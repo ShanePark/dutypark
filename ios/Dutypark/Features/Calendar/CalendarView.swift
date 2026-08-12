@@ -1,16 +1,30 @@
 import SwiftUI
 import UniformTypeIdentifiers
 
+enum DDayModalSelection: Identifiable, Equatable {
+    case create
+    case detail(DDayDTO)
+
+    var id: String {
+        switch self {
+        case .create: "create"
+        case .detail(let item): "detail-\(item.id)"
+        }
+    }
+}
+
 struct CalendarView: View {
     @StateObject private var model: CalendarViewModel
     @State private var showsSearch = false
-    @State private var showsDDayEditor = false
+    @State private var dDayModalSelection: DDayModalSelection?
     @State private var showsBatchUpdate = false
     @State private var showsMonthPicker = false
     @State private var showsDutyComparison = false
     @State private var importsDutyBatch = false
     @State private var showsTodoBoard = false
     @State private var todoTarget: TodoID?
+    @State private var dayModalCanDismiss = true
+    @State private var dDayModalCanDismiss = true
 
     init(memberID: MemberID? = nil, date: DateOnly? = nil, scheduleID: ScheduleID? = nil) {
         _model = StateObject(wrappedValue: CalendarViewModel(memberID: memberID, date: date, scheduleID: scheduleID))
@@ -35,25 +49,42 @@ struct CalendarView: View {
         .task { if model.days.isEmpty { await model.load() } }
         .fullScreenCover(item: $model.selectedDay) { day in
             DPModalOverlay(
-                onDismiss: { model.selectedDay = nil },
-                closeOnBackdrop: false
+                onDismiss: {
+                    model.selectedDay = nil
+                    dayModalCanDismiss = true
+                },
+                closeOnBackdrop: false,
+                canDismiss: dayModalCanDismiss
             ) { availableSize, dismiss in
                 DayDetailView(
                     model: model,
                     initialDay: day,
-                    maximumHeight: availableSize.height
+                    maximumHeight: availableSize.height,
+                    onDismissabilityChange: { dayModalCanDismiss = $0 }
                 ) {
                     dismiss()
                 }
             }
         }
-        .sheet(isPresented: $showsSearch) { ScheduleSearchView(model: model) }
-        .fullScreenCover(isPresented: $showsDDayEditor) {
-            DPModalOverlay(onDismiss: { showsDDayEditor = false }, closeOnBackdrop: false) { availableSize, dismiss in
-                DDayEditorView(
+        .fullScreenCover(isPresented: $showsSearch) {
+            DPModalOverlay(onDismiss: { showsSearch = false }, closeOnBackdrop: false) { availableSize, dismiss in
+                ScheduleSearchView(model: model, maximumHeight: availableSize.height, dismiss: dismiss)
+            }
+        }
+        .fullScreenCover(item: $dDayModalSelection) { selection in
+            DPModalOverlay(
+                onDismiss: {
+                    dDayModalSelection = nil
+                    dDayModalCanDismiss = true
+                },
+                closeOnBackdrop: false,
+                canDismiss: dDayModalCanDismiss
+            ) { availableSize, dismiss in
+                DDayModalView(
                     model: model,
-                    existing: nil,
+                    selection: selection,
                     maximumHeight: availableSize.height,
+                    onDismissabilityChange: { dDayModalCanDismiss = $0 },
                     dismiss: dismiss
                 )
             }
@@ -265,7 +296,7 @@ struct CalendarView: View {
 
     private func performSearch() {
         guard model.canSearchSchedules else { return }
-        showsSearch = true
+        withoutPresentationAnimation { showsSearch = true }
         if !model.searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             Task { await model.search() }
         }
@@ -577,10 +608,12 @@ struct CalendarView: View {
     private var dDaySection: some View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: DPSpacing.small) {
             ForEach(model.dDays, id: \.id) { item in
-                DDayCard(item: item, editable: model.isMyCalendar, model: model)
+                DDayCard(item: item, model: model) {
+                    withoutPresentationAnimation { dDayModalSelection = .detail(item) }
+                }
             }
             if model.isMyCalendar {
-                Button { withoutPresentationAnimation { showsDDayEditor = true } } label: {
+                Button { withoutPresentationAnimation { dDayModalSelection = .create } } label: {
                     VStack(spacing: 6) {
                         Circle()
                             .fill(DPColor.backgroundTertiary)
@@ -766,6 +799,29 @@ private struct YearMonthPickerView: View {
                 }
             }
             .padding(DPSpacing.medium)
+
+            Divider().overlay(DPColor.borderPrimary)
+
+            HStack(spacing: DPSpacing.small) {
+                Button(CalendarLocalization.text("calendar.close"), action: guardedDismiss)
+                    .buttonStyle(DPOutlineButtonStyle())
+                    .frame(maxWidth: .infinity)
+                    .disabled(isSelecting)
+
+                Button {
+                    selectCurrentMonth()
+                } label: {
+                    HStack(spacing: DPSpacing.extraSmall) {
+                        if isSelecting { ProgressView().controlSize(.small) }
+                        Text(CalendarLocalization.text("calendar.month.current"))
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(DPPrimaryButtonStyle())
+                .disabled(isSelecting)
+            }
+            .padding(DPSpacing.compact)
+            .background(DPColor.backgroundModal)
         }
         .frame(maxHeight: maximumHeight * CalendarCompactModalLayout.maximumPanelHeightRatio, alignment: .top)
         .background(DPColor.backgroundModal)
@@ -782,6 +838,15 @@ private struct YearMonthPickerView: View {
         isSelecting = true
         Task {
             await model.selectYearMonth(year: pickerYear, month: month)
+            dismiss()
+        }
+    }
+
+    private func selectCurrentMonth() {
+        guard !isSelecting else { return }
+        isSelecting = true
+        Task {
+            await model.goToToday()
             dismiss()
         }
     }
@@ -1187,13 +1252,121 @@ private struct CalendarDayCell: View {
     }
 }
 
+enum CalendarScheduleDestructiveAction: Identifiable {
+    case delete(ScheduleDTO)
+    case untag(ScheduleDTO)
+
+    var id: String {
+        switch self {
+        case .delete(let schedule): "delete-\(schedule.id)"
+        case .untag(let schedule): "untag-\(schedule.id)"
+        }
+    }
+
+    var titleKey: String {
+        switch self {
+        case .delete: "calendar.schedule.delete.confirm.title"
+        case .untag: "calendar.schedule.untag.confirm.title"
+        }
+    }
+
+    var actionKey: String {
+        switch self {
+        case .delete: "calendar.delete"
+        case .untag: "calendar.schedule.untag"
+        }
+    }
+
+    var message: String {
+        switch self {
+        case .delete(let schedule):
+            CalendarLocalization.format("calendar.schedule.delete.confirm.message", schedule.content)
+        case .untag(let schedule):
+            CalendarLocalization.format("calendar.schedule.untag.confirm.message", schedule.content)
+        }
+    }
+}
+
+enum CalendarDestructiveActionPolicy {
+    static func canBegin(isWorking: Bool) -> Bool { !isWorking }
+}
+
+enum CalendarModalDismissabilityPolicy {
+    static func dayCanDismiss(
+        isEditing: Bool,
+        isPerformingDestructiveAction: Bool
+    ) -> Bool {
+        !isEditing && !isPerformingDestructiveAction
+    }
+
+    static func dDayCanDismiss(isWorking: Bool) -> Bool { !isWorking }
+}
+
+private struct CalendarDestructiveConfirmationModal: View {
+    let action: CalendarScheduleDestructiveAction
+    let isWorking: Bool
+    let cancel: () -> Void
+    let confirm: () async -> Void
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Text(CalendarLocalization.text(action.titleKey))
+                .font(DPTypography.bodyMedium)
+                .foregroundStyle(DPColor.textPrimary)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, DPSpacing.large)
+                .frame(minHeight: 56)
+                .background(DPColor.backgroundTertiary)
+
+            Text(action.message)
+                .font(DPTypography.supporting)
+                .foregroundStyle(DPColor.textSecondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, DPSpacing.large)
+                .padding(.vertical, DPSpacing.large)
+                .frame(maxWidth: .infinity)
+
+            HStack(spacing: DPSpacing.compact) {
+                Button(action: cancel) {
+                    Text(CalendarLocalization.text("calendar.cancel"))
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(DPOutlineButtonStyle())
+                .disabled(isWorking)
+
+                Button {
+                    Task { await confirm() }
+                } label: {
+                    Group {
+                        if isWorking {
+                            ProgressView().tint(DPColor.textOnDark)
+                        } else {
+                            Text(CalendarLocalization.text(action.actionKey))
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(DPDestructiveButtonStyle())
+                .disabled(isWorking)
+            }
+            .padding(.horizontal, DPSpacing.large)
+            .padding(.bottom, DPSpacing.large)
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
 private struct DayDetailView: View {
     @ObservedObject var model: CalendarViewModel
     let initialDay: CalendarDayContent
     let maximumHeight: CGFloat
+    let onDismissabilityChange: (Bool) -> Void
     let dismiss: () -> Void
     @State private var editorSchedule: ScheduleDTO?
     @State private var createsSchedule = false
+    @State private var destructiveAction: CalendarScheduleDestructiveAction?
+    @State private var isPerformingDestructiveAction = false
 
     private var day: CalendarDayContent {
         model.selectedDay ?? initialDay
@@ -1204,26 +1377,55 @@ private struct DayDetailView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            modalHeader
-
-            if showsEditor {
-                ScheduleEditorView(
-                    model: model,
-                    day: day,
-                    existing: editorSchedule,
-                    onCancel: closeEditor,
-                    onSaved: closeEditor
+        Group {
+            if let destructiveAction {
+                CalendarDestructiveConfirmationModal(
+                    action: destructiveAction,
+                    isWorking: isPerformingDestructiveAction,
+                    cancel: { self.destructiveAction = nil },
+                    confirm: performDestructiveAction
                 )
-                .id(editorSchedule?.id.uuidString ?? "new-\(day.id)")
             } else {
-                scheduleList
-                modalFooter
+                VStack(spacing: 0) {
+                    modalHeader
+
+                    if showsEditor {
+                        ScheduleEditorView(
+                            model: model,
+                            day: day,
+                            existing: editorSchedule,
+                            onCancel: closeEditor,
+                            onSaved: closeEditor,
+                            onWorkingChange: { _ in reportDismissability() }
+                        )
+                        .id(editorSchedule?.id.uuidString ?? "new-\(day.id)")
+                    } else {
+                        scheduleList
+                        modalFooter
+                    }
+                }
+                .frame(height: showsEditor ? maximumHeight : nil, alignment: .top)
+                .fixedSize(horizontal: false, vertical: !showsEditor)
             }
         }
-        .frame(height: showsEditor ? maximumHeight : nil, alignment: .top)
-        .fixedSize(horizontal: false, vertical: !showsEditor)
         .background(DPColor.backgroundModal)
+        .onAppear(perform: reportDismissability)
+        .onChange(of: showsEditor) { _, _ in reportDismissability() }
+        .onChange(of: isPerformingDestructiveAction) { _, _ in reportDismissability() }
+        .onDisappear { onDismissabilityChange(true) }
+        .alert(
+            CalendarLocalization.text("calendar.error.title"),
+            isPresented: Binding(
+                get: { model.errorMessage != nil },
+                set: { if !$0 { model.errorMessage = nil } }
+            )
+        ) {
+            Button(CalendarLocalization.text("calendar.ok"), role: .cancel) {
+                model.errorMessage = nil
+            }
+        } message: {
+            Text(model.errorMessage ?? "")
+        }
     }
 
     private var modalHeader: some View {
@@ -1354,7 +1556,7 @@ private struct DayDetailView: View {
 
                 if schedule.isTagged, model.isMyCalendar {
                     Button {
-                        Task { await model.untagSelf(schedule) }
+                        destructiveAction = .untag(schedule)
                     } label: {
                         Label(CalendarLocalization.text("calendar.schedule.untag"), systemImage: "xmark")
                             .font(DPTypography.caption)
@@ -1373,7 +1575,7 @@ private struct DayDetailView: View {
                     .foregroundStyle(DPColor.accent)
 
                     Button {
-                        Task { await model.deleteSchedule(schedule) }
+                        destructiveAction = .delete(schedule)
                     } label: {
                         Image(systemName: "trash")
                             .frame(width: 44, height: 44)
@@ -1476,6 +1678,32 @@ private struct DayDetailView: View {
         editorSchedule = nil
     }
 
+    private func performDestructiveAction() async {
+        guard let destructiveAction,
+              CalendarDestructiveActionPolicy.canBegin(isWorking: isPerformingDestructiveAction)
+        else { return }
+        isPerformingDestructiveAction = true
+        switch destructiveAction {
+        case .delete(let schedule):
+            let succeeded = await model.deleteSchedule(schedule)
+            isPerformingDestructiveAction = false
+            if succeeded { self.destructiveAction = nil }
+        case .untag(let schedule):
+            let succeeded = await model.untagSelf(schedule)
+            isPerformingDestructiveAction = false
+            if succeeded { self.destructiveAction = nil }
+        }
+    }
+
+    private func reportDismissability() {
+        onDismissabilityChange(
+            CalendarModalDismissabilityPolicy.dayCanDismiss(
+                isEditing: showsEditor,
+                isPerformingDestructiveAction: isPerformingDestructiveAction
+            )
+        )
+    }
+
     private var scheduleListHeight: CGFloat {
         guard !day.schedules.isEmpty else { return 76 }
         let estimatedRows = day.schedules.reduce(CGFloat.zero) { total, schedule in
@@ -1538,6 +1766,7 @@ private struct ScheduleEditorView: View {
     let existing: ScheduleDTO?
     let onCancel: () -> Void
     let onSaved: () -> Void
+    let onWorkingChange: (Bool) -> Void
     @State private var content: String
     @State private var description: String
     @State private var visibility: Visibility
@@ -1545,6 +1774,7 @@ private struct ScheduleEditorView: View {
     @State private var end: Date
     @State private var tagIDs: Set<MemberID>
     @State private var isSaving = false
+    @State private var isDiscarding = false
     @StateObject private var attachmentModel: AttachmentPickerModel
     @FocusState private var focusedField: Field?
 
@@ -1558,13 +1788,15 @@ private struct ScheduleEditorView: View {
         day: CalendarDayContent,
         existing: ScheduleDTO?,
         onCancel: @escaping () -> Void,
-        onSaved: @escaping () -> Void
+        onSaved: @escaping () -> Void,
+        onWorkingChange: @escaping (Bool) -> Void = { _ in }
     ) {
         self.model = model
         self.day = day
         self.existing = existing
         self.onCancel = onCancel
         self.onSaved = onSaved
+        self.onWorkingChange = onWorkingChange
         let base = CalendarDateSupport.date(from: day.cell.date) ?? Date()
         _content = State(initialValue: existing?.content ?? "")
         _description = State(initialValue: existing?.description ?? "")
@@ -1664,7 +1896,11 @@ private struct ScheduleEditorView: View {
             HStack(spacing: DPSpacing.small) {
                 Button {
                     Task {
-                        if await attachmentModel.discard() { onCancel() }
+                        guard !interactionsDisabled else { return }
+                        isDiscarding = true
+                        let discarded = await attachmentModel.discard()
+                        isDiscarding = false
+                        if discarded { onCancel() }
                     }
                 } label: {
                     Text(CalendarLocalization.text("calendar.cancel"))
@@ -1691,6 +1927,11 @@ private struct ScheduleEditorView: View {
                 Rectangle().fill(DPColor.borderPrimary).frame(height: 1)
             }
         }
+        .onAppear { onWorkingChange(interactionsDisabled) }
+        .onChange(of: interactionsDisabled) { _, isWorking in
+            onWorkingChange(isWorking)
+        }
+        .onDisappear { onWorkingChange(false) }
     }
 
     private func formRow<Content: View>(
@@ -1776,7 +2017,8 @@ private struct ScheduleEditorView: View {
     private var interactionsDisabled: Bool {
         ScheduleEditorInteractionPolicy.interactionsDisabled(
             isSaving: isSaving,
-            isUploading: attachmentModel.isBusy
+            isUploading: attachmentModel.isBusy,
+            isDiscarding: isDiscarding
         )
     }
 
@@ -2063,8 +2305,12 @@ private struct CalendarFriendTagSelector: View {
 }
 
 nonisolated enum ScheduleEditorInteractionPolicy {
-    static func interactionsDisabled(isSaving: Bool, isUploading: Bool) -> Bool {
-        isSaving || isUploading
+    static func interactionsDisabled(
+        isSaving: Bool,
+        isUploading: Bool,
+        isDiscarding: Bool = false
+    ) -> Bool {
+        isSaving || isUploading || isDiscarding
     }
 }
 
@@ -2095,53 +2341,486 @@ private struct ScheduleAttachmentGallery: View {
 
 private struct ScheduleSearchView: View {
     @ObservedObject var model: CalendarViewModel
-    @Environment(\.dismiss) private var dismiss
+    let maximumHeight: CGFloat
+    let dismiss: () -> Void
+
+    private var trimmedQuery: String {
+        model.searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    private var maximumPanelHeight: CGFloat {
+        min(maximumHeight, 874) * 0.85
+    }
+
+    private var resultsHeight: CGFloat {
+        let rowHeight: CGFloat = 82
+        let emptyHeight: CGFloat = 84
+        let loadMoreHeight: CGFloat = model.canLoadMoreSearchResults ? 52 : 0
+        let desired = model.searchResults.isEmpty
+            ? emptyHeight
+            : CGFloat(model.searchResults.count) * rowHeight + loadMoreHeight + DPSpacing.small
+        return min(max(desired, emptyHeight), max(emptyHeight, maximumPanelHeight - 184))
+    }
+
     var body: some View {
-        NavigationStack {
-            List {
-                HStack {
-                    TextField(CalendarLocalization.text("calendar.search.placeholder"), text: $model.searchQuery)
-                        .textFieldStyle(.roundedBorder).submitLabel(.search).onSubmit { Task { await model.search() } }
-                    Button { Task { await model.search() } } label: { Image(systemName: "magnifyingglass").frame(width: 44, height: 44) }
+        VStack(spacing: 0) {
+            HStack(spacing: DPSpacing.small) {
+                Label(CalendarLocalization.text("calendar.search"), systemImage: "magnifyingglass")
+                    .font(DPTypography.heading)
+                    .foregroundStyle(DPColor.textPrimary)
+                Spacer(minLength: 0)
+                Button(action: dismiss) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(DPColor.textPrimary)
+                        .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                        .contentShape(Rectangle())
                 }
-                if model.isSearching { ProgressView() }
-                ForEach(Array(model.searchResults.enumerated()), id: \.offset) { _, item in
-                    Button {
-                        Task { await model.showSearchResult(item); dismiss() }
-                    } label: {
-                        VStack(alignment: .leading) {
-                            Text(item.content).foregroundStyle(DPColor.textPrimary)
-                            Text(item.startDateTime.rawValue.replacingOccurrences(of: "T", with: " ")).font(.caption).foregroundStyle(DPColor.textMuted)
-                            Text(item.author).font(.caption).foregroundStyle(DPColor.textSecondary)
+                .buttonStyle(.plain)
+                .accessibilityLabel(CalendarLocalization.text("calendar.close"))
+            }
+            .padding(.leading, DPSpacing.medium)
+            .padding(.trailing, DPSpacing.small)
+            .padding(.vertical, DPSpacing.compact)
+            .background(DPColor.backgroundTertiary)
+
+            Divider().overlay(DPColor.borderPrimary)
+
+            HStack(spacing: DPSpacing.small) {
+                TextField(CalendarLocalization.text("calendar.search.placeholder"), text: $model.searchQuery)
+                    .font(DPTypography.body)
+                    .foregroundStyle(DPColor.textPrimary)
+                    .submitLabel(.search)
+                    .onSubmit(performSearch)
+                    .padding(.horizontal, DPSpacing.compact)
+                    .frame(minHeight: DPSize.minimumTouchTarget)
+                    .background(DPColor.backgroundInput)
+                    .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+                    .overlay(RoundedRectangle(cornerRadius: DPRadius.standard).stroke(DPColor.borderInput))
+
+                Button(action: performSearch) {
+                    Group {
+                        if model.isSearching {
+                            ProgressView().controlSize(.small)
+                        } else {
+                            Image(systemName: "magnifyingglass")
                         }
                     }
+                    .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
                 }
-                if model.canLoadMoreSearchResults {
-                    Button(CalendarLocalization.text("calendar.search.more")) {
-                        Task { await model.loadMoreSearchResults() }
+                .buttonStyle(DPPrimaryButtonStyle())
+                .disabled(trimmedQuery.isEmpty || model.isSearching)
+                .accessibilityLabel(CalendarLocalization.text("calendar.search.short"))
+            }
+            .padding(.horizontal, DPSpacing.medium)
+            .padding(.top, DPSpacing.medium)
+            .padding(.bottom, DPSpacing.small)
+
+            HStack {
+                if trimmedQuery.isEmpty {
+                    Text(CalendarLocalization.text("calendar.search.hint"))
+                } else {
+                    Text(CalendarLocalization.format("calendar.search.summary", trimmedQuery, model.searchResults.count))
+                }
+                Spacer(minLength: 0)
+            }
+            .font(DPTypography.caption)
+            .foregroundStyle(DPColor.textMuted)
+            .padding(.horizontal, DPSpacing.medium)
+            .padding(.bottom, DPSpacing.small)
+
+            Divider().overlay(DPColor.borderPrimary)
+
+            ScrollView {
+                LazyVStack(spacing: DPSpacing.small) {
+                    if model.searchResults.isEmpty {
+                        Text(CalendarLocalization.text(trimmedQuery.isEmpty ? "calendar.search.hint" : "calendar.search.empty"))
+                            .font(DPTypography.supporting)
+                            .foregroundStyle(DPColor.textMuted)
+                            .multilineTextAlignment(.center)
+                            .frame(maxWidth: .infinity, minHeight: 68)
+                    } else {
+                        ForEach(Array(model.searchResults.enumerated()), id: \.offset) { _, item in
+                            Button {
+                                Task {
+                                    await model.showSearchResult(item)
+                                    dismiss()
+                                }
+                            } label: {
+                                VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+                                    Text(item.content)
+                                        .font(DPTypography.label)
+                                        .foregroundStyle(DPColor.textPrimary)
+                                        .lineLimit(2)
+                                    Label(
+                                        item.startDateTime.rawValue.replacingOccurrences(of: "T", with: " "),
+                                        systemImage: "calendar"
+                                    )
+                                    Text(item.author)
+                                }
+                                .font(DPTypography.caption)
+                                .foregroundStyle(DPColor.textMuted)
+                                .frame(maxWidth: .infinity, minHeight: 68, alignment: .leading)
+                                .padding(.horizontal, DPSpacing.compact)
+                                .background(DPColor.backgroundCard)
+                                .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+                                .overlay(RoundedRectangle(cornerRadius: DPRadius.standard).stroke(DPColor.borderPrimary))
+                            }
+                            .buttonStyle(.plain)
+                        }
                     }
-                    .disabled(model.isSearching)
-                    .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)
+
+                    if model.canLoadMoreSearchResults {
+                        Button {
+                            Task { await model.loadMoreSearchResults() }
+                        } label: {
+                            HStack(spacing: DPSpacing.extraSmall) {
+                                if model.isSearching { ProgressView().controlSize(.small) }
+                                Text(CalendarLocalization.text("calendar.search.more"))
+                            }
+                            .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)
+                        }
+                        .buttonStyle(DPOutlineButtonStyle())
+                        .disabled(model.isSearching)
+                    }
+                }
+                .padding(DPSpacing.medium)
+            }
+            .scrollDismissesKeyboard(.interactively)
+            .scrollBounceBehavior(.basedOnSize)
+            .frame(height: resultsHeight)
+        }
+        .frame(maxHeight: maximumPanelHeight, alignment: .top)
+        .background(DPColor.backgroundModal)
+    }
+
+    private func performSearch() {
+        guard !trimmedQuery.isEmpty, !model.isSearching else { return }
+        Task { await model.search() }
+    }
+}
+
+enum CalendarDDayDetailPolicy {
+    static func canManage(isMyCalendar: Bool) -> Bool { isMyCalendar }
+}
+
+private struct DDayModalView: View {
+    private enum Route {
+        case detail
+        case edit
+        case confirmDelete
+    }
+
+    @ObservedObject var model: CalendarViewModel
+    let selection: DDayModalSelection
+    let maximumHeight: CGFloat
+    let onDismissabilityChange: (Bool) -> Void
+    let dismiss: () -> Void
+    @State private var route: Route
+    @State private var isDeleting = false
+    @State private var isChildWorking = false
+
+    init(
+        model: CalendarViewModel,
+        selection: DDayModalSelection,
+        maximumHeight: CGFloat,
+        onDismissabilityChange: @escaping (Bool) -> Void,
+        dismiss: @escaping () -> Void
+    ) {
+        self.model = model
+        self.selection = selection
+        self.maximumHeight = maximumHeight
+        self.onDismissabilityChange = onDismissabilityChange
+        self.dismiss = dismiss
+        _route = State(initialValue: selection == .create ? .edit : .detail)
+    }
+
+    @ViewBuilder
+    var body: some View {
+        Group {
+            switch selection {
+            case .create:
+                DDayEditorView(
+                    model: model,
+                    existing: nil,
+                    maximumHeight: maximumHeight,
+                    dismiss: dismiss,
+                    onWorkingChange: updateChildWorking
+                )
+            case .detail(let item):
+                switch route {
+                case .detail:
+                    DDayDetailModal(
+                        item: item,
+                        isPinned: model.pinnedDDayID == item.id,
+                        canManage: CalendarDDayDetailPolicy.canManage(isMyCalendar: model.isMyCalendar),
+                        dismiss: dismiss,
+                        edit: { route = .edit },
+                        delete: { route = .confirmDelete },
+                        togglePin: { model.togglePinnedDDay(item) }
+                    )
+                case .edit:
+                    DDayEditorView(
+                        model: model,
+                        existing: item,
+                        maximumHeight: maximumHeight,
+                        dismiss: dismiss,
+                        onCancel: { route = .detail },
+                        onDeleteRequest: { _ in route = .confirmDelete },
+                        onWorkingChange: updateChildWorking
+                    )
+                case .confirmDelete:
+                    DDayDeleteConfirmationModal(
+                        item: item,
+                        isWorking: isDeleting,
+                        cancel: { route = .detail },
+                        confirm: {
+                            guard CalendarDestructiveActionPolicy.canBegin(isWorking: isDeleting) else { return }
+                            isDeleting = true
+                            let succeeded = await model.deleteDDay(item)
+                            isDeleting = false
+                            if succeeded {
+                                onDismissabilityChange(true)
+                                dismiss()
+                            }
+                        }
+                    )
                 }
             }
-            .scrollContentBackground(.hidden)
-            .background(DPColor.backgroundModal)
-            .navigationTitle(CalendarLocalization.text("calendar.search"))
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button(CalendarLocalization.text("calendar.close")) { dismiss() } } }
         }
-        .tint(DPColor.accent)
-        .toolbarBackground(DPColor.backgroundTertiary, for: .navigationBar)
-        .toolbarBackground(.visible, for: .navigationBar)
-        .presentationCornerRadius(DPRadius.standard)
-        .presentationBackground(DPColor.backgroundModal)
+        .onAppear(perform: reportDismissability)
+        .onChange(of: isDeleting) { _, _ in reportDismissability() }
+        .onDisappear { onDismissabilityChange(true) }
+        .alert(
+            CalendarLocalization.text("calendar.error.title"),
+            isPresented: Binding(
+                get: { model.errorMessage != nil },
+                set: { if !$0 { model.errorMessage = nil } }
+            )
+        ) {
+            Button(CalendarLocalization.text("calendar.ok"), role: .cancel) {
+                model.errorMessage = nil
+            }
+        } message: {
+            Text(model.errorMessage ?? "")
+        }
+    }
+
+    private func updateChildWorking(_ isWorking: Bool) {
+        isChildWorking = isWorking
+        reportDismissability()
+    }
+
+    private func reportDismissability() {
+        onDismissabilityChange(
+            CalendarModalDismissabilityPolicy.dDayCanDismiss(
+                isWorking: isDeleting || isChildWorking
+            )
+        )
+    }
+}
+
+private struct DDayDetailModal: View {
+    let item: DDayDTO
+    let isPinned: Bool
+    let canManage: Bool
+    let dismiss: () -> Void
+    let edit: () -> Void
+    let delete: () -> Void
+    let togglePin: () -> Void
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: DPSpacing.small) {
+                Text(CalendarLocalization.text("calendar.dday.detail.title"))
+                    .font(DPTypography.heading)
+                    .foregroundStyle(DPColor.textPrimary)
+                Spacer(minLength: 0)
+                Button(action: dismiss) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(DPColor.textPrimary)
+                        .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(CalendarLocalization.text("calendar.close"))
+            }
+            .padding(.leading, DPSpacing.medium)
+            .padding(.trailing, DPSpacing.small)
+            .padding(.vertical, DPSpacing.compact)
+            .background(DPColor.backgroundTertiary)
+
+            Divider().overlay(DPColor.borderPrimary)
+
+            VStack(alignment: .leading, spacing: DPSpacing.large) {
+                Text(dDayLabel)
+                    .font(DPFont.bold(size: 24, relativeTo: .title2))
+                    .foregroundStyle(DPColor.textOnDark)
+                    .padding(.horizontal, DPSpacing.large)
+                    .padding(.vertical, DPSpacing.compact)
+                    .background(badgeBackground, in: Capsule())
+                    .frame(maxWidth: .infinity)
+
+                detailField(
+                    label: CalendarLocalization.text("calendar.dday.name"),
+                    value: item.title,
+                    systemImage: item.isPrivate ? "lock.fill" : nil
+                )
+                detailField(
+                    label: CalendarLocalization.text("calendar.dday.date"),
+                    value: formattedDate,
+                    systemImage: "calendar.badge.checkmark"
+                )
+
+                if canManage {
+                    HStack(spacing: DPSpacing.small) {
+                        Label(
+                            CalendarLocalization.text(isPinned ? "calendar.dday.pin.enabled" : "calendar.dday.pin.disabled"),
+                            systemImage: isPinned ? "star.fill" : "star"
+                        )
+                        .font(DPTypography.label)
+                        .foregroundStyle(isPinned ? DPColor.warning : DPColor.textPrimary)
+                        Spacer(minLength: 0)
+                        Toggle(CalendarLocalization.text("calendar.dday.pin.action"), isOn: Binding(
+                            get: { isPinned },
+                            set: { _ in togglePin() }
+                        ))
+                        .labelsHidden()
+                    }
+                    .padding(DPSpacing.compact)
+                    .background(DPColor.backgroundSecondary)
+                    .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+                }
+            }
+            .padding(DPSpacing.medium)
+
+            Divider().overlay(DPColor.borderPrimary)
+
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: DPSpacing.small) { footerActions }
+                VStack(spacing: DPSpacing.small) { footerActions }
+            }
+            .padding(DPSpacing.compact)
+            .background(DPColor.backgroundModal)
+        }
+        .fixedSize(horizontal: false, vertical: true)
+        .background(DPColor.backgroundModal)
+    }
+
+    @ViewBuilder
+    private var footerActions: some View {
+        if canManage {
+            Button(action: edit) {
+                Label(CalendarLocalization.text("calendar.dday.edit.action"), systemImage: "pencil")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(DPOutlineButtonStyle())
+
+            Button(action: delete) {
+                Label(CalendarLocalization.text("calendar.delete"), systemImage: "trash")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(DPDestructiveButtonStyle())
+        }
+
+        Button(CalendarLocalization.text("calendar.close"), action: dismiss)
+            .buttonStyle(DPOutlineButtonStyle())
+            .frame(maxWidth: .infinity)
+    }
+
+    private func detailField(label: String, value: String, systemImage: String?) -> some View {
+        VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+            Text(label)
+                .font(DPTypography.caption)
+                .foregroundStyle(DPColor.textMuted)
+            if let systemImage {
+                Label(value, systemImage: systemImage)
+                    .font(DPTypography.body)
+                    .foregroundStyle(DPColor.textPrimary)
+            } else {
+                Text(value)
+                    .font(DPTypography.body)
+                    .foregroundStyle(DPColor.textPrimary)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var formattedDate: String {
+        guard let date = CalendarDateSupport.date(from: item.date) else { return item.date.rawValue }
+        let formatter = DateFormatter()
+        formatter.locale = CalendarLocalization.selectedLocale
+        formatter.calendar = CalendarDateSupport.calendar
+        formatter.setLocalizedDateFormatFromTemplate("yyyyMMMMdEEEE")
+        return formatter.string(from: date)
+    }
+
+    private var dDayLabel: String {
+        item.calc == 0 ? "D-Day" : item.calc < 0 ? "D+\(abs(item.calc))" : "D-\(item.calc)"
+    }
+
+    private var badgeBackground: Color {
+        switch item.calc {
+        case 0, 1: DPColor.danger
+        case 2, 3: DPColor.warning
+        case ..<0: DPColor.textMuted
+        default: DPColor.accent
+        }
+    }
+}
+
+private struct DDayDeleteConfirmationModal: View {
+    let item: DDayDTO
+    let isWorking: Bool
+    let cancel: () -> Void
+    let confirm: () async -> Void
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Text(CalendarLocalization.text("calendar.dday.delete.confirm.title"))
+                .font(DPTypography.bodyMedium)
+                .foregroundStyle(DPColor.textPrimary)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, DPSpacing.large)
+                .frame(minHeight: 56)
+                .background(DPColor.backgroundTertiary)
+
+            Text(CalendarLocalization.format("calendar.dday.delete.confirm.message", item.title))
+                .font(DPTypography.supporting)
+                .foregroundStyle(DPColor.textSecondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, DPSpacing.large)
+                .padding(.vertical, DPSpacing.large)
+
+            HStack(spacing: DPSpacing.compact) {
+                Button(CalendarLocalization.text("calendar.cancel"), action: cancel)
+                    .buttonStyle(DPOutlineButtonStyle())
+                    .frame(maxWidth: .infinity)
+                    .disabled(isWorking)
+                Button {
+                    Task { await confirm() }
+                } label: {
+                    Group {
+                        if isWorking { ProgressView().tint(DPColor.textOnDark) }
+                        else { Text(CalendarLocalization.text("calendar.delete")) }
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(DPDestructiveButtonStyle())
+                .disabled(isWorking)
+            }
+            .padding(.horizontal, DPSpacing.large)
+            .padding(.bottom, DPSpacing.large)
+        }
+        .frame(maxWidth: .infinity)
     }
 }
 
 private struct DDayCard: View {
     let item: DDayDTO
-    let editable: Bool
     @ObservedObject var model: CalendarViewModel
-    @State private var edits = false
+    let showDetail: () -> Void
     var body: some View {
         VStack(alignment: .leading, spacing: DPSpacing.small) {
                 HStack(alignment: .top) {
@@ -2180,28 +2859,18 @@ private struct DDayCard: View {
                     .stroke(model.pinnedDDayID == item.id ? DPColor.warning : DPColor.borderPrimary, lineWidth: model.pinnedDDayID == item.id ? 2 : 1)
             }
             .overlay(alignment: .topTrailing) {
-                Button { model.togglePinnedDDay(item) } label: {
-                    Image(systemName: model.pinnedDDayID == item.id ? "star.fill" : "star")
-                        .foregroundStyle(model.pinnedDDayID == item.id ? DPColor.warning : DPColor.textMuted)
-                        .frame(width: 44, height: 44)
+                if model.isMyCalendar {
+                    Button { model.togglePinnedDDay(item) } label: {
+                        Image(systemName: model.pinnedDDayID == item.id ? "star.fill" : "star")
+                            .foregroundStyle(model.pinnedDDayID == item.id ? DPColor.warning : DPColor.textMuted)
+                            .frame(width: 44, height: 44)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
         }
         .contentShape(RoundedRectangle(cornerRadius: DPRadius.large))
-        .onTapGesture {
-            if editable { withoutPresentationAnimation { edits = true } }
-        }
+        .onTapGesture(perform: showDetail)
         .shadow(color: .black.opacity(model.pinnedDDayID == item.id ? 0.12 : 0.05), radius: model.pinnedDDayID == item.id ? 4 : 1, y: 1)
-        .fullScreenCover(isPresented: $edits) {
-            DPModalOverlay(onDismiss: { edits = false }, closeOnBackdrop: false) { availableSize, dismiss in
-                DDayEditorView(
-                    model: model,
-                    existing: item,
-                    maximumHeight: availableSize.height,
-                    dismiss: dismiss
-                )
-            }
-        }
     }
 
     private var cardBackground: LinearGradient {
@@ -2235,6 +2904,9 @@ private struct DDayEditorView: View {
     let existing: DDayDTO?
     let maximumHeight: CGFloat
     let dismiss: () -> Void
+    let onCancel: (() -> Void)?
+    let onDeleteRequest: ((DDayDTO) -> Void)?
+    let onWorkingChange: (Bool) -> Void
     @State private var title: String
     @State private var date: Date
     @State private var isPrivate: Bool
@@ -2248,12 +2920,18 @@ private struct DDayEditorView: View {
         model: CalendarViewModel,
         existing: DDayDTO?,
         maximumHeight: CGFloat,
-        dismiss: @escaping () -> Void
+        dismiss: @escaping () -> Void,
+        onCancel: (() -> Void)? = nil,
+        onDeleteRequest: ((DDayDTO) -> Void)? = nil,
+        onWorkingChange: @escaping (Bool) -> Void = { _ in }
     ) {
         self.model = model
         self.existing = existing
         self.maximumHeight = maximumHeight
         self.dismiss = dismiss
+        self.onCancel = onCancel
+        self.onDeleteRequest = onDeleteRequest
+        self.onWorkingChange = onWorkingChange
         _title = State(initialValue: existing?.title ?? "")
         _date = State(initialValue: existing.flatMap { CalendarDateSupport.date(from: $0.date) } ?? Date())
         _isPrivate = State(initialValue: existing?.isPrivate ?? false)
@@ -2312,6 +2990,9 @@ private struct DDayEditorView: View {
         .onPreferenceChange(DDayEditorHeaderHeightPreferenceKey.self) { headerHeight = $0 }
         .onPreferenceChange(DDayEditorBodyHeightPreferenceKey.self) { bodyContentHeight = $0 }
         .onPreferenceChange(DDayEditorFooterHeightPreferenceKey.self) { footerHeight = $0 }
+        .onAppear { onWorkingChange(isSaving) }
+        .onChange(of: isSaving) { _, isWorking in onWorkingChange(isWorking) }
+        .onDisappear { onWorkingChange(false) }
         .confirmationDialog(CalendarLocalization.text("calendar.delete.confirm"), isPresented: $confirmsDelete) {
             if let existing {
                 Button(CalendarLocalization.text("calendar.delete"), role: .destructive) {
@@ -2414,7 +3095,11 @@ private struct DDayEditorView: View {
 
             if existing != nil {
                 Button(CalendarLocalization.text("calendar.delete"), role: .destructive) {
-                    confirmsDelete = true
+                    if let existing, let onDeleteRequest {
+                        onDeleteRequest(existing)
+                    } else {
+                        confirmsDelete = true
+                    }
                 }
                 .font(DPTypography.label)
                 .frame(minHeight: DPSize.minimumTouchTarget)
@@ -2448,7 +3133,7 @@ private struct DDayEditorView: View {
 
     private func guardedDismiss() {
         guard !isSaving else { return }
-        dismiss()
+        if let onCancel { onCancel() } else { dismiss() }
     }
 
     private func save() {
@@ -2461,7 +3146,9 @@ private struct DDayEditorView: View {
                 date: date,
                 isPrivate: isPrivate
             )
-            if saved { dismiss() } else { isSaving = false }
+            isSaving = false
+            onWorkingChange(false)
+            if saved { dismiss() }
         }
     }
 
@@ -2469,8 +3156,10 @@ private struct DDayEditorView: View {
         guard !isSaving else { return }
         isSaving = true
         Task {
-            await model.deleteDDay(item)
-            dismiss()
+            let succeeded = await model.deleteDDay(item)
+            isSaving = false
+            onWorkingChange(false)
+            if succeeded { dismiss() }
         }
     }
 }

@@ -400,16 +400,30 @@ final class CalendarViewModel: ObservableObject {
         }
     }
 
-    func deleteSchedule(_ schedule: ScheduleDTO) async {
-        guard canEdit, !schedule.isTagged else { return }
-        do { try await repository.deleteSchedule(id: schedule.id); try await loadMonth() }
-        catch { errorMessage = CalendarLocalization.text("calendar.error.delete") }
+    func deleteSchedule(_ schedule: ScheduleDTO) async -> Bool {
+        guard canEdit, !schedule.isTagged else { return false }
+        do {
+            try await repository.deleteSchedule(id: schedule.id)
+        } catch {
+            errorMessage = CalendarLocalization.text("calendar.error.delete")
+            return false
+        }
+        do { try await loadMonth() }
+        catch { errorMessage = CalendarLocalization.text("calendar.error.load") }
+        return true
     }
 
-    func untagSelf(_ schedule: ScheduleDTO) async {
-        guard isMyCalendar, schedule.isTagged else { return }
-        do { try await repository.untagSelf(scheduleID: schedule.id); try await loadMonth() }
-        catch { errorMessage = CalendarLocalization.text("calendar.error.delete") }
+    func untagSelf(_ schedule: ScheduleDTO) async -> Bool {
+        guard isMyCalendar, schedule.isTagged else { return false }
+        do {
+            try await repository.untagSelf(scheduleID: schedule.id)
+        } catch {
+            errorMessage = CalendarLocalization.text("calendar.error.delete")
+            return false
+        }
+        do { try await loadMonth() }
+        catch { errorMessage = CalendarLocalization.text("calendar.error.load") }
+        return true
     }
 
     func moveSchedule(from offsets: IndexSet, to destination: Int, in day: CalendarDayContent) async {
@@ -469,10 +483,17 @@ final class CalendarViewModel: ObservableObject {
         } catch { errorMessage = CalendarLocalization.text("calendar.error.save"); return false }
     }
 
-    func deleteDDay(_ dDay: DDayDTO) async {
-        guard isMyCalendar else { return }
-        do { try await repository.deleteDDay(id: dDay.id); try await loadMonth() }
-        catch { errorMessage = CalendarLocalization.text("calendar.error.delete") }
+    func deleteDDay(_ dDay: DDayDTO) async -> Bool {
+        guard isMyCalendar else { return false }
+        do {
+            try await repository.deleteDDay(id: dDay.id)
+        } catch {
+            errorMessage = CalendarLocalization.text("calendar.error.delete")
+            return false
+        }
+        do { try await loadMonth() }
+        catch { errorMessage = CalendarLocalization.text("calendar.error.load") }
+        return true
     }
 
     func loadPattern() async {

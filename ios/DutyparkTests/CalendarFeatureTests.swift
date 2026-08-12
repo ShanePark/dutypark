@@ -19,7 +19,22 @@ final class CalendarFeatureTests: XCTestCase {
             "calendar.compare.empty",
             "calendar.compare.reset",
             "calendar.todo.manage",
-            "calendar.todo.add"
+            "calendar.todo.add",
+            "calendar.search.hint",
+            "calendar.search.empty",
+            "calendar.search.summary",
+            "calendar.schedule.delete.confirm.title",
+            "calendar.schedule.delete.confirm.message",
+            "calendar.schedule.untag.confirm.title",
+            "calendar.schedule.untag.confirm.message",
+            "calendar.dday.detail.title",
+            "calendar.dday.edit.action",
+            "calendar.dday.pin.enabled",
+            "calendar.dday.pin.disabled",
+            "calendar.dday.pin.action",
+            "calendar.dday.delete.confirm.title",
+            "calendar.dday.delete.confirm.message",
+            "calendar.month.current"
         ]
 
         for locale in ["en", "ko", "ja", "zh-Hans", "es"] {
@@ -33,6 +48,33 @@ final class CalendarFeatureTests: XCTestCase {
                 )
             }
         }
+    }
+
+    func testDDayDetailMutationsAreOnlyAvailableOnMyCalendar() {
+        XCTAssertTrue(CalendarDDayDetailPolicy.canManage(isMyCalendar: true))
+        XCTAssertFalse(CalendarDDayDetailPolicy.canManage(isMyCalendar: false))
+    }
+
+    func testDestructiveModalRejectsDuplicateConfirmationWhileWorking() {
+        XCTAssertTrue(CalendarDestructiveActionPolicy.canBegin(isWorking: false))
+        XCTAssertFalse(CalendarDestructiveActionPolicy.canBegin(isWorking: true))
+    }
+
+    func testCalendarModalDismissabilityBlocksEditorsAndWorkingMutations() {
+        XCTAssertTrue(CalendarModalDismissabilityPolicy.dayCanDismiss(
+            isEditing: false,
+            isPerformingDestructiveAction: false
+        ))
+        XCTAssertFalse(CalendarModalDismissabilityPolicy.dayCanDismiss(
+            isEditing: true,
+            isPerformingDestructiveAction: false
+        ))
+        XCTAssertFalse(CalendarModalDismissabilityPolicy.dayCanDismiss(
+            isEditing: false,
+            isPerformingDestructiveAction: true
+        ))
+        XCTAssertTrue(CalendarModalDismissabilityPolicy.dDayCanDismiss(isWorking: false))
+        XCTAssertFalse(CalendarModalDismissabilityPolicy.dDayCanDismiss(isWorking: true))
     }
 
     func testScheduleEditorDisablesInteractionsWhileAttachmentIsUploading() {
@@ -54,6 +96,63 @@ final class CalendarFeatureTests: XCTestCase {
                 isUploading: false
             )
         )
+        XCTAssertTrue(
+            ScheduleEditorInteractionPolicy.interactionsDisabled(
+                isSaving: false,
+                isUploading: false,
+                isDiscarding: true
+            )
+        )
+    }
+
+    func testFailedScheduleDeleteReturnsFalseAndCallsAPIOnce() async {
+        let repository = CalendarRepositoryMock(failDestructiveMutations: true)
+        let model = CalendarViewModel(repository: repository, now: date(2026, 8, 12))
+        await model.load()
+
+        let succeeded = await model.deleteSchedule(model.days[11].schedules[0])
+
+        XCTAssertFalse(succeeded)
+        XCTAssertNotNil(model.errorMessage)
+        let deleteCount = await repository.deleteScheduleCount
+        XCTAssertEqual(deleteCount, 1)
+    }
+
+    func testFailedScheduleUntagReturnsFalseAndCallsAPIOnce() async {
+        let repository = CalendarRepositoryMock(
+            failDestructiveMutations: true,
+            returnsTaggedSchedule: true
+        )
+        let model = CalendarViewModel(repository: repository, now: date(2026, 8, 12))
+        await model.load()
+
+        let succeeded = await model.untagSelf(model.days[11].schedules[0])
+
+        XCTAssertFalse(succeeded)
+        XCTAssertNotNil(model.errorMessage)
+        let untagCount = await repository.untagCount
+        XCTAssertEqual(untagCount, 1)
+    }
+
+    func testFailedDDayDeleteReturnsFalseAndCallsAPIOnce() async {
+        let repository = CalendarRepositoryMock(failDestructiveMutations: true)
+        let model = CalendarViewModel(repository: repository, now: date(2026, 8, 12))
+        await model.load()
+        let dDay = DDayDTO(
+            id: 3,
+            title: "Important day",
+            date: DateOnly(rawValue: "2026-08-12"),
+            isPrivate: false,
+            calc: 0,
+            daysLeft: 0
+        )
+
+        let succeeded = await model.deleteDDay(dDay)
+
+        XCTAssertFalse(succeeded)
+        XCTAssertNotNil(model.errorMessage)
+        let deleteCount = await repository.deleteDDayCount
+        XCTAssertEqual(deleteCount, 1)
     }
 
     func testLoadBuildsTheServerFortyTwoCellCalendar() async {
@@ -435,21 +534,30 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
     var requestedScheduleMemberID: MemberID?
     var requestedDDayMemberID: MemberID?
     var lastDutyUpdate: DutyUpdateDTO?
+    var deleteScheduleCount = 0
+    var untagCount = 0
+    var deleteDDayCount = 0
     let canManageValue: Bool
     let cancelMemberLoad: Bool
     let friendValues: [FriendDTO]
     let scheduleOwnerID: MemberID
+    let failDestructiveMutations: Bool
+    let returnsTaggedSchedule: Bool
 
     init(
         canManage: Bool = false,
         cancelMemberLoad: Bool = false,
         friends: [FriendDTO] = [],
-        scheduleOwnerID: MemberID = 1
+        scheduleOwnerID: MemberID = 1,
+        failDestructiveMutations: Bool = false,
+        returnsTaggedSchedule: Bool = false
     ) {
         canManageValue = canManage
         self.cancelMemberLoad = cancelMemberLoad
         friendValues = friends
         self.scheduleOwnerID = scheduleOwnerID
+        self.failDestructiveMutations = failDestructiveMutations
+        self.returnsTaggedSchedule = returnsTaggedSchedule
     }
 
     func member() async throws -> MemberDTO {
@@ -490,9 +598,15 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
         savedSchedule = request
         return ScheduleSaveResponse(id: UUID())
     }
-    func deleteSchedule(id: ScheduleID) async throws {}
+    func deleteSchedule(id: ScheduleID) async throws {
+        deleteScheduleCount += 1
+        if failDestructiveMutations { throw APIError.invalidResponse }
+    }
     func reorderSchedules(ids: [ScheduleID]) async throws {}
-    func untagSelf(scheduleID: ScheduleID) async throws {}
+    func untagSelf(scheduleID: ScheduleID) async throws {
+        untagCount += 1
+        if failDestructiveMutations { throw APIError.invalidResponse }
+    }
     func searchSchedules(memberID: MemberID, query: String, page: Int) async throws -> PageResponse<ScheduleSearchResultDTO> {
         try JSONDecoder().decode(PageResponse<ScheduleSearchResultDTO>.self, from: Data(#"{"content":[],"totalPages":0,"totalElements":0,"last":true,"first":true,"size":10,"number":0,"numberOfElements":0,"empty":true}"#.utf8))
     }
@@ -508,7 +622,10 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
     func updateDutyPattern(_ request: DutyPatternUpdateDTO) async throws -> DutyPatternDTO { try await dutyPattern() }
     func deleteDutyPattern() async throws {}
     func saveDDay(_ request: DDaySaveDTO) async throws -> DDayDTO { DDayDTO(id: 1, title: request.title, date: request.date, isPrivate: request.isPrivate, calc: 0, daysLeft: 0) }
-    func deleteDDay(id: Int64) async throws {}
+    func deleteDDay(id: Int64) async throws {
+        deleteDDayCount += 1
+        if failDestructiveMutations { throw APIError.invalidResponse }
+    }
 
     private func schedule(year: Int, month: Int) -> ScheduleDTO {
         ScheduleDTO(
@@ -516,7 +633,7 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
             year: year, month: month, dayOfMonth: 12,
             startDateTime: LocalDateTimeValue(rawValue: String(format: "%04d-%02d-12T00:00:00", year, month)),
             endDateTime: LocalDateTimeValue(rawValue: String(format: "%04d-%02d-12T01:00:00", year, month)),
-            isTagged: false, owner: "Tester", taggedByMember: nil, tags: [], visibility: .friends,
+            isTagged: returnsTaggedSchedule, owner: "Tester", taggedByMember: nil, tags: [], visibility: .friends,
             dateToCompare: DateOnly(rawValue: String(format: "%04d-%02d-12", year, month)), attachments: [],
             startDate: DateOnly(rawValue: String(format: "%04d-%02d-12", year, month)), daysFromStart: 1,
             endDate: DateOnly(rawValue: String(format: "%04d-%02d-12", year, month)),
