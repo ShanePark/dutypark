@@ -30,7 +30,7 @@ struct SettingsView: View {
     @StateObject private var push = APNsRegistrationManager.shared
     @State private var oauthClient = MobileOAuthClient()
     @AppStorage(SettingsPreference.languageKey) private var languageCode = ""
-    @AppStorage(SettingsPreference.themeKey) private var themeCode = AppTheme.light.rawValue
+    @AppStorage(SettingsPreference.themeKey) private var themeCode = SettingsPreference.defaultTheme
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var photoToCrop: UIImage?
     @State private var showPhotoActions = false
@@ -358,34 +358,34 @@ struct SettingsView: View {
 
     private var appearanceSection: some View {
         SettingsCard(title: "settings.appearance.title", icon: "sun.max") {
-            HStack(spacing: DPSpacing.compact) {
-                themeButton(.light, icon: "sun.max")
-                themeButton(.dark, icon: "moon")
+            Picker(
+                SettingsLocalization.string("settings.theme"),
+                selection: themeSelection
+            ) {
+                ForEach(AppTheme.allCases) { theme in
+                    SettingsLocalization.text(theme.titleKey)
+                        .tag(theme)
+                }
             }
-            SettingsLocalization.text(themeCode == AppTheme.dark.rawValue ? "settings.theme.current.dark" : "settings.theme.current.light")
+            .pickerStyle(.segmented)
+            .accessibilityLabel(SettingsLocalization.string("settings.theme"))
+            .accessibilityValue(SettingsLocalization.string(selectedTheme.currentDescriptionKey))
+
+            SettingsLocalization.text(selectedTheme.currentDescriptionKey)
                 .font(DPTypography.supporting)
                 .foregroundStyle(DPColor.textMuted)
         }
     }
 
-    private func themeButton(_ theme: AppTheme, icon: String) -> some View {
-        let selected = themeCode == theme.rawValue
-        return Button { themeCode = theme.rawValue } label: {
-            Label(
-                SettingsLocalization.string(theme == .light ? "settings.theme.light" : "settings.theme.dark"),
-                systemImage: icon
-            )
-            .font(DPTypography.bodyMedium)
-            .foregroundStyle(selected ? DPColor.accent : DPColor.textPrimary)
-            .frame(maxWidth: .infinity, minHeight: 48)
-            .background(selected ? DPColor.accentSoft : DPColor.backgroundSecondary)
-            .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
-            .overlay {
-                RoundedRectangle(cornerRadius: DPRadius.standard)
-                    .stroke(selected ? DPColor.accent : DPColor.borderPrimary, lineWidth: 2)
-            }
-        }
-        .buttonStyle(.plain)
+    private var selectedTheme: AppTheme {
+        AppTheme(rawValue: themeCode) ?? .system
+    }
+
+    private var themeSelection: Binding<AppTheme> {
+        Binding(
+            get: { selectedTheme },
+            set: { themeCode = $0.rawValue }
+        )
     }
 
     private var pushSection: some View {

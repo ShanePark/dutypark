@@ -12,6 +12,15 @@ struct SettingsFeatureTests {
     }
 
     @Test
+    func supportsSystemLightAndDarkAppearanceChoices() {
+        #expect(AppTheme.allCases.map(\.rawValue) == ["system", "light", "dark"])
+        #expect(SettingsPreference.defaultTheme == AppTheme.system.rawValue)
+        #expect(AppTheme.system.preferredColorScheme == nil)
+        #expect(AppTheme.light.preferredColorScheme == .light)
+        #expect(AppTheme.dark.preferredColorScheme == .dark)
+    }
+
+    @Test
     func resolvesSettingsCopyFromTheSettingsCatalog() {
         let key = "settings.profile.title"
 
@@ -31,6 +40,8 @@ struct SettingsFeatureTests {
             "settings.profile.name",
             "settings.visibility.modalTitle",
             "settings.visibility.private.description",
+            "settings.theme.system",
+            "settings.theme.current.system",
             "settings.theme.current.dark",
             "settings.pattern.title",
             "settings.pattern.createDescription",

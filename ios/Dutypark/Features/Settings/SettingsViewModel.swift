@@ -1,9 +1,11 @@
 import Foundation
 import Combine
+import SwiftUI
 
 enum SettingsPreference {
     static let languageKey = "dp-language"
     static let themeKey = "dp-theme"
+    static let defaultTheme = AppTheme.system.rawValue
 }
 
 enum AppLanguage: String, CaseIterable, Identifiable {
@@ -27,13 +29,26 @@ enum AppLanguage: String, CaseIterable, Identifiable {
 }
 
 enum AppTheme: String, CaseIterable, Identifiable {
+    case system
     case light
     case dark
 
     var id: String { rawValue }
 
-    var colorScheme: String {
-        rawValue
+    var preferredColorScheme: ColorScheme? {
+        switch self {
+        case .system: nil
+        case .light: .light
+        case .dark: .dark
+        }
+    }
+
+    var titleKey: String {
+        "settings.theme.\(rawValue)"
+    }
+
+    var currentDescriptionKey: String {
+        "settings.theme.current.\(rawValue)"
     }
 }
 

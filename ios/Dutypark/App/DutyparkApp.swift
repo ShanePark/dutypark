@@ -5,7 +5,7 @@ struct DutyparkApp: App {
     @UIApplicationDelegateAdaptor(NotificationAppDelegate.self) private var notificationDelegate
     @StateObject private var session: SessionStore
     @AppStorage(SettingsPreference.languageKey) private var languageCode = ""
-    @AppStorage(SettingsPreference.themeKey) private var themeCode = AppTheme.light.rawValue
+    @AppStorage(SettingsPreference.themeKey) private var themeCode = SettingsPreference.defaultTheme
 
     init() {
         DPBrandChrome.configureAppearance()
@@ -46,7 +46,7 @@ struct DutyparkApp: App {
         return Locale(identifier: language.rawValue)
     }
 
-    private var selectedColorScheme: ColorScheme {
-        themeCode == AppTheme.dark.rawValue ? .dark : .light
+    private var selectedColorScheme: ColorScheme? {
+        (AppTheme(rawValue: themeCode) ?? .system).preferredColorScheme
     }
 }
