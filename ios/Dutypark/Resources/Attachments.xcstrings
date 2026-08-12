@@ -1,0 +1,223 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "attachment.action.cancel" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Cancel" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Cancelar" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "キャンセル" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "취소" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "取消" } }
+    } },
+    "attachment.action.cancelUpload" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Cancel upload" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Cancelar subida" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "アップロードをキャンセル" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "업로드 취소" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "取消上传" } }
+    } },
+    "attachment.action.delete" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Eliminar" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "削除" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "삭제" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "删除" } }
+    } },
+    "attachment.action.files" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Files" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Archivos" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "ファイル" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "파일" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "文件" } }
+    } },
+    "attachment.action.more" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "More attachment actions" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Más acciones de adjuntos" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "添付ファイルのその他の操作" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "첨부파일 더보기" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "更多附件操作" } }
+    } },
+    "attachment.action.moveDown" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Move down" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Mover abajo" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "下へ移動" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "아래로 이동" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "下移" } }
+    } },
+    "attachment.action.moveUp" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Move up" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Mover arriba" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "上へ移動" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "위로 이동" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "上移" } }
+    } },
+    "attachment.action.ok" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "OK" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Aceptar" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "OK" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "확인" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "确定" } }
+    } },
+    "attachment.action.photos" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Photos" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Fotos" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "写真" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "사진" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "照片" } }
+    } },
+    "attachment.action.preview" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Preview attachment" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Previsualizar adjunto" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "添付ファイルをプレビュー" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "첨부파일 미리보기" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "预览附件" } }
+    } },
+    "attachment.action.remove" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Remove attachment" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Quitar adjunto" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "添付ファイルを外す" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "첨부파일 제외" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "移除附件" } }
+    } },
+    "attachment.action.share" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Share" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Compartir" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "共有" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "공유" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "分享" } }
+    } },
+    "attachment.delete.title" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete this attachment?" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "¿Eliminar este adjunto?" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "この添付ファイルを削除しますか？" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "이 첨부파일을 삭제할까요?" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "要删除此附件吗？" } }
+    } },
+    "attachment.empty" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "No attachments" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "No hay adjuntos" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "添付ファイルはありません" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "첨부파일이 없습니다" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "没有附件" } }
+    } },
+    "attachment.error.blockedExtension" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "This file type is not allowed." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Este tipo de archivo no está permitido." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "このファイル形式は許可されていません。" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "업로드할 수 없는 파일 형식입니다." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "不允许上传此文件类型。" } }
+    } },
+    "attachment.error.conversion" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "The photo could not be converted." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "No se pudo convertir la foto." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "写真を変換できませんでした。" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "사진을 변환하지 못했습니다." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "无法转换照片。" } }
+    } },
+    "attachment.error.delete" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to delete the attachment." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "No se pudo eliminar el adjunto." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "添付ファイルを削除できませんでした。" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "첨부파일을 삭제하지 못했습니다." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "无法删除附件。" } }
+    } },
+    "attachment.error.discard" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to discard uploaded files." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "No se pudieron descartar los archivos subidos." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "アップロードしたファイルを破棄できませんでした。" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "업로드한 파일을 정리하지 못했습니다." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "无法丢弃已上传的文件。" } }
+    } },
+    "attachment.error.download" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to download the attachment." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "No se pudo descargar el adjunto." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "添付ファイルをダウンロードできませんでした。" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "첨부파일을 다운로드하지 못했습니다." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "无法下载附件。" } }
+    } },
+    "attachment.error.empty" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Empty files cannot be uploaded." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "No se pueden subir archivos vacíos." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "空のファイルはアップロードできません。" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "빈 파일은 업로드할 수 없습니다." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "无法上传空文件。" } }
+    } },
+    "attachment.error.load" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to load attachments." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "No se pudieron cargar los adjuntos." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "添付ファイルを読み込めませんでした。" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "첨부파일을 불러오지 못했습니다." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "无法加载附件。" } }
+    } },
+    "attachment.error.reorder" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to change the attachment order." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "No se pudo cambiar el orden de los adjuntos." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "添付ファイルの順序を変更できませんでした。" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "첨부파일 순서를 변경하지 못했습니다." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "无法更改附件顺序。" } }
+    } },
+    "attachment.error.title" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Attachment error" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Error de adjunto" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "添付ファイルエラー" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "첨부파일 오류" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "附件错误" } }
+    } },
+    "attachment.error.tooLarge" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Please choose a file smaller than 10 MB." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Elige un archivo de menos de 10 MB." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "10 MB未満のファイルを選択してください。" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "10MB 미만의 파일을 선택해주세요." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "请选择小于 10 MB 的文件。" } }
+    } },
+    "attachment.error.unreadable" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "The selected file could not be read." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "No se pudo leer el archivo seleccionado." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "選択したファイルを読み込めませんでした。" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "선택한 파일을 읽지 못했습니다." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "无法读取所选文件。" } }
+    } },
+    "attachment.error.upload" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to upload the attachment." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "No se pudo subir el adjunto." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "添付ファイルをアップロードできませんでした。" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "첨부파일을 업로드하지 못했습니다." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "无法上传附件。" } }
+    } },
+    "attachment.limit.safe" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Files must be smaller than 10 MB." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Los archivos deben tener menos de 10 MB." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "ファイルは10 MB未満にしてください。" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "10MB 미만의 파일만 업로드할 수 있습니다." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "文件必须小于 10 MB。" } }
+    } },
+    "attachment.loading" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Loading attachments" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Cargando adjuntos" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "添付ファイルを読み込み中" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "첨부파일을 불러오는 중" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "正在加载附件" } }
+    } },
+    "attachment.upload.current" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Current file" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Archivo actual" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "現在のファイル" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "현재 파일" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "当前文件" } }
+    } },
+    "attachment.upload.overall" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Overall progress" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Progreso total" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "全体の進捗" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "전체 진행" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "总体进度" } }
+    } },
+    "attachment.uploading" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Uploading attachments" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Subiendo adjuntos" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "添付ファイルをアップロード中" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "첨부파일을 업로드하는 중" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "正在上传附件" } }
+    } }
+  },
+  "version" : "1.0"
+}

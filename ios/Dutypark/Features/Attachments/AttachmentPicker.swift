@@ -1,0 +1,416 @@
+import Combine
+import PhotosUI
+import SwiftUI
+import UniformTypeIdentifiers
+
+@MainActor
+final class AttachmentPickerModel: ObservableObject {
+    let contextType: AttachmentContextType
+    let targetContextId: String?
+
+    @Published private(set) var attachments: [AttachmentDTO]
+    @Published private(set) var attachmentSessionId: UUID?
+    @Published private(set) var isPreparing = false
+    @Published private(set) var isUploading = false
+    @Published private(set) var uploadProgress: AttachmentUploadProgress?
+    @Published var failure: AttachmentPickerFailure?
+
+    private let client: AttachmentClient
+
+    init(
+        contextType: AttachmentContextType,
+        targetContextId: String? = nil,
+        existingAttachments: [AttachmentDTO] = [],
+        client: AttachmentClient = AttachmentClient()
+    ) {
+        self.contextType = contextType
+        self.targetContextId = targetContextId
+        self.attachments = existingAttachments
+        self.client = client
+    }
+
+    var result: AttachmentPickerResult {
+        AttachmentPickerResult(
+            attachmentSessionId: attachmentSessionId,
+            attachments: attachments
+        )
+    }
+
+    var isBusy: Bool { isPreparing || isUploading }
+
+    func beginPreparing() {
+        isPreparing = true
+    }
+
+    func endPreparing() {
+        isPreparing = false
+    }
+
+    func add(files: [AttachmentUploadFile]) async {
+        guard !files.isEmpty, !isUploading else { return }
+        isUploading = true
+        defer {
+            uploadProgress = nil
+            isUploading = false
+        }
+
+        do {
+            let sessionId = try await ensureSession()
+            for (index, file) in files.enumerated() {
+                try Task.checkCancellation()
+                uploadProgress = AttachmentUploadProgress(
+                    completedFileCount: index,
+                    totalFileCount: files.count,
+                    currentFilename: file.filename
+                )
+                attachments.append(try await client.upload(file, sessionId: sessionId))
+            }
+        } catch {
+            guard !Task.isCancelled else { return }
+            if let error = error as? AttachmentUploadError {
+                failure = .from(error)
+            } else if let error = error as? APIError {
+                failure = .from(error)
+            } else {
+                failure = .uploadFailed
+            }
+        }
+    }
+
+    func remove(_ attachmentId: AttachmentID) {
+        attachments.removeAll { $0.id == attachmentId }
+    }
+
+    func move(from index: Int, by offset: Int) {
+        let destination = index + offset
+        guard attachments.indices.contains(index), attachments.indices.contains(destination) else {
+            return
+        }
+        attachments.swapAt(index, destination)
+    }
+
+    @discardableResult
+    func discard() async -> Bool {
+        guard let attachmentSessionId else { return true }
+        do {
+            try await client.discardSession(attachmentSessionId)
+            self.attachmentSessionId = nil
+            return true
+        } catch {
+            failure = .discardFailed
+            return false
+        }
+    }
+
+    /// An empty order does not remove files uploaded into a new server session.
+    /// Discard that session before saving so removed uploads cannot be reattached.
+    func resultForSave() async -> AttachmentPickerResult? {
+        if attachmentSessionId != nil, attachments.isEmpty {
+            guard await discard() else { return nil }
+        }
+        return result
+    }
+
+    private func ensureSession() async throws -> UUID {
+        if let attachmentSessionId {
+            return attachmentSessionId
+        }
+        let response = try await client.createSession(
+            contextType: contextType,
+            targetContextId: targetContextId
+        )
+        attachmentSessionId = response.sessionId
+        return response.sessionId
+    }
+}
+
+nonisolated struct AttachmentUploadProgress: Equatable, Sendable {
+    let completedFileCount: Int
+    let totalFileCount: Int
+    let currentFilename: String
+
+    var overallFraction: Double {
+        guard totalFileCount > 0 else { return 0 }
+        return Double(completedFileCount) / Double(totalFileCount)
+    }
+
+    var currentFileNumber: Int {
+        min(completedFileCount + 1, totalFileCount)
+    }
+}
+
+nonisolated enum AttachmentPickerFailure: String, Identifiable, Sendable {
+    case emptyFile
+    case tooLarge
+    case unreadableFile
+    case conversionFailed
+    case blockedExtension
+    case uploadFailed
+    case discardFailed
+
+    var id: String { rawValue }
+
+    var messageKey: String {
+        switch self {
+        case .emptyFile: "attachment.error.empty"
+        case .tooLarge: "attachment.error.tooLarge"
+        case .unreadableFile: "attachment.error.unreadable"
+        case .conversionFailed: "attachment.error.conversion"
+        case .blockedExtension: "attachment.error.blockedExtension"
+        case .uploadFailed: "attachment.error.upload"
+        case .discardFailed: "attachment.error.discard"
+        }
+    }
+
+    static func from(_ error: AttachmentUploadError) -> Self {
+        switch error {
+        case .emptyFile: .emptyFile
+        case .tooLarge: .tooLarge
+        case .unreadableFile: .unreadableFile
+        case .imageConversionFailed: .conversionFailed
+        }
+    }
+
+    static func from(_ error: APIError) -> Self {
+        if case .server(_, let code) = error {
+            return switch code {
+            case "attachment.size.exceeded": .tooLarge
+            case "attachment.extension.blocked": .blockedExtension
+            default: .uploadFailed
+            }
+        }
+        return .uploadFailed
+    }
+}
+
+struct AttachmentPicker: View {
+    @ObservedObject var model: AttachmentPickerModel
+
+    @State private var photoItems: [PhotosPickerItem] = []
+    @State private var isImportingFiles = false
+    @State private var uploadTask: Task<Void, Never>?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DPSpacing.small) {
+            HStack(spacing: DPSpacing.small) {
+                PhotosPicker(
+                    selection: $photoItems,
+                    maxSelectionCount: 10,
+                    matching: .any(of: [.images, .videos])
+                ) {
+                    Label(
+                        AttachmentLocalization.text("attachment.action.photos"),
+                        systemImage: "photo.on.rectangle"
+                    )
+                }
+                .frame(minHeight: DPSize.minimumTouchTarget)
+                .buttonStyle(.bordered)
+                .disabled(model.isBusy)
+
+                Button {
+                    isImportingFiles = true
+                } label: {
+                    Label(
+                        AttachmentLocalization.text("attachment.action.files"),
+                        systemImage: "folder"
+                    )
+                }
+                .frame(minHeight: DPSize.minimumTouchTarget)
+                .buttonStyle(.bordered)
+                .disabled(model.isBusy)
+            }
+
+            Text(AttachmentLocalization.text("attachment.limit.safe"))
+                .font(.caption)
+                .foregroundStyle(DPColor.textMuted)
+
+            if model.isBusy {
+                VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+                    if let progress = model.uploadProgress {
+                        HStack {
+                            Text(AttachmentLocalization.text("attachment.upload.overall"))
+                            Spacer()
+                            Text("\(progress.completedFileCount)/\(progress.totalFileCount)")
+                                .monospacedDigit()
+                        }
+                        .font(.caption)
+                        .foregroundStyle(DPColor.textSecondary)
+
+                        ProgressView(value: progress.overallFraction)
+
+                        HStack(spacing: DPSpacing.small) {
+                            ProgressView()
+                            VStack(alignment: .leading, spacing: 0) {
+                                Text(AttachmentLocalization.text("attachment.upload.current"))
+                                    .font(.caption)
+                                    .foregroundStyle(DPColor.textMuted)
+                                Text(progress.currentFilename)
+                                    .font(.subheadline)
+                                    .foregroundStyle(DPColor.textSecondary)
+                                    .lineLimit(1)
+                            }
+                            Spacer()
+                            Text("\(progress.currentFileNumber)/\(progress.totalFileCount)")
+                                .font(.caption)
+                                .monospacedDigit()
+                                .foregroundStyle(DPColor.textMuted)
+                        }
+                    } else {
+                        HStack(spacing: DPSpacing.small) {
+                            ProgressView()
+                            Text(AttachmentLocalization.text("attachment.uploading"))
+                                .font(.subheadline)
+                                .foregroundStyle(DPColor.textSecondary)
+                        }
+                    }
+
+                    Button(role: .cancel) {
+                        uploadTask?.cancel()
+                    } label: {
+                        Label(
+                            AttachmentLocalization.text("attachment.action.cancelUpload"),
+                            systemImage: "xmark.circle"
+                        )
+                    }
+                    .frame(minHeight: DPSize.minimumTouchTarget)
+                    .buttonStyle(.bordered)
+                }
+                .accessibilityIdentifier("attachment.uploading")
+            }
+
+            ForEach(Array(model.attachments.enumerated()), id: \.element.id) { index, attachment in
+                pickerRow(attachment, at: index)
+            }
+        }
+        .fileImporter(
+            isPresented: $isImportingFiles,
+            allowedContentTypes: [.item],
+            allowsMultipleSelection: true
+        ) { result in
+            guard case .success(let urls) = result else { return }
+            startUpload { await add(urls: urls) }
+        }
+        .onChange(of: photoItems) { _, items in
+            guard !items.isEmpty else { return }
+            photoItems = []
+            startUpload { await add(photoItems: items) }
+        }
+        .alert(
+            AttachmentLocalization.text("attachment.error.title"),
+            isPresented: Binding(
+                get: { model.failure != nil },
+                set: { if !$0 { model.failure = nil } }
+            )
+        ) {
+            Button(AttachmentLocalization.text("attachment.action.ok"), role: .cancel) {
+                model.failure = nil
+            }
+        } message: {
+            if let failure = model.failure {
+                Text(AttachmentLocalization.text(failure.messageKey))
+            }
+        }
+        .interactiveDismissDisabled(model.isBusy || model.attachmentSessionId != nil)
+        .onDisappear {
+            uploadTask?.cancel()
+            model.endPreparing()
+        }
+    }
+
+    private func pickerRow(_ attachment: AttachmentDTO, at index: Int) -> some View {
+        HStack(spacing: DPSpacing.small) {
+            AttachmentThumbnail(attachment: attachment)
+                .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+
+            VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+                Text(attachment.originalFilename)
+                    .font(.subheadline)
+                    .foregroundStyle(DPColor.textPrimary)
+                    .lineLimit(1)
+                Text(AttachmentFormatting.bytes(attachment.size))
+                    .font(.caption)
+                    .foregroundStyle(DPColor.textMuted)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Button {
+                model.move(from: index, by: -1)
+            } label: {
+                Image(systemName: "arrow.up")
+                    .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+            }
+            .disabled(index == 0 || model.isBusy)
+            .accessibilityLabel(AttachmentLocalization.text("attachment.action.moveUp"))
+
+            Button {
+                model.move(from: index, by: 1)
+            } label: {
+                Image(systemName: "arrow.down")
+                    .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+            }
+            .disabled(index == model.attachments.count - 1 || model.isBusy)
+            .accessibilityLabel(AttachmentLocalization.text("attachment.action.moveDown"))
+
+            Button(role: .destructive) {
+                model.remove(attachment.id)
+            } label: {
+                Image(systemName: "xmark")
+                    .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+            }
+            .disabled(model.isBusy)
+            .accessibilityLabel(AttachmentLocalization.text("attachment.action.remove"))
+        }
+        .padding(.vertical, DPSpacing.extraSmall)
+        .accessibilityElement(children: .contain)
+    }
+
+    private func add(urls: [URL]) async {
+        do {
+            var files: [AttachmentUploadFile] = []
+            for url in urls {
+                try Task.checkCancellation()
+                files.append(try AttachmentFileLoader.load(from: url))
+            }
+            await model.add(files: files)
+        } catch let error as AttachmentUploadError {
+            guard !Task.isCancelled else { return }
+            model.failure = .from(error)
+        } catch {
+            guard !Task.isCancelled else { return }
+            model.failure = .unreadableFile
+        }
+    }
+
+    private func add(photoItems: [PhotosPickerItem]) async {
+        do {
+            var files: [AttachmentUploadFile] = []
+            for item in photoItems {
+                try Task.checkCancellation()
+                files.append(try await AttachmentFileLoader.load(from: item))
+            }
+            await model.add(files: files)
+        } catch let error as AttachmentUploadError {
+            guard !Task.isCancelled else { return }
+            model.failure = .from(error)
+        } catch {
+            guard !Task.isCancelled else { return }
+            model.failure = .unreadableFile
+        }
+    }
+
+    private func startUpload(_ operation: @escaping @MainActor () async -> Void) {
+        uploadTask?.cancel()
+        model.beginPreparing()
+        uploadTask = Task {
+            await operation()
+            model.endPreparing()
+            uploadTask = nil
+        }
+    }
+}
+
+enum AttachmentFormatting {
+    static func bytes(_ count: Int64) -> String {
+        ByteCountFormatter.string(fromByteCount: count, countStyle: .file)
+    }
+}
