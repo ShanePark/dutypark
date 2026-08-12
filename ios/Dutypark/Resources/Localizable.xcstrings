@@ -173,6 +173,83 @@
       "ko" : { "stringUnit" : { "state" : "translated", "value" : "Dutypark에 연결할 수 없습니다" } },
       "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "无法连接到 Dutypark" } }
     } },
+    "friendTag.clear" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Clear selected friends" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Borrar amigos seleccionados" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "選択した友だちを解除" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "선택한 친구 지우기" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "清除已选择好友" } }
+    } },
+    "friendTag.clearSearch" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Clear search" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Borrar búsqueda" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "検索をクリア" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "검색어 지우기" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "清除搜索" } }
+    } },
+    "friendTag.empty" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "No friends found" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "No se encontraron amigos" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "友だちが見つかりません" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "표시할 친구가 없습니다" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "没有找到好友" } }
+    } },
+    "friendTag.expand" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Choose friends to tag" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Elegir amigos para etiquetar" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "タグする友だちを選択" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "태그할 친구 선택" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "选择要标记的好友" } }
+    } },
+    "friendTag.noneSelected" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "No friends selected" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Ningún amigo seleccionado" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "友だちは選択されていません" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "선택한 친구 없음" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "未选择好友" } }
+    } },
+    "friendTag.notSelectedState" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Not selected" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "No seleccionado" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "未選択" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "선택 안 됨" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "未选择" } }
+    } },
+    "friendTag.search" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Search name or team" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Buscar nombre o equipo" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "名前またはチームを検索" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "이름 또는 팀 검색" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "搜索姓名或团队" } }
+    } },
+    "friendTag.selected" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "%lld selected" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "%lld seleccionados" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "%lld人選択" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "%lld명 선택됨" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "已选择 %lld" } }
+    } },
+    "friendTag.selectedOnly" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Show selected only" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Mostrar solo seleccionados" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "選択済みのみ表示" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "선택한 친구만 보기" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "仅显示已选择" } }
+    } },
+    "friendTag.selectedState" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Selected" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Seleccionado" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "選択済み" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "선택됨" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "已选择" } }
+    } },
+    "friendTag.title" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Friend tags" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Etiquetas de amigos" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "友だちタグ" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 태그" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "朋友标签" } }
+    } },
     "common.retry" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Try again" } },
       "es" : { "stringUnit" : { "state" : "translated", "value" : "Reintentar" } },
