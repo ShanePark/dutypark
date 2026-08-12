@@ -12,6 +12,8 @@ enum TodoBoardLayout {
     static let cardRadius: CGFloat = 14
     static let dragHandleSize: CGFloat = 44
     static let dragActivationDistance: CGFloat = 2
+    static let dragCollisionHysteresis: CGFloat = 2
+    static let dragPushAnimationDuration = 0.1
 }
 
 struct TodoView: View {
@@ -198,27 +200,50 @@ struct TodoView: View {
 
     private func updateInteractiveDrag(todo: TodoDTO, location: CGPoint) {
         guard !model.isSaving else { return }
+        var previewSize = dragPreviewSize
+        var grabOffset = dragGrabOffset
         if draggedTodoID != todo.uuid {
             draggedTodoID = todo.uuid
             dragReferenceCardTargets = cardDropTargets
             dragReferenceColumnTargets = columnDropTargets
             if let frame = cardDropTargets.last(where: { $0.todoID == todo.uuid })?.frame {
-                dragPreviewSize = frame.size
-                dragGrabOffset = CGSize(
+                previewSize = frame.size
+                grabOffset = CGSize(
                     width: location.x - frame.midX,
                     height: location.y - frame.midY
                 )
+                dragPreviewSize = previewSize
+                dragGrabOffset = grabOffset
             }
         }
         dragLocation = location
+        let movingFrame = previewSize.flatMap { size in
+            grabOffset.map { offset in
+                CGRect(
+                    x: location.x - offset.width - (size.width / 2),
+                    y: location.y - offset.height - (size.height / 2),
+                    width: size.width,
+                    height: size.height
+                )
+            }
+        }
+        let previousTarget = dragTargetStatus.map {
+            TodoResolvedDropTarget(
+                status: $0,
+                todoID: dragTargetTodoID,
+                insertAfter: dragInsertAfter
+            )
+        }
         let target = TodoDragTargetResolver.resolve(
             location: location,
             draggedTodoID: todo.uuid,
             cards: dragReferenceCardTargets,
             columns: dragReferenceColumnTargets,
-            statuses: statusDropTargets
+            statuses: statusDropTargets,
+            movingFrame: movingFrame,
+            previousTarget: previousTarget
         )
-        withAnimation(.snappy(duration: 0.18, extraBounce: 0)) {
+        withAnimation(.snappy(duration: TodoBoardLayout.dragPushAnimationDuration, extraBounce: 0)) {
             dragTargetStatus = target?.status
             dragTargetTodoID = target?.todoID
             dragInsertAfter = target?.insertAfter ?? false
@@ -521,7 +546,10 @@ private struct TodoKanbanColumn: View {
                             && dragTargetTodoID == nil
                     )
                 }
-                .animation(.snappy(duration: 0.18, extraBounce: 0), value: todos.map(\.uuid))
+                .animation(
+                    .snappy(duration: TodoBoardLayout.dragPushAnimationDuration, extraBounce: 0),
+                    value: todos.map(\.uuid)
+                )
                 .padding(.horizontal, DPSpacing.compact)
                 .padding(.bottom, DPSpacing.compact)
             }
@@ -862,10 +890,24 @@ enum TodoDragTargetResolver {
         draggedTodoID: TodoID,
         cards: [TodoCardDropTarget],
         columns: [TodoColumnDropTarget],
-        statuses: [TodoStatusDropTarget]
+        statuses: [TodoStatusDropTarget],
+        movingFrame: CGRect? = nil,
+        previousTarget: TodoResolvedDropTarget? = nil
     ) -> TodoResolvedDropTarget? {
         if let status = statuses.last(where: { $0.frame.contains(location) })?.status {
             return TodoResolvedDropTarget(status: status, todoID: nil, insertAfter: false)
+        }
+
+        if let source = cards.last(where: { $0.todoID == draggedTodoID }),
+           let movingFrame,
+           source.frame.minX...source.frame.maxX ~= movingFrame.midX,
+           let edgeTarget = resolveVerticalEdgeCollision(
+               source: source,
+               movingFrame: movingFrame,
+               cards: cards,
+               previousTarget: previousTarget
+           ) {
+            return edgeTarget
         }
 
         if let card = cards.last(where: {
@@ -907,6 +949,66 @@ enum TodoDragTargetResolver {
             todoID: nearest.todoID,
             insertAfter: location.y >= nearest.frame.midY
         )
+    }
+
+    private static func resolveVerticalEdgeCollision(
+        source: TodoCardDropTarget,
+        movingFrame: CGRect,
+        cards: [TodoCardDropTarget],
+        previousTarget: TodoResolvedDropTarget?
+    ) -> TodoResolvedDropTarget? {
+        let candidates = cards
+            .filter {
+                $0.status == source.status
+                    && $0.todoID != source.todoID
+                    && movingFrame.maxX > $0.frame.minX
+                    && movingFrame.minX < $0.frame.maxX
+            }
+            .sorted { $0.frame.minY < $1.frame.minY }
+        let displacement = movingFrame.midY - source.frame.midY
+
+        if displacement > 0 {
+            let crossed = candidates.filter { candidate in
+                guard candidate.frame.midY > source.frame.midY else { return false }
+                let threshold = collisionThreshold(
+                    candidate: candidate,
+                    insertAfter: true,
+                    previousTarget: previousTarget
+                )
+                return movingFrame.maxY >= candidate.frame.minY + threshold
+            }
+            guard let target = crossed.last else { return nil }
+            return TodoResolvedDropTarget(status: source.status, todoID: target.todoID, insertAfter: true)
+        }
+
+        if displacement < 0 {
+            let crossed = candidates.filter { candidate in
+                guard candidate.frame.midY < source.frame.midY else { return false }
+                let threshold = collisionThreshold(
+                    candidate: candidate,
+                    insertAfter: false,
+                    previousTarget: previousTarget
+                )
+                return movingFrame.minY <= candidate.frame.maxY - threshold
+            }
+            guard let target = crossed.first else { return nil }
+            return TodoResolvedDropTarget(status: source.status, todoID: target.todoID, insertAfter: false)
+        }
+
+        return nil
+    }
+
+    private static func collisionThreshold(
+        candidate: TodoCardDropTarget,
+        insertAfter: Bool,
+        previousTarget: TodoResolvedDropTarget?
+    ) -> CGFloat {
+        let isMaintainingCurrentTarget = previousTarget?.status == candidate.status
+            && previousTarget?.todoID == candidate.todoID
+            && previousTarget?.insertAfter == insertAfter
+        return isMaintainingCurrentTarget
+            ? -TodoBoardLayout.dragCollisionHysteresis
+            : TodoBoardLayout.dragCollisionHysteresis
     }
 }
 

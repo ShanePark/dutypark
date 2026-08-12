@@ -13,6 +13,8 @@ struct TodoViewModelTests {
         #expect(TodoBoardLayout.cardRadius == 14)
         #expect(TodoBoardLayout.dragHandleSize == 44)
         #expect(TodoBoardLayout.dragActivationDistance == 2)
+        #expect(TodoBoardLayout.dragCollisionHysteresis == 2)
+        #expect(TodoBoardLayout.dragPushAnimationDuration == 0.1)
 
         #expect(375 * TodoBoardLayout.mobileColumnWidthRatio == 232.5)
         #expect(402 * TodoBoardLayout.mobileColumnWidthRatio == 249.24)
@@ -61,6 +63,203 @@ struct TodoViewModelTests {
         )
 
         #expect(target == nil)
+    }
+
+    @Test
+    func floatingCardEdgesPushDifferentHeightCardsAtFirstOverlap() {
+        let previousID = UUID(uuidString: "00000000-0000-0000-0000-000000000000")!
+        let sourceID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
+        let nextID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
+        let cards = [
+            TodoCardDropTarget(
+                todoID: previousID,
+                status: .todo,
+                frame: CGRect(x: 10, y: 20, width: 200, height: 70)
+            ),
+            TodoCardDropTarget(
+                todoID: sourceID,
+                status: .todo,
+                frame: CGRect(x: 10, y: 100, width: 200, height: 120)
+            ),
+            TodoCardDropTarget(
+                todoID: nextID,
+                status: .todo,
+                frame: CGRect(x: 10, y: 230, width: 200, height: 54)
+            )
+        ]
+        let columns = [TodoColumnDropTarget(
+            status: .todo,
+            frame: CGRect(x: 0, y: 0, width: 220, height: 500)
+        )]
+
+        let upwardTarget = TodoDragTargetResolver.resolve(
+            location: CGPoint(x: 195, y: 148),
+            draggedTodoID: sourceID,
+            cards: cards,
+            columns: columns,
+            statuses: [],
+            movingFrame: CGRect(x: 10, y: 88, width: 200, height: 120)
+        )
+        let downwardTarget = TodoDragTargetResolver.resolve(
+            location: CGPoint(x: 195, y: 172),
+            draggedTodoID: sourceID,
+            cards: cards,
+            columns: columns,
+            statuses: [],
+            movingFrame: CGRect(x: 10, y: 112, width: 200, height: 120)
+        )
+
+        #expect(upwardTarget == TodoResolvedDropTarget(
+            status: .todo,
+            todoID: previousID,
+            insertAfter: false
+        ))
+        #expect(downwardTarget == TodoResolvedDropTarget(
+            status: .todo,
+            todoID: nextID,
+            insertAfter: true
+        ))
+    }
+
+    @Test
+    func edgeCollisionCatchesUpAcrossCardsAndIgnoresOtherColumns() {
+        let sourceID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
+        let firstID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
+        let secondID = UUID(uuidString: "33333333-3333-3333-3333-333333333333")!
+        let otherColumnID = UUID(uuidString: "44444444-4444-4444-4444-444444444444")!
+        let cards = [
+            TodoCardDropTarget(
+                todoID: sourceID,
+                status: .todo,
+                frame: CGRect(x: 10, y: 20, width: 200, height: 80)
+            ),
+            TodoCardDropTarget(
+                todoID: firstID,
+                status: .todo,
+                frame: CGRect(x: 10, y: 110, width: 200, height: 50)
+            ),
+            TodoCardDropTarget(
+                todoID: secondID,
+                status: .todo,
+                frame: CGRect(x: 10, y: 170, width: 200, height: 100)
+            ),
+            TodoCardDropTarget(
+                todoID: otherColumnID,
+                status: .todo,
+                frame: CGRect(x: 240, y: 190, width: 200, height: 70)
+            )
+        ]
+
+        let target = TodoDragTargetResolver.resolve(
+            location: CGPoint(x: 195, y: 170),
+            draggedTodoID: sourceID,
+            cards: cards,
+            columns: [TodoColumnDropTarget(
+                status: .todo,
+                frame: CGRect(x: 0, y: 0, width: 220, height: 500)
+            )],
+            statuses: [],
+            movingFrame: CGRect(x: 10, y: 130, width: 200, height: 80)
+        )
+
+        #expect(target == TodoResolvedDropTarget(
+            status: .todo,
+            todoID: secondID,
+            insertAfter: true
+        ))
+    }
+
+    @Test
+    func crossColumnTargetWinsWhenPreviewStillPartlyOverlapsSourceColumn() {
+        let sourceID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
+        let sameColumnID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
+        let nextColumnID = UUID(uuidString: "33333333-3333-3333-3333-333333333333")!
+        let cards = [
+            TodoCardDropTarget(
+                todoID: sourceID,
+                status: .todo,
+                frame: CGRect(x: 10, y: 20, width: 200, height: 80)
+            ),
+            TodoCardDropTarget(
+                todoID: sameColumnID,
+                status: .todo,
+                frame: CGRect(x: 10, y: 110, width: 200, height: 80)
+            ),
+            TodoCardDropTarget(
+                todoID: nextColumnID,
+                status: .inProgress,
+                frame: CGRect(x: 230, y: 110, width: 200, height: 80)
+            )
+        ]
+
+        let target = TodoDragTargetResolver.resolve(
+            location: CGPoint(x: 250, y: 130),
+            draggedTodoID: sourceID,
+            cards: cards,
+            columns: [TodoColumnDropTarget(
+                status: .inProgress,
+                frame: CGRect(x: 220, y: 0, width: 220, height: 500)
+            )],
+            statuses: [],
+            movingFrame: CGRect(x: 150, y: 90, width: 200, height: 80)
+        )
+
+        #expect(target == TodoResolvedDropTarget(
+            status: .inProgress,
+            todoID: nextColumnID,
+            insertAfter: false
+        ))
+    }
+
+    @Test
+    func edgeCollisionKeepsPreviousTargetWithinTwoPointHysteresis() {
+        let sourceID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
+        let targetID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
+        let cards = [
+            TodoCardDropTarget(
+                todoID: sourceID,
+                status: .todo,
+                frame: CGRect(x: 10, y: 20, width: 200, height: 80)
+            ),
+            TodoCardDropTarget(
+                todoID: targetID,
+                status: .todo,
+                frame: CGRect(x: 10, y: 110, width: 200, height: 80)
+            )
+        ]
+        let previousTarget = TodoResolvedDropTarget(
+            status: .todo,
+            todoID: targetID,
+            insertAfter: true
+        )
+
+        let maintained = TodoDragTargetResolver.resolve(
+            location: CGPoint(x: 195, y: 68),
+            draggedTodoID: sourceID,
+            cards: cards,
+            columns: [TodoColumnDropTarget(
+                status: .todo,
+                frame: CGRect(x: 0, y: 0, width: 220, height: 400)
+            )],
+            statuses: [],
+            movingFrame: CGRect(x: 10, y: 29, width: 200, height: 80),
+            previousTarget: previousTarget
+        )
+        let released = TodoDragTargetResolver.resolve(
+            location: CGPoint(x: 195, y: 66),
+            draggedTodoID: sourceID,
+            cards: cards,
+            columns: [TodoColumnDropTarget(
+                status: .todo,
+                frame: CGRect(x: 0, y: 0, width: 220, height: 400)
+            )],
+            statuses: [],
+            movingFrame: CGRect(x: 10, y: 27, width: 200, height: 80),
+            previousTarget: previousTarget
+        )
+
+        #expect(maintained == previousTarget)
+        #expect(released == nil)
     }
 
     @Test
