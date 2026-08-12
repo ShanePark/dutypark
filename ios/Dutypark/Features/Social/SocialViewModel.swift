@@ -14,6 +14,7 @@ final class SocialViewModel: ObservableObject {
     @Published private(set) var isLoading = false
     @Published private(set) var isSearching = false
     @Published private(set) var isPerformingAction = false
+    @Published private(set) var isReordering = false
     @Published var errorKey: String?
 
     private let repository: any SocialRepository
@@ -176,17 +177,34 @@ final class SocialViewModel: ObservableObject {
     }
 
     func movePinned(fromOffsets: IndexSet, toOffset: Int) async {
+        guard !isReordering else { return }
         var ids = pinnedFriends.compactMap(\.member.id)
+        let previousOrderIDs = pinnedOrderIDs
         ids.move(fromOffsets: fromOffsets, toOffset: toOffset)
+        guard ids != pinnedFriends.compactMap(\.member.id) else { return }
         pinnedOrderIDs = ids
+        isReordering = true
+        defer { isReordering = false }
         do {
             try await repository.updatePinnedOrder(ids)
             try await reload()
             await onMutation(false)
         } catch {
-            pinnedOrderIDs = nil
+            pinnedOrderIDs = previousOrderIDs
             errorKey = "social.error.reorder"
         }
+    }
+
+    func reorderPinned(draggedID: MemberID, over destinationID: MemberID) async {
+        let ids = pinnedFriends.compactMap(\.member.id)
+        guard let sourceIndex = ids.firstIndex(of: draggedID),
+              let destinationIndex = ids.firstIndex(of: destinationID),
+              sourceIndex != destinationIndex else { return }
+
+        await movePinned(
+            fromOffsets: IndexSet(integer: sourceIndex),
+            toOffset: sourceIndex < destinationIndex ? destinationIndex + 1 : destinationIndex
+        )
     }
 
     func dismissError() {

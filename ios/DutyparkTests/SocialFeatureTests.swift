@@ -105,14 +105,27 @@ final class SocialFeatureTests: XCTestCase {
         XCTAssertEqual(repository.actions, ["accept:11", "cancel:22"])
     }
 
-    func testViewModelSendsOnlyPinnedIDsInDisplayedOrder() async {
+    func testNativeDragReorderSendsOnlyPinnedIDsInDisplayedOrder() async {
         let repository = SocialRepositorySpy()
         let viewModel = SocialViewModel(repository: repository)
         await viewModel.load()
 
-        await viewModel.movePinned(fromOffsets: IndexSet(integer: 0), toOffset: 2)
+        await viewModel.reorderPinned(draggedID: 31, over: 32)
 
         XCTAssertEqual(repository.actions.last, "order:32,31")
+    }
+
+    func testFailedNativeDragReorderRestoresOriginalOrderAndReportsError() async {
+        let repository = SocialRepositorySpy(failPinnedOrder: true)
+        let viewModel = SocialViewModel(repository: repository)
+        await viewModel.load()
+        let originalOrder = viewModel.pinnedFriends.compactMap(\.member.id)
+
+        await viewModel.reorderPinned(draggedID: 31, over: 32)
+
+        XCTAssertEqual(viewModel.pinnedFriends.compactMap(\.member.id), originalOrder)
+        XCTAssertEqual(viewModel.errorKey, "social.error.reorder")
+        XCTAssertFalse(viewModel.isReordering)
     }
 
     func testSuccessfulMutationsReportOnlyReceivedRequestCountEffects() async {
@@ -153,7 +166,12 @@ final class SocialFeatureTests: XCTestCase {
 
 private final class SocialRepositorySpy: SocialRepository, @unchecked Sendable {
     private let lock = NSLock()
+    private let failPinnedOrder: Bool
     private var storedActions: [String] = []
+
+    init(failPinnedOrder: Bool = false) {
+        self.failPinnedOrder = failPinnedOrder
+    }
 
     var actions: [String] {
         lock.withLock { storedActions }
@@ -186,6 +204,7 @@ private final class SocialRepositorySpy: SocialRepository, @unchecked Sendable {
     func unpin(_ memberID: MemberID) async throws { record("unpin:\(memberID)") }
     func updatePinnedOrder(_ memberIDs: [MemberID]) async throws {
         record("order:\(memberIDs.map(String.init).joined(separator: ","))")
+        if failPinnedOrder { throw SocialTestError.reorder }
     }
 
     private func record(_ action: String) {
@@ -223,6 +242,10 @@ private final class SocialRepositorySpy: SocialRepository, @unchecked Sendable {
             requestType: .friend
         )
     }
+}
+
+private enum SocialTestError: Error {
+    case reorder
 }
 
 private final class SocialRequestRecorder: @unchecked Sendable {

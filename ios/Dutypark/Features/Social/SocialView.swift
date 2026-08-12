@@ -5,6 +5,7 @@ struct SocialView: View {
     @State private var isSearchPresented = false
     @State private var confirmation: SocialConfirmation?
     @State private var actionCandidate: ActionCandidate?
+    @State private var dropTargetFriendID: MemberID?
 
     private let onOpenCalendar: (MemberID) -> Void
 
@@ -292,7 +293,50 @@ struct SocialView: View {
         .buttonStyle(.plain)
     }
 
+    @ViewBuilder
     private func friendCard(_ friend: DashboardFriendDetailDTO) -> some View {
+        if friend.pinOrder != nil, let friendID = friend.member.id {
+            friendCardBody(friend)
+                .draggable(String(friendID)) {
+                    PinnedFriendDragPreview(friend: friend)
+                }
+                .dropDestination(
+                    for: String.self,
+                    action: { items, _ in
+                        dropTargetFriendID = nil
+                        guard let sourceValue = items.first,
+                              let sourceID = MemberID(sourceValue),
+                              sourceID != friendID else { return false }
+                        Task {
+                            await viewModel.reorderPinned(
+                                draggedID: sourceID,
+                                over: friendID
+                            )
+                        }
+                        return true
+                    },
+                    isTargeted: { isTargeted in
+                        withAnimation(.easeOut(duration: 0.16)) {
+                            dropTargetFriendID = isTargeted ? friendID : nil
+                        }
+                    }
+                )
+                .overlay {
+                    if dropTargetFriendID == friendID {
+                        RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous)
+                            .stroke(DPColor.accent, lineWidth: 3)
+                            .padding(2)
+                            .allowsHitTesting(false)
+                    }
+                }
+                .scaleEffect(dropTargetFriendID == friendID ? 1.015 : 1)
+                .animation(.easeOut(duration: 0.16), value: dropTargetFriendID)
+        } else {
+            friendCardBody(friend)
+        }
+    }
+
+    private func friendCardBody(_ friend: DashboardFriendDetailDTO) -> some View {
         HStack(spacing: DPSpacing.compact) {
             Button {
                 if let id = friend.member.id { onOpenCalendar(id) }
@@ -440,37 +484,8 @@ struct SocialView: View {
                     lineWidth: friend.pinOrder == nil ? 1 : 2
                 )
         }
-        .overlay(alignment: .bottomTrailing) {
-            if friend.pinOrder != nil {
-                Image(systemName: "line.3.horizontal")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(DPColor.textMuted)
-                    .frame(width: 32, height: 28)
-                    .background(DPColor.backgroundTertiary)
-                    .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard, style: .continuous))
-                    .draggable(String(friend.member.id ?? -1))
-                    .accessibilityLabel(social("social.section.pinned"))
-                    .padding(.trailing, DPSpacing.small)
-                    .padding(.bottom, DPSpacing.small)
-            }
-        }
         .shadow(color: Color.black.opacity(friend.pinOrder == nil ? 0.05 : 0.10), radius: 2, y: 1)
         .contentShape(RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous))
-        .dropDestination(for: String.self) { items, _ in
-            guard let source = items.first.flatMap(MemberID.init),
-                  let sourceIndex = viewModel.pinnedFriends.firstIndex(where: { $0.member.id == source }),
-                  let destinationIndex = viewModel.pinnedFriends.firstIndex(where: {
-                      $0.member.id == friend.member.id
-                  }), sourceIndex != destinationIndex else { return false }
-            let offset = sourceIndex < destinationIndex ? destinationIndex + 1 : destinationIndex
-            Task {
-                await viewModel.movePinned(
-                    fromOffsets: IndexSet(integer: sourceIndex),
-                    toOffset: offset
-                )
-            }
-            return true
-        }
     }
 
     private func movePinned(_ friend: DashboardFriendDetailDTO, direction: Int) {
@@ -557,6 +572,37 @@ struct SocialView: View {
         case .removeFamily(let friend): await viewModel.removeFromFamily(friend)
         case .removeFriend(let friend): await viewModel.removeFriend(friend)
         }
+    }
+}
+
+private struct PinnedFriendDragPreview: View {
+    let friend: DashboardFriendDetailDTO
+
+    var body: some View {
+        HStack(spacing: DPSpacing.compact) {
+            SocialAvatar(member: friend.member, size: 44)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(friend.member.name)
+                    .font(DPFont.bold(size: 15, relativeTo: .body))
+                    .foregroundStyle(DPColor.textPrimary)
+                    .lineLimit(1)
+                Text(social("social.section.pinned"))
+                    .font(DPTypography.caption)
+                    .foregroundStyle(DPColor.textSecondary)
+            }
+            Image(systemName: "line.3.horizontal")
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(DPColor.accent)
+        }
+        .padding(.horizontal, DPSpacing.medium)
+        .frame(minHeight: 60)
+        .background(.regularMaterial)
+        .clipShape(RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous)
+                .stroke(DPColor.borderSecondary, lineWidth: 1)
+        }
+        .shadow(color: Color.black.opacity(0.16), radius: 10, y: 5)
     }
 }
 
