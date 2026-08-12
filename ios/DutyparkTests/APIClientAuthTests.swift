@@ -176,6 +176,21 @@ final class APIClientAuthTests: XCTestCase {
         }
     }
 
+    func testRefreshGateDoesNotRefreshAgainForAStaleUnauthorizedResponse() async throws {
+        let gate = RefreshGate()
+        let observedGeneration = await gate.generation
+        let refreshCount = LockedCounter()
+
+        try await gate.run(ifGenerationIs: observedGeneration) {
+            _ = refreshCount.increment()
+        }
+        try await gate.run(ifGenerationIs: observedGeneration) {
+            _ = refreshCount.increment()
+        }
+
+        XCTAssertEqual(refreshCount.current, 1)
+    }
+
     @MainActor
     func testSessionRestoreFailureOffersRetryInsteadOfBecomingGuest() async {
         let attempt = LockedCounter()

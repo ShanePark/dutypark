@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 
 nonisolated enum HTTPMethod: String, Sendable {
     case get = "GET"
@@ -28,8 +29,14 @@ nonisolated private struct ErrorResponse: Decodable {
 
 actor RefreshGate {
     private var task: Task<Void, Error>?
+    private(set) var generation = 0
 
-    func run(_ operation: @escaping @Sendable () async throws -> Void) async throws {
+    func run(
+        ifGenerationIs observedGeneration: Int,
+        _ operation: @escaping @Sendable () async throws -> Void
+    ) async throws {
+        guard generation == observedGeneration else { return }
+
         if let task {
             return try await task.value
         }
@@ -41,6 +48,7 @@ actor RefreshGate {
 
         do {
             try await task.value
+            generation &+= 1
             self.task = nil
         } catch {
             self.task = nil
@@ -74,6 +82,10 @@ private actor AuthenticationMode {
 
 nonisolated final class APIClient: Sendable {
     static let shared = APIClient()
+    private static let logger = Logger(
+        subsystem: Bundle.main.bundleIdentifier ?? "com.tistory.shanepark.dutypark",
+        category: "APIClient"
+    )
 
     let baseURL: URL
     private let session: URLSession
@@ -111,7 +123,12 @@ nonisolated final class APIClient: Sendable {
             queryItems: queryItems,
             headers: headers
         )
-        return try decode(Response.self, from: data)
+        do {
+            return try decode(Response.self, from: data)
+        } catch {
+            Self.logDecodeFailure(method: method, path: path, response: Response.self)
+            throw error
+        }
     }
 
     func request<Response: Decodable & Sendable, Body: Encodable & Sendable>(
@@ -136,7 +153,12 @@ nonisolated final class APIClient: Sendable {
             headers: headers,
             retryingAfterUnauthorized: retryingAfterUnauthorized
         )
-        return try decode(Response.self, from: data)
+        do {
+            return try decode(Response.self, from: data)
+        } catch {
+            Self.logDecodeFailure(method: method, path: path, response: Response.self)
+            throw error
+        }
     }
 
     func optional<Response: Decodable & Sendable>(
@@ -152,7 +174,12 @@ nonisolated final class APIClient: Sendable {
         guard !data.isEmpty else {
             return nil
         }
-        return try decode(Response.self, from: data)
+        do {
+            return try decode(Response.self, from: data)
+        } catch {
+            Self.logDecodeFailure(method: method, path: path, response: Response.self)
+            throw error
+        }
     }
 
     @discardableResult
@@ -164,6 +191,7 @@ nonisolated final class APIClient: Sendable {
         headers: [String: String] = [:],
         retryingAfterUnauthorized: Bool = true
     ) async throws -> Data {
+        let observedRefreshGeneration = await refreshGate.generation
         let (data, response) = try await perform(
             path,
             method: method,
@@ -176,7 +204,7 @@ nonisolated final class APIClient: Sendable {
            retryingAfterUnauthorized,
            await authenticationMode.allowsRefresh {
             do {
-                try await refreshGate.run { [self] in
+                try await refreshGate.run(ifGenerationIs: observedRefreshGeneration) { [self] in
                     let (refreshData, refreshResponse) = try await perform(
                         "auth/refresh",
                         method: .post
@@ -249,6 +277,10 @@ nonisolated final class APIClient: Sendable {
         let response: URLResponse
         do {
             (data, response) = try await session.data(for: request)
+        } catch is CancellationError {
+            throw CancellationError()
+        } catch let error as URLError where error.code == .cancelled {
+            throw CancellationError()
         } catch {
             throw APIError.transport
         }
@@ -299,5 +331,17 @@ nonisolated final class APIClient: Sendable {
         } catch {
             throw APIError.decoding
         }
+    }
+
+    private static func logDecodeFailure<Response>(
+        method: HTTPMethod,
+        path: String,
+        response: Response.Type
+    ) {
+        #if DEBUG
+        logger.error(
+            "Decode failed: \(method.rawValue, privacy: .public) \(path, privacy: .public) as \(String(describing: response), privacy: .public)"
+        )
+        #endif
     }
 }

@@ -87,6 +87,7 @@ final class CalendarViewModel: ObservableObject {
     func load() async {
         isLoading = true
         errorMessage = nil
+        defer { isLoading = false }
         do {
             if me == nil {
                 let member = try await repository.member()
@@ -116,10 +117,11 @@ final class CalendarViewModel: ObservableObject {
                 }
             }
             try await loadMonth()
+        } catch is CancellationError {
+            return
         } catch {
             errorMessage = CalendarLocalization.text("calendar.error.load")
         }
-        isLoading = false
     }
 
     func loadMonth() async throws {
@@ -466,9 +468,10 @@ final class CalendarViewModel: ObservableObject {
     private func reloadMonth() async {
         isLoading = true
         errorMessage = nil
+        defer { isLoading = false }
         do { try await loadMonth() }
+        catch is CancellationError { return }
         catch { errorMessage = CalendarLocalization.text("calendar.error.load") }
-        isLoading = false
     }
 
     private func pinnedDDayKey(_ memberID: MemberID) -> String { "selectedDday_\(memberID)" }
