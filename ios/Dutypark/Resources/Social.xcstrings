@@ -19,6 +19,12 @@
     "social.action.close" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Close" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Cerrar" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "閉じる" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "닫기" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "关闭" } }
     } },
+    "social.action.done" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Done" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Listo" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "完了" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "완료" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "完成" } }
+    } },
+    "social.action.editPinnedOrder" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Edit order" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Editar orden" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "順序を編集" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "순서 편집" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "编辑顺序" } }
+    } },
     "social.action.more" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "More actions" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Más acciones" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "その他の操作" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "더보기" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "更多操作" } }
     } },
@@ -87,6 +93,12 @@
     "social.empty.friends" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "No friends yet." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Aún no tienes amigos." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "友だちはまだいません。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "아직 친구가 없습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "还没有好友。" } }
     } },
+    "social.hint.pinnedOrder" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Press and hold a card, then drag it to reorder pinned friends." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Mantén pulsada una tarjeta y arrástrala para ordenar los amigos fijados." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "カードを長押ししてドラッグし、固定した友だちの順序を変更します。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "카드를 길게 누른 뒤 드래그해 고정 친구 순서를 바꿔주세요." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "长按好友卡片并拖动，以调整置顶好友的顺序。" } }
+    } },
+    "social.hint.unpinnedOrder" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Unpinned friends are not included" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Los amigos no fijados no se incluyen" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "固定していない友だちは対象外です" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "고정하지 않은 친구는 순서 편집 대상이 아닙니다" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "未置顶的好友不参与排序" } }
+    } },
     "social.label.family" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Family member" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Familiar" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "家族" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "가족 구성원" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "家人" } }
     } },
@@ -113,6 +125,9 @@
     } },
     "social.section.pinned" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Pinned" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Fijados" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "固定済み" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "고정한 친구" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "已置顶" } }
+    } },
+    "social.section.pinnedOrder" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Pinned friend order" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Orden de amigos fijados" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "固定した友だちの順序" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "고정 친구 순서" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "置顶好友顺序" } }
     } },
     "social.section.requests" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Friend requests" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Solicitudes" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "友だち申請" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 요청" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "好友请求" } }

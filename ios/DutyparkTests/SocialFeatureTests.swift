@@ -6,6 +6,28 @@ import XCTest
 final class SocialFeatureTests: XCTestCase {
     private let baseURL = URL(string: "https://dutypark.test/api/")!
 
+    func testPinnedOrderEditorStringsResolveInEveryLocale() throws {
+        let keys = [
+            "social.action.done",
+            "social.action.editPinnedOrder",
+            "social.hint.pinnedOrder",
+            "social.hint.unpinnedOrder",
+            "social.section.pinnedOrder"
+        ]
+
+        for locale in ["en", "ko", "ja", "zh-Hans", "es"] {
+            let url = try XCTUnwrap(Bundle.main.url(forResource: locale, withExtension: "lproj"))
+            let bundle = try XCTUnwrap(Bundle(url: url))
+            for key in keys {
+                XCTAssertNotEqual(
+                    bundle.localizedString(forKey: key, value: key, table: "Social"),
+                    key,
+                    "Missing \(key) for \(locale)"
+                )
+            }
+        }
+    }
+
     override func tearDown() {
         SocialURLProtocolStub.handler = nil
         super.tearDown()

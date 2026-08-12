@@ -6,6 +6,7 @@ struct SocialView: View {
     @State private var confirmation: SocialConfirmation?
     @State private var actionCandidate: ActionCandidate?
     @State private var dropTargetFriendID: MemberID?
+    @State private var isFriendOrderEditing = false
 
     private let onOpenCalendar: (MemberID) -> Void
 
@@ -159,15 +160,31 @@ struct SocialView: View {
                 title: social("social.section.friends"),
                 count: viewModel.friends.count,
                 systemImage: "person.2",
-                colors: [DPColor.surfaceStrong, DPColor.surfaceStrongAlt]
+                colors: [DPColor.surfaceStrong, DPColor.surfaceStrongAlt],
+                actionTitle: viewModel.pinnedFriends.count >= 2
+                    ? social(isFriendOrderEditing ? "social.action.done" : "social.action.editPinnedOrder")
+                    : nil,
+                actionDisabled: viewModel.isReordering,
+                action: {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        isFriendOrderEditing.toggle()
+                        dropTargetFriendID = nil
+                    }
+                }
             )
 
             LazyVStack(spacing: DPSpacing.small) {
                 if viewModel.friends.isEmpty {
                     emptyFriends
                 } else {
+                    if isFriendOrderEditing {
+                        pinnedOrderHint
+                    }
                     ForEach(viewModel.pinnedFriends, id: \.member.id) { friend in
                         friendCard(friend)
+                    }
+                    if isFriendOrderEditing, !viewModel.unpinnedFriends.isEmpty {
+                        nonPinnedOrderHint
                     }
                     ForEach(viewModel.unpinnedFriends, id: \.member.id) { friend in
                         friendCard(friend)
@@ -185,6 +202,55 @@ struct SocialView: View {
                 .stroke(DPColor.borderPrimary, lineWidth: 1)
         }
         .shadow(color: Color.black.opacity(0.05), radius: 2, y: 1)
+        .onChange(of: viewModel.pinnedFriends.count) { _, count in
+            if count < 2 { isFriendOrderEditing = false }
+        }
+    }
+
+    private var pinnedOrderHint: some View {
+        HStack(alignment: .top, spacing: DPSpacing.small) {
+            Image(systemName: "hand.draw.fill")
+                .font(.system(size: 17, weight: .medium))
+                .foregroundStyle(DPColor.accent)
+                .frame(width: 24, height: 24)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(social("social.section.pinnedOrder"))
+                    .font(DPFont.bold(size: 14, relativeTo: .subheadline))
+                    .foregroundStyle(DPColor.textPrimary)
+                Text(social("social.hint.pinnedOrder"))
+                    .font(DPTypography.caption)
+                    .foregroundStyle(DPColor.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(DPSpacing.compact)
+        .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget, alignment: .leading)
+        .background(DPColor.accentSoft)
+        .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: DPRadius.standard, style: .continuous)
+                .stroke(DPColor.accentBorder, lineWidth: 1)
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private var nonPinnedOrderHint: some View {
+        HStack(spacing: DPSpacing.small) {
+            Rectangle()
+                .fill(DPColor.borderPrimary)
+                .frame(height: 1)
+            Text(social("social.hint.unpinnedOrder"))
+                .font(DPTypography.caption)
+                .foregroundStyle(DPColor.textMuted)
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+            Rectangle()
+                .fill(DPColor.borderPrimary)
+                .frame(height: 1)
+        }
+        .frame(minHeight: DPSize.minimumTouchTarget)
+        .accessibilityElement(children: .combine)
     }
 
     private func receivedRequestCard(_ request: FriendRequestDTO) -> some View {
@@ -295,7 +361,7 @@ struct SocialView: View {
 
     @ViewBuilder
     private func friendCard(_ friend: DashboardFriendDetailDTO) -> some View {
-        if friend.pinOrder != nil, let friendID = friend.member.id {
+        if isFriendOrderEditing, friend.pinOrder != nil, let friendID = friend.member.id {
             friendCardBody(friend)
                 .draggable(String(friendID)) {
                     PinnedFriendDragPreview(friend: friend)
@@ -414,52 +480,65 @@ struct SocialView: View {
 
             Spacer(minLength: DPSpacing.small)
 
-            HStack(spacing: 0) {
-                Button {
-                    Task { await viewModel.togglePin(friend) }
-                } label: {
-                    Image(systemName: friend.pinOrder == nil ? "star" : "star.fill")
-                        .font(.system(size: 16))
-                        .foregroundStyle(friend.pinOrder == nil ? DPColor.textMuted : DPColor.warning)
-                        .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(social(friend.pinOrder == nil ? "social.action.pin" : "social.action.unpin"))
+            if isFriendOrderEditing, friend.pinOrder != nil {
+                Image(systemName: "line.3.horizontal")
+                    .font(.system(size: 20, weight: .semibold))
+                    .foregroundStyle(DPColor.accent)
+                    .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                    .background(DPColor.accentSoft)
+                    .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard, style: .continuous))
+                    .draggable(String(friend.member.id ?? -1)) {
+                        PinnedFriendDragPreview(friend: friend)
+                    }
+                    .accessibilityHidden(true)
+            } else {
+                HStack(spacing: 0) {
+                    Button {
+                        Task { await viewModel.togglePin(friend) }
+                    } label: {
+                        Image(systemName: friend.pinOrder == nil ? "star" : "star.fill")
+                            .font(.system(size: 16))
+                            .foregroundStyle(friend.pinOrder == nil ? DPColor.textMuted : DPColor.warning)
+                            .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(social(friend.pinOrder == nil ? "social.action.pin" : "social.action.unpin"))
 
-                Button {
-                    actionCandidate = ActionCandidate(friend: friend)
-                } label: {
-                    Image(systemName: "ellipsis.vertical")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundStyle(DPColor.textMuted)
-                        .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(social("social.action.more"))
-                .popover(
-                    isPresented: Binding(
-                        get: { actionCandidate?.id == friend.member.id },
-                        set: { if !$0 { actionCandidate = nil } }
-                    ),
-                    arrowEdge: .top
-                ) {
-                    FriendActionPopover(
-                        friend: friend,
-                        close: { actionCandidate = nil },
-                        addFamily: {
-                            actionCandidate = nil
-                            Task { await viewModel.sendFamilyRequest(to: friend) }
-                        },
-                        removeFamily: {
-                            actionCandidate = nil
-                            confirmation = .removeFamily(friend)
-                        },
-                        removeFriend: {
-                            actionCandidate = nil
-                            confirmation = .removeFriend(friend)
-                        }
-                    )
-                    .presentationCompactAdaptation(.popover)
+                    Button {
+                        actionCandidate = ActionCandidate(friend: friend)
+                    } label: {
+                        Image(systemName: "ellipsis.vertical")
+                            .font(.system(size: 18, weight: .medium))
+                            .foregroundStyle(DPColor.textMuted)
+                            .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(social("social.action.more"))
+                    .popover(
+                        isPresented: Binding(
+                            get: { actionCandidate?.id == friend.member.id },
+                            set: { if !$0 { actionCandidate = nil } }
+                        ),
+                        arrowEdge: .top
+                    ) {
+                        FriendActionPopover(
+                            friend: friend,
+                            close: { actionCandidate = nil },
+                            addFamily: {
+                                actionCandidate = nil
+                                Task { await viewModel.sendFamilyRequest(to: friend) }
+                            },
+                            removeFamily: {
+                                actionCandidate = nil
+                                confirmation = .removeFamily(friend)
+                            },
+                            removeFriend: {
+                                actionCandidate = nil
+                                confirmation = .removeFriend(friend)
+                            }
+                        )
+                        .presentationCompactAdaptation(.popover)
+                    }
                 }
             }
         }
@@ -480,10 +559,15 @@ struct SocialView: View {
         .overlay {
             RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous)
                 .stroke(
-                    friend.pinOrder == nil ? DPColor.borderPrimary : DPColor.borderSecondary,
-                    lineWidth: friend.pinOrder == nil ? 1 : 2
+                    isFriendOrderEditing && friend.pinOrder != nil
+                        ? DPColor.accent
+                        : (friend.pinOrder == nil ? DPColor.borderPrimary : DPColor.borderSecondary),
+                    lineWidth: isFriendOrderEditing && friend.pinOrder != nil
+                        ? 2
+                        : (friend.pinOrder == nil ? 1 : 2)
                 )
         }
+        .opacity(isFriendOrderEditing && friend.pinOrder == nil ? 0.68 : 1)
         .shadow(color: Color.black.opacity(friend.pinOrder == nil ? 0.05 : 0.10), radius: 2, y: 1)
         .contentShape(RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous))
     }
@@ -611,6 +695,27 @@ private struct SocialPanelHeader: View {
     let count: Int
     let systemImage: String
     let colors: [Color]
+    var actionTitle: String?
+    var actionDisabled = false
+    var action: (() -> Void)?
+
+    init(
+        title: String,
+        count: Int,
+        systemImage: String,
+        colors: [Color],
+        actionTitle: String? = nil,
+        actionDisabled: Bool = false,
+        action: (() -> Void)? = nil
+    ) {
+        self.title = title
+        self.count = count
+        self.systemImage = systemImage
+        self.colors = colors
+        self.actionTitle = actionTitle
+        self.actionDisabled = actionDisabled
+        self.action = action
+    }
 
     var body: some View {
         HStack(spacing: DPSpacing.small) {
@@ -627,10 +732,26 @@ private struct SocialPanelHeader: View {
                     .clipShape(Capsule())
             }
             Spacer()
+            if let actionTitle, let action {
+                Button(action: action) {
+                    Text(actionTitle)
+                        .font(DPFont.bold(size: 13, relativeTo: .subheadline))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.82)
+                        .padding(.horizontal, DPSpacing.compact)
+                        .frame(minHeight: DPSize.minimumTouchTarget)
+                        .background(Color.white.opacity(0.16))
+                        .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .disabled(actionDisabled)
+                .opacity(actionDisabled ? 0.55 : 1)
+                .accessibilityIdentifier("social.pinnedOrder.edit")
+            }
         }
         .foregroundStyle(DPColor.textOnDark)
         .padding(.horizontal, count > 0 ? 20 : DPSpacing.large)
-        .frame(height: 44)
+        .frame(minHeight: DPSize.minimumTouchTarget)
         .background {
             LinearGradient(colors: colors, startPoint: .leading, endPoint: .trailing)
         }
