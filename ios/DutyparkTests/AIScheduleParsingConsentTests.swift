@@ -80,24 +80,38 @@ struct AIScheduleParsingConsentTests {
     }
 
     @Test
-    func editorDecisionPromptsOnlyForAllDayWithoutCurrentConsent() {
+    func editorDecisionDistinguishesCurrentNeverRevokedRenewalAndLookupFailure() {
         let allDay = Self.date(hour: 0)
         let manualTime = Self.date(hour: 9)
-        let denied = Self.response(consented: false)
+        let never = Self.response(consented: false, revokedAt: nil)
+        let revoked = Self.response(consented: false)
         let current = Self.response(consented: true)
+        let renewal = Self.response(consented: true, needsRenewal: true)
 
         #expect(AIScheduleConsentDecisionPolicy.saveDecision(
             isAllDay: true,
-            response: denied
-        ) == .requestConsent(denied.policy))
+            response: never
+        ) == .requestConsent(never.policy))
         #expect(AIScheduleConsentDecisionPolicy.saveDecision(
             isAllDay: true,
             response: current
-        ) == .saveWithoutPrompt)
+        ) == .save(aiTimeParsingRequested: true))
+        #expect(AIScheduleConsentDecisionPolicy.saveDecision(
+            isAllDay: true,
+            response: revoked
+        ) == .save(aiTimeParsingRequested: false))
+        #expect(AIScheduleConsentDecisionPolicy.saveDecision(
+            isAllDay: true,
+            response: renewal
+        ) == .requestConsent(renewal.policy))
+        #expect(AIScheduleConsentDecisionPolicy.saveDecision(
+            isAllDay: true,
+            response: nil
+        ) == .save(aiTimeParsingRequested: false))
         #expect(AIScheduleConsentDecisionPolicy.saveDecision(
             isAllDay: false,
-            response: denied
-        ) == .saveWithoutPrompt)
+            response: revoked
+        ) == .save(aiTimeParsingRequested: true))
         #expect(AIScheduleConsentDecisionPolicy.isAllDay(
             start: allDay,
             end: allDay,
@@ -124,9 +138,25 @@ struct AIScheduleParsingConsentTests {
             end: Self.date(hour: 0)
         )
 
-        #expect(decision == .saveWithoutPrompt)
+        #expect(decision == .save(aiTimeParsingRequested: false))
         #expect(store.response == nil)
         #expect(store.errorKey == "settings.aiConsent.loadFailed")
+    }
+
+    @Test
+    func editorDecisionAlwaysReloadsConsentBeforeAnAllDaySave() async {
+        let service = AIConsentServiceMock(statusResponse: Self.response(consented: true))
+        let store = AIScheduleParsingConsentStore(service: service)
+        await store.load(for: 7)
+
+        let decision = await store.saveDecision(
+            for: 7,
+            start: Self.date(hour: 0),
+            end: Self.date(hour: 0)
+        )
+
+        #expect(decision == .save(aiTimeParsingRequested: true))
+        #expect(await service.statusCallCount == 2)
     }
 
     @Test
@@ -212,14 +242,18 @@ struct AIScheduleParsingConsentTests {
         #expect(plist["NSPrivacyTracking"] as? Bool == false)
     }
 
-    private static func response(consented: Bool) -> AIScheduleParsingConsentResponse {
+    private static func response(
+        consented: Bool,
+        needsRenewal: Bool = false,
+        revokedAt: String? = "2026-08-13T00:00:00Z"
+    ) -> AIScheduleParsingConsentResponse {
         AIScheduleParsingConsentResponse(
             consented: consented,
             currentPolicyVersion: "2026-08-13",
             consentVersion: consented ? "2026-08-13" : nil,
-            needsRenewal: false,
+            needsRenewal: needsRenewal,
             consentedAt: consented ? "2026-08-13T00:00:00Z" : nil,
-            revokedAt: consented ? nil : "2026-08-13T00:00:00Z",
+            revokedAt: consented ? nil : revokedAt,
             policy: PolicyDTO(
                 policyType: .aiScheduleParsing,
                 version: "2026-08-13",
@@ -272,6 +306,7 @@ private actor AIConsentServiceMock: AIScheduleParsingConsentServicing {
     let statusResponse: AIScheduleParsingConsentResponse
     let failsStatus: Bool
     let failsUpdate: Bool
+    private(set) var statusCallCount = 0
 
     init(
         statusResponse: AIScheduleParsingConsentResponse,
@@ -284,6 +319,7 @@ private actor AIConsentServiceMock: AIScheduleParsingConsentServicing {
     }
 
     func status() async throws -> AIScheduleParsingConsentResponse {
+        statusCallCount += 1
         if failsStatus { throw APIError.transport }
         return statusResponse
     }

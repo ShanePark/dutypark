@@ -71,6 +71,10 @@ class ScheduleControllerTest : RestDocsTest() {
                         fieldWithPath("startDateTime").description("Schedule Start DateTime"),
                         fieldWithPath("endDateTime").description("Schedule End DateTime"),
                         fieldWithPath("visibility").description("Schedule Visibility"),
+                        fieldWithPath("aiTimeParsingRequested")
+                            .type(JsonFieldType.BOOLEAN)
+                            .description("Whether to request AI time parsing when current consent is valid (optional, defaults to true)")
+                            .optional(),
                         fieldWithPath("tagFriendIds").description("Friend member IDs to tag with the schedule")
                             .type("Array").optional(),
                         fieldWithPath("id").description("Schedule Id (optional, for update)").type("UUID").optional(),
@@ -165,6 +169,10 @@ class ScheduleControllerTest : RestDocsTest() {
                         fieldWithPath("startDateTime").description("Schedule Start DateTime"),
                         fieldWithPath("endDateTime").description("Schedule End DateTime"),
                         fieldWithPath("visibility").description("Schedule Visibility"),
+                        fieldWithPath("aiTimeParsingRequested")
+                            .type(JsonFieldType.BOOLEAN)
+                            .description("Whether to request AI time parsing when current consent is valid (optional, defaults to true)")
+                            .optional(),
                         fieldWithPath("tagFriendIds").description("Friend member IDs to tag with the schedule")
                             .type("Array").optional(),
                         fieldWithPath("attachmentSessionId").description("Attachment Session Id (optional)")

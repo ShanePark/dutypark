@@ -62,7 +62,7 @@ nonisolated struct AIScheduleParsingConsentService: AIScheduleParsingConsentServ
 }
 
 nonisolated enum AIScheduleSaveConsentDecision: Equatable, Sendable {
-    case saveWithoutPrompt
+    case save(aiTimeParsingRequested: Bool)
     case requestConsent(PolicyDTO)
 }
 
@@ -71,13 +71,15 @@ nonisolated enum AIScheduleConsentDecisionPolicy {
         isAllDay: Bool,
         response: AIScheduleParsingConsentResponse?
     ) -> AIScheduleSaveConsentDecision {
-        guard isAllDay,
-              let response,
-              !response.hasCurrentConsent
-        else {
-            return .saveWithoutPrompt
+        guard isAllDay else { return .save(aiTimeParsingRequested: true) }
+        guard let response else { return .save(aiTimeParsingRequested: false) }
+        if response.hasCurrentConsent {
+            return .save(aiTimeParsingRequested: true)
         }
-        return .requestConsent(response.policy)
+        if response.needsRenewal || response.revokedAt == nil {
+            return .requestConsent(response.policy)
+        }
+        return .save(aiTimeParsingRequested: false)
     }
 
     static func isAllDay(start: Date, end: Date, calendar: Calendar) -> Bool {
@@ -127,7 +129,13 @@ final class AIScheduleParsingConsentStore: ObservableObject {
 
     func load(for memberID: Int64, force: Bool = false) async {
         scope(to: memberID)
-        guard force || response == nil, !isLoading else { return }
+        if !force {
+            guard response == nil, !isLoading else { return }
+        }
+        _ = await refresh(for: memberID)
+    }
+
+    private func refresh(for memberID: Int64) async -> AIScheduleParsingConsentResponse? {
         isLoading = true
         errorKey = nil
         defer {
@@ -135,11 +143,13 @@ final class AIScheduleParsingConsentStore: ObservableObject {
         }
         do {
             let loaded = try await service.status()
-            guard self.memberID == memberID else { return }
+            guard self.memberID == memberID else { return nil }
             response = loaded
+            return loaded
         } catch {
-            guard self.memberID == memberID else { return }
+            guard self.memberID == memberID else { return nil }
             errorKey = "settings.aiConsent.loadFailed"
+            return nil
         }
     }
 
@@ -155,11 +165,11 @@ final class AIScheduleParsingConsentStore: ObservableObject {
             end: end,
             calendar: calendar
         )
-        guard isAllDay else { return .saveWithoutPrompt }
-        await load(for: memberID)
+        guard isAllDay else { return .save(aiTimeParsingRequested: true) }
+        let freshResponse = await refresh(for: memberID)
         return AIScheduleConsentDecisionPolicy.saveDecision(
             isAllDay: true,
-            response: response
+            response: freshResponse
         )
     }
 

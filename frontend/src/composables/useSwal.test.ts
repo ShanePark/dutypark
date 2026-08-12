@@ -19,7 +19,7 @@ vi.mock('@/i18n', () => ({
 
 import { useSwal } from './useSwal'
 
-describe('useSwal confirmDelete', () => {
+describe('useSwal', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.fire.mockResolvedValue({ isConfirmed: true })
@@ -48,6 +48,24 @@ describe('useSwal confirmDelete', () => {
     expect(mocks.fire).toHaveBeenCalledWith(expect.objectContaining({
       title: 'Disconnect account',
       confirmButtonText: 'Disconnect',
+    }))
+  })
+
+  it('returns the selected three-way choice with custom labels', async () => {
+    mocks.fire.mockResolvedValue({ isDenied: true })
+    const { choose } = useSwal()
+
+    await expect(choose(
+      'Disclosure',
+      'Use AI?',
+      'Consent and use AI',
+      'Save without AI',
+    )).resolves.toBe('deny')
+
+    expect(mocks.fire).toHaveBeenCalledWith(expect.objectContaining({
+      showDenyButton: true,
+      confirmButtonText: 'Consent and use AI',
+      denyButtonText: 'Save without AI',
     }))
   })
 })

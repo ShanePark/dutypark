@@ -33,6 +33,8 @@ const Toast = Swal.mixin({
 })
 
 export function useSwal() {
+  type ChoiceResult = 'confirm' | 'deny' | 'cancel'
+
   const showError = (message: string, title = translateGlobal('common.swal.error')) => {
     const colors = getSwalColors()
     return Swal.fire({
@@ -77,18 +79,51 @@ export function useSwal() {
     })
   }
 
-  const confirm = (message: string, title = translateGlobal('common.swal.confirm')) => {
+  const confirm = (
+    message: string,
+    title = translateGlobal('common.swal.confirm'),
+    confirmButtonText = translateGlobal('common.actions.confirm'),
+    cancelButtonText = translateGlobal('common.actions.cancel'),
+  ) => {
     const colors = getSwalColors()
     return Swal.fire({
       icon: 'question',
       title,
       text: message,
       showCancelButton: true,
-      confirmButtonText: translateGlobal('common.actions.confirm'),
-      cancelButtonText: translateGlobal('common.actions.cancel'),
+      confirmButtonText,
+      cancelButtonText,
       confirmButtonColor: colors.confirmButtonColor,
       cancelButtonColor: colors.cancelButtonColor,
     }).then((result) => result.isConfirmed)
+  }
+
+  const choose = (
+    message: string,
+    title: string,
+    confirmButtonText: string,
+    denyButtonText: string,
+    cancelButtonText = translateGlobal('common.actions.cancel'),
+  ): Promise<ChoiceResult> => {
+    const colors = getSwalColors()
+    return Swal.fire({
+      icon: 'question',
+      title,
+      text: message,
+      showConfirmButton: true,
+      showDenyButton: true,
+      showCancelButton: true,
+      confirmButtonText,
+      denyButtonText,
+      cancelButtonText,
+      confirmButtonColor: colors.confirmButtonColor,
+      denyButtonColor: colors.cancelButtonColor,
+      cancelButtonColor: colors.cancelButtonColor,
+    }).then((result) => {
+      if (result.isConfirmed) return 'confirm'
+      if (result.isDenied) return 'deny'
+      return 'cancel'
+    })
   }
 
   const confirmDelete = (
@@ -136,6 +171,7 @@ export function useSwal() {
     showSuccess,
     showInfo,
     confirm,
+    choose,
     confirmDelete,
     toastSuccess,
     toastError,

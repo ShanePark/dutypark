@@ -378,7 +378,8 @@ final class CalendarViewModel: ObservableObject {
     func saveSchedule(
         existing: ScheduleDTO?, content: String, description: String,
         visibility: Visibility, start: Date, end: Date, tagFriendIDs: [MemberID],
-        attachmentSessionID: UUID?, orderedAttachmentIDs: [AttachmentID]
+        attachmentSessionID: UUID?, orderedAttachmentIDs: [AttachmentID],
+        aiTimeParsingRequested: Bool
     ) async -> Bool {
         guard canEdit, let memberID = targetMemberID else { return false }
         let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -390,7 +391,8 @@ final class CalendarViewModel: ObservableObject {
                 endDateTime: CalendarDateSupport.localDateTime(end),
                 tagFriendIds: isMyCalendar ? tagFriendIDs : nil,
                 attachmentSessionId: attachmentSessionID,
-                orderedAttachmentIds: orderedAttachmentIDs
+                orderedAttachmentIds: orderedAttachmentIDs,
+                aiTimeParsingRequested: aiTimeParsingRequested
             ))
             try await loadMonth()
             return true

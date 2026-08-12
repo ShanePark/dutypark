@@ -435,7 +435,8 @@ final class CalendarFeatureTests: XCTestCase {
             end: date(2026, 8, 12, hour: 1),
             tagFriendIDs: [],
             attachmentSessionID: session,
-            orderedAttachmentIDs: [first, second]
+            orderedAttachmentIDs: [first, second],
+            aiTimeParsingRequested: false
         )
 
         let request = await repository.savedSchedule
@@ -443,6 +444,12 @@ final class CalendarFeatureTests: XCTestCase {
         XCTAssertEqual(request?.attachmentSessionId, session)
         XCTAssertEqual(request?.orderedAttachmentIds, [first, second])
         XCTAssertEqual(request?.startDateTime.rawValue, "2026-08-12T00:00:00")
+        XCTAssertEqual(request?.aiTimeParsingRequested, false)
+        let encoded = try? JSONEncoder().encode(request)
+        let json = encoded.flatMap {
+            try? JSONSerialization.jsonObject(with: $0) as? [String: Any]
+        }
+        XCTAssertEqual(json?["aiTimeParsingRequested"] as? Bool, false)
     }
 
     func testDeepLinkInitializesTargetMemberAndHighlightedMonth() async {

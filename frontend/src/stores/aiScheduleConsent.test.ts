@@ -73,4 +73,21 @@ describe('AI schedule parsing consent store', () => {
     await pending
     expect(store.isCurrent).toBe(false)
   })
+
+  it('force refreshes an already loaded account', async () => {
+    vi.mocked(aiScheduleParsingConsentApi.getCurrent)
+      .mockResolvedValueOnce(dto(true))
+      .mockResolvedValueOnce({
+        ...dto(false),
+        revokedAt: '2026-08-13T01:00:00Z',
+      })
+    const store = useAiScheduleConsentStore()
+
+    await store.loadForMember(7)
+    await store.loadForMember(7, true)
+
+    expect(aiScheduleParsingConsentApi.getCurrent).toHaveBeenCalledTimes(2)
+    expect(store.consent?.revokedAt).toBe('2026-08-13T01:00:00Z')
+    expect(store.isCurrent).toBe(false)
+  })
 })

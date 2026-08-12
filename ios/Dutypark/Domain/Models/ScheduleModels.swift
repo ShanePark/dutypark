@@ -35,6 +35,7 @@ nonisolated struct ScheduleSaveDTO: Codable, Equatable, Sendable {
     let tagFriendIds: [MemberID]?
     let attachmentSessionId: UUID?
     let orderedAttachmentIds: [AttachmentID]
+    let aiTimeParsingRequested: Bool
 }
 
 nonisolated struct ScheduleSaveResponse: Codable, Equatable, Sendable {

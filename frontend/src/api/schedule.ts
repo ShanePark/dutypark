@@ -63,6 +63,7 @@ export interface ScheduleSaveDto {
   tagFriendIds?: number[]
   attachmentSessionId?: string
   orderedAttachmentIds?: string[]
+  aiTimeParsingRequested?: boolean
 }
 
 // Search result DTO

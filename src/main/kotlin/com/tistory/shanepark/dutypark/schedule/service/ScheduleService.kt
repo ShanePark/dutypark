@@ -130,7 +130,7 @@ class ScheduleService(
             visibility = scheduleSaveDto.visibility
         )
 
-        applyAiParsingConsent(schedule)
+        applyAiParsingPreference(schedule, scheduleSaveDto.aiTimeParsingRequested)
         scheduleRepository.save(schedule)
         syncScheduleTags(schedule, scheduleSaveDto.tagFriendIds.orEmpty())
         if (schedule.parsingTimeStatus == WAIT) {
@@ -169,8 +169,11 @@ class ScheduleService(
         schedule.visibility = scheduleSaveDto.visibility
         scheduleSaveDto.tagFriendIds?.let { syncScheduleTags(schedule, it) }
 
-        if (parsingInputChanged) {
-            applyAiParsingConsent(schedule)
+        if (
+            parsingInputChanged ||
+            schedule.parsingTimeStatus == WAIT
+        ) {
+            applyAiParsingPreference(schedule, scheduleSaveDto.aiTimeParsingRequested)
         }
         scheduleRepository.save(schedule)
         if (parsingInputChanged && schedule.parsingTimeStatus == WAIT) {
@@ -191,8 +194,8 @@ class ScheduleService(
         return schedule
     }
 
-    private fun applyAiParsingConsent(schedule: Schedule) {
-        if (!aiScheduleParsingConsentService.hasCurrentConsent(schedule.member.id!!)) {
+    private fun applyAiParsingPreference(schedule: Schedule, aiTimeParsingRequested: Boolean) {
+        if (!aiTimeParsingRequested || !aiScheduleParsingConsentService.hasCurrentConsent(schedule.member.id!!)) {
             schedule.parsingTimeStatus = SKIP
         }
     }

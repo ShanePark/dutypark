@@ -1307,6 +1307,7 @@ interface ScheduleSaveData {
   tagFriendIds: number[]
   attachmentSessionId?: string | null
   orderedAttachmentIds?: string[]
+  aiTimeParsingRequested: boolean
 }
 
 async function handleCreateSchedule(data: ScheduleSaveData) {
@@ -1323,6 +1324,7 @@ async function handleCreateSchedule(data: ScheduleSaveData) {
       tagFriendIds: data.tagFriendIds,
       attachmentSessionId: data.attachmentSessionId || undefined,
       orderedAttachmentIds: data.orderedAttachmentIds,
+      aiTimeParsingRequested: data.aiTimeParsingRequested,
     })
     await loadSchedules()
     toastSuccess(t('duty.schedule.messages.created'))
@@ -1347,6 +1349,7 @@ async function handleEditSchedule(data: ScheduleSaveData) {
       tagFriendIds: data.tagFriendIds,
       attachmentSessionId: data.attachmentSessionId || undefined,
       orderedAttachmentIds: data.orderedAttachmentIds,
+      aiTimeParsingRequested: data.aiTimeParsingRequested,
     })
     await loadSchedules()
   } catch (error) {

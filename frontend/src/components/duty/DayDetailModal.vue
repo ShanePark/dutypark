@@ -9,9 +9,15 @@ import UntagConfirmModal from '@/components/duty/UntagConfirmModal.vue'
 import type { NormalizedAttachment, TaggableFriend } from '@/types'
 import { normalizeAttachment } from '@/api/attachment'
 import { useSwal } from '@/composables/useSwal'
+import { useAiScheduleConsentStore } from '@/stores/aiScheduleConsent'
+import {
+  getAiScheduleConsentAction,
+  isAiTimeParsingCandidate,
+} from '@/utils/aiScheduleConsentFlow'
 import { VISIBILITY_ICONS, VISIBILITY_COLORS, type CalendarVisibility } from '@/utils/visibility'
 
-const { showWarning, showError } = useSwal()
+const { showWarning, showError, confirm, choose } = useSwal()
+const aiConsentStore = useAiScheduleConsentStore()
 
 interface Schedule {
   id: string
@@ -73,6 +79,7 @@ interface ScheduleSaveData {
   tagFriendIds: number[]
   attachmentSessionId?: string | null
   orderedAttachmentIds?: string[]
+  aiTimeParsingRequested: boolean
 }
 
 interface SelectedTagSummary {
@@ -95,6 +102,7 @@ const isEditMode = ref(false)
 const editingScheduleId = ref<string | null>(null)
 const scheduleFormRef = ref<InstanceType<typeof ScheduleForm> | null>(null)
 const isUploading = ref(false)
+const isResolvingAiConsent = ref(false)
 const contentRef = ref<HTMLElement | null>(null)
 
 // Local duty state for immediate UI feedback
@@ -202,7 +210,7 @@ const isScheduleTimeRangeInvalid = computed(() => {
   return endDateTime < startDateTime
 })
 const isScheduleSaveDisabled = computed(() =>
-  isScheduleTitleMissing.value || isScheduleTimeRangeInvalid.value || isUploading.value
+  isScheduleTitleMissing.value || isScheduleTimeRangeInvalid.value || isUploading.value || isResolvingAiConsent.value
 )
 
 watch(
@@ -345,10 +353,67 @@ function buildScheduleData(): ScheduleSaveData {
     tagFriendIds: [...newSchedule.value.tagFriendIds],
     attachmentSessionId: sessionId,
     orderedAttachmentIds: orderedIds.length > 0 ? orderedIds : undefined,
+    aiTimeParsingRequested: true,
   }
 }
 
-function saveSchedule() {
+async function confirmSaveWithoutAi(message: string): Promise<boolean | null> {
+  const confirmed = await confirm(
+    message,
+    t('aiScheduleConsent.schedule.promptTitle'),
+    t('aiScheduleConsent.schedule.saveWithoutAi'),
+  )
+  return confirmed ? false : null
+}
+
+async function resolveAiTimeParsingRequest(data: ScheduleSaveData): Promise<boolean | null> {
+  if (!props.isMyCalendar) return true
+  if (!isAiTimeParsingCandidate(data.startDateTime, data.endDateTime)) return true
+
+  let consent
+  try {
+    consent = await aiConsentStore.loadForMember(props.memberId, true)
+  } catch (error) {
+    console.error('Failed to refresh AI schedule parsing consent:', error)
+    return confirmSaveWithoutAi(t('aiScheduleConsent.schedule.loadFailedContinue'))
+  }
+
+  const action = getAiScheduleConsentAction(consent)
+  if (action === 'request-ai') return true
+  if (action === 'without-ai') return false
+
+  const choice = await choose(
+    [
+      t('aiScheduleConsent.schedule.promptDescription'),
+      t('aiScheduleConsent.optionalDescription'),
+      t('aiScheduleConsent.schedule.manualHint'),
+    ].join('\n\n'),
+    t('aiScheduleConsent.schedule.promptTitle'),
+    t('aiScheduleConsent.schedule.consentAndParse'),
+    t('aiScheduleConsent.schedule.saveWithoutAi'),
+  )
+
+  if (choice === 'cancel') return null
+  if (choice === 'confirm') {
+    try {
+      await aiConsentStore.grant(props.memberId)
+      return true
+    } catch (error) {
+      console.error('Failed to grant AI schedule parsing consent:', error)
+      return confirmSaveWithoutAi(t('aiScheduleConsent.schedule.grantFailed'))
+    }
+  }
+
+  try {
+    await aiConsentStore.revoke(props.memberId)
+    return false
+  } catch (error) {
+    console.error('Failed to record declined AI schedule parsing consent:', error)
+    return confirmSaveWithoutAi(t('aiScheduleConsent.messages.updateFailed'))
+  }
+}
+
+async function saveSchedule() {
   if (!newSchedule.value.content.trim()) {
     return
   }
@@ -362,18 +427,26 @@ function saveSchedule() {
     return
   }
 
-  const data = buildScheduleData()
+  isResolvingAiConsent.value = true
+  try {
+    const data = buildScheduleData()
+    const aiTimeParsingRequested = await resolveAiTimeParsingRequest(data)
+    if (aiTimeParsingRequested === null) return
+    data.aiTimeParsingRequested = aiTimeParsingRequested
 
-  if (isEditMode.value) {
-    emit('editSchedule', data)
-  } else {
-    emit('createSchedule', data)
+    if (isEditMode.value) {
+      emit('editSchedule', data)
+    } else {
+      emit('createSchedule', data)
+    }
+
+    isCreateMode.value = false
+    isEditMode.value = false
+    editingScheduleId.value = null
+    editAttachments.value = []
+  } finally {
+    isResolvingAiConsent.value = false
   }
-
-  isCreateMode.value = false
-  isEditMode.value = false
-  editingScheduleId.value = null
-  editAttachments.value = []
 }
 
 function handleUploadStart() {

@@ -62,7 +62,7 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
         assertThat(updated.content).isEqualTo("꿈아띠 10~12시")
         assertThat(updated.contentWithoutTime).isEmpty()
         assertThat(updated.content()).isEqualTo("꿈아띠 10~12시")
-        assertThat(updated.parsingTimeStatus).isEqualTo(ParsingTimeStatus.WAIT)
+        assertThat(updated.parsingTimeStatus).isEqualTo(ParsingTimeStatus.SKIP)
         assertThat(updated.parsingGeneration).isNotEqualTo(previousGeneration)
 
         val calendar = scheduleService.findSchedulesByYearAndMonth(

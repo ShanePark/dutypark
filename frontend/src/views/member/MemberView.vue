@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, nextTick, onMounted, watch } from 'vue'
+import { ref, computed, nextTick, onMounted, onUnmounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
@@ -117,6 +117,10 @@ async function toggleAiConsent() {
     console.error('Failed to grant AI schedule parsing consent:', error)
     showError(t('aiScheduleConsent.messages.updateFailed'))
   }
+}
+
+function refreshAiConsentOnReturn() {
+  if (document.visibilityState === 'visible') void loadAiConsent(true)
 }
 
 watch(
@@ -815,6 +819,8 @@ async function fetchMemberInfo() {
 
 // Initialize data
 onMounted(async () => {
+  window.addEventListener('focus', refreshAiConsentOnReturn)
+  document.addEventListener('visibilitychange', refreshAiConsentOnReturn)
   loading.value = true
   try {
     // Fetch all data in parallel
@@ -845,6 +851,11 @@ onMounted(async () => {
   } catch (error) {
     console.error('Failed to handle social account linking callback:', error)
   }
+})
+
+onUnmounted(() => {
+  window.removeEventListener('focus', refreshAiConsentOnReturn)
+  document.removeEventListener('visibilitychange', refreshAiConsentOnReturn)
 })
 </script>
 

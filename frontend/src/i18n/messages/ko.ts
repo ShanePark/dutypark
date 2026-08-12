@@ -69,7 +69,7 @@ const apiErrors = {
     confirmTitle: 'AI 시간 자동 인식을 켤까요?',
     confirmDescription: '일정 날짜와 내용 텍스트가 시간 추출 목적으로 Google Generative Language API에 전송됩니다. 회원 ID와 팀 ID는 전송되지 않습니다.',
     messages: { granted: 'AI 시간 자동 인식에 동의했습니다.', revoked: 'AI 시간 자동 인식 동의를 철회했습니다.', loadFailed: 'AI 동의 상태를 불러오지 못했습니다.', updateFailed: 'AI 동의 설정을 변경하지 못했습니다.' },
-    schedule: { statusOn: 'AI 시간 자동 인식 켜짐', statusOff: 'AI 시간 자동 인식 꺼짐', statusRenewal: 'AI 시간 자동 인식 재동의 필요', promptTitle: '시간을 자동으로 인식할까요?', promptDescription: '동의하면 일정 날짜와 내용 텍스트를 Google AI에 보내 시간을 추출합니다. 회원·팀 ID는 보내지 않습니다.', consentAndParse: '동의하고 자동 인식', saveWithoutAi: '동의하지 않고 그대로 저장', manualHint: '시작·종료 시간은 언제든 직접 입력할 수 있습니다.', loadFailedContinue: 'AI 동의 상태를 확인하지 못했습니다. AI 없이 일정을 그대로 저장할까요?', grantFailed: '동의를 저장하지 못했습니다. AI 없이 저장하거나 다시 시도할 수 있습니다.' },
+    schedule: { statusOn: 'AI 시간 자동 인식 켜짐', statusOff: 'AI 시간 자동 인식 꺼짐', statusRenewal: 'AI 시간 자동 인식 재동의 필요', promptTitle: '시간을 자동으로 인식할까요?', promptDescription: '동의하면 일정 날짜와 내용 텍스트를 Google AI에 보내 시간을 추출합니다. 회원·팀 ID는 보내지 않습니다.', consentAndParse: '동의하고 자동 인식', saveWithoutAi: 'AI 없이 저장', manualHint: '시작·종료 시간은 언제든 직접 입력할 수 있습니다.', loadFailedContinue: 'AI 동의 상태를 확인하지 못했습니다. AI 없이 일정을 그대로 저장할까요?', grantFailed: '동의를 저장하지 못했습니다. AI 없이 저장하거나 다시 시도할 수 있습니다.' },
   },
   member: {
     notFound: '회원을 찾을 수 없습니다.',

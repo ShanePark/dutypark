@@ -2101,8 +2101,8 @@ private struct ScheduleEditorView: View {
                 pendingAIConsentPolicy = nil
                 isSaving = true
                 Task {
-                    _ = await aiConsent.grant(for: memberID, policyVersion: version)
-                    await performSave()
+                    let granted = await aiConsent.grant(for: memberID, policyVersion: version)
+                    await performSave(aiTimeParsingRequested: granted)
                 }
             }
             Button(CalendarLocalization.text("calendar.aiConsent.prompt.decline"), role: .destructive) {
@@ -2111,7 +2111,7 @@ private struct ScheduleEditorView: View {
                 isSaving = true
                 Task {
                     if let memberID { _ = await aiConsent.revoke(for: memberID) }
-                    await performSave()
+                    await performSave(aiTimeParsingRequested: false)
                 }
             }
             Button(CalendarLocalization.text("calendar.cancel"), role: .cancel) {}
@@ -2215,8 +2215,12 @@ private struct ScheduleEditorView: View {
     private func save() {
         isSaving = true
         Task {
+            guard model.isMyCalendar else {
+                await performSave(aiTimeParsingRequested: true)
+                return
+            }
             guard let memberID = model.me?.id else {
-                await performSave()
+                await performSave(aiTimeParsingRequested: false)
                 return
             }
             let decision = await aiConsent.saveDecision(
@@ -2225,8 +2229,8 @@ private struct ScheduleEditorView: View {
                 end: end
             )
             switch decision {
-            case .saveWithoutPrompt:
-                await performSave()
+            case .save(let aiTimeParsingRequested):
+                await performSave(aiTimeParsingRequested: aiTimeParsingRequested)
             case .requestConsent(let policy):
                 isSaving = false
                 pendingAIConsentPolicy = policy
@@ -2236,10 +2240,10 @@ private struct ScheduleEditorView: View {
 
     private func saveWithoutConsentRequest() {
         isSaving = true
-        Task { await performSave() }
+        Task { await performSave(aiTimeParsingRequested: false) }
     }
 
-    private func performSave() async {
+    private func performSave(aiTimeParsingRequested: Bool) async {
         guard let attachments = await attachmentModel.resultForSave() else {
             isSaving = false
             return
@@ -2253,7 +2257,8 @@ private struct ScheduleEditorView: View {
             end: end,
             tagFriendIDs: DPFriendTagSelectionLogic.sortedIDs(tagIDs),
             attachmentSessionID: attachments.attachmentSessionId,
-            orderedAttachmentIDs: attachments.orderedAttachmentIds
+            orderedAttachmentIDs: attachments.orderedAttachmentIds,
+            aiTimeParsingRequested: aiTimeParsingRequested
         )
         isSaving = false
         if saved { onSaved() }
