@@ -81,6 +81,20 @@ final class CalendarViewModel: ObservableObject {
         if targetMemberID == me?.id { return me?.name ?? "" }
         return friends.first(where: { $0.id == targetMemberID })?.name ?? targetMember?.name ?? ""
     }
+    var targetHasProfilePhoto: Bool {
+        guard let targetMemberID else { return me?.hasProfilePhoto ?? false }
+        if targetMemberID == me?.id { return me?.hasProfilePhoto ?? false }
+        return friends.first(where: { $0.id == targetMemberID })?.hasProfilePhoto
+            ?? targetMember?.hasProfilePhoto
+            ?? false
+    }
+    var targetProfilePhotoVersion: Int64 {
+        guard let targetMemberID else { return me?.profilePhotoVersion ?? 0 }
+        if targetMemberID == me?.id { return me?.profilePhotoVersion ?? 0 }
+        return friends.first(where: { $0.id == targetMemberID })?.profilePhotoVersion
+            ?? targetMember?.profilePhotoVersion
+            ?? 0
+    }
     var targetTeamName: String { isMyCalendar ? (me?.team ?? "") : (friends.first(where: { $0.id == targetMemberID })?.team ?? targetMember?.team ?? "") }
     var visibleDutyTypes: [DutyTypeDTO] { team?.dutyTypes.filter { !$0.hidden } ?? [] }
 
@@ -187,6 +201,16 @@ final class CalendarViewModel: ObservableObject {
     func clearFriendDutyComparisons() async {
         guard isMyCalendar, !comparedMemberIDs.isEmpty else { return }
         comparedMemberIDs = []
+        await reloadMonth()
+    }
+
+    func setFriendDutyComparisons(_ memberIDs: Set<MemberID>) async {
+        guard isMyCalendar else { return }
+        let validIDs = Set(memberIDs.filter { candidate in
+            friends.contains(where: { $0.id == candidate })
+        }.prefix(3))
+        guard validIDs != comparedMemberIDs else { return }
+        comparedMemberIDs = validIDs
         await reloadMonth()
     }
 

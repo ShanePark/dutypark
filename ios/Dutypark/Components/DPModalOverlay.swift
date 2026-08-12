@@ -42,7 +42,6 @@ struct DPModalOverlay<Content: View>: View {
 
                 content(CGSize(width: panelWidth, height: panelHeight))
                     .frame(width: panelWidth)
-                    .frame(maxHeight: panelHeight)
                     .background(DPColor.backgroundModal)
                     .clipShape(RoundedRectangle(cornerRadius: DPRadius.extraLarge))
                     .overlay {

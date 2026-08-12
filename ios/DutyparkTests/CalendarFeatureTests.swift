@@ -15,6 +15,9 @@ final class CalendarFeatureTests: XCTestCase {
             "calendar.schedule.tags.selectedOnly",
             "calendar.schedule.tags.clear",
             "calendar.schedule.tags.empty",
+            "calendar.search.short",
+            "calendar.compare.empty",
+            "calendar.compare.reset",
             "calendar.todo.manage",
             "calendar.todo.add"
         ]
@@ -167,6 +170,8 @@ final class CalendarFeatureTests: XCTestCase {
 
         XCTAssertEqual(model.targetName, "Public member")
         XCTAssertEqual(model.targetTeamName, "Public team")
+        XCTAssertTrue(model.targetHasProfilePhoto)
+        XCTAssertEqual(model.targetProfilePhotoVersion, 12)
         let requestedPreviewMemberID = await repository.requestedPreviewMemberID
         XCTAssertEqual(requestedPreviewMemberID, 9)
     }
@@ -205,6 +210,22 @@ final class CalendarFeatureTests: XCTestCase {
 
         await model.toggleMyDutyComparison()
         XCTAssertTrue(model.comparedMemberIDs.isEmpty)
+    }
+
+    func testComparisonSelectionOnlyAcceptsKnownFriendsAndThreeMembers() async {
+        let repository = CalendarRepositoryMock(friends: [
+            FriendDTO(id: 2, name: "A", teamId: nil, team: nil, hasProfilePhoto: false, profilePhotoVersion: 0, isFamily: false, pinOrder: nil),
+            FriendDTO(id: 3, name: "B", teamId: nil, team: nil, hasProfilePhoto: false, profilePhotoVersion: 0, isFamily: false, pinOrder: nil),
+            FriendDTO(id: 4, name: "C", teamId: nil, team: nil, hasProfilePhoto: false, profilePhotoVersion: 0, isFamily: false, pinOrder: nil),
+            FriendDTO(id: 5, name: "D", teamId: nil, team: nil, hasProfilePhoto: false, profilePhotoVersion: 0, isFamily: false, pinOrder: nil)
+        ])
+        let model = CalendarViewModel(repository: repository, now: date(2026, 8, 12))
+        await model.load()
+
+        await model.setFriendDutyComparisons([2, 3, 4, 5, 999])
+
+        XCTAssertEqual(model.comparedMemberIDs.count, 3)
+        XCTAssertTrue(model.comparedMemberIDs.isSubset(of: [2, 3, 4, 5]))
     }
 
     func testPatternWithHiddenSelectedDutyCannotBeSaved() {
@@ -331,10 +352,12 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
     var lastDutyUpdate: DutyUpdateDTO?
     let canManageValue: Bool
     let cancelMemberLoad: Bool
+    let friendValues: [FriendDTO]
 
-    init(canManage: Bool = false, cancelMemberLoad: Bool = false) {
+    init(canManage: Bool = false, cancelMemberLoad: Bool = false, friends: [FriendDTO] = []) {
         canManageValue = canManage
         self.cancelMemberLoad = cancelMemberLoad
+        friendValues = friends
     }
 
     func member() async throws -> MemberDTO {
@@ -347,9 +370,9 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
     }
     func member(id: MemberID) async throws -> MemberPreviewDTO {
         requestedPreviewMemberID = id
-        return MemberPreviewDTO(id: id, name: "Public member", teamId: nil, team: "Public team", hasProfilePhoto: false, profilePhotoVersion: 0)
+        return MemberPreviewDTO(id: id, name: "Public member", teamId: nil, team: "Public team", hasProfilePhoto: true, profilePhotoVersion: 12)
     }
-    func friends() async throws -> [FriendDTO] { [] }
+    func friends() async throws -> [FriendDTO] { friendValues }
     func team(id: TeamID) async throws -> TeamDTO { throw APIError.invalidResponse }
     func canManage(memberID: MemberID) async throws -> Bool { canManageValue }
     func calendar(year: Int, month: Int) async throws -> [TeamDayDTO] {

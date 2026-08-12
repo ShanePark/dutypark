@@ -50,7 +50,13 @@ struct CalendarView: View {
         .sheet(isPresented: $showsSearch) { ScheduleSearchView(model: model) }
         .sheet(isPresented: $showsDDayEditor) { DDayEditorView(model: model, existing: nil) }
         .sheet(isPresented: $showsMonthPicker) { YearMonthPickerView(model: model) }
-        .sheet(isPresented: $showsDutyComparison) { DutyComparisonView(model: model) }
+        .fullScreenCover(isPresented: $showsDutyComparison) {
+            DPModalOverlay(onDismiss: { showsDutyComparison = false }) { availableSize in
+                DutyComparisonView(model: model, maximumHeight: availableSize.height) {
+                    showsDutyComparison = false
+                }
+            }
+        }
         .sheet(isPresented: $showsTodoBoard, onDismiss: { todoTarget = nil }) {
             NavigationStack {
                 TodoView(
@@ -123,7 +129,7 @@ struct CalendarView: View {
                     searchControl
                 } else {
                     Color.clear
-                        .frame(width: 82, height: 42)
+                        .frame(width: 116, height: 44)
                         .accessibilityHidden(true)
                 }
             }
@@ -134,14 +140,13 @@ struct CalendarView: View {
 
     private var memberIdentity: some View {
         HStack(spacing: 6) {
-            Circle()
-                .fill(DPColor.backgroundTertiary)
-                .frame(width: 30, height: 30)
-                .overlay {
-                    Text(model.targetName.prefix(1).uppercased())
-                        .font(DPFont.bold(size: 12, relativeTo: .caption))
-                        .foregroundStyle(DPColor.textSecondary)
-                }
+            CalendarMemberAvatar(
+                memberID: model.targetMemberID,
+                name: model.targetName,
+                hasProfilePhoto: model.targetHasProfilePhoto,
+                profilePhotoVersion: model.targetProfilePhotoVersion,
+                size: 32
+            )
             Text(model.targetName)
                 .font(DPFont.bold(size: 12, relativeTo: .caption))
                 .foregroundStyle(DPColor.textPrimary)
@@ -214,22 +219,28 @@ struct CalendarView: View {
 
     private var searchControl: some View {
         HStack(spacing: 0) {
-            TextField(CalendarLocalization.text("calendar.search.placeholder"), text: $model.searchQuery)
-                .font(DPFont.light(size: 11, relativeTo: .caption))
+            TextField(
+                "",
+                text: $model.searchQuery,
+                prompt: Text(CalendarLocalization.text("calendar.search.short"))
+                    .foregroundStyle(DPColor.textMuted)
+            )
+                .font(DPFont.light(size: 12, relativeTo: .caption))
                 .foregroundStyle(DPColor.textPrimary)
-                .padding(.horizontal, 6)
-                .frame(minWidth: 0, minHeight: 42)
+                .padding(.horizontal, 10)
+                .frame(minWidth: 0, minHeight: 44)
                 .submitLabel(.search)
                 .onSubmit { performSearch() }
             Button(action: performSearch) {
                 Image(systemName: "magnifyingglass")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(DPColor.accentHover)
-                    .frame(width: 42, height: 42)
+                    .frame(width: 44, height: 44)
                     .background(DPColor.accentSoft)
             }
+            .accessibilityLabel(CalendarLocalization.text("calendar.search"))
         }
-        .frame(width: 82, height: 42)
+        .frame(width: 116, height: 44)
         .background(DPColor.backgroundInput)
         .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
         .overlay(RoundedRectangle(cornerRadius: DPRadius.standard).stroke(DPColor.borderSecondary))
@@ -677,59 +688,231 @@ private struct YearMonthPickerView: View {
 
 private struct DutyComparisonView: View {
     @ObservedObject var model: CalendarViewModel
-    @Environment(\.dismiss) private var dismiss
+    let maximumHeight: CGFloat
+    let dismiss: () -> Void
+    @State private var selection: Set<MemberID>
+    @State private var isApplying = false
+
+    init(model: CalendarViewModel, maximumHeight: CGFloat, dismiss: @escaping () -> Void) {
+        self.model = model
+        self.maximumHeight = maximumHeight
+        self.dismiss = dismiss
+        _selection = State(initialValue: model.comparedMemberIDs)
+    }
 
     var body: some View {
-        NavigationStack {
-            List {
-                Section {
-                    Text(CalendarLocalization.format("calendar.compare.description", 3))
-                        .font(.subheadline)
-                        .foregroundStyle(DPColor.textSecondary)
+        VStack(spacing: 0) {
+            HStack(spacing: DPSpacing.small) {
+                Image(systemName: "person.2.fill")
+                    .foregroundStyle(DPColor.accent)
+                Text(CalendarLocalization.text("calendar.compare"))
+                    .font(DPTypography.heading)
+                    .foregroundStyle(DPColor.textPrimary)
+                Spacer()
+                Button(action: dismiss) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 17, weight: .semibold))
+                        .frame(width: 44, height: 44)
                 }
-                Section {
-                    ForEach(model.friends, id: \.id) { friend in
-                        let selected = model.comparedMemberIDs.contains(friend.id)
-                        Button {
-                            Task { await model.toggleFriendDutyComparison(friend.id) }
-                        } label: {
-                            HStack {
-                                Text(friend.name).foregroundStyle(DPColor.textPrimary)
-                                Spacer()
-                                if selected {
-                                    Image(systemName: "checkmark.circle.fill").foregroundStyle(DPColor.accent)
-                                }
+                .buttonStyle(.plain)
+                .foregroundStyle(DPColor.textPrimary)
+                .disabled(isApplying)
+                .accessibilityLabel(CalendarLocalization.text("calendar.close"))
+            }
+            .padding(.leading, DPSpacing.medium)
+            .padding(.trailing, DPSpacing.extraSmall)
+            .padding(.vertical, DPSpacing.extraSmall)
+            .background(DPColor.backgroundTertiary)
+
+            Text(CalendarLocalization.format("calendar.compare.description", 3))
+                .font(DPTypography.supporting)
+                .foregroundStyle(DPColor.accentHover)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, DPSpacing.medium)
+                .padding(.vertical, DPSpacing.small)
+                .background(DPColor.accentSoft)
+
+            ScrollView {
+                Group {
+                    if model.friends.isEmpty {
+                        Text(CalendarLocalization.text("calendar.compare.empty"))
+                            .font(DPTypography.body)
+                            .foregroundStyle(DPColor.textMuted)
+                            .frame(maxWidth: .infinity, minHeight: 88)
+                    } else {
+                        LazyVGrid(
+                            columns: [GridItem(.flexible(), spacing: DPSpacing.small), GridItem(.flexible())],
+                            spacing: DPSpacing.small
+                        ) {
+                            ForEach(model.friends, id: \.id) { friend in
+                                friendButton(friend)
                             }
-                            .frame(minHeight: DPSize.minimumTouchTarget)
                         }
-                        .disabled(!selected && model.comparedMemberIDs.count >= 3)
                     }
                 }
-                Section {
-                    Text(CalendarLocalization.format("calendar.compare.count", model.comparedMemberIDs.count, 3))
-                        .foregroundStyle(DPColor.textMuted)
-                    if !model.comparedMemberIDs.isEmpty {
-                        Button(CalendarLocalization.text("calendar.compare.clear"), role: .destructive) {
-                            Task { await model.clearFriendDutyComparisons() }
-                        }
-                        .frame(minHeight: DPSize.minimumTouchTarget)
+                .padding(DPSpacing.medium)
+            }
+            .frame(height: gridHeight)
+
+            VStack(spacing: DPSpacing.small) {
+                Text(CalendarLocalization.format("calendar.compare.count", selection.count, 3))
+                    .font(DPTypography.supporting)
+                    .foregroundStyle(DPColor.textMuted)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                HStack(spacing: DPSpacing.small) {
+                    Button {
+                        selection.removeAll()
+                    } label: {
+                        Text(CalendarLocalization.text("calendar.compare.reset"))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
+                            .frame(maxWidth: .infinity)
                     }
+                    .buttonStyle(DPOutlineButtonStyle())
+                    .disabled(selection.isEmpty || isApplying)
+
+                    Button(CalendarLocalization.text("calendar.cancel"), action: dismiss)
+                        .buttonStyle(DPSecondaryButtonStyle())
+                        .frame(maxWidth: .infinity)
+                        .disabled(isApplying)
+
+                    Button {
+                        isApplying = true
+                        Task {
+                            await model.setFriendDutyComparisons(selection)
+                            dismiss()
+                        }
+                    } label: {
+                        if isApplying {
+                            ProgressView().frame(maxWidth: .infinity)
+                        } else {
+                            Text(CalendarLocalization.text("calendar.ok"))
+                                .frame(maxWidth: .infinity)
+                        }
+                    }
+                    .buttonStyle(DPPrimaryButtonStyle())
+                    .disabled(isApplying)
                 }
             }
-            .scrollContentBackground(.hidden)
+            .padding(DPSpacing.medium)
             .background(DPColor.backgroundModal)
-            .navigationTitle(CalendarLocalization.text("calendar.compare"))
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(CalendarLocalization.text("calendar.ok")) { dismiss() }
-                }
+            .overlay(alignment: .top) {
+                Rectangle().fill(DPColor.borderPrimary).frame(height: 1)
             }
         }
-        .tint(DPColor.accent)
-        .toolbarBackground(DPColor.backgroundTertiary, for: .navigationBar)
-        .toolbarBackground(.visible, for: .navigationBar)
-        .presentationCornerRadius(DPRadius.standard)
-        .presentationBackground(DPColor.backgroundModal)
+        .background(DPColor.backgroundModal)
+    }
+
+    private var gridHeight: CGFloat {
+        let rows = max(1, Int(ceil(Double(model.friends.count) / 2.0)))
+        let intrinsic = CGFloat(rows * 66) + CGFloat(max(rows - 1, 0)) * DPSpacing.small + DPSpacing.medium * 2
+        return min(intrinsic, max(maximumHeight - 250, 154))
+    }
+
+    private func friendButton(_ friend: FriendDTO) -> some View {
+        let selected = selection.contains(friend.id)
+        let disabled = !selected && selection.count >= 3
+        return Button {
+            if selected {
+                selection.remove(friend.id)
+            } else if selection.count < 3 {
+                selection.insert(friend.id)
+            }
+        } label: {
+            HStack(spacing: DPSpacing.small) {
+                CalendarMemberAvatar(
+                    memberID: friend.id,
+                    name: friend.name,
+                    hasProfilePhoto: friend.hasProfilePhoto,
+                    profilePhotoVersion: friend.profilePhotoVersion,
+                    size: 34
+                )
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(friend.name)
+                        .font(DPTypography.label)
+                        .foregroundStyle(DPColor.textPrimary)
+                        .lineLimit(1)
+                    if let team = friend.team, !team.isEmpty {
+                        Text(team)
+                            .font(DPTypography.caption)
+                            .foregroundStyle(DPColor.textMuted)
+                            .lineLimit(1)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                    .foregroundStyle(selected ? DPColor.accent : DPColor.textMuted)
+            }
+            .padding(.horizontal, DPSpacing.small)
+            .frame(maxWidth: .infinity, minHeight: 58)
+            .background(selected ? DPColor.accentSoft : DPColor.backgroundSecondary)
+            .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+            .overlay {
+                RoundedRectangle(cornerRadius: DPRadius.standard)
+                    .stroke(selected ? DPColor.accent : DPColor.borderPrimary, lineWidth: selected ? 2 : 1)
+            }
+            .opacity(disabled ? 0.45 : 1)
+        }
+        .buttonStyle(.plain)
+        .disabled(disabled || isApplying)
+        .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+}
+
+private struct CalendarMemberAvatar: View {
+    let memberID: MemberID?
+    let name: String
+    let hasProfilePhoto: Bool
+    let profilePhotoVersion: Int64
+    let size: CGFloat
+
+    var body: some View {
+        Group {
+            if hasProfilePhoto, let photoURL {
+                AsyncImage(url: photoURL) { phase in
+                    switch phase {
+                    case .success(let image):
+                        image.resizable().scaledToFill()
+                    case .empty:
+                        ProgressView().controlSize(.small).tint(DPColor.textMuted)
+                    case .failure:
+                        fallback
+                    @unknown default:
+                        fallback
+                    }
+                }
+            } else {
+                fallback
+            }
+        }
+        .frame(width: size, height: size)
+        .background(DPColor.backgroundTertiary)
+        .clipShape(Circle())
+        .accessibilityHidden(true)
+    }
+
+    private var fallback: some View {
+        Circle()
+            .fill(DPColor.backgroundTertiary)
+            .overlay {
+                Text(name.prefix(1).uppercased())
+                    .font(DPFont.bold(size: max(11, size * 0.38), relativeTo: .caption))
+                    .foregroundStyle(DPColor.textSecondary)
+            }
+    }
+
+    private var photoURL: URL? {
+        guard let memberID else { return nil }
+        var components = URLComponents(
+            url: AppConfiguration.apiBaseURL.appending(path: "members/\(memberID)/profile-photo"),
+            resolvingAgainstBaseURL: false
+        )
+        components?.queryItems = [
+            URLQueryItem(name: "thumbnail", value: "true"),
+            URLQueryItem(name: "v", value: String(profilePhotoVersion))
+        ]
+        return components?.url
     }
 }
 
