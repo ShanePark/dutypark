@@ -4,6 +4,34 @@ import XCTest
 
 @MainActor
 final class CalendarFeatureTests: XCTestCase {
+    func testScheduleFormStringsResolveFromCalendarTableInEveryLocale() throws {
+        let keys = [
+            "calendar.schedule.attachments",
+            "calendar.schedule.content.placeholder",
+            "calendar.schedule.description.placeholder",
+            "calendar.schedule.startTime",
+            "calendar.schedule.tags.search",
+            "calendar.schedule.tags.selected",
+            "calendar.schedule.tags.selectedOnly",
+            "calendar.schedule.tags.clear",
+            "calendar.schedule.tags.empty",
+            "calendar.todo.manage",
+            "calendar.todo.add"
+        ]
+
+        for locale in ["en", "ko", "ja", "zh-Hans", "es"] {
+            let url = try XCTUnwrap(Bundle.main.url(forResource: locale, withExtension: "lproj"))
+            let bundle = try XCTUnwrap(Bundle(url: url))
+            for key in keys {
+                XCTAssertNotEqual(
+                    bundle.localizedString(forKey: key, value: key, table: "Calendar"),
+                    key,
+                    "Missing \(key) for \(locale)"
+                )
+            }
+        }
+    }
+
     func testScheduleEditorDisablesInteractionsWhileAttachmentIsUploading() {
         XCTAssertTrue(
             ScheduleEditorInteractionPolicy.interactionsDisabled(
@@ -35,6 +63,16 @@ final class CalendarFeatureTests: XCTestCase {
         XCTAssertEqual(model.days.count, 42)
         XCTAssertEqual(model.days.first?.cell.date.rawValue, "2026-08-01")
         XCTAssertEqual(model.days[11].schedules.first?.content, "Night duty")
+    }
+
+    func testCancelledCalendarLoadDoesNotShowAnError() async {
+        let repository = CalendarRepositoryMock(cancelMemberLoad: true)
+        let model = CalendarViewModel(repository: repository, now: date(2026, 8, 12))
+
+        await model.load()
+
+        XCTAssertNil(model.errorMessage)
+        XCTAssertFalse(model.isLoading)
     }
 
     func testMonthNavigationCrossesTheYearBoundary() async {
@@ -292,13 +330,16 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
     var requestedPreviewMemberID: MemberID?
     var lastDutyUpdate: DutyUpdateDTO?
     let canManageValue: Bool
+    let cancelMemberLoad: Bool
 
-    init(canManage: Bool = false) {
+    init(canManage: Bool = false, cancelMemberLoad: Bool = false) {
         canManageValue = canManage
+        self.cancelMemberLoad = cancelMemberLoad
     }
 
     func member() async throws -> MemberDTO {
-        MemberDTO(
+        if cancelMemberLoad { throw CancellationError() }
+        return MemberDTO(
             id: 1, name: "Tester", email: "test@duty.park", teamId: nil, team: nil,
             calendarVisibility: .friends, kakaoId: nil, naverId: nil, hasPassword: true,
             hasProfilePhoto: false, profilePhotoVersion: 0
