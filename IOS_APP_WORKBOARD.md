@@ -4,7 +4,7 @@
 
 ## 0. 현재 상태 스냅샷 (2026-08-12)
 
-> **현재 종합 상태: freeze3 최종 QA 진행 중.** SwiftUI 앱과 모바일 OAuth/APNs 서버 경로, 일반 사용자 기능 모듈은 작업트리에 구현되어 있다. freeze2 iOS 전체 테스트는 **105/105 성공**했고 final nits·Todo 첨부·core parity 보정과 targeted test도 완료했다. generic Simulator `build-for-testing`과 Personal Team local-only device app build는 성공했지만 연결 가능한 iPhone이 없어 설치는 대기 중이다. APNs 설치의 refresh-session 귀속 P0는 웹/PWA 세션 계약 영향 가능성 때문에 사용자 승인 전 구현하지 않는다. 아래 기능 매트릭스의 `[ ]`는 미착수를 뜻하지 않고 **완료 조건 검증 대기**를 뜻한다.
+> **현재 종합 상태: 기능 기반 구현 후 디자인 동등성 재작업 진행 중.** SwiftUI 앱과 모바일 OAuth/APNs 서버 경로, 일반 사용자 기능 모듈은 작업트리에 구현되어 있다. freeze2 iOS 전체 테스트는 **105/105 성공**했고 final nits·Todo 첨부·core parity 보정과 targeted test도 완료했다. generic Simulator `build-for-testing`과 Personal Team local-only device app build가 성공했고, 앱을 실제 iPhone에 무선 설치해 실행했다. 실기기 확인에서 웹과 앱의 디자인 차이가 큰 것으로 확인되어, 현재는 현행 웹의 모바일 화면을 기준으로 한 시각적 동등성 작업으로 전환했다. 공통 디자인 토큰 foundation만 구현·검증된 상태이며 개별 화면은 완료 처리하지 않는다. APNs 설치의 refresh-session 귀속 P0는 웹/PWA 세션 계약 영향 가능성 때문에 사용자 승인 전 구현하지 않는다. 아래 기능 매트릭스의 `[ ]`는 미착수를 뜻하지 않고 **완료 조건 검증 대기**를 뜻한다.
 
 ### 구현·회귀 검증이 확인된 범위
 
@@ -19,7 +19,9 @@
 - [x] P1 세션·OAuth·Push preference·Social sync·Calendar·Team·Settings Guide/deeplink/share/toolbar·Profile sync·attachment safety/discard guard 보정과 각 targeted test를 완료했다.
 - [x] `docker-compose.yml`에 기존 `APNS_TEAM_ID`, `APNS_KEY_ID`, `APNS_PRIVATE_KEY` 전달을 최소 연결했다.
 - [x] Personal Team을 사용한 local-only device app build를 성공시켜 코드 서명 가능한 앱 산출물을 확인했다.
+- [x] local-only 앱을 실제 iPhone에 무선 설치하고 앱 실행·운영 API 연결을 확인했다.
 - [x] final nits, Todo 첨부·discard 흐름, core 기능 동등성 보정과 targeted test를 완료했다(Calendar **17/17** 포함).
+- [x] `frontend/src/style.css`와 주요 Vue 화면을 기준으로 공통 색상·간격·radius·타이포그래피·버튼·카드·입력창용 iOS 디자인 foundation을 보강하고 빌드·토큰 테스트를 통과했다. 개별 화면의 시각 일치는 아직 완료하지 않았다.
 
 ### 진행 중 또는 완료 확인이 남은 범위
 
@@ -28,7 +30,7 @@
 - [ ] freeze2 105/105 이후 freeze3 최종 clean QA와 마지막 기능 동등성 감사를 완료한다.
 - [ ] APNs installation을 현재 refresh session에 귀속하는 P0 변경의 웹/PWA 영향·최소 대안·회귀안을 사용자에게 제시하고 승인받는다.
 - [ ] iPhone 13 mini·iPhone 16 Pro 화면·5개 언어·접근성 시각 QA를 완료한다.
-- [ ] 실제 iPhone에서 서명·설치·세션 복원·Kakao/Naver 로그인·첨부·알림·APNs 수신 E2E를 완료한다.
+- [ ] 실제 iPhone에서 완료된 서명·무선 설치·기본 실행을 제외하고, 세션 복원·Kakao/Naver 로그인·첨부·알림·APNs 수신 E2E를 완료한다.
 - [ ] App Store 심사 범위인 실제 계정 삭제, Sign in with Apple 적용 여부, 개인정보/UGC 항목을 사용자와 별도 확정한다. 이는 웹 기능 동등성보다 넓은 출시 준비 항목이다.
 
 ### 외부 준비·운영 연결 게이트
@@ -40,7 +42,7 @@
 - [ ] 운영 proxy의 public scheme/host 전달과 실제 provider/APNs 자격증명으로 smoke test한다.
 - [ ] `https://dutypark.o-r.kr/.well-known/apple-app-site-association`은 현재 HTTP 200이나 `text/html` SPA fallback이다. 올바른 AASA 제공은 웹/배포 영향이 있어 사용자 협의 후 적용한다.
 
-> 현재 iOS/백엔드 변경은 작업트리의 미커밋·미배포 상태다. `dutypark://oauth/callback`은 공급자 콘솔 callback이 아니라 서버가 iOS 앱으로 돌아올 때 쓰는 custom scheme이다.
+> 모바일 OAuth·APNs·iOS 기능 기준선은 §13.6의 8개 논리 커밋으로 기록됐고, 최신 디자인 동등성·공식 서체·이 보드 변경은 아직 미커밋 작업트리 상태다. 전체 변경은 아직 미배포다. `dutypark://oauth/callback`은 공급자 콘솔 callback이 아니라 서버가 iOS 앱으로 돌아올 때 쓰는 custom scheme이다.
 
 ## 1. 사용자 목표
 
@@ -71,7 +73,7 @@
 9. 실제 요구나 재현된 문제가 없는 확장 포인트, 다중 환경, 상태 기계, 보안 인프라는 만들지 않는다. 필요가 확인된 시점에 가장 작은 변경으로 도입한다.
 10. 저장소의 `AGENTS.md`와 인접 코드·테스트의 기존 패턴을 따른다.
 11. 개발 서버는 사용자가 명시적으로 요청한 경우에만 실행한다.
-12. 자동 커밋하지 않는다.
+12. 커밋은 사용자의 명시적 요청이나 승인이 있을 때만 수행한다. 2026-08-12 사용자가 디자인 동등성 작업을 적절한 작업 단위로 나눠 커밋하도록 명시적으로 요청했으므로, §13.6의 범위와 검증 게이트에 따라 진행한다.
 
 ## 3. 상태와 보드 갱신 규칙
 
@@ -176,6 +178,7 @@
 | B5 | APNs·계정 삭제·App Store 심사 준비 | APNs 서버·iOS 구현 에이전트 | 진행 중 | additive APNs 등록·발송·수신 구현; 실제 서명·기기·심사 항목 대기 | 백엔드 알림/계정·iOS 설정/CI |
 | QA-001 | 테스트 전략 및 회귀 검증 조사 | QA 서브에이전트 | 완료 | §6.8 QA 기준선, 생성된 단위·UI 테스트 타깃 | 테스트 파일·설정 파일 |
 | QA-FINAL | 통합 freeze·최종 clean QA·기능 동등성 감사 | 통합/QA 에이전트 | 진행 중 | freeze2 iOS 105/105 성공; final nits/Todo 첨부/core parity targeted test 성공; freeze3 최종 QA 진행 | iOS 전반·테스트 결과 |
+| DESIGN-001 | 현행 모바일 웹 기준 iOS 디자인 동등성 | 디자인 foundation·기능별 구현·시각 QA 에이전트 | 진행 중 | §13; 공통 토큰 foundation 빌드·테스트 완료, 화면별 이식·시각 QA 대기 | `ios/Dutypark/Components`, 각 iOS feature 화면, font resource |
 
 ## 6. 1차 조사 통합 요약
 
@@ -393,6 +396,9 @@ iOS 클라이언트 및 외부 후속:
 | 2026-08-12 | D-016 | **구현 완료:** 모바일 OAuth 서버 기반은 승인된 최소 TX 경계만 수정하고 34/34 회귀 검증을 통과했다. | D-014, D-015 | 서버 기반은 완료; iOS OAuth 클라이언트 연결은 B2 이후 후속 |
 | 2026-08-12 | D-017 | **구현 완료:** APNs는 기존 VAPID Web Push를 유지하고 `/api/auth/push/apns/register`, `/unregister`와 별도 installation·sender를 additive로 추가한다. | 웹/PWA 병행 운영과 최소 변경 원칙 | 실제 APNs 자격증명·실기기 E2E 전에는 B5를 완료 처리하지 않는다. |
 | 2026-08-12 | D-018 | **진행 기준:** 기능별 SwiftUI 코드 존재와 기능 동등성 완료를 구분한다. | 최신 감사에서 대부분 구현됐지만 일부 런타임·권한·동등성 갭과 실기기 미검증이 확인됨 | §12 체크는 clean QA와 웹 교차 검증까지 끝난 행만 완료 처리한다. |
+| 2026-08-12 | D-019 | **사용자 재확정:** 네이티브 관례보다 현행 웹 모바일 화면과의 시각적 일치를 우선하고 모든 화면을 하나씩 대조한다. | 실기기 테스트에서 앱 디자인이 웹과 크게 다름을 확인 | §13 화면별 체크와 두 필수 viewport 시각 QA를 완료 조건으로 추가한다. |
+| 2026-08-12 | D-020 | **확정:** MapleStory 서체는 사용자가 지정한 Nexon 공식 배포본만 원본 그대로 앱에 포함한다. | 웹의 핵심 브랜드 타이포그래피 일치와 서체 라이선스 준수 | 기존 WOFF 변환본은 사용하지 않고 공식 OTF/TTF와 라이선스를 검증한 뒤 등록한다. |
+| 2026-08-12 | D-021 | **사용자 승인:** 현재 작업을 적절한 논리 단위로 나눠 커밋한다. | 변경 이력과 검증 지점을 명확히 유지 | §13.6 순서로 명시적 파일만 stage하고 각 milestone 검증 후 커밋한다. |
 
 ## 9. 사용자 질문 / 리스크
 
@@ -440,6 +446,8 @@ iOS 클라이언트 및 외부 후속:
 | R-021 | 2차 감사의 세션/OAuth/Push preference/Social sync/Settings deeplink·toolbar/Profile sync/첨부 discard·safety P1 | 웹 동등성 미달 또는 상태 불일치 가능 | 최소 보정과 targeted test를 완료하고 freeze3 최종 QA에서 재확인 | 보정 완료 / 재감사 중 |
 | R-022 | Calendar·Team·Guide·공개 링크 share/deeplink P1은 보정됐으나 운영 AASA가 `text/html` SPA fallback이고 업로드 10/50MB 정책이 미확정 | Universal Link와 업로드 사용자 경험 미확정 | 앱 보정·targeted test는 완료. AASA/업로드 공통 변경은 웹·배포 영향이 있어 사용자 협의 전 수행하지 않음 | 앱 보정 완료 / 협의 게이트 |
 | R-023 | APNs installation이 현재 refresh session에 명시적으로 귀속되지 않는 P0 | 로그아웃·세션 종료 뒤 기기 푸시 귀속이 웹 세션 의미와 어긋날 수 있음 | 최소 변경안과 additive 대안, 기존 Web Push·refresh 회귀안을 사용자에게 제시; 승인 전 구현 금지 | 승인 대기 |
+| R-024 | 현재 iOS 화면은 기능 중심의 SwiftUI `Form/List/Section` 사용이 많고 웹의 CSS·레이아웃·서체가 직접 이식되지 않음 | 실기기에서 브랜드와 화면 밀도·구조가 웹과 크게 다름 | `style.css`·Vue scoped style·실제 모바일 렌더를 기준으로 화면별 수동 매핑하고 §13 QA matrix로 대조 | 디자인 재작업 진행 중 |
+| R-025 | MapleStory 공식 앱용 OTF 통합 | 웹과 앱의 타이포그래피 불일치 | Nexon 공식 원본 Light/Bold OTF와 NOTICE를 포함하고 `UIAppFonts`, 실제 PostScript name, SwiftUI type mapping을 연결함 | 해결·통합 완료 |
 
 ## 10. 검증 항목
 
@@ -673,3 +681,195 @@ B2 구현 원칙:
 | FM-G06 | 개인 관리자 후보 | 웹은 가족만 후보로 제한하지만 서버 assign API에는 같은 제한이 없다. | 앱은 가족만 표시하고 서버 정책을 이번 범위에서 강화하지 않는다. |
 | FM-G07 | APNs | 기존 `/api/auth/push/**`는 VAPID Web Push라 네이티브 device token과 호환되지 않는다. | additive `/api/auth/push/apns/register`, `/unregister`와 별도 installation/sender를 구현했다. 실제 기기와 기존 PWA 구독·발송·badge 교차 회귀 전에는 완료 처리하지 않는다. |
 | FM-G08 | 날짜·시간 | 일정 계약은 timezone 없는 `LocalDateTime`이다. | 앱의 로컬 날짜 직렬화 코드·테스트는 구현됐다. 실제 서버 E2E로 웹과 같은 달력 의미를 확인하고 공통 계약 변경은 별도 승인 대상으로 둔다. |
+
+## 13. 모바일 웹 디자인 동등성 트랙
+
+### 13.1 목표·판정 기준
+
+> 이 트랙의 목표는 SwiftUI 기본 `Form`, `List`, `Section`을 사용한 기능 중심 화면을 **현재 Dutypark 모바일 웹과 시각·정보 구조·상태 표현이 같은 네이티브 화면**으로 교체하는 것이다. CSS를 SwiftUI에 직접 적용할 수 없으므로 값을 추측하지 않고 웹의 CSS token·Vue markup·실제 모바일 렌더를 SwiftUI modifier와 공통 component로 최소 매핑한다. 관리 화면과 PWA 전용 UI는 계속 제외한다.
+
+시각 동등성의 기준 우선순위:
+
+1. `https://dutypark.o-r.kr/`의 동일 사용자·동일 데이터·동일 locale·동일 theme 실제 모바일 렌더
+2. `frontend/src/style.css`의 `--dp-*` token, typography, background, border, radius, shadow, responsive rule
+3. 각 Vue SFC의 template, Tailwind utility, scoped style와 공통 component
+4. iOS safe area·키보드 회피·공유 시트처럼 웹과 구조가 다른 네이티브 동작은 기능을 바꾸지 않는 범위에서만 플랫폼 관례 적용
+
+모든 화면의 공통 완료 조건:
+
+- [ ] 웹과 앱을 같은 fixture/계정 상태로 맞춰 header, content 순서, 정보 밀도, 정렬, spacing, typography, color, border, radius, shadow를 나란히 비교한다.
+- [ ] 로딩·빈 상태·정상 데이터·서버 오류·권한 없음·확인/편집 modal·키보드 표시 상태 중 해당 화면이 제공하는 상태를 모두 확인한다.
+- [ ] 375×812와 402×874 portrait에서 가로 잘림, 겹침, 잘린 CTA, safe-area 침범, 의도하지 않은 이중 scroll이 없다.
+- [ ] light/dark 모두 `--dp-*` 의미색과 일치하며 SwiftUI system background나 기본 blue가 임의로 노출되지 않는다.
+- [ ] 웹의 정보와 액션을 삭제하거나 새 액션을 추가하지 않는다. 44pt touch target과 접근성 label은 모양을 바꾸지 않는 범위에서 보장한다.
+- [ ] Dynamic Type 확대 시 정보 손실 없이 동작하되, 기본 크기의 웹 비교 이미지를 먼저 통과한다.
+- [ ] 화면별 비교 screenshot 또는 명시적 검사 기록과 build/test 결과가 있어야 `[x]`로 바꾼다. 공통 foundation 완료만으로 개별 화면을 완료 처리하지 않는다.
+
+현재 상태:
+
+- [x] 웹 CSS/컴포넌트와 기존 iOS 화면의 구조적 차이를 감사했다.
+- [x] 공통 adaptive color, spacing, radius, type scale, button style, card/input chrome foundation을 보강하고 generic simulator build와 token test를 통과했다.
+- [x] 공식 MapleStory Light/Bold OTF와 라이선스 고지·SwiftUI mapping을 통합한다.
+- [ ] 전역 app shell을 완료한다.
+- [ ] 아래 개별 화면 이식과 시각 QA matrix를 완료한다.
+
+### 13.2 웹 source 기준표
+
+| 영역 | 1차 웹 source | 함께 확인할 공통 source | iOS 완료 상태 |
+|---|---|---|---|
+| 전역 shell·header·footer·locale·가장 banner | `frontend/src/components/layout/AppLayout.vue`, `AppHeader.vue`, `AppFooter.vue`, `LocaleSwitcher.vue`, `frontend/src/components/common/ImpersonationBanner.vue` | `frontend/src/style.css`, `ProfileAvatar.vue`, `NotificationBell.vue`, `NotificationDropdown.vue` | [ ] |
+| 비로그인 소개 | `frontend/src/components/intro/IntroHero.vue`, `IntroCTA.vue`, `IntroSection.vue`, `IntroShowcase.vue` | intro scoped style, `AppHeader.vue`, `AppFooter.vue` | [ ] |
+| 로그인·SSO 가입/완료 | `frontend/src/views/auth/LoginView.vue`, `SsoSignupView.vue`, `SsoCongratsView.vue`, `OAuthCallbackView.vue` | `PolicyModal.vue`, locale bundles, `style.css` | [ ] |
+| 로그인 홈 | `frontend/src/views/dashboard/DashboardView.vue` | `PageHeader.vue`, `ProfileAvatar.vue`, `VisibilityHintIcon.vue`, `style.css` | [ ] |
+| 개인/친구/공개 캘린더 | `frontend/src/views/duty/DutyView.vue`, `frontend/src/components/duty/DutyCalendarContent.vue` | `CalendarGrid.vue`, `CalendarMonthNavigator.vue`, `DutyHeaderControls.vue`, `DutyTypesBar.vue`, `YearMonthPicker.vue` | [ ] |
+| 근무·일정·D-Day·달력 Todo modal | `frontend/src/components/duty/*.vue` | `BaseModal.vue`, `AttachmentGrid.vue`, `FileUploader.vue`, `FriendTagSelector.vue`, `MemberTagChips.vue` | [ ] |
+| Todo 보드 | `frontend/src/views/todo/TodoBoardView.vue`, `frontend/src/components/todo/KanbanColumn.vue`, `KanbanCard.vue` | Todo/attachment 공통 component, `BaseModal.vue` | [ ] |
+| 친구·가족·개인 관리 | `frontend/src/views/member/FriendsView.vue` | `FriendSearchModal.vue`, `ProfileAvatar.vue`, common confirm/empty/loading/error style | [ ] |
+| 프로필·설정 | `frontend/src/views/member/MemberView.vue` | `DutyPatternCard.vue`, `ProfilePhotoUploader.vue`, `ImageCropModal.vue`, `SessionTokenList.vue`, policy components | [ ] |
+| 팀 월 화면 | `frontend/src/views/team/TeamView.vue` | calendar common components, `ProfileAvatar.vue` | [ ] |
+| 팀 관리 | `frontend/src/views/team/TeamManageView.vue` | `BatchUploadModal.vue`, `DutyTypeModal.vue`, `MemberSearchModal.vue`, `BaseModal.vue` | [ ] |
+| 알림 | `frontend/src/views/notification/NotificationListView.vue` | `NotificationBell.vue`, `NotificationDropdown.vue`, badge/empty/loading/error style | [ ] |
+| 가이드·정책·404 | `frontend/src/views/guide/GuideView.vue`, `frontend/src/views/policy/TermsView.vue`, `PrivacyView.vue`, `NotFoundView.vue` | `PageHeader.vue`, Markdown/body typography, locale bundles | [ ] |
+
+### 13.3 화면별 이식 체크리스트
+
+#### Foundation·전역 shell
+
+- [x] Nexon 공식 MapleStory Light/Bold를 bundle에 등록하고 웹과 같은 weight mapping·line height·fallback을 적용한다.
+- [ ] 전역 배경, content max-width, horizontal gutter, top/bottom safe area, keyboard 회피가 웹 모바일 layout과 일치한다.
+- [ ] 로그인/비로그인 header, logo, locale selector, 알림 badge/dropdown, profile menu와 가장 banner를 이식한다.
+- [ ] 모바일 footer/탭의 순서·짧은 label·선택/비선택 상태·icon 크기·높이를 웹 기준에 맞춘다.
+- [ ] button, card, input, chip, divider, badge, toast/alert, modal의 공통 style을 실제 사용 화면에서 검증한다.
+
+#### 공개·인증
+
+- [ ] 비로그인 intro hero, CTA, feature section, showcase, scroll cue와 footer를 동일한 순서·간격으로 이식한다.
+- [ ] 이메일 로그인 card, 입력 상태, 오류, 로그인 CTA, Kakao/Naver 버튼, 정책/가이드 링크를 일치시킨다.
+- [ ] OAuth 진행/취소/오류 callback 상태와 신규 SSO 가입 form·약관 modal·가입 완료 화면을 일치시킨다.
+- [ ] 이용약관·개인정보·가이드·404 화면의 header, 본문 폭, typography, accordion/list 상태를 일치시킨다.
+
+#### 홈·캘린더·근무·일정
+
+- [ ] 로그인 dashboard의 오늘 카드, 근무/일정 상태, 친구 section, pin/순서, 빈/오류 상태를 일치시킨다.
+- [ ] 개인·친구·공개 캘린더 header와 권한별 action 노출, 월 navigator, 연월 picker를 일치시킨다.
+- [ ] 7열 calendar grid의 요일, 날짜, 공휴일, 근무색, 일정/Todo bubble, 오늘/선택/강조 상태를 두 폭에서 검증한다.
+- [ ] 근무 유형 bar·집계·하루/월/연속/셀 편집·다른 친구 근무 overlay와 Excel 업로드 흐름을 일치시킨다.
+- [ ] 날짜 상세, 일정 목록/상세/작성/수정/삭제/정렬/태그/첨부, 검색 결과와 untag confirm modal을 일치시킨다.
+- [ ] D-Day 목록/상세/작성/수정/삭제/빠른 날짜 조정과 달력 Todo add/detail/complete/reopen을 일치시킨다.
+
+#### Todo·친구·팀
+
+- [ ] Todo의 모바일 상태 tab, column count, card 정보·tag·첨부·drag/대체 action, add/edit/detail modal을 일치시킨다.
+- [ ] 친구/가족 목록, 검색, 보낸/받은 요청, pin, 가족 전환, 삭제, 개인 관리 위임과 auxiliary account 상태를 일치시킨다.
+- [ ] 팀 없음/월 화면, 근무조, 멤버 card, 팀 일정과 권한별 작성 action을 일치시킨다.
+- [ ] 팀 관리의 요약, 구성원 검색/추가/제거, manager/admin, duty type, batch template/Excel modal을 일치시킨다.
+
+#### 알림·프로필·설정
+
+- [ ] 알림 목록의 미읽음 강조, type icon, 상대/절대 시각, 더 보기, 읽음/삭제 action과 빈/오류 상태를 일치시킨다.
+- [ ] 프로필 정보·사진 crop/upload/delete, 이름/팀/이메일/소셜 연결 상태와 공개범위 audience preview를 일치시킨다.
+- [ ] 언어·theme, 근무 pattern, 비밀번호, 로그인 session 목록/종료, 보조 계정, 로그아웃/계정 삭제 안내를 일치시킨다.
+- [ ] 일정·Todo 첨부 grid, image viewer, uploader progress/cancel/error, reorder/delete와 native share/open 결과를 웹 범위 안에서 일치시킨다.
+
+### 13.4 필수 viewport 시각 QA matrix
+
+> 사용자가 지정한 비교 viewport는 375×812와 402×874 portrait다. 실제 iPhone 13 mini의 기기 고유 logical viewport 검사는 실기기에서 추가 수행하되 아래 두 기준을 대체하지 않는다. 각 칸은 동일 데이터·locale에서 웹/app screenshot을 나란히 대조한 뒤에만 체크한다.
+
+| 화면군 | 375×812 Light | 375×812 Dark | 402×874 Light | 402×874 Dark | 상태·상호작용 추가 증거 |
+|---|---|---|---|---|---|
+| 전역 shell·header·footer·modal | [ ] | [ ] | [ ] | [ ] | safe area, scroll, keyboard, sheet |
+| 비로그인 intro | [ ] | [ ] | [ ] | [ ] | top/middle/bottom scroll position |
+| 로그인·OAuth·SSO 가입/완료 | [ ] | [ ] | [ ] | [ ] | validation, loading, error, keyboard |
+| 로그인 dashboard | [ ] | [ ] | [ ] | [ ] | data, empty, error, impersonation |
+| 개인/친구/공개 캘린더 | [ ] | [ ] | [ ] | [ ] | 권한별 header, 월 경계, 선택일 |
+| 근무 편집·근무 pattern·Excel | [ ] | [ ] | [ ] | [ ] | picker, confirm, upload result |
+| 일정·D-Day·달력 Todo modal | [ ] | [ ] | [ ] | [ ] | create/edit/detail/delete/tag/attachment |
+| Todo 보드 | [ ] | [ ] | [ ] | [ ] | 3상태, drag 대체 action, modal |
+| 친구·가족·개인 관리 | [ ] | [ ] | [ ] | [ ] | request states, search, confirm |
+| 팀 월 화면 | [ ] | [ ] | [ ] | [ ] | no-team/data/shift/schedule |
+| 팀 관리 | [ ] | [ ] | [ ] | [ ] | 권한별 action, search, upload modal |
+| 알림 | [ ] | [ ] | [ ] | [ ] | unread/read/deleted/pagination |
+| 프로필·설정·session | [ ] | [ ] | [ ] | [ ] | photo crop, language/theme, destructive confirm |
+| 가이드·약관·개인정보·404 | [ ] | [ ] | [ ] | [ ] | long text, accordion, external link |
+
+추가 locale/accessibility 회귀:
+
+- [ ] 위 matrix의 대표 화면을 `ko`, `en`, `ja`, `zh`, `es`에서 확인하고 tight slot 잘림을 기록한다.
+- [ ] 기본 크기 통과 후 Larger Text, Bold Text, VoiceOver focus order와 Reduce Motion을 핵심 흐름에서 확인한다.
+- [ ] 캡처 파일명에 화면, 상태, viewport, theme, locale, web/app을 포함해 재검증 가능한 증거로 남긴다.
+
+### 13.5 MapleStory 공식 서체 통합 게이트
+
+공식 source: `https://maplestory.nexon.com/Media/Font`
+
+- [x] 공식 페이지에서 배포하는 원본 OTF Light/Bold 파일과 라이선스·출처를 `NOTICE.txt`에 기록한다.
+- [x] 기존 웹 WOFF를 변환하지 않고 공식 원본을 그대로 `ios` resource에 포함한다. 서체 파일 자체를 수정하지 않는다.
+- [x] Xcode resource sync와 `UIAppFonts` 등록을 확인한다.
+- [x] 실제 PostScript name `MaplestoryOTFLight`/`MaplestoryOTFBold`를 확인해 SwiftUI mapping과 system fallback을 구성한다.
+- [ ] 한글·영문·일본어·중국어·스페인어 sample, 숫자·날짜·badge·calendar cell을 두 기기 폭과 light/dark에서 검증한다.
+- [x] `Resources/Fonts/NOTICE.txt`에 저작권·공식 출처·원본 미수정 포함 사실을 최소 기록한다.
+
+### 13.6 논리적 커밋 milestone
+
+> 사용자가 커밋을 명시적으로 승인했다. 각 커밋은 해당 task 파일만 명시적으로 stage하고, secret·DerivedData·build 산출물·Personal Team 임시 signing 값은 포함하지 않는다. 실행 중인 다른 에이전트의 파일과 섞지 않는다.
+
+| 순서 | 권장 commit | 범위 | 커밋 전 최소 검증 | 상태 |
+|---|---|---|---|---|
+| C1 | `feat: add mobile OAuth support` | additive backend mobile OAuth, migration, tests, iOS OAuth client | mobile+web OAuth targeted tests, iOS auth tests/build | [ ] |
+| C2 | `feat: add native iOS app core features` | iOS project, networking/session, domain/API models, 일반 사용자 기능 화면·테스트 | generic build-for-testing, full iOS test | [ ] |
+| C3 | `feat: add APNs notification support` | additive APNs backend/iOS path, migration/config/tests | APNs/Web Push/notification targeted regression, iOS build | [ ] |
+| C4 | `docs: add iOS delivery workboard` | 이 작업 보드와 필요한 배포 문서만 | diff/readability/link 확인 | [ ] |
+| C5 | `feat: align iOS design foundation with web` | CSS token mapping, common button/card/input/state primitives | component/token tests, generic build | [ ] |
+| C6 | `feat: add Dutypark typography and app shell` | 공식 font, typography mapping, global background/header/footer/tab/modal shell | font runtime check, 4-way shell visual matrix, build | [ ] |
+| C7 | `feat: match iOS public and authentication design` | intro, login, OAuth/SSO, policy/guide/404 | 해당 화면 4-way visual matrix, auth targeted tests | [ ] |
+| C8 | `feat: match iOS dashboard and calendar design` | dashboard, calendar, duty/schedule/D-Day/calendar Todo | 해당 화면 4-way visual matrix, Calendar tests/build | [ ] |
+| C9 | `feat: match iOS todo social and team design` | Todo, friends/family, team/team manage | 해당 화면 4-way visual matrix, feature tests/build | [ ] |
+| C10 | `feat: match iOS settings and notification design` | notifications, profile/settings/session/attachments | 해당 화면 4-way visual matrix, feature tests/build | [ ] |
+| C11 | `test: verify iOS web design parity` | 최종 visual evidence/QA 보정과 테스트 | 375×812·402×874 matrix, 5 locale sample, full clean iOS test/build | [ ] |
+
+완료된 기능 기준선 커밋:
+
+| Hash | 논리 단위 |
+|---|---|
+| `aec06ad0` | 모바일 OAuth 서버 교환 기반 |
+| `6b924dff` | APNs 알림 전달 기반 |
+| `157b7ddb` | iOS delivery workboard 기준선 |
+| `4c81bedc` | iOS foundation·인증 |
+| `af62220c` | 홈 dashboard |
+| `b189d982` | 캘린더·Todo·첨부 |
+| `1c30e059` | 소셜·팀 |
+| `fd19a198` | 알림·설정 |
+
+> 위 8개 커밋은 현재 기능 기준선이며 전체 baseline build를 통과했다. C5~C11의 남은 디자인 동등성 변경은 별도 논리 단위로 검증·커밋한다.
+
+### 13.7 배포·provider·사용자 action gate
+
+| 구분 | 준비·설정 | 담당 | 완료 기준 | 상태 |
+|---|---|---|---|---|
+| Apple 계정 | 유료 Apple Developer Program 가입과 법적 계약·세금/은행 정보 완료 | 사용자 | App Store Connect에서 앱 생성·계약 상태가 유효함 | [ ] |
+| App ID | Bundle ID `com.tistory.shanepark.dutypark`, Push Notifications, Associated Domains와 필요한 Sign in with Apple capability 확정 | 사용자 계정 접근 필요 / 에이전트 설정 보조 | 배포 Team의 explicit App ID와 provisioning 생성 가능 | [ ] |
+| Signing | repository의 빈 `DEVELOPMENT_TEAM`에 개인 값을 커밋하지 않고 Xcode/CI signing으로 연결 | 에이전트 repo 설정 + 사용자 Team 선택 | Archive가 distribution profile로 성공 | [ ] |
+| APNs | Apple Developer에서 APNs `.p8`, Key ID, Team ID 발급 | 사용자 계정 접근 필요 | secret manager/운영 환경에만 저장하고 실제 sandbox/production 수신 | [ ] |
+| Associated Domains | `applinks:dutypark.o-r.kr` entitlement와 `/.well-known/apple-app-site-association`의 `TEAM_ID.com.tistory.shanepark.dutypark` 제공 | 에이전트 제안 / 웹 영향 사용자 승인 | AASA가 redirect 없이 JSON MIME으로 제공되고 universal link E2E 성공 | 승인 대기 |
+| Kakao | Kakao Developers의 기존 웹 callback을 보존하고 `https://dutypark.o-r.kr/api/auth/mobile/oauth/callback/kakao` 추가, REST API key·Client Secret 사용 여부·동의항목 확인 | 사용자 로그인/콘솔 권한 필요, 에이전트 단계별 보조 | 기존 웹 로그인과 iOS 기존/신규/취소/실패 E2E 모두 성공 | [ ] |
+| Naver | Naver Developers의 기존 웹 callback을 보존하고 `https://dutypark.o-r.kr/api/auth/mobile/oauth/callback/naver` 추가, Client ID/Secret·서비스 URL·검수/테스트 계정 확인 | 사용자 로그인/콘솔 권한 필요, 에이전트 단계별 보조 | 기존 웹 로그인과 iOS 기존/신규/취소/실패 E2E 모두 성공 | [ ] |
+| 운영 서버 | 모바일 OAuth/APNs additive backend와 migration 배포, public scheme/host proxy 전달, secret 연결 | 에이전트 변경 / 배포는 사용자 승인 범위 | 기존 웹 smoke regression + mobile OAuth/APNs smoke 성공 | 미배포 |
+| App Store 정책 | Sign in with Apple 적용 판단, 실제 앱 내 계정 삭제, 개인정보처리방침·UGC 신고/차단·권한 문구 확정 | 사용자 결정 + 에이전트 구현/문서 보조 | App Review 필수 항목과 privacy answers가 실제 앱 동작과 일치 | 승인 대기 |
+| App Store Connect | 앱 이름·부제·설명·키워드·지원/개인정보 URL·연령등급·카테고리·5개 locale metadata·screenshot 준비 | 사용자 최종 승인 / 에이전트 산출 보조 | 13 mini/16 Pro 기준 화면을 포함한 제출 필드 완료 | [ ] |
+| TestFlight | Archive upload, export compliance, 내부 tester, OAuth/APNs 운영 smoke | 사용자 계정 접근 필요 / 에이전트 보조 | 실제 배포 build에서 핵심 기능과 웹 병행 회귀 성공 | [ ] |
+
+웹/PWA 영향 사전 협의가 필요한 항목:
+
+- [ ] AASA 정적 응답과 proxy route 변경
+- [ ] APNs installation의 refresh-session 귀속 migration
+- [ ] 운영 서버에 모바일 OAuth/APNs backend·DB migration 배포
+- [ ] 첨부 10MB/50MB 정책 통일
+- [ ] 개인정보처리방침·회원 삭제·Sign in with Apple 등 웹에도 표시될 수 있는 공통 정책 변경
+
+사용자 계정 로그인이 없으면 에이전트가 대신 완료할 수 없는 항목:
+
+- Apple Developer/App Store Connect 가입·계약·인증서/key 발급과 최종 제출
+- Kakao/Naver developer console의 앱 소유자 권한이 필요한 callback·동의항목·검수 설정
+- 운영 hosting/DNS/proxy/secret manager에서 권한이 필요한 배포·secret 입력
+
+위 콘솔 작업은 사용자가 로그인한 세션과 명시적 승인 범위가 제공되면 에이전트가 화면을 확인하며 필요한 값만 설정한다. 기존 callback·key·서비스 상태를 삭제하거나 교체하는 작업은 웹 로그인에 영향을 줄 수 있으므로 별도 승인 없이 수행하지 않는다.
