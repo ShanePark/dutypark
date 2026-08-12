@@ -48,8 +48,25 @@ struct CalendarView: View {
             }
         }
         .sheet(isPresented: $showsSearch) { ScheduleSearchView(model: model) }
-        .sheet(isPresented: $showsDDayEditor) { DDayEditorView(model: model, existing: nil) }
-        .sheet(isPresented: $showsMonthPicker) { YearMonthPickerView(model: model) }
+        .fullScreenCover(isPresented: $showsDDayEditor) {
+            DPModalOverlay(onDismiss: { showsDDayEditor = false }, closeOnBackdrop: false) { availableSize, dismiss in
+                DDayEditorView(
+                    model: model,
+                    existing: nil,
+                    maximumHeight: availableSize.height,
+                    dismiss: dismiss
+                )
+            }
+        }
+        .fullScreenCover(isPresented: $showsMonthPicker) {
+            DPModalOverlay(onDismiss: { showsMonthPicker = false }, closeOnBackdrop: false) { availableSize, dismiss in
+                YearMonthPickerView(
+                    model: model,
+                    maximumHeight: availableSize.height,
+                    dismiss: dismiss
+                )
+            }
+        }
         .fullScreenCover(isPresented: $showsDutyComparison) {
             DPModalOverlay(onDismiss: { showsDutyComparison = false }) { availableSize, dismiss in
                 DutyComparisonView(model: model, maximumHeight: availableSize.height) {
@@ -163,7 +180,7 @@ struct CalendarView: View {
     }
 
     private var monthLabel: some View {
-        Button { showsMonthPicker = true } label: {
+        Button { withoutPresentationAnimation { showsMonthPicker = true } } label: {
             Text(String(format: "%04d-%02d", model.year, model.month))
                 .font(DPFont.bold(size: isViewingCurrentMonth ? 16 : 12, relativeTo: .headline))
                 .foregroundStyle(DPColor.textPrimary)
@@ -563,7 +580,7 @@ struct CalendarView: View {
                 DDayCard(item: item, editable: model.isMyCalendar, model: model)
             }
             if model.isMyCalendar {
-                Button { showsDDayEditor = true } label: {
+                Button { withoutPresentationAnimation { showsDDayEditor = true } } label: {
                     VStack(spacing: 6) {
                         Circle()
                             .fill(DPColor.backgroundTertiary)
@@ -644,49 +661,129 @@ private struct CalendarFlowLayout: Layout {
     }
 }
 
+enum CalendarCompactModalLayout {
+    static let maximumPanelHeightRatio: CGFloat = 0.9
+    static let minimumBodyHeight: CGFloat = 1
+
+    static func bodyHeight(
+        contentHeight: CGFloat,
+        maximumPanelHeight: CGFloat,
+        fixedChromeHeight: CGFloat
+    ) -> CGFloat {
+        let availableHeight = max(minimumBodyHeight, maximumPanelHeight - fixedChromeHeight)
+        return min(max(contentHeight, minimumBodyHeight), availableHeight)
+    }
+}
+
 private struct YearMonthPickerView: View {
     @ObservedObject var model: CalendarViewModel
-    @Environment(\.dismiss) private var dismiss
+    let maximumHeight: CGFloat
+    let dismiss: () -> Void
     @State private var pickerYear: Int
+    @State private var isSelecting = false
 
-    init(model: CalendarViewModel) {
+    init(model: CalendarViewModel, maximumHeight: CGFloat, dismiss: @escaping () -> Void) {
         self.model = model
+        self.maximumHeight = maximumHeight
+        self.dismiss = dismiss
         _pickerYear = State(initialValue: model.year)
     }
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: DPSpacing.medium) {
-                HStack {
-                    Button { pickerYear -= 1 } label: { Image(systemName: "chevron.left").frame(width: 44, height: 44) }
-                    Spacer()
-                    Text(String(pickerYear)).font(.title2.bold())
-                    Spacer()
-                    Button { pickerYear += 1 } label: { Image(systemName: "chevron.right").frame(width: 44, height: 44) }
+        VStack(spacing: 0) {
+            HStack(spacing: DPSpacing.small) {
+                Text(CalendarLocalization.text("calendar.month.choose"))
+                    .font(DPTypography.heading)
+                    .foregroundStyle(DPColor.textPrimary)
+                Spacer(minLength: 0)
+                Button(action: guardedDismiss) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(DPColor.textPrimary)
+                        .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                        .contentShape(Rectangle())
                 }
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: DPSpacing.small) {
+                .buttonStyle(.plain)
+                .disabled(isSelecting)
+                .accessibilityLabel(CalendarLocalization.text("calendar.close"))
+            }
+            .padding(.leading, DPSpacing.medium)
+            .padding(.trailing, DPSpacing.small)
+            .padding(.vertical, DPSpacing.compact)
+
+            Divider().overlay(DPColor.borderPrimary)
+
+            VStack(spacing: DPSpacing.medium) {
+                HStack(spacing: DPSpacing.small) {
+                    Button { pickerYear -= 1 } label: {
+                        Image(systemName: "chevron.left")
+                            .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(CalendarLocalization.format("calendar.month.format", pickerYear - 1, model.month))
+
+                    Spacer(minLength: 0)
+
+                    Text(String(pickerYear))
+                        .font(DPTypography.sectionTitle)
+                        .foregroundStyle(DPColor.textPrimary)
+
+                    Spacer(minLength: 0)
+
+                    Button { pickerYear += 1 } label: {
+                        Image(systemName: "chevron.right")
+                            .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(CalendarLocalization.format("calendar.month.format", pickerYear + 1, model.month))
+                }
+                .foregroundStyle(DPColor.accent)
+                .disabled(isSelecting)
+
+                LazyVGrid(
+                    columns: Array(repeating: GridItem(.flexible(), spacing: DPSpacing.small), count: 4),
+                    spacing: DPSpacing.small
+                ) {
                     ForEach(1...12, id: \.self) { month in
-                        Button(CalendarLocalization.format("calendar.month.short", month)) {
-                            Task { await model.selectYearMonth(year: pickerYear, month: month); dismiss() }
+                        let isSelected = pickerYear == model.year && month == model.month
+                        Button {
+                            select(month: month)
+                        } label: {
+                            Text(CalendarLocalization.format("calendar.month.short", month))
+                                .font(DPTypography.label)
+                                .foregroundStyle(isSelected ? DPColor.textOnDark : DPColor.textPrimary)
+                                .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)
+                                .background(isSelected ? DPColor.accent : DPColor.backgroundTertiary)
+                                .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+                                .overlay {
+                                    RoundedRectangle(cornerRadius: DPRadius.standard)
+                                        .stroke(isSelected ? DPColor.accent : DPColor.borderPrimary)
+                                }
                         }
-                        .buttonStyle(.bordered)
-                        .tint(pickerYear == model.year && month == model.month ? DPColor.accent : DPColor.textSecondary)
-                        .frame(minHeight: 44)
+                        .buttonStyle(.plain)
+                        .disabled(isSelecting)
                     }
                 }
-                Spacer()
             }
             .padding(DPSpacing.medium)
-            .background(DPColor.backgroundModal)
-            .navigationTitle(CalendarLocalization.text("calendar.month.choose"))
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button(CalendarLocalization.text("calendar.close")) { dismiss() } } }
         }
-        .tint(DPColor.accent)
-        .toolbarBackground(DPColor.backgroundTertiary, for: .navigationBar)
-        .toolbarBackground(.visible, for: .navigationBar)
-        .presentationDetents([.medium])
-        .presentationCornerRadius(DPRadius.standard)
-        .presentationBackground(DPColor.backgroundModal)
+        .frame(maxHeight: maximumHeight * CalendarCompactModalLayout.maximumPanelHeightRatio, alignment: .top)
+        .background(DPColor.backgroundModal)
+        .opacity(isSelecting ? DPChrome.disabledOpacity : 1)
+    }
+
+    private func guardedDismiss() {
+        guard !isSelecting else { return }
+        dismiss()
+    }
+
+    private func select(month: Int) {
+        guard !isSelecting else { return }
+        isSelecting = true
+        Task {
+            await model.selectYearMonth(year: pickerYear, month: month)
+            dismiss()
+        }
     }
 }
 
@@ -2091,9 +2188,20 @@ private struct DDayCard: View {
                 .buttonStyle(.plain)
         }
         .contentShape(RoundedRectangle(cornerRadius: DPRadius.large))
-        .onTapGesture { if editable { edits = true } }
+        .onTapGesture {
+            if editable { withoutPresentationAnimation { edits = true } }
+        }
         .shadow(color: .black.opacity(model.pinnedDDayID == item.id ? 0.12 : 0.05), radius: model.pinnedDDayID == item.id ? 4 : 1, y: 1)
-        .sheet(isPresented: $edits) { DDayEditorView(model: model, existing: item) }
+        .fullScreenCover(isPresented: $edits) {
+            DPModalOverlay(onDismiss: { edits = false }, closeOnBackdrop: false) { availableSize, dismiss in
+                DDayEditorView(
+                    model: model,
+                    existing: item,
+                    maximumHeight: availableSize.height,
+                    dismiss: dismiss
+                )
+            }
+        }
     }
 
     private var cardBackground: LinearGradient {
@@ -2125,118 +2233,261 @@ private struct DDayCard: View {
 private struct DDayEditorView: View {
     @ObservedObject var model: CalendarViewModel
     let existing: DDayDTO?
-    @Environment(\.dismiss) private var dismiss
+    let maximumHeight: CGFloat
+    let dismiss: () -> Void
     @State private var title: String
     @State private var date: Date
     @State private var isPrivate: Bool
     @State private var confirmsDelete = false
+    @State private var isSaving = false
+    @State private var headerHeight: CGFloat = 0
+    @State private var bodyContentHeight: CGFloat = 0
+    @State private var footerHeight: CGFloat = 0
 
-    init(model: CalendarViewModel, existing: DDayDTO?) {
-        self.model = model; self.existing = existing
+    init(
+        model: CalendarViewModel,
+        existing: DDayDTO?,
+        maximumHeight: CGFloat,
+        dismiss: @escaping () -> Void
+    ) {
+        self.model = model
+        self.existing = existing
+        self.maximumHeight = maximumHeight
+        self.dismiss = dismiss
         _title = State(initialValue: existing?.title ?? "")
         _date = State(initialValue: existing.flatMap { CalendarDateSupport.date(from: $0.date) } ?? Date())
         _isPrivate = State(initialValue: existing?.isPrivate ?? false)
     }
+
+    private var maximumPanelHeight: CGFloat {
+        min(maximumHeight, 874) * CalendarCompactModalLayout.maximumPanelHeightRatio
+    }
+
+    private var measuredBodyHeight: CGFloat {
+        CalendarCompactModalLayout.bodyHeight(
+            contentHeight: bodyContentHeight,
+            maximumPanelHeight: maximumPanelHeight,
+            fixedChromeHeight: headerHeight + footerHeight + DPChrome.borderWidth * 2
+        )
+    }
+
+    private var canSave: Bool {
+        !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && title.count <= 30
+    }
+
     var body: some View {
         VStack(spacing: 0) {
-            HStack {
-                Text(CalendarLocalization.text(existing == nil ? "calendar.dday.add" : "calendar.dday.edit"))
-                    .font(DPTypography.heading)
-                    .foregroundStyle(DPColor.textPrimary)
-                Spacer()
-                Button { dismiss() } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(DPColor.textPrimary)
-                        .frame(width: 44, height: 44)
+            header
+                .background {
+                    GeometryReader { proxy in
+                        Color.clear.preference(key: DDayEditorHeaderHeightPreferenceKey.self, value: proxy.size.height)
+                    }
                 }
-            }
-            .padding(.leading, DPSpacing.medium)
-            .padding(.trailing, DPSpacing.extraSmall)
-            .background(DPColor.backgroundTertiary)
-            .overlay(alignment: .bottom) { Rectangle().fill(DPColor.borderPrimary).frame(height: 1) }
+
+            Divider().overlay(DPColor.borderPrimary)
 
             ScrollView {
-                VStack(alignment: .leading, spacing: DPSpacing.medium) {
-                    VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
-                        HStack {
-                            Text("calendar.dday.name", tableName: "Calendar")
-                                .font(DPTypography.label)
-                                .foregroundStyle(DPColor.textSecondary)
-                            Spacer()
-                            Text("\(title.count)/30")
-                                .font(DPTypography.caption)
-                                .foregroundStyle(title.count > 30 ? DPColor.danger : DPColor.textMuted)
-                        }
-                        TextField(CalendarLocalization.text("calendar.dday.name"), text: $title)
-                            .dpInputChrome(isInvalid: title.isEmpty || title.count > 30)
-                    }
-                    VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
-                        Text("calendar.dday.date", tableName: "Calendar")
-                            .font(DPTypography.label)
-                            .foregroundStyle(DPColor.textSecondary)
-                        DatePicker(CalendarLocalization.text("calendar.dday.date"), selection: $date, displayedComponents: .date)
-                            .labelsHidden()
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal, DPSpacing.compact)
-                            .frame(minHeight: 44)
-                            .background(DPColor.backgroundInput)
-                            .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
-                            .overlay(RoundedRectangle(cornerRadius: DPRadius.standard).stroke(DPColor.borderInput))
-                    }
-                    HStack(spacing: DPSpacing.small) {
-                        ForEach([-7, -1, 0, 1, 7], id: \.self) { offset in
-                            Button(offset == 0 ? CalendarLocalization.text("calendar.today") : (offset > 0 ? "+\(offset)" : "\(offset)")) {
-                                date = CalendarDateSupport.calendar.date(byAdding: .day, value: offset, to: offset == 0 ? Date() : date) ?? date
-                            }
-                            .font(DPTypography.caption)
-                            .foregroundStyle(offset == 0 ? DPColor.accentHover : DPColor.textPrimary)
-                            .frame(maxWidth: .infinity, minHeight: 44)
-                            .background(offset == 0 ? DPColor.accentSoft : DPColor.backgroundTertiary)
-                            .clipShape(RoundedRectangle(cornerRadius: DPRadius.small))
+                editorBody
+                    .background {
+                        GeometryReader { proxy in
+                            Color.clear.preference(key: DDayEditorBodyHeightPreferenceKey.self, value: proxy.size.height)
                         }
                     }
-                    HStack {
-                        Label(CalendarLocalization.text("calendar.dday.private"), systemImage: isPrivate ? "lock.fill" : "lock.open")
-                            .font(DPTypography.label)
-                            .foregroundStyle(DPColor.textPrimary)
-                        Spacer()
-                        Toggle(CalendarLocalization.text("calendar.dday.private"), isOn: $isPrivate)
-                            .labelsHidden()
-                    }
-                    .padding(DPSpacing.compact)
-                    .background(DPColor.backgroundSecondary)
-                    .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+            }
+            .scrollDismissesKeyboard(.interactively)
+            .scrollBounceBehavior(.basedOnSize)
+            .frame(height: measuredBodyHeight)
 
-                    if existing != nil {
-                        Button(CalendarLocalization.text("calendar.delete"), role: .destructive) { confirmsDelete = true }
-                            .font(DPTypography.label)
-                            .frame(minHeight: 44)
+            Divider().overlay(DPColor.borderPrimary)
+
+            footer
+                .background {
+                    GeometryReader { proxy in
+                        Color.clear.preference(key: DDayEditorFooterHeightPreferenceKey.self, value: proxy.size.height)
                     }
                 }
-                .padding(DPSpacing.compact)
-            }
-            HStack(spacing: DPSpacing.small) {
-                Button(CalendarLocalization.text("calendar.cancel")) { dismiss() }
-                    .buttonStyle(DPOutlineButtonStyle())
-                Button(CalendarLocalization.text("calendar.save")) {
-                    Task { if await model.saveDDay(existing: existing, title: title, date: date, isPrivate: isPrivate) { dismiss() } }
-                }
-                .buttonStyle(DPPrimaryButtonStyle())
-                .disabled(title.isEmpty || title.count > 30)
-            }
-            .frame(maxWidth: .infinity, alignment: .trailing)
-            .padding(DPSpacing.compact)
-            .background(DPColor.backgroundModal)
-            .overlay(alignment: .top) { Rectangle().fill(DPColor.borderPrimary).frame(height: 1) }
         }
+        .frame(maxHeight: maximumPanelHeight, alignment: .top)
         .background(DPColor.backgroundModal)
-        .presentationDetents([.medium])
-        .presentationCornerRadius(DPRadius.standard)
+        .onPreferenceChange(DDayEditorHeaderHeightPreferenceKey.self) { headerHeight = $0 }
+        .onPreferenceChange(DDayEditorBodyHeightPreferenceKey.self) { bodyContentHeight = $0 }
+        .onPreferenceChange(DDayEditorFooterHeightPreferenceKey.self) { footerHeight = $0 }
         .confirmationDialog(CalendarLocalization.text("calendar.delete.confirm"), isPresented: $confirmsDelete) {
-            if let existing { Button(CalendarLocalization.text("calendar.delete"), role: .destructive) { Task { await model.deleteDDay(existing); dismiss() } } }
+            if let existing {
+                Button(CalendarLocalization.text("calendar.delete"), role: .destructive) {
+                    delete(existing)
+                }
+            }
+            Button(CalendarLocalization.text("calendar.cancel"), role: .cancel) {}
         }
     }
+
+    private var header: some View {
+        HStack(spacing: DPSpacing.small) {
+            Text(CalendarLocalization.text(existing == nil ? "calendar.dday.add" : "calendar.dday.edit"))
+                .font(DPTypography.heading)
+                .foregroundStyle(DPColor.textPrimary)
+            Spacer(minLength: 0)
+            Button(action: guardedDismiss) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(DPColor.textPrimary)
+                    .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(isSaving)
+            .accessibilityLabel(CalendarLocalization.text("calendar.close"))
+        }
+        .padding(.leading, DPSpacing.medium)
+        .padding(.trailing, DPSpacing.small)
+        .padding(.vertical, DPSpacing.compact)
+        .background(DPColor.backgroundModal)
+    }
+
+    private var editorBody: some View {
+        VStack(alignment: .leading, spacing: DPSpacing.medium) {
+            VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+                HStack {
+                    Text("calendar.dday.name", tableName: "Calendar")
+                        .font(DPTypography.label)
+                        .foregroundStyle(DPColor.textSecondary)
+                    Spacer()
+                    Text("\(title.count)/30")
+                        .font(DPTypography.caption)
+                        .foregroundStyle(title.count > 30 ? DPColor.danger : DPColor.textMuted)
+                }
+                TextField(CalendarLocalization.text("calendar.dday.name"), text: $title)
+                    .dpInputChrome(isInvalid: !canSave)
+                    .disabled(isSaving)
+            }
+
+            VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+                Text("calendar.dday.date", tableName: "Calendar")
+                    .font(DPTypography.label)
+                    .foregroundStyle(DPColor.textSecondary)
+                DatePicker(
+                    CalendarLocalization.text("calendar.dday.date"),
+                    selection: $date,
+                    displayedComponents: .date
+                )
+                .labelsHidden()
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, DPSpacing.compact)
+                .frame(minHeight: DPSize.minimumTouchTarget)
+                .background(DPColor.backgroundInput)
+                .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+                .overlay(RoundedRectangle(cornerRadius: DPRadius.standard).stroke(DPColor.borderInput))
+                .disabled(isSaving)
+            }
+
+            HStack(spacing: DPSpacing.small) {
+                ForEach([-7, -1, 0, 1, 7], id: \.self) { offset in
+                    Button(offset == 0 ? CalendarLocalization.text("calendar.today") : (offset > 0 ? "+\(offset)" : "\(offset)")) {
+                        date = CalendarDateSupport.calendar.date(
+                            byAdding: .day,
+                            value: offset,
+                            to: offset == 0 ? Date() : date
+                        ) ?? date
+                    }
+                    .font(DPTypography.caption)
+                    .foregroundStyle(offset == 0 ? DPColor.accentHover : DPColor.textPrimary)
+                    .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)
+                    .background(offset == 0 ? DPColor.accentSoft : DPColor.backgroundTertiary)
+                    .clipShape(RoundedRectangle(cornerRadius: DPRadius.small))
+                    .disabled(isSaving)
+                }
+            }
+
+            HStack {
+                Label(CalendarLocalization.text("calendar.dday.private"), systemImage: isPrivate ? "lock.fill" : "lock.open")
+                    .font(DPTypography.label)
+                    .foregroundStyle(DPColor.textPrimary)
+                Spacer()
+                Toggle(CalendarLocalization.text("calendar.dday.private"), isOn: $isPrivate)
+                    .labelsHidden()
+                    .disabled(isSaving)
+            }
+            .padding(DPSpacing.compact)
+            .background(DPColor.backgroundSecondary)
+            .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+
+            if existing != nil {
+                Button(CalendarLocalization.text("calendar.delete"), role: .destructive) {
+                    confirmsDelete = true
+                }
+                .font(DPTypography.label)
+                .frame(minHeight: DPSize.minimumTouchTarget)
+                .disabled(isSaving)
+            }
+        }
+        .padding(DPSpacing.medium)
+        .opacity(isSaving ? DPChrome.disabledOpacity : 1)
+    }
+
+    private var footer: some View {
+        HStack(spacing: DPSpacing.small) {
+            Button(CalendarLocalization.text("calendar.cancel"), action: guardedDismiss)
+                .buttonStyle(DPOutlineButtonStyle())
+                .frame(maxWidth: .infinity)
+                .disabled(isSaving)
+
+            Button(action: save) {
+                HStack(spacing: DPSpacing.extraSmall) {
+                    if isSaving { ProgressView().controlSize(.small) }
+                    Text(CalendarLocalization.text("calendar.save"))
+                }
+            }
+            .buttonStyle(DPPrimaryButtonStyle())
+            .frame(maxWidth: .infinity)
+            .disabled(!canSave || isSaving)
+        }
+        .padding(DPSpacing.compact)
+        .background(DPColor.backgroundModal)
+    }
+
+    private func guardedDismiss() {
+        guard !isSaving else { return }
+        dismiss()
+    }
+
+    private func save() {
+        guard canSave, !isSaving else { return }
+        isSaving = true
+        Task {
+            let saved = await model.saveDDay(
+                existing: existing,
+                title: title,
+                date: date,
+                isPrivate: isPrivate
+            )
+            if saved { dismiss() } else { isSaving = false }
+        }
+    }
+
+    private func delete(_ item: DDayDTO) {
+        guard !isSaving else { return }
+        isSaving = true
+        Task {
+            await model.deleteDDay(item)
+            dismiss()
+        }
+    }
+}
+
+private struct DDayEditorHeaderHeightPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
+}
+
+private struct DDayEditorBodyHeightPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
+}
+
+private struct DDayEditorFooterHeightPreferenceKey: PreferenceKey {
+    static var defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = max(value, nextValue()) }
 }
 
 private struct DutyPatternView: View {

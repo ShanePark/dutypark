@@ -48,6 +48,30 @@ final class GuestPublicLinkTests: XCTestCase {
             "ko"
         )
     }
+
+    func testPublicCalendarDetailStringsResolveInEverySupportedLocale() throws {
+        let keys = [
+            "guest.calendar.duty",
+            "guest.calendar.holidays",
+            "guest.calendar.schedules",
+            "guest.calendar.schedule.empty",
+            "guest.calendar.dday.title",
+            "guest.calendar.off",
+            "guest.close"
+        ]
+
+        for locale in ["en", "ko", "ja", "zh-Hans", "es"] {
+            let url = try XCTUnwrap(Bundle.main.url(forResource: locale, withExtension: "lproj"))
+            let bundle = try XCTUnwrap(Bundle(url: url))
+            for key in keys {
+                XCTAssertNotEqual(
+                    bundle.localizedString(forKey: key, value: key, table: "Guest"),
+                    key,
+                    "Missing \(key) for \(locale)"
+                )
+            }
+        }
+    }
 }
 
 @MainActor

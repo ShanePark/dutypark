@@ -297,6 +297,28 @@ final class CalendarFeatureTests: XCTestCase {
         XCTAssertEqual(CalendarLocalization.locale(languageCode: "zh-Hans").identifier, "zh-Hans")
     }
 
+    func testCompactCalendarModalBodyFitsContentAndCapsForSmallPhones() {
+        let maximumPanelHeight: CGFloat = 780
+
+        XCTAssertEqual(CalendarCompactModalLayout.maximumPanelHeightRatio, 0.9)
+        XCTAssertEqual(
+            CalendarCompactModalLayout.bodyHeight(
+                contentHeight: 360,
+                maximumPanelHeight: maximumPanelHeight,
+                fixedChromeHeight: 140
+            ),
+            360
+        )
+        XCTAssertEqual(
+            CalendarCompactModalLayout.bodyHeight(
+                contentHeight: 900,
+                maximumPanelHeight: maximumPanelHeight,
+                fixedChromeHeight: 140
+            ),
+            640
+        )
+    }
+
     func testFriendDutyComparisonIsLimitedToThreeAndAllowsDeselection() {
         let selected = CalendarFeatureLogic.comparisonSelection(current: [1, 2], toggling: 3)
         XCTAssertEqual(selected, [1, 2, 3])

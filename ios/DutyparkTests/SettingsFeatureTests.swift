@@ -40,6 +40,16 @@ struct SettingsFeatureTests {
             "settings.profile.name",
             "settings.visibility.modalTitle",
             "settings.visibility.private.description",
+            "settings.visibility.close",
+            "settings.password.change",
+            "settings.password.current",
+            "settings.password.new",
+            "settings.password.confirm",
+            "settings.action.save",
+            "settings.action.cancel",
+            "settings.auxiliary.create",
+            "settings.auxiliary.description",
+            "settings.auxiliary.name",
             "settings.theme.system",
             "settings.theme.current.system",
             "settings.theme.current.dark",
@@ -56,6 +66,37 @@ struct SettingsFeatureTests {
                 #expect(SettingsLocalization.string(key) != key)
             }
         }
+    }
+
+    @Test
+    func modalDismissPolicyKeepsBackdropAndAccessibilityRulesIndependent() {
+        let explicitOnly = DPModalDismissPolicy(
+            closeOnBackdrop: false,
+            canDismiss: true,
+            isDismissing: false
+        )
+
+        #expect(!explicitOnly.allows(.backdrop))
+        #expect(explicitOnly.allows(.accessibilityEscape))
+        #expect(explicitOnly.allows(.content))
+
+        let blockedWhileWorking = DPModalDismissPolicy(
+            closeOnBackdrop: true,
+            canDismiss: false,
+            isDismissing: false
+        )
+        #expect(!blockedWhileWorking.allows(.backdrop))
+        #expect(!blockedWhileWorking.allows(.accessibilityEscape))
+        #expect(!blockedWhileWorking.allows(.content))
+
+        let blockedAfterDismissStarts = DPModalDismissPolicy(
+            closeOnBackdrop: true,
+            canDismiss: true,
+            isDismissing: true
+        )
+        #expect(!blockedAfterDismissStarts.allows(.backdrop))
+        #expect(!blockedAfterDismissStarts.allows(.accessibilityEscape))
+        #expect(!blockedAfterDismissStarts.allows(.content))
     }
 
     @Test

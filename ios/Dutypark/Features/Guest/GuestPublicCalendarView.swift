@@ -57,8 +57,17 @@ struct GuestPublicCalendarView: View {
         }
         .task { if model.days.isEmpty { await model.load() } }
         .refreshable { await model.load() }
-        .sheet(item: $model.selectedDay) { day in
-            GuestCalendarDayDetailView(day: day)
+        .fullScreenCover(item: $model.selectedDay) { day in
+            DPModalOverlay(
+                onDismiss: { model.selectedDay = nil },
+                closeOnBackdrop: false
+            ) { availableSize, dismiss in
+                GuestCalendarDayDetailView(
+                    day: day,
+                    maximumHeight: availableSize.height,
+                    dismiss: dismiss
+                )
+            }
         }
         .alert(GuestLocalization.text("guest.calendar.error.title"), isPresented: Binding(
             get: { model.hasError && !model.days.isEmpty },
@@ -162,7 +171,9 @@ struct GuestPublicCalendarView: View {
             }
             ForEach(Array(model.days.enumerated()), id: \.element.id) { index, day in
                 GuestCalendarDayCell(day: day, weekday: index % 7)
-                    .onTapGesture { model.selectedDay = day }
+                    .onTapGesture {
+                        withoutPresentationAnimation { model.selectedDay = day }
+                    }
             }
         }
         .background(DPColor.borderPrimary)
@@ -266,73 +277,187 @@ private struct GuestCalendarDayCell: View {
 
 private struct GuestCalendarDayDetailView: View {
     let day: GuestCalendarDay
-    @Environment(\.dismiss) private var dismiss
+    let maximumHeight: CGFloat
+    let dismiss: () -> Void
 
     var body: some View {
-        NavigationStack {
-            List {
-                if let duty = day.duty {
-                    Section {
-                        LabeledContent(
-                            GuestLocalization.text("guest.calendar.duty"),
-                            value: duty.dutyType ?? GuestLocalization.text("guest.calendar.off")
-                        )
-                    } header: {
-                        Text(GuestLocalization.text("guest.calendar.duty"))
-                    }
-                }
-                if !day.holidays.isEmpty {
-                    Section {
-                        ForEach(Array(day.holidays.enumerated()), id: \.offset) { _, holiday in
-                            Text(holiday.dateName)
-                        }
-                    } header: {
-                        Text(GuestLocalization.text("guest.calendar.holidays"))
-                    }
-                }
-                Section {
-                    if day.schedules.isEmpty {
-                        Text("guest.calendar.schedule.empty", tableName: "Guest")
-                            .foregroundStyle(DPColor.textMuted)
-                    }
-                    ForEach(day.schedules, id: \.id) { schedule in
-                        VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
-                            Text(schedule.content)
-                                .foregroundStyle(DPColor.textPrimary)
-                            if !schedule.description.isEmpty {
-                                Text(schedule.description)
-                                    .font(.subheadline)
-                                    .foregroundStyle(DPColor.textSecondary)
+        VStack(spacing: 0) {
+            modalHeader
+
+            ScrollView {
+                LazyVStack(alignment: .leading, spacing: DPSpacing.small) {
+                    if let duty = day.duty {
+                        detailSection(GuestLocalization.text("guest.calendar.duty")) {
+                            HStack(spacing: DPSpacing.small) {
+                                RoundedRectangle(cornerRadius: 3)
+                                    .fill(guestColor(hex: duty.dutyColor))
+                                    .frame(width: 14, height: 14)
+                                Text(duty.dutyType ?? GuestLocalization.text("guest.calendar.off"))
+                                    .font(DPTypography.label)
+                                    .foregroundStyle(DPColor.textPrimary)
                             }
-                            Text(guestScheduleTime(schedule))
-                                .font(.caption)
+                        }
+                    }
+
+                    if !day.holidays.isEmpty {
+                        detailSection(GuestLocalization.text("guest.calendar.holidays")) {
+                            VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+                                ForEach(Array(day.holidays.enumerated()), id: \.offset) { _, holiday in
+                                    Text(holiday.dateName)
+                                        .font(DPTypography.label)
+                                        .foregroundStyle(DPColor.danger)
+                                }
+                            }
+                        }
+                    }
+
+                    detailSection(GuestLocalization.text("guest.calendar.schedules")) {
+                        if day.schedules.isEmpty {
+                            Text("guest.calendar.schedule.empty", tableName: "Guest")
+                                .font(DPTypography.label)
                                 .foregroundStyle(DPColor.textMuted)
-                            if !schedule.attachments.isEmpty {
-                                GuestScheduleAttachments(schedule: schedule)
+                                .frame(maxWidth: .infinity, minHeight: 44, alignment: .center)
+                        } else {
+                            VStack(alignment: .leading, spacing: DPSpacing.compact) {
+                                ForEach(day.schedules, id: \.id) { schedule in
+                                    scheduleCard(schedule)
+                                }
                             }
                         }
                     }
-                } header: {
-                    Text(GuestLocalization.text("guest.calendar.schedules"))
-                }
-                if !day.dDays.isEmpty {
-                    Section {
-                        ForEach(day.dDays, id: \.id) { item in
-                            LabeledContent(item.title, value: guestDDayLabel(item))
+
+                    if !day.dDays.isEmpty {
+                        detailSection(GuestLocalization.text("guest.calendar.dday.title")) {
+                            VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+                                ForEach(day.dDays, id: \.id) { item in
+                                    HStack {
+                                        Text(item.title)
+                                            .font(DPTypography.label)
+                                            .foregroundStyle(DPColor.textPrimary)
+                                        Spacer()
+                                        Text(guestDDayLabel(item))
+                                            .font(DPTypography.label)
+                                            .foregroundStyle(DPColor.accent)
+                                    }
+                                }
+                            }
                         }
-                    } header: {
-                        Text(GuestLocalization.text("guest.calendar.dday.title"))
                     }
                 }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
             }
-            .navigationTitle(day.cell.date.rawValue)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(GuestLocalization.text("guest.close")) { dismiss() }
-                }
+            .frame(height: bodyHeight)
+        }
+        .fixedSize(horizontal: false, vertical: true)
+        .background(DPColor.backgroundModal)
+    }
+
+    private var modalHeader: some View {
+        HStack(spacing: DPSpacing.small) {
+            Text(formattedDate)
+                .font(DPTypography.heading)
+                .foregroundStyle(DPColor.textPrimary)
+                .lineLimit(1)
+
+            Spacer()
+
+            Button(action: dismiss) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 17, weight: .semibold))
+                    .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(DPColor.textPrimary)
+            .accessibilityLabel(GuestLocalization.text("guest.close"))
+        }
+        .padding(.leading, 14)
+        .padding(.trailing, DPSpacing.extraSmall)
+        .padding(.vertical, DPSpacing.extraSmall)
+        .background(DPColor.backgroundTertiary)
+        .overlay(alignment: .bottom) {
+            Rectangle().fill(DPColor.borderPrimary).frame(height: 1)
+        }
+    }
+
+    private func scheduleCard(_ schedule: ScheduleDTO) -> some View {
+        VStack(alignment: .leading, spacing: DPSpacing.small) {
+            Text(schedule.content)
+                .font(DPTypography.body)
+                .foregroundStyle(DPColor.textPrimary)
+
+            Text(guestScheduleTime(schedule))
+                .font(DPTypography.caption)
+                .foregroundStyle(DPColor.textMuted)
+
+            if !schedule.description.isEmpty {
+                Divider().overlay(DPColor.borderPrimary)
+                Text(schedule.description)
+                    .font(DPTypography.label)
+                    .foregroundStyle(DPColor.textSecondary)
+                    .textSelection(.enabled)
+            }
+
+            if !schedule.attachments.isEmpty {
+                Divider().overlay(DPColor.borderPrimary)
+                GuestScheduleAttachments(schedule: schedule)
             }
         }
+        .padding(DPSpacing.compact)
+        .background(DPColor.backgroundCard)
+        .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+        .overlay {
+            RoundedRectangle(cornerRadius: DPRadius.standard)
+                .stroke(DPColor.borderPrimary, lineWidth: 1)
+        }
+    }
+
+    private func detailSection<Content: View>(
+        _ title: String,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+            Text(title)
+                .font(DPTypography.caption)
+                .foregroundStyle(DPColor.textMuted)
+            content()
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var bodyHeight: CGFloat {
+        let maximumBodyHeight = max(maximumHeight - 92, 100)
+        var estimate: CGFloat = 76
+
+        if day.duty != nil { estimate += 52 }
+        if !day.holidays.isEmpty { estimate += CGFloat(day.holidays.count) * 24 + 24 }
+        if !day.dDays.isEmpty { estimate += CGFloat(day.dDays.count) * 32 + 24 }
+
+        for schedule in day.schedules {
+            estimate += 76
+            if !schedule.description.isEmpty { estimate += 48 }
+            if !schedule.attachments.isEmpty { estimate += 56 }
+        }
+
+        return min(max(estimate, 76), maximumBodyHeight)
+    }
+
+    private var formattedDate: String {
+        guard let date = CalendarDateSupport.date(from: day.cell.date) else {
+            return day.cell.date.rawValue
+        }
+        let dateFormatter = DateFormatter()
+        dateFormatter.locale = selectedLocale
+        dateFormatter.calendar = CalendarDateSupport.calendar
+        dateFormatter.setLocalizedDateFormatFromTemplate("yyyyMMMMdEEE")
+        return dateFormatter.string(from: date)
+    }
+
+    private var selectedLocale: Locale {
+        guard let language = UserDefaults.standard.string(forKey: "dp-language"),
+              !language.isEmpty
+        else { return .current }
+        return Locale(identifier: language)
     }
 }
 

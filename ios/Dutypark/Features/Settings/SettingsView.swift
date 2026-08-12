@@ -110,17 +110,38 @@ struct SettingsView: View {
             guard let item else { return }
             Task { await upload(item) }
         }
-        .sheet(isPresented: $showPassword) {
+        .fullScreenCover(isPresented: $showPassword) {
             if let memberID = model.member?.id {
-                PasswordChangeView(memberID: memberID, model: model) {
-                    showPassword = false
-                    await push.unregister()
-                    await session.logout()
+                DPModalOverlay(
+                    onDismiss: { showPassword = false },
+                    closeOnBackdrop: false,
+                    canDismiss: !model.isWorking
+                ) { availableSize, dismiss in
+                    PasswordChangeView(
+                        memberID: memberID,
+                        model: model,
+                        maximumHeight: availableSize.height,
+                        dismiss: dismiss
+                    ) {
+                        showPassword = false
+                        await push.unregister()
+                        await session.logout()
+                    }
                 }
             }
         }
-        .sheet(isPresented: $showVisibility) {
-            VisibilitySettingsSheet(model: model)
+        .fullScreenCover(isPresented: $showVisibility) {
+            DPModalOverlay(
+                onDismiss: { showVisibility = false },
+                closeOnBackdrop: !model.isWorking,
+                canDismiss: !model.isWorking
+            ) { availableSize, dismiss in
+                VisibilitySettingsModal(
+                    model: model,
+                    maximumHeight: availableSize.height,
+                    dismiss: dismiss
+                )
+            }
         }
         .fullScreenCover(isPresented: $showPattern) {
             DPModalOverlay(onDismiss: { showPattern = false }) { _, dismiss in
@@ -129,8 +150,18 @@ struct SettingsView: View {
                 }
             }
         }
-        .sheet(isPresented: $showAuxiliary) {
-            AuxiliaryAccountView(model: model)
+        .fullScreenCover(isPresented: $showAuxiliary) {
+            DPModalOverlay(
+                onDismiss: { showAuxiliary = false },
+                closeOnBackdrop: false,
+                canDismiss: !model.isWorking
+            ) { availableSize, dismiss in
+                AuxiliaryAccountModal(
+                    model: model,
+                    maximumHeight: availableSize.height,
+                    dismiss: dismiss
+                )
+            }
         }
         .sheet(isPresented: cropSheetBinding) {
             if let photoToCrop {
@@ -342,7 +373,7 @@ struct SettingsView: View {
                     .font(DPTypography.supporting)
                     .foregroundStyle(DPColor.textSecondary)
             }
-            Button { showVisibility = true } label: {
+            Button { withoutPresentationAnimation { showVisibility = true } } label: {
                 HStack(spacing: DPSpacing.small) {
                     Circle()
                         .fill(visibilityColor(model.member?.calendarVisibility ?? .friends))
@@ -511,7 +542,7 @@ struct SettingsView: View {
                 .padding(DPSpacing.compact)
                 .background(DPColor.backgroundSecondary, in: RoundedRectangle(cornerRadius: DPRadius.standard))
             }
-            Button { showAuxiliary = true } label: {
+            Button { withoutPresentationAnimation { showAuxiliary = true } } label: {
                 Label(SettingsLocalization.string("settings.auxiliary.create"), systemImage: "plus")
                     .frame(maxWidth: .infinity)
             }
@@ -592,7 +623,7 @@ struct SettingsView: View {
         SettingsCard(title: "settings.account.title", icon: "lock") {
             HStack(spacing: DPSpacing.compact) {
             if model.member?.hasPassword == true {
-                Button { showPassword = true } label: {
+                Button { withoutPresentationAnimation { showPassword = true } } label: {
                     Label(SettingsLocalization.string("settings.password.change"), systemImage: "lock.rotation")
                         .frame(maxWidth: .infinity)
                 }
@@ -1013,6 +1044,7 @@ private struct DashedSettingsButtonStyle: ButtonStyle {
 
 private struct SettingsModalHeader: View {
     let titleKey: String
+    var closeDisabled = false
     let close: () -> Void
 
     var body: some View {
@@ -1029,6 +1061,7 @@ private struct SettingsModalHeader: View {
                     .background(DPColor.backgroundTertiary, in: Circle())
             }
             .buttonStyle(.plain)
+            .disabled(closeDisabled)
         }
         .padding(.horizontal, DPSpacing.large)
         .frame(minHeight: 64)
@@ -1136,37 +1169,58 @@ private struct DutyPatternSummary: View {
     }
 }
 
-private struct VisibilitySettingsSheet: View {
+private struct VisibilitySettingsModal: View {
     @ObservedObject var model: SettingsViewModel
-    @Environment(\.dismiss) private var dismiss
+    let maximumHeight: CGFloat
+    let dismiss: () -> Void
     private let options: [Visibility] = [.publicAccess, .friends, .family, .privateAccess]
 
     var body: some View {
+        ViewThatFits(in: .vertical) {
+            modalContent(scrolls: false)
+                .fixedSize(horizontal: false, vertical: true)
+            modalContent(scrolls: true)
+        }
+        .frame(maxHeight: maximumHeight)
+        .background(DPColor.backgroundModal)
+    }
+
+    @ViewBuilder
+    private func modalContent(scrolls: Bool) -> some View {
         VStack(spacing: 0) {
-            SettingsModalHeader(titleKey: "settings.visibility.modalTitle") { dismiss() }
-            ScrollView {
-                VStack(alignment: .leading, spacing: DPSpacing.compact) {
-                    SettingsLocalization.text("settings.visibility.modalDescription")
-                        .font(DPTypography.body)
-                        .foregroundStyle(DPColor.textSecondary)
-                    SettingsLocalization.text("settings.visibility.modalHint")
-                        .font(DPTypography.supporting)
-                        .foregroundStyle(DPColor.textMuted)
-                    ForEach(options, id: \.rawValue) { option in
-                        visibilityOption(option)
-                    }
-                }
-                .padding(DPSpacing.large)
+            SettingsModalHeader(
+                titleKey: "settings.visibility.modalTitle",
+                closeDisabled: model.isWorking,
+                close: dismiss
+            )
+            if scrolls {
+                ScrollView { bodyContent }
+                    .scrollBounceBehavior(.basedOnSize)
+            } else {
+                bodyContent
             }
             SettingsModalActions {
-                Button(SettingsLocalization.string("settings.visibility.close")) { dismiss() }
+                Button(SettingsLocalization.string("settings.visibility.close"), action: dismiss)
                     .buttonStyle(DPSecondaryButtonStyle())
                     .frame(maxWidth: .infinity)
+                    .disabled(model.isWorking)
             }
         }
-        .background(DPColor.backgroundModal)
-        .presentationDetents([.large])
-        .presentationDragIndicator(.hidden)
+    }
+
+    private var bodyContent: some View {
+        VStack(alignment: .leading, spacing: DPSpacing.compact) {
+            SettingsLocalization.text("settings.visibility.modalDescription")
+                .font(DPTypography.body)
+                .foregroundStyle(DPColor.textSecondary)
+            SettingsLocalization.text("settings.visibility.modalHint")
+                .font(DPTypography.supporting)
+                .foregroundStyle(DPColor.textMuted)
+            ForEach(options, id: \.rawValue) { option in
+                visibilityOption(option)
+            }
+        }
+        .padding(DPSpacing.large)
     }
 
     private func visibilityOption(_ option: Visibility) -> some View {
@@ -1332,8 +1386,9 @@ private struct DutyPatternSettingsModal: View {
 private struct PasswordChangeView: View {
     let memberID: Int64
     @ObservedObject var model: SettingsViewModel
+    let maximumHeight: CGFloat
+    let dismiss: () -> Void
     let completion: () async -> Void
-    @Environment(\.dismiss) private var dismiss
     @State private var currentPassword = ""
     @State private var newPassword = ""
     @State private var confirmation = ""
@@ -1342,43 +1397,65 @@ private struct PasswordChangeView: View {
     private enum Field { case current, new, confirmation }
 
     var body: some View {
+        ViewThatFits(in: .vertical) {
+            modalContent(scrolls: false)
+                .fixedSize(horizontal: false, vertical: true)
+            modalContent(scrolls: true)
+        }
+        .frame(maxHeight: maximumHeight)
+        .background(DPColor.backgroundModal)
+    }
+
+    @ViewBuilder
+    private func modalContent(scrolls: Bool) -> some View {
         VStack(spacing: 0) {
-            SettingsModalHeader(titleKey: "settings.password.change") { dismiss() }
-            ScrollView {
-                VStack(alignment: .leading, spacing: DPSpacing.medium) {
-                    passwordField("settings.password.current", text: $currentPassword, field: .current, contentType: .password)
-                    passwordField("settings.password.new", text: $newPassword, field: .new, contentType: .newPassword)
-                    passwordField("settings.password.confirm", text: $confirmation, field: .confirmation, contentType: .newPassword)
-                    if let validationKey {
-                        SettingsLocalization.text(validationKey)
-                            .font(DPTypography.supporting)
-                            .foregroundStyle(DPColor.danger)
-                    }
-                }
-                .padding(DPSpacing.large)
+            SettingsModalHeader(
+                titleKey: "settings.password.change",
+                closeDisabled: model.isWorking,
+                close: dismiss
+            )
+            if scrolls {
+                ScrollView { bodyContent }
+                    .scrollBounceBehavior(.basedOnSize)
+            } else {
+                bodyContent
             }
             SettingsModalActions {
-                Button(SettingsLocalization.string("settings.action.save")) {
-                        Task {
-                            do {
-                                try await model.changePassword(
-                                    memberID: memberID,
-                                    currentPassword: currentPassword,
-                                    newPassword: newPassword
-                                )
-                                await completion()
-                            } catch {}
-                        }
-                    }
+                Button(SettingsLocalization.string("settings.action.save"), action: changePassword)
                     .disabled(validationKey != nil || model.isWorking)
                     .buttonStyle(DPPrimaryButtonStyle())
-                Button(SettingsLocalization.string("settings.action.cancel")) { dismiss() }
+                Button(SettingsLocalization.string("settings.action.cancel"), action: dismiss)
                     .buttonStyle(DPSecondaryButtonStyle())
+                    .disabled(model.isWorking)
             }
         }
-        .background(DPColor.backgroundModal)
-        .presentationDetents([.height(530)])
-        .presentationDragIndicator(.hidden)
+    }
+
+    private var bodyContent: some View {
+        VStack(alignment: .leading, spacing: DPSpacing.medium) {
+            passwordField("settings.password.current", text: $currentPassword, field: .current, contentType: .password)
+            passwordField("settings.password.new", text: $newPassword, field: .new, contentType: .newPassword)
+            passwordField("settings.password.confirm", text: $confirmation, field: .confirmation, contentType: .newPassword)
+            if let validationKey {
+                SettingsLocalization.text(validationKey)
+                    .font(DPTypography.supporting)
+                    .foregroundStyle(DPColor.danger)
+            }
+        }
+        .padding(DPSpacing.large)
+    }
+
+    private func changePassword() {
+        Task {
+            do {
+                try await model.changePassword(
+                    memberID: memberID,
+                    currentPassword: currentPassword,
+                    newPassword: newPassword
+                )
+                await completion()
+            } catch {}
+        }
     }
 
     private func passwordField(
@@ -1407,52 +1484,78 @@ private struct PasswordChangeView: View {
     }
 }
 
-private struct AuxiliaryAccountView: View {
+private struct AuxiliaryAccountModal: View {
     @ObservedObject var model: SettingsViewModel
-    @Environment(\.dismiss) private var dismiss
+    let maximumHeight: CGFloat
+    let dismiss: () -> Void
     @State private var name = ""
     @FocusState private var focused: Bool
 
     var body: some View {
+        ViewThatFits(in: .vertical) {
+            modalContent(scrolls: false)
+                .fixedSize(horizontal: false, vertical: true)
+            modalContent(scrolls: true)
+        }
+        .frame(maxHeight: maximumHeight)
+        .background(DPColor.backgroundModal)
+    }
+
+    @ViewBuilder
+    private func modalContent(scrolls: Bool) -> some View {
         VStack(spacing: 0) {
-            SettingsModalHeader(titleKey: "settings.auxiliary.create") { dismiss() }
-            ScrollView {
-                VStack(alignment: .leading, spacing: DPSpacing.medium) {
-                SettingsLocalization.text("settings.auxiliary.description")
-                    .font(DPTypography.supporting)
-                    .foregroundStyle(DPColor.textSecondary)
-                SettingsLocalization.text("settings.auxiliary.name")
-                    .font(DPTypography.label)
-                    .foregroundStyle(DPColor.textPrimary)
-                TextField(SettingsLocalization.string("settings.auxiliary.name"), text: $name)
-                    .onChange(of: name) { _, value in
-                        if value.count > 10 { name = String(value.prefix(10)) }
-                    }
-                    .focused($focused)
-                    .dpInputChrome(isFocused: focused)
-                Text("\(name.count)/10")
-                    .font(DPTypography.caption)
-                    .foregroundStyle(DPColor.textMuted)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-                }
-                .padding(DPSpacing.large)
+            SettingsModalHeader(
+                titleKey: "settings.auxiliary.create",
+                closeDisabled: model.isWorking,
+                close: dismiss
+            )
+            if scrolls {
+                ScrollView { bodyContent }
+                    .scrollBounceBehavior(.basedOnSize)
+            } else {
+                bodyContent
             }
             SettingsModalActions {
-                Button(SettingsLocalization.string("settings.action.create")) {
-                        Task {
-                            await model.createAuxiliaryAccount(name: name.trimmingCharacters(in: .whitespacesAndNewlines))
-                            if !model.noticeIsError { dismiss() }
-                        }
-                    }
+                Button(SettingsLocalization.string("settings.action.create"), action: createAccount)
                     .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || model.isWorking)
                     .buttonStyle(DPPrimaryButtonStyle())
-                Button(SettingsLocalization.string("settings.action.cancel")) { dismiss() }
+                Button(SettingsLocalization.string("settings.action.cancel"), action: dismiss)
                     .buttonStyle(DPSecondaryButtonStyle())
+                    .disabled(model.isWorking)
             }
         }
-        .background(DPColor.backgroundModal)
-        .presentationDetents([.height(390)])
-        .presentationDragIndicator(.hidden)
+    }
+
+    private var bodyContent: some View {
+        VStack(alignment: .leading, spacing: DPSpacing.medium) {
+            SettingsLocalization.text("settings.auxiliary.description")
+                .font(DPTypography.supporting)
+                .foregroundStyle(DPColor.textSecondary)
+            SettingsLocalization.text("settings.auxiliary.name")
+                .font(DPTypography.label)
+                .foregroundStyle(DPColor.textPrimary)
+            TextField(SettingsLocalization.string("settings.auxiliary.name"), text: $name)
+                .onChange(of: name) { _, value in
+                    if value.count > 10 { name = String(value.prefix(10)) }
+                }
+                .focused($focused)
+                .dpInputChrome(isFocused: focused)
+                .onSubmit(createAccount)
+            Text("\(name.count)/10")
+                .font(DPTypography.caption)
+                .foregroundStyle(DPColor.textMuted)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+        }
+        .padding(DPSpacing.large)
+    }
+
+    private func createAccount() {
+        let trimmedName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmedName.isEmpty, !model.isWorking else { return }
+        Task {
+            await model.createAuxiliaryAccount(name: trimmedName)
+            if !model.noticeIsError { dismiss() }
+        }
     }
 }
 
