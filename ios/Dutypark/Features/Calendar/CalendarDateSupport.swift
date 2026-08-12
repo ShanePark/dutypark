@@ -108,6 +108,17 @@ nonisolated enum CalendarVisualLogic {
     }
 }
 
+/// Type sizes for the dense calendar surface, kept in one place so the
+/// 375-point layout stays compact without falling below the mobile web scale.
+nonisolated enum CalendarTypography {
+    static let weekday: CGFloat = 14
+    static let dayNumber: CGFloat = 12
+    static let cellContent: CGFloat = 10
+    static let cellMicro: CGFloat = 9
+    static let detailTitle: CGFloat = 16
+    static let detailMetadata: CGFloat = 14
+}
+
 nonisolated enum CalendarPublicLink {
     static func url(memberID: MemberID) -> URL {
         URL(string: "https://dutypark.o-r.kr/duty/\(memberID)")!

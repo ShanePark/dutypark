@@ -527,7 +527,7 @@ struct CalendarView: View {
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 7), spacing: 0) {
                 ForEach(["sun", "mon", "tue", "wed", "thu", "fri", "sat"], id: \.self) { weekday in
                     Text(CalendarLocalization.text("calendar.weekday.\(weekday)"))
-                        .font(DPFont.bold(size: 12, relativeTo: .caption))
+                        .font(DPFont.bold(size: CalendarTypography.weekday, relativeTo: .subheadline))
                         .foregroundStyle(weekday == "sun" ? DPColor.dangerHover : weekday == "sat" ? DPColor.accentHover : DPColor.textPrimary)
                         .frame(maxWidth: .infinity, minHeight: 34)
                         .background(DPColor.backgroundHover)
@@ -931,12 +931,12 @@ private struct CalendarDayCell: View {
         VStack(alignment: .leading, spacing: 1) {
             HStack(spacing: 1) {
                 Text("\(day.cell.day)")
-                    .font(DPFont.bold(size: 11, relativeTo: .caption))
+                    .font(DPFont.bold(size: CalendarTypography.dayNumber, relativeTo: .caption))
                     .foregroundStyle(dayNumberColor)
                 Spacer(minLength: 0)
                 if let pinnedDDay, !hidesDetails {
                     Text(relativeLabel(pinnedDDay))
-                        .font(DPFont.light(size: 8, relativeTo: .caption2))
+                        .font(DPFont.light(size: CalendarTypography.cellMicro, relativeTo: .caption2))
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
                         .foregroundStyle(secondaryForeground)
@@ -945,7 +945,7 @@ private struct CalendarDayCell: View {
             if !hidesDetails {
                 if let holiday = day.holidays.first {
                     Text(holiday.dateName)
-                        .font(DPFont.light(size: 8, relativeTo: .caption2))
+                        .font(DPFont.light(size: CalendarTypography.cellContent, relativeTo: .caption2))
                         .lineLimit(1)
                         .foregroundStyle(holiday.isHoliday ? DPColor.dangerHover : secondaryForeground)
                 }
@@ -960,7 +960,7 @@ private struct CalendarDayCell: View {
                 }
                 if day.schedules.count > CalendarVisualLogic.maximumSchedulesPerCell {
                     Text("+\(day.schedules.count - CalendarVisualLogic.maximumSchedulesPerCell)")
-                        .font(DPFont.bold(size: 8, relativeTo: .caption2))
+                        .font(DPFont.bold(size: CalendarTypography.cellContent, relativeTo: .caption2))
                         .foregroundStyle(secondaryForeground)
                 }
                 ForEach(day.todos.prefix(CalendarVisualLogic.maximumTodosPerCell), id: \.id) { todo in
@@ -974,7 +974,7 @@ private struct CalendarDayCell: View {
                 }
                 if day.todos.count > CalendarVisualLogic.maximumTodosPerCell {
                     Text("+\(day.todos.count - CalendarVisualLogic.maximumTodosPerCell)")
-                        .font(DPFont.bold(size: 8, relativeTo: .caption2))
+                        .font(DPFont.bold(size: CalendarTypography.cellContent, relativeTo: .caption2))
                         .foregroundStyle(secondaryForeground)
                 }
             }
@@ -1037,7 +1037,7 @@ private struct CalendarDayCell: View {
 
     private func scheduleText(_ schedule: ScheduleDTO) -> some View {
         Text(schedule.content)
-            .font(DPFont.light(size: 8, relativeTo: .caption2))
+            .font(DPFont.light(size: CalendarTypography.cellContent, relativeTo: .caption2))
             .foregroundStyle(primaryForeground)
             .lineLimit(2)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -1052,13 +1052,13 @@ private struct CalendarDayCell: View {
 
     private func statusBubble(_ text: String, image: String, background: Color, border: Color, foreground: Color) -> some View {
         HStack(spacing: 2) {
-            Image(systemName: image).font(.system(size: 7, weight: .semibold))
+            Image(systemName: image).font(.system(size: CalendarTypography.cellMicro, weight: .semibold))
             Text(text).lineLimit(1)
         }
-        .font(DPFont.light(size: 8, relativeTo: .caption2))
+        .font(DPFont.light(size: CalendarTypography.cellContent, relativeTo: .caption2))
         .foregroundStyle(foreground)
         .padding(.horizontal, 3)
-        .frame(maxWidth: .infinity, minHeight: 16, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: 18, alignment: .leading)
         .background(background)
         .clipShape(RoundedRectangle(cornerRadius: 5))
         .overlay(RoundedRectangle(cornerRadius: 5).stroke(border, lineWidth: 0.5))
@@ -1068,12 +1068,16 @@ private struct CalendarDayCell: View {
         HStack(spacing: 2) {
             Circle()
                 .fill(DPColor.backgroundTertiary)
-                .frame(width: 10, height: 10)
-                .overlay(Text(item.name.prefix(1)).font(.system(size: 6, weight: .bold)).foregroundStyle(DPColor.textSecondary))
+                .frame(width: 12, height: 12)
+                .overlay(
+                    Text(item.name.prefix(1))
+                        .font(.system(size: CalendarTypography.cellMicro, weight: .bold))
+                        .foregroundStyle(DPColor.textSecondary)
+                )
             Text(item.duty.dutyType ?? CalendarLocalization.text("calendar.off"))
                 .lineLimit(1)
         }
-        .font(DPFont.bold(size: 7, relativeTo: .caption2))
+        .font(DPFont.bold(size: CalendarTypography.cellContent, relativeTo: .caption2))
         .foregroundStyle(primaryForeground)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -1135,7 +1139,7 @@ private struct DayDetailView: View {
                 }
 
                 Text(formattedDate)
-                    .font(DPTypography.heading)
+                    .font(DPFont.bold(size: CalendarTypography.detailTitle, relativeTo: .headline))
                     .foregroundStyle(DPColor.textPrimary)
                     .lineLimit(1)
 
@@ -1235,7 +1239,7 @@ private struct DayDetailView: View {
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: DPSpacing.extraSmall) {
                         Text(schedule.content)
-                            .font(DPTypography.body)
+                            .font(DPFont.light(size: CalendarTypography.detailTitle, relativeTo: .body))
                             .foregroundStyle(DPColor.textPrimary)
                         if schedule.totalDays > 1 {
                             Text("(\(schedule.daysFromStart)/\(schedule.totalDays))")
@@ -1245,7 +1249,7 @@ private struct DayDetailView: View {
                     }
                     if let time = scheduleTime(schedule) {
                         Text(time)
-                            .font(DPTypography.label)
+                            .font(DPFont.light(size: CalendarTypography.detailMetadata, relativeTo: .subheadline))
                             .foregroundStyle(DPColor.textSecondary)
                     }
                 }
@@ -1326,7 +1330,7 @@ private struct DayDetailView: View {
                     )
                 }
             }
-            .font(DPTypography.caption)
+            .font(DPFont.light(size: CalendarTypography.detailMetadata, relativeTo: .subheadline))
             .foregroundStyle(DPColor.textMuted)
             .lineLimit(1)
         }

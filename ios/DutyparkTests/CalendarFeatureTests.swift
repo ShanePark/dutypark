@@ -295,6 +295,16 @@ final class CalendarFeatureTests: XCTestCase {
         XCTAssertEqual(CalendarVisualLogic.maximumTodosPerCell, 2)
     }
 
+    func testCalendarTypographyMatchesReadableMobileWebScale() {
+        XCTAssertEqual(CalendarTypography.weekday, 14)
+        XCTAssertEqual(CalendarTypography.dayNumber, 12)
+        XCTAssertEqual(CalendarTypography.cellContent, 10)
+        XCTAssertEqual(CalendarTypography.cellMicro, 9)
+        XCTAssertEqual(CalendarTypography.detailTitle, 16)
+        XCTAssertEqual(CalendarTypography.detailMetadata, 14)
+        XCTAssertGreaterThanOrEqual(CalendarTypography.cellContent, 10)
+    }
+
     func testDutyBackgroundUsesAdaptiveForegroundContrast() {
         XCTAssertTrue(CalendarVisualLogic.usesLightForeground(on: "#111827"))
         XCTAssertTrue(CalendarVisualLogic.usesLightForeground(on: "3B82F6"))
