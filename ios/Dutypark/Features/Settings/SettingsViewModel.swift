@@ -274,22 +274,26 @@ final class SettingsViewModel: ObservableObject {
         }
     }
 
-    func revokeSession(id: Int64) async {
-        guard sessions.first(where: { $0.id == id })?.isCurrentLogin != true else {
-            return
+    @discardableResult
+    func revokeSession(id: Int64) async -> Bool {
+        guard let token = sessions.first(where: { $0.id == id }),
+              SettingsSessionPolicy.canRevoke(token)
+        else {
+            return false
         }
-        await work(success: "settings.sessions.revoked") {
+        return await workResult(success: "settings.sessions.revoked") {
             try await service.revokeSession(id: id)
             sessions = try await service.sessions()
         }
     }
 
-    func revokeOtherSessions() async {
-        guard sessions.contains(where: { $0.isCurrentLogin != true }) else {
+    @discardableResult
+    func revokeOtherSessions() async -> Bool {
+        guard sessions.contains(where: SettingsSessionPolicy.canRevoke) else {
             showNotice("settings.sessions.noOthers")
-            return
+            return false
         }
-        await work(success: "settings.sessions.othersRevoked") {
+        return await workResult(success: "settings.sessions.othersRevoked") {
             _ = try await service.revokeOtherSessions()
             sessions = try await service.sessions()
         }

@@ -23,6 +23,12 @@ nonisolated struct SettingsRefreshToken: Codable, Equatable, Identifiable, Senda
     }
 }
 
+nonisolated enum SettingsSessionPolicy {
+    static func canRevoke(_ token: SettingsRefreshToken) -> Bool {
+        token.isCurrentLogin != true
+    }
+}
+
 nonisolated struct PasswordChangeRequest: Encodable, Equatable, Sendable {
     let memberId: Int64
     let currentPassword: String

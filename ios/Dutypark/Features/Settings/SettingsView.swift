@@ -41,7 +41,7 @@ struct SettingsView: View {
     @State private var showLogout = false
     @State private var showDeleteInfo = false
     @State private var managerToRemove: MemberDTO?
-    @State private var sessionToRevoke: SettingsRefreshToken?
+    @State private var sessionConfirmation: SettingsSessionConfirmation?
     @State private var memberToImpersonate: MemberDTO?
     @State private var isLinking: OAuthProvider?
     @State private var oauthNoticeMessage: String?
@@ -163,6 +163,30 @@ struct SettingsView: View {
                 )
             }
         }
+        .fullScreenCover(item: $sessionConfirmation) { confirmation in
+            DPModalOverlay(
+                onDismiss: { sessionConfirmation = nil },
+                closeOnBackdrop: !model.isWorking,
+                canDismiss: !model.isWorking
+            ) { _, dismiss in
+                SettingsSessionConfirmationModal(
+                    confirmation: confirmation,
+                    isWorking: model.isWorking,
+                    dismiss: dismiss
+                ) {
+                    let didRevoke: Bool
+                    switch confirmation {
+                    case .session(let token):
+                        didRevoke = await model.revokeSession(id: token.id)
+                    case .otherSessions:
+                        didRevoke = await model.revokeOtherSessions()
+                    }
+                    if didRevoke {
+                        dismiss()
+                    }
+                }
+            }
+        }
         .sheet(isPresented: cropSheetBinding) {
             if let photoToCrop {
                 ProfilePhotoCropView(image: photoToCrop) { jpeg in
@@ -204,13 +228,6 @@ struct SettingsView: View {
             Button(SettingsLocalization.string("settings.manager.remove"), role: .destructive) {
                 guard let id = managerToRemove?.id else { return }
                 Task { await model.unassignManager(id) }
-            }
-            Button(SettingsLocalization.string("settings.action.cancel"), role: .cancel) {}
-        }
-        .confirmationDialog(SettingsLocalization.string("settings.sessions.revokeTitle"), isPresented: revokeSessionBinding) {
-            Button(SettingsLocalization.string("settings.sessions.revoke"), role: .destructive) {
-                guard let id = sessionToRevoke?.id else { return }
-                Task { await model.revokeSession(id: id) }
             }
             Button(SettingsLocalization.string("settings.action.cancel"), role: .cancel) {}
         }
@@ -551,65 +568,50 @@ struct SettingsView: View {
     }
 
     private var sessionSection: some View {
-        SettingsCard(title: "settings.sessions.title", icon: "iphone") {
-            if sortedSessions.contains(where: { $0.isCurrentLogin != true }) {
-                HStack {
-                    Spacer()
-                    Button { Task { await model.revokeOtherSessions() } } label: {
-                        Label(SettingsLocalization.string("settings.sessions.revokeOthers"), systemImage: "rectangle.portrait.and.arrow.right")
+        VStack(alignment: .leading, spacing: DPSpacing.medium) {
+            HStack(alignment: .center, spacing: DPSpacing.small) {
+                Label(SettingsLocalization.string("settings.sessions.title"), systemImage: "iphone")
+                    .font(DPTypography.heading)
+                    .foregroundStyle(DPColor.textPrimary)
+                    .symbolRenderingMode(.monochrome)
+                    .layoutPriority(1)
+                Spacer(minLength: 0)
+                if otherSessionCount > 0 {
+                    Button {
+                        withoutPresentationAnimation {
+                            sessionConfirmation = .otherSessions(count: otherSessionCount)
+                        }
+                    } label: {
+                        Label(
+                            SettingsLocalization.string("settings.sessions.revokeOthers"),
+                            systemImage: "rectangle.portrait.and.arrow.right"
+                        )
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                     }
                     .buttonStyle(DangerSoftButtonStyle())
+                    .disabled(model.isWorking)
+                    .accessibilityIdentifier("settings.sessions.revokeOthers")
                 }
             }
-            ForEach(sortedSessions) { token in
-                VStack(alignment: .leading, spacing: DPSpacing.small) {
-                    HStack {
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(token.lastUsed ?? "-")
-                                .font(DPTypography.bodyMedium)
-                                .foregroundStyle(DPColor.textPrimary)
-                            if let createdDate = token.createdDate {
-                                Text("\(SettingsLocalization.string("settings.sessions.created")): \(createdDate)")
-                                    .font(DPTypography.caption)
-                                    .foregroundStyle(DPColor.textMuted)
-                            }
-                        }
-                        if token.isCurrentLogin == true {
-                            SettingsLocalization.text("settings.sessions.current")
-                                .font(DPTypography.caption)
-                                .foregroundStyle(DPColor.success)
-                                .padding(.horizontal, DPSpacing.small)
-                                .padding(.vertical, DPSpacing.extraSmall)
-                                .background(DPColor.successSoft, in: Capsule())
-                        }
-                        Spacer()
-                        if token.isCurrentLogin != true {
-                            Button { sessionToRevoke = token } label: {
-                                Image(systemName: "rectangle.portrait.and.arrow.right")
-                                    .font(.system(size: 15))
-                                    .frame(width: 32, height: 32)
-                                    .background(DPColor.dangerSoft, in: Circle())
-                                    .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
-                            }
-                            .buttonStyle(.plain)
-                            .foregroundStyle(DPColor.danger)
-                        }
-                    }
-                    Label(token.remoteAddr ?? "-", systemImage: "globe")
-                        .font(DPTypography.supporting)
-                        .foregroundStyle(DPColor.textSecondary)
-                    HStack(spacing: DPSpacing.small) {
-                        Image(systemName: token.userAgent?.device == "Other" ? "desktopcomputer" : "iphone")
-                        Text(sessionName(token))
-                    }
+
+            if sortedSessions.isEmpty {
+                SettingsLocalization.text("settings.sessions.empty")
                     .font(DPTypography.supporting)
-                    .foregroundStyle(DPColor.textSecondary)
+                    .foregroundStyle(DPColor.textMuted)
+                    .frame(maxWidth: .infinity, minHeight: 72)
+            } else {
+                ForEach(sortedSessions) { token in
+                    SettingsSessionCard(token: token) {
+                        withoutPresentationAnimation {
+                            sessionConfirmation = .session(token)
+                        }
+                    }
                 }
-                .padding(DPSpacing.compact)
-                .background(DPColor.backgroundSecondary, in: RoundedRectangle(cornerRadius: DPRadius.standard))
-                .overlay(RoundedRectangle(cornerRadius: DPRadius.standard).stroke(DPColor.borderPrimary))
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .dpCard(padding: DPSpacing.large)
     }
 
     private var socialSection: some View {
@@ -732,11 +734,11 @@ struct SettingsView: View {
     }
 
     private var sortedSessions: [SettingsRefreshToken] {
-        model.sessions.sorted {
-            if $0.isCurrentLogin == true { return true }
-            if $1.isCurrentLogin == true { return false }
-            return ($0.lastUsed ?? "") > ($1.lastUsed ?? "")
-        }
+        SettingsSessionFormatter.sorted(model.sessions)
+    }
+
+    private var otherSessionCount: Int {
+        model.sessions.filter(SettingsSessionPolicy.canRevoke).count
     }
 
     private var noticeBinding: Binding<Bool> {
@@ -753,10 +755,6 @@ struct SettingsView: View {
 
     private var removeManagerBinding: Binding<Bool> {
         Binding(get: { managerToRemove != nil }, set: { if !$0 { managerToRemove = nil } })
-    }
-
-    private var revokeSessionBinding: Binding<Bool> {
-        Binding(get: { sessionToRevoke != nil }, set: { if !$0 { sessionToRevoke = nil } })
     }
 
     private var impersonateBinding: Binding<Bool> {
@@ -918,14 +916,278 @@ struct SettingsView: View {
         }
     }
 
-    private func sessionName(_ token: SettingsRefreshToken) -> String {
-        guard let agent = token.userAgent else {
-            return SettingsLocalization.string("settings.sessions.unknown")
+}
+
+nonisolated enum SettingsSessionFormatter {
+    static func sorted(_ sessions: [SettingsRefreshToken]) -> [SettingsRefreshToken] {
+        sessions.sorted { lhs, rhs in
+            let lhsIsCurrent = lhs.isCurrentLogin == true
+            let rhsIsCurrent = rhs.isCurrentLogin == true
+            if lhsIsCurrent != rhsIsCurrent { return lhsIsCurrent }
+            let lhsDate = date(from: lhs.lastUsed) ?? .distantPast
+            let rhsDate = date(from: rhs.lastUsed) ?? .distantPast
+            if lhsDate != rhsDate { return lhsDate > rhsDate }
+            return lhs.id < rhs.id
         }
-        let parts = [agent.device, agent.browser, agent.os].filter { !$0.isEmpty }
-        return parts.isEmpty ? SettingsLocalization.string("settings.sessions.unknown") : parts.joined(separator: " · ")
     }
 
+    static func relativeTime(_ value: String?, now: Date = Date()) -> String {
+        guard let date = date(from: value) else { return "-" }
+        let elapsed = now.timeIntervalSince(date)
+        if elapsed >= 0, elapsed < 60 {
+            return SettingsLocalization.string("settings.sessions.justNow")
+        }
+
+        let formatter = RelativeDateTimeFormatter()
+        formatter.locale = AppLocalization.locale
+        formatter.unitsStyle = .full
+        formatter.dateTimeStyle = .numeric
+
+        if abs(elapsed) < 3_600 {
+            let minutes = signedUnit(elapsed, divisor: 60)
+            return formatter.localizedString(from: DateComponents(minute: minutes))
+        }
+        if abs(elapsed) < 86_400 {
+            let hours = signedUnit(elapsed, divisor: 3_600)
+            return formatter.localizedString(from: DateComponents(hour: hours))
+        }
+        if abs(elapsed) < 604_800 {
+            let days = signedUnit(elapsed, divisor: 86_400)
+            return formatter.localizedString(from: DateComponents(day: days))
+        }
+        return dateText(value)
+    }
+
+    static func dateText(_ value: String?) -> String {
+        guard let date = date(from: value) else { return "-" }
+        let formatter = DateFormatter()
+        formatter.locale = AppLocalization.locale
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter.string(from: date)
+    }
+
+    static func date(from value: String?) -> Date? {
+        guard let value = value?.trimmingCharacters(in: .whitespacesAndNewlines), !value.isEmpty else {
+            return nil
+        }
+
+        let fractionalISO = ISO8601DateFormatter()
+        fractionalISO.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = fractionalISO.date(from: value) { return date }
+
+        let standardISO = ISO8601DateFormatter()
+        standardISO.formatOptions = [.withInternetDateTime]
+        if let date = standardISO.date(from: value) { return date }
+
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.timeZone = .current
+        for format in [
+            "yyyy-MM-dd'T'HH:mm:ss.SSSSSSSSS",
+            "yyyy-MM-dd'T'HH:mm:ss.SSS",
+            "yyyy-MM-dd'T'HH:mm:ss",
+            "yyyy-MM-dd",
+        ] {
+            formatter.dateFormat = format
+            if let date = formatter.date(from: value) { return date }
+        }
+        return nil
+    }
+
+    private static func signedUnit(_ elapsed: TimeInterval, divisor: TimeInterval) -> Int {
+        let magnitude = max(1, Int(floor(abs(elapsed) / divisor)))
+        return elapsed >= 0 ? -magnitude : magnitude
+    }
+}
+
+enum SettingsSessionConfirmation: Identifiable {
+    case session(SettingsRefreshToken)
+    case otherSessions(count: Int)
+
+    var id: String {
+        switch self {
+        case .session(let token): "session-\(token.id)"
+        case .otherSessions(let count): "others-\(count)"
+        }
+    }
+
+    var titleKey: String {
+        switch self {
+        case .session: "settings.sessions.revokeTitle"
+        case .otherSessions: "settings.sessions.revokeOthersTitle"
+        }
+    }
+
+    var message: String {
+        switch self {
+        case .session:
+            SettingsLocalization.string("settings.sessions.revokeMessage")
+        case .otherSessions(let count):
+            SettingsLocalization.string("settings.sessions.revokeOthersMessage")
+                .replacingOccurrences(of: "{count}", with: "\(count)")
+        }
+    }
+}
+
+private struct SettingsSessionCard: View {
+    let token: SettingsRefreshToken
+    let requestRevoke: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DPSpacing.compact) {
+            HStack(alignment: .center, spacing: DPSpacing.small) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(SettingsSessionFormatter.relativeTime(token.lastUsed))
+                        .font(DPTypography.bodyMedium)
+                        .foregroundStyle(DPColor.textPrimary)
+                    Text(
+                        "\(SettingsLocalization.string("settings.sessions.created")): "
+                            + SettingsSessionFormatter.dateText(token.createdDate)
+                    )
+                    .font(DPTypography.caption)
+                    .foregroundStyle(DPColor.textMuted)
+                }
+                Spacer(minLength: DPSpacing.small)
+                if !SettingsSessionPolicy.canRevoke(token) {
+                    SettingsLocalization.text("settings.sessions.current")
+                        .font(DPTypography.caption)
+                        .foregroundStyle(DPColor.success)
+                        .padding(.horizontal, DPSpacing.small)
+                        .padding(.vertical, DPSpacing.extraSmall)
+                        .background(DPColor.successSoft, in: Capsule())
+                        .fixedSize()
+                } else {
+                    Button(action: requestRevoke) {
+                        Image(systemName: "rectangle.portrait.and.arrow.right")
+                            .font(.system(size: 16, weight: .medium))
+                            .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                            .background(DPColor.dangerSoft, in: Circle())
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(DPColor.danger)
+                    .accessibilityLabel(SettingsLocalization.string("settings.sessions.revoke"))
+                    .accessibilityIdentifier("settings.sessions.revoke.\(token.id)")
+                }
+            }
+
+            SettingsSessionMetadataRow(
+                labelKey: "settings.sessions.ipLabel",
+                icon: "globe",
+                value: nonempty(token.remoteAddr)
+            )
+            SettingsSessionMetadataRow(
+                labelKey: "settings.sessions.deviceLabel",
+                icon: deviceIcon,
+                value: nonempty(token.userAgent?.device)
+            )
+            SettingsSessionMetadataRow(
+                labelKey: "settings.sessions.browserLabel",
+                icon: "globe",
+                value: nonempty(token.userAgent?.browser)
+            )
+        }
+        .padding(DPSpacing.medium)
+        .background(DPColor.backgroundSecondary, in: RoundedRectangle(cornerRadius: DPRadius.standard))
+        .overlay {
+            RoundedRectangle(cornerRadius: DPRadius.standard)
+                .stroke(DPColor.borderPrimary, lineWidth: DPChrome.borderWidth)
+        }
+    }
+
+    private var deviceIcon: String {
+        let device = token.userAgent?.device.lowercased() ?? ""
+        let desktopTerms = ["other", "desktop", "mac", "windows", "linux"]
+        return desktopTerms.contains(where: device.contains) ? "desktopcomputer" : "iphone"
+    }
+
+    private func nonempty(_ value: String?) -> String {
+        guard let value, !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            return "-"
+        }
+        return value
+    }
+}
+
+private struct SettingsSessionMetadataRow: View {
+    let labelKey: String
+    let icon: String
+    let value: String
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: DPSpacing.small) {
+            SettingsLocalization.text(labelKey)
+                .foregroundStyle(DPColor.textMuted)
+                .frame(width: 76, alignment: .leading)
+            HStack(spacing: DPSpacing.extraSmall) {
+                Image(systemName: icon)
+                    .foregroundStyle(DPColor.textMuted)
+                    .frame(width: DPSize.iconSmall)
+                Text(value)
+                    .foregroundStyle(DPColor.textSecondary)
+                    .lineLimit(2)
+            }
+        }
+        .font(DPTypography.supporting)
+    }
+}
+
+private struct SettingsSessionConfirmationModal: View {
+    let confirmation: SettingsSessionConfirmation
+    let isWorking: Bool
+    let dismiss: () -> Void
+    let confirm: () async -> Void
+
+    var body: some View {
+        VStack(spacing: 0) {
+            SettingsLocalization.text(confirmation.titleKey)
+                .font(DPTypography.bodyMedium)
+                .foregroundStyle(DPColor.textPrimary)
+                .frame(maxWidth: .infinity)
+                .padding(.horizontal, DPSpacing.large)
+                .frame(minHeight: 56)
+                .background(DPColor.backgroundTertiary)
+
+            Text(confirmation.message)
+                .font(DPTypography.supporting)
+                .foregroundStyle(DPColor.textSecondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, DPSpacing.large)
+                .padding(.vertical, DPSpacing.large)
+                .frame(maxWidth: .infinity)
+
+            HStack(spacing: DPSpacing.compact) {
+                Button {
+                    Task { await confirm() }
+                } label: {
+                    Group {
+                        if isWorking {
+                            ProgressView()
+                                .tint(DPColor.textOnDark)
+                        } else {
+                            SettingsLocalization.text("settings.action.confirm")
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(DPPrimaryButtonStyle())
+                .disabled(isWorking)
+                .accessibilityIdentifier("settings.sessions.confirm")
+
+                Button(action: dismiss) {
+                    SettingsLocalization.text("settings.action.cancel")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(DPOutlineButtonStyle())
+                .disabled(isWorking)
+            }
+            .padding(.horizontal, DPSpacing.large)
+            .padding(.bottom, DPSpacing.large)
+        }
+        .frame(maxWidth: .infinity)
+    }
 }
 
 private struct SettingsCard<Content: View>: View {

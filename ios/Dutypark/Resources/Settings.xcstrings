@@ -1962,33 +1962,78 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Current"
+            "value": "Current session"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "현재"
+            "value": "현재 접속"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "現在"
+            "value": "現在のセッション"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "当前"
+            "value": "当前会话"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Actual"
+            "value": "Sesión actual"
           }
         }
+      }
+    },
+    "settings.sessions.browserLabel": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Browser" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "브라우저" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "ブラウザ" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "浏览器" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Navegador" } }
+      }
+    },
+    "settings.sessions.deviceLabel": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Device" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "기기" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "端末" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "设备" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Dispositivo" } }
+      }
+    },
+    "settings.sessions.empty": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "No session information available" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "세션 정보가 없습니다" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "セッション情報がありません" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "没有会话信息" } },
+        "es": { "stringUnit": { "state": "translated", "value": "No hay información de sesión" } }
+      }
+    },
+    "settings.sessions.ipLabel": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "IP" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "IP" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "IP" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "IP" } },
+        "es": { "stringUnit": { "state": "translated", "value": "IP" } }
+      }
+    },
+    "settings.sessions.justNow": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Just now" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "방금 전" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "たった今" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "刚刚" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Ahora mismo" } }
       }
     },
     "settings.sessions.noOthers": {
@@ -2093,38 +2138,115 @@
         }
       }
     },
-    "settings.sessions.revokeOthers": {
+    "settings.sessions.revokeMessage": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sign out all other devices"
+            "value": "Are you sure you want to sign out? This device will be signed out."
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "다른 기기 모두 로그아웃"
+            "value": "정말 로그아웃 하시겠습니까? 해당 기기에서 로그아웃 됩니다."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ほかの端末をすべてログアウト"
+            "value": "ログアウトしますか？この端末のセッションが終了します。"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "退出所有其他设备"
+            "value": "确定要退出吗？此设备上的会话将结束。"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Cerrar sesión en los demás dispositivos"
+            "value": "¿Seguro que quieres cerrar sesión? Se cerrará la sesión en este dispositivo."
           }
         }
+      }
+    },
+    "settings.sessions.revokeOthers": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign out all"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "전체 접속 종료"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "すべて終了"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全部退出"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cerrar todas"
+          }
+        }
+      }
+    },
+    "settings.sessions.revokeOthersMessage": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This will sign out {count} other devices while keeping your current session. Continue?"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "현재 접속을 제외한 {count}개의 다른 기기에서 모두 로그아웃 됩니다. 진행하시겠습니까?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "現在のセッションを除くほかの{count}台の端末からログアウトします。続けますか？"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "将退出当前会话以外的 {count} 台设备。是否继续？"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se cerrará la sesión en {count} dispositivos, excepto en la sesión actual. ¿Continuar?"
+          }
+        }
+      }
+    },
+    "settings.sessions.revokeOthersTitle": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Sign out all" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "전체 접속 종료" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "すべての接続を終了" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "全部退出" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Cerrar todas las sesiones" } }
       }
     },
     "settings.sessions.revokeTitle": {
@@ -2132,31 +2254,31 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sign out this session?"
+            "value": "Sign out"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "이 기기에서 로그아웃할까요?"
+            "value": "로그아웃"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "このセッションをログアウトしますか？"
+            "value": "ログアウト"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "退出此会话吗？"
+            "value": "退出"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "¿Cerrar esta sesión?"
+            "value": "Cerrar sesión"
           }
         }
       }
@@ -2200,31 +2322,31 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Signed-in devices"
+            "value": "Session management"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "접속 기기"
+            "value": "접속 세션 관리"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "ログイン中の端末"
+            "value": "セッション管理"
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "已登录设备"
+            "value": "会话管理"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Dispositivos conectados"
+            "value": "Gestión de sesiones"
           }
         }
       }
