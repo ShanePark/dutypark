@@ -1,0 +1,168 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "home.duty" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Duty" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Turno" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "勤務" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "근무" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "值班" } }
+      }
+    },
+    "home.error.friends" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to load friends." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "No se pudieron cargar los amigos." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "友だち情報を読み込めませんでした。" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 정보를 불러오지 못했습니다." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "无法加载好友信息。" } }
+      }
+    },
+    "home.error.message" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Please try again." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Inténtalo de nuevo." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "もう一度お試しください。" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "다시 시도해주세요." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "请重试。" } }
+      }
+    },
+    "home.error.my" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to load the dashboard." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "No se pudo cargar el panel." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "ダッシュボードを読み込めませんでした。" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "대시보드 정보를 불러오지 못했습니다." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "无法加载主页信息。" } }
+      }
+    },
+    "home.family" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Family member" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Familiar" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "家族" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "가족 구성원" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "家庭成员" } }
+      }
+    },
+    "home.friends" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Friends" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Amigos" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "友だち" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "好友" } }
+      }
+    },
+    "home.loading" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Loading..." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Cargando..." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "読み込み中..." } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "불러오는 중..." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "加载中..." } }
+      }
+    },
+    "home.moreSchedules" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "more" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "más" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "件追加" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "개 더보기" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "项更多" } }
+      }
+    },
+    "home.myDashboard" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "My dashboard" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Mi panel" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "マイダッシュボード" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "내 대시보드" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "我的主页" } }
+      }
+    },
+    "home.noFriends" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No friends yet." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Aún no tienes amigos." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "まだ友だちがいません。" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "아직 친구가 없습니다." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "还没有好友。" } }
+      }
+    },
+    "home.none" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "None" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Ninguno" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "なし" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "없음" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "无" } }
+      }
+    },
+    "home.noSchedules" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No schedules for today." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "No hay horarios para hoy." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "今日の予定はありません。" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "오늘 일정이 없습니다." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "今天没有日程。" } }
+      }
+    },
+    "home.offDuty" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Off" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Libre" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "休み" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "휴무" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "休息" } }
+      }
+    },
+    "home.openCalendar" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Open calendar" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Abrir calendario" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "カレンダーを開く" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "캘린더 열기" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "打开日历" } }
+      }
+    },
+    "home.requests.received" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Received requests" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Solicitudes recibidas" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "受信したリクエスト" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "받은 요청" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "收到的请求" } }
+      }
+    },
+    "home.requests.sent" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Sent requests" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Solicitudes enviadas" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "送信したリクエスト" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "보낸 요청" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "已发送的请求" } }
+      }
+    },
+    "home.retry" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Retry" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Reintentar" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "再試行" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "다시 시도" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "重试" } }
+      }
+    },
+    "home.todaySchedules" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Today's schedules" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Horarios de hoy" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "今日の予定" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "오늘 일정" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "今日日程" } }
+      }
+    }
+  },
+  "version" : "1.0"
+}
