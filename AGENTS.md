@@ -1,85 +1,83 @@
 # Dutypark – Agent Operations Manual
 
-Repo-wide defaults only. Read the code and nearby tests for details instead of expanding this document.
+Repo-wide defaults only. Read the code, nearby tests, and linked documentation for details instead of expanding this file.
 
 ## 1. Stack
 
-- **Backend:** Kotlin, Java 25, Spring Boot 4 (MVC + WebFlux + Security + Validation + Actuator + Cache + Flyway), MySQL 8.0
-- **AI:** Spring AI OpenAI-compatible client for Google Generative Language, default model `gemma-4-31b-it`; queue-based schedule time parsing; disabled when `GEMINI_API_KEY` is blank or `EMPTY`
-- **Frontend:** Vue 3 SPA — Vite, TypeScript, Pinia, Vue Router, Vue I18n (`ko`, `en`, `ja`, `zh`, `es`), Tailwind CSS 4, Vitest
-- **Auth:** HttpOnly cookie access/refresh flow with Bearer header fallback, Kakao + Naver OAuth, auxiliary accounts, impersonation
-- **PWA / Push:** service worker `frontend/public/sw.js` + `frontend/src/push/sw-runtime.ts`, VAPID web push, localized notification text, app badge
+- **Backend:** Kotlin, Java 25, Spring Boot 4, MySQL 8.0
+- **AI:** Spring AI OpenAI-compatible Google Generative Language client; queue-based schedule time parsing
+- **Web:** Vue 3, Vite, TypeScript, Pinia, Vue Router, Vue I18n (`ko`, `en`, `ja`, `zh`, `es`), Tailwind CSS 4, Vitest
+- **iOS:** Swift 6, SwiftUI, iOS 17+
+- **Auth / Push:** HttpOnly access/refresh cookies with Bearer fallback, Kakao/Naver OAuth, auxiliary accounts, impersonation, VAPID web push
 
 ## 2. Hard Rules
 
 ### General
 
-- Do not start dev servers (`./gradlew bootRun`, `npm run dev`) unless the user explicitly asks; the developer runs them.
-- New configuration goes in `application.yml` with safe defaults; surface overrides through `.env.sample`.
+- Do not start dev servers (`./gradlew bootRun`, `npm run dev`) unless the user explicitly asks; the developer runs them. Put new configuration in `application.yml` with safe defaults and surface overrides through `.env.sample`.
 - Prefer existing patterns over new structure. Read the nearest controller, service, view, and test first.
-- For `gh` issues/PRs: skim recent ones to match conventions; write titles/bodies in English.
+- For `gh` issues/PRs, skim recent examples and write titles and bodies in English.
 
 ### Backend
 
-- Constructor injection; service layer is `@Service` + `@Transactional`.
-- Use the `logger()` extension from `common/config/LogbackConfig.kt`.
-- Respect visibility/ownership gates: `FriendService`, `SchedulePermissionService`, `AttachmentPermissionEvaluator`, manager checks.
-- Cookie auth and Bearer auth both exist. Before touching either path, check `JwtAuthFilter`, `CookieService`, auth controllers, and `frontend/src/api/client.ts`.
-- API errors return machine-readable `code` values via `RestExceptionControllerAdvice`; user-facing translations live in frontend i18n bundles.
-- Nightly cleanup jobs exist for refresh tokens, attachment sessions, notifications, and login attempts.
+- Use constructor injection; services are `@Service` + `@Transactional`; logging uses `logger()` from `common/config/LogbackConfig.kt`.
+- Preserve visibility and ownership gates (`FriendService`, `SchedulePermissionService`, `AttachmentPermissionEvaluator`, manager checks). Before changing authentication, inspect `JwtAuthFilter`, `CookieService`, auth controllers, and `frontend/src/api/client.ts`; cookie and Bearer paths must both keep working.
+- API errors expose machine-readable `code` values through `RestExceptionControllerAdvice`; user-facing translations belong in frontend i18n bundles.
 
 ### Frontend
 
-- `<script setup lang="ts">` for new SFCs.
-- Authenticated HTTP goes in `frontend/src/api/*.ts`; shared interfaces in `frontend/src/types/index.ts`.
-- `useSwal()` for confirmations and user-facing alerts.
-- Auth is cookie-based via the shared Axios client. No access-token persistence in localStorage.
-- All user-facing copy goes in `frontend/src/i18n/messages/*.ts` — no hardcoded strings in components, composables, or views. Keep all five locales in sync across UI copy, release notes, static notification templates, and service-worker text. For tight mobile slots (footer tabs, calendar cells, pills), add dedicated short keys instead of reusing desktop copy.
-- Browser locale may drive first render or language suggestions, but it is not a confirmed preference until the user explicitly picks a language.
-- Show language names in native form (`한국어`, `English`, `日本語`, `简体中文`, `Español`), untranslated.
-- Style with Tailwind utilities and `--dp-*` tokens from `frontend/src/style.css`; no hardcoded hex or theme-blind utility colors. Inline `:style` only for runtime-dependent or CSS-variable-backed values.
-- UI must work on mobile and desktop, in light and dark mode. Mobile checks: iPhone 16 Pro (402 x 874) and iPhone 13 mini (375 x 812) portrait.
-- Interactive targets at least 44px, with visible hover/focus feedback.
-- When visual quality or interaction polish matters, verify in the browser (Playwright) and iterate; static inspection alone is not enough.
-- New user-facing routes: update both `frontend/src/router/index.ts` and `frontend/src/components/layout/AppHeader.vue`.
+- New SFCs use `<script setup lang="ts">`; authenticated HTTP belongs in `frontend/src/api/*.ts`, shared interfaces in `frontend/src/types/index.ts`, and confirmations/alerts use `useSwal()`.
+- Authentication uses the shared cookie-based Axios client; never persist access tokens in localStorage.
+- Put all user-facing copy in every `frontend/src/i18n/messages/*.ts` locale, including release notes, static notifications, and service-worker text. Use dedicated short keys for tight mobile slots. Browser locale is not a confirmed preference until explicitly selected; show language names natively.
+- Use Tailwind and `--dp-*` tokens from `frontend/src/style.css`; no hardcoded hex or theme-blind colors. Inline `:style` is only for runtime-dependent or CSS-variable-backed values.
+- Support mobile and desktop, light and dark mode, and 44px interaction targets with visible hover/focus feedback. Check iPhone 16 Pro (402×874) and iPhone 13 mini (375×812); verify visual polish in the browser with Playwright.
+- New user-facing routes must update both `frontend/src/router/index.ts` and `frontend/src/components/layout/AppHeader.vue`.
 
 ### Release Notes & `main` PRs
 
-- Every human-authored PR to `main` needs exactly one release note entry, even docs/infra/maintenance. Dependabot-only dependency PRs are exempt.
-- The note id needs the real PR number, so never guess it. Sequence: create a draft PR (`gh pr create --draft`) → commit a release note with `id: "pr-<number>"` to `frontend/src/releaseNotes/meta.ts` and every `frontend/src/releaseNotes/messages/*.ts` locale → push → `cd frontend && npm run release-notes:check` → run the requested build verification → `gh pr ready` → report CI for the head SHA.
-- Date is the PR date in Asia/Seoul as `YYYY.MM.DD`, with `.02`, `.03`… for additional PRs on the same date.
-- The `release-note` CI job skips draft PRs and gates merge. The GitHub Release is generated from the English in-app note — the PR body is not the release note source.
+- Every human-authored PR to `main` needs exactly one release note; Dependabot-only dependency PRs are exempt. Follow `frontend/src/releaseNotes/README.md` for ids, dates, locales, and checks.
+- Create a draft PR first to obtain the real number, add and push `pr-<number>` release-note entries, run `cd frontend && npm run release-notes:check` and requested verification, mark the PR ready, then report CI for the head SHA. Never guess the PR number.
 
 ### Domain Gotchas
 
-- Attachment contexts: `SCHEDULE`, `PROFILE`, `TEAM`, `TODO`. Changing them means updating enum, validation, storage path resolution, synchronization, cleanup, and storage layout together.
-- Schedule create/update goes through `ScheduleTimeParsingQueueManager`; updates reset `ParsingTimeStatus` to `WAIT` and requeue parsing. Preserve this contract.
-- The time parsing worker runs off-thread and saves entities explicitly — do not rely on JPA dirty checking there.
-- Push subscription needs a valid refresh token cookie plus service worker registration; backend and frontend changes often move together.
-- Notifications: unread polling with exponential backoff, friend-request counts, app badge updates. Keep these semantics aligned when touching notification UI or APIs.
+- Attachment contexts (`SCHEDULE`, `PROFILE`, `TEAM`, `TODO`) must change across enum, validation, storage paths, synchronization, cleanup, and storage layout together.
+- Schedule create/update must use `ScheduleTimeParsingQueueManager`; updates reset `ParsingTimeStatus` to `WAIT` and requeue. The off-thread worker saves entities explicitly and must not rely on JPA dirty checking.
+- Web/PWA and native iOS authentication and push paths coexist. Web push subscription requires a valid refresh-token cookie and service-worker registration. Regression-test every affected client after shared backend changes, preserving unread polling backoff, friend-request counts, and app-badge semantics.
 
 ## 3. Verification
 
-- Backend: `./gradlew test` (or targeted `--tests`); API docs: `./gradlew asciidoctor`; full build: `./gradlew build` (includes asciidoctor)
-- Frontend: `cd frontend && npm run type-check` and `npm run build`; `npm run test` for Vitest-covered stores/utils
+- Backend: `./gradlew test` (or targeted `--tests`); API docs: `./gradlew asciidoctor`; full build: `./gradlew build`
+- Frontend: `cd frontend && npm run type-check && npm run build`; run `npm run test` for Vitest-covered stores and utilities
+- iOS: run the documented simulator `xcodebuild ... build` and `xcodebuild ... test` commands from `ios/README.md`
 - Release notes: `cd frontend && npm run release-notes:check`
-- Local dev login for in-browser checks: `test@duty.park` / `12345678` (`http://localhost:5173`, backend `:8080`). Dev-only credentials, not real secrets.
+- Browser login: `test@duty.park` / `12345678` at `http://localhost:5173` with backend `:8080` (dev-only credentials)
 
-## 4. Sub-Agents
+## 4. Agent Roles, Delegation, and Parallelism
 
-- Use sub-agents when independent research, search, verification, or disjoint implementation can run in parallel; not for sequential steps, overlapping edits, or tightly coupled refactors.
-- Use the same model as the main agent unless the user asks otherwise.
+These rules are required, not advisory.
+
+### Role separation
+
+- The main agent is the orchestrator: it performs discovery, design, planning, decomposition, coordination, and review. It does not write or edit implementation code directly.
+- Delegate every implementation change to a sub-agent regardless of size; there is no small-change exception. Use the main agent's model unless the user asks otherwise.
+- Sequential or tightly coupled implementation is still delegated to one sub-agent at a time. Parallelism controls concurrency, not whether implementation is delegated.
+
+### Task briefs and ownership
+
+- Give each sub-agent a bounded brief naming target files, expected deliverables, constraints, and verification commands or observable results.
+- Run independent work on disjoint files in parallel; do not parallelize overlapping edits or ordering dependencies.
+- Assign one owner to shared files such as manifests, lockfiles, routing/registration, migrations, release-note registries, and this file.
+- For cross-cutting work, establish shared contracts first, then fan out only work that lands in independent files.
+
+### Review and handover
+
+- Sub-agents report changed files, verification, assumptions, and remaining risks when a unit finishes.
+- The main agent reviews correctness, scope, simplicity, unrelated edits, and missing tests. Return deficiencies to the implementing sub-agent instead of fixing them directly.
+- The main agent performs final integration and shared-resource verification after delegated work completes.
 
 ## 5. Collaboration
 
-- Respond to the user in Korean.
-- Ask short numbered questions only when ambiguity is risky.
-- Favor backend-first changes for cross-cutting features.
-- Work one checklist item at a time; stop and present the code after each item. RED -> GREEN -> REFACTOR where it fits.
-- For design or visual decisions, show concrete options in the admin `관리 > 개발` tab (`/admin/dev`) so the user can compare in the product instead of choosing from chat descriptions.
+- Respond in Korean and ask short numbered questions only when ambiguity is risky.
+- Favor backend-first changes for cross-cutting features. Coordinate one coherent checklist unit at a time and present reviewed delegated results to the user.
+- Show visual/design options in `관리 > 개발` (`/admin/dev`) for in-product comparison.
 - Never commit automatically.
-
-## 6. Quick Pointers
-
-- Noisy `frontend/dist/.gitkeep` deletions: `git update-index --assume-unchanged frontend/dist/.gitkeep`.
-- If this file is not enough: `README.md`, `application*.yml`, and the nearest controller, view, or test.
