@@ -39,9 +39,11 @@ struct SettingsView: View {
     @State private var showPassword = false
     @State private var showAuxiliary = false
     @State private var showLogout = false
+    @State private var logoutAction = SettingsDestructiveActionGate()
     @State private var showDeleteInfo = false
     @State private var managerToRemove: MemberDTO?
     @State private var sessionConfirmation: SettingsSessionConfirmation?
+    @State private var sessionAction = SettingsDestructiveActionGate()
     @State private var memberToImpersonate: MemberDTO?
     @State private var isLinking: OAuthProvider?
     @State private var oauthNoticeMessage: String?
@@ -163,29 +165,15 @@ struct SettingsView: View {
                 )
             }
         }
-        .fullScreenCover(item: $sessionConfirmation) { confirmation in
-            DPModalOverlay(
-                onDismiss: { sessionConfirmation = nil },
-                closeOnBackdrop: !model.isWorking,
-                canDismiss: !model.isWorking
-            ) { _, dismiss in
-                SettingsSessionConfirmationModal(
-                    confirmation: confirmation,
-                    isWorking: model.isWorking,
-                    dismiss: dismiss
-                ) {
-                    let didRevoke: Bool
-                    switch confirmation {
-                    case .session(let token):
-                        didRevoke = await model.revokeSession(id: token.id)
-                    case .otherSessions:
-                        didRevoke = await model.revokeOtherSessions()
-                    }
-                    if didRevoke {
-                        dismiss()
-                    }
-                }
-            }
+        .alert(item: $sessionConfirmation) { confirmation in
+            Alert(
+                title: Text(SettingsLocalization.string(confirmation.titleKey)),
+                message: Text(confirmation.message),
+                primaryButton: .destructive(Text(SettingsLocalization.string("settings.action.confirm"))) {
+                    Task { await performSessionConfirmation(confirmation) }
+                },
+                secondaryButton: .cancel(Text(SettingsLocalization.string("settings.action.cancel")))
+            )
         }
         .sheet(isPresented: cropSheetBinding) {
             if let photoToCrop {
@@ -213,12 +201,9 @@ struct SettingsView: View {
             }
             Button(SettingsLocalization.string("settings.action.cancel"), role: .cancel) {}
         }
-        .confirmationDialog(SettingsLocalization.string("settings.logout.confirmTitle"), isPresented: $showLogout) {
+        .alert(SettingsLocalization.string("settings.logout.confirmTitle"), isPresented: $showLogout) {
             Button(SettingsLocalization.string("settings.logout"), role: .destructive) {
-                Task {
-                    await push.unregister()
-                    await session.logout()
-                }
+                Task { await performLogout() }
             }
             Button(SettingsLocalization.string("settings.action.cancel"), role: .cancel) {}
         } message: {
@@ -265,7 +250,7 @@ struct SettingsView: View {
         } message: {
             SettingsLocalization.text("settings.push.permissionMessage")
         }
-        .disabled(model.isWorking)
+        .disabled(model.isWorking || logoutAction.isWorking || sessionAction.isWorking)
         .navigationDestination(item: $destination) { destination in
             switch destination {
             case .guide:
@@ -916,6 +901,40 @@ struct SettingsView: View {
         }
     }
 
+    private func performLogout() async {
+        guard logoutAction.start() else { return }
+        defer { logoutAction.finish() }
+        await push.unregister()
+        await session.logout()
+    }
+
+    private func performSessionConfirmation(_ confirmation: SettingsSessionConfirmation) async {
+        guard sessionAction.start() else { return }
+        defer { sessionAction.finish() }
+
+        switch confirmation {
+        case .session(let token):
+            guard SettingsSessionPolicy.canRevoke(token) else { return }
+            _ = await model.revokeSession(id: token.id)
+        case .otherSessions:
+            _ = await model.revokeOtherSessions()
+        }
+    }
+
+}
+
+nonisolated struct SettingsDestructiveActionGate: Equatable, Sendable {
+    private(set) var isWorking = false
+
+    mutating func start() -> Bool {
+        guard !isWorking else { return false }
+        isWorking = true
+        return true
+    }
+
+    mutating func finish() {
+        isWorking = false
+    }
 }
 
 nonisolated enum SettingsSessionFormatter {
@@ -1130,63 +1149,6 @@ private struct SettingsSessionMetadataRow: View {
             }
         }
         .font(DPTypography.supporting)
-    }
-}
-
-private struct SettingsSessionConfirmationModal: View {
-    let confirmation: SettingsSessionConfirmation
-    let isWorking: Bool
-    let dismiss: () -> Void
-    let confirm: () async -> Void
-
-    var body: some View {
-        VStack(spacing: 0) {
-            SettingsLocalization.text(confirmation.titleKey)
-                .font(DPTypography.bodyMedium)
-                .foregroundStyle(DPColor.textPrimary)
-                .frame(maxWidth: .infinity)
-                .padding(.horizontal, DPSpacing.large)
-                .frame(minHeight: 56)
-                .background(DPColor.backgroundTertiary)
-
-            Text(confirmation.message)
-                .font(DPTypography.supporting)
-                .foregroundStyle(DPColor.textSecondary)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.horizontal, DPSpacing.large)
-                .padding(.vertical, DPSpacing.large)
-                .frame(maxWidth: .infinity)
-
-            HStack(spacing: DPSpacing.compact) {
-                Button {
-                    Task { await confirm() }
-                } label: {
-                    Group {
-                        if isWorking {
-                            ProgressView()
-                                .tint(DPColor.textOnDark)
-                        } else {
-                            SettingsLocalization.text("settings.action.confirm")
-                        }
-                    }
-                    .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(DPPrimaryButtonStyle())
-                .disabled(isWorking)
-                .accessibilityIdentifier("settings.sessions.confirm")
-
-                Button(action: dismiss) {
-                    SettingsLocalization.text("settings.action.cancel")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(DPOutlineButtonStyle())
-                .disabled(isWorking)
-            }
-            .padding(.horizontal, DPSpacing.large)
-            .padding(.bottom, DPSpacing.large)
-        }
-        .frame(maxWidth: .infinity)
     }
 }
 

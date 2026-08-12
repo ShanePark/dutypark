@@ -194,6 +194,47 @@ struct SettingsFeatureTests {
     }
 
     @Test(.serialized)
+    func destructiveConfirmationCancelsWithoutAPIAndBlocksDuplicateConfirmation() async throws {
+        let recorder = SettingsRequestRecorder()
+        SettingsURLProtocolStub.handler = { request in
+            recorder.record(request)
+            return (
+                HTTPURLResponse(
+                    url: request.url!,
+                    statusCode: 204,
+                    httpVersion: nil,
+                    headerFields: nil
+                )!,
+                Data()
+            )
+        }
+        defer { SettingsURLProtocolStub.handler = nil }
+
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [SettingsURLProtocolStub.self]
+        let service = SettingsService(client: APIClient(
+            baseURL: URL(string: "https://dutypark.test/api/")!,
+            session: URLSession(configuration: configuration)
+        ))
+        var gate = SettingsDestructiveActionGate()
+
+        // Cancelling the system alert never starts the destructive action.
+        #expect(!gate.isWorking)
+        #expect(recorder.requests.isEmpty)
+
+        let firstConfirmationStarted = gate.start()
+        let duplicateConfirmationStarted = gate.start()
+        #expect(firstConfirmationStarted)
+        #expect(!duplicateConfirmationStarted)
+        try await service.revokeSession(id: 41)
+        gate.finish()
+
+        #expect(!gate.isWorking)
+        #expect(recorder.requests.count == 1)
+        #expect(recorder.requests.first?.url?.path == "/api/auth/refresh-tokens/41")
+    }
+
+    @Test(.serialized)
     func sessionServiceUsesDedicatedDeleteEndpointsAndPreservesCurrentCookie() async throws {
         let recorder = SettingsRequestRecorder()
         SettingsURLProtocolStub.handler = { request in
