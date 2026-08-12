@@ -12,7 +12,7 @@ struct LoginView: View {
     @State private var oauthClient = MobileOAuthClient()
     @State private var oauthErrorMessage: String?
     @State private var signupUUID: String?
-    @State private var isOAuthWorking = false
+    @State private var activeOAuthProvider: OAuthProvider?
     @FocusState private var focusedField: LoginField?
 
     private enum LoginField {
@@ -180,23 +180,25 @@ struct LoginView: View {
                             Button { startOAuth(.kakao) } label: {
                                 socialButton(
                                     oauthString("auth.oauth.kakao"),
+                                    provider: .kakao,
                                     image: "KakaoLogo",
                                     background: SocialBrandColor.kakao,
                                     foreground: .black
                                 )
                             }
-                            .disabled(session.isWorking || isOAuthWorking)
+                            .disabled(oauthButtonPresentation(for: .kakao).isDisabled)
                             .accessibilityIdentifier("login.oauth.kakao")
 
                             Button { startOAuth(.naver) } label: {
                                 socialButton(
                                     oauthString("auth.oauth.naver"),
+                                    provider: .naver,
                                     image: "NaverLogo",
                                     background: SocialBrandColor.naver,
                                     foreground: DPColor.textOnDark
                                 )
                             }
-                            .disabled(session.isWorking || isOAuthWorking)
+                            .disabled(oauthButtonPresentation(for: .naver).isDisabled)
                             .accessibilityIdentifier("login.oauth.naver")
                         }
 
@@ -295,12 +297,13 @@ struct LoginView: View {
 
     private func socialButton(
         _ title: String,
+        provider: OAuthProvider,
         image: String,
         background: Color,
         foreground: Color
     ) -> some View {
         HStack(spacing: 12) {
-            if isOAuthWorking {
+            if oauthButtonPresentation(for: provider).showsProgress {
                 ProgressView()
                     .tint(foreground)
             } else {
@@ -320,12 +323,20 @@ struct LoginView: View {
         .contentShape(Rectangle())
     }
 
+    private func oauthButtonPresentation(for provider: OAuthProvider) -> LoginOAuthButtonPresentation {
+        LoginOAuthButtonPresentation(
+            provider: provider,
+            activeProvider: activeOAuthProvider,
+            isSessionWorking: session.isWorking
+        )
+    }
+
     private func startOAuth(_ provider: OAuthProvider) {
-        guard !isOAuthWorking else { return }
-        isOAuthWorking = true
+        guard activeOAuthProvider == nil else { return }
+        activeOAuthProvider = provider
         oauthErrorMessage = nil
         Task {
-            defer { isOAuthWorking = false }
+            defer { activeOAuthProvider = nil }
             do {
                 switch try await oauthClient.login(provider: provider) {
                 case .authenticated:
@@ -339,6 +350,20 @@ struct LoginView: View {
                 oauthErrorMessage = error.localizedDescription
             }
         }
+    }
+}
+
+nonisolated struct LoginOAuthButtonPresentation: Equatable {
+    let showsProgress: Bool
+    let isDisabled: Bool
+
+    init(
+        provider: OAuthProvider,
+        activeProvider: OAuthProvider?,
+        isSessionWorking: Bool
+    ) {
+        showsProgress = activeProvider == provider
+        isDisabled = isSessionWorking || activeProvider != nil
     }
 }
 

@@ -86,3 +86,46 @@ final class OAuthSignupPresentationTests: XCTestCase {
         }
     }
 }
+
+final class LoginOAuthButtonPresentationTests: XCTestCase {
+    func testIdleStateShowsNoProgressAndEnablesBothProviders() {
+        for provider in OAuthProvider.allCases {
+            let presentation = LoginOAuthButtonPresentation(
+                provider: provider,
+                activeProvider: nil,
+                isSessionWorking: false
+            )
+
+            XCTAssertFalse(presentation.showsProgress)
+            XCTAssertFalse(presentation.isDisabled)
+        }
+    }
+
+    func testOnlyActiveProviderShowsProgressWhileBothProvidersAreDisabled() {
+        for activeProvider in OAuthProvider.allCases {
+            for provider in OAuthProvider.allCases {
+                let presentation = LoginOAuthButtonPresentation(
+                    provider: provider,
+                    activeProvider: activeProvider,
+                    isSessionWorking: false
+                )
+
+                XCTAssertEqual(presentation.showsProgress, provider == activeProvider)
+                XCTAssertTrue(presentation.isDisabled)
+            }
+        }
+    }
+
+    func testEmailLoginDisablesBothProvidersWithoutShowingOAuthProgress() {
+        for provider in OAuthProvider.allCases {
+            let presentation = LoginOAuthButtonPresentation(
+                provider: provider,
+                activeProvider: nil,
+                isSessionWorking: true
+            )
+
+            XCTAssertFalse(presentation.showsProgress)
+            XCTAssertTrue(presentation.isDisabled)
+        }
+    }
+}
