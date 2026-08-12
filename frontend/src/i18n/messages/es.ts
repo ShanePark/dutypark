@@ -939,6 +939,7 @@ export default {
         naverMessage: 'Conecte su cuenta Naver para iniciar sesión más fácilmente. Serás redirigido a la página de inicio de sesión Naver.',
       },
       startFailed: 'No se pudo iniciar la vinculación de cuentas sociales.',
+      linkSuccess: 'La cuenta de {provider} se ha vinculado.',
       alreadyLinkedTitle: 'Error al vincular la cuenta social',
       alreadyLinkedMessage: 'Esta cuenta {provider} ya está vinculada a otra cuenta Dutypark. Inténtelo de nuevo con una cuenta {provider} diferente.',
       unlink: {

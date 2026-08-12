@@ -947,6 +947,7 @@ export default {
         naverMessage: 'Connect your Naver account for easier sign-in. You will be redirected to the Naver sign-in page.',
       },
       startFailed: 'Failed to start social account linking.',
+      linkSuccess: 'Your {provider} account has been linked.',
       alreadyLinkedTitle: 'Social account linking failed',
       alreadyLinkedMessage: 'This {provider} account is already linked to another Dutypark account. Please try again with a different {provider} account.',
       unlink: {

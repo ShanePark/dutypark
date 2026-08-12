@@ -939,6 +939,7 @@ export default {
         naverMessage: '连接您的 Naver 帐户以便更轻松地登录。您将被重定向到 Naver 登录页面。',
       },
       startFailed: '无法启动社交帐户链接。',
+      linkSuccess: '{provider} 帐户已关联。',
       alreadyLinkedTitle: '社交账号关联失败',
       alreadyLinkedMessage: '此 {provider} 帐户已链接到另一个 Dutypark 帐户。请使用其他 {provider} 帐户重试。',
       unlink: {

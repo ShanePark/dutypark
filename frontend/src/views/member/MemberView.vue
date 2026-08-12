@@ -30,6 +30,13 @@ import SocialAccountConnectionModal from '@/components/member/SocialAccountConne
 import AccountDeletionModal from '@/components/member/AccountDeletionModal.vue'
 import AiSchedulePolicyModal from '@/components/common/AiSchedulePolicyModal.vue'
 import type { AccountDeletionCompletion } from '@/utils/accountDeletionFlow'
+import {
+  clearPendingSocialLinkProvider,
+  consumeConnectedPendingSocialLinkProvider,
+  consumeSocialLinkCallback,
+  storePendingSocialLinkProvider,
+  type SocialLinkProvider,
+} from '@/utils/socialLinkCallback'
 import { resolveApiErrorMessage } from '@/utils/resolveApiError'
 import {
   User,
@@ -559,6 +566,10 @@ function canUnlinkSso(provider: SsoProvider): boolean {
   return canUnlinkSocialAccount(memberInfo.value, provider)
 }
 
+function toSocialLinkProvider(provider: SsoProvider): SocialLinkProvider {
+  return provider === 'KAKAO' ? 'kakao' : 'naver'
+}
+
 function openSsoSettings(connection: SsoConnection, event: Event) {
   if (isSsoActionPending.value || !connection.connected) return
   ssoSettingsTrigger = event.currentTarget instanceof HTMLElement ? event.currentTarget : null
@@ -595,9 +606,11 @@ async function connectSso(provider: SsoProvider) {
 
   connectingSso.value = provider
   try {
+    storePendingSocialLinkProvider(toSocialLinkProvider(provider))
     prompt.connect()
   } catch (error) {
     console.error('Failed to connect sso:', error)
+    clearPendingSocialLinkProvider()
     connectingSso.value = null
     showError(t('member.sso.startFailed'))
     return
@@ -631,38 +644,31 @@ async function unlinkSso(connection: SsoConnection) {
   }
 }
 
-type SocialLinkProvider = 'kakao' | 'naver'
-type SocialLinkErrorCode = 'already_linked'
-
-function getSingleQueryValue(value: unknown): string | null {
-  if (Array.isArray(value)) {
-    return typeof value[0] === 'string' ? value[0] : null
-  }
-  return typeof value === 'string' ? value : null
-}
-
-async function clearSocialLinkQuery() {
-  if (!route.query.socialLinkError && !route.query.socialProvider) return
-
-  const nextQuery = { ...route.query }
-  delete nextQuery.socialLinkError
-  delete nextQuery.socialProvider
-  await router.replace({ query: nextQuery })
-}
-
 async function handleSocialLinkQuery() {
-  const socialLinkError = getSingleQueryValue(route.query.socialLinkError) as SocialLinkErrorCode | null
-  const socialProvider = getSingleQueryValue(route.query.socialProvider) as SocialLinkProvider | null
+  const result = await consumeSocialLinkCallback(
+    route.query,
+    (query) => router.replace({ query }),
+  )
+  if (result) {
+    clearPendingSocialLinkProvider()
+  }
 
-  if (!socialLinkError || !socialProvider) return
+  const fallbackProvider = !result && memberInfo.value
+    ? consumeConnectedPendingSocialLinkProvider(memberInfo.value)
+    : null
+  const provider = result?.provider ?? fallbackProvider
 
-  await clearSocialLinkQuery()
+  if (!provider) return
 
-  if (socialLinkError !== 'already_linked') return
-
-  const providerLabel = socialProvider === 'kakao'
+  const providerLabel = provider === 'kakao'
     ? t('member.sso.providers.kakao')
     : t('member.sso.providers.naver')
+
+  if (!result || result.type === 'success') {
+    toastSuccess(t('member.sso.linkSuccess', { provider: providerLabel }))
+    return
+  }
+
   await showError(
     t('member.sso.alreadyLinkedMessage', { provider: providerLabel }),
     t('member.sso.alreadyLinkedTitle')
@@ -828,13 +834,17 @@ onMounted(async () => {
 
     // Set SSO connections based on user data
     ssoConnections.value = buildSsoConnections(memberInfo.value)
-    await handleSocialLinkQuery()
   } catch (error) {
     console.error('Failed to initialize:', error)
   } finally {
     loading.value = false
   }
 
+  try {
+    await handleSocialLinkQuery()
+  } catch (error) {
+    console.error('Failed to handle social account linking callback:', error)
+  }
 })
 </script>
 

@@ -1015,6 +1015,7 @@ export default {
         naverMessage: 'Naverアカウントを連携すると、より簡単にログインできます。Naverログインページへ移動します。',
       },
       startFailed: 'ソーシャルアカウント連携を開始できませんでした。',
+      linkSuccess: '{provider}アカウントを連携しました。',
       alreadyLinkedTitle: 'ソーシャルアカウント連携失敗',
       alreadyLinkedMessage: 'この {provider} アカウントは別のDutyparkアカウントに連携されています。別の {provider} アカウントでお試しください。',
       unlink: {

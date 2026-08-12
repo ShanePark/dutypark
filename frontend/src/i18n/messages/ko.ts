@@ -950,6 +950,7 @@ export default {
         naverMessage: '네이버 계정을 연동하면 네이버 로그인으로 간편하게 접속할 수 있습니다. 네이버 로그인 페이지로 이동합니다.',
       },
       startFailed: '소셜 계정 연동을 시작하지 못했습니다.',
+      linkSuccess: '{provider} 계정이 연동되었습니다.',
       alreadyLinkedTitle: '소셜 계정 연동 실패',
       alreadyLinkedMessage: '이미 다른 Dutypark 계정에 연동된 {provider} 계정입니다. 다른 {provider} 계정으로 다시 시도해주세요.',
       unlink: {
