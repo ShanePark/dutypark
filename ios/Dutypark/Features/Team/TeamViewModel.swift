@@ -300,7 +300,7 @@ final class TeamManageViewModel: ObservableObject {
             || team.members.contains { $0.id == loginID && $0.isManager }
     }
 
-    func changeAdmin(memberID: MemberID?) async {
+    func changeAdmin(memberID: MemberID?) async -> Bool {
         await perform { try await repository.changeAdmin(teamID: teamID, memberID: memberID) }
     }
 
@@ -308,15 +308,15 @@ final class TeamManageViewModel: ObservableObject {
         await perform { try await repository.updateBatchTemplate(teamID: teamID, name: name) }
     }
 
-    func removeMember(_ id: MemberID) async {
+    func removeMember(_ id: MemberID) async -> Bool {
         await perform { try await repository.removeMember(teamID: teamID, memberID: id) }
     }
 
-    func addManager(_ id: MemberID) async {
+    func addManager(_ id: MemberID) async -> Bool {
         await perform { try await repository.addManager(teamID: teamID, memberID: id) }
     }
 
-    func removeManager(_ id: MemberID) async {
+    func removeManager(_ id: MemberID) async -> Bool {
         await perform { try await repository.removeManager(teamID: teamID, memberID: id) }
     }
 
@@ -383,8 +383,9 @@ final class TeamManageViewModel: ObservableObject {
         }
     }
 
-    private func perform(_ operation: () async throws -> Void) async {
-        guard !isWorking else { return }
+    @discardableResult
+    private func perform(_ operation: () async throws -> Void) async -> Bool {
+        guard !isWorking else { return false }
         isWorking = true
         showsError = false
         defer { isWorking = false }
@@ -392,8 +393,10 @@ final class TeamManageViewModel: ObservableObject {
             try await operation()
             team = try await repository.teamForManagement(teamID: teamID)
             showsSuccess = true
+            return true
         } catch {
             showsError = true
+            return false
         }
     }
 }

@@ -2,6 +2,7 @@ import Foundation
 import Testing
 @testable import Dutypark
 
+@Suite(.serialized)
 struct TeamFeatureTests {
     @Test
     func teamAdminToolPermissionIncludesServiceAdminAndTeamRoles() {
@@ -64,6 +65,54 @@ struct TeamFeatureTests {
                 isServiceAdmin: false
             ) == false
         )
+    }
+
+    @Test @MainActor
+    func reportsManagementMutationFailureWithoutLosingRetryState() async {
+        TeamURLProtocolStub.handler = { request in
+            Self.response(request, status: 503)
+        }
+        let viewModel = TeamManageViewModel(
+            teamID: 7,
+            repository: TeamRepository(client: makeClient())
+        )
+
+        let succeeded = await viewModel.removeMember(3)
+
+        #expect(succeeded == false)
+        #expect(viewModel.showsError)
+        #expect(viewModel.showsSuccess == false)
+        TeamURLProtocolStub.handler = nil
+    }
+
+    @Test @MainActor
+    func reportsManagementMutationSuccessOnlyAfterRefreshingTeam() async {
+        TeamURLProtocolStub.handler = { request in
+            switch (request.httpMethod, request.url?.path) {
+            case ("DELETE", "/api/teams/manage/7/members"):
+                Self.response(request, status: 204)
+            case ("GET", "/api/teams/manage/7"):
+                Self.response(
+                    request,
+                    status: 200,
+                    body: #"{"id":7,"name":"Team","description":null,"dutyTypes":[],"members":[],"createdDate":"2026-08-12T00:00:00","lastModifiedDate":"2026-08-12T00:00:00","adminId":null,"adminName":null,"dutyBatchTemplate":null}"#
+                )
+            default:
+                Self.response(request, status: 404)
+            }
+        }
+        let viewModel = TeamManageViewModel(
+            teamID: 7,
+            repository: TeamRepository(client: makeClient())
+        )
+
+        let succeeded = await viewModel.removeMember(3)
+
+        #expect(succeeded)
+        #expect(viewModel.team?.id == 7)
+        #expect(viewModel.showsError == false)
+        #expect(viewModel.showsSuccess)
+        TeamURLProtocolStub.handler = nil
     }
 
     @Test @MainActor
@@ -295,6 +344,60 @@ struct TeamFeatureTests {
         #expect(TeamFeatureLogic.isValidDutyBatchYear(2027, currentYear: 2026))
         #expect(TeamFeatureLogic.isValidDutyBatchYear(2025, currentYear: 2026) == false)
         #expect(TeamFeatureLogic.isValidDutyBatchYear(2028, currentYear: 2026) == false)
+    }
+
+    @Test
+    func limitsAndNormalizesDutyNamesForCompactEditor() {
+        #expect(TeamManageModalLogic.limitedDutyName("12345678901") == "1234567890")
+        #expect(TeamManageModalLogic.normalizedDutyName("  Day  ") == "Day")
+        #expect(TeamManageModalLogic.normalizedDutyName("          Day") == "")
+    }
+
+    @Test
+    func detectsDuplicateDutyNamesWhileExcludingEditedRow() {
+        let defaultDuty = DutyTypeDTO(
+            id: nil,
+            teamId: 7,
+            name: "Off",
+            position: -1,
+            color: "#FFB3BA",
+            hidden: false
+        )
+        let day = dutyType(id: 1, hidden: false)
+        let night = DutyTypeDTO(
+            id: 2,
+            teamId: 7,
+            name: "Night",
+            position: 2,
+            color: "#112233",
+            hidden: false
+        )
+        let dutyTypes = [defaultDuty, day, night]
+
+        #expect(
+            TeamManageModalLogic.hasDuplicateDutyName(
+                "Night",
+                editingID: 1,
+                editingDefaultDuty: false,
+                dutyTypes: dutyTypes
+            )
+        )
+        #expect(
+            TeamManageModalLogic.hasDuplicateDutyName(
+                day.name,
+                editingID: 1,
+                editingDefaultDuty: false,
+                dutyTypes: dutyTypes
+            ) == false
+        )
+        #expect(
+            TeamManageModalLogic.hasDuplicateDutyName(
+                "Off",
+                editingID: nil,
+                editingDefaultDuty: true,
+                dutyTypes: dutyTypes
+            ) == false
+        )
     }
 
     @Test
