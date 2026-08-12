@@ -58,126 +58,327 @@ struct GuestRootView: View {
 }
 
 private struct GuestLandingView: View {
-    private let features: [(icon: String, title: String, description: String)] = [
-        ("heart.fill", "guest.feature.share.title", "guest.feature.share.description"),
-        ("clock.fill", "guest.feature.duty.title", "guest.feature.duty.description"),
-        ("person.2.fill", "guest.feature.life.title", "guest.feature.life.description"),
-        ("checkmark.circle.fill", "guest.feature.todo.title", "guest.feature.todo.description"),
-        ("flag.fill", "guest.feature.dday.title", "guest.feature.dday.description"),
-        ("sun.max.fill", "guest.feature.holiday.title", "guest.feature.holiday.description")
+    private struct Feature: Identifiable {
+        let id: String
+        let icon: String
+        let title: String
+        let description: String
+        let image: String?
+    }
+
+    private let features: [Feature] = [
+        Feature(
+            id: "share",
+            icon: "heart",
+            title: "guest.feature.share.title",
+            description: "guest.feature.share.description",
+            image: "IntroSchedule"
+        ),
+        Feature(
+            id: "duty",
+            icon: "clock",
+            title: "guest.feature.duty.title",
+            description: "guest.feature.duty.description",
+            image: "IntroDuty"
+        ),
+        Feature(
+            id: "life",
+            icon: "person.2",
+            title: "guest.feature.life.title",
+            description: "guest.feature.life.description",
+            image: nil
+        ),
+        Feature(
+            id: "todo",
+            icon: "checkmark.circle",
+            title: "guest.feature.todo.title",
+            description: "guest.feature.todo.description",
+            image: "IntroTodo"
+        ),
+        Feature(
+            id: "dday",
+            icon: "flag",
+            title: "guest.feature.dday.title",
+            description: "guest.feature.dday.description",
+            image: "IntroDDay"
+        ),
+        Feature(
+            id: "holiday",
+            icon: "sun.max",
+            title: "guest.feature.holiday.title",
+            description: "guest.feature.holiday.description",
+            image: "IntroHoliday"
+        )
     ]
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: DPSpacing.large) {
-                hero
+        GeometryReader { geometry in
+            ScrollViewReader { proxy in
+                ScrollView(.vertical) {
+                    LazyVStack(spacing: 0) {
+                        hero(proxy: proxy)
+                            .frame(minHeight: geometry.size.height)
+                            .id("hero")
 
-                LazyVStack(spacing: DPSpacing.small) {
-                    ForEach(features, id: \.title) { feature in
-                        HStack(alignment: .top, spacing: DPSpacing.medium) {
-                            Image(systemName: feature.icon)
-                                .font(.title2)
-                                .foregroundStyle(DPColor.accent)
-                                .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
-                                .background(DPColor.accentSoft)
-                                .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
-                                .accessibilityHidden(true)
-                            VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
-                                Text(GuestLocalization.text(feature.title))
-                                    .font(.headline)
-                                    .foregroundStyle(DPColor.textPrimary)
-                                Text(GuestLocalization.text(feature.description))
-                                    .font(.subheadline)
-                                    .foregroundStyle(DPColor.textSecondary)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                            Spacer(minLength: 0)
+                        ForEach(Array(features.enumerated()), id: \.element.id) { index, feature in
+                            featurePage(feature, index: index)
+                                .frame(minHeight: geometry.size.height)
+                                .id(feature.id)
                         }
-                        .padding(DPSpacing.medium)
-                        .background(DPColor.backgroundCard)
-                        .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: DPRadius.standard)
-                                .stroke(DPColor.borderPrimary)
-                        )
-                    }
-                }
 
-                VStack(spacing: DPSpacing.small) {
-                    Text("guest.cta.title", tableName: "Guest")
-                        .font(.title2.bold())
-                        .multilineTextAlignment(.center)
-                    Text("guest.cta.description", tableName: "Guest")
-                        .foregroundStyle(DPColor.textSecondary)
-                        .multilineTextAlignment(.center)
-                    NavigationLink(value: GuestRoute.login) {
-                        Label(GuestLocalization.text("guest.login"), systemImage: "arrow.right")
-                            .frame(maxWidth: .infinity)
+                        callToAction
+                            .frame(minHeight: geometry.size.height)
+                            .id("cta")
                     }
-                    .buttonStyle(DPPrimaryButtonStyle())
-                    .accessibilityIdentifier("guest.login")
-                    NavigationLink(value: GuestRoute.guide) {
-                        Label(GuestLocalization.text("guest.guide.title"), systemImage: "book")
-                            .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)
-                    }
-                    .accessibilityIdentifier("guest.guide")
+                    .scrollTargetLayout()
                 }
-                .padding(.vertical, DPSpacing.large)
-
-                HStack(spacing: DPSpacing.large) {
-                    NavigationLink(
-                        GuestLocalization.text("guest.policy.terms"),
-                        value: GuestRoute.terms
-                    )
-                    NavigationLink(
-                        GuestLocalization.text("guest.policy.privacy"),
-                        value: GuestRoute.privacy
-                    )
-                }
-                .font(.footnote)
-                .foregroundStyle(DPColor.textMuted)
-                .frame(minHeight: DPSize.minimumTouchTarget)
-            }
-            .padding(.horizontal, DPSpacing.medium)
-            .padding(.bottom, DPSpacing.large)
-        }
-        .background(DPColor.backgroundSecondary)
-        .toolbar {
-            ToolbarItem(placement: .principal) {
-                Text("Dutypark").font(.headline)
-            }
-            ToolbarItem(placement: .topBarTrailing) {
-                NavigationLink(GuestLocalization.text("guest.login.short"), value: GuestRoute.login)
-                    .frame(minHeight: DPSize.minimumTouchTarget)
+                .scrollIndicators(.hidden)
+                .scrollTargetBehavior(.paging)
+                .background(DPColor.backgroundSecondary)
             }
         }
+        .ignoresSafeArea()
+        .toolbar(.hidden, for: .navigationBar)
         .accessibilityIdentifier("screen.guest")
     }
 
-    private var hero: some View {
-        VStack(spacing: DPSpacing.medium) {
-            Image(systemName: "calendar.badge.clock")
-                .font(.system(size: 56))
-                .foregroundStyle(DPColor.accent)
-                .accessibilityHidden(true)
+    private func hero(proxy: ScrollViewProxy) -> some View {
+        VStack(spacing: 0) {
+            Spacer(minLength: 88)
+
             Text("Dutypark")
-                .font(.system(.largeTitle, design: .rounded, weight: .bold))
-                .foregroundStyle(DPColor.textPrimary)
+                .font(DPFont.bold(size: 50, relativeTo: .largeTitle))
+                .tracking(-1)
+                .foregroundStyle(
+                    LinearGradient(
+                        colors: [DPColor.textPrimary, DPColor.textSecondary],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .padding(.bottom, 24)
+
             Text("guest.hero.tagline", tableName: "Guest")
-                .font(.title3.bold())
+                .font(DPFont.bold(size: 19, relativeTo: .title3))
                 .foregroundStyle(DPColor.accent)
                 .multilineTextAlignment(.center)
+                .lineSpacing(6)
+                .padding(.horizontal, 22)
+                .padding(.bottom, 16)
+
             Text("guest.hero.subtitle", tableName: "Guest")
+                .font(DPFont.light(size: 16, relativeTo: .body))
                 .foregroundStyle(DPColor.textSecondary)
                 .multilineTextAlignment(.center)
+                .lineSpacing(9)
+                .padding(.horizontal, 26)
                 .fixedSize(horizontal: false, vertical: true)
+
             NavigationLink(value: GuestRoute.login) {
-                Text("guest.start", tableName: "Guest")
-                    .frame(maxWidth: .infinity)
+                HStack(spacing: 12) {
+                    Text("guest.start", tableName: "Guest")
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14, weight: .semibold))
+                }
+                .font(DPFont.bold(size: 18, relativeTo: .headline))
+                .foregroundStyle(Color.white)
+                .padding(.horizontal, 32)
+                .frame(minHeight: 60)
+                .background(DPColor.accent)
+                .clipShape(Capsule())
+                .shadow(color: DPColor.accent.opacity(0.20), radius: 20, y: 10)
             }
-            .buttonStyle(DPPrimaryButtonStyle())
+            .buttonStyle(.plain)
+            .padding(.top, 38)
+            .accessibilityIdentifier("guest.login")
+
+            Spacer()
+
+            Button {
+                withAnimation(.easeInOut(duration: 0.45)) {
+                    proxy.scrollTo(features[0].id, anchor: .top)
+                }
+            } label: {
+                VStack(spacing: 8) {
+                    Text("guest.hero.scroll", tableName: "Guest")
+                        .font(DPFont.light(size: 14, relativeTo: .subheadline))
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 18, weight: .medium))
+                }
+                .foregroundStyle(DPColor.textMuted)
+                .frame(minWidth: 160, minHeight: 60)
+            }
+            .buttonStyle(.plain)
+            .padding(.bottom, 24)
         }
-        .padding(.vertical, DPSpacing.large)
+        .frame(maxWidth: .infinity)
+        .background(DPColor.backgroundSecondary)
+    }
+
+    private func featurePage(_ feature: Feature, index: Int) -> some View {
+        ZStack(alignment: .leading) {
+            DPColor.backgroundSecondary
+
+            VStack(spacing: 18) {
+                featureMockup(feature)
+
+                Image(systemName: feature.icon)
+                    .font(.system(size: 30, weight: .medium))
+                    .foregroundStyle(DPColor.textPrimary)
+                    .frame(width: 64, height: 64)
+                    .background(
+                        LinearGradient(
+                            colors: [DPColor.backgroundTertiary, DPColor.backgroundSecondary],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
+                    .clipShape(RoundedRectangle(cornerRadius: 20))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: 20)
+                            .stroke(DPColor.borderPrimary)
+                    }
+                    .accessibilityHidden(true)
+
+                Text(GuestLocalization.text(feature.title))
+                    .font(DPFont.bold(size: 31, relativeTo: .title))
+                    .foregroundStyle(DPColor.textPrimary)
+                    .multilineTextAlignment(.center)
+
+                Text(GuestLocalization.text(feature.description))
+                    .font(DPFont.light(size: 16, relativeTo: .body))
+                    .foregroundStyle(DPColor.textSecondary)
+                    .multilineTextAlignment(.center)
+                    .lineSpacing(7)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.horizontal, 28)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.top, 18)
+
+            VStack(spacing: 13) {
+                ForEach(features.indices, id: \.self) { dot in
+                    Circle()
+                        .fill(dot == index ? DPColor.textPrimary : DPColor.borderPrimary)
+                        .frame(width: dot == index ? 10 : 8, height: dot == index ? 10 : 8)
+                }
+            }
+            .padding(.leading, 24)
+            .accessibilityHidden(true)
+        }
+    }
+
+    @ViewBuilder
+    private func featureMockup(_ feature: Feature) -> some View {
+        ZStack(alignment: .top) {
+            RoundedRectangle(cornerRadius: 28)
+                .fill(DPColor.backgroundFooter)
+
+            if let image = feature.image {
+                Image(image)
+                    .resizable()
+                    .scaledToFill()
+            } else {
+                LinearGradient(
+                    colors: [DPColor.backgroundSecondary, DPColor.backgroundTertiary],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+                Image(systemName: feature.icon)
+                    .font(.system(size: 46))
+                    .foregroundStyle(DPColor.textMuted)
+                    .padding(.top, 115)
+            }
+
+            Capsule()
+                .fill(DPColor.backgroundFooter)
+                .frame(width: 72, height: 22)
+                .padding(.top, 7)
+        }
+        .frame(width: 150, height: 325)
+        .clipShape(RoundedRectangle(cornerRadius: 28))
+        .overlay {
+            RoundedRectangle(cornerRadius: 28)
+                .stroke(DPColor.backgroundFooter, lineWidth: 6)
+        }
+        .shadow(color: .black.opacity(0.22), radius: 28, y: 15)
+        .accessibilityHidden(true)
+    }
+
+    private var callToAction: some View {
+        VStack(spacing: 0) {
+            Spacer()
+
+            Image(systemName: "sparkles")
+                .font(.system(size: 30, weight: .medium))
+                .foregroundStyle(DPColor.textPrimary)
+                .frame(width: 64, height: 64)
+                .background(DPColor.backgroundTertiary)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .padding(.bottom, 24)
+
+            Text("guest.cta.title", tableName: "Guest")
+                .font(DPFont.bold(size: 30, relativeTo: .title))
+                .foregroundStyle(DPColor.textPrimary)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 24)
+                .padding(.bottom, 22)
+
+            Text("guest.cta.description", tableName: "Guest")
+                .font(DPTypography.body)
+                .foregroundStyle(DPColor.textSecondary)
+                .multilineTextAlignment(.center)
+                .lineSpacing(7)
+                .padding(.horizontal, 30)
+                .padding(.bottom, 30)
+
+            NavigationLink(value: GuestRoute.login) {
+                HStack(spacing: 12) {
+                    Text("guest.login", tableName: "Guest")
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14, weight: .semibold))
+                }
+                .font(DPFont.bold(size: 18, relativeTo: .headline))
+                .foregroundStyle(DPColor.textOnDark)
+                .padding(.horizontal, 38)
+                .frame(minHeight: 60)
+                .background(
+                    LinearGradient(
+                        colors: [DPColor.accent, DPColor.accentHover],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                )
+                .clipShape(Capsule())
+                .shadow(color: DPColor.accent.opacity(0.20), radius: 20, y: 10)
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("guest.login.cta")
+
+            NavigationLink(value: GuestRoute.guide) {
+                Label(GuestLocalization.text("guest.guide.short"), systemImage: "book")
+                    .font(DPFont.light(size: 15, relativeTo: .subheadline))
+                    .foregroundStyle(DPColor.textSecondary)
+                    .padding(.horizontal, 20)
+                    .frame(minHeight: 44)
+                    .background(.clear)
+                    .clipShape(Capsule())
+                    .overlay { Capsule().stroke(DPColor.borderSecondary) }
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 20)
+            .accessibilityIdentifier("guest.guide")
+
+            Spacer()
+        }
+        .frame(maxWidth: .infinity)
+        .background(
+            LinearGradient(
+                colors: [DPColor.backgroundSecondary, DPColor.backgroundPrimary],
+                startPoint: .top,
+                endPoint: .bottom
+            )
+        )
     }
 }
 

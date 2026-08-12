@@ -239,6 +239,24 @@
         }
       }
     },
+    "guest.hero.scroll": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Scroll to learn more" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Desplázate para saber más" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "スクロールして詳しく見る" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "스크롤하여 더 알아보기" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "滚动了解更多" } }
+      }
+    },
+    "guest.guide.short": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Explore features first" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Explora primero las funciones" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "先に機能を見る" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "먼저 기능 둘러보기" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "先浏览功能" } }
+      }
+    },
     "guest.hero.tagline": {
       "localizations": {
         "en": {

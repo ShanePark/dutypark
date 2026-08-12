@@ -5,6 +5,7 @@ struct LoginView: View {
     private let wrapsInNavigationStack: Bool
 
     @EnvironmentObject private var session: SessionStore
+    @Environment(\.dismiss) private var dismiss
     @State private var email = UserDefaults.standard.string(forKey: rememberedEmailKey) ?? ""
     @State private var password = ""
     @State private var rememberEmail = UserDefaults.standard.string(forKey: rememberedEmailKey) != nil
@@ -12,6 +13,12 @@ struct LoginView: View {
     @State private var oauthErrorMessage: String?
     @State private var signupUUID: String?
     @State private var isOAuthWorking = false
+    @FocusState private var focusedField: LoginField?
+
+    private enum LoginField {
+        case email
+        case password
+    }
 
     init(wrapsInNavigationStack: Bool = true) {
         self.wrapsInNavigationStack = wrapsInNavigationStack
@@ -40,78 +47,212 @@ struct LoginView: View {
     }
 
     private var loginForm: some View {
-        Form {
-            Section {
-                TextField("auth.login.emailPlaceholder", text: $email)
-                    .textContentType(.emailAddress)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .keyboardType(.emailAddress)
-                    .accessibilityLabel(Text("auth.login.emailLabel"))
-
-                SecureField("auth.login.passwordPlaceholder", text: $password)
-                    .textContentType(.password)
-                    .accessibilityLabel(Text("auth.login.passwordLabel"))
-                    .onSubmit(login)
-
-                Toggle("auth.login.rememberMe", isOn: $rememberEmail)
-            }
-
-            if let errorKey = session.loginErrorKey {
-                Section {
-                    Text(LocalizedStringKey(errorKey))
-                        .foregroundStyle(.red)
-                        .accessibilityIdentifier("login.error")
-                    if let attemptsMessage = remainingAttemptsMessage {
-                        Text(attemptsMessage)
-                            .foregroundStyle(.orange)
-                            .fontWeight(.medium)
-                            .accessibilityIdentifier("login.remainingAttempts")
+        GeometryReader { geometry in
+            ScrollView {
+                VStack(spacing: 0) {
+                    VStack(spacing: 8) {
+                        Text("Dutypark")
+                            .font(DPFont.bold(size: 30, relativeTo: .largeTitle))
+                            .foregroundStyle(DPColor.textPrimary)
+                        Text("auth.login.subtitle")
+                            .font(DPTypography.body)
+                            .foregroundStyle(DPColor.textMuted)
                     }
-                }
-            }
+                    .padding(.bottom, 32)
 
-            Section {
-                Button(action: login) {
-                    HStack {
-                        Spacer()
-                        if session.isWorking {
-                            ProgressView()
-                        } else {
-                            Text("auth.login.submit")
+                    VStack(spacing: 20) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("auth.login.emailLabel")
+                                .font(DPTypography.label)
+                                .foregroundStyle(DPColor.textSecondary)
+
+                            TextField("auth.login.emailPlaceholder", text: $email)
+                                .font(DPTypography.body)
+                                .textContentType(.emailAddress)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                                .keyboardType(.emailAddress)
+                                .submitLabel(.next)
+                                .focused($focusedField, equals: .email)
+                                .onSubmit { focusedField = .password }
+                                .dpInputChrome(isFocused: focusedField == .email)
+                                .accessibilityLabel(Text("auth.login.emailLabel"))
+
+                            Button {
+                                rememberEmail.toggle()
+                            } label: {
+                                HStack(spacing: 8) {
+                                    Image(systemName: rememberEmail ? "checkmark.square.fill" : "square")
+                                        .font(.system(size: 18))
+                                        .foregroundStyle(
+                                            rememberEmail ? DPColor.accent : DPColor.textSecondary
+                                        )
+                                    Text("auth.login.rememberMe")
+                                        .font(DPTypography.label)
+                                        .foregroundStyle(DPColor.textSecondary)
+                                }
+                                .frame(minHeight: DPSize.minimumTouchTarget)
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
                         }
-                        Spacer()
+
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("auth.login.passwordLabel")
+                                .font(DPTypography.label)
+                                .foregroundStyle(DPColor.textSecondary)
+
+                            SecureField("auth.login.passwordPlaceholder", text: $password)
+                                .font(DPTypography.body)
+                                .textContentType(.password)
+                                .submitLabel(.go)
+                                .focused($focusedField, equals: .password)
+                                .onSubmit(login)
+                                .dpInputChrome(isFocused: focusedField == .password)
+                                .accessibilityLabel(Text("auth.login.passwordLabel"))
+                        }
+
+                        if let errorKey = session.loginErrorKey {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(LocalizedStringKey(errorKey))
+                                    .accessibilityIdentifier("login.error")
+                                if let attemptsMessage = remainingAttemptsMessage {
+                                    Text(attemptsMessage)
+                                        .font(DPFont.bold(size: 13, relativeTo: .caption))
+                                        .accessibilityIdentifier("login.remainingAttempts")
+                                }
+                            }
+                            .font(DPTypography.supporting)
+                            .foregroundStyle(
+                                session.loginRemainingAttempts.map { $0 <= 1 } == true
+                                    ? DPColor.warning
+                                    : DPColor.danger
+                            )
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(12)
+                            .background(
+                                session.loginRemainingAttempts.map { $0 <= 1 } == true
+                                    ? DPColor.warningSoft
+                                    : DPColor.dangerSoft
+                            )
+                            .clipShape(RoundedRectangle(cornerRadius: DPRadius.large))
+                            .overlay {
+                                RoundedRectangle(cornerRadius: DPRadius.large)
+                                    .stroke(
+                                        session.loginRemainingAttempts.map { $0 <= 1 } == true
+                                            ? DPColor.warningBorder
+                                            : DPColor.dangerBorder
+                                    )
+                            }
+                        }
+
+                        Button(action: login) {
+                            Group {
+                                if session.isWorking {
+                                    ProgressView()
+                                        .tint(DPColor.textOnDark)
+                                } else {
+                                    Text("auth.login.submit")
+                                }
+                            }
+                            .font(DPFont.bold(size: 16, relativeTo: .headline))
+                            .foregroundStyle(DPColor.textOnDark)
+                            .frame(maxWidth: .infinity, minHeight: 52)
+                            .background(DPColor.surfaceStrong)
+                            .clipShape(RoundedRectangle(cornerRadius: DPRadius.large))
+                            .shadow(color: .black.opacity(0.05), radius: 2, y: 1)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(!canLogin)
+                        .opacity(canLogin ? 1 : 0.5)
+                        .accessibilityIdentifier("login.submit")
+
+                        HStack(spacing: 16) {
+                            Rectangle().fill(DPColor.borderPrimary).frame(height: 1)
+                            Text("auth.login.or")
+                                .font(DPTypography.supporting)
+                                .foregroundStyle(DPColor.textMuted)
+                            Rectangle().fill(DPColor.borderPrimary).frame(height: 1)
+                        }
+                        .padding(.vertical, 4)
+
+                        VStack(spacing: 12) {
+                            Button { startOAuth(.kakao) } label: {
+                                socialButton(
+                                    oauthString("auth.oauth.kakao"),
+                                    image: "KakaoLogo",
+                                    background: SocialBrandColor.kakao,
+                                    foreground: .black
+                                )
+                            }
+                            .disabled(session.isWorking || isOAuthWorking)
+                            .accessibilityIdentifier("login.oauth.kakao")
+
+                            Button { startOAuth(.naver) } label: {
+                                socialButton(
+                                    oauthString("auth.oauth.naver"),
+                                    image: "NaverLogo",
+                                    background: SocialBrandColor.naver,
+                                    foreground: DPColor.textOnDark
+                                )
+                            }
+                            .disabled(session.isWorking || isOAuthWorking)
+                            .accessibilityIdentifier("login.oauth.naver")
+                        }
+
+                        if let oauthErrorMessage {
+                            Text(verbatim: oauthErrorMessage)
+                                .font(DPTypography.supporting)
+                                .foregroundStyle(DPColor.danger)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .accessibilityIdentifier("login.oauth.error")
+                        }
                     }
-                }
-                .disabled(session.isWorking || email.isEmpty || password.isEmpty)
-                .accessibilityIdentifier("login.submit")
-            }
+                    .padding(32)
+                    .background(DPColor.backgroundCard)
+                    .clipShape(RoundedRectangle(cornerRadius: DPRadius.extraLarge))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: DPRadius.extraLarge)
+                            .stroke(DPColor.borderPrimary)
+                    }
+                    .shadow(color: .black.opacity(0.06), radius: 3, y: 1)
 
-            Section {
-                Button { startOAuth(.kakao) } label: {
-                    socialButton(oauthString("auth.oauth.kakao"))
-                }
-                .disabled(session.isWorking || isOAuthWorking)
-                .accessibilityIdentifier("login.oauth.kakao")
+                    Button {
+                        dismiss()
+                    } label: {
+                        Text("auth.login.backHome")
+                            .font(DPTypography.supporting)
+                            .foregroundStyle(DPColor.textPrimary)
+                            .frame(minHeight: DPSize.minimumTouchTarget)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.top, 16)
 
-                Button { startOAuth(.naver) } label: {
-                    socialButton(oauthString("auth.oauth.naver"))
+                    HStack(spacing: 8) {
+                        NavigationLink(
+                            GuestLocalization.text("guest.policy.terms"),
+                            value: GuestRoute.terms
+                        )
+                        Text("|")
+                        NavigationLink(
+                            GuestLocalization.text("guest.policy.privacy"),
+                            value: GuestRoute.privacy
+                        )
+                    }
+                    .font(DPTypography.caption)
+                    .foregroundStyle(DPColor.textMuted)
+                    .frame(minHeight: DPSize.minimumTouchTarget)
                 }
-                .disabled(session.isWorking || isOAuthWorking)
-                .accessibilityIdentifier("login.oauth.naver")
-            } header: {
-                Text(oauthString("auth.oauth.divider"))
+                .frame(maxWidth: 448)
+                .frame(minHeight: geometry.size.height)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 16)
+                .frame(maxWidth: .infinity)
             }
-
-            if let oauthErrorMessage {
-                Section {
-                    Text(verbatim: oauthErrorMessage)
-                        .foregroundStyle(.red)
-                        .accessibilityIdentifier("login.oauth.error")
-                }
-            }
+            .scrollDismissesKeyboard(.interactively)
         }
-        .navigationTitle("Dutypark")
+        .background(DPColor.backgroundSecondary)
+        .toolbar(.hidden, for: .navigationBar)
     }
 
     private var remainingAttemptsMessage: String? {
@@ -130,8 +271,14 @@ struct LoginView: View {
         }
     }
 
+    private var canLogin: Bool {
+        !session.isWorking &&
+            !email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty &&
+            !password.isEmpty
+    }
+
     private func login() {
-        guard !email.isEmpty, !password.isEmpty else { return }
+        guard canLogin else { return }
         if rememberEmail {
             UserDefaults.standard.set(email, forKey: Self.rememberedEmailKey)
         } else {
@@ -146,16 +293,31 @@ struct LoginView: View {
         }
     }
 
-    private func socialButton(_ title: String) -> some View {
-        HStack {
-            Spacer()
+    private func socialButton(
+        _ title: String,
+        image: String,
+        background: Color,
+        foreground: Color
+    ) -> some View {
+        HStack(spacing: 12) {
             if isOAuthWorking {
                 ProgressView()
+                    .tint(foreground)
             } else {
+                Image(image)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 20, height: 20)
                 Text(title)
             }
-            Spacer()
         }
+        .font(DPFont.bold(size: 16, relativeTo: .headline))
+        .foregroundStyle(foreground)
+        .frame(maxWidth: .infinity, minHeight: 52)
+        .background(background)
+        .clipShape(RoundedRectangle(cornerRadius: DPRadius.large))
+        .shadow(color: .black.opacity(0.05), radius: 2, y: 1)
+        .contentShape(Rectangle())
     }
 
     private func startOAuth(_ provider: OAuthProvider) {
@@ -178,4 +340,9 @@ struct LoginView: View {
             }
         }
     }
+}
+
+private enum SocialBrandColor {
+    static let kakao = Color(red: 254 / 255, green: 229 / 255, blue: 0)
+    static let naver = Color(red: 3 / 255, green: 199 / 255, blue: 90 / 255)
 }

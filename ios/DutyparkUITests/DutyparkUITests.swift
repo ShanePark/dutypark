@@ -9,6 +9,8 @@ final class DutyparkUITests: XCTestCase {
     func testNavigatesThroughFivePrimaryTabs() throws {
         let app = XCUIApplication()
         app.launchArguments += [
+            "-dp-language", "en",
+            "-dp-theme", "light",
             "-AppleLanguages", "(en)",
             "-AppleLocale", "en_US",
             "-ui-testing-authenticated"
@@ -40,7 +42,12 @@ final class DutyparkUITests: XCTestCase {
     @MainActor
     func testLoginOffersKakaoAndNaver() throws {
         let app = XCUIApplication()
-        app.launchArguments += ["-AppleLanguages", "(ko)", "-AppleLocale", "ko_KR"]
+        app.launchArguments += [
+            "-dp-language", "ko",
+            "-dp-theme", "light",
+            "-AppleLanguages", "(ko)",
+            "-AppleLocale", "ko_KR"
+        ]
         app.launch()
 
         let loginButton = app.buttons["guest.login"]
@@ -55,6 +62,8 @@ final class DutyparkUITests: XCTestCase {
     func testPrimaryToolbarActionsMeetMinimumTouchTarget() throws {
         let app = XCUIApplication()
         app.launchArguments += [
+            "-dp-language", "en",
+            "-dp-theme", "light",
             "-AppleLanguages", "(en)",
             "-AppleLocale", "en_US",
             "-ui-testing-authenticated"

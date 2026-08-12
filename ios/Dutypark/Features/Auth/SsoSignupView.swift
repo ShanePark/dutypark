@@ -12,71 +12,171 @@ struct SsoSignupView: View {
     @State private var policies: CurrentPoliciesDTO?
     @State private var isWorking = false
     @State private var errorKey: String?
+    @State private var displayedPolicy: PolicyDTO?
+    @FocusState private var isNameFocused: Bool
 
     var body: some View {
         NavigationStack {
-            Form {
-                Section {
-                    TextField(oauthString("auth.oauth.signup.name.placeholder"), text: $username)
-                        .textContentType(.name)
-                        .onChange(of: username) { _, value in
-                            if value.count > 10 {
-                                username = String(value.prefix(10))
-                            }
+            GeometryReader { geometry in
+                ScrollView {
+                    VStack(spacing: 0) {
+                        VStack(spacing: 8) {
+                            Text(oauthString("auth.oauth.signup.title"))
+                                .font(DPFont.bold(size: 30, relativeTo: .largeTitle))
+                                .foregroundStyle(DPColor.textPrimary)
+                            Text(oauthString("auth.oauth.signup.subtitle"))
+                                .font(DPTypography.body)
+                                .foregroundStyle(DPColor.textSecondary)
                         }
-                    Text(oauthString("auth.oauth.signup.name.help"))
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                } header: {
-                    Text(oauthString("auth.oauth.signup.name"))
-                }
+                        .multilineTextAlignment(.center)
+                        .padding(.bottom, 24)
 
-                if let terms = policies?.terms, let privacy = policies?.privacy {
-                    policySection(
-                        title: oauthString("auth.oauth.signup.terms"),
-                        policy: terms,
-                        isAgreed: $agreesToTerms
-                    )
-                    policySection(
-                        title: oauthString("auth.oauth.signup.privacy"),
-                        policy: privacy,
-                        isAgreed: $agreesToPrivacy
-                    )
-                } else if errorKey == nil {
-                    Section { ProgressView() }
-                }
+                        VStack(spacing: 20) {
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack {
+                                    Text(oauthString("auth.oauth.signup.name"))
+                                    Spacer()
+                                    Text("\(username.count)/10")
+                                        .foregroundStyle(DPColor.textMuted)
+                                }
+                                .font(DPTypography.label)
+                                .foregroundStyle(DPColor.textSecondary)
 
-                if let errorKey {
-                    Section {
-                        Text(oauthString(errorKey))
-                            .foregroundStyle(.red)
-                            .accessibilityIdentifier("oauth.signup.error")
-                    }
-                }
+                                TextField(
+                                    oauthString("auth.oauth.signup.name.placeholder"),
+                                    text: $username
+                                )
+                                .font(DPTypography.body)
+                                .textContentType(.name)
+                                .focused($isNameFocused)
+                                .dpInputChrome(isFocused: isNameFocused, isDisabled: isWorking)
+                                .disabled(isWorking)
+                                .onChange(of: username) { _, value in
+                                    if value.count > 10 {
+                                        username = String(value.prefix(10))
+                                    }
+                                }
 
-                Section {
-                    Button(action: submit) {
-                        HStack {
-                            Spacer()
-                            if isWorking {
+                                Text(oauthString("auth.oauth.signup.name.help"))
+                                    .font(DPTypography.supporting)
+                                    .foregroundStyle(DPColor.textMuted)
+                            }
+
+                            if let terms = policies?.terms, let privacy = policies?.privacy {
+                                policySection(
+                                    title: oauthString("auth.oauth.signup.terms"),
+                                    policy: terms,
+                                    isAgreed: $agreesToTerms
+                                )
+                                policySection(
+                                    title: oauthString("auth.oauth.signup.privacy"),
+                                    policy: privacy,
+                                    isAgreed: $agreesToPrivacy
+                                )
+                            } else if errorKey == nil {
                                 ProgressView()
-                            } else {
-                                Text(oauthString("auth.oauth.signup.submit"))
+                                    .tint(DPColor.accent)
+                                    .frame(maxWidth: .infinity, minHeight: 160)
                             }
-                            Spacer()
+
+                            if let errorKey {
+                                Text(oauthString(errorKey))
+                                    .font(DPTypography.supporting)
+                                    .foregroundStyle(DPColor.danger)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                                    .padding(12)
+                                    .background(DPColor.dangerSoft)
+                                    .clipShape(RoundedRectangle(cornerRadius: DPRadius.large))
+                                    .overlay {
+                                        RoundedRectangle(cornerRadius: DPRadius.large)
+                                            .stroke(DPColor.dangerBorder)
+                                    }
+                                    .accessibilityIdentifier("oauth.signup.error")
+                            }
+
+                            Button(action: submit) {
+                                Group {
+                                    if isWorking {
+                                        ProgressView().tint(DPColor.textOnDark)
+                                    } else {
+                                        Text(oauthString("auth.oauth.signup.submit"))
+                                    }
+                                }
+                                .font(DPFont.bold(size: 16, relativeTo: .headline))
+                                .foregroundStyle(DPColor.textOnDark)
+                                .frame(maxWidth: .infinity, minHeight: 48)
+                                .background(DPColor.accent)
+                                .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(!canSubmit)
+                            .opacity(canSubmit ? 1 : 0.5)
+                            .accessibilityIdentifier("oauth.signup.submit")
+                        }
+                        .padding(20)
+                        .background(DPColor.backgroundCard)
+                        .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+                        .shadow(color: .black.opacity(0.08), radius: 5, y: 2)
+
+                        if let terms = policies?.terms, let privacy = policies?.privacy {
+                            HStack(spacing: 8) {
+                                Button(oauthString("auth.oauth.signup.terms")) {
+                                    displayedPolicy = terms
+                                }
+                                Text("|")
+                                Button(oauthString("auth.oauth.signup.privacy")) {
+                                    displayedPolicy = privacy
+                                }
+                            }
+                            .buttonStyle(.plain)
+                            .font(DPTypography.caption)
+                            .foregroundStyle(DPColor.textMuted)
+                            .frame(minHeight: DPSize.minimumTouchTarget)
                         }
                     }
-                    .disabled(!canSubmit)
-                    .accessibilityIdentifier("oauth.signup.submit")
+                    .frame(maxWidth: 576)
+                    .frame(minHeight: geometry.size.height)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 20)
+                    .frame(maxWidth: .infinity)
                 }
+                .scrollDismissesKeyboard(.interactively)
             }
-            .navigationTitle(oauthString("auth.oauth.signup.title"))
+            .background(DPColor.backgroundSecondary)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(oauthString("auth.oauth.cancel")) { dismiss() }
+                        .font(DPTypography.label)
                 }
             }
             .task { await loadPolicies() }
+        }
+        .sheet(
+            isPresented: Binding(
+                get: { displayedPolicy != nil },
+                set: { if !$0 { displayedPolicy = nil } }
+            )
+        ) {
+            if let displayedPolicy {
+                NavigationStack {
+                    ScrollView {
+                        policyText(displayedPolicy.content)
+                            .font(DPTypography.body)
+                            .foregroundStyle(DPColor.textSecondary)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(DPSpacing.medium)
+                            .textSelection(.enabled)
+                    }
+                    .background(DPColor.backgroundSecondary)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button(oauthString("auth.oauth.cancel")) {
+                                self.displayedPolicy = nil
+                            }
+                        }
+                    }
+                }
+            }
         }
         .accessibilityIdentifier("screen.oauth.signup")
     }
@@ -93,20 +193,61 @@ struct SsoSignupView: View {
         policy: PolicyDTO,
         isAgreed: Binding<Bool>
     ) -> some View {
-        Section {
-            DisclosureGroup(oauthString("auth.oauth.signup.viewPolicy")) {
-                ScrollView {
-                    Text(policy.content)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .textSelection(.enabled)
+        VStack(spacing: 8) {
+            HStack {
+                Text(title)
+                    .font(DPTypography.label)
+                    .foregroundStyle(DPColor.textSecondary)
+                Spacer()
+                Button {
+                    displayedPolicy = policy
+                } label: {
+                    HStack(spacing: 3) {
+                        Text(oauthString("auth.oauth.signup.viewPolicy"))
+                        Image(systemName: "arrow.right")
+                    }
+                    .font(DPTypography.caption)
+                    .foregroundStyle(DPColor.accent)
+                    .frame(minHeight: DPSize.minimumTouchTarget)
                 }
-                .frame(maxHeight: 240)
+                .buttonStyle(.plain)
             }
-            Toggle(isOn: isAgreed) {
-                Text(oauthString("auth.oauth.signup.agree"))
+
+            ScrollView {
+                policyText(policy.content)
+                    .font(DPFont.light(size: 13, relativeTo: .caption))
+                    .foregroundStyle(DPColor.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(12)
+                    .textSelection(.enabled)
             }
-        } header: {
-            Text(title)
+            .frame(height: 128)
+            .background(DPColor.backgroundTertiary)
+            .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+            .overlay {
+                RoundedRectangle(cornerRadius: DPRadius.standard)
+                    .stroke(DPColor.borderInput)
+            }
+
+            Button {
+                isAgreed.wrappedValue.toggle()
+            } label: {
+                HStack(spacing: 8) {
+                    Image(systemName: isAgreed.wrappedValue ? "checkmark.square.fill" : "square")
+                        .font(.system(size: 20))
+                        .foregroundStyle(isAgreed.wrappedValue ? DPColor.accent : DPColor.textSecondary)
+                    Text(oauthString("auth.oauth.signup.agree"))
+                        .font(DPTypography.supporting)
+                        .foregroundStyle(DPColor.textSecondary)
+                    Text("*")
+                        .foregroundStyle(DPColor.danger)
+                    Spacer()
+                }
+                .frame(minHeight: DPSize.minimumTouchTarget)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(isWorking)
         }
     }
 
@@ -122,6 +263,13 @@ struct SsoSignupView: View {
         } catch {
             errorKey = "auth.oauth.signup.policyError"
         }
+    }
+
+    private func policyText(_ content: String) -> Text {
+        guard let markdown = try? AttributedString(markdown: content) else {
+            return Text(content)
+        }
+        return Text(markdown)
     }
 
     private func submit() {

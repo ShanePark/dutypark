@@ -118,6 +118,15 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "创建账号" } }
       }
     },
+    "auth.oauth.signup.subtitle" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Welcome to Dutypark" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Te damos la bienvenida a Dutypark" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "Dutyparkへようこそ" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "Dutypark에 오신 것을 환영합니다" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "欢迎来到 Dutypark" } }
+      }
+    },
     "auth.oauth.signup.terms" : {
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Terms of Service" } },

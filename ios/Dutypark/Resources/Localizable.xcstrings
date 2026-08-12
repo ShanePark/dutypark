@@ -55,6 +55,27 @@
     "notifications.items.todoStatusDoneFallback" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "TODO [%@] was marked as done." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "La tarea [%@] se marcó como completada." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "TODO［%@］が完了になりました。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "[%@] TODO가 완료 처리되었습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "待办事项［%@］已标记为已完成。" } }
     } },
+    "auth.login.backHome" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Back to home" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Ir al inicio" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "ホームへ戻る" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "홈으로 돌아가기" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "返回首页" } }
+    } },
+    "auth.login.or" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "or" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "o" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "または" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "또는" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "或" } }
+    } },
+    "auth.login.subtitle" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Log in to get started" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Inicia sesión para comenzar" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "ログインして始めましょう" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "로그인하여 시작하세요" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "登录以开始使用" } }
+    } },
     "auth.login.emailLabel" : {
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Email" } },
