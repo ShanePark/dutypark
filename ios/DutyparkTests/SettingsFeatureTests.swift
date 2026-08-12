@@ -1,0 +1,82 @@
+import Foundation
+import Testing
+import UIKit
+@testable import Dutypark
+
+@MainActor
+struct SettingsFeatureTests {
+    @Test
+    func supportsTheSameFiveNativeLanguageChoicesAsWeb() {
+        #expect(AppLanguage.allCases.map(\.rawValue) == ["ko", "en", "ja", "zh-Hans", "es"])
+        #expect(AppLanguage.allCases.map(\.nativeName) == ["한국어", "English", "日本語", "简体中文", "Español"])
+    }
+
+    @Test
+    func resolvesSettingsCopyFromTheSettingsCatalog() {
+        let key = "settings.profile.title"
+
+        #expect(SettingsLocalization.string(key) != key)
+    }
+
+    @Test
+    func localizationHelpersFollowTheExplicitAppLanguage() {
+        let defaults = UserDefaults.standard
+        let previous = defaults.string(forKey: SettingsPreference.languageKey)
+        defer {
+            if let previous { defaults.set(previous, forKey: SettingsPreference.languageKey) }
+            else { defaults.removeObject(forKey: SettingsPreference.languageKey) }
+        }
+
+        defaults.set("ko", forKey: SettingsPreference.languageKey)
+
+        #expect(SettingsLocalization.string("settings.guide") == "사용 가이드")
+        #expect(GuestLocalization.text("guest.retry") == "다시 시도")
+        #expect(SettingsLocalization.string("settings.guide.loadError.title") == "페이지를 불러올 수 없습니다")
+    }
+
+    @Test
+    func decodesSessionWithoutKeepingServerTokenValue() throws {
+        let data = Data(
+            #"{"memberName":"Test","memberId":1,"validUntil":"2026-09-01T10:00:00","createdDate":"2026-08-01T10:00:00","lastUsed":null,"remoteAddr":"127.0.0.1","id":9,"token":"server-secret","userAgent":{"os":"iOS","browser":"Dutypark","device":"iPhone"},"isCurrentLogin":true}"#.utf8
+        )
+
+        let session = try JSONDecoder().decode(SettingsRefreshToken.self, from: data)
+
+        #expect(session.id == 9)
+        #expect(session.userAgent?.device == "iPhone")
+        #expect(session.isCurrentLogin == true)
+    }
+
+    @Test
+    func cropsAProfilePhotoToASquareJpeg() throws {
+        let image = UIGraphicsImageRenderer(size: CGSize(width: 200, height: 100)).image { context in
+            UIColor.systemBlue.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 200, height: 100))
+        }
+
+        let data = try #require(
+            ProfilePhotoCropper.jpeg(
+                image: image,
+                viewport: 300,
+                zoom: 1,
+                offset: .zero
+            )
+        )
+        let cropped = try #require(UIImage(data: data)?.cgImage)
+
+        #expect(cropped.width == cropped.height)
+    }
+
+    @Test
+    func clampsPhotoMovementInsideTheCropArea() {
+        let offset = ProfilePhotoCropper.clampedOffset(
+            CGSize(width: 1_000, height: -1_000),
+            imageSize: CGSize(width: 200, height: 100),
+            viewport: 300,
+            zoom: 1
+        )
+
+        #expect(offset.width == 150)
+        #expect(offset.height == 0)
+    }
+}
