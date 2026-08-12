@@ -1,5 +1,38 @@
 import SwiftUI
 
+nonisolated enum SsoSignupCancellationDecision: Equatable {
+    case dismiss
+    case confirmDiscard
+    case blocked
+}
+
+nonisolated struct SsoSignupPresentationPolicy {
+    static func hasDraft(
+        username: String,
+        agreesToTerms: Bool,
+        agreesToPrivacy: Bool
+    ) -> Bool {
+        !username.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+            agreesToTerms || agreesToPrivacy
+    }
+
+    static func cancellationDecision(
+        username: String,
+        agreesToTerms: Bool,
+        agreesToPrivacy: Bool,
+        isWorking: Bool
+    ) -> SsoSignupCancellationDecision {
+        if isWorking {
+            return .blocked
+        }
+        return hasDraft(
+            username: username,
+            agreesToTerms: agreesToTerms,
+            agreesToPrivacy: agreesToPrivacy
+        ) ? .confirmDiscard : .dismiss
+    }
+}
+
 struct SsoSignupView: View {
     let uuid: String
     let oauthClient: MobileOAuthClient
@@ -13,6 +46,7 @@ struct SsoSignupView: View {
     @State private var isWorking = false
     @State private var errorKey: String?
     @State private var displayedPolicy: PolicyDTO?
+    @State private var showsDiscardConfirmation = false
     @FocusState private var isNameFocused: Bool
 
     var body: some View {
@@ -145,11 +179,29 @@ struct SsoSignupView: View {
             .background(DPColor.backgroundSecondary)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(oauthString("auth.oauth.cancel")) { dismiss() }
+                    Button(oauthString("auth.oauth.cancel"), action: requestCancellation)
                         .font(DPTypography.label)
+                        .frame(
+                            minWidth: DPSize.minimumTouchTarget,
+                            minHeight: DPSize.minimumTouchTarget
+                        )
+                        .disabled(isWorking)
+                        .accessibilityIdentifier("oauth.signup.cancel")
                 }
             }
             .task { await loadPolicies() }
+        }
+        .interactiveDismissDisabled(preventsInteractiveDismissal)
+        .alert(
+            oauthString("auth.oauth.signup.discard.title"),
+            isPresented: $showsDiscardConfirmation
+        ) {
+            Button(oauthString("auth.oauth.signup.discard.action"), role: .destructive) {
+                dismiss()
+            }
+            Button(oauthString("auth.oauth.signup.discard.continue"), role: .cancel) {}
+        } message: {
+            Text(oauthString("auth.oauth.signup.discard.message"))
         }
         .sheet(
             isPresented: Binding(
@@ -168,14 +220,24 @@ struct SsoSignupView: View {
                             .textSelection(.enabled)
                     }
                     .background(DPColor.backgroundSecondary)
+                    .navigationTitle(policyTitle(for: displayedPolicy))
+                    .navigationBarTitleDisplayMode(.inline)
                     .toolbar {
                         ToolbarItem(placement: .confirmationAction) {
-                            Button(oauthString("auth.oauth.cancel")) {
+                            Button(oauthString("auth.oauth.close")) {
                                 self.displayedPolicy = nil
                             }
+                            .frame(
+                                minWidth: DPSize.minimumTouchTarget,
+                                minHeight: DPSize.minimumTouchTarget
+                            )
+                            .accessibilityIdentifier("oauth.signup.policy.close")
                         }
                     }
                 }
+                .presentationDetents([.large])
+                .presentationDragIndicator(.visible)
+                .accessibilityIdentifier("screen.oauth.signup.policy")
             }
         }
         .accessibilityIdentifier("screen.oauth.signup")
@@ -185,6 +247,19 @@ struct SsoSignupView: View {
         let name = username.trimmingCharacters(in: .whitespacesAndNewlines)
         return !isWorking && !name.isEmpty && name.count <= 10 && agreesToTerms && agreesToPrivacy &&
             policies?.terms != nil && policies?.privacy != nil
+    }
+
+    private var cancellationDecision: SsoSignupCancellationDecision {
+        SsoSignupPresentationPolicy.cancellationDecision(
+            username: username,
+            agreesToTerms: agreesToTerms,
+            agreesToPrivacy: agreesToPrivacy,
+            isWorking: isWorking
+        )
+    }
+
+    private var preventsInteractiveDismissal: Bool {
+        cancellationDecision != .dismiss
     }
 
     @ViewBuilder
@@ -270,6 +345,29 @@ struct SsoSignupView: View {
             return Text(content)
         }
         return Text(markdown)
+    }
+
+    private func policyTitle(for policy: PolicyDTO) -> String {
+        switch policy.policyType {
+        case .terms:
+            oauthString("auth.oauth.signup.terms")
+        case .privacy:
+            oauthString("auth.oauth.signup.privacy")
+        case .unknown:
+            oauthString("auth.oauth.signup.viewPolicy")
+        }
+    }
+
+    private func requestCancellation() {
+        switch cancellationDecision {
+        case .dismiss:
+            dismiss()
+        case .confirmDiscard:
+            isNameFocused = false
+            showsDiscardConfirmation = true
+        case .blocked:
+            break
+        }
     }
 
     private func submit() {

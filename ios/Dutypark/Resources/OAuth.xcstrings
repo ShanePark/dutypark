@@ -10,6 +10,15 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "取消" } }
       }
     },
+    "auth.oauth.close" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Close" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Cerrar" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "閉じる" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "닫기" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "关闭" } }
+      }
+    },
     "auth.oauth.divider" : {
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Social login" } },
@@ -53,6 +62,42 @@
         "ja" : { "stringUnit" : { "state" : "translated", "value" : "同意します（必須）" } },
         "ko" : { "stringUnit" : { "state" : "translated", "value" : "동의합니다 (필수)" } },
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "我同意（必需）" } }
+      }
+    },
+    "auth.oauth.signup.discard.action" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Discard" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Descartar" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "破棄" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "나가기" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "放弃" } }
+      }
+    },
+    "auth.oauth.signup.discard.continue" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Keep editing" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Seguir editando" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "編集を続ける" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "계속 작성" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "继续编辑" } }
+      }
+    },
+    "auth.oauth.signup.discard.message" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Your entered name and policy agreements will be lost." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Se perderán el nombre introducido y las aceptaciones de las políticas." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "入力した名前と規約への同意内容は失われます。" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "입력한 이름과 약관 동의 내용이 사라집니다." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "已输入的姓名和政策同意内容将会丢失。" } }
+      }
+    },
+    "auth.oauth.signup.discard.title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Discard signup?" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "¿Descartar el registro?" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "登録を破棄しますか？" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "회원가입을 취소할까요?" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "放弃注册吗？" } }
       }
     },
     "auth.oauth.signup.error" : {
