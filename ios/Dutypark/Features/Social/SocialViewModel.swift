@@ -209,15 +209,22 @@ final class SocialViewModel: ObservableObject {
         pinnedOrderIDs = memberIDs
         isReordering = true
         defer { isReordering = false }
+
         do {
             try await repository.updatePinnedOrder(memberIDs)
-            try await reload()
-            await onMutation(false)
-            return true
         } catch {
             pinnedOrderIDs = previousOrderIDs
             return false
         }
+
+        do {
+            try await reload()
+        } catch {
+            errorKey = "social.warning.reorderReload"
+        }
+
+        await onMutation(false)
+        return true
     }
 
     func dismissError() {

@@ -38,8 +38,13 @@ struct SocialView: View {
         .task { await viewModel.load() }
         .refreshable { await viewModel.refresh() }
         .fullScreenCover(isPresented: $isSearchPresented) {
-            FriendSearchModalView(viewModel: viewModel)
-                .presentationBackground(.clear)
+            DPModalOverlay(onDismiss: { isSearchPresented = false }) { availableSize, dismiss in
+                FriendSearchModalView(
+                    viewModel: viewModel,
+                    availableSize: availableSize,
+                    onDismiss: dismiss
+                )
+            }
         }
         .sheet(isPresented: $isPinnedOrderPresented) {
             PinnedFriendOrderView(friends: viewModel.pinnedFriends) { memberIDs in
@@ -104,7 +109,7 @@ struct SocialView: View {
             Spacer(minLength: DPSpacing.small)
 
             Button {
-                isSearchPresented = true
+                withoutPresentationAnimation { isSearchPresented = true }
             } label: {
                 HStack(spacing: DPSpacing.small) {
                     Image(systemName: "person.badge.plus")
@@ -457,7 +462,7 @@ struct SocialView: View {
                 .font(DPTypography.supporting)
                 .foregroundStyle(DPColor.textSecondary)
             Button(social("social.action.addFriend")) {
-                isSearchPresented = true
+                withoutPresentationAnimation { isSearchPresented = true }
             }
             .font(DPTypography.supporting)
             .foregroundStyle(DPColor.textOnDark)
@@ -472,7 +477,7 @@ struct SocialView: View {
 
     private var addFriendCard: some View {
         Button {
-            isSearchPresented = true
+            withoutPresentationAnimation { isSearchPresented = true }
         } label: {
             VStack(spacing: DPSpacing.extraSmall) {
                 Image(systemName: "person.badge.plus")
@@ -570,6 +575,7 @@ private struct PinnedFriendOrderView: View {
                         .accessibilityElement(children: .combine)
                     }
                     .onMove { offsets, destination in
+                        guard !isSaving else { return }
                         draft.move(fromOffsets: offsets, toOffset: destination)
                     }
                 } header: {
@@ -578,6 +584,7 @@ private struct PinnedFriendOrderView: View {
                     Text(social("social.hint.pinnedOrder"))
                 }
             }
+            .disabled(isSaving)
             .environment(\.editMode, .constant(.active))
             .navigationTitle(social("social.section.pinnedOrder"))
             .navigationBarTitleDisplayMode(.inline)
@@ -619,6 +626,7 @@ private struct PinnedFriendOrderView: View {
     }
 
     private func save() {
+        guard !isSaving else { return }
         let ids = draft.compactMap(\.member.id)
         guard ids != originalIDs else {
             dismiss()
@@ -805,30 +813,19 @@ private struct FriendActionPopover: View {
 
 private struct FriendSearchModalView: View {
     @ObservedObject var viewModel: SocialViewModel
-    @Environment(\.dismiss) private var dismiss
     @State private var keyword = ""
     @State private var candidate: SearchCandidate?
 
-    var body: some View {
-        GeometryReader { proxy in
-            ZStack {
-                Color.black.opacity(0.50)
-                    .ignoresSafeArea()
-                    .onTapGesture { dismiss() }
+    let availableSize: CGSize
+    let onDismiss: () -> Void
 
-                VStack(spacing: 0) {
-                    modalHeader
-                    modalBody
-                    modalFooter
-                }
-                .frame(maxWidth: proxy.size.width - 32)
-                .frame(maxHeight: proxy.size.height * 0.85)
-                .background(DPColor.backgroundCard)
-                .clipShape(RoundedRectangle(cornerRadius: DPRadius.extraLarge, style: .continuous))
-                .shadow(color: Color.black.opacity(0.24), radius: 18, y: 8)
-                .padding(.vertical, DPSpacing.medium)
-            }
+    var body: some View {
+        VStack(spacing: 0) {
+            modalHeader
+            modalBody
+            modalFooter
         }
+        .frame(maxHeight: min(availableSize.height, 620))
         .onDisappear { viewModel.clearSearch() }
         .alert(item: $candidate) { candidate in
             Alert(
@@ -837,7 +834,7 @@ private struct FriendSearchModalView: View {
                 primaryButton: .default(Text(social("social.action.sendRequest"))) {
                     Task {
                         await viewModel.sendFriendRequest(to: candidate.member)
-                        if viewModel.errorKey == nil { dismiss() }
+                        if viewModel.errorKey == nil { onDismiss() }
                     }
                 },
                 secondaryButton: .cancel(Text(social("social.action.cancelDialog")))
@@ -878,7 +875,7 @@ private struct FriendSearchModalView: View {
 
             Spacer()
 
-            Button { dismiss() } label: {
+            Button { onDismiss() } label: {
                 Image(systemName: "xmark")
                     .font(.system(size: 17, weight: .semibold))
                     .foregroundStyle(DPColor.textMuted)
@@ -1062,7 +1059,7 @@ private struct FriendSearchModalView: View {
     private var modalFooter: some View {
         HStack {
             Spacer()
-            Button(social("social.action.close")) { dismiss() }
+            Button(social("social.action.close")) { onDismiss() }
                 .font(DPFont.light(size: 14, relativeTo: .subheadline))
                 .foregroundStyle(DPColor.textPrimary)
                 .padding(.horizontal, 20)

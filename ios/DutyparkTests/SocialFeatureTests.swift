@@ -11,7 +11,8 @@ final class SocialFeatureTests: XCTestCase {
             "social.action.done",
             "social.action.editPinnedOrder",
             "social.hint.pinnedOrder",
-            "social.section.pinnedOrder"
+            "social.section.pinnedOrder",
+            "social.warning.reorderReload"
         ]
 
         for locale in ["en", "ko", "ja", "zh-Hans", "es"] {
@@ -159,6 +160,39 @@ final class SocialFeatureTests: XCTestCase {
         XCTAssertFalse(viewModel.isReordering)
     }
 
+    func testSuccessfulPinnedOrderIsKeptWhenOnlyReloadFails() async {
+        let repository = SocialRepositorySpy(failReloadAfterPinnedOrder: true)
+        let viewModel = SocialViewModel(repository: repository)
+        await viewModel.load()
+        var draftIDs = viewModel.pinnedFriends.compactMap(\.member.id)
+        draftIDs.move(fromOffsets: IndexSet(integer: 0), toOffset: 2)
+
+        let didSave = await viewModel.savePinnedOrder(draftIDs)
+
+        XCTAssertTrue(didSave)
+        XCTAssertEqual(viewModel.pinnedFriends.compactMap(\.member.id), draftIDs)
+        XCTAssertEqual(viewModel.errorKey, "social.warning.reorderReload")
+        XCTAssertEqual(repository.actions.filter { $0.hasPrefix("order:") }.count, 1)
+        XCTAssertFalse(viewModel.isReordering)
+    }
+
+    func testConcurrentPinnedOrderSaveDoesNotSendDuplicateMutation() async {
+        let repository = SocialRepositorySpy(pinnedOrderDelayMilliseconds: 100)
+        let viewModel = SocialViewModel(repository: repository)
+        await viewModel.load()
+        var draftIDs = viewModel.pinnedFriends.compactMap(\.member.id)
+        draftIDs.move(fromOffsets: IndexSet(integer: 0), toOffset: 2)
+
+        let firstSave = Task { await viewModel.savePinnedOrder(draftIDs) }
+        while !viewModel.isReordering { await Task.yield() }
+        let duplicateResult = await viewModel.savePinnedOrder(draftIDs)
+        let firstResult = await firstSave.value
+
+        XCTAssertTrue(firstResult)
+        XCTAssertFalse(duplicateResult)
+        XCTAssertEqual(repository.actions.filter { $0.hasPrefix("order:") }.count, 1)
+    }
+
     func testNativeListReorderRejectsIDsOutsidePinnedFriends() async {
         let repository = SocialRepositorySpy()
         let viewModel = SocialViewModel(repository: repository)
@@ -210,10 +244,19 @@ final class SocialFeatureTests: XCTestCase {
 private final class SocialRepositorySpy: SocialRepository, @unchecked Sendable {
     private let lock = NSLock()
     private let failPinnedOrder: Bool
+    private let failReloadAfterPinnedOrder: Bool
+    private let pinnedOrderDelayMilliseconds: Int64
     private var storedActions: [String] = []
+    private var didUpdatePinnedOrder = false
 
-    init(failPinnedOrder: Bool = false) {
+    init(
+        failPinnedOrder: Bool = false,
+        failReloadAfterPinnedOrder: Bool = false,
+        pinnedOrderDelayMilliseconds: Int64 = 0
+    ) {
         self.failPinnedOrder = failPinnedOrder
+        self.failReloadAfterPinnedOrder = failReloadAfterPinnedOrder
+        self.pinnedOrderDelayMilliseconds = pinnedOrderDelayMilliseconds
     }
 
     var actions: [String] {
@@ -221,7 +264,9 @@ private final class SocialRepositorySpy: SocialRepository, @unchecked Sendable {
     }
 
     func friendInfo() async throws -> DashboardFriendInfoDTO {
-        DashboardFriendInfoDTO(
+        let shouldFail = lock.withLock { failReloadAfterPinnedOrder && didUpdatePinnedOrder }
+        if shouldFail { throw SocialTestError.reload }
+        return DashboardFriendInfoDTO(
             friends: [
                 friend(id: 31, pinOrder: 1),
                 friend(id: 32, pinOrder: 2),
@@ -247,7 +292,11 @@ private final class SocialRepositorySpy: SocialRepository, @unchecked Sendable {
     func unpin(_ memberID: MemberID) async throws { record("unpin:\(memberID)") }
     func updatePinnedOrder(_ memberIDs: [MemberID]) async throws {
         record("order:\(memberIDs.map(String.init).joined(separator: ","))")
+        if pinnedOrderDelayMilliseconds > 0 {
+            try await Task.sleep(for: .milliseconds(pinnedOrderDelayMilliseconds))
+        }
         if failPinnedOrder { throw SocialTestError.reorder }
+        lock.withLock { didUpdatePinnedOrder = true }
     }
 
     private func record(_ action: String) {
@@ -289,6 +338,7 @@ private final class SocialRepositorySpy: SocialRepository, @unchecked Sendable {
 
 private enum SocialTestError: Error {
     case reorder
+    case reload
 }
 
 private final class SocialRequestRecorder: @unchecked Sendable {
