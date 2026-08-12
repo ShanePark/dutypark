@@ -1,15 +1,37 @@
 import SwiftUI
 
-nonisolated enum DPModalDismissSource: Sendable {
+nonisolated enum DPModalDismissSource: Equatable, Sendable {
     case backdrop
     case accessibilityEscape
     case content
+}
+
+nonisolated enum DPModalDismissAction: Equatable, Sendable {
+    case ignore
+    case request(DPModalDismissSource)
+    case dismissImmediately
 }
 
 nonisolated struct DPModalDismissPolicy: Sendable {
     let closeOnBackdrop: Bool
     let canDismiss: Bool
     let isDismissing: Bool
+
+    func action(
+        for source: DPModalDismissSource,
+        hasRequestHandler: Bool
+    ) -> DPModalDismissAction {
+        guard allows(source) else { return .ignore }
+
+        switch source {
+        case .backdrop:
+            return hasRequestHandler ? .request(source) : .dismissImmediately
+        case .accessibilityEscape:
+            return hasRequestHandler ? .request(source) : .dismissImmediately
+        case .content:
+            return .dismissImmediately
+        }
+    }
 
     func allows(_ source: DPModalDismissSource) -> Bool {
         guard canDismiss, !isDismissing else { return false }
@@ -31,17 +53,23 @@ struct DPModalOverlay<Content: View>: View {
     let onDismiss: () -> Void
     let closeOnBackdrop: Bool
     let canDismiss: Bool
+    /// Intercepts backdrop and VoiceOver escape requests without closing immediately.
+    /// `closeOnBackdrop == false` suppresses backdrop requests; `canDismiss == false` suppresses all requests.
+    let onDismissRequest: ((DPModalDismissSource) -> Void)?
+    /// Receives an authorized immediate-dismiss closure that bypasses `onDismissRequest`.
     private let content: (CGSize, @escaping () -> Void) -> Content
 
     init(
         onDismiss: @escaping () -> Void,
         closeOnBackdrop: Bool = true,
         canDismiss: Bool = true,
+        onDismissRequest: ((DPModalDismissSource) -> Void)? = nil,
         @ViewBuilder content: @escaping () -> Content
     ) {
         self.onDismiss = onDismiss
         self.closeOnBackdrop = closeOnBackdrop
         self.canDismiss = canDismiss
+        self.onDismissRequest = onDismissRequest
         self.content = { _, _ in content() }
     }
 
@@ -49,11 +77,13 @@ struct DPModalOverlay<Content: View>: View {
         onDismiss: @escaping () -> Void,
         closeOnBackdrop: Bool = true,
         canDismiss: Bool = true,
+        onDismissRequest: ((DPModalDismissSource) -> Void)? = nil,
         @ViewBuilder content: @escaping (CGSize) -> Content
     ) {
         self.onDismiss = onDismiss
         self.closeOnBackdrop = closeOnBackdrop
         self.canDismiss = canDismiss
+        self.onDismissRequest = onDismissRequest
         self.content = { size, _ in content(size) }
     }
 
@@ -61,11 +91,13 @@ struct DPModalOverlay<Content: View>: View {
         onDismiss: @escaping () -> Void,
         closeOnBackdrop: Bool = true,
         canDismiss: Bool = true,
+        onDismissRequest: ((DPModalDismissSource) -> Void)? = nil,
         @ViewBuilder content: @escaping (CGSize, @escaping () -> Void) -> Content
     ) {
         self.onDismiss = onDismiss
         self.closeOnBackdrop = closeOnBackdrop
         self.canDismiss = canDismiss
+        self.onDismissRequest = onDismissRequest
         self.content = content
     }
 
@@ -123,7 +155,21 @@ struct DPModalOverlay<Content: View>: View {
             canDismiss: canDismiss,
             isDismissing: isDismissing
         )
-        guard policy.allows(source) else { return }
+        switch policy.action(
+            for: source,
+            hasRequestHandler: onDismissRequest != nil
+        ) {
+        case .ignore:
+            return
+        case let .request(source):
+            onDismissRequest?(source)
+            return
+        case .dismissImmediately:
+            dismissImmediately()
+        }
+    }
+
+    private func dismissImmediately() {
         isDismissing = true
 
         withAnimation(presentationAnimation) {
