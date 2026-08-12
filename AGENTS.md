@@ -16,6 +16,7 @@ Repo-wide defaults only. Read the code, nearby tests, and linked documentation f
 
 - Do not start dev servers (`./gradlew bootRun`, `npm run dev`) unless the user explicitly asks; the developer runs them. Put new configuration in `application.yml` with safe defaults and surface overrides through `.env.sample`.
 - Prefer existing patterns over new structure. Read the nearest controller, service, view, and test first.
+- Unless explicitly designated platform-specific, any service feature addition or removal and any user-facing policy, UI, or UX change must ship as one coherent change: keep the backend as the policy source of truth, apply equivalent behavior and safeguards to responsive web (mobile and desktop) and native iOS, and verify both clients. If either client must be deferred, document the gap and do not mark the work feature-complete.
 - For `gh` issues/PRs, skim recent examples and write titles and bodies in English.
 
 ### Backend
