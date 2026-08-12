@@ -14,10 +14,11 @@ struct RootTabView: View {
     @State private var showsNotifications = false
     @State private var showsNotificationCenter = false
     @State private var showsUnsupportedLink = false
+    @State private var showsLogoutConfirmation = false
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
-            TabView(selection: $selectedTab) {
+            TabView(selection: tabSelection) {
                 homeTab
                 primaryTab(.calendar) {
                     CalendarView(
@@ -39,7 +40,7 @@ struct RootTabView: View {
                     }
                 }
             }
-            .toolbar(.hidden, for: .tabBar)
+            .accessibilityIdentifier("primary.tabbar")
 
             if showsNotifications {
                 notificationDropdownLayer
@@ -95,13 +96,21 @@ struct RootTabView: View {
         } message: {
             Text("link.unsupported.message")
         }
+        .confirmationDialog(
+            SettingsLocalization.string("settings.logout.confirmTitle"),
+            isPresented: $showsLogoutConfirmation
+        ) {
+            Button(SettingsLocalization.string("settings.logout"), role: .destructive) {
+                Task { await session.logout() }
+            }
+            Button(SettingsLocalization.string("settings.action.cancel"), role: .cancel) {}
+        } message: {
+            SettingsLocalization.text("settings.logout.confirmMessage")
+        }
         .safeAreaInset(edge: .top, spacing: 0) {
             if case .authenticated(let member) = session.state, member.isImpersonating {
                 ImpersonationBanner()
             }
-        }
-        .safeAreaInset(edge: .bottom, spacing: 0) {
-            DPWebTabBar(selection: $selectedTab)
         }
         .tint(DPColor.accent)
     }
@@ -114,17 +123,23 @@ struct RootTabView: View {
                 .accessibilityIdentifier("screen.home")
                 .toolbar {
                     ToolbarItem(placement: .topBarLeading) {
-                        brandMark
+                        DPBrandMark(action: openHome)
                     }
-                    ToolbarItemGroup(placement: .topBarTrailing) {
-                        Button {
-                            homePath.append(.friends)
-                        } label: {
-                            Image(systemName: "person.2")
-                        }
-                        .accessibilityLabel(Text("social.title", tableName: "Social"))
-
+                    ToolbarItem(placement: .topBarTrailing) {
+                        HStack(spacing: 0) {
                         notificationBell
+                        Button {
+                            homePath.append(.menu)
+                        } label: {
+                            Image(systemName: "line.3.horizontal")
+                                .font(.system(size: 18, weight: .semibold))
+                                .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                                .contentShape(Rectangle())
+                        }
+                        .accessibilityLabel(Text("home.menu", tableName: "Home"))
+                        .accessibilityIdentifier("home.menu")
+                        }
+                        .fixedSize(horizontal: true, vertical: false)
                     }
                 }
                 .navigationDestination(for: HomeDestination.self) { destination in
@@ -134,6 +149,31 @@ struct RootTabView: View {
                             onMutation: socialDidMutate,
                             onOpenCalendar: openMemberCalendar
                         )
+                    case .menu:
+                        AppMenuView(
+                            onOpenCalendar: openMyCalendar,
+                            onOpenTeam: { selectedTab = .team },
+                            onOpenFriends: openFriends,
+                            onOpenTodo: { selectedTab = .todo },
+                            onOpenNotifications: {
+                                homePath.removeAll()
+                                showsNotificationCenter = true
+                            },
+                            onOpenGuide: openGuide,
+                            onOpenSettings: openSettings,
+                            isAdmin: authenticatedMember?.isAdmin == true,
+                            onOpenAdmin: { homePath.append(.admin) },
+                            onLogout: { showsLogoutConfirmation = true }
+                        )
+                    case .admin:
+                        if authenticatedMember?.isAdmin == true {
+                            AdminRootView(onOpenCalendar: openMemberCalendar)
+                        } else {
+                            ContentUnavailableView(
+                                AdminLocalization.string("admin.access.title"),
+                                systemImage: "lock.shield"
+                            )
+                        }
                     }
                 }
         }
@@ -147,22 +187,51 @@ struct RootTabView: View {
         NavigationStack {
             content()
                 .navigationTitle("")
-                .navigationBarTitleDisplayMode(.inline)
+                .toolbar(.hidden, for: .navigationBar)
                 .accessibilityIdentifier("screen.\(tab.rawValue)")
-                .toolbar {
-                    ToolbarItem(placement: .topBarLeading) {
-                        brandMark
-                    }
-                    ToolbarItem(placement: .topBarTrailing) {
-                        notificationBell
-                    }
-                }
         }
         .primaryTabItem(tab)
     }
 
     private var notificationBell: some View {
         NotificationBellButton(store: notifications, isPresented: $showsNotifications)
+    }
+
+    private var tabSelection: Binding<AppTab> {
+        Binding(
+            get: { selectedTab },
+            set: { destination in
+                if RootNavigationPolicy.resetsHomePath(for: destination) {
+                    homePath.removeAll()
+                }
+                selectedTab = destination
+            }
+        )
+    }
+
+    private func openHome() {
+        homePath.removeAll()
+        selectedTab = .home
+    }
+
+    private func openMyCalendar() {
+        calendarTarget = CalendarTarget(memberID: authenticatedMemberID)
+        selectedTab = .calendar
+    }
+
+    private func openFriends() {
+        homePath = [.friends]
+        selectedTab = .home
+    }
+
+    private func openGuide() {
+        settingsDestination = .guide
+        selectedTab = .settings
+    }
+
+    private func openSettings() {
+        settingsDestination = nil
+        selectedTab = .settings
     }
 
     private var notificationDropdownLayer: some View {
@@ -198,17 +267,12 @@ struct RootTabView: View {
         }
     }
 
-    private var brandMark: some View {
-        DPBrandMark {
-            homePath.removeAll()
-            selectedTab = .home
-        }
-    }
-
     private func openHomeRoute(_ route: HomeRoute) {
         switch route {
         case .memberCalendar(let memberID):
             openMemberCalendar(memberID)
+        case .friends:
+            homePath.append(.friends)
         }
     }
 
@@ -245,8 +309,12 @@ struct RootTabView: View {
     }
 
     private var authenticatedMemberID: MemberID? {
+        authenticatedMember?.id
+    }
+
+    private var authenticatedMember: LoginMember? {
         guard case .authenticated(let member) = session.state else { return nil }
-        return member.id
+        return member
     }
 
     private func openScheduleCalendar(
@@ -330,8 +398,197 @@ struct RootTabView: View {
     }
 }
 
+nonisolated enum RootNavigationPolicy {
+    static func resetsHomePath(for destination: AppTab) -> Bool {
+        destination == .home
+    }
+}
+
 private enum HomeDestination: Hashable {
     case friends
+    case menu
+    case admin
+}
+
+private struct AppMenuView: View {
+    let onOpenCalendar: () -> Void
+    let onOpenTeam: () -> Void
+    let onOpenFriends: () -> Void
+    let onOpenTodo: () -> Void
+    let onOpenNotifications: () -> Void
+    let onOpenGuide: () -> Void
+    let onOpenSettings: () -> Void
+    let isAdmin: Bool
+    let onOpenAdmin: () -> Void
+    let onLogout: () -> Void
+
+    private let columns = [
+        GridItem(.flexible(), spacing: DPSpacing.small),
+        GridItem(.flexible(), spacing: DPSpacing.small)
+    ]
+
+    var body: some View {
+        ScrollView {
+            VStack(spacing: DPSpacing.medium) {
+                LazyVGrid(columns: columns, spacing: DPSpacing.small) {
+                    AppMenuTile(
+                        title: String(localized: AppTab.calendar.tabTitle),
+                        systemImage: AppTab.calendar.systemImage,
+                        color: DPColor.accent,
+                        action: onOpenCalendar
+                    )
+                    AppMenuTile(
+                        title: String(localized: AppTab.team.tabTitle),
+                        systemImage: AppTab.team.systemImage,
+                        color: DPColor.success,
+                        action: onOpenTeam
+                    )
+                    AppMenuTile(
+                        title: String(localized: "home.friends", table: "Home"),
+                        systemImage: "person.2",
+                        color: DPColor.warning,
+                        action: onOpenFriends
+                    )
+                    AppMenuTile(
+                        title: String(localized: AppTab.todo.tabTitle),
+                        systemImage: AppTab.todo.systemImage,
+                        color: DPColor.danger,
+                        action: onOpenTodo
+                    )
+                    AppMenuTile(
+                        title: String(localized: "notifications.title", table: "Notifications"),
+                        systemImage: "bell",
+                        color: DPColor.accentHover,
+                        action: onOpenNotifications
+                    )
+                    AppMenuTile(
+                        title: String(localized: AppTab.settings.tabTitle),
+                        systemImage: AppTab.settings.systemImage,
+                        color: DPColor.textSecondary,
+                        action: onOpenSettings
+                    )
+                }
+
+                if isAdmin {
+                    VStack(alignment: .leading, spacing: DPSpacing.small) {
+                        Text(AdminLocalization.string("admin.menu.section"))
+                            .font(DPTypography.caption)
+                            .foregroundStyle(DPColor.textMuted)
+                            .padding(.horizontal, DPSpacing.extraSmall)
+
+                        AppMenuRow(
+                            title: AdminLocalization.string("admin.menu.title"),
+                            systemImage: "lock.shield",
+                            action: onOpenAdmin
+                        )
+                    }
+                    .padding(DPSpacing.small)
+                    .background(DPColor.backgroundCard)
+                    .clipShape(RoundedRectangle(cornerRadius: DPRadius.large))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: DPRadius.large)
+                            .stroke(DPColor.borderPrimary, lineWidth: DPChrome.borderWidth)
+                    }
+                    .accessibilityIdentifier("menu.admin.section")
+                }
+
+                VStack(spacing: 0) {
+                    AppMenuRow(
+                        title: SettingsLocalization.string("settings.guide"),
+                        systemImage: "book",
+                        action: onOpenGuide
+                    )
+                    Divider().overlay(DPColor.borderPrimary)
+                    AppMenuRow(
+                        title: SettingsLocalization.string("settings.logout"),
+                        systemImage: "rectangle.portrait.and.arrow.right",
+                        role: .destructive,
+                        action: onLogout
+                    )
+                }
+                .background(DPColor.backgroundCard)
+                .clipShape(RoundedRectangle(cornerRadius: DPRadius.large))
+                .overlay {
+                    RoundedRectangle(cornerRadius: DPRadius.large)
+                        .stroke(DPColor.borderPrimary, lineWidth: DPChrome.borderWidth)
+                }
+            }
+            .padding(DPSpacing.medium)
+        }
+        .background(DPColor.backgroundPrimary)
+        .navigationTitle(Text("home.menu", tableName: "Home"))
+        .navigationBarTitleDisplayMode(.large)
+        .accessibilityIdentifier("screen.menu")
+    }
+}
+
+private struct AppMenuTile: View {
+    let title: String
+    let systemImage: String
+    let color: Color
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(alignment: .leading, spacing: DPSpacing.medium) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(color)
+                    .frame(width: 44, height: 44)
+                    .background(color.opacity(0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: DPRadius.large))
+
+                HStack(spacing: DPSpacing.extraSmall) {
+                    Text(title)
+                        .font(DPFont.bold(size: 16, relativeTo: .body))
+                        .foregroundStyle(DPColor.textPrimary)
+                        .lineLimit(1)
+                    Spacer(minLength: 0)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundStyle(DPColor.textMuted)
+                }
+            }
+            .padding(DPSpacing.medium)
+            .frame(maxWidth: .infinity, minHeight: 124, alignment: .leading)
+            .background(DPColor.backgroundCard)
+            .clipShape(RoundedRectangle(cornerRadius: DPRadius.large))
+            .overlay {
+                RoundedRectangle(cornerRadius: DPRadius.large)
+                    .stroke(DPColor.borderPrimary, lineWidth: DPChrome.borderWidth)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private struct AppMenuRow: View {
+    let title: String
+    let systemImage: String
+    var role: ButtonRole?
+    let action: () -> Void
+
+    var body: some View {
+        Button(role: role, action: action) {
+            HStack(spacing: DPSpacing.compact) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 18, weight: .semibold))
+                    .frame(width: 32)
+                Text(title)
+                    .font(DPTypography.body)
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(DPColor.textMuted)
+            }
+            .foregroundStyle(role == .destructive ? DPColor.danger : DPColor.textPrimary)
+            .padding(.horizontal, DPSpacing.medium)
+            .frame(maxWidth: .infinity, minHeight: 56)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
 }
 
 private struct CalendarTarget: Hashable {
@@ -521,6 +778,7 @@ private extension View {
             } icon: {
                 Image(systemName: tab.systemImage)
             }
+            .accessibilityIdentifier(tab.accessibilityIdentifier)
         }
         .tag(tab)
     }

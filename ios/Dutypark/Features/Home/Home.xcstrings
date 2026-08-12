@@ -64,6 +64,15 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "加载中..." } }
       }
     },
+    "home.menu" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Menu" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Menú" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "メニュー" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "메뉴" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "菜单" } }
+      }
+    },
     "home.moreSchedules" : {
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "more" } },

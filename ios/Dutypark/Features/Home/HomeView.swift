@@ -158,11 +158,16 @@ struct HomeView: View {
 
     private var friendsDashboardPanel: some View {
         VStack(spacing: 0) {
-            panelHeader(
-                title: Text("home.friends", tableName: "Home"),
-                systemImage: "person.2.fill",
-                count: viewModel.sortedFriends.count
-            )
+            Button { onRoute(.friends) } label: {
+                panelHeader(
+                    title: Text("home.friends", tableName: "Home"),
+                    systemImage: "person.2.fill",
+                    count: viewModel.sortedFriends.count
+                )
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text("home.friends", tableName: "Home"))
 
             Group {
                 switch viewModel.friendsState {

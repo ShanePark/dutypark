@@ -1,0 +1,170 @@
+import Combine
+import Foundation
+
+@MainActor
+final class AdminMemberListViewModel: ObservableObject {
+    static let pageSize = 10
+
+    @Published private(set) var members: [AdminMemberDTO] = []
+    @Published private(set) var sessions: [SettingsRefreshToken] = []
+    @Published private(set) var totalElements: Int64 = 0
+    @Published private(set) var totalPages = 0
+    @Published private(set) var page = 0
+    @Published private(set) var isLoading = false
+    @Published private(set) var loadFailed = false
+
+    private let repository: any AdminRepositoryProtocol
+    private var keyword = ""
+
+    init(repository: any AdminRepositoryProtocol = AdminRepository()) {
+        self.repository = repository
+    }
+
+    func load() async {
+        await load(keyword: keyword, page: page)
+    }
+
+    func search(_ value: String) async {
+        keyword = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        await load(keyword: keyword, page: 0)
+    }
+
+    func movePage(by offset: Int) async {
+        let nextPage = page + offset
+        guard nextPage >= 0, nextPage < totalPages else { return }
+        await load(keyword: keyword, page: nextPage)
+    }
+
+    func memberDetail(id: MemberID) async throws -> AdminMemberDetailDTO {
+        try await repository.memberDetail(id: id)
+    }
+
+    func revokeSession(id: Int64) async throws {
+        try await repository.revokeSession(id: id)
+        sessions.removeAll { $0.id == id }
+        members = members.map { member in
+            guard member.tokens.contains(where: { $0.id == id }) else { return member }
+            return AdminMemberDTO(
+                id: member.id,
+                name: member.name,
+                email: member.email,
+                teamId: member.teamId,
+                teamName: member.teamName,
+                tokens: member.tokens.filter { $0.id != id },
+                hasProfilePhoto: member.hasProfilePhoto,
+                profilePhotoVersion: member.profilePhotoVersion
+            )
+        }
+    }
+
+    func changePassword(memberID: MemberID, newPassword: String) async throws {
+        try await repository.changePassword(memberID: memberID, newPassword: newPassword)
+    }
+
+    private func load(keyword: String, page: Int) async {
+        guard !isLoading else { return }
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            async let memberPage = repository.members(
+                keyword: keyword,
+                page: page,
+                size: Self.pageSize
+            )
+            async let allSessions = repository.sessions()
+            let (loadedPage, loadedSessions) = try await (memberPage, allSessions)
+            members = loadedPage.content
+            sessions = loadedSessions
+            totalElements = loadedPage.totalElements
+            totalPages = loadedPage.totalPages
+            self.page = loadedPage.number
+            loadFailed = false
+        } catch is CancellationError {
+            return
+        } catch {
+            loadFailed = true
+        }
+    }
+}
+
+@MainActor
+final class AdminTeamListViewModel: ObservableObject {
+    static let pageSize = 10
+
+    @Published private(set) var teams: [SimpleTeamDTO] = []
+    @Published private(set) var totalElements: Int64 = 0
+    @Published private(set) var totalPages = 0
+    @Published private(set) var page = 0
+    @Published private(set) var isLoading = false
+    @Published private(set) var loadFailed = false
+    @Published private(set) var nameCheckResult: AdminTeamNameCheckResult?
+
+    private let repository: any AdminRepositoryProtocol
+    private var keyword = ""
+
+    init(repository: any AdminRepositoryProtocol = AdminRepository()) {
+        self.repository = repository
+    }
+
+    func load() async {
+        await load(keyword: keyword, page: page)
+    }
+
+    func search(_ value: String) async {
+        keyword = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        await load(keyword: keyword, page: 0)
+    }
+
+    func movePage(by offset: Int) async {
+        let nextPage = page + offset
+        guard nextPage >= 0, nextPage < totalPages else { return }
+        await load(keyword: keyword, page: nextPage)
+    }
+
+    func checkName(_ name: String) async {
+        let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard (2...20).contains(trimmed.count) else {
+            nameCheckResult = trimmed.count < 2 ? .tooShort : .tooLong
+            return
+        }
+        nameCheckResult = try? await repository.checkTeamName(trimmed)
+    }
+
+    func resetNameCheck() {
+        nameCheckResult = nil
+    }
+
+    func create(name: String, description: String) async throws -> TeamDTO {
+        try await repository.createTeam(
+            name: name.trimmingCharacters(in: .whitespacesAndNewlines),
+            description: description.trimmingCharacters(in: .whitespacesAndNewlines)
+        )
+    }
+
+    func delete(_ team: SimpleTeamDTO) async throws {
+        try await repository.deleteTeam(id: team.id)
+        await load(keyword: keyword, page: min(page, max(0, totalPages - 1)))
+    }
+
+    private func load(keyword: String, page: Int) async {
+        guard !isLoading else { return }
+        isLoading = true
+        defer { isLoading = false }
+        do {
+            let loaded = try await repository.teams(
+                keyword: keyword,
+                page: page,
+                size: Self.pageSize
+            )
+            teams = loaded.content
+            totalElements = loaded.totalElements
+            totalPages = loaded.totalPages
+            self.page = loaded.number
+            loadFailed = false
+        } catch is CancellationError {
+            return
+        } catch {
+            loadFailed = true
+        }
+    }
+}

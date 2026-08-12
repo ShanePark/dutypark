@@ -3,6 +3,7 @@ import Combine
 
 nonisolated enum HomeRoute: Equatable, Sendable {
     case memberCalendar(MemberID)
+    case friends
 }
 
 @MainActor
