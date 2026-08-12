@@ -286,7 +286,8 @@ struct CalendarView: View {
             .compositingGroup()
             .shadow(color: DPColor.accent.opacity(0.35), radius: 4, x: 0, y: 2)
             .padding(.top, 12)
-            .padding(.horizontal, 12)
+            .padding(.leading, 12)
+            .padding(.trailing, 3)
             .padding(.bottom, 4)
             .contentShape(Rectangle())
         }
@@ -297,14 +298,6 @@ struct CalendarView: View {
         monthLabel
             .frame(width: 88)
             .clipShape(RoundedRectangle(cornerRadius: DPRadius.compact))
-            .overlay(alignment: .topTrailing) {
-                if !isViewingCurrentMonth {
-                    thisMonthBubble
-                        .offset(x: 32, y: -24)
-                        .transition(.offset(y: 4).combined(with: .opacity))
-                }
-            }
-            .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: isViewingCurrentMonth)
     }
 
     private var monthControls: some View {
@@ -322,6 +315,17 @@ struct CalendarView: View {
             }
         }
         .foregroundStyle(DPColor.accent)
+        // Attached to the whole HStack so the bubble wins hit-testing over the
+        // chevron buttons wherever it is drawn; the offset keeps the capsule in
+        // the same spot above the year-month label.
+        .overlay(alignment: .topTrailing) {
+            if !isViewingCurrentMonth {
+                thisMonthBubble
+                    .offset(x: -21, y: -24)
+                    .transition(.offset(y: 4).combined(with: .opacity))
+            }
+        }
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: isViewingCurrentMonth)
     }
 
     private var searchControl: some View {
