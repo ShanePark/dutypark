@@ -90,6 +90,7 @@ struct DPBrandMark: View {
                     .lineLimit(1)
             }
             .frame(minHeight: DPSize.minimumTouchTarget)
+            .fixedSize(horizontal: true, vertical: false)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -126,5 +127,56 @@ struct DPBrandMark: View {
             let iconName = iconFiles.last
         else { return nil }
         return UIImage(named: iconName)
+    }
+}
+
+struct DPWebTabBar: View {
+    @Binding var selection: AppTab
+
+    var body: some View {
+        HStack(spacing: DPSpacing.extraSmall) {
+            ForEach(AppTab.allCases) { tab in
+                Button {
+                    selection = tab
+                } label: {
+                    VStack(spacing: 1) {
+                        Image(systemName: tab.systemImage)
+                            .font(.system(size: 20, weight: .semibold))
+                            .frame(height: 24)
+                        Text(tab.tabTitle)
+                            .font(DPFont.light(size: 10, relativeTo: .caption2))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                    }
+                    .foregroundStyle(selection == tab ? DPColor.textOnDark : DPColor.textOnDarkDim)
+                    .frame(maxWidth: .infinity, minHeight: 48)
+                    .background {
+                        if selection == tab {
+                            RoundedRectangle(cornerRadius: DPRadius.large)
+                                .fill(DPColor.textOnDark.opacity(0.25))
+                                .overlay {
+                                    RoundedRectangle(cornerRadius: DPRadius.large)
+                                        .stroke(DPColor.textOnDark.opacity(0.30), lineWidth: 1)
+                                }
+                        }
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text(tab.tabTitle))
+                .accessibilityIdentifier(tab.accessibilityIdentifier)
+                .accessibilityAddTraits(selection == tab ? .isSelected : [])
+            }
+        }
+        .padding(.horizontal, DPSpacing.small)
+        .padding(.vertical, DPSpacing.extraSmall)
+        .background(DPColor.backgroundFooter.ignoresSafeArea(edges: .bottom))
+        .overlay(alignment: .top) {
+            Rectangle()
+                .fill(DPColor.textOnDark.opacity(0.30))
+                .frame(height: 1)
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("primary.tabbar")
     }
 }

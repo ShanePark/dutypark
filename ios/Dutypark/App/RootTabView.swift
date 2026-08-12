@@ -39,6 +39,7 @@ struct RootTabView: View {
                     }
                 }
             }
+            .toolbar(.hidden, for: .tabBar)
 
             if showsNotifications {
                 notificationDropdownLayer
@@ -98,6 +99,9 @@ struct RootTabView: View {
             if case .authenticated(let member) = session.state, member.isImpersonating {
                 ImpersonationBanner()
             }
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            DPWebTabBar(selection: $selectedTab)
         }
         .tint(DPColor.accent)
     }
@@ -517,7 +521,6 @@ private extension View {
             } icon: {
                 Image(systemName: tab.systemImage)
             }
-            .accessibilityIdentifier(tab.accessibilityIdentifier)
         }
         .tag(tab)
     }

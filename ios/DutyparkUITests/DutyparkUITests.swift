@@ -17,21 +17,20 @@ final class DutyparkUITests: XCTestCase {
         ]
         app.launch()
 
-        let tabBar = app.tabBars.firstMatch
+        let tabBar = app.descendants(matching: .any)["primary.tabbar"]
         XCTAssertTrue(tabBar.waitForExistence(timeout: 2))
-        XCTAssertEqual(tabBar.buttons.count, 5)
 
         let destinations = [
-            (tab: "Home", screen: "screen.home"),
-            (tab: "Calendar", screen: "screen.calendar"),
-            (tab: "Todo", screen: "screen.todo"),
-            (tab: "Team", screen: "screen.team"),
-            (tab: "Settings", screen: "screen.settings")
+            (tab: "tab.home", screen: "screen.home"),
+            (tab: "tab.calendar", screen: "screen.calendar"),
+            (tab: "tab.todo", screen: "screen.todo"),
+            (tab: "tab.team", screen: "screen.team"),
+            (tab: "tab.settings", screen: "screen.settings")
         ]
 
         for destination in destinations {
-            let tab = tabBar.buttons[destination.tab]
-            XCTAssertTrue(tab.exists)
+            let tab = app.buttons[destination.tab]
+            XCTAssertTrue(tab.waitForExistence(timeout: 2))
             tab.tap()
             XCTAssertTrue(
                 app.descendants(matching: .any)[destination.screen].waitForExistence(timeout: 2)
@@ -74,7 +73,7 @@ final class DutyparkUITests: XCTestCase {
         XCTAssertTrue(notificationBell.waitForExistence(timeout: 10))
         assertMinimumTouchTarget(notificationBell)
 
-        app.tabBars.buttons["Todo"].tap()
+        app.buttons["tab.todo"].tap()
         let todoAdd = app.buttons["todo.add"]
         XCTAssertTrue(todoAdd.waitForExistence(timeout: 10))
         assertMinimumTouchTarget(todoAdd)
