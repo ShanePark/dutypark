@@ -204,6 +204,12 @@ struct RootTabView: View {
                 if RootNavigationPolicy.resetsHomePath(for: destination) {
                     homePath.removeAll()
                 }
+                if RootNavigationPolicy.resetsCalendarTarget(
+                    for: destination,
+                    origin: .tabBar
+                ) {
+                    calendarTarget = CalendarTarget(memberID: authenticatedMemberID)
+                }
                 selectedTab = destination
             }
         )
@@ -402,6 +408,18 @@ nonisolated enum RootNavigationPolicy {
     static func resetsHomePath(for destination: AppTab) -> Bool {
         destination == .home
     }
+
+    static func resetsCalendarTarget(
+        for destination: AppTab,
+        origin: RootTabSelectionOrigin
+    ) -> Bool {
+        destination == .calendar && origin == .tabBar
+    }
+}
+
+nonisolated enum RootTabSelectionOrigin: Equatable, Sendable {
+    case tabBar
+    case explicitRoute
 }
 
 private enum HomeDestination: Hashable {
