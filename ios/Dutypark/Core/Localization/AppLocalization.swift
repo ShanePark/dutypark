@@ -11,10 +11,14 @@ nonisolated enum AppLocalization {
     }
 
     static func string(_ key: String, table: String, locale override: Locale? = nil) -> String {
-        String(
+        let selectedLocale = override ?? locale
+        if let bundle = localizedBundle(for: selectedLocale) {
+            return bundle.localizedString(forKey: key, value: key, table: table)
+        }
+        return String(
             localized: String.LocalizationValue(key),
             table: table,
-            locale: override ?? locale
+            locale: selectedLocale
         )
     }
 
@@ -24,5 +28,27 @@ nonisolated enum AppLocalization {
             locale: locale,
             arguments: arguments
         )
+    }
+
+    private static func localizedBundle(for locale: Locale) -> Bundle? {
+        let identifier = locale.identifier.lowercased()
+        let language: String
+        if identifier.hasPrefix("zh") {
+            language = "zh-Hans"
+        } else if identifier.hasPrefix("ko") {
+            language = "ko"
+        } else if identifier.hasPrefix("ja") {
+            language = "ja"
+        } else if identifier.hasPrefix("es") {
+            language = "es"
+        } else if identifier.hasPrefix("en") {
+            language = "en"
+        } else {
+            return nil
+        }
+        guard let url = Bundle.main.url(forResource: language, withExtension: "lproj") else {
+            return nil
+        }
+        return Bundle(url: url)
     }
 }

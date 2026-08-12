@@ -10,6 +10,7 @@ struct NotificationCenterView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var notificationToDelete: NotificationDTO?
     @State private var showsDeleteReadConfirmation = false
+    @State private var alertTitle: String?
     @State private var alertMessage: String?
 
     init(
@@ -21,26 +22,27 @@ struct NotificationCenterView: View {
     }
 
     var body: some View {
-        Group {
-            if store.isLoading && store.notifications.isEmpty {
-                DPLoadingState(label: notificationsKey("notifications.common.loading"))
-            } else if store.loadFailed && store.notifications.isEmpty {
-                DPErrorState(
-                    title: notificationsKey("notifications.messages.loadFailed"),
-                    retryTitle: notificationsKey("notifications.common.retry"),
-                    retryAction: { Task { await store.refresh() } }
-                )
-            } else if store.notifications.isEmpty {
-                DPEmptyState(
-                    systemImage: "bell",
-                    title: notificationsKey("notifications.common.empty")
-                )
-            } else {
-                notificationList
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                pageHeader
+                    .padding(.bottom, DPSpacing.medium)
+
+                Text(String(localized: "notifications.list.retentionNotice", table: "Notifications"))
+                    .font(DPTypography.caption)
+                    .foregroundStyle(DPColor.textMuted)
+                    .padding(.bottom, DPSpacing.medium)
+
+                notificationCard
             }
+            .frame(maxWidth: 672)
+            .padding(.horizontal, DPSpacing.medium)
+            .padding(.vertical, DPSpacing.large)
+            .frame(maxWidth: .infinity)
         }
-        .navigationTitle(String(localized: "notifications.title", table: "Notifications"))
-        .toolbar { actions }
+        .background(DPColor.backgroundPrimary)
+        .toolbar(.hidden, for: .navigationBar)
+        .presentationDragIndicator(.visible)
+        .refreshable { await store.refresh() }
         .task {
             store.startPolling()
             if store.notifications.isEmpty {
@@ -79,10 +81,15 @@ struct NotificationCenterView: View {
             Text(String(localized: "notifications.list.deleteAllReadConfirm", table: "Notifications"))
         }
         .alert(
-            String(localized: "notifications.common.error", table: "Notifications"),
+            alertTitle ?? String(localized: "notifications.common.error", table: "Notifications"),
             isPresented: Binding(
                 get: { alertMessage != nil },
-                set: { if !$0 { alertMessage = nil } }
+                set: {
+                    if !$0 {
+                        alertTitle = nil
+                        alertMessage = nil
+                    }
+                }
             )
         ) {
             Button(String(localized: "notifications.common.ok", table: "Notifications")) {}
@@ -91,38 +98,111 @@ struct NotificationCenterView: View {
         }
     }
 
-    private func notificationsKey(_ key: String) -> LocalizedStringKey {
-        LocalizedStringKey(String(localized: String.LocalizationValue(key), table: "Notifications"))
+    private var pageHeader: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: DPSpacing.compact) {
+                pageTitle
+                Spacer(minLength: 0)
+                headerActions
+            }
+
+            VStack(alignment: .leading, spacing: DPSpacing.compact) {
+                pageTitle
+                headerActions
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+            }
+        }
+        .frame(minHeight: DPSize.minimumTouchTarget)
     }
 
-    private var notificationList: some View {
-        List {
-            Section {
-                ForEach(store.notifications, id: \.id) { notification in
-                    Button {
-                        Task {
-                            if let route = await store.open(notification) {
-                                // Keep the notification list visible when a destination
-                                // (notably a removed schedule) can no longer be resolved.
-                                if await onOpen(route) {
-                                    dismiss()
-                                }
-                            }
-                        }
-                    } label: {
-                        NotificationRow(notification: notification)
+    private var pageTitle: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "bell")
+                .font(.system(size: 18, weight: .regular))
+                .foregroundStyle(DPColor.textSecondary)
+                .frame(width: 36, height: 36)
+                .background(DPColor.backgroundTertiary, in: RoundedRectangle(cornerRadius: DPRadius.large))
+                .overlay {
+                    RoundedRectangle(cornerRadius: DPRadius.large)
+                        .stroke(DPColor.borderPrimary, lineWidth: DPChrome.borderWidth)
+                }
+
+            Text(String(localized: "notifications.title", table: "Notifications"))
+                .font(DPTypography.heading)
+                .foregroundStyle(DPColor.textPrimary)
+                .lineLimit(1)
+        }
+        .fixedSize(horizontal: true, vertical: false)
+    }
+
+    private var headerActions: some View {
+        HStack(spacing: DPSpacing.small) {
+            NotificationHeaderActionButton(
+                title: String(localized: "notifications.list.markAllAsReadShort", table: "Notifications"),
+                systemImage: "checkmark.circle"
+            ) {
+                Task { await markAllAsRead() }
+            }
+
+            NotificationHeaderActionButton(
+                title: String(localized: "notifications.list.deleteReadShort", table: "Notifications"),
+                systemImage: "trash",
+                isDestructive: true
+            ) {
+                if store.notifications.contains(where: \.isRead) {
+                    showsDeleteReadConfirmation = true
+                } else {
+                    showInformation("notifications.list.noReadNotifications")
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var notificationCard: some View {
+        LazyVStack(spacing: 0) {
+            if store.isLoading && store.notifications.isEmpty {
+                Text(String(localized: "notifications.common.loading", table: "Notifications"))
+                    .font(DPTypography.label)
+                    .foregroundStyle(DPColor.textMuted)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, DPSpacing.extraLarge)
+            } else if store.loadFailed && store.notifications.isEmpty {
+                VStack(spacing: DPSpacing.compact) {
+                    Text(String(localized: "notifications.messages.loadFailed", table: "Notifications"))
+                        .font(DPTypography.label)
+                        .foregroundStyle(DPColor.textMuted)
+
+                    Button(String(localized: "notifications.common.retry", table: "Notifications")) {
+                        Task { await store.refresh() }
                     }
-                    .buttonStyle(.plain)
-                    .listRowBackground(notification.isRead ? DPColor.backgroundCard : DPColor.accentSoft)
-                    .swipeActions(edge: .trailing) {
-                        Button(role: .destructive) {
-                            notificationToDelete = notification
-                        } label: {
-                            Label(
-                                String(localized: "notifications.common.delete", table: "Notifications"),
-                                systemImage: "trash"
-                            )
-                        }
+                    .buttonStyle(DPSecondaryButtonStyle())
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, DPSpacing.extraLarge)
+            } else if store.notifications.isEmpty {
+                VStack(spacing: DPSpacing.medium) {
+                    Image(systemName: "bell")
+                        .font(.system(size: 48, weight: .light))
+                        .foregroundStyle(DPColor.textMuted.opacity(0.5))
+
+                    Text(String(localized: "notifications.common.empty", table: "Notifications"))
+                        .font(DPTypography.label)
+                        .foregroundStyle(DPColor.textMuted)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 48)
+            } else {
+                ForEach(Array(store.notifications.enumerated()), id: \.element.id) { index, notification in
+                    NotificationRow(
+                        notification: notification,
+                        onOpen: { Task { await open(notification) } },
+                        onDelete: { notificationToDelete = notification }
+                    )
+
+                    if index < store.notifications.count - 1 || store.hasMore {
+                        Divider()
+                            .overlay(DPColor.borderPrimary)
                     }
                 }
 
@@ -130,56 +210,52 @@ struct NotificationCenterView: View {
                     Button {
                         Task { await store.loadMore() }
                     } label: {
-                        HStack {
-                            Spacer()
+                        Group {
                             if store.isLoadingMore {
                                 ProgressView()
+                                    .tint(DPColor.textSecondary)
                             } else {
                                 Text(String(localized: "notifications.list.loadMore", table: "Notifications"))
+                                    .font(DPTypography.label)
+                                    .foregroundStyle(DPColor.textSecondary)
                             }
-                            Spacer()
                         }
+                        .padding(.horizontal, DPSpacing.large)
                         .frame(minHeight: DPSize.minimumTouchTarget)
+                        .background(DPColor.backgroundTertiary, in: RoundedRectangle(cornerRadius: DPRadius.standard))
                     }
+                    .buttonStyle(.plain)
                     .disabled(store.isLoadingMore)
+                    .frame(maxWidth: .infinity)
+                    .padding(DPSpacing.medium)
                 }
-            } footer: {
-                Text(String(localized: "notifications.list.retentionNotice", table: "Notifications"))
             }
         }
-        .listStyle(.plain)
-        .refreshable { await store.refresh() }
+        .background(DPColor.backgroundCard)
+        .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+        .overlay {
+            RoundedRectangle(cornerRadius: DPRadius.standard)
+                .stroke(DPColor.borderPrimary, lineWidth: DPChrome.borderWidth)
+        }
+        .shadow(color: .black.opacity(0.05), radius: 1, x: 0, y: 1)
     }
 
-    @ToolbarContentBuilder
-    private var actions: some ToolbarContent {
-        ToolbarItemGroup(placement: .topBarTrailing) {
-            Button {
-                Task { await markAllAsRead() }
-            } label: {
-                Label(
-                    String(localized: "notifications.list.markAllAsRead", table: "Notifications"),
-                    systemImage: "checkmark.circle"
-                )
-            }
-            .disabled(!store.notifications.contains(where: { !$0.isRead }))
-
-            Button {
-                showsDeleteReadConfirmation = true
-            } label: {
-                Label(
-                    String(localized: "notifications.list.deleteRead", table: "Notifications"),
-                    systemImage: "trash"
-                )
-            }
-            .disabled(!store.notifications.contains(where: \.isRead))
+    private func open(_ notification: NotificationDTO) async {
+        if let route = await store.open(notification), await onOpen(route) {
+            dismiss()
         }
     }
 
     private func markAllAsRead() async {
+        guard store.notifications.contains(where: { !$0.isRead }) else {
+            showInformation("notifications.list.noUnreadNotifications")
+            return
+        }
+
         do {
             try await store.markAllAsRead()
         } catch {
+            alertTitle = String(localized: "notifications.common.error", table: "Notifications")
             alertMessage = String(localized: "notifications.messages.markAllAsReadFailed", table: "Notifications")
         }
     }
@@ -188,6 +264,7 @@ struct NotificationCenterView: View {
         do {
             try await store.delete(notification)
         } catch {
+            alertTitle = String(localized: "notifications.common.error", table: "Notifications")
             alertMessage = String(localized: "notifications.messages.deleteFailed", table: "Notifications")
         }
         notificationToDelete = nil
@@ -197,48 +274,114 @@ struct NotificationCenterView: View {
         do {
             try await store.deleteAllRead()
         } catch {
+            alertTitle = String(localized: "notifications.common.error", table: "Notifications")
             alertMessage = String(localized: "notifications.messages.deleteFailed", table: "Notifications")
         }
+    }
+
+    private func showInformation(_ key: String) {
+        alertTitle = String(localized: "notifications.title", table: "Notifications")
+        alertMessage = String(localized: String.LocalizationValue(key), table: "Notifications")
     }
 }
 
 private struct NotificationRow: View {
     let notification: NotificationDTO
+    let onOpen: () -> Void
+    let onDelete: () -> Void
+    @Environment(\.locale) private var locale
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
-            ZStack(alignment: .topTrailing) {
-                NotificationActorAvatar(notification: notification)
-                if !notification.isRead {
-                    Circle()
-                        .fill(DPColor.accent)
-                        .frame(width: 11, height: 11)
-                        .overlay(Circle().stroke(DPColor.backgroundCard, lineWidth: 2))
-                }
-            }
-            .accessibilityHidden(true)
-
-            VStack(alignment: .leading, spacing: 6) {
-                Text(NotificationPresentation.message(for: notification))
-                    .font(.subheadline.weight(notification.isRead ? .regular : .semibold))
-                    .foregroundStyle(notification.isRead ? DPColor.textSecondary : DPColor.textPrimary)
-                    .multilineTextAlignment(.leading)
-
-                if let date = NotificationPresentation.date(from: notification.createdAt) {
-                    HStack(spacing: 4) {
-                        Text(date, style: .relative)
-                        Text("(\(date.formatted(date: .numeric, time: .shortened)))")
-                            .opacity(0.7)
+        HStack(alignment: .top, spacing: 0) {
+            Button(action: onOpen) {
+                HStack(alignment: .top, spacing: DPSpacing.compact) {
+                    ZStack(alignment: .topTrailing) {
+                        NotificationActorAvatar(notification: notification)
+                        if !notification.isRead {
+                            Circle()
+                                .fill(DPColor.accent)
+                                .frame(width: 12, height: 12)
+                                .overlay(Circle().stroke(DPColor.backgroundCard, lineWidth: 2))
+                                .offset(x: 2, y: -2)
+                        }
                     }
-                    .font(.caption)
+                    .accessibilityHidden(true)
+
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(NotificationPresentation.message(for: notification))
+                            .font(notification.isRead ? DPTypography.label : DPFont.bold(size: 14, relativeTo: .subheadline))
+                            .foregroundStyle(notification.isRead ? DPColor.textSecondary : DPColor.textPrimary)
+                            .multilineTextAlignment(.leading)
+                            .lineLimit(2)
+
+                        if let date = NotificationPresentation.date(from: notification.createdAt) {
+                            HStack(spacing: DPSpacing.small) {
+                                Text(date, style: .relative)
+                                Text("(\(NotificationPresentation.absoluteDate(date, locale: locale)))")
+                                    .opacity(0.7)
+                            }
+                            .font(DPTypography.caption)
+                            .foregroundStyle(DPColor.textMuted)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .buttonStyle(.plain)
+
+            Button(action: onDelete) {
+                Image(systemName: "trash")
+                    .font(.system(size: 16, weight: .regular))
                     .foregroundStyle(DPColor.textMuted)
+                    .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                    .contentShape(Rectangle())
+                }
+            .buttonStyle(.plain)
+            .accessibilityLabel(String(localized: "notifications.common.delete", table: "Notifications"))
+        }
+        .padding(.leading, DPSpacing.medium)
+        .padding(.trailing, DPSpacing.small)
+        .padding(.vertical, DPSpacing.compact)
+        .background {
+            if !notification.isRead {
+                ZStack(alignment: .leading) {
+                    DPColor.backgroundCard
+                    DPColor.accentSoft.opacity(0.45)
+                    Rectangle()
+                        .fill(DPColor.accent)
+                        .frame(width: 4)
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
         }
-        .padding(.vertical, 6)
         .contentShape(Rectangle())
         .accessibilityIdentifier("notifications.row.\(notification.id.uuidString)")
+    }
+}
+
+private struct NotificationHeaderActionButton: View {
+    let title: String
+    let systemImage: String
+    var isDestructive = false
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 6) {
+                Image(systemName: systemImage)
+                    .font(.system(size: 16, weight: .regular))
+                Text(title)
+                    .font(DPFont.light(size: 12, relativeTo: .caption))
+                    .lineLimit(1)
+            }
+            .foregroundStyle(isDestructive ? DPColor.textMuted : DPColor.textSecondary)
+            .padding(.horizontal, 10)
+            .frame(minHeight: DPSize.minimumTouchTarget)
+            .background(DPColor.backgroundTertiary, in: RoundedRectangle(cornerRadius: DPRadius.standard))
+        }
+        .buttonStyle(.plain)
     }
 }
 

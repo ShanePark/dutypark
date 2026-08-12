@@ -1,10 +1,9 @@
 import SwiftUI
 
 private struct DPSolidButtonStyle: ButtonStyle {
-    @Environment(\.isEnabled) private var isEnabled
-
     let background: Color
     let pressedBackground: Color
+    let isEnabled: Bool
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -23,22 +22,40 @@ private struct DPSolidButtonStyle: ButtonStyle {
 }
 
 struct DPPrimaryButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+
     func makeBody(configuration: Configuration) -> some View {
-        DPSolidButtonStyle(background: DPColor.accent, pressedBackground: DPColor.accentHover)
+        DPSolidButtonStyle(
+            background: DPColor.accent,
+            pressedBackground: DPColor.accentHover,
+            isEnabled: isEnabled
+        )
             .makeBody(configuration: configuration)
     }
 }
 
 struct DPSuccessButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+
     func makeBody(configuration: Configuration) -> some View {
-        DPSolidButtonStyle(background: DPColor.success, pressedBackground: DPColor.successHover)
+        DPSolidButtonStyle(
+            background: DPColor.success,
+            pressedBackground: DPColor.successHover,
+            isEnabled: isEnabled
+        )
             .makeBody(configuration: configuration)
     }
 }
 
 struct DPDestructiveButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+
     func makeBody(configuration: Configuration) -> some View {
-        DPSolidButtonStyle(background: DPColor.danger, pressedBackground: DPColor.dangerHover)
+        DPSolidButtonStyle(
+            background: DPColor.danger,
+            pressedBackground: DPColor.dangerHover,
+            isEnabled: isEnabled
+        )
             .makeBody(configuration: configuration)
     }
 }

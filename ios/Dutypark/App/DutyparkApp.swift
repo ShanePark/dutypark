@@ -8,6 +8,8 @@ struct DutyparkApp: App {
     @AppStorage(SettingsPreference.themeKey) private var themeCode = AppTheme.light.rawValue
 
     init() {
+        DPBrandChrome.configureAppearance()
+
         let initialState: SessionState
         if CommandLine.arguments.contains("-ui-testing-authenticated") {
             initialState = .authenticated(

@@ -10,6 +10,9 @@
     "notifications.title" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Notifications" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Notificaciones" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "通知" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "알림" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "通知" } }
     } },
+    "notifications.dropdown.viewAll" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "View all" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Ver todo" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "すべて表示" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "전체보기" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "查看全部" } }
+    } },
     "notifications.common.loading" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Loading..." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Cargando..." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "読み込み中..." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "불러오는 중..." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "加载中..." } }
     } },
@@ -24,6 +27,9 @@
     } },
     "notifications.common.cancel" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Cancel" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Cancelar" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "キャンセル" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "취소" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "取消" } }
+    } },
+    "notifications.common.close" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Close notifications" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Cerrar notificaciones" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "通知を閉じる" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "알림 닫기" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "关闭通知" } }
     } },
     "notifications.common.error" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Error" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Error" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "エラー" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "오류" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "错误" } }
@@ -96,8 +102,20 @@
     "notifications.list.markAllAsRead" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Mark all as read" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Marcar todo como leído" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "すべて既読" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "전체 읽음" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "全部标为已读" } }
     } },
+    "notifications.list.markAllAsReadShort" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Read all" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Leer todo" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "全既読" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "전체 읽음" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "全已读" } }
+    } },
     "notifications.list.deleteRead" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete read" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Eliminar leídas" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "既読を削除" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "읽은 알림 삭제" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "删除已读" } }
+    } },
+    "notifications.list.deleteReadShort" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete read" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Borrar leídas" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "既読削除" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "읽음 삭제" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "删已读" } }
+    } },
+    "notifications.list.noReadNotifications" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "There are no read notifications to delete." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "No hay notificaciones de lectura para eliminar." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "削除できる既読通知がありません。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "삭제할 읽은 알림이 없습니다" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "没有要删除的已读通知。" } }
+    } },
+    "notifications.list.noUnreadNotifications" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "There are no unread notifications." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "No hay notificaciones no leídas." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "未読通知がありません。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "읽지 않은 알림이 없습니다" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "没有未读的通知。" } }
     } },
     "notifications.list.retentionNotice" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Notifications are kept for 30 days." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Las notificaciones se guardan durante 30 días." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "通知は30日間保存されます。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "알림은 30일간 보관됩니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "通知会保留30天。" } }

@@ -57,6 +57,18 @@ enum APNsRegistrationState: Equatable {
 }
 
 @MainActor
+protocol NotificationAuthorizationCenter: AnyObject {
+    func requestAuthorization(options: UNAuthorizationOptions) async throws -> Bool
+    func authorizationStatus() async -> UNAuthorizationStatus
+}
+
+extension UNUserNotificationCenter: NotificationAuthorizationCenter {
+    func authorizationStatus() async -> UNAuthorizationStatus {
+        await notificationSettings().authorizationStatus
+    }
+}
+
+@MainActor
 final class APNsRegistrationManager: ObservableObject {
     static let shared = APNsRegistrationManager()
 
@@ -68,14 +80,13 @@ final class APNsRegistrationManager: ObservableObject {
     private static let storedTokenKey = "dutypark.apns.device-token"
     private static let enabledPreferenceKey = "dp-push-enabled"
     private let api: any APNsRegistrationAPIProtocol
-    private let notificationCenter: UNUserNotificationCenter
+    private let notificationCenter: any NotificationAuthorizationCenter
     private let defaults: UserDefaults
-    private var hasAttemptedAutomaticAuthorization = false
     private var hasRequestedRemoteRegistration = false
 
     init(
         api: any APNsRegistrationAPIProtocol = APNsRegistrationAPI(),
-        notificationCenter: UNUserNotificationCenter = .current(),
+        notificationCenter: any NotificationAuthorizationCenter = UNUserNotificationCenter.current(),
         defaults: UserDefaults = .standard
     ) {
         self.api = api
@@ -114,26 +125,9 @@ final class APNsRegistrationManager: ObservableObject {
         }
     }
 
-    /// Called from the first authenticated root. The system prompt is attempted at most once per app run.
+    /// Called from the first authenticated root without presenting the one-time system prompt.
     func activateForAuthenticatedSession() async {
-        guard isEnabled, !hasAttemptedAutomaticAuthorization else {
-            await resumeRegistration()
-            return
-        }
-        hasAttemptedAutomaticAuthorization = true
-        await refreshAuthorizationStatus()
-        if authorizationStatus == .notDetermined {
-            do {
-                _ = try await notificationCenter.requestAuthorization(options: [.alert, .badge, .sound])
-                await refreshAuthorizationStatus()
-            } catch {
-                registrationState = .failed
-                return
-            }
-        }
-        if authorizationStatus == .authorized || authorizationStatus == .provisional {
-            registerWithSystemIfNeeded()
-        }
+        await resumeRegistration()
     }
 
     private func registerWithSystemIfNeeded() {
@@ -180,7 +174,7 @@ final class APNsRegistrationManager: ObservableObject {
     }
 
     func refreshAuthorizationStatus() async {
-        authorizationStatus = await notificationCenter.notificationSettings().authorizationStatus
+        authorizationStatus = await notificationCenter.authorizationStatus()
     }
 
     nonisolated static func hexString(for data: Data) -> String {
