@@ -159,13 +159,34 @@ struct AttachmentGallery: View {
                     .frame(maxWidth: .infinity)
             } else if model.attachments.isEmpty {
                 Text(AttachmentLocalization.text("attachment.empty"))
-                    .font(.subheadline)
+                    .font(DPTypography.label)
                     .foregroundStyle(DPColor.textMuted)
                     .frame(maxWidth: .infinity, alignment: .leading)
             } else {
-                VStack(spacing: DPSpacing.small) {
-                    ForEach(Array(model.attachments.enumerated()), id: \.element.id) { index, attachment in
-                        galleryRow(attachment, at: index)
+                VStack(alignment: .leading, spacing: DPSpacing.small) {
+                    Label {
+                        Text(
+                            AttachmentLocalization.format(
+                                "attachment.gallery.label",
+                                Int64(model.attachments.count)
+                            )
+                        )
+                    } icon: {
+                        Image(systemName: "paperclip")
+                    }
+                    .font(DPTypography.label)
+                    .foregroundStyle(DPColor.textMuted)
+
+                    LazyVGrid(
+                        columns: [
+                            GridItem(.flexible(), spacing: DPSpacing.small),
+                            GridItem(.flexible(), spacing: DPSpacing.small)
+                        ],
+                        spacing: DPSpacing.small
+                    ) {
+                        ForEach(Array(model.attachments.enumerated()), id: \.element.id) { index, attachment in
+                            galleryCard(attachment, at: index)
+                        }
                     }
                 }
             }
@@ -223,83 +244,134 @@ struct AttachmentGallery: View {
         }
     }
 
-    private func galleryRow(_ attachment: AttachmentDTO, at index: Int) -> some View {
-        HStack(spacing: DPSpacing.small) {
+    private func galleryCard(_ attachment: AttachmentDTO, at index: Int) -> some View {
+        ZStack(alignment: .topTrailing) {
             Button {
                 prepare(attachment, forSharing: false)
             } label: {
-                HStack(spacing: DPSpacing.small) {
+                VStack(alignment: .leading, spacing: 0) {
                     AttachmentThumbnail(attachment: attachment)
-                        .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
-                    VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+                        .frame(maxWidth: .infinity)
+                        .aspectRatio(1, contentMode: .fit)
+                        .clipShape(Rectangle())
+
+                    VStack(alignment: .leading, spacing: 2) {
                         Text(attachment.originalFilename)
-                            .font(.subheadline)
+                            .font(DPTypography.label)
                             .foregroundStyle(DPColor.textPrimary)
                             .lineLimit(1)
                         Text(AttachmentFormatting.bytes(attachment.size))
-                            .font(.caption)
+                            .font(DPTypography.caption)
                             .foregroundStyle(DPColor.textMuted)
                     }
+                    .padding(DPSpacing.small)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
             .buttonStyle(.plain)
             .accessibilityHint(AttachmentLocalization.text("attachment.action.preview"))
 
-            Menu {
+            HStack(spacing: 0) {
+                if canEdit {
+                    Menu {
+                        Button {
+                            Task { await model.move(from: index, by: -1) }
+                        } label: {
+                            Label(
+                                AttachmentLocalization.text("attachment.action.moveUp"),
+                                systemImage: "arrow.up"
+                            )
+                        }
+                        .disabled(index == 0)
+
+                        Button {
+                            Task { await model.move(from: index, by: 1) }
+                        } label: {
+                            Label(
+                                AttachmentLocalization.text("attachment.action.moveDown"),
+                                systemImage: "arrow.down"
+                            )
+                        }
+                        .disabled(index == model.attachments.count - 1)
+
+                        Button(role: .destructive) {
+                            deleteCandidate = attachment
+                        } label: {
+                            Label(
+                                AttachmentLocalization.text("attachment.action.delete"),
+                                systemImage: "trash"
+                            )
+                        }
+                    } label: {
+                        Image(systemName: "ellipsis")
+                            .foregroundStyle(DPColor.textOnDark)
+                            .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                            .background(Color.black.opacity(0.50))
+                            .contentShape(Rectangle())
+                    }
+                    .accessibilityLabel(AttachmentLocalization.text("attachment.action.more"))
+                }
+
                 Button {
                     prepare(attachment, forSharing: true)
                 } label: {
-                    Label(
-                        AttachmentLocalization.text("attachment.action.share"),
-                        systemImage: "square.and.arrow.up"
-                    )
+                    Image(systemName: "square.and.arrow.up")
+                        .foregroundStyle(DPColor.textOnDark)
+                        .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                        .background(Color.black.opacity(0.50))
+                        .contentShape(Rectangle())
                 }
-
-                if canEdit {
-                    Button {
-                        Task { await model.move(from: index, by: -1) }
-                    } label: {
-                        Label(
-                            AttachmentLocalization.text("attachment.action.moveUp"),
-                            systemImage: "arrow.up"
-                        )
-                    }
-                    .disabled(index == 0)
-
-                    Button {
-                        Task { await model.move(from: index, by: 1) }
-                    } label: {
-                        Label(
-                            AttachmentLocalization.text("attachment.action.moveDown"),
-                            systemImage: "arrow.down"
-                        )
-                    }
-                    .disabled(index == model.attachments.count - 1)
-
-                    Button(role: .destructive) {
-                        deleteCandidate = attachment
-                    } label: {
-                        Label(
-                            AttachmentLocalization.text("attachment.action.delete"),
-                            systemImage: "trash"
-                        )
-                    }
-                }
-            } label: {
-                Image(systemName: "ellipsis")
-                    .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
-                    .contentShape(Rectangle())
+                .accessibilityLabel(AttachmentLocalization.text("attachment.action.share"))
             }
-            .accessibilityLabel(AttachmentLocalization.text("attachment.action.more"))
         }
-        .padding(DPSpacing.small)
         .background(DPColor.backgroundCard)
+        .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
         .overlay {
             RoundedRectangle(cornerRadius: DPRadius.standard)
-                .stroke(DPColor.borderPrimary)
+                .stroke(DPColor.borderPrimary, lineWidth: DPChrome.borderWidth)
+                .allowsHitTesting(false)
         }
-        .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+        .contextMenu {
+            Button {
+                prepare(attachment, forSharing: true)
+            } label: {
+                Label(
+                    AttachmentLocalization.text("attachment.action.share"),
+                    systemImage: "square.and.arrow.up"
+                )
+            }
+
+            if canEdit {
+                Button {
+                    Task { await model.move(from: index, by: -1) }
+                } label: {
+                    Label(
+                        AttachmentLocalization.text("attachment.action.moveUp"),
+                        systemImage: "arrow.up"
+                    )
+                }
+                .disabled(index == 0)
+
+                Button {
+                    Task { await model.move(from: index, by: 1) }
+                } label: {
+                    Label(
+                        AttachmentLocalization.text("attachment.action.moveDown"),
+                        systemImage: "arrow.down"
+                    )
+                }
+                .disabled(index == model.attachments.count - 1)
+
+                Button(role: .destructive) {
+                    deleteCandidate = attachment
+                } label: {
+                    Label(
+                        AttachmentLocalization.text("attachment.action.delete"),
+                        systemImage: "trash"
+                    )
+                }
+            }
+        }
     }
 
     private func prepare(_ attachment: AttachmentDTO, forSharing: Bool) {

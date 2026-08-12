@@ -1,6 +1,24 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "attachment.gallery.label" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Attachments (%lld)" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Archivos adjuntos (%lld)" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "添付ファイル (%lld)" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "첨부파일 (%lld)" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "附件 (%lld)" } }
+      }
+    },
+    "attachment.upload.choose" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Tap to choose files" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Toca para elegir archivos" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "タップしてファイルを選択" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "탭해서 파일을 선택하세요" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "点击以选择文件" } }
+      }
+    },
     "attachment.action.cancel" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Cancel" } },
       "es" : { "stringUnit" : { "state" : "translated", "value" : "Cancelar" } },

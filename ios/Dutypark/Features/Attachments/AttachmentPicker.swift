@@ -191,41 +191,58 @@ struct AttachmentPicker: View {
     @State private var uploadTask: Task<Void, Never>?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DPSpacing.small) {
-            HStack(spacing: DPSpacing.small) {
-                PhotosPicker(
-                    selection: $photoItems,
-                    maxSelectionCount: 10,
-                    matching: .any(of: [.images, .videos])
-                ) {
-                    Label(
-                        AttachmentLocalization.text("attachment.action.photos"),
-                        systemImage: "photo.on.rectangle"
-                    )
+        VStack(alignment: .leading, spacing: DPSpacing.compact) {
+            Button {
+                isImportingFiles = true
+            } label: {
+                HStack(spacing: DPSpacing.small) {
+                    Image(systemName: "arrow.up.doc")
+                        .font(.system(size: DPSize.icon, weight: .medium))
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(AttachmentLocalization.text("attachment.upload.choose"))
+                            .font(DPTypography.label)
+                            .foregroundStyle(DPColor.textSecondary)
+                        Text(AttachmentLocalization.text("attachment.limit.safe"))
+                            .font(DPTypography.caption)
+                            .foregroundStyle(DPColor.textMuted)
+                    }
+                    Spacer(minLength: 0)
                 }
-                .frame(minHeight: DPSize.minimumTouchTarget)
-                .buttonStyle(.bordered)
-                .disabled(model.isBusy)
-
-                Button {
-                    isImportingFiles = true
-                } label: {
-                    Label(
-                        AttachmentLocalization.text("attachment.action.files"),
-                        systemImage: "folder"
-                    )
-                }
-                .frame(minHeight: DPSize.minimumTouchTarget)
-                .buttonStyle(.bordered)
-                .disabled(model.isBusy)
+                .padding(.horizontal, DPSpacing.medium)
+                .frame(maxWidth: .infinity, minHeight: 58)
+                .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
+            .foregroundStyle(DPColor.textSecondary)
+            .background(DPColor.backgroundSecondary)
+            .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+            .overlay {
+                RoundedRectangle(cornerRadius: DPRadius.standard)
+                    .stroke(
+                        DPColor.borderPrimary,
+                        style: StrokeStyle(lineWidth: 2, dash: [6, 4])
+                    )
+            }
+            .opacity(model.isBusy ? DPChrome.disabledOpacity : 1)
+            .disabled(model.isBusy)
+            .accessibilityIdentifier("attachment.filePicker")
 
-            Text(AttachmentLocalization.text("attachment.limit.safe"))
-                .font(.caption)
-                .foregroundStyle(DPColor.textMuted)
+            PhotosPicker(
+                selection: $photoItems,
+                maxSelectionCount: 10,
+                matching: .any(of: [.images, .videos])
+            ) {
+                Label(
+                    AttachmentLocalization.text("attachment.action.photos"),
+                    systemImage: "photo.on.rectangle"
+                )
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(DPOutlineButtonStyle())
+            .disabled(model.isBusy)
 
             if model.isBusy {
-                VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+                VStack(alignment: .leading, spacing: DPSpacing.small) {
                     if let progress = model.uploadProgress {
                         HStack {
                             Text(AttachmentLocalization.text("attachment.upload.overall"))
@@ -233,33 +250,36 @@ struct AttachmentPicker: View {
                             Text("\(progress.completedFileCount)/\(progress.totalFileCount)")
                                 .monospacedDigit()
                         }
-                        .font(.caption)
+                        .font(DPTypography.caption)
                         .foregroundStyle(DPColor.textSecondary)
 
                         ProgressView(value: progress.overallFraction)
+                            .tint(DPColor.accent)
 
                         HStack(spacing: DPSpacing.small) {
                             ProgressView()
+                                .tint(DPColor.accent)
                             VStack(alignment: .leading, spacing: 0) {
                                 Text(AttachmentLocalization.text("attachment.upload.current"))
-                                    .font(.caption)
+                                    .font(DPTypography.caption)
                                     .foregroundStyle(DPColor.textMuted)
                                 Text(progress.currentFilename)
-                                    .font(.subheadline)
+                                    .font(DPTypography.label)
                                     .foregroundStyle(DPColor.textSecondary)
                                     .lineLimit(1)
                             }
                             Spacer()
                             Text("\(progress.currentFileNumber)/\(progress.totalFileCount)")
-                                .font(.caption)
+                                .font(DPTypography.caption)
                                 .monospacedDigit()
                                 .foregroundStyle(DPColor.textMuted)
                         }
                     } else {
                         HStack(spacing: DPSpacing.small) {
                             ProgressView()
+                                .tint(DPColor.accent)
                             Text(AttachmentLocalization.text("attachment.uploading"))
-                                .font(.subheadline)
+                                .font(DPTypography.label)
                                 .foregroundStyle(DPColor.textSecondary)
                         }
                     }
@@ -273,7 +293,14 @@ struct AttachmentPicker: View {
                         )
                     }
                     .frame(minHeight: DPSize.minimumTouchTarget)
-                    .buttonStyle(.bordered)
+                    .buttonStyle(DPOutlineButtonStyle())
+                }
+                .padding(DPSpacing.small)
+                .background(DPColor.backgroundCard)
+                .clipShape(RoundedRectangle(cornerRadius: DPRadius.compact))
+                .overlay {
+                    RoundedRectangle(cornerRadius: DPRadius.compact)
+                        .stroke(DPColor.borderPrimary, lineWidth: DPChrome.borderWidth)
                 }
                 .accessibilityIdentifier("attachment.uploading")
             }
@@ -318,49 +345,62 @@ struct AttachmentPicker: View {
     }
 
     private func pickerRow(_ attachment: AttachmentDTO, at index: Int) -> some View {
-        HStack(spacing: DPSpacing.small) {
+        HStack(spacing: DPSpacing.compact) {
             AttachmentThumbnail(attachment: attachment)
-                .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                .frame(width: 40, height: 40)
+                .clipShape(RoundedRectangle(cornerRadius: DPRadius.small))
 
-            VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+            VStack(alignment: .leading, spacing: 2) {
                 Text(attachment.originalFilename)
-                    .font(.subheadline)
+                    .font(DPTypography.label)
                     .foregroundStyle(DPColor.textPrimary)
                     .lineLimit(1)
                 Text(AttachmentFormatting.bytes(attachment.size))
-                    .font(.caption)
+                    .font(DPTypography.caption)
                     .foregroundStyle(DPColor.textMuted)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-
-            Button {
-                model.move(from: index, by: -1)
-            } label: {
-                Image(systemName: "arrow.up")
-                    .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
-            }
-            .disabled(index == 0 || model.isBusy)
-            .accessibilityLabel(AttachmentLocalization.text("attachment.action.moveUp"))
-
-            Button {
-                model.move(from: index, by: 1)
-            } label: {
-                Image(systemName: "arrow.down")
-                    .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
-            }
-            .disabled(index == model.attachments.count - 1 || model.isBusy)
-            .accessibilityLabel(AttachmentLocalization.text("attachment.action.moveDown"))
 
             Button(role: .destructive) {
                 model.remove(attachment.id)
             } label: {
                 Image(systemName: "xmark")
+                    .foregroundStyle(DPColor.textSecondary)
                     .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                    .contentShape(Rectangle())
             }
+            .buttonStyle(.plain)
             .disabled(model.isBusy)
             .accessibilityLabel(AttachmentLocalization.text("attachment.action.remove"))
         }
-        .padding(.vertical, DPSpacing.extraSmall)
+        .padding(DPSpacing.small)
+        .background(DPColor.backgroundCard)
+        .clipShape(RoundedRectangle(cornerRadius: DPRadius.compact))
+        .overlay {
+            RoundedRectangle(cornerRadius: DPRadius.compact)
+                .stroke(DPColor.borderPrimary, lineWidth: DPChrome.borderWidth)
+        }
+        .contextMenu {
+            Button {
+                model.move(from: index, by: -1)
+            } label: {
+                Label(
+                    AttachmentLocalization.text("attachment.action.moveUp"),
+                    systemImage: "arrow.up"
+                )
+            }
+            .disabled(index == 0 || model.isBusy)
+
+            Button {
+                model.move(from: index, by: 1)
+            } label: {
+                Label(
+                    AttachmentLocalization.text("attachment.action.moveDown"),
+                    systemImage: "arrow.down"
+                )
+            }
+            .disabled(index == model.attachments.count - 1 || model.isBusy)
+        }
         .accessibilityElement(children: .contain)
     }
 

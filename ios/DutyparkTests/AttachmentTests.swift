@@ -38,8 +38,10 @@ struct AttachmentTests {
             "attachment.error.tooLarge",
             "attachment.error.unreadable",
             "attachment.error.upload",
+            "attachment.gallery.label",
             "attachment.limit.safe",
             "attachment.loading",
+            "attachment.upload.choose",
             "attachment.upload.current",
             "attachment.upload.overall",
             "attachment.uploading"
@@ -53,6 +55,14 @@ struct AttachmentTests {
                 bundle.localizedString(forKey: $0, value: $0, table: "Attachments") != $0
             })
         }
+    }
+
+    @Test
+    func galleryCountUsesTheWebAttachmentLabel() {
+        let label = AttachmentLocalization.format("attachment.gallery.label", Int64(3))
+
+        #expect(label.contains("3"))
+        #expect(!label.contains("%lld"))
     }
 
     @Test

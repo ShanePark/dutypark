@@ -5,6 +5,18 @@ import Testing
 @MainActor
 struct TodoViewModelTests {
     @Test
+    func mobileBoardMatchesWebColumnGeometry() {
+        #expect(TodoBoardLayout.mobileColumnWidthRatio == 0.62)
+        #expect(TodoBoardLayout.boardPadding == 8)
+        #expect(TodoBoardLayout.columnGap == 10)
+        #expect(TodoBoardLayout.columnRadius == 12)
+        #expect(TodoBoardLayout.cardRadius == 14)
+
+        #expect(375 * TodoBoardLayout.mobileColumnWidthRatio == 232.5)
+        #expect(402 * TodoBoardLayout.mobileColumnWidthRatio == 249.24)
+    }
+
+    @Test
     func todoCatalogResolvesFeatureAndCommonKeysInEverySupportedLocale() {
         let keys = ["todo.action.add", "todo.error.load", "common.save"]
         let locales = ["ko", "en", "ja", "zh-Hans", "es"]
@@ -45,6 +57,31 @@ struct TodoViewModelTests {
         #expect(succeeded)
         #expect(change?.id == UUID(uuidString: todo.id))
         #expect(change?.request.status == .inProgress)
+        #expect(change?.request.orderedIds.isEmpty == true)
+    }
+
+    @Test(arguments: [
+        (TodoStatus.todo, TodoStatus.inProgress),
+        (TodoStatus.inProgress, TodoStatus.todo)
+    ])
+    func detailStatusControlMovesDirectlyBetweenActiveColumns(
+        source: TodoStatus,
+        destination: TodoStatus
+    ) async {
+        let todo = makeTodo(status: source)
+        let repository = FakeTodoRepository(
+            board: source == .todo
+                ? makeBoard(todo: [todo])
+                : makeBoard(inProgress: [todo])
+        )
+        let model = TodoViewModel(repository: repository)
+
+        let succeeded = await model.move(todo, to: destination)
+        let change = await repository.statusChange
+
+        #expect(succeeded)
+        #expect(change?.id == todo.uuid)
+        #expect(change?.request.status == destination)
         #expect(change?.request.orderedIds.isEmpty == true)
     }
 
@@ -132,7 +169,7 @@ private actor FakeTodoRepository: TodoRepository {
 
     func changeStatus(id: TodoID, request: TodoStatusChangeRequest) async throws -> TodoDTO {
         statusChange = (id, request)
-        return board.todo[0]
+        return try todo(id: id)
     }
 
     func updatePositions(_ request: TodoPositionUpdateRequest) async throws {
@@ -140,6 +177,15 @@ private actor FakeTodoRepository: TodoRepository {
     }
 
     func leaveTag(id: TodoID) async throws {}
+
+    private func todo(id: TodoID) throws -> TodoDTO {
+        guard let todo = (board.todo + board.inProgress + board.done)
+            .first(where: { $0.uuid == id })
+        else {
+            throw CocoaError(.fileNoSuchFile)
+        }
+        return todo
+    }
 }
 
 private func makeTodo(
