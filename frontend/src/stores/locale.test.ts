@@ -91,59 +91,25 @@ describe('locale store', () => {
     expect(store.shouldSuggestLocale).toBe(true)
   })
 
-  it('supports japanese browser locales', async () => {
-    setNavigatorLanguage('ja-JP')
-
-    const { useLocaleStore } = await import('./locale')
-    const store = useLocaleStore()
-
-    store.initializeLocale()
-
-    expect(store.locale).toBe('ja')
-    expect(localStorageMock.setItem).not.toHaveBeenCalledWith('dp-locale', 'ja')
-    expect(store.explicitLocale).toBeNull()
-    expect(store.detectedLocale).toBe('ja')
-    expect(store.shouldSuggestLocale).toBe(true)
-    expect(document.documentElement.lang).toBe('ja')
-    expect(syncServiceWorkerLocale).toHaveBeenCalledWith('ja')
-  })
-
-  it('supports chinese browser locales', async () => {
-    setNavigatorLanguage('zh-CN')
-
-    const { useLocaleStore } = await import('./locale')
-    const store = useLocaleStore()
-
-    store.initializeLocale()
-
-    expect(store.locale).toBe('zh')
-    expect(localStorageMock.setItem).not.toHaveBeenCalledWith('dp-locale', 'zh')
-    expect(store.explicitLocale).toBeNull()
-    expect(store.detectedLocale).toBe('zh')
-    expect(store.shouldSuggestLocale).toBe(true)
-    expect(document.documentElement.lang).toBe('zh')
-    expect(syncServiceWorkerLocale).toHaveBeenCalledWith('zh')
-  })
-
-  it('supports spanish browser locales', async () => {
-    setNavigatorLanguage('es-ES')
-
-    const { useLocaleStore } = await import('./locale')
-    const store = useLocaleStore()
-
-    store.initializeLocale()
-
-    expect(store.locale).toBe('es')
-    expect(localStorageMock.setItem).not.toHaveBeenCalledWith('dp-locale', 'es')
-    expect(store.explicitLocale).toBeNull()
-    expect(store.detectedLocale).toBe('es')
-    expect(store.shouldSuggestLocale).toBe(true)
-    expect(document.documentElement.lang).toBe('es')
-    expect(syncServiceWorkerLocale).toHaveBeenCalledWith('es')
-  })
-
-  it('falls back to korean when the browser locale is unsupported', async () => {
+  it('falls back to English when the browser locale is unsupported', async () => {
     setNavigatorLanguage('fr-FR')
+
+    const { useLocaleStore } = await import('./locale')
+    const store = useLocaleStore()
+
+    store.initializeLocale()
+
+    expect(store.locale).toBe('en')
+    expect(store.explicitLocale).toBeNull()
+    expect(store.detectedLocale).toBe('en')
+    expect(store.shouldSuggestLocale).toBe(true)
+    expect(document.documentElement.lang).toBe('en')
+    expect(syncServiceWorkerLocale).toHaveBeenCalledWith('en')
+  })
+
+  it.each(['ja', 'zh', 'es'])('ignores the stored %s locale after support is removed', async (storedLocale) => {
+    storage.set('dp-locale', storedLocale)
+    setNavigatorLanguage('ko-KR')
 
     const { useLocaleStore } = await import('./locale')
     const store = useLocaleStore()
@@ -161,13 +127,13 @@ describe('locale store', () => {
     const { useLocaleStore } = await import('./locale')
     const store = useLocaleStore()
 
-    await store.setLocale('ja')
+    await store.setLocale('en')
 
-    expect(store.locale).toBe('ja')
-    expect(localStorageMock.setItem).toHaveBeenCalledWith('dp-locale', 'ja')
-    expect(store.explicitLocale).toBe('ja')
-    expect(document.documentElement.lang).toBe('ja')
-    expect(syncServiceWorkerLocale).toHaveBeenCalledWith('ja')
+    expect(store.locale).toBe('en')
+    expect(localStorageMock.setItem).toHaveBeenCalledWith('dp-locale', 'en')
+    expect(store.explicitLocale).toBe('en')
+    expect(document.documentElement.lang).toBe('en')
+    expect(syncServiceWorkerLocale).toHaveBeenCalledWith('en')
   })
 
   it('marks the detected locale as handled when the suggestion is dismissed', async () => {
@@ -211,16 +177,4 @@ describe('locale store', () => {
     expect(document.documentElement.lang).toBe('en')
   })
 
-  it('persists chinese locale changes', async () => {
-    const { useLocaleStore } = await import('./locale')
-    const store = useLocaleStore()
-
-    await store.setLocale('zh')
-
-    expect(store.locale).toBe('zh')
-    expect(localStorageMock.setItem).toHaveBeenCalledWith('dp-locale', 'zh')
-    expect(store.explicitLocale).toBe('zh')
-    expect(document.documentElement.lang).toBe('zh')
-    expect(syncServiceWorkerLocale).toHaveBeenCalledWith('zh')
-  })
 })

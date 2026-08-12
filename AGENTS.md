@@ -6,7 +6,7 @@ Repo-wide defaults only. Read the code, nearby tests, and linked documentation f
 
 - **Backend:** Kotlin, Java 25, Spring Boot 4, MySQL 8.0
 - **AI:** Spring AI OpenAI-compatible Google Generative Language client; queue-based schedule time parsing
-- **Web:** Vue 3, Vite, TypeScript, Pinia, Vue Router, Vue I18n (`ko`, `en`, `ja`, `zh`, `es`), Tailwind CSS 4, Vitest
+- **Web:** Vue 3, Vite, TypeScript, Pinia, Vue Router, Vue I18n (`ko`, `en`), Tailwind CSS 4, Vitest
 - **iOS:** Swift 6, SwiftUI, iOS 17+
 - **Auth / Push:** HttpOnly access/refresh cookies with Bearer fallback, Kakao/Naver OAuth, auxiliary accounts, impersonation, VAPID web push
 
@@ -30,7 +30,7 @@ Repo-wide defaults only. Read the code, nearby tests, and linked documentation f
 
 - New SFCs use `<script setup lang="ts">`; authenticated HTTP belongs in `frontend/src/api/*.ts`, shared interfaces in `frontend/src/types/index.ts`, and confirmations/alerts use `useSwal()`.
 - Authentication uses the shared cookie-based Axios client; never persist access tokens in localStorage.
-- Put all user-facing copy in every `frontend/src/i18n/messages/*.ts` locale, including release notes, static notifications, and service-worker text. Use dedicated short keys for tight mobile slots. Browser locale is not a confirmed preference until explicitly selected; show language names natively.
+- Put all user-facing copy in both `frontend/src/i18n/messages/{ko,en}.ts` locales, including release notes, static notifications, and service-worker text. Use dedicated short keys for tight mobile slots. Browser locale is not a confirmed preference until explicitly selected; show language names natively.
 - Use Tailwind and `--dp-*` tokens from `frontend/src/style.css`; no hardcoded hex or theme-blind colors. Inline `:style` is only for runtime-dependent or CSS-variable-backed values.
 - Support mobile and desktop, light and dark mode, and 44px interaction targets with visible hover/focus feedback. Check iPhone 16 Pro (402×874) and iPhone 13 mini (375×812); verify visual polish in the browser with Playwright.
 - New user-facing routes must update both `frontend/src/router/index.ts` and `frontend/src/components/layout/AppHeader.vue`.

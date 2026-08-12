@@ -232,7 +232,7 @@ App Store Connect의 “앱이 데이터를 수집하지 않음”은 서버에 
 
 - `[ ]` Release Archive를 생성하고 서명, entitlement, privacy manifest, 아이콘, 버전·빌드 번호를 검증한다.
 - `[ ]` 운영 API에서 이메일, 카카오, 네이버, Apple 로그인과 주요 기능을 회귀 테스트한다.
-- `[ ]` iPhone 13 mini와 iPhone 16 Pro에서 라이트·다크 모드, 한국어 포함 5개 언어 및 알림을 최종 확인한다.
+- `[ ]` iPhone 13 mini와 iPhone 16 Pro에서 라이트·다크 모드, 한국어·영어 및 알림을 최종 확인한다.
 - `[ ]` 빌드를 App Store Connect에 업로드한다.
 
 ### 사용자가 할 일

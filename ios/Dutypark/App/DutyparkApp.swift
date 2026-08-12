@@ -38,10 +38,7 @@ struct DutyparkApp: App {
     }
 
     private var selectedLocale: Locale {
-        guard let language = AppLanguage(rawValue: languageCode) else {
-            return .current
-        }
-        return Locale(identifier: language.rawValue)
+        AppLocalization.supportedLocale(languageCode: languageCode)
     }
 
     private var selectedColorScheme: ColorScheme? {

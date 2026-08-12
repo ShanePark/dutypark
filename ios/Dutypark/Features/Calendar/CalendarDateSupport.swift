@@ -66,7 +66,7 @@ enum CalendarLocalization {
     }
 
     static func locale(languageCode: String) -> Locale {
-        AppLanguage(rawValue: languageCode).map { Locale(identifier: $0.rawValue) } ?? .current
+        AppLocalization.supportedLocale(languageCode: languageCode)
     }
 
     static func text(_ key: String, table: String = "Calendar") -> String {

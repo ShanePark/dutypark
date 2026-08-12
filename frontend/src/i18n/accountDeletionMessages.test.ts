@@ -1,12 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import en from './messages/en'
-import es from './messages/es'
-import ja from './messages/ja'
 import ko from './messages/ko'
-import zh from './messages/zh'
 
 describe('account deletion translations', () => {
-  it.each([['ko', ko], ['en', en], ['ja', ja], ['zh', zh], ['es', es]])(
+  it.each([['ko', ko], ['en', en]])(
     'defines the complete five-step and completion copy in %s',
     (_locale, messages) => {
       const deletion = messages.member.accountDeletion

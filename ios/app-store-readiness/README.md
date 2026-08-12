@@ -57,7 +57,7 @@
 - [ ] 공개·친구·팀 콘텐츠에 신고, 차단, 운영 문의 및 대응 절차를 제공한다. ([상세](./10-user-generated-content/README.md))
 - [ ] 사용자 콘텐츠 삭제와 제재가 관련 화면·알림·첨부파일에 함께 반영된다. ([상세](./10-user-generated-content/README.md))
 - [ ] VoiceOver, Dynamic Type, 44pt 터치 영역, 색 대비를 핵심 흐름에서 확인한다. ([상세](./09-quality-accessibility/README.md))
-- [ ] 한국어·영어·일본어·중국어·스페인어에서 잘림과 미번역 문구를 확인한다. ([상세](./09-quality-accessibility/README.md))
+- [ ] 한국어·영어에서 잘림과 미번역 문구를 확인한다. ([상세](./09-quality-accessibility/README.md))
 - [ ] 작은 화면과 큰 화면, 라이트·다크 모드에서 주요 화면을 실기기로 확인한다. ([상세](./09-quality-accessibility/README.md))
 - [ ] 로그인 공급자별 신규 가입·기존 로그인·연결·중복 연결 테스트를 통과한다. ([상세](./08-testflight-and-review/README.md))
 - [ ] 오프라인, 느린 네트워크, 401, 5xx 및 앱 재설치 상황을 검증한다. ([상세](./08-testflight-and-review/README.md))

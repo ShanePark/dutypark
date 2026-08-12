@@ -112,15 +112,13 @@ struct NotificationFeatureTests {
     }
 
     @Test
-    func formatsAbsoluteNotificationDatesLikeTheWebLocales() throws {
+    func formatsAbsoluteNotificationDatesInSupportedLocalesAndFallsBackToEnglish() throws {
         let date = try #require(ISO8601DateFormatter().date(from: "2026-08-12T09:51:00Z"))
         let utc = try #require(TimeZone(secondsFromGMT: 0))
 
         #expect(NotificationPresentation.absoluteDate(date, locale: Locale(identifier: "en"), timeZone: utc) == "Aug 12, 2026 09:51")
-        #expect(NotificationPresentation.absoluteDate(date, locale: Locale(identifier: "es"), timeZone: utc) == "12 ago 2026 09:51")
-        #expect(NotificationPresentation.absoluteDate(date, locale: Locale(identifier: "ja"), timeZone: utc) == "2026/08/12 09:51")
         #expect(NotificationPresentation.absoluteDate(date, locale: Locale(identifier: "ko"), timeZone: utc) == "2026.08.12 09:51")
-        #expect(NotificationPresentation.absoluteDate(date, locale: Locale(identifier: "zh-Hans"), timeZone: utc) == "2026年8月12日 09:51")
+        #expect(NotificationPresentation.absoluteDate(date, locale: Locale(identifier: "fr-FR"), timeZone: utc) == "Aug 12, 2026 09:51")
     }
 
     @Test

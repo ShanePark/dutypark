@@ -1,17 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import en from './messages/en'
-import es from './messages/es'
-import ja from './messages/ja'
 import ko from './messages/ko'
-import zh from './messages/zh'
 
 describe('social account unlink translations', () => {
   it.each([
     ['ko', ko],
     ['en', en],
-    ['ja', ja],
-    ['zh', zh],
-    ['es', es],
   ])('defines the complete unlink copy in %s', (_locale, messages) => {
     const unlink = messages.member.sso.unlink
 

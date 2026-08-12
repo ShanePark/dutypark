@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 
-const locales = ['en', 'ko', 'ja', 'zh', 'es']
+const locales = ['en', 'ko']
 
 function fail(message) {
   console.error(message)

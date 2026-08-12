@@ -11,9 +11,6 @@ enum SettingsPreference {
 enum AppLanguage: String, CaseIterable, Identifiable {
     case korean = "ko"
     case english = "en"
-    case japanese = "ja"
-    case chinese = "zh-Hans"
-    case spanish = "es"
 
     var id: String { rawValue }
 
@@ -21,9 +18,6 @@ enum AppLanguage: String, CaseIterable, Identifiable {
         switch self {
         case .korean: "한국어"
         case .english: "English"
-        case .japanese: "日本語"
-        case .chinese: "简体中文"
-        case .spanish: "Español"
         }
     }
 }

@@ -429,10 +429,7 @@ private struct GuestCalendarDayDetailView: View {
     }
 
     private var selectedLocale: Locale {
-        guard let language = UserDefaults.standard.string(forKey: "dp-language"),
-              !language.isEmpty
-        else { return .current }
-        return Locale(identifier: language)
+        AppLocalization.locale
     }
 }
 

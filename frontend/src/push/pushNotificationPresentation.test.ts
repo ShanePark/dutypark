@@ -45,12 +45,12 @@ describe('pushNotificationPresentation', () => {
     expect(resolvePushNotificationBody(createPayload(), 'en-US')).toBe('Shane tagged you in [팀 회의].')
   })
 
-  it('renders Spanish notification copy with the worker locale', () => {
-    expect(resolvePushNotificationBody(createPayload(), 'es-ES')).toBe('Shane te etiquetó en [팀 회의].')
+  it('falls back to English for an unsupported worker locale', () => {
+    expect(resolvePushNotificationBody(createPayload(), 'es-ES')).toBe('Shane tagged you in [팀 회의].')
   })
 
   it('falls back to a generic message when notification details are missing', () => {
-    expect(resolvePushNotificationBody(createPayload({ notification: null }), 'ja-JP')).toBe('新しい通知があります。')
+    expect(resolvePushNotificationBody(createPayload({ notification: null }), 'ja-JP')).toBe('You have a new notification.')
   })
 
   it('falls back to the embedded notification id when top-level id is absent', () => {

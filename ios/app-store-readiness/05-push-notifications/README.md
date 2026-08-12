@@ -87,7 +87,7 @@ Debug sandbox와 TestFlight/App Store production APNs를 분리하고, 운영 �
 - [ ] 알림 탭 시 서버 읽음 처리 실패와 화면 이동을 분리해 사용자가 목적지를 열 수 있게 한다.
 - [ ] 삭제되었거나 권한 없는 일정·Todo는 안전한 오류 화면으로 폴백한다.
 - [ ] 앱 badge가 서버 unread count, 앱 내 읽음 처리, 로그아웃과 일치한다.
-- [ ] 다섯 언어의 `loc-key`와 `loc-args` 개수·순서를 확인한다.
+- [ ] 한국어·영어의 `loc-key`와 `loc-args` 개수·순서를 확인한다.
 
 ## 구현 대상 파일
 

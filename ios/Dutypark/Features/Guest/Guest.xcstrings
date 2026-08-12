@@ -9,28 +9,10 @@
             "value": "OK"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aceptar"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "OK"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "확인"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "确定"
           }
         }
       }
@@ -43,28 +25,10 @@
             "value": "Close"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cerrar"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "閉じる"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "닫기"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "关闭"
           }
         }
       }
@@ -77,28 +41,10 @@
             "value": "Try again"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Reintentar"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "再試行"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "다시 시도"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "重试"
           }
         }
       }
@@ -111,28 +57,10 @@
             "value": "Log in / Sign up"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Iniciar sesión / Registrarse"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ログイン / 会員登録"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "로그인 / 회원가입"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "登录/注册"
           }
         }
       }
@@ -145,28 +73,10 @@
             "value": "Log in"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Iniciar sesión"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ログイン"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "로그인"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "登录"
           }
         }
       }
@@ -179,28 +89,10 @@
             "value": "Get started"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Empezar"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "はじめる"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "시작하기"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "开始使用"
           }
         }
       }
@@ -213,28 +105,10 @@
             "value": "Guide & release notes"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Guía y notas de la versión"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ガイドとリリースノート"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "이용 안내 및 릴리스 노트"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "指南和发行说明"
           }
         }
       }
@@ -242,19 +116,13 @@
     "guest.hero.scroll": {
       "localizations": {
         "en": { "stringUnit": { "state": "translated", "value": "Scroll to learn more" } },
-        "es": { "stringUnit": { "state": "translated", "value": "Desplázate para saber más" } },
-        "ja": { "stringUnit": { "state": "translated", "value": "スクロールして詳しく見る" } },
-        "ko": { "stringUnit": { "state": "translated", "value": "스크롤하여 더 알아보기" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "滚动了解更多" } }
+        "ko": { "stringUnit": { "state": "translated", "value": "스크롤하여 더 알아보기" } }
       }
     },
     "guest.guide.short": {
       "localizations": {
         "en": { "stringUnit": { "state": "translated", "value": "Explore features first" } },
-        "es": { "stringUnit": { "state": "translated", "value": "Explora primero las funciones" } },
-        "ja": { "stringUnit": { "state": "translated", "value": "先に機能を見る" } },
-        "ko": { "stringUnit": { "state": "translated", "value": "먼저 기능 둘러보기" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "先浏览功能" } }
+        "ko": { "stringUnit": { "state": "translated", "value": "먼저 기능 둘러보기" } }
       }
     },
     "guest.hero.tagline": {
@@ -265,28 +133,10 @@
             "value": "A social calendar for you and the people who matter most"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Un calendario social para ti y las personas que más te importan"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "大切な人たちと使うソーシャルカレンダー"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "나와 소중한 사람들을 위한 소셜 캘린더"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "适合您和最重要的人的社交日历"
           }
         }
       }
@@ -299,28 +149,10 @@
             "value": "From work shifts to school drop-offs to your favorite team schedules. Share daily life and make plans together."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Desde turnos de trabajo hasta regresos a la escuela y los horarios de tu equipo favorito. Comparte la vida diaria y haz planes juntos."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "勤務、送り迎え、応援しているチームの試合日程まで。毎日の予定を共有して、一緒に計画しましょう。"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "근무 일정, 아이 등원, 응원하는 팀의 경기까지. 서로의 일상을 공유하고 함께 계획하세요."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "从轮班到放学，再到您最喜欢的团队时间表。分享日常生活并一起制定计划。"
           }
         }
       }
@@ -333,28 +165,10 @@
             "value": "Life together"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vida en común"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "毎日を一緒に"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "일상을 함께"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "共同生活"
           }
         }
       }
@@ -367,28 +181,10 @@
             "value": "Share schedules with family and friends. No more asking, “What are you doing today?”"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Comparte horarios con familiares y amigos. No más preguntas: «¿Qué vas a hacer hoy?»"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "家族や友だちと予定を共有できます。「今日何してる？」と毎回聞かなくて済みます。"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "가족, 친구와 서로의 일정을 공유하세요. “오늘 뭐 해?” 더 이상 물어볼 필요 없어요."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "与家人和朋友分享日程安排。再也不用问“你今天做什么？”"
           }
         }
       }
@@ -401,28 +197,10 @@
             "value": "Shifts and time off"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Turnos y tiempo libre"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "勤務と休暇"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "근무 & 연차 관리"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "轮班和休息时间"
           }
         }
       }
@@ -435,28 +213,10 @@
             "value": "Organize shift work and standard work at a glance. Turn vacation into days off and share it with your team."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Organiza el trabajo por turnos y el trabajo estándar de un vistazo. Convierte las vacaciones en días libres y compártelas con tu equipo."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "シフト勤務も通常勤務もひと目で整理できます。休暇は休みとして反映し、チームとも共有できます。"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "교대근무도, 평일 근무도 한눈에 정리. 연차는 휴무로 바꾸고, 팀원들과 공유하세요."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "轮班工作和标准工作一目了然。将假期变成休息日并与您的团队分享。"
           }
         }
       }
@@ -469,28 +229,10 @@
             "value": "Everyday life"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vida cotidiana"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "日常の予定"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "다양한 일상"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "日常生活"
           }
         }
       }
@@ -503,28 +245,10 @@
             "value": "School runs, sports fixtures, and meetups too. Keep everything in one place."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Carreras escolares, partidos deportivos y reuniones también. Mantén todo en un solo lugar."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "送り迎え、試合日程、集まりまでまとめて管理。日常の予定を一か所に整理できます。"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "아이 등하원, 응원팀 경기 일정, 모임까지. 내 일상의 모든 것을 한 곳에서 관리하세요."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "接送、比赛、聚会也都能一起安排。将所有内容放在一处。"
           }
         }
       }
@@ -537,28 +261,10 @@
             "value": "Task management"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gestión de tareas"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "タスク管理"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "할일 관리"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "任务管理"
           }
         }
       }
@@ -571,28 +277,10 @@
             "value": "A todo board for the things you do not want to forget. Drag to reorder and check off what is done."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Un tablero de tareas para lo que no quieres olvidar. Arrastra para reordenar y marca lo que ya está hecho."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "忘れたくないことは、やることボードで管理できます。ドラッグで並び替え、完了管理もできます。"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "까먹지 않는 일상을 위한 투두 보드. 드래그로 순서 변경, 완료 체크까지."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "用待办看板整理你不想忘记的事情。拖动即可重新排序，并勾选已完成的事项。"
           }
         }
       }
@@ -605,28 +293,10 @@
             "value": "D-Day countdown"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cuenta regresiva del D-Day"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "D-Dayカウントダウン"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "D-Day 카운트다운"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "D-Day 倒计时"
           }
         }
       }
@@ -639,28 +309,10 @@
             "value": "Anniversaries, deadlines, and meaningful dates. Wait together and remember together."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aniversarios, plazos y fechas significativas. Esperad juntos y recordad juntos."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "記念日、締切、大切な日を一緒に覚えましょう。待つ時間も一緒に楽しめます。"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "기념일, 마감일, 중요한 날. 함께 기다리고, 함께 기억해요."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "周年纪念日、截止日期和有意义的日期。一起等待，一起回忆。"
           }
         }
       }
@@ -673,28 +325,10 @@
             "value": "Holiday sync"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sincronización de festivos"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "祝日連携"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "공휴일 자동 연동"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "假期同步"
           }
         }
       }
@@ -707,28 +341,10 @@
             "value": "South Korean public holidays appear automatically. Planning your schedule gets easier."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Los días festivos de Corea del Sur aparecen automáticamente. Planificar tu agenda es más fácil."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "韓国の祝日が自動で表示されます。予定の計画がもっと簡単になります。"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "대한민국 공휴일이 자동으로 표시됩니다. 일정 계획이 더 쉬워집니다."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "韩国公共假期自动出现。规划您的日程安排变得更加容易。"
           }
         }
       }
@@ -741,28 +357,10 @@
             "value": "Stay connected with the people you care about"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mantente conectado con las personas que te importan"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "大切な人たちともっとつながりましょう"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "소중한 사람들과 연결되세요"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "与您关心的人保持联系"
           }
         }
       }
@@ -775,28 +373,10 @@
             "value": "Your schedule is more than just work. Start right now with KakaoTalk."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tu horario es más que solo trabajo. Comienza ahora mismo con KakaoTalk."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "予定は、ただの仕事管理ではありません。今すぐKakaoで始められます。"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "당신의 일정은 단순한 근무 그 이상이니까요. 카카오톡으로 지금 바로 시작하세요."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "你的日程安排不仅仅是工作。现在就从 KakaoTalk 开始。"
           }
         }
       }
@@ -809,28 +389,10 @@
             "value": "Terms of Service"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Términos del servicio"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "利用規約"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "이용약관"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "服务条款"
           }
         }
       }
@@ -843,28 +405,10 @@
             "value": "Privacy Policy"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Política de privacidad"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "プライバシーポリシー"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "개인정보 처리방침"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "隐私政策"
           }
         }
       }
@@ -877,28 +421,10 @@
             "value": "Loading policy"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cargando política"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ポリシーを読み込み中"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "정책을 불러오는 중"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "正在加载政策"
           }
         }
       }
@@ -911,28 +437,10 @@
             "value": "Could not load the policy."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se pudo cargar la política."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ポリシーを読み込めませんでした。"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "정책을 불러올 수 없습니다."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "无法加载政策。"
           }
         }
       }
@@ -945,28 +453,10 @@
             "value": "The policy is unavailable."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La política no está disponible."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ポリシーを表示できません。"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "정책을 표시할 수 없습니다."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "政策不可用。"
           }
         }
       }
@@ -979,28 +469,10 @@
             "value": "Version %1$@ · Effective %2$@"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Versión %1$@ · Vigente desde %2$@"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "バージョン %1$@ · 発効日 %2$@"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "버전 %1$@ · 시행일 %2$@"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "版本 %1$@ · 生效日期 %2$@"
           }
         }
       }
@@ -1013,28 +485,10 @@
             "value": "Public calendar"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Calendario público"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "公開カレンダー"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "공개 캘린더"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "公开日历"
           }
         }
       }
@@ -1047,28 +501,10 @@
             "value": "Loading calendar"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cargando calendario"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "カレンダーを読み込み中"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "캘린더를 불러오는 중"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "正在加载日历"
           }
         }
       }
@@ -1081,28 +517,10 @@
             "value": "Could not open the calendar"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se pudo abrir el calendario"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "カレンダーを開けませんでした"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "캘린더를 열 수 없습니다"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "无法打开日历"
           }
         }
       }
@@ -1115,28 +533,10 @@
             "value": "This calendar is unavailable or is not public."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Este calendario no está disponible o no es público."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "このカレンダーは利用できないか、公開されていません。"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "이 캘린더를 볼 수 없거나 공개되어 있지 않습니다."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "此日历不可用或未公开。"
           }
         }
       }
@@ -1149,28 +549,10 @@
             "value": "%1$lld/%2$02lld"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%2$02lld/%1$lld"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lld年%2$lld月"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "%1$lld년 %2$lld월"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lld年%2$lld月"
           }
         }
       }
@@ -1183,28 +565,10 @@
             "value": "Today"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Hoy"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "今日"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "오늘"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "今天"
           }
         }
       }
@@ -1217,28 +581,10 @@
             "value": "Off"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Libre"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "休み"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "휴무"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "休息"
           }
         }
       }
@@ -1251,28 +597,10 @@
             "value": "Duty"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Turno"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "勤務"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "근무"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "班次"
           }
         }
       }
@@ -1285,28 +613,10 @@
             "value": "Holidays"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Festivos"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "祝日"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "공휴일"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "节假日"
           }
         }
       }
@@ -1319,28 +629,10 @@
             "value": "Schedules"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Horarios"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "予定"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "일정"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "日程"
           }
         }
       }
@@ -1353,28 +645,10 @@
             "value": "No schedules"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sin horarios"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "予定はありません"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "일정이 없습니다"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "没有日程"
           }
         }
       }
@@ -1387,28 +661,10 @@
             "value": "D-Days"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fechas especiales"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "D-Day"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "D-Day"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "纪念日"
           }
         }
       }
@@ -1421,28 +677,10 @@
             "value": "No D-Days"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sin fechas especiales"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "D-Dayはありません"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "등록된 D-Day가 없습니다"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "没有纪念日"
           }
         }
       }
@@ -1455,28 +693,10 @@
             "value": "Sun"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dom"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "日"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "일"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "日"
           }
         }
       }
@@ -1489,28 +709,10 @@
             "value": "Mon"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lun"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "月"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "월"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "一"
           }
         }
       }
@@ -1523,28 +725,10 @@
             "value": "Tue"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mar"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "火"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "화"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "二"
           }
         }
       }
@@ -1557,28 +741,10 @@
             "value": "Wed"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mié"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "水"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "수"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "三"
           }
         }
       }
@@ -1591,28 +757,10 @@
             "value": "Thu"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Jue"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "木"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "목"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "四"
           }
         }
       }
@@ -1625,28 +773,10 @@
             "value": "Fri"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Vie"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "金"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "금"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "五"
           }
         }
       }
@@ -1659,28 +789,10 @@
             "value": "Share calendar"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Compartir calendario"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "カレンダーを共有"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "캘린더 공유"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "共享日历"
           }
         }
       }
@@ -1693,28 +805,10 @@
             "value": "Sat"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sáb"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "土"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "토"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "六"
           }
         }
       }

@@ -9,28 +9,10 @@
             "value": "This area is available only to service administrators."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Esta área solo está disponible para administradores del servicio."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "この領域はサービス管理者のみ利用できます。"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "서비스 관리자만 이용할 수 있는 메뉴입니다."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "此区域仅供服务管理员使用。"
           }
         }
       }
@@ -43,28 +25,10 @@
             "value": "Administrator access required"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Se requiere acceso de administrador"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "管理者権限が必要です"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "관리자 권한이 필요합니다"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "需要管理员权限"
           }
         }
       }
@@ -77,28 +41,10 @@
             "value": "Cancel"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cancelar"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "キャンセル"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "취소"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "取消"
           }
         }
       }
@@ -111,28 +57,10 @@
             "value": "Create"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Crear"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "作成"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "생성"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "创建"
           }
         }
       }
@@ -145,28 +73,10 @@
             "value": "Delete"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Eliminar"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "削除"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "삭제"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "删除"
           }
         }
       }
@@ -174,37 +84,25 @@
     "admin.common.discard.action": {
       "localizations": {
         "en": { "stringUnit": { "state": "translated", "value": "Discard" } },
-        "es": { "stringUnit": { "state": "translated", "value": "Descartar" } },
-        "ja": { "stringUnit": { "state": "translated", "value": "破棄" } },
-        "ko": { "stringUnit": { "state": "translated", "value": "나가기" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "放弃" } }
+        "ko": { "stringUnit": { "state": "translated", "value": "나가기" } }
       }
     },
     "admin.common.discard.continue": {
       "localizations": {
         "en": { "stringUnit": { "state": "translated", "value": "Keep editing" } },
-        "es": { "stringUnit": { "state": "translated", "value": "Seguir editando" } },
-        "ja": { "stringUnit": { "state": "translated", "value": "編集を続ける" } },
-        "ko": { "stringUnit": { "state": "translated", "value": "계속 작성" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "继续编辑" } }
+        "ko": { "stringUnit": { "state": "translated", "value": "계속 작성" } }
       }
     },
     "admin.common.discard.message": {
       "localizations": {
         "en": { "stringUnit": { "state": "translated", "value": "Your entered changes will be lost." } },
-        "es": { "stringUnit": { "state": "translated", "value": "Se perderán los cambios introducidos." } },
-        "ja": { "stringUnit": { "state": "translated", "value": "入力した変更内容は失われます。" } },
-        "ko": { "stringUnit": { "state": "translated", "value": "입력한 변경 내용이 사라집니다." } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "已输入的更改将会丢失。" } }
+        "ko": { "stringUnit": { "state": "translated", "value": "입력한 변경 내용이 사라집니다." } }
       }
     },
     "admin.common.discard.title": {
       "localizations": {
         "en": { "stringUnit": { "state": "translated", "value": "Discard changes?" } },
-        "es": { "stringUnit": { "state": "translated", "value": "¿Descartar los cambios?" } },
-        "ja": { "stringUnit": { "state": "translated", "value": "変更を破棄しますか？" } },
-        "ko": { "stringUnit": { "state": "translated", "value": "변경 내용을 버릴까요?" } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "放弃更改吗？" } }
+        "ko": { "stringUnit": { "state": "translated", "value": "변경 내용을 버릴까요?" } }
       }
     },
     "admin.common.loading": {
@@ -215,28 +113,10 @@
             "value": "Loading..."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cargando..."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "読み込み中..."
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "불러오는 중..."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "加载中..."
           }
         }
       }
@@ -249,28 +129,10 @@
             "value": "Next"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Siguiente"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "次へ"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "다음"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "下一页"
           }
         }
       }
@@ -283,28 +145,10 @@
             "value": "No"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "いいえ"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "아니요"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "否"
           }
         }
       }
@@ -317,28 +161,10 @@
             "value": "Notice"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aviso"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "お知らせ"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "알림"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "提示"
           }
         }
       }
@@ -351,28 +177,10 @@
             "value": "OK"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Aceptar"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "確認"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "확인"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "确定"
           }
         }
       }
@@ -385,25 +193,7 @@
             "value": "%1$d of %2$d"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$d de %2$d"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$d / %2$d"
-          }
-        },
         "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$d / %2$d"
-          }
-        },
-        "zh-Hans": {
           "stringUnit": {
             "state": "translated",
             "value": "%1$d / %2$d"
@@ -419,28 +209,10 @@
             "value": "Previous"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Anterior"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "前へ"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "이전"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "上一页"
           }
         }
       }
@@ -453,28 +225,10 @@
             "value": "Retry"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Reintentar"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "再試行"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "다시 시도"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "重试"
           }
         }
       }
@@ -487,28 +241,10 @@
             "value": "Save"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Guardar"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "保存"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "저장"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "保存"
           }
         }
       }
@@ -521,28 +257,10 @@
             "value": "Yes"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sí"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "はい"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "예"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "是"
           }
         }
       }
@@ -555,28 +273,10 @@
             "value": "Service administration"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Administración del servicio"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "サービス管理"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "서비스 관리"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "服务管理"
           }
         }
       }
@@ -589,28 +289,10 @@
             "value": "Administration"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Administración"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "管理"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "관리자"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "管理"
           }
         }
       }
@@ -623,28 +305,10 @@
             "value": "Account"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cuenta"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "アカウント"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "계정"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "账户"
           }
         }
       }
@@ -657,28 +321,10 @@
             "value": "Active sessions"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sesiones activas"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "有効なセッション"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "활성 세션"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "活跃会话"
           }
         }
       }
@@ -691,28 +337,10 @@
             "value": "Activity"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Actividad"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "アクティビティ"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "활동"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "活动"
           }
         }
       }
@@ -725,28 +353,10 @@
             "value": "Sign-in providers"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Proveedores de inicio"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ログイン方法"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "로그인 방식"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "登录方式"
           }
         }
       }
@@ -759,28 +369,10 @@
             "value": "Change password"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cambiar contraseña"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "パスワード変更"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "비밀번호 변경"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "更改密码"
           }
         }
       }
@@ -793,28 +385,10 @@
             "value": "Confirm password"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Confirmar contraseña"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "パスワード確認"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "비밀번호 확인"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "确认密码"
           }
         }
       }
@@ -827,28 +401,10 @@
             "value": "Joined"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Registro"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "登録日"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "가입일"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "注册时间"
           }
         }
       }
@@ -861,28 +417,10 @@
             "value": "Email"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Correo"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "メール"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "이메일"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "邮箱"
           }
         }
       }
@@ -895,28 +433,10 @@
             "value": "Family"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Familia"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "家族"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "가족"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "家人"
           }
         }
       }
@@ -929,28 +449,10 @@
             "value": "Friends"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Amigos"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "友だち"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "친구"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "好友"
           }
         }
       }
@@ -963,28 +465,10 @@
             "value": "Last active"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Última actividad"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "最終活動"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "최근 활동"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "最近活动"
           }
         }
       }
@@ -997,28 +481,10 @@
             "value": "Could not load members."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se pudieron cargar los miembros."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "メンバーを読み込めませんでした。"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "회원 목록을 불러오지 못했습니다."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "无法加载成员。"
           }
         }
       }
@@ -1031,28 +497,10 @@
             "value": "Managed members"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Miembros gestionados"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "管理対象"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "관리 대상"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "受管理成员"
           }
         }
       }
@@ -1065,28 +513,10 @@
             "value": "Managers"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gestores"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "管理者"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "관리자"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "管理员"
           }
         }
       }
@@ -1099,28 +529,10 @@
             "value": "New password"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nueva contraseña"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "新しいパスワード"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "새 비밀번호"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "新密码"
           }
         }
       }
@@ -1133,28 +545,10 @@
             "value": "No email"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sin correo"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "メールなし"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "이메일 없음"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "无邮箱"
           }
         }
       }
@@ -1167,28 +561,10 @@
             "value": "Notifications"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Notificaciones"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "通知"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "알림"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "通知"
           }
         }
       }
@@ -1201,28 +577,10 @@
             "value": "Open calendar"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Abrir calendario"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "カレンダーを開く"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "달력으로 이동"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "打开日历"
           }
         }
       }
@@ -1235,28 +593,10 @@
             "value": "The operation failed."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La operación falló."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "操作に失敗しました。"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "작업에 실패했습니다."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "操作失败。"
           }
         }
       }
@@ -1269,28 +609,10 @@
             "value": "Overdue tasks"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tareas vencidas"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "期限超過"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "기한 초과 할 일"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "逾期任务"
           }
         }
       }
@@ -1303,28 +625,10 @@
             "value": "Password changed. All sessions for this member were ended."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Contraseña cambiada. Se cerraron todas las sesiones del miembro."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "パスワードを変更し、すべてのセッションを終了しました。"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "비밀번호를 변경하고 해당 회원의 모든 세션을 종료했습니다."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "密码已更改，该成员的所有会话已结束。"
           }
         }
       }
@@ -1337,28 +641,10 @@
             "value": "Use 8–20 characters. Changing another member's password signs them out everywhere."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Usa entre 8 y 20 caracteres. El cambio cierra todas sus sesiones."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "8〜20文字。変更するとすべての端末からログアウトします。"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "8~20자로 입력하세요. 변경하면 모든 기기에서 로그아웃됩니다."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "请输入8至20个字符。更改后将退出所有设备。"
           }
         }
       }
@@ -1371,28 +657,10 @@
             "value": "Password must be 8–20 characters."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La contraseña debe tener entre 8 y 20 caracteres."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "パスワードは8〜20文字で入力してください。"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "비밀번호는 8~20자로 입력하세요."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "密码必须为8至20个字符。"
           }
         }
       }
@@ -1405,28 +673,10 @@
             "value": "Passwords do not match."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Las contraseñas no coinciden."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "パスワードが一致しません。"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "비밀번호가 일치하지 않습니다."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "两次输入的密码不一致。"
           }
         }
       }
@@ -1439,28 +689,10 @@
             "value": "Password: %@"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Contraseña: %@"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "パスワード：%@"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "%@ 비밀번호"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "密码：%@ "
           }
         }
       }
@@ -1473,28 +705,10 @@
             "value": "Relationships"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Relaciones"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "関係"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "관계"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "关系"
           }
         }
       }
@@ -1507,28 +721,10 @@
             "value": "End session"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cerrar sesión"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "セッション終了"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "세션 종료"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "结束会话"
           }
         }
       }
@@ -1541,28 +737,10 @@
             "value": "End this session?"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "¿Cerrar esta sesión?"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "このセッションを終了しますか？"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "이 세션을 종료할까요?"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "结束此会话？"
           }
         }
       }
@@ -1575,28 +753,10 @@
             "value": "Service administrator"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Administrador del servicio"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "サービス管理者"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "서비스 관리자"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "服务管理员"
           }
         }
       }
@@ -1609,28 +769,10 @@
             "value": "Team lead"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Líder del equipo"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "チーム代表"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "팀 대표"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "团队负责人"
           }
         }
       }
@@ -1643,28 +785,10 @@
             "value": "Team manager"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gestor de equipo"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "チーム管理者"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "팀 매니저"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "团队管理员"
           }
         }
       }
@@ -1677,28 +801,10 @@
             "value": "Schedules"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Horarios"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "予定"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "일정"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "日程"
           }
         }
       }
@@ -1711,28 +817,10 @@
             "value": "Search name or email"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Buscar nombre o correo"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "名前またはメールを検索"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "이름 또는 이메일 검색"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "搜索姓名或邮箱"
           }
         }
       }
@@ -1745,28 +833,10 @@
             "value": "Unknown device"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Dispositivo desconocido"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "不明な端末"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "알 수 없는 기기"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "未知设备"
           }
         }
       }
@@ -1779,28 +849,10 @@
             "value": "Session ended."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sesión cerrada."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "セッションを終了しました。"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "세션을 종료했습니다."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "会话已结束。"
           }
         }
       }
@@ -1813,28 +865,10 @@
             "value": "Sessions"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sesiones"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "セッション"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "세션"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "会话"
           }
         }
       }
@@ -1847,28 +881,10 @@
             "value": "%d sessions"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%d sesiones"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%d件"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "%d개"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%d个会话"
           }
         }
       }
@@ -1881,28 +897,10 @@
             "value": "No active sessions."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No hay sesiones activas."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "有効なセッションはありません。"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "활성 세션이 없습니다."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "没有活跃会话。"
           }
         }
       }
@@ -1915,28 +913,10 @@
             "value": "Team"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Equipo"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "チーム"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "팀"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "团队"
           }
         }
       }
@@ -1949,28 +929,10 @@
             "value": "Members"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Miembros"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "メンバー"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "회원"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "成员"
           }
         }
       }
@@ -1983,28 +945,10 @@
             "value": "Tasks"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tareas"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "タスク"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "할 일"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "任务"
           }
         }
       }
@@ -2017,28 +961,10 @@
             "value": "Total members"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Miembros totales"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "総メンバー数"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "전체 회원"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "成员总数"
           }
         }
       }
@@ -2051,28 +977,10 @@
             "value": "Upcoming schedules"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Próximos horarios"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "今後の予定"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "다가오는 일정"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "即将到来的日程"
           }
         }
       }
@@ -2085,28 +993,10 @@
             "value": "API documentation"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Documentación API"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "APIドキュメント"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "API 문서"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "API 文档"
           }
         }
       }
@@ -2119,28 +1009,10 @@
             "value": "Browse server contracts"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Consultar contratos del servidor"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "サーバー契約を確認"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "서버 API 계약 확인"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "浏览服务器契约"
           }
         }
       }
@@ -2153,28 +1025,10 @@
             "value": "Development tools"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Herramientas de desarrollo"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "開発ツール"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "개발 도구"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "开发工具"
           }
         }
       }
@@ -2187,28 +1041,10 @@
             "value": "Open the developer playground"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Abrir el entorno de desarrollo"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "開発プレイグラウンドを開く"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "개발 플레이그라운드 열기"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "打开开发调试页"
           }
         }
       }
@@ -2221,28 +1057,10 @@
             "value": "Members"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Miembros"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "メンバー"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "회원 관리"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "成员"
           }
         }
       }
@@ -2255,28 +1073,10 @@
             "value": "Search accounts, sessions and activity"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Buscar cuentas, sesiones y actividad"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "アカウント、セッション、活動を検索"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "계정·세션·활동 조회"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "搜索账户、会话和活动"
           }
         }
       }
@@ -2289,28 +1089,10 @@
             "value": "Teams"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Equipos"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "チーム"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "팀 관리"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "团队"
           }
         }
       }
@@ -2323,28 +1105,10 @@
             "value": "Create, search and manage teams"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Crear, buscar y gestionar equipos"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "チームの作成・検索・管理"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "팀 생성·검색·관리"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "创建、搜索和管理团队"
           }
         }
       }
@@ -2357,28 +1121,10 @@
             "value": "Developer"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Desarrollo"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "開発者"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "개발자"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "开发者"
           }
         }
       }
@@ -2391,28 +1137,10 @@
             "value": "Management"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gestión"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "管理"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "관리"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "管理"
           }
         }
       }
@@ -2425,28 +1153,10 @@
             "value": "Check availability"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Comprobar disponibilidad"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "使用可能か確認"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "중복 확인"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "检查可用性"
           }
         }
       }
@@ -2459,28 +1169,10 @@
             "value": "Create team"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Crear equipo"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "チーム作成"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "팀 생성"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "创建团队"
           }
         }
       }
@@ -2493,28 +1185,10 @@
             "value": "Could not create the team."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se pudo crear el equipo."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "チームを作成できませんでした。"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "팀을 생성하지 못했습니다."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "无法创建团队。"
           }
         }
       }
@@ -2527,28 +1201,10 @@
             "value": "Name 2–20 characters; description up to 50."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nombre de 2 a 20 caracteres; descripción de hasta 50."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "名前は2〜20文字、説明は50文字まで。"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "이름 2~20자, 설명은 50자까지 입력할 수 있습니다."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "名称2至20个字符，描述最多50个字符。"
           }
         }
       }
@@ -2561,28 +1217,10 @@
             "value": "Created %@."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Se creó %@."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@を作成しました。"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "%@ 팀을 생성했습니다."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已创建 %@。"
           }
         }
       }
@@ -2595,28 +1233,10 @@
             "value": "Delete %@? Teams with members cannot be deleted."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "¿Eliminar %@? Los equipos con miembros no se pueden eliminar."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@を削除しますか？メンバーがいるチームは削除できません。"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "%@ 팀을 삭제할까요? 회원이 있는 팀은 삭제할 수 없습니다."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "删除 %@？有成员的团队无法删除。"
           }
         }
       }
@@ -2629,28 +1249,10 @@
             "value": "Delete team?"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "¿Eliminar equipo?"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "チームを削除しますか？"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "팀을 삭제할까요?"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "删除团队？"
           }
         }
       }
@@ -2663,28 +1265,10 @@
             "value": "Could not delete the team. Remove its members first."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se pudo eliminar. Elimina primero sus miembros."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "削除できませんでした。先にメンバーを削除してください。"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "팀을 삭제하지 못했습니다. 먼저 팀원을 내보내주세요."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "无法删除团队，请先移除成员。"
           }
         }
       }
@@ -2697,28 +1281,10 @@
             "value": "Team deleted."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Equipo eliminado."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "チームを削除しました。"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "팀을 삭제했습니다."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "团队已删除。"
           }
         }
       }
@@ -2731,28 +1297,10 @@
             "value": "Description"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Descripción"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "説明"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "설명"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "描述"
           }
         }
       }
@@ -2765,28 +1313,10 @@
             "value": "Could not load teams."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se pudieron cargar los equipos."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "チームを読み込めませんでした。"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "팀 목록을 불러오지 못했습니다."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "无法加载团队。"
           }
         }
       }
@@ -2799,28 +1329,10 @@
             "value": "%lld members"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld miembros"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld人"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "%lld명"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld名"
           }
         }
       }
@@ -2833,28 +1345,10 @@
             "value": "Team name"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Nombre del equipo"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "チーム名"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "팀 이름"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "团队名称"
           }
         }
       }
@@ -2867,28 +1361,10 @@
             "value": "This name is already in use."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Este nombre ya está en uso."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "この名前は使用されています。"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "이미 사용 중인 이름입니다."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "此名称已被使用。"
           }
         }
       }
@@ -2901,28 +1377,10 @@
             "value": "This name is available."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Este nombre está disponible."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "使用できる名前です。"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "사용 가능한 이름입니다."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "此名称可用。"
           }
         }
       }
@@ -2935,28 +1393,10 @@
             "value": "Use no more than 20 characters."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Usa como máximo 20 caracteres."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "20文字以内で入力してください。"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "20자 이하로 입력해주세요."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "请勿超过20个字符。"
           }
         }
       }
@@ -2969,28 +1409,10 @@
             "value": "Use at least 2 characters."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Usa al menos 2 caracteres."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "2文字以上で入力してください。"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "2자 이상 입력해주세요."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "请至少输入2个字符。"
           }
         }
       }
@@ -3003,28 +1425,10 @@
             "value": "No description"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Sin descripción"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "説明なし"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "설명 없음"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "无描述"
           }
         }
       }
@@ -3037,28 +1441,10 @@
             "value": "Search teams"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Buscar equipos"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "チームを検索"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "팀 검색"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "搜索团队"
           }
         }
       }
@@ -3071,28 +1457,10 @@
             "value": "Teams"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Equipos"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "チーム"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "팀"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "团队"
           }
         }
       }
@@ -3105,28 +1473,10 @@
             "value": "Total teams"
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Equipos totales"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "総チーム数"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "전체 팀"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "团队总数"
           }
         }
       }
@@ -3139,28 +1489,10 @@
             "value": "Could not open this administrator page."
           }
         },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se pudo abrir esta página de administración."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "管理者ページを開けませんでした。"
-          }
-        },
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "관리자 페이지를 열지 못했습니다."
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "无法打开管理员页面。"
           }
         }
       }

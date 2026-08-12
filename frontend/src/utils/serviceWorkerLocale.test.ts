@@ -30,7 +30,7 @@ describe('syncServiceWorkerLocale', () => {
       configurable: true,
     })
 
-    await syncServiceWorkerLocale('ja', {
+    await syncServiceWorkerLocale('ko', {
       active,
       waiting,
       installing,
@@ -39,7 +39,7 @@ describe('syncServiceWorkerLocale', () => {
     for (const target of [active, waiting, installing, controller]) {
       expect(target.postMessage).toHaveBeenCalledWith({
         type: 'DUTYPARK_SET_LOCALE',
-        locale: 'ja',
+        locale: 'ko',
       })
     }
   })

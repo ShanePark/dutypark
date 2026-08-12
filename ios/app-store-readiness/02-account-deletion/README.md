@@ -22,7 +22,7 @@
 - iOS 인증 상태: [SessionStore.swift](../../Dutypark/Core/Auth/SessionStore.swift)
 - iOS APNs·알림 로컬 정리: [APNsRegistration.swift](../../Dutypark/Features/Notifications/APNsRegistration.swift)
 - iOS 소셜 재인증: [MobileOAuthClient.swift](../../Dutypark/Features/Auth/MobileOAuthClient.swift)
-- iOS 5개 언어 문자열: [Settings.xcstrings](../../Dutypark/Resources/Settings.xcstrings)
+- iOS 한국어·영어 문자열: [Settings.xcstrings](../../Dutypark/Resources/Settings.xcstrings)
 - 웹 공통 인증 클라이언트: [client.ts](../../../frontend/src/api/client.ts)
 - 웹 5단계 삭제 화면: [AccountDeletionModal.vue](../../../frontend/src/components/member/AccountDeletionModal.vue)
 - 웹 삭제 API와 소셜 popup PKCE: [accountDeletion.ts](../../../frontend/src/api/accountDeletion.ts)
@@ -124,7 +124,7 @@
 - [x] `202 Accepted` 직후 인증·쿠키·APNs와 사용자별 로컬 상태를 즉시 정리하되, 바로 guest 화면으로 보내지 않고 `탈퇴 요청 완료` 화면을 유지한다.
 - [x] 완료 화면에서 요청 성공, 안전한 로그아웃 완료, 비동기 데이터·파일 삭제가 잠시 걸릴 수 있음을 안내하고 사용자가 확인한 뒤 guest 화면으로 이동한다.
 - [x] 오류 코드별 재시도와 만료된 proof 재인증 흐름을 구현했다.
-- [x] 사용자 문구를 `ko`, `en`, `ja`, `zh-Hans`, `es`로 제공한다.
+- [x] 사용자 문구를 `ko`, `en`으로 제공한다.
 - [ ] TestFlight 실기기에서 5단계 삭제를 끝까지 검증한다.
 - [ ] VoiceOver, 최대 Dynamic Type과 44pt 터치 영역을 실기기로 확인한다.
 
@@ -136,7 +136,7 @@
 - 완료 화면에는 `탈퇴 요청 완료`, `안전하게 로그아웃되었습니다`, `데이터와 파일 삭제에는 잠시 시간이 걸릴 수 있습니다`라는 세 의미가 명확히 포함되어야 한다.
 - 사용자가 확인 버튼을 누른 뒤에만 guest 화면으로 이동한다. 요청 제출 직후 로그인 화면이나 guest 홈으로 갑자기 전환되어 단순 로그아웃처럼 보여서는 안 된다.
 - 완료 화면은 재시도나 취소를 제안하지 않는다. 서버가 요청을 수락한 뒤에는 삭제 작업이 비동기로 계속된다는 사실을 안내한다.
-- 이 계약은 iOS에 구현되어 자동 검증을 통과했다. 5개 언어의 실제 표시와 VoiceOver·Dynamic Type은 TestFlight 실기기 검증 항목으로 유지한다.
+- 이 계약은 iOS에 구현되어 자동 검증을 통과했다. 한국어·영어의 실제 표시와 VoiceOver·Dynamic Type은 TestFlight 실기기 검증 항목으로 유지한다.
 
 ## Kakao/Naver 신규 가입 후 즉시 탈퇴 시연
 
@@ -191,7 +191,7 @@
 - [x] iOS와 동일한 preview·요청 API를 사용하고, 비밀번호 또는 Kakao·Naver popup PKCE 흐름으로 `DELETE_ACCOUNT` 재인증 proof를 발급한다.
 - [x] `202 Accepted` 직후 서버 인증 상태, 웹 푸시 subscription, Pinia 상태와 사용자 캐시를 정리한다.
 - [x] 인증 정리 뒤 완료 안내를 먼저 보여주고 사용자 확인 후 guest 화면으로 이동하는 동일한 성공 UX 계약을 적용한다.
-- [x] 계정 삭제와 소셜 popup 오류·완료 문구를 `ko`, `en`, `ja`, `zh`, `es` 번역에 추가한다.
+- [x] 계정 삭제와 소셜 popup 오류·완료 문구를 웹 지원 언어 번역에 추가한다.
 - [ ] 모바일·데스크톱, 라이트·다크 모드에서 확인한다.
 
 ## 테스트

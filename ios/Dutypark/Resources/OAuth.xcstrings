@@ -4,199 +4,133 @@
     "auth.oauth.cancel" : {
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Cancel" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Cancelar" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "キャンセル" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "취소" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "取消" } }
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "취소" } }
       }
     },
     "auth.oauth.close" : {
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Close" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Cerrar" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "閉じる" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "닫기" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "关闭" } }
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "닫기" } }
       }
     },
     "auth.oauth.divider" : {
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Social login" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Inicio de sesión social" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "ソーシャルログイン" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "소셜 로그인" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "社交账号登录" } }
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "소셜 로그인" } }
       }
     },
     "auth.oauth.error" : {
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Social login failed. Please try again." } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Error de inicio de sesión social. Inténtalo de nuevo." } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "ソーシャルログインに失敗しました。もう一度お試しください。" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "소셜 로그인에 실패했습니다. 다시 시도해주세요." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "社交账号登录失败，请重试。" } }
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "소셜 로그인에 실패했습니다. 다시 시도해주세요." } }
       }
     },
     "auth.oauth.kakao" : {
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Continue with Kakao" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Continuar con Kakao" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "Kakaoで続行" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "카카오 로그인" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "使用 Kakao 继续" } }
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "카카오 로그인" } }
       }
     },
     "auth.oauth.naver" : {
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Continue with Naver" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Continuar con Naver" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "Naverで続行" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "네이버 로그인" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "使用 Naver 继续" } }
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "네이버 로그인" } }
       }
     },
     "auth.oauth.signup.agree" : {
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "I agree (required)" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Acepto (obligatorio)" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "同意します（必須）" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "동의합니다 (필수)" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "我同意（必需）" } }
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "동의합니다 (필수)" } }
       }
     },
     "auth.oauth.signup.discard.action" : {
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Discard" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Descartar" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "破棄" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "나가기" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "放弃" } }
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "나가기" } }
       }
     },
     "auth.oauth.signup.discard.continue" : {
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Keep editing" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Seguir editando" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "編集を続ける" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "계속 작성" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "继续编辑" } }
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "계속 작성" } }
       }
     },
     "auth.oauth.signup.discard.message" : {
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Your entered name and policy agreements will be lost." } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Se perderán el nombre introducido y las aceptaciones de las políticas." } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "入力した名前と規約への同意内容は失われます。" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "입력한 이름과 약관 동의 내용이 사라집니다." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "已输入的姓名和政策同意内容将会丢失。" } }
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "입력한 이름과 약관 동의 내용이 사라집니다." } }
       }
     },
     "auth.oauth.signup.discard.title" : {
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Discard signup?" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "¿Descartar el registro?" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "登録を破棄しますか？" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "회원가입을 취소할까요?" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "放弃注册吗？" } }
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "회원가입을 취소할까요?" } }
       }
     },
     "auth.oauth.signup.error" : {
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Could not create your account." } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "No se pudo crear tu cuenta." } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "アカウントを作成できませんでした。" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "회원가입에 실패했습니다." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "无法创建账号。" } }
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "회원가입에 실패했습니다." } }
       }
     },
     "auth.oauth.signup.name" : {
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Name" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Nombre" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "名前" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "이름" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "姓名" } }
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "이름" } }
       }
     },
     "auth.oauth.signup.name.help" : {
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Enter 1–10 characters." } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Introduce entre 1 y 10 caracteres." } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "1〜10文字で入力してください。" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "1자 이상 10자 이하로 입력해주세요." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "请输入 1–10 个字符。" } }
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "1자 이상 10자 이하로 입력해주세요." } }
       }
     },
     "auth.oauth.signup.name.placeholder" : {
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Your name" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Tu nombre" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "名前" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "이름을 입력해주세요" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "请输入姓名" } }
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "이름을 입력해주세요" } }
       }
     },
     "auth.oauth.signup.policyError" : {
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Could not load the required policies." } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "No se pudieron cargar las políticas requeridas." } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "必要なポリシーを読み込めませんでした。" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "필수 약관을 불러오지 못했습니다." } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "无法加载必需政策。" } }
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "필수 약관을 불러오지 못했습니다." } }
       }
     },
     "auth.oauth.signup.privacy" : {
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Privacy Policy" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Política de privacidad" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "プライバシーポリシー" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "개인정보 처리방침" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "隐私政策" } }
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "개인정보 처리방침" } }
       }
     },
     "auth.oauth.signup.submit" : {
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Create account" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Crear cuenta" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "アカウントを作成" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "가입하기" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "创建账号" } }
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "가입하기" } }
       }
     },
     "auth.oauth.signup.subtitle" : {
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Welcome to Dutypark" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Te damos la bienvenida a Dutypark" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "Dutyparkへようこそ" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "Dutypark에 오신 것을 환영합니다" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "欢迎来到 Dutypark" } }
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "Dutypark에 오신 것을 환영합니다" } }
       }
     },
     "auth.oauth.signup.terms" : {
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Terms of Service" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Términos del servicio" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "利用規約" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "서비스 이용약관" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "服务条款" } }
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "서비스 이용약관" } }
       }
     },
     "auth.oauth.signup.title" : {
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Create account" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Crear cuenta" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "アカウント作成" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "회원가입" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "创建账号" } }
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "회원가입" } }
       }
     },
     "auth.oauth.signup.viewPolicy" : {
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "View full text" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Ver texto completo" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "全文を表示" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "전체보기" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "查看全文" } }
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "전체보기" } }
       }
     }
   },

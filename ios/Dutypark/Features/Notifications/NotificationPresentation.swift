@@ -126,22 +126,19 @@ nonisolated enum NotificationPresentation {
         locale: Locale = AppLocalization.locale,
         timeZone: TimeZone = .current
     ) -> String {
-        let identifier = locale.identifier.lowercased()
+        let supportedLocale = AppLocalization.supportedLocale(
+            languageCode: locale.identifier,
+            preferredLanguages: []
+        )
         let formatter = DateFormatter()
         formatter.calendar = Calendar(identifier: .gregorian)
-        formatter.locale = locale
+        formatter.locale = supportedLocale
         formatter.timeZone = timeZone
 
-        if identifier.hasPrefix("en") {
-            formatter.dateFormat = "MMM d, yyyy HH:mm"
-        } else if identifier.hasPrefix("ja") {
-            formatter.dateFormat = "yyyy/MM/dd HH:mm"
-        } else if identifier.hasPrefix("es") {
-            formatter.dateFormat = "d MMM yyyy HH:mm"
-        } else if identifier.hasPrefix("zh") {
-            formatter.dateFormat = "yyyy年M月d日 HH:mm"
-        } else {
+        if supportedLocale.identifier == "ko" {
             formatter.dateFormat = "yyyy.MM.dd HH:mm"
+        } else {
+            formatter.dateFormat = "MMM d, yyyy HH:mm"
         }
         return formatter.string(from: date)
     }

@@ -73,7 +73,7 @@ final class OAuthSignupPresentationTests: XCTestCase {
             "auth.oauth.signup.terms",
         ]
 
-        for locale in ["en", "ko", "ja", "zh-Hans", "es"] {
+        for locale in ["en", "ko"] {
             let url = try XCTUnwrap(Bundle.main.url(forResource: locale, withExtension: "lproj"))
             let bundle = try XCTUnwrap(Bundle(url: url))
             for key in keys {

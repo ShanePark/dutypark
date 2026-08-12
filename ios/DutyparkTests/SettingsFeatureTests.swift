@@ -7,9 +7,20 @@ import UIKit
 @MainActor
 struct SettingsFeatureTests {
     @Test
-    func supportsTheSameFiveNativeLanguageChoicesAsWeb() {
-        #expect(AppLanguage.allCases.map(\.rawValue) == ["ko", "en", "ja", "zh-Hans", "es"])
-        #expect(AppLanguage.allCases.map(\.nativeName) == ["한국어", "English", "日本語", "简体中文", "Español"])
+    func supportsKoreanAndEnglishLanguageChoices() {
+        #expect(AppLanguage.allCases.map(\.rawValue) == ["ko", "en"])
+        #expect(AppLanguage.allCases.map(\.nativeName) == ["한국어", "English"])
+    }
+
+    @Test
+    func unsupportedLocalesFallBackToEnglish() {
+        #expect(AppLocalization.supportedLocale(languageCode: "ko-KR").identifier == "ko")
+        #expect(AppLocalization.supportedLocale(languageCode: "en-US").identifier == "en")
+        #expect(AppLocalization.supportedLocale(languageCode: "fr-FR").identifier == "en")
+        #expect(AppLocalization.supportedLocale(
+            languageCode: "",
+            preferredLanguages: ["fr-FR"]
+        ).identifier == "en")
     }
 
     @Test

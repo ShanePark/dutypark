@@ -33,19 +33,17 @@ final class GuestPublicLinkTests: XCTestCase {
     func testGuideWebLocaleFollowsExplicitAppSelection() {
         XCTAssertEqual(GuideLocaleResolver.webLocale(languageCode: "ko"), "ko")
         XCTAssertEqual(GuideLocaleResolver.webLocale(languageCode: "en"), "en")
-        XCTAssertEqual(GuideLocaleResolver.webLocale(languageCode: "ja"), "ja")
-        XCTAssertEqual(GuideLocaleResolver.webLocale(languageCode: "zh-Hans"), "zh")
-        XCTAssertEqual(GuideLocaleResolver.webLocale(languageCode: "es"), "es")
+        XCTAssertEqual(GuideLocaleResolver.webLocale(languageCode: "fr-FR"), "en")
     }
 
     func testGuideWebLocaleUsesDeviceLanguageOnlyWithoutSelection() {
         XCTAssertEqual(
-            GuideLocaleResolver.webLocale(languageCode: "", preferredLanguages: ["zh-Hans-KR"]),
-            "zh"
+            GuideLocaleResolver.webLocale(languageCode: "", preferredLanguages: ["ko-KR"]),
+            "ko"
         )
         XCTAssertEqual(
             GuideLocaleResolver.webLocale(languageCode: "", preferredLanguages: ["fr-FR"]),
-            "ko"
+            "en"
         )
     }
 
@@ -60,7 +58,7 @@ final class GuestPublicLinkTests: XCTestCase {
             "guest.close"
         ]
 
-        for locale in ["en", "ko", "ja", "zh-Hans", "es"] {
+        for locale in ["en", "ko"] {
             let url = try XCTUnwrap(Bundle.main.url(forResource: locale, withExtension: "lproj"))
             let bundle = try XCTUnwrap(Bundle(url: url))
             for key in keys {

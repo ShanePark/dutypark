@@ -2,184 +2,184 @@
   "sourceLanguage" : "en",
   "strings" : {
     "notifications.bell.unread" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ unread" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "%@ sin leer" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "未読%@件" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "읽지 않음 %@개" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "%@条未读" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ unread" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "읽지 않음 %@개" } }
     } },
     "notifications.bell.friendRequests" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ friend requests" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "%@ solicitudes de amistad" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "友達リクエスト%@件" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 요청 %@개" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "%@个好友请求" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ friend requests" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 요청 %@개" } }
     } },
     "notifications.title" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Notifications" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Notificaciones" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "通知" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "알림" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "通知" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Notifications" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "알림" } }
     } },
     "notifications.dropdown.viewAll" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "View all" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Ver todo" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "すべて表示" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "전체보기" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "查看全部" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "View all" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "전체보기" } }
     } },
     "notifications.common.loading" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Loading..." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Cargando..." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "読み込み中..." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "불러오는 중..." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "加载中..." } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Loading..." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "불러오는 중..." } }
     } },
     "notifications.common.empty" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "No notifications" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "No hay notificaciones" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "通知はありません" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "알림이 없습니다" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "暂无通知" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "No notifications" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "알림이 없습니다" } }
     } },
     "notifications.common.retry" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Retry" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Reintentar" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "再試行" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "다시 시도" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "重试" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Retry" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "다시 시도" } }
     } },
     "notifications.common.delete" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Eliminar" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "削除" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "삭제" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "删除" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "삭제" } }
     } },
     "notifications.common.cancel" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Cancel" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Cancelar" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "キャンセル" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "취소" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "取消" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Cancel" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "취소" } }
     } },
     "notifications.common.close" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Close notifications" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Cerrar notificaciones" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "通知を閉じる" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "알림 닫기" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "关闭通知" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Close notifications" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "알림 닫기" } }
     } },
     "notifications.common.error" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Error" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Error" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "エラー" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "오류" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "错误" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Error" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "오류" } }
     } },
     "notifications.common.ok" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "OK" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Aceptar" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "確認" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "확인" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "确定" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "OK" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "확인" } }
     } },
     "notifications.common.notNow" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Not now" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Ahora no" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "後で" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "나중에" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "稍后" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Not now" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "나중에" } }
     } },
 
     "notifications.items.generic" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "You have a new notification." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Tienes una nueva notificación." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "新しい通知があります。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "새 알림이 도착했습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "您有一条新通知。" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "You have a new notification." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "새 알림이 도착했습니다." } }
     } },
     "notifications.items.friendRequestReceived" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ sent you a friend request." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "%@ te envió una solicitud de amistad." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "%@さんから友達リクエストが届きました。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님이 친구 요청을 보냈습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "%@向您发送了好友请求。" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ sent you a friend request." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님이 친구 요청을 보냈습니다." } }
     } },
     "notifications.items.friendRequestReceivedFallback" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "You received a friend request." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Has recibido una solicitud de amistad." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "友達リクエストが届きました。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 요청이 도착했습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "您收到了好友请求。" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "You received a friend request." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 요청이 도착했습니다." } }
     } },
     "notifications.items.friendRequestAccepted" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ accepted your friend request." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "%@ aceptó tu solicitud de amistad." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "%@さんが友達リクエストを承認しました。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님이 친구 요청을 수락했습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "%@接受了您的好友请求。" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ accepted your friend request." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님이 친구 요청을 수락했습니다." } }
     } },
     "notifications.items.friendRequestAcceptedFallback" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Your friend request was accepted." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Tu solicitud de amistad fue aceptada." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "友達リクエストが承認されました。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 요청이 수락되었습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "您的好友请求已被接受。" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Your friend request was accepted." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 요청이 수락되었습니다." } }
     } },
     "notifications.items.familyRequestReceived" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ sent you a family request." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "%@ te envió una solicitud familiar." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "%@さんから家族リクエストが届きました。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님이 가족 요청을 보냈습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "%@向您发送了家人请求。" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ sent you a family request." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님이 가족 요청을 보냈습니다." } }
     } },
     "notifications.items.familyRequestReceivedFallback" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "You received a family request." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Has recibido una solicitud familiar." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "家族リクエストが届きました。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "가족 요청이 도착했습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "您收到了家人请求。" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "You received a family request." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "가족 요청이 도착했습니다." } }
     } },
     "notifications.items.familyRequestAccepted" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ accepted your family request." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "%@ aceptó tu solicitud familiar." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "%@さんが家族リクエストを承認しました。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님이 가족 요청을 수락했습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "%@接受了您的家人请求。" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ accepted your family request." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님이 가족 요청을 수락했습니다." } }
     } },
     "notifications.items.familyRequestAcceptedFallback" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Your family request was accepted." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Tu solicitud familiar fue aceptada." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "家族リクエストが承認されました。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "가족 요청이 수락되었습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "您的家人请求已被接受。" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Your family request was accepted." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "가족 요청이 수락되었습니다." } }
     } },
     "notifications.items.scheduleTagged" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ tagged you in [%@]." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "%@ te etiquetó en [%@]." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "%@さんの予定［%@］にタグ付けされました。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님의 [%@] 일정에 태그되었습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "%@在日程［%@］中标记了您。" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ tagged you in [%@]." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님의 [%@] 일정에 태그되었습니다." } }
     } },
     "notifications.items.scheduleTaggedFallback" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "You were tagged in [%@]." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Te etiquetaron en [%@]." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "予定［%@］にタグ付けされました。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "[%@] 일정에 태그되었습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "您在日程［%@］中被标记。" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "You were tagged in [%@]." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "[%@] 일정에 태그되었습니다." } }
     } },
     "notifications.items.todoTagged" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ tagged you in TODO [%@]." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "%@ te etiquetó en la tarea [%@]." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "%@さんのTODO［%@］にタグ付けされました。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님의 [%@] TODO에 태그되었습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "%@在待办事项［%@］中标记了您。" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ tagged you in TODO [%@]." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님의 [%@] TODO에 태그되었습니다." } }
     } },
     "notifications.items.todoTaggedFallback" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "You were tagged in TODO [%@]." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Te etiquetaron en la tarea [%@]." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "TODO［%@］にタグ付けされました。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "[%@] TODO에 태그되었습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "您在待办事项［%@］中被标记。" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "You were tagged in TODO [%@]." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "[%@] TODO에 태그되었습니다." } }
     } },
     "notifications.items.todoStatusTodo" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ moved TODO [%@] to To-do." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "%@ movió la tarea [%@] a Pendiente." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "%@さんがTODO［%@］を未着手に変更しました。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님이 [%@] TODO를 할 일로 변경했습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "%@将待办事项［%@］改为待处理。" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ moved TODO [%@] to To-do." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님이 [%@] TODO를 할 일로 변경했습니다." } }
     } },
     "notifications.items.todoStatusTodoFallback" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "TODO [%@] was moved to To-do." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "La tarea [%@] se movió a Pendiente." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "TODO［%@］が未着手に変更されました。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "[%@] TODO가 할 일로 변경되었습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "待办事项［%@］已改为待处理。" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "TODO [%@] was moved to To-do." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "[%@] TODO가 할 일로 변경되었습니다." } }
     } },
     "notifications.items.todoStatusInProgress" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ moved TODO [%@] to In progress." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "%@ movió la tarea [%@] a En curso." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "%@さんがTODO［%@］を進行中に変更しました。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님이 [%@] TODO를 진행중으로 변경했습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "%@将待办事项［%@］改为进行中。" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ moved TODO [%@] to In progress." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님이 [%@] TODO를 진행중으로 변경했습니다." } }
     } },
     "notifications.items.todoStatusInProgressFallback" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "TODO [%@] was moved to In progress." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "La tarea [%@] se movió a En curso." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "TODO［%@］が進行中に変更されました。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "[%@] TODO가 진행중으로 변경되었습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "待办事项［%@］已改为进行中。" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "TODO [%@] was moved to In progress." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "[%@] TODO가 진행중으로 변경되었습니다." } }
     } },
     "notifications.items.todoStatusDone" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ marked TODO [%@] as done." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "%@ marcó la tarea [%@] como completada." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "%@さんがTODO［%@］を完了にしました。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님이 [%@] TODO를 완료 처리했습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "%@将待办事项［%@］标记为已完成。" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ marked TODO [%@] as done." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님이 [%@] TODO를 완료 처리했습니다." } }
     } },
     "notifications.items.todoStatusDoneFallback" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "TODO [%@] was marked as done." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "La tarea [%@] se marcó como completada." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "TODO［%@］が完了になりました。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "[%@] TODO가 완료 처리되었습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "待办事项［%@］已标记为已完成。" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "TODO [%@] was marked as done." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "[%@] TODO가 완료 처리되었습니다." } }
     } },
 
     "notifications.list.markAllAsRead" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Mark all as read" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Marcar todo como leído" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "すべて既読" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "전체 읽음" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "全部标为已读" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Mark all as read" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "전체 읽음" } }
     } },
     "notifications.list.markAllAsReadShort" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Read all" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Leer todo" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "全既読" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "전체 읽음" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "全已读" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Read all" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "전체 읽음" } }
     } },
     "notifications.list.deleteRead" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete read" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Eliminar leídas" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "既読を削除" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "읽은 알림 삭제" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "删除已读" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete read" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "읽은 알림 삭제" } }
     } },
     "notifications.list.deleteReadShort" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete read" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Borrar leídas" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "既読削除" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "읽음 삭제" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "删已读" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete read" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "읽음 삭제" } }
     } },
     "notifications.list.noReadNotifications" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "There are no read notifications to delete." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "No hay notificaciones de lectura para eliminar." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "削除できる既読通知がありません。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "삭제할 읽은 알림이 없습니다" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "没有要删除的已读通知。" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "There are no read notifications to delete." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "삭제할 읽은 알림이 없습니다" } }
     } },
     "notifications.list.noUnreadNotifications" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "There are no unread notifications." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "No hay notificaciones no leídas." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "未読通知がありません。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "읽지 않은 알림이 없습니다" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "没有未读的通知。" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "There are no unread notifications." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "읽지 않은 알림이 없습니다" } }
     } },
     "notifications.list.retentionNotice" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Notifications are kept for 30 days." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Las notificaciones se guardan durante 30 días." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "通知は30日間保存されます。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "알림은 30일간 보관됩니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "通知会保留30天。" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Notifications are kept for 30 days." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "알림은 30일간 보관됩니다." } }
     } },
     "notifications.list.loadMore" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Load more" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Cargar más" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "さらに読み込む" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "더보기" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "加载更多" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Load more" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "더보기" } }
     } },
     "notifications.list.deleteConfirmTitle" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete notification" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Eliminar notificación" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "通知を削除" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "알림 삭제" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "删除通知" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete notification" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "알림 삭제" } }
     } },
     "notifications.list.deleteConfirmMessage" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete this notification?" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "¿Eliminar esta notificación?" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "この通知を削除しますか？" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "이 알림을 삭제하시겠습니까?" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "要删除这条通知吗？" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete this notification?" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "이 알림을 삭제하시겠습니까?" } }
     } },
     "notifications.list.deleteAllReadTitle" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete read notifications" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Eliminar notificaciones leídas" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "既読通知を削除" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "읽은 알림 삭제" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "删除已读通知" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete read notifications" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "읽은 알림 삭제" } }
     } },
     "notifications.list.deleteAllReadConfirm" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete all read notifications?" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "¿Eliminar todas las notificaciones leídas?" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "既読通知をすべて削除しますか？" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "읽은 알림을 모두 삭제하시겠습니까?" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "要删除所有已读通知吗？" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete all read notifications?" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "읽은 알림을 모두 삭제하시겠습니까?" } }
     } },
     "notifications.messages.loadFailed" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to load notifications." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "No se pudieron cargar las notificaciones." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "通知の読み込みに失敗しました。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "알림을 불러오는데 실패했습니다" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "通知加载失败。" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to load notifications." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "알림을 불러오는데 실패했습니다" } }
     } },
     "notifications.messages.deleteFailed" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to delete notifications." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "No se pudieron eliminar las notificaciones." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "通知の削除に失敗しました。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "알림 삭제에 실패했습니다" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "通知删除失败。" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to delete notifications." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "알림 삭제에 실패했습니다" } }
     } },
     "notifications.messages.markAllAsReadFailed" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to update notifications." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "No se pudieron actualizar las notificaciones." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "通知の更新に失敗しました。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "알림 처리에 실패했습니다" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "通知更新失败。" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to update notifications." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "알림 처리에 실패했습니다" } }
     } },
 
     "notifications.permission.title" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Notification permission" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Permiso de notificaciones" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "通知の許可" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "알림 권한" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "通知权限" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Notification permission" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "알림 권한" } }
     } },
     "notifications.permission.notDetermined" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Review how Dutypark uses iPhone notifications before choosing." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Revisa cómo usa Dutypark las notificaciones del iPhone antes de elegir." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "選択する前に、DutyparkでのiPhone通知の使い方を確認できます。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "선택하기 전에 Dutypark가 아이폰 알림을 사용하는 방식을 확인할 수 있습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "选择前可先了解Dutypark如何使用iPhone通知。" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Review how Dutypark uses iPhone notifications before choosing." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "선택하기 전에 Dutypark가 아이폰 알림을 사용하는 방식을 확인할 수 있습니다." } }
     } },
     "notifications.permission.review" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Review notification permission" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Revisar permiso" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "通知の許可を確認" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "알림 권한 확인" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "查看通知权限" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Review notification permission" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "알림 권한 확인" } }
     } },
     "notifications.permission.denied" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Notification permission is turned off in iPhone Settings." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "El permiso está desactivado en Ajustes del iPhone." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "iPhoneの設定で通知がオフになっています。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "아이폰 설정에서 알림 권한이 꺼져 있습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "iPhone设置中的通知权限已关闭。" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Notification permission is turned off in iPhone Settings." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "아이폰 설정에서 알림 권한이 꺼져 있습니다." } }
     } },
     "notifications.permission.openSettings" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Open Settings" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Abrir Ajustes" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "設定を開く" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "설정 열기" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "打开设置" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Open Settings" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "설정 열기" } }
     } },
     "notifications.permission.granted" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "iPhone notification permission is allowed. Device registration is pending." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "El permiso está concedido. El registro del dispositivo está pendiente." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "通知は許可されています。端末登録を待っています。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "아이폰 알림 권한이 허용되었습니다. 기기 등록을 기다리고 있습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "iPhone通知权限已允许，正在等待设备注册。" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "iPhone notification permission is allowed. Device registration is pending." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "아이폰 알림 권한이 허용되었습니다. 기기 등록을 기다리고 있습니다." } }
     } },
     "notifications.permission.registering" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Registering this device with Dutypark..." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Registrando este dispositivo en Dutypark..." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "この端末をDutyparkに登録しています..." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "이 기기를 Dutypark에 등록하고 있습니다..." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "正在向Dutypark注册此设备..." } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Registering this device with Dutypark..." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "이 기기를 Dutypark에 등록하고 있습니다..." } }
     } },
     "notifications.permission.registered" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "iPhone permission and Dutypark device registration are confirmed." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Se confirmaron el permiso del iPhone y el registro del dispositivo." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "iPhoneの許可とDutyparkへの端末登録を確認しました。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "아이폰 권한과 Dutypark 기기 등록이 확인되었습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "已确认iPhone权限和Dutypark设备注册。" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "iPhone permission and Dutypark device registration are confirmed." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "아이폰 권한과 Dutypark 기기 등록이 확인되었습니다." } }
     } },
     "notifications.permission.registrationFailed" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Could not confirm this device's registration." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "No se pudo confirmar el registro de este dispositivo." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "この端末の登録を確認できませんでした。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "이 기기의 등록을 확인하지 못했습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "无法确认此设备的注册。" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Could not confirm this device's registration." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "이 기기의 등록을 확인하지 못했습니다." } }
     } },
     "notifications.permission.prepromptTitle" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Allow iPhone notifications?" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "¿Permitir notificaciones del iPhone?" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "iPhoneの通知を許可しますか？" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "아이폰 알림을 허용할까요?" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "允许iPhone通知吗？" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Allow iPhone notifications?" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "아이폰 알림을 허용할까요?" } }
     } },
     "notifications.permission.prepromptMessage" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Dutypark will request iOS permission for schedule tags, friend requests, and TODO updates. You can change it later in Settings." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Dutypark solicitará permiso para etiquetas de agenda, solicitudes de amistad y cambios de tareas. Puedes cambiarlo en Ajustes." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "予定のタグ、友達リクエスト、TODOの更新についてiOSの通知許可を求めます。後で設定から変更できます。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "일정 태그, 친구 요청, TODO 변경을 위해 iOS 알림 권한을 요청합니다. 나중에 설정에서 변경할 수 있습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "Dutypark将为日程标记、好友请求和待办更新申请iOS通知权限，之后可在设置中更改。" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Dutypark will request iOS permission for schedule tags, friend requests, and TODO updates. You can change it later in Settings." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "일정 태그, 친구 요청, TODO 변경을 위해 iOS 알림 권한을 요청합니다. 나중에 설정에서 변경할 수 있습니다." } }
     } },
     "notifications.permission.continue" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Continue" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Continuar" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "続ける" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "계속" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "继续" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Continue" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "계속" } }
     } }
   },
   "version" : "1.0"

@@ -533,7 +533,7 @@ struct TodoViewModelTests {
             "common.edit",
             "common.save"
         ]
-        let locales = ["ko", "en", "ja", "zh-Hans", "es"]
+        let locales = ["ko", "en"]
 
         for localeIdentifier in locales {
             for key in keys {

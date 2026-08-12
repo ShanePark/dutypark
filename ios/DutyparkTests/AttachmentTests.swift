@@ -46,7 +46,7 @@ struct AttachmentTests {
         ]
 
         #expect(keys.allSatisfy { AttachmentLocalization.text($0) != $0 })
-        for locale in ["en", "ko", "ja", "zh-Hans", "es"] {
+        for locale in ["en", "ko"] {
             let url = try #require(Bundle.main.url(forResource: locale, withExtension: "lproj"))
             let bundle = try #require(Bundle(url: url))
             #expect(keys.allSatisfy {

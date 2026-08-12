@@ -14,7 +14,7 @@
 - [x] APNs 설치 등록·해제, 발송, 수신·탭 이동·배지 코드를 Web Push 계약을 바꾸지 않는 additive 경로로 구현했다.
 - [x] 모바일 OAuth/APNs/Web Push/알림 타깃 백엔드 테스트 118/118, 백엔드 회귀 범위 1,065개 중 1,044 성공·기존 skip 21·기능 assertion 실패 0을 확인했다. 단일 프로세스 말미 OOM이 난 팀 관리 suite는 새 JVM에서 19/19 성공했다.
 - [x] MySQL 8.0에서 전체 73개 Flyway migration 신규 설치·V2.2.24 업그레이드·validate 73/73을 확인했다.
-- [x] 기존 웹 frontend type-check, Vitest 99/99, production build, 5개 언어 release-note 검사를 통과했다.
+- [x] 기존 웹 frontend type-check, Vitest 99/99, production build, 한국어·영어 release-note 검사를 통과했다.
 - [x] freeze2 최신 iOS 전체 **105/105**를 통과했다.
 - [x] P1 세션·OAuth·Push preference·Social sync·Calendar·Team·Settings Guide/deeplink/share/toolbar·Profile sync·attachment safety/discard guard 보정과 각 targeted test를 완료했다.
 - [x] `docker-compose.yml`에 기존 `APNS_TEAM_ID`, `APNS_KEY_ID`, `APNS_PRIVATE_KEY` 전달을 최소 연결했다.
@@ -27,10 +27,10 @@
 ### 진행 중 또는 완료 확인이 남은 범위
 
 - [ ] 기능 동등성 매트릭스 전 항목의 API fixture·권한·쓰기 후 재조회·웹 교차 검증을 완료한다.
-- [ ] 현지화 String Catalog의 5개 언어 런타임 표시, 테이블/폼 문구, 라이트·다크·Dynamic Type·VoiceOver를 최종 확인한다.
+- [ ] 현지화 String Catalog의 한국어·영어 런타임 표시, 테이블/폼 문구, 라이트·다크·Dynamic Type·VoiceOver를 최종 확인한다.
 - [ ] freeze2 105/105 이후 freeze3 최종 clean QA와 마지막 기능 동등성 감사를 완료한다.
 - [ ] APNs installation을 현재 refresh session에 귀속하는 P0 변경의 웹/PWA 영향·최소 대안·회귀안을 사용자에게 제시하고 승인받는다.
-- [ ] iPhone 13 mini·iPhone 16 Pro 화면·5개 언어·접근성 시각 QA를 완료한다.
+- [ ] iPhone 13 mini·iPhone 16 Pro 화면·한국어·영어·접근성 시각 QA를 완료한다.
 - [ ] 실제 iPhone에서 완료된 서명·무선 설치·기본 실행을 제외하고, 세션 복원·Kakao/Naver 로그인·첨부·알림·APNs 수신 E2E를 완료한다.
 - [ ] App Store 심사 범위인 실제 계정 삭제, Sign in with Apple 적용 여부, 개인정보/UGC 항목을 사용자와 별도 확정한다. 이는 웹 기능 동등성보다 넓은 출시 준비 항목이다.
 
@@ -115,7 +115,7 @@
 - [x] 앱 구조, 의존성 주입, 네트워크 계층, 상태 관리, 내비게이션 기준을 만든다.
 - [ ] 개발/스테이징/운영 환경 구성을 분리하고 비밀정보가 저장소에 들어가지 않게 한다.
 - [x] 공통 디자인 토큰, 타이포그래피, 다크 모드, 접근성 기준을 정의한다.
-- [x] `ko`, `en`, `ja`, `zh`, `es` 현지화 구조를 마련한다.
+- [x] `ko`, `en` 현지화 구조를 마련한다.
 - [ ] 네트워크 오류, 인증 만료, 오프라인 상태의 공통 처리 방식을 구현한다.
 
 ### 단계 2 — 인증 및 계정
@@ -248,7 +248,7 @@
 - 가장 먼저 이메일 로그인, 쿠키 저장, refresh, 앱 재실행 후 세션 복원을 확인하는 cookie POC를 만든다.
 - API 모델은 fixture 기반 contract test로 프론트/백엔드 불일치와 날짜·첨부 계약을 고정한다.
 - iPhone 13 mini와 iPhone 16 Pro를 필수 화면 검증 대상으로 둔다.
-- 한국어, 영어, 일본어, 중국어, 스페인어와 라이트/다크 모드, Dynamic Type, VoiceOver를 함께 검증한다.
+- 한국어, 영어와 라이트/다크 모드, Dynamic Type, VoiceOver를 함께 검증한다.
 
 ### 6.9 App Store 준비 갭
 
@@ -267,7 +267,7 @@
 | B1 | `ios/` SwiftUI 프로젝트 골격, 앱·단위·UI 테스트 타깃, 공통 디자인/현지화 기반 | 사용자 플랫폼 결정 완료 | 프로젝트 파일 소유 에이전트 1명; 테스트 fixture는 분리 가능 | generic build, iPhone 13 mini unit 2/UI 1, 5탭 이동·현지화 검증 | 완료 |
 | B2 | 필요한 범위의 공통 `APIClient`, HttpOnly 쿠키 저장·refresh·복원, 이메일 로그인 | B1 | 네트워크·인증 공통 파일은 단일 담당; 선제 protocol/DI/router 추상화 금지 | cookie POC와 이메일 인증 계약 테스트 통과 | 검토 필요 |
 | B3 | 모바일 OAuth 서버 code 교환과 iOS Kakao/Naver 연결 | 서버 기반 완료; 앱 클라이언트 구현 완료 | additive 서버 경로와 iOS 클라이언트 통합; 기존 OAuth 계약 영향 시 승인 게이트 | 서버 mobile+web 34/34와 앱 성공·취소·실패·exchange 검증 | 서버·앱 구현 완료 / 외부 E2E 대기 |
-| B4 | 관리자 제외 일반 사용자 웹 기능 완전 일치 | B2; 소셜 진입점은 B3 | 홈/캘린더·근무/일정·Todo·친구/팀·알림/첨부·프로필/설정을 파일 소유권별 병렬 구현 | 기능 매트릭스 전 항목과 5개 언어·접근성 검증 | 진행 중 |
+| B4 | 관리자 제외 일반 사용자 웹 기능 완전 일치 | B2; 소셜 진입점은 B3 | 홈/캘린더·근무/일정·Todo·친구/팀·알림/첨부·프로필/설정을 파일 소유권별 병렬 구현 | 기능 매트릭스 전 항목과 한국어·영어·접근성 검증 | 진행 중 |
 | B5 | APNs, 앱 내 계정 삭제, 개인정보/UGC/심사 갭, 배포·CI 준비 | B3, B4 핵심 흐름 | APNs 서버·앱, 계정 삭제 서버·앱, 심사/CI를 분리; 기존 Web Push·계정 계약 영향 시 승인 게이트 | App Store 준비와 기존 Web Push·웹 계정 경로 회귀 검증 통과 | 진행 중 / 외부 준비 필요 |
 
 ### B1 구현·검증 기록
@@ -291,7 +291,7 @@
 
 완료된 최소 보정:
 
-- [x] 작은 탭 슬롯용 short key와 화면 title key를 분리해 5개 언어에 적용
+- [x] 작은 탭 슬롯용 short key와 화면 title key를 분리해 한국어·영어에 적용
 - [x] 실제 5개 탭 이동과 각 화면 도달을 검증하는 UI test 추가
 - [x] 현재 사용하지 않는 미래용 type 제거
 
@@ -369,7 +369,7 @@ iOS 클라이언트 및 외부 후속:
 - `Core/Networking`, `Core/Auth`, `Core/Navigation`과 Home, Calendar, Todo, Social, Team, Notifications, Attachments, Settings, Guest/Public 기능 모듈이 통합돼 있다.
 - Guest/Public targeted test **5/5**를 포함한 기능별 targeted test가 통과했다.
 - 통합 중 발생한 `RootTabView`의 `!await` Swift 구문 오류는 `!(await ...)`로 수정됐고 최신 generic `build-for-testing`은 **TEST BUILD SUCCEEDED**다.
-- 5개 언어 String Catalog 구조와 번역 키는 존재하며, 최근 테이블·폼 현지화 통합 후 런타임 표시를 최종 확인 중이다.
+- 한국어·영어 String Catalog 구조와 번역 키는 존재하며, 최근 테이블·폼 현지화 통합 후 런타임 표시를 최종 확인 중이다.
 - freeze2 최신 iOS 전체 **105/105**가 성공했다.
 - 2차 감사에서 나온 세션·OAuth·Push preference·Social sync·Calendar·Team·Settings Guide/deeplink/share/toolbar·Profile sync·attachment safety/discard guard P1을 보정하고 각 targeted test를 통과했다.
 - final nits, Todo attachment/discard, core parity 보정과 targeted test(Calendar **17/17** 포함)를 완료했다.
@@ -445,7 +445,7 @@ iOS 클라이언트 및 외부 후속:
 | R-017 | 백엔드 회귀 범위 1,065개 중 1,044 성공·기존 21 skip·기능 assertion 실패 0이나 단일 프로세스 말미 OOM이 관찰됨 | 단일 실행의 종료 코드 green 증거는 제한됨 | OOM이 난 팀 관리 suite는 새 JVM 19/19 성공; 기능 회귀 없음으로 기록하되 자원 안정화와 분리 실행을 유지 | 기능 회귀 없음 / 실행 자원 주의 |
 | R-018 | 표준 `docker-compose.yml`의 APNs 자격증명 3개 전달이 필요했음 | 값을 준비해도 APNs가 무음 no-op 가능 | 기존 3개 설정만 compose에 최소 연결함; 실제 자격증명 발송 smoke test는 별도 | 연결 완료 / 외부 E2E 대기 |
 | R-019 | Personal Team local-only device build는 성공했지만 연결 가능한 iPhone과 배포용 유료 Team/provisioning, Kakao/Naver callback·APNs key가 없음 | 실기기 설치·OAuth/APNs E2E 차단 | §0 외부 준비 게이트를 완료하고 저장소에는 secret을 넣지 않음 | 설치·외부 준비 대기 |
-| R-020 | 5개 locale 카탈로그 724키는 누락이 없지만 일부 화면이 명시적 locale 없이 문자열을 선계산함 | 앱 내 언어 선택이 즉시 반영되지 않을 수 있음 | 최근 수정분의 런타임 전환을 5개 언어에서 최종 검증 | 진행 중 |
+| R-020 | 한국어·영어 카탈로그는 누락이 없지만 일부 화면이 명시적 locale 없이 문자열을 선계산함 | 앱 내 언어 선택이 즉시 반영되지 않을 수 있음 | 최근 수정분의 런타임 전환을 한국어·영어에서 최종 검증 | 진행 중 |
 | R-021 | 2차 감사의 세션/OAuth/Push preference/Social sync/Settings deeplink·toolbar/Profile sync/첨부 discard·safety P1 | 웹 동등성 미달 또는 상태 불일치 가능 | 최소 보정과 targeted test를 완료하고 freeze3 최종 QA에서 재확인 | 보정 완료 / 재감사 중 |
 | R-022 | Calendar·Team·Guide·공개 링크 share/deeplink P1은 보정됐으나 운영 AASA가 `text/html` SPA fallback이고 업로드 10/50MB 정책이 미확정 | Universal Link와 업로드 사용자 경험 미확정 | 앱 보정·targeted test는 완료. AASA/업로드 공통 변경은 웹·배포 영향이 있어 사용자 협의 전 수행하지 않음 | 앱 보정 완료 / 협의 게이트 |
 | R-023 | APNs installation이 현재 refresh session에 명시적으로 귀속되지 않는 P0 | 로그아웃·세션 종료 뒤 기기 푸시 귀속이 웹 세션 의미와 어긋날 수 있음 | 최소 변경안과 additive 대안, 기존 Web Push·refresh 회귀안을 사용자에게 제시; 승인 전 구현 금지 | 승인 대기 |
@@ -472,7 +472,7 @@ iOS 클라이언트 및 외부 후속:
 - [ ] iPhone 16 Pro 및 iPhone 13 mini 기준 레이아웃
 - [ ] 라이트/다크 모드와 시스템 글자 크기
 - [ ] VoiceOver, Reduce Motion, 대비, 44pt 이상 터치 영역
-- [ ] 한국어, English, 日本語, 简体中文, Español 문구 정합성
+- [ ] 한국어, English 문구 정합성
 - [ ] 느린 네트워크, 오프라인, 서버 오류, 재시도
 - [ ] 앱 백그라운드/포그라운드 전환과 메모리 경고
 - [ ] 민감정보의 키체인 저장, 로그 마스킹, ATS 적용
@@ -494,7 +494,7 @@ iOS 클라이언트 및 외부 후속:
 1. [ ] **현재 작업:** freeze2 전체 105/105 성공 이후 freeze3 최종 clean QA와 마지막 기능 동등성 감사를 완료한다.
 2. [ ] fixture 기반 contract test와 실제 서버 교차 검증: 일정 검색 DTO, 첨부 순서, 오류 코드, 날짜·시간 직렬화
 3. [ ] iPhone 13 mini와 iPhone 16 Pro 화면·상호작용 검증
-4. [ ] 5개 언어 런타임 전환, 라이트/다크 모드, Dynamic Type, VoiceOver 검증
+4. [ ] 한국어·영어 런타임 전환, 라이트/다크 모드, Dynamic Type, VoiceOver 검증
 5. [ ] 연결 가능한 실제 iPhone에서 Personal Team 빌드를 설치하고 cookie 세션·기본 기능을 검증한 뒤, 유료 Team/provider/APNs 준비 후 OAuth·APNs E2E를 검증
 
 B2 구현 원칙:
@@ -519,7 +519,7 @@ B2 구현 원칙:
 - [x] 사용자에게 기술 방식과 1차 제품 범위의 결정을 받는다.
 - [x] 결정 후 충돌 없는 B1~B5 실행 배치로 나누어 작업표를 갱신한다.
 - [x] B1 담당 에이전트를 배정하고 `ios/` 프로젝트 골격과 테스트 타깃을 구현한다.
-- [x] B1의 짧은 탭·화면 title 5개 언어 분리와 실제 5탭 이동 UI test를 추가한다.
+- [x] B1의 짧은 탭·화면 title 한국어·영어 분리와 실제 5탭 이동 UI test를 추가한다.
 - [x] B2 공통 `APIClient`와 이메일 cookie POC 담당을 배정하고 구현한다.
 - [x] B3 transaction 경계 최소 수정안에 대한 사용자 승인을 기록한다.
 - [x] B3 서버를 `stateConsumedAt` claim, transaction 밖 HTTP, 짧은 finalize transaction으로 최소 수정하고 mobile+web OAuth 34/34를 검증한다.
@@ -540,7 +540,7 @@ B2 구현 원칙:
 
 이 표는 현재 웹/PWA에서 실제로 제공하는 일반 사용자 기능을 iOS에서 빠짐없이 재현하기 위한 완료 계약이다. **서비스 관리자 화면(`/admin`, `/admin/teams`, `/admin/dev`)과 오프라인 동기화는 제외**한다. 팀 대표 관리자·팀 매니저가 사용하는 `/team/manage/:teamId`는 서비스 관리자 기능이 아니므로 포함한다.
 
-> 구현 코드와 targeted test가 대부분 존재하지만 공통 완료 기준의 실제 서버·웹 교차 검증이 끝나지 않았으므로 기능 행은 일괄 완료 처리하지 않는다. freeze2 전체 105/105와 final nits·Todo 첨부·core parity targeted test는 완료했다. 현재 freeze3 최종 QA, 실제 iPhone 설치, APNs refresh-session 귀속 P0 승인, API `code`별 5개 언어 표시·런타임 언어/접근성 확인, AASA와 10/50MB 정책 협의가 남아 있다.
+> 구현 코드와 targeted test가 대부분 존재하지만 공통 완료 기준의 실제 서버·웹 교차 검증이 끝나지 않았으므로 기능 행은 일괄 완료 처리하지 않는다. freeze2 전체 105/105와 final nits·Todo 첨부·core parity targeted test는 완료했다. 현재 freeze3 최종 QA, 실제 iPhone 설치, APNs refresh-session 귀속 P0 승인, API `code`별 한국어·영어 표시·런타임 언어/접근성 확인, AASA와 10/50MB 정책 협의가 남아 있다.
 
 담당 표기:
 
@@ -560,8 +560,8 @@ B2 구현 원칙:
 - [ ] 서버의 소유권·캘린더 공개범위·일정 공개범위·가족·개인 관리 위임·팀 권한 판정을 앱에서 완화하지 않는다.
 - [ ] 쓰기 후 서버 재조회와 웹 재접속에서 결과가 같고, 웹에서 변경 후 앱 재조회에도 같은 결과가 보인다.
 - [ ] 인증 필요 화면은 로그인 후 원래 목적지로 복귀하고, `401`은 기존 계약대로 refresh를 한 번 수행한 뒤 원요청을 한 번만 재시도한다.
-- [ ] 각 사용자 화면에 웹과 같은 로딩·빈 상태·서버 오류 처리가 있고 API의 machine-readable `code`를 5개 언어 문구로 표시한다.
-- [ ] 한국어, English, 日本語, 简体中文, Español 및 라이트·다크 모드에서 확인한다.
+- [ ] 각 사용자 화면에 웹과 같은 로딩·빈 상태·서버 오류 처리가 있고 API의 machine-readable `code`를 한국어·영어 문구로 표시한다.
+- [ ] 한국어, English 및 라이트·다크 모드에서 확인한다.
 - [ ] 웹에 없는 기능, 서버에만 있고 웹 UI에서 쓰지 않는 endpoint, 미래용 설정·추상화는 추가하지 않는다.
 
 ### 12.2 인증·OAuth·세션
@@ -653,10 +653,10 @@ B2 구현 원칙:
 | [ ] | 내 프로필 정보 | `GET /api/members/me` | B4-G 설정·공개 | 이름·팀·이메일·소셜 연결 상태·캘린더 공개범위를 웹과 같이 표시한다. |
 | [ ] | 프로필 사진 변경·삭제·조회 | `PUT/DELETE /api/members/profile-photo`; `GET /api/members/{memberId}/profile-photo` | B4-F 첨부, B4-G 설정·공개 | 사진 선택·웹 수준 crop·업로드·삭제 후 profilePhotoVersion 재조회로 홈·친구·팀의 사진이 갱신된다. 일반 첨부 PROFILE context로 바꾸지 않는다. |
 | [ ] | 캘린더 공개범위와 audience 미리보기 | `PUT /api/members/{memberId}/visibility`; `GET /api/friends` | B4-G 설정·공개 | PUBLIC/FRIENDS/FAMILY/PRIVATE 및 실제 친구·가족 열람 대상 미리보기를 제공하고 변경 즉시 공개 캘린더 조회에 반영한다. |
-| [ ] | 언어 | 앱 번들 `ko/en/ja/zh/es`; 서버 endpoint 없음 | B4-G 설정·공개 | 기기 언어는 최초 표시/제안일 뿐이며 사용자가 명시적으로 선택한 뒤에만 저장한다. 언어명은 `한국어`, `English`, `日本語`, `简体中文`, `Español`로 표시한다. |
+| [ ] | 언어 | 앱 번들 `ko/en`; 서버 endpoint 없음 | B4-G 설정·공개 | 기기 언어는 최초 표시/제안일 뿐이며 사용자가 명시적으로 선택한 뒤에만 저장한다. 언어명은 `한국어`, `English`로 표시한다. |
 | [ ] | 테마 | 앱 로컬 `light/dark`; 서버 endpoint 없음 | B4-G 설정·공개 | 웹과 같은 명시적 라이트·다크 두 선택만 제공하고 재실행 후 유지한다. 웹에 없는 자동 테마 설정은 추가하지 않는다. |
 | [ ] | 이용약관·개인정보처리방침 | `GET /api/policies/current`, `GET /api/policies/terms`, `/privacy` | B4-G 설정·공개 | 로그인 여부와 무관하게 서버의 최신 Markdown 전문·버전·시행일을 로딩/없음/오류 상태와 함께 읽을 수 있다. |
-| [ ] | 기능 가이드·릴리스 노트 | `/guide`의 5개 locale 번들 콘텐츠와 `frontend/src/releaseNotes/**`; 별도 API 없음 | B4-G 설정·공개 | dashboard/calendar/team/friends/settings 안내, 전체 펼침/접기, 릴리스 노트 5개씩 더 보기와 외부 PR 링크를 웹 콘텐츠 범위에서 제공한다. 새 guide API는 만들지 않는다. |
+| [ ] | 기능 가이드·릴리스 노트 | `/guide`의 한국어·영어 번들 콘텐츠와 `frontend/src/releaseNotes/**`; 별도 API 없음 | B4-G 설정·공개 | dashboard/calendar/team/friends/settings 안내, 전체 펼침/접기, 릴리스 노트 5개씩 더 보기와 외부 PR 링크를 웹 콘텐츠 범위에서 제공한다. 새 guide API는 만들지 않는다. |
 | [ ] | 공개 캘린더 링크 | 웹 URL `/duty/{memberId}`; 조회 조합은 members/duty/schedules/dday/calendar/holidays/teams | B4-A 홈·캘린더, B4-G 설정·공개 | 별도 share token이나 새 공개 API를 만들지 않는다. 기존 HTTPS 링크를 공유·열기하고 앱이 열 수 있으면 동일 member 캘린더로, 그렇지 않으면 기존 웹으로 이동한다. 익명 PUBLIC 권한은 서버와 동일하다. |
 | [ ] | 알 수 없는 링크·경로 | 웹 `not-found`와 동등한 fallback | B4-A 홈·캘린더 | 지원하지 않는 딥링크는 crash나 권한 우회 없이 홈 또는 안내 화면으로 이동한다. |
 | [ ] | 계정 삭제 안내·로그아웃 | 웹은 실제 삭제 API 없이 안내만 제공; 로그아웃은 `POST /api/auth/logout` | B4-G 설정·공개 | **웹 기능 동등성 범위에서는 안내만 재현**하고 임의의 삭제 API를 만들지 않는다. App Store 제출을 위한 실제 삭제는 B5의 별도 승인·설계 항목으로 관리한다. |
@@ -798,7 +798,7 @@ B2 구현 원칙:
 
 추가 locale/accessibility 회귀:
 
-- [ ] 위 matrix의 대표 화면을 `ko`, `en`, `ja`, `zh`, `es`에서 확인하고 tight slot 잘림을 기록한다.
+- [ ] 위 matrix의 대표 화면을 `ko`, `en`에서 확인하고 tight slot 잘림을 기록한다.
 - [ ] 기본 크기 통과 후 Larger Text, Bold Text, VoiceOver focus order와 Reduce Motion을 핵심 흐름에서 확인한다.
 - [ ] 캡처 파일명에 화면, 상태, viewport, theme, locale, web/app을 포함해 재검증 가능한 증거로 남긴다.
 
@@ -810,7 +810,7 @@ B2 구현 원칙:
 - [x] 기존 웹 WOFF를 변환하지 않고 공식 원본을 그대로 `ios` resource에 포함한다. 서체 파일 자체를 수정하지 않는다.
 - [x] Xcode resource sync와 `UIAppFonts` 등록을 확인한다.
 - [x] 실제 PostScript name `MaplestoryOTFLight`/`MaplestoryOTFBold`를 확인해 SwiftUI mapping과 system fallback을 구성한다.
-- [ ] 한글·영문·일본어·중국어·스페인어 sample, 숫자·날짜·badge·calendar cell을 두 기기 폭과 light/dark에서 검증한다.
+- [ ] 한글·영문 sample, 숫자·날짜·badge·calendar cell을 두 기기 폭과 light/dark에서 검증한다.
 - [x] `Resources/Fonts/NOTICE.txt`에 저작권·공식 출처·원본 미수정 포함 사실을 최소 기록한다.
 
 ### 13.6 논리적 커밋 milestone
@@ -859,7 +859,7 @@ B2 구현 원칙:
 | Naver | Naver Developers의 기존 웹 callback을 보존하고 `https://dutypark.o-r.kr/api/auth/mobile/oauth/callback/naver` 추가, Client ID/Secret·서비스 URL·검수/테스트 계정 확인 | 사용자 로그인/콘솔 권한 필요, 에이전트 단계별 보조 | 기존 웹 로그인과 iOS 기존/신규/취소/실패 E2E 모두 성공 | [ ] |
 | 운영 서버 | 모바일 OAuth/APNs additive backend와 migration 배포, public scheme/host proxy 전달, secret 연결 | 에이전트 변경 / 배포는 사용자 승인 범위 | 기존 웹 smoke regression + mobile OAuth/APNs smoke 성공 | 미배포 |
 | App Store 정책 | Sign in with Apple 적용 판단, 실제 앱 내 계정 삭제, 개인정보처리방침·UGC 신고/차단·권한 문구 확정 | 사용자 결정 + 에이전트 구현/문서 보조 | App Review 필수 항목과 privacy answers가 실제 앱 동작과 일치 | 승인 대기 |
-| App Store Connect | 앱 이름·부제·설명·키워드·지원/개인정보 URL·연령등급·카테고리·5개 locale metadata·screenshot 준비 | 사용자 최종 승인 / 에이전트 산출 보조 | 13 mini/16 Pro 기준 화면을 포함한 제출 필드 완료 | [ ] |
+| App Store Connect | 앱 이름·부제·설명·키워드·지원/개인정보 URL·연령등급·카테고리·한국어·영어 metadata·screenshot 준비 | 사용자 최종 승인 / 에이전트 산출 보조 | 13 mini/16 Pro 기준 화면을 포함한 제출 필드 완료 | [ ] |
 | TestFlight | Archive upload, export compliance, 내부 tester, OAuth/APNs 운영 smoke | 사용자 계정 접근 필요 / 에이전트 보조 | 실제 배포 build에서 핵심 기능과 웹 병행 회귀 성공 | [ ] |
 
 웹/PWA 영향 사전 협의가 필요한 항목:

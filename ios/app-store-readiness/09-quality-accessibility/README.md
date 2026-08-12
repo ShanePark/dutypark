@@ -42,22 +42,15 @@ Apple의 인터페이스 접근성 원칙은 [Accessibility](https://developer.a
 
 ## 3. 언어·테마·글자 크기 매트릭스
 
-지원 언어는 한국어, 영어, 일본어, 중국어 간체, 스페인어의 5개다.
+지원 언어는 한국어와 영어 2개다.
 모든 조합을 완전 탐색하기 어려우면 핵심 화면은 전 조합, 나머지 화면은 pairwise 방식으로 기록한다.
 
 - [ ] `ko` × Light × 기본/최대 Dynamic Type
 - [ ] `ko` × Dark × 기본/최대 Dynamic Type
 - [ ] `en` × Light × 기본/최대 Dynamic Type
 - [ ] `en` × Dark × 기본/최대 Dynamic Type
-- [ ] `ja` × Light × 기본/최대 Dynamic Type
-- [ ] `ja` × Dark × 기본/최대 Dynamic Type
-- [ ] `zh-Hans` × Light × 기본/최대 Dynamic Type
-- [ ] `zh-Hans` × Dark × 기본/최대 Dynamic Type
-- [ ] `es` × Light × 기본/최대 Dynamic Type
-- [ ] `es` × Dark × 기본/최대 Dynamic Type
 - [ ] 모든 사용자 노출 문자열이 번역되고 키 이름이 그대로 보이지 않는다.
-- [ ] 긴 영어·스페인어 문자열이 버튼, 탭, 경고창에서 잘리지 않는다.
-- [ ] 일본어·중국어의 줄바꿈이 아이콘이나 상태 배지를 침범하지 않는다.
+- [ ] 긴 영어 문자열이 버튼, 탭, 경고창에서 잘리지 않는다.
 - [ ] Dark Mode에서 텍스트, 경계선, disabled 상태와 오류 메시지가 구분된다.
 - [ ] 최대 Dynamic Type에서 확대, 줄바꿈 또는 스크롤로 기능을 끝까지 수행할 수 있다.
 - [ ] 고정 높이 때문에 텍스트가 잘리는 화면을 기록하고 수정한다.
@@ -149,7 +142,7 @@ VoiceOver 수동 검증은 [Apple VoiceOver 테스트 안내](https://developer.
 
 - [ ] iPhone 전용·세로 방향 지원 범위가 프로젝트, 스토어 정보와 테스트 계획에 일치한다.
 - [ ] iPhone 13 mini와 iPhone 16 Pro에서 핵심 사용자 흐름이 통과한다.
-- [ ] 5개 언어 × Light/Dark × 기본·최대 Dynamic Type 매트릭스가 기록되고 차단 결함이 없다.
+- [ ] 2개 언어 × Light/Dark × 기본·최대 Dynamic Type 매트릭스가 기록되고 차단 결함이 없다.
 - [ ] VoiceOver로 캘린더와 Todo 이동을 포함한 핵심 기능을 완료할 수 있다.
 - [ ] 주요 조작의 44pt 터치 영역이 수동·자동 테스트에서 확인된다.
 - [ ] Todo 드래그와 기능적으로 동등한 접근성 대체 조작이 검증된다.

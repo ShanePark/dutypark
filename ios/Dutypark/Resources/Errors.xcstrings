@@ -4,91 +4,61 @@
     "already_linked": {
       "localizations": {
         "en": { "stringUnit": { "state": "translated", "value": "This social account is already connected to another account." } },
-        "es": { "stringUnit": { "state": "translated", "value": "Esta cuenta social ya está conectada a otra cuenta." } },
-        "ja": { "stringUnit": { "state": "translated", "value": "このソーシャルアカウントはすでに別のアカウントに連携されています。" } },
-        "ko": { "stringUnit": { "state": "translated", "value": "이미 다른 계정에 연결된 소셜 계정입니다." } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "此社交账号已关联到其他账号。" } }
+        "ko": { "stringUnit": { "state": "translated", "value": "이미 다른 계정에 연결된 소셜 계정입니다." } }
       }
     },
     "auth.oauth.mobile.authorizationUrl.invalid": {
       "localizations": {
         "en": { "stringUnit": { "state": "translated", "value": "Could not start social login. Please try again." } },
-        "es": { "stringUnit": { "state": "translated", "value": "No se pudo iniciar el acceso social. Inténtalo de nuevo." } },
-        "ja": { "stringUnit": { "state": "translated", "value": "ソーシャルログインを開始できませんでした。もう一度お試しください。" } },
-        "ko": { "stringUnit": { "state": "translated", "value": "소셜 로그인을 시작하지 못했습니다. 다시 시도해주세요." } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "无法启动社交账号登录，请重试。" } }
+        "ko": { "stringUnit": { "state": "translated", "value": "소셜 로그인을 시작하지 못했습니다. 다시 시도해주세요." } }
       }
     },
     "auth.oauth.mobile.callback.invalid": {
       "localizations": {
         "en": { "stringUnit": { "state": "translated", "value": "The social login response is invalid. Please try again." } },
-        "es": { "stringUnit": { "state": "translated", "value": "La respuesta del acceso social no es válida. Inténtalo de nuevo." } },
-        "ja": { "stringUnit": { "state": "translated", "value": "ソーシャルログインの応答が無効です。もう一度お試しください。" } },
-        "ko": { "stringUnit": { "state": "translated", "value": "소셜 로그인 응답이 올바르지 않습니다. 다시 시도해주세요." } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "社交账号登录响应无效，请重试。" } }
+        "ko": { "stringUnit": { "state": "translated", "value": "소셜 로그인 응답이 올바르지 않습니다. 다시 시도해주세요." } }
       }
     },
     "auth.oauth.mobile.callback.notAllowed": {
       "localizations": {
         "en": { "stringUnit": { "state": "translated", "value": "The social login callback address is not allowed." } },
-        "es": { "stringUnit": { "state": "translated", "value": "La dirección de retorno del acceso social no está permitida." } },
-        "ja": { "stringUnit": { "state": "translated", "value": "ソーシャルログインのコールバック先が許可されていません。" } },
-        "ko": { "stringUnit": { "state": "translated", "value": "허용되지 않은 소셜 로그인 콜백 주소입니다." } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "不允许使用此社交账号登录回调地址。" } }
+        "ko": { "stringUnit": { "state": "translated", "value": "허용되지 않은 소셜 로그인 콜백 주소입니다." } }
       }
     },
     "auth.oauth.mobile.code.invalid": {
       "localizations": {
         "en": { "stringUnit": { "state": "translated", "value": "The social login code is invalid or expired. Please start again." } },
-        "es": { "stringUnit": { "state": "translated", "value": "El código de acceso social no es válido o ha caducado. Vuelve a empezar." } },
-        "ja": { "stringUnit": { "state": "translated", "value": "ソーシャルログインコードが無効か期限切れです。最初からやり直してください。" } },
-        "ko": { "stringUnit": { "state": "translated", "value": "소셜 로그인 코드가 올바르지 않거나 만료되었습니다. 처음부터 다시 시도해주세요." } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "社交账号登录代码无效或已过期，请重新开始。" } }
+        "ko": { "stringUnit": { "state": "translated", "value": "소셜 로그인 코드가 올바르지 않거나 만료되었습니다. 처음부터 다시 시도해주세요." } }
       }
     },
     "auth.oauth.mobile.pkce.invalid": {
       "localizations": {
         "en": { "stringUnit": { "state": "translated", "value": "Social login security verification failed. Please start again." } },
-        "es": { "stringUnit": { "state": "translated", "value": "Falló la verificación de seguridad del acceso social. Vuelve a empezar." } },
-        "ja": { "stringUnit": { "state": "translated", "value": "ソーシャルログインのセキュリティ確認に失敗しました。最初からやり直してください。" } },
-        "ko": { "stringUnit": { "state": "translated", "value": "소셜 로그인 보안 확인에 실패했습니다. 처음부터 다시 시도해주세요." } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "社交账号登录安全验证失败，请重新开始。" } }
+        "ko": { "stringUnit": { "state": "translated", "value": "소셜 로그인 보안 확인에 실패했습니다. 처음부터 다시 시도해주세요." } }
       }
     },
     "auth.oauth.mobile.provider.invalid": {
       "localizations": {
         "en": { "stringUnit": { "state": "translated", "value": "This social login provider is not supported." } },
-        "es": { "stringUnit": { "state": "translated", "value": "Este proveedor de acceso social no es compatible." } },
-        "ja": { "stringUnit": { "state": "translated", "value": "このソーシャルログインには対応していません。" } },
-        "ko": { "stringUnit": { "state": "translated", "value": "지원하지 않는 소셜 로그인 제공자입니다." } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "不支持此社交账号登录提供商。" } }
+        "ko": { "stringUnit": { "state": "translated", "value": "지원하지 않는 소셜 로그인 제공자입니다." } }
       }
     },
     "auth.oauth.mobile.purpose.invalid": {
       "localizations": {
         "en": { "stringUnit": { "state": "translated", "value": "This social login request is not supported." } },
-        "es": { "stringUnit": { "state": "translated", "value": "Esta solicitud de acceso social no es compatible." } },
-        "ja": { "stringUnit": { "state": "translated", "value": "このソーシャルログイン要求には対応していません。" } },
-        "ko": { "stringUnit": { "state": "translated", "value": "지원하지 않는 소셜 로그인 요청입니다." } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "不支持此社交账号登录请求。" } }
+        "ko": { "stringUnit": { "state": "translated", "value": "지원하지 않는 소셜 로그인 요청입니다." } }
       }
     },
     "auth.oauth.mobile.state.invalid": {
       "localizations": {
         "en": { "stringUnit": { "state": "translated", "value": "The social login session is invalid or expired. Please start again." } },
-        "es": { "stringUnit": { "state": "translated", "value": "La sesión de acceso social no es válida o ha caducado. Vuelve a empezar." } },
-        "ja": { "stringUnit": { "state": "translated", "value": "ソーシャルログインセッションが無効か期限切れです。最初からやり直してください。" } },
-        "ko": { "stringUnit": { "state": "translated", "value": "소셜 로그인 세션이 올바르지 않거나 만료되었습니다. 처음부터 다시 시도해주세요." } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "社交账号登录会话无效或已过期，请重新开始。" } }
+        "ko": { "stringUnit": { "state": "translated", "value": "소셜 로그인 세션이 올바르지 않거나 만료되었습니다. 처음부터 다시 시도해주세요." } }
       }
     },
     "provider_failed": {
       "localizations": {
         "en": { "stringUnit": { "state": "translated", "value": "The social login provider could not complete authentication. Please try again." } },
-        "es": { "stringUnit": { "state": "translated", "value": "El proveedor de acceso social no pudo completar la autenticación. Inténtalo de nuevo." } },
-        "ja": { "stringUnit": { "state": "translated", "value": "ソーシャルログインの認証に失敗しました。もう一度お試しください。" } },
-        "ko": { "stringUnit": { "state": "translated", "value": "소셜 로그인 제공자 인증에 실패했습니다. 다시 시도해주세요." } },
-        "zh-Hans": { "stringUnit": { "state": "translated", "value": "社交账号登录提供商未能完成认证，请重试。" } }
+        "ko": { "stringUnit": { "state": "translated", "value": "소셜 로그인 제공자 인증에 실패했습니다. 다시 시도해주세요." } }
       }
     },
     "attachment.context.missing": {
@@ -103,24 +73,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "첨부파일의 컨텍스트 정보가 없습니다."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "添付ファイルのコンテキスト情報がありません。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "缺少附件上下文信息。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Falta la información del contexto del archivo adjunto."
           }
         }
       }
@@ -138,24 +90,6 @@
             "state": "translated",
             "value": "허용되지 않는 파일 확장자입니다."
           }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "許可されていないファイル拡張子です。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "不允许使用此文件扩展名。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Esta extensión de archivo no está permitida."
-          }
         }
       }
     },
@@ -171,24 +105,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "이 프로필 첨부파일을 수정할 권한이 없습니다."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "このプロフィール添付ファイルを変更する権限がありません。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "您无权修改此个人资料附件。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No tienes permiso para modificar este archivo adjunto de perfil."
           }
         }
       }
@@ -206,24 +122,6 @@
             "state": "translated",
             "value": "임시 업로드 세션 첨부파일에 접근하려면 로그인이 필요합니다."
           }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "一時アップロードセッションの添付ファイルにアクセスするにはログインが必要です。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "需要登录才能访问会话附件。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Es necesario iniciar sesión para acceder a los archivos adjuntos de la sesión."
-          }
         }
       }
     },
@@ -239,24 +137,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "업로드 세션과 대상 컨텍스트가 일치하지 않습니다."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "アップロードセッションと対象コンテキストが一致しません。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "上传会话与目标上下文不匹配。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La sesión de carga no coincide con el contexto de destino."
           }
         }
       }
@@ -274,24 +154,6 @@
             "state": "translated",
             "value": "이 업로드 세션에 접근할 권한이 없습니다."
           }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "このアップロードセッションにアクセスする権限がありません。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "您无权访问此上传会话。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No tienes permiso para acceder a esta sesión de carga."
-          }
         }
       }
     },
@@ -307,24 +169,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "이 첨부파일에 연결된 업로드 세션을 찾을 수 없습니다."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "この添付ファイルに紐づくアップロードセッションが見つかりません。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "找不到此附件的上传会话。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se pudo encontrar la sesión de carga de este archivo adjunto."
           }
         }
       }
@@ -342,24 +186,6 @@
             "state": "translated",
             "value": "업로드 세션의 대상 컨텍스트 정보가 없습니다."
           }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "アップロードセッションに対象コンテキスト情報がありません。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "上传会话缺少目标上下文信息。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "A la sesión de carga le falta información del contexto de destino."
-          }
         }
       }
     },
@@ -375,24 +201,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "파일 크기가 너무 큽니다."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ファイルサイズが大きすぎます。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "文件太大。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "El archivo es demasiado grande."
           }
         }
       }
@@ -410,24 +218,6 @@
             "state": "translated",
             "value": "이 할 일 첨부파일을 볼 권한이 없습니다."
           }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "このTo-do添付ファイルを閲覧する権限がありません。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "您无权查看此待办事项附件。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No tienes permiso para ver este archivo adjunto de tareas pendientes."
-          }
         }
       }
     },
@@ -443,24 +233,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "이 할 일 첨부파일에 접근하려면 로그인이 필요합니다."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "このTo-do添付ファイルにアクセスするにはログインが必要です。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "需要登录才能访问此待办事项附件。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Es necesario iniciar sesión para acceder a este archivo adjunto de tareas pendientes."
           }
         }
       }
@@ -478,24 +250,6 @@
             "state": "translated",
             "value": "이 할 일 첨부파일을 수정할 권한이 없습니다."
           }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "このTo-do添付ファイルを変更する権限がありません。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "您无权修改此待办事项附件。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No tienes permiso para modificar este archivo adjunto de tareas pendientes."
-          }
         }
       }
     },
@@ -511,24 +265,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "이미 다른 계정으로 전환된 상태입니다."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "すでに別のアカウントに切り替え中です。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "您已经在冒充另一个帐户。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ya estás haciéndote pasar por otra cuenta."
           }
         }
       }
@@ -546,24 +282,6 @@
             "state": "translated",
             "value": "계정 전환에 실패했습니다."
           }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "アカウント切り替えに失敗しました。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "切换账户失败。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se pudo cambiar de cuenta."
-          }
         }
       }
     },
@@ -579,24 +297,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "관리 권한이 없습니다."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "このアカウントを管理する権限がありません。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "您无权管理此帐户。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No tienes permiso para administrar esta cuenta."
           }
         }
       }
@@ -614,24 +314,6 @@
             "state": "translated",
             "value": "관리자 계정을 찾을 수 없습니다."
           }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "管理者アカウントが見つかりません。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "找不到经理帐户。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se pudo encontrar la cuenta de administrador."
-          }
         }
       }
     },
@@ -647,24 +329,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "대상 계정을 찾을 수 없습니다."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "対象アカウントが見つかりません。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "找不到目标帐户。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se pudo encontrar la cuenta de destino."
           }
         }
       }
@@ -682,24 +346,6 @@
             "state": "translated",
             "value": "이메일 또는 비밀번호가 올바르지 않습니다."
           }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "メールアドレスまたはパスワードが正しくありません。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "电子邮件或密码不正确。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "El correo electrónico o la contraseña son incorrectos."
-          }
         }
       }
     },
@@ -715,24 +361,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "로그인 시도 횟수를 초과했습니다. 잠시 후 다시 시도해 주세요."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ログイン試行回数が多すぎます。しばらくしてから再試行してください。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "登录尝试次数过多。请稍后重试。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Demasiados intentos de inicio de sesión. Inténtelo de nuevo más tarde."
           }
         }
       }
@@ -750,24 +378,6 @@
             "state": "translated",
             "value": "이 비밀번호를 변경할 권한이 없습니다."
           }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "このパスワードを変更する権限がありません。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "您无权更改此密码。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No está autorizado a cambiar esta contraseña."
-          }
         }
       }
     },
@@ -783,24 +393,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "현재 비밀번호가 일치하지 않습니다."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "現在のパスワードが一致しません。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "当前密码不匹配。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La contraseña actual no coincide."
           }
         }
       }
@@ -818,24 +410,6 @@
             "state": "translated",
             "value": "존재하지 않는 계정입니다."
           }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "アカウントが存在しません。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "帐户不存在。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La cuenta no existe."
-          }
         }
       }
     },
@@ -851,24 +425,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "현재 로그인 중인 리프레시 토큰 정보가 필요합니다."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "現在のログインに使っているリフレッシュトークン情報が必要です。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "需要当前刷新令牌。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Se requiere el token de actualización actual."
           }
         }
       }
@@ -886,24 +442,6 @@
             "state": "translated",
             "value": "리프레시 토큰이 만료되었습니다."
           }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "リフレッシュトークンの有効期限が切れています。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "刷新令牌已过期。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "El token de actualización ha caducado."
-          }
         }
       }
     },
@@ -919,24 +457,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "유효하지 않은 리프레시 토큰입니다."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "無効なリフレッシュトークンです。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "刷新令牌无效。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Token de actualización no válido."
           }
         }
       }
@@ -954,24 +474,6 @@
             "state": "translated",
             "value": "이 리프레시 토큰을 삭제할 권한이 없습니다."
           }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "このリフレッシュトークンを削除する権限がありません。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "您无权删除此刷新令牌。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No tienes permiso para eliminar este token de actualización."
-          }
         }
       }
     },
@@ -987,24 +489,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "로그인이 필요합니다."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ログインが必要です。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "需要登录。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Es necesario iniciar sesión."
           }
         }
       }
@@ -1022,24 +506,6 @@
             "state": "translated",
             "value": "계정 복원에 실패했습니다."
           }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "元のアカウントへ戻れませんでした。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "无法恢复原始帐户。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se pudo restaurar la cuenta original."
-          }
         }
       }
     },
@@ -1055,24 +521,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "전환된 계정 상태가 아닙니다."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "現在はアカウント切り替え状態ではありません。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "您当前没有冒充其他帐户。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Actualmente no estás haciéndote pasar por otra cuenta."
           }
         }
       }
@@ -1090,24 +538,6 @@
             "state": "translated",
             "value": "원래 계정 정보가 없습니다."
           }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "元のアカウント情報がありません。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "原始帐户信息丢失。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Falta la información de la cuenta original."
-          }
         }
       }
     },
@@ -1123,24 +553,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "원래 계정을 찾을 수 없습니다."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "元のアカウントが見つかりません。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "找不到原始帐户。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se pudo encontrar la cuenta original."
           }
         }
       }
@@ -1158,24 +570,6 @@
             "state": "translated",
             "value": "존재하지 않는 계정입니다."
           }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "アカウントが存在しません。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "帐户不存在。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La cuenta no existe."
-          }
         }
       }
     },
@@ -1191,24 +585,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "인증이 필요합니다."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "認証が必要です。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "未经授权。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No autorizado."
           }
         }
       }
@@ -1226,24 +602,6 @@
             "state": "translated",
             "value": "잘못된 요청입니다."
           }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "不正なリクエストです。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "不好的请求。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mala petición."
-          }
         }
       }
     },
@@ -1259,24 +617,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "다른 근무 변경이 처리 중입니다. 잠시 후 다시 시도해 주세요."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "別の勤務変更を処理中です。しばらくしてからもう一度お試しください。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "其他排班更改正在处理中，请稍后重试。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Se está procesando otro cambio de turno. Inténtelo de nuevo en unos instantes."
           }
         }
       }
@@ -1294,24 +634,6 @@
             "state": "translated",
             "value": "리소스를 찾을 수 없습니다."
           }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "リソースが見つかりません。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "未找到资源。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Recurso no encontrado."
-          }
         }
       }
     },
@@ -1327,24 +649,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "リクエストが多すぎます。しばらくしてから再試行してください。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "请求太多。请稍后重试。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Demasiadas solicitudes. Inténtelo de nuevo más tarde."
           }
         }
       }
@@ -1362,24 +666,6 @@
             "state": "translated",
             "value": "요청 값을 다시 확인해 주세요."
           }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "リクエスト内容を確認してください。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "请检查请求字段。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Por favor revise los campos de solicitud."
-          }
         }
       }
     },
@@ -1395,24 +681,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "이 D-Day에 접근할 권한이 없습니다."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "このD-Dayにアクセスする権限がありません。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "您无权访问此 D-Day。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No tienes permiso para acceder a este D-Day."
           }
         }
       }
@@ -1430,24 +698,6 @@
             "state": "translated",
             "value": "D-DAY 제목은 1자 이상 30자 이하로 입력해주세요."
           }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "D-Dayのタイトルは1文字以上30文字以下で入力してください。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "D-Day 标题必须介于 1 到 30 个字符之间。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Los títulos D-Day deben tener entre 1 y 30 caracteres."
-          }
         }
       }
     },
@@ -1463,24 +713,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "D-DAY 제목은 필수입니다."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "D-Dayのタイトルは必須です。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "D-Day 标题为必填项。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Se requiere el título D-Day."
           }
         }
       }
@@ -1498,24 +730,6 @@
             "state": "translated",
             "value": "이 근무를 수정할 권한이 없습니다."
           }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "この勤務を編集する権限がありません。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "您无权编辑此班次。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No tienes permiso para editar este turno."
-          }
         }
       }
     },
@@ -1531,24 +745,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "선택한 근무 유형을 사용할 수 없습니다. 팀 설정을 확인해주세요."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "選択した勤務タイプは使用できません。チーム設定を確認してください。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "所选值班类型不可用，请检查团队设置。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "El tipo de turno seleccionado no está disponible. Revisa la configuración del equipo."
           }
         }
       }
@@ -1566,24 +762,6 @@
             "state": "translated",
             "value": "팀에 소속된 회원만 기본 근무 패턴을 설정할 수 있습니다."
           }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "基本勤務パターンを設定するには、チームに所属する必要があります。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "只有团队成员才能设置默认值班模式。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Debes pertenecer a un equipo para configurar un patrón de turnos."
-          }
         }
       }
     },
@@ -1599,24 +777,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "같은 요일을 두 번 설정할 수 없습니다."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "同じ曜日を重複して設定することはできません。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "同一星期不能重复设置。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se puede configurar dos veces el mismo día."
           }
         }
       }
@@ -1634,24 +794,6 @@
             "state": "translated",
             "value": "근무 요일을 하나 이상 선택해주세요."
           }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "勤務曜日を1つ以上選択してください。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "请至少选择一个工作日。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Selecciona al menos un día de trabajo."
-          }
         }
       }
     },
@@ -1667,24 +809,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "일괄 업로드를 사용하려면 팀의 근무 유형이 정확히 1개여야 합니다."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "一括アップロードを使うには、チームの勤務タイプがちょうど1つ必要です。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "团队必须只有一种班次类型才能使用批量上传。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "El equipo debe tener exactamente un tipo de tarea para utilizar la carga por lotes."
           }
         }
       }
@@ -1702,24 +826,6 @@
             "state": "translated",
             "value": "시간표 일괄 업로드를 사용하려면 팀에 속한 계정이어야 합니다."
           }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "勤務表の一括アップロードを使うには、チーム所属アカウントである必要があります。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "该帐户必须属于一个团队才能使用批量上传。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La cuenta debe pertenecer a un equipo para utilizar la carga por lotes."
-          }
         }
       }
     },
@@ -1735,24 +841,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "업로드한 파일에서 같은 이름의 사용자가 여러 명 발견되었습니다."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "アップロードしたファイルで同じ名前の利用者が複数見つかりました。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在上传的文件中发现多个匹配的名称。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Se encontraron varios nombres coincidentes en el archivo subido."
           }
         }
       }
@@ -1770,24 +858,6 @@
             "state": "translated",
             "value": "업로드한 파일에서 사용자의 이름을 찾을 수 없습니다."
           }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "アップロードしたファイルから利用者名を見つけられませんでした。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在上传的文件中找不到会员姓名。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se pudo encontrar el nombre del miembro en el archivo cargado."
-          }
         }
       }
     },
@@ -1803,24 +873,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "지원하지 않는 파일 형식입니다. 지원 형식: {supportedFile}"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "このファイル形式には対応していません。対応形式: {supportedFile}"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "不支持此文件格式。支持的格式：{supportedFile}"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Este formato de archivo no es compatible. Formatos admitidos: {supportedFile}"
           }
         }
       }
@@ -1838,24 +890,6 @@
             "state": "translated",
             "value": "먼저 일괄 업로드 템플릿을 선택해주세요."
           }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "先に一括アップロードテンプレートを選択してください。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "首先选择批量上传模板。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Primero seleccione una plantilla de carga por lotes."
-          }
         }
       }
     },
@@ -1871,24 +905,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "업로드한 파일의 연월이 현재 설정 중인 시간표({year}년 {month}월)와 일치하지 않습니다."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "アップロードしたファイルの年月が選択した勤務表年月（{year}-{month}）と一致しません。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "上传的文件月份与选定的计划月份 ({year}-{month}) 不匹配。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "El mes del archivo cargado no coincide con el mes programado seleccionado ({year}-{month})."
           }
         }
       }
@@ -1906,24 +922,6 @@
             "state": "translated",
             "value": "올바른 색상 형식이 아닙니다."
           }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "色の形式が正しくありません。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "颜色格式无效。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Formato de color no válido."
-          }
         }
       }
     },
@@ -1939,24 +937,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "동일한 이름의 근무 유형이 이미 존재합니다."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "同じ名前の勤務タイプがすでに存在します。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "已存在同名的班次类型。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ya existe un tipo de turno con el mismo nombre."
           }
         }
       }
@@ -1974,24 +954,6 @@
             "state": "translated",
             "value": "근무명은 1자 이상 10자 이하로 입력해주세요."
           }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "勤務名は1文字以上10文字以下で入力してください。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "班次名称必须介于 1 到 10 个字符之间。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Los nombres de los turnos deben tener entre 1 y 10 caracteres."
-          }
         }
       }
     },
@@ -2007,24 +969,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "근무명은 필수입니다."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "勤務名は必須です。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "班次名称为必填项。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Se requiere el nombre del servicio."
           }
         }
       }
@@ -2042,24 +986,6 @@
             "state": "translated",
             "value": "이미 가족으로 설정된 사용자입니다."
           }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "すでに家族として設定されています。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "该成员已被标记为家庭成员。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Este miembro ya está marcado como familia."
-          }
         }
       }
     },
@@ -2075,24 +1001,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "가족으로 설정된 사용자가 아닙니다."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "家族として設定されていません。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "该成员未标记为家庭成员。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Este miembro no está marcado como familia."
           }
         }
       }
@@ -2110,24 +1018,6 @@
             "state": "translated",
             "value": "가족으로 추가하려면 먼저 친구여야 합니다."
           }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "家族に追加するには、先に友だちである必要があります。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "只有朋友才能添加为家人。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Solo se pueden agregar amigos como familia."
-          }
         }
       }
     },
@@ -2143,24 +1033,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "친구로 연결된 사용자가 아닙니다."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "友だちとしてつながっている相手ではありません。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "该成员不是您的朋友。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Este miembro no es tu amigo."
           }
         }
       }
@@ -2178,24 +1050,6 @@
             "state": "translated",
             "value": "이미 친구로 연결된 사용자입니다."
           }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "すでに友だちです。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "你们已经是朋友了。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ya sois amigos."
-          }
         }
       }
     },
@@ -2211,24 +1065,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "이미 대기 중인 친구 또는 가족 요청이 있습니다."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "保留中の友だちまたは家族リクエストがすでにあります。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "朋友或家人的请求已在等待处理。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Una solicitud de amigo o familiar ya está pendiente."
           }
         }
       }
@@ -2246,24 +1082,6 @@
             "state": "translated",
             "value": "대기 중인 친구 또는 가족 요청을 찾을 수 없습니다."
           }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "保留中の友だちまたは家族リクエストが見つかりません。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "未找到待处理的朋友或家人请求。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se encontró ninguna solicitud pendiente de amigo o familiar."
-          }
         }
       }
     },
@@ -2279,24 +1097,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "자기 자신에게는 친구 요청을 보낼 수 없습니다."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "自分自身には友だちリクエストを送れません。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "您无法向自己发送好友请求。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No puedes enviarte una solicitud de amistad a ti mismo."
           }
         }
       }
@@ -2314,24 +1114,6 @@
             "state": "translated",
             "value": "이름은 필수입니다."
           }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "名前は必須です。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "姓名为必填项。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "El nombre es obligatorio."
-          }
         }
       }
     },
@@ -2347,24 +1129,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "이 회원의 캘린더를 볼 권한이 없습니다."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "この会員のカレンダーを閲覧する権限がありません。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "您无权查看该成员的日历。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No tienes permiso para ver el calendario de este miembro."
           }
         }
       }
@@ -2382,24 +1146,6 @@
             "state": "translated",
             "value": "다른 회원의 공개 범위는 변경할 수 없습니다."
           }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "他の会員の公開範囲は変更できません。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "您无法更新其他成员的可见性。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No puedes actualizar la visibilidad de otro miembro."
-          }
         }
       }
     },
@@ -2415,24 +1161,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "개인정보 처리방침에 동의해야 합니다."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "プライバシーポリシーへの同意が必要です。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "您必须同意隐私政策。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Debe aceptar la política de privacidad."
           }
         }
       }
@@ -2450,24 +1178,6 @@
             "state": "translated",
             "value": "개인정보 처리방침 버전 정보가 필요합니다."
           }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "プライバシーポリシーのバージョン情報が必要です。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "需要隐私政策版本信息。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Se requiere información de la versión de la política de privacidad."
-          }
         }
       }
     },
@@ -2483,24 +1193,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "서비스 이용약관에 동의해야 합니다."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "利用規約への同意が必要です。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "您必须同意服务条款。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Debe aceptar los términos de servicio."
           }
         }
       }
@@ -2518,24 +1210,6 @@
             "state": "translated",
             "value": "이용약관 버전 정보가 필요합니다."
           }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "利用規約のバージョン情報が必要です。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "需要条款版本信息。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Se requiere información sobre la versión de los términos."
-          }
         }
       }
     },
@@ -2551,24 +1225,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "친구만 이 일정에 태그할 수 있습니다."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "この予定には友だちだけをタグ付けできます。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "在此时间表中只能标记朋友。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Solo se pueden etiquetar amigos en este programa."
           }
         }
       }
@@ -2586,24 +1242,6 @@
             "state": "translated",
             "value": "이 일정을 볼 권한이 없습니다."
           }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "この予定を閲覧する権限がありません。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "您无权查看此时间表。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No tienes permiso para ver este programa."
-          }
         }
       }
     },
@@ -2619,24 +1257,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "이 일정을 수정할 권한이 없습니다."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "この予定を編集する権限がありません。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "您无权编辑此计划。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No tienes permiso para editar este horario."
           }
         }
       }
@@ -2654,24 +1274,6 @@
             "state": "translated",
             "value": "사용자명은 1자 이상 10자 이하로 입력해주세요."
           }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ユーザー名は1文字以上10文字以下で入力してください。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "用户名必须介于 1 到 10 个字符之间。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Los nombres de usuario deben tener entre 1 y 10 caracteres."
-          }
         }
       }
     },
@@ -2687,24 +1289,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "사용자명은 필수입니다."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ユーザー名は必須です。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "需要用户名。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Se requiere nombre de usuario."
           }
         }
       }
@@ -2722,24 +1306,6 @@
             "state": "translated",
             "value": "회원가입 세션이 유효하지 않거나 만료되었습니다."
           }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "会員登録セッションが無効か、期限切れです。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "注册会话无效或已过期。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "La sesión de registro no es válida o ha caducado."
-          }
         }
       }
     },
@@ -2755,24 +1321,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "회원가입 세션 정보가 필요합니다."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "会員登録セッション情報が必要です。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "需要注册会话信息。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Se requiere información de la sesión de registro."
           }
         }
       }
@@ -2790,24 +1338,6 @@
             "state": "translated",
             "value": "팀 관리자만 이 작업을 할 수 있습니다."
           }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "チーム管理者のみ実行できます。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "只有团队管理员可以执行此操作。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Solo los administradores del equipo pueden realizar esta acción."
-          }
         }
       }
     },
@@ -2823,24 +1353,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "근무 유형은 같은 팀에 속해 있어야 합니다."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "勤務タイプは同じチームに属している必要があります。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "班次类型必须属于同一团队。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Los tipos de tareas deben pertenecer al mismo equipo."
           }
         }
       }
@@ -2858,24 +1370,6 @@
             "state": "translated",
             "value": "이 팀을 관리할 권한이 없습니다."
           }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "このチームを管理する権限がありません。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "您无权管理该团队。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No tienes permiso para administrar este equipo."
-          }
         }
       }
     },
@@ -2891,24 +1385,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "이 사용자는 이미 다른 팀에 속해 있습니다."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "この利用者はすでに別のチームに所属しています。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "该成员已经属于一个团队。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Este miembro ya pertenece a un equipo."
           }
         }
       }
@@ -2926,24 +1402,6 @@
             "state": "translated",
             "value": "이 사용자는 이 팀에 속해 있지 않습니다."
           }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "この利用者はこのチームに所属していません。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "该成员不属于该团队。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Este miembro no pertenece a este equipo."
-          }
         }
       }
     },
@@ -2959,24 +1417,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "이 팀에 속한 사용자만 접근할 수 있습니다."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "このチームに所属している必要があります。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "您必须属于该团队才能访问它。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Debes pertenecer a este equipo para acceder a él."
           }
         }
       }
@@ -2994,24 +1434,6 @@
             "state": "translated",
             "value": "같은 상태에서 순서를 바꾸려면 정렬된 할 일 ID 목록이 필요합니다."
           }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "同じ状態で並び替えるには、並び替え後のやることID一覧が必要です。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "需要重新排序的待办事项 ID 列表。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Se requiere la lista de ID de tareas pendientes reordenada."
-          }
         }
       }
     },
@@ -3027,24 +1449,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "친구만 이 할 일에 태그할 수 있습니다."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "このTo-doには友だちだけをタグ付けできます。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "只有朋友可以标记此待办事项。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Solo se pueden etiquetar amigos en esta tarea pendiente."
           }
         }
       }
@@ -3062,24 +1466,6 @@
             "state": "translated",
             "value": "오류가 발생했습니다. 다시 시도해주세요."
           }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "エラーが発生しました。もう一度お試しください。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "发生错误。请重试。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Se ha producido un error. Inténtalo de nuevo."
-          }
         }
       }
     },
@@ -3095,24 +1481,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "연결할 수 없습니다. 네트워크를 확인한 후 다시 시도해주세요."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "接続できませんでした。ネットワークを確認して、もう一度お試しください。"
-          }
-        },
-        "zh-Hans": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "无法连接。请检查网络后重试。"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "No se pudo conectar. Comprueba tu red e inténtalo de nuevo."
           }
         }
       }

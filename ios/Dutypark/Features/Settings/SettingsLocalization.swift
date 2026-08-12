@@ -16,10 +16,7 @@ nonisolated enum SettingsLocalization {
     }
 
     private static var selectedLocale: Locale {
-        guard let language = UserDefaults.standard.string(forKey: "dp-language"),
-              !language.isEmpty
-        else { return .current }
-        return Locale(identifier: language)
+        AppLocalization.locale
     }
 
     private static var selectedBundle: Bundle {

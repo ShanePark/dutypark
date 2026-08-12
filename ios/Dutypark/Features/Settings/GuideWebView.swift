@@ -46,12 +46,10 @@ struct GuideWebView: View {
 
 nonisolated enum GuideLocaleResolver {
     static func webLocale(languageCode: String, preferredLanguages: [String] = Locale.preferredLanguages) -> String {
-        let candidate = languageCode.isEmpty ? (preferredLanguages.first ?? "ko") : languageCode
-        if candidate.lowercased().hasPrefix("zh") { return "zh" }
-        for supported in ["ko", "en", "ja", "es"] where candidate.lowercased().hasPrefix(supported) {
-            return supported
-        }
-        return "ko"
+        AppLocalization.supportedLocale(
+            languageCode: languageCode,
+            preferredLanguages: preferredLanguages
+        ).identifier
     }
 }
 

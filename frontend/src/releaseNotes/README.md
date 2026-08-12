@@ -8,7 +8,7 @@ When preparing a human-authored PR that targets `main`:
 2. Add one metadata entry to `meta.ts` with `id: "pr-<number>"`.
 3. Use the PR date in Asia/Seoul as the version: `YYYY.MM.DD`.
 4. If multiple PRs share a date, keep the first as `YYYY.MM.DD` and append `.02`, `.03`, and so on.
-5. Add the same entry id to every file in `messages/`.
+5. Add the same entry id to both `en.ts` and `ko.ts` in `messages/`.
 6. Run `npm run release-notes:check` and `npm run type-check`.
 
 Dependabot-only dependency update PRs are exempt from in-app release notes.

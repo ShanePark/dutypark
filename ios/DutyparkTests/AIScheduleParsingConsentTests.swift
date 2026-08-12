@@ -201,7 +201,7 @@ struct AIScheduleParsingConsentTests {
             "calendar.aiConsent.prompt.decline",
         ]
 
-        for locale in ["en", "ko", "ja", "zh-Hans", "es"] {
+        for locale in ["en", "ko"] {
             let url = try #require(Bundle.main.url(forResource: locale, withExtension: "lproj"))
             let bundle = try #require(Bundle(url: url))
             for key in settingsKeys {

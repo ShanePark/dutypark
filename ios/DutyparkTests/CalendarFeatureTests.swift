@@ -130,7 +130,7 @@ final class CalendarFeatureTests: XCTestCase {
             "friendTag.selected", "friendTag.selectedOnly", "friendTag.selectedState", "friendTag.title"
         ]
 
-        for locale in ["en", "ko", "ja", "zh-Hans", "es"] {
+        for locale in ["en", "ko"] {
             let url = try XCTUnwrap(Bundle.main.url(forResource: locale, withExtension: "lproj"))
             let bundle = try XCTUnwrap(Bundle(url: url))
             for key in keys {
@@ -179,7 +179,7 @@ final class CalendarFeatureTests: XCTestCase {
             "calendar.discard.action"
         ]
 
-        for locale in ["en", "ko", "ja", "zh-Hans", "es"] {
+        for locale in ["en", "ko"] {
             let url = try XCTUnwrap(Bundle.main.url(forResource: locale, withExtension: "lproj"))
             let bundle = try XCTUnwrap(Bundle(url: url))
             for key in keys {
@@ -627,7 +627,8 @@ final class CalendarFeatureTests: XCTestCase {
 
     func testCalendarLocaleUsesTheAppSelectedLanguage() {
         XCTAssertEqual(CalendarLocalization.locale(languageCode: "ko").identifier, "ko")
-        XCTAssertEqual(CalendarLocalization.locale(languageCode: "zh-Hans").identifier, "zh-Hans")
+        XCTAssertEqual(CalendarLocalization.locale(languageCode: "en").identifier, "en")
+        XCTAssertEqual(CalendarLocalization.locale(languageCode: "fr-FR").identifier, "en")
     }
 
     func testCompactCalendarModalBodyFitsContentAndCapsForSmallPhones() {

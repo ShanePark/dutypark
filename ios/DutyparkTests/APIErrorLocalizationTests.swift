@@ -33,7 +33,7 @@ final class APIErrorLocalizationTests: XCTestCase {
     }
 
     func testValidationUsesSpecificFieldErrorWhenAvailable() throws {
-        let bundle = try localizedBundle("ja")
+        let bundle = try localizedBundle("ko")
 
         XCTAssertEqual(
             APIErrorLocalization.message(
@@ -41,20 +41,20 @@ final class APIErrorLocalizationTests: XCTestCase {
                 fieldErrors: [APIFieldError(field: "username", code: "sso.username.length")],
                 bundle: bundle
             ),
-            "ユーザー名は1文字以上10文字以下で入力してください。"
+            "사용자명은 1자 이상 10자 이하로 입력해주세요."
         )
     }
 
     func testUnknownCodeUsesGenericFallback() throws {
-        let bundle = try localizedBundle("es")
+        let bundle = try localizedBundle("en")
 
         XCTAssertEqual(
             APIErrorLocalization.message(code: "unknown.code", bundle: bundle),
-            "Se ha producido un error. Inténtalo de nuevo."
+            "Something went wrong. Please try again."
         )
     }
 
-    func testCatalogHasFiveLocaleParity() throws {
+    func testCatalogHasEnglishAndKoreanLocaleParity() throws {
         let catalog = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
@@ -69,7 +69,7 @@ final class APIErrorLocalizationTests: XCTestCase {
             let localizations = try XCTUnwrap(entry["localizations"] as? [String: Any], key)
             XCTAssertEqual(
                 Set(localizations.keys),
-                Set(["en", "es", "ja", "ko", "zh-Hans"]),
+                Set(["en", "ko"]),
                 key
             )
         }

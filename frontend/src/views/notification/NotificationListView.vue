@@ -6,10 +6,7 @@ import { Bell, Trash2, CheckCheck } from 'lucide-vue-next'
 import PageHeader from '@/components/common/PageHeader.vue'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
-import 'dayjs/locale/es'
-import 'dayjs/locale/ja'
 import 'dayjs/locale/ko'
-import 'dayjs/locale/zh-cn'
 import { notificationApi } from '@/api/notification'
 import { useNotificationStore } from '@/stores/notification'
 import { useNotificationNavigation } from '@/composables/useNotificationNavigation'
@@ -38,10 +35,7 @@ const pageSize = 20
 
 const hasMorePages = computed(() => currentPage.value < totalPages.value - 1)
 const dayjsLocale = computed(() => {
-  if (locale.value.startsWith('ja')) return 'ja'
   if (locale.value.startsWith('en')) return 'en'
-  if (locale.value.startsWith('es')) return 'es'
-  if (locale.value.startsWith('zh')) return 'zh-cn'
   return 'ko'
 })
 
@@ -119,13 +113,7 @@ function formatTimeAgo(dateString: string): string {
 function formatDate(dateString: string): string {
   const format = dayjsLocale.value === 'en'
     ? 'MMM D, YYYY HH:mm'
-    : dayjsLocale.value === 'ja'
-      ? 'YYYY/MM/DD HH:mm'
-      : dayjsLocale.value === 'es'
-        ? 'D MMM YYYY HH:mm'
-        : dayjsLocale.value === 'zh-cn'
-          ? 'YYYY年M月D日 HH:mm'
-          : 'YYYY.MM.DD HH:mm'
+    : 'YYYY.MM.DD HH:mm'
   return dayjs(dateString).locale(dayjsLocale.value).format(format)
 }
 

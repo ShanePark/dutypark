@@ -858,18 +858,9 @@ struct SettingsView: View {
 
     private var languageBinding: Binding<String> {
         Binding(
-            get: { languageCode.isEmpty ? detectedLanguage.rawValue : languageCode },
+            get: { AppLocalization.supportedLocale(languageCode: languageCode).identifier },
             set: { languageCode = $0 }
         )
-    }
-
-    private var detectedLanguage: AppLanguage {
-        let value = Locale.preferredLanguages.first?.lowercased() ?? "ko"
-        if value.hasPrefix("en") { return .english }
-        if value.hasPrefix("ja") { return .japanese }
-        if value.hasPrefix("zh") { return .chinese }
-        if value.hasPrefix("es") { return .spanish }
-        return .korean
     }
 
     private var sortedSessions: [SettingsRefreshToken] {

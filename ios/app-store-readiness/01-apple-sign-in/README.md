@@ -78,7 +78,7 @@ Apple 사용자도 신규 가입, 기존 계정 연결, 재로그인, 연결 해
 - [ ] 설정 화면에 계정 연결 상태와 허용된 연결·해제 동작을 표시한다.
 - [ ] Apple credential revoked 또는 notFound 상태의 처리 정책을 구현한다.
 - [ ] VoiceOver label, Dynamic Type 주변 배치, 44pt 이상 터치 영역을 검증한다.
-- [ ] 한국어·영어·일본어·중국어·스페인어에서 안내와 오류 문구를 검증한다.
+- [ ] 한국어·영어에서 안내와 오류 문구를 검증한다.
 - [ ] token, authorization code, nonce, 이메일을 콘솔 로그에 출력하지 않는다.
 
 ## 웹 체크리스트
