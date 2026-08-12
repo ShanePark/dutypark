@@ -15,6 +15,7 @@ enum DDayModalSelection: Identifiable, Equatable {
 
 struct CalendarView: View {
     @StateObject private var model: CalendarViewModel
+    @StateObject private var todoCreateModel = TodoViewModel()
     @State private var showsSearch = false
     @State private var dDayModalSelection: DDayModalSelection?
     @State private var showsBatchUpdate = false
@@ -22,9 +23,15 @@ struct CalendarView: View {
     @State private var showsDutyComparison = false
     @State private var importsDutyBatch = false
     @State private var showsTodoBoard = false
+    @State private var showsTodoCreate = false
     @State private var todoTarget: TodoID?
     @State private var dayModalCanDismiss = true
     @State private var dDayModalCanDismiss = true
+    @State private var monthPickerCanDismiss = true
+    @State private var searchModalCanDismiss = true
+    @State private var dayDismissRequest = 0
+    @State private var dDayDismissRequest = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     init(memberID: MemberID? = nil, date: DateOnly? = nil, scheduleID: ScheduleID? = nil) {
         _model = StateObject(wrappedValue: CalendarViewModel(memberID: memberID, date: date, scheduleID: scheduleID))
@@ -53,22 +60,34 @@ struct CalendarView: View {
                     model.selectedDay = nil
                     dayModalCanDismiss = true
                 },
-                closeOnBackdrop: false,
-                canDismiss: dayModalCanDismiss
+                canDismiss: dayModalCanDismiss,
+                onDismissRequest: { _ in dayDismissRequest += 1 }
             ) { availableSize, dismiss in
                 DayDetailView(
                     model: model,
                     initialDay: day,
                     maximumHeight: availableSize.height,
-                    onDismissabilityChange: { dayModalCanDismiss = $0 }
+                    onDismissabilityChange: { dayModalCanDismiss = $0 },
+                    dismissRequest: dayDismissRequest
                 ) {
                     dismiss()
                 }
             }
         }
         .fullScreenCover(isPresented: $showsSearch) {
-            DPModalOverlay(onDismiss: { showsSearch = false }, closeOnBackdrop: false) { availableSize, dismiss in
-                ScheduleSearchView(model: model, maximumHeight: availableSize.height, dismiss: dismiss)
+            DPModalOverlay(
+                onDismiss: {
+                    showsSearch = false
+                    searchModalCanDismiss = true
+                },
+                canDismiss: searchModalCanDismiss
+            ) { availableSize, dismiss in
+                ScheduleSearchView(
+                    model: model,
+                    maximumHeight: availableSize.height,
+                    onDismissabilityChange: { searchModalCanDismiss = $0 },
+                    dismiss: dismiss
+                )
             }
         }
         .fullScreenCover(item: $dDayModalSelection) { selection in
@@ -77,23 +96,31 @@ struct CalendarView: View {
                     dDayModalSelection = nil
                     dDayModalCanDismiss = true
                 },
-                closeOnBackdrop: false,
-                canDismiss: dDayModalCanDismiss
+                canDismiss: dDayModalCanDismiss,
+                onDismissRequest: { _ in dDayDismissRequest += 1 }
             ) { availableSize, dismiss in
                 DDayModalView(
                     model: model,
                     selection: selection,
                     maximumHeight: availableSize.height,
                     onDismissabilityChange: { dDayModalCanDismiss = $0 },
+                    dismissRequest: dDayDismissRequest,
                     dismiss: dismiss
                 )
             }
         }
         .fullScreenCover(isPresented: $showsMonthPicker) {
-            DPModalOverlay(onDismiss: { showsMonthPicker = false }, closeOnBackdrop: false) { availableSize, dismiss in
+            DPModalOverlay(
+                onDismiss: {
+                    showsMonthPicker = false
+                    monthPickerCanDismiss = true
+                },
+                canDismiss: monthPickerCanDismiss
+            ) { availableSize, dismiss in
                 YearMonthPickerView(
                     model: model,
                     maximumHeight: availableSize.height,
+                    onDismissabilityChange: { monthPickerCanDismiss = $0 },
                     dismiss: dismiss
                 )
             }
@@ -104,6 +131,16 @@ struct CalendarView: View {
                     dismiss()
                 }
             }
+        }
+        .fullScreenCover(isPresented: $showsTodoCreate) {
+            TodoCreateModal(
+                model: todoCreateModel,
+                initialStatus: .inProgress,
+                friends: model.friends,
+                refreshBoardAfterCreate: false,
+                onCreated: { _ = try? await model.loadMonth() },
+                onDismiss: { showsTodoCreate = false }
+            )
         }
         .sheet(isPresented: $showsTodoBoard, onDismiss: { todoTarget = nil }) {
             NavigationStack {
@@ -172,6 +209,7 @@ struct CalendarView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             monthControls
                 .fixedSize(horizontal: true, vertical: false)
+                .zIndex(1)
             Group {
                 if model.canSearchSchedules {
                     searchControl
@@ -213,7 +251,7 @@ struct CalendarView: View {
     private var monthLabel: some View {
         Button { withoutPresentationAnimation { showsMonthPicker = true } } label: {
             Text(String(format: "%04d-%02d", model.year, model.month))
-                .font(DPFont.bold(size: isViewingCurrentMonth ? 16 : 12, relativeTo: .headline))
+                .font(DPFont.bold(size: 16, relativeTo: .headline))
                 .foregroundStyle(DPColor.textPrimary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.75)
@@ -222,30 +260,51 @@ struct CalendarView: View {
         .accessibilityLabel(CalendarLocalization.text("calendar.month.choose"))
     }
 
-    private var todayShortcut: some View {
+    /// Floating speech-bubble pill matching the web `.this-month-bubble`:
+    /// accent capsule with an undo icon and a 45°-rotated square tail pointing
+    /// back at the year-month label.
+    private var thisMonthBubble: some View {
         Button { Task { await model.goToToday() } } label: {
-            Text(CalendarLocalization.text("calendar.today"))
-                .font(DPFont.bold(size: 10, relativeTo: .caption2))
-                .foregroundStyle(DPColor.accent)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-                .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)
-                .background(DPColor.accentSoft)
+            HStack(spacing: 3) {
+                Image(systemName: "arrow.uturn.backward")
+                    .font(.system(size: 10, weight: .bold))
+                Text(CalendarLocalization.text("calendar.month.goToThisMonth"))
+                    .font(DPFont.bold(size: 11, relativeTo: .caption2))
+                    .lineLimit(1)
+            }
+            .foregroundStyle(DPColor.textOnDark)
+            .padding(.horizontal, 8)
+            .frame(height: 22)
+            .background(DPColor.accent, in: Capsule())
+            .background(alignment: .bottomLeading) {
+                RoundedRectangle(cornerRadius: 1)
+                    .fill(DPColor.accent)
+                    .frame(width: 8, height: 8)
+                    .rotationEffect(.degrees(45))
+                    .offset(x: 8, y: 3)
+            }
+            .compositingGroup()
+            .shadow(color: DPColor.accent.opacity(0.35), radius: 4, x: 0, y: 2)
+            .padding(.top, 12)
+            .padding(.horizontal, 12)
+            .padding(.bottom, 4)
+            .contentShape(Rectangle())
         }
-        .accessibilityLabel(CalendarLocalization.text("calendar.today"))
+        .accessibilityLabel(CalendarLocalization.text("calendar.month.goToThisMonth"))
     }
 
     private var monthCenterControls: some View {
-        HStack(spacing: 0) {
-            monthLabel
-                .frame(width: isViewingCurrentMonth ? 88 : 44)
-            if !isViewingCurrentMonth {
-                todayShortcut
-                    .frame(width: 44)
+        monthLabel
+            .frame(width: 88)
+            .clipShape(RoundedRectangle(cornerRadius: DPRadius.compact))
+            .overlay(alignment: .topTrailing) {
+                if !isViewingCurrentMonth {
+                    thisMonthBubble
+                        .offset(x: 32, y: -24)
+                        .transition(.offset(y: 4).combined(with: .opacity))
+                }
             }
-        }
-        .frame(width: 88)
-        .clipShape(RoundedRectangle(cornerRadius: DPRadius.compact))
+            .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: isViewingCurrentMonth)
     }
 
     private var monthControls: some View {
@@ -410,12 +469,13 @@ struct CalendarView: View {
                     .frame(minHeight: 44)
                 }
 
-                Button { openTodoBoard() } label: {
+                Button { withoutPresentationAnimation { showsTodoCreate = true } } label: {
                     Image(systemName: "plus")
                         .foregroundStyle(DPColor.textSecondary)
                         .frame(width: 44, height: 44)
                 }
                 .accessibilityLabel(CalendarLocalization.text("calendar.todo.add"))
+                .accessibilityIdentifier("calendar.todo.add")
             }
             .background(DPColor.backgroundCard)
             .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
@@ -711,13 +771,20 @@ enum CalendarCompactModalLayout {
 private struct YearMonthPickerView: View {
     @ObservedObject var model: CalendarViewModel
     let maximumHeight: CGFloat
+    let onDismissabilityChange: (Bool) -> Void
     let dismiss: () -> Void
     @State private var pickerYear: Int
     @State private var isSelecting = false
 
-    init(model: CalendarViewModel, maximumHeight: CGFloat, dismiss: @escaping () -> Void) {
+    init(
+        model: CalendarViewModel,
+        maximumHeight: CGFloat,
+        onDismissabilityChange: @escaping (Bool) -> Void,
+        dismiss: @escaping () -> Void
+    ) {
         self.model = model
         self.maximumHeight = maximumHeight
+        self.onDismissabilityChange = onDismissabilityChange
         self.dismiss = dismiss
         _pickerYear = State(initialValue: model.year)
     }
@@ -733,6 +800,9 @@ private struct YearMonthPickerView: View {
             footerActions
         }
         .opacity(isSelecting ? DPChrome.disabledOpacity : 1)
+        .onAppear { onDismissabilityChange(!isSelecting) }
+        .onChange(of: isSelecting) { _, value in onDismissabilityChange(!value) }
+        .onDisappear { onDismissabilityChange(true) }
     }
 
     private var header: some View {
@@ -1306,15 +1376,28 @@ enum CalendarDestructiveActionPolicy {
     static func canBegin(isWorking: Bool) -> Bool { !isWorking }
 }
 
+enum CalendarDDayDeleteSuccessDismissalPolicy {
+    static func prepareForDismiss(
+        authorizeDismiss: () -> Void,
+        yieldTurn: () async -> Void = { await Task.yield() }
+    ) async {
+        authorizeDismiss()
+        await yieldTurn()
+    }
+}
+
 enum CalendarModalDismissabilityPolicy {
     static func dayCanDismiss(
-        isEditing: Bool,
+        isEditorWorking: Bool,
+        hasDestructiveAction: Bool,
         isPerformingDestructiveAction: Bool
     ) -> Bool {
-        !isEditing && !isPerformingDestructiveAction
+        !isEditorWorking && !hasDestructiveAction && !isPerformingDestructiveAction
     }
 
-    static func dDayCanDismiss(isWorking: Bool) -> Bool { !isWorking }
+    static func dDayCanDismiss(isWorking: Bool, isConfirmingDelete: Bool) -> Bool {
+        !isWorking && !isConfirmingDelete
+    }
 }
 
 private struct CalendarDestructiveConfirmationModal: View {
@@ -1377,11 +1460,14 @@ private struct DayDetailView: View {
     let initialDay: CalendarDayContent
     let maximumHeight: CGFloat
     let onDismissabilityChange: (Bool) -> Void
+    let dismissRequest: Int
     let dismiss: () -> Void
     @State private var editorSchedule: ScheduleDTO?
     @State private var createsSchedule = false
     @State private var destructiveAction: CalendarScheduleDestructiveAction?
     @State private var isPerformingDestructiveAction = false
+    @State private var isEditorWorking = false
+    @State private var editorDismissRequest = 0
 
     private var day: CalendarDayContent {
         model.selectedDay ?? initialDay
@@ -1412,7 +1498,8 @@ private struct DayDetailView: View {
                         existing: editorSchedule,
                         onCancel: closeEditor,
                         onSaved: closeEditor,
-                        onWorkingChange: { _ in reportDismissability() }
+                        dismissRequest: editorDismissRequest,
+                        onWorkingChange: updateEditorWorking
                     )
                     .id(editorSchedule?.id.uuidString ?? "new-\(day.id)")
                 }
@@ -1431,7 +1518,9 @@ private struct DayDetailView: View {
         }
         .onAppear(perform: reportDismissability)
         .onChange(of: showsEditor) { _, _ in reportDismissability() }
+        .onChange(of: destructiveAction != nil) { _, _ in reportDismissability() }
         .onChange(of: isPerformingDestructiveAction) { _, _ in reportDismissability() }
+        .onChange(of: dismissRequest) { _, _ in requestDismissal() }
         .onDisappear { onDismissabilityChange(true) }
         .alert(
             CalendarLocalization.text("calendar.error.title"),
@@ -1465,7 +1554,7 @@ private struct DayDetailView: View {
                 Spacer()
 
                 Button {
-                    if !showsEditor { dismiss() }
+                    requestDismissal()
                 } label: {
                     Image(systemName: "xmark")
                         .font(.system(size: 17, weight: .semibold))
@@ -1473,8 +1562,8 @@ private struct DayDetailView: View {
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(DPColor.textPrimary)
-                .opacity(showsEditor ? 0.35 : 1)
-                .disabled(showsEditor)
+                .opacity(dayModalCanRequestDismissal ? 1 : 0.35)
+                .disabled(!dayModalCanRequestDismissal)
                 .accessibilityLabel(CalendarLocalization.text("calendar.close"))
             }
 
@@ -1687,6 +1776,26 @@ private struct DayDetailView: View {
     private func closeEditor() {
         createsSchedule = false
         editorSchedule = nil
+        isEditorWorking = false
+        reportDismissability()
+    }
+
+    private var dayModalCanRequestDismissal: Bool {
+        !isEditorWorking && destructiveAction == nil && !isPerformingDestructiveAction
+    }
+
+    private func requestDismissal() {
+        guard dayModalCanRequestDismissal else { return }
+        if showsEditor {
+            editorDismissRequest += 1
+        } else {
+            dismiss()
+        }
+    }
+
+    private func updateEditorWorking(_ isWorking: Bool) {
+        isEditorWorking = isWorking
+        reportDismissability()
     }
 
     private func performDestructiveAction() async {
@@ -1709,7 +1818,8 @@ private struct DayDetailView: View {
     private func reportDismissability() {
         onDismissabilityChange(
             CalendarModalDismissabilityPolicy.dayCanDismiss(
-                isEditing: showsEditor,
+                isEditorWorking: isEditorWorking,
+                hasDestructiveAction: destructiveAction != nil,
                 isPerformingDestructiveAction: isPerformingDestructiveAction
             )
         )
@@ -1767,7 +1877,15 @@ private struct ScheduleEditorView: View {
     let existing: ScheduleDTO?
     let onCancel: () -> Void
     let onSaved: () -> Void
+    let dismissRequest: Int
     let onWorkingChange: (Bool) -> Void
+    let initialContent: String
+    let initialDescription: String
+    let initialVisibility: Visibility
+    let initialStart: Date
+    let initialEnd: Date
+    let initialTagIDs: Set<MemberID>
+    let initialAttachmentIDs: [AttachmentID]
     @State private var content: String
     @State private var description: String
     @State private var visibility: Visibility
@@ -1776,9 +1894,10 @@ private struct ScheduleEditorView: View {
     @State private var tagIDs: Set<MemberID>
     @State private var isSaving = false
     @State private var isDiscarding = false
+    @State private var showsDiscardConfirmation = false
     @State private var pendingAIConsentPolicy: PolicyDTO?
-    @StateObject private var aiConsent = AIScheduleParsingConsentStore.shared
     @StateObject private var attachmentModel: AttachmentPickerModel
+    @StateObject private var aiConsent = AIScheduleParsingConsentStore.shared
     @FocusState private var focusedField: Field?
 
     private enum Field {
@@ -1792,6 +1911,7 @@ private struct ScheduleEditorView: View {
         existing: ScheduleDTO?,
         onCancel: @escaping () -> Void,
         onSaved: @escaping () -> Void,
+        dismissRequest: Int = 0,
         onWorkingChange: @escaping (Bool) -> Void = { _ in }
     ) {
         self.model = model
@@ -1799,14 +1919,29 @@ private struct ScheduleEditorView: View {
         self.existing = existing
         self.onCancel = onCancel
         self.onSaved = onSaved
+        self.dismissRequest = dismissRequest
         self.onWorkingChange = onWorkingChange
         let base = CalendarDateSupport.date(from: day.cell.date) ?? Date()
-        _content = State(initialValue: existing?.content ?? "")
-        _description = State(initialValue: existing?.description ?? "")
-        _visibility = State(initialValue: existing?.visibility ?? .family)
-        _start = State(initialValue: existing.flatMap { CalendarDateSupport.date(from: $0.startDateTime) } ?? base)
-        _end = State(initialValue: existing.flatMap { CalendarDateSupport.date(from: $0.endDateTime) } ?? base)
-        _tagIDs = State(initialValue: Set(existing?.tags.compactMap(\.id) ?? []))
+        let initialContent = existing?.content ?? ""
+        let initialDescription = existing?.description ?? ""
+        let initialVisibility = existing?.visibility ?? .family
+        let initialStart = existing.flatMap { CalendarDateSupport.date(from: $0.startDateTime) } ?? base
+        let initialEnd = existing.flatMap { CalendarDateSupport.date(from: $0.endDateTime) } ?? base
+        let initialTagIDs = Set(existing?.tags.compactMap(\.id) ?? [])
+        let initialAttachmentIDs = existing?.attachments.map(\.id) ?? []
+        self.initialContent = initialContent
+        self.initialDescription = initialDescription
+        self.initialVisibility = initialVisibility
+        self.initialStart = initialStart
+        self.initialEnd = initialEnd
+        self.initialTagIDs = initialTagIDs
+        self.initialAttachmentIDs = initialAttachmentIDs
+        _content = State(initialValue: initialContent)
+        _description = State(initialValue: initialDescription)
+        _visibility = State(initialValue: initialVisibility)
+        _start = State(initialValue: initialStart)
+        _end = State(initialValue: initialEnd)
+        _tagIDs = State(initialValue: initialTagIDs)
         _attachmentModel = StateObject(wrappedValue: AttachmentPickerModel(
             contextType: .schedule,
             targetContextId: existing?.id.uuidString,
@@ -1880,11 +2015,16 @@ private struct ScheduleEditorView: View {
                         AttachmentPicker(model: attachmentModel)
                     }
 
-                    if model.isMyCalendar, !model.friends.isEmpty {
+                    if ScheduleFriendTagSelectorPolicy.shouldShow(
+                        isMyCalendar: model.isMyCalendar,
+                        currentFriendCount: model.friends.count,
+                        selectedIDs: tagIDs,
+                        preservedValidIDCount: existing?.tags.compactMap(\.id).count ?? 0
+                    ) {
                         formRow("calendar.schedule.tags", alignment: .top) {
-                            CalendarFriendTagSelector(
-                                friends: model.friends,
-                                selectedSummaries: existing?.tags ?? [],
+                            DPFriendTagSelector(
+                                items: model.friends.map(DPFriendTagAdapter.item),
+                                preservedItems: (existing?.tags ?? []).compactMap(DPFriendTagAdapter.item),
                                 selection: $tagIDs,
                                 disabled: interactionsDisabled
                             )
@@ -1898,13 +2038,7 @@ private struct ScheduleEditorView: View {
 
             HStack(spacing: DPSpacing.small) {
                 Button {
-                    Task {
-                        guard !interactionsDisabled else { return }
-                        isDiscarding = true
-                        let discarded = await attachmentModel.discard()
-                        isDiscarding = false
-                        if discarded { onCancel() }
-                    }
+                    requestDismissal()
                 } label: {
                     Text(CalendarLocalization.text("calendar.cancel"))
                         .frame(maxWidth: .infinity)
@@ -1932,7 +2066,19 @@ private struct ScheduleEditorView: View {
         .onChange(of: interactionsDisabled) { _, isWorking in
             onWorkingChange(isWorking)
         }
+        .onChange(of: dismissRequest) { _, _ in requestDismissal() }
         .onDisappear { onWorkingChange(false) }
+        .alert(
+            CalendarLocalization.text("calendar.discard.title"),
+            isPresented: $showsDiscardConfirmation
+        ) {
+            Button(CalendarLocalization.text("calendar.discard.action"), role: .destructive) {
+                discardAndCancel()
+            }
+            Button(CalendarLocalization.text("calendar.cancel"), role: .cancel) {}
+        } message: {
+            Text(CalendarLocalization.text("calendar.discard.message"))
+        }
         .alert(
             CalendarLocalization.text("calendar.aiConsent.prompt.title"),
             isPresented: Binding(
@@ -2020,6 +2166,48 @@ private struct ScheduleEditorView: View {
         .buttonStyle(.plain)
     }
 
+    private func requestDismissal() {
+        guard !interactionsDisabled else { return }
+        if isDirty {
+            showsDiscardConfirmation = true
+        } else {
+            discardAndCancel()
+        }
+    }
+
+    private func discardAndCancel() {
+        guard !interactionsDisabled else { return }
+        isDiscarding = true
+        Task {
+            let discarded = await attachmentModel.discard()
+            isDiscarding = false
+            if discarded {
+                await Task.yield()
+                onCancel()
+            }
+        }
+    }
+
+    private var isDirty: Bool {
+        ScheduleEditorDismissalPolicy.isDirty(
+            initialContent: initialContent,
+            content: content,
+            initialDescription: initialDescription,
+            description: description,
+            initialVisibility: initialVisibility,
+            visibility: visibility,
+            initialStart: initialStart,
+            start: start,
+            initialEnd: initialEnd,
+            end: end,
+            initialTagIDs: initialTagIDs,
+            tagIDs: tagIDs,
+            initialAttachmentIDs: initialAttachmentIDs,
+            attachmentIDs: attachmentModel.attachments.map(\.id),
+            hasAttachmentSession: attachmentModel.attachmentSessionId != nil
+        )
+    }
+
     private func save() {
         isSaving = true
         Task {
@@ -2053,16 +2241,16 @@ private struct ScheduleEditorView: View {
             return
         }
         let saved = await model.saveSchedule(
-                existing: existing,
-                content: content,
-                description: description,
-                visibility: visibility,
-                start: start,
-                end: end,
-                tagFriendIDs: Array(tagIDs),
-                attachmentSessionID: attachments.attachmentSessionId,
-                orderedAttachmentIDs: attachments.orderedAttachmentIds
-            )
+            existing: existing,
+            content: content,
+            description: description,
+            visibility: visibility,
+            start: start,
+            end: end,
+            tagFriendIDs: DPFriendTagSelectionLogic.sortedIDs(tagIDs),
+            attachmentSessionID: attachments.attachmentSessionId,
+            orderedAttachmentIDs: attachments.orderedAttachmentIds
+        )
         isSaving = false
         if saved { onSaved() }
     }
@@ -2092,275 +2280,51 @@ private struct ScheduleEditorView: View {
     }
 }
 
-private struct CalendarFriendTagSelector: View {
-    let friends: [FriendDTO]
-    let selectedSummaries: [MemberDTO]
-    @Binding var selection: Set<MemberID>
-    let disabled: Bool
-    @State private var isExpanded: Bool
-    @State private var query = ""
-    @State private var showsSelectedOnly = false
-
-    init(
-        friends: [FriendDTO],
-        selectedSummaries: [MemberDTO],
-        selection: Binding<Set<MemberID>>,
-        disabled: Bool
-    ) {
-        self.friends = friends
-        self.selectedSummaries = selectedSummaries
-        _selection = selection
-        self.disabled = disabled
-        _isExpanded = State(initialValue: !selection.wrappedValue.isEmpty)
+nonisolated enum DPFriendTagAdapter {
+    static func item(_ friend: FriendDTO) -> DPFriendTagItem {
+        DPFriendTagItem(
+            id: friend.id,
+            name: friend.name,
+            team: friend.team,
+            hasProfilePhoto: friend.hasProfilePhoto,
+            profilePhotoVersion: friend.profilePhotoVersion,
+            isFamily: friend.isFamily,
+            pinOrder: friend.pinOrder
+        )
     }
 
-    var body: some View {
-        Group {
-            if isExpanded {
-                expandedSelector
-            } else {
-                Button {
-                    isExpanded = true
-                } label: {
-                    HStack(spacing: DPSpacing.compact) {
-                        Image(systemName: "person.badge.plus")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundStyle(DPColor.accent)
-                            .frame(width: 40, height: 40)
-                            .background(DPColor.backgroundTertiary)
-                            .clipShape(Circle())
-                        Text(CalendarLocalization.text("calendar.schedule.tags"))
-                            .font(DPTypography.label)
-                            .foregroundStyle(DPColor.textPrimary)
-                        Spacer(minLength: 0)
-                    }
-                    .padding(.horizontal, DPSpacing.compact)
-                    .frame(maxWidth: .infinity, minHeight: 56)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .background(DPColor.backgroundCard)
-                .clipShape(RoundedRectangle(cornerRadius: DPRadius.large))
-                .overlay {
-                    RoundedRectangle(cornerRadius: DPRadius.large)
-                        .stroke(DPColor.borderPrimary)
-                }
-                .disabled(disabled)
-            }
-        }
+    static func item(_ member: MemberDTO) -> DPFriendTagItem? {
+        guard let id = member.id else { return nil }
+        return DPFriendTagItem(
+            id: id,
+            name: member.name,
+            team: member.team,
+            hasProfilePhoto: member.hasProfilePhoto,
+            profilePhotoVersion: member.profilePhotoVersion
+        )
     }
 
-    private var expandedSelector: some View {
-        VStack(spacing: DPSpacing.small) {
-            HStack(spacing: 6) {
-                HStack(spacing: DPSpacing.small) {
-                    Image(systemName: "magnifyingglass")
-                        .foregroundStyle(DPColor.textMuted)
-                    TextField(CalendarLocalization.text("calendar.schedule.tags.search"), text: $query)
-                        .font(DPTypography.label)
-                        .textInputAutocapitalization(.never)
-                    if !query.isEmpty {
-                        Button { query = "" } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .frame(width: 32, height: 32)
-                        }
-                        .buttonStyle(.plain)
-                        .foregroundStyle(DPColor.textMuted)
-                    }
-                }
-                .padding(.horizontal, DPSpacing.compact)
-                .frame(minHeight: 44)
-                .background(DPColor.backgroundInput)
-                .clipShape(RoundedRectangle(cornerRadius: DPRadius.large))
-                .overlay {
-                    RoundedRectangle(cornerRadius: DPRadius.large)
-                        .stroke(DPColor.borderInput)
-                }
-
-                if !selection.isEmpty {
-                    Button {
-                        showsSelectedOnly.toggle()
-                    } label: {
-                        Text(CalendarLocalization.format("calendar.schedule.tags.selected", selection.count))
-                            .font(DPFont.bold(size: 12, relativeTo: .caption))
-                            .foregroundStyle(showsSelectedOnly ? DPColor.textOnDark : DPColor.textPrimary)
-                            .padding(.horizontal, 8)
-                            .frame(minHeight: 44)
-                            .background(showsSelectedOnly ? DPColor.accent : DPColor.accentSoft)
-                            .clipShape(Capsule())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(CalendarLocalization.text("calendar.schedule.tags.selectedOnly"))
-
-                    Button {
-                        selection.removeAll()
-                        showsSelectedOnly = false
-                    } label: {
-                        Image(systemName: "arrow.counterclockwise")
-                            .frame(width: 44, height: 44)
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(DPColor.textSecondary)
-                    .accessibilityLabel(CalendarLocalization.text("calendar.schedule.tags.clear"))
-                }
-            }
-
-            if visibleItems.isEmpty {
-                Text(CalendarLocalization.text("calendar.schedule.tags.empty"))
-                    .font(DPTypography.label)
-                    .foregroundStyle(DPColor.textMuted)
-                    .frame(maxWidth: .infinity, minHeight: 96)
-            } else {
-                ScrollView {
-                    LazyVGrid(
-                        columns: [GridItem(.flexible(), spacing: 1), GridItem(.flexible(), spacing: 1)],
-                        spacing: 1
-                    ) {
-                        ForEach(visibleItems) { item in
-                            friendButton(item)
-                        }
-                    }
-                }
-                .frame(maxHeight: 146)
-                .background(DPColor.borderPrimary)
-                .clipShape(RoundedRectangle(cornerRadius: DPRadius.large))
-            }
-        }
-        .padding(10)
-        .background(DPColor.backgroundCard)
-        .clipShape(RoundedRectangle(cornerRadius: DPRadius.large))
-        .overlay {
-            RoundedRectangle(cornerRadius: DPRadius.large)
-                .stroke(DPColor.borderPrimary)
-        }
+    static func item(_ member: MemberPreviewDTO) -> DPFriendTagItem? {
+        guard let id = member.id else { return nil }
+        return DPFriendTagItem(
+            id: id,
+            name: member.name,
+            team: member.team,
+            hasProfilePhoto: member.hasProfilePhoto,
+            profilePhotoVersion: member.profilePhotoVersion
+        )
     }
+}
 
-    private func friendButton(_ item: Item) -> some View {
-        let selected = selection.contains(item.id)
-        return Button {
-            if selected { selection.remove(item.id) } else { selection.insert(item.id) }
-        } label: {
-            HStack(spacing: DPSpacing.small) {
-                avatar(item)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(item.name)
-                        .font(DPFont.light(size: 13, relativeTo: .subheadline))
-                        .foregroundStyle(DPColor.textPrimary)
-                        .lineLimit(1)
-                    if let team = item.team {
-                        Text(team)
-                            .font(DPFont.light(size: 11, relativeTo: .caption))
-                            .foregroundStyle(DPColor.textMuted)
-                            .lineLimit(1)
-                    }
-                }
-                Spacer(minLength: 0)
-                if selected {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(DPColor.accent)
-                }
-            }
-            .padding(.horizontal, DPSpacing.small)
-            .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
-            .background(selected ? DPColor.accentSoftHover : DPColor.backgroundPrimary)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .disabled(disabled)
-    }
-
-    @ViewBuilder
-    private func avatar(_ item: Item) -> some View {
-        if item.hasProfilePhoto {
-            AsyncImage(url: profileURL(item)) { image in
-                image.resizable().scaledToFill()
-            } placeholder: {
-                avatarFallback(item)
-            }
-            .frame(width: 24, height: 24)
-            .clipShape(Circle())
-        } else {
-            avatarFallback(item)
-        }
-    }
-
-    private func avatarFallback(_ item: Item) -> some View {
-        Circle()
-            .fill(DPColor.backgroundTertiary)
-            .frame(width: 24, height: 24)
-            .overlay {
-                Text(String(item.name.prefix(1)))
-                    .font(DPFont.bold(size: 10, relativeTo: .caption2))
-                    .foregroundStyle(DPColor.textSecondary)
-            }
-    }
-
-    private var visibleItems: [Item] {
-        let normalized = query.trimmingCharacters(in: .whitespacesAndNewlines)
-            .localizedLowercase
-        return allItems.filter { item in
-            if showsSelectedOnly { return selection.contains(item.id) }
-            guard !normalized.isEmpty else { return true }
-            return "\(item.name) \(item.team ?? "")".localizedLowercase.contains(normalized)
-        }
-    }
-
-    private var allItems: [Item] {
-        let friendItems = friends.map { Item(friend: $0) }
-        let existingIDs = Set(friendItems.map(\.id))
-        let unavailable = selectedSummaries.compactMap { member -> Item? in
-            guard let id = member.id, selection.contains(id), !existingIDs.contains(id) else { return nil }
-            return Item(member: member)
-        }
-        return (friendItems + unavailable).sorted { lhs, rhs in
-            if lhs.pinOrder != rhs.pinOrder {
-                if lhs.pinOrder == nil { return false }
-                if rhs.pinOrder == nil { return true }
-                return lhs.pinOrder! < rhs.pinOrder!
-            }
-            if lhs.isFamily != rhs.isFamily { return lhs.isFamily }
-            return lhs.name.localizedCompare(rhs.name) == .orderedAscending
-        }
-    }
-
-    private func profileURL(_ item: Item) -> URL {
-        AppConfiguration.apiBaseURL
-            .appending(path: "members/\(item.id)/profile-photo")
-            .appending(queryItems: [
-                URLQueryItem(name: "thumbnail", value: "true"),
-                URLQueryItem(name: "v", value: String(item.profilePhotoVersion))
-            ])
-    }
-
-    private struct Item: Identifiable {
-        let id: MemberID
-        let name: String
-        let team: String?
-        let hasProfilePhoto: Bool
-        let profilePhotoVersion: Int64
-        let isFamily: Bool
-        let pinOrder: Int64?
-
-        init(friend: FriendDTO) {
-            id = friend.id
-            name = friend.name
-            team = friend.team
-            hasProfilePhoto = friend.hasProfilePhoto
-            profilePhotoVersion = friend.profilePhotoVersion
-            isFamily = friend.isFamily
-            pinOrder = friend.pinOrder
-        }
-
-        init(member: MemberDTO) {
-            id = member.id ?? -1
-            name = member.name
-            team = member.team
-            hasProfilePhoto = member.hasProfilePhoto
-            profilePhotoVersion = member.profilePhotoVersion
-            isFamily = false
-            pinOrder = nil
-        }
+nonisolated enum ScheduleFriendTagSelectorPolicy {
+    static func shouldShow(
+        isMyCalendar: Bool,
+        currentFriendCount: Int,
+        selectedIDs: Set<MemberID>,
+        preservedValidIDCount: Int
+    ) -> Bool {
+        isMyCalendar
+            && (currentFriendCount > 0 || !selectedIDs.isEmpty || preservedValidIDCount > 0)
     }
 }
 
@@ -2371,6 +2335,35 @@ nonisolated enum ScheduleEditorInteractionPolicy {
         isDiscarding: Bool = false
     ) -> Bool {
         isSaving || isUploading || isDiscarding
+    }
+}
+
+nonisolated enum ScheduleEditorDismissalPolicy {
+    static func isDirty(
+        initialContent: String,
+        content: String,
+        initialDescription: String,
+        description: String,
+        initialVisibility: Visibility,
+        visibility: Visibility,
+        initialStart: Date,
+        start: Date,
+        initialEnd: Date,
+        end: Date,
+        initialTagIDs: Set<MemberID>,
+        tagIDs: Set<MemberID>,
+        initialAttachmentIDs: [AttachmentID],
+        attachmentIDs: [AttachmentID],
+        hasAttachmentSession: Bool
+    ) -> Bool {
+        initialContent != content
+            || initialDescription != description
+            || initialVisibility != visibility
+            || initialStart != start
+            || initialEnd != end
+            || initialTagIDs != tagIDs
+            || initialAttachmentIDs != attachmentIDs
+            || hasAttachmentSession
     }
 }
 
@@ -2402,7 +2395,9 @@ private struct ScheduleAttachmentGallery: View {
 private struct ScheduleSearchView: View {
     @ObservedObject var model: CalendarViewModel
     let maximumHeight: CGFloat
+    let onDismissabilityChange: (Bool) -> Void
     let dismiss: () -> Void
+    @State private var isSelectingResult = false
 
     private var trimmedQuery: String {
         model.searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -2418,6 +2413,10 @@ private struct ScheduleSearchView: View {
         } content: {
             results
         }
+        .onAppear { reportDismissability() }
+        .onChange(of: model.isSearching) { _, _ in reportDismissability() }
+        .onChange(of: isSelectingResult) { _, _ in reportDismissability() }
+        .onDisappear { onDismissabilityChange(true) }
     }
 
     private var header: some View {
@@ -2427,7 +2426,7 @@ private struct ScheduleSearchView: View {
                     .font(DPTypography.heading)
                     .foregroundStyle(DPColor.textPrimary)
                 Spacer(minLength: 0)
-                Button(action: dismiss) {
+                Button(action: guardedDismiss) {
                     Image(systemName: "xmark")
                         .font(.system(size: 17, weight: .semibold))
                         .foregroundStyle(DPColor.textPrimary)
@@ -2435,6 +2434,7 @@ private struct ScheduleSearchView: View {
                         .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .disabled(isWorking)
                 .accessibilityLabel(CalendarLocalization.text("calendar.close"))
             }
             .padding(.leading, DPSpacing.medium)
@@ -2501,6 +2501,8 @@ private struct ScheduleSearchView: View {
                 ForEach(Array(model.searchResults.enumerated()), id: \.offset) { _, item in
                     Button {
                         Task {
+                            guard !isWorking else { return }
+                            isSelectingResult = true
                             await model.showSearchResult(item)
                             dismiss()
                         }
@@ -2549,6 +2551,17 @@ private struct ScheduleSearchView: View {
         guard !trimmedQuery.isEmpty, !model.isSearching else { return }
         Task { await model.search() }
     }
+
+    private func guardedDismiss() {
+        guard !isWorking else { return }
+        dismiss()
+    }
+
+    private var isWorking: Bool { model.isSearching || isSelectingResult }
+
+    private func reportDismissability() {
+        onDismissabilityChange(!isWorking)
+    }
 }
 
 enum CalendarDDayDetailPolicy {
@@ -2556,7 +2569,7 @@ enum CalendarDDayDetailPolicy {
 }
 
 private struct DDayModalView: View {
-    private enum Route {
+    private enum Route: Equatable {
         case detail
         case edit
         case confirmDelete
@@ -2566,6 +2579,7 @@ private struct DDayModalView: View {
     let selection: DDayModalSelection
     let maximumHeight: CGFloat
     let onDismissabilityChange: (Bool) -> Void
+    let dismissRequest: Int
     let dismiss: () -> Void
     @State private var route: Route
     @State private var isDeleting = false
@@ -2576,12 +2590,14 @@ private struct DDayModalView: View {
         selection: DDayModalSelection,
         maximumHeight: CGFloat,
         onDismissabilityChange: @escaping (Bool) -> Void,
+        dismissRequest: Int,
         dismiss: @escaping () -> Void
     ) {
         self.model = model
         self.selection = selection
         self.maximumHeight = maximumHeight
         self.onDismissabilityChange = onDismissabilityChange
+        self.dismissRequest = dismissRequest
         self.dismiss = dismiss
         _route = State(initialValue: selection == .create ? .edit : .detail)
     }
@@ -2596,6 +2612,7 @@ private struct DDayModalView: View {
                     existing: nil,
                     maximumHeight: maximumHeight,
                     dismiss: dismiss,
+                    dismissRequest: dismissRequest,
                     onWorkingChange: updateChildWorking
                 )
             case .detail(let item):
@@ -2619,6 +2636,7 @@ private struct DDayModalView: View {
                         dismiss: dismiss,
                         onCancel: { route = .detail },
                         onDeleteRequest: { _ in route = .confirmDelete },
+                        dismissRequest: dismissRequest,
                         onWorkingChange: updateChildWorking
                     )
                 case .confirmDelete:
@@ -2632,7 +2650,9 @@ private struct DDayModalView: View {
                             let succeeded = await model.deleteDDay(item)
                             isDeleting = false
                             if succeeded {
-                                onDismissabilityChange(true)
+                                await CalendarDDayDeleteSuccessDismissalPolicy.prepareForDismiss(
+                                    authorizeDismiss: { onDismissabilityChange(true) }
+                                )
                                 dismiss()
                             }
                         }
@@ -2641,7 +2661,13 @@ private struct DDayModalView: View {
             }
         }
         .onAppear(perform: reportDismissability)
+        .onChange(of: route) { _, _ in reportDismissability() }
         .onChange(of: isDeleting) { _, _ in reportDismissability() }
+        .onChange(of: dismissRequest) { _, _ in
+            if selection != .create, route == .detail, !isDeleting, !isChildWorking {
+                dismiss()
+            }
+        }
         .onDisappear { onDismissabilityChange(true) }
         .alert(
             CalendarLocalization.text("calendar.error.title"),
@@ -2666,7 +2692,8 @@ private struct DDayModalView: View {
     private func reportDismissability() {
         onDismissabilityChange(
             CalendarModalDismissabilityPolicy.dDayCanDismiss(
-                isWorking: isDeleting || isChildWorking
+                isWorking: isDeleting || isChildWorking,
+                isConfirmingDelete: route == .confirmDelete
             )
         )
     }
@@ -2969,12 +2996,17 @@ private struct DDayEditorView: View {
     let dismiss: () -> Void
     let onCancel: (() -> Void)?
     let onDeleteRequest: ((DDayDTO) -> Void)?
+    let dismissRequest: Int
     let onWorkingChange: (Bool) -> Void
+    let initialTitle: String
+    let initialDate: Date
+    let initialIsPrivate: Bool
     @State private var title: String
     @State private var date: Date
     @State private var isPrivate: Bool
     @State private var confirmsDelete = false
     @State private var isSaving = false
+    @State private var showsDiscardConfirmation = false
 
     init(
         model: CalendarViewModel,
@@ -2983,6 +3015,7 @@ private struct DDayEditorView: View {
         dismiss: @escaping () -> Void,
         onCancel: (() -> Void)? = nil,
         onDeleteRequest: ((DDayDTO) -> Void)? = nil,
+        dismissRequest: Int = 0,
         onWorkingChange: @escaping (Bool) -> Void = { _ in }
     ) {
         self.model = model
@@ -2991,10 +3024,17 @@ private struct DDayEditorView: View {
         self.dismiss = dismiss
         self.onCancel = onCancel
         self.onDeleteRequest = onDeleteRequest
+        self.dismissRequest = dismissRequest
         self.onWorkingChange = onWorkingChange
-        _title = State(initialValue: existing?.title ?? "")
-        _date = State(initialValue: existing.flatMap { CalendarDateSupport.date(from: $0.date) } ?? Date())
-        _isPrivate = State(initialValue: existing?.isPrivate ?? false)
+        let initialTitle = existing?.title ?? ""
+        let initialDate = existing.flatMap { CalendarDateSupport.date(from: $0.date) } ?? Date()
+        let initialIsPrivate = existing?.isPrivate ?? false
+        self.initialTitle = initialTitle
+        self.initialDate = initialDate
+        self.initialIsPrivate = initialIsPrivate
+        _title = State(initialValue: initialTitle)
+        _date = State(initialValue: initialDate)
+        _isPrivate = State(initialValue: initialIsPrivate)
     }
 
     private var maximumPanelHeight: CGFloat {
@@ -3015,7 +3055,19 @@ private struct DDayEditorView: View {
         }
         .onAppear { onWorkingChange(isSaving) }
         .onChange(of: isSaving) { _, isWorking in onWorkingChange(isWorking) }
+        .onChange(of: dismissRequest) { _, _ in guardedDismiss() }
         .onDisappear { onWorkingChange(false) }
+        .alert(
+            CalendarLocalization.text("calendar.discard.title"),
+            isPresented: $showsDiscardConfirmation
+        ) {
+            Button(CalendarLocalization.text("calendar.discard.action"), role: .destructive) {
+                performDismissal()
+            }
+            Button(CalendarLocalization.text("calendar.cancel"), role: .cancel) {}
+        } message: {
+            Text(CalendarLocalization.text("calendar.discard.message"))
+        }
         .confirmationDialog(CalendarLocalization.text("calendar.delete.confirm"), isPresented: $confirmsDelete) {
             if let existing {
                 Button(CalendarLocalization.text("calendar.delete"), role: .destructive) {
@@ -3156,6 +3208,22 @@ private struct DDayEditorView: View {
 
     private func guardedDismiss() {
         guard !isSaving else { return }
+        if DDayEditorDismissalPolicy.isDirty(
+            initialTitle: initialTitle,
+            title: title,
+            initialDate: initialDate,
+            date: date,
+            initialIsPrivate: initialIsPrivate,
+            isPrivate: isPrivate
+        ) {
+            showsDiscardConfirmation = true
+        } else {
+            performDismissal()
+        }
+    }
+
+    private func performDismissal() {
+        guard !isSaving else { return }
         if let onCancel { onCancel() } else { dismiss() }
     }
 
@@ -3184,6 +3252,19 @@ private struct DDayEditorView: View {
             onWorkingChange(false)
             if succeeded { dismiss() }
         }
+    }
+}
+
+nonisolated enum DDayEditorDismissalPolicy {
+    static func isDirty(
+        initialTitle: String,
+        title: String,
+        initialDate: Date,
+        date: Date,
+        initialIsPrivate: Bool,
+        isPrivate: Bool
+    ) -> Bool {
+        initialTitle != title || initialDate != date || initialIsPrivate != isPrivate
     }
 }
 

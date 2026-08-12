@@ -5,6 +5,123 @@ import Testing
 @MainActor
 struct TodoViewModelTests {
     @Test
+    func todoDraftSortsTaggedFriendIDsForStablePayloads() {
+        var draft = TodoDraft()
+        draft.title = "Tagged task"
+        draft.taggedFriendIDs = Set<MemberID>([30, 10, 20])
+
+        #expect(draft.request().tagFriendIds == [10, 20, 30])
+    }
+
+    @Test
+    func activeDetailEditShowsAndCanDeselectAStaleTag() {
+        let staleTag = MemberPreviewDTO(
+            id: 42,
+            name: "Former friend",
+            teamId: nil,
+            team: "Previous team",
+            hasProfilePhoto: false,
+            profilePhotoVersion: 0
+        )
+        let preservedItems = [staleTag].compactMap(TodoFriendTagAdapter.item)
+        var selection: Set<MemberID> = [42]
+
+        #expect(DPFriendTagSelectionLogic.mergedItems(
+            items: [],
+            preservedItems: preservedItems,
+            selection: selection
+        ).map(\.id) == [42])
+
+        selection.remove(42)
+
+        #expect(DPFriendTagSelectionLogic.mergedItems(
+            items: [],
+            preservedItems: preservedItems,
+            selection: selection
+        ).isEmpty)
+    }
+
+    @Test
+    func todoFormRejectsDuplicateSubmitWhileFirstSaveIsInFlight() {
+        #expect(TodoFormSubmissionPolicy.canBegin(
+            isSubmitting: false,
+            canSave: true,
+            isBusy: false
+        ))
+        #expect(!TodoFormSubmissionPolicy.canBegin(
+            isSubmitting: true,
+            canSave: true,
+            isBusy: false
+        ))
+    }
+
+    @Test
+    func calendarQuickAddUsesInProgressWithoutDueDateAsItsCleanBaseline() {
+        let draft = TodoDraft(status: .inProgress)
+
+        #expect(draft.status == .inProgress)
+        #expect(!draft.hasDueDate)
+        #expect(draft.request().dueDate == nil)
+        #expect(!TodoFormDismissalPolicy.isDirty(
+            initialDraft: draft,
+            draft: draft,
+            initialAttachmentIDs: [],
+            attachmentIDs: [],
+            hasAttachmentSession: false
+        ))
+    }
+
+    @Test
+    func todoFormDismissalPolicyConfirmsDraftTagsAndAttachmentChanges() {
+        let initial = TodoDraft(status: .inProgress)
+        var tagged = initial
+        tagged.taggedFriendIDs = [42]
+
+        #expect(TodoFormDismissalPolicy.isDirty(
+            initialDraft: initial,
+            draft: tagged,
+            initialAttachmentIDs: [],
+            attachmentIDs: [],
+            hasAttachmentSession: false
+        ))
+        #expect(TodoFormDismissalPolicy.isDirty(
+            initialDraft: initial,
+            draft: initial,
+            initialAttachmentIDs: [],
+            attachmentIDs: [UUID()],
+            hasAttachmentSession: false
+        ))
+        #expect(TodoFormDismissalPolicy.isDirty(
+            initialDraft: initial,
+            draft: initial,
+            initialAttachmentIDs: [],
+            attachmentIDs: [],
+            hasAttachmentSession: true
+        ))
+        #expect(TodoFormDismissalPolicy.action(isDirty: false, isBusy: false) == .dismiss)
+        #expect(TodoFormDismissalPolicy.action(isDirty: true, isBusy: false) == .confirmDiscard)
+        #expect(TodoFormDismissalPolicy.action(isDirty: true, isBusy: true) == .ignore)
+    }
+
+    @Test
+    func calendarQuickAddDoesNotRefetchTodoBoardAfterSuccessfulPost() async {
+        let created = makeTodo(status: .inProgress)
+        let repository = FakeTodoRepository(board: makeBoard(inProgress: [created]))
+        let model = TodoViewModel(repository: repository)
+        var draft = TodoDraft(status: .inProgress)
+        draft.title = "Quick task"
+
+        let succeeded = await model.create(draft: draft, refreshBoard: false)
+        let request = await repository.createRequest
+        let fetchCount = await repository.fetchBoardCount
+
+        #expect(succeeded)
+        #expect(request?.status == .inProgress)
+        #expect(request?.dueDate == nil)
+        #expect(fetchCount == 0)
+    }
+
+    @Test
     func mobileBoardMatchesWebColumnGeometry() {
         #expect(TodoBoardLayout.mobileColumnWidthRatio == 0.62)
         #expect(TodoBoardLayout.boardPadding == 8)
@@ -397,6 +514,9 @@ struct TodoViewModelTests {
             "todo.action.delete",
             "todo.action.leaveTag",
             "todo.action.reopen",
+            "todo.confirm.discardTitle",
+            "todo.confirm.discardMessage",
+            "todo.confirm.discardAction",
             "todo.drag.dropHere",
             "todo.drag.hint",
             "todo.error.load",
@@ -683,6 +803,8 @@ private actor FakeTodoRepository: TodoRepository {
     var updateRequest: (id: TodoID, request: TodoRequest)?
     var statusChange: (id: TodoID, request: TodoStatusChangeRequest)?
     var positionRequest: TodoPositionUpdateRequest?
+    var createRequest: TodoRequest?
+    var fetchBoardCount = 0
     let shouldFailPositionUpdate: Bool
     let shouldFailAttachmentFetch: Bool
 
@@ -698,7 +820,10 @@ private actor FakeTodoRepository: TodoRepository {
         self.shouldFailAttachmentFetch = shouldFailAttachmentFetch
     }
 
-    func fetchBoard() async throws -> TodoBoardDTO { board }
+    func fetchBoard() async throws -> TodoBoardDTO {
+        fetchBoardCount += 1
+        return board
+    }
     func fetchFriends() async throws -> [FriendDTO] { [] }
     func fetchAttachments(todoID: TodoID) async throws -> [AttachmentDTO] {
         if shouldFailAttachmentFetch {
@@ -706,7 +831,13 @@ private actor FakeTodoRepository: TodoRepository {
         }
         return attachments
     }
-    func create(_ request: TodoRequest) async throws -> TodoDTO { board.todo[0] }
+    func create(_ request: TodoRequest) async throws -> TodoDTO {
+        createRequest = request
+        guard let todo = (board.todo + board.inProgress + board.done).first else {
+            throw CocoaError(.fileNoSuchFile)
+        }
+        return todo
+    }
 
     func update(id: TodoID, request: TodoRequest) async throws -> TodoDTO {
         updateRequest = (id, request)

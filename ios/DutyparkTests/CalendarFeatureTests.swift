@@ -4,6 +4,145 @@ import XCTest
 
 @MainActor
 final class CalendarFeatureTests: XCTestCase {
+    func testSharedFriendTagSelectorMergesCurrentAndSelectedStaleItems() {
+        let current = tagItem(id: 1, name: "Current name", team: "New team", isFamily: true, pinOrder: 2)
+        let staleDuplicate = tagItem(id: 1, name: "Old name", team: "Old team")
+        let selectedStale = tagItem(id: 2, name: "Former friend", team: "Previous team")
+        let unselectedStale = tagItem(id: 3, name: "Hidden", team: nil)
+
+        let merged = DPFriendTagSelectionLogic.mergedItems(
+            items: [current],
+            preservedItems: [staleDuplicate, selectedStale, unselectedStale],
+            selection: [1, 2]
+        )
+
+        XCTAssertEqual(merged.map(\.id), [1, 2])
+        XCTAssertEqual(merged.first, current, "The current friend record must win over a stale summary")
+    }
+
+    func testSharedFriendTagSelectorUsesPinFamilyNameAndIDOrder() {
+        let items = [
+            tagItem(id: 9, name: "Zed", team: nil),
+            tagItem(id: 8, name: "Amy", team: nil, isFamily: false),
+            tagItem(id: 7, name: "Zed", team: nil, isFamily: true),
+            tagItem(id: 6, name: "Amy", team: nil, isFamily: true),
+            tagItem(id: 5, name: "Same", team: nil, pinOrder: 2),
+            tagItem(id: 4, name: "Same", team: nil, pinOrder: 2),
+            tagItem(id: 3, name: "Pinned", team: nil, pinOrder: 1)
+        ]
+
+        let merged = DPFriendTagSelectionLogic.mergedItems(
+            items: items,
+            preservedItems: [],
+            selection: []
+        )
+
+        XCTAssertEqual(merged.map(\.id), [3, 4, 5, 6, 7, 8, 9])
+    }
+
+    func testSharedFriendTagSelectorFiltersNameAndTeamAndIntersectsSelectedOnly() {
+        let items = [
+            tagItem(id: 1, name: "Alice", team: "Emergency"),
+            tagItem(id: 2, name: "Bob", team: "Emergency"),
+            tagItem(id: 3, name: "Carol", team: "Ward")
+        ]
+
+        XCTAssertEqual(
+            DPFriendTagSelectionLogic.visibleItems(
+                items: items,
+                query: "emerg",
+                selectedOnly: false,
+                selection: [2]
+            ).map(\.id),
+            [1, 2]
+        )
+        XCTAssertEqual(
+            DPFriendTagSelectionLogic.visibleItems(
+                items: items,
+                query: "emerg",
+                selectedOnly: true,
+                selection: [2, 3]
+            ).map(\.id),
+            [2]
+        )
+        XCTAssertEqual(
+            DPFriendTagSelectionLogic.visibleItems(
+                items: items,
+                query: "alice",
+                selectedOnly: false,
+                selection: []
+            ).map(\.id),
+            [1]
+        )
+    }
+
+    func testFriendTagAdaptersSkipNilMemberIDs() {
+        let member = MemberDTO(
+            id: nil, name: "No ID", email: nil, teamId: nil, team: nil,
+            calendarVisibility: .friends, kakaoId: nil, naverId: nil,
+            hasPassword: false, hasProfilePhoto: false, profilePhotoVersion: 0
+        )
+        let preview = MemberPreviewDTO(
+            id: nil, name: "No ID", teamId: nil, team: nil,
+            hasProfilePhoto: false, profilePhotoVersion: 0
+        )
+
+        XCTAssertNil(DPFriendTagAdapter.item(member))
+        XCTAssertNil(DPFriendTagAdapter.item(preview))
+        XCTAssertNil(TodoFriendTagAdapter.item(preview))
+    }
+
+    func testSharedFriendTagSelectionMapsPayloadInStableOrder() {
+        XCTAssertEqual(DPFriendTagSelectionLogic.sortedIDs([30, 10, 20]), [10, 20, 30])
+    }
+
+    func testScheduleFriendTagSelectorRemainsVisibleForSelectedStaleTags() {
+        XCTAssertTrue(ScheduleFriendTagSelectorPolicy.shouldShow(
+            isMyCalendar: true,
+            currentFriendCount: 0,
+            selectedIDs: [42],
+            preservedValidIDCount: 1
+        ))
+        XCTAssertTrue(ScheduleFriendTagSelectorPolicy.shouldShow(
+            isMyCalendar: true,
+            currentFriendCount: 0,
+            selectedIDs: [],
+            preservedValidIDCount: 1
+        ))
+        XCTAssertFalse(ScheduleFriendTagSelectorPolicy.shouldShow(
+            isMyCalendar: true,
+            currentFriendCount: 0,
+            selectedIDs: [],
+            preservedValidIDCount: 0
+        ))
+        XCTAssertFalse(ScheduleFriendTagSelectorPolicy.shouldShow(
+            isMyCalendar: false,
+            currentFriendCount: 1,
+            selectedIDs: [42],
+            preservedValidIDCount: 1
+        ))
+    }
+
+    func testSharedFriendTagStringsResolveInEveryLocale() throws {
+        let keys = [
+            "friendTag.clear", "friendTag.clearSearch", "friendTag.empty", "friendTag.expand",
+            "friendTag.noneSelected", "friendTag.notSelectedState", "friendTag.search",
+            "friendTag.selected", "friendTag.selectedOnly", "friendTag.selectedState", "friendTag.title"
+        ]
+
+        for locale in ["en", "ko", "ja", "zh-Hans", "es"] {
+            let url = try XCTUnwrap(Bundle.main.url(forResource: locale, withExtension: "lproj"))
+            let bundle = try XCTUnwrap(Bundle(url: url))
+            for key in keys {
+                XCTAssertNotEqual(
+                    bundle.localizedString(forKey: key, value: key, table: "Localizable"),
+                    key,
+                    "Missing \(key) for \(locale)"
+                )
+            }
+        }
+    }
+
     func testScheduleFormStringsResolveFromCalendarTableInEveryLocale() throws {
         let keys = [
             "calendar.schedule.attachments",
@@ -34,7 +173,10 @@ final class CalendarFeatureTests: XCTestCase {
             "calendar.dday.pin.action",
             "calendar.dday.delete.confirm.title",
             "calendar.dday.delete.confirm.message",
-            "calendar.month.current"
+            "calendar.month.current",
+            "calendar.discard.title",
+            "calendar.discard.message",
+            "calendar.discard.action"
         ]
 
         for locale in ["en", "ko", "ja", "zh-Hans", "es"] {
@@ -60,21 +202,55 @@ final class CalendarFeatureTests: XCTestCase {
         XCTAssertFalse(CalendarDestructiveActionPolicy.canBegin(isWorking: true))
     }
 
+    func testDDayDeleteSuccessEnablesDismissalBeforeYieldingToPresenter() async {
+        var events: [String] = []
+
+        await CalendarDDayDeleteSuccessDismissalPolicy.prepareForDismiss(
+            authorizeDismiss: {
+                events.append("enabled")
+            },
+            yieldTurn: {
+                events.append("yielded")
+            }
+        )
+        events.append("dismissed")
+
+        XCTAssertEqual(events, ["enabled", "yielded", "dismissed"])
+    }
+
     func testCalendarModalDismissabilityBlocksEditorsAndWorkingMutations() {
         XCTAssertTrue(CalendarModalDismissabilityPolicy.dayCanDismiss(
-            isEditing: false,
+            isEditorWorking: false,
+            hasDestructiveAction: false,
             isPerformingDestructiveAction: false
         ))
         XCTAssertFalse(CalendarModalDismissabilityPolicy.dayCanDismiss(
-            isEditing: true,
+            isEditorWorking: true,
+            hasDestructiveAction: false,
             isPerformingDestructiveAction: false
         ))
         XCTAssertFalse(CalendarModalDismissabilityPolicy.dayCanDismiss(
-            isEditing: false,
+            isEditorWorking: false,
+            hasDestructiveAction: true,
+            isPerformingDestructiveAction: false
+        ))
+        XCTAssertFalse(CalendarModalDismissabilityPolicy.dayCanDismiss(
+            isEditorWorking: false,
+            hasDestructiveAction: false,
             isPerformingDestructiveAction: true
         ))
-        XCTAssertTrue(CalendarModalDismissabilityPolicy.dDayCanDismiss(isWorking: false))
-        XCTAssertFalse(CalendarModalDismissabilityPolicy.dDayCanDismiss(isWorking: true))
+        XCTAssertTrue(CalendarModalDismissabilityPolicy.dDayCanDismiss(
+            isWorking: false,
+            isConfirmingDelete: false
+        ))
+        XCTAssertFalse(CalendarModalDismissabilityPolicy.dDayCanDismiss(
+            isWorking: true,
+            isConfirmingDelete: false
+        ))
+        XCTAssertFalse(CalendarModalDismissabilityPolicy.dDayCanDismiss(
+            isWorking: false,
+            isConfirmingDelete: true
+        ))
     }
 
     func testScheduleEditorDisablesInteractionsWhileAttachmentIsUploading() {
@@ -103,6 +279,57 @@ final class CalendarFeatureTests: XCTestCase {
                 isDiscarding: true
             )
         )
+    }
+
+    func testScheduleEditorDismissalDetectsFieldAndAttachmentChanges() {
+        let initialDate = Date(timeIntervalSince1970: 100)
+        let attachmentID = UUID(uuidString: "00000000-0000-0000-0000-000000000010")!
+        let unchanged = ScheduleEditorDismissalPolicy.isDirty(
+            initialContent: "Shift", content: "Shift",
+            initialDescription: "Notes", description: "Notes",
+            initialVisibility: .family, visibility: .family,
+            initialStart: initialDate, start: initialDate,
+            initialEnd: initialDate, end: initialDate,
+            initialTagIDs: [1], tagIDs: [1],
+            initialAttachmentIDs: [attachmentID], attachmentIDs: [attachmentID],
+            hasAttachmentSession: false
+        )
+        XCTAssertFalse(unchanged)
+
+        XCTAssertTrue(ScheduleEditorDismissalPolicy.isDirty(
+            initialContent: "Shift", content: "Changed",
+            initialDescription: "Notes", description: "Notes",
+            initialVisibility: .family, visibility: .family,
+            initialStart: initialDate, start: initialDate,
+            initialEnd: initialDate, end: initialDate,
+            initialTagIDs: [1], tagIDs: [1],
+            initialAttachmentIDs: [attachmentID], attachmentIDs: [attachmentID],
+            hasAttachmentSession: false
+        ))
+        XCTAssertTrue(ScheduleEditorDismissalPolicy.isDirty(
+            initialContent: "Shift", content: "Shift",
+            initialDescription: "Notes", description: "Notes",
+            initialVisibility: .family, visibility: .family,
+            initialStart: initialDate, start: initialDate,
+            initialEnd: initialDate, end: initialDate,
+            initialTagIDs: [1], tagIDs: [1],
+            initialAttachmentIDs: [attachmentID], attachmentIDs: [attachmentID],
+            hasAttachmentSession: true
+        ))
+    }
+
+    func testDDayEditorDismissalDetectsChanges() {
+        let initialDate = Date(timeIntervalSince1970: 100)
+        XCTAssertFalse(DDayEditorDismissalPolicy.isDirty(
+            initialTitle: "Anniversary", title: "Anniversary",
+            initialDate: initialDate, date: initialDate,
+            initialIsPrivate: false, isPrivate: false
+        ))
+        XCTAssertTrue(DDayEditorDismissalPolicy.isDirty(
+            initialTitle: "Anniversary", title: "Changed",
+            initialDate: initialDate, date: initialDate,
+            initialIsPrivate: false, isPrivate: false
+        ))
     }
 
     func testFailedScheduleDeleteReturnsFalseAndCallsAPIOnce() async {
@@ -525,6 +752,24 @@ final class CalendarFeatureTests: XCTestCase {
     private func date(_ year: Int, _ month: Int, _ day: Int, hour: Int = 0) -> Date {
         CalendarDateSupport.calendar.date(from: DateComponents(year: year, month: month, day: day, hour: hour))!
     }
+}
+
+private func tagItem(
+    id: MemberID,
+    name: String,
+    team: String?,
+    isFamily: Bool = false,
+    pinOrder: Int64? = nil
+) -> DPFriendTagItem {
+    DPFriendTagItem(
+        id: id,
+        name: name,
+        team: team,
+        hasProfilePhoto: false,
+        profilePhotoVersion: 0,
+        isFamily: isFamily,
+        pinOrder: pinOrder
+    )
 }
 
 private actor CalendarRepositoryMock: CalendarRepositoryProtocol {

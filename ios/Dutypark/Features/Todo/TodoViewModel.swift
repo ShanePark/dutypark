@@ -88,9 +88,19 @@ final class TodoViewModel: ObservableObject {
         }
     }
 
-    func create(draft: TodoDraft) async -> Bool {
-        await performMutation(errorKey: "todo.error.create") {
+    func create(draft: TodoDraft, refreshBoard: Bool = true) async -> Bool {
+        guard !isSaving else { return false }
+        isSaving = true
+        defer { isSaving = false }
+        do {
             _ = try await repository.create(draft.request())
+            if refreshBoard {
+                await refresh()
+            }
+            return true
+        } catch {
+            errorKey = "todo.error.create"
+            return false
         }
     }
 

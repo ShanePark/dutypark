@@ -30,6 +30,80 @@ enum TodoBoardLayout {
     }
 }
 
+nonisolated enum TodoFormDismissalAction: Equatable, Sendable {
+    case dismiss
+    case confirmDiscard
+    case ignore
+}
+
+nonisolated enum TodoFormSubmissionPolicy {
+    static func canBegin(isSubmitting: Bool, canSave: Bool, isBusy: Bool) -> Bool {
+        !isSubmitting && canSave && !isBusy
+    }
+}
+
+enum TodoFormDismissalPolicy {
+    static func isDirty(
+        initialDraft: TodoDraft,
+        draft: TodoDraft,
+        initialAttachmentIDs: [AttachmentID],
+        attachmentIDs: [AttachmentID],
+        hasAttachmentSession: Bool
+    ) -> Bool {
+        draft != initialDraft
+            || initialAttachmentIDs != attachmentIDs
+            || hasAttachmentSession
+    }
+
+    static func action(isDirty: Bool, isBusy: Bool) -> TodoFormDismissalAction {
+        guard !isBusy else { return .ignore }
+        return isDirty ? .confirmDiscard : .dismiss
+    }
+}
+
+/// The single Todo creation presentation shared by the Todo board and Calendar quick-add.
+struct TodoCreateModal: View {
+    @ObservedObject var model: TodoViewModel
+    let initialStatus: TodoStatus
+    let friends: [FriendDTO]
+    let refreshBoardAfterCreate: Bool
+    let onCreated: () async -> Void
+    let onDismiss: () -> Void
+
+    @State private var dismissRequest = 0
+    @State private var isFormBusy = false
+
+    var body: some View {
+        DPModalOverlay(
+            onDismiss: onDismiss,
+            canDismiss: !isFormBusy && !model.isSaving,
+            onDismissRequest: { _ in dismissRequest += 1 }
+        ) { availableSize, dismiss in
+            TodoFormSheet(
+                titleKey: "todo.form.createTitle",
+                initialDraft: TodoDraft(status: initialStatus),
+                friends: friends,
+                model: model,
+                targetTodoID: nil,
+                existingAttachments: [],
+                isSaving: model.isSaving,
+                maximumHeight: availableSize.height,
+                dismissAction: dismiss,
+                savedDismissAction: dismiss,
+                dismissRequest: dismissRequest,
+                onBusyChange: { isFormBusy = $0 }
+            ) { draft in
+                let created = await model.create(
+                    draft: draft,
+                    refreshBoard: refreshBoardAfterCreate
+                )
+                if created { await onCreated() }
+                return created
+            }
+        }
+    }
+}
+
 struct TodoView: View {
     let initialTodoID: TodoID?
     let onTodoChanged: () async -> Void
@@ -40,8 +114,8 @@ struct TodoView: View {
     @State private var showingDetail = false
     @State private var showingCreate = false
     @State private var showingHelp = false
-    @State private var createCanDismiss = true
     @State private var detailCanDismiss = true
+    @State private var detailDismissRequest = 0
     @State private var visibleStatus: TodoStatus?
     @State private var draggedTodoID: TodoID?
     @State private var dragTargetStatus: TodoStatus?
@@ -156,29 +230,14 @@ struct TodoView: View {
             }
         }
         .fullScreenCover(isPresented: $showingCreate) {
-            DPModalOverlay(
-                onDismiss: { showingCreate = false },
-                closeOnBackdrop: false,
-                canDismiss: createCanDismiss && !model.isSaving
-            ) { availableSize, dismiss in
-                TodoFormSheet(
-                    titleKey: "todo.form.createTitle",
-                    initialDraft: TodoDraft(status: model.selectedStatus),
-                    friends: model.friends,
-                    model: model,
-                    targetTodoID: nil,
-                    existingAttachments: [],
-                    isSaving: model.isSaving,
-                    maximumHeight: availableSize.height,
-                    dismissAction: dismiss,
-                    savedDismissAction: dismiss,
-                    onBusyChange: { createCanDismiss = !$0 }
-                ) { draft in
-                    let created = await model.create(draft: draft)
-                    if created { await onTodoChanged() }
-                    return created
-                }
-            }
+            TodoCreateModal(
+                model: model,
+                initialStatus: model.selectedStatus,
+                friends: model.friends,
+                refreshBoardAfterCreate: true,
+                onCreated: onTodoChanged,
+                onDismiss: { showingCreate = false }
+            )
         }
         .fullScreenCover(isPresented: $showingHelp) {
             DPModalOverlay(onDismiss: { showingHelp = false }) { availableSize, dismiss in
@@ -189,8 +248,8 @@ struct TodoView: View {
             if let selectedTodo {
                 DPModalOverlay(
                     onDismiss: { showingDetail = false },
-                    closeOnBackdrop: false,
-                    canDismiss: detailCanDismiss && !model.isSaving
+                    canDismiss: detailCanDismiss && !model.isSaving,
+                    onDismissRequest: { _ in detailDismissRequest += 1 }
                 ) { availableSize, dismiss in
                     TodoDetailModal(
                         model: model,
@@ -198,6 +257,7 @@ struct TodoView: View {
                         maximumHeight: availableSize.height,
                         onTodoChanged: onTodoChanged,
                         onDismissabilityChange: { detailCanDismiss = $0 },
+                        dismissRequest: detailDismissRequest,
                         dismiss: dismiss
                     )
                 }
@@ -1245,6 +1305,7 @@ private struct TodoDetailSheet: View {
                     model: model,
                     targetTodoID: todo.id,
                     existingAttachments: model.attachmentsByTodoID[todo.uuid, default: []],
+                    preservedTags: todo.tags,
                     isSaving: model.isSaving
                 ) { draft in
                     let updated = await model.update(todo: todo, draft: draft)
@@ -1282,6 +1343,31 @@ private struct TodoDetailSheet: View {
                 Text(todoLocalized("todo.confirm.leaveMessage"))
             }
             .todoErrorAlert(model)
+    }
+}
+
+nonisolated enum TodoFriendTagAdapter {
+    static func item(_ friend: FriendDTO) -> DPFriendTagItem {
+        DPFriendTagItem(
+            id: friend.id,
+            name: friend.name,
+            team: friend.team,
+            hasProfilePhoto: friend.hasProfilePhoto,
+            profilePhotoVersion: friend.profilePhotoVersion,
+            isFamily: friend.isFamily,
+            pinOrder: friend.pinOrder
+        )
+    }
+
+    static func item(_ member: MemberPreviewDTO) -> DPFriendTagItem? {
+        guard let id = member.id else { return nil }
+        return DPFriendTagItem(
+            id: id,
+            name: member.name,
+            team: member.team,
+            hasProfilePhoto: member.hasProfilePhoto,
+            profilePhotoVersion: member.profilePhotoVersion
+        )
     }
 }
 
@@ -1423,11 +1509,15 @@ private struct TodoFlowLayout: Layout {
 
 struct TodoFormSheet: View {
     let titleKey: String
+    let initialDraft: TodoDraft
     let friends: [FriendDTO]
+    let preservedTags: [MemberPreviewDTO]
+    let initialAttachmentIDs: [AttachmentID]
     let isSaving: Bool
     let maximumHeight: CGFloat?
     let dismissAction: (() -> Void)?
     let savedDismissAction: (() -> Void)?
+    let dismissRequest: Int
     let onBusyChange: (Bool) -> Void
     let save: (TodoDraft) async -> Bool
 
@@ -1436,6 +1526,9 @@ struct TodoFormSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var draft: TodoDraft
     @State private var didSave = false
+    @State private var showsDiscardConfirmation = false
+    @State private var isDiscarding = false
+    @State private var isSubmitting = false
     @StateObject private var attachmentModel: AttachmentPickerModel
     @FocusState private var focusedField: TodoFormField?
 
@@ -1446,20 +1539,26 @@ struct TodoFormSheet: View {
         model: TodoViewModel,
         targetTodoID: String?,
         existingAttachments: [AttachmentDTO],
+        preservedTags: [MemberPreviewDTO] = [],
         isSaving: Bool,
         maximumHeight: CGFloat? = nil,
         dismissAction: (() -> Void)? = nil,
         savedDismissAction: (() -> Void)? = nil,
+        dismissRequest: Int = 0,
         onBusyChange: @escaping (Bool) -> Void = { _ in },
         save: @escaping (TodoDraft) async -> Bool
     ) {
         self.titleKey = titleKey
+        self.initialDraft = initialDraft
         self.friends = friends
+        self.preservedTags = preservedTags
+        self.initialAttachmentIDs = existingAttachments.map(\.id)
         self.model = model
         self.isSaving = isSaving
         self.maximumHeight = maximumHeight
         self.dismissAction = dismissAction
         self.savedDismissAction = savedDismissAction
+        self.dismissRequest = dismissRequest
         self.onBusyChange = onBusyChange
         self.save = save
         _draft = State(initialValue: initialDraft)
@@ -1486,13 +1585,22 @@ struct TodoFormSheet: View {
         } footer: {
             formFooter
         }
-        .interactiveDismissDisabled(isSaving || attachmentModel.isBusy || attachmentModel.attachmentSessionId != nil)
+        .interactiveDismissDisabled(isOperationallyBusy || isDirty)
         .onChange(of: isBusy) { _, value in onBusyChange(value) }
+        .onChange(of: dismissRequest) { _, _ in requestDismissal() }
         .onAppear { onBusyChange(isBusy) }
         .onDisappear {
             onBusyChange(false)
             guard !didSave else { return }
             Task { await attachmentModel.discard() }
+        }
+        .alert(todoLocalized("todo.confirm.discardTitle"), isPresented: $showsDiscardConfirmation) {
+            Button(todoLocalized("todo.confirm.discardAction"), role: .destructive) {
+                confirmDiscard()
+            }
+            Button(todoLocalized("common.cancel"), role: .cancel) {}
+        } message: {
+            Text(todoLocalized("todo.confirm.discardMessage"))
         }
         .todoErrorAlert(model)
     }
@@ -1504,7 +1612,7 @@ struct TodoFormSheet: View {
                 .foregroundStyle(DPColor.textPrimary)
             Spacer()
             Button {
-                cancel()
+                requestDismissal()
             } label: {
                 Image(systemName: "xmark")
                     .font(.system(size: 17, weight: .semibold))
@@ -1512,7 +1620,7 @@ struct TodoFormSheet: View {
                     .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
             }
             .buttonStyle(.plain)
-            .disabled(isSaving || attachmentModel.isBusy)
+            .disabled(isOperationallyBusy)
             .accessibilityLabel(todoLocalized("common.cancel"))
         }
         .padding(.leading, DPSpacing.medium)
@@ -1604,33 +1712,14 @@ struct TodoFormSheet: View {
                 }
             }
 
-            if !friends.isEmpty {
+            if !friends.isEmpty || !preservedTags.isEmpty {
                 TodoFormSection(title: todoLocalized("todo.field.tags")) {
-                    TodoFlowLayout(spacing: DPSpacing.small) {
-                        ForEach(friends, id: \.id) { friend in
-                            let selected = draft.taggedFriendIDs.contains(friend.id)
-                            Button {
-                                if selected {
-                                    draft.taggedFriendIDs.remove(friend.id)
-                                } else {
-                                    draft.taggedFriendIDs.insert(friend.id)
-                                }
-                            } label: {
-                                HStack(spacing: 5) {
-                                    Image(systemName: selected ? "checkmark.circle.fill" : "person.crop.circle")
-                                    Text(friend.name).lineLimit(1)
-                                }
-                                .font(DPTypography.label)
-                                .foregroundStyle(selected ? DPColor.accent : DPColor.textSecondary)
-                                .padding(.horizontal, 11)
-                                .frame(minHeight: DPSize.minimumTouchTarget)
-                                .background(selected ? DPColor.accentSoft : DPColor.backgroundTertiary, in: Capsule())
-                                .overlay(Capsule().stroke(selected ? DPColor.accentBorder : DPColor.borderPrimary))
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityAddTraits(selected ? .isSelected : [])
-                        }
-                    }
+                    DPFriendTagSelector(
+                        items: friends.map(TodoFriendTagAdapter.item),
+                        preservedItems: preservedTags.compactMap(TodoFriendTagAdapter.item),
+                        selection: $draft.taggedFriendIDs,
+                        disabled: isBusy
+                    )
                 }
             }
 
@@ -1647,13 +1736,13 @@ struct TodoFormSheet: View {
     private var formFooter: some View {
         HStack(spacing: DPSpacing.small) {
             Button {
-                cancel()
+                requestDismissal()
             } label: {
                 Text(todoLocalized("common.cancel"))
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(DPOutlineButtonStyle())
-            .disabled(isSaving || attachmentModel.isBusy)
+            .disabled(isOperationallyBusy)
 
             Button {
                 submit()
@@ -1662,23 +1751,52 @@ struct TodoFormSheet: View {
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(DPPrimaryButtonStyle())
-            .disabled(!draft.canSave || isSaving || attachmentModel.isBusy)
+            .disabled(!draft.canSave || isOperationallyBusy)
         }
         .padding(DPSpacing.compact)
         .safeAreaPadding(.bottom, DPSpacing.extraSmall)
     }
 
-    private func cancel() {
+    private func requestDismissal() {
+        switch TodoFormDismissalPolicy.action(isDirty: isDirty, isBusy: isOperationallyBusy) {
+        case .dismiss:
+            dismissForm(saved: false)
+        case .confirmDiscard:
+            showsDiscardConfirmation = true
+        case .ignore:
+            break
+        }
+    }
+
+    private func confirmDiscard() {
+        guard !isOperationallyBusy else { return }
+        isDiscarding = true
+        onBusyChange(true)
         Task {
-            if await attachmentModel.discard() {
+            let discarded = await attachmentModel.discard()
+            isDiscarding = false
+            onBusyChange(isBusy)
+            if discarded {
+                await Task.yield()
                 dismissForm(saved: false)
             }
         }
     }
 
     private func submit() {
+        guard TodoFormSubmissionPolicy.canBegin(
+            isSubmitting: isSubmitting,
+            canSave: draft.canSave,
+            isBusy: isOperationallyBusy
+        ) else { return }
+        isSubmitting = true
+        onBusyChange(true)
         Task {
-            guard let attachments = await attachmentModel.resultForSave() else { return }
+            guard let attachments = await attachmentModel.resultForSave() else {
+                isSubmitting = false
+                onBusyChange(isBusy)
+                return
+            }
             var submission = draft
             submission.attachmentSessionId = attachments.attachmentSessionId
             submission.orderedAttachmentIDs = attachments.orderedAttachmentIds
@@ -1687,12 +1805,29 @@ struct TodoFormSheet: View {
                 onBusyChange(false)
                 await Task.yield()
                 dismissForm(saved: true)
+            } else {
+                isSubmitting = false
+                onBusyChange(isBusy)
             }
         }
     }
 
+    private var isDirty: Bool {
+        !didSave && TodoFormDismissalPolicy.isDirty(
+            initialDraft: initialDraft,
+            draft: draft,
+            initialAttachmentIDs: initialAttachmentIDs,
+            attachmentIDs: attachmentModel.attachments.map(\.id),
+            hasAttachmentSession: attachmentModel.attachmentSessionId != nil
+        )
+    }
+
+    private var isOperationallyBusy: Bool {
+        isSubmitting || (!didSave && (isSaving || attachmentModel.isBusy || isDiscarding))
+    }
+
     private var isBusy: Bool {
-        !didSave && (isSaving || attachmentModel.isBusy || attachmentModel.attachmentSessionId != nil)
+        isOperationallyBusy
     }
 
     private func dismissForm(saved: Bool) {

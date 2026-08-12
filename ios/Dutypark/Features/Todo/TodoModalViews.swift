@@ -179,6 +179,7 @@ struct TodoDetailModal: View {
     let maximumHeight: CGFloat
     let onTodoChanged: () async -> Void
     let onDismissabilityChange: (Bool) -> Void
+    let dismissRequest: Int
     let dismiss: () -> Void
 
     @State private var showingEdit = false
@@ -193,6 +194,7 @@ struct TodoDetailModal: View {
         maximumHeight: CGFloat,
         onTodoChanged: @escaping () async -> Void,
         onDismissabilityChange: @escaping (Bool) -> Void = { _ in },
+        dismissRequest: Int = 0,
         dismiss: @escaping () -> Void
     ) {
         self.model = model
@@ -200,6 +202,7 @@ struct TodoDetailModal: View {
         self.maximumHeight = maximumHeight
         self.onTodoChanged = onTodoChanged
         self.onDismissabilityChange = onDismissabilityChange
+        self.dismissRequest = dismissRequest
         self.dismiss = dismiss
         _gallery = StateObject(
             wrappedValue: AttachmentGalleryModel(contextType: .todo, contextId: todo.id)
@@ -220,10 +223,12 @@ struct TodoDetailModal: View {
                     model: model,
                     targetTodoID: todo.id,
                     existingAttachments: model.attachmentsByTodoID[todo.uuid, default: []],
+                    preservedTags: todo.tags,
                     isSaving: model.isSaving,
                     maximumHeight: maximumHeight,
                     dismissAction: { showingEdit = false },
                     savedDismissAction: dismiss,
+                    dismissRequest: dismissRequest,
                     onBusyChange: { onDismissabilityChange(!$0) }
                 ) { draft in
                     let updated = await model.update(todo: todo, draft: draft)
@@ -249,6 +254,11 @@ struct TodoDetailModal: View {
         }
         .onChange(of: model.isSaving) { _, isSaving in
             onDismissabilityChange(!isSaving && !isConfirming)
+        }
+        .onChange(of: dismissRequest) { _, _ in
+            if !showingEdit, confirmation == nil, !isConfirming, !model.isSaving {
+                dismiss()
+            }
         }
         .onDisappear { onDismissabilityChange(true) }
         .todoModalErrorAlert(model)
