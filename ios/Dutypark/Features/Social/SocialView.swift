@@ -210,7 +210,7 @@ struct SocialView: View {
 
                 addFriendCard
             }
-            .padding(20)
+            .padding(SocialFriendCardLayout.panelInset)
         }
         .background(DPColor.backgroundCard)
         .clipShape(RoundedRectangle(cornerRadius: DPRadius.extraLarge, style: .continuous))
@@ -222,23 +222,16 @@ struct SocialView: View {
     }
 
     private func receivedRequestCard(_ request: FriendRequestDTO) -> some View {
-        HStack(spacing: DPSpacing.compact) {
-            RequestAvatar(member: request.fromMember, type: request.requestType)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(request.fromMember.name)
-                    .font(DPFont.light(size: 16, relativeTo: .body))
-                    .foregroundStyle(DPColor.textPrimary)
-                    .lineLimit(1)
-                Text(requestTypeLabel(request.requestType))
-                    .font(DPTypography.caption)
-                    .foregroundStyle(DPColor.textSecondary)
-                    .lineLimit(1)
-            }
-
-            Spacer(minLength: DPSpacing.extraSmall)
+        VStack(alignment: .leading, spacing: DPSpacing.small) {
+            requestIdentity(
+                member: request.fromMember,
+                type: request.requestType,
+                subtitle: requestTypeLabel(request.requestType)
+            )
 
             HStack(spacing: DPSpacing.small) {
+                Spacer(minLength: 0)
+
                 compactActionButton(
                     social("social.action.accept"),
                     foreground: DPColor.textOnDark,
@@ -268,29 +261,23 @@ struct SocialView: View {
     }
 
     private func sentRequestCard(_ request: FriendRequestDTO) -> some View {
-        HStack(spacing: DPSpacing.compact) {
-            RequestAvatar(member: request.toMember, type: request.requestType)
+        VStack(alignment: .leading, spacing: DPSpacing.small) {
+            requestIdentity(
+                member: request.toMember,
+                type: request.requestType,
+                subtitle: socialFormat("social.request.sent", requestTypeLabel(request.requestType))
+            )
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(request.toMember.name)
-                    .font(DPFont.light(size: 16, relativeTo: .body))
-                    .foregroundStyle(DPColor.textPrimary)
-                    .lineLimit(1)
-                Text(socialFormat("social.request.sent", requestTypeLabel(request.requestType)))
-                    .font(DPTypography.caption)
-                    .foregroundStyle(DPColor.textSecondary)
-                    .lineLimit(1)
-            }
-
-            Spacer(minLength: DPSpacing.extraSmall)
-
-            compactActionButton(
-                social("social.action.cancel"),
-                foreground: DPColor.warningHover,
-                background: DPColor.backgroundCard,
-                border: DPColor.warningBorder
-            ) {
-                confirmation = .cancel(request)
+            HStack {
+                Spacer(minLength: 0)
+                compactActionButton(
+                    social("social.action.cancel"),
+                    foreground: DPColor.warningHover,
+                    background: DPColor.backgroundCard,
+                    border: DPColor.warningBorder
+                ) {
+                    confirmation = .cancel(request)
+                }
             }
         }
         .padding(DPSpacing.medium)
@@ -299,6 +286,28 @@ struct SocialView: View {
         .overlay {
             RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous)
                 .stroke(DPColor.warningBorder, lineWidth: 1)
+        }
+    }
+
+    private func requestIdentity(
+        member: MemberPreviewDTO,
+        type: FriendRequestType,
+        subtitle: String
+    ) -> some View {
+        HStack(spacing: DPSpacing.compact) {
+            RequestAvatar(member: member, type: type)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(member.name)
+                    .font(DPFont.bold(size: 16, relativeTo: .body))
+                    .foregroundStyle(DPColor.textPrimary)
+                    .lineLimit(1)
+                Text(subtitle)
+                    .font(DPTypography.caption)
+                    .foregroundStyle(DPColor.textSecondary)
+                    .lineLimit(1)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 
@@ -343,17 +352,17 @@ struct SocialView: View {
         _ friend: DashboardFriendDetailDTO,
         isDragPreview: Bool = false
     ) -> some View {
-        HStack(spacing: DPSpacing.compact) {
+        ZStack(alignment: .topTrailing) {
             Button {
                 if let id = friend.member.id { onOpenCalendar(id) }
             } label: {
-                HStack(alignment: .top, spacing: DPSpacing.compact) {
-                    SocialAvatar(member: friend.member, size: 64)
+                HStack(alignment: .top, spacing: SocialFriendCardLayout.contentSpacing) {
+                    SocialAvatar(member: friend.member, size: SocialFriendCardLayout.avatarSize)
 
                     VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
                         HStack(spacing: 6) {
                             Text(friend.member.name)
-                                .font(DPFont.light(size: 14, relativeTo: .subheadline))
+                                .font(DPFont.bold(size: 15, relativeTo: .subheadline))
                                 .foregroundStyle(DPColor.textPrimary)
                                 .lineLimit(1)
                             if friend.isFamily {
@@ -363,42 +372,51 @@ struct SocialView: View {
                                     .accessibilityLabel(social("social.label.family"))
                             }
                         }
+                        .padding(.trailing, SocialFriendCardLayout.topActionsWidth)
 
-                        if let team = friend.member.team, !team.isEmpty {
-                            Label(team, systemImage: "person.3")
-                                .font(DPTypography.caption)
-                                .foregroundStyle(DPColor.textSecondary)
-                                .lineLimit(1)
-                        }
+                        VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+                            if let team = friend.member.team, !team.isEmpty {
+                                Label(team, systemImage: "person.3")
+                                    .font(DPTypography.caption)
+                                    .foregroundStyle(DPColor.textSecondary)
+                                    .lineLimit(1)
+                            }
 
-                        if let duty = friend.duty {
-                            Label(
-                                duty.dutyType ?? social("social.label.offDuty"),
-                                systemImage: "briefcase"
-                            )
-                            .font(DPTypography.caption)
-                            .foregroundStyle(DPColor.textSecondary)
-                            .lineLimit(1)
-                        }
-
-                        ForEach(Array(friend.schedules.prefix(2)), id: \.id) { schedule in
-                            Label(scheduleLabel(schedule), systemImage: "calendar")
-                                .font(DPTypography.caption)
-                                .foregroundStyle(DPColor.textSecondary)
-                                .lineLimit(1)
-                        }
-
-                        if friend.schedules.count > 2 {
-                            Text(
-                                socialFormat(
-                                    "social.label.moreSchedules",
-                                    String(friend.schedules.count - 2)
+                            if let duty = friend.duty {
+                                Label(
+                                    duty.dutyType ?? social("social.label.offDuty"),
+                                    systemImage: "briefcase"
                                 )
-                            )
-                            .font(DPTypography.caption)
-                            .foregroundStyle(DPColor.textMuted)
-                            .lineLimit(1)
+                                .font(DPTypography.caption)
+                                .foregroundStyle(DPColor.textSecondary)
+                                .lineLimit(1)
+                            }
+
+                            ForEach(Array(friend.schedules.prefix(2)), id: \.id) { schedule in
+                                Label(scheduleLabel(schedule), systemImage: "calendar")
+                                    .font(DPTypography.caption)
+                                    .foregroundStyle(DPColor.textSecondary)
+                                    .lineLimit(1)
+                            }
+
+                            if friend.schedules.count > 2 {
+                                Text(
+                                    socialFormat(
+                                        "social.label.moreSchedules",
+                                        String(friend.schedules.count - 2)
+                                    )
+                                )
+                                .font(DPTypography.caption)
+                                .foregroundStyle(DPColor.textMuted)
+                                .lineLimit(1)
+                            }
                         }
+                        .padding(
+                            .trailing,
+                            friend.pinOrder != nil && viewModel.pinnedFriends.count >= 2
+                                ? SocialFriendCardLayout.bottomActionInset
+                                : 0
+                        )
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
@@ -407,8 +425,6 @@ struct SocialView: View {
             .buttonStyle(.plain)
             .frame(maxWidth: .infinity, alignment: .leading)
             .accessibilityHint(social("social.action.openCalendar"))
-
-            Spacer(minLength: DPSpacing.small)
 
             HStack(spacing: 0) {
                 Button {
@@ -458,9 +474,6 @@ struct SocialView: View {
                     .presentationCompactAdaptation(.popover)
                 }
 
-                if friend.pinOrder != nil && viewModel.pinnedFriends.count >= 2 {
-                    pinnedFriendDragHandle(friend, isDragPreview: isDragPreview)
-                }
             }
         }
         .padding(DPSpacing.compact)
@@ -483,6 +496,12 @@ struct SocialView: View {
                     friend.pinOrder == nil ? DPColor.borderPrimary : DPColor.borderSecondary,
                     lineWidth: friend.pinOrder == nil ? 1 : 2
                 )
+        }
+        .overlay(alignment: .bottomTrailing) {
+            if friend.pinOrder != nil && viewModel.pinnedFriends.count >= 2 {
+                pinnedFriendDragHandle(friend, isDragPreview: isDragPreview)
+                    .padding([.trailing, .bottom], DPSpacing.compact)
+            }
         }
         .shadow(color: Color.black.opacity(friend.pinOrder == nil ? 0.05 : 0.10), radius: 2, y: 1)
         .contentShape(RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous))
@@ -1156,6 +1175,14 @@ private struct SocialAvatar: View {
                 URLQueryItem(name: "v", value: String(member.profilePhotoVersion))
             ])
     }
+}
+
+enum SocialFriendCardLayout {
+    static let panelInset: CGFloat = 12
+    static let avatarSize: CGFloat = 56
+    static let contentSpacing: CGFloat = 10
+    static let topActionsWidth = DPSize.minimumTouchTarget * 2
+    static let bottomActionInset = SocialFriendDragLayout.handleSize + DPSpacing.compact
 }
 
 enum SocialFriendDragLayout {

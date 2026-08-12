@@ -266,6 +266,19 @@ final class SocialFeatureTests: XCTestCase {
         XCTAssertEqual(SocialFriendDragLayout.activationDistance, 2)
     }
 
+    func testCompactFriendCardKeepsActionsOutOfTheContentLayout() {
+        XCTAssertEqual(SocialFriendCardLayout.panelInset, 12)
+        XCTAssertEqual(SocialFriendCardLayout.avatarSize, 56)
+        XCTAssertEqual(
+            SocialFriendCardLayout.topActionsWidth,
+            DPSize.minimumTouchTarget * 2
+        )
+        XCTAssertEqual(
+            SocialFriendCardLayout.bottomActionInset,
+            SocialFriendDragLayout.handleSize + DPSpacing.compact
+        )
+    }
+
     func testSuccessfulMutationsReportOnlyReceivedRequestCountEffects() async {
         let repository = SocialRepositorySpy()
         var effects: [Bool] = []
