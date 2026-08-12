@@ -10,15 +10,6 @@
         "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "附件 (%lld)" } }
       }
     },
-    "attachment.upload.choose" : {
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Tap to choose files" } },
-        "es" : { "stringUnit" : { "state" : "translated", "value" : "Toca para elegir archivos" } },
-        "ja" : { "stringUnit" : { "state" : "translated", "value" : "タップしてファイルを選択" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "탭해서 파일을 선택하세요" } },
-        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "点击以选择文件" } }
-      }
-    },
     "attachment.action.cancel" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Cancel" } },
       "es" : { "stringUnit" : { "state" : "translated", "value" : "Cancelar" } },
@@ -200,13 +191,6 @@
       "ja" : { "stringUnit" : { "state" : "translated", "value" : "添付ファイルをアップロードできませんでした。" } },
       "ko" : { "stringUnit" : { "state" : "translated", "value" : "첨부파일을 업로드하지 못했습니다." } },
       "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "无法上传附件。" } }
-    } },
-    "attachment.limit.safe" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Files must be smaller than 10 MB." } },
-      "es" : { "stringUnit" : { "state" : "translated", "value" : "Los archivos deben tener menos de 10 MB." } },
-      "ja" : { "stringUnit" : { "state" : "translated", "value" : "ファイルは10 MB未満にしてください。" } },
-      "ko" : { "stringUnit" : { "state" : "translated", "value" : "10MB 미만의 파일만 업로드할 수 있습니다." } },
-      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "文件必须小于 10 MB。" } }
     } },
     "attachment.loading" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Loading attachments" } },

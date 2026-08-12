@@ -39,9 +39,7 @@ struct AttachmentTests {
             "attachment.error.unreadable",
             "attachment.error.upload",
             "attachment.gallery.label",
-            "attachment.limit.safe",
             "attachment.loading",
-            "attachment.upload.choose",
             "attachment.upload.current",
             "attachment.upload.overall",
             "attachment.uploading"

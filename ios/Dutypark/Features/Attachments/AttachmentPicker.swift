@@ -192,54 +192,35 @@ struct AttachmentPicker: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: DPSpacing.compact) {
-            Button {
-                isImportingFiles = true
-            } label: {
-                HStack(spacing: DPSpacing.small) {
-                    Image(systemName: "arrow.up.doc")
-                        .font(.system(size: DPSize.icon, weight: .medium))
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(AttachmentLocalization.text("attachment.upload.choose"))
-                            .font(DPTypography.label)
-                            .foregroundStyle(DPColor.textSecondary)
-                        Text(AttachmentLocalization.text("attachment.limit.safe"))
-                            .font(DPTypography.caption)
-                            .foregroundStyle(DPColor.textMuted)
-                    }
-                    Spacer(minLength: 0)
-                }
-                .padding(.horizontal, DPSpacing.medium)
-                .frame(maxWidth: .infinity, minHeight: 58)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(DPColor.textSecondary)
-            .background(DPColor.backgroundSecondary)
-            .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
-            .overlay {
-                RoundedRectangle(cornerRadius: DPRadius.standard)
-                    .stroke(
-                        DPColor.borderPrimary,
-                        style: StrokeStyle(lineWidth: 2, dash: [6, 4])
+            HStack(spacing: DPSpacing.small) {
+                PhotosPicker(
+                    selection: $photoItems,
+                    maxSelectionCount: 10,
+                    matching: .any(of: [.images, .videos])
+                ) {
+                    Label(
+                        AttachmentLocalization.text("attachment.action.photos"),
+                        systemImage: "photo.on.rectangle"
                     )
-            }
-            .opacity(model.isBusy ? DPChrome.disabledOpacity : 1)
-            .disabled(model.isBusy)
-            .accessibilityIdentifier("attachment.filePicker")
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(DPPrimaryButtonStyle())
+                .disabled(model.isBusy)
+                .accessibilityIdentifier("attachment.photoPicker")
 
-            PhotosPicker(
-                selection: $photoItems,
-                maxSelectionCount: 10,
-                matching: .any(of: [.images, .videos])
-            ) {
-                Label(
-                    AttachmentLocalization.text("attachment.action.photos"),
-                    systemImage: "photo.on.rectangle"
-                )
-                .frame(maxWidth: .infinity)
+                Button {
+                    isImportingFiles = true
+                } label: {
+                    Label(
+                        AttachmentLocalization.text("attachment.action.files"),
+                        systemImage: "folder"
+                    )
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(DPOutlineButtonStyle())
+                .disabled(model.isBusy)
+                .accessibilityIdentifier("attachment.filePicker")
             }
-            .buttonStyle(DPOutlineButtonStyle())
-            .disabled(model.isBusy)
 
             if model.isBusy {
                 VStack(alignment: .leading, spacing: DPSpacing.small) {
