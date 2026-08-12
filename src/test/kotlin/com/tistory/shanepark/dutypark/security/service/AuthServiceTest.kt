@@ -29,6 +29,7 @@ import org.mockito.kotlin.whenever
 import org.springframework.http.HttpHeaders
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.security.crypto.password.PasswordEncoder
+import java.time.Instant
 import java.time.LocalDateTime
 import java.util.Optional
 
@@ -73,12 +74,29 @@ class AuthServiceTest {
     @Test
     fun `tokenToLoginMember returns login member for valid token`() {
         val loginMember = LoginMember(id = 1L, name = "user")
+        val member = memberWithId(1L)
         whenever(jwtProvider.validateToken("token")).thenReturn(TokenStatus.VALID)
         whenever(jwtProvider.parseToken("token")).thenReturn(loginMember)
+        whenever(memberRepository.findById(1L)).thenReturn(Optional.of(member))
 
         val result = authService.tokenToLoginMember("token")
 
         assertThat(result).isEqualTo(loginMember)
+    }
+
+    @Test
+    fun `tokenToLoginMember rejects deletion pending member`() {
+        val loginMember = LoginMember(id = 1L, name = "user")
+        val member = memberWithId(1L).also { it.markDeletionPending(Instant.parse("2026-08-12T00:00:00Z")) }
+        whenever(jwtProvider.validateToken("token")).thenReturn(TokenStatus.VALID)
+        whenever(jwtProvider.parseToken("token")).thenReturn(loginMember)
+        whenever(memberRepository.findById(1L)).thenReturn(Optional.of(member))
+
+        val exception = assertThrows<AuthException> {
+            authService.tokenToLoginMember("token")
+        }
+
+        assertThat(exception.message).isEqualTo("auth.account.inactive")
     }
 
     @Test
@@ -192,6 +210,22 @@ class AuthServiceTest {
     }
 
     @Test
+    fun `getTokenResponse rejects deletion pending member`() {
+        val member = memberWithId(4L).also { it.markDeletionPending(Instant.parse("2026-08-12T00:00:00Z")) }
+        whenever(loginAttemptService.isBlocked("127.0.0.1", "user@duty.park")).thenReturn(false)
+        whenever(memberRepository.findByEmail("user@duty.park")).thenReturn(Optional.of(member))
+        val request = requestWith("127.0.0.1", "user@duty.park")
+
+        val exception = assertThrows<AuthException> {
+            authService.getTokenResponse(LoginDto("user@duty.park", "pass"), request)
+        }
+
+        assertThat(exception.message).isEqualTo("auth.login.failed")
+        verify(loginAttemptService).recordFailedAttempt("127.0.0.1", "user@duty.park")
+        verify(jwtProvider, never()).createToken(any<Member>())
+    }
+
+    @Test
     fun `refreshAccessToken throws when token not found`() {
         whenever(refreshTokenService.findByToken("missing")).thenReturn(null)
         val request = requestWith("127.0.0.1", "user@duty.park")
@@ -238,6 +272,26 @@ class AuthServiceTest {
         assertThat(result.refreshToken).isEqualTo(refreshToken.token)
         assertThat(refreshToken.validUntil).isAfter(before)
         assertThat(refreshToken.userAgent).isEqualTo(firefoxUserAgent)
+    }
+
+    @Test
+    fun `refreshAccessToken rejects deletion pending member`() {
+        val member = memberWithId(6L).also { it.markDeletionPending(Instant.parse("2026-08-12T00:00:00Z")) }
+        val refreshToken = RefreshToken(
+            member = member,
+            validUntil = futureDateTime,
+            remoteAddr = "127.0.0.1",
+            userAgent = chromeUserAgent
+        )
+        whenever(refreshTokenService.findByToken("valid")).thenReturn(refreshToken)
+        val request = requestWith("127.0.0.1", firefoxUserAgent)
+
+        val exception = assertThrows<AuthException> {
+            authService.refreshAccessToken("valid", request)
+        }
+
+        assertThat(exception.message).isEqualTo("auth.account.inactive")
+        verify(jwtProvider, never()).createToken(any<Member>())
     }
 
     @Test

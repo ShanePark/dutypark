@@ -9,6 +9,8 @@ import com.tistory.shanepark.dutypark.member.repository.MemberSsoRegisterReposit
 import com.tistory.shanepark.dutypark.member.service.MemberSocialAccountService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.oauth.SocialAccountAlreadyLinkedException
+import com.tistory.shanepark.dutypark.security.reauth.ReauthPurpose
+import com.tistory.shanepark.dutypark.security.reauth.ReauthService
 import com.tistory.shanepark.dutypark.security.service.AuthService
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.beans.factory.annotation.Value
@@ -34,14 +36,20 @@ class MobileOAuthService(
     private val memberRepository: MemberRepository,
     private val memberSsoRegisterRepository: MemberSsoRegisterRepository,
     private val authService: AuthService,
+    private val reauthService: ReauthService,
     private val clock: Clock,
     transactionManager: PlatformTransactionManager,
     @param:Value("\${oauth.kakao.rest-api-key}") private val kakaoClientId: String,
     @param:Value("\${oauth.naver.client-id}") private val naverClientId: String,
+    @param:Value("\${cookie.domain:}") cookieDomain: String,
 ) {
     private val log = logger()
     private val secureRandom = SecureRandom()
     private val callbackTransaction = TransactionTemplate(transactionManager)
+    private val allowedWebCallbackUris = buildSet {
+        DEVELOPMENT_WEB_ORIGINS.mapTo(this, ::webCallbackUriForOrigin)
+        cookieDomainWebCallbackUri(cookieDomain)?.let(::add)
+    }
 
     @Transactional
     fun authorize(
@@ -51,14 +59,18 @@ class MobileOAuthService(
     ): MobileOAuthAuthorizeResponse {
         val provider = parseProvider(request.provider)
         val purpose = parsePurpose(request.purpose)
-        val linkMemberId = if (purpose == MobileOAuthPurpose.LINK) {
-            loginMember?.id ?: throw AuthException()
-        } else {
-            null
+        val authenticatedMemberId = when (purpose) {
+            MobileOAuthPurpose.LOGIN -> null
+            MobileOAuthPurpose.LINK -> loginMember?.id ?: throw AuthException()
+            MobileOAuthPurpose.DELETE_ACCOUNT -> {
+                val member = loginMember ?: throw AuthException()
+                if (member.isImpersonating) {
+                    throw AuthException("auth.reauth.impersonationForbidden")
+                }
+                member.id
+            }
         }
-        require(request.callbackUri == APP_CALLBACK_URI) {
-            "auth.oauth.mobile.callback.notAllowed"
-        }
+        validateAppCallbackUri(purpose, request.callbackUri)
         val callbackUri = providerCallbackUri(mobileOAuthBaseUrl, provider)
         val state = randomToken()
         val now = clock.instant()
@@ -70,7 +82,7 @@ class MobileOAuthService(
                 codeChallenge = request.codeChallenge,
                 stateHash = sha256Hex(state),
                 stateExpiresAt = now.plus(STATE_TTL),
-                linkMemberId = linkMemberId,
+                authenticatedMemberId = authenticatedMemberId,
             )
         )
 
@@ -140,18 +152,11 @@ class MobileOAuthService(
         }
 
         transaction.consumeExchange(now)
-        val memberId = transaction.memberId
-        if (memberId != null) {
-            val tokens = authService.getTokenResponseByMemberId(memberId, servletRequest)
-            return MobileOAuthExchangeResult(
-                response = MobileOAuthExchangeResponse(false, expiresIn = tokens.expiresIn),
-                accessToken = tokens.accessToken,
-                refreshToken = tokens.refreshToken,
-            )
+        return when (transaction.purpose) {
+            MobileOAuthPurpose.LOGIN -> exchangeLogin(transaction, servletRequest)
+            MobileOAuthPurpose.DELETE_ACCOUNT -> exchangeAccountDeletionReauth(transaction)
+            MobileOAuthPurpose.LINK -> throw AuthException("auth.oauth.mobile.code.invalid")
         }
-        return MobileOAuthExchangeResult(
-            response = MobileOAuthExchangeResponse(true, signupUuid = transaction.signupUuid)
-        )
     }
 
     private fun callbackUri(base: String, name: String, value: String): URI =
@@ -174,7 +179,7 @@ class MobileOAuthService(
                 provider = transaction.provider,
                 purpose = transaction.purpose,
                 callbackUri = transaction.callbackUri,
-                linkMemberId = transaction.linkMemberId,
+                authenticatedMemberId = transaction.authenticatedMemberId,
             )
         })
     }
@@ -182,7 +187,7 @@ class MobileOAuthService(
     private fun finalizeCallback(claim: MobileOAuthClaim, socialId: String): URI {
         return requireNotNull(callbackTransaction.execute {
             if (claim.purpose == MobileOAuthPurpose.LINK) {
-                val member = memberRepository.findById(requireNotNull(claim.linkMemberId)).orElseThrow {
+                val member = memberRepository.findById(requireNotNull(claim.authenticatedMemberId)).orElseThrow {
                     AuthException("auth.token.memberNotFound")
                 }
                 return@execute try {
@@ -198,18 +203,91 @@ class MobileOAuthService(
             val member = memberSocialAccountService.findMemberByProviderAndSocialId(claim.provider, socialId)
             val exchangeCode = randomToken()
             val exchangeExpiresAt = clock.instant().plus(EXCHANGE_CODE_TTL)
-            if (member != null) {
-                transaction.completeForMember(sha256Hex(exchangeCode), exchangeExpiresAt, member.id!!)
-            } else {
-                val signup = memberSsoRegisterRepository.save(MemberSsoRegister(claim.provider, socialId))
-                transaction.completeForSignup(sha256Hex(exchangeCode), exchangeExpiresAt, signup.uuid)
+            when (claim.purpose) {
+                MobileOAuthPurpose.LOGIN -> {
+                    if (member != null) {
+                        transaction.completeForMember(sha256Hex(exchangeCode), exchangeExpiresAt, member.id!!)
+                    } else {
+                        val signup = memberSsoRegisterRepository.save(MemberSsoRegister(claim.provider, socialId))
+                        transaction.completeForSignup(sha256Hex(exchangeCode), exchangeExpiresAt, signup.uuid)
+                    }
+                }
+
+                MobileOAuthPurpose.DELETE_ACCOUNT -> {
+                    val authenticatedMemberId = requireNotNull(claim.authenticatedMemberId)
+                    if (member?.id != authenticatedMemberId) {
+                        return@execute callbackUri(claim.callbackUri, "error", "reauth_account_mismatch")
+                    }
+                    transaction.completeForMember(
+                        sha256Hex(exchangeCode),
+                        exchangeExpiresAt,
+                        authenticatedMemberId,
+                    )
+                }
+
+                MobileOAuthPurpose.LINK -> error("LINK callback must return before exchange code creation")
             }
             callbackUri(claim.callbackUri, "code", exchangeCode)
         })
     }
 
+    private fun exchangeLogin(
+        transaction: MobileOAuthTransaction,
+        servletRequest: HttpServletRequest,
+    ): MobileOAuthExchangeResult {
+        val memberId = transaction.memberId
+        if (memberId != null) {
+            val tokens = authService.getTokenResponseByMemberId(memberId, servletRequest)
+            return MobileOAuthExchangeResult(
+                response = MobileOAuthExchangeResponse(false, expiresIn = tokens.expiresIn),
+                accessToken = tokens.accessToken,
+                refreshToken = tokens.refreshToken,
+            )
+        }
+        return MobileOAuthExchangeResult(
+            response = MobileOAuthExchangeResponse(true, signupUuid = transaction.signupUuid)
+        )
+    }
+
+    private fun exchangeAccountDeletionReauth(transaction: MobileOAuthTransaction): MobileOAuthExchangeResult {
+        val memberId = transaction.memberId
+            ?: throw AuthException("auth.oauth.mobile.code.invalid")
+        val proof = reauthService.issue(memberId, ReauthPurpose.DELETE_ACCOUNT)
+        return MobileOAuthExchangeResult(
+            response = MobileOAuthExchangeResponse(
+                signupRequired = false,
+                expiresIn = proof.expiresIn,
+                reauthProof = proof.reauthProof,
+            )
+        )
+    }
+
     private fun providerCallbackUri(mobileOAuthBaseUrl: String, provider: SsoType): String {
         return "${mobileOAuthBaseUrl.trimEnd('/')}/callback/${provider.name.lowercase()}"
+    }
+
+    private fun validateAppCallbackUri(purpose: MobileOAuthPurpose, callbackUri: String) {
+        val allowed = when (purpose) {
+            MobileOAuthPurpose.LOGIN, MobileOAuthPurpose.LINK -> callbackUri == APP_CALLBACK_URI
+            MobileOAuthPurpose.DELETE_ACCOUNT ->
+                callbackUri == APP_CALLBACK_URI || callbackUri in allowedWebCallbackUris
+        }
+        require(allowed) { "auth.oauth.mobile.callback.notAllowed" }
+    }
+
+    private fun webCallbackUriForOrigin(configuredOrigin: String): String {
+        val origin = configuredOrigin.removeSuffix("/")
+        val uri = runCatching { URI(origin) }.getOrElse {
+            throw IllegalStateException("Invalid OAuth mobile web callback origin")
+        }
+        val isOriginOnly = uri.host != null && uri.rawUserInfo == null && uri.rawQuery == null &&
+            uri.rawFragment == null && uri.rawPath.orEmpty().isEmpty()
+        val isSecure = uri.scheme.equals("https", ignoreCase = true)
+        val isExactDevelopmentOrigin = origin in DEVELOPMENT_WEB_ORIGINS
+        check(isOriginOnly && (isSecure || isExactDevelopmentOrigin)) {
+            "OAuth mobile web callback origins must be HTTPS origins or approved local development origins"
+        }
+        return "$origin$WEB_ACCOUNT_DELETION_CALLBACK_PATH"
     }
 
     private data class MobileOAuthClaim(
@@ -217,11 +295,16 @@ class MobileOAuthService(
         val provider: SsoType,
         val purpose: MobileOAuthPurpose,
         val callbackUri: String,
-        val linkMemberId: Long?,
+        val authenticatedMemberId: Long?,
     )
 
     companion object {
         private const val APP_CALLBACK_URI = "dutypark://oauth/callback"
+        private const val WEB_ACCOUNT_DELETION_CALLBACK_PATH = "/auth/account-deletion-oauth-callback"
+        private val DEVELOPMENT_WEB_ORIGINS = setOf(
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+        )
         private val STATE_TTL: Duration = Duration.ofMinutes(5)
         private val EXCHANGE_CODE_TTL: Duration = Duration.ofMinutes(2)
     }
@@ -257,3 +340,26 @@ data class MobileOAuthExchangeResult(
     val accessToken: String? = null,
     val refreshToken: String? = null,
 )
+
+/**
+ * The production SPA is served from the same host as the API, so DOMAIN_NAME
+ * also defines its fixed account-deletion OAuth callback without another env value.
+ */
+internal fun cookieDomainWebCallbackUri(cookieDomain: String): String? {
+    if (cookieDomain.isBlank()) {
+        return null
+    }
+    check(cookieDomain.none(Char::isWhitespace)) {
+        "cookie.domain must be a plain DNS hostname"
+    }
+    val normalized = cookieDomain.trim('.').lowercase()
+    val labels = normalized.split('.')
+    val labelPattern = Regex("^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$")
+    val isPlainDnsHostname = normalized.length <= 253 && labels.size >= 2 &&
+        labels.all { it.length <= 63 && labelPattern.matches(it) } &&
+        labels.last().any(Char::isLetter)
+    check(isPlainDnsHostname) {
+        "cookie.domain must be a plain DNS hostname"
+    }
+    return "https://$normalized/auth/account-deletion-oauth-callback"
+}

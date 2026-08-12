@@ -3,7 +3,10 @@ package com.tistory.shanepark.dutypark.member.service
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.entity.MemberSocialAccount
 import com.tistory.shanepark.dutypark.member.domain.enums.SsoType
+import com.tistory.shanepark.dutypark.member.exception.SocialAccountUnlinkException
+import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberSocialAccountRepository
+import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.oauth.SocialAccountAlreadyLinkedException
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
@@ -18,17 +21,19 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.test.util.ReflectionTestUtils
+import java.util.Optional
 
 @ExtendWith(org.mockito.junit.jupiter.MockitoExtension::class)
 class MemberSocialAccountServiceTest {
 
     private val memberSocialAccountRepository: MemberSocialAccountRepository = mock()
+    private val memberRepository: MemberRepository = mock()
 
     private lateinit var service: MemberSocialAccountService
 
     @BeforeEach
     fun setUp() {
-        service = MemberSocialAccountService(memberSocialAccountRepository)
+        service = MemberSocialAccountService(memberRepository, memberSocialAccountRepository)
     }
 
     @Test
@@ -130,6 +135,85 @@ class MemberSocialAccountServiceTest {
         assertThat(found[1L]?.get(SsoType.NAVER)).isEqualTo("naver-1")
         assertThat(found[2L]?.get(SsoType.KAKAO)).isEqualTo("kakao-2")
     }
+
+    @Test
+    fun `unlink is idempotent when provider is not linked`() {
+        val member = memberWithId(1L)
+        whenever(memberRepository.findMemberWithTeamForUpdate(1L)).thenReturn(Optional.of(member))
+        whenever(memberSocialAccountRepository.findByMemberAndProvider(member, SsoType.KAKAO)).thenReturn(null)
+
+        service.unlink(loginMember(), SsoType.KAKAO)
+
+        verify(memberRepository).findMemberWithTeamForUpdate(1L)
+        verify(memberSocialAccountRepository, never()).delete(any())
+    }
+
+    @Test
+    fun `unlink rejects removing sole social account even when password exists`() {
+        val member = memberWithId(1L)
+        val kakao = socialAccount(member, SsoType.KAKAO)
+        whenever(memberRepository.findMemberWithTeamForUpdate(1L)).thenReturn(Optional.of(member))
+        whenever(memberSocialAccountRepository.findByMemberAndProvider(member, SsoType.KAKAO)).thenReturn(kakao)
+        whenever(memberSocialAccountRepository.findAllByMemberIdIn(listOf(1L))).thenReturn(listOf(kakao))
+
+        val exception = assertThrows<SocialAccountUnlinkException> {
+            service.unlink(loginMember(), SsoType.KAKAO)
+        }
+
+        assertThat(exception.errorCode).isEqualTo(409)
+        assertThat(exception.message).isEqualTo("member.social.unlink.lastAuthenticationMethod")
+        verify(memberSocialAccountRepository, never()).delete(any())
+    }
+
+    @Test
+    fun `unlink rejects removing last authentication method`() {
+        val member = memberWithId(1L).also { it.password = " " }
+        val kakao = socialAccount(member, SsoType.KAKAO)
+        whenever(memberRepository.findMemberWithTeamForUpdate(1L)).thenReturn(Optional.of(member))
+        whenever(memberSocialAccountRepository.findByMemberAndProvider(member, SsoType.KAKAO)).thenReturn(kakao)
+        whenever(memberSocialAccountRepository.findAllByMemberIdIn(listOf(1L))).thenReturn(listOf(kakao))
+
+        val exception = assertThrows<SocialAccountUnlinkException> {
+            service.unlink(loginMember(), SsoType.KAKAO)
+        }
+
+        assertThat(exception.errorCode).isEqualTo(409)
+        assertThat(exception.message).isEqualTo("member.social.unlink.lastAuthenticationMethod")
+        verify(memberSocialAccountRepository, never()).delete(any())
+    }
+
+    @Test
+    fun `unlink allows removing one social account when another remains`() {
+        val member = memberWithId(1L).also { it.password = null }
+        val kakao = socialAccount(member, SsoType.KAKAO)
+        val naver = socialAccount(member, SsoType.NAVER)
+        whenever(memberRepository.findMemberWithTeamForUpdate(1L)).thenReturn(Optional.of(member))
+        whenever(memberSocialAccountRepository.findByMemberAndProvider(member, SsoType.KAKAO)).thenReturn(kakao)
+        whenever(memberSocialAccountRepository.findAllByMemberIdIn(listOf(1L))).thenReturn(listOf(kakao, naver))
+
+        service.unlink(loginMember(), SsoType.KAKAO)
+
+        verify(memberSocialAccountRepository).delete(kakao)
+    }
+
+    @Test
+    fun `unlink rejects impersonation before acquiring member lock`() {
+        val impersonating = loginMember().copy(isImpersonating = true, originalMemberId = 2L)
+
+        val exception = assertThrows<SocialAccountUnlinkException> {
+            service.unlink(impersonating, SsoType.NAVER)
+        }
+
+        assertThat(exception.errorCode).isEqualTo(403)
+        assertThat(exception.message).isEqualTo("member.social.unlink.impersonationForbidden")
+        verify(memberRepository, never()).findMemberWithTeamForUpdate(any())
+        verify(memberSocialAccountRepository, never()).delete(any())
+    }
+
+    private fun loginMember() = LoginMember(id = 1L, name = "user")
+
+    private fun socialAccount(member: Member, provider: SsoType) =
+        MemberSocialAccount(member = member, provider = provider, socialId = "${provider.name.lowercase()}-1")
 
     private fun memberWithId(id: Long): Member {
         val member = Member("user", "user@duty.park", "pass")

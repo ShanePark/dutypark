@@ -197,6 +197,81 @@ class MemberControllerTest : RestDocsTest() {
     }
 
     @Test
+    fun `unlink social account deletes local mapping and returns 204`() {
+        val member = TestData.member
+        memberSocialAccountRepository.save(MemberSocialAccount(member, SsoType.KAKAO, "kakao-unlink"))
+        memberSocialAccountRepository.save(MemberSocialAccount(member, SsoType.NAVER, "naver-retained"))
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.delete("/api/members/me/social-accounts/KAKAO")
+                .withAuth(member)
+        )
+            .andExpect(status().isNoContent)
+
+        assertThat(memberSocialAccountRepository.findByMemberAndProvider(member, SsoType.KAKAO)).isNull()
+        assertThat(memberSocialAccountRepository.findByMemberAndProvider(member, SsoType.NAVER)).isNotNull
+    }
+
+    @Test
+    fun `unlink unlinked social account is idempotent`() {
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.delete("/api/members/me/social-accounts/NAVER")
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isNoContent)
+    }
+
+    @Test
+    fun `unlink social account requires authentication`() {
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.delete("/api/members/me/social-accounts/KAKAO")
+        )
+            .andExpect(status().isUnauthorized)
+    }
+
+    @Test
+    fun `unlink social account rejects impersonation with machine readable code`() {
+        val impersonationToken = jwtProvider.createImpersonationToken(TestData.member, TestData.admin.id!!)
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.delete("/api/members/me/social-accounts/KAKAO")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer $impersonationToken")
+        )
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.code").value("member.social.unlink.impersonationForbidden"))
+    }
+
+    @Test
+    fun `unlink sole social account with password returns conflict and keeps mapping`() {
+        val member = TestData.member
+        assertThat(member.password).isNotBlank()
+        val linked = memberSocialAccountRepository.save(
+            MemberSocialAccount(member, SsoType.KAKAO, "kakao-last-authentication")
+        )
+        em.flush()
+        em.clear()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.delete("/api/members/me/social-accounts/KAKAO")
+                .withAuth(member)
+        )
+            .andExpect(status().isConflict)
+            .andExpect(jsonPath("$.code").value("member.social.unlink.lastAuthenticationMethod"))
+
+        assertThat(memberSocialAccountRepository.findById(linked.id!!)).isPresent
+    }
+
+    @Test
+    fun `unlink social account rejects unsupported provider`() {
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.delete("/api/members/me/social-accounts/APPLE")
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("common.badRequest"))
+    }
+
+    @Test
     fun `getProfilePhoto returns 404 when file is missing`() {
         val member = TestData.member
         val missingPath = storagePathResolver.getStorageRoot().resolve("PROFILE/${member.id}/missing.png")

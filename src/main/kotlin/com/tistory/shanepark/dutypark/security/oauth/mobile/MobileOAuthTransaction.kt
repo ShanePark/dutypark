@@ -28,7 +28,7 @@ class MobileOAuthTransaction(
     val stateExpiresAt: Instant,
 
     @Column(name = "link_member_id")
-    val linkMemberId: Long? = null,
+    val authenticatedMemberId: Long? = null,
 ) {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

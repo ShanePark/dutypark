@@ -6,6 +6,8 @@ import com.tistory.shanepark.dutypark.common.exceptions.RateLimitException
 import com.tistory.shanepark.dutypark.member.repository.MemberManagerRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberSsoRegisterRepository
+import com.tistory.shanepark.dutypark.member.domain.entity.Member
+import com.tistory.shanepark.dutypark.member.domain.enums.MemberStatus
 import com.tistory.shanepark.dutypark.member.service.RefreshTokenService
 import com.tistory.shanepark.dutypark.security.config.JwtConfig
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginDto
@@ -46,9 +48,25 @@ class AuthService(
     @Transactional(readOnly = true)
     fun tokenToLoginMember(token: String): LoginMember {
         if (validateToken(token) == TokenStatus.VALID) {
-            return jwtProvider.parseToken(token)
+            val loginMember = jwtProvider.parseToken(token)
+            val member = memberRepository.findById(loginMember.id).orElseThrow {
+                AuthException("auth.account.inactive")
+            }
+            ensureActive(member)
+            return loginMember
         }
         throw AuthException()
+    }
+
+    @Transactional(readOnly = true)
+    fun verifyPasswordForReauth(memberId: Long, password: String) {
+        val member = memberRepository.findById(memberId).orElseThrow {
+            AuthException("auth.reauth.failed")
+        }
+        ensureActive(member, "auth.reauth.failed")
+        if (member.password == null || !passwordEncoder.matches(password, member.password)) {
+            throw AuthException("auth.reauth.failed")
+        }
     }
 
     fun changePassword(param: PasswordChangeDto, byAdmin: Boolean = false) {
@@ -82,7 +100,10 @@ class AuthService(
 
         val member = memberRepository.findByEmail(email).orElse(null)
 
-        if (member == null || !passwordEncoder.matches(login.password, member.password)) {
+        if (
+            member == null || member.status != MemberStatus.ACTIVE ||
+            !passwordEncoder.matches(login.password, member.password)
+        ) {
             loginAttemptService.recordFailedAttempt(ipAddress, email)
             log.info("Login failed: ip={}, email={}", ipAddress, email)
             throw AuthException(LOGIN_FAILED_MESSAGE)
@@ -113,6 +134,7 @@ class AuthService(
         }
 
         val member = refreshToken.member
+        ensureActive(member)
         val newJwt = jwtProvider.createToken(member)
 
         refreshToken.slideValidUntil(
@@ -133,6 +155,7 @@ class AuthService(
             log.warn("Token generation failed: member not exist, memberId={}", memberId)
             AuthException("auth.token.memberNotFound")
         }
+        ensureActive(member)
 
         val jwt = jwtProvider.createToken(member)
         val refreshToken = refreshTokenService.createRefreshToken(
@@ -157,10 +180,12 @@ class AuthService(
         val managerEntity = memberRepository.findById(manager.id).orElseThrow {
             AuthException("auth.impersonation.managerNotFound")
         }
+        ensureActive(managerEntity)
 
         val targetEntity = memberRepository.findById(targetMemberId).orElseThrow {
             AuthException("auth.impersonation.targetNotFound")
         }
+        ensureActive(targetEntity)
 
         val isManager = memberManagerRepository.findAllByManagerAndManaged(managerEntity, targetEntity).isNotEmpty()
         if (!isManager) {
@@ -184,6 +209,7 @@ class AuthService(
         val originalMember = memberRepository.findById(originalMemberId).orElseThrow {
             AuthException("auth.restore.originalNotFound")
         }
+        ensureActive(originalMember)
 
         val jwt = jwtProvider.createToken(originalMember)
 
@@ -210,6 +236,12 @@ class AuthService(
             refreshToken = refreshToken.token,
             expiresIn = jwtConfig.tokenValidityInSeconds
         )
+    }
+
+    private fun ensureActive(member: Member, code: String = "auth.account.inactive") {
+        if (member.status != MemberStatus.ACTIVE) {
+            throw AuthException(code)
+        }
     }
 
 }

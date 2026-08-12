@@ -23,6 +23,7 @@ data class MobileOAuthAuthorizeRequest(
 enum class MobileOAuthPurpose {
     LOGIN,
     LINK,
+    DELETE_ACCOUNT,
 }
 
 data class MobileOAuthAuthorizeResponse(
@@ -49,4 +50,5 @@ data class MobileOAuthExchangeResponse(
     val signupRequired: Boolean,
     val signupUuid: String? = null,
     val expiresIn: Long? = null,
+    val reauthProof: String? = null,
 )
