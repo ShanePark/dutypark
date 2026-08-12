@@ -4,6 +4,7 @@ struct SocialView: View {
     @StateObject private var viewModel: SocialViewModel
     @State private var isSearchPresented = false
     @State private var confirmation: SocialConfirmation?
+    @State private var actionCandidate: ActionCandidate?
 
     private let onOpenCalendar: (MemberID) -> Void
 
@@ -22,32 +23,22 @@ struct SocialView: View {
         Group {
             if viewModel.isLoading && viewModel.friends.isEmpty && !viewModel.hasPendingRequests {
                 ProgressView(social("social.loading"))
+                    .font(DPTypography.supporting)
+                    .foregroundStyle(DPColor.textSecondary)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .accessibilityIdentifier("social.loading")
             } else {
-                friendList
+                friendContent
             }
         }
-        .navigationTitle(social("social.title"))
-        .toolbar {
-            ToolbarItem(placement: .topBarTrailing) {
-                Button {
-                    isSearchPresented = true
-                } label: {
-                    Label(social("social.action.addFriend"), systemImage: "person.badge.plus")
-                }
-                .accessibilityIdentifier("social.addFriend")
-            }
-            if viewModel.pinnedFriends.count > 1 {
-                ToolbarItem(placement: .topBarTrailing) {
-                    EditButton()
-                }
-            }
-        }
+        .background(DPColor.backgroundPrimary.ignoresSafeArea())
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
         .task { await viewModel.load() }
         .refreshable { await viewModel.refresh() }
-        .sheet(isPresented: $isSearchPresented) {
-            FriendSearchView(viewModel: viewModel)
+        .fullScreenCover(isPresented: $isSearchPresented) {
+            FriendSearchModalView(viewModel: viewModel)
+                .presentationBackground(.clear)
         }
         .alert(item: $confirmation) { confirmation in
             confirmationAlert(confirmation)
@@ -66,261 +57,485 @@ struct SocialView: View {
         .disabled(viewModel.isPerformingAction)
     }
 
-    private var friendList: some View {
-        List {
-            if viewModel.hasPendingRequests {
-                Section(social("social.section.requests")) {
-                    ForEach(viewModel.receivedRequests, id: \.id) { request in
-                        receivedRequestRow(request)
-                    }
-                    ForEach(viewModel.sentRequests, id: \.id) { request in
-                        sentRequestRow(request)
-                    }
-                }
-            }
+    private var friendContent: some View {
+        ScrollView {
+            LazyVStack(spacing: DPSpacing.large) {
+                pageHeader
 
-            if !viewModel.pinnedFriends.isEmpty {
-                Section(social("social.section.pinned")) {
-                    ForEach(viewModel.pinnedFriends, id: \.member.id) { friend in
-                        friendRow(friend)
-                    }
-                    .onMove { source, destination in
-                        Task { await viewModel.movePinned(fromOffsets: source, toOffset: destination) }
-                    }
+                if viewModel.hasPendingRequests {
+                    requestsPanel
                 }
-            }
 
-            Section(social("social.section.friends")) {
-                if viewModel.friends.isEmpty {
-                    VStack(spacing: DPSpacing.medium) {
-                        Image(systemName: "person.2")
-                            .font(.system(size: 32))
-                            .foregroundStyle(DPColor.textMuted)
-                        Text(social("social.empty.friends"))
-                            .foregroundStyle(DPColor.textSecondary)
-                        Button(social("social.action.addFriend")) {
-                            isSearchPresented = true
-                        }
-                        .buttonStyle(DPPrimaryButtonStyle())
-                    }
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, DPSpacing.large)
-                    .listRowBackground(Color.clear)
-                } else {
-                    ForEach(viewModel.unpinnedFriends, id: \.member.id) { friend in
-                        friendRow(friend)
-                    }
-                }
+                friendsPanel
             }
+            .padding(.horizontal, DPSpacing.medium)
+            .padding(.top, DPSpacing.small)
+            .padding(.bottom, DPSpacing.large)
         }
-        .listStyle(.insetGrouped)
         .accessibilityIdentifier("social.list")
     }
 
-    private func receivedRequestRow(_ request: FriendRequestDTO) -> some View {
-        VStack(alignment: .leading, spacing: DPSpacing.small) {
-            HStack(spacing: DPSpacing.small) {
-                SocialAvatar(member: request.fromMember, size: 44)
-                VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
-                    Text(request.fromMember.name)
-                        .font(.body.weight(.semibold))
-                    Label(
-                        requestTypeLabel(request.requestType),
-                        systemImage: request.requestType == .family ? "house.fill" : "person.badge.plus"
-                    )
-                    .font(.caption)
-                    .foregroundStyle(request.requestType == .family ? DPColor.warning : DPColor.accent)
+    private var pageHeader: some View {
+        HStack(spacing: DPSpacing.compact) {
+            Image(systemName: "person.badge.plus")
+                .font(.system(size: 18, weight: .medium))
+                .foregroundStyle(DPColor.textSecondary)
+                .frame(width: 36, height: 36)
+                .background(DPColor.backgroundTertiary)
+                .clipShape(RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous)
+                        .stroke(DPColor.borderPrimary, lineWidth: 1)
                 }
-                Spacer()
-            }
-            HStack(spacing: DPSpacing.small) {
-                Button(social("social.action.accept")) {
-                    Task { await viewModel.accept(request) }
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(DPColor.success)
-                .frame(minHeight: DPSize.minimumTouchTarget)
 
-                Button(social("social.action.reject"), role: .destructive) {
-                    confirmation = .reject(request)
-                }
-                .buttonStyle(.bordered)
-                .frame(minHeight: DPSize.minimumTouchTarget)
-            }
-        }
-        .padding(.vertical, DPSpacing.extraSmall)
-        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-            Button(role: .destructive) { confirmation = .reject(request) } label: {
-                Label(social("social.action.reject"), systemImage: "xmark")
-            }
-        }
-        .swipeActions(edge: .leading, allowsFullSwipe: false) {
-            Button { Task { await viewModel.accept(request) } } label: {
-                Label(social("social.action.accept"), systemImage: "checkmark")
-            }
-            .tint(DPColor.success)
-        }
-    }
+            Text(social("social.title"))
+                .font(DPFont.bold(size: 18, relativeTo: .headline))
+                .foregroundStyle(DPColor.textPrimary)
+                .lineLimit(1)
 
-    private func sentRequestRow(_ request: FriendRequestDTO) -> some View {
-        HStack(spacing: DPSpacing.small) {
-            SocialAvatar(member: request.toMember, size: 44)
-            VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
-                Text(request.toMember.name)
-                    .font(.body.weight(.semibold))
-                Text(socialFormat("social.request.sent", requestTypeLabel(request.requestType)))
-                    .font(.caption)
-                    .foregroundStyle(DPColor.textSecondary)
-            }
-            Spacer()
-            Button(social("social.action.cancel")) {
-                confirmation = .cancel(request)
-            }
-            .buttonStyle(.bordered)
-            .tint(DPColor.warning)
-            .frame(minHeight: DPSize.minimumTouchTarget)
-        }
-        .padding(.vertical, DPSpacing.extraSmall)
-        .swipeActions(allowsFullSwipe: false) {
-            Button(role: .destructive) { confirmation = .cancel(request) } label: {
-                Label(social("social.action.cancel"), systemImage: "xmark")
-            }
-        }
-    }
+            Spacer(minLength: DPSpacing.small)
 
-    private func friendRow(_ friend: DashboardFriendDetailDTO) -> some View {
-        HStack(spacing: DPSpacing.small) {
-            SocialAvatar(member: friend.member, size: 52)
-            VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
-                HStack(spacing: DPSpacing.extraSmall) {
-                    Text(friend.member.name)
-                        .font(.body.weight(.semibold))
-                    if friend.isFamily {
-                        Image(systemName: "house.fill")
-                            .foregroundStyle(DPColor.warning)
-                            .accessibilityLabel(social("social.label.family"))
-                    }
-                }
-                if let team = friend.member.team, !team.isEmpty {
-                    Text(team)
-                        .font(.caption)
-                        .foregroundStyle(DPColor.textSecondary)
-                }
-                if let duty = friend.duty {
-                    Label(
-                        duty.dutyType ?? social("social.label.offDuty"),
-                        systemImage: "briefcase"
-                    )
-                    .font(.caption)
-                    .foregroundStyle(DPColor.textSecondary)
-                }
-                ForEach(Array(friend.schedules.prefix(2)), id: \.id) { schedule in
-                    Label(scheduleLabel(schedule), systemImage: "calendar")
-                        .font(.caption)
-                        .foregroundStyle(DPColor.textSecondary)
+            Button {
+                isSearchPresented = true
+            } label: {
+                HStack(spacing: DPSpacing.small) {
+                    Image(systemName: "person.badge.plus")
+                        .font(.system(size: 16, weight: .semibold))
+                    Text(social("social.action.addFriend"))
+                        .font(DPFont.light(size: 14, relativeTo: .subheadline))
                         .lineLimit(1)
                 }
-                if friend.schedules.count > 2 {
-                    Text(socialFormat("social.label.moreSchedules", String(friend.schedules.count - 2)))
-                        .font(.caption2)
-                        .foregroundStyle(DPColor.textMuted)
+                .foregroundStyle(DPColor.textOnDark)
+                .padding(.horizontal, DPSpacing.medium)
+                .frame(minHeight: DPSize.minimumTouchTarget)
+                .background {
+                    LinearGradient(
+                        colors: [DPColor.surfaceStrong, DPColor.surfaceStrongAlt],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
                 }
-            }
-            Spacer()
-            Button {
-                Task { await viewModel.togglePin(friend) }
-            } label: {
-                Image(systemName: friend.pinOrder == nil ? "star" : "star.fill")
-                    .foregroundStyle(friend.pinOrder == nil ? DPColor.textMuted : DPColor.warning)
-                    .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                .clipShape(RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous))
+                .shadow(color: Color.black.opacity(0.12), radius: 4, y: 2)
             }
             .buttonStyle(.plain)
-            .accessibilityLabel(social(friend.pinOrder == nil ? "social.action.pin" : "social.action.unpin"))
+            .accessibilityIdentifier("social.addFriend")
+        }
+        .frame(minHeight: DPSize.minimumTouchTarget)
+    }
 
-            Menu {
-                if friend.isFamily {
-                    Button {
-                        confirmation = .removeFamily(friend)
-                    } label: {
-                        Label(social("social.action.removeFamily"), systemImage: "person.badge.minus")
-                    }
-                } else {
-                    Button {
-                        Task { await viewModel.sendFamilyRequest(to: friend) }
-                    } label: {
-                        Label(social("social.action.addFamily"), systemImage: "house")
-                    }
+    private var requestsPanel: some View {
+        VStack(spacing: 0) {
+            SocialPanelHeader(
+                title: social("social.section.requests"),
+                count: viewModel.receivedRequests.count + viewModel.sentRequests.count,
+                systemImage: "person.crop.circle.badge.checkmark",
+                colors: [DPColor.warning, DPColor.warningHover]
+            )
+
+            LazyVStack(spacing: DPSpacing.compact) {
+                ForEach(viewModel.receivedRequests, id: \.id) { request in
+                    receivedRequestCard(request)
                 }
-                Button(role: .destructive) {
-                    confirmation = .removeFriend(friend)
-                } label: {
-                    Label(social("social.action.removeFriend"), systemImage: "trash")
+                ForEach(viewModel.sentRequests, id: \.id) { request in
+                    sentRequestCard(request)
                 }
-            } label: {
-                Image(systemName: "ellipsis")
-                    .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
             }
-            .accessibilityLabel(social("social.action.more"))
+            .padding(DPSpacing.medium)
         }
-        .contentShape(Rectangle())
-        .onTapGesture {
-            if let id = friend.member.id { onOpenCalendar(id) }
+        .background(DPColor.backgroundCard)
+        .clipShape(RoundedRectangle(cornerRadius: DPRadius.extraLarge, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: DPRadius.extraLarge, style: .continuous)
+                .stroke(DPColor.borderPrimary, lineWidth: 1)
         }
-        .contextMenu {
+        .shadow(color: Color.black.opacity(0.05), radius: 2, y: 1)
+    }
+
+    private var friendsPanel: some View {
+        VStack(spacing: 0) {
+            SocialPanelHeader(
+                title: social("social.section.friends"),
+                count: viewModel.friends.count,
+                systemImage: "person.2",
+                colors: [DPColor.surfaceStrong, DPColor.surfaceStrongAlt]
+            )
+
+            LazyVStack(spacing: DPSpacing.small) {
+                if viewModel.friends.isEmpty {
+                    emptyFriends
+                } else {
+                    ForEach(viewModel.pinnedFriends, id: \.member.id) { friend in
+                        friendCard(friend)
+                    }
+                    ForEach(viewModel.unpinnedFriends, id: \.member.id) { friend in
+                        friendCard(friend)
+                    }
+                }
+
+                addFriendCard
+            }
+            .padding(20)
+        }
+        .background(DPColor.backgroundCard)
+        .clipShape(RoundedRectangle(cornerRadius: DPRadius.extraLarge, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: DPRadius.extraLarge, style: .continuous)
+                .stroke(DPColor.borderPrimary, lineWidth: 1)
+        }
+        .shadow(color: Color.black.opacity(0.05), radius: 2, y: 1)
+    }
+
+    private func receivedRequestCard(_ request: FriendRequestDTO) -> some View {
+        HStack(spacing: DPSpacing.compact) {
+            RequestAvatar(member: request.fromMember, type: request.requestType)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(request.fromMember.name)
+                    .font(DPFont.light(size: 16, relativeTo: .body))
+                    .foregroundStyle(DPColor.textPrimary)
+                    .lineLimit(1)
+                Text(requestTypeLabel(request.requestType))
+                    .font(DPTypography.caption)
+                    .foregroundStyle(DPColor.textSecondary)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: DPSpacing.extraSmall)
+
+            HStack(spacing: DPSpacing.small) {
+                compactActionButton(
+                    social("social.action.accept"),
+                    foreground: DPColor.textOnDark,
+                    background: DPColor.success,
+                    border: nil
+                ) {
+                    Task { await viewModel.accept(request) }
+                }
+
+                compactActionButton(
+                    social("social.action.reject"),
+                    foreground: DPColor.danger,
+                    background: DPColor.backgroundCard,
+                    border: DPColor.dangerBorder
+                ) {
+                    confirmation = .reject(request)
+                }
+            }
+        }
+        .padding(DPSpacing.medium)
+        .background(DPColor.accentSoft)
+        .clipShape(RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous)
+                .stroke(DPColor.accentBorder, lineWidth: 1)
+        }
+    }
+
+    private func sentRequestCard(_ request: FriendRequestDTO) -> some View {
+        HStack(spacing: DPSpacing.compact) {
+            RequestAvatar(member: request.toMember, type: request.requestType)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(request.toMember.name)
+                    .font(DPFont.light(size: 16, relativeTo: .body))
+                    .foregroundStyle(DPColor.textPrimary)
+                    .lineLimit(1)
+                Text(socialFormat("social.request.sent", requestTypeLabel(request.requestType)))
+                    .font(DPTypography.caption)
+                    .foregroundStyle(DPColor.textSecondary)
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: DPSpacing.extraSmall)
+
+            compactActionButton(
+                social("social.action.cancel"),
+                foreground: DPColor.warningHover,
+                background: DPColor.backgroundCard,
+                border: DPColor.warningBorder
+            ) {
+                confirmation = .cancel(request)
+            }
+        }
+        .padding(DPSpacing.medium)
+        .background(DPColor.warningSoft)
+        .clipShape(RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous)
+                .stroke(DPColor.warningBorder, lineWidth: 1)
+        }
+    }
+
+    private func compactActionButton(
+        _ title: String,
+        foreground: Color,
+        background: Color,
+        border: Color?,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Text(title)
+                .font(DPFont.light(size: 14, relativeTo: .subheadline))
+                .foregroundStyle(foreground)
+                .padding(.horizontal, DPSpacing.compact)
+                .frame(minHeight: DPSize.minimumTouchTarget)
+                .background(background)
+                .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard, style: .continuous))
+                .overlay {
+                    if let border {
+                        RoundedRectangle(cornerRadius: DPRadius.standard, style: .continuous)
+                            .stroke(border, lineWidth: 1)
+                    }
+                }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func friendCard(_ friend: DashboardFriendDetailDTO) -> some View {
+        HStack(spacing: DPSpacing.compact) {
             Button {
                 if let id = friend.member.id { onOpenCalendar(id) }
             } label: {
-                Label(social("social.action.openCalendar"), systemImage: "calendar")
-            }
-            Button {
-                Task { await viewModel.togglePin(friend) }
-            } label: {
-                Label(
-                    social(friend.pinOrder == nil ? "social.action.pin" : "social.action.unpin"),
-                    systemImage: friend.pinOrder == nil ? "star" : "star.slash"
-                )
-            }
-            if friend.isFamily {
-                Button { confirmation = .removeFamily(friend) } label: {
-                    Label(social("social.action.removeFamily"), systemImage: "person.badge.minus")
+                HStack(alignment: .top, spacing: DPSpacing.compact) {
+                    SocialAvatar(member: friend.member, size: 64)
+
+                    VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+                        HStack(spacing: 6) {
+                            Text(friend.member.name)
+                                .font(DPFont.light(size: 14, relativeTo: .subheadline))
+                                .foregroundStyle(DPColor.textPrimary)
+                                .lineLimit(1)
+                            if friend.isFamily {
+                                Image(systemName: "house.fill")
+                                    .font(.system(size: 14))
+                                    .foregroundStyle(DPColor.warning)
+                                    .accessibilityLabel(social("social.label.family"))
+                            }
+                        }
+
+                        if let team = friend.member.team, !team.isEmpty {
+                            Label(team, systemImage: "person.3")
+                                .font(DPTypography.caption)
+                                .foregroundStyle(DPColor.textSecondary)
+                                .lineLimit(1)
+                        }
+
+                        if let duty = friend.duty {
+                            Label(
+                                duty.dutyType ?? social("social.label.offDuty"),
+                                systemImage: "briefcase"
+                            )
+                            .font(DPTypography.caption)
+                            .foregroundStyle(DPColor.textSecondary)
+                            .lineLimit(1)
+                        }
+
+                        ForEach(Array(friend.schedules.prefix(2)), id: \.id) { schedule in
+                            Label(scheduleLabel(schedule), systemImage: "calendar")
+                                .font(DPTypography.caption)
+                                .foregroundStyle(DPColor.textSecondary)
+                                .lineLimit(1)
+                        }
+
+                        if friend.schedules.count > 2 {
+                            Text(
+                                socialFormat(
+                                    "social.label.moreSchedules",
+                                    String(friend.schedules.count - 2)
+                                )
+                            )
+                            .font(DPTypography.caption)
+                            .foregroundStyle(DPColor.textMuted)
+                            .lineLimit(1)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityHint(social("social.action.openCalendar"))
+            .accessibilityActions {
+                if friend.pinOrder != nil {
+                    Button(social("social.action.moveUp")) {
+                        movePinned(friend, direction: -1)
+                    }
+                    Button(social("social.action.moveDown")) {
+                        movePinned(friend, direction: 1)
+                    }
+                }
+            }
+
+            Spacer(minLength: DPSpacing.small)
+
+            HStack(spacing: 0) {
+                Button {
+                    Task { await viewModel.togglePin(friend) }
+                } label: {
+                    Image(systemName: friend.pinOrder == nil ? "star" : "star.fill")
+                        .font(.system(size: 16))
+                        .foregroundStyle(friend.pinOrder == nil ? DPColor.textMuted : DPColor.warning)
+                        .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(social(friend.pinOrder == nil ? "social.action.pin" : "social.action.unpin"))
+
+                Button {
+                    actionCandidate = ActionCandidate(friend: friend)
+                } label: {
+                    Image(systemName: "ellipsis.vertical")
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundStyle(DPColor.textMuted)
+                        .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(social("social.action.more"))
+                .popover(
+                    isPresented: Binding(
+                        get: { actionCandidate?.id == friend.member.id },
+                        set: { if !$0 { actionCandidate = nil } }
+                    ),
+                    arrowEdge: .top
+                ) {
+                    FriendActionPopover(
+                        friend: friend,
+                        close: { actionCandidate = nil },
+                        addFamily: {
+                            actionCandidate = nil
+                            Task { await viewModel.sendFamilyRequest(to: friend) }
+                        },
+                        removeFamily: {
+                            actionCandidate = nil
+                            confirmation = .removeFamily(friend)
+                        },
+                        removeFriend: {
+                            actionCandidate = nil
+                            confirmation = .removeFriend(friend)
+                        }
+                    )
+                    .presentationCompactAdaptation(.popover)
+                }
+            }
+        }
+        .padding(DPSpacing.compact)
+        .frame(minHeight: 88, alignment: .top)
+        .background {
+            if friend.pinOrder != nil {
+                LinearGradient(
+                    colors: [DPColor.backgroundSecondary, DPColor.backgroundTertiary],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
             } else {
-                Button { Task { await viewModel.sendFamilyRequest(to: friend) } } label: {
-                    Label(social("social.action.addFamily"), systemImage: "house")
-                }
-            }
-            Button(role: .destructive) { confirmation = .removeFriend(friend) } label: {
-                Label(social("social.action.removeFriend"), systemImage: "trash")
+                DPColor.backgroundCard
             }
         }
-        .swipeActions(edge: .leading, allowsFullSwipe: false) {
-            Button {
-                Task { await viewModel.togglePin(friend) }
-            } label: {
-                Label(
-                    social(friend.pinOrder == nil ? "social.action.pin" : "social.action.unpin"),
-                    systemImage: friend.pinOrder == nil ? "star" : "star.slash"
+        .clipShape(RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous)
+                .stroke(
+                    friend.pinOrder == nil ? DPColor.borderPrimary : DPColor.borderSecondary,
+                    lineWidth: friend.pinOrder == nil ? 1 : 2
                 )
-            }
-            .tint(DPColor.warning)
         }
-        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-            Button(role: .destructive) { confirmation = .removeFriend(friend) } label: {
-                Label(social("social.action.removeFriend"), systemImage: "trash")
+        .overlay(alignment: .bottomTrailing) {
+            if friend.pinOrder != nil {
+                Image(systemName: "line.3.horizontal")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(DPColor.textMuted)
+                    .frame(width: 32, height: 28)
+                    .background(DPColor.backgroundTertiary)
+                    .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard, style: .continuous))
+                    .draggable(String(friend.member.id ?? -1))
+                    .accessibilityLabel(social("social.section.pinned"))
+                    .padding(.trailing, DPSpacing.small)
+                    .padding(.bottom, DPSpacing.small)
             }
-            Button {
-                if friend.isFamily {
-                    confirmation = .removeFamily(friend)
-                } else {
-                    Task { await viewModel.sendFamilyRequest(to: friend) }
-                }
-            } label: {
-                Label(
-                    social(friend.isFamily ? "social.action.removeFamily" : "social.action.addFamily"),
-                    systemImage: friend.isFamily ? "person.badge.minus" : "house"
+        }
+        .shadow(color: Color.black.opacity(friend.pinOrder == nil ? 0.05 : 0.10), radius: 2, y: 1)
+        .contentShape(RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous))
+        .dropDestination(for: String.self) { items, _ in
+            guard let source = items.first.flatMap(MemberID.init),
+                  let sourceIndex = viewModel.pinnedFriends.firstIndex(where: { $0.member.id == source }),
+                  let destinationIndex = viewModel.pinnedFriends.firstIndex(where: {
+                      $0.member.id == friend.member.id
+                  }), sourceIndex != destinationIndex else { return false }
+            let offset = sourceIndex < destinationIndex ? destinationIndex + 1 : destinationIndex
+            Task {
+                await viewModel.movePinned(
+                    fromOffsets: IndexSet(integer: sourceIndex),
+                    toOffset: offset
                 )
             }
-            .tint(DPColor.accent)
+            return true
+        }
+    }
+
+    private func movePinned(_ friend: DashboardFriendDetailDTO, direction: Int) {
+        guard friend.pinOrder != nil,
+              let sourceIndex = viewModel.pinnedFriends.firstIndex(where: {
+                  $0.member.id == friend.member.id
+              }) else { return }
+
+        let destinationIndex = sourceIndex + direction
+        guard viewModel.pinnedFriends.indices.contains(destinationIndex) else { return }
+
+        Task {
+            await viewModel.movePinned(
+                fromOffsets: IndexSet(integer: sourceIndex),
+                toOffset: direction < 0 ? destinationIndex : destinationIndex + 1
+            )
+        }
+    }
+
+    private var emptyFriends: some View {
+        VStack(spacing: DPSpacing.compact) {
+            Image(systemName: "person.2")
+                .font(.system(size: 42, weight: .light))
+                .foregroundStyle(DPColor.textMuted)
+            Text(social("social.empty.friends"))
+                .font(DPTypography.supporting)
+                .foregroundStyle(DPColor.textSecondary)
+            Button(social("social.action.addFriend")) {
+                isSearchPresented = true
+            }
+            .font(DPTypography.supporting)
+            .foregroundStyle(DPColor.textOnDark)
+            .padding(.horizontal, DPSpacing.medium)
+            .frame(minHeight: DPSize.minimumTouchTarget)
+            .background(DPColor.accent)
+            .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard, style: .continuous))
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, DPSpacing.small)
+    }
+
+    private var addFriendCard: some View {
+        Button {
+            isSearchPresented = true
+        } label: {
+            VStack(spacing: DPSpacing.extraSmall) {
+                Image(systemName: "person.badge.plus")
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundStyle(DPColor.textMuted)
+                    .frame(width: 32, height: 32)
+                    .background(DPColor.backgroundTertiary)
+                    .clipShape(Circle())
+                Text(social("social.action.addFriend"))
+                    .font(DPFont.bold(size: 12, relativeTo: .caption))
+                    .foregroundStyle(DPColor.textMuted)
+            }
+            .frame(maxWidth: .infinity, minHeight: 80)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .background(DPColor.backgroundCard)
+        .clipShape(RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous)
+                .stroke(DPColor.borderSecondary, style: StrokeStyle(lineWidth: 2, dash: [7, 5]))
         }
     }
 
@@ -345,90 +560,174 @@ struct SocialView: View {
     }
 }
 
-private struct FriendSearchView: View {
+private struct SocialPanelHeader: View {
+    let title: String
+    let count: Int
+    let systemImage: String
+    let colors: [Color]
+
+    var body: some View {
+        HStack(spacing: DPSpacing.small) {
+            Image(systemName: systemImage)
+                .font(.system(size: 18, weight: .semibold))
+            Text(title)
+                .font(DPFont.bold(size: 16, relativeTo: .body))
+            if count > 0 {
+                Text(String(count))
+                    .font(DPTypography.caption)
+                    .padding(.horizontal, DPSpacing.small)
+                    .padding(.vertical, 2)
+                    .background(Color.white.opacity(0.20))
+                    .clipShape(Capsule())
+            }
+            Spacer()
+        }
+        .foregroundStyle(DPColor.textOnDark)
+        .padding(.horizontal, count > 0 ? 20 : DPSpacing.large)
+        .frame(height: 44)
+        .background {
+            LinearGradient(colors: colors, startPoint: .leading, endPoint: .trailing)
+        }
+    }
+}
+
+private struct RequestAvatar: View {
+    let member: MemberPreviewDTO
+    let type: FriendRequestType
+
+    var body: some View {
+        SocialAvatar(member: member, size: 36)
+            .overlay(alignment: .bottomTrailing) {
+                Image(systemName: type == .family ? "house.fill" : "person.badge.plus")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(DPColor.textOnDark)
+                    .frame(width: 20, height: 20)
+                    .background(type == .family ? DPColor.warning : DPColor.accent)
+                    .clipShape(Circle())
+                    .overlay { Circle().stroke(Color.white, lineWidth: 2) }
+                    .offset(x: 3, y: 3)
+            }
+    }
+}
+
+private struct FriendActionPopover: View {
+    let friend: DashboardFriendDetailDTO
+    let close: () -> Void
+    let addFamily: () -> Void
+    let removeFamily: () -> Void
+    let removeFriend: () -> Void
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: DPSpacing.small) {
+                Text(friend.member.name)
+                    .font(DPFont.bold(size: 14, relativeTo: .subheadline))
+                    .foregroundStyle(DPColor.textPrimary)
+                    .lineLimit(1)
+                Spacer()
+                Button(action: close) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(DPColor.textMuted)
+                        .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.leading, DPSpacing.medium)
+            .padding(.trailing, 6)
+            .background(DPColor.backgroundTertiary)
+
+            Divider().overlay(DPColor.borderPrimary)
+
+            if friend.isFamily {
+                actionButton(
+                    social("social.action.removeFamily"),
+                    image: "person.badge.minus",
+                    color: DPColor.warning,
+                    action: removeFamily
+                )
+            } else {
+                actionButton(
+                    social("social.action.addFamily"),
+                    image: "house",
+                    color: DPColor.accent,
+                    action: addFamily
+                )
+            }
+
+            actionButton(
+                social("social.action.removeFriend"),
+                image: "trash",
+                color: DPColor.danger,
+                action: removeFriend
+            )
+        }
+        .frame(width: 176)
+        .background(DPColor.backgroundCard)
+    }
+
+    private func actionButton(
+        _ title: String,
+        image: String,
+        color: Color,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            HStack(spacing: 10) {
+                Image(systemName: image).frame(width: 16)
+                Text(title).lineLimit(1)
+                Spacer()
+            }
+            .font(DPFont.light(size: 14, relativeTo: .subheadline))
+            .foregroundStyle(color)
+            .padding(.horizontal, DPSpacing.medium)
+            .frame(minHeight: DPSize.minimumTouchTarget)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+}
+
+private struct FriendSearchModalView: View {
     @ObservedObject var viewModel: SocialViewModel
     @Environment(\.dismiss) private var dismiss
     @State private var keyword = ""
     @State private var candidate: SearchCandidate?
 
     var body: some View {
-        NavigationStack {
-            Group {
-                if viewModel.isSearching {
-                    ProgressView(social("social.search.loading"))
-                } else if viewModel.searchResults.isEmpty {
-                    ContentUnavailableView(
-                        social("social.search.empty"),
-                        systemImage: "person.crop.circle.badge.magnifyingglass"
-                    )
-                } else {
-                    List(viewModel.searchResults, id: \.id) { member in
-                        HStack(spacing: DPSpacing.small) {
-                            SocialAvatar(member: member, size: 44)
-                            VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
-                                Text(member.name).font(.body.weight(.semibold))
-                                if let team = member.team, !team.isEmpty {
-                                    Text(team).font(.caption).foregroundStyle(DPColor.textSecondary)
-                                }
-                            }
-                            Spacer()
-                            Button(social("social.action.sendRequest")) {
-                                candidate = SearchCandidate(member: member)
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .frame(minHeight: DPSize.minimumTouchTarget)
-                        }
-                    }
+        GeometryReader { proxy in
+            ZStack {
+                Color.black.opacity(0.50)
+                    .ignoresSafeArea()
+                    .onTapGesture { dismiss() }
+
+                VStack(spacing: 0) {
+                    modalHeader
+                    modalBody
+                    modalFooter
                 }
-            }
-            .navigationTitle(social("social.search.title"))
-            .navigationBarTitleDisplayMode(.inline)
-            .searchable(text: $keyword, prompt: social("social.search.prompt"))
-            .onSubmit(of: .search) {
-                Task { await viewModel.search(keyword: keyword) }
-            }
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(social("social.action.close")) { dismiss() }
-                }
-                if viewModel.searchTotalPages > 1 {
-                    ToolbarItemGroup(placement: .bottomBar) {
-                        Button {
-                            Task { await viewModel.search(keyword: keyword, page: viewModel.searchPage - 1) }
-                        } label: {
-                            Label(social("social.search.previous"), systemImage: "chevron.left")
-                        }
-                        .disabled(viewModel.searchPage == 0)
-                        Spacer()
-                        Text(
-                            socialFormat(
-                                "social.search.page",
-                                String(viewModel.searchPage + 1),
-                                String(viewModel.searchTotalPages)
-                            )
-                        )
-                        Spacer()
-                        Button {
-                            Task { await viewModel.search(keyword: keyword, page: viewModel.searchPage + 1) }
-                        } label: {
-                            Label(social("social.search.next"), systemImage: "chevron.right")
-                        }
-                        .disabled(viewModel.searchPage + 1 >= viewModel.searchTotalPages)
-                    }
-                }
-            }
-            .alert(item: $candidate) { candidate in
-                Alert(
-                    title: Text(social("social.confirm.sendFriend.title")),
-                    message: Text(socialFormat("social.confirm.sendFriend.message", candidate.member.name)),
-                    primaryButton: .default(Text(social("social.action.sendRequest"))) {
-                        Task { await viewModel.sendFriendRequest(to: candidate.member) }
-                    },
-                    secondaryButton: .cancel(Text(social("social.action.cancelDialog")))
-                )
+                .frame(maxWidth: proxy.size.width - 32)
+                .frame(maxHeight: proxy.size.height * 0.85)
+                .background(DPColor.backgroundCard)
+                .clipShape(RoundedRectangle(cornerRadius: DPRadius.extraLarge, style: .continuous))
+                .shadow(color: Color.black.opacity(0.24), radius: 18, y: 8)
+                .padding(.vertical, DPSpacing.medium)
             }
         }
         .onDisappear { viewModel.clearSearch() }
+        .alert(item: $candidate) { candidate in
+            Alert(
+                title: Text(social("social.confirm.sendFriend.title")),
+                message: Text(socialFormat("social.confirm.sendFriend.message", candidate.member.name)),
+                primaryButton: .default(Text(social("social.action.sendRequest"))) {
+                    Task {
+                        await viewModel.sendFriendRequest(to: candidate.member)
+                        if viewModel.errorKey == nil { dismiss() }
+                    }
+                },
+                secondaryButton: .cancel(Text(social("social.action.cancelDialog")))
+            )
+        }
         .alert(
             social("social.error.title"),
             isPresented: Binding(
@@ -441,11 +740,238 @@ private struct FriendSearchView: View {
             Text(social(viewModel.errorKey ?? "social.error.generic"))
         }
     }
+
+    private var modalHeader: some View {
+        HStack(spacing: DPSpacing.compact) {
+            Image(systemName: "person.badge.plus")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(DPColor.textOnDark)
+                .frame(width: 40, height: 40)
+                .background {
+                    LinearGradient(
+                        colors: [DPColor.accent, DPColor.accentHover],
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
+                }
+                .clipShape(RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous))
+
+            Text(social("social.search.title"))
+                .font(DPFont.bold(size: 18, relativeTo: .headline))
+                .foregroundStyle(DPColor.textPrimary)
+                .lineLimit(1)
+
+            Spacer()
+
+            Button { dismiss() } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(DPColor.textMuted)
+                    .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(social("social.action.close"))
+        }
+        .padding(.horizontal, DPSpacing.medium)
+        .padding(.vertical, DPSpacing.compact)
+        .background(DPColor.backgroundTertiary)
+        .overlay(alignment: .bottom) { Divider().overlay(DPColor.borderPrimary) }
+    }
+
+    private var modalBody: some View {
+        ScrollView {
+            VStack(spacing: DPSpacing.medium) {
+                searchBar
+
+                if viewModel.isSearching {
+                    ProgressView(social("social.search.loading"))
+                        .font(DPTypography.supporting)
+                        .foregroundStyle(DPColor.accent)
+                        .frame(maxWidth: .infinity, minHeight: 112)
+                } else if viewModel.searchResults.isEmpty {
+                    VStack(spacing: DPSpacing.compact) {
+                        Image(systemName: "magnifyingglass")
+                            .font(.system(size: 44, weight: .light))
+                            .foregroundStyle(DPColor.borderSecondary)
+                        Text(social("social.search.empty"))
+                            .font(DPTypography.supporting)
+                            .foregroundStyle(DPColor.textSecondary)
+                            .multilineTextAlignment(.center)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 152)
+                } else {
+                    searchResults
+                }
+            }
+            .padding(DPSpacing.medium)
+        }
+    }
+
+    private var searchBar: some View {
+        HStack(spacing: DPSpacing.small) {
+            HStack(spacing: DPSpacing.small) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 17, weight: .medium))
+                    .foregroundStyle(DPColor.textMuted)
+                TextField(social("social.search.prompt"), text: $keyword)
+                    .font(DPTypography.body)
+                    .foregroundStyle(DPColor.textPrimary)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .submitLabel(.search)
+                    .onSubmit { search(page: 0) }
+            }
+            .padding(.horizontal, 14)
+            .frame(minHeight: 48)
+            .background(DPColor.backgroundInput)
+            .clipShape(RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous)
+                    .stroke(DPColor.borderInput, lineWidth: 1)
+            }
+
+            Button { search(page: 0) } label: {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(DPColor.textOnDark)
+                    .frame(width: 48, height: 48)
+                    .background {
+                        LinearGradient(
+                            colors: [DPColor.surfaceStrong, DPColor.surfaceStrongAlt],
+                            startPoint: .leading,
+                            endPoint: .trailing
+                        )
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .disabled(keyword.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isSearching)
+            .opacity(keyword.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.5 : 1)
+        }
+    }
+
+    private var searchResults: some View {
+        VStack(spacing: DPSpacing.medium) {
+            VStack(spacing: DPSpacing.small) {
+                ForEach(viewModel.searchResults, id: \.id) { member in
+                    HStack(spacing: DPSpacing.compact) {
+                        SocialAvatar(member: member, size: 36)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(member.name)
+                                .font(DPFont.bold(size: 16, relativeTo: .body))
+                                .foregroundStyle(DPColor.textPrimary)
+                                .lineLimit(1)
+                            if let team = member.team, !team.isEmpty {
+                                Text(team)
+                                    .font(DPTypography.supporting)
+                                    .foregroundStyle(DPColor.textSecondary)
+                                    .lineLimit(1)
+                            }
+                        }
+                        Spacer(minLength: DPSpacing.small)
+                        Button(social("social.action.sendRequest")) {
+                            candidate = SearchCandidate(member: member)
+                        }
+                        .font(DPFont.light(size: 14, relativeTo: .subheadline))
+                        .foregroundStyle(DPColor.textOnDark)
+                        .padding(.horizontal, DPSpacing.compact)
+                        .frame(minHeight: DPSize.minimumTouchTarget)
+                        .background(DPColor.success)
+                        .clipShape(RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous))
+                    }
+                    .padding(DPSpacing.medium)
+                    .background(DPColor.backgroundSecondary)
+                    .clipShape(RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous))
+                }
+            }
+
+            if viewModel.searchTotalPages > 1 {
+                HStack(spacing: DPSpacing.small) {
+                    pageButton(systemImage: "chevron.left", disabled: viewModel.searchPage == 0) {
+                        search(page: viewModel.searchPage - 1)
+                    }
+                    Text(
+                        socialFormat(
+                            "social.search.page",
+                            String(viewModel.searchPage + 1),
+                            String(viewModel.searchTotalPages)
+                        )
+                    )
+                    .font(DPFont.light(size: 14, relativeTo: .subheadline))
+                    .foregroundStyle(DPColor.textPrimary)
+                    .frame(maxWidth: .infinity, minHeight: 40)
+                    pageButton(
+                        systemImage: "chevron.right",
+                        disabled: viewModel.searchPage + 1 >= viewModel.searchTotalPages
+                    ) {
+                        search(page: viewModel.searchPage + 1)
+                    }
+                }
+            }
+
+            Text(
+                socialFormat(
+                    "social.search.resultsSummary",
+                    String(viewModel.searchPage + 1),
+                    String(max(viewModel.searchTotalPages, 1)),
+                    String(viewModel.searchTotalElements)
+                )
+            )
+            .font(DPTypography.supporting)
+            .foregroundStyle(DPColor.textSecondary)
+        }
+    }
+
+    private func pageButton(
+        systemImage: String,
+        disabled: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(DPColor.textPrimary)
+                .frame(width: 40, height: 40)
+                .background(DPColor.backgroundCard)
+                .clipShape(RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous))
+                .overlay {
+                    RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous)
+                        .stroke(DPColor.borderPrimary, lineWidth: 1)
+                }
+        }
+        .buttonStyle(.plain)
+        .disabled(disabled)
+        .opacity(disabled ? 0.5 : 1)
+    }
+
+    private var modalFooter: some View {
+        HStack {
+            Spacer()
+            Button(social("social.action.close")) { dismiss() }
+                .font(DPFont.light(size: 14, relativeTo: .subheadline))
+                .foregroundStyle(DPColor.textPrimary)
+                .padding(.horizontal, 20)
+                .frame(minHeight: DPSize.minimumTouchTarget)
+                .background(DPColor.backgroundTertiary)
+                .clipShape(RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous))
+        }
+        .padding(DPSpacing.medium)
+        .overlay(alignment: .top) { Divider().overlay(DPColor.borderPrimary) }
+    }
+
+    private func search(page: Int) {
+        Task { await viewModel.search(keyword: keyword, page: page) }
+    }
 }
 
 private struct SearchCandidate: Identifiable {
     let member: MemberPreviewDTO
     var id: MemberID { member.id ?? -1 }
+}
+
+private struct ActionCandidate: Identifiable {
+    let friend: DashboardFriendDetailDTO
+    var id: MemberID { friend.member.id ?? -1 }
 }
 
 private struct SocialAvatar: View {
@@ -465,17 +991,19 @@ private struct SocialAvatar: View {
             }
         }
         .frame(width: size, height: size)
+        .background(DPColor.backgroundTertiary)
         .clipShape(Circle())
+        .overlay { Circle().stroke(DPColor.borderPrimary, lineWidth: 2) }
         .accessibilityHidden(true)
     }
 
     private var fallback: some View {
         Circle()
-            .fill(DPColor.accentSoft)
+            .fill(DPColor.backgroundTertiary)
             .overlay {
-                Text(String(member.name.prefix(1)).uppercased())
-                    .font(.headline)
-                    .foregroundStyle(DPColor.accent)
+                Image(systemName: "person.fill")
+                    .font(.system(size: size * 0.42))
+                    .foregroundStyle(DPColor.textMuted)
             }
     }
 

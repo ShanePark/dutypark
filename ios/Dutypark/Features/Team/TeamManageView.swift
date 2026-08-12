@@ -3,6 +3,7 @@ import UniformTypeIdentifiers
 
 struct TeamManageView: View {
     @EnvironmentObject private var session: SessionStore
+    @Environment(\.dismiss) private var dismissView
     @StateObject private var viewModel: TeamManageViewModel
     @State private var pendingAction: PendingAction?
 
@@ -15,28 +16,34 @@ struct TeamManageView: View {
     }
 
     var body: some View {
-        Group {
-            if viewModel.isLoading && viewModel.team == nil {
-                DPLoadingState(label: LocalizedStringKey(teamLocalized("team.common.loading")))
-            } else if let team = viewModel.team {
-                List {
-                    informationSection(team)
-                    membersSection(team)
-                    dutyTypesSection(team)
+        VStack(spacing: 0) {
+            manageHeader(viewModel.team)
+            Group {
+                if viewModel.isLoading && viewModel.team == nil {
+                    DPLoadingState(label: LocalizedStringKey(teamLocalized("team.common.loading")))
+                } else if let team = viewModel.team {
+                ScrollView {
+                    VStack(spacing: DPSpacing.medium) {
+                        informationSection(team)
+                        membersSection(team)
+                        dutyTypesSection(team)
+                    }
+                    .padding(.horizontal, DPSpacing.small)
+                    .padding(.vertical, DPSpacing.medium)
                 }
-                .listStyle(.insetGrouped)
-            } else {
-                DPErrorState(
-                    title: LocalizedStringKey(teamLocalized("team.common.error")),
-                    message: nil,
-                    retryTitle: LocalizedStringKey(teamLocalized("team.common.retry"))
-                ) {
-                    Task { await viewModel.load() }
+                .background(DPColor.backgroundPrimary)
+                } else {
+                    DPErrorState(
+                        title: LocalizedStringKey(teamLocalized("team.common.error")),
+                        message: nil,
+                        retryTitle: LocalizedStringKey(teamLocalized("team.common.retry"))
+                    ) {
+                        Task { await viewModel.load() }
+                    }
                 }
             }
         }
-        .navigationTitle(viewModel.team?.name ?? teamLocalized("team.manage.fields.name"))
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarBackButtonHidden(true)
         .task { await viewModel.load() }
         .disabled(viewModel.isWorking)
         .overlay {
@@ -89,42 +96,96 @@ struct TeamManageView: View {
         }
     }
 
+    private func manageHeader(_ team: TeamDTO?) -> some View {
+        HStack(spacing: DPSpacing.small) {
+            Button {
+                dismissView()
+            } label: {
+                Image(systemName: "chevron.left")
+                    .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                    .background(DPColor.surfaceStrongAlt)
+                    .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text("team.manage.actions.back", tableName: "Team"))
+            Text(
+                String(
+                    format: teamLocalized("team.manage.title"),
+                    locale: AppLocalization.locale,
+                    team?.name ?? ""
+                )
+            )
+            .font(DPTypography.sectionTitle)
+            .lineLimit(2)
+            .multilineTextAlignment(.center)
+            .frame(maxWidth: .infinity)
+            Color.clear.frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+        }
+        .foregroundStyle(DPColor.textOnDark)
+        .padding(.horizontal, DPSpacing.medium)
+        .padding(.vertical, DPSpacing.small)
+        .background(DPColor.surfaceStrong)
+        .clipShape(UnevenRoundedRectangle(topLeadingRadius: DPRadius.standard, topTrailingRadius: DPRadius.standard))
+        .padding(.horizontal, DPSpacing.small)
+        .padding(.top, DPSpacing.medium)
+    }
+
     private func informationSection(_ team: TeamDTO) -> some View {
-        Section {
-            LabeledContent(teamLocalized("team.manage.fields.name"), value: team.name)
-            LabeledContent(
-                teamLocalized("team.manage.fields.description"),
+        VStack(spacing: 0) {
+            manageInfoRow(
+                label: teamLocalized("team.manage.fields.description"),
                 value: team.description ?? teamLocalized("team.manage.labels.notAvailable")
             )
             if viewModel.canUseAdminTools(loginID: loginID) {
-                HStack {
-                    LabeledContent(
-                        teamLocalized("team.manage.fields.admin"),
-                        value: team.adminName ?? teamLocalized("team.manage.labels.notAvailable")
-                    )
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("team.manage.fields.admin", tableName: "Team")
+                        .font(DPTypography.caption)
+                        .foregroundStyle(DPColor.textMuted)
+                    HStack {
+                        Text(verbatim: team.adminName ?? teamLocalized("team.manage.labels.notAvailable"))
+                            .font(DPTypography.label)
                     if team.adminId != nil, team.adminId != loginID {
                         Button(role: .destructive) {
                             pendingAction = .changeAdmin(nil)
                         } label: {
-                            Image(systemName: "xmark.circle")
-                                .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                            Label(teamLocalized("team.manage.actions.resetAdmin"), systemImage: "trash")
+                                .font(DPTypography.caption)
+                                .frame(minHeight: DPSize.minimumTouchTarget)
                         }
-                            .accessibilityLabel(Text("team.manage.actions.resetAdmin", tableName: "Team"))
+                    }
                     }
                 }
+                .padding(.horizontal, DPSpacing.medium)
+                .padding(.vertical, DPSpacing.compact)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .overlay(alignment: .top) { Rectangle().fill(DPColor.borderPrimary).frame(height: 1) }
             }
-            Picker(
-                teamLocalized("team.manage.fields.batchTemplate"),
-                selection: Binding(
-                    get: { team.dutyBatchTemplate?.name ?? "" },
-                    set: { name in Task { await viewModel.updateTemplate(name.isEmpty ? nil : name) } }
-                )
-            ) {
-                Text("team.manage.labels.none", tableName: "Team").tag("")
-                ForEach(viewModel.templates, id: \.name) { template in
-                    Text(verbatim: template.label).tag(template.name)
+            VStack(alignment: .leading, spacing: 6) {
+                Text("team.manage.fields.batchTemplate", tableName: "Team")
+                    .font(DPTypography.caption)
+                    .foregroundStyle(DPColor.textMuted)
+                Picker(
+                    teamLocalized("team.manage.fields.batchTemplate"),
+                    selection: Binding(
+                        get: { team.dutyBatchTemplate?.name ?? "" },
+                        set: { name in Task { await viewModel.updateTemplate(name.isEmpty ? nil : name) } }
+                    )
+                ) {
+                    Text("team.manage.labels.none", tableName: "Team").tag("")
+                    ForEach(viewModel.templates, id: \.name) { template in
+                        Text(verbatim: template.label).tag(template.name)
+                    }
                 }
+                .pickerStyle(.menu)
+                .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget, alignment: .leading)
+                .padding(.horizontal, DPSpacing.compact)
+                .background(DPColor.backgroundInput)
+                .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+                .overlay { RoundedRectangle(cornerRadius: DPRadius.standard).stroke(DPColor.borderInput) }
             }
+            .padding(.horizontal, DPSpacing.medium)
+            .padding(.vertical, DPSpacing.compact)
+            .overlay(alignment: .top) { Rectangle().fill(DPColor.borderPrimary).frame(height: 1) }
             if team.dutyBatchTemplate != nil {
                 Button {
                     viewModel.batchUploadPresented = true
@@ -135,178 +196,229 @@ struct TeamManageView: View {
                         Image(systemName: "square.and.arrow.up")
                     }
                 }
-                .frame(minHeight: DPSize.minimumTouchTarget)
+                .buttonStyle(DPPrimaryButtonStyle())
+                .frame(maxWidth: .infinity)
+                .padding(DPSpacing.medium)
+                .overlay(alignment: .top) { Rectangle().fill(DPColor.borderPrimary).frame(height: 1) }
             }
-        } header: {
-            Text("team.manage.fields.name", tableName: "Team")
         }
+        .background(DPColor.backgroundCard)
+        .clipShape(UnevenRoundedRectangle(bottomLeadingRadius: DPRadius.standard, bottomTrailingRadius: DPRadius.standard))
+        .overlay { UnevenRoundedRectangle(bottomLeadingRadius: DPRadius.standard, bottomTrailingRadius: DPRadius.standard).stroke(DPColor.borderPrimary) }
+        .padding(.top, -DPSpacing.medium)
     }
 
     private func membersSection(_ team: TeamDTO) -> some View {
-        Section {
+        VStack(spacing: 0) {
+            teamSectionHeader(
+                title: teamLocalized("team.manage.fields.members"),
+                buttonTitle: teamLocalized("team.manage.actions.addMember"),
+                systemImage: "person.badge.plus"
+            ) { viewModel.memberSearchPresented = true }
             if team.members.isEmpty {
                 Text("team.manage.labels.noMembers", tableName: "Team")
                     .foregroundStyle(DPColor.textMuted)
+                    .frame(maxWidth: .infinity, minHeight: 72)
             }
-            ForEach(team.members, id: \.id) { member in
+            ForEach(Array(team.members.enumerated()), id: \.offset) { index, member in
                 VStack(alignment: .leading, spacing: DPSpacing.small) {
                     HStack {
-                        Image(systemName: member.isAdmin ? "crown.fill" : member.isManager ? "checkmark.shield.fill" : "person.fill")
-                            .foregroundStyle(member.isAdmin ? DPColor.warning : member.isManager ? DPColor.success : DPColor.textMuted)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(verbatim: member.name).font(.body.weight(.medium))
-                            if let email = member.email {
-                                Text(verbatim: email).font(.caption).foregroundStyle(DPColor.textMuted)
-                            }
-                        }
+                        Text(verbatim: String(index + 1)).font(DPTypography.label).foregroundStyle(DPColor.textMuted)
+                        Text(verbatim: member.name).font(DPTypography.bodyMedium)
+                        if member.isManager { Image(systemName: "checkmark").foregroundStyle(DPColor.success) }
                         Spacer()
-                        Menu {
-                            if let id = member.id {
-                                if viewModel.canUseAdminTools(loginID: loginID), !member.isAdmin {
-                                    if member.isManager {
-                                        Button {
-                                            pendingAction = .removeManager(id)
-                                        } label: {
-                                            Label(teamLocalized("team.manage.actions.revokeManager"), systemImage: "shield.slash")
-                                        }
-                                        Button {
-                                            pendingAction = .changeAdmin(id)
-                                        } label: {
-                                            Label(teamLocalized("team.manage.actions.transferAdmin"), systemImage: "crown")
-                                        }
-                                    } else {
-                                        Button {
-                                            pendingAction = .addManager(id)
-                                        } label: {
-                                            Label(teamLocalized("team.manage.actions.assignManager"), systemImage: "shield")
-                                        }
-                                    }
-                                }
-                                Button(role: .destructive) {
-                                    pendingAction = .removeMember(id)
-                                } label: {
-                                    Label(teamLocalized("team.manage.actions.removeMember"), systemImage: "trash")
-                                }
+                        if let id = member.id {
+                            Button { pendingAction = .removeMember(id) } label: {
+                                Label(teamLocalized("team.manage.actions.removeMember"), systemImage: "trash")
+                                    .font(DPTypography.caption)
                             }
-                        } label: {
-                            Image(systemName: "ellipsis.circle")
-                                .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                            .buttonStyle(DPDestructiveButtonStyle())
+                        }
+                    }
+                    if let id = member.id, viewModel.canUseAdminTools(loginID: loginID), !member.isAdmin {
+                        HStack(spacing: DPSpacing.extraSmall) {
+                            if member.isManager {
+                                teamSmallAction(teamLocalized("team.manage.actions.revokeManager"), "shield.slash", DPColor.warning, DPColor.warningBorder) { pendingAction = .removeManager(id) }
+                                teamSmallAction(teamLocalized("team.manage.actions.transferAdmin"), "crown", DPColor.accent, DPColor.accentBorder) { pendingAction = .changeAdmin(id) }
+                            } else {
+                                teamSmallAction(teamLocalized("team.manage.actions.assignManager"), "plus", DPColor.success, DPColor.successBorder) { pendingAction = .addManager(id) }
+                            }
                         }
                     }
                 }
-            }
-        } header: {
-            HStack {
-                Text("team.manage.fields.members", tableName: "Team")
-                Spacer()
-                Button {
-                    viewModel.memberSearchPresented = true
-                } label: {
-                    Label {
-                        Text("team.manage.actions.addMember", tableName: "Team")
-                    } icon: {
-                        Image(systemName: "person.badge.plus")
-                    }
-                }
-                .textCase(nil)
-                .frame(minHeight: DPSize.minimumTouchTarget)
+                .padding(DPSpacing.compact)
+                .overlay(alignment: .bottom) { Rectangle().fill(DPColor.borderPrimary).frame(height: 1) }
             }
         }
+        .background(DPColor.backgroundCard)
+        .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+        .overlay { RoundedRectangle(cornerRadius: DPRadius.standard).stroke(DPColor.borderPrimary) }
     }
 
     private func dutyTypesSection(_ team: TeamDTO) -> some View {
-        Section {
+        VStack(spacing: 0) {
+            teamSectionHeader(
+                title: teamLocalized("team.manage.fields.dutyTypes"),
+                buttonTitle: teamLocalized("team.manage.actions.addDutyType"),
+                systemImage: "plus",
+                secondary: true
+            ) {
+                viewModel.editingDutyType = nil
+                viewModel.dutyEditorPresented = true
+            }
             if team.dutyTypes.isEmpty {
                 Text("team.manage.labels.noDutyTypes", tableName: "Team")
                     .foregroundStyle(DPColor.textMuted)
+                    .frame(maxWidth: .infinity, minHeight: 72)
             }
-            ForEach(Array(team.dutyTypes.enumerated()), id: \.offset) { index, dutyType in
-                HStack(spacing: DPSpacing.small) {
-                    Circle()
-                        .fill(Color(teamHex: dutyType.color))
-                        .frame(width: 24, height: 24)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(verbatim: dutyType.name)
-                        Text(
-                            dutyType.hidden
-                                ? "team.manage.labels.hidden"
-                                : dutyType.id == nil
-                                    ? "team.manage.labels.offDuty"
-                                    : "team.manage.labels.visible",
-                            tableName: "Team"
-                        )
-                        .font(.caption)
-                        .foregroundStyle(DPColor.textMuted)
+            ScrollView(.horizontal) {
+                VStack(spacing: 0) {
+                    HStack(spacing: 0) {
+                        teamTableHeader("#", width: 44)
+                        teamTableHeader(teamLocalized("team.manage.fields.dutyName"), width: 104)
+                        teamTableHeader(teamLocalized("team.manage.fields.color"), width: 64)
+                        teamTableHeader(teamLocalized("team.manage.fields.status"), width: 84)
+                        teamTableHeader(teamLocalized("team.manage.fields.tools"), width: 190)
                     }
-                    Spacer()
-                    Menu {
-                        Button {
+                    ForEach(Array(team.dutyTypes.enumerated()), id: \.offset) { index, dutyType in
+                        HStack(spacing: 0) {
+                            teamTableCell(String(index + 1), width: 44)
+                            teamTableCell(dutyType.name, width: 104)
+                            Circle().fill(Color(teamHex: dutyType.color)).frame(width: 24, height: 24).frame(width: 64).frame(minHeight: 60)
+                            Text(dutyType.hidden ? "team.manage.labels.hidden" : dutyType.id == nil ? "team.manage.labels.offDuty" : "team.manage.labels.visible", tableName: "Team")
+                                .font(DPTypography.caption)
+                                .foregroundStyle(dutyType.hidden ? DPColor.textMuted : DPColor.success)
+                                .padding(.horizontal, DPSpacing.small).padding(.vertical, DPSpacing.extraSmall)
+                                .background(dutyType.hidden ? DPColor.backgroundTertiary : DPColor.successSoft)
+                                .clipShape(Capsule()).frame(width: 84)
+                            HStack(spacing: DPSpacing.extraSmall) {
+                                if dutyType.id != nil {
+                                    teamToolButton(
+                                        "arrow.down",
+                                        label: teamLocalized("team.dutyType.actions.saveOrder"),
+                                        isDisabled: TeamFeatureLogic.visibleDutyTypeNeighbor(in: team.dutyTypes, from: index, direction: 1) == nil
+                                    ) { Task { await viewModel.moveDutyType(from: index, direction: 1) } }
+                                    teamToolButton(
+                                        "arrow.up",
+                                        label: teamLocalized("team.dutyType.actions.saveOrder"),
+                                        isDisabled: TeamFeatureLogic.visibleDutyTypeNeighbor(in: team.dutyTypes, from: index, direction: -1) == nil
+                                    ) { Task { await viewModel.moveDutyType(from: index, direction: -1) } }
+                                }
+                                teamToolButton("pencil", label: teamLocalized("team.dutyType.actions.edit"), tint: DPColor.accent) {
                             viewModel.editingDutyType = dutyType
                             viewModel.dutyEditorPresented = true
-                        } label: {
-                            Label(teamLocalized("team.dutyType.actions.edit"), systemImage: "pencil")
+                                }
+                                if dutyType.id != nil {
+                                    teamToolButton(
+                                        dutyType.hidden ? "eye" : "eye.slash",
+                                        label: dutyType.hidden ? teamLocalized("team.manage.actions.restoreDutyType") : teamLocalized("team.manage.actions.hideDutyType"),
+                                        tint: dutyType.hidden ? DPColor.success : DPColor.warning
+                                    ) { Task { await viewModel.toggleVisibility(dutyType) } }
+                                }
+                            }
+                            .frame(width: 190)
                         }
-                        if dutyType.id != nil {
-                            Button {
-                                Task { await viewModel.moveDutyType(from: index, direction: -1) }
-                            } label: {
-                                Label(teamLocalized("team.dutyType.actions.saveOrder"), systemImage: "arrow.up")
-                            }
-                            .disabled(
-                                TeamFeatureLogic.visibleDutyTypeNeighbor(
-                                    in: team.dutyTypes,
-                                    from: index,
-                                    direction: -1
-                                ) == nil
-                            )
-                            Button {
-                                Task { await viewModel.moveDutyType(from: index, direction: 1) }
-                            } label: {
-                                Label(teamLocalized("team.dutyType.actions.saveOrder"), systemImage: "arrow.down")
-                            }
-                            .disabled(
-                                TeamFeatureLogic.visibleDutyTypeNeighbor(
-                                    in: team.dutyTypes,
-                                    from: index,
-                                    direction: 1
-                                ) == nil
-                            )
-                            Button {
-                                Task { await viewModel.toggleVisibility(dutyType) }
-                            } label: {
-                                Label(
-                                    dutyType.hidden
-                                        ? teamLocalized("team.manage.actions.restoreDutyType")
-                                        : teamLocalized("team.manage.actions.hideDutyType"),
-                                    systemImage: dutyType.hidden ? "eye" : "eye.slash"
-                                )
-                            }
-                        }
-                    } label: {
-                        Image(systemName: "ellipsis.circle")
-                            .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                        .opacity(dutyType.hidden ? 0.6 : 1)
+                        .overlay(alignment: .bottom) { Rectangle().fill(DPColor.borderPrimary).frame(height: 1) }
                     }
                 }
-                .opacity(dutyType.hidden ? 0.6 : 1)
-            }
-        } header: {
-            HStack {
-                Text("team.manage.fields.dutyTypes", tableName: "Team")
-                Spacer()
-                Button {
-                    viewModel.editingDutyType = nil
-                    viewModel.dutyEditorPresented = true
-                } label: {
-                    Label {
-                        Text("team.manage.actions.addDutyType", tableName: "Team")
-                    } icon: {
-                        Image(systemName: "plus")
-                    }
-                }
-                .textCase(nil)
-                .frame(minHeight: DPSize.minimumTouchTarget)
             }
         }
+        .background(DPColor.backgroundCard)
+        .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+        .overlay { RoundedRectangle(cornerRadius: DPRadius.standard).stroke(DPColor.borderPrimary) }
+    }
+
+    private func manageInfoRow(label: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(verbatim: label).font(DPTypography.caption).foregroundStyle(DPColor.textMuted)
+            Text(verbatim: value).font(DPTypography.label).foregroundStyle(DPColor.textPrimary)
+        }
+        .padding(.horizontal, DPSpacing.medium)
+        .padding(.vertical, DPSpacing.compact)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func teamSectionHeader(
+        title: String,
+        buttonTitle: String,
+        systemImage: String,
+        secondary: Bool = false,
+        action: @escaping () -> Void
+    ) -> some View {
+        HStack {
+            Text(verbatim: title).font(DPTypography.bodyMedium)
+            Spacer()
+            Button(action: action) {
+                Label(buttonTitle, systemImage: systemImage)
+                    .font(DPTypography.label)
+                    .padding(.horizontal, DPSpacing.compact)
+                    .frame(minHeight: DPSize.minimumTouchTarget)
+                    .background(secondary ? DPColor.backgroundCard : DPColor.accent)
+                    .foregroundStyle(secondary ? DPColor.textPrimary : DPColor.textOnDark)
+                    .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+            }
+            .buttonStyle(.plain)
+        }
+        .foregroundStyle(DPColor.textOnDark)
+        .padding(.horizontal, DPSpacing.medium)
+        .padding(.vertical, DPSpacing.small)
+        .background(DPColor.surfaceStrong)
+    }
+
+    private func teamSmallAction(
+        _ title: String,
+        _ systemImage: String,
+        _ tint: Color,
+        _ border: Color,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: systemImage)
+                .font(DPTypography.caption)
+                .foregroundStyle(tint)
+                .padding(.horizontal, DPSpacing.small)
+                .frame(minHeight: DPSize.minimumTouchTarget)
+                .overlay { RoundedRectangle(cornerRadius: DPRadius.small).stroke(border) }
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func teamTableHeader(_ title: String, width: CGFloat) -> some View {
+        Text(verbatim: title)
+            .font(DPTypography.label)
+            .foregroundStyle(DPColor.textOnDark)
+            .frame(width: width)
+            .frame(minHeight: 40)
+            .background(DPColor.backgroundFooter)
+    }
+
+    private func teamTableCell(_ title: String, width: CGFloat) -> some View {
+        Text(verbatim: title)
+            .font(DPTypography.label)
+            .foregroundStyle(DPColor.textPrimary)
+            .lineLimit(2)
+            .frame(width: width)
+            .frame(minHeight: 60)
+    }
+
+    private func teamToolButton(
+        _ systemImage: String,
+        label: String,
+        tint: Color = DPColor.textPrimary,
+        isDisabled: Bool = false,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .foregroundStyle(tint)
+                .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                .overlay { RoundedRectangle(cornerRadius: DPRadius.small).stroke(DPColor.borderSecondary) }
+        }
+        .buttonStyle(.plain)
+        .disabled(isDisabled)
+        .opacity(isDisabled ? DPChrome.disabledOpacity : 1)
+        .accessibilityLabel(Text(verbatim: label))
     }
 
     private func run(_ action: PendingAction?) async {
@@ -342,26 +454,42 @@ private struct TeamDutyTypeEditor: View {
 
     var body: some View {
         NavigationStack {
-            Form {
-                TextField(teamLocalized("team.dutyType.placeholders.name"), text: $name)
-                ColorPicker(teamLocalized("team.manage.fields.color"), selection: $color, supportsOpacity: false)
-            }
-            .navigationTitle(Text(viewModel.editingDutyType == nil ? "team.dutyType.titleAdd" : "team.dutyType.titleEdit", tableName: "Team"))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(teamLocalized("team.common.cancel")) { dismiss() }
+            VStack(spacing: 0) {
+                HStack {
+                    Text(viewModel.editingDutyType == nil ? "team.dutyType.titleAdd" : "team.dutyType.titleEdit", tableName: "Team")
+                        .font(DPTypography.bodyMedium)
+                    Spacer()
+                    Button { dismiss() } label: {
+                        Image(systemName: "xmark").frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                    }.buttonStyle(.plain)
                 }
-                ToolbarItem(placement: .confirmationAction) {
+                .padding(.horizontal, DPSpacing.medium).padding(.vertical, DPSpacing.small)
+                .background(DPColor.backgroundTertiary)
+                VStack(alignment: .leading, spacing: DPSpacing.medium) {
+                    TextField(teamLocalized("team.dutyType.placeholders.name"), text: $name)
+                        .dpInputChrome(isInvalid: name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    ColorPicker(teamLocalized("team.manage.fields.color"), selection: $color, supportsOpacity: false)
+                        .frame(minHeight: DPSize.minimumTouchTarget)
+                }
+                .padding(DPSpacing.medium)
+                Spacer(minLength: 0)
+                HStack(spacing: DPSpacing.small) {
                     Button(teamLocalized("team.common.save")) {
                         Task {
                             await viewModel.saveDutyType(name: name, color: color.teamHexRGB)
                             if !viewModel.showsError { dismiss() }
                         }
                     }
+                    .buttonStyle(DPSuccessButtonStyle())
                     .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    Button(teamLocalized("team.common.cancel")) { dismiss() }
+                        .buttonStyle(DPSecondaryButtonStyle())
                 }
+                .padding(DPSpacing.medium)
+                .overlay(alignment: .top) { Rectangle().fill(DPColor.borderPrimary).frame(height: 1) }
             }
+            .background(DPColor.backgroundModal)
+            .navigationBarHidden(true)
             .onAppear {
                 if let dutyType = viewModel.editingDutyType {
                     name = dutyType.name

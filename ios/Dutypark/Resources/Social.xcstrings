@@ -22,6 +22,12 @@
     "social.action.more" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "More actions" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Más acciones" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "その他の操作" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "더보기" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "更多操作" } }
     } },
+    "social.action.moveDown" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Move down" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Mover hacia abajo" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "下へ移動" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "아래로 이동" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "下移" } }
+    } },
+    "social.action.moveUp" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Move up" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Mover hacia arriba" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "上へ移動" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "위로 이동" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "上移" } }
+    } },
     "social.action.ok" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "OK" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Aceptar" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "OK" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "확인" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "确定" } }
     } },
@@ -126,6 +132,9 @@
     } },
     "social.search.page" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ of %@" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "%@ de %@" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "%@ / %@" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@ / %@" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "%@ / %@" } }
+    } },
+    "social.search.resultsSummary" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Page %@ of %@ · %@ results" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Página %@ de %@ · %@ resultados" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "%@ / %@ ページ · %@ 件" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@/%@ 페이지 · 총 %@명" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "第 %@ 页，共 %@ · %@ 结果" } }
     } },
     "social.search.previous" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Previous" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Anterior" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "前へ" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "이전" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "上一页" } }
