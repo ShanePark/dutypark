@@ -46,7 +46,19 @@ struct DPDesignTokensTests {
         )
     }
 
-    private func rgb(of color: Color, style: UIUserInterfaceStyle) -> (Int, Int, Int) {
+    @Test
+    nonisolated func adaptiveColorsResolveAwayFromMainActor() async {
+        let resolved = await Task.detached {
+            rgb(of: DPColor.backgroundCard, style: .dark)
+        }.value
+
+        #expect(resolved == (31, 41, 55))
+    }
+
+    private nonisolated func rgb(
+        of color: Color,
+        style: UIUserInterfaceStyle
+    ) -> (Int, Int, Int) {
         let resolved = UIColor(color).resolvedColor(
             with: UITraitCollection(userInterfaceStyle: style)
         )

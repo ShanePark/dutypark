@@ -5,7 +5,10 @@ import UIKit
 ///
 /// Screens should use these names instead of system colors so light and dark
 /// mode stay aligned with the web/PWA theme.
-enum DPColor {
+/// Color values are resolved by SwiftUI's asynchronous renderer as well as the
+/// main actor. Keep this namespace nonisolated so UIKit's dynamic color
+/// provider never inherits the app target's default MainActor isolation.
+nonisolated enum DPColor {
     // MARK: Surfaces
 
     static let backgroundPrimary = adaptive(light: 0xFFFFFF, dark: 0x111827)
@@ -137,7 +140,7 @@ enum DPChrome {
 }
 
 private extension UIColor {
-    convenience init(hex: UInt32, alpha: CGFloat = 1) {
+    nonisolated convenience init(hex: UInt32, alpha: CGFloat = 1) {
         self.init(
             red: CGFloat((hex >> 16) & 0xFF) / 255,
             green: CGFloat((hex >> 8) & 0xFF) / 255,
