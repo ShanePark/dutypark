@@ -356,7 +356,7 @@ final class SettingsViewModel: ObservableObject {
         }
     }
 
-    private func showNotice(_ key: String) {
+    func showNotice(_ key: String) {
         noticeIsError = false
         noticeKey = key
     }

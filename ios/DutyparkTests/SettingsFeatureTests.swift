@@ -3,6 +3,7 @@ import Testing
 import UIKit
 @testable import Dutypark
 
+@Suite(.serialized)
 @MainActor
 struct SettingsFeatureTests {
     @Test
@@ -67,6 +68,18 @@ struct SettingsFeatureTests {
             "settings.sessions.revokeMessage",
             "settings.sessions.revokeOthersTitle",
             "settings.sessions.revokeOthersMessage",
+            "settings.social.unlink",
+            "settings.social.unlinking",
+            "settings.social.linked",
+            "settings.social.unlinked",
+            "settings.social.unlinkConfirmTitle",
+            "settings.social.unlinkConfirmMessage",
+            "settings.social.unlinkLastAuthenticationMethod",
+            "settings.social.unlinkImpersonationForbidden",
+            "settings.social.unlinkFailed",
+            "settings.social.manage",
+            "settings.social.manageHint",
+            "settings.social.disconnected",
         ]
         for language in AppLanguage.allCases {
             defaults.set(language.rawValue, forKey: SettingsPreference.languageKey)
@@ -74,6 +87,18 @@ struct SettingsFeatureTests {
                 #expect(SettingsLocalization.string(key) != key)
             }
         }
+    }
+
+    @Test
+    func socialLinkSuccessNoticeClearsPreviousErrorState() {
+        let model = SettingsViewModel()
+        model.noticeIsError = true
+        model.noticeKey = "settings.social.unlinkFailed"
+
+        model.showNotice("settings.social.linked")
+
+        #expect(model.noticeKey == "settings.social.linked")
+        #expect(!model.noticeIsError)
     }
 
     @Test
@@ -193,7 +218,7 @@ struct SettingsFeatureTests {
         #expect(allOthers.message.contains("3"))
     }
 
-    @Test(.serialized)
+    @Test
     func destructiveConfirmationCancelsWithoutAPIAndBlocksDuplicateConfirmation() async throws {
         let recorder = SettingsRequestRecorder()
         SettingsURLProtocolStub.handler = { request in
@@ -234,7 +259,7 @@ struct SettingsFeatureTests {
         #expect(recorder.requests.first?.url?.path == "/api/auth/refresh-tokens/41")
     }
 
-    @Test(.serialized)
+    @Test
     func sessionServiceUsesDedicatedDeleteEndpointsAndPreservesCurrentCookie() async throws {
         let recorder = SettingsRequestRecorder()
         SettingsURLProtocolStub.handler = { request in
@@ -291,6 +316,135 @@ struct SettingsFeatureTests {
     }
 
     @Test
+    func socialAccountUnlinkUsesProviderDeleteEndpointAndAcceptsNoContent() async throws {
+        let recorder = SettingsRequestRecorder()
+        SettingsURLProtocolStub.handler = { request in
+            recorder.record(request)
+            return (
+                HTTPURLResponse(
+                    url: request.url!,
+                    statusCode: 204,
+                    httpVersion: nil,
+                    headerFields: nil
+                )!,
+                Data()
+            )
+        }
+        defer { SettingsURLProtocolStub.handler = nil }
+
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [SettingsURLProtocolStub.self]
+        let service = SettingsService(client: APIClient(
+            baseURL: URL(string: "https://dutypark.test/api/")!,
+            session: URLSession(configuration: configuration)
+        ))
+
+        try await service.unlinkSocialAccount(.kakao)
+        try await service.unlinkSocialAccount(.naver)
+
+        #expect(recorder.requests.map(\.httpMethod) == ["DELETE", "DELETE"])
+        #expect(recorder.requests.compactMap { $0.url?.path } == [
+            "/api/members/me/social-accounts/KAKAO",
+            "/api/members/me/social-accounts/NAVER",
+        ])
+    }
+
+    @Test
+    func socialAccountUnlinkMapsSpecificErrorsAndExplainsLocalOnlyDisconnect() {
+        #expect(!SettingsSocialUnlinkPolicy.canUnlink(connectedProviderCount: 0))
+        #expect(!SettingsSocialUnlinkPolicy.canUnlink(connectedProviderCount: 1))
+        #expect(SettingsSocialUnlinkPolicy.canUnlink(connectedProviderCount: 2))
+        #expect(SettingsSocialUnlinkPolicy.noticeKey(for: APIError.server(
+            status: 409,
+            code: "member.social.unlink.lastAuthenticationMethod"
+        )) == "settings.social.unlinkLastAuthenticationMethod")
+        #expect(SettingsSocialUnlinkPolicy.noticeKey(for: APIError.server(
+            status: 403,
+            code: "auth.impersonation.forbidden"
+        )) == "settings.social.unlinkImpersonationForbidden")
+        #expect(SettingsSocialUnlinkPolicy.noticeKey(for: APIError.server(
+            status: 500,
+            code: "errors.generic"
+        )) == "settings.social.unlinkFailed")
+
+        let defaults = UserDefaults.standard
+        let previous = defaults.string(forKey: SettingsPreference.languageKey)
+        defer {
+            if let previous { defaults.set(previous, forKey: SettingsPreference.languageKey) }
+            else { defaults.removeObject(forKey: SettingsPreference.languageKey) }
+        }
+
+        defaults.set(AppLanguage.korean.rawValue, forKey: SettingsPreference.languageKey)
+        let koreanMessage = SettingsSocialUnlinkPolicy.confirmationMessage(for: .kakao)
+        #expect(koreanMessage.contains("Dutypark 내부 연결만 해제"))
+        #expect(koreanMessage.contains("Kakao 계정"))
+        #expect(koreanMessage.contains("권한은 삭제되지 않습니다"))
+        let koreanLastProviderReason = SettingsLocalization.string(
+            "settings.social.unlinkLastAuthenticationMethod"
+        )
+        #expect(koreanLastProviderReason.contains("다른 소셜 계정을 먼저 연결"))
+        #expect(!koreanLastProviderReason.contains("비밀번호"))
+
+        for language in AppLanguage.allCases {
+            defaults.set(language.rawValue, forKey: SettingsPreference.languageKey)
+            let message = SettingsSocialUnlinkPolicy.confirmationMessage(for: .kakao)
+            #expect(message.contains("Kakao"))
+            #expect(message != "settings.social.unlinkConfirmMessage")
+            let lastProviderReason = SettingsLocalization.string(
+                "settings.social.unlinkLastAuthenticationMethod"
+            )
+            #expect(!lastProviderReason.contains("{count}"))
+            #expect(lastProviderReason != "settings.social.unlinkLastAuthenticationMethod")
+        }
+    }
+
+    @Test
+    func socialManagementPresentationAndStateKeepActionsInsideTheSelectedProviderPanel() {
+        let presentation = SettingsSocialManagementPresentation(provider: .kakao)
+        #expect(presentation.id == OAuthProvider.kakao.rawValue)
+
+        let lastConnectedProvider = SettingsSocialManagementState(
+            provider: .kakao,
+            isConnected: true,
+            connectedProviderCount: 1,
+            linkingProvider: nil,
+            unlinkingProvider: nil
+        )
+        #expect(lastConnectedProvider.statusKey == "settings.social.connected")
+        #expect(lastConnectedProvider.showsLastProviderReason)
+        #expect(!lastConnectedProvider.canRequestUnlink)
+
+        let removableProvider = SettingsSocialManagementState(
+            provider: .naver,
+            isConnected: true,
+            connectedProviderCount: 2,
+            linkingProvider: nil,
+            unlinkingProvider: nil
+        )
+        #expect(removableProvider.canRequestUnlink)
+
+        let disconnectedProvider = SettingsSocialManagementState(
+            provider: .naver,
+            isConnected: false,
+            connectedProviderCount: 1,
+            linkingProvider: nil,
+            unlinkingProvider: nil
+        )
+        #expect(disconnectedProvider.statusKey == "settings.social.disconnected")
+        #expect(disconnectedProvider.canConnect)
+
+        let busyProvider = SettingsSocialManagementState(
+            provider: .naver,
+            isConnected: false,
+            connectedProviderCount: 1,
+            linkingProvider: .kakao,
+            unlinkingProvider: nil
+        )
+        #expect(busyProvider.isWorking)
+        #expect(!busyProvider.canConnect)
+    }
+
+    @Test
     func decodesDutyPatternUsedByTheSettingsCard() throws {
         let data = Data(
             ##"{"configurable":true,"reason":null,"dutyTypes":[{"id":4,"name":"Day","color":"#3B82F6"}],"pattern":{"days":[{"weekday":"MONDAY","dutyType":{"id":4,"name":"Day","color":"#3B82F6"}}],"holidayOff":true,"effectiveFrom":"2026-08-01"}}"##.utf8
@@ -301,6 +455,114 @@ struct SettingsFeatureTests {
         #expect(pattern.configurable)
         #expect(pattern.pattern?.days.first?.weekday == .monday)
         #expect(pattern.pattern?.holidayOff == true)
+    }
+
+    @Test
+    func decodesAccountDeletionPreviewAndTeamImpact() throws {
+        let data = Data(#"{"hasPassword":true,"socialProviders":["KAKAO"],"teamImpact":{"teamId":7,"teamName":"Dutypark","isAdmin":true,"activeMemberCount":2,"willDeleteTeam":false,"transferCandidates":[{"memberId":9,"name":"Alex"}]},"auxiliaryImpacts":[{"memberId":12,"name":"Child","willDelete":true}]}"#.utf8)
+
+        let preview = try JSONDecoder().decode(AccountDeletionPreview.self, from: data)
+
+        #expect(preview.hasPassword)
+        #expect(preview.socialProviders == [.kakao])
+        #expect(preview.teamImpact?.transferCandidates.first?.memberId == 9)
+        #expect(preview.auxiliaryImpacts.first?.willDelete == true)
+    }
+
+    @Test
+    func accountDeletionFlowRequiresTransferExactNameAndUnexpiredProof() throws {
+        let preview = AccountDeletionPreview(
+            hasPassword: true,
+            socialProviders: [],
+            teamImpact: AccountDeletionTeamImpact(
+                teamId: 7,
+                teamName: "Dutypark",
+                isAdmin: true,
+                activeMemberCount: 2,
+                willDeleteTeam: false,
+                transferCandidates: [.init(memberId: 9, name: "Alex")]
+            ),
+            auxiliaryImpacts: []
+        )
+        var flow = AccountDeletionFlowState()
+        #expect(!flow.canLeaveTeamStep(preview: preview))
+        flow.selectedTransferMemberID = 9
+        #expect(flow.canLeaveTeamStep(preview: preview))
+        flow.typedName = "Shane "
+        #expect(!flow.nameMatches("Shane"))
+        flow.typedName = "Shane"
+        #expect(flow.nameMatches("Shane"))
+
+        let now = Date(timeIntervalSince1970: 100)
+        flow.storeProof("proof", expiresIn: 30, now: now)
+        #expect(flow.validProof(at: now.addingTimeInterval(29)) == "proof")
+        #expect(flow.validProof(at: now.addingTimeInterval(30)) == nil)
+        #expect(flow.reauthProof == nil)
+    }
+
+    @Test
+    func accountDeletionHasASeparateFinalDestructiveConfirmationStep() {
+        #expect(AccountDeletionStep.allCases == [
+            .scope,
+            .team,
+            .reauthentication,
+            .nameConfirmation,
+            .finalConfirmation,
+        ])
+        #expect(AccountDeletionStep.nameConfirmation.rawValue + 1 == AccountDeletionStep.finalConfirmation.rawValue)
+    }
+
+    @Test
+    func accountDeletionServiceSendsPasswordOnlyForProofAndFinalRequestOnlyUsesProof() async throws {
+        let recorder = SettingsRequestRecorder()
+        SettingsURLProtocolStub.handler = { request in
+            recorder.record(request)
+            let body: String
+            switch request.url?.path {
+            case "/api/auth/reauth/password":
+                body = #"{"reauthProof":"short-lived","expiresIn":300}"#
+            case "/api/members/me/deletion":
+                body = #"{"jobId":44,"status":"ACCEPTED"}"#
+            default:
+                body = #"{"code":"not_found"}"#
+            }
+            return (
+                HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!,
+                Data(body.utf8)
+            )
+        }
+        defer { SettingsURLProtocolStub.handler = nil }
+
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [SettingsURLProtocolStub.self]
+        let service = SettingsService(client: APIClient(
+            baseURL: URL(string: "https://dutypark.test/api/")!,
+            session: URLSession(configuration: configuration)
+        ))
+
+        let proof = try await service.reauthenticateForAccountDeletion(password: "secret")
+        let accepted = try await service.requestAccountDeletion(
+            reauthProof: proof.reauthProof,
+            transferAdminToMemberId: 9
+        )
+
+        #expect(accepted.jobId == 44)
+        let requests = recorder.requests
+        #expect(requests.map(\.url?.path) == [
+            "/api/auth/reauth/password",
+            "/api/members/me/deletion",
+        ])
+        let bodies = recorder.requestBodies
+        let reauthBody = try #require(bodies[0])
+        let reauth = try #require(Self.jsonBody(reauthBody))
+        #expect(reauth["purpose"] as? String == "DELETE_ACCOUNT")
+        #expect(reauth["password"] as? String == "secret")
+        let deletionBody = try #require(bodies[1])
+        let deletion = try #require(Self.jsonBody(deletionBody))
+        #expect(deletion["confirmation"] as? String == "DELETE")
+        #expect(deletion["password"] == nil)
+        #expect(deletion["reauthProof"] as? String == "short-lived")
+        #expect(deletion["transferAdminToMemberId"] as? Int == 9)
     }
 
     @Test
@@ -353,15 +615,22 @@ struct SettingsFeatureTests {
             isCurrentLogin: isCurrent
         )
     }
+
+    private static func jsonBody(_ body: Data) -> [String: Any]? {
+        return try? JSONSerialization.jsonObject(with: body) as? [String: Any]
+    }
 }
 
 private final class SettingsRequestRecorder: @unchecked Sendable {
     private let lock = NSLock()
     private var storage: [URLRequest] = []
+    private var bodyStorage: [Data?] = []
 
     func record(_ request: URLRequest) {
+        let body = Self.requestBody(request)
         lock.lock()
         storage.append(request)
+        bodyStorage.append(body)
         lock.unlock()
     }
 
@@ -369,6 +638,28 @@ private final class SettingsRequestRecorder: @unchecked Sendable {
         lock.lock()
         defer { lock.unlock() }
         return storage
+    }
+
+    var requestBodies: [Data?] {
+        lock.lock()
+        defer { lock.unlock() }
+        return bodyStorage
+    }
+
+    private static func requestBody(_ request: URLRequest) -> Data? {
+        if let body = request.httpBody { return body }
+        guard let stream = request.httpBodyStream else { return nil }
+        stream.open()
+        defer { stream.close() }
+        var data = Data()
+        var buffer = [UInt8](repeating: 0, count: 1_024)
+        while stream.hasBytesAvailable {
+            let count = stream.read(&buffer, maxLength: buffer.count)
+            guard count >= 0 else { return nil }
+            if count == 0 { break }
+            data.append(buffer, count: count)
+        }
+        return data
     }
 }
 

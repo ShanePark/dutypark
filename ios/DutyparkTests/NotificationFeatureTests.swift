@@ -176,6 +176,19 @@ struct NotificationFeatureTests {
     }
 
     @Test
+    func acceptedAccountDeletionClearsStoredPushStateLocally() async throws {
+        let suiteName = "NotificationFeatureTests.deletionCleanup.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        defaults.set("abc123", forKey: "dutypark.apns.device-token")
+        let manager = APNsRegistrationManager(defaults: defaults)
+
+        await manager.completeAccountDeletionCleanup()
+        #expect(defaults.string(forKey: "dutypark.apns.device-token") == nil)
+        #expect(manager.registrationState == .idle)
+    }
+
+    @Test
     func readsNotificationIdentifierFromSupportedAPNsPayloadShapes() {
         let id = UUID(uuidString: "ae71ee7d-3af9-4936-a6e8-75b9c0d37822")!
 

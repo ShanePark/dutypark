@@ -112,6 +112,10 @@ nonisolated struct AuthService: Sendable {
             retryingAfterUnauthorized: false
         )
     }
+
+    func clearLocalAuthentication() async {
+        await client.clearLocalAuthentication()
+    }
 }
 
 nonisolated private struct EmptyRequest: Encodable, Sendable {}

@@ -1,6 +1,11 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "settings.accountDeletion.accepted.confirm": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Continue" } }, "es": { "stringUnit": { "state": "translated", "value": "Continuar" } }, "ja": { "stringUnit": { "state": "translated", "value": "続ける" } }, "ko": { "stringUnit": { "state": "translated", "value": "확인" } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "继续" } } } },
+    "settings.accountDeletion.accepted.loggedOut": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "You have been safely signed out of Dutypark." } }, "es": { "stringUnit": { "state": "translated", "value": "Has cerrado sesión de Dutypark de forma segura." } }, "ja": { "stringUnit": { "state": "translated", "value": "Dutyparkから安全にログアウトしました。" } }, "ko": { "stringUnit": { "state": "translated", "value": "Dutypark에서 안전하게 로그아웃되었습니다." } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "您已安全退出 Dutypark。" } } } },
+    "settings.accountDeletion.accepted.noAction": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "No retry or support inquiry is needed. We will finish the deletion automatically." } }, "es": { "stringUnit": { "state": "translated", "value": "No necesitas volver a intentarlo ni contactar con soporte. Completaremos la eliminación automáticamente." } }, "ja": { "stringUnit": { "state": "translated", "value": "再試行やお問い合わせは必要ありません。削除は自動的に完了します。" } }, "ko": { "stringUnit": { "state": "translated", "value": "다시 요청하거나 문의할 필요가 없습니다. 삭제는 자동으로 완료됩니다." } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "无需重试或联系客服，删除流程将自动完成。" } } } },
+    "settings.accountDeletion.accepted.processing": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Your account data and files are being deleted in the background. This may take some time." } }, "es": { "stringUnit": { "state": "translated", "value": "Los datos y archivos de tu cuenta se están eliminando en segundo plano. El proceso puede tardar un tiempo." } }, "ja": { "stringUnit": { "state": "translated", "value": "アカウントのデータとファイルを順次削除しています。完了まで時間がかかる場合があります。" } }, "ko": { "stringUnit": { "state": "translated", "value": "계정 데이터와 파일은 비동기로 삭제 중이며 완료까지 시간이 걸릴 수 있습니다." } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "您的账户数据和文件正在后台删除，完成可能需要一些时间。" } } } },
+    "settings.accountDeletion.accepted.title": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Deletion request received" } }, "es": { "stringUnit": { "state": "translated", "value": "Solicitud de eliminación recibida" } }, "ja": { "stringUnit": { "state": "translated", "value": "削除申請を受け付けました" } }, "ko": { "stringUnit": { "state": "translated", "value": "탈퇴 요청이 접수되었습니다" } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "注销申请已受理" } } } },
     "settings.account.delete": {
       "localizations": {
         "en": {
@@ -69,6 +74,45 @@
         }
       }
     },
+    "settings.accountDeletion.back": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Back" } }, "es": { "stringUnit": { "state": "translated", "value": "Atrás" } }, "ja": { "stringUnit": { "state": "translated", "value": "戻る" } }, "ko": { "stringUnit": { "state": "translated", "value": "이전" } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "返回" } } } },
+    "settings.accountDeletion.continue": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Continue" } }, "es": { "stringUnit": { "state": "translated", "value": "Continuar" } }, "ja": { "stringUnit": { "state": "translated", "value": "続ける" } }, "ko": { "stringUnit": { "state": "translated", "value": "계속" } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "继续" } } } },
+    "settings.accountDeletion.error.alreadyPending": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Account deletion has already been requested and is being processed." } }, "es": { "stringUnit": { "state": "translated", "value": "La eliminación de la cuenta ya se ha solicitado y se está procesando." } }, "ja": { "stringUnit": { "state": "translated", "value": "アカウント削除はすでに申請され、処理中です。" } }, "ko": { "stringUnit": { "state": "translated", "value": "이미 계정 삭제가 요청되어 처리 중입니다." } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "账户注销申请已提交，正在处理中。" } } } },
+    "settings.accountDeletion.error.generic": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Could not request account deletion. Please try again." } }, "es": { "stringUnit": { "state": "translated", "value": "No se pudo solicitar la eliminación de la cuenta. Inténtalo de nuevo." } }, "ja": { "stringUnit": { "state": "translated", "value": "アカウント削除を申請できませんでした。もう一度お試しください。" } }, "ko": { "stringUnit": { "state": "translated", "value": "계정 삭제를 요청하지 못했습니다. 다시 시도해주세요." } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "无法申请注销账户，请重试。" } } } },
+    "settings.accountDeletion.error.impersonation": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "You cannot delete an account while impersonating another user." } }, "es": { "stringUnit": { "state": "translated", "value": "No puedes eliminar una cuenta mientras actúas como otro usuario." } }, "ja": { "stringUnit": { "state": "translated", "value": "他のユーザーとして操作中はアカウントを削除できません。" } }, "ko": { "stringUnit": { "state": "translated", "value": "다른 사용자로 전환한 상태에서는 계정을 삭제할 수 없습니다." } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "以其他用户身份操作时无法注销账户。" } } } },
+    "settings.accountDeletion.error.load": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Could not load account deletion details. Please try again." } }, "es": { "stringUnit": { "state": "translated", "value": "No se pudieron cargar los detalles de la eliminación. Inténtalo de nuevo." } }, "ja": { "stringUnit": { "state": "translated", "value": "アカウント削除の情報を読み込めませんでした。もう一度お試しください。" } }, "ko": { "stringUnit": { "state": "translated", "value": "계정 삭제 정보를 불러오지 못했습니다. 다시 시도해주세요." } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "无法加载账户注销信息，请重试。" } } } },
+    "settings.accountDeletion.error.nameMismatch": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "The name you entered does not match." } }, "es": { "stringUnit": { "state": "translated", "value": "El nombre introducido no coincide." } }, "ja": { "stringUnit": { "state": "translated", "value": "入力した名前が一致しません。" } }, "ko": { "stringUnit": { "state": "translated", "value": "입력한 이름이 일치하지 않습니다." } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "输入的姓名不一致。" } } } },
+    "settings.accountDeletion.error.noTransferCandidate": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "There is no eligible member to receive administrator privileges." } }, "es": { "stringUnit": { "state": "translated", "value": "No hay ningún miembro que pueda recibir los privilegios de administrador." } }, "ja": { "stringUnit": { "state": "translated", "value": "管理者権限を引き継げるメンバーがいません。" } }, "ko": { "stringUnit": { "state": "translated", "value": "관리자 권한을 넘겨받을 수 있는 팀원이 없습니다." } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "没有可接收管理员权限的成员。" } } } },
+    "settings.accountDeletion.error.proofExpired": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Your verification has expired. Please verify your identity again." } }, "es": { "stringUnit": { "state": "translated", "value": "La verificación ha caducado. Verifica tu identidad de nuevo." } }, "ja": { "stringUnit": { "state": "translated", "value": "本人確認の有効期限が切れました。もう一度確認してください。" } }, "ko": { "stringUnit": { "state": "translated", "value": "본인 확인이 만료되었습니다. 다시 본인 확인을 진행해주세요." } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "身份验证已过期，请重新验证。" } } } },
+    "settings.accountDeletion.error.reauthentication": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Could not verify your identity. Please try again." } }, "es": { "stringUnit": { "state": "translated", "value": "No se pudo verificar tu identidad. Inténtalo de nuevo." } }, "ja": { "stringUnit": { "state": "translated", "value": "本人確認ができませんでした。もう一度お試しください。" } }, "ko": { "stringUnit": { "state": "translated", "value": "본인 확인에 실패했습니다. 다시 시도해주세요." } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "无法验证您的身份，请重试。" } } } },
+    "settings.accountDeletion.error.transferInvalid": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "The selected member cannot receive administrator privileges. Choose another member." } }, "es": { "stringUnit": { "state": "translated", "value": "El miembro seleccionado no puede recibir los privilegios de administrador. Elige otro miembro." } }, "ja": { "stringUnit": { "state": "translated", "value": "選択したメンバーには管理者権限を引き継げません。別のメンバーを選択してください。" } }, "ko": { "stringUnit": { "state": "translated", "value": "선택한 팀원에게 관리자 권한을 이관할 수 없습니다. 다른 팀원을 선택해주세요." } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "无法将管理员权限转交给所选成员，请选择其他成员。" } } } },
+    "settings.accountDeletion.error.transferRequired": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Choose a member to receive administrator privileges." } }, "es": { "stringUnit": { "state": "translated", "value": "Elige un miembro para transferirle los privilegios de administrador." } }, "ja": { "stringUnit": { "state": "translated", "value": "管理者権限を引き継ぐメンバーを選択してください。" } }, "ko": { "stringUnit": { "state": "translated", "value": "관리자 권한을 넘겨받을 팀원을 선택해주세요." } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "请选择接收管理员权限的成员。" } } } },
+    "settings.accountDeletion.final.action": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Delete my account" } }, "es": { "stringUnit": { "state": "translated", "value": "Eliminar mi cuenta" } }, "ja": { "stringUnit": { "state": "translated", "value": "アカウントを削除" } }, "ko": { "stringUnit": { "state": "translated", "value": "내 계정 삭제" } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "注销我的账户" } } } },
+    "settings.accountDeletion.final.irreversible": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Once processing starts, your account, related files, and any team scheduled for deletion cannot be recovered." } }, "es": { "stringUnit": { "state": "translated", "value": "Una vez iniciado el proceso, no se podrán recuperar tu cuenta, los archivos relacionados ni los equipos programados para su eliminación." } }, "ja": { "stringUnit": { "state": "translated", "value": "処理が始まると、アカウント、関連ファイル、削除対象のチームは復元できません。" } }, "ko": { "stringUnit": { "state": "translated", "value": "처리가 시작되면 계정과 관련 파일, 삭제 대상 팀을 복구할 수 없습니다." } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "处理开始后，您的账户、相关文件以及待删除的团队均无法恢复。" } } } },
+    "settings.accountDeletion.final.message": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Your deletion request takes effect immediately and cannot be canceled." } }, "es": { "stringUnit": { "state": "translated", "value": "La solicitud de eliminación entra en vigor de inmediato y no se puede cancelar." } }, "ja": { "stringUnit": { "state": "translated", "value": "削除申請はすぐに有効となり、取り消せません。" } }, "ko": { "stringUnit": { "state": "translated", "value": "삭제 요청은 즉시 적용되며 취소할 수 없습니다." } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "注销申请将立即生效，且无法取消。" } } } },
+    "settings.accountDeletion.final.title": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Final confirmation" } }, "es": { "stringUnit": { "state": "translated", "value": "Confirmación final" } }, "ja": { "stringUnit": { "state": "translated", "value": "最終確認" } }, "ko": { "stringUnit": { "state": "translated", "value": "최종 확인" } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "最终确认" } } } },
+    "settings.accountDeletion.loading": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Loading account information…" } }, "es": { "stringUnit": { "state": "translated", "value": "Cargando la información de la cuenta…" } }, "ja": { "stringUnit": { "state": "translated", "value": "アカウント情報を読み込んでいます…" } }, "ko": { "stringUnit": { "state": "translated", "value": "계정 정보를 불러오는 중…" } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "正在加载账户信息…" } } } },
+    "settings.accountDeletion.name.message": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "To confirm, enter your name exactly as shown below." } }, "es": { "stringUnit": { "state": "translated", "value": "Para confirmar, escribe tu nombre exactamente como aparece abajo." } }, "ja": { "stringUnit": { "state": "translated", "value": "確認のため、以下に表示された名前を正確に入力してください。" } }, "ko": { "stringUnit": { "state": "translated", "value": "확인을 위해 아래 표시된 이름을 똑같이 입력해주세요." } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "请输入与下方显示内容完全相同的姓名以进行确认。" } } } },
+    "settings.accountDeletion.name.placeholder": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Enter your name" } }, "es": { "stringUnit": { "state": "translated", "value": "Escribe tu nombre" } }, "ja": { "stringUnit": { "state": "translated", "value": "名前を入力" } }, "ko": { "stringUnit": { "state": "translated", "value": "이름 입력" } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "输入姓名" } } } },
+    "settings.accountDeletion.name.title": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Confirm your name" } }, "es": { "stringUnit": { "state": "translated", "value": "Confirma tu nombre" } }, "ja": { "stringUnit": { "state": "translated", "value": "名前を確認" } }, "ko": { "stringUnit": { "state": "translated", "value": "이름 확인" } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "确认姓名" } } } },
+    "settings.accountDeletion.progress": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Account deletion progress" } }, "es": { "stringUnit": { "state": "translated", "value": "Progreso de eliminación de la cuenta" } }, "ja": { "stringUnit": { "state": "translated", "value": "アカウント削除の進行状況" } }, "ko": { "stringUnit": { "state": "translated", "value": "계정 삭제 진행 단계" } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "账户注销进度" } } } },
+    "settings.accountDeletion.reauth.complete": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Identity verified" } }, "es": { "stringUnit": { "state": "translated", "value": "Identidad verificada" } }, "ja": { "stringUnit": { "state": "translated", "value": "本人確認が完了しました" } }, "ko": { "stringUnit": { "state": "translated", "value": "본인 확인 완료" } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "身份验证完成" } } } },
+    "settings.accountDeletion.reauth.message": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Verify your identity again to protect your account before continuing." } }, "es": { "stringUnit": { "state": "translated", "value": "Antes de continuar, vuelve a verificar tu identidad para proteger tu cuenta." } }, "ja": { "stringUnit": { "state": "translated", "value": "アカウントを保護するため、続行する前にもう一度本人確認を行ってください。" } }, "ko": { "stringUnit": { "state": "translated", "value": "계정을 보호하기 위해 계속하기 전에 본인 확인을 다시 진행해주세요." } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "为保护您的账户，请在继续前重新验证身份。" } } } },
+    "settings.accountDeletion.reauth.password": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Current password" } }, "es": { "stringUnit": { "state": "translated", "value": "Contraseña actual" } }, "ja": { "stringUnit": { "state": "translated", "value": "現在のパスワード" } }, "ko": { "stringUnit": { "state": "translated", "value": "현재 비밀번호" } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "当前密码" } } } },
+    "settings.accountDeletion.reauth.passwordAction": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Verify with password" } }, "es": { "stringUnit": { "state": "translated", "value": "Verificar con contraseña" } }, "ja": { "stringUnit": { "state": "translated", "value": "パスワードで確認" } }, "ko": { "stringUnit": { "state": "translated", "value": "비밀번호로 확인" } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "使用密码验证" } } } },
+    "settings.accountDeletion.reauth.title": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Verify your identity" } }, "es": { "stringUnit": { "state": "translated", "value": "Verifica tu identidad" } }, "ja": { "stringUnit": { "state": "translated", "value": "本人確認" } }, "ko": { "stringUnit": { "state": "translated", "value": "본인 확인" } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "验证身份" } } } },
+    "settings.accountDeletion.scope.access": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "You will lose access immediately after requesting deletion." } }, "es": { "stringUnit": { "state": "translated", "value": "Perderás el acceso inmediatamente después de solicitar la eliminación." } }, "ja": { "stringUnit": { "state": "translated", "value": "削除を申請すると、すぐにアクセスできなくなります。" } }, "ko": { "stringUnit": { "state": "translated", "value": "삭제를 요청하면 즉시 계정에 접근할 수 없게 됩니다." } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "提交注销申请后，您将立即无法访问账户。" } } } },
+    "settings.accountDeletion.scope.async": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Your account and related files will be deleted asynchronously. This may take some time." } }, "es": { "stringUnit": { "state": "translated", "value": "Tu cuenta y los archivos relacionados se eliminarán en segundo plano. El proceso puede tardar un tiempo." } }, "ja": { "stringUnit": { "state": "translated", "value": "アカウントと関連ファイルは順次削除されます。処理には時間がかかる場合があります。" } }, "ko": { "stringUnit": { "state": "translated", "value": "계정과 관련 파일은 비동기로 삭제되며 처리에 시간이 걸릴 수 있습니다." } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "您的账户及相关文件将在后台异步删除，处理可能需要一些时间。" } } } },
+    "settings.accountDeletion.scope.auxiliary": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "The following linked accounts will also be deleted:" } }, "es": { "stringUnit": { "state": "translated", "value": "También se eliminarán las siguientes cuentas vinculadas:" } }, "ja": { "stringUnit": { "state": "translated", "value": "次の連携アカウントも削除されます：" } }, "ko": { "stringUnit": { "state": "translated", "value": "다음 연결 계정도 함께 삭제됩니다:" } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "以下关联账户也将被注销：" } } } },
+    "settings.accountDeletion.scope.message": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Review what happens when your account is deleted." } }, "es": { "stringUnit": { "state": "translated", "value": "Revisa qué ocurrirá cuando se elimine tu cuenta." } }, "ja": { "stringUnit": { "state": "translated", "value": "アカウントを削除した場合の影響を確認してください。" } }, "ko": { "stringUnit": { "state": "translated", "value": "계정을 삭제하면 어떻게 처리되는지 확인해주세요." } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "请确认注销账户后将发生的情况。" } } } },
+    "settings.accountDeletion.scope.title": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Before you continue" } }, "es": { "stringUnit": { "state": "translated", "value": "Antes de continuar" } }, "ja": { "stringUnit": { "state": "translated", "value": "続行する前に" } }, "ko": { "stringUnit": { "state": "translated", "value": "계속하기 전에" } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "继续之前" } } } },
+    "settings.accountDeletion.team.memberOnly": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "You will leave this team. The team itself will remain." } }, "es": { "stringUnit": { "state": "translated", "value": "Abandonarás este equipo, pero el equipo seguirá existiendo." } }, "ja": { "stringUnit": { "state": "translated", "value": "このチームから退出します。チーム自体は残ります。" } }, "ko": { "stringUnit": { "state": "translated", "value": "이 팀에서 탈퇴하며 팀 자체는 유지됩니다." } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "您将退出此团队，但团队会保留。" } } } },
+    "settings.accountDeletion.team.none": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "You do not belong to a team." } }, "es": { "stringUnit": { "state": "translated", "value": "No perteneces a ningún equipo." } }, "ja": { "stringUnit": { "state": "translated", "value": "所属しているチームはありません。" } }, "ko": { "stringUnit": { "state": "translated", "value": "소속된 팀이 없습니다." } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "您当前不属于任何团队。" } } } },
+    "settings.accountDeletion.team.select": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Select a member" } }, "es": { "stringUnit": { "state": "translated", "value": "Selecciona un miembro" } }, "ja": { "stringUnit": { "state": "translated", "value": "メンバーを選択" } }, "ko": { "stringUnit": { "state": "translated", "value": "팀원 선택" } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "选择成员" } } } },
+    "settings.accountDeletion.team.soloDelete": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Since you are the only team member, the team and its data will also be deleted." } }, "es": { "stringUnit": { "state": "translated", "value": "Como eres el único miembro, también se eliminarán el equipo y sus datos." } }, "ja": { "stringUnit": { "state": "translated", "value": "あなたが唯一のメンバーのため、チームとそのデータも削除されます。" } }, "ko": { "stringUnit": { "state": "translated", "value": "혼자 있는 팀이므로 팀과 팀 데이터도 함께 삭제됩니다." } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "由于您是唯一成员，该团队及其数据也将一并删除。" } } } },
+    "settings.accountDeletion.team.successor": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "New administrator" } }, "es": { "stringUnit": { "state": "translated", "value": "Nuevo administrador" } }, "ja": { "stringUnit": { "state": "translated", "value": "新しい管理者" } }, "ko": { "stringUnit": { "state": "translated", "value": "새 관리자" } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "新管理员" } } } },
+    "settings.accountDeletion.team.title": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Team impact" } }, "es": { "stringUnit": { "state": "translated", "value": "Impacto en el equipo" } }, "ja": { "stringUnit": { "state": "translated", "value": "チームへの影響" } }, "ko": { "stringUnit": { "state": "translated", "value": "팀 처리" } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "对团队的影响" } } } },
+    "settings.accountDeletion.team.transferRequired": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "You are this team's administrator. Choose a member to transfer administrator privileges to." } }, "es": { "stringUnit": { "state": "translated", "value": "Eres el administrador de este equipo. Elige un miembro para transferirle los privilegios de administrador." } }, "ja": { "stringUnit": { "state": "translated", "value": "あなたはこのチームの管理者です。管理者権限を引き継ぐメンバーを選択してください。" } }, "ko": { "stringUnit": { "state": "translated", "value": "이 팀의 관리자입니다. 관리자 권한을 넘겨받을 팀원을 선택해주세요." } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "您是此团队的管理员，请选择一名成员接收管理员权限。" } } } },
+    "settings.accountDeletion.title": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Delete account" } }, "es": { "stringUnit": { "state": "translated", "value": "Eliminar cuenta" } }, "ja": { "stringUnit": { "state": "translated", "value": "アカウント削除" } }, "ko": { "stringUnit": { "state": "translated", "value": "계정 삭제" } }, "zh-Hans": { "stringUnit": { "state": "translated", "value": "注销账户" } } } },
     "settings.account.title": {
       "localizations": {
         "en": {
@@ -2385,6 +2429,74 @@
         }
       }
     },
+    "settings.social.manage": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manage {provider}"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{provider} 연결 관리"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "{provider}連携を管理"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "管理 {provider} 连接"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gestionar conexión de {provider}"
+          }
+        }
+      }
+    },
+    "settings.social.manageHint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opens social account connection settings."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "소셜 계정 연결 관리 화면을 엽니다."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ソーシャルアカウント連携の管理画面を開きます。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "打开社交账户连接管理界面。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abre la configuración de conexión de la cuenta social."
+          }
+        }
+      }
+    },
     "settings.social.connect": {
       "localizations": {
         "en": {
@@ -2453,6 +2565,40 @@
         }
       }
     },
+    "settings.social.disconnected": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not connected"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "연결 안 됨"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未連携"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未连接"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No conectada"
+          }
+        }
+      }
+    },
     "settings.social.failed": {
       "localizations": {
         "en": {
@@ -2517,6 +2663,278 @@
           "stringUnit": {
             "state": "translated",
             "value": "Cuenta conectada."
+          }
+        }
+      }
+    },
+    "settings.social.unlink": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Disconnect"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "연결 해제"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "連携解除"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "解除连接"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desconectar"
+          }
+        }
+      }
+    },
+    "settings.social.unlinked": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Social account disconnected from Dutypark."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dutypark에서 소셜 계정 연결을 해제했습니다."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dutyparkとのソーシャルアカウント連携を解除しました。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已解除社交账户与 Dutypark 的连接。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La cuenta social se ha desconectado de Dutypark."
+          }
+        }
+      }
+    },
+    "settings.social.unlinkConfirmMessage": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Only the connection inside Dutypark will be removed. Your {provider} account and the permissions granted on the provider side will not be deleted."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dutypark 내부 연결만 해제됩니다. {provider} 계정이나 제공자 측에 허용한 권한은 삭제되지 않습니다."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dutypark内の連携のみ解除されます。{provider}アカウントやプロバイダー側で付与した権限は削除されません。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "只会解除 Dutypark 内的连接。您的 {provider} 账户以及在服务商侧授予的权限不会被删除。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Solo se eliminará la conexión dentro de Dutypark. No se eliminarán tu cuenta de {provider} ni los permisos concedidos en el proveedor."
+          }
+        }
+      }
+    },
+    "settings.social.unlinkConfirmTitle": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Disconnect social account?"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "소셜 계정 연결을 해제할까요?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ソーシャルアカウントの連携を解除しますか？"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "要解除社交账户连接吗？"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "¿Desconectar la cuenta social?"
+          }
+        }
+      }
+    },
+    "settings.social.unlinkFailed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not disconnect the social account. Please try again."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "소셜 계정 연결을 해제하지 못했습니다. 다시 시도해 주세요."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ソーシャルアカウントの連携を解除できませんでした。もう一度お試しください。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法解除社交账户连接，请重试。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se pudo desconectar la cuenta social. Inténtalo de nuevo."
+          }
+        }
+      }
+    },
+    "settings.social.unlinkImpersonationForbidden": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Social accounts cannot be disconnected while using another account through account switching. Return to your own account first."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "계정 전환으로 다른 계정에 접속 중에는 소셜 연결을 해제할 수 없습니다. 먼저 본인 계정으로 돌아가 주세요."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "アカウント切り替えで別のアカウントを使用中は連携を解除できません。先にご自身のアカウントへ戻ってください。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通过账户切换使用其他账户时无法解除社交连接。请先返回您自己的账户。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No puedes desconectar cuentas sociales mientras usas otra cuenta mediante el cambio de cuenta. Vuelve primero a tu propia cuenta."
+          }
+        }
+      }
+    },
+    "settings.social.unlinkLastAuthenticationMethod": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your last sign-in method cannot be disconnected. Connect another social account first."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "마지막 로그인 수단이라 해제할 수 없습니다. 다른 소셜 계정을 먼저 연결해 주세요."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最後のログイン方法は解除できません。先に別のSNSアカウントを連携してください。"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "无法解除最后一种登录方式。请先连接其他社交账户。"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No puedes desconectar tu último método de inicio de sesión. Conecta primero otra cuenta social."
+          }
+        }
+      }
+    },
+    "settings.social.unlinking": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Disconnecting social account"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "소셜 계정 연결 해제 중"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ソーシャルアカウントの連携を解除中"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正在解除社交账户连接"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desconectando la cuenta social"
           }
         }
       }

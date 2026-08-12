@@ -19,7 +19,13 @@ struct AppRootView: View {
                     .accessibilityIdentifier("session.retry")
                 }
             case .guest:
-                GuestRootView()
+                if session.accountDeletionAcceptedPresentation != nil {
+                    AccountDeletionAcceptedView {
+                        session.dismissAccountDeletionAcceptedPresentation()
+                    }
+                } else {
+                    GuestRootView()
+                }
             case .authenticated(let member):
                 RootTabView()
                     .id("\(member.id)-\(member.isImpersonating)-\(member.originalMemberId ?? 0)")

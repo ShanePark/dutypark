@@ -42,15 +42,20 @@ struct SettingsView: View {
     @State private var showLogout = false
     @State private var showAIConsentConfirmation = false
     @State private var logoutAction = SettingsDestructiveActionGate()
-    @State private var showDeleteInfo = false
+    @State private var showAccountDeletion = false
+    @State private var accountDeletionIsWorking = false
     @State private var managerToRemove: MemberDTO?
     @State private var sessionConfirmation: SettingsSessionConfirmation?
     @State private var sessionAction = SettingsDestructiveActionGate()
     @State private var memberToImpersonate: MemberDTO?
     @State private var isLinking: OAuthProvider?
+    @State private var isUnlinking: OAuthProvider?
+    @State private var socialManagementPresentation: SettingsSocialManagementPresentation?
+    @State private var socialAction = SettingsDestructiveActionGate()
     @State private var oauthNoticeMessage: String?
     @Binding private var destination: SettingsDestination?
     private let onProfilePhotoChanged: () -> Void
+    private let settingsService = SettingsService()
 
     init(
         destination: Binding<SettingsDestination?> = .constant(nil),
@@ -175,6 +180,37 @@ struct SettingsView: View {
                 )
             }
         }
+        .fullScreenCover(isPresented: $showAccountDeletion) {
+            if let memberName = model.member?.name {
+                DPModalOverlay(
+                    onDismiss: { showAccountDeletion = false },
+                    closeOnBackdrop: false,
+                    canDismiss: !accountDeletionIsWorking
+                ) { availableSize, dismiss in
+                    AccountDeletionView(
+                        push: push,
+                        memberName: memberName,
+                        maximumHeight: availableSize.height,
+                        dismiss: dismiss,
+                        workingChanged: { accountDeletionIsWorking = $0 }
+                    )
+                }
+            }
+        }
+        .fullScreenCover(item: $socialManagementPresentation) { presentation in
+            DPModalOverlay(
+                onDismiss: { socialManagementPresentation = nil },
+                canDismiss: !socialAction.isWorking
+            ) { availableSize, dismiss in
+                SocialConnectionManagementView(
+                    state: socialManagementState(for: presentation.provider),
+                    maximumHeight: availableSize.height,
+                    dismiss: dismiss,
+                    connect: { await link(presentation.provider) },
+                    unlink: { await unlink(presentation.provider) }
+                )
+            }
+        }
         .alert(item: $sessionConfirmation) { confirmation in
             Alert(
                 title: Text(SettingsLocalization.string(confirmation.titleKey)),
@@ -246,11 +282,6 @@ struct SettingsView: View {
             } else if let key = model.noticeKey {
                 SettingsLocalization.text(key)
             }
-        }
-        .alert(SettingsLocalization.string("settings.account.delete"), isPresented: $showDeleteInfo) {
-            Button(SettingsLocalization.string("settings.action.confirm")) {}
-        } message: {
-            SettingsLocalization.text("settings.account.deleteInfo")
         }
         .alert(SettingsLocalization.string("settings.push.permissionTitle"), isPresented: $push.showsPermissionPreprompt) {
             Button(SettingsLocalization.string("settings.action.cancel"), role: .cancel) {}
@@ -691,8 +722,14 @@ struct SettingsView: View {
 
     private var socialSection: some View {
         SettingsCard(title: "settings.social.title", icon: "link") {
-            socialRow(.kakao, connected: model.member?.kakaoId != nil)
-            socialRow(.naver, connected: model.member?.naverId != nil)
+            socialRow(
+                .kakao,
+                connected: model.member?.kakaoId != nil
+            )
+            socialRow(
+                .naver,
+                connected: model.member?.naverId != nil
+            )
         }
     }
 
@@ -706,11 +743,12 @@ struct SettingsView: View {
                 }
                 .buttonStyle(AccentSoftButtonStyle())
             }
-            Button { showDeleteInfo = true } label: {
+            Button { withoutPresentationAnimation { showAccountDeletion = true } } label: {
                 Label(SettingsLocalization.string("settings.account.delete"), systemImage: "person.crop.circle.badge.xmark")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(DangerSoftButtonStyle())
+            .accessibilityIdentifier("settings.account.delete")
             }
         }
     }
@@ -842,6 +880,12 @@ struct SettingsView: View {
         model.sessions.filter(SettingsSessionPolicy.canRevoke).count
     }
 
+    private var connectedSocialProviderCount: Int {
+        [model.member?.kakaoId, model.member?.naverId]
+            .compactMap { $0 }
+            .count
+    }
+
     private var noticeBinding: Binding<Bool> {
         Binding(
             get: { model.noticeKey != nil || oauthNoticeMessage != nil },
@@ -946,7 +990,10 @@ struct SettingsView: View {
         }
     }
 
-    private func socialRow(_ provider: OAuthProvider, connected: Bool) -> some View {
+    private func socialRow(
+        _ provider: OAuthProvider,
+        connected: Bool
+    ) -> some View {
         HStack(spacing: DPSpacing.compact) {
             Text(provider == .kakao ? "K" : "N")
                 .font(.system(size: 15, weight: .bold, design: .rounded))
@@ -954,31 +1001,38 @@ struct SettingsView: View {
                 .frame(width: 32, height: 32)
                 .background(provider == .kakao ? Color(red: 1, green: 0.9, blue: 0) : Color(red: 0.01, green: 0.78, blue: 0.28))
                 .clipShape(RoundedRectangle(cornerRadius: DPRadius.small))
+                .accessibilityHidden(true)
             Text(provider == .kakao ? "Kakao" : "Naver")
                 .font(DPTypography.bodyMedium)
                 .foregroundStyle(DPColor.textPrimary)
-            Spacer()
+            Spacer(minLength: DPSpacing.small)
             if connected {
                 Label(SettingsLocalization.string("settings.social.connected"), systemImage: "checkmark.circle.fill")
-                    .font(DPTypography.supporting)
+                    .font(DPTypography.caption)
                     .foregroundStyle(DPColor.success)
-            } else {
-                Button {
-                    Task { await link(provider) }
-                } label: {
-                    if isLinking == provider {
-                        ProgressView()
-                    } else {
-                        SettingsLocalization.text("settings.social.connect")
-                    }
-                }
-                .disabled(isLinking != nil)
-                .buttonStyle(AccentSoftButtonStyle())
+                    .fixedSize()
             }
+            Button {
+                guard !socialAction.isWorking else { return }
+                withoutPresentationAnimation {
+                    socialManagementPresentation = .init(provider: provider)
+                }
+            } label: {
+                Image(systemName: "gearshape")
+                    .font(.system(size: 16, weight: .semibold))
+                    .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                    .background(DPColor.backgroundTertiary, in: RoundedRectangle(cornerRadius: DPRadius.standard))
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(DPColor.textSecondary)
+            .disabled(socialAction.isWorking)
+            .accessibilityLabel(SettingsSocialManagementPolicy.manageLabel(for: provider))
+            .accessibilityHint(SettingsLocalization.string("settings.social.manageHint"))
+            .accessibilityIdentifier("settings.social.manage.\(provider.rawValue.lowercased())")
         }
         .padding(DPSpacing.compact)
         .background(DPColor.backgroundSecondary, in: RoundedRectangle(cornerRadius: DPRadius.standard))
-        .frame(minHeight: 44)
+        .frame(minHeight: DPSize.minimumTouchTarget)
     }
 
     private func upload(_ item: PhotosPickerItem) async {
@@ -1003,18 +1057,63 @@ struct SettingsView: View {
     }
 
     private func link(_ provider: OAuthProvider) async {
+        guard isLinking == nil, isUnlinking == nil, socialAction.start() else { return }
         isLinking = provider
-        defer { isLinking = nil }
+        defer {
+            isLinking = nil
+            socialAction.finish()
+        }
         do {
             try await oauthClient.link(provider: provider)
             await model.reloadMember()
-            model.noticeKey = "settings.social.linked"
+            oauthNoticeMessage = nil
+            model.showNotice("settings.social.linked")
         } catch MobileOAuthError.cancelled {
             return
         } catch {
             oauthNoticeMessage = error.localizedDescription
             model.noticeIsError = true
         }
+    }
+
+    private func unlink(_ provider: OAuthProvider) async {
+        guard SettingsSocialUnlinkPolicy.canUnlink(
+            connectedProviderCount: connectedSocialProviderCount
+        ) else {
+            model.noticeIsError = true
+            model.noticeKey = "settings.social.unlinkLastAuthenticationMethod"
+            return
+        }
+        guard isLinking == nil, isUnlinking == nil, socialAction.start() else { return }
+        isUnlinking = provider
+        defer {
+            isUnlinking = nil
+            socialAction.finish()
+        }
+
+        do {
+            try await settingsService.unlinkSocialAccount(provider)
+            await model.reloadMember()
+            model.showNotice("settings.social.unlinked")
+        } catch {
+            model.noticeIsError = true
+            model.noticeKey = SettingsSocialUnlinkPolicy.noticeKey(for: error)
+        }
+    }
+
+    private func socialManagementState(for provider: OAuthProvider) -> SettingsSocialManagementState {
+        let connected: Bool
+        switch provider {
+        case .kakao: connected = model.member?.kakaoId != nil
+        case .naver: connected = model.member?.naverId != nil
+        }
+        return SettingsSocialManagementState(
+            provider: provider,
+            isConnected: connected,
+            connectedProviderCount: connectedSocialProviderCount,
+            linkingProvider: isLinking,
+            unlinkingProvider: isUnlinking
+        )
     }
 
     private func performLogout() async {
@@ -1050,6 +1149,48 @@ nonisolated struct SettingsDestructiveActionGate: Equatable, Sendable {
 
     mutating func finish() {
         isWorking = false
+    }
+}
+
+nonisolated enum SettingsSocialUnlinkPolicy {
+    static func canUnlink(connectedProviderCount: Int) -> Bool {
+        connectedProviderCount >= 2
+    }
+
+    static func confirmationMessage(for provider: OAuthProvider) -> String {
+        SettingsLocalization.string("settings.social.unlinkConfirmMessage")
+            .replacingOccurrences(of: "{provider}", with: providerName(provider))
+    }
+
+    static func noticeKey(for error: Error) -> String {
+        let status: Int?
+        let code: String?
+        switch error {
+        case APIError.server(let value, let errorCode):
+            status = value
+            code = errorCode
+        case APIError.serverWithDetails(let value, let errorCode, _):
+            status = value
+            code = errorCode
+        default:
+            status = nil
+            code = nil
+        }
+
+        if code == "member.social.unlink.lastAuthenticationMethod" {
+            return "settings.social.unlinkLastAuthenticationMethod"
+        }
+        if status == 403 {
+            return "settings.social.unlinkImpersonationForbidden"
+        }
+        return "settings.social.unlinkFailed"
+    }
+
+    private static func providerName(_ provider: OAuthProvider) -> String {
+        switch provider {
+        case .kakao: "Kakao"
+        case .naver: "Naver"
+        }
     }
 }
 

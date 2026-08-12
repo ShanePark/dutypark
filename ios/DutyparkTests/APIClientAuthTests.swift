@@ -385,6 +385,78 @@ final class APIClientAuthTests: XCTestCase {
         XCTAssertEqual(store.state, .guest)
     }
 
+    @MainActor
+    func testAcceptedAccountDeletionClearsLocalCookiesImpersonationAndSession() async throws {
+        for name in ["access_token", "refresh_token"] {
+            let cookie = try XCTUnwrap(HTTPCookie(properties: [
+                .domain: "dutypark.test",
+                .path: "/",
+                .name: name,
+                .value: "secret",
+                .secure: "TRUE",
+            ]))
+            HTTPCookieStorage.shared.setCookie(cookie)
+        }
+        let store = SessionStore(
+            authService: AuthService(client: makeClient()),
+            initialState: .authenticated(Self.testMember),
+            impersonationExpiresAt: Date().addingTimeInterval(60)
+        )
+        store.deferDestinationUntilAuthenticated(URL(string: "dutypark://todo")!)
+        UserDefaults.standard.set("test@duty.park", forKey: "dp-remember-email")
+        UserDefaults.standard.set(12, forKey: "selectedDday_1")
+
+        await store.completeAccountDeletion()
+
+        XCTAssertEqual(store.state, .guest)
+        XCTAssertEqual(store.accountDeletionAcceptedPresentation, .accepted)
+        XCTAssertNil(store.pendingDestination)
+        XCTAssertNil(store.impersonationExpiresAt)
+        XCTAssertNil(UserDefaults.standard.string(forKey: "dp-remember-email"))
+        XCTAssertNil(UserDefaults.standard.object(forKey: "selectedDday_1"))
+        XCTAssertFalse(HTTPCookieStorage.shared.cookies?.contains {
+            $0.name == "access_token" || $0.name == "refresh_token"
+        } == true)
+
+        store.dismissAccountDeletionAcceptedPresentation()
+
+        XCTAssertEqual(store.state, .guest)
+        XCTAssertNil(store.accountDeletionAcceptedPresentation)
+
+        let freshStore = SessionStore(initialState: .restoring)
+        XCTAssertNil(freshStore.accountDeletionAcceptedPresentation)
+    }
+
+    @MainActor
+    func testNewAuthenticatedSessionClearsAcceptedAccountDeletionPresentation() async {
+        URLProtocolStub.handler = { request in
+            switch request.url?.path {
+            case "/api/auth/token":
+                return Self.response(request, status: 200, body: #"{"expiresIn":3600}"#)
+            case "/api/auth/status":
+                return Self.response(
+                    request,
+                    status: 200,
+                    body: #"{"id":1,"email":"test@duty.park","name":"Test","teamId":null,"team":null,"isAdmin":false,"isImpersonating":false,"originalMemberId":null}"#
+                )
+            default:
+                return Self.response(request, status: 404)
+            }
+        }
+
+        let store = SessionStore(
+            authService: AuthService(client: makeClient()),
+            initialState: .authenticated(Self.testMember)
+        )
+        await store.completeAccountDeletion()
+        XCTAssertEqual(store.accountDeletionAcceptedPresentation, .accepted)
+
+        await store.login(email: "test@duty.park", password: "12345678", rememberMe: false)
+
+        XCTAssertEqual(store.state, .authenticated(Self.testMember))
+        XCTAssertNil(store.accountDeletionAcceptedPresentation)
+    }
+
     private static let testMember = LoginMember(
         id: 1,
         email: "test@duty.park",

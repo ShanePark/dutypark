@@ -35,6 +35,11 @@ nonisolated enum MobileOAuthLoginOutcome: Equatable, Sendable {
     case signup(uuid: String)
 }
 
+nonisolated struct MobileOAuthReauthProof: Equatable, Sendable {
+    let value: String
+    let expiresIn: Int
+}
+
 nonisolated struct PKCEPair: Equatable, Sendable {
     let verifier: String
     let challenge: String
@@ -154,6 +159,8 @@ nonisolated private struct OAuthExchangeRequest: Encodable, Sendable {
 nonisolated private struct OAuthExchangeResponse: Decodable, Sendable {
     let signupRequired: Bool
     let signupUuid: String?
+    let expiresIn: Int?
+    let reauthProof: String?
 }
 
 nonisolated struct SsoSignupRequest: Encodable, Sendable {
@@ -228,6 +235,42 @@ final class MobileOAuthClient {
         guard callback.linked else {
             throw MobileOAuthError.invalidCallback
         }
+    }
+
+    /// Reauthenticates the current member without creating a new login session.
+    /// The short-lived proof is intentionally returned only to the in-memory deletion flow.
+    func reauthenticateForAccountDeletion(provider: OAuthProvider) async throws -> MobileOAuthReauthProof {
+        let pkce = PKCEPair.make()
+        let callback = try await authorize(provider: provider, purpose: "DELETE_ACCOUNT", pkce: pkce)
+        if callback.error == "oauth_cancelled" {
+            throw MobileOAuthError.cancelled
+        }
+        if let error = callback.error {
+            throw MobileOAuthError.provider(error)
+        }
+        guard let code = callback.code else {
+            throw MobileOAuthError.invalidCallback
+        }
+
+        let response: OAuthExchangeResponse = try await client.request(
+            "auth/mobile/oauth/exchange",
+            method: .post,
+            body: OAuthExchangeRequest(
+                code: code,
+                codeVerifier: pkce.verifier,
+                callbackUri: Self.callbackURI
+            ),
+            retryingAfterUnauthorized: false
+        )
+        guard response.signupRequired == false,
+              let proof = response.reauthProof,
+              !proof.isEmpty,
+              let expiresIn = response.expiresIn,
+              expiresIn > 0
+        else {
+            throw MobileOAuthError.invalidCallback
+        }
+        return MobileOAuthReauthProof(value: proof, expiresIn: expiresIn)
     }
 
     func currentPolicies() async throws -> CurrentPoliciesDTO {

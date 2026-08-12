@@ -100,6 +100,32 @@ final class MobileOAuthClientTests: XCTestCase {
         XCTAssertEqual(web.openedURL?.host, "accounts.example")
     }
 
+    @MainActor
+    func testAccountDeletionReauthUsesDeletePurposeAndReturnsProof() async throws {
+        let recorder = OAuthRequestRecorder()
+        OAuthURLProtocolStub.handler = { request in
+            try recorder.response(for: request)
+        }
+        let web = OAuthWebAuthenticatorStub(
+            callback: URL(string: "dutypark://oauth/callback?code=delete-code")!
+        )
+        let client = MobileOAuthClient(client: makeClient(), webAuthenticator: web)
+
+        let proof = try await client.reauthenticateForAccountDeletion(provider: .naver)
+
+        XCTAssertEqual(proof, MobileOAuthReauthProof(value: "delete-proof", expiresIn: 300))
+        let requests = recorder.requests
+        XCTAssertEqual(requests.map(\.url?.path), [
+            "/api/auth/mobile/oauth/authorize",
+            "/api/auth/mobile/oauth/exchange",
+        ])
+        XCTAssertEqual(
+            try XCTUnwrap(Self.jsonBody(requests[0]))["purpose"] as? String,
+            "DELETE_ACCOUNT"
+        )
+        XCTAssertEqual(try XCTUnwrap(Self.jsonBody(requests[1]))["code"] as? String, "delete-code")
+    }
+
     func testProviderCallbackErrorsUseSpecificLocalizedMessages() throws {
         let bundle = try localizedBundle("ko")
 
@@ -170,6 +196,7 @@ private final class OAuthRequestRecorder: @unchecked Sendable {
     private var storedRequests: [URLRequest] = []
     private let challengeFirstLinkAuthorize: Bool
     private var didChallengeLinkAuthorize = false
+    private var didAuthorizeDeletion = false
 
     init(challengeFirstLinkAuthorize: Bool = false) {
         self.challengeFirstLinkAuthorize = challengeFirstLinkAuthorize
@@ -182,6 +209,11 @@ private final class OAuthRequestRecorder: @unchecked Sendable {
     func response(for request: URLRequest) throws -> (HTTPURLResponse, Data) {
         let statusAndBody: (Int, String) = lock.withLock {
             storedRequests.append(request)
+            if request.url?.path == "/api/auth/mobile/oauth/authorize",
+               let body = MobileOAuthClientTests.jsonBody(request),
+               body["purpose"] as? String == "DELETE_ACCOUNT" {
+                didAuthorizeDeletion = true
+            }
             if challengeFirstLinkAuthorize,
                request.url?.path == "/api/auth/mobile/oauth/authorize",
                let body = MobileOAuthClientTests.jsonBody(request),
@@ -208,7 +240,9 @@ private final class OAuthRequestRecorder: @unchecked Sendable {
         case "/api/auth/mobile/oauth/authorize":
             #"{"authorizationUrl":"https://accounts.example/authorize","expiresIn":300}"#
         case "/api/auth/mobile/oauth/exchange":
-            #"{"signupRequired":false,"signupUuid":null,"expiresIn":3600}"#
+            didAuthorizeDeletion
+                ? #"{"signupRequired":false,"signupUuid":null,"expiresIn":300,"reauthProof":"delete-proof"}"#
+                : #"{"signupRequired":false,"signupUuid":null,"expiresIn":3600}"#
         case "/api/auth/refresh":
             #"{}"#
         default:

@@ -39,6 +39,59 @@ nonisolated struct DeletedSessionsResponse: Decodable, Equatable, Sendable {
     let deletedCount: Int
 }
 
+nonisolated struct AccountDeletionPreview: Decodable, Equatable, Sendable {
+    let hasPassword: Bool
+    let socialProviders: [OAuthProvider]
+    let teamImpact: AccountDeletionTeamImpact?
+    let auxiliaryImpacts: [AccountDeletionAuxiliaryImpact]
+}
+
+nonisolated struct AccountDeletionTeamImpact: Decodable, Equatable, Sendable {
+    let teamId: Int64
+    let teamName: String
+    let isAdmin: Bool
+    let activeMemberCount: Int
+    let willDeleteTeam: Bool
+    let transferCandidates: [AccountDeletionTransferCandidate]
+}
+
+nonisolated struct AccountDeletionTransferCandidate: Decodable, Equatable, Identifiable, Sendable {
+    let memberId: Int64
+    let name: String
+
+    var id: Int64 { memberId }
+}
+
+nonisolated struct AccountDeletionAuxiliaryImpact: Decodable, Equatable, Identifiable, Sendable {
+    let memberId: Int64
+    let name: String
+    let willDelete: Bool
+
+    var id: Int64 { memberId }
+}
+
+nonisolated struct AccountDeletionReauthRequest: Encodable, Equatable, Sendable {
+    let purpose: String
+    let password: String
+}
+
+nonisolated struct AccountDeletionReauthProof: Decodable, Equatable, Sendable {
+    let reauthProof: String
+    let expiresIn: Int
+}
+
+nonisolated struct AccountDeletionRequest: Encodable, Equatable, Sendable {
+    let confirmation: String
+    let password: String?
+    let reauthProof: String
+    let transferAdminToMemberId: Int64?
+}
+
+nonisolated struct AccountDeletionAccepted: Decodable, Equatable, Sendable {
+    let jobId: Int64
+    let status: String
+}
+
 nonisolated struct SettingsService: Sendable {
     private let client: APIClient
 
@@ -171,6 +224,43 @@ nonisolated struct SettingsService: Sendable {
             method: .delete
         )
         return response.deletedCount
+    }
+
+    func unlinkSocialAccount(_ provider: OAuthProvider) async throws {
+        _ = try await client.data(
+            "members/me/social-accounts/\(provider.rawValue)",
+            method: .delete
+        )
+    }
+
+    func accountDeletionPreview() async throws -> AccountDeletionPreview {
+        try await client.request("members/me/deletion")
+    }
+
+    func reauthenticateForAccountDeletion(password: String) async throws -> AccountDeletionReauthProof {
+        try await client.request(
+            "auth/reauth/password",
+            method: .post,
+            body: AccountDeletionReauthRequest(purpose: "DELETE_ACCOUNT", password: password),
+            retryingAfterUnauthorized: false
+        )
+    }
+
+    func requestAccountDeletion(
+        reauthProof: String,
+        transferAdminToMemberId: Int64?
+    ) async throws -> AccountDeletionAccepted {
+        try await client.request(
+            "members/me/deletion",
+            method: .post,
+            body: AccountDeletionRequest(
+                confirmation: "DELETE",
+                password: nil,
+                reauthProof: reauthProof,
+                transferAdminToMemberId: transferAdminToMemberId
+            ),
+            retryingAfterUnauthorized: false
+        )
     }
 
     func profilePhotoURL(memberID: Int64, version: Int64) -> URL {

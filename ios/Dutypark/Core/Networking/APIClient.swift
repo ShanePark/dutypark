@@ -63,6 +63,12 @@ actor RefreshGate {
             throw error
         }
     }
+
+    func reset() {
+        task?.cancel()
+        task = nil
+        generation &+= 1
+    }
 }
 
 private actor AuthenticationMode {
@@ -258,6 +264,17 @@ nonisolated final class APIClient: Sendable {
         _ handler: (@Sendable () async -> Void)?
     ) async {
         await authenticationMode.setAuthenticationFailureHandler(handler)
+    }
+
+    func clearLocalAuthentication() async {
+        for cookie in cookieStorage?.cookies ?? []
+        where cookie.name == "access_token" || cookie.name == "refresh_token" {
+            cookieStorage?.deleteCookie(cookie)
+        }
+        URLCache.shared.removeAllCachedResponses()
+        await refreshGate.reset()
+        await authenticationMode.setImpersonating(false)
+        await authenticationMode.setAuthenticationFailureHandler(nil)
     }
 
     private func perform(

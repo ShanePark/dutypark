@@ -8,6 +8,10 @@ enum SessionState: Equatable {
     case authenticated(LoginMember)
 }
 
+nonisolated enum AccountDeletionAcceptedPresentation: Equatable, Sendable {
+    case accepted
+}
+
 @MainActor
 final class SessionStore: ObservableObject {
     private static let impersonationExpirationKey = "dp-impersonation-expires"
@@ -21,6 +25,7 @@ final class SessionStore: ObservableObject {
     @Published private(set) var loginRemainingAttempts: Int?
     @Published private(set) var impersonationExpiresAt: Date?
     @Published private(set) var pendingDestination: URL?
+    @Published private(set) var accountDeletionAcceptedPresentation: AccountDeletionAcceptedPresentation?
 
     init(
         authService: AuthService = AuthService(),
@@ -35,6 +40,7 @@ final class SessionStore: ObservableObject {
 
     func restore() async {
         guard state == .restoring else { return }
+        accountDeletionAcceptedPresentation = nil
         do {
             if let member = try await authService.restore() {
                 await authenticate(member)
@@ -55,6 +61,7 @@ final class SessionStore: ObservableObject {
     func login(email: String, password: String, rememberMe: Bool) async {
         guard !isWorking else { return }
         isWorking = true
+        accountDeletionAcceptedPresentation = nil
         loginErrorKey = nil
         loginRemainingAttempts = nil
         defer { isWorking = false }
@@ -96,6 +103,23 @@ final class SessionStore: ObservableObject {
         await becomeGuest()
     }
 
+    /// Completes the irreversible local side of account deletion after the server
+    /// accepted the deletion job (or reports that the account is already pending).
+    func completeAccountDeletion() async {
+        if case .authenticated(let member) = state {
+            UserDefaults.standard.removeObject(forKey: "selectedDday_\(member.id)")
+        }
+        UserDefaults.standard.removeObject(forKey: "dp-remember-email")
+        await authService.clearLocalAuthentication()
+        pendingDestination = nil
+        await becomeGuest()
+        accountDeletionAcceptedPresentation = .accepted
+    }
+
+    func dismissAccountDeletionAcceptedPresentation() {
+        accountDeletionAcceptedPresentation = nil
+    }
+
     func finishExternalLogin() async throws {
         guard let member = try await authService.status() else {
             throw APIError.invalidResponse
@@ -109,6 +133,7 @@ final class SessionStore: ObservableObject {
         impersonationExpiresAt = expiration
         UserDefaults.standard.set(expiration, forKey: Self.impersonationExpirationKey)
         AIScheduleParsingConsentStore.shared.scope(to: member.id)
+        accountDeletionAcceptedPresentation = nil
         state = .authenticated(member)
         scheduleImpersonationExpiration(at: expiration)
     }
@@ -118,6 +143,7 @@ final class SessionStore: ObservableObject {
             let member = try await authService.restoreOriginalAccount()
             clearImpersonationExpiration()
             AIScheduleParsingConsentStore.shared.scope(to: member.id)
+            accountDeletionAcceptedPresentation = nil
             state = .authenticated(member)
         } catch {
             await becomeGuest()
@@ -138,6 +164,7 @@ final class SessionStore: ObservableObject {
     }
 
     private func authenticate(_ member: LoginMember) async {
+        accountDeletionAcceptedPresentation = nil
         await authService.setAuthenticationFailureHandler { [weak self] in
             await self?.authenticationDidFail()
         }

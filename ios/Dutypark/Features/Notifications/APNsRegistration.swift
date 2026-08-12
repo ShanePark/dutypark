@@ -153,6 +153,17 @@ final class APNsRegistrationManager: ObservableObject {
         }
     }
 
+    func completeAccountDeletionCleanup() async {
+        defaults.removeObject(forKey: Self.storedTokenKey)
+        hasRequestedRemoteRegistration = false
+        registrationState = .idle
+        let center = UNUserNotificationCenter.current()
+        center.removeAllDeliveredNotifications()
+        center.removeAllPendingNotificationRequests()
+        try? await center.setBadgeCount(0)
+        NotificationPushCenter.shared.resetForAccountDeletion()
+    }
+
     func didRegisterForRemoteNotifications(deviceToken: Data) async {
         guard isEnabled else {
             registrationState = .idle
@@ -199,6 +210,10 @@ final class NotificationPushCenter: ObservableObject {
     func consumePendingNotificationID() -> NotificationID? {
         defer { pendingNotificationID = nil }
         return pendingNotificationID
+    }
+
+    func resetForAccountDeletion() {
+        pendingNotificationID = nil
     }
 
     nonisolated static func notificationID(from userInfo: [AnyHashable: Any]) -> NotificationID? {
