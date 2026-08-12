@@ -404,7 +404,8 @@ struct CalendarView: View {
         showsTodoBoard = true
     }
 
-    private func openTodo(_ id: TodoID) {
+    private func openTodo(_ rawID: String) {
+        guard let id = TodoID(uuidString: rawID) else { return }
         todoTarget = id
         showsTodoBoard = true
     }
