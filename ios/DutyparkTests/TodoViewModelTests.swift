@@ -11,18 +11,140 @@ struct TodoViewModelTests {
         #expect(TodoBoardLayout.columnGap == 10)
         #expect(TodoBoardLayout.columnRadius == 12)
         #expect(TodoBoardLayout.cardRadius == 14)
+        #expect(TodoBoardLayout.dragHandleSize == 44)
+        #expect(TodoBoardLayout.dragActivationDistance == 2)
 
         #expect(375 * TodoBoardLayout.mobileColumnWidthRatio == 232.5)
         #expect(402 * TodoBoardLayout.mobileColumnWidthRatio == 249.24)
+    }
+
+    @Test(arguments: [
+        (CGSize(width: 0, height: 2), true),
+        (CGSize(width: 0, height: -12), true),
+        (CGSize(width: 2, height: 0), true),
+        (CGSize(width: -8, height: 10), true),
+        (CGSize(width: 1, height: 1), false)
+    ])
+    func handleDragReordersImmediatelyInEveryDirection(
+        translation: CGSize,
+        expected: Bool
+    ) {
+        #expect(TodoHandleDragActivation.shouldReorder(translation: translation) == expected)
+    }
+
+    @Test
+    func immediateHandleDragDoesNotMoveWhileStillInsideItsSourceCard() {
+        let sourceID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
+        let otherID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
+        let cards = [
+            TodoCardDropTarget(
+                todoID: sourceID,
+                status: .todo,
+                frame: CGRect(x: 10, y: 100, width: 200, height: 80)
+            ),
+            TodoCardDropTarget(
+                todoID: otherID,
+                status: .todo,
+                frame: CGRect(x: 10, y: 190, width: 200, height: 80)
+            )
+        ]
+
+        let target = TodoDragTargetResolver.resolve(
+            location: CGPoint(x: 190, y: 104),
+            draggedTodoID: sourceID,
+            cards: cards,
+            columns: [TodoColumnDropTarget(
+                status: .todo,
+                frame: CGRect(x: 0, y: 80, width: 220, height: 400)
+            )],
+            statuses: []
+        )
+
+        #expect(target == nil)
+    }
+
+    @Test
+    func handleDragMapsCardGapsAndColumnBottomToStableDropTargets() {
+        let sourceID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
+        let otherID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
+        let cards = [
+            TodoCardDropTarget(
+                todoID: sourceID,
+                status: .todo,
+                frame: CGRect(x: 10, y: 100, width: 200, height: 80)
+            ),
+            TodoCardDropTarget(
+                todoID: otherID,
+                status: .todo,
+                frame: CGRect(x: 10, y: 190, width: 200, height: 80)
+            )
+        ]
+        let columns = [TodoColumnDropTarget(
+            status: .todo,
+            frame: CGRect(x: 0, y: 80, width: 220, height: 400)
+        )]
+
+        let gapTarget = TodoDragTargetResolver.resolve(
+            location: CGPoint(x: 100, y: 185),
+            draggedTodoID: sourceID,
+            cards: cards,
+            columns: columns,
+            statuses: []
+        )
+        let bottomTarget = TodoDragTargetResolver.resolve(
+            location: CGPoint(x: 100, y: 350),
+            draggedTodoID: sourceID,
+            cards: cards,
+            columns: columns,
+            statuses: []
+        )
+
+        #expect(gapTarget == TodoResolvedDropTarget(
+            status: .todo,
+            todoID: otherID,
+            insertAfter: false
+        ))
+        #expect(bottomTarget == TodoResolvedDropTarget(
+            status: .todo,
+            todoID: nil,
+            insertAfter: false
+        ))
+    }
+
+    @Test
+    func statusSelectorTakesPriorityAsCrossColumnDropTarget() {
+        let sourceID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
+        let target = TodoDragTargetResolver.resolve(
+            location: CGPoint(x: 250, y: 24),
+            draggedTodoID: sourceID,
+            cards: [],
+            columns: [],
+            statuses: [TodoStatusDropTarget(
+                status: .done,
+                frame: CGRect(x: 220, y: 0, width: 100, height: 48)
+            )]
+        )
+
+        #expect(target == TodoResolvedDropTarget(
+            status: .done,
+            todoID: nil,
+            insertAfter: false
+        ))
     }
 
     @Test
     func todoCatalogResolvesFeatureAndCommonKeysInEverySupportedLocale() {
         let keys = [
             "todo.action.add",
+            "todo.action.complete",
+            "todo.action.delete",
+            "todo.action.leaveTag",
+            "todo.action.reopen",
             "todo.drag.dropHere",
             "todo.drag.hint",
             "todo.error.load",
+            "common.close",
+            "common.edit",
             "common.save"
         ]
         let locales = ["ko", "en", "ja", "zh-Hans", "es"]
@@ -35,6 +157,25 @@ struct TodoViewModelTests {
                 )
             }
         }
+    }
+
+    @Test
+    func detailModalFitsShortContentAndCapsLongContentForIPhone13Mini() {
+        let availableOverlayHeight: CGFloat = 780
+        let maximumPanelHeight = availableOverlayHeight * TodoModalLayout.maximumPanelHeightRatio
+        let fixedChromeHeight: CGFloat = 176
+
+        #expect(TodoModalLayout.maximumPanelHeightRatio == 0.9)
+        #expect(TodoModalLayout.bodyHeight(
+            contentHeight: 148,
+            maximumPanelHeight: maximumPanelHeight,
+            fixedChromeHeight: fixedChromeHeight
+        ) == 148)
+        #expect(TodoModalLayout.bodyHeight(
+            contentHeight: 900,
+            maximumPanelHeight: maximumPanelHeight,
+            fixedChromeHeight: fixedChromeHeight
+        ) == 526)
     }
 
     @Test
@@ -124,6 +265,37 @@ struct TodoViewModelTests {
 
         #expect(succeeded)
         #expect(update?.request.orderedAttachmentIds == [first.id, second.id])
+    }
+
+    @Test
+    func detailAttachmentPreloadCachesFilesForEditing() async {
+        let todo = makeTodo(hasAttachments: true)
+        let attachment = makeAttachment(id: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!)
+        let repository = FakeTodoRepository(
+            board: makeBoard(todo: [todo]),
+            attachments: [attachment]
+        )
+        let model = TodoViewModel(repository: repository)
+
+        await model.loadAttachments(for: todo)
+
+        #expect(model.attachmentsByTodoID[todo.uuid] == [attachment])
+        #expect(model.errorKey == nil)
+    }
+
+    @Test
+    func failedDetailAttachmentPreloadKeepsEditingLockedAndReportsError() async {
+        let todo = makeTodo(hasAttachments: true)
+        let repository = FakeTodoRepository(
+            board: makeBoard(todo: [todo]),
+            shouldFailAttachmentFetch: true
+        )
+        let model = TodoViewModel(repository: repository)
+
+        await model.loadAttachments(for: todo)
+
+        #expect(model.attachmentsByTodoID[todo.uuid] == nil)
+        #expect(model.errorKey == "todo.error.attachments")
     }
 
     @Test
@@ -236,20 +408,28 @@ private actor FakeTodoRepository: TodoRepository {
     var statusChange: (id: TodoID, request: TodoStatusChangeRequest)?
     var positionRequest: TodoPositionUpdateRequest?
     let shouldFailPositionUpdate: Bool
+    let shouldFailAttachmentFetch: Bool
 
     init(
         board: TodoBoardDTO,
         attachments: [AttachmentDTO] = [],
-        shouldFailPositionUpdate: Bool = false
+        shouldFailPositionUpdate: Bool = false,
+        shouldFailAttachmentFetch: Bool = false
     ) {
         self.board = board
         self.attachments = attachments
         self.shouldFailPositionUpdate = shouldFailPositionUpdate
+        self.shouldFailAttachmentFetch = shouldFailAttachmentFetch
     }
 
     func fetchBoard() async throws -> TodoBoardDTO { board }
     func fetchFriends() async throws -> [FriendDTO] { [] }
-    func fetchAttachments(todoID: TodoID) async throws -> [AttachmentDTO] { attachments }
+    func fetchAttachments(todoID: TodoID) async throws -> [AttachmentDTO] {
+        if shouldFailAttachmentFetch {
+            throw CocoaError(.fileReadUnknown)
+        }
+        return attachments
+    }
     func create(_ request: TodoRequest) async throws -> TodoDTO { board.todo[0] }
 
     func update(id: TodoID, request: TodoRequest) async throws -> TodoDTO {
