@@ -400,6 +400,15 @@ struct TodoViewModelTests {
             "todo.drag.dropHere",
             "todo.drag.hint",
             "todo.error.load",
+            "todo.help.open",
+            "todo.help.title",
+            "todo.help.kanban.body",
+            "todo.help.todo.body",
+            "todo.help.progress.body",
+            "todo.help.done.body",
+            "todo.help.tips.title",
+            "todo.help.tip.1",
+            "todo.help.tip.5",
             "common.close",
             "common.edit",
             "common.save"
@@ -433,6 +442,16 @@ struct TodoViewModelTests {
             maximumPanelHeight: maximumPanelHeight,
             fixedChromeHeight: fixedChromeHeight
         ) == 526)
+    }
+
+    @Test
+    func destructiveConfirmationMapsDeleteAndLeaveActions() {
+        #expect(TodoDestructiveConfirmation.delete.titleKey == "todo.confirm.deleteTitle")
+        #expect(TodoDestructiveConfirmation.delete.messageKey == "todo.confirm.deleteMessage")
+        #expect(TodoDestructiveConfirmation.delete.actionKey == "todo.action.delete")
+        #expect(TodoDestructiveConfirmation.leaveTag.titleKey == "todo.confirm.leaveTitle")
+        #expect(TodoDestructiveConfirmation.leaveTag.messageKey == "todo.confirm.leaveMessage")
+        #expect(TodoDestructiveConfirmation.leaveTag.actionKey == "todo.action.leaveTag")
     }
 
     @Test

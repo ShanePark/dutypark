@@ -14,17 +14,169 @@ enum TodoModalLayout {
     }
 }
 
+enum TodoDestructiveConfirmation: Equatable {
+    case delete
+    case leaveTag
+
+    var titleKey: String {
+        switch self {
+        case .delete: "todo.confirm.deleteTitle"
+        case .leaveTag: "todo.confirm.leaveTitle"
+        }
+    }
+
+    var messageKey: String {
+        switch self {
+        case .delete: "todo.confirm.deleteMessage"
+        case .leaveTag: "todo.confirm.leaveMessage"
+        }
+    }
+
+    var actionKey: String {
+        switch self {
+        case .delete: "todo.action.delete"
+        case .leaveTag: "todo.action.leaveTag"
+        }
+    }
+}
+
+struct TodoDestructiveConfirmationModal: View {
+    let confirmation: TodoDestructiveConfirmation
+    let isWorking: Bool
+    let cancel: () -> Void
+    let confirm: () -> Void
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Text(todoLocalized(confirmation.titleKey))
+                .font(DPTypography.bodyMedium)
+                .foregroundStyle(DPColor.textPrimary)
+                .frame(maxWidth: .infinity, minHeight: 56)
+                .padding(.horizontal, DPSpacing.large)
+                .background(DPColor.backgroundTertiary)
+
+            Text(todoLocalized(confirmation.messageKey))
+                .font(DPTypography.supporting)
+                .foregroundStyle(DPColor.textSecondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(DPSpacing.large)
+                .frame(maxWidth: .infinity)
+
+            HStack(spacing: DPSpacing.compact) {
+                Button(action: confirm) {
+                    Group {
+                        if isWorking {
+                            ProgressView().tint(DPColor.textOnDark)
+                        } else {
+                            Text(todoLocalized(confirmation.actionKey))
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(DPDestructiveButtonStyle())
+                .disabled(isWorking)
+                .accessibilityIdentifier("todo.confirm.confirm")
+
+                Button(todoLocalized("common.cancel"), action: cancel)
+                    .buttonStyle(DPOutlineButtonStyle())
+                    .frame(maxWidth: .infinity)
+                    .disabled(isWorking)
+                    .accessibilityIdentifier("todo.confirm.cancel")
+            }
+            .padding(.horizontal, DPSpacing.large)
+            .padding(.bottom, DPSpacing.large)
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
+
+struct TodoHelpModal: View {
+    let maximumHeight: CGFloat
+    let dismiss: () -> Void
+
+    private let sections: [(String, String, String, Color)] = [
+        ("square.grid.2x2", "todo.help.kanban.title", "todo.help.kanban.body", DPColor.accent),
+        ("list.bullet", "todo.help.todo.title", "todo.help.todo.body", DPColor.accent),
+        ("clock", "todo.help.progress.title", "todo.help.progress.body", DPColor.warning),
+        ("checkmark.circle", "todo.help.done.title", "todo.help.done.body", DPColor.success)
+    ]
+
+    var body: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text(todoLocalized("todo.help.title"))
+                    .font(DPTypography.heading)
+                    .foregroundStyle(DPColor.textPrimary)
+                Spacer()
+                Button(action: dismiss) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 17, weight: .semibold))
+                        .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(todoLocalized("common.close"))
+            }
+            .padding(.leading, DPSpacing.medium)
+            .padding(.trailing, DPSpacing.small)
+            .padding(.vertical, DPSpacing.small)
+            .background(DPColor.backgroundTertiary)
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: DPSpacing.large) {
+                    ForEach(Array(sections.enumerated()), id: \.offset) { _, section in
+                        helpSection(icon: section.0, titleKey: section.1, bodyKey: section.2, color: section.3)
+                    }
+
+                    VStack(alignment: .leading, spacing: DPSpacing.small) {
+                        Label(todoLocalized("todo.help.tips.title"), systemImage: "lightbulb")
+                            .font(DPTypography.bodyMedium)
+                            .foregroundStyle(DPColor.warning)
+                        ForEach(1...5, id: \.self) { index in
+                            HStack(alignment: .firstTextBaseline, spacing: DPSpacing.small) {
+                                Text("•")
+                                Text(todoLocalized("todo.help.tip.\(index)"))
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            .font(DPTypography.supporting)
+                            .foregroundStyle(DPColor.textSecondary)
+                        }
+                    }
+                }
+                .padding(DPSpacing.medium)
+            }
+            .scrollBounceBehavior(.basedOnSize)
+        }
+        .frame(maxHeight: min(maximumHeight * TodoModalLayout.maximumPanelHeightRatio, 720))
+        .background(DPColor.backgroundModal)
+    }
+
+    private func helpSection(icon: String, titleKey: String, bodyKey: String, color: Color) -> some View {
+        VStack(alignment: .leading, spacing: DPSpacing.small) {
+            Label(todoLocalized(titleKey), systemImage: icon)
+                .font(DPTypography.bodyMedium)
+                .foregroundStyle(color)
+            Text(todoLocalized(bodyKey))
+                .font(DPTypography.supporting)
+                .foregroundStyle(DPColor.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
 /// Web-style, content-fitting Todo detail panel presented inside `DPModalOverlay`.
 struct TodoDetailModal: View {
     @ObservedObject var model: TodoViewModel
     let todo: TodoDTO
     let maximumHeight: CGFloat
     let onTodoChanged: () async -> Void
+    let onDismissabilityChange: (Bool) -> Void
     let dismiss: () -> Void
 
     @State private var showingEdit = false
-    @State private var showingDeleteConfirmation = false
-    @State private var showingLeaveConfirmation = false
+    @State private var confirmation: TodoDestructiveConfirmation?
+    @State private var isConfirming = false
     @State private var headerHeight: CGFloat = 0
     @State private var footerHeight: CGFloat = 0
     @State private var bodyContentHeight: CGFloat = 0
@@ -36,12 +188,14 @@ struct TodoDetailModal: View {
         todo: TodoDTO,
         maximumHeight: CGFloat,
         onTodoChanged: @escaping () async -> Void,
+        onDismissabilityChange: @escaping (Bool) -> Void = { _ in },
         dismiss: @escaping () -> Void
     ) {
         self.model = model
         self.todo = todo
         self.maximumHeight = maximumHeight
         self.onTodoChanged = onTodoChanged
+        self.onDismissabilityChange = onDismissabilityChange
         self.dismiss = dismiss
         _gallery = StateObject(
             wrappedValue: AttachmentGalleryModel(contextType: .todo, contextId: todo.id)
@@ -61,6 +215,51 @@ struct TodoDetailModal: View {
     }
 
     var body: some View {
+        Group {
+            if showingEdit {
+                TodoFormSheet(
+                    titleKey: "todo.form.editTitle",
+                    initialDraft: TodoDraft(todo: todo),
+                    friends: model.friends,
+                    model: model,
+                    targetTodoID: todo.id,
+                    existingAttachments: model.attachmentsByTodoID[todo.uuid, default: []],
+                    isSaving: model.isSaving,
+                    maximumHeight: maximumHeight,
+                    dismissAction: { showingEdit = false },
+                    savedDismissAction: dismiss,
+                    onBusyChange: { onDismissabilityChange(!$0) }
+                ) { draft in
+                    let updated = await model.update(todo: todo, draft: draft)
+                    if updated { await onTodoChanged() }
+                    return updated
+                }
+            } else if let confirmation {
+                TodoDestructiveConfirmationModal(
+                    confirmation: confirmation,
+                    isWorking: isConfirming || model.isSaving,
+                    cancel: { self.confirmation = nil },
+                    confirm: performConfirmation
+                )
+            } else {
+                detailContent
+            }
+        }
+        .frame(maxHeight: maximumPanelHeight, alignment: .top)
+        .task(id: todo.uuid) {
+            guard todo.hasAttachments, model.attachmentsByTodoID[todo.uuid] == nil else { return }
+            isLoadingEditAttachments = true
+            await model.loadAttachments(for: todo)
+            isLoadingEditAttachments = false
+        }
+        .onChange(of: model.isSaving) { _, isSaving in
+            onDismissabilityChange(!isSaving && !isConfirming)
+        }
+        .onDisappear { onDismissabilityChange(true) }
+        .todoModalErrorAlert(model)
+    }
+
+    private var detailContent: some View {
         VStack(spacing: 0) {
             header
                 .background {
@@ -100,69 +299,32 @@ struct TodoDetailModal: View {
                     }
                 }
         }
-        .frame(maxHeight: maximumPanelHeight, alignment: .top)
         .background(DPColor.backgroundModal)
         .onPreferenceChange(TodoModalHeaderHeightPreferenceKey.self) { headerHeight = $0 }
         .onPreferenceChange(TodoModalBodyHeightPreferenceKey.self) { bodyContentHeight = $0 }
         .onPreferenceChange(TodoModalFooterHeightPreferenceKey.self) { footerHeight = $0 }
-        .task(id: todo.uuid) {
-            guard todo.hasAttachments, model.attachmentsByTodoID[todo.uuid] == nil else { return }
-            isLoadingEditAttachments = true
-            await model.loadAttachments(for: todo)
-            isLoadingEditAttachments = false
-        }
-        .fullScreenCover(isPresented: $showingEdit) {
-            TodoFormSheet(
-                titleKey: "todo.form.editTitle",
-                initialDraft: TodoDraft(todo: todo),
-                friends: model.friends,
-                model: model,
-                targetTodoID: todo.id,
-                existingAttachments: model.attachmentsByTodoID[todo.uuid, default: []],
-                isSaving: model.isSaving
-            ) { draft in
-                let updated = await model.update(todo: todo, draft: draft)
-                if updated {
-                    await onTodoChanged()
-                    dismiss()
-                }
-                return updated
+    }
+
+    private func performConfirmation() {
+        guard !isConfirming, let confirmation else { return }
+        isConfirming = true
+        onDismissabilityChange(false)
+        Task {
+            let succeeded: Bool
+            switch confirmation {
+            case .delete:
+                succeeded = await model.delete(todo)
+            case .leaveTag:
+                succeeded = await model.leaveTag(todo)
             }
-            .presentationBackground(.clear)
-        }
-        .confirmationDialog(
-            todoLocalized("todo.confirm.deleteTitle"),
-            isPresented: $showingDeleteConfirmation
-        ) {
-            Button(todoLocalized("todo.action.delete"), role: .destructive) {
-                Task {
-                    if await model.delete(todo) {
-                        await onTodoChanged()
-                        dismiss()
-                    }
-                }
+            isConfirming = false
+            onDismissabilityChange(true)
+            if succeeded {
+                await onTodoChanged()
+                await Task.yield()
+                dismiss()
             }
-            Button(todoLocalized("common.cancel"), role: .cancel) {}
-        } message: {
-            Text(todoLocalized("todo.confirm.deleteMessage"))
         }
-        .confirmationDialog(
-            todoLocalized("todo.confirm.leaveTitle"),
-            isPresented: $showingLeaveConfirmation
-        ) {
-            Button(todoLocalized("todo.action.leaveTag"), role: .destructive) {
-                Task {
-                    if await model.leaveTag(todo) {
-                        await onTodoChanged()
-                        dismiss()
-                    }
-                }
-            }
-            Button(todoLocalized("common.cancel"), role: .cancel) {}
-        } message: {
-            Text(todoLocalized("todo.confirm.leaveMessage"))
-        }
-        .todoModalErrorAlert(model)
     }
 
     private var header: some View {
@@ -276,7 +438,7 @@ struct TodoDetailModal: View {
                 title: todoLocalized("todo.action.leaveTag"),
                 systemImage: "xmark",
                 color: DPColor.warning,
-                action: { showingLeaveConfirmation = true }
+                action: { confirmation = .leaveTag }
             )
         } else {
             TodoModalBorderedAction(
@@ -292,7 +454,7 @@ struct TodoDetailModal: View {
                 title: todoLocalized("todo.action.delete"),
                 systemImage: "trash",
                 color: DPColor.danger,
-                action: { showingDeleteConfirmation = true }
+                action: { confirmation = .delete }
             )
         }
     }
