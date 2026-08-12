@@ -4,6 +4,7 @@ import axios, {
   type InternalAxiosRequestConfig,
 } from 'axios'
 import type { ApiError } from '@/types'
+import { shouldSkipUnauthorizedRefresh } from './unauthorizedRetryPolicy'
 
 let isRefreshing = false
 let refreshFailed = false
@@ -77,7 +78,8 @@ apiClient.interceptors.response.use(
     }
 
     // Skip auto-refresh for auth endpoints
-    const isAuthEndpoint = originalRequest?.url?.includes('/auth/token') ||
+    const isAuthEndpoint = shouldSkipUnauthorizedRefresh(originalRequest?.method, originalRequest?.url) ||
+                           originalRequest?.url?.includes('/auth/token') ||
                            originalRequest?.url?.includes('/auth/login') ||
                            originalRequest?.url?.includes('/auth/refresh') ||
                            originalRequest?.url?.includes('/auth/logout') ||

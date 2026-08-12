@@ -9,6 +9,51 @@ import type {
   CalendarVisibility,
   Page,
 } from '@/types'
+import { extractApiError } from '@/utils/resolveApiError'
+
+export type SocialAccountProvider = 'KAKAO' | 'NAVER'
+
+export type SocialAccountUnlinkErrorKey =
+  | 'member.sso.unlink.errors.lastAuthenticationMethod'
+  | 'member.sso.unlink.errors.impersonationForbidden'
+  | 'member.sso.unlink.errors.generic'
+
+type SocialAccountMember = Pick<MemberDto, 'kakaoId' | 'naverId'>
+
+export function isSocialAccountConnected(
+  member: SocialAccountMember | null,
+  provider: SocialAccountProvider,
+): boolean {
+  if (!member) return false
+  return provider === 'KAKAO' ? !!member.kakaoId : !!member.naverId
+}
+
+export function countLinkedSocialAccounts(member: SocialAccountMember | null): number {
+  if (!member) return 0
+  return Number(!!member.kakaoId) + Number(!!member.naverId)
+}
+
+export function canUnlinkSocialAccount(
+  member: SocialAccountMember | null,
+  provider: SocialAccountProvider,
+): boolean {
+  return isSocialAccountConnected(member, provider) && countLinkedSocialAccounts(member) >= 2
+}
+
+export function getSocialAccountUnlinkErrorKey(error: unknown): SocialAccountUnlinkErrorKey {
+  const apiError = extractApiError(error)
+
+  if (apiError?.code === 'member.social.unlink.lastAuthenticationMethod') {
+    return 'member.sso.unlink.errors.lastAuthenticationMethod'
+  }
+  if (
+    apiError?.code === 'member.social.unlink.impersonationForbidden'
+    || apiError?.status === 403
+  ) {
+    return 'member.sso.unlink.errors.impersonationForbidden'
+  }
+  return 'member.sso.unlink.errors.generic'
+}
 
 /**
  * Member API Client
@@ -91,6 +136,14 @@ export const memberApi = {
    */
   createAuxiliaryAccount(name: string) {
     return apiClient.post<MemberDto>('/members/auxiliary', { name })
+  },
+
+  /**
+   * Remove only Dutypark's local mapping to a social account.
+   * Provider-side accounts and authorizations remain unchanged.
+   */
+  unlinkSocialAccount(provider: SocialAccountProvider) {
+    return apiClient.delete<void>(`/members/me/social-accounts/${provider}`)
   },
 }
 

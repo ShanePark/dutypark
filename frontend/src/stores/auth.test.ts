@@ -11,12 +11,14 @@ const currentRoute = {
 let authFailureHandler: (() => void) | null = null
 let impersonationExpiredHandler: (() => void) | null = null
 
+const localStorageMock = {
+  getItem: vi.fn(() => null as string | null),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+}
+
 Object.defineProperty(globalThis, 'localStorage', {
-  value: {
-    getItem: vi.fn(() => null),
-    setItem: vi.fn(),
-    removeItem: vi.fn(),
-  },
+  value: localStorageMock,
   configurable: true,
 })
 
@@ -57,6 +59,10 @@ describe('auth store redirect handling', async () => {
     currentRoute.value.fullPath = '/duty/5?month=2'
     authFailureHandler = null
     impersonationExpiredHandler = null
+    localStorageMock.getItem.mockReset()
+    localStorageMock.getItem.mockReturnValue(null)
+    localStorageMock.setItem.mockClear()
+    localStorageMock.removeItem.mockClear()
   })
 
   it('redirects auth failures back to the original page after login', () => {
@@ -85,5 +91,35 @@ describe('auth store redirect handling', async () => {
         redirect: '/duty/5?month=2',
       },
     })
+  })
+
+  it('completes account deletion locally without redirecting or persisting completion state', async () => {
+    const { resetRefreshState } = await import('@/api/client')
+    vi.mocked(resetRefreshState).mockClear()
+    const store = useAuthStore()
+    store.setUser({
+      id: 1,
+      email: 'member@example.com',
+      name: 'Member',
+      teamId: null,
+      team: null,
+      isAdmin: false,
+      isImpersonating: false,
+      originalMemberId: null,
+    })
+
+    store.completeAccountDeletion()
+
+    expect(store.user).toBeNull()
+    expect(store.isLoggedIn).toBe(false)
+    expect(store.isInitialized).toBe(true)
+    expect(localStorageMock.removeItem).toHaveBeenCalledWith('dp-login-member')
+    expect(localStorageMock.removeItem).toHaveBeenCalledWith('dp-impersonation-expires')
+    expect(resetRefreshState).toHaveBeenCalled()
+    expect(push).not.toHaveBeenCalled()
+    expect(localStorageMock.setItem).not.toHaveBeenCalledWith(
+      expect.stringContaining('deletion'),
+      expect.anything(),
+    )
   })
 })

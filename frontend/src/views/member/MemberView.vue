@@ -1,11 +1,18 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, nextTick, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore, type ThemeMode } from '@/stores/theme'
-import { friendApi, memberApi, refreshTokenApi } from '@/api/member'
 import { useAiScheduleConsentStore } from '@/stores/aiScheduleConsent'
+import {
+  canUnlinkSocialAccount,
+  friendApi,
+  getSocialAccountUnlinkErrorKey,
+  memberApi,
+  refreshTokenApi,
+  type SocialAccountProvider,
+} from '@/api/member'
 import { authApi } from '@/api/auth'
 import { useSwal } from '@/composables/useSwal'
 import { useKakao } from '@/composables/useKakao'
@@ -19,7 +26,10 @@ import SessionTokenList from '@/components/common/SessionTokenList.vue'
 import ProfilePhotoUploader from '@/components/common/ProfilePhotoUploader.vue'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 import DutyPatternCard from '@/components/member/DutyPatternCard.vue'
+import SocialAccountConnectionModal from '@/components/member/SocialAccountConnectionModal.vue'
+import AccountDeletionModal from '@/components/member/AccountDeletionModal.vue'
 import AiSchedulePolicyModal from '@/components/common/AiSchedulePolicyModal.vue'
+import type { AccountDeletionCompletion } from '@/utils/accountDeletionFlow'
 import { resolveApiErrorMessage } from '@/utils/resolveApiError'
 import {
   User,
@@ -54,7 +64,7 @@ const authStore = useAuthStore()
 const themeStore = useThemeStore()
 const aiConsentStore = useAiScheduleConsentStore()
 const { t } = useI18n()
-const { showSuccess, showError, showInfo, confirm, toastSuccess } = useSwal()
+const { showSuccess, showError, showInfo, confirm, confirmDelete, toastSuccess } = useSwal()
 
 const showAiPolicyModal = ref(false)
 const aiConsentOn = computed(() => aiConsentStore.isCurrent)
@@ -262,9 +272,11 @@ const loading = ref(false)
 const tokensLoading = ref(false)
 const savingVisibility = ref(false)
 const savingManager = ref(false)
-type SsoProvider = 'Kakao' | 'Naver'
+type SsoProvider = SocialAccountProvider
 
 const connectingSso = ref<SsoProvider | null>(null)
+const unlinkingSso = ref<SsoProvider | null>(null)
+const isSsoActionPending = computed(() => !!connectingSso.value || !!unlinkingSso.value)
 
 // Visibility settings
 const calendarVisibility = ref<CalendarVisibility>('FRIENDS')
@@ -521,36 +533,56 @@ interface SsoConnection {
 }
 
 const ssoConnections = ref<SsoConnection[]>([])
+const selectedSsoConnection = ref<SsoConnection | null>(null)
+let ssoSettingsTrigger: HTMLElement | null = null
 
 function buildSsoConnections(member: MemberDto | null): SsoConnection[] {
   const connections: SsoConnection[] = [
     {
-      provider: 'Kakao',
+      provider: 'KAKAO',
       label: t('member.sso.providers.kakao'),
       icon: '/img/kakao.png',
       connected: !!member?.kakaoId,
     },
     {
-      provider: 'Naver',
+      provider: 'NAVER',
       label: t('member.sso.providers.naver'),
       icon: '/img/naver.svg',
       connected: !!member?.naverId,
     },
   ]
 
-  return connections.filter((connection) => connection.connected || connection.provider !== 'Naver' || isNaverEnabled)
+  return connections.filter((connection) => connection.connected || connection.provider !== 'NAVER' || isNaverEnabled)
+}
+
+function canUnlinkSso(provider: SsoProvider): boolean {
+  return canUnlinkSocialAccount(memberInfo.value, provider)
+}
+
+function openSsoSettings(connection: SsoConnection, event: Event) {
+  if (isSsoActionPending.value || !connection.connected) return
+  ssoSettingsTrigger = event.currentTarget instanceof HTMLElement ? event.currentTarget : null
+  selectedSsoConnection.value = connection
+}
+
+async function closeSsoSettings() {
+  if (isSsoActionPending.value) return
+  selectedSsoConnection.value = null
+  await nextTick()
+  ssoSettingsTrigger?.focus()
+  ssoSettingsTrigger = null
 }
 
 async function connectSso(provider: SsoProvider) {
-  if (connectingSso.value) return
+  if (isSsoActionPending.value) return
 
   const prompts: Record<SsoProvider, { message: string; title: string; connect: () => void }> = {
-    Kakao: {
+    KAKAO: {
       message: t('member.sso.prompts.kakaoMessage'),
       title: t('member.sso.prompts.kakaoTitle'),
       connect: () => kakaoLink(),
     },
-    Naver: {
+    NAVER: {
       message: t('member.sso.prompts.naverMessage'),
       title: t('member.sso.prompts.naverTitle'),
       connect: () => naverLink(),
@@ -559,7 +591,7 @@ async function connectSso(provider: SsoProvider) {
 
   const prompt = prompts[provider]
   const confirmed = await confirm(prompt.message, prompt.title)
-  if (!confirmed) return
+  if (!confirmed || isSsoActionPending.value) return
 
   connectingSso.value = provider
   try {
@@ -569,6 +601,33 @@ async function connectSso(provider: SsoProvider) {
     connectingSso.value = null
     showError(t('member.sso.startFailed'))
     return
+  }
+}
+
+async function unlinkSso(connection: SsoConnection) {
+  if (isSsoActionPending.value || !canUnlinkSso(connection.provider)) return
+
+  const confirmed = await confirmDelete(
+    t('member.sso.unlink.confirmMessage', { provider: connection.label }),
+    t('member.sso.unlink.confirmTitle', { provider: connection.label }),
+    t('member.sso.unlink.action'),
+  )
+  if (!confirmed || isSsoActionPending.value) return
+
+  let shouldCloseSettings = false
+  unlinkingSso.value = connection.provider
+  try {
+    await memberApi.unlinkSocialAccount(connection.provider)
+    await fetchMemberInfo()
+    ssoConnections.value = buildSsoConnections(memberInfo.value)
+    toastSuccess(t('member.sso.unlink.success', { provider: connection.label }))
+    shouldCloseSettings = true
+  } catch (error) {
+    console.error('Failed to unlink social account:', error)
+    showError(t(getSocialAccountUnlinkErrorKey(error)))
+  } finally {
+    unlinkingSso.value = null
+    if (shouldCloseSettings) await closeSsoSettings()
   }
 }
 
@@ -702,8 +761,25 @@ async function changePassword() {
 }
 
 // Account deletion
+const showAccountDeletionModal = ref(false)
+const accountDeletionCompletion = ref<AccountDeletionCompletion | null>(null)
+
 function deleteAccount() {
-  showInfo(t('member.account.deleteInfo'))
+  if (authStore.isImpersonating) {
+    showError(t('member.accountDeletion.errors.impersonation'))
+    return
+  }
+  showAccountDeletionModal.value = true
+}
+
+function completeAccountDeletion(completion: AccountDeletionCompletion) {
+  showAccountDeletionModal.value = false
+  accountDeletionCompletion.value = completion
+  authStore.completeAccountDeletion()
+}
+
+async function finishAccountDeletionCompletion() {
+  await router.push('/')
 }
 
 // Logout
@@ -758,11 +834,41 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
+
 })
 </script>
 
 <template>
   <div class="max-w-4xl mx-auto px-4 py-6">
+    <section
+      v-if="accountDeletionCompletion"
+      class="mx-auto mt-8 max-w-lg rounded-2xl border border-dp-border-primary bg-dp-bg-card p-5 text-center shadow-sm sm:p-8"
+      aria-live="polite"
+    >
+      <div class="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-dp-success-soft text-dp-success">
+        <Check class="h-7 w-7" aria-hidden="true" />
+      </div>
+      <h1 class="mt-4 text-xl font-bold text-dp-text-primary">
+        {{ accountDeletionCompletion === 'alreadyPending'
+          ? t('member.accountDeletion.completion.alreadyPendingTitle')
+          : t('member.accountDeletion.completion.acceptedTitle') }}
+      </h1>
+      <p class="mt-3 text-sm leading-6 text-dp-text-secondary">
+        {{ t('member.accountDeletion.completion.signedOut') }}
+      </p>
+      <p class="mt-2 text-sm leading-6 text-dp-text-secondary">
+        {{ t('member.accountDeletion.completion.asyncCleanup') }}
+      </p>
+      <button
+        type="button"
+        class="mt-6 min-h-11 w-full rounded-lg bg-dp-accent px-4 font-medium text-dp-text-on-dark transition hover:bg-dp-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dp-accent-ring"
+        @click="finishAccountDeletionCompletion"
+      >
+        {{ t('member.accountDeletion.completion.confirm') }}
+      </button>
+    </section>
+
+    <template v-else>
     <PageHeader :title="t('header.menu.settings')" :icon="Settings" />
 
     <!-- Loading State -->
@@ -1088,27 +1194,48 @@ onMounted(async () => {
           <div
             v-for="sso in ssoConnections"
             :key="sso.provider"
-            class="flex items-center justify-between p-3 rounded-lg bg-dp-bg-secondary"
+            class="flex min-h-16 items-center justify-between gap-3 rounded-lg bg-dp-bg-secondary p-3"
           >
-            <div class="flex items-center gap-3">
+            <div class="flex min-w-0 items-center gap-3">
               <img :src="sso.icon" :alt="sso.label" class="w-8 h-8 rounded" />
-              <div>
-                <p class="font-medium text-dp-text-primary">{{ sso.label }}</p>
+              <div class="min-w-0">
+                <p class="truncate font-medium text-dp-text-primary">{{ sso.label }}</p>
                 <p v-if="sso.connected && sso.accountName" class="text-sm text-dp-text-secondary">
                   {{ sso.accountName }}
                 </p>
               </div>
             </div>
-            <div>
-              <span v-if="sso.connected" class="flex items-center gap-1 text-dp-success text-sm">
+            <div class="flex shrink-0 items-center gap-2">
+              <span v-if="sso.connected" class="flex min-h-6 items-center gap-1 whitespace-nowrap rounded-full bg-dp-success-soft px-2 py-0.5 text-xs font-medium text-dp-success">
                 <Check class="w-4 h-4" />
                 {{ t('member.sso.connected') }}
               </span>
               <button
+                v-if="sso.connected"
+                type="button"
+                class="flex min-h-11 min-w-11 items-center justify-center rounded-lg text-dp-text-muted transition hover:bg-dp-bg-hover hover:text-dp-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dp-accent-ring disabled:cursor-not-allowed disabled:opacity-50"
+                :disabled="isSsoActionPending"
+                :aria-label="t('member.sso.unlink.manageAction', { provider: sso.label })"
+                :aria-describedby="`social-account-settings-hint-${sso.provider.toLowerCase()}`"
+                aria-haspopup="dialog"
+                :aria-expanded="selectedSsoConnection?.provider === sso.provider"
+                @click="openSsoSettings(sso, $event)"
+              >
+                <Settings class="h-5 w-5" aria-hidden="true" />
+              </button>
+              <span
+                v-if="sso.connected"
+                :id="`social-account-settings-hint-${sso.provider.toLowerCase()}`"
+                class="sr-only"
+              >
+                {{ t('member.sso.unlink.manageHint') }}
+              </span>
+              <button
                 v-else
+                type="button"
                 @click="connectSso(sso.provider)"
-                :disabled="!!connectingSso"
-                class="px-4 py-2.5 sm:py-1.5 min-h-11 sm:min-h-0 text-sm font-medium text-dp-accent bg-dp-accent-soft hover:bg-dp-accent-soft-hover rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                :disabled="isSsoActionPending"
+                class="min-h-11 w-full rounded-lg bg-dp-accent-soft px-4 py-2.5 text-sm font-medium text-dp-accent transition hover:bg-dp-accent-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dp-accent disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
               >
                 {{ connectingSso === sso.provider ? t('member.sso.connecting') : t('member.sso.connect') }}
               </button>
@@ -1154,11 +1281,31 @@ onMounted(async () => {
       </section>
     </template>
 
+    <AccountDeletionModal
+      v-if="memberInfo"
+      :is-open="showAccountDeletionModal"
+      :member-name="memberInfo.name"
+      @close="showAccountDeletionModal = false"
+      @completed="completeAccountDeletion"
+    />
+
     <!-- Visibility Modal -->
     <AiSchedulePolicyModal
       :is-open="showAiPolicyModal"
       :policy="aiConsentStore.consent?.policy ?? null"
       @close="showAiPolicyModal = false"
+    />
+
+    <SocialAccountConnectionModal
+      v-if="selectedSsoConnection"
+      :is-open="true"
+      :provider="selectedSsoConnection.provider"
+      :provider-label="selectedSsoConnection.label"
+      :provider-icon="selectedSsoConnection.icon"
+      :can-unlink="canUnlinkSso(selectedSsoConnection.provider)"
+      :busy="unlinkingSso === selectedSsoConnection.provider"
+      @close="closeSsoSettings"
+      @unlink="unlinkSso(selectedSsoConnection)"
     />
 
     <BaseModal
@@ -1396,6 +1543,7 @@ onMounted(async () => {
         </button>
       </div>
     </BaseModal>
+    </template>
   </div>
 </template>
 

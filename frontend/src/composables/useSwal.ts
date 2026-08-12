@@ -91,14 +91,18 @@ export function useSwal() {
     }).then((result) => result.isConfirmed)
   }
 
-  const confirmDelete = (message: string, title = translateGlobal('common.swal.confirmDelete')) => {
+  const confirmDelete = (
+    message: string,
+    title = translateGlobal('common.swal.confirmDelete'),
+    confirmButtonText = translateGlobal('common.actions.delete'),
+  ) => {
     const colors = getSwalColors()
     return Swal.fire({
       icon: 'warning',
       title,
       text: message,
       showCancelButton: true,
-      confirmButtonText: translateGlobal('common.actions.delete'),
+      confirmButtonText,
       cancelButtonText: translateGlobal('common.actions.cancel'),
       confirmButtonColor: colors.dangerButtonColor,
       cancelButtonColor: colors.cancelButtonColor,

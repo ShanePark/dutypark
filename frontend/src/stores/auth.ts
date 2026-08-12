@@ -140,6 +140,17 @@ export const useAuthStore = defineStore('auth', () => {
     isInitialized.value = false
   }
 
+  function completeAccountDeletion() {
+    user.value = null
+    saveCachedUser(null)
+    impersonationExpiresAt.value = null
+    saveImpersonationExpiresAt(null)
+    isLoading.value = false
+    isInitialized.value = true
+    initializePromise = null
+    resetRefreshState()
+  }
+
   function handleAuthFailure() {
     clearAuth()
     router.push(buildLoginRoute(router.currentRoute.value.fullPath))
@@ -229,6 +240,7 @@ export const useAuthStore = defineStore('auth', () => {
     logout,
     setUser,
     clearAuth,
+    completeAccountDeletion,
     checkAuth,
     impersonate,
     restore,
