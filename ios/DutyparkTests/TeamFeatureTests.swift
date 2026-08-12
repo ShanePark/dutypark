@@ -354,6 +354,21 @@ struct TeamFeatureTests {
     }
 
     @Test
+    func choosesTeamModalDismissBehaviorForPristineDirtyAndBusyStates() {
+        #expect(TeamModalInteractionState().dismissDecision == .dismiss)
+        #expect(TeamModalInteractionState(isDirty: true).dismissDecision == .confirmDiscard)
+        #expect(
+            TeamModalInteractionState(isDirty: true, isWorking: true).dismissDecision == .blocked
+        )
+    }
+
+    @Test
+    func closesConfirmationOnlyAfterSuccessfulRequest() {
+        #expect(TeamManageModalLogic.shouldDismissConfirmation(didSucceed: true))
+        #expect(TeamManageModalLogic.shouldDismissConfirmation(didSucceed: false) == false)
+    }
+
+    @Test
     func detectsDuplicateDutyNamesWhileExcludingEditedRow() {
         let defaultDuty = DutyTypeDTO(
             id: nil,

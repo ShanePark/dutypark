@@ -6,6 +6,10 @@ struct TeamManageView: View {
     @Environment(\.dismiss) private var dismissView
     @StateObject private var viewModel: TeamManageViewModel
     @State private var pendingAction: PendingAction?
+    @State private var pendingActionIsWorking = false
+    @State private var memberSearchIsWorking = false
+    @State private var dutyEditorInteraction = TeamModalInteractionState()
+    @State private var batchUploadInteraction = TeamModalInteractionState()
 
     init(teamID: TeamID, isServiceAdmin: Bool = false) {
         _viewModel = StateObject(
@@ -64,11 +68,14 @@ struct TeamManageView: View {
         }) {
             DPModalOverlay(
                 onDismiss: { viewModel.memberSearchPresented = false },
-                closeOnBackdrop: false
+                closeOnBackdrop: true,
+                canDismiss: !memberSearchIsWorking
             ) { availableSize, dismiss in
                 TeamMemberSearchView(
                     teamID: viewModel.teamID,
                     maximumHeight: availableSize.height,
+                    isWorking: $memberSearchIsWorking,
+                    dismissAfterSuccess: { viewModel.memberSearchPresented = false },
                     dismiss: dismiss
                 )
             }
@@ -76,12 +83,15 @@ struct TeamManageView: View {
         .fullScreenCover(isPresented: $viewModel.dutyEditorPresented) {
             DPModalOverlay(
                 onDismiss: { viewModel.dutyEditorPresented = false },
-                closeOnBackdrop: !viewModel.isWorking,
-                canDismiss: !viewModel.isWorking
+                closeOnBackdrop: true,
+                canDismiss: !dutyEditorInteraction.isWorking,
+                onDismissRequest: { _ in dutyEditorInteraction.dismissRequestSerial += 1 }
             ) { availableSize, dismiss in
                 TeamDutyTypeEditor(
                     viewModel: viewModel,
                     maximumHeight: availableSize.height,
+                    interaction: $dutyEditorInteraction,
+                    dismissAfterSuccess: { viewModel.dutyEditorPresented = false },
                     dismiss: dismiss
                 )
             }
@@ -89,12 +99,14 @@ struct TeamManageView: View {
         .fullScreenCover(isPresented: $viewModel.batchUploadPresented) {
             DPModalOverlay(
                 onDismiss: { viewModel.batchUploadPresented = false },
-                closeOnBackdrop: !viewModel.isWorking,
-                canDismiss: !viewModel.isWorking
+                closeOnBackdrop: true,
+                canDismiss: !batchUploadInteraction.isWorking,
+                onDismissRequest: { _ in batchUploadInteraction.dismissRequestSerial += 1 }
             ) { availableSize, dismiss in
                 TeamBatchUploadView(
                     viewModel: viewModel,
                     maximumHeight: availableSize.height,
+                    interaction: $batchUploadInteraction,
                     dismiss: dismiss
                 )
             }
@@ -128,8 +140,8 @@ struct TeamManageView: View {
             if let action = pendingAction {
                 DPModalOverlay(
                     onDismiss: { pendingAction = nil },
-                    closeOnBackdrop: !viewModel.isWorking,
-                    canDismiss: !viewModel.isWorking
+                    closeOnBackdrop: true,
+                    canDismiss: !viewModel.isWorking && !pendingActionIsWorking
                 ) { availableSize, dismiss in
                     TeamActionConfirmationModal(
                         title: confirmationTitle(for: action),
@@ -138,11 +150,11 @@ struct TeamManageView: View {
                         isDestructive: action.isDestructive,
                         isWorking: viewModel.isWorking,
                         maximumHeight: availableSize.height,
-                        dismiss: dismiss
+                        dismiss: dismiss,
+                        dismissAfterSuccess: { pendingAction = nil },
+                        workingChanged: { pendingActionIsWorking = $0 }
                     ) {
-                        if await run(action) {
-                            dismiss()
-                        }
+                        await run(action)
                     }
                     .alert(
                         Text("team.common.error", tableName: "Team"),
@@ -247,6 +259,7 @@ struct TeamManageView: View {
             .overlay(alignment: .top) { Rectangle().fill(DPColor.borderPrimary).frame(height: 1) }
             if team.dutyBatchTemplate != nil {
                 Button {
+                    batchUploadInteraction = TeamModalInteractionState()
                     withoutPresentationAnimation { viewModel.batchUploadPresented = true }
                 } label: {
                     Label {
@@ -273,7 +286,10 @@ struct TeamManageView: View {
                 title: teamLocalized("team.manage.fields.members"),
                 buttonTitle: teamLocalized("team.manage.actions.addMember"),
                 systemImage: "person.badge.plus"
-            ) { withoutPresentationAnimation { viewModel.memberSearchPresented = true } }
+            ) {
+                memberSearchIsWorking = false
+                withoutPresentationAnimation { viewModel.memberSearchPresented = true }
+            }
             if team.members.isEmpty {
                 Text("team.manage.labels.noMembers", tableName: "Team")
                     .foregroundStyle(DPColor.textMuted)
@@ -323,6 +339,7 @@ struct TeamManageView: View {
                 secondary: true
             ) {
                 viewModel.editingDutyType = nil
+                dutyEditorInteraction = TeamModalInteractionState()
                 withoutPresentationAnimation { viewModel.dutyEditorPresented = true }
             }
             if team.dutyTypes.isEmpty {
@@ -365,6 +382,7 @@ struct TeamManageView: View {
                                 }
                                 teamToolButton("pencil", label: teamLocalized("team.dutyType.actions.edit"), tint: DPColor.accent) {
                             viewModel.editingDutyType = dutyType
+                            dutyEditorInteraction = TeamModalInteractionState()
                             withoutPresentationAnimation { viewModel.dutyEditorPresented = true }
                                 }
                                 if dutyType.id != nil {
@@ -481,6 +499,7 @@ struct TeamManageView: View {
     }
 
     private func present(_ action: PendingAction) {
+        pendingActionIsWorking = false
         withoutPresentationAnimation { pendingAction = action }
     }
 
@@ -551,10 +570,15 @@ struct TeamManageView: View {
 private struct TeamDutyTypeEditor: View {
     @ObservedObject var viewModel: TeamManageViewModel
     let maximumHeight: CGFloat
+    @Binding var interaction: TeamModalInteractionState
+    let dismissAfterSuccess: () -> Void
     let dismiss: () -> Void
     @State private var name = ""
     @State private var color = Color.blue
     @State private var isSubmitting = false
+    @State private var initialName = ""
+    @State private var initialColorHex = Color.blue.teamHexRGB
+    @State private var showsDiscardConfirmation = false
 
     private var trimmedName: String {
         TeamManageModalLogic.normalizedDutyName(name)
@@ -582,7 +606,7 @@ private struct TeamDutyTypeEditor: View {
                         : "team.dutyType.titleEdit"
                 ),
                 isWorking: isSubmitting || viewModel.isWorking,
-                dismiss: dismiss
+                dismiss: requestDismiss
             )
         } content: {
             VStack(alignment: .leading, spacing: DPSpacing.medium) {
@@ -683,7 +707,8 @@ private struct TeamDutyTypeEditor: View {
                     Task {
                         await viewModel.saveDutyType(name: trimmedName, color: color.teamHexRGB)
                         isSubmitting = false
-                        if !viewModel.showsError { dismiss() }
+                        updateInteractionState()
+                        if !viewModel.showsError { dismissAfterSuccess() }
                     }
                 } label: {
                     Text(verbatim: teamLocalized("team.common.save"))
@@ -692,7 +717,7 @@ private struct TeamDutyTypeEditor: View {
                 .buttonStyle(DPSuccessButtonStyle())
                 .disabled(!canSave)
                 Button {
-                    dismiss()
+                    requestDismiss()
                 } label: {
                     Text(verbatim: teamLocalized("team.common.cancel"))
                         .frame(maxWidth: .infinity)
@@ -708,6 +733,39 @@ private struct TeamDutyTypeEditor: View {
                 name = dutyType.name
                 color = Color(teamHex: dutyType.color)
             }
+            initialName = name
+            initialColorHex = color.teamHexRGB
+            updateInteractionState()
+        }
+        .onChange(of: name) { _, _ in updateInteractionState() }
+        .onChange(of: color) { _, _ in updateInteractionState() }
+        .onChange(of: isSubmitting) { _, _ in updateInteractionState() }
+        .onChange(of: viewModel.isWorking) { _, _ in updateInteractionState() }
+        .onChange(of: interaction.dismissRequestSerial) { _, _ in requestDismiss() }
+        .alert(
+            Text("team.modal.discard.title", tableName: "Team"),
+            isPresented: $showsDiscardConfirmation
+        ) {
+            Button(teamLocalized("team.modal.discard.action"), role: .destructive) { dismiss() }
+            Button(teamLocalized("team.modal.discard.continue"), role: .cancel) {}
+        } message: {
+            Text("team.modal.discard.message", tableName: "Team")
+        }
+    }
+
+    private func updateInteractionState() {
+        interaction.isDirty = name != initialName || color.teamHexRGB != initialColorHex
+        interaction.isWorking = isSubmitting || viewModel.isWorking
+    }
+
+    private func requestDismiss() {
+        switch interaction.dismissDecision {
+        case .blocked:
+            return
+        case .confirmDiscard:
+            showsDiscardConfirmation = true
+        case .dismiss:
+            dismiss()
         }
     }
 }
@@ -715,13 +773,23 @@ private struct TeamDutyTypeEditor: View {
 private struct TeamMemberSearchView: View {
     @StateObject private var viewModel: TeamMemberSearchViewModel
     let maximumHeight: CGFloat
+    @Binding var isWorking: Bool
+    let dismissAfterSuccess: () -> Void
     let dismiss: () -> Void
     @State private var candidateToAdd: MemberInviteCandidateDTO?
     @State private var didLoadInitialResults = false
 
-    init(teamID: TeamID, maximumHeight: CGFloat, dismiss: @escaping () -> Void) {
+    init(
+        teamID: TeamID,
+        maximumHeight: CGFloat,
+        isWorking: Binding<Bool>,
+        dismissAfterSuccess: @escaping () -> Void,
+        dismiss: @escaping () -> Void
+    ) {
         _viewModel = StateObject(wrappedValue: TeamMemberSearchViewModel(teamID: teamID))
         self.maximumHeight = maximumHeight
+        _isWorking = isWorking
+        self.dismissAfterSuccess = dismissAfterSuccess
         self.dismiss = dismiss
     }
 
@@ -739,11 +807,11 @@ private struct TeamMemberSearchView: View {
                     isDestructive: false,
                     isWorking: viewModel.isWorking,
                     maximumHeight: maximumHeight,
-                    dismiss: { candidateToAdd = nil }
+                    dismiss: { candidateToAdd = nil },
+                    dismissAfterSuccess: dismissAfterSuccess,
+                    workingChanged: { isWorking = $0 }
                 ) {
-                    if await viewModel.add(candidate) {
-                        dismiss()
-                    }
+                    await viewModel.add(candidate)
                 }
             } else {
                 searchPanel
@@ -754,6 +822,8 @@ private struct TeamMemberSearchView: View {
             didLoadInitialResults = true
             await viewModel.search(resetPage: true)
         }
+        .onAppear { isWorking = viewModel.isWorking }
+        .onChange(of: viewModel.isWorking) { _, value in isWorking = value }
         .alert(
             Text("team.common.error", tableName: "Team"),
             isPresented: $viewModel.showsError
@@ -915,12 +985,17 @@ private struct TeamMemberSearchView: View {
 private struct TeamBatchUploadView: View {
     @ObservedObject var viewModel: TeamManageViewModel
     let maximumHeight: CGFloat
+    @Binding var interaction: TeamModalInteractionState
     let dismiss: () -> Void
     @State private var year = Calendar.current.component(.year, from: Date())
     @State private var month = Calendar.current.component(.month, from: Date())
     @State private var fileURL: URL?
     @State private var fileImporterPresented = false
     @State private var result: TeamBatchResultDTO?
+    @State private var initialYear = Calendar.current.component(.year, from: Date())
+    @State private var initialMonth = Calendar.current.component(.month, from: Date())
+    @State private var initialFileURL: URL?
+    @State private var showsDiscardConfirmation = false
 
     private let currentYear = Calendar.current.component(.year, from: Date())
 
@@ -929,7 +1004,7 @@ private struct TeamBatchUploadView: View {
             teamModalHeader(
                 title: teamLocalized("team.batchUpload.title"),
                 isWorking: viewModel.isWorking,
-                dismiss: dismiss
+                dismiss: requestDismiss
             )
         } content: {
             VStack(alignment: .leading, spacing: DPSpacing.medium) {
@@ -1034,7 +1109,13 @@ private struct TeamBatchUploadView: View {
                     guard let fileURL,
                           TeamFeatureLogic.isValidDutyBatchYear(year, currentYear: currentYear)
                     else { return }
-                    Task { result = await viewModel.upload(fileURL: fileURL, year: year, month: month) }
+                    Task {
+                        result = await viewModel.upload(fileURL: fileURL, year: year, month: month)
+                        initialYear = year
+                        initialMonth = month
+                        initialFileURL = fileURL
+                        updateInteractionState()
+                    }
                 } label: {
                     Text(verbatim: teamLocalized("team.manage.actions.upload"))
                         .frame(maxWidth: .infinity)
@@ -1046,7 +1127,7 @@ private struct TeamBatchUploadView: View {
                         || viewModel.isWorking
                 )
                 Button {
-                    dismiss()
+                    requestDismiss()
                 } label: {
                     Text(verbatim: teamLocalized("team.common.cancel"))
                         .frame(maxWidth: .infinity)
@@ -1069,6 +1150,37 @@ private struct TeamBatchUploadView: View {
                 return
             }
             fileURL = selectedURL
+        }
+        .onAppear { updateInteractionState() }
+        .onChange(of: year) { _, _ in updateInteractionState() }
+        .onChange(of: month) { _, _ in updateInteractionState() }
+        .onChange(of: fileURL) { _, _ in updateInteractionState() }
+        .onChange(of: viewModel.isWorking) { _, _ in updateInteractionState() }
+        .onChange(of: interaction.dismissRequestSerial) { _, _ in requestDismiss() }
+        .alert(
+            Text("team.modal.discard.title", tableName: "Team"),
+            isPresented: $showsDiscardConfirmation
+        ) {
+            Button(teamLocalized("team.modal.discard.action"), role: .destructive) { dismiss() }
+            Button(teamLocalized("team.modal.discard.continue"), role: .cancel) {}
+        } message: {
+            Text("team.modal.discard.message", tableName: "Team")
+        }
+    }
+
+    private func updateInteractionState() {
+        interaction.isDirty = year != initialYear || month != initialMonth || fileURL != initialFileURL
+        interaction.isWorking = viewModel.isWorking
+    }
+
+    private func requestDismiss() {
+        switch interaction.dismissDecision {
+        case .blocked:
+            return
+        case .confirmDiscard:
+            showsDiscardConfirmation = true
+        case .dismiss:
+            dismiss()
         }
     }
 
@@ -1095,7 +1207,9 @@ private struct TeamActionConfirmationModal: View {
     let isWorking: Bool
     let maximumHeight: CGFloat
     let dismiss: () -> Void
-    let confirm: () async -> Void
+    let dismissAfterSuccess: () -> Void
+    var workingChanged: ((Bool) -> Void)? = nil
+    let confirm: () async -> Bool
     @State private var isSubmitting = false
 
     var body: some View {
@@ -1120,8 +1234,12 @@ private struct TeamActionConfirmationModal: View {
                     guard !isSubmitting && !isWorking else { return }
                     isSubmitting = true
                     Task {
-                        await confirm()
+                        let didSucceed = await confirm()
                         isSubmitting = false
+                        workingChanged?(isWorking)
+                        if TeamManageModalLogic.shouldDismissConfirmation(didSucceed: didSucceed) {
+                            dismissAfterSuccess()
+                        }
                     }
                 } label: {
                     Text(verbatim: confirmTitle)
@@ -1141,6 +1259,9 @@ private struct TeamActionConfirmationModal: View {
             .padding(DPSpacing.compact)
             .background(DPColor.backgroundFooter)
         }
+        .onAppear { workingChanged?(isWorking || isSubmitting) }
+        .onChange(of: isWorking) { _, _ in workingChanged?(isWorking || isSubmitting) }
+        .onChange(of: isSubmitting) { _, _ in workingChanged?(isWorking || isSubmitting) }
     }
 }
 
@@ -1204,6 +1325,23 @@ private func teamModalHeader(
     .background(DPColor.backgroundTertiary)
 }
 
+nonisolated enum TeamModalDismissDecision: Equatable, Sendable {
+    case dismiss
+    case confirmDiscard
+    case blocked
+}
+
+nonisolated struct TeamModalInteractionState: Equatable, Sendable {
+    var isDirty = false
+    var isWorking = false
+    var dismissRequestSerial = 0
+
+    var dismissDecision: TeamModalDismissDecision {
+        if isWorking { return .blocked }
+        return isDirty ? .confirmDiscard : .dismiss
+    }
+}
+
 nonisolated enum TeamManageModalLogic {
     static let maximumDutyNameLength = 10
 
@@ -1213,6 +1351,10 @@ nonisolated enum TeamManageModalLogic {
 
     static func normalizedDutyName(_ value: String) -> String {
         limitedDutyName(value).trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    static func shouldDismissConfirmation(didSucceed: Bool) -> Bool {
+        didSucceed
     }
 
     static func hasDuplicateDutyName(
