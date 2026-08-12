@@ -16,6 +16,7 @@
 ## 현재 확인된 위치
 
 - iOS 5단계 삭제 화면: [AccountDeletionView.swift](../../Dutypark/Features/Settings/AccountDeletionView.swift)
+- iOS 탈퇴 요청 완료 화면: [AccountDeletionAcceptedView.swift](../../Dutypark/Features/Auth/AccountDeletionAcceptedView.swift)
 - iOS 설정 진입점: [SettingsView.swift](../../Dutypark/Features/Settings/SettingsView.swift)
 - iOS 삭제 API 모델과 호출: [SettingsService.swift](../../Dutypark/Features/Settings/SettingsService.swift)
 - iOS 인증 상태: [SessionStore.swift](../../Dutypark/Core/Auth/SessionStore.swift)
@@ -23,6 +24,10 @@
 - iOS 소셜 재인증: [MobileOAuthClient.swift](../../Dutypark/Features/Auth/MobileOAuthClient.swift)
 - iOS 5개 언어 문자열: [Settings.xcstrings](../../Dutypark/Resources/Settings.xcstrings)
 - 웹 공통 인증 클라이언트: [client.ts](../../../frontend/src/api/client.ts)
+- 웹 5단계 삭제 화면: [AccountDeletionModal.vue](../../../frontend/src/components/member/AccountDeletionModal.vue)
+- 웹 삭제 API와 소셜 popup PKCE: [accountDeletion.ts](../../../frontend/src/api/accountDeletion.ts)
+- 웹 소셜 재인증 callback: [AccountDeletionOAuthCallbackView.vue](../../../frontend/src/views/auth/AccountDeletionOAuthCallbackView.vue)
+- 웹 인증·로컬 상태 정리: [auth.ts](../../../frontend/src/stores/auth.ts)
 - 백엔드 삭제 API: [AccountDeletionController.kt](../../../src/main/kotlin/com/tistory/shanepark/dutypark/member/accountdeletion/controller/AccountDeletionController.kt)
 - 백엔드 삭제 요청 서비스: [AccountDeletionService.kt](../../../src/main/kotlin/com/tistory/shanepark/dutypark/member/accountdeletion/service/AccountDeletionService.kt)
 - 비동기 작업 실행: [AccountDeletionWorker.kt](../../../src/main/kotlin/com/tistory/shanepark/dutypark/member/accountdeletion/worker/AccountDeletionWorker.kt)
@@ -116,8 +121,8 @@
 - [x] 설정 화면에 실제 `계정 삭제` 진입점과 전용 sheet를 제공한다.
 - [x] 범위 안내, 팀 이관, 재인증, 이름 입력, 최종 파괴 확인의 5단계 흐름을 구현했다.
 - [x] 비밀번호와 Kakao·Naver 소셜 재인증을 `DELETE_ACCOUNT` proof로 처리한다.
-- [ ] `202 Accepted` 직후 인증·쿠키·APNs와 사용자별 로컬 상태는 즉시 정리하되, 바로 guest 화면으로 보내지 않고 `탈퇴 요청 완료` 화면을 유지한다.
-- [ ] 완료 화면에서 요청 성공, 안전한 로그아웃 완료, 비동기 데이터·파일 삭제가 잠시 걸릴 수 있음을 안내하고 사용자가 확인한 뒤 guest 화면으로 이동한다.
+- [x] `202 Accepted` 직후 인증·쿠키·APNs와 사용자별 로컬 상태를 즉시 정리하되, 바로 guest 화면으로 보내지 않고 `탈퇴 요청 완료` 화면을 유지한다.
+- [x] 완료 화면에서 요청 성공, 안전한 로그아웃 완료, 비동기 데이터·파일 삭제가 잠시 걸릴 수 있음을 안내하고 사용자가 확인한 뒤 guest 화면으로 이동한다.
 - [x] 오류 코드별 재시도와 만료된 proof 재인증 흐름을 구현했다.
 - [x] 사용자 문구를 `ko`, `en`, `ja`, `zh-Hans`, `es`로 제공한다.
 - [ ] TestFlight 실기기에서 5단계 삭제를 끝까지 검증한다.
@@ -131,7 +136,7 @@
 - 완료 화면에는 `탈퇴 요청 완료`, `안전하게 로그아웃되었습니다`, `데이터와 파일 삭제에는 잠시 시간이 걸릴 수 있습니다`라는 세 의미가 명확히 포함되어야 한다.
 - 사용자가 확인 버튼을 누른 뒤에만 guest 화면으로 이동한다. 요청 제출 직후 로그인 화면이나 guest 홈으로 갑자기 전환되어 단순 로그아웃처럼 보여서는 안 된다.
 - 완료 화면은 재시도나 취소를 제안하지 않는다. 서버가 요청을 수락한 뒤에는 삭제 작업이 비동기로 계속된다는 사실을 안내한다.
-- 이 계약의 iOS 구현과 5개 언어·접근성 검증이 끝날 때까지 위 구현 체크 항목은 `[ ]`로 유지한다.
+- 이 계약은 iOS에 구현되어 자동 검증을 통과했다. 5개 언어의 실제 표시와 VoiceOver·Dynamic Type은 TestFlight 실기기 검증 항목으로 유지한다.
 
 ## Kakao/Naver 신규 가입 후 즉시 탈퇴 시연
 
@@ -182,11 +187,11 @@
 
 ## 웹 구현 체크리스트
 
-- [ ] 웹 설정에도 동일한 계정 삭제 기능과 정책 설명을 제공한다.
-- [ ] iOS와 동일한 사전 점검 및 재인증 API를 사용한다.
-- [ ] 성공 시 서버 세션, 웹 푸시 subscription, Pinia 상태와 사용자 캐시를 정리한다.
-- [ ] 웹 계정 삭제를 구현할 때도 `202 Accepted` 직후 인증 상태는 정리하되 완료 안내를 먼저 보여주고 사용자 확인 후 guest 화면으로 이동하는 동일한 UX 계약을 적용한다.
-- [ ] 모든 사용자 문구를 `ko`, `en`, `ja`, `zh`, `es` 번역에 추가한다.
+- [x] 반응형 웹 회원정보에 범위 안내, 팀 이관, 재인증, 이름 입력, 최종 확인의 동일한 5단계 계정 삭제 화면과 정책 설명을 제공한다.
+- [x] iOS와 동일한 preview·요청 API를 사용하고, 비밀번호 또는 Kakao·Naver popup PKCE 흐름으로 `DELETE_ACCOUNT` 재인증 proof를 발급한다.
+- [x] `202 Accepted` 직후 서버 인증 상태, 웹 푸시 subscription, Pinia 상태와 사용자 캐시를 정리한다.
+- [x] 인증 정리 뒤 완료 안내를 먼저 보여주고 사용자 확인 후 guest 화면으로 이동하는 동일한 성공 UX 계약을 적용한다.
+- [x] 계정 삭제와 소셜 popup 오류·완료 문구를 `ko`, `en`, `ja`, `zh`, `es` 번역에 추가한다.
 - [ ] 모바일·데스크톱, 라이트·다크 모드에서 확인한다.
 
 ## 테스트
@@ -196,7 +201,9 @@
 - [x] [AccountDeletionControllerIntegrationTest.kt](../../../src/test/kotlin/com/tistory/shanepark/dutypark/member/accountdeletion/AccountDeletionControllerIntegrationTest.kt)에서 재인증, 팀 이관, 자동 대상과 멱등성을 검증했다.
 - [x] [MobileOAuthAccountDeletionControllerTest.kt](../../../src/test/kotlin/com/tistory/shanepark/dutypark/security/controller/MobileOAuthAccountDeletionControllerTest.kt)에서 소셜 삭제 재인증 proof를 검증했다.
 - [x] [AdminAccountDeletionControllerTest.kt](../../../src/test/kotlin/com/tistory/shanepark/dutypark/member/accountdeletion/controller/AdminAccountDeletionControllerTest.kt)에서 관리자 retry 조건을 검증했다.
-- [x] iOS `build-for-testing`이 성공했다. Dutypark QA iPhone 16 Pro 시뮬레이터(식별자 접두사 `5F480…`)에서 [SettingsFeatureTests.swift](../../DutyparkTests/SettingsFeatureTests.swift), [MobileOAuthClientTests.swift](../../DutyparkTests/MobileOAuthClientTests.swift), [APIClientAuthTests.swift](../../DutyparkTests/APIClientAuthTests.swift), [NotificationFeatureTests.swift](../../DutyparkTests/NotificationFeatureTests.swift)를 실행해 57/57 통과했으며 실패·건너뜀은 각각 0개였다.
+- [x] iOS 기존 기준선의 `build-for-testing`이 성공했다. Dutypark QA iPhone 16 Pro 시뮬레이터(식별자 접두사 `5F480…`)에서 [SettingsFeatureTests.swift](../../DutyparkTests/SettingsFeatureTests.swift), [MobileOAuthClientTests.swift](../../DutyparkTests/MobileOAuthClientTests.swift), [APIClientAuthTests.swift](../../DutyparkTests/APIClientAuthTests.swift), [NotificationFeatureTests.swift](../../DutyparkTests/NotificationFeatureTests.swift)를 실행해 57/57 통과했으며 실패·건너뜀은 각각 0개였다.
+- [x] iOS 완료 UX 반영 후 Dutypark QA iPhone 13 mini 시뮬레이터에서 완료 화면 유지, 로컬 인증 정리와 확인 후 guest 전환을 포함한 관련 테스트 55/55가 통과했다.
+- [x] 웹 계정 삭제, 5단계 상태, popup PKCE 소셜 재인증, 완료 UX와 현지화 검증을 포함해 type-check, Vitest 31 files/145 tests, production build가 통과했다.
 - [ ] 실제 MySQL Testcontainers 또는 운영 유사 환경에서 worker·locking·삭제 SQL을 검증한다.
 - [ ] Kakao·Naver와 향후 Apple provider-side revoke의 성공·실패·재시도를 검증한다.
 - [ ] TestFlight 실기기에서 삭제 진입부터 완료까지 실행하고 VoiceOver·Dynamic Type도 확인한다.
@@ -208,11 +215,11 @@
 - [x] 서버가 요청 즉시 접근을 차단하고 durable worker로 파일·DB를 정리할 수 있다.
 - [ ] 실제 MySQL 또는 운영 유사 환경에서 전체 삭제와 재시도를 검증한다.
 - [ ] Kakao·Naver provider-side revoke를 구현하고 Apple 로그인 도입 시 Apple revoke를 추가한다.
-- [ ] 웹 설정에 계정 삭제 UI를 제공한다.
+- [x] 반응형 웹 회원정보에서 5단계 계정 삭제 UI와 password·소셜 popup PKCE 재인증을 제공한다.
 - [x] 계정 삭제 정책과 실제 데이터 처리 결과를 `PRIVACY 2026-08-13`에 반영했다. 즉시 접근 차단과 비동기 정리, 공동 TEAM·첨부의 보존·이관 가능성을 구분한다.
 - [x] `TERMS 2026-08-13`도 모든 데이터가 요청 즉시 일괄 삭제된다는 오래된 단정을 제거하고 실제 비동기 삭제·공동 데이터 계약과 일치시켰다.
 - [ ] App Review Notes에 삭제 메뉴 경로, 비동기 처리와 심사 확인 방법을 적는다.
-- [ ] iOS에서 `202 Accepted` 후 완료 안내를 표시하고 사용자 확인 뒤 guest 화면으로 이동하는 성공 UX 계약을 구현한다.
+- [x] iOS에서 `202 Accepted` 후 완료 안내를 표시하고 사용자 확인 뒤 guest 화면으로 이동하는 성공 UX 계약을 구현하고 자동 검증했다.
 - [ ] TestFlight 실기기, VoiceOver와 Dynamic Type 회귀 테스트를 통과한다.
 
 ## 공식 자료
