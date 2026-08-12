@@ -177,22 +177,9 @@ final class SocialViewModel: ObservableObject {
     }
 
     func movePinned(fromOffsets: IndexSet, toOffset: Int) async {
-        guard !isReordering else { return }
         var ids = pinnedFriends.compactMap(\.member.id)
-        let previousOrderIDs = pinnedOrderIDs
         ids.move(fromOffsets: fromOffsets, toOffset: toOffset)
-        guard ids != pinnedFriends.compactMap(\.member.id) else { return }
-        pinnedOrderIDs = ids
-        isReordering = true
-        defer { isReordering = false }
-        do {
-            try await repository.updatePinnedOrder(ids)
-            try await reload()
-            await onMutation(false)
-        } catch {
-            pinnedOrderIDs = previousOrderIDs
-            errorKey = "social.error.reorder"
-        }
+        _ = await savePinnedOrder(ids)
     }
 
     func reorderPinned(draggedID: MemberID, over destinationID: MemberID) async {
@@ -205,6 +192,32 @@ final class SocialViewModel: ObservableObject {
             fromOffsets: IndexSet(integer: sourceIndex),
             toOffset: sourceIndex < destinationIndex ? destinationIndex + 1 : destinationIndex
         )
+    }
+
+    @discardableResult
+    func savePinnedOrder(_ memberIDs: [MemberID]) async -> Bool {
+        guard !isReordering else { return false }
+        let currentIDs = pinnedFriends.compactMap(\.member.id)
+        guard memberIDs.count == currentIDs.count,
+              Set(memberIDs) == Set(currentIDs) else {
+            errorKey = "social.error.reorder"
+            return false
+        }
+        guard memberIDs != currentIDs else { return true }
+
+        let previousOrderIDs = pinnedOrderIDs
+        pinnedOrderIDs = memberIDs
+        isReordering = true
+        defer { isReordering = false }
+        do {
+            try await repository.updatePinnedOrder(memberIDs)
+            try await reload()
+            await onMutation(false)
+            return true
+        } catch {
+            pinnedOrderIDs = previousOrderIDs
+            return false
+        }
     }
 
     func dismissError() {

@@ -5,8 +5,7 @@ struct SocialView: View {
     @State private var isSearchPresented = false
     @State private var confirmation: SocialConfirmation?
     @State private var actionCandidate: ActionCandidate?
-    @State private var dropTargetFriendID: MemberID?
-    @State private var isFriendOrderEditing = false
+    @State private var isPinnedOrderPresented = false
 
     private let onOpenCalendar: (MemberID) -> Void
 
@@ -41,6 +40,13 @@ struct SocialView: View {
         .fullScreenCover(isPresented: $isSearchPresented) {
             FriendSearchModalView(viewModel: viewModel)
                 .presentationBackground(.clear)
+        }
+        .sheet(isPresented: $isPinnedOrderPresented) {
+            PinnedFriendOrderView(friends: viewModel.pinnedFriends) { memberIDs in
+                await viewModel.savePinnedOrder(memberIDs)
+            }
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
         }
         .alert(item: $confirmation) { confirmation in
             confirmationAlert(confirmation)
@@ -162,14 +168,10 @@ struct SocialView: View {
                 systemImage: "person.2",
                 colors: [DPColor.surfaceStrong, DPColor.surfaceStrongAlt],
                 actionTitle: viewModel.pinnedFriends.count >= 2
-                    ? social(isFriendOrderEditing ? "social.action.done" : "social.action.editPinnedOrder")
+                    ? social("social.action.editPinnedOrder")
                     : nil,
-                actionDisabled: viewModel.isReordering,
                 action: {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        isFriendOrderEditing.toggle()
-                        dropTargetFriendID = nil
-                    }
+                    isPinnedOrderPresented = true
                 }
             )
 
@@ -177,14 +179,8 @@ struct SocialView: View {
                 if viewModel.friends.isEmpty {
                     emptyFriends
                 } else {
-                    if isFriendOrderEditing {
-                        pinnedOrderHint
-                    }
                     ForEach(viewModel.pinnedFriends, id: \.member.id) { friend in
                         friendCard(friend)
-                    }
-                    if isFriendOrderEditing, !viewModel.unpinnedFriends.isEmpty {
-                        nonPinnedOrderHint
                     }
                     ForEach(viewModel.unpinnedFriends, id: \.member.id) { friend in
                         friendCard(friend)
@@ -202,55 +198,6 @@ struct SocialView: View {
                 .stroke(DPColor.borderPrimary, lineWidth: 1)
         }
         .shadow(color: Color.black.opacity(0.05), radius: 2, y: 1)
-        .onChange(of: viewModel.pinnedFriends.count) { _, count in
-            if count < 2 { isFriendOrderEditing = false }
-        }
-    }
-
-    private var pinnedOrderHint: some View {
-        HStack(alignment: .top, spacing: DPSpacing.small) {
-            Image(systemName: "hand.draw.fill")
-                .font(.system(size: 17, weight: .medium))
-                .foregroundStyle(DPColor.accent)
-                .frame(width: 24, height: 24)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(social("social.section.pinnedOrder"))
-                    .font(DPFont.bold(size: 14, relativeTo: .subheadline))
-                    .foregroundStyle(DPColor.textPrimary)
-                Text(social("social.hint.pinnedOrder"))
-                    .font(DPTypography.caption)
-                    .foregroundStyle(DPColor.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            Spacer(minLength: 0)
-        }
-        .padding(DPSpacing.compact)
-        .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget, alignment: .leading)
-        .background(DPColor.accentSoft)
-        .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: DPRadius.standard, style: .continuous)
-                .stroke(DPColor.accentBorder, lineWidth: 1)
-        }
-        .accessibilityElement(children: .combine)
-    }
-
-    private var nonPinnedOrderHint: some View {
-        HStack(spacing: DPSpacing.small) {
-            Rectangle()
-                .fill(DPColor.borderPrimary)
-                .frame(height: 1)
-            Text(social("social.hint.unpinnedOrder"))
-                .font(DPTypography.caption)
-                .foregroundStyle(DPColor.textMuted)
-                .lineLimit(1)
-                .minimumScaleFactor(0.85)
-            Rectangle()
-                .fill(DPColor.borderPrimary)
-                .frame(height: 1)
-        }
-        .frame(minHeight: DPSize.minimumTouchTarget)
-        .accessibilityElement(children: .combine)
     }
 
     private func receivedRequestCard(_ request: FriendRequestDTO) -> some View {
@@ -359,50 +306,7 @@ struct SocialView: View {
         .buttonStyle(.plain)
     }
 
-    @ViewBuilder
     private func friendCard(_ friend: DashboardFriendDetailDTO) -> some View {
-        if isFriendOrderEditing, friend.pinOrder != nil, let friendID = friend.member.id {
-            friendCardBody(friend)
-                .draggable(String(friendID)) {
-                    PinnedFriendDragPreview(friend: friend)
-                }
-                .dropDestination(
-                    for: String.self,
-                    action: { items, _ in
-                        dropTargetFriendID = nil
-                        guard let sourceValue = items.first,
-                              let sourceID = MemberID(sourceValue),
-                              sourceID != friendID else { return false }
-                        Task {
-                            await viewModel.reorderPinned(
-                                draggedID: sourceID,
-                                over: friendID
-                            )
-                        }
-                        return true
-                    },
-                    isTargeted: { isTargeted in
-                        withAnimation(.easeOut(duration: 0.16)) {
-                            dropTargetFriendID = isTargeted ? friendID : nil
-                        }
-                    }
-                )
-                .overlay {
-                    if dropTargetFriendID == friendID {
-                        RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous)
-                            .stroke(DPColor.accent, lineWidth: 3)
-                            .padding(2)
-                            .allowsHitTesting(false)
-                    }
-                }
-                .scaleEffect(dropTargetFriendID == friendID ? 1.015 : 1)
-                .animation(.easeOut(duration: 0.16), value: dropTargetFriendID)
-        } else {
-            friendCardBody(friend)
-        }
-    }
-
-    private func friendCardBody(_ friend: DashboardFriendDetailDTO) -> some View {
         HStack(spacing: DPSpacing.compact) {
             Button {
                 if let id = friend.member.id { onOpenCalendar(id) }
@@ -467,78 +371,55 @@ struct SocialView: View {
             .buttonStyle(.plain)
             .frame(maxWidth: .infinity, alignment: .leading)
             .accessibilityHint(social("social.action.openCalendar"))
-            .accessibilityActions {
-                if friend.pinOrder != nil {
-                    Button(social("social.action.moveUp")) {
-                        movePinned(friend, direction: -1)
-                    }
-                    Button(social("social.action.moveDown")) {
-                        movePinned(friend, direction: 1)
-                    }
-                }
-            }
 
             Spacer(minLength: DPSpacing.small)
 
-            if isFriendOrderEditing, friend.pinOrder != nil {
-                Image(systemName: "line.3.horizontal")
-                    .font(.system(size: 20, weight: .semibold))
-                    .foregroundStyle(DPColor.accent)
-                    .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
-                    .background(DPColor.accentSoft)
-                    .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard, style: .continuous))
-                    .draggable(String(friend.member.id ?? -1)) {
-                        PinnedFriendDragPreview(friend: friend)
-                    }
-                    .accessibilityHidden(true)
-            } else {
-                HStack(spacing: 0) {
-                    Button {
-                        Task { await viewModel.togglePin(friend) }
-                    } label: {
-                        Image(systemName: friend.pinOrder == nil ? "star" : "star.fill")
-                            .font(.system(size: 16))
-                            .foregroundStyle(friend.pinOrder == nil ? DPColor.textMuted : DPColor.warning)
-                            .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(social(friend.pinOrder == nil ? "social.action.pin" : "social.action.unpin"))
+            HStack(spacing: 0) {
+                Button {
+                    Task { await viewModel.togglePin(friend) }
+                } label: {
+                    Image(systemName: friend.pinOrder == nil ? "star" : "star.fill")
+                        .font(.system(size: 16))
+                        .foregroundStyle(friend.pinOrder == nil ? DPColor.textMuted : DPColor.warning)
+                        .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(social(friend.pinOrder == nil ? "social.action.pin" : "social.action.unpin"))
 
-                    Button {
-                        actionCandidate = ActionCandidate(friend: friend)
-                    } label: {
-                        Image(systemName: "ellipsis.vertical")
-                            .font(.system(size: 18, weight: .medium))
-                            .foregroundStyle(DPColor.textMuted)
-                            .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(social("social.action.more"))
-                    .popover(
-                        isPresented: Binding(
-                            get: { actionCandidate?.id == friend.member.id },
-                            set: { if !$0 { actionCandidate = nil } }
-                        ),
-                        arrowEdge: .top
-                    ) {
-                        FriendActionPopover(
-                            friend: friend,
-                            close: { actionCandidate = nil },
-                            addFamily: {
-                                actionCandidate = nil
-                                Task { await viewModel.sendFamilyRequest(to: friend) }
-                            },
-                            removeFamily: {
-                                actionCandidate = nil
-                                confirmation = .removeFamily(friend)
-                            },
-                            removeFriend: {
-                                actionCandidate = nil
-                                confirmation = .removeFriend(friend)
-                            }
-                        )
-                        .presentationCompactAdaptation(.popover)
-                    }
+                Button {
+                    actionCandidate = ActionCandidate(friend: friend)
+                } label: {
+                    Image(systemName: "ellipsis.vertical")
+                        .font(.system(size: 18, weight: .medium))
+                        .foregroundStyle(DPColor.textMuted)
+                        .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(social("social.action.more"))
+                .popover(
+                    isPresented: Binding(
+                        get: { actionCandidate?.id == friend.member.id },
+                        set: { if !$0 { actionCandidate = nil } }
+                    ),
+                    arrowEdge: .top
+                ) {
+                    FriendActionPopover(
+                        friend: friend,
+                        close: { actionCandidate = nil },
+                        addFamily: {
+                            actionCandidate = nil
+                            Task { await viewModel.sendFamilyRequest(to: friend) }
+                        },
+                        removeFamily: {
+                            actionCandidate = nil
+                            confirmation = .removeFamily(friend)
+                        },
+                        removeFriend: {
+                            actionCandidate = nil
+                            confirmation = .removeFriend(friend)
+                        }
+                    )
+                    .presentationCompactAdaptation(.popover)
                 }
             }
         }
@@ -559,34 +440,12 @@ struct SocialView: View {
         .overlay {
             RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous)
                 .stroke(
-                    isFriendOrderEditing && friend.pinOrder != nil
-                        ? DPColor.accent
-                        : (friend.pinOrder == nil ? DPColor.borderPrimary : DPColor.borderSecondary),
-                    lineWidth: isFriendOrderEditing && friend.pinOrder != nil
-                        ? 2
-                        : (friend.pinOrder == nil ? 1 : 2)
+                    friend.pinOrder == nil ? DPColor.borderPrimary : DPColor.borderSecondary,
+                    lineWidth: friend.pinOrder == nil ? 1 : 2
                 )
         }
-        .opacity(isFriendOrderEditing && friend.pinOrder == nil ? 0.68 : 1)
         .shadow(color: Color.black.opacity(friend.pinOrder == nil ? 0.05 : 0.10), radius: 2, y: 1)
         .contentShape(RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous))
-    }
-
-    private func movePinned(_ friend: DashboardFriendDetailDTO, direction: Int) {
-        guard friend.pinOrder != nil,
-              let sourceIndex = viewModel.pinnedFriends.firstIndex(where: {
-                  $0.member.id == friend.member.id
-              }) else { return }
-
-        let destinationIndex = sourceIndex + direction
-        guard viewModel.pinnedFriends.indices.contains(destinationIndex) else { return }
-
-        Task {
-            await viewModel.movePinned(
-                fromOffsets: IndexSet(integer: sourceIndex),
-                toOffset: direction < 0 ? destinationIndex : destinationIndex + 1
-            )
-        }
     }
 
     private var emptyFriends: some View {
@@ -659,34 +518,123 @@ struct SocialView: View {
     }
 }
 
-private struct PinnedFriendDragPreview: View {
-    let friend: DashboardFriendDetailDTO
+private struct PinnedFriendOrderView: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var draft: [DashboardFriendDetailDTO]
+    @State private var isSaving = false
+    @State private var showsSaveError = false
+
+    private let originalIDs: [MemberID]
+    private let onSave: ([MemberID]) async -> Bool
+
+    init(
+        friends: [DashboardFriendDetailDTO],
+        onSave: @escaping ([MemberID]) async -> Bool
+    ) {
+        _draft = State(initialValue: friends)
+        originalIDs = friends.compactMap(\.member.id)
+        self.onSave = onSave
+    }
 
     var body: some View {
-        HStack(spacing: DPSpacing.compact) {
-            SocialAvatar(member: friend.member, size: 44)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(friend.member.name)
-                    .font(DPFont.bold(size: 15, relativeTo: .body))
-                    .foregroundStyle(DPColor.textPrimary)
-                    .lineLimit(1)
-                Text(social("social.section.pinned"))
-                    .font(DPTypography.caption)
-                    .foregroundStyle(DPColor.textSecondary)
+        NavigationStack {
+            List {
+                Section {
+                    ForEach(draft, id: \.member.id) { friend in
+                        HStack(spacing: DPSpacing.compact) {
+                            SocialAvatar(member: friend.member, size: 44)
+
+                            VStack(alignment: .leading, spacing: 2) {
+                                HStack(spacing: DPSpacing.extraSmall) {
+                                    Text(friend.member.name)
+                                        .font(DPFont.light(size: 16, relativeTo: .body))
+                                        .foregroundStyle(DPColor.textPrimary)
+                                        .lineLimit(1)
+                                    if friend.isFamily {
+                                        Image(systemName: "house.fill")
+                                            .font(.system(size: 12))
+                                            .foregroundStyle(DPColor.warning)
+                                            .accessibilityLabel(social("social.label.family"))
+                                    }
+                                }
+
+                                if let team = friend.member.team, !team.isEmpty {
+                                    Text(team)
+                                        .font(DPTypography.caption)
+                                        .foregroundStyle(DPColor.textSecondary)
+                                        .lineLimit(1)
+                                }
+                            }
+                        }
+                        .frame(minHeight: DPSize.minimumTouchTarget)
+                        .accessibilityElement(children: .combine)
+                    }
+                    .onMove { offsets, destination in
+                        draft.move(fromOffsets: offsets, toOffset: destination)
+                    }
+                } header: {
+                    Text(social("social.section.pinned"))
+                } footer: {
+                    Text(social("social.hint.pinnedOrder"))
+                }
             }
-            Image(systemName: "line.3.horizontal")
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(DPColor.accent)
+            .environment(\.editMode, .constant(.active))
+            .navigationTitle(social("social.section.pinnedOrder"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(social("social.action.cancelDialog"), role: .cancel) {
+                        dismiss()
+                    }
+                    .disabled(isSaving)
+                    .accessibilityIdentifier("social.pinnedOrder.cancel")
+                }
+
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(social("social.action.done")) {
+                        save()
+                    }
+                    .fontWeight(.semibold)
+                    .disabled(isSaving)
+                    .accessibilityIdentifier("social.pinnedOrder.done")
+                }
+            }
+            .overlay {
+                if isSaving {
+                    ProgressView()
+                        .controlSize(.large)
+                        .padding(DPSpacing.large)
+                        .background(.regularMaterial)
+                        .clipShape(RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous))
+                        .accessibilityLabel(social("social.loading"))
+                }
+            }
+            .alert(social("social.error.title"), isPresented: $showsSaveError) {
+                Button(social("social.action.ok"), role: .cancel) {}
+            } message: {
+                Text(social("social.error.reorder"))
+            }
+            .interactiveDismissDisabled(isSaving)
         }
-        .padding(.horizontal, DPSpacing.medium)
-        .frame(minHeight: 60)
-        .background(.regularMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous)
-                .stroke(DPColor.borderSecondary, lineWidth: 1)
+    }
+
+    private func save() {
+        let ids = draft.compactMap(\.member.id)
+        guard ids != originalIDs else {
+            dismiss()
+            return
         }
-        .shadow(color: Color.black.opacity(0.16), radius: 10, y: 5)
+
+        isSaving = true
+        Task {
+            let didSave = await onSave(ids)
+            isSaving = false
+            if didSave {
+                dismiss()
+            } else {
+                showsSaveError = true
+            }
+        }
     }
 }
 

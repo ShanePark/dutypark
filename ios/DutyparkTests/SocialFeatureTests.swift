@@ -11,7 +11,6 @@ final class SocialFeatureTests: XCTestCase {
             "social.action.done",
             "social.action.editPinnedOrder",
             "social.hint.pinnedOrder",
-            "social.hint.unpinnedOrder",
             "social.section.pinnedOrder"
         ]
 
@@ -127,27 +126,49 @@ final class SocialFeatureTests: XCTestCase {
         XCTAssertEqual(repository.actions, ["accept:11", "cancel:22"])
     }
 
-    func testNativeDragReorderSendsOnlyPinnedIDsInDisplayedOrder() async {
+    func testNativeListReorderSavesDraftOnlyOnceWhenConfirmed() async {
         let repository = SocialRepositorySpy()
         let viewModel = SocialViewModel(repository: repository)
         await viewModel.load()
 
-        await viewModel.reorderPinned(draggedID: 31, over: 32)
+        var draftIDs = viewModel.pinnedFriends.compactMap(\.member.id)
+        draftIDs.move(fromOffsets: IndexSet(integer: 0), toOffset: 2)
 
+        XCTAssertFalse(repository.actions.contains(where: { $0.hasPrefix("order:") }))
+
+        let didSave = await viewModel.savePinnedOrder(draftIDs)
+
+        XCTAssertTrue(didSave)
         XCTAssertEqual(repository.actions.last, "order:32,31")
+        XCTAssertEqual(repository.actions.filter { $0.hasPrefix("order:") }.count, 1)
     }
 
-    func testFailedNativeDragReorderRestoresOriginalOrderAndReportsError() async {
+    func testFailedNativeListReorderKeepsOriginalOrderAndReportsFailure() async {
         let repository = SocialRepositorySpy(failPinnedOrder: true)
         let viewModel = SocialViewModel(repository: repository)
         await viewModel.load()
         let originalOrder = viewModel.pinnedFriends.compactMap(\.member.id)
+        var draftIDs = originalOrder
+        draftIDs.move(fromOffsets: IndexSet(integer: 0), toOffset: 2)
 
-        await viewModel.reorderPinned(draggedID: 31, over: 32)
+        let didSave = await viewModel.savePinnedOrder(draftIDs)
 
+        XCTAssertFalse(didSave)
         XCTAssertEqual(viewModel.pinnedFriends.compactMap(\.member.id), originalOrder)
-        XCTAssertEqual(viewModel.errorKey, "social.error.reorder")
+        XCTAssertNil(viewModel.errorKey)
         XCTAssertFalse(viewModel.isReordering)
+    }
+
+    func testNativeListReorderRejectsIDsOutsidePinnedFriends() async {
+        let repository = SocialRepositorySpy()
+        let viewModel = SocialViewModel(repository: repository)
+        await viewModel.load()
+
+        let didSave = await viewModel.savePinnedOrder([32, 33])
+
+        XCTAssertFalse(didSave)
+        XCTAssertEqual(viewModel.errorKey, "social.error.reorder")
+        XCTAssertFalse(repository.actions.contains(where: { $0.hasPrefix("order:") }))
     }
 
     func testSuccessfulMutationsReportOnlyReceivedRequestCountEffects() async {
