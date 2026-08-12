@@ -37,13 +37,13 @@ struct CalendarView: View {
             DPModalOverlay(
                 onDismiss: { model.selectedDay = nil },
                 closeOnBackdrop: false
-            ) { availableSize in
+            ) { availableSize, dismiss in
                 DayDetailView(
                     model: model,
                     initialDay: day,
                     maximumHeight: availableSize.height
                 ) {
-                    model.selectedDay = nil
+                    dismiss()
                 }
             }
         }
@@ -51,9 +51,9 @@ struct CalendarView: View {
         .sheet(isPresented: $showsDDayEditor) { DDayEditorView(model: model, existing: nil) }
         .sheet(isPresented: $showsMonthPicker) { YearMonthPickerView(model: model) }
         .fullScreenCover(isPresented: $showsDutyComparison) {
-            DPModalOverlay(onDismiss: { showsDutyComparison = false }) { availableSize in
+            DPModalOverlay(onDismiss: { showsDutyComparison = false }) { availableSize, dismiss in
                 DutyComparisonView(model: model, maximumHeight: availableSize.height) {
-                    showsDutyComparison = false
+                    dismiss()
                 }
             }
         }
@@ -272,7 +272,9 @@ struct CalendarView: View {
     private var normalDutyActions: some View {
         HStack(spacing: 0) {
             if model.isMyCalendar && !model.friends.isEmpty {
-                Button { showsDutyComparison = true } label: {
+                Button {
+                    withoutPresentationAnimation { showsDutyComparison = true }
+                } label: {
                     Image(systemName: "person.2")
                         .frame(width: 44, height: 44)
                 }
@@ -542,7 +544,9 @@ struct CalendarView: View {
                     )
                         .onTapGesture {
                             if model.isQuickDutyEditing { model.focusQuickDuty(on: day) }
-                            else { model.selectedDay = day }
+                            else {
+                                withoutPresentationAnimation { model.selectedDay = day }
+                            }
                         }
                 }
             }

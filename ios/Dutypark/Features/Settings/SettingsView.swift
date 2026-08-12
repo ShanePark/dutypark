@@ -123,9 +123,9 @@ struct SettingsView: View {
             VisibilitySettingsSheet(model: model)
         }
         .fullScreenCover(isPresented: $showPattern) {
-            DPModalOverlay(onDismiss: { showPattern = false }) {
+            DPModalOverlay(onDismiss: { showPattern = false }) { _, dismiss in
                 DutyPatternSettingsModal(model: model) {
-                    showPattern = false
+                    dismiss()
                 }
             }
         }
@@ -325,7 +325,9 @@ struct SettingsView: View {
                 }
                 .frame(minHeight: 72)
             } else if let pattern = model.dutyPattern {
-                DutyPatternSummary(pattern: pattern) { showPattern = true }
+                DutyPatternSummary(pattern: pattern) {
+                    withoutPresentationAnimation { showPattern = true }
+                }
             }
         }
     }
