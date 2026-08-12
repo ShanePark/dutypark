@@ -1,0 +1,20 @@
+{
+  "id": 7,
+  "name": "Dutypark",
+  "description": "교대근무 팀",
+  "dutyTypes": [{"id": null, "teamId": 7, "name": "휴무", "position": -1, "color": "#64748B", "hidden": false}],
+  "members": [{
+    "id": 42,
+    "name": "테스트 사용자",
+    "email": "test@duty.park",
+    "isManager": true,
+    "isAdmin": false,
+    "hasProfilePhoto": true,
+    "profilePhotoVersion": 3
+  }],
+  "createdDate": "2026-01-01T00:00",
+  "lastModifiedDate": "2026-08-12T09:00:00.123456",
+  "adminId": 1,
+  "adminName": "관리자",
+  "dutyBatchTemplate": null
+}

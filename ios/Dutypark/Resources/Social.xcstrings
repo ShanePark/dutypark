@@ -1,0 +1,157 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "social.action.accept" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Accept" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Aceptar" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "承認" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "승인" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "接受" } }
+    } },
+    "social.action.addFamily" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Add as family" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Añadir como familiar" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "家族に追加" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "가족 등록" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "添加为家人" } }
+    } },
+    "social.action.addFriend" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Add friend" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Añadir amigo" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "友だちを追加" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 추가" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "添加好友" } }
+    } },
+    "social.action.cancel" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Cancel request" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Cancelar solicitud" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "申請をキャンセル" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "요청 취소" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "取消请求" } }
+    } },
+    "social.action.cancelDialog" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Cancel" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Cancelar" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "キャンセル" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "취소" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "取消" } }
+    } },
+    "social.action.close" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Close" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Cerrar" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "閉じる" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "닫기" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "关闭" } }
+    } },
+    "social.action.more" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "More actions" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Más acciones" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "その他の操作" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "더보기" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "更多操作" } }
+    } },
+    "social.action.ok" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "OK" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Aceptar" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "OK" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "확인" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "确定" } }
+    } },
+    "social.action.openCalendar" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Open calendar" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Abrir calendario" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "カレンダーを開く" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "캘린더 열기" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "打开日历" } }
+    } },
+    "social.action.pin" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Pin" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Fijar" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "固定" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "고정" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "置顶" } }
+    } },
+    "social.action.reject" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Reject" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Rechazar" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "拒否" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "거절" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "拒绝" } }
+    } },
+    "social.action.removeFamily" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Remove from family" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Quitar de la familia" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "家族から外す" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "가족에서 제외" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "移出家人" } }
+    } },
+    "social.action.removeFriend" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Remove friend" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Eliminar amigo" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "友だちを削除" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 삭제" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "删除好友" } }
+    } },
+    "social.action.sendRequest" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Send request" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Enviar solicitud" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "申請を送る" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "요청 보내기" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "发送请求" } }
+    } },
+    "social.action.unpin" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Unpin" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Desfijar" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "固定解除" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "고정 해제" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "取消置顶" } }
+    } },
+
+    "social.confirm.cancel.message" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Cancel the request sent to %@?" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "¿Cancelar la solicitud enviada a %@?" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "%@さんへの申請をキャンセルしますか？" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님에게 보낸 요청을 취소하시겠습니까?" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "取消发送给 %@ 的请求吗？" } }
+    } },
+    "social.confirm.cancel.title" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Cancel request" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Cancelar solicitud" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "申請をキャンセル" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "요청 취소" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "取消请求" } }
+    } },
+    "social.confirm.reject.message" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Reject the request from %@?" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "¿Rechazar la solicitud de %@?" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "%@さんからの申請を拒否しますか？" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님의 요청을 거절하시겠습니까?" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "拒绝 %@ 的请求吗？" } }
+    } },
+    "social.confirm.reject.title" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Reject request" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Rechazar solicitud" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "申請を拒否" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "요청 거절" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "拒绝请求" } }
+    } },
+    "social.confirm.removeFamily.message" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Remove %@ from family? Your friend connection will stay." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "¿Quitar a %@ de la familia? La amistad se mantendrá." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "%@さんを家族から外しますか？友だち関係は維持されます。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님을 가족에서 제외하시겠습니까? 친구 관계는 유지됩니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "将 %@ 移出家人吗？好友关系将保留。" } }
+    } },
+    "social.confirm.removeFamily.title" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Remove from family" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Quitar de la familia" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "家族から外す" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "가족에서 제외" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "移出家人" } }
+    } },
+    "social.confirm.removeFriend.message" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Remove %@ from your friends list?" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "¿Eliminar a %@ de tu lista de amigos?" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "%@さんを友だち一覧から削除しますか？" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님을 친구 목록에서 삭제하시겠습니까?" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "从好友列表中删除 %@ 吗？" } }
+    } },
+    "social.confirm.removeFriend.title" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Remove friend" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Eliminar amigo" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "友だちを削除" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 삭제" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "删除好友" } }
+    } },
+    "social.confirm.sendFriend.message" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Send a friend request to %@?" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "¿Enviar una solicitud de amistad a %@?" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "%@さんに友だち申請を送りますか？" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님에게 친구 요청을 보내시겠습니까?" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "向 %@ 发送好友请求吗？" } }
+    } },
+    "social.confirm.sendFriend.title" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Friend request" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Solicitud de amistad" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "友だち申請" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 요청" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "好友请求" } }
+    } },
+
+    "social.empty.friends" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "No friends yet." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Aún no tienes amigos." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "友だちはまだいません。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "아직 친구가 없습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "还没有好友。" } }
+    } },
+    "social.label.family" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Family member" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Familiar" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "家族" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "가족 구성원" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "家人" } }
+    } },
+    "social.label.moreSchedules" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ more schedules" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "%@ eventos más" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "他%@件の予定" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "일정 %@개 더보기" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "还有 %@ 个日程" } }
+    } },
+    "social.label.offDuty" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Off duty" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Libre" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "休み" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "휴무" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "休息" } }
+    } },
+    "social.loading" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Loading friends…" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Cargando amigos…" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "友だちを読み込み中…" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 정보를 불러오는 중…" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "正在加载好友…" } }
+    } },
+    "social.request.family" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Family request" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Solicitud familiar" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "家族申請" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "가족 요청" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "家人请求" } }
+    } },
+    "social.request.friend" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Friend request" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Solicitud de amistad" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "友だち申請" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 요청" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "好友请求" } }
+    } },
+    "social.request.sent" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ · Pending" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "%@ · Pendiente" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "%@ · 保留中" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@ · 대기 중" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "%@ · 等待中" } }
+    } },
+    "social.section.friends" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Friends" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Amigos" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "友だち" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 목록" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "好友" } }
+    } },
+    "social.section.pinned" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Pinned" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Fijados" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "固定済み" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "고정한 친구" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "已置顶" } }
+    } },
+    "social.section.requests" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Friend requests" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Solicitudes" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "友だち申請" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 요청" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "好友请求" } }
+    } },
+    "social.title" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Friends" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Amigos" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "友だち" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "好友" } }
+    } },
+
+    "social.search.empty" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Search for people to add" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Busca personas para añadir" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "追加する人を検索" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "추가할 친구를 검색하세요" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "搜索要添加的人" } }
+    } },
+    "social.search.loading" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Searching…" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Buscando…" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "検索中…" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "검색 중…" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "正在搜索…" } }
+    } },
+    "social.search.next" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Next" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Siguiente" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "次へ" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "다음" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "下一页" } }
+    } },
+    "social.search.page" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ of %@" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "%@ de %@" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "%@ / %@" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@ / %@" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "%@ / %@" } }
+    } },
+    "social.search.previous" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Previous" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Anterior" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "前へ" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "이전" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "上一页" } }
+    } },
+    "social.search.prompt" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Search by name or email" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Buscar por nombre o correo" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "名前またはメールで検索" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "이름 또는 이메일로 검색" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "按姓名或邮箱搜索" } }
+    } },
+    "social.search.title" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Add friend" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Añadir amigo" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "友だちを追加" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 추가" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "添加好友" } }
+    } },
+
+    "social.error.accept" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to accept the request." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "No se pudo aceptar la solicitud." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "申請を承認できませんでした。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "요청 수락에 실패했습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "接受请求失败。" } } } },
+    "social.error.cancel" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to cancel the request." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "No se pudo cancelar la solicitud." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "申請をキャンセルできませんでした。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "요청 취소에 실패했습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "取消请求失败。" } } } },
+    "social.error.familyAlreadyRequested" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "A family request has already been sent." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Ya se envió una solicitud familiar." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "家族申請は送信済みです。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "이미 가족 요청을 보낸 상태입니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "已发送家人请求。" } } } },
+    "social.error.generic" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "The request could not be completed." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "No se pudo completar la solicitud." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "操作を完了できませんでした。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "요청을 완료하지 못했습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "无法完成请求。" } } } },
+    "social.error.load" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to load friends." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "No se pudieron cargar los amigos." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "友だちを読み込めませんでした。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 정보를 불러오지 못했습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "加载好友失败。" } } } },
+    "social.error.pin" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to pin the friend." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "No se pudo fijar al amigo." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "友だちを固定できませんでした。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 고정에 실패했습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "置顶好友失败。" } } } },
+    "social.error.reject" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to reject the request." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "No se pudo rechazar la solicitud." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "申請を拒否できませんでした。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "요청 거절에 실패했습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "拒绝请求失败。" } } } },
+    "social.error.removeFamily" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to remove the family connection." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "No se pudo quitar la relación familiar." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "家族関係を解除できませんでした。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "가족에서 제외하지 못했습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "移除家人关系失败。" } } } },
+    "social.error.removeFriend" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to remove the friend." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "No se pudo eliminar al amigo." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "友だちを削除できませんでした。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 삭제에 실패했습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "删除好友失败。" } } } },
+    "social.error.reorder" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to update the friend order." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "No se pudo actualizar el orden." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "友だちの順序を更新できませんでした。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 순서 변경에 실패했습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "更新好友顺序失败。" } } } },
+    "social.error.search" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to search for friends." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "No se pudo buscar amigos." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "友だちを検索できませんでした。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 검색에 실패했습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "搜索好友失败。" } } } },
+    "social.error.sendFamily" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to send the family request." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "No se pudo enviar la solicitud familiar." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "家族申請を送信できませんでした。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "가족 요청 전송에 실패했습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "发送家人请求失败。" } } } },
+    "social.error.sendFriend" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to send the friend request." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "No se pudo enviar la solicitud de amistad." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "友だち申請を送信できませんでした。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 요청 전송에 실패했습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "发送好友请求失败。" } } } },
+    "social.error.title" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Unable to complete action" } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "No se pudo completar" } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "操作を完了できません" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "작업을 완료하지 못했습니다" } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "无法完成操作" } } } },
+    "social.error.unpin" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to unpin the friend." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "No se pudo desfijar al amigo." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "友だちの固定を解除できませんでした。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 고정 해제에 실패했습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "取消置顶失败。" } } } }
+  },
+  "version" : "1.0"
+}
