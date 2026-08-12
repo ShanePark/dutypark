@@ -122,8 +122,12 @@ struct SettingsView: View {
         .sheet(isPresented: $showVisibility) {
             VisibilitySettingsSheet(model: model)
         }
-        .sheet(isPresented: $showPattern) {
-            DutyPatternSettingsSheet(model: model)
+        .fullScreenCover(isPresented: $showPattern) {
+            DPModalOverlay(onDismiss: { showPattern = false }) {
+                DutyPatternSettingsModal(model: model) {
+                    showPattern = false
+                }
+            }
         }
         .sheet(isPresented: $showAuxiliary) {
             AuxiliaryAccountView(model: model)
@@ -1206,9 +1210,9 @@ private struct VisibilitySettingsSheet: View {
     }
 }
 
-private struct DutyPatternSettingsSheet: View {
+private struct DutyPatternSettingsModal: View {
     @ObservedObject var model: SettingsViewModel
-    @Environment(\.dismiss) private var dismiss
+    let dismiss: () -> Void
     @State private var selections: [Weekday: DutyTypeID?] = [:]
     @State private var holidayOff = true
     @State private var confirmsSave = false
@@ -1280,8 +1284,6 @@ private struct DutyPatternSettingsSheet: View {
             }
         }
         .background(DPColor.backgroundModal)
-        .presentationDetents([.large])
-        .presentationDragIndicator(.hidden)
         .onAppear {
             holidayOff = model.dutyPattern?.pattern?.holidayOff ?? true
             selections = Dictionary(uniqueKeysWithValues: (model.dutyPattern?.pattern?.days ?? []).map { ($0.weekday, Optional($0.dutyType.id)) })
