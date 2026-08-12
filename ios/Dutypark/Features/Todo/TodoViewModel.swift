@@ -135,19 +135,84 @@ final class TodoViewModel: ObservableObject {
         }
     }
 
-    func moveWithinSelectedColumn(_ todo: TodoDTO, offset: Int) async {
-        var items = selectedTodos
-        guard let source = items.firstIndex(where: { $0.id == todo.id }) else { return }
+    @discardableResult
+    func moveWithinSelectedColumn(_ todo: TodoDTO, offset: Int) async -> Bool {
+        let items = selectedTodos
+        guard let source = items.firstIndex(where: { $0.id == todo.id }) else { return false }
         let destination = source + offset
-        guard items.indices.contains(destination) else { return }
-        items.swapAt(source, destination)
+        guard items.indices.contains(destination) else { return false }
+        let target = items[destination]
+        return await drop(
+            todoID: todo.uuid,
+            into: selectedStatus,
+            relativeTo: target.uuid,
+            insertAfter: offset > 0
+        )
+    }
+
+    /// Optimistically applies the exact order the viewer sees, then persists it
+    /// using the same contract as the web Kanban board. Owned and tagged cards
+    /// deliberately share one ordering space on each viewer's board.
+    @discardableResult
+    func drop(
+        todoID: TodoID,
+        into destinationStatus: TodoStatus,
+        relativeTo targetTodoID: TodoID? = nil,
+        insertAfter: Bool = false
+    ) async -> Bool {
+        guard !isSaving, let originalBoard = board else { return false }
+        guard let sourceStatus = boardStatus(of: todoID, in: originalBoard) else { return false }
+
+        if targetTodoID == todoID {
+            return true
+        }
+
+        var columns = TodoBoardColumns(board: originalBoard)
+        let movingTodo = columns.remove(todoID: todoID, from: sourceStatus)
+        guard let movingTodo else { return false }
+
+        let insertionIndex = columns.insertionIndex(
+            in: destinationStatus,
+            relativeTo: targetTodoID,
+            insertAfter: insertAfter
+        )
+        columns.insert(
+            movingTodo.updatingStatus(destinationStatus),
+            in: destinationStatus,
+            at: insertionIndex
+        )
+
+        let optimisticBoard = columns.board
+        guard optimisticBoard != originalBoard else { return true }
+
+        board = optimisticBoard
+        selectedStatus = destinationStatus
+        isSaving = true
+        defer { isSaving = false }
+
         do {
-            try await repository.updatePositions(
-                TodoPositionUpdateRequest(status: selectedStatus, orderedIds: items.map(\.uuid))
-            )
-            await refresh()
+            let orderedIds = columns.todos(for: destinationStatus).map(\.uuid)
+            if sourceStatus == destinationStatus {
+                try await repository.updatePositions(
+                    TodoPositionUpdateRequest(status: destinationStatus, orderedIds: orderedIds)
+                )
+            } else {
+                _ = try await repository.changeStatus(
+                    id: todoID,
+                    request: TodoStatusChangeRequest(
+                        status: destinationStatus,
+                        orderedIds: orderedIds
+                    )
+                )
+            }
+            return true
         } catch {
-            errorKey = "todo.error.reorder"
+            board = originalBoard
+            selectedStatus = sourceStatus
+            errorKey = sourceStatus == destinationStatus
+                ? "todo.error.reorder"
+                : "todo.error.status"
+            return false
         }
     }
 
@@ -199,6 +264,109 @@ final class TodoViewModel: ObservableObject {
             }
             return lhs.name.localizedStandardCompare(rhs.name) == .orderedAscending
         }
+    }
+
+    private func boardStatus(of todoID: TodoID, in board: TodoBoardDTO) -> TodoStatus? {
+        for status in TodoStatus.boardStatuses {
+            if TodoBoardColumns(board: board).todos(for: status).contains(where: { $0.uuid == todoID }) {
+                return status
+            }
+        }
+        return nil
+    }
+}
+
+private struct TodoBoardColumns {
+    var todo: [TodoDTO]
+    var inProgress: [TodoDTO]
+    var done: [TodoDTO]
+
+    init(board: TodoBoardDTO) {
+        todo = board.todo
+        inProgress = board.inProgress
+        done = board.done
+    }
+
+    var board: TodoBoardDTO {
+        TodoBoardDTO(
+            todo: todo,
+            inProgress: inProgress,
+            done: done,
+            counts: TodoCountsDTO(
+                todo: todo.count,
+                inProgress: inProgress.count,
+                done: done.count,
+                total: todo.count + inProgress.count + done.count
+            )
+        )
+    }
+
+    func todos(for status: TodoStatus) -> [TodoDTO] {
+        switch status {
+        case .todo: todo
+        case .inProgress: inProgress
+        case .done: done
+        case .unknown: []
+        }
+    }
+
+    mutating func remove(todoID: TodoID, from status: TodoStatus) -> TodoDTO? {
+        switch status {
+        case .todo: remove(todoID: todoID, from: &todo)
+        case .inProgress: remove(todoID: todoID, from: &inProgress)
+        case .done: remove(todoID: todoID, from: &done)
+        case .unknown: nil
+        }
+    }
+
+    mutating func insert(_ item: TodoDTO, in status: TodoStatus, at index: Int) {
+        switch status {
+        case .todo: todo.insert(item, at: min(max(0, index), todo.endIndex))
+        case .inProgress: inProgress.insert(item, at: min(max(0, index), inProgress.endIndex))
+        case .done: done.insert(item, at: min(max(0, index), done.endIndex))
+        case .unknown: break
+        }
+    }
+
+    func insertionIndex(
+        in status: TodoStatus,
+        relativeTo targetTodoID: TodoID?,
+        insertAfter: Bool
+    ) -> Int {
+        let items = todos(for: status)
+        guard
+            let targetTodoID,
+            let targetIndex = items.firstIndex(where: { $0.uuid == targetTodoID })
+        else {
+            return items.endIndex
+        }
+        return targetIndex + (insertAfter ? 1 : 0)
+    }
+
+    private func remove(todoID: TodoID, from items: inout [TodoDTO]) -> TodoDTO? {
+        guard let index = items.firstIndex(where: { $0.uuid == todoID }) else { return nil }
+        return items.remove(at: index)
+    }
+}
+
+private extension TodoDTO {
+    func updatingStatus(_ status: TodoStatus) -> TodoDTO {
+        TodoDTO(
+            id: id,
+            title: title,
+            content: content,
+            position: position,
+            status: status,
+            createdDate: createdDate,
+            completedDate: completedDate,
+            dueDate: dueDate,
+            isOverdue: isOverdue,
+            isTagged: isTagged,
+            owner: owner,
+            taggedByMember: taggedByMember,
+            tags: tags,
+            hasAttachments: hasAttachments
+        )
     }
 }
 

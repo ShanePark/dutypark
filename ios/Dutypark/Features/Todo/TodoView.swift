@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 func todoLocalized(_ key: String, locale: Locale? = nil) -> String {
     AppLocalization.string(key, table: "Todo", locale: locale)
@@ -22,6 +23,8 @@ struct TodoView: View {
     @State private var showingDetail = false
     @State private var showingCreate = false
     @State private var visibleStatus: TodoStatus?
+    @State private var draggedTodoID: TodoID?
+    @State private var dragTargetStatus: TodoStatus?
 
     init(
         initialTodoID: TodoID? = nil,
@@ -122,6 +125,26 @@ struct TodoView: View {
         onInitialTodoOpened()
     }
 
+    private func handleDrop(
+        todoID: TodoID,
+        destinationStatus: TodoStatus,
+        targetTodoID: TodoID? = nil,
+        insertAfter: Bool = false
+    ) {
+        draggedTodoID = nil
+        dragTargetStatus = nil
+        Task {
+            if await model.drop(
+                todoID: todoID,
+                into: destinationStatus,
+                relativeTo: targetTodoID,
+                insertAfter: insertAfter
+            ) {
+                await onTodoChanged()
+            }
+        }
+    }
+
     private var statusSelector: some View {
         HStack(spacing: DPSpacing.small) {
             ForEach(TodoStatus.boardStatuses, id: \.rawValue) { status in
@@ -154,12 +177,23 @@ struct TodoView: View {
                     .overlay(
                         RoundedRectangle(cornerRadius: DPRadius.large)
                             .stroke(
-                                model.selectedStatus == status ? status.color : DPColor.borderPrimary,
-                                lineWidth: model.selectedStatus == status ? 2 : 1
+                                dragTargetStatus == status
+                                    ? DPColor.accent
+                                    : (model.selectedStatus == status ? status.color : DPColor.borderPrimary),
+                                lineWidth: dragTargetStatus == status || model.selectedStatus == status ? 2 : 1
                             )
                     )
                 }
                 .buttonStyle(.plain)
+                .onDrop(
+                    of: [UTType.utf8PlainText],
+                    delegate: TodoStatusDropDelegate(
+                        status: status,
+                        draggedTodoID: draggedTodoID,
+                        targetedStatus: $dragTargetStatus,
+                        drop: { todoID in handleDrop(todoID: todoID, destinationStatus: status) }
+                    )
+                )
                 .accessibilityLabel(Text(todoLocalized(status.titleKey)))
                 .accessibilityValue(Text("\(model.count(for: status))"))
             }
@@ -190,6 +224,7 @@ struct TodoView: View {
                                 count: model.count(for: status),
                                 todos: model.todos(for: status),
                                 width: columnWidth,
+                                draggedTodoID: draggedTodoID,
                                 add: {
                                     model.selectedStatus = status
                                     showingCreate = true
@@ -201,7 +236,22 @@ struct TodoView: View {
                                 },
                                 move: { todo, offset in
                                     model.selectedStatus = status
-                                    Task { await model.moveWithinSelectedColumn(todo, offset: offset) }
+                                    Task {
+                                        if await model.moveWithinSelectedColumn(todo, offset: offset) {
+                                            await onTodoChanged()
+                                        }
+                                    }
+                                },
+                                startDrag: { todo in
+                                    draggedTodoID = todo.uuid
+                                },
+                                drop: { todoID, destinationStatus, targetTodoID, insertAfter in
+                                    handleDrop(
+                                        todoID: todoID,
+                                        destinationStatus: destinationStatus,
+                                        targetTodoID: targetTodoID,
+                                        insertAfter: insertAfter
+                                    )
                                 }
                             )
                             .id(status)
@@ -227,10 +277,15 @@ private struct TodoKanbanColumn: View {
     let count: Int
     let todos: [TodoDTO]
     let width: CGFloat
+    let draggedTodoID: TodoID?
     let add: () -> Void
     let select: () -> Void
     let open: (TodoDTO) -> Void
     let move: (TodoDTO, Int) -> Void
+    let startDrag: (TodoDTO) -> Void
+    let drop: (TodoID, TodoStatus, TodoID?, Bool) -> Void
+
+    @State private var isColumnDropTarget = false
 
     var body: some View {
         VStack(spacing: 0) {
@@ -295,14 +350,29 @@ private struct TodoKanbanColumn: View {
                         ForEach(Array(todos.enumerated()), id: \.element.id) { index, todo in
                             TodoCard(
                                 todo: todo,
+                                status: status,
+                                draggedTodoID: draggedTodoID,
                                 canMoveUp: index > 0,
                                 canMoveDown: index < todos.count - 1,
                                 open: { open(todo) },
                                 moveUp: { move(todo, -1) },
-                                moveDown: { move(todo, 1) }
+                                moveDown: { move(todo, 1) },
+                                moveToStatus: { destination in
+                                    drop(todo.uuid, destination, nil, false)
+                                },
+                                startDrag: { startDrag(todo) },
+                                drop: { todoID, targetTodoID, insertAfter in
+                                    drop(todoID, status, targetTodoID, insertAfter)
+                                }
                             )
                         }
                     }
+
+                    TodoColumnDropZone(
+                        draggedTodoID: draggedTodoID,
+                        isTargeted: $isColumnDropTarget,
+                        drop: { todoID in drop(todoID, status, nil, false) }
+                    )
                 }
                 .padding(.horizontal, DPSpacing.compact)
                 .padding(.bottom, DPSpacing.compact)
@@ -317,17 +387,33 @@ private struct TodoKanbanColumn: View {
             }
         }
         .clipShape(RoundedRectangle(cornerRadius: TodoBoardLayout.columnRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: TodoBoardLayout.columnRadius)
+                .stroke(
+                    isColumnDropTarget ? status.color : .clear,
+                    style: StrokeStyle(lineWidth: 2, dash: [7, 5])
+                )
+                .allowsHitTesting(false)
+        )
         .accessibilityIdentifier("todo.column.\(status.rawValue)")
     }
 }
 
 private struct TodoCard: View {
     let todo: TodoDTO
+    let status: TodoStatus
+    let draggedTodoID: TodoID?
     let canMoveUp: Bool
     let canMoveDown: Bool
     let open: () -> Void
     let moveUp: () -> Void
     let moveDown: () -> Void
+    let moveToStatus: (TodoStatus) -> Void
+    let startDrag: () -> Void
+    let drop: (TodoID, TodoID, Bool) -> Void
+
+    @State private var dropEdge: TodoDropEdge?
+    @State private var cardHeight: CGFloat = 1
 
     var body: some View {
         Button(action: open) {
@@ -345,6 +431,10 @@ private struct TodoCard: View {
                             .foregroundStyle(DPColor.textMuted)
                             .accessibilityLabel(Text(todoLocalized("todo.label.attachments")))
                     }
+                    Image(systemName: "line.3.horizontal")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(DPColor.textMuted)
+                        .accessibilityHidden(true)
                 }
 
                 if !todo.content.isEmpty {
@@ -400,10 +490,50 @@ private struct TodoCard: View {
         .background(DPColor.backgroundCard)
         .clipShape(RoundedRectangle(cornerRadius: TodoBoardLayout.cardRadius))
         .overlay(
-            RoundedRectangle(cornerRadius: TodoBoardLayout.cardRadius)
-                .stroke(DPColor.borderPrimary, lineWidth: 1)
+            ZStack {
+                RoundedRectangle(cornerRadius: TodoBoardLayout.cardRadius)
+                    .stroke(dropEdge == nil ? DPColor.borderPrimary : status.color, lineWidth: dropEdge == nil ? 1 : 2)
+
+                if let dropEdge {
+                    VStack(spacing: 0) {
+                        if dropEdge == .after { Spacer(minLength: 0) }
+                        Capsule()
+                            .fill(status.color)
+                            .frame(height: 4)
+                            .padding(.horizontal, 10)
+                            .offset(y: dropEdge == .before ? -8 : 8)
+                        if dropEdge == .before { Spacer(minLength: 0) }
+                    }
+                }
+            }
+            .allowsHitTesting(false)
         )
         .shadow(color: .black.opacity(0.05), radius: 2, y: 1)
+        .background {
+            GeometryReader { proxy in
+                Color.clear
+                    .onAppear { cardHeight = proxy.size.height }
+                    .onChange(of: proxy.size.height) { _, height in cardHeight = height }
+            }
+        }
+        .onDrag {
+            startDrag()
+            let provider = NSItemProvider(object: todo.id as NSString)
+            provider.suggestedName = todo.id
+            return provider
+        } preview: {
+            TodoDragPreview(todo: todo, status: status)
+        }
+        .onDrop(
+            of: [UTType.utf8PlainText],
+            delegate: TodoCardDropDelegate(
+                targetTodoID: todo.uuid,
+                draggedTodoID: draggedTodoID,
+                cardHeight: cardHeight,
+                edge: $dropEdge,
+                drop: drop
+            )
+        )
         .contextMenu {
             Button(action: moveUp) {
                 Label(todoLocalized("todo.action.moveUp"), systemImage: "arrow.up")
@@ -413,6 +543,16 @@ private struct TodoCard: View {
                 Label(todoLocalized("todo.action.moveDown"), systemImage: "arrow.down")
             }
             .disabled(!canMoveDown)
+
+            Divider()
+
+            ForEach(TodoStatus.boardStatuses.filter { $0 != status }, id: \.rawValue) { destination in
+                Button {
+                    moveToStatus(destination)
+                } label: {
+                    Label(todoLocalized(destination.titleKey), systemImage: destination.systemImage)
+                }
+            }
         }
         .accessibilityAction(named: Text(todoLocalized("todo.action.moveUp"))) {
             if canMoveUp { moveUp() }
@@ -420,8 +560,179 @@ private struct TodoCard: View {
         .accessibilityAction(named: Text(todoLocalized("todo.action.moveDown"))) {
             if canMoveDown { moveDown() }
         }
+        .accessibilityActions {
+            ForEach(TodoStatus.boardStatuses.filter { $0 != status }, id: \.rawValue) { destination in
+                Button(todoLocalized(destination.titleKey)) {
+                    moveToStatus(destination)
+                }
+            }
+        }
+        .accessibilityHint(todoLocalized("todo.drag.hint"))
         .accessibilityIdentifier("todo.card.\(todo.id)")
     }
+}
+
+private enum TodoDropEdge: Equatable {
+    case before
+    case after
+}
+
+private struct TodoStatusDropDelegate: DropDelegate {
+    let status: TodoStatus
+    let draggedTodoID: TodoID?
+    @Binding var targetedStatus: TodoStatus?
+    let drop: (TodoID) -> Void
+
+    func validateDrop(info: DropInfo) -> Bool {
+        resolvedTodoID(from: info, fallback: draggedTodoID) != nil
+    }
+
+    func dropEntered(info: DropInfo) {
+        targetedStatus = status
+    }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        targetedStatus = status
+        return DropProposal(operation: .move)
+    }
+
+    func dropExited(info: DropInfo) {
+        if targetedStatus == status {
+            targetedStatus = nil
+        }
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        guard let todoID = resolvedTodoID(from: info, fallback: draggedTodoID) else { return false }
+        targetedStatus = nil
+        drop(todoID)
+        return true
+    }
+}
+
+private struct TodoCardDropDelegate: DropDelegate {
+    let targetTodoID: TodoID
+    let draggedTodoID: TodoID?
+    let cardHeight: CGFloat
+    @Binding var edge: TodoDropEdge?
+    let drop: (TodoID, TodoID, Bool) -> Void
+
+    func validateDrop(info: DropInfo) -> Bool {
+        resolvedTodoID(from: info, fallback: draggedTodoID) != nil
+    }
+
+    func dropEntered(info: DropInfo) {
+        updateEdge(for: info)
+    }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        updateEdge(for: info)
+        return DropProposal(operation: .move)
+    }
+
+    func dropExited(info: DropInfo) {
+        edge = nil
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        guard let todoID = resolvedTodoID(from: info, fallback: draggedTodoID) else { return false }
+        let insertAfter = info.location.y >= cardHeight / 2
+        edge = nil
+        drop(todoID, targetTodoID, insertAfter)
+        return true
+    }
+
+    private func updateEdge(for info: DropInfo) {
+        edge = info.location.y < cardHeight / 2 ? .before : .after
+    }
+}
+
+private struct TodoColumnDropDelegate: DropDelegate {
+    let draggedTodoID: TodoID?
+    @Binding var isTargeted: Bool
+    let drop: (TodoID) -> Void
+
+    func validateDrop(info: DropInfo) -> Bool {
+        resolvedTodoID(from: info, fallback: draggedTodoID) != nil
+    }
+
+    func dropEntered(info: DropInfo) {
+        isTargeted = true
+    }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        DropProposal(operation: .move)
+    }
+
+    func dropExited(info: DropInfo) {
+        isTargeted = false
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        guard let todoID = resolvedTodoID(from: info, fallback: draggedTodoID) else { return false }
+        isTargeted = false
+        drop(todoID)
+        return true
+    }
+}
+
+private struct TodoColumnDropZone: View {
+    let draggedTodoID: TodoID?
+    @Binding var isTargeted: Bool
+    let drop: (TodoID) -> Void
+
+    var body: some View {
+        Label(todoLocalized("todo.drag.dropHere"), systemImage: "arrow.down.to.line")
+            .font(DPTypography.caption)
+            .foregroundStyle(isTargeted ? DPColor.accent : DPColor.textMuted)
+            .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)
+            .opacity(isTargeted ? 1 : 0)
+            .contentShape(Rectangle())
+            .onDrop(
+                of: [UTType.utf8PlainText],
+                delegate: TodoColumnDropDelegate(
+                    draggedTodoID: draggedTodoID,
+                    isTargeted: $isTargeted,
+                    drop: drop
+                )
+            )
+            .accessibilityHidden(true)
+    }
+}
+
+private struct TodoDragPreview: View {
+    let todo: TodoDTO
+    let status: TodoStatus
+
+    var body: some View {
+        HStack(spacing: DPSpacing.small) {
+            Image(systemName: status.systemImage)
+                .foregroundStyle(status.color)
+            Text(todo.title)
+                .font(DPFont.bold(size: 14, relativeTo: .subheadline))
+                .foregroundStyle(DPColor.textPrimary)
+                .lineLimit(2)
+            Spacer(minLength: 0)
+            Image(systemName: "line.3.horizontal")
+                .foregroundStyle(DPColor.textMuted)
+        }
+        .padding(14)
+        .frame(width: 220, alignment: .leading)
+        .background(DPColor.backgroundCard)
+        .clipShape(RoundedRectangle(cornerRadius: TodoBoardLayout.cardRadius))
+        .overlay(
+            RoundedRectangle(cornerRadius: TodoBoardLayout.cardRadius)
+                .stroke(status.color, lineWidth: 2)
+        )
+        .shadow(color: .black.opacity(0.18), radius: 12, y: 6)
+    }
+}
+
+private func resolvedTodoID(from info: DropInfo, fallback: TodoID?) -> TodoID? {
+    fallback ?? info.itemProviders(for: [UTType.utf8PlainText])
+        .compactMap(\.suggestedName)
+        .compactMap(UUID.init(uuidString:))
+        .first
 }
 
 private struct TodoDetailSheet: View {

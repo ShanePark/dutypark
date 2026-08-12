@@ -18,7 +18,13 @@ struct TodoViewModelTests {
 
     @Test
     func todoCatalogResolvesFeatureAndCommonKeysInEverySupportedLocale() {
-        let keys = ["todo.action.add", "todo.error.load", "common.save"]
+        let keys = [
+            "todo.action.add",
+            "todo.drag.dropHere",
+            "todo.drag.hint",
+            "todo.error.load",
+            "common.save"
+        ]
         let locales = ["ko", "en", "ja", "zh-Hans", "es"]
 
         for localeIdentifier in locales {
@@ -139,6 +145,88 @@ struct TodoViewModelTests {
         #expect(reorder?.status == .todo)
         #expect(reorder?.orderedIds == [tagged.uuid, first.uuid])
     }
+
+    @Test
+    func cardDropOptimisticallyReordersOwnedAndTaggedTodosInOneViewerOrder() async {
+        let first = makeTodo(id: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!, title: "First")
+        let tagged = makeTodo(
+            id: UUID(uuidString: "22222222-2222-2222-2222-222222222222")!,
+            title: "Shared",
+            isTagged: true
+        )
+        let repository = FakeTodoRepository(board: makeBoard(todo: [first, tagged]))
+        let model = TodoViewModel(repository: repository)
+        await model.load()
+
+        let succeeded = await model.drop(
+            todoID: tagged.uuid,
+            into: .todo,
+            relativeTo: first.uuid,
+            insertAfter: false
+        )
+        let request = await repository.positionRequest
+
+        #expect(succeeded)
+        #expect(model.todos(for: .todo).map(\.uuid) == [tagged.uuid, first.uuid])
+        #expect(request == TodoPositionUpdateRequest(status: .todo, orderedIds: [tagged.uuid, first.uuid]))
+    }
+
+    @Test
+    func crossColumnDropSendsTheCompleteDestinationOrderAndUpdatesStatus() async {
+        let moving = makeTodo(
+            id: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!,
+            title: "Shared",
+            status: .todo,
+            isTagged: true
+        )
+        let existing = makeTodo(
+            id: UUID(uuidString: "22222222-2222-2222-2222-222222222222")!,
+            title: "Existing",
+            status: .inProgress
+        )
+        let repository = FakeTodoRepository(board: makeBoard(todo: [moving], inProgress: [existing]))
+        let model = TodoViewModel(repository: repository)
+        await model.load()
+
+        let succeeded = await model.drop(
+            todoID: moving.uuid,
+            into: .inProgress,
+            relativeTo: existing.uuid,
+            insertAfter: true
+        )
+        let change = await repository.statusChange
+
+        #expect(succeeded)
+        #expect(model.todos(for: .todo).isEmpty)
+        #expect(model.todos(for: .inProgress).map(\.uuid) == [existing.uuid, moving.uuid])
+        #expect(model.todos(for: .inProgress).last?.status == .inProgress)
+        #expect(change?.id == moving.uuid)
+        #expect(change?.request == TodoStatusChangeRequest(
+            status: .inProgress,
+            orderedIds: [existing.uuid, moving.uuid]
+        ))
+    }
+
+    @Test
+    func failedDropRestoresTheOriginalBoardAndExposesReorderError() async {
+        let first = makeTodo(id: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!, title: "First")
+        let second = makeTodo(id: UUID(uuidString: "22222222-2222-2222-2222-222222222222")!, title: "Second")
+        let original = makeBoard(todo: [first, second])
+        let repository = FakeTodoRepository(board: original, shouldFailPositionUpdate: true)
+        let model = TodoViewModel(repository: repository)
+        await model.load()
+
+        let succeeded = await model.drop(
+            todoID: second.uuid,
+            into: .todo,
+            relativeTo: first.uuid,
+            insertAfter: false
+        )
+
+        #expect(!succeeded)
+        #expect(model.board == original)
+        #expect(model.errorKey == "todo.error.reorder")
+    }
 }
 
 private actor FakeTodoRepository: TodoRepository {
@@ -147,10 +235,16 @@ private actor FakeTodoRepository: TodoRepository {
     var updateRequest: (id: TodoID, request: TodoRequest)?
     var statusChange: (id: TodoID, request: TodoStatusChangeRequest)?
     var positionRequest: TodoPositionUpdateRequest?
+    let shouldFailPositionUpdate: Bool
 
-    init(board: TodoBoardDTO, attachments: [AttachmentDTO] = []) {
+    init(
+        board: TodoBoardDTO,
+        attachments: [AttachmentDTO] = [],
+        shouldFailPositionUpdate: Bool = false
+    ) {
         self.board = board
         self.attachments = attachments
+        self.shouldFailPositionUpdate = shouldFailPositionUpdate
     }
 
     func fetchBoard() async throws -> TodoBoardDTO { board }
@@ -173,6 +267,9 @@ private actor FakeTodoRepository: TodoRepository {
     }
 
     func updatePositions(_ request: TodoPositionUpdateRequest) async throws {
+        if shouldFailPositionUpdate {
+            throw CocoaError(.fileWriteUnknown)
+        }
         positionRequest = request
     }
 
