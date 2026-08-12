@@ -19,6 +19,7 @@ import com.tistory.shanepark.dutypark.notification.domain.payload.TodoTaggedPayl
 import com.tistory.shanepark.dutypark.notification.domain.repository.NotificationRepository
 import com.tistory.shanepark.dutypark.notification.dto.NotificationDto
 import com.tistory.shanepark.dutypark.notification.service.NotificationService
+import com.tistory.shanepark.dutypark.push.apns.service.ApnsPushService
 import com.tistory.shanepark.dutypark.push.dto.PushNotificationPayload
 import com.tistory.shanepark.dutypark.push.service.WebPushService
 import com.tistory.shanepark.dutypark.todo.domain.entity.TodoStatus
@@ -35,6 +36,7 @@ class NotificationEventListener(
     private val notificationRepository: NotificationRepository,
     private val memberRepository: MemberRepository,
     private val webPushService: WebPushService,
+    private val apnsPushService: ApnsPushService,
 ) {
     private val log = logger()
 
@@ -208,16 +210,15 @@ class NotificationEventListener(
         val memberId = notification.member.id!!
         val unreadCount = notificationRepository.countByMemberIdAndIsReadFalse(memberId).toInt()
 
-        webPushService.sendToMember(
-            memberId = memberId,
-            payload = PushNotificationPayload(
-                type = notification.type,
-                url = getNotificationUrl(notification),
-                notificationId = notification.id.toString(),
-                unreadCount = unreadCount,
-                notification = notificationDto,
-            )
+        val payload = PushNotificationPayload(
+            type = notification.type,
+            url = getNotificationUrl(notification),
+            notificationId = notification.id.toString(),
+            unreadCount = unreadCount,
+            notification = notificationDto,
         )
+        webPushService.sendToMember(memberId, payload)
+        apnsPushService.sendToMember(memberId, payload)
     }
 
     private fun actorSnapshot(actorId: Long?): NotificationActorSnapshot {

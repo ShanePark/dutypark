@@ -66,6 +66,10 @@ dutypark:
     vapid: # npx web-push generate-vapid-keys
       public-key: "${VAPID_PUBLIC_KEY:}"
       private-key: "${VAPID_PRIVATE_KEY:}"
+  apns:
+    team-id: "${APNS_TEAM_ID:}"
+    key-id: "${APNS_KEY_ID:}"
+    private-key: "${APNS_PRIVATE_KEY:}"
   login:
     rate-limit:
       max-attempts: ${LOGIN_MAX_ATTEMPTS:5}
