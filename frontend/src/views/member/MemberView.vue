@@ -1,10 +1,11 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useThemeStore, type ThemeMode } from '@/stores/theme'
 import { friendApi, memberApi, refreshTokenApi } from '@/api/member'
+import { useAiScheduleConsentStore } from '@/stores/aiScheduleConsent'
 import { authApi } from '@/api/auth'
 import { useSwal } from '@/composables/useSwal'
 import { useKakao } from '@/composables/useKakao'
@@ -18,6 +19,7 @@ import SessionTokenList from '@/components/common/SessionTokenList.vue'
 import ProfilePhotoUploader from '@/components/common/ProfilePhotoUploader.vue'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 import DutyPatternCard from '@/components/member/DutyPatternCard.vue'
+import AiSchedulePolicyModal from '@/components/common/AiSchedulePolicyModal.vue'
 import { resolveApiErrorMessage } from '@/utils/resolveApiError'
 import {
   User,
@@ -43,14 +45,71 @@ import {
   Plus,
   Bell,
   Settings,
+  BrainCircuit,
 } from 'lucide-vue-next'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const themeStore = useThemeStore()
+const aiConsentStore = useAiScheduleConsentStore()
 const { t } = useI18n()
 const { showSuccess, showError, showInfo, confirm, toastSuccess } = useSwal()
+
+const showAiPolicyModal = ref(false)
+const aiConsentOn = computed(() => aiConsentStore.isCurrent)
+
+async function loadAiConsent(force = false) {
+  const id = authStore.user?.id
+  if (!id) {
+    aiConsentStore.reset()
+    return
+  }
+  try {
+    await aiConsentStore.loadForMember(id, force)
+  } catch (error) {
+    console.error('Failed to load AI schedule parsing consent:', error)
+  }
+}
+
+async function toggleAiConsent() {
+  const id = authStore.user?.id
+  if (!id || aiConsentStore.isSaving) return
+
+  if (aiConsentOn.value) {
+    try {
+      await aiConsentStore.revoke(id)
+      toastSuccess(t('aiScheduleConsent.messages.revoked'))
+    } catch (error) {
+      console.error('Failed to revoke AI schedule parsing consent:', error)
+      showError(t('aiScheduleConsent.messages.updateFailed'))
+    }
+    return
+  }
+
+  const confirmed = await confirm(
+    t('aiScheduleConsent.confirmDescription'),
+    t('aiScheduleConsent.confirmTitle'),
+  )
+  if (!confirmed) return
+
+  try {
+    await aiConsentStore.grant(id)
+    toastSuccess(t('aiScheduleConsent.messages.granted'))
+  } catch (error) {
+    console.error('Failed to grant AI schedule parsing consent:', error)
+    showError(t('aiScheduleConsent.messages.updateFailed'))
+  }
+}
+
+watch(
+  () => authStore.user?.id ?? null,
+  (id, previousId) => {
+    if (id === previousId) return
+    if (id === null) aiConsentStore.reset()
+    else void loadAiConsent()
+  },
+)
 
 // Managed members (accounts I manage)
 const managedMembers = ref<MemberDto[]>([])
@@ -683,6 +742,7 @@ onMounted(async () => {
       fetchManagedMembers(),
       fetchTokens(),
       initPushNotification(),
+      loadAiConsent(),
     ])
 
     // Set initial visibility from user data
@@ -852,6 +912,55 @@ onMounted(async () => {
         <p v-if="isIOSPWA && isPushBlocked" class="text-sm mt-2 text-dp-text-muted">
           {{ t('member.push.iosHint') }}
         </p>
+      </section>
+
+      <!-- Optional AI Schedule Parsing Settings Section -->
+      <section class="rounded-xl shadow-sm p-4 sm:p-6 mb-4 bg-dp-bg-card border border-dp-border-primary">
+        <h2 class="text-lg font-semibold mb-3 flex items-center gap-2 text-dp-text-primary">
+          <BrainCircuit class="w-5 h-5 text-dp-text-secondary" />
+          {{ t('aiScheduleConsent.settingsTitle') }}
+        </h2>
+        <p class="text-sm leading-6 text-dp-text-secondary">
+          {{ t('aiScheduleConsent.dataFlow') }}
+        </p>
+        <p class="mt-1 text-sm leading-6 text-dp-text-secondary">
+          {{ t('aiScheduleConsent.optionalDescription') }}
+        </p>
+        <div v-if="aiConsentStore.loadFailed" class="mt-3 rounded-lg bg-dp-warning-soft p-3 text-sm text-dp-warning">
+          <p>{{ t('aiScheduleConsent.messages.loadFailed') }}</p>
+          <button type="button" class="mt-2 min-h-11 rounded-lg px-3 font-medium hover:bg-dp-bg-hover" @click="loadAiConsent(true)">
+            {{ t('common.actions.retry') }}
+          </button>
+        </div>
+        <button
+          v-else
+          type="button"
+          role="switch"
+          :aria-checked="aiConsentOn"
+          :disabled="aiConsentStore.isLoading || aiConsentStore.isSaving"
+          class="push-toggle-row mt-3 w-full min-h-11 flex items-center justify-between gap-4 rounded-lg p-3 text-left disabled:cursor-not-allowed"
+          @click="toggleAiConsent"
+        >
+          <span class="min-w-0">
+            <span class="block font-medium text-dp-text-primary">{{ t('aiScheduleConsent.toggleLabel') }}</span>
+            <span class="block text-sm mt-1 text-dp-text-muted">
+              {{ aiConsentStore.consent?.needsRenewal ? t('aiScheduleConsent.renewalRequired') : (aiConsentOn ? t('aiScheduleConsent.statusOn') : t('aiScheduleConsent.statusOff')) }}
+            </span>
+          </span>
+          <span class="push-switch" :class="{ 'push-switch-on': aiConsentOn }" aria-hidden="true">
+            <span class="push-switch-thumb">
+              <Loader2 v-if="aiConsentStore.isLoading || aiConsentStore.isSaving" class="w-3.5 h-3.5 animate-spin text-dp-accent" />
+            </span>
+          </span>
+        </button>
+        <button
+          type="button"
+          :disabled="!aiConsentStore.consent?.policy"
+          class="mt-2 min-h-11 rounded-lg px-3 text-sm font-medium text-dp-accent hover:bg-dp-accent-soft disabled:opacity-50"
+          @click="showAiPolicyModal = true"
+        >
+          {{ t('aiScheduleConsent.viewPolicy') }}
+        </button>
       </section>
 
       <!-- Manager Delegation Section -->
@@ -1046,6 +1155,12 @@ onMounted(async () => {
     </template>
 
     <!-- Visibility Modal -->
+    <AiSchedulePolicyModal
+      :is-open="showAiPolicyModal"
+      :policy="aiConsentStore.consent?.policy ?? null"
+      @close="showAiPolicyModal = false"
+    />
+
     <BaseModal
       :is-open="showVisibilityModal"
       size="md"

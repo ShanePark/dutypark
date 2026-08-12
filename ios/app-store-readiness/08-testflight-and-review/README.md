@@ -1,6 +1,6 @@
 # TestFlight 및 App Review 실행 가이드
 
-최종 확인일: 2026-08-12
+최종 확인일: 2026-08-13
 
 이 문서는 Dutypark iOS 빌드를 내부 TestFlight에서 시작해 App Review 제출과 출시 판단까지 진행하기 위한 실행 체크리스트다.
 비밀번호, OAuth 비밀값, APNs 개인 키, 실제 세션 쿠키는 이 문서와 저장소에 기록하지 않는다.
@@ -88,7 +88,8 @@ TestFlight 빌드는 production APNs 환경을 사용하므로 Debug sandbox 성
 - [ ] Apple 로그인, 소셜 로그인, 회원 탈퇴 위치를 Review Notes에 설명한다.
 - [ ] 푸시를 확인하는 절차와 알림 도착에 필요한 조건을 설명한다.
 - [ ] 카메라·사진·파일 권한이 필요한 기능과 그 이유를 설명한다.
-- [ ] AI 처리 기능이 있다면 사용자 동의 위치와 거부 시 수동 사용 경로를 설명한다.
+- [ ] AI 선택 동의 위치(웹·iOS 설정, iOS all-day 저장 선택), Google로 전송되는 일정 날짜·내용, 설정 철회와 수동 시간 입력 경로를 Review Notes에 설명한다.
+- [!] Cloud Billing이 활성화된 Google paid service와 DPA 적용 Cloud Project를 확인하기 전에는 production AI 자동 인식을 사용하지 않는다.
 - [ ] Universal Link 등 외부 진입 경로가 있다면 테스트 URL을 제공한다.
 - [ ] 심사 중 운영 백엔드, 데이터베이스, OAuth callback과 파일 저장소를 계속 가용하게 유지한다.
 - [ ] 점검 시간, IP 제한, 관리자 승인 대기 때문에 심사가 막히지 않도록 한다.

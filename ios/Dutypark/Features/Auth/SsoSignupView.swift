@@ -353,7 +353,7 @@ struct SsoSignupView: View {
             oauthString("auth.oauth.signup.terms")
         case .privacy:
             oauthString("auth.oauth.signup.privacy")
-        case .unknown:
+        case .aiScheduleParsing, .unknown:
             oauthString("auth.oauth.signup.viewPolicy")
         }
     }

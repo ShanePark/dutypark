@@ -51,6 +51,7 @@ nonisolated final class GuestAPI: GuestAPIProtocol, Sendable {
         let path = switch type {
         case .terms: "terms"
         case .privacy: "privacy"
+        case .aiScheduleParsing: "ai-schedule-parsing"
         case .unknown(let value): value.lowercased()
         }
         return try await get("policies/\(path)")

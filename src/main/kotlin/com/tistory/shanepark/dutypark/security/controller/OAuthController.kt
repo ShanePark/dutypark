@@ -2,10 +2,12 @@ package com.tistory.shanepark.dutypark.security.controller
 
 import tools.jackson.core.type.TypeReference
 import tools.jackson.databind.json.JsonMapper
+import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
 import com.tistory.shanepark.dutypark.common.slack.annotation.SlackNotification
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.member.domain.enums.SsoType
 import com.tistory.shanepark.dutypark.policy.domain.enums.PolicyType
+import com.tistory.shanepark.dutypark.policy.service.PolicyService
 import com.tistory.shanepark.dutypark.member.service.ConsentService
 import com.tistory.shanepark.dutypark.member.service.MemberService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
@@ -35,6 +37,7 @@ class OAuthController(
     private val authService: AuthService,
     private val cookieService: CookieService,
     private val consentService: ConsentService,
+    private val policyService: PolicyService,
 ) {
     private val jsonMapper = JsonMapper.builder().build()
 
@@ -133,6 +136,16 @@ class OAuthController(
         httpServletRequest: HttpServletRequest,
         httpServletResponse: HttpServletResponse
     ): ResponseEntity<Map<String, Any>> {
+        val currentTermsVersion = policyService.getCurrentPolicy(PolicyType.TERMS)?.version
+        if (request.termsVersion != currentTermsVersion) {
+            throw BadRequestException("policy.terms.version.outdated")
+        }
+
+        val currentPrivacyVersion = policyService.getCurrentPolicy(PolicyType.PRIVACY)?.version
+        if (request.privacyVersion != currentPrivacyVersion) {
+            throw BadRequestException("policy.privacy.version.outdated")
+        }
+
         val member = memberService.createSsoMember(
             username = request.username,
             memberSsoRegisterUUID = request.uuid

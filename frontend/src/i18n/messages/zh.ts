@@ -59,6 +59,14 @@ const apiErrors = {
       exceeded: '请求太多。请稍后重试。',
     },
   },
+  aiScheduleConsent: {
+    settingsTitle: 'AI 时间自动识别', toggleLabel: '使用 Google AI 自动识别日程时间',
+    dataFlow: '仅将日程日期和内容文本发送到 Google Generative Language API，用于提取开始和结束时间。不会发送会员 ID 和团队 ID。', optionalDescription: '此同意为可选项，可随时撤回。不同意也能原样保存日程或手动输入时间。',
+    statusOn: '当前已同意', statusOff: '当前未同意', renewalRequired: '政策已变更，需要重新同意。', viewPolicy: '查看详细政策', policyTitle: 'AI 日程时间识别可选同意', policyMeta: '版本 {version} · 生效日期 {date}',
+    confirmTitle: '开启 AI 时间自动识别？', confirmDescription: '日程日期和内容文本将发送到 Google Generative Language API 以提取时间。不会发送会员 ID 和团队 ID。',
+    messages: { granted: '已同意 AI 时间识别。', revoked: '已撤回 AI 时间识别同意。', loadFailed: '无法加载 AI 同意状态。', updateFailed: '无法更改 AI 同意设置。' },
+    schedule: { statusOn: 'AI 时间自动识别已开启', statusOff: 'AI 时间自动识别已关闭', statusRenewal: 'AI 时间自动识别需要重新同意', promptTitle: '要自动识别时间吗？', promptDescription: '同意后，日程日期和内容文本将发送到 Google AI 以提取时间。不会发送会员和团队 ID。', consentAndParse: '同意并自动识别', saveWithoutAi: '不同意并原样保存', manualHint: '您可以随时手动输入开始和结束时间。', loadFailedContinue: '无法确认 AI 同意状态。要在不使用 AI 的情况下原样保存吗？', grantFailed: '无法保存同意。您可以不使用 AI 保存或重试。' },
+  },
   member: {
     notFound: '未找到会员。',
     visibility: {
@@ -251,6 +259,7 @@ const apiErrors = {
 } as const
 
 export default {
+  aiScheduleConsent: apiErrors.aiScheduleConsent,
   common: {
     actions: {
       close: '关闭',

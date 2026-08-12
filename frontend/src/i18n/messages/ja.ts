@@ -60,6 +60,15 @@ const apiErrors = {
       exceeded: 'リクエストが多すぎます。しばらくしてから再試行してください。',
     },
   },
+  aiScheduleConsent: {
+    settingsTitle: 'AIによる時刻の自動認識', toggleLabel: 'Google AIで予定時刻を自動認識',
+    dataFlow: '開始・終了時刻の抽出のため、予定の日付と内容テキストのみをGoogle Generative Language APIへ送信します。会員IDとチームIDは送信しません。',
+    optionalDescription: '任意の同意で、いつでも撤回できます。同意しなくても予定をそのまま保存したり、時刻を手動入力できます。',
+    statusOn: '同意済み', statusOff: '未同意', renewalRequired: 'ポリシー変更のため再同意が必要です。', viewPolicy: '詳細ポリシーを見る', policyTitle: 'AI予定時刻認識の任意同意', policyMeta: 'バージョン {version}・施行日 {date}',
+    confirmTitle: 'AI時刻自動認識を有効にしますか？', confirmDescription: '時刻抽出のため、予定の日付と内容テキストをGoogle Generative Language APIへ送信します。会員IDとチームIDは送信しません。',
+    messages: { granted: 'AI時刻認識に同意しました。', revoked: 'AI時刻認識の同意を撤回しました。', loadFailed: 'AI同意状態を読み込めませんでした。', updateFailed: 'AI同意設定を変更できませんでした。' },
+    schedule: { statusOn: 'AI時刻自動認識：オン', statusOff: 'AI時刻自動認識：オフ', statusRenewal: 'AI時刻自動認識：再同意が必要', promptTitle: '時刻を自動認識しますか？', promptDescription: '同意すると、予定の日付と内容テキストをGoogle AIへ送信して時刻を抽出します。会員・チームIDは送信しません。', consentAndParse: '同意して自動認識', saveWithoutAi: '同意せずそのまま保存', manualHint: '開始・終了時刻はいつでも手動入力できます。', loadFailedContinue: 'AI同意状態を確認できませんでした。AIを使わずそのまま保存しますか？', grantFailed: '同意を保存できませんでした。AIを使わず保存するか、再試行できます。' },
+  },
   member: {
     notFound: '会員が見つかりません。',
     visibility: {
@@ -253,6 +262,7 @@ const apiErrors = {
 
 export default {
   ...en,
+  aiScheduleConsent: apiErrors.aiScheduleConsent,
   common: {
     ...en.common,
     actions: {

@@ -59,6 +59,14 @@ const apiErrors = {
       exceeded: 'Demasiadas solicitudes. Inténtelo de nuevo más tarde.',
     },
   },
+  aiScheduleConsent: {
+    settingsTitle: 'Reconocimiento automático de hora con IA', toggleLabel: 'Reconocer horas con Google AI',
+    dataFlow: 'Solo se envían la fecha y el texto del contenido del evento a Google Generative Language API para extraer las horas de inicio y fin. No se envían los ID de miembro ni de equipo.', optionalDescription: 'El consentimiento es opcional y puede retirarse en cualquier momento. Sin consentir, puedes guardar el evento sin cambios o introducir las horas manualmente.',
+    statusOn: 'Consentimiento activo', statusOff: 'Sin consentimiento', renewalRequired: 'La política cambió y requiere renovar el consentimiento.', viewPolicy: 'Ver política detallada', policyTitle: 'Consentimiento opcional para reconocer horas con IA', policyMeta: 'Versión {version} · Vigente desde {date}',
+    confirmTitle: '¿Activar el reconocimiento automático con IA?', confirmDescription: 'La fecha y el texto del evento se enviarán a Google Generative Language API para extraer las horas. No se envían los ID de miembro ni de equipo.',
+    messages: { granted: 'Consentimiento de reconocimiento con IA concedido.', revoked: 'Consentimiento de reconocimiento con IA retirado.', loadFailed: 'No se pudo cargar el estado del consentimiento de IA.', updateFailed: 'No se pudo actualizar el consentimiento de IA.' },
+    schedule: { statusOn: 'Reconocimiento de hora con IA activado', statusOff: 'Reconocimiento de hora con IA desactivado', statusRenewal: 'Se debe renovar el consentimiento de IA', promptTitle: '¿Reconocer la hora automáticamente?', promptDescription: 'Con tu consentimiento, la fecha y el texto del evento se envían a Google AI para extraer las horas. No se envían los ID de miembro ni de equipo.', consentAndParse: 'Consentir y reconocer automáticamente', saveWithoutAi: 'Guardar sin cambios y sin consentir', manualHint: 'Siempre puedes introducir las horas de inicio y fin manualmente.', loadFailedContinue: 'No se pudo comprobar el consentimiento de IA. ¿Guardar el evento sin cambios y sin IA?', grantFailed: 'No se pudo guardar el consentimiento. Puedes guardar sin IA o intentarlo de nuevo.' },
+  },
   member: {
     notFound: 'Miembro no encontrado.',
     visibility: {
@@ -251,6 +259,7 @@ const apiErrors = {
 } as const
 
 export default {
+  aiScheduleConsent: apiErrors.aiScheduleConsent,
   common: {
     actions: {
       close: 'Cerrar',

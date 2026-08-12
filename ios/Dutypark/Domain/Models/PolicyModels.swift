@@ -3,12 +3,14 @@ import Foundation
 nonisolated enum PolicyType: Codable, Hashable, Sendable {
     case terms
     case privacy
+    case aiScheduleParsing
     case unknown(String)
 
     var rawValue: String {
         switch self {
         case .terms: "TERMS"
         case .privacy: "PRIVACY"
+        case .aiScheduleParsing: "AI_SCHEDULE_PARSING"
         case .unknown(let value): value
         }
     }
@@ -18,6 +20,7 @@ nonisolated enum PolicyType: Codable, Hashable, Sendable {
         self = switch value {
         case "TERMS": .terms
         case "PRIVACY": .privacy
+        case "AI_SCHEDULE_PARSING": .aiScheduleParsing
         default: .unknown(value)
         }
     }

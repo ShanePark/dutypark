@@ -108,6 +108,7 @@ final class SessionStore: ObservableObject {
         let expiration = Date().addingTimeInterval(TimeInterval(expiresIn))
         impersonationExpiresAt = expiration
         UserDefaults.standard.set(expiration, forKey: Self.impersonationExpirationKey)
+        AIScheduleParsingConsentStore.shared.scope(to: member.id)
         state = .authenticated(member)
         scheduleImpersonationExpiration(at: expiration)
     }
@@ -116,6 +117,7 @@ final class SessionStore: ObservableObject {
         do {
             let member = try await authService.restoreOriginalAccount()
             clearImpersonationExpiration()
+            AIScheduleParsingConsentStore.shared.scope(to: member.id)
             state = .authenticated(member)
         } catch {
             await becomeGuest()
@@ -140,6 +142,7 @@ final class SessionStore: ObservableObject {
             await self?.authenticationDidFail()
         }
         await authService.setImpersonating(member.isImpersonating)
+        AIScheduleParsingConsentStore.shared.scope(to: member.id)
         state = .authenticated(member)
         if member.isImpersonating, let impersonationExpiresAt {
             scheduleImpersonationExpiration(at: impersonationExpiresAt)
@@ -152,6 +155,7 @@ final class SessionStore: ObservableObject {
         impersonationExpiryTask?.cancel()
         clearImpersonationExpiration()
         await authService.setImpersonating(false)
+        AIScheduleParsingConsentStore.shared.scope(to: nil)
         state = .guest
     }
 

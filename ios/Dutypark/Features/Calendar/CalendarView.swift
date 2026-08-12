@@ -1775,6 +1775,8 @@ private struct ScheduleEditorView: View {
     @State private var tagIDs: Set<MemberID>
     @State private var isSaving = false
     @State private var isDiscarding = false
+    @State private var pendingAIConsentPolicy: PolicyDTO?
+    @StateObject private var aiConsent = AIScheduleParsingConsentStore.shared
     @StateObject private var attachmentModel: AttachmentPickerModel
     @FocusState private var focusedField: Field?
 
@@ -1932,6 +1934,41 @@ private struct ScheduleEditorView: View {
             onWorkingChange(isWorking)
         }
         .onDisappear { onWorkingChange(false) }
+        .alert(
+            CalendarLocalization.text("calendar.aiConsent.prompt.title"),
+            isPresented: Binding(
+                get: { pendingAIConsentPolicy != nil },
+                set: { if !$0 { pendingAIConsentPolicy = nil } }
+            )
+        ) {
+            Button(CalendarLocalization.text("calendar.aiConsent.prompt.agree")) {
+                guard let memberID = model.me?.id,
+                      let version = pendingAIConsentPolicy?.version
+                else {
+                    pendingAIConsentPolicy = nil
+                    saveWithoutConsentRequest()
+                    return
+                }
+                pendingAIConsentPolicy = nil
+                isSaving = true
+                Task {
+                    _ = await aiConsent.grant(for: memberID, policyVersion: version)
+                    await performSave()
+                }
+            }
+            Button(CalendarLocalization.text("calendar.aiConsent.prompt.decline"), role: .destructive) {
+                let memberID = model.me?.id
+                pendingAIConsentPolicy = nil
+                isSaving = true
+                Task {
+                    if let memberID { _ = await aiConsent.revoke(for: memberID) }
+                    await performSave()
+                }
+            }
+            Button(CalendarLocalization.text("calendar.cancel"), role: .cancel) {}
+        } message: {
+            Text(CalendarLocalization.text("calendar.aiConsent.prompt.message"))
+        }
     }
 
     private func formRow<Content: View>(
@@ -1987,11 +2024,36 @@ private struct ScheduleEditorView: View {
     private func save() {
         isSaving = true
         Task {
-            guard let attachments = await attachmentModel.resultForSave() else {
-                isSaving = false
+            guard let memberID = model.me?.id else {
+                await performSave()
                 return
             }
-            let saved = await model.saveSchedule(
+            let decision = await aiConsent.saveDecision(
+                for: memberID,
+                start: start,
+                end: end
+            )
+            switch decision {
+            case .saveWithoutPrompt:
+                await performSave()
+            case .requestConsent(let policy):
+                isSaving = false
+                pendingAIConsentPolicy = policy
+            }
+        }
+    }
+
+    private func saveWithoutConsentRequest() {
+        isSaving = true
+        Task { await performSave() }
+    }
+
+    private func performSave() async {
+        guard let attachments = await attachmentModel.resultForSave() else {
+            isSaving = false
+            return
+        }
+        let saved = await model.saveSchedule(
                 existing: existing,
                 content: content,
                 description: description,
@@ -2002,9 +2064,8 @@ private struct ScheduleEditorView: View {
                 attachmentSessionID: attachments.attachmentSessionId,
                 orderedAttachmentIDs: attachments.orderedAttachmentIds
             )
-            isSaving = false
-            if saved { onSaved() }
-        }
+        isSaving = false
+        if saved { onSaved() }
     }
 
     private var saveDisabled: Bool {

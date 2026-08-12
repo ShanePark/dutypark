@@ -1,5 +1,7 @@
 # Apple Developer 및 App Store Connect 제출 준비
 
+- 최종 확인일: 2026-08-13
+
 ## 목표
 
 App Store 심사에 필요한 Apple Developer 설정, 앱 레코드, 개인정보·법적 선언, 메타데이터와 심사 자료를 누락 없이 준비한다.
@@ -73,14 +75,14 @@ App Store 심사에 필요한 Apple Developer 설정, 앱 레코드, 개인정�
 
 ## 6. App Privacy
 
-- [ ] 수집하는 데이터 유형을 서버·iOS 구현과 대조한다.
-- [ ] 이름, 이메일, 계정 식별자 수집 여부를 표시한다.
-- [ ] 일정, Todo, 사진·첨부파일 등 사용자 콘텐츠를 표시한다.
-- [ ] 푸시 토큰, 기기·세션 정보, IP 등 운영 데이터를 검토한다.
-- [ ] 데이터가 사용자와 연결되는지와 추적 목적으로 쓰이는지를 표시한다.
-- [ ] 각 데이터의 목적을 앱 기능, 분석, 보안 등으로 정확히 선택한다.
+- [x] 서버·iOS 데이터 inventory 초안을 [개인정보·AI 상세 문서](../03-privacy-and-ai-consent/README.md)에 정리했다.
+- [x] Name, Email, Photos or Videos, Other User Content, User ID, Device ID와 Other Data Types를 현재 `PrivacyInfo.xcprivacy`에 App Functionality·Linked to User·non-tracking으로 선언했다.
+- [x] 별도 광고·analytics·crash SDK가 없는 현재 상태와 서버 운영 로그 범위를 구분했다.
+- [ ] Release Archive Privacy Report와 실제 포함 SDK를 inventory·manifest와 대조한다.
+- [ ] App Store Connect에서 각 데이터 유형, App Functionality, Linked to User와 non-tracking 답변을 실제 Release 기준으로 최종 확인하고 Publish한다.
 - [ ] 개인정보 처리방침 URL을 운영 URL로 입력한다.
-- [ ] 개인정보 처리방침 내용과 App Privacy 응답을 일치시킨다.
+- [x] 저장소의 `PRIVACY 2026-08-13` 정책 내용과 App Privacy 입력 초안을 기술 데이터 흐름 기준으로 일치시켰다.
+- [!] 법률·운영 계약 검토와 Google paid service/DPA 확인은 저장소 기술 정합성 완료와 별개의 출시 차단 항목이다.
 
 “수집하지 않음”은 앱 또는 서버가 실제로 데이터를 받지 않는 경우에만 선택한다.
 

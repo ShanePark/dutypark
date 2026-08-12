@@ -1,4 +1,5 @@
 import com.tistory.shanepark.dutypark.common.slack.notifier.SlackNotifier
+import com.tistory.shanepark.dutypark.consent.service.AiScheduleParsingConsentService
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
 import com.tistory.shanepark.dutypark.schedule.domain.enums.ParsingTimeStatus
@@ -8,6 +9,8 @@ import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimePa
 import com.tistory.shanepark.dutypark.schedule.timeparsing.service.ScheduleTimeParsingService
 import com.tistory.shanepark.dutypark.schedule.timeparsing.service.ScheduleTimeParsingWorker
 import net.gpedro.integrations.slack.SlackMessage
+import net.gpedro.integrations.slack.SlackAttachment
+import net.gpedro.integrations.slack.SlackField
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -20,6 +23,7 @@ import org.mockito.Mockito.*
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.whenever
 import org.springframework.test.util.ReflectionTestUtils
 import java.time.LocalDateTime
@@ -37,11 +41,15 @@ class ScheduleTimeParsingWorkerTest {
     @Mock
     lateinit var slackNotifier: SlackNotifier
 
+    @Mock
+    lateinit var aiScheduleParsingConsentService: AiScheduleParsingConsentService
+
     @InjectMocks
     lateinit var worker: ScheduleTimeParsingWorker
 
     @BeforeEach
     fun setUpAtomicUpdates() {
+        lenient().whenever(aiScheduleParsingConsentService.hasCurrentConsent(any())).thenReturn(true)
         lenient().whenever(
             scheduleRepository.updateParsingStatusIfCurrent(any(), any(), any(), any())
         ).thenReturn(1)
@@ -55,6 +63,7 @@ class ScheduleTimeParsingWorkerTest {
     private fun createSchedule(content: String = "3시 회의"): Schedule {
         val randomDay = LocalDateTime.of(2025, 3, 3, 0, 0, 0, 0)
         val member = Member("")
+        ReflectionTestUtils.setField(member, "id", 1L)
         val schedule = Schedule(member = member, content = content, startDateTime = randomDay, endDateTime = randomDay)
         return schedule
     }
@@ -165,6 +174,52 @@ class ScheduleTimeParsingWorkerTest {
         assertThat(schedule.parsingTimeStatus).isEqualTo(ParsingTimeStatus.FAILED)
         assertThat(aiAttempted).isTrue()
         verify(scheduleRepository).updateParsingStatusIfCurrent(any(), any(), any(), any())
+    }
+
+    @Test
+    fun `withdrawn owner consent immediately before parsing changes status to SKIP without external request`() {
+        // Given
+        val schedule = createSchedule(content = "3시 회의")
+        val task = ScheduleTimeParsingTask(schedule)
+        whenever(scheduleRepository.findById(schedule.id)).thenReturn(Optional.of(schedule))
+        whenever(aiScheduleParsingConsentService.hasCurrentConsent(schedule.member.id!!)).thenReturn(false)
+
+        // When
+        val aiAttempted = worker.run(task)
+
+        // Then
+        assertThat(aiAttempted).isFalse()
+        assertThat(schedule.parsingTimeStatus).isEqualTo(ParsingTimeStatus.SKIP)
+        verify(scheduleRepository).updateParsingStatusIfCurrent(
+            schedule.id,
+            schedule.parsingGeneration,
+            ParsingTimeStatus.WAIT,
+            ParsingTimeStatus.SKIP,
+        )
+        verify(scheduleTimeParsingService, never()).parseScheduleTime(anyOrNull())
+    }
+
+    @Test
+    fun `withdrawn owner consent takes priority over no time indicator pre-filter`() {
+        // Given
+        val schedule = createSchedule(content = "점심 먹기")
+        val task = ScheduleTimeParsingTask(schedule)
+        whenever(scheduleRepository.findById(schedule.id)).thenReturn(Optional.of(schedule))
+        whenever(aiScheduleParsingConsentService.hasCurrentConsent(schedule.member.id!!)).thenReturn(false)
+
+        // When
+        val aiAttempted = worker.run(task)
+
+        // Then
+        assertThat(aiAttempted).isFalse()
+        assertThat(schedule.parsingTimeStatus).isEqualTo(ParsingTimeStatus.SKIP)
+        verify(scheduleRepository).updateParsingStatusIfCurrent(
+            schedule.id,
+            schedule.parsingGeneration,
+            ParsingTimeStatus.WAIT,
+            ParsingTimeStatus.SKIP,
+        )
+        verify(scheduleTimeParsingService, never()).parseScheduleTime(anyOrNull())
     }
 
     @Test
@@ -659,6 +714,36 @@ class ScheduleTimeParsingWorkerTest {
     }
 
     @Test
+    fun `Slack parsing error notification excludes schedule content and raw AI response`() {
+        // Given
+        val privateContent = "비공개 진료 일정 3시"
+        val rawAiResponse = "raw-provider-response-with-private-data"
+        val schedule = createSchedule(content = privateContent)
+        val task = ScheduleTimeParsingTask(schedule)
+        whenever(scheduleRepository.findById(schedule.id)).thenReturn(Optional.of(schedule))
+        whenever(scheduleTimeParsingService.parseScheduleTime(anyOrNull())).thenReturn(
+            ScheduleTimeParsingResponse(
+                result = false,
+                errorMessage = "invalid response format",
+                rawResponse = rawAiResponse,
+            )
+        )
+        val messageCaptor = argumentCaptor<SlackMessage>()
+
+        // When
+        worker.run(task)
+
+        // Then
+        verify(slackNotifier).call(messageCaptor.capture())
+        val fields = readAttachments(messageCaptor.firstValue).flatMap(::readFields)
+        assertThat(fields.mapNotNull(::readFieldTitle))
+            .contains("Schedule ID", "Failure Kind", "Time")
+            .doesNotContain("Content", "LLM Response", "Error Message")
+        assertThat(fields.mapNotNull(::readFieldValue).joinToString(" "))
+            .doesNotContain(privateContent, rawAiResponse)
+    }
+
+    @Test
     fun `when parsing fails without error info, slack notification is not sent`() {
         // Given
         val schedule = createSchedule()
@@ -677,6 +762,32 @@ class ScheduleTimeParsingWorkerTest {
         // Then
         assertThat(schedule.parsingTimeStatus).isEqualTo(ParsingTimeStatus.FAILED)
         verify(slackNotifier, never()).call(any<SlackMessage>())
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun readAttachments(message: SlackMessage): List<SlackAttachment> {
+        val field = SlackMessage::class.java.getDeclaredField("attach")
+        field.isAccessible = true
+        return field.get(message) as? List<SlackAttachment> ?: emptyList()
+    }
+
+    @Suppress("UNCHECKED_CAST")
+    private fun readFields(attachment: SlackAttachment): List<SlackField> {
+        val field = SlackAttachment::class.java.getDeclaredField("fields")
+        field.isAccessible = true
+        return field.get(attachment) as? List<SlackField> ?: emptyList()
+    }
+
+    private fun readFieldTitle(field: SlackField): String? {
+        val titleField = SlackField::class.java.getDeclaredField("title")
+        titleField.isAccessible = true
+        return titleField.get(field) as? String
+    }
+
+    private fun readFieldValue(field: SlackField): String? {
+        val valueField = SlackField::class.java.getDeclaredField("value")
+        valueField.isAccessible = true
+        return valueField.get(field) as? String
     }
 
 }

@@ -2,6 +2,7 @@ package com.tistory.shanepark.dutypark.schedule.timeparsing.service
 
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.slack.notifier.SlackNotifier
+import com.tistory.shanepark.dutypark.consent.service.AiScheduleParsingConsentService
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
 import com.tistory.shanepark.dutypark.schedule.domain.enums.ParsingTimeStatus
 import com.tistory.shanepark.dutypark.schedule.domain.enums.ParsingTimeStatus.*
@@ -23,11 +24,13 @@ class ScheduleTimeParsingWorker(
     private val scheduleTimeParsingService: ScheduleTimeParsingService,
     private val scheduleRepository: ScheduleRepository,
     private val slackNotifier: SlackNotifier,
+    private val aiScheduleParsingConsentService: AiScheduleParsingConsentService,
 ) {
     private val log = logger()
     fun run(task: ScheduleTimeParsingTask): Boolean {
         val schedule = findCurrentSchedule(task) ?: return false
 
+        if (!hasCurrentOwnerConsent(task, schedule)) return false
         if (alreadyHaveTimeInfo(task, schedule)) return false
         if (noTimeRelatedText(task, schedule)) return false
 
@@ -49,14 +52,15 @@ class ScheduleTimeParsingWorker(
                 log.info("AI parsing interrupted during shutdown: scheduleId={}", task.scheduleId)
                 return false
             }
-            log.error("AI parsing failed for schedule {}: {}", task.scheduleId, e.message, e)
+            log.error(
+                "AI parsing failed: scheduleId={}, exceptionType={}",
+                task.scheduleId,
+                e.javaClass.simpleName,
+            )
             if (updateStatusIfCurrent(task, schedule, FAILED)) {
                 notifyLlmError(
                     scheduleId = task.scheduleId.toString(),
-                    content = request.content,
-                    errorMessage = e.message,
-                    rawResponse = null,
-                    stackTrace = e.stackTraceToString()
+                    failureKind = "REQUEST_EXCEPTION",
                 )
             }
             return true
@@ -72,7 +76,7 @@ class ScheduleTimeParsingWorker(
                 parsedEnd.toLocalDate() != request.date ||
                 parsedEnd.isBefore(parsedStart)
             ) {
-                log.warn("Rejected out-of-range parsed dateTime: {}", response)
+                log.warn("Rejected out-of-range parsed dateTime: scheduleId={}", task.scheduleId)
                 updateStatusIfCurrent(task, schedule, FAILED)
                 return true
             }
@@ -84,7 +88,7 @@ class ScheduleTimeParsingWorker(
                 contentWithoutTime = response.content ?: "",
             )
         } catch (e: DateTimeParseException) {
-            log.warn("Failed to parse dateTime: {}", response)
+            log.warn("Failed to parse AI dateTime fields: scheduleId={}", task.scheduleId)
             updateStatusIfCurrent(task, schedule, FAILED)
         }
         return true
@@ -130,10 +134,7 @@ class ScheduleTimeParsingWorker(
         if (updated && (response.errorMessage != null || response.rawResponse != null)) {
             notifyLlmError(
                 scheduleId = schedule.id.toString(),
-                content = schedule.content,
-                errorMessage = response.errorMessage,
-                rawResponse = response.rawResponse,
-                stackTrace = null
+                failureKind = "INVALID_RESPONSE",
             )
         }
         return true
@@ -154,6 +155,14 @@ class ScheduleTimeParsingWorker(
 
         updateStatusIfCurrent(task, schedule, NO_TIME_INFO)
         return true
+    }
+
+    private fun hasCurrentOwnerConsent(task: ScheduleTimeParsingTask, schedule: Schedule): Boolean {
+        if (aiScheduleParsingConsentService.hasCurrentConsent(schedule.member.id!!)) {
+            return true
+        }
+        updateStatusIfCurrent(task, schedule, SKIP)
+        return false
     }
 
     private fun updateStatusIfCurrent(
@@ -200,24 +209,18 @@ class ScheduleTimeParsingWorker(
 
     private fun notifyLlmError(
         scheduleId: String,
-        content: String,
-        errorMessage: String?,
-        rawResponse: String?,
-        stackTrace: String?
+        failureKind: String,
     ) {
         val slackAttachment = SlackAttachment()
         slackAttachment.setFallback("LLM Parsing Error")
         slackAttachment.setColor("danger")
         slackAttachment.setTitle("LLM Time Parsing Failed")
-        stackTrace?.let { slackAttachment.setText(it) }
 
         val fields = mutableListOf(
             SlackField().setTitle("Schedule ID").setValue(scheduleId),
-            SlackField().setTitle("Content").setValue(content),
+            SlackField().setTitle("Failure Kind").setValue(failureKind),
             SlackField().setTitle("Time").setValue(LocalDateTime.now().toString()),
         )
-        errorMessage?.let { fields.add(SlackField().setTitle("Error Message").setValue(it)) }
-        rawResponse?.let { fields.add(SlackField().setTitle("LLM Response").setValue(it)) }
         slackAttachment.setFields(fields)
 
         val slackMessage = SlackMessage()

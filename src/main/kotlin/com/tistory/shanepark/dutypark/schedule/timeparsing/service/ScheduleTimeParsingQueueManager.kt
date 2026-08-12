@@ -1,7 +1,9 @@
 package com.tistory.shanepark.dutypark.schedule.timeparsing.service
 
 import com.tistory.shanepark.dutypark.common.config.logger
+import com.tistory.shanepark.dutypark.consent.service.AiScheduleParsingConsentService
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
+import com.tistory.shanepark.dutypark.schedule.domain.enums.ParsingTimeStatus.SKIP
 import com.tistory.shanepark.dutypark.schedule.domain.enums.ParsingTimeStatus.WAIT
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
 import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeParsingTask
@@ -23,6 +25,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 class ScheduleTimeParsingQueueManager(
     private val worker: ScheduleTimeParsingWorker,
     private val scheduleRepository: ScheduleRepository,
+    private val aiScheduleParsingConsentService: AiScheduleParsingConsentService,
     @param:Value("\${spring.ai.openai.api-key}") private val geminiApiKey: String,
     @param:Value("\${spring.ai.rate-limit.rpm}") private val rpmLimit: Int,
     @param:Value("\${spring.ai.rate-limit.rpd}") private val rpdLimit: Int,
@@ -52,10 +55,34 @@ class ScheduleTimeParsingQueueManager(
         }
 
         val allWaitJobs = scheduleRepository.findAllByParsingTimeStatus(WAIT)
-        allWaitJobs.forEach { schedule -> addTask(schedule) }
-        if (allWaitJobs.isNotEmpty())
-            log.info("Pending schedules added to queue: count={}", allWaitJobs.size)
+        val consentedJobs = allWaitJobs.filter { schedule ->
+            val hasConsent = aiScheduleParsingConsentService.hasCurrentConsent(schedule.member.id!!)
+            if (!hasConsent) {
+                reclassifyAsSkipped(schedule)
+            }
+            hasConsent
+        }
+        consentedJobs.forEach { schedule -> addTask(schedule) }
+        if (allWaitJobs.isNotEmpty()) {
+            log.info(
+                "Pending schedules restored: queued={}, skippedWithoutConsent={}",
+                consentedJobs.size,
+                allWaitJobs.size - consentedJobs.size,
+            )
+        }
 
+    }
+
+    private fun reclassifyAsSkipped(schedule: Schedule) {
+        val updated = scheduleRepository.updateParsingStatusIfCurrent(
+            id = schedule.id,
+            parsingGeneration = schedule.parsingGeneration,
+            expectedStatus = WAIT,
+            newStatus = SKIP,
+        ) == 1
+        if (updated) {
+            schedule.parsingTimeStatus = SKIP
+        }
     }
 
     fun addTask(schedule: Schedule) {

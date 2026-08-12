@@ -28,6 +28,7 @@ struct SettingsView: View {
     @EnvironmentObject private var session: SessionStore
     @StateObject private var model = SettingsViewModel()
     @StateObject private var push = APNsRegistrationManager.shared
+    @StateObject private var aiConsent = AIScheduleParsingConsentStore.shared
     @State private var oauthClient = MobileOAuthClient()
     @AppStorage(SettingsPreference.languageKey) private var languageCode = ""
     @AppStorage(SettingsPreference.themeKey) private var themeCode = SettingsPreference.defaultTheme
@@ -39,6 +40,7 @@ struct SettingsView: View {
     @State private var showPassword = false
     @State private var showAuxiliary = false
     @State private var showLogout = false
+    @State private var showAIConsentConfirmation = false
     @State private var logoutAction = SettingsDestructiveActionGate()
     @State private var showDeleteInfo = false
     @State private var managerToRemove: MemberDTO?
@@ -83,6 +85,7 @@ struct SettingsView: View {
                     visibilitySection
                     appearanceSection
                     pushSection
+                    aiConsentSection
                     if model.loadedSections.isSuperset(of: [.family, .managers]) {
                         managerSection
                     }
@@ -108,6 +111,10 @@ struct SettingsView: View {
         .accessibilityIdentifier("screen.settings")
         .task { await model.load() }
         .task { await push.resumeRegistration() }
+        .task(id: model.member?.id) {
+            guard let memberID = model.member?.id else { return }
+            await aiConsent.load(for: memberID)
+        }
         .onChange(of: selectedPhoto) { _, item in
             guard let item else { return }
             Task { await upload(item) }
@@ -249,6 +256,23 @@ struct SettingsView: View {
             }
         } message: {
             SettingsLocalization.text("settings.push.permissionMessage")
+        }
+        .alert(SettingsLocalization.string("settings.aiConsent.confirmTitle"), isPresented: $showAIConsentConfirmation) {
+            Button(SettingsLocalization.string("settings.action.cancel"), role: .cancel) {}
+            Button(SettingsLocalization.string("settings.aiConsent.confirmEnable")) {
+                Task { await grantAIConsent() }
+            }
+        } message: {
+            SettingsLocalization.text("settings.aiConsent.confirmMessage")
+        }
+        .alert(SettingsLocalization.string("settings.notice.title"), isPresented: aiConsentErrorBinding) {
+            Button(SettingsLocalization.string("settings.action.confirm")) {
+                aiConsent.dismissError()
+            }
+        } message: {
+            if let key = aiConsent.errorKey {
+                SettingsLocalization.text(key)
+            }
         }
         .disabled(model.isWorking || logoutAction.isWorking || sessionAction.isWorking)
         .navigationDestination(item: $destination) { destination in
@@ -459,6 +483,69 @@ struct SettingsView: View {
                 Label(SettingsLocalization.string("settings.push.failed"), systemImage: "exclamationmark.triangle")
                     .font(DPTypography.supporting)
                     .foregroundStyle(DPColor.danger)
+            }
+        }
+    }
+
+    private var aiConsentSection: some View {
+        SettingsCard(title: "settings.aiConsent.title", icon: "sparkles") {
+            Button(action: toggleAIConsent) {
+                HStack(spacing: DPSpacing.medium) {
+                    VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+                        SettingsLocalization.text("settings.aiConsent.toggle")
+                            .font(DPTypography.bodyMedium)
+                            .foregroundStyle(DPColor.textPrimary)
+                        SettingsLocalization.text("settings.aiConsent.description")
+                            .font(DPTypography.supporting)
+                            .foregroundStyle(DPColor.textSecondary)
+                            .multilineTextAlignment(.leading)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Spacer(minLength: DPSpacing.small)
+                    if aiConsent.isLoading || aiConsent.isUpdating {
+                        ProgressView()
+                            .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                            .accessibilityLabel(SettingsLocalization.string("settings.aiConsent.updating"))
+                    } else {
+                        SettingsSwitch(isOn: aiConsent.isEnabled)
+                    }
+                }
+                .padding(.horizontal, DPSpacing.compact)
+                .frame(minHeight: 64)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .disabled(aiConsent.isLoading || aiConsent.isUpdating || aiConsent.response == nil)
+            .accessibilityLabel(SettingsLocalization.string("settings.aiConsent.toggle"))
+            .accessibilityValue(SettingsLocalization.string(
+                aiConsent.isEnabled ? "settings.accessibility.on" : "settings.accessibility.off"
+            ))
+            .accessibilityAddTraits(.isButton)
+
+            SettingsLocalization.text("settings.aiConsent.dataFlow")
+                .font(DPTypography.supporting)
+                .foregroundStyle(DPColor.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if aiConsent.response?.needsRenewal == true {
+                Label(SettingsLocalization.string("settings.aiConsent.renewalRequired"), systemImage: "exclamationmark.circle")
+                    .font(DPTypography.supporting)
+                    .foregroundStyle(DPColor.warning)
+            }
+
+            if aiConsent.response == nil, !aiConsent.isLoading {
+                Button(SettingsLocalization.string("settings.action.retry")) {
+                    guard let memberID = model.member?.id else { return }
+                    Task { await aiConsent.load(for: memberID, force: true) }
+                }
+                .buttonStyle(DPOutlineButtonStyle())
+            }
+
+            settingsNavigationLink("settings.aiConsent.policy", icon: "doc.text") {
+                AIScheduleConsentPolicyView(
+                    store: aiConsent,
+                    memberID: model.member?.id
+                )
             }
         }
     }
@@ -700,6 +787,32 @@ struct SettingsView: View {
                 }
             }
         )
+    }
+
+    private var aiConsentErrorBinding: Binding<Bool> {
+        Binding(
+            get: { aiConsent.errorKey != nil },
+            set: { if !$0 { aiConsent.dismissError() } }
+        )
+    }
+
+    private func toggleAIConsent() {
+        guard let memberID = model.member?.id else { return }
+        if aiConsent.isEnabled {
+            Task { _ = await aiConsent.revoke(for: memberID) }
+        } else {
+            showAIConsentConfirmation = true
+        }
+    }
+
+    private func grantAIConsent() async {
+        guard let memberID = model.member?.id,
+              let version = aiConsent.response?.currentPolicyVersion
+        else {
+            aiConsent.reportLoadFailure()
+            return
+        }
+        _ = await aiConsent.grant(for: memberID, policyVersion: version)
     }
 
     private var languageBinding: Binding<String> {
@@ -1812,6 +1925,62 @@ private struct PolicyView: View {
             }
         }
         .navigationTitle(SettingsLocalization.string(titleKey))
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+private struct AIScheduleConsentPolicyView: View {
+    @ObservedObject var store: AIScheduleParsingConsentStore
+    let memberID: Int64?
+
+    var body: some View {
+        Group {
+            if let policy = store.response?.policy {
+                ScrollView {
+                    VStack(alignment: .leading, spacing: DPSpacing.medium) {
+                        SettingsLocalization.text("settings.aiConsent.dataFlow")
+                            .font(DPTypography.body)
+                            .foregroundStyle(DPColor.textPrimary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .padding(DPSpacing.medium)
+                            .background(DPColor.accentSoft)
+                            .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+
+                        if let markdown = try? AttributedString(markdown: policy.content) {
+                            Text(markdown)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        } else {
+                            Text(policy.content)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+
+                        Divider()
+                        Text("\(policy.version) · \(policy.effectiveDate.rawValue)")
+                            .font(DPTypography.caption)
+                            .foregroundStyle(DPColor.textMuted)
+                    }
+                    .padding(DPSpacing.medium)
+                }
+            } else if store.isLoading {
+                ProgressView(SettingsLocalization.string("settings.loading"))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                ContentUnavailableView {
+                    Label(
+                        SettingsLocalization.string("settings.aiConsent.loadFailed"),
+                        systemImage: "exclamationmark.triangle"
+                    )
+                } actions: {
+                    if let memberID {
+                        Button(SettingsLocalization.string("settings.action.retry")) {
+                            Task { await store.load(for: memberID, force: true) }
+                        }
+                        .buttonStyle(.borderedProminent)
+                    }
+                }
+            }
+        }
+        .navigationTitle(SettingsLocalization.string("settings.aiConsent.policy"))
         .navigationBarTitleDisplayMode(.inline)
     }
 }

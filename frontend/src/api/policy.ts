@@ -1,7 +1,7 @@
 import apiClient from './client'
 
 export interface PolicyDto {
-  policyType: 'TERMS' | 'PRIVACY'
+  policyType: 'TERMS' | 'PRIVACY' | 'AI_SCHEDULE_PARSING'
   version: string
   content: string
   effectiveDate: string

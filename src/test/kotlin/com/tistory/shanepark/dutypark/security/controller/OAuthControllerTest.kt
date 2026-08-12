@@ -8,7 +8,10 @@ import com.tistory.shanepark.dutypark.member.domain.enums.SsoType
 import com.tistory.shanepark.dutypark.member.repository.MemberConsentRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberSocialAccountRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberSsoRegisterRepository
+import com.tistory.shanepark.dutypark.policy.domain.entity.PolicyVersion
 import com.tistory.shanepark.dutypark.policy.domain.enums.PolicyType
+import com.tistory.shanepark.dutypark.policy.repository.PolicyVersionRepository
+import com.tistory.shanepark.dutypark.policy.service.PolicyService
 import com.tistory.shanepark.dutypark.security.config.JwtConfig
 import com.tistory.shanepark.dutypark.security.domain.dto.SsoSignupRequest
 import com.tistory.shanepark.dutypark.security.oauth.kakao.KakaoTokenApi
@@ -39,6 +42,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPat
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.net.URI
 import java.nio.charset.StandardCharsets
+import java.time.LocalDate
 import java.util.Base64
 
 @AutoConfigureMockMvc
@@ -56,6 +60,12 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
 
     @Autowired
     lateinit var memberSocialAccountRepository: MemberSocialAccountRepository
+
+    @Autowired
+    lateinit var policyVersionRepository: PolicyVersionRepository
+
+    @Autowired
+    lateinit var policyService: PolicyService
 
     @Autowired
     lateinit var jwtConfig: JwtConfig
@@ -302,14 +312,17 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
 
     @Test
     fun `sso signup creates member and consent with explicit versions`() {
+        saveCurrentPolicies()
+        val currentTermsVersion = policyService.getCurrentPolicy(PolicyType.TERMS)!!.version
+        val currentPrivacyVersion = policyService.getCurrentPolicy(PolicyType.PRIVACY)!!.version
         val ssoRegister = memberSsoRegisterRepository.save(MemberSsoRegister(SsoType.NAVER, "naver-id-1"))
         val request = SsoSignupRequest(
             uuid = ssoRegister.uuid,
             username = "new-user",
             termAgree = true,
             privacyAgree = true,
-            termsVersion = "2025-01-15",
-            privacyVersion = "2026-03-10"
+            termsVersion = currentTermsVersion,
+            privacyVersion = currentPrivacyVersion
         )
 
         val json = objectMapper.writeValueAsString(request)
@@ -335,12 +348,91 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
         assertThat(consents).hasSize(2)
         assertThat(consents.map { it.policyType }).containsExactlyInAnyOrder(PolicyType.TERMS, PolicyType.PRIVACY)
 
-        assertThat(consents.single { it.policyType == PolicyType.TERMS }.consentVersion).isEqualTo("2025-01-15")
-        assertThat(consents.single { it.policyType == PolicyType.PRIVACY }.consentVersion).isEqualTo("2026-03-10")
+        assertThat(consents.single { it.policyType == PolicyType.TERMS }.consentVersion)
+            .isEqualTo(currentTermsVersion)
+        assertThat(consents.single { it.policyType == PolicyType.PRIVACY }.consentVersion)
+            .isEqualTo(currentPrivacyVersion)
         consents.forEach { consent ->
             assertThat(consent.ipAddress).isEqualTo("127.0.0.1")
             assertThat(consent.userAgent).isEqualTo("Test-UA")
         }
+    }
+
+    @Test
+    fun `sso signup returns bad request before creating member when terms version is outdated`() {
+        saveCurrentPolicies()
+        val ssoRegister = memberSsoRegisterRepository.save(MemberSsoRegister(SsoType.KAKAO, "stale-terms-id"))
+        val request = SsoSignupRequest(
+            uuid = ssoRegister.uuid,
+            username = "staleterm",
+            termAgree = true,
+            privacyAgree = true,
+            termsVersion = "2025-01-14",
+            privacyVersion = CURRENT_PRIVACY_VERSION
+        )
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/auth/sso/signup/token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.status").value(400))
+            .andExpect(jsonPath("$.code").value("policy.terms.version.outdated"))
+
+        assertNoSignupDataCreated("staleterm")
+        assertThat(memberSsoRegisterRepository.findById(ssoRegister.id!!)).isPresent
+    }
+
+    @Test
+    fun `sso signup returns bad request before creating member when privacy version is outdated`() {
+        saveCurrentPolicies()
+        val ssoRegister = memberSsoRegisterRepository.save(MemberSsoRegister(SsoType.NAVER, "stale-privacy-id"))
+        val request = SsoSignupRequest(
+            uuid = ssoRegister.uuid,
+            username = "stalepriv",
+            termAgree = true,
+            privacyAgree = true,
+            termsVersion = CURRENT_TERMS_VERSION,
+            privacyVersion = "2026-03-10"
+        )
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/auth/sso/signup/token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.status").value(400))
+            .andExpect(jsonPath("$.code").value("policy.privacy.version.outdated"))
+
+        assertNoSignupDataCreated("stalepriv")
+        assertThat(memberSsoRegisterRepository.findById(ssoRegister.id!!)).isPresent
+    }
+
+    @Test
+    fun `sso signup returns outdated terms when current terms policy is missing`() {
+        savePolicy(PolicyType.PRIVACY, CURRENT_PRIVACY_VERSION)
+        val ssoRegister = memberSsoRegisterRepository.save(MemberSsoRegister(SsoType.KAKAO, "missing-terms-id"))
+        val request = SsoSignupRequest(
+            uuid = ssoRegister.uuid,
+            username = "notermcur",
+            termAgree = true,
+            privacyAgree = true,
+            termsVersion = CURRENT_TERMS_VERSION,
+            privacyVersion = CURRENT_PRIVACY_VERSION
+        )
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/auth/sso/signup/token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(request))
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("policy.terms.version.outdated"))
+
+        assertNoSignupDataCreated("notermcur")
+        assertThat(memberSsoRegisterRepository.findById(ssoRegister.id!!)).isPresent
     }
 
     @Test
@@ -517,6 +609,27 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
         )
     }
 
+    private fun saveCurrentPolicies() {
+        savePolicy(PolicyType.TERMS, CURRENT_TERMS_VERSION)
+        savePolicy(PolicyType.PRIVACY, CURRENT_PRIVACY_VERSION)
+    }
+
+    private fun savePolicy(policyType: PolicyType, version: String) {
+        policyVersionRepository.save(
+            PolicyVersion(
+                policyType = policyType,
+                version = version,
+                content = "$policyType policy",
+                effectiveDate = LocalDate.parse(version)
+            )
+        )
+    }
+
+    private fun assertNoSignupDataCreated(username: String) {
+        assertThat(memberRepository.findAll().none { it.name == username }).isTrue
+        assertThat(memberConsentRepository.findAll().none { it.member.name == username }).isTrue
+    }
+
     private fun ResultActions.expectValidationError(code: String, field: String): ResultActions {
         return this
             .andExpect(status().isBadRequest)
@@ -606,5 +719,7 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
         private const val CALLBACK_URL = "https://client.example.com/callback"
         private const val TEST_KAKAO_ID = 123456789L
         private const val TEST_NAVER_ID = "naver-user-123"
+        private const val CURRENT_TERMS_VERSION = "2026-08-13"
+        private const val CURRENT_PRIVACY_VERSION = "2026-08-13"
     }
 }

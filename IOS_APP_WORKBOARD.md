@@ -2,7 +2,7 @@
 
 > 이 문서는 iOS 앱 전환 작업의 공용 컨텍스트이자 단일 작업 보드다. 모든 에이전트는 작업 시작 전 최신 내용을 읽고, 담당 범위·상태·산출물·충돌 가능 파일을 갱신한다.
 
-## 0. 현재 상태 스냅샷 (2026-08-12)
+## 0. 현재 상태 스냅샷 (최종 확인 2026-08-13)
 
 > **현재 종합 상태: 기능 기반 구현 후 디자인 동등성 재작업 진행 중.** SwiftUI 앱과 모바일 OAuth/APNs 서버 경로, 일반 사용자 기능 모듈은 작업트리에 구현되어 있다. freeze2 iOS 전체 테스트는 **105/105 성공**했고 final nits·Todo 첨부·core parity 보정과 targeted test도 완료했다. generic Simulator `build-for-testing`과 Personal Team local-only device app build가 성공했고, 앱을 실제 iPhone에 무선 설치해 실행했다. 실기기 확인에서 웹과 앱의 디자인 차이가 큰 것으로 확인되어, 현재는 현행 웹의 모바일 화면을 기준으로 한 시각적 동등성 작업으로 전환했다. 공통 디자인 토큰 foundation만 구현·검증된 상태이며 개별 화면은 완료 처리하지 않는다. APNs 설치의 refresh-session 귀속 P0는 웹/PWA 세션 계약 영향 가능성 때문에 사용자 승인 전 구현하지 않는다. 아래 기능 매트릭스의 `[ ]`는 미착수를 뜻하지 않고 **완료 조건 검증 대기**를 뜻한다.
 
@@ -22,6 +22,7 @@
 - [x] local-only 앱을 실제 iPhone에 무선 설치하고 앱 실행·운영 API 연결을 확인했다.
 - [x] final nits, Todo 첨부·discard 흐름, core 기능 동등성 보정과 targeted test를 완료했다(Calendar **17/17** 포함).
 - [x] `frontend/src/style.css`와 주요 Vue 화면을 기준으로 공통 색상·간격·radius·타이포그래피·버튼·카드·입력창용 iOS 디자인 foundation을 보강하고 빌드·토큰 테스트를 통과했다. 개별 화면의 시각 일치는 아직 완료하지 않았다.
+- [x] `V2.2.28` 개인정보 처리방침과 `V2.2.29` 이용약관·AI 선택 정책, 서버 owner 기준 AI 동의 API와 schedule/queue/worker gate, 웹·iOS 설정/상세 정책/수동 fallback을 구현했다. 개인정보 migration test 2/2, backend core consent 20 tests와 통합 targeted command, 격리 후보 기준 웹 type-check·Vitest 24 files/110 tests·production build, iOS generic Simulator build·`plutil`·AI consent 8/8이 통과했다.
 
 ### 진행 중 또는 완료 확인이 남은 범위
 
@@ -40,6 +41,7 @@
 - [ ] Naver Developers에 기존 웹 callback을 유지하면서 `https://dutypark.o-r.kr/api/auth/mobile/oauth/callback/naver`를 추가하고 Client ID/Secret·서비스 상태·테스트 계정을 확인한다.
 - [x] `docker-compose.yml`이 `APNS_TEAM_ID`, `APNS_KEY_ID`, `APNS_PRIVATE_KEY`를 앱 컨테이너에 전달하도록 최소 연결했다. 자격증명은 저장소에 커밋하지 않는다.
 - [ ] 운영 proxy의 public scheme/host 전달과 실제 provider/APNs 자격증명으로 smoke test한다.
+- [!] Google AI는 Cloud Billing이 활성화된 paid service와 DPA 적용 Cloud Project임을 확인한 API key만 production에 구성한다. 확인 전 production AI 자동 인식을 사용하지 않고 unpaid service에는 일정 데이터를 전송하지 않는다.
 - [ ] `https://dutypark.o-r.kr/.well-known/apple-app-site-association`은 현재 HTTP 200이나 `text/html` SPA fallback이다. 올바른 AASA 제공은 웹/배포 영향이 있어 사용자 협의 후 적용한다.
 
 > 모바일 OAuth·APNs·iOS 기능 기준선은 §13.6의 8개 논리 커밋으로 기록됐고, 최신 디자인 동등성·공식 서체·이 보드 변경은 아직 미커밋 작업트리 상태다. 전체 변경은 아직 미배포다. `dutypark://oauth/callback`은 공급자 콘솔 callback이 아니라 서버가 iOS 앱으로 돌아올 때 쓰는 custom scheme이다.
@@ -252,7 +254,8 @@
 
 - App Store 제출 전 앱 안에서 접근 가능한 계정 삭제 API와 화면이 필요하다.
 - Kakao/Naver와 같은 제3자 로그인을 제공하면 Sign in with Apple 제공 요건을 검토해야 하며, 현재 범위에서는 사실상 함께 준비하는 것이 안전하다.
-- 개인정보 처리방침의 인증 설명이 실제 쿠키 인증 방식과 일치하지 않아 수정이 필요하다.
+- [x] 개인정보 처리방침을 `V2.2.28` 새 버전으로 추가해 HttpOnly 쿠키, Web Push·APNs, 첨부, 소셜 OAuth, Gemini 및 기기 저장소의 실제 처리 흐름과 일치시켰고 정책 migration 계약 테스트로 고정했다. 확인되지 않은 해외 이전 국가·법정 보관기간은 운영 계약 확인과 별도 법률 검토 후 고지한다.
+- [x] `V2.2.29`에 최신 이용약관과 `AI_SCHEDULE_PARSING` 선택 정책을 추가하고, owner 기준 동의 event/API·schedule/queue/worker gate와 웹·iOS 설정/수동 fallback을 구현해 backend·웹·iOS 자동 검증을 통과했다. paid Google 운영 계약과 실제 교차 플랫폼 E2E는 별도 출시 게이트다.
 - 사용자 생성 콘텐츠(UGC)가 노출되는 범위에는 신고·차단·운영 대응 요건을 검토한다.
 
 ## 7. 실행 배치
@@ -433,7 +436,7 @@ iOS 클라이언트 및 외부 후속:
 | R-008 | 모바일 OAuth `state`와 callback 검증 필요 | 로그인 CSRF·redirect 오용 위험 | 해시 state·PKCE와 고정 `dutypark://oauth/callback` 적용; 기존 웹 경로 불변 | 모바일 서버 해결 |
 | R-009 | 앱 내 계정 삭제 기능이 없음 | App Store 심사 차단 가능 | B5에서 삭제 API·확인 화면·데이터 처리 정책 구현 | B5 필수 |
 | R-010 | 제3자 로그인 제공 시 Sign in with Apple 요건 적용 가능성이 높음 | App Store 심사 차단 가능 | Apple 로그인 동시 제공을 출시 범위에 포함할지 결정 | 사용자 결정 필요 |
-| R-011 | 개인정보 처리방침이 실제 쿠키 인증과 불일치함 | 사용자 고지·심사 리스크 | 실제 저장·전송 방식을 기준으로 정책 수정 | App Store 전 필수 |
+| R-011 | 개인정보 처리방침이 실제 쿠키·푸시·첨부·소셜 OAuth 흐름과 불일치했음 | 사용자 고지·심사 리스크 | `V2.2.28`에 실제 저장·전송·정리 흐름을 새 버전으로 반영하고 `PrivacyPolicyMigrationTest`로 버전·핵심 계약·오표현 배제를 검증함; 해외 이전 국가·법정 보관기간은 별도 법률 검토 | 해결 |
 | R-012 | UGC 신고·차단·운영 절차가 앱 심사 요건에 부족할 수 있음 | 심사 또는 운영 리스크 | 노출 기능 범위와 신고·차단 기능 점검 | 검토 필요 |
 | R-013 | iOS-only `main` 병합도 현 CI에서 서버 재배포를 유발함 | 불필요한 배포와 운영 위험 | 별도 `ios.yml`, 경로 필터, 배포 조건 도입 검토 | CI 변경 논의 필요 |
 | R-014 | iOS 지원을 위해 공유 인증·API·알림 계약을 변경하면 운영 중인 웹/PWA가 회귀할 수 있음 | 로그인·데이터·OAuth·Web Push 장애 | 기본은 iOS 전용 additive 경로; 영향 가능 시 작업 중단 후 영향·대안·회귀안 승인 | 상시 승인 게이트 |
@@ -448,6 +451,7 @@ iOS 클라이언트 및 외부 후속:
 | R-023 | APNs installation이 현재 refresh session에 명시적으로 귀속되지 않는 P0 | 로그아웃·세션 종료 뒤 기기 푸시 귀속이 웹 세션 의미와 어긋날 수 있음 | 최소 변경안과 additive 대안, 기존 Web Push·refresh 회귀안을 사용자에게 제시; 승인 전 구현 금지 | 승인 대기 |
 | R-024 | 현재 iOS 화면은 기능 중심의 SwiftUI `Form/List/Section` 사용이 많고 웹의 CSS·레이아웃·서체가 직접 이식되지 않음 | 실기기에서 브랜드와 화면 밀도·구조가 웹과 크게 다름 | `style.css`·Vue scoped style·실제 모바일 렌더를 기준으로 화면별 수동 매핑하고 §13 QA matrix로 대조 | 디자인 재작업 진행 중 |
 | R-025 | MapleStory 공식 앱용 OTF 통합 | 웹과 앱의 타이포그래피 불일치 | Nexon 공식 원본 Light/Bold OTF와 NOTICE를 포함하고 `UIAppFonts`, 실제 PostScript name, SwiftUI type mapping을 연결함 | 해결·통합 완료 |
+| R-026 | Google AI 선택 동의 코드는 구현됐지만 paid service·DPA 운영 계약, 실제 처리 국가·보관 조건과 교차 플랫폼 E2E가 미확정 | 개인정보 고지·App Review 5.1.2·운영 데이터 사용 위험 | Billing 활성 paid Cloud Project와 DPA를 확인하기 전 production AI를 사용하지 않고, 확인 후 비민감 테스트 데이터로 grant/revoke 전송 gate와 App Privacy를 검증 | 외부 운영·법률 차단 |
 
 ## 10. 검증 항목
 

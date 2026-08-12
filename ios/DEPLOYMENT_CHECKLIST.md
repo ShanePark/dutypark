@@ -1,6 +1,6 @@
 # Dutypark iOS 배포 체크리스트
 
-최종 확인일: 2026-08-12
+최종 확인일: 2026-08-13
 
 이 문서는 현재 저장소와 운영 주소 `https://dutypark.o-r.kr`를 기준으로, 실제 배포 전 필요한 작업을 순서대로 정리한다. 비밀값은 저장소나 이 문서에 기록하지 않는다.
 
@@ -196,9 +196,14 @@ Dutypark는 카카오·네이버로 주 계정을 만들거나 인증할 수 있
 ### Codex가 저장소에서 할 일
 
 - `[x]` 앱 안에서 개인정보 처리방침을 열 수 있다.
-- `[x]` `PrivacyInfo.xcprivacy`에 현재 직접 사용하는 required-reason API를 선언했다.
-- `[ ]` 최종 의존성과 데이터 흐름이 확정된 뒤 Xcode Privacy Report와 App Store Connect 답변이 일치하는지 검토한다.
-- `[ ]` Sign in with Apple, 회원 탈퇴 또는 SDK가 추가되면 개인정보 처리방침과 privacy manifest 변경 필요 여부를 다시 점검한다.
+- `[x]` `V2.2.28`의 `PRIVACY 2026-08-13`에 HttpOnly cookie, 기기 저장소, push, 첨부, Kakao/Naver, Google AI, 보유·삭제와 공동 TEAM 예외를 실제 기술 흐름대로 반영하고 migration test 2/2를 통과했다.
+- `[x]` `V2.2.29`에 `TERMS`와 `AI_SCHEDULE_PARSING` 2026-08-13 정책을 추가하고 별도 선택 동의 event/API, owner 기준 schedule gate와 worker 외부 호출 직전 재검사를 구현했다.
+- `[x]` `PrivacyInfo.xcprivacy`에 UserDefaults required-reason API와 Name, Email, Photos or Videos, Other User Content, User ID, Device ID, Other Data Types를 App Functionality·Linked to User·non-tracking으로 선언했다.
+- `[!]` Google AI는 Cloud Billing이 활성화된 paid service와 DPA 적용 Cloud Project를 확인하기 전 production에서 사용하지 않고 unpaid service에는 일정 데이터를 전송하지 않는다.
+- `[ ]` 운영 개인정보 처리방침을 법적 관점에서 최종 검토하고 Google의 실제 처리 국가·하위처리자·보관 조건 및 법정 보존 의무를 확정한다.
+- `[ ]` Xcode Release Archive의 Privacy Report와 실제 포함 SDK를 `PrivacyInfo.xcprivacy` 및 App Store Connect 입력값과 대조한다.
+- `[ ]` App Store Connect의 Privacy Policy URL과 App Privacy 답변을 입력하고 Publish한다.
+- `[ ]` Sign in with Apple 또는 새 SDK를 추가하면 정책, manifest와 App Privacy를 다시 점검한다.
 
 App Store Connect의 “앱이 데이터를 수집하지 않음”은 서버에 계정·일정·할 일·첨부파일 등이 저장되는 Dutypark에는 맞지 않는다.
 

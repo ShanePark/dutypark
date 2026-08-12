@@ -1,6 +1,6 @@
 # 11. 릴리스 엔지니어링과 App Store 빌드
 
-- 기준일: 2026-08-12
+- 기준일·최종 확인일: 2026-08-13
 - 상태: 수동 빌드 가능, 배포 파이프라인 정비 필요
 - 기존 문서: [iOS README](../../README.md), [기존 배포 체크리스트](../../DEPLOYMENT_CHECKLIST.md)
 - 공식 절차: [Distribute an app through the App Store](https://developer.apple.com/documentation/xcode/distributing-your-app-for-beta-testing-and-releases)
@@ -13,6 +13,7 @@
 - 앱 타깃 버전은 `MARKETING_VERSION = 1.0`, 빌드는 `CURRENT_PROJECT_VERSION = 1`이다.
 - 자동 서명 설정과 entitlement 파일은 있으나 실제 배포 팀·프로필 검증이 필요하다.
 - [PrivacyInfo.xcprivacy](../../Dutypark/PrivacyInfo.xcprivacy)가 앱 타깃에 포함되어 있다.
+- Privacy Manifest에는 현재 수집하는 Name, Email, Photos or Videos, Other User Content, User ID, Device ID와 Other Data Types가 App Functionality·user-linked·non-tracking으로 선언되어 있다.
 - Release Archive 생성, 업로드 및 보관 절차는 아직 재현 가능한 자동화로 고정되지 않았다.
 
 프로젝트 설정 근거는 [project.pbxproj](../../Dutypark.xcodeproj/project.pbxproj), [Dutypark.xcscheme](../../Dutypark.xcodeproj/xcshareddata/xcschemes/Dutypark.xcscheme), [Dutypark.entitlements](../../Dutypark/Dutypark.entitlements), [Info.plist](../../Dutypark/Info.plist)다.
@@ -96,6 +97,7 @@ Apple 참고: [Set the version number and build string](https://developer.apple.
 - crash 분석 서비스가 있다면 해당 릴리스 dSYM을 안전하게 업로드한다.
 - [PrivacyInfo.xcprivacy](../../Dutypark/PrivacyInfo.xcprivacy)와 SDK privacy manifest가 포함되는지 확인한다.
 - Xcode Organizer의 Privacy Report를 내보내 App Privacy 응답과 비교한다.
+- [개인정보·AI 상세 문서](../03-privacy-and-ai-consent/README.md)의 inventory 초안과 Release Privacy Report의 데이터 유형·목적·연결·tracking 값을 대조한다.
 - Required Reason API 경고와 서드파티 SDK signature 경고가 없는지 확인한다.
 - Debug URL, 개발 서버 주소, 테스트 계정, verbose logging이 Release에 남지 않았는지 확인한다.
 

@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.schedule.timeparsing.service
 
+import com.tistory.shanepark.dutypark.consent.service.AiScheduleParsingConsentService
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
 import com.tistory.shanepark.dutypark.schedule.domain.enums.ParsingTimeStatus
@@ -15,6 +16,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.Mock
 import org.mockito.Mockito.`when`
+import org.mockito.Mockito.lenient
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
 import org.mockito.kotlin.never
@@ -36,6 +38,9 @@ class ScheduleTimeParsingQueueManagerTest {
     @Mock
     lateinit var scheduleRepository: ScheduleRepository
 
+    @Mock
+    lateinit var aiScheduleParsingConsentService: AiScheduleParsingConsentService
+
     lateinit var queueManager: ScheduleTimeParsingQueueManager
 
     @BeforeEach
@@ -43,10 +48,12 @@ class ScheduleTimeParsingQueueManagerTest {
         queueManager = ScheduleTimeParsingQueueManager(
             worker = worker,
             scheduleRepository = scheduleRepository,
+            aiScheduleParsingConsentService = aiScheduleParsingConsentService,
             geminiApiKey = "GEMINI_KEY",
             rpmLimit = 30,
             rpdLimit = 14400,
         )
+        lenient().`when`(aiScheduleParsingConsentService.hasCurrentConsent(any())).thenReturn(true)
     }
 
     @AfterEach
@@ -69,6 +76,37 @@ class ScheduleTimeParsingQueueManagerTest {
         // Then
         assertEquals(2, queueManager.queueSize())
         verify(scheduleRepository, times(1)).findAllByParsingTimeStatus(WAIT)
+    }
+
+    @Test
+    fun `init reclassifies WAIT schedules without owner consent as SKIP`() {
+        // Given
+        val consented = makeSchedule(memberId = 1L)
+        val nonConsented = makeSchedule(memberId = 2L)
+        whenever(scheduleRepository.findAllByParsingTimeStatus(WAIT)).thenReturn(listOf(consented, nonConsented))
+        whenever(aiScheduleParsingConsentService.hasCurrentConsent(1L)).thenReturn(true)
+        whenever(aiScheduleParsingConsentService.hasCurrentConsent(2L)).thenReturn(false)
+        whenever(
+            scheduleRepository.updateParsingStatusIfCurrent(
+                nonConsented.id,
+                nonConsented.parsingGeneration,
+                WAIT,
+                ParsingTimeStatus.SKIP,
+            )
+        ).thenReturn(1)
+
+        // When
+        queueManager.init()
+
+        // Then
+        assertEquals(1, queueManager.queueSize())
+        assertEquals(ParsingTimeStatus.SKIP, nonConsented.parsingTimeStatus)
+        verify(scheduleRepository).updateParsingStatusIfCurrent(
+            nonConsented.id,
+            nonConsented.parsingGeneration,
+            WAIT,
+            ParsingTimeStatus.SKIP,
+        )
     }
 
     @Test
@@ -137,6 +175,7 @@ class ScheduleTimeParsingQueueManagerTest {
         queueManager = ScheduleTimeParsingQueueManager(
             worker = worker,
             scheduleRepository = scheduleRepository,
+            aiScheduleParsingConsentService = aiScheduleParsingConsentService,
             geminiApiKey = apiKey,
             rpmLimit = 30,
             rpdLimit = 14400,
@@ -201,8 +240,12 @@ class ScheduleTimeParsingQueueManagerTest {
         assertEquals(2, queueManager.queueSize())
     }
 
-    private fun makeSchedule(parsingTimeStatus: ParsingTimeStatus = WAIT): Schedule {
+    private fun makeSchedule(
+        parsingTimeStatus: ParsingTimeStatus = WAIT,
+        memberId: Long = 1L,
+    ): Schedule {
         val member = Member("")
+        ReflectionTestUtils.setField(member, "id", memberId)
         val schedule = Schedule(member = member, content = "", startDateTime = fixedDateTime, endDateTime = fixedDateTime)
         schedule.parsingTimeStatus = parsingTimeStatus
         return schedule

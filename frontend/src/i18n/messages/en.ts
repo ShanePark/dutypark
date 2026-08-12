@@ -59,6 +59,16 @@ const apiErrors = {
       exceeded: 'Too many requests. Please try again later.',
     },
   },
+  aiScheduleConsent: {
+    settingsTitle: 'Automatic AI time recognition', toggleLabel: 'Recognize schedule times with Google AI',
+    dataFlow: 'Only the schedule date and content text are sent to the Google Generative Language API to extract start and end times. Member and team IDs are not sent.',
+    optionalDescription: 'This is optional and can be withdrawn at any time. You can still save schedules unchanged or enter times manually without consenting.',
+    statusOn: 'Currently consented', statusOff: 'Not currently consented', renewalRequired: 'The policy changed and requires renewed consent.',
+    viewPolicy: 'View detailed policy', policyTitle: 'Optional AI schedule time recognition consent', policyMeta: 'Version {version} · Effective {date}',
+    confirmTitle: 'Turn on automatic AI time recognition?', confirmDescription: 'Schedule dates and content text will be sent to the Google Generative Language API to extract times. Member and team IDs are not sent.',
+    messages: { granted: 'AI time recognition consent granted.', revoked: 'AI time recognition consent withdrawn.', loadFailed: 'Could not load the AI consent status.', updateFailed: 'Could not update the AI consent setting.' },
+    schedule: { statusOn: 'AI time recognition is on', statusOff: 'AI time recognition is off', statusRenewal: 'AI time recognition needs renewed consent', promptTitle: 'Recognize the time automatically?', promptDescription: 'With consent, the schedule date and content text are sent to Google AI to extract times. Member and team IDs are not sent.', consentAndParse: 'Consent and recognize automatically', saveWithoutAi: 'Save unchanged without consenting', manualHint: 'You can always enter start and end times manually.', loadFailedContinue: 'The AI consent status could not be checked. Save the schedule unchanged without AI?', grantFailed: 'Consent could not be saved. You can save without AI or try again.' },
+  },
   member: {
     notFound: 'Member not found.',
     visibility: {
@@ -251,6 +261,7 @@ const apiErrors = {
 } as const
 
 export default {
+  aiScheduleConsent: apiErrors.aiScheduleConsent,
   common: {
     actions: {
       close: 'Close',

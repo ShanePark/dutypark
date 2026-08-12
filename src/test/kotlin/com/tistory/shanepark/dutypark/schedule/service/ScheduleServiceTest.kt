@@ -5,6 +5,7 @@ import com.tistory.shanepark.dutypark.attachment.service.AttachmentService
 import com.tistory.shanepark.dutypark.attachment.service.FileSystemService
 import com.tistory.shanepark.dutypark.attachment.service.StoragePathResolver
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.consent.service.AiScheduleParsingConsentService
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
@@ -41,6 +42,7 @@ class ScheduleServiceTest {
     private lateinit var fileSystemService: FileSystemService
     private lateinit var pathResolver: StoragePathResolver
     private lateinit var eventPublisher: ApplicationEventPublisher
+    private lateinit var aiScheduleParsingConsentService: AiScheduleParsingConsentService
 
     private lateinit var member: Member
     private lateinit var member2: Member
@@ -59,6 +61,8 @@ class ScheduleServiceTest {
         fileSystemService = mock()
         pathResolver = mock()
         eventPublisher = mock()
+        aiScheduleParsingConsentService = mock()
+        whenever(aiScheduleParsingConsentService.hasCurrentConsent(any())).thenReturn(true)
 
         scheduleService = ScheduleService(
             scheduleRepository = scheduleRepository,
@@ -70,7 +74,8 @@ class ScheduleServiceTest {
             attachmentService = attachmentService,
             fileSystemService = fileSystemService,
             pathResolver = pathResolver,
-            eventPublisher = eventPublisher
+            eventPublisher = eventPublisher,
+            aiScheduleParsingConsentService = aiScheduleParsingConsentService,
         )
 
         member = Member(name = "testMember", email = "test@test.com", password = "1234")
@@ -117,6 +122,62 @@ class ScheduleServiceTest {
         verify(schedulePermissionService).checkScheduleWriteAuthority(loginMember, member)
         verify(scheduleRepository).save(any<Schedule>())
         verify(scheduleTimeParsingQueueManager).addTask(any<Schedule>())
+    }
+
+    @Test
+    fun `create without current AI consent saves as SKIP and does not enqueue`() {
+        // Given
+        whenever(aiScheduleParsingConsentService.hasCurrentConsent(member.id!!)).thenReturn(false)
+        whenever(memberRepository.findById(member.id!!)).thenReturn(Optional.of(member))
+        whenever(scheduleRepository.findMaxPosition(eq(member), any())).thenReturn(-1)
+        whenever(scheduleRepository.save(any<Schedule>())).thenAnswer { invocation ->
+            invocation.getArgument<Schedule>(0).also {
+                ReflectionTestUtils.setField(it, "id", UUID.randomUUID())
+            }
+        }
+        val dto = ScheduleSaveDto(
+            memberId = member.id!!,
+            content = "오후 3시 회의",
+            startDateTime = LocalDateTime.of(2026, 8, 13, 0, 0),
+            endDateTime = LocalDateTime.of(2026, 8, 13, 0, 0),
+        )
+
+        // When
+        val schedule = scheduleService.createSchedule(loginMember, dto)
+
+        // Then
+        assertThat(schedule.parsingTimeStatus).isEqualTo(ParsingTimeStatus.SKIP)
+        verify(scheduleRepository).save(schedule)
+        verify(scheduleTimeParsingQueueManager, never()).addTask(any())
+    }
+
+    @Test
+    fun `create without current AI consent preserves manually entered time`() {
+        // Given
+        whenever(aiScheduleParsingConsentService.hasCurrentConsent(member.id!!)).thenReturn(false)
+        whenever(memberRepository.findById(member.id!!)).thenReturn(Optional.of(member))
+        whenever(scheduleRepository.findMaxPosition(eq(member), any())).thenReturn(-1)
+        whenever(scheduleRepository.save(any<Schedule>())).thenAnswer { invocation ->
+            invocation.getArgument<Schedule>(0).also {
+                ReflectionTestUtils.setField(it, "id", UUID.randomUUID())
+            }
+        }
+        val start = LocalDateTime.of(2026, 8, 13, 15, 0)
+        val end = LocalDateTime.of(2026, 8, 13, 16, 0)
+        val dto = ScheduleSaveDto(
+            memberId = member.id!!,
+            content = "회의",
+            startDateTime = start,
+            endDateTime = end,
+        )
+
+        // When
+        val schedule = scheduleService.createSchedule(loginMember, dto)
+
+        // Then
+        assertThat(schedule.startDateTime).isEqualTo(start)
+        assertThat(schedule.endDateTime).isEqualTo(end)
+        assertThat(schedule.parsingTimeStatus).isEqualTo(ParsingTimeStatus.SKIP)
     }
 
     @Test
@@ -179,6 +240,34 @@ class ScheduleServiceTest {
         verify(schedulePermissionService).checkScheduleWriteAuthority(schedule = schedule, loginMember = loginMember)
         verify(scheduleRepository).save(schedule)
         verify(scheduleTimeParsingQueueManager).addTask(schedule)
+    }
+
+    @Test
+    fun `parsing input update without current owner consent changes WAIT to SKIP`() {
+        // Given
+        val scheduleId = UUID.randomUUID()
+        val schedule = Schedule(
+            member = member,
+            content = "기존 일정",
+            startDateTime = LocalDateTime.of(2026, 8, 13, 0, 0),
+            endDateTime = LocalDateTime.of(2026, 8, 13, 0, 0),
+        ).also { ReflectionTestUtils.setField(it, "id", scheduleId) }
+        whenever(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule))
+        whenever(scheduleRepository.save(schedule)).thenReturn(schedule)
+        whenever(aiScheduleParsingConsentService.hasCurrentConsent(member.id!!)).thenReturn(false)
+        val dto = updateDto(
+            id = scheduleId,
+            content = "변경 일정 오후 4시",
+            startDateTime = LocalDateTime.of(2026, 8, 14, 0, 0),
+            endDateTime = LocalDateTime.of(2026, 8, 14, 0, 0),
+        )
+
+        // When
+        val updated = scheduleService.updateSchedule(loginMember, dto)
+
+        // Then
+        assertThat(updated.parsingTimeStatus).isEqualTo(ParsingTimeStatus.SKIP)
+        verify(scheduleTimeParsingQueueManager, never()).addTask(any())
     }
 
     @Test

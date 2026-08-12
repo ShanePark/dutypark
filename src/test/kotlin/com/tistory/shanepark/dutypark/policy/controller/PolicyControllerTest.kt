@@ -112,4 +112,23 @@ class PolicyControllerTest : DutyparkIntegrationTest() {
             .andExpect(jsonPath("$.version").value("3.0"))
             .andExpect(jsonPath("$.policyType").value("TERMS"))
     }
+
+    @Test
+    fun `get current AI schedule parsing policy by type`() {
+        policyVersionRepository.save(
+            PolicyVersion(
+                policyType = PolicyType.AI_SCHEDULE_PARSING,
+                version = "2026-08-13",
+                content = "ai-schedule-parsing-policy",
+                effectiveDate = LocalDate.of(2026, 8, 13)
+            )
+        )
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.get("/api/policies/ai_schedule_parsing")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.version").value("2026-08-13"))
+            .andExpect(jsonPath("$.policyType").value("AI_SCHEDULE_PARSING"))
+    }
 }
