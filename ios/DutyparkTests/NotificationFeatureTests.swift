@@ -28,6 +28,22 @@ struct NotificationFeatureTests {
     }
 
     @Test
+    func scheduleNotificationRoutesChooseTheMatchingCalendarOwner() {
+        let scheduleID = UUID(uuidString: "9a53c095-c8b0-4de7-91be-b2fef4134e2a")!
+
+        #expect(RootNavigationPolicy.scheduleMemberID(
+            for: .schedule(scheduleID),
+            authenticatedMemberID: 1,
+            scheduleOwnerID: 9
+        ) == 9)
+        #expect(RootNavigationPolicy.scheduleMemberID(
+            for: .taggedSchedule(scheduleID),
+            authenticatedMemberID: 1,
+            scheduleOwnerID: 9
+        ) == 1)
+    }
+
+    @Test
     func preservesTodoReferenceIdentifierForDetailRouting() throws {
         let todoID = UUID(uuidString: "60fd4faf-ecda-48d4-a128-362791a599e7")!
         let notification = try decodeNotification(

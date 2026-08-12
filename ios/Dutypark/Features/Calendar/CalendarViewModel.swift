@@ -106,8 +106,20 @@ final class CalendarViewModel: ObservableObject {
             if me == nil {
                 let member = try await repository.member()
                 me = member
-                if selectedMemberID == nil { selectedMemberID = member.id }
                 friends = try await repository.friends()
+                if let initialScheduleID {
+                    let schedule = try await repository.scheduleBasic(id: initialScheduleID)
+                    if selectedMemberID == nil {
+                        selectedMemberID = schedule.memberId
+                    }
+                    if let date = CalendarDateSupport.date(from: schedule.startDateTime) {
+                        let parts = CalendarDateSupport.calendar.dateComponents([.year, .month, .day], from: date)
+                        year = parts.year ?? year
+                        month = parts.month ?? month
+                        highlightedDate = DateOnly(rawValue: String(format: "%04d-%02d-%02d", year, month, parts.day ?? 1))
+                    }
+                }
+                if selectedMemberID == nil { selectedMemberID = member.id }
                 if let selectedMemberID,
                    selectedMemberID != member.id,
                    !friends.contains(where: { $0.id == selectedMemberID }) {
@@ -118,16 +130,6 @@ final class CalendarViewModel: ObservableObject {
                     : friends.first(where: { $0.id == selectedMemberID })?.teamId ?? targetMember?.teamId
                 if let teamID = targetTeamID {
                     team = try await repository.team(id: teamID)
-                }
-                if let initialScheduleID {
-                    let schedule = try await repository.scheduleBasic(id: initialScheduleID)
-                    selectedMemberID = schedule.memberId
-                    if let date = CalendarDateSupport.date(from: schedule.startDateTime) {
-                        let parts = CalendarDateSupport.calendar.dateComponents([.year, .month, .day], from: date)
-                        year = parts.year ?? year
-                        month = parts.month ?? month
-                        highlightedDate = DateOnly(rawValue: String(format: "%04d-%02d-%02d", year, month, parts.day ?? 1))
-                    }
                 }
             }
             try await loadMonth()

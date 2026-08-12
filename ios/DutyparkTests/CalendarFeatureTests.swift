@@ -134,6 +134,57 @@ final class CalendarFeatureTests: XCTestCase {
         XCTAssertEqual(model.highlightedDate?.rawValue, "2027-03-15")
     }
 
+    func testTaggedScheduleRouteKeepsAuthenticatedCalendarTargetWhileLoadingScheduleDate() async {
+        let scheduleID = UUID(uuidString: "9a53c095-c8b0-4de7-91be-b2fef4134e2a")!
+        let repository = CalendarRepositoryMock(scheduleOwnerID: 9)
+        let targetMemberID = RootNavigationPolicy.scheduleMemberID(
+            for: .taggedSchedule(scheduleID),
+            authenticatedMemberID: 1,
+            scheduleOwnerID: 9
+        )
+        let model = CalendarViewModel(
+            repository: repository,
+            now: date(2026, 1, 1),
+            memberID: targetMemberID,
+            scheduleID: scheduleID
+        )
+
+        await model.load()
+
+        XCTAssertEqual(model.selectedMemberID, 1)
+        XCTAssertTrue(model.isMyCalendar)
+        XCTAssertEqual(model.year, 2026)
+        XCTAssertEqual(model.month, 8)
+        XCTAssertEqual(model.highlightedDate?.rawValue, "2026-08-12")
+        let requestedPreviewMemberID = await repository.requestedPreviewMemberID
+        let requestedScheduleMemberID = await repository.requestedScheduleMemberID
+        let requestedDDayMemberID = await repository.requestedDDayMemberID
+        XCTAssertNil(requestedPreviewMemberID)
+        XCTAssertEqual(requestedScheduleMemberID, 1)
+        XCTAssertEqual(requestedDDayMemberID, 1)
+    }
+
+    func testScheduleDeepLinkWithoutMemberTargetLoadsTheScheduleOwnersCalendar() async {
+        let scheduleID = UUID(uuidString: "9a53c095-c8b0-4de7-91be-b2fef4134e2a")!
+        let repository = CalendarRepositoryMock(scheduleOwnerID: 9)
+        let model = CalendarViewModel(
+            repository: repository,
+            now: date(2026, 1, 1),
+            scheduleID: scheduleID
+        )
+
+        await model.load()
+
+        let requestedPreviewMemberID = await repository.requestedPreviewMemberID
+        let requestedScheduleMemberID = await repository.requestedScheduleMemberID
+        let requestedDDayMemberID = await repository.requestedDDayMemberID
+        XCTAssertEqual(model.selectedMemberID, 9)
+        XCTAssertFalse(model.isMyCalendar)
+        XCTAssertEqual(requestedPreviewMemberID, 9)
+        XCTAssertEqual(requestedScheduleMemberID, 9)
+        XCTAssertEqual(requestedDDayMemberID, 9)
+    }
+
     func testManagerCannotBatchReplaceAnotherMembersMonth() async {
         let repository = CalendarRepositoryMock(canManage: true)
         let model = CalendarViewModel(repository: repository, now: date(2026, 8, 12), memberID: 9)
@@ -359,15 +410,24 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
     var savedSchedule: ScheduleSaveDTO?
     var batchUpdateCount = 0
     var requestedPreviewMemberID: MemberID?
+    var requestedScheduleMemberID: MemberID?
+    var requestedDDayMemberID: MemberID?
     var lastDutyUpdate: DutyUpdateDTO?
     let canManageValue: Bool
     let cancelMemberLoad: Bool
     let friendValues: [FriendDTO]
+    let scheduleOwnerID: MemberID
 
-    init(canManage: Bool = false, cancelMemberLoad: Bool = false, friends: [FriendDTO] = []) {
+    init(
+        canManage: Bool = false,
+        cancelMemberLoad: Bool = false,
+        friends: [FriendDTO] = [],
+        scheduleOwnerID: MemberID = 1
+    ) {
         canManageValue = canManage
         self.cancelMemberLoad = cancelMemberLoad
         friendValues = friends
+        self.scheduleOwnerID = scheduleOwnerID
     }
 
     func member() async throws -> MemberDTO {
@@ -391,12 +451,16 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
     func duties(memberID: MemberID, year: Int, month: Int) async throws -> [DutyDTO] { [] }
     func otherDuties(memberIDs: [MemberID], year: Int, month: Int) async throws -> [OtherDutyResponse] { [] }
     func schedules(memberID: MemberID, year: Int, month: Int) async throws -> [[ScheduleDTO]] {
+        requestedScheduleMemberID = memberID
         var result = Array(repeating: [ScheduleDTO](), count: 42)
         result[11] = [schedule(year: year, month: month)]
         return result
     }
     func holidays(year: Int, month: Int) async throws -> [[HolidayDTO]] { Array(repeating: [], count: 42) }
-    func dDays(memberID: MemberID, isMine: Bool) async throws -> [DDayDTO] { [] }
+    func dDays(memberID: MemberID, isMine: Bool) async throws -> [DDayDTO] {
+        requestedDDayMemberID = memberID
+        return []
+    }
     func todoBoard() async throws -> TodoBoardDTO {
         TodoBoardDTO(todo: [], inProgress: [], done: [], counts: TodoCountsDTO(todo: 0, inProgress: 0, done: 0, total: 0))
     }
@@ -411,7 +475,7 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
         try JSONDecoder().decode(PageResponse<ScheduleSearchResultDTO>.self, from: Data(#"{"content":[],"totalPages":0,"totalElements":0,"last":true,"first":true,"size":10,"number":0,"numberOfElements":0,"empty":true}"#.utf8))
     }
     func scheduleBasic(id: ScheduleID) async throws -> ScheduleBasicInfoDTO {
-        ScheduleBasicInfoDTO(id: id, memberId: 1, memberName: "Tester", startDateTime: LocalDateTimeValue(rawValue: "2026-08-12T00:00:00"), content: "Night duty")
+        ScheduleBasicInfoDTO(id: id, memberId: scheduleOwnerID, memberName: "Tester", startDateTime: LocalDateTimeValue(rawValue: "2026-08-12T00:00:00"), content: "Night duty")
     }
     func updateDuty(_ request: DutyUpdateDTO) async throws { lastDutyUpdate = request }
     func batchUpdateDuty(_ request: DutyBatchUpdateDTO) async throws { batchUpdateCount += 1 }

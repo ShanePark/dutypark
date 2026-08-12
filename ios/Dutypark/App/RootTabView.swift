@@ -300,10 +300,8 @@ struct RootTabView: View {
             selectedTab = .home
             homePath = [.friends]
             return true
-        case .schedule(let scheduleID):
-            return await openScheduleCalendar(scheduleID)
-        case .taggedSchedule(let scheduleID):
-            return await openScheduleCalendar(scheduleID, targetMemberID: authenticatedMemberID)
+        case .schedule(let scheduleID), .taggedSchedule(let scheduleID):
+            return await openScheduleCalendar(scheduleID, route: route)
         case .member(let memberID):
             openMemberCalendar(memberID)
             return true
@@ -325,13 +323,17 @@ struct RootTabView: View {
 
     private func openScheduleCalendar(
         _ scheduleID: ScheduleID,
-        targetMemberID: MemberID? = nil
+        route: NotificationRoute
     ) async -> Bool {
         guard let schedule: ScheduleBasicInfoDTO = try? await APIClient.shared.request(
             "schedules/\(scheduleID.uuidString)"
         ) else { return false }
         calendarTarget = CalendarTarget(
-            memberID: targetMemberID ?? schedule.memberId,
+            memberID: RootNavigationPolicy.scheduleMemberID(
+                for: route,
+                authenticatedMemberID: authenticatedMemberID,
+                scheduleOwnerID: schedule.memberId
+            ),
             date: DateOnly(rawValue: String(schedule.startDateTime.rawValue.prefix(10))),
             scheduleID: scheduleID
         )
@@ -414,6 +416,21 @@ nonisolated enum RootNavigationPolicy {
         origin: RootTabSelectionOrigin
     ) -> Bool {
         destination == .calendar && origin == .tabBar
+    }
+
+    static func scheduleMemberID(
+        for route: NotificationRoute,
+        authenticatedMemberID: MemberID?,
+        scheduleOwnerID: MemberID
+    ) -> MemberID? {
+        switch route {
+        case .schedule:
+            scheduleOwnerID
+        case .taggedSchedule:
+            authenticatedMemberID ?? scheduleOwnerID
+        default:
+            nil
+        }
     }
 }
 
