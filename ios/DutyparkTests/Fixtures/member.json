@@ -1,0 +1,13 @@
+{
+  "id": 42,
+  "name": "테스트 사용자",
+  "email": "test@duty.park",
+  "teamId": 7,
+  "team": "Dutypark",
+  "calendarVisibility": "FRIENDS",
+  "kakaoId": null,
+  "naverId": "naver-42",
+  "hasPassword": true,
+  "hasProfilePhoto": true,
+  "profilePhotoVersion": 3
+}

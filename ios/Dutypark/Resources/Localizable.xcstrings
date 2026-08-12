@@ -1,0 +1,594 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "notifications.items.friendRequestReceived" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ sent you a friend request." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "%@ te envió una solicitud de amistad." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "%@さんから友達リクエストが届きました。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님이 친구 요청을 보냈습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "%@向您发送了好友请求。" } }
+    } },
+    "notifications.items.friendRequestReceivedFallback" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "You received a friend request." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Has recibido una solicitud de amistad." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "友達リクエストが届きました。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 요청이 도착했습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "您收到了好友请求。" } }
+    } },
+    "notifications.items.friendRequestAccepted" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ accepted your friend request." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "%@ aceptó tu solicitud de amistad." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "%@さんが友達リクエストを承認しました。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님이 친구 요청을 수락했습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "%@接受了您的好友请求。" } }
+    } },
+    "notifications.items.friendRequestAcceptedFallback" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Your friend request was accepted." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Tu solicitud de amistad fue aceptada." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "友達リクエストが承認されました。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 요청이 수락되었습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "您的好友请求已被接受。" } }
+    } },
+    "notifications.items.familyRequestReceived" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ sent you a family request." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "%@ te envió una solicitud familiar." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "%@さんから家族リクエストが届きました。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님이 가족 요청을 보냈습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "%@向您发送了家人请求。" } }
+    } },
+    "notifications.items.familyRequestReceivedFallback" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "You received a family request." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Has recibido una solicitud familiar." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "家族リクエストが届きました。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "가족 요청이 도착했습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "您收到了家人请求。" } }
+    } },
+    "notifications.items.familyRequestAccepted" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ accepted your family request." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "%@ aceptó tu solicitud familiar." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "%@さんが家族リクエストを承認しました。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님이 가족 요청을 수락했습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "%@接受了您的家人请求。" } }
+    } },
+    "notifications.items.familyRequestAcceptedFallback" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Your family request was accepted." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Tu solicitud familiar fue aceptada." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "家族リクエストが承認されました。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "가족 요청이 수락되었습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "您的家人请求已被接受。" } }
+    } },
+    "notifications.items.scheduleTagged" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ tagged you in [%@]." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "%@ te etiquetó en [%@]." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "%@さんの予定［%@］にタグ付けされました。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님의 [%@] 일정에 태그되었습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "%@在日程［%@］中标记了您。" } }
+    } },
+    "notifications.items.scheduleTaggedFallback" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "You were tagged in [%@]." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Te etiquetaron en [%@]." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "予定［%@］にタグ付けされました。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "[%@] 일정에 태그되었습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "您在日程［%@］中被标记。" } }
+    } },
+    "notifications.items.todoTagged" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ tagged you in TODO [%@]." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "%@ te etiquetó en la tarea [%@]." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "%@さんのTODO［%@］にタグ付けされました。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님의 [%@] TODO에 태그되었습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "%@在待办事项［%@］中标记了您。" } }
+    } },
+    "notifications.items.todoTaggedFallback" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "You were tagged in TODO [%@]." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "Te etiquetaron en la tarea [%@]." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "TODO［%@］にタグ付けされました。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "[%@] TODO에 태그되었습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "您在待办事项［%@］中被标记。" } }
+    } },
+    "notifications.items.todoStatusTodo" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ moved TODO [%@] to To-do." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "%@ movió la tarea [%@] a Pendiente." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "%@さんがTODO［%@］を未着手に変更しました。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님이 [%@] TODO를 할 일로 변경했습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "%@将待办事项［%@］改为待处理。" } }
+    } },
+    "notifications.items.todoStatusTodoFallback" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "TODO [%@] was moved to To-do." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "La tarea [%@] se movió a Pendiente." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "TODO［%@］が未着手に変更されました。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "[%@] TODO가 할 일로 변경되었습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "待办事项［%@］已改为待处理。" } }
+    } },
+    "notifications.items.todoStatusInProgress" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ moved TODO [%@] to In progress." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "%@ movió la tarea [%@] a En curso." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "%@さんがTODO［%@］を進行中に変更しました。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님이 [%@] TODO를 진행중으로 변경했습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "%@将待办事项［%@］改为进行中。" } }
+    } },
+    "notifications.items.todoStatusInProgressFallback" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "TODO [%@] was moved to In progress." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "La tarea [%@] se movió a En curso." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "TODO［%@］が進行中に変更されました。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "[%@] TODO가 진행중으로 변경되었습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "待办事项［%@］已改为进行中。" } }
+    } },
+    "notifications.items.todoStatusDone" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ marked TODO [%@] as done." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "%@ marcó la tarea [%@] como completada." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "%@さんがTODO［%@］を完了にしました。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님이 [%@] TODO를 완료 처리했습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "%@将待办事项［%@］标记为已完成。" } }
+    } },
+    "notifications.items.todoStatusDoneFallback" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "TODO [%@] was marked as done." } }, "es" : { "stringUnit" : { "state" : "translated", "value" : "La tarea [%@] se marcó como completada." } }, "ja" : { "stringUnit" : { "state" : "translated", "value" : "TODO［%@］が完了になりました。" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "[%@] TODO가 완료 처리되었습니다." } }, "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "待办事项［%@］已标记为已完成。" } }
+    } },
+    "auth.login.emailLabel" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Email" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Correo electrónico" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "メールアドレス" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "이메일" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "电子邮箱" } }
+      }
+    },
+    "auth.login.emailPlaceholder" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Email address" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Dirección de correo" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "メールアドレス" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "이메일 주소" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "电子邮箱地址" } }
+      }
+    },
+    "auth.login.error.generic" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to log in." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "No se pudo iniciar sesión." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "ログインに失敗しました。" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "로그인에 실패했습니다." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "登录失败。" } }
+      }
+    },
+    "auth.login.error.invalidCredentials" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Login failed. Check your email and password." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Error de inicio de sesión. Comprueba tu correo y contraseña." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "ログインに失敗しました。メールアドレスとパスワードを確認してください。" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "로그인에 실패했습니다. 이메일과 비밀번호를 확인해주세요." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "登录失败。请检查邮箱和密码。" } }
+      }
+    },
+    "auth.login.error.rateLimited" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Login has been temporarily blocked. Please try again later." } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "El inicio de sesión está bloqueado temporalmente. Inténtalo más tarde." } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "ログインが一時的にブロックされています。しばらくしてから再度お試しください。" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "로그인이 차단되었습니다. 잠시 후 다시 시도해주세요." } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "登录已暂时被阻止。请稍后重试。" } }
+      }
+    },
+    "auth.login.passwordLabel" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Password" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Contraseña" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "パスワード" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "비밀번호" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "密码" } }
+      }
+    },
+    "auth.login.passwordPlaceholder" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Password" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Contraseña" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "パスワード" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "비밀번호" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "密码" } }
+      }
+    },
+    "auth.login.rememberMe" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Remember email" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Recordar correo electrónico" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "メールアドレスを保存" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "아이디 저장" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "记住电子邮箱" } }
+      }
+    },
+    "auth.login.submit" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Log in" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Iniciar sesión" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "ログイン" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "로그인" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "登录" } }
+      }
+    },
+    "auth.session.restoring" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Restoring session" } },
+        "es" : { "stringUnit" : { "state" : "translated", "value" : "Restaurando sesión" } },
+        "ja" : { "stringUnit" : { "state" : "translated", "value" : "セッションを復元しています" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "로그인 상태를 확인하고 있습니다" } },
+        "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "正在恢复会话" } }
+      }
+    },
+    "auth.session.error" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Could not connect to Dutypark" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "No se pudo conectar con Dutypark" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "Dutyparkに接続できませんでした" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "Dutypark에 연결할 수 없습니다" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "无法连接到 Dutypark" } }
+    } },
+    "common.retry" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Try again" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Reintentar" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "もう一度試す" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "다시 시도" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "重试" } }
+    } },
+    "link.unsupported.message" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "This link does not point to a page available in the app." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Este enlace no apunta a una página disponible en la aplicación." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "このリンクのページはアプリでは利用できません。" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "앱에서 열 수 없는 페이지입니다." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "此链接指向的页面无法在应用中打开。" } }
+    } },
+    "link.unsupported.ok" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "OK" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Aceptar" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "OK" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "확인" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "确定" } }
+    } },
+    "link.unsupported.title" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Page not found" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Página no encontrada" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "ページが見つかりません" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "페이지를 찾을 수 없습니다" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "找不到页面" } }
+    } },
+    "placeholder.description" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This screen is being prepared."
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Estamos preparando esta pantalla."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "この画面は準備中です。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이 화면을 준비하고 있습니다."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "此页面正在准备中。"
+          }
+        }
+      }
+    },
+    "screen.calendar.title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "My Calendar"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mi calendario"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "マイカレンダー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 캘린더"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "我的日历"
+          }
+        }
+      }
+    },
+    "screen.home.title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Home"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inicio"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ホーム"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "홈"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "首页"
+          }
+        }
+      }
+    },
+    "screen.settings.title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Settings"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajustes"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "설정"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "设置"
+          }
+        }
+      }
+    },
+    "screen.team.title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "My Team"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Mi equipo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "マイチーム"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 팀"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "我的团队"
+          }
+        }
+      }
+    },
+    "screen.todo.title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Todo"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tareas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "やること"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "할일"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "待办"
+          }
+        }
+      }
+    },
+    "tab.calendar" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Calendar"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Calendario"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "カレンダー"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "캘린더"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "日历"
+          }
+        }
+      }
+    },
+    "tab.home" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Home"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Inicio"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "ホーム"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "홈"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "首页"
+          }
+        }
+      }
+    },
+    "tab.settings" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Settings"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Ajustes"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "設定"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "설정"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "设置"
+          }
+        }
+      }
+    },
+    "tab.team" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Team"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Equipo"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "チーム"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "팀"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "团队"
+          }
+        }
+      }
+    },
+    "auth.impersonation.active" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Using a managed account" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Usando una cuenta administrada" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "管理対象アカウントを使用中" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "관리 계정으로 사용 중" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "正在使用受管理账户" } }
+    } },
+    "auth.impersonation.remaining" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Time remaining: %@" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Tiempo restante: %@" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "残り時間：%@" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "남은 시간: %@" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "剩余时间：%@" } }
+    } },
+    "auth.login.error.locked" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Login has been temporarily blocked. Please try again later." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "El inicio de sesión está bloqueado temporalmente. Inténtalo más tarde." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "ログインが一時的にブロックされています。しばらくしてから再度お試しください。" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "로그인이 차단되었습니다. 잠시 후 다시 시도해주세요." } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "登录已暂时被阻止。请稍后重试。" } }
+    } },
+    "auth.login.error.lastAttempt" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Warning: this is your last attempt." } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Advertencia: este es tu último intento." } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "注意: これが最後の試行です。" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "주의: 마지막 시도입니다!" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "警告：这是您的最后一次尝试。" } }
+    } },
+    "auth.login.error.remainingAttempts" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Remaining attempts: %lld" } },
+      "es" : { "stringUnit" : { "state" : "translated", "value" : "Intentos restantes: %lld" } },
+      "ja" : { "stringUnit" : { "state" : "translated", "value" : "残り試行回数: %lld" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "남은 시도 횟수: %lld회" } },
+      "zh-Hans" : { "stringUnit" : { "state" : "translated", "value" : "剩余尝试次数：%lld" } }
+    } },
+    "tab.todo" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Todo"
+          }
+        },
+        "es" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Tareas"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "やること"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "할일"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "待办"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

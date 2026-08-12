@@ -1,0 +1,16 @@
+MapleStory typeface notice
+
+Copyright (c) 2017 NEXON-Maplestory. All rights reserved.
+
+This app embeds the original, unmodified MapleStory OTF Light and Bold files
+distributed by NEXON Korea Corporation.
+
+NEXON provides the typeface free of charge to personal and corporate users and
+permits free use and distribution. The distributed files may not be modified or
+edited, the typeface itself may not be sold, and it may be bundled or embedded
+with this copyright notice.
+
+Official source and full terms:
+https://maplestory.nexon.com/Media/Font
+
+이 앱에는 메이플스토리가 제공한 메이플스토리 서체가 적용되어 있습니다.
