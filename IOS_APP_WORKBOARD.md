@@ -252,7 +252,7 @@
 
 ### 6.9 App Store 준비 갭
 
-- App Store 제출 전 앱 안에서 접근 가능한 계정 삭제 API와 화면이 필요하다.
+- [-] 앱 안에서 접근 가능한 계정 삭제 API와 화면은 구현됐다. 실제 MySQL/provider revoke/TestFlight 실기기·Review Notes 검증은 별도 출시 준비 항목으로 남아 있다.
 - Kakao/Naver와 같은 제3자 로그인을 제공하면 Sign in with Apple 제공 요건을 검토해야 하며, 현재 범위에서는 사실상 함께 준비하는 것이 안전하다.
 - [x] 개인정보 처리방침을 `V2.2.28` 새 버전으로 추가해 HttpOnly 쿠키, Web Push·APNs, 첨부, 소셜 OAuth, Gemini 및 기기 저장소의 실제 처리 흐름과 일치시켰고 정책 migration 계약 테스트로 고정했다. 확인되지 않은 해외 이전 국가·법정 보관기간은 운영 계약 확인과 별도 법률 검토 후 고지한다.
 - [x] `V2.2.29`에 최신 이용약관과 `AI_SCHEDULE_PARSING` 선택 정책을 추가하고, owner 기준 동의 event/API·schedule/queue/worker gate와 웹·iOS 설정/수동 fallback을 구현해 backend·웹·iOS 자동 검증을 통과했다. paid Google 운영 계약과 실제 교차 플랫폼 E2E는 별도 출시 게이트다.
@@ -434,7 +434,7 @@ iOS 클라이언트 및 외부 후속:
 | R-006 | 첨부 편집의 `orderedAttachmentIds`·HEIC→JPEG·앱 10MB 제한은 구현됐으나 웹 50MB 표시와 운영 proxy 제한은 미확정 | 데이터 손실 또는 업로드 실패 | 기존 ID 보존 계약 테스트를 유지하고 운영 한도 확인 전 공통 서버/웹 표시는 바꾸지 않음 | 앱 반영 / 운영 확인 필요 |
 | R-007 | 로컬 날짜 직렬화 코드·테스트는 있으나 일정 검색 DTO의 웹/서버 불일치가 남음 | 검색 실패 또는 시간 오해 | 실제 응답 fixture와 웹 동작을 확인하고 공통 DTO 변경이 필요하면 사용자 승인 | 부분 반영 / 계약 확인 필요 |
 | R-008 | 모바일 OAuth `state`와 callback 검증 필요 | 로그인 CSRF·redirect 오용 위험 | 해시 state·PKCE와 고정 `dutypark://oauth/callback` 적용; 기존 웹 경로 불변 | 모바일 서버 해결 |
-| R-009 | 앱 내 계정 삭제 기능이 없음 | App Store 심사 차단 가능 | B5에서 삭제 API·확인 화면·데이터 처리 정책 구현 | B5 필수 |
+| R-009 | 앱 내 계정 삭제 API·화면은 구현됐으나 실제 MySQL/provider revoke/TestFlight·Review Notes 검증이 남음 | 심사 또는 운영 삭제 누락 가능 | 운영 유사 DB, provider revoke, 실기기와 심사 경로를 검증 | 구현 완료 / 외부·통합 검증 대기 |
 | R-010 | 제3자 로그인 제공 시 Sign in with Apple 요건 적용 가능성이 높음 | App Store 심사 차단 가능 | Apple 로그인 동시 제공을 출시 범위에 포함할지 결정 | 사용자 결정 필요 |
 | R-011 | 개인정보 처리방침이 실제 쿠키·푸시·첨부·소셜 OAuth 흐름과 불일치했음 | 사용자 고지·심사 리스크 | `V2.2.28`에 실제 저장·전송·정리 흐름을 새 버전으로 반영하고 `PrivacyPolicyMigrationTest`로 버전·핵심 계약·오표현 배제를 검증함; 해외 이전 국가·법정 보관기간은 별도 법률 검토 | 해결 |
 | R-012 | UGC 신고·차단·운영 절차가 앱 심사 요건에 부족할 수 있음 | 심사 또는 운영 리스크 | 노출 기능 범위와 신고·차단 기능 점검 | 검토 필요 |

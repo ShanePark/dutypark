@@ -36,8 +36,8 @@
 ## P0 체크리스트
 
 - [ ] Apple 로그인의 서버·iOS·콘솔 구현과 계정 연결 정책을 완료한다. ([상세](./01-apple-sign-in/README.md))
-- [ ] 앱 안에서 회원 탈퇴를 시작하고 완료할 수 있게 한다. ([상세](./02-account-deletion/README.md))
-- [ ] 탈퇴 시 세션, 푸시 토큰, 소셜 연결 및 소유 데이터 처리 규칙을 적용한다. ([상세](./02-account-deletion/README.md))
+- [-] 앱 안에서 회원 탈퇴를 시작하고 완료할 수 있게 한다. 구현 완료, TestFlight 실기기·웹 UI·심사 문서 검증이 남아 있다. ([상세](./02-account-deletion/README.md))
+- [-] 탈퇴 시 세션, 푸시 토큰, 소셜 연결 및 소유 데이터 처리 규칙을 적용한다. 로컬 정리는 구현됐으며 실제 MySQL 검증과 provider-side revoke가 남아 있다. ([상세](./02-account-deletion/README.md))
 - [x] `PRIVACY 2026-08-13` 정책을 HttpOnly 쿠키·기기 저장소·푸시·첨부·Kakao/Naver·Google AI·보유/삭제 흐름과 일치시키고 migration 계약 test 2/2를 통과했다. ([상세](./03-privacy-and-ai-consent/README.md))
 - [x] 일정 날짜·내용을 Google AI에 보내기 전 대상·목적·범위를 알리고 현행 정책의 명시적 선택 동의를 받도록 서버·웹·iOS를 구현하고 자동 검증했다. ([상세](./03-privacy-and-ai-consent/README.md))
 - [x] AI 처리 거부·철회 시 수동 시간 입력으로 일정을 저장하도록 구현하고 백엔드·웹·iOS 자동 검증을 통과했다. 실제 교차 플랫폼 E2E는 별도 출시 검증으로 남아 있다. ([상세](./03-privacy-and-ai-consent/README.md))

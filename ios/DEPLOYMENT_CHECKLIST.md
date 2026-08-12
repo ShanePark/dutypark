@@ -165,22 +165,19 @@ Dutypark는 카카오·네이버로 주 계정을 만들거나 인증할 수 있
 
 ## 7. 앱 내 회원 탈퇴
 
-### 현재 차단 사항
+### 저장소 구현 상태
 
-- `[!]` 현재 iOS와 웹은 “관리자에게 문의” 안내만 제공한다. 계정 생성을 지원하는 앱은 앱 안에서 계정 삭제를 제공해야 한다는 App Review Guideline 5.1.1(v)를 충족하지 못한다.
-- `[!]` 회원 삭제는 일정, 할 일, 팀, 친구, 첨부파일, 알림, 갱신 토큰, APNs 설치 정보 및 관리자/팀장 권한에 영향을 줄 수 있다. 기존 웹 서비스의 동작과 데이터 정책에 영향이 있으므로 사용자와 삭제 범위를 먼저 합의한다.
+- `[x]` iOS 설정에서 안전한 재인증, 팀 이관, 이름 확인과 최종 확인을 거쳐 계정 삭제를 요청할 수 있다.
+- `[x]` 서버는 요청 즉시 계정을 `DELETION_PENDING`으로 전환하고 refresh session·연결된 push 정보를 무효화한 뒤 durable 비동기 job으로 파일·DB를 정리한다.
+- `[x]` 1인 팀 삭제, 다인 팀 관리자 이관과 공동 TEAM 데이터·첨부의 보존·이관 규칙을 구현했다.
+- `[x]` `PRIVACY`와 `TERMS` 2026-08-13 버전에 즉시 접근 차단, 비동기 삭제와 공동 데이터 예외를 실제 흐름대로 반영했다.
 
-### 사용자가 결정할 일
+### 출시 전 남은 일
 
-- `[ ]` 즉시 삭제인지 유예 삭제인지 결정한다.
-- `[ ]` 팀장 또는 유일한 관리자의 탈퇴 전 권한 이관 규칙을 결정한다.
-- `[ ]` 법적 보존이 필요한 데이터와 즉시 파기할 데이터를 개인정보 처리방침과 일치시킨다.
-
-### Codex가 저장소에서 할 일
-
-- `[ ]` 안전한 재인증과 최종 확인을 거치는 회원 탈퇴 API 및 앱 화면을 구현한다.
-- `[ ]` 연관 데이터, 로그인 세션, 푸시 토큰과 소셜 연결을 정책대로 정리한다.
-- `[ ]` 웹에도 동일한 탈퇴 동작을 연결해 웹·앱 정책을 일치시키고 회귀 테스트한다.
+- `[ ]` 실제 MySQL 또는 운영 유사 환경에서 locking, 전체 삭제와 재시도를 검증한다.
+- `[ ]` Kakao·Naver provider-side revoke를 구현·검증하고 Sign in with Apple 도입 시 Apple revoke를 추가한다.
+- `[ ]` TestFlight 실기기에서 삭제 요청과 재가입 흐름을 확인하고 Review Notes에 메뉴 경로·비동기 처리·확인 절차를 기록한다.
+- `[ ]` 법적 보존 의무, 감사 로그 보유 범위와 운영 모니터링 책임자를 최종 확정한다.
 
 참고: [App Review Guideline 5.1.1(v)](https://developer.apple.com/app-store/review/guidelines/#data-collection-and-storage)
 
@@ -199,6 +196,7 @@ Dutypark는 카카오·네이버로 주 계정을 만들거나 인증할 수 있
 - `[x]` `V2.2.28`의 `PRIVACY 2026-08-13`에 HttpOnly cookie, 기기 저장소, push, 첨부, Kakao/Naver, Google AI, 보유·삭제와 공동 TEAM 예외를 실제 기술 흐름대로 반영하고 migration test 2/2를 통과했다.
 - `[x]` `V2.2.29`에 `TERMS`와 `AI_SCHEDULE_PARSING` 2026-08-13 정책을 추가하고 별도 선택 동의 event/API, owner 기준 schedule gate와 worker 외부 호출 직전 재검사를 구현했다.
 - `[x]` `PrivacyInfo.xcprivacy`에 UserDefaults required-reason API와 Name, Email, Photos or Videos, Other User Content, User ID, Device ID, Other Data Types를 App Functionality·Linked to User·non-tracking으로 선언했다.
+- `[x]` 회원 탈퇴 구현 뒤 개인정보 처리방침·이용약관과 manifest 데이터 유형을 다시 점검했다.
 - `[!]` Google AI는 Cloud Billing이 활성화된 paid service와 DPA 적용 Cloud Project를 확인하기 전 production에서 사용하지 않고 unpaid service에는 일정 데이터를 전송하지 않는다.
 - `[ ]` 운영 개인정보 처리방침을 법적 관점에서 최종 검토하고 Google의 실제 처리 국가·하위처리자·보관 조건 및 법정 보존 의무를 확정한다.
 - `[ ]` Xcode Release Archive의 Privacy Report와 실제 포함 SDK를 `PrivacyInfo.xcprivacy` 및 App Store Connect 입력값과 대조한다.
