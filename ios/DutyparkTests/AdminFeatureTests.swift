@@ -74,19 +74,44 @@ struct AdminFeatureTests {
         #expect(model.nameCheckResult == nil)
     }
 
-    @Test("Admin edit modals prevent accidental and in-flight dismissal")
+    @Test("Admin edit modals use one dirty-form dismissal policy for every request source")
     func modalDismissPolicy() {
         let pristine = AdminModalInteractionState()
-        #expect(pristine.allowsBackdropDismiss)
         #expect(pristine.allowsDismiss)
+        #expect(pristine.dismissDecision == .dismiss)
 
         let dirty = AdminModalInteractionState(isDirty: true)
-        #expect(!dirty.allowsBackdropDismiss)
         #expect(dirty.allowsDismiss)
+        #expect(dirty.dismissDecision == .confirmDiscard)
 
         let saving = AdminModalInteractionState(isDirty: true, isSaving: true)
-        #expect(!saving.allowsBackdropDismiss)
         #expect(!saving.allowsDismiss)
+        #expect(saving.dismissDecision == .blocked)
+
+        let checking = AdminModalInteractionState(isDirty: true, isChecking: true)
+        #expect(!checking.allowsDismiss)
+        #expect(checking.dismissDecision == .blocked)
+    }
+
+    @Test("Admin form dirtiness is an exact comparison with its initial values")
+    func modalDirtyBaseline() {
+        #expect(!AdminModalInteractionState.passwordIsDirty(password: "", confirmation: ""))
+        #expect(AdminModalInteractionState.passwordIsDirty(password: " ", confirmation: ""))
+        #expect(!AdminModalInteractionState.passwordIsDirty(
+            password: "original",
+            confirmation: "original",
+            baselinePassword: "original",
+            baselineConfirmation: "original"
+        ))
+
+        #expect(!AdminModalInteractionState.teamIsDirty(name: "", description: ""))
+        #expect(AdminModalInteractionState.teamIsDirty(name: " ", description: ""))
+        #expect(!AdminModalInteractionState.teamIsDirty(
+            name: "Dutypark",
+            description: "Team",
+            baselineName: "Dutypark",
+            baselineDescription: "Team"
+        ))
     }
 }
 

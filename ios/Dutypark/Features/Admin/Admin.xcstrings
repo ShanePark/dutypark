@@ -171,6 +171,42 @@
         }
       }
     },
+    "admin.common.discard.action": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Discard" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Descartar" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "破棄" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "나가기" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "放弃" } }
+      }
+    },
+    "admin.common.discard.continue": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Keep editing" } },
+        "es": { "stringUnit": { "state": "translated", "value": "Seguir editando" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "編集を続ける" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "계속 작성" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "继续编辑" } }
+      }
+    },
+    "admin.common.discard.message": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Your entered changes will be lost." } },
+        "es": { "stringUnit": { "state": "translated", "value": "Se perderán los cambios introducidos." } },
+        "ja": { "stringUnit": { "state": "translated", "value": "入力した変更内容は失われます。" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "입력한 변경 내용이 사라집니다." } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "已输入的更改将会丢失。" } }
+      }
+    },
+    "admin.common.discard.title": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Discard changes?" } },
+        "es": { "stringUnit": { "state": "translated", "value": "¿Descartar los cambios?" } },
+        "ja": { "stringUnit": { "state": "translated", "value": "変更を破棄しますか？" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "변경 내용을 버릴까요?" } },
+        "zh-Hans": { "stringUnit": { "state": "translated", "value": "放弃更改吗？" } }
+      }
+    },
     "admin.common.loading": {
       "localizations": {
         "en": {

@@ -5,6 +5,7 @@ struct AdminTeamListView: View {
     @State private var searchText = ""
     @State private var showsCreateSheet = false
     @State private var createModalState = AdminModalInteractionState()
+    @State private var showsCreateDiscardConfirmation = false
     @State private var teamToDelete: SimpleTeamDTO?
     @State private var operationMessage: String?
 
@@ -88,18 +89,30 @@ struct AdminTeamListView: View {
         .fullScreenCover(isPresented: $showsCreateSheet) {
             DPModalOverlay(
                 onDismiss: { showsCreateSheet = false },
-                closeOnBackdrop: createModalState.allowsBackdropDismiss,
-                canDismiss: createModalState.allowsDismiss
-            ) { availableSize, dismiss in
+                canDismiss: createModalState.allowsDismiss,
+                onDismissRequest: { _ in requestCreateModalDismiss() }
+            ) { availableSize, _ in
                 AdminTeamCreateModal(
                     model: model,
                     maximumHeight: availableSize.height,
                     interactionState: $createModalState,
-                    dismiss: dismiss
+                    requestDismiss: requestCreateModalDismiss
                 ) { team in
                     operationMessage = AdminLocalization.format("admin.teams.created", team.name)
                     Task { await model.load() }
+                    showsCreateSheet = false
                 }
+            }
+            .alert(
+                AdminLocalization.string("admin.common.discard.title"),
+                isPresented: $showsCreateDiscardConfirmation
+            ) {
+                Button(AdminLocalization.string("admin.common.discard.action"), role: .destructive) {
+                    showsCreateSheet = false
+                }
+                Button(AdminLocalization.string("admin.common.discard.continue"), role: .cancel) {}
+            } message: {
+                Text(AdminLocalization.string("admin.common.discard.message"))
             }
         }
         .confirmationDialog(
@@ -141,6 +154,17 @@ struct AdminTeamListView: View {
         .task { await model.load() }
         .accessibilityIdentifier("screen.admin.teams")
     }
+
+    private func requestCreateModalDismiss() {
+        switch createModalState.dismissDecision {
+        case .dismiss:
+            showsCreateSheet = false
+        case .confirmDiscard:
+            showsCreateDiscardConfirmation = true
+        case .blocked:
+            break
+        }
+    }
 }
 
 private struct AdminTeamRow: View {
@@ -174,7 +198,7 @@ private struct AdminTeamCreateModal: View {
     @ObservedObject var model: AdminTeamListViewModel
     let maximumHeight: CGFloat
     @Binding var interactionState: AdminModalInteractionState
-    let dismiss: () -> Void
+    let requestDismiss: () -> Void
     let onCreated: (TeamDTO) -> Void
     @State private var name = ""
     @State private var description = ""
@@ -210,7 +234,7 @@ private struct AdminTeamCreateModal: View {
                 .font(DPTypography.heading)
                 .foregroundStyle(DPColor.textPrimary)
             Spacer()
-            Button(action: dismiss) {
+            Button(action: requestDismiss) {
                 Image(systemName: "xmark")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(DPColor.textMuted)
@@ -218,7 +242,7 @@ private struct AdminTeamCreateModal: View {
                     .background(DPColor.backgroundTertiary, in: Circle())
             }
             .buttonStyle(.plain)
-            .disabled(interactionState.isSaving)
+            .disabled(interactionState.isWorking)
             .accessibilityLabel(AdminLocalization.string("admin.common.cancel"))
         }
         .padding(.horizontal, DPSpacing.large)
@@ -251,13 +275,17 @@ private struct AdminTeamCreateModal: View {
             Button {
                 let candidate = normalizedName
                 checkedName = candidate
-                Task { await model.checkName(candidate) }
+                interactionState.isChecking = true
+                Task {
+                    await model.checkName(candidate)
+                    interactionState.isChecking = false
+                }
             } label: {
                 Label(AdminLocalization.string("admin.teams.checkName"), systemImage: "checkmark.seal")
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(DPOutlineButtonStyle())
-            .disabled(interactionState.isSaving || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            .disabled(interactionState.isWorking || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
 
             if checkedName == normalizedName, let result = model.nameCheckResult {
                 Label(
@@ -322,12 +350,12 @@ private struct AdminTeamCreateModal: View {
             .buttonStyle(DPPrimaryButtonStyle())
             .disabled(!canCreate || interactionState.isSaving)
 
-            Button(action: dismiss) {
+            Button(action: requestDismiss) {
                 Text(AdminLocalization.string("admin.common.cancel"))
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(DPSecondaryButtonStyle())
-            .disabled(interactionState.isSaving)
+            .disabled(interactionState.isWorking)
         }
         .padding(DPSpacing.compact)
     }
@@ -354,17 +382,20 @@ private struct AdminTeamCreateModal: View {
 
     private func create() async {
         interactionState.isSaving = true
-        defer { interactionState.isSaving = false }
         do {
             let team = try await model.create(name: name, description: description)
+            interactionState.isSaving = false
             onCreated(team)
-            dismiss()
         } catch {
+            interactionState.isSaving = false
             saveFailed = true
         }
     }
 
     private func updateDirtyState() {
-        interactionState.isDirty = !name.isEmpty || !description.isEmpty
+        interactionState.isDirty = AdminModalInteractionState.teamIsDirty(
+            name: name,
+            description: description
+        )
     }
 }

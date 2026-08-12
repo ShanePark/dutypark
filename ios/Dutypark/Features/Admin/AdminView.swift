@@ -234,6 +234,7 @@ private struct AdminMemberDetailView: View {
     @State private var loadFailed = false
     @State private var showsPasswordSheet = false
     @State private var passwordModalState = AdminModalInteractionState()
+    @State private var showsPasswordDiscardConfirmation = false
     @State private var sessionToRevoke: SettingsRefreshToken?
     @State private var operationMessage: String?
 
@@ -291,18 +292,30 @@ private struct AdminMemberDetailView: View {
         .fullScreenCover(isPresented: $showsPasswordSheet) {
             DPModalOverlay(
                 onDismiss: { showsPasswordSheet = false },
-                closeOnBackdrop: passwordModalState.allowsBackdropDismiss,
-                canDismiss: passwordModalState.allowsDismiss
-            ) { availableSize, dismiss in
+                canDismiss: passwordModalState.allowsDismiss,
+                onDismissRequest: { _ in requestPasswordModalDismiss() }
+            ) { availableSize, _ in
                 AdminPasswordChangeModal(
                     member: member,
                     model: model,
                     maximumHeight: availableSize.height,
                     interactionState: $passwordModalState,
-                    dismiss: dismiss
+                    requestDismiss: requestPasswordModalDismiss
                 ) {
                     operationMessage = AdminLocalization.string("admin.members.passwordChanged")
+                    showsPasswordSheet = false
                 }
+            }
+            .alert(
+                AdminLocalization.string("admin.common.discard.title"),
+                isPresented: $showsPasswordDiscardConfirmation
+            ) {
+                Button(AdminLocalization.string("admin.common.discard.action"), role: .destructive) {
+                    showsPasswordSheet = false
+                }
+                Button(AdminLocalization.string("admin.common.discard.continue"), role: .cancel) {}
+            } message: {
+                Text(AdminLocalization.string("admin.common.discard.message"))
             }
         }
         .confirmationDialog(
@@ -382,6 +395,17 @@ private struct AdminMemberDetailView: View {
             loadFailed = true
         }
     }
+
+    private func requestPasswordModalDismiss() {
+        switch passwordModalState.dismissDecision {
+        case .dismiss:
+            showsPasswordSheet = false
+        case .confirmDiscard:
+            showsPasswordDiscardConfirmation = true
+        case .blocked:
+            break
+        }
+    }
 }
 
 private struct AdminSessionRow: View {
@@ -414,12 +438,42 @@ private struct AdminSessionRow: View {
     }
 }
 
+nonisolated enum AdminModalDismissDecision: Equatable, Sendable {
+    case dismiss
+    case confirmDiscard
+    case blocked
+}
+
 nonisolated struct AdminModalInteractionState: Equatable, Sendable {
     var isDirty = false
     var isSaving = false
+    var isChecking = false
 
-    var allowsBackdropDismiss: Bool { !isDirty && !isSaving }
-    var allowsDismiss: Bool { !isSaving }
+    var isWorking: Bool { isSaving || isChecking }
+    var allowsDismiss: Bool { !isWorking }
+
+    var dismissDecision: AdminModalDismissDecision {
+        if isWorking { return .blocked }
+        return isDirty ? .confirmDiscard : .dismiss
+    }
+
+    static func passwordIsDirty(
+        password: String,
+        confirmation: String,
+        baselinePassword: String = "",
+        baselineConfirmation: String = ""
+    ) -> Bool {
+        password != baselinePassword || confirmation != baselineConfirmation
+    }
+
+    static func teamIsDirty(
+        name: String,
+        description: String,
+        baselineName: String = "",
+        baselineDescription: String = ""
+    ) -> Bool {
+        name != baselineName || description != baselineDescription
+    }
 }
 
 private struct AdminPasswordChangeModal: View {
@@ -427,7 +481,7 @@ private struct AdminPasswordChangeModal: View {
     @ObservedObject var model: AdminMemberListViewModel
     let maximumHeight: CGFloat
     @Binding var interactionState: AdminModalInteractionState
-    let dismiss: () -> Void
+    let requestDismiss: () -> Void
     let onSuccess: () -> Void
     @State private var password = ""
     @State private var confirmation = ""
@@ -459,7 +513,7 @@ private struct AdminPasswordChangeModal: View {
                     .foregroundStyle(DPColor.textMuted)
             }
             Spacer()
-            Button(action: dismiss) {
+            Button(action: requestDismiss) {
                 Image(systemName: "xmark")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(DPColor.textMuted)
@@ -519,7 +573,7 @@ private struct AdminPasswordChangeModal: View {
             .buttonStyle(DPPrimaryButtonStyle())
             .disabled(!isValid || interactionState.isSaving)
 
-            Button(action: dismiss) {
+            Button(action: requestDismiss) {
                 Text(AdminLocalization.string("admin.common.cancel"))
                     .frame(maxWidth: .infinity)
             }
@@ -566,18 +620,21 @@ private struct AdminPasswordChangeModal: View {
     }
 
     private func updateDirtyState() {
-        interactionState.isDirty = !password.isEmpty || !confirmation.isEmpty
+        interactionState.isDirty = AdminModalInteractionState.passwordIsDirty(
+            password: password,
+            confirmation: confirmation
+        )
         saveFailed = false
     }
 
     private func save() async {
         interactionState.isSaving = true
-        defer { interactionState.isSaving = false }
         do {
             try await model.changePassword(memberID: member.id, newPassword: password)
+            interactionState.isSaving = false
             onSuccess()
-            dismiss()
         } catch {
+            interactionState.isSaving = false
             saveFailed = true
         }
     }
