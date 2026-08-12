@@ -281,76 +281,71 @@ private struct GuestCalendarDayDetailView: View {
     let dismiss: () -> Void
 
     var body: some View {
-        VStack(spacing: 0) {
+        DPModalPanel(maximumPanelHeight: maximumHeight) {
             modalHeader
-
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: DPSpacing.small) {
-                    if let duty = day.duty {
-                        detailSection(GuestLocalization.text("guest.calendar.duty")) {
-                            HStack(spacing: DPSpacing.small) {
-                                RoundedRectangle(cornerRadius: 3)
-                                    .fill(guestColor(hex: duty.dutyColor))
-                                    .frame(width: 14, height: 14)
-                                Text(duty.dutyType ?? GuestLocalization.text("guest.calendar.off"))
-                                    .font(DPTypography.label)
-                                    .foregroundStyle(DPColor.textPrimary)
-                            }
-                        }
-                    }
-
-                    if !day.holidays.isEmpty {
-                        detailSection(GuestLocalization.text("guest.calendar.holidays")) {
-                            VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
-                                ForEach(Array(day.holidays.enumerated()), id: \.offset) { _, holiday in
-                                    Text(holiday.dateName)
-                                        .font(DPTypography.label)
-                                        .foregroundStyle(DPColor.danger)
-                                }
-                            }
-                        }
-                    }
-
-                    detailSection(GuestLocalization.text("guest.calendar.schedules")) {
-                        if day.schedules.isEmpty {
-                            Text("guest.calendar.schedule.empty", tableName: "Guest")
+        } content: {
+            VStack(alignment: .leading, spacing: DPSpacing.small) {
+                if let duty = day.duty {
+                    detailSection(GuestLocalization.text("guest.calendar.duty")) {
+                        HStack(spacing: DPSpacing.small) {
+                            RoundedRectangle(cornerRadius: 3)
+                                .fill(guestColor(hex: duty.dutyColor))
+                                .frame(width: 14, height: 14)
+                            Text(duty.dutyType ?? GuestLocalization.text("guest.calendar.off"))
                                 .font(DPTypography.label)
-                                .foregroundStyle(DPColor.textMuted)
-                                .frame(maxWidth: .infinity, minHeight: 44, alignment: .center)
-                        } else {
-                            VStack(alignment: .leading, spacing: DPSpacing.compact) {
-                                ForEach(day.schedules, id: \.id) { schedule in
-                                    scheduleCard(schedule)
-                                }
+                                .foregroundStyle(DPColor.textPrimary)
+                        }
+                    }
+                }
+
+                if !day.holidays.isEmpty {
+                    detailSection(GuestLocalization.text("guest.calendar.holidays")) {
+                        VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+                            ForEach(Array(day.holidays.enumerated()), id: \.offset) { _, holiday in
+                                Text(holiday.dateName)
+                                    .font(DPTypography.label)
+                                    .foregroundStyle(DPColor.danger)
                             }
                         }
                     }
+                }
 
-                    if !day.dDays.isEmpty {
-                        detailSection(GuestLocalization.text("guest.calendar.dday.title")) {
-                            VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
-                                ForEach(day.dDays, id: \.id) { item in
-                                    HStack {
-                                        Text(item.title)
-                                            .font(DPTypography.label)
-                                            .foregroundStyle(DPColor.textPrimary)
-                                        Spacer()
-                                        Text(guestDDayLabel(item))
-                                            .font(DPTypography.label)
-                                            .foregroundStyle(DPColor.accent)
-                                    }
+                detailSection(GuestLocalization.text("guest.calendar.schedules")) {
+                    if day.schedules.isEmpty {
+                        Text("guest.calendar.schedule.empty", tableName: "Guest")
+                            .font(DPTypography.label)
+                            .foregroundStyle(DPColor.textMuted)
+                            .frame(maxWidth: .infinity, minHeight: 44, alignment: .center)
+                    } else {
+                        VStack(alignment: .leading, spacing: DPSpacing.compact) {
+                            ForEach(day.schedules, id: \.id) { schedule in
+                                scheduleCard(schedule)
+                            }
+                        }
+                    }
+                }
+
+                if !day.dDays.isEmpty {
+                    detailSection(GuestLocalization.text("guest.calendar.dday.title")) {
+                        VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+                            ForEach(day.dDays, id: \.id) { item in
+                                HStack {
+                                    Text(item.title)
+                                        .font(DPTypography.label)
+                                        .foregroundStyle(DPColor.textPrimary)
+                                    Spacer()
+                                    Text(guestDDayLabel(item))
+                                        .font(DPTypography.label)
+                                        .foregroundStyle(DPColor.accent)
                                 }
                             }
                         }
                     }
                 }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
             }
-            .frame(height: bodyHeight)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
         }
-        .fixedSize(horizontal: false, vertical: true)
-        .background(DPColor.backgroundModal)
     }
 
     private var modalHeader: some View {
@@ -375,9 +370,6 @@ private struct GuestCalendarDayDetailView: View {
         .padding(.trailing, DPSpacing.extraSmall)
         .padding(.vertical, DPSpacing.extraSmall)
         .background(DPColor.backgroundTertiary)
-        .overlay(alignment: .bottom) {
-            Rectangle().fill(DPColor.borderPrimary).frame(height: 1)
-        }
     }
 
     private func scheduleCard(_ schedule: ScheduleDTO) -> some View {
@@ -423,23 +415,6 @@ private struct GuestCalendarDayDetailView: View {
             content()
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    private var bodyHeight: CGFloat {
-        let maximumBodyHeight = max(maximumHeight - 92, 100)
-        var estimate: CGFloat = 76
-
-        if day.duty != nil { estimate += 52 }
-        if !day.holidays.isEmpty { estimate += CGFloat(day.holidays.count) * 24 + 24 }
-        if !day.dDays.isEmpty { estimate += CGFloat(day.dDays.count) * 32 + 24 }
-
-        for schedule in day.schedules {
-            estimate += 76
-            if !schedule.description.isEmpty { estimate += 48 }
-            if !schedule.attachments.isEmpty { estimate += 56 }
-        }
-
-        return min(max(estimate, 76), maximumBodyHeight)
     }
 
     private var formattedDate: String {

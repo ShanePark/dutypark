@@ -868,12 +868,13 @@ private struct FriendSearchModalView: View {
     let onDismiss: () -> Void
 
     var body: some View {
-        VStack(spacing: 0) {
+        DPModalPanel(maximumPanelHeight: min(availableSize.height, 620)) {
             modalHeader
+        } content: {
             modalBody
+        } footer: {
             modalFooter
         }
-        .frame(maxHeight: min(availableSize.height, 620))
         .onDisappear { viewModel.clearSearch() }
         .alert(item: $candidate) { candidate in
             Alert(
@@ -935,36 +936,33 @@ private struct FriendSearchModalView: View {
         .padding(.horizontal, DPSpacing.medium)
         .padding(.vertical, DPSpacing.compact)
         .background(DPColor.backgroundTertiary)
-        .overlay(alignment: .bottom) { Divider().overlay(DPColor.borderPrimary) }
     }
 
     private var modalBody: some View {
-        ScrollView {
-            VStack(spacing: DPSpacing.medium) {
-                searchBar
+        VStack(spacing: DPSpacing.medium) {
+            searchBar
 
-                if viewModel.isSearching {
-                    ProgressView(social("social.search.loading"))
+            if viewModel.isSearching {
+                ProgressView(social("social.search.loading"))
+                    .font(DPTypography.supporting)
+                    .foregroundStyle(DPColor.accent)
+                    .frame(maxWidth: .infinity, minHeight: 112)
+            } else if viewModel.searchResults.isEmpty {
+                VStack(spacing: DPSpacing.compact) {
+                    Image(systemName: "magnifyingglass")
+                        .font(.system(size: 44, weight: .light))
+                        .foregroundStyle(DPColor.borderSecondary)
+                    Text(social("social.search.empty"))
                         .font(DPTypography.supporting)
-                        .foregroundStyle(DPColor.accent)
-                        .frame(maxWidth: .infinity, minHeight: 112)
-                } else if viewModel.searchResults.isEmpty {
-                    VStack(spacing: DPSpacing.compact) {
-                        Image(systemName: "magnifyingglass")
-                            .font(.system(size: 44, weight: .light))
-                            .foregroundStyle(DPColor.borderSecondary)
-                        Text(social("social.search.empty"))
-                            .font(DPTypography.supporting)
-                            .foregroundStyle(DPColor.textSecondary)
-                            .multilineTextAlignment(.center)
-                    }
-                    .frame(maxWidth: .infinity, minHeight: 152)
-                } else {
-                    searchResults
+                        .foregroundStyle(DPColor.textSecondary)
+                        .multilineTextAlignment(.center)
                 }
+                .frame(maxWidth: .infinity, minHeight: 152)
+            } else {
+                searchResults
             }
-            .padding(DPSpacing.medium)
         }
+        .padding(DPSpacing.medium)
     }
 
     private var searchBar: some View {
@@ -1116,7 +1114,6 @@ private struct FriendSearchModalView: View {
                 .clipShape(RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous))
         }
         .padding(DPSpacing.medium)
-        .overlay(alignment: .top) { Divider().overlay(DPColor.borderPrimary) }
     }
 
     private func search(page: Int) {

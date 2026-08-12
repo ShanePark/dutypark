@@ -1472,191 +1472,200 @@ struct TodoFormSheet: View {
         )
     }
 
+    /// `DPModalOverlay` always measures the height available to the panel; the fallback
+    /// keeps the panel bounded when a presenter provides no measurement.
+    private var maximumPanelHeight: CGFloat {
+        min(maximumHeight.map { $0 * TodoModalLayout.maximumPanelHeightRatio } ?? .infinity, 786)
+    }
+
     var body: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: DPSpacing.small) {
-                Text(todoLocalized(titleKey))
-                    .font(DPTypography.heading)
-                    .foregroundStyle(DPColor.textPrimary)
-                Spacer()
-                Button {
-                    cancel()
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 17, weight: .semibold))
-                        .foregroundStyle(DPColor.textPrimary)
-                        .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
-                }
-                .buttonStyle(.plain)
-                .disabled(isSaving || attachmentModel.isBusy)
-                .accessibilityLabel(todoLocalized("common.cancel"))
-            }
-            .padding(.leading, DPSpacing.medium)
-            .padding(.trailing, DPSpacing.small)
-            .padding(.vertical, DPSpacing.small)
-            .background(DPColor.backgroundModal)
-
-            Divider().overlay(DPColor.borderPrimary)
-
-            ScrollView {
-                VStack(alignment: .leading, spacing: DPSpacing.large) {
-                    TodoFormSection(title: todoLocalized("todo.field.status")) {
-                        HStack(spacing: DPSpacing.small) {
-                            ForEach(TodoStatus.boardStatuses, id: \.rawValue) { status in
-                                Button {
-                                    draft.status = status
-                                } label: {
-                                    VStack(spacing: 6) {
-                                        Image(systemName: status.systemImage)
-                                            .font(.system(size: 16, weight: .semibold))
-                                        Text(todoLocalized(status.shortTitleKey))
-                                            .font(DPTypography.caption)
-                                            .lineLimit(1)
-                                    }
-                                    .foregroundStyle(status.color)
-                                    .frame(maxWidth: .infinity, minHeight: 62)
-                                    .background(status.softColor)
-                                    .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
-                                    .overlay(
-                                        RoundedRectangle(cornerRadius: DPRadius.standard)
-                                            .stroke(draft.status == status ? status.color : Color.clear, lineWidth: 2)
-                                    )
-                                }
-                                .buttonStyle(.plain)
-                                .accessibilityAddTraits(draft.status == status ? .isSelected : [])
-                            }
-                        }
-                    }
-
-                    TodoFormSection(title: todoLocalized("todo.field.title")) {
-                        TextField("", text: $draft.title, prompt: Text(todoLocalized("todo.field.title")))
-                            .textInputAutocapitalization(.sentences)
-                            .focused($focusedField, equals: .title)
-                            .dpInputChrome(
-                                isFocused: focusedField == .title,
-                                isInvalid: draft.title.count > 50
-                            )
-                        Text(verbatim: "\(draft.title.count)/50")
-                            .font(DPTypography.caption)
-                            .foregroundStyle(draft.title.count > 50 ? DPColor.danger : DPColor.textMuted)
-                            .frame(maxWidth: .infinity, alignment: .trailing)
-                    }
-
-                    TodoFormSection(title: todoLocalized("todo.field.content")) {
-                        TextEditor(text: $draft.content)
-                            .font(DPTypography.body)
-                            .foregroundStyle(DPColor.textPrimary)
-                            .scrollContentBackground(.hidden)
-                            .focused($focusedField, equals: .content)
-                            .frame(minHeight: 132)
-                            .dpInputChrome(isFocused: focusedField == .content)
-                            .overlay(alignment: .topLeading) {
-                                if draft.content.isEmpty {
-                                    Text(todoLocalized("todo.field.content"))
-                                        .font(DPTypography.body)
-                                        .foregroundStyle(DPColor.textMuted)
-                                        .padding(.leading, DPChrome.inputHorizontalPadding + 4)
-                                        .padding(.top, DPChrome.inputVerticalPadding + 7)
-                                        .allowsHitTesting(false)
-                                }
-                            }
-                    }
-
-                    TodoFormSection(title: todoLocalized("todo.field.dueDate")) {
-                        Toggle(isOn: $draft.hasDueDate) {
-                            Label(todoLocalized("todo.field.setDueDate"), systemImage: "calendar")
-                                .font(DPTypography.supporting)
-                                .foregroundStyle(DPColor.textSecondary)
-                        }
-                        .tint(DPColor.accent)
-                        .frame(minHeight: DPSize.minimumTouchTarget)
-                        if draft.hasDueDate {
-                            DatePicker(
-                                todoLocalized("todo.field.dueDate"),
-                                selection: $draft.dueDate,
-                                displayedComponents: .date
-                            )
-                            .datePickerStyle(.compact)
-                            .font(DPTypography.body)
-                            .dpInputChrome()
-                        }
-                    }
-
-                    if !friends.isEmpty {
-                        TodoFormSection(title: todoLocalized("todo.field.tags")) {
-                            TodoFlowLayout(spacing: DPSpacing.small) {
-                                ForEach(friends, id: \.id) { friend in
-                                    let selected = draft.taggedFriendIDs.contains(friend.id)
-                                    Button {
-                                        if selected {
-                                            draft.taggedFriendIDs.remove(friend.id)
-                                        } else {
-                                            draft.taggedFriendIDs.insert(friend.id)
-                                        }
-                                    } label: {
-                                        HStack(spacing: 5) {
-                                            Image(systemName: selected ? "checkmark.circle.fill" : "person.crop.circle")
-                                            Text(friend.name).lineLimit(1)
-                                        }
-                                        .font(DPTypography.label)
-                                        .foregroundStyle(selected ? DPColor.accent : DPColor.textSecondary)
-                                        .padding(.horizontal, 11)
-                                        .frame(minHeight: DPSize.minimumTouchTarget)
-                                        .background(selected ? DPColor.accentSoft : DPColor.backgroundTertiary, in: Capsule())
-                                        .overlay(Capsule().stroke(selected ? DPColor.accentBorder : DPColor.borderPrimary))
-                                    }
-                                    .buttonStyle(.plain)
-                                    .accessibilityAddTraits(selected ? .isSelected : [])
-                                }
-                            }
-                        }
-                    }
-
-                    TodoFormSection(title: todoLocalized("todo.label.attachments")) {
-                        AttachmentPicker(model: attachmentModel)
-                            .padding(DPSpacing.compact)
-                            .background(DPColor.backgroundTertiary)
-                            .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
-                    }
-                }
-                .padding(DPSpacing.medium)
-            }
-            .scrollDismissesKeyboard(.interactively)
-
-            Divider().overlay(DPColor.borderPrimary)
-
-            HStack(spacing: DPSpacing.small) {
-                Button(todoLocalized("common.cancel")) {
-                    cancel()
-                }
-                .buttonStyle(DPOutlineButtonStyle())
-                .frame(maxWidth: .infinity)
-                .disabled(isSaving || attachmentModel.isBusy)
-
-                Button(todoLocalized("common.save")) {
-                    submit()
-                }
-                .buttonStyle(DPPrimaryButtonStyle())
-                .frame(maxWidth: .infinity)
-                .disabled(!draft.canSave || isSaving || attachmentModel.isBusy)
-            }
-            .padding(DPSpacing.compact)
-            .background(DPColor.backgroundModal)
-            .safeAreaPadding(.bottom, DPSpacing.extraSmall)
+        DPModalPanel(maximumPanelHeight: maximumPanelHeight) {
+            formHeader
+        } content: {
+            formContent
+        } footer: {
+            formFooter
         }
-            .frame(maxHeight: maximumHeight.map { min($0 * TodoModalLayout.maximumPanelHeightRatio, 786) })
-            .background(DPColor.backgroundModal)
-            .presentationBackground(DPColor.backgroundModal)
-            .presentationCornerRadius(DPRadius.extraLarge)
-            .interactiveDismissDisabled(isSaving || attachmentModel.isBusy || attachmentModel.attachmentSessionId != nil)
-            .onChange(of: isBusy) { _, value in onBusyChange(value) }
-            .onAppear { onBusyChange(isBusy) }
-            .onDisappear {
-                onBusyChange(false)
-                guard !didSave else { return }
-                Task { await attachmentModel.discard() }
+        .interactiveDismissDisabled(isSaving || attachmentModel.isBusy || attachmentModel.attachmentSessionId != nil)
+        .onChange(of: isBusy) { _, value in onBusyChange(value) }
+        .onAppear { onBusyChange(isBusy) }
+        .onDisappear {
+            onBusyChange(false)
+            guard !didSave else { return }
+            Task { await attachmentModel.discard() }
+        }
+        .todoErrorAlert(model)
+    }
+
+    private var formHeader: some View {
+        HStack(spacing: DPSpacing.small) {
+            Text(todoLocalized(titleKey))
+                .font(DPTypography.heading)
+                .foregroundStyle(DPColor.textPrimary)
+            Spacer()
+            Button {
+                cancel()
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.system(size: 17, weight: .semibold))
+                    .foregroundStyle(DPColor.textPrimary)
+                    .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
             }
-            .todoErrorAlert(model)
+            .buttonStyle(.plain)
+            .disabled(isSaving || attachmentModel.isBusy)
+            .accessibilityLabel(todoLocalized("common.cancel"))
+        }
+        .padding(.leading, DPSpacing.medium)
+        .padding(.trailing, DPSpacing.small)
+        .padding(.vertical, DPSpacing.small)
+    }
+
+    private var formContent: some View {
+        VStack(alignment: .leading, spacing: DPSpacing.large) {
+            TodoFormSection(title: todoLocalized("todo.field.status")) {
+                HStack(spacing: DPSpacing.small) {
+                    ForEach(TodoStatus.boardStatuses, id: \.rawValue) { status in
+                        Button {
+                            draft.status = status
+                        } label: {
+                            VStack(spacing: 6) {
+                                Image(systemName: status.systemImage)
+                                    .font(.system(size: 16, weight: .semibold))
+                                Text(todoLocalized(status.shortTitleKey))
+                                    .font(DPTypography.caption)
+                                    .lineLimit(1)
+                            }
+                            .foregroundStyle(status.color)
+                            .frame(maxWidth: .infinity, minHeight: 62)
+                            .background(status.softColor)
+                            .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+                            .overlay(
+                                RoundedRectangle(cornerRadius: DPRadius.standard)
+                                    .stroke(draft.status == status ? status.color : Color.clear, lineWidth: 2)
+                            )
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityAddTraits(draft.status == status ? .isSelected : [])
+                    }
+                }
+            }
+
+            TodoFormSection(title: todoLocalized("todo.field.title")) {
+                TextField("", text: $draft.title, prompt: Text(todoLocalized("todo.field.title")))
+                    .textInputAutocapitalization(.sentences)
+                    .focused($focusedField, equals: .title)
+                    .dpInputChrome(
+                        isFocused: focusedField == .title,
+                        isInvalid: draft.title.count > 50
+                    )
+                Text(verbatim: "\(draft.title.count)/50")
+                    .font(DPTypography.caption)
+                    .foregroundStyle(draft.title.count > 50 ? DPColor.danger : DPColor.textMuted)
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+            }
+
+            TodoFormSection(title: todoLocalized("todo.field.content")) {
+                TextEditor(text: $draft.content)
+                    .font(DPTypography.body)
+                    .foregroundStyle(DPColor.textPrimary)
+                    .scrollContentBackground(.hidden)
+                    .focused($focusedField, equals: .content)
+                    .frame(minHeight: 132)
+                    .dpInputChrome(isFocused: focusedField == .content)
+                    .overlay(alignment: .topLeading) {
+                        if draft.content.isEmpty {
+                            Text(todoLocalized("todo.field.content"))
+                                .font(DPTypography.body)
+                                .foregroundStyle(DPColor.textMuted)
+                                .padding(.leading, DPChrome.inputHorizontalPadding + 4)
+                                .padding(.top, DPChrome.inputVerticalPadding + 7)
+                                .allowsHitTesting(false)
+                        }
+                    }
+            }
+
+            TodoFormSection(title: todoLocalized("todo.field.dueDate")) {
+                Toggle(isOn: $draft.hasDueDate) {
+                    Label(todoLocalized("todo.field.setDueDate"), systemImage: "calendar")
+                        .font(DPTypography.supporting)
+                        .foregroundStyle(DPColor.textSecondary)
+                }
+                .tint(DPColor.accent)
+                .frame(minHeight: DPSize.minimumTouchTarget)
+                if draft.hasDueDate {
+                    DatePicker(
+                        todoLocalized("todo.field.dueDate"),
+                        selection: $draft.dueDate,
+                        displayedComponents: .date
+                    )
+                    .datePickerStyle(.compact)
+                    .font(DPTypography.body)
+                    .dpInputChrome()
+                }
+            }
+
+            if !friends.isEmpty {
+                TodoFormSection(title: todoLocalized("todo.field.tags")) {
+                    TodoFlowLayout(spacing: DPSpacing.small) {
+                        ForEach(friends, id: \.id) { friend in
+                            let selected = draft.taggedFriendIDs.contains(friend.id)
+                            Button {
+                                if selected {
+                                    draft.taggedFriendIDs.remove(friend.id)
+                                } else {
+                                    draft.taggedFriendIDs.insert(friend.id)
+                                }
+                            } label: {
+                                HStack(spacing: 5) {
+                                    Image(systemName: selected ? "checkmark.circle.fill" : "person.crop.circle")
+                                    Text(friend.name).lineLimit(1)
+                                }
+                                .font(DPTypography.label)
+                                .foregroundStyle(selected ? DPColor.accent : DPColor.textSecondary)
+                                .padding(.horizontal, 11)
+                                .frame(minHeight: DPSize.minimumTouchTarget)
+                                .background(selected ? DPColor.accentSoft : DPColor.backgroundTertiary, in: Capsule())
+                                .overlay(Capsule().stroke(selected ? DPColor.accentBorder : DPColor.borderPrimary))
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityAddTraits(selected ? .isSelected : [])
+                        }
+                    }
+                }
+            }
+
+            TodoFormSection(title: todoLocalized("todo.label.attachments")) {
+                AttachmentPicker(model: attachmentModel)
+                    .padding(DPSpacing.compact)
+                    .background(DPColor.backgroundTertiary)
+                    .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+            }
+        }
+        .padding(DPSpacing.medium)
+    }
+
+    private var formFooter: some View {
+        HStack(spacing: DPSpacing.small) {
+            Button {
+                cancel()
+            } label: {
+                Text(todoLocalized("common.cancel"))
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(DPOutlineButtonStyle())
+            .disabled(isSaving || attachmentModel.isBusy)
+
+            Button {
+                submit()
+            } label: {
+                Text(todoLocalized("common.save"))
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(DPPrimaryButtonStyle())
+            .disabled(!draft.canSave || isSaving || attachmentModel.isBusy)
+        }
+        .padding(DPSpacing.compact)
+        .safeAreaPadding(.bottom, DPSpacing.extraSmall)
     }
 
     private func cancel() {

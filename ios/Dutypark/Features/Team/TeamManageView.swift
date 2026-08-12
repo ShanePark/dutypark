@@ -130,13 +130,14 @@ struct TeamManageView: View {
                     onDismiss: { pendingAction = nil },
                     closeOnBackdrop: !viewModel.isWorking,
                     canDismiss: !viewModel.isWorking
-                ) { _, dismiss in
+                ) { availableSize, dismiss in
                     TeamActionConfirmationModal(
                         title: confirmationTitle(for: action),
                         message: confirmationMessage(for: action),
                         confirmTitle: confirmationButtonTitle(for: action),
                         isDestructive: action.isDestructive,
                         isWorking: viewModel.isWorking,
+                        maximumHeight: availableSize.height,
                         dismiss: dismiss
                     ) {
                         if await run(action) {
@@ -573,7 +574,7 @@ private struct TeamDutyTypeEditor: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
+        DPModalPanel(maximumPanelHeight: min(maximumHeight * 0.64, 500)) {
             teamModalHeader(
                 title: teamLocalized(
                     viewModel.editingDutyType == nil
@@ -583,103 +584,100 @@ private struct TeamDutyTypeEditor: View {
                 isWorking: isSubmitting || viewModel.isWorking,
                 dismiss: dismiss
             )
+        } content: {
+            VStack(alignment: .leading, spacing: DPSpacing.medium) {
+                Text("team.dutyType.description", tableName: "Team")
+                    .font(DPTypography.caption)
+                    .foregroundStyle(DPColor.textSecondary)
 
-            ScrollView {
-                VStack(alignment: .leading, spacing: DPSpacing.medium) {
-                    Text("team.dutyType.description", tableName: "Team")
-                        .font(DPTypography.caption)
-                        .foregroundStyle(DPColor.textSecondary)
-
-                    if viewModel.editingDutyType != nil, viewModel.editingDutyType?.id == nil {
-                        HStack(alignment: .top, spacing: DPSpacing.small) {
-                            Image(systemName: "info.circle.fill")
-                            Text(
-                                teamLocalized("team.dutyType.defaultNoticeStart")
-                                    + teamLocalized("team.dutyType.defaultNoticeStrong")
-                                    + teamLocalized("team.dutyType.defaultNoticeEnd")
-                            )
-                        }
-                        .font(DPTypography.caption)
-                        .foregroundStyle(DPColor.accent)
-                        .padding(DPSpacing.compact)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(DPColor.accentSoft)
-                        .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
-                        .overlay {
-                            RoundedRectangle(cornerRadius: DPRadius.standard)
-                                .stroke(DPColor.accentBorder)
-                        }
+                if viewModel.editingDutyType != nil, viewModel.editingDutyType?.id == nil {
+                    HStack(alignment: .top, spacing: DPSpacing.small) {
+                        Image(systemName: "info.circle.fill")
+                        Text(
+                            teamLocalized("team.dutyType.defaultNoticeStart")
+                                + teamLocalized("team.dutyType.defaultNoticeStrong")
+                                + teamLocalized("team.dutyType.defaultNoticeEnd")
+                        )
                     }
+                    .font(DPTypography.caption)
+                    .foregroundStyle(DPColor.accent)
+                    .padding(DPSpacing.compact)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(DPColor.accentSoft)
+                    .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: DPRadius.standard)
+                            .stroke(DPColor.accentBorder)
+                    }
+                }
 
-                    VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
-                        HStack {
-                            Text("team.dutyType.fields.name", tableName: "Team")
-                                .font(DPTypography.label)
-                            Spacer()
-                            Text(verbatim: "\(name.count)/\(TeamManageModalLogic.maximumDutyNameLength)")
-                                .font(DPTypography.caption)
-                                .foregroundStyle(
-                                    name.count == TeamManageModalLogic.maximumDutyNameLength
-                                        ? DPColor.warning
-                                        : DPColor.textMuted
-                                )
-                        }
-                        TextField(teamLocalized("team.dutyType.placeholders.name"), text: $name)
+                VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+                    HStack {
+                        Text("team.dutyType.fields.name", tableName: "Team")
+                            .font(DPTypography.label)
+                        Spacer()
+                        Text(verbatim: "\(name.count)/\(TeamManageModalLogic.maximumDutyNameLength)")
+                            .font(DPTypography.caption)
+                            .foregroundStyle(
+                                name.count == TeamManageModalLogic.maximumDutyNameLength
+                                    ? DPColor.warning
+                                    : DPColor.textMuted
+                            )
+                    }
+                    TextField(teamLocalized("team.dutyType.placeholders.name"), text: $name)
                         .dpInputChrome(isInvalid: name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                         .onChange(of: name) { _, newValue in
                             name = String(newValue.prefix(TeamManageModalLogic.maximumDutyNameLength))
                         }
-                        if hasDuplicateName {
-                            Text(
-                                String(
-                                    format: teamLocalized("team.dutyType.warnings.duplicate"),
-                                    locale: AppLocalization.locale,
-                                    trimmedName
-                                )
-                            )
-                            .font(DPTypography.caption)
-                            .foregroundStyle(DPColor.danger)
-                        }
-                    }
-
-                    VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
-                        Text("team.dutyType.fields.color", tableName: "Team")
-                            .font(DPTypography.label)
-                        ColorPicker(
-                            teamLocalized("team.dutyType.fields.color"),
-                            selection: $color,
-                            supportsOpacity: false
-                        )
-                        .labelsHidden()
-                        .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget, alignment: .leading)
-                    }
-
-                    VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
-                        Text("team.dutyType.fields.preview", tableName: "Team")
-                            .font(DPTypography.label)
+                    if hasDuplicateName {
                         Text(
-                            verbatim: trimmedName.isEmpty
-                                ? teamLocalized("team.dutyType.placeholders.preview")
-                                : trimmedName
+                            String(
+                                format: teamLocalized("team.dutyType.warnings.duplicate"),
+                                locale: AppLocalization.locale,
+                                trimmedName
+                            )
                         )
-                        .font(DPTypography.bodyMedium)
-                        .foregroundStyle(DPColor.textPrimary)
-                        .padding(.horizontal, DPSpacing.medium)
-                        .frame(minHeight: DPSize.minimumTouchTarget)
-                        .background(color.opacity(0.78))
-                        .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
-                        .overlay {
-                            RoundedRectangle(cornerRadius: DPRadius.standard)
-                                .stroke(DPColor.borderPrimary)
-                        }
+                        .font(DPTypography.caption)
+                        .foregroundStyle(DPColor.danger)
                     }
                 }
-                .padding(DPSpacing.medium)
-            }
-            .frame(maxHeight: min(maximumHeight * 0.64, 500))
 
+                VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+                    Text("team.dutyType.fields.color", tableName: "Team")
+                        .font(DPTypography.label)
+                    ColorPicker(
+                        teamLocalized("team.dutyType.fields.color"),
+                        selection: $color,
+                        supportsOpacity: false
+                    )
+                    .labelsHidden()
+                    .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget, alignment: .leading)
+                }
+
+                VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+                    Text("team.dutyType.fields.preview", tableName: "Team")
+                        .font(DPTypography.label)
+                    Text(
+                        verbatim: trimmedName.isEmpty
+                            ? teamLocalized("team.dutyType.placeholders.preview")
+                            : trimmedName
+                    )
+                    .font(DPTypography.bodyMedium)
+                    .foregroundStyle(DPColor.textPrimary)
+                    .padding(.horizontal, DPSpacing.medium)
+                    .frame(minHeight: DPSize.minimumTouchTarget)
+                    .background(color.opacity(0.78))
+                    .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+                    .overlay {
+                        RoundedRectangle(cornerRadius: DPRadius.standard)
+                            .stroke(DPColor.borderPrimary)
+                    }
+                }
+            }
+            .padding(DPSpacing.medium)
+        } footer: {
             HStack(spacing: DPSpacing.small) {
-                Button(teamLocalized("team.common.save")) {
+                Button {
                     guard canSave else { return }
                     isSubmitting = true
                     Task {
@@ -687,18 +685,24 @@ private struct TeamDutyTypeEditor: View {
                         isSubmitting = false
                         if !viewModel.showsError { dismiss() }
                     }
+                } label: {
+                    Text(verbatim: teamLocalized("team.common.save"))
+                        .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(DPSuccessButtonStyle())
                 .disabled(!canSave)
-                Button(teamLocalized("team.common.cancel")) { dismiss() }
-                    .buttonStyle(DPSecondaryButtonStyle())
-                    .disabled(isSubmitting || viewModel.isWorking)
+                Button {
+                    dismiss()
+                } label: {
+                    Text(verbatim: teamLocalized("team.common.cancel"))
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(DPSecondaryButtonStyle())
+                .disabled(isSubmitting || viewModel.isWorking)
             }
-            .padding(DPSpacing.medium)
+            .padding(DPSpacing.compact)
             .background(DPColor.backgroundFooter)
-            .overlay(alignment: .top) { Rectangle().fill(DPColor.borderPrimary).frame(height: 1) }
         }
-        .background(DPColor.backgroundModal)
         .onAppear {
             if let dutyType = viewModel.editingDutyType {
                 name = dutyType.name
@@ -734,6 +738,7 @@ private struct TeamMemberSearchView: View {
                     confirmTitle: teamLocalized("team.memberSearch.add"),
                     isDestructive: false,
                     isWorking: viewModel.isWorking,
+                    maximumHeight: maximumHeight,
                     dismiss: { candidateToAdd = nil }
                 ) {
                     if await viewModel.add(candidate) {
@@ -758,13 +763,13 @@ private struct TeamMemberSearchView: View {
     }
 
     private var searchPanel: some View {
-        VStack(spacing: 0) {
+        DPModalPanel(maximumPanelHeight: maximumHeight) {
             teamModalHeader(
                 title: teamLocalized("team.memberSearch.title"),
                 isWorking: viewModel.isWorking,
                 dismiss: dismiss
             )
-
+        } content: {
             VStack(spacing: DPSpacing.compact) {
                 HStack(spacing: DPSpacing.small) {
                     TextField(
@@ -790,16 +795,14 @@ private struct TeamMemberSearchView: View {
                     .accessibilityLabel(Text("team.memberSearch.searchPlaceholder", tableName: "Team"))
                 }
 
-                ZStack {
-                    ScrollView {
-                        LazyVStack(spacing: DPSpacing.small) {
-                            ForEach(Array(viewModel.results.enumerated()), id: \.offset) { index, member in
-                                memberRow(member, index: index)
-                            }
-                        }
-                        .padding(.vertical, DPSpacing.extraSmall)
+                VStack(spacing: DPSpacing.small) {
+                    ForEach(Array(viewModel.results.enumerated()), id: \.offset) { index, member in
+                        memberRow(member, index: index)
                     }
-
+                }
+                .padding(.vertical, DPSpacing.extraSmall)
+                .frame(maxWidth: .infinity, minHeight: 150)
+                .overlay {
                     if viewModel.isWorking {
                         ProgressView()
                     } else if viewModel.results.isEmpty {
@@ -809,7 +812,6 @@ private struct TeamMemberSearchView: View {
                         )
                     }
                 }
-                .frame(minHeight: 150, maxHeight: min(maximumHeight * 0.48, 390))
 
                 if !viewModel.results.isEmpty {
                     Text(
@@ -848,18 +850,20 @@ private struct TeamMemberSearchView: View {
                 }
             }
             .padding(DPSpacing.medium)
-
-            HStack {
+        } footer: {
+            HStack(spacing: DPSpacing.small) {
                 Spacer()
-                Button(teamLocalized("team.common.cancel")) { dismiss() }
-                    .buttonStyle(DPSecondaryButtonStyle())
-                    .disabled(viewModel.isWorking)
+                Button {
+                    dismiss()
+                } label: {
+                    Text(verbatim: teamLocalized("team.common.cancel"))
+                }
+                .buttonStyle(DPSecondaryButtonStyle())
+                .disabled(viewModel.isWorking)
             }
-            .padding(DPSpacing.medium)
+            .padding(DPSpacing.compact)
             .background(DPColor.backgroundFooter)
-            .overlay(alignment: .top) { Rectangle().fill(DPColor.borderPrimary).frame(height: 1) }
         }
-        .background(DPColor.backgroundModal)
     }
 
     private func memberRow(_ member: MemberInviteCandidateDTO, index: Int) -> some View {
@@ -921,119 +925,119 @@ private struct TeamBatchUploadView: View {
     private let currentYear = Calendar.current.component(.year, from: Date())
 
     var body: some View {
-        VStack(spacing: 0) {
+        DPModalPanel(maximumPanelHeight: min(maximumHeight * 0.66, 560)) {
             teamModalHeader(
                 title: teamLocalized("team.batchUpload.title"),
                 isWorking: viewModel.isWorking,
                 dismiss: dismiss
             )
-
-            ScrollView {
-                VStack(alignment: .leading, spacing: DPSpacing.medium) {
-                    VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
-                        Text("team.batchUpload.fileLabel", tableName: "Team")
-                            .font(DPTypography.label)
-                        Button {
-                            fileImporterPresented = true
-                        } label: {
-                            HStack {
-                                Image(systemName: "doc.badge.plus")
-                                Text(
-                                    verbatim: fileURL?.lastPathComponent
-                                        ?? teamLocalized("team.batchUpload.selectFile")
-                                )
-                                    .lineLimit(1)
-                                Spacer()
-                                Image(systemName: "chevron.right")
-                                    .font(DPTypography.caption)
-                            }
-                            .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)
-                            .padding(.horizontal, DPSpacing.compact)
-                            .background(DPColor.backgroundInput)
-                            .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
-                            .overlay {
-                                RoundedRectangle(cornerRadius: DPRadius.standard)
-                                    .stroke(DPColor.borderInput)
-                            }
-                        }
-                        .buttonStyle(.plain)
-                        .disabled(viewModel.isWorking)
-                    }
-
-                    HStack(spacing: DPSpacing.small) {
-                        VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
-                            Text("team.batchUpload.year", tableName: "Team")
-                                .font(DPTypography.label)
-                            Picker(teamLocalized("team.batchUpload.year"), selection: $year) {
-                                ForEach(currentYear...(currentYear + 1), id: \.self) { value in
-                                    Text(verbatim: String(value)).tag(value)
-                                }
-                            }
-                            .pickerStyle(.menu)
-                            .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)
-                            .background(DPColor.backgroundInput)
-                            .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
-                        }
-                        VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
-                            Text("team.batchUpload.month", tableName: "Team")
-                                .font(DPTypography.label)
-                            Picker(teamLocalized("team.batchUpload.month"), selection: $month) {
-                                ForEach(1...12, id: \.self) { Text(verbatim: String($0)).tag($0) }
-                            }
-                            .pickerStyle(.menu)
-                            .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)
-                            .background(DPColor.backgroundInput)
-                            .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
-                        }
-                    }
-
-                    if let result {
-                        Text("team.batchUpload.result", tableName: "Team")
-                            .font(DPTypography.bodyMedium)
-                        if let period = batchPeriod(result.startDate, result.endDate) {
-                            LabeledContent(teamLocalized("team.batchUpload.period"), value: period)
+        } content: {
+            VStack(alignment: .leading, spacing: DPSpacing.medium) {
+                VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+                    Text("team.batchUpload.fileLabel", tableName: "Team")
+                        .font(DPTypography.label)
+                    Button {
+                        fileImporterPresented = true
+                    } label: {
+                        HStack {
+                            Image(systemName: "doc.badge.plus")
+                            Text(
+                                verbatim: fileURL?.lastPathComponent
+                                    ?? teamLocalized("team.batchUpload.selectFile")
+                            )
+                                .lineLimit(1)
+                            Spacer()
+                            Image(systemName: "chevron.right")
                                 .font(DPTypography.caption)
                         }
-                        if !result.result {
-                            Text(verbatim: batchMessage(result.errorCode, result.errorDetails))
-                                .foregroundStyle(DPColor.danger)
-                        }
-                        ForEach(Array(result.dutyBatchResult.enumerated()), id: \.offset) { _, item in
-                            VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
-                                HStack(alignment: .top) {
-                                    Text(verbatim: item.memberName).font(DPTypography.label)
-                                    Spacer()
-                                    Text(
-                                        verbatim: item.result.result
-                                            ? teamLocalized("team.batchUpload.success")
-                                            : batchMessage(item.result.errorCode, item.result.errorDetails)
-                                    )
-                                    .font(DPTypography.caption)
-                                    .foregroundStyle(item.result.result ? DPColor.success : DPColor.danger)
-                                    .multilineTextAlignment(.trailing)
-                                }
-                                if let period = batchPeriod(item.result.startDate, item.result.endDate) {
-                                    Text(verbatim: period)
-                                        .font(DPTypography.caption)
-                                        .foregroundStyle(DPColor.textSecondary)
-                                }
-                            }
-                            .padding(DPSpacing.compact)
-                            .background(DPColor.backgroundSecondary)
-                            .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+                        .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)
+                        .padding(.horizontal, DPSpacing.compact)
+                        .background(DPColor.backgroundInput)
+                        .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: DPRadius.standard)
+                                .stroke(DPColor.borderInput)
                         }
                     }
+                    .buttonStyle(.plain)
+                    .disabled(viewModel.isWorking)
                 }
-                .padding(DPSpacing.medium)
-            }
-            .frame(maxHeight: min(maximumHeight * 0.66, 560))
 
+                HStack(spacing: DPSpacing.small) {
+                    VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+                        Text("team.batchUpload.year", tableName: "Team")
+                            .font(DPTypography.label)
+                        Picker(teamLocalized("team.batchUpload.year"), selection: $year) {
+                            ForEach(currentYear...(currentYear + 1), id: \.self) { value in
+                                Text(verbatim: String(value)).tag(value)
+                            }
+                        }
+                        .pickerStyle(.menu)
+                        .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)
+                        .background(DPColor.backgroundInput)
+                        .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+                    }
+                    VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+                        Text("team.batchUpload.month", tableName: "Team")
+                            .font(DPTypography.label)
+                        Picker(teamLocalized("team.batchUpload.month"), selection: $month) {
+                            ForEach(1...12, id: \.self) { Text(verbatim: String($0)).tag($0) }
+                        }
+                        .pickerStyle(.menu)
+                        .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)
+                        .background(DPColor.backgroundInput)
+                        .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+                    }
+                }
+
+                if let result {
+                    Text("team.batchUpload.result", tableName: "Team")
+                        .font(DPTypography.bodyMedium)
+                    if let period = batchPeriod(result.startDate, result.endDate) {
+                        LabeledContent(teamLocalized("team.batchUpload.period"), value: period)
+                            .font(DPTypography.caption)
+                    }
+                    if !result.result {
+                        Text(verbatim: batchMessage(result.errorCode, result.errorDetails))
+                            .foregroundStyle(DPColor.danger)
+                    }
+                    ForEach(Array(result.dutyBatchResult.enumerated()), id: \.offset) { _, item in
+                        VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+                            HStack(alignment: .top) {
+                                Text(verbatim: item.memberName).font(DPTypography.label)
+                                Spacer()
+                                Text(
+                                    verbatim: item.result.result
+                                        ? teamLocalized("team.batchUpload.success")
+                                        : batchMessage(item.result.errorCode, item.result.errorDetails)
+                                )
+                                .font(DPTypography.caption)
+                                .foregroundStyle(item.result.result ? DPColor.success : DPColor.danger)
+                                .multilineTextAlignment(.trailing)
+                            }
+                            if let period = batchPeriod(item.result.startDate, item.result.endDate) {
+                                Text(verbatim: period)
+                                    .font(DPTypography.caption)
+                                    .foregroundStyle(DPColor.textSecondary)
+                            }
+                        }
+                        .padding(DPSpacing.compact)
+                        .background(DPColor.backgroundSecondary)
+                        .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+                    }
+                }
+            }
+            .padding(DPSpacing.medium)
+        } footer: {
             HStack(spacing: DPSpacing.small) {
-                Button(teamLocalized("team.manage.actions.upload")) {
+                Button {
                     guard let fileURL,
                           TeamFeatureLogic.isValidDutyBatchYear(year, currentYear: currentYear)
                     else { return }
                     Task { result = await viewModel.upload(fileURL: fileURL, year: year, month: month) }
+                } label: {
+                    Text(verbatim: teamLocalized("team.manage.actions.upload"))
+                        .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(DPPrimaryButtonStyle())
                 .disabled(
@@ -1041,15 +1045,18 @@ private struct TeamBatchUploadView: View {
                         || !TeamFeatureLogic.isValidDutyBatchYear(year, currentYear: currentYear)
                         || viewModel.isWorking
                 )
-                Button(teamLocalized("team.common.cancel")) { dismiss() }
-                    .buttonStyle(DPSecondaryButtonStyle())
-                    .disabled(viewModel.isWorking)
+                Button {
+                    dismiss()
+                } label: {
+                    Text(verbatim: teamLocalized("team.common.cancel"))
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(DPSecondaryButtonStyle())
+                .disabled(viewModel.isWorking)
             }
-            .padding(DPSpacing.medium)
+            .padding(DPSpacing.compact)
             .background(DPColor.backgroundFooter)
-            .overlay(alignment: .top) { Rectangle().fill(DPColor.borderPrimary).frame(height: 1) }
         }
-        .background(DPColor.backgroundModal)
         .fileImporter(
             isPresented: $fileImporterPresented,
             allowedContentTypes: [UTType(filenameExtension: "xlsx") ?? .spreadsheet],
@@ -1086,17 +1093,19 @@ private struct TeamActionConfirmationModal: View {
     let confirmTitle: String
     let isDestructive: Bool
     let isWorking: Bool
+    let maximumHeight: CGFloat
     let dismiss: () -> Void
     let confirm: () async -> Void
     @State private var isSubmitting = false
 
     var body: some View {
-        VStack(spacing: 0) {
+        DPModalPanel(maximumPanelHeight: maximumHeight) {
             teamModalHeader(
                 title: title,
                 isWorking: isWorking || isSubmitting,
                 dismiss: dismiss
             )
+        } content: {
             Text(verbatim: message)
                 .font(DPTypography.body)
                 .foregroundStyle(DPColor.textSecondary)
@@ -1105,27 +1114,33 @@ private struct TeamActionConfirmationModal: View {
                 .frame(maxWidth: .infinity)
                 .padding(.horizontal, DPSpacing.medium)
                 .padding(.vertical, DPSpacing.large)
-
+        } footer: {
             HStack(spacing: DPSpacing.small) {
-                Button(confirmTitle) {
+                Button {
                     guard !isSubmitting && !isWorking else { return }
                     isSubmitting = true
                     Task {
                         await confirm()
                         isSubmitting = false
                     }
+                } label: {
+                    Text(verbatim: confirmTitle)
+                        .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(isDestructive ? AnyTeamButtonStyle.destructive : AnyTeamButtonStyle.primary)
                 .disabled(isSubmitting || isWorking)
-                Button(teamLocalized("team.common.cancel")) { dismiss() }
-                    .buttonStyle(DPSecondaryButtonStyle())
-                    .disabled(isSubmitting || isWorking)
+                Button {
+                    dismiss()
+                } label: {
+                    Text(verbatim: teamLocalized("team.common.cancel"))
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(DPSecondaryButtonStyle())
+                .disabled(isSubmitting || isWorking)
             }
-            .padding(DPSpacing.medium)
+            .padding(DPSpacing.compact)
             .background(DPColor.backgroundFooter)
-            .overlay(alignment: .top) { Rectangle().fill(DPColor.borderPrimary).frame(height: 1) }
         }
-        .background(DPColor.backgroundModal)
     }
 }
 
@@ -1187,7 +1202,6 @@ private func teamModalHeader(
     .padding(.horizontal, DPSpacing.medium)
     .padding(.vertical, DPSpacing.small)
     .background(DPColor.backgroundTertiary)
-    .overlay(alignment: .bottom) { Rectangle().fill(DPColor.borderPrimary).frame(height: 1) }
 }
 
 nonisolated enum TeamManageModalLogic {

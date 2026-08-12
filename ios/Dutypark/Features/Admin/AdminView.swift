@@ -437,29 +437,15 @@ private struct AdminPasswordChangeModal: View {
     private enum Field { case password, confirmation }
 
     var body: some View {
-        ViewThatFits(in: .vertical) {
-            modalContent(scrolls: false)
-                .fixedSize(horizontal: false, vertical: true)
-            modalContent(scrolls: true)
-        }
-        .frame(maxHeight: maximumHeight)
-        .background(DPColor.backgroundModal)
-        .onChange(of: password) { _, _ in updateDirtyState() }
-        .onChange(of: confirmation) { _, _ in updateDirtyState() }
-    }
-
-    @ViewBuilder
-    private func modalContent(scrolls: Bool) -> some View {
-        VStack(spacing: 0) {
+        DPModalPanel(maximumPanelHeight: maximumHeight) {
             header
-            if scrolls {
-                ScrollView { formContent }
-                    .scrollBounceBehavior(.basedOnSize)
-            } else {
-                formContent
-            }
+        } content: {
+            formContent
+        } footer: {
             footer
         }
+        .onChange(of: password) { _, _ in updateDirtyState() }
+        .onChange(of: confirmation) { _, _ in updateDirtyState() }
     }
 
     private var header: some View {
@@ -486,7 +472,6 @@ private struct AdminPasswordChangeModal: View {
         }
         .padding(.horizontal, DPSpacing.large)
         .frame(minHeight: 64)
-        .overlay(alignment: .bottom) { Divider().overlay(DPColor.borderPrimary) }
     }
 
     private var formContent: some View {
@@ -518,7 +503,7 @@ private struct AdminPasswordChangeModal: View {
     }
 
     private var footer: some View {
-        HStack(spacing: DPSpacing.compact) {
+        HStack(spacing: DPSpacing.small) {
             Button {
                 Task { await save() }
             } label: {
@@ -541,9 +526,7 @@ private struct AdminPasswordChangeModal: View {
             .buttonStyle(DPSecondaryButtonStyle())
             .disabled(interactionState.isSaving)
         }
-        .padding(DPSpacing.large)
-        .background(DPColor.backgroundModal)
-        .overlay(alignment: .top) { Divider().overlay(DPColor.borderPrimary) }
+        .padding(DPSpacing.compact)
     }
 
     private func passwordField(

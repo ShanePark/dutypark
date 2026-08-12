@@ -185,13 +185,13 @@ private struct AdminTeamCreateModal: View {
     private enum Field { case name, description }
 
     var body: some View {
-        ViewThatFits(in: .vertical) {
-            modalContent(scrolls: false)
-                .fixedSize(horizontal: false, vertical: true)
-            modalContent(scrolls: true)
+        DPModalPanel(maximumPanelHeight: maximumHeight) {
+            header
+        } content: {
+            formContent
+        } footer: {
+            footer
         }
-        .frame(maxHeight: maximumHeight)
-        .background(DPColor.backgroundModal)
         .onChange(of: name) { _, _ in
             checkedName = nil
             model.resetNameCheck()
@@ -201,20 +201,6 @@ private struct AdminTeamCreateModal: View {
         .onChange(of: description) { _, _ in
             saveFailed = false
             updateDirtyState()
-        }
-    }
-
-    @ViewBuilder
-    private func modalContent(scrolls: Bool) -> some View {
-        VStack(spacing: 0) {
-            header
-            if scrolls {
-                ScrollView { formContent }
-                    .scrollBounceBehavior(.basedOnSize)
-            } else {
-                formContent
-            }
-            footer
         }
     }
 
@@ -237,7 +223,6 @@ private struct AdminTeamCreateModal: View {
         }
         .padding(.horizontal, DPSpacing.large)
         .frame(minHeight: 64)
-        .overlay(alignment: .bottom) { Divider().overlay(DPColor.borderPrimary) }
     }
 
     private var formContent: some View {
@@ -321,7 +306,7 @@ private struct AdminTeamCreateModal: View {
     }
 
     private var footer: some View {
-        HStack(spacing: DPSpacing.compact) {
+        HStack(spacing: DPSpacing.small) {
             Button {
                 Task { await create() }
             } label: {
@@ -344,9 +329,7 @@ private struct AdminTeamCreateModal: View {
             .buttonStyle(DPSecondaryButtonStyle())
             .disabled(interactionState.isSaving)
         }
-        .padding(DPSpacing.large)
-        .background(DPColor.backgroundModal)
-        .overlay(alignment: .top) { Divider().overlay(DPColor.borderPrimary) }
+        .padding(DPSpacing.compact)
     }
 
     private var canCreate: Bool {

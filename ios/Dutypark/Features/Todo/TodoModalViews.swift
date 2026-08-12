@@ -78,11 +78,13 @@ struct TodoDestructiveConfirmationModal: View {
                 .disabled(isWorking)
                 .accessibilityIdentifier("todo.confirm.confirm")
 
-                Button(todoLocalized("common.cancel"), action: cancel)
-                    .buttonStyle(DPOutlineButtonStyle())
-                    .frame(maxWidth: .infinity)
-                    .disabled(isWorking)
-                    .accessibilityIdentifier("todo.confirm.cancel")
+                Button(action: cancel) {
+                    Text(todoLocalized("common.cancel"))
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(DPOutlineButtonStyle())
+                .disabled(isWorking)
+                .accessibilityIdentifier("todo.confirm.cancel")
             }
             .padding(.horizontal, DPSpacing.large)
             .padding(.bottom, DPSpacing.large)
@@ -103,53 +105,58 @@ struct TodoHelpModal: View {
     ]
 
     var body: some View {
-        VStack(spacing: 0) {
-            HStack {
-                Text(todoLocalized("todo.help.title"))
-                    .font(DPTypography.heading)
-                    .foregroundStyle(DPColor.textPrimary)
-                Spacer()
-                Button(action: dismiss) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 17, weight: .semibold))
-                        .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(todoLocalized("common.close"))
-            }
-            .padding(.leading, DPSpacing.medium)
-            .padding(.trailing, DPSpacing.small)
-            .padding(.vertical, DPSpacing.small)
-            .background(DPColor.backgroundTertiary)
-
-            ScrollView {
-                VStack(alignment: .leading, spacing: DPSpacing.large) {
-                    ForEach(Array(sections.enumerated()), id: \.offset) { _, section in
-                        helpSection(icon: section.0, titleKey: section.1, bodyKey: section.2, color: section.3)
-                    }
-
-                    VStack(alignment: .leading, spacing: DPSpacing.small) {
-                        Label(todoLocalized("todo.help.tips.title"), systemImage: "lightbulb")
-                            .font(DPTypography.bodyMedium)
-                            .foregroundStyle(DPColor.warning)
-                        ForEach(1...5, id: \.self) { index in
-                            HStack(alignment: .firstTextBaseline, spacing: DPSpacing.small) {
-                                Text("•")
-                                Text(todoLocalized("todo.help.tip.\(index)"))
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                            .font(DPTypography.supporting)
-                            .foregroundStyle(DPColor.textSecondary)
-                        }
-                    }
-                }
-                .padding(DPSpacing.medium)
-            }
-            .scrollBounceBehavior(.basedOnSize)
+        DPModalPanel(
+            maximumPanelHeight: min(maximumHeight * TodoModalLayout.maximumPanelHeightRatio, 720)
+        ) {
+            header
+        } content: {
+            helpBody
         }
-        .frame(maxHeight: min(maximumHeight * TodoModalLayout.maximumPanelHeightRatio, 720))
-        .background(DPColor.backgroundModal)
+    }
+
+    private var header: some View {
+        HStack {
+            Text(todoLocalized("todo.help.title"))
+                .font(DPTypography.heading)
+                .foregroundStyle(DPColor.textPrimary)
+            Spacer()
+            Button(action: dismiss) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 17, weight: .semibold))
+                    .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(todoLocalized("common.close"))
+        }
+        .padding(.leading, DPSpacing.medium)
+        .padding(.trailing, DPSpacing.small)
+        .padding(.vertical, DPSpacing.small)
+        .background(DPColor.backgroundTertiary)
+    }
+
+    private var helpBody: some View {
+        VStack(alignment: .leading, spacing: DPSpacing.large) {
+            ForEach(Array(sections.enumerated()), id: \.offset) { _, section in
+                helpSection(icon: section.0, titleKey: section.1, bodyKey: section.2, color: section.3)
+            }
+
+            VStack(alignment: .leading, spacing: DPSpacing.small) {
+                Label(todoLocalized("todo.help.tips.title"), systemImage: "lightbulb")
+                    .font(DPTypography.bodyMedium)
+                    .foregroundStyle(DPColor.warning)
+                ForEach(1...5, id: \.self) { index in
+                    HStack(alignment: .firstTextBaseline, spacing: DPSpacing.small) {
+                        Text("•")
+                        Text(todoLocalized("todo.help.tip.\(index)"))
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    .font(DPTypography.supporting)
+                    .foregroundStyle(DPColor.textSecondary)
+                }
+            }
+        }
+        .padding(DPSpacing.medium)
     }
 
     private func helpSection(icon: String, titleKey: String, bodyKey: String, color: Color) -> some View {
@@ -177,9 +184,6 @@ struct TodoDetailModal: View {
     @State private var showingEdit = false
     @State private var confirmation: TodoDestructiveConfirmation?
     @State private var isConfirming = false
-    @State private var headerHeight: CGFloat = 0
-    @State private var footerHeight: CGFloat = 0
-    @State private var bodyContentHeight: CGFloat = 0
     @State private var isLoadingEditAttachments = false
     @StateObject private var gallery: AttachmentGalleryModel
 
@@ -204,14 +208,6 @@ struct TodoDetailModal: View {
 
     private var maximumPanelHeight: CGFloat {
         min(maximumHeight, 874) * TodoModalLayout.maximumPanelHeightRatio
-    }
-
-    private var measuredBodyHeight: CGFloat {
-        TodoModalLayout.bodyHeight(
-            contentHeight: bodyContentHeight,
-            maximumPanelHeight: maximumPanelHeight,
-            fixedChromeHeight: headerHeight + footerHeight + DPChrome.borderWidth * 2
-        )
     }
 
     var body: some View {
@@ -245,7 +241,6 @@ struct TodoDetailModal: View {
                 detailContent
             }
         }
-        .frame(maxHeight: maximumPanelHeight, alignment: .top)
         .task(id: todo.uuid) {
             guard todo.hasAttachments, model.attachmentsByTodoID[todo.uuid] == nil else { return }
             isLoadingEditAttachments = true
@@ -260,49 +255,13 @@ struct TodoDetailModal: View {
     }
 
     private var detailContent: some View {
-        VStack(spacing: 0) {
+        DPModalPanel(maximumPanelHeight: maximumPanelHeight) {
             header
-                .background {
-                    GeometryReader { proxy in
-                        Color.clear.preference(
-                            key: TodoModalHeaderHeightPreferenceKey.self,
-                            value: proxy.size.height
-                        )
-                    }
-                }
-
-            Divider().overlay(DPColor.borderPrimary)
-
-            ScrollView {
-                detailBody
-                    .background {
-                        GeometryReader { proxy in
-                            Color.clear.preference(
-                                key: TodoModalBodyHeightPreferenceKey.self,
-                                value: proxy.size.height
-                            )
-                        }
-                    }
-            }
-            .scrollBounceBehavior(.basedOnSize)
-            .frame(height: measuredBodyHeight)
-
-            Divider().overlay(DPColor.borderPrimary)
-
+        } content: {
+            detailBody
+        } footer: {
             footer
-                .background {
-                    GeometryReader { proxy in
-                        Color.clear.preference(
-                            key: TodoModalFooterHeightPreferenceKey.self,
-                            value: proxy.size.height
-                        )
-                    }
-                }
         }
-        .background(DPColor.backgroundModal)
-        .onPreferenceChange(TodoModalHeaderHeightPreferenceKey.self) { headerHeight = $0 }
-        .onPreferenceChange(TodoModalBodyHeightPreferenceKey.self) { bodyContentHeight = $0 }
-        .onPreferenceChange(TodoModalFooterHeightPreferenceKey.self) { footerHeight = $0 }
     }
 
     private func performConfirmation() {
@@ -368,7 +327,6 @@ struct TodoDetailModal: View {
         .padding(.leading, DPSpacing.medium)
         .padding(.trailing, DPSpacing.small)
         .padding(.vertical, DPSpacing.compact)
-        .background(DPColor.backgroundModal)
     }
 
     private var detailBody: some View {
@@ -428,7 +386,6 @@ struct TodoDetailModal: View {
             }
         }
         .padding(DPSpacing.compact)
-        .background(DPColor.backgroundModal)
     }
 
     @ViewBuilder
@@ -598,21 +555,6 @@ private struct TodoModalFlowLayout: Layout {
             points
         )
     }
-}
-
-private struct TodoModalHeaderHeightPreferenceKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
-}
-
-private struct TodoModalBodyHeightPreferenceKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
-}
-
-private struct TodoModalFooterHeightPreferenceKey: PreferenceKey {
-    static var defaultValue: CGFloat = 0
-    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) { value = nextValue() }
 }
 
 private struct TodoModalErrorAlertModifier: ViewModifier {

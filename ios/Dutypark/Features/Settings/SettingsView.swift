@@ -153,8 +153,11 @@ struct SettingsView: View {
             }
         }
         .fullScreenCover(isPresented: $showPattern) {
-            DPModalOverlay(onDismiss: { showPattern = false }) { _, dismiss in
-                DutyPatternSettingsModal(model: model) {
+            DPModalOverlay(onDismiss: { showPattern = false }) { availableSize, dismiss in
+                DutyPatternSettingsModal(
+                    model: model,
+                    maximumHeight: availableSize.height
+                ) {
                     dismiss()
                 }
             }
@@ -1402,19 +1405,18 @@ private struct SettingsModalHeader: View {
         }
         .padding(.horizontal, DPSpacing.large)
         .frame(minHeight: 64)
-        .overlay(alignment: .bottom) { Divider().overlay(DPColor.borderPrimary) }
     }
 }
 
+/// Footer row for `DPModalPanel`. The panel draws the separating divider and
+/// `DPModalOverlay` paints the modal background behind it.
 private struct SettingsModalActions<Content: View>: View {
     @ViewBuilder let content: Content
     init(@ViewBuilder content: () -> Content) { self.content = content() }
 
     var body: some View {
-        HStack(spacing: DPSpacing.compact) { content }
-            .padding(DPSpacing.large)
-            .background(DPColor.backgroundModal)
-            .overlay(alignment: .top) { Divider().overlay(DPColor.borderPrimary) }
+        HStack(spacing: DPSpacing.small) { content }
+            .padding(DPSpacing.compact)
     }
 }
 
@@ -1513,34 +1515,22 @@ private struct VisibilitySettingsModal: View {
     private let options: [Visibility] = [.publicAccess, .friends, .family, .privateAccess]
 
     var body: some View {
-        ViewThatFits(in: .vertical) {
-            modalContent(scrolls: false)
-                .fixedSize(horizontal: false, vertical: true)
-            modalContent(scrolls: true)
-        }
-        .frame(maxHeight: maximumHeight)
-        .background(DPColor.backgroundModal)
-    }
-
-    @ViewBuilder
-    private func modalContent(scrolls: Bool) -> some View {
-        VStack(spacing: 0) {
+        DPModalPanel(maximumPanelHeight: maximumHeight) {
             SettingsModalHeader(
                 titleKey: "settings.visibility.modalTitle",
                 closeDisabled: model.isWorking,
                 close: dismiss
             )
-            if scrolls {
-                ScrollView { bodyContent }
-                    .scrollBounceBehavior(.basedOnSize)
-            } else {
-                bodyContent
-            }
+        } content: {
+            bodyContent
+        } footer: {
             SettingsModalActions {
-                Button(SettingsLocalization.string("settings.visibility.close"), action: dismiss)
-                    .buttonStyle(DPSecondaryButtonStyle())
-                    .frame(maxWidth: .infinity)
-                    .disabled(model.isWorking)
+                Button(action: dismiss) {
+                    SettingsLocalization.text("settings.visibility.close")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(DPSecondaryButtonStyle())
+                .disabled(model.isWorking)
             }
         }
     }
@@ -1605,6 +1595,7 @@ private struct VisibilitySettingsModal: View {
 
 private struct DutyPatternSettingsModal: View {
     @ObservedObject var model: SettingsViewModel
+    let maximumHeight: CGFloat
     let dismiss: () -> Void
     @State private var selections: [Weekday: DutyTypeID?] = [:]
     @State private var holidayOff = true
@@ -1613,70 +1604,29 @@ private struct DutyPatternSettingsModal: View {
     private let weekdays: [Weekday] = [.monday, .tuesday, .wednesday, .thursday, .friday, .saturday, .sunday]
 
     var body: some View {
-        VStack(spacing: 0) {
+        DPModalPanel(maximumPanelHeight: maximumHeight) {
             SettingsModalHeader(titleKey: "settings.pattern.title") { dismiss() }
-            ScrollView {
-                VStack(alignment: .leading, spacing: DPSpacing.compact) {
-                    if let details = model.dutyPattern?.pattern {
-                        Text("\(CalendarLocalization.text("calendar.pattern.effectiveFrom")) \(details.effectiveFrom.rawValue)")
-                            .font(DPTypography.supporting)
-                            .foregroundStyle(DPColor.textMuted)
-                    }
-                    ForEach(weekdays, id: \.rawValue) { weekday in
-                        HStack {
-                            Text(weekdayLong(weekday))
-                                .font(DPTypography.bodyMedium)
-                                .foregroundStyle(DPColor.textPrimary)
-                            Spacer()
-                            Menu(selectionName(weekday)) {
-                                Button(CalendarLocalization.text("calendar.off")) { selections[weekday] = nil }
-                                ForEach(model.dutyPattern?.dutyTypes ?? [], id: \.id) { type in
-                                    Button(type.name) { selections[weekday] = type.id }
-                                }
-                            }
-                            .foregroundStyle(DPColor.textPrimary)
-                        }
-                        .padding(.horizontal, DPSpacing.compact)
-                        .frame(minHeight: 48)
-                        .background(DPColor.backgroundSecondary, in: RoundedRectangle(cornerRadius: DPRadius.standard))
-                        .overlay(RoundedRectangle(cornerRadius: DPRadius.standard).stroke(DPColor.borderPrimary))
-                    }
-                    Button { holidayOff.toggle() } label: {
-                        HStack {
-                            Text(CalendarLocalization.text("calendar.pattern.holidayOff"))
-                                .font(DPTypography.body)
-                                .foregroundStyle(DPColor.textPrimary)
-                            Spacer()
-                            SettingsSwitch(isOn: holidayOff)
-                        }
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .frame(minHeight: DPSize.minimumTouchTarget)
-                    .accessibilityValue(SettingsLocalization.string(holidayOff ? "settings.accessibility.on" : "settings.accessibility.off"))
-                    .accessibilityAddTraits(.isButton)
-
-                    if model.dutyPattern?.pattern != nil {
-                        Button { confirmsDelete = true } label: {
-                            Label(CalendarLocalization.text("calendar.pattern.delete"), systemImage: "trash")
-                                .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(DangerSoftButtonStyle())
-                    }
-                }
-                .padding(DPSpacing.large)
-            }
+        } content: {
+            bodyContent
+        } footer: {
             SettingsModalActions {
-                Button(SettingsLocalization.string("settings.action.save")) {
+                Button {
                     confirmsSave = true
+                } label: {
+                    SettingsLocalization.text("settings.action.save")
+                        .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(DPPrimaryButtonStyle())
                 .disabled(selectedIDs.isEmpty || hasHiddenSelection || model.isWorking)
-                Button(SettingsLocalization.string("settings.action.cancel")) { dismiss() }
-                    .buttonStyle(DPSecondaryButtonStyle())
+                Button {
+                    dismiss()
+                } label: {
+                    SettingsLocalization.text("settings.action.cancel")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(DPSecondaryButtonStyle())
             }
         }
-        .background(DPColor.backgroundModal)
         .onAppear {
             holidayOff = model.dutyPattern?.pattern?.holidayOff ?? true
             selections = Dictionary(uniqueKeysWithValues: (model.dutyPattern?.pattern?.days ?? []).map { ($0.weekday, Optional($0.dutyType.id)) })
@@ -1699,6 +1649,58 @@ private struct DutyPatternSettingsModal: View {
         } message: {
             SettingsLocalization.text("settings.pattern.deleteConfirm")
         }
+    }
+
+    private var bodyContent: some View {
+        VStack(alignment: .leading, spacing: DPSpacing.compact) {
+            if let details = model.dutyPattern?.pattern {
+                Text("\(CalendarLocalization.text("calendar.pattern.effectiveFrom")) \(details.effectiveFrom.rawValue)")
+                    .font(DPTypography.supporting)
+                    .foregroundStyle(DPColor.textMuted)
+            }
+            ForEach(weekdays, id: \.rawValue) { weekday in
+                HStack {
+                    Text(weekdayLong(weekday))
+                        .font(DPTypography.bodyMedium)
+                        .foregroundStyle(DPColor.textPrimary)
+                    Spacer()
+                    Menu(selectionName(weekday)) {
+                        Button(CalendarLocalization.text("calendar.off")) { selections[weekday] = nil }
+                        ForEach(model.dutyPattern?.dutyTypes ?? [], id: \.id) { type in
+                            Button(type.name) { selections[weekday] = type.id }
+                        }
+                    }
+                    .foregroundStyle(DPColor.textPrimary)
+                }
+                .padding(.horizontal, DPSpacing.compact)
+                .frame(minHeight: 48)
+                .background(DPColor.backgroundSecondary, in: RoundedRectangle(cornerRadius: DPRadius.standard))
+                .overlay(RoundedRectangle(cornerRadius: DPRadius.standard).stroke(DPColor.borderPrimary))
+            }
+            Button { holidayOff.toggle() } label: {
+                HStack {
+                    Text(CalendarLocalization.text("calendar.pattern.holidayOff"))
+                        .font(DPTypography.body)
+                        .foregroundStyle(DPColor.textPrimary)
+                    Spacer()
+                    SettingsSwitch(isOn: holidayOff)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .frame(minHeight: DPSize.minimumTouchTarget)
+            .accessibilityValue(SettingsLocalization.string(holidayOff ? "settings.accessibility.on" : "settings.accessibility.off"))
+            .accessibilityAddTraits(.isButton)
+
+            if model.dutyPattern?.pattern != nil {
+                Button { confirmsDelete = true } label: {
+                    Label(CalendarLocalization.text("calendar.pattern.delete"), systemImage: "trash")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(DangerSoftButtonStyle())
+            }
+        }
+        .padding(DPSpacing.large)
     }
 
     private var selectedIDs: [DutyTypeID] { selections.values.compactMap { $0 } }
@@ -1734,36 +1736,28 @@ private struct PasswordChangeView: View {
     private enum Field { case current, new, confirmation }
 
     var body: some View {
-        ViewThatFits(in: .vertical) {
-            modalContent(scrolls: false)
-                .fixedSize(horizontal: false, vertical: true)
-            modalContent(scrolls: true)
-        }
-        .frame(maxHeight: maximumHeight)
-        .background(DPColor.backgroundModal)
-    }
-
-    @ViewBuilder
-    private func modalContent(scrolls: Bool) -> some View {
-        VStack(spacing: 0) {
+        DPModalPanel(maximumPanelHeight: maximumHeight) {
             SettingsModalHeader(
                 titleKey: "settings.password.change",
                 closeDisabled: model.isWorking,
                 close: dismiss
             )
-            if scrolls {
-                ScrollView { bodyContent }
-                    .scrollBounceBehavior(.basedOnSize)
-            } else {
-                bodyContent
-            }
+        } content: {
+            bodyContent
+        } footer: {
             SettingsModalActions {
-                Button(SettingsLocalization.string("settings.action.save"), action: changePassword)
-                    .disabled(validationKey != nil || model.isWorking)
-                    .buttonStyle(DPPrimaryButtonStyle())
-                Button(SettingsLocalization.string("settings.action.cancel"), action: dismiss)
-                    .buttonStyle(DPSecondaryButtonStyle())
-                    .disabled(model.isWorking)
+                Button(action: changePassword) {
+                    SettingsLocalization.text("settings.action.save")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(DPPrimaryButtonStyle())
+                .disabled(validationKey != nil || model.isWorking)
+                Button(action: dismiss) {
+                    SettingsLocalization.text("settings.action.cancel")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(DPSecondaryButtonStyle())
+                .disabled(model.isWorking)
             }
         }
     }
@@ -1829,36 +1823,28 @@ private struct AuxiliaryAccountModal: View {
     @FocusState private var focused: Bool
 
     var body: some View {
-        ViewThatFits(in: .vertical) {
-            modalContent(scrolls: false)
-                .fixedSize(horizontal: false, vertical: true)
-            modalContent(scrolls: true)
-        }
-        .frame(maxHeight: maximumHeight)
-        .background(DPColor.backgroundModal)
-    }
-
-    @ViewBuilder
-    private func modalContent(scrolls: Bool) -> some View {
-        VStack(spacing: 0) {
+        DPModalPanel(maximumPanelHeight: maximumHeight) {
             SettingsModalHeader(
                 titleKey: "settings.auxiliary.create",
                 closeDisabled: model.isWorking,
                 close: dismiss
             )
-            if scrolls {
-                ScrollView { bodyContent }
-                    .scrollBounceBehavior(.basedOnSize)
-            } else {
-                bodyContent
-            }
+        } content: {
+            bodyContent
+        } footer: {
             SettingsModalActions {
-                Button(SettingsLocalization.string("settings.action.create"), action: createAccount)
-                    .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || model.isWorking)
-                    .buttonStyle(DPPrimaryButtonStyle())
-                Button(SettingsLocalization.string("settings.action.cancel"), action: dismiss)
-                    .buttonStyle(DPSecondaryButtonStyle())
-                    .disabled(model.isWorking)
+                Button(action: createAccount) {
+                    SettingsLocalization.text("settings.action.create")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(DPPrimaryButtonStyle())
+                .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || model.isWorking)
+                Button(action: dismiss) {
+                    SettingsLocalization.text("settings.action.cancel")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(DPSecondaryButtonStyle())
+                .disabled(model.isWorking)
             }
         }
     }
