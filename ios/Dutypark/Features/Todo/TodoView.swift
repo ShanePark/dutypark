@@ -29,6 +29,11 @@ struct TodoView: View {
     @State private var dragTargetTodoID: TodoID?
     @State private var dragInsertAfter = false
     @State private var dragLocation: CGPoint?
+    @State private var dragPreviewSize: CGSize?
+    @State private var dragGrabOffset: CGSize?
+    @State private var pendingDropPlacement: TodoDragPlacement?
+    @State private var dragReferenceCardTargets: [TodoCardDropTarget] = []
+    @State private var dragReferenceColumnTargets: [TodoColumnDropTarget] = []
     @State private var cardDropTargets: [TodoCardDropTarget] = []
     @State private var columnDropTargets: [TodoColumnDropTarget] = []
     @State private var statusDropTargets: [TodoStatusDropTarget] = []
@@ -61,9 +66,18 @@ struct TodoView: View {
         .overlay {
             if let draggedTodoID,
                let dragLocation,
+               let dragPreviewSize,
+               let dragGrabOffset,
                let todo = draggedTodo(withID: draggedTodoID) {
-                TodoDragPreview(todo: todo, status: todo.status)
-                    .position(dragLocation)
+                TodoDragPreview(
+                    todo: todo,
+                    status: todo.status,
+                    size: dragPreviewSize
+                )
+                    .position(
+                        x: dragLocation.x - dragGrabOffset.width,
+                        y: dragLocation.y - dragGrabOffset.height
+                    )
                     .allowsHitTesting(false)
                     .accessibilityHidden(true)
             }
@@ -163,16 +177,20 @@ struct TodoView: View {
         todoID: TodoID,
         destinationStatus: TodoStatus,
         targetTodoID: TodoID? = nil,
-        insertAfter: Bool = false
+        insertAfter: Bool = false,
+        visualPlacement: TodoDragPlacement? = nil
     ) {
         clearInteractiveDrag()
+        pendingDropPlacement = visualPlacement
         Task {
-            if await model.drop(
+            let succeeded = await model.drop(
                 todoID: todoID,
                 into: destinationStatus,
                 relativeTo: targetTodoID,
                 insertAfter: insertAfter
-            ) {
+            )
+            pendingDropPlacement = nil
+            if succeeded {
                 await onTodoChanged()
             }
         }
@@ -182,32 +200,54 @@ struct TodoView: View {
         guard !model.isSaving else { return }
         if draggedTodoID != todo.uuid {
             draggedTodoID = todo.uuid
+            dragReferenceCardTargets = cardDropTargets
+            dragReferenceColumnTargets = columnDropTargets
+            if let frame = cardDropTargets.last(where: { $0.todoID == todo.uuid })?.frame {
+                dragPreviewSize = frame.size
+                dragGrabOffset = CGSize(
+                    width: location.x - frame.midX,
+                    height: location.y - frame.midY
+                )
+            }
         }
         dragLocation = location
         let target = TodoDragTargetResolver.resolve(
             location: location,
             draggedTodoID: todo.uuid,
-            cards: cardDropTargets,
-            columns: columnDropTargets,
+            cards: dragReferenceCardTargets,
+            columns: dragReferenceColumnTargets,
             statuses: statusDropTargets
         )
-        dragTargetStatus = target?.status
-        dragTargetTodoID = target?.todoID
-        dragInsertAfter = target?.insertAfter ?? false
+        withAnimation(.snappy(duration: 0.18, extraBounce: 0)) {
+            dragTargetStatus = target?.status
+            dragTargetTodoID = target?.todoID
+            dragInsertAfter = target?.insertAfter ?? false
+        }
     }
 
     private func finishInteractiveDrag(todo: TodoDTO) {
         let destinationStatus = dragTargetStatus
         let targetTodoID = dragTargetTodoID
         let insertAfter = dragInsertAfter
-        clearInteractiveDrag()
 
-        guard let destinationStatus else { return }
+        guard let destinationStatus else {
+            clearInteractiveDrag()
+            return
+        }
+        let placement = destinationStatus == todo.status
+            ? TodoDragPlacement(
+                todoID: todo.uuid,
+                destinationStatus: destinationStatus,
+                targetTodoID: targetTodoID,
+                insertAfter: insertAfter
+            )
+            : nil
         handleDrop(
             todoID: todo.uuid,
             destinationStatus: destinationStatus,
             targetTodoID: targetTodoID,
-            insertAfter: insertAfter
+            insertAfter: insertAfter,
+            visualPlacement: placement
         )
     }
 
@@ -217,6 +257,10 @@ struct TodoView: View {
         dragTargetTodoID = nil
         dragInsertAfter = false
         dragLocation = nil
+        dragPreviewSize = nil
+        dragGrabOffset = nil
+        dragReferenceCardTargets = []
+        dragReferenceColumnTargets = []
     }
 
     private var statusSelector: some View {
@@ -298,7 +342,7 @@ struct TodoView: View {
                             TodoKanbanColumn(
                                 status: status,
                                 count: model.count(for: status),
-                                todos: model.todos(for: status),
+                                todos: displayedTodos(for: status),
                                 width: columnWidth,
                                 draggedTodoID: draggedTodoID,
                                 dragTargetStatus: dragTargetStatus,
@@ -347,6 +391,28 @@ struct TodoView: View {
                 .refreshable { await model.refresh() }
             }
         }
+    }
+
+    private func displayedTodos(for status: TodoStatus) -> [TodoDTO] {
+        let columns = Dictionary(
+            uniqueKeysWithValues: TodoStatus.boardStatuses.map { ($0, model.todos(for: $0)) }
+        )
+        let activePlacement: TodoDragPlacement? = draggedTodoID.flatMap { todoID in
+            guard let todo = draggedTodo(withID: todoID) else { return nil }
+            return dragTargetStatus.flatMap {
+                guard $0 == todo.status else { return nil }
+                return TodoDragPlacement(
+                    todoID: todoID,
+                    destinationStatus: $0,
+                    targetTodoID: dragTargetTodoID,
+                    insertAfter: dragInsertAfter
+                )
+            }
+        }
+        return TodoDragProjection.columns(
+            projecting: activePlacement ?? pendingDropPlacement,
+            from: columns
+        )[status] ?? []
     }
 }
 
@@ -445,6 +511,7 @@ private struct TodoKanbanColumn: View {
                                 updateDrag: { location in updateDrag(todo, location) },
                                 finishDrag: { finishDrag(todo) }
                             )
+                            .opacity(draggedTodoID == todo.uuid ? 0 : 1)
                         }
                     }
 
@@ -454,6 +521,7 @@ private struct TodoKanbanColumn: View {
                             && dragTargetTodoID == nil
                     )
                 }
+                .animation(.snappy(duration: 0.18, extraBounce: 0), value: todos.map(\.uuid))
                 .padding(.horizontal, DPSpacing.compact)
                 .padding(.bottom, DPSpacing.compact)
             }
@@ -502,6 +570,7 @@ private struct TodoCard: View {
     let dropEdge: TodoDropEdge?
     let updateDrag: (CGPoint) -> Void
     let finishDrag: () -> Void
+    var measuresDropTarget = true
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
@@ -616,16 +685,18 @@ private struct TodoCard: View {
         )
         .shadow(color: .black.opacity(0.05), radius: 2, y: 1)
         .background {
-            GeometryReader { proxy in
-                Color.clear
-                    .preference(
-                        key: TodoCardDropTargetPreferenceKey.self,
-                        value: [TodoCardDropTarget(
-                            todoID: todo.uuid,
-                            status: status,
-                            frame: proxy.frame(in: .named(TodoDragCoordinateSpace.name))
-                        )]
-                    )
+            if measuresDropTarget {
+                GeometryReader { proxy in
+                    Color.clear
+                        .preference(
+                            key: TodoCardDropTargetPreferenceKey.self,
+                            value: [TodoCardDropTarget(
+                                todoID: todo.uuid,
+                                status: status,
+                                frame: proxy.frame(in: .named(TodoDragCoordinateSpace.name))
+                            )]
+                        )
+                }
             }
         }
         .accessibilityElement(children: .combine)
@@ -677,28 +748,64 @@ private struct TodoColumnDropZone: View {
 private struct TodoDragPreview: View {
     let todo: TodoDTO
     let status: TodoStatus
+    let size: CGSize
 
     var body: some View {
-        HStack(spacing: DPSpacing.small) {
-            Image(systemName: status.systemImage)
-                .foregroundStyle(status.color)
-            Text(todo.title)
-                .font(DPFont.bold(size: 14, relativeTo: .subheadline))
-                .foregroundStyle(DPColor.textPrimary)
-                .lineLimit(2)
-            Spacer(minLength: 0)
-            Image(systemName: "line.3.horizontal")
-                .foregroundStyle(DPColor.textMuted)
-        }
-        .padding(14)
-        .frame(width: 220, alignment: .leading)
-        .background(DPColor.backgroundCard)
-        .clipShape(RoundedRectangle(cornerRadius: TodoBoardLayout.cardRadius))
+        TodoCard(
+            todo: todo,
+            status: status,
+            canMoveUp: false,
+            canMoveDown: false,
+            open: {},
+            moveUp: {},
+            moveDown: {},
+            moveToStatus: { _ in },
+            dropEdge: nil,
+            updateDrag: { _ in },
+            finishDrag: {},
+            measuresDropTarget: false
+        )
+        .frame(width: size.width, height: size.height)
         .overlay(
             RoundedRectangle(cornerRadius: TodoBoardLayout.cardRadius)
                 .stroke(status.color, lineWidth: 2)
         )
         .shadow(color: .black.opacity(0.18), radius: 12, y: 6)
+    }
+}
+
+struct TodoDragPlacement: Equatable {
+    let todoID: TodoID
+    let destinationStatus: TodoStatus
+    let targetTodoID: TodoID?
+    let insertAfter: Bool
+}
+
+enum TodoDragProjection {
+    static func columns(
+        projecting placement: TodoDragPlacement?,
+        from columns: [TodoStatus: [TodoDTO]]
+    ) -> [TodoStatus: [TodoDTO]] {
+        guard let placement else { return columns }
+
+        var result = columns
+        guard let sourceItems = result[placement.destinationStatus],
+              let movingTodo = sourceItems.first(where: { $0.uuid == placement.todoID }) else {
+            return columns
+        }
+
+        var destination = sourceItems
+        destination.removeAll { $0.uuid == placement.todoID }
+        let insertionIndex: Int
+        if let targetTodoID = placement.targetTodoID,
+           let targetIndex = destination.firstIndex(where: { $0.uuid == targetTodoID }) {
+            insertionIndex = targetIndex + (placement.insertAfter ? 1 : 0)
+        } else {
+            insertionIndex = destination.endIndex
+        }
+        destination.insert(movingTodo, at: min(insertionIndex, destination.endIndex))
+        result[placement.destinationStatus] = destination
+        return result
     }
 }
 

@@ -133,6 +133,51 @@ struct TodoViewModelTests {
     }
 
     @Test
+    func interactiveDragProjectionMovesTheFullCardAndPushesAdjacentItemsBeforeDrop() {
+        let first = makeTodo(
+            id: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!,
+            title: "First"
+        )
+        let moving = makeTodo(
+            id: UUID(uuidString: "22222222-2222-2222-2222-222222222222")!,
+            title: "Moving"
+        )
+        let last = makeTodo(
+            id: UUID(uuidString: "33333333-3333-3333-3333-333333333333")!,
+            title: "Last"
+        )
+        let original: [TodoStatus: [TodoDTO]] = [
+            .todo: [first, moving, last],
+            .inProgress: [],
+            .done: []
+        ]
+
+        let projected = TodoDragProjection.columns(
+            projecting: TodoDragPlacement(
+                todoID: moving.uuid,
+                destinationStatus: .todo,
+                targetTodoID: last.uuid,
+                insertAfter: true
+            ),
+            from: original
+        )
+
+        #expect(projected[.todo]?.map(\.uuid) == [first.uuid, last.uuid, moving.uuid])
+        #expect(original[.todo]?.map(\.uuid) == [first.uuid, moving.uuid, last.uuid])
+
+        let crossColumnProjection = TodoDragProjection.columns(
+            projecting: TodoDragPlacement(
+                todoID: moving.uuid,
+                destinationStatus: .inProgress,
+                targetTodoID: nil,
+                insertAfter: false
+            ),
+            from: original
+        )
+        #expect(crossColumnProjection == original)
+    }
+
+    @Test
     func todoCatalogResolvesFeatureAndCommonKeysInEverySupportedLocale() {
         let keys = [
             "todo.action.add",
