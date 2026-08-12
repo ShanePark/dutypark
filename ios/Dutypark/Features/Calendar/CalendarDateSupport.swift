@@ -82,6 +82,32 @@ enum CalendarLocalization {
     }
 }
 
+/// Layout and contrast rules mirrored from the mobile web calendar.
+/// Kept value-only so the visual contract can be covered without SwiftUI snapshots.
+nonisolated enum CalendarVisualLogic {
+    static let compactCellMinimumHeight: CGFloat = 60
+    static let regularCellMinimumHeight: CGFloat = 80
+    static let maximumSchedulesPerCell = 3
+    static let maximumTodosPerCell = 2
+
+    static func usesLightForeground(on hex: String?) -> Bool {
+        guard let components = rgb(hex) else { return false }
+        let luminance = (Double(components.red) * 299 + Double(components.green) * 587 + Double(components.blue) * 114) / 1_000
+        return luminance <= 127.5
+    }
+
+    static func rgb(_ hex: String?) -> (red: UInt8, green: UInt8, blue: UInt8)? {
+        guard var value = hex?.trimmingCharacters(in: .whitespacesAndNewlines), !value.isEmpty else { return nil }
+        if value.hasPrefix("#") { value.removeFirst() }
+        guard value.count == 6, let number = UInt32(value, radix: 16) else { return nil }
+        return (
+            UInt8((number >> 16) & 0xFF),
+            UInt8((number >> 8) & 0xFF),
+            UInt8(number & 0xFF)
+        )
+    }
+}
+
 nonisolated enum CalendarPublicLink {
     static func url(memberID: MemberID) -> URL {
         URL(string: "https://dutypark.o-r.kr/duty/\(memberID)")!

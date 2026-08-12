@@ -76,18 +76,37 @@ struct CalendarView: View {
 
     private var calendarContent: some View {
         ScrollView {
-            LazyVStack(spacing: DPSpacing.medium) {
-                memberPicker
-                monthControls
-                actionBar
-                dutySummary
+            LazyVStack(spacing: DPSpacing.small) {
+                calendarHeader
+                dutyToolbar
                 calendarGrid
                 dDaySection
             }
             .padding(.horizontal, DPSpacing.small)
+            .padding(.top, DPSpacing.extraSmall)
             .padding(.bottom, DPSpacing.large)
         }
         .refreshable { await model.load() }
+    }
+
+    private var calendarHeader: some View {
+        HStack(spacing: 2) {
+            memberPicker
+                .frame(maxWidth: .infinity, alignment: .leading)
+            monthControls
+                .fixedSize(horizontal: true, vertical: false)
+            Group {
+                if model.canSearchSchedules {
+                    searchControl
+                } else {
+                    Color.clear
+                        .frame(width: 82, height: 42)
+                        .accessibilityHidden(true)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .trailing)
+        }
+        .frame(minHeight: DPSize.minimumTouchTarget)
     }
 
     private var memberPicker: some View {
@@ -99,106 +118,140 @@ struct CalendarView: View {
                 Button(friend.name) { Task { await model.selectMember(friend.id) } }
             }
         } label: {
-            HStack {
-                Image(systemName: model.isMyCalendar ? "person.crop.circle.fill" : "person.2.fill")
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(model.targetName).font(.headline)
-                    if !model.targetTeamName.isEmpty { Text(model.targetTeamName).font(.caption).foregroundStyle(DPColor.textMuted) }
-                }
-                Spacer()
-                Image(systemName: "chevron.up.chevron.down").font(.caption)
+            HStack(spacing: 6) {
+                Circle()
+                    .fill(DPColor.backgroundTertiary)
+                    .frame(width: 30, height: 30)
+                    .overlay {
+                        Text(model.targetName.prefix(1).uppercased())
+                            .font(DPFont.bold(size: 12, relativeTo: .caption))
+                            .foregroundStyle(DPColor.textSecondary)
+                    }
+                Text(model.targetName)
+                    .font(DPFont.bold(size: 12, relativeTo: .caption))
+                    .foregroundStyle(DPColor.textPrimary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
             }
-            .foregroundStyle(DPColor.textPrimary)
-            .padding(.horizontal, DPSpacing.medium)
             .frame(minHeight: DPSize.minimumTouchTarget)
-            .background(DPColor.backgroundCard)
-            .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
-            .overlay(RoundedRectangle(cornerRadius: DPRadius.standard).stroke(DPColor.borderPrimary))
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
     }
 
     private var monthControls: some View {
-        HStack(spacing: DPSpacing.extraSmall) {
+        HStack(spacing: 0) {
             Button { Task { await model.changeMonth(by: -1) } } label: {
-                Image(systemName: "chevron.left").frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                Image(systemName: "chevron.left")
+                    .font(.system(size: 18, weight: .semibold))
+                    .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
             }
-            Spacer()
             Button { showsMonthPicker = true } label: {
-                HStack(spacing: 4) {
-                    Text(CalendarLocalization.format("calendar.month.format", model.year, model.month)).font(.title3.bold())
-                    Image(systemName: "chevron.down").font(.caption)
-                }
-                .foregroundStyle(DPColor.textPrimary)
-                .frame(minHeight: DPSize.minimumTouchTarget)
+                Text(String(format: "%04d-%02d", model.year, model.month))
+                    .font(DPFont.bold(size: 16, relativeTo: .headline))
+                    .foregroundStyle(DPColor.textPrimary)
+                    .frame(width: 88)
+                    .frame(minHeight: DPSize.minimumTouchTarget)
             }
-            Spacer()
             Button { Task { await model.changeMonth(by: 1) } } label: {
-                Image(systemName: "chevron.right").frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 18, weight: .semibold))
+                    .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
             }
-            Button(CalendarLocalization.text("calendar.today")) { Task { await model.goToToday() } }
-                .font(.subheadline.bold())
-                .frame(minHeight: DPSize.minimumTouchTarget)
         }
         .foregroundStyle(DPColor.accent)
     }
 
-    private var actionBar: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
+    private var searchControl: some View {
+        HStack(spacing: 0) {
+            TextField(CalendarLocalization.text("calendar.search.placeholder"), text: $model.searchQuery)
+                .font(DPFont.light(size: 11, relativeTo: .caption))
+                .foregroundStyle(DPColor.textPrimary)
+                .padding(.horizontal, 6)
+                .frame(minWidth: 0, minHeight: 42)
+                .submitLabel(.search)
+                .onSubmit { performSearch() }
+            Button(action: performSearch) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(DPColor.accentHover)
+                    .frame(width: 42, height: 42)
+                    .background(DPColor.accentSoft)
+            }
+        }
+        .frame(width: 82, height: 42)
+        .background(DPColor.backgroundInput)
+        .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+        .overlay(RoundedRectangle(cornerRadius: DPRadius.standard).stroke(DPColor.borderSecondary))
+    }
+
+    private func performSearch() {
+        guard model.canSearchSchedules else { return }
+        showsSearch = true
+        if !model.searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            Task { await model.search() }
+        }
+    }
+
+    private var dutyToolbar: some View {
+        VStack(spacing: DPSpacing.extraSmall) {
+            if model.isQuickDutyEditing { quickDutyBar }
             HStack(spacing: DPSpacing.small) {
-                if model.canEdit {
-                    actionButton("magnifyingglass", "calendar.search") { showsSearch = true }
-                }
-                if !model.isMyCalendar, let myID = model.me?.id {
-                    Button {
-                        Task { await model.toggleMyDutyComparison() }
-                    } label: {
-                        Label(CalendarLocalization.text("calendar.compare.mine"), systemImage: model.comparedMemberIDs.contains(myID) ? "checkmark.circle.fill" : "circle")
-                            .font(.subheadline.bold()).padding(.horizontal, DPSpacing.small).frame(minHeight: DPSize.minimumTouchTarget)
-                    }
-                    .buttonStyle(.bordered).tint(DPColor.accent)
-                }
-                if model.isMyCalendar {
-                    if !model.friends.isEmpty {
-                        actionButton("person.2", "calendar.compare") { showsDutyComparison = true }
-                    }
-                    actionButton("calendar.badge.plus", "calendar.dday.add") { showsDDayEditor = true }
-                    actionButton("repeat", "calendar.pattern") { showsPattern = true }
-                    Button {
-                        Task { await model.toggleTodoItems() }
-                    } label: {
-                        Label(CalendarLocalization.text("calendar.todo.showTodo"), systemImage: model.showTodoItems ? "checkmark.circle.fill" : "circle")
-                            .font(.subheadline.bold()).padding(.horizontal, DPSpacing.small).frame(minHeight: DPSize.minimumTouchTarget)
-                    }
-                    .buttonStyle(.bordered).tint(DPColor.accent)
-                }
-                if model.canEdit && !model.visibleDutyTypes.isEmpty {
-                    Button {
-                        model.setQuickDutyEditing(!model.isQuickDutyEditing)
-                    } label: {
-                        Label(CalendarLocalization.text(model.isQuickDutyEditing ? "calendar.duty.quick.exit" : "calendar.duty.quick.start"), systemImage: model.isQuickDutyEditing ? "xmark" : "pencil.line")
-                            .font(.subheadline.bold()).padding(.horizontal, DPSpacing.small).frame(minHeight: DPSize.minimumTouchTarget)
-                    }
-                    .buttonStyle(.bordered).tint(model.isQuickDutyEditing ? DPColor.warning : DPColor.accent)
-                }
-                if model.isMyCalendar && !model.visibleDutyTypes.isEmpty {
-                    actionButton("square.grid.3x3", "calendar.duty.batch") { showsBatchUpdate = true }
-                }
-                if model.isMyCalendar && model.team?.dutyBatchTemplate != nil {
-                    actionButton("doc.badge.arrow.up", "calendar.duty.excel") { importsDutyBatch = true }
-                }
+                dutySummary
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                toolbarActions
             }
         }
     }
 
-    private func actionButton(_ image: String, _ title: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Label(CalendarLocalization.text(title), systemImage: image)
-                .font(.subheadline.bold())
-                .padding(.horizontal, DPSpacing.small)
-                .frame(minHeight: DPSize.minimumTouchTarget)
+    private var toolbarActions: some View {
+        HStack(spacing: 0) {
+            if model.isMyCalendar && !model.friends.isEmpty {
+                Button { showsDutyComparison = true } label: {
+                    Image(systemName: "person.2")
+                        .frame(width: 44, height: 44)
+                }
+                .accessibilityLabel(CalendarLocalization.text("calendar.compare"))
+            } else if !model.isMyCalendar, model.me?.id != nil {
+                Button { Task { await model.toggleMyDutyComparison() } } label: {
+                    Image(systemName: model.comparedMemberIDs.isEmpty ? "person.2" : "person.2.fill")
+                        .frame(width: 44, height: 44)
+                }
+                .accessibilityLabel(CalendarLocalization.text("calendar.compare.mine"))
+            }
+            if model.canEdit && !model.visibleDutyTypes.isEmpty {
+                Button { model.setQuickDutyEditing(!model.isQuickDutyEditing) } label: {
+                    Image(systemName: model.isQuickDutyEditing ? "xmark" : "pencil.line")
+                        .foregroundStyle(model.isQuickDutyEditing ? DPColor.warning : DPColor.textSecondary)
+                        .frame(width: 44, height: 44)
+                }
+                .accessibilityLabel(CalendarLocalization.text(model.isQuickDutyEditing ? "calendar.duty.quick.exit" : "calendar.duty.quick.start"))
+            }
+            Menu {
+                if model.isMyCalendar {
+                    Button(CalendarLocalization.text("calendar.dday.add"), systemImage: "calendar.badge.plus") { showsDDayEditor = true }
+                    Button(CalendarLocalization.text("calendar.pattern"), systemImage: "repeat") { showsPattern = true }
+                    Button(CalendarLocalization.text("calendar.todo.showTodo"), systemImage: model.showTodoItems ? "checkmark.circle.fill" : "circle") {
+                        Task { await model.toggleTodoItems() }
+                    }
+                }
+                if model.isMyCalendar && !model.visibleDutyTypes.isEmpty {
+                    Button(CalendarLocalization.text("calendar.duty.batch"), systemImage: "square.grid.3x3") { showsBatchUpdate = true }
+                }
+                if model.isMyCalendar && model.team?.dutyBatchTemplate != nil {
+                    Button(CalendarLocalization.text("calendar.duty.excel"), systemImage: "doc.badge.arrow.up") { importsDutyBatch = true }
+                }
+                Button(CalendarLocalization.text("calendar.today"), systemImage: "arrow.uturn.backward") { Task { await model.goToToday() } }
+            } label: {
+                Image(systemName: "ellipsis")
+                    .frame(width: 44, height: 44)
+            }
+            .accessibilityLabel(CalendarLocalization.text("calendar.more"))
         }
-        .buttonStyle(.bordered)
-        .tint(DPColor.accent)
+        .foregroundStyle(DPColor.textSecondary)
+        .background(DPColor.backgroundCard)
+        .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+        .overlay(RoundedRectangle(cornerRadius: DPRadius.standard).stroke(DPColor.borderSecondary))
     }
 
     private var dutyBatchContentTypes: [UTType] {
@@ -212,19 +265,16 @@ struct CalendarView: View {
     }
 
     private var dutySummary: some View {
-        if model.isQuickDutyEditing {
-            return AnyView(quickDutyBar)
-        }
         let counts = Dictionary(grouping: model.days.compactMap(\.duty).filter { $0.month == model.month }, by: { $0.dutyType ?? CalendarLocalization.text("calendar.off") })
         return AnyView(ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: DPSpacing.medium) {
+            HStack(spacing: DPSpacing.small) {
                 ForEach(counts.keys.sorted(), id: \.self) { name in
                     HStack(spacing: DPSpacing.extraSmall) {
-                        Circle().fill(color(hex: counts[name]?.first?.dutyColor)).frame(width: 10, height: 10)
+                        RoundedRectangle(cornerRadius: 2).fill(color(hex: counts[name]?.first?.dutyColor)).frame(width: 16, height: 16)
                         Text(name).foregroundStyle(DPColor.textSecondary)
                         Text("\(counts[name]?.count ?? 0)").bold().foregroundStyle(DPColor.textPrimary)
                     }
-                    .font(.caption)
+                    .font(DPTypography.caption)
                 }
             }
             .frame(minHeight: DPSize.minimumTouchTarget)
@@ -256,12 +306,15 @@ struct CalendarView: View {
 
     private var calendarGrid: some View {
         VStack(spacing: 0) {
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 1), count: 7), spacing: 1) {
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 7), spacing: 0) {
                 ForEach(["sun", "mon", "tue", "wed", "thu", "fri", "sat"], id: \.self) { weekday in
                     Text(CalendarLocalization.text("calendar.weekday.\(weekday)"))
-                        .font(.caption.bold())
-                        .foregroundStyle(weekday == "sun" ? DPColor.danger : DPColor.textSecondary)
-                        .frame(maxWidth: .infinity, minHeight: 30)
+                        .font(DPFont.bold(size: 12, relativeTo: .caption))
+                        .foregroundStyle(weekday == "sun" ? DPColor.dangerHover : weekday == "sat" ? DPColor.accentHover : DPColor.textPrimary)
+                        .frame(maxWidth: .infinity, minHeight: 34)
+                        .background(DPColor.backgroundHover)
+                        .overlay(alignment: .trailing) { Rectangle().fill(DPColor.borderSecondary).frame(width: 0.5) }
+                        .overlay(alignment: .bottom) { Rectangle().fill(DPColor.borderSecondary).frame(height: 2) }
                 }
                 ForEach(Array(model.days.enumerated()), id: \.element.id) { index, day in
                     CalendarDayCell(day: day, weekday: index % 7, highlighted: model.highlightedDate == day.cell.date, pinnedDDay: model.pinnedDDay)
@@ -272,33 +325,38 @@ struct CalendarView: View {
                 }
             }
         }
-        .background(DPColor.borderPrimary)
+        .background(DPColor.backgroundCard)
         .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
-        .overlay(RoundedRectangle(cornerRadius: DPRadius.standard).stroke(DPColor.borderPrimary))
+        .overlay(RoundedRectangle(cornerRadius: DPRadius.standard).stroke(DPColor.borderSecondary))
+        .shadow(color: .black.opacity(0.05), radius: 1, y: 1)
     }
 
     private var dDaySection: some View {
-        VStack(alignment: .leading, spacing: DPSpacing.small) {
-            HStack {
-                Text("calendar.dday.title", tableName: "Calendar").font(.headline)
-                Spacer()
-                Text("\(model.dDays.count)").foregroundStyle(DPColor.textMuted)
+        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: DPSpacing.small) {
+            ForEach(model.dDays, id: \.id) { item in
+                DDayCard(item: item, editable: model.isMyCalendar, model: model)
             }
-            if model.dDays.isEmpty {
-                Text("calendar.dday.empty", tableName: "Calendar")
-                    .font(.subheadline).foregroundStyle(DPColor.textMuted)
-                    .frame(maxWidth: .infinity, minHeight: 64)
-            } else {
-                LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: DPSpacing.small) {
-                    ForEach(model.dDays, id: \.id) { item in
-                        DDayCard(item: item, editable: model.isMyCalendar, model: model)
+            if model.isMyCalendar {
+                Button { showsDDayEditor = true } label: {
+                    VStack(spacing: 6) {
+                        Circle()
+                            .fill(DPColor.backgroundTertiary)
+                            .frame(width: 40, height: 40)
+                            .overlay(Image(systemName: "plus").foregroundStyle(DPColor.textMuted))
+                        Text("calendar.dday.add", tableName: "Calendar")
+                            .font(DPTypography.caption)
+                            .foregroundStyle(DPColor.textMuted)
+                    }
+                    .frame(maxWidth: .infinity, minHeight: 108)
+                    .background(DPColor.backgroundCard)
+                    .overlay {
+                        RoundedRectangle(cornerRadius: DPRadius.large)
+                            .stroke(DPColor.borderSecondary, style: StrokeStyle(lineWidth: 2, dash: [6, 4]))
                     }
                 }
+                .buttonStyle(.plain)
             }
         }
-        .padding(DPSpacing.medium)
-        .background(DPColor.backgroundCard)
-        .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
     }
 
     private func color(hex: String?) -> Color {
@@ -341,10 +399,16 @@ private struct YearMonthPickerView: View {
                 Spacer()
             }
             .padding(DPSpacing.medium)
+            .background(DPColor.backgroundModal)
             .navigationTitle(CalendarLocalization.text("calendar.month.choose"))
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button(CalendarLocalization.text("calendar.close")) { dismiss() } } }
         }
+        .tint(DPColor.accent)
+        .toolbarBackground(DPColor.backgroundTertiary, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
         .presentationDetents([.medium])
+        .presentationCornerRadius(DPRadius.standard)
+        .presentationBackground(DPColor.backgroundModal)
     }
 }
 
@@ -389,6 +453,8 @@ private struct DutyComparisonView: View {
                     }
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(DPColor.backgroundModal)
             .navigationTitle(CalendarLocalization.text("calendar.compare"))
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
@@ -396,6 +462,11 @@ private struct DutyComparisonView: View {
                 }
             }
         }
+        .tint(DPColor.accent)
+        .toolbarBackground(DPColor.backgroundTertiary, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .presentationCornerRadius(DPRadius.standard)
+        .presentationBackground(DPColor.backgroundModal)
     }
 }
 
@@ -406,44 +477,152 @@ private struct CalendarDayCell: View {
     let pinnedDDay: DDayDTO?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack {
+        VStack(alignment: .leading, spacing: 1) {
+            HStack(spacing: 1) {
                 Text("\(day.cell.day)")
-                    .font(.caption.bold())
-                    .foregroundStyle(day.holidays.isEmpty && weekday != 0 ? DPColor.textPrimary : DPColor.danger)
+                    .font(DPFont.bold(size: 11, relativeTo: .caption))
+                    .foregroundStyle(dayNumberColor)
                 Spacer(minLength: 0)
-                if let duty = day.duty?.dutyType {
-                    Text(duty.prefix(4)).font(.system(size: 9, weight: .bold))
-                    if day.duty?.source == .patternPaused { Image(systemName: "pause.circle.fill").font(.system(size: 9)) }
+                if let pinnedDDay {
+                    Text(relativeLabel(pinnedDDay))
+                        .font(DPFont.light(size: 8, relativeTo: .caption2))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                        .foregroundStyle(secondaryForeground)
                 }
             }
-            if let pinnedDDay { compactText(relativeLabel(pinnedDDay), color: DPColor.warning) }
-            if let holiday = day.holidays.first { compactText(holiday.dateName, color: DPColor.danger) }
-            ForEach(day.schedules.prefix(3), id: \.id) { compactText($0.content, color: DPColor.accent) }
-            ForEach(day.todos.prefix(2), id: \.id) { compactText($0.title, color: $0.isOverdue ? DPColor.danger : DPColor.textSecondary) }
-            ForEach(day.dDays.prefix(1), id: \.id) { compactText($0.title, color: DPColor.warning) }
+            if let holiday = day.holidays.first {
+                Text(holiday.dateName)
+                    .font(DPFont.light(size: 8, relativeTo: .caption2))
+                    .lineLimit(1)
+                    .foregroundStyle(holiday.isHoliday ? DPColor.dangerHover : secondaryForeground)
+            }
             ForEach(Array(day.comparedDuties.prefix(3).enumerated()), id: \.offset) { _, item in
-                compactText("\(item.name.prefix(3)) \(item.duty.dutyType ?? CalendarLocalization.text("calendar.off"))", color: DPColor.success)
+                comparedDutyChip(item)
+            }
+            ForEach(day.dDays.prefix(1), id: \.id) { item in
+                statusBubble(item.title, image: "calendar.badge.checkmark", background: DPColor.successSoft, border: DPColor.successBorder, foreground: DPColor.successHover)
+            }
+            ForEach(day.schedules.prefix(CalendarVisualLogic.maximumSchedulesPerCell), id: \.id) { schedule in
+                scheduleText(schedule)
+            }
+            if day.schedules.count > CalendarVisualLogic.maximumSchedulesPerCell {
+                Text("+\(day.schedules.count - CalendarVisualLogic.maximumSchedulesPerCell)")
+                    .font(DPFont.bold(size: 8, relativeTo: .caption2))
+                    .foregroundStyle(secondaryForeground)
+            }
+            ForEach(day.todos.prefix(CalendarVisualLogic.maximumTodosPerCell), id: \.id) { todo in
+                statusBubble(
+                    todo.title,
+                    image: "checkmark.square",
+                    background: todo.status == .inProgress ? DPColor.warningSoft : DPColor.accentSoft,
+                    border: todo.status == .inProgress ? DPColor.warningBorder : DPColor.accentBorder,
+                    foreground: todo.status == .inProgress ? DPColor.warningHover : DPColor.accentHover
+                )
+            }
+            if day.todos.count > CalendarVisualLogic.maximumTodosPerCell {
+                Text("+\(day.todos.count - CalendarVisualLogic.maximumTodosPerCell)")
+                    .font(DPFont.bold(size: 8, relativeTo: .caption2))
+                    .foregroundStyle(secondaryForeground)
             }
             Spacer(minLength: 0)
         }
-        .padding(4)
-        .frame(maxWidth: .infinity, minHeight: 82, alignment: .topLeading)
+        .padding(2)
+        .frame(maxWidth: .infinity, minHeight: CalendarVisualLogic.compactCellMinimumHeight, alignment: .topLeading)
         .background(cellBackground)
         .opacity(day.cell.isCurrentMonth ? 1 : 0.45)
-        .overlay(RoundedRectangle(cornerRadius: 3).stroke(highlighted ? DPColor.danger : .clear, lineWidth: 2))
+        .overlay(alignment: .trailing) { Rectangle().fill(cellBorder).frame(width: 0.5) }
+        .overlay(alignment: .bottom) { Rectangle().fill(cellBorder).frame(height: 0.5) }
+        .overlay(Rectangle().stroke(focusBorder, lineWidth: highlighted || isToday ? 2 : 0))
         .contentShape(Rectangle())
         .accessibilityLabel(day.cell.date.rawValue)
     }
 
     private var cellBackground: Color {
-        guard let raw = day.duty?.dutyColor else { return DPColor.backgroundCard }
-        let value = UInt64(raw.trimmingCharacters(in: CharacterSet.alphanumerics.inverted), radix: 16) ?? 0
-        return Color(red: Double((value >> 16) & 0xff) / 255, green: Double((value >> 8) & 0xff) / 255, blue: Double(value & 0xff) / 255).opacity(0.16)
+        guard let components = CalendarVisualLogic.rgb(day.duty?.dutyColor) else {
+            return day.cell.isCurrentMonth ? DPColor.backgroundCard : DPColor.backgroundSecondary
+        }
+        return Color(
+            red: Double(components.red) / 255,
+            green: Double(components.green) / 255,
+            blue: Double(components.blue) / 255
+        )
     }
 
-    private func compactText(_ text: String, color: Color) -> some View {
-        Text(text).font(.system(size: 9)).lineLimit(1).foregroundStyle(color).frame(maxWidth: .infinity, alignment: .leading)
+    private var primaryForeground: Color {
+        guard day.duty?.dutyColor != nil else { return DPColor.textPrimary }
+        return CalendarVisualLogic.usesLightForeground(on: day.duty?.dutyColor) ? DPColor.textOnDark : DPColor.textOnLight
+    }
+
+    private var secondaryForeground: Color {
+        guard day.duty?.dutyColor != nil else { return DPColor.textMuted }
+        return CalendarVisualLogic.usesLightForeground(on: day.duty?.dutyColor) ? DPColor.textOnDarkMuted : DPColor.textMuted
+    }
+
+    private var dayNumberColor: Color {
+        if weekday == 0 || !day.holidays.isEmpty { return DPColor.dangerHover }
+        if weekday == 6 { return DPColor.accentHover }
+        return primaryForeground
+    }
+
+    private var cellBorder: Color {
+        guard day.duty?.dutyColor != nil else { return DPColor.borderSecondary }
+        return CalendarVisualLogic.usesLightForeground(on: day.duty?.dutyColor)
+            ? DPColor.textOnDark.opacity(0.30)
+            : DPColor.textOnLight.opacity(0.15)
+    }
+
+    private var focusBorder: Color {
+        if highlighted { return DPColor.accent }
+        return isToday ? DPColor.danger : .clear
+    }
+
+    private var isToday: Bool {
+        let today = CalendarDateSupport.calendar.dateComponents([.year, .month, .day], from: Date())
+        return day.cell.year == today.year && day.cell.month == today.month && day.cell.day == today.day
+    }
+
+    private func scheduleText(_ schedule: ScheduleDTO) -> some View {
+        Text(schedule.content)
+            .font(DPFont.light(size: 8, relativeTo: .caption2))
+            .foregroundStyle(primaryForeground)
+            .lineLimit(2)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, 1)
+            .overlay(alignment: .top) {
+                Rectangle()
+                    .stroke(style: StrokeStyle(lineWidth: 0.75, dash: [2, 2]))
+                    .foregroundStyle(cellBorder)
+                    .frame(height: 0.75)
+            }
+    }
+
+    private func statusBubble(_ text: String, image: String, background: Color, border: Color, foreground: Color) -> some View {
+        HStack(spacing: 2) {
+            Image(systemName: image).font(.system(size: 7, weight: .semibold))
+            Text(text).lineLimit(1)
+        }
+        .font(DPFont.light(size: 8, relativeTo: .caption2))
+        .foregroundStyle(foreground)
+        .padding(.horizontal, 3)
+        .frame(maxWidth: .infinity, minHeight: 16, alignment: .leading)
+        .background(background)
+        .clipShape(RoundedRectangle(cornerRadius: 5))
+        .overlay(RoundedRectangle(cornerRadius: 5).stroke(border, lineWidth: 0.5))
+    }
+
+    private func comparedDutyChip(_ item: ComparedDuty) -> some View {
+        HStack(spacing: 2) {
+            Circle()
+                .fill(DPColor.backgroundTertiary)
+                .frame(width: 10, height: 10)
+                .overlay(Text(item.name.prefix(1)).font(.system(size: 6, weight: .bold)).foregroundStyle(DPColor.textSecondary))
+            Text(item.duty.dutyType ?? CalendarLocalization.text("calendar.off"))
+                .lineLimit(1)
+        }
+        .font(DPFont.bold(size: 7, relativeTo: .caption2))
+        .foregroundStyle(primaryForeground)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     private func relativeLabel(_ item: DDayDTO) -> String {
@@ -528,6 +707,8 @@ private struct DayDetailView: View {
                     }
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(DPColor.backgroundModal)
             .navigationTitle(day.cell.date.rawValue)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button(CalendarLocalization.text("calendar.close")) { dismiss() } } }
@@ -550,6 +731,11 @@ private struct DayDetailView: View {
                 }
             }
         }
+        .tint(DPColor.accent)
+        .toolbarBackground(DPColor.backgroundTertiary, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .presentationCornerRadius(DPRadius.standard)
+        .presentationBackground(DPColor.backgroundModal)
     }
 
     private func scheduleTime(_ schedule: ScheduleDTO) -> String {
@@ -665,6 +851,8 @@ private struct ScheduleEditorView: View {
                     AttachmentPicker(model: attachmentModel)
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(DPColor.backgroundModal)
             .navigationTitle(CalendarLocalization.text(existing == nil ? "calendar.schedule.add" : "calendar.schedule.edit"))
             .interactiveDismissDisabled(interactionsDisabled)
             .toolbar {
@@ -699,6 +887,11 @@ private struct ScheduleEditorView: View {
                 }
             }
         }
+        .tint(DPColor.accent)
+        .toolbarBackground(DPColor.backgroundTertiary, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .presentationCornerRadius(DPRadius.standard)
+        .presentationBackground(DPColor.backgroundModal)
     }
 
     private var interactionsDisabled: Bool {
@@ -771,9 +964,16 @@ private struct ScheduleSearchView: View {
                     .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(DPColor.backgroundModal)
             .navigationTitle(CalendarLocalization.text("calendar.search"))
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button(CalendarLocalization.text("calendar.close")) { dismiss() } } }
         }
+        .tint(DPColor.accent)
+        .toolbarBackground(DPColor.backgroundTertiary, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .presentationCornerRadius(DPRadius.standard)
+        .presentationBackground(DPColor.backgroundModal)
     }
 }
 
@@ -783,37 +983,79 @@ private struct DDayCard: View {
     @ObservedObject var model: CalendarViewModel
     @State private var edits = false
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Button { if editable { edits = true } } label: {
-                    HStack {
-                        Text(item.title).lineLimit(1)
-                        if item.isPrivate { Image(systemName: "lock.fill").font(.caption) }
-                    }
-                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+        VStack(alignment: .leading, spacing: DPSpacing.small) {
+                HStack(alignment: .top) {
+                    Text(dDayLabel)
+                        .font(DPFont.bold(size: 12, relativeTo: .caption))
+                        .foregroundStyle(badgeForeground)
+                        .padding(.horizontal, DPSpacing.small)
+                        .padding(.vertical, DPSpacing.extraSmall)
+                        .background(badgeBackground)
+                        .clipShape(Capsule())
+                        .shadow(color: .black.opacity(0.08), radius: 1, y: 1)
+                    Spacer(minLength: 0)
                 }
-                .buttonStyle(.plain)
+                HStack(alignment: .top, spacing: DPSpacing.extraSmall) {
+                    if item.isPrivate {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 12))
+                            .foregroundStyle(DPColor.textMuted)
+                    }
+                    Text(item.title)
+                        .font(DPTypography.label)
+                        .foregroundStyle(DPColor.textPrimary)
+                        .lineLimit(2)
+                    Spacer(minLength: 0)
+                }
+                Label(item.date.rawValue, systemImage: "calendar.badge.checkmark")
+                    .font(DPTypography.caption)
+                    .foregroundStyle(DPColor.textMuted)
+            }
+            .padding(10)
+            .frame(maxWidth: .infinity, minHeight: 108, alignment: .topLeading)
+            .background(cardBackground)
+            .clipShape(RoundedRectangle(cornerRadius: DPRadius.large))
+            .overlay {
+                RoundedRectangle(cornerRadius: DPRadius.large)
+                    .stroke(model.pinnedDDayID == item.id ? DPColor.warning : DPColor.borderPrimary, lineWidth: model.pinnedDDayID == item.id ? 2 : 1)
+            }
+            .overlay(alignment: .topTrailing) {
                 Button { model.togglePinnedDDay(item) } label: {
                     Image(systemName: model.pinnedDDayID == item.id ? "star.fill" : "star")
-                        .foregroundStyle(DPColor.warning).frame(width: 44, height: 44)
+                        .foregroundStyle(model.pinnedDDayID == item.id ? DPColor.warning : DPColor.textMuted)
+                        .frame(width: 44, height: 44)
                 }
                 .buttonStyle(.plain)
-            }
-            Button { if editable { edits = true } } label: {
-                VStack(alignment: .leading, spacing: 4) {
-                Text(dDayLabel).font(.title3.bold()).foregroundStyle(DPColor.accent)
-                Text(item.date.rawValue).font(.caption).foregroundStyle(DPColor.textMuted)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .buttonStyle(.plain)
         }
-        .frame(maxWidth: .infinity, minHeight: 76, alignment: .leading)
-        .padding(DPSpacing.small)
-        .background(DPColor.backgroundSecondary)
-        .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+        .contentShape(RoundedRectangle(cornerRadius: DPRadius.large))
+        .onTapGesture { if editable { edits = true } }
+        .shadow(color: .black.opacity(model.pinnedDDayID == item.id ? 0.12 : 0.05), radius: model.pinnedDDayID == item.id ? 4 : 1, y: 1)
         .sheet(isPresented: $edits) { DDayEditorView(model: model, existing: item) }
     }
+
+    private var cardBackground: LinearGradient {
+        LinearGradient(
+            colors: item.calc <= 0
+                ? [DPColor.backgroundSecondary, DPColor.backgroundTertiary]
+                : [DPColor.backgroundCard, DPColor.backgroundSecondary],
+            startPoint: .topLeading,
+            endPoint: .bottomTrailing
+        )
+    }
+
+    private var badgeBackground: Color {
+        switch item.calc {
+        case 0, 1: DPColor.danger
+        case 2, 3: DPColor.warning
+        case ..<0: DPColor.textMuted
+        default: DPColor.backgroundTertiary
+        }
+    }
+
+    private var badgeForeground: Color {
+        item.calc > 3 ? DPColor.textPrimary : DPColor.textOnDark
+    }
+
     private var dDayLabel: String { item.calc == 0 ? "D-Day" : item.calc < 0 ? "D+\(abs(item.calc))" : "D-\(item.calc)" }
 }
 
@@ -833,28 +1075,103 @@ private struct DDayEditorView: View {
         _isPrivate = State(initialValue: existing?.isPrivate ?? false)
     }
     var body: some View {
-        NavigationStack {
-            Form {
-                TextField(CalendarLocalization.text("calendar.dday.name"), text: $title)
-                DatePicker(CalendarLocalization.text("calendar.dday.date"), selection: $date, displayedComponents: .date)
-                Toggle(CalendarLocalization.text("calendar.dday.private"), isOn: $isPrivate)
-                HStack {
-                    ForEach([-7, -1, 0, 1, 7], id: \.self) { offset in
-                        Button(offset == 0 ? CalendarLocalization.text("calendar.today") : (offset > 0 ? "+\(offset)" : "\(offset)")) {
-                            date = CalendarDateSupport.calendar.date(byAdding: .day, value: offset, to: offset == 0 ? Date() : date) ?? date
-                        }.frame(minWidth: 44, minHeight: 44)
+        VStack(spacing: 0) {
+            HStack {
+                Text(CalendarLocalization.text(existing == nil ? "calendar.dday.add" : "calendar.dday.edit"))
+                    .font(DPTypography.heading)
+                    .foregroundStyle(DPColor.textPrimary)
+                Spacer()
+                Button { dismiss() } label: {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(DPColor.textPrimary)
+                        .frame(width: 44, height: 44)
+                }
+            }
+            .padding(.leading, DPSpacing.medium)
+            .padding(.trailing, DPSpacing.extraSmall)
+            .background(DPColor.backgroundTertiary)
+            .overlay(alignment: .bottom) { Rectangle().fill(DPColor.borderPrimary).frame(height: 1) }
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: DPSpacing.medium) {
+                    VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+                        HStack {
+                            Text("calendar.dday.name", tableName: "Calendar")
+                                .font(DPTypography.label)
+                                .foregroundStyle(DPColor.textSecondary)
+                            Spacer()
+                            Text("\(title.count)/30")
+                                .font(DPTypography.caption)
+                                .foregroundStyle(title.count > 30 ? DPColor.danger : DPColor.textMuted)
+                        }
+                        TextField(CalendarLocalization.text("calendar.dday.name"), text: $title)
+                            .dpInputChrome(isInvalid: title.isEmpty || title.count > 30)
+                    }
+                    VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+                        Text("calendar.dday.date", tableName: "Calendar")
+                            .font(DPTypography.label)
+                            .foregroundStyle(DPColor.textSecondary)
+                        DatePicker(CalendarLocalization.text("calendar.dday.date"), selection: $date, displayedComponents: .date)
+                            .labelsHidden()
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, DPSpacing.compact)
+                            .frame(minHeight: 44)
+                            .background(DPColor.backgroundInput)
+                            .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+                            .overlay(RoundedRectangle(cornerRadius: DPRadius.standard).stroke(DPColor.borderInput))
+                    }
+                    HStack(spacing: DPSpacing.small) {
+                        ForEach([-7, -1, 0, 1, 7], id: \.self) { offset in
+                            Button(offset == 0 ? CalendarLocalization.text("calendar.today") : (offset > 0 ? "+\(offset)" : "\(offset)")) {
+                                date = CalendarDateSupport.calendar.date(byAdding: .day, value: offset, to: offset == 0 ? Date() : date) ?? date
+                            }
+                            .font(DPTypography.caption)
+                            .foregroundStyle(offset == 0 ? DPColor.accentHover : DPColor.textPrimary)
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                            .background(offset == 0 ? DPColor.accentSoft : DPColor.backgroundTertiary)
+                            .clipShape(RoundedRectangle(cornerRadius: DPRadius.small))
+                        }
+                    }
+                    HStack {
+                        Label(CalendarLocalization.text("calendar.dday.private"), systemImage: isPrivate ? "lock.fill" : "lock.open")
+                            .font(DPTypography.label)
+                            .foregroundStyle(DPColor.textPrimary)
+                        Spacer()
+                        Toggle(CalendarLocalization.text("calendar.dday.private"), isOn: $isPrivate)
+                            .labelsHidden()
+                    }
+                    .padding(DPSpacing.compact)
+                    .background(DPColor.backgroundSecondary)
+                    .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+
+                    if existing != nil {
+                        Button(CalendarLocalization.text("calendar.delete"), role: .destructive) { confirmsDelete = true }
+                            .font(DPTypography.label)
+                            .frame(minHeight: 44)
                     }
                 }
-                if existing != nil { Button(CalendarLocalization.text("calendar.delete"), role: .destructive) { confirmsDelete = true } }
+                .padding(DPSpacing.compact)
             }
-            .navigationTitle(CalendarLocalization.text(existing == nil ? "calendar.dday.add" : "calendar.dday.edit"))
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button(CalendarLocalization.text("calendar.cancel")) { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) { Button(CalendarLocalization.text("calendar.save")) { Task { if await model.saveDDay(existing: existing, title: title, date: date, isPrivate: isPrivate) { dismiss() } } }.disabled(title.isEmpty || title.count > 30) }
+            HStack(spacing: DPSpacing.small) {
+                Button(CalendarLocalization.text("calendar.cancel")) { dismiss() }
+                    .buttonStyle(DPOutlineButtonStyle())
+                Button(CalendarLocalization.text("calendar.save")) {
+                    Task { if await model.saveDDay(existing: existing, title: title, date: date, isPrivate: isPrivate) { dismiss() } }
+                }
+                .buttonStyle(DPPrimaryButtonStyle())
+                .disabled(title.isEmpty || title.count > 30)
             }
-            .confirmationDialog(CalendarLocalization.text("calendar.delete.confirm"), isPresented: $confirmsDelete) {
-                if let existing { Button(CalendarLocalization.text("calendar.delete"), role: .destructive) { Task { await model.deleteDDay(existing); dismiss() } } }
-            }
+            .frame(maxWidth: .infinity, alignment: .trailing)
+            .padding(DPSpacing.compact)
+            .background(DPColor.backgroundModal)
+            .overlay(alignment: .top) { Rectangle().fill(DPColor.borderPrimary).frame(height: 1) }
+        }
+        .background(DPColor.backgroundModal)
+        .presentationDetents([.medium])
+        .presentationCornerRadius(DPRadius.standard)
+        .confirmationDialog(CalendarLocalization.text("calendar.delete.confirm"), isPresented: $confirmsDelete) {
+            if let existing { Button(CalendarLocalization.text("calendar.delete"), role: .destructive) { Task { await model.deleteDDay(existing); dismiss() } } }
         }
     }
 }
@@ -899,6 +1216,8 @@ private struct DutyPatternView: View {
                     if model.pattern?.pattern != nil { Button(CalendarLocalization.text("calendar.pattern.delete"), role: .destructive) { confirmsDelete = true } }
                 }
             }
+            .scrollContentBackground(.hidden)
+            .background(DPColor.backgroundModal)
             .navigationTitle(CalendarLocalization.text("calendar.pattern"))
             .task {
                 await model.loadPattern()
@@ -921,6 +1240,11 @@ private struct DutyPatternView: View {
                 Button(CalendarLocalization.text("calendar.delete"), role: .destructive) { Task { await model.deletePattern(); dismiss() } }
             }
         }
+        .tint(DPColor.accent)
+        .toolbarBackground(DPColor.backgroundTertiary, for: .navigationBar)
+        .toolbarBackground(.visible, for: .navigationBar)
+        .presentationCornerRadius(DPRadius.standard)
+        .presentationBackground(DPColor.backgroundModal)
     }
     private func weekdayName(_ value: Weekday) -> String {
         let key: String = switch value {

@@ -229,6 +229,58 @@ final class CalendarFeatureTests: XCTestCase {
         )
     }
 
+    func testCalendarUsesTheSameCompactCellMinimumAsMobileWeb() {
+        XCTAssertEqual(CalendarVisualLogic.compactCellMinimumHeight, 60)
+        XCTAssertEqual(CalendarVisualLogic.regularCellMinimumHeight, 80)
+        XCTAssertEqual(CalendarVisualLogic.maximumSchedulesPerCell, 3)
+        XCTAssertEqual(CalendarVisualLogic.maximumTodosPerCell, 2)
+    }
+
+    func testDutyBackgroundUsesAdaptiveForegroundContrast() {
+        XCTAssertTrue(CalendarVisualLogic.usesLightForeground(on: "#111827"))
+        XCTAssertTrue(CalendarVisualLogic.usesLightForeground(on: "3B82F6"))
+        XCTAssertFalse(CalendarVisualLogic.usesLightForeground(on: "#FCD34D"))
+        XCTAssertTrue(CalendarVisualLogic.usesLightForeground(on: "#7F7F7F"))
+        XCTAssertFalse(CalendarVisualLogic.usesLightForeground(on: "#808080"))
+        XCTAssertFalse(CalendarVisualLogic.usesLightForeground(on: nil))
+    }
+
+    func testReadOnlyFriendCalendarDoesNotOfferScheduleSearch() async {
+        let readOnly = CalendarViewModel(
+            repository: CalendarRepositoryMock(canManage: false),
+            now: date(2026, 8, 12),
+            memberID: 9
+        )
+        await readOnly.load()
+        XCTAssertFalse(readOnly.canSearchSchedules)
+
+        let manager = CalendarViewModel(
+            repository: CalendarRepositoryMock(canManage: true),
+            now: date(2026, 8, 12),
+            memberID: 9
+        )
+        await manager.load()
+        XCTAssertTrue(manager.canSearchSchedules)
+    }
+
+    func testDutyColorParserRejectsMalformedValues() {
+        XCTAssertNil(CalendarVisualLogic.rgb(nil))
+        XCTAssertNil(CalendarVisualLogic.rgb("#12345"))
+        XCTAssertNil(CalendarVisualLogic.rgb("not-a-color"))
+    }
+
+    func testDutyColorParserAcceptsHashAndBareHex() {
+        let hashed = CalendarVisualLogic.rgb("#3B82F6")
+        let bare = CalendarVisualLogic.rgb("3b82f6")
+
+        XCTAssertEqual(hashed?.red, 59)
+        XCTAssertEqual(hashed?.green, 130)
+        XCTAssertEqual(hashed?.blue, 246)
+        XCTAssertEqual(hashed?.red, bare?.red)
+        XCTAssertEqual(hashed?.green, bare?.green)
+        XCTAssertEqual(hashed?.blue, bare?.blue)
+    }
+
     private func date(_ year: Int, _ month: Int, _ day: Int, hour: Int = 0) -> Date {
         CalendarDateSupport.calendar.date(from: DateComponents(year: year, month: month, day: day, hour: hour))!
     }

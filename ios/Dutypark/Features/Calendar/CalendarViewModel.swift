@@ -75,6 +75,7 @@ final class CalendarViewModel: ObservableObject {
     var targetMemberID: MemberID? { selectedMemberID ?? me?.id }
     var isMyCalendar: Bool { targetMemberID == me?.id }
     var canEdit: Bool { isMyCalendar || canManage }
+    var canSearchSchedules: Bool { canEdit }
     var targetName: String {
         guard let targetMemberID else { return me?.name ?? "" }
         if targetMemberID == me?.id { return me?.name ?? "" }
