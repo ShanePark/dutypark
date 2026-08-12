@@ -38,6 +38,7 @@ enum AppTheme: String, CaseIterable, Identifiable {
 }
 
 enum SettingsLoadedSection: Hashable {
+    case dutyPattern
     case family
     case friends
     case managers
@@ -57,6 +58,8 @@ final class SettingsViewModel: ObservableObject {
     @Published private(set) var managedMembers: [MemberDTO] = []
     @Published private(set) var sessions: [SettingsRefreshToken] = []
     @Published private(set) var policies: CurrentPoliciesDTO?
+    @Published private(set) var dutyPattern: DutyPatternDTO?
+    @Published private(set) var dutyPatternLoadFailed = false
     @Published private(set) var policyLoadFailed = false
     @Published private(set) var isLoading = false
     @Published private(set) var isWorking = false
@@ -78,6 +81,10 @@ final class SettingsViewModel: ObservableObject {
 
     func load() async {
         guard !isLoading else { return }
+        if ProcessInfo.processInfo.arguments.contains("-ui-testing-authenticated") {
+            loadUITestingFixture()
+            return
+        }
         isLoading = true
         defer { isLoading = false }
 
@@ -88,6 +95,7 @@ final class SettingsViewModel: ObservableObject {
         async let loadedManaged = try? service.managedMembers()
         async let loadedSessions = try? service.sessions()
         async let loadedPolicies = try? service.policies()
+        async let loadedPattern = try? service.dutyPattern()
         let values = await (
             loadedMember,
             loadedFamily,
@@ -95,7 +103,8 @@ final class SettingsViewModel: ObservableObject {
             loadedManagers,
             loadedManaged,
             loadedSessions,
-            loadedPolicies
+            loadedPolicies,
+            loadedPattern
         )
         didAttemptMemberLoad = true
         if let value = values.0 { member = value }
@@ -125,6 +134,13 @@ final class SettingsViewModel: ObservableObject {
             policyLoadFailed = false
         } else {
             policyLoadFailed = true
+        }
+        if let value = values.7 {
+            dutyPattern = value
+            dutyPatternLoadFailed = false
+            loadedSections.insert(.dutyPattern)
+        } else {
+            dutyPatternLoadFailed = true
         }
         if values.0 == nil, member != nil {
             showError("settings.error.load")
@@ -264,6 +280,34 @@ final class SettingsViewModel: ObservableObject {
         }
     }
 
+    func reloadDutyPattern() async {
+        dutyPatternLoadFailed = false
+        do {
+            dutyPattern = try await service.dutyPattern()
+            loadedSections.insert(.dutyPattern)
+        } catch {
+            dutyPatternLoadFailed = true
+            showError("settings.pattern.loadFailed")
+        }
+    }
+
+    func saveDutyPattern(days: [DutyPatternDayUpdateDTO], holidayOff: Bool) async -> Bool {
+        await workResult(success: "settings.pattern.saved") {
+            dutyPattern = try await service.updateDutyPattern(
+                DutyPatternUpdateDTO(days: days, holidayOff: holidayOff)
+            )
+            loadedSections.insert(.dutyPattern)
+        }
+    }
+
+    func deleteDutyPattern() async -> Bool {
+        await workResult(success: "settings.pattern.deleted") {
+            try await service.deleteDutyPattern()
+            dutyPattern = try await service.dutyPattern()
+            loadedSections.insert(.dutyPattern)
+        }
+    }
+
     func profilePhotoURL() -> URL? {
         guard let member, let id = member.id, member.hasProfilePhoto else { return nil }
         return service.profilePhotoURL(memberID: id, version: member.profilePhotoVersion)
@@ -301,5 +345,75 @@ final class SettingsViewModel: ObservableObject {
     private func showError(_ key: String) {
         noticeIsError = true
         noticeKey = key
+    }
+
+    private func loadUITestingFixture() {
+        member = MemberDTO(
+            id: 1,
+            name: "Test",
+            email: "test@duty.park",
+            teamId: 1,
+            team: "Dutypark",
+            calendarVisibility: .friends,
+            kakaoId: "connected",
+            naverId: nil,
+            hasPassword: true,
+            hasProfilePhoto: false,
+            profilePhotoVersion: 0
+        )
+        familyMembers = []
+        friends = [
+            FriendDTO(
+                id: 2,
+                name: "Alex",
+                teamId: 1,
+                team: "Dutypark",
+                hasProfilePhoto: false,
+                profilePhotoVersion: 0,
+                isFamily: true,
+                pinOrder: 1
+            )
+        ]
+        managers = []
+        managedMembers = []
+        sessions = [
+            SettingsRefreshToken(
+                memberName: "Test",
+                memberId: 1,
+                validUntil: "2026-09-12",
+                createdDate: "2026-08-01",
+                lastUsed: "2026-08-12",
+                remoteAddr: "127.0.0.1",
+                id: 1,
+                userAgent: .init(os: "iOS", browser: "Dutypark", device: "iPhone"),
+                isCurrentLogin: true
+            )
+        ]
+        dutyPattern = DutyPatternDTO(
+            configurable: true,
+            reason: nil,
+            dutyTypes: [DutyPatternDutyTypeDTO(id: 1, name: "Day", color: "#3B82F6")],
+            pattern: DutyPatternDetailsDTO(
+                days: [
+                    DutyPatternDayDTO(
+                        weekday: .monday,
+                        dutyType: DutyPatternDutyTypeDTO(id: 1, name: "Day", color: "#3B82F6")
+                    ),
+                    DutyPatternDayDTO(
+                        weekday: .wednesday,
+                        dutyType: DutyPatternDutyTypeDTO(id: 1, name: "Day", color: "#3B82F6")
+                    ),
+                    DutyPatternDayDTO(
+                        weekday: .friday,
+                        dutyType: DutyPatternDutyTypeDTO(id: 1, name: "Day", color: "#3B82F6")
+                    ),
+                ],
+                holidayOff: true,
+                effectiveFrom: DateOnly(rawValue: "2026-08-01")
+            )
+        )
+        dutyPatternLoadFailed = false
+        didAttemptMemberLoad = true
+        loadedSections = [.family, .friends, .managers, .managedAccounts, .sessions, .dutyPattern]
     }
 }

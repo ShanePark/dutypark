@@ -71,6 +71,18 @@ nonisolated struct SettingsService: Sendable {
         try await client.request("policies/current")
     }
 
+    func dutyPattern() async throws -> DutyPatternDTO {
+        try await client.request("duty/pattern/me")
+    }
+
+    func updateDutyPattern(_ request: DutyPatternUpdateDTO) async throws -> DutyPatternDTO {
+        try await client.request("duty/pattern/me", method: .put, body: request)
+    }
+
+    func deleteDutyPattern() async throws {
+        _ = try await client.data("duty/pattern/me", method: .delete)
+    }
+
     func updateVisibility(memberID: Int64, visibility: Visibility) async throws {
         let body = try JSONEncoder().encode(VisibilityUpdateRequest(visibility: visibility))
         _ = try await client.data(

@@ -19,6 +19,35 @@ struct SettingsFeatureTests {
     }
 
     @Test
+    func webParitySettingsCopyExistsInEverySupportedLanguage() {
+        let defaults = UserDefaults.standard
+        let previous = defaults.string(forKey: SettingsPreference.languageKey)
+        defer {
+            if let previous { defaults.set(previous, forKey: SettingsPreference.languageKey) }
+            else { defaults.removeObject(forKey: SettingsPreference.languageKey) }
+        }
+
+        let keys = [
+            "settings.profile.name",
+            "settings.visibility.modalTitle",
+            "settings.visibility.private.description",
+            "settings.theme.current.dark",
+            "settings.pattern.title",
+            "settings.pattern.createDescription",
+            "settings.pattern.saveConfirm",
+            "settings.pattern.deleteConfirm",
+            "settings.accessibility.on",
+            "settings.accessibility.off",
+        ]
+        for language in AppLanguage.allCases {
+            defaults.set(language.rawValue, forKey: SettingsPreference.languageKey)
+            for key in keys {
+                #expect(SettingsLocalization.string(key) != key)
+            }
+        }
+    }
+
+    @Test
     func localizationHelpersFollowTheExplicitAppLanguage() {
         let defaults = UserDefaults.standard
         let previous = defaults.string(forKey: SettingsPreference.languageKey)
@@ -45,6 +74,19 @@ struct SettingsFeatureTests {
         #expect(session.id == 9)
         #expect(session.userAgent?.device == "iPhone")
         #expect(session.isCurrentLogin == true)
+    }
+
+    @Test
+    func decodesDutyPatternUsedByTheSettingsCard() throws {
+        let data = Data(
+            ##"{"configurable":true,"reason":null,"dutyTypes":[{"id":4,"name":"Day","color":"#3B82F6"}],"pattern":{"days":[{"weekday":"MONDAY","dutyType":{"id":4,"name":"Day","color":"#3B82F6"}}],"holidayOff":true,"effectiveFrom":"2026-08-01"}}"##.utf8
+        )
+
+        let pattern = try JSONDecoder().decode(DutyPatternDTO.self, from: data)
+
+        #expect(pattern.configurable)
+        #expect(pattern.pattern?.days.first?.weekday == .monday)
+        #expect(pattern.pattern?.holidayOff == true)
     }
 
     @Test
