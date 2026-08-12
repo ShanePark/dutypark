@@ -16,8 +16,8 @@ CREATE TABLE mobile_oauth_transaction
     signup_uuid            VARCHAR(36)  NULL,
     CONSTRAINT uk_mobile_oauth_state_hash UNIQUE (state_hash),
     CONSTRAINT uk_mobile_oauth_exchange_code_hash UNIQUE (exchange_code_hash),
-    CONSTRAINT fk_mobile_oauth_link_member FOREIGN KEY (link_member_id) REFERENCES member (id),
-    CONSTRAINT fk_mobile_oauth_member FOREIGN KEY (member_id) REFERENCES member (id)
+    CONSTRAINT fk_mobile_oauth_link_member FOREIGN KEY (link_member_id) REFERENCES member (id) ON DELETE CASCADE,
+    CONSTRAINT fk_mobile_oauth_member FOREIGN KEY (member_id) REFERENCES member (id) ON DELETE CASCADE
 );
 
 CREATE INDEX idx_mobile_oauth_state_expiry ON mobile_oauth_transaction (state_expires_at);

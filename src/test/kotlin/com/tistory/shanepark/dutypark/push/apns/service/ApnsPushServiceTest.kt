@@ -9,6 +9,7 @@ import com.tistory.shanepark.dutypark.notification.dto.NotificationDto
 import com.tistory.shanepark.dutypark.push.apns.domain.entity.ApnsInstallation
 import com.tistory.shanepark.dutypark.push.apns.domain.repository.ApnsInstallationRepository
 import com.tistory.shanepark.dutypark.push.dto.PushNotificationPayload
+import com.tistory.shanepark.dutypark.security.domain.entity.RefreshToken
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
@@ -43,7 +44,7 @@ class ApnsPushServiceTest {
             )
         }
 
-        verify(repository, never()).findAllByMemberId(any())
+        verify(repository, never()).findAllDeliverableByMemberId(any(), any())
     }
 
     @Test
@@ -53,8 +54,8 @@ class ApnsPushServiceTest {
         whenever(response.statusCode()).thenReturn(200)
         whenever(httpClient.sendAsync(any(), any<HttpResponse.BodyHandler<String>>()))
             .thenReturn(CompletableFuture.completedFuture(response))
-        whenever(repository.findAllByMemberId(1L)).thenReturn(
-            listOf(ApnsInstallation(Member("member", "member@duty.park", "password"), "abc123", sandbox = true))
+        whenever(repository.findAllDeliverableByMemberId(any(), any())).thenReturn(
+            listOf(ApnsInstallation(refreshToken(), "abc123", sandbox = true))
         )
         val service = enabledService(httpClient)
 
@@ -94,11 +95,11 @@ class ApnsPushServiceTest {
         whenever(httpClient.sendAsync(any(), any<HttpResponse.BodyHandler<String>>()))
             .thenReturn(CompletableFuture.completedFuture(response))
         val installation = ApnsInstallation(
-            Member("member", "member@duty.park", "password"),
+            refreshToken(),
             "expired-token",
             sandbox = false,
         )
-        whenever(repository.findAllByMemberId(1L)).thenReturn(listOf(installation))
+        whenever(repository.findAllDeliverableByMemberId(any(), any())).thenReturn(listOf(installation))
 
         enabledService(httpClient).sendToMember(
             1L,
@@ -146,6 +147,13 @@ class ApnsPushServiceTest {
         "KEYID123",
         privateKeyPem(),
         httpClient,
+    )
+
+    private fun refreshToken(): RefreshToken = RefreshToken(
+        member = Member("member", "member@duty.park", "password"),
+        validUntil = LocalDateTime.now().plusDays(1),
+        remoteAddr = null,
+        userAgent = null,
     )
 
     private fun privateKeyPem(): String {

@@ -1,2 +1,0 @@
-ALTER TABLE apns_installation
-    ADD COLUMN sandbox BOOLEAN NOT NULL DEFAULT FALSE;

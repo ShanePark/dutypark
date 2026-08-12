@@ -24,6 +24,7 @@ import java.security.KeyFactory
 import java.security.PrivateKey
 import java.security.spec.PKCS8EncodedKeySpec
 import java.time.Duration
+import java.time.LocalDateTime
 import java.util.Base64
 import java.util.Date
 
@@ -59,7 +60,7 @@ class ApnsPushService @Autowired constructor(
         val key = signingKey ?: return
         if (teamId.isBlank() || keyId.isBlank()) return
 
-        val installations = apnsInstallationRepository.findAllByMemberId(memberId)
+        val installations = apnsInstallationRepository.findAllDeliverableByMemberId(memberId, LocalDateTime.now())
         if (installations.isEmpty()) return
 
         val authorization = "bearer " + Jwts.builder()
