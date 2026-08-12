@@ -14,6 +14,20 @@ enum TodoBoardLayout {
     static let dragActivationDistance: CGFloat = 2
     static let dragCollisionHysteresis: CGFloat = 2
     static let dragPushAnimationDuration = 0.1
+
+    static func mobileColumnWidth(in containerWidth: CGFloat) -> CGFloat {
+        containerWidth * mobileColumnWidthRatio
+    }
+
+    /// Gives the first and last columns enough scroll content on both sides to
+    /// use the same centered snap position as the middle column.
+    static func centeredColumnInset(containerWidth: CGFloat, columnWidth: CGFloat) -> CGFloat {
+        max(boardPadding, (containerWidth - columnWidth) / 2)
+    }
+
+    static func adjacentColumnPeekWidth(containerWidth: CGFloat, columnWidth: CGFloat) -> CGFloat {
+        max(0, centeredColumnInset(containerWidth: containerWidth, columnWidth: columnWidth) - columnGap)
+    }
 }
 
 struct TodoView: View {
@@ -360,7 +374,11 @@ struct TodoView: View {
             )
         } else {
             GeometryReader { proxy in
-                let columnWidth = proxy.size.width * TodoBoardLayout.mobileColumnWidthRatio
+                let columnWidth = TodoBoardLayout.mobileColumnWidth(in: proxy.size.width)
+                let centeredColumnInset = TodoBoardLayout.centeredColumnInset(
+                    containerWidth: proxy.size.width,
+                    columnWidth: columnWidth
+                )
                 ScrollView(.horizontal) {
                     LazyHStack(alignment: .top, spacing: TodoBoardLayout.columnGap) {
                         ForEach(TodoStatus.boardStatuses, id: \.rawValue) { status in
@@ -406,8 +424,7 @@ struct TodoView: View {
                         }
                     }
                     .scrollTargetLayout()
-                    .padding(.leading, TodoBoardLayout.boardPadding)
-                    .padding(.trailing, max(TodoBoardLayout.boardPadding, proxy.size.width - columnWidth - TodoBoardLayout.boardPadding))
+                    .padding(.horizontal, centeredColumnInset)
                     .padding(.bottom, DPSpacing.small)
                 }
                 .scrollIndicators(.hidden)

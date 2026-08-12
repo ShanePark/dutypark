@@ -16,8 +16,21 @@ struct TodoViewModelTests {
         #expect(TodoBoardLayout.dragCollisionHysteresis == 2)
         #expect(TodoBoardLayout.dragPushAnimationDuration == 0.1)
 
-        #expect(375 * TodoBoardLayout.mobileColumnWidthRatio == 232.5)
-        #expect(402 * TodoBoardLayout.mobileColumnWidthRatio == 249.24)
+        let miniColumnWidth = TodoBoardLayout.mobileColumnWidth(in: 375)
+        let proColumnWidth = TodoBoardLayout.mobileColumnWidth(in: 402)
+        #expect(miniColumnWidth == 232.5)
+        #expect(proColumnWidth == 249.24)
+
+        #expect(TodoBoardLayout.centeredColumnInset(containerWidth: 375, columnWidth: miniColumnWidth) == 71.25)
+        #expect(TodoBoardLayout.centeredColumnInset(containerWidth: 402, columnWidth: proColumnWidth) == 76.38)
+        #expect(TodoBoardLayout.adjacentColumnPeekWidth(containerWidth: 375, columnWidth: miniColumnWidth) == 61.25)
+        #expect(TodoBoardLayout.adjacentColumnPeekWidth(containerWidth: 402, columnWidth: proColumnWidth) == 66.38)
+    }
+
+    @Test
+    func narrowBoardKeepsMinimumHorizontalPadding() {
+        #expect(TodoBoardLayout.centeredColumnInset(containerWidth: 100, columnWidth: 96) == 8)
+        #expect(TodoBoardLayout.adjacentColumnPeekWidth(containerWidth: 100, columnWidth: 96) == 0)
     }
 
     @Test(arguments: [
