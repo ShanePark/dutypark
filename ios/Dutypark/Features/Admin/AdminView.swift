@@ -233,6 +233,7 @@ private struct AdminMemberDetailView: View {
     @State private var isLoading = true
     @State private var loadFailed = false
     @State private var showsPasswordSheet = false
+    @State private var passwordModalState = AdminModalInteractionState()
     @State private var sessionToRevoke: SettingsRefreshToken?
     @State private var operationMessage: String?
 
@@ -250,7 +251,8 @@ private struct AdminMemberDetailView: View {
                 }
 
                 Button {
-                    showsPasswordSheet = true
+                    passwordModalState = AdminModalInteractionState()
+                    withoutPresentationAnimation { showsPasswordSheet = true }
                 } label: {
                     Label(AdminLocalization.string("admin.members.changePassword"), systemImage: "key")
                         .frame(minHeight: DPSize.minimumTouchTarget)
@@ -286,9 +288,21 @@ private struct AdminMemberDetailView: View {
         .navigationTitle(member.name)
         .navigationBarTitleDisplayMode(.inline)
         .task { await loadDetail() }
-        .sheet(isPresented: $showsPasswordSheet) {
-            AdminPasswordChangeSheet(member: member, model: model) {
-                operationMessage = AdminLocalization.string("admin.members.passwordChanged")
+        .fullScreenCover(isPresented: $showsPasswordSheet) {
+            DPModalOverlay(
+                onDismiss: { showsPasswordSheet = false },
+                closeOnBackdrop: passwordModalState.allowsBackdropDismiss,
+                canDismiss: passwordModalState.allowsDismiss
+            ) { availableSize, dismiss in
+                AdminPasswordChangeModal(
+                    member: member,
+                    model: model,
+                    maximumHeight: availableSize.height,
+                    interactionState: $passwordModalState,
+                    dismiss: dismiss
+                ) {
+                    operationMessage = AdminLocalization.string("admin.members.passwordChanged")
+                }
             }
         }
         .confirmationDialog(
@@ -400,57 +414,182 @@ private struct AdminSessionRow: View {
     }
 }
 
-private struct AdminPasswordChangeSheet: View {
-    @Environment(\.dismiss) private var dismiss
+nonisolated struct AdminModalInteractionState: Equatable, Sendable {
+    var isDirty = false
+    var isSaving = false
+
+    var allowsBackdropDismiss: Bool { !isDirty && !isSaving }
+    var allowsDismiss: Bool { !isSaving }
+}
+
+private struct AdminPasswordChangeModal: View {
     let member: AdminMemberDTO
     @ObservedObject var model: AdminMemberListViewModel
+    let maximumHeight: CGFloat
+    @Binding var interactionState: AdminModalInteractionState
+    let dismiss: () -> Void
     let onSuccess: () -> Void
     @State private var password = ""
     @State private var confirmation = ""
-    @State private var isSaving = false
     @State private var saveFailed = false
+    @FocusState private var focusedField: Field?
+
+    private enum Field { case password, confirmation }
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    SecureField(AdminLocalization.string("admin.members.newPassword"), text: $password)
-                        .textContentType(.newPassword)
-                    SecureField(AdminLocalization.string("admin.members.confirmPassword"), text: $confirmation)
-                        .textContentType(.newPassword)
-                } footer: {
-                    Text(AdminLocalization.string("admin.members.passwordHint"))
-                }
+        ViewThatFits(in: .vertical) {
+            modalContent(scrolls: false)
+                .fixedSize(horizontal: false, vertical: true)
+            modalContent(scrolls: true)
+        }
+        .frame(maxHeight: maximumHeight)
+        .background(DPColor.backgroundModal)
+        .onChange(of: password) { _, _ in updateDirtyState() }
+        .onChange(of: confirmation) { _, _ in updateDirtyState() }
+    }
 
-                if saveFailed {
-                    Text(AdminLocalization.string("admin.members.operationFailed"))
-                        .foregroundStyle(DPColor.danger)
-                }
+    @ViewBuilder
+    private func modalContent(scrolls: Bool) -> some View {
+        VStack(spacing: 0) {
+            header
+            if scrolls {
+                ScrollView { formContent }
+                    .scrollBounceBehavior(.basedOnSize)
+            } else {
+                formContent
             }
-            .navigationTitle(AdminLocalization.format("admin.members.passwordTitle", member.name))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(AdminLocalization.string("admin.common.cancel")) { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(AdminLocalization.string("admin.common.save")) {
-                        Task { await save() }
-                    }
-                    .disabled(!isValid || isSaving)
-                }
+            footer
+        }
+    }
+
+    private var header: some View {
+        HStack(spacing: DPSpacing.compact) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(AdminLocalization.string("admin.members.changePassword"))
+                    .font(DPTypography.heading)
+                    .foregroundStyle(DPColor.textPrimary)
+                Text(member.name)
+                    .font(DPTypography.caption)
+                    .foregroundStyle(DPColor.textMuted)
+            }
+            Spacer()
+            Button(action: dismiss) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(DPColor.textMuted)
+                    .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                    .background(DPColor.backgroundTertiary, in: Circle())
+            }
+            .buttonStyle(.plain)
+            .disabled(interactionState.isSaving)
+            .accessibilityLabel(AdminLocalization.string("admin.common.cancel"))
+        }
+        .padding(.horizontal, DPSpacing.large)
+        .frame(minHeight: 64)
+        .overlay(alignment: .bottom) { Divider().overlay(DPColor.borderPrimary) }
+    }
+
+    private var formContent: some View {
+        VStack(alignment: .leading, spacing: DPSpacing.medium) {
+            passwordField(
+                AdminLocalization.string("admin.members.newPassword"),
+                text: $password,
+                field: .password
+            )
+            passwordField(
+                AdminLocalization.string("admin.members.confirmPassword"),
+                text: $confirmation,
+                field: .confirmation
+            )
+
+            Text(AdminLocalization.string("admin.members.passwordHint"))
+                .font(DPTypography.caption)
+                .foregroundStyle(DPColor.textMuted)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if let validationMessage {
+                Label(validationMessage, systemImage: "exclamationmark.circle.fill")
+                    .font(DPTypography.supporting)
+                    .foregroundStyle(DPColor.danger)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .presentationDetents([.medium])
+        .padding(DPSpacing.large)
+    }
+
+    private var footer: some View {
+        HStack(spacing: DPSpacing.compact) {
+            Button {
+                Task { await save() }
+            } label: {
+                Group {
+                    if interactionState.isSaving {
+                        ProgressView().tint(DPColor.textOnDark)
+                    } else {
+                        Text(AdminLocalization.string("admin.common.save"))
+                    }
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(DPPrimaryButtonStyle())
+            .disabled(!isValid || interactionState.isSaving)
+
+            Button(action: dismiss) {
+                Text(AdminLocalization.string("admin.common.cancel"))
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(DPSecondaryButtonStyle())
+            .disabled(interactionState.isSaving)
+        }
+        .padding(DPSpacing.large)
+        .background(DPColor.backgroundModal)
+        .overlay(alignment: .top) { Divider().overlay(DPColor.borderPrimary) }
+    }
+
+    private func passwordField(
+        _ title: String,
+        text: Binding<String>,
+        field: Field
+    ) -> some View {
+        VStack(alignment: .leading, spacing: DPSpacing.small) {
+            Text(title)
+                .font(DPTypography.label)
+                .foregroundStyle(DPColor.textPrimary)
+            SecureField(title, text: text)
+                .textContentType(.newPassword)
+                .focused($focusedField, equals: field)
+                .submitLabel(field == .password ? .next : .done)
+                .onSubmit {
+                    focusedField = field == .password ? .confirmation : nil
+                }
+                .dpInputChrome(isFocused: focusedField == field)
+                .disabled(interactionState.isSaving)
+        }
     }
 
     private var isValid: Bool {
         (8...20).contains(password.count) && password == confirmation
     }
 
+    private var validationMessage: String? {
+        if saveFailed { return AdminLocalization.string("admin.members.operationFailed") }
+        if !password.isEmpty && !(8...20).contains(password.count) {
+            return AdminLocalization.string("admin.members.passwordLength")
+        }
+        if !confirmation.isEmpty && password != confirmation {
+            return AdminLocalization.string("admin.members.passwordMismatch")
+        }
+        return nil
+    }
+
+    private func updateDirtyState() {
+        interactionState.isDirty = !password.isEmpty || !confirmation.isEmpty
+        saveFailed = false
+    }
+
     private func save() async {
-        isSaving = true
-        defer { isSaving = false }
+        interactionState.isSaving = true
+        defer { interactionState.isSaving = false }
         do {
             try await model.changePassword(memberID: member.id, newPassword: password)
             onSuccess()

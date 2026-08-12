@@ -4,6 +4,7 @@ struct AdminTeamListView: View {
     @StateObject private var model: AdminTeamListViewModel
     @State private var searchText = ""
     @State private var showsCreateSheet = false
+    @State private var createModalState = AdminModalInteractionState()
     @State private var teamToDelete: SimpleTeamDTO?
     @State private var operationMessage: String?
 
@@ -75,7 +76,8 @@ struct AdminTeamListView: View {
             ToolbarItem(placement: .primaryAction) {
                 Button {
                     model.resetNameCheck()
-                    showsCreateSheet = true
+                    createModalState = AdminModalInteractionState()
+                    withoutPresentationAnimation { showsCreateSheet = true }
                 } label: {
                     Image(systemName: "plus")
                         .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
@@ -83,11 +85,21 @@ struct AdminTeamListView: View {
                 .accessibilityLabel(AdminLocalization.string("admin.teams.create"))
             }
         }
-        .sheet(isPresented: $showsCreateSheet) {
-            AdminTeamCreateSheet(model: model) { team in
-                showsCreateSheet = false
-                operationMessage = AdminLocalization.format("admin.teams.created", team.name)
-                Task { await model.load() }
+        .fullScreenCover(isPresented: $showsCreateSheet) {
+            DPModalOverlay(
+                onDismiss: { showsCreateSheet = false },
+                closeOnBackdrop: createModalState.allowsBackdropDismiss,
+                canDismiss: createModalState.allowsDismiss
+            ) { availableSize, dismiss in
+                AdminTeamCreateModal(
+                    model: model,
+                    maximumHeight: availableSize.height,
+                    interactionState: $createModalState,
+                    dismiss: dismiss
+                ) { team in
+                    operationMessage = AdminLocalization.format("admin.teams.created", team.name)
+                    Task { await model.load() }
+                }
             }
         }
         .confirmationDialog(
@@ -158,74 +170,194 @@ private struct AdminTeamRow: View {
     }
 }
 
-private struct AdminTeamCreateSheet: View {
-    @Environment(\.dismiss) private var dismiss
+private struct AdminTeamCreateModal: View {
     @ObservedObject var model: AdminTeamListViewModel
+    let maximumHeight: CGFloat
+    @Binding var interactionState: AdminModalInteractionState
+    let dismiss: () -> Void
     let onCreated: (TeamDTO) -> Void
     @State private var name = ""
     @State private var description = ""
-    @State private var isSaving = false
+    @State private var checkedName: String?
     @State private var saveFailed = false
+    @FocusState private var focusedField: Field?
+
+    private enum Field { case name, description }
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section {
-                    TextField(AdminLocalization.string("admin.teams.name"), text: $name)
-                        .textInputAutocapitalization(.never)
-                        .onChange(of: name) { _, _ in model.resetNameCheck() }
-                    TextField(
-                        AdminLocalization.string("admin.teams.description"),
-                        text: $description,
-                        axis: .vertical
-                    )
-                    .lineLimit(2...4)
-                } footer: {
-                    Text(AdminLocalization.string("admin.teams.createHint"))
-                }
+        ViewThatFits(in: .vertical) {
+            modalContent(scrolls: false)
+                .fixedSize(horizontal: false, vertical: true)
+            modalContent(scrolls: true)
+        }
+        .frame(maxHeight: maximumHeight)
+        .background(DPColor.backgroundModal)
+        .onChange(of: name) { _, _ in
+            checkedName = nil
+            model.resetNameCheck()
+            saveFailed = false
+            updateDirtyState()
+        }
+        .onChange(of: description) { _, _ in
+            saveFailed = false
+            updateDirtyState()
+        }
+    }
 
-                Section {
-                    Button {
-                        Task { await model.checkName(name) }
-                    } label: {
-                        Label(AdminLocalization.string("admin.teams.checkName"), systemImage: "checkmark.seal")
-                            .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)
-                    }
-
-                    if let result = model.nameCheckResult {
-                        Label(nameCheckMessage(result), systemImage: result == .ok ? "checkmark.circle.fill" : "exclamationmark.circle.fill")
-                            .foregroundStyle(result == .ok ? DPColor.success : DPColor.danger)
-                    }
-                }
-
-                if saveFailed {
-                    Section {
-                        Text(AdminLocalization.string("admin.teams.createFailed"))
-                            .foregroundStyle(DPColor.danger)
-                    }
-                }
+    @ViewBuilder
+    private func modalContent(scrolls: Bool) -> some View {
+        VStack(spacing: 0) {
+            header
+            if scrolls {
+                ScrollView { formContent }
+                    .scrollBounceBehavior(.basedOnSize)
+            } else {
+                formContent
             }
-            .navigationTitle(AdminLocalization.string("admin.teams.create"))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(AdminLocalization.string("admin.common.cancel")) { dismiss() }
+            footer
+        }
+    }
+
+    private var header: some View {
+        HStack {
+            Text(AdminLocalization.string("admin.teams.create"))
+                .font(DPTypography.heading)
+                .foregroundStyle(DPColor.textPrimary)
+            Spacer()
+            Button(action: dismiss) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 16, weight: .semibold))
+                    .foregroundStyle(DPColor.textMuted)
+                    .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                    .background(DPColor.backgroundTertiary, in: Circle())
+            }
+            .buttonStyle(.plain)
+            .disabled(interactionState.isSaving)
+            .accessibilityLabel(AdminLocalization.string("admin.common.cancel"))
+        }
+        .padding(.horizontal, DPSpacing.large)
+        .frame(minHeight: 64)
+        .overlay(alignment: .bottom) { Divider().overlay(DPColor.borderPrimary) }
+    }
+
+    private var formContent: some View {
+        VStack(alignment: .leading, spacing: DPSpacing.medium) {
+            VStack(alignment: .leading, spacing: DPSpacing.small) {
+                HStack {
+                    Text(AdminLocalization.string("admin.teams.name"))
+                        .font(DPTypography.label)
+                    Spacer()
+                    Text("\(name.count)/20")
+                        .font(DPTypography.caption)
+                        .foregroundStyle(name.count > 20 ? DPColor.danger : DPColor.textMuted)
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(AdminLocalization.string("admin.common.create")) {
-                        Task { await create() }
-                    }
-                    .disabled(!canCreate || isSaving)
+                TextField(AdminLocalization.string("admin.teams.name"), text: $name)
+                    .textInputAutocapitalization(.never)
+                    .focused($focusedField, equals: .name)
+                    .submitLabel(.next)
+                    .onSubmit { focusedField = .description }
+                    .dpInputChrome(
+                        isFocused: focusedField == .name,
+                        isInvalid: name.count > 20
+                    )
+                    .disabled(interactionState.isSaving)
+            }
+
+            Button {
+                let candidate = normalizedName
+                checkedName = candidate
+                Task { await model.checkName(candidate) }
+            } label: {
+                Label(AdminLocalization.string("admin.teams.checkName"), systemImage: "checkmark.seal")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(DPOutlineButtonStyle())
+            .disabled(interactionState.isSaving || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+
+            if checkedName == normalizedName, let result = model.nameCheckResult {
+                Label(
+                    nameCheckMessage(result),
+                    systemImage: result == .ok ? "checkmark.circle.fill" : "exclamationmark.circle.fill"
+                )
+                .font(DPTypography.supporting)
+                .foregroundStyle(result == .ok ? DPColor.success : DPColor.danger)
+            }
+
+            VStack(alignment: .leading, spacing: DPSpacing.small) {
+                HStack {
+                    Text(AdminLocalization.string("admin.teams.description"))
+                        .font(DPTypography.label)
+                    Spacer()
+                    Text("\(description.count)/50")
+                        .font(DPTypography.caption)
+                        .foregroundStyle(description.count > 50 ? DPColor.danger : DPColor.textMuted)
                 }
+                TextField(
+                    AdminLocalization.string("admin.teams.description"),
+                    text: $description,
+                    axis: .vertical
+                )
+                .lineLimit(2...4)
+                .focused($focusedField, equals: .description)
+                .dpInputChrome(
+                    isFocused: focusedField == .description,
+                    isInvalid: description.count > 50
+                )
+                .disabled(interactionState.isSaving)
+            }
+
+            Text(AdminLocalization.string("admin.teams.createHint"))
+                .font(DPTypography.caption)
+                .foregroundStyle(DPColor.textMuted)
+                .fixedSize(horizontal: false, vertical: true)
+
+            if saveFailed {
+                Label(AdminLocalization.string("admin.teams.createFailed"), systemImage: "exclamationmark.circle.fill")
+                    .font(DPTypography.supporting)
+                    .foregroundStyle(DPColor.danger)
             }
         }
-        .presentationDetents([.medium, .large])
+        .padding(DPSpacing.large)
+    }
+
+    private var footer: some View {
+        HStack(spacing: DPSpacing.compact) {
+            Button {
+                Task { await create() }
+            } label: {
+                Group {
+                    if interactionState.isSaving {
+                        ProgressView().tint(DPColor.textOnDark)
+                    } else {
+                        Text(AdminLocalization.string("admin.common.create"))
+                    }
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(DPPrimaryButtonStyle())
+            .disabled(!canCreate || interactionState.isSaving)
+
+            Button(action: dismiss) {
+                Text(AdminLocalization.string("admin.common.cancel"))
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(DPSecondaryButtonStyle())
+            .disabled(interactionState.isSaving)
+        }
+        .padding(DPSpacing.large)
+        .background(DPColor.backgroundModal)
+        .overlay(alignment: .top) { Divider().overlay(DPColor.borderPrimary) }
     }
 
     private var canCreate: Bool {
-        model.nameCheckResult == .ok
+        checkedName == normalizedName
+            && model.nameCheckResult == .ok
             && !description.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
             && description.count <= 50
+    }
+
+    private var normalizedName: String {
+        name.trimmingCharacters(in: .whitespacesAndNewlines)
     }
 
     private func nameCheckMessage(_ result: AdminTeamNameCheckResult) -> String {
@@ -238,13 +370,18 @@ private struct AdminTeamCreateSheet: View {
     }
 
     private func create() async {
-        isSaving = true
-        defer { isSaving = false }
+        interactionState.isSaving = true
+        defer { interactionState.isSaving = false }
         do {
             let team = try await model.create(name: name, description: description)
             onCreated(team)
+            dismiss()
         } catch {
             saveFailed = true
         }
+    }
+
+    private func updateDirtyState() {
+        interactionState.isDirty = !name.isEmpty || !description.isEmpty
     }
 }

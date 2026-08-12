@@ -101,6 +101,7 @@ final class AdminTeamListViewModel: ObservableObject {
 
     private let repository: any AdminRepositoryProtocol
     private var keyword = ""
+    private var nameCheckGeneration = 0
 
     init(repository: any AdminRepositoryProtocol = AdminRepository()) {
         self.repository = repository
@@ -123,14 +124,29 @@ final class AdminTeamListViewModel: ObservableObject {
 
     func checkName(_ name: String) async {
         let trimmed = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        nameCheckGeneration += 1
+        let generation = nameCheckGeneration
+        nameCheckResult = nil
+
         guard (2...20).contains(trimmed.count) else {
             nameCheckResult = trimmed.count < 2 ? .tooShort : .tooLong
             return
         }
-        nameCheckResult = try? await repository.checkTeamName(trimmed)
+
+        do {
+            let result = try await repository.checkTeamName(trimmed)
+            guard generation == nameCheckGeneration else { return }
+            nameCheckResult = result
+        } catch is CancellationError {
+            return
+        } catch {
+            guard generation == nameCheckGeneration else { return }
+            nameCheckResult = nil
+        }
     }
 
     func resetNameCheck() {
+        nameCheckGeneration += 1
         nameCheckResult = nil
     }
 
