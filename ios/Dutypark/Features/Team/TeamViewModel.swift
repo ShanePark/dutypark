@@ -254,10 +254,16 @@ final class TeamManageViewModel: ObservableObject {
     @Published var editingDutyType: DutyTypeDTO?
 
     let teamID: TeamID
+    let isServiceAdmin: Bool
     private let repository: TeamRepository
 
-    init(teamID: TeamID, repository: TeamRepository = TeamRepository()) {
+    init(
+        teamID: TeamID,
+        isServiceAdmin: Bool = false,
+        repository: TeamRepository = TeamRepository()
+    ) {
         self.teamID = teamID
+        self.isServiceAdmin = isServiceAdmin
         self.repository = repository
     }
 
@@ -276,6 +282,19 @@ final class TeamManageViewModel: ObservableObject {
     }
 
     func canUseAdminTools(loginID: MemberID?) -> Bool {
+        Self.canUseAdminTools(
+            loginID: loginID,
+            team: team,
+            isServiceAdmin: isServiceAdmin
+        )
+    }
+
+    nonisolated static func canUseAdminTools(
+        loginID: MemberID?,
+        team: TeamDTO?,
+        isServiceAdmin: Bool
+    ) -> Bool {
+        if isServiceAdmin { return true }
         guard let loginID, let team else { return false }
         return team.adminId == loginID
             || team.members.contains { $0.id == loginID && $0.isManager }

@@ -7,8 +7,13 @@ struct TeamManageView: View {
     @StateObject private var viewModel: TeamManageViewModel
     @State private var pendingAction: PendingAction?
 
-    init(teamID: TeamID) {
-        _viewModel = StateObject(wrappedValue: TeamManageViewModel(teamID: teamID))
+    init(teamID: TeamID, isServiceAdmin: Bool = false) {
+        _viewModel = StateObject(
+            wrappedValue: TeamManageViewModel(
+                teamID: teamID,
+                isServiceAdmin: isServiceAdmin
+            )
+        )
     }
 
     private var loginID: MemberID? {

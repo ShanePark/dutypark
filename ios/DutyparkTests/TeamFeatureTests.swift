@@ -3,6 +3,69 @@ import Testing
 @testable import Dutypark
 
 struct TeamFeatureTests {
+    @Test
+    func teamAdminToolPermissionIncludesServiceAdminAndTeamRoles() {
+        let team = managedTeam(
+            adminID: 1,
+            members: [
+                TeamMemberDTO(
+                    id: 2,
+                    name: "Manager",
+                    email: nil,
+                    isManager: true,
+                    isAdmin: false,
+                    hasProfilePhoto: false,
+                    profilePhotoVersion: 0
+                ),
+                TeamMemberDTO(
+                    id: 3,
+                    name: "Member",
+                    email: nil,
+                    isManager: false,
+                    isAdmin: false,
+                    hasProfilePhoto: false,
+                    profilePhotoVersion: 0
+                )
+            ]
+        )
+
+        #expect(
+            TeamManageViewModel.canUseAdminTools(
+                loginID: nil,
+                team: team,
+                isServiceAdmin: true
+            )
+        )
+        #expect(
+            TeamManageViewModel.canUseAdminTools(
+                loginID: 1,
+                team: team,
+                isServiceAdmin: false
+            )
+        )
+        #expect(
+            TeamManageViewModel.canUseAdminTools(
+                loginID: 2,
+                team: team,
+                isServiceAdmin: false
+            )
+        )
+        #expect(
+            TeamManageViewModel.canUseAdminTools(
+                loginID: 3,
+                team: team,
+                isServiceAdmin: false
+            ) == false
+        )
+        #expect(
+            TeamManageViewModel.canUseAdminTools(
+                loginID: nil,
+                team: nil,
+                isServiceAdmin: false
+            ) == false
+        )
+    }
+
     @Test @MainActor
     func preservesLoadFailureUntilSuccessfulNoTeamResponse() async {
         TeamURLProtocolStub.handler = { request in
@@ -259,6 +322,21 @@ struct TeamFeatureTests {
             position: Int(id ?? 0),
             color: "#112233",
             hidden: hidden
+        )
+    }
+
+    private func managedTeam(adminID: MemberID?, members: [TeamMemberDTO]) -> TeamDTO {
+        TeamDTO(
+            id: 7,
+            name: "Team",
+            description: nil,
+            dutyTypes: [],
+            members: members,
+            createdDate: LocalDateTimeValue(rawValue: "2026-08-12T00:00:00"),
+            lastModifiedDate: LocalDateTimeValue(rawValue: "2026-08-12T00:00:00"),
+            adminId: adminID,
+            adminName: nil,
+            dutyBatchTemplate: nil
         )
     }
 
