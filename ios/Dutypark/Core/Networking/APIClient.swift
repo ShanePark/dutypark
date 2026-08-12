@@ -18,6 +18,14 @@ nonisolated enum APIError: Error, Equatable, Sendable {
     case decoding
 }
 
+/// Selects the server API namespace while preserving the same cookie and
+/// authentication lifecycle. Admin requests use `/admin/api/**`; token refresh
+/// always remains on `/api/auth/refresh`.
+nonisolated enum APIRequestScope: Sendable {
+    case api
+    case admin
+}
+
 nonisolated struct APIErrorDetails: Decodable, Equatable, Sendable {
     let remainingAttempts: Int?
 }
@@ -115,13 +123,15 @@ nonisolated final class APIClient: Sendable {
         _ path: String,
         method: HTTPMethod = .get,
         queryItems: [URLQueryItem] = [],
-        headers: [String: String] = [:]
+        headers: [String: String] = [:],
+        scope: APIRequestScope = .api
     ) async throws -> Response {
         let data = try await data(
             path,
             method: method,
             queryItems: queryItems,
-            headers: headers
+            headers: headers,
+            scope: scope
         )
         do {
             return try decode(Response.self, from: data)
@@ -137,6 +147,7 @@ nonisolated final class APIClient: Sendable {
         queryItems: [URLQueryItem] = [],
         body: Body,
         headers: [String: String] = [:],
+        scope: APIRequestScope = .api,
         retryingAfterUnauthorized: Bool = true
     ) async throws -> Response {
         let bodyData: Data
@@ -151,6 +162,7 @@ nonisolated final class APIClient: Sendable {
             queryItems: queryItems,
             body: bodyData,
             headers: headers,
+            scope: scope,
             retryingAfterUnauthorized: retryingAfterUnauthorized
         )
         do {
@@ -164,11 +176,13 @@ nonisolated final class APIClient: Sendable {
     func optional<Response: Decodable & Sendable>(
         _ path: String,
         method: HTTPMethod = .get,
+        scope: APIRequestScope = .api,
         retryingAfterUnauthorized: Bool = true
     ) async throws -> Response? {
         let data = try await data(
             path,
             method: method,
+            scope: scope,
             retryingAfterUnauthorized: retryingAfterUnauthorized
         )
         guard !data.isEmpty else {
@@ -189,6 +203,7 @@ nonisolated final class APIClient: Sendable {
         queryItems: [URLQueryItem] = [],
         body: Data? = nil,
         headers: [String: String] = [:],
+        scope: APIRequestScope = .api,
         retryingAfterUnauthorized: Bool = true
     ) async throws -> Data {
         let observedRefreshGeneration = await refreshGate.generation
@@ -197,7 +212,8 @@ nonisolated final class APIClient: Sendable {
             method: method,
             queryItems: queryItems,
             body: body,
-            headers: headers
+            headers: headers,
+            scope: scope
         )
 
         if response.statusCode == 401,
@@ -207,7 +223,8 @@ nonisolated final class APIClient: Sendable {
                 try await refreshGate.run(ifGenerationIs: observedRefreshGeneration) { [self] in
                     let (refreshData, refreshResponse) = try await perform(
                         "auth/refresh",
-                        method: .post
+                        method: .post,
+                        scope: .api
                     )
                     try validate(refreshResponse, data: refreshData)
                 }
@@ -222,7 +239,8 @@ nonisolated final class APIClient: Sendable {
                 method: method,
                 queryItems: queryItems,
                 body: body,
-                headers: headers
+                headers: headers,
+                scope: scope
             )
             try validate(retryResponse, data: retryData)
             return retryData
@@ -247,10 +265,23 @@ nonisolated final class APIClient: Sendable {
         method: HTTPMethod,
         queryItems: [URLQueryItem] = [],
         body: Data? = nil,
-        headers: [String: String] = [:]
+        headers: [String: String] = [:],
+        scope: APIRequestScope = .api
     ) async throws -> (Data, HTTPURLResponse) {
+        guard let scopedBaseURL = AppConfiguration.baseURL(
+            for: scope,
+            apiBaseURL: baseURL
+        ) else {
+            throw APIError.invalidURL
+        }
+        let normalizedPath = path.drop(while: { $0 == "/" })
+        guard !normalizedPath.split(separator: "/", omittingEmptySubsequences: false)
+            .contains("..")
+        else {
+            throw APIError.invalidURL
+        }
         guard var components = URLComponents(
-            url: baseURL.appending(path: path),
+            url: scopedBaseURL.appending(path: String(normalizedPath)),
             resolvingAgainstBaseURL: false
         ) else {
             throw APIError.invalidURL
