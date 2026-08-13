@@ -16,6 +16,7 @@ Debug sandbox와 TestFlight/App Store production APNs를 분리하고, 운영 �
 - [DutyparkApp.swift](../../Dutypark/App/DutyparkApp.swift)가 `NotificationAppDelegate`를 연결한다.
 - [APNsRegistration.swift](../../Dutypark/Features/Notifications/APNsRegistration.swift)가 시스템 권한, 기기 토큰 수신, 서버 등록·해제를 담당한다.
 - Debug 빌드는 `sandbox: true`, Release 빌드는 `sandbox: false`를 서버에 전송한다.
+- [x] 2026-08-13 새 Debug/Release Simulator 빌드의 `ProcessProductPackaging` 중간 산출물에서 `aps-environment`가 각각 `development`/`production`으로 치환되는 것을 확인했다. 이는 실제 App ID capability, provisioning profile, 서명 Archive 또는 APNs 송수신 검증이 아니다.
 - 서버 endpoint는 [ApnsInstallationController.kt](../../../src/main/kotlin/com/tistory/shanepark/dutypark/push/apns/controller/ApnsInstallationController.kt)의 `/api/auth/push/apns/register|unregister`다.
 - [ApnsInstallationService.kt](../../../src/main/kotlin/com/tistory/shanepark/dutypark/push/apns/service/ApnsInstallationService.kt)는 기기 토큰을 현재 refresh token에 연결한다.
 - 같은 device token이 다시 등록되면 새로운 refresh session으로 소유 관계를 갱신한다.
@@ -61,6 +62,7 @@ Debug sandbox와 TestFlight/App Store production APNs를 분리하고, 운영 �
 - [!] Apple 멤버십 승인 후 가용성을 확인한 출시 목표 Explicit App ID `io.github.shanepark.dutypark`에 Push Notifications capability를 활성화한다. 현재 Xcode의 `com.tistory.shanepark.dutypark`와 혼동하지 않는다.
 - [ ] 개발·배포 provisioning profile을 갱신하고 실제 entitlement를 archive에서 확인한다.
 - [ ] Debug archive가 아닌 Release archive에 production `aps-environment`가 들어가는지 확인한다.
+- [x] 소스 entitlement와 Xcode build setting, Debug/Release Simulator의 처리된 `.xcent`에서 개발·운영 APNs 환경 분리가 일치한다.
 - [ ] Apple Developer에서 APNs Auth Key(`.p8`)를 생성하거나 기존 전용 키의 소유자를 확인한다.
 - [ ] Key ID와 Apple Developer Team ID를 배포 secret manager에 등록한다.
 - [ ] `.p8` 원문은 Git, Markdown, 빌드 로그, 컨테이너 이미지에 넣지 않는다.

@@ -32,6 +32,7 @@
 - [x] Release 시뮬레이터 clean build에 Debug 전용 인증·게스트 UI 테스트 플래그가 포함되지 않는다.
 - [x] unsigned generic iOS Release Archive 앱 번들에 Debug 전용 가정, 테스트용 인증 플래그·계정과 로컬 개발 주소가 남지 않는다.
 - [x] 새 unsigned generic iOS Release Archive에서 앱 아이콘, 표시 이름, 최소 iOS와 iPhone 전용·세로 방향 기술 설정이 프로젝트와 일치한다.
+- [x] Debug/Release Simulator의 Xcode 처리 entitlement에서 APNs `development`/`production` 분리와 `applinks:dutypark.o-r.kr`를 기술 사전 검증한다.
 - [ ] 배포 서명된 Release Archive에서도 같은 검증을 반복한다.
 
 2026-08-13 iPhone 16 Pro(iOS 26.5) 검증에서 Debug 전용 guest 초기 상태를 로그인 UI 테스트에 명시해
@@ -90,7 +91,7 @@ iPhone rendition이 포함됐다. asset catalog compiler에서 앱 아이콘 관
 - [ ] `MARKETING_VERSION`과 `CURRENT_PROJECT_VERSION`을 제출할 값으로 확정한다.
 - [ ] 동일 버전을 재업로드할 때는 빌드 번호를 반드시 증가시킨다.
 - [ ] Release Archive의 `aps-environment`가 production인지 확인한다.
-- [ ] Push Notifications, Associated Domains, Sign in with Apple entitlement를 구현 상태와 맞춘다.
+- [ ] Push Notifications, Associated Domains, Sign in with Apple entitlement를 최종 App ID·서명·정책 결정과 맞춘다.
 - [x] 앱 아이콘, 표시 이름, 최소 iOS 버전과 iPhone 대상 설정을 기술 설정과 unsigned Archive에서 확인한다.
 - [ ] Organizer의 Validate App을 통과한다.
 - [ ] Xcode Privacy Report와 [PrivacyInfo.xcprivacy](../../Dutypark/PrivacyInfo.xcprivacy)를 대조한다.
@@ -99,6 +100,15 @@ iPhone rendition이 포함됐다. asset catalog compiler에서 앱 아이콘 관
 
 기준 명령은 [iOS README](../../README.md)의 `xcodebuild ... build`와 `xcodebuild ... test`를 사용한다.
 Archive 업로드 방법은 [Apple의 빌드 업로드 안내](https://developer.apple.com/help/app-store-connect/manage-builds/upload-builds/)를 따른다.
+
+2026-08-13 새 `/tmp` DerivedData에서 Debug와 Release Simulator build를 실행했다. Xcode의
+`ProcessProductPackaging` 입력은 `Dutypark.entitlements`였고 처리된 `Entitlements-Simulated.plist`와
+`Dutypark.app-Simulated.xcent`는 Debug `aps-environment=development`, Release `production`, 양쪽 모두
+`applinks:dutypark.o-r.kr`를 기록했다. Sign in with Apple entitlement는 현재 소스와 처리 산출물에 없다.
+별도의 unsigned generic iOS Release `clean archive`는 성공했지만 `CODE_SIGNING_ALLOWED=NO`라 처리된 `.xcent`,
+`embedded.mobileprovision`, 최종 코드서명 entitlement가 없고 Archive의 Signing Identity와 Team도 비어 있다.
+따라서 Release Archive의 production entitlement, 실제 App ID capability/profile, APNs E2E, Sign in with Apple
+적용 여부는 완료 처리하지 않는다.
 
 2026-08-13 기술 감사에서는 프로젝트와 새 unsigned generic iOS Release Archive의
 `ITSAppUsesNonExemptEncryption`이 모두 `false`임을 확인했다. 앱이 사용하는 암호화 관련 기능은

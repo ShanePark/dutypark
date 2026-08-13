@@ -9,6 +9,7 @@ Dutypark의 웹 링크를 iOS 앱으로 안전하게 연결하고, App Store 제
 ## 현재 상태
 
 - iOS 프로젝트에는 Associated Domains entitlement가 이미 존재한다.
+- 2026-08-13 소스 entitlement의 `plutil` 검증과 새 Debug/Release Simulator의 처리된 `.xcent`에서 `applinks:dutypark.o-r.kr`가 정확히 일치함을 확인했다.
 - 관련 파일: [`ios/Dutypark/Dutypark.entitlements`](../../Dutypark/Dutypark.entitlements)
 - 현재 Xcode Bundle ID는 `com.tistory.shanepark.dutypark`이고 출시 목표 후보는 `io.github.shanepark.dutypark`다. Apple 승인 후 Explicit App ID 가용성 확인 전까지 출시 식별자는 미확정이다.
 - 2026-08-12 확인 기준, 운영 AASA URL은 HTTP 200을 반환하지만 `Content-Type: text/html`인 SPA HTML을 응답한다.
@@ -20,7 +21,7 @@ Dutypark의 웹 링크를 iOS 앱으로 안전하게 연결하고, App Store 제
 - [ ] Apple Developer 계정의 실제 Team ID를 확인한다.
 - [ ] Xcode 프로젝트의 Bundle ID를 확인한다.
 - [ ] `TeamID.BundleID` 형태의 `appID` 값을 확정한다.
-- [ ] entitlement의 `applinks:` 도메인이 운영 도메인과 정확히 일치하는지 확인한다.
+- [x] 현재 소스와 Debug/Release 빌드 중간 산출물의 `applinks:` 값이 운영 도메인 `dutypark.o-r.kr`와 정확히 일치하는지 확인한다.
 - [ ] 운영 서버에서 AASA JSON을 제공한다.
 - [ ] AASA URL이 SPA fallback 또는 로그인 화면으로 전달되지 않도록 한다.
 - [ ] AASA 응답에 redirect가 없는지 확인한다.
