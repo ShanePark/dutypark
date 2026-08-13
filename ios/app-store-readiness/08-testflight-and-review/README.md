@@ -21,15 +21,15 @@
 - [x] iOS 시뮬레이터용 앱 빌드가 성공한다.
 - [x] iPhone 16 Pro(iOS 26.5) 시뮬레이터에서 5개 기본 탭 이동 테스트가 3회 연속 통과한다.
 - [x] 같은 시뮬레이터에서 알림·Todo 툴바 44pt 테스트가 1회 통과한다.
-- [x] iPhone 16 Pro(iOS 26.5) 시뮬레이터에서 전체 테스트 263개가 최신 코드로 통과한다.
+- [x] `Dutypark QA iPhone 16 Pro`(iOS 26.5) 시뮬레이터에서 전체 테스트 263개가 최신 코드로 3회 연속 통과한다.
 - [x] iPhone 13 mini(iOS 26.5) 시뮬레이터에서 UI 테스트 3개를 포함한 전체 테스트 263개가 최신 코드로 통과한다.
 - [x] Release 시뮬레이터 clean build에 Debug 전용 인증·게스트 UI 테스트 플래그가 포함되지 않는다.
 - [ ] Release Archive에서도 Debug 전용 가정이나 테스트용 인증 플래그가 남지 않는지 확인한다.
 
 2026-08-13 iPhone 16 Pro(iOS 26.5) 검증에서 Debug 전용 guest 초기 상태를 로그인 UI 테스트에 명시해
 로컬 세션·네트워크 상태와 무관하게 카카오·네이버 로그인 진입을 확인하도록 안정화했다. 같은 기기에서 UI 테스트 3개를 포함한
-전체 suite **263/263**이 통과했고, iPhone 13 mini(iOS 26.5)에서도 UI 테스트 3개를 포함한 전체 suite
-**263/263**이 통과했다. Release 시뮬레이터 clean build도 성공했고 실행 파일에
+전체 suite를 새로 3회 연속 실행해 매번 **263/263**(실패·건너뜀 0)으로 통과했고, iPhone 13 mini(iOS 26.5)에서도
+UI 테스트 3개를 포함한 전체 suite **263/263**이 통과했다. Release 시뮬레이터 clean build도 성공했고 실행 파일에
 `-ui-testing-authenticated`, `-ui-testing-guest` 문자열이 없음을 확인했다. 서명된 Release Archive 검증은 별도로 남아 있다.
 
 ## 2. 업로드 전 빌드 게이트

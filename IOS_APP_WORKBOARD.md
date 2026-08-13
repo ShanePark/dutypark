@@ -291,7 +291,7 @@
 - iPhone 13 mini 시뮬레이터에서 unit test **2/2 성공**
 - iPhone 13 mini 시뮬레이터에서 초기 UI test **1/1 성공**
 - 2026-08-13 iPhone 16 Pro(iOS 26.5) 시뮬레이터에서 5탭 이동 test **3/3 성공**, 알림·Todo 툴바 44pt test **1/1 성공**, Debug 전용 guest 초기 상태를 적용한 로그인 test **1/1 성공**
-- 2026-08-13 같은 iPhone 16 Pro 시뮬레이터에서 UI test 3개를 포함한 최신 전체 suite **263/263 성공**
+- 2026-08-13 같은 `Dutypark QA iPhone 16 Pro`(iOS 26.5, destination `5F480BC5-C3D8-48AB-BD13-E5ECED361167`) 시뮬레이터에서 UI test 3개를 포함한 최신 전체 suite를 새로 3회 연속 실행해 매번 **263/263 성공**(실패·건너뜀 0)
 - 2026-08-13 iPhone 13 mini(iOS 26.5) 시뮬레이터에서도 UI test 3개를 포함한 최신 전체 suite **263/263 성공**
 - Release 시뮬레이터 clean build 성공, 실행 파일에서 Debug 전용 authenticated·guest UI-test 플래그 문자열 제외 확인(서명된 Archive 검증은 별도 대기)
 
