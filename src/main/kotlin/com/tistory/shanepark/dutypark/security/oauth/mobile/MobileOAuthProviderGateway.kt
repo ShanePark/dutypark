@@ -25,6 +25,7 @@ class MobileOAuthProviderGateway(
         return when (provider) {
             SsoType.KAKAO -> getKakaoId(code, redirectUri)
             SsoType.NAVER -> getNaverId(code, state)
+            SsoType.APPLE -> throw IllegalArgumentException("auth.oauth.mobile.provider.invalid")
         }
     }
 

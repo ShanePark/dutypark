@@ -3,6 +3,7 @@ import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   AlertTriangle,
+  Apple,
   KeyRound,
   Loader2,
   ShieldCheck,
@@ -14,8 +15,10 @@ import BaseModal from '@/components/common/BaseModal.vue'
 import {
   AccountDeletionOAuthError,
   accountDeletionApi,
+  getWebSocialReauthenticationProviders,
   getAccountDeletionErrorKey,
   isAccountDeletionAlreadyPending,
+  requiresIosAppleReauthentication,
   type AccountDeletionPreview,
 } from '@/api/accountDeletion'
 import type { SocialAccountProvider } from '@/api/member'
@@ -62,6 +65,13 @@ const requiresAdminTransfer = computed(() => {
   return !!team?.isAdmin && team.activeMemberCount > 1
 })
 const hasValidProof = computed(() => readValidReauthProof(proof.value) !== null)
+const webSocialProviders = computed(() => preview.value
+  ? getWebSocialReauthenticationProviders(preview.value)
+  : [])
+const hasAppleProvider = computed(() => preview.value?.socialProviders.includes('APPLE') ?? false)
+const appleIsOnlyReauthenticationMethod = computed(() => preview.value
+  ? requiresIosAppleReauthentication(preview.value)
+  : false)
 const canContinue = computed(() => {
   if (!preview.value) return false
   switch (step.value) {
@@ -237,6 +247,8 @@ function oauthErrorKey(error: AccountDeletionOAuthError): string {
     case 'provider_failed':
     case 'invalid_response':
       return 'member.accountDeletion.errors.oauthProviderFailed'
+    case 'unsupported_provider':
+      return 'member.accountDeletion.errors.appleRequiresIos'
   }
 }
 
@@ -258,9 +270,14 @@ async function reauthenticateWithSocial(provider: SocialAccountProvider) {
 }
 
 function providerLabel(provider: SocialAccountProvider): string {
-  return provider === 'KAKAO'
-    ? t('member.sso.providers.kakao')
-    : t('member.sso.providers.naver')
+  switch (provider) {
+    case 'KAKAO':
+      return t('member.sso.providers.kakao')
+    case 'NAVER':
+      return t('member.sso.providers.naver')
+    case 'APPLE':
+      return t('member.sso.providers.apple')
+  }
 }
 
 async function submit() {
@@ -461,10 +478,10 @@ async function submit() {
                 {{ t('member.accountDeletion.reauth.passwordAction') }}
               </button>
             </form>
-            <div v-if="preview.socialProviders.length" class="space-y-2">
+            <div v-if="webSocialProviders.length" class="space-y-2">
               <p class="text-sm font-medium text-dp-text-primary">{{ t('member.accountDeletion.reauth.socialTitle') }}</p>
               <button
-                v-for="provider in preview.socialProviders"
+                v-for="provider in webSocialProviders"
                 :key="provider"
                 type="button"
                 class="min-h-11 w-full rounded-lg border border-dp-border-primary bg-dp-bg-secondary px-4 font-medium text-dp-text-primary transition hover:bg-dp-bg-hover disabled:cursor-not-allowed disabled:opacity-50"
@@ -473,6 +490,24 @@ async function submit() {
               >
                 {{ t('member.accountDeletion.reauth.socialAction', { provider: providerLabel(provider) }) }}
               </button>
+            </div>
+            <div
+              v-if="hasAppleProvider"
+              class="flex items-start gap-3 rounded-xl border border-dp-border-primary bg-dp-bg-secondary p-4"
+            >
+              <Apple class="mt-0.5 h-5 w-5 shrink-0 text-dp-text-primary" aria-hidden="true" />
+              <div class="min-w-0">
+                <p class="font-medium text-dp-text-primary">
+                  {{ t('member.accountDeletion.reauth.appleTitle') }}
+                </p>
+                <p class="mt-1 text-sm leading-6 text-dp-text-secondary">
+                  {{ t(
+                    appleIsOnlyReauthenticationMethod
+                      ? 'member.accountDeletion.reauth.appleOnlyMessage'
+                      : 'member.accountDeletion.reauth.appleAlternativeMessage',
+                  ) }}
+                </p>
+              </div>
             </div>
             <div v-if="hasValidProof" class="flex items-center gap-2 rounded-xl bg-dp-success-soft p-3 text-sm text-dp-success">
               <ShieldCheck class="h-5 w-5 shrink-0" aria-hidden="true" />

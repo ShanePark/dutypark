@@ -26,13 +26,13 @@
 - [x] iPhone 13 mini(iOS 26.5) 시뮬레이터에서 당시 UI 테스트 3개를 포함한 전체 테스트 263개가 통과한다.
 - [x] 한국어·영어 × Light/Dark UI smoke가 iPhone 16 Pro에서 3회 연속, iPhone 13 mini에서 1회 통과한다.
 - [x] 한국어·영어 × Light/Dark × 기본/최대 Dynamic Type 자동 핵심 내비게이션·scale evidence를 두 기기에서 확인한다.
-- [x] 최신 전체 테스트 265개를 같은 iPhone 16 Pro 시뮬레이터에서 3회 연속 통과시킨다.
+- [x] Apple 로그인 반영 후 최신 전체 테스트 278/278을 같은 iPhone 16 Pro 시뮬레이터에서 1회 통과시켰다.
 - [x] `Dutypark/Resources`의 8개 String Catalog 한국어·영어 번역과 런타임 lookup 회귀 게이트가 통과한다.
 - [x] Debug 인증 UI 테스트가 결정적 fixture만 사용하며 실제 API 요청을 시도하지 않는 것을 fail-fast로 검증한다.
 - [x] Release 시뮬레이터 clean build에 Debug 전용 인증·게스트 UI 테스트 플래그가 포함되지 않는다.
 - [x] unsigned generic iOS Release Archive 앱 번들에 Debug 전용 가정, 테스트용 인증 플래그·계정과 로컬 개발 주소가 남지 않는다.
 - [x] 새 unsigned generic iOS Release Archive에서 앱 아이콘, 표시 이름, 최소 iOS와 iPhone 전용·세로 방향 기술 설정이 프로젝트와 일치한다.
-- [x] Debug/Release Simulator의 Xcode 처리 entitlement에서 APNs `development`/`production` 분리와 `applinks:dutypark.o-r.kr`를 기술 사전 검증한다.
+- [x] Debug/Release Simulator의 Xcode 처리 entitlement에서 APNs `development`/`production` 분리, `applinks:dutypark.o-r.kr`와 Sign in with Apple `Default`를 기술 사전 검증한다.
 - [ ] 배포 서명된 Release Archive에서도 같은 검증을 반복한다.
 
 2026-08-13 iPhone 16 Pro(iOS 26.5) 검증에서 Debug 전용 guest 초기 상태를 로그인 UI 테스트에 명시해
@@ -76,6 +76,12 @@ Release Simulator clean build가 통과했다. 새 unsigned generic iOS Release 
 162개**임을 확인했다. 이는 다른 feature catalog, 모든 사용자 노출 문자열의 번역, 수동 clipping·VoiceOver·시각 QA,
 배포 서명 Archive나 TestFlight를 완료했다는 의미가 아니다.
 
+Sign in with Apple 반영 후 `AppleSignInClientTests`, mobile OAuth·settings targeted test와 로그인 UI presence를
+검증했고, iPhone 16 Pro Simulator 전체 suite **278/278**을 1회 통과했다(실패·건너뜀 0). Release Simulator
+clean build도 성공했으며 처리된 `.xcent`에서 `com.apple.developer.applesignin = Default`를 확인했다. 이는
+승인된 Developer Team의 App ID capability, provisioning profile, 서명 Archive 또는 실제 Apple 계정 E2E를
+검증한 결과가 아니다.
+
 같은 날 새 `/tmp` 경로에서 unsigned generic iOS Release `clean archive`를 다시 생성해 기본 제출 기술 설정을
 교차 검증했다. 프로젝트와 Archive 앱 `Info.plist`는 표시 이름 `Dutypark`, 최소 iOS `17.0`, iPhone 전용
 `UIDeviceFamily = [1]`, iPhone 세로 방향만 지원하는 설정이 일치했다. `AppIcon`의 1024×1024 RGB 원본은 alpha가
@@ -104,11 +110,12 @@ Archive 업로드 방법은 [Apple의 빌드 업로드 안내](https://developer
 2026-08-13 새 `/tmp` DerivedData에서 Debug와 Release Simulator build를 실행했다. Xcode의
 `ProcessProductPackaging` 입력은 `Dutypark.entitlements`였고 처리된 `Entitlements-Simulated.plist`와
 `Dutypark.app-Simulated.xcent`는 Debug `aps-environment=development`, Release `production`, 양쪽 모두
-`applinks:dutypark.o-r.kr`를 기록했다. Sign in with Apple entitlement는 현재 소스와 처리 산출물에 없다.
+`applinks:dutypark.o-r.kr`를 기록했다. Apple 로그인 구현 후 소스와 새 처리 산출물에는
+`com.apple.developer.applesignin = Default`도 포함된다.
 별도의 unsigned generic iOS Release `clean archive`는 성공했지만 `CODE_SIGNING_ALLOWED=NO`라 처리된 `.xcent`,
 `embedded.mobileprovision`, 최종 코드서명 entitlement가 없고 Archive의 Signing Identity와 Team도 비어 있다.
 따라서 Release Archive의 production entitlement, 실제 App ID capability/profile, APNs E2E, Sign in with Apple
-적용 여부는 완료 처리하지 않는다.
+실계정 동작은 완료 처리하지 않는다.
 
 2026-08-13 기술 감사에서는 프로젝트와 새 unsigned generic iOS Release Archive의
 `ITSAppUsesNonExemptEncryption`이 모두 `false`임을 확인했다. 앱이 사용하는 암호화 관련 기능은
@@ -135,7 +142,8 @@ Apple의 **운영체제 내부 암호화만 사용하는 앱은 App Store Connec
 - [ ] 백그라운드 종료 후 세션 복원이 동작하는지 확인한다.
 - [ ] 운영 서버에서 이메일 로그인이 성공한다.
 - [ ] 운영 서버에서 카카오·네이버 로그인이 성공한다.
-- [ ] 구현 완료 후 Apple 로그인 신규 가입·재로그인·이메일 가리기를 확인한다.
+- [ ] iOS 전용 Apple 로그인 신규 가입·재로그인·연결·충돌·취소를 확인한다. 앱은 Apple 이름·이메일 scope를 요청하지 않는다.
+- [ ] Apple 연결 해제와 Apple-only 계정 삭제의 revoke 성공·실패·mismatch를 확인한다.
 - [ ] 일정 생성·조회·수정·삭제 CRUD를 확인한다.
 - [ ] Todo 생성·상태 이동·정렬·수정·삭제 CRUD를 확인한다.
 - [ ] 팀, 친구, 공개 달력, 첨부파일의 핵심 흐름을 확인한다.
@@ -208,7 +216,7 @@ Apple의 버전 제출·상태 관리는 [App Review 제출 개요](https://deve
 ## 완료 조건
 
 - [ ] 시뮬레이터 빌드와 Release Archive 검증이 모두 성공한다.
-- [x] 최신 전체 265개 테스트가 3회 연속 통과하며 탭·`todo.add`·로그인 UI 실패가 재발하지 않는다.
+- [x] Apple 로그인 반영 후 최신 전체 278/278을 1회 통과하며 관련 targeted/UI presence 검증도 통과했다.
 - [ ] 내부 TestFlight에서 운영 로그인, 핵심 CRUD와 production APNs가 실기기로 검증된다.
 - [ ] 필요한 경우 외부 TestFlight와 Beta App Review를 통과한다.
 - [ ] Review Notes, 데모 계정과 심사 연락처가 준비되고 운영 백엔드 가용 담당자가 지정된다.

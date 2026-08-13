@@ -8,6 +8,7 @@ import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberSocialAccountRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.oauth.SocialAccountAlreadyLinkedException
+import com.tistory.shanepark.dutypark.security.oauth.apple.AppleCredentialService
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -17,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional
 class MemberSocialAccountService(
     private val memberRepository: MemberRepository,
     private val memberSocialAccountRepository: MemberSocialAccountRepository,
+    private val appleCredentialService: AppleCredentialService,
 ) {
 
     @Transactional(readOnly = true)
@@ -67,6 +69,9 @@ class MemberSocialAccountService(
             throw SocialAccountUnlinkException("member.social.unlink.lastAuthenticationMethod", 409)
         }
 
+        if (provider == SsoType.APPLE) {
+            appleCredentialService.revokeAndDelete(linkedAccount.socialId)
+        }
         memberSocialAccountRepository.delete(linkedAccount)
     }
 

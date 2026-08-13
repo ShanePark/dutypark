@@ -11,7 +11,7 @@ Dutypark의 실제 수집·저장·전송 동작을 개인정보 처리방침, �
 
 | 범위 | 상태 | 근거·남은 일 |
 |---|---|---|
-| 실제 개인정보 데이터 흐름 고지 | [x] | [V2.2.28](../../../src/main/resources/db/migration/v2/V2.2.28__align_privacy_policy_with_current_data_flows.sql)에 HttpOnly cookie, 기기 저장소, push, 첨부, Kakao/Naver, Google AI와 보유·정리 흐름을 새 정책 버전으로 추가했고 migration test 2/2가 통과했다. |
+| 실제 개인정보 데이터 흐름 고지 | [x] | [V2.2.28](../../../src/main/resources/db/migration/v2/V2.2.28__align_privacy_policy_with_current_data_flows.sql)의 전체 흐름을 상속하고 [V2.2.32](../../../src/main/resources/db/migration/v2/V2.2.32__publish_apple_sign_in_privacy_policy.sql)에 iOS 전용 Apple 처리까지 추가한 `PRIVACY 2026-08-14`를 최신 서비스 정책으로 게시한다. |
 | 최신 이용약관·AI 선택 정책 | [x] | [V2.2.29](../../../src/main/resources/db/migration/v2/V2.2.29__add_terms_and_ai_schedule_consent.sql)에 `TERMS`와 `AI_SCHEDULE_PARSING` 2026-08-13 버전을 추가했다. migration test와 consent·policy·OAuth·schedule 통합 targeted command가 `BUILD SUCCESSFUL`로 통과했다. |
 | 서버 동의·전송 gate | [x] | 조회·부여·철회 API, owner 기준 저장 gate, 재기동 queue 복원 gate와 worker 외부 호출 직전 재검사가 구현됐다. core consent 20 tests와 consent·policy·OAuth·schedule 통합 targeted command가 성공했다. |
 | 웹 선택 동의·철회 | [x] | 설정에서 사전 opt-in/철회, 상세 정책과 수동 시간 입력 안내를 한국어·영어로 제공한다. type-check, Vitest 27 files/122 tests, locale targeted 11, production build가 통과했다. |
@@ -20,20 +20,20 @@ Dutypark의 실제 수집·저장·전송 동작을 개인정보 처리방침, �
 | App Store Connect App Privacy | [ ] | 아래 입력 초안을 Release 빌드·운영 서버와 최종 대조해 App Store Connect에서 Publish해야 한다. |
 | Google 운영 계약 | [!] | Cloud Billing이 활성화된 paid service이며 DPA가 적용되는 Cloud Project인지 운영자가 확인해야 한다. 확인 전 production AI 자동 인식을 사용하지 않고 unpaid service에는 일정 데이터를 전송하지 않는다. |
 | 법률·해외 이전 검토 | [!] | 실제 계약 주체, 처리 국가, 보관·삭제 조건과 법정 보존 의무를 확인해 최종 고지해야 한다. 확인되지 않은 국가·기간을 발명하지 않는다. |
-| Sign in with Apple | [!] | 미구현이다. 구현 시 Apple `sub`, relay email, 연결·삭제·revoke 흐름을 inventory·정책·manifest·App Privacy에 추가한다. |
+| Sign in with Apple | [-] | iOS 전용 구현과 `PRIVACY 2026-08-14` 기술 고지는 완료했다. 검증된 `sub`, 일시 token·code·nonce·state, replay hash·만료, AES-256-GCM refresh credential과 revoke-first 처리를 공개한다. App Privacy·Release Privacy Report와 법률·운영 조건의 최종 대조가 남아 있다. |
 
 ## 정책 버전과 API
 
 | 항목 | 현행 버전·경로 | 의미 |
 |---|---|---|
-| 개인정보 처리방침 | `PRIVACY` / `2026-08-13` / `V2.2.28` | 실제 인증·저장·push·첨부·OAuth·AI 데이터 흐름과 보유·삭제·공동 TEAM 예외 |
+| 개인정보 처리방침 | `PRIVACY` / `2026-08-14` / `V2.2.32` | 기존 전체 데이터 흐름과 iOS 전용 Apple `sub`, 일시 credential·nonce, replay hash, encrypted refresh credential, revoke-first 연결 해제·탈퇴 |
 | 이용약관 | `TERMS` / `2026-08-13` / `V2.2.29` | 비동기 계정 삭제, 공동 데이터 보존·이관, 선택 AI와 수동 입력 |
 | AI 선택 동의 안내 | `AI_SCHEDULE_PARSING` / `2026-08-13` / `V2.2.29` | Google 수신자, 일정 날짜·내용 전송, 목적, 선택·철회와 호출 직전 재검사 |
 | 현재 정책 | `GET /api/policies/current`, `GET /api/policies/{type}` | 가입 및 정책 화면이 서버의 최신 버전·전문을 사용 |
 | AI 동의 상태 | `GET /api/consents/ai-schedule-parsing` | 현재 정책, 동의 버전, 갱신 필요, 동의·철회 시각 조회 |
 | AI 동의 변경 | `PUT /api/consents/ai-schedule-parsing` | `consented=true`에는 현재 policy version이 필요하며 철회는 `false`로 요청 |
 
-신규 가입은 클라이언트가 제출한 `TERMS`·`PRIVACY` 버전을 서버의 current version과 대조한다. AI 동의는 필수 가입 동의에 포함하지 않는 별도 선택 동의다.
+신규 SSO 가입은 클라이언트가 제출한 `TERMS`·`PRIVACY` 버전을 서버의 current version과 대조하므로 `PRIVACY 2026-08-14`에 동의해야 한다. `V2.2.32`는 기존 `policy_version`과 `member_consent`를 수정하지 않아 기존 회원에게 재동의 gate를 추가하지 않는다. AI 동의는 필수 가입 동의에 포함하지 않는 별도 선택 동의다.
 
 ## 현재 데이터 inventory와 App Privacy 입력 초안
 
@@ -45,7 +45,7 @@ Dutypark의 실제 수집·저장·전송 동작을 개인정보 처리방침, �
 | Email Address | 직접 가입 이메일, 선택적 기억 이메일 | 계정 인증과 로그인 편의. Kakao/Naver 프로필 이메일은 수집하지 않음 |
 | Photos or Videos | 프로필 사진, 이미지·영상 첨부 | 프로필·일정·Todo 등 첨부 기능 |
 | Other User Content | 일정, D-Day, 근무표, Todo, 팀·친구 관계, 설명, 일반 파일 첨부 | 서비스 핵심 콘텐츠와 공유 기능 |
-| User ID | Dutypark 회원 ID, Kakao/Naver provider와 공급자 고유 식별자 | 계정 식별·소셜 로그인. provider access token은 DB에 저장하지 않음 |
+| User ID | Dutypark 회원 ID, Kakao/Naver/Apple provider와 공급자 고유 식별자 | 계정 식별·소셜 로그인. Kakao/Naver access token은 DB에 저장하지 않고 Apple refresh credential은 revoke를 위해 AES-256-GCM으로 암호화 보관 |
 | Device ID | APNs device token | 이용자가 opt-in한 iOS push를 현재 refresh session에 귀속 |
 | Other Data Types | IP 주소, User-Agent, 동의 버전·시각, 로그인 시도, refresh session과 Web Push 구독 정보 | 보안, 세션, 동의 증명, opt-in 알림과 운영 안정성 |
 
@@ -74,6 +74,7 @@ Dutypark 앱에는 현재 별도의 광고, analytics, crash reporting SDK가 �
 - 완료 파일은 관련 `SCHEDULE`·`PROFILE`·`TEAM`·`TODO` 유지 기간 또는 개별 삭제까지 보유한다. 공동 TEAM 데이터는 계정 삭제 때 보존·이관될 수 있다.
 - 로그인 시도 기록은 현재 7일, 운영 파일 로그는 최대 365일 보유한다.
 - Kakao/Naver에서는 고유 식별자만 영구 저장한다. provider 프로필 이름·이메일은 수집하지 않고 access token은 식별자 조회에만 일시 사용한다.
+- Sign in with Apple은 iOS에서만 시작하며 Apple 이름·이메일 scope를 요청하지 않는다. 검증된 `sub`를 계정 연결 키로 저장하고 authorization code 교환으로 받은 refresh token은 연결 해제·회원 탈퇴 revoke를 위해 AES-256-GCM으로 암호화 보관한다. iOS 기기에는 Apple credential을 영속화하지 않는다.
 
 ## AI 선택 동의 semantics
 
@@ -108,6 +109,8 @@ Google의 [Gemini API Additional Terms of Service](https://ai.google.dev/gemini-
 - [x] 백엔드 core consent 20 tests 및 consent service/controller, PolicyController, `V2.2.29` migration, OAuthController, ScheduleService, QueueManager, Worker 통합 targeted command 통과 (`BUILD SUCCESSFUL`, 20초)
 - [x] Privacy Manifest exact 계약 targeted test 통과, iPhone 16 Pro 전체 suite 새 3회 모두 264/264(실패·건너뜀 0), Release Simulator clean build와 unsigned generic iOS Release clean Archive 성공
 - [x] 소스·의존성·unsigned Archive의 Required Reason API·tracking·embedded framework 사전 대조와 Archive manifest 원본 일치 확인
+- [x] Apple 이름·이메일 무수집, `sub`·암호화 refresh credential·revoke 흐름을 기술 data inventory에 반영했다.
+- [x] `V2.2.32`가 기존 정책·동의 이력을 변경하지 않고 `PRIVACY 2026-08-14`를 멱등 게시하며 Apple `sub`, token·nonce·replay·encrypted refresh credential과 revoke-first 수명주기를 공개하도록 migration test 2개로 계약을 고정했다.
 - [ ] 실제 paid Google endpoint에서 테스트용 비민감 일정으로 동의 전 0건, 동의 후 1건, 철회 후 0건을 네트워크·서버 로그로 확인
 - [ ] iOS에서 동의하고 웹에서 철회하는 교차 플랫폼 E2E 및 그 반대 방향 확인
 - [ ] Xcode Release Archive Privacy Report와 `PrivacyInfo.xcprivacy`, App Store Connect 입력값 대조
@@ -121,7 +124,7 @@ Google의 [Gemini API Additional Terms of Service](https://ai.google.dev/gemini-
 - [x] 현재 앱의 Required Reason API를 감사하고 UserDefaults `CA92.1` 단일 선언과 빈 tracking domains를 자동 회귀 검증한다.
 - [ ] App Store Connect App Privacy 초안을 Release 기준으로 확정하고 Publish한다.
 - [!] paid service/DPA 운영 계약, 법률·해외 이전 고지, production key 구성이 확인돼야 AI 기능을 production에서 사용할 수 있다.
-- [!] Apple 로그인은 별도 구현·정책·privacy 업데이트 전까지 완료되지 않았다.
+- [-] Apple 로그인 기술 inventory와 서비스 `PRIVACY 2026-08-14` 고지는 반영했다. App Store Connect App Privacy 답변과 Release Privacy Report는 최종 검토·Publish해야 한다.
 
 ## 공식 자료
 

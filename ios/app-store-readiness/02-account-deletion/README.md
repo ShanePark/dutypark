@@ -21,7 +21,8 @@
 - iOS 삭제 API 모델과 호출: [SettingsService.swift](../../Dutypark/Features/Settings/SettingsService.swift)
 - iOS 인증 상태: [SessionStore.swift](../../Dutypark/Core/Auth/SessionStore.swift)
 - iOS APNs·알림 로컬 정리: [APNsRegistration.swift](../../Dutypark/Features/Notifications/APNsRegistration.swift)
-- iOS 소셜 재인증: [MobileOAuthClient.swift](../../Dutypark/Features/Auth/MobileOAuthClient.swift)
+- iOS Kakao·Naver 재인증: [MobileOAuthClient.swift](../../Dutypark/Features/Auth/MobileOAuthClient.swift)
+- iOS Apple 재인증: [AppleSignInClient.swift](../../Dutypark/Features/Auth/AppleSignInClient.swift)
 - iOS 한국어·영어 문자열: [Settings.xcstrings](../../Dutypark/Resources/Settings.xcstrings)
 - 웹 공통 인증 클라이언트: [client.ts](../../../frontend/src/api/client.ts)
 - 웹 5단계 삭제 화면: [AccountDeletionModal.vue](../../../frontend/src/components/member/AccountDeletionModal.vue)
@@ -40,6 +41,7 @@
 - 로그인 차단: [AuthService.kt](../../../src/main/kotlin/com/tistory/shanepark/dutypark/security/service/AuthService.kt)
 - 백엔드 쿠키 처리: [CookieService.kt](../../../src/main/kotlin/com/tistory/shanepark/dutypark/security/service/CookieService.kt)
 - 개인정보 처리방침: [V2.2.28__align_privacy_policy_with_current_data_flows.sql](../../../src/main/resources/db/migration/v2/V2.2.28__align_privacy_policy_with_current_data_flows.sql)
+- Apple 처리 최신 개인정보 정책: [V2.2.32__publish_apple_sign_in_privacy_policy.sql](../../../src/main/resources/db/migration/v2/V2.2.32__publish_apple_sign_in_privacy_policy.sql)
 - 최신 이용약관: [V2.2.29__add_terms_and_ai_schedule_consent.sql](../../../src/main/resources/db/migration/v2/V2.2.29__add_terms_and_ai_schedule_consent.sql)
 
 경로가 리팩터링되면 실제 클래스명을 `rg --files`로 다시 찾아 이 문서 링크도 갱신한다.
@@ -54,7 +56,7 @@
 - [x] 로그인 수단이 없는 보조 계정은 삭제 요청자가 유일한 manager일 때 함께 삭제한다.
 - [x] 삭제 요청은 멱등하게 수락하며 이미 존재하는 job을 중복 생성하지 않는다.
 - [ ] 법적 보존 의무가 있는 데이터와 보존 기간을 개인정보 처리방침에 적는다.
-- [x] `PRIVACY 2026-08-13`에 비동기 계정 삭제, 개별 삭제, 공동 TEAM 데이터·첨부의 보존·이관 예외를 실제 처리 흐름에 맞춰 반영했다.
+- [x] 최신 `PRIVACY 2026-08-14`가 기존 비동기 계정 삭제·공동 데이터 예외를 유지하면서 Apple revoke-first 삭제를 추가로 공개한다.
 - [x] `TERMS 2026-08-13`에 비동기 처리, 접근 제한, 공동 데이터·법정 보존 예외와 완료 후 복구 불가를 반영했다.
 - [ ] 삭제·이관·보존 데이터의 최종 목록과 법적 근거를 Review Notes에 반영한다.
 - [ ] 재가입 시 같은 소셜 식별자를 새 계정으로 허용할지 정한다.
@@ -93,7 +95,8 @@
 - [x] 소셜 OAuth의 `DELETE_ACCOUNT` 목적과 일회성 재인증 proof를 구현한다.
 - [x] 외부 revoke를 worker 단계의 재시도 가능한 인터페이스로 분리했다.
 - [ ] Kakao·Naver provider-side revoke는 현재 의도적인 no-op이므로 실제 자격 증명 보관과 API 연동을 구현한다.
-- [ ] Sign in with Apple 도입 시 durable credential snapshot과 Apple revoke를 구현한다.
+- [x] Apple authorization code를 교환해 받은 refresh token을 AES-256-GCM으로 보관하고 durable 삭제 worker에서 revoke-first로 처리한다.
+- [x] Apple revoke가 실패하면 로컬 Apple mapping을 먼저 삭제하지 않고 durable job 오류로 전파해 재시도한다.
 - [ ] provider-side revoke 실패와 재시도를 운영 유사 환경에서 검증한다.
 
 ### 보조 계정과 impersonation
@@ -120,7 +123,7 @@
 
 - [x] 설정 화면에 실제 `계정 삭제` 진입점과 전용 sheet를 제공한다.
 - [x] 범위 안내, 팀 이관, 재인증, 이름 입력, 최종 파괴 확인의 5단계 흐름을 구현했다.
-- [x] 비밀번호와 Kakao·Naver 소셜 재인증을 `DELETE_ACCOUNT` proof로 처리한다.
+- [x] 비밀번호와 Kakao·Naver·Apple 소셜 재인증을 `DELETE_ACCOUNT` proof로 처리한다. Apple 재인증 진입은 iOS 전용이다.
 - [x] `202 Accepted` 직후 인증·쿠키·APNs와 사용자별 로컬 상태를 즉시 정리하되, 바로 guest 화면으로 보내지 않고 `탈퇴 요청 완료` 화면을 유지한다.
 - [x] 완료 화면에서 요청 성공, 안전한 로그아웃 완료, 비동기 데이터·파일 삭제가 잠시 걸릴 수 있음을 안내하고 사용자가 확인한 뒤 guest 화면으로 이동한다.
 - [x] 오류 코드별 재시도와 만료된 proof 재인증 흐름을 구현했다.
@@ -192,6 +195,8 @@
 - [x] `202 Accepted` 직후 서버 인증 상태, 웹 푸시 subscription, Pinia 상태와 사용자 캐시를 정리한다.
 - [x] 인증 정리 뒤 완료 안내를 먼저 보여주고 사용자 확인 후 guest 화면으로 이동하는 동일한 성공 UX 계약을 적용한다.
 - [x] 계정 삭제와 소셜 popup 오류·완료 문구를 웹 지원 언어 번역에 추가한다.
+- [x] iOS에서 연결된 Apple 상태는 표시하되 웹 Apple OAuth를 만들지 않는다. Apple-only 계정은 iOS 앱에서 Apple 재인증 후 탈퇴하도록 안내한다.
+- [x] 비밀번호·Kakao·Naver 등 다른 재인증 수단이 있는 Apple 연결 계정은 웹에서 해당 수단으로 삭제를 계속할 수 있다.
 - [ ] 모바일·데스크톱, 라이트·다크 모드에서 확인한다.
 
 ## 테스트
@@ -204,8 +209,9 @@
 - [x] iOS 기존 기준선의 `build-for-testing`이 성공했다. Dutypark QA iPhone 16 Pro 시뮬레이터(식별자 접두사 `5F480…`)에서 [SettingsFeatureTests.swift](../../DutyparkTests/SettingsFeatureTests.swift), [MobileOAuthClientTests.swift](../../DutyparkTests/MobileOAuthClientTests.swift), [APIClientAuthTests.swift](../../DutyparkTests/APIClientAuthTests.swift), [NotificationFeatureTests.swift](../../DutyparkTests/NotificationFeatureTests.swift)를 실행해 57/57 통과했으며 실패·건너뜀은 각각 0개였다.
 - [x] iOS 완료 UX 반영 후 Dutypark QA iPhone 13 mini 시뮬레이터에서 완료 화면 유지, 로컬 인증 정리와 확인 후 guest 전환을 포함한 관련 테스트 55/55가 통과했다.
 - [x] 웹 계정 삭제, 5단계 상태, popup PKCE 소셜 재인증, 완료 UX와 현지화 검증을 포함해 type-check, Vitest 31 files/145 tests, production build가 통과했다.
+- [x] Apple 추가 후 backend Apple-focused 19/19와 관련 회귀 25/25·60/60, iOS 전체 278/278 1회, 웹 Vitest 34 files/162 tests·type-check·production build가 통과했다.
 - [ ] 실제 MySQL Testcontainers 또는 운영 유사 환경에서 worker·locking·삭제 SQL을 검증한다.
-- [ ] Kakao·Naver와 향후 Apple provider-side revoke의 성공·실패·재시도를 검증한다.
+- [ ] Kakao·Naver provider-side revoke를 구현하고, Apple revoke 성공·실패·durable 재시도를 실제 공급자·운영 유사 환경에서 검증한다.
 - [ ] TestFlight 실기기에서 삭제 진입부터 완료까지 실행하고 VoiceOver·Dynamic Type도 확인한다.
 
 ## 완료 조건
@@ -214,9 +220,9 @@
 - [x] 팀 관리자 이관 또는 1인 팀 자동 삭제 결과와 다음 행동이 화면에 표시된다.
 - [x] 서버가 요청 즉시 접근을 차단하고 durable worker로 파일·DB를 정리할 수 있다.
 - [ ] 실제 MySQL 또는 운영 유사 환경에서 전체 삭제와 재시도를 검증한다.
-- [ ] Kakao·Naver provider-side revoke를 구현하고 Apple 로그인 도입 시 Apple revoke를 추가한다.
+- [ ] 실제 Apple 공급자/TestFlight E2E와 Kakao·Naver provider-side revoke를 완료한다. Apple revoke 코드 구현 자체는 완료했다.
 - [x] 반응형 웹 회원정보에서 5단계 계정 삭제 UI와 password·소셜 popup PKCE 재인증을 제공한다.
-- [x] 계정 삭제 정책과 실제 데이터 처리 결과를 `PRIVACY 2026-08-13`에 반영했다. 즉시 접근 차단과 비동기 정리, 공동 TEAM·첨부의 보존·이관 가능성을 구분한다.
+- [x] 계정 삭제 정책과 실제 데이터 처리 결과는 최신 `PRIVACY 2026-08-14`에도 유지되며 Apple revoke-first credential 정리를 추가로 공개한다.
 - [x] `TERMS 2026-08-13`도 모든 데이터가 요청 즉시 일괄 삭제된다는 오래된 단정을 제거하고 실제 비동기 삭제·공동 데이터 계약과 일치시켰다.
 - [ ] App Review Notes에 삭제 메뉴 경로, 비동기 처리와 심사 확인 방법을 적는다.
 - [x] iOS에서 `202 Accepted` 후 완료 안내를 표시하고 사용자 확인 뒤 guest 화면으로 이동하는 성공 UX 계약을 구현하고 자동 검증했다.

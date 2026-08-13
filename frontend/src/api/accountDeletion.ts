@@ -34,6 +34,28 @@ export interface AccountDeletionPreview {
   auxiliaryImpacts: AccountDeletionAuxiliaryImpact[]
 }
 
+export type WebSocialReauthenticationProvider = Exclude<SocialAccountProvider, 'APPLE'>
+
+export function isWebSocialReauthenticationProvider(
+  provider: SocialAccountProvider,
+): provider is WebSocialReauthenticationProvider {
+  return provider === 'KAKAO' || provider === 'NAVER'
+}
+
+export function getWebSocialReauthenticationProviders(
+  preview: Pick<AccountDeletionPreview, 'socialProviders'>,
+): WebSocialReauthenticationProvider[] {
+  return preview.socialProviders.filter(isWebSocialReauthenticationProvider)
+}
+
+export function requiresIosAppleReauthentication(
+  preview: Pick<AccountDeletionPreview, 'hasPassword' | 'socialProviders'>,
+): boolean {
+  return preview.socialProviders.includes('APPLE')
+    && !preview.hasPassword
+    && getWebSocialReauthenticationProviders(preview).length === 0
+}
+
 export interface AccountDeletionReauthProofResponse {
   reauthProof: string
   expiresIn: number
@@ -69,6 +91,7 @@ export type AccountDeletionOAuthFailure =
   | 'popup_closed'
   | 'popup_timeout'
   | 'invalid_response'
+  | 'unsupported_provider'
 
 export class AccountDeletionOAuthError extends Error {
   readonly reason: AccountDeletionOAuthFailure
@@ -206,6 +229,9 @@ export const accountDeletionApi = {
     callbackUri: string,
     codeChallenge: string,
   ) {
+    if (!isWebSocialReauthenticationProvider(provider)) {
+      throw new AccountDeletionOAuthError('unsupported_provider')
+    }
     return apiClient.post<SocialReauthAuthorizeResponse>('/auth/mobile/oauth/authorize', {
       provider,
       purpose: 'DELETE_ACCOUNT',
@@ -223,6 +249,9 @@ export const accountDeletionApi = {
   },
 
   async reauthenticateWithSocial(provider: SocialAccountProvider): Promise<AccountDeletionReauthProofResponse> {
+    if (!isWebSocialReauthenticationProvider(provider)) {
+      throw new AccountDeletionOAuthError('unsupported_provider')
+    }
     const popup = openAccountDeletionOAuthPopup()
     if (!popup) throw new AccountDeletionOAuthError('popup_blocked')
 

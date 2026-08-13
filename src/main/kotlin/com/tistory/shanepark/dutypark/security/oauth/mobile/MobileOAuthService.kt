@@ -99,6 +99,8 @@ class MobileOAuthService(
                 .queryParam("redirect_uri", callbackUri)
                 .queryParam("state", state)
                 .build().encode().toUriString()
+
+            SsoType.APPLE -> throw IllegalArgumentException("auth.oauth.mobile.provider.invalid")
         }
         return MobileOAuthAuthorizeResponse(authorizationUrl, STATE_TTL.seconds)
     }

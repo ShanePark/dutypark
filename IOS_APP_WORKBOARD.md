@@ -4,7 +4,7 @@
 
 ## 0. 현재 상태 스냅샷 (최종 확인 2026-08-13)
 
-> **현재 종합 상태: 기능 기반 구현 후 디자인 동등성 재작업 진행 중.** SwiftUI 앱과 모바일 OAuth/APNs 서버 경로, 일반 사용자 기능 모듈은 작업트리에 구현되어 있다. freeze2 iOS 전체 테스트는 **105/105 성공**했고 final nits·Todo 첨부·core parity 보정과 targeted test도 완료했다. generic Simulator `build-for-testing`과 Personal Team local-only device app build가 성공했고, 앱을 실제 iPhone에 무선 설치해 실행했다. 실기기 확인에서 웹과 앱의 디자인 차이가 큰 것으로 확인되어, 현재는 현행 웹의 모바일 화면을 기준으로 한 시각적 동등성 작업으로 전환했다. 공통 디자인 토큰 foundation만 구현·검증된 상태이며 개별 화면은 완료 처리하지 않는다. APNs 설치의 refresh-session 귀속 P0는 웹/PWA 세션 계약 영향 가능성 때문에 사용자 승인 전 구현하지 않는다. 아래 기능 매트릭스의 `[ ]`는 미착수를 뜻하지 않고 **완료 조건 검증 대기**를 뜻한다.
+> **현재 종합 상태: 저장소 기능 구현·자동 검증 후 외부 출시 준비 진행 중.** SwiftUI 앱과 모바일 OAuth/APNs 서버 경로, 일반 사용자 기능 모듈 및 iOS 전용 Sign in with Apple이 작업트리에 구현되어 있다. Apple 반영 후 최신 iOS 전체 테스트는 **278/278**을 1회 통과했고 Release Simulator clean build도 성공했다. generic Simulator `build-for-testing`과 Personal Team local-only device app build가 성공했고, 앱을 실제 iPhone에 무선 설치해 실행했다. Apple 승인·최종 Bundle ID·배포 서명·provider 자격증명·TestFlight E2E와 일부 수동 시각·접근성 검증은 남아 있다. 아래 기능 매트릭스의 `[ ]`는 미착수를 뜻하지 않고 **완료 조건 검증 대기**를 뜻한다.
 
 > **Apple 외부 준비:** Apple Developer Program은 개인 주체 가입·결제를 완료했고 Apple 승인을 기다리는 중이다. 현재 Xcode Bundle ID는 `com.tistory.shanepark.dutypark`이며, 출시 목표는 `io.github.shanepark.dutypark`를 우선 후보로 한다. Apple 승인 후 Explicit App ID 가용성을 확인하기 전에는 최종 확정하지 않는다.
 
@@ -12,6 +12,7 @@
 
 - [x] `ios/` SwiftUI iOS 17 프로젝트, 공통 `APIClient`, HttpOnly cookie/401 refresh/세션 복원, 이메일 인증, 5탭 내비게이션과 기능별 모듈을 구현했다.
 - [x] `ASWebAuthenticationSession` + PKCE 기반 Kakao/Naver 로그인·연결·신규 SSO 가입 클라이언트와 additive 모바일 OAuth 서버 API를 구현했다.
+- [x] iOS 전용 Sign in with Apple 로그인·가입·연결·삭제 재인증, backend native token 검증·encrypted credential·revoke-first 계정 생명주기와 웹 상태 표시·iOS 안내를 구현했다. 웹 Apple OAuth와 Services ID는 만들지 않았다.
 - [x] 홈·캘린더·근무·일정·검색·D-Day·Todo·친구/가족·팀/팀 관리·알림·첨부·프로필/설정·정책/가이드·공개 진입점 코드를 구현했다.
 - [x] APNs 설치 등록·해제, 발송, 수신·탭 이동·배지 코드를 Web Push 계약을 바꾸지 않는 additive 경로로 구현했다.
 - [x] 모바일 OAuth/APNs/Web Push/알림 타깃 백엔드 테스트 118/118, 백엔드 회귀 범위 1,065개 중 1,044 성공·기존 skip 21·기능 assertion 실패 0을 확인했다. 단일 프로세스 말미 OOM이 난 팀 관리 suite는 새 JVM에서 19/19 성공했다.
@@ -24,7 +25,7 @@
 - [x] local-only 앱을 실제 iPhone에 무선 설치하고 앱 실행·운영 API 연결을 확인했다.
 - [x] final nits, Todo 첨부·discard 흐름, core 기능 동등성 보정과 targeted test를 완료했다(Calendar **17/17** 포함).
 - [x] `frontend/src/style.css`와 주요 Vue 화면을 기준으로 공통 색상·간격·radius·타이포그래피·버튼·카드·입력창용 iOS 디자인 foundation을 보강하고 빌드·토큰 테스트를 통과했다. 개별 화면의 시각 일치는 아직 완료하지 않았다.
-- [x] `V2.2.28` 개인정보 처리방침과 `V2.2.29` 이용약관·AI 선택 정책, 서버 owner 기준 AI 동의 API와 schedule/queue/worker gate, 웹·iOS 설정/상세 정책/수동 fallback을 구현했다. 개인정보 migration test 2/2, backend core consent 20 tests와 통합 targeted command, 웹 type-check·Vitest 122·locale 11·production build, iOS generic Simulator build·`plutil`·AI consent 8/8이 통과했다.
+- [x] `V2.2.28`의 전체 개인정보 흐름과 `V2.2.29` 이용약관·AI 선택 정책을 구현했고, `V2.2.32`로 iOS 전용 Apple credential 생명주기를 공개한 최신 `PRIVACY 2026-08-14`를 게시했다. 기존 consent·회원 재동의 gate는 변경하지 않고 신규 가입은 current privacy version 동의를 요구한다.
 
 ### 진행 중 또는 완료 확인이 남은 범위
 
@@ -34,11 +35,11 @@
 - [ ] APNs installation을 현재 refresh session에 귀속하는 P0 변경의 웹/PWA 영향·최소 대안·회귀안을 사용자에게 제시하고 승인받는다.
 - [ ] iPhone 13 mini·iPhone 16 Pro 화면·한국어·영어·접근성 시각 QA를 완료한다.
 - [ ] 실제 iPhone에서 완료된 서명·무선 설치·기본 실행을 제외하고, 세션 복원·Kakao/Naver 로그인·첨부·알림·APNs 수신 E2E를 완료한다.
-- [ ] App Store 심사 범위인 실제 계정 삭제의 외부·실기기 검증, Sign in with Apple 적용 여부, UGC 항목을 사용자와 별도 확정한다. 개인정보 기술 흐름과 AI 선택 동의 저장소 구현은 완료했지만 법률·운영 계약과 App Store Connect 입력은 남아 있다.
+- [ ] App Store 심사 범위인 Apple 로그인·계정 삭제의 외부 자격증명·실기기 검증과 UGC 항목을 완료한다. Apple 적용 범위는 iOS 전용으로 확정·구현했으며 법률·운영 계약과 App Store Connect 입력은 남아 있다.
 
 ### 외부 준비·운영 연결 게이트
 
-- [-] Apple Developer Program 개인 가입·결제를 완료했고 승인을 기다리고 있다. 승인 후 유료 개인 Developer Team, 목표 Bundle ID 가용성, App ID Push capability, development/distribution provisioning, APNs `.p8`·Key ID·Team ID와 App Store Connect 앱 레코드를 준비한다. Personal Team local-only build는 배포·실제 APNs 자격증명을 대신하지 않는다.
+- [-] Apple Developer Program 개인 가입·결제를 완료했고 승인을 기다리고 있다. 승인 후 유료 개인 Developer Team, 목표 Bundle ID 가용성, App ID Push·Associated Domains·Sign in with Apple capability, provisioning, Apple 로그인 server key·credential 암호화 키, APNs key와 App Store Connect 앱 레코드를 준비한다. Personal Team local-only build는 배포·실제 자격증명을 대신하지 않는다.
 - [ ] Kakao Developers에 기존 웹 callback을 유지하면서 `https://dutypark.o-r.kr/api/auth/mobile/oauth/callback/kakao`를 추가하고 REST key·동의항목·Client Secret ON/OFF를 확인한다.
 - [ ] Naver Developers에 기존 웹 callback을 유지하면서 `https://dutypark.o-r.kr/api/auth/mobile/oauth/callback/naver`를 추가하고 Client ID/Secret·서비스 상태·테스트 계정을 확인한다.
 - [x] `docker-compose.yml`이 `APNS_TEAM_ID`, `APNS_KEY_ID`, `APNS_PRIVATE_KEY`를 앱 컨테이너에 전달하도록 최소 연결했다. 자격증명은 저장소에 커밋하지 않는다.
@@ -254,9 +255,9 @@
 
 ### 6.9 App Store 준비 갭
 
-- [-] 앱 안에서 접근 가능한 계정 삭제 API와 화면은 구현됐다. 실제 MySQL/provider revoke/TestFlight 실기기·Review Notes 검증은 별도 출시 준비 항목으로 남아 있다.
-- Kakao/Naver와 같은 제3자 로그인을 제공하면 Sign in with Apple 제공 요건을 검토해야 하며, 현재 범위에서는 사실상 함께 준비하는 것이 안전하다.
-- [x] 개인정보 처리방침을 `V2.2.28` 새 버전으로 추가해 HttpOnly 쿠키, Web Push·APNs, 첨부, 소셜 OAuth, Gemini 및 기기 저장소의 실제 처리 흐름과 일치시켰고 정책 migration 계약 테스트로 고정했다. 확인되지 않은 해외 이전 국가·법정 보관기간은 운영 계약 확인과 별도 법률 검토 후 고지한다.
+- [-] 앱 안에서 접근 가능한 계정 삭제 API와 화면은 구현됐다. Apple revoke-first durable 경로도 구현됐으며 실제 MySQL·Apple provider·TestFlight 실기기·Review Notes 검증은 별도 출시 준비 항목으로 남아 있다.
+- [-] App Review Guideline 4.8 대응으로 iOS 전용 Sign in with Apple을 구현했다. 웹에는 Apple 로그인·Services ID를 추가하지 않고 연결 상태·revoke-first unlink와 iOS 탈퇴 안내만 제공한다. Apple 승인·App ID capability·server key·서명과 실기기 E2E가 남아 있다.
+- [x] `V2.2.28`의 전체 데이터 흐름을 상속한 `V2.2.32` 최신 `PRIVACY 2026-08-14`에 Apple `sub`, 일시 token·nonce, replay hash, 암호화 refresh credential과 revoke-first 처리를 추가하고 migration 계약 테스트로 고정했다. 확인되지 않은 해외 이전 국가·법정 보관기간은 운영 계약 확인과 별도 법률 검토 후 고지한다.
 - [x] `V2.2.29`에 최신 이용약관과 `AI_SCHEDULE_PARSING` 선택 정책을 추가하고, owner 기준 동의 event/API·schedule/queue/worker gate와 웹·iOS 설정/수동 fallback을 구현해 backend·웹·iOS 자동 검증을 통과했다. paid Google 운영 계약과 실제 교차 플랫폼 E2E는 별도 출시 게이트다.
 - 사용자 생성 콘텐츠(UGC)가 노출되는 범위에는 신고·차단·운영 대응 요건을 검토한다.
 
@@ -304,7 +305,8 @@
 - 2026-08-13 새 `/tmp` 경로의 unsigned generic iOS Release `clean archive`에서 기본 제출 기술 설정을 다시 감사했다. 프로젝트와 Archive는 표시 이름 `Dutypark`, 최소 iOS `17.0`, iPhone 전용 `UIDeviceFamily = [1]`, iPhone 세로 방향만 지원하는 설정이 일치했다. 1024×1024 RGB/no-alpha AppIcon 원본, Archive의 `CFBundleIconName = AppIcon`, 120×120 no-alpha icon과 `Assets.car`의 iPhone 1024 rendition을 확인했고 icon compile 경고·오류는 없었다. 현재 버전 `1.0`(빌드 `1`)은 기록만 했으며 스토어 제품명·제출 버전, 출시 Bundle ID와 서명 검증은 확정하지 않았다.
 - 2026-08-13 Apple의 최신 Required Reason API 5개 범주를 기준으로 테스트를 제외한 앱 소스·Xcode 의존성·새 unsigned Release Archive를 사전 감사했다. 실제 사용은 앱 자체 UserDefaults뿐이며 `CA92.1` 단일 선언과 일치했다. File Timestamp·System Boot Time·Disk Space·Active Keyboards API와 embedded third-party framework는 발견되지 않았다. Archive manifest는 소스와 byte 단위로 같고 tracking false·domain 빈 배열이며, exact 계약 테스트를 보강했다. targeted test, Release clean build·archive가 성공했고 전체 suite는 새로 3회 모두 정확히 **264/264 성공**(실패·건너뜀 0)했다. Organizer Privacy Report와 App Store Connect Publish는 별도 대기다.
 - 2026-08-13 `Dutypark/Resources`의 8개 String Catalog, 번역 대상 695개 table/key를 자동 검증했다. 한국어·영어 translated/nonempty/value!=key, table/key 유일성, compiled Bundle exact lookup과 printf placeholder 위치·타입 parity가 통과했고 `shouldTranslate = false`는 0개다. targeted **1/1**, 전체 suite **265/265**를 3회 연속 통과했으며 Release Simulator clean build도 성공했다. 새 unsigned generic iOS Release Archive의 8개 table에 `en`·`ko`가 모두 있고 locale별 key 수가 source와 일치했다. 다른 feature catalog와 전체 사용자 문자열, 수동 clipping·VoiceOver·시각 QA, 서명 Archive·TestFlight는 별도 대기다.
-- 2026-08-13 entitlement 기술 사전 감사에서 source plist와 Xcode build setting, 새 Debug/Release Simulator의 `ProcessProductPackaging` 산출물을 교차 검증했다. APNs는 Debug `development`/Release `production`, Associated Domains는 양쪽 `applinks:dutypark.o-r.kr`로 일치했고 Sign in with Apple entitlement는 현재 없다. 새 unsigned generic Release Archive에는 서명 비활성화로 `.xcent`·embedded profile·Signing Identity·Team이 없으므로 실제 App ID capability/profile, 서명 Archive, APNs·Universal Links E2E와 Sign in with Apple 정책 결정은 대기다.
+- 2026-08-13 entitlement 기술 사전 감사 후 Sign in with Apple을 반영했다. 소스와 새 Debug/Release Simulator 처리 `.xcent`에는 `com.apple.developer.applesignin = Default`가 포함되고 APNs development/production·Associated Domains 설정도 유지된다. 서명된 Archive, 실제 App ID capability/profile과 Apple 실계정 E2E는 대기다.
+- 2026-08-13 iOS 전용 Sign in with Apple과 backend native exchange·RS256/JWKS/claim/nonce/replay 검증, ES256 client secret, AES-256-GCM refresh credential, revoke-first unlink·durable account deletion을 구현했다. iOS 전체 **278/278** 1회, Apple targeted/UI presence, Release clean build, backend Apple-focused **19/19**와 관련 회귀, 웹 **34 files/162 tests**·type-check·build를 통과했다. 웹 Apple OAuth·Services ID는 범위에서 제외했고 실제 Apple portal·서명·TestFlight 검증은 남아 있다.
 
 완료된 최소 보정:
 
@@ -420,6 +422,7 @@ iOS 클라이언트 및 외부 후속:
 | 2026-08-12 | D-020 | **확정:** MapleStory 서체는 사용자가 지정한 Nexon 공식 배포본만 원본 그대로 앱에 포함한다. | 웹의 핵심 브랜드 타이포그래피 일치와 서체 라이선스 준수 | 기존 WOFF 변환본은 사용하지 않고 공식 OTF/TTF와 라이선스를 검증한 뒤 등록한다. |
 | 2026-08-12 | D-021 | **사용자 승인:** 현재 작업을 적절한 논리 단위로 나눠 커밋한다. | 변경 이력과 검증 지점을 명확히 유지 | §13.6 순서로 명시적 파일만 stage하고 각 milestone 검증 후 커밋한다. |
 | 2026-08-13 | D-022 | **사용자 확정:** Apple Developer Program은 개인 주체로 가입·결제했고 승인 대기 중이다. 출시 Bundle ID는 `io.github.shanepark.dutypark`를 우선한다. | 기존 `com.tistory.shanepark`보다 GitHub 네임스페이스를 선호 | 승인 후 Explicit App ID 가용성을 확인하기 전까지 목표 후보이며, 현재 Xcode `com.tistory.shanepark.dutypark`는 그대로 유지한다. 개인 출시 판매자명은 법적 실명 표시를 확인한다. |
+| 2026-08-13 | D-023 | **사용자 확정·구현 완료:** Sign in with Apple 로그인·가입·연결·삭제 재인증은 iOS 전용으로 제공한다. | Guideline 4.8 대응과 제품 범위 최소화 | 웹에는 Apple 로그인·Services ID를 만들지 않고 iOS 연결 상태·revoke-first unlink·Apple-only 탈퇴 iOS 안내만 제공한다. Apple 외부 설정·실기기 E2E는 별도 게이트다. |
 
 ## 9. 사용자 질문 / 리스크
 
@@ -428,7 +431,6 @@ iOS 클라이언트 및 외부 후속:
 1. [ ] **P0:** APNs installation을 현재 refresh session에 귀속하도록 백엔드를 보정할지 결정 — 기존 웹/PWA refresh-token/푸시 계약 영향·additive 대안·회귀 검증안을 확인한 뒤 승인 전에는 구현하지 않는다.
 2. [ ] AASA 제공과 첨부 10MB/50MB 노출 정책을 결정 — 둘 다 웹/운영 배포에 영향을 줄 수 있어 앱에서 임의 변경하지 않는다.
 3. [ ] 내부 빌드 이후 **TestFlight 배포 → App Store 제출** 순서로 갈지, App Store 제출 준비만 완료한 뒤 배포 시점을 별도로 잡을지 결정
-4. [ ] 공개 App Store 배포 전에 **Sign in with Apple**을 함께 구현할지 결정 — Kakao/Naver 제공에 따른 심사 요건 확인 후 통과해야 하는 사용자 결정 게이트
 
 ### 확정되어 닫힌 질문
 
@@ -439,6 +441,7 @@ iOS 클라이언트 및 외부 후속:
 - [x] 오프라인 기능은 후순위
 - [x] 관리자 제외 일반 사용자 웹 기능 완전 일치
 - [x] B3는 기존 `stateConsumedAt`을 재사용한 짧은 claim/finalize transaction 최소 수정
+- [x] Sign in with Apple은 iOS 전용으로 구현하고 웹 Apple OAuth·Services ID는 만들지 않음
 
 ### 현재 리스크
 
@@ -453,7 +456,7 @@ iOS 클라이언트 및 외부 후속:
 | R-007 | 로컬 날짜 직렬화 코드·테스트는 있으나 일정 검색 DTO의 웹/서버 불일치가 남음 | 검색 실패 또는 시간 오해 | 실제 응답 fixture와 웹 동작을 확인하고 공통 DTO 변경이 필요하면 사용자 승인 | 부분 반영 / 계약 확인 필요 |
 | R-008 | 모바일 OAuth `state`와 callback 검증 필요 | 로그인 CSRF·redirect 오용 위험 | 해시 state·PKCE와 고정 `dutypark://oauth/callback` 적용; 기존 웹 경로 불변 | 모바일 서버 해결 |
 | R-009 | 앱 내 계정 삭제 API·화면은 구현됐으나 실제 MySQL/provider revoke/TestFlight·Review Notes 검증이 남음 | 심사 또는 운영 삭제 누락 가능 | 운영 유사 DB, provider revoke, 실기기와 심사 경로를 검증 | 구현 완료 / 외부·통합 검증 대기 |
-| R-010 | 제3자 로그인 제공 시 Sign in with Apple 요건 적용 가능성이 높음 | App Store 심사 차단 가능 | Apple 로그인 동시 제공을 출시 범위에 포함할지 결정 | 사용자 결정 필요 |
+| R-010 | iOS 전용 Sign in with Apple 저장소 구현은 완료했으나 Apple 승인·App ID capability·server key·서명·실기기 E2E가 없음 | App Store 심사 또는 실제 로그인 차단 가능 | 외부 자격증명 연결 후 login/signup/link/conflict/cancel/delete/revoke를 TestFlight에서 검증 | 구현 완료 / 외부 준비 대기 |
 | R-011 | 개인정보 처리방침이 실제 쿠키·푸시·첨부·소셜 OAuth 흐름과 불일치했음 | 사용자 고지·심사 리스크 | `V2.2.28`에 실제 저장·전송·정리 흐름을 새 버전으로 반영하고 `PrivacyPolicyMigrationTest`로 버전·핵심 계약·오표현 배제를 검증함; 해외 이전 국가·법정 보관기간은 별도 법률 검토 | 해결 |
 | R-012 | UGC 신고·차단·운영 절차가 앱 심사 요건에 부족할 수 있음 | 심사 또는 운영 리스크 | 노출 기능 범위와 신고·차단 기능 점검 | 검토 필요 |
 | R-013 | iOS-only `main` 병합도 현 CI에서 서버 재배포를 유발함 | 불필요한 배포와 운영 위험 | 별도 `ios.yml`, 경로 필터, 배포 조건 도입 검토 | CI 변경 논의 필요 |
@@ -513,7 +516,7 @@ iOS 클라이언트 및 외부 후속:
 2. [ ] fixture 기반 contract test와 실제 서버 교차 검증: 일정 검색 DTO, 첨부 순서, 오류 코드, 날짜·시간 직렬화
 3. [ ] iPhone 13 mini와 iPhone 16 Pro 화면·상호작용 검증
 4. [ ] 한국어·영어 런타임 전환, 라이트/다크 모드, Dynamic Type, VoiceOver 검증
-5. [ ] 완료된 실제 iPhone 설치·기본 실행을 기준으로 cookie 세션과 기본 기능을 더 검증하고, Apple 승인 및 유료 Team/provider/APNs 준비 후 OAuth·APNs E2E를 검증
+5. [ ] Apple 승인 후 Sign in with Apple App ID capability·server key·암호화 키·provisioning을 연결하고, 실제 iPhone/TestFlight에서 Apple OAuth·삭제 revoke와 APNs E2E를 검증
 
 B2 구현 원칙:
 
@@ -549,8 +552,9 @@ B2 구현 원칙:
 - [ ] freeze3 최종 clean QA와 마지막 기능 동등성 감사를 완료한다.
 - [ ] APNs refresh-session 귀속 P0의 웹 영향·대안·회귀안을 제시하고 사용자 승인을 받는다.
 - [x] Personal Team local-only device app build를 성공시킨다.
-- [ ] 연결 가능한 iPhone에 설치해 실제 실행을 확인한다.
-- [ ] Apple/Kakao/Naver 외부 준비 후 실제 iPhone 설치·OAuth·APNs E2E를 완료한다.
+- [x] 연결 가능한 iPhone에 Personal Team local-only 앱을 설치해 기본 실행을 확인했다.
+- [x] iOS 전용 Sign in with Apple과 서버 검증·credential·revoke-first 계정 생명주기를 구현하고 자동 검증한다.
+- [ ] Apple/Kakao/Naver 외부 준비 후 실제 iPhone·TestFlight OAuth·Apple revoke·APNs E2E를 완료한다.
 
 ## 12. 기능 동등성 매트릭스
 
@@ -869,14 +873,15 @@ B2 구현 원칙:
 | 구분 | 준비·설정 | 담당 | 완료 기준 | 상태 |
 |---|---|---|---|---|
 | Apple 계정 | 개인 주체 가입·결제 완료, Apple 승인 후 법적 계약·필요한 세금/은행 정보 확인 | 사용자 | 유료 개인 Developer Team과 Team ID 확인, App Store Connect 앱 생성·계약 상태 유효 | 승인 대기 |
-| App ID | 출시 목표 `io.github.shanepark.dutypark`의 가용성 확인 후 Bundle ID, Push Notifications, Associated Domains와 필요한 Sign in with Apple capability 확정. 현재 Xcode는 `com.tistory.shanepark.dutypark` | 사용자 계정 접근 필요 / 에이전트 설정 보조 | 배포 Team의 explicit App ID와 provisioning 생성 가능 | 승인 대기 |
+| App ID | 출시 목표 `io.github.shanepark.dutypark`의 가용성 확인 후 Bundle ID, Push Notifications, Associated Domains와 Sign in with Apple Primary capability 확정. 현재 Xcode는 `com.tistory.shanepark.dutypark` | 사용자 계정 접근 필요 / 에이전트 설정 보조 | 배포 Team의 explicit App ID와 provisioning 생성 가능 | 승인 대기 |
+| Apple 로그인 서버 | Sign in with Apple Team ID·Key ID·`.p8`, native client ID와 별도 32바이트 credential 암호화 키를 secret manager에 주입. 웹 Services ID는 만들지 않음 | 사용자 계정 접근 + 운영 secret 권한 필요 | 서명된 TestFlight에서 login/signup/link/conflict/cancel/delete mismatch/revoke 성공 | 승인 대기 |
 | Signing | repository의 빈 `DEVELOPMENT_TEAM`에 개인 값을 커밋하지 않고 Xcode/CI signing으로 연결 | 에이전트 repo 설정 + 사용자 Team 선택 | Archive가 distribution profile로 성공 | [ ] |
 | APNs | Apple Developer에서 APNs `.p8`, Key ID, Team ID 발급 | 사용자 계정 접근 필요 | secret manager/운영 환경에만 저장하고 실제 sandbox/production 수신 | [ ] |
 | Associated Domains | `applinks:dutypark.o-r.kr` entitlement와 `/.well-known/apple-app-site-association`의 승인 대기 목표 `TEAM_ID.io.github.shanepark.dutypark` 제공 | 에이전트 제안 / 웹 영향 사용자 승인 | Team ID·Bundle ID 확정 후 AASA가 redirect 없이 JSON MIME으로 제공되고 universal link E2E 성공 | 승인 대기 |
 | Kakao | Kakao Developers의 기존 웹 callback을 보존하고 `https://dutypark.o-r.kr/api/auth/mobile/oauth/callback/kakao` 추가, REST API key·Client Secret 사용 여부·동의항목 확인 | 사용자 로그인/콘솔 권한 필요, 에이전트 단계별 보조 | 기존 웹 로그인과 iOS 기존/신규/취소/실패 E2E 모두 성공 | [ ] |
 | Naver | Naver Developers의 기존 웹 callback을 보존하고 `https://dutypark.o-r.kr/api/auth/mobile/oauth/callback/naver` 추가, Client ID/Secret·서비스 URL·검수/테스트 계정 확인 | 사용자 로그인/콘솔 권한 필요, 에이전트 단계별 보조 | 기존 웹 로그인과 iOS 기존/신규/취소/실패 E2E 모두 성공 | [ ] |
 | 운영 서버 | 모바일 OAuth/APNs additive backend와 migration 배포, public scheme/host proxy 전달, secret 연결 | 에이전트 변경 / 배포는 사용자 승인 범위 | 기존 웹 smoke regression + mobile OAuth/APNs smoke 성공 | 미배포 |
-| App Store 정책 | Sign in with Apple 적용 판단, 실제 앱 내 계정 삭제, 개인정보처리방침·UGC 신고/차단·권한 문구 확정 | 사용자 결정 + 에이전트 구현/문서 보조 | App Review 필수 항목과 privacy answers가 실제 앱 동작과 일치 | 승인 대기 |
+| App Store 정책 | iOS 전용 Sign in with Apple·앱 내 계정 삭제의 외부 E2E, 개인정보처리방침·UGC 신고/차단·권한 문구 확정 | 사용자 결정 + 에이전트 구현/문서 보조 | App Review 필수 항목과 privacy answers가 실제 앱 동작과 일치 | 외부 검증 대기 |
 | App Store Connect | 앱 이름·부제·설명·키워드·지원/개인정보 URL·연령등급·카테고리·한국어·영어 metadata·screenshot 준비 | 사용자 최종 승인 / 에이전트 산출 보조 | 13 mini/16 Pro 기준 화면을 포함한 제출 필드 완료 | [ ] |
 | TestFlight | Archive upload, export compliance, 내부 tester, OAuth/APNs 운영 smoke | 사용자 계정 접근 필요 / 에이전트 보조 | 실제 배포 build에서 핵심 기능과 웹 병행 회귀 성공 | [ ] |
 
@@ -886,7 +891,7 @@ B2 구현 원칙:
 - [ ] APNs installation의 refresh-session 귀속 migration
 - [ ] 운영 서버에 모바일 OAuth/APNs backend·DB migration 배포
 - [ ] 첨부 10MB/50MB 정책 통일
-- [ ] 개인정보처리방침·회원 삭제·Sign in with Apple 등 웹에도 표시될 수 있는 공통 정책 변경
+- [ ] Apple `sub`·암호화 credential·revoke를 포함한 개인정보처리방침·App Privacy 최종 반영
 
 사용자 계정 로그인이 없으면 에이전트가 대신 완료할 수 없는 항목:
 

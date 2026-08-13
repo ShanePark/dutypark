@@ -84,7 +84,8 @@ Explicit App ID를 만들기 전까지 현재 Xcode의 `com.tistory.shanepark.du
 - [ ] Release Archive Privacy Report와 실제 포함 SDK를 inventory·manifest와 대조한다.
 - [ ] App Store Connect에서 각 데이터 유형, App Functionality, Linked to User와 non-tracking 답변을 실제 Release 기준으로 최종 확인하고 Publish한다.
 - [ ] 개인정보 처리방침 URL을 운영 URL로 입력한다.
-- [x] 저장소의 `PRIVACY 2026-08-13` 정책 내용과 App Privacy 입력 초안을 기술 데이터 흐름 기준으로 일치시켰다.
+- [x] 저장소의 최신 `PRIVACY 2026-08-14`에 iOS 전용 Apple `sub`, 일시 token·nonce, replay hash, 암호화 credential과 revoke-first 처리를 포함한 기술 데이터 흐름을 공개했다.
+- [ ] 이 최신 정책과 Release Privacy Report를 기준으로 App Privacy 입력 초안을 최종 대조해 Publish한다.
 - [!] 법률·운영 계약 검토와 Google paid service/DPA 확인은 저장소 기술 정합성 완료와 별개의 출시 차단 항목이다.
 
 “수집하지 않음”은 앱 또는 서버가 실제로 데이터를 받지 않는 경우에만 선택한다.

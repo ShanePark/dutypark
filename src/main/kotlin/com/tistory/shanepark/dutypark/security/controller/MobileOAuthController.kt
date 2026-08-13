@@ -6,6 +6,8 @@ import com.tistory.shanepark.dutypark.security.oauth.mobile.MobileOAuthAuthorize
 import com.tistory.shanepark.dutypark.security.oauth.mobile.MobileOAuthExchangeRequest
 import com.tistory.shanepark.dutypark.security.oauth.mobile.MobileOAuthExchangeResponse
 import com.tistory.shanepark.dutypark.security.oauth.mobile.MobileOAuthService
+import com.tistory.shanepark.dutypark.security.oauth.apple.AppleNativeExchangeRequest
+import com.tistory.shanepark.dutypark.security.oauth.apple.AppleNativeOAuthService
 import com.tistory.shanepark.dutypark.security.service.CookieService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import jakarta.servlet.http.HttpServletRequest
@@ -20,6 +22,7 @@ import org.springframework.web.bind.annotation.*
 class MobileOAuthController(
     private val mobileOAuthService: MobileOAuthService,
     private val cookieService: CookieService,
+    private val appleNativeOAuthService: AppleNativeOAuthService,
 ) {
     @PostMapping("/authorize")
     fun authorize(
@@ -58,6 +61,20 @@ class MobileOAuthController(
         servletResponse: HttpServletResponse,
     ): MobileOAuthExchangeResponse {
         val result = mobileOAuthService.exchange(request, servletRequest)
+        if (result.accessToken != null && result.refreshToken != null) {
+            cookieService.setTokenCookies(servletResponse, result.accessToken, result.refreshToken)
+        }
+        return result.response
+    }
+
+    @PostMapping("/apple/exchange")
+    fun exchangeApple(
+        @Valid @RequestBody request: AppleNativeExchangeRequest,
+        @Login(required = false) loginMember: LoginMember?,
+        servletRequest: HttpServletRequest,
+        servletResponse: HttpServletResponse,
+    ): MobileOAuthExchangeResponse {
+        val result = appleNativeOAuthService.exchange(request, loginMember, servletRequest)
         if (result.accessToken != null && result.refreshToken != null) {
             cookieService.setTokenCookies(servletResponse, result.accessToken, result.refreshToken)
         }

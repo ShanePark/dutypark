@@ -100,6 +100,12 @@ dutypark:
     session-expiration-hours: 24
 
 oauth:
+  apple:
+    client-id: "${APPLE_CLIENT_ID:}"
+    team-id: "${APPLE_TEAM_ID:}"
+    key-id: "${APPLE_KEY_ID:}"
+    private-key: "${APPLE_PRIVATE_KEY:}"
+    credential-encryption-key: "${APPLE_CREDENTIAL_ENCRYPTION_KEY:}"
   kakao:
     rest-api-key: "${KAKAO_REST_API_KEY:KAKAO_REST_API_KEY_HERE}"
   naver:

@@ -13,12 +13,16 @@ import com.tistory.shanepark.dutypark.security.oauth.naver.NaverTokenResponse
 import com.tistory.shanepark.dutypark.security.oauth.naver.NaverUserInfoApi
 import com.tistory.shanepark.dutypark.security.oauth.naver.NaverUserInfoPayload
 import com.tistory.shanepark.dutypark.security.oauth.naver.NaverUserInfoResponse
+import com.tistory.shanepark.dutypark.security.oauth.apple.AppleNativeOAuthService
+import com.tistory.shanepark.dutypark.security.oauth.mobile.MobileOAuthExchangeResponse
+import com.tistory.shanepark.dutypark.security.oauth.mobile.MobileOAuthExchangeResult
 import org.assertj.core.api.Assertions.assertThat
 import org.hamcrest.Matchers.startsWith
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.boot.test.context.TestConfiguration
+import org.springframework.test.context.bean.override.mockito.MockitoBean
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Import
 import org.springframework.context.annotation.Primary
@@ -36,6 +40,9 @@ import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.util.Base64
+import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
+import org.mockito.kotlin.whenever
 
 @AutoConfigureMockMvc
 @Import(MobileOAuthControllerTest.ProviderApiTestConfig::class)
@@ -46,6 +53,38 @@ class MobileOAuthControllerTest : DutyparkIntegrationTest() {
 
     @Autowired
     lateinit var memberSocialAccountRepository: MemberSocialAccountRepository
+
+    @MockitoBean
+    lateinit var appleNativeOAuthService: AppleNativeOAuthService
+
+    @Test
+    fun `Apple native exchange uses dedicated contract and sets normal login cookies`() {
+        whenever(appleNativeOAuthService.exchange(any(), anyOrNull(), any())).thenReturn(
+            MobileOAuthExchangeResult(
+                response = MobileOAuthExchangeResponse(signupRequired = false, expiresIn = 1800),
+                accessToken = "apple-access",
+                refreshToken = "apple-refresh",
+            )
+        )
+
+        mockMvc.perform(
+            post("/api/auth/mobile/oauth/apple/exchange")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(
+                    """{
+                        "identityToken":"identity-token",
+                        "authorizationCode":"authorization-code",
+                        "nonce":"${"n".repeat(32)}",
+                        "purpose":"LOGIN"
+                    }""".trimIndent()
+                )
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.signupRequired").value(false))
+            .andExpect(jsonPath("$.expiresIn").value(1800))
+            .andExpect(cookie().exists("access_token"))
+            .andExpect(cookie().exists("refresh_token"))
+    }
 
     @Test
     fun `kakao mobile oauth exchanges one-time code for existing member cookies`() {

@@ -54,6 +54,27 @@ final class APIErrorLocalizationTests: XCTestCase {
         )
     }
 
+    func testAppleAuthenticationErrorsHaveSpecificMessages() throws {
+        let english = try localizedBundle("en")
+        let korean = try localizedBundle("ko")
+        let codes = [
+            "auth.apple.configurationUnavailable",
+            "auth.apple.credential.invalid",
+            "auth.apple.provider.unavailable",
+            "auth.apple.accountMismatch",
+            "auth.oauth.socialAccountAlreadyLinked",
+        ]
+
+        for code in codes {
+            XCTAssertNotEqual(APIErrorLocalization.message(code: code, bundle: english), code)
+            XCTAssertNotEqual(APIErrorLocalization.message(code: code, bundle: korean), code)
+            XCTAssertNotEqual(
+                APIErrorLocalization.message(code: code, bundle: english),
+                APIErrorLocalization.message(code: "unknown.code", bundle: english)
+            )
+        }
+    }
+
     func testCatalogHasEnglishAndKoreanLocaleParity() throws {
         let catalog = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()

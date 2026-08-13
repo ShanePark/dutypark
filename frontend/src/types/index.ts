@@ -156,6 +156,7 @@ export interface DashboardMemberDto {
   calendarVisibility: CalendarVisibility
   kakaoId?: string | null
   naverId?: string | null
+  appleId?: string | null
   hasPassword?: boolean
   hasProfilePhoto?: boolean
   profilePhotoVersion?: number
@@ -488,6 +489,7 @@ export interface MemberDto {
   calendarVisibility: CalendarVisibility
   kakaoId: string | null
   naverId: string | null
+  appleId?: string | null
   hasPassword: boolean
   hasProfilePhoto?: boolean
   profilePhotoVersion?: number

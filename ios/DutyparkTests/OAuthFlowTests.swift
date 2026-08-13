@@ -65,6 +65,7 @@ final class OAuthSignupPresentationTests: XCTestCase {
     func testPresentationStringsResolveInEverySupportedLocale() throws {
         let keys = [
             "auth.oauth.close",
+            "auth.oauth.apple",
             "auth.oauth.signup.discard.action",
             "auth.oauth.signup.discard.continue",
             "auth.oauth.signup.discard.message",

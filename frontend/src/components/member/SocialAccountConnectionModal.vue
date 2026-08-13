@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Check, Info, Loader2, Trash2, X } from 'lucide-vue-next'
+import { Apple, Check, Info, Loader2, Trash2, X } from 'lucide-vue-next'
 import BaseModal from '@/components/common/BaseModal.vue'
 import type { SocialAccountProvider } from '@/api/member'
 
@@ -9,7 +9,7 @@ const props = defineProps<{
   isOpen: boolean
   provider: SocialAccountProvider
   providerLabel: string
-  providerIcon: string
+  providerIcon?: string
   canUnlink: boolean
   busy: boolean
 }>()
@@ -76,7 +76,14 @@ function close() {
 
       <div class="min-h-0 space-y-4 overflow-x-hidden overflow-y-auto p-4 sm:p-5">
         <div class="flex items-center gap-3 rounded-xl border border-dp-border-primary bg-dp-bg-secondary p-4">
-          <img :src="providerIcon" alt="" class="h-10 w-10 shrink-0 rounded-lg" />
+          <span
+            v-if="provider === 'APPLE'"
+            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-dp-bg-card text-dp-text-primary"
+            aria-hidden="true"
+          >
+            <Apple class="h-6 w-6" />
+          </span>
+          <img v-else :src="providerIcon" alt="" class="h-10 w-10 shrink-0 rounded-lg" />
           <div class="min-w-0">
             <p class="truncate font-semibold text-dp-text-primary">{{ providerLabel }}</p>
             <span class="mt-1 inline-flex items-center gap-1 rounded-full bg-dp-success-soft px-2 py-0.5 text-xs font-medium text-dp-success">
@@ -88,10 +95,15 @@ function close() {
 
         <div class="rounded-xl border border-dp-border-primary bg-dp-bg-card p-4">
           <h3 class="font-semibold text-dp-text-primary">
-            {{ t('member.sso.unlink.localMappingTitle') }}
+            {{ t(provider === 'APPLE' ? 'member.sso.unlink.appleAuthorizationTitle' : 'member.sso.unlink.localMappingTitle') }}
           </h3>
           <p :id="descriptionId" class="mt-2 text-sm leading-6 text-dp-text-secondary">
-            {{ t('member.sso.unlink.localMappingDescription', { provider: providerLabel }) }}
+            {{ t(
+              provider === 'APPLE'
+                ? 'member.sso.unlink.appleAuthorizationDescription'
+                : 'member.sso.unlink.localMappingDescription',
+              { provider: providerLabel },
+            ) }}
           </p>
         </div>
 

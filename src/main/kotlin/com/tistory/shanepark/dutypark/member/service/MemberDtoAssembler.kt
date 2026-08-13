@@ -19,6 +19,7 @@ class MemberDtoAssembler(
         return member.toMemberDto(
             kakaoId = providerMap[SsoType.KAKAO],
             naverId = providerMap[SsoType.NAVER],
+            appleId = providerMap[SsoType.APPLE],
         )
     }
 
@@ -34,6 +35,7 @@ class MemberDtoAssembler(
             member.toMemberDto(
                 kakaoId = providerMap[SsoType.KAKAO],
                 naverId = providerMap[SsoType.NAVER],
+                appleId = providerMap[SsoType.APPLE],
             )
         }
     }

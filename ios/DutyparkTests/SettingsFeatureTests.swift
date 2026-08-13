@@ -80,6 +80,7 @@ struct SettingsFeatureTests {
             "settings.sessions.revokeOthersTitle",
             "settings.sessions.revokeOthersMessage",
             "settings.social.unlink",
+            "settings.social.apple",
             "settings.social.unlinking",
             "settings.social.linked",
             "settings.social.unlinked",
@@ -352,11 +353,13 @@ struct SettingsFeatureTests {
 
         try await service.unlinkSocialAccount(.kakao)
         try await service.unlinkSocialAccount(.naver)
+        try await service.unlinkSocialAccount(.apple)
 
-        #expect(recorder.requests.map(\.httpMethod) == ["DELETE", "DELETE"])
+        #expect(recorder.requests.map(\.httpMethod) == ["DELETE", "DELETE", "DELETE"])
         #expect(recorder.requests.compactMap { $0.url?.path } == [
             "/api/members/me/social-accounts/KAKAO",
             "/api/members/me/social-accounts/NAVER",
+            "/api/members/me/social-accounts/APPLE",
         ])
     }
 
@@ -407,6 +410,10 @@ struct SettingsFeatureTests {
             #expect(!lastProviderReason.contains("{count}"))
             #expect(lastProviderReason != "settings.social.unlinkLastAuthenticationMethod")
         }
+
+        defaults.set(AppLanguage.english.rawValue, forKey: SettingsPreference.languageKey)
+        let appleMessage = SettingsSocialUnlinkPolicy.confirmationMessage(for: .apple)
+        #expect(appleMessage.contains("Apple"))
     }
 
     @Test
@@ -453,6 +460,16 @@ struct SettingsFeatureTests {
         )
         #expect(busyProvider.isWorking)
         #expect(!busyProvider.canConnect)
+
+        let appleProvider = SettingsSocialManagementState(
+            provider: .apple,
+            isConnected: true,
+            connectedProviderCount: 3,
+            linkingProvider: nil,
+            unlinkingProvider: nil
+        )
+        #expect(appleProvider.canRequestUnlink)
+        #expect(SettingsSocialManagementPolicy.providerName(.apple) == "Apple")
     }
 
     @Test
@@ -470,12 +487,12 @@ struct SettingsFeatureTests {
 
     @Test
     func decodesAccountDeletionPreviewAndTeamImpact() throws {
-        let data = Data(#"{"hasPassword":true,"socialProviders":["KAKAO"],"teamImpact":{"teamId":7,"teamName":"Dutypark","isAdmin":true,"activeMemberCount":2,"willDeleteTeam":false,"transferCandidates":[{"memberId":9,"name":"Alex"}]},"auxiliaryImpacts":[{"memberId":12,"name":"Child","willDelete":true}]}"#.utf8)
+        let data = Data(#"{"hasPassword":true,"socialProviders":["KAKAO","APPLE"],"teamImpact":{"teamId":7,"teamName":"Dutypark","isAdmin":true,"activeMemberCount":2,"willDeleteTeam":false,"transferCandidates":[{"memberId":9,"name":"Alex"}]},"auxiliaryImpacts":[{"memberId":12,"name":"Child","willDelete":true}]}"#.utf8)
 
         let preview = try JSONDecoder().decode(AccountDeletionPreview.self, from: data)
 
         #expect(preview.hasPassword)
-        #expect(preview.socialProviders == [.kakao])
+        #expect(preview.socialProviders == [.kakao, .apple])
         #expect(preview.teamImpact?.transferCandidates.first?.memberId == 9)
         #expect(preview.auxiliaryImpacts.first?.willDelete == true)
     }

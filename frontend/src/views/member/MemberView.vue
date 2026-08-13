@@ -9,6 +9,7 @@ import {
   canUnlinkSocialAccount,
   friendApi,
   getSocialAccountUnlinkErrorKey,
+  getVisibleSocialAccountProviders,
   memberApi,
   refreshTokenApi,
   type SocialAccountProvider,
@@ -64,6 +65,7 @@ import {
   Bell,
   Settings,
   BrainCircuit,
+  Apple,
 } from 'lucide-vue-next'
 
 const route = useRoute()
@@ -320,6 +322,7 @@ const tokensLoading = ref(false)
 const savingVisibility = ref(false)
 const savingManager = ref(false)
 type SsoProvider = SocialAccountProvider
+type WebConnectableSsoProvider = Exclude<SsoProvider, 'APPLE'>
 
 const connectingSso = ref<SsoProvider | null>(null)
 const unlinkingSso = ref<SsoProvider | null>(null)
@@ -574,7 +577,7 @@ async function deleteOtherTokens() {
 interface SsoConnection {
   provider: SsoProvider
   label: string
-  icon: string
+  icon?: string
   connected: boolean
   accountName?: string
 }
@@ -597,16 +600,26 @@ function buildSsoConnections(member: MemberDto | null): SsoConnection[] {
       icon: '/img/naver.svg',
       connected: !!member?.naverId,
     },
+    {
+      provider: 'APPLE',
+      label: t('member.sso.providers.apple'),
+      connected: !!member?.appleId,
+    },
   ]
 
-  return connections.filter((connection) => connection.connected || connection.provider !== 'NAVER' || isNaverEnabled)
+  const visibleProviders = getVisibleSocialAccountProviders(member, isNaverEnabled)
+  return connections.filter((connection) => visibleProviders.includes(connection.provider))
 }
 
 function canUnlinkSso(provider: SsoProvider): boolean {
   return canUnlinkSocialAccount(memberInfo.value, provider)
 }
 
-function toSocialLinkProvider(provider: SsoProvider): SocialLinkProvider {
+function isWebConnectableSsoProvider(provider: SsoProvider): provider is WebConnectableSsoProvider {
+  return provider === 'KAKAO' || provider === 'NAVER'
+}
+
+function toSocialLinkProvider(provider: WebConnectableSsoProvider): SocialLinkProvider {
   return provider === 'KAKAO' ? 'kakao' : 'naver'
 }
 
@@ -625,9 +638,9 @@ async function closeSsoSettings() {
 }
 
 async function connectSso(provider: SsoProvider) {
-  if (isSsoActionPending.value) return
+  if (isSsoActionPending.value || !isWebConnectableSsoProvider(provider)) return
 
-  const prompts: Record<SsoProvider, { message: string; title: string; connect: () => void }> = {
+  const prompts: Record<WebConnectableSsoProvider, { message: string; title: string; connect: () => void }> = {
     KAKAO: {
       message: t('member.sso.prompts.kakaoMessage'),
       title: t('member.sso.prompts.kakaoTitle'),
@@ -661,7 +674,12 @@ async function unlinkSso(connection: SsoConnection) {
   if (isSsoActionPending.value || !canUnlinkSso(connection.provider)) return
 
   const confirmed = await confirmDelete(
-    t('member.sso.unlink.confirmMessage', { provider: connection.label }),
+    t(
+      connection.provider === 'APPLE'
+        ? 'member.sso.unlink.appleConfirmMessage'
+        : 'member.sso.unlink.confirmMessage',
+      { provider: connection.label },
+    ),
     t('member.sso.unlink.confirmTitle', { provider: connection.label }),
     t('member.sso.unlink.action'),
   )
@@ -673,7 +691,12 @@ async function unlinkSso(connection: SsoConnection) {
     await memberApi.unlinkSocialAccount(connection.provider)
     await fetchMemberInfo()
     ssoConnections.value = buildSsoConnections(memberInfo.value)
-    toastSuccess(t('member.sso.unlink.success', { provider: connection.label }))
+    toastSuccess(t(
+      connection.provider === 'APPLE'
+        ? 'member.sso.unlink.appleSuccess'
+        : 'member.sso.unlink.success',
+      { provider: connection.label },
+    ))
     shouldCloseSettings = true
   } catch (error) {
     console.error('Failed to unlink social account:', error)
@@ -1254,7 +1277,14 @@ onUnmounted(() => {
             class="flex min-h-16 items-center justify-between gap-3 rounded-lg bg-dp-bg-secondary p-3"
           >
             <div class="flex min-w-0 items-center gap-3">
-              <img :src="sso.icon" :alt="sso.label" class="w-8 h-8 rounded" />
+              <span
+                v-if="sso.provider === 'APPLE'"
+                class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-dp-bg-card text-dp-text-primary"
+                aria-hidden="true"
+              >
+                <Apple class="h-5 w-5" />
+              </span>
+              <img v-else :src="sso.icon" :alt="sso.label" class="w-8 h-8 rounded" />
               <div class="min-w-0">
                 <p class="truncate font-medium text-dp-text-primary">{{ sso.label }}</p>
                 <p v-if="sso.connected && sso.accountName" class="text-sm text-dp-text-secondary">
@@ -1288,7 +1318,7 @@ onUnmounted(() => {
                 {{ t('member.sso.unlink.manageHint') }}
               </span>
               <button
-                v-else
+                v-else-if="isWebConnectableSsoProvider(sso.provider)"
                 type="button"
                 @click="connectSso(sso.provider)"
                 :disabled="isSsoActionPending"

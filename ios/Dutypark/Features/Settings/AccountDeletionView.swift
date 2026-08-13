@@ -66,13 +66,16 @@ final class AccountDeletionViewModel: ObservableObject {
 
     private let service: SettingsService
     private let oauthClient: MobileOAuthClient
+    private let appleSignInClient: AppleSignInClient
 
     init(
         service: SettingsService = SettingsService(),
-        oauthClient: MobileOAuthClient = MobileOAuthClient()
+        oauthClient: MobileOAuthClient = MobileOAuthClient(),
+        appleSignInClient: AppleSignInClient = AppleSignInClient()
     ) {
         self.service = service
         self.oauthClient = oauthClient
+        self.appleSignInClient = appleSignInClient
     }
 
     var requiresAdminTransfer: Bool {
@@ -186,9 +189,15 @@ final class AccountDeletionViewModel: ObservableObject {
         errorKey = nil
         defer { isWorking = false }
         do {
-            let proof = try await oauthClient.reauthenticateForAccountDeletion(provider: provider)
+            let proof = if provider == .apple {
+                try await appleSignInClient.reauthenticateForAccountDeletion()
+            } else {
+                try await oauthClient.reauthenticateForAccountDeletion(provider: provider)
+            }
             flow.storeProof(proof.value, expiresIn: proof.expiresIn)
         } catch MobileOAuthError.cancelled {
+            flow.clearProof()
+        } catch AppleSignInError.cancelled {
             flow.clearProof()
         } catch {
             flow.clearProof()
@@ -228,12 +237,32 @@ final class AccountDeletionViewModel: ObservableObject {
 
     nonisolated static func errorKey(for error: Error) -> String {
         guard let apiError = error as? APIError else {
+            if let appleError = error as? AppleSignInError {
+                return switch appleError {
+                case .configurationUnavailable:
+                    "settings.accountDeletion.error.appleConfigurationUnavailable"
+                case .invalidCredential, .stateMismatch:
+                    "settings.accountDeletion.error.appleCredentialInvalid"
+                case .providerUnavailable:
+                    "settings.accountDeletion.error.appleProviderUnavailable"
+                case .cancelled:
+                    "settings.accountDeletion.error.reauthentication"
+                }
+            }
             if error is MobileOAuthError {
                 return "settings.accountDeletion.error.reauthentication"
             }
             return "settings.accountDeletion.error.generic"
         }
         switch code(from: apiError) {
+        case "auth.apple.configurationUnavailable":
+            return "settings.accountDeletion.error.appleConfigurationUnavailable"
+        case "auth.apple.credential.invalid":
+            return "settings.accountDeletion.error.appleCredentialInvalid"
+        case "auth.apple.provider.unavailable":
+            return "settings.accountDeletion.error.appleProviderUnavailable"
+        case "auth.apple.accountMismatch":
+            return "settings.accountDeletion.error.appleAccountMismatch"
         case "auth.reauth.proof.invalid", "account.delete.reauthenticationFailed":
             return "settings.accountDeletion.error.reauthentication"
         case "account.delete.teamAdminTransferRequired":
@@ -431,7 +460,7 @@ struct AccountDeletionView: View {
                 Button {
                     Task { await model.reauthenticate(with: provider) }
                 } label: {
-                    Text(provider == .kakao ? "Kakao" : "Naver")
+                    Text(SettingsSocialManagementPolicy.providerName(provider))
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(DPSecondaryButtonStyle())

@@ -926,6 +926,7 @@ export default {
       providers: {
         kakao: 'Kakao',
         naver: 'Naver',
+        apple: 'Apple',
       },
       prompts: {
         kakaoTitle: 'Connect Kakao account',
@@ -945,13 +946,18 @@ export default {
         modalTitle: '{provider} connection',
         localMappingTitle: 'Dutypark connection',
         localMappingDescription: 'Dutypark stores a local mapping to this {provider} account. Disconnecting removes only that mapping; your {provider} account and provider-side authorization remain active.',
+        appleAuthorizationTitle: 'Apple authorization',
+        appleAuthorizationDescription: 'When you disconnect Apple, Dutypark first revokes its Apple authorization and then deletes the local connection. If revocation fails, both the Apple authorization and Dutypark connection remain active.',
         confirmTitle: 'Disconnect {provider}?',
         confirmMessage: 'This removes only the mapping saved in Dutypark. Your {provider} account and provider-side authorization will remain active.',
+        appleConfirmMessage: 'This revokes Dutypark’s Apple authorization and deletes the saved connection. You will no longer be able to sign in to Dutypark with this Apple account.',
         success: '{provider} has been disconnected from Dutypark.',
+        appleSuccess: 'Apple authorization was revoked and the account was disconnected from Dutypark.',
         lastSocialReason: 'Connect another social account before disconnecting this one.',
         errors: {
           lastAuthenticationMethod: 'You must keep at least one other connected social account. Connect another social account and try again.',
           impersonationForbidden: 'You cannot disconnect social accounts while managing another account. Return to your own account and try again.',
+          appleProviderUnavailable: 'Dutypark could not confirm revocation with Apple, so the connection was kept. Please try again later.',
           generic: 'Failed to disconnect the social account. Please try again.',
         },
       },
@@ -990,6 +996,9 @@ export default {
         passwordAction: 'Verify password',
         socialTitle: 'Or verify with a connected social account',
         socialAction: 'Verify with {provider}',
+        appleTitle: 'Verify with Apple',
+        appleOnlyMessage: 'Apple reauthentication is not available on the web. Open Account Management in the Dutypark iOS app, verify with Apple, and continue account deletion there.',
+        appleAlternativeMessage: 'On the web, verify with the password or another social account shown above. To verify with Apple, continue account deletion in the Dutypark iOS app.',
         complete: 'Identity verified. You can continue.',
       },
       name: {
@@ -1021,6 +1030,7 @@ export default {
         oauthCancelled: 'Social verification was cancelled.',
         oauthAccountMismatch: 'That social account does not match the account connected to Dutypark.',
         oauthProviderFailed: 'The social provider could not complete verification. Please try again.',
+        appleRequiresIos: 'Apple reauthentication is not available on the web. Continue account deletion in the Dutypark iOS app.',
         generic: 'Account deletion could not be completed. Your verification was discarded; please verify again.',
       },
       oauth: {

@@ -36,7 +36,7 @@ final class DutyparkUITests: XCTestCase {
     }
 
     @MainActor
-    func testLoginOffersKakaoAndNaver() throws {
+    func testLoginOffersAppleKakaoAndNaver() throws {
         let app = XCUIApplication()
         app.launchArguments += [
             "-dp-language", "ko",
@@ -51,7 +51,8 @@ final class DutyparkUITests: XCTestCase {
         XCTAssertTrue(loginButton.waitForExistence(timeout: 10))
         loginButton.tap()
 
-        XCTAssertTrue(app.buttons["login.oauth.kakao"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["login.oauth.apple"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["login.oauth.kakao"].exists)
         XCTAssertTrue(app.buttons["login.oauth.naver"].exists)
     }
 

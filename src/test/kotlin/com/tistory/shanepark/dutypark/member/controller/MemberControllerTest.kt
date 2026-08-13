@@ -255,13 +255,12 @@ class MemberControllerTest : RestDocsTest() {
     }
 
     @Test
-    fun `unlink social account rejects unsupported provider`() {
+    fun `unlink unlinked Apple account is idempotent`() {
         mockMvc.perform(
             RestDocumentationRequestBuilders.delete("/api/members/me/social-accounts/APPLE")
                 .withAuth(TestData.member)
         )
-            .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.code").value("common.badRequest"))
+            .andExpect(status().isNoContent)
     }
 
     @Test

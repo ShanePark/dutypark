@@ -373,6 +373,7 @@ final class SettingsViewModel: ObservableObject {
             calendarVisibility: .friends,
             kakaoId: "connected",
             naverId: nil,
+            appleId: nil,
             hasPassword: true,
             hasProfilePhoto: false,
             profilePhotoVersion: 0

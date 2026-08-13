@@ -14,7 +14,7 @@
 - Apple Developer Program은 개인 주체 가입·결제를 완료했고 승인을 기다리는 중이다.
 - 앱 타깃 버전은 `MARKETING_VERSION = 1.0`, 빌드는 `CURRENT_PROJECT_VERSION = 1`이다.
 - 자동 서명 설정과 entitlement 파일은 있으나 실제 배포 팀·프로필 검증이 필요하다.
-- Debug/Release Simulator 처리 entitlement의 APNs 환경 분리와 Associated Domains 값은 사전 검증했지만, 서명 Archive entitlement와 provisioning은 미검증이다.
+- Debug/Release Simulator 처리 entitlement의 APNs 환경 분리, Associated Domains와 Sign in with Apple `Default`는 사전 검증했지만, 서명 Archive entitlement와 provisioning은 미검증이다.
 - [PrivacyInfo.xcprivacy](../../Dutypark/PrivacyInfo.xcprivacy)가 앱 타깃에 포함되어 있다.
 - Privacy Manifest에는 현재 수집하는 Name, Email, Photos or Videos, Other User Content, User ID, Device ID와 Other Data Types가 App Functionality·user-linked·non-tracking으로 선언되어 있다.
 - Release Archive 생성, 업로드 및 보관 절차는 아직 재현 가능한 자동화로 고정되지 않았다.
@@ -77,7 +77,7 @@ Apple 참고: [Xcode Cloud overview](https://developer.apple.com/xcode-cloud/) �
 - 앱의 `application-identifier`가 배포 Team ID와 Bundle ID 조합인지 확인한다.
 - `aps-environment`가 배포 빌드에서 production인지 확인한다.
 - Associated Domains의 운영 도메인이 실제 AASA 파일과 일치하는지 확인한다.
-- Sign in with Apple을 도입하면 해당 capability와 entitlement를 확인한다.
+- Sign in with Apple `Default`가 최종 App ID capability, provisioning profile과 서명 entitlement에 모두 포함되는지 확인한다.
 - 개발 전용 entitlement나 잘못된 keychain group이 없는지 확인한다.
 - embedded provisioning profile의 만료일과 App ID를 확인한다.
 
@@ -85,10 +85,10 @@ Apple 참고: [Code signing](https://developer.apple.com/support/code-signing/) 
 
 ### 2026-08-13 entitlement 기술 사전 감사
 
-- 소스 `Dutypark.entitlements`는 `plutil`을 통과하며 `aps-environment=$(APNS_ENVIRONMENT)`와 `applinks:dutypark.o-r.kr`만 선언한다.
+- 소스 `Dutypark.entitlements`는 `plutil`을 통과하며 `aps-environment=$(APNS_ENVIRONMENT)`, `applinks:dutypark.o-r.kr`와 `com.apple.developer.applesignin = Default`를 선언한다.
 - app target의 `showBuildSettings`는 Debug `APNS_ENVIRONMENT=development`, Release `production`, 양쪽 모두 같은 `CODE_SIGN_ENTITLEMENTS` 파일을 사용한다.
-- 새 Debug/Release Simulator build의 `ProcessProductPackaging` 처리 산출물은 각각 APNs development/production과 동일한 associated domain을 기록했다.
-- Sign in with Apple의 `com.apple.developer.applesignin`은 소스와 처리 산출물에 없다. 이는 현재 미구현 상태와 일치할 뿐이며, 적용 필요 여부와 구현 결정은 남아 있다.
+- Apple 로그인 반영 후 새 Debug/Release Simulator build의 `ProcessProductPackaging` 처리 산출물은 각각 APNs development/production, 동일한 associated domain과 `com.apple.developer.applesignin = Default`를 기록했다.
+- 이 Simulator `.xcent` 결과는 소스 설정의 기술 사전 검증이다. 실제 Apple Developer App ID capability와 provisioning profile 승인을 대신하지 않는다.
 - `CODE_SIGNING_ALLOWED=NO` unsigned generic Release Archive에는 `.xcent`, `embedded.mobileprovision`, 최종 코드서명 entitlement가 없고 Archive의 Signing Identity·Team도 비어 있다. 따라서 이 사전 감사는 실제 배포 Team/App ID capability/profile, 서명 Archive, APNs 송수신 또는 Universal Links E2E를 검증하지 않는다.
 
 ## 4. 버전과 빌드 번호

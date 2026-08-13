@@ -4,6 +4,7 @@ import type { MemberDto } from '@/types'
 
 vi.mock('./client', () => ({
   default: {
+    get: vi.fn(),
     delete: vi.fn(),
   },
 }))
@@ -13,6 +14,8 @@ import {
   canUnlinkSocialAccount,
   countLinkedSocialAccounts,
   getSocialAccountUnlinkErrorKey,
+  getVisibleSocialAccountProviders,
+  isSocialAccountConnected,
   memberApi,
   type SocialAccountProvider,
 } from './member'
@@ -27,6 +30,7 @@ function member(overrides: Partial<MemberDto> = {}): MemberDto {
     calendarVisibility: 'FRIENDS',
     kakaoId: null,
     naverId: null,
+    appleId: null,
     hasPassword: false,
     ...overrides,
   }
@@ -50,7 +54,17 @@ describe('member social account API contract', () => {
     vi.clearAllMocks()
   })
 
-  it.each<SocialAccountProvider>(['KAKAO', 'NAVER'])(
+  it('preserves a nullable Apple subject in the member response', async () => {
+    const responseMember = member({ appleId: 'apple-subject' })
+    vi.mocked(apiClient.get).mockResolvedValue({ data: responseMember })
+
+    const response = await memberApi.getMyInfo()
+
+    expect(apiClient.get).toHaveBeenCalledWith('/members/me')
+    expect(response.data.appleId).toBe('apple-subject')
+  })
+
+  it.each<SocialAccountProvider>(['KAKAO', 'NAVER', 'APPLE'])(
     'uses DELETE and the uppercase %s provider path',
     async (provider) => {
       vi.mocked(apiClient.delete).mockResolvedValue({ data: undefined })
@@ -80,8 +94,27 @@ describe('social account unlink policy', () => {
     expect(canUnlinkSocialAccount(bothConnected, 'NAVER')).toBe(true)
   })
 
+  it('counts Apple and uses appleId as its connection identity', () => {
+    const appleConnected = member({ appleId: 'apple-subject' })
+    const allConnected = member({
+      kakaoId: 'kakao-1',
+      naverId: 'naver-1',
+      appleId: 'apple-subject',
+    })
+
+    expect(isSocialAccountConnected(appleConnected, 'APPLE')).toBe(true)
+    expect(countLinkedSocialAccounts(allConnected)).toBe(3)
+    expect(canUnlinkSocialAccount(allConnected, 'APPLE')).toBe(true)
+  })
+
   it('does not allow disconnecting a provider that is not connected', () => {
     expect(canUnlinkSocialAccount(member({ kakaoId: 'kakao-1' }), 'NAVER')).toBe(false)
+  })
+
+  it('shows Apple management only after an iOS-linked appleId is returned', () => {
+    expect(getVisibleSocialAccountProviders(member(), true)).toEqual(['KAKAO', 'NAVER'])
+    expect(getVisibleSocialAccountProviders(member({ appleId: 'apple-subject' }), false))
+      .toEqual(['KAKAO', 'APPLE'])
   })
 })
 
@@ -105,5 +138,11 @@ describe('social account unlink error mapping', () => {
     expect(getSocialAccountUnlinkErrorKey(
       axiosApiError(500, 'common.badRequest'),
     )).toBe('member.sso.unlink.errors.generic')
+  })
+
+  it('keeps the Apple connection and asks for retry when revocation is unavailable', () => {
+    expect(getSocialAccountUnlinkErrorKey(
+      axiosApiError(503, 'auth.apple.provider.unavailable'),
+    )).toBe('member.sso.unlink.errors.appleProviderUnavailable')
   })
 })

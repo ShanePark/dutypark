@@ -10,9 +10,13 @@ vi.mock('./client', () => ({
 
 import apiClient from './client'
 import {
+  AccountDeletionOAuthError,
   accountDeletionApi,
+  getWebSocialReauthenticationProviders,
   getAccountDeletionErrorKey,
   isAccountDeletionAlreadyPending,
+  requiresIosAppleReauthentication,
+  type AccountDeletionPreview,
 } from './accountDeletion'
 
 function apiError(status: number, code: string): AxiosError {
@@ -69,6 +73,35 @@ describe('account deletion API contract', () => {
       codeVerifier: 'verifier',
       callbackUri: 'https://dutypark.test/callback',
     })
+  })
+
+  it('never sends Apple through the generic mobile OAuth authorize flow', async () => {
+    expect(() => accountDeletionApi.authorizeSocialReauthentication(
+      'APPLE',
+      'https://dutypark.test/callback',
+      'challenge',
+    )).toThrow(AccountDeletionOAuthError)
+    await expect(accountDeletionApi.reauthenticateWithSocial('APPLE')).rejects.toMatchObject({
+      name: 'AccountDeletionOAuthError',
+      reason: 'unsupported_provider',
+    } satisfies Partial<AccountDeletionOAuthError>)
+    expect(apiClient.post).not.toHaveBeenCalled()
+  })
+
+  it('offers only Kakao and Naver on web and identifies Apple-only reauthentication', () => {
+    const appleOnly: Pick<AccountDeletionPreview, 'hasPassword' | 'socialProviders'> = {
+      hasPassword: false,
+      socialProviders: ['APPLE'],
+    }
+    const mixed: Pick<AccountDeletionPreview, 'hasPassword' | 'socialProviders'> = {
+      hasPassword: false,
+      socialProviders: ['APPLE', 'KAKAO'],
+    }
+
+    expect(getWebSocialReauthenticationProviders(appleOnly)).toEqual([])
+    expect(requiresIosAppleReauthentication(appleOnly)).toBe(true)
+    expect(getWebSocialReauthenticationProviders(mixed)).toEqual(['KAKAO'])
+    expect(requiresIosAppleReauthentication(mixed)).toBe(false)
   })
 })
 

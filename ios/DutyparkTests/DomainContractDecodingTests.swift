@@ -10,6 +10,8 @@ struct DomainContractDecodingTests {
 
         #expect(member.id == 42)
         #expect(member.calendarVisibility == .friends)
+        #expect(member.naverId == "naver-42")
+        #expect(member.appleId == "apple-42")
         #expect(member.hasProfilePhoto)
     }
 

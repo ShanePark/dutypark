@@ -52,9 +52,38 @@ nonisolated struct MemberDTO: Codable, Equatable, Sendable {
     let calendarVisibility: Visibility
     let kakaoId: String?
     let naverId: String?
+    let appleId: String?
     let hasPassword: Bool
     let hasProfilePhoto: Bool
     let profilePhotoVersion: Int64
+
+    init(
+        id: MemberID?,
+        name: String,
+        email: String?,
+        teamId: TeamID?,
+        team: String?,
+        calendarVisibility: Visibility,
+        kakaoId: String?,
+        naverId: String?,
+        appleId: String? = nil,
+        hasPassword: Bool,
+        hasProfilePhoto: Bool,
+        profilePhotoVersion: Int64
+    ) {
+        self.id = id
+        self.name = name
+        self.email = email
+        self.teamId = teamId
+        self.team = team
+        self.calendarVisibility = calendarVisibility
+        self.kakaoId = kakaoId
+        self.naverId = naverId
+        self.appleId = appleId
+        self.hasPassword = hasPassword
+        self.hasProfilePhoto = hasProfilePhoto
+        self.profilePhotoVersion = profilePhotoVersion
+    }
 }
 
 nonisolated struct MemberInviteCandidateDTO: Codable, Equatable, Sendable {

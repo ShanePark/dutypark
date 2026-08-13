@@ -7,6 +7,36 @@
         "ko": { "stringUnit": { "state": "translated", "value": "이미 다른 계정에 연결된 소셜 계정입니다." } }
       }
     },
+    "auth.apple.accountMismatch": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "This Apple account does not match the account being verified." } },
+        "ko": { "stringUnit": { "state": "translated", "value": "현재 확인 중인 계정과 Apple 계정이 일치하지 않습니다." } }
+      }
+    },
+    "auth.apple.configurationUnavailable": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Sign in with Apple is not available yet. Please try another sign-in method." } },
+        "ko": { "stringUnit": { "state": "translated", "value": "Apple 로그인을 아직 사용할 수 없습니다. 다른 로그인 방법을 이용해주세요." } }
+      }
+    },
+    "auth.apple.credential.invalid": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "The Apple sign-in response is invalid or expired. Please try again." } },
+        "ko": { "stringUnit": { "state": "translated", "value": "Apple 로그인 응답이 올바르지 않거나 만료되었습니다. 다시 시도해주세요." } }
+      }
+    },
+    "auth.apple.provider.unavailable": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Apple sign-in is temporarily unavailable. Please try again later." } },
+        "ko": { "stringUnit": { "state": "translated", "value": "Apple 로그인을 일시적으로 사용할 수 없습니다. 잠시 후 다시 시도해주세요." } }
+      }
+    },
+    "auth.oauth.socialAccountAlreadyLinked": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "This social account is already connected to another account." } },
+        "ko": { "stringUnit": { "state": "translated", "value": "이미 다른 계정에 연결된 소셜 계정입니다." } }
+      }
+    },
     "auth.oauth.mobile.authorizationUrl.invalid": {
       "localizations": {
         "en": { "stringUnit": { "state": "translated", "value": "Could not start social login. Please try again." } },

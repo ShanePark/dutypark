@@ -55,6 +55,7 @@ describe('consumeSocialLinkCallback', () => {
     [{ socialLinkSuccess: 'TRUE', socialProvider: 'kakao' }],
     [{ socialLinkSuccess: '1', socialProvider: 'naver' }],
     [{ socialLinkSuccess: 'true', socialProvider: 'google' }],
+    [{ socialLinkSuccess: 'true', socialProvider: 'apple' }],
     [{ socialLinkError: 'unknown', socialProvider: 'kakao' }],
   ])('cleans but ignores invalid callback query %o', async (query) => {
     const replaceQuery = vi.fn(async () => undefined)

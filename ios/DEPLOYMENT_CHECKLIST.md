@@ -22,8 +22,8 @@
 - `[-]` Apple Developer Program에 개인 주체로 가입하고 결제를 완료했으며, 현재 Apple 승인을 기다리고 있다. 승인 전의 Personal Team 설치는 App Store 배포 준비 완료를 뜻하지 않는다.
 - `[ ]` App ID, 배포 인증서/프로비저닝, APNs 키 및 App Store Connect 앱 레코드는 외부 콘솔에서 완료해야 한다.
 - `[ ]` 카카오·네이버 콘솔에 모바일 콜백을 추가하고, 해당 서버 코드를 운영에 배포해야 한다.
-- `[ ]` Sign in with Apple은 아직 구현되어 있지 않다.
-- `[!]` 현재 앱의 회원 탈퇴는 관리자 문의 안내뿐이다. Apple 심사 기준의 앱 내 계정 삭제 기능을 충족하지 않으므로 서버·웹 동시 영향 범위를 합의한 후 구현해야 한다.
+- `[-]` iOS 전용 Sign in with Apple과 서버 검증·revoke-first 계정 생명주기를 구현하고 자동 검증했다. Apple 외부 설정·서명·실기기/TestFlight E2E가 남아 있다.
+- `[-]` 앱 내 계정 삭제는 iOS·웹·서버에 구현됐다. Apple revoke도 구현됐으며 실제 공급자·MySQL·TestFlight 검증이 남아 있다.
 - `[ ]` 운영 서버의 AASA(`apple-app-site-association`) 파일이 아직 올바른 JSON으로 제공되지 않는다.
 - `[ ]` TestFlight 업로드와 심사 정보 입력은 아직 수행하지 않았다.
 
@@ -57,7 +57,7 @@
 - `[ ]` 해당 App ID에서 다음 capability를 활성화한다.
   - Push Notifications
   - Associated Domains
-  - Sign in with Apple — 6단계 구현을 진행할 때 Primary App ID로 설정
+  - Sign in with Apple — Primary App ID로 설정
 - `[ ]` Xcode 자동 서명을 사용할지, 수동으로 Development/Distribution 인증서와 프로비저닝 프로파일을 관리할지 결정한다. 이 프로젝트는 단일 앱이므로 우선 Xcode 자동 서명이 가장 단순하다.
 
 ### Codex가 저장소에서 할 일
@@ -65,7 +65,8 @@
 - `[x]` 현재 Xcode Bundle ID는 `com.tistory.shanepark.dutypark`다.
 - `[!]` Apple 승인 후 `io.github.shanepark.dutypark`의 가용성이 확인되면 출시 Bundle ID로 변경한다. 확인 전에는 코드와 Xcode 프로젝트를 변경하지 않는다.
 - `[x]` `aps-environment`와 `applinks:dutypark.o-r.kr` entitlement를 추가했다.
-- `[ ]` Sign in with Apple 구현 시 해당 entitlement와 프레임워크를 추가한다.
+- `[x]` `AuthenticationServices` 구현과 `com.apple.developer.applesignin = Default` entitlement를 추가하고 Debug/Release Simulator 처리 산출물에서 확인했다.
+- `[ ]` 최종 App ID·provisioning profile과 서명된 Release Archive에 같은 Apple entitlement가 포함되는지 확인한다.
 - `[ ]` 최종 배포 Team에서 Debug는 development APNs, Release는 production APNs entitlement로 서명되는지 확인한다.
 
 App ID의 capability를 변경하면 기존 프로비저닝 프로파일이 무효화될 수 있으므로, 변경 후 프로파일을 다시 생성하거나 Xcode 자동 서명이 갱신하도록 한다.
@@ -157,18 +158,24 @@ App ID의 capability를 변경하면 기존 프로비저닝 프로파일이 무�
 
 Dutypark는 카카오·네이버로 주 계정을 만들거나 인증할 수 있다. Apple의 로그인 서비스 심사 기준 4.8을 가장 예측 가능하게 충족하려면 Sign in with Apple을 동등한 로그인·가입·계정 연결 수단으로 제공해야 한다.
 
+제품 범위는 **iOS 전용 Apple 로그인**이다. 웹에는 Apple 로그인 버튼, Services ID, Website URL, Return URL 또는 Apple 웹 OAuth flow를 만들지 않는다. 웹은 iOS에서 연결된 Apple 상태, revoke-first 연결 해제와 Apple-only 계정의 iOS 탈퇴 안내만 제공한다.
+
 ### 사용자가 할 일
 
 - `[ ]` 2단계의 App ID에서 **Sign in with Apple**을 Primary로 활성화한다.
 - `[ ]` 서버 측 토큰 처리와 연결 해제에 필요한 Apple 설정·키를 생성할 때 Team ID, Key ID 등 식별값을 확인하고 개인 키는 비밀 저장소에만 보관한다.
-- `[ ]` 사용자가 이메일 가리기를 선택해도 가입과 로그인이 동작하는 정책을 승인한다.
+- `[ ]` 별도의 32바이트 credential 암호화 키를 생성해 base64로 운영 비밀 저장소에 보관한다.
 
 ### Codex가 저장소에서 할 일
 
-- `[ ]` iOS 로그인·가입·설정의 계정 연결 화면에 Sign in with Apple을 추가한다.
-- `[ ]` 서버에서 Apple identity token의 서명, issuer, audience, nonce를 검증하고 기존 계정 생성·연결·해제 정책에 맞춘다.
-- `[ ]` Apple이 이름·이메일을 최초 승인에만 제공하는 경우와 Private Relay 이메일을 처리한다.
-- `[ ]` 카카오·네이버와 동일한 수준으로 가입 동의, 중복 연결, 로그인, 로그아웃 및 테스트를 추가한다.
+- `[x]` iOS 로그인·가입·설정 연결과 계정 삭제 재인증에 표준 Sign in with Apple flow를 추가했다.
+- `[x]` 서버 native API가 RS256/JWKS, issuer, audience, 시간 claim, nonce, replay와 authorization-code 교환 결과 `sub`를 검증한다.
+- `[x]` Apple 이름·이메일 scope는 요청하지 않는다. 검증된 `sub`만 저장하고 이름·동의는 기존 Dutypark 가입 화면에서 직접 받으며 이메일 기반 자동 병합을 하지 않는다.
+- `[x]` Apple refresh token AES-256-GCM 보관과 연결 해제·회원 탈퇴 revoke-first durable 재시도를 구현했다.
+- `[x]` iOS 전체 278/278 1회, backend Apple-focused 19/19 및 관련 회귀, 웹 34 files/162 tests·type-check·build를 통과했다.
+- `[x]` 웹 Services ID와 Apple 웹 OAuth가 불필요한 iOS 전용 범위를 코드·UI에 반영했다.
+- `[ ]` 승인된 Team의 App ID capability, Apple server key·운영 환경 변수를 연결한다.
+- `[ ]` 실기기/TestFlight에서 로그인·가입·연결·충돌·취소·삭제 mismatch·revoke를 검증한다.
 
 참고: [Sign in with Apple 개요](https://developer.apple.com/help/account/capabilities/about-sign-in-with-apple), [App Review Guideline 4.8](https://developer.apple.com/app-store/review/guidelines/#login-services)
 
@@ -179,12 +186,14 @@ Dutypark는 카카오·네이버로 주 계정을 만들거나 인증할 수 있
 - `[x]` iOS 설정에서 안전한 재인증, 팀 이관, 이름 확인과 최종 확인을 거쳐 계정 삭제를 요청할 수 있다.
 - `[x]` 서버는 요청 즉시 계정을 `DELETION_PENDING`으로 전환하고 refresh session·연결된 push 정보를 무효화한 뒤 durable 비동기 job으로 파일·DB를 정리한다.
 - `[x]` 1인 팀 삭제, 다인 팀 관리자 이관과 공동 TEAM 데이터·첨부의 보존·이관 규칙을 구현했다.
-- `[x]` `PRIVACY`와 `TERMS` 2026-08-13 버전에 즉시 접근 차단, 비동기 삭제와 공동 데이터 예외를 실제 흐름대로 반영했다.
+- `[x]` 최신 `PRIVACY 2026-08-14`와 현행 이용약관에 즉시 접근 차단, 비동기 삭제와 공동 데이터 예외를 실제 흐름대로 반영했다.
+- `[x]` 현행 이용약관 버전은 `TERMS 2026-08-13`이다.
 
 ### 출시 전 남은 일
 
 - `[ ]` 실제 MySQL 또는 운영 유사 환경에서 locking, 전체 삭제와 재시도를 검증한다.
-- `[ ]` Kakao·Naver provider-side revoke를 구현·검증하고 Sign in with Apple 도입 시 Apple revoke를 추가한다.
+- `[x]` Apple provider revoke를 로컬 mapping 삭제보다 먼저 수행하고, 회원 탈퇴 worker 실패 시 durable 재시도하도록 구현했다.
+- `[ ]` 실제 Apple revoke 성공·실패·재시도를 운영 유사 환경에서 검증하고 Kakao·Naver provider-side revoke를 구현한다.
 - `[ ]` TestFlight 실기기에서 삭제 요청과 재가입 흐름을 확인하고 Review Notes에 메뉴 경로·비동기 처리·확인 절차를 기록한다.
 - `[ ]` 법적 보존 의무, 감사 로그 보유 범위와 운영 모니터링 책임자를 최종 확정한다.
 
@@ -202,7 +211,8 @@ Dutypark는 카카오·네이버로 주 계정을 만들거나 인증할 수 있
 ### Codex가 저장소에서 할 일
 
 - `[x]` 앱 안에서 개인정보 처리방침을 열 수 있다.
-- `[x]` `V2.2.28`의 `PRIVACY 2026-08-13`에 HttpOnly cookie, 기기 저장소, push, 첨부, Kakao/Naver, Google AI, 보유·삭제와 공동 TEAM 예외를 실제 기술 흐름대로 반영하고 migration test 2/2를 통과했다.
+- `[x]` `V2.2.28`의 전체 데이터 흐름을 상속한 `V2.2.32`의 최신 `PRIVACY 2026-08-14`에 iOS 전용 Apple `sub`, 일시 token·nonce, replay hash, 암호화 refresh credential과 revoke-first 처리를 공개했다.
+- `[x]` `V2.2.32`는 기존 consent를 변경하거나 기존 회원 재동의를 강제하지 않는다. 신규 SSO 가입은 서버 current privacy version인 `2026-08-14` 동의를 요구한다.
 - `[x]` `V2.2.29`에 `TERMS`와 `AI_SCHEDULE_PARSING` 2026-08-13 정책을 추가하고 별도 선택 동의 event/API, owner 기준 schedule gate와 worker 외부 호출 직전 재검사를 구현했다.
 - `[x]` `PrivacyInfo.xcprivacy`에 UserDefaults required-reason API와 Name, Email, Photos or Videos, Other User Content, User ID, Device ID, Other Data Types를 App Functionality·Linked to User·non-tracking으로 선언했다.
 - `[x]` 회원 탈퇴 구현 뒤 개인정보 처리방침·이용약관과 manifest 데이터 유형을 다시 점검했다.
@@ -210,7 +220,7 @@ Dutypark는 카카오·네이버로 주 계정을 만들거나 인증할 수 있
 - `[ ]` 운영 개인정보 처리방침을 법적 관점에서 최종 검토하고 Google의 실제 처리 국가·하위처리자·보관 조건 및 법정 보존 의무를 확정한다.
 - `[ ]` Xcode Release Archive의 Privacy Report와 실제 포함 SDK를 `PrivacyInfo.xcprivacy` 및 App Store Connect 입력값과 대조한다.
 - `[ ]` App Store Connect의 Privacy Policy URL과 App Privacy 답변을 입력하고 Publish한다.
-- `[ ]` Sign in with Apple 또는 새 SDK를 추가하면 정책, manifest와 App Privacy를 다시 점검한다.
+- `[-]` Sign in with Apple의 이름·이메일 무수집과 Apple `sub`, token·nonce·replay, AES-GCM 암호화 refresh credential 및 revoke-first 처리는 서비스 정책에 반영했다. manifest와 App Privacy 답변을 최종 점검한다.
 
 App Store Connect의 “앱이 데이터를 수집하지 않음”은 서버에 계정·일정·할 일·첨부파일 등이 저장되는 Dutypark에는 맞지 않는다.
 
@@ -240,7 +250,7 @@ App Store Connect의 “앱이 데이터를 수집하지 않음”은 서버에 
 ### Codex가 준비할 일
 
 - `[ ]` Release Archive를 생성하고 서명, entitlement, privacy manifest, 아이콘, 버전·빌드 번호를 검증한다.
-- `[ ]` 운영 API에서 이메일, 카카오, 네이버, Apple 로그인과 주요 기능을 회귀 테스트한다.
+- `[ ]` 운영 API에서 이메일, 카카오, 네이버와 **iOS 전용 Apple 로그인** 및 주요 기능을 회귀 테스트한다.
 - `[ ]` iPhone 13 mini와 iPhone 16 Pro에서 라이트·다크 모드, 한국어·영어 및 알림을 최종 확인한다.
 - `[ ]` 빌드를 App Store Connect에 업로드한다.
 
@@ -262,8 +272,8 @@ App Store Connect의 “앱이 데이터를 수집하지 않음”은 서버에 
 3. App Store Connect 앱 레코드 생성
 4. 카카오·네이버 모바일 콜백을 기존 웹 콜백 옆에 추가
 5. 모바일 OAuth 서버 변경 운영 배포 후 웹·앱 로그인 동시 검증
-6. Sign in with Apple 구현 및 검증
-7. 회원 탈퇴 정책 합의 후 서버·웹·앱 구현
+6. Sign in with Apple 운영 자격증명 연결, 서명 Archive와 실기기/TestFlight E2E
+7. 회원 탈퇴의 실제 Apple revoke·MySQL·TestFlight 검증과 Kakao·Naver revoke 보강
 8. APNs 키를 운영 비밀 설정에 주입하고 sandbox/production 푸시 검증
 9. Team ID 기반 AASA 배포 및 Universal Links 검증
 10. 개인정보 처리방침·App Privacy·스토어 메타데이터 확정

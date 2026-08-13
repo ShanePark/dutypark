@@ -139,6 +139,23 @@ final class MobileOAuthClientTests: XCTestCase {
         )
     }
 
+    @MainActor
+    func testAppleCannotFallThroughToBrowserOAuthEndpoints() async {
+        let client = MobileOAuthClient(
+            client: makeClient(),
+            webAuthenticator: OAuthWebAuthenticatorStub(
+                callback: URL(string: "dutypark://oauth/callback?code=unexpected")!
+            )
+        )
+
+        do {
+            _ = try await client.login(provider: .apple)
+            XCTFail("Expected native-only Apple login to reject browser OAuth")
+        } catch {
+            XCTAssertEqual(error as? MobileOAuthError, .invalidAuthorizationURL)
+        }
+    }
+
     private func makeClient() -> APIClient {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [OAuthURLProtocolStub.self]

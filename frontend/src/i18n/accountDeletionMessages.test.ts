@@ -13,13 +13,28 @@ describe('account deletion translations', () => {
       expect(deletion.scope.async).toBeTruthy()
       expect(deletion.team.transferRequired).toBeTruthy()
       expect(deletion.reauth.socialAction).toContain('{provider}')
+      expect(deletion.reauth.appleOnlyMessage).toBeTruthy()
+      expect(deletion.reauth.appleAlternativeMessage).toBeTruthy()
       expect(deletion.name.placeholder).toBeTruthy()
       expect(deletion.final.irreversible).toBeTruthy()
       expect(deletion.errors.oauthPopupBlocked).toBeTruthy()
       expect(deletion.errors.oauthAccountMismatch).toBeTruthy()
+      expect(deletion.errors.appleRequiresIos).toBeTruthy()
       expect(deletion.oauth.callbackNoOpener).toBeTruthy()
       expect(deletion.completion.signedOut).toBeTruthy()
       expect(deletion.completion.asyncCleanup).toBeTruthy()
+    },
+  )
+
+  it.each([['ko', ko], ['en', en]])(
+    'defines Apple-specific disconnect semantics in %s',
+    (_locale, messages) => {
+      const unlink = messages.member.sso.unlink
+      expect(messages.member.sso.providers.apple).toBeTruthy()
+      expect(unlink.appleAuthorizationDescription).toBeTruthy()
+      expect(unlink.appleConfirmMessage).toBeTruthy()
+      expect(unlink.appleSuccess).toBeTruthy()
+      expect(unlink.errors.appleProviderUnavailable).toBeTruthy()
     },
   )
 })

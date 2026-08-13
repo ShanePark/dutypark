@@ -8,6 +8,8 @@ import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberSocialAccountRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.oauth.SocialAccountAlreadyLinkedException
+import com.tistory.shanepark.dutypark.security.oauth.apple.AppleCredentialService
+import com.tistory.shanepark.dutypark.security.oauth.apple.AppleOAuthException
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -16,6 +18,7 @@ import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argThat
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.inOrder
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
@@ -28,12 +31,13 @@ class MemberSocialAccountServiceTest {
 
     private val memberSocialAccountRepository: MemberSocialAccountRepository = mock()
     private val memberRepository: MemberRepository = mock()
+    private val appleCredentialService: AppleCredentialService = mock()
 
     private lateinit var service: MemberSocialAccountService
 
     @BeforeEach
     fun setUp() {
-        service = MemberSocialAccountService(memberRepository, memberSocialAccountRepository)
+        service = MemberSocialAccountService(memberRepository, memberSocialAccountRepository, appleCredentialService)
     }
 
     @Test
@@ -86,6 +90,7 @@ class MemberSocialAccountServiceTest {
         }
 
         assertThat(exception.provider).isEqualTo(SsoType.KAKAO)
+        assertThat(exception.message).isEqualTo("auth.oauth.socialAccountAlreadyLinked")
     }
 
     @Test
@@ -194,6 +199,39 @@ class MemberSocialAccountServiceTest {
         service.unlink(loginMember(), SsoType.KAKAO)
 
         verify(memberSocialAccountRepository).delete(kakao)
+    }
+
+    @Test
+    fun `unlink Apple revokes provider credential before deleting local mapping`() {
+        val member = memberWithId(1L)
+        val apple = socialAccount(member, SsoType.APPLE)
+        val naver = socialAccount(member, SsoType.NAVER)
+        whenever(memberRepository.findMemberWithTeamForUpdate(1L)).thenReturn(Optional.of(member))
+        whenever(memberSocialAccountRepository.findByMemberAndProvider(member, SsoType.APPLE)).thenReturn(apple)
+        whenever(memberSocialAccountRepository.findAllByMemberIdIn(listOf(1L))).thenReturn(listOf(apple, naver))
+
+        service.unlink(loginMember(), SsoType.APPLE)
+
+        val order = inOrder(appleCredentialService, memberSocialAccountRepository)
+        order.verify(appleCredentialService).revokeAndDelete(apple.socialId)
+        order.verify(memberSocialAccountRepository).delete(apple)
+    }
+
+    @Test
+    fun `unlink Apple keeps local mapping when provider revoke fails`() {
+        val member = memberWithId(1L)
+        val apple = socialAccount(member, SsoType.APPLE)
+        val naver = socialAccount(member, SsoType.NAVER)
+        whenever(memberRepository.findMemberWithTeamForUpdate(1L)).thenReturn(Optional.of(member))
+        whenever(memberSocialAccountRepository.findByMemberAndProvider(member, SsoType.APPLE)).thenReturn(apple)
+        whenever(memberSocialAccountRepository.findAllByMemberIdIn(listOf(1L))).thenReturn(listOf(apple, naver))
+        whenever(appleCredentialService.revokeAndDelete(apple.socialId))
+            .thenThrow(AppleOAuthException("auth.apple.provider.unavailable", 503))
+
+        val exception = assertThrows<AppleOAuthException> { service.unlink(loginMember(), SsoType.APPLE) }
+
+        assertThat(exception.message).isEqualTo("auth.apple.provider.unavailable")
+        verify(memberSocialAccountRepository, never()).delete(apple)
     }
 
     @Test

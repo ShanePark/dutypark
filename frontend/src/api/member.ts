@@ -11,26 +11,51 @@ import type {
 } from '@/types'
 import { extractApiError } from '@/utils/resolveApiError'
 
-export type SocialAccountProvider = 'KAKAO' | 'NAVER'
+export type SocialAccountProvider = 'KAKAO' | 'NAVER' | 'APPLE'
 
 export type SocialAccountUnlinkErrorKey =
   | 'member.sso.unlink.errors.lastAuthenticationMethod'
   | 'member.sso.unlink.errors.impersonationForbidden'
+  | 'member.sso.unlink.errors.appleProviderUnavailable'
   | 'member.sso.unlink.errors.generic'
 
-type SocialAccountMember = Pick<MemberDto, 'kakaoId' | 'naverId'>
+type SocialAccountMember = Pick<MemberDto, 'kakaoId' | 'naverId' | 'appleId'>
+
+function socialAccountId(
+  member: SocialAccountMember,
+  provider: SocialAccountProvider,
+): string | null | undefined {
+  switch (provider) {
+    case 'KAKAO':
+      return member.kakaoId
+    case 'NAVER':
+      return member.naverId
+    case 'APPLE':
+      return member.appleId
+  }
+}
 
 export function isSocialAccountConnected(
   member: SocialAccountMember | null,
   provider: SocialAccountProvider,
 ): boolean {
   if (!member) return false
-  return provider === 'KAKAO' ? !!member.kakaoId : !!member.naverId
+  return !!socialAccountId(member, provider)
 }
 
 export function countLinkedSocialAccounts(member: SocialAccountMember | null): number {
   if (!member) return 0
-  return Number(!!member.kakaoId) + Number(!!member.naverId)
+  return Number(!!member.kakaoId) + Number(!!member.naverId) + Number(!!member.appleId)
+}
+
+export function getVisibleSocialAccountProviders(
+  member: SocialAccountMember | null,
+  naverEnabled: boolean,
+): SocialAccountProvider[] {
+  const providers: SocialAccountProvider[] = ['KAKAO']
+  if (naverEnabled || isSocialAccountConnected(member, 'NAVER')) providers.push('NAVER')
+  if (isSocialAccountConnected(member, 'APPLE')) providers.push('APPLE')
+  return providers
 }
 
 export function canUnlinkSocialAccount(
@@ -51,6 +76,12 @@ export function getSocialAccountUnlinkErrorKey(error: unknown): SocialAccountUnl
     || apiError?.status === 403
   ) {
     return 'member.sso.unlink.errors.impersonationForbidden'
+  }
+  if (
+    apiError?.code === 'auth.apple.provider.unavailable'
+    || apiError?.code === 'auth.apple.configurationUnavailable'
+  ) {
+    return 'member.sso.unlink.errors.appleProviderUnavailable'
   }
   return 'member.sso.unlink.errors.generic'
 }
@@ -138,10 +169,7 @@ export const memberApi = {
     return apiClient.post<MemberDto>('/members/auxiliary', { name })
   },
 
-  /**
-   * Remove only Dutypark's local mapping to a social account.
-   * Provider-side accounts and authorizations remain unchanged.
-   */
+  /** Disconnect a social account. Apple authorization is revoked first by the backend. */
   unlinkSocialAccount(provider: SocialAccountProvider) {
     return apiClient.delete<void>(`/members/me/social-accounts/${provider}`)
   },

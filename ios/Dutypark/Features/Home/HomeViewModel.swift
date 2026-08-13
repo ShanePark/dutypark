@@ -134,6 +134,7 @@ final class HomeViewModel: ObservableObject {
             calendarVisibility: .friends,
             kakaoId: nil,
             naverId: nil,
+            appleId: nil,
             hasPassword: true,
             hasProfilePhoto: false,
             profilePhotoVersion: 0

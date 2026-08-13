@@ -30,6 +30,7 @@ struct SettingsView: View {
     @StateObject private var push = APNsRegistrationManager.shared
     @StateObject private var aiConsent = AIScheduleParsingConsentStore.shared
     @State private var oauthClient = MobileOAuthClient()
+    @State private var appleSignInClient = AppleSignInClient()
     @AppStorage(SettingsPreference.languageKey) private var languageCode = ""
     @AppStorage(SettingsPreference.themeKey) private var themeCode = SettingsPreference.defaultTheme
     @State private var selectedPhoto: PhotosPickerItem?
@@ -737,6 +738,10 @@ struct SettingsView: View {
                 .naver,
                 connected: model.member?.naverId != nil
             )
+            socialRow(
+                .apple,
+                connected: model.member?.appleId != nil
+            )
         }
     }
 
@@ -881,7 +886,7 @@ struct SettingsView: View {
     }
 
     private var connectedSocialProviderCount: Int {
-        [model.member?.kakaoId, model.member?.naverId]
+        [model.member?.kakaoId, model.member?.naverId, model.member?.appleId]
             .compactMap { $0 }
             .count
     }
@@ -995,14 +1000,20 @@ struct SettingsView: View {
         connected: Bool
     ) -> some View {
         HStack(spacing: DPSpacing.compact) {
-            Text(provider == .kakao ? "K" : "N")
+            Group {
+                if provider == .apple {
+                    Image(systemName: "apple.logo")
+                } else {
+                    Text(provider == .kakao ? "K" : "N")
+                }
+            }
                 .font(.system(size: 15, weight: .bold, design: .rounded))
                 .foregroundStyle(provider == .kakao ? DPColor.textOnLight : DPColor.textOnDark)
                 .frame(width: 32, height: 32)
-                .background(provider == .kakao ? Color(red: 1, green: 0.9, blue: 0) : Color(red: 0.01, green: 0.78, blue: 0.28))
+                .background(socialProviderColor(provider))
                 .clipShape(RoundedRectangle(cornerRadius: DPRadius.small))
                 .accessibilityHidden(true)
-            Text(provider == .kakao ? "Kakao" : "Naver")
+            Text(SettingsSocialManagementPolicy.providerName(provider))
                 .font(DPTypography.bodyMedium)
                 .foregroundStyle(DPColor.textPrimary)
             Spacer(minLength: DPSpacing.small)
@@ -1064,11 +1075,17 @@ struct SettingsView: View {
             socialAction.finish()
         }
         do {
-            try await oauthClient.link(provider: provider)
+            if provider == .apple {
+                try await appleSignInClient.link()
+            } else {
+                try await oauthClient.link(provider: provider)
+            }
             await model.reloadMember()
             oauthNoticeMessage = nil
             model.showNotice("settings.social.linked")
         } catch MobileOAuthError.cancelled {
+            return
+        } catch AppleSignInError.cancelled {
             return
         } catch {
             oauthNoticeMessage = error.localizedDescription
@@ -1106,6 +1123,7 @@ struct SettingsView: View {
         switch provider {
         case .kakao: connected = model.member?.kakaoId != nil
         case .naver: connected = model.member?.naverId != nil
+        case .apple: connected = model.member?.appleId != nil
         }
         return SettingsSocialManagementState(
             provider: provider,
@@ -1114,6 +1132,14 @@ struct SettingsView: View {
             linkingProvider: isLinking,
             unlinkingProvider: isUnlinking
         )
+    }
+
+    private func socialProviderColor(_ provider: OAuthProvider) -> Color {
+        switch provider {
+        case .kakao: Color(red: 1, green: 0.9, blue: 0)
+        case .naver: Color(red: 0.01, green: 0.78, blue: 0.28)
+        case .apple: DPColor.surfaceStrong
+        }
     }
 
     private func performLogout() async {
@@ -1190,6 +1216,7 @@ nonisolated enum SettingsSocialUnlinkPolicy {
         switch provider {
         case .kakao: "Kakao"
         case .naver: "Naver"
+        case .apple: SettingsLocalization.string("settings.social.apple")
         }
     }
 }

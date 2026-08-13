@@ -1,3 +1,4 @@
+import AuthenticationServices
 import SwiftUI
 
 struct LoginView: View {
@@ -6,13 +7,16 @@ struct LoginView: View {
 
     @EnvironmentObject private var session: SessionStore
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.colorScheme) private var colorScheme
     @State private var email = UserDefaults.standard.string(forKey: rememberedEmailKey) ?? ""
     @State private var password = ""
     @State private var rememberEmail = UserDefaults.standard.string(forKey: rememberedEmailKey) != nil
     @State private var oauthClient = MobileOAuthClient()
+    @State private var appleSignInClient = AppleSignInClient()
     @State private var oauthErrorMessage: String?
     @State private var signupUUID: String?
     @State private var activeOAuthProvider: OAuthProvider?
+    @State private var appleSignInAttempt: AppleSignInAttempt?
     @FocusState private var focusedField: LoginField?
 
     private enum LoginField {
@@ -177,6 +181,25 @@ struct LoginView: View {
                         .padding(.vertical, 4)
 
                         VStack(spacing: 12) {
+                            SignInWithAppleButton(
+                                .signIn,
+                                onRequest: prepareAppleSignIn,
+                                onCompletion: completeAppleSignIn
+                            )
+                            .signInWithAppleButtonStyle(colorScheme == .dark ? .white : .black)
+                            .frame(maxWidth: .infinity, minHeight: 52, maxHeight: 52)
+                            .clipShape(RoundedRectangle(cornerRadius: DPRadius.large))
+                            .overlay {
+                                if oauthButtonPresentation(for: .apple).showsProgress {
+                                    ProgressView()
+                                        .tint(colorScheme == .dark ? .black : .white)
+                                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                                        .background(colorScheme == .dark ? Color.white : Color.black)
+                                }
+                            }
+                            .disabled(oauthButtonPresentation(for: .apple).isDisabled)
+                            .accessibilityIdentifier("login.oauth.apple")
+
                             Button { startOAuth(.kakao) } label: {
                                 socialButton(
                                     oauthString("auth.oauth.kakao"),
@@ -332,6 +355,7 @@ struct LoginView: View {
     }
 
     private func startOAuth(_ provider: OAuthProvider) {
+        guard provider != .apple else { return }
         guard activeOAuthProvider == nil else { return }
         activeOAuthProvider = provider
         oauthErrorMessage = nil
@@ -345,6 +369,44 @@ struct LoginView: View {
                     signupUUID = uuid
                 }
             } catch MobileOAuthError.cancelled {
+                return
+            } catch {
+                oauthErrorMessage = error.localizedDescription
+            }
+        }
+    }
+
+    private func prepareAppleSignIn(_ request: ASAuthorizationAppleIDRequest) {
+        guard activeOAuthProvider == nil else { return }
+        oauthErrorMessage = nil
+        do {
+            appleSignInAttempt = try appleSignInClient.configure(request)
+            activeOAuthProvider = .apple
+        } catch {
+            appleSignInAttempt = nil
+            oauthErrorMessage = error.localizedDescription
+        }
+    }
+
+    private func completeAppleSignIn(_ result: Result<ASAuthorization, Error>) {
+        guard let attempt = appleSignInAttempt else {
+            activeOAuthProvider = nil
+            oauthErrorMessage = AppleSignInError.invalidCredential.localizedDescription
+            return
+        }
+        Task {
+            defer {
+                appleSignInAttempt = nil
+                activeOAuthProvider = nil
+            }
+            do {
+                switch try await appleSignInClient.completeLogin(result: result, attempt: attempt) {
+                case .authenticated:
+                    try await session.finishExternalLogin()
+                case .signup(let uuid):
+                    signupUUID = uuid
+                }
+            } catch AppleSignInError.cancelled {
                 return
             } catch {
                 oauthErrorMessage = error.localizedDescription

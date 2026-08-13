@@ -6,6 +6,7 @@ import UIKit
 nonisolated enum OAuthProvider: String, Codable, CaseIterable, Sendable {
     case kakao = "KAKAO"
     case naver = "NAVER"
+    case apple = "APPLE"
 }
 
 nonisolated enum MobileOAuthError: Error, Equatable, Sendable {
@@ -192,6 +193,7 @@ final class MobileOAuthClient {
     }
 
     func login(provider: OAuthProvider) async throws -> MobileOAuthLoginOutcome {
+        guard provider != .apple else { throw MobileOAuthError.invalidAuthorizationURL }
         let pkce = PKCEPair.make()
         let callback = try await authorize(provider: provider, purpose: "LOGIN", pkce: pkce)
         if callback.error == "oauth_cancelled" {
@@ -225,6 +227,7 @@ final class MobileOAuthClient {
 
     /// Authenticated settings screens can use this to connect a social account.
     func link(provider: OAuthProvider) async throws {
+        guard provider != .apple else { throw MobileOAuthError.invalidAuthorizationURL }
         let callback = try await authorize(provider: provider, purpose: "LINK", pkce: PKCEPair.make())
         if callback.error == "oauth_cancelled" {
             throw MobileOAuthError.cancelled
@@ -240,6 +243,7 @@ final class MobileOAuthClient {
     /// Reauthenticates the current member without creating a new login session.
     /// The short-lived proof is intentionally returned only to the in-memory deletion flow.
     func reauthenticateForAccountDeletion(provider: OAuthProvider) async throws -> MobileOAuthReauthProof {
+        guard provider != .apple else { throw MobileOAuthError.invalidAuthorizationURL }
         let pkce = PKCEPair.make()
         let callback = try await authorize(provider: provider, purpose: "DELETE_ACCOUNT", pkce: pkce)
         if callback.error == "oauth_cancelled" {

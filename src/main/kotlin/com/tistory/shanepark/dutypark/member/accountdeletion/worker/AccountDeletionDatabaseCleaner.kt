@@ -59,6 +59,11 @@ class AccountDeletionDatabaseCleaner(
         update("delete from mobile_oauth_transaction where link_member_id in (:memberIds) or member_id in (:memberIds)", memberParams)
         update("delete from account_reauth_proof where member_id in (:memberIds)", memberParams)
         update("delete from member_consent where member_id in (:memberIds)", memberParams)
+        update(
+            "delete from apple_oauth_credential where provider = 'APPLE' and social_id in " +
+                "(select social_id from member_social_account where member_id in (:memberIds) and provider = 'APPLE')",
+            memberParams,
+        )
         update("delete from member_social_account where member_id in (:memberIds)", memberParams)
 
         deleteTeams(teamIds, teamParams)

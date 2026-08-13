@@ -36,6 +36,7 @@ nonisolated enum SettingsSocialManagementPolicy {
         switch provider {
         case .kakao: "Kakao"
         case .naver: "Naver"
+        case .apple: SettingsLocalization.string("settings.social.apple")
         }
     }
 
@@ -122,15 +123,17 @@ struct SocialConnectionManagementView: View {
 
     private var providerStatus: some View {
         HStack(spacing: DPSpacing.medium) {
-            Text(state.provider == .kakao ? "K" : "N")
+            Group {
+                if state.provider == .apple {
+                    Image(systemName: "apple.logo")
+                } else {
+                    Text(state.provider == .kakao ? "K" : "N")
+                }
+            }
                 .font(.system(size: 20, weight: .bold, design: .rounded))
                 .foregroundStyle(state.provider == .kakao ? DPColor.textOnLight : DPColor.textOnDark)
                 .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
-                .background(
-                    state.provider == .kakao
-                        ? Color(red: 1, green: 0.9, blue: 0)
-                        : Color(red: 0.01, green: 0.78, blue: 0.28)
-                )
+                .background(providerColor)
                 .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
                 .accessibilityHidden(true)
 
@@ -222,5 +225,13 @@ struct SocialConnectionManagementView: View {
 
     private var providerID: String {
         state.provider.rawValue.lowercased()
+    }
+
+    private var providerColor: Color {
+        switch state.provider {
+        case .kakao: Color(red: 1, green: 0.9, blue: 0)
+        case .naver: Color(red: 0.01, green: 0.78, blue: 0.28)
+        case .apple: DPColor.surfaceStrong
+        }
     }
 }
