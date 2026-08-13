@@ -31,6 +31,7 @@ final class DutyparkUITests: XCTestCase {
             XCTAssertTrue(
                 app.descendants(matching: .any)[destination.screen].waitForExistence(timeout: 10)
             )
+            assertNoUnexpectedAlert(in: app, context: destination.tab)
         }
     }
 
@@ -72,8 +73,9 @@ final class DutyparkUITests: XCTestCase {
 
         primaryTab("tab.todo", in: app).tap()
         let todoAdd = app.buttons["todo.add"]
-        XCTAssertTrue(waitForTodoToolbarAction(todoAdd, in: app, timeout: 10))
+        XCTAssertTrue(todoAdd.waitForExistence(timeout: 10))
         assertMinimumTouchTarget(todoAdd)
+        assertNoUnexpectedAlert(in: app, context: "Todo toolbar")
     }
 
     @MainActor
@@ -121,6 +123,7 @@ final class DutyparkUITests: XCTestCase {
                 XCTAssertTrue(
                     app.descendants(matching: .any)["screen.settings"].waitForExistence(timeout: 10)
                 )
+                assertNoUnexpectedAlert(in: app, context: "Settings")
 
                 let themePicker = app.descendants(matching: .any)
                     .matching(
@@ -155,6 +158,7 @@ final class DutyparkUITests: XCTestCase {
                     app.descendants(matching: .any)["screen.home"].waitForExistence(timeout: 10),
                     "Home screen did not become ready after returning from Settings"
                 )
+                assertNoUnexpectedAlert(in: app, context: "returning Home")
             }
         }
     }
@@ -194,28 +198,18 @@ final class DutyparkUITests: XCTestCase {
     }
 
     @MainActor
-    private func waitForTodoToolbarAction(
-        _ element: XCUIElement,
+    private func assertNoUnexpectedAlert(
         in app: XCUIApplication,
-        timeout: TimeInterval
-    ) -> Bool {
-        let deadline = Date().addingTimeInterval(timeout)
-        let loadErrorAlert = app.alerts["Todo error"]
-
-        while Date() < deadline {
-            if element.exists { return true }
-
-            if loadErrorAlert.exists,
-               loadErrorAlert.staticTexts["Failed to load Todos."].exists {
-                let dismissButton = loadErrorAlert.buttons["OK"]
-                guard dismissButton.exists else { return false }
-                dismissButton.tap()
-            }
-
-            RunLoop.current.run(until: Date().addingTimeInterval(0.05))
-        }
-
-        return element.exists
+        context: String,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) {
+        XCTAssertFalse(
+            app.alerts.firstMatch.waitForExistence(timeout: 0.5),
+            "Unexpected alert appeared after \(context)",
+            file: file,
+            line: line
+        )
     }
 
     @MainActor

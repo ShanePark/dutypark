@@ -96,6 +96,12 @@ final class CalendarViewModel: ObservableObject {
     var visibleDutyTypes: [DutyTypeDTO] { team?.dutyTypes.filter { !$0.hidden } ?? [] }
 
     func load() async {
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-ui-testing-authenticated") {
+            loadUITestingFixture()
+            return
+        }
+#endif
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
@@ -138,6 +144,12 @@ final class CalendarViewModel: ObservableObject {
     }
 
     func loadMonth() async throws {
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-ui-testing-authenticated") {
+            loadUITestingFixture()
+            return
+        }
+#endif
         guard let memberID = targetMemberID else { throw APIError.invalidResponse }
         let mine = memberID == me?.id
         async let calendarResult = repository.calendar(year: year, month: month)
@@ -185,6 +197,72 @@ final class CalendarViewModel: ObservableObject {
         comparedMemberIDs = comparedMemberIDs.contains(myID) ? [] : [myID]
         await reloadMonth()
     }
+
+#if DEBUG
+    private func loadUITestingFixture() {
+        let member = MemberDTO(
+            id: 1,
+            name: "UI Test",
+            email: nil,
+            teamId: nil,
+            team: nil,
+            calendarVisibility: .friends,
+            kakaoId: nil,
+            naverId: nil,
+            hasPassword: true,
+            hasProfilePhoto: false,
+            profilePhotoVersion: 0
+        )
+        me = member
+        selectedMemberID = member.id
+        targetMember = nil
+        friends = []
+        team = nil
+        dDays = []
+        todoBoard = TodoBoardDTO(
+            todo: [],
+            inProgress: [],
+            done: [],
+            counts: TodoCountsDTO(todo: 0, inProgress: 0, done: 0, total: 0)
+        )
+        canManage = false
+        errorMessage = nil
+        let firstOfMonth = CalendarDateSupport.calendar.date(
+            from: DateComponents(year: year, month: month, day: 1)
+        ) ?? Date()
+        let weekday = CalendarDateSupport.calendar.component(.weekday, from: firstOfMonth)
+        let gridStart = CalendarDateSupport.calendar.date(
+            byAdding: .day,
+            value: -(weekday - CalendarDateSupport.calendar.firstWeekday + 7) % 7,
+            to: firstOfMonth
+        ) ?? firstOfMonth
+        days = (0..<42).compactMap { offset in
+            guard let date = CalendarDateSupport.calendar.date(byAdding: .day, value: offset, to: gridStart) else {
+                return nil
+            }
+            let parts = CalendarDateSupport.calendar.dateComponents([.year, .month, .day], from: date)
+            guard let cellYear = parts.year, let cellMonth = parts.month, let cellDay = parts.day else {
+                return nil
+            }
+            let cell = CalendarCell(
+                date: DateOnly(rawValue: String(format: "%04d-%02d-%02d", cellYear, cellMonth, cellDay)),
+                year: cellYear,
+                month: cellMonth,
+                day: cellDay,
+                isCurrentMonth: cellYear == year && cellMonth == month
+            )
+            return CalendarDayContent(
+                cell: cell,
+                duty: nil,
+                schedules: [],
+                holidays: [],
+                todos: [],
+                dDays: [],
+                comparedDuties: []
+            )
+        }
+    }
+#endif
 
     func setFriendDutyComparisons(_ memberIDs: Set<MemberID>) async {
         guard isMyCalendar else { return }

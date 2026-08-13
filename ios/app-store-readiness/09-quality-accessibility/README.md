@@ -134,12 +134,12 @@ VoiceOver 수동 검증은 [Apple VoiceOver 테스트 안내](https://developer.
 ## 8. UI 자동화 안정화
 
 - [x] 각 UI 테스트는 언어, 테마와 인증 상태를 명시적으로 초기화한다.
-- [ ] 각 UI 테스트에 필요한 테스트 데이터를 명시적으로 초기화한다.
+- [x] 각 UI 테스트에 필요한 테스트 데이터를 명시적으로 초기화한다.
 - [x] 고정 sleep 대신 `waitForExistence`와 화면 준비 신호를 사용한다.
-- [ ] 테스트 인증 모드가 실제 API 오류 alert를 만들지 않도록 fixture 범위를 완성한다.
+- [x] 테스트 인증 모드가 실제 API 오류 alert를 만들지 않도록 fixture 범위를 완성한다.
 - [x] 대상 UI 테스트에서 `screen.*`, `tab.*`, `todo.add` 식별자가 XCUI 요소로 노출된다.
 - [x] guest 로그인 UI 테스트가 세션 쿠키·네트워크 상태와 무관한 Debug 전용 초기 상태를 사용한다.
-- [ ] 한 테스트가 생성한 데이터가 다음 테스트에 영향을 주지 않는다.
+- [x] 한 테스트가 생성한 데이터가 다음 테스트에 영향을 주지 않는다.
 - [x] 실패 시 screenshot, UI hierarchy와 로그를 결과 번들에 보존한다.
 - [x] 최신 전체 suite를 동일 시뮬레이터에서 최소 3회 연속 통과시킨다.
 - [x] iPhone 13 mini와 iPhone 16 Pro destination에서 핵심 UI 테스트를 각각 실행한다.
@@ -150,6 +150,13 @@ VoiceOver 수동 검증은 [Apple VoiceOver 테스트 안내](https://developer.
 2026-08-13 실제 실패 xcresult에서 UI Snapshot·screen recording attachment, 앱 UI hierarchy와 XCTest activity/test log를
 추출·검토해 `screen.home`은 렌더됐지만 `tab.home` identifier 전파가 늦어진 원인을 진단했다. 이는 자동 실패 증거가
 결과 번들에 보존되고 활용 가능한지 확인한 것이며 수동 시각·접근성 QA 완료를 의미하지 않는다.
+
+`-ui-testing-authenticated`는 Home·Calendar·Todo·Team·Settings의 최소 empty fixture를 앱 시작마다 다시 구성하고,
+알림 polling/refresh, APNs activation/resume, AI 동의 refresh와 pending push 처리를 no-op으로 만든다. 앱의 모든 직접
+HTTP 경로가 모이는 `APIClient.perform`에는 같은 Debug 실행 모드에서 요청이 하나라도 발생하면 즉시 종료하는 fail-fast를
+적용했다. 따라서 iPhone 16 Pro UI target 3회 연속 4/4 및 iPhone 13 mini 1회 4/4 통과는 alert 순간 부재뿐 아니라
+현재 자동 UI 범위의 실제 API 요청 0건도 검증한다. 각 authenticated 테스트는 5탭 또는 Todo·Settings 이동 뒤 alert 부재를
+추가 확인하며, 서버 쓰기나 공유 fixture를 만들지 않는다. 일반 Debug와 Release 경로는 기존 동작을 유지한다.
 
 Dynamic Type 재현 시 시뮬레이터를 부팅한 다음 `xcrun simctl ui <UDID> content_size large` 또는
 `accessibility-extra-extra-extra-large`를 설정하고 같은 명령에서 크기 인자를 생략해 적용값을 조회한다.

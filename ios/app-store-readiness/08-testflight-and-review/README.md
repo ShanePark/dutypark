@@ -26,6 +26,7 @@
 - [x] 한국어·영어 × Light/Dark UI smoke가 iPhone 16 Pro에서 3회 연속, iPhone 13 mini에서 1회 통과한다.
 - [x] 한국어·영어 × Light/Dark × 기본/최대 Dynamic Type 자동 핵심 내비게이션·scale evidence를 두 기기에서 확인한다.
 - [x] 최신 전체 테스트 264개를 같은 iPhone 16 Pro 시뮬레이터에서 3회 연속 통과시킨다.
+- [x] Debug 인증 UI 테스트가 결정적 fixture만 사용하며 실제 API 요청을 시도하지 않는 것을 fail-fast로 검증한다.
 - [x] Release 시뮬레이터 clean build에 Debug 전용 인증·게스트 UI 테스트 플래그가 포함되지 않는다.
 - [x] unsigned generic iOS Release Archive 앱 번들에 Debug 전용 가정, 테스트용 인증 플래그·계정과 로컬 개발 주소가 남지 않는다.
 - [ ] 배포 서명된 Release Archive에서도 같은 검증을 반복한다.
@@ -52,6 +53,15 @@ iPhone 16 Pro에서 4개 locale/theme 조합이 기본·최대 각각 3회 연�
 설정 텍스트는 기본 15.67pt에서 최대 한국어 46.00pt(2.94배), 영어 91.67pt(5.85배, 줄바꿈 포함)로
 확대된 frame을 xcresult에 보존했다. 변경 후 전체 suite는 새로 3회 연속 **264/264**(실패·건너뜀 0),
 Release Simulator `clean build`도 통과했다. 전체 화면의 수동 clipping·VoiceOver·기능 완주 검증은 남아 있다.
+
+이후 `-ui-testing-authenticated` 실행에서 Home·Calendar·Todo·Team·Settings와 알림·APNs·AI 동의 초기 작업이
+Debug 전용 결정적 fixture 또는 no-op을 사용하도록 범위를 완성했다. `APIClient`에는 같은 실행 모드에서 요청이 발생하면
+즉시 테스트 앱을 종료하는 Debug 전용 fail-fast를 두어, 오류 alert가 우연히 늦게 나타나지 않은 것과 실제 API 요청 0건을
+구분했다. 5탭 이동과 Todo·Settings 진입 뒤 alert 부재도 명시적으로 검증했다. 이 상태에서 UI 테스트 4개는
+iPhone 16 Pro(iOS 26.5)에서 3회 연속, iPhone 13 mini(iOS 26.5)에서 1회 통과했고, 전체 suite는 iPhone 16 Pro에서
+새로 3회 연속 **264/264**(실패·건너뜀 0)로 통과했다. Release Simulator `clean build`와 unsigned generic iOS
+Release `clean archive`도 다시 성공했으며, 두 앱 번들에서 authenticated·guest UI-test 플래그, 테스트 계정,
+fixture/fail-fast 문구와 localhost·`127.0.0.1`이 없음을 확인했다. 이는 수동 오프라인·5xx 검증을 대신하지 않는다.
 
 ## 2. 업로드 전 빌드 게이트
 

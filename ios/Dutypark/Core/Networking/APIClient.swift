@@ -285,6 +285,11 @@ nonisolated final class APIClient: Sendable {
         headers: [String: String] = [:],
         scope: APIRequestScope = .api
     ) async throws -> (Data, HTTPURLResponse) {
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-ui-testing-authenticated") {
+            fatalError("Authenticated UI testing attempted a live API request: \(method.rawValue) \(path)")
+        }
+#endif
         guard let scopedBaseURL = AppConfiguration.baseURL(
             for: scope,
             apiBaseURL: baseURL

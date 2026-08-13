@@ -351,6 +351,11 @@ struct RootTabView: View {
     }
 
     private func openPendingPushIfNeeded() async {
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-ui-testing-authenticated") {
+            return
+        }
+#endif
         guard let notificationID = pushCenter.consumePendingNotificationID() else { return }
         do {
             if let route = try await notifications.open(id: notificationID) {

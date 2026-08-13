@@ -64,6 +64,12 @@ final class HomeViewModel: ObservableObject {
     }
 
     func refresh() async {
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-ui-testing-authenticated") {
+            loadUITestingFixture()
+            return
+        }
+#endif
         myState = .loading
         friendsState = .loading
 
@@ -116,6 +122,30 @@ final class HomeViewModel: ObservableObject {
             return .failure
         }
     }
+
+#if DEBUG
+    private func loadUITestingFixture() {
+        let member = MemberDTO(
+            id: 1,
+            name: "UI Test",
+            email: nil,
+            teamId: nil,
+            team: nil,
+            calendarVisibility: .friends,
+            kakaoId: nil,
+            naverId: nil,
+            hasPassword: true,
+            hasProfilePhoto: false,
+            profilePhotoVersion: 0
+        )
+        myState = .loaded(DashboardMyDetailDTO(member: member, duty: nil, schedules: []))
+        friendsState = .loaded(DashboardFriendInfoDTO(
+            friends: [],
+            pendingRequestsTo: [],
+            pendingRequestsFrom: []
+        ))
+    }
+#endif
 }
 
 private nonisolated enum DashboardResult<Value: Sendable>: Sendable {

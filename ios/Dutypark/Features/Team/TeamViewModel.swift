@@ -41,6 +41,20 @@ final class TeamViewModel: ObservableObject {
 
     func load(memberID: MemberID?) async {
         guard !isLoading else { return }
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-ui-testing-authenticated") {
+            self.memberID = memberID
+            team = nil
+            days = []
+            schedules = []
+            duties = []
+            holidays = []
+            shifts = []
+            loadFailed = false
+            showsError = false
+            return
+        }
+#endif
         self.memberID = memberID
         isLoading = true
         loadFailed = false

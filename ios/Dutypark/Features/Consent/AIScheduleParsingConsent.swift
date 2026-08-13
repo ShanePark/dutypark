@@ -222,6 +222,12 @@ final class AIScheduleParsingConsentStore: ObservableObject {
 
     func load(for memberID: Int64, force: Bool = false) async {
         scope(to: memberID)
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-ui-testing-authenticated") {
+            errorKey = nil
+            return
+        }
+#endif
         if !force {
             guard response == nil else { return }
         }
@@ -233,6 +239,12 @@ final class AIScheduleParsingConsentStore: ObservableObject {
         minimumInterval: TimeInterval = 30
     ) async {
         scope(to: memberID)
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-ui-testing-authenticated") {
+            errorKey = nil
+            return
+        }
+#endif
         guard AIScheduleConsentFreshnessPolicy.shouldRefresh(
             hasResponse: response != nil,
             lastSuccessfulRefreshAt: lastSuccessfulRefreshAt,

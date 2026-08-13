@@ -55,6 +55,12 @@ final class TodoViewModel: ObservableObject {
 
     func load() async {
         guard !isLoading else { return }
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-ui-testing-authenticated") {
+            loadUITestingFixture()
+            return
+        }
+#endif
         isLoading = true
         defer { isLoading = false }
         do {
@@ -68,6 +74,12 @@ final class TodoViewModel: ObservableObject {
     }
 
     func refresh() async {
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-ui-testing-authenticated") {
+            loadUITestingFixture()
+            return
+        }
+#endif
         do {
             board = try await repository.fetchBoard()
             selectNonemptyStatusIfNeeded()
@@ -284,6 +296,21 @@ final class TodoViewModel: ObservableObject {
         }
         return nil
     }
+
+#if DEBUG
+    private func loadUITestingFixture() {
+        board = TodoBoardDTO(
+            todo: [],
+            inProgress: [],
+            done: [],
+            counts: TodoCountsDTO(todo: 0, inProgress: 0, done: 0, total: 0)
+        )
+        friends = []
+        attachmentsByTodoID = [:]
+        errorKey = nil
+        selectedStatus = .inProgress
+    }
+#endif
 }
 
 private struct TodoBoardColumns {

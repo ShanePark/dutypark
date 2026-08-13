@@ -118,6 +118,11 @@ final class APNsRegistrationManager: ObservableObject {
 
     /// Call on sign-in and foreground resume. It never asks for permission by itself.
     func resumeRegistration() async {
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-ui-testing-authenticated") {
+            return
+        }
+#endif
         await refreshAuthorizationStatus()
         guard isEnabled else { return }
         if authorizationStatus == .authorized || authorizationStatus == .provisional {

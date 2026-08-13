@@ -43,6 +43,15 @@ final class NotificationStore: ObservableObject {
     }
 
     func refresh() async {
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-ui-testing-authenticated") {
+            notifications = []
+            unreadCount = 0
+            friendRequestCount = 0
+            loadFailed = false
+            return
+        }
+#endif
         guard !isLoading else { return }
         isLoading = true
         defer { isLoading = false }
@@ -132,6 +141,11 @@ final class NotificationStore: ObservableObject {
     }
 
     func startPolling() {
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-ui-testing-authenticated") {
+            return
+        }
+#endif
         guard pollingTask == nil else { return }
         pollingTask = Task { [weak self] in
             while !Task.isCancelled {
