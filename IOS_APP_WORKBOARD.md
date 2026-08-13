@@ -295,7 +295,8 @@
 - 2026-08-13 iPhone 13 mini(iOS 26.5) 시뮬레이터에서도 UI test 3개를 포함한 당시 전체 suite **263/263 성공**
 - 2026-08-13 한국어·영어 × Light/Dark 4개 조합의 `홈`/`Home` 탭 label과 설정 theme 접근성 값을 검증하는 데이터 기반 UI smoke test를 추가했다. 최초 전체 suite 반복의 실패 xcresult에서 UI Snapshot·screen recording attachment, UI hierarchy와 test log를 추출해 화면 렌더 후 탭 identifier 전파가 늦어진 원인을 진단했고, app foreground·`screen.home` 준비를 bounded wait로 검증하도록 보정했다. 이후 iPhone 16 Pro에서 smoke test 3회 연속, iPhone 13 mini에서 1회 통과했다.
 - 2026-08-13 안정화 후 UI test 4개를 포함한 최신 iPhone 16 Pro 전체 suite를 새로 3회 연속 실행해 매번 **264/264 성공**(실패·건너뜀 0)
-- Release 시뮬레이터 clean build 성공, 실행 파일에서 Debug 전용 authenticated·guest UI-test 플래그 문자열 제외 확인(서명된 Archive 검증은 별도 대기)
+- Release 시뮬레이터 clean build 성공, 실행 파일에서 Debug 전용 authenticated·guest UI-test 플래그, 테스트 계정과 localhost 제외 확인. Simulator 실행 파일의 strip되지 않은 symbol table에는 빌드 머신 소스 절대 경로가 남으므로 최종 패키징 판정에는 사용하지 않는다.
+- 2026-08-13 unsigned generic iOS Release `clean archive` 성공. 배포 후처리된 device 앱 번들 36개 파일에 내부 Markdown·Swift 소스·테스트 fixture·프로젝트/개발 파일이 없고, UI-test 플래그·테스트 계정·localhost·저장소 절대 경로도 없음을 확인했다. `PrivacyInfo.xcprivacy`, asset, `ko`·`en` localization과 의도된 폰트 고지는 포함됐고 앱/dSYM UUID가 일치했다. 현재 Bundle ID는 `com.tistory.shanepark.dutypark`; 배포 서명·provisioning·entitlement·Validate App과 출시 후보 Bundle ID 확정은 별도 대기다.
 
 완료된 최소 보정:
 

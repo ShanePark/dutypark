@@ -29,7 +29,8 @@
 - [ ] macOS 실행 환경에서 clean build, test, archive를 재현한다.
 - [ ] 마케팅 버전과 빌드 번호가 이전 업로드보다 증가했다.
 - [ ] Archive 안의 앱, dSYM, privacy manifest, entitlement를 검증한다.
-- [ ] 불필요한 내부 문서와 개발용 파일이 앱 번들에 포함되지 않는다.
+- [x] unsigned generic iOS Release Archive의 앱 번들에 불필요한 내부 문서와 개발용 파일이 포함되지 않는다.
+- [ ] 배포 서명된 Release Archive에서도 같은 번들 제외 검증을 반복한다.
 - [ ] TestFlight 내부 테스트를 거쳐 동일 빌드를 심사에 연결한다.
 - [ ] 릴리스 산출물과 결과 로그를 정해진 위치에 보관한다.
 
@@ -114,6 +115,30 @@ Xcode의 synchronized group 또는 Copy Bundle Resources 설정 때문에 `.md` 
 - 라이선스·폰트 고지처럼 사용자 제공이 필요한 문서는 목적을 확인한 뒤 의도적으로 포함한다.
 - 제외 결과를 실제 Archive에서 재검증하며 Finder의 프로젝트 표시만 믿지 않는다.
 - 문서에 비밀값을 적지 않는 원칙은 번들 제외 여부와 무관하게 유지한다.
+
+### 2026-08-13 unsigned Release Archive 번들 감사
+
+새 `/tmp` 경로에서 `CODE_SIGNING_ALLOWED=NO`로 generic iOS Release `clean archive`를 실행해
+`Dutypark.xcarchive/Products/Applications/Dutypark.app`을 직접 검사했다. 이는 배포 후처리와 strip이 적용된
+device 앱 번들의 패키징 기준선이며, 배포 인증서·provisioning profile·entitlement·Organizer Validate App을 검증한
+서명 Archive는 아니다.
+
+- 앱 번들 36개 파일 중 `.md`, `.swift`, `.xctest`, 테스트 fixture, `README`, `AGENTS`, workboard,
+  Xcode project/workspace, 샘플 JSON, 인증서·키·provisioning profile은 없었다.
+- 실행 파일과 리소스에 `-ui-testing-authenticated`, `-ui-testing-guest`, `test@duty.park`, `127.0.0.1`,
+  `localhost`, 테스트 target 이름 및 저장소 절대 경로가 없었다. 운영 API URL은 의도된 Release 설정이므로 제외 대상이 아니다.
+- `PrivacyInfo.xcprivacy`, `Assets.car`, `ko`·`en` localization, 앱 아이콘과 폰트가 포함됐다.
+  `NOTICE.txt`는 내장 MapleStory 폰트의 의도된 저작권 고지다.
+- 앱 `Info.plist`는 현재 Xcode 값인 Bundle ID `com.tistory.shanepark.dutypark`, 버전 `1.0`(빌드 `1`),
+  최소 iOS `17.0`을 기록했다. 출시 목표 후보 `io.github.shanepark.dutypark`가 확정됐다는 의미는 아니다.
+- `.xcarchive`에 dSYM이 존재하고 앱 실행 파일과 dSYM의 UUID
+  `36688204-A146-3DBF-B416-6CAAA7A63439`가 일치했다.
+- 같은 날 만든 Release Simulator clean build의 실행 파일에는 테스트 플래그·계정·localhost는 없었지만,
+  배포 strip이 적용되지 않은 symbol table에 빌드 머신의 소스 절대 경로가 남았다. 따라서 Simulator `.app`은
+  최종 배포 번들 제외 판정에 사용하지 않고, unsigned generic iOS Archive 결과를 기준선으로 삼았다.
+
+위 검사는 지정한 개발·테스트 artifact와 문자열에 대한 범위 제한 감사다. 모든 비밀값의 부재를 전수 증명하거나
+서명·entitlement·Privacy Report를 검증한 것은 아니므로 아래 완료 조건은 미완료로 유지한다.
 
 ## 7. 업로드와 TestFlight
 

@@ -26,7 +26,8 @@
 - [x] 한국어·영어 × Light/Dark UI smoke가 iPhone 16 Pro에서 3회 연속, iPhone 13 mini에서 1회 통과한다.
 - [x] 최신 전체 테스트 264개를 같은 iPhone 16 Pro 시뮬레이터에서 3회 연속 통과시킨다.
 - [x] Release 시뮬레이터 clean build에 Debug 전용 인증·게스트 UI 테스트 플래그가 포함되지 않는다.
-- [ ] Release Archive에서도 Debug 전용 가정이나 테스트용 인증 플래그가 남지 않는지 확인한다.
+- [x] unsigned generic iOS Release Archive 앱 번들에 Debug 전용 가정, 테스트용 인증 플래그·계정과 로컬 개발 주소가 남지 않는다.
+- [ ] 배포 서명된 Release Archive에서도 같은 검증을 반복한다.
 
 2026-08-13 iPhone 16 Pro(iOS 26.5) 검증에서 Debug 전용 guest 초기 상태를 로그인 UI 테스트에 명시해
 로컬 세션·네트워크 상태와 무관하게 카카오·네이버 로그인 진입을 확인하도록 안정화했다. 같은 기기에서 UI 테스트 3개를 포함한
@@ -36,7 +37,12 @@ UI 테스트 3개를 포함한 전체 suite **263/263**이 통과했다. Release
 홈 탭 label과 설정 theme 접근성 값을 검증하는 UI smoke를 추가했다. 최초 전체 suite 반복에서는 렌더된 홈·탭 UI에
 identifier 전파가 늦어져 첫 `ko` × Light가 실패했다. app foreground와 `screen.home` 준비를 bounded wait로 확인하도록
 테스트를 보정한 뒤 smoke는 iPhone 16 Pro에서 3회 연속, iPhone 13 mini에서 1회 통과했다. 변경 후 전체 suite도
-iPhone 16 Pro에서 새로 3회 연속 **264/264**(실패·건너뜀 0)로 통과했다. 서명된 Release Archive 검증은 별도로 남아 있다.
+iPhone 16 Pro에서 새로 3회 연속 **264/264**(실패·건너뜀 0)로 통과했다. 이어서 unsigned generic iOS Release
+`clean archive`를 생성해 앱 번들에서 내부 Markdown·소스·테스트 fixture·개발용 파일과 인증/guest UI-test 플래그,
+테스트 계정, localhost·저장소 절대 경로가 없고 `PrivacyInfo.xcprivacy` 및 `ko`·`en` localization이 포함된 것을
+확인했다. 이 Archive의 Bundle ID는 현재 Xcode 값 `com.tistory.shanepark.dutypark`이며, 출시 후보
+`io.github.shanepark.dutypark` 확정 또는 서명·provisioning·entitlement 검증을 의미하지 않는다. 배포 서명된
+Release Archive 검증은 별도로 남아 있다.
 
 ## 2. 업로드 전 빌드 게이트
 
