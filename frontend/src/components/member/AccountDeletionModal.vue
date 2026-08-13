@@ -3,7 +3,6 @@ import { computed, nextTick, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   AlertTriangle,
-  Check,
   KeyRound,
   Loader2,
   ShieldCheck,
