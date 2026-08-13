@@ -24,6 +24,7 @@
 - [x] `Dutypark QA iPhone 16 Pro`(iOS 26.5) 시뮬레이터에서 당시 전체 테스트 263개가 3회 연속 통과한다.
 - [x] iPhone 13 mini(iOS 26.5) 시뮬레이터에서 당시 UI 테스트 3개를 포함한 전체 테스트 263개가 통과한다.
 - [x] 한국어·영어 × Light/Dark UI smoke가 iPhone 16 Pro에서 3회 연속, iPhone 13 mini에서 1회 통과한다.
+- [x] 한국어·영어 × Light/Dark × 기본/최대 Dynamic Type 자동 핵심 내비게이션·scale evidence를 두 기기에서 확인한다.
 - [x] 최신 전체 테스트 264개를 같은 iPhone 16 Pro 시뮬레이터에서 3회 연속 통과시킨다.
 - [x] Release 시뮬레이터 clean build에 Debug 전용 인증·게스트 UI 테스트 플래그가 포함되지 않는다.
 - [x] unsigned generic iOS Release Archive 앱 번들에 Debug 전용 가정, 테스트용 인증 플래그·계정과 로컬 개발 주소가 남지 않는다.
@@ -43,6 +44,14 @@ iPhone 16 Pro에서 새로 3회 연속 **264/264**(실패·건너뜀 0)로 통�
 확인했다. 이 Archive의 Bundle ID는 현재 Xcode 값 `com.tistory.shanepark.dutypark`이며, 출시 후보
 `io.github.shanepark.dutypark` 확정 또는 서명·provisioning·entitlement 검증을 의미하지 않는다. 배포 서명된
 Release Archive 검증은 별도로 남아 있다.
+
+이어서 iOS 26.5 시뮬레이터의 실제 `content_size`를 `large`와
+`accessibility-extra-extra-extra-large`로 설정·조회하며 기본/최대 Dynamic Type을 검증했다.
+iPhone 16 Pro에서 4개 locale/theme 조합이 기본·최대 각각 3회 연속, iPhone 13 mini에서 각각 1회 통과했다.
+홈·설정 탭의 고정 ID·hittable과 44×44pt 영역·왕복 내비게이션, theme accessibility value를 확인했고,
+설정 텍스트는 기본 15.67pt에서 최대 한국어 46.00pt(2.94배), 영어 91.67pt(5.85배, 줄바꿈 포함)로
+확대된 frame을 xcresult에 보존했다. 변경 후 전체 suite는 새로 3회 연속 **264/264**(실패·건너뜀 0),
+Release Simulator `clean build`도 통과했다. 전체 화면의 수동 clipping·VoiceOver·기능 완주 검증은 남아 있다.
 
 ## 2. 업로드 전 빌드 게이트
 

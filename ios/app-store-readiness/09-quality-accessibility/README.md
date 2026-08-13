@@ -45,10 +45,10 @@ Apple의 인터페이스 접근성 원칙은 [Accessibility](https://developer.a
 지원 언어는 한국어와 영어 2개다.
 모든 조합을 완전 탐색하기 어려우면 핵심 화면은 전 조합, 나머지 화면은 pairwise 방식으로 기록한다.
 
-- [ ] `ko` × Light × 기본/최대 Dynamic Type
-- [ ] `ko` × Dark × 기본/최대 Dynamic Type
-- [ ] `en` × Light × 기본/최대 Dynamic Type
-- [ ] `en` × Dark × 기본/최대 Dynamic Type
+- [x] `ko` × Light × 기본/최대 Dynamic Type 자동 핵심 내비게이션·scale evidence
+- [x] `ko` × Dark × 기본/최대 Dynamic Type 자동 핵심 내비게이션·scale evidence
+- [x] `en` × Light × 기본/최대 Dynamic Type 자동 핵심 내비게이션·scale evidence
+- [x] `en` × Dark × 기본/최대 Dynamic Type 자동 핵심 내비게이션·scale evidence
 - [ ] 모든 사용자 노출 문자열이 번역되고 키 이름이 그대로 보이지 않는다.
 - [ ] 긴 영어 문자열이 버튼, 탭, 경고창에서 잘리지 않는다.
 - [ ] Dark Mode에서 텍스트, 경계선, disabled 상태와 오류 메시지가 구분된다.
@@ -56,6 +56,11 @@ Apple의 인터페이스 접근성 원칙은 [Accessibility](https://developer.a
 - [ ] 고정 높이 때문에 텍스트가 잘리는 화면을 기록하고 수정한다.
 
 Dynamic Type 검증 기준은 [Apple의 글자 크기 지원 안내](https://developer.apple.com/documentation/uikit/scaling-fonts-automatically)를 참고한다.
+
+위 체크는 iPhone 16 Pro와 iPhone 13 mini(iOS 26.5)에서 홈·설정 탭의 고정 accessibility ID,
+현지화 label, hittable과 44×44pt 이상 터치 영역, 설정 진입·홈 복귀, theme accessibility value를
+자동 검증한 범위다. 최대 글자 크기에서 전체 화면의 clipping, 모든 기능 완주와 수동 시각 품질을
+확인했다는 의미는 아니며 아래 수동 항목은 남겨 둔다.
 
 ## 4. VoiceOver와 의미 구조
 
@@ -90,6 +95,7 @@ VoiceOver 수동 검증은 [Apple VoiceOver 테스트 안내](https://developer.
 - [ ] 시각적 아이콘이 작더라도 padding과 `contentShape`가 전체 영역에 적용된다.
 - [ ] 인접 버튼의 터치 영역이 겹치거나 잘못된 동작을 실행하지 않는다.
 - [ ] 최대 Dynamic Type에서도 터치 영역이 축소되지 않는다.
+- [x] 기본·최대 Dynamic Type에서 홈·설정 탭이 hittable이며 각각 44×44pt 이상으로 측정된다.
 - [x] [DutyparkUITests.swift](../../DutyparkUITests/DutyparkUITests.swift)의 탭 대기 조건을 공통화해 터치 영역 테스트를 안정화한다.
 - [x] iPhone 16 Pro(iOS 26.5) 대상 실행에서 `todo.add` 요소가 XCUI에 발견되고 44pt 이상으로 측정된다.
 
@@ -129,7 +135,7 @@ VoiceOver 수동 검증은 [Apple VoiceOver 테스트 안내](https://developer.
 
 - [x] 각 UI 테스트는 언어, 테마와 인증 상태를 명시적으로 초기화한다.
 - [ ] 각 UI 테스트에 필요한 테스트 데이터를 명시적으로 초기화한다.
-- [ ] 고정 sleep 대신 `waitForExistence`와 화면 준비 신호를 사용한다.
+- [x] 고정 sleep 대신 `waitForExistence`와 화면 준비 신호를 사용한다.
 - [ ] 테스트 인증 모드가 실제 API 오류 alert를 만들지 않도록 fixture 범위를 완성한다.
 - [x] 대상 UI 테스트에서 `screen.*`, `tab.*`, `todo.add` 식별자가 XCUI 요소로 노출된다.
 - [x] guest 로그인 UI 테스트가 세션 쿠키·네트워크 상태와 무관한 Debug 전용 초기 상태를 사용한다.
@@ -138,11 +144,18 @@ VoiceOver 수동 검증은 [Apple VoiceOver 테스트 안내](https://developer.
 - [x] 최신 전체 suite를 동일 시뮬레이터에서 최소 3회 연속 통과시킨다.
 - [x] iPhone 13 mini와 iPhone 16 Pro destination에서 핵심 UI 테스트를 각각 실행한다.
 - [x] locale·theme 스모크 테스트를 데이터 기반으로 확장한다.
+- [x] `simctl ui ... content_size`로 기본·최대 Dynamic Type을 명시하고 조합별 텍스트 frame을 xcresult에 보존한다.
 - [ ] 접근성 식별자가 시각적 텍스트에 의존하지 않도록 유지한다.
 
 2026-08-13 실제 실패 xcresult에서 UI Snapshot·screen recording attachment, 앱 UI hierarchy와 XCTest activity/test log를
 추출·검토해 `screen.home`은 렌더됐지만 `tab.home` identifier 전파가 늦어진 원인을 진단했다. 이는 자동 실패 증거가
 결과 번들에 보존되고 활용 가능한지 확인한 것이며 수동 시각·접근성 QA 완료를 의미하지 않는다.
+
+Dynamic Type 재현 시 시뮬레이터를 부팅한 다음 `xcrun simctl ui <UDID> content_size large` 또는
+`accessibility-extra-extra-extra-large`를 설정하고 같은 명령에서 크기 인자를 생략해 적용값을 조회한다.
+이후 `xcodebuild ... test -only-testing:DutyparkUITests/DutyparkUITests/testLanguageAndThemePreferencesAcrossSupportedCombinations`를
+실행하고 끝나면 원래 값으로 복원한다. 이 절차는 앱 launch argument로 글자 크기를 가정하지 않고
+시뮬레이터의 실제 설정값과 XCUI frame을 교차 확인한다.
 
 ## 완료 조건
 
@@ -164,4 +177,14 @@ UI 테스트 3개를 포함한 전체 suite **263/263**이 1회 통과했다. iP
 최초 전체 suite 반복에서는 렌더된 홈·탭 UI에 identifier 전파가 늦어 첫 `ko` × Light가 실패했다. app foreground와
 `screen.home` 준비를 bounded wait로 확인하도록 보정한 뒤 smoke는 iPhone 16 Pro에서 3회 연속, iPhone 13 mini에서
 1회 통과했다. 안정화 후 iPhone 16 Pro 전체 suite도 UI 테스트 4개를 포함해 새로 3회 연속 **264/264**
-(실패·건너뜀 0)로 통과했다. 기본·최대 Dynamic Type와 수동 시각·접근성 검증은 여전히 남아 있다.
+(실패·건너뜀 0)로 통과했다. 이 시점의 기본·최대 Dynamic Type과 수동 시각·접근성 검증은 남아 있었다.
+
+2026-08-13에 시뮬레이터의 실제 `content_size`를 `large`와
+`accessibility-extra-extra-extra-large`로 바꿔 가며 2개 언어 × Light/Dark 8개 조합을 추가로 검증했다.
+iPhone 16 Pro에서 기본·최대 스모크가 각각 3회 연속, iPhone 13 mini에서 각각 1회 통과했다.
+설정 theme 텍스트 높이는 iPhone 16 Pro에서 기본 15.67pt, 최대 한국어 46.00pt(2.94배),
+최대 영어 91.67pt(5.85배, 줄바꿈 포함)로 측정됐고 모든 조합의 frame을 xcresult attachment로 남겼다.
+탭 아이콘에 고정 `tab.*` ID를 적용해 iOS 26.5의 accessibility button으로 안정적으로 전파했고,
+보정 후 5탭 이동 테스트도 3회 연속 통과했다. 두 시뮬레이터는 원래 `large`로 복원했다.
+변경 후 전체 suite는 iPhone 16 Pro에서 다시 3회 연속 **264/264**(실패·건너뜀 0)로 통과했고
+Release Simulator clean build도 성공했다. 전체 화면 clipping·VoiceOver·기능 완주 수동 검증은 아직 남아 있다.

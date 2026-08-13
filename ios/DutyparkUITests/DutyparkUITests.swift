@@ -111,8 +111,13 @@ final class DutyparkUITests: XCTestCase {
 
                 let homeTab = primaryTab("tab.home", in: app, timeout: 20)
                 XCTAssertEqual(homeTab.label, combination.home)
+                XCTAssertTrue(homeTab.isHittable)
+                assertMinimumTouchTarget(homeTab)
 
-                primaryTab("tab.settings", in: app, timeout: 20).tap()
+                let settingsTab = primaryTab("tab.settings", in: app, timeout: 20)
+                XCTAssertTrue(settingsTab.isHittable)
+                assertMinimumTouchTarget(settingsTab)
+                settingsTab.tap()
                 XCTAssertTrue(
                     app.descendants(matching: .any)["screen.settings"].waitForExistence(timeout: 10)
                 )
@@ -127,11 +132,47 @@ final class DutyparkUITests: XCTestCase {
                     )
                     .firstMatch
                 XCTAssertTrue(
-                    themePicker.waitForExistence(timeout: 10),
+                    revealSettingsElement(themePicker, in: app, timeout: 10),
                     "Theme preference was not reflected: \(combination.themeValue)"
+                )
+
+                let themeDescription = app.staticTexts[combination.themeValue].firstMatch
+                XCTAssertTrue(
+                    themeDescription.waitForExistence(timeout: 10),
+                    "Dynamic Type probe text did not appear: \(combination.themeValue)"
+                )
+                let evidence = XCTAttachment(
+                    string: "text=\(combination.themeValue), frame=\(themeDescription.frame)"
+                )
+                evidence.name = "Dynamic Type frame — \(combination.language) × \(combination.theme)"
+                evidence.lifetime = .keepAlways
+                add(evidence)
+
+                let returnHomeTab = primaryTab("tab.home", in: app)
+                XCTAssertTrue(returnHomeTab.isHittable)
+                returnHomeTab.tap()
+                XCTAssertTrue(
+                    app.descendants(matching: .any)["screen.home"].waitForExistence(timeout: 10),
+                    "Home screen did not become ready after returning from Settings"
                 )
             }
         }
+    }
+
+    @MainActor
+    private func revealSettingsElement(
+        _ element: XCUIElement,
+        in app: XCUIApplication,
+        timeout: TimeInterval
+    ) -> Bool {
+        let settingsScrollView = app.scrollViews["screen.settings"].firstMatch
+        guard settingsScrollView.waitForExistence(timeout: 2) else { return false }
+
+        let deadline = Date().addingTimeInterval(timeout)
+        while Date() < deadline, !element.exists {
+            settingsScrollView.swipeUp(velocity: .fast)
+        }
+        return element.exists
     }
 
     @MainActor

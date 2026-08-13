@@ -821,8 +821,8 @@ private extension View {
                 Text(tab.tabTitle)
             } icon: {
                 Image(systemName: tab.systemImage)
+                    .accessibilityIdentifier(tab.accessibilityIdentifier)
             }
-            .accessibilityIdentifier(tab.accessibilityIdentifier)
         }
         .tag(tab)
     }
