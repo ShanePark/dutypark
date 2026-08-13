@@ -134,11 +134,15 @@ VoiceOver 수동 검증은 [Apple VoiceOver 테스트 안내](https://developer.
 - [x] 대상 UI 테스트에서 `screen.*`, `tab.*`, `todo.add` 식별자가 XCUI 요소로 노출된다.
 - [x] guest 로그인 UI 테스트가 세션 쿠키·네트워크 상태와 무관한 Debug 전용 초기 상태를 사용한다.
 - [ ] 한 테스트가 생성한 데이터가 다음 테스트에 영향을 주지 않는다.
-- [ ] 실패 시 screenshot, UI hierarchy와 로그를 결과 번들에 보존한다.
+- [x] 실패 시 screenshot, UI hierarchy와 로그를 결과 번들에 보존한다.
 - [x] 최신 전체 suite를 동일 시뮬레이터에서 최소 3회 연속 통과시킨다.
 - [x] iPhone 13 mini와 iPhone 16 Pro destination에서 핵심 UI 테스트를 각각 실행한다.
 - [x] locale·theme 스모크 테스트를 데이터 기반으로 확장한다.
 - [ ] 접근성 식별자가 시각적 텍스트에 의존하지 않도록 유지한다.
+
+2026-08-13 실제 실패 xcresult에서 UI Snapshot·screen recording attachment, 앱 UI hierarchy와 XCTest activity/test log를
+추출·검토해 `screen.home`은 렌더됐지만 `tab.home` identifier 전파가 늦어진 원인을 진단했다. 이는 자동 실패 증거가
+결과 번들에 보존되고 활용 가능한지 확인한 것이며 수동 시각·접근성 QA 완료를 의미하지 않는다.
 
 ## 완료 조건
 
