@@ -77,6 +77,64 @@ final class DutyparkUITests: XCTestCase {
     }
 
     @MainActor
+    func testLanguageAndThemePreferencesAcrossSupportedCombinations() throws {
+        let combinations = [
+            (language: "ko", locale: "ko_KR", theme: "light", home: "홈", themeLabel: "테마", themeValue: "현재 테마: 라이트"),
+            (language: "ko", locale: "ko_KR", theme: "dark", home: "홈", themeLabel: "테마", themeValue: "현재 테마: 다크"),
+            (language: "en", locale: "en_US", theme: "light", home: "Home", themeLabel: "Theme", themeValue: "Current theme: Light"),
+            (language: "en", locale: "en_US", theme: "dark", home: "Home", themeLabel: "Theme", themeValue: "Current theme: Dark")
+        ]
+
+        for combination in combinations {
+            try XCTContext.runActivity(
+                named: "\(combination.language) × \(combination.theme)"
+            ) { _ in
+                let app = XCUIApplication()
+                app.launchArguments += [
+                    "-dp-language", combination.language,
+                    "-dp-theme", combination.theme,
+                    "-AppleLanguages", "(\(combination.language))",
+                    "-AppleLocale", combination.locale,
+                    "-ui-testing-authenticated"
+                ]
+                app.launch()
+                defer { app.terminate() }
+
+                XCTAssertTrue(
+                    app.wait(for: .runningForeground, timeout: 10),
+                    "App did not reach the foreground"
+                )
+                XCTAssertTrue(
+                    app.descendants(matching: .any)["screen.home"].waitForExistence(timeout: 20),
+                    "Authenticated home screen did not become ready"
+                )
+
+                let homeTab = primaryTab("tab.home", in: app, timeout: 20)
+                XCTAssertEqual(homeTab.label, combination.home)
+
+                primaryTab("tab.settings", in: app, timeout: 20).tap()
+                XCTAssertTrue(
+                    app.descendants(matching: .any)["screen.settings"].waitForExistence(timeout: 10)
+                )
+
+                let themePicker = app.descendants(matching: .any)
+                    .matching(
+                        NSPredicate(
+                            format: "label == %@ AND value == %@",
+                            combination.themeLabel,
+                            combination.themeValue
+                        )
+                    )
+                    .firstMatch
+                XCTAssertTrue(
+                    themePicker.waitForExistence(timeout: 10),
+                    "Theme preference was not reflected: \(combination.themeValue)"
+                )
+            }
+        }
+    }
+
+    @MainActor
     private func primaryTab(
         _ identifier: String,
         in app: XCUIApplication,

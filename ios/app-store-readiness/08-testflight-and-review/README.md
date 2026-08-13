@@ -21,8 +21,10 @@
 - [x] iOS 시뮬레이터용 앱 빌드가 성공한다.
 - [x] iPhone 16 Pro(iOS 26.5) 시뮬레이터에서 5개 기본 탭 이동 테스트가 3회 연속 통과한다.
 - [x] 같은 시뮬레이터에서 알림·Todo 툴바 44pt 테스트가 1회 통과한다.
-- [x] `Dutypark QA iPhone 16 Pro`(iOS 26.5) 시뮬레이터에서 전체 테스트 263개가 최신 코드로 3회 연속 통과한다.
-- [x] iPhone 13 mini(iOS 26.5) 시뮬레이터에서 UI 테스트 3개를 포함한 전체 테스트 263개가 최신 코드로 통과한다.
+- [x] `Dutypark QA iPhone 16 Pro`(iOS 26.5) 시뮬레이터에서 당시 전체 테스트 263개가 3회 연속 통과한다.
+- [x] iPhone 13 mini(iOS 26.5) 시뮬레이터에서 당시 UI 테스트 3개를 포함한 전체 테스트 263개가 통과한다.
+- [x] 한국어·영어 × Light/Dark UI smoke가 iPhone 16 Pro에서 3회 연속, iPhone 13 mini에서 1회 통과한다.
+- [x] 최신 전체 테스트 264개를 같은 iPhone 16 Pro 시뮬레이터에서 3회 연속 통과시킨다.
 - [x] Release 시뮬레이터 clean build에 Debug 전용 인증·게스트 UI 테스트 플래그가 포함되지 않는다.
 - [ ] Release Archive에서도 Debug 전용 가정이나 테스트용 인증 플래그가 남지 않는지 확인한다.
 
@@ -30,7 +32,11 @@
 로컬 세션·네트워크 상태와 무관하게 카카오·네이버 로그인 진입을 확인하도록 안정화했다. 같은 기기에서 UI 테스트 3개를 포함한
 전체 suite를 새로 3회 연속 실행해 매번 **263/263**(실패·건너뜀 0)으로 통과했고, iPhone 13 mini(iOS 26.5)에서도
 UI 테스트 3개를 포함한 전체 suite **263/263**이 통과했다. Release 시뮬레이터 clean build도 성공했고 실행 파일에
-`-ui-testing-authenticated`, `-ui-testing-guest` 문자열이 없음을 확인했다. 서명된 Release Archive 검증은 별도로 남아 있다.
+`-ui-testing-authenticated`, `-ui-testing-guest` 문자열이 없음을 확인했다. 이후 한국어·영어 × Light/Dark 4개 조합의
+홈 탭 label과 설정 theme 접근성 값을 검증하는 UI smoke를 추가했다. 최초 전체 suite 반복에서는 렌더된 홈·탭 UI에
+identifier 전파가 늦어져 첫 `ko` × Light가 실패했다. app foreground와 `screen.home` 준비를 bounded wait로 확인하도록
+테스트를 보정한 뒤 smoke는 iPhone 16 Pro에서 3회 연속, iPhone 13 mini에서 1회 통과했다. 변경 후 전체 suite도
+iPhone 16 Pro에서 새로 3회 연속 **264/264**(실패·건너뜀 0)로 통과했다. 서명된 Release Archive 검증은 별도로 남아 있다.
 
 ## 2. 업로드 전 빌드 게이트
 
@@ -132,7 +138,7 @@ Apple의 버전 제출·상태 관리는 [App Review 제출 개요](https://deve
 ## 완료 조건
 
 - [ ] 시뮬레이터 빌드와 Release Archive 검증이 모두 성공한다.
-- [x] 전체 263개 테스트가 최신 코드로 통과하며 대상 검증에서 해소한 탭·`todo.add`·로그인 UI 실패가 재발하지 않는다.
+- [x] 최신 전체 264개 테스트가 3회 연속 통과하며 탭·`todo.add`·로그인 UI 실패가 재발하지 않는다.
 - [ ] 내부 TestFlight에서 운영 로그인, 핵심 CRUD와 production APNs가 실기기로 검증된다.
 - [ ] 필요한 경우 외부 TestFlight와 Beta App Review를 통과한다.
 - [ ] Review Notes, 데모 계정과 심사 연락처가 준비되고 운영 백엔드 가용 담당자가 지정된다.

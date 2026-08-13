@@ -135,9 +135,9 @@ VoiceOver 수동 검증은 [Apple VoiceOver 테스트 안내](https://developer.
 - [x] guest 로그인 UI 테스트가 세션 쿠키·네트워크 상태와 무관한 Debug 전용 초기 상태를 사용한다.
 - [ ] 한 테스트가 생성한 데이터가 다음 테스트에 영향을 주지 않는다.
 - [ ] 실패 시 screenshot, UI hierarchy와 로그를 결과 번들에 보존한다.
-- [x] 동일 시뮬레이터에서 전체 테스트를 최소 3회 연속 통과시킨다.
+- [x] 최신 전체 suite를 동일 시뮬레이터에서 최소 3회 연속 통과시킨다.
 - [x] iPhone 13 mini와 iPhone 16 Pro destination에서 핵심 UI 테스트를 각각 실행한다.
-- [ ] locale·theme 스모크 테스트를 데이터 기반으로 확장한다.
+- [x] locale·theme 스모크 테스트를 데이터 기반으로 확장한다.
 - [ ] 접근성 식별자가 시각적 텍스트에 의존하지 않도록 유지한다.
 
 ## 완료 조건
@@ -149,10 +149,15 @@ VoiceOver 수동 검증은 [Apple VoiceOver 테스트 안내](https://developer.
 - [ ] 주요 조작의 44pt 터치 영역이 수동·자동 테스트에서 확인된다.
 - [ ] Todo 드래그와 기능적으로 동등한 접근성 대체 조작이 검증된다.
 - [ ] 오프라인, 느린 네트워크, 인증 오류와 5xx에서 크래시·데이터 유실·무한 재시도가 없다.
-- [x] 탭·`todo.add`·로그인 대상 UI 실패가 수정된 상태에서 전체 263개 테스트가 안정적으로 통과한다.
+- [x] 탭·`todo.add`·로그인 대상 UI 실패가 재발하지 않고 최신 전체 264개 테스트가 3회 연속 통과한다.
 
-2026-08-13 `Dutypark QA iPhone 16 Pro`(iOS 26.5) 시뮬레이터에서 UI 테스트 3개를 포함한 최신 전체 suite를
+2026-08-13 `Dutypark QA iPhone 16 Pro`(iOS 26.5) 시뮬레이터에서 UI 테스트 3개를 포함한 당시 전체 suite를
 새로 3회 연속 실행해 매번 **263/263**(실패·건너뜀 0)으로 통과했다. iPhone 13 mini(iOS 26.5)에서도
 UI 테스트 3개를 포함한 전체 suite **263/263**이 1회 통과했다. iPhone 16 Pro의 5개 탭 이동 대상 테스트는
 별도로 3회 연속, 알림·Todo 툴바 44pt 테스트는 별도로 1회 통과했다. 두 기기의 수동 화면·핵심 사용자 흐름·
-접근성 매트릭스 검증은 아직 남아 있다.
+접근성 매트릭스 검증은 아직 남아 있다. 이후 데이터 기반 UI smoke를 추가해 한국어·영어 × Light/Dark 4개 조합에서
+`홈`/`Home` 탭 label과 `현재 테마: 라이트/다크`/`Current theme: Light/Dark` 설정 접근성 값을 검증했고,
+최초 전체 suite 반복에서는 렌더된 홈·탭 UI에 identifier 전파가 늦어 첫 `ko` × Light가 실패했다. app foreground와
+`screen.home` 준비를 bounded wait로 확인하도록 보정한 뒤 smoke는 iPhone 16 Pro에서 3회 연속, iPhone 13 mini에서
+1회 통과했다. 안정화 후 iPhone 16 Pro 전체 suite도 UI 테스트 4개를 포함해 새로 3회 연속 **264/264**
+(실패·건너뜀 0)로 통과했다. 기본·최대 Dynamic Type와 수동 시각·접근성 검증은 여전히 남아 있다.
