@@ -36,10 +36,6 @@ const isPeriodInvalid = computed(() => {
   return !Number.isInteger(year) || !Number.isInteger(month) ||
     year < currentYear || year > maxYear || month < 1 || month > 12
 })
-const periodFeedbackMessage = computed(() => {
-  if (!isPeriodInvalid.value) return ''
-  return t('team.batchUpload.validation.period')
-})
 const isUploadDisabled = computed(() => props.saving || isFileMissing.value || isPeriodInvalid.value)
 
 watch(() => props.isOpen, (open) => {
@@ -68,7 +64,7 @@ async function uploadBatch() {
     return
   }
   if (isPeriodInvalid.value) {
-    showWarning(periodFeedbackMessage.value)
+    showWarning(t('team.batchUpload.validation.period'))
     return
   }
 

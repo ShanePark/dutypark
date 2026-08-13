@@ -7,7 +7,6 @@ export const enReleaseNotes = {
   loadMore: "Load more",
   latest: "Latest",
   pr: "PR #{number}",
-  openedAt: "PR date",
   areas: "Areas",
   categories: {
     feature: "Feature",

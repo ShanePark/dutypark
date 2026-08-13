@@ -55,7 +55,6 @@ interface Props {
   schedules: Schedule[]
   dutyTypes: DutyType[]
   canEdit: boolean
-  batchEditMode: boolean
   friends: TaggableFriend[]
   memberId: number
   isMyCalendar: boolean
@@ -105,7 +104,6 @@ const isUploading = ref(false)
 const isResolvingAiConsent = ref(false)
 const contentRef = ref<HTMLElement | null>(null)
 
-// Local duty state for immediate UI feedback
 const selectedDutyType = ref<string | null>(null)
 const unavailableCurrentDuty = computed(() => {
   if (!props.duty || props.duty.dutyTypeId === null) return null
@@ -124,7 +122,6 @@ watch(
   { immediate: true }
 )
 
-// Handle duty type change with immediate UI feedback
 function handleDutyTypeChange(dutyTypeId: number | null, dutyTypeName: string) {
   selectedDutyType.value = dutyTypeName
   emit('changeDutyType', dutyTypeId)
@@ -176,28 +173,24 @@ const visibilityOptions = computed(() => [
   {
     value: 'PUBLIC' as CalendarVisibility,
     label: t('visibility.labels.public'),
-    description: t('visibility.descriptions.public'),
     icon: VISIBILITY_ICONS.PUBLIC,
     color: VISIBILITY_COLORS.PUBLIC,
   },
   {
     value: 'FRIENDS' as CalendarVisibility,
     label: t('visibility.labels.friends'),
-    description: t('visibility.descriptions.friends'),
     icon: VISIBILITY_ICONS.FRIENDS,
     color: VISIBILITY_COLORS.FRIENDS,
   },
   {
     value: 'FAMILY' as CalendarVisibility,
     label: t('visibility.labels.family'),
-    description: t('visibility.descriptions.family'),
     icon: VISIBILITY_ICONS.FAMILY,
     color: VISIBILITY_COLORS.FAMILY,
   },
   {
     value: 'PRIVATE' as CalendarVisibility,
     label: t('visibility.labels.private'),
-    description: t('visibility.descriptions.private'),
     icon: VISIBILITY_ICONS.PRIVATE,
     color: VISIBILITY_COLORS.PRIVATE,
   },
@@ -228,13 +221,11 @@ watch(
       newSchedule.value.tagFriendIds = []
       selectedTagSummaries.value = []
     } else {
-      // Cleanup when modal closes
       scheduleFormRef.value?.cleanup()
     }
   }
 )
 
-// Auto-adjust endDateTime when startDateTime changes
 watch(
   () => newSchedule.value.startDateTime,
   (startDateTime) => {
@@ -262,7 +253,6 @@ function startCreateMode() {
     tagFriendIds: [],
   }
   selectedTagSummaries.value = []
-  // Scroll to top when entering create mode
   nextTick(() => {
     if (contentRef.value) {
       contentRef.value.scrollTop = 0
@@ -294,7 +284,6 @@ function startEditMode(schedule: Schedule) {
     name: tag.name,
   }))
 
-  // Load existing attachments
   editAttachments.value = (schedule.attachments || []).map((a) =>
     normalizeAttachment({
       id: a.id,
@@ -311,7 +300,6 @@ function startEditMode(schedule: Schedule) {
     })
   )
 
-  // Scroll to top when entering edit mode
   nextTick(() => {
     if (contentRef.value) {
       contentRef.value.scrollTop = 0
@@ -421,7 +409,6 @@ async function saveSchedule() {
     return
   }
 
-  // Check if upload is in progress
   if (scheduleFormRef.value?.isUploading()) {
     showWarning(t('duty.schedule.warnings.uploadInProgress'))
     return
@@ -526,7 +513,6 @@ function handleUploadError(message: string) {
       </div>
     </div>
 
-        <!-- Content -->
         <div ref="contentRef" class="day-detail-modal-content px-3 py-2.5 sm:p-4 overflow-y-auto overflow-x-hidden flex-1 min-h-0">
 
           <ScheduleList
@@ -541,7 +527,6 @@ function handleUploadError(message: string) {
             @request-untag="openUntagConfirmModal"
           />
 
-          <!-- Create/Edit Schedule Form -->
           <ScheduleForm
             v-if="isCreateMode || isEditMode"
             ref="scheduleFormRef"
@@ -558,12 +543,10 @@ function handleUploadError(message: string) {
           />
         </div>
 
-        <!-- Footer (sticky at bottom) -->
         <div
           v-if="canEdit || isCreateMode || isEditMode"
           class="day-detail-modal-footer modal-footer-safe px-3 py-2.5 sm:p-4 flex-shrink-0 border-t border-dp-border-primary"
         >
-          <!-- List mode: Add schedule button -->
           <div v-if="!isCreateMode && !isEditMode && canEdit" class="flex justify-end">
             <button
               @click="startCreateMode"
@@ -581,7 +564,6 @@ function handleUploadError(message: string) {
               {{ t('common.actions.close') }}
             </button>
           </div>
-          <!-- Create/Edit mode: Save/Cancel buttons -->
           <div v-else-if="isCreateMode || isEditMode" class="flex justify-end gap-2">
             <button
               @click="cancelEdit"
@@ -601,7 +583,6 @@ function handleUploadError(message: string) {
         </div>
   </BaseModal>
 
-  <!-- Untag Confirm Modal -->
   <UntagConfirmModal
     :is-open="!!untagConfirmScheduleId"
     @close="closeUntagConfirmModal"

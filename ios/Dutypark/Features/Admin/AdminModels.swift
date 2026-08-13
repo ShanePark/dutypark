@@ -69,14 +69,3 @@ nonisolated struct AdminPasswordChangeRequest: Encodable, Equatable, Sendable {
     let currentPassword: String?
     let newPassword: String
 }
-
-nonisolated enum AdminMenuDestination: String, CaseIterable, Equatable, Sendable {
-    case members
-    case teams
-    case development
-    case apiDocumentation
-
-    static func visibleDestinations(isAdmin: Bool) -> [Self] {
-        isAdmin ? allCases : []
-    }
-}

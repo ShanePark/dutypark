@@ -181,7 +181,6 @@ onMounted(loadPattern)
       <Loader2 class="w-6 h-6 animate-spin text-dp-accent" />
     </div>
 
-    <!-- Load failure -->
     <div v-else-if="!response" class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
       <p class="text-sm text-dp-text-secondary">{{ t('member.dutyPattern.messages.loadFailed') }}</p>
       <button
@@ -193,7 +192,6 @@ onMounted(loadPattern)
       </button>
     </div>
 
-    <!-- Configured: compact summary, opens modal -->
     <button
       v-else-if="pattern"
       type="button"
@@ -250,7 +248,6 @@ onMounted(loadPattern)
       </p>
     </button>
 
-    <!-- Not configured yet: call to action -->
     <button
       v-else-if="configurable"
       type="button"
@@ -270,7 +267,6 @@ onMounted(loadPattern)
       </span>
     </button>
 
-    <!-- Not configurable -->
     <div v-else class="rounded-lg border p-4 bg-dp-bg-secondary border-dp-border-primary">
       <p class="flex items-center gap-2 text-sm font-medium text-dp-text-primary">
         <Info class="w-4 h-4 shrink-0 text-dp-text-muted" />
@@ -279,7 +275,6 @@ onMounted(loadPattern)
       <p class="mt-1 text-sm text-dp-text-secondary">{{ unavailableReason }}</p>
     </div>
 
-    <!-- Pattern settings modal -->
     <BaseModal
       :is-open="showModal"
       size="md"

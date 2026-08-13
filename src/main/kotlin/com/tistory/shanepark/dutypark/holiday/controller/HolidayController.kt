@@ -6,7 +6,6 @@ import com.tistory.shanepark.dutypark.holiday.domain.HolidayDto
 import com.tistory.shanepark.dutypark.holiday.service.HolidayService
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
-import org.springframework.cache.annotation.Cacheable
 import org.springframework.web.bind.annotation.*
 
 @RestController
@@ -17,7 +16,6 @@ class HolidayController(
     private val log = logger()
 
     @GetMapping
-    @Cacheable(value = ["holidays"], key = "#year + '-' + #month")
     fun getHolidays(@RequestParam year: Int, @RequestParam month: Int): Array<List<HolidayDto>> {
         val calendarView = CalendarView(year = year, month = month)
         return holidayService.findHolidays(calendarView = calendarView)

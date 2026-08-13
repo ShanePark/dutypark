@@ -1,6 +1,4 @@
 import SwiftUI
-import UIKit
-import UserNotifications
 
 struct NotificationCenterView: View {
     @ObservedObject var store: NotificationStore
@@ -505,80 +503,5 @@ struct NotificationBellButton: View {
         ]
         .compactMap { $0 }
         .joined(separator: ", ")
-    }
-}
-
-struct NotificationPermissionCard: View {
-    @ObservedObject var manager: APNsRegistrationManager
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: DPSpacing.small) {
-            Label(
-                String(localized: "notifications.permission.title", table: "Notifications"),
-                systemImage: "bell.badge"
-            )
-            .font(.headline)
-
-            Text(statusMessage)
-                .font(.subheadline)
-                .foregroundStyle(DPColor.textSecondary)
-
-            if manager.authorizationStatus == .notDetermined {
-                Button(String(localized: "notifications.permission.review", table: "Notifications")) {
-                    manager.requestPermission()
-                }
-                .buttonStyle(DPPrimaryButtonStyle())
-            } else if manager.authorizationStatus == .denied {
-                Button(String(localized: "notifications.permission.openSettings", table: "Notifications")) {
-                    guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
-                    UIApplication.shared.open(url)
-                }
-                .buttonStyle(.bordered)
-            } else if manager.registrationState == .failed {
-                Button(String(localized: "notifications.common.retry", table: "Notifications")) {
-                    Task { await manager.resumeRegistration() }
-                }
-                .buttonStyle(.bordered)
-            }
-        }
-        .padding(DPSpacing.medium)
-        .background(DPColor.backgroundCard, in: RoundedRectangle(cornerRadius: DPRadius.standard))
-        .overlay {
-            RoundedRectangle(cornerRadius: DPRadius.standard)
-                .stroke(DPColor.borderPrimary)
-        }
-        .alert(
-            String(localized: "notifications.permission.prepromptTitle", table: "Notifications"),
-            isPresented: $manager.showsPermissionPreprompt
-        ) {
-            Button(String(localized: "notifications.permission.continue", table: "Notifications")) {
-                Task { await manager.continuePermissionRequest() }
-            }
-            Button(String(localized: "notifications.common.notNow", table: "Notifications"), role: .cancel) {}
-        } message: {
-            Text(String(localized: "notifications.permission.prepromptMessage", table: "Notifications"))
-        }
-    }
-
-    private var statusMessage: String {
-        switch manager.authorizationStatus {
-        case .notDetermined:
-            String(localized: "notifications.permission.notDetermined", table: "Notifications")
-        case .denied:
-            String(localized: "notifications.permission.denied", table: "Notifications")
-        case .authorized, .provisional, .ephemeral:
-            switch manager.registrationState {
-            case .registered:
-                String(localized: "notifications.permission.registered", table: "Notifications")
-            case .registering:
-                String(localized: "notifications.permission.registering", table: "Notifications")
-            case .failed:
-                String(localized: "notifications.permission.registrationFailed", table: "Notifications")
-            case .idle:
-                String(localized: "notifications.permission.granted", table: "Notifications")
-            }
-        @unknown default:
-            String(localized: "notifications.permission.notDetermined", table: "Notifications")
-        }
     }
 }

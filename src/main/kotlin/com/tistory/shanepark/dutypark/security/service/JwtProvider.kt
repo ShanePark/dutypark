@@ -1,6 +1,5 @@
 package com.tistory.shanepark.dutypark.security.service
 
-import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.security.config.DutyparkProperties
 import com.tistory.shanepark.dutypark.security.config.JwtConfig
@@ -24,7 +23,6 @@ class JwtProvider(
 ) {
     private val key: SecretKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtConfig.secret))
     private val tokenValidityInMilliseconds: Long = 1000L * jwtConfig.tokenValidityInSeconds
-    private val log = logger()
 
     fun createToken(member: Member): String {
 

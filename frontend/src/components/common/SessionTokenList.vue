@@ -104,7 +104,6 @@ function handleDelete(tokenId: number) {
 
 <template>
   <div>
-    <!-- Loading State -->
     <div v-if="loading" class="flex items-center justify-center py-8">
       <Loader2 class="w-6 h-6 animate-spin text-dp-accent" />
     </div>
@@ -116,9 +115,7 @@ function handleDelete(tokenId: number) {
     </template>
 
     <template v-else>
-      <!-- Compact Mode -->
       <template v-if="compact">
-        <!-- Mobile -->
         <div class="sm:hidden space-y-2">
           <div
             v-for="(token, idx) in visibleTokens"
@@ -136,7 +133,6 @@ function handleDelete(tokenId: number) {
                 </span>
               </div>
               <div class="flex items-center gap-2">
-                <!-- Delete button or current login badge -->
                 <span v-if="token.isCurrentLogin" class="px-2 py-0.5 text-xs font-medium text-dp-success bg-dp-success-soft rounded-full">
                   {{ t('member.sessions.current') }}
                 </span>
@@ -148,7 +144,6 @@ function handleDelete(tokenId: number) {
                 >
                   <LogOut class="w-3.5 h-3.5" />
                 </button>
-                <!-- Expand/Collapse badge (always reserve space when collapsible) -->
                 <div v-if="collapsible" class="w-6 h-6 flex items-center justify-center">
                   <button
                     v-if="idx === 0 && hiddenCount > 0"
@@ -174,7 +169,6 @@ function handleDelete(tokenId: number) {
             </div>
           </div>
         </div>
-        <!-- Desktop -->
         <div class="hidden sm:block space-y-2">
           <div
             v-for="(token, idx) in visibleTokens"
@@ -219,7 +213,6 @@ function handleDelete(tokenId: number) {
                 {{ t('member.sessions.currentLogin') }}
               </span>
             </div>
-            <!-- Expand/Collapse column (always reserved when collapsible) -->
             <div v-if="collapsible" class="flex items-center justify-end">
               <button
                 v-if="idx === 0 && hiddenCount > 0"
@@ -234,9 +227,7 @@ function handleDelete(tokenId: number) {
         </div>
       </template>
 
-      <!-- Full Mode (with table headers) -->
       <template v-else>
-        <!-- Mobile -->
         <div class="sm:hidden space-y-3">
           <div
             v-for="token in sortedTokens"
@@ -287,7 +278,6 @@ function handleDelete(tokenId: number) {
           </div>
         </div>
 
-        <!-- Desktop -->
         <div class="hidden sm:block overflow-x-auto">
           <table class="w-full text-sm">
             <thead>

@@ -52,7 +52,6 @@ const currentIndex = ref(0)
 const fullImageUrls = ref<Record<string, string>>({})
 const isLoading = ref(false)
 
-// Touch/swipe handling
 const touchStartX = ref(0)
 const touchStartY = ref(0)
 const touchEndX = ref(0)
@@ -125,7 +124,6 @@ function handleKeydown(e: KeyboardEvent) {
   if (e.key === 'ArrowRight') nextImage()
 }
 
-// Touch handlers for swipe navigation
 function handleTouchStart(e: TouchEvent) {
   const touch = e.touches[0]
   if (!touch) return
@@ -164,14 +162,12 @@ function handleTouchEnd(e: TouchEvent) {
     }
   }
 
-  // Reset touch values
   touchStartX.value = 0
   touchStartY.value = 0
   touchEndX.value = 0
   touchEndY.value = 0
 }
 
-// Keyboard navigation
 onMounted(() => {
   window.addEventListener('keydown', handleKeydown)
 })
@@ -194,7 +190,6 @@ onUnmounted(() => {
       @touchmove="handleTouchMove"
       @touchend="handleTouchEnd"
     >
-      <!-- Close button -->
       <button
         @click="emit('close')"
         class="absolute top-4 right-4 p-2 text-dp-text-on-dark hover:bg-dp-overlay-light/20 rounded-full transition z-10 cursor-pointer"
@@ -203,7 +198,6 @@ onUnmounted(() => {
         <X class="w-6 h-6" />
       </button>
 
-      <!-- Previous button - centered vertically, larger touch area on mobile -->
       <button
         v-if="currentIndex > 0"
         @click="prevImage"
@@ -213,7 +207,6 @@ onUnmounted(() => {
         <ChevronLeft class="w-8 h-8" />
       </button>
 
-      <!-- Image -->
       <div class="max-w-[90vw] max-h-[90vh] flex flex-col items-center">
         <img
           v-if="getCurrentImageUrl()"
@@ -223,7 +216,6 @@ onUnmounted(() => {
         />
         <div v-else class="text-dp-text-on-dark">{{ isLoading ? t('imageViewer.loading') : t('imageViewer.loadFailed') }}</div>
 
-        <!-- Image info -->
         <div class="mt-4 text-dp-text-on-dark text-center">
           <div class="text-sm">{{ images[currentIndex]?.originalFilename }}</div>
           <div class="text-xs mt-1 text-dp-text-on-dark-muted">
@@ -231,7 +223,6 @@ onUnmounted(() => {
           </div>
         </div>
 
-        <!-- Download button - larger touch area on mobile -->
         <button
           @click="downloadImage"
           class="mt-4 flex items-center gap-2 px-5 py-3 sm:px-4 sm:py-2 bg-dp-overlay-light/20 hover:bg-dp-overlay-light/30 active:bg-dp-overlay-light/40 rounded-lg text-dp-text-on-dark transition cursor-pointer"
@@ -241,7 +232,6 @@ onUnmounted(() => {
         </button>
       </div>
 
-      <!-- Next button - centered vertically, larger touch area on mobile -->
       <button
         v-if="currentIndex < images.length - 1"
         @click="nextImage"

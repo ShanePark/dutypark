@@ -1,7 +1,6 @@
 import SwiftUI
 import UIKit
 
-/// Compact brand mark used only in the Home navigation bar.
 struct DPBrandMark: View {
     let action: () -> Void
 

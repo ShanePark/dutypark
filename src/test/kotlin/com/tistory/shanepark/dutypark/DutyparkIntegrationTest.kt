@@ -3,7 +3,6 @@ package com.tistory.shanepark.dutypark
 import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
 import tools.jackson.databind.json.JsonMapper
 import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
-import com.tistory.shanepark.dutypark.member.domain.dto.MemberCreateDto
 import com.tistory.shanepark.dutypark.member.domain.entity.FriendRelation
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.entity.MemberManager
@@ -21,6 +20,7 @@ import jakarta.persistence.EntityManager
 import org.junit.jupiter.api.BeforeEach
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.transaction.annotation.Transactional
 
 @SpringBootTest
@@ -35,6 +35,9 @@ class DutyparkIntegrationTest {
 
     @Autowired
     lateinit var memberService: MemberService
+
+    @Autowired
+    lateinit var testPasswordEncoder: PasswordEncoder
 
     @Autowired
     lateinit var dutyTypeRepository: DutyTypeRepository
@@ -76,12 +79,11 @@ class DutyparkIntegrationTest {
 
     private fun initTestMember() {
         for (i in 1..2) {
-            val memberCreateDto = MemberCreateDto(
+            val saved = createMember(
                 name = "dummy$i",
                 email = "test$i@duty.park",
                 password = TestData.testPass,
             )
-            val saved = memberService.createMember(memberCreateDto)
             TestData.team.addMember(saved)
             memberRepository.save(saved)
             if (i == 1) {
@@ -90,11 +92,19 @@ class DutyparkIntegrationTest {
                 TestData.member2 = saved
             }
         }
-        TestData.admin = memberService.createMember(
-            MemberCreateDto(
-                name = "admin",
-                email = "admin@email.com",
-                password = TestData.testPass,
+        TestData.admin = createMember(
+            name = "admin",
+            email = "admin@email.com",
+            password = TestData.testPass,
+        )
+    }
+
+    private fun createMember(name: String, email: String, password: String): Member {
+        return memberRepository.save(
+            Member(
+                name = name,
+                email = email,
+                password = testPasswordEncoder.encode(password),
             )
         )
     }

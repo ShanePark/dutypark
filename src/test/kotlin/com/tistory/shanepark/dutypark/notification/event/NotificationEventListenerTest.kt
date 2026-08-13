@@ -424,7 +424,7 @@ class NotificationEventListenerTest {
         ).thenReturn(notification)
         whenever(notificationRepository.countByMemberIdAndIsReadFalse(member.id!!)).thenReturn(1)
 
-        listener.handleFamilyRequestAccepted(FamilyRequestAcceptedEvent(99L, member.id!!, actor.id!!))
+        listener.handleFamilyRequestAccepted(FamilyRequestAcceptedEvent(member.id!!, actor.id!!))
 
         val payloadCaptor = argumentCaptor<PushNotificationPayload>()
         verify(webPushService).sendToMember(eq(member.id!!), payloadCaptor.capture())
@@ -496,7 +496,7 @@ class NotificationEventListenerTest {
         ).thenReturn(notification)
         whenever(notificationRepository.countByMemberIdAndIsReadFalse(member.id!!)).thenReturn(1)
 
-        listener.handleFriendRequestAccepted(FriendRequestAcceptedEvent(99L, member.id!!, actor.id!!))
+        listener.handleFriendRequestAccepted(FriendRequestAcceptedEvent(member.id!!, actor.id!!))
 
         val payloadCaptor = argumentCaptor<PushNotificationPayload>()
         verify(webPushService).sendToMember(eq(member.id!!), payloadCaptor.capture())

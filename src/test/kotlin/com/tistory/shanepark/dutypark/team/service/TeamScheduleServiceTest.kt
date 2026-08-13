@@ -51,7 +51,6 @@ class TeamScheduleServiceTest {
 
     @Test
     fun `create should save schedule and return TeamScheduleDto`() {
-        // Given
         val loginMember = LoginMember(id = 1L, name = "Test Author")
         val author = Member("Test Author")
         val team = makeTeam()
@@ -71,10 +70,8 @@ class TeamScheduleServiceTest {
         whenever(teamScheduleRepository.findTeamSchedulesOfTeamRangeIn(any<Team>(), any(), any())).thenReturn(listOf())
         whenever(teamScheduleRepository.save(any())).thenReturn(savedSchedule)
 
-        // When
         val result = teamScheduleService.create(loginMember, saveDto)
 
-        // Then
         assertThat(result.content).isEqualTo(saveDto.content)
         assertThat(result.createMember).isEqualTo(author.name)
         assertThat(result.position).isEqualTo(0)
@@ -101,7 +98,6 @@ class TeamScheduleServiceTest {
 
     @Test
     fun `create should assign position based on existing schedules`() {
-        // Given
         val loginMember = LoginMember(id = 1L, name = "Author")
         val author = Member("Author")
         val team = makeTeam("Team B")
@@ -127,10 +123,8 @@ class TeamScheduleServiceTest {
             .thenReturn(existingSchedules)
         whenever(teamScheduleRepository.save(any())).thenReturn(savedSchedule)
 
-        // When
         val result = teamScheduleService.create(loginMember, saveDto)
 
-        // Then
         assertThat(result.position).isEqualTo(3)
     }
 
@@ -149,7 +143,6 @@ class TeamScheduleServiceTest {
 
     @Test
     fun `update should update schedule with new values and updateMember`() {
-        // Given
         val loginMember = LoginMember(id = 1L, name = "Editor")
         val author = Member("Editor")
 
@@ -181,10 +174,8 @@ class TeamScheduleServiceTest {
         whenever(memberRepository.findById(1L)).thenReturn(Optional.of(author))
         whenever(teamScheduleRepository.findById(oldSchedule.id)).thenReturn(Optional.of(oldSchedule))
 
-        // When
         teamScheduleService.update(loginMember, saveDto)
 
-        // Then
         assertThat(oldSchedule.content).isEqualTo("Updated Content")
         assertThat(oldSchedule.description).isEqualTo("Updated Description")
         assertThat(oldSchedule.startDateTime).isEqualTo(updatedStart)
@@ -285,22 +276,18 @@ class TeamScheduleServiceTest {
 
     @Test
     fun `delete should remove schedule by id`() {
-        // given
         val scheduleId = UUID.randomUUID()
         val schedule = createSchedule()
 
         whenever(teamScheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule))
 
-        // when
         teamScheduleService.delete(scheduleId)
 
-        // then
         verify(teamScheduleRepository).delete(schedule)
     }
 
     @Test
     fun `findTeamSchedules should return schedules within calendar range`() {
-        // Given
         val team = makeTeam("Team C")
         val teamId = 1L
         ReflectionTestUtils.setField(team, "id", teamId)
@@ -327,10 +314,8 @@ class TeamScheduleServiceTest {
             )
         ).thenReturn(schedules)
 
-        // When
         val result = teamScheduleService.findTeamSchedules(teamId, calendarView)
 
-        // Then
         val ids = result.flatMap { l -> l }
             .map { s -> s.id }
             .distinct()
@@ -347,7 +332,6 @@ class TeamScheduleServiceTest {
 
     @Test
     fun `multi-day schedules should spread correctly across the calendar view`() {
-        // Given
         val team = makeTeam("Team Multi")
         val teamId = 2L
         ReflectionTestUtils.setField(team, "id", teamId)
@@ -375,16 +359,14 @@ class TeamScheduleServiceTest {
             )
         ).thenReturn(schedules)
 
-        // When
         val result = teamScheduleService.findTeamSchedules(teamId, calendarView)
 
-        // Then
         val flattened = result.flatMap { it }
         val spanningIds = flattened.filter { it.id == spanningSchedule.id }
-        assertThat(spanningIds).hasSize(4) // 2/28, 3/1, 3/2, 3/3
+        assertThat(spanningIds).hasSize(4)
 
         val fullMonthIds = flattened.filter { it.id == fullMonthSchedule.id }
-        assertThat(fullMonthIds).hasSize(31) // whole March
+        assertThat(fullMonthIds).hasSize(31)
 
         val feb28Index = calendarView.getIndex(LocalDate.of(2025, 2, 28))
         val mar1Index = calendarView.getIndex(LocalDate.of(2025, 3, 1))
@@ -396,7 +378,6 @@ class TeamScheduleServiceTest {
 
     @Test
     fun `schedules from previous month overlapping with calendar view padding should appear correctly`() {
-        // Given
         val team = makeTeam("Team Padding")
         val teamId = 3L
         ReflectionTestUtils.setField(team, "id", teamId)
@@ -416,10 +397,8 @@ class TeamScheduleServiceTest {
             )
         ).thenReturn(listOf(schedule))
 
-        // When
         val result = teamScheduleService.findTeamSchedules(teamId, calendarView)
 
-        // Then
         val date = LocalDate.of(2025, 2, 23)
         val index = calendarView.getIndex(date)
         assertThat(result[index]).hasSize(1)

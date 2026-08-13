@@ -132,7 +132,6 @@ function getAvatarProps(notification: NotificationDto) {
 }
 
 async function handleNotificationClick(notification: NotificationDto) {
-  // Mark as read if not already
   if (!notification.isRead) {
     try {
       await notificationApi.markAsRead(notification.id)
@@ -229,7 +228,6 @@ watch(
 
 <template>
   <div class="notification-list-view max-w-2xl mx-auto px-4 py-6">
-    <!-- Header -->
     <PageHeader :title="t('header.menu.notifications')" :icon="Bell">
       <button
         type="button"
@@ -251,12 +249,10 @@ watch(
       </button>
     </PageHeader>
 
-    <!-- Retention Notice -->
     <p class="notification-retention-notice text-xs mb-4">
       {{ t('notifications.list.retentionNotice') }}
     </p>
 
-    <!-- Notification List -->
     <div class="notification-list-container card">
       <div v-if="isLoading && notifications.length === 0" class="p-8 text-center">
         <span class="notification-loading-text text-sm">{{ t('notifications.common.loading') }}</span>
@@ -311,7 +307,6 @@ watch(
           </div>
         </button>
 
-        <!-- Load More Button -->
         <div v-if="hasMorePages" class="p-4 text-center border-t notification-list-footer">
           <button
             type="button"
@@ -397,10 +392,6 @@ watch(
 }
 
 .notification-list-item-title {
-  color: var(--dp-text-secondary);
-}
-
-.notification-list-item-content {
   color: var(--dp-text-secondary);
 }
 

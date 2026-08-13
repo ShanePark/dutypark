@@ -47,23 +47,4 @@ class PolicyServiceTest {
         assertThat(current).isNull()
     }
 
-    @Test
-    fun `getPolicy returns policy by version`() {
-        val policy = PolicyVersion(
-            policyType = PolicyType.PRIVACY,
-            version = "1.0",
-            content = "privacy-v1",
-            effectiveDate = LocalDate.of(2024, 6, 1)
-        )
-        whenever(policyVersionRepository.findByPolicyTypeAndVersion(PolicyType.PRIVACY, "1.0"))
-            .thenReturn(policy)
-        whenever(policyVersionRepository.findByPolicyTypeAndVersion(PolicyType.PRIVACY, "missing"))
-            .thenReturn(null)
-
-        val foundPolicy = policyService.getPolicy(PolicyType.PRIVACY, "1.0")
-        val missingPolicy = policyService.getPolicy(PolicyType.PRIVACY, "missing")
-
-        assertThat(foundPolicy?.version).isEqualTo("1.0")
-        assertThat(missingPolicy).isNull()
-    }
 }

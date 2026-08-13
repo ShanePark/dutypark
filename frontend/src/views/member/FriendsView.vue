@@ -31,7 +31,6 @@ const { t } = useI18n()
 const { showWarning, confirm, confirmDelete, toastSuccess } = useSwal()
 const dragClickGuard = useDragClickGuard()
 
-// Watch for notification-triggered refresh
 watch(() => notificationStore.friendsRefreshTrigger, (newValue) => {
   if (newValue > 0) {
     loadFriendInfo()
@@ -42,18 +41,15 @@ const loading = ref(false)
 const error = ref<string | null>(null)
 const friendInfo = ref<DashboardFriendInfo | null>(null)
 
-// Dropdown state for friend management
 const openDropdownId = ref<number | null>(null)
 const dropdownPosition = ref({ top: 0, left: 0 })
 const dropdownRef = ref<HTMLElement | null>(null)
 const MENU_WIDTH = 176 // w-44
 
-// Sortable instance
 let friendSortable: Sortable | null = null
 const friendListRef = ref<HTMLElement | null>(null)
 const friendSectionRef = ref<HTMLElement | null>(null)
 
-// Search modal state
 const showSearchModal = ref(false)
 const searchKeyword = ref('')
 const searchResult = ref<MemberPreviewDto[]>([])
@@ -110,7 +106,6 @@ async function loadFriendInfo() {
   }
 }
 
-// Friend request actions
 async function acceptFriendRequest(req: { fromMember: { id: number | null; name: string } }) {
   if (!friendInfo.value || !req.fromMember.id) return
   try {
@@ -159,7 +154,6 @@ async function cancelRequest(req: { toMember: { id: number | null; name: string 
   }
 }
 
-// Pin/Unpin friend
 async function pinFriend(member: { id: number | null; name: string }) {
   if (!friendInfo.value || !member.id) return
   const friend = friendInfo.value.friends.find((f) => f.member.id === member.id)
@@ -217,7 +211,6 @@ function sortFriendsByPinOrder() {
   })
 }
 
-// Friend management actions
 async function addFamily(member: { id: number | null; name: string }) {
   if (!friendInfo.value || !member.id) return
   const alreadySent = friendInfo.value.pendingRequestsFrom.some((r) => r.toMember.id === member.id)
@@ -273,7 +266,6 @@ async function unfriend(member: { id: number | null; name: string }) {
   }
 }
 
-// Dropdown management
 function toggleDropdown(memberId: number, event: Event) {
   event.stopPropagation()
   if (openDropdownId.value === memberId) {
@@ -306,13 +298,11 @@ function closeDropdown() {
   openDropdownId.value = null
 }
 
-// Navigate to friend's duty
 function moveTo(memberId?: number | null) {
   if (!memberId) return
   router.push(`/duty/${memberId}`)
 }
 
-// Search modal
 function openSearchModal() {
   showSearchModal.value = true
   searchKeyword.value = ''
@@ -367,7 +357,6 @@ function goToPage(page: number) {
   search()
 }
 
-// Sortable
 function initFriendSortable() {
   if (!friendListRef.value) {
     destroyFriendSortable()
@@ -464,7 +453,6 @@ onUnmounted(() => {
 
 <template>
   <div class="max-w-4xl mx-auto px-4 py-6">
-    <!-- Header -->
     <PageHeader :title="t('header.menu.friends')" :icon="UserPlus">
       <button
         class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-dp-surface-strong to-dp-surface-strong-alt text-dp-text-on-dark rounded-xl hover:from-dp-surface-strong-alt hover:to-dp-surface-strong-hover transition-all shadow-lg font-medium cursor-pointer"
@@ -475,18 +463,15 @@ onUnmounted(() => {
       </button>
     </PageHeader>
 
-    <!-- Loading -->
     <div v-if="loading" class="flex justify-center py-16">
       <div class="w-8 h-8 border-3 rounded-full animate-spin" :style="{ borderColor: 'var(--dp-border-secondary)', borderTopColor: 'var(--dp-text-primary)' }"></div>
     </div>
 
-    <!-- Error -->
     <div v-else-if="error" class="text-center py-16 text-dp-danger">
       {{ error }}
     </div>
 
     <template v-else-if="friendInfo">
-      <!-- Friend Request Section -->
       <div
         v-if="hasPendingRequests"
         class="rounded-2xl shadow-sm border mb-6 overflow-hidden bg-dp-bg-card border-dp-border-primary"
@@ -501,7 +486,6 @@ onUnmounted(() => {
           </div>
         </div>
         <div class="p-4 space-y-3">
-          <!-- Received Requests -->
           <div
             v-for="req in friendInfo.pendingRequestsTo"
             :key="'to-' + req.fromMember.id"
@@ -545,7 +529,6 @@ onUnmounted(() => {
             </div>
           </div>
 
-          <!-- Sent Requests -->
           <div
             v-for="req in friendInfo.pendingRequestsFrom"
             :key="'from-' + req.toMember.id"
@@ -583,7 +566,6 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <!-- Friends List Section -->
       <div
         ref="friendSectionRef"
         class="friend-section rounded-2xl shadow-sm border bg-dp-bg-card border-dp-border-primary"
@@ -616,7 +598,6 @@ onUnmounted(() => {
             @pointerdown.capture="dragClickGuard.handlePointerDown"
             @click.capture="dragClickGuard.handleClick"
           >
-            <!-- Friend Cards -->
             <div
               v-for="friend in sortedFriends"
               :key="friend.member.id ?? 'unknown'"
@@ -631,7 +612,6 @@ onUnmounted(() => {
               @click="moveTo(friend.member.id)"
             >
               <div class="flex p-3">
-                <!-- Left section: Profile -->
                 <div class="flex-shrink-0 mr-3">
                   <ProfileAvatar
                     :member-id="friend.member.id"
@@ -642,16 +622,13 @@ onUnmounted(() => {
                   />
                 </div>
 
-                <!-- Right section: Info & Actions -->
                 <div class="flex-1 min-w-0">
-                  <!-- Top: Name & Actions -->
                   <div class="flex items-center justify-between mb-1.5">
                     <div class="flex items-center gap-1.5 min-w-0">
                       <span class="font-medium text-sm truncate text-dp-text-primary">{{ friend.member.name }}</span>
                       <Home v-if="friend.isFamily" class="w-3.5 h-3.5 flex-shrink-0 text-dp-warning" :title="t('friends.labels.familyMember')" />
                     </div>
                     <div class="flex items-center flex-shrink-0" @click.stop>
-                      <!-- Pin/Unpin button -->
                       <button
                         v-if="friend.pinOrder"
                         class="p-1 text-dp-warning hover:text-dp-warning transition cursor-pointer"
@@ -668,7 +645,6 @@ onUnmounted(() => {
                       >
                         <Star class="w-4 h-4" />
                       </button>
-                      <!-- Dropdown toggle -->
                       <button
                         v-if="friend.member.id"
                         class="p-1.5 rounded-lg transition hover:bg-opacity-80 cursor-pointer text-dp-text-muted"
@@ -681,7 +657,6 @@ onUnmounted(() => {
                 </div>
               </div>
 
-              <!-- Drag handle for pinned friends -->
               <div v-if="friend.pinOrder" class="absolute bottom-2 right-2" @click.stop>
                 <div
                   class="handle friend-drag-handle rounded-lg p-1.5 transition hover:bg-dp-overlay-dark/10 !cursor-grab active:!cursor-grabbing"
@@ -692,7 +667,6 @@ onUnmounted(() => {
               </div>
             </div>
 
-            <!-- Add Friend Card -->
             <div
               class="group rounded-xl sm:rounded-2xl border-2 border-dashed cursor-pointer hover:border-dp-accent-border hover:bg-dp-accent-soft transition-all duration-300 flex flex-col items-center justify-center min-h-[80px] sm:min-h-[120px] border-dp-border-secondary"
               @click="openSearchModal"

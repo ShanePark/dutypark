@@ -1,6 +1,5 @@
 package com.tistory.shanepark.dutypark.security.controller
 
-import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.domain.dto.DutyParkErrorResponse
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.common.exceptions.RateLimitException
@@ -29,8 +28,6 @@ class AuthController(
     private val jwtConfig: JwtConfig,
     private val loginAttemptService: LoginAttemptService,
 ) {
-    private val log = logger()
-
     @PutMapping("password")
     fun changePassword(
         @Login loginMember: LoginMember,

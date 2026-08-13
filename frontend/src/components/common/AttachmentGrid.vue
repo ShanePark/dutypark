@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, reactive, computed, type Component } from 'vue'
+import { ref, watch, reactive, type Component } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
   Download,
@@ -21,41 +21,33 @@ import type { NormalizedAttachment } from '@/types'
 
 interface Props {
   attachments: NormalizedAttachment[]
-  showLabel?: boolean
-  columns?: 2 | 3 | 4
+  columns?: 2 | 4
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  showLabel: true,
   columns: 2,
 })
 
 const { t } = useI18n()
 const thumbnailBlobUrls = reactive<Record<string, string>>({})
 
-// Image viewer state
 const imageViewerOpen = ref(false)
 const imageViewerIndex = ref(0)
 const imageAttachments = ref<Array<{ id: string; originalFilename: string }>>([])
 
-// File extension to icon mapping
 const EXTENSION_ICON_MAP: Record<string, Component> = {
-  // Documents
   pdf: FileText,
   doc: FileText,
   docx: FileText,
   txt: FileText,
   rtf: FileText,
   md: FileText,
-  // Spreadsheets
   xls: FileSpreadsheet,
   xlsx: FileSpreadsheet,
   csv: FileSpreadsheet,
-  // Presentations
   ppt: Presentation,
   pptx: Presentation,
   key: Presentation,
-  // Code
   js: FileCode,
   ts: FileCode,
   jsx: FileCode,
@@ -67,13 +59,11 @@ const EXTENSION_ICON_MAP: Record<string, Component> = {
   java: FileCode,
   kt: FileCode,
   py: FileCode,
-  // Archives
   zip: FileArchive,
   rar: FileArchive,
   '7z': FileArchive,
   gz: FileArchive,
   tar: FileArchive,
-  // Media
   mp3: FileAudio,
   wav: FileAudio,
   flac: FileAudio,
@@ -83,7 +73,6 @@ const EXTENSION_ICON_MAP: Record<string, Component> = {
   avi: FileVideo,
   mkv: FileVideo,
   webm: FileVideo,
-  // Images
   jpg: FileImage,
   jpeg: FileImage,
   png: FileImage,
@@ -99,13 +88,11 @@ function getFileExtension(filename: string): string {
 }
 
 function getFileIconComponent(attachment: NormalizedAttachment): Component {
-  // First try by extension
   const ext = getFileExtension(attachment.originalFilename)
   if (ext && EXTENSION_ICON_MAP[ext]) {
     return EXTENSION_ICON_MAP[ext]
   }
 
-  // Fallback by content type
   const contentType = attachment.contentType || ''
   if (contentType.startsWith('image/')) return FileImage
   if (contentType.startsWith('video/')) return FileVideo
@@ -154,7 +141,6 @@ function handleAttachmentClick(index: number) {
 }
 
 function openImageViewer(clickedIndex: number) {
-  // Filter only image attachments
   const images = props.attachments.filter((a) => a.contentType?.startsWith('image/'))
   if (images.length === 0) return
 
@@ -182,7 +168,6 @@ async function downloadAttachment(attachmentId: string, filename: string) {
   }
 }
 
-// Watch for attachment changes to load thumbnails
 watch(
   () => props.attachments,
   () => {
@@ -193,17 +178,13 @@ watch(
 
 const gridColsClass = {
   2: 'grid-cols-2',
-  3: 'grid-cols-2 sm:grid-cols-3',
   4: 'grid-cols-2 sm:grid-cols-4',
 }
 </script>
 
 <template>
   <div v-if="attachments.length > 0">
-    <div
-      v-if="showLabel"
-      class="flex items-center gap-1 text-sm mb-2 text-dp-text-muted"
-    >
+    <div class="flex items-center gap-1 text-sm mb-2 text-dp-text-muted">
       <Paperclip class="w-3 h-3" />
       {{ t('attachmentGrid.label', { count: attachments.length }) }}
     </div>
@@ -216,7 +197,6 @@ const gridColsClass = {
         :style="{ border: `1px solid var(--dp-border-primary)` }"
         @click="handleAttachmentClick(idx)"
       >
-        <!-- Thumbnail or Icon -->
         <div
           class="aspect-square flex items-center justify-center relative bg-dp-bg-secondary"
         >
@@ -232,7 +212,6 @@ const gridColsClass = {
             class="w-12 h-12 text-dp-text-muted"
           />
 
-          <!-- Zoom overlay for images - shown on hover -->
           <div
             v-if="attachment.contentType?.startsWith('image/')"
             class="absolute inset-0 bg-dp-overlay-dark/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
@@ -242,7 +221,6 @@ const gridColsClass = {
           </div>
         </div>
 
-        <!-- Download button - always visible, larger touch area on mobile -->
         <button
           class="absolute top-1 right-1 p-2.5 sm:p-1.5 bg-dp-overlay-dark/50 rounded text-dp-text-on-dark hover:bg-dp-overlay-dark/70 active:bg-dp-overlay-dark/80 transition-colors cursor-pointer"
           @click.stop="downloadAttachment(attachment.id, attachment.originalFilename)"
@@ -251,7 +229,6 @@ const gridColsClass = {
           <Download class="w-5 h-5 sm:w-4 sm:h-4" />
         </button>
 
-        <!-- File info -->
         <div class="p-2 bg-dp-bg-card">
           <p class="text-sm truncate text-dp-text-primary" :title="attachment.originalFilename">
             {{ attachment.originalFilename }}
@@ -261,7 +238,6 @@ const gridColsClass = {
       </div>
     </div>
 
-    <!-- Image Viewer -->
     <ImageViewer
       :is-open="imageViewerOpen"
       :images="imageAttachments"

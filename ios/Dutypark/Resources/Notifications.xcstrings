@@ -37,10 +37,6 @@
     "notifications.common.ok" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "OK" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "확인" } }
     } },
-    "notifications.common.notNow" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Not now" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "나중에" } }
-    } },
-
     "notifications.items.generic" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "You have a new notification." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "새 알림이 도착했습니다." } }
     } },
@@ -143,43 +139,6 @@
     } },
     "notifications.messages.markAllAsReadFailed" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to update notifications." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "알림 처리에 실패했습니다" } }
-    } },
-
-    "notifications.permission.title" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Notification permission" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "알림 권한" } }
-    } },
-    "notifications.permission.notDetermined" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Review how Dutypark uses iPhone notifications before choosing." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "선택하기 전에 Dutypark가 아이폰 알림을 사용하는 방식을 확인할 수 있습니다." } }
-    } },
-    "notifications.permission.review" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Review notification permission" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "알림 권한 확인" } }
-    } },
-    "notifications.permission.denied" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Notification permission is turned off in iPhone Settings." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "아이폰 설정에서 알림 권한이 꺼져 있습니다." } }
-    } },
-    "notifications.permission.openSettings" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Open Settings" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "설정 열기" } }
-    } },
-    "notifications.permission.granted" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "iPhone notification permission is allowed. Device registration is pending." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "아이폰 알림 권한이 허용되었습니다. 기기 등록을 기다리고 있습니다." } }
-    } },
-    "notifications.permission.registering" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Registering this device with Dutypark..." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "이 기기를 Dutypark에 등록하고 있습니다..." } }
-    } },
-    "notifications.permission.registered" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "iPhone permission and Dutypark device registration are confirmed." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "아이폰 권한과 Dutypark 기기 등록이 확인되었습니다." } }
-    } },
-    "notifications.permission.registrationFailed" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Could not confirm this device's registration." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "이 기기의 등록을 확인하지 못했습니다." } }
-    } },
-    "notifications.permission.prepromptTitle" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Allow iPhone notifications?" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "아이폰 알림을 허용할까요?" } }
-    } },
-    "notifications.permission.prepromptMessage" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Dutypark will request iOS permission for schedule tags, friend requests, and TODO updates. You can change it later in Settings." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "일정 태그, 친구 요청, TODO 변경을 위해 iOS 알림 권한을 요청합니다. 나중에 설정에서 변경할 수 있습니다." } }
-    } },
-    "notifications.permission.continue" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Continue" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "계속" } }
     } }
   },
   "version" : "1.0"

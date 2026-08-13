@@ -53,7 +53,7 @@ class ErrorDetectAdvisor(
     fun handleMethodArgumentTypeMismatch(
         e: MethodArgumentTypeMismatchException
     ): ResponseEntity<Map<String, String>> {
-        return ResponseEntity.badRequest().body(mapOf("error" to (e.message ?: "Bad Request")))
+        return ResponseEntity.badRequest().body(mapOf("error" to e.message))
     }
 
     @ExceptionHandler(Exception::class)

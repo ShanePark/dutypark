@@ -107,16 +107,13 @@ function handleNaverLogin() {
 <template>
   <div class="min-h-screen flex items-center justify-center px-4 pb-safe pt-safe bg-dp-bg-secondary">
     <div class="w-full max-w-md">
-      <!-- Logo -->
       <div class="text-center mb-8">
         <h1 class="text-3xl font-bold text-dp-text-primary">Dutypark</h1>
         <p class="mt-2 text-dp-text-muted">{{ t('auth.login.subtitle') }}</p>
       </div>
 
-      <!-- Login Card -->
       <div class="rounded-2xl shadow-sm p-8 bg-dp-bg-card border border-dp-border-primary">
         <form @submit.prevent="handleLogin" class="space-y-5">
-          <!-- Email Field -->
           <div>
             <label for="email" class="block text-sm font-medium mb-2 text-dp-text-secondary">
               {{ t('auth.login.emailLabel') }}
@@ -147,7 +144,6 @@ function handleNaverLogin() {
             </div>
           </div>
 
-          <!-- Password Field -->
           <div>
             <label for="password" class="block text-sm font-medium mb-2 text-dp-text-secondary">
               {{ t('auth.login.passwordLabel') }}
@@ -169,7 +165,6 @@ function handleNaverLogin() {
             />
           </div>
 
-          <!-- Error Message -->
           <div v-if="error" class="text-sm p-3 rounded-xl border" :class="remainingAttempts !== null && remainingAttempts <= 1 ? 'text-dp-warning bg-dp-warning-soft border-dp-warning-border' : 'text-dp-danger bg-dp-danger-soft border-dp-danger-border'">
             <div>{{ error }}</div>
             <div v-if="remainingAttemptsMessage" class="mt-1 font-medium">
@@ -177,7 +172,6 @@ function handleNaverLogin() {
             </div>
           </div>
 
-          <!-- Login Button -->
           <button
             type="submit"
             :disabled="isLoading"
@@ -186,7 +180,6 @@ function handleNaverLogin() {
             {{ isLoading ? t('auth.login.submitting') : t('auth.login.submit') }}
           </button>
 
-          <!-- Divider -->
           <div class="relative my-6">
             <div class="absolute inset-0 flex items-center">
               <div class="w-full border-t border-dp-border-primary"></div>
@@ -197,7 +190,6 @@ function handleNaverLogin() {
           </div>
 
           <div class="space-y-3">
-            <!-- Kakao Login Button -->
             <button
               type="button"
               @click="handleKakaoLogin"
@@ -224,14 +216,12 @@ function handleNaverLogin() {
         </form>
       </div>
 
-      <!-- Back to Home -->
       <div class="text-center mt-6">
         <router-link to="/" class="text-sm transition text-dp-text-muted">
           {{ t('common.navigation.backHome') }}
         </router-link>
       </div>
 
-      <!-- Policy Links -->
       <div class="text-center mt-4">
         <button
           type="button"

@@ -25,12 +25,8 @@ nonisolated enum DPColor {
     static let textPrimary = adaptive(light: 0x111827, dark: 0xF9FAFB)
     static let textSecondary = adaptive(light: 0x4B5563, dark: 0xD1D5DB)
     static let textMuted = adaptive(light: 0x6B7280, dark: 0x9CA3AF)
-    static let textInverse = adaptive(light: 0xFFFFFF, dark: 0x111827)
     static let textOnDark = fixed(0xFFFFFF)
-    static let textOnDarkStrong = fixed(0xFFFFFF, opacity: 0.85)
-    static let textOnDarkSoft = fixed(0xFFFFFF, opacity: 0.80)
     static let textOnDarkMuted = fixed(0xFFFFFF, opacity: 0.70)
-    static let textOnDarkDim = fixed(0xFFFFFF, opacity: 0.55)
     static let textOnLight = fixed(0x1F2937)
 
     // MARK: Borders
@@ -38,13 +34,11 @@ nonisolated enum DPColor {
     static let borderPrimary = adaptive(light: 0xE5E7EB, dark: 0x374151)
     static let borderSecondary = adaptive(light: 0xD1D5DB, dark: 0x4B5563)
     static let borderInput = adaptive(light: 0xD1D5DB, dark: 0x4B5563)
-    static let borderHover = adaptive(light: 0x9CA3AF, dark: 0x6B7280)
 
     // MARK: Actions and statuses
 
     static let accent = fixed(0x3B82F6)
     static let accentHover = fixed(0x2563EB)
-    static let accentLight = fixed(0x60A5FA)
     static let accentSoft = adaptive(light: 0xEFF6FF, dark: 0x1E3A5F)
     static let accentSoftHover = adaptive(light: 0xDBEAFE, dark: 0x1E40AF)
     static let accentBorder = adaptive(light: 0x93C5FD, dark: 0x3B82F6)
@@ -52,7 +46,6 @@ nonisolated enum DPColor {
     static let success = fixed(0x22C55E)
     static let successHover = fixed(0x16A34A)
     static let successSoft = adaptive(light: 0xF0FDF4, dark: 0x14532D)
-    static let successSoftHover = adaptive(light: 0xDCFCE7, dark: 0x166534)
     static let successBorder = adaptive(light: 0x86EFAC, dark: 0x22C55E)
 
     static let warning = fixed(0xF59E0B)
@@ -99,7 +92,6 @@ enum DPRadius {
     static let standard: CGFloat = 8    // `rounded-lg`: cards, buttons and inputs
     static let large: CGFloat = 12      // `rounded-xl`
     static let extraLarge: CGFloat = 16 // `rounded-2xl`
-    static let pill: CGFloat = 999
 }
 
 enum DPSize {

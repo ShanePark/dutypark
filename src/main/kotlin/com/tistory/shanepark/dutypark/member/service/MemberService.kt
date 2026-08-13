@@ -1,7 +1,6 @@
 package com.tistory.shanepark.dutypark.member.service
 
 import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTemplate
-import com.tistory.shanepark.dutypark.member.domain.dto.MemberCreateDto
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberInviteCandidateDto
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberPreviewDto
@@ -18,7 +17,6 @@ import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.team.domain.entity.Team
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
-import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -26,19 +24,11 @@ import org.springframework.transaction.annotation.Transactional
 @Transactional
 class MemberService(
     private val memberRepository: MemberRepository,
-    private val passwordEncoder: PasswordEncoder,
     private val memberSsoRegisterRepository: MemberSsoRegisterRepository,
     private val memberManagerRepository: MemberManagerRepository,
     private val memberSocialAccountService: MemberSocialAccountService,
     private val memberDtoAssembler: MemberDtoAssembler,
 ) {
-
-    @Transactional(readOnly = true)
-    fun findAll(): List<MemberDto> {
-        val members = memberRepository.findAll()
-            .sortedWith(compareBy({ it.team?.name }, { it.name }))
-        return memberDtoAssembler.toDtos(members)
-    }
 
     @Transactional(readOnly = true)
     fun findById(memberId: Long): MemberDto {
@@ -50,16 +40,6 @@ class MemberService(
     fun findPreviewById(memberId: Long): MemberPreviewDto {
         val member = memberRepository.findById(memberId).orElseThrow()
         return member.toMemberPreviewDto()
-    }
-
-    fun createMember(memberCreateDto: MemberCreateDto): Member {
-        val password = passwordEncoder.encode(memberCreateDto.password)
-        val member = Member(
-            email = memberCreateDto.email,
-            name = memberCreateDto.name,
-            password = password
-        )
-        return memberRepository.save(member)
     }
 
     fun createSsoMember(username: String, memberSsoRegisterUUID: String): Member {

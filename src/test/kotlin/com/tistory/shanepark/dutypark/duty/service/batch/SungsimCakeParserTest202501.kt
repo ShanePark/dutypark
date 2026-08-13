@@ -65,7 +65,6 @@ class SungsimCakeParserTest202501 {
             }
         }
 
-        // 2025-01 and 2025-10 calendar looks same so can't distinguish. any idea to distinguish?
         SungsimCakeParser().parseDayOff(
             YearMonth.of(2025, 10),
             Path(janFilePath).inputStream()

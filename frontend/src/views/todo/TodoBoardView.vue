@@ -34,7 +34,6 @@ const activeStatus = ref<TodoStatus>('IN_PROGRESS')
 const friends = ref<TaggableFriend[]>([])
 let scrollRafId: number | null = null
 
-// Sortable instances for each column
 let sortableInstances: Record<string, Sortable> = {}
 
 const todoList = computed(() => board.value?.todo ?? [])
@@ -157,7 +156,6 @@ async function handleDragEnd(evt: SortableEvent) {
   const orderedIds = collectOrderedIds(evt.to)
 
   if (fromColumn === toColumn) {
-    // Within-column reordering (own or tagged cards alike)
     try {
       await todoApi.updatePositions({
         status: toColumn,
@@ -344,18 +342,6 @@ async function handleReopenTodo(id: string) {
   }
 }
 
-async function handleChangeTodoStatus(data: { id: string; status: TodoStatus }) {
-  try {
-    await todoApi.changeStatus(data.id, { status: data.status })
-    showSuccess(t('todoBoard.messages.changeStatusSuccess'))
-    closeDetailModal()
-    await loadBoard()
-  } catch (error) {
-    console.error('Failed to change todo status:', error)
-    showError(t('todoBoard.messages.changeStatusFailed'))
-  }
-}
-
 async function handleDeleteTodo(id: string) {
   const confirmed = await confirmDelete(t('todoBoard.messages.deleteConfirm'))
   if (!confirmed) return
@@ -447,13 +433,11 @@ onBeforeUnmount(() => {
       </button>
     </div>
 
-    <!-- Loading State -->
     <div v-if="isLoading && !board" class="todo-board-loading">
       <div class="todo-board-spinner"></div>
       <p>{{ t('todoBoard.loading') }}</p>
     </div>
 
-    <!-- Board -->
     <div
       v-else
       ref="boardScroller"
@@ -463,7 +447,6 @@ onBeforeUnmount(() => {
       @click.capture="dragClickGuard.handleClick"
     >
       <div class="todo-board-columns">
-        <!-- TODO Column -->
         <KanbanColumn
           status="TODO"
           :count="counts.todo"
@@ -492,7 +475,6 @@ onBeforeUnmount(() => {
           </div>
         </KanbanColumn>
 
-        <!-- IN_PROGRESS Column -->
         <KanbanColumn
           status="IN_PROGRESS"
           :count="counts.inProgress"
@@ -521,7 +503,6 @@ onBeforeUnmount(() => {
           </div>
         </KanbanColumn>
 
-        <!-- DONE Column -->
         <KanbanColumn
           status="DONE"
           :count="counts.done"
@@ -552,7 +533,6 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
-    <!-- Modals -->
     <TodoAddModal
       :is-open="isAddModalOpen"
       :initial-status="addModalInitialStatus"
@@ -571,7 +551,6 @@ onBeforeUnmount(() => {
       @update="handleUpdateTodo"
       @complete="handleCompleteTodo"
       @reopen="handleReopenTodo"
-      @change-status="handleChangeTodoStatus"
       @delete="handleDeleteTodo"
       @untag-self="handleUntagSelf"
       @back-to-list="handleBackToList"
@@ -961,18 +940,6 @@ onBeforeUnmount(() => {
   line-height: 1.6;
 }
 
-.help-section-text strong {
-  color: var(--dp-text-primary);
-  font-weight: 600;
-}
-
-.help-highlight {
-  background-color: var(--dp-warning-bg);
-  color: var(--dp-warning);
-  padding: 0.125rem 0.375rem;
-  border-radius: 0.25rem;
-}
-
 .help-tips-list {
   list-style: none;
   padding: 0;
@@ -998,16 +965,11 @@ onBeforeUnmount(() => {
   font-weight: bold;
 }
 
-.help-tips-list li strong {
-  color: var(--dp-text-primary);
-  font-weight: 600;
-}
 </style>
 
 <style>
 /* SortableJS drag-and-drop styles - must be unscoped for dynamic classes */
 
-/* Hide empty state when dragging item enters the column */
 .kanban-column-drop-zone:has(.kanban-ghost) .kanban-empty-state {
   display: none;
 }

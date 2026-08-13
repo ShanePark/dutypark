@@ -117,7 +117,6 @@ onUnmounted(() => {
   window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt)
 })
 
-defineExpose({ checkVisibility })
 </script>
 
 <template>
@@ -129,7 +128,6 @@ defineExpose({ checkVisibility })
       @click="handleBackdropClick"
     >
       <div class="pwa-guide-container">
-        <!-- Header -->
         <div class="pwa-guide-header">
           <div class="flex items-center gap-2">
             <Smartphone class="w-5 h-5 pwa-guide-icon" />
@@ -145,14 +143,12 @@ defineExpose({ checkVisibility })
           </button>
         </div>
 
-        <!-- Content -->
         <div class="pwa-guide-content">
           <p class="pwa-guide-benefit">
             {{ t('pwaInstallGuide.descriptionStart') }}<br />
             <strong>{{ t('pwaInstallGuide.descriptionStrong') }}</strong>{{ t('pwaInstallGuide.descriptionEnd') }}
           </p>
 
-          <!-- iOS Instructions -->
           <div v-if="isIOS" class="pwa-guide-steps">
             <div class="pwa-guide-step">
               <div class="pwa-guide-step-number">1</div>
@@ -190,9 +186,7 @@ defineExpose({ checkVisibility })
             </div>
           </div>
 
-          <!-- Android Instructions -->
           <div v-else-if="isAndroid" class="pwa-guide-steps">
-            <!-- Native Install Button -->
             <button
               v-if="canShowNativePrompt"
               type="button"
@@ -203,7 +197,6 @@ defineExpose({ checkVisibility })
               <span>{{ t('pwaInstallGuide.android.installButton') }}</span>
             </button>
 
-            <!-- Manual Instructions -->
             <template v-else>
               <div class="pwa-guide-step">
                 <div class="pwa-guide-step-number">1</div>
@@ -232,7 +225,6 @@ defineExpose({ checkVisibility })
           </div>
         </div>
 
-        <!-- Footer -->
         <div class="pwa-guide-footer">
           <button
             type="button"
@@ -406,7 +398,6 @@ defineExpose({ checkVisibility })
   color: var(--dp-text-secondary);
 }
 
-/* Transition */
 .slide-up-enter-active,
 .slide-up-leave-active {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);

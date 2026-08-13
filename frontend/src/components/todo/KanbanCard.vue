@@ -13,7 +13,7 @@ interface Props {
 const props = defineProps<Props>()
 
 const emit = defineEmits<{
-  (e: 'click', todo: Todo): void
+  (e: 'click'): void
 }>()
 
 const formattedDueDate = computed(() => {
@@ -57,7 +57,7 @@ const visibleTags = computed(() => {
 <template>
   <div
     class="kanban-card"
-    @click="emit('click', todo)"
+    @click="emit('click')"
   >
     <div class="kanban-card-header">
       <h4 class="kanban-card-title">{{ todo.title }}</h4>

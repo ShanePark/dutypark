@@ -1,6 +1,5 @@
 package com.tistory.shanepark.dutypark.team.controller
 
-import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.domain.dto.PageResponse
 import com.tistory.shanepark.dutypark.team.domain.dto.SimpleTeamDto
 import com.tistory.shanepark.dutypark.team.domain.dto.TeamCreateDto
@@ -18,13 +17,10 @@ import org.springframework.web.bind.annotation.*
 class TeamAdminController(
     val teamService: TeamService,
 ) {
-
-    private val log = logger()
-
     @GetMapping
     fun findAll(
-        @PageableDefault(page = 0, size = 10) page: Pageable,
-        @RequestParam(required = false, defaultValue = "") keyword: String,
+        @PageableDefault(size = 10) page: Pageable,
+        @RequestParam(defaultValue = "") keyword: String,
     ): PageResponse<SimpleTeamDto> {
         val result = teamService.findAllWithMemberCount(pageable = page, keyword = keyword)
         return PageResponse(result)

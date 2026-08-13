@@ -196,8 +196,7 @@ class DutyBatchSungsimService(
         if (dutyTypes.size != 1) {
             throw DutyTypeNotSingleException(dutyTypes)
         }
-        val dutyType = dutyTypes.first()
-        return dutyType
+        return dutyTypes.first()
     }
 
 }

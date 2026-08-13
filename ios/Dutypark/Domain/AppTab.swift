@@ -24,21 +24,6 @@ enum AppTab: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
-    nonisolated var navigationTitle: LocalizedStringResource {
-        switch self {
-        case .home:
-            "screen.home.title"
-        case .calendar:
-            "screen.calendar.title"
-        case .todo:
-            "screen.todo.title"
-        case .team:
-            "screen.team.title"
-        case .settings:
-            "screen.settings.title"
-        }
-    }
-
     nonisolated var systemImage: String {
         switch self {
         case .home:

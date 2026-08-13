@@ -7,7 +7,6 @@ export const koReleaseNotes = {
   loadMore: "더보기",
   latest: "최신",
   pr: "PR #{number}",
-  openedAt: "PR 날짜",
   areas: "영역",
   categories: {
     feature: "기능",

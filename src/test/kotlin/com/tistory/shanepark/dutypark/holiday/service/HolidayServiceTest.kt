@@ -51,64 +51,49 @@ class HolidayServiceTest {
 
     @Test
     fun `findHolidaysTest-loadFromMemory`() {
-        // Given
         val calendarView = CalendarView(2023, 5)
         HolidayService::class.java.getDeclaredField("holidayMap").apply {
             isAccessible = true
             set(holidayService, mutableMapOf(2023 to holiday2023Dto()))
         }
 
-        // When
         val result = holidayService.findHolidays(calendarView)
 
-        // Then
         assert2023MayResult(result)
     }
 
     @Test
     fun `findHolidaysTest-loadFromDB`() {
-        // Given
         val calendarView = CalendarView(2023, 5)
 
-        // When
         `when`(holidayRepository.findAllByLocalDateBetween(any(), any()))
             .thenReturn(holiday2023Entity())
         val result = holidayService.findHolidays(calendarView)
 
-        // Then
         assert2023MayResult(result)
     }
 
     @Test
     fun `findHolidaysTest-loadFromAPI`() {
-        // Given
         val calendarView = CalendarView(2023, 5)
 
-        // When
         `when`(holidayRepository.findAllByLocalDateBetween(any(), any())).thenReturn(listOf())
         `when`(holidayAPI.requestHolidays(any())).thenReturn(holiday2023Dto())
         val result = holidayService.findHolidays(calendarView)
 
-        // Then
         assert2023MayResult(result)
         verify(holidayRepository).saveAll(any<List<Holiday>>())
     }
 
     @Test
     fun `test december 2023`() {
-        // Given
         val calendarView = CalendarView(2023, 12)
 
-        // When
         `when`(holidayRepository.findAllByLocalDateBetween(any(), any())).thenReturn(listOf())
         `when`(holidayAPI.requestHolidays(2023)).thenReturn(holiday2023Dto())
         `when`(holidayAPI.requestHolidays(2024)).thenReturn(holiday2024Dto())
         val result = holidayService.findHolidays(calendarView)
 
-        for (i in result.indices) {
-            print("result[$i]: ${result[i]}  ")
-            if (i % 7 == 6) println()
-        }
         assert2023DecemberResult(result)
     }
 

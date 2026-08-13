@@ -186,8 +186,14 @@ class TodoEntityTest {
 
         @Test
         fun `should change status from DONE to TODO and clear completedDate`() {
-            val todo = Todo(member, "Title", "Content", 0, TodoStatus.DONE)
-            todo.markCompleted(0)
+            val todo = Todo(
+                member,
+                "Title",
+                "Content",
+                0,
+                TodoStatus.DONE,
+                completedDate = LocalDateTime.now(),
+            )
             assertNotNull(todo.completedDate)
 
             todo.changeStatus(TodoStatus.TODO, 0)
@@ -198,8 +204,14 @@ class TodoEntityTest {
 
         @Test
         fun `should change status from DONE to IN_PROGRESS and clear completedDate`() {
-            val todo = Todo(member, "Title", "Content", 0, TodoStatus.DONE)
-            todo.markCompleted(0)
+            val todo = Todo(
+                member,
+                "Title",
+                "Content",
+                0,
+                TodoStatus.DONE,
+                completedDate = LocalDateTime.now(),
+            )
             assertNotNull(todo.completedDate)
 
             todo.changeStatus(TodoStatus.IN_PROGRESS, 3)
@@ -238,104 +250,6 @@ class TodoEntityTest {
             todo.changeStatus(TodoStatus.IN_PROGRESS, -10)
 
             assertEquals(-10, todo.position)
-        }
-    }
-
-    @Nested
-    @DisplayName("markCompleted() Tests")
-    inner class MarkCompletedTests {
-
-        @Test
-        fun `should set status to DONE`() {
-            val todo = Todo(member, "Title", "Content", 0, TodoStatus.TODO)
-
-            todo.markCompleted(0)
-
-            assertEquals(TodoStatus.DONE, todo.status)
-        }
-
-        @Test
-        fun `should set completedDate to now by default`() {
-            val todo = Todo(member, "Title", "Content", 0, TodoStatus.TODO)
-
-            todo.markCompleted(0)
-
-            assertNotNull(todo.completedDate)
-        }
-
-        @Test
-        fun `should set completedDate to provided time`() {
-            val todo = Todo(member, "Title", "Content", 0, TodoStatus.TODO)
-            val specificTime = LocalDateTime.of(2025, 6, 15, 14, 30)
-
-            todo.markCompleted(0, specificTime)
-
-            assertEquals(specificTime, todo.completedDate)
-        }
-
-        @Test
-        fun `should set position to provided value`() {
-            val todo = Todo(member, "Title", "Content", 5, TodoStatus.TODO)
-
-            todo.markCompleted(10)
-
-            assertEquals(10, todo.position)
-        }
-
-        @Test
-        fun `should work from IN_PROGRESS status`() {
-            val todo = Todo(member, "Title", "Content", 0, TodoStatus.IN_PROGRESS)
-
-            todo.markCompleted(0)
-
-            assertEquals(TodoStatus.DONE, todo.status)
-            assertNotNull(todo.completedDate)
-        }
-    }
-
-    @Nested
-    @DisplayName("markActive() Tests")
-    inner class MarkActiveTests {
-
-        @Test
-        fun `should set status to TODO`() {
-            val todo = Todo(member, "Title", "Content", 0, TodoStatus.DONE)
-            todo.markCompleted(0)
-
-            todo.markActive(0)
-
-            assertEquals(TodoStatus.TODO, todo.status)
-        }
-
-        @Test
-        fun `should clear completedDate`() {
-            val todo = Todo(member, "Title", "Content", 0, TodoStatus.DONE)
-            todo.markCompleted(0)
-            assertNotNull(todo.completedDate)
-
-            todo.markActive(0)
-
-            assertNull(todo.completedDate)
-        }
-
-        @Test
-        fun `should set position to provided value`() {
-            val todo = Todo(member, "Title", "Content", 0, TodoStatus.DONE)
-            todo.markCompleted(0)
-
-            todo.markActive(15)
-
-            assertEquals(15, todo.position)
-        }
-
-        @Test
-        fun `should work with negative position`() {
-            val todo = Todo(member, "Title", "Content", 0, TodoStatus.DONE)
-            todo.markCompleted(0)
-
-            todo.markActive(-1)
-
-            assertEquals(-1, todo.position)
         }
     }
 

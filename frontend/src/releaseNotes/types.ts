@@ -55,7 +55,6 @@ export interface ReleaseNotesMessages<ReleaseNoteId extends string = string> {
   loadMore: string
   latest: string
   pr: string
-  openedAt: string
   areas: string
   categories: Record<ReleaseNoteCategory, string>
   areaLabels: Record<ReleaseNoteArea, string>

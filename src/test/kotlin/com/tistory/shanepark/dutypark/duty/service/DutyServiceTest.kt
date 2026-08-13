@@ -90,7 +90,6 @@ internal class DutyServiceTest {
     @Test
     @DisplayName("create new duty")
     fun create() {
-        // Given
         val memberId = 1L
         val dutyTypeId = 10L
         val member = createMember(memberId)
@@ -112,10 +111,8 @@ internal class DutyServiceTest {
             .thenReturn(null)
         whenever(dutyRepository.save(any<Duty>())).thenAnswer { it.arguments[0] }
 
-        // When
         dutyService.update(dto)
 
-        // Then
         verify(memberRepository).findMemberWithTeamForUpdate(memberId)
         verify(dutyTypeRepository).findById(dutyTypeId)
         verify(dutyRepository).save(any<Duty>())
@@ -128,7 +125,6 @@ internal class DutyServiceTest {
     @Test
     @DisplayName("change original duty to new duty")
     fun update() {
-        // Given
         val memberId = 1L
         val oldDutyTypeId = 10L
         val newDutyTypeId = 11L
@@ -157,10 +153,8 @@ internal class DutyServiceTest {
         whenever(dutyRepository.findByMemberAndDutyDate(member, LocalDate.of(2022, 10, 10)))
             .thenReturn(existingDuty)
 
-        // When
         dutyService.update(dto)
 
-        // Then
         assertThat(existingDuty.dutyType).isEqualTo(newDutyType)
         assertThat(existingDuty.manualOverride).isTrue()
         verify(dutyRepository, never()).save(any<Duty>())
@@ -169,7 +163,6 @@ internal class DutyServiceTest {
     @Test
     @DisplayName("delete original duty")
     fun delete() {
-        // Given
         val memberId = 1L
         val dutyTypeId = 10L
         val member = createMember(memberId)
@@ -194,17 +187,14 @@ internal class DutyServiceTest {
         whenever(dutyRepository.findByMemberAndDutyDate(member, LocalDate.of(2022, 10, 10)))
             .thenReturn(existingDuty)
 
-        // When
         dutyService.update(dto)
 
-        // Then
         assertThat(existingDuty.dutyType).isNull()
     }
 
     @Test
     @DisplayName("wrong member Id")
     fun wrongMemberId() {
-        // Given
         val invalidMemberId = -1L
         val dto = DutyUpdateDto(
             year = 2022,
@@ -216,7 +206,6 @@ internal class DutyServiceTest {
 
         whenever(memberRepository.findMemberWithTeamForUpdate(invalidMemberId)).thenReturn(Optional.empty())
 
-        // When & Then
         assertThrows<NoSuchElementException> {
             dutyService.update(dto)
         }
@@ -225,7 +214,6 @@ internal class DutyServiceTest {
     @Test
     @DisplayName("wrong duty Type Id")
     fun wrongDutyTypeId() {
-        // Given
         val memberId = 1L
         val invalidDutyTypeId = -1L
         val member = createMember(memberId)
@@ -241,7 +229,6 @@ internal class DutyServiceTest {
         whenever(memberRepository.findMemberWithTeamForUpdate(memberId)).thenReturn(Optional.of(member))
         whenever(dutyTypeRepository.findById(invalidDutyTypeId)).thenReturn(Optional.empty())
 
-        // When & Then
         assertThrows<NoSuchElementException> {
             dutyService.update(dto)
         }
@@ -278,7 +265,6 @@ internal class DutyServiceTest {
 
     @Test
     fun `duty batch update set all duties`() {
-        // Given
         val memberId = 1L
         val dutyTypeId = 10L
         val member = createMember(memberId)
@@ -301,10 +287,8 @@ internal class DutyServiceTest {
         whenever(dutyTypeRepository.findById(dutyTypeId)).thenReturn(Optional.of(dutyType))
         whenever(dutyRepository.saveAll(any<List<Duty>>())).thenAnswer { it.arguments[0] }
 
-        // When
         dutyService.update(dto)
 
-        // Then
         verify(dutyRepository).deleteDutiesByMemberAndDutyDateBetween(
             member,
             yearMonth.atDay(1),
@@ -325,7 +309,6 @@ internal class DutyServiceTest {
 
     @Test
     fun `duty batch update delete all duties if dutyTypeId is null`() {
-        // Given
         val memberId = 1L
         val member = createMember(memberId)
         val team = createTeam(1L)
@@ -351,10 +334,8 @@ internal class DutyServiceTest {
         whenever(memberRepository.findMemberWithTeamForUpdate(memberId)).thenReturn(Optional.of(member))
         whenever(dutyRepository.saveAll(any<List<Duty>>())).thenAnswer { it.arguments[0] }
 
-        // When
         dutyService.update(dto)
 
-        // Then
         verify(dutyRepository).deleteDutiesByMemberAndDutyDateBetween(
             member,
             yearMonth.atDay(1),
@@ -367,7 +348,6 @@ internal class DutyServiceTest {
 
     @Test
     fun `duty batch update dutyTypeId if already exists`() {
-        // Given
         val memberId = 1L
         val oldDutyTypeId = 10L
         val newDutyTypeId = 11L
@@ -397,10 +377,8 @@ internal class DutyServiceTest {
         whenever(dutyTypeRepository.findById(newDutyTypeId)).thenReturn(Optional.of(newDutyType))
         whenever(dutyRepository.saveAll(any<List<Duty>>())).thenAnswer { it.arguments[0] }
 
-        // When
         dutyService.update(dto)
 
-        // Then
         verify(dutyRepository).deleteDutiesByMemberAndDutyDateBetween(
             member,
             yearMonth.atDay(1),

@@ -24,11 +24,9 @@ class ConsentServiceTest {
 
     @Test
     fun `recordConsent stores consent with truncated user agent`() {
-        // Given
         val member = Member(name = "TestUser", email = "test@test.com", password = "password")
         val longUserAgent = "a".repeat(600)
 
-        // When
         consentService.recordConsent(
             member = member,
             policyType = PolicyType.TERMS,
@@ -37,7 +35,6 @@ class ConsentServiceTest {
             userAgent = longUserAgent
         )
 
-        // Then
         argumentCaptor<MemberConsent>().apply {
             verify(memberConsentRepository).save(capture())
             val savedConsent = firstValue

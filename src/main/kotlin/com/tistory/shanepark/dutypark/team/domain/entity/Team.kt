@@ -90,7 +90,7 @@ class Team(
     }
 
     fun addManager(member: Member) {
-        if (member.team != this)
+        if (member.team?.id != id)
             throw IllegalArgumentException("Member does not belong to this team")
         if (isManager(member.id ?: -1))
             throw IllegalArgumentException("Member is already a manager")
@@ -98,7 +98,7 @@ class Team(
     }
 
     fun removeManager(member: Member) {
-        if (member.team != this)
+        if (member.team?.id != id)
             throw IllegalArgumentException("Member does not belong to this team")
         if (!isManager(member.id ?: -1))
             throw IllegalArgumentException("Member is not a manager")

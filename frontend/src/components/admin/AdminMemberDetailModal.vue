@@ -262,7 +262,6 @@ function openPasswordModal() {
     height="default"
     rounded
     z-index="admin"
-    panel-class="member-detail-shell"
     @close="emit('close')"
   >
         <div class="modal-header">
@@ -570,10 +569,6 @@ function openPasswordModal() {
 </template>
 
 <style scoped>
-.member-detail-shell {
-  position: relative;
-}
-
 .member-detail-body {
   min-height: 0;
   max-height: min(calc(90dvh - 4.75rem), 46rem);

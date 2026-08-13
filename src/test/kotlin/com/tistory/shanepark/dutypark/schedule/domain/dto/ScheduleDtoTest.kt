@@ -12,18 +12,15 @@ class ScheduleDtoTest {
 
     @Test
     fun `Long day Schedule on same month`() {
-        // Given
         val member = member
         val from = LocalDateTime.of(2021, 1, 5, 0, 0)
         val end = LocalDateTime.of(2021, 1, 8, 0, 0)
         val schedule =
             Schedule(member = member, content = "content", startDateTime = from, endDateTime = end, position = 1)
 
-        // When
         val calendarView = CalendarView(2021, 1)
         val list = ScheduleDto.of(calendarView, schedule)
 
-        // Then
         assertThat(list).hasSize(4)
         assertThat(list[0].dayOfMonth).isEqualTo(5)
         assertThat(list[0].daysFromStart).isEqualTo(1)
@@ -44,17 +41,14 @@ class ScheduleDtoTest {
 
     @Test
     fun `Long day Schedule until next month`() {
-        // Given
         val from = LocalDateTime.of(2020, 12, 30, 0, 0)
         val end = LocalDateTime.of(2021, 1, 3, 23, 59)
         val schedule =
             Schedule(member = member, content = "content", startDateTime = from, endDateTime = end, position = 1)
 
-        // When
         val calendarView = CalendarView(2021, 1)
         val list = ScheduleDto.of(calendarView, schedule)
 
-        // Then
         assertThat(list).hasSize(5)
         assertThat(list[0].dayOfMonth).isEqualTo(30)
         assertThat(list[0].daysFromStart).isEqualTo(1)
@@ -77,12 +71,10 @@ class ScheduleDtoTest {
 
     @Test
     fun `empty if there is no schedule on the month`() {
-        // Given
         val day = LocalDateTime.of(2023, 4, 17, 0, 0)
         val schedule =
             Schedule(member = member, content = "content", startDateTime = day, endDateTime = day, position = 1)
 
-        // When
         val calendarView = CalendarView(2023, 3)
         val list = ScheduleDto.of(calendarView, schedule)
         assertThat(list).isEmpty()
@@ -90,12 +82,10 @@ class ScheduleDtoTest {
 
     @Test
     fun `One day Schedule`() {
-        // Given
         val day = LocalDateTime.of(2023, 4, 17, 0, 0)
         val schedule =
             Schedule(member = member, content = "content", startDateTime = day, endDateTime = day, position = 1)
 
-        // When
         val calendarView = CalendarView(2023, 4)
         val list = ScheduleDto.of(calendarView, schedule)
         assertThat(list.size).isEqualTo(1)

@@ -19,9 +19,7 @@ const props = withDefaults(defineProps<{
   modelValue: number[]
   friends: TaggableFriend[]
   selectedSummaries?: SelectedFriendSummary[]
-  disabled?: boolean
 }>(), {
-  disabled: false,
   selectedSummaries: () => [],
 })
 
@@ -136,10 +134,6 @@ function isSelected(friendId: number) {
 }
 
 function toggleFriend(friendId: number) {
-  if (props.disabled) {
-    return
-  }
-
   if (isSelected(friendId)) {
     emit('update:modelValue', props.modelValue.filter((id) => id !== friendId))
     return
@@ -149,7 +143,7 @@ function toggleFriend(friendId: number) {
 }
 
 async function clearSelection() {
-  if (props.disabled || props.modelValue.length === 0) {
+  if (props.modelValue.length === 0) {
     return
   }
 
@@ -165,15 +159,11 @@ async function clearSelection() {
 }
 
 function openSelector() {
-  if (props.disabled) {
-    return
-  }
-
   isExpanded.value = true
 }
 
 function toggleSelectedOnly() {
-  if (props.disabled || selectedCount.value === 0) {
+  if (selectedCount.value === 0) {
     return
   }
 
@@ -233,8 +223,7 @@ function getSubtitle(friend: TaggableFriend) {
     <button
       v-if="!isExpanded"
       type="button"
-      class="flex min-h-[56px] w-full items-center gap-3 rounded-2xl border border-dp-border-primary bg-dp-bg-card px-4 py-3 text-left transition hover:border-dp-accent-border hover:bg-dp-bg-hover disabled:cursor-not-allowed disabled:opacity-60"
-      :disabled="props.disabled"
+      class="flex min-h-[56px] w-full items-center gap-3 rounded-2xl border border-dp-border-primary bg-dp-bg-card px-4 py-3 text-left transition hover:border-dp-accent-border hover:bg-dp-bg-hover"
       @click="openSelector"
     >
       <div class="flex min-w-0 items-center gap-3">

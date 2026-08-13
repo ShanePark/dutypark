@@ -86,7 +86,6 @@ enum CalendarLocalization {
 /// Kept value-only so the visual contract can be covered without SwiftUI snapshots.
 nonisolated enum CalendarVisualLogic {
     static let compactCellMinimumHeight: CGFloat = 60
-    static let regularCellMinimumHeight: CGFloat = 80
     static let maximumSchedulesPerCell = 3
     static let maximumTodosPerCell = 2
 
@@ -117,10 +116,4 @@ nonisolated enum CalendarTypography {
     static let cellMicro: CGFloat = 9
     static let detailTitle: CGFloat = 16
     static let detailMetadata: CGFloat = 14
-}
-
-nonisolated enum CalendarPublicLink {
-    static func url(memberID: MemberID) -> URL {
-        URL(string: "https://dutypark.o-r.kr/duty/\(memberID)")!
-    }
 }

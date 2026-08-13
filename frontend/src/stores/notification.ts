@@ -85,7 +85,6 @@ export const useNotificationStore = defineStore('notification', () => {
   const isFetchingUnreadCount = ref(false)
   const lastResumeSyncAt = ref(0)
 
-  // Getters
   const hasUnread = computed(() => unreadCount.value > 0)
   const hasFriendRequests = computed(() => friendRequestCount.value > 0)
   const unreadCountDisplay = computed(() =>
@@ -124,9 +123,6 @@ export const useNotificationStore = defineStore('notification', () => {
     }
   }
 
-  /**
-   * Fetch pending relationship request count (friend + family)
-   */
   async function fetchFriendRequestCount(): Promise<void> {
     try {
       friendRequestCount.value = await notificationApi.getFriendRequestCount()
@@ -135,9 +131,6 @@ export const useNotificationStore = defineStore('notification', () => {
     }
   }
 
-  /**
-   * Check if new notifications include relationship requests that affect the badge
-   */
   async function checkForNewFriendRequests(): Promise<void> {
     try {
       const notifications = await notificationApi.getUnreadNotifications()
@@ -152,27 +145,6 @@ export const useNotificationStore = defineStore('notification', () => {
     }
   }
 
-  /**
-   * Fetch unread notifications list
-   */
-  async function fetchUnreadNotifications(): Promise<void> {
-    isLoading.value = true
-    try {
-      unreadNotifications.value = await notificationApi.getUnreadNotifications()
-      unreadCount.value = unreadNotifications.value.length
-      updateAppBadge(unreadCount.value)
-      consecutiveFailures.value = 0
-    } catch (error) {
-      consecutiveFailures.value++
-      console.warn('Failed to fetch unread notifications:', error)
-    } finally {
-      isLoading.value = false
-    }
-  }
-
-  /**
-   * Fetch recent notifications (read + unread) for dropdown
-   */
   async function fetchRecentNotifications(): Promise<boolean> {
     isLoading.value = true
     try {
@@ -189,19 +161,14 @@ export const useNotificationStore = defineStore('notification', () => {
     }
   }
 
-  /**
-   * Mark a single notification as read
-   */
   async function markAsRead(id: string): Promise<void> {
     try {
       await notificationApi.markAsRead(id)
-      // Update local state - unread list
       const unreadIndex = unreadNotifications.value.findIndex(n => n.id === id)
       if (unreadIndex !== -1) {
         unreadNotifications.value.splice(unreadIndex, 1)
         unreadCount.value = Math.max(0, unreadCount.value - 1)
       }
-      // Update local state - recent list
       const recentNotification = recentNotifications.value.find(n => n.id === id)
       if (recentNotification) {
         // Decrease count if unread and not already handled above
@@ -216,16 +183,11 @@ export const useNotificationStore = defineStore('notification', () => {
     }
   }
 
-  /**
-   * Mark all notifications as read
-   */
   async function markAllAsRead(): Promise<void> {
     try {
       await notificationApi.markAllAsRead()
-      // Clear unread list
       unreadNotifications.value = []
       unreadCount.value = 0
-      // Update recent list - mark all as read
       recentNotifications.value.forEach(n => {
         n.isRead = true
       })
@@ -235,9 +197,6 @@ export const useNotificationStore = defineStore('notification', () => {
     }
   }
 
-  /**
-   * Calculate polling interval with exponential backoff
-   */
   function getPollingInterval(): number {
     if (consecutiveFailures.value === 0) {
       return BASE_INTERVAL_MS
@@ -249,9 +208,6 @@ export const useNotificationStore = defineStore('notification', () => {
     return backoffMs
   }
 
-  /**
-   * Handle visibility change for efficient polling
-   */
   function handleVisibilityChange(): void {
     if (document.visibilityState === 'visible') {
       handleAppResume()
@@ -273,37 +229,26 @@ export const useNotificationStore = defineStore('notification', () => {
     fetchUnreadCount()
   }
 
-  /**
-   * Start polling for notification count
-   */
   function startPolling(intervalMs: number = BASE_INTERVAL_MS): void {
-    // Stop any existing polling
     stopPolling()
 
-    // Initial fetch - includes friend request count on app start
     fetchUnreadCount()
     fetchFriendRequestCount()
 
-    // Add visibility change listener
     document.addEventListener('visibilitychange', handleVisibilityChange)
     window.addEventListener('focus', handleAppResume)
     window.addEventListener('pageshow', handleAppResume)
 
-    // Start polling interval
     const poll = () => {
       if (!isPollingPaused.value) {
         fetchUnreadCount()
       }
-      // Schedule next poll with potentially adjusted interval
       pollingIntervalId.value = window.setTimeout(poll, getPollingInterval())
     }
 
     pollingIntervalId.value = window.setTimeout(poll, intervalMs)
   }
 
-  /**
-   * Stop polling
-   */
   function stopPolling(): void {
     if (pollingIntervalId.value !== null) {
       clearTimeout(pollingIntervalId.value)
@@ -315,23 +260,6 @@ export const useNotificationStore = defineStore('notification', () => {
     isPollingPaused.value = false
   }
 
-  /**
-   * Reset store state
-   */
-  function $reset(): void {
-    stopPolling()
-    unreadNotifications.value = []
-    recentNotifications.value = []
-    unreadCount.value = 0
-    friendRequestCount.value = 0
-    isLoading.value = false
-    consecutiveFailures.value = 0
-    updateAppBadge(0)
-  }
-
-  /**
-   * Trigger friends page to refresh data
-   */
   function triggerFriendsRefresh(): void {
     friendsRefreshTrigger.value++
   }
@@ -342,28 +270,22 @@ export const useNotificationStore = defineStore('notification', () => {
   })
 
   return {
-    // State
     unreadNotifications,
     recentNotifications,
     unreadCount,
-    friendRequestCount,
     isLoading,
     friendsRefreshTrigger,
-    // Getters
     hasUnread,
     hasFriendRequests,
     unreadCountDisplay,
     friendRequestCountDisplay,
-    // Actions
     fetchUnreadCount,
     fetchFriendRequestCount,
-    fetchUnreadNotifications,
     fetchRecentNotifications,
     markAsRead,
     markAllAsRead,
     startPolling,
     stopPolling,
     triggerFriendsRefresh,
-    $reset,
   }
 })

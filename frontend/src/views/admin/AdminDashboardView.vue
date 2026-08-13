@@ -36,7 +36,6 @@ const loading = ref(true)
 const members = ref<AdminMemberDto[]>([])
 const allTokens = ref<RefreshTokenDto[]>([])
 
-// Pagination state
 const currentPage = ref(0)
 const totalPages = ref(0)
 const totalElements = ref(0)
@@ -54,7 +53,6 @@ const stats = computed(() => {
 const searchKeyword = ref('')
 const isLoading = ref(false)
 
-// Debounce search
 let searchTimeout: ReturnType<typeof setTimeout> | null = null
 watch(searchKeyword, () => {
   if (searchTimeout) clearTimeout(searchTimeout)
@@ -248,10 +246,6 @@ async function fetchData() {
   }
 }
 
-async function refreshData() {
-  await fetchData()
-}
-
 function goToPage(page: number) {
   if (page >= 0 && page < totalPages.value) {
     currentPage.value = page
@@ -287,7 +281,6 @@ onMounted(async () => {
       </div>
 
       <template v-else>
-        <!-- Admin Navigation -->
         <div class="grid grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
           <router-link
             to="/admin"
@@ -329,7 +322,6 @@ onMounted(async () => {
           </a>
         </div>
 
-        <!-- Stats Cards -->
         <div class="admin-stats-band mb-4 sm:mb-6" :aria-label="t('admin.dashboard.statsAriaLabel')">
           <div class="admin-stats-grid">
             <div class="admin-stat-tile">
@@ -355,7 +347,6 @@ onMounted(async () => {
           </div>
         </div>
 
-        <!-- Member Management Section -->
         <div class="rounded-xl bg-dp-bg-card border border-dp-border-primary">
           <div class="p-4 border-b border-dp-border-primary">
             <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -426,7 +417,6 @@ onMounted(async () => {
             </template>
           </div>
 
-          <!-- Pagination -->
           <div v-if="totalPages > 1" class="p-4 flex items-center justify-between" :style="{ borderTop: '1px solid var(--dp-border-primary)' }">
             <p class="text-sm text-dp-text-secondary">
               {{ t('admin.dashboard.pagination', {
@@ -471,7 +461,6 @@ onMounted(async () => {
       @change-password="openPasswordModalFromDetail"
     />
 
-    <!-- Password Change Modal -->
     <BaseModal
       :is-open="showPasswordModal"
       size="md"

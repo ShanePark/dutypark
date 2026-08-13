@@ -15,8 +15,4 @@ class PolicyService(
     fun getCurrentPolicy(policyType: PolicyType): PolicyVersion? {
         return policyVersionRepository.findTopByPolicyTypeOrderByEffectiveDateDesc(policyType)
     }
-
-    fun getPolicy(policyType: PolicyType, version: String): PolicyVersion? {
-        return policyVersionRepository.findByPolicyTypeAndVersion(policyType, version)
-    }
 }

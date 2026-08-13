@@ -206,7 +206,6 @@ function maxSizeDefault({ imageSize }: { imageSize: { width: number; height: num
     backdrop-event="mousedown"
     @close="handleClose"
   >
-        <!-- Header -->
         <div class="modal-header">
           <h2>{{ t('imageCropModal.title') }}</h2>
           <button
@@ -218,9 +217,7 @@ function maxSizeDefault({ imageSize }: { imageSize: { width: number; height: num
           </button>
         </div>
 
-        <!-- Content -->
         <div class="flex-1 overflow-hidden p-4 flex flex-col gap-4">
-          <!-- File Upload Area (when no image) -->
           <div
             v-if="!hasImage"
             class="upload-area"
@@ -238,7 +235,6 @@ function maxSizeDefault({ imageSize }: { imageSize: { width: number; height: num
             </div>
           </div>
 
-          <!-- Cropper (when image exists) -->
           <template v-else>
             <div
               class="cropper-wrapper"
@@ -260,7 +256,6 @@ function maxSizeDefault({ imageSize }: { imageSize: { width: number; height: num
                 :default-size="isEditingExistingPhoto ? maxSizeDefault : undefined"
                 class="cropper"
               />
-              <!-- Drag overlay -->
               <Transition name="fade">
                 <div v-if="isDragging" class="drag-overlay">
                   <ImagePlus class="w-12 h-12" />
@@ -269,7 +264,6 @@ function maxSizeDefault({ imageSize }: { imageSize: { width: number; height: num
               </Transition>
             </div>
 
-            <!-- Zoom Controls -->
             <div class="zoom-controls">
               <button
                 type="button"
@@ -302,7 +296,6 @@ function maxSizeDefault({ imageSize }: { imageSize: { width: number; height: num
               </button>
             </div>
 
-            <!-- Change Image Button -->
             <button
               type="button"
               @click="changeImage"
@@ -315,7 +308,6 @@ function maxSizeDefault({ imageSize }: { imageSize: { width: number; height: num
           </template>
         </div>
 
-        <!-- Footer -->
         <div class="modal-actions modal-actions-end modal-footer-safe flex-shrink-0">
           <button
             type="button"
@@ -345,7 +337,6 @@ function maxSizeDefault({ imageSize }: { imageSize: { width: number; height: num
           </button>
         </div>
 
-        <!-- Hidden file input -->
         <input
           ref="fileInputRef"
           type="file"

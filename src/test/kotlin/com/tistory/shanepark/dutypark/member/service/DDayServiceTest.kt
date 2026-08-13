@@ -98,6 +98,23 @@ class DDayServiceTest {
     }
 
     @Test
+    fun `createDDay throws when member does not exist`() {
+        val login = LoginMember(id = -1L, email = "", name = "", team = "team", isAdmin = false)
+        whenever(memberRepository.findById(login.id)).thenReturn(Optional.empty())
+
+        assertThrows<NoSuchElementException> {
+            dDayService.createDDay(
+                loginMember = login,
+                dDaySaveDto = DDaySaveDto(
+                    title = "Missing member",
+                    date = fixedDate,
+                    isPrivate = false,
+                )
+            )
+        }
+    }
+
+    @Test
     fun `findDDay allows owner for private event`() {
         val event = dDayEventWithId(
             id = 10L,
@@ -112,6 +129,18 @@ class DDayServiceTest {
 
         assertThat(result.id).isEqualTo(event.id)
         assertThat(result.isPrivate).isTrue
+    }
+
+    @Test
+    fun `findDDay calculates days left relative to today`() {
+        val today = LocalDate.now()
+        val futureEvent = dDayEventWithId(10L, member, "Future", today.plusDays(3), false)
+        val todayEvent = dDayEventWithId(11L, member, "Today", today, false)
+        whenever(dDayRepository.findById(futureEvent.id!!)).thenReturn(Optional.of(futureEvent))
+        whenever(dDayRepository.findById(todayEvent.id!!)).thenReturn(Optional.of(todayEvent))
+
+        assertThat(dDayService.findDDay(loginMember(member), futureEvent.id!!).daysLeft).isEqualTo(3)
+        assertThat(dDayService.findDDay(loginMember(member), todayEvent.id!!).daysLeft).isZero()
     }
 
     @Test

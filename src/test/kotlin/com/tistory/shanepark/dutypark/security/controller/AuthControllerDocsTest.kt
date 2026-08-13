@@ -11,7 +11,6 @@ import org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders
 import org.springframework.restdocs.payload.JsonFieldType
 import org.springframework.restdocs.payload.PayloadDocumentation.fieldWithPath
 import org.springframework.restdocs.payload.PayloadDocumentation.responseFields
-import org.springframework.test.web.servlet.result.MockMvcResultHandlers
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
@@ -38,7 +37,6 @@ class AuthControllerDocsTest : RestDocsTest() {
             .andExpect(jsonPath("$.expiresIn").exists())
             .andExpect(cookie().exists("access_token"))
             .andExpect(cookie().exists("refresh_token"))
-            .andDo(MockMvcResultHandlers.print())
             .andDo(
                 document(
                     "auth/refresh",
@@ -59,7 +57,6 @@ class AuthControllerDocsTest : RestDocsTest() {
             .andExpect(status().isUnauthorized)
             .andExpect(jsonPath("$.status").value(401))
             .andExpect(jsonPath("$.code").value("auth.refresh.invalid"))
-            .andDo(MockMvcResultHandlers.print())
             .andDo(
                 document(
                     "auth/refresh-unauthorized",
@@ -90,7 +87,6 @@ class AuthControllerDocsTest : RestDocsTest() {
             .andExpect(status().isNoContent)
             .andExpect(cookie().maxAge("access_token", 0))
             .andExpect(cookie().maxAge("refresh_token", 0))
-            .andDo(MockMvcResultHandlers.print())
             .andDo(
                 document(
                     "auth/logout"

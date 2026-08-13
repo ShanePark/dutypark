@@ -18,9 +18,7 @@ const showLayout = computed(() => {
 
 <template>
   <div class="min-h-screen flex flex-col bg-dp-bg-secondary">
-    <!-- Impersonation Banner -->
     <ImpersonationBanner v-if="authStore.isImpersonating" />
-    <!-- Header -->
     <AppHeader v-if="showLayout && authStore.isLoggedIn" />
     <main
       class="flex-1"
@@ -33,9 +31,7 @@ const showLayout = computed(() => {
       <slot />
     </main>
     <AppFooter v-if="showLayout && authStore.isLoggedIn" />
-    <!-- PWA Install Guide - only for logged in users on mobile -->
     <PWAInstallGuide v-if="authStore.isLoggedIn" />
-    <!-- Push Permission Guide - only for iOS PWA users -->
     <PushPermissionGuide v-if="authStore.isLoggedIn" />
   </div>
 </template>

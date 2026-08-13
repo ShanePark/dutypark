@@ -188,7 +188,6 @@ async function handleSubmit() {
 
       <div class="rounded-lg shadow-md p-5 sm:p-6 bg-dp-bg-card">
         <form class="space-y-4 sm:space-y-5" @submit.prevent="handleSubmit">
-          <!-- Username input -->
           <div>
             <label for="username" class="block text-sm font-medium mb-1 text-dp-text-secondary">
               {{ t('auth.ssoSignup.username.label') }}
@@ -219,7 +218,6 @@ async function handleSubmit() {
             </p>
           </div>
 
-          <!-- Terms of Service -->
           <div>
             <div class="flex items-center justify-between mb-2">
               <label class="block text-sm font-medium text-dp-text-secondary">
@@ -266,7 +264,6 @@ async function handleSubmit() {
             </div>
           </div>
 
-          <!-- Terms agreement checkbox -->
           <div class="flex items-center min-h-[44px]">
             <input
               id="termAgree"
@@ -281,7 +278,6 @@ async function handleSubmit() {
             </label>
           </div>
 
-          <!-- Privacy Policy -->
           <div>
             <div class="flex items-center justify-between mb-2">
               <label class="block text-sm font-medium text-dp-text-secondary">
@@ -328,7 +324,6 @@ async function handleSubmit() {
             </div>
           </div>
 
-          <!-- Privacy agreement checkbox -->
           <div class="flex items-center min-h-[44px]">
             <input
               id="privacyAgree"
@@ -343,7 +338,6 @@ async function handleSubmit() {
             </label>
           </div>
 
-          <!-- Submit button -->
           <button
             type="submit"
             :disabled="isSubmitDisabled"
@@ -380,7 +374,6 @@ async function handleSubmit() {
         </form>
       </div>
 
-      <!-- Policy Links -->
       <div class="text-center mt-4">
         <button
           type="button"

@@ -4,12 +4,6 @@ import Testing
 
 @Suite("Admin feature")
 struct AdminFeatureTests {
-    @Test("Admin menu destinations are completely hidden from non-admin members")
-    func adminMenuVisibility() {
-        #expect(AdminMenuDestination.visibleDestinations(isAdmin: false).isEmpty)
-        #expect(AdminMenuDestination.visibleDestinations(isAdmin: true) == AdminMenuDestination.allCases)
-    }
-
     @Test("Selecting Home always resets its navigation path")
     func homeNavigationResetPolicy() {
         #expect(RootNavigationPolicy.resetsHomePath(for: .home))

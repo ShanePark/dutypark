@@ -105,7 +105,6 @@ Apple 참고: [Privacy manifest files](https://developer.apple.com/documentation
 
 ## 6. 내부 Markdown의 앱 번들 제외
 
-[ConfigNotes.md](../../Dutypark/Config/ConfigNotes.md)와 [CoreNotes.md](../../Dutypark/Core/CoreNotes.md)는 개발 문서이며 런타임 리소스가 아니다.
 Xcode의 synchronized group 또는 Copy Bundle Resources 설정 때문에 `.md` 파일이 자동 포함되는지 Archive에서 반드시 검사한다.
 
 - `.app` 내부에서 `*.md`, 테스트 fixture, 샘플 JSON, 개발용 인증서 파일을 검색한다.

@@ -28,24 +28,19 @@ class DutyTypeServiceIntegrationTest : DutyparkIntegrationTest() {
 
     @Test
     fun `When DutyType is hidden, related duties are preserved`() {
-        // Given
         val dutyType = TestData.dutyTypes[0]
         val member = TestData.member
 
         val duty1 = dutyRepository.save(
             Duty(
-                dutyYear = 2022,
-                dutyMonth = 10,
-                dutyDay = 10,
+                dutyDate = LocalDate.of(2022, 10, 10),
                 dutyType = dutyType,
                 member = member
             )
         )
         val duty2 = dutyRepository.save(
             Duty(
-                dutyYear = 2022,
-                dutyMonth = 10,
-                dutyDay = 11,
+                dutyDate = LocalDate.of(2022, 10, 11),
                 dutyType = dutyType,
                 member = member
             )
@@ -54,10 +49,8 @@ class DutyTypeServiceIntegrationTest : DutyparkIntegrationTest() {
         assertThat(dutyRepository.findById(duty2.id!!).get().dutyType).isNotNull
         assertThat(dutyTypeRepository.findById(dutyType.id!!)).isNotNull
 
-        // When
         dutyTypeService.updateVisibility(dutyType.id!!, true)
 
-        // Then
         assertThat(dutyTypeRepository.findById(dutyType.id!!).orElseThrow().hidden).isTrue()
         assertThat(dutyRepository.findById(duty1.id!!)).isPresent
         assertThat(dutyRepository.findById(duty2.id!!)).isPresent

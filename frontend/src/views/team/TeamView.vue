@@ -36,23 +36,19 @@ const authStore = useAuthStore()
 const { t } = useI18n()
 const { showError, confirmDelete, toastSuccess } = useSwal()
 
-// Loading state
 const loading = ref(false)
 const shiftLoading = ref(false)
 const saving = ref(false)
 
-// State from API
 const hasTeam = ref(false)
 const isTeamManager = ref(false)
 const loginMemberId = computed(() => authStore.user?.id ?? 0)
 const team = ref<TeamDto | null>(null)
 
-// Current view date
 const now = new Date()
 const currentYear = ref(now.getFullYear())
 const currentMonth = ref(now.getMonth() + 1)
 
-// Year-Month Picker
 const isYearMonthPickerOpen = ref(false)
 
 function handleYearMonthSelect(year: number, month: number) {
@@ -60,7 +56,6 @@ function handleYearMonthSelect(year: number, month: number) {
   void updateCurrentMonth(year, month)
 }
 
-// Today's date
 const today = {
   year: now.getFullYear(),
   month: now.getMonth() + 1,
@@ -71,7 +66,6 @@ function getLastDayOfMonth(year: number, month: number) {
   return new Date(year, month, 0).getDate()
 }
 
-// Selected day
 const selectedDay = ref({
   year: today.year,
   month: today.month,
@@ -79,22 +73,16 @@ const selectedDay = ref({
   index: -1,
 })
 
-// Team schedules from API - indexed by calendar position
 const teamSchedules = ref<TeamScheduleDto[][]>([])
 
-// Shift data from API
 const shift = ref<(DutyByShift & { isMyGroup: boolean })[]>([])
 
-// My duty data - fetched from duty API (same as DutyView)
 const myDuties = ref<DutyCalendarDay[]>([])
 
-// Holidays by day index
 const holidaysByDays = ref<HolidayDto[][]>([])
 
-// Raw calendar days from backend API
 const rawCalendarDays = ref<Array<{ year: number; month: number; day: number }>>([])
 
-// Schedule Modal
 const showScheduleModal = ref(false)
 const scheduleForm = ref({
   id: null as string | null,
@@ -113,7 +101,6 @@ const isTeamScheduleSaveDisabled = computed(() =>
   saving.value || isTeamScheduleTitleMissing.value || isTeamScheduleDateRangeInvalid.value
 )
 
-// Load calendar structure from backend API (cached)
 async function loadCalendar() {
   try {
     rawCalendarDays.value = await dutyApi.getCalendar(currentYear.value, currentMonth.value)
@@ -123,7 +110,6 @@ async function loadCalendar() {
   }
 }
 
-// Generate calendar days from backend data
 const teamDays = computed(() => {
   return rawCalendarDays.value.map((raw) => ({
     year: raw.year,
@@ -133,7 +119,6 @@ const teamDays = computed(() => {
   }))
 })
 
-// Fetch team summary for the month
 async function fetchTeamSummary() {
   loading.value = true
   try {
@@ -148,7 +133,6 @@ async function fetchTeamSummary() {
       team.value = data.team
       isTeamManager.value = data.isTeamManager
 
-      // Fetch my duties, team schedules, and holidays in parallel
       await Promise.all([
         fetchMyDuties(),
         fetchTeamSchedules(),
@@ -168,7 +152,6 @@ async function fetchTeamSummary() {
   }
 }
 
-// Fetch team schedules
 async function fetchTeamSchedules() {
   if (!team.value) return
 
@@ -185,7 +168,6 @@ async function fetchTeamSchedules() {
   }
 }
 
-// Fetch shift data for selected day
 async function fetchShift() {
   if (!hasTeam.value) return
 
@@ -197,7 +179,6 @@ async function fetchShift() {
       selectedDay.value.day
     )
 
-    // Add isMyGroup flag based on loginMemberId
     shift.value = response.data.map(group => ({
       ...group,
       isMyGroup: group.members.some((m: MemberPreviewDto) => m.id === loginMemberId.value),
@@ -210,7 +191,6 @@ async function fetchShift() {
   }
 }
 
-// Fetch my duty data
 async function fetchMyDuties() {
   if (!loginMemberId.value) return
 
@@ -226,9 +206,7 @@ async function fetchMyDuties() {
   }
 }
 
-// Get duty color for a day
 function getDutyColor(day: { year: number; month: number; day: number }): string | null {
-  // Find duty from fetched data
   const duty = myDuties.value.find(
     d => d.year === day.year && d.month === day.month && d.day === day.day
   )
@@ -240,7 +218,6 @@ function getDutyTypeHeaderTextColor(color: string | null | undefined): string {
   return isLightColor(color) ? 'var(--dp-text-on-light)' : 'var(--dp-text-on-dark)'
 }
 
-// Load holidays from API
 async function loadHolidays() {
   try {
     holidaysByDays.value = await dutyApi.getHolidays(
@@ -253,7 +230,6 @@ async function loadHolidays() {
   }
 }
 
-// Find selected day index
 function findSelectedDayIndex() {
   const index = teamDays.value.findIndex(day =>
     day.year === selectedDay.value.year &&
@@ -323,7 +299,6 @@ function getShiftMemberKey(group: DutyByShift, member: MemberPreviewDto) {
   return member.id ?? `${group.dutyType.id ?? group.dutyType.name}-${member.name}`
 }
 
-// Schedule Modal functions
 function openNewScheduleModal() {
   const dateStr = `${selectedDay.value.year}-${String(selectedDay.value.month).padStart(2, '0')}-${String(selectedDay.value.day).padStart(2, '0')}`
   scheduleForm.value = {
@@ -394,7 +369,6 @@ async function deleteSchedule(scheduleId: string) {
   }
 }
 
-// Initial load
 onMounted(() => {
   fetchTeamSummary().then(() => {
     findSelectedDayIndex()
@@ -405,12 +379,10 @@ onMounted(() => {
 
 <template>
   <div class="max-w-4xl mx-auto px-2 sm:px-4 py-4">
-    <!-- Loading State -->
     <div v-if="loading" class="flex items-center justify-center py-20">
       <Loader2 class="w-8 h-8 animate-spin text-dp-accent" />
     </div>
 
-    <!-- No Team State -->
     <template v-else-if="!hasTeam">
       <div class="rounded-lg shadow overflow-hidden bg-dp-bg-card">
         <div class="bg-dp-surface-strong text-dp-text-on-dark font-bold text-xl text-center py-3">
@@ -424,11 +396,8 @@ onMounted(() => {
       </div>
     </template>
 
-    <!-- Team View -->
     <template v-else-if="team">
-      <!-- Team Header & Month Controls -->
       <div class="flex items-center justify-between gap-1 mb-1">
-        <!-- Left: Team name -->
         <div class="w-20 sm:w-24 flex-shrink-0 flex items-center justify-start">
           <div class="flex items-center gap-1.5 px-2 py-1 rounded-full border bg-dp-bg-tertiary border-dp-border-secondary">
             <Building2 class="w-3.5 h-3.5 flex-shrink-0 text-dp-text-secondary" />
@@ -436,7 +405,6 @@ onMounted(() => {
           </div>
         </div>
 
-        <!-- Center: Year-Month Navigation -->
         <CalendarMonthNavigator
           :current-year="currentYear"
           :current-month="currentMonth"
@@ -446,7 +414,6 @@ onMounted(() => {
           @go-to-this-month="goToToday"
         />
 
-        <!-- Right: Team manage button -->
         <div class="flex-shrink-0">
           <button
             v-if="isTeamManager"
@@ -460,7 +427,6 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- Calendar Grid -->
       <CalendarGrid
         :days="teamDays"
         :current-year="currentYear"
@@ -472,7 +438,6 @@ onMounted(() => {
         @day-click="selectDay"
       >
         <template #day-content="{ day, index }">
-          <!-- Team Schedules -->
           <div v-if="teamSchedules[index]?.length" class="mt-0.5">
             <div
               v-for="schedule in teamSchedules[index].slice(0, 2)"
@@ -503,7 +468,6 @@ onMounted(() => {
         </template>
       </CalendarGrid>
 
-      <!-- Selected Day Schedule -->
       <div class="rounded-lg border shadow-sm p-3 bg-dp-bg-card border-dp-border-secondary">
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
           <h3 class="text-lg font-bold text-dp-text-primary">
@@ -519,7 +483,6 @@ onMounted(() => {
           </button>
         </div>
 
-        <!-- Schedule List -->
         <div
           v-if="selectedDay.index >= 0 && teamSchedules[selectedDay.index]?.length"
           class="space-y-2"
@@ -565,7 +528,6 @@ onMounted(() => {
         </div>
       </div>
 
-      <!-- Shift Groups -->
       <div v-if="shiftLoading" class="mt-3 flex items-center justify-center py-8">
         <Loader2 class="w-6 h-6 animate-spin text-dp-accent" />
       </div>
@@ -581,7 +543,6 @@ onMounted(() => {
               '--tw-ring-color': 'var(--dp-text-primary)'
             }"
           >
-            <!-- Duty Type Header -->
             <div
               class="p-3 flex items-center justify-between"
               :style="{ backgroundColor: group.dutyType.color ?? 'var(--dp-duty-type-fallback)' }"
@@ -592,7 +553,6 @@ onMounted(() => {
               </span>
             </div>
 
-            <!-- Members Grid -->
             <div class="p-3 grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2">
               <div
                 v-for="member in group.members"
@@ -621,7 +581,6 @@ onMounted(() => {
       </div>
     </template>
 
-    <!-- Schedule Modal -->
     <BaseModal
       :is-open="showScheduleModal"
       size="lg"

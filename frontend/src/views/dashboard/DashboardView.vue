@@ -12,7 +12,6 @@ import Sortable from 'sortablejs'
 import type {
   DashboardMyDetail,
   DashboardFriendInfo,
-  DashboardScheduleDto,
   MemberPreviewDto,
 } from '@/types'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
@@ -22,7 +21,6 @@ import {
   Calendar,
   Briefcase,
   ClipboardList,
-  Clock,
   Users,
   Star,
   GripVertical,
@@ -36,16 +34,13 @@ const { t, locale } = useI18n()
 const { showWarning, confirm, toastSuccess } = useSwal()
 const dragClickGuard = useDragClickGuard()
 
-// Loading states
 const myInfoLoading = ref(false)
 const friendInfoLoading = ref(false)
 const friendInfoInitialized = ref(false)
 
-// Error states
 const myInfoError = ref<string | null>(null)
 const friendInfoError = ref<string | null>(null)
 
-// Today's date formatted
 const today = computed(() => {
   return new Date().toLocaleDateString(locale.value, {
     year: 'numeric',
@@ -55,11 +50,9 @@ const today = computed(() => {
   })
 })
 
-// API data
 const myInfo = ref<DashboardMyDetail | null>(null)
 const friendInfo = ref<DashboardFriendInfo | null>(null)
 
-// Load my dashboard data
 async function loadMyDashboard() {
   if (!authStore.isLoggedIn) return
 
@@ -75,7 +68,6 @@ async function loadMyDashboard() {
   }
 }
 
-// Load friends dashboard data
 async function loadFriendsDashboard() {
   if (!authStore.isLoggedIn) return
 
@@ -92,7 +84,6 @@ async function loadFriendsDashboard() {
   }
 }
 
-// Search modal state
 const showSearchModal = ref(false)
 const searchKeyword = ref('')
 const searchResult = ref<MemberPreviewDto[]>([])
@@ -102,12 +93,10 @@ const searchTotalElements = ref(0)
 const searchPageSize = 5
 const searchLoading = ref(false)
 
-// Sortable instance
 let friendSortable: Sortable | null = null
 const friendListRef = ref<HTMLElement | null>(null)
 const friendSectionRef = ref<HTMLElement | null>(null)
 
-// Computed: sorted friends (pinned first)
 const sortedFriends = computed(() => {
   if (!friendInfo.value) return []
   return [...friendInfo.value.friends].sort((a, b) => {
@@ -123,7 +112,6 @@ const sortedFriends = computed(() => {
   })
 })
 
-// Methods
 function moveTo(memberId?: number | null) {
   const id = memberId || myInfo.value?.member.id
   if (!id) return
@@ -157,7 +145,6 @@ function printScheduleTime(startDateTime: string) {
   })
 }
 
-// Pin/Unpin friend
 async function pinFriend(member: { id: number | null; name: string }) {
   if (!friendInfo.value || !member.id) return
   const friend = friendInfo.value.friends.find((f) => f.member.id === member.id)
@@ -200,7 +187,6 @@ async function unpinFriend(member: { id: number | null; name: string }) {
   }
 }
 
-// Sort friends by pin order
 function sortFriendsByPinOrder() {
   if (!friendInfo.value) return
   friendInfo.value.friends.sort((a, b) => {
@@ -216,7 +202,6 @@ function sortFriendsByPinOrder() {
   })
 }
 
-// Search modal
 function openSearchModal() {
   showSearchModal.value = true
   searchKeyword.value = ''
@@ -280,7 +265,6 @@ function goToPage(page: number) {
   search()
 }
 
-// Initialize SortableJS for friend list
 function initFriendSortable() {
   if (!friendListRef.value) {
     destroyFriendSortable()
@@ -310,7 +294,6 @@ function initFriendSortable() {
   })
 }
 
-// Update friend pin order after drag
 async function updateFriendsPin() {
   if (!friendListRef.value || !friendInfo.value) return
 
@@ -335,7 +318,6 @@ async function updateFriendsPin() {
   }
 }
 
-// Apply friend order based on IDs
 function applyFriendOrder(friendIds: number[]) {
   if (!friendInfo.value || friendIds.length === 0) return
 
@@ -347,7 +329,6 @@ function applyFriendOrder(friendIds: number[]) {
   friendInfo.value.friends = [...pinnedFriends, ...unpinnedFriends] as typeof friendInfo.value.friends
 }
 
-// Destroy sortable on unmount
 function destroyFriendSortable() {
   if (friendSortable) {
     friendSortable.destroy()
@@ -358,7 +339,6 @@ function destroyFriendSortable() {
   }
 }
 
-// Load dashboard data when logged in
 onMounted(async () => {
   if (authStore.isLoggedIn) {
     // Load both APIs in parallel
@@ -370,12 +350,10 @@ onMounted(async () => {
   }
 })
 
-// Cleanup on unmount
 onUnmounted(() => {
   destroyFriendSortable()
 })
 
-// Watch for login state changes
 watch(
   () => authStore.isLoggedIn,
   async (isLoggedIn) => {
@@ -397,12 +375,9 @@ watch(
 </script>
 
 <template>
-  <!-- Guest Dashboard - Full width -->
   <IntroSection v-if="!authStore.isLoggedIn" />
 
-  <!-- Logged-in Dashboard -->
   <div v-else class="max-w-4xl mx-auto px-4 py-6">
-      <!-- My Info Section -->
       <div
         class="rounded-2xl shadow-sm border mb-6 overflow-hidden"
         :style="{
@@ -410,7 +385,6 @@ watch(
           borderColor: 'var(--dp-border-primary)'
         }"
       >
-        <!-- Header -->
         <div
           class="dashboard-panel-header group px-5 py-3 flex items-center justify-between cursor-pointer"
           @click="moveTo()"
@@ -428,14 +402,11 @@ watch(
           <ChevronRight class="w-5 h-5 text-dp-text-muted group-hover:text-dp-text-on-dark group-hover:translate-x-1 transition-all" />
         </div>
 
-        <!-- Content -->
         <div class="p-5">
-          <!-- Error state -->
           <div v-if="myInfoError" class="text-center py-4 text-dp-danger">
             {{ myInfoError }}
           </div>
           <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <!-- Left column: Date & Duty -->
             <div class="space-y-3">
               <div class="flex items-center gap-2 text-dp-text-primary">
                 <Calendar class="w-5 h-5 text-dp-text-muted" />
@@ -463,7 +434,6 @@ watch(
               </div>
             </div>
 
-            <!-- Right column: Today's schedules -->
             <div class="border-t pt-4 md:border-t-0 md:pt-0 md:border-l md:pl-5 border-dp-border-primary">
               <div class="flex items-center gap-2 mb-2">
                 <ClipboardList class="w-5 h-5 text-dp-text-muted" />
@@ -492,7 +462,6 @@ watch(
         </div>
       </div>
 
-      <!-- Friends List Section -->
       <div ref="friendSectionRef" class="friend-section rounded-2xl shadow-sm border overflow-hidden bg-dp-bg-card border-dp-border-primary">
         <div
           class="dashboard-panel-header group px-6 py-3 cursor-pointer"
@@ -510,7 +479,6 @@ watch(
           </div>
         </div>
         <div class="p-5">
-          <!-- Error state -->
           <div v-if="friendInfoError" class="text-center py-4 text-dp-danger">
             {{ friendInfoError }}
           </div>
@@ -519,7 +487,6 @@ watch(
               <div class="w-8 h-8 border-3 rounded-full animate-spin" :style="{ borderColor: 'var(--dp-border-secondary)', borderTopColor: 'var(--dp-text-primary)' }"></div>
             </div>
           </template>
-          <!-- Empty state -->
           <div v-else-if="sortedFriends.length === 0" class="text-center py-8">
             <Users class="w-12 h-12 mx-auto mb-3 text-dp-text-muted" />
             <p class="text-sm text-dp-text-secondary">{{ t('dashboard.labels.noFriends') }}</p>
@@ -538,7 +505,6 @@ watch(
             @pointerdown.capture="dragClickGuard.handlePointerDown"
             @click.capture="dragClickGuard.handleClick"
           >
-            <!-- Friend Cards -->
             <div
               v-for="friend in sortedFriends"
               :key="friend.member.id ?? 'unknown'"
@@ -553,7 +519,6 @@ watch(
               @click="moveTo(friend.member.id)"
             >
               <div class="flex p-3">
-                <!-- Left section: Large Profile -->
                 <div class="flex-shrink-0 mr-3">
                   <ProfileAvatar
                     :member-id="friend.member.id"
@@ -564,16 +529,13 @@ watch(
                   />
                 </div>
 
-                <!-- Right section: Info & Actions -->
                 <div class="flex-1 min-w-0">
-                  <!-- Top: Name & Actions -->
                   <div class="flex items-center justify-between mb-1.5">
                     <div class="flex items-center gap-1.5 min-w-0">
                       <span class="font-medium text-sm truncate text-dp-text-primary">{{ friend.member.name }}</span>
                       <Home v-if="friend.isFamily" class="w-3.5 h-3.5 flex-shrink-0 text-dp-warning" :title="t('dashboard.labels.familyMember')" />
                     </div>
                     <div class="flex items-center flex-shrink-0" @click.stop>
-                    <!-- Pin/Unpin button -->
                     <button
                       v-if="friend.pinOrder"
                       class="p-1 text-dp-warning hover:text-dp-warning transition cursor-pointer"
@@ -593,7 +555,6 @@ watch(
                   </div>
                   </div>
 
-                  <!-- Duty info -->
                   <div class="flex items-center gap-1.5 mb-1.5">
                     <Briefcase class="w-3.5 h-3.5 flex-shrink-0 text-dp-text-muted" />
                     <span class="text-xs text-dp-text-secondary">{{ t('dashboard.labels.duty') }}</span>
@@ -601,7 +562,6 @@ watch(
                     <span v-else class="text-xs text-dp-text-muted">-</span>
                   </div>
 
-                  <!-- Schedules -->
                   <div v-if="friend.schedules && friend.schedules.length" class="space-y-1">
                     <div
                       v-for="schedule in friend.schedules.slice(0, 2)"
@@ -617,7 +577,6 @@ watch(
                 </div>
               </div>
 
-              <!-- Drag handle for pinned friends -->
               <div v-if="friend.pinOrder" class="absolute bottom-2 right-2" @click.stop>
                 <div
                   class="handle friend-drag-handle rounded-lg p-1.5 transition hover:bg-dp-overlay-dark/10 !cursor-grab active:!cursor-grabbing"

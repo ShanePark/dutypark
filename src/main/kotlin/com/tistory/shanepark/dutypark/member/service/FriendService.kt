@@ -144,7 +144,6 @@ class FriendService(
                 setFriend(member, friend)
                 eventPublisher.publishEvent(
                     FriendRequestAcceptedEvent(
-                        requestId = friendRequest.id!!,
                         fromMemberId = friend.id!!,
                         toMemberId = member.id!!
                     )
@@ -154,7 +153,6 @@ class FriendService(
                 setFamily(member, friend)
                 eventPublisher.publishEvent(
                     FamilyRequestAcceptedEvent(
-                        requestId = friendRequest.id!!,
                         fromMemberId = friend.id!!,
                         toMemberId = member.id!!
                     )

@@ -124,7 +124,6 @@ onUnmounted(() => {
         <nav class="flex items-center gap-0.5 sm:gap-1">
           <LocaleSwitcher />
 
-          <!-- Theme Toggle (always visible) -->
           <button
             type="button"
             class="theme-toggle-btn cursor-pointer p-2 rounded-full transition-all duration-150 min-h-[44px] min-w-[44px] flex items-center justify-center"
@@ -160,7 +159,6 @@ onUnmounted(() => {
                 v-if="isMenuDropdownVisible"
                 class="menu-dropdown absolute right-0 top-full mt-2 w-44 rounded-lg shadow-lg border z-50 py-1"
               >
-                <!-- Navigation -->
                 <button
                   :class="['menu-item w-full px-4 py-2.5 flex items-center gap-3 text-sm cursor-pointer', { 'menu-item-active': isActiveRoute('/') }]"
                   @click="navigateTo('/')"
@@ -210,10 +208,8 @@ onUnmounted(() => {
                   {{ t('header.menu.notifications') }}
                 </button>
 
-                <!-- Divider -->
                 <div class="menu-divider my-1"></div>
 
-                <!-- Admin (conditional) -->
                 <button
                   v-if="authStore.isAdmin"
                   :class="['menu-item w-full px-4 py-2.5 flex items-center gap-3 text-sm cursor-pointer', { 'menu-item-active': isActiveRoute('/admin') }]"
@@ -238,7 +234,6 @@ onUnmounted(() => {
                   {{ t('header.menu.settings') }}
                 </button>
 
-                <!-- Divider -->
                 <div class="menu-divider my-1"></div>
 
                 <button

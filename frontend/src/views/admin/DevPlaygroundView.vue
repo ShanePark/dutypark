@@ -48,7 +48,6 @@ onMounted(() => {
 
 <template>
   <div class="max-w-4xl mx-auto px-4 py-6">
-    <!-- Admin Navigation -->
     <div class="grid grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
       <router-link
         to="/admin"
@@ -90,7 +89,6 @@ onMounted(() => {
       </a>
     </div>
 
-    <!-- Page Header -->
     <div class="mb-6">
       <h1 class="text-2xl font-bold text-dp-text-primary">
         {{ t('admin.devPlayground.title') }}
@@ -100,7 +98,6 @@ onMounted(() => {
       </p>
     </div>
 
-    <!-- Example Section -->
     <div
       class="rounded-xl bg-dp-bg-card border border-dp-border-primary"
     >

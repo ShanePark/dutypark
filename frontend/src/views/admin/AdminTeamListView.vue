@@ -29,7 +29,6 @@ const authStore = useAuthStore()
 const { t } = useI18n()
 const { showError, toastSuccess } = useSwal()
 
-// Team list state
 const teams = ref<SimpleTeam[]>([])
 const keyword = ref('')
 const searchKeyword = ref('')
@@ -39,7 +38,6 @@ const totalElements = ref(0)
 const totalPages = ref(0)
 const isLoading = ref(false)
 
-// New team modal state
 const showNewTeamModal = ref(false)
 const newTeamName = ref('')
 const newTeamDescription = ref('')
@@ -53,7 +51,6 @@ const isCreateTeamDisabled = computed(() =>
   nameCheckResult.value !== 'OK' || !trimmedNewTeamDescription.value || isCreating.value
 )
 
-// Fetch teams from API
 async function fetchTeams() {
   isLoading.value = true
   try {
@@ -129,7 +126,6 @@ async function handleCreateTeam() {
     })
     toastSuccess(t('admin.teamList.messages.createSuccess'))
     closeNewTeamModal()
-    // Navigate to team manage page
     router.push(`/team/manage/${response.data.id}`)
   } catch (error) {
     console.error('Failed to create team:', error)
@@ -154,10 +150,6 @@ function goToPage(pageNum: number) {
     page.value = pageNum
     fetchTeams()
   }
-}
-
-function refreshData() {
-  fetchTeams()
 }
 
 function setHoverBg(e: Event) {
@@ -200,7 +192,6 @@ onMounted(() => {
 
 <template>
   <div class="max-w-4xl mx-auto px-4 py-6">
-    <!-- Admin Navigation -->
       <div class="grid grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
         <router-link
           to="/admin"
@@ -242,7 +233,6 @@ onMounted(() => {
         </a>
       </div>
 
-      <!-- Team List Section -->
       <div class="rounded-xl bg-dp-bg-card border border-dp-border-primary">
         <div class="p-4 border-b border-dp-border-primary">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -284,7 +274,6 @@ onMounted(() => {
           </div>
         </div>
 
-        <!-- Team Table (Desktop) -->
         <div class="hidden sm:block overflow-x-auto">
           <table class="w-full">
             <thead class="bg-dp-bg-tertiary">
@@ -335,10 +324,9 @@ onMounted(() => {
           </table>
         </div>
 
-        <!-- Team Cards (Mobile) -->
         <div class="sm:hidden border-t border-dp-border-secondary">
           <div
-            v-for="(team, index) in teams"
+            v-for="team in teams"
             :key="team.id"
             class="p-4 cursor-pointer transition border-b border-dp-border-secondary"
             @click="manageTeam(team.id)"
@@ -367,9 +355,7 @@ onMounted(() => {
           {{ t('admin.teamList.empty') }}
         </div>
 
-        <!-- Footer with Pagination -->
         <div v-if="totalPages > 1" class="p-4 flex justify-center" :style="{ borderTop: '1px solid var(--dp-border-primary)' }">
-          <!-- Pagination -->
           <nav class="flex items-center gap-1">
             <button
               :disabled="page === 0"
@@ -380,7 +366,6 @@ onMounted(() => {
             >
               <ChevronLeft class="w-4 h-4" />
             </button>
-            <!-- Desktop: Show all page numbers -->
             <template v-for="p in totalPages" :key="p">
               <button
                 v-if="totalPages <= 5 || p === 1 || p === totalPages || (p >= page && p <= page + 2)"
@@ -416,7 +401,6 @@ onMounted(() => {
         </div>
       </div>
 
-    <!-- New Team Modal -->
     <BaseModal
       :is-open="showNewTeamModal"
       size="md"

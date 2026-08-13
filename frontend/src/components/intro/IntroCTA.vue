@@ -15,8 +15,8 @@ const { progress } = useScrollProgress(sectionRef, containerRef, {
 
 const iconStyle = computed(() => {
   const p = progress.value
-  const scale = 0.5 + (p * 0.5) // 0.5 to 1.0
-  const rotate = (1 - p) * 180 // 180 to 0
+  const scale = 0.5 + (p * 0.5)
+  const rotate = (1 - p) * 180
 
   return {
     transform: `scale(${scale}) rotate(${rotate}deg)`,

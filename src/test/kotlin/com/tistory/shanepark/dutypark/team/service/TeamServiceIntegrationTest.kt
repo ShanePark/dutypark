@@ -52,38 +52,31 @@ class TeamServiceIntegrationTest : DutyparkIntegrationTest() {
 
     @Test
     fun `delete Team success`() {
-        // Given
         val totalBefore = service.findAllWithMemberCount(Pageable.ofSize(10)).totalElements
         val created = service.create(TeamCreateDto("teamName", "teamDesc"))
         val totalAfter = service.findAllWithMemberCount(Pageable.ofSize(10)).totalElements
         assertThat(totalAfter).isEqualTo(totalBefore + 1)
 
-        // When
         service.delete(created.id)
 
-        // Then
         val totalAfterDelete = service.findAllWithMemberCount(Pageable.ofSize(10)).totalElements
         assertThat(totalAfterDelete).isEqualTo(totalBefore)
     }
 
     @Test
     fun `can not delete invalid team id`() {
-        // Given
         val totalBefore = service.findAllWithMemberCount(Pageable.ofSize(10)).totalElements
 
-        // When
         assertThrows<NoSuchElementException> {
             service.delete(9999)
         }
 
-        // Then
         val totalAfter = service.findAllWithMemberCount(Pageable.ofSize(10)).totalElements
         assertThat(totalAfter).isEqualTo(totalBefore)
     }
 
     @Test
     fun `can't delete team containing member`() {
-        // Given
         val totalBefore = service.findAllWithMemberCount(Pageable.ofSize(10)).totalElements
         val created = service.create(TeamCreateDto("teamName", "teamDesc"))
         val totalAfter = service.findAllWithMemberCount(Pageable.ofSize(10)).totalElements
@@ -93,7 +86,6 @@ class TeamServiceIntegrationTest : DutyparkIntegrationTest() {
         team.addMember(TestData.member)
         team.addMember(TestData.member2)
 
-        // When
         val exception = assertThrows<BadRequestException> {
             service.delete(created.id)
         }
@@ -103,7 +95,6 @@ class TeamServiceIntegrationTest : DutyparkIntegrationTest() {
 
     @Test
     fun `When delete team containing duty types, all associated dutyTypes will be removed as well`() {
-        // Given
         val totalBefore = service.findAllWithMemberCount(Pageable.ofSize(10)).totalElements
         val created = service.create(TeamCreateDto("teamName", "teamDesc"))
         val totalAfter = service.findAllWithMemberCount(Pageable.ofSize(10)).totalElements
@@ -121,10 +112,8 @@ class TeamServiceIntegrationTest : DutyparkIntegrationTest() {
 
         assertThat(team.dutyTypes).hasSize(3)
 
-        // When
         service.delete(created.id)
 
-        // Then
         assertThat(dutyTypeRepository.findById(dutyType1.id!!)).isEmpty
         assertThat(dutyTypeRepository.findById(dutyType2.id!!)).isEmpty
         assertThat(dutyTypeRepository.findById(dutyType3.id!!)).isEmpty
@@ -136,7 +125,6 @@ class TeamServiceIntegrationTest : DutyparkIntegrationTest() {
         @Autowired dutyService: DutyService,
         @Autowired dutyRepository: DutyRepository
     ) {
-        // Given
         val created = service.create(TeamCreateDto("teamName", "teamDesc"))
         val team = teamRepository.findById(created.id).orElseThrow()
         val member = memberRepository.findById(TestData.member.id!!).orElseThrow()
@@ -157,11 +145,9 @@ class TeamServiceIntegrationTest : DutyparkIntegrationTest() {
         val apr8 = duties.first { it.year == 2023 && it.month == 4 && it.day == 8 }
         assertThat(apr8.dutyType).isNotNull
 
-        // When
         service.removeMemberFromTeam(team.id!!, member.id!!)
         service.delete(team.id!!)
 
-        // Then
         assertThat(dutyTypeRepository.findById(dutyType1.id!!)).isEmpty
         assertThat(teamRepository.findById(team.id!!)).isEmpty
 
@@ -173,7 +159,6 @@ class TeamServiceIntegrationTest : DutyparkIntegrationTest() {
 
     @Test
     fun `can't add same name DutyType on one Team`() {
-        // Given
         val team = teamRepository.findById(TestData.team.id!!).orElseThrow()
         val dutyType1 = team.addDutyType("test1", "#ffb3ba")
         val dutyType2 = team.addDutyType("test2", "#98fb98")
@@ -186,7 +171,6 @@ class TeamServiceIntegrationTest : DutyparkIntegrationTest() {
 
         assertThat(team.dutyTypes).containsAll(listOf(dutyType1, dutyType2, dutyType3))
 
-        // When
         assertThrows<IllegalArgumentException> {
             team.addDutyType("test1", "#f5deb3")
         }
@@ -194,7 +178,6 @@ class TeamServiceIntegrationTest : DutyparkIntegrationTest() {
 
     @Test
     fun `Delete member from Team Test`() {
-        // Given
         val team = teamRepository.findById(TestData.team.id!!).orElseThrow()
         val member = memberRepository.findById(TestData.member.id!!).orElseThrow()
         val member2 = memberRepository.findById(TestData.member2.id!!).orElseThrow()
@@ -202,11 +185,9 @@ class TeamServiceIntegrationTest : DutyparkIntegrationTest() {
         assertThat(member.team).isEqualTo(team)
         assertThat(member2.team).isEqualTo(team)
 
-        // When
         service.removeMemberFromTeam(team.id!!, member.id!!)
         service.removeMemberFromTeam(team.id!!, member2.id!!)
 
-        // Then
         assertThat(team.members).isEmpty()
         assertThat(member.team).isNull()
         assertThat(member2.team).isNull()
@@ -257,7 +238,6 @@ class TeamServiceIntegrationTest : DutyparkIntegrationTest() {
 
     @Test
     fun `can't delete member from team if not member of team`() {
-        // Given
         val team = teamRepository.findById(TestData.team.id!!).orElseThrow()
         val team2 = teamRepository.findById(TestData.team2.id!!).orElseThrow()
         val member = memberRepository.findById(TestData.member.id!!).orElseThrow()
@@ -266,7 +246,6 @@ class TeamServiceIntegrationTest : DutyparkIntegrationTest() {
         assertThat(member.team).isEqualTo(team)
         assertThat(member2.team).isEqualTo(team)
 
-        // When
         val exception = assertThrows<BadRequestException> {
             service.removeMemberFromTeam(team2.id!!, member.id!!)
         }
@@ -276,7 +255,6 @@ class TeamServiceIntegrationTest : DutyparkIntegrationTest() {
 
     @Test
     fun `add Member to Team Test`() {
-        // Given
         val team = teamRepository.findById(TestData.team.id!!).orElseThrow()
         val member = memberRepository.findById(TestData.member.id!!).orElseThrow()
         val member2 = memberRepository.findById(TestData.member2.id!!).orElseThrow()
@@ -286,14 +264,12 @@ class TeamServiceIntegrationTest : DutyparkIntegrationTest() {
         assertThat(member.team).isEqualTo(null)
         assertThat(member2.team).isEqualTo(null)
 
-        // When
         service.addMemberToTeam(team.id!!, member.id!!)
         service.addMemberToTeam(team.id!!, member2.id!!)
 
         em.flush()
         em.clear()
 
-        // Then
         val team1 = teamRepository.findById(team.id!!).orElseThrow()
         assertThat(team1.members).hasSize(2)
         assertThat(member.team?.id).isEqualTo(team1.id)
@@ -302,7 +278,6 @@ class TeamServiceIntegrationTest : DutyparkIntegrationTest() {
 
     @Test
     fun `can't add member to team if already member of team`() {
-        // Given
         val team = teamRepository.findById(TestData.team.id!!).orElseThrow()
         val member = memberRepository.findById(TestData.member.id!!).orElseThrow()
         val member2 = memberRepository.findById(TestData.member2.id!!).orElseThrow()
@@ -310,7 +285,6 @@ class TeamServiceIntegrationTest : DutyparkIntegrationTest() {
         assertThat(member.team).isEqualTo(team)
         assertThat(member2.team).isEqualTo(team)
 
-        // When
         val first = assertThrows(BadRequestException::class.java) {
             service.addMemberToTeam(team.id!!, member.id!!)
         }
@@ -321,7 +295,6 @@ class TeamServiceIntegrationTest : DutyparkIntegrationTest() {
         assertThat(first.message).isEqualTo("team.member.alreadyAssigned")
         assertThat(second.message).isEqualTo("team.member.alreadyAssigned")
 
-        // Then
         assertThat(team.members).hasSize(2)
         assertThat(member.team).isEqualTo(team)
         assertThat(member2.team).isEqualTo(team)
@@ -329,7 +302,6 @@ class TeamServiceIntegrationTest : DutyparkIntegrationTest() {
 
     @Test
     fun `change team admin`() {
-        // Given
         val team = teamRepository.findById(TestData.team.id!!).orElseThrow()
         val member = memberRepository.findById(TestData.member.id!!).orElseThrow()
         val member2 = memberRepository.findById(TestData.member2.id!!).orElseThrow()
@@ -338,7 +310,6 @@ class TeamServiceIntegrationTest : DutyparkIntegrationTest() {
         assertThat(member2.team).isEqualTo(team)
         assertThat(team.admin).isNull()
 
-        // Then
         service.changeTeamAdmin(team.id!!, member.id!!)
         assertThat(team.admin).isEqualTo(member)
 
@@ -352,15 +323,12 @@ class TeamServiceIntegrationTest : DutyparkIntegrationTest() {
 
     @Test
     fun `update default duty success`() {
-        // Given
         val team = service.create(TeamCreateDto("teamName", "teamDesc"))
 
-        // When
         val updatedDutyName = "newDutyName"
         val updatedDutyColor = "#ffb3ba"
         service.updateDefaultDuty(team.id, updatedDutyName, updatedDutyColor)
 
-        // Then
         val updated = teamRepository.findById(team.id).orElseThrow()
         assertThat(updated.defaultDutyName).isEqualTo(updatedDutyName)
         assertThat(updated.defaultDutyColor).isEqualTo(updatedDutyColor)
@@ -369,23 +337,18 @@ class TeamServiceIntegrationTest : DutyparkIntegrationTest() {
 
     @Test
     fun `addTeamManager success`() {
-        // Given
         val member = TestData.member
 
-        // When
         service.addTeamManager(teamId = TestData.team.id!!, memberId = member.id!!)
 
-        // Then
         val team = teamRepository.findById(TestData.team.id!!).orElseThrow()
         assertThat(team.managers.any { it.member.id == member.id }).isTrue()
     }
 
     @Test
     fun `can not be another team's manager`() {
-        // Given
         val member = TestData.member
 
-        // Then
         val exception = assertThrows<BadRequestException> {
             service.addTeamManager(teamId = TestData.team2.id!!, memberId = member.id!!)
         }
@@ -395,56 +358,45 @@ class TeamServiceIntegrationTest : DutyparkIntegrationTest() {
 
     @Test
     fun `nothing happens when add a team manager who is already a manager`() {
-        // Given
         val member = TestData.member
         val team = teamRepository.findById(TestData.team.id!!).orElseThrow()
 
-        // When
         service.addTeamManager(teamId = TestData.team.id!!, memberId = member.id!!)
         assertThat(team.managers.any { it.member.id == member.id }).isTrue()
 
-        // Then
         service.addTeamManager(teamId = TestData.team.id!!, memberId = member.id!!)
         assertThat(team.managers.any { it.member.id == member.id }).isTrue()
     }
 
     @Test
     fun `remove team manager success`() {
-        // Given
         val member = TestData.member
         service.addTeamManager(teamId = TestData.team.id!!, memberId = member.id!!)
         var team = teamRepository.findById(TestData.team.id!!).orElseThrow()
         assertThat(team.managers.any { it.member.id == member.id }).isTrue()
 
-        // When
         service.removeTeamManager(teamId = TestData.team.id!!, memberId = member.id!!)
 
-        // Then
         team = teamRepository.findById(TestData.team.id!!).orElseThrow()
         assertThat(team.managers.any { it.member.id == member.id }).isFalse()
     }
 
     @Test
     fun `nothing happens when trying to remove a member from manager who is not actually a manager`() {
-        // Given
         val member = TestData.member
         val team = teamRepository.findById(TestData.team.id!!).orElseThrow()
         assertThat(team.managers.any { it.member.id == member.id }).isFalse()
 
-        // When
         service.removeTeamManager(teamId = TestData.team.id!!, memberId = member.id!!)
 
-        // Then
         val team2 = teamRepository.findById(TestData.team.id!!).orElseThrow()
         assertThat(team2.managers.any { it.member.id == member.id }).isFalse()
     }
 
     @Test
     fun `exception is thrown when trying to remove from manager who is actually not in the team`() {
-        // Given
         val member = TestData.member
 
-        // When
         val exception = assertThrows<BadRequestException> {
             service.removeTeamManager(teamId = TestData.team2.id!!, memberId = member.id!!)
         }

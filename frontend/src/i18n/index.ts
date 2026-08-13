@@ -43,13 +43,6 @@ export function writeStoredLocalePreference(locale: SupportedLocale) {
   window.localStorage.setItem(LOCALE_STORAGE_KEY, locale)
 }
 
-export function clearStoredLocalePreference() {
-  if (typeof window === 'undefined') {
-    return
-  }
-  window.localStorage.removeItem(LOCALE_STORAGE_KEY)
-}
-
 export function readHandledLocaleSuggestion(): SupportedLocale | null {
   if (typeof window === 'undefined') {
     return null

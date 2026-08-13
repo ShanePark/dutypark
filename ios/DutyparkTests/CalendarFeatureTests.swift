@@ -553,7 +553,6 @@ final class CalendarFeatureTests: XCTestCase {
         await model.load()
 
         XCTAssertEqual(model.targetName, "Public member")
-        XCTAssertEqual(model.targetTeamName, "Public team")
         XCTAssertTrue(model.targetHasProfilePhoto)
         XCTAssertEqual(model.targetProfilePhotoVersion, 12)
         let requestedPreviewMemberID = await repository.requestedPreviewMemberID
@@ -612,19 +611,6 @@ final class CalendarFeatureTests: XCTestCase {
         XCTAssertTrue(model.comparedMemberIDs.isSubset(of: [2, 3, 4, 5]))
     }
 
-    func testPatternWithHiddenSelectedDutyCannotBeSaved() {
-        XCTAssertFalse(CalendarFeatureLogic.canSavePattern(selectedDutyTypeIDs: [10], visibleDutyTypeIDs: [11]))
-        XCTAssertTrue(CalendarFeatureLogic.canSavePattern(selectedDutyTypeIDs: [11], visibleDutyTypeIDs: [11]))
-        XCTAssertTrue(CalendarFeatureLogic.canSavePattern(selectedDutyTypeIDs: [], visibleDutyTypeIDs: [11]))
-    }
-
-    func testCalendarShareLinkUsesPublicDutyRoute() {
-        XCTAssertEqual(
-            CalendarPublicLink.url(memberID: 42).absoluteString,
-            "https://dutypark.o-r.kr/duty/42"
-        )
-    }
-
     func testCalendarLocaleUsesTheAppSelectedLanguage() {
         XCTAssertEqual(CalendarLocalization.locale(languageCode: "ko").identifier, "ko")
         XCTAssertEqual(CalendarLocalization.locale(languageCode: "en").identifier, "en")
@@ -653,29 +639,6 @@ final class CalendarFeatureTests: XCTestCase {
         )
     }
 
-    func testFriendDutyComparisonIsLimitedToThreeAndAllowsDeselection() {
-        let selected = CalendarFeatureLogic.comparisonSelection(current: [1, 2], toggling: 3)
-        XCTAssertEqual(selected, [1, 2, 3])
-        XCTAssertEqual(
-            CalendarFeatureLogic.comparisonSelection(current: selected, toggling: 4),
-            selected
-        )
-        XCTAssertEqual(
-            CalendarFeatureLogic.comparisonSelection(current: selected, toggling: 2),
-            [1, 3]
-        )
-    }
-
-    func testPatternRequestContainsOnlySelectedWeekdays() {
-        let days = CalendarFeatureLogic.patternDays(
-            weekdays: [.monday, .tuesday, .wednesday],
-            selections: [.monday: 7, .wednesday: 9]
-        )
-
-        XCTAssertEqual(days.map(\.weekday), [.monday, .wednesday])
-        XCTAssertEqual(days.map(\.dutyTypeId), [7, 9])
-    }
-
     func testDutyBatchUsesOnlyTemplateFileExtensions() {
         XCTAssertEqual(
             CalendarFeatureLogic.normalizedFileExtensions([".XLS", "xlsx", " .xlsx ", ""]),
@@ -697,7 +660,6 @@ final class CalendarFeatureTests: XCTestCase {
 
     func testCalendarUsesTheSameCompactCellMinimumAsMobileWeb() {
         XCTAssertEqual(CalendarVisualLogic.compactCellMinimumHeight, 60)
-        XCTAssertEqual(CalendarVisualLogic.regularCellMinimumHeight, 80)
         XCTAssertEqual(CalendarVisualLogic.maximumSchedulesPerCell, 3)
         XCTAssertEqual(CalendarVisualLogic.maximumTodosPerCell, 2)
     }
@@ -855,7 +817,6 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
         deleteScheduleCount += 1
         if failDestructiveMutations { throw APIError.invalidResponse }
     }
-    func reorderSchedules(ids: [ScheduleID]) async throws {}
     func untagSelf(scheduleID: ScheduleID) async throws {
         untagCount += 1
         if failDestructiveMutations { throw APIError.invalidResponse }
@@ -871,9 +832,6 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
     func uploadDutyBatch(memberID: MemberID, year: Int, month: Int, filename: String, data: Data) async throws -> DutyBatchUploadResult {
         DutyBatchUploadResult(result: true, errorCode: nil, errorDetails: nil, startDate: nil, endDate: nil, workingDays: 20, offDays: 10)
     }
-    func dutyPattern() async throws -> DutyPatternDTO { DutyPatternDTO(configurable: false, reason: nil, dutyTypes: [], pattern: nil) }
-    func updateDutyPattern(_ request: DutyPatternUpdateDTO) async throws -> DutyPatternDTO { try await dutyPattern() }
-    func deleteDutyPattern() async throws {}
     func saveDDay(_ request: DDaySaveDTO) async throws -> DDayDTO { DDayDTO(id: 1, title: request.title, date: request.date, isPrivate: request.isPrivate, calc: 0, daysLeft: 0) }
     func deleteDDay(id: Int64) async throws {
         deleteDDayCount += 1

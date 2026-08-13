@@ -54,8 +54,6 @@ class ApnsPushService @Autowired constructor(
         this.httpClient = httpClient
     }
 
-    fun isEnabled(): Boolean = teamId.isNotBlank() && keyId.isNotBlank() && signingKey != null
-
     fun sendToMember(memberId: Long, payload: PushNotificationPayload) {
         val key = signingKey ?: return
         if (teamId.isBlank() || keyId.isBlank()) return

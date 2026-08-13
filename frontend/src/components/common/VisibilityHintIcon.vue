@@ -3,7 +3,6 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch, type CSSPro
 import { getVisibilityDescription, getVisibilityIcon, getVisibilityLabel, type CalendarVisibility } from '@/utils/visibility'
 
 type VisibilityHintSize = 'xs' | 'sm'
-type VisibilityHintAlign = 'start' | 'end'
 type TooltipPlacement = 'top' | 'bottom'
 type LegacyMediaQueryList = MediaQueryList & {
   addListener?: (listener: (event: MediaQueryListEvent) => void) => void
@@ -13,10 +12,8 @@ type LegacyMediaQueryList = MediaQueryList & {
 const props = withDefaults(defineProps<{
   visibility: CalendarVisibility
   size?: VisibilityHintSize
-  align?: VisibilityHintAlign
 }>(), {
   size: 'sm',
-  align: 'start',
 })
 
 const rootRef = ref<HTMLElement | null>(null)
@@ -103,9 +100,7 @@ function updateTooltipPosition() {
   const gutter = 12
   const gap = 10
 
-  let left = props.align === 'end'
-    ? buttonRect.right - tooltipRect.width
-    : buttonRect.left
+  let left = buttonRect.right - tooltipRect.width
 
   left = Math.min(Math.max(left, gutter), viewportWidth - tooltipRect.width - gutter)
 

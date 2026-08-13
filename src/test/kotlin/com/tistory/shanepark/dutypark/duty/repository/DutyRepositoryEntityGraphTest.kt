@@ -14,7 +14,6 @@ class DutyRepositoryEntityGraphTest : DutyparkIntegrationTest() {
 
     @Test
     fun `findByMemberAndDutyDate loads dutyType`() {
-        // Given
         val dutyTypeId = requireNotNull(TestData.dutyTypes.first().id)
         val memberId = requireNotNull(TestData.member.id)
         val dutyType = dutyTypeRepository.getReferenceById(dutyTypeId)
@@ -25,10 +24,8 @@ class DutyRepositoryEntityGraphTest : DutyparkIntegrationTest() {
         em.flush()
         em.clear()
 
-        // When
         val found = dutyRepository.findByMemberAndDutyDate(member, dutyDate)
 
-        // Then
         assertThat(found).isNotNull
         val duty = requireNotNull(found)
         assertThat(isDutyTypeLoaded(duty)).isTrue()
@@ -36,7 +33,6 @@ class DutyRepositoryEntityGraphTest : DutyparkIntegrationTest() {
 
     @Test
     fun `findByDutyDateAndMemberIn loads dutyType for each duty`() {
-        // Given
         val dutyTypeId = requireNotNull(TestData.dutyTypes.first().id)
         val dutyType = dutyTypeRepository.getReferenceById(dutyTypeId)
         val member = memberRepository.getReferenceById(requireNotNull(TestData.member.id))
@@ -48,10 +44,8 @@ class DutyRepositoryEntityGraphTest : DutyparkIntegrationTest() {
         em.flush()
         em.clear()
 
-        // When
         val duties = dutyRepository.findByDutyDateAndMemberIn(dutyDate, listOf(member, member2))
 
-        // Then
         assertThat(duties).hasSize(2)
         assertThat(duties.all { isDutyTypeLoaded(it) }).isTrue()
     }

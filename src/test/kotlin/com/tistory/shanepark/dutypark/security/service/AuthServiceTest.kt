@@ -7,7 +7,6 @@ import com.tistory.shanepark.dutypark.member.domain.entity.MemberManager
 import com.tistory.shanepark.dutypark.member.domain.enums.ManagerRole
 import com.tistory.shanepark.dutypark.member.repository.MemberManagerRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
-import com.tistory.shanepark.dutypark.member.repository.MemberSsoRegisterRepository
 import com.tistory.shanepark.dutypark.member.service.RefreshTokenService
 import com.tistory.shanepark.dutypark.security.config.JwtConfig
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginDto
@@ -38,7 +37,6 @@ class AuthServiceTest {
 
     // RefreshToken validity is checked against LocalDateTime.now() in the service
     // So we need dates relative to actual current time for valid/expired token tests
-    private val fixedDateTime = LocalDateTime.of(2025, 1, 15, 12, 0, 0)
     private val futureDateTime = LocalDateTime.now().plusDays(30)
     private val pastDateTime = LocalDateTime.now().minusDays(1)
     private val chromeUserAgent =
@@ -47,7 +45,6 @@ class AuthServiceTest {
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0"
 
     private val memberRepository: MemberRepository = mock()
-    private val memberSsoRegisterRepository: MemberSsoRegisterRepository = mock()
     private val memberManagerRepository: MemberManagerRepository = mock()
     private val passwordEncoder: PasswordEncoder = mock()
     private val refreshTokenService: RefreshTokenService = mock()
@@ -61,7 +58,6 @@ class AuthServiceTest {
     fun setUp() {
         authService = AuthService(
             memberRepository = memberRepository,
-            memberSsoRegisterRepository = memberSsoRegisterRepository,
             memberManagerRepository = memberManagerRepository,
             passwordEncoder = passwordEncoder,
             refreshTokenService = refreshTokenService,

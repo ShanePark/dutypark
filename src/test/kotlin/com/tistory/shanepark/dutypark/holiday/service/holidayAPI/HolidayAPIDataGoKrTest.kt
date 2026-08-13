@@ -26,10 +26,6 @@ class HolidayAPIDataGoKrTest {
         `when`(dataGoKrApi.getHolidays(any(), any())).thenReturn(API_RESPONSE_2023)
 
         val holidayAPIDataGoKr = HolidayAPIDataGoKr(dataGoKrApi, "DUMMY_SERVICE_KEY")
-        HolidayAPIDataGoKr::class.java.getDeclaredField("serviceKey").apply {
-            isAccessible = true
-            set(holidayAPIDataGoKr, "SERVICE_KEY_HERE")
-        }
         val result = holidayAPIDataGoKr.requestHolidays(2023)
         Assertions.assertThat(result).hasSize(holiday2023.size)
         IntStream.range(0, holiday2023.size).forEach { i ->
@@ -45,7 +41,6 @@ class HolidayAPIDataGoKrTest {
         val result = holidayAPIDataGoKr.parse(API_RESPONSE_2023)
         Assertions.assertThat(result).hasSize(holiday2023.size)
         IntStream.range(0, holiday2023.size).forEach { i ->
-            // Holiday name can be different depending on the API.
             Assertions.assertThat(result[i].dateName).isEqualTo(holiday2023[i].dateName)
             Assertions.assertThat(result[i].localDate).isEqualTo(holiday2023[i].localDate)
             Assertions.assertThat(result[i].isHoliday).isEqualTo(holiday2023[i].isHoliday)

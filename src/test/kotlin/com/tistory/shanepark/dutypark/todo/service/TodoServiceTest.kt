@@ -69,17 +69,14 @@ class TodoServiceTest {
 
     @Test
     fun `addTodo should save and return TodoResponse`() {
-        // Given
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
         `when`(todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.TODO)).thenReturn(0)
 
         val todo = Todo(member, "title", "content", 1)
         `when`(todoRepository.save(any(Todo::class.java))).thenReturn(todo)
 
-        // When
         val response = todoService.addTodo(loginMember, "title", "content")
 
-        // Then
         assertEquals("title", response.title)
         assertEquals("content", response.content)
         verify(todoRepository, times(1)).save(any(Todo::class.java))
@@ -87,17 +84,14 @@ class TodoServiceTest {
 
     @Test
     fun `editTodo should update and return TodoResponse`() {
-        // Given
         val todoId = UUID.randomUUID()
         val todo = Todo(member, "old title", "old content", 1)
 
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
         `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
 
-        // When
         val updatedResponse = todoService.editTodo(loginMember, todoId, "new title", "new content")
 
-        // Then
         assertEquals("new title", updatedResponse.title)
         assertEquals("new content", updatedResponse.content)
         verify(todoRepository, times(1)).findById(todoId)
@@ -105,7 +99,6 @@ class TodoServiceTest {
 
     @Test
     fun `editTodo should throw exception if not owner`() {
-        // Given
         val todoId = UUID.randomUUID()
         val otherMember = otherMember()
         val todo = Todo(otherMember, "old title", "old content", 1)
@@ -113,7 +106,6 @@ class TodoServiceTest {
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
         `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
 
-        // When & Then
         val exception = assertThrows<IllegalArgumentException> {
             todoService.editTodo(loginMember, todoId, "new title", "new content")
         }
@@ -122,23 +114,19 @@ class TodoServiceTest {
 
     @Test
     fun `deleteTodoById should delete the todo if owner`() {
-        // Given
         val todoId = UUID.randomUUID()
         val todo = Todo(member, "title", "content", 1)
 
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
         `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
 
-        // When
         todoService.deleteTodo(loginMember, todoId)
 
-        // Then
         verify(todoRepository, times(1)).delete(todo)
     }
 
     @Test
     fun `deleteTodoById should throw exception if not owner`() {
-        // Given
         val todoId = UUID.randomUUID()
         val otherMember = otherMember()
         val todo = Todo(otherMember, "title", "content", 1)
@@ -146,7 +134,6 @@ class TodoServiceTest {
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
         `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
 
-        // When & Then
         val exception = assertThrows<IllegalArgumentException> {
             todoService.deleteTodo(loginMember, todoId)
         }
@@ -155,7 +142,6 @@ class TodoServiceTest {
 
     @Test
     fun `todoList should return list of TodoResponse`() {
-        // Given
         `when`(
             memberRepository.findById(
                 loginMember
@@ -169,10 +155,8 @@ class TodoServiceTest {
             )
         )
 
-        // When
         val response = todoService.todoList(loginMember)
 
-        // Then
         assertEquals(2, response.size)
         assertEquals("title1", response[0].title)
         assertEquals("content1", response[0].content)
@@ -182,7 +166,6 @@ class TodoServiceTest {
 
     @Test
     fun `updatePosition should update positions of todos correctly`() {
-        // Given
         val todos = listOf(
             Todo(member, "title1", "content1", 1),
             Todo(member, "title2", "content2", 2),
@@ -193,11 +176,9 @@ class TodoServiceTest {
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
         `when`(todoRepository.findAllById(todoIds)).thenReturn(todos)
 
-        // When
         val reverse = todoIds.reversed()
         todoService.updatePosition(loginMember, reverse)
 
-        // Verify
         verify(todoRepository, times(1)).findAllById(reverse)
         verifyNoMoreInteractions(todoRepository)
     }
@@ -258,8 +239,7 @@ class TodoServiceTest {
     @Test
     fun `reopenTodo should mark todo as active`() {
         val todoId = UUID.randomUUID()
-        val todo = Todo(member, "title", "content", 0)
-        todo.markCompleted(0)
+        val todo = createTodo("title", TodoStatus.DONE, 0)
 
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
         `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
@@ -618,7 +598,6 @@ class TodoServiceTest {
     fun `changeStatus DONE to TODO should clear completedDate`() {
         val todoId = UUID.randomUUID()
         val todo = createTodo("task", TodoStatus.DONE, 0)
-        todo.markCompleted(0)
         ReflectionTestUtils.setField(todo, "id", todoId)
 
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
@@ -637,7 +616,6 @@ class TodoServiceTest {
     fun `changeStatus DONE to IN_PROGRESS should clear completedDate`() {
         val todoId = UUID.randomUUID()
         val todo = createTodo("task", TodoStatus.DONE, 0)
-        todo.markCompleted(0)
         ReflectionTestUtils.setField(todo, "id", todoId)
 
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
@@ -944,7 +922,6 @@ class TodoServiceTest {
     fun `completeTodo already DONE should not change anything`() {
         val todoId = UUID.randomUUID()
         val todo = createTodo("task", TodoStatus.DONE, 0)
-        todo.markCompleted(0)
         ReflectionTestUtils.setField(todo, "id", todoId)
 
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
@@ -1000,7 +977,6 @@ class TodoServiceTest {
         val todoId = UUID.randomUUID()
         val otherMember = otherMember()
         val todo = createTodo("task", TodoStatus.DONE, 0)
-        todo.markCompleted(0)
         ReflectionTestUtils.setField(todo, "id", todoId)
         ReflectionTestUtils.setField(todo, "member", otherMember)
 
@@ -1018,7 +994,6 @@ class TodoServiceTest {
         val todoId = UUID.randomUUID()
         val owner = otherMember()
         val todo = createTodo("task", TodoStatus.DONE, 0)
-        todo.markCompleted(0)
         ReflectionTestUtils.setField(todo, "id", todoId)
         ReflectionTestUtils.setField(todo, "member", owner)
         todo.addTag(member)
@@ -1488,7 +1463,6 @@ class TodoServiceTest {
     fun `reopenTodo should clear completedDate`() {
         val todoId = UUID.randomUUID()
         val todo = createTodo("task", TodoStatus.DONE, 0)
-        todo.markCompleted(0)
         ReflectionTestUtils.setField(todo, "id", todoId)
         assertNotNull(todo.completedDate)
 
@@ -1658,7 +1632,6 @@ class TodoServiceTest {
     fun `editTodo with status change from DONE to TODO should clear completedDate`() {
         val todoId = UUID.randomUUID()
         val todo = createTodo("title", TodoStatus.DONE, 0)
-        todo.markCompleted(0)
         ReflectionTestUtils.setField(todo, "id", todoId)
         assertNotNull(todo.completedDate)
 
@@ -1676,7 +1649,6 @@ class TodoServiceTest {
     fun `editTodo with status change from DONE to IN_PROGRESS should clear completedDate`() {
         val todoId = UUID.randomUUID()
         val todo = createTodo("title", TodoStatus.DONE, 0)
-        todo.markCompleted(0)
         ReflectionTestUtils.setField(todo, "id", todoId)
         assertNotNull(todo.completedDate)
 
@@ -2078,8 +2050,14 @@ class TodoServiceTest {
     fun `reopenTodo by tagged member bumps that member's tag order`() {
         val todoId = UUID.randomUUID()
         val owner = otherMember()
-        val todo = Todo(owner, "task", "content", 0, TodoStatus.DONE)
-        todo.markCompleted(0)
+        val todo = Todo(
+            owner,
+            "task",
+            "content",
+            0,
+            TodoStatus.DONE,
+            completedDate = LocalDateTime.now(),
+        )
         todo.addTag(member)
         ReflectionTestUtils.setField(todo, "id", todoId)
 
@@ -2100,7 +2078,14 @@ class TodoServiceTest {
     // ========== Helper Methods ==========
 
     private fun createTodo(title: String, status: TodoStatus, position: Int): Todo {
-        return Todo(member, title, "content", position, status)
+        return Todo(
+            member,
+            title,
+            "content",
+            position,
+            status,
+            completedDate = if (status == TodoStatus.DONE) LocalDateTime.now() else null,
+        )
     }
 
 }

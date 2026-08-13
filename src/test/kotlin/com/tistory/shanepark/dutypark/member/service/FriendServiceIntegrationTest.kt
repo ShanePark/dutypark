@@ -32,7 +32,6 @@ class FriendServiceIntegrationTest : DutyparkIntegrationTest() {
 
     @Test
     fun `find All Friends test`() {
-        // Given
         val member1 = loginMember(TestData.member)
         val member2 = loginMember(TestData.member2)
         assertThat(friendService.findAllFriends(member1)).isEmpty()
@@ -42,10 +41,8 @@ class FriendServiceIntegrationTest : DutyparkIntegrationTest() {
         em.flush()
         em.clear()
 
-        // When
         val friends = friendService.findAllFriends(member1)
 
-        // Then
         assertThat(friends).hasSize(1)
         assertThat(friends[0].id).isEqualTo(member2.id)
         assertThat(friendService.findAllFriends(member2)).hasSize(1)
@@ -104,12 +101,10 @@ class FriendServiceIntegrationTest : DutyparkIntegrationTest() {
 
     @Test
     fun `check visibility pass even if the setting is private, when login is his manager`() {
-        // Given
         val viewer = TestData.member
         val loginMember = loginMember(viewer)
         val targetMember = TestData.member2
 
-        // When
         TestData.team.admin = viewer
         teamRepository.save(TestData.team)
         targetMember.team = TestData.team
@@ -153,11 +148,9 @@ class FriendServiceIntegrationTest : DutyparkIntegrationTest() {
         statistics.isStatisticsEnabled = true
         statistics.clear()
 
-        // When
         val page = Pageable.ofSize(10)
         val searchResult = friendService.searchPossibleFriends(loginMember, "searchable", page)
 
-        // Then
         // Expected: at most 2 queries (1 for search with subquery, 1 for count)
         val queryCount = statistics.prepareStatementCount
 

@@ -1,6 +1,5 @@
 import Combine
 import Foundation
-import SwiftUI
 
 @MainActor
 final class SocialViewModel: ObservableObject {
@@ -174,24 +173,6 @@ final class SocialViewModel: ObservableObject {
             }
             try await reload()
         }
-    }
-
-    func movePinned(fromOffsets: IndexSet, toOffset: Int) async {
-        var ids = pinnedFriends.compactMap(\.member.id)
-        ids.move(fromOffsets: fromOffsets, toOffset: toOffset)
-        _ = await savePinnedOrder(ids)
-    }
-
-    func reorderPinned(draggedID: MemberID, over destinationID: MemberID) async {
-        let ids = pinnedFriends.compactMap(\.member.id)
-        guard let sourceIndex = ids.firstIndex(of: draggedID),
-              let destinationIndex = ids.firstIndex(of: destinationID),
-              sourceIndex != destinationIndex else { return }
-
-        await movePinned(
-            fromOffsets: IndexSet(integer: sourceIndex),
-            toOffset: sourceIndex < destinationIndex ? destinationIndex + 1 : destinationIndex
-        )
     }
 
     @discardableResult

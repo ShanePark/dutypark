@@ -15,16 +15,12 @@ nonisolated protocol CalendarRepositoryProtocol: Sendable {
     func todoBoard() async throws -> TodoBoardDTO
     func saveSchedule(_ request: ScheduleSaveDTO) async throws -> ScheduleSaveResponse
     func deleteSchedule(id: ScheduleID) async throws
-    func reorderSchedules(ids: [ScheduleID]) async throws
     func untagSelf(scheduleID: ScheduleID) async throws
     func searchSchedules(memberID: MemberID, query: String, page: Int) async throws -> PageResponse<ScheduleSearchResultDTO>
     func scheduleBasic(id: ScheduleID) async throws -> ScheduleBasicInfoDTO
     func updateDuty(_ request: DutyUpdateDTO) async throws
     func batchUpdateDuty(_ request: DutyBatchUpdateDTO) async throws
     func uploadDutyBatch(memberID: MemberID, year: Int, month: Int, filename: String, data: Data) async throws -> DutyBatchUploadResult
-    func dutyPattern() async throws -> DutyPatternDTO
-    func updateDutyPattern(_ request: DutyPatternUpdateDTO) async throws -> DutyPatternDTO
-    func deleteDutyPattern() async throws
     func saveDDay(_ request: DDaySaveDTO) async throws -> DDayDTO
     func deleteDDay(id: Int64) async throws
 }
@@ -90,10 +86,6 @@ nonisolated final class CalendarRepository: CalendarRepositoryProtocol, Sendable
         try await voidRequest("schedules/\(id.uuidString)", method: .delete)
     }
 
-    func reorderSchedules(ids: [ScheduleID]) async throws {
-        try await voidRequest("schedules/positions", method: .patch, body: ids)
-    }
-
     func untagSelf(scheduleID: ScheduleID) async throws {
         try await voidRequest("schedules/\(scheduleID.uuidString)/tags", method: .delete)
     }
@@ -140,16 +132,6 @@ nonisolated final class CalendarRepository: CalendarRepositoryProtocol, Sendable
         )
         do { return try JSONDecoder().decode(DutyBatchUploadResult.self, from: response) }
         catch { throw APIError.decoding }
-    }
-
-    func dutyPattern() async throws -> DutyPatternDTO { try await client.request("duty/pattern/me") }
-
-    func updateDutyPattern(_ request: DutyPatternUpdateDTO) async throws -> DutyPatternDTO {
-        try await client.request("duty/pattern/me", method: .put, body: request)
-    }
-
-    func deleteDutyPattern() async throws {
-        try await voidRequest("duty/pattern/me", method: .delete)
     }
 
     func saveDDay(_ request: DDaySaveDTO) async throws -> DDayDTO {

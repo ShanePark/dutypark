@@ -1,6 +1,5 @@
 package com.tistory.shanepark.dutypark.duty.domain.dto
 
-import com.tistory.shanepark.dutypark.duty.domain.entity.Duty
 import com.tistory.shanepark.dutypark.team.domain.entity.Team
 import java.time.LocalDate
 
@@ -14,26 +13,7 @@ data class DutyDto(
     val dutyTypeId: Long? = null,
     val source: DutySource = DutySource.OVERRIDE,
 ) {
-    constructor(duty: Duty) : this(
-        year = duty.dutyDate.year,
-        month = duty.dutyDate.monthValue,
-        day = duty.dutyDate.dayOfMonth,
-        dutyType = duty.dutyType?.name,
-        dutyColor = dutyColor(duty),
-        isOff = duty.dutyType == null,
-        dutyTypeId = duty.dutyType?.id,
-        source = if (duty.manualOverride) DutySource.OVERRIDE else DutySource.PATTERN,
-    )
-
     companion object {
-        private fun dutyColor(duty: Duty): String? {
-            val dutyType = duty.dutyType
-            if (dutyType == null) {
-                return duty.member.team?.defaultDutyColor
-            }
-            return dutyType.color
-        }
-
         fun offDuty(date: LocalDate, team: Team, source: DutySource = DutySource.DEFAULT_OFF): DutyDto {
             return DutyDto(
                 year = date.year,

@@ -249,8 +249,8 @@ function handleTagClick(schedule: Schedule) {
             <GripVertical class="w-5 h-5" />
           </div>
           <div class="min-w-0 flex-1">
-            <div class="schedule-primary-row flex items-start gap-1.5 sm:gap-2">
-              <div class="schedule-primary-info min-w-0 flex-1">
+            <div class="flex items-start gap-1.5 sm:gap-2">
+              <div class="min-w-0 flex-1">
                 <div class="schedule-primary-content min-w-0">
                   <span class="schedule-primary-title font-medium text-dp-text-primary">{{ schedule.content }}<template v-if="schedule.totalDays && schedule.totalDays > 1"> ({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</template></span>
                   <div
@@ -279,7 +279,6 @@ function handleTagClick(schedule: Schedule) {
                   v-if="shouldShowVisibility(schedule)"
                   :visibility="schedule.visibility"
                   size="sm"
-                  align="end"
                   class="schedule-primary-visibility"
                 />
                 <button
@@ -324,13 +323,11 @@ function handleTagClick(schedule: Schedule) {
               />
             </div>
 
-            <!-- Description -->
             <div v-if="schedule.description" class="mt-2 pt-2 border-t border-dp-border-primary flex items-start gap-2">
               <div class="flex-1 min-w-0 text-sm whitespace-pre-wrap text-dp-text-secondary">{{ schedule.description }}</div>
               <CopyTextButton :text="schedule.description" class="shrink-0" />
             </div>
 
-            <!-- Attachments -->
             <div v-if="schedule.attachments?.length" class="mt-2 pt-2 border-t border-dp-border-primary">
               <AttachmentGrid
                 :attachments="toNormalizedAttachments(schedule.attachments)"

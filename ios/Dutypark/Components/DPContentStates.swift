@@ -18,45 +18,6 @@ struct DPLoadingState: View {
     }
 }
 
-struct DPEmptyState: View {
-    let systemImage: String
-    let title: LocalizedStringKey
-    let message: LocalizedStringKey?
-
-    init(
-        systemImage: String = "tray",
-        title: LocalizedStringKey,
-        message: LocalizedStringKey? = nil
-    ) {
-        self.systemImage = systemImage
-        self.title = title
-        self.message = message
-    }
-
-    var body: some View {
-        VStack(spacing: DPSpacing.small) {
-            Image(systemName: systemImage)
-                .font(.system(size: 32))
-                .foregroundStyle(DPColor.textMuted)
-                .accessibilityHidden(true)
-            Text(title)
-                .font(DPTypography.heading)
-                .foregroundStyle(DPColor.textPrimary)
-                .multilineTextAlignment(.center)
-            if let message {
-                Text(message)
-                    .font(DPTypography.supporting)
-                    .foregroundStyle(DPColor.textSecondary)
-                    .multilineTextAlignment(.center)
-            }
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(DPSpacing.large)
-        .accessibilityElement(children: .combine)
-        .accessibilityIdentifier("state.empty")
-    }
-}
-
 struct DPErrorState: View {
     let title: LocalizedStringKey
     let message: LocalizedStringKey?

@@ -13,7 +13,6 @@ import org.springframework.restdocs.payload.PayloadDocumentation.responseFields
 import org.springframework.restdocs.payload.PayloadDocumentation.subsectionWithPath
 import org.springframework.restdocs.request.RequestDocumentation.parameterWithName
 import org.springframework.restdocs.request.RequestDocumentation.pathParameters
-import org.springframework.test.web.servlet.result.MockMvcResultHandlers
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.time.LocalDate
 
@@ -41,7 +40,6 @@ class AdminControllerDocsTest : RestDocsTest() {
                 .withAuth(TestData.admin)
         )
             .andExpect(status().isOk)
-            .andDo(MockMvcResultHandlers.print())
             .andDo(
                 document(
                     "admin/members-detail",

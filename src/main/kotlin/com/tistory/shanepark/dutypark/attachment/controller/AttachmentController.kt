@@ -50,7 +50,6 @@ class AttachmentController(
         @RequestParam(required = false, defaultValue = "false") inline: Boolean
     ): ResponseEntity<Resource> {
         val attachment = attachmentService.findById(loginMember, id)
-            ?: return ResponseEntity.notFound().build()
 
         val filePath = pathResolver.resolveFilePath(
             attachment.contextType,
@@ -93,7 +92,6 @@ class AttachmentController(
         @PathVariable id: UUID
     ): ResponseEntity<Resource> {
         val attachment = attachmentService.findById(loginMember, id)
-            ?: return ResponseEntity.notFound().build()
 
         val thumbnailFilename = attachment.thumbnailFilename
         if (thumbnailFilename != null) {
@@ -112,7 +110,6 @@ class AttachmentController(
             }
         }
 
-        // Fallback to original image if thumbnail is not available yet
         val originalPath = pathResolver.resolveFilePath(
             attachment.contextType,
             attachment.contextId,

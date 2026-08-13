@@ -76,9 +76,6 @@ class AttachmentService(
 
             val savedAttachment = attachmentRepository.save(attachment)
 
-            // Thumbnail generation will be triggered after session finalization
-            // when the file is moved to the permanent location
-
             log.info(
                 "File uploaded successfully: sessionId={}, filename={}, size={}, orderIndex={}",
                 sessionId,
@@ -95,7 +92,7 @@ class AttachmentService(
         }
     }
 
-    fun findById(loginMember: LoginMember?, attachmentId: UUID): Attachment? {
+    fun findById(loginMember: LoginMember?, attachmentId: UUID): Attachment {
         val attachment = attachmentRepository.findById(attachmentId).orElseThrow()
         val sessionId = attachment.uploadSessionId
 

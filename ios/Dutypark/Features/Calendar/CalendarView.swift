@@ -260,9 +260,6 @@ struct CalendarView: View {
         .accessibilityLabel(CalendarLocalization.text("calendar.month.choose"))
     }
 
-    /// Floating speech-bubble pill matching the web `.this-month-bubble`:
-    /// accent capsule with an undo icon and a 45°-rotated square tail pointing
-    /// back at the year-month label.
     private var thisMonthBubble: some View {
         Button { Task { await model.goToToday() } } label: {
             HStack(spacing: 3) {
@@ -3274,98 +3271,5 @@ nonisolated enum DDayEditorDismissalPolicy {
         isPrivate: Bool
     ) -> Bool {
         initialTitle != title || initialDate != date || initialIsPrivate != isPrivate
-    }
-}
-
-private struct DutyPatternView: View {
-    @ObservedObject var model: CalendarViewModel
-    @Environment(\.dismiss) private var dismiss
-    @State private var selections: [Weekday: DutyTypeID?] = [:]
-    @State private var holidayOff = false
-    @State private var confirmsDelete = false
-    private let weekdays: [Weekday] = [.monday, .tuesday, .wednesday, .thursday, .friday, .saturday, .sunday]
-
-    var body: some View {
-        NavigationStack {
-            Form {
-                if let pattern = model.pattern, !pattern.configurable {
-                    Text(pattern.reason ?? CalendarLocalization.text("calendar.pattern.unavailable"))
-                } else {
-                    if let effectiveFrom = model.pattern?.pattern?.effectiveFrom {
-                        LabeledContent(CalendarLocalization.text("calendar.pattern.effectiveFrom"), value: effectiveFrom.rawValue)
-                    }
-                    ForEach(weekdays, id: \.rawValue) { weekday in
-                        Picker(weekdayName(weekday), selection: Binding<DutyTypeID?>(
-                            get: { selections[weekday] ?? nil }, set: { selections[weekday] = $0 }
-                        )) {
-                            Text("calendar.off", tableName: "Calendar").tag(DutyTypeID?.none)
-                            if let hiddenType = hiddenSelectedType(for: weekday) {
-                                Text(CalendarLocalization.format("calendar.pattern.hidden.type", hiddenType.name)).tag(DutyTypeID?.some(hiddenType.id))
-                            }
-                            ForEach(model.pattern?.dutyTypes ?? [], id: \.id) { type in Text(type.name).tag(DutyTypeID?.some(type.id)) }
-                        }
-                    }
-                    Toggle(CalendarLocalization.text("calendar.pattern.holidayOff"), isOn: $holidayOff)
-                    if hasHiddenSelection {
-                        Section {
-                            Label(CalendarLocalization.text("calendar.pattern.paused.warning"), systemImage: "pause.circle.fill")
-                                .foregroundStyle(DPColor.warning)
-                            Text("calendar.pattern.paused.description", tableName: "Calendar")
-                                .font(.caption).foregroundStyle(DPColor.textSecondary)
-                        }
-                    }
-                    if model.pattern?.pattern != nil { Button(CalendarLocalization.text("calendar.pattern.delete"), role: .destructive) { confirmsDelete = true } }
-                }
-            }
-            .scrollContentBackground(.hidden)
-            .background(DPColor.backgroundModal)
-            .navigationTitle(CalendarLocalization.text("calendar.pattern"))
-            .task {
-                await model.loadPattern()
-                holidayOff = model.pattern?.pattern?.holidayOff ?? false
-                selections = Dictionary(uniqueKeysWithValues: (model.pattern?.pattern?.days ?? []).map { ($0.weekday, Optional($0.dutyType.id)) })
-            }
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button(CalendarLocalization.text("calendar.close")) { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(CalendarLocalization.text("calendar.save")) {
-                        let days = CalendarFeatureLogic.patternDays(
-                            weekdays: weekdays,
-                            selections: selections
-                        )
-                        Task { if await model.savePattern(days: days, holidayOff: holidayOff) { dismiss() } }
-                    }.disabled(model.pattern?.configurable != true || selectedPatternDutyTypeIDs.isEmpty || hasHiddenSelection)
-                }
-            }
-            .confirmationDialog(CalendarLocalization.text("calendar.pattern.delete.confirm"), isPresented: $confirmsDelete) {
-                Button(CalendarLocalization.text("calendar.delete"), role: .destructive) { Task { await model.deletePattern(); dismiss() } }
-            }
-        }
-        .tint(DPColor.accent)
-        .toolbarBackground(DPColor.backgroundTertiary, for: .navigationBar)
-        .toolbarBackground(.visible, for: .navigationBar)
-        .presentationCornerRadius(DPRadius.standard)
-        .presentationBackground(DPColor.backgroundModal)
-    }
-    private func weekdayName(_ value: Weekday) -> String {
-        let key: String = switch value {
-        case .monday: "mon"; case .tuesday: "tue"; case .wednesday: "wed"; case .thursday: "thu"; case .friday: "fri"; case .saturday: "sat"; case .sunday: "sun"; case .unknown: ""
-        }
-        return CalendarLocalization.text("calendar.weekday.\(key)")
-    }
-
-    private var visiblePatternDutyTypeIDs: [DutyTypeID] { model.pattern?.dutyTypes.map(\.id) ?? [] }
-    private var selectedPatternDutyTypeIDs: [DutyTypeID] { selections.values.compactMap { $0 } }
-    private var hasHiddenSelection: Bool {
-        !CalendarFeatureLogic.canSavePattern(
-            selectedDutyTypeIDs: selectedPatternDutyTypeIDs,
-            visibleDutyTypeIDs: visiblePatternDutyTypeIDs
-        )
-    }
-    private func hiddenSelectedType(for weekday: Weekday) -> DutyPatternDutyTypeDTO? {
-        guard let selectedID = selections[weekday] ?? nil,
-              !visiblePatternDutyTypeIDs.contains(selectedID)
-        else { return nil }
-        return model.pattern?.pattern?.days.first(where: { $0.weekday == weekday && $0.dutyType.id == selectedID })?.dutyType
     }
 }

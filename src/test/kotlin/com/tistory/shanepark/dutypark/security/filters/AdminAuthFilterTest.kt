@@ -64,14 +64,4 @@ class AdminAuthFilterTest {
         verify(filterChain, never()).doFilter(any(), any())
     }
 
-    @Test
-    fun `should 401 error when expired access token leaves no authenticated member`() {
-        `when`(request.getAttribute(LoginMember.ATTR_NAME)).thenReturn(null)
-
-        adminAuthFilter.doFilter(request, response, filterChain)
-
-        verify(response).sendError(HttpServletResponse.SC_UNAUTHORIZED)
-        verify(filterChain, never()).doFilter(any(), any())
-    }
-
 }

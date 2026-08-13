@@ -25,7 +25,6 @@ interface ScheduleFormData {
 interface VisibilityOption {
   value: CalendarVisibility
   label: string
-  description: string
   icon: any
   color: string
 }
@@ -40,7 +39,6 @@ const props = defineProps<{
   selectedTagSummaries: SelectedTagSummary[]
 }>()
 
-// For create mode: extract time portion from startDateTime
 const startTime = computed({
   get: () => {
     if (!props.form.startDateTime) return '00:00'
@@ -115,7 +113,6 @@ defineExpose({
     </div>
 
     <div class="space-y-1.5 sm:space-y-2">
-      <!-- Create mode: time only (date is already selected from calendar) -->
       <div v-if="!isEditMode" class="flex items-center gap-2">
         <label class="schedule-form__label text-sm flex-shrink-0 w-16 text-dp-text-secondary">{{ t('duty.schedule.fields.startTime') }}</label>
         <input
@@ -126,7 +123,6 @@ defineExpose({
           :aria-invalid="isTimeRangeInvalid"
         />
       </div>
-      <!-- Edit mode: full datetime (allow changing date) -->
       <div v-else class="flex items-center gap-2">
         <label class="schedule-form__label text-sm flex-shrink-0 w-16 text-dp-text-secondary">{{ t('duty.schedule.fields.startDateTime') }}</label>
         <input
@@ -173,7 +169,6 @@ defineExpose({
             'visibility-card-unselected': form.visibility !== option.value
           }"
         >
-          <!-- Check badge -->
           <div
             v-if="form.visibility === option.value"
             class="absolute -top-1.5 -right-1.5 w-5 h-5 bg-dp-accent rounded-full flex items-center justify-center shadow-sm"
@@ -229,7 +224,6 @@ defineExpose({
 </template>
 
 <style scoped>
-/* Visibility card styles */
 .visibility-card-selected {
   border-color: var(--dp-accent);
   background-color: var(--dp-accent-bg);

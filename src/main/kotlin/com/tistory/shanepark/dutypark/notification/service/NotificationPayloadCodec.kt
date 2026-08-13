@@ -63,14 +63,6 @@ class NotificationPayloadCodec(
             )
     }
 
-    fun deserialize(type: NotificationType, payloadVersion: Int?, payloadJson: String?): NotificationPayload? {
-        return when (val result = safeDeserialize(type, payloadVersion, payloadJson)) {
-            is NotificationPayloadDecodeResult.Success -> result.payload
-            is NotificationPayloadDecodeResult.Missing -> null
-            is NotificationPayloadDecodeResult.Invalid -> throw IllegalArgumentException(result.reason)
-        }
-    }
-
     @Suppress("LongMethod")
     private fun payloadClass(type: NotificationType, version: Int): Class<out NotificationPayload> {
         return when (version) {

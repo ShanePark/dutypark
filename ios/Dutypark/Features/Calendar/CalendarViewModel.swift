@@ -1,6 +1,5 @@
 import Foundation
 import Combine
-import SwiftUI
 
 nonisolated struct CalendarDayContent: Identifiable, Equatable, Sendable {
     let cell: CalendarCell
@@ -33,7 +32,6 @@ final class CalendarViewModel: ObservableObject {
     @Published private(set) var isLoading = false
     @Published var errorMessage: String?
     @Published private(set) var searchResults: [ScheduleSearchResultDTO] = []
-    @Published private(set) var pattern: DutyPatternDTO?
 
     @Published var year: Int
     @Published var month: Int
@@ -95,7 +93,6 @@ final class CalendarViewModel: ObservableObject {
             ?? targetMember?.profilePhotoVersion
             ?? 0
     }
-    var targetTeamName: String { isMyCalendar ? (me?.team ?? "") : (friends.first(where: { $0.id == targetMemberID })?.team ?? targetMember?.team ?? "") }
     var visibleDutyTypes: [DutyTypeDTO] { team?.dutyTypes.filter { !$0.hidden } ?? [] }
 
     func load() async {
@@ -189,23 +186,6 @@ final class CalendarViewModel: ObservableObject {
         await reloadMonth()
     }
 
-    func toggleFriendDutyComparison(_ memberID: MemberID) async {
-        guard isMyCalendar, friends.contains(where: { $0.id == memberID }) else { return }
-        let updated = CalendarFeatureLogic.comparisonSelection(
-            current: comparedMemberIDs,
-            toggling: memberID
-        )
-        guard updated != comparedMemberIDs else { return }
-        comparedMemberIDs = updated
-        await reloadMonth()
-    }
-
-    func clearFriendDutyComparisons() async {
-        guard isMyCalendar, !comparedMemberIDs.isEmpty else { return }
-        comparedMemberIDs = []
-        await reloadMonth()
-    }
-
     func setFriendDutyComparisons(_ memberIDs: Set<MemberID>) async {
         guard isMyCalendar else { return }
         let validIDs = Set(memberIDs.filter { candidate in
@@ -275,22 +255,6 @@ final class CalendarViewModel: ObservableObject {
         year = components.year ?? year
         month = components.month ?? month
         highlightedDate = DateOnly(rawValue: String(format: "%04d-%02d-%02d", year, month, components.day ?? 1))
-        await reloadMonth()
-    }
-
-    func selectMember(_ id: MemberID) async {
-        selectedMemberID = id
-        targetMember = nil
-        team = nil
-        if id == me?.id, let teamID = me?.teamId {
-            team = try? await repository.team(id: teamID)
-        } else if let teamID = friends.first(where: { $0.id == id })?.teamId {
-            team = try? await repository.team(id: teamID)
-        } else if let preview = try? await repository.member(id: id) {
-            targetMember = preview
-            if let teamID = preview.teamId { team = try? await repository.team(id: teamID) }
-        }
-        comparedMemberIDs = []
         await reloadMonth()
     }
 
@@ -428,13 +392,6 @@ final class CalendarViewModel: ObservableObject {
         return true
     }
 
-    func moveSchedule(from offsets: IndexSet, to destination: Int, in day: CalendarDayContent) async {
-        var owned = day.schedules.filter { !$0.isTagged }
-        owned.move(fromOffsets: offsets, toOffset: destination)
-        do { try await repository.reorderSchedules(ids: owned.map(\.id)); try await loadMonth() }
-        catch { errorMessage = CalendarLocalization.text("calendar.error.save") }
-    }
-
     func search() async {
         let query = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
         guard canEdit, let memberID = targetMemberID, !query.isEmpty else { searchResults = []; return }
@@ -498,22 +455,6 @@ final class CalendarViewModel: ObservableObject {
         return true
     }
 
-    func loadPattern() async {
-        guard isMyCalendar else { return }
-        do { pattern = try await repository.dutyPattern() }
-        catch { errorMessage = CalendarLocalization.text("calendar.error.load") }
-    }
-
-    func savePattern(days: [DutyPatternDayUpdateDTO], holidayOff: Bool) async -> Bool {
-        do { pattern = try await repository.updateDutyPattern(DutyPatternUpdateDTO(days: days, holidayOff: holidayOff)); try await loadMonth(); return true }
-        catch { errorMessage = CalendarLocalization.text("calendar.error.save"); return false }
-    }
-
-    func deletePattern() async {
-        do { try await repository.deleteDutyPattern(); pattern = try await repository.dutyPattern(); try await loadMonth() }
-        catch { errorMessage = CalendarLocalization.text("calendar.error.delete") }
-    }
-
     private func reloadMonth() async {
         isLoading = true
         errorMessage = nil
@@ -527,31 +468,6 @@ final class CalendarViewModel: ObservableObject {
 }
 
 enum CalendarFeatureLogic {
-    static func comparisonSelection(
-        current: Set<MemberID>,
-        toggling memberID: MemberID,
-        maximum: Int = 3
-    ) -> Set<MemberID> {
-        if current.contains(memberID) { return current.subtracting([memberID]) }
-        guard current.count < maximum else { return current }
-        return current.union([memberID])
-    }
-
-    static func patternDays(
-        weekdays: [Weekday],
-        selections: [Weekday: DutyTypeID?]
-    ) -> [DutyPatternDayUpdateDTO] {
-        weekdays.compactMap { weekday in
-            (selections[weekday] ?? nil).map {
-                DutyPatternDayUpdateDTO(weekday: weekday, dutyTypeId: $0)
-            }
-        }
-    }
-
-    static func canSavePattern(selectedDutyTypeIDs: [DutyTypeID], visibleDutyTypeIDs: [DutyTypeID]) -> Bool {
-        Set(selectedDutyTypeIDs).isSubset(of: Set(visibleDutyTypeIDs))
-    }
-
     static func dutyBatchFailureMessage(_ result: DutyBatchUploadResult) -> String {
         dutyBatchFailureMessage(errorCode: result.errorCode, details: result.errorDetails)
     }

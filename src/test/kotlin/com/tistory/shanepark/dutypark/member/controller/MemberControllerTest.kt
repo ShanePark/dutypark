@@ -51,11 +51,9 @@ class MemberControllerTest : RestDocsTest() {
 
     @Test
     fun updateCalendarVisibility() {
-        // Given
         val member = TestData.member
         assertThat(member.calendarVisibility).isEqualTo(Visibility.FRIENDS)
 
-        // When
         mockMvc.perform(
             RestDocumentationRequestBuilders.put("/api/members/${member.id}/visibility")
                 .accept("application/json")
@@ -74,14 +72,12 @@ class MemberControllerTest : RestDocsTest() {
                 )
             )
 
-        // Then
         val findMember = memberRepository.findById(member.id!!).orElseThrow()
         assertThat(findMember.calendarVisibility).isEqualTo(Visibility.PRIVATE)
     }
 
     @Test
     fun `getProfilePhoto returns cache-control header for long-term caching`() {
-        // Given
         val member = TestData.member
         val profileDir = storagePathResolver.getStorageRoot().resolve("PROFILE/${member.id}")
         createdDirectories.add(profileDir)
@@ -95,7 +91,6 @@ class MemberControllerTest : RestDocsTest() {
         memberRepository.save(member)
         em.flush()
 
-        // When & Then
         mockMvc.perform(
             RestDocumentationRequestBuilders.get("/api/members/${member.id}/profile-photo")
         )
@@ -107,12 +102,10 @@ class MemberControllerTest : RestDocsTest() {
 
     @Test
     fun `getProfilePhoto returns 404 when no photo exists`() {
-        // Given
         val member = TestData.member
         member.profilePhotoPath = null
         memberRepository.save(member)
 
-        // When & Then
         mockMvc.perform(
             RestDocumentationRequestBuilders.get("/api/members/${member.id}/profile-photo")
         )
