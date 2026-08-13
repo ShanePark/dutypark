@@ -21,12 +21,14 @@
 - [x] iOS 시뮬레이터용 앱 빌드가 성공한다.
 - [x] iPhone 16 Pro(iOS 26.5) 시뮬레이터에서 5개 기본 탭 이동 테스트가 3회 연속 통과한다.
 - [x] 같은 시뮬레이터에서 알림·Todo 툴바 44pt 테스트가 1회 통과한다.
-- [ ] 전체 테스트 176개를 최신 코드로 다시 실행해 통과 여부를 확인한다.
+- [x] iPhone 16 Pro(iOS 26.5) 시뮬레이터에서 전체 테스트 263개가 최신 코드로 통과한다.
+- [x] Release 시뮬레이터 clean build에 Debug 전용 인증·게스트 UI 테스트 플래그가 포함되지 않는다.
 - [ ] Release Archive에서도 Debug 전용 가정이나 테스트용 인증 플래그가 남지 않는지 확인한다.
 
-2026-08-13 대상 검증에서 `tab.*` 식별자는 XCUI Button으로 정상 노출됐다. `primary.tabbar` 컨테이너가 탭 버튼보다 먼저 나타날 수 있으므로
-[DutyparkUITests.swift](../../DutyparkUITests/DutyparkUITests.swift)는 각 탭 버튼을 직접 최대 10초 기다리도록 수정했다.
-기존의 전체 176개 중 1개 실패 기록은 최신 대상 테스트로 해소했지만, 전체 suite 재실행 결과로 간주하지 않는다.
+2026-08-13 iPhone 16 Pro(iOS 26.5) 검증에서 Debug 전용 guest 초기 상태를 로그인 UI 테스트에 명시해
+로컬 세션·네트워크 상태와 무관하게 카카오·네이버 로그인 진입을 확인하도록 안정화했다. 같은 기기에서 UI 테스트 3개를 포함한
+전체 suite **263/263**이 통과했다. Release 시뮬레이터 clean build도 성공했고 실행 파일에
+`-ui-testing-authenticated`, `-ui-testing-guest` 문자열이 없음을 확인했다. 서명된 Release Archive 검증은 별도로 남아 있다.
 
 ## 2. 업로드 전 빌드 게이트
 
@@ -128,7 +130,7 @@ Apple의 버전 제출·상태 관리는 [App Review 제출 개요](https://deve
 ## 완료 조건
 
 - [ ] 시뮬레이터 빌드와 Release Archive 검증이 모두 성공한다.
-- [ ] 전체 176개 테스트가 최신 코드로 통과하며 대상 검증에서 해소한 탭·`todo.add` UI 실패가 재발하지 않는다.
+- [x] 전체 263개 테스트가 최신 코드로 통과하며 대상 검증에서 해소한 탭·`todo.add`·로그인 UI 실패가 재발하지 않는다.
 - [ ] 내부 TestFlight에서 운영 로그인, 핵심 CRUD와 production APNs가 실기기로 검증된다.
 - [ ] 필요한 경우 외부 TestFlight와 Beta App Review를 통과한다.
 - [ ] Review Notes, 데모 계정과 심사 연락처가 준비되고 운영 백엔드 가용 담당자가 지정된다.

@@ -41,7 +41,8 @@ final class DutyparkUITests: XCTestCase {
             "-dp-language", "ko",
             "-dp-theme", "light",
             "-AppleLanguages", "(ko)",
-            "-AppleLocale", "ko_KR"
+            "-AppleLocale", "ko_KR",
+            "-ui-testing-guest"
         ]
         app.launch()
 

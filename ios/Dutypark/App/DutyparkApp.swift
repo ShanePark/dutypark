@@ -23,6 +23,8 @@ struct DutyparkApp: App {
                     originalMemberId: nil
                 )
             )
+        } else if CommandLine.arguments.contains("-ui-testing-guest") {
+            initialState = .guest
         } else {
             initialState = .restoring
         }
