@@ -84,7 +84,12 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(member)}")
         )
             .andExpect(status().isFound)
-            .andExpect(header().string(HttpHeaders.LOCATION, "/after"))
+            .andExpect(
+                header().string(
+                    HttpHeaders.LOCATION,
+                    "/after?socialLinkSuccess=true&socialProvider=kakao"
+                )
+            )
 
         em.flush()
         em.clear()
@@ -104,7 +109,7 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
         assertThat(existingMember.id).isNotEqualTo(member.id)
         linkSocialAccount(existingMember, SsoType.KAKAO, TEST_KAKAO_ID.toString())
 
-        val referer = "http://localhost:5173/member"
+        val referer = "http://localhost:5173/member?tab=social&socialLinkSuccess=true"
         val stateJson = encodedState(login = true, referer = referer)
 
         mockMvc.perform(
@@ -117,7 +122,7 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
             .andExpect(
                 header().string(
                     HttpHeaders.LOCATION,
-                    "$referer?socialLinkError=already_linked&socialProvider=kakao"
+                    "http://localhost:5173/member?tab=social&socialLinkError=already_linked&socialProvider=kakao"
                 )
             )
     }
@@ -199,7 +204,12 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(member)}")
         )
             .andExpect(status().isFound)
-            .andExpect(header().string(HttpHeaders.LOCATION, "/after"))
+            .andExpect(
+                header().string(
+                    HttpHeaders.LOCATION,
+                    "/after?socialLinkSuccess=true&socialProvider=naver"
+                )
+            )
 
         em.flush()
         em.clear()
@@ -209,10 +219,10 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
     }
 
     @Test
-    fun `naver callback decodes utf8 encoded state`() {
+    fun `naver callback decodes utf8 state and preserves existing query on link success`() {
         val member = memberRepository.findById(TestData.member.id!!).orElseThrow()
         clearSocialAccount(member, SsoType.NAVER)
-        val referer = "http://localhost:5173/member?tab=네이버"
+        val referer = "http://localhost:5173/member?tab=네이버&socialLinkError=already_linked"
         val stateJson = encodedState(login = true, referer = referer)
 
         mockMvc.perform(
@@ -222,7 +232,15 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(member)}")
         )
             .andExpect(status().isFound)
-            .andExpect(header().string(HttpHeaders.LOCATION, URI.create(referer).toASCIIString()))
+            .andExpect(
+                header().string(
+                    HttpHeaders.LOCATION,
+                    URI.create(
+                        "http://localhost:5173/member?tab=네이버" +
+                            "&socialLinkSuccess=true&socialProvider=naver"
+                    ).toASCIIString()
+                )
+            )
 
         em.flush()
         em.clear()

@@ -67,7 +67,7 @@ class OAuthController(
                     loginMember = loginMember,
                 )
                 ResponseEntity.status(HttpStatus.FOUND)
-                    .location(URI.create(referer))
+                    .location(buildSocialLinkSuccessUri(referer, SsoType.KAKAO))
                     .build()
             } catch (e: SocialAccountAlreadyLinkedException) {
                 ResponseEntity.status(HttpStatus.FOUND)
@@ -108,7 +108,7 @@ class OAuthController(
                     loginMember = loginMember,
                 )
                 ResponseEntity.status(HttpStatus.FOUND)
-                    .location(URI.create(referer))
+                    .location(buildSocialLinkSuccessUri(referer, SsoType.NAVER))
                     .build()
             } catch (e: SocialAccountAlreadyLinkedException) {
                 ResponseEntity.status(HttpStatus.FOUND)
@@ -201,7 +201,17 @@ class OAuthController(
 
     private fun buildSocialLinkErrorUri(referer: String, provider: SsoType): URI {
         return UriComponentsBuilder.fromUriString(referer)
+            .replaceQueryParam("socialLinkSuccess")
             .replaceQueryParam("socialLinkError", SOCIAL_LINK_ERROR_ALREADY_LINKED)
+            .replaceQueryParam("socialProvider", provider.name.lowercase())
+            .build(true)
+            .toUri()
+    }
+
+    private fun buildSocialLinkSuccessUri(referer: String, provider: SsoType): URI {
+        return UriComponentsBuilder.fromUriString(URI.create(referer).toASCIIString())
+            .replaceQueryParam("socialLinkError")
+            .replaceQueryParam("socialLinkSuccess", true)
             .replaceQueryParam("socialProvider", provider.name.lowercase())
             .build(true)
             .toUri()
