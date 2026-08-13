@@ -75,8 +75,33 @@ final class DutyparkUITests: XCTestCase {
 
         app.buttons["tab.todo"].tap()
         let todoAdd = app.buttons["todo.add"]
-        XCTAssertTrue(todoAdd.waitForExistence(timeout: 10))
+        XCTAssertTrue(waitForTodoToolbarAction(todoAdd, in: app, timeout: 10))
         assertMinimumTouchTarget(todoAdd)
+    }
+
+    @MainActor
+    private func waitForTodoToolbarAction(
+        _ element: XCUIElement,
+        in app: XCUIApplication,
+        timeout: TimeInterval
+    ) -> Bool {
+        let deadline = Date().addingTimeInterval(timeout)
+        let loadErrorAlert = app.alerts["Todo error"]
+
+        while Date() < deadline {
+            if element.exists { return true }
+
+            if loadErrorAlert.exists,
+               loadErrorAlert.staticTexts["Failed to load Todos."].exists {
+                let dismissButton = loadErrorAlert.buttons["OK"]
+                guard dismissButton.exists else { return false }
+                dismissButton.tap()
+            }
+
+            RunLoop.current.run(until: Date().addingTimeInterval(0.05))
+        }
+
+        return element.exists
     }
 
     @MainActor

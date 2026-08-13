@@ -28,7 +28,7 @@ struct RootTabView: View {
                     )
                         .id(calendarTarget)
                 }
-                primaryTab(.todo) {
+                primaryTab(.todo, showsNavigationBar: true) {
                     TodoView(initialTodoID: todoTarget) {
                         todoTarget = nil
                     }
@@ -190,12 +190,13 @@ struct RootTabView: View {
 
     private func primaryTab<Content: View>(
         _ tab: AppTab,
+        showsNavigationBar: Bool = false,
         @ViewBuilder content: () -> Content
     ) -> some View {
         NavigationStack {
             content()
                 .navigationTitle("")
-                .toolbar(.hidden, for: .navigationBar)
+                .toolbar(showsNavigationBar ? .visible : .hidden, for: .navigationBar)
                 .accessibilityIdentifier("screen.\(tab.rawValue)")
         }
         .primaryTabItem(tab)
