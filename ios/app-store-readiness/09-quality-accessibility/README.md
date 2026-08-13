@@ -21,6 +21,7 @@
 - [x] 프로젝트 대상은 iPhone 전용(`TARGETED_DEVICE_FAMILY = 1`)이다.
 - [x] iPhone 지원 방향은 세로(`UIInterfaceOrientationPortrait`)로 제한되어 있다.
 - [x] 최소 지원 버전은 iOS 17이다.
+- [x] unsigned generic iOS Release Archive의 `UIDeviceFamily = [1]`, 최소 iOS `17.0`, iPhone 세로 방향 설정이 프로젝트와 일치한다.
 - [ ] App Store 설명과 지원 문서가 iPhone 전용·세로 방향 범위와 일치한다.
 - [ ] iPad 호환 실행을 의도하지 않았다면 App Store Connect 노출을 확인한다.
 - [ ] 화면 회전 잠금과 멀티태스킹 환경에서도 레이아웃이 깨지지 않는지 확인한다.
@@ -167,6 +168,7 @@ Dynamic Type 재현 시 시뮬레이터를 부팅한 다음 `xcrun simctl ui <UD
 ## 완료 조건
 
 - [ ] iPhone 전용·세로 방향 지원 범위가 프로젝트, 스토어 정보와 테스트 계획에 일치한다.
+- [x] iPhone 전용·세로 방향 기술 설정이 프로젝트와 unsigned generic iOS Release Archive에서 일치한다.
 - [ ] iPhone 13 mini와 iPhone 16 Pro에서 핵심 사용자 흐름이 통과한다.
 - [ ] 2개 언어 × Light/Dark × 기본·최대 Dynamic Type 매트릭스가 기록되고 차단 결함이 없다.
 - [ ] VoiceOver로 캘린더와 Todo 이동을 포함한 핵심 기능을 완료할 수 있다.

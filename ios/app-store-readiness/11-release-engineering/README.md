@@ -30,6 +30,7 @@
 - [ ] 마케팅 버전과 빌드 번호가 이전 업로드보다 증가했다.
 - [ ] Archive 안의 앱, dSYM, privacy manifest, entitlement를 검증한다.
 - [x] unsigned generic iOS Release Archive의 앱 번들에 불필요한 내부 문서와 개발용 파일이 포함되지 않는다.
+- [x] unsigned generic iOS Release Archive의 앱 아이콘, 표시 이름, 최소 iOS와 iPhone 전용·세로 방향 기술 설정이 프로젝트와 일치한다.
 - [ ] 배포 서명된 Release Archive에서도 같은 번들 제외 검증을 반복한다.
 - [ ] TestFlight 내부 테스트를 거쳐 동일 빌드를 심사에 연결한다.
 - [ ] 릴리스 산출물과 결과 로그를 정해진 위치에 보관한다.
@@ -136,6 +137,29 @@ device 앱 번들의 패키징 기준선이며, 배포 인증서·provisioning p
 - 같은 날 만든 Release Simulator clean build의 실행 파일에는 테스트 플래그·계정·localhost는 없었지만,
   배포 strip이 적용되지 않은 symbol table에 빌드 머신의 소스 절대 경로가 남았다. 따라서 Simulator `.app`은
   최종 배포 번들 제외 판정에 사용하지 않고, unsigned generic iOS Archive 결과를 기준선으로 삼았다.
+
+### 2026-08-13 기본 제출 기술 설정 재검증
+
+새 `/tmp` derived data와 Archive 경로에서 `CODE_SIGNING_ALLOWED=NO` generic iOS Release `clean archive`를
+다시 생성했다. 첫 sandbox 실행은 CoreSimulatorService 접근 제한 때문에 asset catalog compile에서 중단됐고,
+동일 명령을 권한이 있는 환경에서 실행해 성공했다. 성공 로그의 asset catalog compiler에는 앱 아이콘 관련
+warning·error가 없었으며, AppIntents framework가 없어 metadata 추출을 건너뛴 비차단 warning만 있었다.
+
+- 프로젝트 Release 설정과 앱 `Info.plist`는 표시 이름 `Dutypark`, 최소 iOS `17.0`, iPhone 전용
+  `UIDeviceFamily = [1]`, `UISupportedInterfaceOrientations~iphone = [UIInterfaceOrientationPortrait]`로 일치했다.
+- 프로젝트의 현재 `MARKETING_VERSION = 1.0`, `CURRENT_PROJECT_VERSION = 1`은 Archive의
+  `CFBundleShortVersionString = 1.0`, `CFBundleVersion = 1`과 일치했다. 이는 현재값 기록이며 제출값 확정 또는
+  다음 업로드용 빌드 번호 증가를 완료했다는 의미가 아니다.
+- `AppIcon.appiconset/Contents.json`은 universal iOS 1024×1024 원본 하나를 가리키며 JSON 구문 검증을 통과했다.
+  원본 `AppIcon.png`는 1024×1024 RGB PNG이고 alpha channel이 없다.
+- Archive `Info.plist`에는 `CFBundlePrimaryIcon`의 `CFBundleIconName = AppIcon`과
+  `CFBundleIconFiles = [AppIcon60x60]`이 있다. 앱 번들에는 120×120, alpha 없는 `AppIcon60x60@2x.png`가 있고,
+  `Assets.car`에는 `AppIcon` 이름의 iPhone 1024×1024 rendition이 있다.
+- Xcode가 `AppIcon76x76@2x~ipad.png`와 `CFBundleIcons~ipad`도 생성했지만, 실제 지원 대상은
+  `UIDeviceFamily = [1]`과 asset compile의 `--target-device iphone`으로 iPhone에 제한된다.
+
+이 결과는 프로젝트와 unsigned device Archive의 기술 설정 일치만 확인한다. 표시 이름 `Dutypark`를 App Store
+제품명으로 확정하거나, 출시 Bundle ID·배포 서명·provisioning·entitlement·Validate App을 검증한 것은 아니다.
 
 위 검사는 지정한 개발·테스트 artifact와 문자열에 대한 범위 제한 감사다. 모든 비밀값의 부재를 전수 증명하거나
 서명·entitlement·Privacy Report를 검증한 것은 아니므로 아래 완료 조건은 미완료로 유지한다.

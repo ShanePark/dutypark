@@ -29,6 +29,7 @@
 - [x] Debug 인증 UI 테스트가 결정적 fixture만 사용하며 실제 API 요청을 시도하지 않는 것을 fail-fast로 검증한다.
 - [x] Release 시뮬레이터 clean build에 Debug 전용 인증·게스트 UI 테스트 플래그가 포함되지 않는다.
 - [x] unsigned generic iOS Release Archive 앱 번들에 Debug 전용 가정, 테스트용 인증 플래그·계정과 로컬 개발 주소가 남지 않는다.
+- [x] 새 unsigned generic iOS Release Archive에서 앱 아이콘, 표시 이름, 최소 iOS와 iPhone 전용·세로 방향 기술 설정이 프로젝트와 일치한다.
 - [ ] 배포 서명된 Release Archive에서도 같은 검증을 반복한다.
 
 2026-08-13 iPhone 16 Pro(iOS 26.5) 검증에서 Debug 전용 guest 초기 상태를 로그인 UI 테스트에 명시해
@@ -63,6 +64,13 @@ iPhone 16 Pro(iOS 26.5)에서 3회 연속, iPhone 13 mini(iOS 26.5)에서 1회 �
 Release `clean archive`도 다시 성공했으며, 두 앱 번들에서 authenticated·guest UI-test 플래그, 테스트 계정,
 fixture/fail-fast 문구와 localhost·`127.0.0.1`이 없음을 확인했다. 이는 수동 오프라인·5xx 검증을 대신하지 않는다.
 
+같은 날 새 `/tmp` 경로에서 unsigned generic iOS Release `clean archive`를 다시 생성해 기본 제출 기술 설정을
+교차 검증했다. 프로젝트와 Archive 앱 `Info.plist`는 표시 이름 `Dutypark`, 최소 iOS `17.0`, iPhone 전용
+`UIDeviceFamily = [1]`, iPhone 세로 방향만 지원하는 설정이 일치했다. `AppIcon`의 1024×1024 RGB 원본은 alpha가
+없고, Archive에는 `CFBundleIconName = AppIcon`, 120×120 `AppIcon60x60@2x.png`와 `Assets.car`의 1024×1024
+iPhone rendition이 포함됐다. asset catalog compiler에서 앱 아이콘 관련 경고·오류는 없었다. 현재 버전 `1.0`(빌드 `1`)과
+표시 이름은 기술 기준선 기록이며 App Store Connect 제출 버전·스토어 제품명을 확정했다는 의미가 아니다.
+
 ## 2. 업로드 전 빌드 게이트
 
 - [!] Apple 멤버십 승인 후 출시 목표 `io.github.shanepark.dutypark`의 Explicit App ID 가용성을 확인하고 최종 Bundle ID를 확정한다. 현재 Xcode 설정은 아직 `com.tistory.shanepark.dutypark`다.
@@ -72,7 +80,7 @@ fixture/fail-fast 문구와 localhost·`127.0.0.1`이 없음을 확인했다. �
 - [ ] 동일 버전을 재업로드할 때는 빌드 번호를 반드시 증가시킨다.
 - [ ] Release Archive의 `aps-environment`가 production인지 확인한다.
 - [ ] Push Notifications, Associated Domains, Sign in with Apple entitlement를 구현 상태와 맞춘다.
-- [ ] 앱 아이콘, 표시 이름, 최소 iOS 버전과 iPhone 대상 설정을 확인한다.
+- [x] 앱 아이콘, 표시 이름, 최소 iOS 버전과 iPhone 대상 설정을 기술 설정과 unsigned Archive에서 확인한다.
 - [ ] Organizer의 Validate App을 통과한다.
 - [ ] Xcode Privacy Report와 [PrivacyInfo.xcprivacy](../../Dutypark/PrivacyInfo.xcprivacy)를 대조한다.
 - [ ] 수출 규정 질문에 답할 근거를 정리한다.

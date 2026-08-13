@@ -301,6 +301,7 @@
 - Release 시뮬레이터 clean build 성공, 실행 파일에서 Debug 전용 authenticated·guest UI-test 플래그, 테스트 계정과 localhost 제외 확인. Simulator 실행 파일의 strip되지 않은 symbol table에는 빌드 머신 소스 절대 경로가 남으므로 최종 패키징 판정에는 사용하지 않는다.
 - 2026-08-13 unsigned generic iOS Release `clean archive` 성공. 배포 후처리된 device 앱 번들 36개 파일에 내부 Markdown·Swift 소스·테스트 fixture·프로젝트/개발 파일이 없고, UI-test 플래그·테스트 계정·localhost·저장소 절대 경로도 없음을 확인했다. `PrivacyInfo.xcprivacy`, asset, `ko`·`en` localization과 의도된 폰트 고지는 포함됐고 앱/dSYM UUID가 일치했다. 현재 Bundle ID는 `com.tistory.shanepark.dutypark`; 배포 서명·provisioning·entitlement·Validate App과 출시 후보 Bundle ID 확정은 별도 대기다.
 - authenticated fixture 완성 후 Release Simulator `clean build`와 unsigned generic iOS Release `clean archive`를 다시 생성했다. Simulator·device 앱 번들 모두 authenticated·guest UI-test 플래그, 테스트 계정, fixture/fail-fast 문구, localhost와 `127.0.0.1`이 없었고 device 앱 번들 파일 수는 기존과 같은 36개였다.
+- 2026-08-13 새 `/tmp` 경로의 unsigned generic iOS Release `clean archive`에서 기본 제출 기술 설정을 다시 감사했다. 프로젝트와 Archive는 표시 이름 `Dutypark`, 최소 iOS `17.0`, iPhone 전용 `UIDeviceFamily = [1]`, iPhone 세로 방향만 지원하는 설정이 일치했다. 1024×1024 RGB/no-alpha AppIcon 원본, Archive의 `CFBundleIconName = AppIcon`, 120×120 no-alpha icon과 `Assets.car`의 iPhone 1024 rendition을 확인했고 icon compile 경고·오류는 없었다. 현재 버전 `1.0`(빌드 `1`)은 기록만 했으며 스토어 제품명·제출 버전, 출시 Bundle ID와 서명 검증은 확정하지 않았다.
 
 완료된 최소 보정:
 
