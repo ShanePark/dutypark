@@ -10,6 +10,7 @@ Dutypark의 웹 링크를 iOS 앱으로 안전하게 연결하고, App Store 제
 
 - iOS 프로젝트에는 Associated Domains entitlement가 이미 존재한다.
 - 관련 파일: [`ios/Dutypark/Dutypark.entitlements`](../../Dutypark/Dutypark.entitlements)
+- 현재 Xcode Bundle ID는 `com.tistory.shanepark.dutypark`이고 출시 목표 후보는 `io.github.shanepark.dutypark`다. Apple 승인 후 Explicit App ID 가용성 확인 전까지 출시 식별자는 미확정이다.
 - 2026-08-12 확인 기준, 운영 AASA URL은 HTTP 200을 반환하지만 `Content-Type: text/html`인 SPA HTML을 응답한다.
 - 따라서 현재 응답은 유효한 AASA JSON으로 인정될 수 없으며 Universal Links 설치 검증이 실패할 가능성이 높다.
 - HTTP 상태 코드가 200이라는 사실만으로 설정 완료로 판단하면 안 된다.
@@ -60,7 +61,7 @@ Apple은 다음 경로 중 하나에서 AASA 파일을 조회한다.
     "details": [
       {
         "appIDs": [
-          "<TEAM_ID>.<BUNDLE_ID>"
+          "TEAM_ID.io.github.shanepark.dutypark"
         ],
         "components": [
           {
@@ -74,7 +75,7 @@ Apple은 다음 경로 중 하나에서 AASA 파일을 조회한다.
 }
 ```
 
-`TEAM_ID`, `BUNDLE_ID`, path는 Apple Developer와 현재 라우팅 설정을 확인해 실제 값으로 채운다.
+위 `appID`의 `TEAM_ID`는 placeholder이며 전체 값은 출시 목표 후보를 반영한 **승인 대기 값**이다. Apple 멤버십 승인 후 `io.github.shanepark.dutypark`의 Explicit App ID 가용성과 실제 Team ID를 확인한 뒤 확정하고, 사용할 수 없다면 AASA를 배포하기 전에 새 Bundle ID로 바꾼다. path도 현재 라우팅 설정을 확인해 실제 값으로 채운다.
 
 ## 서버와 CDN 점검
 

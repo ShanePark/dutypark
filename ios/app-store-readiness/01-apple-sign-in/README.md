@@ -92,7 +92,8 @@ Apple 사용자도 신규 가입, 기존 계정 연결, 재로그인, 연결 해
 
 ## Apple Developer 및 App Store Connect 체크리스트
 
-- [ ] 유료 Apple Developer Program의 실제 배포 Team을 확정한다.
+- [-] Apple Developer Program에 개인 주체로 가입하고 결제를 완료했다. 승인 후 실제 유료 개인 Developer Team과 Team ID를 확인한다.
+- [!] 승인 후 출시 목표 Bundle ID `io.github.shanepark.dutypark`의 Explicit App ID 가용성을 확인한다. 현재 Xcode 설정은 `com.tistory.shanepark.dutypark`다.
 - [ ] Explicit App ID에 Sign in with Apple capability를 활성화한다.
 - [ ] Xcode의 Bundle ID와 Apple Developer의 App ID가 일치하는지 확인한다.
 - [ ] 필요한 경우 Services ID, Website URL, Return URL을 등록한다.

@@ -30,7 +30,8 @@
 
 ## 2. 업로드 전 빌드 게이트
 
-- [ ] App Store Connect 앱 레코드와 Bundle ID `com.tistory.shanepark.dutypark`가 일치한다.
+- [!] Apple 멤버십 승인 후 출시 목표 `io.github.shanepark.dutypark`의 Explicit App ID 가용성을 확인하고 최종 Bundle ID를 확정한다. 현재 Xcode 설정은 아직 `com.tistory.shanepark.dutypark`다.
+- [ ] 확정된 Bundle ID, Xcode Release 설정과 App Store Connect 앱 레코드가 모두 일치한다.
 - [ ] 유료 배포 Team으로 Release 서명과 프로비저닝이 완료된다.
 - [ ] `MARKETING_VERSION`과 `CURRENT_PROJECT_VERSION`을 제출할 값으로 확정한다.
 - [ ] 동일 버전을 재업로드할 때는 빌드 번호를 반드시 증가시킨다.

@@ -10,6 +10,8 @@
 - 저장소에서 iOS 전용 CI 구성은 확인되지 않는다.
 - 로컬 빌드·테스트 명령은 [iOS README](../../README.md)에 문서화되어 있다.
 - 프로젝트의 `DEVELOPMENT_TEAM` 값은 현재 빈 문자열이다.
+- 현재 Xcode Bundle ID는 `com.tistory.shanepark.dutypark`이며, 출시 목표 후보 `io.github.shanepark.dutypark`는 Apple 멤버십 승인 후 Explicit App ID 가용성 확인 전까지 미확정이다.
+- Apple Developer Program은 개인 주체 가입·결제를 완료했고 승인을 기다리는 중이다.
 - 앱 타깃 버전은 `MARKETING_VERSION = 1.0`, 빌드는 `CURRENT_PROJECT_VERSION = 1`이다.
 - 자동 서명 설정과 entitlement 파일은 있으나 실제 배포 팀·프로필 검증이 필요하다.
 - [PrivacyInfo.xcprivacy](../../Dutypark/PrivacyInfo.xcprivacy)가 앱 타깃에 포함되어 있다.
@@ -63,7 +65,7 @@ Apple 참고: [Xcode Cloud overview](https://developer.apple.com/xcode-cloud/) �
 ## 3. 서명과 entitlement
 
 현재 [project.pbxproj](../../Dutypark.xcodeproj/project.pbxproj)의 `DEVELOPMENT_TEAM`이 비어 있으므로 출시 전에 팀을 연결해야 한다.
-개인 Team이나 임시 Bundle ID로 만든 Archive를 출시 산출물로 사용하지 않는다.
+무료 Personal Team이나 임시 Bundle ID로 만든 Archive를 출시 산출물로 사용하지 않는다. Apple 승인이 완료되면 유료 개인 Developer Team으로 서명한다.
 
 검증 항목:
 

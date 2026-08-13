@@ -6,6 +6,8 @@
 
 > **현재 종합 상태: 기능 기반 구현 후 디자인 동등성 재작업 진행 중.** SwiftUI 앱과 모바일 OAuth/APNs 서버 경로, 일반 사용자 기능 모듈은 작업트리에 구현되어 있다. freeze2 iOS 전체 테스트는 **105/105 성공**했고 final nits·Todo 첨부·core parity 보정과 targeted test도 완료했다. generic Simulator `build-for-testing`과 Personal Team local-only device app build가 성공했고, 앱을 실제 iPhone에 무선 설치해 실행했다. 실기기 확인에서 웹과 앱의 디자인 차이가 큰 것으로 확인되어, 현재는 현행 웹의 모바일 화면을 기준으로 한 시각적 동등성 작업으로 전환했다. 공통 디자인 토큰 foundation만 구현·검증된 상태이며 개별 화면은 완료 처리하지 않는다. APNs 설치의 refresh-session 귀속 P0는 웹/PWA 세션 계약 영향 가능성 때문에 사용자 승인 전 구현하지 않는다. 아래 기능 매트릭스의 `[ ]`는 미착수를 뜻하지 않고 **완료 조건 검증 대기**를 뜻한다.
 
+> **Apple 외부 준비:** Apple Developer Program은 개인 주체 가입·결제를 완료했고 Apple 승인을 기다리는 중이다. 현재 Xcode Bundle ID는 `com.tistory.shanepark.dutypark`이며, 출시 목표는 `io.github.shanepark.dutypark`를 우선 후보로 한다. Apple 승인 후 Explicit App ID 가용성을 확인하기 전에는 최종 확정하지 않는다.
+
 ### 구현·회귀 검증이 확인된 범위
 
 - [x] `ios/` SwiftUI iOS 17 프로젝트, 공통 `APIClient`, HttpOnly cookie/401 refresh/세션 복원, 이메일 인증, 5탭 내비게이션과 기능별 모듈을 구현했다.
@@ -36,7 +38,7 @@
 
 ### 외부 준비·운영 연결 게이트
 
-- [ ] 배포용 유료 Apple Developer Team, App ID Push capability, development/distribution provisioning, APNs `.p8`·Key ID·Team ID와 App Store Connect 앱 레코드를 준비한다. Personal Team local-only build는 성공했지만 배포·실제 APNs 자격증명을 대신하지 않는다.
+- [-] Apple Developer Program 개인 가입·결제를 완료했고 승인을 기다리고 있다. 승인 후 유료 개인 Developer Team, 목표 Bundle ID 가용성, App ID Push capability, development/distribution provisioning, APNs `.p8`·Key ID·Team ID와 App Store Connect 앱 레코드를 준비한다. Personal Team local-only build는 배포·실제 APNs 자격증명을 대신하지 않는다.
 - [ ] Kakao Developers에 기존 웹 callback을 유지하면서 `https://dutypark.o-r.kr/api/auth/mobile/oauth/callback/kakao`를 추가하고 REST key·동의항목·Client Secret ON/OFF를 확인한다.
 - [ ] Naver Developers에 기존 웹 callback을 유지하면서 `https://dutypark.o-r.kr/api/auth/mobile/oauth/callback/naver`를 추가하고 Client ID/Secret·서비스 상태·테스트 계정을 확인한다.
 - [x] `docker-compose.yml`이 `APNS_TEAM_ID`, `APNS_KEY_ID`, `APNS_PRIVATE_KEY`를 앱 컨테이너에 전달하도록 최소 연결했다. 자격증명은 저장소에 커밋하지 않는다.
@@ -298,7 +300,7 @@
 필요 시 도입하는 후순위 항목:
 
 - Debug/Staging/Prod 다중 configuration은 실제로 복수 서버 환경을 운영할 때 추가한다.
-- bundle identifier와 Development Team은 실제 기기 서명 또는 TestFlight 준비 시 확정한다.
+- 출시 bundle identifier는 `io.github.shanepark.dutypark`를 우선 후보로 하며 Apple 승인 후 Explicit App ID 가용성 확인 시 확정한다. Development Team도 승인된 유료 개인 Team으로 TestFlight 준비 전에 확정한다.
 - DI, session 추상화, router, design token scaffolding은 실제 기능 구현에서 중복이나 교체 필요가 확인될 때 가장 작은 형태로 도입한다.
 
 ### B3 모바일 OAuth 서버·앱 구현 및 외부 E2E 후속
@@ -375,7 +377,7 @@ iOS 클라이언트 및 외부 후속:
 - final nits, Todo attachment/discard, core parity 보정과 targeted test(Calendar **17/17** 포함)를 완료했다.
 - 현재 freeze3 최종 clean QA와 마지막 기능 동등성 감사가 진행 중이다.
 - APNs installation의 refresh-session 귀속 P0는 기존 웹/PWA refresh token 계약에 닿을 수 있어 사용자 승인 대기이며 아직 구현하지 않았다.
-- Personal Team local-only device app build는 성공했다. 연결 가능한 iPhone이 없어 설치는 대기 중이며 배포용 유료 Team/provisioning과 provider/APNs key는 외부 준비가 필요하다.
+- Personal Team local-only device app build와 실제 iPhone 무선 설치·앱 실행은 성공했다. 운영 세션·OAuth·APNs E2E와 배포용 유료 Team/provisioning, provider/APNs key 준비는 남아 있다.
 
 ## 8. 결정 로그
 
@@ -402,6 +404,7 @@ iOS 클라이언트 및 외부 후속:
 | 2026-08-12 | D-019 | **사용자 재확정:** 네이티브 관례보다 현행 웹 모바일 화면과의 시각적 일치를 우선하고 모든 화면을 하나씩 대조한다. | 실기기 테스트에서 앱 디자인이 웹과 크게 다름을 확인 | §13 화면별 체크와 두 필수 viewport 시각 QA를 완료 조건으로 추가한다. |
 | 2026-08-12 | D-020 | **확정:** MapleStory 서체는 사용자가 지정한 Nexon 공식 배포본만 원본 그대로 앱에 포함한다. | 웹의 핵심 브랜드 타이포그래피 일치와 서체 라이선스 준수 | 기존 WOFF 변환본은 사용하지 않고 공식 OTF/TTF와 라이선스를 검증한 뒤 등록한다. |
 | 2026-08-12 | D-021 | **사용자 승인:** 현재 작업을 적절한 논리 단위로 나눠 커밋한다. | 변경 이력과 검증 지점을 명확히 유지 | §13.6 순서로 명시적 파일만 stage하고 각 milestone 검증 후 커밋한다. |
+| 2026-08-13 | D-022 | **사용자 확정:** Apple Developer Program은 개인 주체로 가입·결제했고 승인 대기 중이다. 출시 Bundle ID는 `io.github.shanepark.dutypark`를 우선한다. | 기존 `com.tistory.shanepark`보다 GitHub 네임스페이스를 선호 | 승인 후 Explicit App ID 가용성을 확인하기 전까지 목표 후보이며, 현재 Xcode `com.tistory.shanepark.dutypark`는 그대로 유지한다. 개인 출시 판매자명은 법적 실명 표시를 확인한다. |
 
 ## 9. 사용자 질문 / 리스크
 
@@ -444,7 +447,7 @@ iOS 클라이언트 및 외부 후속:
 | R-016 | 인증 없는 모바일 authorize의 DB row 발급은 리뷰 우려이나 현재 운영 문제로 확인되지 않음 | 과도한 선제 대응 시 불필요한 인프라·설정 증가 | custom rate limit·발급 상한은 현재 추가하지 않고 실제 증거가 생기면 재평가 | 현재 범위 제외 |
 | R-017 | 백엔드 회귀 범위 1,065개 중 1,044 성공·기존 21 skip·기능 assertion 실패 0이나 단일 프로세스 말미 OOM이 관찰됨 | 단일 실행의 종료 코드 green 증거는 제한됨 | OOM이 난 팀 관리 suite는 새 JVM 19/19 성공; 기능 회귀 없음으로 기록하되 자원 안정화와 분리 실행을 유지 | 기능 회귀 없음 / 실행 자원 주의 |
 | R-018 | 표준 `docker-compose.yml`의 APNs 자격증명 3개 전달이 필요했음 | 값을 준비해도 APNs가 무음 no-op 가능 | 기존 3개 설정만 compose에 최소 연결함; 실제 자격증명 발송 smoke test는 별도 | 연결 완료 / 외부 E2E 대기 |
-| R-019 | Personal Team local-only device build는 성공했지만 연결 가능한 iPhone과 배포용 유료 Team/provisioning, Kakao/Naver callback·APNs key가 없음 | 실기기 설치·OAuth/APNs E2E 차단 | §0 외부 준비 게이트를 완료하고 저장소에는 secret을 넣지 않음 | 설치·외부 준비 대기 |
+| R-019 | Personal Team local-only device build·실제 iPhone 설치는 성공했지만 유료 개인 Developer Team 승인, 배포 provisioning, Kakao/Naver callback·APNs key가 없음 | OAuth/APNs·TestFlight E2E 차단 | Apple 승인과 §0 외부 준비 게이트를 완료하고 저장소에는 secret을 넣지 않음 | 기본 설치 완료 / 외부 준비 대기 |
 | R-020 | 한국어·영어 카탈로그는 누락이 없지만 일부 화면이 명시적 locale 없이 문자열을 선계산함 | 앱 내 언어 선택이 즉시 반영되지 않을 수 있음 | 최근 수정분의 런타임 전환을 한국어·영어에서 최종 검증 | 진행 중 |
 | R-021 | 2차 감사의 세션/OAuth/Push preference/Social sync/Settings deeplink·toolbar/Profile sync/첨부 discard·safety P1 | 웹 동등성 미달 또는 상태 불일치 가능 | 최소 보정과 targeted test를 완료하고 freeze3 최종 QA에서 재확인 | 보정 완료 / 재감사 중 |
 | R-022 | Calendar·Team·Guide·공개 링크 share/deeplink P1은 보정됐으나 운영 AASA가 `text/html` SPA fallback이고 업로드 10/50MB 정책이 미확정 | Universal Link와 업로드 사용자 경험 미확정 | 앱 보정·targeted test는 완료. AASA/업로드 공통 변경은 웹·배포 영향이 있어 사용자 협의 전 수행하지 않음 | 앱 보정 완료 / 협의 게이트 |
@@ -495,7 +498,7 @@ iOS 클라이언트 및 외부 후속:
 2. [ ] fixture 기반 contract test와 실제 서버 교차 검증: 일정 검색 DTO, 첨부 순서, 오류 코드, 날짜·시간 직렬화
 3. [ ] iPhone 13 mini와 iPhone 16 Pro 화면·상호작용 검증
 4. [ ] 한국어·영어 런타임 전환, 라이트/다크 모드, Dynamic Type, VoiceOver 검증
-5. [ ] 연결 가능한 실제 iPhone에서 Personal Team 빌드를 설치하고 cookie 세션·기본 기능을 검증한 뒤, 유료 Team/provider/APNs 준비 후 OAuth·APNs E2E를 검증
+5. [ ] 완료된 실제 iPhone 설치·기본 실행을 기준으로 cookie 세션과 기본 기능을 더 검증하고, Apple 승인 및 유료 Team/provider/APNs 준비 후 OAuth·APNs E2E를 검증
 
 B2 구현 원칙:
 
@@ -850,11 +853,11 @@ B2 구현 원칙:
 
 | 구분 | 준비·설정 | 담당 | 완료 기준 | 상태 |
 |---|---|---|---|---|
-| Apple 계정 | 유료 Apple Developer Program 가입과 법적 계약·세금/은행 정보 완료 | 사용자 | App Store Connect에서 앱 생성·계약 상태가 유효함 | [ ] |
-| App ID | Bundle ID `com.tistory.shanepark.dutypark`, Push Notifications, Associated Domains와 필요한 Sign in with Apple capability 확정 | 사용자 계정 접근 필요 / 에이전트 설정 보조 | 배포 Team의 explicit App ID와 provisioning 생성 가능 | [ ] |
+| Apple 계정 | 개인 주체 가입·결제 완료, Apple 승인 후 법적 계약·필요한 세금/은행 정보 확인 | 사용자 | 유료 개인 Developer Team과 Team ID 확인, App Store Connect 앱 생성·계약 상태 유효 | 승인 대기 |
+| App ID | 출시 목표 `io.github.shanepark.dutypark`의 가용성 확인 후 Bundle ID, Push Notifications, Associated Domains와 필요한 Sign in with Apple capability 확정. 현재 Xcode는 `com.tistory.shanepark.dutypark` | 사용자 계정 접근 필요 / 에이전트 설정 보조 | 배포 Team의 explicit App ID와 provisioning 생성 가능 | 승인 대기 |
 | Signing | repository의 빈 `DEVELOPMENT_TEAM`에 개인 값을 커밋하지 않고 Xcode/CI signing으로 연결 | 에이전트 repo 설정 + 사용자 Team 선택 | Archive가 distribution profile로 성공 | [ ] |
 | APNs | Apple Developer에서 APNs `.p8`, Key ID, Team ID 발급 | 사용자 계정 접근 필요 | secret manager/운영 환경에만 저장하고 실제 sandbox/production 수신 | [ ] |
-| Associated Domains | `applinks:dutypark.o-r.kr` entitlement와 `/.well-known/apple-app-site-association`의 `TEAM_ID.com.tistory.shanepark.dutypark` 제공 | 에이전트 제안 / 웹 영향 사용자 승인 | AASA가 redirect 없이 JSON MIME으로 제공되고 universal link E2E 성공 | 승인 대기 |
+| Associated Domains | `applinks:dutypark.o-r.kr` entitlement와 `/.well-known/apple-app-site-association`의 승인 대기 목표 `TEAM_ID.io.github.shanepark.dutypark` 제공 | 에이전트 제안 / 웹 영향 사용자 승인 | Team ID·Bundle ID 확정 후 AASA가 redirect 없이 JSON MIME으로 제공되고 universal link E2E 성공 | 승인 대기 |
 | Kakao | Kakao Developers의 기존 웹 callback을 보존하고 `https://dutypark.o-r.kr/api/auth/mobile/oauth/callback/kakao` 추가, REST API key·Client Secret 사용 여부·동의항목 확인 | 사용자 로그인/콘솔 권한 필요, 에이전트 단계별 보조 | 기존 웹 로그인과 iOS 기존/신규/취소/실패 E2E 모두 성공 | [ ] |
 | Naver | Naver Developers의 기존 웹 callback을 보존하고 `https://dutypark.o-r.kr/api/auth/mobile/oauth/callback/naver` 추가, Client ID/Secret·서비스 URL·검수/테스트 계정 확인 | 사용자 로그인/콘솔 권한 필요, 에이전트 단계별 보조 | 기존 웹 로그인과 iOS 기존/신규/취소/실패 E2E 모두 성공 | [ ] |
 | 운영 서버 | 모바일 OAuth/APNs additive backend와 migration 배포, public scheme/host proxy 전달, secret 연결 | 에이전트 변경 / 배포는 사용자 승인 범위 | 기존 웹 smoke regression + mobile OAuth/APNs smoke 성공 | 미배포 |

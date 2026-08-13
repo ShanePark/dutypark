@@ -50,4 +50,6 @@ Xcode 프로젝트는 filesystem-synchronized groups를 사용합니다. 위 소
 
 ## 서명 전 확인
 
-현재 개발용 번들 식별자는 서버 패키지 관례를 따른 `com.tistory.shanepark.dutypark`입니다. Apple Developer Team, App Store Connect 앱 레코드, Associated Domains와 OAuth callback을 설정하기 전에 최종 번들 식별자를 확정해야 합니다.
+현재 Xcode 프로젝트의 개발용 번들 식별자는 서버 패키지 관례를 따른 `com.tistory.shanepark.dutypark`입니다. 출시 목표 번들 식별자는 `io.github.shanepark.dutypark`를 우선 후보로 하지만, Apple Developer Program 승인 후 Explicit App ID 등록 화면에서 가용성을 확인하기 전에는 최종 확정하지 않습니다.
+
+Apple Developer Program은 개인 주체로 가입하고 결제를 완료했으며 현재 Apple 승인을 기다리는 중입니다. 승인 후 유료 개인 Developer Team과 Team ID를 확인하고, 목표 Bundle ID가 사용 가능하면 Xcode·App Store Connect·APNs topic·AASA를 함께 변경해야 합니다. 개인 멤버십으로 출시할 때 App Store 판매자명에는 계정 소유자의 법적 실명이 표시될 수 있습니다.

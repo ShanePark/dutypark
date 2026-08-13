@@ -33,6 +33,13 @@
 6. App Store Connect 메타데이터와 심사 계정을 준비하고 제출한다.
 7. 출시 후 모니터링·롤백·지원 절차를 실제 담당자와 점검한다.
 
+## Apple 계정·식별자 현재 상태
+
+- Apple Developer Program은 **개인 주체로 가입하고 결제를 완료했으며 Apple 승인을 기다리는 중**이다.
+- 현재 Xcode 프로젝트의 Bundle ID는 `com.tistory.shanepark.dutypark`다.
+- 출시 목표 Bundle ID는 `io.github.shanepark.dutypark`를 우선 후보로 한다. 다만 Apple 승인 후 Explicit App ID 등록 화면에서 가용성을 확인하기 전에는 최종 확정으로 취급하지 않는다.
+- 개인 멤버십으로 출시하면 App Store 판매자명에는 조직명이 아니라 계정 소유자의 법적 실명이 표시될 수 있으므로 제품 페이지 공개 전에 확인한다.
+
 ## P0 체크리스트
 
 - [ ] Apple 로그인의 서버·iOS·콘솔 구현과 계정 연결 정책을 완료한다. ([상세](./01-apple-sign-in/README.md))
