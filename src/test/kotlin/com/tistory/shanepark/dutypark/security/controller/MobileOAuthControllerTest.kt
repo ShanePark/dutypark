@@ -14,6 +14,7 @@ import com.tistory.shanepark.dutypark.security.oauth.naver.NaverUserInfoApi
 import com.tistory.shanepark.dutypark.security.oauth.naver.NaverUserInfoPayload
 import com.tistory.shanepark.dutypark.security.oauth.naver.NaverUserInfoResponse
 import org.assertj.core.api.Assertions.assertThat
+import org.hamcrest.Matchers.startsWith
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
@@ -31,6 +32,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.header
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.net.URI
+import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.util.Base64
@@ -95,6 +97,38 @@ class MobileOAuthControllerTest : DutyparkIntegrationTest() {
         )
             .andExpect(status().isUnauthorized)
             .andExpect(jsonPath("$.code").value("auth.oauth.mobile.code.invalid"))
+    }
+
+    @Test
+    fun `kakao mobile oauth preserves forwarded production callback uri through token exchange`() {
+        val verifier = "i".repeat(43)
+        val request = post("/api/auth/mobile/oauth/authorize")
+            .header("X-Forwarded-Proto", "https")
+            .header("X-Forwarded-Host", "dutypark.o-r.kr")
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(
+                """{"provider":"KAKAO","purpose":"LOGIN","callbackUri":"dutypark://oauth/callback","codeChallenge":"${challenge(verifier)}"}"""
+            )
+        val authorizationUrl = mockMvc.perform(request)
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.authorizationUrl").isString)
+            .andReturn().response.contentAsString
+            .let { Regex("\\\"authorizationUrl\\\":\\\"([^\\\"]+)\\\"").find(it)!!.groupValues[1] }
+        val providerUri = URI.create(authorizationUrl)
+        val state = providerUri.queryParam("state")
+
+        assertThat(providerUri.decodedQueryParam("redirect_uri"))
+            .isEqualTo(PRODUCTION_KAKAO_CALLBACK_URI)
+
+        mockMvc.perform(
+            get("/api/auth/mobile/oauth/callback/kakao")
+                .header("X-Forwarded-Proto", "https")
+                .header("X-Forwarded-Host", "dutypark.o-r.kr")
+                .param("code", "forwarded-provider-code")
+                .param("state", state)
+        )
+            .andExpect(status().isFound)
+            .andExpect(header().string(HttpHeaders.LOCATION, startsWith("dutypark://oauth/callback?code=")))
     }
 
     @Test
@@ -260,6 +294,9 @@ class MobileOAuthControllerTest : DutyparkIntegrationTest() {
         .map { it.split('=', limit = 2) }
         .first { it[0] == name }[1]
 
+    private fun URI.decodedQueryParam(name: String): String =
+        URLDecoder.decode(queryParam(name), StandardCharsets.UTF_8)
+
     @TestConfiguration
     class ProviderApiTestConfig {
         @Bean
@@ -273,6 +310,9 @@ class MobileOAuthControllerTest : DutyparkIntegrationTest() {
             ): KakaoTokenResponse {
                 if (code == "provider-failure") {
                     throw IllegalStateException("provider failed")
+                }
+                if (code == "forwarded-provider-code") {
+                    check(redirectUri == PRODUCTION_KAKAO_CALLBACK_URI)
                 }
                 return KakaoTokenResponse("token", "bearer", "refresh", 3600, 7200)
             }
@@ -315,5 +355,7 @@ class MobileOAuthControllerTest : DutyparkIntegrationTest() {
     companion object {
         private const val KAKAO_ID = 987654321L
         private const val NAVER_ID = "mobile-naver-id"
+        private const val PRODUCTION_KAKAO_CALLBACK_URI =
+            "https://dutypark.o-r.kr/api/auth/mobile/oauth/callback/kakao"
     }
 }
