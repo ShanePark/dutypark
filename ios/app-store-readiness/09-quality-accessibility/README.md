@@ -136,7 +136,7 @@ VoiceOver 수동 검증은 [Apple VoiceOver 테스트 안내](https://developer.
 - [ ] 한 테스트가 생성한 데이터가 다음 테스트에 영향을 주지 않는다.
 - [ ] 실패 시 screenshot, UI hierarchy와 로그를 결과 번들에 보존한다.
 - [ ] 동일 시뮬레이터에서 전체 테스트를 최소 3회 연속 통과시킨다.
-- [ ] iPhone 13 mini와 iPhone 16 Pro destination에서 핵심 UI 테스트를 각각 실행한다.
+- [x] iPhone 13 mini와 iPhone 16 Pro destination에서 핵심 UI 테스트를 각각 실행한다.
 - [ ] locale·theme 스모크 테스트를 데이터 기반으로 확장한다.
 - [ ] 접근성 식별자가 시각적 텍스트에 의존하지 않도록 유지한다.
 
@@ -151,6 +151,7 @@ VoiceOver 수동 검증은 [Apple VoiceOver 테스트 안내](https://developer.
 - [ ] 오프라인, 느린 네트워크, 인증 오류와 5xx에서 크래시·데이터 유실·무한 재시도가 없다.
 - [ ] 탭·`todo.add`·로그인 대상 UI 실패가 수정된 상태에서 전체 263개 테스트가 안정적으로 통과한다.
 
-2026-08-13 iPhone 16 Pro(iOS 26.5) 시뮬레이터에서 guest 로그인 초기 상태를 결정적으로 고정한 뒤
-UI 테스트 3개를 포함한 전체 suite **263/263**이 1회 통과했다. 5개 탭 이동 대상 테스트는 별도로 3회 연속,
-알림·Todo 툴바 44pt 테스트는 별도로 1회 통과했다. 전체 suite 3회 연속과 iPhone 13 mini 매트릭스 검증은 아직 남아 있다.
+2026-08-13 iPhone 16 Pro와 iPhone 13 mini(iOS 26.5) 시뮬레이터에서 각각 UI 테스트 3개를 포함한
+전체 suite **263/263**이 1회 통과했다. iPhone 16 Pro의 5개 탭 이동 대상 테스트는 별도로 3회 연속,
+알림·Todo 툴바 44pt 테스트는 별도로 1회 통과했다. 동일 시뮬레이터의 전체 suite 3회 연속과 두 기기의
+수동 화면·핵심 사용자 흐름·접근성 매트릭스 검증은 아직 남아 있다.
