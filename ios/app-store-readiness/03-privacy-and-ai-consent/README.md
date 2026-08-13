@@ -14,7 +14,7 @@ Dutypark의 실제 수집·저장·전송 동작을 개인정보 처리방침, �
 | 실제 개인정보 데이터 흐름 고지 | [x] | [V2.2.28](../../../src/main/resources/db/migration/v2/V2.2.28__align_privacy_policy_with_current_data_flows.sql)에 HttpOnly cookie, 기기 저장소, push, 첨부, Kakao/Naver, Google AI와 보유·정리 흐름을 새 정책 버전으로 추가했고 migration test 2/2가 통과했다. |
 | 최신 이용약관·AI 선택 정책 | [x] | [V2.2.29](../../../src/main/resources/db/migration/v2/V2.2.29__add_terms_and_ai_schedule_consent.sql)에 `TERMS`와 `AI_SCHEDULE_PARSING` 2026-08-13 버전을 추가했다. migration test와 consent·policy·OAuth·schedule 통합 targeted command가 `BUILD SUCCESSFUL`로 통과했다. |
 | 서버 동의·전송 gate | [x] | 조회·부여·철회 API, owner 기준 저장 gate, 재기동 queue 복원 gate와 worker 외부 호출 직전 재검사가 구현됐다. core consent 20 tests와 consent·policy·OAuth·schedule 통합 targeted command가 성공했다. |
-| 웹 선택 동의·철회 | [x] | 설정에서 사전 opt-in/철회, 상세 정책과 수동 시간 입력 안내를 한국어·영어로 제공한다. 격리 후보 기준 type-check, Vitest 24 files/110 tests, production build가 통과했다. |
+| 웹 선택 동의·철회 | [x] | 설정에서 사전 opt-in/철회, 상세 정책과 수동 시간 입력 안내를 한국어·영어로 제공한다. type-check, Vitest 27 files/122 tests, locale targeted 11, production build가 통과했다. |
 | iOS 선택 동의·철회 | [x] | 설정 toggle·상세 정책과 all-day 일정 저장 시 명시적 선택, 수동 시간 fallback을 구현했다. generic iOS Simulator build, `plutil`, `AIScheduleParsingConsentTests` 8/8이 통과했다. |
 | Privacy Manifest 수집 선언 | [x] | [PrivacyInfo.xcprivacy](../../Dutypark/PrivacyInfo.xcprivacy)에 현재 수집 유형과 UserDefaults required-reason API가 선언됐다. Release Archive Privacy Report 대조는 별도 대기다. |
 | App Store Connect App Privacy | [ ] | 아래 입력 초안을 Release 빌드·운영 서버와 최종 대조해 App Store Connect에서 Publish해야 한다. |
@@ -90,7 +90,8 @@ Google의 [Gemini API Additional Terms of Service](https://ai.google.dev/gemini-
 
 - [x] `V2.2.28` 개인정보 처리방침 migration 적용·idempotency·핵심 문구 계약 test 2/2 통과
 - [x] 웹 type-check 통과
-- [x] 격리 후보 기준 웹 Vitest 24 files/110 tests 통과(AI 동의 locale 계약 포함)
+- [x] 웹 Vitest 27 files/122 tests 통과
+- [x] 웹 AI 동의 locale targeted 11 통과
 - [x] 웹 production build 통과
 - [x] 백엔드 core consent 20 tests 및 consent service/controller, PolicyController, `V2.2.29` migration, OAuthController, ScheduleService, QueueManager, Worker 통합 targeted command 통과 (`BUILD SUCCESSFUL`, 20초)
 - [x] generic iOS Simulator build 통과, `PrivacyInfo.xcprivacy` `plutil` 검증 통과, `AIScheduleParsingConsentTests` 8/8 통과(exit 0)

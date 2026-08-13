@@ -22,7 +22,7 @@
 - [x] local-only 앱을 실제 iPhone에 무선 설치하고 앱 실행·운영 API 연결을 확인했다.
 - [x] final nits, Todo 첨부·discard 흐름, core 기능 동등성 보정과 targeted test를 완료했다(Calendar **17/17** 포함).
 - [x] `frontend/src/style.css`와 주요 Vue 화면을 기준으로 공통 색상·간격·radius·타이포그래피·버튼·카드·입력창용 iOS 디자인 foundation을 보강하고 빌드·토큰 테스트를 통과했다. 개별 화면의 시각 일치는 아직 완료하지 않았다.
-- [x] `V2.2.28` 개인정보 처리방침과 `V2.2.29` 이용약관·AI 선택 정책, 서버 owner 기준 AI 동의 API와 schedule/queue/worker gate, 웹·iOS 설정/상세 정책/수동 fallback을 구현했다. 개인정보 migration test 2/2, backend core consent 20 tests와 통합 targeted command, 격리 후보 기준 웹 type-check·Vitest 24 files/110 tests·production build, iOS generic Simulator build·`plutil`·AI consent 8/8이 통과했다.
+- [x] `V2.2.28` 개인정보 처리방침과 `V2.2.29` 이용약관·AI 선택 정책, 서버 owner 기준 AI 동의 API와 schedule/queue/worker gate, 웹·iOS 설정/상세 정책/수동 fallback을 구현했다. 개인정보 migration test 2/2, backend core consent 20 tests와 통합 targeted command, 웹 type-check·Vitest 122·locale 11·production build, iOS generic Simulator build·`plutil`·AI consent 8/8이 통과했다.
 
 ### 진행 중 또는 완료 확인이 남은 범위
 
@@ -32,7 +32,7 @@
 - [ ] APNs installation을 현재 refresh session에 귀속하는 P0 변경의 웹/PWA 영향·최소 대안·회귀안을 사용자에게 제시하고 승인받는다.
 - [ ] iPhone 13 mini·iPhone 16 Pro 화면·한국어·영어·접근성 시각 QA를 완료한다.
 - [ ] 실제 iPhone에서 완료된 서명·무선 설치·기본 실행을 제외하고, 세션 복원·Kakao/Naver 로그인·첨부·알림·APNs 수신 E2E를 완료한다.
-- [ ] App Store 심사 범위인 실제 계정 삭제, Sign in with Apple 적용 여부, 개인정보/UGC 항목을 사용자와 별도 확정한다. 이는 웹 기능 동등성보다 넓은 출시 준비 항목이다.
+- [ ] App Store 심사 범위인 실제 계정 삭제의 외부·실기기 검증, Sign in with Apple 적용 여부, UGC 항목을 사용자와 별도 확정한다. 개인정보 기술 흐름과 AI 선택 동의 저장소 구현은 완료했지만 법률·운영 계약과 App Store Connect 입력은 남아 있다.
 
 ### 외부 준비·운영 연결 게이트
 
