@@ -31,6 +31,7 @@
 - [ ] Archive 안의 앱, dSYM, privacy manifest, entitlement를 검증한다.
 - [x] unsigned generic iOS Release Archive의 앱 번들에 불필요한 내부 문서와 개발용 파일이 포함되지 않는다.
 - [x] unsigned generic iOS Release Archive의 앱 아이콘, 표시 이름, 최소 iOS와 iPhone 전용·세로 방향 기술 설정이 프로젝트와 일치한다.
+- [x] 현재 소스·의존성·unsigned Release Archive 기준으로 비면제 암호화 미사용 선언의 기술 근거를 확인한다.
 - [ ] 배포 서명된 Release Archive에서도 같은 번들 제외 검증을 반복한다.
 - [ ] TestFlight 내부 테스트를 거쳐 동일 빌드를 심사에 연결한다.
 - [ ] 릴리스 산출물과 결과 로그를 정해진 위치에 보관한다.
@@ -164,7 +165,57 @@ warning·error가 없었으며, AppIntents framework가 없어 metadata 추출�
 위 검사는 지정한 개발·테스트 artifact와 문자열에 대한 범위 제한 감사다. 모든 비밀값의 부재를 전수 증명하거나
 서명·entitlement·Privacy Report를 검증한 것은 아니므로 아래 완료 조건은 미완료로 유지한다.
 
-## 7. 업로드와 TestFlight
+## 7. 수출 규정 기술 근거
+
+2026-08-13 현재 [Info.plist](../../Dutypark/Info.plist)의 `ITSAppUsesNonExemptEncryption`은 `false`다.
+새 `/tmp` derived data와 Archive 경로에서 `CODE_SIGNING_ALLOWED=NO` generic iOS Release `clean archive`를
+성공시킨 뒤, Archive 앱의 `Info.plist`에서도 같은 Boolean `false`를 확인했다. 현재 Bundle ID는
+`com.tistory.shanepark.dutypark`이며, 이 감사는 출시 Bundle ID·배포 서명·App Store Connect 제출을 완료했다는
+의미가 아니다.
+
+현재 앱의 암호화 관련 기술 inventory는 다음과 같다.
+
+- 운영 API와 웹 화면은 Apple `URLSession`·WebKit을 통한 HTTPS/TLS를 사용한다. Release API URL은
+  `https://dutypark.o-r.kr/api/`다.
+- 모바일 OAuth PKCE는 Apple `CryptoKit`의 `SHA256`과 Security의 `SecRandomCopyBytes`로 verifier·challenge를
+  만든다. 앱이 암호 알고리즘을 자체 구현하거나 사용자 데이터 암호화 키를 관리하는 용도가 아니다.
+- OAuth 브라우저 인증은 `ASWebAuthenticationSession`, push는 APNs·UserNotifications 등 Apple OS 기능을 사용한다.
+- 앱 소스 제한 검색에서 CommonCrypto, OpenSSL, libsodium, 자체 AES/RSA/ChaCha·cipher, VPN·NetworkExtension,
+  암호화 파일 저장, 종단간 암호화 메시징 구현은 발견되지 않았다.
+- Xcode 앱 target에는 Swift package product dependency와 명시적 framework build item이 없고, 저장소에도
+  CocoaPods·Carthage 또는 배포용 외부 framework/xcframework가 없다. Archive 앱 번들에도 내장 framework·동적
+  라이브러리가 없다.
+- Archive 실행 파일의 `otool -L`은 `CryptoKit.framework`, `Security.framework`,
+  `AuthenticationServices.framework`, `Foundation.framework` 등 `/System/Library`·`/usr/lib`의 Apple OS
+  구성요소만 표시했다. `nm -u`와 `strings`에서는 실제 앱 사용과 일치하는 CryptoKit SHA-256 및
+  `SecRandomCopyBytes` 참조를 확인했고, 외부 암호화 라이브러리나 VPN API 참조는 확인되지 않았다.
+
+[Apple의 `ITSAppUsesNonExemptEncryption` 설명](https://developer.apple.com/documentation/bundleresources/information-property-list/itsappusesnonexemptencryption)은
+앱과 링크한 제3자 라이브러리가 암호화를 사용하지 않거나 수출 규정 문서 제출이 면제되는 암호화만 사용할 때 값을 `NO`로
+설정하도록 안내한다. [Apple의 암호화 문서 분류표](https://developer.apple.com/help/app-store-connect/reference/app-information/export-compliance-documentation-for-encryption)는
+Apple 운영체제 내부의 암호화로 제한된 앱은 App Store Connect에 문서를 제출할 필요가 없다고 명시하고,
+[수출 규정 준수 안내](https://developer.apple.com/documentation/security/complying-with-encryption-export-regulations)는
+`URLSession` HTTPS 같은 OS 내장 암호화가 일반적으로 문서 제출 면제라고 설명한다. 따라서 현재 확인한 기술 범위에서는
+**Apple OS 제공 암호화만 사용하며 비면제 암호화를 포함하지 않는다**는 판단과
+`ITSAppUsesNonExemptEncryption = NO`가 서로 일치한다.
+
+이 기록은 법률 자문이나 모든 암호화 부재에 대한 절대적 증명이 아니다. Apple도 앱·배포 국가에 따른 규정 판단과 정확한
+면제 주장 책임이 개발자에게 있음을 [수출 규정 개요](https://developer.apple.com/help/app-store-connect/manage-app-information/overview-of-export-compliance)에서
+안내한다. Apple의 준수 안내는 면제 암호화도 상황에 따라 미국 정부의 연간 self-classification 보고 대상이 될 수 있다고
+덧붙이므로, 해당 의무는 App Store Connect 문서 제출 면제와 별도로 계정 소유자가 배포 범위에 맞춰 확인한다.
+App Store Connect의 실제 질문 응답·저장과 Apple 확인은 아직 수행하지 않았다. 최종 서명 Archive를 업로드할 때
+[App Store Connect 질문 절차](https://developer.apple.com/help/app-store-connect/manage-app-information/determine-and-upload-app-encryption-documentation)에
+따라 당시 문구를 확인하고, 이 inventory와 다른 결과가 나오면 제출을 중단해 재검토한다.
+
+다음 변경은 수출 규정 재검토 gate를 다시 연다.
+
+- CryptoKit·Security 사용 범위를 PKCE hash·난수 생성 밖으로 확대하거나 CommonCrypto/OpenSSL/libsodium 등 새
+  암호화 API·SDK·외부 dependency를 추가하는 경우
+- 앱이 자체 또는 비표준 암호 알고리즘, VPN·NetworkExtension, 암호화 저장소·파일, E2EE 메시징, 암호화 키 생성·교환·관리
+  기능을 도입하는 경우
+- App Store Connect 질문, Apple 공식 기준, 배포 국가 또는 서버·클라이언트 보안 구조가 바뀌는 경우
+
+## 8. 업로드와 TestFlight
 
 Archive 검증이 끝나면 Xcode Organizer 또는 명시적인 export/upload 절차를 사용한다.
 App Store Connect에서 빌드 처리가 끝난 뒤 export compliance, 암호화, privacy 경고를 확인한다.
@@ -177,7 +228,7 @@ App Store Connect에서 빌드 처리가 끝난 뒤 export compliance, 암호화
 
 Apple 참고: [TestFlight overview](https://developer.apple.com/help/app-store-connect/test-a-beta-version/testflight-overview/).
 
-## 8. fastlane 사용 여부
+## 9. fastlane 사용 여부
 
 fastlane은 선택 사항이며 Archive와 업로드 절차가 안정된 뒤 반복 작업을 줄일 필요가 있을 때 도입한다.
 
@@ -185,7 +236,7 @@ fastlane은 선택 사항이며 Archive와 업로드 절차가 안정된 뒤 반
 Match 같은 인증서 관리 방식을 쓸 경우 저장소 접근 권한, 암호 회전, 퇴사자 권한 회수 절차를 먼저 정한다.
 도구 버전은 고정하고 자동 업로드는 보호된 branch/tag와 수동 승인으로 제한한다.
 
-## 9. 릴리스 산출물 보관
+## 10. 릴리스 산출물 보관
 
 각 제출 빌드마다 다음을 접근 제한된 artifact 저장소에 보관한다.
 

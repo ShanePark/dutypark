@@ -83,10 +83,25 @@ iPhone rendition이 포함됐다. asset catalog compiler에서 앱 아이콘 관
 - [x] 앱 아이콘, 표시 이름, 최소 iOS 버전과 iPhone 대상 설정을 기술 설정과 unsigned Archive에서 확인한다.
 - [ ] Organizer의 Validate App을 통과한다.
 - [ ] Xcode Privacy Report와 [PrivacyInfo.xcprivacy](../../Dutypark/PrivacyInfo.xcprivacy)를 대조한다.
-- [ ] 수출 규정 질문에 답할 근거를 정리한다.
+- [x] 현재 소스·의존성·unsigned Release Archive를 기준으로 수출 규정 질문에 답할 기술 근거를 정리한다.
 
 기준 명령은 [iOS README](../../README.md)의 `xcodebuild ... build`와 `xcodebuild ... test`를 사용한다.
 Archive 업로드 방법은 [Apple의 빌드 업로드 안내](https://developer.apple.com/help/app-store-connect/manage-builds/upload-builds/)를 따른다.
+
+2026-08-13 기술 감사에서는 프로젝트와 새 unsigned generic iOS Release Archive의
+`ITSAppUsesNonExemptEncryption`이 모두 `false`임을 확인했다. 앱이 사용하는 암호화 관련 기능은
+`URLSession`의 HTTPS/TLS, OAuth PKCE의 Apple `CryptoKit.SHA256`·`SecRandomCopyBytes`,
+`ASWebAuthenticationSession`과 APNs처럼 Apple 운영체제가 제공하는 기능으로 제한된다. 현재 앱 소스와 링크 대상에는
+자체·비표준 암호화, CommonCrypto/OpenSSL/libsodium, VPN·NetworkExtension, 암호화 파일 저장 또는 종단간 암호화
+메시징 구현이 없고, 외부 Swift package·CocoaPods·Carthage 및 앱 내장 framework도 없다. 따라서 현재 기술 inventory는
+Apple의 **운영체제 내부 암호화만 사용하는 앱은 App Store Connect에 암호화 문서를 제출할 필요가 없다**는 분류와
+`ITSAppUsesNonExemptEncryption = NO`에 부합한다. 상세 근거와 재검토 조건은
+[릴리스 엔지니어링 문서](../11-release-engineering/README.md#7-수출-규정-기술-근거)에 기록했다.
+
+이는 App Store Connect에서 실제 질문에 답하거나 Apple의 판정을 받은 상태가 아니다. 업로드한 최종 서명 빌드에서 해당 값과
+의존성을 다시 확인한 뒤, 당시 App Store Connect 질문 문구에 따라 **Apple OS 제공 암호화만 사용하며 비면제 암호화는
+포함하지 않는 경로**로 답한다. 실제 답변 저장·제출과 국가별 의무 최종 판단은 계정 소유자의 책임이므로 아래 제출 당일
+체크는 완료 처리하지 않는다.
 
 ## 3. 내부 TestFlight
 
