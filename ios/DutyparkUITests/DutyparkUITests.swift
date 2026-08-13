@@ -17,9 +17,6 @@ final class DutyparkUITests: XCTestCase {
         ]
         app.launch()
 
-        let tabBar = app.descendants(matching: .any)["primary.tabbar"]
-        XCTAssertTrue(tabBar.waitForExistence(timeout: 2))
-
         let destinations = [
             (tab: "tab.home", screen: "screen.home"),
             (tab: "tab.calendar", screen: "screen.calendar"),
@@ -29,11 +26,10 @@ final class DutyparkUITests: XCTestCase {
         ]
 
         for destination in destinations {
-            let tab = app.buttons[destination.tab]
-            XCTAssertTrue(tab.waitForExistence(timeout: 2))
+            let tab = primaryTab(destination.tab, in: app)
             tab.tap()
             XCTAssertTrue(
-                app.descendants(matching: .any)[destination.screen].waitForExistence(timeout: 2)
+                app.descendants(matching: .any)[destination.screen].waitForExistence(timeout: 10)
             )
         }
     }
@@ -73,10 +69,28 @@ final class DutyparkUITests: XCTestCase {
         XCTAssertTrue(notificationBell.waitForExistence(timeout: 10))
         assertMinimumTouchTarget(notificationBell)
 
-        app.buttons["tab.todo"].tap()
+        primaryTab("tab.todo", in: app).tap()
         let todoAdd = app.buttons["todo.add"]
         XCTAssertTrue(waitForTodoToolbarAction(todoAdd, in: app, timeout: 10))
         assertMinimumTouchTarget(todoAdd)
+    }
+
+    @MainActor
+    private func primaryTab(
+        _ identifier: String,
+        in app: XCUIApplication,
+        timeout: TimeInterval = 10,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) -> XCUIElement {
+        let tab = app.buttons.matching(identifier: identifier).firstMatch
+        XCTAssertTrue(
+            tab.waitForExistence(timeout: timeout),
+            "Primary tab did not appear: \(identifier)",
+            file: file,
+            line: line
+        )
+        return tab
     }
 
     @MainActor

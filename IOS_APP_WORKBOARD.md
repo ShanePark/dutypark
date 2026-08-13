@@ -289,7 +289,8 @@
 
 - generic iOS Simulator build 성공
 - iPhone 13 mini 시뮬레이터에서 unit test **2/2 성공**
-- iPhone 13 mini 시뮬레이터에서 UI test **1/1 성공**
+- iPhone 13 mini 시뮬레이터에서 초기 UI test **1/1 성공**
+- 2026-08-13 iPhone 16 Pro(iOS 26.5) 시뮬레이터에서 5탭 이동 test **3/3 성공**, 알림·Todo 툴바 44pt test **1/1 성공**(전체 176개 suite 재검증 대기)
 
 완료된 최소 보정:
 

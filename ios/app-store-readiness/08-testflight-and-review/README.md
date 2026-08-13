@@ -19,14 +19,14 @@
 ## 1. 현재 기준선
 
 - [x] iOS 시뮬레이터용 앱 빌드가 성공한다.
-- [!] 전체 테스트 176개 중 175개가 통과하고 UI 테스트 1개가 실패한다.
-- [!] 실패 항목은 Todo 탭의 `todo.add` 요소를 찾지 못한 터치 영역 테스트다.
-- [ ] [DutyparkUITests.swift](../../DutyparkUITests/DutyparkUITests.swift)의 실패가 재현 가능한지 확인한다.
-- [ ] `todo.add` 식별자 노출 또는 테스트 대기 조건을 수정하고 전체 176개 통과를 만든다.
+- [x] iPhone 16 Pro(iOS 26.5) 시뮬레이터에서 5개 기본 탭 이동 테스트가 3회 연속 통과한다.
+- [x] 같은 시뮬레이터에서 알림·Todo 툴바 44pt 테스트가 1회 통과한다.
+- [ ] 전체 테스트 176개를 최신 코드로 다시 실행해 통과 여부를 확인한다.
 - [ ] Release Archive에서도 Debug 전용 가정이나 테스트용 인증 플래그가 남지 않는지 확인한다.
 
-현재 실패를 단순 flaky로 분류해 무시하지 않는다. 버튼은 [TodoView.swift](../../Dutypark/Features/Todo/TodoView.swift)에 존재하므로,
-접근성 표현이 XCUI 계층에 안정적으로 나타나는지와 Todo 화면의 네트워크 오류가 테스트를 가리는지를 함께 조사한다.
+2026-08-13 대상 검증에서 `tab.*` 식별자는 XCUI Button으로 정상 노출됐다. `primary.tabbar` 컨테이너가 탭 버튼보다 먼저 나타날 수 있으므로
+[DutyparkUITests.swift](../../DutyparkUITests/DutyparkUITests.swift)는 각 탭 버튼을 직접 최대 10초 기다리도록 수정했다.
+기존의 전체 176개 중 1개 실패 기록은 최신 대상 테스트로 해소했지만, 전체 suite 재실행 결과로 간주하지 않는다.
 
 ## 2. 업로드 전 빌드 게이트
 
@@ -128,7 +128,7 @@ Apple의 버전 제출·상태 관리는 [App Review 제출 개요](https://deve
 ## 완료 조건
 
 - [ ] 시뮬레이터 빌드와 Release Archive 검증이 모두 성공한다.
-- [ ] 176개 테스트가 모두 통과하며 `todo.add` UI 실패가 재발하지 않는다.
+- [ ] 전체 176개 테스트가 최신 코드로 통과하며 대상 검증에서 해소한 탭·`todo.add` UI 실패가 재발하지 않는다.
 - [ ] 내부 TestFlight에서 운영 로그인, 핵심 CRUD와 production APNs가 실기기로 검증된다.
 - [ ] 필요한 경우 외부 TestFlight와 Beta App Review를 통과한다.
 - [ ] Review Notes, 데모 계정과 심사 연락처가 준비되고 운영 백엔드 가용 담당자가 지정된다.

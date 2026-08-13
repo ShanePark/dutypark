@@ -1,6 +1,6 @@
 # 품질, 호환성 및 접근성 검증 가이드
 
-최종 확인일: 2026-08-12
+최종 확인일: 2026-08-13
 
 이 문서는 Dutypark iOS 앱의 지원 범위를 명확히 하고 App Review 전 수동·자동 품질 검증을 반복 가능하게 만드는 체크리스트다.
 테스트에는 가짜 계정과 테스트 데이터만 사용하며 비밀번호, 토큰, 실제 개인정보를 문서나 저장소에 남기지 않는다.
@@ -90,8 +90,8 @@ VoiceOver 수동 검증은 [Apple VoiceOver 테스트 안내](https://developer.
 - [ ] 시각적 아이콘이 작더라도 padding과 `contentShape`가 전체 영역에 적용된다.
 - [ ] 인접 버튼의 터치 영역이 겹치거나 잘못된 동작을 실행하지 않는다.
 - [ ] 최대 Dynamic Type에서도 터치 영역이 축소되지 않는다.
-- [ ] [DutyparkUITests.swift](../../DutyparkUITests/DutyparkUITests.swift)의 터치 영역 테스트를 안정화한다.
-- [ ] 현재 실패하는 `todo.add` 요소가 XCUI에서 안정적으로 발견되고 44pt 이상으로 측정된다.
+- [x] [DutyparkUITests.swift](../../DutyparkUITests/DutyparkUITests.swift)의 탭 대기 조건을 공통화해 터치 영역 테스트를 안정화한다.
+- [x] iPhone 16 Pro(iOS 26.5) 대상 실행에서 `todo.add` 요소가 XCUI에 발견되고 44pt 이상으로 측정된다.
 
 44pt 권장 기준은 [Human Interface Guidelines: Layout](https://developer.apple.com/design/human-interface-guidelines/layout)을 따른다.
 
@@ -130,7 +130,7 @@ VoiceOver 수동 검증은 [Apple VoiceOver 테스트 안내](https://developer.
 - [ ] 각 테스트는 언어, 테마, 인증 상태와 테스트 데이터를 명시적으로 초기화한다.
 - [ ] 고정 sleep 대신 `waitForExistence`와 화면 준비 신호를 사용한다.
 - [ ] 테스트 인증 모드가 실제 API 오류 alert를 만들지 않도록 fixture 범위를 완성한다.
-- [ ] `screen.*`, `tab.*`, `todo.add` 식별자가 렌더링 구조 변화에도 유지된다.
+- [x] 대상 UI 테스트에서 `screen.*`, `tab.*`, `todo.add` 식별자가 XCUI 요소로 노출된다.
 - [ ] 한 테스트가 생성한 데이터가 다음 테스트에 영향을 주지 않는다.
 - [ ] 실패 시 screenshot, UI hierarchy와 로그를 결과 번들에 보존한다.
 - [ ] 동일 시뮬레이터에서 전체 테스트를 최소 3회 연속 통과시킨다.
@@ -147,4 +147,7 @@ VoiceOver 수동 검증은 [Apple VoiceOver 테스트 안내](https://developer.
 - [ ] 주요 조작의 44pt 터치 영역이 수동·자동 테스트에서 확인된다.
 - [ ] Todo 드래그와 기능적으로 동등한 접근성 대체 조작이 검증된다.
 - [ ] 오프라인, 느린 네트워크, 인증 오류와 5xx에서 크래시·데이터 유실·무한 재시도가 없다.
-- [ ] `todo.add` 실패를 포함한 UI 테스트가 수정되고 전체 176개 테스트가 안정적으로 통과한다.
+- [ ] 탭·`todo.add` 대상 UI 실패가 수정된 상태에서 전체 176개 테스트가 안정적으로 통과한다.
+
+2026-08-13 검증 범위는 iPhone 16 Pro(iOS 26.5) 시뮬레이터의 5개 탭 이동 3회 연속 통과와
+알림·Todo 툴바 44pt 테스트 1회 통과다. 전체 176개 suite와 두 필수 기기 매트릭스 재검증은 아직 남아 있다.
