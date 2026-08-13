@@ -116,13 +116,15 @@ App ID의 capability를 변경하면 기존 프로비저닝 프로파일이 무�
 
 ## 5. 카카오·네이버 로그인 콘솔
 
-현재 구현은 Kakao/Naver iOS SDK를 앱에 추가하지 않고, `ASWebAuthenticationSession`에서 기존 서버 OAuth를 사용하는 방식이다. 따라서 앱에 제공자 Client Secret을 넣지 않으며, 제공자 콘솔에는 아래 HTTPS 콜백만 추가한다.
+현재 구현은 Kakao/Naver iOS SDK를 앱에 추가하지 않고, `ASWebAuthenticationSession`에서 기존 서버 OAuth를 사용하는 방식이다. 따라서 앱에 제공자 Client Secret을 넣지 않으며, 운영용으로는 제공자 콘솔에 아래 HTTPS 콜백을 추가한다. Debug 시뮬레이터는 로컬 백엔드를 사용하므로 로컬 OAuth까지 시험할 때만 `http://localhost:8080/api/auth/mobile/oauth/callback/{provider}`도 해당 제공자 콘솔에 별도로 등록해야 한다.
 
 ### 카카오 — 사용자가 할 일
 
 - `[ ]` Kakao Developers의 기존 Dutypark 앱에서 **Kakao Login** 사용 설정이 ON인지 확인한다.
 - `[ ]` **App > Platform key > REST API key > Redirect URI**에 아래 값을 정확히 추가한다.
   - `https://dutypark.o-r.kr/api/auth/mobile/oauth/callback/kakao`
+- `[ ]` Debug 시뮬레이터에서 로컬 백엔드로 로그인할 때만 아래 값도 추가한다.
+  - `http://localhost:8080/api/auth/mobile/oauth/callback/kakao`
 - `[!]` 기존 웹 콜백 `https://dutypark.o-r.kr/api/auth/Oauth2ClientCallback/kakao`를 삭제하거나 바꾸지 않는다.
 - `[!]` **Kakao Client Secret을 지금 새로 활성화하지 않는다.** 현재 웹과 모바일 서버의 카카오 토큰 요청은 Client Secret을 보내지 않는다. 콘솔에서 이를 활성화하면 서버 코드를 함께 수정·배포하기 전까지 기존 웹 로그인과 앱 로그인이 모두 실패할 수 있다.
 - `[ ]` 카카오 동의 항목과 앱 검수 상태가 현재 운영 정책에 맞는지 확인한다.
@@ -131,6 +133,8 @@ App ID의 capability를 변경하면 기존 프로비저닝 프로파일이 무�
 
 - `[ ]` Naver Developers의 기존 Dutypark 애플리케이션에서 **API 설정 > 로그인 오픈 API 서비스 환경**의 PC Web 또는 Mobile Web Callback URL 목록에 아래 값을 정확히 추가한다. 두 슬롯의 검증 방식은 같으며, HTTPS 서버 콜백이므로 iOS SDK용 URL Scheme 설정은 사용하지 않는다.
   - `https://dutypark.o-r.kr/api/auth/mobile/oauth/callback/naver`
+- `[ ]` Debug 시뮬레이터에서 로컬 백엔드로 로그인할 때만 아래 값도 추가한다.
+  - `http://localhost:8080/api/auth/mobile/oauth/callback/naver`
 - `[!]` 기존 웹 콜백 `https://dutypark.o-r.kr/api/auth/Oauth2ClientCallback/naver`를 삭제하거나 바꾸지 않는다. 네이버는 콜백을 여러 개 등록할 수 있으므로 새 값을 추가한다.
 - `[!]` 기존 Naver Client ID/Client Secret을 임의로 재발급하거나 교체하지 않는다. 교체 시 운영 서버 설정을 같은 배포에서 갱신하지 않으면 기존 웹 로그인과 앱 로그인이 모두 실패한다.
 - `[ ]` 제공 정보, 서비스 URL, 검수 상태가 현재 운영 정책에 맞는지 확인한다.
@@ -139,6 +143,7 @@ App ID의 capability를 변경하면 기존 프로비저닝 프로파일이 무�
 
 - `[x]` 두 모바일 콜백, `state`, 일회용 교환 코드와 PKCE 기반 앱 복귀 흐름을 구현했다.
 - `[x]` 제공자 비밀값은 앱에 포함하지 않고 서버에서만 사용한다.
+- `[ ]` 운영 서버의 `KAKAO_REST_API_KEY`, `NAVER_CLIENT_ID`, `NAVER_CLIENT_SECRET`이 각 콘솔의 기존 Dutypark 앱 값과 일치하는지 확인한다.
 - `[ ]` 모바일 OAuth 서버 변경을 운영에 배포한다. 콘솔 콜백 추가와 서버 배포가 모두 끝나야 실앱 로그인이 성공한다.
 - `[ ]` 배포 직후 기존 웹 카카오·네이버 로그인과 앱 카카오·네이버 로그인을 각각 확인한다.
 
