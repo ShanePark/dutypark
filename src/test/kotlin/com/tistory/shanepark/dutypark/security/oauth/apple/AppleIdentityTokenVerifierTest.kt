@@ -90,6 +90,22 @@ class AppleIdentityTokenVerifierTest {
         verify(provider, times(2)).jwks()
     }
 
+    @Test
+    fun `does not repeatedly refresh cached JWKS for unknown key ids`() {
+        whenever(provider.jwks()).thenReturn(AppleJwks(listOf(jwk(keys, "known-kid"))))
+        val verifier = verifier()
+
+        verifier.verify(token(keys, kid = "known-kid", nonce = sha256Hex(RAW_NONCE)), RAW_NONCE)
+        assertThrows<AppleOAuthException> {
+            verifier.verify(token(keys, kid = "unknown-kid-1", nonce = sha256Hex(RAW_NONCE)), RAW_NONCE)
+        }
+        assertThrows<AppleOAuthException> {
+            verifier.verify(token(keys, kid = "unknown-kid-2", nonce = sha256Hex(RAW_NONCE)), RAW_NONCE)
+        }
+
+        verify(provider, times(2)).jwks()
+    }
+
     private fun verifier() = AppleIdentityTokenVerifier(provider, clientSecretFactory, TestUtils.jsr310JsonMapper(), clock)
 
     private fun token(

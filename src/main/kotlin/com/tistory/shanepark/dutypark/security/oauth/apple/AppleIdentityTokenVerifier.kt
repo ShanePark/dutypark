@@ -21,6 +21,7 @@ class AppleIdentityTokenVerifier(
     private val clock: Clock,
 ) {
     @Volatile private var cache: KeyCache? = null
+    private var unknownKidRefreshBlockedUntil = Long.MIN_VALUE
 
     fun verify(token: String, rawNonce: String?, requireNonce: Boolean = true): VerifiedAppleIdentity {
         val parts = token.split('.')
@@ -69,10 +70,17 @@ class AppleIdentityTokenVerifier(
     @Synchronized
     private fun findKey(kid: String): AppleJwk? {
         val now = clock.instant().epochSecond
-        cache?.takeIf { now < it.expiresAt }?.keys?.firstOrNull { it.kid == kid }?.let { return it }
+        val validCache = cache?.takeIf { now < it.expiresAt }
+        validCache?.keys?.firstOrNull { it.kid == kid }?.let { return it }
+        if (validCache != null && now < unknownKidRefreshBlockedUntil) return null
+
         val fetched = providerClient.jwks().keys
         cache = KeyCache(fetched, now + JWKS_TTL.seconds)
         return fetched.firstOrNull { it.kid == kid }
+            ?: run {
+                unknownKidRefreshBlockedUntil = now + UNKNOWN_KID_REFRESH_COOLDOWN.seconds
+                null
+            }
     }
 
     private fun publicKey(jwk: AppleJwk): PublicKey {
@@ -98,5 +106,6 @@ class AppleIdentityTokenVerifier(
         private val CLOCK_SKEW = Duration.ofMinutes(2)
         private val MAX_TOKEN_AGE = Duration.ofMinutes(10)
         private val JWKS_TTL = Duration.ofHours(6)
+        private val UNKNOWN_KID_REFRESH_COOLDOWN = Duration.ofMinutes(1)
     }
 }
