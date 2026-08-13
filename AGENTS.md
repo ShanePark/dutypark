@@ -1,85 +1,64 @@
-# Dutypark – Agent Operations Manual
+# Dutypark Agent Instructions
 
-Repo-wide defaults only. Read the code, nearby tests, and linked documentation for details instead of expanding this file.
+The source code, tests, and task-specific documentation are the source of truth for implementation details.
 
-## 1. Stack
+## Implementation
 
-- **Backend:** Kotlin, Java 25, Spring Boot 4, MySQL 8.0
-- **AI:** Spring AI OpenAI-compatible Google Generative Language client; queue-based schedule time parsing
-- **Web:** Vue 3, Vite, TypeScript, Pinia, Vue Router, Vue I18n (`ko`, `en`), Tailwind CSS 4, Vitest
-- **iOS:** Swift 6, SwiftUI, iOS 17+
-- **Auth / Push:** HttpOnly access/refresh cookies with Bearer fallback, Kakao/Naver OAuth, auxiliary accounts, impersonation, VAPID web push
+- Read the relevant code, tests, and local instructions before editing.
+- Before implementation, ask clarifying questions about any remaining material ambiguity that affects scope, behavior, interfaces, or acceptance criteria. Do not proceed on material assumptions.
+- For behavior changes and bug fixes, start with a focused failing test whenever practical.
+- Follow RED–GREEN–REFACTOR: confirm the test fails for the intended reason, make the smallest change that passes it, then refactor while keeping tests green.
+- Make the smallest, simplest change that fully satisfies the request.
+- Do not invent requirements, broaden scope, or add speculative abstractions or dependencies.
+- Follow existing conventions and preserve unrelated behavior and work.
+- Write clear code. Comment only non-obvious rationale, invariants, or constraints.
 
-## 2. Hard Rules
+### Dutypark Scope
 
-### General
+- Do not start development servers (`./gradlew bootRun`, `npm run dev`) unless the user explicitly asks.
+- Unless explicitly platform-specific, complete service features and user-facing policy, UI, or UX changes across the backend, responsive web, and native iOS. If a client is deferred, report the gap and do not mark the work complete.
 
-- Do not start dev servers (`./gradlew bootRun`, `npm run dev`) unless the user explicitly asks; the developer runs them. Put new configuration in `application.yml` with safe defaults and surface overrides through `.env.sample`.
-- Prefer existing patterns over new structure. Read the nearest controller, service, view, and test first.
-- When committing, include only changes made in the current agent session unless the user explicitly requests a broader scope. Preserve all pre-existing staged and unstaged work, including overlapping files, through path- or hunk-level staging.
-- Unless explicitly designated platform-specific, any service feature addition or removal and any user-facing policy, UI, or UX change must ship as one coherent change: keep the backend as the policy source of truth, apply equivalent behavior and safeguards to responsive web (mobile and desktop) and native iOS, and verify both clients. If either client must be deferred, document the gap and do not mark the work feature-complete.
-- For `gh` issues/PRs, skim recent examples and write titles and bodies in English.
+### Local Development
 
-### Backend
+- The local development database is defined in `dutypark_dev_db/docker-compose.yml`. Start it with `(cd dutypark_dev_db && docker compose up -d)`.
+- Local backend database connection settings are in `src/main/resources/application-dev.yml`.
 
-- Use constructor injection; services are `@Service` + `@Transactional`; logging uses `logger()` from `common/config/LogbackConfig.kt`.
-- Preserve visibility and ownership gates (`FriendService`, `SchedulePermissionService`, `AttachmentPermissionEvaluator`, manager checks). Before changing authentication, inspect `JwtAuthFilter`, `CookieService`, auth controllers, and `frontend/src/api/client.ts`; cookie and Bearer paths must both keep working.
-- API errors expose machine-readable `code` values through `RestExceptionControllerAdvice`; user-facing translations belong in frontend i18n bundles.
+## Delegation and Parallel Work
 
-### Frontend
+- The main agent's primary role is orchestration: planning, decomposition, delegation, coordination, review, user communication, and handling additional work—not hands-on execution.
+- Delegate repository exploration, implementation, testing, and verification to subagents by default. Do not occupy the main agent with substantial work that can be delegated.
+- Maximize safe parallelism across independent workstreams.
+- The main agent may directly handle only brief, local tasks that do not benefit from delegation, as well as integration, conflict resolution, or work that requires its broader context.
+- Give each delegated task a single owner with explicit scope, deliverables, dependencies, and verification criteria.
+- Parallelize only independent work. Concurrent writes must not overlap in files, mutable state, or contracts.
+- Shared files and cross-cutting contracts must have a single owner.
+- The main agent remains accountable for integration, review of the final diff and verification results, and the accuracy of the completion report.
 
-- New SFCs use `<script setup lang="ts">`; authenticated HTTP belongs in `frontend/src/api/*.ts`, shared interfaces in `frontend/src/types/index.ts`, and confirmations/alerts use `useSwal()`.
-- Authentication uses the shared cookie-based Axios client; never persist access tokens in localStorage.
-- Put all user-facing copy in both `frontend/src/i18n/messages/{ko,en}.ts` locales, including release notes, static notifications, and service-worker text. Use dedicated short keys for tight mobile slots. Browser locale is not a confirmed preference until explicitly selected; show language names natively.
-- Use Tailwind and `--dp-*` tokens from `frontend/src/style.css`; no hardcoded hex or theme-blind colors. Inline `:style` is only for runtime-dependent or CSS-variable-backed values.
-- Support mobile and desktop, light and dark mode, and 44px interaction targets with visible hover/focus feedback. Check iPhone 16 Pro (402×874) and iPhone 13 mini (375×812); verify visual polish in the browser with Playwright.
-- New user-facing routes must update both `frontend/src/router/index.ts` and `frontend/src/components/layout/AppHeader.vue`.
+## Completion
 
-### Release Notes & `main` PRs
+- Run verification proportional to the change, starting with focused checks and expanding based on risk and blast radius.
+- Never weaken or bypass tests or checks to make a change pass.
+- Do not claim completion without relevant verification. State exactly what was not verified and why.
+- Distinguish failures caused by the current change from pre-existing failures.
+- Report what changed, the checks run and their results, unverified areas, and remaining risks or assumptions.
 
-- Every human-authored PR to `main` needs exactly one release note; Dependabot-only dependency PRs are exempt. Follow `frontend/src/releaseNotes/README.md` for ids, dates, locales, and checks.
-- Create a draft PR first to obtain the real number, add and push `pr-<number>` release-note entries, run `cd frontend && npm run release-notes:check` and requested verification, mark the PR ready, then report CI for the head SHA. Never guess the PR number.
+### Dutypark Verification
 
-### Domain Gotchas
+- Backend: run focused Gradle tests first, then expand by risk.
+- Web: run `npm run type-check` and `npm run build`, plus affected tests.
+- iOS: when affected, run the build and tests documented in `ios/README.md`.
 
-- Attachment contexts (`SCHEDULE`, `PROFILE`, `TEAM`, `TODO`) must change across enum, validation, storage paths, synchronization, cleanup, and storage layout together.
-- Schedule create/update must use `ScheduleTimeParsingQueueManager`; updates reset `ParsingTimeStatus` to `WAIT` and requeue. The off-thread worker saves entities explicitly and must not rely on JPA dirty checking.
-- Web/PWA and native iOS authentication and push paths coexist. Web push subscription requires a valid refresh-token cookie and service-worker registration. Regression-test every affected client after shared backend changes, preserving unread polling backoff, friend-request counts, and app-badge semantics.
+## Git
 
-## 3. Verification
+- Do not perform version-control operations that change local or remote repository state unless explicitly requested.
+- Before any requested version-control write, inspect the working tree and relevant diffs.
+- Commit only changes made for the current task.
+- Treat pre-existing changes as user-owned. Never discard, overwrite, stage, or commit unrelated work.
 
-- Backend: `./gradlew test` (or targeted `--tests`); API docs: `./gradlew asciidoctor`; full build: `./gradlew build`
-- Frontend: `cd frontend && npm run type-check && npm run build`; run `npm run test` for Vitest-covered stores and utilities
-- iOS: run the documented simulator `xcodebuild ... build` and `xcodebuild ... test` commands from `ios/README.md`
-- Release notes: `cd frontend && npm run release-notes:check`
-- Browser login: `test@duty.park` / `12345678` at `http://localhost:5173` with backend `:8080` (dev-only credentials)
+### Release Notes
 
-## 4. Agent Roles, Delegation, and Parallelism
+- Every human-authored PR to `main` requires exactly one release note. Follow `frontend/src/releaseNotes/README.md`, obtain the real PR number before adding its entry, and never guess the PR number.
 
-These rules are required, not advisory.
+## Communication
 
-### Role separation
-
-- The main agent is the orchestrator: it performs discovery, design, planning, decomposition, coordination, and review. It does not write or edit implementation code directly.
-- Delegate every implementation change to a sub-agent regardless of size; there is no small-change exception. Use the main agent's model unless the user asks otherwise.
-- Sequential or tightly coupled implementation is still delegated to one sub-agent at a time. Parallelism controls concurrency, not whether implementation is delegated.
-
-### Task briefs and ownership
-
-- Give each sub-agent a bounded brief naming target files, expected deliverables, constraints, and verification commands or observable results.
-- Run independent work on disjoint files in parallel; do not parallelize overlapping edits or ordering dependencies.
-- Assign one owner to shared files such as manifests, lockfiles, routing/registration, migrations, release-note registries, and this file.
-- For cross-cutting work, establish shared contracts first, then fan out only work that lands in independent files.
-
-### Review and handover
-
-- Sub-agents report changed files, verification, assumptions, and remaining risks when a unit finishes.
-- The main agent reviews correctness, scope, simplicity, unrelated edits, and missing tests. Return deficiencies to the implementing sub-agent instead of fixing them directly.
-- The main agent performs final integration and shared-resource verification after delegated work completes.
-
-## 5. Collaboration
-
-- Respond in Korean and ask short numbered questions only when ambiguity is risky.
-- Favor backend-first changes for cross-cutting features. Coordinate one coherent checklist unit at a time and present reviewed delegated results to the user.
-- Show visual/design options in `관리 > 개발` (`/admin/dev`) for in-product comparison.
-- Never commit automatically.
+- Respond to the user in Korean.
