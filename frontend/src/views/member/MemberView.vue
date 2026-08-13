@@ -407,15 +407,19 @@ async function fetchTokens() {
   }
 }
 
-async function deleteToken(tokenId: number) {
+async function deleteToken(token: RefreshTokenDto) {
   const confirmed = await confirm(
-    t('member.sessions.signOutCurrentConfirm'),
+    t('member.sessions.signOutCurrentConfirm', {
+      device: token.userAgent?.device ?? '-',
+      browser: token.userAgent?.browser ?? '-',
+      ip: token.remoteAddr ?? '-',
+    }),
     t('member.sessions.signOutCurrentTitle')
   )
   if (!confirmed) return
 
   try {
-    await refreshTokenApi.deleteRefreshToken(tokenId)
+    await refreshTokenApi.deleteRefreshToken(token.id)
     await fetchTokens()
     toastSuccess(t('member.sessions.signOutCurrentSuccess'))
   } catch (error) {

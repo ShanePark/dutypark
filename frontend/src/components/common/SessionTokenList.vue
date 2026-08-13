@@ -25,7 +25,7 @@ const props = withDefaults(defineProps<{
 })
 
 const emit = defineEmits<{
-  delete: [tokenId: number]
+  delete: [token: RefreshTokenDto]
 }>()
 
 const { locale, t } = useI18n()
@@ -97,8 +97,8 @@ function isDesktopDevice(device: string | undefined): boolean {
   return device === 'Other'
 }
 
-function handleDelete(tokenId: number) {
-  emit('delete', tokenId)
+function handleDelete(token: RefreshTokenDto) {
+  emit('delete', token)
 }
 </script>
 
@@ -142,7 +142,7 @@ function handleDelete(tokenId: number) {
                 </span>
                 <button
                   v-else-if="showDeleteButton"
-                  @click="handleDelete(token.id)"
+                  @click="handleDelete(token)"
                   class="w-6 h-6 flex items-center justify-center text-dp-danger hover:bg-dp-danger-soft rounded-full transition cursor-pointer"
                   :title="t('member.sessions.terminate')"
                 >
@@ -209,7 +209,7 @@ function handleDelete(tokenId: number) {
             <div v-if="showDeleteButton" class="flex items-center justify-end">
               <button
                 v-if="!token.isCurrentLogin"
-                @click="handleDelete(token.id)"
+                @click="handleDelete(token)"
                 class="w-6 h-6 flex items-center justify-center text-dp-danger hover:bg-dp-danger-soft rounded-full transition cursor-pointer"
                 :title="t('member.sessions.terminate')"
               >
@@ -257,7 +257,7 @@ function handleDelete(tokenId: number) {
               </span>
               <button
                 v-else-if="showDeleteButton"
-                @click="handleDelete(token.id)"
+                @click="handleDelete(token)"
                 class="w-10 h-10 flex items-center justify-center text-dp-danger hover:bg-dp-danger-soft rounded-full transition cursor-pointer"
                 :title="t('member.sessions.terminate')"
               >
@@ -330,7 +330,7 @@ function handleDelete(tokenId: number) {
                 <td v-if="showDeleteButton" class="py-3 px-2 text-center">
                   <button
                     v-if="!token.isCurrentLogin"
-                    @click="handleDelete(token.id)"
+                    @click="handleDelete(token)"
                     class="w-8 h-8 inline-flex items-center justify-center text-dp-danger hover:bg-dp-danger-soft rounded-full transition cursor-pointer"
                     :title="t('member.sessions.terminate')"
                   >

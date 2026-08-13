@@ -163,7 +163,7 @@ async function unAssignManager(member: TeamMemberDto) {
 async function changeAdmin(member?: TeamMemberDto) {
   const message = member
     ? t('team.manage.messages.changeAdminConfirm', { name: member.name })
-    : t('team.manage.messages.resetAdminConfirm')
+    : t('team.manage.messages.resetAdminConfirm', { name: team.value?.adminName })
 
   if (!await confirm(message)) return
 
@@ -291,7 +291,7 @@ function closeBatchUploadModal() {
 
 async function removeTeam() {
   const confirmed = await confirmDelete(
-    t('team.manage.messages.deleteTeamConfirm'),
+    t('team.manage.messages.deleteTeamConfirm', { name: team.value?.name }),
     t('team.manage.actions.deleteTeam')
   )
   if (!confirmed) return

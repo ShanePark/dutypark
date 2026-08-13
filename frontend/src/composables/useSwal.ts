@@ -84,7 +84,7 @@ export function useSwal() {
       title,
       text: message,
       showCancelButton: true,
-      confirmButtonText: translateGlobal('common.actions.confirm'),
+      confirmButtonText: title,
       cancelButtonText: translateGlobal('common.actions.cancel'),
       confirmButtonColor: colors.confirmButtonColor,
       cancelButtonColor: colors.cancelButtonColor,

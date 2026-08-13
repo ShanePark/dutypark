@@ -142,17 +142,22 @@ async function handleChangePassword() {
   }
 }
 
-async function handleRevokeToken(tokenId: number, member: AdminMemberDto) {
+async function handleRevokeToken(token: RefreshTokenDto, member: AdminMemberDto) {
   if (!await confirm(
-    t('admin.dashboard.messages.revokeSessionConfirm', { name: member.name }),
+    t('admin.dashboard.messages.revokeSessionConfirm', {
+      name: member.name,
+      device: token.userAgent?.device ?? '-',
+      browser: token.userAgent?.browser ?? '-',
+      ip: token.remoteAddr ?? '-',
+    }),
     t('admin.dashboard.messages.revokeSessionTitle'),
   )) return
 
   try {
-    await refreshTokenApi.deleteRefreshToken(tokenId)
+    await refreshTokenApi.deleteRefreshToken(token.id)
     toastSuccess(t('admin.dashboard.messages.revokeSessionSuccess', { name: member.name }))
-    member.tokens = member.tokens.filter(t => t.id !== tokenId)
-    allTokens.value = allTokens.value.filter(t => t.id !== tokenId)
+    member.tokens = member.tokens.filter(t => t.id !== token.id)
+    allTokens.value = allTokens.value.filter(t => t.id !== token.id)
     if (showMemberDetailModal.value && selectedMemberId.value === member.id) {
       fetchSelectedMemberDetail(member.id)
     }
@@ -415,7 +420,7 @@ onMounted(async () => {
                     :show-delete-button="true"
                     :compact="true"
                     :collapsible="true"
-                    @delete="(tokenId: number) => handleRevokeToken(tokenId, member)"
+                    @delete="(token: RefreshTokenDto) => handleRevokeToken(token, member)"
                   />
                 </div>
               </div>

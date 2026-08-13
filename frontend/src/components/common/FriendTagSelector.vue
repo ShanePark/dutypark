@@ -154,7 +154,7 @@ async function clearSelection() {
   }
 
   if (!await confirm(
-    t('friendTagSelector.clearConfirm'),
+    t('friendTagSelector.clearConfirm', { count: selectedCount.value }),
     t('friendTagSelector.clearTitle'),
   )) {
     return

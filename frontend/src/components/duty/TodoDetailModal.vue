@@ -78,8 +78,8 @@ const emit = defineEmits<{
   (e: 'complete', id: string): void
   (e: 'reopen', id: string): void
   (e: 'change-status', data: { id: string; status: TodoStatus }): void
-  (e: 'delete', id: string): void
-  (e: 'untagSelf', id: string): void
+  (e: 'delete', todo: Pick<TodoDetailItem, 'id' | 'title'>): void
+  (e: 'untagSelf', todo: Pick<TodoDetailItem, 'id' | 'title'>): void
   (e: 'backToList'): void
 }>()
 
@@ -485,7 +485,7 @@ function onUploadError(message: string) {
             <div class="flex flex-wrap justify-end gap-2">
               <template v-if="isTaggedTodo">
                 <button
-                  @click="emit('untagSelf', todo.id)"
+                  @click="emit('untagSelf', { id: todo.id, title: todo.title })"
                   class="flex min-h-11 items-center justify-center gap-1 px-3 py-2 text-sm border border-dp-warning-border text-dp-warning rounded-lg hover:bg-dp-warning-soft transition cursor-pointer"
                 >
                   <X class="w-4 h-4" />
@@ -517,7 +517,7 @@ function onUploadError(message: string) {
                   <span class="whitespace-nowrap">{{ t('duty.todo.actions.edit') }}</span>
                 </button>
                 <button
-                  @click="emit('delete', todo.id)"
+                  @click="emit('delete', { id: todo.id, title: todo.title })"
                   class="flex min-h-11 items-center justify-center gap-1 px-3 py-2 text-sm border border-dp-danger-border text-dp-danger rounded-lg hover:bg-dp-danger-soft transition cursor-pointer"
                 >
                   <Trash2 class="w-4 h-4" />

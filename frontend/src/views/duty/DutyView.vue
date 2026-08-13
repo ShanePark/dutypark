@@ -1076,13 +1076,13 @@ async function handleTodoStatusChange(data: { id: string; status: TodoStatus }) 
   }
 }
 
-async function handleTodoDelete(id: string) {
-  if (!await confirmDelete(t('duty.todo.messages.deleteConfirm'))) return
+async function handleTodoDelete(todo: Pick<LocalTodo, 'id' | 'title'>) {
+  if (!await confirmDelete(t('duty.todo.messages.deleteConfirm', { title: todo.title }))) return
   const fromDetailModal = isTodoDetailModalOpen.value
   try {
-    await todoApi.deleteTodo(id)
-    todos.value = todos.value.filter((t) => t.id !== id)
-    completedTodos.value = completedTodos.value.filter((t) => t.id !== id)
+    await todoApi.deleteTodo(todo.id)
+    todos.value = todos.value.filter((t) => t.id !== todo.id)
+    completedTodos.value = completedTodos.value.filter((t) => t.id !== todo.id)
   } catch (error) {
     console.error('Failed to delete todo:', error)
     showError(t('duty.todo.messages.deleteFailed'))
@@ -1126,13 +1126,13 @@ async function handleTodoAdd(data: {
   isTodoAddModalOpen.value = false
 }
 
-async function handleTodoUntagSelf(id: string) {
-  if (!await confirm(t('duty.todo.messages.untagConfirm'), t('duty.todo.messages.untagTitle'))) return
+async function handleTodoUntagSelf(todo: Pick<LocalTodo, 'id' | 'title'>) {
+  if (!await confirm(t('duty.todo.messages.untagConfirm', { title: todo.title }), t('duty.todo.messages.untagTitle'))) return
 
   try {
-    await todoApi.untagSelf(id)
-    todos.value = todos.value.filter((todo) => todo.id !== id)
-    completedTodos.value = completedTodos.value.filter((todo) => todo.id !== id)
+    await todoApi.untagSelf(todo.id)
+    todos.value = todos.value.filter((item) => item.id !== todo.id)
+    completedTodos.value = completedTodos.value.filter((item) => item.id !== todo.id)
     isTodoDetailModalOpen.value = false
     toastSuccess(t('duty.todo.messages.untagged'))
   } catch (error) {
@@ -1355,11 +1355,11 @@ async function handleEditSchedule(data: ScheduleSaveData) {
   }
 }
 
-async function handleDeleteSchedule(scheduleId: string) {
-  if (!await confirmDelete(t('duty.schedule.messages.deleteConfirm'))) return
+async function handleDeleteSchedule(schedule: Pick<Schedule, 'id' | 'content'>) {
+  if (!await confirmDelete(t('duty.schedule.messages.deleteConfirm', { title: schedule.content }))) return
 
   try {
-    await scheduleApi.deleteSchedule(scheduleId)
+    await scheduleApi.deleteSchedule(schedule.id)
     await loadSchedules()
     toastSuccess(t('duty.schedule.messages.deleted'))
   } catch (error) {
@@ -1379,9 +1379,9 @@ async function handleReorderSchedules(scheduleIds: string[]) {
   }
 }
 
-async function handleUntagSelf(scheduleId: string) {
+async function handleUntagSelf(schedule: Pick<Schedule, 'id' | 'content'>) {
   try {
-    await scheduleApi.untagSelf(scheduleId)
+    await scheduleApi.untagSelf(schedule.id)
     await loadSchedules()
     toastSuccess(t('duty.schedule.messages.untagged'))
   } catch (error) {
