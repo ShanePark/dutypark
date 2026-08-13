@@ -83,6 +83,7 @@ iPhone rendition이 포함됐다. asset catalog compiler에서 앱 아이콘 관
 - [x] 앱 아이콘, 표시 이름, 최소 iOS 버전과 iPhone 대상 설정을 기술 설정과 unsigned Archive에서 확인한다.
 - [ ] Organizer의 Validate App을 통과한다.
 - [ ] Xcode Privacy Report와 [PrivacyInfo.xcprivacy](../../Dutypark/PrivacyInfo.xcprivacy)를 대조한다.
+- [x] 현재 소스·의존성·unsigned Release Archive에서 Required Reason API·tracking 선언과 embedded third-party framework를 사전 대조한다.
 - [x] 현재 소스·의존성·unsigned Release Archive를 기준으로 수출 규정 질문에 답할 기술 근거를 정리한다.
 
 기준 명령은 [iOS README](../../README.md)의 `xcodebuild ... build`와 `xcodebuild ... test`를 사용한다.

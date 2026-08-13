@@ -32,6 +32,7 @@
 - [x] unsigned generic iOS Release Archive의 앱 번들에 불필요한 내부 문서와 개발용 파일이 포함되지 않는다.
 - [x] unsigned generic iOS Release Archive의 앱 아이콘, 표시 이름, 최소 iOS와 iPhone 전용·세로 방향 기술 설정이 프로젝트와 일치한다.
 - [x] 현재 소스·의존성·unsigned Release Archive 기준으로 비면제 암호화 미사용 선언의 기술 근거를 확인한다.
+- [x] 현재 소스·의존성·unsigned Release Archive 기준으로 Required Reason API·tracking 선언과 embedded third-party framework를 사전 대조한다.
 - [ ] 배포 서명된 Release Archive에서도 같은 번들 제외 검증을 반복한다.
 - [ ] TestFlight 내부 테스트를 거쳐 동일 빌드를 심사에 연결한다.
 - [ ] 릴리스 산출물과 결과 로그를 정해진 위치에 보관한다.
@@ -107,6 +108,18 @@ Apple 참고: [Set the version number and build string](https://developer.apple.
 - Debug URL, 개발 서버 주소, 테스트 계정, verbose logging이 Release에 남지 않았는지 확인한다.
 
 Apple 참고: [Privacy manifest files](https://developer.apple.com/documentation/bundleresources/privacy-manifest-files) 및 [Describing data use](https://developer.apple.com/app-store/app-privacy-details/).
+
+### 2026-08-13 Privacy Manifest source/archive preflight
+
+[Apple의 Required Reason API 안내](https://developer.apple.com/documentation/bundleresources/describing-use-of-required-reason-api)와 [현재 API 범주 목록](https://developer.apple.com/documentation/bundleresources/app-privacy-configuration/nsprivacyaccessedapitypes/nsprivacyaccessedapitype)을 기준으로 테스트 타깃을 제외한 앱 소스와 새 unsigned generic iOS Release Archive를 감사했다.
+
+- 소스에서 사용하는 required-reason 범주는 앱 자체 preference를 읽고 쓰는 UserDefaults뿐이다. File Timestamp, System Boot Time, Disk Space, Active Keyboards 범주는 제한 검색에서 발견되지 않았다. 첨부의 `fileSizeKey`는 timestamp API가 아니다.
+- manifest의 UserDefaults 단일 항목과 `CA92.1`은 [Apple의 approved reason](https://developer.apple.com/documentation/bundleresources/app-privacy-configuration/nsprivacyaccessedapitypes/nsprivacyaccessedapitypereasons)에 명시된 앱 자체 정보 읽기·쓰기 용도와 일치한다.
+- Xcode 앱 타깃에는 package product와 framework build item이 없고 저장소에 CocoaPods·Carthage·XCFramework가 없다. Archive 앱 번들에도 embedded framework·외부 dylib가 없고 실행 파일은 Apple OS framework와 `/usr/lib`만 링크한다. 현재 [Apple의 third-party SDK requirements](https://developer.apple.com/support/third-party-SDK-requirements/) 대상 SDK가 포함됐다는 증거는 없다.
+- Archive manifest는 소스 manifest와 byte 단위로 같고 `plutil`을 통과했다. 일곱 collected data type은 중복 없이 App Functionality·linked·non-tracking이며, `NSPrivacyTracking=false`, `NSPrivacyTrackingDomains=[]`다.
+- exact manifest 계약 targeted test가 통과했고, iPhone 16 Pro 전체 suite를 새로 3회 실행해 매번 정확히 264/264(실패·건너뜀 0)로 통과했다. Release Simulator clean build와 unsigned generic iOS Release clean Archive도 성공했다.
+
+이 사전 감사는 Xcode Organizer가 앱과 SDK manifest를 결합해 생성하는 Privacy Report가 아니다. 서명 Archive에서 Organizer Report를 내보낸 뒤 manifest·App Store Connect App Privacy 초안과 대조하는 항목은 미완료로 유지한다.
 
 ## 6. 내부 Markdown의 앱 번들 제외
 

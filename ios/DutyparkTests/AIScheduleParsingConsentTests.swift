@@ -455,15 +455,18 @@ struct AIScheduleParsingConsentTests {
     }
 
     @Test
-    func privacyManifestDeclaresOnlyRequestedLinkedFunctionalityData() throws {
+    func privacyManifestDeclaresExactDataTrackingAndRequiredReasonAPIs() throws {
         let url = try #require(Bundle.main.url(forResource: "PrivacyInfo", withExtension: "xcprivacy"))
         let data = try Data(contentsOf: url)
         let plist = try #require(
             PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any]
         )
         let entries = try #require(plist["NSPrivacyCollectedDataTypes"] as? [[String: Any]])
-        let types = Set(entries.compactMap { $0["NSPrivacyCollectedDataType"] as? String })
+        let declaredTypes = entries.compactMap { $0["NSPrivacyCollectedDataType"] as? String }
+        let types = Set(declaredTypes)
 
+        #expect(declaredTypes.count == entries.count)
+        #expect(types.count == entries.count)
         #expect(types == [
             "NSPrivacyCollectedDataTypeName",
             "NSPrivacyCollectedDataTypeEmailAddress",
@@ -480,7 +483,15 @@ struct AIScheduleParsingConsentTests {
                 "NSPrivacyCollectedDataTypePurposeAppFunctionality"
             ])
         }
+
+        let accessedAPIs = try #require(plist["NSPrivacyAccessedAPITypes"] as? [[String: Any]])
+        #expect(accessedAPIs.count == 1)
+        let userDefaultsAPI = try #require(accessedAPIs.first)
+        #expect(userDefaultsAPI["NSPrivacyAccessedAPIType"] as? String ==
+            "NSPrivacyAccessedAPICategoryUserDefaults")
+        #expect(userDefaultsAPI["NSPrivacyAccessedAPITypeReasons"] as? [String] == ["CA92.1"])
         #expect(plist["NSPrivacyTracking"] as? Bool == false)
+        #expect(plist["NSPrivacyTrackingDomains"] as? [String] == [])
     }
 
     private static func response(

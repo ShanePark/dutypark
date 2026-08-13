@@ -15,8 +15,8 @@ Dutypark의 실제 수집·저장·전송 동작을 개인정보 처리방침, �
 | 최신 이용약관·AI 선택 정책 | [x] | [V2.2.29](../../../src/main/resources/db/migration/v2/V2.2.29__add_terms_and_ai_schedule_consent.sql)에 `TERMS`와 `AI_SCHEDULE_PARSING` 2026-08-13 버전을 추가했다. migration test와 consent·policy·OAuth·schedule 통합 targeted command가 `BUILD SUCCESSFUL`로 통과했다. |
 | 서버 동의·전송 gate | [x] | 조회·부여·철회 API, owner 기준 저장 gate, 재기동 queue 복원 gate와 worker 외부 호출 직전 재검사가 구현됐다. core consent 20 tests와 consent·policy·OAuth·schedule 통합 targeted command가 성공했다. |
 | 웹 선택 동의·철회 | [x] | 설정에서 사전 opt-in/철회, 상세 정책과 수동 시간 입력 안내를 한국어·영어로 제공한다. type-check, Vitest 27 files/122 tests, locale targeted 11, production build가 통과했다. |
-| iOS 선택 동의·철회 | [x] | 설정 toggle·상세 정책과 all-day 일정 저장 시 명시적 선택, 수동 시간 fallback을 구현했다. generic iOS Simulator build, `plutil`, `AIScheduleParsingConsentTests` 8/8이 통과했다. |
-| Privacy Manifest 수집 선언 | [x] | [PrivacyInfo.xcprivacy](../../Dutypark/PrivacyInfo.xcprivacy)에 현재 수집 유형과 UserDefaults required-reason API가 선언됐다. Release Archive Privacy Report 대조는 별도 대기다. |
+| iOS 선택 동의·철회 | [x] | 설정 toggle·상세 정책과 all-day 일정 저장 시 명시적 선택, 수동 시간 fallback을 구현했다. 최신 iPhone 16 Pro 전체 suite 264/264를 3회 연속 통과했다. |
+| Privacy Manifest 수집·API 선언 | [x] | [PrivacyInfo.xcprivacy](../../Dutypark/PrivacyInfo.xcprivacy)에 현재 수집 유형과 UserDefaults required-reason API가 선언됐다. 소스·의존성·unsigned Release Archive 사전 대조는 완료했고 Xcode Organizer Privacy Report 대조는 별도 대기다. |
 | App Store Connect App Privacy | [ ] | 아래 입력 초안을 Release 빌드·운영 서버와 최종 대조해 App Store Connect에서 Publish해야 한다. |
 | Google 운영 계약 | [!] | Cloud Billing이 활성화된 paid service이며 DPA가 적용되는 Cloud Project인지 운영자가 확인해야 한다. 확인 전 production AI 자동 인식을 사용하지 않고 unpaid service에는 일정 데이터를 전송하지 않는다. |
 | 법률·해외 이전 검토 | [!] | 실제 계약 주체, 처리 국가, 보관·삭제 조건과 법정 보존 의무를 확인해 최종 고지해야 한다. 확인되지 않은 국가·기간을 발명하지 않는다. |
@@ -52,6 +52,18 @@ Dutypark의 실제 수집·저장·전송 동작을 개인정보 처리방침, �
 `PrivacyInfo.xcprivacy`의 선언 후보도 위 일곱 유형과 동일하다. `NSPrivacyTracking=false`, tracking domain 없음으로 유지한다. 새로운 광고·분석·충돌 SDK를 추가하면 이 판단을 다시 해야 한다.
 
 Dutypark 앱에는 현재 별도의 광고, analytics, crash reporting SDK가 확인되지 않는다. 서버 파일 로그에는 IP, 이메일, User-Agent, 파일명 등 요청·처리·오류 정보가 포함될 수 있고 최대 365일 보유되므로, 이를 앱의 별도 `Diagnostics`/`Usage Data` SDK 수집과 혼동하지 않는다. App Store Connect의 정확한 분류는 Release Privacy Report와 운영 로그 구성을 기준으로 최종 확인한다.
+
+### 2026-08-13 Required Reason API 사전 감사
+
+[Apple의 현재 Required Reason API 목록](https://developer.apple.com/documentation/bundleresources/app-privacy-configuration/nsprivacyaccessedapitypes/nsprivacyaccessedapitype)을 기준으로 앱 타깃 Swift 소스에서 테스트 타깃을 제외하고 File Timestamp, System Boot Time, Disk Space, Active Keyboards와 UserDefaults 범주를 제한 검색했다.
+
+- `UserDefaults.standard`는 언어·로그인 이메일 기억·화면 preference·APNs preference/token·가장 만료 시각 등 앱 자체 정보에 사용된다. [Apple의 approved reasons](https://developer.apple.com/documentation/bundleresources/app-privacy-configuration/nsprivacyaccessedapitypes/nsprivacyaccessedapitypereasons)에서 `CA92.1`은 앱 자체만 접근 가능한 UserDefaults 읽기·쓰기에 해당하므로 현재 선언과 일치한다.
+- File Timestamp API는 발견되지 않았다. 첨부 검사에서 쓰는 `URLResourceKey.fileSizeKey`는 파일 크기 확인이며 Apple 목록의 timestamp key가 아니다.
+- `ProcessInfo.systemUptime`·`mach_absolute_time`, volume capacity·`statfs` 계열, `activeInputModes`는 발견되지 않았다.
+- 앱 타깃의 Swift package product와 framework build item은 비어 있고 CocoaPods·Carthage·XCFramework가 없다. 새 unsigned generic iOS Release Archive에도 embedded framework·외부 dylib가 없으며 실행 파일은 Apple OS framework와 `/usr/lib`만 링크한다. [Apple의 third-party SDK requirements](https://developer.apple.com/support/third-party-SDK-requirements/) 대상 SDK도 현재 포함되지 않는다.
+- Archive의 `PrivacyInfo.xcprivacy`는 소스 파일과 byte 단위로 같고 `plutil` 검증을 통과했다. Required Reason API는 UserDefaults 한 항목과 `CA92.1` 하나, tracking은 `false`, tracking domains는 빈 배열이다.
+
+따라서 manifest는 변경하지 않았다. 이 검사는 현재 저장소와 unsigned Archive의 범위 제한 사전 감사이며, Apple이 결합한 Xcode Organizer Privacy Report와 App Store Connect 응답을 검증하거나 Publish한 것은 아니다. SDK 또는 required-reason API가 추가되면 다시 수행한다.
 
 ## 실제 저장·전송·보유 흐름
 
@@ -94,7 +106,8 @@ Google의 [Gemini API Additional Terms of Service](https://ai.google.dev/gemini-
 - [x] 웹 AI 동의 locale targeted 11 통과
 - [x] 웹 production build 통과
 - [x] 백엔드 core consent 20 tests 및 consent service/controller, PolicyController, `V2.2.29` migration, OAuthController, ScheduleService, QueueManager, Worker 통합 targeted command 통과 (`BUILD SUCCESSFUL`, 20초)
-- [x] generic iOS Simulator build 통과, `PrivacyInfo.xcprivacy` `plutil` 검증 통과, `AIScheduleParsingConsentTests` 8/8 통과(exit 0)
+- [x] Privacy Manifest exact 계약 targeted test 통과, iPhone 16 Pro 전체 suite 새 3회 모두 264/264(실패·건너뜀 0), Release Simulator clean build와 unsigned generic iOS Release clean Archive 성공
+- [x] 소스·의존성·unsigned Archive의 Required Reason API·tracking·embedded framework 사전 대조와 Archive manifest 원본 일치 확인
 - [ ] 실제 paid Google endpoint에서 테스트용 비민감 일정으로 동의 전 0건, 동의 후 1건, 철회 후 0건을 네트워크·서버 로그로 확인
 - [ ] iOS에서 동의하고 웹에서 철회하는 교차 플랫폼 E2E 및 그 반대 방향 확인
 - [ ] Xcode Release Archive Privacy Report와 `PrivacyInfo.xcprivacy`, App Store Connect 입력값 대조
@@ -105,6 +118,7 @@ Google의 [Gemini API Additional Terms of Service](https://ai.google.dev/gemini-
 - [x] Google 전송 전에 현행 정책의 제공자·목적·전송 범위를 알린 선택 동의와 서버 강제를 구현하고 백엔드·웹·iOS 자동 검증을 통과했다.
 - [x] 거부·철회와 수동 시간 입력 fallback을 구현하고 백엔드·웹·iOS 자동 검증을 통과했다. 실제 교차 플랫폼 E2E는 별도 출시 검증으로 남아 있다.
 - [x] Privacy Manifest에 현재 수집 데이터 유형, App Functionality, user-linked, non-tracking 선언을 추가했다.
+- [x] 현재 앱의 Required Reason API를 감사하고 UserDefaults `CA92.1` 단일 선언과 빈 tracking domains를 자동 회귀 검증한다.
 - [ ] App Store Connect App Privacy 초안을 Release 기준으로 확정하고 Publish한다.
 - [!] paid service/DPA 운영 계약, 법률·해외 이전 고지, production key 구성이 확인돼야 AI 기능을 production에서 사용할 수 있다.
 - [!] Apple 로그인은 별도 구현·정책·privacy 업데이트 전까지 완료되지 않았다.
@@ -114,6 +128,9 @@ Google의 [Gemini API Additional Terms of Service](https://ai.google.dev/gemini-
 - [Apple App Review Guidelines 5.1](https://developer.apple.com/app-store/review/guidelines/#privacy)
 - [Apple: Manage app privacy](https://developer.apple.com/help/app-store-connect/manage-app-information/manage-app-privacy/)
 - [Apple: Describing data use in privacy manifests](https://developer.apple.com/documentation/bundleresources/describing-data-use-in-privacy-manifests)
+- [Apple: Describing use of required reason API](https://developer.apple.com/documentation/bundleresources/describing-use-of-required-reason-api)
+- [Apple: Required Reason API categories](https://developer.apple.com/documentation/bundleresources/app-privacy-configuration/nsprivacyaccessedapitypes/nsprivacyaccessedapitype)
+- [Apple: Approved reasons](https://developer.apple.com/documentation/bundleresources/app-privacy-configuration/nsprivacyaccessedapitypes/nsprivacyaccessedapitypereasons)
 - [Apple: Third-party SDK requirements](https://developer.apple.com/support/third-party-SDK-requirements/)
 - [Google: Gemini API Additional Terms of Service](https://ai.google.dev/gemini-api/terms)
 - [Google Cloud Data Processing Addendum](https://cloud.google.com/terms/data-processing-addendum)
