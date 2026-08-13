@@ -14,6 +14,7 @@
 - 로그인·세션 복원: [SessionStore.swift](../../Dutypark/Core/Auth/SessionStore.swift)
 - APNs 등록 흐름: [APNsRegistration.swift](../../Dutypark/Features/Notifications/APNsRegistration.swift)
 - 현재 UI 테스트: [DutyparkUITests.swift](../../DutyparkUITests/DutyparkUITests.swift)
+- 현지화 카탈로그 회귀 테스트: [LocalizationCatalogTests.swift](../../DutyparkTests/LocalizationCatalogTests.swift)
 - 개인정보 manifest: [PrivacyInfo.xcprivacy](../../Dutypark/PrivacyInfo.xcprivacy)
 
 ## 1. 현재 기준선
@@ -25,7 +26,8 @@
 - [x] iPhone 13 mini(iOS 26.5) 시뮬레이터에서 당시 UI 테스트 3개를 포함한 전체 테스트 263개가 통과한다.
 - [x] 한국어·영어 × Light/Dark UI smoke가 iPhone 16 Pro에서 3회 연속, iPhone 13 mini에서 1회 통과한다.
 - [x] 한국어·영어 × Light/Dark × 기본/최대 Dynamic Type 자동 핵심 내비게이션·scale evidence를 두 기기에서 확인한다.
-- [x] 최신 전체 테스트 264개를 같은 iPhone 16 Pro 시뮬레이터에서 3회 연속 통과시킨다.
+- [x] 최신 전체 테스트 265개를 같은 iPhone 16 Pro 시뮬레이터에서 3회 연속 통과시킨다.
+- [x] `Dutypark/Resources`의 8개 String Catalog 한국어·영어 번역과 런타임 lookup 회귀 게이트가 통과한다.
 - [x] Debug 인증 UI 테스트가 결정적 fixture만 사용하며 실제 API 요청을 시도하지 않는 것을 fail-fast로 검증한다.
 - [x] Release 시뮬레이터 clean build에 Debug 전용 인증·게스트 UI 테스트 플래그가 포함되지 않는다.
 - [x] unsigned generic iOS Release Archive 앱 번들에 Debug 전용 가정, 테스트용 인증 플래그·계정과 로컬 개발 주소가 남지 않는다.
@@ -63,6 +65,15 @@ iPhone 16 Pro(iOS 26.5)에서 3회 연속, iPhone 13 mini(iOS 26.5)에서 1회 �
 새로 3회 연속 **264/264**(실패·건너뜀 0)로 통과했다. Release Simulator `clean build`와 unsigned generic iOS
 Release `clean archive`도 다시 성공했으며, 두 앱 번들에서 authenticated·guest UI-test 플래그, 테스트 계정,
 fixture/fail-fast 문구와 localhost·`127.0.0.1`이 없음을 확인했다. 이는 수동 오프라인·5xx 검증을 대신하지 않는다.
+
+같은 날 `Dutypark/Resources/*.xcstrings` 정확히 8개, 번역 대상 695개 table/key 항목을 검사하는
+`LocalizationCatalogTests`를 추가했다. 한국어·영어의 translated·비어 있지 않은 값·key와 다른 값,
+table/key 유일성, source와 compiled Bundle lookup의 exact 일치와 printf placeholder 위치/타입 parity를 검증한다.
+대상 테스트는 iPhone 16 Pro(iOS 26.5)에서 **1/1**, 전체 suite는 3회 연속 **265/265**(실패·건너뜀 0),
+Release Simulator clean build가 통과했다. 새 unsigned generic iOS Release Archive에는 8개 table 모두
+`en.lproj`·`ko.lproj`가 있고 각 locale의 key 수가 source와 동일한 **31, 99, 57, 46, 22, 211, 67,
+162개**임을 확인했다. 이는 다른 feature catalog, 모든 사용자 노출 문자열의 번역, 수동 clipping·VoiceOver·시각 QA,
+배포 서명 Archive나 TestFlight를 완료했다는 의미가 아니다.
 
 같은 날 새 `/tmp` 경로에서 unsigned generic iOS Release `clean archive`를 다시 생성해 기본 제출 기술 설정을
 교차 검증했다. 프로젝트와 Archive 앱 `Info.plist`는 표시 이름 `Dutypark`, 최소 iOS `17.0`, iPhone 전용
@@ -187,7 +198,7 @@ Apple의 버전 제출·상태 관리는 [App Review 제출 개요](https://deve
 ## 완료 조건
 
 - [ ] 시뮬레이터 빌드와 Release Archive 검증이 모두 성공한다.
-- [x] 최신 전체 264개 테스트가 3회 연속 통과하며 탭·`todo.add`·로그인 UI 실패가 재발하지 않는다.
+- [x] 최신 전체 265개 테스트가 3회 연속 통과하며 탭·`todo.add`·로그인 UI 실패가 재발하지 않는다.
 - [ ] 내부 TestFlight에서 운영 로그인, 핵심 CRUD와 production APNs가 실기기로 검증된다.
 - [ ] 필요한 경우 외부 TestFlight와 Beta App Review를 통과한다.
 - [ ] Review Notes, 데모 계정과 심사 연락처가 준비되고 운영 백엔드 가용 담당자가 지정된다.

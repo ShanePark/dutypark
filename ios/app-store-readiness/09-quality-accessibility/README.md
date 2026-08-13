@@ -14,6 +14,7 @@
 - 캘린더 날짜 셀: [CalendarView.swift](../../Dutypark/Features/Calendar/CalendarView.swift)
 - Todo 드래그·대체 동작: [TodoView.swift](../../Dutypark/Features/Todo/TodoView.swift)
 - 현재 자동 UI 테스트: [DutyparkUITests.swift](../../DutyparkUITests/DutyparkUITests.swift)
+- 현지화 카탈로그 회귀 테스트: [LocalizationCatalogTests.swift](../../DutyparkTests/LocalizationCatalogTests.swift)
 - 현지화 선택 로직: [AppLocalization.swift](../../Dutypark/Core/Localization/AppLocalization.swift)
 
 ## 1. 공식 지원 범위
@@ -50,6 +51,7 @@ Apple의 인터페이스 접근성 원칙은 [Accessibility](https://developer.a
 - [x] `ko` × Dark × 기본/최대 Dynamic Type 자동 핵심 내비게이션·scale evidence
 - [x] `en` × Light × 기본/최대 Dynamic Type 자동 핵심 내비게이션·scale evidence
 - [x] `en` × Dark × 기본/최대 Dynamic Type 자동 핵심 내비게이션·scale evidence
+- [x] `Dutypark/Resources`의 String Catalog 8개에서 한국어·영어 번역, 중복, placeholder와 런타임 Bundle lookup을 자동 검증한다.
 - [ ] 모든 사용자 노출 문자열이 번역되고 키 이름이 그대로 보이지 않는다.
 - [ ] 긴 영어 문자열이 버튼, 탭, 경고창에서 잘리지 않는다.
 - [ ] Dark Mode에서 텍스트, 경계선, disabled 상태와 오류 메시지가 구분된다.
@@ -175,7 +177,7 @@ Dynamic Type 재현 시 시뮬레이터를 부팅한 다음 `xcrun simctl ui <UD
 - [ ] 주요 조작의 44pt 터치 영역이 수동·자동 테스트에서 확인된다.
 - [ ] Todo 드래그와 기능적으로 동등한 접근성 대체 조작이 검증된다.
 - [ ] 오프라인, 느린 네트워크, 인증 오류와 5xx에서 크래시·데이터 유실·무한 재시도가 없다.
-- [x] 탭·`todo.add`·로그인 대상 UI 실패가 재발하지 않고 최신 전체 264개 테스트가 3회 연속 통과한다.
+- [x] 탭·`todo.add`·로그인 대상 UI 실패가 재발하지 않고 최신 전체 265개 테스트가 3회 연속 통과한다.
 
 2026-08-13 `Dutypark QA iPhone 16 Pro`(iOS 26.5) 시뮬레이터에서 UI 테스트 3개를 포함한 당시 전체 suite를
 새로 3회 연속 실행해 매번 **263/263**(실패·건너뜀 0)으로 통과했다. iPhone 13 mini(iOS 26.5)에서도
@@ -197,3 +199,15 @@ iPhone 16 Pro에서 기본·최대 스모크가 각각 3회 연속, iPhone 13 mi
 보정 후 5탭 이동 테스트도 3회 연속 통과했다. 두 시뮬레이터는 원래 `large`로 복원했다.
 변경 후 전체 suite는 iPhone 16 Pro에서 다시 3회 연속 **264/264**(실패·건너뜀 0)로 통과했고
 Release Simulator clean build도 성공했다. 전체 화면 clipping·VoiceOver·기능 완주 수동 검증은 아직 남아 있다.
+
+이후 `LocalizationCatalogTests`의 Swift Testing 테스트 1개로 `#filePath`에서 찾은
+`Dutypark/Resources/*.xcstrings` **정확히 8개**를 검사했다. 번역 대상 695개 table/key 항목에 대해
+한국어·영어 source state가 translated이고 값이 비어 있거나 key와 같지 않은지, table/key가 중복되지 않는지,
+컴파일된 Bundle lookup이 source와 정확히 같은지 확인한다. printf placeholder는 위치 지정·비지정 여부와 타입이
+언어 간 일치하는지 검사하되 `%%`는 제외한다. 현재 `shouldTranslate = false` 항목은 0개다. 대상 테스트는
+iPhone 16 Pro(iOS 26.5)에서 **1/1**, 전체 suite는 **265/265**(실패·건너뜀 0)로 3회 연속 통과했고 Release
+Simulator clean build도 성공했다. 새 unsigned generic iOS Release Archive에는 8개 compiled table 모두
+`en.lproj`·`ko.lproj`가 있으며 각 locale의 table별 key 수는 source와 같은 **31, 99, 57, 46, 22, 211,
+67, 162개**다. 제한된 Swift source hardcoded-string 감사에서는 명확한 사용자 노출 결함을 찾지 못했지만,
+방어적 영문 `Errors` fallback과 Todo의 `": "` 문장부호 결합은 저위험 후속 검토로 남긴다. 이 검증은 다른 feature
+catalog, 모든 사용자 노출 문자열, 수동 clipping·VoiceOver·시각 QA, 서명 Archive나 TestFlight 완료를 뜻하지 않는다.
