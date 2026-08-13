@@ -90,10 +90,12 @@ final class SettingsViewModel: ObservableObject {
 
     func load() async {
         guard !isLoading else { return }
+#if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-ui-testing-authenticated") {
             loadUITestingFixture()
             return
         }
+#endif
         isLoading = true
         defer { isLoading = false }
 
@@ -360,6 +362,7 @@ final class SettingsViewModel: ObservableObject {
         noticeKey = key
     }
 
+#if DEBUG
     private func loadUITestingFixture() {
         member = MemberDTO(
             id: 1,
@@ -429,4 +432,5 @@ final class SettingsViewModel: ObservableObject {
         didAttemptMemberLoad = true
         loadedSections = [.family, .friends, .managers, .managedAccounts, .sessions, .dutyPattern]
     }
+#endif
 }

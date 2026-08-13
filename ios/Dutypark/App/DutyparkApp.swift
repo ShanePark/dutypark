@@ -9,6 +9,7 @@ struct DutyparkApp: App {
 
     init() {
         let initialState: SessionState
+#if DEBUG
         if CommandLine.arguments.contains("-ui-testing-authenticated") {
             initialState = .authenticated(
                 LoginMember(
@@ -25,6 +26,9 @@ struct DutyparkApp: App {
         } else {
             initialState = .restoring
         }
+#else
+        initialState = .restoring
+#endif
         _session = StateObject(wrappedValue: SessionStore(initialState: initialState))
     }
 
