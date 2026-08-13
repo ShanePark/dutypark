@@ -9,6 +9,7 @@ import { aiScheduleParsingConsentApi } from './consent'
 
 const response = {
   consented: false,
+  previouslyConsentedToCurrentPolicy: false,
   currentPolicyVersion: '2026-08-13',
   consentVersion: null,
   needsRenewal: false,
@@ -29,6 +30,7 @@ describe('AI schedule parsing consent API', () => {
     vi.mocked(apiClient.get).mockResolvedValue({ data: response })
     await expect(aiScheduleParsingConsentApi.getCurrent()).resolves.toBe(response)
     expect(apiClient.get).toHaveBeenCalledWith('/consents/ai-schedule-parsing')
+    expect(response.previouslyConsentedToCurrentPolicy).toBe(false)
   })
 
   it('grants only the displayed policy version', async () => {

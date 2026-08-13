@@ -42,6 +42,7 @@ class AiScheduleParsingConsentControllerTest : RestDocsTest() {
             jsonPath("$.policy.policyType") { value("AI_SCHEDULE_PARSING") }
             jsonPath("$.currentPolicyVersion") { value("2026-08-13") }
             jsonPath("$.consented") { value(false) }
+            jsonPath("$.previouslyConsentedToCurrentPolicy") { value(false) }
             jsonPath("$.consentVersion") { doesNotExist() }
             jsonPath("$.needsRenewal") { value(false) }
             jsonPath("$.consentedAt") { doesNotExist() }
@@ -71,6 +72,7 @@ class AiScheduleParsingConsentControllerTest : RestDocsTest() {
             }.andExpect {
                 status { isOk() }
                 jsonPath("$.consented") { value(true) }
+                jsonPath("$.previouslyConsentedToCurrentPolicy") { value(true) }
                 jsonPath("$.consentVersion") { value("2026-08-13") }
                 jsonPath("$.needsRenewal") { value(false) }
                 jsonPath("$.consentedAt") { exists() }
@@ -81,6 +83,13 @@ class AiScheduleParsingConsentControllerTest : RestDocsTest() {
         assertThat(events).hasSize(1)
         assertThat(events.single().eventType).isEqualTo(AiScheduleParsingConsentEventType.GRANTED)
         assertThat(events.single().userAgent).isEqualTo("consent-test-agent")
+
+        mockMvc.get("/api/consents/ai-schedule-parsing") {
+            header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(TestData.member)}")
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.previouslyConsentedToCurrentPolicy") { value(true) }
+        }
     }
 
     @Test
@@ -96,6 +105,7 @@ class AiScheduleParsingConsentControllerTest : RestDocsTest() {
             }.andExpect {
                 status { isOk() }
                 jsonPath("$.consented") { value(false) }
+                jsonPath("$.previouslyConsentedToCurrentPolicy") { value(true) }
                 jsonPath("$.consentVersion") { doesNotExist() }
                 jsonPath("$.needsRenewal") { value(false) }
                 jsonPath("$.revokedAt") { exists() }
@@ -106,6 +116,53 @@ class AiScheduleParsingConsentControllerTest : RestDocsTest() {
         assertThat(events).hasSize(2)
         assertThat(events.last().eventType).isEqualTo(AiScheduleParsingConsentEventType.REVOKED)
         assertThat(events.last().policyVersion).isNull()
+
+        mockMvc.get("/api/consents/ai-schedule-parsing") {
+            header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(TestData.member)}")
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.consented") { value(false) }
+            jsonPath("$.previouslyConsentedToCurrentPolicy") { value(true) }
+        }
+
+        mockMvc.put("/api/consents/ai-schedule-parsing") {
+            header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(TestData.member)}")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"consented":true,"policyVersion":"2026-08-13"}"""
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.consented") { value(true) }
+            jsonPath("$.previouslyConsentedToCurrentPolicy") { value(true) }
+        }
+
+        val reactivatedEvents = consentEventRepository.findAll()
+        assertThat(reactivatedEvents).hasSize(3)
+        assertThat(reactivatedEvents.last().eventType).isEqualTo(AiScheduleParsingConsentEventType.GRANTED)
+        assertThat(reactivatedEvents.last().policyVersion).isEqualTo("2026-08-13")
+    }
+
+    @Test
+    fun `GET returns false for previous consent after the current policy changes`() {
+        saveCurrentPolicy()
+        putConsent(true, "2026-08-13")
+        policyVersionRepository.save(
+            PolicyVersion(
+                policyType = PolicyType.AI_SCHEDULE_PARSING,
+                version = "2026-09-01",
+                content = "Updated AI schedule parsing policy",
+                effectiveDate = LocalDate.of(2026, 9, 1),
+            )
+        )
+
+        mockMvc.get("/api/consents/ai-schedule-parsing") {
+            header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(TestData.member)}")
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.currentPolicyVersion") { value("2026-09-01") }
+            jsonPath("$.consented") { value(true) }
+            jsonPath("$.previouslyConsentedToCurrentPolicy") { value(false) }
+            jsonPath("$.needsRenewal") { value(true) }
+        }
     }
 
     @Test

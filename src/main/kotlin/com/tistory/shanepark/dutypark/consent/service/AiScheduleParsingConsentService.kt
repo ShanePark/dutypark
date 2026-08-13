@@ -25,7 +25,11 @@ class AiScheduleParsingConsentService(
 
     fun getConsent(memberId: Long): AiScheduleParsingConsentResponse {
         val currentPolicy = requireCurrentPolicy()
-        return response(currentPolicy, consentEventRepository.findTopByMember_IdOrderByCreatedAtDescIdDesc(memberId))
+        return response(
+            memberId,
+            currentPolicy,
+            consentEventRepository.findTopByMember_IdOrderByCreatedAtDescIdDesc(memberId),
+        )
     }
 
     fun hasCurrentConsent(memberId: Long): Boolean {
@@ -56,7 +60,7 @@ class AiScheduleParsingConsentService(
         val isSameState = latestEvent?.eventType == requestedType &&
             (!consented || latestEvent.policyVersion == currentPolicy.version)
         if (isSameState) {
-            return response(currentPolicy, latestEvent)
+            return response(memberId, currentPolicy, latestEvent)
         }
 
         val savedEvent = consentEventRepository.save(
@@ -72,7 +76,7 @@ class AiScheduleParsingConsentService(
             "AI schedule parsing consent changed: memberId={}, eventType={}, policyVersion={}",
             memberId, requestedType, savedEvent.policyVersion,
         )
-        return response(currentPolicy, savedEvent)
+        return response(memberId, currentPolicy, savedEvent)
     }
 
     private fun requireCurrentPolicy(): PolicyVersion =
@@ -80,13 +84,22 @@ class AiScheduleParsingConsentService(
             ?: throw NoSuchElementException("consent.aiScheduleParsing.policyUnavailable")
 
     private fun response(
+        memberId: Long,
         currentPolicy: PolicyVersion,
         latestEvent: AiScheduleParsingConsentEvent?,
     ): AiScheduleParsingConsentResponse {
         val consented = latestEvent?.eventType == AiScheduleParsingConsentEventType.GRANTED
+        val previouslyConsentedToCurrentPolicy =
+            consented && latestEvent.policyVersion == currentPolicy.version ||
+                consentEventRepository.existsByMember_IdAndEventTypeAndPolicyVersion(
+                    memberId,
+                    AiScheduleParsingConsentEventType.GRANTED,
+                    currentPolicy.version,
+                )
         return AiScheduleParsingConsentResponse(
             policy = PolicyDto.from(currentPolicy),
             consented = consented,
+            previouslyConsentedToCurrentPolicy = previouslyConsentedToCurrentPolicy,
             currentPolicyVersion = currentPolicy.version,
             consentVersion = latestEvent?.policyVersion,
             needsRenewal = consented && latestEvent.policyVersion != currentPolicy.version,

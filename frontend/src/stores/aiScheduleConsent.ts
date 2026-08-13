@@ -11,7 +11,12 @@ export const useAiScheduleConsentStore = defineStore('aiScheduleConsent', () => 
   const isLoading = ref(false)
   const isSaving = ref(false)
   const loadFailed = ref(false)
+  const lastSuccessfulAt = ref<number | null>(null)
   let requestSequence = 0
+  let inFlightLoad: {
+    memberId: number
+    promise: Promise<AiScheduleParsingConsentDto>
+  } | null = null
 
   const isCurrent = computed(() =>
     consent.value?.consented === true && consent.value.needsRenewal === false,
@@ -24,34 +29,62 @@ export const useAiScheduleConsentStore = defineStore('aiScheduleConsent', () => 
     isLoading.value = false
     isSaving.value = false
     loadFailed.value = false
+    lastSuccessfulAt.value = null
+    inFlightLoad = null
   }
 
-  async function loadForMember(nextMemberId: number, force = false) {
+  function loadForMember(
+    nextMemberId: number,
+    force = false,
+  ): Promise<AiScheduleParsingConsentDto> {
     if (memberId.value !== nextMemberId) {
       reset(nextMemberId)
-    } else if (consent.value && !force) {
-      return consent.value
     }
+
+    if (inFlightLoad?.memberId === nextMemberId) return inFlightLoad.promise
+    if (consent.value && !force) return Promise.resolve(consent.value)
 
     const sequence = ++requestSequence
     isLoading.value = true
     loadFailed.value = false
-    try {
-      const response = await aiScheduleParsingConsentApi.getCurrent()
-      if (memberId.value === nextMemberId && requestSequence === sequence) {
-        consent.value = response
-      }
-      return response
-    } catch (error) {
-      if (memberId.value === nextMemberId && requestSequence === sequence) {
-        loadFailed.value = true
-      }
-      throw error
-    } finally {
-      if (memberId.value === nextMemberId && requestSequence === sequence) {
-        isLoading.value = false
-      }
-    }
+    const promise: Promise<AiScheduleParsingConsentDto> = aiScheduleParsingConsentApi.getCurrent()
+      .then((response) => {
+        if (memberId.value === nextMemberId && requestSequence === sequence) {
+          consent.value = response
+          lastSuccessfulAt.value = Date.now()
+        }
+        return response
+      })
+      .catch((error: unknown) => {
+        if (memberId.value === nextMemberId && requestSequence === sequence) {
+          loadFailed.value = true
+        }
+        throw error
+      })
+      .finally(() => {
+        if (inFlightLoad?.promise === promise) inFlightLoad = null
+        if (memberId.value === nextMemberId && requestSequence === sequence) {
+          isLoading.value = false
+        }
+      })
+
+    inFlightLoad = { memberId: nextMemberId, promise }
+    return promise
+  }
+
+  function refreshIfStaleForMember(
+    nextMemberId: number,
+    minimumIntervalMs: number,
+  ): Promise<AiScheduleParsingConsentDto> {
+    const freshnessWindow = Math.max(0, minimumIntervalMs)
+    const cachedConsent = consent.value
+    const isFresh = memberId.value === nextMemberId
+      && cachedConsent !== null
+      && lastSuccessfulAt.value !== null
+      && Date.now() - lastSuccessfulAt.value < freshnessWindow
+
+    if (isFresh && cachedConsent) return Promise.resolve(cachedConsent)
+    return loadForMember(nextMemberId, true)
   }
 
   async function grant(nextMemberId: number) {
@@ -64,7 +97,11 @@ export const useAiScheduleConsentStore = defineStore('aiScheduleConsent', () => 
     isSaving.value = true
     try {
       const response = await aiScheduleParsingConsentApi.grant(version)
-      if (memberId.value === nextMemberId) consent.value = response
+      if (memberId.value === nextMemberId) {
+        consent.value = response
+        lastSuccessfulAt.value = Date.now()
+        loadFailed.value = false
+      }
       return response
     } finally {
       if (memberId.value === nextMemberId) isSaving.value = false
@@ -76,7 +113,11 @@ export const useAiScheduleConsentStore = defineStore('aiScheduleConsent', () => 
     isSaving.value = true
     try {
       const response = await aiScheduleParsingConsentApi.revoke()
-      if (memberId.value === nextMemberId) consent.value = response
+      if (memberId.value === nextMemberId) {
+        consent.value = response
+        lastSuccessfulAt.value = Date.now()
+        loadFailed.value = false
+      }
       return response
     } finally {
       if (memberId.value === nextMemberId) isSaving.value = false
@@ -92,6 +133,7 @@ export const useAiScheduleConsentStore = defineStore('aiScheduleConsent', () => 
     isCurrent,
     reset,
     loadForMember,
+    refreshIfStaleForMember,
     grant,
     revoke,
   }

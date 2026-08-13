@@ -6,9 +6,71 @@ nonisolated struct AIScheduleParsingConsentResponse: Codable, Equatable, Sendabl
     let currentPolicyVersion: String
     let consentVersion: String?
     let needsRenewal: Bool
+    let previouslyConsentedToCurrentPolicy: Bool
     let consentedAt: String?
     let revokedAt: String?
     let policy: PolicyDTO
+
+    private enum CodingKeys: String, CodingKey {
+        case consented
+        case currentPolicyVersion
+        case consentVersion
+        case needsRenewal
+        case previouslyConsentedToCurrentPolicy
+        case consentedAt
+        case revokedAt
+        case policy
+    }
+
+    init(
+        consented: Bool,
+        currentPolicyVersion: String,
+        consentVersion: String?,
+        needsRenewal: Bool,
+        previouslyConsentedToCurrentPolicy: Bool = false,
+        consentedAt: String?,
+        revokedAt: String?,
+        policy: PolicyDTO
+    ) {
+        self.consented = consented
+        self.currentPolicyVersion = currentPolicyVersion
+        self.consentVersion = consentVersion
+        self.needsRenewal = needsRenewal
+        self.previouslyConsentedToCurrentPolicy = previouslyConsentedToCurrentPolicy
+        self.consentedAt = consentedAt
+        self.revokedAt = revokedAt
+        self.policy = policy
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        consented = try container.decode(Bool.self, forKey: .consented)
+        currentPolicyVersion = try container.decode(String.self, forKey: .currentPolicyVersion)
+        consentVersion = try container.decodeIfPresent(String.self, forKey: .consentVersion)
+        needsRenewal = try container.decode(Bool.self, forKey: .needsRenewal)
+        previouslyConsentedToCurrentPolicy = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .previouslyConsentedToCurrentPolicy
+        ) ?? false
+        consentedAt = try container.decodeIfPresent(String.self, forKey: .consentedAt)
+        revokedAt = try container.decodeIfPresent(String.self, forKey: .revokedAt)
+        policy = try container.decode(PolicyDTO.self, forKey: .policy)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(consented, forKey: .consented)
+        try container.encode(currentPolicyVersion, forKey: .currentPolicyVersion)
+        try container.encodeIfPresent(consentVersion, forKey: .consentVersion)
+        try container.encode(needsRenewal, forKey: .needsRenewal)
+        try container.encode(
+            previouslyConsentedToCurrentPolicy,
+            forKey: .previouslyConsentedToCurrentPolicy
+        )
+        try container.encodeIfPresent(consentedAt, forKey: .consentedAt)
+        try container.encodeIfPresent(revokedAt, forKey: .revokedAt)
+        try container.encode(policy, forKey: .policy)
+    }
 
     var hasCurrentConsent: Bool {
         consented && !needsRenewal
@@ -90,20 +152,47 @@ nonisolated enum AIScheduleConsentDecisionPolicy {
     }
 }
 
+nonisolated enum AIScheduleConsentFreshnessPolicy {
+    static func shouldRefresh(
+        hasResponse: Bool,
+        lastSuccessfulRefreshAt: Date?,
+        now: Date,
+        minimumInterval: TimeInterval
+    ) -> Bool {
+        guard hasResponse,
+              let lastSuccessfulRefreshAt,
+              minimumInterval > 0
+        else { return true }
+
+        let elapsed = now.timeIntervalSince(lastSuccessfulRefreshAt)
+        return elapsed < 0 || elapsed >= minimumInterval
+    }
+}
+
 @MainActor
 final class AIScheduleParsingConsentStore: ObservableObject {
     static let shared = AIScheduleParsingConsentStore()
 
     private let service: any AIScheduleParsingConsentServicing
+    private let now: () -> Date
+    private var refreshTask: Task<AIScheduleParsingConsentResponse?, Never>?
+    private var refreshTaskMemberID: Int64?
+    private var refreshTaskGeneration: UInt = 0
+    private var scopeGeneration: UInt = 0
     private(set) var memberID: Int64?
+    private(set) var lastSuccessfulRefreshAt: Date?
 
     @Published private(set) var response: AIScheduleParsingConsentResponse?
     @Published private(set) var isLoading = false
     @Published private(set) var isUpdating = false
     @Published private(set) var errorKey: String?
 
-    init(service: any AIScheduleParsingConsentServicing = AIScheduleParsingConsentService()) {
+    init(
+        service: any AIScheduleParsingConsentServicing = AIScheduleParsingConsentService(),
+        now: @escaping () -> Date = Date.init
+    ) {
         self.service = service
+        self.now = now
     }
 
     var isEnabled: Bool {
@@ -112,11 +201,15 @@ final class AIScheduleParsingConsentStore: ObservableObject {
 
     func scope(to memberID: Int64?) {
         guard self.memberID != memberID else { return }
+        scopeGeneration &+= 1
         self.memberID = memberID
         response = nil
+        lastSuccessfulRefreshAt = nil
         errorKey = nil
         isLoading = false
         isUpdating = false
+        refreshTask = nil
+        refreshTaskMemberID = nil
     }
 
     func dismissError() {
@@ -130,27 +223,68 @@ final class AIScheduleParsingConsentStore: ObservableObject {
     func load(for memberID: Int64, force: Bool = false) async {
         scope(to: memberID)
         if !force {
-            guard response == nil, !isLoading else { return }
+            guard response == nil else { return }
         }
         _ = await refresh(for: memberID)
     }
 
+    func refreshIfStale(
+        for memberID: Int64,
+        minimumInterval: TimeInterval = 30
+    ) async {
+        scope(to: memberID)
+        guard AIScheduleConsentFreshnessPolicy.shouldRefresh(
+            hasResponse: response != nil,
+            lastSuccessfulRefreshAt: lastSuccessfulRefreshAt,
+            now: now(),
+            minimumInterval: minimumInterval
+        ) else { return }
+
+        _ = await refresh(for: memberID)
+    }
+
     private func refresh(for memberID: Int64) async -> AIScheduleParsingConsentResponse? {
+        let generation = scopeGeneration
+        if let refreshTask,
+           refreshTaskMemberID == memberID,
+           refreshTaskGeneration == generation {
+            return await refreshTask.value
+        }
+
         isLoading = true
         errorKey = nil
-        defer {
-            if self.memberID == memberID { isLoading = false }
+        let task = Task { @MainActor [weak self] () -> AIScheduleParsingConsentResponse? in
+            guard let self else { return nil }
+            do {
+                let loaded = try await self.service.status()
+                guard self.memberID == memberID,
+                      self.scopeGeneration == generation
+                else { return nil }
+                self.response = loaded
+                self.lastSuccessfulRefreshAt = self.now()
+                return loaded
+            } catch {
+                guard self.memberID == memberID,
+                      self.scopeGeneration == generation
+                else { return nil }
+                self.errorKey = "settings.aiConsent.loadFailed"
+                return nil
+            }
         }
-        do {
-            let loaded = try await service.status()
-            guard self.memberID == memberID else { return nil }
-            response = loaded
-            return loaded
-        } catch {
-            guard self.memberID == memberID else { return nil }
-            errorKey = "settings.aiConsent.loadFailed"
-            return nil
+        refreshTask = task
+        refreshTaskMemberID = memberID
+        refreshTaskGeneration = generation
+
+        let result = await task.value
+        if self.memberID == memberID,
+           scopeGeneration == generation,
+           refreshTaskMemberID == memberID,
+           refreshTaskGeneration == generation {
+            refreshTask = nil
+            refreshTaskMemberID = nil
+            isLoading = false
         }
+        return result
     }
 
     func saveDecision(
@@ -202,6 +336,7 @@ final class AIScheduleParsingConsentStore: ObservableObject {
             )
             guard self.memberID == memberID else { return false }
             response = updated
+            lastSuccessfulRefreshAt = now()
             return consented ? updated.hasCurrentConsent : !updated.consented
         } catch {
             guard self.memberID == memberID else { return false }

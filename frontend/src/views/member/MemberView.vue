@@ -38,6 +38,7 @@ import {
   type SocialLinkProvider,
 } from '@/utils/socialLinkCallback'
 import { resolveApiErrorMessage } from '@/utils/resolveApiError'
+import { canReenableAiScheduleConsentWithoutPrompt } from '@/utils/aiScheduleConsentFlow'
 import {
   User,
   Building2,
@@ -74,7 +75,10 @@ const { t } = useI18n()
 const { showSuccess, showError, showInfo, confirm, confirmDelete, toastSuccess } = useSwal()
 
 const showAiPolicyModal = ref(false)
+const aiPolicyModalMode = ref<'read' | 'consent'>('read')
+const aiConsentError = ref('')
 const aiConsentOn = computed(() => aiConsentStore.isCurrent)
+const AI_CONSENT_REFRESH_INTERVAL_MS = 30_000
 
 async function loadAiConsent(force = false) {
   const id = authStore.user?.id
@@ -104,23 +108,55 @@ async function toggleAiConsent() {
     return
   }
 
-  const confirmed = await confirm(
-    t('aiScheduleConsent.confirmDescription'),
-    t('aiScheduleConsent.confirmTitle'),
-  )
-  if (!confirmed) return
+  if (canReenableAiScheduleConsentWithoutPrompt(aiConsentStore.consent)) {
+    try {
+      await aiConsentStore.grant(id)
+      toastSuccess(t('aiScheduleConsent.messages.granted'))
+    } catch (error) {
+      console.error('Failed to re-enable AI schedule parsing consent:', error)
+      showError(t('aiScheduleConsent.messages.updateFailed'))
+    }
+    return
+  }
 
+  aiPolicyModalMode.value = 'consent'
+  aiConsentError.value = ''
+  showAiPolicyModal.value = true
+}
+
+function openAiPolicy() {
+  aiPolicyModalMode.value = 'read'
+  aiConsentError.value = ''
+  showAiPolicyModal.value = true
+}
+
+function closeAiPolicy() {
+  if (aiConsentStore.isSaving) return
+  showAiPolicyModal.value = false
+  aiConsentError.value = ''
+}
+
+async function grantAiConsent() {
+  const id = authStore.user?.id
+  if (!id || aiConsentStore.isSaving || aiPolicyModalMode.value !== 'consent') return
+
+  aiConsentError.value = ''
   try {
     await aiConsentStore.grant(id)
+    showAiPolicyModal.value = false
     toastSuccess(t('aiScheduleConsent.messages.granted'))
   } catch (error) {
     console.error('Failed to grant AI schedule parsing consent:', error)
-    showError(t('aiScheduleConsent.messages.updateFailed'))
+    aiConsentError.value = t('aiScheduleConsent.messages.updateFailed')
   }
 }
 
 function refreshAiConsentOnReturn() {
-  if (document.visibilityState === 'visible') void loadAiConsent(true)
+  const id = authStore.user?.id
+  if (document.visibilityState !== 'visible' || !id) return
+  void aiConsentStore.refreshIfStaleForMember(id, AI_CONSENT_REFRESH_INTERVAL_MS).catch((error) => {
+    console.error('Failed to refresh AI schedule parsing consent:', error)
+  })
 }
 
 watch(
@@ -1064,7 +1100,7 @@ onUnmounted(() => {
           type="button"
           role="switch"
           :aria-checked="aiConsentOn"
-          :disabled="aiConsentStore.isLoading || aiConsentStore.isSaving"
+          :disabled="aiConsentStore.isLoading || aiConsentStore.isSaving || !aiConsentStore.consent?.policy"
           class="push-toggle-row mt-3 w-full min-h-11 flex items-center justify-between gap-4 rounded-lg p-3 text-left disabled:cursor-not-allowed"
           @click="toggleAiConsent"
         >
@@ -1084,7 +1120,7 @@ onUnmounted(() => {
           type="button"
           :disabled="!aiConsentStore.consent?.policy"
           class="mt-2 min-h-11 rounded-lg px-3 text-sm font-medium text-dp-accent hover:bg-dp-accent-soft disabled:opacity-50"
-          @click="showAiPolicyModal = true"
+          @click="openAiPolicy"
         >
           {{ t('aiScheduleConsent.viewPolicy') }}
         </button>
@@ -1314,7 +1350,11 @@ onUnmounted(() => {
     <AiSchedulePolicyModal
       :is-open="showAiPolicyModal"
       :policy="aiConsentStore.consent?.policy ?? null"
-      @close="showAiPolicyModal = false"
+      :mode="aiPolicyModalMode"
+      :is-saving="aiConsentStore.isSaving"
+      :error="aiConsentError"
+      @close="closeAiPolicy"
+      @consent="grantAiConsent"
     />
 
     <SocialAccountConnectionModal

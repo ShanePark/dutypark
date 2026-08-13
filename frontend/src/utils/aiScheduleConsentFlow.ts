@@ -2,6 +2,12 @@ import type { AiScheduleParsingConsentDto } from '@/api/consent'
 
 export type AiScheduleConsentAction = 'request-ai' | 'prompt' | 'without-ai'
 
+export function canReenableAiScheduleConsentWithoutPrompt(
+  consent: AiScheduleParsingConsentDto | null,
+): boolean {
+  return consent?.previouslyConsentedToCurrentPolicy === true
+}
+
 export function isAiTimeParsingCandidate(startDateTime: string, endDateTime: string): boolean {
   return isMidnight(startDateTime) && isMidnight(endDateTime)
 }

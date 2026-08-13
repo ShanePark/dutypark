@@ -6,6 +6,7 @@ import java.time.LocalDateTime
 data class AiScheduleParsingConsentResponse(
     val policy: PolicyDto,
     val consented: Boolean,
+    val previouslyConsentedToCurrentPolicy: Boolean,
     val currentPolicyVersion: String,
     val consentVersion: String?,
     val needsRenewal: Boolean,

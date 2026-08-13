@@ -62,6 +62,7 @@ class AiScheduleParsingConsentServiceTest {
         assertThat(result.currentPolicyVersion).isEqualTo("2026-08-13")
         assertThat(result.policy.version).isEqualTo("2026-08-13")
         assertThat(result.consented).isFalse()
+        assertThat(result.previouslyConsentedToCurrentPolicy).isFalse()
         assertThat(result.consentVersion).isNull()
         assertThat(result.needsRenewal).isFalse()
         assertThat(result.consentedAt).isNull()
@@ -102,6 +103,7 @@ class AiScheduleParsingConsentServiceTest {
             assertThat(firstValue.userAgent).hasSize(500)
         }
         assertThat(result.consented).isTrue()
+        assertThat(result.previouslyConsentedToCurrentPolicy).isTrue()
         assertThat(result.needsRenewal).isFalse()
         assertThat(result.consentedAt).isNotNull()
     }
@@ -184,6 +186,35 @@ class AiScheduleParsingConsentServiceTest {
         whenever(consentEventRepository.findTopByMember_IdOrderByCreatedAtDescIdDesc(1L))
             .thenReturn(event(AiScheduleParsingConsentEventType.REVOKED, null))
         assertThat(consentService.hasCurrentConsent(1L)).isFalse()
+    }
+
+    @Test
+    fun `revoked member remains previously consented to the current policy`() {
+        val revoked = event(AiScheduleParsingConsentEventType.REVOKED, null)
+        whenever(consentEventRepository.findTopByMember_IdOrderByCreatedAtDescIdDesc(1L)).thenReturn(revoked)
+        whenever(
+            consentEventRepository.existsByMember_IdAndEventTypeAndPolicyVersion(
+                1L,
+                AiScheduleParsingConsentEventType.GRANTED,
+                "2026-08-13",
+            )
+        ).thenReturn(true)
+
+        val result = consentService.getConsent(1L)
+
+        assertThat(result.consented).isFalse()
+        assertThat(result.previouslyConsentedToCurrentPolicy).isTrue()
+        assertThat(consentService.hasCurrentConsent(1L)).isFalse()
+    }
+
+    @Test
+    fun `grant to an older policy is not previous consent to the current policy`() {
+        val oldGrant = event(AiScheduleParsingConsentEventType.GRANTED, "2026-01-01")
+        whenever(consentEventRepository.findTopByMember_IdOrderByCreatedAtDescIdDesc(1L)).thenReturn(oldGrant)
+
+        val result = consentService.getConsent(1L)
+
+        assertThat(result.previouslyConsentedToCurrentPolicy).isFalse()
     }
 
     @Test

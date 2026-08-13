@@ -69,7 +69,12 @@ struct RootTabView: View {
                 guard phase == .active else { return }
                 homeRefreshID &+= 1
                 if let memberID = authenticatedMemberID {
-                    await AIScheduleParsingConsentStore.shared.load(for: memberID, force: true)
+                    Task {
+                        await AIScheduleParsingConsentStore.shared.refreshIfStale(
+                            for: memberID,
+                            minimumInterval: 30
+                        )
+                    }
                 }
                 await APNsRegistrationManager.shared.resumeRegistration()
                 await openPendingPushIfNeeded()

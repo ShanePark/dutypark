@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { AiScheduleParsingConsentDto } from '@/api/consent'
 import {
+  canReenableAiScheduleConsentWithoutPrompt,
   getAiScheduleConsentAction,
   isAiTimeParsingCandidate,
 } from './aiScheduleConsentFlow'
@@ -10,6 +11,7 @@ function consentDto(
 ): AiScheduleParsingConsentDto {
   return {
     consented: false,
+    previouslyConsentedToCurrentPolicy: false,
     currentPolicyVersion: 'v2',
     consentVersion: null,
     needsRenewal: false,
@@ -26,6 +28,16 @@ function consentDto(
 }
 
 describe('AI schedule consent flow', () => {
+  it('re-enables without prompting only after prior consent to the current policy', () => {
+    expect(canReenableAiScheduleConsentWithoutPrompt(consentDto({
+      previouslyConsentedToCurrentPolicy: true,
+      revokedAt: '2026-08-13T00:00:00Z',
+    }))).toBe(true)
+    expect(canReenableAiScheduleConsentWithoutPrompt(consentDto())).toBe(false)
+    expect(canReenableAiScheduleConsentWithoutPrompt({} as AiScheduleParsingConsentDto)).toBe(false)
+    expect(canReenableAiScheduleConsentWithoutPrompt(null)).toBe(false)
+  })
+
   it('treats an all-day midnight range as an AI parsing candidate', () => {
     expect(isAiTimeParsingCandidate('2026-08-13T00:00:00', '2026-08-13T00:00:00')).toBe(true)
     expect(isAiTimeParsingCandidate('2026-08-13T00:00', '2026-08-14T00:00')).toBe(true)

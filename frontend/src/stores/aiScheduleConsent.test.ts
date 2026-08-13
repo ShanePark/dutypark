@@ -12,9 +12,14 @@ vi.mock('@/api/consent', () => ({
 import { aiScheduleParsingConsentApi } from '@/api/consent'
 import { useAiScheduleConsentStore } from './aiScheduleConsent'
 
-function dto(consented = false, needsRenewal = false) {
+function dto(
+  consented = false,
+  needsRenewal = false,
+  previouslyConsentedToCurrentPolicy = consented,
+) {
   return {
     consented,
+    previouslyConsentedToCurrentPolicy,
     currentPolicyVersion: 'v2',
     consentVersion: consented ? 'v2' : null,
     needsRenewal,
@@ -49,7 +54,7 @@ describe('AI schedule parsing consent store', () => {
 
   it('revokes the current account', async () => {
     vi.mocked(aiScheduleParsingConsentApi.getCurrent).mockResolvedValue(dto(true))
-    vi.mocked(aiScheduleParsingConsentApi.revoke).mockResolvedValue(dto(false))
+    vi.mocked(aiScheduleParsingConsentApi.revoke).mockResolvedValue(dto(false, false, true))
     const store = useAiScheduleConsentStore()
 
     await store.loadForMember(7)
@@ -57,6 +62,7 @@ describe('AI schedule parsing consent store', () => {
 
     expect(aiScheduleParsingConsentApi.revoke).toHaveBeenCalledOnce()
     expect(store.isCurrent).toBe(false)
+    expect(store.consent?.previouslyConsentedToCurrentPolicy).toBe(true)
   })
 
   it('clears the previous response before loading a switched account', async () => {
@@ -89,5 +95,77 @@ describe('AI schedule parsing consent store', () => {
     expect(aiScheduleParsingConsentApi.getCurrent).toHaveBeenCalledTimes(2)
     expect(store.consent?.revokedAt).toBe('2026-08-13T01:00:00Z')
     expect(store.isCurrent).toBe(false)
+  })
+
+  it('merges overlapping stale refreshes for the same member', async () => {
+    let resolveRequest!: (value: ReturnType<typeof dto>) => void
+    vi.mocked(aiScheduleParsingConsentApi.getCurrent).mockReturnValue(new Promise((resolve) => {
+      resolveRequest = resolve
+    }))
+    const store = useAiScheduleConsentStore()
+
+    const first = store.refreshIfStaleForMember(7, 30_000)
+    const second = store.refreshIfStaleForMember(7, 30_000)
+
+    expect(aiScheduleParsingConsentApi.getCurrent).toHaveBeenCalledOnce()
+    resolveRequest(dto())
+    await Promise.all([first, second])
+  })
+
+  it('uses a fresh cached result and refreshes it once after it becomes stale', async () => {
+    let now = 1_000
+    const nowSpy = vi.spyOn(Date, 'now').mockImplementation(() => now)
+    vi.mocked(aiScheduleParsingConsentApi.getCurrent).mockResolvedValue(dto())
+    const store = useAiScheduleConsentStore()
+
+    await store.loadForMember(7)
+    await store.refreshIfStaleForMember(7, 30_000)
+    await store.refreshIfStaleForMember(7, 30_000)
+    expect(aiScheduleParsingConsentApi.getCurrent).toHaveBeenCalledOnce()
+
+    now += 30_001
+    await store.refreshIfStaleForMember(7, 30_000)
+    expect(aiScheduleParsingConsentApi.getCurrent).toHaveBeenCalledTimes(2)
+    nowSpy.mockRestore()
+  })
+
+  it('treats successful grants and revocations as fresh', async () => {
+    let now = 1_000
+    const nowSpy = vi.spyOn(Date, 'now').mockImplementation(() => now)
+    vi.mocked(aiScheduleParsingConsentApi.getCurrent).mockResolvedValue(dto())
+    vi.mocked(aiScheduleParsingConsentApi.grant).mockResolvedValue(dto(true))
+    vi.mocked(aiScheduleParsingConsentApi.revoke).mockResolvedValue(dto(false, false, true))
+    const store = useAiScheduleConsentStore()
+
+    await store.loadForMember(7)
+    now += 30_001
+    await store.grant(7)
+    await store.refreshIfStaleForMember(7, 30_000)
+    now += 30_001
+    await store.revoke(7)
+    await store.refreshIfStaleForMember(7, 30_000)
+
+    expect(aiScheduleParsingConsentApi.getCurrent).toHaveBeenCalledOnce()
+    nowSpy.mockRestore()
+  })
+
+  it('keeps the cached value when a stale refresh fails', async () => {
+    let now = 1_000
+    const nowSpy = vi.spyOn(Date, 'now').mockImplementation(() => now)
+    vi.mocked(aiScheduleParsingConsentApi.getCurrent)
+      .mockResolvedValueOnce(dto(true))
+      .mockRejectedValueOnce(new Error('network'))
+      .mockResolvedValueOnce(dto(true))
+    const store = useAiScheduleConsentStore()
+
+    await store.loadForMember(7)
+    now += 30_001
+    await expect(store.refreshIfStaleForMember(7, 30_000)).rejects.toThrow('network')
+
+    expect(store.isCurrent).toBe(true)
+    expect(store.loadFailed).toBe(true)
+    await store.refreshIfStaleForMember(7, 30_000)
+    expect(aiScheduleParsingConsentApi.getCurrent).toHaveBeenCalledTimes(3)
+    nowSpy.mockRestore()
   })
 })

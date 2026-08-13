@@ -180,6 +180,21 @@ struct SettingsView: View {
                 )
             }
         }
+        .fullScreenCover(isPresented: $showAIConsentConfirmation) {
+            if let memberID = model.member?.id {
+                DPModalOverlay(
+                    onDismiss: { showAIConsentConfirmation = false },
+                    canDismiss: !aiConsent.isUpdating
+                ) { availableSize, dismiss in
+                    AIScheduleConsentActivationModal(
+                        store: aiConsent,
+                        memberID: memberID,
+                        maximumHeight: availableSize.height,
+                        dismiss: dismiss
+                    )
+                }
+            }
+        }
         .fullScreenCover(isPresented: $showAccountDeletion) {
             if let memberName = model.member?.name {
                 DPModalOverlay(
@@ -290,14 +305,6 @@ struct SettingsView: View {
             }
         } message: {
             SettingsLocalization.text("settings.push.permissionMessage")
-        }
-        .alert(SettingsLocalization.string("settings.aiConsent.confirmTitle"), isPresented: $showAIConsentConfirmation) {
-            Button(SettingsLocalization.string("settings.action.cancel"), role: .cancel) {}
-            Button(SettingsLocalization.string("settings.aiConsent.confirmEnable")) {
-                Task { await grantAIConsent() }
-            }
-        } message: {
-            SettingsLocalization.text("settings.aiConsent.confirmMessage")
         }
         .alert(SettingsLocalization.string("settings.notice.title"), isPresented: aiConsentErrorBinding) {
             Button(SettingsLocalization.string("settings.action.confirm")) {
@@ -832,7 +839,7 @@ struct SettingsView: View {
 
     private var aiConsentErrorBinding: Binding<Bool> {
         Binding(
-            get: { aiConsent.errorKey != nil },
+            get: { aiConsent.errorKey != nil && !showAIConsentConfirmation },
             set: { if !$0 { aiConsent.dismissError() } }
         )
     }
@@ -841,19 +848,21 @@ struct SettingsView: View {
         guard let memberID = model.member?.id else { return }
         if aiConsent.isEnabled {
             Task { _ = await aiConsent.revoke(for: memberID) }
-        } else {
-            showAIConsentConfirmation = true
-        }
-    }
-
-    private func grantAIConsent() async {
-        guard let memberID = model.member?.id,
-              let version = aiConsent.response?.currentPolicyVersion
-        else {
-            aiConsent.reportLoadFailure()
             return
         }
-        _ = await aiConsent.grant(for: memberID, policyVersion: version)
+
+        switch AIScheduleConsentSettingsActivationPolicy.decision(response: aiConsent.response) {
+        case .showAgreement:
+            aiConsent.dismissError()
+            showAIConsentConfirmation = true
+        case let .grant(policyVersion):
+            aiConsent.dismissError()
+            Task {
+                _ = await aiConsent.grant(for: memberID, policyVersion: policyVersion)
+            }
+        case .unavailable:
+            aiConsent.reportLoadFailure()
+        }
     }
 
     private var languageBinding: Binding<String> {
@@ -1524,6 +1533,7 @@ private struct SettingsModalHeader: View {
             SettingsLocalization.text(titleKey)
                 .font(DPTypography.heading)
                 .foregroundStyle(DPColor.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
             Spacer()
             Button(action: close) {
                 Image(systemName: "xmark")
@@ -1534,6 +1544,7 @@ private struct SettingsModalHeader: View {
             }
             .buttonStyle(.plain)
             .disabled(closeDisabled)
+            .accessibilityLabel(SettingsLocalization.string("settings.action.cancel"))
         }
         .padding(.horizontal, DPSpacing.large)
         .frame(minHeight: 64)
@@ -2044,6 +2055,182 @@ private struct PolicyView: View {
         }
         .navigationTitle(SettingsLocalization.string(titleKey))
         .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
+nonisolated enum AIScheduleConsentSettingsActivationDecision: Equatable, Sendable {
+    case showAgreement
+    case grant(policyVersion: String)
+    case unavailable
+}
+
+nonisolated enum AIScheduleConsentSettingsActivationPolicy {
+    static func decision(
+        response: AIScheduleParsingConsentResponse?
+    ) -> AIScheduleConsentSettingsActivationDecision {
+        guard let response else { return .unavailable }
+
+        let currentVersion = response.currentPolicyVersion
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        let policyVersion = response.policy.version
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard response.policy.policyType == .aiScheduleParsing,
+              !currentVersion.isEmpty,
+              currentVersion == response.currentPolicyVersion,
+              currentVersion == policyVersion,
+              policyVersion == response.policy.version,
+              !response.policy.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        else { return .unavailable }
+
+        return response.previouslyConsentedToCurrentPolicy
+            ? .grant(policyVersion: currentVersion)
+            : .showAgreement
+    }
+}
+
+nonisolated enum AIScheduleConsentActivationPolicy {
+    static func canSubmit(
+        hasConfirmedTerms: Bool,
+        hasPolicy: Bool,
+        policyVersion: String?,
+        isUpdating: Bool
+    ) -> Bool {
+        hasConfirmedTerms
+            && hasPolicy
+            && policyVersion?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+            && !isUpdating
+    }
+}
+
+private struct AIScheduleConsentActivationModal: View {
+    @ObservedObject var store: AIScheduleParsingConsentStore
+    let memberID: Int64
+    let maximumHeight: CGFloat
+    let dismiss: () -> Void
+    @State private var hasConfirmedTerms = false
+
+    var body: some View {
+        DPModalPanel(maximumPanelHeight: maximumHeight) {
+            SettingsModalHeader(
+                titleKey: "settings.aiConsent.confirmTitle",
+                closeDisabled: store.isUpdating,
+                close: dismiss
+            )
+        } content: {
+            VStack(alignment: .leading, spacing: DPSpacing.medium) {
+                SettingsLocalization.text("settings.aiConsent.dataFlow")
+                    .font(DPTypography.body)
+                    .foregroundStyle(DPColor.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(DPSpacing.medium)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(DPColor.accentSoft)
+                    .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+
+                if let policy = store.response?.policy {
+                    if let markdown = try? AttributedString(markdown: policy.content) {
+                        Text(markdown)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .fixedSize(horizontal: false, vertical: true)
+                    } else {
+                        Text(policy.content)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    Divider()
+
+                    VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+                        Text(verbatim: "\(SettingsLocalization.string("settings.aiConsent.policyVersion")) \(policy.version)")
+                        Text(verbatim: "\(SettingsLocalization.string("settings.aiConsent.effectiveDate")) \(policy.effectiveDate.rawValue)")
+                    }
+                    .font(DPTypography.caption)
+                    .foregroundStyle(DPColor.textMuted)
+                } else {
+                    Label(
+                        SettingsLocalization.string("settings.aiConsent.loadFailed"),
+                        systemImage: "exclamationmark.triangle"
+                    )
+                    .font(DPTypography.supporting)
+                    .foregroundStyle(DPColor.danger)
+                    .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Toggle(isOn: $hasConfirmedTerms) {
+                    SettingsLocalization.text("settings.aiConsent.confirmAcknowledgement")
+                        .font(DPTypography.bodyMedium)
+                        .foregroundStyle(DPColor.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .tint(DPColor.accent)
+                .frame(minHeight: DPSize.minimumTouchTarget)
+                .disabled(store.isUpdating || store.response?.policy == nil)
+                .accessibilityLabel(SettingsLocalization.string("settings.aiConsent.confirmAcknowledgement"))
+                .accessibilityValue(SettingsLocalization.string(
+                    hasConfirmedTerms ? "settings.accessibility.on" : "settings.accessibility.off"
+                ))
+                .accessibilityHint(SettingsLocalization.string("settings.aiConsent.confirmAcknowledgementHint"))
+                .accessibilityIdentifier("settings.aiConsent.confirmAcknowledgement")
+
+                if let errorKey = store.errorKey {
+                    Label(SettingsLocalization.string(errorKey), systemImage: "exclamationmark.circle.fill")
+                        .font(DPTypography.supporting)
+                        .foregroundStyle(DPColor.danger)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityElement(children: .combine)
+                        .accessibilityIdentifier("settings.aiConsent.error")
+                }
+            }
+            .padding(DPSpacing.large)
+        } footer: {
+            SettingsModalActions {
+                Button(action: enable) {
+                    Group {
+                        if store.isUpdating {
+                            ProgressView()
+                                .accessibilityLabel(SettingsLocalization.string("settings.aiConsent.updating"))
+                        } else {
+                            SettingsLocalization.text("settings.aiConsent.confirmEnable")
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(DPPrimaryButtonStyle())
+                .disabled(!canSubmit)
+                .accessibilityHint(SettingsLocalization.string("settings.aiConsent.confirmEnableHint"))
+                .accessibilityIdentifier("settings.aiConsent.confirmEnable")
+
+                Button(action: dismiss) {
+                    SettingsLocalization.text("settings.action.cancel")
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(DPSecondaryButtonStyle())
+                .disabled(store.isUpdating)
+            }
+        }
+    }
+
+    private var canSubmit: Bool {
+        AIScheduleConsentActivationPolicy.canSubmit(
+            hasConfirmedTerms: hasConfirmedTerms,
+            hasPolicy: store.response?.policy != nil,
+            policyVersion: store.response?.currentPolicyVersion,
+            isUpdating: store.isUpdating
+        )
+    }
+
+    private func enable() {
+        guard canSubmit,
+              let policyVersion = store.response?.currentPolicyVersion
+        else { return }
+
+        Task {
+            if await store.grant(for: memberID, policyVersion: policyVersion) {
+                dismiss()
+            }
+        }
     }
 }
 

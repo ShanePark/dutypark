@@ -3,6 +3,7 @@ import type { PolicyDto } from './policy'
 
 export interface AiScheduleParsingConsentDto {
   consented: boolean
+  previouslyConsentedToCurrentPolicy: boolean
   currentPolicyVersion: string
   consentVersion: string | null
   needsRenewal: boolean
