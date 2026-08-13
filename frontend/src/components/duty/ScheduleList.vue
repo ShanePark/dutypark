@@ -63,9 +63,9 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'edit', schedule: Schedule): void
-  (e: 'delete', scheduleId: string): void
+  (e: 'delete', schedule: Pick<Schedule, 'id' | 'content'>): void
   (e: 'reorder', scheduleIds: string[]): void
-  (e: 'request-untag', scheduleId: string): void
+  (e: 'request-untag', schedule: Pick<Schedule, 'id' | 'content'>): void
 }>()
 
 const { t } = useI18n()
@@ -283,7 +283,7 @@ function handleTagClick(schedule: Schedule) {
                 />
                 <button
                   v-if="canUntagSchedule(schedule)"
-                  @click="emit('request-untag', schedule.id)"
+                  @click="emit('request-untag', { id: schedule.id, content: schedule.content })"
                   class="inline-flex min-h-[44px] shrink-0 items-center gap-1 whitespace-nowrap rounded border border-dp-warning-border px-2 py-1 text-xs font-medium text-dp-warning transition hover:bg-dp-warning-soft cursor-pointer"
                   :title="t('duty.schedule.list.untag')"
                 >
@@ -300,7 +300,7 @@ function handleTagClick(schedule: Schedule) {
                     <Pencil class="w-4 h-4" />
                   </button>
                   <button
-                    @click="emit('delete', schedule.id)"
+                    @click="emit('delete', { id: schedule.id, content: schedule.content })"
                     class="p-1.5 rounded-lg hover-danger cursor-pointer text-dp-danger"
                     :title="t('duty.schedule.list.delete')"
                   >

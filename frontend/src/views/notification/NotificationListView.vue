@@ -153,7 +153,7 @@ async function handleDeleteNotification(notification: NotificationDto, event: Ev
   event.stopPropagation()
 
   const confirmed = await confirm(
-    t('notifications.list.deleteConfirmMessage'),
+    t('notifications.list.deleteConfirmMessage', { message: getNotificationMessage(notification) }),
     t('notifications.list.deleteConfirmTitle')
   )
   if (!confirmed) return

@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 
 const props = defineProps<{
   isOpen: boolean
+  scheduleTitle: string
 }>()
 
 const emit = defineEmits<{
@@ -38,7 +39,7 @@ function confirm() {
       </div>
       <div class="modal-body-form-compact">
         <p class="text-sm text-dp-text-secondary">
-          {{ t('duty.untagConfirm.message') }}
+          {{ t('duty.untagConfirm.message', { title: props.scheduleTitle }) }}
         </p>
         <div
           class="p-3 rounded-lg text-xs space-y-1 bg-dp-bg-secondary text-dp-text-muted"

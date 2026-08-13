@@ -356,11 +356,11 @@ async function saveSchedule() {
   }
 }
 
-async function deleteSchedule(scheduleId: string) {
-  if (!await confirmDelete(t('team.view.schedule.deleteConfirm'))) return
+async function deleteSchedule(schedule: TeamScheduleDto) {
+  if (!await confirmDelete(t('team.view.schedule.deleteConfirm', { title: schedule.content }))) return
 
   try {
-    await teamApi.deleteTeamSchedule(scheduleId)
+    await teamApi.deleteTeamSchedule(schedule.id)
     await fetchTeamSchedules()
     toastSuccess(t('team.view.schedule.deleteSuccess'))
   } catch (error) {
@@ -513,7 +513,7 @@ onMounted(() => {
                   <Pencil class="w-4 h-4" />
                 </button>
                 <button
-                  @click="deleteSchedule(schedule.id)"
+                  @click="deleteSchedule(schedule)"
                   class="p-1.5 text-dp-danger rounded-lg hover:bg-dp-danger-soft transition cursor-pointer"
                   :title="t('team.view.actions.deleteSchedule')"
                 >

@@ -342,12 +342,12 @@ async function handleReopenTodo(id: string) {
   }
 }
 
-async function handleDeleteTodo(id: string) {
-  const confirmed = await confirmDelete(t('todoBoard.messages.deleteConfirm'))
+async function handleDeleteTodo(todo: Pick<Todo, 'id' | 'title'>) {
+  const confirmed = await confirmDelete(t('todoBoard.messages.deleteConfirm', { title: todo.title }))
   if (!confirmed) return
 
   try {
-    await todoApi.deleteTodo(id)
+    await todoApi.deleteTodo(todo.id)
     toastSuccess(t('todoBoard.messages.deleteSuccess'))
     closeDetailModal()
     await loadBoard()
@@ -357,15 +357,15 @@ async function handleDeleteTodo(id: string) {
   }
 }
 
-async function handleUntagSelf(id: string) {
+async function handleUntagSelf(todo: Pick<Todo, 'id' | 'title'>) {
   const confirmed = await confirm(
-    t('todoBoard.messages.untagConfirm'),
+    t('todoBoard.messages.untagConfirm', { title: todo.title }),
     t('todoBoard.messages.untagTitle'),
   )
   if (!confirmed) return
 
   try {
-    await todoApi.untagSelf(id)
+    await todoApi.untagSelf(todo.id)
     showSuccess(t('todoBoard.messages.untagSuccess'))
     closeDetailModal()
     await loadBoard()

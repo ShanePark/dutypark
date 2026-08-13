@@ -91,9 +91,9 @@ const emit = defineEmits<{
   (e: 'changeDutyType', dutyTypeId: number | null): void
   (e: 'createSchedule', data: ScheduleSaveData): void
   (e: 'editSchedule', data: ScheduleSaveData): void
-  (e: 'deleteSchedule', scheduleId: string): void
+  (e: 'deleteSchedule', schedule: Pick<Schedule, 'id' | 'content'>): void
   (e: 'reorderSchedules', scheduleIds: string[]): void
-  (e: 'untagSelf', scheduleId: string): void
+  (e: 'untagSelf', schedule: Pick<Schedule, 'id' | 'content'>): void
 }>()
 
 const isCreateMode = ref(false)
@@ -138,20 +138,20 @@ const newSchedule = ref({
 const editAttachments = ref<NormalizedAttachment[]>([])
 const selectedTagSummaries = ref<SelectedTagSummary[]>([])
 
-const untagConfirmScheduleId = ref<string | null>(null)
+const untagConfirmSchedule = ref<Pick<Schedule, 'id' | 'content'> | null>(null)
 
-function openUntagConfirmModal(scheduleId: string) {
-  untagConfirmScheduleId.value = scheduleId
+function openUntagConfirmModal(schedule: Pick<Schedule, 'id' | 'content'>) {
+  untagConfirmSchedule.value = schedule
 }
 
 function closeUntagConfirmModal() {
-  untagConfirmScheduleId.value = null
+  untagConfirmSchedule.value = null
 }
 
 function confirmUntag() {
-  if (untagConfirmScheduleId.value) {
-    emit('untagSelf', untagConfirmScheduleId.value)
-    untagConfirmScheduleId.value = null
+  if (untagConfirmSchedule.value) {
+    emit('untagSelf', untagConfirmSchedule.value)
+    untagConfirmSchedule.value = null
   }
 }
 
@@ -522,7 +522,7 @@ function handleUploadError(message: string) {
             :is-my-calendar="isMyCalendar"
             :member-id="memberId"
             @edit="startEditMode"
-            @delete="(scheduleId) => emit('deleteSchedule', scheduleId)"
+            @delete="(schedule) => emit('deleteSchedule', schedule)"
             @reorder="(scheduleIds) => emit('reorderSchedules', scheduleIds)"
             @request-untag="openUntagConfirmModal"
           />
@@ -584,7 +584,8 @@ function handleUploadError(message: string) {
   </BaseModal>
 
   <UntagConfirmModal
-    :is-open="!!untagConfirmScheduleId"
+    :is-open="!!untagConfirmSchedule"
+    :schedule-title="untagConfirmSchedule?.content ?? ''"
     @close="closeUntagConfirmModal"
     @confirm="confirmUntag"
   />

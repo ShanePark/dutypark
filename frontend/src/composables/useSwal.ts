@@ -82,7 +82,7 @@ export function useSwal() {
   const confirm = (
     message: string,
     title = translateGlobal('common.swal.confirm'),
-    confirmButtonText = translateGlobal('common.actions.confirm'),
+    confirmButtonText = title,
     cancelButtonText = translateGlobal('common.actions.cancel'),
   ) => {
     const colors = getSwalColors()

@@ -51,6 +51,17 @@ describe('useSwal', () => {
     }))
   })
 
+  it('uses the dialog title as the default confirm action label', async () => {
+    const { confirm } = useSwal()
+
+    await expect(confirm('Remove this item?', 'Remove item')).resolves.toBe(true)
+
+    expect(mocks.fire).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'Remove item',
+      confirmButtonText: 'Remove item',
+    }))
+  })
+
   it('returns the selected three-way choice with custom labels', async () => {
     mocks.fire.mockResolvedValue({ isDenied: true })
     const { choose } = useSwal()
