@@ -16,14 +16,22 @@ final class NotificationStore: ObservableObject {
     @Published private(set) var loadFailed = false
 
     private let api: any NotificationAPIProtocol
+    private let pollingSleep: @Sendable (TimeInterval) async throws -> Void
     private var currentPage = 0
     private var totalPages = 0
     private var consecutiveFailures = 0
     private var pollingTask: Task<Void, Never>?
     private var isForeground = true
+    private var markingAsReadIDs: Set<NotificationID> = []
 
-    init(api: any NotificationAPIProtocol = NotificationAPI()) {
+    init(
+        api: any NotificationAPIProtocol = NotificationAPI(),
+        pollingSleep: @escaping @Sendable (TimeInterval) async throws -> Void = { interval in
+            try await Task.sleep(for: .seconds(interval))
+        }
+    ) {
         self.api = api
+        self.pollingSleep = pollingSleep
     }
 
     var hasMore: Bool {
@@ -97,7 +105,13 @@ final class NotificationStore: ObservableObject {
 
     @discardableResult
     func open(_ notification: NotificationDTO) async -> NotificationRoute? {
-        if !notification.isRead {
+        let storedNotification = notifications.first { $0.id == notification.id }
+        let shouldMarkAsRead = !notification.isRead
+            && storedNotification?.isRead != true
+            && !markingAsReadIDs.contains(notification.id)
+        if shouldMarkAsRead {
+            markingAsReadIDs.insert(notification.id)
+            defer { markingAsReadIDs.remove(notification.id) }
             do {
                 let updated = try await api.markAsRead(id: notification.id)
                 replace(updated)
@@ -151,7 +165,7 @@ final class NotificationStore: ObservableObject {
             while !Task.isCancelled {
                 guard let self else { return }
                 let delay = Self.pollingInterval(afterFailures: self.consecutiveFailures)
-                try? await Task.sleep(for: .seconds(delay))
+                try? await self.pollingSleep(delay)
                 guard !Task.isCancelled else { return }
                 if self.isForeground {
                     await self.synchronizeCounts()
