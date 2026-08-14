@@ -55,6 +55,7 @@ The source code, tests, and task-specific documentation are the source of truth 
 
 ## Git
 
+- Write all GitHub-facing communication and metadata in English, including issue and PR titles and bodies, comments, and review comments. This does not require localized user-facing product content or app release note copy to be in English.
 - Do not perform version-control operations that change local or remote repository state unless explicitly requested.
 - Before any requested version-control write, inspect the working tree and relevant diffs.
 - Commit only changes made for the current task.
