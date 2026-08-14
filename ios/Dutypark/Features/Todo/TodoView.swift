@@ -1249,6 +1249,7 @@ struct TodoFormSheet: View {
             Button(todoLocalized("todo.confirm.discardAction"), role: .destructive) {
                 confirmDiscard()
             }
+            .accessibilityIdentifier("todo.form.discard.confirm")
             Button(todoLocalized("common.cancel"), role: .cancel) {}
         } message: {
             Text(todoLocalized("todo.confirm.discardMessage"))
@@ -1273,6 +1274,7 @@ struct TodoFormSheet: View {
             .buttonStyle(.plain)
             .disabled(isOperationallyBusy)
             .accessibilityLabel(todoLocalized("common.cancel"))
+            .accessibilityIdentifier("todo.form.cancel")
         }
         .padding(.leading, DPSpacing.medium)
         .padding(.trailing, DPSpacing.small)
@@ -1305,6 +1307,7 @@ struct TodoFormSheet: View {
                         }
                         .buttonStyle(.plain)
                         .accessibilityAddTraits(draft.status == status ? .isSelected : [])
+                        .accessibilityIdentifier("todo.form.status.\(status.rawValue.lowercased())")
                     }
                 }
             }
@@ -1313,6 +1316,7 @@ struct TodoFormSheet: View {
                 TextField("", text: $draft.title, prompt: Text(todoLocalized("todo.field.title")))
                     .textInputAutocapitalization(.sentences)
                     .focused($focusedField, equals: .title)
+                    .accessibilityIdentifier("todo.form.title")
                     .dpInputChrome(
                         isFocused: focusedField == .title,
                         isInvalid: draft.title.count > 50

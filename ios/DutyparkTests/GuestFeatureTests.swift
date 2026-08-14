@@ -177,17 +177,22 @@ final class GuestPublicCalendarTests: XCTestCase {
         XCTAssertTrue(model.days.isEmpty)
     }
 
-    func testSlowerPreviousMonthResponseCannotOverwriteLatestMonth() async throws {
-        let api = GuestScenarioAPI(delayByMonth: [8: .milliseconds(250), 9: .milliseconds(10)])
+    func testSlowerPreviousMonthResponseCannotOverwriteLatestMonth() async {
+        let api = GuestScenarioAPI(blockedCalendarMonth: 8)
         let model = GuestPublicCalendarViewModel(
             memberID: 42,
             api: api,
             now: date(2026, 8, 12)
         )
         let augustLoad = Task { await model.load() }
-        try await waitUntil { await api.calendarRequestCount == 1 }
+        await api.waitForBlockedCalendarRequest()
 
         await model.changeMonth(by: 1)
+
+        XCTAssertEqual(model.month, 9)
+        XCTAssertTrue(model.days.allSatisfy { $0.cell.month == 9 })
+
+        await api.releaseBlockedCalendarRequest()
         await augustLoad.value
 
         XCTAssertEqual(model.year, 2026)
@@ -218,15 +223,19 @@ final class GuestPublicCalendarTests: XCTestCase {
 private actor GuestScenarioAPI: GuestAPIProtocol {
     private let failingCalendarAttempts: Int
     private let delayByMonth: [Int: Duration]
+    private let blockedCalendarMonth: Int?
+    private let calendarGate = GuestAsyncGate()
     private var memberRequests = 0
     private var calendarRequests = 0
 
     init(
         failingCalendarAttempts: Int = 0,
-        delayByMonth: [Int: Duration] = [:]
+        delayByMonth: [Int: Duration] = [:],
+        blockedCalendarMonth: Int? = nil
     ) {
         self.failingCalendarAttempts = failingCalendarAttempts
         self.delayByMonth = delayByMonth
+        self.blockedCalendarMonth = blockedCalendarMonth
     }
 
     var memberRequestCount: Int { memberRequests }
@@ -247,6 +256,9 @@ private actor GuestScenarioAPI: GuestAPIProtocol {
     func calendar(year: Int, month: Int) async throws -> [TeamDayDTO] {
         calendarRequests += 1
         let requestNumber = calendarRequests
+        if month == blockedCalendarMonth {
+            await calendarGate.wait()
+        }
         try await delay(month: month)
         if requestNumber <= failingCalendarAttempts {
             throw URLError(.badServerResponse)
@@ -270,7 +282,6 @@ private actor GuestScenarioAPI: GuestAPIProtocol {
     }
 
     func dDays(memberID: MemberID) async throws -> [DDayDTO] {
-        // Month-specific calls provide the delay needed by race tests.
         []
     }
 
@@ -278,9 +289,47 @@ private actor GuestScenarioAPI: GuestAPIProtocol {
         throw URLError(.unsupportedURL)
     }
 
+    func waitForBlockedCalendarRequest() async {
+        await calendarGate.waitUntilBlocked()
+    }
+
+    func releaseBlockedCalendarRequest() async {
+        await calendarGate.release()
+    }
+
     private func delay(month: Int) async throws {
         guard let duration = delayByMonth[month] else { return }
         try await Task.sleep(for: duration)
+    }
+}
+
+private actor GuestAsyncGate {
+    private var isBlocked = false
+    private var blockedWaiters: [CheckedContinuation<Void, Never>] = []
+    private var releaseContinuation: CheckedContinuation<Void, Never>?
+
+    func wait() async {
+        isBlocked = true
+        let waiters = blockedWaiters
+        blockedWaiters.removeAll()
+        waiters.forEach { $0.resume() }
+
+        await withCheckedContinuation { continuation in
+            releaseContinuation = continuation
+        }
+    }
+
+    func waitUntilBlocked() async {
+        guard !isBlocked else { return }
+        await withCheckedContinuation { continuation in
+            blockedWaiters.append(continuation)
+        }
+    }
+
+    func release() {
+        isBlocked = false
+        releaseContinuation?.resume()
+        releaseContinuation = nil
     }
 }
 

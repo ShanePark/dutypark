@@ -11,8 +11,15 @@ struct NotificationReadDeduplicationTests {
         let store = NotificationStore(api: api)
         await store.refresh()
 
-        _ = await store.open(unread)
-        _ = await store.open(unread)
+        let firstOpen = Task { await store.open(unread) }
+        await api.waitUntilFirstMarkStarts()
+
+        let secondRoute = await store.open(unread)
+        #expect(secondRoute == NotificationRoute(notification: unread))
+        #expect(await api.markAsReadCallCount() == 1)
+
+        await api.releaseFirstMark()
+        _ = await firstOpen.value
 
         #expect(store.unreadCount == 1)
         #expect(store.notifications.first?.isRead == true)
@@ -46,6 +53,10 @@ private actor NotificationReadDeduplicationAPIMock: NotificationAPIProtocol {
     private var notification: NotificationDTO
     private let unreadCount: Int
     private var markCalls = 0
+    private var firstMarkStarted = false
+    private var firstMarkStartWaiters: [CheckedContinuation<Void, Never>] = []
+    private var firstMarkReleaseRequested = false
+    private var firstMarkReleaseContinuation: CheckedContinuation<Void, Never>?
 
     init(notification: NotificationDTO, unreadCount: Int) {
         self.notification = notification
@@ -81,6 +92,17 @@ private actor NotificationReadDeduplicationAPIMock: NotificationAPIProtocol {
             throw NotificationReadDeduplicationMockError.notificationMissing
         }
         markCalls += 1
+        if markCalls == 1 {
+            firstMarkStarted = true
+            let startWaiters = firstMarkStartWaiters
+            firstMarkStartWaiters.removeAll()
+            startWaiters.forEach { $0.resume() }
+            if !firstMarkReleaseRequested {
+                await withCheckedContinuation { continuation in
+                    firstMarkReleaseContinuation = continuation
+                }
+            }
+        }
         notification = NotificationDTO(
             id: notification.id,
             type: notification.type,
@@ -101,4 +123,17 @@ private actor NotificationReadDeduplicationAPIMock: NotificationAPIProtocol {
     func deleteAllRead() async throws -> Int { 0 }
 
     func markAsReadCallCount() -> Int { markCalls }
+
+    func waitUntilFirstMarkStarts() async {
+        guard !firstMarkStarted else { return }
+        await withCheckedContinuation { continuation in
+            firstMarkStartWaiters.append(continuation)
+        }
+    }
+
+    func releaseFirstMark() {
+        firstMarkReleaseRequested = true
+        firstMarkReleaseContinuation?.resume()
+        firstMarkReleaseContinuation = nil
+    }
 }

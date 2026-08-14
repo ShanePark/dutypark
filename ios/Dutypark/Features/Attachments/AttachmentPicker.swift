@@ -15,13 +15,13 @@ final class AttachmentPickerModel: ObservableObject {
     @Published private(set) var uploadProgress: AttachmentUploadProgress?
     @Published var failure: AttachmentPickerFailure?
 
-    private let client: AttachmentClient
+    private let client: any AttachmentPickerClient
 
     init(
         contextType: AttachmentContextType,
         targetContextId: String? = nil,
         existingAttachments: [AttachmentDTO] = [],
-        client: AttachmentClient = AttachmentClient()
+        client: any AttachmentPickerClient = AttachmentClient()
     ) {
         self.contextType = contextType
         self.targetContextId = targetContextId

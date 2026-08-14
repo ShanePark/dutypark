@@ -56,6 +56,9 @@ final class AppleSignInClientTests: XCTestCase {
             (Data("token".utf8), nil, "state"),
             (Data("token".utf8), Data("code".utf8), nil),
             (Data([0xFF]), Data("code".utf8), "state"),
+            (Data(), Data("code".utf8), "state"),
+            (Data("token".utf8), Data(), "state"),
+            (Data("token".utf8), Data("code".utf8), ""),
         ] as [(Data?, Data?, String?)] {
             XCTAssertThrowsError(try AppleAuthorizationCredential.decode(
                 identityToken: invalid.0,
@@ -163,6 +166,96 @@ final class AppleSignInClientTests: XCTestCase {
     }
 
     @MainActor
+    func testAppleCallbackCancellationStopsBeforeSendingCredential() async throws {
+        let recorder = AppleRequestRecorder()
+        AppleURLProtocolStub.handler = { try recorder.response(for: $0) }
+        let client = AppleSignInClient(client: makeClient(), authorizer: AppleAuthorizerStub())
+        let attempt = try AppleSignInAttempt.make(
+            nonceBytes: Data(repeating: 4, count: 32),
+            stateBytes: Data(repeating: 5, count: 32)
+        )
+        let cancellation = NSError(
+            domain: ASAuthorizationError.errorDomain,
+            code: ASAuthorizationError.canceled.rawValue
+        )
+
+        do {
+            _ = try await client.completeLogin(
+                result: Result<ASAuthorization, Error>.failure(cancellation),
+                attempt: attempt
+            )
+            XCTFail("Expected cancellation")
+        } catch {
+            XCTAssertEqual(error as? AppleSignInError, .cancelled)
+        }
+        XCTAssertTrue(recorder.requests.isEmpty)
+    }
+
+    @MainActor
+    func testAppleCallbackProviderFailureStopsBeforeSendingCredential() async throws {
+        let recorder = AppleRequestRecorder()
+        AppleURLProtocolStub.handler = { try recorder.response(for: $0) }
+        let client = AppleSignInClient(client: makeClient(), authorizer: AppleAuthorizerStub())
+        let attempt = try AppleSignInAttempt.make(
+            nonceBytes: Data(repeating: 6, count: 32),
+            stateBytes: Data(repeating: 7, count: 32)
+        )
+
+        do {
+            _ = try await client.completeLogin(
+                result: Result<ASAuthorization, Error>.failure(URLError(.notConnectedToInternet)),
+                attempt: attempt
+            )
+            XCTFail("Expected provider failure")
+        } catch {
+            XCTAssertEqual(error as? AppleSignInError, .providerUnavailable)
+        }
+        XCTAssertTrue(recorder.requests.isEmpty)
+    }
+
+    @MainActor
+    func testLinkStateMismatchStopsBeforeSendingCredential() async {
+        let recorder = AppleRequestRecorder()
+        AppleURLProtocolStub.handler = { try recorder.response(for: $0) }
+        let authorizer = AppleAuthorizerStub(returnedState: "attacker-state")
+        let client = AppleSignInClient(client: makeClient(), authorizer: authorizer)
+
+        do {
+            try await client.link()
+            XCTFail("Expected state mismatch")
+        } catch {
+            XCTAssertEqual(error as? AppleSignInError, .stateMismatch)
+        }
+
+        XCTAssertEqual(authorizer.requests.count, 1)
+        XCTAssertTrue(recorder.requests.isEmpty)
+    }
+
+    @MainActor
+    func testCancellingLinkWhileAuthorizingDoesNotSendCredential() async {
+        let recorder = AppleRequestRecorder()
+        AppleURLProtocolStub.handler = { try recorder.response(for: $0) }
+        let authorizationStarted = expectation(description: "Apple authorization started")
+        let authorizer = IgnoringCancellationAppleAuthorizerStub(
+            authorizationStarted: authorizationStarted
+        )
+        let client = AppleSignInClient(client: makeClient(), authorizer: authorizer)
+        let task = Task { @MainActor in try await client.link() }
+
+        await fulfillment(of: [authorizationStarted], timeout: 1)
+        task.cancel()
+        authorizer.completeAuthorization()
+
+        do {
+            try await task.value
+            XCTFail("Expected task cancellation")
+        } catch {
+            XCTAssertTrue(error is CancellationError)
+        }
+        XCTAssertTrue(recorder.requests.isEmpty)
+    }
+
+    @MainActor
     func testLinkRetriesExchangeAfterRefreshWithoutRepeatingAppleAuthorization() async throws {
         let recorder = AppleRequestRecorder(challengeFirstLink: true)
         AppleURLProtocolStub.handler = { try recorder.response(for: $0) }
@@ -181,6 +274,47 @@ final class AppleSignInClientTests: XCTestCase {
             try XCTUnwrap(Self.jsonBody(recorder.requests[0]))["purpose"] as? String,
             "LINK"
         )
+        let firstBody = try XCTUnwrap(Self.jsonBody(recorder.requests[0]))
+        let retriedBody = try XCTUnwrap(Self.jsonBody(recorder.requests[2]))
+        XCTAssertEqual(firstBody["identityToken"] as? String, retriedBody["identityToken"] as? String)
+        XCTAssertEqual(firstBody["authorizationCode"] as? String, retriedBody["authorizationCode"] as? String)
+        XCTAssertEqual(firstBody["nonce"] as? String, retriedBody["nonce"] as? String)
+        XCTAssertNotEqual(firstBody["nonce"] as? String, authorizer.requests[0].nonce)
+    }
+
+    @MainActor
+    func testLoginDoesNotRefreshOrRepeatAppleAuthorizationAfterUnauthorized() async {
+        let recorder = AppleRequestRecorder(challengeFirstLogin: true)
+        AppleURLProtocolStub.handler = { try recorder.response(for: $0) }
+        let authorizer = AppleAuthorizerStub()
+        let client = AppleSignInClient(client: makeClient(), authorizer: authorizer)
+
+        do {
+            _ = try await client.login()
+            XCTFail("Expected unauthorized response")
+        } catch {
+            XCTAssertEqual(error as? APIError, .server(status: 401, code: "auth.required"))
+        }
+
+        XCTAssertEqual(authorizer.requests.count, 1)
+        XCTAssertEqual(recorder.requests.compactMap(\.url?.path), [
+            "/api/auth/mobile/oauth/apple/exchange",
+        ])
+    }
+
+    @MainActor
+    func testLinkRejectsSignupResponse() async {
+        let recorder = AppleRequestRecorder()
+        recorder.linkResponse = #"{"signupRequired":true,"signupUuid":"unexpected","expiresIn":null,"reauthProof":null}"#
+        AppleURLProtocolStub.handler = { try recorder.response(for: $0) }
+        let client = AppleSignInClient(client: makeClient(), authorizer: AppleAuthorizerStub())
+
+        do {
+            try await client.link()
+            XCTFail("Expected invalid credential")
+        } catch {
+            XCTAssertEqual(error as? AppleSignInError, .invalidCredential)
+        }
     }
 
     @MainActor
@@ -198,6 +332,56 @@ final class AppleSignInClientTests: XCTestCase {
             try XCTUnwrap(Self.jsonBody(try XCTUnwrap(recorder.requests.first)))["purpose"] as? String,
             "DELETE_ACCOUNT"
         )
+    }
+
+    @MainActor
+    func testAccountDeletionRetriesExchangeAfterRefreshWithoutRepeatingAppleAuthorization() async throws {
+        let recorder = AppleRequestRecorder(challengeFirstDelete: true)
+        AppleURLProtocolStub.handler = { try recorder.response(for: $0) }
+        let authorizer = AppleAuthorizerStub()
+        let client = AppleSignInClient(client: makeClient(), authorizer: authorizer)
+
+        let proof = try await client.reauthenticateForAccountDeletion()
+
+        XCTAssertEqual(proof, MobileOAuthReauthProof(value: "delete-proof", expiresIn: 300))
+        XCTAssertEqual(authorizer.requests.count, 1)
+        XCTAssertEqual(recorder.requests.compactMap(\.url?.path), [
+            "/api/auth/mobile/oauth/apple/exchange",
+            "/api/auth/refresh",
+            "/api/auth/mobile/oauth/apple/exchange",
+        ])
+        let firstBody = try XCTUnwrap(Self.jsonBody(recorder.requests[0]))
+        let retriedBody = try XCTUnwrap(Self.jsonBody(recorder.requests[2]))
+        XCTAssertEqual(firstBody["identityToken"] as? String, retriedBody["identityToken"] as? String)
+        XCTAssertEqual(firstBody["authorizationCode"] as? String, retriedBody["authorizationCode"] as? String)
+        XCTAssertEqual(firstBody["nonce"] as? String, retriedBody["nonce"] as? String)
+        XCTAssertEqual(firstBody["purpose"] as? String, "DELETE_ACCOUNT")
+    }
+
+    @MainActor
+    func testAccountDeletionRejectsIncompleteOrSignupResponses() async {
+        let invalidResponses = [
+            #"{"signupRequired":true,"signupUuid":"signup","expiresIn":300,"reauthProof":"proof"}"#,
+            #"{"signupRequired":false,"signupUuid":null,"expiresIn":300,"reauthProof":null}"#,
+            #"{"signupRequired":false,"signupUuid":null,"expiresIn":300,"reauthProof":""}"#,
+            #"{"signupRequired":false,"signupUuid":null,"expiresIn":null,"reauthProof":"proof"}"#,
+            #"{"signupRequired":false,"signupUuid":null,"expiresIn":0,"reauthProof":"proof"}"#,
+            #"{"signupRequired":false,"signupUuid":null,"expiresIn":-1,"reauthProof":"proof"}"#,
+        ]
+
+        for response in invalidResponses {
+            let recorder = AppleRequestRecorder()
+            recorder.deleteResponse = response
+            AppleURLProtocolStub.handler = { try recorder.response(for: $0) }
+            let client = AppleSignInClient(client: makeClient(), authorizer: AppleAuthorizerStub())
+
+            do {
+                _ = try await client.reauthenticateForAccountDeletion()
+                XCTFail("Expected invalid credential for response: \(response)")
+            } catch {
+                XCTAssertEqual(error as? AppleSignInError, .invalidCredential)
+            }
+        }
     }
 
     @MainActor
@@ -270,9 +454,11 @@ final class AppleSignInClientTests: XCTestCase {
 private final class AppleAuthorizerStub: AppleAuthorizationPerforming {
     private(set) var requests: [AppleAuthorizationRequest] = []
     private let error: Error?
+    private let returnedState: String?
 
-    init(error: Error? = nil) {
+    init(error: Error? = nil, returnedState: String? = nil) {
         self.error = error
+        self.returnedState = returnedState
     }
 
     func authorize(request: AppleAuthorizationRequest) async throws -> AppleAuthorizationCredential {
@@ -281,8 +467,40 @@ private final class AppleAuthorizerStub: AppleAuthorizationPerforming {
         return AppleAuthorizationCredential(
             identityToken: "identity-token",
             authorizationCode: "authorization-code",
-            state: request.state
+            state: returnedState ?? request.state
         )
+    }
+}
+
+@MainActor
+private final class IgnoringCancellationAppleAuthorizerStub: AppleAuthorizationPerforming {
+    private(set) var requests: [AppleAuthorizationRequest] = []
+    private let authorizationStarted: XCTestExpectation
+    private var continuation: CheckedContinuation<AppleAuthorizationCredential, Never>?
+
+    init(authorizationStarted: XCTestExpectation) {
+        self.authorizationStarted = authorizationStarted
+    }
+
+    func authorize(request: AppleAuthorizationRequest) async throws -> AppleAuthorizationCredential {
+        requests.append(request)
+        authorizationStarted.fulfill()
+        return await withCheckedContinuation { continuation in
+            self.continuation = continuation
+        }
+    }
+
+    func completeAuthorization() {
+        guard let request = requests.last, let continuation else {
+            XCTFail("Authorization must be awaiting its callback")
+            return
+        }
+        self.continuation = nil
+        continuation.resume(returning: AppleAuthorizationCredential(
+            identityToken: "unexpected-token",
+            authorizationCode: "unexpected-code",
+            state: request.state
+        ))
     }
 }
 
@@ -290,11 +508,23 @@ private final class AppleRequestRecorder: @unchecked Sendable {
     private let lock = NSLock()
     private var storedRequests: [URLRequest] = []
     private let challengeFirstLink: Bool
+    private let challengeFirstLogin: Bool
+    private let challengeFirstDelete: Bool
     private var didChallengeLink = false
+    private var didChallengeLogin = false
+    private var didChallengeDelete = false
     var loginResponse = #"{"signupRequired":false,"signupUuid":null,"expiresIn":3600,"reauthProof":null}"#
+    var linkResponse = #"{"signupRequired":false,"signupUuid":null,"expiresIn":null,"reauthProof":null}"#
+    var deleteResponse = #"{"signupRequired":false,"signupUuid":null,"expiresIn":300,"reauthProof":"delete-proof"}"#
 
-    init(challengeFirstLink: Bool = false) {
+    init(
+        challengeFirstLink: Bool = false,
+        challengeFirstLogin: Bool = false,
+        challengeFirstDelete: Bool = false
+    ) {
         self.challengeFirstLink = challengeFirstLink
+        self.challengeFirstLogin = challengeFirstLogin
+        self.challengeFirstDelete = challengeFirstDelete
     }
 
     var requests: [URLRequest] { lock.withLock { storedRequests } }
@@ -311,11 +541,25 @@ private final class AppleRequestRecorder: @unchecked Sendable {
                 didChallengeLink = true
                 return (401, #"{"code":"auth.required"}"#)
             }
+            if challengeFirstLogin,
+               request.url?.path == "/api/auth/mobile/oauth/apple/exchange",
+               purpose == "LOGIN",
+               !didChallengeLogin {
+                didChallengeLogin = true
+                return (401, #"{"code":"auth.required"}"#)
+            }
+            if challengeFirstDelete,
+               request.url?.path == "/api/auth/mobile/oauth/apple/exchange",
+               purpose == "DELETE_ACCOUNT",
+               !didChallengeDelete {
+                didChallengeDelete = true
+                return (401, #"{"code":"auth.required"}"#)
+            }
             switch request.url?.path {
             case "/api/auth/mobile/oauth/apple/exchange" where purpose == "DELETE_ACCOUNT":
-                return (200, #"{"signupRequired":false,"signupUuid":null,"expiresIn":300,"reauthProof":"delete-proof"}"#)
+                return (200, deleteResponse)
             case "/api/auth/mobile/oauth/apple/exchange" where purpose == "LINK":
-                return (200, #"{"signupRequired":false,"signupUuid":null,"expiresIn":null,"reauthProof":null}"#)
+                return (200, linkResponse)
             case "/api/auth/mobile/oauth/apple/exchange":
                 return (200, loginResponse)
             case "/api/auth/refresh":

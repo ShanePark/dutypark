@@ -74,7 +74,21 @@ nonisolated enum MultipartFormData {
     }
 }
 
-nonisolated final class AttachmentClient: Sendable {
+nonisolated protocol AttachmentPickerClient: Sendable {
+    func createSession(
+        contextType: AttachmentContextType,
+        targetContextId: String?
+    ) async throws -> CreateAttachmentSessionResponse
+
+    func discardSession(_ sessionId: UUID) async throws
+
+    func upload(
+        _ file: AttachmentUploadFile,
+        sessionId: UUID
+    ) async throws -> AttachmentDTO
+}
+
+nonisolated final class AttachmentClient: AttachmentPickerClient, Sendable {
     private let apiClient: APIClient
 
     init(apiClient: APIClient = .shared) {

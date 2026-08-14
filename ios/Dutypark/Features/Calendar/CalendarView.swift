@@ -259,6 +259,8 @@ struct CalendarView: View {
                 .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)
         }
         .accessibilityLabel(CalendarLocalization.text("calendar.month.choose"))
+        .accessibilityValue(String(format: "%04d-%02d", model.year, model.month))
+        .accessibilityIdentifier("calendar.month.display")
     }
 
     private var thisMonthBubble: some View {
@@ -805,6 +807,7 @@ private struct YearMonthPickerView: View {
         .onAppear { onDismissabilityChange(!isSelecting) }
         .onChange(of: isSelecting) { _, value in onDismissabilityChange(!value) }
         .onDisappear { onDismissabilityChange(true) }
+        .accessibilityIdentifier("calendar.monthPicker")
     }
 
     private var header: some View {
@@ -879,6 +882,7 @@ private struct YearMonthPickerView: View {
                     }
                     .buttonStyle(.plain)
                     .disabled(isSelecting)
+                    .accessibilityIdentifier("calendar.monthPicker.month.\(month)")
                 }
             }
         }

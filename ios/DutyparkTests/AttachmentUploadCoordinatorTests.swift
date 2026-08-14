@@ -8,52 +8,69 @@ struct AttachmentUploadCoordinatorTests {
     func replacedPreparationCannotClearTheNewPreparationState() async {
         let model = AttachmentPickerModel(contextType: .todo)
         let coordinator = AttachmentUploadCoordinator()
-        let probe = AttachmentUploadTaskProbe()
+        let gate = AttachmentUploadTaskGate()
 
         coordinator.start(model: model) {
-            await probe.markFirstStarted()
-            do {
-                try await Task.sleep(for: .seconds(30))
-            } catch {
-                try? await Task.sleep(for: .milliseconds(30))
-            }
+            await gate.run(.first)
         }
-        #expect(await waitUntil { await probe.firstStarted })
+        await gate.waitUntilStarted(.first)
 
         coordinator.start(model: model) {
-            await probe.markSecondStarted()
-            try? await Task.sleep(for: .seconds(30))
+            await gate.run(.second)
         }
-        #expect(await waitUntil { await probe.secondStarted })
-        try? await Task.sleep(for: .milliseconds(60))
+        await gate.waitUntilStarted(.second)
+        await gate.release(.first)
+        await gate.waitUntilFinished(.first)
+        await Task.yield()
 
         #expect(model.isPreparing)
         #expect(model.isBusy)
 
         coordinator.cancel(model: model)
         #expect(!model.isPreparing)
-    }
-
-    private func waitUntil(
-        _ condition: @escaping () async -> Bool
-    ) async -> Bool {
-        for _ in 0..<1_000 {
-            if await condition() { return true }
-            try? await Task.sleep(for: .milliseconds(1))
-        }
-        return false
+        await gate.release(.second)
     }
 }
 
-private actor AttachmentUploadTaskProbe {
-    private(set) var firstStarted = false
-    private(set) var secondStarted = false
-
-    func markFirstStarted() {
-        firstStarted = true
+private actor AttachmentUploadTaskGate {
+    enum Operation: Hashable, Sendable {
+        case first
+        case second
     }
 
-    func markSecondStarted() {
-        secondStarted = true
+    private var started: Set<Operation> = []
+    private var finished: Set<Operation> = []
+    private var releases: [Operation: CheckedContinuation<Void, Never>] = [:]
+    private var startWaiters: [Operation: [CheckedContinuation<Void, Never>]] = [:]
+    private var finishWaiters: [Operation: [CheckedContinuation<Void, Never>]] = [:]
+
+    func run(_ operation: Operation) async {
+        started.insert(operation)
+        startWaiters.removeValue(forKey: operation)?.forEach { $0.resume() }
+
+        await withCheckedContinuation { continuation in
+            releases[operation] = continuation
+        }
+
+        finished.insert(operation)
+        finishWaiters.removeValue(forKey: operation)?.forEach { $0.resume() }
+    }
+
+    func waitUntilStarted(_ operation: Operation) async {
+        guard !started.contains(operation) else { return }
+        await withCheckedContinuation { continuation in
+            startWaiters[operation, default: []].append(continuation)
+        }
+    }
+
+    func waitUntilFinished(_ operation: Operation) async {
+        guard !finished.contains(operation) else { return }
+        await withCheckedContinuation { continuation in
+            finishWaiters[operation, default: []].append(continuation)
+        }
+    }
+
+    func release(_ operation: Operation) {
+        releases.removeValue(forKey: operation)?.resume()
     }
 }

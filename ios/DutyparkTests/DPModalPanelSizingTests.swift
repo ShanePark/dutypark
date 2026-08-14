@@ -1,3 +1,4 @@
+import SwiftUI
 import Testing
 @testable import Dutypark
 
@@ -30,16 +31,18 @@ struct DPModalPanelSizingTests {
     }
 
     @Test
-    func panelWithoutFooterAccountsForOneDivider() {
-        let policy = makePolicy(dividerCount: 1)
-
-        #expect(
-            policy.bodyHeight(
-                headerHeight: 80,
-                bodyContentHeight: 800,
-                footerHeight: 0
-            ) == 419
+    func panelWithoutFooterUsesOneDivider() {
+        let panel = DPModalPanel(
+            maximumPanelHeight: 500,
+            header: {
+                Color.clear.frame(height: 80)
+            },
+            content: {
+                Color.clear.frame(height: 800)
+            }
         )
+
+        #expect(panel.sizingPolicy.dividerCount == 1)
     }
 
     private func makePolicy(dividerCount: Int) -> DPModalPanelSizingPolicy {

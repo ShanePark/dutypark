@@ -6,8 +6,88 @@ enum RootLogoutAction {
         push: APNsRegistrationManager = .shared,
         logout: @MainActor () async -> Void
     ) async {
-        await push.unregister()
+        await perform(
+            unregisterPush: { await push.unregister() },
+            logout: logout
+        )
+    }
+
+    static func perform(
+        unregisterPush: @MainActor () async -> Void,
+        logout: @MainActor () async -> Void
+    ) async {
+        await unregisterPush()
         await logout()
+    }
+}
+
+@MainActor
+enum RootAuthenticatedStartupAction {
+    static func perform(
+        startPolling: () -> Void,
+        refreshNotifications: () async -> Void,
+        activatePush: () async -> Void,
+        consumePendingPush: () async -> Void,
+        consumePendingDestination: () -> Void
+    ) async {
+        startPolling()
+        await refreshNotifications()
+        await activatePush()
+        await consumePendingPush()
+        consumePendingDestination()
+    }
+}
+
+@MainActor
+enum RootSceneLifecycleAction {
+    static func perform(
+        isActive: Bool,
+        setNotificationForeground: (Bool) async -> Void,
+        refreshHome: () -> Void,
+        refreshConsent: () -> Void,
+        resumePush: () async -> Void,
+        consumePendingPush: () async -> Void
+    ) async {
+        await setNotificationForeground(isActive)
+        guard isActive else { return }
+        refreshHome()
+        refreshConsent()
+        await resumePush()
+        await consumePendingPush()
+    }
+}
+
+@MainActor
+enum RootPendingPushAction {
+    static func perform(
+        consume: () -> NotificationID?,
+        open: (NotificationID) async throws -> Bool,
+        showFallback: () -> Void
+    ) async {
+        guard let notificationID = consume() else { return }
+        do {
+            guard try await open(notificationID) else {
+                showFallback()
+                return
+            }
+        } catch {
+            showFallback()
+        }
+    }
+}
+
+@MainActor
+enum RootPendingDestinationAction {
+    static func perform(
+        consume: () -> URL?,
+        open: (URL) -> Bool,
+        showUnsupported: () -> Void
+    ) {
+        guard let destination = consume() else { return }
+        guard !open(destination), RootNavigationPolicy.isFirstPartyWebURL(destination) else {
+            return
+        }
+        showUnsupported()
     }
 }
 
@@ -65,30 +145,33 @@ struct RootTabView: View {
             }
         }
         .task {
-            notifications.startPolling()
-            await notifications.refresh()
-            await APNsRegistrationManager.shared.activateForAuthenticatedSession()
-            await openPendingPushIfNeeded()
-            openPendingDestinationIfNeeded()
+            await RootAuthenticatedStartupAction.perform(
+                startPolling: { notifications.startPolling() },
+                refreshNotifications: { await notifications.refresh() },
+                activatePush: {
+                    await APNsRegistrationManager.shared.activateForAuthenticatedSession()
+                },
+                consumePendingPush: { await openPendingPushIfNeeded() },
+                consumePendingDestination: openPendingDestinationIfNeeded
+            )
         }
         .onDisappear {
             notifications.stopPolling()
         }
         .onChange(of: scenePhase) { _, phase in
             Task {
-                await notifications.setForeground(phase == .active)
-                guard phase == .active else { return }
-                homeRefreshID &+= 1
-                if let memberID = authenticatedMemberID {
-                    Task {
-                        await AIScheduleParsingConsentStore.shared.refreshIfStale(
-                            for: memberID,
-                            minimumInterval: 30
-                        )
-                    }
-                }
-                await APNsRegistrationManager.shared.resumeRegistration()
-                await openPendingPushIfNeeded()
+                await RootSceneLifecycleAction.perform(
+                    isActive: phase == .active,
+                    setNotificationForeground: {
+                        await notifications.setForeground($0)
+                    },
+                    refreshHome: { homeRefreshID &+= 1 },
+                    refreshConsent: refreshConsentIfNeeded,
+                    resumePush: {
+                        await APNsRegistrationManager.shared.resumeRegistration()
+                    },
+                    consumePendingPush: { await openPendingPushIfNeeded() }
+                )
             }
         }
         .onChange(of: selectedTab) { _, tab in
@@ -365,32 +448,40 @@ struct RootTabView: View {
         return true
     }
 
+    private func refreshConsentIfNeeded() {
+        guard let memberID = authenticatedMemberID else { return }
+        Task {
+            await AIScheduleParsingConsentStore.shared.refreshIfStale(
+                for: memberID,
+                minimumInterval: 30
+            )
+        }
+    }
+
     private func openPendingPushIfNeeded() async {
 #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-ui-testing-authenticated") {
             return
         }
 #endif
-        guard let notificationID = pushCenter.consumePendingNotificationID() else { return }
-        do {
-            if let route = try await notifications.open(id: notificationID) {
-                if !(await openNotificationRoute(route)) {
-                    showsNotifications = true
+        await RootPendingPushAction.perform(
+            consume: pushCenter.consumePendingNotificationID,
+            open: { notificationID in
+                guard let route = try await notifications.open(id: notificationID) else {
+                    return false
                 }
-            } else {
-                showsNotifications = true
-            }
-        } catch {
-            showsNotifications = true
-        }
+                return await openNotificationRoute(route)
+            },
+            showFallback: { showsNotifications = true }
+        )
     }
 
     private func openPendingDestinationIfNeeded() {
-        guard let destination = session.consumePendingDestination() else { return }
-        if !open(destination), destination.scheme?.lowercased() == "https",
-           destination.host?.lowercased() == "dutypark.o-r.kr" {
-            showsUnsupportedLink = true
-        }
+        RootPendingDestinationAction.perform(
+            consume: session.consumePendingDestination,
+            open: open,
+            showUnsupported: { showsUnsupportedLink = true }
+        )
     }
 
     @discardableResult
@@ -436,6 +527,11 @@ struct RootTabView: View {
 }
 
 nonisolated enum RootNavigationPolicy {
+    static func isFirstPartyWebURL(_ url: URL) -> Bool {
+        url.scheme?.lowercased() == "https"
+            && url.host?.lowercased() == "dutypark.o-r.kr"
+    }
+
     static func resetsHomePath(for destination: AppTab) -> Bool {
         destination == .home
     }

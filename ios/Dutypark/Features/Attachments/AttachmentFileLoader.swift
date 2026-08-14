@@ -6,10 +6,22 @@ import UIKit
 
 enum AttachmentFileLoader {
     static func load(from url: URL) throws -> AttachmentUploadFile {
-        let hasAccess = url.startAccessingSecurityScopedResource()
+        try load(
+            from: url,
+            startAccessing: { $0.startAccessingSecurityScopedResource() },
+            stopAccessing: { $0.stopAccessingSecurityScopedResource() }
+        )
+    }
+
+    static func load(
+        from url: URL,
+        startAccessing: (URL) -> Bool,
+        stopAccessing: (URL) -> Void
+    ) throws -> AttachmentUploadFile {
+        let hasAccess = startAccessing(url)
         defer {
             if hasAccess {
-                url.stopAccessingSecurityScopedResource()
+                stopAccessing(url)
             }
         }
 

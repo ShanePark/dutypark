@@ -108,6 +108,115 @@ final class DutyparkUITests: XCTestCase {
     }
 
     @MainActor
+    func testTodoDraftCanBeEditedAndDiscardedWithoutSaving() throws {
+        let app = launchAuthenticatedApp()
+        defer { app.terminate() }
+
+        primaryTab("tab.todo", in: app).tap()
+        XCTAssertTrue(
+            app.descendants(matching: .any)["screen.todo"].waitForExistence(timeout: 10)
+        )
+
+        let addButton = app.buttons["todo.add"]
+        XCTAssertTrue(addButton.waitForExistence(timeout: 10))
+        addButton.tap()
+
+        let titleField = app.textFields["todo.form.title"]
+        XCTAssertTrue(titleField.waitForExistence(timeout: 10))
+        titleField.tap()
+        titleField.typeText("UI test draft")
+
+        let todoStatus = app.buttons["todo.form.status.todo"]
+        XCTAssertTrue(todoStatus.waitForExistence(timeout: 5))
+        todoStatus.tap()
+        XCTAssertEqual(titleField.value as? String, "UI test draft")
+
+        let keyboardDismiss = app.buttons["keyboard.dismiss"]
+        if keyboardDismiss.waitForExistence(timeout: 2) {
+            keyboardDismiss.tap()
+        }
+
+        app.buttons["todo.form.cancel"].tap()
+        let discardAlert = app.alerts.firstMatch
+        XCTAssertTrue(discardAlert.waitForExistence(timeout: 5))
+        let discardButton = discardAlert.buttons
+            .matching(identifier: "todo.form.discard.confirm")
+            .firstMatch
+        XCTAssertTrue(discardButton.waitForExistence(timeout: 5))
+        discardButton.tap()
+
+        XCTAssertTrue(waitForNonHittable(titleField, timeout: 3))
+        XCTAssertTrue(app.descendants(matching: .any)["screen.todo"].exists)
+        assertNoUnexpectedAlert(in: app, context: "discarding a Todo draft")
+    }
+
+    @MainActor
+    func testCalendarQuickAddOpensAndClosesTodoForm() throws {
+        let app = launchAuthenticatedApp()
+        defer { app.terminate() }
+
+        primaryTab("tab.calendar", in: app).tap()
+        XCTAssertTrue(
+            app.descendants(matching: .any)["screen.calendar"].waitForExistence(timeout: 10)
+        )
+
+        let quickAdd = app.buttons["calendar.todo.add"]
+        XCTAssertTrue(quickAdd.waitForExistence(timeout: 10))
+        quickAdd.tap()
+
+        let titleField = app.textFields["todo.form.title"]
+        XCTAssertTrue(titleField.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["todo.form.status.in_progress"].exists)
+        app.buttons["todo.form.cancel"].tap()
+
+        XCTAssertTrue(waitForNonHittable(titleField, timeout: 3))
+        XCTAssertTrue(app.descendants(matching: .any)["screen.calendar"].exists)
+        XCTAssertFalse(
+            app.alerts.firstMatch.isHittable,
+            "An interactive alert remained after closing Calendar quick add"
+        )
+    }
+
+    @MainActor
+    func testCalendarMonthPickerChangesMonthUsingFixture() throws {
+        let app = launchAuthenticatedApp()
+        defer { app.terminate() }
+
+        primaryTab("tab.calendar", in: app).tap()
+        XCTAssertTrue(
+            app.descendants(matching: .any)["screen.calendar"].waitForExistence(timeout: 10)
+        )
+
+        let monthDisplay = app.buttons["calendar.month.display"]
+        XCTAssertTrue(monthDisplay.waitForExistence(timeout: 10))
+        let initialYearMonth = try XCTUnwrap(monthDisplay.value as? String)
+        let parts = initialYearMonth.split(separator: "-")
+        XCTAssertEqual(parts.count, 2)
+        let currentYear = try XCTUnwrap(parts.first.flatMap { Int($0) })
+        let currentMonth = try XCTUnwrap(parts.dropFirst().first.flatMap { Int($0) })
+
+        monthDisplay.tap()
+        let monthPicker = app.descendants(matching: .any)["calendar.monthPicker"]
+        XCTAssertTrue(monthPicker.waitForExistence(timeout: 5))
+
+        let alternateMonth = currentMonth == 1 ? 2 : 1
+        let alternateMonthButton = app.buttons["calendar.monthPicker.month.\(alternateMonth)"]
+        XCTAssertTrue(alternateMonthButton.waitForExistence(timeout: 5))
+        alternateMonthButton.tap()
+
+        XCTAssertTrue(monthPicker.waitForNonExistence(timeout: 5))
+        let expectedYearMonth = String(format: "%04d-%02d", currentYear, alternateMonth)
+        let monthChanged = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "value == %@", expectedYearMonth),
+            object: monthDisplay
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [monthChanged], timeout: 5), .completed)
+        XCTAssertNotEqual(monthDisplay.value as? String, initialYearMonth)
+        XCTAssertTrue(app.descendants(matching: .any)["screen.calendar"].exists)
+        assertNoUnexpectedAlert(in: app, context: "changing Calendar month")
+    }
+
+    @MainActor
     func testLanguageAndThemePreferencesAcrossSupportedCombinations() throws {
         let combinations = [
             (language: "ko", locale: "ko_KR", theme: "light", home: "홈", themeLabel: "테마", themeValue: "현재 테마: 라이트"),
@@ -206,6 +315,32 @@ final class DutyparkUITests: XCTestCase {
             settingsScrollView.swipeUp(velocity: .fast)
         }
         return element.exists
+    }
+
+    @MainActor
+    private func launchAuthenticatedApp() -> XCUIApplication {
+        let app = XCUIApplication()
+        app.launchArguments += [
+            "-dp-language", "en",
+            "-dp-theme", "light",
+            "-AppleLanguages", "(en)",
+            "-AppleLocale", "en_US",
+            "-ui-testing-authenticated"
+        ]
+        app.launch()
+        return app
+    }
+
+    @MainActor
+    private func waitForNonHittable(
+        _ element: XCUIElement,
+        timeout: TimeInterval
+    ) -> Bool {
+        let expectation = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "hittable == false"),
+            object: element
+        )
+        return XCTWaiter.wait(for: [expectation], timeout: timeout) == .completed
     }
 
     @MainActor

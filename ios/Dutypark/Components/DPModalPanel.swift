@@ -52,7 +52,7 @@ struct DPModalPanel<Header: View, PanelContent: View, Footer: View>: View {
         self.footer = footer()
     }
 
-    private var sizingPolicy: DPModalPanelSizingPolicy {
+    var sizingPolicy: DPModalPanelSizingPolicy {
         DPModalPanelSizingPolicy(
             maximumPanelHeight: maximumPanelHeight,
             minimumBodyHeight: minimumBodyHeight,

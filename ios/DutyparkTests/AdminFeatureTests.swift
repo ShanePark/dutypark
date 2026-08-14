@@ -36,13 +36,11 @@ struct AdminFeatureTests {
 
     @Test("Admin member repository uses the expected API namespaces and payloads")
     func memberRepositoryContract() async throws {
+        let recorder = AdminRequestRecorder()
         AdminURLProtocolStub.handler = { request in
+            recorder.record(request)
             switch (request.httpMethod, request.url?.path) {
             case ("GET", "/admin/api/members"):
-                let query = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)?.queryItems
-                #expect(query?.first(where: { $0.name == "keyword" })?.value == "Shane Park")
-                #expect(query?.first(where: { $0.name == "page" })?.value == "2")
-                #expect(query?.first(where: { $0.name == "size" })?.value == "10")
                 return Self.response(request, status: 200, body: Self.emptyPageJSON)
             case ("GET", "/admin/api/members/7"):
                 return Self.response(request, status: 200, body: "{}")
@@ -51,14 +49,8 @@ struct AdminFeatureTests {
             case ("DELETE", "/api/auth/refresh-tokens/99"):
                 return Self.response(request, status: 204)
             case ("PUT", "/api/auth/password"):
-                #expect(request.value(forHTTPHeaderField: "Content-Type") == "application/json")
-                let body = Self.jsonObject(from: request)
-                #expect(body["memberId"] as? Int == 7)
-                #expect(body["currentPassword"] is NSNull)
-                #expect(body["newPassword"] as? String == "new-password")
                 return Self.response(request, status: 204)
             default:
-                Issue.record("Unexpected admin member request: \(request.httpMethod ?? "nil") \(request.url?.absoluteString ?? "nil")")
                 return Self.response(request, status: 404)
             }
         }
@@ -75,26 +67,36 @@ struct AdminFeatureTests {
         #expect(try await repository.sessions().isEmpty)
         try await repository.revokeSession(id: 99)
         try await repository.changePassword(memberID: 7, newPassword: "new-password")
+
+        let requests = recorder.snapshots
+        #expect(requests.map(\.route) == [
+            "GET /admin/api/members",
+            "GET /admin/api/members/7",
+            "GET /admin/api/refresh-tokens",
+            "DELETE /api/auth/refresh-tokens/99",
+            "PUT /api/auth/password"
+        ])
+        #expect(requests[0].query["keyword"] == "Shane Park")
+        #expect(requests[0].query["page"] == "2")
+        #expect(requests[0].query["size"] == "10")
+        #expect(requests[4].contentType == "application/json")
+        let passwordBody = Self.jsonObject(from: requests[4].body)
+        #expect(passwordBody["memberId"] as? Int == 7)
+        #expect(passwordBody["currentPassword"] == nil)
+        #expect(passwordBody["newPassword"] as? String == "new-password")
     }
 
     @Test("Admin team repository uses the expected endpoints and normalized payloads")
     func teamRepositoryContract() async throws {
+        let recorder = AdminRequestRecorder()
         AdminURLProtocolStub.handler = { request in
+            recorder.record(request)
             switch (request.httpMethod, request.url?.path) {
             case ("GET", "/admin/api/teams"):
-                let query = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)?.queryItems
-                #expect(query?.first(where: { $0.name == "keyword" })?.value == "Duty Park")
-                #expect(query?.first(where: { $0.name == "page" })?.value == "1")
-                #expect(query?.first(where: { $0.name == "size" })?.value == "10")
                 return Self.response(request, status: 200, body: Self.emptyPageJSON)
             case ("POST", "/admin/api/teams/check"):
-                let body = Self.jsonObject(from: request)["name"] as? String
-                #expect(body == "Duty Park")
                 return Self.response(request, status: 200, body: #""OK""#)
             case ("POST", "/admin/api/teams"):
-                let body = Self.jsonObject(from: request)
-                #expect(body["name"] as? String == "Duty Park")
-                #expect(body["description"] as? String == "Admin team")
                 return Self.response(
                     request,
                     status: 200,
@@ -103,7 +105,6 @@ struct AdminFeatureTests {
             case ("DELETE", "/admin/api/teams/3"):
                 return Self.response(request, status: 204)
             default:
-                Issue.record("Unexpected admin team request: \(request.httpMethod ?? "nil") \(request.url?.absoluteString ?? "nil")")
                 return Self.response(request, status: 404)
             }
         }
@@ -114,6 +115,22 @@ struct AdminFeatureTests {
         #expect(try await repository.checkTeamName("Duty Park") == .ok)
         #expect(try await repository.createTeam(name: "Duty Park", description: "Admin team").id == 3)
         try await repository.deleteTeam(id: 3)
+
+        let requests = recorder.snapshots
+        #expect(requests.map(\.route) == [
+            "GET /admin/api/teams",
+            "POST /admin/api/teams/check",
+            "POST /admin/api/teams",
+            "DELETE /admin/api/teams/3"
+        ])
+        #expect(requests[0].query["keyword"] == "Duty Park")
+        #expect(requests[0].query["page"] == "1")
+        #expect(requests[0].query["size"] == "10")
+        let nameCheckBody = Self.jsonObject(from: requests[1].body)
+        #expect(nameCheckBody["name"] as? String == "Duty Park")
+        let createBody = Self.jsonObject(from: requests[2].body)
+        #expect(createBody["name"] as? String == "Duty Park")
+        #expect(createBody["description"] as? String == "Admin team")
     }
 
     @Test("Team name validation catches lengths before calling the server") @MainActor
@@ -292,12 +309,67 @@ struct AdminFeatureTests {
         )
     }
 
-    private static func jsonObject(from request: URLRequest) -> [String: Any] {
-        guard let body = request.httpBody,
+    private static func jsonObject(from body: Data?) -> [String: Any] {
+        guard let body,
               let object = try? JSONSerialization.jsonObject(with: body) as? [String: Any] else {
             return [:]
         }
         return object
+    }
+}
+
+private struct AdminRequestSnapshot: Sendable {
+    let method: String
+    let path: String
+    let query: [String: String]
+    let contentType: String?
+    let body: Data?
+
+    var route: String { "\(method) \(path)" }
+}
+
+private final class AdminRequestRecorder: @unchecked Sendable {
+    private let lock = NSLock()
+    private var storage: [AdminRequestSnapshot] = []
+
+    func record(_ request: URLRequest) {
+        let query = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)?.queryItems?
+            .reduce(into: [String: String]()) { result, item in
+                result[item.name] = item.value
+            } ?? [:]
+        let snapshot = AdminRequestSnapshot(
+            method: request.httpMethod ?? "",
+            path: request.url?.path ?? "",
+            query: query,
+            contentType: request.value(forHTTPHeaderField: "Content-Type"),
+            body: Self.requestBody(request)
+        )
+        lock.lock()
+        storage.append(snapshot)
+        lock.unlock()
+    }
+
+    var snapshots: [AdminRequestSnapshot] {
+        lock.lock()
+        defer { lock.unlock() }
+        return storage
+    }
+
+    private static func requestBody(_ request: URLRequest) -> Data? {
+        if let body = request.httpBody { return body }
+        guard let stream = request.httpBodyStream else { return nil }
+
+        stream.open()
+        defer { stream.close() }
+        var data = Data()
+        var buffer = [UInt8](repeating: 0, count: 1_024)
+        while stream.hasBytesAvailable {
+            let count = stream.read(&buffer, maxLength: buffer.count)
+            guard count >= 0 else { return nil }
+            if count == 0 { break }
+            data.append(buffer, count: count)
+        }
+        return data
     }
 }
 

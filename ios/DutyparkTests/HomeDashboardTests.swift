@@ -74,23 +74,58 @@ final class HomeDashboardTests: XCTestCase {
         let viewModel = HomeViewModel(service: service)
         let staleDashboard = try Self.decodeMyDashboard(named: "Stale")
         let newestDashboard = try Self.decodeMyDashboard(named: "Newest")
-        let friendsDashboard = try Self.decodeFriendsDashboard()
+        let staleFriendsDashboard = try Self.decodeFriendsDashboard(pinnedFriendNamed: "Stale Friend")
+        let newestFriendsDashboard = try Self.decodeFriendsDashboard(pinnedFriendNamed: "Newest Friend")
+        let firstRequests = HomeRequestCountSignal(description: "First refresh started both requests")
+        await service.notifyWhenRequestCountsReach(my: 1, friends: 1, signal: firstRequests)
 
         let staleRefresh = Task { await viewModel.refresh() }
-        await service.waitForRequestCounts(my: 1, friends: 1)
+        await fulfillment(of: [firstRequests.expectation], timeout: 1)
+
+        let secondRequests = HomeRequestCountSignal(description: "Second refresh started both requests")
+        await service.notifyWhenRequestCountsReach(my: 2, friends: 2, signal: secondRequests)
 
         let newestRefresh = Task { await viewModel.refresh() }
-        await service.waitForRequestCounts(my: 2, friends: 2)
+        await fulfillment(of: [secondRequests.expectation], timeout: 1)
 
         await service.resolveMyRequest(at: 1, with: newestDashboard)
-        await service.resolveFriendsRequest(at: 1, with: friendsDashboard)
+        await service.resolveFriendsRequest(at: 1, with: newestFriendsDashboard)
         await newestRefresh.value
 
         await service.resolveMyRequest(at: 0, with: staleDashboard)
-        await service.resolveFriendsRequest(at: 0, with: friendsDashboard)
+        await service.resolveFriendsRequest(at: 0, with: staleFriendsDashboard)
         await staleRefresh.value
 
         XCTAssertEqual(viewModel.myDashboard?.member.name, "Newest")
+        XCTAssertEqual(viewModel.sortedFriends.first?.member.name, "Newest Friend")
+    }
+
+    func testSectionRetryWinsAgainstAnOlderFullRefreshForThatSection() async throws {
+        let service = ControlledHomeService()
+        let viewModel = HomeViewModel(service: service)
+        let staleDashboard = try Self.decodeMyDashboard(named: "Stale")
+        let retriedDashboard = try Self.decodeMyDashboard(named: "Retried")
+        let friendsDashboard = try Self.decodeFriendsDashboard()
+        let refreshRequests = HomeRequestCountSignal(description: "Full refresh started")
+        await service.notifyWhenRequestCountsReach(my: 1, friends: 1, signal: refreshRequests)
+
+        let fullRefresh = Task { await viewModel.refresh() }
+        await fulfillment(of: [refreshRequests.expectation], timeout: 1)
+
+        let retryRequest = HomeRequestCountSignal(description: "My dashboard retry started")
+        await service.notifyWhenRequestCountsReach(my: 2, friends: 1, signal: retryRequest)
+
+        let retry = Task { await viewModel.retryMyDashboard() }
+        await fulfillment(of: [retryRequest.expectation], timeout: 1)
+
+        await service.resolveMyRequest(at: 1, with: retriedDashboard)
+        await retry.value
+        await service.resolveMyRequest(at: 0, with: staleDashboard)
+        await service.resolveFriendsRequest(at: 0, with: friendsDashboard)
+        await fullRefresh.value
+
+        XCTAssertEqual(viewModel.myDashboard?.member.name, "Retried")
+        XCTAssertEqual(viewModel.friendsDashboard?.friends.count, 3)
     }
 
     func testServiceUsesTheExistingWebDashboardEndpoints() async throws {
@@ -135,6 +170,16 @@ final class HomeDashboardTests: XCTestCase {
 
     private nonisolated static func decodeFriendsDashboard() throws -> DashboardFriendInfoDTO {
         try JSONDecoder().decode(DashboardFriendInfoDTO.self, from: Data(friendsDashboardJSON.utf8))
+    }
+
+    private nonisolated static func decodeFriendsDashboard(
+        pinnedFriendNamed name: String
+    ) throws -> DashboardFriendInfoDTO {
+        let json = friendsDashboardJSON.replacingOccurrences(
+            of: "\"name\":\"First\"",
+            with: "\"name\":\"\(name)\""
+        )
+        return try JSONDecoder().decode(DashboardFriendInfoDTO.self, from: Data(json.utf8))
     }
 
     private nonisolated static func response(
@@ -318,24 +363,39 @@ private actor RetryHomeService: HomeDashboardServing {
 }
 
 private actor ControlledHomeService: HomeDashboardServing {
+    private struct RequestCountObserver: Sendable {
+        let my: Int
+        let friends: Int
+        let signal: HomeRequestCountSignal
+    }
+
     private var myContinuations: [CheckedContinuation<DashboardMyDetailDTO, Error>] = []
     private var friendsContinuations: [CheckedContinuation<DashboardFriendInfoDTO, Error>] = []
+    private var requestCountObservers: [RequestCountObserver] = []
 
     func loadMyDashboard() async throws -> DashboardMyDetailDTO {
         try await withCheckedThrowingContinuation { continuation in
             myContinuations.append(continuation)
+            notifyRequestCountObservers()
         }
     }
 
     func loadFriendsDashboard() async throws -> DashboardFriendInfoDTO {
         try await withCheckedThrowingContinuation { continuation in
             friendsContinuations.append(continuation)
+            notifyRequestCountObservers()
         }
     }
 
-    func waitForRequestCounts(my: Int, friends: Int) async {
-        while myContinuations.count < my || friendsContinuations.count < friends {
-            await Task.yield()
+    func notifyWhenRequestCountsReach(
+        my: Int,
+        friends: Int,
+        signal: HomeRequestCountSignal
+    ) {
+        if myContinuations.count >= my, friendsContinuations.count >= friends {
+            signal.fulfill()
+        } else {
+            requestCountObservers.append(RequestCountObserver(my: my, friends: friends, signal: signal))
         }
     }
 
@@ -345,6 +405,29 @@ private actor ControlledHomeService: HomeDashboardServing {
 
     func resolveFriendsRequest(at index: Int, with dashboard: DashboardFriendInfoDTO) {
         friendsContinuations[index].resume(returning: dashboard)
+    }
+
+    private func notifyRequestCountObservers() {
+        requestCountObservers.removeAll { observer in
+            guard myContinuations.count >= observer.my,
+                  friendsContinuations.count >= observer.friends else {
+                return false
+            }
+            observer.signal.fulfill()
+            return true
+        }
+    }
+}
+
+private final class HomeRequestCountSignal: @unchecked Sendable {
+    let expectation: XCTestExpectation
+
+    init(description: String) {
+        expectation = XCTestExpectation(description: description)
+    }
+
+    func fulfill() {
+        expectation.fulfill()
     }
 }
 
