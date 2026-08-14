@@ -212,6 +212,7 @@ class ScheduleControllerTest : RestDocsTest() {
                 )
             )
 
+        em.flush()
         em.clear()
 
         assertThat(scheduleRepository.findById(oldSchedule.id)).isEmpty()
