@@ -21,8 +21,10 @@
 - 그 안의 `referer`, `callbackUrl`, `login` 값을 신뢰하여 로그인·연결 분기와 최종 이동 위치를 결정한다.
 - [OAuthCallbackRedirectBuilder.kt](../../../src/main/kotlin/com/tistory/shanepark/dutypark/security/oauth/OAuthCallbackRedirectBuilder.kt)도 전달받은 callback URL로 URI를 구성한다.
 - 이 구조는 외부 사이트로 보내는 open redirect와 로그인 CSRF/login swapping 가능성을 별도 검토해야 한다.
-- [SessionStore.swift](../../Dutypark/Core/Auth/SessionStore.swift)는 로그아웃 API 오류를 `try?`로 버리고 즉시 guest로 전환한다.
-- 서버가 쿠키 삭제에 실패하면 UI만 로그아웃되고 쿠키 세션이 남을 수 있다.
+- [x] 2026-08-14 `f766e541`에서 [SessionStore.swift](../../Dutypark/Core/Auth/SessionStore.swift)가 서버 로그아웃 성공 여부와 관계없이 `clearLocalAuthentication()`을 호출한 뒤 guest로 전환하도록 보정했다.
+- [APIClient.swift](../../Dutypark/Core/Networking/APIClient.swift)의 로컬 인증 정리는 access/refresh cookie, URL cache, refresh 상태와 impersonation 상태를 제거한다.
+- 서버 503 응답 뒤 access/refresh cookie 제거, impersonation 만료 정보 제거와 guest 전환을 [APIClientAuthTests.swift](../../DutyparkTests/APIClientAuthTests.swift)로 검증했다.
+- 서버 로그아웃 실패를 사용자에게 알리고 재시도할 수 있게 하는 UX는 아직 구현하지 않았다.
 - 앱 시작 시 [AppRootView.swift](../../Dutypark/Features/Auth/AppRootView.swift)는 세션 복원 네트워크 오류를 전체 화면 재시도로 표시한다.
 - 이때 로그인 없이 쓸 수 있는 guest 화면도 열리지 않는다.
 - iOS [LoginView.swift](../../Dutypark/Features/Auth/LoginView.swift)에는 이메일 로그인은 있지만 비밀번호 찾기·재설정 진입점이 없다.
@@ -57,8 +59,8 @@
 - [ ] 로그아웃 진입점을 하나로 모아 APNs 해제와 서버 로그아웃 순서를 일관되게 적용한다.
 - [ ] 서버 응답 성공 시 서버가 access/refresh 쿠키 모두 만료했는지 확인한다.
 - [ ] 요청 실패 시 "서버 로그아웃 미완료"를 알리고 재시도 또는 기기 내 데이터 정리 선택지를 제공한다.
-- [ ] APIClient가 사용하는 `HTTPCookieStorage`에서 Dutypark 인증 쿠키를 명시적으로 정리할 수 있는 함수를 둔다.
-- [ ] 로컬 정리를 선택했다면 다음 실행에서 남은 refresh cookie로 자동 재로그인되지 않아야 한다.
+- [x] APIClient가 사용하는 `HTTPCookieStorage`에서 Dutypark access/refresh cookie를 명시적으로 정리하는 함수를 사용한다.
+- [x] 서버 로그아웃 요청의 성공 여부와 관계없이 로컬 access/refresh cookie와 impersonation 상태를 정리한 뒤 guest로 전환한다.
 - [ ] 로그아웃 도중 네트워크 단절, 401, 5xx, timeout을 각각 테스트한다.
 - [ ] impersonation 세션 로그아웃도 원 계정과 보조 계정의 토큰 정책에 맞게 검증한다.
 
@@ -92,7 +94,8 @@
 - [ ] [MobileOAuthClientTests.swift](../../DutyparkTests/MobileOAuthClientTests.swift)에 callback scheme/host/path, 취소, 오류, PKCE 케이스를 추가한다.
 - [ ] [MobileOAuthControllerTest.kt](../../../src/test/kotlin/com/tistory/shanepark/dutypark/security/controller/MobileOAuthControllerTest.kt)에 만료·재사용·provider/purpose 불일치를 추가한다.
 - [ ] [OAuthControllerTest.kt](../../../src/test/kotlin/com/tistory/shanepark/dutypark/security/controller/OAuthControllerTest.kt)에 외부 callback/referer, protocol-relative URL, 이중 인코딩을 추가한다.
-- [ ] iOS 세션 테스트에 restore 401, offline, timeout, 5xx와 logout 실패 뒤 쿠키 상태를 추가한다.
+- [ ] iOS 세션 테스트에 restore 401, offline, timeout, 5xx를 추가한다.
+- [x] 서버 logout 503 뒤 로컬 access/refresh cookie, impersonation 상태와 guest 전환을 테스트한다.
 - [ ] 실기기에서 Kakao/Naver 신규 가입, 기존 로그인, 취소, 계정 연결, 중복 연결을 운영과 같은 redirect URI로 확인한다.
 - [ ] 이메일 재설정 메일의 만료·재사용·다른 기기·앱 미설치 흐름을 확인한다.
 

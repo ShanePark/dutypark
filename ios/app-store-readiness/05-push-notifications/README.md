@@ -24,34 +24,38 @@ Debug sandbox와 TestFlight/App Store production APNs를 분리하고, 운영 �
 - [application.yml](../../../src/main/resources/application.yml)은 Team ID, Key ID, private key를 환경 변수에서 받도록 되어 있다.
 - APNs 410 응답을 받은 installation은 제거한다.
 - [RootTabView.swift](../../Dutypark/App/RootTabView.swift)는 인증 화면 진입과 foreground 복귀 때 등록 재개를 호출한다.
+- [x] 2026-08-14 `11b7c214`에서 앱 내부 푸시 OFF→ON과 로그아웃→다른 계정 로그인 시 시스템 등록을 다시 요청하고 현재 세션에 token을 재등록하도록 보정했다.
+- [x] 같은 변경에서 APNs register/unregister 요청을 직렬화하고, 로그아웃 뒤 늦게 도착한 callback과 진행 중 token 교체 경합이 이전 계정에 installation을 남기지 않도록 자동 테스트로 고정했다.
+- [x] 탭 메뉴 로그아웃도 인증 쿠키가 유효할 때 APNs unregister를 먼저 실행하도록 설정 화면과 순서를 맞췄다.
 
-## 확인된 재등록 결함
+## 재등록 결함 보정 상태
 
-`APNsRegistrationManager`의 `hasRequestedRemoteRegistration`은 한 프로세스 동안 한 번 `true`가 된 뒤 다시 초기화되지 않는다.
-푸시 OFF 시 서버 unregister와 저장 토큰 삭제는 하지만 이 플래그는 그대로다.
-그 뒤 ON으로 바꾸면 `registerWithSystemIfNeeded()`가 조기 반환하여 APNs callback을 다시 받지 못하고 서버 재등록도 일어나지 않는다.
-로그아웃 때 토큰을 삭제한 후 같은 앱 프로세스에서 재로그인해도 같은 이유로 새 refresh session에 installation을 연결하지 못할 수 있다.
-또한 탭의 로그아웃 동선은 [RootTabView.swift](../../Dutypark/App/RootTabView.swift)에서 `session.logout()`만 호출하여 설정 화면의 로그아웃과 APNs 해제 순서가 다르다.
+`APNsRegistrationManager`는 푸시 OFF, 로그아웃, 시스템·서버 등록 실패 때 시스템 등록 요청 상태를 다시 열어 foreground 복귀 또는 다음 인증 세션에서 재등록할 수 있다.
+서버 register/unregister는 직렬화하고 현재 시도 번호와 pending token을 추적하여, 늦은 callback이나 진행 중 등록과 로그아웃이 겹쳐도 오래된 완료 결과를 적용하지 않는다.
+[NotificationFeatureTests.swift](../../DutyparkTests/NotificationFeatureTests.swift)에서 OFF→ON, 시스템·서버 등록 실패 뒤 재시도, A 계정 해제→B 계정 등록, 지연 callback, register/unregister 경합, 탭 메뉴 로그아웃 순서를 검증했다.
+실제 APNs token과 서버를 사용한 OFF→ON·계정 전환은 아래 실기기/TestFlight 매트릭스에서 별도로 확인해야 한다.
 
 ## 해야 할 일
 
 ### 1. 등록 상태 모델 수정
 
-- [ ] `registerForRemoteNotifications()` 호출 여부와 서버 등록 완료 여부를 별도 상태로 관리한다.
+- [x] `registerForRemoteNotifications()` 호출 여부와 서버 등록 완료 여부를 별도 상태로 관리한다.
 - [ ] 이미 시스템 등록된 경우 저장된 token으로 서버 register를 다시 호출할 수 있게 한다.
-- [ ] OFF→ON에서 현재 권한이 authorized/provisional이면 서버 연결을 반드시 복원한다.
-- [ ] 로그아웃→재로그인 시 같은 token을 새 refresh session에 다시 연결한다.
+- [x] OFF→ON에서 현재 권한이 authorized/provisional이면 시스템 등록과 서버 연결을 다시 시도한다.
+- [x] 로그아웃→재로그인 시 APNs token callback을 새 refresh session에 다시 연결한다.
 - [ ] `didRegister...` API 실패 시 token을 보존하고 인증 복구 뒤 서버 등록만 재시도한다.
-- [ ] `didFail...` 또는 timeout 뒤 foreground 복귀에서 제한된 backoff로 재시도한다.
+- [x] `didFail...` 또는 서버 등록 실패 뒤 foreground 복귀에서 시스템 등록을 다시 시도한다.
+- [ ] timeout 뒤 제한된 backoff로 재시도한다.
 - [ ] OS 권한 denied와 앱 내부 OFF를 서로 다른 상태와 안내 문구로 표시한다.
 - [ ] 앱 설정에서 OFF일 때 시스템 권한 자체를 되돌릴 수 없다는 점을 정확히 안내한다.
 
 ### 2. 세션 생명주기와 연결
 
 - [ ] 로그아웃 함수를 중앙화하여 APNs unregister를 인증 쿠키가 유효할 때 먼저 요청한다.
-- [ ] 설정 화면, 탭 메뉴, 세션 만료 등 모든 로그아웃 경로가 같은 흐름을 사용한다.
+- [x] 설정 화면과 탭 메뉴 로그아웃이 APNs unregister 후 서버 로그아웃 순서를 사용한다.
+- [ ] 세션 만료 등 나머지 인증 종료 경로도 같은 흐름을 사용한다.
 - [ ] unregister 실패 시 installation이 이전 계정에 남지 않도록 다음 로그인 register가 소유권을 덮어쓴다.
-- [ ] 다른 계정 로그인 직후 stored token을 현재 refresh session으로 등록한다.
+- [x] 다른 계정 로그인 직후 새 APNs token callback을 현재 refresh session으로 등록한다.
 - [ ] refresh token 회전 시 installation foreign key가 새 세션으로 이동하거나 유효하게 유지되는지 정한다.
 - [ ] 서버 로그아웃·전체 세션 삭제·회원 탈퇴 시 연결된 installation 정리 정책을 검증한다.
 - [ ] impersonation 중에는 실제 session owner와 알림 수신 대상 정책을 명확히 한다.
@@ -114,7 +118,7 @@ Debug sandbox와 TestFlight/App Store production APNs를 분리하고, 운영 �
 | 모든 환경 | offline 후 복귀 | backoff 뒤 중복 없는 재등록 |
 | 모든 환경 | token 변경/앱 재설치 | 새 token 저장, 만료 token 정리 |
 
-- [ ] [NotificationFeatureTests.swift](../../DutyparkTests/NotificationFeatureTests.swift)에 OFF→ON, 재로그인, 실패 재시도 상태 테스트를 추가한다.
+- [x] [NotificationFeatureTests.swift](../../DutyparkTests/NotificationFeatureTests.swift)에 OFF→ON, 계정 전환, 시스템·서버 실패 재시도, 늦은 callback과 register/unregister 경합 테스트를 추가했다.
 - [ ] [ApnsInstallationControllerTest.kt](../../../src/test/kotlin/com/tistory/shanepark/dutypark/push/apns/controller/ApnsInstallationControllerTest.kt)에 refresh cookie 누락·타 계정 세션을 추가한다.
 - [ ] [ApnsInstallationServiceTest.kt](../../../src/test/kotlin/com/tistory/shanepark/dutypark/push/apns/service/ApnsInstallationServiceTest.kt)에 token 소유권 이전과 세션 폐기를 추가한다.
 - [ ] [ApnsPushServiceTest.kt](../../../src/test/kotlin/com/tistory/shanepark/dutypark/push/apns/service/ApnsPushServiceTest.kt)에 host 분기, APNs 오류 reason, payload 현지화를 추가한다.
