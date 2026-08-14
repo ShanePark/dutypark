@@ -55,6 +55,7 @@ final class AttachmentPickerModel: ObservableObject {
         }
 
         do {
+            try Task.checkCancellation()
             let sessionId = try await ensureSession()
             for (index, file) in files.enumerated() {
                 try Task.checkCancellation()
