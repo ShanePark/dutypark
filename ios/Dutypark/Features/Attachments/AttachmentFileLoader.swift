@@ -87,7 +87,7 @@ enum AttachmentFileLoader {
             || type?.identifier == "public.heif"
             || extensionName == "heic"
             || extensionName == "heif"
-            || heifBrands.contains(where: data.contains)
+            || heifBrands.contains { data.dropFirst(4).starts(with: $0) }
     }
 
     private static let heifBrands = ["ftypheic", "ftypheix", "ftyphevc", "ftyphevx", "ftypmif1"]
