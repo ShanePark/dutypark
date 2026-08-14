@@ -33,10 +33,9 @@ class AiScheduleParsingConsentService(
     }
 
     fun hasCurrentConsent(memberId: Long): Boolean {
-        val currentPolicy = policyService.getCurrentPolicy(PolicyType.AI_SCHEDULE_PARSING) ?: return false
+        policyService.getCurrentPolicy(PolicyType.AI_SCHEDULE_PARSING) ?: return false
         val latestEvent = consentEventRepository.findTopByMember_IdOrderByCreatedAtDescIdDesc(memberId) ?: return false
-        return latestEvent.eventType == AiScheduleParsingConsentEventType.GRANTED &&
-            latestEvent.policyVersion == currentPolicy.version
+        return latestEvent.eventType == AiScheduleParsingConsentEventType.GRANTED
     }
 
     @Transactional
@@ -102,7 +101,7 @@ class AiScheduleParsingConsentService(
             previouslyConsentedToCurrentPolicy = previouslyConsentedToCurrentPolicy,
             currentPolicyVersion = currentPolicy.version,
             consentVersion = latestEvent?.policyVersion,
-            needsRenewal = consented && latestEvent.policyVersion != currentPolicy.version,
+            needsRenewal = false,
             consentedAt = latestEvent?.createdAt?.takeIf { consented },
             revokedAt = latestEvent?.createdAt?.takeIf { !consented },
         )

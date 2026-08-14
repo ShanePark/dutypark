@@ -455,6 +455,32 @@ struct AIScheduleParsingConsentTests {
     }
 
     @Test
+    func userFacingAIConsentCopyIsProviderNeutral() throws {
+        let keysByTable = [
+            "Settings": [
+                "settings.aiConsent.dataFlow",
+                "settings.aiConsent.confirmMessage",
+            ],
+            "Calendar": [
+                "calendar.aiConsent.prompt.message",
+            ],
+        ]
+
+        for locale in ["en", "ko"] {
+            let url = try #require(Bundle.main.url(forResource: locale, withExtension: "lproj"))
+            let bundle = try #require(Bundle(url: url))
+            for (table, keys) in keysByTable {
+                for key in keys {
+                    let copy = bundle.localizedString(forKey: key, value: key, table: table)
+                    #expect(!copy.localizedCaseInsensitiveContains("Google"))
+                    #expect(!copy.localizedCaseInsensitiveContains("Generative Language"))
+                    #expect(copy.localizedCaseInsensitiveContains(locale == "ko" ? "외부 AI" : "external AI"))
+                }
+            }
+        }
+    }
+
+    @Test
     func privacyManifestDeclaresExactDataTrackingAndRequiredReasonAPIs() throws {
         let url = try #require(Bundle.main.url(forResource: "PrivacyInfo", withExtension: "xcprivacy"))
         let data = try Data(contentsOf: url)

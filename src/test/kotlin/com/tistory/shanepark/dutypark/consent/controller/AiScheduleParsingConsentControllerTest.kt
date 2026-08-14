@@ -171,7 +171,7 @@ class AiScheduleParsingConsentControllerTest : RestDocsTest() {
     }
 
     @Test
-    fun `GET returns false for previous consent after the current policy changes`() {
+    fun `GET keeps an active consent valid after the current policy changes`() {
         saveCurrentPolicy()
         putConsent(true, "2026-08-13")
         policyVersionRepository.save(
@@ -190,7 +190,7 @@ class AiScheduleParsingConsentControllerTest : RestDocsTest() {
             jsonPath("$.currentPolicyVersion") { value("2026-09-01") }
             jsonPath("$.consented") { value(true) }
             jsonPath("$.previouslyConsentedToCurrentPolicy") { value(false) }
-            jsonPath("$.needsRenewal") { value(true) }
+            jsonPath("$.needsRenewal") { value(false) }
         }
     }
 

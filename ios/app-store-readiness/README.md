@@ -16,7 +16,7 @@
 
 - `[!]` [01-apple-sign-in/README.md](./01-apple-sign-in/README.md)
 - `[-]` [02-account-deletion/README.md](./02-account-deletion/README.md)
-- `[!]` [03-privacy-and-ai-consent/README.md](./03-privacy-and-ai-consent/README.md)
+- `정책·AI 동의·Manifest 구현 [x] / App Store 개인정보 검증 [!]` [03-privacy-and-ai-consent/README.md](./03-privacy-and-ai-consent/README.md)
 - `[-]` [04-auth-and-session-hardening/README.md](./04-auth-and-session-hardening/README.md)
 
 ## P1 — 제출 전 필수

@@ -15,6 +15,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.Mock
+import org.mockito.Mockito.lenient
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
@@ -163,7 +164,7 @@ class AiScheduleParsingConsentServiceTest {
     }
 
     @Test
-    fun `stale grant remains consented but needs renewal and is not current consent`() {
+    fun `active grant remains valid without renewal after the policy changes`() {
         val consentedAt = LocalDateTime.of(2026, 1, 1, 12, 0)
         val oldGrant = event(AiScheduleParsingConsentEventType.GRANTED, "2026-01-01", consentedAt)
         whenever(consentEventRepository.findTopByMember_IdOrderByCreatedAtDescIdDesc(1L)).thenReturn(oldGrant)
@@ -172,15 +173,17 @@ class AiScheduleParsingConsentServiceTest {
 
         assertThat(result.consented).isTrue()
         assertThat(result.consentVersion).isEqualTo("2026-01-01")
-        assertThat(result.needsRenewal).isTrue()
+        assertThat(result.previouslyConsentedToCurrentPolicy).isFalse()
+        assertThat(result.needsRenewal).isFalse()
         assertThat(result.consentedAt).isEqualTo(consentedAt)
-        assertThat(consentService.hasCurrentConsent(1L)).isFalse()
+        assertThat(consentService.hasCurrentConsent(1L)).isTrue()
     }
 
     @Test
     fun `current grant is current consent while revoked event is not`() {
         whenever(consentEventRepository.findTopByMember_IdOrderByCreatedAtDescIdDesc(1L))
             .thenReturn(event(AiScheduleParsingConsentEventType.GRANTED, "2026-08-13"))
+        assertThat(consentService.getConsent(1L).consented).isTrue()
         assertThat(consentService.hasCurrentConsent(1L)).isTrue()
 
         whenever(consentEventRepository.findTopByMember_IdOrderByCreatedAtDescIdDesc(1L))
@@ -220,11 +223,14 @@ class AiScheduleParsingConsentServiceTest {
     @Test
     fun `policy unavailable uses machine readable not found code`() {
         whenever(policyService.getCurrentPolicy(PolicyType.AI_SCHEDULE_PARSING)).thenReturn(null)
+        lenient().`when`(consentEventRepository.findTopByMember_IdOrderByCreatedAtDescIdDesc(1L))
+            .thenReturn(event(AiScheduleParsingConsentEventType.GRANTED, "2026-08-13"))
 
         assertThatThrownBy { consentService.getConsent(1L) }
             .isInstanceOf(NoSuchElementException::class.java)
             .hasMessage("consent.aiScheduleParsing.policyUnavailable")
         assertThat(consentService.hasCurrentConsent(1L)).isFalse()
+        verify(consentEventRepository, never()).findTopByMember_IdOrderByCreatedAtDescIdDesc(1L)
     }
 
     private fun event(
