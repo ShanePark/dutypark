@@ -69,6 +69,46 @@ extension UNUserNotificationCenter: NotificationAuthorizationCenter {
 }
 
 @MainActor
+protocol RemoteNotificationRegistrar: AnyObject {
+    func registerForRemoteNotifications()
+}
+
+extension UIApplication: RemoteNotificationRegistrar {}
+
+private actor APNsRegistrationAPIOperationLock {
+    private var isLocked = false
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+
+    func perform(_ operation: @Sendable () async throws -> Void) async throws {
+        await acquire()
+        defer { release() }
+        try await operation()
+    }
+
+    private func acquire() async {
+        guard isLocked else {
+            isLocked = true
+            return
+        }
+        await withCheckedContinuation { continuation in
+            waiters.append(continuation)
+        }
+    }
+
+    private func release() {
+        guard !waiters.isEmpty else {
+            isLocked = false
+            return
+        }
+        waiters.removeFirst().resume()
+    }
+}
+
+private enum APNsRegistrationOperationError: Error {
+    case unregisterFailed
+}
+
+@MainActor
 final class APNsRegistrationManager: ObservableObject {
     static let shared = APNsRegistrationManager()
 
@@ -81,16 +121,22 @@ final class APNsRegistrationManager: ObservableObject {
     private static let enabledPreferenceKey = "dp-push-enabled"
     private let api: any APNsRegistrationAPIProtocol
     private let notificationCenter: any NotificationAuthorizationCenter
+    private let remoteNotificationRegistrar: any RemoteNotificationRegistrar
     private let defaults: UserDefaults
+    private let apiOperationLock = APNsRegistrationAPIOperationLock()
     private var hasRequestedRemoteRegistration = false
+    private var registrationAttempt = 0
+    private var pendingDeviceToken: String?
 
     init(
         api: any APNsRegistrationAPIProtocol = APNsRegistrationAPI(),
         notificationCenter: any NotificationAuthorizationCenter = UNUserNotificationCenter.current(),
+        remoteNotificationRegistrar: any RemoteNotificationRegistrar = UIApplication.shared,
         defaults: UserDefaults = .standard
     ) {
         self.api = api
         self.notificationCenter = notificationCenter
+        self.remoteNotificationRegistrar = remoteNotificationRegistrar
         self.defaults = defaults
         isEnabled = defaults.object(forKey: Self.enabledPreferenceKey) == nil
             ? true
@@ -138,27 +184,65 @@ final class APNsRegistrationManager: ObservableObject {
     private func registerWithSystemIfNeeded() {
         guard !hasRequestedRemoteRegistration else { return }
         hasRequestedRemoteRegistration = true
-        UIApplication.shared.registerForRemoteNotifications()
+        remoteNotificationRegistrar.registerForRemoteNotifications()
     }
 
     func setEnabled(_ enabled: Bool) {
         isEnabled = enabled
         defaults.set(enabled, forKey: Self.enabledPreferenceKey)
+        if !enabled {
+            hasRequestedRemoteRegistration = false
+        }
     }
 
     /// Call before logout while the authenticated cookie is still available.
     func unregister() async {
-        guard let token = defaults.string(forKey: Self.storedTokenKey) else { return }
+        hasRequestedRemoteRegistration = false
+        registrationAttempt &+= 1
+        let currentUnregisterAttempt = registrationAttempt
+        let storedToken = defaults.string(forKey: Self.storedTokenKey)
+        let pendingToken = pendingDeviceToken
+        let tokens = [storedToken, pendingToken]
+            .compactMap { $0 }
+            .reduce(into: [String]()) { tokens, token in
+                if !tokens.contains(token) {
+                    tokens.append(token)
+                }
+            }
+        guard !tokens.isEmpty else {
+            registrationState = .idle
+            return
+        }
         do {
-            try await api.unregister(deviceToken: token)
+            let api = api
+            try await apiOperationLock.perform {
+                var unregisterFailed = false
+                for token in tokens {
+                    do {
+                        try await api.unregister(deviceToken: token)
+                    } catch {
+                        unregisterFailed = true
+                    }
+                }
+                if unregisterFailed {
+                    throw APNsRegistrationOperationError.unregisterFailed
+                }
+            }
+            guard registrationAttempt == currentUnregisterAttempt else { return }
             defaults.removeObject(forKey: Self.storedTokenKey)
+            if pendingDeviceToken == pendingToken {
+                pendingDeviceToken = nil
+            }
             registrationState = .idle
         } catch {
+            guard registrationAttempt == currentUnregisterAttempt else { return }
             registrationState = .failed
         }
     }
 
     func completeAccountDeletionCleanup() async {
+        registrationAttempt &+= 1
+        pendingDeviceToken = nil
         defaults.removeObject(forKey: Self.storedTokenKey)
         hasRequestedRemoteRegistration = false
         registrationState = .idle
@@ -174,18 +258,31 @@ final class APNsRegistrationManager: ObservableObject {
             registrationState = .idle
             return
         }
+        guard hasRequestedRemoteRegistration else { return }
         let token = Self.hexString(for: deviceToken)
+        registrationAttempt &+= 1
+        let currentRegistrationAttempt = registrationAttempt
+        pendingDeviceToken = token
         registrationState = .registering
         do {
-            try await api.register(deviceToken: token)
+            let api = api
+            try await apiOperationLock.perform {
+                try await api.register(deviceToken: token)
+            }
+            guard registrationAttempt == currentRegistrationAttempt else { return }
+            pendingDeviceToken = nil
             defaults.set(token, forKey: Self.storedTokenKey)
             registrationState = .registered
         } catch {
+            guard registrationAttempt == currentRegistrationAttempt else { return }
+            pendingDeviceToken = nil
+            hasRequestedRemoteRegistration = false
             registrationState = .failed
         }
     }
 
     func didFailToRegisterForRemoteNotifications() {
+        hasRequestedRemoteRegistration = false
         registrationState = .failed
     }
 

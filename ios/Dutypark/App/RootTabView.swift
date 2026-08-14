@@ -1,5 +1,16 @@
 import SwiftUI
 
+@MainActor
+enum RootLogoutAction {
+    static func perform(
+        push: APNsRegistrationManager = .shared,
+        logout: @MainActor () async -> Void
+    ) async {
+        await push.unregister()
+        await logout()
+    }
+}
+
 struct RootTabView: View {
     @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject private var session: SessionStore
@@ -109,7 +120,11 @@ struct RootTabView: View {
             isPresented: $showsLogoutConfirmation
         ) {
             Button(SettingsLocalization.string("settings.logout"), role: .destructive) {
-                Task { await session.logout() }
+                Task {
+                    await RootLogoutAction.perform {
+                        await session.logout()
+                    }
+                }
             }
             Button(SettingsLocalization.string("settings.action.cancel"), role: .cancel) {}
         } message: {

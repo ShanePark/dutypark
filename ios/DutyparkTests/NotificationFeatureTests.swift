@@ -174,6 +174,349 @@ struct NotificationFeatureTests {
     }
 
     @Test
+    func reenablingPushRequestsRemoteRegistrationAgain() async throws {
+        let suiteName = "NotificationFeatureTests.reenablePush.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let api = APNsRegistrationAPIMock()
+        let center = NotificationAuthorizationCenterMock(status: .authorized)
+        let registrar = RemoteNotificationRegistrarMock()
+        let manager = APNsRegistrationManager(
+            api: api,
+            notificationCenter: center,
+            remoteNotificationRegistrar: registrar,
+            defaults: defaults
+        )
+
+        await manager.resumeRegistration()
+        manager.setEnabled(false)
+        manager.setEnabled(true)
+        await manager.resumeRegistration()
+        await manager.didRegisterForRemoteNotifications(deviceToken: Data([0xAA]))
+
+        #expect(registrar.registrationRequestCount == 2)
+        #expect(await api.calls().registeredTokens == ["aa"])
+        #expect(defaults.string(forKey: "dutypark.apns.device-token") == "aa")
+        #expect(manager.registrationState == .registered)
+    }
+
+    @Test
+    func lateSystemRegistrationCallbackAfterLogoutIsIgnored() async throws {
+        let suiteName = "NotificationFeatureTests.lateSystemCallbackAfterLogout.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        defaults.set("aa", forKey: "dutypark.apns.device-token")
+        let api = APNsRegistrationAPIMock(initialBoundToken: "aa")
+        let center = NotificationAuthorizationCenterMock(status: .authorized)
+        let registrar = RemoteNotificationRegistrarMock()
+        let manager = APNsRegistrationManager(
+            api: api,
+            notificationCenter: center,
+            remoteNotificationRegistrar: registrar,
+            defaults: defaults
+        )
+
+        await manager.activateForAuthenticatedSession()
+        await manager.unregister()
+        await manager.didRegisterForRemoteNotifications(deviceToken: Data([0xBB]))
+
+        #expect(registrar.registrationRequestCount == 1)
+        #expect(await api.calls() == APNsRegistrationAPICalls(
+            registeredTokens: [],
+            unregisteredTokens: ["aa"]
+        ))
+        #expect(await api.boundToken() == nil)
+        #expect(defaults.string(forKey: "dutypark.apns.device-token") == nil)
+        #expect(manager.registrationState == .idle)
+    }
+
+    @Test
+    func failedServerRegistrationCanRetryOnForegroundResume() async throws {
+        let suiteName = "NotificationFeatureTests.failedServerRegistrationRetry.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let api = APNsRegistrationAPIMock(registerFailureCount: 1)
+        let center = NotificationAuthorizationCenterMock(status: .authorized)
+        let registrar = RemoteNotificationRegistrarMock()
+        let manager = APNsRegistrationManager(
+            api: api,
+            notificationCenter: center,
+            remoteNotificationRegistrar: registrar,
+            defaults: defaults
+        )
+
+        await manager.resumeRegistration()
+        await manager.didRegisterForRemoteNotifications(deviceToken: Data([0xAA]))
+        await manager.resumeRegistration()
+        await manager.didRegisterForRemoteNotifications(deviceToken: Data([0xAA]))
+
+        #expect(registrar.registrationRequestCount == 2)
+        #expect(await api.calls().registeredTokens == ["aa", "aa"])
+        #expect(defaults.string(forKey: "dutypark.apns.device-token") == "aa")
+        #expect(manager.registrationState == .registered)
+    }
+
+    @Test
+    func failedSystemRegistrationCanRetryOnForegroundResume() async throws {
+        let suiteName = "NotificationFeatureTests.failedSystemRegistrationRetry.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let api = APNsRegistrationAPIMock()
+        let center = NotificationAuthorizationCenterMock(status: .authorized)
+        let registrar = RemoteNotificationRegistrarMock()
+        let manager = APNsRegistrationManager(
+            api: api,
+            notificationCenter: center,
+            remoteNotificationRegistrar: registrar,
+            defaults: defaults
+        )
+
+        await manager.resumeRegistration()
+        manager.didFailToRegisterForRemoteNotifications()
+        await manager.resumeRegistration()
+        await manager.didRegisterForRemoteNotifications(deviceToken: Data([0xAA]))
+
+        #expect(registrar.registrationRequestCount == 2)
+        #expect(await api.calls().registeredTokens == ["aa"])
+        #expect(defaults.string(forKey: "dutypark.apns.device-token") == "aa")
+        #expect(manager.registrationState == .registered)
+    }
+
+    @Test
+    func newAccountRequestsRegistrationAfterPreviousAccountUnregisters() async throws {
+        let suiteName = "NotificationFeatureTests.accountTransition.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let api = APNsRegistrationAPIMock()
+        let center = NotificationAuthorizationCenterMock(status: .authorized)
+        let registrar = RemoteNotificationRegistrarMock()
+        let manager = APNsRegistrationManager(
+            api: api,
+            notificationCenter: center,
+            remoteNotificationRegistrar: registrar,
+            defaults: defaults
+        )
+
+        await manager.activateForAuthenticatedSession()
+        await manager.didRegisterForRemoteNotifications(deviceToken: Data([0xAA]))
+        await manager.unregister()
+        await manager.activateForAuthenticatedSession()
+        await manager.didRegisterForRemoteNotifications(deviceToken: Data([0xBB]))
+
+        #expect(registrar.registrationRequestCount == 2)
+        #expect(await api.calls() == APNsRegistrationAPICalls(
+            registeredTokens: ["aa", "bb"],
+            unregisteredTokens: ["aa"]
+        ))
+        #expect(await api.boundToken() == "bb")
+        #expect(await api.events() == [
+            .registered("aa"),
+            .unregisterStarted("aa"),
+            .unregisterFinished("aa"),
+            .registered("bb")
+        ])
+        #expect(defaults.string(forKey: "dutypark.apns.device-token") == "bb")
+        #expect(manager.registrationState == .registered)
+    }
+
+    @Test
+    func lateUnregisterCannotRemoveAReenabledPushRegistration() async throws {
+        let suiteName = "NotificationFeatureTests.lateUnregister.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        defaults.set("aa", forKey: "dutypark.apns.device-token")
+        let api = APNsRegistrationAPIMock(
+            initialBoundToken: "aa",
+            delaysUnregister: true
+        )
+        let center = NotificationAuthorizationCenterMock(status: .authorized)
+        let registrar = RemoteNotificationRegistrarMock()
+        let manager = APNsRegistrationManager(
+            api: api,
+            notificationCenter: center,
+            remoteNotificationRegistrar: registrar,
+            defaults: defaults
+        )
+
+        manager.setEnabled(false)
+        let unregisterTask = Task { await manager.unregister() }
+        #expect(await api.waitUntilUnregisterStarts())
+
+        manager.setEnabled(true)
+        await manager.resumeRegistration()
+        let registerTask = Task {
+            await manager.didRegisterForRemoteNotifications(deviceToken: Data([0xAA]))
+        }
+        for _ in 0..<100 {
+            guard manager.registrationState == .idle else { break }
+            await Task.yield()
+        }
+        for _ in 0..<100 {
+            guard manager.registrationState == .registering else { break }
+            await Task.yield()
+        }
+
+        #expect(await api.calls().registeredTokens.isEmpty)
+        await api.releaseUnregister()
+        await unregisterTask.value
+        await registerTask.value
+
+        #expect(registrar.registrationRequestCount == 1)
+        #expect(await api.events() == [
+            .unregisterStarted("aa"),
+            .unregisterFinished("aa"),
+            .registered("aa")
+        ])
+        #expect(await api.boundToken() == "aa")
+        #expect(defaults.string(forKey: "dutypark.apns.device-token") == "aa")
+        #expect(manager.registrationState == .registered)
+    }
+
+    @Test
+    func logoutUnregistersAnInFlightFirstDeviceToken() async throws {
+        let suiteName = "NotificationFeatureTests.inFlightFirstRegistrationLogout.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let api = APNsRegistrationAPIMock(delaysRegister: true)
+        let center = NotificationAuthorizationCenterMock(status: .authorized)
+        let registrar = RemoteNotificationRegistrarMock()
+        let manager = APNsRegistrationManager(
+            api: api,
+            notificationCenter: center,
+            remoteNotificationRegistrar: registrar,
+            defaults: defaults
+        )
+        await manager.resumeRegistration()
+        let registerTask = Task {
+            await manager.didRegisterForRemoteNotifications(deviceToken: Data([0xBB]))
+        }
+        #expect(await api.waitUntilRegisterStarts())
+        var didLogout = false
+        let logoutTask = Task {
+            await RootLogoutAction.perform(push: manager) {
+                didLogout = true
+            }
+        }
+        for _ in 0..<100 { await Task.yield() }
+
+        await api.releaseRegister()
+        await registerTask.value
+        await logoutTask.value
+
+        #expect(didLogout)
+        #expect(await api.events() == [
+            .registered("bb"),
+            .unregisterStarted("bb"),
+            .unregisterFinished("bb")
+        ])
+        #expect(await api.boundToken() == nil)
+        #expect(defaults.string(forKey: "dutypark.apns.device-token") == nil)
+        #expect(manager.registrationState == .idle)
+    }
+
+    @Test
+    func logoutUnregistersStoredAndInFlightReplacementTokens() async throws {
+        let suiteName = "NotificationFeatureTests.inFlightReplacementLogout.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        defaults.set("aa", forKey: "dutypark.apns.device-token")
+        let api = APNsRegistrationAPIMock(
+            initialBoundToken: "aa",
+            delaysRegister: true
+        )
+        let center = NotificationAuthorizationCenterMock(status: .authorized)
+        let registrar = RemoteNotificationRegistrarMock()
+        let manager = APNsRegistrationManager(
+            api: api,
+            notificationCenter: center,
+            remoteNotificationRegistrar: registrar,
+            defaults: defaults
+        )
+        await manager.resumeRegistration()
+        let registerTask = Task {
+            await manager.didRegisterForRemoteNotifications(deviceToken: Data([0xBB]))
+        }
+        #expect(await api.waitUntilRegisterStarts())
+        var didLogout = false
+        let logoutTask = Task {
+            await RootLogoutAction.perform(push: manager) {
+                didLogout = true
+            }
+        }
+        for _ in 0..<100 { await Task.yield() }
+
+        await api.releaseRegister()
+        await registerTask.value
+        await logoutTask.value
+
+        #expect(didLogout)
+        #expect(await api.events() == [
+            .registered("bb"),
+            .unregisterStarted("aa"),
+            .unregisterFinished("aa"),
+            .unregisterStarted("bb"),
+            .unregisterFinished("bb")
+        ])
+        #expect(await api.boundToken() == nil)
+        #expect(defaults.string(forKey: "dutypark.apns.device-token") == nil)
+        #expect(manager.registrationState == .idle)
+    }
+
+    @Test
+    func rootMenuLogoutUnregistersPushBeforeEndingSession() async throws {
+        let suiteName = "NotificationFeatureTests.rootLogout.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        defaults.set("abc123", forKey: "dutypark.apns.device-token")
+        let api = APNsRegistrationAPIMock()
+        let manager = APNsRegistrationManager(api: api, defaults: defaults)
+        var logoutObservedPushUnregistration = false
+
+        await RootLogoutAction.perform(push: manager) {
+            logoutObservedPushUnregistration = await api.calls().unregisteredTokens == ["abc123"]
+        }
+
+        #expect(logoutObservedPushUnregistration)
+    }
+
+    @Test
+    func rootMenuLogoutContinuesWhenNoPushTokenExists() async throws {
+        let suiteName = "NotificationFeatureTests.rootLogoutWithoutToken.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let api = APNsRegistrationAPIMock()
+        let manager = APNsRegistrationManager(api: api, defaults: defaults)
+        var didLogout = false
+
+        await RootLogoutAction.perform(push: manager) {
+            didLogout = true
+        }
+
+        #expect(didLogout)
+        #expect(await api.calls().unregisteredTokens.isEmpty)
+        #expect(manager.registrationState == .idle)
+    }
+
+    @Test
+    func rootMenuLogoutContinuesWhenPushUnregisterFails() async throws {
+        let suiteName = "NotificationFeatureTests.rootLogoutUnregisterFailure.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        defaults.set("abc123", forKey: "dutypark.apns.device-token")
+        let api = APNsRegistrationAPIMock(failsUnregister: true)
+        let manager = APNsRegistrationManager(api: api, defaults: defaults)
+        var didLogout = false
+
+        await RootLogoutAction.perform(push: manager) {
+            didLogout = true
+        }
+
+        #expect(didLogout)
+        #expect(await api.calls().unregisteredTokens == ["abc123"])
+        #expect(manager.registrationState == .failed)
+    }
+
+    @Test
     func acceptedAccountDeletionClearsStoredPushStateLocally() async throws {
         let suiteName = "NotificationFeatureTests.deletionCleanup.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suiteName))
@@ -248,6 +591,143 @@ private final class NotificationAuthorizationCenterMock: NotificationAuthorizati
 
     func authorizationStatus() async -> UNAuthorizationStatus {
         status
+    }
+}
+
+@MainActor
+private final class RemoteNotificationRegistrarMock: RemoteNotificationRegistrar {
+    private(set) var registrationRequestCount = 0
+
+    func registerForRemoteNotifications() {
+        registrationRequestCount += 1
+    }
+}
+
+private struct APNsRegistrationAPICalls: Equatable, Sendable {
+    let registeredTokens: [String]
+    let unregisteredTokens: [String]
+}
+
+private enum APNsRegistrationAPIEvent: Equatable, Sendable {
+    case registerFailed(String)
+    case registered(String)
+    case unregisterStarted(String)
+    case unregisterFinished(String)
+    case unregisterFailed(String)
+}
+
+private enum APNsRegistrationAPIMockError: Error {
+    case registerFailed
+    case unregisterFailed
+}
+
+private actor APNsRegistrationAPIMock: APNsRegistrationAPIProtocol {
+    private var registeredTokens: [String] = []
+    private var unregisteredTokens: [String] = []
+    private var recordedEvents: [APNsRegistrationAPIEvent] = []
+    private var currentBoundToken: String?
+    private let delaysRegister: Bool
+    private let delaysUnregister: Bool
+    private var registerFailuresRemaining: Int
+    private let failsUnregister: Bool
+    private var registerStarted = false
+    private var registerReleaseRequested = false
+    private var registerReleaseContinuation: CheckedContinuation<Void, Never>?
+    private var unregisterStarted = false
+    private var unregisterReleaseRequested = false
+    private var unregisterReleaseContinuation: CheckedContinuation<Void, Never>?
+
+    init(
+        initialBoundToken: String? = nil,
+        delaysRegister: Bool = false,
+        delaysUnregister: Bool = false,
+        registerFailureCount: Int = 0,
+        failsUnregister: Bool = false
+    ) {
+        currentBoundToken = initialBoundToken
+        self.delaysRegister = delaysRegister
+        self.delaysUnregister = delaysUnregister
+        registerFailuresRemaining = registerFailureCount
+        self.failsUnregister = failsUnregister
+    }
+
+    func register(deviceToken: String) async throws {
+        registeredTokens.append(deviceToken)
+        registerStarted = true
+        if delaysRegister, !registerReleaseRequested {
+            await withCheckedContinuation { continuation in
+                registerReleaseContinuation = continuation
+            }
+        }
+        if registerFailuresRemaining > 0 {
+            registerFailuresRemaining -= 1
+            recordedEvents.append(.registerFailed(deviceToken))
+            throw APNsRegistrationAPIMockError.registerFailed
+        }
+        recordedEvents.append(.registered(deviceToken))
+        currentBoundToken = deviceToken
+    }
+
+    func unregister(deviceToken: String) async throws {
+        unregisteredTokens.append(deviceToken)
+        recordedEvents.append(.unregisterStarted(deviceToken))
+        unregisterStarted = true
+        if delaysUnregister, !unregisterReleaseRequested {
+            await withCheckedContinuation { continuation in
+                unregisterReleaseContinuation = continuation
+            }
+        }
+        if failsUnregister {
+            recordedEvents.append(.unregisterFailed(deviceToken))
+            throw APNsRegistrationAPIMockError.unregisterFailed
+        }
+        if currentBoundToken == deviceToken {
+            currentBoundToken = nil
+        }
+        recordedEvents.append(.unregisterFinished(deviceToken))
+    }
+
+    func calls() -> APNsRegistrationAPICalls {
+        APNsRegistrationAPICalls(
+            registeredTokens: registeredTokens,
+            unregisteredTokens: unregisteredTokens
+        )
+    }
+
+    func events() -> [APNsRegistrationAPIEvent] {
+        recordedEvents
+    }
+
+    func boundToken() -> String? {
+        currentBoundToken
+    }
+
+    func waitUntilRegisterStarts() async -> Bool {
+        for _ in 0..<200 {
+            if registerStarted { return true }
+            try? await Task.sleep(for: .milliseconds(1))
+        }
+        return registerStarted
+    }
+
+    func releaseRegister() {
+        registerReleaseRequested = true
+        registerReleaseContinuation?.resume()
+        registerReleaseContinuation = nil
+    }
+
+    func waitUntilUnregisterStarts() async -> Bool {
+        for _ in 0..<200 {
+            if unregisterStarted { return true }
+            try? await Task.sleep(for: .milliseconds(1))
+        }
+        return unregisterStarted
+    }
+
+    func releaseUnregister() {
+        unregisterReleaseRequested = true
+        unregisterReleaseContinuation?.resume()
+        unregisterReleaseContinuation = nil
     }
 }
 
