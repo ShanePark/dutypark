@@ -51,11 +51,34 @@ export function countLinkedSocialAccounts(member: SocialAccountMember | null): n
 export function getVisibleSocialAccountProviders(
   member: SocialAccountMember | null,
   naverEnabled: boolean,
+  appleEnabled: boolean,
 ): SocialAccountProvider[] {
   const providers: SocialAccountProvider[] = ['KAKAO']
   if (naverEnabled || isSocialAccountConnected(member, 'NAVER')) providers.push('NAVER')
-  if (isSocialAccountConnected(member, 'APPLE')) providers.push('APPLE')
+  if (appleEnabled || isSocialAccountConnected(member, 'APPLE')) providers.push('APPLE')
   return providers
+}
+
+export interface AppleLinkMemberRefreshResult {
+  member: MemberDto | null
+  error: unknown | null
+}
+
+export async function refreshAppleLinkMemberState(
+  loadMember: () => Promise<MemberDto>,
+): Promise<AppleLinkMemberRefreshResult> {
+  try {
+    const member = await loadMember()
+    if (!member.appleId) {
+      return {
+        member: null,
+        error: new Error('Apple link succeeded but refreshed member state has no appleId'),
+      }
+    }
+    return { member, error: null }
+  } catch (error) {
+    return { member: null, error }
+  }
 }
 
 export function canUnlinkSocialAccount(

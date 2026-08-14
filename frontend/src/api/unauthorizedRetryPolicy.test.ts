@@ -6,6 +6,7 @@ describe('unauthorized retry policy', () => {
     '/auth/reauth/password',
     '/members/me/deletion',
     '/auth/mobile/oauth/exchange',
+    '/auth/web/oauth/apple/exchange',
   ])('does not refresh and replay one-time POST %s', (url) => {
     expect(shouldSkipUnauthorizedRefresh('post', url)).toBe(true)
   })

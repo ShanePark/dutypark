@@ -10,12 +10,13 @@ describe('useLoginAttemptGate', () => {
     expect(gate.activeAttempt.value).toBe('PASSWORD')
     expect(gate.startAttempt('KAKAO')).toBe(false)
     expect(gate.startAttempt('NAVER')).toBe(false)
+    expect(gate.startAttempt('APPLE')).toBe(false)
 
     gate.finishAttempt('KAKAO')
     expect(gate.activeAttempt.value).toBe('PASSWORD')
 
     gate.finishAttempt('PASSWORD')
     expect(gate.isAttemptPending.value).toBe(false)
-    expect(gate.startAttempt('NAVER')).toBe(true)
+    expect(gate.startAttempt('APPLE')).toBe(true)
   })
 })

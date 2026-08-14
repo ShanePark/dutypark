@@ -19,6 +19,8 @@ class AppleOAuthCleanupScheduler(
         val now = LocalDateTime.ofInstant(clock.instant(), java.time.ZoneOffset.UTC)
         replayRepository.deleteByExpiresAtBefore(now.minusDays(1))
         credentialRepository.findOrphansUpdatedBefore(now.minusDays(1))
-            .forEach { credentialService.revokeAndDelete(it.socialId) }
+            .map(AppleOAuthCredential::socialId)
+            .distinct()
+            .forEach(credentialService::revokeAndDelete)
     }
 }

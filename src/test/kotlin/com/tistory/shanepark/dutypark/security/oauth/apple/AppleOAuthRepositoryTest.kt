@@ -43,6 +43,62 @@ class AppleOAuthRepositoryTest {
         assertThat(found.map { it.id }).containsExactly(orphan.id)
     }
 
+    @Test
+    fun `orphan cleanup waits until every client grant for a subject is stale`() {
+        val now = LocalDateTime.now()
+        credentialRepository.saveAndFlush(
+            AppleOAuthCredential(
+                socialId = "pending-signup",
+                clientId = "native-client",
+                encryptedRefreshToken = "old-native",
+                createdAt = now.minusDays(2),
+                updatedAt = now.minusDays(2),
+            )
+        )
+        credentialRepository.saveAndFlush(
+            AppleOAuthCredential(
+                socialId = "pending-signup",
+                clientId = "web-client",
+                encryptedRefreshToken = "fresh-web",
+                createdAt = now,
+                updatedAt = now,
+            )
+        )
+
+        val found = credentialRepository.findOrphansUpdatedBefore(now.minusDays(1))
+
+        assertThat(found).isEmpty()
+    }
+
+    @Test
+    fun `credentials preserve native and web grants for the same subject`() {
+        val now = LocalDateTime.now()
+        credentialRepository.saveAndFlush(
+            AppleOAuthCredential(
+                socialId = "shared-subject",
+                clientId = "io.github.shanepark.dutypark",
+                encryptedRefreshToken = "encrypted-native-subject",
+                createdAt = now,
+                updatedAt = now,
+            )
+        )
+        credentialRepository.saveAndFlush(
+            AppleOAuthCredential(
+                socialId = "shared-subject",
+                clientId = "io.github.shanepark.dutypark.web",
+                encryptedRefreshToken = "encrypted-web-subject",
+                createdAt = now,
+                updatedAt = now,
+            )
+        )
+        val found = credentialRepository.findAllByProviderAndSocialId(SsoType.APPLE, "shared-subject")
+
+        assertThat(found.map { it.clientId }).containsExactlyInAnyOrder(
+            "io.github.shanepark.dutypark",
+            "io.github.shanepark.dutypark.web",
+        )
+    }
+
     private fun credential(subject: String, time: LocalDateTime) = AppleOAuthCredential(
         socialId = subject,
         encryptedRefreshToken = "encrypted-$subject",

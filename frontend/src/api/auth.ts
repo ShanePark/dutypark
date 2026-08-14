@@ -14,6 +14,20 @@ export interface AuthResponse {
   expiresIn: number
 }
 
+export interface AppleExchangeRequest {
+  identityToken: string
+  authorizationCode: string
+  rawNonce: string
+  purpose: 'LOGIN' | 'LINK'
+}
+
+export interface AppleExchangeResponse {
+  signupRequired: boolean
+  signupUuid: string | null
+  expiresIn: number | null
+  reauthProof: string | null
+}
+
 
 export const authApi = {
   /**
@@ -58,6 +72,11 @@ export const authApi = {
    */
   ssoSignup: async (data: SsoSignupDto): Promise<AuthResponse> => {
     const response = await apiClient.post<AuthResponse>('/auth/sso/signup/token', data)
+    return response.data
+  },
+
+  exchangeAppleLogin: async (data: AppleExchangeRequest): Promise<AppleExchangeResponse> => {
+    const response = await apiClient.post<AppleExchangeResponse>('/auth/web/oauth/apple/exchange', data)
     return response.data
   },
 

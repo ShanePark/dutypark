@@ -1,7 +1,10 @@
 package com.tistory.shanepark.dutypark.security.oauth.apple
 
+import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.entity.MemberSsoRegister
+import com.tistory.shanepark.dutypark.member.domain.enums.MemberStatus
 import com.tistory.shanepark.dutypark.member.domain.enums.SsoType
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberSsoRegisterRepository
@@ -32,50 +35,90 @@ class AppleNativeOAuthService(
     private val authService: AuthService,
     private val reauthService: ReauthService,
 ) {
+    private val log = logger()
+
     @Transactional
     fun exchange(
         request: AppleNativeExchangeRequest,
         loginMember: LoginMember?,
         servletRequest: HttpServletRequest,
     ): MobileOAuthExchangeResult {
+        return exchangeForClient(
+            request,
+            loginMember,
+            servletRequest,
+            clientSecretFactory.clientId(),
+            null,
+        )
+    }
+
+    @Transactional
+    internal fun exchangeForClient(
+        request: AppleNativeExchangeRequest,
+        loginMember: LoginMember?,
+        servletRequest: HttpServletRequest,
+        clientId: String,
+        redirectUri: String?,
+    ): MobileOAuthExchangeResult {
         val authenticated = authenticatedMember(request.purpose, loginMember)
-        val clientId = clientSecretFactory.clientId()
-        val clientSecret = clientSecretFactory.create()
+        val clientSecret = clientSecretFactory.create(clientId)
         credentialService.ensureConfigured()
-        val identity = tokenVerifier.verify(request.identityToken, request.nonce)
+        val identity = tokenVerifier.verify(request.identityToken, request.nonce, clientId)
+        val existingLoginMember = if (request.purpose == MobileOAuthPurpose.LOGIN) {
+            lockExistingLoginMember(identity.subject)
+        } else {
+            null
+        }
         consumeOnce(request.identityToken, identity.expiresAtEpochSecond)
 
         val tokenResponse = providerClient.exchange(
             request.authorizationCode,
             clientId,
             clientSecret,
+            redirectUri,
         )
         val refreshToken = tokenResponse.refresh_token
             ?: throw AppleOAuthException("auth.apple.credential.invalid")
-        val exchangeIdentityToken = tokenResponse.id_token
-            ?: throw AppleOAuthException("auth.apple.credential.invalid")
-        val exchangedIdentity = tokenVerifier.verify(exchangeIdentityToken, null, requireNonce = false)
-        if (!constantTimeEquals(identity.subject, exchangedIdentity.subject)) {
-            throw AppleOAuthException("auth.apple.credential.invalid")
+
+        if (request.purpose == MobileOAuthPurpose.LINK) {
+            return try {
+                verifyExchangedIdentity(tokenResponse, clientId, identity.subject)
+                link(requireNotNull(authenticated), identity.subject, refreshToken, clientId)
+            } catch (linkFailure: Exception) {
+                compensateFailedLink(refreshToken, clientId, clientSecret, linkFailure)
+            }
         }
 
+        verifyExchangedIdentity(tokenResponse, clientId, identity.subject)
+
         return when (request.purpose) {
-            MobileOAuthPurpose.LOGIN -> login(identity.subject, refreshToken, servletRequest)
-            MobileOAuthPurpose.LINK -> link(requireNotNull(authenticated), identity.subject, refreshToken)
+            MobileOAuthPurpose.LOGIN -> login(
+                identity.subject,
+                refreshToken,
+                clientId,
+                existingLoginMember,
+                servletRequest,
+            )
+            MobileOAuthPurpose.LINK -> error("LINK returns before common exchange completion")
             MobileOAuthPurpose.DELETE_ACCOUNT -> reauthenticateDeletion(
-                requireNotNull(authenticated), identity.subject, refreshToken
+                requireNotNull(authenticated), identity.subject, refreshToken, clientId
             )
         }
     }
 
-    private fun login(subject: String, refreshToken: String, request: HttpServletRequest): MobileOAuthExchangeResult {
-        credentialService.upsert(subject, refreshToken)
-        val member = socialAccountService.findMemberByProviderAndSocialId(SsoType.APPLE, subject)
-        if (member == null) {
+    private fun login(
+        subject: String,
+        refreshToken: String,
+        clientId: String,
+        existingMember: Member?,
+        request: HttpServletRequest,
+    ): MobileOAuthExchangeResult {
+        credentialService.upsert(subject, refreshToken, clientId)
+        if (existingMember == null) {
             val signup = signupRepository.save(MemberSsoRegister(SsoType.APPLE, subject))
             return MobileOAuthExchangeResult(MobileOAuthExchangeResponse(true, signupUuid = signup.uuid))
         }
-        val tokens = authService.getTokenResponseByMemberId(requireNotNull(member.id), request)
+        val tokens = authService.getTokenResponseByMemberId(requireNotNull(existingMember.id), request)
         return MobileOAuthExchangeResult(
             MobileOAuthExchangeResponse(false, expiresIn = tokens.expiresIn),
             tokens.accessToken,
@@ -83,23 +126,74 @@ class AppleNativeOAuthService(
         )
     }
 
-    private fun link(memberId: Long, subject: String, refreshToken: String): MobileOAuthExchangeResult {
+    private fun lockExistingLoginMember(subject: String): Member? {
+        val member = socialAccountService.findMemberByProviderAndSocialId(SsoType.APPLE, subject) ?: return null
+        val memberId = member.id ?: throw AuthException("auth.token.memberNotFound")
+        val locked = memberRepository.findMemberWithTeamForUpdate(memberId)
+            .orElseThrow { AuthException("auth.token.memberNotFound") }
+        if (locked.status != MemberStatus.ACTIVE) {
+            throw AuthException("auth.account.inactive")
+        }
+        return locked
+    }
+
+    private fun link(
+        memberId: Long,
+        subject: String,
+        refreshToken: String,
+        clientId: String,
+    ): MobileOAuthExchangeResult {
         val member = memberRepository.findById(memberId).orElseThrow { AuthException("auth.token.memberNotFound") }
         socialAccountService.link(member, SsoType.APPLE, subject)
-        credentialService.upsert(subject, refreshToken)
+        credentialService.upsert(subject, refreshToken, clientId)
         return MobileOAuthExchangeResult(MobileOAuthExchangeResponse(false))
+    }
+
+    private fun verifyExchangedIdentity(tokenResponse: AppleTokenResponse, clientId: String, subject: String) {
+        val exchangeIdentityToken = tokenResponse.id_token
+            ?: throw AppleOAuthException("auth.apple.credential.invalid")
+        val exchangedIdentity = tokenVerifier.verify(exchangeIdentityToken, null, clientId, requireNonce = false)
+        if (!constantTimeEquals(subject, exchangedIdentity.subject)) {
+            throw AppleOAuthException("auth.apple.credential.invalid")
+        }
+    }
+
+    private fun compensateFailedLink(
+        refreshToken: String,
+        clientId: String,
+        clientSecret: String,
+        linkFailure: Exception,
+    ): Nothing {
+        try {
+            providerClient.revoke(refreshToken, clientId, clientSecret)
+        } catch (revokeFailure: Exception) {
+            linkFailure.addSuppressed(revokeFailure)
+            try {
+                credentialService.storeRevocationRetry(refreshToken, clientId)
+                log.warn("Apple LINK credential revoke deferred for durable retry. clientId={}", clientId)
+            } catch (retryPersistenceFailure: Exception) {
+                linkFailure.addSuppressed(retryPersistenceFailure)
+                log.error(
+                    "Failed to persist Apple LINK credential revocation retry. clientId={}",
+                    clientId,
+                    retryPersistenceFailure,
+                )
+            }
+        }
+        throw linkFailure
     }
 
     private fun reauthenticateDeletion(
         memberId: Long,
         subject: String,
         refreshToken: String,
+        clientId: String,
     ): MobileOAuthExchangeResult {
         val member = socialAccountService.findMemberByProviderAndSocialId(SsoType.APPLE, subject)
         if (member?.id != memberId) {
             throw AppleOAuthException("auth.apple.accountMismatch", 403)
         }
-        credentialService.upsert(subject, refreshToken)
+        credentialService.upsert(subject, refreshToken, clientId)
         val proof = reauthService.issue(memberId, ReauthPurpose.DELETE_ACCOUNT)
         return MobileOAuthExchangeResult(
             MobileOAuthExchangeResponse(false, expiresIn = proof.expiresIn, reauthProof = proof.reauthProof)
@@ -110,6 +204,13 @@ class AppleNativeOAuthService(
         if (purpose == MobileOAuthPurpose.LOGIN) return null
         val member = loginMember ?: throw AuthException()
         if (member.isImpersonating) throw AuthException("auth.reauth.impersonationForbidden")
+        if (purpose == MobileOAuthPurpose.LINK) {
+            val locked = memberRepository.findMemberWithTeamForUpdate(member.id)
+                .orElseThrow { AuthException("auth.token.memberNotFound") }
+            if (locked.status != MemberStatus.ACTIVE) {
+                throw AuthException("auth.account.inactive")
+            }
+        }
         return member.id
     }
 

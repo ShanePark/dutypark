@@ -12,9 +12,11 @@
 - `[!] 차단`: 외부 권한, 설정 또는 결정이 필요함
 - `[~] 해당 없음`: 제외 근거를 상세 문서에 기록함
 
+한 항목 안에서 구현과 출시 준비 상태가 다르면 `구현 [x] / 출시 검증 [!]`처럼 분리해 적는다. 따라서 `[!]`는 코드 미구현을 뜻하지 않을 수 있으며, 외부 설정이나 운영·실기기 검증이 남은 경우에도 사용한다.
+
 ## P0 — 출시 차단
 
-- `[!]` [01-apple-sign-in/README.md](./01-apple-sign-in/README.md)
+- `iOS·서버·웹 로그인/가입 구현 [x] / 출시 검증 [!]` [01-apple-sign-in/README.md](./01-apple-sign-in/README.md)
 - `[-]` [02-account-deletion/README.md](./02-account-deletion/README.md)
 - `정책·AI 동의·Manifest 구현 [x] / App Store 개인정보 검증 [!]` [03-privacy-and-ai-consent/README.md](./03-privacy-and-ai-consent/README.md)
 - `[-]` [04-auth-and-session-hardening/README.md](./04-auth-and-session-hardening/README.md)

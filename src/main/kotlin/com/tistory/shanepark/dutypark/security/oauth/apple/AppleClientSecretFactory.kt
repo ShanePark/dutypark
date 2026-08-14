@@ -22,7 +22,14 @@ class AppleClientSecretFactory(
     fun clientId(): String = clientId.takeIf(String::isNotBlank)
         ?: throw AppleOAuthException("auth.apple.configurationUnavailable", 503)
 
-    fun create(): String {
+    fun isNativeClientId(candidate: String): Boolean = clientId.isNotBlank() && clientId == candidate
+
+    fun create(): String = create(clientId())
+
+    fun create(clientId: String): String {
+        if (clientId.isBlank()) {
+            throw AppleOAuthException("auth.apple.configurationUnavailable", 503)
+        }
         if (teamId.isBlank() || keyId.isBlank() || privateKeyPem.isBlank()) {
             throw AppleOAuthException("auth.apple.configurationUnavailable", 503)
         }
@@ -31,7 +38,7 @@ class AppleClientSecretFactory(
             Jwts.builder()
                 .header().keyId(keyId).and()
                 .issuer(teamId)
-                .subject(clientId())
+                .subject(clientId)
                 .audience().add("https://appleid.apple.com").and()
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plus(CLIENT_SECRET_TTL)))

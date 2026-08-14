@@ -47,6 +47,15 @@ const apiErrors = {
         required: '콜백 URL 정보가 필요합니다.',
       },
     },
+    apple: {
+      configurationUnavailable: 'Apple 로그인 설정이 완료되지 않았습니다.',
+      credential: {
+        invalid: 'Apple 인증 정보가 올바르지 않습니다. 다시 시도해 주세요.',
+      },
+      provider: {
+        unavailable: 'Apple 로그인 서비스에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.',
+      },
+    },
   },
   common: {
     notFound: '리소스를 찾을 수 없습니다.',
@@ -724,6 +733,15 @@ export default {
       social: {
         kakao: '카카오 로그인',
         naver: '네이버 로그인',
+        apple: 'Apple로 로그인',
+      },
+      apple: {
+        cancelled: 'Apple 로그인이 취소되었습니다.',
+        providerUnavailable: 'Apple 로그인을 시작할 수 없습니다. 잠시 후 다시 시도해 주세요.',
+        invalidCredential: 'Apple 인증 응답을 확인할 수 없습니다. 다시 시도해 주세요.',
+        generic: 'Apple 로그인에 실패했습니다.',
+        retry: '다시 시도',
+        retrying: 'Apple 로그인 준비 중...',
       },
       error: {
         generic: '로그인에 실패했습니다.',
@@ -942,6 +960,17 @@ export default {
         kakaoMessage: '카카오 계정을 연동하면 카카오 로그인으로 간편하게 접속할 수 있습니다. 카카오 로그인 페이지로 이동합니다.',
         naverTitle: '네이버 계정 연동',
         naverMessage: '네이버 계정을 연동하면 네이버 로그인으로 간편하게 접속할 수 있습니다. 네이버 로그인 페이지로 이동합니다.',
+        appleTitle: 'Apple 계정 연동',
+        appleMessage: 'Apple 계정을 연동하면 Apple 로그인으로 간편하게 접속할 수 있습니다. Apple 인증 창을 엽니다.',
+      },
+      apple: {
+        providerUnavailable: 'Apple 인증을 시작할 수 없습니다. 잠시 후 다시 시도해 주세요.',
+        invalidCredential: 'Apple 인증 응답을 확인할 수 없습니다. 다시 시도해 주세요.',
+        linkFailed: 'Apple 계정 연동에 실패했습니다.',
+        refreshFailedTitle: 'Apple 계정 연동 완료',
+        refreshFailed: 'Apple 계정은 연동되었지만 최신 상태를 불러오지 못했습니다. 페이지를 새로고침해 주세요.',
+        retry: 'Apple 인증 다시 준비',
+        retrying: 'Apple 인증 준비 중...',
       },
       startFailed: '소셜 계정 연동을 시작하지 못했습니다.',
       linkSuccess: '{provider} 계정이 연동되었습니다.',

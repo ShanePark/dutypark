@@ -1,6 +1,7 @@
 # 02. 앱 내 계정 삭제
 
-> 상태: 앱·웹·서버 구현 완료 / 법적 보존 정책, 외부 provider revoke, 운영 유사 DB와 TestFlight 검증 대기
+> 구현 상태: 앱·웹·서버 완료 / Apple 계정 삭제 재인증은 iOS에서 제공하고 웹은 iOS 안내 제공
+> 출시 검증 상태: 법적 보존 정책, 외부 provider revoke, 운영 유사 DB와 TestFlight E2E 대기
 > 우선순위: P0
 > 최종 확인일: 2026-08-14
 
@@ -15,6 +16,7 @@
 - [ ] 재가입 시 같은 Kakao·Naver·Apple 식별자를 새 계정에 연결할 수 있는지 정책을 정한다.
 - [ ] Kakao·Naver provider-side revoke에 필요한 credential 수명주기와 API 연동을 구현한다. 현재 Dutypark mapping 삭제만으로 공급자 권한 철회가 완료됐다고 보지 않는다.
 - [ ] Apple·Kakao·Naver revoke 실패가 로컬 mapping 선삭제 없이 durable job 재시도로 이어지는지 운영 유사 환경에서 확인한다.
+- [ ] 웹에서 Apple로 가입한 Apple-only 계정도 iOS에서 같은 계정으로 로그인한 뒤 재인증·탈퇴할 수 있는지 확인한다.
 
 ### 데이터베이스와 운영
 
@@ -26,7 +28,7 @@
 ### 실기기·TestFlight
 
 - [ ] TestFlight 실기기에서 범위 안내부터 완료 안내까지 5단계 삭제 흐름을 끝까지 실행한다.
-- [ ] 비밀번호, Kakao, Naver, Apple 재인증을 각각 검증한다.
+- [ ] 비밀번호, Kakao, Naver, Apple 재인증을 각각 검증한다. Apple은 iOS에서 끝까지 실행하고 웹의 Apple-only 계정에는 정확한 iOS 안내가 표시되는지 확인한다.
 - [ ] 팀 관리자 이관, 1인 팀 자동 삭제와 자동 삭제 대상 보조 계정의 결과를 확인한다.
 - [ ] `202 Accepted` 뒤 인증·APNs·로컬 상태가 정리되면서 완료 화면은 유지되고, 사용자 확인 뒤에만 guest로 이동하는지 확인한다.
 - [ ] 같은 인증 수단으로 다시 로그인해 삭제 완료 후 신규 가입 흐름이 나타나는지 확인한다.

@@ -40,6 +40,18 @@ class AppleClientSecretFactoryTest {
     }
 
     @Test
+    fun `creates client secret for explicitly selected web client id`() {
+        val keyPair = KeyPairGenerator.getInstance("EC").apply { initialize(256) }.generateKeyPair()
+        val pem = Base64.getEncoder().encodeToString(keyPair.private.encoded)
+        val factory = AppleClientSecretFactory(clock, CLIENT_ID, "TEAM123", "KEY123", pem)
+
+        val claims = Jwts.parser().verifyWith(keyPair.public).clock { java.util.Date.from(now) }.build()
+            .parseSignedClaims(factory.create("io.github.shanepark.dutypark.web")).payload
+
+        assertThat(claims.subject).isEqualTo("io.github.shanepark.dutypark.web")
+    }
+
+    @Test
     fun `blank Apple signing configuration is unavailable only when used`() {
         val factory = AppleClientSecretFactory(clock, "", "", "", "")
 

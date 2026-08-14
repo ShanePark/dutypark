@@ -42,12 +42,12 @@
 
 | 정책 | 현행 버전 | migration |
 | --- | --- | --- |
-| 개인정보 처리방침 | `PRIVACY 2026-08-14` | `V2.2.32` |
+| 개인정보 처리방침 | `PRIVACY 2026-08-14` (`2026-08-15` 시행 예정) | `V2.2.32` / `V2.2.35` |
 | 이용약관 | `TERMS 2026-08-14` | `V2.2.36` |
 | AI 선택 동의 | `AI_SCHEDULE_PARSING 2026-08-14` | `V2.2.36` |
 
 - 신규 SSO 가입은 서버의 current `TERMS`와 `PRIVACY` 버전에 동의해야 한다.
-- `V2.2.32`는 기존 동의 이력을 수정하거나 기존 회원의 재동의 gate를 만들지 않는다.
+- `V2.2.32`와 `V2.2.35`는 기존 동의 이력을 수정하거나 기존 회원의 재동의 gate를 만들지 않는다.
 - AI 동의는 필수 가입 동의와 분리된 선택 동의다.
 - 사용자가 AI 일정 자동 분석 기능을 켤 때 current `AI_SCHEDULE_PARSING` 안내를 확인하고 `GRANTED` 이벤트를 기록한다.
 - 한 번 부여한 동의는 이후 정책 문구나 버전이 바뀌어도 재동의를 요구하거나 기능을 자동으로 비활성화하지 않는다.
@@ -82,7 +82,7 @@
 
 ## 구현 위치
 
-- 개인정보 처리방침 migration: [`V2.2.32__publish_apple_sign_in_privacy_policy.sql`](../../../src/main/resources/db/migration/v2/V2.2.32__publish_apple_sign_in_privacy_policy.sql)
+- 개인정보 처리방침 migration: [`V2.2.32__publish_apple_sign_in_privacy_policy.sql`](../../../src/main/resources/db/migration/v2/V2.2.32__publish_apple_sign_in_privacy_policy.sql), [`V2.2.35__publish_web_apple_sign_in_privacy_policy.sql`](../../../src/main/resources/db/migration/v2/V2.2.35__publish_web_apple_sign_in_privacy_policy.sql)
 - 공급자 중립 약관·AI 동의 migration: [`V2.2.36__publish_provider_neutral_terms_and_ai_policy.sql`](../../../src/main/resources/db/migration/v2/V2.2.36__publish_provider_neutral_terms_and_ai_policy.sql)
 - 동의 서비스: [`AiScheduleParsingConsentService.kt`](../../../src/main/kotlin/com/tistory/shanepark/dutypark/consent/service/AiScheduleParsingConsentService.kt)
 - iOS 정책 모델: [`PolicyModels.swift`](../../Dutypark/Domain/Models/PolicyModels.swift)

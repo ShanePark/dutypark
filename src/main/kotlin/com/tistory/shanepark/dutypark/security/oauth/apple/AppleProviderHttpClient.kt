@@ -14,7 +14,12 @@ import java.time.Duration
 
 interface AppleProviderClient {
     fun jwks(): AppleJwks
-    fun exchange(code: String, clientId: String, clientSecret: String): AppleTokenResponse
+    fun exchange(
+        code: String,
+        clientId: String,
+        clientSecret: String,
+        redirectUri: String? = null,
+    ): AppleTokenResponse
     fun revoke(refreshToken: String, clientId: String, clientSecret: String)
 }
 
@@ -34,15 +39,21 @@ class AppleProviderHttpClient @Autowired constructor(
         return send(request, AppleJwks::class.java)
     }
 
-    override fun exchange(code: String, clientId: String, clientSecret: String): AppleTokenResponse {
+    override fun exchange(
+        code: String,
+        clientId: String,
+        clientSecret: String,
+        redirectUri: String?,
+    ): AppleTokenResponse {
         val request = formRequest(
             TOKEN_URI,
-            mapOf(
-                "grant_type" to "authorization_code",
-                "code" to code,
-                "client_id" to clientId,
-                "client_secret" to clientSecret,
-            ),
+            buildMap {
+                put("grant_type", "authorization_code")
+                put("code", code)
+                put("client_id", clientId)
+                put("client_secret", clientSecret)
+                redirectUri?.let { put("redirect_uri", it) }
+            },
         )
         val response = sendRaw(request)
         if (response.statusCode() in 500..599) {

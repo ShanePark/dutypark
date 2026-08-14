@@ -24,6 +24,15 @@ class AppleIdentityTokenVerifier(
     private var unknownKidRefreshBlockedUntil = Long.MIN_VALUE
 
     fun verify(token: String, rawNonce: String?, requireNonce: Boolean = true): VerifiedAppleIdentity {
+        return verify(token, rawNonce, clientSecretFactory.clientId(), requireNonce)
+    }
+
+    fun verify(
+        token: String,
+        rawNonce: String?,
+        audience: String,
+        requireNonce: Boolean = true,
+    ): VerifiedAppleIdentity {
         val parts = token.split('.')
         if (parts.size != 3) invalid()
         val header = try {
@@ -49,7 +58,7 @@ class AppleIdentityTokenVerifier(
             invalid()
         }
         val now = clock.instant().epochSecond
-        if (claims.issuer != APPLE_ISSUER || claims.audience?.contains(clientSecretFactory.clientId()) != true) invalid()
+        if (audience.isBlank() || claims.issuer != APPLE_ISSUER || claims.audience?.contains(audience) != true) invalid()
         val subject = claims.subject?.takeIf { it.isNotBlank() && it.length <= 255 } ?: invalid()
         val expiration = claims.expiration?.toInstant()?.epochSecond ?: invalid()
         val issuedAt = claims.issuedAt?.toInstant()?.epochSecond ?: invalid()

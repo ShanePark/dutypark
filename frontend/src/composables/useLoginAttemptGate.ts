@@ -1,6 +1,6 @@
 import { computed, ref } from 'vue'
 
-export type LoginAttempt = 'PASSWORD' | 'KAKAO' | 'NAVER'
+export type LoginAttempt = 'PASSWORD' | 'KAKAO' | 'NAVER' | 'APPLE'
 
 export function useLoginAttemptGate() {
   const activeAttempt = ref<LoginAttempt | null>(null)

@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useKakao } from '@/composables/useKakao'
 import { useNaver } from '@/composables/useNaver'
+import { AppleSignInError, isAppleSignInCancellation, useApple } from '@/composables/useApple'
 import { useLoginAttemptGate } from '@/composables/useLoginAttemptGate'
 import { AxiosError } from 'axios'
 import PolicyModal from '@/components/common/PolicyModal.vue'
@@ -19,6 +20,12 @@ const { t } = useI18n()
 const authStore = useAuthStore()
 const { initKakao, kakaoLogin } = useKakao()
 const { isNaverEnabled, naverLogin } = useNaver()
+const {
+  isAppleConfigured,
+  isAppleReady,
+  preloadAppleSdk,
+  appleLogin,
+} = useApple()
 const { activeAttempt, isAttemptPending, startAttempt, finishAttempt } = useLoginAttemptGate()
 
 const email = ref('')
@@ -27,6 +34,9 @@ const rememberMe = ref(false)
 const isLoading = computed(() => activeAttempt.value === 'PASSWORD')
 const isKakaoLoading = computed(() => activeAttempt.value === 'KAKAO')
 const isNaverLoading = computed(() => activeAttempt.value === 'NAVER')
+const isAppleLoading = computed(() => activeAttempt.value === 'APPLE')
+const isAppleRetrying = ref(false)
+const appleMessage = ref('')
 const error = ref('')
 const remainingAttempts = ref<number | null>(null)
 const policyModal = ref<'terms' | 'privacy' | null>(null)
@@ -50,6 +60,11 @@ const remainingAttemptsMessage = computed(() => {
 
 onMounted(() => {
   initKakao()
+  void preloadAppleSdk().catch(() => {
+    if (isAppleConfigured) {
+      appleMessage.value = t('auth.login.apple.providerUnavailable')
+    }
+  })
 
   const savedEmail = localStorage.getItem(REMEMBER_EMAIL_KEY)
   if (savedEmail) {
@@ -123,6 +138,70 @@ async function handleNaverLogin() {
     )
   } finally {
     finishAttempt('NAVER')
+  }
+}
+
+function getAppleErrorMessage(exception: unknown): string {
+  if (exception instanceof AppleSignInError) {
+    switch (exception.code) {
+      case 'CANCELLED':
+        return t('auth.login.apple.cancelled')
+      case 'INVALID_CREDENTIAL':
+      case 'STATE_MISMATCH':
+        return t('auth.login.apple.invalidCredential')
+      case 'CONFIGURATION_UNAVAILABLE':
+        return t('auth.login.apple.providerUnavailable')
+      case 'SDK_UNAVAILABLE':
+        return t('auth.login.apple.providerUnavailable')
+    }
+  }
+
+  return resolveApiErrorMessage(
+    exception,
+    { fallbackKey: 'auth.login.apple.generic' },
+    t,
+  )
+}
+
+async function handleAppleLogin() {
+  if (!isAppleConfigured || !isAppleReady.value || !startAttempt('APPLE')) return
+  appleMessage.value = ''
+
+  try {
+    const response = await appleLogin()
+    const redirect = redirectTarget()
+
+    if (response.signupRequired) {
+      const uuid = response.signupUuid?.trim()
+      if (!uuid) throw new AppleSignInError('INVALID_CREDENTIAL')
+      await router.push({
+        path: '/auth/sso-signup',
+        query: redirect === '/' ? { uuid } : { uuid, redirect },
+      })
+      return
+    }
+
+    await authStore.checkAuth()
+    await router.push(redirect)
+  } catch (exception) {
+    if (isAppleSignInCancellation(exception)) return
+    appleMessage.value = getAppleErrorMessage(exception)
+  } finally {
+    finishAttempt('APPLE')
+  }
+}
+
+async function handleAppleRetry() {
+  if (isAppleRetrying.value || isAppleReady.value) return
+  isAppleRetrying.value = true
+
+  try {
+    await preloadAppleSdk()
+    appleMessage.value = ''
+  } catch {
+    appleMessage.value = t('auth.login.apple.providerUnavailable')
+  } finally {
+    isAppleRetrying.value = false
   }
 }
 
@@ -236,6 +315,66 @@ async function handleNaverLogin() {
               <img src="/img/naver.svg" alt="Naver" class="w-5 h-5" />
               <span>{{ isNaverLoading ? t('auth.login.submitting') : t('auth.login.social.naver') }}</span>
             </button>
+
+            <div>
+              <div
+                class="relative h-[52px] w-full overflow-hidden rounded-xl bg-black transition-opacity focus-within:ring-2 focus-within:ring-dp-accent focus-within:ring-offset-2"
+                :class="(isAttemptPending || !isAppleConfigured || !isAppleReady) ? 'opacity-50' : 'hover:opacity-90'"
+              >
+                <span
+                  aria-hidden="true"
+                  class="absolute inset-0 flex items-center justify-center font-semibold text-white"
+                >
+                  {{ t('auth.login.social.apple') }}
+                </span>
+                <div
+                  id="appleid-signin"
+                  aria-hidden="true"
+                  class="absolute inset-0 pointer-events-none"
+                  data-color="black"
+                  data-border="true"
+                  data-border-radius="12"
+                  data-type="sign-in"
+                  data-mode="center-align"
+                  data-width="100%"
+                  data-height="52"
+                ></div>
+                <button
+                  type="button"
+                  class="absolute inset-0 z-10 h-full w-full cursor-pointer bg-transparent disabled:cursor-not-allowed"
+                  :disabled="isAttemptPending || !isAppleConfigured || !isAppleReady"
+                  :aria-label="t('auth.login.social.apple')"
+                  :aria-describedby="appleMessage ? 'apple-login-status' : undefined"
+                  @click="handleAppleLogin"
+                >
+                  <span class="sr-only">
+                    {{ isAppleLoading ? t('auth.login.submitting') : t('auth.login.social.apple') }}
+                  </span>
+                </button>
+              </div>
+              <div
+                v-if="appleMessage || isAppleRetrying"
+                class="mt-2 text-center"
+              >
+                <p
+                  id="apple-login-status"
+                  class="text-xs"
+                  :class="isAppleRetrying ? 'text-dp-text-muted' : 'text-dp-danger'"
+                  aria-live="polite"
+                >
+                  {{ isAppleRetrying ? t('auth.login.apple.retrying') : appleMessage }}
+                </p>
+                <button
+                  v-if="isAppleConfigured && appleMessage && !isAppleReady"
+                  type="button"
+                  class="mt-2 text-xs font-medium text-dp-accent hover:text-dp-accent-hover hover:underline disabled:cursor-not-allowed disabled:opacity-50"
+                  :disabled="isAppleRetrying"
+                  @click="handleAppleRetry"
+                >
+                  {{ isAppleRetrying ? t('auth.login.apple.retrying') : t('auth.login.apple.retry') }}
+                </button>
+              </div>
+            </div>
           </div>
         </form>
       </div>

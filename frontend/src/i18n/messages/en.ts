@@ -47,6 +47,15 @@ const apiErrors = {
         required: 'Callback URL is required.',
       },
     },
+    apple: {
+      configurationUnavailable: 'Sign in with Apple is not configured.',
+      credential: {
+        invalid: 'The Apple authorization credentials are invalid. Please try again.',
+      },
+      provider: {
+        unavailable: 'Sign in with Apple is temporarily unavailable. Please try again later.',
+      },
+    },
   },
   common: {
     notFound: 'Resource not found.',
@@ -722,6 +731,15 @@ export default {
       social: {
         kakao: 'Continue with Kakao',
         naver: 'Continue with Naver',
+        apple: 'Sign in with Apple',
+      },
+      apple: {
+        cancelled: 'Sign in with Apple was cancelled.',
+        providerUnavailable: 'Unable to start Sign in with Apple. Please try again later.',
+        invalidCredential: 'The Apple authorization response could not be verified. Please try again.',
+        generic: 'Sign in with Apple failed.',
+        retry: 'Try again',
+        retrying: 'Preparing Sign in with Apple...',
       },
       error: {
         generic: 'Failed to log in.',
@@ -939,6 +957,17 @@ export default {
         kakaoMessage: 'Connect your Kakao account for easier sign-in. You will be redirected to the Kakao sign-in page.',
         naverTitle: 'Connect Naver account',
         naverMessage: 'Connect your Naver account for easier sign-in. You will be redirected to the Naver sign-in page.',
+        appleTitle: 'Connect Apple account',
+        appleMessage: 'Connect your Apple account for easier sign-in. An Apple authorization window will open.',
+      },
+      apple: {
+        providerUnavailable: 'Unable to start Apple authorization. Please try again later.',
+        invalidCredential: 'The Apple authorization response could not be verified. Please try again.',
+        linkFailed: 'Failed to connect your Apple account.',
+        refreshFailedTitle: 'Apple account connected',
+        refreshFailed: 'Your Apple account was connected, but the latest status could not be loaded. Please refresh the page.',
+        retry: 'Prepare Apple authorization again',
+        retrying: 'Preparing Apple authorization...',
       },
       startFailed: 'Failed to start social account linking.',
       linkSuccess: 'Your {provider} account has been linked.',

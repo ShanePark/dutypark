@@ -11,6 +11,7 @@ import {
   getSocialAccountUnlinkErrorKey,
   getVisibleSocialAccountProviders,
   memberApi,
+  refreshAppleLinkMemberState,
   refreshTokenApi,
   type SocialAccountProvider,
 } from '@/api/member'
@@ -18,6 +19,7 @@ import { authApi } from '@/api/auth'
 import { useSwal } from '@/composables/useSwal'
 import { useKakao } from '@/composables/useKakao'
 import { useNaver } from '@/composables/useNaver'
+import { AppleSignInError, isAppleSignInCancellation, useApple } from '@/composables/useApple'
 import { usePushNotification } from '@/composables/usePushNotification'
 import type { MemberPreviewDto, MemberDto, RefreshTokenDto, CalendarVisibility, FriendDto } from '@/types'
 import { VISIBILITY_COLORS } from '@/utils/visibility'
@@ -247,6 +249,27 @@ async function handleImpersonate(member: MemberDto) {
 }
 const { kakaoLink } = useKakao()
 const { isNaverEnabled, naverLink } = useNaver()
+const {
+  isAppleConfigured,
+  isAppleReady,
+  preloadAppleSdk,
+  appleLink,
+} = useApple()
+const isApplePreparing = ref(false)
+const applePreparationFailed = ref(false)
+
+async function prepareAppleLink() {
+  if (!isAppleConfigured || isApplePreparing.value) return
+  isApplePreparing.value = true
+  applePreparationFailed.value = false
+  try {
+    await preloadAppleSdk()
+  } catch {
+    applePreparationFailed.value = true
+  } finally {
+    isApplePreparing.value = false
+  }
+}
 
 // Push notification settings
 const pushNotification = usePushNotification()
@@ -322,7 +345,7 @@ const tokensLoading = ref(false)
 const savingVisibility = ref(false)
 const savingManager = ref(false)
 type SsoProvider = SocialAccountProvider
-type WebConnectableSsoProvider = Exclude<SsoProvider, 'APPLE'>
+type RedirectConnectableSsoProvider = Exclude<SsoProvider, 'APPLE'>
 
 const connectingSso = ref<SsoProvider | null>(null)
 const unlinkingSso = ref<SsoProvider | null>(null)
@@ -611,7 +634,7 @@ function buildSsoConnections(member: MemberDto | null): SsoConnection[] {
     },
   ]
 
-  const visibleProviders = getVisibleSocialAccountProviders(member, isNaverEnabled)
+  const visibleProviders = getVisibleSocialAccountProviders(member, isNaverEnabled, true)
   return connections.filter((connection) => visibleProviders.includes(connection.provider))
 }
 
@@ -619,12 +642,35 @@ function canUnlinkSso(provider: SsoProvider): boolean {
   return canUnlinkSocialAccount(memberInfo.value, provider)
 }
 
-function isWebConnectableSsoProvider(provider: SsoProvider): provider is WebConnectableSsoProvider {
-  return provider === 'KAKAO' || provider === 'NAVER'
+function isWebConnectableSsoProvider(provider: SsoProvider): boolean {
+  return provider === 'KAKAO' || provider === 'NAVER' || provider === 'APPLE'
 }
 
-function toSocialLinkProvider(provider: WebConnectableSsoProvider): SocialLinkProvider {
+function toSocialLinkProvider(provider: RedirectConnectableSsoProvider): SocialLinkProvider {
   return provider === 'KAKAO' ? 'kakao' : 'naver'
+}
+
+function appleLinkStatusMessage(): string {
+  if (isApplePreparing.value) return t('member.sso.apple.retrying')
+  if (applePreparationFailed.value) return t('member.sso.apple.providerUnavailable')
+  return ''
+}
+
+function getAppleLinkErrorMessage(error: unknown): string {
+  if (error instanceof AppleSignInError) {
+    switch (error.code) {
+      case 'CONFIGURATION_UNAVAILABLE':
+        return t('member.sso.apple.providerUnavailable')
+      case 'SDK_UNAVAILABLE':
+        return t('member.sso.apple.providerUnavailable')
+      case 'INVALID_CREDENTIAL':
+      case 'STATE_MISMATCH':
+        return t('member.sso.apple.invalidCredential')
+      case 'CANCELLED':
+        return ''
+    }
+  }
+  return resolveApiErrorMessage(error, { fallbackKey: 'member.sso.apple.linkFailed' }, t)
 }
 
 function openSsoSettings(connection: SsoConnection, event: Event) {
@@ -643,8 +689,9 @@ async function closeSsoSettings() {
 
 async function connectSso(provider: SsoProvider) {
   if (isSsoActionPending.value || !isWebConnectableSsoProvider(provider)) return
+  if (provider === 'APPLE' && (!isAppleConfigured || !isAppleReady.value)) return
 
-  const prompts: Record<WebConnectableSsoProvider, { message: string; title: string; connect: () => Promise<void> }> = {
+  const prompts: Record<SsoProvider, { message: string; title: string; connect: () => Promise<unknown> }> = {
     KAKAO: {
       message: t('member.sso.prompts.kakaoMessage'),
       title: t('member.sso.prompts.kakaoTitle'),
@@ -655,6 +702,11 @@ async function connectSso(provider: SsoProvider) {
       title: t('member.sso.prompts.naverTitle'),
       connect: () => naverLink(),
     },
+    APPLE: {
+      message: t('member.sso.prompts.appleMessage'),
+      title: t('member.sso.prompts.appleTitle'),
+      connect: () => appleLink(),
+    },
   }
 
   const prompt = prompts[provider]
@@ -663,12 +715,48 @@ async function connectSso(provider: SsoProvider) {
 
   connectingSso.value = provider
   try {
+    if (provider === 'APPLE') {
+      await prompt.connect()
+      const successMessage = t('member.sso.linkSuccess', {
+        provider: t('member.sso.providers.apple'),
+      })
+      toastSuccess(successMessage)
+
+      const refreshResult = await refreshAppleLinkMemberState(async () => (
+        await memberApi.getMyInfo()
+      ).data)
+      if (refreshResult.member) {
+        memberInfo.value = refreshResult.member
+        ssoConnections.value = buildSsoConnections(memberInfo.value)
+      } else {
+        console.error('Apple account linked, but failed to refresh member info:', refreshResult.error)
+        ssoConnections.value = ssoConnections.value.map((connection) => (
+          connection.provider === 'APPLE'
+            ? { ...connection, connected: true }
+            : connection
+        ))
+        await showWarning(
+          t('member.sso.apple.refreshFailed'),
+          t('member.sso.apple.refreshFailedTitle'),
+        )
+      }
+      return
+    }
+
     storePendingSocialLinkProvider(toSocialLinkProvider(provider))
     await prompt.connect()
   } catch (error) {
+    if (provider === 'APPLE' && isAppleSignInCancellation(error)) return
     console.error('Failed to connect sso:', error)
-    clearPendingSocialLinkProvider()
-    showError(t('member.sso.startFailed'))
+    if (provider === 'APPLE') {
+      if (error instanceof AppleSignInError && error.code === 'SDK_UNAVAILABLE') {
+        applePreparationFailed.value = true
+      }
+      showError(getAppleLinkErrorMessage(error))
+    } else {
+      clearPendingSocialLinkProvider()
+      showError(t('member.sso.startFailed'))
+    }
   } finally {
     connectingSso.value = null
   }
@@ -895,6 +983,7 @@ onMounted(async () => {
   window.addEventListener('focus', refreshAiConsentOnReturn)
   document.addEventListener('visibilitychange', refreshAiConsentOnReturn)
   loading.value = true
+  void prepareAppleLink()
   try {
     // Fetch all data in parallel
     await Promise.all([
@@ -1304,6 +1393,13 @@ onUnmounted(() => {
                 <p v-if="sso.connected && sso.accountName" class="text-sm text-dp-text-secondary">
                   {{ sso.accountName }}
                 </p>
+                <p
+                  v-else-if="sso.provider === 'APPLE' && appleLinkStatusMessage()"
+                  class="mt-0.5 max-w-md text-xs text-dp-text-muted"
+                  aria-live="polite"
+                >
+                  {{ appleLinkStatusMessage() }}
+                </p>
               </div>
             </div>
             <div class="flex shrink-0 items-center gap-2">
@@ -1332,13 +1428,22 @@ onUnmounted(() => {
                 {{ t('member.sso.unlink.manageHint') }}
               </span>
               <button
-                v-else-if="isWebConnectableSsoProvider(sso.provider)"
+                v-else-if="isWebConnectableSsoProvider(sso.provider) && !(sso.provider === 'APPLE' && applePreparationFailed)"
                 type="button"
                 @click="connectSso(sso.provider)"
-                :disabled="isSsoActionPending"
+                :disabled="isSsoActionPending || (sso.provider === 'APPLE' && (!isAppleConfigured || !isAppleReady))"
                 class="min-h-11 w-full rounded-lg bg-dp-accent-soft px-4 py-2.5 text-sm font-medium text-dp-accent transition hover:bg-dp-accent-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dp-accent disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
               >
                 {{ connectingSso === sso.provider ? t('member.sso.connecting') : t('member.sso.connect') }}
+              </button>
+              <button
+                v-else-if="sso.provider === 'APPLE' && applePreparationFailed"
+                type="button"
+                @click="prepareAppleLink"
+                :disabled="isSsoActionPending || isApplePreparing"
+                class="min-h-11 w-full rounded-lg bg-dp-accent-soft px-4 py-2.5 text-sm font-medium text-dp-accent transition hover:bg-dp-accent-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dp-accent disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+              >
+                {{ isApplePreparing ? t('member.sso.apple.retrying') : t('member.sso.apple.retry') }}
               </button>
             </div>
           </div>

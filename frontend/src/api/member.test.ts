@@ -17,6 +17,7 @@ import {
   getVisibleSocialAccountProviders,
   isSocialAccountConnected,
   memberApi,
+  refreshAppleLinkMemberState,
   type SocialAccountProvider,
 } from './member'
 
@@ -76,6 +77,35 @@ describe('member social account API contract', () => {
   )
 })
 
+describe('Apple link member state refresh', () => {
+  it('returns the refreshed Apple-linked member', async () => {
+    const linkedMember = member({ appleId: 'apple-subject' })
+
+    await expect(refreshAppleLinkMemberState(async () => linkedMember)).resolves.toEqual({
+      member: linkedMember,
+      error: null,
+    })
+  })
+
+  it('reports stale state without rejecting after the Apple link already succeeded', async () => {
+    const refreshError = new Error('member refresh unavailable')
+
+    await expect(refreshAppleLinkMemberState(async () => {
+      throw refreshError
+    })).resolves.toEqual({
+      member: null,
+      error: refreshError,
+    })
+  })
+
+  it('treats a refresh without appleId as stale state instead of an auth failure', async () => {
+    await expect(refreshAppleLinkMemberState(async () => member())).resolves.toMatchObject({
+      member: null,
+      error: expect.any(Error),
+    })
+  })
+})
+
 describe('social account unlink policy', () => {
   it('blocks the only connected social account regardless of password availability', () => {
     const withoutPassword = member({ kakaoId: 'kakao-1', hasPassword: false })
@@ -111,9 +141,10 @@ describe('social account unlink policy', () => {
     expect(canUnlinkSocialAccount(member({ kakaoId: 'kakao-1' }), 'NAVER')).toBe(false)
   })
 
-  it('shows Apple management only after an iOS-linked appleId is returned', () => {
-    expect(getVisibleSocialAccountProviders(member(), true)).toEqual(['KAKAO', 'NAVER'])
-    expect(getVisibleSocialAccountProviders(member({ appleId: 'apple-subject' }), false))
+  it('shows Apple when web linking is configured or an existing Apple account is connected', () => {
+    expect(getVisibleSocialAccountProviders(member(), true, true)).toEqual(['KAKAO', 'NAVER', 'APPLE'])
+    expect(getVisibleSocialAccountProviders(member(), true, false)).toEqual(['KAKAO', 'NAVER'])
+    expect(getVisibleSocialAccountProviders(member({ appleId: 'apple-subject' }), false, false))
       .toEqual(['KAKAO', 'APPLE'])
   })
 })

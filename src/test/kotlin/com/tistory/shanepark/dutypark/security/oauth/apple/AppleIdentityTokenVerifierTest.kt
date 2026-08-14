@@ -38,6 +38,21 @@ class AppleIdentityTokenVerifierTest {
     }
 
     @Test
+    fun `verifies identity token against explicitly selected web audience`() {
+        whenever(provider.jwks()).thenReturn(AppleJwks(listOf(jwk(keys))))
+        val verifier = verifier()
+        val webClientId = "io.github.shanepark.dutypark.web"
+
+        val result = verifier.verify(
+            token(keys, audience = webClientId, nonce = sha256Hex(RAW_NONCE)),
+            RAW_NONCE,
+            webClientId,
+        )
+
+        assertThat(result.subject).isEqualTo("apple-subject")
+    }
+
+    @Test
     fun `rejects invalid nonce audience issuer expiration future issued-at and signature`() {
         val otherKeys = KeyPairGenerator.getInstance("RSA").apply { initialize(2048) }.generateKeyPair()
         val cases = listOf(

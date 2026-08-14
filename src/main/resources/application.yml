@@ -108,6 +108,8 @@ oauth:
   web-base-url: "${WEB_OAUTH_BASE_URL:http://localhost:8080}"
   apple:
     client-id: "${APPLE_CLIENT_ID:}"
+    web-client-id: "${APPLE_WEB_CLIENT_ID:}"
+    web-redirect-uri: "${APPLE_WEB_REDIRECT_URI:}"
     team-id: "${APPLE_TEAM_ID:}"
     key-id: "${APPLE_KEY_ID:}"
     private-key: "${APPLE_PRIVATE_KEY:}"

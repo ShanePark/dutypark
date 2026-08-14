@@ -31,6 +31,10 @@ SwiftUI 화면이나 targeted test가 존재한다는 사실만으로 이식 완
 
 ## 3. WebView와 SSO UX parity
 
+- [x] 웹 Apple 로그인·가입을 구현하고 iOS와 같은 `sub`·Dutypark 회원 mapping을 사용한다.
+- [x] 웹 기존 계정에서 Apple 계정 연결과 revoke-first 연결 해제를 제공한다.
+- [ ] 앱에서 Apple로 가입한 계정의 웹 로그인과 웹에서 가입한 계정의 앱 로그인을 실제 Apple 계정으로 교차 검증한다.
+- [ ] 기존 Dutypark 계정에 웹과 iOS 앱에서 각각 Apple을 연결하고, 양쪽에서 같은 회원·연결 상태를 조회하는지 실제 Apple 계정으로 교차 검증한다.
 - [ ] 가이드·릴리스 노트와 관리자 개발/API 문서의 `WKWebView`를 네이티브 원칙의 허용 예외로 둘지 결정한다.
 - [ ] WebView를 유지하면 로그인 cookie, 내부·외부 링크, 뒤로가기, 로딩, 오프라인·인증 만료·서버 오류 복구를 검증한다.
 - [ ] 네이티브로 바꾸면 웹 콘텐츠의 한국어·영어, 갱신 방식과 링크 동작을 빠뜨리지 않는다.
@@ -56,7 +60,7 @@ SwiftUI 화면이나 targeted test가 존재한다는 사실만으로 이식 완
 - 별도 공개 share token. 기존 공개 HTTPS 캘린더 링크와 Universal Link를 사용한다.
 - iPad 적응형 UI와 가로 방향
 
-Kakao·Naver·Apple 연결 해제, system theme, 계정 삭제, 일정·Todo 첨부, 팀 대표·매니저용 팀 관리는 현행 웹 기능이므로 제외하지 않는다.
+Kakao·Naver 로그인과 Kakao·Naver·Apple 연결·해제, system theme, 계정 삭제, 일정·Todo 첨부, 팀 대표·매니저용 팀 관리는 현행 웹 기능이므로 제외하지 않는다. Apple 웹 로그인·가입도 이번 구현 범위이므로 제외하지 않는다. Apple 계정 연결·해제는 iOS 앱과 웹에서 제공하고, 삭제 재인증은 iOS에서만 제공하며 웹은 iOS 탈퇴 안내를 제공한다.
 
 ## 6. 실서버·웹 교차 완료 기준
 
@@ -64,7 +68,7 @@ Kakao·Naver·Apple 연결 해제, system theme, 계정 삭제, 일정·Todo 첨
 - [ ] 일정·근무·D-Day·Todo·첨부·친구·가족·팀·알림·프로필을 생성·수정·삭제하고 앱 재조회와 웹 접속에서 같은 결과를 확인한다.
 - [ ] 소유자, 태그 사용자, 친구, 가족, 개인 manager, 팀 대표·manager·일반 멤버와 비회원 권한을 각각 검증한다.
 - [ ] 서비스 관리자 계정으로 회원·세션·팀 관리와 destructive confirm을 검증하고, 비관리자 계정에서는 관리자 메뉴·API·WebView 접근이 차단되는지 확인한다.
-- [ ] Kakao/Naver/Apple 로그인·가입·연결·해제, APNs와 Universal Link는 각 상세 출시 문서의 E2E 조건도 충족한다.
+- [ ] Kakao/Naver 로그인·가입·연결·해제, Apple의 양쪽 플랫폼 로그인·가입·연결·해제와 iOS 삭제 재인증, APNs와 Universal Link는 각 상세 출시 문서의 E2E 조건도 충족한다.
 - [ ] 앱 변경이 기존 웹 OAuth, 쿠키 세션, Web Push, API DTO와 오류 code를 깨뜨리지 않는 회귀 테스트를 통과한다.
 - [ ] 일정 수동 정렬과 모든 계약·UX 결정을 닫고, 차단 결함·미승인 차이가 없는 동일 빌드로 시각 QA까지 완료한다.
 
