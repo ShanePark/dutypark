@@ -1,123 +1,76 @@
-# 인증·세션 보강 계획
+# 04. 인증·세션 보강
 
-- 작성일: 2026-08-12
-- 우선순위: P0(출시 전 보안·복구 흐름 확정)
-- 범위: iOS 로그인, 모바일 OAuth, 기존 웹 OAuth, 쿠키 세션, 계정 복구
+> 상태: 모바일 OAuth와 로컬 로그아웃 안전장치 구현 완료 / refresh token 응답 노출, 웹 OAuth, 실제 장애 복구 검증 대기
+> 우선순위: P0
+> 최종 확인일: 2026-08-14
 
-## 목표
+[출시 준비 목록으로 돌아가기](../README.md)
 
-로그인 성공뿐 아니라 취소, 재시도, 네트워크 단절, 세션 만료, 로그아웃 실패까지 예측 가능한 상태로 만든다.
-모바일 OAuth의 현재 안전장치는 유지하고, 기존 웹 OAuth에서 신뢰할 수 없는 `state`와 리디렉션 값을 받는 경로를 닫는다.
+## 남은 체크리스트
 
-## 현재 확인된 상태
+### P0: refresh token 원문 노출 제거
 
-- iOS 모바일 OAuth는 [MobileOAuthClient.swift](../../Dutypark/Features/Auth/MobileOAuthClient.swift)에서 PKCE S256 verifier/challenge를 생성한다.
-- 서버는 [MobileOAuthService.kt](../../../src/main/kotlin/com/tistory/shanepark/dutypark/security/oauth/mobile/MobileOAuthService.kt)에서 무작위 `state`를 해시로 보관하고 5분 뒤 만료시킨다.
-- 같은 서비스가 callback state를 행 잠금 후 한 번만 소비하고, 2분짜리 교환 코드를 발급하며 교환 코드도 한 번만 소비한다.
-- callback URI는 현재 `dutypark://oauth/callback` 하나로 제한되어 임의 callback을 허용하지 않는다.
-- [MobileOAuthController.kt](../../../src/main/kotlin/com/tistory/shanepark/dutypark/security/controller/MobileOAuthController.kt)가 성공한 교환 뒤 HttpOnly 인증 쿠키를 설정한다.
-- 즉, 모바일 Kakao/Naver 경로의 state, PKCE, 짧은 수명, 일회성 코드는 좋은 기준선이다.
-- 반면 기존 웹 [OAuthController.kt](../../../src/main/kotlin/com/tistory/shanepark/dutypark/security/controller/OAuthController.kt)는 클라이언트가 보낸 JSON/Base64 `state`를 검증 없이 파싱한다.
-- 그 안의 `referer`, `callbackUrl`, `login` 값을 신뢰하여 로그인·연결 분기와 최종 이동 위치를 결정한다.
-- [OAuthCallbackRedirectBuilder.kt](../../../src/main/kotlin/com/tistory/shanepark/dutypark/security/oauth/OAuthCallbackRedirectBuilder.kt)도 전달받은 callback URL로 URI를 구성한다.
-- 이 구조는 외부 사이트로 보내는 open redirect와 로그인 CSRF/login swapping 가능성을 별도 검토해야 한다.
-- [x] 2026-08-14 `f766e541`에서 [SessionStore.swift](../../Dutypark/Core/Auth/SessionStore.swift)가 서버 로그아웃 성공 여부와 관계없이 `clearLocalAuthentication()`을 호출한 뒤 guest로 전환하도록 보정했다.
-- [APIClient.swift](../../Dutypark/Core/Networking/APIClient.swift)의 로컬 인증 정리는 access/refresh cookie, URL cache, refresh 상태와 impersonation 상태를 제거한다.
-- 서버 503 응답 뒤 access/refresh cookie 제거, impersonation 만료 정보 제거와 guest 전환을 [APIClientAuthTests.swift](../../DutyparkTests/APIClientAuthTests.swift)로 검증했다.
-- 서버 로그아웃 실패를 사용자에게 알리고 재시도할 수 있게 하는 UX는 아직 구현하지 않았다.
-- 앱 시작 시 [AppRootView.swift](../../Dutypark/Features/Auth/AppRootView.swift)는 세션 복원 네트워크 오류를 전체 화면 재시도로 표시한다.
-- 이때 로그인 없이 쓸 수 있는 guest 화면도 열리지 않는다.
-- iOS [LoginView.swift](../../Dutypark/Features/Auth/LoginView.swift)에는 이메일 로그인은 있지만 비밀번호 찾기·재설정 진입점이 없다.
+- [ ] [`RefreshTokenDto.kt`](../../../src/main/kotlin/com/tistory/shanepark/dutypark/security/domain/dto/RefreshTokenDto.kt)의 응답 모델에서 `token` 원문 필드를 제거한다.
+- [ ] `GET /api/auth/refresh-tokens`, 관리자 refresh-token 목록과 `AdminMemberDto`가 refresh token 원문을 직렬화하지 않는지 회귀 테스트로 고정한다.
+- [ ] 현재 로그인 판별은 DTO의 token 비교에 의존하지 않도록 서비스 내부 또는 노출되지 않는 projection에서 수행한다.
+- [ ] 세션 목록 응답에는 세션 ID, 생성·마지막 사용·만료 시각, IP/User-Agent와 현재 세션 여부처럼 관리에 필요한 metadata만 포함한다.
+- [ ] 로그, 오류 응답, 관리자 화면, 분석 이벤트와 테스트 fixture에도 기존 refresh token 원문이 남지 않는지 제한 감사한다.
+- [ ] 운영 배포 전에 기존에 노출 가능했던 refresh session을 모두 폐기할지 위험을 평가하고 결정·실행 기록을 남긴다.
 
-## 해야 할 일
+### P0: 기존 웹 OAuth 보강
 
-### 1. 모바일 OAuth 기준선 고정
+- [ ] 웹 Kakao·Naver OAuth도 서버가 생성한 암호학적 무작위 `state`를 사용한다.
+- [ ] `state`에 요청 세션, provider, `LOGIN`/`LINK` 목적, 만료와 일회 소비 상태를 묶고 서버에서 검증한다.
+- [ ] 연결 시작과 callback 시점의 로그인 회원이 동일한지 다시 확인한다.
+- [ ] 클라이언트 입력 `callbackUrl`을 제거하거나 고정 origin·callback path allowlist로 제한한다.
+- [ ] `referer`는 검증된 내부 상대 경로만 허용하고 scheme, host, `//`, 역슬래시와 인코딩 우회를 거부한다.
+- [ ] 잘못된·만료된·재사용된 state는 외부 URL로 redirect하지 않고 안전한 내부 오류 화면으로 보낸다.
+- [ ] Kakao·Naver 양쪽에 login CSRF, login swapping, open redirect와 state 재사용 회귀 테스트를 추가한다.
 
-- [ ] `state`의 provider, purpose, 만료, 미사용 여부 검사를 계속 서버 트랜잭션 안에서 수행한다.
-- [ ] PKCE는 S256만 허용하고 verifier 길이·문자 집합 validation을 DTO 계층에서도 명시한다.
-- [ ] callback state와 교환 코드는 재사용 시 항상 같은 일반화된 오류 코드로 거절한다.
-- [ ] 로그인과 계정 연결 트랜잭션이 서로 바뀌어 소비되지 않는지 테스트한다.
-- [ ] callback URL scheme/host/path를 iOS와 서버 양쪽에서 정확히 일치시킨다.
-- [ ] OAuth code, state, verifier, 교환 코드, 쿠키 값을 로그·분석 이벤트·오류 메시지에 남기지 않는다.
-- [ ] 앱 전환 중 취소와 provider 오류는 세션 실패가 아닌 재시도 가능한 사용자 취소로 처리한다.
+### 세션 장애와 복구
 
-### 2. 기존 웹 OAuth 보강
-
-- [ ] 브라우저 OAuth도 서버가 생성한 암호학적 무작위 state를 사용한다.
-- [ ] state 원문 대신 서버 저장 트랜잭션 또는 서명·암호화된 불투명 토큰을 사용한다.
-- [ ] state에 요청 세션, provider, LOGIN/LINK 목적, 만료 시간, 일회 소비 상태를 묶는다.
-- [ ] 로그인 callback에서 이미 로그인된 브라우저 상태를 임의 입력으로 바꾸지 못하게 한다.
-- [ ] 연결(LINK)은 시작 시점과 callback 시점에 같은 회원 세션인지 다시 확인한다.
-- [ ] `callbackUrl`은 제거하거나 앱의 고정 origin과 고정 callback path allowlist로 제한한다.
-- [ ] `referer`는 상대 경로만 허용하고 `//`, scheme, host, 역슬래시, 인코딩 우회를 거부한다.
-- [ ] 최종 redirect 생성은 문자열 조립 대신 검증된 내부 경로 전용 함수 하나로 중앙화한다.
-- [ ] 잘못되거나 만료·재사용된 state는 외부 URL로 redirect하지 말고 안전한 로그인 오류 화면으로 보낸다.
-- [ ] Kakao와 Naver 양쪽에 같은 보안 계약과 회귀 테스트를 적용한다.
-
-### 3. 로그아웃과 로컬 쿠키 처리
-
-- [ ] 로그아웃 진입점을 하나로 모아 APNs 해제와 서버 로그아웃 순서를 일관되게 적용한다.
-- [ ] 서버 응답 성공 시 서버가 access/refresh 쿠키 모두 만료했는지 확인한다.
-- [ ] 요청 실패 시 "서버 로그아웃 미완료"를 알리고 재시도 또는 기기 내 데이터 정리 선택지를 제공한다.
-- [x] APIClient가 사용하는 `HTTPCookieStorage`에서 Dutypark access/refresh cookie를 명시적으로 정리하는 함수를 사용한다.
-- [x] 서버 로그아웃 요청의 성공 여부와 관계없이 로컬 access/refresh cookie와 impersonation 상태를 정리한 뒤 guest로 전환한다.
-- [ ] 로그아웃 도중 네트워크 단절, 401, 5xx, timeout을 각각 테스트한다.
-- [ ] impersonation 세션 로그아웃도 원 계정과 보조 계정의 토큰 정책에 맞게 검증한다.
-
-### 4. 앱 시작과 guest 폴백
-
-- [ ] 401/유효 refresh 없음은 즉시 정상 guest 상태로 분류한다.
-- [ ] timeout·오프라인·5xx는 "세션 확인 보류"로 분류하되 guest 공개 기능 진입을 막지 않는다.
-- [ ] 재시도 버튼과 로그인 버튼을 함께 제공하고, 복구 뒤 인증 화면으로 자연스럽게 승격한다.
-- [ ] 인증이 필요한 deep link는 보류했다가 로그인 성공 뒤 한 번만 소비한다.
-- [ ] guest로 진행한 뒤 네트워크 회복 시 기존 쿠키로 조용히 계정을 바꾸지 않도록 사용자 경험을 정한다.
-
-### 5. 이메일 계정 복구
-
-- [ ] iOS 로그인 화면에 "비밀번호를 잊으셨나요?" 진입점을 추가한다.
-- [ ] 이메일 존재 여부를 노출하지 않는 동일 응답과 rate limit을 사용한다.
-- [ ] 재설정 토큰은 짧은 수명, 일회 사용, 안전한 해시 저장을 적용한다.
-- [ ] 메일 링크는 Universal Link를 우선하고 미설치 시 웹 재설정으로 폴백한다.
-- [ ] 소셜 전용·Apple relay 이메일 계정에는 가능한 복구 방법을 명확히 안내한다.
-- [ ] 비밀번호 변경 뒤 기존 refresh session을 전부 폐기할지 정책을 문서화한다.
-
-## 구현 대상 파일
-
-- iOS: [MobileOAuthClient.swift](../../Dutypark/Features/Auth/MobileOAuthClient.swift), [SessionStore.swift](../../Dutypark/Core/Auth/SessionStore.swift), [AuthService.swift](../../Dutypark/Core/Auth/AuthService.swift)
-- iOS UI: [LoginView.swift](../../Dutypark/Features/Auth/LoginView.swift), [AppRootView.swift](../../Dutypark/Features/Auth/AppRootView.swift)
-- 서버: [OAuthController.kt](../../../src/main/kotlin/com/tistory/shanepark/dutypark/security/controller/OAuthController.kt), [MobileOAuthService.kt](../../../src/main/kotlin/com/tistory/shanepark/dutypark/security/oauth/mobile/MobileOAuthService.kt)
-- 쿠키: [CookieService.kt](../../../src/main/kotlin/com/tistory/shanepark/dutypark/security/service/CookieService.kt), [AuthController.kt](../../../src/main/kotlin/com/tistory/shanepark/dutypark/security/controller/AuthController.kt)
-- 웹 시작점: [LoginView.vue](../../../frontend/src/views/auth/LoginView.vue), [OAuthCallbackView.vue](../../../frontend/src/views/auth/OAuthCallbackView.vue)
-
-## 테스트 계획
-
-- [ ] [MobileOAuthClientTests.swift](../../DutyparkTests/MobileOAuthClientTests.swift)에 callback scheme/host/path, 취소, 오류, PKCE 케이스를 추가한다.
-- [ ] [MobileOAuthControllerTest.kt](../../../src/test/kotlin/com/tistory/shanepark/dutypark/security/controller/MobileOAuthControllerTest.kt)에 만료·재사용·provider/purpose 불일치를 추가한다.
-- [ ] [OAuthControllerTest.kt](../../../src/test/kotlin/com/tistory/shanepark/dutypark/security/controller/OAuthControllerTest.kt)에 외부 callback/referer, protocol-relative URL, 이중 인코딩을 추가한다.
-- [ ] iOS 세션 테스트에 restore 401, offline, timeout, 5xx를 추가한다.
-- [x] 서버 logout 503 뒤 로컬 access/refresh cookie, impersonation 상태와 guest 전환을 테스트한다.
-- [ ] 실기기에서 Kakao/Naver 신규 가입, 기존 로그인, 취소, 계정 연결, 중복 연결을 운영과 같은 redirect URI로 확인한다.
-- [ ] 이메일 재설정 메일의 만료·재사용·다른 기기·앱 미설치 흐름을 확인한다.
-
-## 운영 검증
-
-- [ ] 운영 OAuth 콘솔의 callback URL이 서버 고정 callback과 정확히 일치한다.
-- [ ] 운영 CORS, cookie domain, `Secure`, `HttpOnly`, `SameSite` 값이 앱과 웹 흐름에 맞다.
-- [ ] 프록시 환경에서 callback base URL이 공격자 `Host`/forwarded header로 오염되지 않는다.
-- [ ] 민감값 없는 구조화 로그로 callback 실패율과 재사용 탐지만 관찰한다.
-- [ ] App Review 계정은 만료되지 않고, 심사 메모에 로그인·복구 절차를 적는다.
+- [ ] 앱 시작 시 401 또는 유효 refresh 없음은 정상 guest 상태로 처리한다.
+- [ ] timeout, 오프라인과 5xx는 세션 확인 실패를 알리되 guest 공개 기능과 로그인 진입을 막지 않는다.
+- [ ] 복구 뒤 기존 cookie로 사용자가 모르게 guest에서 authenticated로 바뀌지 않도록 전환 정책을 정한다.
+- [ ] 인증이 필요한 deep link는 로그인 성공 뒤 한 번만 소비하고 실패·취소 때 안전하게 보존 또는 폐기한다.
+- [ ] 로그아웃 중 오프라인, timeout, 401, 5xx와 서버 logout 실패를 실제 네트워크 조건에서 검증한다.
+- [ ] 서버 logout 실패 후 로컬 상태는 정리됐지만 서버 세션이 남을 수 있음을 사용자에게 알리고, 다른 기기·세션 목록에서 폐기할 수 있게 한다.
+- [ ] APNs unregister, 서버 logout, 로컬 cookie·cache·impersonation 정리 순서를 모든 로그아웃·세션 만료 경로에서 일관되게 적용한다.
+- [ ] 운영 cookie의 `Secure`, `HttpOnly`, `SameSite`, domain/path와 CORS 설정을 웹·앱 흐름에 맞춰 확인한다.
+- [ ] 프록시의 `Host`와 forwarded header가 OAuth callback base URL을 오염시키지 않는지 검증한다.
 
 ## 완료 조건
 
-- [ ] 모바일 OAuth의 state/PKCE/일회 코드 보장이 자동 테스트로 고정된다.
-- [ ] 웹 OAuth의 외부 redirect와 위조·재사용 state가 모두 거절된다.
-- [ ] 로그아웃 API가 실패해도 사용자가 남은 세션 위험을 인지하고 안전하게 정리할 수 있다.
-- [ ] 시작 네트워크 오류가 guest 공개 기능을 막지 않는다.
-- [ ] 이메일 사용자는 앱에서 계정 복구를 시작하고 끝낼 수 있다.
-- [ ] 테스트 환경과 운영 환경에서 동일한 인증 체크리스트를 통과한다.
+- 일반 사용자와 관리자 API 어느 곳에서도 refresh token 원문을 반환하거나 기록하지 않는다.
+- 웹 OAuth의 위조·재사용 state, 로그인 목적 혼동과 외부 redirect가 모두 서버에서 거절된다.
+- 401, 오프라인, timeout과 5xx에서 앱이 무한 복원·refresh 루프에 빠지지 않고 guest 또는 명확한 복구 화면으로 이동한다.
+- 서버 logout 실패에도 로컬 인증은 안전하게 정리되고 남은 서버 세션 위험과 폐기 수단이 사용자에게 제공된다.
+- 운영과 같은 callback, cookie, proxy와 네트워크 조건에서 위 계약을 재현한다.
+
+## 변하지 않는 정책과 계약
+
+- iOS Kakao·Naver 모바일 OAuth는 PKCE S256, 서버 생성 무작위 state, 짧은 만료와 일회성 callback·교환 코드를 사용한다.
+- 모바일 callback은 `dutypark://oauth/callback`의 scheme, host와 path 계약을 따른다.
+- provider, 목적, 만료와 미사용 여부가 일치하지 않는 state·교환 코드는 거절한다.
+- OAuth code, state, verifier, 교환 코드와 인증 cookie는 로그·오류 메시지·분석 이벤트에 기록하지 않는다.
+- 사용자가 provider sheet를 취소한 것은 세션 실패가 아니라 재시도 가능한 취소로 처리한다.
+- 서버 logout 성공 여부와 관계없이 iOS는 Dutypark access/refresh cookie, URL cache, refresh 상태와 impersonation 상태를 정리하고 guest로 전환한다.
+- 인증 token은 HttpOnly cookie로 관리하며 iOS UserDefaults나 웹 localStorage에 저장하지 않는다.
+- 로그인 목적과 계정 연결 목적은 서로 바뀌어 소비될 수 없다.
+
+## 구현 위치
+
+- refresh token DTO: [`RefreshTokenDto.kt`](../../../src/main/kotlin/com/tistory/shanepark/dutypark/security/domain/dto/RefreshTokenDto.kt)
+- 사용자 세션 API: [`RefreshTokenController.kt`](../../../src/main/kotlin/com/tistory/shanepark/dutypark/member/controller/RefreshTokenController.kt)
+- 관리자 세션 API: [`AdminController.kt`](../../../src/main/kotlin/com/tistory/shanepark/dutypark/admin/controller/AdminController.kt)
+- 웹 OAuth callback: [`OAuthController.kt`](../../../src/main/kotlin/com/tistory/shanepark/dutypark/security/controller/OAuthController.kt)
+- 모바일 OAuth: [`MobileOAuthService.kt`](../../../src/main/kotlin/com/tistory/shanepark/dutypark/security/oauth/mobile/MobileOAuthService.kt)
+- iOS 세션: [`SessionStore.swift`](../../Dutypark/Core/Auth/SessionStore.swift)
+- iOS 시작 상태: [`AppRootView.swift`](../../Dutypark/Features/Auth/AppRootView.swift)
+- iOS 로그인: [`LoginView.swift`](../../Dutypark/Features/Auth/LoginView.swift)
 
 ## 참고
 
-- [Apple: ASWebAuthenticationSession](https://developer.apple.com/documentation/authenticationservices/aswebauthenticationsession)
 - [RFC 7636: OAuth PKCE](https://www.rfc-editor.org/rfc/rfc7636)
 - [RFC 9700: OAuth 2.0 Security Best Current Practice](https://www.rfc-editor.org/rfc/rfc9700)
+- [Apple: ASWebAuthenticationSession](https://developer.apple.com/documentation/authenticationservices/aswebauthenticationsession)

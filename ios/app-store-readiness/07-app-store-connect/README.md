@@ -1,164 +1,71 @@
-# Apple Developer 및 App Store Connect 제출 준비
+# App Store Connect 입력 준비
 
-- 최종 확인일: 2026-08-14
+## 현재 상태
 
-## 목표
+- Apple Developer Program 멤버십, Team ID `2V47G42CDS`와 운영 Bundle ID `io.github.shanepark.dutypark`는 확정돼 있다.
+- 앱과 서버의 개인정보 데이터 inventory 및 수출 규정 기술 근거는 별도 상세 문서에 정리돼 있다.
+- 이 문서는 App Store Connect에 아직 입력·공개·확정해야 하는 정보만 관리한다. 빌드 서명·업로드는 [릴리스 엔지니어링](../11-release-engineering/README.md), TestFlight와 심사 실행은 [TestFlight 및 App Review](../08-testflight-and-review/README.md)를 따른다.
 
-App Store 심사에 필요한 Apple Developer 설정, 앱 레코드, 개인정보·법적 선언, 메타데이터와 심사 자료를 누락 없이 준비한다.
+## 남은 체크
 
-이 문서는 기능 구현이 끝난 뒤 급하게 입력하는 목록이 아니라, TestFlight 전에 확정해야 할 운영 체크리스트다.
+### 앱 레코드와 판매 범위
 
-## 현재 상태와 선행 조건
+- [ ] iOS 앱 레코드를 생성하고 Bundle ID `io.github.shanepark.dutypark`를 연결한다.
+- [ ] 앱 이름, 기본 언어, SKU, 기본·보조 카테고리와 사용자 접근 권한을 확정한다.
+- [ ] 판매 국가·지역과 EU 배포 여부를 정한다.
+- [ ] EU 배포 시 DSA trader 여부를 판단하고 필요한 연락처·주소 검증을 완료한다.
+- [ ] 개인 계정의 판매자명이 계정 소유자의 법적 실명으로 표시되는 점과 멤버십 갱신 책임을 확인한다.
+- [ ] 계약, 세금·은행 정보가 실제 판매 방식에 필요하면 완료한다.
 
-- Apple Developer Program 개인 멤버십은 2026-08-14 승인됐다.
-- 프로젝트 Team ID는 `2V47G42CDS`, 등록된 Explicit App ID와 Xcode Bundle ID는 `io.github.shanepark.dutypark`다.
-- Sign in with Apple, Push Notifications, Associated Domains capability를 활성화했고 development 서명된 generic iOS Release 앱에서 profile/application identifier와 Apple·Associated Domains entitlement를 확인했다.
-- 개인 키 원문, 인증서, 프로비저닝 프로파일은 문서나 저장소에 기록하지 않는다.
-- Apple 로그인과 Associated Domains 등 capability를 사용하는 기능은 App ID와 Xcode 양쪽 설정이 일치해야 한다.
-- Associated Domains 상세 점검: [`ios/app-store-readiness/06-associated-domains/README.md`](../06-associated-domains/README.md)
-- 기존 배포 체크리스트: [`ios/DEPLOYMENT_CHECKLIST.md`](../../DEPLOYMENT_CHECKLIST.md)
+### App Privacy와 규제 응답
 
-## 1. Apple Developer Program
+- [ ] 최종 Release Privacy Report와 포함 SDK를 [개인정보·AI 상세 문서](../03-privacy-and-ai-consent/README.md), [PrivacyInfo.xcprivacy](../../Dutypark/PrivacyInfo.xcprivacy)와 대조한다.
+- [ ] 실제 수집 데이터, 사용 목적, 사용자 연결 여부와 non-tracking 상태를 App Privacy에 입력해 Publish한다.
+- [ ] 로그인 없이 열리는 개인정보 처리방침 URL을 입력한다.
+- [ ] 연령 등급 질문에 사용자 생성 콘텐츠와 공유·협업 기능을 반영한다.
+- [ ] 콘텐츠 권리와 광고 식별자 관련 질문에 최종 빌드 기준으로 답한다.
+- [ ] 수출 규정 질문은 [릴리스 엔지니어링 문서](../11-release-engineering/README.md)의 최종 Archive 검증 결과와 다시 대조해 입력한다.
+- [ ] 사용자 생성 콘텐츠에 필요한 신고·차단·운영 대응이 완료된 뒤 해당 기능을 사실대로 선언한다.
 
-- [x] 배포 주체를 개인으로 확정했다.
-- [x] Apple Developer Program 가입·결제와 멤버십 승인을 완료했다.
-- [ ] 계약, 세금, 은행 정보가 필요한 경우 담당자를 정한다.
-- [ ] 다른 운영 사용자를 초대할 경우 Account Holder, Admin, App Manager 등 최소 권한 역할을 배정한다.
-- [ ] 개인 가입의 App Store 판매자명이 계정 소유자의 법적 실명으로 표시되는 점과 멤버십 갱신 책임을 최종 확인한다.
+### 한국어·영어 메타데이터
 
-개인 가입은 조직명으로 판매자를 표시하는 방식이 아니다. 조직명 노출이 필요해지면 현재 개인 가입 상태와 별개로 Apple의 조직 등록·전환 요건을 확인한다.
+- [ ] `ko`, `en`의 앱 이름, 부제, 설명, 키워드와 프로모션 텍스트를 작성·검수한다.
+- [ ] 제출 버전에 맞는 `What's New`를 작성한다.
+- [ ] 로그인 없이 열리는 지원 URL과, 사용하는 경우 마케팅 URL을 입력한다.
+- [ ] App Store가 요구하는 기기 크기별 스크린샷을 실제 UI와 전용 테스트 데이터로 준비한다.
+- [ ] 스크린샷과 설명이 현재 기능을 과장하지 않고 개인정보를 노출하지 않는지 검수한다.
 
-## 2. App ID와 capability
+### 심사 정보
 
-- [x] `io.github.shanepark.dutypark`를 운영 Explicit App ID로 등록했다.
-- [x] Xcode의 Signing & Capabilities에서 Team `2V47G42CDS`를 선택했다.
-- [ ] 자동 서명을 사용할지 수동 서명을 사용할지 팀 기준을 정한다.
-- [x] Sign in with Apple capability를 활성화했다.
-- [x] Push Notifications capability를 활성화했다.
-- [x] Associated Domains capability를 활성화했다.
-- [x] development provisioning profile에 Sign in with Apple과 Associated Domains capability가 반영됐는지 확인했다.
-- [ ] Release archive의 entitlements를 검사한다.
+- [ ] 실제 응답 가능한 App Review 연락 담당자의 이름, 이메일과 전화번호를 입력한다.
+- [ ] 심사 기간에 유지할 전용 계정과 팀·친구 기능용 보조 계정을 준비한다.
+- [ ] 계정 자격 증명은 App Store Connect 전용 보안 필드에만 입력한다.
+- [ ] Review Notes에 로그인, 소셜·Apple 로그인, 회원 탈퇴, 권한 요청, 푸시, Universal Link와 조건부 기능의 재현 절차를 작성한다.
+- [ ] AI 선택 동의, Google 전송 데이터, 동의 철회와 수동 입력 경로를 실제 운영 정책에 맞게 설명한다.
 
-개발용과 운영용 식별자를 분리한다면 App ID, APNs 환경, 서버 설정도 함께 분리해야 한다.
+## 완료 조건
 
-## 3. App Store Connect 앱 레코드
+- 앱 레코드, 판매 범위, 카테고리와 규제 선언이 확정돼 있다.
+- App Privacy와 개인정보 처리방침이 최종 앱·서버 동작과 일치한다.
+- 한국어·영어 메타데이터, 스크린샷과 공개 URL이 검수돼 있다.
+- 심사 담당자, 전용 계정과 Review Notes만으로 주요 기능을 재현할 수 있다.
+- 제출할 빌드와 버전이 App Store Connect 앱 레코드에 연결돼 있다.
 
-- [ ] App Store Connect에서 새 앱 레코드를 만든다.
-- [ ] 플랫폼으로 iOS를 선택한다.
-- [ ] 앱 이름과 기본 언어를 확정한다.
-- [ ] 확정된 운영 Bundle ID `io.github.shanepark.dutypark`를 연결한다.
-- [ ] SKU를 팀 규칙에 맞게 정한다.
-- [ ] 사용자 접근 권한과 기본·보조 카테고리를 지정한다.
+## 불변 계약
 
-앱 이름은 상표·중복·검색 노출을 고려하고, 웹 서비스에서 사용하는 표기와 일관되게 유지한다.
+- 앱 이름, 설명, 스크린샷과 Privacy 응답은 실제 출시 빌드를 과장하거나 축소해서는 안 된다.
+- 실제 운영자·사용자 계정과 데이터는 심사 자료에 사용하지 않는다.
+- 비밀번호, OAuth secret, APNs 키와 관리자 자격 증명을 문서나 Review Notes에 기록하지 않는다.
+- 지원 URL과 개인정보 처리방침 URL은 로그인 없이 공개 접근 가능해야 한다.
+- 법적·계약상 판단이 필요한 항목은 기술 추정만으로 완료 처리하지 않는다.
 
-## 4. 버전과 빌드 관리
+## 필요한 실행 및 참고
 
-- [ ] 마케팅 버전 `CFBundleShortVersionString`을 확정한다.
-- [ ] 빌드 번호 `CFBundleVersion`을 업로드마다 증가시킨다.
-- [ ] Release 구성으로 Archive한다.
-- [ ] Archive에 개발용 endpoint나 mock flag가 포함되지 않았는지 확인한다.
-- [ ] TestFlight 내부 테스트를 먼저 진행한다.
-- [ ] 최종 심사에 연결할 빌드를 명시적으로 선택한다.
-- [ ] 제출한 소스 커밋과 App Store 빌드 번호를 추적 가능하게 기록한다.
-
-동일 버전에 여러 빌드를 올릴 수 있지만 같은 빌드 번호는 다시 업로드할 수 없다.
-
-## 5. 연령 등급과 콘텐츠 선언
-
-- [ ] App Store Connect의 연령 등급 질문에 실제 기능 기준으로 답한다.
-- [ ] 사용자 생성 콘텐츠, 메시지·공유 기능의 존재를 반영한다.
-- [ ] 의료·건강 기능으로 오해될 표현이 없는지 확인한다.
-- [ ] 부적절한 콘텐츠 신고·차단·관리 수단을 검토한다.
-- [ ] 암호화 사용 여부와 수출 규정 질문에 답한다.
-
-서드파티 SDK와 HTTPS 통신도 수출 규정 응답에 영향을 줄 수 있으므로 코드와 의존성을 기준으로 판단한다.
-
-## 6. App Privacy
-
-- [x] 서버·iOS 데이터 inventory 초안을 [개인정보·AI 상세 문서](../03-privacy-and-ai-consent/README.md)에 정리했다.
-- [x] Name, Email, Photos or Videos, Other User Content, User ID, Device ID와 Other Data Types를 현재 `PrivacyInfo.xcprivacy`에 App Functionality·Linked to User·non-tracking으로 선언했다.
-- [x] 별도 광고·analytics·crash SDK가 없는 현재 상태와 서버 운영 로그 범위를 구분했다.
-- [ ] Release Archive Privacy Report와 실제 포함 SDK를 inventory·manifest와 대조한다.
-- [ ] App Store Connect에서 각 데이터 유형, App Functionality, Linked to User와 non-tracking 답변을 실제 Release 기준으로 최종 확인하고 Publish한다.
-- [ ] 개인정보 처리방침 URL을 운영 URL로 입력한다.
-- [x] 저장소의 최신 `PRIVACY 2026-08-14`에 iOS 전용 Apple `sub`, 일시 token·nonce, replay hash, 암호화 credential과 revoke-first 처리를 포함한 기술 데이터 흐름을 공개했다.
-- [ ] 이 최신 정책과 Release Privacy Report를 기준으로 App Privacy 입력 초안을 최종 대조해 Publish한다.
-- [!] 법률·운영 계약 검토와 Google paid service/DPA 확인은 저장소 기술 정합성 완료와 별개의 출시 차단 항목이다.
-
-“수집하지 않음”은 앱 또는 서버가 실제로 데이터를 받지 않는 경우에만 선택한다.
-
-## 7. DSA와 규제 정보
-
-- [ ] EU 배포 여부를 결정한다.
-- [ ] EU에 배포한다면 Digital Services Act의 trader 여부를 선언한다.
-- [ ] trader라면 Apple이 요구하는 주소, 전화번호, 이메일 검증을 완료한다.
-- [ ] 표시되는 사업자 정보가 실제 운영 주체와 일치하는지 확인한다.
-- [ ] 지역별 배포 제한이 필요한지 검토한다.
-
-법적 지위 판단이 애매하면 임의로 선택하지 말고 사업자 또는 법률 담당자와 확인한다.
-
-## 8. 2개 언어 메타데이터
-
-Dutypark가 지원하는 `ko`, `en` 기준으로 Store 메타데이터를 준비한다.
-
-- [ ] 앱 이름, 부제, 설명, 키워드
-- [ ] 프로모션 텍스트와 새로운 기능(What's New)
-- [ ] 지원 URL, 개인정보 처리방침 URL, 사용하는 경우 마케팅 URL
-
-기계 번역만 붙여 넣지 말고 기능명, 일정·근무 용어, 개인정보 표현을 각 언어에서 검수한다.
-
-## 9. 스크린샷과 미리보기
-
-- [ ] App Store Connect가 요구하는 기기 크기별 스크린샷을 준비한다.
-- [ ] 실제 앱 UI와 실제 테스트 데이터로 촬영한다.
-- [ ] 이름, 이메일, 일정 등 개인정보가 노출되지 않도록 전용 데이터를 사용한다.
-- [ ] mockup이 실제 기능처럼 오해되지 않게 하고, 2개 언어별 현지화 범위를 명확히 한다.
-- [ ] 다크 모드만으로 기능을 숨기지 않고 대표 화면을 균형 있게 보여준다.
-- [ ] 로그인, 캘린더, Todo, 협업 등 핵심 흐름을 포함한다.
-
-실제 테스트 데이터는 심사 중 동일하게 재현할 수 있도록 유지하되 운영 사용자의 정보를 복사하지 않는다.
-
-## 10. 지원 URL과 심사 연락처
-
-- [ ] 로그인 없이 접근 가능한 지원 페이지를 운영한다.
-- [ ] 지원 페이지에 문의 방법과 개인정보 처리방침 링크를 제공한다.
-- [ ] 삭제되거나 리다이렉트가 반복되는 URL을 사용하지 않는다.
-- [ ] App Review 연락 담당자의 이름, 이메일, 전화번호를 최신 상태로 둔다.
-- [ ] 심사 기간 중 담당자가 연락을 받을 수 있게 한다.
-
-## 11. 심사 계정과 Review Notes
-
-- [ ] 심사용 전용 계정을 만든다.
-- [ ] 계정이 잠기거나 만료되지 않게 하고, 2단계 인증 등이 있다면 심사 가능한 절차를 제공한다.
-- [ ] 공유·친구·팀 기능 확인에 보조 계정이 필요하면 함께 제공한다.
-- [ ] 로그인 ID와 비밀번호를 App Store Connect의 전용 필드에만 입력한다.
-- [ ] 관리자 전용 또는 조건부 기능의 진입 방법을 Review Notes에 쓴다.
-- [ ] Apple 로그인, 알림, 위치 등 권한 요청 목적을 간단히 설명한다.
-- [ ] 백엔드가 심사 기간 동안 운영 상태인지 확인한다.
-
-실제 운영자 계정이나 개인 계정을 심사 계정으로 제공하지 않는다.
-
-## 제출 전 완료 조건
-
-- [ ] 유료 Apple Developer Program 멤버십과 계약 상태가 유효하다.
-- [ ] 실제 Team, Explicit App ID, Bundle ID, capability가 모두 일치한다.
-- [ ] App Store Connect 앱 레코드와 제출 버전·빌드가 연결되어 있다.
-- [ ] 카테고리, 연령 등급, 수출 규정, DSA 선언을 완료했다.
-- [ ] App Privacy가 실제 서버·앱 동작 및 개인정보 처리방침과 일치한다.
-- [ ] 2개 언어 메타데이터와 실제 테스트 데이터 스크린샷을 검수했다.
-- [ ] 지원 URL과 개인정보 처리방침 URL이 로그인 없이 열린다.
-- [ ] 심사 계정과 보조 계정으로 핵심 기능을 재현할 수 있다.
-- [ ] Review Notes에 특수 진입 방법과 심사에 필요한 설명을 남겼다.
-- [ ] TestFlight에서 최종 빌드의 로그인, 푸시, 링크, CRUD 흐름을 확인했다.
-
-## 공식 문서
-
-- [Apple Developer Program enrollment](https://developer.apple.com/programs/enroll/)
-- [Apple: Register an App ID](https://developer.apple.com/help/account/identifiers/register-an-app-id/)
+- 개인정보·AI: [03-privacy-and-ai-consent/README.md](../03-privacy-and-ai-consent/README.md)
+- 사용자 생성 콘텐츠: [10-user-generated-content/README.md](../10-user-generated-content/README.md)
+- 릴리스 엔지니어링: [11-release-engineering/README.md](../11-release-engineering/README.md)
 - [App Store Connect: Add a new app](https://developer.apple.com/help/app-store-connect/create-an-app-record/add-a-new-app/)
-- [App Store Connect: Upload builds](https://developer.apple.com/help/app-store-connect/manage-builds/upload-builds/)
 - [App Store Connect: Manage app privacy](https://developer.apple.com/help/app-store-connect/manage-app-information/manage-app-privacy/)
 - [App Store Connect: Set an app age rating](https://developer.apple.com/help/app-store-connect/manage-app-information/set-an-app-age-rating/)
-- [App Store Connect: Digital Services Act trader requirements](https://developer.apple.com/help/app-store-connect/manage-compliance-information/manage-european-union-digital-services-act-trader-requirements/)
-- [App Store Review Guidelines](https://developer.apple.com/app-store/review/guidelines/)
+- [App Store Connect: DSA trader requirements](https://developer.apple.com/help/app-store-connect/manage-compliance-information/manage-european-union-digital-services-act-trader-requirements/)
+- [Apple: Provide App Review information](https://developer.apple.com/help/app-store-connect/manage-submissions-to-app-review/provide-app-review-information/)
