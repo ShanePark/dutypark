@@ -103,7 +103,7 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
             .andExpect(
                 header().string(
                     HttpHeaders.LOCATION,
-                    "/after?socialLinkSuccess=true&socialProvider=kakao"
+                    "$FRONTEND_ORIGIN/after?socialLinkSuccess=true&socialProvider=kakao"
                 )
             )
 
@@ -139,7 +139,7 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
             .andExpect(
                 header().string(
                     HttpHeaders.LOCATION,
-                    "/member?tab=social&socialLinkError=already_linked&socialProvider=kakao"
+                    "$FRONTEND_ORIGIN/member?tab=social&socialLinkError=already_linked&socialProvider=kakao"
                 )
             )
     }
@@ -228,7 +228,7 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
             .andExpect(
                 header().string(
                     HttpHeaders.LOCATION,
-                    "/after?socialLinkSuccess=true&socialProvider=naver"
+                    "$FRONTEND_ORIGIN/after?socialLinkSuccess=true&socialProvider=naver"
                 )
             )
 
@@ -258,7 +258,7 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
                 header().string(
                     HttpHeaders.LOCATION,
                     URI.create(
-                        "/member?tab=네이버" +
+                        "$FRONTEND_ORIGIN/member?tab=네이버" +
                             "&socialLinkSuccess=true&socialProvider=naver"
                     ).toASCIIString()
                 )
@@ -296,7 +296,7 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
             .andExpect(
                 header().string(
                     HttpHeaders.LOCATION,
-                    "$referer?socialLinkError=already_linked&socialProvider=naver"
+                    "$FRONTEND_ORIGIN$referer?socialLinkError=already_linked&socialProvider=naver"
                 )
             )
     }
@@ -772,7 +772,8 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
     }
 
     companion object {
-        private const val CALLBACK_URL = "/auth/oauth-callback"
+        private const val FRONTEND_ORIGIN = "http://localhost:5173"
+        private const val CALLBACK_URL = "$FRONTEND_ORIGIN/auth/oauth-callback"
         private const val TEST_KAKAO_ID = 123456789L
         private const val TEST_NAVER_ID = "naver-user-123"
         private const val CURRENT_TERMS_VERSION = "2026-08-13"

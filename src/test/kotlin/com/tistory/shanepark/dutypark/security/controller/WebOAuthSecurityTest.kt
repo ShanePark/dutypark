@@ -27,6 +27,7 @@ import org.springframework.context.annotation.Primary
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.mock.web.MockHttpSession
+import org.springframework.test.context.TestPropertySource
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
@@ -41,6 +42,11 @@ import java.time.Clock
 
 @AutoConfigureMockMvc
 @Import(WebOAuthSecurityTest.ProviderApiTestConfig::class)
+@TestPropertySource(
+    properties = [
+        "oauth.web-base-url=http://localhost:8080",
+    ]
+)
 class WebOAuthSecurityTest : DutyparkIntegrationTest() {
 
     @Autowired
@@ -59,7 +65,7 @@ class WebOAuthSecurityTest : DutyparkIntegrationTest() {
     lateinit var providerCalls: ProviderCalls
 
     @Test
-    fun `server issues opaque kakao state and completes login once in the initiating session`() {
+    fun `kakao login completion redirects from backend callback to configured frontend origin`() {
         val member = memberRepository.findById(TestData.member.id!!).orElseThrow()
         socialAccountRepository.saveAndFlush(MemberSocialAccount(member, SsoType.KAKAO, KAKAO_ID))
         val flow = authorize("KAKAO", "LOGIN", "/todo?view=mine")
@@ -75,7 +81,12 @@ class WebOAuthSecurityTest : DutyparkIntegrationTest() {
                 .param("state", flow.state)
         )
             .andExpect(status().isFound)
-            .andExpect(header().string(HttpHeaders.LOCATION, "$CALLBACK_URL#login=success&redirect=%2Ftodo%3Fview%3Dmine"))
+            .andExpect(
+                header().string(
+                    HttpHeaders.LOCATION,
+                    "$CALLBACK_URL#login=success&redirect=%2Ftodo%3Fview%3Dmine"
+                )
+            )
             .andExpect(cookie().exists("access_token"))
 
         callback(flow, "kakao")
@@ -351,7 +362,7 @@ class WebOAuthSecurityTest : DutyparkIntegrationTest() {
     companion object {
         private const val KAKAO_ID = "918273645"
         private const val NAVER_ID = "naver-web-security-id"
-        private const val CALLBACK_URL = "/auth/oauth-callback"
+        private const val CALLBACK_URL = "http://localhost:5173/auth/oauth-callback"
         private const val INVALID_STATE_LOCATION = "$CALLBACK_URL#error=oauth_state_invalid"
     }
 }

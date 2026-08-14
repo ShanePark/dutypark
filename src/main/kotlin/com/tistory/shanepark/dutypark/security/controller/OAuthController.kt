@@ -10,9 +10,10 @@ import com.tistory.shanepark.dutypark.member.service.ConsentService
 import com.tistory.shanepark.dutypark.member.service.MemberService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.domain.dto.SsoSignupRequest
+import com.tistory.shanepark.dutypark.security.oauth.OAuthFrontendBaseUrl
+import com.tistory.shanepark.dutypark.security.oauth.SocialAccountAlreadyLinkedException
 import com.tistory.shanepark.dutypark.security.oauth.kakao.KakaoLoginService
 import com.tistory.shanepark.dutypark.security.oauth.naver.NaverLoginService
-import com.tistory.shanepark.dutypark.security.oauth.SocialAccountAlreadyLinkedException
 import com.tistory.shanepark.dutypark.security.oauth.web.WebOAuthAuthorizeRequest
 import com.tistory.shanepark.dutypark.security.oauth.web.WebOAuthAuthorizeResponse
 import com.tistory.shanepark.dutypark.security.oauth.web.WebOAuthPurpose
@@ -40,11 +41,11 @@ class OAuthController(
     private val consentService: ConsentService,
     private val policyService: PolicyService,
     private val webOAuthService: WebOAuthService,
+    private val oauthFrontendBaseUrl: OAuthFrontendBaseUrl,
 ) {
     companion object {
         private const val SOCIAL_LINK_ERROR_ALREADY_LINKED = "already_linked"
         private const val WEB_OAUTH_CALLBACK = "/auth/oauth-callback"
-        private val INVALID_STATE_URI: URI = URI.create("$WEB_OAUTH_CALLBACK#error=oauth_state_invalid")
     }
 
     @PostMapping("oauth2/authorize")
@@ -89,7 +90,7 @@ class OAuthController(
             resp = httpServletResponse,
             code = code,
             redirectUrl = redirectUrl,
-            callbackUrl = WEB_OAUTH_CALLBACK,
+            callbackUrl = oauthFrontendBaseUrl.uri(WEB_OAUTH_CALLBACK).toASCIIString(),
             redirectTarget = claim.referer,
         )
     }
@@ -128,7 +129,7 @@ class OAuthController(
             resp = httpServletResponse,
             code = code,
             state = stateString,
-            callbackUrl = WEB_OAUTH_CALLBACK,
+            callbackUrl = oauthFrontendBaseUrl.uri(WEB_OAUTH_CALLBACK).toASCIIString(),
             redirectTarget = claim.referer,
         )
     }
@@ -188,11 +189,11 @@ class OAuthController(
     }
 
     private fun invalidStateResponse(): ResponseEntity<Void> = ResponseEntity.status(HttpStatus.FOUND)
-        .location(INVALID_STATE_URI)
+        .location(oauthFrontendBaseUrl.uri("$WEB_OAUTH_CALLBACK#error=oauth_state_invalid"))
         .build()
 
     private fun buildSocialLinkErrorUri(referer: String, provider: SsoType): URI {
-        return UriComponentsBuilder.fromUriString(referer)
+        return UriComponentsBuilder.fromUriString(oauthFrontendBaseUrl.uri(referer).toASCIIString())
             .replaceQueryParam("socialLinkSuccess")
             .replaceQueryParam("socialLinkError", SOCIAL_LINK_ERROR_ALREADY_LINKED)
             .replaceQueryParam("socialProvider", provider.name.lowercase())
@@ -201,7 +202,7 @@ class OAuthController(
     }
 
     private fun buildSocialLinkSuccessUri(referer: String, provider: SsoType): URI {
-        return UriComponentsBuilder.fromUriString(URI.create(referer).toASCIIString())
+        return UriComponentsBuilder.fromUriString(oauthFrontendBaseUrl.uri(referer).toASCIIString())
             .replaceQueryParam("socialLinkError")
             .replaceQueryParam("socialLinkSuccess", true)
             .replaceQueryParam("socialProvider", provider.name.lowercase())
