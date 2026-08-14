@@ -44,7 +44,7 @@ import java.time.Clock
 @Import(WebOAuthSecurityTest.ProviderApiTestConfig::class)
 @TestPropertySource(
     properties = [
-        "oauth.web-base-url=http://localhost:8080",
+        "cookie.domain=",
     ]
 )
 class WebOAuthSecurityTest : DutyparkIntegrationTest() {

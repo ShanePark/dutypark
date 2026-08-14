@@ -105,7 +105,6 @@ dutypark:
     session-expiration-hours: 24
 
 oauth:
-  web-base-url: "${WEB_OAUTH_BASE_URL:http://localhost:8080}"
   apple:
     client-id: "${APPLE_CLIENT_ID:}"
     web-client-id: "${APPLE_WEB_CLIENT_ID:}"
