@@ -4,6 +4,12 @@
 
 이 문서는 출시 준비 문서의 인덱스다. 상태, 체크 항목, 근거와 실행 절차는 각 상세 문서에서 관리한다.
 
+## 단계별 진행과 문서 현행화 규칙
+
+- 출시 준비는 한 번에 한 단계씩 진행하고, 현재 단계의 완료 여부와 근거를 확인하기 전에는 다음 단계를 시작하지 않는다.
+- 구현·설정·검증·배포 작업이 끝나면 같은 작업 안에서 이 인덱스와 관련 상세 문서 및 하위 문서의 상태, 체크리스트, 최종 확인일과 검증 근거를 즉시 현행화한다.
+- App Store Connect, Apple Developer, 운영 서버와 실기기처럼 저장소 밖에서 수행한 작업은 실제 결과를 확인한 뒤에만 완료 처리한다. 확인할 수 없는 항목은 사용자 확인 또는 증거를 기다리는 상태로 남긴다.
+
 ## 상태 정의
 
 - `[ ] 미착수`: 범위 또는 실행을 시작하지 않음
@@ -25,11 +31,11 @@
 
 - `[!]` [05-push-notifications/README.md](./05-push-notifications/README.md)
 - `[!]` [06-associated-domains/README.md](./06-associated-domains/README.md)
-- `[!]` [07-app-store-connect/README.md](./07-app-store-connect/README.md)
-- `[ ]` [08-testflight-and-review/README.md](./08-testflight-and-review/README.md)
+- `앱 레코드 [x] / 메타데이터·Privacy·규제 응답 [!]` [07-app-store-connect/README.md](./07-app-store-connect/README.md)
+- `전체 자동 테스트·Archive·Validate·Upload [x] / Connect 처리·내부 TestFlight [ ]` [08-testflight-and-review/README.md](./08-testflight-and-review/README.md)
 - `[-]` [09-quality-accessibility/README.md](./09-quality-accessibility/README.md)
 - `[ ]` [10-user-generated-content/README.md](./10-user-generated-content/README.md)
-- `[-]` [11-release-engineering/README.md](./11-release-engineering/README.md)
+- `인증서·Archive·Validate·Upload [x] / Connect 처리·최종 패키징 검증 [ ]` [11-release-engineering/README.md](./11-release-engineering/README.md)
 - `[-]` [12-web-app-parity/README.md](./12-web-app-parity/README.md)
 
 ## 권장 순서

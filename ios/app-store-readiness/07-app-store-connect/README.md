@@ -3,6 +3,9 @@
 ## 현재 상태
 
 - Apple Developer Program 멤버십, Team ID `2V47G42CDS`와 운영 Bundle ID `io.github.shanepark.dutypark`는 확정돼 있다.
+- App Store Connect에 `Dutypark` iOS 앱 레코드를 생성했으며 버전 `1.0`이 `Prepare for Submission` 상태인 것을 2026-08-14 화면에서 확인했다.
+- 2026-08-15 Xcode에서 `Dutypark` 1.0 (1)의 App Store Connect 업로드 완료를 확인했다. Connect의 처리 완료와 빌드 표시 여부는 아직 확인하지 않았다.
+- App Store Connect가 EU 배포 전 trader status 제공 필요 경고를 표시하고 있다. EU 판매 범위와 DSA trader 여부는 아직 확정하지 않았다.
 - 앱과 서버의 개인정보 데이터 inventory 및 수출 규정 기술 근거는 별도 상세 문서에 정리돼 있다.
 - 이 문서는 App Store Connect에 아직 입력·공개·확정해야 하는 정보만 관리한다. 빌드 서명·업로드는 [릴리스 엔지니어링](../11-release-engineering/README.md), TestFlight와 심사 실행은 [TestFlight 및 App Review](../08-testflight-and-review/README.md)를 따른다.
 
@@ -10,10 +13,10 @@
 
 ### 앱 레코드와 판매 범위
 
-- [ ] iOS 앱 레코드를 생성하고 Bundle ID `io.github.shanepark.dutypark`를 연결한다.
+- [x] iOS 앱 레코드를 생성하고 Bundle ID `io.github.shanepark.dutypark`를 연결한다.
 - [ ] 앱 이름, 기본 언어, SKU, 기본·보조 카테고리와 사용자 접근 권한을 확정한다.
 - [ ] 판매 국가·지역과 EU 배포 여부를 정한다.
-- [ ] EU 배포 시 DSA trader 여부를 판단하고 필요한 연락처·주소 검증을 완료한다.
+- [ ] App Store Connect에 표시된 trader status 경고를 확인하고, EU 배포 시 DSA trader 여부를 판단해 필요한 연락처·주소 검증을 완료한다.
 - [ ] 개인 계정의 판매자명이 계정 소유자의 법적 실명으로 표시되는 점과 멤버십 갱신 책임을 확인한다.
 - [ ] 계약, 세금·은행 정보가 실제 판매 방식에 필요하면 완료한다.
 

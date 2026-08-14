@@ -2,9 +2,10 @@
 
 ## 현재 상태
 
-- 최신 dirty working tree snapshot에서 generic iOS 빌드는 성공했다.
-- 같은 snapshot의 전체 테스트 result node는 **376개 중 373개 통과, 3개 실패, 0개 건너뜀**이다.
-- 따라서 현재 코드는 아직 제출용 동결 기준선이 아니다. 변경을 동결한 뒤 전체 테스트를 다시 실행해 실패를 분류·해결하고 green 결과를 확보해야 한다.
+- 2026-08-15 Xcode Organizer에서 `Dutypark` 1.0 (1) Release Archive 생성, 경고 없는 Validate App 통과와 App Store Connect 업로드 완료를 확인했다. Connect의 빌드 처리와 TestFlight 표시 확인은 아직 남아 있다.
+- 2026-08-14 현재 working tree에서 generic iOS 빌드와 전체 테스트가 성공했다.
+- `Dutypark QA iPhone 16 Pro` iOS 26.5 Simulator의 최신 `.xcresult` 요약은 **396개 통과, 0개 실패, 0개 건너뜀**이다. 동적 매개변수 실행을 포함한 device execution은 402개다.
+- 이전 기록의 3개 실패는 최신 전체 실행에서 재현되지 않았다. 다만 working tree가 아직 dirty이므로 현재 코드는 제출용 동결 기준선이 아니며, 변경을 동결한 동일 후보에서 다시 검증해야 한다.
 - 이 문서는 빌드 생성법이나 Connect 메타데이터가 아니라, 업로드된 후보 빌드를 TestFlight에서 검증하고 App Review에 제출하는 실행 절차만 관리한다.
 
 ## 남은 체크
@@ -13,8 +14,11 @@
 
 - [ ] 제출 후보 소스와 서버 배포 상태를 동결하고 커밋, 마케팅 버전, 빌드 번호를 기록한다.
 - [ ] clean working tree의 동일 후보로 generic iOS 빌드와 전체 테스트를 다시 실행한다.
-- [ ] 현재 3개 실패가 후보 빌드에서도 재현되는지 확인하고, 회귀면 수정한 뒤 전체 테스트 green을 확보한다.
-- [ ] 서명된 Release Archive를 Validate·업로드하고 App Store Connect 처리 완료를 확인한다.
+- [x] 이전 3개 실패가 최신 전체 실행에서 재현되지 않고 전체 테스트가 green인 것을 확인했다. clean 후보 재검증은 별도로 남아 있다.
+- [x] `Dutypark` 1.0 (1) Release Archive를 생성하고 Organizer에 표시되는 것을 확인한다.
+- [x] 생성한 Archive가 Organizer의 Validate App을 경고 없이 통과한 것을 확인한다.
+- [x] 검증한 `Dutypark` 1.0 (1) Archive의 App Store Connect 업로드 완료를 Xcode에서 확인한다.
+- [ ] App Store Connect의 빌드 처리 완료를 확인한다.
 - [ ] TestFlight에 표시된 version/build가 기록한 후보와 동일한지 확인한다.
 
 ### 내부 TestFlight
