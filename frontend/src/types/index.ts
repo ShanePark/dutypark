@@ -551,7 +551,6 @@ export interface RefreshTokenDto {
   lastUsed: string | null
   remoteAddr: string | null
   id: number
-  token: string
   userAgent: RefreshTokenUserAgent | null
   isCurrentLogin: boolean | null
 }

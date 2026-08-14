@@ -95,6 +95,7 @@ class AdminControllerTest : DutyparkIntegrationTest() {
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.length()").value(1))
             .andExpect(jsonPath("$[0].id").value(validToken.id))
+            .andExpect(jsonPath("$[0].token").doesNotExist())
     }
 
     @Test
@@ -127,6 +128,7 @@ class AdminControllerTest : DutyparkIntegrationTest() {
             .andExpect(jsonPath("$.content[0].name").value(TestData.member.name))
             .andExpect(jsonPath("$.content[0].tokens.length()").value(1))
             .andExpect(jsonPath("$.content[0].tokens[0].id").value(validToken.id))
+            .andExpect(jsonPath("$.content[0].tokens[0].token").doesNotExist())
     }
 
     @Test

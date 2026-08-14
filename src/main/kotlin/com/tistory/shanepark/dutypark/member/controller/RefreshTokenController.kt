@@ -23,14 +23,8 @@ class RefreshTokenController(
         request: HttpServletRequest,
         @RequestParam("validOnly", required = false, defaultValue = "true") validOnly: Boolean,
     ): List<RefreshTokenDto> {
-        val refreshTokens = refreshTokenService.findRefreshTokens(loginMember.id, validOnly)
         val currentToken = cookieService.extractRefreshToken(request.cookies)
-
-        refreshTokens
-            .firstOrNull { it.token == currentToken }
-            ?.isCurrentLogin = true
-
-        return refreshTokens
+        return refreshTokenService.findRefreshTokens(loginMember.id, validOnly, currentToken)
     }
 
     @DeleteMapping("/{id}")

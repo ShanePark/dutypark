@@ -50,7 +50,7 @@ class RefreshTokenControllerTest : RestDocsTest() {
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.length()").value(1))
-            .andExpect(jsonPath("$[0].token").value(current.token))
+            .andExpect(jsonPath("$[0].token").doesNotExist())
             .andExpect(jsonPath("$[0].isCurrentLogin").value(true))
     }
 
@@ -81,7 +81,7 @@ class RefreshTokenControllerTest : RestDocsTest() {
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.length()").value(2))
-            .andExpect(jsonPath("$[0].token").value(current.token))
+            .andExpect(jsonPath("$[0].token").doesNotExist())
             .andExpect(jsonPath("$[0].isCurrentLogin").value(true))
     }
 

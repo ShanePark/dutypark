@@ -27,12 +27,23 @@ class RefreshTokenService(
         refreshTokenRepository.deleteAll(expiredTokens)
     }
 
-    fun findRefreshTokens(memberId: Long, validOnly: Boolean): List<RefreshTokenDto> {
+    fun findRefreshTokens(
+        memberId: Long,
+        validOnly: Boolean,
+        currentToken: String? = null,
+    ): List<RefreshTokenDto> {
         val tokens = refreshTokenRepository
             .findAllByMemberIdOrderByLastUsedDesc(memberId)
             .filter { !validOnly || it.isValid() }
 
-        return tokens.map { RefreshTokenDto.of(it) }
+        return tokens.map { refreshToken ->
+            RefreshTokenDto.of(
+                refreshToken = refreshToken,
+                isCurrentLogin = true.takeIf {
+                    currentToken != null && refreshToken.token == currentToken
+                },
+            )
+        }
     }
 
     fun deleteRefreshToken(loginMember: LoginMember, id: Long) {

@@ -1,6 +1,6 @@
 # 04. 인증·세션 보강
 
-> 상태: 모바일 OAuth와 로컬 로그아웃 안전장치 구현 완료 / refresh token 응답 노출, 웹 OAuth, 실제 장애 복구 검증 대기
+> 상태: 모바일 OAuth와 로컬 로그아웃 안전장치 구현 완료 / 기존 노출 세션 대응, 웹 OAuth, 실제 장애 복구 검증 대기
 > 우선순위: P0
 > 최종 확인일: 2026-08-14
 
@@ -8,13 +8,8 @@
 
 ## 남은 체크리스트
 
-### P0: refresh token 원문 노출 제거
+### P0: 기존 노출 세션 대응
 
-- [ ] [`RefreshTokenDto.kt`](../../../src/main/kotlin/com/tistory/shanepark/dutypark/security/domain/dto/RefreshTokenDto.kt)의 응답 모델에서 `token` 원문 필드를 제거한다.
-- [ ] `GET /api/auth/refresh-tokens`, 관리자 refresh-token 목록과 `AdminMemberDto`가 refresh token 원문을 직렬화하지 않는지 회귀 테스트로 고정한다.
-- [ ] 현재 로그인 판별은 DTO의 token 비교에 의존하지 않도록 서비스 내부 또는 노출되지 않는 projection에서 수행한다.
-- [ ] 세션 목록 응답에는 세션 ID, 생성·마지막 사용·만료 시각, IP/User-Agent와 현재 세션 여부처럼 관리에 필요한 metadata만 포함한다.
-- [ ] 로그, 오류 응답, 관리자 화면, 분석 이벤트와 테스트 fixture에도 기존 refresh token 원문이 남지 않는지 제한 감사한다.
 - [ ] 운영 배포 전에 기존에 노출 가능했던 refresh session을 모두 폐기할지 위험을 평가하고 결정·실행 기록을 남긴다.
 
 ### P0: 기존 웹 OAuth 보강
