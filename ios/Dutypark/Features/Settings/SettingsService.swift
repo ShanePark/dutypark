@@ -92,7 +92,16 @@ nonisolated struct AccountDeletionAccepted: Decodable, Equatable, Sendable {
     let status: String
 }
 
-nonisolated struct SettingsService: Sendable {
+nonisolated protocol AccountDeletionServicing: Sendable {
+    func accountDeletionPreview() async throws -> AccountDeletionPreview
+    func reauthenticateForAccountDeletion(password: String) async throws -> AccountDeletionReauthProof
+    func requestAccountDeletion(
+        reauthProof: String,
+        transferAdminToMemberId: Int64?
+    ) async throws -> AccountDeletionAccepted
+}
+
+nonisolated struct SettingsService: AccountDeletionServicing, Sendable {
     private let client: APIClient
 
     init(client: APIClient = .shared) {

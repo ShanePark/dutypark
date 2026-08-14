@@ -64,12 +64,12 @@ final class AccountDeletionViewModel: ObservableObject {
     @Published private(set) var isWorking = false
     @Published private(set) var errorKey: String?
 
-    private let service: SettingsService
+    private let service: any AccountDeletionServicing
     private let oauthClient: MobileOAuthClient
     private let appleSignInClient: AppleSignInClient
 
     init(
-        service: SettingsService = SettingsService(),
+        service: any AccountDeletionServicing = SettingsService(),
         oauthClient: MobileOAuthClient = MobileOAuthClient(),
         appleSignInClient: AppleSignInClient = AppleSignInClient()
     ) {
@@ -206,6 +206,7 @@ final class AccountDeletionViewModel: ObservableObject {
     }
 
     func submit() async -> AccountDeletionCompletion? {
+        guard flow.step == .finalConfirmation else { return nil }
         guard !isWorking else { return nil }
         guard let proof = flow.validProof() else {
             errorKey = "settings.accountDeletion.error.proofExpired"
