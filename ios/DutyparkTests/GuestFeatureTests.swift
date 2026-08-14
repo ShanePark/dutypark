@@ -17,6 +17,33 @@ final class GuestDeepLinkTests: XCTestCase {
         XCTAssertNil(route("https://dutypark.o-r.kr/admin"))
     }
 
+    func testColdLaunchRouteIgnoresQueryAndFragmentButRequiresExactPath() {
+        XCTAssertEqual(
+            route("https://dutypark.o-r.kr/duty/42?month=8#calendar"),
+            .publicCalendar(42)
+        )
+        XCTAssertEqual(route("https://dutypark.o-r.kr/guide/"), .guide)
+        XCTAssertNil(route("https://dutypark.o-r.kr/duty/42/edit"))
+        XCTAssertNil(route("https://dutypark.o-r.kr/guide/archive"))
+    }
+
+    func testWarmLinkParsingDoesNotTrustLookalikeHostsOrInvalidMemberIDs() {
+        XCTAssertNil(route("https://dutypark.o-r.kr.evil.example/duty/42"))
+        XCTAssertNil(route("https://dutypark.o-r.kr@evil.example/duty/42"))
+        XCTAssertNil(route("https://sub.dutypark.o-r.kr/duty/42"))
+        XCTAssertNil(route("https://dutypark.o-r.kr/duty/-1"))
+        XCTAssertNil(route("https://dutypark.o-r.kr/duty/9223372036854775808"))
+    }
+
+    func testSupportsExplicitHostOverrideCaseInsensitively() {
+        let url = URL(string: "https://DUTYPARK.TEST/duty/7")!
+
+        XCTAssertEqual(
+            GuestDeepLink.route(from: url, allowedHost: "dutypark.test"),
+            .publicCalendar(7)
+        )
+    }
+
     private func route(_ value: String) -> GuestRoute? {
         GuestDeepLink.route(from: URL(string: value)!)
     }
@@ -105,10 +132,155 @@ final class GuestPublicCalendarTests: XCTestCase {
         XCTAssertEqual(model.month, 1)
     }
 
+    func testFailureStopsLoadingAndRetryReusesLoadedMember() async {
+        let api = GuestScenarioAPI(failingCalendarAttempts: 1)
+        let model = GuestPublicCalendarViewModel(
+            memberID: 42,
+            api: api,
+            now: date(2026, 8, 12)
+        )
+
+        await model.load()
+
+        XCTAssertTrue(model.hasError)
+        XCTAssertFalse(model.isLoading)
+        XCTAssertTrue(model.days.isEmpty)
+        var memberRequestCount = await api.memberRequestCount
+        XCTAssertEqual(memberRequestCount, 1)
+
+        await model.load()
+
+        XCTAssertFalse(model.hasError)
+        XCTAssertFalse(model.isLoading)
+        XCTAssertEqual(model.days.count, 42)
+        memberRequestCount = await api.memberRequestCount
+        let calendarRequestCount = await api.calendarRequestCount
+        XCTAssertEqual(memberRequestCount, 1)
+        XCTAssertEqual(calendarRequestCount, 2)
+    }
+
+    func testCancellationDoesNotPresentFailureState() async throws {
+        let api = GuestScenarioAPI(delayByMonth: [8: .milliseconds(500)])
+        let model = GuestPublicCalendarViewModel(
+            memberID: 42,
+            api: api,
+            now: date(2026, 8, 12)
+        )
+        let task = Task { await model.load() }
+        try await waitUntil { await api.calendarRequestCount == 1 }
+
+        task.cancel()
+        await task.value
+
+        XCTAssertFalse(model.hasError)
+        XCTAssertFalse(model.isLoading)
+        XCTAssertTrue(model.days.isEmpty)
+    }
+
+    func testSlowerPreviousMonthResponseCannotOverwriteLatestMonth() async throws {
+        let api = GuestScenarioAPI(delayByMonth: [8: .milliseconds(250), 9: .milliseconds(10)])
+        let model = GuestPublicCalendarViewModel(
+            memberID: 42,
+            api: api,
+            now: date(2026, 8, 12)
+        )
+        let augustLoad = Task { await model.load() }
+        try await waitUntil { await api.calendarRequestCount == 1 }
+
+        await model.changeMonth(by: 1)
+        await augustLoad.value
+
+        XCTAssertEqual(model.year, 2026)
+        XCTAssertEqual(model.month, 9)
+        XCTAssertFalse(model.hasError)
+        XCTAssertFalse(model.isLoading)
+        XCTAssertEqual(model.days.count, 42)
+        XCTAssertTrue(model.days.allSatisfy { $0.cell.month == 9 })
+    }
+
+    private func waitUntil(
+        _ predicate: @escaping @Sendable () async -> Bool
+    ) async throws {
+        for _ in 0..<100 {
+            if await predicate() { return }
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        XCTFail("Timed out waiting for asynchronous request")
+    }
+
     private func date(_ year: Int, _ month: Int, _ day: Int) -> Date {
         CalendarDateSupport.calendar.date(
             from: DateComponents(year: year, month: month, day: day)
         )!
+    }
+}
+
+private actor GuestScenarioAPI: GuestAPIProtocol {
+    private let failingCalendarAttempts: Int
+    private let delayByMonth: [Int: Duration]
+    private var memberRequests = 0
+    private var calendarRequests = 0
+
+    init(
+        failingCalendarAttempts: Int = 0,
+        delayByMonth: [Int: Duration] = [:]
+    ) {
+        self.failingCalendarAttempts = failingCalendarAttempts
+        self.delayByMonth = delayByMonth
+    }
+
+    var memberRequestCount: Int { memberRequests }
+    var calendarRequestCount: Int { calendarRequests }
+
+    func member(id: MemberID) async throws -> MemberPreviewDTO {
+        memberRequests += 1
+        return MemberPreviewDTO(
+            id: id,
+            name: "Public member",
+            teamId: nil,
+            team: nil,
+            hasProfilePhoto: false,
+            profilePhotoVersion: 0
+        )
+    }
+
+    func calendar(year: Int, month: Int) async throws -> [TeamDayDTO] {
+        calendarRequests += 1
+        let requestNumber = calendarRequests
+        try await delay(month: month)
+        if requestNumber <= failingCalendarAttempts {
+            throw URLError(.badServerResponse)
+        }
+        return (1...42).map { TeamDayDTO(year: year, month: month, day: $0) }
+    }
+
+    func duties(memberID: MemberID, year: Int, month: Int) async throws -> [DutyDTO] {
+        try await delay(month: month)
+        return []
+    }
+
+    func schedules(memberID: MemberID, year: Int, month: Int) async throws -> [[ScheduleDTO]] {
+        try await delay(month: month)
+        return Array(repeating: [], count: 42)
+    }
+
+    func holidays(year: Int, month: Int) async throws -> [[HolidayDTO]] {
+        try await delay(month: month)
+        return Array(repeating: [], count: 42)
+    }
+
+    func dDays(memberID: MemberID) async throws -> [DDayDTO] {
+        // Month-specific calls provide the delay needed by race tests.
+        []
+    }
+
+    func policy(_ type: PolicyType) async throws -> PolicyDTO {
+        throw URLError(.unsupportedURL)
+    }
+
+    private func delay(month: Int) async throws {
+        guard let duration = delayByMonth[month] else { return }
+        try await Task.sleep(for: duration)
     }
 }
 

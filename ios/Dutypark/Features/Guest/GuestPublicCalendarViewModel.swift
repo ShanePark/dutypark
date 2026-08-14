@@ -13,8 +13,14 @@ nonisolated struct GuestCalendarDay: Identifiable, Equatable, Sendable {
 
 @MainActor
 final class GuestPublicCalendarViewModel: ObservableObject {
+    private struct MonthSnapshot {
+        let days: [GuestCalendarDay]
+        let dDays: [DDayDTO]
+    }
+
     private let memberID: MemberID
     private let api: GuestAPIProtocol
+    private var loadGeneration = 0
 
     @Published private(set) var member: MemberPreviewDTO?
     @Published private(set) var days: [GuestCalendarDay] = []
@@ -38,14 +44,29 @@ final class GuestPublicCalendarViewModel: ObservableObject {
     }
 
     func load() async {
+        loadGeneration += 1
+        let generation = loadGeneration
+        let requestedYear = year
+        let requestedMonth = month
         isLoading = true
         hasError = false
         do {
             if member == nil {
-                member = try await api.member(id: memberID)
+                let loadedMember = try await api.member(id: memberID)
+                guard generation == loadGeneration else { return }
+                member = loadedMember
             }
-            try await loadMonth()
+            let snapshot = try await loadMonth(year: requestedYear, month: requestedMonth)
+            guard generation == loadGeneration else { return }
+            dDays = snapshot.dDays
+            days = snapshot.days
+            selectedDay = selectedDay.flatMap { selection in
+                days.first { $0.id == selection.id }
+            }
+        } catch is CancellationError {
+            guard generation == loadGeneration else { return }
         } catch {
+            guard generation == loadGeneration else { return }
             hasError = true
         }
         isLoading = false
@@ -74,7 +95,7 @@ final class GuestPublicCalendarViewModel: ObservableObject {
         await load()
     }
 
-    private func loadMonth() async throws {
+    private func loadMonth(year: Int, month: Int) async throws -> MonthSnapshot {
         async let calendarResult = api.calendar(year: year, month: month)
         async let dutiesResult = api.duties(memberID: memberID, year: year, month: month)
         async let schedulesResult = api.schedules(memberID: memberID, year: year, month: month)
@@ -92,8 +113,7 @@ final class GuestPublicCalendarViewModel: ObservableObject {
         let holidays = try await holidaysResult
         let loadedDDays = try await dDaysResult.sorted { $0.date.rawValue < $1.date.rawValue }
 
-        dDays = loadedDDays
-        days = cells.enumerated().map { index, cell in
+        let loadedDays = cells.enumerated().map { index, cell in
             GuestCalendarDay(
                 cell: cell,
                 duty: duties.first {
@@ -104,8 +124,6 @@ final class GuestPublicCalendarViewModel: ObservableObject {
                 dDays: loadedDDays.filter { $0.date == cell.date }
             )
         }
-        selectedDay = selectedDay.flatMap { selection in
-            days.first { $0.id == selection.id }
-        }
+        return MonthSnapshot(days: loadedDays, dDays: loadedDDays)
     }
 }
