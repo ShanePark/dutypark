@@ -100,6 +100,7 @@ final class SessionStore: ObservableObject {
             isWorking = false
         }
         try? await authService.logout()
+        await authService.clearLocalAuthentication()
         await becomeGuest()
     }
 

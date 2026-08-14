@@ -369,7 +369,17 @@ final class APIClientAuthTests: XCTestCase {
     }
 
     @MainActor
-    func testLogoutServerFailureStillTransitionsSessionToGuest() async {
+    func testLogoutServerFailureStillTransitionsSessionToGuest() async throws {
+        for name in ["access_token", "refresh_token"] {
+            let cookie = try XCTUnwrap(HTTPCookie(properties: [
+                .domain: "dutypark.test",
+                .path: "/",
+                .name: name,
+                .value: "secret",
+                .secure: "TRUE",
+            ]))
+            HTTPCookieStorage.shared.setCookie(cookie)
+        }
         URLProtocolStub.handler = { request in
             XCTAssertEqual(request.url?.path, "/api/auth/logout")
             return Self.response(request, status: 503)
@@ -377,12 +387,17 @@ final class APIClientAuthTests: XCTestCase {
 
         let store = SessionStore(
             authService: AuthService(client: makeClient()),
-            initialState: .authenticated(Self.testMember)
+            initialState: .authenticated(Self.testMember),
+            impersonationExpiresAt: Date().addingTimeInterval(60)
         )
 
         await store.logout()
 
         XCTAssertEqual(store.state, .guest)
+        XCTAssertNil(store.impersonationExpiresAt)
+        XCTAssertFalse(HTTPCookieStorage.shared.cookies?.contains {
+            $0.name == "access_token" || $0.name == "refresh_token"
+        } == true)
     }
 
     @MainActor
