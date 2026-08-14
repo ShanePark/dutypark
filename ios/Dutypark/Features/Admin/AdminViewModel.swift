@@ -15,6 +15,7 @@ final class AdminMemberListViewModel: ObservableObject {
 
     private let repository: any AdminRepositoryProtocol
     private var keyword = ""
+    private var loadGeneration = 0
 
     init(repository: any AdminRepositoryProtocol = AdminRepository()) {
         self.repository = repository
@@ -62,9 +63,14 @@ final class AdminMemberListViewModel: ObservableObject {
     }
 
     private func load(keyword: String, page: Int) async {
-        guard !isLoading else { return }
+        loadGeneration += 1
+        let generation = loadGeneration
         isLoading = true
-        defer { isLoading = false }
+        defer {
+            if generation == loadGeneration {
+                isLoading = false
+            }
+        }
         do {
             async let memberPage = repository.members(
                 keyword: keyword,
@@ -73,6 +79,7 @@ final class AdminMemberListViewModel: ObservableObject {
             )
             async let allSessions = repository.sessions()
             let (loadedPage, loadedSessions) = try await (memberPage, allSessions)
+            guard generation == loadGeneration else { return }
             members = loadedPage.content
             sessions = loadedSessions
             totalElements = loadedPage.totalElements
@@ -82,6 +89,7 @@ final class AdminMemberListViewModel: ObservableObject {
         } catch is CancellationError {
             return
         } catch {
+            guard generation == loadGeneration else { return }
             loadFailed = true
         }
     }
@@ -101,6 +109,7 @@ final class AdminTeamListViewModel: ObservableObject {
 
     private let repository: any AdminRepositoryProtocol
     private var keyword = ""
+    private var loadGeneration = 0
     private var nameCheckGeneration = 0
 
     init(repository: any AdminRepositoryProtocol = AdminRepository()) {
@@ -163,15 +172,21 @@ final class AdminTeamListViewModel: ObservableObject {
     }
 
     private func load(keyword: String, page: Int) async {
-        guard !isLoading else { return }
+        loadGeneration += 1
+        let generation = loadGeneration
         isLoading = true
-        defer { isLoading = false }
+        defer {
+            if generation == loadGeneration {
+                isLoading = false
+            }
+        }
         do {
             let loaded = try await repository.teams(
                 keyword: keyword,
                 page: page,
                 size: Self.pageSize
             )
+            guard generation == loadGeneration else { return }
             teams = loaded.content
             totalElements = loaded.totalElements
             totalPages = loaded.totalPages
@@ -180,6 +195,7 @@ final class AdminTeamListViewModel: ObservableObject {
         } catch is CancellationError {
             return
         } catch {
+            guard generation == loadGeneration else { return }
             loadFailed = true
         }
     }
