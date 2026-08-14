@@ -10,7 +10,10 @@ private struct DPSolidButtonStyle: ButtonStyle {
             .font(DPTypography.bodyMedium)
             .foregroundStyle(DPColor.textOnDark)
             .padding(.horizontal, DPChrome.controlHorizontalPadding)
-            .frame(minHeight: DPSize.minimumTouchTarget)
+            .frame(
+                minWidth: DPSize.minimumTouchTarget,
+                minHeight: DPSize.minimumTouchTarget
+            )
             .background(
                 RoundedRectangle(cornerRadius: DPRadius.standard)
                     .fill(configuration.isPressed ? pressedBackground : background)
@@ -68,7 +71,10 @@ struct DPSecondaryButtonStyle: ButtonStyle {
             .font(DPTypography.bodyMedium)
             .foregroundStyle(DPColor.textPrimary)
             .padding(.horizontal, DPChrome.controlHorizontalPadding)
-            .frame(minHeight: DPSize.minimumTouchTarget)
+            .frame(
+                minWidth: DPSize.minimumTouchTarget,
+                minHeight: DPSize.minimumTouchTarget
+            )
             .background(
                 RoundedRectangle(cornerRadius: DPRadius.standard)
                     .fill(configuration.isPressed ? DPColor.backgroundHover : DPColor.backgroundTertiary)
@@ -87,7 +93,10 @@ struct DPOutlineButtonStyle: ButtonStyle {
             .font(DPTypography.bodyMedium)
             .foregroundStyle(DPColor.textSecondary)
             .padding(.horizontal, DPChrome.controlHorizontalPadding)
-            .frame(minHeight: DPSize.minimumTouchTarget)
+            .frame(
+                minWidth: DPSize.minimumTouchTarget,
+                minHeight: DPSize.minimumTouchTarget
+            )
             .background(
                 RoundedRectangle(cornerRadius: DPRadius.standard)
                     .fill(configuration.isPressed ? DPColor.backgroundHover : DPColor.backgroundPrimary)
