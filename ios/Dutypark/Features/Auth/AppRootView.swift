@@ -35,9 +35,15 @@ struct AppRootView: View {
             await session.restore()
         }
         .onOpenURL { url in
-            if session.state == .restoring || session.state == .restoreFailed {
+            if AppRootDeepLinkPolicy.shouldDeferDestination(for: session.state) {
                 session.deferDestinationUntilAuthenticated(url)
             }
         }
+    }
+}
+
+enum AppRootDeepLinkPolicy {
+    static func shouldDeferDestination(for state: SessionState) -> Bool {
+        state == .restoring || state == .restoreFailed || state == .guest
     }
 }
