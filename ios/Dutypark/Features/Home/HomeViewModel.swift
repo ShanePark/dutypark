@@ -19,6 +19,8 @@ final class HomeViewModel: ObservableObject {
     @Published private(set) var friendsState: LoadState<DashboardFriendInfoDTO> = .idle
 
     private let service: any HomeDashboardServing
+    private var myRequestRevision = 0
+    private var friendsRequestRevision = 0
 
     init(service: any HomeDashboardServing) {
         self.service = service
@@ -72,34 +74,52 @@ final class HomeViewModel: ObservableObject {
 #endif
         myState = .loading
         friendsState = .loading
+        myRequestRevision += 1
+        friendsRequestRevision += 1
+        let myRevision = myRequestRevision
+        let friendsRevision = friendsRequestRevision
 
         async let myResult = Self.fetchMy(using: service)
         async let friendsResult = Self.fetchFriends(using: service)
         let (my, friends) = await (myResult, friendsResult)
 
-        myState = switch my {
-        case .success(let dashboard): .loaded(dashboard)
-        case .failure: .failed
+        if myRevision == myRequestRevision {
+            myState = switch my {
+            case .success(let dashboard): .loaded(dashboard)
+            case .failure: .failed
+            }
         }
-        friendsState = switch friends {
-        case .success(let dashboard): .loaded(dashboard)
-        case .failure: .failed
+        if friendsRevision == friendsRequestRevision {
+            friendsState = switch friends {
+            case .success(let dashboard): .loaded(dashboard)
+            case .failure: .failed
+            }
         }
     }
 
     func retryMyDashboard() async {
         myState = .loading
-        myState = switch await Self.fetchMy(using: service) {
-        case .success(let dashboard): .loaded(dashboard)
-        case .failure: .failed
+        myRequestRevision += 1
+        let revision = myRequestRevision
+        let result = await Self.fetchMy(using: service)
+        if revision == myRequestRevision {
+            myState = switch result {
+            case .success(let dashboard): .loaded(dashboard)
+            case .failure: .failed
+            }
         }
     }
 
     func retryFriendsDashboard() async {
         friendsState = .loading
-        friendsState = switch await Self.fetchFriends(using: service) {
-        case .success(let dashboard): .loaded(dashboard)
-        case .failure: .failed
+        friendsRequestRevision += 1
+        let revision = friendsRequestRevision
+        let result = await Self.fetchFriends(using: service)
+        if revision == friendsRequestRevision {
+            friendsState = switch result {
+            case .success(let dashboard): .loaded(dashboard)
+            case .failure: .failed
+            }
         }
     }
 

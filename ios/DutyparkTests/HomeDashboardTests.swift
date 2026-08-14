@@ -35,6 +35,64 @@ final class HomeDashboardTests: XCTestCase {
         XCTAssertEqual(viewModel.friendsDashboard?.friends.count, 3)
     }
 
+    func testRetryingMyDashboardRecoversOnlyThatSection() async throws {
+        let recoveredDashboard = try Self.decodeMyDashboard(named: "Recovered")
+        let friendsDashboard = try Self.decodeFriendsDashboard()
+        let service = RetryHomeService(
+            myResults: [.failure(HomeServiceStubError.failed), .success(recoveredDashboard)],
+            friends: friendsDashboard
+        )
+        let viewModel = HomeViewModel(service: service)
+
+        await viewModel.refresh()
+        await viewModel.retryMyDashboard()
+
+        XCTAssertEqual(viewModel.myDashboard?.member.name, "Recovered")
+        XCTAssertEqual(viewModel.friendsDashboard?.friends.count, 3)
+        let counts = await service.requestCounts
+        XCTAssertEqual(counts.my, 2)
+        XCTAssertEqual(counts.friends, 1)
+    }
+
+    func testLoadIfNeededDoesNotReloadAnAlreadyLoadedDashboard() async throws {
+        let service = CountingHomeService(
+            my: try Self.decodeMyDashboard(),
+            friends: try Self.decodeFriendsDashboard()
+        )
+        let viewModel = HomeViewModel(service: service)
+
+        await viewModel.loadIfNeeded()
+        await viewModel.loadIfNeeded()
+
+        let counts = await service.requestCounts
+        XCTAssertEqual(counts.my, 1)
+        XCTAssertEqual(counts.friends, 1)
+    }
+
+    func testOverlappingRefreshesKeepTheNewestResponse() async throws {
+        let service = ControlledHomeService()
+        let viewModel = HomeViewModel(service: service)
+        let staleDashboard = try Self.decodeMyDashboard(named: "Stale")
+        let newestDashboard = try Self.decodeMyDashboard(named: "Newest")
+        let friendsDashboard = try Self.decodeFriendsDashboard()
+
+        let staleRefresh = Task { await viewModel.refresh() }
+        await service.waitForRequestCounts(my: 1, friends: 1)
+
+        let newestRefresh = Task { await viewModel.refresh() }
+        await service.waitForRequestCounts(my: 2, friends: 2)
+
+        await service.resolveMyRequest(at: 1, with: newestDashboard)
+        await service.resolveFriendsRequest(at: 1, with: friendsDashboard)
+        await newestRefresh.value
+
+        await service.resolveMyRequest(at: 0, with: staleDashboard)
+        await service.resolveFriendsRequest(at: 0, with: friendsDashboard)
+        await staleRefresh.value
+
+        XCTAssertEqual(viewModel.myDashboard?.member.name, "Newest")
+    }
+
     func testServiceUsesTheExistingWebDashboardEndpoints() async throws {
         let recorder = HomeRequestRecorder()
         HomeURLProtocolStub.handler = { request in
@@ -68,6 +126,11 @@ final class HomeDashboardTests: XCTestCase {
 
     private nonisolated static func decodeMyDashboard() throws -> DashboardMyDetailDTO {
         try JSONDecoder().decode(DashboardMyDetailDTO.self, from: Data(myDashboardJSON.utf8))
+    }
+
+    private nonisolated static func decodeMyDashboard(named name: String) throws -> DashboardMyDetailDTO {
+        let json = myDashboardJSON.replacingOccurrences(of: "\"name\": \"Shane\"", with: "\"name\": \"\(name)\"")
+        return try JSONDecoder().decode(DashboardMyDetailDTO.self, from: Data(json.utf8))
     }
 
     private nonisolated static func decodeFriendsDashboard() throws -> DashboardFriendInfoDTO {
@@ -196,6 +259,93 @@ private nonisolated struct PartialFailureHomeService: HomeDashboardServing {
 
 private nonisolated enum HomeServiceStubError: Error {
     case failed
+}
+
+private actor CountingHomeService: HomeDashboardServing {
+    let my: DashboardMyDetailDTO
+    let friends: DashboardFriendInfoDTO
+    private var myRequestCount = 0
+    private var friendsRequestCount = 0
+
+    init(my: DashboardMyDetailDTO, friends: DashboardFriendInfoDTO) {
+        self.my = my
+        self.friends = friends
+    }
+
+    var requestCounts: (my: Int, friends: Int) {
+        (myRequestCount, friendsRequestCount)
+    }
+
+    func loadMyDashboard() async throws -> DashboardMyDetailDTO {
+        myRequestCount += 1
+        return my
+    }
+
+    func loadFriendsDashboard() async throws -> DashboardFriendInfoDTO {
+        friendsRequestCount += 1
+        return friends
+    }
+}
+
+private actor RetryHomeService: HomeDashboardServing {
+    private var myResults: [Result<DashboardMyDetailDTO, Error>]
+    let friends: DashboardFriendInfoDTO
+    private var myRequestCount = 0
+    private var friendsRequestCount = 0
+
+    init(
+        myResults: [Result<DashboardMyDetailDTO, Error>],
+        friends: DashboardFriendInfoDTO
+    ) {
+        self.myResults = myResults
+        self.friends = friends
+    }
+
+    var requestCounts: (my: Int, friends: Int) {
+        (myRequestCount, friendsRequestCount)
+    }
+
+    func loadMyDashboard() async throws -> DashboardMyDetailDTO {
+        let result = myResults[myRequestCount]
+        myRequestCount += 1
+        return try result.get()
+    }
+
+    func loadFriendsDashboard() async throws -> DashboardFriendInfoDTO {
+        friendsRequestCount += 1
+        return friends
+    }
+}
+
+private actor ControlledHomeService: HomeDashboardServing {
+    private var myContinuations: [CheckedContinuation<DashboardMyDetailDTO, Error>] = []
+    private var friendsContinuations: [CheckedContinuation<DashboardFriendInfoDTO, Error>] = []
+
+    func loadMyDashboard() async throws -> DashboardMyDetailDTO {
+        try await withCheckedThrowingContinuation { continuation in
+            myContinuations.append(continuation)
+        }
+    }
+
+    func loadFriendsDashboard() async throws -> DashboardFriendInfoDTO {
+        try await withCheckedThrowingContinuation { continuation in
+            friendsContinuations.append(continuation)
+        }
+    }
+
+    func waitForRequestCounts(my: Int, friends: Int) async {
+        while myContinuations.count < my || friendsContinuations.count < friends {
+            await Task.yield()
+        }
+    }
+
+    func resolveMyRequest(at index: Int, with dashboard: DashboardMyDetailDTO) {
+        myContinuations[index].resume(returning: dashboard)
+    }
+
+    func resolveFriendsRequest(at index: Int, with dashboard: DashboardFriendInfoDTO) {
+        friendsContinuations[index].resume(returning: dashboard)
+    }
 }
 
 private final class HomeRequestRecorder: @unchecked Sendable {
