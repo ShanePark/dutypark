@@ -5,7 +5,6 @@ import com.tistory.shanepark.dutypark.common.domain.dto.PageResponse
 import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTeamResult
 import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTemplate
 import com.tistory.shanepark.dutypark.duty.batch.exceptions.DutyBatchException
-import com.tistory.shanepark.dutypark.duty.batch.service.DutyBatchService
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberInviteCandidateDto
 import com.tistory.shanepark.dutypark.member.service.MemberService
@@ -73,7 +72,7 @@ class TeamManageController(
         checkCanManage(login = loginMember, teamId = teamId)
         val team = teamRepository.findById(teamId).orElseThrow()
         val batchTemplate = team.dutyBatchTemplate ?: throw IllegalArgumentException("dutyBatch.template.required")
-        val dutyBatchService = applicationContext.getBean(batchTemplate.batchServiceClass) as DutyBatchService
+        val dutyBatchService = applicationContext.getBean(batchTemplate.batchServiceClass)
         return try {
             log.info("Batch duty upload: teamId={}, year={}, month={}, by={}", team.id, year, month, loginMember.id)
             dutyBatchService.batchUploadTeam(
@@ -104,7 +103,6 @@ class TeamManageController(
         @RequestParam memberId: Long
     ) {
         checkCanManage(login = loginMember, teamId = teamId)
-        val member = memberService.findById(memberId)
         teamService.addMemberToTeam(teamId = teamId, memberId = memberId)
     }
 
@@ -115,7 +113,6 @@ class TeamManageController(
         @RequestParam memberId: Long
     ) {
         checkCanManage(login = loginMember, teamId = teamId)
-        val member = memberService.findById(memberId)
         teamService.removeMemberFromTeam(teamId, memberId)
     }
 
@@ -139,7 +136,6 @@ class TeamManageController(
         @RequestParam memberId: Long
     ) {
         checkCanAdmin(login = loginMember, teamId = teamId)
-        val member = memberService.findById(memberId)
         teamService.addTeamManager(teamId = teamId, memberId = memberId)
         log.info("Manager added to team: teamId={}, memberId={}, by={}", teamId, memberId, loginMember.id)
     }
@@ -151,7 +147,6 @@ class TeamManageController(
         @RequestParam memberId: Long
     ) {
         checkCanAdmin(login = loginMember, teamId = teamId)
-        val member = memberService.findById(memberId)
         teamService.removeTeamManager(teamId = teamId, memberId = memberId)
         log.info("Manager removed from team: teamId={}, memberId={}, by={}", teamId, memberId, loginMember.id)
     }

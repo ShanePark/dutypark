@@ -18,7 +18,6 @@ class MemberServiceIntegrationTest : DutyparkIntegrationTest() {
         val member4 = memberRepository.save(Member("xjane", "xjane_email", "pass"))
         val member5 = memberRepository.save(Member("xjames", "xjames_email", "pass"))
 
-        // When
         val sort = Sort.by("name").ascending()
         val page = PageRequest.of(0, 10, sort)
 

@@ -41,7 +41,6 @@ class SlackApiConfiguration(
     fun dummySlackNotifier(): SlackNotifier {
         return object : SlackNotifier {
             override fun call(slackMessage: SlackMessage) {
-                // do nothing
             }
         }
     }

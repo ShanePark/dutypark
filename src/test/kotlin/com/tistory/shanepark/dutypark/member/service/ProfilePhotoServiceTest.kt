@@ -39,15 +39,12 @@ class ProfilePhotoServiceTest : DutyparkIntegrationTest() {
 
     @Test
     fun `getProfilePhotoPath returns original path when thumbnail is false`() {
-        // Given
         val member = TestData.member
         member.profilePhotoPath = "PROFILE/${member.id}/test-photo.png"
         memberRepository.save(member)
 
-        // When
         val result = profilePhotoService.getProfilePhotoPath(member.id!!, thumbnail = false)
 
-        // Then
         assertThat(result).isNotNull
         assertThat(result.toString()).contains("PROFILE/${member.id}/test-photo.png")
         assertThat(result.toString()).doesNotContain("_thumb")
@@ -55,45 +52,36 @@ class ProfilePhotoServiceTest : DutyparkIntegrationTest() {
 
     @Test
     fun `getProfilePhotoPath returns thumbnail path when thumbnail is true`() {
-        // Given
         val member = TestData.member
         member.profilePhotoPath = "PROFILE/${member.id}/test-photo.png"
         memberRepository.save(member)
 
-        // When
         val result = profilePhotoService.getProfilePhotoPath(member.id!!, thumbnail = true)
 
-        // Then
         assertThat(result).isNotNull
         assertThat(result.toString()).contains("PROFILE/${member.id}/test-photo_thumb.png")
     }
 
     @Test
     fun `getProfilePhotoPath returns null when no profile photo exists`() {
-        // Given
         val member = TestData.member
         member.profilePhotoPath = null
         memberRepository.save(member)
 
-        // When
         val result = profilePhotoService.getProfilePhotoPath(member.id!!)
 
-        // Then
         assertThat(result).isNull()
     }
 
     @Test
     fun `getProfilePhotoPath returns null when member does not exist`() {
-        // When
         val result = profilePhotoService.getProfilePhotoPath(999999L)
 
-        // Then
         assertThat(result).isNull()
     }
 
     @Test
     fun `setProfilePhoto saves photo and generates thumbnail`() {
-        // Given
         val member = TestData.member
         member.profilePhotoPath = null
         memberRepository.save(member)
@@ -113,12 +101,10 @@ class ProfilePhotoServiceTest : DutyparkIntegrationTest() {
         val profileDir = storagePathResolver.getStorageRoot().resolve("PROFILE/${member.id}")
         createdDirectories.add(profileDir)
 
-        // When
         profilePhotoService.setProfilePhoto(loginMember, file)
         em.flush()
         em.clear()
 
-        // Then
         val updatedMember = memberRepository.findById(member.id!!).orElseThrow()
         assertThat(updatedMember.profilePhotoPath).isNotNull
         assertThat(updatedMember.profilePhotoPath).startsWith("PROFILE/${member.id}/")
@@ -135,7 +121,6 @@ class ProfilePhotoServiceTest : DutyparkIntegrationTest() {
 
     @Test
     fun `setProfilePhoto increments profilePhotoVersion`() {
-        // Given
         val member = TestData.member
         member.profilePhotoPath = null
         member.profilePhotoVersion = 0
@@ -147,21 +132,18 @@ class ProfilePhotoServiceTest : DutyparkIntegrationTest() {
         val profileDir = storagePathResolver.getStorageRoot().resolve("PROFILE/${member.id}")
         createdDirectories.add(profileDir)
 
-        // When
         val imageBytes = createTestPngImage()
         val file = MockMultipartFile("file", "test.png", "image/png", imageBytes)
         profilePhotoService.setProfilePhoto(loginMember, file)
         em.flush()
         em.clear()
 
-        // Then
         val updatedMember = memberRepository.findById(member.id!!).orElseThrow()
         assertThat(updatedMember.profilePhotoVersion).isEqualTo(1)
     }
 
     @Test
     fun `setProfilePhoto increments version on each upload`() {
-        // Given
         val member = TestData.member
         member.profilePhotoPath = null
         member.profilePhotoVersion = 5
@@ -180,7 +162,6 @@ class ProfilePhotoServiceTest : DutyparkIntegrationTest() {
         em.flush()
         em.clear()
 
-        // Then
         var updatedMember = memberRepository.findById(member.id!!).orElseThrow()
         assertThat(updatedMember.profilePhotoVersion).isEqualTo(6)
 
@@ -191,14 +172,12 @@ class ProfilePhotoServiceTest : DutyparkIntegrationTest() {
         em.flush()
         em.clear()
 
-        // Then
         updatedMember = memberRepository.findById(member.id!!).orElseThrow()
         assertThat(updatedMember.profilePhotoVersion).isEqualTo(7)
     }
 
     @Test
     fun `setProfilePhoto replaces existing photo`() {
-        // Given
         val member = TestData.member
         member.profilePhotoPath = null
         memberRepository.save(member)
@@ -227,7 +206,6 @@ class ProfilePhotoServiceTest : DutyparkIntegrationTest() {
         em.flush()
         em.clear()
 
-        // Then
         val updatedMember = memberRepository.findById(member.id!!).orElseThrow()
         assertThat(updatedMember.profilePhotoPath).isNotNull
         assertThat(updatedMember.profilePhotoPath).isNotEqualTo(firstPhotoPath)
@@ -242,7 +220,6 @@ class ProfilePhotoServiceTest : DutyparkIntegrationTest() {
 
     @Test
     fun `deleteProfilePhoto removes photo and files`() {
-        // Given
         val member = TestData.member
         member.profilePhotoPath = null
         memberRepository.save(member)
@@ -265,12 +242,10 @@ class ProfilePhotoServiceTest : DutyparkIntegrationTest() {
         val originalPath = storagePathResolver.getStorageRoot().resolve(photoPath)
         assertThat(Files.exists(originalPath)).isTrue()
 
-        // When
         profilePhotoService.deleteProfilePhoto(loginMember)
         em.flush()
         em.clear()
 
-        // Then
         val updatedMember = memberRepository.findById(member.id!!).orElseThrow()
         assertThat(updatedMember.profilePhotoPath).isNull()
         assertThat(Files.exists(originalPath)).isFalse()
@@ -278,7 +253,6 @@ class ProfilePhotoServiceTest : DutyparkIntegrationTest() {
 
     @Test
     fun `deleteProfilePhoto increments profilePhotoVersion`() {
-        // Given
         val member = TestData.member
         member.profilePhotoPath = null
         member.profilePhotoVersion = 0
@@ -305,7 +279,6 @@ class ProfilePhotoServiceTest : DutyparkIntegrationTest() {
         em.flush()
         em.clear()
 
-        // Then
         val updatedMember = memberRepository.findById(member.id!!).orElseThrow()
         assertThat(updatedMember.profilePhotoPath).isNull()
         assertThat(updatedMember.profilePhotoVersion).isEqualTo(2)
@@ -313,7 +286,6 @@ class ProfilePhotoServiceTest : DutyparkIntegrationTest() {
 
     @Test
     fun `setProfilePhoto rejects non-image files`() {
-        // Given
         val member = TestData.member
         memberRepository.save(member)
         val loginMember = loginMember(member)
@@ -325,7 +297,6 @@ class ProfilePhotoServiceTest : DutyparkIntegrationTest() {
             "fake pdf content".toByteArray()
         )
 
-        // When & Then
         assertThatThrownBy {
             profilePhotoService.setProfilePhoto(loginMember, file)
         }.isInstanceOf(IllegalArgumentException::class.java)

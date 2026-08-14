@@ -80,8 +80,6 @@ function handleSave() {
 function handleClose() {
   emit('close')
 }
-
-const isEditMode = props.dday !== null && props.dday !== undefined
 </script>
 
 <template>
@@ -91,7 +89,6 @@ const isEditMode = props.dday !== null && props.dday !== undefined
     height="default"
     @close="handleClose"
   >
-    <!-- Header -->
     <div class="modal-header">
       <h2>{{ dday ? t('duty.ddayModal.editTitle') : t('duty.ddayModal.addTitle') }}</h2>
       <button @click="handleClose" class="p-2 rounded-full hover-close-btn cursor-pointer">
@@ -99,7 +96,6 @@ const isEditMode = props.dday !== null && props.dday !== undefined
       </button>
     </div>
 
-    <!-- Content -->
     <div class="modal-body-form-compact">
       <div>
         <label class="form-label">
@@ -128,7 +124,6 @@ const isEditMode = props.dday !== null && props.dday !== undefined
         />
       </div>
 
-      <!-- Quick Date Buttons -->
       <div class="flex justify-center gap-2">
         <button
           @click="addDays(-7)"
@@ -167,7 +162,6 @@ const isEditMode = props.dday !== null && props.dday !== undefined
         </button>
       </div>
 
-      <!-- Privacy Toggle -->
       <div class="flex items-center justify-between p-3 rounded-lg bg-dp-bg-secondary">
         <div class="flex items-center gap-2">
           <component :is="isPrivate ? Lock : Unlock" class="w-5 h-5 text-dp-text-secondary" />
@@ -186,7 +180,6 @@ const isEditMode = props.dday !== null && props.dday !== undefined
       </div>
     </div>
 
-    <!-- Footer (sticky at bottom) -->
     <div class="modal-actions-compact modal-actions-end modal-footer-safe">
       <button
         @click="handleClose"

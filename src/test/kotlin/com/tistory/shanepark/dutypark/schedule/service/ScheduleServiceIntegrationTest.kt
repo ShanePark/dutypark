@@ -29,7 +29,6 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
 
     @Test
     fun `updating a parsed schedule persists the new authoritative title and clears derived title`() {
-        // Given
         val member = TestData.member
         val original = Schedule(
             member = member,
@@ -43,7 +42,6 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
         val previousGeneration = original.parsingGeneration
         scheduleRepository.saveAndFlush(original)
 
-        // When
         scheduleService.updateSchedule(
             loginMember(member),
             ScheduleSaveDto(
@@ -57,12 +55,11 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
         em.flush()
         em.clear()
 
-        // Then
         val updated = scheduleRepository.findById(original.id).orElseThrow()
         assertThat(updated.content).isEqualTo("꿈아띠 10~12시")
         assertThat(updated.contentWithoutTime).isEmpty()
         assertThat(updated.content()).isEqualTo("꿈아띠 10~12시")
-        assertThat(updated.parsingTimeStatus).isEqualTo(ParsingTimeStatus.WAIT)
+        assertThat(updated.parsingTimeStatus).isEqualTo(ParsingTimeStatus.SKIP)
         assertThat(updated.parsingGeneration).isNotEqualTo(previousGeneration)
 
         val calendar = scheduleService.findSchedulesByYearAndMonth(
@@ -76,7 +73,6 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
 
     @Test
     fun `atomic parsing update rejects a stale generation and applies the current generation`() {
-        // Given
         val member = TestData.member
         val schedule = Schedule(
             member = member,
@@ -174,7 +170,6 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
 
     @Test
     fun `Find Schedules`() {
-        // given
         val member = TestData.member
         val schedule1 = Schedule(
             member = member,
@@ -199,11 +194,9 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
         )
         scheduleRepository.saveAll(listOf(schedule1, schedule2, schedule3))
 
-        // When
         val result =
             scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(member), member.id!!, 2023, 4)
 
-        // Then
         assertThat(result[6 + 9 - 1]).hasSize(0)
         assertThat(result[6 + 10 - 1]).hasSize(3)
         assertThat(result[6 + 11 - 1]).hasSize(2)
@@ -216,7 +209,6 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
 
     @Test
     fun `find schedules over month`() {
-        // given
         val member = TestData.member
         val schedule1 = Schedule(
             member = member,
@@ -234,11 +226,9 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
         )
         scheduleRepository.saveAll(listOf(schedule1, schedule2))
 
-        // When
         val result =
             scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(member), member.id!!, 2023, 4)
 
-        // Then
         val paddingBefore = 6
 
         val lastDayOfMarch = result[paddingBefore - 1]
@@ -271,7 +261,6 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
 
     @Test
     fun `find Schedules Over year`() {
-        // given
         val yearMonth = YearMonth.of(2023, 12)
         val paddingBefore = 5
 
@@ -292,18 +281,15 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
         )
         scheduleRepository.saveAll(listOf(schedule1, schedule2))
 
-        // When
         val result =
             scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(member), member.id!!, 2023, 12)
 
-        // Then
         assertThat(result[paddingBefore - 1 + 31][0].content).isEqualTo("schedule1")
         assertThat(result[paddingBefore - 1 + 31 + 1][0].content).isEqualTo("schedule2")
     }
 
     @Test
     fun `tag friend test`() {
-        // Given
         val member = TestData.member
         val friend = TestData.member2
         val scheduleSaveDto = ScheduleSaveDto(
@@ -317,10 +303,8 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
         val schedule = scheduleService.createSchedule(loginMember, scheduleSaveDto)
         makeThemFriend(member, friend)
 
-        // When
         scheduleService.tagFriend(loginMember, schedule.id, friend.id!!)
 
-        // Then
         val findSchedule = scheduleRepository.findById(schedule.id).orElseThrow()
         assertThat(findSchedule.tags).hasSize(1)
         assertThat(findSchedule.tags[0].member.id).isEqualTo(friend.id)
@@ -382,7 +366,6 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
 
     @Test
     fun `can't tag a person to schedule if not friend`() {
-        // Given
         val member = TestData.member
         val friend = TestData.member2
         val scheduleSaveDto = ScheduleSaveDto(
@@ -392,12 +375,10 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
             endDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
         )
 
-        // When
         val loginMember = loginMember(member)
         val schedule = scheduleService.createSchedule(loginMember, scheduleSaveDto)
 
 
-        // Then
         val exception = assertThrows<AuthException> {
             scheduleService.tagFriend(loginMember, schedule.id, friend.id!!)
         }
@@ -406,7 +387,6 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
 
     @Test
     fun `can't tag a friend who is already tagged`() {
-        // Given
         val member = TestData.member
         val friend = TestData.member2
         val scheduleSaveDto = ScheduleSaveDto(
@@ -421,8 +401,6 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
         makeThemFriend(member, friend)
         scheduleService.tagFriend(loginMember, schedule.id, friend.id!!)
 
-        // When
-        // Then
         assertThrows<IllegalArgumentException> {
             scheduleService.tagFriend(loginMember, schedule.id, friend.id!!)
         }
@@ -431,7 +409,6 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
 
     @Test
     fun `untag friend test`() {
-        // Given
         val member = TestData.member
         val friend = TestData.member2
         val scheduleSaveDto = ScheduleSaveDto(
@@ -446,17 +423,14 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
         makeThemFriend(member, friend)
         scheduleService.tagFriend(loginMember, schedule.id, friend.id!!)
 
-        // When
         scheduleService.untagFriend(loginMember, schedule.id, friend.id!!)
 
-        // Then
         val findSchedule = scheduleRepository.findById(schedule.id).orElseThrow()
         assertThat(findSchedule.tags).isEmpty()
     }
 
     @Test
     fun `untag self test`() {
-        // Given
         val member = TestData.member
         val friend = TestData.member2
         val scheduleSaveDto = ScheduleSaveDto(
@@ -474,18 +448,15 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
         assertThat(scheduleRepository.findById(schedule.id).orElseThrow().tags).hasSize(1)
 
 
-        // When
         val friendLoginMember = loginMember(friend)
         scheduleService.untagSelf(friendLoginMember, schedule.id)
 
-        // Then
         val findSchedule = scheduleRepository.findById(schedule.id).orElseThrow()
         assertThat(findSchedule.tags).isEmpty()
     }
 
     @Test
     fun `can't untag self if not tagged`() {
-        // Given
         val member = TestData.member
         val friend = TestData.member2
         val scheduleSaveDto = ScheduleSaveDto(
@@ -499,10 +470,8 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
         val schedule = scheduleService.createSchedule(loginMember, scheduleSaveDto)
         makeThemFriend(member, friend)
 
-        // When
         val friendLoginMember = loginMember(friend)
 
-        // Then
         assertThrows<IllegalArgumentException> {
             scheduleService.untagSelf(friendLoginMember, schedule.id)
         }
@@ -510,7 +479,6 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
 
     @Test
     fun `find schedules include tagged schedules`() {
-        // Given
         val owner = TestData.member
         val taggedPerson = TestData.member2
         val scheduleSaveDto = ScheduleSaveDto(
@@ -526,13 +494,11 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
 
         scheduleService.tagFriend(loginMember, schedule.id, taggedPerson.id!!)
 
-        // When
         val taggedPersonSchedules =
             scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(owner), taggedPerson.id!!, 2023, 4)
         val ownerSchedules =
             scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(owner), owner.id!!, 2023, 4)
 
-        // Then
         val scheduleForOwner = ownerSchedules[15]
         assertThat(scheduleForOwner).hasSize(1)
         assertThat(scheduleForOwner[0].isTagged).isFalse
@@ -546,7 +512,6 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
 
     @Test
     fun `schedules include tags`() {
-        // Given
         val member1 = TestData.member
         val member2 = TestData.member2
         val updateDto1 = ScheduleSaveDto(
@@ -572,11 +537,9 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
         scheduleService.tagFriend(loginMember, member1Schedule.id, member2.id!!)
         scheduleService.tagFriend(loginMember2, member2Schedule.id, member1.id!!)
 
-        // When
         val ownerSchedules =
             scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(member1), member1.id!!, 2023, 4)
 
-        // Then
         val scheduleForOwner = ownerSchedules[15]
         assertThat(scheduleForOwner).hasSize(2)
 
@@ -593,7 +556,6 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
 
     @Test
     fun `Tagged schedules always comes after their own schedules`() {
-        // Given
         val member1 = TestData.member
         val member2 = TestData.member2
 
@@ -629,11 +591,9 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
 
         scheduleService.tagFriend(loginMember2, tagged.id, member1.id!!)
 
-        // When
         val ownerSchedules =
             scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(member1), member1.id!!, 2023, 4)
 
-        // Then
         val scheduleForOwner = ownerSchedules[6 + dayOfMonth - 1]
         assertThat(scheduleForOwner).hasSize(3)
         val own1Index = findIndex(scheduleForOwner, own1.id)
@@ -654,7 +614,6 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
 
     @Test
     fun `tagged schedule is visible even if it is only for family`() {
-        // Given
         // member2 creates a schedule and then tags member1
         val member1 = TestData.member
         val member2 = TestData.member2
@@ -672,19 +631,16 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
         )
         makeThemFriend(member1, member2)
 
-        // When
         scheduleService.tagFriend(loginMember2, tagged.id, member1.id!!)
         val ownerSchedules =
             scheduleService.findSchedulesByYearAndMonth(loginMember = loginMember(member1), member1.id!!, 2023, 4)
 
-        // Then
         val schedules = ownerSchedules[6 + dayOfMonth - 1]
         assertThat(schedules).isNotEmpty
     }
 
     @Test
     fun `can not retrieve FAMILY only schedules even if they are friend`() {
-        // Given
         val member1 = TestData.member
         val member2 = TestData.member2
         val loginMember2 = loginMember(member2)
@@ -710,7 +666,6 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
         )
         makeThemFriend(member1, member2)
 
-        // Then
         val schedules =
             scheduleService.findSchedulesByYearAndMonth(loginMember(member1), member2.id!!, 2023, 4)
         val scheduleOfDay = schedules[6 + dayOfMonth - 1]
@@ -719,7 +674,6 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
 
     @Test
     fun `if not friend and calendar visibility is only for friends, can not get schedules even if they are in same team`() {
-        // Given
         val target = TestData.member
         updateVisibility(target, Visibility.FRIENDS)
         val login = TestData.member2
@@ -730,7 +684,6 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
         memberRepository.save(target)
         memberRepository.save(login)
 
-        // Then
         assertThrows<AuthException> {
             scheduleService.findSchedulesByYearAndMonth(loginMember(login), target.id!!, 2023, 4)
         }
@@ -738,7 +691,6 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
 
     @Test
     fun `if friend and calendar is only open for friends can get schedules`() {
-        // Given
         val target = TestData.member
         updateVisibility(target, Visibility.FRIENDS)
         val login = TestData.member2
@@ -746,22 +698,18 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
         val member2 = TestData.member2
         makeThemFriend(target, member2)
 
-        // When
         val result = scheduleService.findSchedulesByYearAndMonth(loginMember(login), target.id!!, 2023, 4)
 
-        // Then
         assertThat(result).isNotEmpty
     }
 
     @Test
     fun `if calendar visibility is private, even they are friend, can't get schedules`() {
-        // Given
         val target = TestData.member
         updateVisibility(target, Visibility.PRIVATE)
         val login = TestData.member2
         makeThemFriend(target, login)
 
-        // Then
         assertThrows<AuthException> {
             scheduleService.findSchedulesByYearAndMonth(loginMember(login), target.id!!, 2023, 4)
         }
@@ -769,20 +717,16 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
 
     @Test
     fun `if calendar visibility is public, even guest can get schedules`() {
-        // Given
         val target = TestData.member
         updateVisibility(target, Visibility.PUBLIC)
 
-        // When
         val result = scheduleService.findSchedulesByYearAndMonth(null, target.id!!, 2023, 4)
 
-        // Then
         assertThat(result).isNotEmpty
     }
 
     @Test
     fun `guest can't see private and friends level schedules`() {
-        // Given
         val target = TestData.member
         updateVisibility(target, Visibility.PUBLIC)
 
@@ -791,10 +735,8 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
         val friends = makeSchedule(target, Visibility.FRIENDS, dateTime)
         val public = makeSchedule(target, Visibility.PUBLIC, dateTime)
 
-        // When
         val result = scheduleService.findSchedulesByYearAndMonth(null, target.id!!, 2024, 3)
 
-        // Then
         val calendarView = CalendarView(2024, 3)
         val index = calendarView.getIndex(date = dateTime.toLocalDate())
         val schedulesIds = result[index].map { it.id }.toList()
@@ -805,7 +747,6 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
 
     @Test
     fun `friend can retrieve schedules for friends`() {
-        // Given
         val target = TestData.member
         updateVisibility(target, Visibility.FRIENDS)
 
@@ -817,11 +758,9 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
         val friend = TestData.member2
         makeThemFriend(target, friend)
 
-        // When
         val result =
             scheduleService.findSchedulesByYearAndMonth(loginMember(friend), target.id!!, 2024, 3)
 
-        // Then
         val calendarView = CalendarView(2024, 3)
         val index = calendarView.getIndex(date = dateTime.toLocalDate())
         val schedulesIds = result[index].map { it.id }.toList()
@@ -832,7 +771,6 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
 
     @Test
     fun `user can retrieve self private schedules`() {
-        // Given
         val target = TestData.member
         updateVisibility(target, Visibility.PRIVATE)
 
@@ -841,11 +779,9 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
         val friends = makeSchedule(target, Visibility.FRIENDS, dateTime)
         val public = makeSchedule(target, Visibility.PUBLIC, dateTime)
 
-        // When
         val result =
             scheduleService.findSchedulesByYearAndMonth(loginMember(target), target.id!!, 2024, 3)
 
-        // Then
         val calendarView = CalendarView(2024, 3)
         val index = calendarView.getIndex(date = dateTime.toLocalDate())
         val schedulesIds = result[index].map { it.id }.toList()
@@ -856,7 +792,6 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
 
     @Test
     fun `can not retrieve other's friends-level-tagged schedules if not logged in but friends can`() {
-        // Given
         val target = TestData.member
         updateVisibility(target, Visibility.PUBLIC)
         val friend = TestData.member2
@@ -867,12 +802,10 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
 
         scheduleService.tagFriend(loginMember(friend), friendsSchedule.id, target.id!!)
 
-        // When
         val notLoginResult = scheduleService.findSchedulesByYearAndMonth(null, target.id!!, 2024, 3)
         val friendResult =
             scheduleService.findSchedulesByYearAndMonth(loginMember(friend), target.id!!, 2024, 3)
 
-        // Then
         val calendarView = CalendarView(2024, 3)
         val index = calendarView.getIndex(date = dateTime.toLocalDate())
 
@@ -882,7 +815,6 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
 
     @Test
     fun `can retrieve other's tagged public schedule even if not logged in`() {
-        // Given
         val target = TestData.member
         updateVisibility(target, Visibility.PUBLIC)
         val friend = TestData.member2
@@ -893,10 +825,8 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
 
         scheduleService.tagFriend(loginMember(friend), publicSchedule.id, target.id!!)
 
-        // When
         val notLoginResult = scheduleService.findSchedulesByYearAndMonth(null, target.id!!, 2024, 3)
 
-        // Then
         val calendarView = CalendarView(2024, 3)
         val index = calendarView.getIndex(date = dateTime.toLocalDate())
 
@@ -905,7 +835,6 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
 
     @Test
     fun `schedules should include attachments information`() {
-        // Given
         val member = TestData.member
         val dateTime = LocalDateTime.of(2024, 3, 10, 0, 0)
 
@@ -927,10 +856,8 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
             )
         )
 
-        // When
         val result = scheduleService.findSchedulesByYearAndMonth(loginMember(member), member.id!!, 2024, 3)
 
-        // Then
         val calendarView = CalendarView(2024, 3)
         val index = calendarView.getIndex(date = dateTime.toLocalDate())
         val schedules = result[index]

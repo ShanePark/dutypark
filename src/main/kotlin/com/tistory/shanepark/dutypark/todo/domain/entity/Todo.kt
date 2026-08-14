@@ -66,26 +66,12 @@ class Todo(
         this.status = newStatus
         this.position = newPosition
 
-        // Set completedDate when changing to DONE
         if (newStatus == TodoStatus.DONE && previousStatus != TodoStatus.DONE) {
             this.completedDate = LocalDateTime.now()
         }
-        // Clear completedDate when changing from DONE to other status
         if (newStatus != TodoStatus.DONE && previousStatus == TodoStatus.DONE) {
             this.completedDate = null
         }
-    }
-
-    fun markCompleted(newPosition: Int, completedAt: LocalDateTime = LocalDateTime.now()) {
-        status = TodoStatus.DONE
-        completedDate = completedAt
-        position = newPosition
-    }
-
-    fun markActive(newPosition: Int) {
-        status = TodoStatus.TODO
-        position = newPosition
-        completedDate = null
     }
 
 }

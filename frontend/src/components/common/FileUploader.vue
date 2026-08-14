@@ -21,21 +21,17 @@ import {
 } from '@/api/attachment'
 import { resolveFileUploaderErrorMessage } from './fileUploaderError'
 
-// Props
 interface Props {
   contextType: AttachmentContextType
   targetContextId?: string | null
   existingAttachments?: NormalizedAttachment[]
-  disabled?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   targetContextId: null,
   existingAttachments: () => [],
-  disabled: false,
 })
 
-// Emits
 const emit = defineEmits<{
   (e: 'update:attachments', attachments: NormalizedAttachment[]): void
   (e: 'session-created', sessionId: string): void
@@ -45,7 +41,6 @@ const emit = defineEmits<{
 }>()
 
 const { t } = useI18n()
-// Refs
 const uploadedAttachments = ref<NormalizedAttachment[]>([...props.existingAttachments])
 const uploadProgress = ref<Record<string, number>>({})
 const uploadMeta = ref<Record<string, { bytesUploaded: number; bytesTotal: number; startedAt: number }>>({})
@@ -53,13 +48,11 @@ const sessionId = ref<string | null>(null)
 const sessionCreationPromise = ref<Promise<string> | null>(null)
 const uppy = shallowRef<Uppy | null>(null)
 const fileInputRef = ref<HTMLInputElement | null>(null)
-const dropZoneRef = ref<HTMLElement | null>(null)
 const isDragging = ref(false)
 const ticker = ref(0)
 const imageBlobUrls = ref<Record<string, string>>({})
 let tickerInterval: number | null = null
 
-// Computed
 const isUploading = computed(() => Object.keys(uploadMeta.value).length > 0)
 const hasAttachments = computed(() => uploadedAttachments.value.length > 0)
 
@@ -67,7 +60,6 @@ const hasAttachments = computed(() => uploadedAttachments.value.length > 0)
 // Initialize with existing attachment IDs so removal triggers emit properly
 let lastEmittedIds = props.existingAttachments.map(a => a.id).join(',')
 
-// Watchers
 watch(
   () => props.existingAttachments,
   (newVal) => {
@@ -90,7 +82,6 @@ watch(uploadedAttachments, (newVal) => {
   }
 })
 
-// Session management
 async function ensureSession(): Promise<string> {
   if (sessionId.value) {
     return sessionId.value
@@ -115,7 +106,6 @@ async function ensureSession(): Promise<string> {
   return sessionCreationPromise.value
 }
 
-// Ticker for upload progress display
 function startTicker() {
   if (tickerInterval) return
   tickerInterval = window.setInterval(() => {
@@ -132,7 +122,6 @@ function stopTicker() {
   ticker.value = 0
 }
 
-// Setup Uppy
 function setupUppy() {
   if (uppy.value) {
     try {
@@ -155,7 +144,6 @@ function setupUppy() {
     withCredentials: true,
   })
 
-  // File added event
   uppyInstance.on('file-added', (file) => {
     const fileData = file.data as File
     const validation = validateFile(fileData)
@@ -197,7 +185,6 @@ function setupUppy() {
     }
   })
 
-  // Pre-processor to ensure session exists
   uppyInstance.addPreProcessor(async (fileIDs: string[]) => {
     if (!fileIDs || fileIDs.length === 0) return
 
@@ -223,7 +210,6 @@ function setupUppy() {
     }
   })
 
-  // Upload progress
   uppyInstance.on('upload-progress', (file, progress) => {
     if (!file) return
     const bytesTotal = progress.bytesTotal ?? 1
@@ -236,7 +222,6 @@ function setupUppy() {
     }
   })
 
-  // Upload success
   uppyInstance.on('upload-success', (file, response) => {
     if (!file) return
     const dto = response.body as unknown
@@ -268,7 +253,6 @@ function setupUppy() {
     }
   })
 
-  // Upload error
   uppyInstance.on('upload-error', (file, error, response) => {
     if (!file) return
     console.error('Upload error:', error, response)
@@ -287,7 +271,6 @@ function setupUppy() {
     emit('error', message)
   })
 
-  // Restriction failed
   uppyInstance.on('restriction-failed', (file, error) => {
     if (error && /maximum allowed size/i.test(error.message || '')) {
       emit('error', attachmentValidation.tooLargeMessage(file?.name))
@@ -315,7 +298,6 @@ function removeFileFromState(fileId: string) {
   }
 }
 
-// Remove attachment
 function removeAttachment(attachmentId: string) {
   removeFileFromState(attachmentId)
 
@@ -331,7 +313,6 @@ function removeAttachment(attachmentId: string) {
   }
 }
 
-// File input handler
 function onFileSelect(event: Event) {
   const input = event.target as HTMLInputElement
   const files = Array.from(input.files || [])
@@ -349,7 +330,6 @@ function onFileSelect(event: Event) {
   input.value = ''
 }
 
-// Drag and drop handlers
 function onDragOver(event: DragEvent) {
   event.preventDefault()
   event.stopPropagation()
@@ -381,7 +361,6 @@ function onDrop(event: DragEvent) {
   })
 }
 
-// Cleanup
 function cleanup() {
   if (uppy.value) {
     const uppyInstance = uppy.value
@@ -414,7 +393,6 @@ function cleanup() {
   stopTicker()
 }
 
-// Discard session
 async function discardSession() {
   if (sessionId.value) {
     try {
@@ -426,17 +404,14 @@ async function discardSession() {
   cleanup()
 }
 
-// Expose methods
 defineExpose({
   getSessionId: () => sessionId.value,
   getAttachments: () => uploadedAttachments.value,
-  getOrderedIds: () => uploadedAttachments.value.map((a) => a.id),
   isUploading: () => isUploading.value,
   cleanup,
   discardSession,
 })
 
-// Lifecycle
 onMounted(() => {
   setupUppy()
   loadExistingImages()
@@ -446,14 +421,12 @@ onUnmounted(() => {
   cleanup()
 })
 
-// Helper to get icon component
 function getIconComponent(attachment: NormalizedAttachment) {
   const iconName = getAttachmentIcon(attachment)
   if (iconName === 'image') return Image
   return FileIcon
 }
 
-// Get display image URL for attachment
 function getDisplayImageUrl(attachment: NormalizedAttachment): string | null {
   // First check blob URL cache
   const blobUrl = imageBlobUrls.value[attachment.id]
@@ -467,7 +440,6 @@ function getDisplayImageUrl(attachment: NormalizedAttachment): string | null {
   return null
 }
 
-// Load authenticated image as blob URL
 async function loadAuthenticatedImage(attachment: NormalizedAttachment) {
   if (!attachment.isImage) return
   if (imageBlobUrls.value[attachment.id]) return
@@ -482,7 +454,6 @@ async function loadAuthenticatedImage(attachment: NormalizedAttachment) {
   }
 }
 
-// Load images for existing attachments
 async function loadExistingImages() {
   for (const attachment of uploadedAttachments.value) {
     await loadAuthenticatedImage(attachment)
@@ -492,11 +463,9 @@ async function loadExistingImages() {
 
 <template>
   <div class="file-uploader">
-    <!-- Drop zone - Desktop: full area, Mobile: compact button -->
     <div
-      ref="dropZoneRef"
       class="drop-zone cursor-pointer"
-      :class="{ 'drag-over': isDragging, disabled: disabled }"
+      :class="{ 'drag-over': isDragging }"
       @dragover="onDragOver"
       @dragleave="onDragLeave"
       @drop="onDrop"
@@ -513,18 +482,15 @@ async function loadExistingImages() {
       type="file"
       multiple
       class="hidden"
-      :disabled="disabled"
       @change="onFileSelect"
     />
 
-    <!-- Attachment list -->
     <div v-if="hasAttachments" class="attachment-list">
       <div
         v-for="attachment in uploadedAttachments"
         :key="attachment.id"
         class="attachment-item"
       >
-        <!-- Thumbnail or icon -->
         <div class="attachment-preview">
           <template v-if="attachment.isImage && getDisplayImageUrl(attachment)">
             <img
@@ -538,13 +504,11 @@ async function loadExistingImages() {
           </template>
         </div>
 
-        <!-- Info -->
         <div class="attachment-info">
           <span class="attachment-name" :title="attachment.name">{{ attachment.name }}</span>
           <span class="attachment-size">{{ formatBytes(attachment.size) }}</span>
         </div>
 
-        <!-- Progress or actions -->
         <div class="attachment-actions">
           <template v-if="uploadProgress[attachment.id] !== undefined">
             <div class="upload-progress">
@@ -558,7 +522,6 @@ async function loadExistingImages() {
             <button
               type="button"
               class="remove-btn"
-              :disabled="disabled"
               @click.stop="removeAttachment(attachment.id)"
             >
               <X :size="16" />
@@ -597,7 +560,7 @@ async function loadExistingImages() {
   }
 }
 
-.drop-zone:hover:not(.disabled) {
+.drop-zone:hover {
   border-color: var(--dp-accent);
   background-color: var(--dp-bg-tertiary);
 }
@@ -605,11 +568,6 @@ async function loadExistingImages() {
 .drop-zone.drag-over {
   border-color: var(--dp-accent);
   background-color: var(--dp-accent-bg);
-}
-
-.drop-zone.disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 .upload-icon {
@@ -752,13 +710,8 @@ async function loadExistingImages() {
   transition: all 0.15s ease;
 }
 
-.remove-btn:hover:not(:disabled) {
+.remove-btn:hover {
   background-color: var(--dp-danger-bg);
   color: var(--dp-danger);
-}
-
-.remove-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 </style>

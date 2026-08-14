@@ -16,16 +16,19 @@ class AdminAuthFilter : Filter {
         val request = req as HttpServletRequest
         val response = resp as HttpServletResponse
 
-        request.getAttribute(LoginMember.ATTR_NAME)?.let {
-            val loginMember = it as LoginMember
-            if (loginMember.isAdmin) {
-                return chain.doFilter(request, response)
-            }
+        val loginMember = request.getAttribute(LoginMember.ATTR_NAME) as? LoginMember
+        if (loginMember == null) {
+            log.warn("Admin access denied: no login member. ip={}", request.remoteAddr)
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED)
+            return
+        }
+
+        if (!loginMember.isAdmin) {
             log.warn("Admin access denied for memberId={}", loginMember.id)
             response.sendError(HttpServletResponse.SC_UNAUTHORIZED)
+            return
         }
-        log.warn("Admin access denied: no login member. ip={}", request.remoteAddr)
+
+        chain.doFilter(request, response)
     }
-
-
 }

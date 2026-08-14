@@ -45,8 +45,7 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-devtools")
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
-    implementation("org.springframework.boot:spring-boot-starter-webflux")
-    implementation("org.springframework.boot:spring-boot-starter-cache")
+    implementation("org.springframework.boot:spring-boot-starter-webclient")
     implementation("org.springframework.ai:spring-ai-starter-model-openai")
 
     // Monitoring
@@ -73,12 +72,10 @@ dependencies {
     implementation("net.gpedro.integrations.slack:slack-webhook:1.4.0")
     implementation("nl.basjes.parse.useragent:yauaa:7.32.0")
     implementation("com.github.f4b6a3:ulid-creator:5.1.0")
-    implementation("org.apache.poi:poi:5.4.0")
     implementation("org.apache.poi:poi-ooxml:5.4.0")
     implementation("net.coobird:thumbnailator:0.4.20")
     implementation("com.twelvemonkeys.imageio:imageio-jpeg:3.12.0")
     implementation("com.twelvemonkeys.imageio:imageio-webp:3.12.0")
-    implementation("com.twelvemonkeys.imageio:imageio-core:3.12.0")
 
     // JWT
     implementation("io.jsonwebtoken:jjwt-api:0.12.6")
@@ -102,6 +99,7 @@ dependencyManagement {
 tasks.withType<Test> {
     useJUnitPlatform()
     failFast = true
+    maxHeapSize = "1g"
 }
 
 tasks.jar {

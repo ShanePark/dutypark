@@ -9,6 +9,105 @@ import type {
   CalendarVisibility,
   Page,
 } from '@/types'
+import { extractApiError } from '@/utils/resolveApiError'
+
+export type SocialAccountProvider = 'KAKAO' | 'NAVER' | 'APPLE'
+
+export type SocialAccountUnlinkErrorKey =
+  | 'member.sso.unlink.errors.lastAuthenticationMethod'
+  | 'member.sso.unlink.errors.impersonationForbidden'
+  | 'member.sso.unlink.errors.appleProviderUnavailable'
+  | 'member.sso.unlink.errors.generic'
+
+type SocialAccountMember = Pick<MemberDto, 'kakaoId' | 'naverId' | 'appleId'>
+
+function socialAccountId(
+  member: SocialAccountMember,
+  provider: SocialAccountProvider,
+): string | null | undefined {
+  switch (provider) {
+    case 'KAKAO':
+      return member.kakaoId
+    case 'NAVER':
+      return member.naverId
+    case 'APPLE':
+      return member.appleId
+  }
+}
+
+export function isSocialAccountConnected(
+  member: SocialAccountMember | null,
+  provider: SocialAccountProvider,
+): boolean {
+  if (!member) return false
+  return !!socialAccountId(member, provider)
+}
+
+export function countLinkedSocialAccounts(member: SocialAccountMember | null): number {
+  if (!member) return 0
+  return Number(!!member.kakaoId) + Number(!!member.naverId) + Number(!!member.appleId)
+}
+
+export function getVisibleSocialAccountProviders(
+  member: SocialAccountMember | null,
+  naverEnabled: boolean,
+  appleEnabled: boolean,
+): SocialAccountProvider[] {
+  const providers: SocialAccountProvider[] = ['KAKAO']
+  if (naverEnabled || isSocialAccountConnected(member, 'NAVER')) providers.push('NAVER')
+  if (appleEnabled || isSocialAccountConnected(member, 'APPLE')) providers.push('APPLE')
+  return providers
+}
+
+export interface AppleLinkMemberRefreshResult {
+  member: MemberDto | null
+  error: unknown | null
+}
+
+export async function refreshAppleLinkMemberState(
+  loadMember: () => Promise<MemberDto>,
+): Promise<AppleLinkMemberRefreshResult> {
+  try {
+    const member = await loadMember()
+    if (!member.appleId) {
+      return {
+        member: null,
+        error: new Error('Apple link succeeded but refreshed member state has no appleId'),
+      }
+    }
+    return { member, error: null }
+  } catch (error) {
+    return { member: null, error }
+  }
+}
+
+export function canUnlinkSocialAccount(
+  member: SocialAccountMember | null,
+  provider: SocialAccountProvider,
+): boolean {
+  return isSocialAccountConnected(member, provider) && countLinkedSocialAccounts(member) >= 2
+}
+
+export function getSocialAccountUnlinkErrorKey(error: unknown): SocialAccountUnlinkErrorKey {
+  const apiError = extractApiError(error)
+
+  if (apiError?.code === 'member.social.unlink.lastAuthenticationMethod') {
+    return 'member.sso.unlink.errors.lastAuthenticationMethod'
+  }
+  if (
+    apiError?.code === 'member.social.unlink.impersonationForbidden'
+    || apiError?.status === 403
+  ) {
+    return 'member.sso.unlink.errors.impersonationForbidden'
+  }
+  if (
+    apiError?.code === 'auth.apple.provider.unavailable'
+    || apiError?.code === 'auth.apple.configurationUnavailable'
+  ) {
+    return 'member.sso.unlink.errors.appleProviderUnavailable'
+  }
+  return 'member.sso.unlink.errors.generic'
+}
 
 /**
  * Member API Client
@@ -91,6 +190,11 @@ export const memberApi = {
    */
   createAuxiliaryAccount(name: string) {
     return apiClient.post<MemberDto>('/members/auxiliary', { name })
+  },
+
+  /** Disconnect a social account. Apple authorization is revoked first by the backend. */
+  unlinkSocialAccount(provider: SocialAccountProvider) {
+    return apiClient.delete<void>(`/members/me/social-accounts/${provider}`)
   },
 }
 

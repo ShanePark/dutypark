@@ -11,7 +11,7 @@ Vue 3 SPA for Dutypark. The frontend is Vite-based, cookie-authenticated through
 | Language | TypeScript |
 | State | Pinia |
 | Routing | Vue Router |
-| Localization | Vue I18n (`ko`, `en`, `ja`, `zh`, `es`) |
+| Localization | Vue I18n (`ko`, `en`) |
 | Styling | Tailwind CSS 4 + `--dp-*` design tokens |
 | Tests | Vitest |
 | UI helpers | Lucide Vue, SweetAlert2, Uppy, SortableJS, Pickr |
@@ -94,7 +94,7 @@ When adding a user-facing route, update both `src/router/index.ts` and `src/comp
 
 ## Localization
 
-User-facing copy belongs in `src/i18n/messages/*.ts`. Supported locale files are `ko`, `en`, `ja`, `zh`, and `es`; keep them synchronized with release-note copy and static notification templates. Language names are shown in their native forms through `localeUtils.ts`.
+User-facing copy belongs in `src/i18n/messages/*.ts`. Supported locale files are `ko` and `en`; keep both synchronized with release-note copy and static notification templates. Language names are shown in their native forms through `localeUtils.ts`.
 
 The locale store separates detected browser locale from explicit user choice and syncs the active locale to the service worker for localized push notifications.
 
@@ -106,7 +106,7 @@ The service worker handles install/activate, push presentation, notification-cli
 
 ## Release Notes
 
-Main-targeting PRs require exactly one in-app release note entry after the PR number is known. Update `src/releaseNotes/meta.ts` and every file under `src/releaseNotes/messages/`, then run:
+Main-targeting PRs require exactly one in-app release note entry after the PR number is known. Update `src/releaseNotes/meta.ts` and both files under `src/releaseNotes/messages/`, then run:
 
 ```bash
 npm run release-notes:check

@@ -7,6 +7,7 @@ import com.tistory.shanepark.dutypark.attachment.service.FileSystemService
 import com.tistory.shanepark.dutypark.attachment.service.StoragePathResolver
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.consent.service.AiScheduleParsingConsentService
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.service.FriendService
@@ -14,6 +15,8 @@ import com.tistory.shanepark.dutypark.notification.event.ScheduleTaggedEvent
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleDto
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleSaveDto
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
+import com.tistory.shanepark.dutypark.schedule.domain.enums.ParsingTimeStatus.SKIP
+import com.tistory.shanepark.dutypark.schedule.domain.enums.ParsingTimeStatus.WAIT
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
 import com.tistory.shanepark.dutypark.schedule.timeparsing.service.ScheduleTimeParsingQueueManager
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
@@ -36,6 +39,7 @@ class ScheduleService(
     private val fileSystemService: FileSystemService,
     private val pathResolver: StoragePathResolver,
     private val eventPublisher: ApplicationEventPublisher,
+    private val aiScheduleParsingConsentService: AiScheduleParsingConsentService,
 ) {
 
     @Transactional(readOnly = true)
@@ -126,9 +130,12 @@ class ScheduleService(
             visibility = scheduleSaveDto.visibility
         )
 
+        applyAiParsingPreference(schedule, scheduleSaveDto.aiTimeParsingRequested)
         scheduleRepository.save(schedule)
         syncScheduleTags(schedule, scheduleSaveDto.tagFriendIds.orEmpty())
-        scheduleTimeParsingQueueManager.addTask(schedule)
+        if (schedule.parsingTimeStatus == WAIT) {
+            scheduleTimeParsingQueueManager.addTask(schedule)
+        }
 
         attachmentService.synchronizeContextAttachments(
             loginMember = loginMember,
@@ -162,8 +169,14 @@ class ScheduleService(
         schedule.visibility = scheduleSaveDto.visibility
         scheduleSaveDto.tagFriendIds?.let { syncScheduleTags(schedule, it) }
 
+        if (
+            parsingInputChanged ||
+            schedule.parsingTimeStatus == WAIT
+        ) {
+            applyAiParsingPreference(schedule, scheduleSaveDto.aiTimeParsingRequested)
+        }
         scheduleRepository.save(schedule)
-        if (parsingInputChanged) {
+        if (parsingInputChanged && schedule.parsingTimeStatus == WAIT) {
             scheduleTimeParsingQueueManager.addTask(schedule)
         }
 
@@ -179,6 +192,12 @@ class ScheduleService(
         )
 
         return schedule
+    }
+
+    private fun applyAiParsingPreference(schedule: Schedule, aiTimeParsingRequested: Boolean) {
+        if (!aiTimeParsingRequested || !aiScheduleParsingConsentService.hasCurrentConsent(schedule.member.id!!)) {
+            schedule.parsingTimeStatus = SKIP
+        }
     }
 
     fun reorderSchedulePositions(loginMember: LoginMember, scheduleIds: List<UUID>) {

@@ -22,7 +22,6 @@ import {
   Link,
   Lock,
   Sun,
-  Moon,
   ChevronDown,
   ChevronUp,
   Building2,

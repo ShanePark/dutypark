@@ -31,7 +31,6 @@ type TodoDetailItem = Omit<TodoDto, 'attachments'>
 const { showWarning, showError } = useSwal()
 const { t } = useI18n()
 
-// Helper functions for status compatibility
 function isActiveTodo(status: string): boolean {
   return status === 'TODO' || status === 'IN_PROGRESS'
 }
@@ -77,7 +76,6 @@ const emit = defineEmits<{
   }): void
   (e: 'complete', id: string): void
   (e: 'reopen', id: string): void
-  (e: 'change-status', data: { id: string; status: TodoStatus }): void
   (e: 'delete', todo: Pick<TodoDetailItem, 'id' | 'title'>): void
   (e: 'untagSelf', todo: Pick<TodoDetailItem, 'id' | 'title'>): void
   (e: 'backToList'): void
@@ -127,7 +125,6 @@ watch(
       // Load attachments from API
       await loadAttachments()
 
-      // Start in edit mode if requested
       if (props.startInEditMode && !props.todo.isTagged) {
         isEditMode.value = true
       } else {

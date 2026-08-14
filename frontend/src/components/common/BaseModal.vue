@@ -22,6 +22,8 @@ const props = withDefaults(defineProps<{
   overlayClass?: HTMLAttributes['class']
   panelClass?: HTMLAttributes['class']
   panelStyle?: HTMLAttributes['style']
+  ariaLabelledby?: string
+  ariaDescribedby?: string
 }>(), {
   size: 'lg',
   height: 'default',
@@ -111,6 +113,8 @@ function handleOverlayClick(event: MouseEvent) {
         :style="props.panelStyle"
         role="dialog"
         aria-modal="true"
+        :aria-labelledby="props.ariaLabelledby"
+        :aria-describedby="props.ariaDescribedby"
       >
         <slot />
       </div>

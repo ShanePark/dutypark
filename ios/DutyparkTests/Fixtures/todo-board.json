@@ -1,0 +1,21 @@
+{
+  "todo": [{
+    "id": "7863a34b-c4f9-4ba7-8439-9017c3b43f00",
+    "title": "근무표 확인",
+    "content": "다음 달 근무표",
+    "position": 0,
+    "status": "TODO",
+    "createdDate": "2026-08-12T09:51:51.163702",
+    "completedDate": null,
+    "dueDate": "2026-08-20",
+    "isOverdue": false,
+    "isTagged": false,
+    "owner": "테스트 사용자",
+    "taggedByMember": null,
+    "tags": [],
+    "hasAttachments": false
+  }],
+  "inProgress": [],
+  "done": [],
+  "counts": {"todo": 1, "inProgress": 0, "done": 0, "total": 1}
+}

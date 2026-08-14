@@ -11,13 +11,11 @@ data class RefreshTokenDto(
     val lastUsed: LocalDateTime?,
     val remoteAddr: String?,
     val id: Long,
-    val token: String,
     val userAgent: UserAgentInfo?,
+    val isCurrentLogin: Boolean? = null,
 ) {
-    var isCurrentLogin: Boolean? = null
-
     companion object {
-        fun of(refreshToken: RefreshToken): RefreshTokenDto {
+        fun of(refreshToken: RefreshToken, isCurrentLogin: Boolean? = null): RefreshTokenDto {
             return RefreshTokenDto(
                 memberName = refreshToken.member.name,
                 memberId = refreshToken.member.id ?: -1L,
@@ -26,8 +24,8 @@ data class RefreshTokenDto(
                 lastUsed = refreshToken.lastUsed,
                 remoteAddr = refreshToken.remoteAddr,
                 id = refreshToken.id!!,
-                token = refreshToken.token,
                 userAgent = UserAgentInfo.fromStoredValue(refreshToken.userAgent),
+                isCurrentLogin = isCurrentLogin,
             )
         }
     }

@@ -1,9 +1,6 @@
 import { createI18n } from 'vue-i18n'
 import en from './messages/en'
-import es from './messages/es'
-import ja from './messages/ja'
 import ko from './messages/ko'
-import zh from './messages/zh'
 import {
   DEFAULT_LOCALE,
   LOCALE_NATIVE_LABELS,
@@ -20,9 +17,6 @@ export const LOCALE_SUGGESTION_STORAGE_KEY = 'dp-locale-suggestion'
 const messages = {
   ko,
   en,
-  ja,
-  zh,
-  es,
 }
 
 export function getLocaleNativeLabel(locale: SupportedLocale): string {
@@ -47,13 +41,6 @@ export function writeStoredLocalePreference(locale: SupportedLocale) {
     return
   }
   window.localStorage.setItem(LOCALE_STORAGE_KEY, locale)
-}
-
-export function clearStoredLocalePreference() {
-  if (typeof window === 'undefined') {
-    return
-  }
-  window.localStorage.removeItem(LOCALE_STORAGE_KEY)
 }
 
 export function readHandledLocaleSuggestion(): SupportedLocale | null {
@@ -87,11 +74,8 @@ export const i18n = createI18n({
   legacy: false,
   locale: readStoredLocale(),
   fallbackLocale: {
-    zh: ['en', 'ko'],
-    es: ['en', 'ko'],
-    ja: ['en', 'ko'],
     en: ['ko'],
-    default: ['ko'],
+    default: ['en', 'ko'],
   },
   messages,
 })

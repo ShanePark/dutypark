@@ -3,7 +3,6 @@ package com.tistory.shanepark.dutypark
 import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
 import tools.jackson.databind.json.JsonMapper
 import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
-import com.tistory.shanepark.dutypark.member.domain.dto.MemberCreateDto
 import com.tistory.shanepark.dutypark.member.domain.entity.FriendRelation
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.entity.MemberManager
@@ -13,6 +12,7 @@ import com.tistory.shanepark.dutypark.member.repository.FriendRelationRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberManagerRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.service.MemberService
+import com.tistory.shanepark.dutypark.member.service.RefreshTokenService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.service.JwtProvider
 import com.tistory.shanepark.dutypark.team.domain.entity.Team
@@ -21,6 +21,7 @@ import jakarta.persistence.EntityManager
 import org.junit.jupiter.api.BeforeEach
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
+import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.transaction.annotation.Transactional
 
 @SpringBootTest
@@ -37,6 +38,9 @@ class DutyparkIntegrationTest {
     lateinit var memberService: MemberService
 
     @Autowired
+    lateinit var testPasswordEncoder: PasswordEncoder
+
+    @Autowired
     lateinit var dutyTypeRepository: DutyTypeRepository
 
     @Autowired
@@ -50,6 +54,9 @@ class DutyparkIntegrationTest {
 
     @Autowired
     lateinit var jwtProvider: JwtProvider
+
+    @Autowired
+    lateinit var sessionTokenService: RefreshTokenService
 
     val objectMapper: JsonMapper = TestUtils.jsr310JsonMapper()
 
@@ -76,12 +83,11 @@ class DutyparkIntegrationTest {
 
     private fun initTestMember() {
         for (i in 1..2) {
-            val memberCreateDto = MemberCreateDto(
+            val saved = createMember(
                 name = "dummy$i",
                 email = "test$i@duty.park",
                 password = TestData.testPass,
             )
-            val saved = memberService.createMember(memberCreateDto)
             TestData.team.addMember(saved)
             memberRepository.save(saved)
             if (i == 1) {
@@ -90,11 +96,19 @@ class DutyparkIntegrationTest {
                 TestData.member2 = saved
             }
         }
-        TestData.admin = memberService.createMember(
-            MemberCreateDto(
-                name = "admin",
-                email = "admin@email.com",
-                password = TestData.testPass,
+        TestData.admin = createMember(
+            name = "admin",
+            email = "admin@email.com",
+            password = TestData.testPass,
+        )
+    }
+
+    private fun createMember(name: String, email: String, password: String): Member {
+        return memberRepository.save(
+            Member(
+                name = name,
+                email = email,
+                password = testPasswordEncoder.encode(password),
             )
         )
     }
@@ -116,7 +130,17 @@ class DutyparkIntegrationTest {
     }
 
     fun getJwt(member: Member): String {
-        return jwtProvider.createToken(member)
+        val refreshToken = sessionTokenService.createRefreshToken(member.id!!, "127.0.0.1", "integration-test")
+        return jwtProvider.createToken(member, requireNotNull(refreshToken.id))
+    }
+
+    fun getJwt(member: Member, sessionId: Long): String {
+        return jwtProvider.createToken(member, sessionId)
+    }
+
+    fun getImpersonationJwt(target: Member, original: Member): String {
+        val refreshToken = sessionTokenService.createRefreshToken(original.id!!, "127.0.0.1", "integration-test")
+        return jwtProvider.createImpersonationToken(target, original.id!!, requireNotNull(refreshToken.id))
     }
 
     fun loginMember(member: Member): LoginMember {

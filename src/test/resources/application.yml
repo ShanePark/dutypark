@@ -32,6 +32,10 @@ decorator:
       enable-logging: false
 
 dutypark:
+  account-deletion:
+    worker:
+      fixed-delay-ms: 3600000
+      initial-delay-ms: 3600000
   slack:
     token: ""
   adminEmails:

@@ -9,20 +9,17 @@ import ImageCropModal from '@/components/common/ImageCropModal.vue'
 
 interface Props {
   memberId: number
-  disabled?: boolean
   profilePhotoVersion?: number
-  size?: 'sm' | 'md' | 'lg'
+  size?: 'sm' | 'lg'
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  disabled: false,
   profilePhotoVersion: 0,
   size: 'lg',
 })
 
 const sizeClasses: Record<string, string> = {
   sm: 'photo-size-sm',
-  md: 'photo-size-md',
   lg: 'photo-size-lg',
 }
 
@@ -61,7 +58,7 @@ watch(
 )
 
 function openCropModal() {
-  if (props.disabled || isUploading.value) return
+  if (isUploading.value) return
   showCropModal.value = true
 }
 
@@ -96,7 +93,7 @@ function onCropCancel() {
 }
 
 async function deletePhoto() {
-  if (!hasPhoto.value || isDeleting.value || props.disabled) return
+  if (!hasPhoto.value || isDeleting.value) return
 
   isDeleting.value = true
   try {
@@ -181,11 +178,6 @@ onMounted(() => {
 .photo-size-sm {
   width: 80px;
   height: 80px;
-}
-
-.photo-size-md {
-  width: 100px;
-  height: 100px;
 }
 
 .photo-size-lg {

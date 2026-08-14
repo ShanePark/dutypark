@@ -5,6 +5,7 @@ import com.tistory.shanepark.dutypark.attachment.service.AttachmentService
 import com.tistory.shanepark.dutypark.attachment.service.FileSystemService
 import com.tistory.shanepark.dutypark.attachment.service.StoragePathResolver
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.consent.service.AiScheduleParsingConsentService
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
@@ -41,6 +42,7 @@ class ScheduleServiceTest {
     private lateinit var fileSystemService: FileSystemService
     private lateinit var pathResolver: StoragePathResolver
     private lateinit var eventPublisher: ApplicationEventPublisher
+    private lateinit var aiScheduleParsingConsentService: AiScheduleParsingConsentService
 
     private lateinit var member: Member
     private lateinit var member2: Member
@@ -59,6 +61,8 @@ class ScheduleServiceTest {
         fileSystemService = mock()
         pathResolver = mock()
         eventPublisher = mock()
+        aiScheduleParsingConsentService = mock()
+        whenever(aiScheduleParsingConsentService.hasCurrentConsent(any())).thenReturn(true)
 
         scheduleService = ScheduleService(
             scheduleRepository = scheduleRepository,
@@ -70,7 +74,8 @@ class ScheduleServiceTest {
             attachmentService = attachmentService,
             fileSystemService = fileSystemService,
             pathResolver = pathResolver,
-            eventPublisher = eventPublisher
+            eventPublisher = eventPublisher,
+            aiScheduleParsingConsentService = aiScheduleParsingConsentService,
         )
 
         member = Member(name = "testMember", email = "test@test.com", password = "1234")
@@ -85,7 +90,6 @@ class ScheduleServiceTest {
 
     @Test
     fun `Create schedule success test`() {
-        // given
         val scheduleSaveDto = ScheduleSaveDto(
             memberId = member.id!!,
             content = "schedule1",
@@ -102,10 +106,8 @@ class ScheduleServiceTest {
             schedule
         }
 
-        // When
         val createdSchedule = scheduleService.createSchedule(loginMember, scheduleSaveDto)
 
-        // Then
         assertThat(createdSchedule).isNotNull
         assertThat(createdSchedule.id).isNotNull
         assertThat(createdSchedule.content).isEqualTo(scheduleSaveDto.content)
@@ -120,8 +122,81 @@ class ScheduleServiceTest {
     }
 
     @Test
+    fun `create without current AI consent saves as SKIP and does not enqueue`() {
+        whenever(aiScheduleParsingConsentService.hasCurrentConsent(member.id!!)).thenReturn(false)
+        whenever(memberRepository.findById(member.id!!)).thenReturn(Optional.of(member))
+        whenever(scheduleRepository.findMaxPosition(eq(member), any())).thenReturn(-1)
+        whenever(scheduleRepository.save(any<Schedule>())).thenAnswer { invocation ->
+            invocation.getArgument<Schedule>(0).also {
+                ReflectionTestUtils.setField(it, "id", UUID.randomUUID())
+            }
+        }
+        val dto = ScheduleSaveDto(
+            memberId = member.id!!,
+            content = "오후 3시 회의",
+            startDateTime = LocalDateTime.of(2026, 8, 13, 0, 0),
+            endDateTime = LocalDateTime.of(2026, 8, 13, 0, 0),
+        )
+
+        val schedule = scheduleService.createSchedule(loginMember, dto)
+
+        assertThat(schedule.parsingTimeStatus).isEqualTo(ParsingTimeStatus.SKIP)
+        verify(scheduleRepository).save(schedule)
+        verify(scheduleTimeParsingQueueManager, never()).addTask(any())
+    }
+
+    @Test
+    fun `create with AI parsing explicitly disabled saves as SKIP without checking consent`() {
+        whenever(memberRepository.findById(member.id!!)).thenReturn(Optional.of(member))
+        whenever(scheduleRepository.findMaxPosition(eq(member), any())).thenReturn(-1)
+        whenever(scheduleRepository.save(any<Schedule>())).thenAnswer { invocation ->
+            invocation.getArgument<Schedule>(0).also {
+                ReflectionTestUtils.setField(it, "id", UUID.randomUUID())
+            }
+        }
+        val dto = ScheduleSaveDto(
+            memberId = member.id!!,
+            content = "오후 3시 회의",
+            startDateTime = LocalDateTime.of(2026, 8, 13, 0, 0),
+            endDateTime = LocalDateTime.of(2026, 8, 13, 0, 0),
+            aiTimeParsingRequested = false,
+        )
+
+        val schedule = scheduleService.createSchedule(loginMember, dto)
+
+        assertThat(schedule.parsingTimeStatus).isEqualTo(ParsingTimeStatus.SKIP)
+        verify(aiScheduleParsingConsentService, never()).hasCurrentConsent(any())
+        verify(scheduleTimeParsingQueueManager, never()).addTask(any())
+    }
+
+    @Test
+    fun `create without current AI consent preserves manually entered time`() {
+        whenever(aiScheduleParsingConsentService.hasCurrentConsent(member.id!!)).thenReturn(false)
+        whenever(memberRepository.findById(member.id!!)).thenReturn(Optional.of(member))
+        whenever(scheduleRepository.findMaxPosition(eq(member), any())).thenReturn(-1)
+        whenever(scheduleRepository.save(any<Schedule>())).thenAnswer { invocation ->
+            invocation.getArgument<Schedule>(0).also {
+                ReflectionTestUtils.setField(it, "id", UUID.randomUUID())
+            }
+        }
+        val start = LocalDateTime.of(2026, 8, 13, 15, 0)
+        val end = LocalDateTime.of(2026, 8, 13, 16, 0)
+        val dto = ScheduleSaveDto(
+            memberId = member.id!!,
+            content = "회의",
+            startDateTime = start,
+            endDateTime = end,
+        )
+
+        val schedule = scheduleService.createSchedule(loginMember, dto)
+
+        assertThat(schedule.startDateTime).isEqualTo(start)
+        assertThat(schedule.endDateTime).isEqualTo(end)
+        assertThat(schedule.parsingTimeStatus).isEqualTo(ParsingTimeStatus.SKIP)
+    }
+
+    @Test
     fun `can't create other member's schedule`() {
-        // given
         val scheduleSaveDto = ScheduleSaveDto(
             memberId = member2.id!!,
             content = "schedule1",
@@ -133,7 +208,6 @@ class ScheduleServiceTest {
         whenever(schedulePermissionService.checkScheduleWriteAuthority(loginMember, member2))
             .thenThrow(AuthException("login member doesn't have permission"))
 
-        // When & Then
         assertThrows<AuthException> {
             scheduleService.createSchedule(loginMember, scheduleSaveDto)
         }
@@ -141,7 +215,6 @@ class ScheduleServiceTest {
 
     @Test
     fun `update Schedule Test`() {
-        // given
         val scheduleId = UUID.randomUUID()
         val schedule = Schedule(
             member = member,
@@ -165,10 +238,8 @@ class ScheduleServiceTest {
         whenever(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule))
         whenever(scheduleRepository.save(any<Schedule>())).thenAnswer { it.getArgument<Schedule>(0) }
 
-        // When
         val updatedSchedule = scheduleService.updateSchedule(loginMember, scheduleSaveDto)
 
-        // Then
         assertThat(updatedSchedule).isNotNull
         assertThat(updatedSchedule.content).isEqualTo(scheduleSaveDto.content)
         assertThat(updatedSchedule.description).isEqualTo(scheduleSaveDto.description)
@@ -182,8 +253,153 @@ class ScheduleServiceTest {
     }
 
     @Test
+    fun `parsing input update without current owner consent changes WAIT to SKIP`() {
+        val scheduleId = UUID.randomUUID()
+        val schedule = Schedule(
+            member = member,
+            content = "기존 일정",
+            startDateTime = LocalDateTime.of(2026, 8, 13, 0, 0),
+            endDateTime = LocalDateTime.of(2026, 8, 13, 0, 0),
+        ).also { ReflectionTestUtils.setField(it, "id", scheduleId) }
+        whenever(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule))
+        whenever(scheduleRepository.save(schedule)).thenReturn(schedule)
+        whenever(aiScheduleParsingConsentService.hasCurrentConsent(member.id!!)).thenReturn(false)
+        val dto = updateDto(
+            id = scheduleId,
+            content = "변경 일정 오후 4시",
+            startDateTime = LocalDateTime.of(2026, 8, 14, 0, 0),
+            endDateTime = LocalDateTime.of(2026, 8, 14, 0, 0),
+        )
+
+        val updated = scheduleService.updateSchedule(loginMember, dto)
+
+        assertThat(updated.parsingTimeStatus).isEqualTo(ParsingTimeStatus.SKIP)
+        verify(scheduleTimeParsingQueueManager, never()).addTask(any())
+    }
+
+    @Test
+    fun `parsing input update with AI parsing explicitly disabled changes WAIT to SKIP without checking consent`() {
+        val scheduleId = UUID.randomUUID()
+        val schedule = Schedule(
+            member = member,
+            content = "기존 일정",
+            startDateTime = LocalDateTime.of(2026, 8, 13, 0, 0),
+            endDateTime = LocalDateTime.of(2026, 8, 13, 0, 0),
+        ).also { ReflectionTestUtils.setField(it, "id", scheduleId) }
+        whenever(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule))
+        whenever(scheduleRepository.save(schedule)).thenReturn(schedule)
+        val dto = ScheduleSaveDto(
+            id = scheduleId,
+            memberId = member.id!!,
+            content = "변경 일정 오후 4시",
+            startDateTime = LocalDateTime.of(2026, 8, 14, 0, 0),
+            endDateTime = LocalDateTime.of(2026, 8, 14, 0, 0),
+            aiTimeParsingRequested = false,
+        )
+
+        val updated = scheduleService.updateSchedule(loginMember, dto)
+
+        assertThat(updated.parsingTimeStatus).isEqualTo(ParsingTimeStatus.SKIP)
+        verify(aiScheduleParsingConsentService, never()).hasCurrentConsent(any())
+        verify(scheduleTimeParsingQueueManager, never()).addTask(any())
+    }
+
+    @Test
+    fun `metadata update with AI parsing explicitly disabled cancels a waiting parse`() {
+        val scheduleId = UUID.randomUUID()
+        val dateTime = LocalDateTime.of(2026, 8, 13, 0, 0)
+        val schedule = Schedule(
+            member = member,
+            content = "오후 3시 회의",
+            startDateTime = dateTime,
+            endDateTime = dateTime,
+            parsingTimeStatus = ParsingTimeStatus.WAIT,
+        ).also { ReflectionTestUtils.setField(it, "id", scheduleId) }
+        whenever(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule))
+        whenever(scheduleRepository.save(schedule)).thenReturn(schedule)
+        val dto = ScheduleSaveDto(
+            id = scheduleId,
+            memberId = member.id!!,
+            content = schedule.content,
+            description = "설명만 변경",
+            startDateTime = dateTime,
+            endDateTime = dateTime,
+            aiTimeParsingRequested = false,
+        )
+
+        val updated = scheduleService.updateSchedule(loginMember, dto)
+
+        assertThat(updated.parsingTimeStatus).isEqualTo(ParsingTimeStatus.SKIP)
+        verify(aiScheduleParsingConsentService, never()).hasCurrentConsent(any())
+        verify(scheduleTimeParsingQueueManager, never()).addTask(any())
+    }
+
+    @Test
+    fun `metadata update without current owner consent cancels a waiting parse`() {
+        val scheduleId = UUID.randomUUID()
+        val dateTime = LocalDateTime.of(2026, 8, 13, 0, 0)
+        val schedule = Schedule(
+            member = member,
+            content = "오후 3시 회의",
+            startDateTime = dateTime,
+            endDateTime = dateTime,
+            parsingTimeStatus = ParsingTimeStatus.WAIT,
+        ).also { ReflectionTestUtils.setField(it, "id", scheduleId) }
+        whenever(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule))
+        whenever(scheduleRepository.save(schedule)).thenReturn(schedule)
+        whenever(aiScheduleParsingConsentService.hasCurrentConsent(member.id!!)).thenReturn(false)
+        val dto = ScheduleSaveDto(
+            id = scheduleId,
+            memberId = member.id!!,
+            content = schedule.content,
+            description = "설명만 변경",
+            startDateTime = dateTime,
+            endDateTime = dateTime,
+        )
+
+        val updated = scheduleService.updateSchedule(loginMember, dto)
+
+        assertThat(updated.parsingTimeStatus).isEqualTo(ParsingTimeStatus.SKIP)
+        verify(aiScheduleParsingConsentService).hasCurrentConsent(member.id!!)
+        verify(scheduleTimeParsingQueueManager, never()).addTask(any())
+    }
+
+    @Test
+    fun `metadata update with AI parsing disabled preserves a completed parse`() {
+        val scheduleId = UUID.randomUUID()
+        val startDateTime = LocalDateTime.of(2026, 8, 13, 15, 0)
+        val endDateTime = LocalDateTime.of(2026, 8, 13, 16, 0)
+        val schedule = parsedSchedule(
+            id = scheduleId,
+            content = "오후 3시 회의",
+            contentWithoutTime = "회의",
+            startDateTime = startDateTime,
+            endDateTime = endDateTime,
+        )
+        whenever(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule))
+        whenever(scheduleRepository.save(schedule)).thenReturn(schedule)
+        val previousGeneration = schedule.parsingGeneration
+        val dto = ScheduleSaveDto(
+            id = scheduleId,
+            memberId = member.id!!,
+            content = schedule.content(),
+            description = "설명만 변경",
+            startDateTime = startDateTime,
+            endDateTime = endDateTime,
+            aiTimeParsingRequested = false,
+        )
+
+        val updated = scheduleService.updateSchedule(loginMember, dto)
+
+        assertThat(updated.parsingTimeStatus).isEqualTo(ParsingTimeStatus.PARSED)
+        assertThat(updated.parsingGeneration).isEqualTo(previousGeneration)
+        assertThat(updated.contentWithoutTime).isEqualTo("회의")
+        verify(aiScheduleParsingConsentService, never()).hasCurrentConsent(any())
+        verify(scheduleTimeParsingQueueManager, never()).addTask(any())
+    }
+
+    @Test
     fun `update clears the title derived by a previous AI parsing`() {
-        // Given
         val scheduleId = UUID.randomUUID()
         val schedule = parsedSchedule(
             id = scheduleId,
@@ -202,10 +418,8 @@ class ScheduleServiceTest {
         whenever(scheduleRepository.save(schedule)).thenReturn(schedule)
         val previousGeneration = schedule.parsingGeneration
 
-        // When
         val updatedSchedule = scheduleService.updateSchedule(loginMember, scheduleSaveDto)
 
-        // Then
         assertThat(updatedSchedule.content).isEqualTo("꿈아띠 10~12시")
         assertThat(updatedSchedule.contentWithoutTime).isEmpty()
         assertThat(updatedSchedule.content()).isEqualTo("꿈아띠 10~12시")
@@ -218,7 +432,6 @@ class ScheduleServiceTest {
 
     @Test
     fun `title-only update clears the previous AI title while preserving explicit times`() {
-        // Given
         val scheduleId = UUID.randomUUID()
         val startDateTime = LocalDateTime.of(2026, 7, 24, 12, 0)
         val endDateTime = LocalDateTime.of(2026, 7, 24, 14, 0)
@@ -239,10 +452,8 @@ class ScheduleServiceTest {
         whenever(scheduleRepository.save(schedule)).thenReturn(schedule)
         val previousGeneration = schedule.parsingGeneration
 
-        // When
         val updatedSchedule = scheduleService.updateSchedule(loginMember, scheduleSaveDto)
 
-        // Then
         assertThat(updatedSchedule.content()).isEqualTo("변경한 제목")
         assertThat(updatedSchedule.contentWithoutTime).isEmpty()
         assertThat(updatedSchedule.startDateTime).isEqualTo(startDateTime)
@@ -275,10 +486,8 @@ class ScheduleServiceTest {
         whenever(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule))
         whenever(scheduleRepository.save(schedule)).thenReturn(schedule)
 
-        // When
         val updatedSchedule = scheduleService.updateSchedule(loginMember, scheduleSaveDto)
 
-        // Then
         assertThat(updatedSchedule.content).isEqualTo("꿈아띠 12~14시")
         assertThat(updatedSchedule.contentWithoutTime).isEmpty()
         assertThat(updatedSchedule.content()).isEqualTo("꿈아띠 12~14시")
@@ -289,7 +498,6 @@ class ScheduleServiceTest {
 
     @Test
     fun `date-only update treats the displayed title sent by the client as authoritative`() {
-        // Given
         val scheduleId = UUID.randomUUID()
         val schedule = parsedSchedule(
             id = scheduleId,
@@ -308,10 +516,8 @@ class ScheduleServiceTest {
         whenever(scheduleRepository.save(schedule)).thenReturn(schedule)
         val previousGeneration = schedule.parsingGeneration
 
-        // When
         val updatedSchedule = scheduleService.updateSchedule(loginMember, scheduleSaveDto)
 
-        // Then
         assertThat(updatedSchedule.content).isEqualTo("꿈아띠")
         assertThat(updatedSchedule.contentWithoutTime).isEmpty()
         assertThat(updatedSchedule.content()).isEqualTo("꿈아띠")
@@ -336,7 +542,6 @@ class ScheduleServiceTest {
         newEndHour: Int,
         newEndMinute: Int,
     ) {
-        // Given
         val scheduleId = UUID.randomUUID()
         val date = LocalDateTime.of(2026, 7, 24, 0, 0)
         val schedule = parsedSchedule(
@@ -358,10 +563,8 @@ class ScheduleServiceTest {
         whenever(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule))
         whenever(scheduleRepository.save(schedule)).thenReturn(schedule)
 
-        // When
         val updatedSchedule = scheduleService.updateSchedule(loginMember, scheduleSaveDto)
 
-        // Then
         assertThat(updatedSchedule.content).isEqualTo("꿈아띠")
         assertThat(updatedSchedule.contentWithoutTime).isEmpty()
         assertThat(updatedSchedule.startDateTime).isEqualTo(newStart)
@@ -376,7 +579,6 @@ class ScheduleServiceTest {
     fun `metadata-only update preserves the current parsing state and does not requeue`(
         previousStatus: ParsingTimeStatus,
     ) {
-        // Given
         val scheduleId = UUID.randomUUID()
         val startDateTime = LocalDateTime.of(2026, 7, 24, 12, 0)
         val endDateTime = LocalDateTime.of(2026, 7, 24, 14, 0)
@@ -401,10 +603,8 @@ class ScheduleServiceTest {
         whenever(scheduleRepository.save(schedule)).thenReturn(schedule)
         val previousGeneration = schedule.parsingGeneration
 
-        // When
         val updatedSchedule = scheduleService.updateSchedule(loginMember, scheduleSaveDto)
 
-        // Then
         assertThat(updatedSchedule.description).isEqualTo("변경한 설명")
         assertThat(updatedSchedule.visibility).isEqualTo(Visibility.PRIVATE)
         assertThat(updatedSchedule.content).isEqualTo("꿈아띠 12~14시")
@@ -420,7 +620,6 @@ class ScheduleServiceTest {
     fun `parsing input update starts a new parsing generation from every previous status`(
         previousStatus: ParsingTimeStatus,
     ) {
-        // Given
         val scheduleId = UUID.randomUUID()
         val originalDateTime = LocalDateTime.of(2026, 7, 24, 0, 0)
         val schedule = parsedSchedule(
@@ -441,10 +640,8 @@ class ScheduleServiceTest {
         whenever(scheduleRepository.save(schedule)).thenReturn(schedule)
         val previousGeneration = schedule.parsingGeneration
 
-        // When
         val updatedSchedule = scheduleService.updateSchedule(loginMember, scheduleSaveDto)
 
-        // Then
         assertThat(updatedSchedule.contentWithoutTime).isEmpty()
         assertThat(updatedSchedule.parsingTimeStatus).isEqualTo(ParsingTimeStatus.WAIT)
         assertThat(updatedSchedule.parsingGeneration).isNotEqualTo(previousGeneration)
@@ -453,7 +650,6 @@ class ScheduleServiceTest {
 
     @Test
     fun `can't update other member's schedule`() {
-        // given
         val scheduleId = UUID.randomUUID()
         val schedule = Schedule(
             member = member2,
@@ -476,7 +672,6 @@ class ScheduleServiceTest {
         whenever(schedulePermissionService.checkScheduleWriteAuthority(schedule = schedule, loginMember = loginMember))
             .thenThrow(AuthException("login member doesn't have permission"))
 
-        // When & Then
         assertThrows<AuthException> {
             scheduleService.updateSchedule(loginMember, scheduleSaveDto)
         }
@@ -520,7 +715,6 @@ class ScheduleServiceTest {
 
     @Test
     fun `delete schedule test`() {
-        // given
         val scheduleId = UUID.randomUUID()
         val schedule = Schedule(
             member = member,
@@ -535,17 +729,14 @@ class ScheduleServiceTest {
         whenever(attachmentRepository.findAllByContextTypeAndContextId(any(), any())).thenReturn(emptyList())
         whenever(pathResolver.resolveContextDirectory(any(), any())).thenReturn(java.nio.file.Paths.get("/tmp/test"))
 
-        // When
         scheduleService.deleteSchedule(loginMember, scheduleId)
 
-        // Then
         verify(schedulePermissionService).checkScheduleWriteAuthority(schedule = schedule, loginMember = loginMember)
         verify(scheduleRepository).delete(schedule)
     }
 
     @Test
     fun `can't delete other member's schedule`() {
-        // given
         val scheduleId = UUID.randomUUID()
         val schedule = Schedule(
             member = member2,
@@ -560,7 +751,6 @@ class ScheduleServiceTest {
         whenever(schedulePermissionService.checkScheduleWriteAuthority(schedule = schedule, loginMember = loginMember))
             .thenThrow(AuthException("login member doesn't have permission"))
 
-        // When & Then
         assertThrows<AuthException> {
             scheduleService.deleteSchedule(loginMember, scheduleId)
         }
@@ -568,7 +758,6 @@ class ScheduleServiceTest {
 
     @Test
     fun `create schedule with private visibility`() {
-        // Given
         val scheduleSaveDto = ScheduleSaveDto(
             memberId = member.id!!,
             content = "schedule1",
@@ -585,16 +774,13 @@ class ScheduleServiceTest {
             schedule
         }
 
-        // When
         val schedule = scheduleService.createSchedule(loginMember, scheduleSaveDto)
 
-        // Then
         assertThat(schedule.visibility).isEqualTo(Visibility.PRIVATE)
     }
 
     @Test
     fun `create schedule with public visibility`() {
-        // Given
         val scheduleSaveDto = ScheduleSaveDto(
             memberId = member.id!!,
             content = "schedule1",
@@ -611,16 +797,13 @@ class ScheduleServiceTest {
             schedule
         }
 
-        // When
         val schedule = scheduleService.createSchedule(loginMember, scheduleSaveDto)
 
-        // Then
         assertThat(schedule.visibility).isEqualTo(Visibility.PUBLIC)
     }
 
     @Test
     fun `update schedule's visibility`() {
-        // Given
         val scheduleId = UUID.randomUUID()
         val schedule = Schedule(
             member = member,
@@ -646,10 +829,8 @@ class ScheduleServiceTest {
         whenever(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(schedule))
         whenever(scheduleRepository.save(any<Schedule>())).thenAnswer { it.getArgument<Schedule>(0) }
 
-        // When
         val updatedSchedule = scheduleService.updateSchedule(loginMember, scheduleSaveDto)
 
-        // Then
         assertThat(updatedSchedule.visibility).isEqualTo(Visibility.PUBLIC)
     }
 

@@ -5,8 +5,10 @@ import com.tistory.shanepark.dutypark.member.domain.dto.AuxiliaryAccountCreateRe
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberDto
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberPreviewDto
 import com.tistory.shanepark.dutypark.member.domain.dto.VisibilityUpdateRequest
+import com.tistory.shanepark.dutypark.member.domain.enums.SsoType
 import com.tistory.shanepark.dutypark.member.service.FriendService
 import com.tistory.shanepark.dutypark.member.service.MemberService
+import com.tistory.shanepark.dutypark.member.service.MemberSocialAccountService
 import com.tistory.shanepark.dutypark.member.service.ProfilePhotoService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import jakarta.validation.Valid
@@ -27,6 +29,7 @@ class MemberController(
     private val memberService: MemberService,
     private val friendService: FriendService,
     private val profilePhotoService: ProfilePhotoService,
+    private val memberSocialAccountService: MemberSocialAccountService,
 ) {
 
     @GetMapping("/me")
@@ -129,6 +132,15 @@ class MemberController(
         @Login loginMember: LoginMember,
     ) {
         profilePhotoService.deleteProfilePhoto(loginMember)
+    }
+
+    @DeleteMapping("/me/social-accounts/{provider}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    fun unlinkSocialAccount(
+        @Login loginMember: LoginMember,
+        @PathVariable provider: SsoType,
+    ) {
+        memberSocialAccountService.unlink(loginMember, provider)
     }
 
     @GetMapping("/{memberId}/profile-photo")

@@ -6,10 +6,7 @@ import { Bell, Trash2, CheckCheck } from 'lucide-vue-next'
 import PageHeader from '@/components/common/PageHeader.vue'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
-import 'dayjs/locale/es'
-import 'dayjs/locale/ja'
 import 'dayjs/locale/ko'
-import 'dayjs/locale/zh-cn'
 import { notificationApi } from '@/api/notification'
 import { useNotificationStore } from '@/stores/notification'
 import { useNotificationNavigation } from '@/composables/useNotificationNavigation'
@@ -38,10 +35,7 @@ const pageSize = 20
 
 const hasMorePages = computed(() => currentPage.value < totalPages.value - 1)
 const dayjsLocale = computed(() => {
-  if (locale.value.startsWith('ja')) return 'ja'
   if (locale.value.startsWith('en')) return 'en'
-  if (locale.value.startsWith('es')) return 'es'
-  if (locale.value.startsWith('zh')) return 'zh-cn'
   return 'ko'
 })
 
@@ -119,13 +113,7 @@ function formatTimeAgo(dateString: string): string {
 function formatDate(dateString: string): string {
   const format = dayjsLocale.value === 'en'
     ? 'MMM D, YYYY HH:mm'
-    : dayjsLocale.value === 'ja'
-      ? 'YYYY/MM/DD HH:mm'
-      : dayjsLocale.value === 'es'
-        ? 'D MMM YYYY HH:mm'
-        : dayjsLocale.value === 'zh-cn'
-          ? 'YYYY年M月D日 HH:mm'
-          : 'YYYY.MM.DD HH:mm'
+    : 'YYYY.MM.DD HH:mm'
   return dayjs(dateString).locale(dayjsLocale.value).format(format)
 }
 
@@ -144,7 +132,6 @@ function getAvatarProps(notification: NotificationDto) {
 }
 
 async function handleNotificationClick(notification: NotificationDto) {
-  // Mark as read if not already
   if (!notification.isRead) {
     try {
       await notificationApi.markAsRead(notification.id)
@@ -241,7 +228,6 @@ watch(
 
 <template>
   <div class="notification-list-view max-w-2xl mx-auto px-4 py-6">
-    <!-- Header -->
     <PageHeader :title="t('header.menu.notifications')" :icon="Bell">
       <button
         type="button"
@@ -263,12 +249,10 @@ watch(
       </button>
     </PageHeader>
 
-    <!-- Retention Notice -->
     <p class="notification-retention-notice text-xs mb-4">
       {{ t('notifications.list.retentionNotice') }}
     </p>
 
-    <!-- Notification List -->
     <div class="notification-list-container card">
       <div v-if="isLoading && notifications.length === 0" class="p-8 text-center">
         <span class="notification-loading-text text-sm">{{ t('notifications.common.loading') }}</span>
@@ -323,7 +307,6 @@ watch(
           </div>
         </button>
 
-        <!-- Load More Button -->
         <div v-if="hasMorePages" class="p-4 text-center border-t notification-list-footer">
           <button
             type="button"
@@ -409,10 +392,6 @@ watch(
 }
 
 .notification-list-item-title {
-  color: var(--dp-text-secondary);
-}
-
-.notification-list-item-content {
   color: var(--dp-text-secondary);
 }
 

@@ -33,17 +33,14 @@ class ScheduleSearchServiceDBImplTest : DutyparkIntegrationTest() {
         val member = TestData.member
         val loginMember = loginMember(member)
 
-        // Given
         makeSchedule(loginMember, "test1", LocalDateTime.of(2024, 1, 1, 0, 0))
         makeSchedule(loginMember, "test2", LocalDateTime.of(2024, 1, 2, 0, 0))
         makeSchedule(loginMember, "test3", LocalDateTime.of(2024, 1, 3, 0, 0))
         makeSchedule(loginMember, "sample1", LocalDateTime.of(2024, 1, 4, 0, 0))
         makeSchedule(loginMember, "sample2", LocalDateTime.of(2024, 1, 5, 0, 0))
 
-        // When
         val result = scheduleSearchServiceDBImpl.search(loginMember, loginMember.id, Pageable.ofSize(10), "test")
 
-        // Then
         assertThat(result.content).hasSize(3)
         assertThat(result.content[0].content).isEqualTo("test3")
         assertThat(result.content[1].content).isEqualTo("test2")
@@ -55,15 +52,12 @@ class ScheduleSearchServiceDBImplTest : DutyparkIntegrationTest() {
         val member = TestData.member
         val loginMember = loginMember(member)
 
-        // Given
         for (i in 1..20) {
             makeSchedule(loginMember, "test$i", LocalDateTime.of(2024, 1, 1, 0, i))
         }
 
-        // When
         val result = scheduleSearchServiceDBImpl.search(loginMember, loginMember.id, Pageable.ofSize(10), "test")
 
-        // Then
         assertThat(result.content).hasSize(10)
         assertThat(result.content[0].content).isEqualTo("test20")
         assertThat(
@@ -78,7 +72,6 @@ class ScheduleSearchServiceDBImplTest : DutyparkIntegrationTest() {
 
     @Test
     fun `tagged schedules should be included in the search result`() {
-        // Given
         val member1 = TestData.member
         val loginMember = loginMember(member1)
         val member2 = TestData.member2
@@ -94,10 +87,8 @@ class ScheduleSearchServiceDBImplTest : DutyparkIntegrationTest() {
             friendId = member1.id!!
         )
 
-        // When
         val result = scheduleSearchServiceDBImpl.search(loginMember, loginMember.id, Pageable.ofSize(10), "test")
 
-        // Then
         assertThat(result.content).hasSize(2)
         assertThat(result.content[0].content).isEqualTo("test-tagged")
         assertThat(result.content[1].content).isEqualTo("test1")

@@ -26,7 +26,7 @@ class PolicyController(
     @GetMapping("/{type}")
     fun getCurrentPolicy(@PathVariable type: String): ResponseEntity<PolicyDto> {
         val policyType = try {
-            PolicyType.valueOf(type.uppercase())
+            PolicyType.valueOf(type.uppercase().replace('-', '_'))
         } catch (e: IllegalArgumentException) {
             throw BadRequestException()
         }

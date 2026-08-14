@@ -1,11 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import en from './messages/en'
-import es from './messages/es'
-import ja from './messages/ja'
 import ko from './messages/ko'
-import zh from './messages/zh'
 
-const locales = { ko, en, ja, zh, es }
+const locales = { ko, en }
 
 const requiredPlaceholders = {
   'notifications.list.deleteConfirmMessage': ['message'],

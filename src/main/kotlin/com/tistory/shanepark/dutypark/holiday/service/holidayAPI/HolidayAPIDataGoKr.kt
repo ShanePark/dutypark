@@ -54,9 +54,6 @@ class HolidayAPIDataGoKr(
         }.collect(Collectors.toList())
     }
 
-    /**
-     * Some Holiday names on DataGoKr API are not good. So, I change them.
-     */
     private fun adjustName(name: String): String {
         return when (name) {
             "1월1일" -> "신정"

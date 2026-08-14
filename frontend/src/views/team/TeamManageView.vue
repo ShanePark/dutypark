@@ -29,7 +29,6 @@ import {
   Check,
   Upload,
   ChevronLeft,
-  Shield,
   ShieldOff,
   Crown,
   Loader2,
@@ -44,43 +43,34 @@ const { t } = useI18n()
 const { showError, toastSuccess, confirmDelete, confirm } = useSwal()
 const teamId = Number(route.params.teamId)
 
-// Loading state
 const loading = ref(false)
 const saving = ref(false)
 
-// State
-const isAdmin = ref(false) // Is team admin
+const isAdmin = ref(false)
 const isAppAdmin = computed(() => authStore.user?.isAdmin ?? false)
 const loginId = computed(() => authStore.user?.id ?? 0)
 const teamLoaded = ref(false)
 
-// Team data
 const team = ref<TeamDto | null>(null)
 
 const dutyBatchTemplates = ref<DutyBatchTemplateDto[]>([])
 
-// Computed
 const hasMember = computed(() => team.value?.members && team.value.members.length > 0)
 const hasDutyType = computed(() => team.value?.dutyTypes && team.value.dutyTypes.length > 0)
 
-// Member Search Modal
 const showMemberSearchModal = ref(false)
 
-// Duty Type Modal
 const showDutyTypeModal = ref(false)
 const dutyTypeModalTarget = ref<DutyTypeDto | null>(null)
 
-// Duty Batch Upload Modal
 const showBatchUploadModal = ref(false)
 
-// Fetch team data
 async function fetchTeam() {
   loading.value = true
   try {
     const response = await teamApi.getTeamForManage(teamId)
     team.value = response.data
     teamLoaded.value = true
-    // Check if current user is admin
     isAdmin.value = team.value.adminId === loginId.value ||
       team.value.members.some(m => m.id === loginId.value && m.isManager)
   } catch (error) {
@@ -92,7 +82,6 @@ async function fetchTeam() {
   }
 }
 
-// Fetch duty batch templates
 async function fetchDutyBatchTemplates() {
   try {
     const response = await teamApi.getDutyBatchTemplates()
@@ -102,7 +91,6 @@ async function fetchDutyBatchTemplates() {
   }
 }
 
-// Methods
 function openMemberSearchModal() {
   showMemberSearchModal.value = true
 }
@@ -280,7 +268,6 @@ async function swapPosition(index1: number, index2: number) {
   }
 }
 
-// Batch Upload Methods
 function openBatchUploadModal() {
   showBatchUploadModal.value = true
 }
@@ -314,13 +301,11 @@ onMounted(() => {
 
 <template>
   <div class="max-w-4xl mx-auto px-2 sm:px-4 py-4">
-    <!-- Loading State -->
     <div v-if="loading" class="flex items-center justify-center py-20">
       <Loader2 class="w-8 h-8 animate-spin text-dp-accent" />
     </div>
 
     <template v-else-if="team">
-      <!-- Header -->
       <div class="font-bold text-xl py-3 rounded-t-lg flex items-center justify-between px-4" :style="{ backgroundColor: 'var(--dp-modal-header-bg)', color: 'var(--dp-text-on-dark)' }">
         <button
           @click="router.back()"
@@ -340,7 +325,6 @@ onMounted(() => {
         <span v-else class="w-16"></span>
       </div>
 
-    <!-- Team Info Card -->
     <div class="border rounded-b-lg overflow-hidden mb-4 bg-dp-bg-card border-dp-border-primary">
       <div class="sm:hidden divide-y divide-dp-border-primary">
         <div class="px-4 py-3">
@@ -464,7 +448,6 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- Members Section -->
     <div class="border rounded-lg overflow-hidden mb-4 bg-dp-bg-card border-dp-border-primary">
       <div class="text-dp-text-on-dark px-4 py-3 flex flex-wrap items-center justify-between gap-2 bg-dp-surface-strong">
         <h3 class="font-bold">{{ t('team.manage.fields.members') }}</h3>
@@ -477,7 +460,6 @@ onMounted(() => {
         </button>
       </div>
 
-      <!-- Desktop Table View -->
       <div v-if="hasMember" class="hidden sm:block overflow-x-auto">
         <table class="w-full">
           <thead class="text-dp-text-on-dark bg-dp-bg-footer">
@@ -537,7 +519,6 @@ onMounted(() => {
         </table>
       </div>
 
-      <!-- Mobile Card View -->
       <div v-if="hasMember" class="sm:hidden border-dp-border-primary">
         <div
           v-for="(member, index) in team.members"
@@ -591,7 +572,6 @@ onMounted(() => {
       </div>
     </div>
 
-    <!-- Duty Types Section -->
     <div class="border rounded-lg overflow-hidden bg-dp-bg-card border-dp-border-primary">
       <div class="text-dp-text-on-dark px-4 py-3 flex items-center justify-between bg-dp-surface-strong">
         <h3 class="font-bold">{{ t('team.manage.fields.dutyTypes') }}</h3>

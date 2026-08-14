@@ -47,6 +47,15 @@ const apiErrors = {
         required: 'Callback URL is required.',
       },
     },
+    apple: {
+      configurationUnavailable: 'Sign in with Apple is not configured.',
+      credential: {
+        invalid: 'The Apple authorization credentials are invalid. Please try again.',
+      },
+      provider: {
+        unavailable: 'Sign in with Apple is temporarily unavailable. Please try again later.',
+      },
+    },
   },
   common: {
     notFound: 'Resource not found.',
@@ -58,6 +67,18 @@ const apiErrors = {
     rateLimit: {
       exceeded: 'Too many requests. Please try again later.',
     },
+  },
+  aiScheduleConsent: {
+    settingsTitle: 'Automatic AI time recognition', toggleLabel: 'Recognize schedule times with AI',
+    dataFlowTitle: 'Data transfer summary',
+    dataFlow: 'Only the schedule date and content text are sent to an external AI processing service to extract start and end times. Member and team IDs are not sent.',
+    optionalDescription: 'This is optional and can be withdrawn at any time. You can still save schedules unchanged or enter times manually without consenting.',
+    statusOn: 'Currently consented', statusOff: 'Not currently consented', renewalRequired: 'The policy changed and requires renewed consent.',
+    viewPolicy: 'View detailed policy', policyTitle: 'Optional AI schedule time recognition consent', policyMeta: 'Version {version} · Effective {date}',
+    consentAcknowledgement: 'I have reviewed and agree to the policy and data transfer details above.', consentAction: 'Agree and turn on', consentSaving: 'Saving consent...',
+    confirmTitle: 'Turn on automatic AI time recognition?', confirmDescription: 'Schedule dates and content text will be sent to an external AI processing service to extract times. Member and team IDs are not sent.',
+    messages: { granted: 'AI time recognition consent granted.', revoked: 'AI time recognition consent withdrawn.', loadFailed: 'Could not load the AI consent status.', updateFailed: 'Could not update the AI consent setting.' },
+    schedule: { statusOn: 'AI time recognition is on', statusOff: 'AI time recognition is off', statusRenewal: 'AI time recognition needs renewed consent', promptTitle: 'Recognize the time automatically?', promptDescription: 'With consent, the schedule date and content text are sent to an external AI processing service to extract times. Member and team IDs are not sent.', consentAndParse: 'Consent and recognize automatically', saveWithoutAi: 'Save without AI', manualHint: 'You can always enter start and end times manually.', loadFailedContinue: 'The AI consent status could not be checked. Save the schedule unchanged without AI?', grantFailed: 'Consent could not be saved. You can save without AI or try again.' },
   },
   member: {
     notFound: 'Member not found.',
@@ -251,6 +272,7 @@ const apiErrors = {
 } as const
 
 export default {
+  aiScheduleConsent: apiErrors.aiScheduleConsent,
   common: {
     actions: {
       close: 'Close',
@@ -342,6 +364,12 @@ export default {
       guide: 'Guide',
       settings: 'Settings',
     },
+  },
+  sessionRecovery: {
+    checkFailed: 'We could not verify your session. You can keep using public features or sign in again.',
+    signIn: 'Go to sign in',
+    logoutUnconfirmedTitle: 'Server sign-out not confirmed',
+    logoutUnconfirmed: 'This device was signed out safely, but a server session may remain. Sign in again and open Settings > Sessions, or use another signed-in device, to end it.',
   },
   notifications: {
     common: {
@@ -483,9 +511,6 @@ export default {
     names: {
       ko: '한국어',
       en: 'English',
-      ja: '日本語',
-      zh: '简体中文',
-      es: 'Español',
     },
     suggestion: {
       title: 'Use {language}?',
@@ -706,6 +731,15 @@ export default {
       social: {
         kakao: 'Continue with Kakao',
         naver: 'Continue with Naver',
+        apple: 'Sign in with Apple',
+      },
+      apple: {
+        cancelled: 'Sign in with Apple was cancelled.',
+        providerUnavailable: 'Unable to start Sign in with Apple. Please try again later.',
+        invalidCredential: 'The Apple authorization response could not be verified. Please try again.',
+        generic: 'Sign in with Apple failed.',
+        retry: 'Try again',
+        retrying: 'Preparing Sign in with Apple...',
       },
       error: {
         generic: 'Failed to log in.',
@@ -844,18 +878,6 @@ export default {
           title: 'English',
           description: 'Applied to translated areas first',
         },
-        ja: {
-          title: '日本語',
-          description: 'Applied to translated areas first',
-        },
-        zh: {
-          title: '简体中文',
-          description: 'Applied to translated areas first',
-        },
-        es: {
-          title: 'Español',
-          description: 'Applied to translated areas first',
-        },
       },
     },
     theme: {
@@ -928,22 +950,138 @@ export default {
       providers: {
         kakao: 'Kakao',
         naver: 'Naver',
+        apple: 'Apple',
       },
       prompts: {
         kakaoTitle: 'Connect Kakao account',
         kakaoMessage: 'Connect your Kakao account for easier sign-in. You will be redirected to the Kakao sign-in page.',
         naverTitle: 'Connect Naver account',
         naverMessage: 'Connect your Naver account for easier sign-in. You will be redirected to the Naver sign-in page.',
+        appleTitle: 'Connect Apple account',
+        appleMessage: 'Connect your Apple account for easier sign-in. An Apple authorization window will open.',
+      },
+      apple: {
+        providerUnavailable: 'Unable to start Apple authorization. Please try again later.',
+        invalidCredential: 'The Apple authorization response could not be verified. Please try again.',
+        linkFailed: 'Failed to connect your Apple account.',
+        refreshFailedTitle: 'Apple account connected',
+        refreshFailed: 'Your Apple account was connected, but the latest status could not be loaded. Please refresh the page.',
+        retry: 'Prepare Apple authorization again',
+        retrying: 'Preparing Apple authorization...',
       },
       startFailed: 'Failed to start social account linking.',
+      linkSuccess: 'Your {provider} account has been linked.',
       alreadyLinkedTitle: 'Social account linking failed',
       alreadyLinkedMessage: 'This {provider} account is already linked to another Dutypark account. Please try again with a different {provider} account.',
+      unlink: {
+        action: 'Disconnect',
+        unlinking: 'Disconnecting...',
+        manageAction: 'Manage {provider} connection',
+        manageHint: 'Opens the social account connection settings.',
+        modalTitle: '{provider} connection',
+        localMappingTitle: 'Dutypark connection',
+        localMappingDescription: 'Dutypark stores a local mapping to this {provider} account. Disconnecting removes only that mapping; your {provider} account and provider-side authorization remain active.',
+        appleAuthorizationTitle: 'Apple authorization',
+        appleAuthorizationDescription: 'When you disconnect Apple, Dutypark first revokes its Apple authorization and then deletes the local connection. If revocation fails, both the Apple authorization and Dutypark connection remain active.',
+        confirmTitle: 'Disconnect {provider}?',
+        confirmMessage: 'This removes only the mapping saved in Dutypark. Your {provider} account and provider-side authorization will remain active.',
+        appleConfirmMessage: 'This revokes Dutypark’s Apple authorization and deletes the saved connection. You will no longer be able to sign in to Dutypark with this Apple account.',
+        success: '{provider} has been disconnected from Dutypark.',
+        appleSuccess: 'Apple authorization was revoked and the account was disconnected from Dutypark.',
+        lastSocialReason: 'Connect another social account before disconnecting this one.',
+        errors: {
+          lastAuthenticationMethod: 'You must keep at least one other connected social account. Connect another social account and try again.',
+          impersonationForbidden: 'You cannot disconnect social accounts while managing another account. Return to your own account and try again.',
+          appleProviderUnavailable: 'Dutypark could not confirm revocation with Apple, so the connection was kept. Please try again later.',
+          generic: 'Failed to disconnect the social account. Please try again.',
+        },
+      },
     },
     account: {
       sectionTitle: 'Account Management',
       changePassword: 'Change password',
       deleteAccount: 'Delete account',
       deleteInfo: 'Please contact an administrator to delete your account.',
+    },
+    accountDeletion: {
+      title: 'Delete account',
+      progress: 'Step {current} of {total}',
+      loading: 'Loading the effects of account deletion...',
+      scope: {
+        title: 'Review what will be deleted',
+        message: 'Review the immediate and background effects before continuing.',
+        access: 'Your account access and active sessions end as soon as the request is accepted.',
+        async: 'Schedules, to-dos, attachments, and stored files are removed safely in the background and may take some time.',
+        auxiliary: 'These auxiliary accounts will also be deleted',
+      },
+      team: {
+        title: 'Review team effects',
+        message: 'Dutypark protects teams and their members before deleting your account.',
+        soloDelete: 'You are the only active team member. The team will be deleted with your account.',
+        transferRequired: 'Choose a member to become team admin before you leave.',
+        successor: 'New team admin',
+        select: 'Select a member',
+        memberOnly: 'Only your membership in this team will be removed.',
+        none: 'You do not belong to a team.',
+      },
+      reauth: {
+        title: 'Verify your identity',
+        message: 'Verify again with one of your current sign-in methods. The proof stays only in this window and expires shortly.',
+        password: 'Current password',
+        passwordAction: 'Verify password',
+        socialTitle: 'Or verify with a connected social account',
+        socialAction: 'Verify with {provider}',
+        appleTitle: 'Verify with Apple',
+        appleOnlyMessage: 'Apple reauthentication is not available on the web. Open Account Management in the Dutypark iOS app, verify with Apple, and continue account deletion there.',
+        appleAlternativeMessage: 'On the web, verify with the password or another social account shown above. To verify with Apple, continue account deletion in the Dutypark iOS app.',
+        complete: 'Identity verified. You can continue.',
+      },
+      name: {
+        title: 'Enter your exact account name',
+        message: 'Type the name shown below exactly to confirm which account will be deleted.',
+        label: 'Account name confirmation',
+        placeholder: 'Enter the exact account name',
+      },
+      final: {
+        title: 'Final confirmation',
+        message: 'Submit the deletion request only if you understand all effects above.',
+        irreversible: 'This request cannot be undone. Deleted account data cannot be restored.',
+        action: 'Permanently delete account',
+      },
+      back: 'Back',
+      continue: 'Continue',
+      errors: {
+        load: 'Failed to load the effects of account deletion. Please try again.',
+        reauthentication: 'Identity verification failed. Check your sign-in method and try again.',
+        transferRequired: 'Select a valid new team admin before continuing.',
+        transferInvalid: 'The selected team admin is no longer available. Verify again and select another member.',
+        noTransferCandidate: 'No eligible member can receive team admin rights. Resolve the team setup before deleting your account.',
+        impersonation: 'You cannot delete an account while managing another account. Return to your own account first.',
+        proofExpired: 'Your identity verification expired. Please verify again.',
+        nameMismatch: 'The account name does not match exactly.',
+        oauthPopupBlocked: 'The verification window was blocked. Allow pop-ups for Dutypark and try again.',
+        oauthPopupClosed: 'The verification window was closed before completion.',
+        oauthPopupTimeout: 'Social verification timed out. Please try again.',
+        oauthCancelled: 'Social verification was cancelled.',
+        oauthAccountMismatch: 'That social account does not match the account connected to Dutypark.',
+        oauthProviderFailed: 'The social provider could not complete verification. Please try again.',
+        appleRequiresIos: 'Apple reauthentication is not available on the web. Continue account deletion in the Dutypark iOS app.',
+        generic: 'Account deletion could not be completed. Your verification was discarded; please verify again.',
+      },
+      oauth: {
+        callbackTitle: 'Account verification',
+        callbackWorking: 'Completing verification...',
+        callbackComplete: 'Verification was sent to the original window. You can close this window.',
+        callbackNoOpener: 'The original Dutypark window could not be verified. Close this window and try again.',
+        callbackInvalid: 'The verification response is invalid. Close this window and try again.',
+      },
+      completion: {
+        acceptedTitle: 'Your account deletion request was accepted',
+        alreadyPendingTitle: 'Your account deletion request is already being processed',
+        signedOut: 'You have been safely signed out from Dutypark.',
+        asyncCleanup: 'Account data and stored files are being removed asynchronously and may take some time.',
+        confirm: 'OK',
+      },
     },
     logout: 'Log out',
     logoutDialog: {

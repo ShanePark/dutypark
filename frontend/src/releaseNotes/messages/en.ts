@@ -7,7 +7,6 @@ export const enReleaseNotes = {
   loadMore: "Load more",
   latest: "Latest",
   pr: "PR #{number}",
-  openedAt: "PR date",
   areas: "Areas",
   categories: {
     feature: "Feature",
@@ -39,6 +38,16 @@ export const enReleaseNotes = {
     ui: "UI"
   },
   entries: {
+    "pr-403": {
+      title: "Dutypark comes to iPhone",
+      summary: "Use Dutypark in a new native iOS app with familiar calendars, todos, teams, friends, and settings, backed by sign-in and account controls that work consistently across web and mobile.",
+      changes: [
+        "Use the native iOS app for dashboards, duty calendars, schedules, todos, friends, teams, attachments, notifications, settings, and admin tools.",
+        "Sign in and connect accounts with Kakao, Naver, or Apple across web and iOS, including native Sign in with Apple and secure mobile OAuth handoff.",
+        "Receive iPhone push notifications through APNs and open supported destinations directly from each notification.",
+        "Request account deletion through a verified, staged flow and review or withdraw AI schedule-recognition consent from either client."
+      ]
+    },
     "pr-387": {
       title: "Jump back to this month from the calendar",
       summary: "A bubble button appears next to the year and month while you are viewing another month, so one tap brings you back to the current one.",

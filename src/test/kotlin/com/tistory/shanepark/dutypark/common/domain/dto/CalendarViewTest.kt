@@ -13,7 +13,6 @@ class CalendarViewTest {
     fun `jan 2023 - starts on Sunday, shows previous week`() {
         val calendarView = CalendarView(2023, 1)
         assertThat(CalendarView.SIZE).isEqualTo(42)
-        // Jan 1, 2023 is Sunday -> show full previous week (Dec 25-31)
         assertThat(calendarView.startDate).isEqualTo(LocalDate.of(2022, 12, 25))
         assertThat(calendarView.endDate).isEqualTo(LocalDate.of(2023, 2, 4))
     }
@@ -30,7 +29,6 @@ class CalendarViewTest {
     fun `2015-02 - Feb starts on Sunday, shows previous week`() {
         val calendarView = CalendarView(2015, 2)
         assertThat(CalendarView.SIZE).isEqualTo(42)
-        // Feb 1, 2015 is Sunday -> show full previous week (Jan 25-31)
         assertThat(calendarView.startDate).isEqualTo(LocalDate.of(2015, 1, 25))
         assertThat(calendarView.endDate).isEqualTo(LocalDate.of(2015, 3, 7))
     }
@@ -39,7 +37,6 @@ class CalendarViewTest {
     fun `2026-02 - Feb starts on Sunday, shows previous week`() {
         val calendarView = CalendarView(2026, 2)
         assertThat(CalendarView.SIZE).isEqualTo(42)
-        // Feb 1, 2026 is Sunday -> show full previous week (Jan 25-31)
         assertThat(calendarView.startDate).isEqualTo(LocalDate.of(2026, 1, 25))
         assertThat(calendarView.endDate).isEqualTo(LocalDate.of(2026, 3, 7))
     }
@@ -79,11 +76,9 @@ class CalendarViewTest {
     @Test
     fun `range from , range until`() {
         val calendarView = CalendarView(year = 2025, month = 4)
-        // April 1, 2025 = Tuesday, so paddingBefore = 2
         assertThat(calendarView.startDate).isEqualTo(LocalDate.of(2025, 3, 30))
         assertThat(calendarView.rangeFromDateTime).isEqualTo(LocalDate.of(2025, 3, 30).atStartOfDay())
 
-        // Fixed 42 days: March 30 + 41 = May 10
         assertThat(calendarView.endDate).isEqualTo(LocalDate.of(2025, 5, 10))
         assertThat(calendarView.rangeUntilDateTime).isEqualTo(LocalDate.of(2025, 5, 10).atTime(23, 59, 59))
     }

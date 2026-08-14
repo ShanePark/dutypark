@@ -6,7 +6,6 @@ import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchResult
 import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTemplate
 import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTemplateDto
 import com.tistory.shanepark.dutypark.duty.batch.exceptions.DutyBatchException
-import com.tistory.shanepark.dutypark.duty.batch.service.DutyBatchService
 import com.tistory.shanepark.dutypark.duty.service.DutyService
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.member.service.MemberService
@@ -26,9 +25,7 @@ class DutyBatchController(
     private val log = logger()
 
     @GetMapping("/templates")
-    fun getTemplates(
-        @Login(required = false) loginMember: LoginMember?,
-    ): List<DutyBatchTemplateDto> {
+    fun getTemplates(): List<DutyBatchTemplateDto> {
         return DutyBatchTemplate.entries.map { DutyBatchTemplateDto(it) }
     }
 
@@ -46,7 +43,7 @@ class DutyBatchController(
         val dutyBatchTemplate =
             memberService.getDutyBatchTemplate(memberId) ?: throw IllegalArgumentException("dutyBatch.template.required")
 
-        val dutyBatchService = applicationContext.getBean(dutyBatchTemplate.batchServiceClass) as DutyBatchService
+        val dutyBatchService = applicationContext.getBean(dutyBatchTemplate.batchServiceClass)
         return try {
             dutyBatchService.batchUploadMember(memberId = memberId, file = file, yearMonth = YearMonth.of(year, month))
         } catch (e: DutyBatchException) {

@@ -46,11 +46,11 @@ class RefreshTokenControllerTest : RestDocsTest() {
             MockMvcRequestBuilders.get("/api/auth/refresh-tokens")
                 .accept(MediaType.APPLICATION_JSON)
                 .cookie(Cookie(CookieService.REFRESH_TOKEN_COOKIE, current.token))
-                .withAuth(TestData.member)
+                .withAuth(TestData.member, current.id!!)
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.length()").value(1))
-            .andExpect(jsonPath("$[0].token").value(current.token))
+            .andExpect(jsonPath("$[0].token").doesNotExist())
             .andExpect(jsonPath("$[0].isCurrentLogin").value(true))
     }
 
@@ -77,11 +77,11 @@ class RefreshTokenControllerTest : RestDocsTest() {
                 .param("validOnly", "false")
                 .accept(MediaType.APPLICATION_JSON)
                 .cookie(Cookie(CookieService.REFRESH_TOKEN_COOKIE, current.token))
-                .withAuth(TestData.member)
+                .withAuth(TestData.member, current.id!!)
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.length()").value(2))
-            .andExpect(jsonPath("$[0].token").value(current.token))
+            .andExpect(jsonPath("$[0].token").doesNotExist())
             .andExpect(jsonPath("$[0].isCurrentLogin").value(true))
     }
 
@@ -97,7 +97,7 @@ class RefreshTokenControllerTest : RestDocsTest() {
 
         mockMvc.perform(
             MockMvcRequestBuilders.delete("/api/auth/refresh-tokens/{id}", token.id)
-                .withAuth(TestData.member)
+                .withAuth(TestData.member, token.id!!)
         )
             .andExpect(status().isNoContent)
 
@@ -140,7 +140,7 @@ class RefreshTokenControllerTest : RestDocsTest() {
         mockMvc.perform(
             MockMvcRequestBuilders.delete("/api/auth/refresh-tokens/others")
                 .cookie(Cookie(CookieService.REFRESH_TOKEN_COOKIE, current.token))
-                .withAuth(TestData.member)
+                .withAuth(TestData.member, current.id!!)
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.deletedCount").value(1))

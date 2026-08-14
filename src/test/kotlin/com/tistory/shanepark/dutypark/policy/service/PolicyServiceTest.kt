@@ -4,22 +4,33 @@ import com.tistory.shanepark.dutypark.policy.domain.entity.PolicyVersion
 import com.tistory.shanepark.dutypark.policy.domain.enums.PolicyType
 import com.tistory.shanepark.dutypark.policy.repository.PolicyVersionRepository
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
-import org.mockito.InjectMocks
 import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.whenever
+import java.time.Clock
 import java.time.LocalDate
+import java.time.ZoneId
+import java.time.ZoneOffset
 
 @ExtendWith(MockitoExtension::class)
 class PolicyServiceTest {
 
+    private val today = LocalDate.of(2026, 8, 14)
+    private val seoul = ZoneId.of("Asia/Seoul")
+    private val clock = Clock.fixed(today.atStartOfDay(seoul).toInstant(), ZoneOffset.UTC)
+
     @Mock
     lateinit var policyVersionRepository: PolicyVersionRepository
 
-    @InjectMocks
     lateinit var policyService: PolicyService
+
+    @BeforeEach
+    fun setUp() {
+        policyService = PolicyService(policyVersionRepository, clock)
+    }
 
     @Test
     fun `getCurrentPolicy returns latest by effective date`() {
@@ -29,7 +40,12 @@ class PolicyServiceTest {
             content = "terms-v2",
             effectiveDate = LocalDate.of(2025, 1, 1)
         )
-        whenever(policyVersionRepository.findTopByPolicyTypeOrderByEffectiveDateDesc(PolicyType.TERMS))
+        whenever(
+            policyVersionRepository.findTopByPolicyTypeAndEffectiveDateLessThanEqualOrderByEffectiveDateDesc(
+                PolicyType.TERMS,
+                today,
+            )
+        )
             .thenReturn(latestPolicy)
 
         val current = policyService.getCurrentPolicy(PolicyType.TERMS)
@@ -39,7 +55,12 @@ class PolicyServiceTest {
 
     @Test
     fun `getCurrentPolicy returns null when no policy`() {
-        whenever(policyVersionRepository.findTopByPolicyTypeOrderByEffectiveDateDesc(PolicyType.PRIVACY))
+        whenever(
+            policyVersionRepository.findTopByPolicyTypeAndEffectiveDateLessThanEqualOrderByEffectiveDateDesc(
+                PolicyType.PRIVACY,
+                today,
+            )
+        )
             .thenReturn(null)
 
         val current = policyService.getCurrentPolicy(PolicyType.PRIVACY)
@@ -47,23 +68,4 @@ class PolicyServiceTest {
         assertThat(current).isNull()
     }
 
-    @Test
-    fun `getPolicy returns policy by version`() {
-        val policy = PolicyVersion(
-            policyType = PolicyType.PRIVACY,
-            version = "1.0",
-            content = "privacy-v1",
-            effectiveDate = LocalDate.of(2024, 6, 1)
-        )
-        whenever(policyVersionRepository.findByPolicyTypeAndVersion(PolicyType.PRIVACY, "1.0"))
-            .thenReturn(policy)
-        whenever(policyVersionRepository.findByPolicyTypeAndVersion(PolicyType.PRIVACY, "missing"))
-            .thenReturn(null)
-
-        val foundPolicy = policyService.getPolicy(PolicyType.PRIVACY, "1.0")
-        val missingPolicy = policyService.getPolicy(PolicyType.PRIVACY, "missing")
-
-        assertThat(foundPolicy?.version).isEqualTo("1.0")
-        assertThat(missingPolicy).isNull()
-    }
 }

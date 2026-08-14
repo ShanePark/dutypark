@@ -9,9 +9,15 @@ import UntagConfirmModal from '@/components/duty/UntagConfirmModal.vue'
 import type { NormalizedAttachment, TaggableFriend } from '@/types'
 import { normalizeAttachment } from '@/api/attachment'
 import { useSwal } from '@/composables/useSwal'
+import { useAiScheduleConsentStore } from '@/stores/aiScheduleConsent'
+import {
+  getAiScheduleConsentAction,
+  isAiTimeParsingCandidate,
+} from '@/utils/aiScheduleConsentFlow'
 import { VISIBILITY_ICONS, VISIBILITY_COLORS, type CalendarVisibility } from '@/utils/visibility'
 
-const { showWarning, showError } = useSwal()
+const { showWarning, showError, confirm, choose } = useSwal()
+const aiConsentStore = useAiScheduleConsentStore()
 
 interface Schedule {
   id: string
@@ -49,7 +55,6 @@ interface Props {
   schedules: Schedule[]
   dutyTypes: DutyType[]
   canEdit: boolean
-  batchEditMode: boolean
   friends: TaggableFriend[]
   memberId: number
   isMyCalendar: boolean
@@ -73,6 +78,7 @@ interface ScheduleSaveData {
   tagFriendIds: number[]
   attachmentSessionId?: string | null
   orderedAttachmentIds?: string[]
+  aiTimeParsingRequested: boolean
 }
 
 interface SelectedTagSummary {
@@ -95,9 +101,9 @@ const isEditMode = ref(false)
 const editingScheduleId = ref<string | null>(null)
 const scheduleFormRef = ref<InstanceType<typeof ScheduleForm> | null>(null)
 const isUploading = ref(false)
+const isResolvingAiConsent = ref(false)
 const contentRef = ref<HTMLElement | null>(null)
 
-// Local duty state for immediate UI feedback
 const selectedDutyType = ref<string | null>(null)
 const unavailableCurrentDuty = computed(() => {
   if (!props.duty || props.duty.dutyTypeId === null) return null
@@ -116,7 +122,6 @@ watch(
   { immediate: true }
 )
 
-// Handle duty type change with immediate UI feedback
 function handleDutyTypeChange(dutyTypeId: number | null, dutyTypeName: string) {
   selectedDutyType.value = dutyTypeName
   emit('changeDutyType', dutyTypeId)
@@ -168,28 +173,24 @@ const visibilityOptions = computed(() => [
   {
     value: 'PUBLIC' as CalendarVisibility,
     label: t('visibility.labels.public'),
-    description: t('visibility.descriptions.public'),
     icon: VISIBILITY_ICONS.PUBLIC,
     color: VISIBILITY_COLORS.PUBLIC,
   },
   {
     value: 'FRIENDS' as CalendarVisibility,
     label: t('visibility.labels.friends'),
-    description: t('visibility.descriptions.friends'),
     icon: VISIBILITY_ICONS.FRIENDS,
     color: VISIBILITY_COLORS.FRIENDS,
   },
   {
     value: 'FAMILY' as CalendarVisibility,
     label: t('visibility.labels.family'),
-    description: t('visibility.descriptions.family'),
     icon: VISIBILITY_ICONS.FAMILY,
     color: VISIBILITY_COLORS.FAMILY,
   },
   {
     value: 'PRIVATE' as CalendarVisibility,
     label: t('visibility.labels.private'),
-    description: t('visibility.descriptions.private'),
     icon: VISIBILITY_ICONS.PRIVATE,
     color: VISIBILITY_COLORS.PRIVATE,
   },
@@ -202,7 +203,7 @@ const isScheduleTimeRangeInvalid = computed(() => {
   return endDateTime < startDateTime
 })
 const isScheduleSaveDisabled = computed(() =>
-  isScheduleTitleMissing.value || isScheduleTimeRangeInvalid.value || isUploading.value
+  isScheduleTitleMissing.value || isScheduleTimeRangeInvalid.value || isUploading.value || isResolvingAiConsent.value
 )
 
 watch(
@@ -220,13 +221,11 @@ watch(
       newSchedule.value.tagFriendIds = []
       selectedTagSummaries.value = []
     } else {
-      // Cleanup when modal closes
       scheduleFormRef.value?.cleanup()
     }
   }
 )
 
-// Auto-adjust endDateTime when startDateTime changes
 watch(
   () => newSchedule.value.startDateTime,
   (startDateTime) => {
@@ -254,7 +253,6 @@ function startCreateMode() {
     tagFriendIds: [],
   }
   selectedTagSummaries.value = []
-  // Scroll to top when entering create mode
   nextTick(() => {
     if (contentRef.value) {
       contentRef.value.scrollTop = 0
@@ -286,7 +284,6 @@ function startEditMode(schedule: Schedule) {
     name: tag.name,
   }))
 
-  // Load existing attachments
   editAttachments.value = (schedule.attachments || []).map((a) =>
     normalizeAttachment({
       id: a.id,
@@ -303,7 +300,6 @@ function startEditMode(schedule: Schedule) {
     })
   )
 
-  // Scroll to top when entering edit mode
   nextTick(() => {
     if (contentRef.value) {
       contentRef.value.scrollTop = 0
@@ -345,10 +341,67 @@ function buildScheduleData(): ScheduleSaveData {
     tagFriendIds: [...newSchedule.value.tagFriendIds],
     attachmentSessionId: sessionId,
     orderedAttachmentIds: orderedIds.length > 0 ? orderedIds : undefined,
+    aiTimeParsingRequested: true,
   }
 }
 
-function saveSchedule() {
+async function confirmSaveWithoutAi(message: string): Promise<boolean | null> {
+  const confirmed = await confirm(
+    message,
+    t('aiScheduleConsent.schedule.promptTitle'),
+    t('aiScheduleConsent.schedule.saveWithoutAi'),
+  )
+  return confirmed ? false : null
+}
+
+async function resolveAiTimeParsingRequest(data: ScheduleSaveData): Promise<boolean | null> {
+  if (!props.isMyCalendar) return true
+  if (!isAiTimeParsingCandidate(data.startDateTime, data.endDateTime)) return true
+
+  let consent
+  try {
+    consent = await aiConsentStore.loadForMember(props.memberId, true)
+  } catch (error) {
+    console.error('Failed to refresh AI schedule parsing consent:', error)
+    return confirmSaveWithoutAi(t('aiScheduleConsent.schedule.loadFailedContinue'))
+  }
+
+  const action = getAiScheduleConsentAction(consent)
+  if (action === 'request-ai') return true
+  if (action === 'without-ai') return false
+
+  const choice = await choose(
+    [
+      t('aiScheduleConsent.schedule.promptDescription'),
+      t('aiScheduleConsent.optionalDescription'),
+      t('aiScheduleConsent.schedule.manualHint'),
+    ].join('\n\n'),
+    t('aiScheduleConsent.schedule.promptTitle'),
+    t('aiScheduleConsent.schedule.consentAndParse'),
+    t('aiScheduleConsent.schedule.saveWithoutAi'),
+  )
+
+  if (choice === 'cancel') return null
+  if (choice === 'confirm') {
+    try {
+      await aiConsentStore.grant(props.memberId)
+      return true
+    } catch (error) {
+      console.error('Failed to grant AI schedule parsing consent:', error)
+      return confirmSaveWithoutAi(t('aiScheduleConsent.schedule.grantFailed'))
+    }
+  }
+
+  try {
+    await aiConsentStore.revoke(props.memberId)
+    return false
+  } catch (error) {
+    console.error('Failed to record declined AI schedule parsing consent:', error)
+    return confirmSaveWithoutAi(t('aiScheduleConsent.messages.updateFailed'))
+  }
+}
+
+async function saveSchedule() {
   if (!newSchedule.value.content.trim()) {
     return
   }
@@ -356,24 +409,31 @@ function saveSchedule() {
     return
   }
 
-  // Check if upload is in progress
   if (scheduleFormRef.value?.isUploading()) {
     showWarning(t('duty.schedule.warnings.uploadInProgress'))
     return
   }
 
-  const data = buildScheduleData()
+  isResolvingAiConsent.value = true
+  try {
+    const data = buildScheduleData()
+    const aiTimeParsingRequested = await resolveAiTimeParsingRequest(data)
+    if (aiTimeParsingRequested === null) return
+    data.aiTimeParsingRequested = aiTimeParsingRequested
 
-  if (isEditMode.value) {
-    emit('editSchedule', data)
-  } else {
-    emit('createSchedule', data)
+    if (isEditMode.value) {
+      emit('editSchedule', data)
+    } else {
+      emit('createSchedule', data)
+    }
+
+    isCreateMode.value = false
+    isEditMode.value = false
+    editingScheduleId.value = null
+    editAttachments.value = []
+  } finally {
+    isResolvingAiConsent.value = false
   }
-
-  isCreateMode.value = false
-  isEditMode.value = false
-  editingScheduleId.value = null
-  editAttachments.value = []
 }
 
 function handleUploadStart() {
@@ -453,7 +513,6 @@ function handleUploadError(message: string) {
       </div>
     </div>
 
-        <!-- Content -->
         <div ref="contentRef" class="day-detail-modal-content px-3 py-2.5 sm:p-4 overflow-y-auto overflow-x-hidden flex-1 min-h-0">
 
           <ScheduleList
@@ -468,7 +527,6 @@ function handleUploadError(message: string) {
             @request-untag="openUntagConfirmModal"
           />
 
-          <!-- Create/Edit Schedule Form -->
           <ScheduleForm
             v-if="isCreateMode || isEditMode"
             ref="scheduleFormRef"
@@ -485,12 +543,10 @@ function handleUploadError(message: string) {
           />
         </div>
 
-        <!-- Footer (sticky at bottom) -->
         <div
           v-if="canEdit || isCreateMode || isEditMode"
           class="day-detail-modal-footer modal-footer-safe px-3 py-2.5 sm:p-4 flex-shrink-0 border-t border-dp-border-primary"
         >
-          <!-- List mode: Add schedule button -->
           <div v-if="!isCreateMode && !isEditMode && canEdit" class="flex justify-end">
             <button
               @click="startCreateMode"
@@ -508,7 +564,6 @@ function handleUploadError(message: string) {
               {{ t('common.actions.close') }}
             </button>
           </div>
-          <!-- Create/Edit mode: Save/Cancel buttons -->
           <div v-else-if="isCreateMode || isEditMode" class="flex justify-end gap-2">
             <button
               @click="cancelEdit"
@@ -528,7 +583,6 @@ function handleUploadError(message: string) {
         </div>
   </BaseModal>
 
-  <!-- Untag Confirm Modal -->
   <UntagConfirmModal
     :is-open="!!untagConfirmSchedule"
     :schedule-title="untagConfirmSchedule?.content ?? ''"

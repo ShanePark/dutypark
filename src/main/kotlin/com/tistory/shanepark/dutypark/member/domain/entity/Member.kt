@@ -1,10 +1,12 @@
 package com.tistory.shanepark.dutypark.member.domain.entity
 
 import com.tistory.shanepark.dutypark.common.domain.entity.BaseTimeEntity
+import com.tistory.shanepark.dutypark.member.domain.enums.MemberStatus
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.team.domain.entity.Team
 import jakarta.persistence.*
+import java.time.Instant
 
 @Entity
 class Member(
@@ -37,10 +39,25 @@ class Member(
     @Column(name = "profile_photo_version")
     var profilePhotoVersion: Long = 0
 
+    @Column(nullable = false, length = 30)
+    @Enumerated(EnumType.STRING)
+    var status: MemberStatus = MemberStatus.ACTIVE
+        protected set
+
+    @Column(name = "deletion_requested_at")
+    var deletionRequestedAt: Instant? = null
+        protected set
+
     fun hasProfilePhoto(): Boolean = profilePhotoPath != null
 
     fun incrementProfilePhotoVersion() {
         profilePhotoVersion++
+    }
+
+    fun markDeletionPending(requestedAt: Instant) {
+        check(status == MemberStatus.ACTIVE)
+        status = MemberStatus.DELETION_PENDING
+        deletionRequestedAt = requestedAt
     }
 
     override fun toString(): String {

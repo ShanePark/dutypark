@@ -156,7 +156,6 @@ class DutyBatchSungsimServiceTest {
 
     @Test
     fun `sungsimDutyBatch successfully processes and calls saveAll`() {
-        // Given
         val yearMonth = YearMonth.of(2023, 1)
         val offDays = listOf(
             LocalDate.of(2022, 12, 31),
@@ -179,10 +178,8 @@ class DutyBatchSungsimServiceTest {
         val dutyType = DutyType(name = "dummy", position = 0, team = team, "#ffb3ba")
         whenever(dutyTypeRepository.findAllByTeamAndHiddenFalse(team)).thenReturn(listOf(dutyType))
 
-        // When
         dutyBatchService.batchUploadMember(createValidXlsxFile(), 1L, yearMonth)
 
-        // Then
         verify(dutyRepository).deleteDutiesByMemberAndDutyDateBetween(
             member,
             startDate,
@@ -226,7 +223,6 @@ class DutyBatchSungsimServiceTest {
         val yearMonth = YearMonth.of(2023, 1)
         val team = Team("dummy")
         whenever(teamRepository.findById(1L)).thenReturn(Optional.of(team))
-        // dutyTypeRepository 가 여러 개의 DutyType 을 반환하면 예외 발생
         val dutyType1 = DutyType(name = "dummy1", position = 0, team = team, "#98fb98")
         val dutyType2 = DutyType(name = "dummy2", position = 1, team = team, "#f0f8ff")
         whenever(dutyTypeRepository.findAllByTeamAndHiddenFalse(team)).thenReturn(listOf(dutyType1, dutyType2))

@@ -1,0 +1,145 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "notifications.bell.unread" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ unread" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "읽지 않음 %@개" } }
+    } },
+    "notifications.bell.friendRequests" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ friend requests" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 요청 %@개" } }
+    } },
+    "notifications.title" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Notifications" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "알림" } }
+    } },
+    "notifications.dropdown.viewAll" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "View all" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "전체보기" } }
+    } },
+    "notifications.common.loading" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Loading..." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "불러오는 중..." } }
+    } },
+    "notifications.common.empty" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "No notifications" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "알림이 없습니다" } }
+    } },
+    "notifications.common.retry" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Retry" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "다시 시도" } }
+    } },
+    "notifications.common.delete" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "삭제" } }
+    } },
+    "notifications.common.cancel" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Cancel" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "취소" } }
+    } },
+    "notifications.common.close" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Close notifications" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "알림 닫기" } }
+    } },
+    "notifications.common.error" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Error" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "오류" } }
+    } },
+    "notifications.common.ok" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "OK" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "확인" } }
+    } },
+    "notifications.items.generic" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "You have a new notification." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "새 알림이 도착했습니다." } }
+    } },
+    "notifications.items.friendRequestReceived" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ sent you a friend request." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님이 친구 요청을 보냈습니다." } }
+    } },
+    "notifications.items.friendRequestReceivedFallback" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "You received a friend request." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 요청이 도착했습니다." } }
+    } },
+    "notifications.items.friendRequestAccepted" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ accepted your friend request." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님이 친구 요청을 수락했습니다." } }
+    } },
+    "notifications.items.friendRequestAcceptedFallback" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Your friend request was accepted." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 요청이 수락되었습니다." } }
+    } },
+    "notifications.items.familyRequestReceived" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ sent you a family request." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님이 가족 요청을 보냈습니다." } }
+    } },
+    "notifications.items.familyRequestReceivedFallback" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "You received a family request." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "가족 요청이 도착했습니다." } }
+    } },
+    "notifications.items.familyRequestAccepted" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ accepted your family request." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님이 가족 요청을 수락했습니다." } }
+    } },
+    "notifications.items.familyRequestAcceptedFallback" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Your family request was accepted." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "가족 요청이 수락되었습니다." } }
+    } },
+    "notifications.items.scheduleTagged" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ tagged you in [%@]." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님의 [%@] 일정에 태그되었습니다." } }
+    } },
+    "notifications.items.scheduleTaggedFallback" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "You were tagged in [%@]." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "[%@] 일정에 태그되었습니다." } }
+    } },
+    "notifications.items.todoTagged" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ tagged you in TODO [%@]." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님의 [%@] TODO에 태그되었습니다." } }
+    } },
+    "notifications.items.todoTaggedFallback" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "You were tagged in TODO [%@]." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "[%@] TODO에 태그되었습니다." } }
+    } },
+    "notifications.items.todoStatusTodo" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ moved TODO [%@] to To-do." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님이 [%@] TODO를 할 일로 변경했습니다." } }
+    } },
+    "notifications.items.todoStatusTodoFallback" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "TODO [%@] was moved to To-do." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "[%@] TODO가 할 일로 변경되었습니다." } }
+    } },
+    "notifications.items.todoStatusInProgress" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ moved TODO [%@] to In progress." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님이 [%@] TODO를 진행중으로 변경했습니다." } }
+    } },
+    "notifications.items.todoStatusInProgressFallback" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "TODO [%@] was moved to In progress." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "[%@] TODO가 진행중으로 변경되었습니다." } }
+    } },
+    "notifications.items.todoStatusDone" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ marked TODO [%@] as done." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님이 [%@] TODO를 완료 처리했습니다." } }
+    } },
+    "notifications.items.todoStatusDoneFallback" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "TODO [%@] was marked as done." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "[%@] TODO가 완료 처리되었습니다." } }
+    } },
+
+    "notifications.list.markAllAsRead" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Mark all as read" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "전체 읽음" } }
+    } },
+    "notifications.list.markAllAsReadShort" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Read all" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "전체 읽음" } }
+    } },
+    "notifications.list.deleteRead" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete read" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "읽은 알림 삭제" } }
+    } },
+    "notifications.list.deleteReadShort" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete read" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "읽음 삭제" } }
+    } },
+    "notifications.list.noReadNotifications" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "There are no read notifications to delete." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "삭제할 읽은 알림이 없습니다" } }
+    } },
+    "notifications.list.noUnreadNotifications" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "There are no unread notifications." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "읽지 않은 알림이 없습니다" } }
+    } },
+    "notifications.list.retentionNotice" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Notifications are kept for 30 days." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "알림은 30일간 보관됩니다." } }
+    } },
+    "notifications.list.loadMore" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Load more" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "더보기" } }
+    } },
+    "notifications.list.deleteConfirmTitle" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete notification" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "알림 삭제" } }
+    } },
+    "notifications.list.deleteConfirmMessage" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete this notification?" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "이 알림을 삭제하시겠습니까?" } }
+    } },
+    "notifications.list.deleteAllReadTitle" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete read notifications" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "읽은 알림 삭제" } }
+    } },
+    "notifications.list.deleteAllReadConfirm" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete all read notifications?" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "읽은 알림을 모두 삭제하시겠습니까?" } }
+    } },
+    "notifications.messages.loadFailed" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to load notifications." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "알림을 불러오는데 실패했습니다" } }
+    } },
+    "notifications.messages.deleteFailed" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to delete notifications." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "알림 삭제에 실패했습니다" } }
+    } },
+    "notifications.messages.markAllAsReadFailed" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to update notifications." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "알림 처리에 실패했습니다" } }
+    } }
+  },
+  "version" : "1.0"
+}

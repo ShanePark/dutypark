@@ -28,7 +28,6 @@ class TodoControllerTest : RestDocsTest() {
 
     @Test
     fun `todoList test`() {
-        // Given
         todoRepository.saveAll(
             listOf(
                 Todo(
@@ -46,7 +45,6 @@ class TodoControllerTest : RestDocsTest() {
             )
         )
 
-        // Then
         mockMvc.perform(
             RestDocumentationRequestBuilders.get("/api/todos")
                 .accept(MediaType.APPLICATION_JSON)
@@ -76,7 +74,6 @@ class TodoControllerTest : RestDocsTest() {
             }
         """.trimIndent()
 
-        // Then
         mockMvc.perform(
             RestDocumentationRequestBuilders.post("/api/todos")
                 .accept(MediaType.APPLICATION_JSON)
@@ -98,7 +95,6 @@ class TodoControllerTest : RestDocsTest() {
 
     @Test
     fun `editTodo test`() {
-        // Given
         val saved = todoRepository.save(
             Todo(
                 member = TestData.member,
@@ -118,7 +114,6 @@ class TodoControllerTest : RestDocsTest() {
             }
         """.trimIndent()
 
-        // Then
         mockMvc.perform(
             RestDocumentationRequestBuilders.put("/api/todos/{id}", saved.id)
                 .accept(MediaType.APPLICATION_JSON)
@@ -143,7 +138,6 @@ class TodoControllerTest : RestDocsTest() {
 
     @Test
     fun `deleteTodo test`() {
-        // Given
         val saved = todoRepository.save(
             Todo(
                 member = TestData.member,
@@ -153,7 +147,6 @@ class TodoControllerTest : RestDocsTest() {
             )
         )
 
-        // Then
         mockMvc.perform(
             RestDocumentationRequestBuilders.delete("/api/todos/{id}", saved.id)
                 .accept(MediaType.APPLICATION_JSON)
@@ -173,7 +166,6 @@ class TodoControllerTest : RestDocsTest() {
 
     @Test
     fun `updatePosition test`() {
-        // Given
         val saved1 = todoRepository.save(
             Todo(
                 member = TestData.member,
@@ -199,7 +191,6 @@ class TodoControllerTest : RestDocsTest() {
             ]
         """.trimIndent()
 
-        // Then
         mockMvc.perform(
             RestDocumentationRequestBuilders.patch("/api/todos/position")
                 .accept(MediaType.APPLICATION_JSON)
@@ -226,9 +217,9 @@ class TodoControllerTest : RestDocsTest() {
             title = "Todo Completed",
             content = "Content Completed",
             position = 0,
-            status = TodoStatus.DONE
+            status = TodoStatus.DONE,
+            completedDate = java.time.LocalDateTime.now(),
         )
-        completed.markCompleted(0)
         todoRepository.save(completed)
 
         mockMvc.perform(
@@ -287,8 +278,9 @@ class TodoControllerTest : RestDocsTest() {
                 title = "Todo",
                 content = "Content",
                 position = 0,
-                status = TodoStatus.DONE
-            ).apply { markCompleted(0) }
+                status = TodoStatus.DONE,
+                completedDate = java.time.LocalDateTime.now(),
+            )
         )
 
         mockMvc.perform(
@@ -438,7 +430,6 @@ class TodoControllerTest : RestDocsTest() {
 
     @Test
     fun `getBoard test`() {
-        // Given
         todoRepository.saveAll(
             listOf(
                 Todo(
@@ -465,7 +456,6 @@ class TodoControllerTest : RestDocsTest() {
             )
         )
 
-        // Then
         mockMvc.perform(
             RestDocumentationRequestBuilders.get("/api/todos/board")
                 .accept(MediaType.APPLICATION_JSON)
@@ -488,7 +478,6 @@ class TodoControllerTest : RestDocsTest() {
 
     @Test
     fun `getByStatus test`() {
-        // Given
         todoRepository.saveAll(
             listOf(
                 Todo(
@@ -508,7 +497,6 @@ class TodoControllerTest : RestDocsTest() {
             )
         )
 
-        // Then
         mockMvc.perform(
             RestDocumentationRequestBuilders.get("/api/todos/status/{status}", "IN_PROGRESS")
                 .accept(MediaType.APPLICATION_JSON)
@@ -532,7 +520,6 @@ class TodoControllerTest : RestDocsTest() {
 
     @Test
     fun `changeStatus test`() {
-        // Given
         val saved = todoRepository.save(
             Todo(
                 member = TestData.member,
@@ -550,7 +537,6 @@ class TodoControllerTest : RestDocsTest() {
             }
         """.trimIndent()
 
-        // Then
         mockMvc.perform(
             RestDocumentationRequestBuilders.patch("/api/todos/{id}/status", saved.id)
                 .accept(MediaType.APPLICATION_JSON)
@@ -578,7 +564,6 @@ class TodoControllerTest : RestDocsTest() {
 
     @Test
     fun `updatePositionsByStatus test`() {
-        // Given
         val saved1 = todoRepository.save(
             Todo(
                 member = TestData.member,
@@ -606,7 +591,6 @@ class TodoControllerTest : RestDocsTest() {
             }
         """.trimIndent()
 
-        // Then
         mockMvc.perform(
             RestDocumentationRequestBuilders.patch("/api/todos/positions")
                 .accept(MediaType.APPLICATION_JSON)
@@ -631,7 +615,6 @@ class TodoControllerTest : RestDocsTest() {
 
     @Test
     fun `getTodosByCalendar test`() {
-        // Given
         todoRepository.save(
             Todo(
                 member = TestData.member,
@@ -642,7 +625,6 @@ class TodoControllerTest : RestDocsTest() {
             ).apply { dueDate = java.time.LocalDate.of(2025, 6, 15) }
         )
 
-        // Then
         mockMvc.perform(
             RestDocumentationRequestBuilders.get("/api/todos/calendar")
                 .param("year", "2025")
@@ -668,7 +650,6 @@ class TodoControllerTest : RestDocsTest() {
 
     @Test
     fun `getTodosByDue test`() {
-        // Given
         todoRepository.save(
             Todo(
                 member = TestData.member,
@@ -679,7 +660,6 @@ class TodoControllerTest : RestDocsTest() {
             ).apply { dueDate = java.time.LocalDate.of(2025, 6, 15) }
         )
 
-        // Then
         mockMvc.perform(
             RestDocumentationRequestBuilders.get("/api/todos/due")
                 .param("date", "2025-06-15")
@@ -703,7 +683,6 @@ class TodoControllerTest : RestDocsTest() {
 
     @Test
     fun `getOverdueTodos test`() {
-        // Given
         todoRepository.save(
             Todo(
                 member = TestData.member,
@@ -714,7 +693,6 @@ class TodoControllerTest : RestDocsTest() {
             ).apply { dueDate = fixedDate.minusDays(1) }
         )
 
-        // Then
         mockMvc.perform(
             RestDocumentationRequestBuilders.get("/api/todos/overdue")
                 .accept(MediaType.APPLICATION_JSON)
@@ -909,8 +887,9 @@ class TodoControllerTest : RestDocsTest() {
                 title = "Todo",
                 content = "Content",
                 position = 0,
-                status = TodoStatus.DONE
-            ).apply { markCompleted(0) }
+                status = TodoStatus.DONE,
+                completedDate = java.time.LocalDateTime.now(),
+            )
         )
 
         mockMvc.perform(
@@ -1139,7 +1118,6 @@ class TodoControllerTest : RestDocsTest() {
 
     @Test
     fun `member can only see own todos in list`() {
-        // Given: member1 creates a todo
         todoRepository.save(
             Todo(
                 member = TestData.member,
@@ -1149,7 +1127,6 @@ class TodoControllerTest : RestDocsTest() {
             )
         )
 
-        // When: member2 fetches todo list
         mockMvc.perform(
             RestDocumentationRequestBuilders.get("/api/todos")
                 .accept(MediaType.APPLICATION_JSON)
@@ -1197,7 +1174,6 @@ class TodoControllerTest : RestDocsTest() {
 
     @Test
     fun `member can only see own todos in board`() {
-        // Given: member1 creates todos in all statuses
         todoRepository.saveAll(
             listOf(
                 Todo(member = TestData.member, title = "Member1 Todo", content = "", position = 0, status = TodoStatus.TODO),
@@ -1206,7 +1182,6 @@ class TodoControllerTest : RestDocsTest() {
             )
         )
 
-        // When: member2 fetches board
         mockMvc.perform(
             RestDocumentationRequestBuilders.get("/api/todos/board")
                 .accept(MediaType.APPLICATION_JSON)
@@ -1471,8 +1446,9 @@ class TodoControllerTest : RestDocsTest() {
                 title = "Todo",
                 content = "Content",
                 position = 0,
-                status = TodoStatus.DONE
-            ).apply { markCompleted(0) }
+                status = TodoStatus.DONE,
+                completedDate = java.time.LocalDateTime.now(),
+            )
         )
 
         val json = """{"status": "TODO", "orderedIds": ["${saved.id}"]}"""
@@ -1761,8 +1737,9 @@ class TodoControllerTest : RestDocsTest() {
                 title = "Completed Todo",
                 content = "Content",
                 position = 0,
-                status = TodoStatus.DONE
-            ).apply { markCompleted(0) }
+                status = TodoStatus.DONE,
+                completedDate = java.time.LocalDateTime.now(),
+            )
         )
 
         val json = """
@@ -1793,8 +1770,9 @@ class TodoControllerTest : RestDocsTest() {
                 title = "Completed Todo",
                 content = "Content",
                 position = 0,
-                status = TodoStatus.DONE
-            ).apply { markCompleted(0) }
+                status = TodoStatus.DONE,
+                completedDate = java.time.LocalDateTime.now(),
+            )
         )
 
         val json = """

@@ -11,9 +11,6 @@ import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
-/**
- * When search engine is implemented, this service will be replaced with ScheduleSearchServiceESImpl
- */
 @Service
 class ScheduleSearchServiceDBImpl(
     private val scheduleRepository: ScheduleRepository,

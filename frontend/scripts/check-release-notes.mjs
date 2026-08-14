@@ -8,7 +8,7 @@ const root = path.resolve(__dirname, '..')
 const releaseNotesRoot = path.join(root, 'src', 'releaseNotes')
 const metaPath = path.join(releaseNotesRoot, 'meta.ts')
 const messageDir = path.join(releaseNotesRoot, 'messages')
-const locales = ['en', 'ko', 'ja', 'zh', 'es']
+const locales = ['en', 'ko']
 
 function fail(message) {
   console.error(message)

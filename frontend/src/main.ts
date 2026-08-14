@@ -14,11 +14,9 @@ app.use(pinia)
 app.use(i18n)
 app.use(router)
 
-// Initialize theme before mounting
 const themeStore = useThemeStore(pinia)
 themeStore.initializeTheme()
 
-// Initialize locale before mounting
 const localeStore = useLocaleStore(pinia)
 localeStore.initializeLocale()
 

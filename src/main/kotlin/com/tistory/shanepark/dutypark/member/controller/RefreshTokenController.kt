@@ -7,6 +7,7 @@ import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.domain.dto.RefreshTokenDto
 import com.tistory.shanepark.dutypark.security.service.CookieService
 import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpServletResponse
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 
@@ -23,22 +24,22 @@ class RefreshTokenController(
         request: HttpServletRequest,
         @RequestParam("validOnly", required = false, defaultValue = "true") validOnly: Boolean,
     ): List<RefreshTokenDto> {
-        val refreshTokens = refreshTokenService.findRefreshTokens(loginMember.id, validOnly)
         val currentToken = cookieService.extractRefreshToken(request.cookies)
-
-        refreshTokens
-            .firstOrNull { it.token == currentToken }
-            ?.isCurrentLogin = true
-
-        return refreshTokens
+        return refreshTokenService.findRefreshTokens(loginMember.id, validOnly, currentToken)
     }
 
     @DeleteMapping("/{id}")
     fun deleteRefreshToken(
         @Login loginMember: LoginMember,
         @PathVariable id: Long,
+        request: HttpServletRequest,
+        response: HttpServletResponse,
     ): ResponseEntity<Void> {
-        refreshTokenService.deleteRefreshToken(loginMember, id)
+        val currentToken = cookieService.extractRefreshToken(request.cookies)
+        val deletedCurrentToken = refreshTokenService.deleteRefreshToken(loginMember, id, currentToken)
+        if (deletedCurrentToken) {
+            cookieService.clearTokenCookies(response)
+        }
         return ResponseEntity.noContent().build()
     }
 

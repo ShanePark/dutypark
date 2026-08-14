@@ -1,0 +1,6 @@
+{
+  "status": 400,
+  "code": "schedule.content.required",
+  "details": {"attempt": 2, "retryable": false, "nested": {"source": "validation"}},
+  "fieldErrors": [{"field": "content", "code": "schedule.content.required"}]
+}

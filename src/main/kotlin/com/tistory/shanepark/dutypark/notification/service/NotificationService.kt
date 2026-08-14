@@ -13,7 +13,6 @@ import com.tistory.shanepark.dutypark.notification.domain.repository.Notificatio
 import com.tistory.shanepark.dutypark.notification.dto.NotificationCountDto
 import com.tistory.shanepark.dutypark.notification.dto.NotificationDto
 import org.springframework.data.domain.Page
-import org.springframework.data.domain.PageImpl
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -38,12 +37,6 @@ class NotificationService(
 
     @Transactional(readOnly = true)
     fun getNotifications(memberId: Long, pageable: Pageable): Page<NotificationDto> {
-        if (pageable.isUnpaged) {
-            val notifications = notificationRepository.findAllByMemberIdOrderByCreatedDateDesc(memberId)
-            val content = notifications.map { toDto(memberId, it, "getNotifications") }
-            return PageImpl(content, pageable, content.size.toLong())
-        }
-
         return notificationRepository.findByMemberIdOrderByCreatedDateDesc(memberId, pageable)
             .map { toDto(memberId, it, "getNotifications") }
     }

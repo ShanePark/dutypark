@@ -1,0 +1,144 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "auth.oauth.cancel" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Cancel" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "취소" } }
+      }
+    },
+    "auth.oauth.close" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Close" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "닫기" } }
+      }
+    },
+    "auth.oauth.divider" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Social login" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "소셜 로그인" } }
+      }
+    },
+    "auth.oauth.error" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Social login failed. Please try again." } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "소셜 로그인에 실패했습니다. 다시 시도해주세요." } }
+      }
+    },
+    "auth.oauth.apple" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Continue with Apple" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "Apple로 로그인" } }
+      }
+    },
+    "auth.oauth.kakao" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Continue with Kakao" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "카카오 로그인" } }
+      }
+    },
+    "auth.oauth.naver" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Continue with Naver" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "네이버 로그인" } }
+      }
+    },
+    "auth.oauth.signup.agree" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "I agree (required)" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "동의합니다 (필수)" } }
+      }
+    },
+    "auth.oauth.signup.discard.action" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Discard" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "나가기" } }
+      }
+    },
+    "auth.oauth.signup.discard.continue" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Keep editing" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "계속 작성" } }
+      }
+    },
+    "auth.oauth.signup.discard.message" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Your entered name and policy agreements will be lost." } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "입력한 이름과 약관 동의 내용이 사라집니다." } }
+      }
+    },
+    "auth.oauth.signup.discard.title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Discard signup?" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "회원가입을 취소할까요?" } }
+      }
+    },
+    "auth.oauth.signup.error" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Could not create your account." } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "회원가입에 실패했습니다." } }
+      }
+    },
+    "auth.oauth.signup.name" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Name" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "이름" } }
+      }
+    },
+    "auth.oauth.signup.name.help" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Enter 1–10 characters." } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "1자 이상 10자 이하로 입력해주세요." } }
+      }
+    },
+    "auth.oauth.signup.name.placeholder" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Your name" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "이름을 입력해주세요" } }
+      }
+    },
+    "auth.oauth.signup.policyError" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Could not load the required policies." } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "필수 약관을 불러오지 못했습니다." } }
+      }
+    },
+    "auth.oauth.signup.privacy" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Privacy Policy" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "개인정보 처리방침" } }
+      }
+    },
+    "auth.oauth.signup.submit" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Create account" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "가입하기" } }
+      }
+    },
+    "auth.oauth.signup.subtitle" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Welcome to Dutypark" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "Dutypark에 오신 것을 환영합니다" } }
+      }
+    },
+    "auth.oauth.signup.terms" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Terms of Service" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "서비스 이용약관" } }
+      }
+    },
+    "auth.oauth.signup.title" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Create account" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "회원가입" } }
+      }
+    },
+    "auth.oauth.signup.viewPolicy" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "View full text" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "전체보기" } }
+      }
+    }
+  },
+  "version" : "1.0"
+}

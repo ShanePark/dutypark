@@ -39,6 +39,7 @@ class AdminAuthFilterTest {
         adminAuthFilter.doFilter(request, response, filterChain)
 
         verify(filterChain).doFilter(request, response)
+        verify(response, never()).sendError(anyInt())
     }
 
     @Test
@@ -49,7 +50,18 @@ class AdminAuthFilterTest {
 
         adminAuthFilter.doFilter(request, response, filterChain)
 
-        verify(response).sendError(401)
+        verify(response).sendError(HttpServletResponse.SC_UNAUTHORIZED)
+        verify(filterChain, never()).doFilter(any(), any())
+    }
+
+    @Test
+    fun `should 401 error when access token is missing`() {
+        `when`(request.getAttribute(LoginMember.ATTR_NAME)).thenReturn(null)
+
+        adminAuthFilter.doFilter(request, response, filterChain)
+
+        verify(response).sendError(HttpServletResponse.SC_UNAUTHORIZED)
+        verify(filterChain, never()).doFilter(any(), any())
     }
 
 }

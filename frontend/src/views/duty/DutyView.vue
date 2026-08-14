@@ -10,7 +10,6 @@ import { buildDutyTypeCounts } from '@/utils/dutyTypeCounts'
 import { isOwnedCalendarSchedule } from '@/utils/schedulePermissions'
 import { Loader2 } from 'lucide-vue-next'
 
-// Modal Components
 import DayDetailModal from '@/components/duty/DayDetailModal.vue'
 import TodoAddModal from '@/components/duty/TodoAddModal.vue'
 import TodoDetailModal from '@/components/duty/TodoDetailModal.vue'
@@ -25,7 +24,6 @@ import DutyCalendarContent from '@/components/duty/DutyCalendarContent.vue'
 import DDayList from '@/components/duty/DDayList.vue'
 import YearMonthPicker from '@/components/common/YearMonthPicker.vue'
 
-// API
 import { todoApi } from '@/api/todo'
 import { dutyApi } from '@/api/duty'
 import { ddayApi, memberApi, friendApi } from '@/api/member'
@@ -41,7 +39,6 @@ const authStore = useAuthStore()
 const { showError, confirm, confirmDelete, toastSuccess } = useSwal()
 const { t } = useI18n()
 
-// State
 const today = new Date()
 const currentYear = ref(today.getFullYear())
 const currentMonth = ref(today.getMonth() + 1)
@@ -67,19 +64,16 @@ const canEditMyCalendar = computed(() => canEdit.value && isMyCalendar.value)
 // canSearch: true if can search schedules (same as canEdit)
 const canSearch = canEdit
 
-// Loading states
 const isLoading = ref(false)
 const isLoadingDuties = ref(false)
 const loadError = ref<string | null>(null)
 
-// Edit mode states
 const batchEditMode = ref(false)
 const focusedDay = ref<number | null>(null)  // Focused day for quick duty input (1~lastDay)
 const searchQuery = ref('')
 
 const lastDayInMonth = computed(() => new Date(currentYear.value, currentMonth.value, 0).getDate())
 
-// Modal states
 const isDayDetailModalOpen = ref(false)
 const isTodoAddModalOpen = ref(false)
 const isTodoDetailModalOpen = ref(false)
@@ -100,13 +94,11 @@ function handleYearMonthSelect(year: number, month: number) {
   isYearMonthPickerOpen.value = false
 }
 
-// Selected items
 const selectedDay = ref<CalendarDay | null>(null)
 const selectedTodo = ref<LocalTodo | null>(null)
 const selectedDDay = ref<LocalDDay | null>(null)
 const pinnedDDay = ref<LocalDDay | null>(null)
 
-// Data
 const todos = ref<LocalTodo[]>([])
 const completedTodos = ref<LocalTodo[]>([])
 const isLoadingTodos = ref(false)
@@ -380,12 +372,10 @@ async function loadHolidays() {
   }
 }
 
-// Team and duty types from API
 const team = ref<TeamDto | null>(null)
 const dutyTypes = ref<DutyType[]>([])
 const teamHasDutyBatchTemplate = computed(() => !!team.value?.dutyBatchTemplate)
 
-// Raw duty data from API
 const rawDuties = ref<DutyCalendarDay[]>([])
 
 // Computed duty types with count - reactive to both dutyTypes and rawDuties
@@ -411,16 +401,12 @@ const isOtherDutyActive = computed(() => otherDutyCount.value > 0)
 
 const otherDuties = ref<OtherDuty[]>([])
 
-// Schedules by day index
 const schedulesByDays = ref<Schedule[][]>([])
 
-// Holidays by day index
 const holidaysByDays = ref<HolidayDto[][]>([])
 
-// Raw calendar days from backend API
 const rawCalendarDays = ref<Array<{ year: number; month: number; day: number }>>([])
 
-// Search results
 const searchResults = ref<any[]>([])
 const searchPageInfo = ref({
   pageNumber: 0,
@@ -760,7 +746,6 @@ watch(
   }
 )
 
-// Navigation
 function prevMonth() {
   searchDay.value = null // Clear search highlight when navigating
   if (currentMonth.value === 1) {
@@ -905,7 +890,6 @@ function handleQuickDutyChange(dutyTypeId: number | null) {
     })
 }
 
-// D-Day handlers
 function togglePinnedDDay(dday: LocalDDay) {
   if (pinnedDDay.value?.id === dday.id) {
     pinnedDDay.value = null
@@ -998,7 +982,6 @@ async function deleteDDay(dday: LocalDDay) {
   }
 }
 
-// Todo handlers
 function openTodoDetail(todo: LocalTodo) {
   selectedTodo.value = todo
   isTodoDetailModalOpen.value = true
@@ -1056,21 +1039,6 @@ async function handleTodoReopen(id: string) {
     showError(t('duty.todo.messages.reopenFailed'))
   }
   // Only close detail modal if called from detail modal
-  if (fromDetailModal) {
-    isTodoDetailModalOpen.value = false
-  }
-}
-
-async function handleTodoStatusChange(data: { id: string; status: TodoStatus }) {
-  const fromDetailModal = isTodoDetailModalOpen.value
-  try {
-    await todoApi.changeStatus(data.id, { status: data.status })
-    await loadTodos()
-    toastSuccess(t('duty.todo.messages.statusChanged'))
-  } catch (error) {
-    console.error('Failed to change todo status:', error)
-    showError(t('duty.todo.messages.statusChangeFailed'))
-  }
   if (fromDetailModal) {
     isTodoDetailModalOpen.value = false
   }
@@ -1146,7 +1114,6 @@ function handleTodoBackToList() {
   router.push('/todo')
 }
 
-// Search handler
 const isSearching = ref(false)
 
 function openSearchModal() {
@@ -1210,7 +1177,6 @@ function handleSearchGoToDate(result: any) {
   isSearchResultModalOpen.value = false
 }
 
-// Other duties (view together)
 async function handleFriendToggle(friendId: number) {
   const idx = selectedFriendIds.value.indexOf(friendId)
   if (idx >= 0) {
@@ -1281,7 +1247,6 @@ async function loadOtherDuties() {
   }
 }
 
-// Load friends list
 async function loadFriends() {
   if (!isMyCalendar.value) return
 
@@ -1296,7 +1261,6 @@ async function loadFriends() {
   }
 }
 
-// Schedule handlers
 interface ScheduleSaveData {
   id?: string
   content: string
@@ -1307,6 +1271,7 @@ interface ScheduleSaveData {
   tagFriendIds: number[]
   attachmentSessionId?: string | null
   orderedAttachmentIds?: string[]
+  aiTimeParsingRequested: boolean
 }
 
 async function handleCreateSchedule(data: ScheduleSaveData) {
@@ -1323,6 +1288,7 @@ async function handleCreateSchedule(data: ScheduleSaveData) {
       tagFriendIds: data.tagFriendIds,
       attachmentSessionId: data.attachmentSessionId || undefined,
       orderedAttachmentIds: data.orderedAttachmentIds,
+      aiTimeParsingRequested: data.aiTimeParsingRequested,
     })
     await loadSchedules()
     toastSuccess(t('duty.schedule.messages.created'))
@@ -1347,6 +1313,7 @@ async function handleEditSchedule(data: ScheduleSaveData) {
       tagFriendIds: data.tagFriendIds,
       attachmentSessionId: data.attachmentSessionId || undefined,
       orderedAttachmentIds: data.orderedAttachmentIds,
+      aiTimeParsingRequested: data.aiTimeParsingRequested,
     })
     await loadSchedules()
   } catch (error) {
@@ -1407,7 +1374,6 @@ async function handleChangeDutyType(dutyTypeId: number | null) {
   }
 }
 
-// Batch update modal - update all days in current month to a single duty type
 async function showBatchUpdateModal() {
   if (!memberId.value || dutyTypes.value.length === 0) return
 
@@ -1418,7 +1384,7 @@ async function showBatchUpdateModal() {
     })
     .join('')
 
-  const result = await Swal.fire({
+  await Swal.fire({
     title: t('duty.batchUpdate.title'),
     html: `
       <p>${t('duty.batchUpdate.description1', { year: currentYear.value, month: currentMonth.value })}</p>
@@ -1454,7 +1420,6 @@ async function showBatchUpdateModal() {
   })
 }
 
-// Excel upload modal
 async function showExcelUploadModal() {
   if (!memberId.value || !team.value?.dutyBatchTemplate) return
 
@@ -1517,13 +1482,11 @@ async function showExcelUploadModal() {
 
 <template>
   <div class="max-w-4xl mx-auto px-2 sm:px-4 py-2 sm:py-4">
-    <!-- Loading State -->
     <div v-if="isLoading" class="flex items-center justify-center py-20">
       <Loader2 class="w-8 h-8 text-dp-accent animate-spin" />
       <span class="ml-2 text-dp-text-secondary">{{ t('duty.view.loading') }}</span>
     </div>
 
-    <!-- Error State -->
     <div v-else-if="loadError" class="border rounded-lg p-4 mb-4" :style="{ backgroundColor: 'var(--dp-danger-bg)', borderColor: 'var(--dp-danger-border)' }">
       <p class="text-dp-danger">{{ loadError }}</p>
       <button
@@ -1534,7 +1497,6 @@ async function showExcelUploadModal() {
       </button>
     </div>
 
-    <!-- Main Content -->
     <template v-else>
     <DutyHeaderControls
       :member-id="memberId"
@@ -1610,7 +1572,6 @@ async function showExcelUploadModal() {
       @todo-click="handleTodoBubbleClick"
     />
 
-    <!-- D-Day List (hidden in edit mode) -->
     <DDayList
       v-if="!batchEditMode"
       :d-days="dDays"
@@ -1621,7 +1582,6 @@ async function showExcelUploadModal() {
       @add="openDDayModal()"
     />
 
-    <!-- Modals -->
     <DayDetailModal
       :is-open="isDayDetailModalOpen"
       :date="selectedDay || { year: currentYear, month: currentMonth, day: 1 }"
@@ -1629,7 +1589,6 @@ async function showExcelUploadModal() {
       :schedules="selectedDaySchedules"
       :duty-types="dutyTypes"
       :can-edit="canEdit"
-      :batch-edit-mode="batchEditMode"
       :friends="friends"
       :member-id="memberId"
       :is-my-calendar="isMyCalendar"
@@ -1658,7 +1617,6 @@ async function showExcelUploadModal() {
       @update="handleTodoUpdate"
       @complete="handleTodoComplete"
       @reopen="handleTodoReopen"
-      @change-status="handleTodoStatusChange"
       @delete="handleTodoDelete"
       @untag-self="handleTodoUntagSelf"
       @back-to-list="handleTodoBackToList"

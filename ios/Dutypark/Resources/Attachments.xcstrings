@@ -1,0 +1,132 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "attachment.gallery.label" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Attachments (%lld)" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "첨부파일 (%lld)" } }
+      }
+    },
+    "attachment.action.cancel" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Cancel" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "취소" } }
+    } },
+    "attachment.action.cancelUpload" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Cancel upload" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "업로드 취소" } }
+    } },
+    "attachment.action.delete" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "삭제" } }
+    } },
+    "attachment.action.files" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Files" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "파일" } }
+    } },
+    "attachment.action.more" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "More attachment actions" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "첨부파일 더보기" } }
+    } },
+    "attachment.action.moveDown" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Move down" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "아래로 이동" } }
+    } },
+    "attachment.action.moveUp" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Move up" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "위로 이동" } }
+    } },
+    "attachment.action.ok" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "OK" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "확인" } }
+    } },
+    "attachment.action.photos" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Photos" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "사진" } }
+    } },
+    "attachment.action.preview" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Preview attachment" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "첨부파일 미리보기" } }
+    } },
+    "attachment.action.remove" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Remove attachment" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "첨부파일 제외" } }
+    } },
+    "attachment.action.share" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Share" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "공유" } }
+    } },
+    "attachment.delete.title" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete this attachment?" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "이 첨부파일을 삭제할까요?" } }
+    } },
+    "attachment.empty" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "No attachments" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "첨부파일이 없습니다" } }
+    } },
+    "attachment.error.blockedExtension" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "This file type is not allowed." } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "업로드할 수 없는 파일 형식입니다." } }
+    } },
+    "attachment.error.conversion" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "The photo could not be converted." } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "사진을 변환하지 못했습니다." } }
+    } },
+    "attachment.error.delete" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to delete the attachment." } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "첨부파일을 삭제하지 못했습니다." } }
+    } },
+    "attachment.error.discard" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to discard uploaded files." } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "업로드한 파일을 정리하지 못했습니다." } }
+    } },
+    "attachment.error.download" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to download the attachment." } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "첨부파일을 다운로드하지 못했습니다." } }
+    } },
+    "attachment.error.empty" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Empty files cannot be uploaded." } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "빈 파일은 업로드할 수 없습니다." } }
+    } },
+    "attachment.error.load" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to load attachments." } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "첨부파일을 불러오지 못했습니다." } }
+    } },
+    "attachment.error.reorder" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to change the attachment order." } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "첨부파일 순서를 변경하지 못했습니다." } }
+    } },
+    "attachment.error.title" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Attachment error" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "첨부파일 오류" } }
+    } },
+    "attachment.error.tooLarge" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Please choose a file smaller than 10 MB." } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "10MB 미만의 파일을 선택해주세요." } }
+    } },
+    "attachment.error.unreadable" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "The selected file could not be read." } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "선택한 파일을 읽지 못했습니다." } }
+    } },
+    "attachment.error.upload" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to upload the attachment." } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "첨부파일을 업로드하지 못했습니다." } }
+    } },
+    "attachment.loading" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Loading attachments" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "첨부파일을 불러오는 중" } }
+    } },
+    "attachment.upload.current" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Current file" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "현재 파일" } }
+    } },
+    "attachment.upload.overall" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Overall progress" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "전체 진행" } }
+    } },
+    "attachment.uploading" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Uploading attachments" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "첨부파일을 업로드하는 중" } }
+    } }
+  },
+  "version" : "1.0"
+}

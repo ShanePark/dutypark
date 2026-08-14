@@ -23,14 +23,6 @@ class Duty(
     @Column(name = "manual_override", nullable = false)
     var manualOverride: Boolean = true,
 ) {
-    constructor(
-        dutyYear: Int,
-        dutyMonth: Int,
-        dutyDay: Int,
-        dutyType: DutyType,
-        member: Member
-    ) : this(LocalDate.of(dutyYear, dutyMonth, dutyDay), dutyType, member)
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     var id: Long? = null

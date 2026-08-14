@@ -19,12 +19,14 @@ import com.tistory.shanepark.dutypark.notification.domain.payload.TodoTaggedPayl
 import com.tistory.shanepark.dutypark.notification.domain.repository.NotificationRepository
 import com.tistory.shanepark.dutypark.notification.dto.NotificationDto
 import com.tistory.shanepark.dutypark.notification.service.NotificationService
+import com.tistory.shanepark.dutypark.push.apns.service.ApnsPushService
 import com.tistory.shanepark.dutypark.push.dto.PushNotificationPayload
 import com.tistory.shanepark.dutypark.push.service.WebPushService
 import com.tistory.shanepark.dutypark.todo.domain.entity.TodoStatus
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertDoesNotThrow
+import org.mockito.Mockito.inOrder
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.doThrow
@@ -44,12 +46,14 @@ class NotificationEventListenerTest {
     private val notificationRepository: NotificationRepository = mock()
     private val memberRepository: MemberRepository = mock()
     private val webPushService: WebPushService = mock()
+    private val apnsPushService: ApnsPushService = mock()
 
     private val listener = NotificationEventListener(
         notificationService = notificationService,
         notificationRepository = notificationRepository,
         memberRepository = memberRepository,
         webPushService = webPushService,
+        apnsPushService = apnsPushService,
     )
 
     @Test
@@ -94,7 +98,11 @@ class NotificationEventListenerTest {
             payload,
         )
         val payloadCaptor = argumentCaptor<PushNotificationPayload>()
-        verify(webPushService).sendToMember(eq(member.id!!), payloadCaptor.capture())
+        val apnsPayloadCaptor = argumentCaptor<PushNotificationPayload>()
+        val pushOrder = inOrder(webPushService, apnsPushService)
+        pushOrder.verify(webPushService).sendToMember(eq(member.id!!), payloadCaptor.capture())
+        pushOrder.verify(apnsPushService).sendToMember(eq(member.id!!), apnsPayloadCaptor.capture())
+        assertThat(apnsPayloadCaptor.firstValue).isSameAs(payloadCaptor.firstValue)
         assertThat(payloadCaptor.firstValue.type).isEqualTo(NotificationType.FRIEND_REQUEST_RECEIVED)
         assertThat(payloadCaptor.firstValue.url).isEqualTo("/friends")
         assertThat(payloadCaptor.firstValue.unreadCount).isEqualTo(3)
@@ -416,7 +424,7 @@ class NotificationEventListenerTest {
         ).thenReturn(notification)
         whenever(notificationRepository.countByMemberIdAndIsReadFalse(member.id!!)).thenReturn(1)
 
-        listener.handleFamilyRequestAccepted(FamilyRequestAcceptedEvent(99L, member.id!!, actor.id!!))
+        listener.handleFamilyRequestAccepted(FamilyRequestAcceptedEvent(member.id!!, actor.id!!))
 
         val payloadCaptor = argumentCaptor<PushNotificationPayload>()
         verify(webPushService).sendToMember(eq(member.id!!), payloadCaptor.capture())
@@ -488,7 +496,7 @@ class NotificationEventListenerTest {
         ).thenReturn(notification)
         whenever(notificationRepository.countByMemberIdAndIsReadFalse(member.id!!)).thenReturn(1)
 
-        listener.handleFriendRequestAccepted(FriendRequestAcceptedEvent(99L, member.id!!, actor.id!!))
+        listener.handleFriendRequestAccepted(FriendRequestAcceptedEvent(member.id!!, actor.id!!))
 
         val payloadCaptor = argumentCaptor<PushNotificationPayload>()
         verify(webPushService).sendToMember(eq(member.id!!), payloadCaptor.capture())
@@ -515,6 +523,7 @@ class NotificationEventListenerTest {
         }
 
         verifyNoInteractions(webPushService)
+        verifyNoInteractions(apnsPushService)
     }
 
     private fun notificationWith(

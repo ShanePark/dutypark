@@ -1,18 +1,24 @@
 package com.tistory.shanepark.dutypark.security.controller
 
-import tools.jackson.core.type.TypeReference
-import tools.jackson.databind.json.JsonMapper
+import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
 import com.tistory.shanepark.dutypark.common.slack.annotation.SlackNotification
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.member.domain.enums.SsoType
 import com.tistory.shanepark.dutypark.policy.domain.enums.PolicyType
+import com.tistory.shanepark.dutypark.policy.service.PolicyService
 import com.tistory.shanepark.dutypark.member.service.ConsentService
 import com.tistory.shanepark.dutypark.member.service.MemberService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.domain.dto.SsoSignupRequest
+import com.tistory.shanepark.dutypark.security.oauth.OAuthFrontendBaseUrl
+import com.tistory.shanepark.dutypark.security.oauth.SocialAccountAlreadyLinkedException
 import com.tistory.shanepark.dutypark.security.oauth.kakao.KakaoLoginService
 import com.tistory.shanepark.dutypark.security.oauth.naver.NaverLoginService
-import com.tistory.shanepark.dutypark.security.oauth.SocialAccountAlreadyLinkedException
+import com.tistory.shanepark.dutypark.security.oauth.web.WebOAuthAuthorizeRequest
+import com.tistory.shanepark.dutypark.security.oauth.web.WebOAuthAuthorizeResponse
+import com.tistory.shanepark.dutypark.security.oauth.web.WebOAuthPurpose
+import com.tistory.shanepark.dutypark.security.oauth.web.WebOAuthService
+import com.tistory.shanepark.dutypark.security.oauth.web.WebOAuthStateException
 import com.tistory.shanepark.dutypark.security.service.AuthService
 import com.tistory.shanepark.dutypark.security.service.CookieService
 import jakarta.validation.Valid
@@ -23,8 +29,6 @@ import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.util.UriComponentsBuilder
 import java.net.URI
-import java.nio.charset.StandardCharsets
-import java.util.Base64
 
 @RestController
 @RequestMapping("/api/auth")
@@ -35,12 +39,21 @@ class OAuthController(
     private val authService: AuthService,
     private val cookieService: CookieService,
     private val consentService: ConsentService,
+    private val policyService: PolicyService,
+    private val webOAuthService: WebOAuthService,
+    private val oauthFrontendBaseUrl: OAuthFrontendBaseUrl,
 ) {
-    private val jsonMapper = JsonMapper.builder().build()
-
     companion object {
         private const val SOCIAL_LINK_ERROR_ALREADY_LINKED = "already_linked"
+        private const val WEB_OAUTH_CALLBACK = "/auth/oauth-callback"
     }
+
+    @PostMapping("oauth2/authorize")
+    fun authorizeWebOAuth(
+        @RequestBody request: WebOAuthAuthorizeRequest,
+        httpServletRequest: HttpServletRequest,
+        @Login(required = false) loginMember: LoginMember?,
+    ): WebOAuthAuthorizeResponse = webOAuthService.authorize(request, loginMember, httpServletRequest)
 
     @GetMapping("Oauth2ClientCallback/kakao")
     fun kakaoLoginCallback(
@@ -50,38 +63,35 @@ class OAuthController(
         httpServletResponse: HttpServletResponse,
         @Login(required = false) loginMember: LoginMember?
     ): ResponseEntity<Void> {
-        val state = parseState(stateString)
-        val referer = (state["referer"] as String?) ?: "/"
-
-        val redirectUrl = httpServletRequest.requestURL.toString()
-
-        val login = (state["login"] as Boolean?) ?: false
-        if (login && loginMember != null) {
+        val claim = try {
+            webOAuthService.claim(SsoType.KAKAO, stateString, loginMember, httpServletRequest)
+        } catch (_: WebOAuthStateException) {
+            return invalidStateResponse()
+        }
+        val redirectUrl = webOAuthService.callbackUri(SsoType.KAKAO)
+        if (claim.purpose == WebOAuthPurpose.LINK) {
             return try {
                 kakaoLoginService.setKakaoIdToMember(
                     code = code,
                     redirectUrl = redirectUrl,
-                    loginMember = loginMember,
+                    loginMember = requireNotNull(loginMember),
                 )
                 ResponseEntity.status(HttpStatus.FOUND)
-                    .location(URI.create(referer))
+                    .location(buildSocialLinkSuccessUri(claim.referer, SsoType.KAKAO))
                     .build()
             } catch (e: SocialAccountAlreadyLinkedException) {
                 ResponseEntity.status(HttpStatus.FOUND)
-                    .location(buildSocialLinkErrorUri(referer, e.provider))
+                    .location(buildSocialLinkErrorUri(claim.referer, e.provider))
                     .build()
             }
         }
-
-        val callbackUrl = state["callbackUrl"] as String?
-            ?: throw IllegalArgumentException("auth.oauth.callbackUrl.required")
         return kakaoLoginService.login(
             req = httpServletRequest,
             resp = httpServletResponse,
             code = code,
             redirectUrl = redirectUrl,
-            callbackUrl = callbackUrl,
-            redirectTarget = state["referer"] as String?
+            callbackUrl = oauthFrontendBaseUrl.uri(WEB_OAUTH_CALLBACK).toASCIIString(),
+            redirectTarget = claim.referer,
         )
     }
 
@@ -93,36 +103,34 @@ class OAuthController(
         httpServletResponse: HttpServletResponse,
         @Login(required = false) loginMember: LoginMember?
     ): ResponseEntity<Void> {
-        val state = parseState(stateString)
-        val referer = (state["referer"] as String?) ?: "/"
-
-        val login = (state["login"] as Boolean?) ?: false
-        if (login && loginMember != null) {
+        val claim = try {
+            webOAuthService.claim(SsoType.NAVER, stateString, loginMember, httpServletRequest)
+        } catch (_: WebOAuthStateException) {
+            return invalidStateResponse()
+        }
+        if (claim.purpose == WebOAuthPurpose.LINK) {
             return try {
                 naverLoginService.setNaverIdToMember(
                     code = code,
                     state = stateString,
-                    loginMember = loginMember,
+                    loginMember = requireNotNull(loginMember),
                 )
                 ResponseEntity.status(HttpStatus.FOUND)
-                    .location(URI.create(referer))
+                    .location(buildSocialLinkSuccessUri(claim.referer, SsoType.NAVER))
                     .build()
             } catch (e: SocialAccountAlreadyLinkedException) {
                 ResponseEntity.status(HttpStatus.FOUND)
-                    .location(buildSocialLinkErrorUri(referer, e.provider))
+                    .location(buildSocialLinkErrorUri(claim.referer, e.provider))
                     .build()
             }
         }
-
-        val callbackUrl = state["callbackUrl"] as String?
-            ?: throw IllegalArgumentException("auth.oauth.callbackUrl.required")
         return naverLoginService.login(
             req = httpServletRequest,
             resp = httpServletResponse,
             code = code,
             state = stateString,
-            callbackUrl = callbackUrl,
-            redirectTarget = state["referer"] as String?
+            callbackUrl = oauthFrontendBaseUrl.uri(WEB_OAUTH_CALLBACK).toASCIIString(),
+            redirectTarget = claim.referer,
         )
     }
 
@@ -133,6 +141,16 @@ class OAuthController(
         httpServletRequest: HttpServletRequest,
         httpServletResponse: HttpServletResponse
     ): ResponseEntity<Map<String, Any>> {
+        val currentTermsVersion = policyService.getCurrentPolicy(PolicyType.TERMS)?.version
+        if (request.termsVersion != currentTermsVersion) {
+            throw BadRequestException("policy.terms.version.outdated")
+        }
+
+        val currentPrivacyVersion = policyService.getCurrentPolicy(PolicyType.PRIVACY)?.version
+        if (request.privacyVersion != currentPrivacyVersion) {
+            throw BadRequestException("policy.privacy.version.outdated")
+        }
+
         val member = memberService.createSsoMember(
             username = request.username,
             memberSsoRegisterUUID = request.uuid
@@ -170,25 +188,23 @@ class OAuthController(
         )
     }
 
-    private fun parseState(stateString: String): Map<String, Any> {
-        return try {
-            jsonMapper.readValue(stateString, object : TypeReference<Map<String, Any>>() {})
-        } catch (_: Exception) {
-            val normalized = stateString
-                .replace('-', '+')
-                .replace('_', '/')
-                .let { raw ->
-                    val padding = (4 - raw.length % 4) % 4
-                    raw + "=".repeat(padding)
-                }
-            val decoded = String(Base64.getDecoder().decode(normalized), StandardCharsets.UTF_8)
-            jsonMapper.readValue(decoded, object : TypeReference<Map<String, Any>>() {})
-        }
-    }
+    private fun invalidStateResponse(): ResponseEntity<Void> = ResponseEntity.status(HttpStatus.FOUND)
+        .location(oauthFrontendBaseUrl.uri("$WEB_OAUTH_CALLBACK#error=oauth_state_invalid"))
+        .build()
 
     private fun buildSocialLinkErrorUri(referer: String, provider: SsoType): URI {
-        return UriComponentsBuilder.fromUriString(referer)
+        return UriComponentsBuilder.fromUriString(oauthFrontendBaseUrl.uri(referer).toASCIIString())
+            .replaceQueryParam("socialLinkSuccess")
             .replaceQueryParam("socialLinkError", SOCIAL_LINK_ERROR_ALREADY_LINKED)
+            .replaceQueryParam("socialProvider", provider.name.lowercase())
+            .build(true)
+            .toUri()
+    }
+
+    private fun buildSocialLinkSuccessUri(referer: String, provider: SsoType): URI {
+        return UriComponentsBuilder.fromUriString(oauthFrontendBaseUrl.uri(referer).toASCIIString())
+            .replaceQueryParam("socialLinkError")
+            .replaceQueryParam("socialLinkSuccess", true)
             .replaceQueryParam("socialProvider", provider.name.lowercase())
             .build(true)
             .toUri()

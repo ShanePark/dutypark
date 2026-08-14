@@ -50,7 +50,7 @@ data class TeamDto(
                         teamId = teamId,
                         name = it.name,
                         position = it.position,
-                        color = it.color.toString(),
+                        color = it.color,
                         hidden = it.hidden,
                     )
                 }.toMutableList()
@@ -61,7 +61,7 @@ data class TeamDto(
                     teamId = teamId,
                     name = team.defaultDutyName,
                     position = -1,
-                    color = team.defaultDutyColor.toString()
+                    color = team.defaultDutyColor
                 )
             )
 

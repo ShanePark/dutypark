@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.security.filters
 
+import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.domain.enums.TokenStatus.NOT_EXIST
 import com.tistory.shanepark.dutypark.security.domain.enums.TokenStatus.VALID
@@ -30,6 +31,7 @@ class JwtAuthFilter(
 
         var jwt = ""
         var status = NOT_EXIST
+        var tokenFromCookie = false
 
         val bearerToken = extractBearerToken(request)
         if (bearerToken != null) {
@@ -45,14 +47,21 @@ class JwtAuthFilter(
                 val cookieStatus = authService.validateToken(cookieToken)
                 if (cookieStatus == VALID) {
                     jwt = cookieToken
+                    tokenFromCookie = true
                 }
                 status = cookieStatus
             }
         }
 
         if (status == VALID) {
-            val loginMember = authService.tokenToLoginMember(jwt)
-            request.setAttribute(LoginMember.ATTR_NAME, loginMember)
+            try {
+                val loginMember = authService.tokenToLoginMember(jwt)
+                request.setAttribute(LoginMember.ATTR_NAME, loginMember)
+            } catch (_: AuthException) {
+                if (tokenFromCookie) {
+                    cookieService.clearTokenCookies(response)
+                }
+            }
         }
 
         chain.doFilter(req, response)

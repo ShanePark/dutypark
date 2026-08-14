@@ -11,7 +11,6 @@ function createToken(lastUsed: string | null): RefreshTokenDto {
     lastUsed,
     remoteAddr: '127.0.0.1',
     id: Math.floor(Math.random() * 1000),
-    token: 'token',
     userAgent: null,
     isCurrentLogin: false,
   }

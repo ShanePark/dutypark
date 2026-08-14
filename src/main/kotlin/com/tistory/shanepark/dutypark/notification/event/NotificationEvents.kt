@@ -10,7 +10,6 @@ data class FriendRequestSentEvent(
 )
 
 data class FriendRequestAcceptedEvent(
-    val requestId: Long,
     val fromMemberId: Long,
     val toMemberId: Long
 )
@@ -22,7 +21,6 @@ data class FamilyRequestSentEvent(
 )
 
 data class FamilyRequestAcceptedEvent(
-    val requestId: Long,
     val fromMemberId: Long,
     val toMemberId: Long
 )

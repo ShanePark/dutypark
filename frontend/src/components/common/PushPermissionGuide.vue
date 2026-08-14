@@ -117,7 +117,6 @@ onMounted(() => {
   checkVisibility()
 })
 
-defineExpose({ checkVisibility })
 </script>
 
 <template>
@@ -129,7 +128,6 @@ defineExpose({ checkVisibility })
       @click="handleBackdropClick"
     >
       <div class="push-guide-container">
-        <!-- Header -->
         <div class="push-guide-header">
           <div class="flex items-center gap-2">
             <Bell class="w-5 h-5 push-guide-icon" />
@@ -145,14 +143,12 @@ defineExpose({ checkVisibility })
           </button>
         </div>
 
-        <!-- Content -->
         <div class="push-guide-content">
           <p class="push-guide-benefit">
             {{ t('pushGuide.descriptionLine1') }}<br />
             {{ t('pushGuide.descriptionLine2') }}
           </p>
 
-          <!-- Allow Button -->
           <button
             type="button"
             class="push-guide-allow-btn"
@@ -170,7 +166,6 @@ defineExpose({ checkVisibility })
           </button>
         </div>
 
-        <!-- Footer -->
         <div class="push-guide-footer">
           <button
             type="button"
@@ -315,7 +310,6 @@ defineExpose({ checkVisibility })
   color: var(--dp-text-secondary);
 }
 
-/* Transition */
 .slide-up-enter-active,
 .slide-up-leave-active {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);

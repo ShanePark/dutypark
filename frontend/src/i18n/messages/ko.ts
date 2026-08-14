@@ -47,6 +47,15 @@ const apiErrors = {
         required: '콜백 URL 정보가 필요합니다.',
       },
     },
+    apple: {
+      configurationUnavailable: 'Apple 로그인 설정이 완료되지 않았습니다.',
+      credential: {
+        invalid: 'Apple 인증 정보가 올바르지 않습니다. 다시 시도해 주세요.',
+      },
+      provider: {
+        unavailable: 'Apple 로그인 서비스에 연결할 수 없습니다. 잠시 후 다시 시도해 주세요.',
+      },
+    },
   },
   common: {
     notFound: '리소스를 찾을 수 없습니다.',
@@ -58,6 +67,20 @@ const apiErrors = {
     rateLimit: {
       exceeded: '요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.',
     },
+  },
+  aiScheduleConsent: {
+    settingsTitle: 'AI 시간 자동 인식',
+    toggleLabel: 'AI로 일정 시간 자동 인식',
+    dataFlowTitle: '데이터 전송 안내',
+    dataFlow: '일정의 날짜와 내용 텍스트만 외부 AI 처리 서비스로 전송해 시작·종료 시간을 추출합니다. 회원 ID와 팀 ID는 전송하지 않습니다.',
+    optionalDescription: '선택 동의이며 언제든 철회할 수 있습니다. 동의하지 않아도 일정을 그대로 저장하거나 시간을 직접 입력할 수 있습니다.',
+    statusOn: '현재 동의됨', statusOff: '현재 동의하지 않음', renewalRequired: '정책이 변경되어 다시 동의해야 합니다.',
+    viewPolicy: '상세 정책 보기', policyTitle: 'AI 일정 시간 인식 선택 동의', policyMeta: '버전 {version} · 시행일 {date}',
+    consentAcknowledgement: '위 약관과 데이터 전송 내용을 확인했고 동의합니다.', consentAction: '동의하고 켜기', consentSaving: '동의 저장 중...',
+    confirmTitle: 'AI 시간 자동 인식을 켤까요?',
+    confirmDescription: '일정 날짜와 내용 텍스트가 시간 추출 목적으로 외부 AI 처리 서비스에 전송됩니다. 회원 ID와 팀 ID는 전송되지 않습니다.',
+    messages: { granted: 'AI 시간 자동 인식에 동의했습니다.', revoked: 'AI 시간 자동 인식 동의를 철회했습니다.', loadFailed: 'AI 동의 상태를 불러오지 못했습니다.', updateFailed: 'AI 동의 설정을 변경하지 못했습니다.' },
+    schedule: { statusOn: 'AI 시간 자동 인식 켜짐', statusOff: 'AI 시간 자동 인식 꺼짐', statusRenewal: 'AI 시간 자동 인식 재동의 필요', promptTitle: '시간을 자동으로 인식할까요?', promptDescription: '동의하면 일정 날짜와 내용 텍스트를 외부 AI 처리 서비스에 보내 시간을 추출합니다. 회원·팀 ID는 보내지 않습니다.', consentAndParse: '동의하고 자동 인식', saveWithoutAi: 'AI 없이 저장', manualHint: '시작·종료 시간은 언제든 직접 입력할 수 있습니다.', loadFailedContinue: 'AI 동의 상태를 확인하지 못했습니다. AI 없이 일정을 그대로 저장할까요?', grantFailed: '동의를 저장하지 못했습니다. AI 없이 저장하거나 다시 시도할 수 있습니다.' },
   },
   member: {
     notFound: '회원을 찾을 수 없습니다.',
@@ -251,6 +274,7 @@ const apiErrors = {
 } as const
 
 export default {
+  aiScheduleConsent: apiErrors.aiScheduleConsent,
   common: {
     actions: {
       close: '닫기',
@@ -342,6 +366,12 @@ export default {
       guide: '이용 안내',
       settings: '설정',
     },
+  },
+  sessionRecovery: {
+    checkFailed: '세션을 확인하지 못했습니다. 공개 기능은 계속 사용하거나 다시 로그인할 수 있습니다.',
+    signIn: '로그인으로 이동',
+    logoutUnconfirmedTitle: '서버 로그아웃 확인 실패',
+    logoutUnconfirmed: '이 기기의 로그인 정보는 안전하게 정리했지만 서버 세션이 남아 있을 수 있습니다. 다시 로그인한 뒤 설정 > 접속 세션 관리에서 종료하거나, 로그인된 다른 기기에서 해당 세션을 종료해 주세요.',
   },
   notifications: {
     common: {
@@ -483,9 +513,6 @@ export default {
     names: {
       ko: '한국어',
       en: 'English',
-      ja: '日本語',
-      zh: '简体中文',
-      es: 'Español',
     },
     suggestion: {
       title: '{language}로 볼까요?',
@@ -706,6 +733,15 @@ export default {
       social: {
         kakao: '카카오 로그인',
         naver: '네이버 로그인',
+        apple: 'Apple로 로그인',
+      },
+      apple: {
+        cancelled: 'Apple 로그인이 취소되었습니다.',
+        providerUnavailable: 'Apple 로그인을 시작할 수 없습니다. 잠시 후 다시 시도해 주세요.',
+        invalidCredential: 'Apple 인증 응답을 확인할 수 없습니다. 다시 시도해 주세요.',
+        generic: 'Apple 로그인에 실패했습니다.',
+        retry: '다시 시도',
+        retrying: 'Apple 로그인 준비 중...',
       },
       error: {
         generic: '로그인에 실패했습니다.',
@@ -845,18 +881,6 @@ export default {
           title: 'English',
           description: '영어 지원 화면부터 순차 적용',
         },
-        ja: {
-          title: '日本語',
-          description: '일본어 지원 화면부터 순차 적용',
-        },
-        zh: {
-          title: '简体中文',
-          description: '중국어(간체) 지원 화면부터 순차 적용',
-        },
-        es: {
-          title: 'Español',
-          description: '스페인어 지원 화면부터 순차 적용',
-        },
       },
     },
     theme: {
@@ -923,28 +947,76 @@ export default {
     },
     sso: {
       sectionTitle: '소셜 계정 연동',
-      connected: '연동중',
+      connected: '연동됨',
       connecting: '연동 중...',
       connect: '연동하기',
       providers: {
         kakao: '카카오',
         naver: '네이버',
+        apple: 'Apple',
       },
       prompts: {
         kakaoTitle: '카카오 계정 연동',
         kakaoMessage: '카카오 계정을 연동하면 카카오 로그인으로 간편하게 접속할 수 있습니다. 카카오 로그인 페이지로 이동합니다.',
         naverTitle: '네이버 계정 연동',
         naverMessage: '네이버 계정을 연동하면 네이버 로그인으로 간편하게 접속할 수 있습니다. 네이버 로그인 페이지로 이동합니다.',
+        appleTitle: 'Apple 계정 연동',
+        appleMessage: 'Apple 계정을 연동하면 Apple 로그인으로 간편하게 접속할 수 있습니다. Apple 인증 창을 엽니다.',
+      },
+      apple: {
+        providerUnavailable: 'Apple 인증을 시작할 수 없습니다. 잠시 후 다시 시도해 주세요.',
+        invalidCredential: 'Apple 인증 응답을 확인할 수 없습니다. 다시 시도해 주세요.',
+        linkFailed: 'Apple 계정 연동에 실패했습니다.',
+        refreshFailedTitle: 'Apple 계정 연동 완료',
+        refreshFailed: 'Apple 계정은 연동되었지만 최신 상태를 불러오지 못했습니다. 페이지를 새로고침해 주세요.',
+        retry: 'Apple 인증 다시 준비',
+        retrying: 'Apple 인증 준비 중...',
       },
       startFailed: '소셜 계정 연동을 시작하지 못했습니다.',
+      linkSuccess: '{provider} 계정이 연동되었습니다.',
       alreadyLinkedTitle: '소셜 계정 연동 실패',
       alreadyLinkedMessage: '이미 다른 Dutypark 계정에 연동된 {provider} 계정입니다. 다른 {provider} 계정으로 다시 시도해주세요.',
+      unlink: {
+        action: '연동 해제',
+        unlinking: '해제 중...',
+        manageAction: '{provider} 연동 관리',
+        manageHint: '소셜 계정 연동 설정을 엽니다.',
+        modalTitle: '{provider} 연동 관리',
+        localMappingTitle: 'Dutypark 연결 정보',
+        localMappingDescription: 'Dutypark는 이 {provider} 계정과의 연결 정보만 보관합니다. 연동을 해제하면 이 연결 정보만 삭제되며, {provider} 계정과 제공자 측 인증 권한은 그대로 유지됩니다.',
+        appleAuthorizationTitle: 'Apple 인증 권한',
+        appleAuthorizationDescription: 'Apple 연동을 해제하면 Dutypark가 먼저 Apple 인증 권한을 철회한 뒤 연결 정보를 삭제합니다. 철회에 실패하면 Apple 권한과 Dutypark 연결 정보가 모두 유지됩니다.',
+        confirmTitle: '{provider} 연동을 해제할까요?',
+        confirmMessage: 'Dutypark에 저장된 계정 연결 정보만 삭제합니다. {provider} 계정과 제공자 측 인증 권한은 그대로 유지됩니다.',
+        appleConfirmMessage: 'Apple 인증 권한을 철회하고 Dutypark에 저장된 연결 정보를 삭제합니다. 이후 이 Apple 계정으로 Dutypark에 로그인할 수 없습니다.',
+        success: 'Dutypark에서 {provider} 연동을 해제했습니다.',
+        appleSuccess: 'Apple 인증 권한을 철회하고 Dutypark 연동을 해제했습니다.',
+        lastSocialReason: '이 계정의 연동을 해제하려면 다른 소셜 계정을 먼저 연동해 주세요.',
+        errors: {
+          lastAuthenticationMethod: '연결된 다른 소셜 계정이 최소 1개는 남아 있어야 합니다. 다른 소셜 계정을 연동한 뒤 다시 시도해 주세요.',
+          impersonationForbidden: '다른 계정을 관리 중일 때는 소셜 연동을 해제할 수 없습니다. 내 계정으로 돌아온 뒤 다시 시도해 주세요.',
+          appleProviderUnavailable: 'Apple 인증 서버에서 권한 철회를 확인하지 못해 연동을 유지했습니다. 잠시 후 다시 시도해 주세요.',
+          generic: '소셜 계정 연동을 해제하지 못했습니다. 다시 시도해 주세요.',
+        },
+      },
     },
     account: {
       sectionTitle: '회원정보 관리',
       changePassword: '비밀번호 변경',
       deleteAccount: '회원 탈퇴',
       deleteInfo: '회원 탈퇴는 관리자에게 문의해주세요.',
+    },
+    accountDeletion: {
+      title: '회원 탈퇴', progress: '{total}단계 중 {current}단계', loading: '회원 탈퇴 영향을 확인하고 있습니다...',
+      scope: { title: '삭제 범위를 확인해 주세요', message: '계속하기 전에 즉시 적용되는 항목과 백그라운드 처리 항목을 확인해 주세요.', access: '요청이 접수되는 즉시 계정 접근과 모든 활성 세션이 종료됩니다.', async: '일정, 할 일, 첨부파일과 저장 파일은 백그라운드에서 안전하게 삭제되며 시간이 걸릴 수 있습니다.', auxiliary: '다음 보조 계정도 함께 삭제됩니다' },
+      team: { title: '팀 영향을 확인해 주세요', message: '계정을 삭제하기 전에 팀과 구성원을 보호하기 위한 절차입니다.', soloDelete: '현재 팀의 유일한 활성 구성원입니다. 계정과 함께 팀도 삭제됩니다.', transferRequired: '팀을 떠나기 전에 새 팀 관리자를 선택해 주세요.', successor: '새 팀 관리자', select: '구성원 선택', memberOnly: '이 팀에서 회원님의 소속만 제거됩니다.', none: '소속된 팀이 없습니다.' },
+      reauth: { title: '본인 확인', message: '현재 로그인 수단 중 하나로 다시 인증해 주세요. 인증 정보는 이 창의 메모리에만 잠시 유지됩니다.', password: '현재 비밀번호', passwordAction: '비밀번호로 확인', socialTitle: '또는 연동된 소셜 계정으로 확인', socialAction: '{provider}로 확인', appleTitle: 'Apple 계정으로 본인 확인', appleOnlyMessage: '웹에서는 Apple 계정으로 다시 인증할 수 없습니다. Dutypark iOS 앱의 회원정보 관리에서 Apple로 본인 확인한 뒤 탈퇴를 진행해 주세요.', appleAlternativeMessage: '웹에서는 위의 비밀번호나 다른 소셜 계정으로 확인할 수 있습니다. Apple로 확인하려면 Dutypark iOS 앱에서 탈퇴를 진행해 주세요.', complete: '본인 확인이 완료되었습니다. 계속할 수 있습니다.' },
+      name: { title: '정확한 계정 이름 입력', message: '삭제할 계정을 확인하기 위해 아래 이름을 똑같이 입력해 주세요.', label: '계정 이름 확인', placeholder: '계정 이름을 정확히 입력' },
+      final: { title: '최종 확인', message: '위의 모든 영향을 이해한 경우에만 탈퇴를 요청해 주세요.', irreversible: '이 요청은 취소할 수 없으며 삭제된 계정 데이터는 복구할 수 없습니다.', action: '계정 영구 삭제' },
+      back: '이전', continue: '계속',
+      errors: { load: '회원 탈퇴 영향을 불러오지 못했습니다. 다시 시도해 주세요.', reauthentication: '본인 확인에 실패했습니다. 로그인 수단을 확인하고 다시 시도해 주세요.', transferRequired: '계속하려면 유효한 새 팀 관리자를 선택해 주세요.', transferInvalid: '선택한 팀 관리자를 더 이상 지정할 수 없습니다. 다시 인증한 뒤 다른 구성원을 선택해 주세요.', noTransferCandidate: '팀 관리자 권한을 넘길 수 있는 구성원이 없습니다. 팀 상태를 먼저 정리해 주세요.', impersonation: '다른 계정을 관리 중일 때는 탈퇴할 수 없습니다. 내 계정으로 먼저 돌아와 주세요.', proofExpired: '본인 확인이 만료되었습니다. 다시 인증해 주세요.', nameMismatch: '계정 이름이 정확히 일치하지 않습니다.', oauthPopupBlocked: '인증 창이 차단되었습니다. Dutypark 팝업을 허용한 뒤 다시 시도해 주세요.', oauthPopupClosed: '본인 확인이 끝나기 전에 인증 창이 닫혔습니다.', oauthPopupTimeout: '소셜 본인 확인 시간이 초과되었습니다. 다시 시도해 주세요.', oauthCancelled: '소셜 본인 확인이 취소되었습니다.', oauthAccountMismatch: 'Dutypark에 연결된 계정과 다른 소셜 계정입니다.', oauthProviderFailed: '소셜 제공자에서 본인 확인을 완료하지 못했습니다. 다시 시도해 주세요.', appleRequiresIos: 'Apple 계정 재인증은 웹에서 지원되지 않습니다. Dutypark iOS 앱에서 탈퇴를 진행해 주세요.', generic: '회원 탈퇴를 완료하지 못했습니다. 인증 정보는 폐기되었으니 다시 인증해 주세요.' },
+      oauth: { callbackTitle: '계정 본인 확인', callbackWorking: '본인 확인을 완료하고 있습니다...', callbackComplete: '원래 창으로 인증 결과를 보냈습니다. 이 창을 닫아도 됩니다.', callbackNoOpener: '원래 Dutypark 창을 확인할 수 없습니다. 이 창을 닫고 다시 시도해 주세요.', callbackInvalid: '인증 응답이 올바르지 않습니다. 이 창을 닫고 다시 시도해 주세요.' },
+      completion: { acceptedTitle: '회원 탈퇴 요청이 접수되었습니다', alreadyPendingTitle: '회원 탈퇴 요청이 이미 처리 중입니다', signedOut: 'Dutypark에서 안전하게 로그아웃되었습니다.', asyncCleanup: '계정 데이터와 저장 파일은 비동기로 삭제되며 시간이 걸릴 수 있습니다.', confirm: '확인' },
     },
     logout: '로그아웃',
     logoutDialog: {

@@ -60,11 +60,6 @@ function getPrimaryTextColor(dutyColor: string | null): string {
   return isLightColor(dutyColor) ? 'var(--dp-text-on-light)' : 'var(--dp-text-on-dark)'
 }
 
-function getIconTextColor(dutyColor: string | null): string {
-  if (!dutyColor) return 'var(--dp-text-primary)'
-  return isLightColor(dutyColor) ? 'var(--dp-text-on-light)' : 'var(--dp-text-on-dark)'
-}
-
 function getBorderColor(dutyColor: string | null): string {
   if (!dutyColor) return 'var(--dp-border-primary)'
   return isLightColor(dutyColor) ? 'var(--dp-border-on-light)' : 'var(--dp-border-on-dark)'
@@ -195,7 +190,6 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
     :clickable="!batchEditMode || canEdit"
     @day-click="(day, index) => emit('day-click', day, index)"
   >
-    <!-- D-Day indicator in header -->
     <template #day-header="{ day, index }">
       <span
         v-if="!batchEditMode && calcDDayForDay(day)"
@@ -206,9 +200,7 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
       </span>
     </template>
 
-    <!-- Day content slot -->
     <template #day-content="{ day, index }">
-      <!-- Batch Edit Mode: Duty Type Buttons (hidden on mobile, use top bar instead) -->
       <div v-if="batchEditMode && day.isCurrentMonth" class="mt-1 hidden sm:grid grid-cols-2 gap-0.5">
         <button
           v-for="dutyType in dutyTypes"
@@ -233,7 +225,6 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
       </div>
 
       <div v-if="!batchEditMode" class="mt-0.5">
-        <!-- Other duties -->
         <div v-if="otherDuties.length > 0" class="mb-1 grid gap-0.5 sm:flex sm:flex-wrap sm:justify-center sm:gap-1">
           <div
             v-for="otherDuty in otherDuties"
@@ -259,7 +250,6 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
           </div>
         </div>
 
-        <!-- D-Days -->
         <button
           v-for="dday in getDDaysForDay(day)"
           :key="dday.id"
@@ -276,7 +266,6 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
           </span>
         </button>
 
-        <!-- Schedules -->
         <div
           v-for="schedule in schedulesByDays[index]?.slice(0, 3)"
           :key="schedule.id"
@@ -288,15 +277,13 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
               v-if="shouldShowPrivateVisibility(schedule)"
               :visibility="schedule.visibility"
               size="xs"
-              align="end"
               class="mr-0.5 inline-flex align-[-2px] sm:align-[-3px]"
             /><span class="sm:hidden">{{ getMobileCalendarScheduleTitle(schedule) }}</span><span class="hidden sm:inline">{{ schedule.contentWithoutTime || schedule.content }}</span>{{ formatScheduleTime(schedule) }}<template v-if="schedule.totalDays > 1">({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</template><MessageSquareText
               v-if="hasScheduleDetails(schedule)"
               class="w-2.5 h-2.5 sm:w-3 sm:h-3 inline align-[-1px] sm:align-[-2px] ml-0.5"
-              :style="{ color: getIconTextColor(getDutyColorAt(index)) }"
+              :style="{ color: getPrimaryTextColor(getDutyColorAt(index)) }"
             />
           </div>
-          <!-- Tags display -->
           <div
             v-if="getDisplayTagMembers(schedule).length"
             class="mt-px flex flex-wrap justify-end gap-px sm:hidden"
@@ -352,7 +339,6 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
           +{{ (schedulesByDays[index]?.length ?? 0) - 3 }}
         </div>
 
-        <!-- Due to-dos shown only on my calendar -->
         <template v-if="isMyCalendar && todosDueByDays[index]?.length">
           <button
             v-for="todo in todosDueByDays[index].slice(0, 2)"

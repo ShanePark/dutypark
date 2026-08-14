@@ -16,57 +16,7 @@ export interface LoginDto {
   rememberMe: boolean
 }
 
-// Member types
-export interface Member {
-  id: number
-  name: string
-  email: string
-  team?: Team
-  calendarVisibility: CalendarVisibility
-}
-
 export type CalendarVisibility = 'PUBLIC' | 'FRIENDS' | 'FAMILY' | 'PRIVATE'
-
-// Team types
-export interface Team {
-  id: number
-  name: string
-  description?: string
-}
-
-export interface DutyType {
-  id: number
-  name: string
-  shortName: string
-  color: string
-  position: number
-}
-
-// Duty types
-export interface Duty {
-  id: number
-  date: string
-  dutyType: DutyType
-  member: Member
-}
-
-// Schedule types
-export interface Schedule {
-  id: string
-  date: string
-  content: string
-  startTime?: string
-  endTime?: string
-  visibility: CalendarVisibility
-  position: number
-  attachments: Attachment[]
-  tags: ScheduleTag[]
-}
-
-export interface ScheduleTag {
-  memberId: number
-  memberName: string
-}
 
 export interface Attachment {
   id: string
@@ -196,23 +146,6 @@ export interface TodoPositionUpdateRequest {
   orderedIds: string[]
 }
 
-// D-Day types
-export interface DDay {
-  id: number
-  title: string
-  date: string
-  isPrivate: boolean
-}
-
-// Friend types
-export interface Friend {
-  id: number
-  name: string
-  team?: string
-  isFamily: boolean
-  isPinned: boolean
-}
-
 // Dashboard types - matches backend DTOs
 export interface DashboardMemberDto {
   id: number | null
@@ -223,6 +156,7 @@ export interface DashboardMemberDto {
   calendarVisibility: CalendarVisibility
   kakaoId?: string | null
   naverId?: string | null
+  appleId?: string | null
   hasPassword?: boolean
   hasProfilePhoto?: boolean
   profilePhotoVersion?: number
@@ -555,6 +489,7 @@ export interface MemberDto {
   calendarVisibility: CalendarVisibility
   kakaoId: string | null
   naverId: string | null
+  appleId?: string | null
   hasPassword: boolean
   hasProfilePhoto?: boolean
   profilePhotoVersion?: number
@@ -616,7 +551,6 @@ export interface RefreshTokenDto {
   lastUsed: string | null
   remoteAddr: string | null
   id: number
-  token: string
   userAgent: RefreshTokenUserAgent | null
   isCurrentLogin: boolean | null
 }
@@ -763,26 +697,8 @@ export interface NotificationPayloadRegistry {
 }
 
 export type NotificationPayloadVersion = keyof NotificationPayloadRegistry
-export type NotificationPayloadByVersion<V extends NotificationPayloadVersion> = NotificationPayloadRegistry[V]
-
-export type FriendRequestReceivedPayload = NotificationPayloadByTypeV1['FRIEND_REQUEST_RECEIVED']
-export type FriendRequestAcceptedPayload = NotificationPayloadByTypeV1['FRIEND_REQUEST_ACCEPTED']
-export type FamilyRequestReceivedPayload = NotificationPayloadByTypeV1['FAMILY_REQUEST_RECEIVED']
-export type FamilyRequestAcceptedPayload = NotificationPayloadByTypeV1['FAMILY_REQUEST_ACCEPTED']
-export type ScheduleTaggedPayload = NotificationPayloadByTypeV1['SCHEDULE_TAGGED']
-export type TodoTaggedPayload = NotificationPayloadByTypeV1['TODO_TAGGED']
-export type TodoStatusTodoPayload = NotificationPayloadByTypeV1['TODO_STATUS_TODO']
-export type TodoStatusInProgressPayload = NotificationPayloadByTypeV1['TODO_STATUS_IN_PROGRESS']
-export type TodoStatusDonePayload = NotificationPayloadByTypeV1['TODO_STATUS_DONE']
-
-export type NotificationPayloadV0 = NotificationPayloadByTypeV0[keyof NotificationPayloadByTypeV0]
-export type NotificationPayloadV1 = NotificationPayloadByTypeV1[keyof NotificationPayloadByTypeV1]
 export type NotificationPayload = {
   [V in NotificationPayloadVersion]: NotificationPayloadRegistry[V][keyof NotificationPayloadRegistry[V]]
-}[NotificationPayloadVersion]
-
-export type NotificationPayloadForType<T extends NotificationType> = {
-  [V in NotificationPayloadVersion]: NotificationPayloadRegistry[V][T]
 }[NotificationPayloadVersion]
 
 export type NotificationPayloadForTypeAndVersion<

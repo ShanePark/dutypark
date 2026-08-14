@@ -17,10 +17,6 @@ export const VISIBILITY_COLORS: Record<CalendarVisibility, string> = {
   PRIVATE: 'bg-dp-danger',
 }
 
-export function getVisibilityColor(visibility: string): string {
-  return VISIBILITY_COLORS[visibility as CalendarVisibility] || 'bg-dp-accent'
-}
-
 export function getVisibilityIcon(visibility: string): LucideIcon {
   return VISIBILITY_ICONS[visibility as CalendarVisibility] || Eye
 }

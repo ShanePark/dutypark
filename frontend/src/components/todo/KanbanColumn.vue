@@ -93,12 +93,10 @@ const statusConfig: Record<TodoStatus, { labelKey: string; shortLabelKey: string
   overflow: hidden;
 }
 
-/* First column snaps to start (no left padding) */
 .kanban-column:first-child {
   scroll-snap-align: start;
 }
 
-/* Last column snaps to end */
 .kanban-column:last-child {
   scroll-snap-align: end;
 }
@@ -136,9 +134,6 @@ const statusConfig: Record<TodoStatus, { labelKey: string; shortLabelKey: string
   transition: background-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-/* Hovering the clickable title region tints the WHOLE header bar edge-to-edge
-   with the column's accent color (plus a thin accent ring), instead of drawing
-   a smaller nested box that looked like a stray rectangle. Works in light/dark. */
 .kanban-column-todo .kanban-column-header:has(.kanban-column-header-main-clickable:hover) {
   background-color: color-mix(in srgb, var(--dp-accent) 12%, var(--dp-bg-card));
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--dp-accent) 40%, transparent);
@@ -253,7 +248,6 @@ const statusConfig: Record<TodoStatus, { labelKey: string; shortLabelKey: string
   padding-bottom: 0.5rem;
 }
 
-/* Scrollbar styling for column content */
 .kanban-column-content::-webkit-scrollbar {
   width: 4px;
 }

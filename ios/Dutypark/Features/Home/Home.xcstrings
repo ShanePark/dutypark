@@ -1,0 +1,120 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "home.duty" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Duty" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "근무" } }
+      }
+    },
+    "home.error.friends" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to load friends." } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 정보를 불러오지 못했습니다." } }
+      }
+    },
+    "home.error.message" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Please try again." } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "다시 시도해주세요." } }
+      }
+    },
+    "home.error.my" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to load the dashboard." } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "대시보드 정보를 불러오지 못했습니다." } }
+      }
+    },
+    "home.family" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Family member" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "가족 구성원" } }
+      }
+    },
+    "home.friends" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Friends" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구" } }
+      }
+    },
+    "home.loading" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Loading..." } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "불러오는 중..." } }
+      }
+    },
+    "home.menu" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Menu" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "메뉴" } }
+      }
+    },
+    "home.moreSchedules" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "more" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "개 더보기" } }
+      }
+    },
+    "home.myDashboard" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "My dashboard" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "내 대시보드" } }
+      }
+    },
+    "home.noFriends" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No friends yet." } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "아직 친구가 없습니다." } }
+      }
+    },
+    "home.none" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "None" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "없음" } }
+      }
+    },
+    "home.noSchedules" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "No schedules for today." } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "오늘 일정이 없습니다." } }
+      }
+    },
+    "home.offDuty" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Off" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "휴무" } }
+      }
+    },
+    "home.openCalendar" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Open calendar" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "캘린더 열기" } }
+      }
+    },
+    "home.requests.received" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Received requests" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "받은 요청" } }
+      }
+    },
+    "home.requests.sent" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Sent requests" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "보낸 요청" } }
+      }
+    },
+    "home.retry" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Retry" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "다시 시도" } }
+      }
+    },
+    "home.todaySchedules" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Today's schedules" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "오늘 일정" } }
+      }
+    }
+  },
+  "version" : "1.0"
+}

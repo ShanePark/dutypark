@@ -45,13 +45,11 @@ const weekDays = computed(() => {
   return Array.from({ length: 7 }, (_, index) => formatter.format(new Date(2024, 0, 7 + index)))
 })
 
-// Determine if a day is the current month
 function isCurrentMonth(day: CalendarDay): boolean {
   if (day.isCurrentMonth !== undefined) return day.isCurrentMonth
   return day.year === props.currentYear && day.month === props.currentMonth
 }
 
-// Check if a day is today
 function isToday(day: CalendarDay): boolean {
   if (day.isToday !== undefined) return day.isToday
   const today = new Date()
@@ -62,7 +60,6 @@ function isToday(day: CalendarDay): boolean {
   )
 }
 
-// Check if a day is highlighted (search result, etc.)
 function isHighlighted(day: CalendarDay): boolean {
   if (!props.highlightDay) return false
   return (
@@ -72,7 +69,6 @@ function isHighlighted(day: CalendarDay): boolean {
   )
 }
 
-// Check if a day is selected
 function isSelected(day: CalendarDay): boolean {
   if (!props.selectedDay) return false
   return (
@@ -82,7 +78,6 @@ function isSelected(day: CalendarDay): boolean {
   )
 }
 
-// Check if a day is focused (for quick duty input)
 function isFocused(day: CalendarDay): boolean {
   if (!props.focusedDay) return false
   return (
@@ -92,7 +87,6 @@ function isFocused(day: CalendarDay): boolean {
   )
 }
 
-// Get border color based on background brightness
 function getBorderColor(day: CalendarDay): string {
   if (!props.useAdaptiveBorder) return 'var(--dp-border-secondary)'
   const bgColor = props.getDutyColor(day)
@@ -102,14 +96,12 @@ function getBorderColor(day: CalendarDay): string {
     : 'color-mix(in srgb, var(--dp-border-on-dark) 70%, transparent)'
 }
 
-// Get background color for a day
 function getBackgroundColor(day: CalendarDay): string {
   const dutyColor = props.getDutyColor(day)
   if (dutyColor) return dutyColor
   return isCurrentMonth(day) ? 'var(--dp-calendar-cell-bg)' : 'var(--dp-calendar-cell-prev-next)'
 }
 
-// Get text color based on background and day of week
 function getDayNumberColor(day: CalendarDay, dayOfWeek: number): string {
   const bgColor = props.getDutyColor(day)
   if (dayOfWeek === 0) return 'var(--dp-sunday)'
@@ -120,7 +112,6 @@ function getDayNumberColor(day: CalendarDay, dayOfWeek: number): string {
   return 'var(--dp-text-primary)'
 }
 
-// Get holiday text color
 function getHolidayColor(day: CalendarDay, holiday: HolidayDto): string {
   if (holiday.isHoliday) return 'var(--dp-sunday)'
   const bgColor = props.getDutyColor(day)
@@ -137,7 +128,6 @@ function handleDayClick(day: CalendarDay, index: number) {
 
 <template>
   <div class="rounded-lg border overflow-hidden mb-2 shadow-sm bg-dp-bg-card border-dp-border-secondary">
-    <!-- Week Days Header -->
     <div class="grid grid-cols-7" :style="{ backgroundColor: 'var(--dp-calendar-header-bg)' }">
       <div
         v-for="(day, idx) in weekDays"
@@ -150,7 +140,6 @@ function handleDayClick(day: CalendarDay, index: number) {
       </div>
     </div>
 
-    <!-- Calendar Days -->
     <div class="grid grid-cols-7">
       <div
         v-for="(day, idx) in days"
@@ -174,7 +163,6 @@ function handleDayClick(day: CalendarDay, index: number) {
           opacity: isCurrentMonth(day) ? 1 : 0.5
         }"
       >
-        <!-- Day Number -->
         <div class="flex items-center justify-between">
           <span
             class="text-xs sm:text-sm font-medium"
@@ -183,11 +171,9 @@ function handleDayClick(day: CalendarDay, index: number) {
           >
             {{ day.day }}
           </span>
-          <!-- Slot for day number area (D-Day indicator, etc.) -->
           <slot name="day-header" :day="day" :index="idx" />
         </div>
 
-        <!-- Holidays -->
         <div
           v-for="holiday in (holidays[idx] ?? [])"
           :key="holiday.localDate + holiday.dateName"
@@ -198,7 +184,6 @@ function handleDayClick(day: CalendarDay, index: number) {
           {{ holiday.dateName }}
         </div>
 
-        <!-- Slot for day content (schedules, D-Days, etc.) -->
         <slot name="day-content" :day="day" :index="idx" />
       </div>
     </div>

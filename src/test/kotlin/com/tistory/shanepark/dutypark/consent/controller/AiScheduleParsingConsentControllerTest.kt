@@ -1,0 +1,228 @@
+package com.tistory.shanepark.dutypark.consent.controller
+
+import com.tistory.shanepark.dutypark.RestDocsTest
+import com.tistory.shanepark.dutypark.consent.domain.AiScheduleParsingConsentEventType
+import com.tistory.shanepark.dutypark.consent.repository.AiScheduleParsingConsentEventRepository
+import com.tistory.shanepark.dutypark.policy.domain.entity.PolicyVersion
+import com.tistory.shanepark.dutypark.policy.domain.enums.PolicyType
+import com.tistory.shanepark.dutypark.policy.repository.PolicyVersionRepository
+import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.Test
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.http.HttpHeaders
+import org.springframework.http.MediaType
+import org.springframework.test.web.servlet.get
+import org.springframework.test.web.servlet.put
+import java.time.Clock
+import java.time.LocalDate
+import java.time.ZoneId
+
+class AiScheduleParsingConsentControllerTest : RestDocsTest() {
+    @Autowired
+    lateinit var policyVersionRepository: PolicyVersionRepository
+
+    @Autowired
+    lateinit var clock: Clock
+
+    @Autowired
+    lateinit var consentEventRepository: AiScheduleParsingConsentEventRepository
+
+    @Test
+    fun `GET requires authentication`() {
+        mockMvc.get("/api/consents/ai-schedule-parsing")
+            .andExpect {
+                status { isUnauthorized() }
+                jsonPath("$.code") { value("auth.required") }
+            }
+    }
+
+    @Test
+    fun `GET returns current policy and unconsented state`() {
+        saveCurrentPolicy()
+
+        mockMvc.get("/api/consents/ai-schedule-parsing") {
+            header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(TestData.member)}")
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.policy.policyType") { value("AI_SCHEDULE_PARSING") }
+            jsonPath("$.currentPolicyVersion") { value("2026-08-13") }
+            jsonPath("$.consented") { value(false) }
+            jsonPath("$.previouslyConsentedToCurrentPolicy") { value(false) }
+            jsonPath("$.consentVersion") { doesNotExist() }
+            jsonPath("$.needsRenewal") { value(false) }
+            jsonPath("$.consentedAt") { doesNotExist() }
+            jsonPath("$.revokedAt") { doesNotExist() }
+        }
+    }
+
+    @Test
+    fun `PUT grant requires exact current version and is idempotent`() {
+        saveCurrentPolicy()
+
+        mockMvc.put("/api/consents/ai-schedule-parsing") {
+            header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(TestData.member)}")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"consented":true,"policyVersion":"old"}"""
+        }.andExpect {
+            status { isBadRequest() }
+            jsonPath("$.code") { value("consent.aiScheduleParsing.policyVersionMismatch") }
+        }
+
+        repeat(2) {
+            mockMvc.put("/api/consents/ai-schedule-parsing") {
+                header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(TestData.member)}")
+                contentType = MediaType.APPLICATION_JSON
+                header("User-Agent", "consent-test-agent")
+                content = """{"consented":true,"policyVersion":"2026-08-13"}"""
+            }.andExpect {
+                status { isOk() }
+                jsonPath("$.consented") { value(true) }
+                jsonPath("$.previouslyConsentedToCurrentPolicy") { value(true) }
+                jsonPath("$.consentVersion") { value("2026-08-13") }
+                jsonPath("$.needsRenewal") { value(false) }
+                jsonPath("$.consentedAt") { exists() }
+            }
+        }
+
+        val events = consentEventRepository.findAll()
+        assertThat(events).hasSize(1)
+        assertThat(events.single().eventType).isEqualTo(AiScheduleParsingConsentEventType.GRANTED)
+        assertThat(events.single().userAgent).isEqualTo("consent-test-agent")
+
+        mockMvc.get("/api/consents/ai-schedule-parsing") {
+            header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(TestData.member)}")
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.previouslyConsentedToCurrentPolicy") { value(true) }
+        }
+    }
+
+    @Test
+    fun `PUT revoke records once and does not require a version`() {
+        saveCurrentPolicy()
+        putConsent(true, "2026-08-13")
+
+        repeat(2) {
+            mockMvc.put("/api/consents/ai-schedule-parsing") {
+                header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(TestData.member)}")
+                contentType = MediaType.APPLICATION_JSON
+                content = """{"consented":false}"""
+            }.andExpect {
+                status { isOk() }
+                jsonPath("$.consented") { value(false) }
+                jsonPath("$.previouslyConsentedToCurrentPolicy") { value(true) }
+                jsonPath("$.consentVersion") { doesNotExist() }
+                jsonPath("$.needsRenewal") { value(false) }
+                jsonPath("$.revokedAt") { exists() }
+            }
+        }
+
+        val events = consentEventRepository.findAll()
+        assertThat(events).hasSize(2)
+        assertThat(events.last().eventType).isEqualTo(AiScheduleParsingConsentEventType.REVOKED)
+        assertThat(events.last().policyVersion).isNull()
+
+        mockMvc.get("/api/consents/ai-schedule-parsing") {
+            header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(TestData.member)}")
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.consented") { value(false) }
+            jsonPath("$.previouslyConsentedToCurrentPolicy") { value(true) }
+        }
+
+        mockMvc.put("/api/consents/ai-schedule-parsing") {
+            header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(TestData.member)}")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"consented":true,"policyVersion":"2026-08-13"}"""
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.consented") { value(true) }
+            jsonPath("$.previouslyConsentedToCurrentPolicy") { value(true) }
+        }
+
+        val reactivatedEvents = consentEventRepository.findAll()
+        assertThat(reactivatedEvents).hasSize(3)
+        assertThat(reactivatedEvents.last().eventType).isEqualTo(AiScheduleParsingConsentEventType.GRANTED)
+        assertThat(reactivatedEvents.last().policyVersion).isEqualTo("2026-08-13")
+    }
+
+    @Test
+    fun `GET ignores a future policy when checking current consent`() {
+        saveCurrentPolicy()
+        putConsent(true, "2026-08-13")
+        policyVersionRepository.save(
+            PolicyVersion(
+                policyType = PolicyType.AI_SCHEDULE_PARSING,
+                version = "future-policy",
+                content = "Updated AI schedule parsing policy",
+                effectiveDate = today().plusDays(1),
+            )
+        )
+
+        mockMvc.get("/api/consents/ai-schedule-parsing") {
+            header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(TestData.member)}")
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.currentPolicyVersion") { value("2026-08-13") }
+            jsonPath("$.consented") { value(true) }
+            jsonPath("$.previouslyConsentedToCurrentPolicy") { value(true) }
+            jsonPath("$.needsRenewal") { value(false) }
+        }
+    }
+
+    @Test
+    fun `GET keeps an active consent valid after the current policy changes`() {
+        saveCurrentPolicy()
+        putConsent(true, "2026-08-13")
+        policyVersionRepository.save(
+            PolicyVersion(
+                policyType = PolicyType.AI_SCHEDULE_PARSING,
+                version = "2026-09-01",
+                content = "Updated AI schedule parsing policy",
+                effectiveDate = today(),
+            )
+        )
+
+        mockMvc.get("/api/consents/ai-schedule-parsing") {
+            header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(TestData.member)}")
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.currentPolicyVersion") { value("2026-09-01") }
+            jsonPath("$.consented") { value(true) }
+            jsonPath("$.previouslyConsentedToCurrentPolicy") { value(false) }
+            jsonPath("$.needsRenewal") { value(false) }
+        }
+    }
+
+    @Test
+    fun `GET policy unavailable returns machine readable not found code`() {
+        mockMvc.get("/api/consents/ai-schedule-parsing") {
+            header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(TestData.member)}")
+        }.andExpect {
+            status { isNotFound() }
+            jsonPath("$.code") { value("consent.aiScheduleParsing.policyUnavailable") }
+        }
+    }
+
+    private fun putConsent(consented: Boolean, policyVersion: String?) {
+        val versionField = policyVersion?.let { ",\"policyVersion\":\"$it\"" }.orEmpty()
+        mockMvc.put("/api/consents/ai-schedule-parsing") {
+            header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(TestData.member)}")
+            contentType = MediaType.APPLICATION_JSON
+            content = """{"consented":$consented$versionField}"""
+        }.andExpect { status { isOk() } }
+    }
+
+    private fun today(): LocalDate = LocalDate.now(clock.withZone(ZoneId.of("Asia/Seoul")))
+
+    private fun saveCurrentPolicy() {
+        policyVersionRepository.save(
+            PolicyVersion(
+                policyType = PolicyType.AI_SCHEDULE_PARSING,
+                version = "2026-08-13",
+                content = "AI schedule parsing policy",
+                effectiveDate = LocalDate.of(2026, 8, 13),
+            )
+        )
+    }
+}

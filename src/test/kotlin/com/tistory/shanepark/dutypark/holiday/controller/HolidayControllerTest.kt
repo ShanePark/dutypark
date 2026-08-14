@@ -23,7 +23,6 @@ import org.springframework.restdocs.payload.PayloadDocumentation.responseFields
 import org.springframework.restdocs.request.RequestDocumentation
 import org.springframework.restdocs.request.RequestDocumentation.parameterWithName
 import org.springframework.test.util.ReflectionTestUtils
-import org.springframework.test.web.servlet.result.MockMvcResultHandlers
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 
 @ExtendWith(MockitoExtension::class)
@@ -36,17 +35,10 @@ class HolidayControllerTest : RestDocsTest() {
     @Mock
     private lateinit var dataGoKrApi: DataGoKrApi
 
-    /**
-     * Mocking External API
-     */
     @BeforeEach
     fun setup() {
         Mockito.`when`(dataGoKrApi.getHolidays(any(), any())).thenReturn(HolidayAPIDataGoKrTest.`API_RESPONSE_2023`)
         val holidayAPIDataGoKr = HolidayAPIDataGoKr(dataGoKrApi, "DUMMY_SERVICE_KEY")
-        HolidayAPIDataGoKr::class.java.getDeclaredField("serviceKey").apply {
-            isAccessible = true
-            set(holidayAPIDataGoKr, "SERVICE_KEY_HERE")
-        }
         ReflectionTestUtils.setField(holidayService, "holidayAPI", holidayAPIDataGoKr)
     }
 
@@ -58,7 +50,6 @@ class HolidayControllerTest : RestDocsTest() {
                 .param("year", "2023")
                 .param("month", "5")
         ).andExpect(status().isOk)
-            .andDo(MockMvcResultHandlers.print())
             .andDo(
                 document(
                     "holiday/get",
@@ -85,7 +76,6 @@ class HolidayControllerTest : RestDocsTest() {
                 .accept("application/json")
                 .withAuth(TestData.admin)
         ).andExpect(status().isOk)
-            .andDo(MockMvcResultHandlers.print())
             .andDo(document("holiday/reset"))
     }
 

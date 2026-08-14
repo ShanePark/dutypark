@@ -39,17 +39,6 @@ interface TodoRepository : JpaRepository<Todo, UUID> {
     ): Int
 
     @Query(
-        "SELECT COALESCE(MAX(t.position), -1) " +
-                "FROM Todo t " +
-                "WHERE t.member = :member " +
-                "AND t.status = :status"
-    )
-    fun findMaxPositionByMemberAndStatus(
-        @Param("member") member: Member,
-        @Param("status") status: TodoStatus
-    ): Int
-
-    @Query(
         "SELECT MIN(tt.tagOrder) " +
                 "FROM TodoTag tt " +
                 "WHERE tt.member = :member " +
@@ -59,31 +48,6 @@ interface TodoRepository : JpaRepository<Todo, UUID> {
         @Param("member") member: Member,
         @Param("status") status: TodoStatus
     ): Int?
-
-    fun findAllByMemberAndStatusOrderByPosition(member: Member, status: TodoStatus): List<Todo>
-
-    fun findAllByMemberAndStatusOrderByPositionAsc(member: Member, status: TodoStatus): List<Todo>
-
-    fun findAllByMemberAndStatusOrderByCompletedDateDesc(member: Member, status: TodoStatus): List<Todo>
-
-    fun findAllByMemberOrderByStatusAscPositionAsc(member: Member): List<Todo>
-
-    fun findAllByMemberAndDueDateBetweenOrderByDueDateAsc(
-        member: Member,
-        startDate: LocalDate,
-        endDate: LocalDate
-    ): List<Todo>
-
-    fun findAllByMemberAndDueDateOrderByPositionAsc(
-        member: Member,
-        dueDate: LocalDate
-    ): List<Todo>
-
-    fun findAllByMemberAndDueDateLessThanAndStatusNot(
-        member: Member,
-        dueDate: LocalDate,
-        status: TodoStatus
-    ): List<Todo>
 
     @Query(
         """

@@ -3,7 +3,6 @@ import { computed } from 'vue'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 import type { DisplayTagMember } from '@/utils/tagMembers'
 
-type ChipVariant = 'accent' | 'subtle'
 type ChipDensity = 'regular' | 'compact'
 type ChipAlign = 'start' | 'end'
 
@@ -11,14 +10,12 @@ const props = withDefaults(defineProps<{
   members: DisplayTagMember[]
   interactive?: boolean
   buttonTitle?: string
-  variant?: ChipVariant
   density?: ChipDensity
   align?: ChipAlign
   maxVisible?: number | null
 }>(), {
   interactive: false,
   buttonTitle: undefined,
-  variant: 'accent',
   density: 'compact',
   align: 'start',
   maxVisible: null,
@@ -63,7 +60,7 @@ function handleChipClick(member: DisplayTagMember) {
       :type="interactive ? 'button' : undefined"
       class="member-tag-chip"
       :class="[
-        `member-tag-chip--${variant}`,
+        'member-tag-chip--accent',
         `member-tag-chip--${density}`,
         interactive ? 'member-tag-chip--interactive' : 'member-tag-chip--static',
       ]"
@@ -88,11 +85,8 @@ function handleChipClick(member: DisplayTagMember) {
 
     <span
       v-if="hiddenCount > 0"
-      class="member-tag-chip member-tag-chip--count"
-      :class="[
-        `member-tag-chip--${variant}`,
-        `member-tag-chip--${density}`,
-      ]"
+      class="member-tag-chip member-tag-chip--accent member-tag-chip--count"
+      :class="`member-tag-chip--${density}`"
     >
       +{{ hiddenCount }}
     </span>
@@ -140,12 +134,6 @@ function handleChipClick(member: DisplayTagMember) {
 .member-tag-chip--accent {
   border-color: var(--dp-accent-border);
   background-color: var(--dp-accent-soft);
-  color: var(--dp-text-primary);
-}
-
-.member-tag-chip--subtle {
-  border-color: var(--dp-border-primary);
-  background-color: var(--dp-bg-secondary);
   color: var(--dp-text-primary);
 }
 

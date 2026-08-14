@@ -17,7 +17,7 @@ const mocks = vi.hoisted(() => ({
   buildPushSubscriptionRequest: vi.fn(),
   syncServiceWorkerLocale: vi.fn(),
   localeStore: {
-    locale: 'ja',
+    locale: 'en',
   },
 }))
 
@@ -46,7 +46,7 @@ describe('usePushNotification', () => {
     mocks.pushApi.unsubscribe.mockReset()
     mocks.buildPushSubscriptionRequest.mockReset()
     mocks.syncServiceWorkerLocale.mockReset()
-    mocks.localeStore.locale = 'ja'
+    mocks.localeStore.locale = 'en'
 
     const notificationApi = {
       permission: 'granted' as NotificationPermission,
@@ -116,7 +116,7 @@ describe('usePushNotification', () => {
     expect(register).toHaveBeenCalledWith(SERVICE_WORKER_URL, {
       type: 'module',
     })
-    expect(mocks.syncServiceWorkerLocale).toHaveBeenCalledWith('ja', registration)
+    expect(mocks.syncServiceWorkerLocale).toHaveBeenCalledWith('en', registration)
     expect(mocks.buildPushSubscriptionRequest).toHaveBeenCalledWith(existingSubscription)
     expect(registration.pushManager.subscribe).not.toHaveBeenCalled()
     const syncOrder = mocks.syncServiceWorkerLocale.mock.invocationCallOrder[0]
@@ -293,7 +293,7 @@ describe('usePushNotification', () => {
     expect(staleRegistration.unregister).toHaveBeenCalledTimes(1)
     expect(register).toHaveBeenCalledTimes(2)
     expect(prepared).toBe(currentRegistration)
-    expect(mocks.syncServiceWorkerLocale).toHaveBeenCalledWith('ja', currentRegistration)
+    expect(mocks.syncServiceWorkerLocale).toHaveBeenCalledWith('en', currentRegistration)
   })
 
   it('does not reuse a stale registration when no current worker becomes available', async () => {
@@ -370,7 +370,7 @@ describe('usePushNotification', () => {
     expect(register).toHaveBeenCalledWith(SERVICE_WORKER_URL, {
       type: 'module',
     })
-    expect(mocks.syncServiceWorkerLocale).toHaveBeenCalledWith('ja', registration)
+    expect(mocks.syncServiceWorkerLocale).toHaveBeenCalledWith('en', registration)
     expect(mocks.pushApi.isEnabled).not.toHaveBeenCalled()
   })
 

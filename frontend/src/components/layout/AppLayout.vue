@@ -18,10 +18,25 @@ const showLayout = computed(() => {
 
 <template>
   <div class="min-h-screen flex flex-col bg-dp-bg-secondary">
-    <!-- Impersonation Banner -->
     <ImpersonationBanner v-if="authStore.isImpersonating" />
-    <!-- Header -->
     <AppHeader v-if="showLayout && authStore.isLoggedIn" />
+    <div
+      v-if="showLayout && authStore.sessionCheckFailed"
+      class="border-b border-dp-warning/30 bg-dp-warning/10 px-4 py-3 text-sm text-dp-text-primary"
+      role="status"
+      aria-live="polite"
+    >
+      <div class="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-2">
+        <span>{{ $t('sessionRecovery.checkFailed') }}</span>
+        <RouterLink
+          v-if="route.name !== 'login'"
+          to="/auth/login"
+          class="font-semibold text-dp-accent hover:underline"
+        >
+          {{ $t('sessionRecovery.signIn') }}
+        </RouterLink>
+      </div>
+    </div>
     <main
       class="flex-1"
       :class="[
@@ -33,9 +48,7 @@ const showLayout = computed(() => {
       <slot />
     </main>
     <AppFooter v-if="showLayout && authStore.isLoggedIn" />
-    <!-- PWA Install Guide - only for logged in users on mobile -->
     <PWAInstallGuide v-if="authStore.isLoggedIn" />
-    <!-- Push Permission Guide - only for iOS PWA users -->
     <PushPermissionGuide v-if="authStore.isLoggedIn" />
   </div>
 </template>

@@ -96,7 +96,7 @@
 | **카카오 + 네이버 로그인** | 한국 사용자를 위한 소셜 로그인과 SSO 온보딩 |
 | **공휴일 동기화** | 공공데이터포털에서 한국 공휴일 자동 연동 (캐시 지원) |
 | **다크 모드** | 사용자가 선택하고 로컬에 저장되는 라이트/다크 테마 |
-| **다국어 UI** | 한국어, 영어, 일본어, 중국어 간체, 스페인어와 브라우저 언어 제안 |
+| **다국어 UI** | 한국어, 영어와 브라우저 언어 제안 |
 | **모바일 우선** | 스마트폰과 태블릿에 최적화된 반응형 디자인 |
 | **웹 푸시** | 태그, 요청, 업데이트에 대한 네이티브 브라우저 푸시 알림 |
 | **PWA 지원** | iOS, Android 홈 화면 설치와 푸시, 배지, 알림 클릭 지원 |
@@ -205,7 +205,7 @@ frontend/src/
 ├── composables/   # 훅 (useSwal, useKakao, useNaver, usePushNotification, useEscapeKey 등)
 ├── stores/        # Pinia 스토어 (auth, notification 폴링, theme, locale)
 ├── views/         # 페이지 컴포넌트 (Dashboard, Duty, TodoBoard, Member, Team, Admin)
-├── i18n/          # ko/en/ja/zh/es 로케일 번들
+├── i18n/          # ko/en 로케일 번들
 ├── releaseNotes/  # 인앱 변경 로그 메타데이터와 다국어 문구
 ├── utils/         # 헬퍼 (color, date, visibility)
 └── types/         # 공유 TypeScript 인터페이스

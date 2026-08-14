@@ -8,7 +8,6 @@ import com.tistory.shanepark.dutypark.holiday.domain.HolidayDto
 import com.tistory.shanepark.dutypark.holiday.repository.HolidayRepository
 import com.tistory.shanepark.dutypark.holiday.service.holidayAPI.HolidayAPI
 import org.springframework.beans.factory.annotation.Qualifier
-import org.springframework.cache.annotation.CacheEvict
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.transaction.support.TransactionSynchronization
@@ -49,7 +48,6 @@ class HolidayService(
         return answer
     }
 
-    @CacheEvict(value = ["holidays"], allEntries = true)
     @Transactional(timeout = 20)
     fun resetHolidayInfo() {
         dutyRepository.deleteAutomaticByDutyDateGreaterThanEqual(

@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted, inject, type Ref } from 'vue'
+import { ref, computed, onMounted, onUnmounted, inject, type Component, type Ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import {
-  CalendarDays,
   ListTodo,
   Clock,
   Users,
@@ -28,11 +27,7 @@ const showcaseRef = ref<HTMLElement | null>(null)
 const containerRef = inject<Ref<HTMLElement | null>>('introContainer', ref(null))
 const { t } = useI18n()
 
-// Scroll progress within the showcase section (0 to 1)
-const scrollProgress = ref(0)
-// Which feature is currently active (0-indexed)
 const activeIndex = ref(0)
-// Progress within the current feature (0 to 1)
 const featureProgress = ref(0)
 
 // Typing animation phases within 0-80% of feature progress
@@ -45,7 +40,6 @@ const featureProgress = ref(0)
 interface TypingState {
   iconOpacity: number
   titleText: string
-  titleComplete: boolean
   descriptionLines: { text: string; complete: boolean }[]
   mockupOpacity: number
 }
@@ -53,30 +47,24 @@ interface TypingState {
 function getTypingState(featureIndex: number, progress: number, feature: Feature): TypingState {
   const diff = featureIndex - activeIndex.value
 
-  // Not the active feature - show nothing or full content
   if (diff !== 0) {
     if (diff < 0) {
-      // Already passed - show full content
       return {
         iconOpacity: 0,
         titleText: feature.title,
-        titleComplete: true,
         descriptionLines: feature.descriptionLines.map(line => ({ text: line, complete: true })),
         mockupOpacity: 0,
       }
     }
-    // Future feature - show nothing
     return {
       iconOpacity: 0,
       titleText: '',
-      titleComplete: false,
       descriptionLines: feature.descriptionLines.map(() => ({ text: '', complete: false })),
       mockupOpacity: 0,
     }
   }
 
-  // Active feature - calculate typing state based on progress
-  const p = progress // 0 to 1 within this feature
+  const p = progress
 
   // Icon + Title + Mockup: 0-15% (appear together)
   const initialOpacity = Math.min(1, p / 0.15)
@@ -84,12 +72,9 @@ function getTypingState(featureIndex: number, progress: number, feature: Feature
 
   // Title appears all at once (no typing)
   const titleText = initialOpacity > 0.3 ? feature.title : ''
-  const titleComplete = initialOpacity >= 1
-
   // Mockup appears with title
   const mockupOpacity = initialOpacity
 
-  // Description lines
   const descriptionLines = feature.descriptionLines.map((line, idx) => {
     // Line 0: 15-40%, Line 1: 40-65%
     const lineStart = 0.15 + idx * 0.25
@@ -110,14 +95,12 @@ function getTypingState(featureIndex: number, progress: number, feature: Feature
   return {
     iconOpacity,
     titleText,
-    titleComplete,
     descriptionLines,
     mockupOpacity,
   }
 }
 
-const iconComponents: Record<string, typeof CalendarDays> = {
-  calendar: CalendarDays,
+const iconComponents: Record<string, Component> = {
   check: ListTodo,
   clock: Clock,
   users: Users,
@@ -126,7 +109,6 @@ const iconComponents: Record<string, typeof CalendarDays> = {
   sun: Sun,
 }
 
-// Calculate scroll progress and active feature
 let rafId: number | null = null
 
 const updateProgress = () => {
@@ -137,26 +119,19 @@ const updateProgress = () => {
   const containerRect = container.getBoundingClientRect()
   const showcaseRect = showcase.getBoundingClientRect()
 
-  // How far into the showcase section we've scrolled
   const showcaseTop = showcaseRect.top - containerRect.top
   const showcaseHeight = showcaseRect.height
   const viewportHeight = containerRect.height
 
-  // Total scrollable distance within showcase
   const scrollableDistance = showcaseHeight - viewportHeight
 
-  // Current scroll position within showcase (0 = just entered, 1 = about to exit)
   let progress = -showcaseTop / scrollableDistance
   progress = Math.max(0, Math.min(1, progress))
-  scrollProgress.value = progress
-
-  // Map progress to feature index
   const totalFeatures = props.features.length
   const rawIndex = progress * totalFeatures
   const currentIndex = Math.min(Math.floor(rawIndex), totalFeatures - 1)
   activeIndex.value = currentIndex
 
-  // Progress within current feature (0 = just entered, 1 = about to leave)
   featureProgress.value = rawIndex - currentIndex
 }
 
@@ -183,12 +158,10 @@ onUnmounted(() => {
   }
 })
 
-// Animation styles for each feature
 const getFeatureStyle = (index: number) => {
   const diff = index - activeIndex.value
   const progress = featureProgress.value
 
-  // Current feature
   if (diff === 0) {
     // Crossfade: both exit and enter happen at 80-100%
     const exitProgress = Math.max(0, progress - 0.8) / 0.2
@@ -204,7 +177,6 @@ const getFeatureStyle = (index: number) => {
     }
   }
 
-  // Next feature (coming in)
   if (diff === 1) {
     // Crossfade: enter at same time as current exits (80-100%)
     const enterProgress = Math.max(0, progress - 0.8) / 0.2
@@ -220,7 +192,6 @@ const getFeatureStyle = (index: number) => {
     }
   }
 
-  // Previous features (already passed)
   if (diff < 0) {
     return {
       opacity: 0,
@@ -230,7 +201,6 @@ const getFeatureStyle = (index: number) => {
     }
   }
 
-  // Future features (not yet visible)
   return {
     opacity: 0,
     transform: 'translate(-50%, -50%) translateY(50px) scale(0.97)',
@@ -301,7 +271,6 @@ const getIconStyle = (index: number) => {
   }
 }
 
-// Progress indicator
 const progressDots = computed(() => {
   return props.features.map((_, index) => {
     const isActive = index === activeIndex.value
@@ -310,7 +279,6 @@ const progressDots = computed(() => {
   })
 })
 
-// Navigate to specific feature when clicking progress dot
 function scrollToFeature(index: number) {
   if (!showcaseRef.value || !containerRef?.value) return
 
@@ -319,13 +287,11 @@ function scrollToFeature(index: number) {
   const showcaseRect = showcase.getBoundingClientRect()
   const containerRect = container.getBoundingClientRect()
 
-  // Calculate showcase's top position relative to scroll
   const showcaseTop = showcase.offsetTop - container.offsetTop
   const showcaseHeight = showcaseRect.height
   const viewportHeight = containerRect.height
   const scrollableDistance = showcaseHeight - viewportHeight
 
-  // Target scroll position for this feature
   const targetProgress = index / props.features.length
   const targetScroll = showcaseTop + targetProgress * scrollableDistance
 
@@ -338,9 +304,7 @@ function scrollToFeature(index: number) {
 
 <template>
   <section ref="showcaseRef" class="intro-showcase">
-    <!-- Sticky viewport that stays fixed during scroll -->
     <div class="intro-showcase-viewport">
-      <!-- Progress dots on the side -->
       <div class="intro-showcase-progress">
         <button
           v-for="(dot, index) in progressDots"
@@ -352,7 +316,6 @@ function scrollToFeature(index: number) {
         />
       </div>
 
-      <!-- Feature cards stack -->
       <div class="intro-showcase-stage">
         <div
           v-for="(feature, index) in features"
@@ -361,7 +324,6 @@ function scrollToFeature(index: number) {
           :style="getFeatureStyle(index)"
         >
           <div class="intro-showcase-content">
-            <!-- Text side -->
             <div class="intro-showcase-text">
               <div
                 class="intro-showcase-icon"
@@ -395,7 +357,6 @@ function scrollToFeature(index: number) {
               </div>
             </div>
 
-            <!-- Mockup side -->
             <div
               class="intro-showcase-mockup"
               :style="{

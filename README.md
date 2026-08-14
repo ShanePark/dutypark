@@ -96,7 +96,7 @@ Tag friends in your schedules. They'll see it on their dashboard instantly. No m
 | **Kakao + Naver OAuth** | One-click social login and SSO onboarding for Korean users |
 | **Holiday Sync** | Korean public holidays auto-imported from Data.go.kr with caching |
 | **Dark Mode** | User-selectable light/dark theme persisted locally |
-| **Localized UI** | Korean, English, Japanese, Simplified Chinese, and Spanish with browser-locale suggestions |
+| **Localized UI** | Korean and English with browser-locale suggestions |
 | **Mobile-First** | Responsive design optimized for phones and tablets |
 | **Web Push** | Native browser push notifications for tags, requests, and updates |
 | **PWA Support** | Installable on iOS and Android home screens with push, badge, and notification-click support |
@@ -205,7 +205,7 @@ frontend/src/
 ├── composables/   # Hooks (useSwal, useKakao, useNaver, usePushNotification, useEscapeKey, etc.)
 ├── stores/        # Pinia stores (auth, notification with polling, theme, locale)
 ├── views/         # Page components (Dashboard, Duty, TodoBoard, Member, Team, Admin)
-├── i18n/          # Locale bundles for ko/en/ja/zh/es
+├── i18n/          # Locale bundles for ko/en
 ├── releaseNotes/  # In-app changelog metadata and localized copy
 ├── utils/         # Helpers (color, date, visibility)
 └── types/         # Shared TypeScript interfaces

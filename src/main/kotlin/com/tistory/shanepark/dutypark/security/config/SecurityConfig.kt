@@ -18,11 +18,13 @@ import org.springframework.web.cors.CorsConfiguration
 import org.springframework.web.cors.CorsConfigurationSource
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource
 import org.springframework.web.filter.ForwardedHeaderFilter
+import java.net.URI
 
 @Configuration
 class SecurityConfig(
     private val authService: AuthService,
     private val cookieService: CookieService,
+    private val cookieConfig: CookieConfig,
     @param:Value("\${dutypark.cors.allowed-origins:}") private val corsAllowedOrigins: String,
     @param:Value("\${dutypark.cors.allowed-origin-patterns:}") private val corsAllowedOriginPatterns: String,
 ) {
@@ -52,10 +54,10 @@ class SecurityConfig(
         val origins = corsAllowedOrigins.split(",")
             .map { it.trim() }
             .filter { it.isNotEmpty() }
-            .ifEmpty { listOf("http://localhost:5173", "http://127.0.0.1:5173") }
         val originPatterns = corsAllowedOriginPatterns.split(",")
             .map { it.trim() }
             .filter { it.isNotEmpty() }
+        validateCorsOrigins(origins, originPatterns)
         configuration.allowedOrigins = origins
         if (originPatterns.isNotEmpty()) {
             configuration.allowedOriginPatterns = originPatterns
@@ -69,6 +71,34 @@ class SecurityConfig(
         source.registerCorsConfiguration("/api/**", configuration)
         return source
     }
+
+    private fun validateCorsOrigins(origins: List<String>, originPatterns: List<String>) {
+        check("*" !in origins) {
+            "Credentialed CORS must not allow every origin"
+        }
+        if (cookieConfig.secure) {
+            check(originPatterns.none { '*' in it }) {
+                "Production credentialed CORS must not use wildcard origin patterns"
+            }
+            check((origins + originPatterns).all { it.startsWith("https://") }) {
+                "Production credentialed CORS origins must use HTTPS"
+            }
+            check((origins + originPatterns).all(::isExactOrigin)) {
+                "Production credentialed CORS entries must be exact origins without paths, queries, or fragments"
+            }
+        }
+    }
+
+    private fun isExactOrigin(value: String): Boolean = runCatching {
+        val uri = URI(value)
+        uri.scheme.equals("https", ignoreCase = true) &&
+            uri.host != null &&
+            uri.rawUserInfo == null &&
+            uri.rawPath.isNullOrEmpty() &&
+            uri.rawQuery == null &&
+            uri.rawFragment == null &&
+            uri.port <= 65535
+    }.getOrDefault(false)
 
     @Bean
     fun adminFilterBean(): FilterRegistrationBean<Filter> {

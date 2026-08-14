@@ -22,9 +22,9 @@ class NotificationPayloadCodecTest {
         )
 
         val json = codec.serialize(payload)
-        val decoded = codec.deserialize(NotificationType.FRIEND_REQUEST_RECEIVED, payload.version, json)
+        val decoded = codec.safeDeserialize(NotificationType.FRIEND_REQUEST_RECEIVED, payload.version, json)
 
-        assertThat(decoded).isEqualTo(payload)
+        assertThat(decoded).isEqualTo(NotificationPayloadDecodeResult.Success(payload))
     }
 
     @Test
@@ -39,16 +39,9 @@ class NotificationPayloadCodecTest {
         )
 
         val json = codec.serialize(payload)
-        val decoded = codec.deserialize(NotificationType.SCHEDULE_TAGGED, payload.version, json)
+        val decoded = codec.safeDeserialize(NotificationType.SCHEDULE_TAGGED, payload.version, json)
 
-        assertThat(decoded).isEqualTo(payload)
-    }
-
-    @Test
-    fun `returns null for blank payload json`() {
-        val decoded = codec.deserialize(NotificationType.TODO_TAGGED, null, null)
-
-        assertThat(decoded).isNull()
+        assertThat(decoded).isEqualTo(NotificationPayloadDecodeResult.Success(payload))
     }
 
     @Test
@@ -71,9 +64,9 @@ class NotificationPayloadCodecTest {
         )
         val wrappedJson = jacksonMapperBuilder().build().writeValueAsString(codec.serialize(payload))
 
-        val decoded = codec.deserialize(NotificationType.FRIEND_REQUEST_RECEIVED, payload.version, wrappedJson)
+        val decoded = codec.safeDeserialize(NotificationType.FRIEND_REQUEST_RECEIVED, payload.version, wrappedJson)
 
-        assertThat(decoded).isEqualTo(payload)
+        assertThat(decoded).isEqualTo(NotificationPayloadDecodeResult.Success(payload))
     }
 
     @Test
@@ -88,14 +81,16 @@ class NotificationPayloadCodecTest {
             }
         """.trimIndent()
 
-        val decoded = codec.deserialize(NotificationType.FRIEND_REQUEST_RECEIVED, null, payloadJson)
+        val decoded = codec.safeDeserialize(NotificationType.FRIEND_REQUEST_RECEIVED, null, payloadJson)
 
         assertThat(decoded).isEqualTo(
-            FriendRequestReceivedPayload(
-                actor = NotificationActorSnapshot(
-                    name = "Shane",
-                    hasProfilePhoto = true,
-                    profilePhotoVersion = 3,
+            NotificationPayloadDecodeResult.Success(
+                FriendRequestReceivedPayload(
+                    actor = NotificationActorSnapshot(
+                        name = "Shane",
+                        hasProfilePhoto = true,
+                        profilePhotoVersion = 3,
+                    ),
                 ),
             )
         )
@@ -115,16 +110,18 @@ class NotificationPayloadCodecTest {
             }
         """.trimIndent()
 
-        val decoded = codec.deserialize(NotificationType.SCHEDULE_TAGGED, null, payloadJson)
+        val decoded = codec.safeDeserialize(NotificationType.SCHEDULE_TAGGED, null, payloadJson)
 
         assertThat(decoded).isEqualTo(
-            ScheduleTaggedPayload(
-                actor = NotificationActorSnapshot(
-                    name = "Shane",
-                    hasProfilePhoto = false,
-                    profilePhotoVersion = 0,
+            NotificationPayloadDecodeResult.Success(
+                ScheduleTaggedPayload(
+                    actor = NotificationActorSnapshot(
+                        name = "Shane",
+                        hasProfilePhoto = false,
+                        profilePhotoVersion = 0,
+                    ),
+                    scheduleTitle = "팀 회의",
                 ),
-                scheduleTitle = "팀 회의",
             )
         )
     }

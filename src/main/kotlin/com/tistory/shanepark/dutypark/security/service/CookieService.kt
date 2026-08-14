@@ -25,7 +25,7 @@ class CookieService(
             .sameSite(cookieConfig.sameSite)
             .path("/")
             .maxAge(jwtConfig.tokenValidityInSeconds)
-            .apply { cookieConfig.domain?.let { domain(it) } }
+            .apply { cookieConfig.domain?.takeIf { it.isNotBlank() }?.let { domain(it) } }
             .build()
 
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString())
@@ -38,7 +38,7 @@ class CookieService(
             .sameSite(cookieConfig.sameSite)
             .path("/api/auth")
             .maxAge(jwtConfig.refreshTokenValidityInDays * 24 * 60 * 60)
-            .apply { cookieConfig.domain?.let { domain(it) } }
+            .apply { cookieConfig.domain?.takeIf { it.isNotBlank() }?.let { domain(it) } }
             .build()
 
         response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString())
@@ -56,7 +56,7 @@ class CookieService(
             .sameSite(cookieConfig.sameSite)
             .path("/")
             .maxAge(0)
-            .apply { cookieConfig.domain?.let { domain(it) } }
+            .apply { cookieConfig.domain?.takeIf { it.isNotBlank() }?.let { domain(it) } }
             .build()
 
         val refreshCookie = ResponseCookie.from(REFRESH_TOKEN_COOKIE, "")
@@ -65,7 +65,7 @@ class CookieService(
             .sameSite(cookieConfig.sameSite)
             .path("/api/auth")
             .maxAge(0)
-            .apply { cookieConfig.domain?.let { domain(it) } }
+            .apply { cookieConfig.domain?.takeIf { it.isNotBlank() }?.let { domain(it) } }
             .build()
 
         response.addHeader(HttpHeaders.SET_COOKIE, accessCookie.toString())

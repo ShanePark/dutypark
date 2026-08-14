@@ -154,7 +154,6 @@ class TodoService(
         todo.update(title, content)
         todo.dueDate = dueDate
 
-        // Handle status change if provided and different from current
         val changedStatus = status?.takeIf { it != todo.status }
         if (changedStatus != null) {
             bumpTodoToTopOfStatus(todo, changedStatus)

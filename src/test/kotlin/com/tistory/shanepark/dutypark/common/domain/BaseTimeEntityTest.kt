@@ -17,7 +17,6 @@ class BaseTimeEntityTest : DutyparkIntegrationTest() {
 
     @Test
     fun test() {
-        // Given
         val member = TestData.member
         val refreshToken = RefreshToken(member, fixedDateTime, "", "")
         refreshTokenRepository.save(refreshToken)
@@ -29,13 +28,11 @@ class BaseTimeEntityTest : DutyparkIntegrationTest() {
         assertThat(refreshToken.createdDate).isNotNull
         assertThat(refreshToken.lastModifiedDate).isNotNull
 
-        // When - modify and save with a slight delay to ensure time changes
         Thread.sleep(10)
         val loaded = refreshTokenRepository.findById(refreshToken.id!!).get()
         loaded.validUntil = fixedDateTime.plusDays(1)
         em.flush()
 
-        // Then - lastModifiedDate should be updated
         val saved = refreshTokenRepository.save(loaded)
         assertThat(saved.lastModifiedDate).isAfterOrEqualTo(createdDate)
     }

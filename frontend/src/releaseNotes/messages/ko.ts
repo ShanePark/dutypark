@@ -7,7 +7,6 @@ export const koReleaseNotes = {
   loadMore: "더보기",
   latest: "최신",
   pr: "PR #{number}",
-  openedAt: "PR 날짜",
   areas: "영역",
   categories: {
     feature: "기능",
@@ -39,6 +38,16 @@ export const koReleaseNotes = {
     ui: "화면"
   },
   entries: {
+    "pr-403": {
+      title: "Dutypark 네이티브 iOS 앱 출시",
+      summary: "익숙한 캘린더, Todo, 팀, 친구, 설정을 새로운 네이티브 iOS 앱에서 이용하고, 웹과 모바일에서 일관된 로그인 및 계정 관리 기능을 사용할 수 있습니다.",
+      changes: [
+        "네이티브 iOS 앱에서 대시보드, 근무 캘린더, 일정, Todo, 친구, 팀, 첨부파일, 알림, 설정, 관리자 기능을 이용할 수 있습니다.",
+        "웹과 iOS에서 카카오, 네이버, Apple 계정으로 로그인하거나 계정을 연결할 수 있으며, 네이티브 Apple 로그인과 안전한 모바일 OAuth 연결을 지원합니다.",
+        "APNs를 통해 iPhone 푸시 알림을 받고, 알림에서 지원하는 화면으로 바로 이동할 수 있습니다.",
+        "본인 확인과 단계별 안내를 거쳐 계정 삭제를 요청하고, 어느 클라이언트에서든 AI 일정 시간 인식 동의를 확인하거나 철회할 수 있습니다."
+      ]
+    },
     "pr-387": {
       title: "달력에서 이번달로 바로 돌아가기",
       summary: "다른 달을 보고 있을 때 연-월 옆에 말풍선 버튼이 나타나, 한 번만 눌러도 이번달로 돌아옵니다.",

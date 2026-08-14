@@ -34,6 +34,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: false },
   },
   {
+    path: '/auth/account-deletion-oauth-callback',
+    name: 'account-deletion-oauth-callback',
+    component: () => import('@/views/auth/AccountDeletionOAuthCallbackView.vue'),
+    meta: { requiresAuth: false, hideLayout: true },
+  },
+  {
     path: '/duty/:id',
     name: 'duty',
     component: () => import('@/views/duty/DutyView.vue'),

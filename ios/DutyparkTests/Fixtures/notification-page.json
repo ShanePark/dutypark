@@ -1,0 +1,25 @@
+{
+  "content": [{
+    "id": "ae71ee7d-3af9-4936-a6e8-75b9c0d37822",
+    "type": "SCHEDULE_TAGGED",
+    "referenceType": "SCHEDULE",
+    "referenceId": "9a53c095-c8b0-4de7-91be-b2fef4134e2a",
+    "actorId": 11,
+    "payload": {
+      "version": 1,
+      "actor": {"name": "친구", "hasProfilePhoto": false, "profilePhotoVersion": 0},
+      "scheduleTitle": "당직 후 저녁 약속"
+    },
+    "isRead": false,
+    "createdAt": "2026-08-12T09:51:51.163702"
+  }],
+  "totalPages": 1,
+  "totalElements": 1,
+  "last": true,
+  "first": true,
+  "size": 20,
+  "number": 0,
+  "numberOfElements": 1,
+  "empty": false,
+  "pageable": {"pageNumber": 0, "pageSize": 20}
+}

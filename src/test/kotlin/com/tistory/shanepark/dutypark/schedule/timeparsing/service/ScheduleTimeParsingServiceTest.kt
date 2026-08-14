@@ -50,7 +50,6 @@ class ScheduleTimeParsingServiceTest {
         val chatOption = OpenAiChatOptions
             .builder()
             .model("gemma-4-31b-it")
-//            .model("gemma-3-27b-it")
             .temperature(0.0)
             .build()
 

@@ -1,5 +1,7 @@
 package com.tistory.shanepark.dutypark.security.domain.dto
 
+import com.fasterxml.jackson.annotation.JsonIgnore
+
 data class LoginMember(
     val id: Long,
     val email: String? = null,
@@ -8,7 +10,9 @@ data class LoginMember(
     val team: String? = null,
     var isAdmin: Boolean = false,
     val isImpersonating: Boolean = false,
-    val originalMemberId: Long? = null
+    val originalMemberId: Long? = null,
+    @get:JsonIgnore
+    val sessionId: Long? = null,
 ) {
     companion object {
         const val ATTR_NAME: String = "loginMember"

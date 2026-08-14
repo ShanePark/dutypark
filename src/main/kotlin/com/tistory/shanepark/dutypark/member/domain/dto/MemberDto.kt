@@ -12,12 +12,17 @@ data class MemberDto(
     val calendarVisibility: Visibility,
     val kakaoId: String?,
     val naverId: String?,
+    val appleId: String? = null,
     val hasPassword: Boolean = false,
     val hasProfilePhoto: Boolean = false,
     val profilePhotoVersion: Long = 0,
 )
 
-internal fun Member.toMemberDto(kakaoId: String? = null, naverId: String? = null): MemberDto {
+internal fun Member.toMemberDto(
+    kakaoId: String? = null,
+    naverId: String? = null,
+    appleId: String? = null,
+): MemberDto {
     val preview = toMemberPreviewDto()
     return MemberDto(
         id = preview.id,
@@ -28,6 +33,7 @@ internal fun Member.toMemberDto(kakaoId: String? = null, naverId: String? = null
         calendarVisibility = calendarVisibility,
         kakaoId = kakaoId,
         naverId = naverId,
+        appleId = appleId,
         hasPassword = password != null,
         hasProfilePhoto = preview.hasProfilePhoto,
         profilePhotoVersion = preview.profilePhotoVersion,

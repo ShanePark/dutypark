@@ -36,7 +36,6 @@ class ScheduleControllerTest : RestDocsTest() {
 
     @Test
     fun `createSchedule test`() {
-        // Given
         val member = TestData.member
         val friend = TestData.member2
         makeThemFriend(member, friend)
@@ -52,7 +51,6 @@ class ScheduleControllerTest : RestDocsTest() {
         val json = objectMapper.writeValueAsString(updateScheduleDto)
         val sizeBefore = scheduleRepository.findAll().size
 
-        // Then
         mockMvc.perform(
             post("/api/schedules")
                 .accept("application/json")
@@ -71,6 +69,10 @@ class ScheduleControllerTest : RestDocsTest() {
                         fieldWithPath("startDateTime").description("Schedule Start DateTime"),
                         fieldWithPath("endDateTime").description("Schedule End DateTime"),
                         fieldWithPath("visibility").description("Schedule Visibility"),
+                        fieldWithPath("aiTimeParsingRequested")
+                            .type(JsonFieldType.BOOLEAN)
+                            .description("Whether to request AI time parsing when current consent is valid (optional, defaults to true)")
+                            .optional(),
                         fieldWithPath("tagFriendIds").description("Friend member IDs to tag with the schedule")
                             .type("Array").optional(),
                         fieldWithPath("id").description("Schedule Id (optional, for update)").type("UUID").optional(),
@@ -89,7 +91,6 @@ class ScheduleControllerTest : RestDocsTest() {
 
     @Test
     fun `createScheduleTest unauthorized`() {
-        // Given
         val updateScheduleDto = ScheduleSaveDto(
             memberId = 1234,
             content = "test",
@@ -98,7 +99,6 @@ class ScheduleControllerTest : RestDocsTest() {
         )
         val json = objectMapper.writeValueAsString(updateScheduleDto)
 
-        // Then
         mockMvc.perform(
             post("/api/schedules")
                 .accept("application/json")
@@ -120,7 +120,6 @@ class ScheduleControllerTest : RestDocsTest() {
 
     @Test
     fun `update schedule test`() {
-        // Given
         val member = TestData.member
         val friend = TestData.member2
         makeThemFriend(member, friend)
@@ -145,7 +144,6 @@ class ScheduleControllerTest : RestDocsTest() {
         )
         val json = objectMapper.writeValueAsString(updateScheduleDto)
 
-        // Then
         mockMvc.perform(
             post("/api/schedules")
                 .accept("application/json")
@@ -165,6 +163,10 @@ class ScheduleControllerTest : RestDocsTest() {
                         fieldWithPath("startDateTime").description("Schedule Start DateTime"),
                         fieldWithPath("endDateTime").description("Schedule End DateTime"),
                         fieldWithPath("visibility").description("Schedule Visibility"),
+                        fieldWithPath("aiTimeParsingRequested")
+                            .type(JsonFieldType.BOOLEAN)
+                            .description("Whether to request AI time parsing when current consent is valid (optional, defaults to true)")
+                            .optional(),
                         fieldWithPath("tagFriendIds").description("Friend member IDs to tag with the schedule")
                             .type("Array").optional(),
                         fieldWithPath("attachmentSessionId").description("Attachment Session Id (optional)")
@@ -184,7 +186,6 @@ class ScheduleControllerTest : RestDocsTest() {
 
     @Test
     fun `delete Test`() {
-        // Given
         val member = TestData.member
         val oldSchedule = scheduleRepository.save(
             Schedule(
@@ -198,7 +199,6 @@ class ScheduleControllerTest : RestDocsTest() {
 
         val jwt = getJwt(member)
 
-        // Then
         mockMvc.perform(
             delete("/api/schedules/{id}", oldSchedule.id)
                 .accept("application/json")
@@ -212,6 +212,7 @@ class ScheduleControllerTest : RestDocsTest() {
                 )
             )
 
+        em.flush()
         em.clear()
 
         assertThat(scheduleRepository.findById(oldSchedule.id)).isEmpty()
@@ -219,7 +220,6 @@ class ScheduleControllerTest : RestDocsTest() {
 
     @Test
     fun `getSchedules returns schedules with attachments field`() {
-        // Given
         val owner = TestData.member
         val member = TestData.member2
         makeThemFriend(owner, member)
@@ -252,7 +252,6 @@ class ScheduleControllerTest : RestDocsTest() {
 
         val jwt = getJwt(member)
 
-        // When & Then
         mockMvc.perform(
             get("/api/schedules")
                 .param("memberId", member.id.toString())
@@ -303,7 +302,6 @@ class ScheduleControllerTest : RestDocsTest() {
 
     @Test
     fun `update schedule should delete attachments not in orderedAttachmentIds`() {
-        // Given
         val member = TestData.member
         val schedule = scheduleRepository.save(
             Schedule(
@@ -357,7 +355,6 @@ class ScheduleControllerTest : RestDocsTest() {
         )
         val json = objectMapper.writeValueAsString(updateScheduleDto)
 
-        // When
         mockMvc.perform(
             post("/api/schedules")
                 .accept("application/json")
@@ -369,7 +366,6 @@ class ScheduleControllerTest : RestDocsTest() {
         em.flush()
         em.clear()
 
-        // Then
         val attachments = attachmentRepository.findAllByContextTypeAndContextId(
             AttachmentContextType.SCHEDULE,
             schedule.id.toString()

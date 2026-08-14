@@ -6,7 +6,6 @@ import { useSwal } from '@/composables/useSwal'
 
 const props = defineProps<{
   text: string
-  label?: string
 }>()
 
 const { t } = useI18n()
@@ -16,7 +15,7 @@ const copied = ref(false)
 let revertTimer: ReturnType<typeof setTimeout> | null = null
 
 const buttonLabel = computed(() =>
-  copied.value ? t('common.actions.copied') : (props.label ?? t('common.actions.copy'))
+  copied.value ? t('common.actions.copied') : t('common.actions.copy')
 )
 
 // Fallback for non-secure contexts where navigator.clipboard is unavailable/rejected.

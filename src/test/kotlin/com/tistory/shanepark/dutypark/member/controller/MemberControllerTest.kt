@@ -51,11 +51,9 @@ class MemberControllerTest : RestDocsTest() {
 
     @Test
     fun updateCalendarVisibility() {
-        // Given
         val member = TestData.member
         assertThat(member.calendarVisibility).isEqualTo(Visibility.FRIENDS)
 
-        // When
         mockMvc.perform(
             RestDocumentationRequestBuilders.put("/api/members/${member.id}/visibility")
                 .accept("application/json")
@@ -74,14 +72,12 @@ class MemberControllerTest : RestDocsTest() {
                 )
             )
 
-        // Then
         val findMember = memberRepository.findById(member.id!!).orElseThrow()
         assertThat(findMember.calendarVisibility).isEqualTo(Visibility.PRIVATE)
     }
 
     @Test
     fun `getProfilePhoto returns cache-control header for long-term caching`() {
-        // Given
         val member = TestData.member
         val profileDir = storagePathResolver.getStorageRoot().resolve("PROFILE/${member.id}")
         createdDirectories.add(profileDir)
@@ -95,7 +91,6 @@ class MemberControllerTest : RestDocsTest() {
         memberRepository.save(member)
         em.flush()
 
-        // When & Then
         mockMvc.perform(
             RestDocumentationRequestBuilders.get("/api/members/${member.id}/profile-photo")
         )
@@ -107,12 +102,10 @@ class MemberControllerTest : RestDocsTest() {
 
     @Test
     fun `getProfilePhoto returns 404 when no photo exists`() {
-        // Given
         val member = TestData.member
         member.profilePhotoPath = null
         memberRepository.save(member)
 
-        // When & Then
         mockMvc.perform(
             RestDocumentationRequestBuilders.get("/api/members/${member.id}/profile-photo")
         )
@@ -194,6 +187,80 @@ class MemberControllerTest : RestDocsTest() {
             .andExpect(jsonPath("$.kakaoId").doesNotExist())
             .andExpect(jsonPath("$.naverId").doesNotExist())
             .andExpect(jsonPath("$.hasPassword").doesNotExist())
+    }
+
+    @Test
+    fun `unlink social account deletes local mapping and returns 204`() {
+        val member = TestData.member
+        memberSocialAccountRepository.save(MemberSocialAccount(member, SsoType.KAKAO, "kakao-unlink"))
+        memberSocialAccountRepository.save(MemberSocialAccount(member, SsoType.NAVER, "naver-retained"))
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.delete("/api/members/me/social-accounts/KAKAO")
+                .withAuth(member)
+        )
+            .andExpect(status().isNoContent)
+
+        assertThat(memberSocialAccountRepository.findByMemberAndProvider(member, SsoType.KAKAO)).isNull()
+        assertThat(memberSocialAccountRepository.findByMemberAndProvider(member, SsoType.NAVER)).isNotNull
+    }
+
+    @Test
+    fun `unlink unlinked social account is idempotent`() {
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.delete("/api/members/me/social-accounts/NAVER")
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isNoContent)
+    }
+
+    @Test
+    fun `unlink social account requires authentication`() {
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.delete("/api/members/me/social-accounts/KAKAO")
+        )
+            .andExpect(status().isUnauthorized)
+    }
+
+    @Test
+    fun `unlink social account rejects impersonation with machine readable code`() {
+        val impersonationToken = getImpersonationJwt(TestData.member, TestData.admin)
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.delete("/api/members/me/social-accounts/KAKAO")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer $impersonationToken")
+        )
+            .andExpect(status().isForbidden)
+            .andExpect(jsonPath("$.code").value("member.social.unlink.impersonationForbidden"))
+    }
+
+    @Test
+    fun `unlink sole social account with password returns conflict and keeps mapping`() {
+        val member = TestData.member
+        assertThat(member.password).isNotBlank()
+        val linked = memberSocialAccountRepository.save(
+            MemberSocialAccount(member, SsoType.KAKAO, "kakao-last-authentication")
+        )
+        em.flush()
+        em.clear()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.delete("/api/members/me/social-accounts/KAKAO")
+                .withAuth(member)
+        )
+            .andExpect(status().isConflict)
+            .andExpect(jsonPath("$.code").value("member.social.unlink.lastAuthenticationMethod"))
+
+        assertThat(memberSocialAccountRepository.findById(linked.id!!)).isPresent
+    }
+
+    @Test
+    fun `unlink unlinked Apple account is idempotent`() {
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.delete("/api/members/me/social-accounts/APPLE")
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isNoContent)
     }
 
     @Test

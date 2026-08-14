@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>DutyparkAPIBaseURL</key>
+    <string>$(API_BASE_URL)</string>
+    <key>ITSAppUsesNonExemptEncryption</key>
+    <false/>
+    <key>UIAppFonts</key>
+    <array>
+        <string>Maplestory OTF Light.otf</string>
+        <string>Maplestory OTF Bold.otf</string>
+    </array>
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleTypeRole</key>
+            <string>Editor</string>
+            <key>CFBundleURLName</key>
+            <string>io.github.shanepark.dutypark.oauth</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>dutypark</string>
+            </array>
+        </dict>
+    </array>
+</dict>
+</plist>

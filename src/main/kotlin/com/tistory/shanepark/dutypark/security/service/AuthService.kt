@@ -5,7 +5,8 @@ import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.common.exceptions.RateLimitException
 import com.tistory.shanepark.dutypark.member.repository.MemberManagerRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
-import com.tistory.shanepark.dutypark.member.repository.MemberSsoRegisterRepository
+import com.tistory.shanepark.dutypark.member.domain.entity.Member
+import com.tistory.shanepark.dutypark.member.domain.enums.MemberStatus
 import com.tistory.shanepark.dutypark.member.service.RefreshTokenService
 import com.tistory.shanepark.dutypark.security.config.JwtConfig
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginDto
@@ -23,7 +24,6 @@ import org.springframework.transaction.annotation.Transactional
 @Transactional
 class AuthService(
     private val memberRepository: MemberRepository,
-    private val memberSsoRegisterRepository: MemberSsoRegisterRepository,
     private val memberManagerRepository: MemberManagerRepository,
     private val passwordEncoder: PasswordEncoder,
     private val refreshTokenService: RefreshTokenService,
@@ -46,9 +46,35 @@ class AuthService(
     @Transactional(readOnly = true)
     fun tokenToLoginMember(token: String): LoginMember {
         if (validateToken(token) == TokenStatus.VALID) {
-            return jwtProvider.parseToken(token)
+            val loginMember = jwtProvider.parseToken(token)
+            loginMember.sessionId?.let { sessionId ->
+                val sessionOwnerId = if (loginMember.isImpersonating) {
+                    loginMember.originalMemberId ?: throw AuthException()
+                } else {
+                    loginMember.id
+                }
+                if (!refreshTokenService.isSessionActive(sessionId, sessionOwnerId)) {
+                    throw AuthException()
+                }
+            }
+            val member = memberRepository.findById(loginMember.id).orElseThrow {
+                AuthException("auth.account.inactive")
+            }
+            ensureActive(member)
+            return loginMember
         }
         throw AuthException()
+    }
+
+    @Transactional(readOnly = true)
+    fun verifyPasswordForReauth(memberId: Long, password: String) {
+        val member = memberRepository.findById(memberId).orElseThrow {
+            AuthException("auth.reauth.failed")
+        }
+        ensureActive(member, "auth.reauth.failed")
+        if (member.password == null || !passwordEncoder.matches(password, member.password)) {
+            throw AuthException("auth.reauth.failed")
+        }
     }
 
     fun changePassword(param: PasswordChangeDto, byAdmin: Boolean = false) {
@@ -82,7 +108,10 @@ class AuthService(
 
         val member = memberRepository.findByEmail(email).orElse(null)
 
-        if (member == null || !passwordEncoder.matches(login.password, member.password)) {
+        if (
+            member == null || member.status != MemberStatus.ACTIVE ||
+            !passwordEncoder.matches(login.password, member.password)
+        ) {
             loginAttemptService.recordFailedAttempt(ipAddress, email)
             log.info("Login failed: ip={}, email={}", ipAddress, email)
             throw AuthException(LOGIN_FAILED_MESSAGE)
@@ -90,12 +119,12 @@ class AuthService(
 
         loginAttemptService.recordSuccessfulAttempt(ipAddress, email)
 
-        val jwt = jwtProvider.createToken(member)
         val refreshToken = refreshTokenService.createRefreshToken(
             memberId = member.id!!,
             remoteAddr = ipAddress,
             userAgent = req.getHeader(HttpHeaders.USER_AGENT)
         )
+        val jwt = jwtProvider.createToken(member, requireNotNull(refreshToken.id))
 
         return TokenResponse(
             accessToken = jwt,
@@ -113,7 +142,8 @@ class AuthService(
         }
 
         val member = refreshToken.member
-        val newJwt = jwtProvider.createToken(member)
+        ensureActive(member)
+        val newJwt = jwtProvider.createToken(member, requireNotNull(refreshToken.id))
 
         refreshToken.slideValidUntil(
             req.remoteAddr,
@@ -133,13 +163,14 @@ class AuthService(
             log.warn("Token generation failed: member not exist, memberId={}", memberId)
             AuthException("auth.token.memberNotFound")
         }
+        ensureActive(member)
 
-        val jwt = jwtProvider.createToken(member)
         val refreshToken = refreshTokenService.createRefreshToken(
             memberId = memberId,
             remoteAddr = req.remoteAddr,
             userAgent = req.getHeader(HttpHeaders.USER_AGENT)
         )
+        val jwt = jwtProvider.createToken(member, requireNotNull(refreshToken.id))
 
         return TokenResponse(
             accessToken = jwt,
@@ -148,7 +179,11 @@ class AuthService(
         )
     }
 
-    fun impersonate(manager: LoginMember, targetMemberId: Long): String {
+    fun impersonate(
+        manager: LoginMember,
+        targetMemberId: Long,
+        legacyRefreshToken: String? = null,
+    ): String {
         if (manager.isImpersonating) {
             log.warn("Impersonation denied: manager {} already impersonating another account", manager.id)
             throw AuthException("auth.impersonation.alreadyImpersonating")
@@ -157,10 +192,12 @@ class AuthService(
         val managerEntity = memberRepository.findById(manager.id).orElseThrow {
             AuthException("auth.impersonation.managerNotFound")
         }
+        ensureActive(managerEntity)
 
         val targetEntity = memberRepository.findById(targetMemberId).orElseThrow {
             AuthException("auth.impersonation.targetNotFound")
         }
+        ensureActive(targetEntity)
 
         val isManager = memberManagerRepository.findAllByManagerAndManaged(managerEntity, targetEntity).isNotEmpty()
         if (!isManager) {
@@ -170,7 +207,11 @@ class AuthService(
 
         log.info("Impersonation started: manager={} -> target={}", manager.id, targetMemberId)
 
-        return jwtProvider.createImpersonationToken(targetEntity, manager.id)
+        val sessionId = manager.sessionId ?: legacyRefreshToken?.let(refreshTokenService::findByToken)
+            ?.takeIf { it.member.id == manager.id && it.isValid() }
+            ?.id
+            ?: throw AuthException("auth.impersonation.sessionInvalid")
+        return jwtProvider.createImpersonationToken(targetEntity, manager.id, sessionId)
     }
 
     fun restore(currentLogin: LoginMember, existingRefreshToken: String?, req: HttpServletRequest): TokenResponse {
@@ -184,12 +225,12 @@ class AuthService(
         val originalMember = memberRepository.findById(originalMemberId).orElseThrow {
             AuthException("auth.restore.originalNotFound")
         }
-
-        val jwt = jwtProvider.createToken(originalMember)
+        ensureActive(originalMember)
 
         val refreshToken = existingRefreshToken?.let { token ->
             refreshTokenService.findByToken(token)?.takeIf {
-                it.member.id == originalMemberId && it.isValid()
+                (currentLogin.sessionId == null || it.id == currentLogin.sessionId) &&
+                    it.member.id == originalMemberId && it.isValid()
             }?.also {
                 it.slideValidUntil(
                     req.remoteAddr,
@@ -197,11 +238,8 @@ class AuthService(
                     jwtConfig.refreshTokenValidityInDays
                 )
             }
-        } ?: refreshTokenService.createRefreshToken(
-            memberId = originalMemberId,
-            remoteAddr = req.remoteAddr,
-            userAgent = req.getHeader(HttpHeaders.USER_AGENT)
-        )
+        } ?: throw AuthException("auth.restore.sessionInvalid")
+        val jwt = jwtProvider.createToken(originalMember, requireNotNull(refreshToken.id))
 
         log.info("Impersonation ended: restored to={} from={}", originalMemberId, currentLogin.id)
 
@@ -210,6 +248,12 @@ class AuthService(
             refreshToken = refreshToken.token,
             expiresIn = jwtConfig.tokenValidityInSeconds
         )
+    }
+
+    private fun ensureActive(member: Member, code: String = "auth.account.inactive") {
+        if (member.status != MemberStatus.ACTIVE) {
+            throw AuthException(code)
+        }
     }
 
 }

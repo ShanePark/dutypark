@@ -22,6 +22,7 @@ data class ScheduleSaveDto(
     val tagFriendIds: List<Long>? = null,
     val attachmentSessionId: UUID? = null,
     val orderedAttachmentIds: List<UUID> = emptyList(),
+    val aiTimeParsingRequested: Boolean = true,
 ) {
 
     init {

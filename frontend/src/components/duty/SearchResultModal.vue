@@ -16,7 +16,6 @@ interface SearchResult {
 
 interface PageInfo {
   pageNumber: number
-  pageSize: number
   totalPages: number
   totalElements: number
 }

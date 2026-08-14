@@ -1,0 +1,1520 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "already_linked": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "This social account is already connected to another account." } },
+        "ko": { "stringUnit": { "state": "translated", "value": "이미 다른 계정에 연결된 소셜 계정입니다." } }
+      }
+    },
+    "auth.apple.accountMismatch": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "This Apple account does not match the account being verified." } },
+        "ko": { "stringUnit": { "state": "translated", "value": "현재 확인 중인 계정과 Apple 계정이 일치하지 않습니다." } }
+      }
+    },
+    "auth.apple.configurationUnavailable": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Sign in with Apple is not available yet. Please try another sign-in method." } },
+        "ko": { "stringUnit": { "state": "translated", "value": "Apple 로그인을 아직 사용할 수 없습니다. 다른 로그인 방법을 이용해주세요." } }
+      }
+    },
+    "auth.apple.credential.invalid": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "The Apple sign-in response is invalid or expired. Please try again." } },
+        "ko": { "stringUnit": { "state": "translated", "value": "Apple 로그인 응답이 올바르지 않거나 만료되었습니다. 다시 시도해주세요." } }
+      }
+    },
+    "auth.apple.provider.unavailable": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Apple sign-in is temporarily unavailable. Please try again later." } },
+        "ko": { "stringUnit": { "state": "translated", "value": "Apple 로그인을 일시적으로 사용할 수 없습니다. 잠시 후 다시 시도해주세요." } }
+      }
+    },
+    "auth.oauth.socialAccountAlreadyLinked": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "This social account is already connected to another account." } },
+        "ko": { "stringUnit": { "state": "translated", "value": "이미 다른 계정에 연결된 소셜 계정입니다." } }
+      }
+    },
+    "auth.oauth.mobile.authorizationUrl.invalid": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Could not start social login. Please try again." } },
+        "ko": { "stringUnit": { "state": "translated", "value": "소셜 로그인을 시작하지 못했습니다. 다시 시도해주세요." } }
+      }
+    },
+    "auth.oauth.mobile.callback.invalid": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "The social login response is invalid. Please try again." } },
+        "ko": { "stringUnit": { "state": "translated", "value": "소셜 로그인 응답이 올바르지 않습니다. 다시 시도해주세요." } }
+      }
+    },
+    "auth.oauth.mobile.callback.notAllowed": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "The social login callback address is not allowed." } },
+        "ko": { "stringUnit": { "state": "translated", "value": "허용되지 않은 소셜 로그인 콜백 주소입니다." } }
+      }
+    },
+    "auth.oauth.mobile.code.invalid": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "The social login code is invalid or expired. Please start again." } },
+        "ko": { "stringUnit": { "state": "translated", "value": "소셜 로그인 코드가 올바르지 않거나 만료되었습니다. 처음부터 다시 시도해주세요." } }
+      }
+    },
+    "auth.oauth.mobile.pkce.invalid": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Social login security verification failed. Please start again." } },
+        "ko": { "stringUnit": { "state": "translated", "value": "소셜 로그인 보안 확인에 실패했습니다. 처음부터 다시 시도해주세요." } }
+      }
+    },
+    "auth.oauth.mobile.provider.invalid": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "This social login provider is not supported." } },
+        "ko": { "stringUnit": { "state": "translated", "value": "지원하지 않는 소셜 로그인 제공자입니다." } }
+      }
+    },
+    "auth.oauth.mobile.purpose.invalid": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "This social login request is not supported." } },
+        "ko": { "stringUnit": { "state": "translated", "value": "지원하지 않는 소셜 로그인 요청입니다." } }
+      }
+    },
+    "auth.oauth.mobile.state.invalid": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "The social login session is invalid or expired. Please start again." } },
+        "ko": { "stringUnit": { "state": "translated", "value": "소셜 로그인 세션이 올바르지 않거나 만료되었습니다. 처음부터 다시 시도해주세요." } }
+      }
+    },
+    "provider_failed": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "The social login provider could not complete authentication. Please try again." } },
+        "ko": { "stringUnit": { "state": "translated", "value": "소셜 로그인 제공자 인증에 실패했습니다. 다시 시도해주세요." } }
+      }
+    },
+    "attachment.context.missing": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Attachment context information is missing."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "첨부파일의 컨텍스트 정보가 없습니다."
+          }
+        }
+      }
+    },
+    "attachment.extension.blocked": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This file extension is not allowed."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "허용되지 않는 파일 확장자입니다."
+          }
+        }
+      }
+    },
+    "attachment.profile.forbidden": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You do not have permission to modify this profile attachment."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 프로필 첨부파일을 수정할 권한이 없습니다."
+          }
+        }
+      }
+    },
+    "attachment.session.auth.required": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Login is required to access session attachments."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "임시 업로드 세션 첨부파일에 접근하려면 로그인이 필요합니다."
+          }
+        }
+      }
+    },
+    "attachment.session.contextMismatch": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The upload session does not match the target context."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "업로드 세션과 대상 컨텍스트가 일치하지 않습니다."
+          }
+        }
+      }
+    },
+    "attachment.session.forbidden": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You do not have permission to access this upload session."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 업로드 세션에 접근할 권한이 없습니다."
+          }
+        }
+      }
+    },
+    "attachment.session.notFound": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The upload session for this attachment could not be found."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 첨부파일에 연결된 업로드 세션을 찾을 수 없습니다."
+          }
+        }
+      }
+    },
+    "attachment.session.targetContext.missing": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The upload session is missing target context information."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "업로드 세션의 대상 컨텍스트 정보가 없습니다."
+          }
+        }
+      }
+    },
+    "attachment.size.exceeded": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The file is too large."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "파일 크기가 너무 큽니다."
+          }
+        }
+      }
+    },
+    "attachment.todo.access.forbidden": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You do not have permission to view this to-do attachment."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 할 일 첨부파일을 볼 권한이 없습니다."
+          }
+        }
+      }
+    },
+    "attachment.todo.auth.required": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Login is required to access this to-do attachment."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 할 일 첨부파일에 접근하려면 로그인이 필요합니다."
+          }
+        }
+      }
+    },
+    "attachment.todo.write.forbidden": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You do not have permission to modify this to-do attachment."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 할 일 첨부파일을 수정할 권한이 없습니다."
+          }
+        }
+      }
+    },
+    "auth.impersonation.alreadyImpersonating": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You are already impersonating another account."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이미 다른 계정으로 전환된 상태입니다."
+          }
+        }
+      }
+    },
+    "auth.impersonation.failed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Failed to switch accounts."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "계정 전환에 실패했습니다."
+          }
+        }
+      }
+    },
+    "auth.impersonation.forbidden": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You do not have permission to manage this account."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "관리 권한이 없습니다."
+          }
+        }
+      }
+    },
+    "auth.impersonation.managerNotFound": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manager account could not be found."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "관리자 계정을 찾을 수 없습니다."
+          }
+        }
+      }
+    },
+    "auth.impersonation.targetNotFound": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Target account could not be found."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "대상 계정을 찾을 수 없습니다."
+          }
+        }
+      }
+    },
+    "auth.login.failed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Email or password is incorrect."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이메일 또는 비밀번호가 올바르지 않습니다."
+          }
+        }
+      }
+    },
+    "auth.login.rateLimited": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Too many login attempts. Please try again later."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "로그인 시도 횟수를 초과했습니다. 잠시 후 다시 시도해 주세요."
+          }
+        }
+      }
+    },
+    "auth.password.changeUnauthorized": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You are not authorized to change this password."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 비밀번호를 변경할 권한이 없습니다."
+          }
+        }
+      }
+    },
+    "auth.password.currentMismatch": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Current password does not match."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "현재 비밀번호가 일치하지 않습니다."
+          }
+        }
+      }
+    },
+    "auth.password.memberNotFound": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Account does not exist."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "존재하지 않는 계정입니다."
+          }
+        }
+      }
+    },
+    "auth.refresh.current.required": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The current refresh token is required."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "현재 로그인 중인 리프레시 토큰 정보가 필요합니다."
+          }
+        }
+      }
+    },
+    "auth.refresh.expired": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Refresh token has expired."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "리프레시 토큰이 만료되었습니다."
+          }
+        }
+      }
+    },
+    "auth.refresh.invalid": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invalid refresh token."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "유효하지 않은 리프레시 토큰입니다."
+          }
+        }
+      }
+    },
+    "auth.refreshToken.delete.forbidden": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You do not have permission to delete this refresh token."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 리프레시 토큰을 삭제할 권한이 없습니다."
+          }
+        }
+      }
+    },
+    "auth.required": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Login is required."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "로그인이 필요합니다."
+          }
+        }
+      }
+    },
+    "auth.restore.failed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Failed to restore the original account."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "계정 복원에 실패했습니다."
+          }
+        }
+      }
+    },
+    "auth.restore.notImpersonating": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You are not currently impersonating another account."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "전환된 계정 상태가 아닙니다."
+          }
+        }
+      }
+    },
+    "auth.restore.originalMissing": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Original account information is missing."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "원래 계정 정보가 없습니다."
+          }
+        }
+      }
+    },
+    "auth.restore.originalNotFound": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Original account could not be found."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "원래 계정을 찾을 수 없습니다."
+          }
+        }
+      }
+    },
+    "auth.token.memberNotFound": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Account does not exist."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "존재하지 않는 계정입니다."
+          }
+        }
+      }
+    },
+    "auth.unauthorized": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unauthorized."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "인증이 필요합니다."
+          }
+        }
+      }
+    },
+    "common.badRequest": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bad request."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "잘못된 요청입니다."
+          }
+        }
+      }
+    },
+    "common.concurrentUpdate": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Another duty update is in progress. Please try again shortly."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다른 근무 변경이 처리 중입니다. 잠시 후 다시 시도해 주세요."
+          }
+        }
+      }
+    },
+    "common.notFound": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resource not found."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "리소스를 찾을 수 없습니다."
+          }
+        }
+      }
+    },
+    "common.rateLimit.exceeded": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Too many requests. Please try again later."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "요청이 너무 많습니다. 잠시 후 다시 시도해 주세요."
+          }
+        }
+      }
+    },
+    "common.validation.failed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Please check the request fields."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "요청 값을 다시 확인해 주세요."
+          }
+        }
+      }
+    },
+    "dday.access.forbidden": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You do not have permission to access this D-Day."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 D-Day에 접근할 권한이 없습니다."
+          }
+        }
+      }
+    },
+    "dday.title.length": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "D-Day titles must be between 1 and 30 characters."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "D-DAY 제목은 1자 이상 30자 이하로 입력해주세요."
+          }
+        }
+      }
+    },
+    "dday.title.required": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "D-Day title is required."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "D-DAY 제목은 필수입니다."
+          }
+        }
+      }
+    },
+    "duty.edit.forbidden": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You do not have permission to edit this duty."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 근무를 수정할 권한이 없습니다."
+          }
+        }
+      }
+    },
+    "duty.pattern.dutyType.invalid": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The selected duty type is unavailable. Check the team settings."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "선택한 근무 유형을 사용할 수 없습니다. 팀 설정을 확인해주세요."
+          }
+        }
+      }
+    },
+    "duty.pattern.team.required": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You must belong to a team to configure a default duty pattern."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "팀에 소속된 회원만 기본 근무 패턴을 설정할 수 있습니다."
+          }
+        }
+      }
+    },
+    "duty.pattern.weekdays.duplicate": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The same weekday cannot be configured twice."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "같은 요일을 두 번 설정할 수 없습니다."
+          }
+        }
+      }
+    },
+    "duty.pattern.weekdays.required": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select at least one workday."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "근무 요일을 하나 이상 선택해주세요."
+          }
+        }
+      }
+    },
+    "dutyBatch.dutyTypeNotSingle": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The team must have exactly one duty type to use batch upload."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "일괄 업로드를 사용하려면 팀의 근무 유형이 정확히 1개여야 합니다."
+          }
+        }
+      }
+    },
+    "dutyBatch.member.teamRequired": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The account must belong to a team to use batch upload."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시간표 일괄 업로드를 사용하려면 팀에 속한 계정이어야 합니다."
+          }
+        }
+      }
+    },
+    "dutyBatch.multipleNameFound": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Multiple matching names were found in the uploaded file."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "업로드한 파일에서 같은 이름의 사용자가 여러 명 발견되었습니다."
+          }
+        }
+      }
+    },
+    "dutyBatch.nameNotFound": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not find the member name in the uploaded file."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "업로드한 파일에서 사용자의 이름을 찾을 수 없습니다."
+          }
+        }
+      }
+    },
+    "dutyBatch.notSupportedFile": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This file format is not supported. Supported formats: {supportedFile}"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지원하지 않는 파일 형식입니다. 지원 형식: {supportedFile}"
+          }
+        }
+      }
+    },
+    "dutyBatch.template.required": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select a batch upload template first."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "먼저 일괄 업로드 템플릿을 선택해주세요."
+          }
+        }
+      }
+    },
+    "dutyBatch.yearMonthNotMatch": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The uploaded file month does not match the selected schedule month ({year}-{month})."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "업로드한 파일의 연월이 현재 설정 중인 시간표({year}년 {month}월)와 일치하지 않습니다."
+          }
+        }
+      }
+    },
+    "dutyType.color.invalid": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Invalid color format."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "올바른 색상 형식이 아닙니다."
+          }
+        }
+      }
+    },
+    "dutyType.name.duplicate": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A duty type with the same name already exists."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "동일한 이름의 근무 유형이 이미 존재합니다."
+          }
+        }
+      }
+    },
+    "dutyType.name.length": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Duty names must be between 1 and 10 characters."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "근무명은 1자 이상 10자 이하로 입력해주세요."
+          }
+        }
+      }
+    },
+    "dutyType.name.required": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Duty name is required."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "근무명은 필수입니다."
+          }
+        }
+      }
+    },
+    "friend.family.alreadyFamily": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This member is already marked as family."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이미 가족으로 설정된 사용자입니다."
+          }
+        }
+      }
+    },
+    "friend.family.notFamily": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This member is not marked as family."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "가족으로 설정된 사용자가 아닙니다."
+          }
+        }
+      }
+    },
+    "friend.family.notFriend": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Only friends can be added as family."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "가족으로 추가하려면 먼저 친구여야 합니다."
+          }
+        }
+      }
+    },
+    "friend.notFriend": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This member is not your friend."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "친구로 연결된 사용자가 아닙니다."
+          }
+        }
+      }
+    },
+    "friend.request.alreadyFriend": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You are already friends."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이미 친구로 연결된 사용자입니다."
+          }
+        }
+      }
+    },
+    "friend.request.alreadyRequested": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A friend or family request is already pending."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이미 대기 중인 친구 또는 가족 요청이 있습니다."
+          }
+        }
+      }
+    },
+    "friend.request.notFound": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No pending friend or family request was found."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "대기 중인 친구 또는 가족 요청을 찾을 수 없습니다."
+          }
+        }
+      }
+    },
+    "friend.request.self": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You cannot send a friend request to yourself."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자기 자신에게는 친구 요청을 보낼 수 없습니다."
+          }
+        }
+      }
+    },
+    "member.auxiliary.name.required": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Name is required."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이름은 필수입니다."
+          }
+        }
+      }
+    },
+    "member.visibility.forbidden": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You do not have permission to view this member's calendar."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 회원의 캘린더를 볼 권한이 없습니다."
+          }
+        }
+      }
+    },
+    "member.visibility.update.forbidden": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You cannot update another member's visibility."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다른 회원의 공개 범위는 변경할 수 없습니다."
+          }
+        }
+      }
+    },
+    "policy.privacy.consent.required": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You must agree to the privacy policy."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "개인정보 처리방침에 동의해야 합니다."
+          }
+        }
+      }
+    },
+    "policy.privacy.version.required": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Privacy policy version information is required."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "개인정보 처리방침 버전 정보가 필요합니다."
+          }
+        }
+      }
+    },
+    "policy.terms.consent.required": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You must agree to the terms of service."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "서비스 이용약관에 동의해야 합니다."
+          }
+        }
+      }
+    },
+    "policy.terms.version.required": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Terms version information is required."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이용약관 버전 정보가 필요합니다."
+          }
+        }
+      }
+    },
+    "schedule.tag.notFriend": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Only friends can be tagged on this schedule."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "친구만 이 일정에 태그할 수 있습니다."
+          }
+        }
+      }
+    },
+    "schedule.visibility.forbidden": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You do not have permission to view this schedule."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 일정을 볼 권한이 없습니다."
+          }
+        }
+      }
+    },
+    "schedule.write.forbidden": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You do not have permission to edit this schedule."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 일정을 수정할 권한이 없습니다."
+          }
+        }
+      }
+    },
+    "sso.username.length": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usernames must be between 1 and 10 characters."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "사용자명은 1자 이상 10자 이하로 입력해주세요."
+          }
+        }
+      }
+    },
+    "sso.username.required": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Username is required."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "사용자명은 필수입니다."
+          }
+        }
+      }
+    },
+    "sso.uuid.invalid": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The sign-up session is invalid or has expired."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회원가입 세션이 유효하지 않거나 만료되었습니다."
+          }
+        }
+      }
+    },
+    "sso.uuid.required": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sign-up session information is required."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회원가입 세션 정보가 필요합니다."
+          }
+        }
+      }
+    },
+    "team.admin.required": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Only team admins can perform this action."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "팀 관리자만 이 작업을 할 수 있습니다."
+          }
+        }
+      }
+    },
+    "team.dutyType.sameTeam.required": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Duty types must belong to the same team."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "근무 유형은 같은 팀에 속해 있어야 합니다."
+          }
+        }
+      }
+    },
+    "team.manage.forbidden": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You do not have permission to manage this team."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 팀을 관리할 권한이 없습니다."
+          }
+        }
+      }
+    },
+    "team.member.alreadyAssigned": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This member already belongs to a team."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 사용자는 이미 다른 팀에 속해 있습니다."
+          }
+        }
+      }
+    },
+    "team.member.notInTeam": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This member does not belong to this team."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 사용자는 이 팀에 속해 있지 않습니다."
+          }
+        }
+      }
+    },
+    "team.member.required": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You must belong to this team to access it."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 팀에 속한 사용자만 접근할 수 있습니다."
+          }
+        }
+      }
+    },
+    "todo.reorder.orderedIds.required": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The reordered to-do ID list is required."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "같은 상태에서 순서를 바꾸려면 정렬된 할 일 ID 목록이 필요합니다."
+          }
+        }
+      }
+    },
+    "todo.tag.notFriend": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Only friends can be tagged on this to-do."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "친구만 이 할 일에 태그할 수 있습니다."
+          }
+        }
+      }
+    },
+    "errors.generic": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Something went wrong. Please try again."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오류가 발생했습니다. 다시 시도해주세요."
+          }
+        }
+      }
+    },
+    "errors.transport": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unable to connect. Check your network and try again."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "연결할 수 없습니다. 네트워크를 확인한 후 다시 시도해주세요."
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

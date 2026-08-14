@@ -14,7 +14,6 @@ import org.springframework.http.MediaType
 import org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document
 import org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders
 import org.springframework.restdocs.payload.PayloadDocumentation.*
-import org.springframework.test.web.servlet.result.MockMvcResultHandlers
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.time.Clock
@@ -69,7 +68,6 @@ class DashboardControllerTest : RestDocsTest() {
             .andExpect(jsonPath("$.member").exists())
             .andExpect(jsonPath("$.member.kakaoId").value("kakao-dashboard"))
             .andExpect(jsonPath("$.member.naverId").value("naver-dashboard"))
-            .andDo(MockMvcResultHandlers.print())
             .andDo(
                 document(
                     "dashboard/my",
@@ -82,6 +80,7 @@ class DashboardControllerTest : RestDocsTest() {
                         fieldWithPath("member.calendarVisibility").description("Calendar visibility setting"),
                         fieldWithPath("member.kakaoId").description("Kakao ID (nullable)"),
                         fieldWithPath("member.naverId").description("Naver ID (nullable)"),
+                        fieldWithPath("member.appleId").description("Apple subject identifier (nullable)"),
                         fieldWithPath("member.hasPassword").description("Whether member has password set"),
                         fieldWithPath("member.hasProfilePhoto").description("Whether member has profile photo"),
                         fieldWithPath("member.profilePhotoVersion").description("Profile photo version for cache busting"),
@@ -141,7 +140,6 @@ class DashboardControllerTest : RestDocsTest() {
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.friends").isArray)
-            .andDo(MockMvcResultHandlers.print())
             .andDo(
                 document(
                     "dashboard/friends",
@@ -179,7 +177,6 @@ class DashboardControllerTest : RestDocsTest() {
                 .accept(MediaType.APPLICATION_JSON)
         )
             .andExpect(status().isUnauthorized)
-            .andDo(MockMvcResultHandlers.print())
             .andDo(document("dashboard/my-unauthorized"))
     }
 

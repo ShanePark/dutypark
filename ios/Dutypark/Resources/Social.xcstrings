@@ -1,0 +1,179 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "social.action.accept" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Accept" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "승인" } }
+    } },
+    "social.action.addFamily" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Add as family" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "가족 등록" } }
+    } },
+    "social.action.addFriend" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Add friend" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 추가" } }
+    } },
+    "social.action.cancel" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Cancel request" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "요청 취소" } }
+    } },
+    "social.action.cancelDialog" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Cancel" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "취소" } }
+    } },
+    "social.action.close" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Close" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "닫기" } }
+    } },
+    "social.action.done" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Done" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "완료" } }
+    } },
+    "social.action.editPinnedOrder" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Edit order" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "순서 편집" } }
+    } },
+    "social.action.more" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "More actions" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "더보기" } }
+    } },
+    "social.action.moveDown" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Move down" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "아래로 이동" } }
+    } },
+    "social.action.moveUp" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Move up" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "위로 이동" } }
+    } },
+    "social.action.ok" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "OK" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "확인" } }
+    } },
+    "social.action.openCalendar" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Open calendar" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "캘린더 열기" } }
+    } },
+    "social.action.pin" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Pin" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "고정" } }
+    } },
+    "social.action.reject" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Reject" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "거절" } }
+    } },
+    "social.action.removeFamily" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Remove from family" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "가족에서 제외" } }
+    } },
+    "social.action.removeFriend" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Remove friend" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 삭제" } }
+    } },
+    "social.action.sendRequest" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Send request" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "요청 보내기" } }
+    } },
+    "social.action.unpin" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Unpin" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "고정 해제" } }
+    } },
+
+    "social.confirm.cancel.message" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Cancel the request sent to %@?" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님에게 보낸 요청을 취소하시겠습니까?" } }
+    } },
+    "social.confirm.cancel.title" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Cancel request" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "요청 취소" } }
+    } },
+    "social.confirm.reject.message" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Reject the request from %@?" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님의 요청을 거절하시겠습니까?" } }
+    } },
+    "social.confirm.reject.title" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Reject request" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "요청 거절" } }
+    } },
+    "social.confirm.removeFamily.message" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Remove %@ from family? Your friend connection will stay." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님을 가족에서 제외하시겠습니까? 친구 관계는 유지됩니다." } }
+    } },
+    "social.confirm.removeFamily.title" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Remove from family" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "가족에서 제외" } }
+    } },
+    "social.confirm.removeFriend.message" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Remove %@ from your friends list?" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님을 친구 목록에서 삭제하시겠습니까?" } }
+    } },
+    "social.confirm.removeFriend.title" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Remove friend" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 삭제" } }
+    } },
+    "social.confirm.sendFriend.message" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Send a friend request to %@?" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님에게 친구 요청을 보내시겠습니까?" } }
+    } },
+    "social.confirm.sendFriend.title" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Friend request" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 요청" } }
+    } },
+
+    "social.empty.friends" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "No friends yet." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "아직 친구가 없습니다." } }
+    } },
+    "social.hint.pinnedOrder" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Drag this handle to reorder pinned friends." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "이 핸들을 드래그해 고정 친구 순서를 바꿔주세요." } }
+    } },
+    "social.label.family" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Family member" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "가족 구성원" } }
+    } },
+    "social.label.moreSchedules" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ more schedules" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "일정 %@개 더보기" } }
+    } },
+    "social.label.offDuty" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Off duty" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "휴무" } }
+    } },
+    "social.loading" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Loading friends…" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 정보를 불러오는 중…" } }
+    } },
+    "social.request.family" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Family request" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "가족 요청" } }
+    } },
+    "social.request.friend" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Friend request" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 요청" } }
+    } },
+    "social.request.sent" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ · Pending" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@ · 대기 중" } }
+    } },
+    "social.section.friends" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Friends" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 목록" } }
+    } },
+    "social.section.pinned" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Pinned" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "고정한 친구" } }
+    } },
+    "social.section.pinnedOrder" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Pinned friend order" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "고정 친구 순서" } }
+    } },
+    "social.section.requests" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Friend requests" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 요청" } }
+    } },
+    "social.title" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Friends" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구" } }
+    } },
+
+    "social.search.empty" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Search for people to add" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "추가할 친구를 검색하세요" } }
+    } },
+    "social.search.loading" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Searching…" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "검색 중…" } }
+    } },
+    "social.search.next" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Next" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "다음" } }
+    } },
+    "social.search.page" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ of %@" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@ / %@" } }
+    } },
+    "social.search.resultsSummary" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Page %@ of %@ · %@ results" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@/%@ 페이지 · 총 %@명" } }
+    } },
+    "social.search.previous" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Previous" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "이전" } }
+    } },
+    "social.search.prompt" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Search by name or email" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "이름 또는 이메일로 검색" } }
+    } },
+    "social.search.title" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Add friend" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 추가" } }
+    } },
+
+    "social.error.accept" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to accept the request." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "요청 수락에 실패했습니다." } } } },
+    "social.error.cancel" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to cancel the request." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "요청 취소에 실패했습니다." } } } },
+    "social.error.familyAlreadyRequested" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "A family request has already been sent." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "이미 가족 요청을 보낸 상태입니다." } } } },
+    "social.error.generic" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "The request could not be completed." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "요청을 완료하지 못했습니다." } } } },
+    "social.error.load" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to load friends." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 정보를 불러오지 못했습니다." } } } },
+    "social.error.pin" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to pin the friend." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 고정에 실패했습니다." } } } },
+    "social.error.reject" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to reject the request." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "요청 거절에 실패했습니다." } } } },
+    "social.error.removeFamily" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to remove the family connection." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "가족에서 제외하지 못했습니다." } } } },
+    "social.error.removeFriend" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to remove the friend." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 삭제에 실패했습니다." } } } },
+    "social.error.reorder" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to update the friend order." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 순서 변경에 실패했습니다." } } } },
+    "social.error.search" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to search for friends." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 검색에 실패했습니다." } } } },
+    "social.error.sendFamily" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to send the family request." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "가족 요청 전송에 실패했습니다." } } } },
+    "social.error.sendFriend" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to send the friend request." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 요청 전송에 실패했습니다." } } } },
+    "social.error.title" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Unable to complete action" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "작업을 완료하지 못했습니다" } } } },
+    "social.error.unpin" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to unpin the friend." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 고정 해제에 실패했습니다." } } } },
+    "social.warning.reorderReload" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "The friend order was saved, but the latest list could not be reloaded. Pull down to refresh." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 순서는 저장됐지만 최신 목록을 다시 불러오지 못했습니다. 아래로 당겨 새로고침해 주세요." } } } }
+  },
+  "version" : "1.0"
+}

@@ -60,7 +60,6 @@ class FriendServiceUnitTest {
 
     @Test
     fun updateFriendsPin() {
-        // Given
         val member = Member(name = "test")
         ReflectionTestUtils.setField(member, "id", 0L)
 
@@ -79,7 +78,6 @@ class FriendServiceUnitTest {
             ).apply { pinOrder = 0L }
         }.toList()
 
-        // When
         whenever(memberRepository.findAllById(friendIds)).thenReturn(dummyFriends)
         whenever(memberRepository.findById(member.id!!)).thenReturn(Optional.of(member))
         whenever(friendRelationRepository.findAllByMemberAndFriendIn(member, dummyFriends))
@@ -90,7 +88,6 @@ class FriendServiceUnitTest {
             friendIds = friendIds
         )
 
-        // Then
         dummyFriendRelations.forEachIndexed { index, relation ->
             assertThat(relation.pinOrder).isEqualTo(index + 1L)
         }
@@ -98,7 +95,6 @@ class FriendServiceUnitTest {
 
     @Test
     fun `update friends pin does not update NullPinOrder`() {
-        // Given
         val member = Member(name = "test")
         ReflectionTestUtils.setField(member, "id", 0L)
 
@@ -118,7 +114,6 @@ class FriendServiceUnitTest {
             ).apply { pinOrder = if (friend.id == pinOrderNullFriendId) null else 0L }
         }.toList()
 
-        // When
         whenever(memberRepository.findAllById(friendIds)).thenReturn(dummyFriends)
         whenever(memberRepository.findById(member.id!!)).thenReturn(Optional.of(member))
         whenever(friendRelationRepository.findAllByMemberAndFriendIn(member, dummyFriends))
@@ -129,7 +124,6 @@ class FriendServiceUnitTest {
             friendIds = friendIds
         )
 
-        // Then
         dummyFriendRelations.forEachIndexed { index, relation ->
             if (relation.friend.id != pinOrderNullFriendId) {
                 assertThat(relation.pinOrder).isEqualTo(index + 1L)
@@ -145,7 +139,6 @@ class FriendServiceUnitTest {
 
     @Test
     fun `send friend request success`() {
-        // Given
         val member1 = createMember(1L, "member1")
         val member2 = createMember(2L, "member2")
         val savedRequest = FriendRequest(member1, member2).apply {
@@ -159,17 +152,14 @@ class FriendServiceUnitTest {
             .thenReturn(emptyList())
         whenever(friendRequestRepository.save(any<FriendRequest>())).thenReturn(savedRequest)
 
-        // When
         friendService.sendFriendRequest(loginMember(member1), member2.id!!)
 
-        // Then
         verify(friendRequestRepository).save(any<FriendRequest>())
         verify(eventPublisher).publishEvent(any<Any>())
     }
 
     @Test
     fun `cannot send friend request to friend`() {
-        // Given
         val member1 = createMember(1L, "member1")
         val member2 = createMember(2L, "member2")
         val friendRelation = FriendRelation(member1, member2)
@@ -178,7 +168,6 @@ class FriendServiceUnitTest {
         whenever(memberRepository.findById(member2.id!!)).thenReturn(Optional.of(member2))
         whenever(friendRelationRepository.findByMemberAndFriend(member1, member2)).thenReturn(friendRelation)
 
-        // Then
         assertThrows<BadRequestException> {
             friendService.sendFriendRequest(loginMember(member1), member2.id!!)
         }
@@ -187,12 +176,10 @@ class FriendServiceUnitTest {
 
     @Test
     fun `can't send friend request to self`() {
-        // Given
         val self = createMember(1L, "self")
 
         whenever(memberRepository.findById(self.id!!)).thenReturn(Optional.of(self))
 
-        // Then
         assertThrows<BadRequestException> {
             friendService.sendFriendRequest(loginMember(self), self.id!!)
         }
@@ -201,7 +188,6 @@ class FriendServiceUnitTest {
 
     @Test
     fun `cannot send friend request to friend twice`() {
-        // Given
         val member1 = createMember(1L, "member1")
         val member2 = createMember(2L, "member2")
         val pendingRequest = FriendRequest(member1, member2)
@@ -212,7 +198,6 @@ class FriendServiceUnitTest {
         whenever(friendRequestRepository.findAllByFromMemberAndToMemberAndStatus(member1, member2, FriendRequestStatus.PENDING))
             .thenReturn(listOf(pendingRequest))
 
-        // Then
         assertThrows<BadRequestException> {
             friendService.sendFriendRequest(loginMember(member1), member2.id!!)
         }
@@ -220,7 +205,6 @@ class FriendServiceUnitTest {
 
     @Test
     fun `cannot send family request when target is not a friend`() {
-        // Given
         val member1 = createMember(1L, "member1")
         val member2 = createMember(2L, "member2")
 
@@ -228,7 +212,6 @@ class FriendServiceUnitTest {
         whenever(memberRepository.findById(member2.id!!)).thenReturn(Optional.of(member2))
         whenever(friendRelationRepository.findByMemberAndFriend(member1, member2)).thenReturn(null)
 
-        // Then
         assertThrows<BadRequestException> {
             friendService.sendFamilyRequest(loginMember(member1), member2.id!!)
         }
@@ -237,7 +220,6 @@ class FriendServiceUnitTest {
 
     @Test
     fun `cannot send family request when already family`() {
-        // Given
         val member1 = createMember(1L, "member1")
         val member2 = createMember(2L, "member2")
         val friendRelation = FriendRelation(member1, member2)
@@ -248,7 +230,6 @@ class FriendServiceUnitTest {
         whenever(friendRelationRepository.findByMemberAndFriend(member1, member2)).thenReturn(friendRelation)
         whenever(friendRelationRepository.findByMemberAndFriend(member2, member1)).thenReturn(reverseRelation)
 
-        // Then
         assertThrows<BadRequestException> {
             friendService.sendFamilyRequest(loginMember(member1), member2.id!!)
         }
@@ -257,7 +238,6 @@ class FriendServiceUnitTest {
 
     @Test
     fun `cannot send family request when another request is already pending`() {
-        // Given
         val member1 = createMember(1L, "member1")
         val member2 = createMember(2L, "member2")
         val friendRelation = FriendRelation(member1, member2)
@@ -275,7 +255,6 @@ class FriendServiceUnitTest {
         whenever(friendRequestRepository.findAllByFromMemberAndToMemberAndStatus(member1, member2, FriendRequestStatus.PENDING))
             .thenReturn(listOf(pendingRequest))
 
-        // Then
         assertThrows<BadRequestException> {
             friendService.sendFamilyRequest(loginMember(member1), member2.id!!)
         }
@@ -284,7 +263,6 @@ class FriendServiceUnitTest {
 
     @Test
     fun `Cancel friend request test`() {
-        // Given
         val member1 = createMember(1L, "member1")
         val member2 = createMember(2L, "member2")
         val pendingRequest = FriendRequest(member1, member2)
@@ -294,16 +272,13 @@ class FriendServiceUnitTest {
         whenever(friendRequestRepository.findAllByFromMemberAndToMemberAndStatus(member1, member2, FriendRequestStatus.PENDING))
             .thenReturn(listOf(pendingRequest))
 
-        // When
         friendService.cancelFriendRequest(loginMember(member1), member2.id!!)
 
-        // Then
         verify(friendRequestRepository).delete(pendingRequest)
     }
 
     @Test
     fun `Can't cancel friend request if there is no pending request`() {
-        // Given
         val member1 = createMember(1L, "member1")
         val member2 = createMember(2L, "member2")
 
@@ -312,7 +287,6 @@ class FriendServiceUnitTest {
         whenever(friendRequestRepository.findAllByFromMemberAndToMemberAndStatus(member1, member2, FriendRequestStatus.PENDING))
             .thenReturn(emptyList())
 
-        // Then
         assertThrows<BadRequestException> {
             friendService.cancelFriendRequest(loginMember(member1), member2.id!!)
         }
@@ -321,7 +295,6 @@ class FriendServiceUnitTest {
 
     @Test
     fun `Can't reject friend request if there is no pending request`() {
-        // Given
         val member1 = createMember(1L, "member1")
         val member2 = createMember(2L, "member2")
 
@@ -330,7 +303,6 @@ class FriendServiceUnitTest {
         whenever(friendRequestRepository.findAllByFromMemberAndToMemberAndStatus(member1, member2, FriendRequestStatus.PENDING))
             .thenReturn(emptyList())
 
-        // Then
         assertThrows<BadRequestException> {
             friendService.rejectFriendRequest(loginMember(member2), member1.id!!)
         }
@@ -338,7 +310,6 @@ class FriendServiceUnitTest {
 
     @Test
     fun `Reject friend request test`() {
-        // Given
         val member1 = createMember(1L, "member1")
         val member2 = createMember(2L, "member2")
         val pendingRequest = FriendRequest(member1, member2)
@@ -348,16 +319,13 @@ class FriendServiceUnitTest {
         whenever(friendRequestRepository.findAllByFromMemberAndToMemberAndStatus(member1, member2, FriendRequestStatus.PENDING))
             .thenReturn(listOf(pendingRequest))
 
-        // When
         friendService.rejectFriendRequest(loginMember(member2), member1.id!!)
 
-        // Then
         assertThat(pendingRequest.status).isEqualTo(FriendRequestStatus.REJECTED)
     }
 
     @Test
     fun `Accept friend request test`() {
-        // Given
         val member1 = createMember(1L, "member1")
         val member2 = createMember(2L, "member2")
         val pendingRequest = FriendRequest(fromMember = member2, toMember = member1).apply {
@@ -371,10 +339,8 @@ class FriendServiceUnitTest {
         whenever(friendRequestRepository.findAllByFromMemberAndToMemberAndStatus(member1, member2, FriendRequestStatus.PENDING))
             .thenReturn(emptyList())
 
-        // When
         friendService.acceptFriendRequest(loginMember(member1), member2.id!!)
 
-        // Then
         assertThat(pendingRequest.status).isEqualTo(FriendRequestStatus.ACCEPTED)
         verify(friendRelationRepository, times(2)).save(any<FriendRelation>())
         verify(eventPublisher).publishEvent(any<Any>())
@@ -382,7 +348,6 @@ class FriendServiceUnitTest {
 
     @Test
     fun `Can't accept friend request if there is no pending request`() {
-        // Given
         val member1 = createMember(1L, "member1")
         val member2 = createMember(2L, "member2")
 
@@ -391,7 +356,6 @@ class FriendServiceUnitTest {
         whenever(friendRequestRepository.findAllByFromMemberAndToMemberAndStatus(member2, member1, FriendRequestStatus.PENDING))
             .thenReturn(emptyList())
 
-        // Then
         assertThrows<BadRequestException> {
             friendService.acceptFriendRequest(loginMember(member1), member2.id!!)
         }
@@ -400,14 +364,12 @@ class FriendServiceUnitTest {
 
     @Test
     fun `cannot demote family member when target is not family`() {
-        // Given
         val member1 = createMember(1L, "member1")
         val member2 = createMember(2L, "member2")
 
         whenever(memberRepository.findById(member1.id!!)).thenReturn(Optional.of(member1))
         whenever(memberRepository.findById(member2.id!!)).thenReturn(Optional.of(member2))
 
-        // Then
         assertThrows<BadRequestException> {
             friendService.demoteFromFamily(loginMember(member1), member2.id!!)
         }
@@ -415,7 +377,6 @@ class FriendServiceUnitTest {
 
     @Test
     fun `if there were vice versa request when accept friend request, delete it`() {
-        // Given
         val member1 = createMember(1L, "member1")
         val member2 = createMember(2L, "member2")
         val incomingRequest = FriendRequest(fromMember = member2, toMember = member1).apply {
@@ -432,16 +393,13 @@ class FriendServiceUnitTest {
         whenever(friendRequestRepository.findAllByFromMemberAndToMemberAndStatus(member1, member2, FriendRequestStatus.PENDING))
             .thenReturn(listOf(outgoingRequest))
 
-        // When
         friendService.acceptFriendRequest(loginMember(member1), member2.id!!)
 
-        // Then
         verify(friendRequestRepository).delete(outgoingRequest)
     }
 
     @Test
     fun `findFriendRequests test - getPendingRequestsTo`() {
-        // Given
         val member1 = createMember(1L, "member1")
         val member2 = createMember(2L, "member2")
         val pendingRequest = FriendRequest(member2, member1)
@@ -449,26 +407,21 @@ class FriendServiceUnitTest {
         whenever(friendRequestRepository.findAllByToMemberAndStatus(member1, FriendRequestStatus.PENDING))
             .thenReturn(listOf(pendingRequest))
 
-        // When
         val friendRequests = friendService.getPendingRequestsTo(member1)
 
-        // Then
         assertThat(friendRequests).hasSize(1)
         assertThat(friendRequests[0].fromMember.id).isEqualTo(member2.id)
     }
 
     @Test
     fun `getPendingFriendRequest does not include accepted requests`() {
-        // Given
         val member1 = createMember(1L, "member1")
 
         whenever(friendRequestRepository.findAllByToMemberAndStatus(member1, FriendRequestStatus.PENDING))
             .thenReturn(emptyList())
 
-        // When
         val friendRequests = friendService.getPendingRequestsTo(member1)
 
-        // Then
         assertThat(friendRequests).isEmpty()
     }
 
@@ -478,7 +431,6 @@ class FriendServiceUnitTest {
 
     @Test
     fun `Unfriend test`() {
-        // Given
         val member1 = createMember(1L, "member1")
         val member2 = createMember(2L, "member2")
         val friendRelation = FriendRelation(member1, member2)
@@ -487,17 +439,14 @@ class FriendServiceUnitTest {
         whenever(memberRepository.findById(member2.id!!)).thenReturn(Optional.of(member2))
         whenever(friendRelationRepository.findByMemberAndFriend(member1, member2)).thenReturn(friendRelation)
 
-        // When
         friendService.unfriend(loginMember(member1), member2.id!!)
 
-        // Then
         verify(friendRelationRepository).deleteByMemberAndFriend(member1, member2)
         verify(friendRelationRepository).deleteByMemberAndFriend(member2, member1)
     }
 
     @Test
     fun `Can't unfriend if not friend`() {
-        // Given
         val member1 = createMember(1L, "member1")
         val member2 = createMember(2L, "member2")
 
@@ -505,7 +454,6 @@ class FriendServiceUnitTest {
         whenever(memberRepository.findById(member2.id!!)).thenReturn(Optional.of(member2))
         whenever(friendRelationRepository.findByMemberAndFriend(member1, member2)).thenReturn(null)
 
-        // Then
         assertThrows<BadRequestException> {
             friendService.unfriend(loginMember(member1), member2.id!!)
         }
@@ -514,38 +462,31 @@ class FriendServiceUnitTest {
 
     @Test
     fun `isFriend test - returns true when friend relation exists`() {
-        // Given
         val member1 = createMember(1L, "member1")
         val member2 = createMember(2L, "member2")
         val friendRelation = FriendRelation(member1, member2)
 
         whenever(friendRelationRepository.findByMemberAndFriend(member1, member2)).thenReturn(friendRelation)
 
-        // When
         val isFriend = friendService.isFriend(member1, member2)
 
-        // Then
         assertThat(isFriend).isTrue()
     }
 
     @Test
     fun `isFriend test - returns false when no friend relation`() {
-        // Given
         val member1 = createMember(1L, "member1")
         val member2 = createMember(2L, "member2")
 
         whenever(friendRelationRepository.findByMemberAndFriend(member1, member2)).thenReturn(null)
 
-        // When
         val isFriend = friendService.isFriend(member1, member2)
 
-        // Then
         assertThat(isFriend).isFalse()
     }
 
     @Test
     fun `build schedule visibility map respects family and manager overrides`() {
-        // Given
         val login = createMember(1L, "login")
         val family = createMember(2L, "family")
         val friend = createMember(3L, "friend")
@@ -559,10 +500,8 @@ class FriendServiceUnitTest {
 
         whenever(memberService.findManagedMemberIds(loginMember(login))).thenReturn(setOf(managed.id!!))
 
-        // When
         val result = friendService.buildScheduleVisibilityMap(loginMember(login), relations)
 
-        // Then
         assertThat(result[family.id]).isEqualTo(Visibility.family())
         assertThat(result[friend.id]).isEqualTo(Visibility.friends())
         assertThat(result[managed.id]).isEqualTo(Visibility.all())
