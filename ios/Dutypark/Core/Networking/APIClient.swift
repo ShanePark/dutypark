@@ -97,7 +97,7 @@ private actor AuthenticationMode {
 nonisolated final class APIClient: Sendable {
     static let shared = APIClient()
     private static let logger = Logger(
-        subsystem: Bundle.main.bundleIdentifier ?? "com.tistory.shanepark.dutypark",
+        subsystem: Bundle.main.bundleIdentifier ?? "io.github.shanepark.dutypark",
         category: "APIClient"
     )
 

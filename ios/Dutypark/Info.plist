@@ -17,7 +17,7 @@
             <key>CFBundleTypeRole</key>
             <string>Editor</string>
             <key>CFBundleURLName</key>
-            <string>com.tistory.shanepark.dutypark.oauth</string>
+            <string>io.github.shanepark.dutypark.oauth</string>
             <key>CFBundleURLSchemes</key>
             <array>
                 <string>dutypark</string>

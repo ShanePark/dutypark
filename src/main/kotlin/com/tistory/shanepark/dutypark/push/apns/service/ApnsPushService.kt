@@ -194,7 +194,7 @@ class ApnsPushService @Autowired constructor(
     )
 
     companion object {
-        private const val TOPIC = "com.tistory.shanepark.dutypark"
+        private const val TOPIC = "io.github.shanepark.dutypark"
         private const val SANDBOX_HOST = "api.sandbox.push.apple.com"
         private const val PRODUCTION_HOST = "api.push.apple.com"
     }

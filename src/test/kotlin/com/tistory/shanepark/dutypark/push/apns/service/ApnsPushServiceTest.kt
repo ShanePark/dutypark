@@ -73,7 +73,7 @@ class ApnsPushServiceTest {
         verify(httpClient).sendAsync(requestCaptor.capture(), any<HttpResponse.BodyHandler<String>>())
         val request = requestCaptor.firstValue
         assertThat(request.uri().host).isEqualTo("api.sandbox.push.apple.com")
-        assertThat(request.headers().firstValue("apns-topic")).hasValue("com.tistory.shanepark.dutypark")
+        assertThat(request.headers().firstValue("apns-topic")).hasValue("io.github.shanepark.dutypark")
         assertThat(request.headers().firstValue("authorization").orElse("")).startsWith("bearer ")
 
         val body = request.bodyPublisher().orElseThrow().let { publisher ->

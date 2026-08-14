@@ -1,0 +1,25 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": [
+          "2V47G42CDS.io.github.shanepark.dutypark"
+        ],
+        "components": [
+          {
+            "/": "/guide"
+          },
+          {
+            "/": "/terms"
+          },
+          {
+            "/": "/privacy"
+          },
+          {
+            "/": "/duty/*"
+          }
+        ]
+      }
+    ]
+  }
+}
