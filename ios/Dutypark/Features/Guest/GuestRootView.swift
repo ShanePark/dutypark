@@ -17,7 +17,10 @@ struct GuestRootView: View {
                 }
         }
         .task {
-            guard let url = session.consumePendingDestination() else { return }
+            guard let url = session.pendingDestination,
+                  GuestPendingDestinationPolicy.shouldConsume(url)
+            else { return }
+            _ = session.consumePendingDestination()
             open(url)
         }
         .onOpenURL { url in
@@ -54,6 +57,12 @@ struct GuestRootView: View {
         case .publicCalendar(let memberID):
             GuestPublicCalendarView(memberID: memberID)
         }
+    }
+}
+
+enum GuestPendingDestinationPolicy {
+    static func shouldConsume(_ destination: URL) -> Bool {
+        GuestDeepLink.route(from: destination) != nil
     }
 }
 

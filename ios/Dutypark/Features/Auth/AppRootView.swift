@@ -35,7 +35,7 @@ struct AppRootView: View {
             await session.restore()
         }
         .onOpenURL { url in
-            if AppRootDeepLinkPolicy.shouldDeferDestination(for: session.state) {
+            if AppRootDeepLinkPolicy.shouldDeferDestination(url, for: session.state) {
                 session.deferDestinationUntilAuthenticated(url)
             }
         }
@@ -43,7 +43,22 @@ struct AppRootView: View {
 }
 
 enum AppRootDeepLinkPolicy {
-    static func shouldDeferDestination(for state: SessionState) -> Bool {
-        state == .restoring || state == .restoreFailed || state == .guest
+    static func shouldDeferDestination(_ destination: URL, for state: SessionState) -> Bool {
+        guard state == .restoring || state == .restoreFailed || state == .guest else {
+            return false
+        }
+        if GuestDeepLink.route(from: destination) != nil {
+            return true
+        }
+        guard destination.scheme?.lowercased() == "https",
+              destination.host?.lowercased() == "dutypark.o-r.kr"
+        else { return false }
+
+        switch destination.pathComponents.filter({ $0 != "/" }) {
+        case ["todo"], ["team"], ["member"], ["friends"], ["notifications"]:
+            return true
+        default:
+            return false
+        }
     }
 }
