@@ -46,7 +46,7 @@ management:
         include: "health, metrics, prometheus"
 
 jwt:
-  secret: "${JWT_SECRET:WvQiOAms2XFyW/UnmfO/9xL24ch4IlfUikP9QohMuso=}"
+  secret: "${JWT_SECRET}"
   token-validity-in-seconds: 1800
   refresh-token-validity-in-days: 7
 
