@@ -183,12 +183,41 @@ nonisolated enum AttachmentPickerFailure: String, Identifiable, Sendable {
     }
 }
 
+@MainActor
+final class AttachmentUploadCoordinator {
+    private var task: Task<Void, Never>?
+    private var generation = 0
+
+    func start(
+        model: AttachmentPickerModel,
+        operation: @escaping @MainActor () async -> Void
+    ) {
+        task?.cancel()
+        generation &+= 1
+        let currentGeneration = generation
+        model.beginPreparing()
+        task = Task { @MainActor [weak self, weak model] in
+            await operation()
+            guard let self, self.generation == currentGeneration else { return }
+            model?.endPreparing()
+            self.task = nil
+        }
+    }
+
+    func cancel(model: AttachmentPickerModel) {
+        generation &+= 1
+        task?.cancel()
+        task = nil
+        model.endPreparing()
+    }
+}
+
 struct AttachmentPicker: View {
     @ObservedObject var model: AttachmentPickerModel
 
     @State private var photoItems: [PhotosPickerItem] = []
     @State private var isImportingFiles = false
-    @State private var uploadTask: Task<Void, Never>?
+    @State private var uploadCoordinator = AttachmentUploadCoordinator()
 
     var body: some View {
         VStack(alignment: .leading, spacing: DPSpacing.compact) {
@@ -266,7 +295,7 @@ struct AttachmentPicker: View {
                     }
 
                     Button(role: .cancel) {
-                        uploadTask?.cancel()
+                        uploadCoordinator.cancel(model: model)
                     } label: {
                         Label(
                             AttachmentLocalization.text("attachment.action.cancelUpload"),
@@ -320,8 +349,7 @@ struct AttachmentPicker: View {
         }
         .interactiveDismissDisabled(model.isBusy || model.attachmentSessionId != nil)
         .onDisappear {
-            uploadTask?.cancel()
-            model.endPreparing()
+            uploadCoordinator.cancel(model: model)
         }
     }
 
@@ -420,13 +448,7 @@ struct AttachmentPicker: View {
     }
 
     private func startUpload(_ operation: @escaping @MainActor () async -> Void) {
-        uploadTask?.cancel()
-        model.beginPreparing()
-        uploadTask = Task {
-            await operation()
-            model.endPreparing()
-            uploadTask = nil
-        }
+        uploadCoordinator.start(model: model, operation: operation)
     }
 }
 
