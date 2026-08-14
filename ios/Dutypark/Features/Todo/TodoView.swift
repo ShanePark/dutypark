@@ -50,7 +50,16 @@ enum TodoFormDismissalPolicy {
         attachmentIDs: [AttachmentID],
         hasAttachmentSession: Bool
     ) -> Bool {
-        draft != initialDraft
+        var comparableInitialDraft = initialDraft
+        var comparableDraft = draft
+        if !comparableInitialDraft.hasDueDate {
+            comparableInitialDraft.dueDate = .distantPast
+        }
+        if !comparableDraft.hasDueDate {
+            comparableDraft.dueDate = .distantPast
+        }
+
+        return comparableDraft != comparableInitialDraft
             || initialAttachmentIDs != attachmentIDs
             || hasAttachmentSession
     }
