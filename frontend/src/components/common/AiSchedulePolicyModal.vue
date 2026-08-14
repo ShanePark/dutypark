@@ -1,11 +1,9 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { marked } from 'marked'
 import BaseModal from '@/components/common/BaseModal.vue'
 import type { PolicyDto } from '@/api/policy'
-
-marked.setOptions({ breaks: true })
+import { renderPolicyMarkdown } from '@/utils/policyMarkdown'
 
 const props = withDefaults(defineProps<{
   isOpen: boolean
@@ -24,7 +22,7 @@ const emit = defineEmits<{
   consent: []
 }>()
 const { t } = useI18n()
-const content = computed(() => props.policy?.content ? String(marked(props.policy.content)) : '')
+const content = computed(() => props.policy?.content ? renderPolicyMarkdown(props.policy.content) : '')
 const agreed = ref(false)
 const isConsentMode = computed(() => props.mode === 'consent')
 

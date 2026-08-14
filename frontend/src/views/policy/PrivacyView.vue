@@ -1,12 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { marked } from 'marked'
-
-marked.setOptions({
-  breaks: true,
-})
 import { policyApi, type PolicyDto } from '@/api/policy'
+import { renderPolicyMarkdown } from '@/utils/policyMarkdown'
 
 const { t } = useI18n()
 const policy = ref<PolicyDto | null>(null)
@@ -15,7 +11,7 @@ const error = ref('')
 
 const renderedContent = computed(() => {
   if (!policy.value?.content) return ''
-  return marked(policy.value.content) as string
+  return renderPolicyMarkdown(policy.value.content)
 })
 
 onMounted(async () => {

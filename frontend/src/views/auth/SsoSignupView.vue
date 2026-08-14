@@ -2,19 +2,15 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { marked } from 'marked'
 import { authApi } from '@/api/auth'
 import { policyApi, type CurrentPoliciesDto } from '@/api/policy'
 import { useAuthStore } from '@/stores/auth'
 import { useSwal } from '@/composables/useSwal'
 import CharacterCounter from '@/components/common/CharacterCounter.vue'
 import PolicyModal from '@/components/common/PolicyModal.vue'
+import { renderPolicyMarkdown } from '@/utils/policyMarkdown'
 import { getSafeRedirect } from '@/utils/redirect'
 import { resolveApiErrorMessage } from '@/utils/resolveApiError'
-
-marked.setOptions({
-  breaks: true,
-})
 
 const route = useRoute()
 const router = useRouter()
@@ -35,12 +31,12 @@ const redirectTarget = computed(() => getSafeRedirect(route.query.redirect))
 
 const renderedTerms = computed(() => {
   if (!policies.value?.terms?.content) return ''
-  return marked(policies.value.terms.content) as string
+  return renderPolicyMarkdown(policies.value.terms.content)
 })
 
 const renderedPrivacy = computed(() => {
   if (!policies.value?.privacy?.content) return ''
-  return marked(policies.value.privacy.content) as string
+  return renderPolicyMarkdown(policies.value.privacy.content)
 })
 
 function openPolicyModal(type: 'terms' | 'privacy') {

@@ -1,13 +1,9 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { marked } from 'marked'
 import BaseModal from '@/components/common/BaseModal.vue'
 import { policyApi, type CurrentPoliciesDto } from '@/api/policy'
-
-marked.setOptions({
-  breaks: true,
-})
+import { renderPolicyMarkdown } from '@/utils/policyMarkdown'
 
 const props = defineProps<{
   type: 'terms' | 'privacy' | null
@@ -37,9 +33,9 @@ const modalTitle = computed(() => {
 const modalContent = computed(() => {
   if (!effectivePolicies.value) return ''
   if (props.type === 'terms') {
-    return effectivePolicies.value.terms?.content ? marked(effectivePolicies.value.terms.content) as string : ''
+    return effectivePolicies.value.terms?.content ? renderPolicyMarkdown(effectivePolicies.value.terms.content) : ''
   }
-  return effectivePolicies.value.privacy?.content ? marked(effectivePolicies.value.privacy.content) as string : ''
+  return effectivePolicies.value.privacy?.content ? renderPolicyMarkdown(effectivePolicies.value.privacy.content) : ''
 })
 
 watch(() => props.type, async (newType) => {
