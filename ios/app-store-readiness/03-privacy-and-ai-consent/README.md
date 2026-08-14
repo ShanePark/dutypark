@@ -19,7 +19,6 @@
 
 ### 개인정보와 App Store 제출
 
-- [ ] `current` 정책 조회가 시행일이 미래인 정책을 조기 선택하지 않도록 서버 쿼리와 가입·동의 계약 테스트를 보강한다.
 - [ ] 계정 삭제, 운영 감사 로그와 법정 보존 데이터의 근거·기간·삭제 또는 익명화 방식을 확정한다.
 - [ ] App Store distribution 서명 Release Archive의 Xcode Organizer Privacy Report를 내보낸다.
 - [ ] Release Privacy Report, `PrivacyInfo.xcprivacy`, 실제 포함 SDK와 아래 데이터 inventory를 대조한다.

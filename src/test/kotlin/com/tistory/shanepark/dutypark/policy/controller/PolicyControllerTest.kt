@@ -12,7 +12,9 @@ import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import java.time.Clock
 import java.time.LocalDate
+import java.time.ZoneId
 
 @AutoConfigureMockMvc
 class PolicyControllerTest : DutyparkIntegrationTest() {
@@ -22,6 +24,9 @@ class PolicyControllerTest : DutyparkIntegrationTest() {
 
     @Autowired
     lateinit var policyVersionRepository: PolicyVersionRepository
+
+    @Autowired
+    lateinit var clock: Clock
 
     @Test
     fun `get current policies returns nulls when no policies exist`() {
@@ -49,6 +54,14 @@ class PolicyControllerTest : DutyparkIntegrationTest() {
                 version = "2.0",
                 content = "terms-v2",
                 effectiveDate = LocalDate.of(2025, 1, 1)
+            )
+        )
+        policyVersionRepository.save(
+            PolicyVersion(
+                policyType = PolicyType.TERMS,
+                version = "3.0",
+                content = "future-terms",
+                effectiveDate = today().plusDays(1)
             )
         )
         policyVersionRepository.save(
@@ -114,7 +127,7 @@ class PolicyControllerTest : DutyparkIntegrationTest() {
     }
 
     @Test
-    fun `get current AI schedule parsing policy by type`() {
+    fun `get current AI schedule parsing policy by iOS path`() {
         policyVersionRepository.save(
             PolicyVersion(
                 policyType = PolicyType.AI_SCHEDULE_PARSING,
@@ -125,10 +138,12 @@ class PolicyControllerTest : DutyparkIntegrationTest() {
         )
 
         mockMvc.perform(
-            MockMvcRequestBuilders.get("/api/policies/ai_schedule_parsing")
+            MockMvcRequestBuilders.get("/api/policies/ai-schedule-parsing")
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.version").value("2026-08-13"))
             .andExpect(jsonPath("$.policyType").value("AI_SCHEDULE_PARSING"))
     }
+
+    private fun today(): LocalDate = LocalDate.now(clock.withZone(ZoneId.of("Asia/Seoul")))
 }

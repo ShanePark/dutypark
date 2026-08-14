@@ -13,11 +13,16 @@ import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.get
 import org.springframework.test.web.servlet.put
+import java.time.Clock
 import java.time.LocalDate
+import java.time.ZoneId
 
 class AiScheduleParsingConsentControllerTest : RestDocsTest() {
     @Autowired
     lateinit var policyVersionRepository: PolicyVersionRepository
+
+    @Autowired
+    lateinit var clock: Clock
 
     @Autowired
     lateinit var consentEventRepository: AiScheduleParsingConsentEventRepository
@@ -142,6 +147,30 @@ class AiScheduleParsingConsentControllerTest : RestDocsTest() {
     }
 
     @Test
+    fun `GET ignores a future policy when checking current consent`() {
+        saveCurrentPolicy()
+        putConsent(true, "2026-08-13")
+        policyVersionRepository.save(
+            PolicyVersion(
+                policyType = PolicyType.AI_SCHEDULE_PARSING,
+                version = "future-policy",
+                content = "Updated AI schedule parsing policy",
+                effectiveDate = today().plusDays(1),
+            )
+        )
+
+        mockMvc.get("/api/consents/ai-schedule-parsing") {
+            header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(TestData.member)}")
+        }.andExpect {
+            status { isOk() }
+            jsonPath("$.currentPolicyVersion") { value("2026-08-13") }
+            jsonPath("$.consented") { value(true) }
+            jsonPath("$.previouslyConsentedToCurrentPolicy") { value(true) }
+            jsonPath("$.needsRenewal") { value(false) }
+        }
+    }
+
+    @Test
     fun `GET returns false for previous consent after the current policy changes`() {
         saveCurrentPolicy()
         putConsent(true, "2026-08-13")
@@ -150,7 +179,7 @@ class AiScheduleParsingConsentControllerTest : RestDocsTest() {
                 policyType = PolicyType.AI_SCHEDULE_PARSING,
                 version = "2026-09-01",
                 content = "Updated AI schedule parsing policy",
-                effectiveDate = LocalDate.of(2026, 9, 1),
+                effectiveDate = today(),
             )
         )
 
@@ -183,6 +212,8 @@ class AiScheduleParsingConsentControllerTest : RestDocsTest() {
             content = """{"consented":$consented$versionField}"""
         }.andExpect { status { isOk() } }
     }
+
+    private fun today(): LocalDate = LocalDate.now(clock.withZone(ZoneId.of("Asia/Seoul")))
 
     private fun saveCurrentPolicy() {
         policyVersionRepository.save(
