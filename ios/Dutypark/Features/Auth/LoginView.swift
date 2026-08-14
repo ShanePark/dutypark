@@ -36,6 +36,7 @@ struct LoginView: View {
                 loginForm
             }
         }
+        .dpKeyboardDismissToolbar()
         .sheet(
             isPresented: Binding(
                 get: { signupUUID != nil },

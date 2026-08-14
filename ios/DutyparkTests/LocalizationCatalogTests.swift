@@ -117,6 +117,44 @@ struct LocalizationCatalogTests {
         )
     }
 
+    @Test
+    func directSwiftUILocalizationKeysUseMatchingCatalogs() throws {
+        let catalogs = try loadCatalogs()
+        let tablesByKey = Dictionary(grouping: catalogs.flatMap { catalog in
+            catalog.strings.keys.map { (key: $0, table: catalog.table) }
+        }, by: \.key)
+        let sourceDirectory = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark", directoryHint: .isDirectory)
+        let sourceURLs = try FileManager.default.subpathsOfDirectory(atPath: sourceDirectory.path)
+            .filter { $0.hasSuffix(".swift") }
+            .map { sourceDirectory.appending(path: $0) }
+        let expression = try NSRegularExpression(
+            pattern: #"\b(?:Text|Button|Label|ProgressView|TextField|SecureField|navigationTitle|alert)\(\s*\"([^\"]+)\"([^\n]*)"#
+        )
+
+        for sourceURL in sourceURLs {
+            let source = try String(contentsOf: sourceURL, encoding: .utf8)
+            let range = NSRange(source.startIndex..<source.endIndex, in: source)
+            for match in expression.matches(in: source, range: range) {
+                let key = try substring(for: match.range(at: 1), in: source)
+                guard let entries = tablesByKey[key] else { continue }
+                let tables = Set(entries.map(\.table))
+                guard !tables.contains("Localizable") else { continue }
+
+                let callSuffix = try substring(for: match.range(at: 2), in: source)
+                let hasMatchingTable = tables.contains { table in
+                    callSuffix.contains(#"tableName: "\#(table)""#)
+                }
+                #expect(
+                    hasMatchingTable,
+                    "\(sourceURL.lastPathComponent) uses \(key) without its localization table \(tables.sorted())"
+                )
+            }
+        }
+    }
+
     private func loadCatalogs() throws -> [Catalog] {
         let resourcesDirectory = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()

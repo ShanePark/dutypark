@@ -27,6 +27,7 @@
 - [x] 한국어·영어 × Light/Dark UI smoke가 iPhone 16 Pro에서 3회 연속, iPhone 13 mini에서 1회 통과한다.
 - [x] 한국어·영어 × Light/Dark × 기본/최대 Dynamic Type 자동 핵심 내비게이션·scale evidence를 두 기기에서 확인한다.
 - [x] Apple 로그인 반영 후 최신 전체 테스트 278/278을 같은 iPhone 16 Pro 시뮬레이터에서 1회 통과시켰다.
+- [x] 실기기 Apple 가입·탈퇴에서 발견한 현지화·키보드 문제 보정 후 최신 전체 테스트 280/280을 같은 시뮬레이터에서 1회 통과시켰다.
 - [x] `Dutypark/Resources`의 8개 String Catalog 한국어·영어 번역과 런타임 lookup 회귀 게이트가 통과한다.
 - [x] Debug 인증 UI 테스트가 결정적 fixture만 사용하며 실제 API 요청을 시도하지 않는 것을 fail-fast로 검증한다.
 - [x] Release 시뮬레이터 clean build에 Debug 전용 인증·게스트 UI 테스트 플래그가 포함되지 않는다.
@@ -82,6 +83,11 @@ Sign in with Apple 반영 후 `AppleSignInClientTests`, mobile OAuth·settings t
 clean build도 성공했으며 처리된 `.xcent`에서 `com.apple.developer.applesignin = Default`를 확인했다. 이는
 승인된 Developer Team의 App ID capability, provisioning profile, 서명 Archive 또는 실제 Apple 계정 E2E를
 검증한 결과가 아니다.
+
+2026-08-14 실기기 Apple 가입·탈퇴 E2E에서 탈퇴 완료 문구의 localization table 누락과 가입 닉네임 키보드
+닫기 불편을 확인했다. `Settings` table lookup을 명시하고, 가입 필드 Done 처리와 입력 modal·화면의 공통 키보드
+`완료` 동작을 추가했다. 직접 SwiftUI 문자열의 table 계약 및 실제 키보드 dismiss UI 테스트가 통과했고,
+iPhone 16 Pro(iOS 26.5) 전체 suite **280/280** 1회(실패·건너뜀 0), Release Simulator clean build가 성공했다.
 
 같은 날 새 `/tmp` 경로에서 unsigned generic iOS Release `clean archive`를 다시 생성해 기본 제출 기술 설정을
 교차 검증했다. 프로젝트와 Archive 앱 `Info.plist`는 표시 이름 `Dutypark`, 최소 iOS `17.0`, iPhone 전용

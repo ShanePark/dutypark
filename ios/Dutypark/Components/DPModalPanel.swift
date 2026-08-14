@@ -68,6 +68,7 @@ struct DPModalPanel<Header: View, PanelContent: View, Footer: View>: View {
                     .background { heightReader(DPModalPanelFooterHeightPreferenceKey.self) }
             }
         }
+        .dpKeyboardDismissToolbar()
         .onPreferenceChange(DPModalPanelHeaderHeightPreferenceKey.self) { headerHeight = $0 }
         .onPreferenceChange(DPModalPanelBodyHeightPreferenceKey.self) { bodyContentHeight = $0 }
         .onPreferenceChange(DPModalPanelFooterHeightPreferenceKey.self) { footerHeight = $0 }

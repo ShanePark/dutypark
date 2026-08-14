@@ -57,6 +57,34 @@ final class DutyparkUITests: XCTestCase {
     }
 
     @MainActor
+    func testKeyboardProvidesAnExplicitDismissAction() throws {
+        let app = XCUIApplication()
+        app.launchArguments += [
+            "-dp-language", "ko",
+            "-dp-theme", "light",
+            "-AppleLanguages", "(ko)",
+            "-AppleLocale", "ko_KR",
+            "-ui-testing-guest"
+        ]
+        app.launch()
+
+        let loginButton = app.buttons["guest.login"]
+        XCTAssertTrue(loginButton.waitForExistence(timeout: 10))
+        loginButton.tap()
+
+        let emailField = app.textFields.firstMatch
+        XCTAssertTrue(emailField.waitForExistence(timeout: 10))
+        emailField.tap()
+
+        let keyboard = app.keyboards.firstMatch
+        XCTAssertTrue(keyboard.waitForExistence(timeout: 3))
+        let dismissButton = app.buttons["keyboard.dismiss"]
+        XCTAssertTrue(dismissButton.waitForExistence(timeout: 3))
+        dismissButton.tap()
+        XCTAssertFalse(keyboard.waitForExistence(timeout: 1))
+    }
+
+    @MainActor
     func testPrimaryToolbarActionsMeetMinimumTouchTarget() throws {
         let app = XCUIApplication()
         app.launchArguments += [

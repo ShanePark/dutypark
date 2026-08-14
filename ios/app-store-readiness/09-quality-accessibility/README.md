@@ -178,6 +178,7 @@ Dynamic Type 재현 시 시뮬레이터를 부팅한 다음 `xcrun simctl ui <UD
 - [ ] Todo 드래그와 기능적으로 동등한 접근성 대체 조작이 검증된다.
 - [ ] 오프라인, 느린 네트워크, 인증 오류와 5xx에서 크래시·데이터 유실·무한 재시도가 없다.
 - [x] 탭·`todo.add`·로그인 대상 UI 실패가 재발하지 않고 최신 전체 265개 테스트가 3회 연속 통과한다.
+- [x] 모든 현재 입력 화면에 스크롤·검색 취소 또는 명시적 `완료` 경로가 있고, 공통 완료 버튼이 실제 키보드를 닫는 UI 테스트가 통과한다.
 
 2026-08-13 `Dutypark QA iPhone 16 Pro`(iOS 26.5) 시뮬레이터에서 UI 테스트 3개를 포함한 당시 전체 suite를
 새로 3회 연속 실행해 매번 **263/263**(실패·건너뜀 0)으로 통과했다. iPhone 13 mini(iOS 26.5)에서도
@@ -211,3 +212,10 @@ Simulator clean build도 성공했다. 새 unsigned generic iOS Release Archive�
 67, 162개**다. 제한된 Swift source hardcoded-string 감사에서는 명확한 사용자 노출 결함을 찾지 못했지만,
 방어적 영문 `Errors` fallback과 Todo의 `": "` 문장부호 결합은 저위험 후속 검토로 남긴다. 이 검증은 다른 feature
 catalog, 모든 사용자 노출 문자열, 수동 clipping·VoiceOver·시각 QA, 서명 Archive나 TestFlight 완료를 뜻하지 않는다.
+
+2026-08-14 실기기 가입 흐름에서 닉네임 입력 후 키보드를 확실히 닫기 어려운 점을 확인했다. 입력 화면 12개
+Swift 파일을 감사해 기존 ScrollView의 interactive dismissal과 시스템 검색 취소를 유지하고, 공통 modal panel 및
+로그인·가입·캘린더·팀 일정 편집기에 현지화된 키보드 `완료` toolbar를 제공했다. 가입 닉네임은 Return과 가입
+제출 시 포커스를 직접 해제한다. iPhone 13 mini에서 키보드 dismiss UI 테스트 **1/1**, iPhone 16 Pro에서 전체
+suite **280/280** 1회(실패·건너뜀 0), Release Simulator clean build가 통과했다. 키보드 표시 상태의 모든 화면을
+실기기에서 시각적으로 확인하는 항목은 계속 별도 수동 QA로 남긴다.

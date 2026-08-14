@@ -82,7 +82,9 @@ struct SsoSignupView: View {
                                 )
                                 .font(DPTypography.body)
                                 .textContentType(.name)
+                                .submitLabel(.done)
                                 .focused($isNameFocused)
+                                .onSubmit { isNameFocused = false }
                                 .dpInputChrome(isFocused: isNameFocused, isDisabled: isWorking)
                                 .disabled(isWorking)
                                 .onChange(of: username) { _, value in
@@ -191,6 +193,7 @@ struct SsoSignupView: View {
             }
             .task { await loadPolicies() }
         }
+        .dpKeyboardDismissToolbar()
         .interactiveDismissDisabled(preventsInteractiveDismissal)
         .alert(
             oauthString("auth.oauth.signup.discard.title"),
@@ -373,6 +376,7 @@ struct SsoSignupView: View {
     private func submit() {
         guard canSubmit, let terms = policies?.terms, let privacy = policies?.privacy else { return }
         let trimmedName = username.trimmingCharacters(in: .whitespacesAndNewlines)
+        isNameFocused = false
         isWorking = true
         errorKey = nil
         Task {

@@ -52,6 +52,7 @@ struct CalendarView: View {
                 calendarContent
             }
         }
+        .dpKeyboardDismissToolbar()
         .background(DPColor.backgroundPrimary)
         .task { if model.days.isEmpty { await model.load() } }
         .fullScreenCover(item: $model.selectedDay) { day in

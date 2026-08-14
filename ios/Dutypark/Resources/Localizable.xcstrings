@@ -1,6 +1,9 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "common.keyboard.done" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Done" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "완료" } }
+    } },
     "notifications.items.friendRequestReceived" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ sent you a friend request." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님이 친구 요청을 보냈습니다." } }
     } },

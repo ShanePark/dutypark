@@ -705,6 +705,7 @@ private struct TeamScheduleEditor: View {
             .background(DPColor.backgroundModal)
             .navigationBarHidden(true)
         }
+        .dpKeyboardDismissToolbar()
         .presentationDetents([.medium, .large])
     }
 }

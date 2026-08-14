@@ -15,12 +15,12 @@ struct AccountDeletionAcceptedView: View {
                             .foregroundStyle(DPColor.success)
                             .accessibilityHidden(true)
 
-                        Text("settings.accountDeletion.accepted.title")
+                        Text(SettingsLocalization.string("settings.accountDeletion.accepted.title"))
                             .font(DPTypography.pageTitle)
                             .foregroundStyle(DPColor.textPrimary)
                             .multilineTextAlignment(.center)
 
-                        Text("settings.accountDeletion.accepted.loggedOut")
+                        Text(SettingsLocalization.string("settings.accountDeletion.accepted.loggedOut"))
                             .font(DPTypography.body)
                             .foregroundStyle(DPColor.textSecondary)
                             .multilineTextAlignment(.center)
@@ -30,12 +30,12 @@ struct AccountDeletionAcceptedView: View {
                     VStack(alignment: .leading, spacing: DPSpacing.medium) {
                         informationRow(
                             systemImage: "clock.arrow.circlepath",
-                            text: "settings.accountDeletion.accepted.processing"
+                            text: SettingsLocalization.string("settings.accountDeletion.accepted.processing")
                         )
                         Divider().overlay(DPColor.borderPrimary)
                         informationRow(
                             systemImage: "checkmark.circle",
-                            text: "settings.accountDeletion.accepted.noAction"
+                            text: SettingsLocalization.string("settings.accountDeletion.accepted.noAction")
                         )
                     }
                     .dpCard(padding: DPSpacing.medium)
@@ -48,7 +48,7 @@ struct AccountDeletionAcceptedView: View {
             }
             .safeAreaInset(edge: .bottom) {
                 Button(action: onConfirm) {
-                    Text("settings.accountDeletion.accepted.confirm")
+                    Text(SettingsLocalization.string("settings.accountDeletion.accepted.confirm"))
                         .frame(maxWidth: .infinity)
                 }
                     .buttonStyle(DPPrimaryButtonStyle())
@@ -66,7 +66,7 @@ struct AccountDeletionAcceptedView: View {
 
     private func informationRow(
         systemImage: String,
-        text: LocalizedStringKey
+        text: String
     ) -> some View {
         HStack(alignment: .top, spacing: DPSpacing.compact) {
             Image(systemName: systemImage)

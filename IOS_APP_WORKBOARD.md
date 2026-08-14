@@ -4,7 +4,7 @@
 
 ## 0. 현재 상태 스냅샷 (최종 확인 2026-08-14)
 
-> **현재 종합 상태: 저장소 기능 구현·자동 검증 후 외부 출시 준비 진행 중.** SwiftUI 앱과 모바일 OAuth/APNs 서버 경로, 일반 사용자 기능 모듈 및 iOS 전용 Sign in with Apple이 작업트리에 구현되어 있다. Apple 반영 후 최신 iOS 전체 테스트는 **278/278**을 1회 통과했고 Release Simulator clean build도 성공했다. 승인된 Team의 generic iOS Release development 서명 빌드와 profile·entitlement 검증도 성공했다. App Store distribution Archive·provider 운영 자격증명·TestFlight E2E와 일부 수동 시각·접근성 검증은 남아 있다. 아래 기능 매트릭스의 `[ ]`는 미착수를 뜻하지 않고 **완료 조건 검증 대기**를 뜻한다.
+> **현재 종합 상태: 저장소 기능 구현·자동 검증 후 외부 출시 준비 진행 중.** SwiftUI 앱과 모바일 OAuth/APNs 서버 경로, 일반 사용자 기능 모듈 및 iOS 전용 Sign in with Apple이 작업트리에 구현되어 있다. 실기기 Apple 가입·탈퇴 점검에서 발견한 탈퇴 완료 현지화와 키보드 닫기 문제를 보정한 뒤 최신 iOS 전체 테스트는 **280/280**을 1회 통과했고 Release Simulator clean build도 성공했다. 승인된 Team의 generic iOS Release development 서명 빌드와 profile·entitlement 검증도 성공했다. App Store distribution Archive·provider 운영 자격증명·TestFlight E2E와 일부 수동 시각·접근성 검증은 남아 있다. 아래 기능 매트릭스의 `[ ]`는 미착수를 뜻하지 않고 **완료 조건 검증 대기**를 뜻한다.
 
 > **Apple 외부 준비:** Apple Developer Program 개인 멤버십은 2026-08-14 승인됐다. Team ID는 `2V47G42CDS`, Explicit App ID와 Xcode Bundle ID는 `io.github.shanepark.dutypark`로 확정했다. Sign in with Apple·Push Notifications·Associated Domains capability와 Apple server key를 생성했고 development 서명 빌드를 검증했다. 운영 비밀 실제 주입, App Store distribution Archive·Validate App·TestFlight·Apple 실계정 E2E는 남아 있다.
 
@@ -307,6 +307,7 @@
 - 2026-08-13 `Dutypark/Resources`의 8개 String Catalog, 번역 대상 695개 table/key를 자동 검증했다. 한국어·영어 translated/nonempty/value!=key, table/key 유일성, compiled Bundle exact lookup과 printf placeholder 위치·타입 parity가 통과했고 `shouldTranslate = false`는 0개다. targeted **1/1**, 전체 suite **265/265**를 3회 연속 통과했으며 Release Simulator clean build도 성공했다. 새 unsigned generic iOS Release Archive의 8개 table에 `en`·`ko`가 모두 있고 locale별 key 수가 source와 일치했다. 다른 feature catalog와 전체 사용자 문자열, 수동 clipping·VoiceOver·시각 QA, 서명 Archive·TestFlight는 별도 대기다.
 - 2026-08-13 entitlement 기술 사전 감사 후 Sign in with Apple을 반영했다. 소스와 새 Debug/Release Simulator 처리 `.xcent`에는 `com.apple.developer.applesignin = Default`가 포함되고 APNs development/production·Associated Domains 설정도 유지된다. 서명된 Archive, 실제 App ID capability/profile과 Apple 실계정 E2E는 대기다.
 - 2026-08-13 iOS 전용 Sign in with Apple과 backend native exchange·RS256/JWKS/claim/nonce/replay 검증, ES256 client secret, AES-256-GCM refresh credential, revoke-first unlink·durable account deletion을 구현했다. iOS 전체 **278/278** 1회, Apple targeted/UI presence, Release clean build, backend Apple-focused **19/19**와 관련 회귀, 웹 **34 files/162 tests**·type-check·build를 통과했다. 웹 Apple OAuth·Services ID는 범위에서 제외했고 실제 Apple portal·서명·TestFlight 검증은 남아 있다.
+- 2026-08-14 실기기 Apple 가입·탈퇴 E2E에서 `Settings.xcstrings`의 탈퇴 완료 문구가 기본 localization table로 조회돼 key가 노출되는 문제와 가입 닉네임 키보드의 명시적 닫기 경로 부재를 확인했다. 올바른 table lookup, 가입 필드의 Done 처리, 입력 화면 공통 키보드 `완료` toolbar를 적용했다. 직접 SwiftUI 문자열의 table 계약 테스트와 키보드 dismiss UI 테스트를 추가했고, iPhone 16 Pro(iOS 26.5) 전체 suite **280/280** 1회 및 Release Simulator clean build가 통과했다.
 
 완료된 최소 보정:
 
