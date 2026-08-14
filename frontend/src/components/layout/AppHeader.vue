@@ -17,7 +17,7 @@ const authStore = useAuthStore()
 const notificationStore = useNotificationStore()
 const themeStore = useThemeStore()
 const { t } = useI18n()
-const { confirm } = useSwal()
+const { confirm, showWarning } = useSwal()
 
 const themeToggleAriaLabel = computed(() => {
   return themeStore.isDark
@@ -87,7 +87,15 @@ const handleLogout = async () => {
     t('header.logout.confirmTitle')
   )
   if (confirmed) {
-    authStore.logout()
+    const serverSessionCleared = await authStore.logout()
+    await router.push('/auth/login')
+    if (!serverSessionCleared) {
+      await showWarning(
+        t('sessionRecovery.logoutUnconfirmed'),
+        t('sessionRecovery.logoutUnconfirmedTitle')
+      )
+    }
+    window.location.replace('/auth/login')
   }
 }
 

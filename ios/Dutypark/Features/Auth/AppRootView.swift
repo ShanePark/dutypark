@@ -12,11 +12,17 @@ struct AppRootView: View {
             case .restoreFailed:
                 ContentUnavailableView {
                     Label("auth.session.error", systemImage: "wifi.exclamationmark")
+                } description: {
+                    Text("auth.session.error.description")
                 } actions: {
                     Button("common.retry") {
                         Task { await session.retryRestore() }
                     }
                     .accessibilityIdentifier("session.retry")
+                    Button("auth.session.continueAsGuest") {
+                        Task { await session.continueAsGuestAfterRestoreFailure() }
+                    }
+                    .accessibilityIdentifier("session.continueAsGuest")
                 }
             case .guest:
                 if session.accountDeletionAcceptedPresentation != nil {
@@ -39,6 +45,19 @@ struct AppRootView: View {
                 session.deferDestinationUntilAuthenticated(url)
             }
         }
+        .alert(
+            "auth.logout.serverWarning.title",
+            isPresented: Binding(
+                get: { session.serverSessionWarning != nil },
+                set: { if !$0 { session.dismissServerSessionWarning() } }
+            )
+        ) {
+            Button("auth.logout.serverWarning.ok", role: .cancel) {
+                session.dismissServerSessionWarning()
+            }
+        } message: {
+            Text("auth.logout.serverWarning.message")
+        }
     }
 }
 
@@ -48,8 +67,21 @@ enum AppRootDeepLinkPolicy {
             return false
         }
         if GuestDeepLink.route(from: destination) != nil {
-            return true
+            return state == .restoring || state == .restoreFailed
         }
+        guard destination.scheme?.lowercased() == "https",
+              destination.host?.lowercased() == "dutypark.o-r.kr"
+        else { return false }
+
+        switch destination.pathComponents.filter({ $0 != "/" }) {
+        case ["todo"], ["team"], ["member"], ["friends"], ["notifications"]:
+            return true
+        default:
+            return false
+        }
+    }
+
+    static func requiresAuthentication(_ destination: URL) -> Bool {
         guard destination.scheme?.lowercased() == "https",
               destination.host?.lowercased() == "dutypark.o-r.kr"
         else { return false }

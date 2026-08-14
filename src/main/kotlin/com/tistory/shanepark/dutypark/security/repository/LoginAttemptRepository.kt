@@ -27,4 +27,8 @@ interface LoginAttemptRepository : JpaRepository<LoginAttempt, Long> {
     @Query("DELETE FROM LoginAttempt la WHERE la.attemptTime < :threshold")
     fun deleteAllByAttemptTimeBefore(threshold: LocalDateTime): Int
 
+    @Modifying
+    @Query("DELETE FROM LoginAttempt la WHERE la.email IN :keys AND la.attemptTime < :threshold")
+    fun deleteAllByEmailInAndAttemptTimeBefore(keys: Collection<String>, threshold: LocalDateTime): Int
+
 }

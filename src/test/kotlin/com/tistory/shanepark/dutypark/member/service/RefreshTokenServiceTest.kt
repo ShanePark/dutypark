@@ -171,6 +171,24 @@ class RefreshTokenServiceTest {
         assertThat(result.userAgent).isEqualTo(chromeUserAgent)
     }
 
+    @Test
+    fun `isSessionActive requires matching member and unexpired token`() {
+        whenever(
+            refreshTokenRepository.existsByIdAndMemberIdAndValidUntilAfter(
+                org.mockito.kotlin.eq(10L),
+                org.mockito.kotlin.eq(1L),
+                any(),
+            )
+        ).thenReturn(true)
+
+        assertThat(refreshTokenService.isSessionActive(10L, 1L)).isTrue()
+        verify(refreshTokenRepository).existsByIdAndMemberIdAndValidUntilAfter(
+            org.mockito.kotlin.eq(10L),
+            org.mockito.kotlin.eq(1L),
+            any(),
+        )
+    }
+
     private fun memberWithId(id: Long): Member {
         val member = Member("user$id", "user$id@duty.park", "pass")
         val field = Member::class.java.getDeclaredField("id")

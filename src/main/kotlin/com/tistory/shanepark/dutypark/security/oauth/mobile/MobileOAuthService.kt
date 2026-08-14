@@ -9,6 +9,7 @@ import com.tistory.shanepark.dutypark.member.repository.MemberSsoRegisterReposit
 import com.tistory.shanepark.dutypark.member.service.MemberSocialAccountService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.oauth.SocialAccountAlreadyLinkedException
+import com.tistory.shanepark.dutypark.security.oauth.OAuthWebBaseUrl
 import com.tistory.shanepark.dutypark.security.reauth.ReauthPurpose
 import com.tistory.shanepark.dutypark.security.reauth.ReauthService
 import com.tistory.shanepark.dutypark.security.service.AuthService
@@ -37,6 +38,7 @@ class MobileOAuthService(
     private val authService: AuthService,
     private val reauthService: ReauthService,
     private val clock: Clock,
+    private val oauthWebBaseUrl: OAuthWebBaseUrl,
     transactionManager: PlatformTransactionManager,
     @param:Value("\${oauth.kakao.rest-api-key}") private val kakaoClientId: String,
     @param:Value("\${oauth.naver.client-id}") private val naverClientId: String,
@@ -54,7 +56,6 @@ class MobileOAuthService(
     fun authorize(
         request: MobileOAuthAuthorizeRequest,
         loginMember: LoginMember?,
-        mobileOAuthBaseUrl: String,
     ): MobileOAuthAuthorizeResponse {
         val provider = parseProvider(request.provider)
         val purpose = parsePurpose(request.purpose)
@@ -70,7 +71,7 @@ class MobileOAuthService(
             }
         }
         validateAppCallbackUri(purpose, request.callbackUri)
-        val callbackUri = providerCallbackUri(mobileOAuthBaseUrl, provider)
+        val callbackUri = providerCallbackUri(provider)
         val state = randomToken()
         val now = clock.instant()
         transactionRepository.save(
@@ -110,7 +111,6 @@ class MobileOAuthService(
         code: String?,
         state: String,
         error: String?,
-        providerRedirectUri: String,
     ): URI {
         val provider = parseProvider(providerName)
         val claim = claim(provider, state)
@@ -126,7 +126,7 @@ class MobileOAuthService(
                 provider = provider,
                 code = code,
                 state = state,
-                redirectUri = providerRedirectUri,
+                redirectUri = providerCallbackUri(provider),
             )
         } catch (e: Exception) {
             log.warn("Mobile OAuth provider call failed. provider={}, error={}", provider, e.javaClass.simpleName)
@@ -263,9 +263,9 @@ class MobileOAuthService(
         )
     }
 
-    private fun providerCallbackUri(mobileOAuthBaseUrl: String, provider: SsoType): String {
-        return "${mobileOAuthBaseUrl.trimEnd('/')}/callback/${provider.name.lowercase()}"
-    }
+    private fun providerCallbackUri(provider: SsoType): String = oauthWebBaseUrl.callbackUri(
+        "api/auth/mobile/oauth/callback/${provider.name.lowercase()}"
+    )
 
     private fun validateAppCallbackUri(purpose: MobileOAuthPurpose, callbackUri: String) {
         val allowed = when (purpose) {

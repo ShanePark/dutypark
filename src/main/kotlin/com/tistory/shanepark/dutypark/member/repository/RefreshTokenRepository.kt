@@ -28,4 +28,6 @@ interface RefreshTokenRepository : JpaRepository<RefreshToken, Long> {
 
     fun findByPushEndpoint(pushEndpoint: String): RefreshToken?
 
+    fun existsByIdAndMemberIdAndValidUntilAfter(id: Long, memberId: Long, now: LocalDateTime): Boolean
+
 }

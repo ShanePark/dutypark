@@ -20,6 +20,7 @@ import com.tistory.shanepark.dutypark.todo.domain.entity.Todo
 import com.tistory.shanepark.dutypark.todo.domain.entity.TodoStatus
 import com.tistory.shanepark.dutypark.todo.repository.TodoRepository
 import org.junit.jupiter.api.Test
+import org.hamcrest.Matchers.hasItem
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc
 import org.springframework.http.HttpHeaders
@@ -93,8 +94,8 @@ class AdminControllerTest : DutyparkIntegrationTest() {
                 .header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(TestData.admin)}")
         )
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$.length()").value(1))
-            .andExpect(jsonPath("$[0].id").value(validToken.id))
+            .andExpect(jsonPath("$.length()").value(2))
+            .andExpect(jsonPath("$[*].id").value(hasItem(validToken.id!!.toInt())))
             .andExpect(jsonPath("$[0].token").doesNotExist())
     }
 

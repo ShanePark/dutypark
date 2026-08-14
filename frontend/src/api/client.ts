@@ -8,6 +8,7 @@ import { shouldSkipUnauthorizedRefresh } from './unauthorizedRetryPolicy'
 
 let isRefreshing = false
 let refreshFailed = false
+let authFailureHandled = false
 let impersonationExpiredHandled = false
 let failedQueue: Array<{
   resolve: (value?: unknown) => void
@@ -37,7 +38,14 @@ export function setImpersonationHandlers(
 
 export function resetRefreshState() {
   refreshFailed = false
+  authFailureHandled = false
   impersonationExpiredHandled = false
+}
+
+function handleAuthFailureOnce() {
+  if (authFailureHandled || !onAuthFailure) return
+  authFailureHandled = true
+  onAuthFailure()
 }
 
 const processQueue = (error: Error | null) => {
@@ -81,13 +89,21 @@ apiClient.interceptors.response.use(
     const isAuthEndpoint = shouldSkipUnauthorizedRefresh(originalRequest?.method, originalRequest?.url) ||
                            originalRequest?.url?.includes('/auth/token') ||
                            originalRequest?.url?.includes('/auth/login') ||
+                           originalRequest?.url?.includes('/auth/status') ||
                            originalRequest?.url?.includes('/auth/refresh') ||
                            originalRequest?.url?.includes('/auth/logout') ||
                            originalRequest?.url?.includes('/auth/restore') ||
                            originalRequest?.url?.includes('/auth/impersonate')
 
     // Handle 401 - try to refresh token
-    if (error.response?.status === 401 && originalRequest && !originalRequest._retry) {
+    if (error.response?.status === 401 && originalRequest) {
+      // A replay that is still unauthorized cannot be recovered by refreshing again.
+      if (originalRequest._retry) {
+        refreshFailed = true
+        handleAuthFailureOnce()
+        return Promise.reject(error)
+      }
+
       if (isAuthEndpoint) {
         return Promise.reject(error)
       }
@@ -107,6 +123,9 @@ apiClient.interceptors.response.use(
       }
 
       if (isRefreshing) {
+        // A queued request gets exactly one replay, just like the request that
+        // started the refresh. Otherwise another 401 could start a refresh loop.
+        originalRequest._retry = true
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject })
         })
@@ -148,9 +167,7 @@ apiClient.interceptors.response.use(
         refreshFailed = true
 
         // Clear auth state and redirect to login
-        if (onAuthFailure) {
-          onAuthFailure()
-        }
+        handleAuthFailureOnce()
 
         return Promise.reject(refreshError)
       } finally {

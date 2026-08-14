@@ -113,10 +113,13 @@ class AuthController(
         resp: HttpServletResponse
     ): ResponseEntity<Void> {
         val refreshToken = cookieService.extractRefreshToken(req.cookies)
-        if (refreshToken != null) {
-            refreshTokenService.deleteByToken(refreshToken)
+        try {
+            if (refreshToken != null) {
+                refreshTokenService.deleteByToken(refreshToken)
+            }
+        } finally {
+            cookieService.clearTokenCookies(resp)
         }
-        cookieService.clearTokenCookies(resp)
         return ResponseEntity.noContent().build()
     }
 
@@ -128,10 +131,12 @@ class AuthController(
     fun impersonate(
         @Login loginMember: LoginMember,
         @PathVariable targetMemberId: Long,
+        req: HttpServletRequest,
         resp: HttpServletResponse
     ): ResponseEntity<*> {
         return try {
-            val accessToken = authService.impersonate(loginMember, targetMemberId)
+            val refreshToken = cookieService.extractRefreshToken(req.cookies)
+            val accessToken = authService.impersonate(loginMember, targetMemberId, refreshToken)
             cookieService.setAccessTokenCookie(resp, accessToken)
             ResponseEntity.ok(mapOf("expiresIn" to jwtConfig.tokenValidityInSeconds))
         } catch (e: AuthException) {

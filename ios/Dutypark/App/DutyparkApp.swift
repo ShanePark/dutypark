@@ -34,7 +34,10 @@ struct DutyparkApp: App {
 
     init() {
         let initialState = DutyparkLaunchPolicy.initialSessionState(arguments: CommandLine.arguments)
-        _session = StateObject(wrappedValue: SessionStore(initialState: initialState))
+        _session = StateObject(wrappedValue: SessionStore(
+            initialState: initialState,
+            unregisterPush: { await APNsRegistrationManager.shared.unregister() }
+        ))
     }
 
     var body: some Scene {

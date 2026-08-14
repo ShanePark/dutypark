@@ -28,11 +28,9 @@ class MobileOAuthController(
     fun authorize(
         @Valid @RequestBody request: MobileOAuthAuthorizeRequest,
         @Login(required = false) loginMember: LoginMember?,
-        servletRequest: HttpServletRequest,
     ): MobileOAuthAuthorizeResponse = mobileOAuthService.authorize(
         request = request,
         loginMember = loginMember,
-        mobileOAuthBaseUrl = servletRequest.requestURL.toString().removeSuffix("/authorize"),
     )
 
     @GetMapping("/callback/{provider}")
@@ -41,7 +39,6 @@ class MobileOAuthController(
         @RequestParam(required = false) code: String?,
         @RequestParam state: String,
         @RequestParam(required = false) error: String?,
-        servletRequest: HttpServletRequest,
     ): ResponseEntity<Void> = ResponseEntity.status(HttpStatus.FOUND)
         .location(
             mobileOAuthService.completeCallback(
@@ -49,7 +46,6 @@ class MobileOAuthController(
                 code = code,
                 state = state,
                 error = error,
-                providerRedirectUri = servletRequest.requestURL.toString(),
             )
         )
         .build()

@@ -35,10 +35,8 @@ struct GuestRootView: View {
 
     private func open(_ url: URL) {
         if let route = GuestDeepLink.route(from: url) {
-            session.deferDestinationUntilAuthenticated(url)
             path = [route]
-        } else if url.scheme?.lowercased() == "https",
-                  url.host?.lowercased() == "dutypark.o-r.kr" {
+        } else if GuestPendingDestinationPolicy.shouldShowUnsupported(url) {
             showsUnsupportedLink = true
         }
     }
@@ -63,6 +61,11 @@ struct GuestRootView: View {
 enum GuestPendingDestinationPolicy {
     static func shouldConsume(_ destination: URL) -> Bool {
         GuestDeepLink.route(from: destination) != nil
+    }
+
+    static func shouldShowUnsupported(_ destination: URL) -> Bool {
+        RootNavigationPolicy.isFirstPartyWebURL(destination)
+            && !AppRootDeepLinkPolicy.requiresAuthentication(destination)
     }
 }
 

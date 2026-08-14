@@ -393,9 +393,8 @@ struct NotificationFeatureTests {
         #expect(await api.waitUntilRegisterStarts())
         var didLogout = false
         let logoutTask = Task {
-            await RootLogoutAction.perform(push: manager) {
-                didLogout = true
-            }
+            await manager.unregister()
+            didLogout = true
         }
         for _ in 0..<100 { await Task.yield() }
 
@@ -439,9 +438,8 @@ struct NotificationFeatureTests {
         #expect(await api.waitUntilRegisterStarts())
         var didLogout = false
         let logoutTask = Task {
-            await RootLogoutAction.perform(push: manager) {
-                didLogout = true
-            }
+            await manager.unregister()
+            didLogout = true
         }
         for _ in 0..<100 { await Task.yield() }
 
@@ -463,7 +461,7 @@ struct NotificationFeatureTests {
     }
 
     @Test
-    func rootMenuLogoutUnregistersPushBeforeEndingSession() async throws {
+    func unregisterCompletesBeforeSessionCleanupContinues() async throws {
         let suiteName = "NotificationFeatureTests.rootLogout.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suiteName))
         defer { defaults.removePersistentDomain(forName: suiteName) }
@@ -472,15 +470,14 @@ struct NotificationFeatureTests {
         let manager = APNsRegistrationManager(api: api, defaults: defaults)
         var logoutObservedPushUnregistration = false
 
-        await RootLogoutAction.perform(push: manager) {
-            logoutObservedPushUnregistration = await api.calls().unregisteredTokens == ["abc123"]
-        }
+        await manager.unregister()
+        logoutObservedPushUnregistration = await api.calls().unregisteredTokens == ["abc123"]
 
         #expect(logoutObservedPushUnregistration)
     }
 
     @Test
-    func rootMenuLogoutContinuesWhenNoPushTokenExists() async throws {
+    func unregisterWithoutPushTokenReturnsCleanly() async throws {
         let suiteName = "NotificationFeatureTests.rootLogoutWithoutToken.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suiteName))
         defer { defaults.removePersistentDomain(forName: suiteName) }
@@ -488,9 +485,8 @@ struct NotificationFeatureTests {
         let manager = APNsRegistrationManager(api: api, defaults: defaults)
         var didLogout = false
 
-        await RootLogoutAction.perform(push: manager) {
-            didLogout = true
-        }
+        await manager.unregister()
+        didLogout = true
 
         #expect(didLogout)
         #expect(await api.calls().unregisteredTokens.isEmpty)
@@ -498,7 +494,7 @@ struct NotificationFeatureTests {
     }
 
     @Test
-    func rootMenuLogoutContinuesWhenPushUnregisterFails() async throws {
+    func unregisterFailureReturnsSoSessionCleanupCanContinue() async throws {
         let suiteName = "NotificationFeatureTests.rootLogoutUnregisterFailure.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suiteName))
         defer { defaults.removePersistentDomain(forName: suiteName) }
@@ -507,9 +503,8 @@ struct NotificationFeatureTests {
         let manager = APNsRegistrationManager(api: api, defaults: defaults)
         var didLogout = false
 
-        await RootLogoutAction.perform(push: manager) {
-            didLogout = true
-        }
+        await manager.unregister()
+        didLogout = true
 
         #expect(didLogout)
         #expect(await api.calls().unregisteredTokens == ["abc123"])

@@ -150,6 +150,65 @@ class AuthControllerTest : DutyparkIntegrationTest() {
     }
 
     @Test
+    fun `deleting current refresh token also clears local token cookies`() {
+        val refreshToken = refreshTokenService.createRefreshToken(
+            memberId = TestData.member.id!!,
+            remoteAddr = "127.0.0.1",
+            userAgent = "test-agent"
+        )
+        em.flush()
+        em.clear()
+        val accessToken = getJwt(memberRepository.findByEmail(TestData.member.email).orElseThrow())
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.delete("/api/auth/refresh-tokens/{id}", refreshToken.id)
+                .cookie(Cookie("refresh_token", refreshToken.token))
+                .header(HttpHeaders.AUTHORIZATION, "Bearer $accessToken")
+        )
+            .andExpect(status().isNoContent)
+            .andExpect(cookie().maxAge("access_token", 0))
+            .andExpect(cookie().maxAge("refresh_token", 0))
+
+        assertThat(refreshTokenService.findByToken(refreshToken.token)).isNull()
+    }
+
+    @Test
+    fun `revoking another session immediately invalidates its access token`() {
+        val loginBody = objectMapper.writeValueAsString(
+            LoginDto(TestData.member.email, testPass, false)
+        )
+        val firstLogin = mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/auth/token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(loginBody)
+        ).andExpect(status().isOk).andReturn()
+        val firstAccessToken = firstLogin.response.getCookie("access_token")?.value
+            ?: error("first access token missing")
+        val firstRefreshToken = firstLogin.response.getCookie("refresh_token")?.value
+            ?: error("first refresh token missing")
+        val firstSessionId = refreshTokenService.findByToken(firstRefreshToken)?.id
+            ?: error("first refresh session missing")
+
+        val secondLogin = mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/auth/token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(loginBody)
+        ).andExpect(status().isOk).andReturn()
+        val secondAccessToken = secondLogin.response.getCookie("access_token")?.value
+            ?: error("second access token missing")
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.delete("/api/auth/refresh-tokens/{id}", firstSessionId)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer $secondAccessToken")
+        ).andExpect(status().isNoContent)
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.get("/api/auth/refresh-tokens")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer $firstAccessToken")
+        ).andExpect(status().isUnauthorized)
+    }
+
+    @Test
     fun `logout while impersonating invalidates original refresh token`() {
         val manager = memberRepository.findByEmail(TestData.member.email).orElseThrow()
         val managed = memberRepository.findByEmail(TestData.member2.email).orElseThrow()
@@ -284,6 +343,7 @@ class AuthControllerTest : DutyparkIntegrationTest() {
             .andExpect(jsonPath("$.id").value(member.id))
             .andExpect(jsonPath("$.email").value(member.email))
             .andExpect(jsonPath("$.name").value(member.name))
+            .andExpect(jsonPath("$.sessionId").doesNotExist())
     }
 
     @Test
@@ -388,11 +448,17 @@ class AuthControllerTest : DutyparkIntegrationTest() {
         em.flush()
         em.clear()
 
-        val accessToken = getJwt(manager)
+        val refreshToken = refreshTokenService.createRefreshToken(
+            memberId = manager.id!!,
+            remoteAddr = "127.0.0.1",
+            userAgent = "test-agent",
+        )
+        val accessToken = getJwt(manager, requireNotNull(refreshToken.id))
 
         val impersonateResult = mockMvc.perform(
             MockMvcRequestBuilders.post("/api/auth/impersonate/${managed.id}")
                 .header("Authorization", "Bearer $accessToken")
+                .cookie(Cookie("refresh_token", refreshToken.token))
         ).andExpect(status().isOk)
             .andReturn()
 
@@ -401,6 +467,7 @@ class AuthControllerTest : DutyparkIntegrationTest() {
         mockMvc.perform(
             MockMvcRequestBuilders.post("/api/auth/restore")
                 .header("Authorization", "Bearer $impersonatedToken")
+                .cookie(Cookie("refresh_token", refreshToken.token))
         ).andExpect(status().isOk)
             .andExpect(jsonPath("$.expiresIn").exists())
             .andExpect(cookie().exists("access_token"))
@@ -471,7 +538,7 @@ class AuthControllerTest : DutyparkIntegrationTest() {
         em.flush()
         em.clear()
 
-        val accessToken = getJwt(manager)
+        val accessToken = getJwt(manager, requireNotNull(originalRefreshToken.id))
         val tokenCountBefore = refreshTokenService.findRefreshTokens(manager.id!!, false).size
 
         val impersonateResult = mockMvc.perform(
@@ -499,7 +566,7 @@ class AuthControllerTest : DutyparkIntegrationTest() {
     }
 
     @Test
-    fun `restore creates new refresh token when cookie token is missing`() {
+    fun `restore rejects missing refresh cookie without creating a new session`() {
         val manager = memberRepository.findByEmail(TestData.member.email).orElseThrow()
         val managed = memberRepository.findByEmail(TestData.member2.email).orElseThrow()
         makeManagerRelation(manager, managed)
@@ -520,15 +587,15 @@ class AuthControllerTest : DutyparkIntegrationTest() {
         mockMvc.perform(
             MockMvcRequestBuilders.post("/api/auth/restore")
                 .header("Authorization", "Bearer $impersonatedToken")
-        ).andExpect(status().isOk)
-            .andExpect(cookie().exists("refresh_token"))
+        ).andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("auth.restore.sessionInvalid"))
 
         val tokenCountAfter = refreshTokenService.findRefreshTokens(manager.id!!, false).size
-        assertThat(tokenCountAfter).isEqualTo(tokenCountBefore + 1)
+        assertThat(tokenCountAfter).isEqualTo(tokenCountBefore)
     }
 
     @Test
-    fun `restore creates new refresh token when cookie token belongs to different member`() {
+    fun `restore rejects refresh cookie belonging to a different session`() {
         val manager = memberRepository.findByEmail(TestData.member.email).orElseThrow()
         val managed = memberRepository.findByEmail(TestData.member2.email).orElseThrow()
         makeManagerRelation(manager, managed)
@@ -552,19 +619,15 @@ class AuthControllerTest : DutyparkIntegrationTest() {
 
         val impersonatedToken = impersonateResult.response.getCookie("access_token")?.value
 
-        val restoreResult = mockMvc.perform(
+        mockMvc.perform(
             MockMvcRequestBuilders.post("/api/auth/restore")
                 .header("Authorization", "Bearer $impersonatedToken")
                 .cookie(Cookie("refresh_token", differentMemberToken.token))
-        ).andExpect(status().isOk)
-            .andExpect(cookie().exists("refresh_token"))
-            .andReturn()
-
-        val returnedRefreshToken = restoreResult.response.getCookie("refresh_token")?.value
-        assertThat(returnedRefreshToken).isNotEqualTo(differentMemberToken.token)
+        ).andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("auth.restore.sessionInvalid"))
 
         val tokenCountAfter = refreshTokenService.findRefreshTokens(manager.id!!, false).size
-        assertThat(tokenCountAfter).isEqualTo(tokenCountBefore + 1)
+        assertThat(tokenCountAfter).isEqualTo(tokenCountBefore)
     }
 
 }

@@ -26,6 +26,11 @@ nonisolated enum APIRequestScope: Sendable {
     case admin
 }
 
+nonisolated enum AuthenticationFailureHandling: Sendable {
+    case awaitCompletion
+    case deferred
+}
+
 nonisolated struct APIErrorDetails: Decodable, Equatable, Sendable {
     let remainingAttempts: Int?
 }
@@ -33,6 +38,17 @@ nonisolated struct APIErrorDetails: Decodable, Equatable, Sendable {
 nonisolated private struct ErrorResponse: Decodable {
     let code: String
     let details: APIErrorDetails?
+}
+
+private extension APIError {
+    var isUnauthorized: Bool {
+        switch self {
+        case .server(status: 401, _), .serverWithDetails(status: 401, _, _):
+            true
+        default:
+            false
+        }
+    }
 }
 
 actor RefreshGate {
@@ -130,14 +146,16 @@ nonisolated final class APIClient: Sendable {
         method: HTTPMethod = .get,
         queryItems: [URLQueryItem] = [],
         headers: [String: String] = [:],
-        scope: APIRequestScope = .api
+        scope: APIRequestScope = .api,
+        authenticationFailureHandling: AuthenticationFailureHandling = .awaitCompletion
     ) async throws -> Response {
         let data = try await data(
             path,
             method: method,
             queryItems: queryItems,
             headers: headers,
-            scope: scope
+            scope: scope,
+            authenticationFailureHandling: authenticationFailureHandling
         )
         do {
             return try decode(Response.self, from: data)
@@ -154,7 +172,8 @@ nonisolated final class APIClient: Sendable {
         body: Body,
         headers: [String: String] = [:],
         scope: APIRequestScope = .api,
-        retryingAfterUnauthorized: Bool = true
+        retryingAfterUnauthorized: Bool = true,
+        authenticationFailureHandling: AuthenticationFailureHandling = .awaitCompletion
     ) async throws -> Response {
         let bodyData: Data
         do {
@@ -169,7 +188,8 @@ nonisolated final class APIClient: Sendable {
             body: bodyData,
             headers: headers,
             scope: scope,
-            retryingAfterUnauthorized: retryingAfterUnauthorized
+            retryingAfterUnauthorized: retryingAfterUnauthorized,
+            authenticationFailureHandling: authenticationFailureHandling
         )
         do {
             return try decode(Response.self, from: data)
@@ -210,7 +230,8 @@ nonisolated final class APIClient: Sendable {
         body: Data? = nil,
         headers: [String: String] = [:],
         scope: APIRequestScope = .api,
-        retryingAfterUnauthorized: Bool = true
+        retryingAfterUnauthorized: Bool = true,
+        authenticationFailureHandling: AuthenticationFailureHandling = .awaitCompletion
     ) async throws -> Data {
         let observedRefreshGeneration = await refreshGate.generation
         let (data, response) = try await perform(
@@ -222,34 +243,39 @@ nonisolated final class APIClient: Sendable {
             scope: scope
         )
 
-        if response.statusCode == 401,
-           retryingAfterUnauthorized,
-           await authenticationMode.allowsRefresh {
-            do {
-                try await refreshGate.run(ifGenerationIs: observedRefreshGeneration) { [self] in
-                    let (refreshData, refreshResponse) = try await perform(
-                        "auth/refresh",
-                        method: .post,
-                        scope: .api
-                    )
-                    try validate(refreshResponse, data: refreshData)
+        if response.statusCode == 401, retryingAfterUnauthorized {
+            if await authenticationMode.allowsRefresh {
+                do {
+                    try await refreshGate.run(ifGenerationIs: observedRefreshGeneration) { [self] in
+                        let (refreshData, refreshResponse) = try await perform(
+                            "auth/refresh",
+                            method: .post,
+                            scope: .api
+                        )
+                        try validate(refreshResponse, data: refreshData)
+                    }
+                } catch let error as APIError {
+                    if error.isUnauthorized {
+                        await handleAuthenticationFailure(authenticationFailureHandling)
+                    }
+                    throw error
                 }
-            } catch let error as APIError {
-                if case .server(status: 401, code: _) = error {
-                    await authenticationMode.handleAuthenticationFailure()
+                let (retryData, retryResponse) = try await perform(
+                    path,
+                    method: method,
+                    queryItems: queryItems,
+                    body: body,
+                    headers: headers,
+                    scope: scope
+                )
+                if retryResponse.statusCode == 401 {
+                    await handleAuthenticationFailure(authenticationFailureHandling)
                 }
-                throw error
+                try validate(retryResponse, data: retryData)
+                return retryData
             }
-            let (retryData, retryResponse) = try await perform(
-                path,
-                method: method,
-                queryItems: queryItems,
-                body: body,
-                headers: headers,
-                scope: scope
-            )
-            try validate(retryResponse, data: retryData)
-            return retryData
+
+            await handleAuthenticationFailure(authenticationFailureHandling)
         }
 
         try validate(response, data: data)
@@ -275,6 +301,19 @@ nonisolated final class APIClient: Sendable {
         await refreshGate.reset()
         await authenticationMode.setImpersonating(false)
         await authenticationMode.setAuthenticationFailureHandler(nil)
+    }
+
+    private func handleAuthenticationFailure(
+        _ handling: AuthenticationFailureHandling
+    ) async {
+        switch handling {
+        case .awaitCompletion:
+            await authenticationMode.handleAuthenticationFailure()
+        case .deferred:
+            Task { [authenticationMode] in
+                await authenticationMode.handleAuthenticationFailure()
+            }
+        }
     }
 
     private func perform(

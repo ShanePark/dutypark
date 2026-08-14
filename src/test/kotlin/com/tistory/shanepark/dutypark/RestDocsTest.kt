@@ -37,8 +37,12 @@ abstract class RestDocsTest : DutyparkIntegrationTest() {
             .build()
     }
 
-    protected fun MockHttpServletRequestBuilder.withAuth(member: Member): MockHttpServletRequestBuilder {
-        return this.header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(member)}")
+    protected fun MockHttpServletRequestBuilder.withAuth(
+        member: Member,
+        sessionId: Long? = null,
+    ): MockHttpServletRequestBuilder {
+        val jwt = sessionId?.let { getJwt(member, it) } ?: getJwt(member)
+        return this.header(HttpHeaders.AUTHORIZATION, "Bearer $jwt")
     }
 
 }

@@ -12,6 +12,7 @@ import com.tistory.shanepark.dutypark.member.repository.FriendRelationRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberManagerRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.service.MemberService
+import com.tistory.shanepark.dutypark.member.service.RefreshTokenService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.service.JwtProvider
 import com.tistory.shanepark.dutypark.team.domain.entity.Team
@@ -53,6 +54,9 @@ class DutyparkIntegrationTest {
 
     @Autowired
     lateinit var jwtProvider: JwtProvider
+
+    @Autowired
+    lateinit var sessionTokenService: RefreshTokenService
 
     val objectMapper: JsonMapper = TestUtils.jsr310JsonMapper()
 
@@ -126,7 +130,17 @@ class DutyparkIntegrationTest {
     }
 
     fun getJwt(member: Member): String {
-        return jwtProvider.createToken(member)
+        val refreshToken = sessionTokenService.createRefreshToken(member.id!!, "127.0.0.1", "integration-test")
+        return jwtProvider.createToken(member, requireNotNull(refreshToken.id))
+    }
+
+    fun getJwt(member: Member, sessionId: Long): String {
+        return jwtProvider.createToken(member, sessionId)
+    }
+
+    fun getImpersonationJwt(target: Member, original: Member): String {
+        val refreshToken = sessionTokenService.createRefreshToken(original.id!!, "127.0.0.1", "integration-test")
+        return jwtProvider.createImpersonationToken(target, original.id!!, requireNotNull(refreshToken.id))
     }
 
     fun loginMember(member: Member): LoginMember {

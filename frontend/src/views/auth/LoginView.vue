@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useKakao } from '@/composables/useKakao'
 import { useNaver } from '@/composables/useNaver'
+import { useLoginAttemptGate } from '@/composables/useLoginAttemptGate'
 import { AxiosError } from 'axios'
 import PolicyModal from '@/components/common/PolicyModal.vue'
 import { getSafeRedirect } from '@/utils/redirect'
@@ -18,13 +19,14 @@ const { t } = useI18n()
 const authStore = useAuthStore()
 const { initKakao, kakaoLogin } = useKakao()
 const { isNaverEnabled, naverLogin } = useNaver()
+const { activeAttempt, isAttemptPending, startAttempt, finishAttempt } = useLoginAttemptGate()
 
 const email = ref('')
 const password = ref('')
 const rememberMe = ref(false)
-const isLoading = ref(false)
-const isKakaoLoading = ref(false)
-const isNaverLoading = ref(false)
+const isLoading = computed(() => activeAttempt.value === 'PASSWORD')
+const isKakaoLoading = computed(() => activeAttempt.value === 'KAKAO')
+const isNaverLoading = computed(() => activeAttempt.value === 'NAVER')
 const error = ref('')
 const remainingAttempts = ref<number | null>(null)
 const policyModal = ref<'terms' | 'privacy' | null>(null)
@@ -57,9 +59,9 @@ onMounted(() => {
 })
 
 async function handleLogin() {
+  if (!startAttempt('PASSWORD')) return
   error.value = ''
   remainingAttempts.value = null
-  isLoading.value = true
 
   try {
     await authStore.login({
@@ -74,7 +76,7 @@ async function handleLogin() {
       localStorage.removeItem(REMEMBER_EMAIL_KEY)
     }
 
-    router.push(redirectTarget())
+    await router.push(redirectTarget())
   } catch (e: unknown) {
     if (e instanceof AxiosError && e.response?.data) {
       error.value = resolveApiErrorMessage(e, { fallbackKey: 'auth.login.error.generic' }, t)
@@ -86,20 +88,42 @@ async function handleLogin() {
       error.value = t('auth.login.error.invalidCredentials')
     }
   } finally {
-    isLoading.value = false
+    finishAttempt('PASSWORD')
   }
 }
 
-function handleKakaoLogin() {
-  if (isKakaoLoading.value) return
-  isKakaoLoading.value = true
-  kakaoLogin(redirectTarget())
+async function handleKakaoLogin() {
+  if (!startAttempt('KAKAO')) return
+  error.value = ''
+  remainingAttempts.value = null
+  try {
+    await kakaoLogin(redirectTarget())
+  } catch (exception) {
+    error.value = resolveApiErrorMessage(
+      exception,
+      { fallbackKey: 'auth.login.error.generic' },
+      t,
+    )
+  } finally {
+    finishAttempt('KAKAO')
+  }
 }
 
-function handleNaverLogin() {
-  if (isNaverLoading.value) return
-  isNaverLoading.value = true
-  naverLogin(redirectTarget())
+async function handleNaverLogin() {
+  if (!startAttempt('NAVER')) return
+  error.value = ''
+  remainingAttempts.value = null
+  try {
+    await naverLogin(redirectTarget())
+  } catch (exception) {
+    error.value = resolveApiErrorMessage(
+      exception,
+      { fallbackKey: 'auth.login.error.generic' },
+      t,
+    )
+  } finally {
+    finishAttempt('NAVER')
+  }
 }
 
 </script>
@@ -174,7 +198,7 @@ function handleNaverLogin() {
 
           <button
             type="submit"
-            :disabled="isLoading"
+            :disabled="isAttemptPending"
             class="w-full bg-dp-surface-strong text-dp-text-on-dark py-3.5 px-4 rounded-xl font-semibold hover:bg-dp-surface-strong-hover disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm"
           >
             {{ isLoading ? t('auth.login.submitting') : t('auth.login.submit') }}
@@ -193,7 +217,7 @@ function handleNaverLogin() {
             <button
               type="button"
               @click="handleKakaoLogin"
-              :disabled="isKakaoLoading"
+              :disabled="isAttemptPending"
               class="w-full py-3.5 px-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-3 hover:opacity-90 cursor-pointer shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
               :style="{ backgroundColor: 'var(--dp-kakao)', color: 'var(--dp-kakao-text)' }"
             >
@@ -205,7 +229,7 @@ function handleNaverLogin() {
               v-if="isNaverEnabled"
               type="button"
               @click="handleNaverLogin"
-              :disabled="isNaverLoading"
+              :disabled="isAttemptPending"
               class="w-full py-3.5 px-4 rounded-xl font-semibold transition-all flex items-center justify-center gap-3 hover:opacity-95 cursor-pointer shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
               :style="{ backgroundColor: 'var(--dp-naver)', color: 'var(--dp-naver-text)' }"
             >

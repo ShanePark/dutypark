@@ -66,7 +66,7 @@ class AccountDeletionControllerIntegrationTest : RestDocsTest() {
 
     @Test
     fun `preview rejects impersonated session`() {
-        val impersonationToken = jwtProvider.createImpersonationToken(TestData.member, TestData.admin.id!!)
+        val impersonationToken = getImpersonationJwt(TestData.member, TestData.admin)
 
         mockMvc.perform(
             get("/api/members/me/deletion")

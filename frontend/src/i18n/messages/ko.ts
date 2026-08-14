@@ -358,6 +358,12 @@ export default {
       settings: '설정',
     },
   },
+  sessionRecovery: {
+    checkFailed: '세션을 확인하지 못했습니다. 공개 기능은 계속 사용하거나 다시 로그인할 수 있습니다.',
+    signIn: '로그인으로 이동',
+    logoutUnconfirmedTitle: '서버 로그아웃 확인 실패',
+    logoutUnconfirmed: '이 기기의 로그인 정보는 안전하게 정리했지만 서버 세션이 남아 있을 수 있습니다. 다시 로그인한 뒤 설정 > 접속 세션 관리에서 종료하거나, 로그인된 다른 기기에서 해당 세션을 종료해 주세요.',
+  },
   notifications: {
     common: {
       ariaLabel: '알림',

@@ -1,62 +1,31 @@
-declare global {
-  interface Window {
-    Kakao: {
-      init: (appKey: string) => void
-      isInitialized: () => boolean
-      Auth: {
-        authorize: (options: {
-          redirectUri: string
-          state?: string
-        }) => void
-      }
-    }
-  }
+import apiClient from '@/api/client'
+
+type WebOAuthPurpose = 'LOGIN' | 'LINK'
+
+interface WebOAuthAuthorizeResponse {
+  authorizationUrl: string
+  expiresIn: number
 }
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || window.location.origin
-const KAKAO_APP_KEY = import.meta.env.VITE_KAKAO_APP_KEY
-
-let initialized = false
+export async function authorizeKakao(
+  purpose: WebOAuthPurpose,
+  referer: string,
+  navigate: (url: string) => void = (url) => window.location.assign(url),
+): Promise<void> {
+  const response = await apiClient.post<WebOAuthAuthorizeResponse>('/auth/oauth2/authorize', {
+    provider: 'KAKAO',
+    purpose,
+    referer,
+  })
+  navigate(response.data.authorizationUrl)
+}
 
 export function useKakao() {
-  const initKakao = () => {
-    if (initialized || !window.Kakao) return
+  // Kept for call-site compatibility now that authorization is server-driven.
+  const initKakao = () => {}
 
-    if (!window.Kakao.isInitialized()) {
-      window.Kakao.init(KAKAO_APP_KEY)
-    }
-    initialized = true
-  }
-
-  const kakaoLogin = (referer: string = '/') => {
-    initKakao()
-
-    const redirectUri = `${API_BASE_URL}/api/auth/Oauth2ClientCallback/kakao`
-    const callbackUrl = `${window.location.origin}/auth/oauth-callback`
-
-    window.Kakao.Auth.authorize({
-      redirectUri,
-      state: JSON.stringify({
-        referer,
-        callbackUrl,
-      }),
-    })
-  }
-
-  const kakaoLink = (referer: string = '/member') => {
-    initKakao()
-
-    const redirectUri = `${API_BASE_URL}/api/auth/Oauth2ClientCallback/kakao`
-    const fullReferer = referer.startsWith('http') ? referer : `${window.location.origin}${referer}`
-
-    window.Kakao.Auth.authorize({
-      redirectUri,
-      state: JSON.stringify({
-        referer: fullReferer,
-        login: true,
-      }),
-    })
-  }
+  const kakaoLogin = (referer: string = '/') => authorizeKakao('LOGIN', referer)
+  const kakaoLink = (referer: string = '/member') => authorizeKakao('LINK', referer)
 
   return {
     initKakao,

@@ -139,7 +139,6 @@ struct SettingsView: View {
                         dismiss: dismiss
                     ) {
                         showPassword = false
-                        await push.unregister()
                         await session.logout()
                     }
                 }
@@ -1145,7 +1144,6 @@ struct SettingsView: View {
     private func performLogout() async {
         guard logoutAction.start() else { return }
         defer { logoutAction.finish() }
-        await push.unregister()
         await session.logout()
     }
 

@@ -69,10 +69,11 @@ class AuthServiceTest {
 
     @Test
     fun `tokenToLoginMember returns login member for valid token`() {
-        val loginMember = LoginMember(id = 1L, name = "user")
+        val loginMember = LoginMember(id = 1L, name = "user", sessionId = 10L)
         val member = memberWithId(1L)
         whenever(jwtProvider.validateToken("token")).thenReturn(TokenStatus.VALID)
         whenever(jwtProvider.parseToken("token")).thenReturn(loginMember)
+        whenever(refreshTokenService.isSessionActive(10L, 1L)).thenReturn(true)
         whenever(memberRepository.findById(1L)).thenReturn(Optional.of(member))
 
         val result = authService.tokenToLoginMember("token")
@@ -81,11 +82,40 @@ class AuthServiceTest {
     }
 
     @Test
-    fun `tokenToLoginMember rejects deletion pending member`() {
+    fun `tokenToLoginMember allows legacy token until its JWT expiration without revoking refresh session`() {
+        val member = memberWithId(1L)
         val loginMember = LoginMember(id = 1L, name = "user")
+        whenever(jwtProvider.validateToken("legacy-token")).thenReturn(TokenStatus.VALID)
+        whenever(jwtProvider.parseToken("legacy-token")).thenReturn(loginMember)
+        whenever(memberRepository.findById(1L)).thenReturn(Optional.of(member))
+
+        val result = authService.tokenToLoginMember("legacy-token")
+
+        assertThat(result).isEqualTo(loginMember)
+        verify(refreshTokenService, never()).isSessionActive(any(), any())
+    }
+
+    @Test
+    fun `tokenToLoginMember rejects revoked refresh session`() {
+        whenever(jwtProvider.validateToken("revoked-token")).thenReturn(TokenStatus.VALID)
+        whenever(jwtProvider.parseToken("revoked-token"))
+            .thenReturn(LoginMember(id = 1L, name = "user", sessionId = 10L))
+        whenever(refreshTokenService.isSessionActive(10L, 1L)).thenReturn(false)
+
+        assertThrows<AuthException> {
+            authService.tokenToLoginMember("revoked-token")
+        }
+
+        verify(memberRepository, never()).findById(any())
+    }
+
+    @Test
+    fun `tokenToLoginMember rejects deletion pending member`() {
+        val loginMember = LoginMember(id = 1L, name = "user", sessionId = 10L)
         val member = memberWithId(1L).also { it.markDeletionPending(Instant.parse("2026-08-12T00:00:00Z")) }
         whenever(jwtProvider.validateToken("token")).thenReturn(TokenStatus.VALID)
         whenever(jwtProvider.parseToken("token")).thenReturn(loginMember)
+        whenever(refreshTokenService.isSessionActive(10L, 1L)).thenReturn(true)
         whenever(memberRepository.findById(1L)).thenReturn(Optional.of(member))
 
         val exception = assertThrows<AuthException> {
@@ -187,14 +217,15 @@ class AuthServiceTest {
         whenever(loginAttemptService.isBlocked("127.0.0.1", "user@duty.park")).thenReturn(false)
         whenever(memberRepository.findByEmail("user@duty.park")).thenReturn(Optional.of(member))
         whenever(passwordEncoder.matches("pass", "encoded-pass")).thenReturn(true)
-        whenever(jwtProvider.createToken(member)).thenReturn("jwt-token")
         val refreshToken = RefreshToken(
             member = member,
             validUntil = futureDateTime,
             remoteAddr = "127.0.0.1",
             userAgent = null
         )
+        setRefreshTokenId(refreshToken, 40L)
         whenever(refreshTokenService.createRefreshToken(eq(4L), any(), any())).thenReturn(refreshToken)
+        whenever(jwtProvider.createToken(member, 40L)).thenReturn("jwt-token")
         val request = requestWith("127.0.0.1", "user@duty.park")
 
         val result = authService.getTokenResponse(LoginDto("user@duty.park", "pass"), request)
@@ -218,7 +249,7 @@ class AuthServiceTest {
 
         assertThat(exception.message).isEqualTo("auth.login.failed")
         verify(loginAttemptService).recordFailedAttempt("127.0.0.1", "user@duty.park")
-        verify(jwtProvider, never()).createToken(any<Member>())
+        verify(jwtProvider, never()).createToken(any<Member>(), any())
     }
 
     @Test
@@ -240,6 +271,7 @@ class AuthServiceTest {
             remoteAddr = "127.0.0.1",
             userAgent = null
         )
+        setRefreshTokenId(refreshToken, 60L)
         whenever(refreshTokenService.findByToken("expired")).thenReturn(refreshToken)
         val request = requestWith("127.0.0.1", "user@duty.park")
 
@@ -257,9 +289,10 @@ class AuthServiceTest {
             remoteAddr = "127.0.0.1",
             userAgent = chromeUserAgent
         )
+        setRefreshTokenId(refreshToken, 60L)
         val before = refreshToken.validUntil
         whenever(refreshTokenService.findByToken("valid")).thenReturn(refreshToken)
-        whenever(jwtProvider.createToken(member)).thenReturn("new-jwt")
+        whenever(jwtProvider.createToken(member, 60L)).thenReturn("new-jwt")
         val request = requestWith("127.0.0.1", firefoxUserAgent)
 
         val result = authService.refreshAccessToken("valid", request)
@@ -287,7 +320,7 @@ class AuthServiceTest {
         }
 
         assertThat(exception.message).isEqualTo("auth.account.inactive")
-        verify(jwtProvider, never()).createToken(any<Member>())
+        verify(jwtProvider, never()).createToken(any<Member>(), any())
     }
 
     @Test
@@ -309,9 +342,32 @@ class AuthServiceTest {
         whenever(memberManagerRepository.findAllByManagerAndManaged(manager, target)).thenReturn(
             listOf(MemberManager(manager, target, ManagerRole.MANAGER))
         )
-        whenever(jwtProvider.createImpersonationToken(target, 8L)).thenReturn("imp-token")
+        whenever(jwtProvider.createImpersonationToken(target, 8L, 80L)).thenReturn("imp-token")
 
-        val token = authService.impersonate(LoginMember(id = 8L, name = "manager"), 9L)
+        val token = authService.impersonate(LoginMember(id = 8L, name = "manager", sessionId = 80L), 9L)
+
+        assertThat(token).isEqualTo("imp-token")
+    }
+
+    @Test
+    fun `legacy manager access token binds impersonation to its valid refresh cookie`() {
+        val manager = memberWithId(8L)
+        val target = memberWithId(9L)
+        val refreshToken = RefreshToken(manager, futureDateTime, "127.0.0.1", "legacy")
+        setRefreshTokenId(refreshToken, 80L)
+        whenever(memberRepository.findById(8L)).thenReturn(Optional.of(manager))
+        whenever(memberRepository.findById(9L)).thenReturn(Optional.of(target))
+        whenever(memberManagerRepository.findAllByManagerAndManaged(manager, target)).thenReturn(
+            listOf(MemberManager(manager, target, ManagerRole.MANAGER))
+        )
+        whenever(refreshTokenService.findByToken(refreshToken.token)).thenReturn(refreshToken)
+        whenever(jwtProvider.createImpersonationToken(target, 8L, 80L)).thenReturn("imp-token")
+
+        val token = authService.impersonate(
+            LoginMember(id = 8L, name = "legacy-manager"),
+            targetMemberId = 9L,
+            legacyRefreshToken = refreshToken.token,
+        )
 
         assertThat(token).isEqualTo("imp-token")
     }
@@ -325,7 +381,7 @@ class AuthServiceTest {
         whenever(memberManagerRepository.findAllByManagerAndManaged(manager, target)).thenReturn(emptyList())
 
         assertThrows<AuthException> {
-            authService.impersonate(LoginMember(id = 8L, name = "manager"), 9L)
+            authService.impersonate(LoginMember(id = 8L, name = "manager", sessionId = 80L), 9L)
         }
     }
 
@@ -351,5 +407,11 @@ class AuthServiceTest {
         field.isAccessible = true
         field.set(member, id)
         return member
+    }
+
+    private fun setRefreshTokenId(refreshToken: RefreshToken, id: Long) {
+        val field = RefreshToken::class.java.getDeclaredField("id")
+        field.isAccessible = true
+        field.set(refreshToken, id)
     }
 }

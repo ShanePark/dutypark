@@ -28,7 +28,8 @@ nonisolated struct APNsRegistrationAPI: APNsRegistrationAPIProtocol {
         let _: SuccessResponse = try await client.request(
             "auth/push/apns/register",
             method: .post,
-            body: DeviceTokenRequest(deviceToken: deviceToken, sandbox: Self.usesSandbox)
+            body: DeviceTokenRequest(deviceToken: deviceToken, sandbox: Self.usesSandbox),
+            authenticationFailureHandling: .deferred
         )
     }
 
@@ -36,7 +37,8 @@ nonisolated struct APNsRegistrationAPI: APNsRegistrationAPIProtocol {
         let _: SuccessResponse = try await client.request(
             "auth/push/apns/unregister",
             method: .post,
-            body: DeviceTokenRequest(deviceToken: deviceToken, sandbox: Self.usesSandbox)
+            body: DeviceTokenRequest(deviceToken: deviceToken, sandbox: Self.usesSandbox),
+            retryingAfterUnauthorized: false
         )
     }
 

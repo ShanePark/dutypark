@@ -47,6 +47,16 @@ class AuthService(
     fun tokenToLoginMember(token: String): LoginMember {
         if (validateToken(token) == TokenStatus.VALID) {
             val loginMember = jwtProvider.parseToken(token)
+            loginMember.sessionId?.let { sessionId ->
+                val sessionOwnerId = if (loginMember.isImpersonating) {
+                    loginMember.originalMemberId ?: throw AuthException()
+                } else {
+                    loginMember.id
+                }
+                if (!refreshTokenService.isSessionActive(sessionId, sessionOwnerId)) {
+                    throw AuthException()
+                }
+            }
             val member = memberRepository.findById(loginMember.id).orElseThrow {
                 AuthException("auth.account.inactive")
             }
@@ -109,12 +119,12 @@ class AuthService(
 
         loginAttemptService.recordSuccessfulAttempt(ipAddress, email)
 
-        val jwt = jwtProvider.createToken(member)
         val refreshToken = refreshTokenService.createRefreshToken(
             memberId = member.id!!,
             remoteAddr = ipAddress,
             userAgent = req.getHeader(HttpHeaders.USER_AGENT)
         )
+        val jwt = jwtProvider.createToken(member, requireNotNull(refreshToken.id))
 
         return TokenResponse(
             accessToken = jwt,
@@ -133,7 +143,7 @@ class AuthService(
 
         val member = refreshToken.member
         ensureActive(member)
-        val newJwt = jwtProvider.createToken(member)
+        val newJwt = jwtProvider.createToken(member, requireNotNull(refreshToken.id))
 
         refreshToken.slideValidUntil(
             req.remoteAddr,
@@ -155,12 +165,12 @@ class AuthService(
         }
         ensureActive(member)
 
-        val jwt = jwtProvider.createToken(member)
         val refreshToken = refreshTokenService.createRefreshToken(
             memberId = memberId,
             remoteAddr = req.remoteAddr,
             userAgent = req.getHeader(HttpHeaders.USER_AGENT)
         )
+        val jwt = jwtProvider.createToken(member, requireNotNull(refreshToken.id))
 
         return TokenResponse(
             accessToken = jwt,
@@ -169,7 +179,11 @@ class AuthService(
         )
     }
 
-    fun impersonate(manager: LoginMember, targetMemberId: Long): String {
+    fun impersonate(
+        manager: LoginMember,
+        targetMemberId: Long,
+        legacyRefreshToken: String? = null,
+    ): String {
         if (manager.isImpersonating) {
             log.warn("Impersonation denied: manager {} already impersonating another account", manager.id)
             throw AuthException("auth.impersonation.alreadyImpersonating")
@@ -193,7 +207,11 @@ class AuthService(
 
         log.info("Impersonation started: manager={} -> target={}", manager.id, targetMemberId)
 
-        return jwtProvider.createImpersonationToken(targetEntity, manager.id)
+        val sessionId = manager.sessionId ?: legacyRefreshToken?.let(refreshTokenService::findByToken)
+            ?.takeIf { it.member.id == manager.id && it.isValid() }
+            ?.id
+            ?: throw AuthException("auth.impersonation.sessionInvalid")
+        return jwtProvider.createImpersonationToken(targetEntity, manager.id, sessionId)
     }
 
     fun restore(currentLogin: LoginMember, existingRefreshToken: String?, req: HttpServletRequest): TokenResponse {
@@ -209,11 +227,10 @@ class AuthService(
         }
         ensureActive(originalMember)
 
-        val jwt = jwtProvider.createToken(originalMember)
-
         val refreshToken = existingRefreshToken?.let { token ->
             refreshTokenService.findByToken(token)?.takeIf {
-                it.member.id == originalMemberId && it.isValid()
+                (currentLogin.sessionId == null || it.id == currentLogin.sessionId) &&
+                    it.member.id == originalMemberId && it.isValid()
             }?.also {
                 it.slideValidUntil(
                     req.remoteAddr,
@@ -221,11 +238,8 @@ class AuthService(
                     jwtConfig.refreshTokenValidityInDays
                 )
             }
-        } ?: refreshTokenService.createRefreshToken(
-            memberId = originalMemberId,
-            remoteAddr = req.remoteAddr,
-            userAgent = req.getHeader(HttpHeaders.USER_AGENT)
-        )
+        } ?: throw AuthException("auth.restore.sessionInvalid")
+        val jwt = jwtProvider.createToken(originalMember, requireNotNull(refreshToken.id))
 
         log.info("Impersonation ended: restored to={} from={}", originalMemberId, currentLogin.id)
 

@@ -28,12 +28,7 @@ export const authApi = {
    * Logout - clears HttpOnly cookies on server
    */
   logout: async (): Promise<void> => {
-    try {
-      await apiClient.post('/auth/logout')
-    } catch {
-      // Ignore errors during logout
-    }
-    window.location.href = '/'
+    await apiClient.post('/auth/logout')
   },
 
   getStatus: async (): Promise<LoginMember | null> => {

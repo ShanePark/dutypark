@@ -23,6 +23,9 @@ import com.tistory.shanepark.dutypark.security.oauth.naver.NaverTokenResponse
 import com.tistory.shanepark.dutypark.security.oauth.naver.NaverUserInfoApi
 import com.tistory.shanepark.dutypark.security.oauth.naver.NaverUserInfoPayload
 import com.tistory.shanepark.dutypark.security.oauth.naver.NaverUserInfoResponse
+import com.tistory.shanepark.dutypark.security.oauth.web.WebOAuthPurpose
+import com.tistory.shanepark.dutypark.security.oauth.web.WebOAuthTransaction
+import com.tistory.shanepark.dutypark.security.oauth.web.WebOAuthTransactionRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -33,6 +36,7 @@ import org.springframework.context.annotation.Import
 import org.springframework.context.annotation.Primary
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
+import org.springframework.mock.web.MockHttpSession
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.ResultActions
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders
@@ -42,6 +46,9 @@ import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPat
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.net.URI
 import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
+import java.security.SecureRandom
+import java.time.Clock
 import java.time.LocalDate
 import java.util.Base64
 
@@ -70,15 +77,24 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
     @Autowired
     lateinit var jwtConfig: JwtConfig
 
+    @Autowired
+    lateinit var webOAuthTransactionRepository: WebOAuthTransactionRepository
+
+    @Autowired
+    lateinit var clock: Clock
+
+    private val oauthSession = MockHttpSession()
+
     @Test
     fun `kakao callback links kakao id when login requested`() {
         val member = memberRepository.findById(TestData.member.id!!).orElseThrow()
         clearSocialAccount(member, SsoType.KAKAO)
 
-        val stateJson = encodedState(login = true, referer = "/after")
+        val stateJson = encodedState(SsoType.KAKAO, login = true, referer = "/after")
 
         mockMvc.perform(
             MockMvcRequestBuilders.get("/api/auth/Oauth2ClientCallback/kakao")
+                .session(oauthSession)
                 .param("code", "test-code")
                 .param("state", stateJson)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(member)}")
@@ -109,11 +125,12 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
         assertThat(existingMember.id).isNotEqualTo(member.id)
         linkSocialAccount(existingMember, SsoType.KAKAO, TEST_KAKAO_ID.toString())
 
-        val referer = "http://localhost:5173/member?tab=social&socialLinkSuccess=true"
-        val stateJson = encodedState(login = true, referer = referer)
+        val referer = "/member?tab=social&socialLinkSuccess=true"
+        val stateJson = encodedState(SsoType.KAKAO, login = true, referer = referer)
 
         mockMvc.perform(
             MockMvcRequestBuilders.get("/api/auth/Oauth2ClientCallback/kakao")
+                .session(oauthSession)
                 .param("code", "test-code")
                 .param("state", stateJson)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(member)}")
@@ -122,7 +139,7 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
             .andExpect(
                 header().string(
                     HttpHeaders.LOCATION,
-                    "http://localhost:5173/member?tab=social&socialLinkError=already_linked&socialProvider=kakao"
+                    "/member?tab=social&socialLinkError=already_linked&socialProvider=kakao"
                 )
             )
     }
@@ -134,10 +151,11 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
         linkSocialAccount(member, SsoType.KAKAO, TEST_KAKAO_ID.toString())
 
         val redirect = "/todo?view=mine"
-        val stateJson = encodedState(callbackUrl = CALLBACK_URL, referer = redirect)
+        val stateJson = encodedState(SsoType.KAKAO, callbackUrl = CALLBACK_URL, referer = redirect)
 
         mockMvc.perform(
             MockMvcRequestBuilders.get("/api/auth/Oauth2ClientCallback/kakao")
+                .session(oauthSession)
                 .param("code", "test-code")
                 .param("state", stateJson)
         )
@@ -157,10 +175,11 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
     @Test
     fun `kakao callback redirects with sso required when member not found`() {
         val redirect = "/todo?view=mine"
-        val stateJson = encodedState(callbackUrl = CALLBACK_URL, referer = redirect)
+        val stateJson = encodedState(SsoType.KAKAO, callbackUrl = CALLBACK_URL, referer = redirect)
 
         val result = mockMvc.perform(
             MockMvcRequestBuilders.get("/api/auth/Oauth2ClientCallback/kakao")
+                .session(oauthSession)
                 .param("code", "test-code")
                 .param("state", stateJson)
         )
@@ -183,11 +202,12 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
 
         mockMvc.perform(
             MockMvcRequestBuilders.get("/api/auth/Oauth2ClientCallback/kakao")
+                .session(oauthSession)
                 .param("code", "test-code")
                 .param("state", stateJson)
         )
-            .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.code").value("auth.oauth.callbackUrl.required"))
+            .andExpect(status().isFound)
+            .andExpect(header().string(HttpHeaders.LOCATION, "$CALLBACK_URL#error=oauth_state_invalid"))
     }
 
     @Test
@@ -195,10 +215,11 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
         val member = memberRepository.findById(TestData.member.id!!).orElseThrow()
         clearSocialAccount(member, SsoType.NAVER)
 
-        val stateJson = encodedState(login = true, referer = "/after")
+        val stateJson = encodedState(SsoType.NAVER, login = true, referer = "/after")
 
         mockMvc.perform(
             MockMvcRequestBuilders.get("/api/auth/Oauth2ClientCallback/naver")
+                .session(oauthSession)
                 .param("code", "test-code")
                 .param("state", stateJson)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(member)}")
@@ -222,11 +243,12 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
     fun `naver callback decodes utf8 state and preserves existing query on link success`() {
         val member = memberRepository.findById(TestData.member.id!!).orElseThrow()
         clearSocialAccount(member, SsoType.NAVER)
-        val referer = "http://localhost:5173/member?tab=네이버&socialLinkError=already_linked"
-        val stateJson = encodedState(login = true, referer = referer)
+        val referer = "/member?tab=네이버&socialLinkError=already_linked"
+        val stateJson = encodedState(SsoType.NAVER, login = true, referer = referer)
 
         mockMvc.perform(
             MockMvcRequestBuilders.get("/api/auth/Oauth2ClientCallback/naver")
+                .session(oauthSession)
                 .param("code", "test-code")
                 .param("state", stateJson)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(member)}")
@@ -236,7 +258,7 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
                 header().string(
                     HttpHeaders.LOCATION,
                     URI.create(
-                        "http://localhost:5173/member?tab=네이버" +
+                        "/member?tab=네이버" +
                             "&socialLinkSuccess=true&socialProvider=naver"
                     ).toASCIIString()
                 )
@@ -260,11 +282,12 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
         assertThat(existingMember.id).isNotEqualTo(member.id)
         linkSocialAccount(existingMember, SsoType.NAVER, TEST_NAVER_ID)
 
-        val referer = "http://localhost:5173/member"
-        val stateJson = encodedState(login = true, referer = referer)
+        val referer = "/member"
+        val stateJson = encodedState(SsoType.NAVER, login = true, referer = referer)
 
         mockMvc.perform(
             MockMvcRequestBuilders.get("/api/auth/Oauth2ClientCallback/naver")
+                .session(oauthSession)
                 .param("code", "test-code")
                 .param("state", stateJson)
                 .header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(member)}")
@@ -285,10 +308,11 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
         linkSocialAccount(member, SsoType.NAVER, TEST_NAVER_ID)
 
         val redirect = "/todo?view=mine"
-        val stateJson = encodedState(callbackUrl = CALLBACK_URL, referer = redirect)
+        val stateJson = encodedState(SsoType.NAVER, callbackUrl = CALLBACK_URL, referer = redirect)
 
         mockMvc.perform(
             MockMvcRequestBuilders.get("/api/auth/Oauth2ClientCallback/naver")
+                .session(oauthSession)
                 .param("code", "test-code")
                 .param("state", stateJson)
         )
@@ -308,10 +332,11 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
     @Test
     fun `naver callback redirects with sso required when member not found`() {
         val redirect = "/todo?view=mine"
-        val stateJson = encodedState(callbackUrl = CALLBACK_URL, referer = redirect)
+        val stateJson = encodedState(SsoType.NAVER, callbackUrl = CALLBACK_URL, referer = redirect)
 
         val result = mockMvc.perform(
             MockMvcRequestBuilders.get("/api/auth/Oauth2ClientCallback/naver")
+                .session(oauthSession)
                 .param("code", "test-code")
                 .param("state", stateJson)
         )
@@ -604,17 +629,30 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
     }
 
     private fun encodedState(
+        provider: SsoType,
         login: Boolean? = null,
         referer: String? = null,
         callbackUrl: String? = null
     ): String {
-        return Base64.getUrlEncoder()
-            .withoutPadding()
-            .encodeToString(
-                stateJson(login = login, referer = referer, callbackUrl = callbackUrl)
-                    .toByteArray(StandardCharsets.UTF_8)
+        val state = ByteArray(32).also(SecureRandom()::nextBytes)
+            .let { Base64.getUrlEncoder().withoutPadding().encodeToString(it) }
+        webOAuthTransactionRepository.save(
+            WebOAuthTransaction(
+                provider = provider,
+                purpose = if (login == true) WebOAuthPurpose.LINK else WebOAuthPurpose.LOGIN,
+                referer = referer ?: "/",
+                stateHash = sha256Hex(state),
+                browserSessionHash = sha256Hex(oauthSession.id),
+                stateExpiresAt = clock.instant().plusSeconds(300),
+                authenticatedMemberId = if (login == true) TestData.member.id else null,
             )
+        )
+        return state
     }
+
+    private fun sha256Hex(value: String): String = MessageDigest.getInstance("SHA-256")
+        .digest(value.toByteArray(StandardCharsets.UTF_8))
+        .joinToString("") { "%02x".format(it) }
 
     private fun clearSocialAccount(member: Member, provider: SsoType) {
         memberSocialAccountRepository.findByMemberAndProvider(member, provider)
@@ -734,7 +772,7 @@ class OAuthControllerTest : DutyparkIntegrationTest() {
     }
 
     companion object {
-        private const val CALLBACK_URL = "https://client.example.com/callback"
+        private const val CALLBACK_URL = "/auth/oauth-callback"
         private const val TEST_KAKAO_ID = 123456789L
         private const val TEST_NAVER_ID = "naver-user-123"
         private const val CURRENT_TERMS_VERSION = "2026-08-13"

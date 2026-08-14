@@ -47,12 +47,16 @@ nonisolated struct AuthService: Sendable {
     }
 
     func status() async throws -> LoginMember? {
-        try await client.optional("auth/status")
+        try await status(retryingAfterUnauthorized: true)
     }
 
     func restore() async throws -> LoginMember? {
-        if let member = try await status() {
-            return member
+        do {
+            if let member = try await status(retryingAfterUnauthorized: false) {
+                return member
+            }
+        } catch let error as APIError where error.isUnauthorized {
+            // A missing or expired access cookie can still be recovered below.
         }
         do {
             let _: TokenResponse = try await client.request(
@@ -61,10 +65,14 @@ nonisolated struct AuthService: Sendable {
                 body: EmptyRequest(),
                 retryingAfterUnauthorized: false
             )
-        } catch APIError.server(status: 401, code: _) {
+        } catch let error as APIError where error.isUnauthorized {
             return nil
         }
-        return try await status()
+        do {
+            return try await status(retryingAfterUnauthorized: false)
+        } catch let error as APIError where error.isUnauthorized {
+            return nil
+        }
     }
 
     func impersonate(memberId: Int64) async throws -> (LoginMember, expiresIn: Int) {
@@ -116,6 +124,24 @@ nonisolated struct AuthService: Sendable {
     func clearLocalAuthentication() async {
         await client.clearLocalAuthentication()
     }
+
+    private func status(retryingAfterUnauthorized: Bool) async throws -> LoginMember? {
+        try await client.optional(
+            "auth/status",
+            retryingAfterUnauthorized: retryingAfterUnauthorized
+        )
+    }
 }
 
 nonisolated private struct EmptyRequest: Encodable, Sendable {}
+
+nonisolated private extension APIError {
+    var isUnauthorized: Bool {
+        switch self {
+        case .server(status: 401, _), .serverWithDetails(status: 401, _, _):
+            true
+        default:
+            false
+        }
+    }
+}

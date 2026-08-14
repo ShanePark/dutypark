@@ -20,6 +20,23 @@ const showLayout = computed(() => {
   <div class="min-h-screen flex flex-col bg-dp-bg-secondary">
     <ImpersonationBanner v-if="authStore.isImpersonating" />
     <AppHeader v-if="showLayout && authStore.isLoggedIn" />
+    <div
+      v-if="showLayout && authStore.sessionCheckFailed"
+      class="border-b border-dp-warning/30 bg-dp-warning/10 px-4 py-3 text-sm text-dp-text-primary"
+      role="status"
+      aria-live="polite"
+    >
+      <div class="mx-auto flex max-w-4xl flex-wrap items-center justify-between gap-2">
+        <span>{{ $t('sessionRecovery.checkFailed') }}</span>
+        <RouterLink
+          v-if="route.name !== 'login'"
+          to="/auth/login"
+          class="font-semibold text-dp-accent hover:underline"
+        >
+          {{ $t('sessionRecovery.signIn') }}
+        </RouterLink>
+      </div>
+    </div>
     <main
       class="flex-1"
       :class="[

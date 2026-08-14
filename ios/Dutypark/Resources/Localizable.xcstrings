@@ -134,6 +134,26 @@
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Could not connect to Dutypark" } },
       "ko" : { "stringUnit" : { "state" : "translated", "value" : "Dutypark에 연결할 수 없습니다" } }
     } },
+    "auth.session.error.description" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Check your connection and try again, or clear this device's saved session and continue with public features." } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "연결 상태를 확인해 다시 시도하거나, 이 기기에 저장된 세션을 지우고 공개 기능을 계속 이용할 수 있습니다." } }
+    } },
+    "auth.session.continueAsGuest" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Continue with public features" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "공개 기능 계속 이용" } }
+    } },
+    "auth.logout.serverWarning.title" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Signed out on this device" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "이 기기에서 로그아웃했습니다" } }
+    } },
+    "auth.logout.serverWarning.message" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Dutypark could not confirm that the server session ended. On another signed-in device, open Settings > Sessions to end the remaining session." } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "서버 세션 종료를 확인하지 못했습니다. 로그인된 다른 기기에서 설정 > 세션을 열어 남아 있는 세션을 종료해주세요." } }
+    } },
+    "auth.logout.serverWarning.ok" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "OK" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "확인" } }
+    } },
     "friendTag.clear" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Clear selected friends" } },
       "ko" : { "stringUnit" : { "state" : "translated", "value" : "선택한 친구 지우기" } }

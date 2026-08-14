@@ -1,27 +1,6 @@
 import SwiftUI
 
 @MainActor
-enum RootLogoutAction {
-    static func perform(
-        push: APNsRegistrationManager = .shared,
-        logout: @MainActor () async -> Void
-    ) async {
-        await perform(
-            unregisterPush: { await push.unregister() },
-            logout: logout
-        )
-    }
-
-    static func perform(
-        unregisterPush: @MainActor () async -> Void,
-        logout: @MainActor () async -> Void
-    ) async {
-        await unregisterPush()
-        await logout()
-    }
-}
-
-@MainActor
 enum RootAuthenticatedStartupAction {
     static func perform(
         startPolling: () -> Void,
@@ -204,9 +183,7 @@ struct RootTabView: View {
         ) {
             Button(SettingsLocalization.string("settings.logout"), role: .destructive) {
                 Task {
-                    await RootLogoutAction.perform {
-                        await session.logout()
-                    }
+                    await session.logout()
                 }
             }
             Button(SettingsLocalization.string("settings.action.cancel"), role: .cancel) {}

@@ -46,17 +46,27 @@ class RefreshTokenService(
         }
     }
 
-    fun deleteRefreshToken(loginMember: LoginMember, id: Long) {
+    fun deleteRefreshToken(loginMember: LoginMember, id: Long, currentToken: String? = null): Boolean {
         val refreshToken = refreshTokenRepository.findById(id).orElseThrow()
         if (!loginMember.isAdmin && refreshToken.member.id != loginMember.id) {
             log.warn("No authority to delete refresh token: loginMemberId={}, refreshTokenId={}", loginMember.id, id)
             throw AuthException("auth.refreshToken.delete.forbidden")
         }
+        val deletedCurrentToken = currentToken != null && refreshToken.token == currentToken
         refreshTokenRepository.delete(refreshToken)
+        return deletedCurrentToken
     }
 
     fun findByToken(refreshToken: String): RefreshToken? {
         return refreshTokenRepository.findByToken(refreshToken)
+    }
+
+    fun isSessionActive(sessionId: Long, memberId: Long): Boolean {
+        return refreshTokenRepository.existsByIdAndMemberIdAndValidUntilAfter(
+            id = sessionId,
+            memberId = memberId,
+            now = LocalDateTime.now(),
+        )
     }
 
     fun deleteByToken(token: String): Boolean {

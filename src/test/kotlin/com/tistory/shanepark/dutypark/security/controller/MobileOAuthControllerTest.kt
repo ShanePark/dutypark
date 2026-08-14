@@ -139,11 +139,12 @@ class MobileOAuthControllerTest : DutyparkIntegrationTest() {
     }
 
     @Test
-    fun `kakao mobile oauth preserves forwarded production callback uri through token exchange`() {
+    fun `kakao mobile oauth ignores hostile host and forwarded headers for authorize and token exchange`() {
         val verifier = "i".repeat(43)
         val request = post("/api/auth/mobile/oauth/authorize")
+            .header(HttpHeaders.HOST, "host-evil.example")
             .header("X-Forwarded-Proto", "https")
-            .header("X-Forwarded-Host", "dutypark.o-r.kr")
+            .header("X-Forwarded-Host", "forwarded-evil.example")
             .contentType(MediaType.APPLICATION_JSON)
             .content(
                 """{"provider":"KAKAO","purpose":"LOGIN","callbackUri":"dutypark://oauth/callback","codeChallenge":"${challenge(verifier)}"}"""
@@ -157,13 +158,14 @@ class MobileOAuthControllerTest : DutyparkIntegrationTest() {
         val state = providerUri.queryParam("state")
 
         assertThat(providerUri.decodedQueryParam("redirect_uri"))
-            .isEqualTo(PRODUCTION_KAKAO_CALLBACK_URI)
+            .isEqualTo(FIXED_KAKAO_CALLBACK_URI)
 
         mockMvc.perform(
             get("/api/auth/mobile/oauth/callback/kakao")
+                .header(HttpHeaders.HOST, "host-evil.example")
                 .header("X-Forwarded-Proto", "https")
-                .header("X-Forwarded-Host", "dutypark.o-r.kr")
-                .param("code", "forwarded-provider-code")
+                .header("X-Forwarded-Host", "forwarded-evil.example")
+                .param("code", "fixed-provider-code")
                 .param("state", state)
         )
             .andExpect(status().isFound)
@@ -350,8 +352,8 @@ class MobileOAuthControllerTest : DutyparkIntegrationTest() {
                 if (code == "provider-failure") {
                     throw IllegalStateException("provider failed")
                 }
-                if (code == "forwarded-provider-code") {
-                    check(redirectUri == PRODUCTION_KAKAO_CALLBACK_URI)
+                if (code == "fixed-provider-code") {
+                    check(redirectUri == FIXED_KAKAO_CALLBACK_URI)
                 }
                 return KakaoTokenResponse("token", "bearer", "refresh", 3600, 7200)
             }
@@ -394,7 +396,7 @@ class MobileOAuthControllerTest : DutyparkIntegrationTest() {
     companion object {
         private const val KAKAO_ID = 987654321L
         private const val NAVER_ID = "mobile-naver-id"
-        private const val PRODUCTION_KAKAO_CALLBACK_URI =
-            "https://dutypark.o-r.kr/api/auth/mobile/oauth/callback/kakao"
+        private const val FIXED_KAKAO_CALLBACK_URI =
+            "http://localhost:8080/api/auth/mobile/oauth/callback/kakao"
     }
 }

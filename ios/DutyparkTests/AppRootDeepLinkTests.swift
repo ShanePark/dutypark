@@ -23,6 +23,7 @@ final class AppRootDeepLinkTests: XCTestCase {
         let destination = URL(string: "https://dutypark.o-r.kr/friends")!
 
         XCTAssertTrue(AppRootDeepLinkPolicy.shouldDeferDestination(destination, for: .guest))
+        XCTAssertFalse(GuestPendingDestinationPolicy.shouldShowUnsupported(destination))
     }
 
     @MainActor
@@ -35,11 +36,12 @@ final class AppRootDeepLinkTests: XCTestCase {
     }
 
     @MainActor
-    func testWarmGuestPublicLinkStillOpensInGuestRootAndRemainsDeferred() {
+    func testWarmGuestPublicLinkOpensWithoutBeingDeferredForAuthentication() {
         let destination = URL(string: "https://dutypark.o-r.kr/duty/42")!
 
         XCTAssertTrue(GuestPendingDestinationPolicy.shouldConsume(destination))
         XCTAssertEqual(GuestDeepLink.route(from: destination), .publicCalendar(42))
-        XCTAssertTrue(AppRootDeepLinkPolicy.shouldDeferDestination(destination, for: .guest))
+        XCTAssertFalse(AppRootDeepLinkPolicy.shouldDeferDestination(destination, for: .guest))
+        XCTAssertTrue(AppRootDeepLinkPolicy.shouldDeferDestination(destination, for: .restoring))
     }
 }

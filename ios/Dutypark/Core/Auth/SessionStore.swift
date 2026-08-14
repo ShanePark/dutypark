@@ -12,12 +12,18 @@ nonisolated enum AccountDeletionAcceptedPresentation: Equatable, Sendable {
     case accepted
 }
 
+nonisolated enum ServerSessionWarningPresentation: Equatable, Sendable {
+    case serverMayRemain
+}
+
 @MainActor
 final class SessionStore: ObservableObject {
     private static let impersonationExpirationKey = "dp-impersonation-expires"
 
     private let authService: AuthService
+    private let unregisterPush: @MainActor @Sendable () async -> Void
     private var impersonationExpiryTask: Task<Void, Never>?
+    private var isTerminatingSession = false
 
     @Published private(set) var state: SessionState
     @Published private(set) var isWorking = false
@@ -26,13 +32,16 @@ final class SessionStore: ObservableObject {
     @Published private(set) var impersonationExpiresAt: Date?
     @Published private(set) var pendingDestination: URL?
     @Published private(set) var accountDeletionAcceptedPresentation: AccountDeletionAcceptedPresentation?
+    @Published private(set) var serverSessionWarning: ServerSessionWarningPresentation?
 
     init(
         authService: AuthService = AuthService(),
         initialState: SessionState = .restoring,
-        impersonationExpiresAt: Date? = nil
+        impersonationExpiresAt: Date? = nil,
+        unregisterPush: @escaping @MainActor @Sendable () async -> Void = {}
     ) {
         self.authService = authService
+        self.unregisterPush = unregisterPush
         self.state = initialState
         self.impersonationExpiresAt = impersonationExpiresAt
             ?? UserDefaults.standard.object(forKey: Self.impersonationExpirationKey) as? Date
@@ -45,6 +54,7 @@ final class SessionStore: ObservableObject {
             if let member = try await authService.restore() {
                 await authenticate(member)
             } else {
+                await authService.clearLocalAuthentication()
                 await becomeGuest()
             }
         } catch {
@@ -56,6 +66,11 @@ final class SessionStore: ObservableObject {
         guard state == .restoreFailed else { return }
         state = .restoring
         await restore()
+    }
+
+    func continueAsGuestAfterRestoreFailure() async {
+        guard state == .restoreFailed else { return }
+        await terminateSession(reportServerFailure: true)
     }
 
     func login(email: String, password: String, rememberMe: Bool) async {
@@ -96,12 +111,9 @@ final class SessionStore: ObservableObject {
     func logout() async {
         guard !isWorking else { return }
         isWorking = true
-        defer {
-            isWorking = false
-        }
-        try? await authService.logout()
-        await authService.clearLocalAuthentication()
-        await becomeGuest()
+        defer { isWorking = false }
+        pendingDestination = nil
+        await terminateSession(reportServerFailure: true)
     }
 
     /// Completes the irreversible local side of account deletion after the server
@@ -119,6 +131,10 @@ final class SessionStore: ObservableObject {
 
     func dismissAccountDeletionAcceptedPresentation() {
         accountDeletionAcceptedPresentation = nil
+    }
+
+    func dismissServerSessionWarning() {
+        serverSessionWarning = nil
     }
 
     func finishExternalLogin() async throws {
@@ -147,7 +163,8 @@ final class SessionStore: ObservableObject {
             accountDeletionAcceptedPresentation = nil
             state = .authenticated(member)
         } catch {
-            await becomeGuest()
+            pendingDestination = nil
+            await terminateSession(reportServerFailure: true)
         }
     }
 
@@ -166,6 +183,7 @@ final class SessionStore: ObservableObject {
 
     private func authenticate(_ member: LoginMember) async {
         accountDeletionAcceptedPresentation = nil
+        serverSessionWarning = nil
         await authService.setAuthenticationFailureHandler { [weak self] in
             await self?.authenticationDidFail()
         }
@@ -188,6 +206,22 @@ final class SessionStore: ObservableObject {
     }
 
     private func authenticationDidFail() async {
+        pendingDestination = nil
+        await terminateSession(reportServerFailure: true)
+    }
+
+    private func terminateSession(reportServerFailure: Bool) async {
+        guard !isTerminatingSession else { return }
+        isTerminatingSession = true
+        defer { isTerminatingSession = false }
+        await unregisterPush()
+        do {
+            try await authService.logout()
+            serverSessionWarning = nil
+        } catch {
+            serverSessionWarning = reportServerFailure ? .serverMayRemain : nil
+        }
+        await authService.clearLocalAuthentication()
         await becomeGuest()
     }
 

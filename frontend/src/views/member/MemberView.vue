@@ -74,7 +74,7 @@ const authStore = useAuthStore()
 const themeStore = useThemeStore()
 const aiConsentStore = useAiScheduleConsentStore()
 const { t } = useI18n()
-const { showSuccess, showError, showInfo, confirm, confirmDelete, toastSuccess } = useSwal()
+const { showSuccess, showError, showWarning, showInfo, confirm, confirmDelete, toastSuccess } = useSwal()
 
 const showAiPolicyModal = ref(false)
 const aiPolicyModalMode = ref<'read' | 'consent'>('read')
@@ -644,7 +644,7 @@ async function closeSsoSettings() {
 async function connectSso(provider: SsoProvider) {
   if (isSsoActionPending.value || !isWebConnectableSsoProvider(provider)) return
 
-  const prompts: Record<WebConnectableSsoProvider, { message: string; title: string; connect: () => void }> = {
+  const prompts: Record<WebConnectableSsoProvider, { message: string; title: string; connect: () => Promise<void> }> = {
     KAKAO: {
       message: t('member.sso.prompts.kakaoMessage'),
       title: t('member.sso.prompts.kakaoTitle'),
@@ -664,13 +664,13 @@ async function connectSso(provider: SsoProvider) {
   connectingSso.value = provider
   try {
     storePendingSocialLinkProvider(toSocialLinkProvider(provider))
-    prompt.connect()
+    await prompt.connect()
   } catch (error) {
     console.error('Failed to connect sso:', error)
     clearPendingSocialLinkProvider()
-    connectingSso.value = null
     showError(t('member.sso.startFailed'))
-    return
+  } finally {
+    connectingSso.value = null
   }
 }
 
@@ -823,14 +823,25 @@ async function changePassword() {
     })
     await showSuccess(t('member.password.changedReLogin'))
     showPasswordModal.value = false
-    authStore.logout()
-    router.push('/auth/login')
+    await logoutAndRedirect()
   } catch (error: any) {
     const message = resolveApiErrorMessage(error, { fallbackKey: 'member.password.changeFailed' }, t)
     showError(message)
   } finally {
     changingPassword.value = false
   }
+}
+
+async function logoutAndRedirect() {
+  const serverSessionCleared = await authStore.logout()
+  await router.push('/auth/login')
+  if (!serverSessionCleared) {
+    await showWarning(
+      t('sessionRecovery.logoutUnconfirmed'),
+      t('sessionRecovery.logoutUnconfirmedTitle')
+    )
+  }
+  window.location.replace('/auth/login')
 }
 
 // Account deletion
@@ -862,8 +873,7 @@ async function logout() {
     t('member.logoutDialog.title')
   )
   if (confirmed) {
-    authStore.logout()
-    router.push('/auth/login')
+    await logoutAndRedirect()
   }
 }
 

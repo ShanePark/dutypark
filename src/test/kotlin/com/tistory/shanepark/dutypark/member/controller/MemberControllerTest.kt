@@ -224,7 +224,7 @@ class MemberControllerTest : RestDocsTest() {
 
     @Test
     fun `unlink social account rejects impersonation with machine readable code`() {
-        val impersonationToken = jwtProvider.createImpersonationToken(TestData.member, TestData.admin.id!!)
+        val impersonationToken = getImpersonationJwt(TestData.member, TestData.admin)
 
         mockMvc.perform(
             RestDocumentationRequestBuilders.delete("/api/members/me/social-accounts/KAKAO")

@@ -356,6 +356,12 @@ export default {
       settings: 'Settings',
     },
   },
+  sessionRecovery: {
+    checkFailed: 'We could not verify your session. You can keep using public features or sign in again.',
+    signIn: 'Go to sign in',
+    logoutUnconfirmedTitle: 'Server sign-out not confirmed',
+    logoutUnconfirmed: 'This device was signed out safely, but a server session may remain. Sign in again and open Settings > Sessions, or use another signed-in device, to end it.',
+  },
   notifications: {
     common: {
       ariaLabel: 'Notifications',

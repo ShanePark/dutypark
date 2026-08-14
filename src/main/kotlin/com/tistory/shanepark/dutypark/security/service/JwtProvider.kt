@@ -24,7 +24,7 @@ class JwtProvider(
     private val key: SecretKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwtConfig.secret))
     private val tokenValidityInMilliseconds: Long = 1000L * jwtConfig.tokenValidityInSeconds
 
-    fun createToken(member: Member): String {
+    fun createToken(member: Member, sessionId: Long): String {
 
         val validity = Date(Date().time + tokenValidityInMilliseconds)
 
@@ -35,12 +35,13 @@ class JwtProvider(
             .claim("name", member.name)
             .claim("teamId", team?.id)
             .claim("teamName", team?.name)
+            .claim(SESSION_ID_CLAIM, sessionId)
             .signWith(key)
             .expiration(validity)
             .compact()
     }
 
-    fun createImpersonationToken(target: Member, originalMemberId: Long): String {
+    fun createImpersonationToken(target: Member, originalMemberId: Long, sessionId: Long): String {
         val validity = Date(Date().time + tokenValidityInMilliseconds)
 
         val team = target.team
@@ -52,6 +53,7 @@ class JwtProvider(
             .claim("teamName", team?.name)
             .claim("originalSub", originalMemberId.toString())
             .claim("impersonated", true)
+            .claim(SESSION_ID_CLAIM, sessionId)
             .signWith(key)
             .expiration(validity)
             .compact()
@@ -69,6 +71,7 @@ class JwtProvider(
         val teamId = (claims["teamId"] as? Number)?.toLong()
         val isImpersonated = claims["impersonated"] as? Boolean ?: false
         val originalSub = claims["originalSub"] as? String
+        val sessionId = (claims[SESSION_ID_CLAIM] as? Number)?.toLong()
 
         val loginMember = LoginMember(
             id = claims.subject.toLong(),
@@ -78,7 +81,8 @@ class JwtProvider(
             team = claims["teamName"] as String?,
             isAdmin = dutyparkProperties.adminEmails.contains(email),
             isImpersonating = isImpersonated,
-            originalMemberId = originalSub?.toLongOrNull()
+            originalMemberId = originalSub?.toLongOrNull(),
+            sessionId = sessionId,
         )
         return loginMember
     }
@@ -105,6 +109,10 @@ class JwtProvider(
             }
         }
         return TokenStatus.VALID
+    }
+
+    companion object {
+        private const val SESSION_ID_CLAIM = "sessionId"
     }
 
 

@@ -159,7 +159,7 @@ class MobileOAuthWebAccountDeletionControllerTest : DutyparkIntegrationTest() {
         )
             .andExpect(status().isUnauthorized)
 
-        val impersonationToken = jwtProvider.createImpersonationToken(TestData.member, TestData.admin.id!!)
+        val impersonationToken = getImpersonationJwt(TestData.member, TestData.admin)
         mockMvc.perform(
             post("/api/auth/mobile/oauth/authorize")
                 .header(HttpHeaders.AUTHORIZATION, "Bearer $impersonationToken")

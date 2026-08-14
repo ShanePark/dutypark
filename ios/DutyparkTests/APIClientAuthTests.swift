@@ -1,4 +1,5 @@
 import Foundation
+import UserNotifications
 import XCTest
 @testable import Dutypark
 
@@ -7,6 +8,7 @@ final class APIClientAuthTests: XCTestCase {
 
     override func tearDown() {
         URLProtocolStub.handler = nil
+        URLProtocolStub.error = nil
         HTTPCookieStorage.shared.cookies?.forEach(HTTPCookieStorage.shared.deleteCookie)
         super.tearDown()
     }
@@ -240,6 +242,159 @@ final class APIClientAuthTests: XCTestCase {
         }
     }
 
+    @MainActor
+    func testImpersonationUnauthorizedTerminatesStaleSessionWithoutRefresh() async {
+        let refreshCount = LockedCounter()
+        let pushCount = LockedCounter()
+        URLProtocolStub.handler = { request in
+            switch request.url?.path {
+            case "/api/auth/status":
+                return Self.response(
+                    request,
+                    status: 200,
+                    body: #"{"id":2,"email":null,"name":"Managed","teamId":null,"team":null,"isAdmin":false,"isImpersonating":true,"originalMemberId":1}"#
+                )
+            case "/api/protected":
+                return Self.response(request, status: 401)
+            case "/api/auth/refresh":
+                _ = refreshCount.increment()
+                return Self.response(request, status: 200, body: #"{"expiresIn":3600}"#)
+            case "/api/auth/logout":
+                return Self.response(request, status: 204)
+            default:
+                return Self.response(request, status: 404)
+            }
+        }
+        let client = makeClient()
+        let store = SessionStore(
+            authService: AuthService(client: client),
+            unregisterPush: { _ = pushCount.increment() }
+        )
+        await store.restore()
+
+        do {
+            let _: ValueResponse = try await client.request("protected")
+            XCTFail("Expected unauthorized response")
+        } catch APIError.server(status: 401, code: _) {
+            // Expected.
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+
+        XCTAssertEqual(refreshCount.current, 0)
+        XCTAssertEqual(pushCount.current, 1)
+        XCTAssertEqual(store.state, .guest)
+        XCTAssertNil(store.impersonationExpiresAt)
+    }
+
+    func testDeferredAuthenticationFailureDoesNotWaitForAPNsOperationLockCleanup() async {
+        let handlerStarted = LockedFlag()
+        let requestFinished = LockedFlag()
+        let cleanupCanContinue = TestAsyncGate()
+        URLProtocolStub.handler = { request in
+            switch request.url?.path {
+            case "/api/auth/push/apns/register", "/api/auth/refresh":
+                return Self.response(request, status: 401)
+            default:
+                return Self.response(request, status: 404)
+            }
+        }
+        let client = makeClient()
+        await client.setAuthenticationFailureHandler {
+            handlerStarted.set()
+            await cleanupCanContinue.wait()
+        }
+
+        let requestTask = Task {
+            defer { requestFinished.set() }
+            do {
+                let _: ValueResponse = try await client.request(
+                    "auth/push/apns/register",
+                    method: .post,
+                    body: EmptyTestRequest(),
+                    authenticationFailureHandling: .deferred
+                )
+                XCTFail("Expected invalid refresh response")
+            } catch {
+                // Expected.
+            }
+        }
+
+        for _ in 0..<200 where !handlerStarted.value {
+            try? await Task.sleep(for: .milliseconds(1))
+        }
+        for _ in 0..<200 where !requestFinished.value {
+            try? await Task.sleep(for: .milliseconds(1))
+        }
+
+        XCTAssertTrue(handlerStarted.value)
+        XCTAssertTrue(
+            requestFinished.value,
+            "APNs register must release its operation lock before session cleanup unregisters push"
+        )
+        await cleanupCanContinue.open()
+        await requestTask.value
+    }
+
+    @MainActor
+    func testAPNsRegistrationAuthenticationFailureReleasesManagerLockBeforeSessionCleanup() async throws {
+        let suiteName = "APIClientAuthTests.apnsAuthenticationFailure.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        defaults.set("stored-token", forKey: "dutypark.apns.device-token")
+        let unregisterCount = LockedCounter()
+        URLProtocolStub.handler = { request in
+            switch request.url?.path {
+            case "/api/auth/status":
+                return Self.response(
+                    request,
+                    status: 200,
+                    body: #"{"id":1,"email":"test@duty.park","name":"Test","teamId":null,"team":null,"isAdmin":false,"isImpersonating":false,"originalMemberId":null}"#
+                )
+            case "/api/auth/push/apns/register", "/api/auth/refresh":
+                return Self.response(request, status: 401)
+            case "/api/auth/push/apns/unregister":
+                _ = unregisterCount.increment()
+                return Self.response(request, status: 204)
+            case "/api/auth/logout":
+                return Self.response(request, status: 204)
+            default:
+                return Self.response(request, status: 404)
+            }
+        }
+        let client = makeClient()
+        let manager = APNsRegistrationManager(
+            api: APNsRegistrationAPI(client: client),
+            notificationCenter: APIClientAuthNotificationCenter(),
+            remoteNotificationRegistrar: APIClientAuthRemoteNotificationRegistrar(),
+            defaults: defaults
+        )
+        let store = SessionStore(
+            authService: AuthService(client: client),
+            unregisterPush: { await manager.unregister() }
+        )
+        await store.restore()
+        await manager.activateForAuthenticatedSession()
+        let registrationFinished = LockedFlag()
+        let registrationTask = Task { @MainActor in
+            await manager.didRegisterForRemoteNotifications(deviceToken: Data([0xAA]))
+            registrationFinished.set()
+        }
+
+        for _ in 0..<500 where store.state != .guest || !registrationFinished.value {
+            try? await Task.sleep(for: .milliseconds(1))
+        }
+
+        XCTAssertEqual(store.state, .guest)
+        XCTAssertTrue(registrationFinished.value, "APNs registration must not deadlock session cleanup")
+        XCTAssertGreaterThanOrEqual(unregisterCount.current, 1)
+        if registrationFinished.value {
+            await registrationTask.value
+        } else {
+            registrationTask.cancel()
+        }
+    }
+
     func testRefreshGateDoesNotRefreshAgainForAStaleUnauthorizedResponse() async throws {
         let gate = RefreshGate()
         let observedGeneration = await gate.generation
@@ -281,6 +436,89 @@ final class APIClientAuthTests: XCTestCase {
     }
 
     @MainActor
+    func testSessionRestoreTreatsUnauthorizedStatusAndInvalidRefreshAsGuest() async {
+        let requests = LockedRequests()
+        URLProtocolStub.handler = { request in
+            requests.append(request.url?.path ?? "")
+            switch request.url?.path {
+            case "/api/auth/status":
+                return Self.response(
+                    request,
+                    status: 401,
+                    body: #"{"status":401,"code":"auth.required"}"#
+                )
+            case "/api/auth/refresh":
+                return Self.response(
+                    request,
+                    status: 401,
+                    body: #"{"status":401,"code":"auth.refresh.invalid"}"#
+                )
+            default:
+                return Self.response(request, status: 404)
+            }
+        }
+
+        let store = SessionStore(authService: AuthService(client: makeClient()))
+
+        await store.restore()
+
+        XCTAssertEqual(store.state, .guest)
+        XCTAssertEqual(requests.values, ["/api/auth/status", "/api/auth/refresh"])
+    }
+
+    @MainActor
+    func testContinueAsGuestAfterRestoreFailureClearsCookiesWithoutDiscardingDeepLink() async throws {
+        let destination = URL(string: "https://dutypark.o-r.kr/todo")!
+        let events = LockedEvents()
+        let cookie = try XCTUnwrap(HTTPCookie(properties: [
+            .domain: "dutypark.test",
+            .path: "/",
+            .name: "refresh_token",
+            .value: "possibly-stale",
+            .secure: "TRUE",
+        ]))
+        HTTPCookieStorage.shared.setCookie(cookie)
+        URLProtocolStub.handler = { request in
+            events.append("server")
+            return Self.response(request, status: 503)
+        }
+        let store = SessionStore(
+            authService: AuthService(client: makeClient()),
+            unregisterPush: { events.append("push") }
+        )
+        store.deferDestinationUntilAuthenticated(destination)
+        await store.restore()
+        XCTAssertEqual(store.state, .restoreFailed)
+
+        await store.continueAsGuestAfterRestoreFailure()
+
+        XCTAssertEqual(store.state, .guest)
+        XCTAssertEqual(store.pendingDestination, destination)
+        XCTAssertEqual(events.values, ["server", "push", "server"])
+        XCTAssertEqual(store.serverSessionWarning, .serverMayRemain)
+        XCTAssertFalse(HTTPCookieStorage.shared.cookies?.contains {
+            $0.name == "access_token" || $0.name == "refresh_token"
+        } == true)
+
+        await store.retryRestore()
+        XCTAssertEqual(store.state, .guest)
+    }
+
+    @MainActor
+    func testOfflineAndTimeoutRestoreOfferRecoveryInsteadOfChangingSessionSilently() async {
+        for code in [URLError.notConnectedToInternet, URLError.timedOut] {
+            URLProtocolStub.error = URLError(code)
+            let store = SessionStore(authService: AuthService(client: makeClient()))
+
+            await store.restore()
+
+            XCTAssertEqual(store.state, .restoreFailed, "Failed for \(code)")
+            await store.restore()
+            XCTAssertEqual(store.state, .restoreFailed, "Restore must not retry automatically for \(code)")
+        }
+    }
+
+    @MainActor
     func testPendingDestinationSurvivesLoginBoundaryUntilConsumed() {
         let destination = URL(string: "dutypark://schedule/123")!
         let store = SessionStore(initialState: .guest)
@@ -289,6 +527,24 @@ final class APIClientAuthTests: XCTestCase {
 
         XCTAssertEqual(store.consumePendingDestination(), destination)
         XCTAssertNil(store.consumePendingDestination())
+    }
+
+    @MainActor
+    func testLoginFailurePreservesAuthenticatedDestinationForRetry() async {
+        URLProtocolStub.handler = { request in
+            Self.response(request, status: 401)
+        }
+        let destination = URL(string: "https://dutypark.o-r.kr/todo")!
+        let store = SessionStore(
+            authService: AuthService(client: makeClient()),
+            initialState: .guest
+        )
+        store.deferDestinationUntilAuthenticated(destination)
+
+        await store.login(email: "test@duty.park", password: "wrong", rememberMe: false)
+
+        XCTAssertEqual(store.state, .guest)
+        XCTAssertEqual(store.pendingDestination, destination)
     }
 
     @MainActor
@@ -398,6 +654,223 @@ final class APIClientAuthTests: XCTestCase {
         XCTAssertFalse(HTTPCookieStorage.shared.cookies?.contains {
             $0.name == "access_token" || $0.name == "refresh_token"
         } == true)
+        XCTAssertEqual(store.serverSessionWarning, .serverMayRemain)
+
+        store.dismissServerSessionWarning()
+        XCTAssertNil(store.serverSessionWarning)
+    }
+
+    @MainActor
+    func testLogoutRunsPushServerAndLocalCleanupInOrderAndDiscardsPendingDestination() async throws {
+        let events = LockedEvents()
+        let cachedRequest = URLRequest(url: URL(string: "https://dutypark.test/cached-member")!)
+        URLCache.shared.storeCachedResponse(
+            CachedURLResponse(
+                response: HTTPURLResponse(
+                    url: cachedRequest.url!,
+                    statusCode: 200,
+                    httpVersion: nil,
+                    headerFields: nil
+                )!,
+                data: Data("cached".utf8)
+            ),
+            for: cachedRequest
+        )
+        XCTAssertNotNil(URLCache.shared.cachedResponse(for: cachedRequest))
+        let cookie = try XCTUnwrap(HTTPCookie(properties: [
+            .domain: "dutypark.test",
+            .path: "/",
+            .name: "access_token",
+            .value: "secret",
+            .secure: "TRUE",
+        ]))
+        HTTPCookieStorage.shared.setCookie(cookie)
+        URLProtocolStub.handler = { request in
+            events.append("server")
+            return Self.response(request, status: 204)
+        }
+        let store = SessionStore(
+            authService: AuthService(client: makeClient()),
+            initialState: .authenticated(Self.testMember),
+            unregisterPush: { events.append("push") }
+        )
+        store.deferDestinationUntilAuthenticated(URL(string: "https://dutypark.o-r.kr/todo")!)
+
+        await store.logout()
+
+        XCTAssertEqual(events.values, ["push", "server"])
+        XCTAssertEqual(store.state, .guest)
+        XCTAssertNil(store.pendingDestination)
+        XCTAssertNil(store.serverSessionWarning)
+        XCTAssertFalse(HTTPCookieStorage.shared.cookies?.contains {
+            $0.name == "access_token" || $0.name == "refresh_token"
+        } == true)
+        XCTAssertNil(URLCache.shared.cachedResponse(for: cachedRequest))
+    }
+
+    @MainActor
+    func testInvalidRefreshUsesSameTerminationOrderAndWarnsWhenServerLogoutFails() async throws {
+        let events = LockedEvents()
+        URLProtocolStub.handler = { request in
+            switch request.url?.path {
+            case "/api/auth/status":
+                return Self.response(
+                    request,
+                    status: 200,
+                    body: #"{"id":1,"email":"test@duty.park","name":"Test","teamId":null,"team":null,"isAdmin":false,"isImpersonating":false,"originalMemberId":null}"#
+                )
+            case "/api/protected":
+                return Self.response(request, status: 401)
+            case "/api/auth/refresh":
+                return Self.response(request, status: 401)
+            case "/api/auth/logout":
+                events.append("server")
+                return Self.response(request, status: 503)
+            default:
+                return Self.response(request, status: 404)
+            }
+        }
+        let client = makeClient()
+        let store = SessionStore(
+            authService: AuthService(client: client),
+            unregisterPush: { events.append("push") }
+        )
+        await store.restore()
+
+        do {
+            let _: ValueResponse = try await client.request("protected")
+            XCTFail("Expected invalid refresh response")
+        } catch {
+            // Expected.
+        }
+
+        XCTAssertEqual(events.values, ["push", "server"])
+        XCTAssertEqual(store.state, .guest)
+        XCTAssertEqual(store.serverSessionWarning, .serverMayRemain)
+    }
+
+    @MainActor
+    func testConcurrentInvalidRefreshTerminatesSessionOnlyOnce() async {
+        let refreshCount = LockedCounter()
+        let logoutCount = LockedCounter()
+        let pushCount = LockedCounter()
+        URLProtocolStub.handler = { request in
+            switch request.url?.path {
+            case "/api/auth/status":
+                return Self.response(
+                    request,
+                    status: 200,
+                    body: #"{"id":1,"email":"test@duty.park","name":"Test","teamId":null,"team":null,"isAdmin":false,"isImpersonating":false,"originalMemberId":null}"#
+                )
+            case "/api/protected":
+                return Self.response(request, status: 401)
+            case "/api/auth/refresh":
+                _ = refreshCount.increment()
+                return Self.response(request, status: 401)
+            case "/api/auth/logout":
+                _ = logoutCount.increment()
+                return Self.response(request, status: 204)
+            default:
+                return Self.response(request, status: 404)
+            }
+        }
+        let client = makeClient()
+        let store = SessionStore(
+            authService: AuthService(client: client),
+            unregisterPush: { _ = pushCount.increment() }
+        )
+        await store.restore()
+
+        async let first = requestFails(client)
+        async let second = requestFails(client)
+        let failures = await [first, second]
+
+        XCTAssertEqual(failures, [true, true])
+        XCTAssertEqual(refreshCount.current, 1)
+        XCTAssertEqual(pushCount.current, 1)
+        XCTAssertEqual(logoutCount.current, 1)
+        XCTAssertEqual(store.state, .guest)
+    }
+
+    @MainActor
+    func testUnauthorizedRetryAfterSuccessfulRefreshTerminatesWithoutAnotherRefresh() async {
+        let protectedCount = LockedCounter()
+        let refreshCount = LockedCounter()
+        let events = LockedEvents()
+        URLProtocolStub.handler = { request in
+            switch request.url?.path {
+            case "/api/auth/status":
+                return Self.response(
+                    request,
+                    status: 200,
+                    body: #"{"id":1,"email":"test@duty.park","name":"Test","teamId":null,"team":null,"isAdmin":false,"isImpersonating":false,"originalMemberId":null}"#
+                )
+            case "/api/protected":
+                _ = protectedCount.increment()
+                return Self.response(request, status: 401)
+            case "/api/auth/refresh":
+                _ = refreshCount.increment()
+                return Self.response(request, status: 200, body: #"{"expiresIn":3600}"#)
+            case "/api/auth/logout":
+                events.append("server")
+                return Self.response(request, status: 204)
+            default:
+                return Self.response(request, status: 404)
+            }
+        }
+        let client = makeClient()
+        let store = SessionStore(
+            authService: AuthService(client: client),
+            unregisterPush: { events.append("push") }
+        )
+        await store.restore()
+
+        do {
+            let _: ValueResponse = try await client.request("protected")
+            XCTFail("Expected retried unauthorized response")
+        } catch APIError.server(status: 401, code: _) {
+            // Expected.
+        } catch {
+            XCTFail("Unexpected error: \(error)")
+        }
+
+        XCTAssertEqual(protectedCount.current, 2)
+        XCTAssertEqual(refreshCount.current, 1)
+        XCTAssertEqual(events.values, ["push", "server"])
+        XCTAssertEqual(store.state, .guest)
+        XCTAssertNil(store.serverSessionWarning)
+    }
+
+    @MainActor
+    func testUnauthorizedLogoutStillClearsLocalSessionAndShowsServerWarning() async {
+        URLProtocolStub.handler = { request in
+            Self.response(request, status: 401)
+        }
+        let store = SessionStore(
+            authService: AuthService(client: makeClient()),
+            initialState: .authenticated(Self.testMember)
+        )
+
+        await store.logout()
+
+        XCTAssertEqual(store.state, .guest)
+        XCTAssertEqual(store.serverSessionWarning, .serverMayRemain)
+    }
+
+    @MainActor
+    func testOfflineAndTimeoutLogoutStillClearLocalSessionAndShowServerWarning() async {
+        for code in [URLError.notConnectedToInternet, URLError.timedOut] {
+            URLProtocolStub.error = URLError(code)
+            let store = SessionStore(
+                authService: AuthService(client: makeClient()),
+                initialState: .authenticated(Self.testMember)
+            )
+
+            await store.logout()
+
+            XCTAssertEqual(store.state, .guest, "Failed for \(code)")
+            XCTAssertEqual(store.serverSessionWarning, .serverMayRemain, "Failed for \(code)")
+        }
     }
 
     @MainActor
@@ -516,6 +989,71 @@ private struct ValueResponse: Decodable, Sendable {
     let value: Int
 }
 
+private struct EmptyTestRequest: Encodable, Sendable {}
+
+private final class LockedFlag: @unchecked Sendable {
+    private let lock = NSLock()
+    private var storedValue = false
+
+    func set() {
+        lock.lock()
+        storedValue = true
+        lock.unlock()
+    }
+
+    var value: Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return storedValue
+    }
+}
+
+private actor TestAsyncGate {
+    private var isOpen = false
+    private var continuations: [CheckedContinuation<Void, Never>] = []
+
+    func wait() async {
+        guard !isOpen else { return }
+        await withCheckedContinuation { continuation in
+            continuations.append(continuation)
+        }
+    }
+
+    func open() {
+        isOpen = true
+        let waiting = continuations
+        continuations.removeAll()
+        for continuation in waiting {
+            continuation.resume()
+        }
+    }
+}
+
+@MainActor
+private final class APIClientAuthNotificationCenter: NotificationAuthorizationCenter {
+    func requestAuthorization(options: UNAuthorizationOptions) async throws -> Bool {
+        true
+    }
+
+    func authorizationStatus() async -> UNAuthorizationStatus {
+        .authorized
+    }
+}
+
+@MainActor
+private final class APIClientAuthRemoteNotificationRegistrar: RemoteNotificationRegistrar {
+    func registerForRemoteNotifications() {}
+}
+
+private func requestFails(_ client: APIClient) async -> Bool {
+    do {
+        let _: ValueResponse = try await client.request("protected")
+        return false
+    } catch {
+        return true
+    }
+}
+
 private final class LockedCounter: @unchecked Sendable {
     private let lock = NSLock()
     private var value = 0
@@ -533,6 +1071,25 @@ private final class LockedCounter: @unchecked Sendable {
         return value
     }
 }
+
+private final class LockedRequests: @unchecked Sendable {
+    private let lock = NSLock()
+    private var storedValues: [String] = []
+
+    func append(_ value: String) {
+        lock.lock()
+        storedValues.append(value)
+        lock.unlock()
+    }
+
+    var values: [String] {
+        lock.lock()
+        defer { lock.unlock() }
+        return storedValues
+    }
+}
+
+private typealias LockedEvents = LockedRequests
 
 private final class RefreshRecorder: @unchecked Sendable {
     private let condition = NSCondition()
@@ -588,12 +1145,17 @@ private final class RefreshRecorder: @unchecked Sendable {
 
 private final class URLProtocolStub: URLProtocol, @unchecked Sendable {
     nonisolated(unsafe) static var handler: (@Sendable (URLRequest) -> (HTTPURLResponse, Data))?
+    nonisolated(unsafe) static var error: URLError?
 
     override class func canInit(with request: URLRequest) -> Bool { true }
 
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
     override func startLoading() {
+        if let error = Self.error {
+            client?.urlProtocol(self, didFailWithError: error)
+            return
+        }
         guard let handler = Self.handler else {
             fatalError("URLProtocolStub.handler is not set")
         }

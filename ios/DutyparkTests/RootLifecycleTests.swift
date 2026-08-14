@@ -180,18 +180,6 @@ struct RootLifecycleTests {
     }
 
     @Test
-    func logoutWaitsForPushCleanupBeforeEndingSession() async {
-        var events: [String] = []
-
-        await RootLogoutAction.perform(
-            unregisterPush: { events.append("push") },
-            logout: { events.append("session") }
-        )
-
-        #expect(events == ["push", "session"])
-    }
-
-    @Test
     func launchArgumentsSelectOnlyExplicitUITestSessionOverrides() {
         #expect(DutyparkLaunchPolicy.initialSessionState(arguments: []) == .restoring)
         #expect(
