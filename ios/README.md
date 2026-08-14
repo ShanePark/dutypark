@@ -48,8 +48,8 @@ xcodebuild \
 
 Xcode 프로젝트는 filesystem-synchronized groups를 사용합니다. 위 소스 디렉터리에 파일을 추가할 때 일반적으로 `project.pbxproj`를 수정할 필요가 없습니다.
 
-## 서명 전 확인
+## 서명 상태
 
-현재 Xcode 프로젝트의 개발용 번들 식별자는 서버 패키지 관례를 따른 `com.tistory.shanepark.dutypark`입니다. 출시 목표 번들 식별자는 `io.github.shanepark.dutypark`를 우선 후보로 하지만, Apple Developer Program 승인 후 Explicit App ID 등록 화면에서 가용성을 확인하기 전에는 최종 확정하지 않습니다.
+Apple Developer Program 개인 멤버십은 2026-08-14 승인됐다. Team ID는 `2V47G42CDS`, Xcode 앱 Bundle ID는 등록된 Explicit App ID `io.github.shanepark.dutypark`로 확정했으며 Sign in with Apple, Push Notifications, Associated Domains capability를 활성화했다.
 
-Apple Developer Program은 개인 주체로 가입하고 결제를 완료했으며 현재 Apple 승인을 기다리는 중입니다. 승인 후 유료 개인 Developer Team과 Team ID를 확인하고, 목표 Bundle ID가 사용 가능하면 Xcode·App Store Connect·APNs topic·AASA를 함께 변경해야 합니다. 개인 멤버십으로 출시할 때 App Store 판매자명에는 계정 소유자의 법적 실명이 표시될 수 있습니다.
+Xcode Development Team·Bundle ID 전환 후 generic iOS Release development 서명 빌드가 성공했고, provisioning profile의 application identifier와 Sign in with Apple `Default`·Associated Domains entitlement를 확인했다. App Store distribution 서명 Archive·Validate App·TestFlight 검증은 별도로 남아 있다. 개인 멤버십으로 출시할 때 App Store 판매자명에는 계정 소유자의 법적 실명이 표시될 수 있다.

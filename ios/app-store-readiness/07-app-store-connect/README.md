@@ -1,6 +1,6 @@
 # Apple Developer 및 App Store Connect 제출 준비
 
-- 최종 확인일: 2026-08-13
+- 최종 확인일: 2026-08-14
 
 ## 목표
 
@@ -10,11 +10,10 @@ App Store 심사에 필요한 Apple Developer 설정, 앱 레코드, 개인정�
 
 ## 현재 상태와 선행 조건
 
-- Apple Developer Program은 개인 주체로 가입하고 결제를 완료했으며, 현재 Apple 승인을 기다리는 중이다.
-- 프로젝트의 Team은 승인된 유료 개인 Developer Team으로 확정해야 한다.
-- Team 값이 비어 있거나 무료 Personal Team이면 App Store 배포 서명과 capability가 정상 구성되지 않는다. 유료 개인 멤버십의 Developer Team과 무료 Personal Team을 혼동하지 않는다.
-- 현재 Xcode Bundle ID는 `com.tistory.shanepark.dutypark`이고, 출시 목표 후보는 `io.github.shanepark.dutypark`다. Apple 승인 후 Explicit App ID 등록 시 가용성을 확인하기 전에는 최종 확정하지 않는다.
-- 실제 Team ID, 인증서, 프로비저닝 프로파일 같은 값은 문서나 저장소에 비밀값으로 기록하지 않는다.
+- Apple Developer Program 개인 멤버십은 2026-08-14 승인됐다.
+- 프로젝트 Team ID는 `2V47G42CDS`, 등록된 Explicit App ID와 Xcode Bundle ID는 `io.github.shanepark.dutypark`다.
+- Sign in with Apple, Push Notifications, Associated Domains capability를 활성화했고 development 서명된 generic iOS Release 앱에서 profile/application identifier와 Apple·Associated Domains entitlement를 확인했다.
+- 개인 키 원문, 인증서, 프로비저닝 프로파일은 문서나 저장소에 기록하지 않는다.
 - Apple 로그인과 Associated Domains 등 capability를 사용하는 기능은 App ID와 Xcode 양쪽 설정이 일치해야 한다.
 - Associated Domains 상세 점검: [`ios/app-store-readiness/06-associated-domains/README.md`](../06-associated-domains/README.md)
 - 기존 배포 체크리스트: [`ios/DEPLOYMENT_CHECKLIST.md`](../../DEPLOYMENT_CHECKLIST.md)
@@ -22,7 +21,7 @@ App Store 심사에 필요한 Apple Developer 설정, 앱 레코드, 개인정�
 ## 1. Apple Developer Program
 
 - [x] 배포 주체를 개인으로 확정했다.
-- [-] Apple Developer Program 가입과 결제를 완료했다. Apple의 멤버십 승인을 기다리고 있다.
+- [x] Apple Developer Program 가입·결제와 멤버십 승인을 완료했다.
 - [ ] 계약, 세금, 은행 정보가 필요한 경우 담당자를 정한다.
 - [ ] 다른 운영 사용자를 초대할 경우 Account Holder, Admin, App Manager 등 최소 권한 역할을 배정한다.
 - [ ] 개인 가입의 App Store 판매자명이 계정 소유자의 법적 실명으로 표시되는 점과 멤버십 갱신 책임을 최종 확인한다.
@@ -31,24 +30,23 @@ App Store 심사에 필요한 Apple Developer 설정, 앱 레코드, 개인정�
 
 ## 2. App ID와 capability
 
-- [!] Apple 승인 후 `io.github.shanepark.dutypark`의 가용성을 확인하고, 사용 가능하면 운영 Explicit App ID로 생성한다. 사용할 수 없다면 새 후보를 결정한 뒤 모든 문서를 함께 갱신한다.
-- [ ] Xcode의 Signing & Capabilities에서 실제 Team을 선택한다.
+- [x] `io.github.shanepark.dutypark`를 운영 Explicit App ID로 등록했다.
+- [x] Xcode의 Signing & Capabilities에서 Team `2V47G42CDS`를 선택했다.
 - [ ] 자동 서명을 사용할지 수동 서명을 사용할지 팀 기준을 정한다.
-- [ ] Sign in with Apple capability를 활성화한다.
-- [ ] Push Notifications capability를 활성화한다.
-- [ ] Associated Domains capability를 활성화한다.
-- [ ] App ID와 provisioning profile에 capability가 반영되었는지 확인한다.
+- [x] Sign in with Apple capability를 활성화했다.
+- [x] Push Notifications capability를 활성화했다.
+- [x] Associated Domains capability를 활성화했다.
+- [x] development provisioning profile에 Sign in with Apple과 Associated Domains capability가 반영됐는지 확인했다.
 - [ ] Release archive의 entitlements를 검사한다.
 
 개발용과 운영용 식별자를 분리한다면 App ID, APNs 환경, 서버 설정도 함께 분리해야 한다.
-Explicit App ID를 만들기 전까지 현재 Xcode의 `com.tistory.shanepark.dutypark`를 출시 식별자로 등록하거나 App Store Connect 앱 레코드에 연결하지 않는다.
 
 ## 3. App Store Connect 앱 레코드
 
-- [!] 멤버십 승인과 출시 Bundle ID 확정 후 App Store Connect에서 새 앱 레코드를 만든다.
+- [ ] App Store Connect에서 새 앱 레코드를 만든다.
 - [ ] 플랫폼으로 iOS를 선택한다.
 - [ ] 앱 이름과 기본 언어를 확정한다.
-- [ ] 확정된 운영 Bundle ID를 연결한다. 현재 우선 후보는 `io.github.shanepark.dutypark`다.
+- [ ] 확정된 운영 Bundle ID `io.github.shanepark.dutypark`를 연결한다.
 - [ ] SKU를 팀 규칙에 맞게 정한다.
 - [ ] 사용자 접근 권한과 기본·보조 카테고리를 지정한다.
 

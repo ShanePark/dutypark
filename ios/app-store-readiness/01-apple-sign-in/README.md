@@ -1,8 +1,8 @@
 # 01. Sign in with Apple
 
-> 기준일·최종 확인일: 2026-08-13
+> 기준일·최종 확인일: 2026-08-14
 > 우선순위: P0
-> 상태: 저장소 구현·자동 검증 완료 / Apple 외부 연동·실기기 E2E 대기
+> 상태: 저장소 구현·Apple App ID/key·development 서명 검증 완료 / 운영 비밀·실계정 E2E 대기
 
 [전체 출시 준비 체크리스트로 돌아가기](../README.md)
 
@@ -14,7 +14,7 @@ Apple 사용자가 신규 가입, 기존 로그인, 계정 연결·해제와 회
 - **Apple 로그인 진입점은 iOS 앱에만 제공한다.** 웹에는 Apple 로그인 버튼, Services ID, Return URL 또는 Apple 웹 OAuth flow를 만들지 않는다.
 - 웹은 iOS에서 연결된 Apple 상태 표시, 서버의 revoke-first 연결 해제, Apple-only 계정 삭제 시 iOS 앱 이용 안내만 제공한다.
 - Apple 이름·이메일 scope를 요청하지 않는다. 검증된 Apple `sub`만 계정 연결 키로 사용하며 가입 이름과 동의는 기존 Dutypark 가입 화면에서 직접 받는다.
-- 현재 Xcode Bundle ID `com.tistory.shanepark.dutypark`는 유지한다. 출시 후보 `io.github.shanepark.dutypark`는 Apple 멤버십 승인과 Explicit App ID 가용성 확인 후 확정한다.
+- Apple Developer Program 개인 멤버십은 2026-08-14 승인됐고 Team ID는 `2V47G42CDS`다. Explicit App ID와 Xcode Bundle ID는 `io.github.shanepark.dutypark`로 확정했다.
 
 ## 현재 구현 위치
 
@@ -70,7 +70,7 @@ Apple 사용자가 신규 가입, 기존 로그인, 계정 연결·해제와 회
 - [x] iOS 설정에서 Apple 연결·revoke-first 해제와 계정 삭제 재인증을 제공한다.
 - [x] 취소, 설정 누락, 잘못된 credential, 공급자 장애, 계정 불일치를 한국어·영어로 구분한다.
 - [x] Apple user identifier, identity token, authorization code, nonce를 기기에 영속화하거나 콘솔에 기록하지 않는다.
-- [x] `com.apple.developer.applesignin = Default` entitlement를 소스에 선언하고 Debug/Release Simulator 처리 산출물에서 확인했다.
+- [x] `com.apple.developer.applesignin = Default` entitlement를 소스·Debug/Release Simulator 처리 산출물과 development 서명된 generic iOS Release 앱에서 확인했다.
 
 ## 웹 범위
 
@@ -101,17 +101,19 @@ Apple 사용자가 신규 가입, 기존 로그인, 계정 연결·해제와 회
 - [x] Apple 로그인 진입점 없이 연결 상태·revoke-first unlink·삭제 안내만 제공하는 계약을 검증했다.
 - [x] Vitest 34 files/162 tests, type-check, production build와 release-notes check가 통과했다.
 
-## Apple Developer 및 운영 환경 대기 항목
+## Apple Developer 및 운영 환경 항목
 
-- [-] Apple Developer Program 개인 가입·결제는 완료했고 승인을 기다린다.
-- [!] 승인 후 출시 후보 `io.github.shanepark.dutypark`의 Explicit App ID 가용성을 확인하고 최종 Bundle ID를 확정한다.
-- [ ] 최종 Explicit App ID를 Primary App ID로 설정하고 Sign in with Apple capability를 활성화한다.
-- [ ] 최종 Bundle ID와 Xcode target, Apple client ID, provisioning profile을 일치시킨다.
-- [ ] Sign in with Apple server key를 만들고 Team ID, Key ID, `.p8`을 운영 비밀 저장소에 넣는다.
-- [ ] 별도의 32바이트 credential 암호화 키를 생성해 base64로 운영 환경에 주입한다.
+- [x] Apple Developer Program 개인 멤버십 승인을 완료했다(2026-08-14).
+- [x] `io.github.shanepark.dutypark` Explicit App ID를 등록하고 최종 Bundle ID로 확정했다.
+- [x] Explicit App ID에서 Sign in with Apple, Push Notifications, Associated Domains capability를 활성화했다.
+- [x] Xcode target의 Development Team `2V47G42CDS`, Bundle ID, Apple native client ID와 development provisioning profile을 일치시켰다.
+- [x] Sign in with Apple server key를 만들고 Key ID `4D85ZS4KM2`를 확인했다. 개인 키 원문·경로는 문서나 Git에 남기지 않는다.
+- [-] 별도의 32바이트 credential 암호화 키를 생성해 로컬 로그인 키체인에 보관했다. 운영 환경 실제 주입은 남아 있다.
 - [ ] `APPLE_CLIENT_ID`, `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY`, `APPLE_CREDENTIAL_ENCRYPTION_KEY`를 운영에 주입한다.
+- [x] `docker-compose.yml`이 위 Apple 환경 변수를 서버 컨테이너에 전달하도록 연결했다.
 - [x] 웹 Services ID, Website URL과 Return URL은 만들지 않는다.
-- [ ] 서명된 Release Archive의 entitlement와 provisioning profile에 Sign in with Apple capability가 포함됐는지 확인한다.
+- [x] development 서명된 generic iOS Release 앱에서 application identifier, provisioning profile, Sign in with Apple `Default`, Associated Domains entitlement를 확인했다.
+- [ ] App Store distribution 서명 Archive에서도 entitlement와 provisioning profile을 확인하고 Validate App을 통과한다.
 - [ ] App Review Notes에 iOS Apple 로그인 신규 가입·연결·탈퇴 재인증 경로를 설명한다.
 
 비밀값은 Git, 문서, 이슈, 로그, 스크린샷 또는 앱 번들에 남기지 않는다.
@@ -135,9 +137,9 @@ Apple 사용자가 신규 가입, 기존 로그인, 계정 연결·해제와 회
 - [x] 저장소에서 native Apple 로그인·가입·연결·해제·삭제 재인증과 revoke 경로가 구현되고 targeted 자동 검증을 통과했다.
 - [x] Apple `sub` 유일성, token 필수 claim·nonce·replay와 no-auto-merge 정책이 서버에서 강제된다.
 - [x] 웹에 Apple OAuth flow를 추가하지 않는 제품 범위가 구현과 문서에 일치한다.
-- [ ] Apple 멤버십 승인 후 실제 App ID, server key, provisioning과 운영 환경 설정을 완료한다.
+- [-] 실제 App ID, server key와 development provisioning 설정은 완료했다. 운영 비밀 실제 주입과 App Store distribution 서명은 남아 있다.
 - [ ] 실기기·TestFlight에서 신규 가입, 재로그인, 연결, 충돌, 취소, 연결 해제와 탈퇴 revoke를 통과한다.
-- [ ] 서명된 Release Archive에서 최종 entitlement를 검증한다.
+- [ ] App Store distribution 서명 Archive에서 최종 entitlement를 검증한다.
 - [ ] 로그·배포 환경·Archive에 key, token, code, nonce 원문 등 비밀값이 없는지 최종 확인한다.
 
 ## 출시 후 보강

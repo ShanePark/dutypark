@@ -59,7 +59,7 @@ Debug sandbox와 TestFlight/App Store production APNs를 분리하고, 운영 �
 
 ### 3. Apple Developer와 Xcode 설정
 
-- [!] Apple 멤버십 승인 후 가용성을 확인한 출시 목표 Explicit App ID `io.github.shanepark.dutypark`에 Push Notifications capability를 활성화한다. 현재 Xcode의 `com.tistory.shanepark.dutypark`와 혼동하지 않는다.
+- [x] 등록된 Explicit App ID `io.github.shanepark.dutypark`에 Push Notifications capability를 활성화하고 Xcode Bundle ID를 일치시켰다.
 - [ ] 개발·배포 provisioning profile을 갱신하고 실제 entitlement를 archive에서 확인한다.
 - [ ] Debug archive가 아닌 Release archive에 production `aps-environment`가 들어가는지 확인한다.
 - [x] 소스 entitlement와 Xcode build setting, Debug/Release Simulator의 처리된 `.xcent`에서 개발·운영 APNs 환경 분리가 일치한다.

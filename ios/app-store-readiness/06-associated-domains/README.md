@@ -11,19 +11,17 @@ Dutypark의 웹 링크를 iOS 앱으로 안전하게 연결하고, App Store 제
 - iOS 프로젝트에는 Associated Domains entitlement가 이미 존재한다.
 - 2026-08-13 소스 entitlement의 `plutil` 검증과 새 Debug/Release Simulator의 처리된 `.xcent`에서 `applinks:dutypark.o-r.kr`가 정확히 일치함을 확인했다.
 - 관련 파일: [`ios/Dutypark/Dutypark.entitlements`](../../Dutypark/Dutypark.entitlements)
-- 현재 Xcode Bundle ID는 `com.tistory.shanepark.dutypark`이고 출시 목표 후보는 `io.github.shanepark.dutypark`다. Apple 승인 후 Explicit App ID 가용성 확인 전까지 출시 식별자는 미확정이다.
-- 2026-08-12 확인 기준, 운영 AASA URL은 HTTP 200을 반환하지만 `Content-Type: text/html`인 SPA HTML을 응답한다.
-- 따라서 현재 응답은 유효한 AASA JSON으로 인정될 수 없으며 Universal Links 설치 검증이 실패할 가능성이 높다.
-- HTTP 상태 코드가 200이라는 사실만으로 설정 완료로 판단하면 안 된다.
+- Apple Developer Team ID는 `2V47G42CDS`, 등록된 Explicit App ID와 Xcode Bundle ID는 `io.github.shanepark.dutypark`다. Associated Domains capability도 활성화했다.
+- AASA JSON과 `/.well-known/apple-app-site-association` nginx 전용 경로를 구현했다. 이전 운영 응답은 SPA HTML이었으므로 실제 운영 반영 후 HTTP 응답을 다시 확인해야 한다.
 
 ## 해야 할 일
 
-- [ ] Apple Developer 계정의 실제 Team ID를 확인한다.
-- [ ] Xcode 프로젝트의 Bundle ID를 확인한다.
-- [ ] `TeamID.BundleID` 형태의 `appID` 값을 확정한다.
+- [x] Apple Developer 계정의 실제 Team ID `2V47G42CDS`를 확인했다.
+- [x] Xcode 프로젝트의 Bundle ID `io.github.shanepark.dutypark`를 확인했다.
+- [x] `TeamID.BundleID` 형태의 `appID`를 `2V47G42CDS.io.github.shanepark.dutypark`로 확정했다.
 - [x] 현재 소스와 Debug/Release 빌드 중간 산출물의 `applinks:` 값이 운영 도메인 `dutypark.o-r.kr`와 정확히 일치하는지 확인한다.
-- [ ] 운영 서버에서 AASA JSON을 제공한다.
-- [ ] AASA URL이 SPA fallback 또는 로그인 화면으로 전달되지 않도록 한다.
+- [x] 운영 배포 산출물에 AASA JSON을 추가했다.
+- [x] AASA URL이 SPA fallback보다 우선하도록 nginx 전용 경로를 구현했다.
 - [ ] AASA 응답에 redirect가 없는지 확인한다.
 - [ ] 올바른 Content-Type을 반환하도록 설정한다.
 - [ ] CDN과 reverse proxy의 캐시·라우팅 규칙을 확인한다.
@@ -54,7 +52,7 @@ Apple은 다음 경로 중 하나에서 AASA 파일을 조회한다.
 
 ## AASA 예시
 
-실제 값이 확정되기 전에는 아래 placeholder를 운영에 배포하지 않는다.
+현재 구현된 식별자와 최소 path 범위는 다음과 같다.
 
 ```json
 {
@@ -62,13 +60,13 @@ Apple은 다음 경로 중 하나에서 AASA 파일을 조회한다.
     "details": [
       {
         "appIDs": [
-          "TEAM_ID.io.github.shanepark.dutypark"
+          "2V47G42CDS.io.github.shanepark.dutypark"
         ],
         "components": [
-          {
-            "/": "/<APP_LINK_PATH>/*",
-            "comment": "Dutypark 앱에서 처리할 링크"
-          }
+          { "/": "/guide" },
+          { "/": "/terms" },
+          { "/": "/privacy" },
+          { "/": "/duty/*" }
         ]
       }
     ]
@@ -76,7 +74,7 @@ Apple은 다음 경로 중 하나에서 AASA 파일을 조회한다.
 }
 ```
 
-위 `appID`의 `TEAM_ID`는 placeholder이며 전체 값은 출시 목표 후보를 반영한 **승인 대기 값**이다. Apple 멤버십 승인 후 `io.github.shanepark.dutypark`의 Explicit App ID 가용성과 실제 Team ID를 확인한 뒤 확정하고, 사용할 수 없다면 AASA를 배포하기 전에 새 Bundle ID로 바꾼다. path도 현재 라우팅 설정을 확인해 실제 값으로 채운다.
+위 값은 등록된 Team ID와 Explicit App ID를 반영한다. 실제 운영 응답과 앱 설치 후 Universal Links 동작은 아직 검증하지 않았다.
 
 ## 서버와 CDN 점검
 
@@ -129,8 +127,8 @@ Safari 주소창에서 직접 입력한 동작은 링크 탭 동작과 다를 �
 
 ## 완료 조건
 
-- [ ] entitlement에 올바른 `applinks:<운영도메인>` 값이 포함되어 있다.
-- [ ] AASA의 `appIDs`가 실제 Team ID와 Bundle ID 조합이다.
+- [x] entitlement에 올바른 `applinks:<운영도메인>` 값이 포함되어 있다.
+- [x] AASA의 `appIDs`가 실제 Team ID와 Bundle ID 조합이다.
 - [ ] 운영 AASA가 redirect 없이 HTTP 200 JSON을 반환한다.
 - [ ] Content-Type이 `application/json`이다.
 - [ ] SPA HTML이 AASA 경로에 반환되지 않는다.

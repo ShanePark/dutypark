@@ -1,6 +1,6 @@
 # 11. 릴리스 엔지니어링과 App Store 빌드
 
-- 기준일·최종 확인일: 2026-08-13
+- 기준일·최종 확인일: 2026-08-14
 - 상태: 수동 빌드 가능, 배포 파이프라인 정비 필요
 - 기존 문서: [iOS README](../../README.md), [기존 배포 체크리스트](../../DEPLOYMENT_CHECKLIST.md)
 - 공식 절차: [Distribute an app through the App Store](https://developer.apple.com/documentation/xcode/distributing-your-app-for-beta-testing-and-releases)
@@ -9,12 +9,12 @@
 
 - 저장소에서 iOS 전용 CI 구성은 확인되지 않는다.
 - 로컬 빌드·테스트 명령은 [iOS README](../../README.md)에 문서화되어 있다.
-- 프로젝트의 `DEVELOPMENT_TEAM` 값은 현재 빈 문자열이다.
-- 현재 Xcode Bundle ID는 `com.tistory.shanepark.dutypark`이며, 출시 목표 후보 `io.github.shanepark.dutypark`는 Apple 멤버십 승인 후 Explicit App ID 가용성 확인 전까지 미확정이다.
-- Apple Developer Program은 개인 주체 가입·결제를 완료했고 승인을 기다리는 중이다.
+- 프로젝트의 `DEVELOPMENT_TEAM`은 승인된 개인 Team `2V47G42CDS`다.
+- 등록된 Explicit App ID와 Xcode Bundle ID는 `io.github.shanepark.dutypark`다.
+- Apple Developer Program 개인 멤버십은 2026-08-14 승인됐다.
 - 앱 타깃 버전은 `MARKETING_VERSION = 1.0`, 빌드는 `CURRENT_PROJECT_VERSION = 1`이다.
-- 자동 서명 설정과 entitlement 파일은 있으나 실제 배포 팀·프로필 검증이 필요하다.
-- Debug/Release Simulator 처리 entitlement의 APNs 환경 분리, Associated Domains와 Sign in with Apple `Default`는 사전 검증했지만, 서명 Archive entitlement와 provisioning은 미검증이다.
+- 자동 서명과 development provisioning으로 generic iOS Release 서명 빌드를 성공시켰다.
+- 서명 앱의 application identifier, provisioning profile, Associated Domains와 Sign in with Apple `Default`를 확인했다. App Store distribution 서명 Archive 검증은 남아 있다.
 - [PrivacyInfo.xcprivacy](../../Dutypark/PrivacyInfo.xcprivacy)가 앱 타깃에 포함되어 있다.
 - Privacy Manifest에는 현재 수집하는 Name, Email, Photos or Videos, Other User Content, User ID, Device ID와 Other Data Types가 App Functionality·user-linked·non-tracking으로 선언되어 있다.
 - Release Archive 생성, 업로드 및 보관 절차는 아직 재현 가능한 자동화로 고정되지 않았다.
@@ -23,8 +23,8 @@
 
 ## 출시 전 필수 체크리스트
 
-- [ ] Apple Developer Program 팀과 App Store Connect 권한을 확정한다.
-- [ ] Xcode 프로젝트 Release 설정에 실제 Team을 연결한다.
+- [x] Apple Developer Program 팀을 확정했다.
+- [x] Xcode 프로젝트 Release 설정에 실제 Team을 연결했다.
 - [ ] Bundle ID와 App Store Connect 앱 레코드가 정확히 일치한다.
 - [ ] Distribution certificate와 App Store provisioning profile을 준비한다.
 - [ ] macOS 실행 환경에서 clean build, test, archive를 재현한다.
@@ -69,8 +69,7 @@ Apple 참고: [Xcode Cloud overview](https://developer.apple.com/xcode-cloud/) �
 
 ## 3. 서명과 entitlement
 
-현재 [project.pbxproj](../../Dutypark.xcodeproj/project.pbxproj)의 `DEVELOPMENT_TEAM`이 비어 있으므로 출시 전에 팀을 연결해야 한다.
-무료 Personal Team이나 임시 Bundle ID로 만든 Archive를 출시 산출물로 사용하지 않는다. Apple 승인이 완료되면 유료 개인 Developer Team으로 서명한다.
+현재 [project.pbxproj](../../Dutypark.xcodeproj/project.pbxproj)의 `DEVELOPMENT_TEAM`은 `2V47G42CDS`, Bundle ID는 `io.github.shanepark.dutypark`다. development 서명 검증 결과를 App Store distribution 서명 완료로 오인하지 않는다.
 
 검증 항목:
 
@@ -88,7 +87,7 @@ Apple 참고: [Code signing](https://developer.apple.com/support/code-signing/) 
 - 소스 `Dutypark.entitlements`는 `plutil`을 통과하며 `aps-environment=$(APNS_ENVIRONMENT)`, `applinks:dutypark.o-r.kr`와 `com.apple.developer.applesignin = Default`를 선언한다.
 - app target의 `showBuildSettings`는 Debug `APNS_ENVIRONMENT=development`, Release `production`, 양쪽 모두 같은 `CODE_SIGN_ENTITLEMENTS` 파일을 사용한다.
 - Apple 로그인 반영 후 새 Debug/Release Simulator build의 `ProcessProductPackaging` 처리 산출물은 각각 APNs development/production, 동일한 associated domain과 `com.apple.developer.applesignin = Default`를 기록했다.
-- 이 Simulator `.xcent` 결과는 소스 설정의 기술 사전 검증이다. 실제 Apple Developer App ID capability와 provisioning profile 승인을 대신하지 않는다.
+- 승인된 Explicit App ID capability와 development provisioning으로 generic iOS Release 앱을 서명했고 application identifier, associated domain과 `com.apple.developer.applesignin = Default`를 확인했다.
 - `CODE_SIGNING_ALLOWED=NO` unsigned generic Release Archive에는 `.xcent`, `embedded.mobileprovision`, 최종 코드서명 entitlement가 없고 Archive의 Signing Identity·Team도 비어 있다. 따라서 이 사전 감사는 실제 배포 Team/App ID capability/profile, 서명 Archive, APNs 송수신 또는 Universal Links E2E를 검증하지 않는다.
 
 ## 4. 버전과 빌드 번호
@@ -153,8 +152,8 @@ device 앱 번들의 패키징 기준선이며, 배포 인증서·provisioning p
   `localhost`, 테스트 target 이름 및 저장소 절대 경로가 없었다. 운영 API URL은 의도된 Release 설정이므로 제외 대상이 아니다.
 - `PrivacyInfo.xcprivacy`, `Assets.car`, `ko`·`en` localization, 앱 아이콘과 폰트가 포함됐다.
   `NOTICE.txt`는 내장 MapleStory 폰트의 의도된 저작권 고지다.
-- 앱 `Info.plist`는 현재 Xcode 값인 Bundle ID `com.tistory.shanepark.dutypark`, 버전 `1.0`(빌드 `1`),
-  최소 iOS `17.0`을 기록했다. 출시 목표 후보 `io.github.shanepark.dutypark`가 확정됐다는 의미는 아니다.
+- 당시 앱 `Info.plist`는 Bundle ID `com.tistory.shanepark.dutypark`, 버전 `1.0`(빌드 `1`),
+  최소 iOS `17.0`을 기록했다. 이후 Bundle ID는 `io.github.shanepark.dutypark`로 확정·전환했다.
 - `.xcarchive`에 dSYM이 존재하고 앱 실행 파일과 dSYM의 UUID
   `36688204-A146-3DBF-B416-6CAAA7A63439`가 일치했다.
 - 같은 날 만든 Release Simulator clean build의 실행 파일에는 테스트 플래그·계정·localhost는 없었지만,

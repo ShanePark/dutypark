@@ -1,6 +1,6 @@
 # Dutypark iOS 배포 체크리스트
 
-최종 확인일: 2026-08-13
+최종 확인일: 2026-08-14
 
 이 문서는 현재 저장소와 운영 주소 `https://dutypark.o-r.kr`를 기준으로, 실제 배포 전 필요한 작업을 순서대로 정리한다. 비밀값은 저장소나 이 문서에 기록하지 않는다.
 
@@ -12,19 +12,21 @@
 
 ## 0. 현재 상태 요약
 
-- `[x]` 현재 Xcode 프로젝트의 iOS Bundle ID가 `com.tistory.shanepark.dutypark`로 설정되어 있다.
-- `[!]` 출시 목표 Bundle ID는 `io.github.shanepark.dutypark`를 우선 후보로 한다. Apple 승인 후 Explicit App ID 등록 시 가용성을 확인하기 전에는 최종 확정하지 않는다.
+- `[x]` Explicit App ID와 Xcode 프로젝트의 iOS Bundle ID가 `io.github.shanepark.dutypark`로 확정됐다.
+- `[x]` Apple Developer Program 개인 멤버십이 2026-08-14 승인됐고 Team ID `2V47G42CDS`를 Xcode Development Team에 연결했다.
 - `[x]` Debug/Release의 APNs 환경, Push Notifications 및 Associated Domains entitlement가 저장소에 있다.
 - `[x]` 앱은 운영 API `https://dutypark.o-r.kr/api/`를 사용한다.
 - `[x]` 카카오·네이버용 모바일 OAuth 서버 경로와 앱 복귀 스킴 `dutypark://oauth/callback`이 구현되어 있다.
 - `[x]` APNs 등록·해제 및 발송 코드와 배포 설정 자리만 마련되어 있다.
 - `[x]` 앱 내 약관·개인정보 처리방침 조회 화면과 `PrivacyInfo.xcprivacy`가 있다.
-- `[-]` Apple Developer Program에 개인 주체로 가입하고 결제를 완료했으며, 현재 Apple 승인을 기다리고 있다. 승인 전의 Personal Team 설치는 App Store 배포 준비 완료를 뜻하지 않는다.
-- `[ ]` App ID, 배포 인증서/프로비저닝, APNs 키 및 App Store Connect 앱 레코드는 외부 콘솔에서 완료해야 한다.
+- `[x]` Explicit App ID에서 Sign in with Apple, Push Notifications, Associated Domains capability를 활성화했다.
+- `[x]` Sign in with Apple server key를 생성했고 Key ID는 `4D85ZS4KM2`다. 개인 키 원문은 저장소에서 추적하지 않는다.
+- `[-]` generic iOS Release development 서명 빌드와 profile/application-identifier/Apple `Default`/Associated Domains entitlement 확인은 완료했다. App Store distribution 서명 Archive·Validate App은 남아 있다.
+- `[ ]` APNs 키 및 App Store Connect 앱 레코드는 외부 콘솔에서 완료해야 한다.
 - `[ ]` 카카오·네이버 콘솔에 모바일 콜백을 추가하고, 해당 서버 코드를 운영에 배포해야 한다.
-- `[-]` iOS 전용 Sign in with Apple과 서버 검증·revoke-first 계정 생명주기를 구현하고 자동 검증했다. Apple 외부 설정·서명·실기기/TestFlight E2E가 남아 있다.
+- `[-]` iOS 전용 Sign in with Apple과 서버 검증·revoke-first 계정 생명주기를 구현하고 자동 검증했다. App ID·server key·development 서명은 완료했고 운영 비밀 주입·distribution 서명·실기기/TestFlight E2E가 남아 있다.
 - `[-]` 앱 내 계정 삭제는 iOS·웹·서버에 구현됐다. Apple revoke도 구현됐으며 실제 공급자·MySQL·TestFlight 검증이 남아 있다.
-- `[ ]` 운영 서버의 AASA(`apple-app-site-association`) 파일이 아직 올바른 JSON으로 제공되지 않는다.
+- `[-]` Team ID·Bundle ID 기반 AASA JSON과 nginx 전용 경로는 구현됐다. 운영 배포 후 실제 URL의 JSON MIME·무리디렉션 응답을 확인해야 한다.
 - `[ ]` TestFlight 업로드와 심사 정보 입력은 아직 수행하지 않았다.
 
 ## 1. Apple Developer Program과 배포 Team
@@ -32,17 +34,17 @@
 ### 사용자가 할 일
 
 - `[x]` [Apple Developer Program](https://developer.apple.com/programs/enroll/)에 개인 주체로 가입하고 결제를 완료했다.
-- `[-]` Apple의 멤버십 승인을 기다린다.
-- `[ ]` 승인 완료 후 Apple Developer의 **Membership details**에서 다음 두 값을 확인한다.
+- `[x]` Apple의 멤버십 승인을 완료했다(2026-08-14).
+- `[x]` Apple Developer의 **Membership details**에서 다음 두 값을 확인했다.
   - Team Name
-  - Team ID
+  - Team ID: `2V47G42CDS`
 - `[ ]` 개인 가입이므로 법적 이름이 App Store 판매자명으로 표시될 수 있음을 제품 페이지 공개 전에 확인한다. 조직명 노출이 필요하면 조직 등록·전환 요건을 별도로 검토한다.
 - `[ ]` 최신 계약이 표시되면 Account Holder가 동의한다.
 
 ### Codex가 저장소에서 할 일
 
-- `[ ]` 사용자가 Team ID를 확인한 뒤 Xcode 프로젝트의 Signing Team을 해당 유료 Team으로 지정한다.
-- `[ ]` 유료 Team으로 기기용 Release 빌드와 Archive가 서명되는지 검증한다.
+- `[x]` Xcode 프로젝트의 Signing Team을 승인된 유료 Team `2V47G42CDS`로 지정했다.
+- `[-]` 유료 Team으로 generic iOS Release development 서명 빌드를 성공시켰다. App Store distribution 서명 Archive는 별도 검증한다.
 
 참고: [Apple Developer Program 등록](https://developer.apple.com/help/account/membership/enrolling-in-the-app), [App Store Connect 흐름](https://developer.apple.com/help/app-store-connect/get-started/app-store-connect-workflow)
 
@@ -50,11 +52,11 @@
 
 ### 사용자가 할 일
 
-- `[ ]` Apple Developer의 **Certificates, Identifiers & Profiles > Identifiers > + > App IDs > App**에서 Explicit App ID를 등록한다.
+- `[x]` Apple Developer의 **Certificates, Identifiers & Profiles > Identifiers > + > App IDs > App**에서 Explicit App ID를 등록했다.
   - Description: 사용자가 알아보기 쉬운 Dutypark 명칭
   - 출시 목표 Bundle ID: `io.github.shanepark.dutypark`
-  - 상태: Apple 승인 후 가용성을 확인하기 전까지 미확정. 사용할 수 없다면 새 후보를 결정하고 Xcode·APNs·AASA·App Store Connect 문서를 함께 갱신한다.
-- `[ ]` 해당 App ID에서 다음 capability를 활성화한다.
+  - 상태: 등록 완료·출시 식별자로 확정
+- `[x]` 해당 App ID에서 다음 capability를 활성화했다.
   - Push Notifications
   - Associated Domains
   - Sign in with Apple — Primary App ID로 설정
@@ -62,11 +64,11 @@
 
 ### Codex가 저장소에서 할 일
 
-- `[x]` 현재 Xcode Bundle ID는 `com.tistory.shanepark.dutypark`다.
-- `[!]` Apple 승인 후 `io.github.shanepark.dutypark`의 가용성이 확인되면 출시 Bundle ID로 변경한다. 확인 전에는 코드와 Xcode 프로젝트를 변경하지 않는다.
+- `[x]` Xcode Bundle ID를 `io.github.shanepark.dutypark`로 변경했다.
 - `[x]` `aps-environment`와 `applinks:dutypark.o-r.kr` entitlement를 추가했다.
 - `[x]` `AuthenticationServices` 구현과 `com.apple.developer.applesignin = Default` entitlement를 추가하고 Debug/Release Simulator 처리 산출물에서 확인했다.
-- `[ ]` 최종 App ID·provisioning profile과 서명된 Release Archive에 같은 Apple entitlement가 포함되는지 확인한다.
+- `[x]` development 서명된 generic iOS Release 앱의 provisioning profile과 서명 entitlement에 Sign in with Apple `Default`와 Associated Domains가 포함되는지 확인했다.
+- `[ ]` App Store distribution 서명 Archive에서도 같은 entitlement를 확인한다.
 - `[ ]` 최종 배포 Team에서 Debug는 development APNs, Release는 production APNs entitlement로 서명되는지 확인한다.
 
 App ID의 capability를 변경하면 기존 프로비저닝 프로파일이 무효화될 수 있으므로, 변경 후 프로파일을 다시 생성하거나 Xcode 자동 서명이 갱신하도록 한다.
@@ -102,7 +104,7 @@ App ID의 capability를 변경하면 기존 프로비저닝 프로파일이 무�
   - Platform: iOS
   - Name: 출시할 앱 이름
   - Primary Language: 기본 스토어 언어
-  - Bundle ID: Apple 승인 후 확정한 운영 식별자. 현재 우선 후보는 `io.github.shanepark.dutypark`
+  - Bundle ID: `io.github.shanepark.dutypark`
   - SKU: 사용자가 정한 내부 관리용 고유 문자열
   - User Access: 팀 운영 방식에 맞게 선택
 - `[ ]` 앱 이름, 부제, 설명, 키워드, 카테고리, 연령 등급, 지원 URL, 저작권, 출시 국가와 가격을 입력한다.
@@ -162,9 +164,9 @@ Dutypark는 카카오·네이버로 주 계정을 만들거나 인증할 수 있
 
 ### 사용자가 할 일
 
-- `[ ]` 2단계의 App ID에서 **Sign in with Apple**을 Primary로 활성화한다.
-- `[ ]` 서버 측 토큰 처리와 연결 해제에 필요한 Apple 설정·키를 생성할 때 Team ID, Key ID 등 식별값을 확인하고 개인 키는 비밀 저장소에만 보관한다.
-- `[ ]` 별도의 32바이트 credential 암호화 키를 생성해 base64로 운영 비밀 저장소에 보관한다.
+- `[x]` 2단계의 App ID에서 **Sign in with Apple**을 Primary로 활성화했다.
+- `[x]` 서버 key를 생성하고 Team ID `2V47G42CDS`, Key ID `4D85ZS4KM2`를 확인했다. 개인 키는 비밀 저장소에만 보관하고 저장소에서 추적하지 않는다.
+- `[-]` 별도의 32바이트 credential 암호화 키를 생성해 로컬 로그인 키체인에 보관했다. 운영 비밀 설정에는 아직 주입하지 않았다.
 
 ### Codex가 저장소에서 할 일
 
@@ -174,7 +176,8 @@ Dutypark는 카카오·네이버로 주 계정을 만들거나 인증할 수 있
 - `[x]` Apple refresh token AES-256-GCM 보관과 연결 해제·회원 탈퇴 revoke-first durable 재시도를 구현했다.
 - `[x]` iOS 전체 278/278 1회, backend Apple-focused 19/19 및 관련 회귀, 웹 34 files/162 tests·type-check·build를 통과했다.
 - `[x]` 웹 Services ID와 Apple 웹 OAuth가 불필요한 iOS 전용 범위를 코드·UI에 반영했다.
-- `[ ]` 승인된 Team의 App ID capability, Apple server key·운영 환경 변수를 연결한다.
+- `[x]` 승인된 Team의 App ID capability, Xcode Team·Bundle ID와 서버 compose 환경 변수 배선을 연결했다.
+- `[ ]` Apple 개인 키와 credential 암호화 키를 운영 환경에 실제 주입한다.
 - `[ ]` 실기기/TestFlight에서 로그인·가입·연결·충돌·취소·삭제 mismatch·revoke를 검증한다.
 
 참고: [Sign in with Apple 개요](https://developer.apple.com/help/account/capabilities/about-sign-in-with-apple), [App Review Guideline 4.8](https://developer.apple.com/app-store/review/guidelines/#login-services)
@@ -230,13 +233,13 @@ App Store Connect의 “앱이 데이터를 수집하지 않음”은 서버에 
 
 ### 사용자가 할 일
 
-- `[ ]` 유료 Apple Team ID를 Codex에 전달한다. Team ID는 비밀키가 아니지만 App ID 구성에 정확히 일치해야 한다.
+- `[x]` 유료 Apple Team ID `2V47G42CDS`를 확인하고 App ID·Xcode 설정에 일치시켰다.
 
 ### Codex가 저장소와 서버에서 할 일
 
 - `[x]` 앱 entitlement에 `applinks:dutypark.o-r.kr`를 추가했다.
 - `[x]` 앱은 `https://dutypark.o-r.kr`의 가이드, 약관, 개인정보, 공개 근무표 및 주요 앱 경로를 해석한다.
-- `[ ]` Team ID와 목표 Bundle ID 가용성을 확인한 뒤 AASA의 앱 식별자를 `TEAM_ID.io.github.shanepark.dutypark` 형식으로 확정하고 필요한 경로만 허용한다. 이 값은 현재 승인 대기 후보이며 가용성 확인 전에는 배포하지 않는다.
+- `[x]` AASA의 앱 식별자를 `2V47G42CDS.io.github.shanepark.dutypark`로 확정하고 현재 지원 경로만 허용하는 JSON을 구현했다.
 - `[ ]` `https://dutypark.o-r.kr/.well-known/apple-app-site-association`에서 확장자 없는 JSON을 HTTPS, 유효한 인증서, 리다이렉트 없이 올바른 Content-Type으로 제공한다.
 - `[!]` 이 작업은 운영 정적 파일/프록시 설정에 영향을 주므로 배포 전에 사용자와 변경 내용을 확인한다.
 - `[ ]` Apple CDN 반영 시간을 고려해 설치 직후 및 재설치 후 실제 링크 열기를 검증한다.
@@ -267,15 +270,15 @@ App Store Connect의 “앱이 데이터를 수집하지 않음”은 서버에 
 
 ## 권장 실행 순서
 
-1. Apple Developer Program 승인 완료 및 유료 개인 Developer Team ID 확인
-2. `io.github.shanepark.dutypark` 가용성 확인·최종 확정 후 Explicit App ID와 Push/Associated Domains/Sign in with Apple capability 구성
+1. ~~Apple Developer Program 승인 완료 및 유료 개인 Developer Team ID 확인~~ — 완료
+2. ~~`io.github.shanepark.dutypark` Explicit App ID와 Push/Associated Domains/Sign in with Apple capability 구성~~ — 완료
 3. App Store Connect 앱 레코드 생성
 4. 카카오·네이버 모바일 콜백을 기존 웹 콜백 옆에 추가
 5. 모바일 OAuth 서버 변경 운영 배포 후 웹·앱 로그인 동시 검증
-6. Sign in with Apple 운영 자격증명 연결, 서명 Archive와 실기기/TestFlight E2E
+6. Sign in with Apple 운영 개인 키·암호화 키 실제 주입, App Store distribution 서명 Archive와 실기기/TestFlight E2E
 7. 회원 탈퇴의 실제 Apple revoke·MySQL·TestFlight 검증과 Kakao·Naver revoke 보강
 8. APNs 키를 운영 비밀 설정에 주입하고 sandbox/production 푸시 검증
-9. Team ID 기반 AASA 배포 및 Universal Links 검증
+9. 구현된 Team ID 기반 AASA를 운영에 배포하고 curl·Universal Links 검증
 10. 개인정보 처리방침·App Privacy·스토어 메타데이터 확정
 11. Archive 업로드, TestFlight 내부 테스트, 필요 시 외부 테스트
 12. 최종 실기기 회귀 테스트 후 App Review 제출

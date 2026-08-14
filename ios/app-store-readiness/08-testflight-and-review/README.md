@@ -1,6 +1,6 @@
 # TestFlight 및 App Review 실행 가이드
 
-최종 확인일: 2026-08-13
+최종 확인일: 2026-08-14
 
 이 문서는 Dutypark iOS 빌드를 내부 TestFlight에서 시작해 App Review 제출과 출시 판단까지 진행하기 위한 실행 체크리스트다.
 비밀번호, OAuth 비밀값, APNs 개인 키, 실제 세션 쿠키는 이 문서와 저장소에 기록하지 않는다.
@@ -33,7 +33,8 @@
 - [x] unsigned generic iOS Release Archive 앱 번들에 Debug 전용 가정, 테스트용 인증 플래그·계정과 로컬 개발 주소가 남지 않는다.
 - [x] 새 unsigned generic iOS Release Archive에서 앱 아이콘, 표시 이름, 최소 iOS와 iPhone 전용·세로 방향 기술 설정이 프로젝트와 일치한다.
 - [x] Debug/Release Simulator의 Xcode 처리 entitlement에서 APNs `development`/`production` 분리, `applinks:dutypark.o-r.kr`와 Sign in with Apple `Default`를 기술 사전 검증한다.
-- [ ] 배포 서명된 Release Archive에서도 같은 검증을 반복한다.
+- [x] development 서명된 generic iOS Release 앱에서 profile/application identifier와 Apple `Default`·Associated Domains entitlement를 확인한다.
+- [ ] App Store distribution 서명 Archive에서도 같은 검증을 반복한다.
 
 2026-08-13 iPhone 16 Pro(iOS 26.5) 검증에서 Debug 전용 guest 초기 상태를 로그인 UI 테스트에 명시해
 로컬 세션·네트워크 상태와 무관하게 카카오·네이버 로그인 진입을 확인하도록 안정화했다. 같은 기기에서 UI 테스트 3개를 포함한
@@ -46,8 +47,8 @@ identifier 전파가 늦어져 첫 `ko` × Light가 실패했다. app foreground
 iPhone 16 Pro에서 새로 3회 연속 **264/264**(실패·건너뜀 0)로 통과했다. 이어서 unsigned generic iOS Release
 `clean archive`를 생성해 앱 번들에서 내부 Markdown·소스·테스트 fixture·개발용 파일과 인증/guest UI-test 플래그,
 테스트 계정, localhost·저장소 절대 경로가 없고 `PrivacyInfo.xcprivacy` 및 `ko`·`en` localization이 포함된 것을
-확인했다. 이 Archive의 Bundle ID는 현재 Xcode 값 `com.tistory.shanepark.dutypark`이며, 출시 후보
-`io.github.shanepark.dutypark` 확정 또는 서명·provisioning·entitlement 검증을 의미하지 않는다. 배포 서명된
+확인했다. 이 당시 Archive의 Bundle ID는 `com.tistory.shanepark.dutypark`였으며, 이후 확정한
+`io.github.shanepark.dutypark` 또는 서명·provisioning·entitlement 검증을 의미하지 않는다. App Store distribution 서명된
 Release Archive 검증은 별도로 남아 있다.
 
 이어서 iOS 26.5 시뮬레이터의 실제 `content_size`를 `large`와
@@ -91,7 +92,7 @@ iPhone rendition이 포함됐다. asset catalog compiler에서 앱 아이콘 관
 
 ## 2. 업로드 전 빌드 게이트
 
-- [!] Apple 멤버십 승인 후 출시 목표 `io.github.shanepark.dutypark`의 Explicit App ID 가용성을 확인하고 최종 Bundle ID를 확정한다. 현재 Xcode 설정은 아직 `com.tistory.shanepark.dutypark`다.
+- [x] Apple 멤버십 승인 후 Explicit App ID와 Xcode Bundle ID를 `io.github.shanepark.dutypark`, Development Team을 `2V47G42CDS`로 확정했다.
 - [ ] 확정된 Bundle ID, Xcode Release 설정과 App Store Connect 앱 레코드가 모두 일치한다.
 - [ ] 유료 배포 Team으로 Release 서명과 프로비저닝이 완료된다.
 - [ ] `MARKETING_VERSION`과 `CURRENT_PROJECT_VERSION`을 제출할 값으로 확정한다.

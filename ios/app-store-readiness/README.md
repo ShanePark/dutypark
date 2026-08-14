@@ -35,14 +35,14 @@
 
 ## Apple 계정·식별자 현재 상태
 
-- Apple Developer Program은 **개인 주체로 가입하고 결제를 완료했으며 Apple 승인을 기다리는 중**이다.
-- 현재 Xcode 프로젝트의 Bundle ID는 `com.tistory.shanepark.dutypark`다.
-- 출시 목표 Bundle ID는 `io.github.shanepark.dutypark`를 우선 후보로 한다. 다만 Apple 승인 후 Explicit App ID 등록 화면에서 가용성을 확인하기 전에는 최종 확정으로 취급하지 않는다.
+- Apple Developer Program 개인 멤버십은 **2026-08-14 승인 완료**됐고 Team ID는 `2V47G42CDS`다.
+- Explicit App ID와 Xcode 프로젝트의 Bundle ID는 `io.github.shanepark.dutypark`로 확정했다.
+- Sign in with Apple, Push Notifications, Associated Domains capability와 Sign in with Apple server key를 생성했다. 개인 키 원문은 저장소에서 추적하지 않는다.
 - 개인 멤버십으로 출시하면 App Store 판매자명에는 조직명이 아니라 계정 소유자의 법적 실명이 표시될 수 있으므로 제품 페이지 공개 전에 확인한다.
 
 ## P0 체크리스트
 
-- [-] iOS 전용 Sign in with Apple의 서버·앱·웹 상태 표시와 revoke-first 계정 생명주기 구현 및 자동 검증을 완료했다. Apple 승인, App ID capability·server key·서명과 실기기/TestFlight E2E가 남아 있다. 웹 Services ID와 Apple 웹 OAuth는 만들지 않는다. ([상세](./01-apple-sign-in/README.md))
+- [-] iOS 전용 Sign in with Apple의 구현·자동 검증과 Apple App ID capability·server key·development 서명 검증을 완료했다. 운영 비밀 주입과 실제 Apple 계정·TestFlight E2E가 남아 있다. 웹 Services ID와 Apple 웹 OAuth는 만들지 않는다. ([상세](./01-apple-sign-in/README.md))
 - [-] 앱 안에서 회원 탈퇴를 시작하고 완료할 수 있게 한다. iOS·웹 구현과 자동 검증은 완료했으며 TestFlight 실기기·심사 문서 검증이 남아 있다. ([상세](./02-account-deletion/README.md))
 - [-] 탈퇴 시 세션, 푸시 토큰, 소셜 연결 및 소유 데이터 처리 규칙을 적용한다. Apple refresh credential 암호화·revoke-first durable 재시도는 구현됐으며 실제 Apple E2E, Kakao·Naver revoke와 MySQL 검증이 남아 있다. ([상세](./02-account-deletion/README.md))
 - [x] 기존 전체 흐름을 상속한 최신 `PRIVACY 2026-08-14`에 iOS 전용 Apple `sub`, 일시 token·nonce, replay hash, 암호화 credential과 revoke-first 처리까지 공개했다. 기존 consent·회원 재동의 gate는 변경하지 않고 신규 가입은 current version 동의를 요구한다. ([상세](./03-privacy-and-ai-consent/README.md))
@@ -105,7 +105,7 @@
 - 체크 상태를 바꿀 때 관련 PR 또는 검증 기록을 항목 아래에 남긴다.
 - 정책 결정에는 결정일, 결정자, 적용 범위, 예외를 기록한다.
 - App Store Connect와 Apple Developer 설정은 값 자체보다 확인 위치와 담당자를 기록한다.
-- Team ID, 키, 토큰, 비밀번호, 심사 계정 비밀번호 등 비밀값은 문서나 Git에 남기지 않는다.
+- 개인 키 원문, 토큰, 비밀번호, 심사 계정 비밀번호 등 비밀값은 문서나 Git에 남기지 않는다. Team ID와 Key ID는 식별값이지만 실제 키와 분리해 관리한다.
 - 스크린샷에 사용자 개인정보나 운영 인증 정보가 포함되지 않도록 확인한다.
 - Apple 정책이 바뀌면 기준일을 갱신하고 공식 문서에서 변경 내용을 다시 확인한다.
 
