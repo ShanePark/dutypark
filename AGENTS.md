@@ -23,6 +23,11 @@ The source code, tests, and task-specific documentation are the source of truth 
 - The local development database is defined in `dutypark_dev_db/docker-compose.yml`. Start it with `(cd dutypark_dev_db && docker compose up -d)`.
 - Local backend database connection settings are in `src/main/resources/application-dev.yml`.
 
+### Flyway Migrations
+
+- Once a versioned Flyway migration file is created, treat it as immutable: never modify its contents, rename it, renumber it, or delete it.
+- Add every follow-up change or correction as a new migration with a version higher than all existing migrations.
+
 ## Delegation and Parallel Work
 
 - The main agent's primary role is orchestration: planning, decomposition, delegation, coordination, review, user communication, and handling additional work—not hands-on execution.
