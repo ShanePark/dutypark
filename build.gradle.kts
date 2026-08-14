@@ -99,6 +99,7 @@ dependencyManagement {
 tasks.withType<Test> {
     useJUnitPlatform()
     failFast = true
+    maxHeapSize = "1g"
 }
 
 tasks.jar {
