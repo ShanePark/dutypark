@@ -15,7 +15,12 @@ nonisolated enum NotificationRoute: Equatable, Hashable, Sendable {
             guard let value = notification.referenceId, let id = UUID(uuidString: value) else { return nil }
             self = notification.type == .scheduleTagged ? .taggedSchedule(id) : .schedule(id)
         case .todo:
-            self = .todo(notification.referenceId.flatMap(UUID.init(uuidString:)))
+            if let value = notification.referenceId {
+                guard let id = UUID(uuidString: value) else { return nil }
+                self = .todo(id)
+            } else {
+                self = .todo(nil)
+            }
         case .member:
             guard let value = notification.referenceId, let id = Int64(value) else { return nil }
             self = .member(id)
