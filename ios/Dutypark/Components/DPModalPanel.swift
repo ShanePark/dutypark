@@ -1,5 +1,24 @@
 import SwiftUI
 
+struct DPModalPanelSizingPolicy {
+    let maximumPanelHeight: CGFloat
+    let minimumBodyHeight: CGFloat
+    let dividerCount: Int
+
+    func bodyHeight(
+        headerHeight: CGFloat,
+        bodyContentHeight: CGFloat,
+        footerHeight: CGFloat
+    ) -> CGFloat {
+        let dividerAllowance = DPChrome.borderWidth * CGFloat(dividerCount)
+        let availableBodyHeight = max(
+            minimumBodyHeight,
+            maximumPanelHeight - headerHeight - footerHeight - dividerAllowance
+        )
+        return min(max(bodyContentHeight, minimumBodyHeight), availableBodyHeight)
+    }
+}
+
 /// Content panel for `DPModalOverlay` that hugs its content height,
 /// caps at `maximumPanelHeight`, and scrolls the body when content exceeds the cap.
 ///
@@ -33,17 +52,20 @@ struct DPModalPanel<Header: View, PanelContent: View, Footer: View>: View {
         self.footer = footer()
     }
 
-    /// Header and footer dividers are hairlines the stack lays out outside the measured chrome.
-    private var dividerAllowance: CGFloat {
-        DPChrome.borderWidth * 2
+    private var sizingPolicy: DPModalPanelSizingPolicy {
+        DPModalPanelSizingPolicy(
+            maximumPanelHeight: maximumPanelHeight,
+            minimumBodyHeight: minimumBodyHeight,
+            dividerCount: hasFooter ? 2 : 1
+        )
     }
 
     private var clampedBodyHeight: CGFloat {
-        let availableBodyHeight = max(
-            minimumBodyHeight,
-            maximumPanelHeight - headerHeight - footerHeight - dividerAllowance
+        sizingPolicy.bodyHeight(
+            headerHeight: headerHeight,
+            bodyContentHeight: bodyContentHeight,
+            footerHeight: footerHeight
         )
-        return min(max(bodyContentHeight, minimumBodyHeight), availableBodyHeight)
     }
 
     var body: some View {
