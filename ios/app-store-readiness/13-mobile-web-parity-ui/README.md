@@ -41,7 +41,7 @@
 | 6 | 하단 탭 | `달력`이 `캘린더`로 변경됨 | 완료 | `74858618` |
 | 7 | 전역 현지화 | 한국어 앱에서 기본 패턴·메뉴·팀 월 이름 등이 영어로 표시됨 | 부분 완료 | `74858618`, `2cdc26ea`, `3987ea66` |
 | 8 | 설정 · 기본 근무 패턴 | 근무 선택 목록과 요일 선택 UI가 웹보다 나빠짐 | 완료 | `b7bdc8ae` |
-| 9 | 전역 확인 UI | destructive 확인 UI가 터치 위치와 무관한 시스템 시트로 표시됨 | 부분 완료 | `de46f754`, `92f3fa66`, `def118e2`, `b7bdc8ae`, `2316075a`, `84047661` |
+| 9 | 전역 확인 UI | destructive 확인 UI가 터치 위치와 무관한 시스템 시트로 표시됨 | 부분 완료 | `de46f754`, `92f3fa66`, `def118e2`, `b7bdc8ae`, `2316075a`, `84047661`, `bd3a1fc4` |
 | 10 | 친구관리 상세 | UI 테스트에서 실 API를 호출해 화면 진입 종료 | 완료 | `f5da2cd1`, `24814f20` |
 
 상태는 `대기 → 진행 중 → 수정됨·커밋 전 → 코드 커밋됨·시각 검증 전 → 완료` 순으로 관리한다.
@@ -63,6 +63,7 @@
 | `24814f20` | 친구관리 UI fixture 안정화 및 실제 롱프레스 재정렬 | iPhone 13 mini 전용 UI 테스트 1건 | 친구관리 수정 후 화면 확보 | 완료 |
 | `2316075a` | 관리자 팀 삭제·회원 세션 종료 중앙 확인 | AdminTeam·AdminFeature 테스트 포함 전체 선택 테스트 | 관리자 fixture 부재 | 코드 커밋됨·캡처 대기 |
 | `84047661` | 설정의 계정·프로필 destructive 확인 5종 | iPhone 13 mini `SettingsFeatureTests` 29건 | 설정 화면 확보, 확인 패널 직접 캡처 대기 | 코드 커밋됨·패널 캡처 대기 |
+| `bd3a1fc4` | Todo 작성 취소·삭제·태그 해제 중앙 확인 | iPhone 13 mini 단위 32건·UI 1건 | Todo 화면 확보, 확인 패널 직접 캡처 대기 | 코드·상호작용 완료·캡처 대기 |
 
 ## 상세 변경 보고
 
@@ -177,6 +178,17 @@
 - 작업 중에는 중복 실행과 배경·gesture dismiss를 차단한다.
 - iPhone 13 mini에서 `SettingsFeatureTests` 29건이 통과했다. 직접 확인 패널 캡처는 전용 fixture 보강 후 추가한다.
 
+### Todo destructive 확인 — `bd3a1fc4`
+
+| 웹 Todo | iOS Todo |
+| --- | --- |
+| <img src="screenshots/todo-web-ko.png" width="240" alt="모바일 웹 Todo"> | <img src="screenshots/todo-ios-after.png" width="240" alt="iOS Todo"> |
+
+- 작성·수정 변경사항 폐기, Todo 삭제, 내 태그 해제를 중앙 확인 패널로 통일했다.
+- 삭제 시 첨부파일도 함께 삭제되고, 태그 해제 시 보드에서 제거된다는 영향 안내는 유지했다.
+- iPhone 13 mini에서 `TodoViewModelTests` 32건과 작성 취소 중앙 패널 UI 테스트 1건이 통과했다.
+- 결과: `/tmp/dutypark-todo-confirmation-unit-suite.xcresult`, `/tmp/dutypark-todo-confirmation-ui.xcresult`.
+
 ## 시각 회귀 자동화
 
 `ParityVisualCaptureUITests`는 한국어·다크모드로 앱을 실행해 다음 화면을 순서대로 캡처한다.
@@ -202,6 +214,7 @@
 - [ ] 첨부 삭제용 UI fixture와 중앙 패널 스크린샷 추가
 - [ ] 관리자 팀 삭제·회원 세션 종료 UI fixture와 중앙 패널 스크린샷 추가
 - [ ] 설정 로그아웃·프로필 삭제 중앙 패널 스크린샷 추가
+- [ ] Todo 작성 취소·삭제 중앙 패널 스크린샷 추가
 - [ ] 팀 연월 선택기 한국어 스크린샷 추가
 - [ ] 설정의 사진 삭제·관리자 해제·관리 계정 전환 확인 UI 조사 및 수정
 - [ ] 로그아웃 등 남은 전역 `confirmationDialog` 조사 및 수정
