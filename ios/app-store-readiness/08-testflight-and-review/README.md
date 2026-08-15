@@ -2,7 +2,8 @@
 
 ## 현재 상태
 
-- 2026-08-15 Xcode Organizer에서 `Dutypark` 1.0 (1) Release Archive 생성, 경고 없는 Validate App 통과와 App Store Connect 업로드 완료를 확인했다. Connect의 빌드 처리와 TestFlight 표시 확인은 아직 남아 있다.
+- 2026-08-15 Xcode Organizer에서 `Dutypark` 1.0 (1) Release Archive 생성, 경고 없는 Validate App 통과와 App Store Connect 업로드 완료를 확인했다. 이어 TestFlight에 Version 1.0 / Build 1이 `Ready to Submit`으로 표시돼 Connect 처리 완료를 확인했다.
+- 같은 날 자동 배포를 사용하지 않는 내부 테스트 그룹 `Dutypark Internal`을 생성하고 Version 1.0 / Build 1을 연결했다. 빌드는 `Ready to Test`이며 내부 테스터 1명을 추가했다. 실제 iPhone에 TestFlight를 설치하고 초대 링크를 리딤한 뒤 Dutypark Version 1.0 / Build 1을 설치해 앱 실행과 로그인을 확인했다. 사용한 로그인 방식과 나머지 인증 시나리오는 아직 구분해 검증하지 않았다. 개인 이메일은 문서에 기록하지 않는다.
 - 2026-08-14 현재 working tree에서 generic iOS 빌드와 전체 테스트가 성공했다.
 - `Dutypark QA iPhone 16 Pro` iOS 26.5 Simulator의 최신 `.xcresult` 요약은 **396개 통과, 0개 실패, 0개 건너뜀**이다. 동적 매개변수 실행을 포함한 device execution은 402개다.
 - 이전 기록의 3개 실패는 최신 전체 실행에서 재현되지 않았다. 다만 working tree가 아직 dirty이므로 현재 코드는 제출용 동결 기준선이 아니며, 변경을 동결한 동일 후보에서 다시 검증해야 한다.
@@ -18,12 +19,17 @@
 - [x] `Dutypark` 1.0 (1) Release Archive를 생성하고 Organizer에 표시되는 것을 확인한다.
 - [x] 생성한 Archive가 Organizer의 Validate App을 경고 없이 통과한 것을 확인한다.
 - [x] 검증한 `Dutypark` 1.0 (1) Archive의 App Store Connect 업로드 완료를 Xcode에서 확인한다.
-- [ ] App Store Connect의 빌드 처리 완료를 확인한다.
-- [ ] TestFlight에 표시된 version/build가 기록한 후보와 동일한지 확인한다.
+- [x] App Store Connect의 빌드 처리 완료와 `Ready to Submit` 상태를 확인한다.
+- [x] TestFlight에 표시된 Version 1.0 / Build 1이 기록한 후보와 동일한지 확인한다.
 
 ### 내부 TestFlight
 
-- [ ] 내부 그룹, 피드백 이메일, Beta App Description과 `What to Test`를 설정한다.
+- [x] 자동 배포를 사용하지 않는 내부 그룹 `Dutypark Internal`을 생성한다.
+- [x] Version 1.0 / Build 1을 내부 그룹에 연결하고 `Ready to Test` 상태를 확인한다.
+- [x] 내부 테스터 1명을 그룹에 추가하고 `Invited` 상태를 확인한다.
+- [x] 실제 iPhone에 TestFlight를 설치하고 초대 링크의 리딤을 완료한다.
+- [x] TestFlight에서 Dutypark Version 1.0 / Build 1을 설치하고 앱 실행과 로그인 성공을 확인한다.
+- [ ] 피드백 이메일, Beta App Description과 `What to Test`를 설정한다.
 - [ ] 새 설치, 업데이트, 삭제 후 재설치와 백그라운드 종료 후 세션 복원을 확인한다.
 - [ ] 운영 서버의 이메일, 카카오, 네이버와 Apple 로그인 신규 가입·재로그인·연결·충돌·취소를 확인한다.
 - [ ] Apple 연결 해제와 Apple-only 계정 탈퇴의 revoke 성공·실패·mismatch를 확인한다.

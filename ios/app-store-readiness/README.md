@@ -32,11 +32,11 @@
 - `[!]` [05-push-notifications/README.md](./05-push-notifications/README.md)
 - `[!]` [06-associated-domains/README.md](./06-associated-domains/README.md)
 - `앱 레코드 [x] / 메타데이터·Privacy·규제 응답 [!]` [07-app-store-connect/README.md](./07-app-store-connect/README.md)
-- `전체 자동 테스트·Archive·Validate·Upload [x] / Connect 처리·내부 TestFlight [ ]` [08-testflight-and-review/README.md](./08-testflight-and-review/README.md)
+- `자동 테스트·Archive·Validate·Upload·Connect 처리·내부 그룹·빌드·테스터 초대·리딤·설치·로그인 smoke [x] / 운영 기능·실기기 E2E [ ]` [08-testflight-and-review/README.md](./08-testflight-and-review/README.md)
 - `[-]` [09-quality-accessibility/README.md](./09-quality-accessibility/README.md)
 - `[ ]` [10-user-generated-content/README.md](./10-user-generated-content/README.md)
-- `인증서·Archive·Validate·Upload [x] / Connect 처리·최종 패키징 검증 [ ]` [11-release-engineering/README.md](./11-release-engineering/README.md)
-- `[-]` [12-web-app-parity/README.md](./12-web-app-parity/README.md)
+- `인증서·Archive·Validate·Upload·Connect 처리 [x] / 최종 패키징 검증 [ ]` [11-release-engineering/README.md](./11-release-engineering/README.md)
+- `[x]` [13-mobile-web-parity-ui/README.md](./13-mobile-web-parity-ui/README.md)
 
 ## 권장 순서
 
