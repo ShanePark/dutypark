@@ -99,12 +99,6 @@
     "social.label.family" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Family member" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "가족 구성원" } }
     } },
-    "social.label.moreSchedules" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ more schedules" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "일정 %@개 더보기" } }
-    } },
-    "social.label.offDuty" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Off duty" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "휴무" } }
-    } },
     "social.loading" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Loading friends…" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 정보를 불러오는 중…" } }
     } },

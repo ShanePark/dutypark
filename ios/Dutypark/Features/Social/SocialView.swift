@@ -396,56 +396,16 @@ struct SocialView: View {
                 HStack(alignment: .top, spacing: SocialFriendCardLayout.contentSpacing) {
                     SocialAvatar(member: friend.member, size: SocialFriendCardLayout.avatarSize)
 
-                    VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
-                        HStack(spacing: 6) {
-                            Text(friend.member.name)
-                                .font(DPFont.bold(size: 15, relativeTo: .subheadline))
-                                .foregroundStyle(DPColor.textPrimary)
-                                .lineLimit(1)
-                            if friend.isFamily {
-                                Image(systemName: "house.fill")
-                                    .font(.system(size: 14))
-                                    .foregroundStyle(DPColor.warning)
-                                    .accessibilityLabel(social("social.label.family"))
-                            }
-                        }
-
-                        VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
-                            if let team = friend.member.team, !team.isEmpty {
-                                Label(team, systemImage: "person.3")
-                                    .font(DPTypography.caption)
-                                    .foregroundStyle(DPColor.textSecondary)
-                                    .lineLimit(1)
-                            }
-
-                            if let duty = friend.duty {
-                                Label(
-                                    duty.dutyType ?? social("social.label.offDuty"),
-                                    systemImage: "briefcase"
-                                )
-                                .font(DPTypography.caption)
-                                .foregroundStyle(DPColor.textSecondary)
-                                .lineLimit(1)
-                            }
-
-                            ForEach(Array(friend.schedules.prefix(2)), id: \.id) { schedule in
-                                Label(scheduleLabel(schedule), systemImage: "calendar")
-                                    .font(DPTypography.caption)
-                                    .foregroundStyle(DPColor.textSecondary)
-                                    .lineLimit(1)
-                            }
-
-                            if friend.schedules.count > 2 {
-                                Text(
-                                    socialFormat(
-                                        "social.label.moreSchedules",
-                                        String(friend.schedules.count - 2)
-                                    )
-                                )
-                                .font(DPTypography.caption)
-                                .foregroundStyle(DPColor.textMuted)
-                                .lineLimit(1)
-                            }
+                    HStack(spacing: 6) {
+                        Text(friend.member.name)
+                            .font(DPFont.bold(size: 15, relativeTo: .subheadline))
+                            .foregroundStyle(DPColor.textPrimary)
+                            .lineLimit(1)
+                        if friend.isFamily {
+                            Image(systemName: "house.fill")
+                                .font(.system(size: 14))
+                                .foregroundStyle(DPColor.warning)
+                                .accessibilityLabel(social("social.label.family"))
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -1457,11 +1417,6 @@ nonisolated enum SocialConfirmationActionPolicy {
 
 private func requestTypeLabel(_ type: FriendRequestType) -> String {
     social(type == .family ? "social.request.family" : "social.request.friend")
-}
-
-private func scheduleLabel(_ schedule: ScheduleDTO) -> String {
-    guard schedule.totalDays > 1 else { return schedule.content }
-    return "\(schedule.content) [\(schedule.daysFromStart)/\(schedule.totalDays)]"
 }
 
 private func social(_ key: String) -> String {

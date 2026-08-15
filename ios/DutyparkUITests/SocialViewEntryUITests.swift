@@ -42,6 +42,10 @@ final class SocialViewEntryUITests: XCTestCase {
         let secondFriend = app.descendants(matching: .any)["social.friend.32"]
         XCTAssertTrue(firstFriend.waitForExistence(timeout: 10))
         XCTAssertTrue(secondFriend.waitForExistence(timeout: 10))
+        XCTAssertFalse(
+            app.staticTexts["Dutypark"].exists,
+            "Friend rows should match mobile web by omitting team and dashboard details."
+        )
         let initialFirstY = firstFriend.frame.minY
         let initialSecondY = secondFriend.frame.minY
         capture("parity-ios-friends-after")

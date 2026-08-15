@@ -344,6 +344,29 @@ final class SocialFeatureTests: XCTestCase {
         )
     }
 
+    func testFriendCardMatchesMobileWebIdentityOnlyDensity() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark/Features/Social/SocialView.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+        let start = try XCTUnwrap(source.range(of: "    private func friendCard("))
+        let end = try XCTUnwrap(
+            source.range(
+                of: "    private func isPinnedFriendReorderEnabled(",
+                range: start.upperBound..<source.endIndex
+            )
+        )
+        let friendCardSource = String(source[start.lowerBound..<end.lowerBound])
+
+        XCTAssertTrue(friendCardSource.contains("friend.member.name"))
+        XCTAssertTrue(friendCardSource.contains("friend.isFamily"))
+        XCTAssertFalse(friendCardSource.contains("friend.member.team"))
+        XCTAssertFalse(friendCardSource.contains("friend.duty"))
+        XCTAssertFalse(friendCardSource.contains("friend.schedules"))
+        XCTAssertTrue(friendCardSource.contains(".frame(minHeight: 88"))
+    }
+
     func testSuccessfulMutationsReportOnlyReceivedRequestCountEffects() async {
         let repository = SocialRepositorySpy()
         var effects: [Bool] = []
