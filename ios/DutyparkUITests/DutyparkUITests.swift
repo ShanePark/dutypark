@@ -168,9 +168,20 @@ final class DutyparkUITests: XCTestCase {
         XCTAssertTrue(quickAdd.waitForExistence(timeout: 10))
         quickAdd.tap()
 
+        XCTAssertTrue(app.staticTexts["New Todo"].waitForExistence(timeout: 10))
         let titleField = app.textFields["todo.form.title"]
         XCTAssertTrue(titleField.waitForExistence(timeout: 10))
-        XCTAssertTrue(app.buttons["todo.form.status.in_progress"].exists)
+        let inProgressStatus = app.buttons["todo.form.status.in_progress"]
+        XCTAssertTrue(inProgressStatus.exists)
+        XCTAssertTrue(inProgressStatus.isSelected)
+        XCTAssertFalse(
+            app.descendants(matching: .any)["screen.todo"].exists,
+            "Calendar quick add must not route to the Todo management screen"
+        )
+        let evidence = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        evidence.name = "calendar-todo-quick-add-in-progress"
+        evidence.lifetime = .keepAlways
+        add(evidence)
         app.buttons["todo.form.cancel"].tap()
 
         XCTAssertTrue(waitForNonHittable(titleField, timeout: 3))

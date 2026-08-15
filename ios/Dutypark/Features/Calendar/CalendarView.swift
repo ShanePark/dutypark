@@ -173,7 +173,7 @@ struct CalendarView: View {
                 initialStatus: .inProgress,
                 friends: model.friends,
                 refreshBoardAfterCreate: false,
-                onCreated: { _ = try? await model.loadMonth() },
+                onCreated: { await model.refreshTodoBoard() },
                 onDismiss: { showsTodoCreate = false }
             )
         }
@@ -181,7 +181,7 @@ struct CalendarView: View {
             NavigationStack {
                 TodoView(
                     initialTodoID: todoTarget,
-                    onTodoChanged: { _ = try? await model.loadMonth() },
+                    onTodoChanged: { await model.refreshTodoBoard() },
                     onInitialTodoOpened: { todoTarget = nil }
                 )
                 .navigationTitle(CalendarLocalization.text("calendar.todo.manage"))

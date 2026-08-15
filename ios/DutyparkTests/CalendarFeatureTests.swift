@@ -4,6 +4,20 @@ import XCTest
 
 @MainActor
 final class CalendarFeatureTests: XCTestCase {
+    func testCalendarTodoAddUsesTheQuickCreateModalAndTodoOnlyRefresh() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark/Features/Calendar/CalendarView.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+
+        XCTAssertTrue(source.contains("TodoCreateModal("))
+        XCTAssertTrue(source.contains("initialStatus: .inProgress"))
+        XCTAssertTrue(source.contains("refreshBoardAfterCreate: false"))
+        XCTAssertTrue(source.contains("onCreated: { await model.refreshTodoBoard() }"))
+        XCTAssertTrue(source.contains("TodoView("), "The separate Todo management entry must remain")
+    }
+
     func testSharedFriendTagSelectorMergesCurrentAndSelectedStaleItems() {
         let current = tagItem(id: 1, name: "Current name", team: "New team", isFamily: true, pinOrder: 2)
         let staleDuplicate = tagItem(id: 1, name: "Old name", team: "Old team")

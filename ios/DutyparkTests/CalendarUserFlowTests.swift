@@ -4,6 +4,117 @@ import XCTest
 
 @MainActor
 final class CalendarUserFlowTests: XCTestCase {
+    func testMutationsRefreshOnlyTheirAffectedCalendarSlice() async throws {
+        let defaults = UserDefaults.standard
+        let previousTodoVisibility = defaults.object(forKey: "dutyViewShowTodo")
+        defaults.set(false, forKey: "dutyViewShowTodo")
+        defer {
+            if let previousTodoVisibility {
+                defaults.set(previousTodoVisibility, forKey: "dutyViewShowTodo")
+            } else {
+                defaults.removeObject(forKey: "dutyViewShowTodo")
+            }
+        }
+
+        let repository = CalendarUserFlowRepository(todo: Self.todo())
+        let model = CalendarViewModel(repository: repository, now: date(2026, 8, 12))
+        await model.load()
+        let originalDayIDs = model.days.map(\.id)
+        let baseline = await repository.fetchCounts
+        var expectedBaseline = CalendarFetchCounts(all: 1)
+        expectedBaseline.canManage = 0
+        XCTAssertEqual(baseline, expectedBaseline)
+
+        await model.toggleTodoItems()
+        var actualFetchCounts = await repository.fetchCounts
+        XCTAssertEqual(actualFetchCounts, baseline)
+        XCTAssertEqual(
+            model.days.first { $0.cell.date.rawValue == "2026-08-12" }?.todos.map(\.title),
+            ["Local todo"]
+        )
+
+        await model.refreshTodoBoard()
+        var expected = baseline
+        expected.todoBoard += 1
+        actualFetchCounts = await repository.fetchCounts
+        XCTAssertEqual(actualFetchCounts, expected)
+
+        model.selectedDay = try XCTUnwrap(
+            model.days.first { $0.cell.date.rawValue == "2026-08-12" }
+        )
+        let scheduleSaved = await model.saveSchedule(
+            existing: nil,
+            content: "Dinner",
+            description: "",
+            visibility: .friends,
+            start: date(2026, 8, 12, hour: 18),
+            end: date(2026, 8, 12, hour: 19),
+            tagFriendIDs: [],
+            attachmentSessionID: nil,
+            orderedAttachmentIDs: [],
+            aiTimeParsingRequested: false
+        )
+        XCTAssertTrue(scheduleSaved)
+        expected.schedules += 1
+        actualFetchCounts = await repository.fetchCounts
+        XCTAssertEqual(actualFetchCounts, expected)
+        let createdSchedule = try XCTUnwrap(model.selectedDay?.schedules.first)
+
+        let scheduleUpdated = await model.saveSchedule(
+            existing: createdSchedule,
+            content: "Lunch",
+            description: "",
+            visibility: .friends,
+            start: date(2026, 8, 12, hour: 12),
+            end: date(2026, 8, 12, hour: 13),
+            tagFriendIDs: [],
+            attachmentSessionID: nil,
+            orderedAttachmentIDs: [],
+            aiTimeParsingRequested: false
+        )
+        XCTAssertTrue(scheduleUpdated)
+        expected.schedules += 1
+        actualFetchCounts = await repository.fetchCounts
+        XCTAssertEqual(actualFetchCounts, expected)
+        let schedule = try XCTUnwrap(model.selectedDay?.schedules.first)
+        XCTAssertEqual(schedule.content, "Lunch")
+
+        let scheduleDeleted = await model.deleteSchedule(schedule)
+        XCTAssertTrue(scheduleDeleted)
+        actualFetchCounts = await repository.fetchCounts
+        XCTAssertEqual(actualFetchCounts, expected)
+        XCTAssertTrue(model.selectedDay?.schedules.isEmpty == true)
+
+        let selectedBeforeDutyRefresh = try XCTUnwrap(model.selectedDay)
+        model.focusQuickDuty(on: selectedBeforeDutyRefresh)
+        await model.updateDuty(day: selectedBeforeDutyRefresh, dutyTypeID: 7)
+        expected.duties += 1
+        actualFetchCounts = await repository.fetchCounts
+        XCTAssertEqual(actualFetchCounts, expected)
+        XCTAssertEqual(model.selectedDay?.duty?.dutyTypeId, 7)
+        XCTAssertEqual(model.quickDutyDay?.duty?.dutyTypeId, 7)
+
+        let dDaySaved = await model.saveDDay(
+            existing: nil,
+            title: "Anniversary",
+            date: date(2026, 8, 12),
+            isPrivate: false
+        )
+        XCTAssertTrue(dDaySaved)
+        actualFetchCounts = await repository.fetchCounts
+        XCTAssertEqual(actualFetchCounts, expected)
+        let dDay = try XCTUnwrap(model.dDays.first)
+        XCTAssertEqual(model.selectedDay?.dDays, [dDay])
+
+        let dDayDeleted = await model.deleteDDay(dDay)
+        XCTAssertTrue(dDayDeleted)
+        actualFetchCounts = await repository.fetchCounts
+        XCTAssertEqual(actualFetchCounts, expected)
+        XCTAssertTrue(model.selectedDay?.dDays.isEmpty == true)
+        XCTAssertEqual(model.days.map(\.id), originalDayIDs)
+        XCTAssertEqual(model.selectedDay?.todos.map(\.title), ["Local todo"])
+    }
+
     func testScheduleCreateEditDeleteRefreshesTheOpenDay() async throws {
         let repository = CalendarUserFlowRepository()
         let model = CalendarViewModel(
@@ -122,6 +233,7 @@ final class CalendarUserFlowTests: XCTestCase {
         )
 
         await model.load()
+        let baseline = await repository.fetchCounts
 
         XCTAssertTrue(model.isMyCalendar)
         XCTAssertEqual(model.highlightedDate?.rawValue, "2026-08-12")
@@ -132,6 +244,8 @@ final class CalendarUserFlowTests: XCTestCase {
         let untagged = await model.untagSelf(linkedSchedule)
         XCTAssertTrue(untagged)
         XCTAssertTrue(model.selectedDay?.schedules.isEmpty == true)
+        let fetchCounts = await repository.fetchCounts
+        XCTAssertEqual(fetchCounts, baseline)
         let untaggedScheduleIDs = await repository.untaggedScheduleIDs
         XCTAssertEqual(untaggedScheduleIDs, [scheduleID])
     }
@@ -227,6 +341,47 @@ final class CalendarUserFlowTests: XCTestCase {
             from: DateComponents(year: year, month: month, day: day, hour: hour)
         )!
     }
+
+    nonisolated private static func todo() -> TodoDTO {
+        TodoDTO(
+            id: UUID().uuidString,
+            title: "Local todo",
+            content: "",
+            position: 0,
+            status: .todo,
+            createdDate: LocalDateTimeValue(rawValue: "2026-08-12T00:00:00"),
+            completedDate: nil,
+            dueDate: DateOnly(rawValue: "2026-08-12"),
+            isOverdue: false,
+            isTagged: false,
+            owner: "Tester",
+            taggedByMember: nil,
+            tags: [],
+            hasAttachments: false
+        )
+    }
+}
+
+private struct CalendarFetchCounts: Equatable, Sendable {
+    var calendar: Int
+    var duties: Int
+    var schedules: Int
+    var holidays: Int
+    var dDays: Int
+    var todoBoard: Int
+    var canManage: Int
+    var otherDuties: Int
+
+    init(all value: Int = 0) {
+        calendar = value
+        duties = value
+        schedules = value
+        holidays = value
+        dDays = value
+        todoBoard = value
+        canManage = value
+        otherDuties = value
+    }
 }
 
 private actor CalendarUserFlowRepository: CalendarRepositoryProtocol {
@@ -234,6 +389,9 @@ private actor CalendarUserFlowRepository: CalendarRepositoryProtocol {
     private var storedDDays: [DDayDTO] = []
     private let canManageValue: Bool
     private let scheduleOwnerID: MemberID
+    private var storedDuty: DutyDTO?
+    private var storedTodo: TodoDTO?
+    private(set) var fetchCounts = CalendarFetchCounts()
 
     private(set) var savedRequests: [ScheduleSaveDTO] = []
     private(set) var deletedScheduleIDs: [ScheduleID] = []
@@ -243,11 +401,13 @@ private actor CalendarUserFlowRepository: CalendarRepositoryProtocol {
     init(
         schedule: ScheduleDTO? = nil,
         canManage: Bool = false,
-        scheduleOwnerID: MemberID = 1
+        scheduleOwnerID: MemberID = 1,
+        todo: TodoDTO? = nil
     ) {
         storedSchedule = schedule
         canManageValue = canManage
         self.scheduleOwnerID = scheduleOwnerID
+        storedTodo = todo
     }
 
     func member() async throws -> MemberDTO {
@@ -279,16 +439,27 @@ private actor CalendarUserFlowRepository: CalendarRepositoryProtocol {
 
     func friends() async throws -> [FriendDTO] { [] }
     func team(id: TeamID) async throws -> TeamDTO { throw APIError.invalidResponse }
-    func canManage(memberID: MemberID) async throws -> Bool { canManageValue }
-
-    func calendar(year: Int, month: Int) async throws -> [TeamDayDTO] {
-        Self.gridDays(year: year, month: month)
+    func canManage(memberID: MemberID) async throws -> Bool {
+        fetchCounts.canManage += 1
+        return canManageValue
     }
 
-    func duties(memberID: MemberID, year: Int, month: Int) async throws -> [DutyDTO] { [] }
-    func otherDuties(memberIDs: [MemberID], year: Int, month: Int) async throws -> [OtherDutyResponse] { [] }
+    func calendar(year: Int, month: Int) async throws -> [TeamDayDTO] {
+        fetchCounts.calendar += 1
+        return Self.gridDays(year: year, month: month)
+    }
+
+    func duties(memberID: MemberID, year: Int, month: Int) async throws -> [DutyDTO] {
+        fetchCounts.duties += 1
+        return storedDuty.map { [$0] } ?? []
+    }
+    func otherDuties(memberIDs: [MemberID], year: Int, month: Int) async throws -> [OtherDutyResponse] {
+        fetchCounts.otherDuties += 1
+        return []
+    }
 
     func schedules(memberID: MemberID, year: Int, month: Int) async throws -> [[ScheduleDTO]] {
+        fetchCounts.schedules += 1
         var result = Array(repeating: [ScheduleDTO](), count: 42)
         let cells = Self.gridDays(year: year, month: month)
         if let storedSchedule,
@@ -303,17 +474,22 @@ private actor CalendarUserFlowRepository: CalendarRepositoryProtocol {
     }
 
     func holidays(year: Int, month: Int) async throws -> [[HolidayDTO]] {
-        Array(repeating: [], count: 42)
+        fetchCounts.holidays += 1
+        return Array(repeating: [], count: 42)
     }
 
-    func dDays(memberID: MemberID, isMine: Bool) async throws -> [DDayDTO] { storedDDays }
+    func dDays(memberID: MemberID, isMine: Bool) async throws -> [DDayDTO] {
+        fetchCounts.dDays += 1
+        return storedDDays
+    }
 
     func todoBoard() async throws -> TodoBoardDTO {
-        TodoBoardDTO(
-            todo: [],
+        fetchCounts.todoBoard += 1
+        return TodoBoardDTO(
+            todo: storedTodo.map { [$0] } ?? [],
             inProgress: [],
             done: [],
-            counts: TodoCountsDTO(todo: 0, inProgress: 0, done: 0, total: 0)
+            counts: TodoCountsDTO(todo: storedTodo == nil ? 0 : 1, inProgress: 0, done: 0, total: storedTodo == nil ? 0 : 1)
         )
     }
 
@@ -366,7 +542,18 @@ private actor CalendarUserFlowRepository: CalendarRepositoryProtocol {
         )
     }
 
-    func updateDuty(_ request: DutyUpdateDTO) async throws {}
+    func updateDuty(_ request: DutyUpdateDTO) async throws {
+        storedDuty = DutyDTO(
+            year: request.year,
+            month: request.month,
+            day: request.day,
+            dutyType: request.dutyTypeId == nil ? nil : "Updated",
+            dutyColor: nil,
+            isOff: request.dutyTypeId == nil,
+            dutyTypeId: request.dutyTypeId,
+            source: .override
+        )
+    }
     func batchUpdateDuty(_ request: DutyBatchUpdateDTO) async throws {}
 
     func uploadDutyBatch(

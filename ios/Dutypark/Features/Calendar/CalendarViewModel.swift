@@ -313,7 +313,7 @@ final class CalendarViewModel: ObservableObject {
             let nextDate = currentMonthDays.firstIndex(where: { $0.id == day.id }).flatMap { index in
                 currentMonthDays.indices.contains(index + 1) ? currentMonthDays[index + 1].cell.date : nil
             }
-            try await loadMonth()
+            try await refreshDuties()
             if let nextDate, let next = days.first(where: { $0.cell.date == nextDate }) { focusQuickDuty(on: next) }
         } catch { errorMessage = CalendarLocalization.text("calendar.error.save") }
     }
@@ -352,7 +352,17 @@ final class CalendarViewModel: ObservableObject {
 
     func toggleTodoItems() async {
         showTodoItems.toggle()
-        await reloadMonth()
+        rebuildTodoDays()
+    }
+
+    func refreshTodoBoard() async {
+        guard isMyCalendar else { return }
+        do {
+            todoBoard = try await repository.todoBoard()
+            rebuildTodoDays()
+        } catch {
+            errorMessage = CalendarLocalization.text("calendar.error.load")
+        }
     }
 
     func updateDuty(day: CalendarDayContent, dutyTypeID: DutyTypeID?) async {
@@ -362,7 +372,7 @@ final class CalendarViewModel: ObservableObject {
                 year: day.cell.year, month: day.cell.month, day: day.cell.day,
                 dutyTypeId: dutyTypeID, memberId: memberID
             ))
-            try await loadMonth()
+            try await refreshDuties()
         } catch { errorMessage = CalendarLocalization.text("calendar.error.save") }
     }
 
@@ -372,7 +382,7 @@ final class CalendarViewModel: ObservableObject {
             try await repository.batchUpdateDuty(DutyBatchUpdateDTO(
                 year: year, month: month, dutyTypeId: dutyTypeID, memberId: memberID
             ))
-            try await loadMonth()
+            try await refreshDuties()
         } catch { errorMessage = CalendarLocalization.text("calendar.error.save") }
     }
 
@@ -411,7 +421,7 @@ final class CalendarViewModel: ObservableObject {
                 } else { "" }
                 dutyBatchMessage = [period, CalendarLocalization.format("calendar.duty.excel.success", result.workingDays, result.offDays)]
                     .filter { !$0.isEmpty }.joined(separator: "\n")
-                try await loadMonth()
+                try await refreshDuties()
             } else {
                 dutyBatchMessage = CalendarFeatureLogic.dutyBatchFailureMessage(result)
             }
@@ -437,7 +447,7 @@ final class CalendarViewModel: ObservableObject {
                 orderedAttachmentIds: orderedAttachmentIDs,
                 aiTimeParsingRequested: aiTimeParsingRequested
             ))
-            try await loadMonth()
+            try await refreshSchedules()
             return true
         } catch {
             errorMessage = CalendarLocalization.text("calendar.error.save")
@@ -453,8 +463,7 @@ final class CalendarViewModel: ObservableObject {
             errorMessage = CalendarLocalization.text("calendar.error.delete")
             return false
         }
-        do { try await loadMonth() }
-        catch { errorMessage = CalendarLocalization.text("calendar.error.load") }
+        removeSchedule(id: schedule.id)
         return true
     }
 
@@ -466,8 +475,7 @@ final class CalendarViewModel: ObservableObject {
             errorMessage = CalendarLocalization.text("calendar.error.delete")
             return false
         }
-        do { try await loadMonth() }
-        catch { errorMessage = CalendarLocalization.text("calendar.error.load") }
+        removeSchedule(id: schedule.id)
         return true
     }
 
@@ -515,8 +523,10 @@ final class CalendarViewModel: ObservableObject {
         let parts = CalendarDateSupport.calendar.dateComponents([.year, .month, .day], from: date)
         let dateOnly = DateOnly(rawValue: String(format: "%04d-%02d-%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0))
         do {
-            _ = try await repository.saveDDay(DDaySaveDTO(id: existing?.id, title: trimmed, date: dateOnly, isPrivate: isPrivate))
-            try await loadMonth()
+            let saved = try await repository.saveDDay(
+                DDaySaveDTO(id: existing?.id, title: trimmed, date: dateOnly, isPrivate: isPrivate)
+            )
+            upsertDDay(saved)
             return true
         } catch { errorMessage = CalendarLocalization.text("calendar.error.save"); return false }
     }
@@ -529,9 +539,105 @@ final class CalendarViewModel: ObservableObject {
             errorMessage = CalendarLocalization.text("calendar.error.delete")
             return false
         }
-        do { try await loadMonth() }
-        catch { errorMessage = CalendarLocalization.text("calendar.error.load") }
+        removeDDay(id: dDay.id)
         return true
+    }
+
+    private func refreshSchedules() async throws {
+        guard let memberID = targetMemberID else { throw APIError.invalidResponse }
+        let loadedSchedules = try await repository.schedules(
+            memberID: memberID,
+            year: year,
+            month: month
+        )
+        days = days.enumerated().map { index, day in
+            replacing(day, schedules: loadedSchedules.indices.contains(index) ? loadedSchedules[index] : [])
+        }
+        rebindPresentedDays()
+    }
+
+    private func refreshDuties() async throws {
+        guard let memberID = targetMemberID else { throw APIError.invalidResponse }
+        let loadedDuties = try await repository.duties(
+            memberID: memberID,
+            year: year,
+            month: month
+        )
+        days = days.map { day in
+            let duty = loadedDuties.first {
+                $0.year == day.cell.year && $0.month == day.cell.month && $0.day == day.cell.day
+            }
+            return CalendarDayContent(
+                cell: day.cell,
+                duty: duty,
+                schedules: day.schedules,
+                holidays: day.holidays,
+                todos: day.todos,
+                dDays: day.dDays,
+                comparedDuties: day.comparedDuties
+            )
+        }
+        rebindPresentedDays()
+    }
+
+    private func rebuildTodoDays() {
+        let visibleTodos = (showTodoItems ? (todoBoard?.todo ?? []) : []) + (todoBoard?.inProgress ?? [])
+        days = days.map { day in
+            replacing(day, todos: visibleTodos.filter { $0.dueDate == day.cell.date })
+        }
+        rebindPresentedDays()
+    }
+
+    private func removeSchedule(id: ScheduleID) {
+        days = days.map { day in
+            replacing(day, schedules: day.schedules.filter { $0.id != id })
+        }
+        rebindPresentedDays()
+    }
+
+    private func upsertDDay(_ item: DDayDTO) {
+        dDays.removeAll { $0.id == item.id }
+        dDays.append(item)
+        dDays.sort { $0.date.rawValue < $1.date.rawValue }
+        rebuildDDayDays()
+    }
+
+    private func removeDDay(id: Int64) {
+        dDays.removeAll { $0.id == id }
+        if pinnedDDayID == id, let memberID = targetMemberID {
+            pinnedDDayID = nil
+            UserDefaults.standard.removeObject(forKey: pinnedDDayKey(memberID))
+        }
+        rebuildDDayDays()
+    }
+
+    private func rebuildDDayDays() {
+        days = days.map { day in
+            replacing(day, dDays: dDays.filter { $0.date == day.cell.date })
+        }
+        rebindPresentedDays()
+    }
+
+    private func rebindPresentedDays() {
+        selectedDay = selectedDay.flatMap { selected in days.first { $0.id == selected.id } }
+        quickDutyDay = quickDutyDay.flatMap { selected in days.first { $0.id == selected.id } }
+    }
+
+    private func replacing(
+        _ day: CalendarDayContent,
+        schedules: [ScheduleDTO]? = nil,
+        todos: [TodoDTO]? = nil,
+        dDays: [DDayDTO]? = nil
+    ) -> CalendarDayContent {
+        CalendarDayContent(
+            cell: day.cell,
+            duty: day.duty,
+            schedules: schedules ?? day.schedules,
+            holidays: day.holidays,
+            todos: todos ?? day.todos,
+            dDays: dDays ?? day.dDays,
+            comparedDuties: day.comparedDuties
+        )
     }
 
     private func reloadMonth() async {
