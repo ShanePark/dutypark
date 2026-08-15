@@ -52,6 +52,10 @@ final class NotificationStore: ObservableObject {
 
     func refresh() async {
 #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-ui-testing-notification-fixture") {
+            loadUITestingNotificationFixture()
+            return
+        }
         if ProcessInfo.processInfo.arguments.contains("-ui-testing-authenticated") {
             notifications = []
             unreadCount = 0
@@ -235,4 +239,56 @@ final class NotificationStore: ObservableObject {
     private func updateBadge() async {
         try? await UNUserNotificationCenter.current().setBadgeCount(unreadCount)
     }
+
+#if DEBUG
+    private func loadUITestingNotificationFixture() {
+        let data = Data(Self.uiTestingNotificationFixture.utf8)
+        notifications = (try? JSONDecoder().decode([NotificationDTO].self, from: data)) ?? []
+        unreadCount = notifications.filter { !$0.isRead }.count
+        friendRequestCount = 1
+        currentPage = 0
+        totalPages = 1
+        loadFailed = false
+    }
+
+    private static let uiTestingNotificationFixture = #"""
+    [
+      {
+        "id": "00000000-0000-0000-0000-000000000101",
+        "type": "FRIEND_REQUEST_RECEIVED",
+        "referenceType": "FRIEND_REQUEST",
+        "referenceId": "101",
+        "actorId": 101,
+        "payload": {
+          "version": 1,
+          "actor": {
+            "name": "민지",
+            "hasProfilePhoto": false,
+            "profilePhotoVersion": 0
+          }
+        },
+        "isRead": false,
+        "createdAt": "2026-08-15T08:30:00"
+      },
+      {
+        "id": "00000000-0000-0000-0000-000000000102",
+        "type": "TODO_STATUS_DONE",
+        "referenceType": "TODO",
+        "referenceId": "00000000-0000-0000-0000-000000000202",
+        "actorId": 102,
+        "payload": {
+          "version": 1,
+          "actor": {
+            "name": "알렉스",
+            "hasProfilePhoto": false,
+            "profilePhotoVersion": 0
+          },
+          "todoTitle": "근무표 확인"
+        },
+        "isRead": true,
+        "createdAt": "2026-08-14T18:15:00"
+      }
+    ]
+    """#
+#endif
 }

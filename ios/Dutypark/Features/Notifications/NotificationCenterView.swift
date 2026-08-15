@@ -79,6 +79,7 @@ struct NotificationCenterView: View {
             .frame(maxWidth: .infinity)
         }
         .background(DPColor.backgroundPrimary)
+        .accessibilityIdentifier("screen.notifications")
         .toolbar(.hidden, for: .navigationBar)
         .presentationDragIndicator(.visible)
         .refreshable { await store.refresh() }
@@ -170,7 +171,8 @@ struct NotificationCenterView: View {
         HStack(spacing: DPSpacing.small) {
             NotificationHeaderActionButton(
                 title: notificationLocalized("notifications.list.markAllAsReadShort"),
-                systemImage: "checkmark.circle"
+                systemImage: "checkmark.circle",
+                accessibilityIdentifier: "notifications.markAllAsRead"
             ) {
                 Task { await markAllAsRead() }
             }
@@ -178,7 +180,8 @@ struct NotificationCenterView: View {
             NotificationHeaderActionButton(
                 title: notificationLocalized("notifications.list.deleteReadShort"),
                 systemImage: "trash",
-                isDestructive: true
+                isDestructive: true,
+                accessibilityIdentifier: "notifications.deleteRead"
             ) {
                 if store.notifications.contains(where: \.isRead) {
                     deletionConfirmation = .allRead
@@ -357,6 +360,7 @@ private struct NotificationRow: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier("notifications.row.\(notification.id.uuidString).open")
 
             Button(action: onDelete) {
                 Image(systemName: "trash")
@@ -367,6 +371,7 @@ private struct NotificationRow: View {
                 }
             .buttonStyle(.plain)
             .accessibilityLabel(notificationLocalized("notifications.common.delete"))
+            .accessibilityIdentifier("notifications.row.\(notification.id.uuidString).delete")
         }
         .padding(.leading, DPSpacing.medium)
         .padding(.trailing, DPSpacing.small)
@@ -383,7 +388,6 @@ private struct NotificationRow: View {
             }
         }
         .contentShape(Rectangle())
-        .accessibilityIdentifier("notifications.row.\(notification.id.uuidString)")
     }
 }
 
@@ -391,6 +395,7 @@ private struct NotificationHeaderActionButton: View {
     let title: String
     let systemImage: String
     var isDestructive = false
+    let accessibilityIdentifier: String
     let action: () -> Void
 
     var body: some View {
@@ -408,6 +413,7 @@ private struct NotificationHeaderActionButton: View {
             .background(DPColor.backgroundTertiary, in: RoundedRectangle(cornerRadius: DPRadius.standard))
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier(accessibilityIdentifier)
     }
 }
 
