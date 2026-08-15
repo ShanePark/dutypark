@@ -4,6 +4,48 @@ import XCTest
 
 @MainActor
 final class HomeDashboardTests: XCTestCase {
+    func testHomeFoundationStringsFollowTheSelectedLocale() {
+        XCTAssertEqual(homeLocalized("home.offDuty", locale: Locale(identifier: "ko")), "휴무")
+        XCTAssertEqual(homeLocalized("home.offDuty", locale: Locale(identifier: "en")), "Off")
+    }
+
+    func testPinnedFriendLongPressUsesDeliberateActivationDelay() {
+        XCTAssertEqual(HomePinnedFriendDragLayout.minimumPressDuration, 0.35)
+    }
+
+    func testPinnedFriendDragMovesCardAfterItOverlapsTheNextCard() {
+        let targets = [
+            HomePinnedFriendDropTarget(memberID: 2, frame: CGRect(x: 0, y: 0, width: 300, height: 88)),
+            HomePinnedFriendDropTarget(memberID: 3, frame: CGRect(x: 0, y: 96, width: 300, height: 88)),
+            HomePinnedFriendDropTarget(memberID: 4, frame: CGRect(x: 0, y: 192, width: 300, height: 88))
+        ]
+
+        let reordered = HomePinnedFriendLiveOrder.reordered(
+            [2, 3, 4],
+            draggedID: 2,
+            previewFrame: CGRect(x: 0, y: 20, width: 300, height: 88),
+            targets: targets
+        )
+
+        XCTAssertEqual(reordered, [3, 2, 4])
+    }
+
+    func testPinnedFriendDragKeepsOrderBeforeCardsOverlap() {
+        let targets = [
+            HomePinnedFriendDropTarget(memberID: 2, frame: CGRect(x: 0, y: 0, width: 300, height: 88)),
+            HomePinnedFriendDropTarget(memberID: 3, frame: CGRect(x: 0, y: 96, width: 300, height: 88))
+        ]
+
+        let reordered = HomePinnedFriendLiveOrder.reordered(
+            [2, 3],
+            draggedID: 2,
+            previewFrame: CGRect(x: 0, y: 4, width: 300, height: 88),
+            targets: targets
+        )
+
+        XCTAssertEqual(reordered, [2, 3])
+    }
+
     func testLoadsBothDashboardSectionsAndKeepsPinnedOrder() async throws {
         let myDashboard = try Self.decodeMyDashboard()
         let friendsDashboard = try Self.decodeFriendsDashboard()
