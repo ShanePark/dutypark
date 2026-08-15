@@ -6,6 +6,29 @@ import UserNotifications
 @MainActor
 struct NotificationFeatureTests {
     @Test
+    func deletionConfirmationKeepsTheSelectedScopeAndLocalizationKeys() throws {
+        let page: PageResponse<NotificationDTO> = try decodeNotificationFixture()
+        let notification = try #require(page.content.first)
+
+        let single = NotificationDeletionConfirmation.notification(notification)
+        #expect(single.id == .notification(notification.id))
+        #expect(single.titleKey == "notifications.list.deleteConfirmTitle")
+        #expect(single.messageKey == "notifications.list.deleteConfirmMessage")
+        #expect(single.confirmTitleKey == "notifications.common.delete")
+        guard case let .notification(selectedNotification) = single else {
+            Issue.record("Expected a single-notification confirmation")
+            return
+        }
+        #expect(selectedNotification == notification)
+
+        let allRead = NotificationDeletionConfirmation.allRead
+        #expect(allRead.id == .allRead)
+        #expect(allRead.titleKey == "notifications.list.deleteAllReadTitle")
+        #expect(allRead.messageKey == "notifications.list.deleteAllReadConfirm")
+        #expect(allRead.confirmTitleKey == "notifications.list.deleteRead")
+    }
+
+    @Test
     func mapsNotificationReferencesToNativeRoutes() throws {
         let page: PageResponse<NotificationDTO> = try decodeNotificationFixture()
         let notification = try #require(page.content.first)
