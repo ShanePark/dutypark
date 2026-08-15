@@ -69,7 +69,7 @@
 | `2ecdbb70` | 팀 일정 삭제 및 팀 관리 확인 UI | iPhone 13 mini `TeamFeatureTests` 24건 | `d444f095`에서 가입 팀 패널 2종 확보 | 완료 |
 | `8a6a3aae` | Root 햄버거 로그아웃 중앙 확인 | iPhone 13 mini 전용 테스트 3건 | 메뉴 화면 확보, 패널 직접 캡처 대기 | 코드·테스트 완료·캡처 대기 |
 | `a19f4047` | 소셜 계정 연결 해제 중앙 확인 | iPhone 13 mini 전용 테스트 3건 | `8c947a62`에서 관리·확인 패널 캡처 확보 | 완료 |
-| `cc673095` | SSO 추가정보 draft 폐기 중앙 확인 | iPhone 13 mini OAuth 가입 테스트 6건 | 인증 fixture 부재 | 코드·테스트 완료·캡처 대기 |
+| `cc673095` | SSO 추가정보 draft 폐기 중앙 확인 | iPhone 13 mini OAuth 가입 테스트 6건 | `eb822f5e`에서 직접 진입 캡처 확보 | 완료 |
 | `38dc5bca` | 친구 destructive 확인 4종 및 `더보기` 터치 복원 | Social 19건·재정렬 UI·삭제 패널 UI | 친구 삭제 중앙 패널 확보 | 완료 |
 | `c47a77ea` | 달력 연도 치환의 천 단위 구분 제거 | 앱·테스트 빌드, exact 한국어 문자열 회귀 테스트 | 수정 후 월 일괄 변경 화면 재캡처 | 완료 |
 | `f390c6bc` | 달력 월 일괄 변경 시각 fixture | iPhone 13 mini UI 1건 | 중앙 선택 패널·`2026년` 표기 확보 | 완료 |
@@ -81,6 +81,7 @@
 | `aaca282c` | 긴 확인 문구의 취소·확인 버튼 겹침 방지 | 공통 패널 계약·generic test build | 관리자 세션 종료에서 픽셀 재검증 | 완료 |
 | `eee695a9` | 관리자 destructive 확인 시각 fixture | iPhone 13 mini UI 2건 | 팀 삭제·회원 세션 종료 확보 | 완료 |
 | `8c947a62` | 소셜 연결 관리 시각 fixture | iPhone 13 mini UI 1건 | Kakao 관리·연결 해제 패널 확보 | 완료 |
+| `eb822f5e` | SSO 추가정보 draft 폐기 시각 검증 | iPhone 13 mini UI 1건 | 작성 내용 폐기 중앙 패널 확보 | 완료 |
 
 ## 상세 변경 보고
 
@@ -290,10 +291,14 @@
 
 ### SSO 추가정보 draft 폐기 — `cc673095`
 
+<img src="screenshots/sso-signup-discard-confirmation-ios-after.png" width="240" alt="iOS SSO 회원가입 draft 폐기 확인">
+
 - 작성 중인 추가정보를 취소할 때 표시되던 native alert를 중앙 패널로 교체했다.
 - 빈 draft는 즉시 닫고, 작성 내용이나 약관 선택이 있을 때만 확인한다.
 - 처리 중에는 중복 제출·취소·배경·gesture dismiss를 차단한다.
 - iPhone 13 mini에서 OAuth 가입 프레젠테이션 테스트 6건이 통과했다: `/tmp/Dutypark-SsoSignupConfirmation-20260815-01.xcresult`.
+- DEBUG direct route에서 이름 draft를 입력한 뒤 취소해 정확한 제목·영향 문구·`계속 작성`·`나가기` 버튼을 검증했다.
+- 시각 UI 테스트 1/1 통과: `/tmp/Dutypark-SsoSignupVisual-20260815-02.xcresult`.
 
 ### 친구 destructive 확인과 관리 액션 — `38dc5bca`
 
@@ -337,6 +342,6 @@
 - [x] 가입 팀 fixture로 일정 삭제·관리 중앙 패널 스크린샷 추가
 - [x] Root 햄버거 로그아웃 중앙 패널 스크린샷 추가
 - [x] 소셜 연결 관리 fixture와 연결 해제 중앙 패널 스크린샷 추가
-- [ ] SSO 추가정보 fixture와 draft 폐기 중앙 패널 스크린샷 추가
+- [x] SSO 추가정보 fixture와 draft 폐기 중앙 패널 스크린샷 추가
 - [x] 설정의 사진 삭제·관리자 해제·관리 계정 전환 확인 UI 조사 및 수정
 - [x] 로그아웃 등 남은 전역 `confirmationDialog` 조사 및 수정
