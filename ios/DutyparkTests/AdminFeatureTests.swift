@@ -62,8 +62,6 @@ struct AdminFeatureTests {
         #expect(AdminRootNavigationPresentation.tileKeys == [
             "admin.nav.members",
             "admin.nav.teams",
-            "admin.nav.development",
-            "admin.nav.apiDocumentation",
         ])
         #expect(stats.values == [24, 1, 2, 1])
         #expect(AdminMemberSearchPolicy.debounce == .milliseconds(300))

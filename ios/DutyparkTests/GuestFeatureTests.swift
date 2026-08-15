@@ -57,60 +57,20 @@ final class GuestPublicLinkTests: XCTestCase {
         )
     }
 
-    func testGuideWebLocaleFollowsExplicitAppSelection() {
-        XCTAssertEqual(GuideLocaleResolver.webLocale(languageCode: "ko"), "ko")
-        XCTAssertEqual(GuideLocaleResolver.webLocale(languageCode: "en"), "en")
-        XCTAssertEqual(GuideLocaleResolver.webLocale(languageCode: "fr-FR"), "en")
+    func testGuideContentLocaleFollowsExplicitAppSelection() {
+        XCTAssertEqual(PublicContentLocaleResolver.locale(languageCode: "ko"), "ko")
+        XCTAssertEqual(PublicContentLocaleResolver.locale(languageCode: "en"), "en")
+        XCTAssertEqual(PublicContentLocaleResolver.locale(languageCode: "fr-FR"), "en")
     }
 
-    func testGuideWebLocaleUsesDeviceLanguageOnlyWithoutSelection() {
+    func testGuideContentLocaleUsesDeviceLanguageOnlyWithoutSelection() {
         XCTAssertEqual(
-            GuideLocaleResolver.webLocale(languageCode: "", preferredLanguages: ["ko-KR"]),
+            PublicContentLocaleResolver.locale(languageCode: "", preferredLanguages: ["ko-KR"]),
             "ko"
         )
         XCTAssertEqual(
-            GuideLocaleResolver.webLocale(languageCode: "", preferredLanguages: ["fr-FR"]),
+            PublicContentLocaleResolver.locale(languageCode: "", preferredLanguages: ["fr-FR"]),
             "en"
-        )
-    }
-
-    func testGuestGuideInterceptsOnlyTheFirstPartyHomeRoute() {
-        let homeURLs = [
-            URL(string: "https://dutypark.o-r.kr")!,
-            URL(string: "https://dutypark.o-r.kr/")!,
-            URL(string: "https://dutypark.o-r.kr/?from=guide#top")!
-        ]
-        for url in homeURLs {
-            XCTAssertTrue(
-                GuideNavigationPolicy.shouldNavigateHomeNatively(
-                    url,
-                    interceptsFirstPartyHome: true
-                )
-            )
-        }
-
-        let ordinaryURLs = [
-            URL(string: "https://dutypark.o-r.kr/guide")!,
-            URL(string: "https://dutypark.o-r.kr/terms")!,
-            URL(string: "https://example.com/")!,
-            URL(string: "http://dutypark.o-r.kr/")!
-        ]
-        for url in ordinaryURLs {
-            XCTAssertFalse(
-                GuideNavigationPolicy.shouldNavigateHomeNatively(
-                    url,
-                    interceptsFirstPartyHome: true
-                )
-            )
-        }
-    }
-
-    func testSettingsGuideDoesNotInterceptTheFirstPartyHomeRoute() {
-        XCTAssertFalse(
-            GuideNavigationPolicy.shouldNavigateHomeNatively(
-                URL(string: "https://dutypark.o-r.kr/")!,
-                interceptsFirstPartyHome: false
-            )
         )
     }
 

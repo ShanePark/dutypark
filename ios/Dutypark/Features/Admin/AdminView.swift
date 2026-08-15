@@ -2,7 +2,6 @@ import SwiftUI
 
 struct AdminRootView: View {
     @EnvironmentObject private var session: SessionStore
-    @Environment(\.openURL) private var openURL
     @StateObject private var memberModel: AdminMemberListViewModel
     @State private var searchText = ""
     @State private var searchTask: Task<Void, Never>?
@@ -59,37 +58,6 @@ struct AdminRootView: View {
                             }
                             .buttonStyle(.plain)
                             .accessibilityIdentifier("admin.tile.teams")
-
-                            NavigationLink {
-                                AdminAuthenticatedWebView(
-                                    path: "admin/dev",
-                                    title: AdminLocalization.string("admin.nav.development")
-                                )
-                            } label: {
-                                AdminTopTile(
-                                    title: AdminLocalization.string("admin.nav.development"),
-                                    systemImage: "chevron.left.forwardslash.chevron.right",
-                                    color: DPColor.warning
-                                )
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityIdentifier("admin.tile.development")
-
-                            Button {
-                                openURL(AdminWebDestination.apiDocumentationURL())
-                            } label: {
-                                AdminTopTile(
-                                    title: AdminLocalization.string("admin.nav.apiDocumentation"),
-                                    systemImage: "doc.text.fill",
-                                    color: DPColor.surfaceStrong
-                                )
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityLabel(AdminLocalization.string("admin.nav.apiDocumentation"))
-                            .accessibilityHint(
-                                AdminLocalization.string("admin.nav.apiDocumentation.externalHint")
-                            )
-                            .accessibilityIdentifier("admin.tile.apiDocumentation")
                         }
                         .padding(.vertical, DPSpacing.extraSmall)
                     }
@@ -353,8 +321,6 @@ nonisolated enum AdminRootNavigationPresentation {
     static let tileKeys = [
         "admin.nav.members",
         "admin.nav.teams",
-        "admin.nav.development",
-        "admin.nav.apiDocumentation",
     ]
 }
 

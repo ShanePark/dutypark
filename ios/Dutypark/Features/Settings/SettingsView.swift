@@ -299,7 +299,7 @@ struct SettingsView: View {
         .navigationDestination(item: $destination) { destination in
             switch destination {
             case .guide:
-                GuideWebView(destination: .guide)
+                PublicGuideView()
             case .terms:
                 DeepLinkedPolicyView(type: .terms, model: model)
             case .privacy:
@@ -796,10 +796,10 @@ struct SettingsView: View {
                 }
             }
             settingsNavigationLink("settings.guide", icon: "book") {
-                GuideWebView(destination: .guide)
+                PublicGuideView()
             }
             settingsNavigationLink("settings.releaseNotes", icon: "clock.arrow.circlepath") {
-                GuideWebView(destination: .releaseNotes)
+                PublicReleaseNotesView()
             }
         }
     }

@@ -40,7 +40,7 @@ final class GuestGuideTitleVisualUITests: XCTestCase {
     }
 
     @MainActor
-    func testGuestGuideHomeLinkReturnsToTheNativeGuestLanding() throws {
+    func testGuestGuideBackButtonReturnsToTheNativeGuestLanding() throws {
         let app = XCUIApplication()
         app.launchArguments += [
             "-dp-language", "ko",
@@ -59,10 +59,10 @@ final class GuestGuideTitleVisualUITests: XCTestCase {
         XCTAssertTrue(guideButton.waitForExistence(timeout: 5))
         guideButton.tap()
 
-        let homeLink = app.links["홈으로 돌아가기"]
-        XCTAssertTrue(homeLink.waitForExistence(timeout: 15))
-        XCTAssertTrue(homeLink.isHittable)
-        homeLink.tap()
+        let backButton = app.navigationBars.buttons.firstMatch
+        XCTAssertTrue(backButton.waitForExistence(timeout: 15))
+        XCTAssertTrue(backButton.isHittable)
+        backButton.tap()
 
         XCTAssertTrue(guideButton.waitForExistence(timeout: 5))
         XCTAssertTrue(guideButton.isHittable)

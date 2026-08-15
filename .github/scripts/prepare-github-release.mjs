@@ -2,6 +2,11 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { execFileSync } from 'node:child_process'
+import { fileURLToPath } from 'node:url'
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+const repositoryRoot = path.resolve(__dirname, '..', '..')
+const releaseNotesPath = path.join(repositoryRoot, 'src', 'main', 'resources', 'public-content', 'release-notes.json')
 
 function requiredEnv(name) {
   const value = process.env[name]
@@ -22,111 +27,11 @@ function runGh(args) {
   }).trim()
 }
 
-function decodeI18nLiteral(text) {
-  return text
-    .replaceAll("{'@'}", '@')
-    .replaceAll("{'{'}", '{')
-    .replaceAll("{'}'}", '}')
-}
-
-function parseJsonStringFromLine(line) {
-  const match = line.match(/"((?:[^"\\]|\\.)*)"/)
-  return match ? decodeI18nLiteral(JSON.parse(match[0])) : null
-}
-
-function readInAppReleaseNoteMeta(prNumber) {
-  const metaPath = path.join(process.cwd(), 'frontend', 'src', 'releaseNotes', 'meta.ts')
-  if (!fs.existsSync(metaPath)) {
-    return null
+function readCanonicalReleaseNotes() {
+  if (!fs.existsSync(releaseNotesPath)) {
+    throw new Error(`Missing canonical release notes: ${releaseNotesPath}`)
   }
-
-  const lines = fs.readFileSync(metaPath, 'utf8').split('\n')
-  const startIndex = lines.findIndex(line => line.includes(`id: "pr-${prNumber}"`))
-  if (startIndex < 0) {
-    return null
-  }
-
-  const note = {
-    version: '',
-  }
-
-  for (const line of lines.slice(startIndex + 1)) {
-    const trimmed = line.trim()
-    if (trimmed === '},' || trimmed === '}') {
-      break
-    }
-
-    if (trimmed.startsWith('version:')) {
-      note.version = parseJsonStringFromLine(line) ?? ''
-    }
-  }
-
-  return note.version ? note : null
-}
-
-function readInAppReleaseNote(prNumber, locale = 'en') {
-  const messagePath = path.join(
-    process.cwd(),
-    'frontend',
-    'src',
-    'releaseNotes',
-    'messages',
-    `${locale}.ts`,
-  )
-
-  if (!fs.existsSync(messagePath)) {
-    return null
-  }
-
-  const lines = fs.readFileSync(messagePath, 'utf8').split('\n')
-  const startIndex = lines.findIndex(line => line.includes(`"pr-${prNumber}": {`))
-  if (startIndex < 0) {
-    return null
-  }
-
-  const note = {
-    title: '',
-    summary: '',
-    changes: [],
-  }
-  let inChanges = false
-
-  for (const line of lines.slice(startIndex + 1)) {
-    const trimmed = line.trim()
-
-    if (trimmed === '},' || trimmed === '}') {
-      break
-    }
-
-    if (trimmed.startsWith('title:')) {
-      note.title = parseJsonStringFromLine(line) ?? ''
-      continue
-    }
-
-    if (trimmed.startsWith('summary:')) {
-      note.summary = parseJsonStringFromLine(line) ?? ''
-      continue
-    }
-
-    if (trimmed.startsWith('changes: [')) {
-      inChanges = true
-      continue
-    }
-
-    if (inChanges && trimmed.startsWith(']')) {
-      inChanges = false
-      continue
-    }
-
-    if (inChanges) {
-      const change = parseJsonStringFromLine(line)
-      if (change) {
-        note.changes.push(change)
-      }
-    }
-  }
-
-  return note.title && note.summary ? note : null
+  return JSON.parse(fs.readFileSync(releaseNotesPath, 'utf8'))
 }
 
 function releaseNotesFromInAppEntry(note, pr) {
@@ -202,14 +107,23 @@ if (isDependabotPr) {
   process.exit(0)
 }
 
-const inAppReleaseNoteMeta = readInAppReleaseNoteMeta(pr.number)
-const inAppReleaseNote = readInAppReleaseNote(pr.number)
+const canonicalReleaseNotes = readCanonicalReleaseNotes()
+const matchingNotes = canonicalReleaseNotes.items?.filter(note => note.pr === pr.number) || []
+const inAppReleaseNoteMeta = matchingNotes.length === 1 ? matchingNotes[0] : null
+const inAppReleaseNote = inAppReleaseNoteMeta
+  ? canonicalReleaseNotes.locales?.en?.entries?.[inAppReleaseNoteMeta.id]
+  : null
 
 if (!inAppReleaseNoteMeta?.version) {
   throw new Error(`Missing in-app release note metadata for PR #${pr.number}`)
 }
 
-if (!inAppReleaseNote) {
+if (
+  !inAppReleaseNote?.title ||
+  !inAppReleaseNote?.summary ||
+  !Array.isArray(inAppReleaseNote.changes) ||
+  inAppReleaseNote.changes.length === 0
+) {
   throw new Error(`Missing English in-app release note copy for PR #${pr.number}`)
 }
 
