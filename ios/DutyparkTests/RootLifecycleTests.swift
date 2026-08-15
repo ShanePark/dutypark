@@ -5,6 +5,22 @@ import Testing
 @MainActor
 struct RootLifecycleTests {
     @Test
+    func automaticHomeRefreshCoalescesImmediateSceneAndTabTriggers() {
+        var policy = RootHomeRefreshPolicy()
+        let now = Date(timeIntervalSince1970: 1_000)
+
+        let firstTrigger = policy.shouldRefreshAutomatically(at: now)
+        let immediateDuplicate = policy.shouldRefreshAutomatically(at: now.addingTimeInterval(1))
+        let triggerAfterInterval = policy.shouldRefreshAutomatically(
+            at: now.addingTimeInterval(RootHomeRefreshPolicy.minimumAutomaticInterval)
+        )
+
+        #expect(firstTrigger)
+        #expect(!immediateDuplicate)
+        #expect(triggerAfterInterval)
+    }
+
+    @Test
     func notificationDropdownArmsReadOnCloseOnlyAfterVisibleSuccessfulUnreadLoad() {
         var policy = RootNotificationDropdownReadPolicy()
 

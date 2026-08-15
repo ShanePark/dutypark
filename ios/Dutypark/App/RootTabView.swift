@@ -87,6 +87,25 @@ struct RootNotificationDropdownReadPolicy {
     }
 }
 
+struct RootHomeRefreshPolicy {
+    static let minimumAutomaticInterval: TimeInterval = 5
+
+    private var lastAutomaticRefreshAt: Date?
+
+    init(initialRefreshAt: Date? = nil) {
+        lastAutomaticRefreshAt = initialRefreshAt
+    }
+
+    mutating func shouldRefreshAutomatically(at now: Date = Date()) -> Bool {
+        if let lastAutomaticRefreshAt,
+           now.timeIntervalSince(lastAutomaticRefreshAt) < Self.minimumAutomaticInterval {
+            return false
+        }
+        lastAutomaticRefreshAt = now
+        return true
+    }
+}
+
 struct RootTabView: View {
     @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject private var session: SessionStore
@@ -94,6 +113,7 @@ struct RootTabView: View {
     @StateObject private var pushCenter = NotificationPushCenter.shared
     @State private var selectedTab = AppTab.home
     @State private var homeRefreshID = 0
+    @State private var homeRefreshPolicy = RootHomeRefreshPolicy(initialRefreshAt: Date())
     @State private var homePath: [HomeDestination] = []
     @State private var calendarTarget = CalendarTarget()
     @State private var todoTarget: TodoID?
@@ -193,7 +213,7 @@ struct RootTabView: View {
                     setNotificationForeground: {
                         await notifications.setForeground($0)
                     },
-                    refreshHome: { homeRefreshID &+= 1 },
+                    refreshHome: refreshHomeIfStale,
                     refreshConsent: refreshConsentIfNeeded,
                     resumePush: {
                         await APNsRegistrationManager.shared.resumeRegistration()
@@ -204,17 +224,16 @@ struct RootTabView: View {
         }
         .onChange(of: selectedTab) { _, tab in
             if tab == .home {
-                homeRefreshID &+= 1
+                refreshHomeIfStale()
             }
         }
         .onChange(of: showsNotifications) { _, isPresented in
             guard isPresented else { return }
             notificationDropdownReadPolicy.prepareForOpen()
-            let canStartLoading = !notifications.isLoading
             Task {
-                await notifications.refresh()
+                let didLoad = await notifications.refreshIfStale()
                 notificationDropdownReadPolicy.finishLoading(
-                    didLoad: canStartLoading && !notifications.loadFailed,
+                    didLoad: didLoad,
                     isPresented: showsNotifications,
                     hasUnread: notifications.unreadCount > 0
                         || notifications.notifications.contains(where: { !$0.isRead })
@@ -440,8 +459,13 @@ struct RootTabView: View {
     private func socialDidMutate(_ affectsReceivedRequestCount: Bool) async {
         homeRefreshID &+= 1
         if affectsReceivedRequestCount {
-            await notifications.refresh()
+            await notifications.refreshFriendRequestCount()
         }
+    }
+
+    private func refreshHomeIfStale() {
+        guard homeRefreshPolicy.shouldRefreshAutomatically() else { return }
+        homeRefreshID &+= 1
     }
 
     private func openNotificationRoute(_ route: NotificationRoute) async -> Bool {

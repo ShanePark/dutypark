@@ -17,10 +17,13 @@ final class NotificationStore: ObservableObject {
 
     private let api: any NotificationAPIProtocol
     private let pollingSleep: @Sendable (TimeInterval) async throws -> Void
+    private let now: () -> Date
     private var currentPage = 0
     private var totalPages = 0
     private var consecutiveFailures = 0
     private var pollingTask: Task<Void, Never>?
+    private var refreshTask: Task<Bool, Never>?
+    private var lastSuccessfulRefreshAt: Date?
     private var isForeground = true
     private var markingAsReadIDs: Set<NotificationID> = []
     private var isMarkingAllAsRead = false
@@ -29,10 +32,12 @@ final class NotificationStore: ObservableObject {
         api: any NotificationAPIProtocol = NotificationAPI(),
         pollingSleep: @escaping @Sendable (TimeInterval) async throws -> Void = { interval in
             try await Task.sleep(for: .seconds(interval))
-        }
+        },
+        now: @escaping () -> Date = Date.init
     ) {
         self.api = api
         self.pollingSleep = pollingSleep
+        self.now = now
     }
 
     var hasMore: Bool {
@@ -52,22 +57,73 @@ final class NotificationStore: ObservableObject {
     }
 
     func refresh() async {
+        _ = await performRefresh()
+    }
+
+    /// Reuses a recent successful snapshot and joins an in-flight refresh when possible.
+    /// Explicit pull-to-refresh continues to call `refresh()` and always requests fresh data.
+    @discardableResult
+    func refreshIfStale(minimumInterval: TimeInterval = NotificationStore.basePollingInterval) async -> Bool {
+        if let lastSuccessfulRefreshAt,
+           now().timeIntervalSince(lastSuccessfulRefreshAt) < minimumInterval {
+            return true
+        }
+        return await performRefresh()
+    }
+
+    /// Social mutations only invalidate the friend-request badge, not the notification list.
+    @discardableResult
+    func refreshFriendRequestCount() async -> Bool {
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-ui-testing-notification-fixture") {
+            friendRequestCount = 1
+            return true
+        }
+        if ProcessInfo.processInfo.arguments.contains("-ui-testing-authenticated") {
+            friendRequestCount = 0
+            return true
+        }
+#endif
+        do {
+            friendRequestCount = try await api.friendRequestCount()
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    private func performRefresh() async -> Bool {
+        if let refreshTask {
+            return await refreshTask.value
+        }
+
+        isLoading = true
+        let task = Task { @MainActor [weak self] in
+            await self?.loadFirstPageSnapshot() ?? false
+        }
+        refreshTask = task
+        let succeeded = await task.value
+        refreshTask = nil
+        isLoading = false
+        return succeeded
+    }
+
+    private func loadFirstPageSnapshot() async -> Bool {
 #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-ui-testing-notification-fixture") {
             loadUITestingNotificationFixture()
-            return
+            lastSuccessfulRefreshAt = now()
+            return true
         }
         if ProcessInfo.processInfo.arguments.contains("-ui-testing-authenticated") {
             notifications = []
             unreadCount = 0
             friendRequestCount = 0
             loadFailed = false
-            return
+            lastSuccessfulRefreshAt = now()
+            return true
         }
 #endif
-        guard !isLoading else { return }
-        isLoading = true
-        defer { isLoading = false }
 
         do {
             async let page = api.notifications(page: 0, size: Self.pageSize)
@@ -81,10 +137,13 @@ final class NotificationStore: ObservableObject {
             friendRequestCount = friendCountResult
             loadFailed = false
             consecutiveFailures = 0
+            lastSuccessfulRefreshAt = now()
             await updateBadge()
+            return true
         } catch {
             loadFailed = true
             consecutiveFailures += 1
+            return false
         }
     }
 
@@ -200,7 +259,7 @@ final class NotificationStore: ObservableObject {
         if foreground {
             // A scene resume can include changes made by another session, including
             // read-notification deletion that does not alter the unread count.
-            await refresh()
+            _ = await refreshIfStale()
         }
     }
 
