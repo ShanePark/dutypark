@@ -86,6 +86,27 @@ final class TodoConfirmationVisualUITests: XCTestCase {
     }
 
     @MainActor
+    func testInProgressLabelsMatchResponsiveWebCopy() {
+        let app = launchApp()
+        defer { app.terminate() }
+
+        openTodoScreen(in: app)
+
+        let webCopy = app.staticTexts.matching(NSPredicate(format: "label == %@", "진행중"))
+        XCTAssertGreaterThanOrEqual(
+            webCopy.count,
+            2,
+            "The status tab and visible board column must both use the responsive-web copy."
+        )
+        XCTAssertEqual(
+            app.staticTexts.matching(NSPredicate(format: "label == %@", "진행")).count,
+            0,
+            "The old abbreviated copy must not remain visible."
+        )
+        capture("parity-ios-todo-in-progress-copy-after")
+    }
+
+    @MainActor
     func testFixtureTodoLongPressReordersWithoutOpeningDetail() {
         let app = launchApp()
         defer { app.terminate() }
