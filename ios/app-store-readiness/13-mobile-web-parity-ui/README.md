@@ -51,6 +51,7 @@
 | 16 | Todo | 선택한 상태와 다른 열이 보여 카드가 화면 밖에 놓이고, 롱프레스 제스처가 일반 탭을 막음 | 완료 | `b84b2478` |
 | 17 | Todo | 웹의 `진행중` 상태가 iOS에서 `진행`으로 축약됨 | 완료 | `73fe7e0a` |
 | 18 | 대시보드 · 친구 | 수정 후 증빙이 빈 fixture라 친구 총수·목록 유지 여부를 비교할 수 없음 | 완료 | `ed29121c` |
+| 19 | 설정 · 회원 탈퇴 | 영구 삭제 버튼이 `내 계정 삭제`로 축약되어 비가역성이 약하게 안내됨 | 완료 | `12974a63` |
 
 상태는 `대기 → 진행 중 → 수정됨·커밋 전 → 코드 커밋됨·시각 검증 전 → 완료` 순으로 관리한다.
 
@@ -94,6 +95,7 @@
 | `b84b2478` | Todo 카드 탭·롱프레스·선택 열 정렬 복원 | Todo 단위 32건, iPhone 13 mini UI 5건 | 실제 카드 탭 삭제·작성 취소 패널 및 드래그·스크롤 검증 | 완료 |
 | `73fe7e0a` | Todo `진행중` 상태 문구 복원 | exact ko/en 테스트, generic build·test build, UI 1건 | 상단 탭·보드 열 `진행중` 재캡처 | 완료 |
 | `ed29121c` | 친구가 있는 Home parity fixture | HomeDashboard 11건, generic build·test build, UI 1건 | 친구 총수 3·고정 2·일반 1 재캡처 | 완료 |
+| `12974a63` | 회원 탈퇴 최종 버튼의 영구 삭제 경고 복원 | AccountDeletion 9건, generic build·test build, UI 1건 | 5/5 최종 확인 화면 재캡처 | 완료 |
 
 ## 상세 변경 보고
 
@@ -275,6 +277,15 @@
 - 작업 중에는 중복 실행과 배경·gesture dismiss를 차단한다.
 - iPhone 13 mini에서 `SettingsFeatureTests` 29건과 전용 시각 UI 테스트 3건이 통과했다.
 - `22d0bc18`에서 프로필 사진 fixture와 안정적인 접근성 식별자를 추가했고, 두 확인 패널의 제목·설명·취소·destructive 버튼 및 중앙 배치를 직접 확인했다.
+
+### 회원 탈퇴 영구 삭제 문구 — `12974a63`
+
+<img src="screenshots/account-permanent-delete-copy-ios-after.png" width="240" alt="계정 영구 삭제로 복원한 iOS 회원 탈퇴 최종 확인">
+
+- 모바일 웹의 최종 destructive 동작은 `계정 영구 삭제` / `Permanently delete account`로 비가역성을 버튼 자체에 명시하지만 iOS는 `내 계정 삭제` / `Delete my account`로 축약되어 있었다.
+- 한·영 문구를 웹과 exact 일치시켰으며 삭제 영향·복구 불가 안내와 기존 5단계 확인 흐름은 유지했다.
+- DEBUG fixture는 삭제 요청을 항상 거부하고, UI 테스트도 최종 버튼을 누르지 않은 채 문구·44pt 높이·완전 노출·비중첩만 검증한다.
+- iPhone 13 mini에서 AccountDeletion 테스트 9/9와 UI 1/1이 통과했다. 결과: `/tmp/Dutypark-AccountDeletionCopy-Unit-Green-20260815.xcresult`, `/tmp/Dutypark-AccountDeletionCopy-UI-Final-20260815.xcresult`.
 
 ### Todo 카드 상호작용과 destructive 확인 — `bd3a1fc4`, `b84b2478`
 
