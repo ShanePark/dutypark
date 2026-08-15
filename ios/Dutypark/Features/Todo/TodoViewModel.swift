@@ -105,9 +105,9 @@ final class TodoViewModel: ObservableObject {
         isSaving = true
         defer { isSaving = false }
         do {
-            _ = try await repository.create(draft.request())
+            let created = try await repository.create(draft.request())
             if refreshBoard {
-                await refresh()
+                patchBoard(with: created)
             }
             return true
         } catch {
@@ -122,7 +122,7 @@ final class TodoViewModel: ObservableObject {
             return false
         }
         return await performMutation(errorKey: "todo.error.update") {
-            _ = try await repository.update(
+            try await repository.update(
                 id: todo.uuid,
                 request: draft.request()
             )
@@ -130,27 +130,27 @@ final class TodoViewModel: ObservableObject {
     }
 
     func delete(_ todo: TodoDTO) async -> Bool {
-        await performMutation(errorKey: "todo.error.delete") {
+        await performRemoval(todoID: todo.uuid, errorKey: "todo.error.delete") {
             try await repository.delete(id: todo.uuid)
         }
     }
 
     func complete(_ todo: TodoDTO) async -> Bool {
         await performMutation(errorKey: "todo.error.status") {
-            _ = try await repository.complete(id: todo.uuid)
+            try await repository.complete(id: todo.uuid)
         }
     }
 
     func reopen(_ todo: TodoDTO) async -> Bool {
         await performMutation(errorKey: "todo.error.status") {
-            _ = try await repository.reopen(id: todo.uuid)
+            try await repository.reopen(id: todo.uuid)
         }
     }
 
     func move(_ todo: TodoDTO, to status: TodoStatus) async -> Bool {
         guard todo.status != status else { return true }
         return await performMutation(errorKey: "todo.error.status") {
-            _ = try await repository.changeStatus(
+            try await repository.changeStatus(
                 id: todo.uuid,
                 request: TodoStatusChangeRequest(status: status, orderedIds: [])
             )
@@ -244,12 +244,29 @@ final class TodoViewModel: ObservableObject {
     }
 
     func leaveTag(_ todo: TodoDTO) async -> Bool {
-        await performMutation(errorKey: "todo.error.leaveTag") {
+        await performRemoval(todoID: todo.uuid, errorKey: "todo.error.leaveTag") {
             try await repository.leaveTag(id: todo.uuid)
         }
     }
 
     private func performMutation(
+        errorKey: String,
+        operation: () async throws -> TodoDTO
+    ) async -> Bool {
+        guard !isSaving else { return false }
+        isSaving = true
+        defer { isSaving = false }
+        do {
+            patchBoard(with: try await operation())
+            return true
+        } catch {
+            self.errorKey = errorKey
+            return false
+        }
+    }
+
+    private func performRemoval(
+        todoID: TodoID,
         errorKey: String,
         operation: () async throws -> Void
     ) async -> Bool {
@@ -258,12 +275,26 @@ final class TodoViewModel: ObservableObject {
         defer { isSaving = false }
         do {
             try await operation()
-            await refresh()
+            removeFromBoard(todoID: todoID)
+            attachmentsByTodoID[todoID] = nil
             return true
         } catch {
             self.errorKey = errorKey
             return false
         }
+    }
+
+    private func patchBoard(with todo: TodoDTO) {
+        var columns = board.map(TodoBoardColumns.init(board:)) ?? TodoBoardColumns()
+        columns.replace(todo)
+        board = columns.board
+    }
+
+    private func removeFromBoard(todoID: TodoID) {
+        guard let board else { return }
+        var columns = TodoBoardColumns(board: board)
+        columns.remove(todoID: todoID)
+        self.board = columns.board
     }
 
     private func selectNonemptyStatusIfNeeded() {
@@ -382,6 +413,12 @@ private struct TodoBoardColumns {
     var inProgress: [TodoDTO]
     var done: [TodoDTO]
 
+    init() {
+        todo = []
+        inProgress = []
+        done = []
+    }
+
     init(board: TodoBoardDTO) {
         todo = board.todo
         inProgress = board.inProgress
@@ -418,6 +455,18 @@ private struct TodoBoardColumns {
         case .done: remove(todoID: todoID, from: &done)
         case .unknown: nil
         }
+    }
+
+    mutating func remove(todoID: TodoID) {
+        for status in TodoStatus.boardStatuses {
+            _ = remove(todoID: todoID, from: status)
+        }
+    }
+
+    mutating func replace(_ item: TodoDTO) {
+        remove(todoID: item.uuid)
+        let index = item.position ?? todos(for: item.status).endIndex
+        insert(item, in: item.status, at: index)
     }
 
     mutating func insert(_ item: TodoDTO, in status: TodoStatus, at index: Int) {

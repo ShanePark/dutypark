@@ -16,6 +16,8 @@ struct TodoUserFlowTests {
             attachments: [attachment]
         )
         let model = TodoViewModel(repository: repository)
+        await model.load()
+        #expect(model.selectedStatus == .inProgress)
 
         var creation = TodoDraft(status: .todo)
         creation.title = "  Pack documents  "
@@ -29,6 +31,7 @@ struct TodoUserFlowTests {
         #expect(created.uuid == todoID)
         #expect(created.title == "Pack documents")
         #expect(created.hasAttachments)
+        #expect(model.selectedStatus == .inProgress)
 
         await model.loadAttachments(for: created)
         #expect(model.attachmentsByTodoID[todoID] == [attachment])
@@ -49,11 +52,14 @@ struct TodoUserFlowTests {
         #expect(updated.title == "Pack travel documents")
         #expect(updated.content == "Passport, tickets, and insurance")
         #expect(updated.hasAttachments)
+        #expect(model.selectedStatus == .inProgress)
 
         #expect(await model.delete(updated))
         #expect(model.board == makeFlowBoard())
+        #expect(model.selectedStatus == .inProgress)
 
         let snapshot = await repository.snapshot()
+        #expect(snapshot.fetchBoardCallCount == 1)
         #expect(snapshot.createRequests.count == 1)
         #expect(snapshot.createRequests.first?.attachmentSessionId == sessionID)
         #expect(snapshot.createRequests.first?.orderedAttachmentIds == [attachmentID])
@@ -67,6 +73,36 @@ struct TodoUserFlowTests {
         #expect(snapshot.updateRequests.first?.id == todoID)
         #expect(snapshot.updateRequests.first?.request.orderedAttachmentIds == [attachmentID])
         #expect(snapshot.deletedIDs == [todoID])
+    }
+
+    @Test
+    func statusAndTagMutationsPatchTheLoadedBoardWithoutRefetchingOrChangingSelection() async throws {
+        let todo = makeFlowTodo(
+            id: UUID(uuidString: "88888888-8888-4888-8888-888888888888")!,
+            title: "Keep this column visible",
+            status: .todo
+        )
+        let repository = TodoFlowRepository(board: makeFlowBoard(todo: [todo]))
+        let model = TodoViewModel(repository: repository)
+        await model.load()
+
+        #expect(model.selectedStatus == .todo)
+        #expect(await model.move(todo, to: .inProgress))
+        let moved = try #require(model.todos(for: .inProgress).first)
+        #expect(model.selectedStatus == .todo)
+
+        #expect(await model.complete(moved))
+        let completed = try #require(model.todos(for: .done).first)
+        #expect(model.selectedStatus == .todo)
+
+        #expect(await model.reopen(completed))
+        let reopened = try #require(model.todos(for: .inProgress).first)
+        #expect(model.selectedStatus == .todo)
+
+        #expect(await model.leaveTag(reopened))
+        #expect(model.board == makeFlowBoard())
+        #expect(model.selectedStatus == .todo)
+        #expect(await repository.fetchBoardCallCount == 1)
     }
 
     @Test
@@ -146,6 +182,7 @@ private actor TodoFlowRepository: TodoRepository {
     }
 
     struct Snapshot: Sendable {
+        let fetchBoardCallCount: Int
         let createRequests: [TodoRequest]
         let updateRequests: [UpdateCall]
         let statusChanges: [StatusChange]
@@ -162,6 +199,7 @@ private actor TodoFlowRepository: TodoRepository {
     private var updateRequests: [UpdateCall] = []
     private var statusChanges: [StatusChange] = []
     private var deletedIDs: [TodoID] = []
+    private(set) var fetchBoardCallCount = 0
 
     init(
         board: TodoBoardDTO,
@@ -181,6 +219,7 @@ private actor TodoFlowRepository: TodoRepository {
 
     func snapshot() -> Snapshot {
         Snapshot(
+            fetchBoardCallCount: fetchBoardCallCount,
             createRequests: createRequests,
             updateRequests: updateRequests,
             statusChanges: statusChanges,
@@ -196,7 +235,10 @@ private actor TodoFlowRepository: TodoRepository {
         createGate.release()
     }
 
-    func fetchBoard() async throws -> TodoBoardDTO { board }
+    func fetchBoard() async throws -> TodoBoardDTO {
+        fetchBoardCallCount += 1
+        return board
+    }
     func fetchFriends() async throws -> [FriendDTO] { [] }
     func fetchAttachments(todoID: TodoID) async throws -> [AttachmentDTO] { attachments }
 
