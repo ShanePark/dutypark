@@ -38,4 +38,39 @@ final class GuestGuideTitleVisualUITests: XCTestCase {
         attachment.lifetime = .keepAlways
         add(attachment)
     }
+
+    @MainActor
+    func testGuestGuideHomeLinkReturnsToTheNativeGuestLanding() throws {
+        let app = XCUIApplication()
+        app.launchArguments += [
+            "-dp-language", "ko",
+            "-dp-theme", "light",
+            "-AppleLanguages", "(ko)",
+            "-AppleLocale", "ko_KR",
+            "-ui-testing-guest"
+        ]
+        app.launch()
+        defer { app.terminate() }
+
+        let guideButton = app.buttons["guest.guide"]
+        for _ in 0..<12 where !guideButton.isHittable {
+            app.swipeUp()
+        }
+        XCTAssertTrue(guideButton.waitForExistence(timeout: 5))
+        guideButton.tap()
+
+        let homeLink = app.links["홈으로 돌아가기"]
+        XCTAssertTrue(homeLink.waitForExistence(timeout: 15))
+        XCTAssertTrue(homeLink.isHittable)
+        homeLink.tap()
+
+        XCTAssertTrue(guideButton.waitForExistence(timeout: 5))
+        XCTAssertTrue(guideButton.isHittable)
+        XCTAssertFalse(app.navigationBars.staticTexts["이용 안내"].exists)
+
+        let attachment = XCTAttachment(screenshot: app.screenshot())
+        attachment.name = "guest-guide-home-native-landing-ios-after"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
 }

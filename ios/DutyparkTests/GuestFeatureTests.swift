@@ -74,6 +74,46 @@ final class GuestPublicLinkTests: XCTestCase {
         )
     }
 
+    func testGuestGuideInterceptsOnlyTheFirstPartyHomeRoute() {
+        let homeURLs = [
+            URL(string: "https://dutypark.o-r.kr")!,
+            URL(string: "https://dutypark.o-r.kr/")!,
+            URL(string: "https://dutypark.o-r.kr/?from=guide#top")!
+        ]
+        for url in homeURLs {
+            XCTAssertTrue(
+                GuideNavigationPolicy.shouldNavigateHomeNatively(
+                    url,
+                    interceptsFirstPartyHome: true
+                )
+            )
+        }
+
+        let ordinaryURLs = [
+            URL(string: "https://dutypark.o-r.kr/guide")!,
+            URL(string: "https://dutypark.o-r.kr/terms")!,
+            URL(string: "https://example.com/")!,
+            URL(string: "http://dutypark.o-r.kr/")!
+        ]
+        for url in ordinaryURLs {
+            XCTAssertFalse(
+                GuideNavigationPolicy.shouldNavigateHomeNatively(
+                    url,
+                    interceptsFirstPartyHome: true
+                )
+            )
+        }
+    }
+
+    func testSettingsGuideDoesNotInterceptTheFirstPartyHomeRoute() {
+        XCTAssertFalse(
+            GuideNavigationPolicy.shouldNavigateHomeNatively(
+                URL(string: "https://dutypark.o-r.kr/")!,
+                interceptsFirstPartyHome: false
+            )
+        )
+    }
+
     func testGuestGuideTitleMatchesTheWebGuideTitleInEverySupportedLocale() throws {
         let expectedTitles = [
             "en": "Guide",
