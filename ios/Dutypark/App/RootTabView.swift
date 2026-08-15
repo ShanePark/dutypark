@@ -161,6 +161,8 @@ struct RootTabView: View {
             NavigationStack {
                 NotificationCenterView(store: notifications, onOpen: openNotificationRoute)
             }
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
         }
         .fullScreenCover(
             isPresented: Binding(
@@ -299,16 +301,12 @@ struct RootTabView: View {
                         )
                     case .menu:
                         AppMenuView(
-                            onOpenCalendar: openMyCalendar,
-                            onOpenTeam: { selectedTab = .team },
                             onOpenFriends: openFriends,
-                            onOpenTodo: { selectedTab = .todo },
                             onOpenNotifications: {
                                 homePath.removeAll()
                                 showsNotificationCenter = true
                             },
                             onOpenGuide: openGuide,
-                            onOpenSettings: openSettings,
                             isAdmin: authenticatedMember?.isAdmin == true,
                             onOpenAdmin: { homePath.append(.admin) },
                             onLogout: { showsLogoutConfirmation = true }
@@ -663,6 +661,20 @@ nonisolated enum RootLogoutConfirmationPolicy {
     }
 }
 
+nonisolated enum RootHamburgerMenuItem: String, CaseIterable, Hashable, Sendable {
+    case friends
+    case notifications
+    case admin
+    case guide
+    case logout
+
+    static let primaryItems: [Self] = [.friends, .notifications]
+
+    static func visibleItems(isAdmin: Bool) -> [Self] {
+        primaryItems + (isAdmin ? [.admin] : []) + [.guide, .logout]
+    }
+}
+
 nonisolated enum RootTabSelectionOrigin: Equatable, Sendable {
     case tabBar
     case explicitRoute
@@ -675,13 +687,9 @@ private enum HomeDestination: Hashable {
 }
 
 private struct AppMenuView: View {
-    let onOpenCalendar: () -> Void
-    let onOpenTeam: () -> Void
     let onOpenFriends: () -> Void
-    let onOpenTodo: () -> Void
     let onOpenNotifications: () -> Void
     let onOpenGuide: () -> Void
-    let onOpenSettings: () -> Void
     let isAdmin: Bool
     let onOpenAdmin: () -> Void
     let onLogout: () -> Void
@@ -695,42 +703,9 @@ private struct AppMenuView: View {
         ScrollView {
             VStack(spacing: DPSpacing.medium) {
                 LazyVGrid(columns: columns, spacing: DPSpacing.small) {
-                    AppMenuTile(
-                        title: AppTab.calendar.localizedTitle,
-                        systemImage: AppTab.calendar.systemImage,
-                        color: DPColor.accent,
-                        action: onOpenCalendar
-                    )
-                    AppMenuTile(
-                        title: AppTab.team.localizedTitle,
-                        systemImage: AppTab.team.systemImage,
-                        color: DPColor.success,
-                        action: onOpenTeam
-                    )
-                    AppMenuTile(
-                        title: RootChromeLocalization.home("home.friends"),
-                        systemImage: "person.2",
-                        color: DPColor.warning,
-                        action: onOpenFriends
-                    )
-                    AppMenuTile(
-                        title: AppTab.todo.localizedTitle,
-                        systemImage: AppTab.todo.systemImage,
-                        color: DPColor.danger,
-                        action: onOpenTodo
-                    )
-                    AppMenuTile(
-                        title: RootChromeLocalization.notifications("notifications.title"),
-                        systemImage: "bell",
-                        color: DPColor.accentHover,
-                        action: onOpenNotifications
-                    )
-                    AppMenuTile(
-                        title: AppTab.settings.localizedTitle,
-                        systemImage: AppTab.settings.systemImage,
-                        color: DPColor.textSecondary,
-                        action: onOpenSettings
-                    )
+                    ForEach(RootHamburgerMenuItem.primaryItems, id: \.self) { item in
+                        primaryTile(for: item)
+                    }
                 }
 
                 if isAdmin {
@@ -745,6 +720,7 @@ private struct AppMenuView: View {
                             systemImage: "lock.shield",
                             action: onOpenAdmin
                         )
+                        .accessibilityIdentifier("menu.admin")
                     }
                     .padding(DPSpacing.small)
                     .background(DPColor.backgroundCard)
@@ -762,6 +738,7 @@ private struct AppMenuView: View {
                         systemImage: "book",
                         action: onOpenGuide
                     )
+                    .accessibilityIdentifier("menu.guide")
                     Divider().overlay(DPColor.borderPrimary)
                     AppMenuRow(
                         title: SettingsLocalization.string("settings.logout"),
@@ -784,6 +761,30 @@ private struct AppMenuView: View {
         .navigationTitle(RootChromeLocalization.home("home.menu"))
         .navigationBarTitleDisplayMode(.large)
         .accessibilityIdentifier("screen.menu")
+    }
+
+    @ViewBuilder
+    private func primaryTile(for item: RootHamburgerMenuItem) -> some View {
+        switch item {
+        case .friends:
+            AppMenuTile(
+                title: RootChromeLocalization.home("home.friends"),
+                systemImage: "person.2",
+                color: DPColor.warning,
+                action: onOpenFriends
+            )
+            .accessibilityIdentifier("menu.friends")
+        case .notifications:
+            AppMenuTile(
+                title: RootChromeLocalization.notifications("notifications.title"),
+                systemImage: "bell",
+                color: DPColor.accentHover,
+                action: onOpenNotifications
+            )
+            .accessibilityIdentifier("menu.notifications")
+        case .admin, .guide, .logout:
+            EmptyView()
+        }
     }
 }
 

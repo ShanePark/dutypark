@@ -37,10 +37,8 @@ final class RootHamburgerMenuParityUITests: XCTestCase {
         XCTAssertEqual(
             Set(menuButtons.map(\.identifier)),
             [
-                "menu.home",
                 "menu.friends",
                 "menu.notifications",
-                "menu.settings",
                 "menu.guide",
                 "menu.logout",
             ]
@@ -50,11 +48,23 @@ final class RootHamburgerMenuParityUITests: XCTestCase {
             XCTAssertGreaterThanOrEqual(button.frame.height, 44)
         }
 
-        XCTAssertFalse(app.buttons["menu.calendar"].exists)
-        XCTAssertFalse(app.buttons["menu.todo"].exists)
-        XCTAssertFalse(app.buttons["menu.team"].exists)
+        for removedIdentifier in [
+            "menu.home",
+            "menu.calendar",
+            "menu.todo",
+            "menu.team",
+            "menu.settings",
+        ] {
+            XCTAssertFalse(app.buttons[removedIdentifier].exists)
+        }
 
-        for dockIdentifier in ["tab.calendar", "tab.todo", "tab.team"] {
+        for dockIdentifier in [
+            "tab.home",
+            "tab.calendar",
+            "tab.todo",
+            "tab.team",
+            "tab.settings",
+        ] {
             XCTAssertTrue(app.buttons[dockIdentifier].exists)
         }
 

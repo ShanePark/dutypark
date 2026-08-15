@@ -26,6 +26,36 @@ struct RootChromeLocalizationTests {
     }
 
     @Test
+    func hamburgerKeepsGlobalActionsAndExcludesDockOnlyDestinations() {
+        #expect(RootHamburgerMenuItem.primaryItems == [
+            .friends,
+            .notifications,
+        ])
+        #expect(RootHamburgerMenuItem.visibleItems(isAdmin: false) == [
+            .friends,
+            .notifications,
+            .guide,
+            .logout,
+        ])
+        #expect(RootHamburgerMenuItem.visibleItems(isAdmin: true) == [
+            .friends,
+            .notifications,
+            .admin,
+            .guide,
+            .logout,
+        ])
+
+        let exposedIdentifiers = Set(RootHamburgerMenuItem.allCases.map(\.rawValue))
+        #expect(exposedIdentifiers.isDisjoint(with: [
+            "home",
+            "calendar",
+            "todo",
+            "team",
+            "settings",
+        ]))
+    }
+
+    @Test
     func impersonationBannerUsesTheRequestedLocale() {
         #expect(
             RootChromeLocalization.localizable("auth.impersonation.active", locale: korean)

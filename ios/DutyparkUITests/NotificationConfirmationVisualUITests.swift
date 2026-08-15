@@ -45,6 +45,46 @@ final class NotificationConfirmationVisualUITests: XCTestCase {
     }
 
     @MainActor
+    func testNotificationCenterHasClearCloseControlAndPreservesBadgeAfterDismissal() {
+        let app = makeApp()
+        app.launch()
+        defer { app.terminate() }
+
+        openNotificationCenter(in: app)
+
+        let closeButton = app.buttons["notifications.close"]
+        XCTAssertTrue(closeButton.waitForExistence(timeout: 10))
+        XCTAssertTrue(closeButton.isHittable)
+        XCTAssertGreaterThanOrEqual(closeButton.frame.width, 44)
+        XCTAssertGreaterThanOrEqual(closeButton.frame.height, 44)
+        XCTAssertEqual(closeButton.label, "알림 닫기")
+        capture("parity-ios-notification-center-close-control-after")
+
+        closeButton.tap()
+
+        let notificationCenter = app.descendants(matching: .any)["screen.notifications"]
+        XCTAssertTrue(notificationCenter.waitForNonExistence(timeout: 10))
+        assertHomeNotificationBadgeState(in: app)
+    }
+
+    @MainActor
+    func testNotificationCenterSupportsSwipeDownDismissalAndPreservesBadge() {
+        let app = makeApp()
+        app.launch()
+        defer { app.terminate() }
+
+        openNotificationCenter(in: app)
+
+        let notificationCenter = app.descendants(matching: .any)["screen.notifications"]
+        let dragStart = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.08))
+        let dragEnd = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.78))
+        dragStart.press(forDuration: 0.1, thenDragTo: dragEnd)
+
+        XCTAssertTrue(notificationCenter.waitForNonExistence(timeout: 10))
+        assertHomeNotificationBadgeState(in: app)
+    }
+
+    @MainActor
     func testNotificationDeletionConfirmationUsesStableCenteredSharedPanel() {
         let app = makeApp()
         app.launch()
@@ -123,6 +163,19 @@ final class NotificationConfirmationVisualUITests: XCTestCase {
             app.descendants(matching: .any)["screen.notifications"]
                 .waitForExistence(timeout: 10)
         )
+    }
+
+    @MainActor
+    private func assertHomeNotificationBadgeState(in app: XCUIApplication) {
+        XCTAssertTrue(
+            app.descendants(matching: .any)["screen.home"]
+                .waitForExistence(timeout: 10)
+        )
+        let bell = app.buttons["notifications.bell"]
+        XCTAssertTrue(bell.waitForExistence(timeout: 10))
+        let badgeValue = String(describing: bell.value)
+        XCTAssertFalse(badgeValue.contains("읽지 않음"))
+        XCTAssertTrue(badgeValue.contains("친구 요청 1개"))
     }
 
     @MainActor

@@ -81,7 +81,27 @@ struct NotificationCenterView: View {
         .background(DPColor.backgroundPrimary)
         .accessibilityIdentifier("screen.notifications")
         .toolbar(.hidden, for: .navigationBar)
-        .presentationDragIndicator(.visible)
+        .safeAreaInset(edge: .top, spacing: 0) {
+            HStack {
+                Spacer()
+                Button(action: dismiss.callAsFunction) {
+                    HStack(spacing: DPSpacing.extraSmall) {
+                        Image(systemName: "xmark")
+                        Text(notificationLocalized("notifications.common.close"))
+                    }
+                    .font(DPTypography.label)
+                    .frame(minWidth: DPSize.minimumTouchTarget, minHeight: DPSize.minimumTouchTarget)
+                    .contentShape(Rectangle())
+                }
+                .accessibilityLabel(notificationLocalized("notifications.common.close"))
+                .accessibilityIdentifier("notifications.close")
+            }
+            .padding(.horizontal, DPSpacing.medium)
+            .background(DPColor.backgroundPrimary)
+            .overlay(alignment: .bottom) {
+                Divider().overlay(DPColor.borderPrimary)
+            }
+        }
         .refreshable { await store.refresh() }
         .task {
             store.startPolling()
