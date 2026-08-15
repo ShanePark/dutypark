@@ -364,6 +364,9 @@ final class SettingsViewModel: ObservableObject {
 
 #if DEBUG
     private func loadUITestingFixture() {
+        let includesSocialConnections = ProcessInfo.processInfo.arguments.contains(
+            "-ui-testing-social-connections"
+        )
         member = MemberDTO(
             id: 1,
             name: "Test",
@@ -372,7 +375,7 @@ final class SettingsViewModel: ObservableObject {
             team: "Dutypark",
             calendarVisibility: .friends,
             kakaoId: "connected",
-            naverId: nil,
+            naverId: includesSocialConnections ? "connected" : nil,
             appleId: nil,
             hasPassword: true,
             hasProfilePhoto: false,
