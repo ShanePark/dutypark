@@ -100,7 +100,6 @@ struct AdminTeamListView: View {
                     requestDismiss: requestCreateModalDismiss
                 ) { team in
                     operationMessage = AdminLocalization.format("admin.teams.created", team.name)
-                    Task { await model.load() }
                     showsCreateSheet = false
                 }
             }

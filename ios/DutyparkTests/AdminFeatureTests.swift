@@ -271,6 +271,54 @@ struct AdminFeatureTests {
         #expect(model.isLoading == false)
     }
 
+    @Test("Creating a team updates an active description search without reloading it") @MainActor
+    func creatingTeamUpdatesCurrentPageLocally() async throws {
+        let repository = AdminTeamMutationRepository(
+            teams: [],
+            createdTeam: Self.managedTeam(id: 7, name: "Created team")
+        )
+        let model = AdminTeamListViewModel(repository: repository)
+
+        await model.search("  Description  ")
+        let created = try await model.create(name: "  Created team  ", description: "  Description  ")
+
+        #expect(created.id == 7)
+        #expect(model.teams == [
+            SimpleTeamDTO(id: 7, name: "Created team", description: "Description", memberCount: 0)
+        ])
+        #expect(model.totalElements == 1)
+        #expect(model.totalPages == 1)
+        #expect(model.page == 0)
+        #expect(model.isLoading == false)
+        #expect(await repository.teamLoadCount == 1)
+        let createdValues = await repository.createdValues
+        #expect(createdValues.count == 1)
+        #expect(createdValues.first?.0 == "Created team")
+        #expect(createdValues.first?.1 == "Description")
+    }
+
+    @Test("Deleting a team removes it and updates pagination without reloading the page") @MainActor
+    func deletingTeamUpdatesCurrentPageLocally() async throws {
+        let first = SimpleTeamDTO(id: 1, name: "First", description: nil, memberCount: 2)
+        let second = SimpleTeamDTO(id: 2, name: "Second", description: nil, memberCount: 1)
+        let repository = AdminTeamMutationRepository(
+            teams: [first, second],
+            createdTeam: Self.managedTeam(id: 7, name: "Unused")
+        )
+        let model = AdminTeamListViewModel(repository: repository)
+
+        await model.load()
+        try await model.delete(first)
+
+        #expect(model.teams == [second])
+        #expect(model.totalElements == 1)
+        #expect(model.totalPages == 1)
+        #expect(model.page == 0)
+        #expect(model.isLoading == false)
+        #expect(await repository.deletedIDs == [first.id])
+        #expect(await repository.teamLoadCount == 1)
+    }
+
     @Test("Admin edit modals use one dirty-form dismissal policy for every request source")
     func modalDismissPolicy() {
         let pristine = AdminModalInteractionState()
@@ -373,6 +421,21 @@ struct AdminFeatureTests {
             return [:]
         }
         return object
+    }
+
+    private static func managedTeam(id: TeamID, name: String) -> TeamDTO {
+        TeamDTO(
+            id: id,
+            name: name,
+            description: "Description",
+            dutyTypes: [],
+            members: [],
+            createdDate: LocalDateTimeValue(rawValue: "2026-08-15T00:00:00"),
+            lastModifiedDate: LocalDateTimeValue(rawValue: "2026-08-15T00:00:00"),
+            adminId: nil,
+            adminName: nil,
+            dutyBatchTemplate: nil
+        )
     }
 }
 
@@ -707,6 +770,70 @@ private actor AdminRepositorySpy: AdminRepositoryProtocol {
         try JSONDecoder().decode(
             PageResponse<Element>.self,
             from: Data(#"{"content":[],"totalPages":0,"totalElements":0,"last":true,"first":true,"size":10,"number":0,"numberOfElements":0,"empty":true}"#.utf8)
+        )
+    }
+}
+
+private actor AdminTeamMutationRepository: AdminRepositoryProtocol {
+    private let initialTeams: [SimpleTeamDTO]
+    private let createdTeam: TeamDTO
+    private(set) var teamLoadCount = 0
+    private(set) var createdValues: [(String, String)] = []
+    private(set) var deletedIDs: [TeamID] = []
+
+    init(teams: [SimpleTeamDTO], createdTeam: TeamDTO) {
+        initialTeams = teams
+        self.createdTeam = createdTeam
+    }
+
+    func teams(keyword: String, page: Int, size: Int) async throws -> PageResponse<SimpleTeamDTO> {
+        teamLoadCount += 1
+        return PageResponse(
+            content: initialTeams,
+            totalPages: initialTeams.isEmpty ? 0 : 1,
+            totalElements: Int64(initialTeams.count),
+            last: true,
+            first: true,
+            size: size,
+            number: page,
+            numberOfElements: initialTeams.count,
+            empty: initialTeams.isEmpty
+        )
+    }
+
+    func createTeam(name: String, description: String) async throws -> TeamDTO {
+        createdValues.append((name, description))
+        return TeamDTO(
+            id: createdTeam.id,
+            name: createdTeam.name,
+            description: description,
+            dutyTypes: createdTeam.dutyTypes,
+            members: createdTeam.members,
+            createdDate: createdTeam.createdDate,
+            lastModifiedDate: createdTeam.lastModifiedDate,
+            adminId: createdTeam.adminId,
+            adminName: createdTeam.adminName,
+            dutyBatchTemplate: createdTeam.dutyBatchTemplate
+        )
+    }
+
+    func deleteTeam(id: TeamID) async throws {
+        deletedIDs.append(id)
+    }
+
+    func members(keyword: String, page: Int, size: Int) async throws -> PageResponse<AdminMemberDTO> {
+        try emptyPage()
+    }
+    func memberDetail(id: MemberID) async throws -> AdminMemberDetailDTO { throw APIError.invalidResponse }
+    func sessions() async throws -> [SettingsRefreshToken] { [] }
+    func revokeSession(id: Int64) async throws {}
+    func changePassword(memberID: MemberID, newPassword: String) async throws {}
+    func checkTeamName(_ name: String) async throws -> AdminTeamNameCheckResult { .ok }
+
+    private func emptyPage<Element: Codable & Equatable & Sendable>() throws -> PageResponse<Element> {
+        try JSONDecoder().decode(
+            PageResponse<Element>.self,
+            from: Data(AdminFeatureTests.emptyPageJSON.utf8)
         )
     }
 }
