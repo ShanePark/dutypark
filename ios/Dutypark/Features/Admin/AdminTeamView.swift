@@ -221,6 +221,7 @@ private struct AdminTeamRow: View {
         }
         .padding(.vertical, DPSpacing.extraSmall)
         .frame(minHeight: 60)
+        .accessibilityIdentifier("admin.team.\(team.id)")
     }
 }
 

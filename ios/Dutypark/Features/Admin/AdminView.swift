@@ -3,6 +3,25 @@ import SwiftUI
 struct AdminRootView: View {
     @EnvironmentObject private var session: SessionStore
     let onOpenCalendar: (MemberID) -> Void
+    private let repository: any AdminRepositoryProtocol
+
+    init(
+        repository: (any AdminRepositoryProtocol)? = nil,
+        onOpenCalendar: @escaping (MemberID) -> Void
+    ) {
+#if DEBUG
+        if let repository {
+            self.repository = repository
+        } else if ProcessInfo.processInfo.arguments.contains("-ui-testing-admin-visual-fixture") {
+            self.repository = AdminVisualFixtureRepository()
+        } else {
+            self.repository = AdminRepository()
+        }
+#else
+        self.repository = repository ?? AdminRepository()
+#endif
+        self.onOpenCalendar = onOpenCalendar
+    }
 
     var body: some View {
         Group {
@@ -10,7 +29,10 @@ struct AdminRootView: View {
                 List {
                     Section {
                         NavigationLink {
-                            AdminMemberListView(onOpenCalendar: onOpenCalendar)
+                            AdminMemberListView(
+                                model: AdminMemberListViewModel(repository: repository),
+                                onOpenCalendar: onOpenCalendar
+                            )
                         } label: {
                             AdminNavigationLabel(
                                 title: AdminLocalization.string("admin.nav.members"),
@@ -21,7 +43,9 @@ struct AdminRootView: View {
                         }
 
                         NavigationLink {
-                            AdminTeamListView()
+                            AdminTeamListView(
+                                model: AdminTeamListViewModel(repository: repository)
+                            )
                         } label: {
                             AdminNavigationLabel(
                                 title: AdminLocalization.string("admin.nav.teams"),
@@ -222,6 +246,7 @@ private struct AdminMemberRow: View {
         }
         .padding(.vertical, DPSpacing.extraSmall)
         .frame(minHeight: 60)
+        .accessibilityIdentifier("admin.member.\(member.id)")
     }
 }
 
@@ -445,6 +470,7 @@ private struct AdminSessionRow: View {
                         .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
                 }
                 .accessibilityLabel(AdminLocalization.string("admin.members.revokeSession.action"))
+                .accessibilityIdentifier("admin.member.session.revoke.\(token.id)")
             }
             Text(token.userAgent.map { "\($0.os) · \($0.browser)" } ?? "-")
                 .font(DPTypography.caption)
