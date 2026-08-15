@@ -61,6 +61,7 @@
 | 26 | 게스트 · 이용 안내 | 네이티브 제목만 `이용 안내 및 릴리스 노트`로 길어 웹 본문 제목과 다름 | 완료 | `e60632a0` |
 | 27 | 게스트 · 공개 달력 | 웹과 달리 연월 직접 선택이 없어 먼 달까지 한 달씩 반복 이동해야 함 | 완료 | `41e1c184` |
 | 28 | 팀 근무 현황 | 근무 인원 배지가 단위 없이 `3`처럼 표시되어 의미가 불분명함 | 완료 | `1153345a` |
+| 29 | 관리자 · 회원 목록 | 활성 세션 수가 `1개`·`0개`로만 표시되어 숫자의 의미와 빈 상태를 알기 어려움 | 완료 | `e34d67c4` |
 
 상태는 `대기 → 진행 중 → 수정됨·커밋 전 → 코드 커밋됨·시각 검증 전 → 완료` 순으로 관리한다.
 
@@ -114,6 +115,7 @@
 | `e60632a0` | 게스트 이용 안내 제목을 웹과 통일 | exact ko/en 테스트, generic build, UI 1건 | 네이티브·웹 본문 제목 일치 재캡처 | 완료 |
 | `41e1c184` | 게스트 공개 달력 연월 직접 선택 | focused unit 3건, generic build·test build, UI 1건 | 연월 선택기·2028년 2월 이동 재캡처 | 완료 |
 | `1153345a` | 팀 근무 인원 배지의 현지화 단위 복원 | exact ko/en 테스트, generic test build, UI 1건 | 2명 배지와 팀원 카드 재캡처 | 완료 |
+| `e34d67c4` | 관리자 회원 목록의 활성 세션 상태 명확화 | exact ko/en 테스트, generic test build, UI 1건 | 활성 세션 1개·없음 분기 동시 재캡처 | 완료 |
 
 ## 상세 변경 보고
 
@@ -247,6 +249,14 @@
 - 이미 존재하던 공유 현지화 키를 실제 배지에 연결해 한국어 `3명`, 영어 `3 people`로 표시한다.
 - 기존 빈 근무 fixture를 보존하고 전용 opt-in fixture에서만 두 명의 근무 카드를 구성해 다른 회귀 테스트의 의미를 유지했다.
 - exact 한·영 테스트와 generic test build가 통과했다. iPhone 13 mini UI 테스트 1/1에서 `주간` 헤더의 `2명` 배지와 두 팀원 카드가 잘림·겹침 없이 표시되는 것을 확인했다: `/tmp/Dutypark-TeamShiftCount-Unit-20260815.xcresult`, `/tmp/Dutypark-TeamShiftCount-UI-Final-20260815.xcresult`.
+
+### 관리자 활성 세션 상태 — `e34d67c4`
+
+<img src="screenshots/admin-active-session-count-ios-after.png" width="240" alt="활성 세션 1개와 없음 상태를 명확히 표시한 iOS 관리자 회원 목록">
+
+- 모바일 웹은 회원별 상태를 `N개의 활성 세션` 또는 `활성 세션 없음`으로 구분하지만 iOS는 `N개`만 표시해 숫자의 의미를 알기 어려웠고, 빈 상태도 `0개`로 노출했다.
+- 같은 회원 DTO의 세션 수를 유지하면서 한국어는 `N개의 활성 세션` / `활성 세션 없음`, 영어는 `N active sessions` / `No active sessions`로 분기했다.
+- exact 한·영 테스트와 generic test build가 통과했다. iPhone 13 mini UI 테스트 1/1에서 세션이 있는 회원과 없는 회원의 두 문구가 한 화면에 완전히 표시되고 잘림·겹침이 없음을 확인했다: `/tmp/Dutypark-AdminActiveSession-Unit-20260815.xcresult`, `/tmp/Dutypark-AdminActiveSession-UI-20260815.xcresult`.
 
 ### 달력·팀 비교 기준 확장 — `58cbf120`
 
