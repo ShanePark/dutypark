@@ -41,8 +41,9 @@
 | 6 | 하단 탭 | `달력`이 `캘린더`로 변경됨 | 완료 | `74858618` |
 | 7 | 전역 현지화 | 한국어 앱에서 기본 패턴·메뉴·팀 월 이름 등이 영어로 표시됨 | 부분 완료 | `74858618`, `2cdc26ea`, `3987ea66` |
 | 8 | 설정 · 기본 근무 패턴 | 근무 선택 목록과 요일 선택 UI가 웹보다 나빠짐 | 완료 | `b7bdc8ae` |
-| 9 | 전역 확인 UI | destructive 확인 UI가 터치 위치와 무관한 시스템 시트로 표시됨 | 부분 완료 | `de46f754`, `92f3fa66`, `def118e2`, `b7bdc8ae`, `2316075a`, `84047661`, `bd3a1fc4`, `2ecdbb70`, `8a6a3aae`, `a19f4047`, `cc673095` |
+| 9 | 전역 확인 UI | destructive 확인 UI가 터치 위치와 무관한 시스템 시트로 표시됨 | 부분 완료 | `de46f754`, `92f3fa66`, `def118e2`, `b7bdc8ae`, `2316075a`, `84047661`, `bd3a1fc4`, `2ecdbb70`, `8a6a3aae`, `a19f4047`, `cc673095`, `38dc5bca` |
 | 10 | 친구관리 상세 | UI 테스트에서 실 API를 호출해 화면 진입 종료 | 완료 | `f5da2cd1`, `24814f20` |
+| 11 | 친구관리 상세 | 존재하지 않는 SF Symbol로 `더보기` 버튼이 0×0이고 터치 불가 | 완료 | `38dc5bca` |
 
 상태는 `대기 → 진행 중 → 수정됨·커밋 전 → 코드 커밋됨·시각 검증 전 → 완료` 순으로 관리한다.
 
@@ -68,6 +69,7 @@
 | `8a6a3aae` | Root 햄버거 로그아웃 중앙 확인 | iPhone 13 mini 전용 테스트 3건 | 메뉴 화면 확보, 패널 직접 캡처 대기 | 코드·테스트 완료·캡처 대기 |
 | `a19f4047` | 소셜 계정 연결 해제 중앙 확인 | iPhone 13 mini 전용 테스트 3건 | 설정 화면 확보, 연결 관리 fixture 대기 | 코드·테스트 완료·캡처 대기 |
 | `cc673095` | SSO 추가정보 draft 폐기 중앙 확인 | iPhone 13 mini OAuth 가입 테스트 6건 | 인증 fixture 부재 | 코드·테스트 완료·캡처 대기 |
+| `38dc5bca` | 친구 destructive 확인 4종 및 `더보기` 터치 복원 | Social 19건·재정렬 UI·삭제 패널 UI | 친구 삭제 중앙 패널 확보 | 완료 |
 
 ## 상세 변경 보고
 
@@ -226,6 +228,18 @@
 - 빈 draft는 즉시 닫고, 작성 내용이나 약관 선택이 있을 때만 확인한다.
 - 처리 중에는 중복 제출·취소·배경·gesture dismiss를 차단한다.
 - iPhone 13 mini에서 OAuth 가입 프레젠테이션 테스트 6건이 통과했다: `/tmp/Dutypark-SsoSignupConfirmation-20260815-01.xcresult`.
+
+### 친구 destructive 확인과 관리 액션 — `38dc5bca`
+
+| 친구 목록 | 친구 삭제 중앙 확인 |
+| --- | --- |
+| <img src="screenshots/friends-ios-after.png" width="240" alt="iOS 친구 목록"> | <img src="screenshots/friend-delete-confirmation-ios-after.png" width="240" alt="iOS 친구 삭제 중앙 확인"> |
+
+- 친구 요청 거절·보낸 요청 취소·가족 관계 해제·친구 삭제를 중앙 패널로 통일했다.
+- `ellipsis.vertical`이 iOS 26.5에 없는 SF Symbol이라 버튼 frame이 `(inf, inf, 0, 0)`이 되던 원인을 찾아, 유효한 `ellipsis`를 90도 회전해 세로 점 모양과 44pt 터치 영역을 복원했다.
+- 카드 본문 캘린더 열기, 별표, 더보기, 0.35초 롱프레스 재정렬 영역을 분리했다.
+- `SocialFeatureTests` 19건, 친구 진입·재정렬 UI, 친구 삭제 중앙 패널 UI가 모두 통과했다.
+- 결과: `/tmp/dutypark-social-hit-symbol-20260815-1020.xcresult`, `/tmp/dutypark-social-reorder-20260815-1021.xcresult`.
 
 ## 시각 회귀 자동화
 
