@@ -56,6 +56,7 @@
 | 21 | 팀 관리 | 대표 취소 확인에서 대상 대표 이름이 빠져 권한 초기화 대상을 알 수 없음 | 완료 | `76e0f25f` |
 | 22 | 팀 달력 | 한국어 앱의 요일이 기기 언어를 따라 영어로 표시될 수 있음 | 완료 | `3f9fe25a` |
 | 23 | 알림 드롭다운 | 목록을 확인하고 닫아도 iOS만 미읽음 배지와 강조가 계속 남음 | 완료 | `a72a15ca` |
+| 24 | 설정 · 소셜 연결 | Apple 해제 안내가 실제 권한 철회 동작과 반대로 표시됨 | 완료 | `54bc2c42` |
 
 상태는 `대기 → 진행 중 → 수정됨·커밋 전 → 코드 커밋됨·시각 검증 전 → 완료` 순으로 관리한다.
 
@@ -104,6 +105,7 @@
 | `76e0f25f` | 팀 대표 취소 확인에 대상명 표시 | 포맷·fallback 2건, generic build·test build, UI 1건 | 김듀티 대상 중앙 패널 재캡처 | 완료 |
 | `3f9fe25a` | 팀 달력 요일을 앱 언어에 고정 | exact ko/en 테스트, generic test build, UI 1건 | 영어 기기·한국어 앱 조합 재캡처 | 완료 |
 | `a72a15ca` | 알림 드롭다운 닫기 시 확인한 알림 읽음 처리 | 정책·중복 요청 focused 테스트, generic build·test build, UI 1건 | 닫은 뒤 미읽음 배지 제거 재캡처 | 완료 |
+| `54bc2c42` | Apple 연결 해제의 권한 철회 정책 안내 | exact ko/en 테스트, generic build·test build, UI 1건 | Apple 관리·확인 패널 재캡처 | 완료 |
 
 ## 상세 변경 보고
 
@@ -410,6 +412,17 @@
 - iPhone 13 mini에서 전용 테스트 3건이 통과했다: `/tmp/Dutypark-SocialConnectionManagementTests.xcresult`.
 - `8c947a62`의 DEBUG fixture로 Kakao 연결 상태, 내부 연결만 해제된다는 영향 안내, 취소·연결 해제 버튼을 직접 검증했다.
 - 시각 UI 테스트 1/1 통과: `/tmp/Dutypark-SocialConnectionVisual-20260815.xcresult`.
+
+### Apple 연결 해제 정책 안내 — `54bc2c42`
+
+| Apple 연결 관리 | Apple 연결 해제 중앙 확인 |
+| --- | --- |
+| <img src="screenshots/apple-unlink-management-ios-after.png" width="240" alt="Apple 권한 철회 정책을 설명하는 iOS 연결 관리"> | <img src="screenshots/apple-unlink-confirmation-ios-after.png" width="240" alt="Apple 권한 철회와 연결 삭제를 안내하는 iOS 중앙 확인"> |
+
+- 기존 iOS는 모든 공급자에 같은 문구를 사용해 Apple도 `제공자 측에 허용한 권한은 삭제되지 않습니다`라고 안내했지만, 실제 서버와 모바일 웹은 Apple 인증 권한을 먼저 철회한 뒤 로컬 연결 정보를 삭제한다.
+- Apple 관리 화면에는 철회 후 삭제 순서와 철회 실패 시 양쪽 상태가 유지된다는 점을, 확인 패널에는 권한 철회·저장 연결 삭제·이후 해당 Apple 계정 로그인 불가 영향을 명시했다.
+- Kakao와 Naver는 기존처럼 Dutypark 내부 연결만 해제하고 제공자 권한은 유지한다는 안내를 보존했다.
+- exact 한·영 정책 테스트와 generic 앱·테스트 빌드가 통과했다. iPhone 13 mini UI 테스트 1/1에서 두 문구의 전체 노출, 정상 줄바꿈, 중앙 패널과 동일 높이·비중첩 버튼을 확인했다. 파괴적 확인은 누르지 않고 취소했다: `/tmp/Dutypark-AppleUnlink-Unit-Final-20260815.xcresult`, `/tmp/Dutypark-AppleUnlink-UI-Final2-20260815.xcresult`.
 
 ### SSO 추가정보 draft 폐기 — `cc673095`
 
