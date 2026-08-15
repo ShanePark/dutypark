@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import UIKit
 @testable import Dutypark
 
 @Suite("Admin feature", .serialized)
@@ -62,10 +63,28 @@ struct AdminFeatureTests {
         #expect(AdminRootNavigationPresentation.tileKeys == [
             "admin.nav.members",
             "admin.nav.teams",
+            "admin.nav.development",
+            "admin.nav.apiDocumentation",
         ])
+        #expect(AdminRootDestination.allCases == [.teams, .development])
+        #expect(AdminRootDestination.teams.embeddedWebPath == nil)
+        #expect(AdminRootDestination.development.embeddedWebPath == "admin/dev")
         #expect(stats.values == [24, 1, 2, 1])
         #expect(AdminMemberSearchPolicy.debounce == .milliseconds(300))
         #expect(AdminMemberSearchPolicy.normalized("  Shane  ") == "Shane")
+    }
+
+    @Test("Selected admin tile keeps readable contrast in light and dark appearances")
+    func selectedAdminTileContrast() {
+        for style in [UIUserInterfaceStyle.light, .dark] {
+            let traits = UITraitCollection(userInterfaceStyle: style)
+            let background = UIColor(AdminTopTilePresentation.selectedBackground)
+                .resolvedColor(with: traits)
+            let foreground = UIColor(AdminTopTilePresentation.selectedForeground)
+                .resolvedColor(with: traits)
+
+            #expect(contrastRatio(foreground, background) >= 4.5)
+        }
     }
 
     @Test("Admin member identity metadata is localized and profile-photo URLs are cache-safe")
@@ -588,6 +607,28 @@ struct AdminFeatureTests {
             dutyBatchTemplate: nil
         )
     }
+}
+
+private func contrastRatio(_ first: UIColor, _ second: UIColor) -> Double {
+    let brighter = max(relativeLuminance(first), relativeLuminance(second))
+    let darker = min(relativeLuminance(first), relativeLuminance(second))
+    return (brighter + 0.05) / (darker + 0.05)
+}
+
+private func relativeLuminance(_ color: UIColor) -> Double {
+    var red: CGFloat = 0
+    var green: CGFloat = 0
+    var blue: CGFloat = 0
+    color.getRed(&red, green: &green, blue: &blue, alpha: nil)
+
+    func component(_ value: CGFloat) -> Double {
+        let value = Double(value)
+        return value <= 0.04045
+            ? value / 12.92
+            : pow((value + 0.055) / 1.055, 2.4)
+    }
+
+    return 0.2126 * component(red) + 0.7152 * component(green) + 0.0722 * component(blue)
 }
 
 private struct AdminRequestSnapshot: Sendable {

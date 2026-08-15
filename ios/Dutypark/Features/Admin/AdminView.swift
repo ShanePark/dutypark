@@ -2,9 +2,11 @@ import SwiftUI
 
 struct AdminRootView: View {
     @EnvironmentObject private var session: SessionStore
+    @Environment(\.openURL) private var openURL
     @StateObject private var memberModel: AdminMemberListViewModel
     @State private var searchText = ""
     @State private var searchTask: Task<Void, Never>?
+    @State private var destination: AdminRootDestination?
     let onOpenCalendar: (MemberID) -> Void
     private let repository: any AdminRepositoryProtocol
 
@@ -45,10 +47,8 @@ struct AdminRootView: View {
                             )
                             .accessibilityIdentifier("admin.tile.members")
 
-                            NavigationLink {
-                                AdminTeamListView(
-                                    model: AdminTeamListViewModel(repository: repository)
-                                )
+                            Button {
+                                destination = .teams
                             } label: {
                                 AdminTopTile(
                                     title: AdminLocalization.string("admin.nav.teams"),
@@ -58,6 +58,34 @@ struct AdminRootView: View {
                             }
                             .buttonStyle(.plain)
                             .accessibilityIdentifier("admin.tile.teams")
+
+                            Button {
+                                destination = .development
+                            } label: {
+                                AdminTopTile(
+                                    title: AdminLocalization.string("admin.nav.development"),
+                                    systemImage: "chevron.left.forwardslash.chevron.right",
+                                    color: DPColor.warning
+                                )
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("admin.tile.development")
+
+                            Button {
+                                openURL(AdminWebDestination.apiDocumentationURL())
+                            } label: {
+                                AdminTopTile(
+                                    title: AdminLocalization.string("admin.nav.apiDocumentation"),
+                                    systemImage: "doc.text.fill",
+                                    color: DPColor.surfaceStrong
+                                )
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(AdminLocalization.string("admin.nav.apiDocumentation"))
+                            .accessibilityHint(
+                                AdminLocalization.string("admin.nav.apiDocumentation.externalHint")
+                            )
+                            .accessibilityIdentifier("admin.tile.apiDocumentation")
                         }
                         .padding(.vertical, DPSpacing.extraSmall)
                     }
@@ -161,6 +189,19 @@ struct AdminRootView: View {
         }
         .navigationTitle(AdminLocalization.string("admin.menu.title"))
         .navigationBarTitleDisplayMode(.large)
+        .navigationDestination(item: $destination) { destination in
+            switch destination {
+            case .teams:
+                AdminTeamListView(
+                    model: AdminTeamListViewModel(repository: repository)
+                )
+            case .development:
+                AdminAuthenticatedWebView(
+                    path: destination.embeddedWebPath ?? "admin/dev",
+                    title: AdminLocalization.string("admin.nav.development")
+                )
+            }
+        }
         .accessibilityIdentifier("screen.admin")
     }
 
@@ -195,7 +236,7 @@ private struct AdminTopTile: View {
         HStack(spacing: DPSpacing.small) {
             Image(systemName: systemImage)
                 .font(.system(size: 17, weight: .semibold))
-                .foregroundStyle(isSelected ? DPColor.textOnDark : color)
+                .foregroundStyle(isSelected ? AdminTopTilePresentation.selectedForeground : color)
                 .frame(width: 30, height: 30)
                 .background(
                     (isSelected ? Color.white.opacity(0.16) : color.opacity(0.12)),
@@ -203,7 +244,9 @@ private struct AdminTopTile: View {
                 )
             Text(title)
                 .font(DPTypography.label)
-                .foregroundStyle(isSelected ? DPColor.textOnDark : DPColor.textPrimary)
+                .foregroundStyle(
+                    isSelected ? AdminTopTilePresentation.selectedForeground : DPColor.textPrimary
+                )
                 .lineLimit(2)
                 .minimumScaleFactor(0.8)
             Spacer(minLength: 0)
@@ -211,7 +254,7 @@ private struct AdminTopTile: View {
         .padding(DPSpacing.small)
         .frame(maxWidth: .infinity, minHeight: 62, alignment: .leading)
         .background(
-            isSelected ? DPColor.textPrimary : DPColor.backgroundSecondary,
+            isSelected ? AdminTopTilePresentation.selectedBackground : DPColor.backgroundSecondary,
             in: RoundedRectangle(cornerRadius: DPRadius.standard)
         )
         .overlay {
@@ -317,10 +360,31 @@ private struct AdminMemberAvatar: View {
     }
 }
 
+nonisolated enum AdminTopTilePresentation {
+    static let selectedBackground = DPColor.surfaceStrong
+    static let selectedForeground = DPColor.textOnDark
+}
+
+nonisolated enum AdminRootDestination: String, CaseIterable, Hashable, Identifiable, Sendable {
+    case teams
+    case development
+
+    var id: Self { self }
+
+    var embeddedWebPath: String? {
+        switch self {
+        case .teams: nil
+        case .development: "admin/dev"
+        }
+    }
+}
+
 nonisolated enum AdminRootNavigationPresentation {
     static let tileKeys = [
         "admin.nav.members",
         "admin.nav.teams",
+        "admin.nav.development",
+        "admin.nav.apiDocumentation",
     ]
 }
 
@@ -656,6 +720,7 @@ private struct AdminMemberDetailView: View {
                 AdminLocalization.string("admin.members.visibility"),
                 value: AdminLocalization.string(AdminMemberDetailPresentation.visibilityKey(detail.calendarVisibility))
             )
+            .accessibilityIdentifier("admin.member.metadata.visibility")
             LabeledContent(
                 AdminLocalization.string("admin.members.created"),
                 value: AdminMemberDetailPresentation.dateText(detail.createdDate)
@@ -664,6 +729,7 @@ private struct AdminMemberDetailView: View {
                 AdminLocalization.string("admin.members.lastModified"),
                 value: AdminMemberDetailPresentation.dateText(detail.lastModifiedDate)
             )
+            .accessibilityIdentifier("admin.member.metadata.lastModified")
             LabeledContent(
                 AdminLocalization.string("admin.members.lastActive"),
                 value: AdminMemberDetailPresentation.dateText(detail.lastActiveAt)
@@ -679,8 +745,10 @@ private struct AdminMemberDetailView: View {
             LabeledContent(AdminLocalization.string("admin.members.auxiliaryAccount"), value: yesNo(detail.auxiliaryAccount))
             LabeledContent(AdminLocalization.string("admin.members.activeSessions"), value: detail.activeSessionCount.formatted())
             LabeledContent(AdminLocalization.string("admin.members.pushEnabledSessions"), value: detail.pushEnabledSessionCount.formatted())
+                .accessibilityIdentifier("admin.member.status.pushEnabledSessions")
             LabeledContent(AdminLocalization.string("admin.members.notifications"), value: detail.totalNotificationCount.formatted())
             LabeledContent(AdminLocalization.string("admin.members.unreadNotifications"), value: detail.unreadNotificationCount.formatted())
+                .accessibilityIdentifier("admin.member.status.unreadNotifications")
         }
 
         Section(AdminLocalization.string("admin.members.scheduleSummary")) {
@@ -794,6 +862,7 @@ private struct AdminMemberDetailView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, DPSpacing.small)
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("admin.member.identity")
     }
 

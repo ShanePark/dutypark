@@ -20,7 +20,7 @@ final class AdminTeamListParityUITests: XCTestCase {
         app.launch()
 
         XCTAssertTrue(app.descendants(matching: .any)["screen.admin"].waitForExistence(timeout: 20))
-        app.staticTexts["팀 관리"].firstMatch.tap()
+        app.descendants(matching: .any)["admin.tile.teams"].tap()
 
         XCTAssertTrue(app.descendants(matching: .any)["screen.admin.teams"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.staticTexts["총 12개의 팀이 있습니다"].waitForExistence(timeout: 10))
@@ -51,6 +51,9 @@ final class AdminTeamListParityUITests: XCTestCase {
         clearSearch.tap()
         XCTAssertTrue(app.staticTexts["시각 검증팀"].waitForExistence(timeout: 10))
         XCTAssertFalse(app.staticTexts["[없는 팀]"].exists)
+        let dismissSearch = app.buttons["닫기"]
+        XCTAssertTrue(dismissSearch.waitForExistence(timeout: 5))
+        dismissSearch.tap()
 
         app.buttons["admin.teams.create.open"].tap()
         let nameField = app.textFields["admin.teams.create.name"]
@@ -68,7 +71,7 @@ final class AdminTeamListParityUITests: XCTestCase {
             app.descendants(matching: .any)["screen.team.manage.9001"]
                 .waitForExistence(timeout: 10)
         )
-        XCTAssertTrue(app.staticTexts["시각 검증팀 관리"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["신규 검증팀 관리"].waitForExistence(timeout: 10))
         attachScreenshot(named: "parity-ios-admin-team-create-manage-route-ko-dark")
     }
 

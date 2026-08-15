@@ -160,8 +160,8 @@ final class AdminConfirmationVisualUITests: XCTestCase {
 
         XCTAssertTrue(app.descendants(matching: .any)["admin.tile.members"].exists)
         XCTAssertTrue(app.descendants(matching: .any)["admin.tile.teams"].exists)
-        XCTAssertFalse(app.descendants(matching: .any)["admin.tile.development"].exists)
-        XCTAssertFalse(app.descendants(matching: .any)["admin.tile.apiDocumentation"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["admin.tile.development"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["admin.tile.apiDocumentation"].exists)
         XCTAssertTrue(app.staticTexts["전체 회원"].exists)
         XCTAssertTrue(app.staticTexts["활성 세션"].exists)
         XCTAssertTrue(app.staticTexts["오늘 로그인"].exists)
@@ -189,11 +189,10 @@ final class AdminConfirmationVisualUITests: XCTestCase {
         add(detailAttachment)
 
         let list = app.collectionViews.firstMatch
-        XCTAssertTrue(scrollToText("계정 상태", in: app, list: list))
-        XCTAssertTrue(scrollToText("최근 수정", in: app, list: list))
-        XCTAssertTrue(scrollToText("캘린더 공개 범위", in: app, list: list))
-        XCTAssertTrue(scrollToText("푸시 활성 세션", in: app, list: list))
-        XCTAssertTrue(scrollToText("읽지 않은 알림", in: app, list: list))
+        XCTAssertTrue(scrollToIdentifier("admin.member.metadata.visibility", in: app, list: list))
+        XCTAssertTrue(scrollToIdentifier("admin.member.metadata.lastModified", in: app, list: list))
+        XCTAssertTrue(scrollToIdentifier("admin.member.status.pushEnabledSessions", in: app, list: list))
+        XCTAssertTrue(scrollToIdentifier("admin.member.status.unreadNotifications", in: app, list: list))
         XCTAssertFalse(app.staticTexts["2026-08-15T09:00:00"].exists)
 
         let metadataAttachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
@@ -227,6 +226,19 @@ final class AdminConfirmationVisualUITests: XCTestCase {
     @MainActor
     private func scrollToText(_ text: String, in app: XCUIApplication, list: XCUIElement) -> Bool {
         let element = app.staticTexts[text].firstMatch
+        for _ in 0..<8 where !element.exists {
+            list.swipeUp()
+        }
+        return element.waitForExistence(timeout: 2)
+    }
+
+    @MainActor
+    private func scrollToIdentifier(
+        _ identifier: String,
+        in app: XCUIApplication,
+        list: XCUIElement
+    ) -> Bool {
+        let element = app.descendants(matching: .any)[identifier].firstMatch
         for _ in 0..<8 where !element.exists {
             list.swipeUp()
         }
