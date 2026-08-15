@@ -69,13 +69,22 @@ final class AccountDeletionViewModel: ObservableObject {
     private let appleSignInClient: AppleSignInClient
 
     init(
-        service: any AccountDeletionServicing = SettingsService(),
+        service: (any AccountDeletionServicing)? = nil,
         oauthClient: MobileOAuthClient = MobileOAuthClient(),
         appleSignInClient: AppleSignInClient = AppleSignInClient()
     ) {
-        self.service = service
+        self.service = service ?? Self.defaultService()
         self.oauthClient = oauthClient
         self.appleSignInClient = appleSignInClient
+    }
+
+    private static func defaultService() -> any AccountDeletionServicing {
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-ui-testing-account-deletion") {
+            return AccountDeletionUITestingService()
+        }
+        #endif
+        return SettingsService()
     }
 
     var requiresAdminTransfer: Bool {
@@ -287,6 +296,30 @@ final class AccountDeletionViewModel: ObservableObject {
     }
 
 }
+
+#if DEBUG
+private nonisolated struct AccountDeletionUITestingService: AccountDeletionServicing, Sendable {
+    func accountDeletionPreview() async throws -> AccountDeletionPreview {
+        AccountDeletionPreview(
+            hasPassword: true,
+            socialProviders: [],
+            teamImpact: nil,
+            auxiliaryImpacts: []
+        )
+    }
+
+    func reauthenticateForAccountDeletion(password: String) async throws -> AccountDeletionReauthProof {
+        AccountDeletionReauthProof(reauthProof: "ui-testing-proof", expiresIn: 300)
+    }
+
+    func requestAccountDeletion(
+        reauthProof: String,
+        transferAdminToMemberId: Int64?
+    ) async throws -> AccountDeletionAccepted {
+        throw APIError.server(status: 409, code: "ui-testing.accountDeletion.executionForbidden")
+    }
+}
+#endif
 
 struct AccountDeletionView: View {
     @EnvironmentObject private var session: SessionStore
