@@ -52,6 +52,7 @@
 | 17 | Todo | 웹의 `진행중` 상태가 iOS에서 `진행`으로 축약됨 | 완료 | `73fe7e0a` |
 | 18 | 대시보드 · 친구 | 수정 후 증빙이 빈 fixture라 친구 총수·목록 유지 여부를 비교할 수 없음 | 완료 | `ed29121c` |
 | 19 | 설정 · 회원 탈퇴 | 영구 삭제 버튼이 `내 계정 삭제`로 축약되어 비가역성이 약하게 안내됨 | 완료 | `12974a63` |
+| 20 | 달력 · 일정 검색 | 상세도 검색하지만 placeholder가 `제목으로 검색`이라고 잘못 안내함 | 완료 | `83ea522e` |
 
 상태는 `대기 → 진행 중 → 수정됨·커밋 전 → 코드 커밋됨·시각 검증 전 → 완료` 순으로 관리한다.
 
@@ -96,6 +97,7 @@
 | `73fe7e0a` | Todo `진행중` 상태 문구 복원 | exact ko/en 테스트, generic build·test build, UI 1건 | 상단 탭·보드 열 `진행중` 재캡처 | 완료 |
 | `ed29121c` | 친구가 있는 Home parity fixture | HomeDashboard 11건, generic build·test build, UI 1건 | 친구 총수 3·고정 2·일반 1 재캡처 | 완료 |
 | `12974a63` | 회원 탈퇴 최종 버튼의 영구 삭제 경고 복원 | AccountDeletion 9건, generic build·test build, UI 1건 | 5/5 최종 확인 화면 재캡처 | 완료 |
+| `83ea522e` | 일정 검색 placeholder의 검색 범위 복원 | exact ko/en 테스트, generic build·test build, UI 1건 | 검색 모달 placeholder 재캡처 | 완료 |
 
 ## 상세 변경 보고
 
@@ -221,6 +223,15 @@
 - 표시할 요약이나 액션이 하나라도 있거나 빠른 편집 중일 때만 도구행을 유지하고, 완전히 비어 있으면 생략하도록 했다.
 - focused 정책 테스트와 generic test build가 통과했다.
 - iPhone 13 mini 캡처에서 월 그리드가 `할 일` 행 바로 아래로 올라오고 불필요한 빈 행이 사라진 것을 확인했다. 결과: `/tmp/Dutypark-CalendarTopGap-Visual.xcresult`.
+
+### 달력 일정 검색 범위 문구 — `83ea522e`
+
+<img src="screenshots/calendar-search-placeholder-ios-after.png" width="240" alt="제목이나 상세로 검색으로 복원한 iOS 일정 검색">
+
+- 모바일 웹은 제목과 상세 내용을 모두 검색하므로 `제목이나 상세로 검색` / `Search by title or details`라고 안내하지만 iOS placeholder는 제목만 검색하는 것처럼 축약되어 있었다.
+- iOS 검색 결과 안내는 이미 제목·상세를 언급하고 있어 같은 화면 안에서도 모순이었다. placeholder의 한·영 값만 실제 기능 및 웹과 맞췄다.
+- exact ko/en 테스트와 iPhone 13 mini UI 1/1이 통과했다. 긴 한국어 placeholder가 한 줄로 완전 노출되고 검색 버튼과 겹치지 않음을 확인했다.
+- 결과: `/tmp/Dutypark-CalendarSearch-Green-20260815.xcresult`, `/tmp/Dutypark-CalendarSearch-UI-20260815.xcresult`.
 
 ### 중앙 확인 UI — `de46f754`, `b7bdc8ae` 및 후속 적용 커밋
 
