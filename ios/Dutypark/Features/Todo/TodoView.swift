@@ -10,8 +10,8 @@ enum TodoBoardLayout {
     static let columnGap: CGFloat = 10
     static let columnRadius: CGFloat = 12
     static let cardRadius: CGFloat = 14
-    static let dragHandleSize: CGFloat = 44
-    static let dragActivationDistance: CGFloat = 2
+    static let dragLongPressDuration = 0.35
+    static let dragLongPressMaximumDistance: CGFloat = 10
     static let dragCollisionHysteresis: CGFloat = 2
     static let dragPushAnimationDuration = 0.1
 
@@ -736,7 +736,6 @@ private struct TodoCard: View {
                                 .foregroundStyle(DPColor.textMuted)
                                 .accessibilityLabel(Text(todoLocalized("todo.label.attachments")))
                         }
-                        Spacer(minLength: DPSize.minimumTouchTarget)
                     }
 
                     if !todo.content.isEmpty {
@@ -788,29 +787,12 @@ private struct TodoCard: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-
-            Image(systemName: "line.3.horizontal")
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(DPColor.textMuted)
-                .frame(width: TodoBoardLayout.dragHandleSize, height: TodoBoardLayout.dragHandleSize)
-                .contentShape(Rectangle())
-                .simultaneousGesture(
-                    DragGesture(
-                        minimumDistance: TodoBoardLayout.dragActivationDistance,
-                        coordinateSpace: .named(TodoDragCoordinateSpace.name)
-                    )
-                    .onChanged { value in
-                        if TodoHandleDragActivation.shouldReorder(translation: value.translation) {
-                            updateDrag(value.location)
-                        }
-                    }
-                    .onEnded { _ in finishDrag() }
-                )
-                .accessibilityHidden(true)
         }
         .padding(14)
         .background(DPColor.backgroundCard)
         .clipShape(RoundedRectangle(cornerRadius: TodoBoardLayout.cardRadius))
+        .contentShape(RoundedRectangle(cornerRadius: TodoBoardLayout.cardRadius))
+        .highPriorityGesture(cardDragGesture)
         .overlay(
             ZStack {
                 RoundedRectangle(cornerRadius: TodoBoardLayout.cardRadius)
@@ -860,16 +842,41 @@ private struct TodoCard: View {
                 }
             }
         }
-        .accessibilityHint(todoLocalized("todo.drag.hint"))
         .accessibilityIdentifier("todo.card.\(todo.id)")
+    }
+
+    private var cardDragGesture: some Gesture {
+        LongPressGesture(
+            minimumDuration: TodoBoardLayout.dragLongPressDuration,
+            maximumDistance: TodoBoardLayout.dragLongPressMaximumDistance
+        )
+        .sequenced(before: DragGesture(
+            minimumDistance: 0,
+            coordinateSpace: .named(TodoDragCoordinateSpace.name)
+        ))
+        .onChanged { phase in
+            guard case let .second(didLongPress, dragValue) = phase,
+                  TodoCardDragActivation.shouldReorder(
+                      didLongPress: didLongPress,
+                      hasDragValue: dragValue != nil
+                  ),
+                  let dragValue else { return }
+            updateDrag(dragValue.location)
+        }
+        .onEnded { phase in
+            guard case let .second(didLongPress, dragValue) = phase,
+                  TodoCardDragActivation.shouldReorder(
+                      didLongPress: didLongPress,
+                      hasDragValue: dragValue != nil
+                  ) else { return }
+            finishDrag()
+        }
     }
 }
 
-enum TodoHandleDragActivation {
-    static func shouldReorder(translation: CGSize) -> Bool {
-        let horizontal = abs(translation.width)
-        let vertical = abs(translation.height)
-        return hypot(horizontal, vertical) >= TodoBoardLayout.dragActivationDistance
+enum TodoCardDragActivation {
+    static func shouldReorder(didLongPress: Bool, hasDragValue: Bool) -> Bool {
+        didLongPress && hasDragValue
     }
 }
 
@@ -1039,8 +1046,8 @@ enum TodoDragTargetResolver {
             )
         }
 
-        // A two-point movement should activate the handle without accidentally
-        // sending the card to the end of its own column.
+        // The first zero-distance sample after the long press should not
+        // accidentally send the card to the end of its own column.
         if cards.contains(where: { $0.todoID == draggedTodoID && $0.frame.contains(location) }) {
             return nil
         }
