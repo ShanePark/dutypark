@@ -367,6 +367,9 @@ final class SettingsViewModel: ObservableObject {
         let includesSocialConnections = ProcessInfo.processInfo.arguments.contains(
             "-ui-testing-social-connections"
         )
+        let includesAppleSocialConnection = ProcessInfo.processInfo.arguments.contains(
+            "-ui-testing-apple-social-connection"
+        )
         member = MemberDTO(
             id: 1,
             name: "Test",
@@ -376,7 +379,7 @@ final class SettingsViewModel: ObservableObject {
             calendarVisibility: .friends,
             kakaoId: "connected",
             naverId: includesSocialConnections ? "connected" : nil,
-            appleId: nil,
+            appleId: includesAppleSocialConnection ? "connected" : nil,
             hasPassword: true,
             hasProfilePhoto: false,
             profilePhotoVersion: 0

@@ -1173,7 +1173,23 @@ nonisolated enum SettingsSocialUnlinkPolicy {
         connectedProviderCount >= 2
     }
 
+    static func managementDescription(for provider: OAuthProvider) -> String {
+        switch provider {
+        case .apple:
+            SettingsLocalization.string("settings.social.unlinkAppleDescription")
+        case .kakao, .naver:
+            localOnlyMessage(for: provider)
+        }
+    }
+
     static func confirmationMessage(for provider: OAuthProvider) -> String {
+        if provider == .apple {
+            return SettingsLocalization.string("settings.social.unlinkAppleConfirmMessage")
+        }
+        return localOnlyMessage(for: provider)
+    }
+
+    private static func localOnlyMessage(for provider: OAuthProvider) -> String {
         SettingsLocalization.string("settings.social.unlinkConfirmMessage")
             .replacingOccurrences(of: "{provider}", with: providerName(provider))
     }

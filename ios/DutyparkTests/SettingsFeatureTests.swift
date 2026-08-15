@@ -146,6 +146,8 @@ struct SettingsFeatureTests {
             "settings.social.unlinked",
             "settings.social.unlinkConfirmTitle",
             "settings.social.unlinkConfirmMessage",
+            "settings.social.unlinkAppleConfirmMessage",
+            "settings.social.unlinkAppleDescription",
             "settings.social.unlinkLastAuthenticationMethod",
             "settings.social.unlinkImpersonationForbidden",
             "settings.social.unlinkFailed",
@@ -509,6 +511,42 @@ struct SettingsFeatureTests {
         defaults.set(AppLanguage.english.rawValue, forKey: SettingsPreference.languageKey)
         let appleMessage = SettingsSocialUnlinkPolicy.confirmationMessage(for: .apple)
         #expect(appleMessage.contains("Apple"))
+    }
+
+    @Test
+    func appleUnlinkCopyExplainsProviderRevocationWhileOtherProvidersStayLocalOnly() {
+        let defaults = UserDefaults.standard
+        let previous = defaults.string(forKey: SettingsPreference.languageKey)
+        defer {
+            if let previous { defaults.set(previous, forKey: SettingsPreference.languageKey) }
+            else { defaults.removeObject(forKey: SettingsPreference.languageKey) }
+        }
+
+        defaults.set(AppLanguage.korean.rawValue, forKey: SettingsPreference.languageKey)
+        let kakaoDescription = SettingsSocialUnlinkPolicy.managementDescription(for: .kakao)
+        let naverDescription = SettingsSocialUnlinkPolicy.managementDescription(for: .naver)
+        let appleDescription = SettingsSocialUnlinkPolicy.managementDescription(for: .apple)
+        let appleConfirmation = SettingsSocialUnlinkPolicy.confirmationMessage(for: .apple)
+
+        #expect(kakaoDescription.contains("권한은 삭제되지 않습니다"))
+        #expect(naverDescription.contains("Naver 계정"))
+        #expect(naverDescription.contains("권한은 삭제되지 않습니다"))
+        #expect(appleDescription.contains("먼저 Apple 인증 권한을 철회한 뒤"))
+        #expect(appleDescription.contains("철회에 실패하면"))
+        #expect(appleConfirmation.contains("Apple 인증 권한을 철회하고"))
+        #expect(appleConfirmation.contains("이후 이 Apple 계정으로 Dutypark에 로그인할 수 없습니다"))
+        #expect(!appleDescription.contains("권한은 삭제되지 않습니다"))
+        #expect(!appleConfirmation.contains("권한은 삭제되지 않습니다"))
+
+        defaults.set(AppLanguage.english.rawValue, forKey: SettingsPreference.languageKey)
+        #expect(
+            SettingsSocialUnlinkPolicy.managementDescription(for: .apple)
+                .contains("first revokes its Apple authorization")
+        )
+        #expect(
+            SettingsSocialUnlinkPolicy.confirmationMessage(for: .apple)
+                .contains("You will no longer be able to sign in")
+        )
     }
 
     @Test

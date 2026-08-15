@@ -46,7 +46,7 @@ nonisolated enum SettingsSocialManagementPolicy {
     }
 
     static func description(for provider: OAuthProvider) -> String {
-        SettingsSocialUnlinkPolicy.confirmationMessage(for: provider)
+        SettingsSocialUnlinkPolicy.managementDescription(for: provider)
     }
 }
 

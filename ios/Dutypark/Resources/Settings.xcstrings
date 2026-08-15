@@ -1369,6 +1369,38 @@
         }
       }
     },
+    "settings.social.unlinkAppleConfirmMessage": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This revokes Dutypark’s Apple authorization and deletes the saved connection. You will no longer be able to sign in to Dutypark with this Apple account."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple 인증 권한을 철회하고 Dutypark에 저장된 연결 정보를 삭제합니다. 이후 이 Apple 계정으로 Dutypark에 로그인할 수 없습니다."
+          }
+        }
+      }
+    },
+    "settings.social.unlinkAppleDescription": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When you disconnect Apple, Dutypark first revokes its Apple authorization and then deletes the local connection. If revocation fails, both the Apple authorization and Dutypark connection remain active."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple 연동을 해제하면 Dutypark가 먼저 Apple 인증 권한을 철회한 뒤 연결 정보를 삭제합니다. 철회에 실패하면 Apple 권한과 Dutypark 연결 정보가 모두 유지됩니다."
+          }
+        }
+      }
+    },
     "settings.social.unlinkConfirmTitle": {
       "localizations": {
         "en": {
