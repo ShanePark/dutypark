@@ -40,6 +40,60 @@ struct SettingsFeatureTests {
     }
 
     @Test
+    func settingsOverviewCopyMatchesResponsiveWeb() {
+        let defaults = UserDefaults.standard
+        let previous = defaults.string(forKey: SettingsPreference.languageKey)
+        defer {
+            if let previous { defaults.set(previous, forKey: SettingsPreference.languageKey) }
+            else { defaults.removeObject(forKey: SettingsPreference.languageKey) }
+        }
+
+        let expectedByLanguage: [String: [String: String]] = [
+            "ko": [
+                "settings.profile.title": "기본 정보",
+                "settings.visibility.title": "시간표 공개 설정",
+                "settings.visibility.description": "내 시간표를 볼 수 있는 사람을 설정합니다",
+                "settings.appearance.title": "화면 테마 설정",
+                "settings.push.title": "푸시 알림 설정",
+                "settings.push.description": "새로운 알림이 있을 때 이 기기로 알려드려요.",
+                "settings.aiConsent.title": "AI 시간 자동 인식",
+                "settings.aiConsent.description": "선택 동의이며 언제든 철회할 수 있습니다. 동의하지 않아도 일정을 그대로 저장하거나 시간을 직접 입력할 수 있습니다.",
+                "settings.aiConsent.dataFlow": "일정의 날짜와 내용 텍스트만 외부 AI 처리 서비스로 전송해 시작·종료 시간을 추출합니다. 회원 ID와 팀 ID는 전송하지 않습니다.",
+                "settings.manager.title": "관리 권한 위임",
+                "settings.manager.description": "가족만 관리자로 추가할 수 있어요",
+                "settings.managed.title": "내가 관리 중인 계정",
+                "settings.sessions.title": "접속 세션 관리",
+                "settings.social.title": "소셜 계정 연동",
+                "settings.account.title": "회원정보 관리",
+            ],
+            "en": [
+                "settings.profile.title": "Profile",
+                "settings.visibility.title": "Calendar Visibility",
+                "settings.visibility.description": "Choose who can view your schedule.",
+                "settings.appearance.title": "Theme",
+                "settings.push.title": "Push Notifications",
+                "settings.push.description": "Get notified on this device when something new happens.",
+                "settings.aiConsent.title": "Automatic AI time recognition",
+                "settings.aiConsent.description": "This is optional and can be withdrawn at any time. You can still save schedules unchanged or enter times manually without consenting.",
+                "settings.aiConsent.dataFlow": "Only the schedule date and content text are sent to an external AI processing service to extract start and end times. Member and team IDs are not sent.",
+                "settings.manager.title": "Delegated Management",
+                "settings.manager.description": "Only family members can be added as managers.",
+                "settings.managed.title": "Accounts I manage",
+                "settings.sessions.title": "Sessions",
+                "settings.social.title": "Social Sign-in",
+                "settings.account.title": "Account Management",
+            ],
+        ]
+
+        for (language, expectedCopy) in expectedByLanguage {
+            defaults.set(language, forKey: SettingsPreference.languageKey)
+            for (key, expected) in expectedCopy {
+                #expect(SettingsLocalization.string(key) == expected)
+            }
+        }
+    }
+
+    @Test
     func webParitySettingsCopyExistsInEverySupportedLanguage() {
         let defaults = UserDefaults.standard
         let previous = defaults.string(forKey: SettingsPreference.languageKey)
