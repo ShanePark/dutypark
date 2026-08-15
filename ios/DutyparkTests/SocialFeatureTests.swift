@@ -6,6 +6,43 @@ import XCTest
 final class SocialFeatureTests: XCTestCase {
     private let baseURL = URL(string: "https://dutypark.test/api/")!
 
+    func testDestructiveConfirmationsUseCenteredSharedPanel() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark/Features/Social/SocialView.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+
+        XCTAssertFalse(source.contains(".alert(item: $confirmation)"))
+        XCTAssertTrue(source.contains(".fullScreenCover(item: $confirmation)"))
+        XCTAssertTrue(source.contains("DPConfirmationPanel("))
+        XCTAssertTrue(source.contains("canDismiss: !isPerformingConfirmation"))
+        XCTAssertTrue(source.contains("isWorking: isPerformingConfirmation"))
+        XCTAssertTrue(source.contains("isDestructive: true"))
+        XCTAssertTrue(source.contains(".alert(item: $candidate)"))
+    }
+
+    func testConfirmationActionPolicyBlocksDuplicateSubmissions() {
+        XCTAssertTrue(
+            SocialConfirmationActionPolicy.canBegin(
+                isPerformingConfirmation: false,
+                isPerformingAction: false
+            )
+        )
+        XCTAssertFalse(
+            SocialConfirmationActionPolicy.canBegin(
+                isPerformingConfirmation: true,
+                isPerformingAction: false
+            )
+        )
+        XCTAssertFalse(
+            SocialConfirmationActionPolicy.canBegin(
+                isPerformingConfirmation: false,
+                isPerformingAction: true
+            )
+        )
+    }
+
     func testInlinePinnedOrderStringsResolveInEveryLocale() throws {
         let keys = [
             "social.action.moveDown",

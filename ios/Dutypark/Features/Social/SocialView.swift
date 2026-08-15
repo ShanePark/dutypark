@@ -4,6 +4,7 @@ struct SocialView: View {
     @StateObject private var viewModel: SocialViewModel
     @State private var isSearchPresented = false
     @State private var confirmation: SocialConfirmation?
+    @State private var isPerformingConfirmation = false
     @State private var actionCandidate: ActionCandidate?
     @State private var inlinePinnedOrder: [MemberID]?
     @State private var draggedPinnedFriendID: MemberID?
@@ -76,8 +77,27 @@ struct SocialView: View {
                 )
             }
         }
-        .alert(item: $confirmation) { confirmation in
-            confirmationAlert(confirmation)
+        .fullScreenCover(item: $confirmation) { confirmation in
+            DPModalOverlay(
+                maximumContentWidth: DPConfirmationPanel.maximumWidth,
+                onDismiss: { self.confirmation = nil },
+                canDismiss: !isPerformingConfirmation
+            ) { availableSize, dismiss in
+                DPConfirmationPanel(
+                    title: social(confirmation.titleKey),
+                    message: socialFormat(confirmation.messageKey, confirmation.memberName),
+                    confirmTitle: social(confirmation.confirmKey),
+                    cancelTitle: social("social.action.cancelDialog"),
+                    isDestructive: true,
+                    isWorking: isPerformingConfirmation,
+                    maximumHeight: availableSize.height,
+                    cancel: dismiss,
+                    confirm: {
+                        perform(confirmation, dismiss: dismiss)
+                    }
+                )
+            }
+            .interactiveDismissDisabled(isPerformingConfirmation)
         }
         .alert(
             social("social.error.title"),
@@ -353,7 +373,7 @@ struct SocialView: View {
         _ friend: DashboardFriendDetailDTO,
         isDragPreview: Bool = false
     ) -> some View {
-        ZStack(alignment: .topTrailing) {
+        HStack(alignment: .top, spacing: 0) {
             Button {
                 guard let id = friend.member.id else { return }
                 guard suppressedCalendarFriendID != id else {
@@ -362,65 +382,64 @@ struct SocialView: View {
                 }
                 onOpenCalendar(id)
             } label: {
-                    HStack(alignment: .top, spacing: SocialFriendCardLayout.contentSpacing) {
-                        SocialAvatar(member: friend.member, size: SocialFriendCardLayout.avatarSize)
+                HStack(alignment: .top, spacing: SocialFriendCardLayout.contentSpacing) {
+                    SocialAvatar(member: friend.member, size: SocialFriendCardLayout.avatarSize)
+
+                    VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+                        HStack(spacing: 6) {
+                            Text(friend.member.name)
+                                .font(DPFont.bold(size: 15, relativeTo: .subheadline))
+                                .foregroundStyle(DPColor.textPrimary)
+                                .lineLimit(1)
+                            if friend.isFamily {
+                                Image(systemName: "house.fill")
+                                    .font(.system(size: 14))
+                                    .foregroundStyle(DPColor.warning)
+                                    .accessibilityLabel(social("social.label.family"))
+                            }
+                        }
 
                         VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
-                            HStack(spacing: 6) {
-                                Text(friend.member.name)
-                                    .font(DPFont.bold(size: 15, relativeTo: .subheadline))
-                                    .foregroundStyle(DPColor.textPrimary)
-                                    .lineLimit(1)
-                                if friend.isFamily {
-                                    Image(systemName: "house.fill")
-                                        .font(.system(size: 14))
-                                        .foregroundStyle(DPColor.warning)
-                                        .accessibilityLabel(social("social.label.family"))
-                                }
-                            }
-                            .padding(.trailing, SocialFriendCardLayout.topActionsWidth)
-
-                            VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
-                                if let team = friend.member.team, !team.isEmpty {
-                                    Label(team, systemImage: "person.3")
-                                        .font(DPTypography.caption)
-                                        .foregroundStyle(DPColor.textSecondary)
-                                        .lineLimit(1)
-                                }
-
-                                if let duty = friend.duty {
-                                    Label(
-                                        duty.dutyType ?? social("social.label.offDuty"),
-                                        systemImage: "briefcase"
-                                    )
+                            if let team = friend.member.team, !team.isEmpty {
+                                Label(team, systemImage: "person.3")
                                     .font(DPTypography.caption)
                                     .foregroundStyle(DPColor.textSecondary)
                                     .lineLimit(1)
-                                }
+                            }
 
-                                ForEach(Array(friend.schedules.prefix(2)), id: \.id) { schedule in
-                                    Label(scheduleLabel(schedule), systemImage: "calendar")
-                                        .font(DPTypography.caption)
-                                        .foregroundStyle(DPColor.textSecondary)
-                                        .lineLimit(1)
-                                }
+                            if let duty = friend.duty {
+                                Label(
+                                    duty.dutyType ?? social("social.label.offDuty"),
+                                    systemImage: "briefcase"
+                                )
+                                .font(DPTypography.caption)
+                                .foregroundStyle(DPColor.textSecondary)
+                                .lineLimit(1)
+                            }
 
-                                if friend.schedules.count > 2 {
-                                    Text(
-                                        socialFormat(
-                                            "social.label.moreSchedules",
-                                            String(friend.schedules.count - 2)
-                                        )
-                                    )
+                            ForEach(Array(friend.schedules.prefix(2)), id: \.id) { schedule in
+                                Label(scheduleLabel(schedule), systemImage: "calendar")
                                     .font(DPTypography.caption)
-                                    .foregroundStyle(DPColor.textMuted)
+                                    .foregroundStyle(DPColor.textSecondary)
                                     .lineLimit(1)
-                                }
+                            }
+
+                            if friend.schedules.count > 2 {
+                                Text(
+                                    socialFormat(
+                                        "social.label.moreSchedules",
+                                        String(friend.schedules.count - 2)
+                                    )
+                                )
+                                .font(DPTypography.caption)
+                                .foregroundStyle(DPColor.textMuted)
+                                .lineLimit(1)
                             }
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .contentShape(Rectangle())
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -456,43 +475,46 @@ struct SocialView: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(social(friend.pinOrder == nil ? "social.action.pin" : "social.action.unpin"))
+                .accessibilityIdentifier("social.friend.\(friend.member.id ?? -1).pin")
 
                 Button {
                     actionCandidate = ActionCandidate(friend: friend)
                 } label: {
-                    Image(systemName: "ellipsis.vertical")
+                    Image(systemName: "ellipsis")
                         .font(.system(size: 18, weight: .medium))
                         .foregroundStyle(DPColor.textMuted)
+                        .rotationEffect(.degrees(90))
                         .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(social("social.action.more"))
-                .popover(
-                    isPresented: Binding(
-                        get: { actionCandidate?.id == friend.member.id },
-                        set: { if !$0 { actionCandidate = nil } }
-                    ),
-                    arrowEdge: .top
-                ) {
-                    FriendActionPopover(
-                        friend: friend,
-                        close: { actionCandidate = nil },
-                        addFamily: {
-                            actionCandidate = nil
-                            Task { await viewModel.sendFamilyRequest(to: friend) }
-                        },
-                        removeFamily: {
-                            actionCandidate = nil
-                            confirmation = .removeFamily(friend)
-                        },
-                        removeFriend: {
-                            actionCandidate = nil
-                            confirmation = .removeFriend(friend)
-                        }
-                    )
-                    .presentationCompactAdaptation(.popover)
-                }
-
+                .accessibilityIdentifier("social.friend.\(friend.member.id ?? -1).more")
+            }
+            .frame(width: SocialFriendCardLayout.topActionsWidth, alignment: .topTrailing)
+            .popover(
+                isPresented: Binding(
+                    get: { actionCandidate?.id == friend.member.id },
+                    set: { if !$0 { actionCandidate = nil } }
+                ),
+                arrowEdge: .top
+            ) {
+                FriendActionPopover(
+                    friend: friend,
+                    close: { actionCandidate = nil },
+                    addFamily: {
+                        actionCandidate = nil
+                        Task { await viewModel.sendFamilyRequest(to: friend) }
+                    },
+                    removeFamily: {
+                        actionCandidate = nil
+                        confirmation = .removeFamily(friend)
+                    },
+                    removeFriend: {
+                        actionCandidate = nil
+                        confirmation = .removeFriend(friend)
+                    }
+                )
+                .presentationCompactAdaptation(.popover)
             }
         }
         .padding(DPSpacing.compact)
@@ -742,15 +764,20 @@ struct SocialView: View {
         }
     }
 
-    private func confirmationAlert(_ confirmation: SocialConfirmation) -> Alert {
-        Alert(
-            title: Text(social(confirmation.titleKey)),
-            message: Text(socialFormat(confirmation.messageKey, confirmation.memberName)),
-            primaryButton: .destructive(Text(social(confirmation.confirmKey))) {
-                Task { await perform(confirmation) }
-            },
-            secondaryButton: .cancel(Text(social("social.action.cancelDialog")))
-        )
+    private func perform(
+        _ confirmation: SocialConfirmation,
+        dismiss: @escaping () -> Void
+    ) {
+        guard SocialConfirmationActionPolicy.canBegin(
+            isPerformingConfirmation: isPerformingConfirmation,
+            isPerformingAction: viewModel.isPerformingAction
+        ) else { return }
+        isPerformingConfirmation = true
+        Task {
+            await perform(confirmation)
+            isPerformingConfirmation = false
+            dismiss()
+        }
     }
 
     private func perform(_ confirmation: SocialConfirmation) async {
@@ -1353,6 +1380,15 @@ private enum SocialConfirmation: Identifiable {
         case .removeFamily: "social.action.removeFamily"
         case .removeFriend: "social.action.removeFriend"
         }
+    }
+}
+
+nonisolated enum SocialConfirmationActionPolicy {
+    static func canBegin(
+        isPerformingConfirmation: Bool,
+        isPerformingAction: Bool
+    ) -> Bool {
+        !isPerformingConfirmation && !isPerformingAction
     }
 }
 
