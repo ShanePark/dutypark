@@ -59,6 +59,7 @@
 | 24 | 설정 · 소셜 연결 | Apple 해제 안내가 실제 권한 철회 동작과 반대로 표시됨 | 완료 | `54bc2c42` |
 | 25 | 팀 상세 | 일정이 있는데도 빈 근무 영역에 `이 날의 팀 일정이 없습니다.`가 중복 표시됨 | 완료 | `9b37abb7` |
 | 26 | 게스트 · 이용 안내 | 네이티브 제목만 `이용 안내 및 릴리스 노트`로 길어 웹 본문 제목과 다름 | 완료 | `e60632a0` |
+| 27 | 게스트 · 공개 달력 | 웹과 달리 연월 직접 선택이 없어 먼 달까지 한 달씩 반복 이동해야 함 | 완료 | `41e1c184` |
 
 상태는 `대기 → 진행 중 → 수정됨·커밋 전 → 코드 커밋됨·시각 검증 전 → 완료` 순으로 관리한다.
 
@@ -110,6 +111,7 @@
 | `54bc2c42` | Apple 연결 해제의 권한 철회 정책 안내 | exact ko/en 테스트, generic build·test build, UI 1건 | Apple 관리·확인 패널 재캡처 | 완료 |
 | `9b37abb7` | 빈 팀 근무 영역의 일정 없음 오안내 제거 | TeamFeatureTests 27건, generic build·test build, UI 1건 | 일정 카드 유지·거짓 빈 문구 부재 재캡처 | 완료 |
 | `e60632a0` | 게스트 이용 안내 제목을 웹과 통일 | exact ko/en 테스트, generic build, UI 1건 | 네이티브·웹 본문 제목 일치 재캡처 | 완료 |
+| `41e1c184` | 게스트 공개 달력 연월 직접 선택 | focused unit 3건, generic build·test build, UI 1건 | 연월 선택기·2028년 2월 이동 재캡처 | 완료 |
 
 ## 상세 변경 보고
 
@@ -456,6 +458,17 @@
 - 같은 화면에서 웹 본문은 `이용 안내`인데 네이티브 내비게이션 제목만 `이용 안내 및 릴리스 노트`로 표시되어 제목이 서로 달랐다.
 - 게스트 전용 한·영 제목을 웹과 같은 `이용 안내` / `Guide`로 맞췄다. Root 메뉴와 Settings의 별도 가이드 키는 변경하지 않았다.
 - exact 한·영 테스트와 generic 앱 빌드가 통과했다. iPhone 13 mini UI 테스트 1/1에서 상단 네이티브 제목과 웹 본문 제목이 모두 `이용 안내`로 표시되고 잘림·겹침이 없음을 확인했다: `/tmp/Dutypark-GuestGuideTitle-Green.xcresult`, `/tmp/Dutypark-GuestGuideTitle-UI3.xcresult`.
+
+### 게스트 공개 달력 연월 선택 — `41e1c184`
+
+| 연월 선택기 | 먼 월 직접 이동 후 |
+| --- | --- |
+| <img src="screenshots/guest-calendar-month-picker-ios-after.png" width="240" alt="iOS 게스트 공개 달력 연월 선택기"> | <img src="screenshots/guest-calendar-distant-month-ios-after.png" width="240" alt="2028년 2월로 직접 이동한 iOS 게스트 공개 달력"> |
+
+- 모바일 웹은 중앙 연월을 눌러 연도와 월을 직접 선택할 수 있지만 iOS 게스트 공개 달력은 이전·다음·오늘만 제공해 먼 월까지 한 달씩 반복 이동해야 했다.
+- 중앙 연월을 버튼으로 바꾸고 연도 이동, 4×3 월 그리드, 이번 달 동작을 갖춘 native medium sheet를 추가했다. 선택한 먼 월은 기존 공개 달력 조회 경로로 다시 불러온다.
+- 첫 시각 검증에서 locale 숫자 그룹화로 `2,028년`이 표시되는 문제도 발견해, 번역 선택과 숫자 치환을 분리해 `2028년 2월`로 바로잡았다.
+- focused unit 3/3과 generic 앱·테스트 빌드가 통과했다. iPhone 13 mini UI 테스트 1/1에서 선택기 요소의 잘림·겹침 부재, 2026년 8월 선택 강조, 2028년 2월 직접 이동과 그리드 갱신을 확인했다: `/tmp/Dutypark-GuestMonthPicker-Unit-Final2-20260815.xcresult`, `/tmp/Dutypark-GuestMonthPicker-UI-Final2-20260815.xcresult`.
 
 ### 친구 destructive 확인과 관리 액션 — `38dc5bca`
 
