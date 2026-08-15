@@ -2,7 +2,7 @@
 
 - 기준일: 2026-08-15
 - 목적: 반응형 모바일 웹(`http://localhost:5173`)을 iOS 네이티브 앱으로 이식하는 과정에서 나빠진 화면과 동작을 찾아 웹 수준으로 되돌린다.
-- 기준 기기: iPhone 13 mini 시뮬레이터(`360×780pt`, iOS 26.5) / 모바일 웹 `375×812`
+- 기준 기기: iPhone 13 mini 시뮬레이터(`375×812pt`, iOS 26.5) / 모바일 웹 `375×812`
 - 판정 원칙: 웹을 레퍼런스로 삼고, 명백히 나빠진 부분만 회귀로 판정한다.
 - 관련 문서: [12. 웹 → iOS 기능·UX 동등성](../12-web-app-parity/README.md)
 
@@ -48,6 +48,7 @@
 | 13 | 설정 | 같은 기능의 섹션 이름·설명이 모바일 웹과 다르게 표시됨 | 완료 | `4d8b9de3` |
 | 14 | 햄버거 메뉴 | 웹의 `이용 안내`가 iOS에서 `사용 가이드`로 변경됨 | 완료 | `f9291784` |
 | 15 | 달력 | 근무 요약·액션이 없는데도 빈 도구행이 남아 월 그리드 위에 큰 공백이 생김 | 완료 | `a0aea3a8` |
+| 16 | Todo | 선택한 상태와 다른 열이 보여 카드가 화면 밖에 놓이고, 롱프레스 제스처가 일반 탭을 막음 | 완료 | `b84b2478` |
 
 상태는 `대기 → 진행 중 → 수정됨·커밋 전 → 코드 커밋됨·시각 검증 전 → 완료` 순으로 관리한다.
 
@@ -68,7 +69,7 @@
 | `24814f20` | 친구관리 UI fixture 안정화 및 실제 롱프레스 재정렬 | iPhone 13 mini 전용 UI 테스트 1건 | 친구관리 수정 후 화면 확보 | 완료 |
 | `2316075a` | 관리자 팀 삭제·회원 세션 종료 중앙 확인 | AdminTeam·AdminFeature 테스트 포함 전체 선택 테스트 | `eee695a9`에서 두 패널 캡처 확보 | 완료 |
 | `84047661` | 설정의 계정·프로필 destructive 확인 5종 | iPhone 13 mini `SettingsFeatureTests` 29건 | 설정 화면 확보, 확인 패널 직접 캡처 대기 | 코드 커밋됨·패널 캡처 대기 |
-| `bd3a1fc4` | Todo 작성 취소·삭제·태그 해제 중앙 확인 | iPhone 13 mini 단위 32건·UI 1건 | Todo 화면 확보, 확인 패널 직접 캡처 대기 | 코드·상호작용 완료·캡처 대기 |
+| `bd3a1fc4` | Todo 작성 취소·삭제·태그 해제 중앙 확인 | iPhone 13 mini 단위 32건·UI 1건 | `b84b2478`에서 실제 카드 경로로 작성 취소·삭제 패널 재검증 | 완료 |
 | `2ecdbb70` | 팀 일정 삭제 및 팀 관리 확인 UI | iPhone 13 mini `TeamFeatureTests` 24건 | `d444f095`에서 가입 팀 패널 2종 확보 | 완료 |
 | `8a6a3aae` | Root 햄버거 로그아웃 중앙 확인 | iPhone 13 mini 전용 테스트 3건 | 메뉴 화면 확보, 패널 직접 캡처 대기 | 코드·테스트 완료·캡처 대기 |
 | `a19f4047` | 소셜 계정 연결 해제 중앙 확인 | iPhone 13 mini 전용 테스트 3건 | `8c947a62`에서 관리·확인 패널 캡처 확보 | 완료 |
@@ -88,6 +89,7 @@
 | `4d8b9de3` | 설정 첫 화면 카피의 모바일 웹 동등성 | exact ko/en 회귀 테스트, generic build·test build | iPhone 13 mini 설정 첫 화면 재캡처 | 완료 |
 | `f9291784` | Root 메뉴의 가이드 문구 동등성 | Root 현지화 3건·UI 1건, generic test build | 햄버거 메뉴 `이용 안내` 캡처 | 완료 |
 | `a0aea3a8` | 내용 없는 달력 근무 도구행 제거 | Calendar focused test, generic test build | iPhone 13 mini 월 그리드 상단 재캡처 | 완료 |
+| `b84b2478` | Todo 카드 탭·롱프레스·선택 열 정렬 복원 | Todo 단위 32건, iPhone 13 mini UI 5건 | 실제 카드 탭 삭제·작성 취소 패널 및 드래그·스크롤 검증 | 완료 |
 
 ## 상세 변경 보고
 
@@ -269,16 +271,19 @@
 - iPhone 13 mini에서 `SettingsFeatureTests` 29건과 전용 시각 UI 테스트 3건이 통과했다.
 - `22d0bc18`에서 프로필 사진 fixture와 안정적인 접근성 식별자를 추가했고, 두 확인 패널의 제목·설명·취소·destructive 버튼 및 중앙 배치를 직접 확인했다.
 
-### Todo destructive 확인 — `bd3a1fc4`
+### Todo 카드 상호작용과 destructive 확인 — `bd3a1fc4`, `b84b2478`
 
-| 웹 Todo | iOS Todo |
-| --- | --- |
-| <img src="screenshots/todo-web-ko.png" width="240" alt="모바일 웹 Todo"> | <img src="screenshots/todo-ios-after.png" width="240" alt="iOS Todo"> |
+| 웹 Todo 기준 | iOS 작성 취소 | iOS Todo 삭제 |
+| --- | --- | --- |
+| <img src="screenshots/todo-web-ko.png" width="240" alt="모바일 웹 Todo"> | <img src="screenshots/todo-discard-confirmation-ios-after.png" width="240" alt="iOS Todo 작성 취소 확인"> | <img src="screenshots/todo-delete-confirmation-ios-after.png" width="240" alt="iOS Todo 삭제 확인"> |
 
 - 작성·수정 변경사항 폐기, Todo 삭제, 내 태그 해제를 중앙 확인 패널로 통일했다.
 - 삭제 시 첨부파일도 함께 삭제되고, 태그 해제 시 보드에서 제거된다는 영향 안내는 유지했다.
-- iPhone 13 mini에서 `TodoViewModelTests` 32건과 작성 취소 중앙 패널 UI 테스트 1건이 통과했다.
-- 결과: `/tmp/dutypark-todo-confirmation-unit-suite.xcresult`, `/tmp/dutypark-todo-confirmation-ui.xcresult`.
+- 후속 실제 경로 검증에서 선택 상태가 `진행 중`이어도 보드는 다른 열에 머물러 카드가 화면 밖에 놓이고, 기존 롱프레스 제스처가 일반 카드 탭을 막는 회귀를 발견했다.
+- 보드가 나타나거나 상태가 바뀔 때 선택 열을 화면 중앙으로 정렬하고, iOS 18 이상에서는 SwiftUI 카드에 직접 연결한 UIKit 롱프레스 인식기와 일반 탭을 함께 사용한다. iOS 17 fallback은 기존 정책을 유지한다.
+- DEBUG 전용 direct-open 우회 없이 실제 카드 탭 → 상세 → 삭제 경로와 0.5초 롱프레스 재정렬을 검증했다. 세로 스크롤은 상세를 열거나 순서를 바꾸지 않는다.
+- iPhone 13 mini에서 `TodoViewModelTests` 32건과 UI 5/5가 통과했다. 결과: `/tmp/Dutypark-TodoFallbackPolicy-Unit-20260815.xcresult`, `/tmp/Dutypark-TodoGesture-TapLongPress-20260815.xcresult`, `/tmp/Dutypark-TodoGesture-Remaining-20260815.xcresult`.
+- 두 확인 패널은 제목·본문·취소·destructive 버튼이 모두 표시되고, 버튼 겹침 없이 화면 중앙에 배치되는 것을 원본 PNG와 독립 crop으로 확인했다.
 
 ### 팀 일정·관리 확인 — `2ecdbb70`
 
@@ -377,7 +382,7 @@
 - [x] 첨부 삭제용 UI fixture와 중앙 패널 스크린샷 추가
 - [x] 관리자 팀 삭제·회원 세션 종료 UI fixture와 중앙 패널 스크린샷 추가
 - [x] 설정 로그아웃·프로필 삭제 중앙 패널 스크린샷 추가
-- [ ] Todo 작성 취소·삭제 중앙 패널 스크린샷 추가
+- [x] Todo 작성 취소·삭제 중앙 패널 스크린샷 추가
 - [x] 팀 연월 선택기 한국어 스크린샷 추가
 - [x] 가입 팀 fixture로 일정 삭제·관리 중앙 패널 스크린샷 추가
 - [x] Root 햄버거 로그아웃 중앙 패널 스크린샷 추가
