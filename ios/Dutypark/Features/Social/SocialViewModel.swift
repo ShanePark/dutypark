@@ -51,6 +51,12 @@ final class SocialViewModel: ObservableObject {
     }
 
     func load() async {
+#if DEBUG
+        if isUITesting {
+            loadUITestingFixture()
+            return
+        }
+#endif
         isLoading = true
         defer { isLoading = false }
         do {
@@ -61,6 +67,12 @@ final class SocialViewModel: ObservableObject {
     }
 
     func refresh() async {
+#if DEBUG
+        if isUITesting {
+            loadUITestingFixture()
+            return
+        }
+#endif
         do {
             try await reload()
         } catch {
@@ -186,6 +198,14 @@ final class SocialViewModel: ObservableObject {
         }
         guard memberIDs != currentIDs else { return true }
 
+#if DEBUG
+        if isUITesting {
+            pinnedOrderIDs = memberIDs
+            await onMutation(false)
+            return true
+        }
+#endif
+
         let previousOrderIDs = pinnedOrderIDs
         pinnedOrderIDs = memberIDs
         isReordering = true
@@ -236,4 +256,43 @@ final class SocialViewModel: ObservableObject {
             self.errorKey = errorKey
         }
     }
+
+#if DEBUG
+    private var isUITesting: Bool {
+        ProcessInfo.processInfo.arguments.contains("-ui-testing-authenticated")
+    }
+
+    private func loadUITestingFixture() {
+        friends = [
+            uiTestingFriend(id: 31, name: "알렉스", pinOrder: 1),
+            uiTestingFriend(id: 32, name: "민지", pinOrder: 2),
+            uiTestingFriend(id: 33, name: "테일러", pinOrder: nil)
+        ]
+        receivedRequests = []
+        sentRequests = []
+        pinnedOrderIDs = nil
+        errorKey = nil
+    }
+
+    private func uiTestingFriend(
+        id: MemberID,
+        name: String,
+        pinOrder: Int64?
+    ) -> DashboardFriendDetailDTO {
+        DashboardFriendDetailDTO(
+            member: MemberPreviewDTO(
+                id: id,
+                name: name,
+                teamId: 1,
+                team: "Dutypark",
+                hasProfilePhoto: false,
+                profilePhotoVersion: 0
+            ),
+            duty: nil,
+            schedules: [],
+            isFamily: false,
+            pinOrder: pinOrder
+        )
+    }
+#endif
 }

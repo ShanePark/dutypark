@@ -354,15 +354,14 @@ struct SocialView: View {
         isDragPreview: Bool = false
     ) -> some View {
         ZStack(alignment: .topTrailing) {
-            reorderableFriendContent(
-                Button {
-                    guard let id = friend.member.id else { return }
-                    guard suppressedCalendarFriendID != id else {
-                        suppressedCalendarFriendID = nil
-                        return
-                    }
-                    onOpenCalendar(id)
-                } label: {
+            Button {
+                guard let id = friend.member.id else { return }
+                guard suppressedCalendarFriendID != id else {
+                    suppressedCalendarFriendID = nil
+                    return
+                }
+                onOpenCalendar(id)
+            } label: {
                     HStack(alignment: .top, spacing: SocialFriendCardLayout.contentSpacing) {
                         SocialAvatar(member: friend.member, size: SocialFriendCardLayout.avatarSize)
 
@@ -422,13 +421,29 @@ struct SocialView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .accessibilityHint(social("social.action.openCalendar")),
-                friend: friend,
-                isDragPreview: isDragPreview
+            }
+            .buttonStyle(.plain)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityIdentifier("social.friend.\(friend.member.id ?? -1)")
+            .simultaneousGesture(
+                pinnedFriendReorderGesture(memberID: friend.member.id),
+                including: isPinnedFriendReorderEnabled(friend, isDragPreview: isDragPreview)
+                    ? .all
+                    : .none
             )
+            .accessibilityHint(
+                isPinnedFriendReorderEnabled(friend, isDragPreview: isDragPreview)
+                    ? social("social.action.openCalendar") + " " + social("social.hint.pinnedOrder")
+                    : social("social.action.openCalendar")
+            )
+            .accessibilityActions {
+                ForEach(accessiblePinnedFriendMoves(friend), id: \.offset) { move in
+                    Button(social(move.key)) {
+                        guard let memberID = friend.member.id else { return }
+                        movePinnedFriend(memberID: memberID, to: move.destinationIndex)
+                    }
+                }
+            }
 
             HStack(spacing: 0) {
                 Button {
@@ -519,42 +534,33 @@ struct SocialView: View {
         }
     }
 
-    @ViewBuilder
-    private func reorderableFriendContent<Content: View>(
-        _ content: Content,
-        friend: DashboardFriendDetailDTO,
+    private func isPinnedFriendReorderEnabled(
+        _ friend: DashboardFriendDetailDTO,
         isDragPreview: Bool
-    ) -> some View {
-        if !isDragPreview,
-           friend.pinOrder != nil,
-           viewModel.pinnedFriends.count >= 2,
-           let memberID = friend.member.id {
-            let pinnedIDs = displayedPinnedFriends.compactMap(\.member.id)
-            let index = pinnedIDs.firstIndex(of: memberID)
-
-            content
-                .simultaneousGesture(pinnedFriendReorderGesture(memberID: memberID))
-                .accessibilityHint(
-                    Text(
-                        social("social.action.openCalendar")
-                            + " "
-                            + social("social.hint.pinnedOrder")
-                    )
-                )
-                .accessibilityAction(named: Text(social("social.action.moveUp"))) {
-                    guard let index, index > 0 else { return }
-                    movePinnedFriend(memberID: memberID, to: index - 1)
-                }
-                .accessibilityAction(named: Text(social("social.action.moveDown"))) {
-                    guard let index, index < pinnedIDs.count - 1 else { return }
-                    movePinnedFriend(memberID: memberID, to: index + 1)
-                }
-        } else {
-            content
-        }
+    ) -> Bool {
+        !isDragPreview && friend.pinOrder != nil && viewModel.pinnedFriends.count >= 2
     }
 
-    private func pinnedFriendReorderGesture(memberID: MemberID) -> some Gesture {
+    private func accessiblePinnedFriendMoves(
+        _ friend: DashboardFriendDetailDTO
+    ) -> [PinnedFriendAccessibleMove] {
+        guard friend.pinOrder != nil,
+              viewModel.pinnedFriends.count >= 2,
+              let memberID = friend.member.id else { return [] }
+        let pinnedIDs = displayedPinnedFriends.compactMap(\.member.id)
+        guard let index = pinnedIDs.firstIndex(of: memberID) else { return [] }
+
+        var moves: [PinnedFriendAccessibleMove] = []
+        if index > 0 {
+            moves.append(.init(offset: -1, destinationIndex: index - 1, key: "social.action.moveUp"))
+        }
+        if index < pinnedIDs.count - 1 {
+            moves.append(.init(offset: 1, destinationIndex: index + 1, key: "social.action.moveDown"))
+        }
+        return moves
+    }
+
+    private func pinnedFriendReorderGesture(memberID: MemberID?) -> some Gesture {
         LongPressGesture(
             minimumDuration: SocialFriendDragLayout.activationDuration,
             maximumDistance: SocialFriendDragLayout.activationMaximumDistance
@@ -566,11 +572,13 @@ struct SocialView: View {
             )
         )
         .onChanged { value in
-            guard case .second(true, let dragValue) = value,
+            guard let memberID,
+                  case .second(true, let dragValue) = value,
                   let dragValue else { return }
             updatePinnedFriendDrag(memberID: memberID, location: dragValue.location)
         }
         .onEnded { value in
+            guard let memberID else { return }
             guard case .second(true, let dragValue) = value,
                   dragValue != nil else {
                 if draggedPinnedFriendID == memberID {
@@ -1222,6 +1230,12 @@ enum SocialFriendDragLayout {
     static let activationMaximumDistance: CGFloat = 10
     static let activationDistance: CGFloat = 4
     static let overlapThreshold: CGFloat = 12
+}
+
+private struct PinnedFriendAccessibleMove {
+    let offset: Int
+    let destinationIndex: Int
+    let key: String
 }
 
 struct PinnedFriendDropTarget: Equatable {
