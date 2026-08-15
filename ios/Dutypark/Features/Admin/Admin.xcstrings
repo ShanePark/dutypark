@@ -878,13 +878,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "%d sessions"
+            "value": "%d active sessions"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "%d개"
+            "value": "%d개의 활성 세션"
           }
         }
       }
@@ -894,13 +894,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "No active sessions."
+            "value": "No active sessions"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "활성 세션이 없습니다."
+            "value": "활성 세션 없음"
           }
         }
       }

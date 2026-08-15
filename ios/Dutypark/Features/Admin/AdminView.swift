@@ -240,13 +240,35 @@ private struct AdminMemberRow: View {
                 }
             }
             Spacer(minLength: DPSpacing.extraSmall)
-            Text(AdminLocalization.format("admin.members.sessions.count", member.tokens.count))
+            Text(AdminMemberSessionCountPresentation.text(count: member.tokens.count))
                 .font(DPTypography.caption)
                 .foregroundStyle(DPColor.textMuted)
         }
         .padding(.vertical, DPSpacing.extraSmall)
         .frame(minHeight: 60)
         .accessibilityIdentifier("admin.member.\(member.id)")
+    }
+}
+
+nonisolated enum AdminMemberSessionCountPresentation {
+    static func text(count: Int, locale: Locale = AppLocalization.locale) -> String {
+        guard count > 0 else {
+            return AppLocalization.string(
+                "admin.members.sessions.empty",
+                table: "Admin",
+                locale: locale
+            )
+        }
+
+        return String(
+            format: AppLocalization.string(
+                "admin.members.sessions.count",
+                table: "Admin",
+                locale: locale
+            ),
+            locale: locale,
+            count
+        )
     }
 }
 

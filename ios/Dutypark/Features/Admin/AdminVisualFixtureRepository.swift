@@ -13,6 +13,17 @@ nonisolated struct AdminVisualFixtureRepository: AdminRepositoryProtocol, Sendab
         profilePhotoVersion: 0
     )
 
+    private let memberWithoutSessions = AdminMemberDTO(
+        id: 8,
+        name: "세션 없는 회원",
+        email: "no-session@duty.park",
+        teamId: 101,
+        teamName: "시각 검증팀",
+        tokens: [],
+        hasProfilePhoto: false,
+        profilePhotoVersion: 0
+    )
+
     private static let session = SettingsRefreshToken(
         memberName: "관리자 검증 회원",
         memberId: 7,
@@ -26,7 +37,7 @@ nonisolated struct AdminVisualFixtureRepository: AdminRepositoryProtocol, Sendab
     )
 
     func members(keyword: String, page: Int, size: Int) async throws -> PageResponse<AdminMemberDTO> {
-        pageResponse(content: [member], page: page, size: size)
+        pageResponse(content: [member, memberWithoutSessions], page: page, size: size)
     }
 
     func memberDetail(id: MemberID) async throws -> AdminMemberDetailDTO {

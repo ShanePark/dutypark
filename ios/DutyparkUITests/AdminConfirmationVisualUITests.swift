@@ -6,6 +6,25 @@ final class AdminConfirmationVisualUITests: XCTestCase {
     }
 
     @MainActor
+    func testCapturesMemberActiveSessionCountParity() throws {
+        let app = launchServiceAdminApp()
+        defer { app.terminate() }
+
+        openAdministration(in: app)
+        app.staticTexts["회원 관리"].firstMatch.tap()
+
+        XCTAssertTrue(app.staticTexts["관리자 검증 회원"].firstMatch.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["1개의 활성 세션"].firstMatch.exists)
+        XCTAssertTrue(app.staticTexts["세션 없는 회원"].firstMatch.exists)
+        XCTAssertTrue(app.staticTexts["활성 세션 없음"].firstMatch.exists)
+
+        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        attachment.name = "parity-ios-admin-member-active-session-count-ko-dark"
+        attachment.lifetime = .keepAlways
+        add(attachment)
+    }
+
+    @MainActor
     func testCapturesCenteredTeamDeleteConfirmation() throws {
         let app = launchServiceAdminApp()
         defer { app.terminate() }

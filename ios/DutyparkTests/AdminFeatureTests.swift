@@ -4,6 +4,14 @@ import Testing
 
 @Suite("Admin feature", .serialized)
 struct AdminFeatureTests {
+    @Test("Admin member rows describe active-session counts exactly like the web")
+    func memberActiveSessionCountPresentation() {
+        #expect(AdminMemberSessionCountPresentation.text(count: 2, locale: Locale(identifier: "ko")) == "2개의 활성 세션")
+        #expect(AdminMemberSessionCountPresentation.text(count: 0, locale: Locale(identifier: "ko")) == "활성 세션 없음")
+        #expect(AdminMemberSessionCountPresentation.text(count: 2, locale: Locale(identifier: "en")) == "2 active sessions")
+        #expect(AdminMemberSessionCountPresentation.text(count: 0, locale: Locale(identifier: "en")) == "No active sessions")
+    }
+
     @Test("Selecting Home always resets its navigation path")
     func homeNavigationResetPolicy() {
         #expect(RootNavigationPolicy.resetsHomePath(for: .home))
