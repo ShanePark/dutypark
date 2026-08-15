@@ -10,14 +10,23 @@ struct TeamManageView: View {
     @State private var memberSearchIsWorking = false
     @State private var dutyEditorInteraction = TeamModalInteractionState()
     @State private var batchUploadInteraction = TeamModalInteractionState()
+    private let onTeamChanged: (TeamDTO) -> Void
+    private let onDutyBatchChanged: (Int, Int) -> Void
 
-    init(teamID: TeamID, isServiceAdmin: Bool = false) {
+    init(
+        teamID: TeamID,
+        isServiceAdmin: Bool = false,
+        onTeamChanged: @escaping (TeamDTO) -> Void = { _ in },
+        onDutyBatchChanged: @escaping (Int, Int) -> Void = { _, _ in }
+    ) {
         _viewModel = StateObject(
             wrappedValue: TeamManageViewModel(
                 teamID: teamID,
                 isServiceAdmin: isServiceAdmin
             )
         )
+        self.onTeamChanged = onTeamChanged
+        self.onDutyBatchChanged = onDutyBatchChanged
     }
 
     private var loginID: MemberID? {
@@ -54,18 +63,10 @@ struct TeamManageView: View {
         }
         .navigationBarBackButtonHidden(true)
         .task { await viewModel.load() }
-        .disabled(viewModel.isWorking)
-        .overlay {
-            if viewModel.isWorking {
-                ProgressView()
-                    .padding(DPSpacing.medium)
-                    .background(.regularMaterial)
-                    .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
-            }
+        .onChange(of: viewModel.team) { _, team in
+            if let team { onTeamChanged(team) }
         }
-        .fullScreenCover(isPresented: $viewModel.memberSearchPresented, onDismiss: {
-            Task { await viewModel.load() }
-        }) {
+        .fullScreenCover(isPresented: $viewModel.memberSearchPresented) {
             DPModalOverlay(
                 onDismiss: { viewModel.memberSearchPresented = false },
                 closeOnBackdrop: true,
@@ -76,6 +77,7 @@ struct TeamManageView: View {
                     maximumHeight: availableSize.height,
                     isWorking: $memberSearchIsWorking,
                     dismissAfterSuccess: { viewModel.memberSearchPresented = false },
+                    didAdd: { viewModel.appendMember($0) },
                     dismiss: dismiss
                 )
             }
@@ -107,6 +109,7 @@ struct TeamManageView: View {
                     viewModel: viewModel,
                     maximumHeight: availableSize.height,
                     interaction: $batchUploadInteraction,
+                    didUpload: onDutyBatchChanged,
                     dismiss: dismiss
                 )
             }
@@ -837,6 +840,7 @@ private struct TeamMemberSearchView: View {
     let maximumHeight: CGFloat
     @Binding var isWorking: Bool
     let dismissAfterSuccess: () -> Void
+    let didAdd: (MemberInviteCandidateDTO) -> Void
     let dismiss: () -> Void
     @State private var candidateToAdd: MemberInviteCandidateDTO?
     @State private var candidateSubmissionIsWorking = false
@@ -847,12 +851,14 @@ private struct TeamMemberSearchView: View {
         maximumHeight: CGFloat,
         isWorking: Binding<Bool>,
         dismissAfterSuccess: @escaping () -> Void,
+        didAdd: @escaping (MemberInviteCandidateDTO) -> Void,
         dismiss: @escaping () -> Void
     ) {
         _viewModel = StateObject(wrappedValue: TeamMemberSearchViewModel(teamID: teamID))
         self.maximumHeight = maximumHeight
         _isWorking = isWorking
         self.dismissAfterSuccess = dismissAfterSuccess
+        self.didAdd = didAdd
         self.dismiss = dismiss
     }
 
@@ -890,6 +896,7 @@ private struct TeamMemberSearchView: View {
                         maximumHeight: availableSize.height,
                         dismiss: confirmationDismiss,
                         dismissAfterSuccess: {
+                            didAdd(candidate)
                             candidateToAdd = nil
                             dismissAfterSuccess()
                         },
@@ -1073,6 +1080,7 @@ private struct TeamBatchUploadView: View {
     @ObservedObject var viewModel: TeamManageViewModel
     let maximumHeight: CGFloat
     @Binding var interaction: TeamModalInteractionState
+    let didUpload: (Int, Int) -> Void
     let dismiss: () -> Void
     @State private var year = Calendar.current.component(.year, from: Date())
     @State private var month = Calendar.current.component(.month, from: Date())
@@ -1198,6 +1206,9 @@ private struct TeamBatchUploadView: View {
                     else { return }
                     Task {
                         result = await viewModel.upload(fileURL: fileURL, year: year, month: month)
+                        if result?.result == true {
+                            didUpload(year, month)
+                        }
                         initialYear = year
                         initialMonth = month
                         initialFileURL = fileURL

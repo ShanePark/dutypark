@@ -72,6 +72,22 @@ struct TeamFeatureTests {
     }
 
     @Test
+    func scheduleEditorDismissalHasASinglePresentationOwner() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark/Features/Team/TeamView.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+        let editor = try #require(source.range(of: "private struct TeamScheduleEditor"))
+        let editorSource = source[editor.lowerBound...]
+
+        #expect(editorSource.contains("viewModel.scheduleDraft = nil") == false)
+        #expect(editorSource.contains("Binding($viewModel.scheduleDraft)") == false)
+        #expect(editorSource.contains("@State private var draft: TeamScheduleDraft"))
+        #expect(editorSource.contains("dismiss()"))
+    }
+
+    @Test
     func emptyShiftListDoesNotReuseTheScheduleEmptyMessage() throws {
         let sourceURL = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
@@ -275,7 +291,7 @@ struct TeamFeatureTests {
     }
 
     @Test @MainActor
-    func reportsManagementMutationSuccessOnlyAfterRefreshingTeam() async {
+    func reportsManagementMutationSuccessWithoutRefreshingTeam() async {
         TeamURLProtocolStub.handler = { request in
             switch (request.httpMethod, request.url?.path) {
             case ("DELETE", "/api/teams/manage/7/members"):
@@ -294,6 +310,7 @@ struct TeamFeatureTests {
             teamID: 7,
             repository: TeamRepository(client: makeClient())
         )
+        await viewModel.load()
 
         let succeeded = await viewModel.removeMember(3)
 
@@ -301,6 +318,198 @@ struct TeamFeatureTests {
         #expect(viewModel.team?.id == 7)
         #expect(viewModel.showsError == false)
         #expect(viewModel.showsSuccess)
+        TeamURLProtocolStub.handler = nil
+    }
+
+    @Test @MainActor
+    func addingAMemberPatchesTheManagementSnapshotWithoutReloading() async {
+        TeamURLProtocolStub.handler = { request in
+            Self.successfulTeamLoadResponse(request)
+        }
+        let viewModel = TeamManageViewModel(
+            teamID: 7,
+            repository: TeamRepository(client: makeClient())
+        )
+        await viewModel.load()
+        TeamURLProtocolStub.handler = { request in
+            Self.response(request, status: 503)
+        }
+        let candidate = MemberInviteCandidateDTO(
+            id: 9,
+            name: "New member",
+            email: "new@example.com",
+            teamId: nil,
+            team: nil,
+            hasProfilePhoto: true,
+            profilePhotoVersion: 4
+        )
+
+        viewModel.appendMember(candidate)
+
+        let added = viewModel.team?.members.first { $0.id == 9 }
+        #expect(added?.name == "New member")
+        #expect(added?.isManager == false)
+        #expect(added?.isAdmin == false)
+        #expect(added?.profilePhotoVersion == 4)
+        TeamURLProtocolStub.handler = nil
+    }
+
+    @Test
+    func memberSearchDismissDoesNotReloadTheManagementScreen() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark/Features/Team/TeamManageView.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+
+        #expect(source.contains("didAdd: { viewModel.appendMember($0) }"))
+        #expect(source.contains("onDismiss: {\n            Task { await viewModel.load() }") == false)
+    }
+
+    @Test
+    func existingTeamContentIsNotReplacedByAFullScreenLoadingState() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark/Features/Team/TeamView.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+
+        #expect(source.contains("if viewModel.isLoading && viewModel.team == nil"))
+        #expect(source.contains("else if viewModel.loadFailed && viewModel.team == nil"))
+    }
+
+    @Test @MainActor
+    func repeatedLoadAndMonthNavigationPreserveTheSelectedDay() async throws {
+        TeamURLProtocolStub.handler = { request in
+            Self.successfulTeamLoadResponse(request)
+        }
+        let viewModel = TeamViewModel(
+            repository: TeamRepository(client: makeClient()),
+            now: try #require(Self.date(year: 2026, month: 8, day: 1))
+        )
+
+        await viewModel.load(memberID: 1)
+        await viewModel.selectDay(at: 1)
+        #expect(viewModel.selectedDay?.day == 13)
+
+        await viewModel.load(memberID: 1)
+        #expect(viewModel.selectedDay?.day == 13)
+
+        await viewModel.nextMonth()
+        #expect(viewModel.year == 2026)
+        #expect(viewModel.month == 9)
+        #expect(viewModel.selectedDay?.year == 2026)
+        #expect(viewModel.selectedDay?.month == 9)
+        #expect(viewModel.selectedDay?.day == 13)
+        TeamURLProtocolStub.handler = nil
+    }
+
+    @Test @MainActor
+    func managementMutationPatchesTheLoadedTeamWithoutARefreshRequest() async {
+        TeamURLProtocolStub.handler = { request in
+            Self.successfulTeamLoadResponse(request)
+        }
+        let viewModel = TeamManageViewModel(
+            teamID: 7,
+            repository: TeamRepository(client: makeClient())
+        )
+        await viewModel.load()
+        #expect(viewModel.team?.members.contains { $0.id == 3 } == true)
+
+        TeamURLProtocolStub.handler = { request in
+            if request.httpMethod == "DELETE",
+               request.url?.path == "/api/teams/manage/7/members" {
+                return Self.response(request, status: 204)
+            }
+            return Self.response(request, status: 503)
+        }
+
+        let succeeded = await viewModel.removeMember(3)
+
+        #expect(succeeded)
+        #expect(viewModel.team?.members.contains { $0.id == 3 } == false)
+        #expect(viewModel.showsError == false)
+        TeamURLProtocolStub.handler = nil
+    }
+
+    @Test @MainActor
+    func resettingTeamAdminClearsTheLocalAdminWithoutARefreshRequest() async {
+        TeamURLProtocolStub.handler = { request in
+            Self.successfulTeamLoadResponse(request)
+        }
+        let viewModel = TeamManageViewModel(
+            teamID: 7,
+            repository: TeamRepository(client: makeClient())
+        )
+        await viewModel.load()
+        TeamURLProtocolStub.handler = { request in
+            if request.httpMethod == "PUT", request.url?.path == "/api/teams/manage/7/admin" {
+                return Self.response(request, status: 204)
+            }
+            return Self.response(request, status: 503)
+        }
+
+        let succeeded = await viewModel.changeAdmin(memberID: nil)
+
+        #expect(succeeded)
+        #expect(viewModel.team?.adminId == nil)
+        #expect(viewModel.team?.adminName == nil)
+        #expect(viewModel.team?.members.first { $0.id == 1 }?.isAdmin == false)
+        TeamURLProtocolStub.handler = nil
+    }
+
+    @Test @MainActor
+    func scheduleMutationsPatchTheLoadedMonthWithoutARefreshRequest() async throws {
+        TeamURLProtocolStub.handler = { request in
+            Self.successfulTeamLoadResponse(request)
+        }
+        let viewModel = TeamViewModel(
+            repository: TeamRepository(client: makeClient()),
+            now: try #require(Self.date(year: 2026, month: 8, day: 1))
+        )
+        await viewModel.load(memberID: 1)
+        let date = try #require(Self.date(year: 2026, month: 8, day: 12))
+        viewModel.scheduleDraft = TeamScheduleDraft(
+            id: nil,
+            content: "Local schedule",
+            description: "No refresh",
+            startDate: date,
+            endDate: date
+        )
+        let scheduleID = UUID(uuidString: "B4F66F4B-95C2-4E52-B9BA-8840185C8843")!
+        TeamURLProtocolStub.handler = { request in
+            if request.httpMethod == "POST", request.url?.path == "/api/teams/schedules" {
+                return Self.response(
+                    request,
+                    status: 200,
+                    body: #"{"id":"B4F66F4B-95C2-4E52-B9BA-8840185C8843","teamId":7,"content":"Local schedule","description":"No refresh","position":0,"year":2026,"month":8,"dayOfMonth":12,"daysFromStart":null,"totalDays":null,"startDateTime":"2026-08-12T00:00:00","endDateTime":"2026-08-12T23:59:59","createMember":"Manager","updateMember":"Manager","curDate":"2026-08-12"}"#
+                )
+            }
+            return Self.response(request, status: 503)
+        }
+
+        await viewModel.saveSchedule()
+
+        let saved = try #require(viewModel.selectedSchedules.first)
+        #expect(saved.id == scheduleID)
+        #expect(saved.content == "Local schedule")
+        #expect(viewModel.scheduleDraft == nil)
+        #expect(viewModel.showsError == false)
+
+        viewModel.schedulePendingDeletion = saved
+        TeamURLProtocolStub.handler = { request in
+            if request.httpMethod == "DELETE",
+               request.url?.path == "/api/teams/schedules/\(scheduleID.uuidString)" {
+                return Self.response(request, status: 204)
+            }
+            return Self.response(request, status: 503)
+        }
+
+        await viewModel.deleteSchedule()
+
+        #expect(viewModel.selectedSchedules.isEmpty)
+        #expect(viewModel.schedulePendingDeletion == nil)
+        #expect(viewModel.showsError == false)
         TeamURLProtocolStub.handler = nil
     }
 
@@ -700,6 +909,48 @@ struct TeamFeatureTests {
                 headerFields: nil
             )!,
             Data(body.utf8)
+        )
+    }
+
+    private static func successfulTeamLoadResponse(
+        _ request: URLRequest
+    ) -> (HTTPURLResponse, Data) {
+        let components = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)
+        let month = Int(components?.queryItems?.first { $0.name == "month" }?.value ?? "8") ?? 8
+        let year = Int(components?.queryItems?.first { $0.name == "year" }?.value ?? "2026") ?? 2026
+        switch request.url?.path {
+        case "/api/calendar":
+            return response(
+                request,
+                status: 200,
+                body: "[{\"year\":\(year),\"month\":\(month),\"day\":12},{\"year\":\(year),\"month\":\(month),\"day\":13}]"
+            )
+        case "/api/teams/my":
+            return response(
+                request,
+                status: 200,
+                body: "{\"year\":\(year),\"month\":\(month),\"team\":\(managedTeamJSON),\"teamDays\":[],\"isTeamManager\":true}"
+            )
+        case "/api/teams/schedules", "/api/holidays":
+            return response(request, status: 200, body: "[[],[]]")
+        case "/api/duty", "/api/teams/shift":
+            return response(request, status: 200, body: "[]")
+        case "/api/teams/manage/7":
+            return response(request, status: 200, body: managedTeamJSON)
+        case "/api/duty_batch/templates":
+            return response(request, status: 200, body: "[]")
+        default:
+            return response(request, status: 404)
+        }
+    }
+
+    private static var managedTeamJSON: String {
+        ##"{"id":7,"name":"Team","description":null,"dutyTypes":[{"id":null,"teamId":7,"name":"Off","position":-1,"color":"#112233","hidden":false},{"id":11,"teamId":7,"name":"Day","position":0,"color":"#445566","hidden":false}],"members":[{"id":1,"name":"Manager","email":"manager@example.com","isManager":true,"isAdmin":true,"hasProfilePhoto":false,"profilePhotoVersion":0},{"id":3,"name":"Member","email":"member@example.com","isManager":false,"isAdmin":false,"hasProfilePhoto":false,"profilePhotoVersion":0}],"createdDate":"2026-08-12T00:00:00","lastModifiedDate":"2026-08-12T00:00:00","adminId":1,"adminName":"Manager","dutyBatchTemplate":null}"##
+    }
+
+    private static func date(year: Int, month: Int, day: Int) -> Date? {
+        Calendar(identifier: .gregorian).date(
+            from: DateComponents(year: year, month: month, day: day)
         )
     }
 }

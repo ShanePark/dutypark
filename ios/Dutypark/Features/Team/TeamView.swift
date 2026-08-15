@@ -18,9 +18,9 @@ struct TeamView: View {
 
     var body: some View {
         Group {
-            if viewModel.isLoading {
+            if viewModel.isLoading && viewModel.team == nil {
                 DPLoadingState(label: LocalizedStringKey(teamLocalized("team.common.loading")))
-            } else if viewModel.loadFailed {
+            } else if viewModel.loadFailed && viewModel.team == nil {
                 DPErrorState(
                     title: LocalizedStringKey(teamLocalized("team.common.error")),
                     message: nil,
@@ -52,7 +52,7 @@ struct TeamView: View {
                 .frame(maxHeight: .infinity, alignment: .top)
             }
         }
-        .task { await viewModel.load(memberID: memberID) }
+        .task { await viewModel.loadIfNeeded(memberID: memberID) }
         .refreshable { await viewModel.load(memberID: memberID) }
         .alert(
             Text("team.common.error", tableName: "Team"),
@@ -68,7 +68,9 @@ struct TeamView: View {
                 set: { if !$0 { viewModel.scheduleDraft = nil } }
             )
         ) {
-            TeamScheduleEditor(viewModel: viewModel)
+            if let draft = viewModel.scheduleDraft {
+                TeamScheduleEditor(viewModel: viewModel, draft: draft)
+            }
         }
         .sheet(isPresented: $monthPickerPresented) {
             TeamYearMonthPicker(
@@ -166,7 +168,15 @@ struct TeamView: View {
                     Group {
                     if viewModel.isTeamManager {
                         NavigationLink {
-                            TeamManageView(teamID: team.id)
+                            TeamManageView(
+                                teamID: team.id,
+                                onTeamChanged: { viewModel.applyManagedTeam($0) },
+                                onDutyBatchChanged: { year, month in
+                                    Task {
+                                        await viewModel.refreshDutiesAfterBatch(year: year, month: month)
+                                    }
+                                }
+                            )
                         } label: {
                             Image(systemName: "gearshape")
                                 .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
@@ -199,6 +209,7 @@ struct TeamView: View {
                     .frame(width: 36, height: DPSize.minimumTouchTarget)
             }
             .accessibilityLabel(Text("team.view.calendar.month", tableName: "Team"))
+            .disabled(viewModel.isLoading)
 
             VStack(spacing: -2) {
                 Button {
@@ -215,6 +226,7 @@ struct TeamView: View {
                     .frame(minHeight: 26)
                 }
                 .accessibilityLabel(Text("team.view.calendar.chooseMonth", tableName: "Team"))
+                .disabled(viewModel.isLoading)
                 if !isCurrentMonth {
                     Button {
                         Task { await viewModel.goToToday() }
@@ -234,6 +246,7 @@ struct TeamView: View {
                     .frame(width: 36, height: DPSize.minimumTouchTarget)
             }
             .accessibilityLabel(Text("team.view.calendar.month", tableName: "Team"))
+            .disabled(viewModel.isLoading)
         }
     }
 
@@ -678,7 +691,13 @@ private struct TeamCalendarDayCell: View {
 
 private struct TeamScheduleEditor: View {
     @ObservedObject var viewModel: TeamViewModel
+    @State private var draft: TeamScheduleDraft
     @Environment(\.dismiss) private var dismiss
+
+    init(viewModel: TeamViewModel, draft: TeamScheduleDraft) {
+        self.viewModel = viewModel
+        _draft = State(initialValue: draft)
+    }
 
     var body: some View {
         NavigationStack {
@@ -688,7 +707,6 @@ private struct TeamScheduleEditor: View {
                         .font(DPTypography.bodyMedium)
                     Spacer()
                     Button {
-                        viewModel.scheduleDraft = nil
                         dismiss()
                     } label: {
                         Image(systemName: "xmark")
@@ -702,41 +720,40 @@ private struct TeamScheduleEditor: View {
                 .overlay(alignment: .bottom) { Rectangle().fill(DPColor.borderPrimary).frame(height: 1) }
 
                 ScrollView {
-                if let draft = Binding($viewModel.scheduleDraft) {
                     VStack(alignment: .leading, spacing: DPSpacing.medium) {
                         VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
                             HStack {
                                 Text("team.view.schedule.form.contentLabel", tableName: "Team").font(DPTypography.label)
                                 Spacer()
-                                Text(verbatim: "\(draft.wrappedValue.content.count)/50").font(DPTypography.caption).foregroundStyle(DPColor.textMuted)
+                                Text(verbatim: "\(draft.content.count)/50").font(DPTypography.caption).foregroundStyle(DPColor.textMuted)
                             }
                         TextField(
                             teamLocalized("team.view.schedule.form.contentPlaceholder"),
-                            text: draft.content
+                            text: $draft.content
                         )
-                        .dpInputChrome(isInvalid: draft.wrappedValue.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                        .onChange(of: draft.wrappedValue.content) { _, value in
-                            if value.count > 50 { draft.wrappedValue.content = String(value.prefix(50)) }
+                        .dpInputChrome(isInvalid: draft.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        .onChange(of: draft.content) { _, value in
+                            if value.count > 50 { draft.content = String(value.prefix(50)) }
                         }
                         }
                         VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
                             Text("team.view.schedule.form.descriptionLabel", tableName: "Team").font(DPTypography.label)
                         TextField(
                             teamLocalized("team.view.schedule.form.descriptionPlaceholder"),
-                            text: draft.description,
+                            text: $draft.description,
                             axis: .vertical
                         )
                         .lineLimit(4...8)
                         .dpInputChrome()
                         }
                         VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
-                        DatePicker(selection: draft.startDate, displayedComponents: .date) {
+                        DatePicker(selection: $draft.startDate, displayedComponents: .date) {
                             Text("team.view.schedule.form.startDate", tableName: "Team")
                         }
                         .frame(minHeight: DPSize.minimumTouchTarget)
                         DatePicker(
-                            selection: draft.endDate,
-                            in: draft.wrappedValue.startDate...,
+                            selection: $draft.endDate,
+                            in: draft.startDate...,
                             displayedComponents: .date
                         ) {
                             Text("team.view.schedule.form.endDate", tableName: "Team")
@@ -746,15 +763,13 @@ private struct TeamScheduleEditor: View {
                     }
                     .padding(DPSpacing.medium)
                 }
-                }
                 HStack(spacing: DPSpacing.small) {
                     Button(teamLocalized("team.common.save")) {
-                        Task { await viewModel.saveSchedule() }
+                        Task { await viewModel.saveSchedule(draft) }
                     }
                     .buttonStyle(DPPrimaryButtonStyle())
-                    .disabled(viewModel.scheduleDraft?.isValid != true || viewModel.isWorking)
+                    .disabled(!draft.isValid || viewModel.isWorking)
                     Button(teamLocalized("team.common.cancel")) {
-                        viewModel.scheduleDraft = nil
                         dismiss()
                     }
                     .buttonStyle(DPSecondaryButtonStyle())

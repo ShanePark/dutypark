@@ -85,6 +85,26 @@ final class TeamParityVisualUITests: XCTestCase {
     }
 
     @MainActor
+    func testScheduleEditorCanBeOpenedAndCancelledWithoutTerminatingTheApp() {
+        let app = launchTeamFixture()
+        defer { app.terminate() }
+
+        let addSchedule = app.buttons["팀 일정 추가"].firstMatch
+        scrollUntilHittable(addSchedule, in: app)
+        XCTAssertTrue(addSchedule.isHittable)
+        addSchedule.tap()
+
+        XCTAssertTrue(app.staticTexts["팀 일정 저장"].waitForExistence(timeout: 10))
+        let cancel = app.buttons["취소"].firstMatch
+        XCTAssertTrue(cancel.waitForExistence(timeout: 10))
+        cancel.tap()
+
+        XCTAssertTrue(app.staticTexts["팀 일정 저장"].waitForNonExistence(timeout: 5))
+        XCTAssertEqual(app.state, .runningForeground)
+        XCTAssertTrue(app.buttons["팀 일정 추가"].waitForExistence(timeout: 5))
+    }
+
+    @MainActor
     func testTeamManagementActionUsesCenteredConfirmation() {
         let app = launchTeamFixture()
         defer { app.terminate() }
