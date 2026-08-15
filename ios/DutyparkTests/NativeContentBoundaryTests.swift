@@ -3,8 +3,8 @@ import Testing
 @testable import Dutypark
 
 struct NativeContentBoundaryTests {
-    @Test("Production Swift sources do not embed web views")
-    func productionHasNoWebKitUsage() throws {
+    @Test("Only authenticated admin tools may embed a web view")
+    func productionWebKitUsageIsRestrictedToAdminTools() throws {
         let iosDirectory = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
@@ -14,11 +14,15 @@ struct NativeContentBoundaryTests {
             includingPropertiesForKeys: nil
         ))
 
+        var webKitSources: [String] = []
         for case let file as URL in enumerator where file.pathExtension == "swift" {
             let source = try String(contentsOf: file, encoding: .utf8)
-            #expect(!source.contains("import WebKit"), "WebKit import remains in \(file.lastPathComponent)")
-            #expect(!source.contains("WKWebView"), "WKWebView remains in \(file.lastPathComponent)")
+            if source.contains("import WebKit") || source.contains("WKWebView") {
+                webKitSources.append(file.lastPathComponent)
+            }
         }
+
+        #expect(webKitSources.sorted() == ["AdminWebView.swift"])
     }
 
     @Test("Guest, settings, and authenticated deep-link routes render native content screens")
@@ -42,11 +46,13 @@ struct NativeContentBoundaryTests {
         #expect(settings.contains("PublicReleaseNotesView()"))
     }
 
-    @Test("Admin navigation exposes only native management destinations")
-    func adminMenuIsNativeOnly() {
+    @Test("Admin navigation preserves the four responsive-web destinations")
+    func adminMenuMatchesResponsiveWeb() {
         #expect(AdminRootNavigationPresentation.tileKeys == [
             "admin.nav.members",
             "admin.nav.teams",
+            "admin.nav.development",
+            "admin.nav.apiDocumentation",
         ])
     }
 
