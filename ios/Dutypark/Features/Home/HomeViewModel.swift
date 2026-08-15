@@ -161,10 +161,45 @@ final class HomeViewModel: ObservableObject {
         )
         myState = .loaded(DashboardMyDetailDTO(member: member, duty: nil, schedules: []))
         friendsState = .loaded(DashboardFriendInfoDTO(
-            friends: [],
+            friends: [
+                uiTestingFriend(id: 21, name: "김간호", dutyType: "주간", pinOrder: 0),
+                uiTestingFriend(id: 22, name: "박야간", dutyType: "야간", pinOrder: 1),
+                uiTestingFriend(id: 23, name: "이휴무", dutyType: nil, pinOrder: nil),
+            ],
             pendingRequestsTo: [],
             pendingRequestsFrom: []
         ))
+    }
+
+    private func uiTestingFriend(
+        id: MemberID,
+        name: String,
+        dutyType: String?,
+        pinOrder: Int64?
+    ) -> DashboardFriendDetailDTO {
+        DashboardFriendDetailDTO(
+            member: MemberPreviewDTO(
+                id: id,
+                name: name,
+                teamId: nil,
+                team: nil,
+                hasProfilePhoto: false,
+                profilePhotoVersion: 0
+            ),
+            duty: DutyDTO(
+                year: 2026,
+                month: 8,
+                day: 15,
+                dutyType: dutyType,
+                dutyColor: dutyType == nil ? nil : "#2563EB",
+                isOff: dutyType == nil,
+                dutyTypeId: nil,
+                source: .pattern
+            ),
+            schedules: [],
+            isFamily: id == 21,
+            pinOrder: pinOrder
+        )
     }
 #endif
 }

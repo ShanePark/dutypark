@@ -219,6 +219,8 @@ struct HomeView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(Text("home.friends", tableName: "Home"))
+            .accessibilityValue(String(viewModel.sortedFriends.count))
+            .accessibilityIdentifier("home.friends.total")
 
             Group {
                 switch viewModel.friendsState {
@@ -630,6 +632,7 @@ private struct FriendSummaryCard: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier("home.friend.\(friend.member.id ?? -1)")
         .background {
             if friend.pinOrder == nil {
                 DPColor.backgroundCard

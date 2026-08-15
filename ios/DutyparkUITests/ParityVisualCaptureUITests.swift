@@ -6,6 +6,48 @@ final class ParityVisualCaptureUITests: XCTestCase {
     }
 
     @MainActor
+    func testCapturesPopulatedHomeFriendsParity() throws {
+        let app = XCUIApplication()
+        app.launchArguments += [
+            "-dp-language", "ko",
+            "-dp-theme", "dark",
+            "-AppleLanguages", "(ko)",
+            "-AppleLocale", "ko_KR",
+            "-ui-testing-authenticated",
+        ]
+        app.launch()
+        defer { app.terminate() }
+
+        let home = app.descendants(matching: .any)["screen.home"]
+        XCTAssertTrue(home.waitForExistence(timeout: 20))
+
+        let total = app.descendants(matching: .any)["home.friends.total"]
+        XCTAssertTrue(total.waitForExistence(timeout: 10))
+        XCTAssertEqual(total.value as? String, "3")
+
+        home.swipeUp()
+
+        let firstPinnedFriend = app.buttons["home.friend.21"]
+        let secondPinnedFriend = app.buttons["home.friend.22"]
+        let unpinnedFriend = app.buttons["home.friend.23"]
+        XCTAssertTrue(firstPinnedFriend.waitForExistence(timeout: 10))
+        XCTAssertTrue(secondPinnedFriend.exists)
+        XCTAssertTrue(unpinnedFriend.exists)
+        XCTAssertFalse(app.staticTexts["받은 요청"].exists)
+        XCTAssertFalse(app.staticTexts["보낸 요청"].exists)
+        XCTAssertEqual(
+            app.descendants(matching: .any)
+                .matching(NSPredicate(format: "identifier BEGINSWITH %@", "home.friend.reorderHandle"))
+                .count,
+            0
+        )
+
+        firstPinnedFriend.press(forDuration: 0.5)
+        XCTAssertTrue(home.exists)
+        capture("parity-ios-home-friends-populated-after")
+    }
+
+    @MainActor
     func testCapturesKoreanDarkModeParityFlow() throws {
         let app = XCUIApplication()
         app.launchArguments += [
