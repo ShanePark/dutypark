@@ -44,7 +44,13 @@ final class TeamViewModel: ObservableObject {
 #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-ui-testing-team-fixture") {
             self.memberID = memberID
-            let fixture = TeamUITestingFixture.make(year: year, month: month)
+            let fixture = TeamUITestingFixture.make(
+                year: year,
+                month: month,
+                includeShifts: ProcessInfo.processInfo.arguments.contains(
+                    "-ui-testing-team-shift-fixture"
+                )
+            )
             team = fixture.team
             isTeamManager = true
             days = fixture.days
@@ -455,7 +461,7 @@ private nonisolated enum TeamUITestingFixture {
         let shifts: [DutyByShiftDTO]
     }
 
-    static func make(year: Int, month: Int) -> CalendarFixture {
+    static func make(year: Int, month: Int, includeShifts: Bool) -> CalendarFixture {
         let team = makeManagementTeam()
         let dayCount = Calendar(identifier: .gregorian).range(
             of: .day,
@@ -485,13 +491,29 @@ private nonisolated enum TeamUITestingFixture {
         )
         var schedules = Array(repeating: [TeamScheduleDTO](), count: days.count)
         schedules[0] = [schedule]
+        let shiftMembers = team.members.map { member in
+            MemberPreviewDTO(
+                id: member.id,
+                name: member.name,
+                teamId: team.id,
+                team: team.name,
+                hasProfilePhoto: member.hasProfilePhoto,
+                profilePhotoVersion: member.profilePhotoVersion
+            )
+        }
+        let shifts: [DutyByShiftDTO]
+        if includeShifts, let dutyType = team.dutyTypes.first {
+            shifts = [DutyByShiftDTO(dutyType: dutyType, members: shiftMembers)]
+        } else {
+            shifts = []
+        }
         return CalendarFixture(
             team: team,
             days: days,
             schedules: schedules,
             duties: [],
             holidays: Array(repeating: [], count: days.count),
-            shifts: []
+            shifts: shifts
         )
     }
 

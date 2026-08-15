@@ -39,6 +39,25 @@ struct TeamFeatureTests {
         #expect(english.contains("Deleted schedules cannot be restored"))
     }
 
+    @Test @MainActor
+    func shiftMemberCountIncludesTheLocalizedUnit() {
+        let defaults = UserDefaults.standard
+        let previousLanguage = defaults.string(forKey: SettingsPreference.languageKey)
+        defer {
+            if let previousLanguage {
+                defaults.set(previousLanguage, forKey: SettingsPreference.languageKey)
+            } else {
+                defaults.removeObject(forKey: SettingsPreference.languageKey)
+            }
+        }
+
+        defaults.set(AppLanguage.korean.rawValue, forKey: SettingsPreference.languageKey)
+        #expect(TeamLocalization.shiftMemberCount(3) == "3명")
+
+        defaults.set(AppLanguage.english.rawValue, forKey: SettingsPreference.languageKey)
+        #expect(TeamLocalization.shiftMemberCount(3) == "3 people")
+    }
+
     @Test
     func scheduleDeletionUsesCenteredPanelAndKeepsTheGeneralErrorAlert() throws {
         let sourceURL = URL(fileURLWithPath: #filePath)

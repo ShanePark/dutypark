@@ -409,13 +409,14 @@ struct TeamView: View {
                             .font(DPTypography.bodyMedium)
                             .foregroundStyle(TeamVisualStyle.foregroundColor(on: shift.dutyType.color))
                         Spacer()
-                        Text(verbatim: String(shift.members.count))
+                        Text(verbatim: TeamLocalization.shiftMemberCount(shift.members.count))
                             .font(DPTypography.caption)
                             .foregroundStyle(DPColor.textOnLight)
                             .padding(.horizontal, DPSpacing.small)
                             .padding(.vertical, 2)
                             .background(Color.white.opacity(0.65))
                             .clipShape(Capsule())
+                            .accessibilityIdentifier("team.shift.memberCount")
                     }
                     .padding(DPSpacing.compact)
                     .background(Color(teamHex: shift.dutyType.color))
@@ -832,6 +833,14 @@ nonisolated enum TeamLocalization {
             "team.view.schedule.deleteConfirm",
             table: "Team",
             arguments: [title]
+        )
+    }
+
+    static func shiftMemberCount(_ count: Int) -> String {
+        AppLocalization.format(
+            "team.view.shift.memberCount",
+            table: "Team",
+            arguments: [Int64(count)]
         )
     }
 }

@@ -45,6 +45,20 @@ final class TeamParityVisualUITests: XCTestCase {
     }
 
     @MainActor
+    func testKoreanShiftMemberCountIncludesUnit() {
+        let app = launchTeamFixture(includeShifts: true)
+        defer { app.terminate() }
+
+        let memberCount = app.staticTexts["team.shift.memberCount"].firstMatch
+        scrollUntilHittable(memberCount, in: app)
+        XCTAssertTrue(memberCount.isHittable)
+        XCTAssertEqual(memberCount.label, "2명")
+        app.swipeUp()
+        XCTAssertTrue(memberCount.isHittable)
+        capture("parity-ios-team-shift-member-count-ko-after")
+    }
+
+    @MainActor
     func testJoinedTeamScheduleDeleteUsesCenteredConfirmation() {
         let app = launchTeamFixture()
         defer { app.terminate() }
@@ -138,7 +152,8 @@ final class TeamParityVisualUITests: XCTestCase {
     @MainActor
     private func launchTeamFixture(
         deviceLanguage: String = "ko",
-        deviceLocale: String = "ko_KR"
+        deviceLocale: String = "ko_KR",
+        includeShifts: Bool = false
     ) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += [
@@ -149,6 +164,9 @@ final class TeamParityVisualUITests: XCTestCase {
             "-ui-testing-authenticated",
             "-ui-testing-team-fixture",
         ]
+        if includeShifts {
+            app.launchArguments.append("-ui-testing-team-shift-fixture")
+        }
         app.launch()
 
         XCTAssertTrue(
