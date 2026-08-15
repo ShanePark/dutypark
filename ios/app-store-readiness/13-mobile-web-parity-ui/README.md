@@ -47,6 +47,7 @@
 | 12 | 달력 · 월 일괄 변경 | 한국어 연도가 `2,026년`으로 숫자 그룹화됨 | 완료 | `c47a77ea` |
 | 13 | 설정 | 같은 기능의 섹션 이름·설명이 모바일 웹과 다르게 표시됨 | 완료 | `4d8b9de3` |
 | 14 | 햄버거 메뉴 | 웹의 `이용 안내`가 iOS에서 `사용 가이드`로 변경됨 | 완료 | `f9291784` |
+| 15 | 달력 | 근무 요약·액션이 없는데도 빈 도구행이 남아 월 그리드 위에 큰 공백이 생김 | 완료 | `a0aea3a8` |
 
 상태는 `대기 → 진행 중 → 수정됨·커밋 전 → 코드 커밋됨·시각 검증 전 → 완료` 순으로 관리한다.
 
@@ -86,6 +87,7 @@
 | `eb822f5e` | SSO 추가정보 draft 폐기 시각 검증 | iPhone 13 mini UI 1건 | 작성 내용 폐기 중앙 패널 확보 | 완료 |
 | `4d8b9de3` | 설정 첫 화면 카피의 모바일 웹 동등성 | exact ko/en 회귀 테스트, generic build·test build | iPhone 13 mini 설정 첫 화면 재캡처 | 완료 |
 | `f9291784` | Root 메뉴의 가이드 문구 동등성 | Root 현지화 3건·UI 1건, generic test build | 햄버거 메뉴 `이용 안내` 캡처 | 완료 |
+| `a0aea3a8` | 내용 없는 달력 근무 도구행 제거 | Calendar focused test, generic test build | iPhone 13 mini 월 그리드 상단 재캡처 | 완료 |
 
 ## 상세 변경 보고
 
@@ -199,6 +201,17 @@
 - 달력은 웹과 iOS fixture의 일정·D-Day 데이터가 달라 데이터 개수는 판정에서 제외하고 월 그리드와 네비게이션 기준으로 보존한다.
 - 팀은 웹이 가입 팀, iOS가 미가입 fixture라 현재 직접 비교할 수 없다. 같은 팀 fixture를 제공한 뒤 연월 선택기와 팀 일정 UI를 판정한다.
 - 확장 캡처는 홈·Todo·달력·팀·메뉴·설정·패턴 편집·패턴 해제 확인 8개 화면을 한 흐름에서 검증한다.
+
+### 달력 월 그리드 상단 공백 — `a0aea3a8`
+
+| 모바일 웹 기준 | iOS 수정 전 | iOS 수정 후 |
+| --- | --- | --- |
+| <img src="screenshots/calendar-web-ko.png" width="240" alt="컨트롤 바로 아래에 월 그리드가 이어지는 모바일 웹 달력"> | <img src="screenshots/calendar-ios-after.png" width="240" alt="빈 근무 도구행 때문에 월 그리드 위가 벌어진 iOS 달력"> | <img src="screenshots/calendar-toolbar-gap-ios-after.png" width="240" alt="빈 근무 도구행을 제거한 iOS 달력"> |
+
+- 근무 요약, 친구 비교, 빠른 편집, 근무표 가져오기 액션이 모두 없는 달에도 44pt 높이의 빈 `dutyToolbar`가 렌더링되어 그리드가 아래로 밀렸다.
+- 표시할 요약이나 액션이 하나라도 있거나 빠른 편집 중일 때만 도구행을 유지하고, 완전히 비어 있으면 생략하도록 했다.
+- focused 정책 테스트와 generic test build가 통과했다.
+- iPhone 13 mini 캡처에서 월 그리드가 `할 일` 행 바로 아래로 올라오고 불필요한 빈 행이 사라진 것을 확인했다. 결과: `/tmp/Dutypark-CalendarTopGap-Visual.xcresult`.
 
 ### 중앙 확인 UI — `de46f754`, `b7bdc8ae` 및 후속 적용 커밋
 
