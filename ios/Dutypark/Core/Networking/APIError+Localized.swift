@@ -5,8 +5,9 @@ nonisolated enum APIErrorLocalization {
         code: String?,
         details: [String: JSONValue]? = nil,
         fieldErrors: [APIFieldError] = [],
-        bundle: Bundle = .main
+        bundle: Bundle? = nil
     ) -> String {
+        let bundle = bundle ?? AppLocalization.bundle()
         let candidates: [String]
         if code == "common.validation.failed" {
             candidates = fieldErrors.map(\.code) + [code].compactMap { $0 }

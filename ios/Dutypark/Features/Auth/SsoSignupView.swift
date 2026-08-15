@@ -400,6 +400,6 @@ struct SsoSignupView: View {
     }
 }
 
-func oauthString(_ key: String) -> String {
-    String(localized: String.LocalizationValue(key), table: "OAuth")
+nonisolated func oauthString(_ key: String) -> String {
+    AppLocalization.string(key, table: "OAuth")
 }

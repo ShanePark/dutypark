@@ -282,19 +282,7 @@ struct LoginView: View {
     }
 
     private var remainingAttemptsMessage: String? {
-        guard let attempts = session.loginRemainingAttempts, attempts <= 3 else { return nil }
-        switch attempts {
-        case ...0:
-            return String(localized: "auth.login.error.locked")
-        case 1:
-            return String(localized: "auth.login.error.lastAttempt")
-        default:
-            return String(
-                format: String(localized: "auth.login.error.remainingAttempts"),
-                locale: .current,
-                attempts
-            )
-        }
+        LoginAttemptMessage.text(remainingAttempts: session.loginRemainingAttempts)
     }
 
     private var canLogin: Bool {
@@ -372,7 +360,7 @@ struct LoginView: View {
             } catch MobileOAuthError.cancelled {
                 return
             } catch {
-                oauthErrorMessage = error.localizedDescription
+                oauthErrorMessage = OAuthLoginErrorMessage.text(for: error)
             }
         }
     }
@@ -385,14 +373,16 @@ struct LoginView: View {
             activeOAuthProvider = .apple
         } catch {
             appleSignInAttempt = nil
-            oauthErrorMessage = error.localizedDescription
+            oauthErrorMessage = OAuthLoginErrorMessage.text(for: error)
         }
     }
 
     private func completeAppleSignIn(_ result: Result<ASAuthorization, Error>) {
         guard let attempt = appleSignInAttempt else {
             activeOAuthProvider = nil
-            oauthErrorMessage = AppleSignInError.invalidCredential.localizedDescription
+            oauthErrorMessage = OAuthLoginErrorMessage.text(
+                for: AppleSignInError.invalidCredential
+            )
             return
         }
         Task {
@@ -410,8 +400,41 @@ struct LoginView: View {
             } catch AppleSignInError.cancelled {
                 return
             } catch {
-                oauthErrorMessage = error.localizedDescription
+                oauthErrorMessage = OAuthLoginErrorMessage.text(for: error)
             }
+        }
+    }
+}
+
+nonisolated enum LoginAttemptMessage {
+    static func text(remainingAttempts: Int?) -> String? {
+        guard let remainingAttempts, remainingAttempts <= 3 else { return nil }
+        switch remainingAttempts {
+        case ...0:
+            return AppLocalization.string("auth.login.error.locked", table: "Localizable")
+        case 1:
+            return AppLocalization.string("auth.login.error.lastAttempt", table: "Localizable")
+        default:
+            return AppLocalization.format(
+                "auth.login.error.remainingAttempts",
+                table: "Localizable",
+                arguments: [remainingAttempts]
+            )
+        }
+    }
+}
+
+nonisolated enum OAuthLoginErrorMessage {
+    static func text(for error: any Error) -> String {
+        switch error {
+        case let error as MobileOAuthError:
+            return error.localizedDescription
+        case let error as AppleSignInError:
+            return error.localizedDescription
+        case let error as APIError:
+            return error.localizedDescription
+        default:
+            return oauthString("auth.oauth.error")
         }
     }
 }
