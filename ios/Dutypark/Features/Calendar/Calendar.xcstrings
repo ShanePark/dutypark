@@ -18,7 +18,7 @@
     "calendar.month.format" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "%1$d/%2$d" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%1$d년 %2$d월" } } } },
     "calendar.today" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Today" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "오늘" } } } },
     "calendar.search" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Search schedules" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "일정 검색" } } } },
-    "calendar.search.placeholder" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Search by title" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "제목으로 검색" } } } },
+    "calendar.search.placeholder" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Search by title or details" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "제목이나 상세로 검색" } } } },
     "calendar.search.short" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Search" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "검색" } } } },
     "calendar.search.more" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Load more" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "더 보기" } } } },
     "calendar.search.hint" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Enter a title or description to search." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "제목이나 상세를 입력해 검색하세요." } } } },
