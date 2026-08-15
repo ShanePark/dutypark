@@ -64,6 +64,7 @@
 | 29 | 관리자 · 회원 목록 | 활성 세션 수가 `1개`·`0개`로만 표시되어 숫자의 의미와 빈 상태를 알기 어려움 | 완료 | `e34d67c4` |
 | 30 | 설정 · 기본 근무 패턴 | 숨김 근무유형이 남으면 저장이 막히지만 이유와 해결 방법이 표시되지 않음 | 완료 | `4ba4ab07` |
 | 31 | 게스트 · 이용 안내 | `홈으로 돌아가기`가 네이티브 게스트 화면 대신 WebView 안의 웹 홈을 열음 | 완료 | `6b69ce5a` |
+| 32 | 알림 드롭다운 | 작성자 프로필 사진이 있어도 항상 동일한 기본 사람 아이콘으로 표시됨 | 완료 | `0d16412b` |
 
 상태는 `대기 → 진행 중 → 수정됨·커밋 전 → 코드 커밋됨·시각 검증 전 → 완료` 순으로 관리한다.
 
@@ -120,6 +121,7 @@
 | `e34d67c4` | 관리자 회원 목록의 활성 세션 상태 명확화 | exact ko/en 테스트, generic test build, UI 1건 | 활성 세션 1개·없음 분기 동시 재캡처 | 완료 |
 | `4ba4ab07` | 숨김 근무유형이 포함된 기본 패턴 경고 | Settings 32건, generic build, UI 1건 | 경고·숨김 배지·비활성 저장 상태 재캡처 | 완료 |
 | `6b69ce5a` | 게스트 이용 안내에서 네이티브 홈 복귀 | GuestPublicLinkTests 7건, generic build, UI 1건 | 웹 링크 탭 후 네이티브 게스트 화면 재캡처 | 완료 |
+| `0d16412b` | 알림 드롭다운 작성자 프로필 사진 표시 | endpoint 계약 3건, generic build·test build, UI 1건 | 사진 actor와 fallback을 한 화면에서 재캡처 | 완료 |
 
 ## 상세 변경 보고
 
@@ -324,6 +326,14 @@
 - 배경 탭, VoiceOver escape, 전체보기 이동, 알림 행 라우팅을 공통 닫기 경로로 묶고, 화면에 표시된 로드가 성공했으며 미읽음이 있을 때만 전체 읽음 처리한다.
 - 로딩·로드 실패·이미 읽음 상태에서는 요청하지 않고, 처리 중 중복 `markAllAsRead` 호출도 차단한다. API 실패 시 기존 상태를 유지한다.
 - focused 정책·중복 요청 테스트와 generic 앱·테스트 빌드가 통과했다. iPhone 13 mini UI 테스트 1/1에서 드롭다운 닫힘과 빨간 미읽음 `1` 배지 제거를 확인했고, 별도 주황색 친구 요청 `1` 배지는 그대로 유지되어 범위도 정확했다: `/tmp/Dutypark-NotificationClose-Focused-20260815.xcresult`, `/tmp/Dutypark-NotificationClose-UI-Retry-20260815.xcresult`.
+
+### 알림 드롭다운 작성자 아바타 — `0d16412b`
+
+<img src="screenshots/notification-dropdown-actor-avatar-ios-after.png" width="240" alt="작성자 프로필 사진과 기본 아바타를 함께 표시한 iOS 알림 드롭다운">
+
+- 모바일 웹과 iOS 전체 알림 화면은 작성자 프로필 사진을 표시하지만, iOS 드롭다운만 payload와 무관하게 항상 `person.fill` 기본 아이콘을 사용했다.
+- 작성자 ID와 프로필 사진 여부가 있을 때 전체 알림 화면과 같은 thumbnail/version API 계약으로 사진을 불러오며, 사진이 없거나 로드에 실패하면 기존 기본 아바타를 유지한다.
+- endpoint·query·fallback 단위 테스트 3/3과 generic 앱·테스트 빌드가 통과했다. iPhone 13 mini UI 테스트 1/1에서 사진이 있는 첫 행과 fallback인 둘째 행, 미읽음 배지·텍스트·chevron이 한 화면에서 잘림 없이 표시됨을 확인했다: `/tmp/Dutypark-NotificationAvatar-Unit-20260815.xcresult`, `/tmp/Dutypark-NotificationAvatar-UI-Final-20260815.xcresult`.
 
 ### 관리자 팀 삭제·회원 세션 종료 — `2316075a`, `aaca282c`, `eee695a9`
 
