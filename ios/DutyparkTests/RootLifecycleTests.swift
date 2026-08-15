@@ -4,6 +4,41 @@ import Testing
 
 @MainActor
 struct RootLifecycleTests {
+    @Test(arguments: [
+        (1, false),
+        (2, true),
+        (4, true),
+    ])
+    func interactivePopOnlyBeginsForPushedScreens(
+        navigationDepth: Int,
+        expected: Bool
+    ) {
+        #expect(
+            DPInteractivePopGesturePolicy.shouldBegin(navigationDepth: navigationDepth) == expected
+        )
+    }
+
+    @Test
+    func pushedScreensThatHideTheSystemBackAffordanceRestoreInteractivePop() throws {
+        let iosDirectory = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+
+        let teamManageSource = try String(
+            contentsOf: iosDirectory.appending(path: "Dutypark/Features/Team/TeamManageView.swift"),
+            encoding: .utf8
+        )
+        let loginSource = try String(
+            contentsOf: iosDirectory.appending(path: "Dutypark/Features/Auth/LoginView.swift"),
+            encoding: .utf8
+        )
+
+        #expect(teamManageSource.contains(".navigationBarBackButtonHidden(true)"))
+        #expect(teamManageSource.contains(".dpInteractivePopGestureEnabled()"))
+        #expect(loginSource.contains(".toolbar(.hidden, for: .navigationBar)"))
+        #expect(loginSource.contains(".dpInteractivePopGestureEnabled()"))
+    }
+
     @Test
     func automaticHomeRefreshCoalescesImmediateSceneAndTabTriggers() {
         var policy = RootHomeRefreshPolicy()

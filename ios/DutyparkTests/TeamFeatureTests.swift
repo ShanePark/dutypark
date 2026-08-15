@@ -774,6 +774,22 @@ struct TeamFeatureTests {
     }
 
     @Test
+    func dutyTypeVisibilityActionsUseTheCentralConfirmationFlow() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark/Features/Team/TeamManageView.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+
+        #expect(source.contains("present(.setDutyTypeVisibility(dutyType))"))
+        #expect(source.contains("Task { await viewModel.toggleVisibility(dutyType) }") == false)
+        #expect(source.contains("case .setDutyTypeVisibility(let dutyType):"))
+        #expect(source.contains("team.dutyType.messages.hideConfirm"))
+        #expect(source.contains("team.dutyType.messages.restoreConfirm"))
+        #expect(source.contains("await viewModel.toggleVisibility(dutyType)"))
+    }
+
+    @Test
     func teamManagementConfirmationsUseTheCenteredSharedPanel() throws {
         let sourceURL = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
@@ -785,6 +801,42 @@ struct TeamFeatureTests {
         #expect(!source.contains(".confirmationDialog("))
         #expect(source.components(separatedBy: ".alert(").count - 1 == 4)
         #expect(source.components(separatedBy: "DPConfirmationPanel(").count - 1 >= 3)
+    }
+
+    @Test @MainActor
+    func dutyTypeVisibilityConfirmationMutatesLocallyWithOneRequestPerConfirmation() async throws {
+        TeamURLProtocolStub.handler = { request in
+            Self.successfulTeamLoadResponse(request)
+        }
+        let viewModel = TeamManageViewModel(
+            teamID: 7,
+            repository: TeamRepository(client: makeClient())
+        )
+        await viewModel.load()
+        TeamURLProtocolStub.visibilityRequestCount = 0
+        TeamURLProtocolStub.handler = { request in
+            if request.httpMethod == "PATCH",
+               request.url?.path == "/api/teams/manage/7/duty-types/11/visibility" {
+                TeamURLProtocolStub.visibilityRequestCount += 1
+                return Self.response(request, status: 204)
+            }
+            return Self.response(request, status: 503)
+        }
+
+        let visibleDuty = try #require(viewModel.team?.dutyTypes.first { $0.id == 11 })
+        let didHide = await viewModel.toggleVisibility(visibleDuty)
+
+        #expect(didHide)
+        #expect(TeamURLProtocolStub.visibilityRequestCount == 1)
+        #expect(viewModel.team?.dutyTypes.first { $0.id == 11 }?.hidden == true)
+        let hiddenDuty = try #require(viewModel.team?.dutyTypes.first { $0.id == 11 })
+        let didRestore = await viewModel.toggleVisibility(hiddenDuty)
+
+        #expect(didRestore)
+        #expect(TeamURLProtocolStub.visibilityRequestCount == 2)
+        #expect(viewModel.team?.dutyTypes.first { $0.id == 11 }?.hidden == false)
+        TeamURLProtocolStub.handler = nil
+        TeamURLProtocolStub.visibilityRequestCount = 0
     }
 
     @Test
@@ -957,6 +1009,7 @@ struct TeamFeatureTests {
 
 private final class TeamURLProtocolStub: URLProtocol, @unchecked Sendable {
     nonisolated(unsafe) static var handler: (@Sendable (URLRequest) -> (HTTPURLResponse, Data))?
+    nonisolated(unsafe) static var visibilityRequestCount = 0
 
     override class func canInit(with request: URLRequest) -> Bool { true }
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }

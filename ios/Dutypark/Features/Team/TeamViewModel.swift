@@ -640,9 +640,9 @@ final class TeamManageViewModel: ObservableObject {
         )
     }
 
-    func toggleVisibility(_ dutyType: DutyTypeDTO) async {
-        guard let id = dutyType.id else { return }
-        await perform(
+    func toggleVisibility(_ dutyType: DutyTypeDTO) async -> Bool {
+        guard let id = dutyType.id else { return false }
+        return await perform(
             operation: {
                 try await repository.setDutyTypeVisibility(
                     teamID: teamID,
@@ -865,6 +865,14 @@ private nonisolated enum TeamUITestingFixture {
                     position: 0,
                     color: "#4F7CAC",
                     hidden: false
+                ),
+                DutyTypeDTO(
+                    id: 702,
+                    teamId: 91,
+                    name: "야간",
+                    position: 1,
+                    color: "#263238",
+                    hidden: true
                 )
             ],
             members: [

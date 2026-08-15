@@ -136,6 +136,45 @@ final class TeamParityVisualUITests: XCTestCase {
     }
 
     @MainActor
+    func testDutyTypeHideAndRestoreRequireNamedCenteredConfirmations() {
+        let app = launchTeamFixture()
+        defer { app.terminate() }
+
+        let manageTeam = app.buttons["팀 관리"].firstMatch
+        XCTAssertTrue(manageTeam.waitForExistence(timeout: 10))
+        manageTeam.tap()
+        XCTAssertTrue(app.staticTexts["듀티파크 테스트팀 관리"].waitForExistence(timeout: 10))
+
+        let hide = app.buttons["숨기기"].firstMatch
+        scrollUntilHittable(hide, in: app)
+        if !hide.isHittable { app.swipeLeft() }
+        XCTAssertTrue(hide.waitForExistence(timeout: 5))
+        hide.tap()
+        assertVisibilityConfirmation(
+            app: app,
+            title: "숨기기",
+            message: "[주간] 근무 유형을 숨기시겠습니까? 과거 근무 기록은 유지됩니다."
+        )
+        app.buttons["dp.confirmation.cancel"].tap()
+        XCTAssertTrue(app.buttons["dp.confirmation.confirm"].waitForNonExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["사용 중"].exists)
+
+        let restore = app.buttons["복원"].firstMatch
+        if !restore.isHittable { app.swipeLeft() }
+        XCTAssertTrue(restore.waitForExistence(timeout: 5))
+        restore.tap()
+        assertVisibilityConfirmation(
+            app: app,
+            title: "복원",
+            message: "[야간] 근무 유형을 다시 사용하시겠습니까?"
+        )
+        app.buttons["dp.confirmation.cancel"].tap()
+        XCTAssertTrue(app.buttons["dp.confirmation.confirm"].waitForNonExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["숨김"].exists)
+        XCTAssertEqual(app.state, .runningForeground)
+    }
+
+    @MainActor
     func testResetLeadConfirmationNamesTheCurrentLeadAndFitsThePanel() {
         let app = launchTeamFixture()
         defer { app.terminate() }
@@ -211,6 +250,23 @@ final class TeamParityVisualUITests: XCTestCase {
         for _ in 0..<attempts where !element.isHittable {
             app.swipeUp()
         }
+    }
+
+    @MainActor
+    private func assertVisibilityConfirmation(
+        app: XCUIApplication,
+        title: String,
+        message: String
+    ) {
+        let cancel = app.buttons["dp.confirmation.cancel"]
+        let confirm = app.buttons["dp.confirmation.confirm"]
+        XCTAssertTrue(cancel.waitForExistence(timeout: 10))
+        XCTAssertTrue(confirm.waitForExistence(timeout: 10))
+        XCTAssertEqual(cancel.label, "취소")
+        XCTAssertEqual(confirm.label, title)
+        XCTAssertTrue(app.staticTexts[title].exists)
+        XCTAssertTrue(app.staticTexts[message].exists)
+        XCTAssertEqual((cancel.frame.midX + confirm.frame.midX) / 2, app.frame.midX, accuracy: 20)
     }
 
     @MainActor

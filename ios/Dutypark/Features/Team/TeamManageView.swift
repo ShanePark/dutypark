@@ -62,6 +62,7 @@ struct TeamManageView: View {
             }
         }
         .navigationBarBackButtonHidden(true)
+        .dpInteractivePopGestureEnabled()
         .task { await viewModel.load() }
         .onChange(of: viewModel.team) { _, team in
             if let team { onTeamChanged(team) }
@@ -402,7 +403,7 @@ struct TeamManageView: View {
                                         dutyType.hidden ? "eye" : "eye.slash",
                                         label: dutyType.hidden ? teamLocalized("team.manage.actions.restoreDutyType") : teamLocalized("team.manage.actions.hideDutyType"),
                                         tint: dutyType.hidden ? DPColor.success : DPColor.warning
-                                    ) { Task { await viewModel.toggleVisibility(dutyType) } }
+                                    ) { present(.setDutyTypeVisibility(dutyType)) }
                                 }
                             }
                             .frame(width: 190)
@@ -524,6 +525,10 @@ struct TeamManageView: View {
             id == nil
                 ? teamLocalized("team.manage.actions.resetAdmin")
                 : teamLocalized("team.manage.actions.transferAdmin")
+        case .setDutyTypeVisibility(let dutyType):
+            dutyType.hidden
+                ? teamLocalized("team.manage.actions.restoreDutyType")
+                : teamLocalized("team.manage.actions.hideDutyType")
         }
     }
 
@@ -557,6 +562,15 @@ struct TeamManageView: View {
             }
             key = "team.manage.messages.changeAdminConfirm"
             memberID = id
+        case .setDutyTypeVisibility(let dutyType):
+            key = dutyType.hidden
+                ? "team.dutyType.messages.restoreConfirm"
+                : "team.dutyType.messages.hideConfirm"
+            return String(
+                format: teamLocalized(key),
+                locale: AppLocalization.locale,
+                dutyType.name
+            )
         }
         let name = viewModel.team?.members.first(where: { $0.id == memberID })?.name
             ?? teamLocalized("team.manage.labels.notAvailable")
@@ -569,6 +583,7 @@ struct TeamManageView: View {
         case .addManager(let id): await viewModel.addManager(id)
         case .removeManager(let id): await viewModel.removeManager(id)
         case .changeAdmin(let id): await viewModel.changeAdmin(memberID: id)
+        case .setDutyTypeVisibility(let dutyType): await viewModel.toggleVisibility(dutyType)
         case nil: false
         }
     }
@@ -578,10 +593,12 @@ struct TeamManageView: View {
         case addManager(MemberID)
         case removeManager(MemberID)
         case changeAdmin(MemberID?)
+        case setDutyTypeVisibility(DutyTypeDTO)
 
         var isDestructive: Bool {
             switch self {
             case .removeMember, .removeManager, .changeAdmin(nil): true
+            case .setDutyTypeVisibility(let dutyType): !dutyType.hidden
             case .addManager, .changeAdmin: false
             }
         }

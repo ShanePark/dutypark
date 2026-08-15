@@ -279,6 +279,7 @@ struct LoginView: View {
         }
         .background(DPColor.backgroundSecondary)
         .toolbar(.hidden, for: .navigationBar)
+        .dpInteractivePopGestureEnabled()
     }
 
     private var remainingAttemptsMessage: String? {
