@@ -209,6 +209,11 @@ final class TodoViewModel: ObservableObject {
 
         board = optimisticBoard
         selectedStatus = destinationStatus
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-ui-testing-todo-confirmations") {
+            return true
+        }
+#endif
         isSaving = true
         defer { isSaving = false }
 
@@ -299,11 +304,70 @@ final class TodoViewModel: ObservableObject {
 
 #if DEBUG
     private func loadUITestingFixture() {
+        let overflowTodos = (3...10).map { index in
+            TodoDTO(
+                id: String(format: "A11CE000-0000-4000-8000-%012d", index),
+                title: "스크롤 확인 \(index)",
+                content: "세로 목록 이동과 카드 탭 동작을 확인합니다.",
+                position: index - 1,
+                status: .inProgress,
+                createdDate: LocalDateTimeValue(rawValue: "2026-08-15T09:00:00"),
+                completedDate: nil,
+                dueDate: nil,
+                isOverdue: false,
+                isTagged: false,
+                owner: "UI Test",
+                taggedByMember: nil,
+                tags: [],
+                hasAttachments: false
+            )
+        }
+        let fixtureTodos: [TodoDTO] = ProcessInfo.processInfo.arguments.contains("-ui-testing-todo-confirmations")
+            ? [
+                TodoDTO(
+                    id: "A11CE000-0000-4000-8000-000000000001",
+                    title: "병동 인수인계 확인",
+                    content: "오후 근무 전 확인할 항목을 정리합니다.",
+                    position: 0,
+                    status: .inProgress,
+                    createdDate: LocalDateTimeValue(rawValue: "2026-08-15T08:00:00"),
+                    completedDate: nil,
+                    dueDate: DateOnly(rawValue: "2026-08-15"),
+                    isOverdue: false,
+                    isTagged: false,
+                    owner: "UI Test",
+                    taggedByMember: nil,
+                    tags: [],
+                    hasAttachments: false
+                ),
+                TodoDTO(
+                    id: "A11CE000-0000-4000-8000-000000000002",
+                    title: "저녁 근무 준비",
+                    content: "투약 목록과 병실 순서를 확인합니다.",
+                    position: 1,
+                    status: .inProgress,
+                    createdDate: LocalDateTimeValue(rawValue: "2026-08-15T08:30:00"),
+                    completedDate: nil,
+                    dueDate: nil,
+                    isOverdue: false,
+                    isTagged: false,
+                    owner: "UI Test",
+                    taggedByMember: nil,
+                    tags: [],
+                    hasAttachments: false
+                )
+            ] + overflowTodos
+            : []
         board = TodoBoardDTO(
             todo: [],
-            inProgress: [],
+            inProgress: fixtureTodos,
             done: [],
-            counts: TodoCountsDTO(todo: 0, inProgress: 0, done: 0, total: 0)
+            counts: TodoCountsDTO(
+                todo: 0,
+                inProgress: fixtureTodos.count,
+                done: 0,
+                total: fixtureTodos.count
+            )
         )
         friends = []
         attachmentsByTodoID = [:]

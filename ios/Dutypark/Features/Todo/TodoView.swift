@@ -228,11 +228,6 @@ struct TodoView: View {
             visibleStatus = model.selectedStatus
             openInitialTodoIfPresent()
         }
-        .onChange(of: model.selectedStatus) { _, status in
-            withAnimation(.easeInOut(duration: 0.2)) {
-                visibleStatus = status
-            }
-        }
         .onChange(of: visibleStatus) { _, status in
             if let status, status != model.selectedStatus {
                 model.selectedStatus = status
@@ -481,58 +476,69 @@ struct TodoView: View {
                     containerWidth: proxy.size.width,
                     columnWidth: columnWidth
                 )
-                ScrollView(.horizontal) {
-                    LazyHStack(alignment: .top, spacing: TodoBoardLayout.columnGap) {
-                        ForEach(TodoStatus.boardStatuses, id: \.rawValue) { status in
-                            TodoKanbanColumn(
-                                status: status,
-                                count: model.count(for: status),
-                                todos: displayedTodos(for: status),
-                                width: columnWidth,
-                                draggedTodoID: draggedTodoID,
-                                dragTargetStatus: dragTargetStatus,
-                                dragTargetTodoID: dragTargetTodoID,
-                                dragInsertAfter: dragInsertAfter,
-                                add: {
-                                    model.selectedStatus = status
-                                    withoutPresentationAnimation { showingCreate = true }
-                                },
-                                select: { model.selectedStatus = status },
-                                open: { todo in
-                                    selectedTodo = todo
-                                    withoutPresentationAnimation { showingDetail = true }
-                                },
-                                move: { todo, offset in
-                                    model.selectedStatus = status
-                                    Task {
-                                        if await model.moveWithinSelectedColumn(todo, offset: offset) {
-                                            await onTodoChanged()
+                ScrollViewReader { scrollProxy in
+                    ScrollView(.horizontal) {
+                        LazyHStack(alignment: .top, spacing: TodoBoardLayout.columnGap) {
+                            ForEach(TodoStatus.boardStatuses, id: \.rawValue) { status in
+                                TodoKanbanColumn(
+                                    status: status,
+                                    count: model.count(for: status),
+                                    todos: displayedTodos(for: status),
+                                    width: columnWidth,
+                                    draggedTodoID: draggedTodoID,
+                                    dragTargetStatus: dragTargetStatus,
+                                    dragTargetTodoID: dragTargetTodoID,
+                                    dragInsertAfter: dragInsertAfter,
+                                    add: {
+                                        model.selectedStatus = status
+                                        withoutPresentationAnimation { showingCreate = true }
+                                    },
+                                    select: { model.selectedStatus = status },
+                                    open: { todo in
+                                        selectedTodo = todo
+                                        withoutPresentationAnimation { showingDetail = true }
+                                    },
+                                    move: { todo, offset in
+                                        model.selectedStatus = status
+                                        Task {
+                                            if await model.moveWithinSelectedColumn(todo, offset: offset) {
+                                                await onTodoChanged()
+                                            }
                                         }
+                                    },
+                                    updateDrag: updateInteractiveDrag,
+                                    finishDrag: finishInteractiveDrag,
+                                    cancelDrag: clearInteractiveDrag,
+                                    drop: { todoID, destinationStatus, targetTodoID, insertAfter in
+                                        handleDrop(
+                                            todoID: todoID,
+                                            destinationStatus: destinationStatus,
+                                            targetTodoID: targetTodoID,
+                                            insertAfter: insertAfter
+                                        )
                                     }
-                                },
-                                updateDrag: updateInteractiveDrag,
-                                finishDrag: finishInteractiveDrag,
-                                drop: { todoID, destinationStatus, targetTodoID, insertAfter in
-                                    handleDrop(
-                                        todoID: todoID,
-                                        destinationStatus: destinationStatus,
-                                        targetTodoID: targetTodoID,
-                                        insertAfter: insertAfter
-                                    )
-                                }
-                            )
-                            .id(status)
-                            .containerRelativeFrame(.vertical)
+                                )
+                                .id(status)
+                                .containerRelativeFrame(.vertical)
+                            }
+                        }
+                        .scrollTargetLayout()
+                        .padding(.bottom, DPSpacing.small)
+                    }
+                    .contentMargins(.horizontal, centeredColumnInset, for: .scrollContent)
+                    .scrollIndicators(.hidden)
+                    .scrollTargetBehavior(.viewAligned(limitBehavior: .always))
+                    .scrollPosition(id: $visibleStatus, anchor: .center)
+                    .refreshable { await model.refresh() }
+                    .task(id: model.selectedStatus.rawValue) {
+                        let status = model.selectedStatus
+                        await Task.yield()
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            visibleStatus = status
+                            scrollProxy.scrollTo(status, anchor: .center)
                         }
                     }
-                    .scrollTargetLayout()
-                    .padding(.horizontal, centeredColumnInset)
-                    .padding(.bottom, DPSpacing.small)
                 }
-                .scrollIndicators(.hidden)
-                .scrollTargetBehavior(.viewAligned(limitBehavior: .always))
-                .scrollPosition(id: $visibleStatus, anchor: .center)
-                .refreshable { await model.refresh() }
             }
         }
     }
@@ -575,6 +581,7 @@ private struct TodoKanbanColumn: View {
     let move: (TodoDTO, Int) -> Void
     let updateDrag: (TodoDTO, CGPoint) -> Void
     let finishDrag: (TodoDTO) -> Void
+    let cancelDrag: () -> Void
     let drop: (TodoID, TodoStatus, TodoID?, Bool) -> Void
 
     var body: some View {
@@ -653,7 +660,8 @@ private struct TodoKanbanColumn: View {
                                     ? (dragInsertAfter ? .after : .before)
                                     : nil,
                                 updateDrag: { location in updateDrag(todo, location) },
-                                finishDrag: { finishDrag(todo) }
+                                finishDrag: { finishDrag(todo) },
+                                cancelDrag: cancelDrag
                             )
                             .opacity(draggedTodoID == todo.uuid ? 0 : 1)
                         }
@@ -706,6 +714,8 @@ private struct TodoKanbanColumn: View {
 }
 
 private struct TodoCard: View {
+    @State private var suppressTapAfterLongPress = false
+
     let todo: TodoDTO
     let status: TodoStatus
     let canMoveUp: Bool
@@ -717,11 +727,12 @@ private struct TodoCard: View {
     let dropEdge: TodoDropEdge?
     let updateDrag: (CGPoint) -> Void
     let finishDrag: () -> Void
+    let cancelDrag: () -> Void
     var measuresDropTarget = true
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
-            Button(action: open) {
+            Button(action: handleTap) {
                 VStack(alignment: .leading, spacing: 0) {
                     HStack(alignment: .top, spacing: DPSpacing.small) {
                         Text(todo.title)
@@ -792,7 +803,13 @@ private struct TodoCard: View {
         .background(DPColor.backgroundCard)
         .clipShape(RoundedRectangle(cornerRadius: TodoBoardLayout.cardRadius))
         .contentShape(RoundedRectangle(cornerRadius: TodoBoardLayout.cardRadius))
-        .highPriorityGesture(cardDragGesture)
+        .modifier(TodoCardGestureModifier(
+            suppressTapAfterLongPress: $suppressTapAfterLongPress,
+            handleTap: handleTap,
+            updateDrag: updateDrag,
+            finishDrag: finishDrag,
+            cancelDrag: cancelDrag
+        ))
         .overlay(
             ZStack {
                 RoundedRectangle(cornerRadius: TodoBoardLayout.cardRadius)
@@ -845,7 +862,58 @@ private struct TodoCard: View {
         .accessibilityIdentifier("todo.card.\(todo.id)")
     }
 
-    private var cardDragGesture: some Gesture {
+    private func handleTap() {
+        if suppressTapAfterLongPress {
+            suppressTapAfterLongPress = false
+            return
+        }
+        open()
+    }
+}
+
+private struct TodoCardGestureModifier: ViewModifier {
+    @Binding var suppressTapAfterLongPress: Bool
+    let handleTap: () -> Void
+    let updateDrag: (CGPoint) -> Void
+    let finishDrag: () -> Void
+    let cancelDrag: () -> Void
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if #available(iOS 18.0, *) {
+            content
+                .gesture(modernLongPressGesture)
+                .simultaneousGesture(
+                    TapGesture().onEnded(handleTap)
+                )
+        } else {
+            content.highPriorityGesture(legacyLongPressGesture)
+        }
+    }
+
+    @available(iOS 18.0, *)
+    private var modernLongPressGesture: DPLongPressGestureRecognizer {
+        DPLongPressGestureRecognizer(
+            minimumDuration: TodoBoardLayout.dragLongPressDuration,
+            maximumMovement: TodoBoardLayout.dragLongPressMaximumDistance,
+            coordinateSpaceName: TodoDragCoordinateSpace.name,
+            onBegan: { location in
+                suppressTapAfterLongPress = true
+                updateDrag(location)
+            },
+            onChanged: updateDrag,
+            onEnded: {
+                finishDrag()
+                releaseTapSuppression()
+            },
+            onCancelled: {
+                cancelDrag()
+                releaseTapSuppression()
+            }
+        )
+    }
+
+    private var legacyLongPressGesture: some Gesture {
         LongPressGesture(
             minimumDuration: TodoBoardLayout.dragLongPressDuration,
             maximumDistance: TodoBoardLayout.dragLongPressMaximumDistance
@@ -870,6 +938,12 @@ private struct TodoCard: View {
                       hasDragValue: dragValue != nil
                   ) else { return }
             finishDrag()
+        }
+    }
+
+    private func releaseTapSuppression() {
+        DispatchQueue.main.async {
+            suppressTapAfterLongPress = false
         }
     }
 }
@@ -917,6 +991,7 @@ private struct TodoDragPreview: View {
             dropEdge: nil,
             updateDrag: { _ in },
             finishDrag: {},
+            cancelDrag: {},
             measuresDropTarget: false
         )
         .frame(width: size.width, height: size.height)
