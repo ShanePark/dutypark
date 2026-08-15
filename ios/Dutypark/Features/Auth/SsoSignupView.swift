@@ -93,6 +93,7 @@ struct SsoSignupView: View {
                                         username = String(value.prefix(10))
                                     }
                                 }
+                                .accessibilityIdentifier("oauth.signup.name")
 
                                 Text(oauthString("auth.oauth.signup.name.help"))
                                     .font(DPTypography.supporting)
@@ -226,6 +227,7 @@ struct SsoSignupView: View {
                         confirmationDismiss()
                     }
                 )
+                .accessibilityIdentifier("oauth.signup.discard.confirmation")
             }
             .interactiveDismissDisabled(isWorking)
         }
@@ -354,6 +356,25 @@ struct SsoSignupView: View {
 
     private func loadPolicies() async {
         guard policies == nil else { return }
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-ui-testing-sso-signup") {
+            policies = CurrentPoliciesDTO(
+                terms: PolicyDTO(
+                    policyType: .terms,
+                    version: "ui-test",
+                    content: "서비스 이용약관 테스트 내용",
+                    effectiveDate: DateOnly(rawValue: "2026-01-01")
+                ),
+                privacy: PolicyDTO(
+                    policyType: .privacy,
+                    version: "ui-test",
+                    content: "개인정보 처리방침 테스트 내용",
+                    effectiveDate: DateOnly(rawValue: "2026-01-01")
+                )
+            )
+            return
+        }
+        #endif
         do {
             let response = try await oauthClient.currentPolicies()
             guard response.terms != nil, response.privacy != nil else {
