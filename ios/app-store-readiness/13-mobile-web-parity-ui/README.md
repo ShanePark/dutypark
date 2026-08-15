@@ -57,6 +57,7 @@
 | 22 | 팀 달력 | 한국어 앱의 요일이 기기 언어를 따라 영어로 표시될 수 있음 | 완료 | `3f9fe25a` |
 | 23 | 알림 드롭다운 | 목록을 확인하고 닫아도 iOS만 미읽음 배지와 강조가 계속 남음 | 완료 | `a72a15ca` |
 | 24 | 설정 · 소셜 연결 | Apple 해제 안내가 실제 권한 철회 동작과 반대로 표시됨 | 완료 | `54bc2c42` |
+| 25 | 팀 상세 | 일정이 있는데도 빈 근무 영역에 `이 날의 팀 일정이 없습니다.`가 중복 표시됨 | 완료 | `9b37abb7` |
 
 상태는 `대기 → 진행 중 → 수정됨·커밋 전 → 코드 커밋됨·시각 검증 전 → 완료` 순으로 관리한다.
 
@@ -106,6 +107,7 @@
 | `3f9fe25a` | 팀 달력 요일을 앱 언어에 고정 | exact ko/en 테스트, generic test build, UI 1건 | 영어 기기·한국어 앱 조합 재캡처 | 완료 |
 | `a72a15ca` | 알림 드롭다운 닫기 시 확인한 알림 읽음 처리 | 정책·중복 요청 focused 테스트, generic build·test build, UI 1건 | 닫은 뒤 미읽음 배지 제거 재캡처 | 완료 |
 | `54bc2c42` | Apple 연결 해제의 권한 철회 정책 안내 | exact ko/en 테스트, generic build·test build, UI 1건 | Apple 관리·확인 패널 재캡처 | 완료 |
+| `9b37abb7` | 빈 팀 근무 영역의 일정 없음 오안내 제거 | TeamFeatureTests 27건, generic build·test build, UI 1건 | 일정 카드 유지·거짓 빈 문구 부재 재캡처 | 완료 |
 
 ## 상세 변경 보고
 
@@ -220,6 +222,16 @@
 - 팀 달력의 요일 생성에 `AppLocalization.locale`을 적용해 기기 설정과 앱 언어를 분리했다.
 - 한국어·영어 exact 단위 테스트와 generic test build가 통과했다.
 - iPhone 13 mini를 기기 언어 영어(`en_US`), 앱 언어 한국어로 실행한 UI 테스트 1/1에서 `일 월 화 수 목 금 토` 전부와 `Sun`·`Mon` 부재를 확인했다. 육안으로도 균등 정렬과 잘림·겹침이 없었다: `/tmp/Dutypark-TeamWeekday-Green/Logs/Test/Test-Dutypark-2026.08.15_17-20-40-+0900.xcresult`, `/tmp/Dutypark-TeamWeekday-UI-Final-20260815.xcresult`.
+
+### 팀 빈 근무 영역 오안내 — `9b37abb7`
+
+| 수정 전 | iOS 수정 후 |
+| --- | --- |
+| 실제 일정 카드 아래 근무 영역에서도 `이 날의 팀 일정이 없습니다.`를 다시 표시 | <img src="screenshots/team-empty-shift-message-ios-after.png" width="240" alt="일정 카드는 유지하고 거짓 빈 문구를 제거한 iOS 팀 화면"> |
+
+- iOS는 해당 날짜의 근무 배정이 없을 때 근무 영역에서 일정 전용 빈 문구를 재사용해, 실제 `정기 팀 회의`가 있는데도 `이 날의 팀 일정이 없습니다.`라고 잘못 안내했다.
+- 모바일 웹과 동일하게 근무 배정 목록이 비면 해당 근무 영역 자체를 렌더하지 않고, 일정 빈 문구는 실제 일정 목록이 비었을 때만 유지한다.
+- generic 앱·테스트 빌드와 `TeamFeatureTests` 27건이 통과했다. iPhone 13 mini UI 테스트 1/1에서 `정기 팀 회의` 카드가 남고 거짓 빈 문구가 존재하지 않음을 확인했다: `/tmp/Dutypark-TeamEmptyShift-TeamSuite-Built.xcresult`, `/tmp/Dutypark-TeamEmptyShift-UI.xcresult`.
 
 ### 달력·팀 비교 기준 확장 — `58cbf120`
 
