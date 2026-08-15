@@ -15,7 +15,63 @@ final class CalendarFeatureTests: XCTestCase {
         XCTAssertTrue(source.contains("initialStatus: .inProgress"))
         XCTAssertTrue(source.contains("refreshBoardAfterCreate: false"))
         XCTAssertTrue(source.contains("onCreated: { await model.refreshTodoBoard() }"))
-        XCTAssertTrue(source.contains("TodoView("), "The separate Todo management entry must remain")
+        XCTAssertTrue(source.contains("TodoDetailModal("))
+        XCTAssertTrue(source.contains("Button { openTodo(todo) }"))
+        XCTAssertTrue(source.contains("calendar.day.todo.\\(todo.id)"))
+        XCTAssertFalse(source.contains("todoDetailModel.load()"))
+        XCTAssertFalse(source.contains("TodoView("), "Calendar Todo bubbles must not present the full board")
+        XCTAssertFalse(source.contains("private func openTodoBoard()"), "Calendar keeps only the quick-add entry")
+    }
+
+    func testCalendarHeaderAllocatesEqualSidesAroundMonthNavigation() {
+        XCTAssertEqual(
+            CalendarMainLayout.headerSideWidth(
+                containerWidth: 359,
+                monthControlsWidth: 176,
+                interColumnSpacing: 2
+            ),
+            89.5
+        )
+        XCTAssertEqual(
+            CalendarMainLayout.headerSideWidth(
+                containerWidth: 160,
+                monthControlsWidth: 176,
+                interColumnSpacing: 2
+            ),
+            0
+        )
+    }
+
+    func testComparedDutyRetainsProfileMetadataForCalendarAvatar() async throws {
+        let response = OtherDutyResponse(
+            memberId: 2,
+            name: "Profile friend",
+            hasProfilePhoto: true,
+            profilePhotoVersion: 17,
+            duties: [DutyDTO(
+                year: 2026,
+                month: 8,
+                day: 12,
+                dutyType: "Day",
+                dutyColor: "#3B82F6",
+                isOff: false,
+                dutyTypeId: 7,
+                source: .override
+            )]
+        )
+        let repository = CalendarRepositoryMock(otherDuties: [response])
+        let model = CalendarViewModel(repository: repository, now: date(2026, 8, 12))
+        model.comparedMemberIDs = [response.memberId]
+
+        await model.load()
+
+        let item = try XCTUnwrap(
+            model.days.first { $0.cell.day == 12 }?.comparedDuties.first
+        )
+        XCTAssertEqual(item.memberID, response.memberId)
+        XCTAssertEqual(item.name, response.name)
+        XCTAssertTrue(item.hasProfilePhoto)
+        XCTAssertEqual(item.profilePhotoVersion, response.profilePhotoVersion)
     }
 
     func testSharedFriendTagSelectorMergesCurrentAndSelectedStaleItems() {
@@ -861,6 +917,7 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
     let scheduleOwnerID: MemberID
     let failDestructiveMutations: Bool
     let returnsTaggedSchedule: Bool
+    let otherDutyValues: [OtherDutyResponse]
 
     init(
         canManage: Bool = false,
@@ -868,7 +925,8 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
         friends: [FriendDTO] = [],
         scheduleOwnerID: MemberID = 1,
         failDestructiveMutations: Bool = false,
-        returnsTaggedSchedule: Bool = false
+        returnsTaggedSchedule: Bool = false,
+        otherDuties: [OtherDutyResponse] = []
     ) {
         canManageValue = canManage
         self.cancelMemberLoad = cancelMemberLoad
@@ -876,6 +934,7 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
         self.scheduleOwnerID = scheduleOwnerID
         self.failDestructiveMutations = failDestructiveMutations
         self.returnsTaggedSchedule = returnsTaggedSchedule
+        otherDutyValues = otherDuties
     }
 
     func member() async throws -> MemberDTO {
@@ -897,7 +956,9 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
         (1...42).map { TeamDayDTO(year: year, month: month, day: $0) }
     }
     func duties(memberID: MemberID, year: Int, month: Int) async throws -> [DutyDTO] { [] }
-    func otherDuties(memberIDs: [MemberID], year: Int, month: Int) async throws -> [OtherDutyResponse] { [] }
+    func otherDuties(memberIDs: [MemberID], year: Int, month: Int) async throws -> [OtherDutyResponse] {
+        otherDutyValues
+    }
     func schedules(memberID: MemberID, year: Int, month: Int) async throws -> [[ScheduleDTO]] {
         requestedScheduleMemberID = memberID
         var result = Array(repeating: [ScheduleDTO](), count: 42)

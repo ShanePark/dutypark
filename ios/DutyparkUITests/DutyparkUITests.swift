@@ -193,6 +193,60 @@ final class DutyparkUITests: XCTestCase {
     }
 
     @MainActor
+    func testCalendarParityCentersHeaderAndOpensOnlyTheTappedTodoDetail() throws {
+        let app = launchAuthenticatedApp(extraArguments: ["-ui-testing-calendar-parity"])
+        defer { app.terminate() }
+
+        primaryTab("tab.calendar", in: app).tap()
+        XCTAssertTrue(
+            app.descendants(matching: .any)["screen.calendar"].waitForExistence(timeout: 10)
+        )
+
+        let monthControls = app.descendants(matching: .any)["calendar.month.controls"]
+        XCTAssertTrue(monthControls.waitForExistence(timeout: 10))
+        XCTAssertEqual(monthControls.frame.midX, app.frame.midX, accuracy: 1)
+        XCTAssertTrue(app.buttons["calendar.todo.add"].exists)
+        XCTAssertTrue(app.buttons["tab.todo"].exists, "The dock Todo entry must remain")
+
+        let comparedDuty = app.descendants(matching: .any)["calendar.compared-duty.2"]
+        XCTAssertTrue(comparedDuty.waitForExistence(timeout: 10))
+
+        let calendarEvidence = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        calendarEvidence.name = "calendar-centered-header-todo-add-profile-duty"
+        calendarEvidence.lifetime = .keepAlways
+        add(calendarEvidence)
+
+        let todo = app.buttons["calendar.todo.item.A11CE000-0000-4000-8000-000000000011"]
+        XCTAssertTrue(todo.waitForExistence(timeout: 10))
+        todo.tap()
+
+        XCTAssertTrue(
+            app.descendants(matching: .any)["calendar.todo.detail"].waitForExistence(timeout: 10)
+        )
+        XCTAssertTrue(app.staticTexts["Calendar detail check"].exists)
+        XCTAssertFalse(app.descendants(matching: .any)["screen.todo"].exists)
+
+        let detailEvidence = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        detailEvidence.name = "calendar-direct-todo-detail"
+        detailEvidence.lifetime = .keepAlways
+        add(detailEvidence)
+
+        app.buttons["Close"].tap()
+        XCTAssertTrue(waitForNonHittable(
+            app.descendants(matching: .any)["calendar.todo.detail"],
+            timeout: 3
+        ))
+
+        let dayTodo = app.buttons["calendar.day.todo.A11CE000-0000-4000-8000-000000000011"]
+        XCTAssertTrue(dayTodo.waitForExistence(timeout: 10))
+        dayTodo.tap()
+        XCTAssertTrue(
+            app.descendants(matching: .any)["calendar.todo.detail"].waitForExistence(timeout: 10)
+        )
+        XCTAssertFalse(app.descendants(matching: .any)["screen.todo"].exists)
+    }
+
+    @MainActor
     func testCalendarMonthPickerChangesMonthUsingFixture() throws {
         let app = launchAuthenticatedApp()
         defer { app.terminate() }
@@ -333,7 +387,7 @@ final class DutyparkUITests: XCTestCase {
     }
 
     @MainActor
-    private func launchAuthenticatedApp() -> XCUIApplication {
+    private func launchAuthenticatedApp(extraArguments: [String] = []) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += [
             "-dp-language", "en",
@@ -342,6 +396,7 @@ final class DutyparkUITests: XCTestCase {
             "-AppleLocale", "en_US",
             "-ui-testing-authenticated"
         ]
+        app.launchArguments += extraArguments
         app.launch()
         return app
     }

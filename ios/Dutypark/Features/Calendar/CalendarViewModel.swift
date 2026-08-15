@@ -14,7 +14,10 @@ nonisolated struct CalendarDayContent: Identifiable, Equatable, Sendable {
 }
 
 nonisolated struct ComparedDuty: Equatable, Sendable {
+    let memberID: MemberID
     let name: String
+    let hasProfilePhoto: Bool
+    let profilePhotoVersion: Int64
     let duty: DutyDTO
 }
 
@@ -185,7 +188,15 @@ final class CalendarViewModel: ObservableObject {
                 dDays: loadedDDays.filter { $0.date == cell.date },
                 comparedDuties: compared.compactMap { response in
                     response.duties.first(where: { $0.year == cell.year && $0.month == cell.month && $0.day == cell.day })
-                        .map { ComparedDuty(name: response.name, duty: $0) }
+                        .map {
+                            ComparedDuty(
+                                memberID: response.memberId,
+                                name: response.name,
+                                hasProfilePhoto: response.hasProfilePhoto,
+                                profilePhotoVersion: response.profilePhotoVersion,
+                                duty: $0
+                            )
+                        }
                 }
             )
         }
@@ -200,6 +211,7 @@ final class CalendarViewModel: ObservableObject {
 
 #if DEBUG
     private func loadUITestingFixture() {
+        let includesCalendarParity = ProcessInfo.processInfo.arguments.contains("-ui-testing-calendar-parity")
         let member = MemberDTO(
             id: 1,
             name: "UI Test",
@@ -217,15 +229,47 @@ final class CalendarViewModel: ObservableObject {
         me = member
         selectedMemberID = member.id
         targetMember = nil
-        friends = []
+        let parityFriend = FriendDTO(
+            id: 2,
+            name: "Profile friend",
+            teamId: nil,
+            team: "Ward A",
+            hasProfilePhoto: false,
+            profilePhotoVersion: 17,
+            isFamily: false,
+            pinOrder: nil
+        )
+        friends = includesCalendarParity ? [parityFriend] : []
         team = nil
         dDays = []
+        let parityTodo = TodoDTO(
+            id: "A11CE000-0000-4000-8000-000000000011",
+            title: "Calendar detail check",
+            content: "Only this Todo detail should be visible.",
+            position: 0,
+            status: .inProgress,
+            createdDate: LocalDateTimeValue(rawValue: "2026-08-15T09:00:00"),
+            completedDate: nil,
+            dueDate: DateOnly(rawValue: "2026-08-12"),
+            isOverdue: false,
+            isTagged: false,
+            owner: "UI Test",
+            taggedByMember: nil,
+            tags: [],
+            hasAttachments: false
+        )
         todoBoard = TodoBoardDTO(
             todo: [],
-            inProgress: [],
+            inProgress: includesCalendarParity ? [parityTodo] : [],
             done: [],
-            counts: TodoCountsDTO(todo: 0, inProgress: 0, done: 0, total: 0)
+            counts: TodoCountsDTO(
+                todo: 0,
+                inProgress: includesCalendarParity ? 1 : 0,
+                done: 0,
+                total: includesCalendarParity ? 1 : 0
+            )
         )
+        comparedMemberIDs = includesCalendarParity ? [parityFriend.id] : []
         canManage = false
         errorMessage = nil
         let firstOfMonth = CalendarDateSupport.calendar.date(
@@ -252,14 +296,34 @@ final class CalendarViewModel: ObservableObject {
                 day: cellDay,
                 isCurrentMonth: cellYear == year && cellMonth == month
             )
+            let comparedDuties: [ComparedDuty] = if includesCalendarParity && cell.isCurrentMonth && cell.day == 12 {
+                [ComparedDuty(
+                    memberID: parityFriend.id,
+                    name: parityFriend.name,
+                    hasProfilePhoto: parityFriend.hasProfilePhoto,
+                    profilePhotoVersion: parityFriend.profilePhotoVersion,
+                    duty: DutyDTO(
+                        year: cell.year,
+                        month: cell.month,
+                        day: cell.day,
+                        dutyType: "Day",
+                        dutyColor: "#3B82F6",
+                        isOff: false,
+                        dutyTypeId: 7,
+                        source: .override
+                    )
+                )]
+            } else {
+                []
+            }
             return CalendarDayContent(
                 cell: cell,
                 duty: nil,
                 schedules: [],
                 holidays: [],
-                todos: [],
+                todos: includesCalendarParity && parityTodo.dueDate == cell.date ? [parityTodo] : [],
                 dDays: [],
-                comparedDuties: []
+                comparedDuties: comparedDuties
             )
         }
     }
