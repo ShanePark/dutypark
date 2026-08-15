@@ -100,7 +100,7 @@ final class AdminConfirmationVisualUITests: XCTestCase {
     }
 
     @MainActor
-    func testCapturesCenteredTeamDeleteConfirmation() throws {
+    func testPopulatedAdminTeamManagementHidesDelete() throws {
         let app = launchServiceAdminApp()
         defer { app.terminate() }
 
@@ -109,18 +109,15 @@ final class AdminConfirmationVisualUITests: XCTestCase {
 
         let fixtureTeam = app.staticTexts["시각 검증팀"].firstMatch
         XCTAssertTrue(fixtureTeam.waitForExistence(timeout: 10))
-        fixtureTeam.swipeLeft()
-        let deleteButton = app.buttons["삭제"].firstMatch
-        XCTAssertTrue(deleteButton.waitForExistence(timeout: 5))
-        deleteButton.tap()
+        fixtureTeam.tap()
+        XCTAssertTrue(app.staticTexts["듀티파크 테스트팀 관리"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["테스트 관리자"].exists)
+        XCTAssertFalse(app.buttons["team.manage.delete"].exists)
 
-        assertCenteredConfirmation(
-            in: app,
-            title: "팀을 삭제할까요?",
-            message: "시각 검증팀 팀을 삭제할까요? 회원이 있는 팀은 삭제할 수 없습니다.",
-            confirmTitle: "삭제",
-            screenshotName: "parity-ios-admin-team-delete-confirmation-ko-dark"
-        )
+        let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        attachment.name = "parity-ios-admin-populated-team-no-delete-ko-dark"
+        attachment.lifetime = .keepAlways
+        add(attachment)
     }
 
     @MainActor
@@ -211,6 +208,7 @@ final class AdminConfirmationVisualUITests: XCTestCase {
             "-AppleLocale", "ko_KR",
             "-ui-testing-admin",
             "-ui-testing-admin-visual-fixture",
+            "-ui-testing-team-fixture",
         ]
         app.launch()
         return app
