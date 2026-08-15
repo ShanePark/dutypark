@@ -63,7 +63,7 @@
 | `3987ea66` | 팀 연월 선택기의 월 이름 현지화 | `TeamFeatureTests` 앱 ko·기기 en 조합 | `d444f095`에서 1~12월 한국어 캡처 확보 | 완료 |
 | `b7bdc8ae` | 기본 근무 패턴 UI 및 캘린더 중앙 확인 흐름 | Settings·Calendar 테스트 및 UI 캡처 | 패턴 편집·해제 확인 확보, 월 일괄 변경 캡처 대기 | 패턴 완료·캘린더 캡처 대기 |
 | `24814f20` | 친구관리 UI fixture 안정화 및 실제 롱프레스 재정렬 | iPhone 13 mini 전용 UI 테스트 1건 | 친구관리 수정 후 화면 확보 | 완료 |
-| `2316075a` | 관리자 팀 삭제·회원 세션 종료 중앙 확인 | AdminTeam·AdminFeature 테스트 포함 전체 선택 테스트 | 관리자 fixture 부재 | 코드 커밋됨·캡처 대기 |
+| `2316075a` | 관리자 팀 삭제·회원 세션 종료 중앙 확인 | AdminTeam·AdminFeature 테스트 포함 전체 선택 테스트 | `eee695a9`에서 두 패널 캡처 확보 | 완료 |
 | `84047661` | 설정의 계정·프로필 destructive 확인 5종 | iPhone 13 mini `SettingsFeatureTests` 29건 | 설정 화면 확보, 확인 패널 직접 캡처 대기 | 코드 커밋됨·패널 캡처 대기 |
 | `bd3a1fc4` | Todo 작성 취소·삭제·태그 해제 중앙 확인 | iPhone 13 mini 단위 32건·UI 1건 | Todo 화면 확보, 확인 패널 직접 캡처 대기 | 코드·상호작용 완료·캡처 대기 |
 | `2ecdbb70` | 팀 일정 삭제 및 팀 관리 확인 UI | iPhone 13 mini `TeamFeatureTests` 24건 | `d444f095`에서 가입 팀 패널 2종 확보 | 완료 |
@@ -78,6 +78,8 @@
 | `3bef215b` | DEBUG 전용 direct visual fixture 라우트 | Debug·Release 빌드 및 route 정책 테스트 | 첨부·SSO·관리자 캡처 경로 제공 | 완료 |
 | `28bfcbed` | 첨부 삭제 확인 시각 검증 | iPhone 13 mini UI 1건 | 메뉴→삭제 중앙 패널 확보 | 완료 |
 | `d444f095` | 가입 팀 달력·관리 시각 fixture | iPhone 13 mini UI 3건 | 연월 선택·일정 삭제·구성원 제외 확보 | 완료 |
+| `aaca282c` | 긴 확인 문구의 취소·확인 버튼 겹침 방지 | 공통 패널 계약·generic test build | 관리자 세션 종료에서 픽셀 재검증 | 완료 |
+| `eee695a9` | 관리자 destructive 확인 시각 fixture | iPhone 13 mini UI 2건 | 팀 삭제·회원 세션 종료 확보 | 완료 |
 
 ## 상세 변경 보고
 
@@ -180,6 +182,18 @@
 - 기본 패턴 해제는 iPhone 13 mini UI 테스트에서 중앙 표시와 한국어 문구를 확인했다.
 - 알림 삭제(`92f3fa66`)와 첨부 삭제(`def118e2`)에도 같은 패널을 적용했다. 두 화면은 삭제 대상 fixture를 추가한 뒤 별도 캡처한다.
 - 관리자 팀 삭제와 회원 세션 종료(`2316075a`)도 중앙 패널로 통일했다. 진행 중에는 취소·외부 닫기·중복 제출을 막고, 세션 종료 패널에는 회원·기기·브라우저·IP 범위를 표시한다.
+
+### 관리자 팀 삭제·회원 세션 종료 — `2316075a`, `aaca282c`, `eee695a9`
+
+| 관리자 팀 삭제 | 회원 세션 종료 |
+| --- | --- |
+| <img src="screenshots/admin-team-delete-confirmation-ios-after.png" width="240" alt="iOS 관리자 팀 삭제 확인"> | <img src="screenshots/admin-session-revoke-confirmation-ios-after.png" width="240" alt="iOS 관리자 회원 세션 종료 확인"> |
+
+- DEBUG 관리자 fixture로 회원이 있는 팀 삭제와 iPhone 세션 종료 경로를 직접 열었다.
+- 최초 세션 종료 캡처에서 긴 확인 문구가 취소 버튼 영역을 침범해, 접근성 트리에는 존재하지만 실제 픽셀에서 `취소`가 가려지는 공통 회귀를 발견했다.
+- 공통 패널의 label뿐 아니라 Button 자체에도 균등 폭을 강제해 취소·확인 버튼의 동일 폭과 간격을 복원했다.
+- 강화한 `isHittable`·비중첩·동일폭 assertion과 crop 육안 검수까지 통과했다.
+- iPhone 13 mini UI 테스트 2/2 통과: `/tmp/Dutypark-AdminConfirmationVisual-Final-20260815.xcresult`.
 
 ### 알림 삭제 확인 — `92f3fa66`, `da97937c`
 
@@ -309,7 +323,7 @@
 - [x] 캘린더 월 일괄 변경 중앙 선택 화면 스크린샷 추가
 - [x] 알림 삭제용 UI fixture와 중앙 패널 스크린샷 추가
 - [x] 첨부 삭제용 UI fixture와 중앙 패널 스크린샷 추가
-- [ ] 관리자 팀 삭제·회원 세션 종료 UI fixture와 중앙 패널 스크린샷 추가
+- [x] 관리자 팀 삭제·회원 세션 종료 UI fixture와 중앙 패널 스크린샷 추가
 - [x] 설정 로그아웃·프로필 삭제 중앙 패널 스크린샷 추가
 - [ ] Todo 작성 취소·삭제 중앙 패널 스크린샷 추가
 - [x] 팀 연월 선택기 한국어 스크린샷 추가
