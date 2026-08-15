@@ -63,6 +63,7 @@
 | 28 | 팀 근무 현황 | 근무 인원 배지가 단위 없이 `3`처럼 표시되어 의미가 불분명함 | 완료 | `1153345a` |
 | 29 | 관리자 · 회원 목록 | 활성 세션 수가 `1개`·`0개`로만 표시되어 숫자의 의미와 빈 상태를 알기 어려움 | 완료 | `e34d67c4` |
 | 30 | 설정 · 기본 근무 패턴 | 숨김 근무유형이 남으면 저장이 막히지만 이유와 해결 방법이 표시되지 않음 | 완료 | `4ba4ab07` |
+| 31 | 게스트 · 이용 안내 | `홈으로 돌아가기`가 네이티브 게스트 화면 대신 WebView 안의 웹 홈을 열음 | 완료 | `6b69ce5a` |
 
 상태는 `대기 → 진행 중 → 수정됨·커밋 전 → 코드 커밋됨·시각 검증 전 → 완료` 순으로 관리한다.
 
@@ -118,6 +119,7 @@
 | `1153345a` | 팀 근무 인원 배지의 현지화 단위 복원 | exact ko/en 테스트, generic test build, UI 1건 | 2명 배지와 팀원 카드 재캡처 | 완료 |
 | `e34d67c4` | 관리자 회원 목록의 활성 세션 상태 명확화 | exact ko/en 테스트, generic test build, UI 1건 | 활성 세션 1개·없음 분기 동시 재캡처 | 완료 |
 | `4ba4ab07` | 숨김 근무유형이 포함된 기본 패턴 경고 | Settings 32건, generic build, UI 1건 | 경고·숨김 배지·비활성 저장 상태 재캡처 | 완료 |
+| `6b69ce5a` | 게스트 이용 안내에서 네이티브 홈 복귀 | GuestPublicLinkTests 7건, generic build, UI 1건 | 웹 링크 탭 후 네이티브 게스트 화면 재캡처 | 완료 |
 
 ## 상세 변경 보고
 
@@ -490,6 +492,14 @@
 - 같은 화면에서 웹 본문은 `이용 안내`인데 네이티브 내비게이션 제목만 `이용 안내 및 릴리스 노트`로 표시되어 제목이 서로 달랐다.
 - 게스트 전용 한·영 제목을 웹과 같은 `이용 안내` / `Guide`로 맞췄다. Root 메뉴와 Settings의 별도 가이드 키는 변경하지 않았다.
 - exact 한·영 테스트와 generic 앱 빌드가 통과했다. iPhone 13 mini UI 테스트 1/1에서 상단 네이티브 제목과 웹 본문 제목이 모두 `이용 안내`로 표시되고 잘림·겹침이 없음을 확인했다: `/tmp/Dutypark-GuestGuideTitle-Green.xcresult`, `/tmp/Dutypark-GuestGuideTitle-UI3.xcresult`.
+
+### 게스트 이용 안내의 네이티브 홈 복귀 — `6b69ce5a`
+
+<img src="screenshots/guest-guide-home-native-ios-after.png" width="240" alt="이용 안내에서 네이티브 게스트 시작 화면으로 복귀한 iOS">
+
+- 웹 본문의 `홈으로 돌아가기`를 누르면 기존 iOS는 같은 WebView 안에서 웹 홈을 열어 네이티브 이용 안내 내비게이션이 남았다.
+- 게스트 가이드에서만 first-party `/` 이동을 가로채 native dismiss로 연결하고, Vue Router의 SPA 링크도 동일하게 처리했다. Settings의 가이드·릴리스 노트와 외부 링크 동작은 변경하지 않았다.
+- generic 앱 빌드와 `GuestPublicLinkTests` 7/7이 통과했다. iPhone 13 mini UI 테스트 1/1에서 실제 웹 링크를 탭한 뒤 이용 안내 내비게이션이 사라지고 네이티브 게스트 CTA 화면으로 돌아오는 것을 확인했다: `/tmp/Dutypark-GuestGuideHome-Unit-20260815.xcresult`, `/tmp/Dutypark-GuestGuideHome-UI-Final-20260815.xcresult`.
 
 ### 게스트 공개 달력 연월 선택 — `41e1c184`
 
