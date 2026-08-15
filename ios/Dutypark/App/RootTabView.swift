@@ -85,6 +85,7 @@ struct RootTabView: View {
     @State private var showsNotificationCenter = false
     @State private var showsUnsupportedLink = false
     @State private var showsLogoutConfirmation = false
+    @State private var isLoggingOut = false
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
@@ -122,6 +123,36 @@ struct RootTabView: View {
             NavigationStack {
                 NotificationCenterView(store: notifications, onOpen: openNotificationRoute)
             }
+        }
+        .fullScreenCover(
+            isPresented: Binding(
+                get: { showsLogoutConfirmation },
+                set: { isPresented in
+                    if !isPresented,
+                       RootLogoutConfirmationPolicy.canDismiss(isLoggingOut: isLoggingOut) {
+                        showsLogoutConfirmation = false
+                    }
+                }
+            )
+        ) {
+            DPModalOverlay(
+                maximumContentWidth: DPConfirmationPanel.maximumWidth,
+                onDismiss: { showsLogoutConfirmation = false },
+                canDismiss: RootLogoutConfirmationPolicy.canDismiss(isLoggingOut: isLoggingOut)
+            ) { availableSize, dismiss in
+                DPConfirmationPanel(
+                    title: SettingsLocalization.string("settings.logout.confirmTitle"),
+                    message: SettingsLocalization.string("settings.logout.confirmMessage"),
+                    confirmTitle: SettingsLocalization.string("settings.logout"),
+                    cancelTitle: SettingsLocalization.string("settings.action.cancel"),
+                    isDestructive: true,
+                    isWorking: isLoggingOut,
+                    maximumHeight: availableSize.height,
+                    cancel: dismiss,
+                    confirm: { logout(dismiss: dismiss) }
+                )
+            }
+            .interactiveDismissDisabled(isLoggingOut)
         }
         .task {
             await RootAuthenticatedStartupAction.perform(
@@ -176,19 +207,6 @@ struct RootTabView: View {
             Button("link.unsupported.ok", role: .cancel) {}
         } message: {
             Text("link.unsupported.message")
-        }
-        .confirmationDialog(
-            SettingsLocalization.string("settings.logout.confirmTitle"),
-            isPresented: $showsLogoutConfirmation
-        ) {
-            Button(SettingsLocalization.string("settings.logout"), role: .destructive) {
-                Task {
-                    await session.logout()
-                }
-            }
-            Button(SettingsLocalization.string("settings.action.cancel"), role: .cancel) {}
-        } message: {
-            SettingsLocalization.text("settings.logout.confirmMessage")
         }
         .safeAreaInset(edge: .top, spacing: 0) {
             if case .authenticated(let member) = session.state, member.isImpersonating {
@@ -322,6 +340,17 @@ struct RootTabView: View {
     private func openSettings() {
         settingsDestination = nil
         selectedTab = .settings
+    }
+
+    private func logout(dismiss: @escaping () -> Void) {
+        guard RootLogoutConfirmationPolicy.canSubmit(isLoggingOut: isLoggingOut) else { return }
+        isLoggingOut = true
+
+        Task {
+            await session.logout()
+            isLoggingOut = false
+            dismiss()
+        }
     }
 
     private var notificationDropdownLayer: some View {
@@ -562,6 +591,16 @@ nonisolated enum RootChromeLocalization {
             locale: selectedLocale,
             arguments: [duration]
         )
+    }
+}
+
+nonisolated enum RootLogoutConfirmationPolicy {
+    static func canSubmit(isLoggingOut: Bool) -> Bool {
+        !isLoggingOut
+    }
+
+    static func canDismiss(isLoggingOut: Bool) -> Bool {
+        !isLoggingOut
     }
 }
 
