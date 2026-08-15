@@ -42,6 +42,21 @@ final class TeamViewModel: ObservableObject {
     func load(memberID: MemberID?) async {
         guard !isLoading else { return }
 #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-ui-testing-team-fixture") {
+            self.memberID = memberID
+            let fixture = TeamUITestingFixture.make(year: year, month: month)
+            team = fixture.team
+            isTeamManager = true
+            days = fixture.days
+            schedules = fixture.schedules
+            duties = fixture.duties
+            holidays = fixture.holidays
+            shifts = fixture.shifts
+            selectedIndex = 0
+            loadFailed = false
+            showsError = false
+            return
+        }
         if ProcessInfo.processInfo.arguments.contains("-ui-testing-authenticated") {
             self.memberID = memberID
             team = nil
@@ -283,6 +298,20 @@ final class TeamManageViewModel: ObservableObject {
 
     func load() async {
         guard !isLoading else { return }
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-ui-testing-team-fixture") {
+            team = TeamUITestingFixture.makeManagementTeam()
+            templates = [
+                DutyBatchTemplateDTO(
+                    name: "standard",
+                    label: "표준 근무표",
+                    fileExtensions: ["xlsx"]
+                )
+            ]
+            showsError = false
+            return
+        }
+#endif
         isLoading = true
         defer { isLoading = false }
         do {
@@ -414,6 +443,102 @@ final class TeamManageViewModel: ObservableObject {
         }
     }
 }
+
+#if DEBUG
+private nonisolated enum TeamUITestingFixture {
+    struct CalendarFixture {
+        let team: TeamDTO
+        let days: [TeamDayDTO]
+        let schedules: [[TeamScheduleDTO]]
+        let duties: [DutyDTO]
+        let holidays: [[HolidayDTO]]
+        let shifts: [DutyByShiftDTO]
+    }
+
+    static func make(year: Int, month: Int) -> CalendarFixture {
+        let team = makeManagementTeam()
+        let dayCount = Calendar(identifier: .gregorian).range(
+            of: .day,
+            in: .month,
+            for: Calendar(identifier: .gregorian).date(
+                from: DateComponents(year: year, month: month, day: 1)
+            ) ?? Date()
+        )?.count ?? 28
+        let days = (1...dayCount).map { TeamDayDTO(year: year, month: month, day: $0) }
+        let date = String(format: "%04d-%02d-01", year, month)
+        let schedule = TeamScheduleDTO(
+            id: UUID(uuidString: "B4F66F4B-95C2-4E52-B9BA-8840185C8843")!,
+            teamId: team.id,
+            content: "정기 팀 회의",
+            description: "이번 달 근무 일정 공유",
+            position: 0,
+            year: year,
+            month: month,
+            dayOfMonth: 1,
+            daysFromStart: 1,
+            totalDays: 1,
+            startDateTime: LocalDateTimeValue(rawValue: "\(date)T09:00:00"),
+            endDateTime: LocalDateTimeValue(rawValue: "\(date)T10:00:00"),
+            createMember: "테스트 관리자",
+            updateMember: "테스트 관리자",
+            curDate: DateOnly(rawValue: date)
+        )
+        var schedules = Array(repeating: [TeamScheduleDTO](), count: days.count)
+        schedules[0] = [schedule]
+        return CalendarFixture(
+            team: team,
+            days: days,
+            schedules: schedules,
+            duties: [],
+            holidays: Array(repeating: [], count: days.count),
+            shifts: []
+        )
+    }
+
+    static func makeManagementTeam() -> TeamDTO {
+        TeamDTO(
+            id: 91,
+            name: "듀티파크 테스트팀",
+            description: "UI 시각 검증용 가입 팀",
+            dutyTypes: [
+                DutyTypeDTO(
+                    id: 701,
+                    teamId: 91,
+                    name: "주간",
+                    position: 0,
+                    color: "#4F7CAC",
+                    hidden: false
+                )
+            ],
+            members: [
+                TeamMemberDTO(
+                    id: 1,
+                    name: "테스트 관리자",
+                    email: "test@duty.park",
+                    isManager: true,
+                    isAdmin: true,
+                    hasProfilePhoto: false,
+                    profilePhotoVersion: 0
+                ),
+                TeamMemberDTO(
+                    id: 2,
+                    name: "김듀티",
+                    email: "member@duty.park",
+                    isManager: false,
+                    isAdmin: false,
+                    hasProfilePhoto: false,
+                    profilePhotoVersion: 0
+                )
+            ],
+            createdDate: LocalDateTimeValue(rawValue: "2026-01-01T00:00:00"),
+            lastModifiedDate: LocalDateTimeValue(rawValue: "2026-01-01T00:00:00"),
+            adminId: 1,
+            adminName: "테스트 관리자",
+            dutyBatchTemplate: nil
+        )
+    }
+}
+#endif
 
 @MainActor
 final class TeamMemberSearchViewModel: ObservableObject {
