@@ -58,6 +58,7 @@
 | 23 | 알림 드롭다운 | 목록을 확인하고 닫아도 iOS만 미읽음 배지와 강조가 계속 남음 | 완료 | `a72a15ca` |
 | 24 | 설정 · 소셜 연결 | Apple 해제 안내가 실제 권한 철회 동작과 반대로 표시됨 | 완료 | `54bc2c42` |
 | 25 | 팀 상세 | 일정이 있는데도 빈 근무 영역에 `이 날의 팀 일정이 없습니다.`가 중복 표시됨 | 완료 | `9b37abb7` |
+| 26 | 게스트 · 이용 안내 | 네이티브 제목만 `이용 안내 및 릴리스 노트`로 길어 웹 본문 제목과 다름 | 완료 | `e60632a0` |
 
 상태는 `대기 → 진행 중 → 수정됨·커밋 전 → 코드 커밋됨·시각 검증 전 → 완료` 순으로 관리한다.
 
@@ -108,6 +109,7 @@
 | `a72a15ca` | 알림 드롭다운 닫기 시 확인한 알림 읽음 처리 | 정책·중복 요청 focused 테스트, generic build·test build, UI 1건 | 닫은 뒤 미읽음 배지 제거 재캡처 | 완료 |
 | `54bc2c42` | Apple 연결 해제의 권한 철회 정책 안내 | exact ko/en 테스트, generic build·test build, UI 1건 | Apple 관리·확인 패널 재캡처 | 완료 |
 | `9b37abb7` | 빈 팀 근무 영역의 일정 없음 오안내 제거 | TeamFeatureTests 27건, generic build·test build, UI 1건 | 일정 카드 유지·거짓 빈 문구 부재 재캡처 | 완료 |
+| `e60632a0` | 게스트 이용 안내 제목을 웹과 통일 | exact ko/en 테스트, generic build, UI 1건 | 네이티브·웹 본문 제목 일치 재캡처 | 완료 |
 
 ## 상세 변경 보고
 
@@ -446,6 +448,14 @@
 - iPhone 13 mini에서 OAuth 가입 프레젠테이션 테스트 6건이 통과했다: `/tmp/Dutypark-SsoSignupConfirmation-20260815-01.xcresult`.
 - DEBUG direct route에서 이름 draft를 입력한 뒤 취소해 정확한 제목·영향 문구·`계속 작성`·`나가기` 버튼을 검증했다.
 - 시각 UI 테스트 1/1 통과: `/tmp/Dutypark-SsoSignupVisual-20260815-02.xcresult`.
+
+### 게스트 이용 안내 제목 — `e60632a0`
+
+<img src="screenshots/guest-guide-title-ios-after.png" width="240" alt="네이티브와 웹 본문이 모두 이용 안내로 표시된 게스트 화면">
+
+- 같은 화면에서 웹 본문은 `이용 안내`인데 네이티브 내비게이션 제목만 `이용 안내 및 릴리스 노트`로 표시되어 제목이 서로 달랐다.
+- 게스트 전용 한·영 제목을 웹과 같은 `이용 안내` / `Guide`로 맞췄다. Root 메뉴와 Settings의 별도 가이드 키는 변경하지 않았다.
+- exact 한·영 테스트와 generic 앱 빌드가 통과했다. iPhone 13 mini UI 테스트 1/1에서 상단 네이티브 제목과 웹 본문 제목이 모두 `이용 안내`로 표시되고 잘림·겹침이 없음을 확인했다: `/tmp/Dutypark-GuestGuideTitle-Green.xcresult`, `/tmp/Dutypark-GuestGuideTitle-UI3.xcresult`.
 
 ### 친구 destructive 확인과 관리 액션 — `38dc5bca`
 
