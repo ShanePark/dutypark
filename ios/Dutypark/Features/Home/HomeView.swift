@@ -917,8 +917,7 @@ enum HomePinnedFriendLiveOrder {
         }
 
         let framesByID = Dictionary(uniqueKeysWithValues: targets.map { ($0.memberID, $0.frame) })
-        guard let sourceFrame = framesByID[draggedID],
-              originalOrder.allSatisfy({ framesByID[$0] != nil }) else {
+        guard let sourceFrame = framesByID[draggedID] else {
             return originalOrder
         }
         var reordered = originalOrder

@@ -48,6 +48,24 @@ final class HomeDashboardTests: XCTestCase {
         XCTAssertEqual(reordered, [2, 3])
     }
 
+    func testPinnedFriendDragReordersWithOnlyVisibleLazyStackTargets() {
+        let targets = [
+            HomePinnedFriendDropTarget(memberID: 21, frame: CGRect(x: 0, y: 0, width: 300, height: 88)),
+            HomePinnedFriendDropTarget(memberID: 22, frame: CGRect(x: 0, y: 96, width: 300, height: 88)),
+            HomePinnedFriendDropTarget(memberID: 23, frame: CGRect(x: 0, y: 192, width: 300, height: 88)),
+            HomePinnedFriendDropTarget(memberID: 24, frame: CGRect(x: 0, y: 288, width: 300, height: 88))
+        ]
+
+        let reordered = HomePinnedFriendLiveOrder.reordered(
+            [21, 22, 23, 24, 25, 26],
+            draggedID: 21,
+            previewFrame: CGRect(x: 0, y: 20, width: 300, height: 88),
+            targets: targets
+        )
+
+        XCTAssertEqual(reordered, [22, 21, 23, 24, 25, 26])
+    }
+
     func testLoadsBothDashboardSectionsAndKeepsPinnedOrder() async throws {
         let myDashboard = try Self.decodeMyDashboard()
         let friendsDashboard = try Self.decodeFriendsDashboard()

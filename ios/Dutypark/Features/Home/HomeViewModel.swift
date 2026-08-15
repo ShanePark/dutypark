@@ -207,12 +207,24 @@ final class HomeViewModel: ObservableObject {
             profilePhotoVersion: 0
         )
         myState = .loaded(DashboardMyDetailDTO(member: member, duty: nil, schedules: []))
-        friendsState = .loaded(DashboardFriendInfoDTO(
-            friends: [
+        let friends = if ProcessInfo.processInfo.arguments.contains("-ui-testing-home-many-pinned") {
+            [
+                uiTestingFriend(id: 31, name: "첫째 친구", dutyType: "주간", pinOrder: 0),
+                uiTestingFriend(id: 32, name: "둘째 친구", dutyType: "야간", pinOrder: 1),
+                uiTestingFriend(id: 33, name: "셋째 친구", dutyType: "휴무", pinOrder: 2),
+                uiTestingFriend(id: 34, name: "넷째 친구", dutyType: "주간", pinOrder: 3),
+                uiTestingFriend(id: 35, name: "다섯째 친구", dutyType: "야간", pinOrder: 4),
+                uiTestingFriend(id: 36, name: "여섯째 친구", dutyType: "휴무", pinOrder: 5),
+            ]
+        } else {
+            [
                 uiTestingFriend(id: 21, name: "김간호", dutyType: "주간", pinOrder: 0),
                 uiTestingFriend(id: 22, name: "박야간", dutyType: "야간", pinOrder: 1),
                 uiTestingFriend(id: 23, name: "이휴무", dutyType: nil, pinOrder: nil),
-            ],
+            ]
+        }
+        friendsState = .loaded(DashboardFriendInfoDTO(
+            friends: friends,
             pendingRequestsTo: [],
             pendingRequestsFrom: []
         ))
