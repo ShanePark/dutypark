@@ -4,6 +4,8 @@ struct TeamView: View {
     @EnvironmentObject private var session: SessionStore
     @StateObject private var viewModel = TeamViewModel()
     @State private var monthPickerPresented = false
+    @State private var scheduleDeletionCandidate: TeamScheduleDTO?
+    @State private var scheduleDeletionIsWorking = false
     private let onOpenCalendar: (MemberID) -> Void
 
     init(onOpenCalendar: @escaping (MemberID) -> Void = { _ in }) {
@@ -80,21 +82,62 @@ struct TeamView: View {
                 Task { await viewModel.goToToday() }
             }
         }
-        .alert(
-            Text("team.common.delete", tableName: "Team"),
+        .fullScreenCover(
             isPresented: Binding(
-                get: { viewModel.schedulePendingDeletion != nil },
-                set: { if !$0 { viewModel.schedulePendingDeletion = nil } }
+                get: { scheduleDeletionCandidate != nil },
+                set: {
+                    if !$0, TeamScheduleDeleteConfirmationPolicy.canDismiss(
+                        isDeleting: scheduleDeletionIsWorking
+                    ) {
+                        clearScheduleDeletion()
+                    }
+                }
             )
         ) {
-            Button(teamLocalized("team.common.delete"), role: .destructive) {
-                Task { await viewModel.deleteSchedule() }
+            if let scheduleDeletionCandidate {
+                DPModalOverlay(
+                    maximumContentWidth: DPConfirmationPanel.maximumWidth,
+                    onDismiss: {
+                        guard TeamScheduleDeleteConfirmationPolicy.canDismiss(
+                            isDeleting: scheduleDeletionIsWorking
+                        ) else { return }
+                        clearScheduleDeletion()
+                    },
+                    canDismiss: TeamScheduleDeleteConfirmationPolicy.canDismiss(
+                        isDeleting: scheduleDeletionIsWorking
+                    )
+                ) { availableSize, dismiss in
+                    DPConfirmationPanel(
+                        title: teamLocalized("team.view.actions.deleteSchedule"),
+                        message: TeamLocalization.scheduleDeletionMessage(
+                            title: scheduleDeletionCandidate.content
+                        ),
+                        confirmTitle: teamLocalized("team.common.delete"),
+                        cancelTitle: teamLocalized("team.common.cancel"),
+                        isDestructive: true,
+                        isWorking: scheduleDeletionIsWorking,
+                        maximumHeight: availableSize.height,
+                        cancel: {
+                            guard TeamScheduleDeleteConfirmationPolicy.canDismiss(
+                                isDeleting: scheduleDeletionIsWorking
+                            ) else { return }
+                            dismiss()
+                        },
+                        confirm: {
+                            deleteSchedule(dismiss: dismiss)
+                        }
+                    )
+                    .alert(
+                        Text("team.common.error", tableName: "Team"),
+                        isPresented: $viewModel.showsError
+                    ) {
+                        Button(teamLocalized("team.common.confirm"), role: .cancel) {}
+                    } message: {
+                        Text("team.common.error", tableName: "Team")
+                    }
+                }
+                .interactiveDismissDisabled(scheduleDeletionIsWorking)
             }
-            Button(teamLocalized("team.common.cancel"), role: .cancel) {
-                viewModel.schedulePendingDeletion = nil
-            }
-        } message: {
-            Text("team.view.schedule.deleteConfirm", tableName: "Team")
         }
     }
 
@@ -310,7 +353,10 @@ struct TeamView: View {
                                             .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
                                     }
                                     .accessibilityLabel(Text("team.view.actions.editSchedule", tableName: "Team"))
-                                    Button { viewModel.schedulePendingDeletion = schedule } label: {
+                                    Button {
+                                        viewModel.schedulePendingDeletion = schedule
+                                        scheduleDeletionCandidate = schedule
+                                    } label: {
                                         Image(systemName: "trash")
                                             .foregroundStyle(DPColor.danger)
                                             .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
@@ -332,6 +378,26 @@ struct TeamView: View {
         .background(DPColor.backgroundCard)
         .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
         .overlay { RoundedRectangle(cornerRadius: DPRadius.standard).stroke(DPColor.borderPrimary) }
+    }
+
+    private func deleteSchedule(dismiss: @escaping () -> Void) {
+        guard TeamScheduleDeleteConfirmationPolicy.canSubmit(
+            isDeleting: scheduleDeletionIsWorking
+        ) else { return }
+
+        scheduleDeletionIsWorking = true
+        Task {
+            await viewModel.deleteSchedule()
+            scheduleDeletionIsWorking = false
+            if viewModel.schedulePendingDeletion == nil {
+                dismiss()
+            }
+        }
+    }
+
+    private func clearScheduleDeletion() {
+        scheduleDeletionCandidate = nil
+        viewModel.schedulePendingDeletion = nil
     }
 
     private var shiftList: some View {
@@ -759,6 +825,24 @@ nonisolated enum TeamLocalization {
         let formatter = DateFormatter()
         formatter.locale = locale
         return formatter.monthSymbols[month - 1]
+    }
+
+    static func scheduleDeletionMessage(title: String) -> String {
+        AppLocalization.format(
+            "team.view.schedule.deleteConfirm",
+            table: "Team",
+            arguments: [title]
+        )
+    }
+}
+
+nonisolated enum TeamScheduleDeleteConfirmationPolicy {
+    static func canSubmit(isDeleting: Bool) -> Bool {
+        !isDeleting
+    }
+
+    static func canDismiss(isDeleting: Bool) -> Bool {
+        !isDeleting
     }
 }
 

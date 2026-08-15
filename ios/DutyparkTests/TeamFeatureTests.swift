@@ -4,6 +4,54 @@ import Testing
 
 @Suite(.serialized)
 struct TeamFeatureTests {
+    @Test(arguments: [false, true])
+    func scheduleDeleteConfirmationOnlyAllowsInteractionWhileIdle(isDeleting: Bool) {
+        #expect(
+            TeamScheduleDeleteConfirmationPolicy.canSubmit(isDeleting: isDeleting)
+                == !isDeleting
+        )
+        #expect(
+            TeamScheduleDeleteConfirmationPolicy.canDismiss(isDeleting: isDeleting)
+                == !isDeleting
+        )
+    }
+
+    @Test @MainActor
+    func scheduleDeleteConfirmationNamesTheScheduleAndExplainsTheIrreversibleImpact() {
+        let defaults = UserDefaults.standard
+        let previousLanguage = defaults.string(forKey: SettingsPreference.languageKey)
+        defer {
+            if let previousLanguage {
+                defaults.set(previousLanguage, forKey: SettingsPreference.languageKey)
+            } else {
+                defaults.removeObject(forKey: SettingsPreference.languageKey)
+            }
+        }
+
+        defaults.set(AppLanguage.korean.rawValue, forKey: SettingsPreference.languageKey)
+        let korean = TeamLocalization.scheduleDeletionMessage(title: "회의")
+        #expect(korean.contains("“회의”"))
+        #expect(korean.contains("삭제된 일정은 복구할 수 없습니다"))
+
+        defaults.set(AppLanguage.english.rawValue, forKey: SettingsPreference.languageKey)
+        let english = TeamLocalization.scheduleDeletionMessage(title: "Meeting")
+        #expect(english.contains("“Meeting”"))
+        #expect(english.contains("Deleted schedules cannot be restored"))
+    }
+
+    @Test
+    func scheduleDeletionUsesCenteredPanelAndKeepsTheGeneralErrorAlert() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark/Features/Team/TeamView.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+
+        #expect(source.contains("DPConfirmationPanel("))
+        #expect(source.contains(".fullScreenCover("))
+        #expect(source.contains("Text(\"team.common.error\", tableName: \"Team\")"))
+    }
+
     @Test @MainActor
     func monthNamesFollowTheAppLanguageInsteadOfTheDeviceCalendar() {
         let defaults = UserDefaults.standard
@@ -389,6 +437,27 @@ struct TeamFeatureTests {
     func closesConfirmationOnlyAfterSuccessfulRequest() {
         #expect(TeamManageModalLogic.shouldDismissConfirmation(didSucceed: true))
         #expect(TeamManageModalLogic.shouldDismissConfirmation(didSucceed: false) == false)
+    }
+
+    @Test
+    func blocksDuplicateTeamConfirmationSubmissionsWhileWorkIsInFlight() {
+        #expect(TeamConfirmationSubmissionPolicy.canSubmit(isSubmitting: false, isWorking: false))
+        #expect(!TeamConfirmationSubmissionPolicy.canSubmit(isSubmitting: true, isWorking: false))
+        #expect(!TeamConfirmationSubmissionPolicy.canSubmit(isSubmitting: false, isWorking: true))
+    }
+
+    @Test
+    func teamManagementConfirmationsUseTheCenteredSharedPanel() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark/Features/Team/TeamManageView.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+
+        #expect(!source.contains("TeamActionConfirmationModal"))
+        #expect(!source.contains(".confirmationDialog("))
+        #expect(source.components(separatedBy: ".alert(").count - 1 == 4)
+        #expect(source.components(separatedBy: "DPConfirmationPanel(").count - 1 >= 3)
     }
 
     @Test
