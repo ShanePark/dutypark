@@ -62,6 +62,24 @@ final class OAuthSignupPresentationTests: XCTestCase {
         )
     }
 
+    func testDiscardConfirmationUsesCenteredPanelAndBlocksExternalDismissalWhileWorking() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark/Features/Auth/SsoSignupView.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+
+        XCTAssertFalse(
+            source.contains(
+                ".alert(\n            oauthString(\"auth.oauth.signup.discard.title\")"
+            )
+        )
+        XCTAssertTrue(source.contains("DPConfirmationPanel("))
+        XCTAssertTrue(source.contains("canDismiss: !isWorking"))
+        XCTAssertTrue(source.contains(".interactiveDismissDisabled(isWorking)"))
+        XCTAssertTrue(source.contains("case .blocked:"))
+    }
+
     func testPresentationStringsResolveInEverySupportedLocale() throws {
         let keys = [
             "auth.oauth.close",

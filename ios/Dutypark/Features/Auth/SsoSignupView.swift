@@ -47,6 +47,7 @@ struct SsoSignupView: View {
     @State private var errorKey: String?
     @State private var displayedPolicy: PolicyDTO?
     @State private var showsDiscardConfirmation = false
+    @State private var dismissesSignupAfterDiscardConfirmation = false
     @FocusState private var isNameFocused: Bool
 
     var body: some View {
@@ -195,16 +196,38 @@ struct SsoSignupView: View {
         }
         .dpKeyboardDismissToolbar()
         .interactiveDismissDisabled(preventsInteractiveDismissal)
-        .alert(
-            oauthString("auth.oauth.signup.discard.title"),
-            isPresented: $showsDiscardConfirmation
+        .fullScreenCover(
+            isPresented: Binding(
+                get: { showsDiscardConfirmation },
+                set: { isPresented in
+                    guard !isPresented, !isWorking else { return }
+                    showsDiscardConfirmation = false
+                    dismissesSignupAfterDiscardConfirmation = false
+                }
+            )
         ) {
-            Button(oauthString("auth.oauth.signup.discard.action"), role: .destructive) {
-                dismiss()
+            DPModalOverlay(
+                maximumContentWidth: DPConfirmationPanel.maximumWidth,
+                onDismiss: finishDiscardConfirmationDismissal,
+                canDismiss: !isWorking
+            ) { availableSize, confirmationDismiss in
+                DPConfirmationPanel(
+                    title: oauthString("auth.oauth.signup.discard.title"),
+                    message: oauthString("auth.oauth.signup.discard.message"),
+                    confirmTitle: oauthString("auth.oauth.signup.discard.action"),
+                    cancelTitle: oauthString("auth.oauth.signup.discard.continue"),
+                    isDestructive: true,
+                    isWorking: isWorking,
+                    maximumHeight: availableSize.height,
+                    cancel: confirmationDismiss,
+                    confirm: {
+                        guard !isWorking else { return }
+                        dismissesSignupAfterDiscardConfirmation = true
+                        confirmationDismiss()
+                    }
+                )
             }
-            Button(oauthString("auth.oauth.signup.discard.continue"), role: .cancel) {}
-        } message: {
-            Text(oauthString("auth.oauth.signup.discard.message"))
+            .interactiveDismissDisabled(isWorking)
         }
         .sheet(
             isPresented: Binding(
@@ -371,6 +394,13 @@ struct SsoSignupView: View {
         case .blocked:
             break
         }
+    }
+
+    private func finishDiscardConfirmationDismissal() {
+        showsDiscardConfirmation = false
+        guard dismissesSignupAfterDiscardConfirmation else { return }
+        dismissesSignupAfterDiscardConfirmation = false
+        dismiss()
     }
 
     private func submit() {
