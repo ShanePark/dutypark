@@ -79,6 +79,40 @@ final class TeamParityVisualUITests: XCTestCase {
     }
 
     @MainActor
+    func testResetLeadConfirmationNamesTheCurrentLeadAndFitsThePanel() {
+        let app = launchTeamFixture()
+        defer { app.terminate() }
+
+        let manageTeam = app.buttons["팀 관리"].firstMatch
+        XCTAssertTrue(manageTeam.waitForExistence(timeout: 10))
+        manageTeam.tap()
+
+        XCTAssertTrue(app.staticTexts["듀티파크 테스트팀 관리"].waitForExistence(timeout: 10))
+        let resetLead = app.buttons["대표 취소"].firstMatch
+        scrollUntilHittable(resetLead, in: app)
+        XCTAssertTrue(resetLead.isHittable)
+        resetLead.tap()
+
+        let cancel = app.buttons["dp.confirmation.cancel"]
+        let confirm = app.buttons["dp.confirmation.confirm"]
+        let message = app.staticTexts["김듀티 님의 팀 대표 권한을 초기화하시겠습니까?"]
+        XCTAssertTrue(cancel.waitForExistence(timeout: 10))
+        XCTAssertTrue(confirm.waitForExistence(timeout: 10))
+        XCTAssertTrue(message.exists)
+        XCTAssertEqual(cancel.label, "취소")
+        XCTAssertEqual(confirm.label, "대표 취소")
+        XCTAssertTrue(app.staticTexts["대표 취소"].exists)
+        XCTAssertEqual((cancel.frame.midX + confirm.frame.midX) / 2, app.frame.midX, accuracy: 20)
+        XCTAssertGreaterThanOrEqual(message.frame.minX, app.frame.minX)
+        XCTAssertLessThanOrEqual(message.frame.maxX, app.frame.maxX)
+        XCTAssertGreaterThanOrEqual(cancel.frame.minY, app.frame.minY)
+        XCTAssertLessThanOrEqual(confirm.frame.maxY, app.frame.maxY)
+        capture("parity-ios-team-reset-lead-confirmation-after")
+
+        // The destructive confirmation is intentionally left unsubmitted.
+    }
+
+    @MainActor
     private func launchTeamFixture() -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += [

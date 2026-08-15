@@ -516,7 +516,7 @@ private nonisolated enum TeamUITestingFixture {
                     name: "테스트 관리자",
                     email: "test@duty.park",
                     isManager: true,
-                    isAdmin: true,
+                    isAdmin: false,
                     hasProfilePhoto: false,
                     profilePhotoVersion: 0
                 ),
@@ -524,16 +524,16 @@ private nonisolated enum TeamUITestingFixture {
                     id: 2,
                     name: "김듀티",
                     email: "member@duty.park",
-                    isManager: false,
-                    isAdmin: false,
+                    isManager: true,
+                    isAdmin: true,
                     hasProfilePhoto: false,
                     profilePhotoVersion: 0
                 )
             ],
             createdDate: LocalDateTimeValue(rawValue: "2026-01-01T00:00:00"),
             lastModifiedDate: LocalDateTimeValue(rawValue: "2026-01-01T00:00:00"),
-            adminId: 1,
-            adminName: "테스트 관리자",
+            adminId: 2,
+            adminName: "김듀티",
             dutyBatchTemplate: nil
         )
     }

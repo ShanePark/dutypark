@@ -542,7 +542,16 @@ struct TeamManageView: View {
             key = "team.manage.messages.unassignManagerConfirm"
             memberID = id
         case .changeAdmin(let id):
-            guard let id else { return teamLocalized("team.manage.messages.resetAdminConfirm") }
+            guard let id else {
+                let team = viewModel.team
+                let name = TeamManageConfirmationCopy.currentAdminName(
+                    adminName: team?.adminName,
+                    adminID: team?.adminId,
+                    members: team?.members ?? [],
+                    fallback: teamLocalized("team.manage.labels.notAvailable")
+                )
+                return TeamManageConfirmationCopy.resetAdminMessage(name: name)
+            }
             key = "team.manage.messages.changeAdminConfirm"
             memberID = id
         }
@@ -573,6 +582,39 @@ struct TeamManageView: View {
             case .addManager, .changeAdmin: false
             }
         }
+    }
+}
+
+nonisolated enum TeamManageConfirmationCopy {
+    static func currentAdminName(
+        adminName: String?,
+        adminID: MemberID?,
+        members: [TeamMemberDTO],
+        fallback: String
+    ) -> String {
+        if let adminName = nonempty(adminName) {
+            return adminName
+        }
+        if let adminID,
+           let memberName = nonempty(members.first(where: { $0.id == adminID })?.name) {
+            return memberName
+        }
+        return fallback
+    }
+
+    static func resetAdminMessage(name: String) -> String {
+        AppLocalization.format(
+            "team.manage.messages.resetAdminConfirm",
+            table: "Team",
+            arguments: [name]
+        )
+    }
+
+    private static func nonempty(_ value: String?) -> String? {
+        guard let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !trimmed.isEmpty
+        else { return nil }
+        return trimmed
     }
 }
 

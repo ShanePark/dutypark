@@ -71,7 +71,7 @@
     "team.manage.messages.deleteTeamConfirm" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Delete this team?"}},"ko":{"stringUnit":{"state":"translated","value":"정말로 이 팀을 삭제하시겠습니까?"}}}},
     "team.manage.messages.fetchFailed" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Failed to load team information."}},"ko":{"stringUnit":{"state":"translated","value":"팀 정보를 불러오는데 실패했습니다."}}}},
     "team.manage.messages.removeMemberConfirm" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Remove %@ from the team?"}},"ko":{"stringUnit":{"state":"translated","value":"%@ 님을 팀에서 제외하시겠습니까?"}}}},
-    "team.manage.messages.resetAdminConfirm" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Reset the team lead?"}},"ko":{"stringUnit":{"state":"translated","value":"팀 대표를 초기화하시겠습니까?"}}}},
+    "team.manage.messages.resetAdminConfirm" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Remove %@ as the team lead?"}},"ko":{"stringUnit":{"state":"translated","value":"%@ 님의 팀 대표 권한을 초기화하시겠습니까?"}}}},
     "team.manage.messages.updateFailed" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Failed to update the team."}},"ko":{"stringUnit":{"state":"translated","value":"팀 변경에 실패했습니다."}}}},
     "team.manage.messages.updateSuccess" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"The team has been updated."}},"ko":{"stringUnit":{"state":"translated","value":"팀 정보가 변경되었습니다."}}}},
     "team.manage.title" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Manage %@"}},"ko":{"stringUnit":{"state":"translated","value":"%@ 관리"}}}},

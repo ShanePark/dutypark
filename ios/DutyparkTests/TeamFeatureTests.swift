@@ -139,6 +139,71 @@ struct TeamFeatureTests {
     }
 
     @Test @MainActor
+    func resetLeadConfirmationNamesTheCurrentLeadInEachAppLanguage() {
+        let defaults = UserDefaults.standard
+        let previousLanguage = defaults.string(forKey: SettingsPreference.languageKey)
+        defer {
+            if let previousLanguage {
+                defaults.set(previousLanguage, forKey: SettingsPreference.languageKey)
+            } else {
+                defaults.removeObject(forKey: SettingsPreference.languageKey)
+            }
+        }
+
+        defaults.set(AppLanguage.korean.rawValue, forKey: SettingsPreference.languageKey)
+        #expect(
+            TeamManageConfirmationCopy.resetAdminMessage(name: "테스트 관리자")
+                == "테스트 관리자 님의 팀 대표 권한을 초기화하시겠습니까?"
+        )
+
+        defaults.set(AppLanguage.english.rawValue, forKey: SettingsPreference.languageKey)
+        #expect(
+            TeamManageConfirmationCopy.resetAdminMessage(name: "Test Admin")
+                == "Remove Test Admin as the team lead?"
+        )
+    }
+
+    @Test
+    func resolvesTheCurrentLeadNameFromPayloadThenMemberFallback() {
+        let members = [
+            TeamMemberDTO(
+                id: 1,
+                name: "Member Lead",
+                email: nil,
+                isManager: true,
+                isAdmin: true,
+                hasProfilePhoto: false,
+                profilePhotoVersion: 0
+            )
+        ]
+
+        #expect(
+            TeamManageConfirmationCopy.currentAdminName(
+                adminName: "Payload Lead",
+                adminID: 1,
+                members: members,
+                fallback: "N/A"
+            ) == "Payload Lead"
+        )
+        #expect(
+            TeamManageConfirmationCopy.currentAdminName(
+                adminName: "  ",
+                adminID: 1,
+                members: members,
+                fallback: "N/A"
+            ) == "Member Lead"
+        )
+        #expect(
+            TeamManageConfirmationCopy.currentAdminName(
+                adminName: nil,
+                adminID: nil,
+                members: members,
+                fallback: "N/A"
+            ) == "N/A"
+        )
+    }
+
+    @Test @MainActor
     func reportsManagementMutationFailureWithoutLosingRetryState() async {
         TeamURLProtocolStub.handler = { request in
             Self.response(request, status: 503)
