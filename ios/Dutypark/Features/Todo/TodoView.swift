@@ -529,6 +529,7 @@ struct TodoView: View {
                     .scrollIndicators(.hidden)
                     .scrollTargetBehavior(.viewAligned(limitBehavior: .always))
                     .scrollPosition(id: $visibleStatus, anchor: .center)
+                    .scrollDisabled(draggedTodoID != nil)
                     .refreshable { await model.refresh() }
                     .task(id: model.selectedStatus.rawValue) {
                         let status = model.selectedStatus
@@ -547,21 +548,9 @@ struct TodoView: View {
         let columns = Dictionary(
             uniqueKeysWithValues: TodoStatus.boardStatuses.map { ($0, model.todos(for: $0)) }
         )
-        let activePlacement: TodoDragPlacement? = draggedTodoID.flatMap { todoID in
-            guard let todo = draggedTodo(withID: todoID) else { return nil }
-            return dragTargetStatus.flatMap {
-                guard $0 == todo.status else { return nil }
-                return TodoDragPlacement(
-                    todoID: todoID,
-                    destinationStatus: $0,
-                    targetTodoID: dragTargetTodoID,
-                    insertAfter: dragInsertAfter
-                )
-            }
-        }
-        return TodoDragProjection.columns(
-            projecting: activePlacement ?? pendingDropPlacement,
-            from: columns
+        return TodoDragPresentation.columns(
+            from: columns,
+            pendingDropPlacement: pendingDropPlacement
         )[status] ?? []
     }
 }
@@ -1008,6 +997,18 @@ struct TodoDragPlacement: Equatable {
     let destinationStatus: TodoStatus
     let targetTodoID: TodoID?
     let insertAfter: Bool
+}
+
+enum TodoDragPresentation {
+    static func columns(
+        from columns: [TodoStatus: [TodoDTO]],
+        pendingDropPlacement: TodoDragPlacement?
+    ) -> [TodoStatus: [TodoDTO]] {
+        TodoDragProjection.columns(
+            projecting: pendingDropPlacement,
+            from: columns
+        )
+    }
 }
 
 enum TodoDragProjection {

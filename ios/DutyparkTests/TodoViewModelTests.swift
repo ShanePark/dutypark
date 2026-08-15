@@ -465,7 +465,7 @@ struct TodoViewModelTests {
     }
 
     @Test
-    func interactiveDragProjectionMovesTheFullCardAndPushesAdjacentItemsBeforeDrop() {
+    func cardDragKeepsTheBoardFixedUntilDropThenProjectsTheCommittedPlacement() {
         let first = makeTodo(
             id: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!,
             title: "First"
@@ -484,27 +484,33 @@ struct TodoViewModelTests {
             .done: []
         ]
 
-        let projected = TodoDragProjection.columns(
-            projecting: TodoDragPlacement(
+        let duringInteractiveDrag = TodoDragPresentation.columns(
+            from: original,
+            pendingDropPlacement: nil
+        )
+        #expect(duringInteractiveDrag == original)
+
+        let projected = TodoDragPresentation.columns(
+            from: original,
+            pendingDropPlacement: TodoDragPlacement(
                 todoID: moving.uuid,
                 destinationStatus: .todo,
                 targetTodoID: last.uuid,
                 insertAfter: true
-            ),
-            from: original
+            )
         )
 
         #expect(projected[.todo]?.map(\.uuid) == [first.uuid, last.uuid, moving.uuid])
         #expect(original[.todo]?.map(\.uuid) == [first.uuid, moving.uuid, last.uuid])
 
-        let crossColumnProjection = TodoDragProjection.columns(
-            projecting: TodoDragPlacement(
+        let crossColumnProjection = TodoDragPresentation.columns(
+            from: original,
+            pendingDropPlacement: TodoDragPlacement(
                 todoID: moving.uuid,
                 destinationStatus: .inProgress,
                 targetTodoID: nil,
                 insertAfter: false
-            ),
-            from: original
+            )
         )
         #expect(crossColumnProjection == original)
     }

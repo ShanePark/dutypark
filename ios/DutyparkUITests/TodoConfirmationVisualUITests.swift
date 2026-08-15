@@ -119,22 +119,42 @@ final class TodoConfirmationVisualUITests: XCTestCase {
         let secondCard = app.descendants(matching: .any)[
             "todo.card.A11CE000-0000-4000-8000-000000000002"
         ]
+        let column = app.scrollViews["todo.column.IN_PROGRESS"]
+        let inProgressLabels = app.staticTexts.matching(
+            NSPredicate(format: "label == %@", "진행중")
+        )
         XCTAssertTrue(firstCard.waitForExistence(timeout: 10))
         XCTAssertTrue(secondCard.waitForExistence(timeout: 10))
+        XCTAssertTrue(column.waitForExistence(timeout: 10))
+        XCTAssertGreaterThanOrEqual(inProgressLabels.count, 2)
+        let columnHeader = inProgressLabels.allElementsBoundByIndex.max {
+            $0.frame.minY < $1.frame.minY
+        }!
         XCTAssertLessThan(firstCard.frame.minY, secondCard.frame.minY)
+        let initialColumnFrame = column.frame
+        let initialHeaderFrame = columnHeader.frame
+        let initialSecondCardFrame = secondCard.frame
 
-        firstCard.press(
+        firstCard.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).press(
             forDuration: 0.5,
-            thenDragTo: secondCard,
+            thenDragTo: secondCard.coordinate(withNormalizedOffset: CGVector(dx: 0.82, dy: 0.82)),
             withVelocity: .slow,
             thenHoldForDuration: 0.2
         )
 
         XCTAssertGreaterThan(firstCard.frame.minY, secondCard.frame.minY)
+        XCTAssertEqual(column.frame.minX, initialColumnFrame.minX, accuracy: 1)
+        XCTAssertEqual(column.frame.width, initialColumnFrame.width, accuracy: 1)
+        XCTAssertEqual(columnHeader.frame.minX, initialHeaderFrame.minX, accuracy: 1)
+        XCTAssertEqual(columnHeader.frame.minY, initialHeaderFrame.minY, accuracy: 1)
+        XCTAssertEqual(columnHeader.frame.width, initialHeaderFrame.width, accuracy: 1)
+        XCTAssertEqual(secondCard.frame.minX, initialSecondCardFrame.minX, accuracy: 1)
+        XCTAssertEqual(secondCard.frame.width, initialSecondCardFrame.width, accuracy: 1)
         XCTAssertFalse(
             app.buttons.matching(NSPredicate(format: "label == %@", "삭제")).firstMatch.exists,
             "A completed long-press drag must not also open the Todo detail."
         )
+        capture("parity-ios-todo-card-only-drag-after")
     }
 
     @MainActor
