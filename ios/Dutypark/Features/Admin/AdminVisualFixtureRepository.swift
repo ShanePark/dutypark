@@ -68,13 +68,38 @@ nonisolated struct AdminVisualFixtureRepository: AdminRepositoryProtocol, Sendab
             todoCount: 2,
             inProgressTodoCount: 1,
             doneTodoCount: 5,
-            overdueTodoCount: 0,
+            overdueTodoCount: 1,
             dueTodayTodoCount: 1,
-            dDays: [],
+            dDays: [
+                DDayDTO(
+                    id: 1,
+                    title: "공개 일정",
+                    date: DateOnly(rawValue: "2026-08-20"),
+                    isPrivate: false,
+                    calc: 0,
+                    daysLeft: 5
+                ),
+                DDayDTO(
+                    id: 2,
+                    title: "비공개 일정",
+                    date: DateOnly(rawValue: "2026-09-01"),
+                    isPrivate: true,
+                    calc: 0,
+                    daysLeft: 17
+                ),
+                DDayDTO(
+                    id: 3,
+                    title: "또 다른 공개 일정",
+                    date: DateOnly(rawValue: "2026-10-01"),
+                    isPrivate: false,
+                    calc: 0,
+                    daysLeft: 47
+                ),
+            ],
             friendCount: 4,
             familyCount: 2,
-            pendingReceivedFriendRequestCount: 0,
-            pendingSentFriendRequestCount: 0,
+            pendingReceivedFriendRequestCount: 2,
+            pendingSentFriendRequestCount: 1,
             managerCount: 1,
             managedMemberCount: 0,
             managerNames: ["Dutypark 관리자"],

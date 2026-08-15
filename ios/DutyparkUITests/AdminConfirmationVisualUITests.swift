@@ -6,6 +6,46 @@ final class AdminConfirmationVisualUITests: XCTestCase {
     }
 
     @MainActor
+    func testCapturesMemberDetailStatusMetricsParity() throws {
+        let app = launchServiceAdminApp()
+        defer { app.terminate() }
+
+        openAdministration(in: app)
+        app.staticTexts["회원 관리"].firstMatch.tap()
+
+        let fixtureMember = app.staticTexts["관리자 검증 회원"].firstMatch
+        XCTAssertTrue(fixtureMember.waitForExistence(timeout: 10))
+        fixtureMember.tap()
+
+        let list = app.collectionViews.firstMatch
+        XCTAssertTrue(scrollToText("일정 요약", in: app, list: list))
+        XCTAssertTrue(scrollToText("직접 등록", in: app, list: list))
+        XCTAssertTrue(scrollToText("다가오는 일정", in: app, list: list))
+        XCTAssertTrue(scrollToText("태그됨", in: app, list: list))
+        XCTAssertTrue(scrollToText("할 일 요약", in: app, list: list))
+        XCTAssertTrue(scrollToText("진행 중", in: app, list: list))
+        XCTAssertTrue(scrollToText("완료", in: app, list: list))
+        XCTAssertTrue(scrollToText("기한 초과 할 일", in: app, list: list))
+        XCTAssertTrue(scrollToText("오늘 마감", in: app, list: list))
+
+        let activityAttachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        activityAttachment.name = "parity-ios-admin-member-schedule-todo-metrics-ko-dark"
+        activityAttachment.lifetime = .keepAlways
+        add(activityAttachment)
+
+        XCTAssertTrue(scrollToText("디데이", in: app, list: list))
+        XCTAssertTrue(scrollToText("공개", in: app, list: list))
+        XCTAssertTrue(scrollToText("비공개", in: app, list: list))
+        XCTAssertTrue(scrollToText("받은 친구 요청", in: app, list: list))
+        XCTAssertTrue(scrollToText("보낸 친구 요청", in: app, list: list))
+
+        let relationshipAttachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        relationshipAttachment.name = "parity-ios-admin-member-dday-request-metrics-ko-dark"
+        relationshipAttachment.lifetime = .keepAlways
+        add(relationshipAttachment)
+    }
+
+    @MainActor
     func testCapturesMemberActiveSessionCountParity() throws {
         let app = launchServiceAdminApp()
         defer { app.terminate() }
@@ -97,6 +137,15 @@ final class AdminConfirmationVisualUITests: XCTestCase {
         XCTAssertTrue(
             app.descendants(matching: .any)["screen.admin"].waitForExistence(timeout: 20)
         )
+    }
+
+    @MainActor
+    private func scrollToText(_ text: String, in app: XCUIApplication, list: XCUIElement) -> Bool {
+        let element = app.staticTexts[text].firstMatch
+        for _ in 0..<8 where !element.exists {
+            list.swipeUp()
+        }
+        return element.waitForExistence(timeout: 2)
     }
 
     @MainActor

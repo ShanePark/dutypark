@@ -985,6 +985,96 @@
         }
       }
     },
+    "admin.members.dDaySummary": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "D-Days" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "디데이" } }
+      }
+    },
+    "admin.members.directCreatedSchedules": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Directly created" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "직접 등록" } }
+      }
+    },
+    "admin.members.doneTodos": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Done" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "완료" } }
+      }
+    },
+    "admin.members.dueTodayTodos": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Due today" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "오늘 마감" } }
+      }
+    },
+    "admin.members.inProgressTodos": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "In progress" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "진행 중" } }
+      }
+    },
+    "admin.members.pendingTodos": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Pending" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "할 일" } }
+      }
+    },
+    "admin.members.privateDDays": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Private" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "비공개" } }
+      }
+    },
+    "admin.members.publicDDays": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Public" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "공개" } }
+      }
+    },
+    "admin.members.receivedFriendRequests": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Received requests" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "받은 친구 요청" } }
+      }
+    },
+    "admin.members.scheduleSummary": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Schedule summary" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "일정 요약" } }
+      }
+    },
+    "admin.members.sentFriendRequests": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Sent requests" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "보낸 친구 요청" } }
+      }
+    },
+    "admin.members.taggedSchedules": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Tagged" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "태그됨" } }
+      }
+    },
+    "admin.members.todoSummary": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Task summary" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "할 일 요약" } }
+      }
+    },
+    "admin.members.totalDDays": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Total" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "전체" } }
+      }
+    },
+    "admin.members.totalTodos": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Total" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "전체" } }
+      }
+    },
     "admin.nav.apiDocumentation": {
       "localizations": {
         "en": {

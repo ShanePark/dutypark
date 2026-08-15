@@ -4,6 +4,28 @@ import Testing
 
 @Suite("Admin feature", .serialized)
 struct AdminFeatureTests {
+    @Test("Admin member detail exposes every web status metric")
+    func memberDetailStatusMetrics() {
+        let metrics = AdminMemberDetailMetricsPresentation(
+            totalScheduleCount: 12,
+            upcomingScheduleCount: 3,
+            taggedScheduleCount: 2,
+            todoCount: 4,
+            inProgressTodoCount: 2,
+            doneTodoCount: 7,
+            overdueTodoCount: 1,
+            dueTodayTodoCount: 5,
+            dDayPrivacy: [false, true, false],
+            pendingReceivedFriendRequestCount: 6,
+            pendingSentFriendRequestCount: 8
+        )
+
+        #expect(metrics.scheduleCounts == [12, 3, 2])
+        #expect(metrics.todoCounts == [4, 2, 7, 1, 5])
+        #expect(metrics.dDayCounts == [3, 2, 1])
+        #expect(metrics.friendRequestCounts == [6, 8])
+    }
+
     @Test("Admin member rows describe active-session counts exactly like the web")
     func memberActiveSessionCountPresentation() {
         #expect(AdminMemberSessionCountPresentation.text(count: 2, locale: Locale(identifier: "ko")) == "2개의 활성 세션")

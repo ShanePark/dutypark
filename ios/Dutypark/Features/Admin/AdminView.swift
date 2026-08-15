@@ -272,6 +272,79 @@ nonisolated enum AdminMemberSessionCountPresentation {
     }
 }
 
+nonisolated struct AdminMemberDetailMetricsPresentation: Equatable, Sendable {
+    let directCreatedScheduleCount: Int64
+    let upcomingScheduleCount: Int64
+    let taggedScheduleCount: Int64
+    let pendingTodoCount: Int64
+    let inProgressTodoCount: Int64
+    let doneTodoCount: Int64
+    let overdueTodoCount: Int64
+    let dueTodayTodoCount: Int64
+    let totalDDayCount: Int
+    let publicDDayCount: Int
+    let privateDDayCount: Int
+    let receivedFriendRequestCount: Int64
+    let sentFriendRequestCount: Int64
+
+    var scheduleCounts: [Int64] {
+        [directCreatedScheduleCount, upcomingScheduleCount, taggedScheduleCount]
+    }
+
+    var todoCounts: [Int64] {
+        [pendingTodoCount, inProgressTodoCount, doneTodoCount, overdueTodoCount, dueTodayTodoCount]
+    }
+
+    var dDayCounts: [Int] { [totalDDayCount, publicDDayCount, privateDDayCount] }
+    var friendRequestCounts: [Int64] { [receivedFriendRequestCount, sentFriendRequestCount] }
+
+    init(
+        totalScheduleCount: Int64,
+        upcomingScheduleCount: Int64,
+        taggedScheduleCount: Int64,
+        todoCount: Int64,
+        inProgressTodoCount: Int64,
+        doneTodoCount: Int64,
+        overdueTodoCount: Int64,
+        dueTodayTodoCount: Int64,
+        dDayPrivacy: [Bool],
+        pendingReceivedFriendRequestCount: Int64,
+        pendingSentFriendRequestCount: Int64
+    ) {
+        directCreatedScheduleCount = totalScheduleCount
+        self.upcomingScheduleCount = upcomingScheduleCount
+        self.taggedScheduleCount = taggedScheduleCount
+        pendingTodoCount = todoCount
+        self.inProgressTodoCount = inProgressTodoCount
+        self.doneTodoCount = doneTodoCount
+        self.overdueTodoCount = overdueTodoCount
+        self.dueTodayTodoCount = dueTodayTodoCount
+
+        let privateCount = dDayPrivacy.count(where: { $0 })
+        totalDDayCount = dDayPrivacy.count
+        publicDDayCount = dDayPrivacy.count - privateCount
+        privateDDayCount = privateCount
+        receivedFriendRequestCount = pendingReceivedFriendRequestCount
+        sentFriendRequestCount = pendingSentFriendRequestCount
+    }
+
+    init(detail: AdminMemberDetailDTO) {
+        self.init(
+            totalScheduleCount: detail.totalScheduleCount,
+            upcomingScheduleCount: detail.upcomingScheduleCount,
+            taggedScheduleCount: detail.taggedScheduleCount,
+            todoCount: detail.todoCount,
+            inProgressTodoCount: detail.inProgressTodoCount,
+            doneTodoCount: detail.doneTodoCount,
+            overdueTodoCount: detail.overdueTodoCount,
+            dueTodayTodoCount: detail.dueTodayTodoCount,
+            dDayPrivacy: detail.dDays.map(\.isPrivate),
+            pendingReceivedFriendRequestCount: detail.pendingReceivedFriendRequestCount,
+            pendingSentFriendRequestCount: detail.pendingSentFriendRequestCount
+        )
+    }
+}
+
 private struct AdminMemberDetailView: View {
     let member: AdminMemberDTO
     @ObservedObject var model: AdminMemberListViewModel
@@ -401,6 +474,8 @@ private struct AdminMemberDetailView: View {
 
     @ViewBuilder
     private func detailSections(_ detail: AdminMemberDetailDTO) -> some View {
+        let metrics = AdminMemberDetailMetricsPresentation(detail: detail)
+
         Section(AdminLocalization.string("admin.members.account")) {
             LabeledContent(AdminLocalization.string("admin.members.role.serviceAdmin"), value: yesNo(detail.serviceAdmin))
             LabeledContent(AdminLocalization.string("admin.members.role.teamAdmin"), value: yesNo(detail.teamAdmin))
@@ -410,17 +485,36 @@ private struct AdminMemberDetailView: View {
             LabeledContent(AdminLocalization.string("admin.members.lastActive"), value: detail.lastActiveAt?.rawValue ?? "-")
         }
 
+        Section(AdminLocalization.string("admin.members.scheduleSummary")) {
+            LabeledContent(AdminLocalization.string("admin.members.directCreatedSchedules"), value: metrics.directCreatedScheduleCount.formatted())
+            LabeledContent(AdminLocalization.string("admin.members.upcomingSchedules"), value: metrics.upcomingScheduleCount.formatted())
+            LabeledContent(AdminLocalization.string("admin.members.taggedSchedules"), value: metrics.taggedScheduleCount.formatted())
+        }
+
+        Section(AdminLocalization.string("admin.members.todoSummary")) {
+            LabeledContent(AdminLocalization.string("admin.members.totalTodos"), value: detail.totalTodoCount.formatted())
+            LabeledContent(AdminLocalization.string("admin.members.pendingTodos"), value: metrics.pendingTodoCount.formatted())
+            LabeledContent(AdminLocalization.string("admin.members.inProgressTodos"), value: metrics.inProgressTodoCount.formatted())
+            LabeledContent(AdminLocalization.string("admin.members.doneTodos"), value: metrics.doneTodoCount.formatted())
+            LabeledContent(AdminLocalization.string("admin.members.overdueTodos"), value: metrics.overdueTodoCount.formatted())
+            LabeledContent(AdminLocalization.string("admin.members.dueTodayTodos"), value: metrics.dueTodayTodoCount.formatted())
+        }
+
+        Section(AdminLocalization.string("admin.members.dDaySummary")) {
+            LabeledContent(AdminLocalization.string("admin.members.totalDDays"), value: metrics.totalDDayCount.formatted())
+            LabeledContent(AdminLocalization.string("admin.members.publicDDays"), value: metrics.publicDDayCount.formatted())
+            LabeledContent(AdminLocalization.string("admin.members.privateDDays"), value: metrics.privateDDayCount.formatted())
+        }
+
         Section(AdminLocalization.string("admin.members.activity")) {
-            LabeledContent(AdminLocalization.string("admin.members.schedules"), value: detail.totalScheduleCount.formatted())
-            LabeledContent(AdminLocalization.string("admin.members.upcomingSchedules"), value: detail.upcomingScheduleCount.formatted())
-            LabeledContent(AdminLocalization.string("admin.members.todos"), value: detail.totalTodoCount.formatted())
-            LabeledContent(AdminLocalization.string("admin.members.overdueTodos"), value: detail.overdueTodoCount.formatted())
             LabeledContent(AdminLocalization.string("admin.members.notifications"), value: detail.totalNotificationCount.formatted())
         }
 
         Section(AdminLocalization.string("admin.members.relationships")) {
             LabeledContent(AdminLocalization.string("admin.members.friends"), value: detail.friendCount.formatted())
             LabeledContent(AdminLocalization.string("admin.members.family"), value: detail.familyCount.formatted())
+            LabeledContent(AdminLocalization.string("admin.members.receivedFriendRequests"), value: metrics.receivedFriendRequestCount.formatted())
+            LabeledContent(AdminLocalization.string("admin.members.sentFriendRequests"), value: metrics.sentFriendRequestCount.formatted())
             LabeledContent(AdminLocalization.string("admin.members.managers"), value: detail.managerCount.formatted())
             LabeledContent(AdminLocalization.string("admin.members.managedMembers"), value: detail.managedMemberCount.formatted())
         }
