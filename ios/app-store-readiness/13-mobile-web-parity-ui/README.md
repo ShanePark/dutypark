@@ -44,6 +44,7 @@
 | 9 | 전역 확인 UI | destructive 확인 UI가 터치 위치와 무관한 시스템 시트로 표시됨 | 부분 완료 | `de46f754`, `92f3fa66`, `def118e2`, `b7bdc8ae`, `2316075a`, `84047661`, `bd3a1fc4`, `2ecdbb70`, `8a6a3aae`, `a19f4047`, `cc673095`, `38dc5bca` |
 | 10 | 친구관리 상세 | UI 테스트에서 실 API를 호출해 화면 진입 종료 | 완료 | `f5da2cd1`, `24814f20` |
 | 11 | 친구관리 상세 | 존재하지 않는 SF Symbol로 `더보기` 버튼이 0×0이고 터치 불가 | 완료 | `38dc5bca` |
+| 12 | 달력 · 월 일괄 변경 | 한국어 연도가 `2,026년`으로 숫자 그룹화됨 | 완료 | `c47a77ea` |
 
 상태는 `대기 → 진행 중 → 수정됨·커밋 전 → 코드 커밋됨·시각 검증 전 → 완료` 순으로 관리한다.
 
@@ -70,6 +71,9 @@
 | `a19f4047` | 소셜 계정 연결 해제 중앙 확인 | iPhone 13 mini 전용 테스트 3건 | 설정 화면 확보, 연결 관리 fixture 대기 | 코드·테스트 완료·캡처 대기 |
 | `cc673095` | SSO 추가정보 draft 폐기 중앙 확인 | iPhone 13 mini OAuth 가입 테스트 6건 | 인증 fixture 부재 | 코드·테스트 완료·캡처 대기 |
 | `38dc5bca` | 친구 destructive 확인 4종 및 `더보기` 터치 복원 | Social 19건·재정렬 UI·삭제 패널 UI | 친구 삭제 중앙 패널 확보 | 완료 |
+| `c47a77ea` | 달력 연도 치환의 천 단위 구분 제거 | 앱·테스트 빌드, exact 한국어 문자열 회귀 테스트 | 수정 후 월 일괄 변경 화면 재캡처 | 완료 |
+| `f390c6bc` | 달력 월 일괄 변경 시각 fixture | iPhone 13 mini UI 1건 | 중앙 선택 패널·`2026년` 표기 확보 | 완료 |
+| `22d0bc18` | 설정·Root 확인 패널 시각 fixture | iPhone 13 mini UI 3건 및 안정화 재캡처 1건 | 프로필 삭제·설정 로그아웃·메뉴 로그아웃 확보 | 완료 |
 
 ## 상세 변경 보고
 
@@ -175,14 +179,15 @@
 
 ### 설정 계정·프로필 확인 — `84047661`
 
-| 웹 설정 기준 | iOS 설정 |
-| --- | --- |
-| <img src="screenshots/settings-web-ko.png" width="240" alt="모바일 웹 설정"> | <img src="screenshots/settings-ios-after.png" width="240" alt="iOS 설정"> |
+| 웹 설정 기준 | 프로필 사진 삭제 | 설정 로그아웃 |
+| --- | --- | --- |
+| <img src="screenshots/settings-web-ko.png" width="240" alt="모바일 웹 설정"> | <img src="screenshots/profile-photo-delete-confirmation-ios-after.png" width="240" alt="iOS 프로필 사진 삭제 확인"> | <img src="screenshots/settings-logout-confirmation-ios-after.png" width="240" alt="iOS 설정 로그아웃 확인"> |
 
 - 프로필 사진 삭제, 로그아웃, 관리자 해제, 관리 계정 전환, 세션 종료를 공통 중앙 패널로 통일했다.
 - 세션 종료는 웹처럼 기기·브라우저·IP를 영향 범위에 포함한다.
 - 작업 중에는 중복 실행과 배경·gesture dismiss를 차단한다.
-- iPhone 13 mini에서 `SettingsFeatureTests` 29건이 통과했다. 직접 확인 패널 캡처는 전용 fixture 보강 후 추가한다.
+- iPhone 13 mini에서 `SettingsFeatureTests` 29건과 전용 시각 UI 테스트 3건이 통과했다.
+- `22d0bc18`에서 프로필 사진 fixture와 안정적인 접근성 식별자를 추가했고, 두 확인 패널의 제목·설명·취소·destructive 버튼 및 중앙 배치를 직접 확인했다.
 
 ### Todo destructive 확인 — `bd3a1fc4`
 
@@ -208,12 +213,26 @@
 
 ### Root 로그아웃 확인 — `8a6a3aae`
 
-<img src="screenshots/menu-ios-after.png" width="240" alt="iOS 햄버거 메뉴 로그아웃 진입점">
+| 로그아웃 진입점 | 중앙 확인 패널 |
+| --- | --- |
+| <img src="screenshots/menu-ios-after.png" width="240" alt="iOS 햄버거 메뉴 로그아웃 진입점"> | <img src="screenshots/root-menu-logout-confirmation-ios-after.png" width="240" alt="iOS 햄버거 메뉴 로그아웃 확인"> |
 
 - 햄버거 메뉴의 로그아웃 native `confirmationDialog`를 중앙 패널로 교체했다.
 - 로그아웃 처리 중에는 재실행, 취소, 배경 탭, gesture dismiss를 차단한다.
 - 링크 미지원 같은 정보 alert는 기존 방식으로 유지했다.
 - iPhone 13 mini에서 전용 정책·소스 테스트 3건이 통과했다: `/tmp/dutypark-root-logout-20260815.xcresult`.
+- `22d0bc18`의 전용 UI 테스트에서 실제 메뉴 진입 후 패널 중앙 배치와 한국어 버튼을 검증했으며, 전환 안정화 후 최종 스크린샷을 보존했다.
+
+### 달력 월 일괄 변경 — `c47a77ea`, `f390c6bc`
+
+| 모바일 웹 달력 기준 | iOS 월 일괄 변경 중앙 선택 |
+| --- | --- |
+| <img src="screenshots/calendar-web-ko.png" width="240" alt="모바일 웹 달력"> | <img src="screenshots/calendar-batch-selection-ios-after.png" width="240" alt="iOS 월 일괄 변경 중앙 선택"> |
+
+- 빠른 근무 편집에서 월 일괄 변경을 열어 주간·야간 선택, 덮어쓰기 경고, 취소 동작을 한 중앙 패널에서 확인했다.
+- 최초 시각 검수에서 `String(format:locale:)`가 연도 `%d`를 `2,026`으로 그룹화하는 새 회귀를 발견했다.
+- 번역 bundle은 앱 언어를 유지하고 캘린더 식별자·카운트 치환에는 `en_US_POSIX`를 사용해 `2026년 8월`로 복원했다.
+- 수정 후 iPhone 13 mini UI 테스트 1건이 통과했고 `2026년 8월 전체에 적용할 근무를 선택하세요.`를 육안 확인했다: `/tmp/Dutypark-CalendarBatchVisual-YearFix-20260815.xcresult`.
 
 ### 소셜 계정 연결 해제 — `a19f4047`
 
@@ -261,16 +280,16 @@
 - [x] 친구관리 상세 진입과 롱프레스 재정렬 시각·상호작용 검증
 - [x] 헤더·탭·Root 메뉴 현지화 기능 커밋 및 시각 보고
 - [x] 기본 근무 패턴 UI와 패턴 해제 중앙 확인 기능 커밋 및 시각 보고
-- [ ] 캘린더 월 일괄 변경 중앙 선택 화면 스크린샷 추가
+- [x] 캘린더 월 일괄 변경 중앙 선택 화면 스크린샷 추가
 - [ ] 알림 삭제용 UI fixture와 중앙 패널 스크린샷 추가
 - [ ] 첨부 삭제용 UI fixture와 중앙 패널 스크린샷 추가
 - [ ] 관리자 팀 삭제·회원 세션 종료 UI fixture와 중앙 패널 스크린샷 추가
-- [ ] 설정 로그아웃·프로필 삭제 중앙 패널 스크린샷 추가
+- [x] 설정 로그아웃·프로필 삭제 중앙 패널 스크린샷 추가
 - [ ] Todo 작성 취소·삭제 중앙 패널 스크린샷 추가
 - [ ] 팀 연월 선택기 한국어 스크린샷 추가
 - [ ] 가입 팀 fixture로 일정 삭제·관리 중앙 패널 스크린샷 추가
-- [ ] Root 햄버거 로그아웃 중앙 패널 스크린샷 추가
+- [x] Root 햄버거 로그아웃 중앙 패널 스크린샷 추가
 - [ ] 소셜 연결 관리 fixture와 연결 해제 중앙 패널 스크린샷 추가
 - [ ] SSO 추가정보 fixture와 draft 폐기 중앙 패널 스크린샷 추가
-- [ ] 설정의 사진 삭제·관리자 해제·관리 계정 전환 확인 UI 조사 및 수정
-- [ ] 로그아웃 등 남은 전역 `confirmationDialog` 조사 및 수정
+- [x] 설정의 사진 삭제·관리자 해제·관리 계정 전환 확인 UI 조사 및 수정
+- [x] 로그아웃 등 남은 전역 `confirmationDialog` 조사 및 수정
