@@ -90,6 +90,7 @@ struct DPConfirmationPanel: View {
                 .frame(maxWidth: .infinity)
         }
         .buttonStyle(DPOutlineButtonStyle())
+        .frame(maxWidth: .infinity)
         .disabled(isWorking)
         .accessibilityIdentifier("dp.confirmation.cancel")
     }
@@ -101,6 +102,7 @@ struct DPConfirmationPanel: View {
                 confirmLabel
             }
             .buttonStyle(DPDestructiveButtonStyle())
+            .frame(maxWidth: .infinity)
             .disabled(isWorking)
             .accessibilityLabel(confirmTitle)
             .accessibilityIdentifier("dp.confirmation.confirm")
@@ -109,6 +111,7 @@ struct DPConfirmationPanel: View {
                 confirmLabel
             }
             .buttonStyle(DPPrimaryButtonStyle())
+            .frame(maxWidth: .infinity)
             .disabled(isWorking)
             .accessibilityLabel(confirmTitle)
             .accessibilityIdentifier("dp.confirmation.confirm")

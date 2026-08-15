@@ -6,6 +6,31 @@ import UIKit
 @MainActor
 struct DPConfirmationPanelTests {
     @Test
+    func actionButtonsExpandAtTheButtonBoundary() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark/Components/DPConfirmationPanel.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+
+        #expect(
+            source.contains(
+                ".buttonStyle(DPOutlineButtonStyle())\n        .frame(maxWidth: .infinity)"
+            )
+        )
+        #expect(
+            source.contains(
+                ".buttonStyle(DPDestructiveButtonStyle())\n            .frame(maxWidth: .infinity)"
+            )
+        )
+        #expect(
+            source.contains(
+                ".buttonStyle(DPPrimaryButtonStyle())\n            .frame(maxWidth: .infinity)"
+            )
+        )
+    }
+
+    @Test
     func panelUsesTheCompactWebConfirmationWidth() {
         let size = fittingSize(
             of: makePanel(),
