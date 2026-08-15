@@ -30,6 +30,22 @@ final class ParityVisualCaptureUITests: XCTestCase {
         )
         capture("parity-ios-02-todo-ko-dark")
 
+        let calendarTab = app.buttons.matching(identifier: "tab.calendar").firstMatch
+        XCTAssertTrue(calendarTab.waitForExistence(timeout: 10))
+        calendarTab.tap()
+        XCTAssertTrue(
+            app.descendants(matching: .any)["screen.calendar"].waitForExistence(timeout: 10)
+        )
+        capture("parity-ios-03-calendar-ko-dark")
+
+        let teamTab = app.buttons.matching(identifier: "tab.team").firstMatch
+        XCTAssertTrue(teamTab.waitForExistence(timeout: 10))
+        teamTab.tap()
+        XCTAssertTrue(
+            app.descendants(matching: .any)["screen.team"].waitForExistence(timeout: 10)
+        )
+        capture("parity-ios-04-team-ko-dark")
+
         let homeTab = app.buttons.matching(identifier: "tab.home").firstMatch
         XCTAssertTrue(homeTab.waitForExistence(timeout: 10))
         homeTab.tap()
@@ -41,7 +57,7 @@ final class ParityVisualCaptureUITests: XCTestCase {
 
         let menu = app.descendants(matching: .any)["screen.menu"]
         XCTAssertTrue(menu.waitForExistence(timeout: 10))
-        capture("parity-ios-03-menu-ko-dark")
+        capture("parity-ios-05-menu-ko-dark")
 
         let settingsTab = app.buttons.matching(identifier: "tab.settings").firstMatch
         XCTAssertTrue(settingsTab.waitForExistence(timeout: 10))
@@ -51,7 +67,7 @@ final class ParityVisualCaptureUITests: XCTestCase {
         XCTAssertTrue(settings.waitForExistence(timeout: 10))
         let patternTitle = app.staticTexts["기본 근무 패턴"].firstMatch
         XCTAssertTrue(patternTitle.waitForExistence(timeout: 10))
-        capture("parity-ios-04-settings-ko-dark")
+        capture("parity-ios-06-settings-ko-dark")
 
         let editPatternButton = app.buttons
             .matching(NSPredicate(format: "label CONTAINS %@", "변경"))
@@ -65,13 +81,13 @@ final class ParityVisualCaptureUITests: XCTestCase {
         XCTAssertTrue(patternModalTitle.waitForExistence(timeout: 10))
         let disablePatternButton = app.buttons["패턴 해제"].firstMatch
         XCTAssertTrue(disablePatternButton.waitForExistence(timeout: 10))
-        capture("parity-ios-05-default-work-pattern-ko-dark")
+        capture("parity-ios-07-default-work-pattern-ko-dark")
 
         disablePatternButton.tap()
 
         let confirmationTitle = app.staticTexts["근무 패턴을 해제할까요?"]
         XCTAssertTrue(confirmationTitle.waitForExistence(timeout: 10))
-        capture("parity-ios-06-disable-pattern-confirmation-ko-dark")
+        capture("parity-ios-08-disable-pattern-confirmation-ko-dark")
     }
 
     @MainActor
