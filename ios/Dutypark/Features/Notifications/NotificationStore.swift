@@ -23,6 +23,7 @@ final class NotificationStore: ObservableObject {
     private var pollingTask: Task<Void, Never>?
     private var isForeground = true
     private var markingAsReadIDs: Set<NotificationID> = []
+    private var isMarkingAllAsRead = false
 
     init(
         api: any NotificationAPIProtocol = NotificationAPI(),
@@ -138,6 +139,17 @@ final class NotificationStore: ObservableObject {
     }
 
     func markAllAsRead() async throws {
+        guard !isMarkingAllAsRead else { return }
+        isMarkingAllAsRead = true
+        defer { isMarkingAllAsRead = false }
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-ui-testing-notification-fixture") {
+            notifications = notifications.map(markedAsRead)
+            unreadCount = 0
+            await updateBadge()
+            return
+        }
+#endif
         _ = try await api.markAllAsRead()
         notifications = notifications.map(markedAsRead)
         unreadCount = 0

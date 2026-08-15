@@ -8,6 +8,43 @@ final class NotificationConfirmationVisualUITests: XCTestCase {
     }
 
     @MainActor
+    func testClosingLoadedDropdownMarksUnreadNotificationsAsRead() {
+        let app = makeApp()
+        app.launch()
+        defer { app.terminate() }
+
+        let home = app.descendants(matching: .any)["screen.home"]
+        XCTAssertTrue(home.waitForExistence(timeout: 20))
+
+        let bell = app.buttons["notifications.bell"]
+        XCTAssertTrue(bell.waitForExistence(timeout: 10))
+        XCTAssertTrue(String(describing: bell.value).contains("읽지 않음 1개"))
+        bell.tap()
+
+        let dropdown = app.descendants(matching: .any)["notifications.dropdown"]
+        XCTAssertTrue(dropdown.waitForExistence(timeout: 10))
+        XCTAssertTrue(
+            app.descendants(matching: .any)["notifications.dropdown.row.\(unreadNotificationID)"]
+                .waitForExistence(timeout: 10)
+        )
+
+        let closeBackground = app.buttons["알림 닫기"]
+        XCTAssertTrue(closeBackground.waitForExistence(timeout: 10))
+        XCTAssertTrue(closeBackground.isHittable)
+        app.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.82)).tap()
+
+        XCTAssertTrue(dropdown.waitForNonExistence(timeout: 10))
+        let unreadBadgeCleared = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in
+                !String(describing: bell.value).contains("읽지 않음")
+            },
+            object: bell
+        )
+        XCTAssertEqual(XCTWaiter.wait(for: [unreadBadgeCleared], timeout: 10), .completed)
+        capture("parity-ios-notification-close-marks-read-after")
+    }
+
+    @MainActor
     func testNotificationDeletionConfirmationUsesStableCenteredSharedPanel() {
         let app = makeApp()
         app.launch()

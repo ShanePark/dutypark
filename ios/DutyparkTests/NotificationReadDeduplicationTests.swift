@@ -26,6 +26,27 @@ struct NotificationReadDeduplicationTests {
         #expect(await api.markAsReadCallCount() == 1)
     }
 
+    @Test
+    func markingAllAsReadWhileARequestIsInFlightDoesNotStartAnotherRequest() async throws {
+        let unread = try notification(referenceID: UUID())
+        let api = NotificationReadDeduplicationAPIMock(notification: unread, unreadCount: 1)
+        let store = NotificationStore(api: api)
+        await store.refresh()
+
+        let firstMarkAll = Task { try await store.markAllAsRead() }
+        await api.waitUntilFirstMarkAllStarts()
+
+        try await store.markAllAsRead()
+        #expect(await api.markAllAsReadCallCount() == 1)
+
+        await api.releaseFirstMarkAll()
+        try await firstMarkAll.value
+
+        #expect(store.unreadCount == 0)
+        let allNotificationsAreRead = store.notifications.allSatisfy(\.isRead)
+        #expect(allNotificationsAreRead)
+    }
+
     private func notification(referenceID: UUID) throws -> NotificationDTO {
         try JSONDecoder().decode(
             NotificationDTO.self,
@@ -57,6 +78,11 @@ private actor NotificationReadDeduplicationAPIMock: NotificationAPIProtocol {
     private var firstMarkStartWaiters: [CheckedContinuation<Void, Never>] = []
     private var firstMarkReleaseRequested = false
     private var firstMarkReleaseContinuation: CheckedContinuation<Void, Never>?
+    private var markAllCalls = 0
+    private var firstMarkAllStarted = false
+    private var firstMarkAllStartWaiters: [CheckedContinuation<Void, Never>] = []
+    private var firstMarkAllReleaseRequested = false
+    private var firstMarkAllReleaseContinuation: CheckedContinuation<Void, Never>?
 
     init(notification: NotificationDTO, unreadCount: Int) {
         self.notification = notification
@@ -116,13 +142,29 @@ private actor NotificationReadDeduplicationAPIMock: NotificationAPIProtocol {
         return notification
     }
 
-    func markAllAsRead() async throws -> Int { 0 }
+    func markAllAsRead() async throws -> Int {
+        markAllCalls += 1
+        if markAllCalls == 1 {
+            firstMarkAllStarted = true
+            let startWaiters = firstMarkAllStartWaiters
+            firstMarkAllStartWaiters.removeAll()
+            startWaiters.forEach { $0.resume() }
+            if !firstMarkAllReleaseRequested {
+                await withCheckedContinuation { continuation in
+                    firstMarkAllReleaseContinuation = continuation
+                }
+            }
+        }
+        return 1
+    }
 
     func delete(id: NotificationID) async throws {}
 
     func deleteAllRead() async throws -> Int { 0 }
 
     func markAsReadCallCount() -> Int { markCalls }
+
+    func markAllAsReadCallCount() -> Int { markAllCalls }
 
     func waitUntilFirstMarkStarts() async {
         guard !firstMarkStarted else { return }
@@ -135,5 +177,18 @@ private actor NotificationReadDeduplicationAPIMock: NotificationAPIProtocol {
         firstMarkReleaseRequested = true
         firstMarkReleaseContinuation?.resume()
         firstMarkReleaseContinuation = nil
+    }
+
+    func waitUntilFirstMarkAllStarts() async {
+        guard !firstMarkAllStarted else { return }
+        await withCheckedContinuation { continuation in
+            firstMarkAllStartWaiters.append(continuation)
+        }
+    }
+
+    func releaseFirstMarkAll() {
+        firstMarkAllReleaseRequested = true
+        firstMarkAllReleaseContinuation?.resume()
+        firstMarkAllReleaseContinuation = nil
     }
 }

@@ -70,6 +70,23 @@ enum RootPendingDestinationAction {
     }
 }
 
+struct RootNotificationDropdownReadPolicy {
+    private var shouldMarkAllAsReadOnClose = false
+
+    mutating func prepareForOpen() {
+        shouldMarkAllAsReadOnClose = false
+    }
+
+    mutating func finishLoading(didLoad: Bool, isPresented: Bool, hasUnread: Bool) {
+        shouldMarkAllAsReadOnClose = didLoad && isPresented && hasUnread
+    }
+
+    mutating func consumeClose() -> Bool {
+        defer { shouldMarkAllAsReadOnClose = false }
+        return shouldMarkAllAsReadOnClose
+    }
+}
+
 struct RootTabView: View {
     @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject private var session: SessionStore
@@ -82,6 +99,7 @@ struct RootTabView: View {
     @State private var todoTarget: TodoID?
     @State private var settingsDestination: SettingsDestination?
     @State private var showsNotifications = false
+    @State private var notificationDropdownReadPolicy = RootNotificationDropdownReadPolicy()
     @State private var showsNotificationCenter = false
     @State private var showsUnsupportedLink = false
     @State private var showsLogoutConfirmation = false
@@ -191,7 +209,17 @@ struct RootTabView: View {
         }
         .onChange(of: showsNotifications) { _, isPresented in
             guard isPresented else { return }
-            Task { await notifications.refresh() }
+            notificationDropdownReadPolicy.prepareForOpen()
+            let canStartLoading = !notifications.isLoading
+            Task {
+                await notifications.refresh()
+                notificationDropdownReadPolicy.finishLoading(
+                    didLoad: canStartLoading && !notifications.loadFailed,
+                    isPresented: showsNotifications,
+                    hasUnread: notifications.unreadCount > 0
+                        || notifications.notifications.contains(where: { !$0.isRead })
+                )
+            }
         }
         .onChange(of: pushCenter.pendingNotificationID) { _, notificationID in
             guard notificationID != nil else { return }
@@ -358,18 +386,18 @@ struct RootTabView: View {
             DPColor.textOnLight.opacity(0.30)
                 .ignoresSafeArea()
                 .contentShape(Rectangle())
-                .onTapGesture { showsNotifications = false }
+                .onTapGesture(perform: closeNotificationDropdown)
                 .accessibilityLabel(
                     RootChromeLocalization.notifications("notifications.common.close")
                 )
                 .accessibilityAddTraits(.isButton)
-                .accessibilityAction { showsNotifications = false }
+                .accessibilityAction { closeNotificationDropdown() }
 
             NotificationDropdown(
                 store: notifications,
                 onOpen: openDropdownNotification,
                 onViewAll: {
-                    showsNotifications = false
+                    closeNotificationDropdown()
                     showsNotificationCenter = true
                 }
             )
@@ -377,14 +405,21 @@ struct RootTabView: View {
             .padding(.horizontal, DPSpacing.medium)
             .padding(.top, DPSpacing.extraSmall)
         }
-        .accessibilityAction(.escape) { showsNotifications = false }
+        .accessibilityAction(.escape) { closeNotificationDropdown() }
         .zIndex(10)
+    }
+
+    private func closeNotificationDropdown() {
+        let shouldMarkAllAsRead = notificationDropdownReadPolicy.consumeClose()
+        showsNotifications = false
+        guard shouldMarkAllAsRead else { return }
+        Task { try? await notifications.markAllAsRead() }
     }
 
     private func openDropdownNotification(_ notification: NotificationDTO) async {
         guard let route = await notifications.open(notification) else { return }
         if await openNotificationRoute(route) {
-            showsNotifications = false
+            closeNotificationDropdown()
         }
     }
 

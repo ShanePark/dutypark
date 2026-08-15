@@ -5,6 +5,54 @@ import Testing
 @MainActor
 struct RootLifecycleTests {
     @Test
+    func notificationDropdownArmsReadOnCloseOnlyAfterVisibleSuccessfulUnreadLoad() {
+        var policy = RootNotificationDropdownReadPolicy()
+
+        policy.prepareForOpen()
+        policy.finishLoading(didLoad: true, isPresented: true, hasUnread: true)
+
+        let shouldMarkAllAsRead = policy.consumeClose()
+        #expect(shouldMarkAllAsRead)
+    }
+
+    @Test(arguments: [
+        (didLoad: false, isPresented: true, hasUnread: true),
+        (didLoad: true, isPresented: false, hasUnread: true),
+        (didLoad: true, isPresented: true, hasUnread: false),
+    ])
+    func notificationDropdownDoesNotArmReadOnCloseWithoutVisibleSuccessfulUnreadLoad(
+        input: (didLoad: Bool, isPresented: Bool, hasUnread: Bool)
+    ) {
+        var policy = RootNotificationDropdownReadPolicy()
+
+        policy.prepareForOpen()
+        policy.finishLoading(
+            didLoad: input.didLoad,
+            isPresented: input.isPresented,
+            hasUnread: input.hasUnread
+        )
+
+        let shouldMarkAllAsRead = policy.consumeClose()
+        #expect(!shouldMarkAllAsRead)
+    }
+
+    @Test
+    func notificationDropdownConsumesReadOnCloseOnlyOnceAndResetsOnReopen() {
+        var policy = RootNotificationDropdownReadPolicy()
+        policy.prepareForOpen()
+        policy.finishLoading(didLoad: true, isPresented: true, hasUnread: true)
+
+        let firstCloseShouldMarkAllAsRead = policy.consumeClose()
+        let repeatedCloseShouldMarkAllAsRead = policy.consumeClose()
+        #expect(firstCloseShouldMarkAllAsRead)
+        #expect(!repeatedCloseShouldMarkAllAsRead)
+
+        policy.prepareForOpen()
+        let reopenedCloseShouldMarkAllAsRead = policy.consumeClose()
+        #expect(!reopenedCloseShouldMarkAllAsRead)
+    }
+
+    @Test
     func authenticatedStartupRunsRequiredWorkInOrder() async {
         var events: [String] = []
 
