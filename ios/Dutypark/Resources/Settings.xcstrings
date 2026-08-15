@@ -1074,13 +1074,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sign out"
+            "value": "End session"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "로그아웃"
+            "value": "접속 종료"
           }
         }
       }
@@ -1144,13 +1144,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sign out"
+            "value": "End session"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "로그아웃"
+            "value": "접속 세션 종료"
           }
         }
       }

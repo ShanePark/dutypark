@@ -296,6 +296,27 @@ struct SettingsFeatureTests {
     }
 
     @Test
+    func individualSessionRevokeCopyMatchesResponsiveWeb() {
+        let defaults = UserDefaults.standard
+        let previous = defaults.string(forKey: SettingsPreference.languageKey)
+        defer {
+            if let previous { defaults.set(previous, forKey: SettingsPreference.languageKey) }
+            else { defaults.removeObject(forKey: SettingsPreference.languageKey) }
+        }
+
+        let expectedCopy: [(language: AppLanguage, title: String, action: String)] = [
+            (.korean, "접속 세션 종료", "접속 종료"),
+            (.english, "End session", "End session"),
+        ]
+
+        for expected in expectedCopy {
+            defaults.set(expected.language.rawValue, forKey: SettingsPreference.languageKey)
+            #expect(SettingsLocalization.string("settings.sessions.revokeTitle") == expected.title)
+            #expect(SettingsLocalization.string("settings.sessions.revoke") == expected.action)
+        }
+    }
+
+    @Test
     func consequentialSettingsActionsUseCentralConfirmationContent() {
         let defaults = UserDefaults.standard
         let previous = defaults.string(forKey: SettingsPreference.languageKey)
