@@ -402,55 +402,49 @@ struct TeamView: View {
 
     private var shiftList: some View {
         VStack(alignment: .leading, spacing: DPSpacing.small) {
-            if viewModel.shifts.isEmpty {
-                Text("team.view.schedule.empty", tableName: "Team")
-                    .foregroundStyle(DPColor.textMuted)
-                    .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)
-            } else {
-                ForEach(Array(viewModel.shifts.enumerated()), id: \.offset) { _, shift in
-                    VStack(alignment: .leading, spacing: 0) {
-                        HStack {
-                            Text(verbatim: shift.dutyType.name)
-                                .font(DPTypography.bodyMedium)
-                                .foregroundStyle(TeamVisualStyle.foregroundColor(on: shift.dutyType.color))
-                            Spacer()
-                            Text(verbatim: String(shift.members.count))
-                                .font(DPTypography.caption)
-                                .foregroundStyle(DPColor.textOnLight)
-                                .padding(.horizontal, DPSpacing.small)
-                                .padding(.vertical, 2)
-                                .background(Color.white.opacity(0.65))
-                                .clipShape(Capsule())
-                        }
-                        .padding(DPSpacing.compact)
-                        .background(Color(teamHex: shift.dutyType.color))
+            ForEach(Array(viewModel.shifts.enumerated()), id: \.offset) { _, shift in
+                VStack(alignment: .leading, spacing: 0) {
+                    HStack {
+                        Text(verbatim: shift.dutyType.name)
+                            .font(DPTypography.bodyMedium)
+                            .foregroundStyle(TeamVisualStyle.foregroundColor(on: shift.dutyType.color))
+                        Spacer()
+                        Text(verbatim: String(shift.members.count))
+                            .font(DPTypography.caption)
+                            .foregroundStyle(DPColor.textOnLight)
+                            .padding(.horizontal, DPSpacing.small)
+                            .padding(.vertical, 2)
+                            .background(Color.white.opacity(0.65))
+                            .clipShape(Capsule())
+                    }
+                    .padding(DPSpacing.compact)
+                    .background(Color(teamHex: shift.dutyType.color))
 
-                        let memberColumns = Array(repeating: GridItem(.flexible(), spacing: DPSpacing.small), count: 2)
-                        LazyVGrid(columns: memberColumns, spacing: DPSpacing.small) {
-                            ForEach(Array(shift.members.enumerated()), id: \.offset) { _, member in
-                                Group {
-                                    if let id = member.id {
-                                        Button { onOpenCalendar(id) } label: { memberCard(member) }
-                                            .buttonStyle(.plain)
-                                    } else {
-                                        memberCard(member)
-                                    }
+                    let memberColumns = Array(repeating: GridItem(.flexible(), spacing: DPSpacing.small), count: 2)
+                    LazyVGrid(columns: memberColumns, spacing: DPSpacing.small) {
+                        ForEach(Array(shift.members.enumerated()), id: \.offset) { _, member in
+                            Group {
+                                if let id = member.id {
+                                    Button { onOpenCalendar(id) } label: { memberCard(member) }
+                                        .buttonStyle(.plain)
+                                } else {
+                                    memberCard(member)
                                 }
                             }
                         }
-                        .padding(DPSpacing.compact)
                     }
-                    .background(DPColor.backgroundCard)
-                    .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: DPRadius.standard)
-                            .stroke(
-                                TeamFeatureLogic.isMyShiftGroup(shift, memberID: memberID)
-                                    ? DPColor.textPrimary
-                                    : DPColor.borderSecondary,
-                                lineWidth: TeamFeatureLogic.isMyShiftGroup(shift, memberID: memberID) ? 2 : 1
-                            )
-                    }
+                    .padding(DPSpacing.compact)
+                }
+                .background(DPColor.backgroundCard)
+                .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+                .overlay {
+                    RoundedRectangle(cornerRadius: DPRadius.standard)
+                        .stroke(
+                            TeamFeatureLogic.isMyShiftGroup(shift, memberID: memberID)
+                                ? DPColor.textPrimary
+                                : DPColor.borderSecondary,
+                            lineWidth: TeamFeatureLogic.isMyShiftGroup(shift, memberID: memberID) ? 2 : 1
+                        )
                 }
             }
         }

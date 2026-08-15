@@ -52,6 +52,17 @@ struct TeamFeatureTests {
         #expect(source.contains("Text(\"team.common.error\", tableName: \"Team\")"))
     }
 
+    @Test
+    func emptyShiftListDoesNotReuseTheScheduleEmptyMessage() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark/Features/Team/TeamView.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+
+        #expect(source.components(separatedBy: "team.view.schedule.empty").count - 1 == 1)
+    }
+
     @Test @MainActor
     func monthNamesFollowTheAppLanguageInsteadOfTheDeviceCalendar() {
         let defaults = UserDefaults.standard

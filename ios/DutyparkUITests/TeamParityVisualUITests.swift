@@ -35,6 +35,16 @@ final class TeamParityVisualUITests: XCTestCase {
     }
 
     @MainActor
+    func testScheduledDayDoesNotShowAFalseEmptyMessageWhenShiftsAreEmpty() {
+        let app = launchTeamFixture()
+        defer { app.terminate() }
+
+        XCTAssertTrue(app.staticTexts["정기 팀 회의"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.staticTexts["이 날의 팀 일정이 없습니다."].exists)
+        capture("parity-ios-team-empty-shift-message-after")
+    }
+
+    @MainActor
     func testJoinedTeamScheduleDeleteUsesCenteredConfirmation() {
         let app = launchTeamFixture()
         defer { app.terminate() }
