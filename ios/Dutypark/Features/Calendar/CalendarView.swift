@@ -139,7 +139,7 @@ struct CalendarView: View {
                 onDismiss: { showsBatchUpdate = false }
             ) { availableSize, dismiss in
                 CalendarBatchDutySelectionModal(
-                    dutyTypes: model.visibleDutyTypes,
+                    dutyTypes: batchDutyTypes,
                     year: model.year,
                     month: model.month,
                     maximumHeight: availableSize.height,
@@ -408,13 +408,14 @@ struct CalendarView: View {
                 }
                 .accessibilityLabel(CalendarLocalization.text("calendar.compare.mine"))
             }
-            if model.canEdit && !model.visibleDutyTypes.isEmpty {
+            if model.canEdit && !batchDutyTypes.isEmpty {
                 Button { model.setQuickDutyEditing(true) } label: {
                     Image(systemName: "pencil.line")
                         .foregroundStyle(DPColor.textSecondary)
                         .frame(width: 44, height: 44)
                 }
                 .accessibilityLabel(CalendarLocalization.text("calendar.duty.quick.start"))
+                .accessibilityIdentifier("calendar.duty.quick.start")
             }
             if model.isMyCalendar, model.team?.dutyBatchTemplate != nil {
                 Button { importsDutyBatch = true } label: {
@@ -598,7 +599,7 @@ struct CalendarView: View {
                 foreground: DPColor.textPrimary
             )
 
-            ForEach(model.visibleDutyTypes, id: \.id) { type in
+            ForEach(batchDutyTypes, id: \.id) { type in
                 quickDutyButton(
                     id: type.id,
                     name: type.name,
@@ -617,6 +618,7 @@ struct CalendarView: View {
                 }
                 .buttonStyle(.bordered)
                 .tint(DPColor.textSecondary)
+                .accessibilityIdentifier("calendar.duty.batch.open")
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -715,6 +717,32 @@ struct CalendarView: View {
         let value = UInt64(hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted), radix: 16) ?? 0x6B7280
         return Color(red: Double((value >> 16) & 0xff) / 255, green: Double((value >> 8) & 0xff) / 255, blue: Double(value & 0xff) / 255)
     }
+
+    private var batchDutyTypes: [DutyTypeDTO] {
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-ui-testing-calendar-batch") {
+            return [
+                DutyTypeDTO(
+                    id: 101,
+                    teamId: 1,
+                    name: "주간",
+                    position: 0,
+                    color: "#3B82F6",
+                    hidden: false
+                ),
+                DutyTypeDTO(
+                    id: 102,
+                    teamId: 1,
+                    name: "야간",
+                    position: 1,
+                    color: "#4338CA",
+                    hidden: false
+                ),
+            ]
+        }
+#endif
+        return model.visibleDutyTypes
+    }
 }
 
 private struct CalendarBatchDutySelectionModal: View {
@@ -736,6 +764,7 @@ private struct CalendarBatchDutySelectionModal: View {
                 .padding(.horizontal, DPSpacing.large)
                 .background(DPColor.backgroundTertiary)
                 .accessibilityAddTraits(.isHeader)
+                .accessibilityIdentifier("calendar.duty.batch.title")
         } content: {
             VStack(spacing: DPSpacing.medium) {
                 VStack(spacing: DPSpacing.extraSmall) {
