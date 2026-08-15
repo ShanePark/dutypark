@@ -9,11 +9,20 @@ struct RootChromeLocalizationTests {
     func hamburgerMenuAndNotificationChromeUseTheRequestedLocale() {
         #expect(RootChromeLocalization.home("home.menu", locale: korean) == "메뉴")
         #expect(RootChromeLocalization.home("home.friends", locale: korean) == "친구관리")
+        #expect(RootChromeLocalization.localizable("root.menu.guide", locale: korean) == "이용 안내")
         #expect(RootChromeLocalization.notifications("notifications.title", locale: korean) == "알림")
         #expect(RootChromeLocalization.notifications("notifications.common.close", locale: korean) == "알림 닫기")
         #expect(RootChromeLocalization.notifications("notifications.common.loading", locale: korean) == "불러오는 중...")
         #expect(RootChromeLocalization.notifications("notifications.common.empty", locale: korean) == "알림이 없습니다")
         #expect(RootChromeLocalization.notifications("notifications.dropdown.viewAll", locale: korean) == "전체보기")
+    }
+
+    @Test
+    func hamburgerGuideLabelKeepsTheSameEnglishMeaningAsTheWebMenu() {
+        #expect(
+            RootChromeLocalization.localizable("root.menu.guide", locale: Locale(identifier: "en"))
+                == "Guide"
+        )
     }
 
     @Test

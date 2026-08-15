@@ -699,7 +699,7 @@ private struct AppMenuView: View {
 
                 VStack(spacing: 0) {
                     AppMenuRow(
-                        title: SettingsLocalization.string("settings.guide"),
+                        title: RootChromeLocalization.localizable("root.menu.guide"),
                         systemImage: "book",
                         action: onOpenGuide
                     )

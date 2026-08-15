@@ -74,6 +74,26 @@ final class SettingsRootConfirmationVisualUITests: XCTestCase {
     }
 
     @MainActor
+    func testRootMenuUsesTheSameKoreanGuideCopyAsTheWebMenu() {
+        let app = launchAuthenticatedApp()
+        defer { app.terminate() }
+
+        XCTAssertTrue(
+            app.descendants(matching: .any)["screen.home"].waitForExistence(timeout: 20)
+        )
+        let menuButton = app.buttons["home.menu"]
+        XCTAssertTrue(menuButton.waitForExistence(timeout: 10))
+        menuButton.tap()
+        XCTAssertTrue(
+            app.descendants(matching: .any)["screen.menu"].waitForExistence(timeout: 10)
+        )
+
+        XCTAssertTrue(app.staticTexts["이용 안내"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.staticTexts["사용 가이드"].exists)
+        capture("parity-ios-root-menu-guide-copy-after")
+    }
+
+    @MainActor
     private func launchAuthenticatedApp(profilePhotoFixture: Bool = false) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += [
