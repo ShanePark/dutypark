@@ -57,7 +57,7 @@
 | `a28f348c` | Todo 롱프레스 재정렬 | `TodoViewModelTests` 포함 전체 선택 테스트 | 웹·수정 후 확보, 빈 fixture라 실제 드래그는 단위 테스트로 검증 | 완료 |
 | `f5da2cd1` | 친구관리 롱프레스 재정렬 | `SocialFeatureTests` 포함 전체 선택 테스트 | 후속 UI 검증에서 fixture 결함 발견 | `24814f20`으로 보완 |
 | `92f3fa66` | 알림 삭제 중앙 확인 | `NotificationFeatureTests` 포함 전체 선택 테스트 | `da97937c`에서 개별·일괄 삭제 캡처 확보 | 완료 |
-| `def118e2` | 첨부 삭제 중앙 확인 | `AttachmentTests` 포함 전체 선택 테스트 | 첨부 fixture 부재 | 코드 커밋됨·캡처 대기 |
+| `def118e2` | 첨부 삭제 중앙 확인 | `AttachmentTests` 포함 전체 선택 테스트 | `28bfcbed`에서 실제 메뉴 경로 캡처 확보 | 완료 |
 | `74858618` | 헤더 캡슐 제거, `달력` 복원, Root 메뉴 현지화 | AppTab·RootChrome·컴포넌트 테스트 및 UI 캡처 | 대시보드·메뉴 수정 후 확보 | 완료 |
 | `2cdc26ea` | 앱 언어 override 및 로그인·OAuth·API 오류 현지화 | 앱 언어 override·Auth 테스트 포함 전체 선택 테스트 | 한국어 메뉴·설정 화면에서 Foundation 조회 결과 확인 | 완료 |
 | `3987ea66` | 팀 연월 선택기의 월 이름 현지화 | `TeamFeatureTests` 앱 ko·기기 en 조합 | 웹 기준 확보, iOS 연월 선택기 캡처 대기 | 코드 커밋됨·캡처 대기 |
@@ -75,6 +75,8 @@
 | `f390c6bc` | 달력 월 일괄 변경 시각 fixture | iPhone 13 mini UI 1건 | 중앙 선택 패널·`2026년` 표기 확보 | 완료 |
 | `22d0bc18` | 설정·Root 확인 패널 시각 fixture | iPhone 13 mini UI 3건 및 안정화 재캡처 1건 | 프로필 삭제·설정 로그아웃·메뉴 로그아웃 확보 | 완료 |
 | `da97937c` | 알림 삭제 확인 시각 fixture와 전환 안정성 검증 | iPhone 13 mini UI 2건 | 개별·읽은 알림 일괄 삭제 패널 확보 | 완료 |
+| `3bef215b` | DEBUG 전용 direct visual fixture 라우트 | Debug·Release 빌드 및 route 정책 테스트 | 첨부·SSO·관리자 캡처 경로 제공 | 완료 |
+| `28bfcbed` | 첨부 삭제 확인 시각 검증 | iPhone 13 mini UI 1건 | 메뉴→삭제 중앙 패널 확보 | 완료 |
 
 ## 상세 변경 보고
 
@@ -189,6 +191,15 @@
 - 두 흐름을 각각 새 앱 launch로 분리하고, 제목·본문·버튼 문구, 44pt 터치 영역, 비중첩, 화면 bounds와 4회 연속 프레임 안정성을 통과한 뒤 캡처한다.
 - iPhone 13 mini UI 테스트 2/2 통과: `/tmp/Dutypark-NotificationVisualStability-20260815.xcresult`.
 
+### 첨부파일 삭제 확인 — `def118e2`, `3bef215b`, `28bfcbed`
+
+<img src="screenshots/attachment-delete-confirmation-ios-after.png" width="240" alt="iOS 첨부파일 삭제 중앙 확인">
+
+- 고정 PDF fixture에서 카드의 더보기 메뉴를 열고 삭제를 선택하는 실제 경로를 검증했다.
+- 패널은 대상 파일명, 취소·삭제 버튼을 같은 폭으로 표시하며 화면 중앙에 배치된다.
+- direct route와 fixture는 `#if DEBUG`로 한정했고 Release 빌드에서도 제거된 상태로 컴파일되는 것을 확인했다.
+- iPhone 13 mini UI 테스트 1/1 통과: `/tmp/Dutypark-AttachmentVisual-20260815-04.xcresult`.
+
 ### 설정 계정·프로필 확인 — `84047661`
 
 | 웹 설정 기준 | 프로필 사진 삭제 | 설정 로그아웃 |
@@ -294,7 +305,7 @@
 - [x] 기본 근무 패턴 UI와 패턴 해제 중앙 확인 기능 커밋 및 시각 보고
 - [x] 캘린더 월 일괄 변경 중앙 선택 화면 스크린샷 추가
 - [x] 알림 삭제용 UI fixture와 중앙 패널 스크린샷 추가
-- [ ] 첨부 삭제용 UI fixture와 중앙 패널 스크린샷 추가
+- [x] 첨부 삭제용 UI fixture와 중앙 패널 스크린샷 추가
 - [ ] 관리자 팀 삭제·회원 세션 종료 UI fixture와 중앙 패널 스크린샷 추가
 - [x] 설정 로그아웃·프로필 삭제 중앙 패널 스크린샷 추가
 - [ ] Todo 작성 취소·삭제 중앙 패널 스크린샷 추가
