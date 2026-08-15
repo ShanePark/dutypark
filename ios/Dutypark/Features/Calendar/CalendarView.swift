@@ -13,6 +13,22 @@ enum DDayModalSelection: Identifiable, Equatable {
     }
 }
 
+nonisolated enum CalendarMainLayout {
+    static func shouldShowDutyToolbar(
+        hasDutySummary: Bool,
+        hasComparisonAction: Bool,
+        hasQuickEditAction: Bool,
+        hasImportAction: Bool,
+        isQuickDutyEditing: Bool
+    ) -> Bool {
+        isQuickDutyEditing
+            || hasDutySummary
+            || hasComparisonAction
+            || hasQuickEditAction
+            || hasImportAction
+    }
+}
+
 struct CalendarView: View {
     @StateObject private var model: CalendarViewModel
     @StateObject private var todoCreateModel = TodoViewModel()
@@ -202,7 +218,9 @@ struct CalendarView: View {
                 if model.isMyCalendar, !model.isQuickDutyEditing {
                     dutyTodoRow
                 }
-                dutyToolbar
+                if showsDutyToolbar {
+                    dutyToolbar
+                }
                 calendarGrid
                 if !model.isQuickDutyEditing {
                     dDaySection
@@ -389,6 +407,17 @@ struct CalendarView: View {
                 }
             }
         }
+    }
+
+    private var showsDutyToolbar: Bool {
+        CalendarMainLayout.shouldShowDutyToolbar(
+            hasDutySummary: model.days.contains { $0.duty?.month == model.month },
+            hasComparisonAction: (model.isMyCalendar && !model.friends.isEmpty)
+                || (!model.isMyCalendar && model.me?.id != nil),
+            hasQuickEditAction: model.canEdit && !batchDutyTypes.isEmpty,
+            hasImportAction: model.isMyCalendar && model.team?.dutyBatchTemplate != nil,
+            isQuickDutyEditing: model.isQuickDutyEditing
+        )
     }
 
     private var normalDutyActions: some View {

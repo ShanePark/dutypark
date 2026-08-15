@@ -708,6 +708,51 @@ final class CalendarFeatureTests: XCTestCase {
         XCTAssertEqual(CalendarVisualLogic.maximumTodosPerCell, 2)
     }
 
+    func testCalendarOmitsEmptyDutyToolbarAboveMonthGrid() {
+        XCTAssertFalse(CalendarMainLayout.shouldShowDutyToolbar(
+            hasDutySummary: false,
+            hasComparisonAction: false,
+            hasQuickEditAction: false,
+            hasImportAction: false,
+            isQuickDutyEditing: false
+        ))
+        XCTAssertTrue(CalendarMainLayout.shouldShowDutyToolbar(
+            hasDutySummary: true,
+            hasComparisonAction: false,
+            hasQuickEditAction: false,
+            hasImportAction: false,
+            isQuickDutyEditing: false
+        ))
+        XCTAssertTrue(CalendarMainLayout.shouldShowDutyToolbar(
+            hasDutySummary: false,
+            hasComparisonAction: false,
+            hasQuickEditAction: false,
+            hasImportAction: false,
+            isQuickDutyEditing: true
+        ))
+        XCTAssertTrue(CalendarMainLayout.shouldShowDutyToolbar(
+            hasDutySummary: false,
+            hasComparisonAction: true,
+            hasQuickEditAction: false,
+            hasImportAction: false,
+            isQuickDutyEditing: false
+        ))
+        XCTAssertTrue(CalendarMainLayout.shouldShowDutyToolbar(
+            hasDutySummary: false,
+            hasComparisonAction: false,
+            hasQuickEditAction: true,
+            hasImportAction: false,
+            isQuickDutyEditing: false
+        ))
+        XCTAssertTrue(CalendarMainLayout.shouldShowDutyToolbar(
+            hasDutySummary: false,
+            hasComparisonAction: false,
+            hasQuickEditAction: false,
+            hasImportAction: true,
+            isQuickDutyEditing: false
+        ))
+    }
+
     func testCalendarTypographyMatchesReadableMobileWebScale() {
         XCTAssertEqual(CalendarTypography.weekday, 14)
         XCTAssertEqual(CalendarTypography.dayNumber, 12)
