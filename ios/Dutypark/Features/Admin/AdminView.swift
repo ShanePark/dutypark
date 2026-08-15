@@ -2,6 +2,10 @@ import SwiftUI
 
 struct AdminRootView: View {
     @EnvironmentObject private var session: SessionStore
+    @Environment(\.openURL) private var openURL
+    @StateObject private var memberModel: AdminMemberListViewModel
+    @State private var searchText = ""
+    @State private var searchTask: Task<Void, Never>?
     let onOpenCalendar: (MemberID) -> Void
     private let repository: any AdminRepositoryProtocol
 
@@ -9,17 +13,22 @@ struct AdminRootView: View {
         repository: (any AdminRepositoryProtocol)? = nil,
         onOpenCalendar: @escaping (MemberID) -> Void
     ) {
+        let resolvedRepository: any AdminRepositoryProtocol
 #if DEBUG
         if let repository {
-            self.repository = repository
+            resolvedRepository = repository
         } else if ProcessInfo.processInfo.arguments.contains("-ui-testing-admin-visual-fixture") {
-            self.repository = AdminVisualFixtureRepository()
+            resolvedRepository = AdminVisualFixtureRepository()
         } else {
-            self.repository = AdminRepository()
+            resolvedRepository = AdminRepository()
         }
 #else
-        self.repository = repository ?? AdminRepository()
+        resolvedRepository = repository ?? AdminRepository()
 #endif
+        self.repository = resolvedRepository
+        _memberModel = StateObject(
+            wrappedValue: AdminMemberListViewModel(repository: resolvedRepository)
+        )
         self.onOpenCalendar = onOpenCalendar
     }
 
@@ -28,69 +37,152 @@ struct AdminRootView: View {
             if isAdmin {
                 List {
                     Section {
-                        NavigationLink {
-                            AdminMemberListView(
-                                model: AdminMemberListViewModel(repository: repository),
-                                onOpenCalendar: onOpenCalendar
-                            )
-                        } label: {
-                            AdminNavigationLabel(
+                        LazyVGrid(columns: dashboardColumns, spacing: DPSpacing.small) {
+                            AdminTopTile(
                                 title: AdminLocalization.string("admin.nav.members"),
-                                subtitle: AdminLocalization.string("admin.nav.members.subtitle"),
                                 systemImage: "person.3.fill",
-                                color: DPColor.accent
+                                color: DPColor.accent,
+                                isSelected: true
                             )
-                        }
+                            .accessibilityIdentifier("admin.tile.members")
 
-                        NavigationLink {
-                            AdminTeamListView(
-                                model: AdminTeamListViewModel(repository: repository)
+                            NavigationLink {
+                                AdminTeamListView(
+                                    model: AdminTeamListViewModel(repository: repository)
+                                )
+                            } label: {
+                                AdminTopTile(
+                                    title: AdminLocalization.string("admin.nav.teams"),
+                                    systemImage: "building.2.fill",
+                                    color: DPColor.success
+                                )
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("admin.tile.teams")
+
+                            NavigationLink {
+                                AdminAuthenticatedWebView(
+                                    path: "admin/dev",
+                                    title: AdminLocalization.string("admin.nav.development")
+                                )
+                            } label: {
+                                AdminTopTile(
+                                    title: AdminLocalization.string("admin.nav.development"),
+                                    systemImage: "chevron.left.forwardslash.chevron.right",
+                                    color: DPColor.warning
+                                )
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("admin.tile.development")
+
+                            Button {
+                                openURL(AdminWebDestination.apiDocumentationURL())
+                            } label: {
+                                AdminTopTile(
+                                    title: AdminLocalization.string("admin.nav.apiDocumentation"),
+                                    systemImage: "doc.text.fill",
+                                    color: DPColor.surfaceStrong
+                                )
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(AdminLocalization.string("admin.nav.apiDocumentation"))
+                            .accessibilityHint(
+                                AdminLocalization.string("admin.nav.apiDocumentation.externalHint")
                             )
-                        } label: {
-                            AdminNavigationLabel(
-                                title: AdminLocalization.string("admin.nav.teams"),
-                                subtitle: AdminLocalization.string("admin.nav.teams.subtitle"),
-                                systemImage: "building.2.fill",
-                                color: DPColor.success
-                            )
+                            .accessibilityIdentifier("admin.tile.apiDocumentation")
                         }
-                    } header: {
-                        Text(AdminLocalization.string("admin.section.management"))
+                        .padding(.vertical, DPSpacing.extraSmall)
                     }
+                    .listRowInsets(.init(
+                        top: 0,
+                        leading: DPSpacing.compact,
+                        bottom: 0,
+                        trailing: DPSpacing.compact
+                    ))
+                    .listRowBackground(Color.clear)
 
                     Section {
-                        NavigationLink {
-                            AdminAuthenticatedWebView(
-                                path: "admin/dev",
-                                title: AdminLocalization.string("admin.nav.development")
-                            )
-                        } label: {
-                            AdminNavigationLabel(
-                                title: AdminLocalization.string("admin.nav.development"),
-                                subtitle: AdminLocalization.string("admin.nav.development.subtitle"),
-                                systemImage: "hammer.fill",
-                                color: DPColor.warning
-                            )
+                        LazyVGrid(columns: dashboardColumns, spacing: DPSpacing.small) {
+                            ForEach(Array(summaryCards.enumerated()), id: \.offset) { _, card in
+                                AdminSummaryCard(
+                                    title: AdminLocalization.string(card.key),
+                                    value: card.value
+                                )
+                            }
                         }
+                        .padding(.vertical, DPSpacing.extraSmall)
+                    }
+                    .listRowInsets(.init(
+                        top: 0,
+                        leading: DPSpacing.compact,
+                        bottom: 0,
+                        trailing: DPSpacing.compact
+                    ))
+                    .listRowBackground(Color.clear)
 
-                        NavigationLink {
-                            AdminAuthenticatedWebView(
-                                path: "docs/index.html",
-                                title: AdminLocalization.string("admin.nav.apiDocumentation")
+                    Section(AdminLocalization.string("admin.members.title")) {
+                        if memberModel.isLoading && memberModel.members.isEmpty {
+                            ProgressView(AdminLocalization.string("admin.common.loading"))
+                                .frame(maxWidth: .infinity)
+                        } else if memberModel.loadFailed && memberModel.members.isEmpty {
+                            Button {
+                                Task { await memberModel.load() }
+                            } label: {
+                                Label(
+                                    AdminLocalization.string("admin.members.loadFailed"),
+                                    systemImage: "arrow.clockwise"
+                                )
+                            }
+                        } else if memberModel.members.isEmpty {
+                            ContentUnavailableView(
+                                AdminLocalization.string("admin.members.empty"),
+                                systemImage: "person.crop.circle.badge.questionmark"
                             )
-                        } label: {
-                            AdminNavigationLabel(
-                                title: AdminLocalization.string("admin.nav.apiDocumentation"),
-                                subtitle: AdminLocalization.string("admin.nav.apiDocumentation.subtitle"),
-                                systemImage: "doc.text.fill",
-                                color: DPColor.textSecondary
+                            .accessibilityIdentifier("admin.members.empty")
+                        } else {
+                            ForEach(memberModel.members) { member in
+                                NavigationLink {
+                                    AdminMemberDetailView(
+                                        member: member,
+                                        model: memberModel,
+                                        onOpenCalendar: onOpenCalendar
+                                    )
+                                } label: {
+                                    AdminMemberRow(member: member)
+                                }
+                            }
+                        }
+                    }
+
+                    if memberModel.totalPages > 1 {
+                        Section {
+                            AdminPaginationFooter(
+                                page: memberModel.page,
+                                totalPages: memberModel.totalPages,
+                                onPrevious: { Task { await memberModel.movePage(by: -1) } },
+                                onNext: { Task { await memberModel.movePage(by: 1) } }
                             )
                         }
-                    } header: {
-                        Text(AdminLocalization.string("admin.section.developer"))
                     }
                 }
                 .listStyle(.insetGrouped)
+                .refreshable { await memberModel.load() }
+                .searchable(
+                    text: $searchText,
+                    placement: .navigationBarDrawer(displayMode: .always),
+                    prompt: AdminLocalization.string("admin.members.search")
+                )
+                .onChange(of: searchText) { _, newValue in
+                    searchTask?.cancel()
+                    let keyword = AdminMemberSearchPolicy.normalized(newValue)
+                    searchTask = Task {
+                        try? await Task.sleep(for: AdminMemberSearchPolicy.debounce)
+                        guard !Task.isCancelled else { return }
+                        await memberModel.search(keyword)
+                    }
+                }
+                .task { await memberModel.load() }
+                .onDisappear { searchTask?.cancel() }
             } else {
                 ContentUnavailableView(
                     AdminLocalization.string("admin.access.title"),
@@ -108,112 +200,77 @@ struct AdminRootView: View {
         guard case .authenticated(let member) = session.state else { return false }
         return member.isAdmin
     }
+
+    private var dashboardColumns: [GridItem] {
+        [GridItem(.adaptive(minimum: 140), spacing: DPSpacing.small)]
+    }
+
+    private var summaryCards: [(key: String, value: Int)] {
+        let stats = AdminDashboardStatsPresentation(
+            totalMembers: memberModel.totalElements,
+            loadedMembers: memberModel.members,
+            sessions: memberModel.sessions,
+            today: AdminDashboardStatsPresentation.todayString()
+        )
+        return zip(AdminDashboardStatsPresentation.localizationKeys, stats.values)
+            .map { (key: $0.0, value: $0.1) }
+    }
 }
-private struct AdminNavigationLabel: View {
+
+private struct AdminTopTile: View {
     let title: String
-    let subtitle: String
     let systemImage: String
     let color: Color
+    var isSelected = false
 
     var body: some View {
-        HStack(spacing: DPSpacing.compact) {
+        HStack(spacing: DPSpacing.small) {
             Image(systemName: systemImage)
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(color)
-                .frame(width: 40, height: 40)
-                .background(color.opacity(0.12), in: RoundedRectangle(cornerRadius: DPRadius.standard))
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(title)
-                    .font(DPTypography.body)
-                    .foregroundStyle(DPColor.textPrimary)
-                Text(subtitle)
-                    .font(DPTypography.caption)
-                    .foregroundStyle(DPColor.textMuted)
-                    .lineLimit(2)
-            }
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(isSelected ? DPColor.textOnDark : color)
+                .frame(width: 30, height: 30)
+                .background(
+                    (isSelected ? Color.white.opacity(0.16) : color.opacity(0.12)),
+                    in: RoundedRectangle(cornerRadius: DPRadius.small)
+                )
+            Text(title)
+                .font(DPTypography.label)
+                .foregroundStyle(isSelected ? DPColor.textOnDark : DPColor.textPrimary)
+                .lineLimit(2)
+                .minimumScaleFactor(0.8)
+            Spacer(minLength: 0)
         }
-        .padding(.vertical, DPSpacing.extraSmall)
-        .frame(minHeight: DPSize.minimumTouchTarget)
+        .padding(DPSpacing.small)
+        .frame(maxWidth: .infinity, minHeight: 62, alignment: .leading)
+        .background(
+            isSelected ? DPColor.textPrimary : DPColor.backgroundSecondary,
+            in: RoundedRectangle(cornerRadius: DPRadius.standard)
+        )
+        .overlay {
+            RoundedRectangle(cornerRadius: DPRadius.standard)
+                .stroke(color.opacity(isSelected ? 0 : 0.18), lineWidth: 1)
+        }
     }
 }
 
-struct AdminMemberListView: View {
-    @StateObject private var model: AdminMemberListViewModel
-    @State private var searchText = ""
-    let onOpenCalendar: (MemberID) -> Void
-
-    init(
-        model: @autoclosure @escaping () -> AdminMemberListViewModel = AdminMemberListViewModel(),
-        onOpenCalendar: @escaping (MemberID) -> Void
-    ) {
-        _model = StateObject(wrappedValue: model())
-        self.onOpenCalendar = onOpenCalendar
-    }
+private struct AdminSummaryCard: View {
+    let title: String
+    let value: Int
 
     var body: some View {
-        Group {
-            if model.isLoading && model.members.isEmpty {
-                ProgressView(AdminLocalization.string("admin.common.loading"))
-            } else if model.loadFailed && model.members.isEmpty {
-                ContentUnavailableView {
-                    Label(AdminLocalization.string("admin.members.loadFailed"), systemImage: "wifi.exclamationmark")
-                } actions: {
-                    Button(AdminLocalization.string("admin.common.retry")) {
-                        Task { await model.load() }
-                    }
-                }
-            } else {
-                List {
-                    Section {
-                        LabeledContent(
-                            AdminLocalization.string("admin.members.total"),
-                            value: model.totalElements.formatted()
-                        )
-                        LabeledContent(
-                            AdminLocalization.string("admin.members.activeSessions"),
-                            value: model.sessions.count.formatted()
-                        )
-                    }
-
-                    Section(AdminLocalization.string("admin.members.title")) {
-                        ForEach(model.members) { member in
-                            NavigationLink {
-                                AdminMemberDetailView(
-                                    member: member,
-                                    model: model,
-                                    onOpenCalendar: onOpenCalendar
-                                )
-                            } label: {
-                                AdminMemberRow(member: member)
-                            }
-                        }
-                    }
-
-                    if model.totalPages > 1 {
-                        Section {
-                            AdminPaginationFooter(
-                                page: model.page,
-                                totalPages: model.totalPages,
-                                onPrevious: { Task { await model.movePage(by: -1) } },
-                                onNext: { Task { await model.movePage(by: 1) } }
-                            )
-                        }
-                    }
-                }
-                .refreshable { await model.load() }
-            }
+        VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+            Text(value.formatted())
+                .font(DPTypography.heading)
+                .foregroundStyle(DPColor.textPrimary)
+            Text(title)
+                .font(DPTypography.caption)
+                .foregroundStyle(DPColor.textMuted)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
         }
-        .navigationTitle(AdminLocalization.string("admin.nav.members"))
-        .navigationBarTitleDisplayMode(.inline)
-        .searchable(
-            text: $searchText,
-            placement: .navigationBarDrawer(displayMode: .always),
-            prompt: AdminLocalization.string("admin.members.search")
-        )
-        .onSubmit(of: .search) { Task { await model.search(searchText) } }
-        .task { await model.load() }
-        .accessibilityIdentifier("screen.admin.members")
+        .padding(DPSpacing.small)
+        .frame(maxWidth: .infinity, minHeight: 68, alignment: .leading)
+        .background(DPColor.backgroundSecondary, in: RoundedRectangle(cornerRadius: DPRadius.standard))
     }
 }
 
@@ -222,9 +279,13 @@ private struct AdminMemberRow: View {
 
     var body: some View {
         HStack(spacing: DPSpacing.compact) {
-            Image(systemName: "person.crop.circle.fill")
-                .font(.system(size: 34))
-                .foregroundStyle(DPColor.textMuted)
+            AdminMemberAvatar(
+                memberID: member.id,
+                name: member.name,
+                hasProfilePhoto: member.hasProfilePhoto,
+                version: member.profilePhotoVersion,
+                size: 44
+            )
             VStack(alignment: .leading, spacing: 3) {
                 Text(member.name)
                     .font(DPTypography.body)
@@ -247,6 +308,168 @@ private struct AdminMemberRow: View {
         .padding(.vertical, DPSpacing.extraSmall)
         .frame(minHeight: 60)
         .accessibilityIdentifier("admin.member.\(member.id)")
+    }
+}
+
+private struct AdminMemberAvatar: View {
+    let memberID: MemberID
+    let name: String
+    let hasProfilePhoto: Bool
+    let version: Int64
+    let size: CGFloat
+
+    var body: some View {
+        Group {
+            if hasProfilePhoto {
+                AsyncImage(url: AdminMemberAvatarPresentation.url(memberID: memberID, version: version)) { phase in
+                    if let image = phase.image {
+                        image.resizable().scaledToFill()
+                    } else {
+                        fallback
+                    }
+                }
+            } else {
+                fallback
+            }
+        }
+        .frame(width: size, height: size)
+        .clipShape(Circle())
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(name)
+        .accessibilityIdentifier("admin.member.avatar.\(memberID)")
+    }
+
+    private var fallback: some View {
+        ZStack {
+            DPColor.accent.opacity(0.14)
+            Text(String(name.prefix(1)))
+                .font(.system(size: size * 0.38, weight: .semibold))
+                .foregroundStyle(DPColor.accent)
+        }
+    }
+}
+
+nonisolated enum AdminRootNavigationPresentation {
+    static let tileKeys = [
+        "admin.nav.members",
+        "admin.nav.teams",
+        "admin.nav.development",
+        "admin.nav.apiDocumentation",
+    ]
+}
+
+nonisolated enum AdminMemberSearchPolicy {
+    static let debounce: Duration = .milliseconds(300)
+
+    static func normalized(_ keyword: String) -> String {
+        keyword.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+}
+
+nonisolated struct AdminDashboardStatsPresentation: Equatable, Sendable {
+    static let localizationKeys = [
+        "admin.dashboard.totalMembers",
+        "admin.dashboard.teams",
+        "admin.dashboard.activeSessions",
+        "admin.dashboard.todayLogins",
+    ]
+
+    let totalMembers: Int64
+    let teamCount: Int
+    let activeSessionCount: Int
+    let todayLoginCount: Int
+
+    var values: [Int] {
+        [Int(totalMembers), teamCount, activeSessionCount, todayLoginCount]
+    }
+
+    init(
+        totalMembers: Int64,
+        loadedMembers: [AdminMemberDTO],
+        sessions: [SettingsRefreshToken],
+        today: String
+    ) {
+        self.totalMembers = totalMembers
+        teamCount = Set(loadedMembers.compactMap(\.teamId)).count
+        activeSessionCount = sessions.count
+        todayLoginCount = sessions.count { $0.lastUsed?.hasPrefix(today) == true }
+    }
+
+    static func todayString(
+        date: Date = Date(),
+        calendar: Calendar = .current
+    ) -> String {
+        let components = calendar.dateComponents([.year, .month, .day], from: date)
+        return String(
+            format: "%04d-%02d-%02d",
+            components.year ?? 0,
+            components.month ?? 0,
+            components.day ?? 0
+        )
+    }
+}
+
+nonisolated enum AdminMemberAvatarPresentation {
+    static func url(memberID: MemberID, version: Int64) -> URL {
+        AppConfiguration.apiBaseURL
+            .appending(path: "members/\(memberID)/profile-photo")
+            .appending(queryItems: [
+                URLQueryItem(name: "thumbnail", value: "true"),
+                URLQueryItem(name: "v", value: version.formatted()),
+            ])
+    }
+}
+
+nonisolated enum AdminMemberDetailPresentation {
+    static func dateText(
+        _ value: LocalDateTimeValue?,
+        locale: Locale = AppLocalization.locale,
+        timeZone: TimeZone = .current
+    ) -> String {
+        guard let value, let date = parse(value.rawValue, timeZone: timeZone) else { return "-" }
+        let formatter = DateFormatter()
+        formatter.locale = locale
+        formatter.timeZone = timeZone
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
+    }
+
+    static func roleKeys(
+        serviceAdmin: Bool,
+        teamAdmin: Bool,
+        teamManager: Bool,
+        auxiliaryAccount: Bool
+    ) -> [String] {
+        var keys: [String] = []
+        if serviceAdmin { keys.append("admin.members.role.serviceAdmin") }
+        if teamAdmin { keys.append("admin.members.role.teamAdmin") }
+        if teamManager { keys.append("admin.members.role.teamManager") }
+        if auxiliaryAccount { keys.append("admin.members.role.auxiliary") }
+        if keys.isEmpty { keys.append("admin.members.role.member") }
+        return keys
+    }
+
+    static func visibilityKey(_ visibility: Visibility) -> String {
+        switch visibility {
+        case .publicAccess: "admin.members.visibility.public"
+        case .friends: "admin.members.visibility.friends"
+        case .family: "admin.members.visibility.family"
+        case .privateAccess: "admin.members.visibility.private"
+        case .unknown: "admin.members.visibility.unknown"
+        }
+    }
+
+    private static func parse(_ rawValue: String, timeZone: TimeZone) -> Date? {
+        for format in ["yyyy-MM-dd'T'HH:mm:ss.SSSSSS", "yyyy-MM-dd'T'HH:mm:ss.SSS", "yyyy-MM-dd'T'HH:mm:ss"] {
+            let formatter = DateFormatter()
+            formatter.calendar = Calendar(identifier: .gregorian)
+            formatter.locale = Locale(identifier: "en_US_POSIX")
+            formatter.timeZone = timeZone
+            formatter.dateFormat = format
+            if let date = formatter.date(from: rawValue) { return date }
+        }
+        return nil
     }
 }
 
@@ -362,23 +585,7 @@ private struct AdminMemberDetailView: View {
     var body: some View {
         List {
             Section {
-                LabeledContent(AdminLocalization.string("admin.members.email"), value: member.email ?? "-")
-                LabeledContent(AdminLocalization.string("admin.members.team"), value: member.teamName ?? "-")
-
-                Button {
-                    onOpenCalendar(member.id)
-                } label: {
-                    Label(AdminLocalization.string("admin.members.openCalendar"), systemImage: "calendar")
-                        .frame(minHeight: DPSize.minimumTouchTarget)
-                }
-
-                Button {
-                    passwordModalState = AdminModalInteractionState()
-                    withoutPresentationAnimation { showsPasswordSheet = true }
-                } label: {
-                    Label(AdminLocalization.string("admin.members.changePassword"), systemImage: "key")
-                        .frame(minHeight: DPSize.minimumTouchTarget)
-                }
+                identityHeader
             }
 
             if isLoading {
@@ -476,13 +683,38 @@ private struct AdminMemberDetailView: View {
     private func detailSections(_ detail: AdminMemberDetailDTO) -> some View {
         let metrics = AdminMemberDetailMetricsPresentation(detail: detail)
 
-        Section(AdminLocalization.string("admin.members.account")) {
-            LabeledContent(AdminLocalization.string("admin.members.role.serviceAdmin"), value: yesNo(detail.serviceAdmin))
-            LabeledContent(AdminLocalization.string("admin.members.role.teamAdmin"), value: yesNo(detail.teamAdmin))
-            LabeledContent(AdminLocalization.string("admin.members.role.teamManager"), value: yesNo(detail.teamManager))
-            LabeledContent(AdminLocalization.string("admin.members.authProviders"), value: detail.authProviders.joined(separator: ", "))
-            LabeledContent(AdminLocalization.string("admin.members.created"), value: detail.createdDate.rawValue)
-            LabeledContent(AdminLocalization.string("admin.members.lastActive"), value: detail.lastActiveAt?.rawValue ?? "-")
+        Section(AdminLocalization.string("admin.members.basicInfo")) {
+            LabeledContent(AdminLocalization.string("admin.members.email"), value: detail.email ?? "-")
+            LabeledContent(AdminLocalization.string("admin.members.team"), value: detail.teamName ?? AdminLocalization.string("admin.members.noTeam"))
+            LabeledContent(
+                AdminLocalization.string("admin.members.visibility"),
+                value: AdminLocalization.string(AdminMemberDetailPresentation.visibilityKey(detail.calendarVisibility))
+            )
+            LabeledContent(
+                AdminLocalization.string("admin.members.created"),
+                value: AdminMemberDetailPresentation.dateText(detail.createdDate)
+            )
+            LabeledContent(
+                AdminLocalization.string("admin.members.lastModified"),
+                value: AdminMemberDetailPresentation.dateText(detail.lastModifiedDate)
+            )
+            LabeledContent(
+                AdminLocalization.string("admin.members.lastActive"),
+                value: AdminMemberDetailPresentation.dateText(detail.lastActiveAt)
+            )
+        }
+
+        Section(AdminLocalization.string("admin.members.accountStatus")) {
+            LabeledContent(
+                AdminLocalization.string("admin.members.authProviders"),
+                value: listText(detail.authProviders)
+            )
+            LabeledContent(AdminLocalization.string("admin.members.hasPassword"), value: yesNo(detail.hasPassword))
+            LabeledContent(AdminLocalization.string("admin.members.auxiliaryAccount"), value: yesNo(detail.auxiliaryAccount))
+            LabeledContent(AdminLocalization.string("admin.members.activeSessions"), value: detail.activeSessionCount.formatted())
+            LabeledContent(AdminLocalization.string("admin.members.pushEnabledSessions"), value: detail.pushEnabledSessionCount.formatted())
+            LabeledContent(AdminLocalization.string("admin.members.notifications"), value: detail.totalNotificationCount.formatted())
+            LabeledContent(AdminLocalization.string("admin.members.unreadNotifications"), value: detail.unreadNotificationCount.formatted())
         }
 
         Section(AdminLocalization.string("admin.members.scheduleSummary")) {
@@ -506,22 +738,105 @@ private struct AdminMemberDetailView: View {
             LabeledContent(AdminLocalization.string("admin.members.privateDDays"), value: metrics.privateDDayCount.formatted())
         }
 
-        Section(AdminLocalization.string("admin.members.activity")) {
-            LabeledContent(AdminLocalization.string("admin.members.notifications"), value: detail.totalNotificationCount.formatted())
-        }
-
         Section(AdminLocalization.string("admin.members.relationships")) {
             LabeledContent(AdminLocalization.string("admin.members.friends"), value: detail.friendCount.formatted())
             LabeledContent(AdminLocalization.string("admin.members.family"), value: detail.familyCount.formatted())
             LabeledContent(AdminLocalization.string("admin.members.receivedFriendRequests"), value: metrics.receivedFriendRequestCount.formatted())
             LabeledContent(AdminLocalization.string("admin.members.sentFriendRequests"), value: metrics.sentFriendRequestCount.formatted())
             LabeledContent(AdminLocalization.string("admin.members.managers"), value: detail.managerCount.formatted())
+            LabeledContent(AdminLocalization.string("admin.members.managerNames"), value: listText(detail.managerNames))
             LabeledContent(AdminLocalization.string("admin.members.managedMembers"), value: detail.managedMemberCount.formatted())
+            LabeledContent(AdminLocalization.string("admin.members.managedMemberNames"), value: listText(detail.managedMemberNames))
         }
+    }
+
+    private var identityHeader: some View {
+        VStack(spacing: DPSpacing.compact) {
+            AdminMemberAvatar(
+                memberID: member.id,
+                name: member.name,
+                hasProfilePhoto: member.hasProfilePhoto,
+                version: member.profilePhotoVersion,
+                size: 76
+            )
+
+            VStack(spacing: 3) {
+                Text(member.name)
+                    .font(DPTypography.heading)
+                    .foregroundStyle(DPColor.textPrimary)
+                Text(AdminLocalization.format("admin.members.id", member.id))
+                    .font(DPTypography.caption)
+                    .foregroundStyle(DPColor.textMuted)
+                Text(member.email ?? AdminLocalization.string("admin.members.noEmail"))
+                    .font(DPTypography.supporting)
+                    .foregroundStyle(DPColor.textSecondary)
+                Label(
+                    member.teamName ?? AdminLocalization.string("admin.members.noTeam"),
+                    systemImage: "building.2"
+                )
+                .font(DPTypography.caption)
+                .foregroundStyle(DPColor.textMuted)
+            }
+
+            if let detail {
+                LazyVGrid(
+                    columns: [GridItem(.adaptive(minimum: 92), spacing: DPSpacing.extraSmall)],
+                    spacing: DPSpacing.extraSmall
+                ) {
+                    ForEach(
+                        AdminMemberDetailPresentation.roleKeys(
+                            serviceAdmin: detail.serviceAdmin,
+                            teamAdmin: detail.teamAdmin,
+                            teamManager: detail.teamManager,
+                            auxiliaryAccount: detail.auxiliaryAccount
+                        ),
+                        id: \.self
+                    ) { key in
+                        Text(AdminLocalization.string(key))
+                            .font(DPTypography.caption)
+                            .foregroundStyle(DPColor.accent)
+                            .padding(.horizontal, DPSpacing.small)
+                            .padding(.vertical, DPSpacing.extraSmall)
+                            .frame(maxWidth: .infinity)
+                            .background(
+                                DPColor.accent.opacity(0.12),
+                                in: Capsule()
+                            )
+                    }
+                }
+                .accessibilityIdentifier("admin.member.roles")
+            }
+
+            HStack(spacing: DPSpacing.small) {
+                Button {
+                    onOpenCalendar(member.id)
+                } label: {
+                    Label(AdminLocalization.string("admin.members.openCalendar"), systemImage: "calendar")
+                        .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)
+                }
+                .buttonStyle(DPSecondaryButtonStyle())
+
+                Button {
+                    passwordModalState = AdminModalInteractionState()
+                    withoutPresentationAnimation { showsPasswordSheet = true }
+                } label: {
+                    Label(AdminLocalization.string("admin.members.changePassword"), systemImage: "key")
+                        .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)
+                }
+                .buttonStyle(DPSecondaryButtonStyle())
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, DPSpacing.small)
+        .accessibilityIdentifier("admin.member.identity")
     }
 
     private func yesNo(_ value: Bool) -> String {
         AdminLocalization.string(value ? "admin.common.yes" : "admin.common.no")
+    }
+
+    private func listText(_ values: [String]) -> String {
+        values.isEmpty ? AdminLocalization.string("admin.members.none") : values.joined(separator: ", ")
     }
 
     private func loadDetail() async {

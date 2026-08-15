@@ -4,6 +4,120 @@ import Testing
 
 @Suite("Admin feature", .serialized)
 struct AdminFeatureTests {
+    @Test("Admin landing matches the web navigation and summary hierarchy")
+    func landingPresentation() {
+        let members = [
+            AdminMemberDTO(
+                id: 1,
+                name: "Alpha",
+                email: nil,
+                teamId: 10,
+                teamName: "One",
+                tokens: [],
+                hasProfilePhoto: true,
+                profilePhotoVersion: 3
+            ),
+            AdminMemberDTO(
+                id: 2,
+                name: "Bravo",
+                email: nil,
+                teamId: 10,
+                teamName: "One",
+                tokens: [],
+                hasProfilePhoto: false,
+                profilePhotoVersion: 0
+            ),
+        ]
+        let sessions = [
+            SettingsRefreshToken(
+                memberName: "Alpha",
+                memberId: 1,
+                validUntil: "2026-09-01T00:00:00",
+                createdDate: "2026-08-01T00:00:00",
+                lastUsed: "2026-08-15T09:00:00",
+                remoteAddr: nil,
+                id: 1,
+                userAgent: nil,
+                isCurrentLogin: false
+            ),
+            SettingsRefreshToken(
+                memberName: "Bravo",
+                memberId: 2,
+                validUntil: "2026-09-01T00:00:00",
+                createdDate: "2026-08-01T00:00:00",
+                lastUsed: "2026-08-14T23:59:59",
+                remoteAddr: nil,
+                id: 2,
+                userAgent: nil,
+                isCurrentLogin: false
+            ),
+        ]
+        let stats = AdminDashboardStatsPresentation(
+            totalMembers: 24,
+            loadedMembers: members,
+            sessions: sessions,
+            today: "2026-08-15"
+        )
+
+        #expect(AdminRootNavigationPresentation.tileKeys == [
+            "admin.nav.members",
+            "admin.nav.teams",
+            "admin.nav.development",
+            "admin.nav.apiDocumentation",
+        ])
+        #expect(stats.values == [24, 1, 2, 1])
+        #expect(AdminMemberSearchPolicy.debounce == .milliseconds(300))
+        #expect(AdminMemberSearchPolicy.normalized("  Shane  ") == "Shane")
+    }
+
+    @Test("Admin member identity metadata is localized and profile-photo URLs are cache-safe")
+    func memberIdentityPresentation() {
+        let value = LocalDateTimeValue(rawValue: "2026-08-15T09:30:00")
+        let ko = AdminMemberDetailPresentation.dateText(
+            value,
+            locale: Locale(identifier: "ko"),
+            timeZone: TimeZone(secondsFromGMT: 0)!
+        )
+        let en = AdminMemberDetailPresentation.dateText(
+            value,
+            locale: Locale(identifier: "en"),
+            timeZone: TimeZone(secondsFromGMT: 0)!
+        )
+        let photoURL = AdminMemberAvatarPresentation.url(memberID: 7, version: 9)
+
+        #expect(!ko.contains("T"))
+        #expect(!en.contains("T"))
+        #expect(ko != en)
+        #expect(photoURL.path.hasSuffix("/members/7/profile-photo"))
+        #expect(URLComponents(url: photoURL, resolvingAgainstBaseURL: false)?.queryItems == [
+            URLQueryItem(name: "thumbnail", value: "true"),
+            URLQueryItem(name: "v", value: "9"),
+        ])
+        #expect(AdminMemberDetailPresentation.roleKeys(
+            serviceAdmin: true,
+            teamAdmin: false,
+            teamManager: true,
+            auxiliaryAccount: true
+        ) == [
+            "admin.members.role.serviceAdmin",
+            "admin.members.role.teamManager",
+            "admin.members.role.auxiliary",
+        ])
+    }
+
+    @Test("Admin fixture search filters, empties, and restores the member list")
+    func memberSearchFixture() async throws {
+        let repository = AdminVisualFixtureRepository()
+
+        let filtered = try await repository.members(keyword: "세션 없는", page: 0, size: 20)
+        let empty = try await repository.members(keyword: "존재하지 않음", page: 0, size: 20)
+        let restored = try await repository.members(keyword: "", page: 0, size: 20)
+
+        #expect(filtered.content.map(\.id) == [8])
+        #expect(empty.content.isEmpty)
+        #expect(restored.content.map(\.id) == [7, 8])
+    }
+
     @Test("Admin member detail exposes every web status metric")
     func memberDetailStatusMetrics() {
         let metrics = AdminMemberDetailMetricsPresentation(
@@ -317,6 +431,45 @@ struct AdminFeatureTests {
         #expect(model.isLoading == false)
         #expect(await repository.deletedIDs == [first.id])
         #expect(await repository.teamLoadCount == 1)
+    }
+
+    @Test("Clearing a submitted team search restores the unfiltered first page") @MainActor
+    func clearingTeamSearchRestoresFirstPage() async {
+        let team = SimpleTeamDTO(
+            id: 1,
+            name: "Visible team",
+            description: "Description",
+            memberCount: 2
+        )
+        let repository = AdminTeamMutationRepository(
+            teams: [team],
+            createdTeam: Self.managedTeam(id: 7, name: "Unused")
+        )
+        let model = AdminTeamListViewModel(repository: repository)
+
+        await model.search("  Missing  ")
+        #expect(model.searchKeyword == "Missing")
+        #expect(model.teams.isEmpty)
+
+        await model.search("")
+        #expect(model.searchKeyword.isEmpty)
+        #expect(model.teams == [team])
+        #expect(model.page == 0)
+        #expect(await repository.teamKeywords == ["Missing", ""])
+    }
+
+    @Test("Team pagination mirrors the web mobile hierarchy")
+    func teamPaginationPresentation() {
+        #expect(AdminTeamPaginationPolicy.items(currentPage: 0, totalPages: 1) == [.page(0)])
+        #expect(AdminTeamPaginationPolicy.items(currentPage: 2, totalPages: 5) == [
+            .page(0), .page(1), .page(2), .page(3), .page(4),
+        ])
+        #expect(AdminTeamPaginationPolicy.items(currentPage: 4, totalPages: 10) == [
+            .page(0), .gap, .page(3), .page(4), .page(5), .gap, .page(9),
+        ])
+        #expect(AdminTeamPaginationPolicy.compactItems(currentPage: 4, totalPages: 10) == [
+            .page(0), .gap, .page(4), .gap, .page(9),
+        ])
     }
 
     @Test("Admin edit modals use one dirty-form dismissal policy for every request source")
@@ -778,6 +931,7 @@ private actor AdminTeamMutationRepository: AdminRepositoryProtocol {
     private let initialTeams: [SimpleTeamDTO]
     private let createdTeam: TeamDTO
     private(set) var teamLoadCount = 0
+    private(set) var teamKeywords: [String] = []
     private(set) var createdValues: [(String, String)] = []
     private(set) var deletedIDs: [TeamID] = []
 
@@ -788,16 +942,22 @@ private actor AdminTeamMutationRepository: AdminRepositoryProtocol {
 
     func teams(keyword: String, page: Int, size: Int) async throws -> PageResponse<SimpleTeamDTO> {
         teamLoadCount += 1
+        teamKeywords.append(keyword)
+        let filtered = initialTeams.filter { team in
+            keyword.isEmpty
+                || team.name.localizedCaseInsensitiveContains(keyword)
+                || team.description?.localizedCaseInsensitiveContains(keyword) == true
+        }
         return PageResponse(
-            content: initialTeams,
-            totalPages: initialTeams.isEmpty ? 0 : 1,
-            totalElements: Int64(initialTeams.count),
+            content: filtered,
+            totalPages: filtered.isEmpty ? 0 : 1,
+            totalElements: Int64(filtered.count),
             last: true,
             first: true,
             size: size,
             number: page,
-            numberOfElements: initialTeams.count,
-            empty: initialTeams.isEmpty
+            numberOfElements: filtered.count,
+            empty: filtered.isEmpty
         )
     }
 

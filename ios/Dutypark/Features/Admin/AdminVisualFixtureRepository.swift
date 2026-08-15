@@ -36,8 +36,32 @@ nonisolated struct AdminVisualFixtureRepository: AdminRepositoryProtocol, Sendab
         isCurrentLogin: false
     )
 
+    private static let teamFixtures: [SimpleTeamDTO] = [
+        SimpleTeamDTO(
+            id: 101,
+            name: "시각 검증팀",
+            description: "관리자 팀 목록 시각 검증",
+            memberCount: 0
+        ),
+    ] + (1...11).map { index in
+        SimpleTeamDTO(
+            id: TeamID(101 + index),
+            name: "운영팀 \(index)",
+            description: "모바일 목록 계층 검증 \(index)",
+            memberCount: Int64(index)
+        )
+    }
+
     func members(keyword: String, page: Int, size: Int) async throws -> PageResponse<AdminMemberDTO> {
-        pageResponse(content: [member, memberWithoutSessions], page: page, size: size)
+        let normalizedKeyword = keyword.trimmingCharacters(in: .whitespacesAndNewlines)
+        let allMembers = [member, memberWithoutSessions]
+        let filteredMembers = normalizedKeyword.isEmpty
+            ? allMembers
+            : allMembers.filter {
+                $0.name.localizedCaseInsensitiveContains(normalizedKeyword)
+                    || $0.email?.localizedCaseInsensitiveContains(normalizedKeyword) == true
+            }
+        return pageResponse(content: filteredMembers, page: page, size: size)
     }
 
     func memberDetail(id: MemberID) async throws -> AdminMemberDetailDTO {
@@ -50,10 +74,10 @@ nonisolated struct AdminVisualFixtureRepository: AdminRepositoryProtocol, Sendab
             calendarVisibility: .friends,
             hasProfilePhoto: false,
             profilePhotoVersion: 0,
-            serviceAdmin: false,
+            serviceAdmin: true,
             teamAdmin: false,
-            teamManager: false,
-            auxiliaryAccount: false,
+            teamManager: true,
+            auxiliaryAccount: true,
             hasPassword: true,
             authProviders: ["LOCAL"],
             createdDate: LocalDateTimeValue(rawValue: "2026-01-01T09:00:00"),
@@ -101,9 +125,9 @@ nonisolated struct AdminVisualFixtureRepository: AdminRepositoryProtocol, Sendab
             pendingReceivedFriendRequestCount: 2,
             pendingSentFriendRequestCount: 1,
             managerCount: 1,
-            managedMemberCount: 0,
+            managedMemberCount: 2,
             managerNames: ["Dutypark 관리자"],
-            managedMemberNames: [],
+            managedMemberNames: ["관리 회원 A", "관리 회원 B"],
             totalNotificationCount: 6,
             unreadNotificationCount: 1
         )
@@ -118,24 +142,47 @@ nonisolated struct AdminVisualFixtureRepository: AdminRepositoryProtocol, Sendab
     func changePassword(memberID: MemberID, newPassword: String) async throws {}
 
     func teams(keyword: String, page: Int, size: Int) async throws -> PageResponse<SimpleTeamDTO> {
-        pageResponse(
-            content: [
-                SimpleTeamDTO(
-                    id: 101,
-                    name: "시각 검증팀",
-                    description: "관리자 확인 패널 캡처용 팀",
-                    memberCount: 0
-                )
-            ],
-            page: page,
-            size: size
+        let filtered = Self.teamFixtures.filter { team in
+            keyword.isEmpty
+                || team.name.localizedCaseInsensitiveContains(keyword)
+                || team.description?.localizedCaseInsensitiveContains(keyword) == true
+        }
+        let start = page * size
+        let content: [SimpleTeamDTO]
+        if filtered.indices.contains(start) {
+            content = Array(filtered[start..<min(start + size, filtered.count)])
+        } else {
+            content = []
+        }
+        let totalPages = filtered.isEmpty ? 0 : (filtered.count + size - 1) / size
+        return PageResponse(
+            content: content,
+            totalPages: totalPages,
+            totalElements: Int64(filtered.count),
+            last: page >= totalPages - 1,
+            first: page == 0,
+            size: size,
+            number: page,
+            numberOfElements: content.count,
+            empty: content.isEmpty
         )
     }
 
     func checkTeamName(_ name: String) async throws -> AdminTeamNameCheckResult { .ok }
 
     func createTeam(name: String, description: String) async throws -> TeamDTO {
-        throw APIError.invalidResponse
+        TeamDTO(
+            id: 9001,
+            name: name,
+            description: description,
+            dutyTypes: [],
+            members: [],
+            createdDate: LocalDateTimeValue(rawValue: "2026-08-15T21:00:00"),
+            lastModifiedDate: LocalDateTimeValue(rawValue: "2026-08-15T21:00:00"),
+            adminId: nil,
+            adminName: nil,
+            dutyBatchTemplate: nil
+        )
     }
 
     func deleteTeam(id: TeamID) async throws {}

@@ -297,6 +297,31 @@
         }
       }
     },
+    "admin.dashboard.activeSessions": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Active sessions" } }, "ko": { "stringUnit": { "state": "translated", "value": "활성 세션" } } } },
+    "admin.dashboard.teams": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Teams on page" } }, "ko": { "stringUnit": { "state": "translated", "value": "현재 팀" } } } },
+    "admin.dashboard.todayLogins": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Today's logins" } }, "ko": { "stringUnit": { "state": "translated", "value": "오늘 로그인" } } } },
+    "admin.dashboard.totalMembers": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Total members" } }, "ko": { "stringUnit": { "state": "translated", "value": "전체 회원" } } } },
+    "admin.members.accountStatus": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Account status" } }, "ko": { "stringUnit": { "state": "translated", "value": "계정 상태" } } } },
+    "admin.members.auxiliaryAccount": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Auxiliary account" } }, "ko": { "stringUnit": { "state": "translated", "value": "보조 계정" } } } },
+    "admin.members.basicInfo": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Basic information" } }, "ko": { "stringUnit": { "state": "translated", "value": "기본 정보" } } } },
+    "admin.members.empty": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "No members found" } }, "ko": { "stringUnit": { "state": "translated", "value": "검색된 회원이 없습니다" } } } },
+    "admin.members.hasPassword": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Password configured" } }, "ko": { "stringUnit": { "state": "translated", "value": "비밀번호 설정" } } } },
+    "admin.members.id": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "ID %lld" } }, "ko": { "stringUnit": { "state": "translated", "value": "ID %lld" } } } },
+    "admin.members.lastModified": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Last updated" } }, "ko": { "stringUnit": { "state": "translated", "value": "최근 수정" } } } },
+    "admin.members.managedMemberNames": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Managed member names" } }, "ko": { "stringUnit": { "state": "translated", "value": "관리 회원 이름" } } } },
+    "admin.members.managerNames": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Manager names" } }, "ko": { "stringUnit": { "state": "translated", "value": "담당 관리자 이름" } } } },
+    "admin.members.none": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "None" } }, "ko": { "stringUnit": { "state": "translated", "value": "없음" } } } },
+    "admin.members.noTeam": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "No team" } }, "ko": { "stringUnit": { "state": "translated", "value": "소속 팀 없음" } } } },
+    "admin.members.pushEnabledSessions": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Push-enabled sessions" } }, "ko": { "stringUnit": { "state": "translated", "value": "푸시 활성 세션" } } } },
+    "admin.members.role.auxiliary": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Auxiliary" } }, "ko": { "stringUnit": { "state": "translated", "value": "보조 계정" } } } },
+    "admin.members.role.member": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Member" } }, "ko": { "stringUnit": { "state": "translated", "value": "일반 회원" } } } },
+    "admin.members.unreadNotifications": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Unread notifications" } }, "ko": { "stringUnit": { "state": "translated", "value": "읽지 않은 알림" } } } },
+    "admin.members.visibility": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Calendar visibility" } }, "ko": { "stringUnit": { "state": "translated", "value": "캘린더 공개 범위" } } } },
+    "admin.members.visibility.family": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Family" } }, "ko": { "stringUnit": { "state": "translated", "value": "가족" } } } },
+    "admin.members.visibility.friends": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Friends" } }, "ko": { "stringUnit": { "state": "translated", "value": "친구" } } } },
+    "admin.members.visibility.private": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Private" } }, "ko": { "stringUnit": { "state": "translated", "value": "비공개" } } } },
+    "admin.members.visibility.public": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Public" } }, "ko": { "stringUnit": { "state": "translated", "value": "전체 공개" } } } },
+    "admin.members.visibility.unknown": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Unknown" } }, "ko": { "stringUnit": { "state": "translated", "value": "알 수 없음" } } } },
     "admin.members.account": {
       "localizations": {
         "en": {
@@ -1091,6 +1116,22 @@
         }
       }
     },
+    "admin.nav.apiDocumentation.externalHint": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opens in your browser"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "브라우저에서 엽니다"
+          }
+        }
+      }
+    },
     "admin.nav.apiDocumentation.subtitle": {
       "localizations": {
         "en": {
@@ -1379,6 +1420,22 @@
         }
       }
     },
+    "admin.teams.empty": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No teams found"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "검색 결과가 없습니다"
+          }
+        }
+      }
+    },
     "admin.teams.description": {
       "localizations": {
         "en": {
@@ -1539,6 +1596,22 @@
         }
       }
     },
+    "admin.teams.search.clear": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Clear search"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "검색 지우기"
+          }
+        }
+      }
+    },
     "admin.teams.title": {
       "localizations": {
         "en": {
@@ -1550,7 +1623,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "팀"
+            "value": "팀 목록"
           }
         }
       }
@@ -1560,13 +1633,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Total teams"
+            "value": "%lld teams total"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "전체 팀"
+            "value": "총 %lld개의 팀이 있습니다"
           }
         }
       }

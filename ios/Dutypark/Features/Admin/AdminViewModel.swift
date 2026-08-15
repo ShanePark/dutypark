@@ -106,9 +106,9 @@ final class AdminTeamListViewModel: ObservableObject {
     @Published private(set) var isLoading = false
     @Published private(set) var loadFailed = false
     @Published private(set) var nameCheckResult: AdminTeamNameCheckResult?
+    @Published private(set) var searchKeyword = ""
 
     private let repository: any AdminRepositoryProtocol
-    private var keyword = ""
     private var loadGeneration = 0
     private var nameCheckGeneration = 0
 
@@ -117,18 +117,21 @@ final class AdminTeamListViewModel: ObservableObject {
     }
 
     func load() async {
-        await load(keyword: keyword, page: page)
+        await load(keyword: searchKeyword, page: page)
     }
 
     func search(_ value: String) async {
-        keyword = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        await load(keyword: keyword, page: 0)
+        searchKeyword = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        await load(keyword: searchKeyword, page: 0)
     }
 
     func movePage(by offset: Int) async {
-        let nextPage = page + offset
+        await movePage(to: page + offset)
+    }
+
+    func movePage(to nextPage: Int) async {
         guard nextPage >= 0, nextPage < totalPages else { return }
-        await load(keyword: keyword, page: nextPage)
+        await load(keyword: searchKeyword, page: nextPage)
     }
 
     func checkName(_ name: String) async {
@@ -178,9 +181,9 @@ final class AdminTeamListViewModel: ObservableObject {
     }
 
     private func insertCreatedTeam(_ team: TeamDTO) {
-        let matchesKeyword = keyword.isEmpty
-            || team.name.localizedCaseInsensitiveContains(keyword)
-            || team.description?.localizedCaseInsensitiveContains(keyword) == true
+        let matchesKeyword = searchKeyword.isEmpty
+            || team.name.localizedCaseInsensitiveContains(searchKeyword)
+            || team.description?.localizedCaseInsensitiveContains(searchKeyword) == true
         guard matchesKeyword else { return }
 
         let created = SimpleTeamDTO(

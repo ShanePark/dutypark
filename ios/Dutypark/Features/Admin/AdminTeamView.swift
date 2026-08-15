@@ -9,6 +9,7 @@ struct AdminTeamListView: View {
     @State private var teamToDelete: SimpleTeamDTO?
     @State private var isDeletingTeam = false
     @State private var operationMessage: String?
+    @State private var createdTeamID: TeamID?
 
     init(model: @autoclosure @escaping () -> AdminTeamListViewModel = AdminTeamListViewModel()) {
         _model = StateObject(wrappedValue: model())
@@ -29,24 +30,30 @@ struct AdminTeamListView: View {
             } else {
                 List {
                     Section {
-                        LabeledContent(
-                            AdminLocalization.string("admin.teams.total"),
-                            value: model.totalElements.formatted()
+                        AdminTeamListSummary(
+                            searchKeyword: model.searchKeyword,
+                            totalElements: model.totalElements,
+                            clearSearch: clearSearch
                         )
                     }
+                    .listRowSeparator(.hidden)
 
-                    Section(AdminLocalization.string("admin.teams.title")) {
-                        ForEach(model.teams, id: \.id) { team in
-                            NavigationLink {
-                                TeamManageView(teamID: team.id, isServiceAdmin: true)
-                            } label: {
-                                AdminTeamRow(team: team)
-                            }
-                            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                                Button(role: .destructive) {
-                                    teamToDelete = team
+                    Section {
+                        if model.teams.isEmpty {
+                            AdminTeamEmptyState()
+                        } else {
+                            ForEach(model.teams, id: \.id) { team in
+                                NavigationLink {
+                                    teamManageDestination(team.id)
                                 } label: {
-                                    Label(AdminLocalization.string("admin.common.delete"), systemImage: "trash")
+                                    AdminTeamRow(team: team)
+                                }
+                                .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                                    Button(role: .destructive) {
+                                        teamToDelete = team
+                                    } label: {
+                                        Label(AdminLocalization.string("admin.common.delete"), systemImage: "trash")
+                                    }
                                 }
                             }
                         }
@@ -54,15 +61,18 @@ struct AdminTeamListView: View {
 
                     if model.totalPages > 1 {
                         Section {
-                            AdminPaginationFooter(
+                            AdminTeamPagination(
                                 page: model.page,
                                 totalPages: model.totalPages,
-                                onPrevious: { Task { await model.movePage(by: -1) } },
-                                onNext: { Task { await model.movePage(by: 1) } }
+                                selectPage: { page in
+                                    Task { await model.movePage(to: page) }
+                                }
                             )
                         }
+                        .listRowSeparator(.hidden)
                     }
                 }
+                .listStyle(.plain)
                 .refreshable { await model.load() }
             }
         }
@@ -74,6 +84,13 @@ struct AdminTeamListView: View {
             prompt: AdminLocalization.string("admin.teams.search")
         )
         .onSubmit(of: .search) { Task { await model.search(searchText) } }
+        .onChange(of: searchText) { oldValue, newValue in
+            guard !oldValue.isEmpty,
+                  newValue.isEmpty,
+                  !model.searchKeyword.isEmpty
+            else { return }
+            Task { await model.search("") }
+        }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {
@@ -85,6 +102,7 @@ struct AdminTeamListView: View {
                         .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
                 }
                 .accessibilityLabel(AdminLocalization.string("admin.teams.create"))
+                .accessibilityIdentifier("admin.teams.create.open")
             }
         }
         .fullScreenCover(isPresented: $showsCreateSheet) {
@@ -99,8 +117,8 @@ struct AdminTeamListView: View {
                     interactionState: $createModalState,
                     requestDismiss: requestCreateModalDismiss
                 ) { team in
-                    operationMessage = AdminLocalization.format("admin.teams.created", team.name)
                     showsCreateSheet = false
+                    createdTeamID = team.id
                 }
             }
             .alert(
@@ -159,7 +177,23 @@ struct AdminTeamListView: View {
             Text(operationMessage ?? "")
         }
         .task { await model.load() }
+        .navigationDestination(item: $createdTeamID) { teamID in
+            teamManageDestination(teamID)
+        }
         .accessibilityIdentifier("screen.admin.teams")
+    }
+
+    private func clearSearch() {
+        if searchText.isEmpty {
+            Task { await model.search("") }
+        } else {
+            searchText = ""
+        }
+    }
+
+    private func teamManageDestination(_ teamID: TeamID) -> some View {
+        TeamManageView(teamID: teamID, isServiceAdmin: true)
+            .accessibilityIdentifier("screen.team.manage.\(teamID)")
     }
 
     private func requestCreateModalDismiss() {
@@ -196,27 +230,198 @@ nonisolated enum AdminTeamDeleteConfirmationPolicy {
     }
 }
 
+private struct AdminTeamListSummary: View {
+    let searchKeyword: String
+    let totalElements: Int64
+    let clearSearch: () -> Void
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+            Text(AdminLocalization.string("admin.teams.title"))
+                .font(DPTypography.sectionTitle)
+                .foregroundStyle(DPColor.textPrimary)
+
+            HStack(alignment: .center, spacing: DPSpacing.extraSmall) {
+                if !searchKeyword.isEmpty {
+                    Text("[\(searchKeyword)]")
+                        .font(DPTypography.supporting)
+                        .foregroundStyle(DPColor.accent)
+                }
+                Text(AdminLocalization.format("admin.teams.total", totalElements))
+                    .font(DPTypography.supporting)
+                    .foregroundStyle(DPColor.textSecondary)
+                Spacer(minLength: DPSpacing.extraSmall)
+                if !searchKeyword.isEmpty {
+                    Button(action: clearSearch) {
+                        Label(
+                            AdminLocalization.string("admin.teams.search.clear"),
+                            systemImage: "xmark.circle.fill"
+                        )
+                        .font(DPTypography.supporting)
+                        .frame(minHeight: DPSize.minimumTouchTarget)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(DPColor.textSecondary)
+                    .accessibilityIdentifier("admin.teams.search.clear")
+                }
+            }
+        }
+        .padding(.vertical, DPSpacing.extraSmall)
+    }
+}
+
+private struct AdminTeamEmptyState: View {
+    var body: some View {
+        VStack(spacing: DPSpacing.small) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 28, weight: .medium))
+                .foregroundStyle(DPColor.textMuted)
+            Text(AdminLocalization.string("admin.teams.empty"))
+                .font(DPTypography.body)
+                .foregroundStyle(DPColor.textMuted)
+        }
+        .frame(maxWidth: .infinity, minHeight: 132)
+        .accessibilityIdentifier("admin.teams.empty")
+    }
+}
+
+nonisolated enum AdminTeamPaginationItem: Equatable, Sendable {
+    case page(Int)
+    case gap
+}
+
+nonisolated enum AdminTeamPaginationPolicy {
+    static func items(currentPage: Int, totalPages: Int) -> [AdminTeamPaginationItem] {
+        guard totalPages > 0 else { return [] }
+        if totalPages <= 5 {
+            return (0..<totalPages).map(AdminTeamPaginationItem.page)
+        }
+
+        let pages = Set([0, totalPages - 1, currentPage - 1, currentPage, currentPage + 1])
+            .filter { (0..<totalPages).contains($0) }
+            .sorted()
+        return items(for: pages)
+    }
+
+    static func compactItems(currentPage: Int, totalPages: Int) -> [AdminTeamPaginationItem] {
+        guard totalPages > 0 else { return [] }
+        let pages = Set([0, currentPage, totalPages - 1])
+            .filter { (0..<totalPages).contains($0) }
+            .sorted()
+        return items(for: pages)
+    }
+
+    private static func items(for pages: [Int]) -> [AdminTeamPaginationItem] {
+        var items: [AdminTeamPaginationItem] = []
+        for page in pages {
+            if case .page(let previous)? = items.last, page - previous > 1 {
+                items.append(.gap)
+            }
+            items.append(.page(page))
+        }
+        return items
+    }
+}
+
+private struct AdminTeamPagination: View {
+    let page: Int
+    let totalPages: Int
+    let selectPage: (Int) -> Void
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            paginationRow(
+                items: AdminTeamPaginationPolicy.items(currentPage: page, totalPages: totalPages)
+            )
+            paginationRow(
+                items: AdminTeamPaginationPolicy.compactItems(currentPage: page, totalPages: totalPages)
+            )
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, DPSpacing.extraSmall)
+    }
+
+    private func paginationRow(items: [AdminTeamPaginationItem]) -> some View {
+        HStack(spacing: DPSpacing.extraSmall) {
+            pageButton(systemImage: "chevron.left", page: page - 1)
+                .disabled(page == 0)
+                .accessibilityLabel(AdminLocalization.string("admin.common.previous"))
+
+            ForEach(
+                Array(items.enumerated()),
+                id: \.offset
+            ) { _, item in
+                switch item {
+                case .gap:
+                    Text("…")
+                        .font(DPTypography.label)
+                        .foregroundStyle(DPColor.textMuted)
+                        .frame(minWidth: 20, minHeight: DPSize.minimumTouchTarget)
+                case .page(let itemPage):
+                    Button {
+                        selectPage(itemPage)
+                    } label: {
+                        Text("\(itemPage + 1)")
+                            .font(DPTypography.label)
+                            .frame(minWidth: DPSize.minimumTouchTarget, minHeight: DPSize.minimumTouchTarget)
+                            .foregroundStyle(itemPage == page ? DPColor.textOnDark : DPColor.textSecondary)
+                            .background(
+                                itemPage == page ? DPColor.surfaceStrong : Color.clear,
+                                in: RoundedRectangle(cornerRadius: DPRadius.standard)
+                            )
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(itemPage == page)
+                    .accessibilityIdentifier("admin.teams.page.\(itemPage + 1)")
+                }
+            }
+
+            pageButton(systemImage: "chevron.right", page: page + 1)
+                .disabled(page >= totalPages - 1)
+                .accessibilityLabel(AdminLocalization.string("admin.common.next"))
+        }
+    }
+
+    private func pageButton(systemImage: String, page: Int) -> some View {
+        Button {
+            selectPage(page)
+        } label: {
+            Image(systemName: systemImage)
+                .font(.system(size: 14, weight: .semibold))
+                .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(DPColor.textMuted)
+    }
+}
+
 private struct AdminTeamRow: View {
     let team: SimpleTeamDTO
 
     var body: some View {
-        HStack(spacing: DPSpacing.compact) {
-            Image(systemName: "building.2.crop.circle.fill")
-                .font(.system(size: 34))
-                .foregroundStyle(DPColor.success)
+        HStack(alignment: .top, spacing: DPSpacing.compact) {
+            Image(systemName: "building.2.fill")
+                .font(.system(size: 18, weight: .medium))
+                .foregroundStyle(DPColor.textSecondary)
+                .frame(width: 40, height: 40)
+                .background(DPColor.backgroundTertiary, in: RoundedRectangle(cornerRadius: DPRadius.standard))
             VStack(alignment: .leading, spacing: 3) {
                 Text(team.name)
-                    .font(DPTypography.body)
+                    .font(DPTypography.label)
                     .foregroundStyle(DPColor.textPrimary)
+                    .lineLimit(1)
                 Text(team.description ?? AdminLocalization.string("admin.teams.noDescription"))
                     .font(DPTypography.caption)
                     .foregroundStyle(DPColor.textMuted)
-                    .lineLimit(2)
+                    .lineLimit(1)
             }
             Spacer(minLength: DPSpacing.extraSmall)
-            Text(AdminLocalization.format("admin.teams.members.count", team.memberCount))
-                .font(DPTypography.caption)
-                .foregroundStyle(DPColor.textSecondary)
+            Label(
+                AdminLocalization.format("admin.teams.members.count", team.memberCount),
+                systemImage: "person.2"
+            )
+            .font(DPTypography.caption)
+            .foregroundStyle(DPColor.textSecondary)
         }
         .padding(.vertical, DPSpacing.extraSmall)
         .frame(minHeight: 60)
@@ -300,6 +505,7 @@ private struct AdminTeamCreateModal: View {
                         isInvalid: name.count > 20
                     )
                     .disabled(interactionState.isSaving)
+                    .accessibilityIdentifier("admin.teams.create.name")
             }
 
             Button {
@@ -316,6 +522,7 @@ private struct AdminTeamCreateModal: View {
             }
             .buttonStyle(DPOutlineButtonStyle())
             .disabled(interactionState.isWorking || name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            .accessibilityIdentifier("admin.teams.create.checkName")
 
             if checkedName == normalizedName, let result = model.nameCheckResult {
                 Label(
@@ -347,6 +554,7 @@ private struct AdminTeamCreateModal: View {
                     isInvalid: description.count > 50
                 )
                 .disabled(interactionState.isSaving)
+                .accessibilityIdentifier("admin.teams.create.description")
             }
 
             Text(AdminLocalization.string("admin.teams.createHint"))
@@ -379,6 +587,7 @@ private struct AdminTeamCreateModal: View {
             }
             .buttonStyle(DPPrimaryButtonStyle())
             .disabled(!canCreate || interactionState.isSaving)
+            .accessibilityIdentifier("admin.teams.create.submit")
 
             Button(action: requestDismiss) {
                 Text(AdminLocalization.string("admin.common.cancel"))

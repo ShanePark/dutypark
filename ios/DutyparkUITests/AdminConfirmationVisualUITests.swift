@@ -11,7 +11,6 @@ final class AdminConfirmationVisualUITests: XCTestCase {
         defer { app.terminate() }
 
         openAdministration(in: app)
-        app.staticTexts["회원 관리"].firstMatch.tap()
 
         let fixtureMember = app.staticTexts["관리자 검증 회원"].firstMatch
         XCTAssertTrue(fixtureMember.waitForExistence(timeout: 10))
@@ -51,7 +50,6 @@ final class AdminConfirmationVisualUITests: XCTestCase {
         defer { app.terminate() }
 
         openAdministration(in: app)
-        app.staticTexts["회원 관리"].firstMatch.tap()
 
         XCTAssertTrue(app.staticTexts["관리자 검증 회원"].firstMatch.waitForExistence(timeout: 10))
         XCTAssertTrue(app.staticTexts["1개의 활성 세션"].firstMatch.exists)
@@ -62,6 +60,43 @@ final class AdminConfirmationVisualUITests: XCTestCase {
         attachment.name = "parity-ios-admin-member-active-session-count-ko-dark"
         attachment.lifetime = .keepAlways
         add(attachment)
+    }
+
+    @MainActor
+    func testCapturesMemberSearchEmptyAndClearParity() throws {
+        let app = launchServiceAdminApp()
+        defer { app.terminate() }
+
+        openAdministration(in: app)
+
+        let searchField = app.searchFields["이름 또는 이메일 검색"].firstMatch
+        XCTAssertTrue(searchField.waitForExistence(timeout: 10))
+        searchField.tap()
+        searchField.typeText("존재하지 않는 회원")
+
+        XCTAssertTrue(
+            app.descendants(matching: .any)["admin.members.empty"]
+                .waitForExistence(timeout: 10)
+        )
+        XCTAssertFalse(app.staticTexts["관리자 검증 회원"].exists)
+
+        let emptyAttachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        emptyAttachment.name = "parity-ios-admin-member-search-empty-ko-dark"
+        emptyAttachment.lifetime = .keepAlways
+        add(emptyAttachment)
+
+        let clearButton = searchField.buttons.firstMatch
+        XCTAssertTrue(clearButton.waitForExistence(timeout: 5))
+        clearButton.tap()
+
+        XCTAssertTrue(app.staticTexts["관리자 검증 회원"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts["세션 없는 회원"].exists)
+        XCTAssertFalse(app.descendants(matching: .any)["admin.members.empty"].exists)
+
+        let restoredAttachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        restoredAttachment.name = "parity-ios-admin-member-search-cleared-ko-dark"
+        restoredAttachment.lifetime = .keepAlways
+        add(restoredAttachment)
     }
 
     @MainActor
@@ -94,7 +129,6 @@ final class AdminConfirmationVisualUITests: XCTestCase {
         defer { app.terminate() }
 
         openAdministration(in: app)
-        app.staticTexts["회원 관리"].firstMatch.tap()
 
         let fixtureMember = app.staticTexts["관리자 검증 회원"].firstMatch
         XCTAssertTrue(fixtureMember.waitForExistence(timeout: 10))
@@ -115,6 +149,57 @@ final class AdminConfirmationVisualUITests: XCTestCase {
             confirmTitle: "세션 종료",
             screenshotName: "parity-ios-admin-member-session-confirmation-ko-dark"
         )
+    }
+
+    @MainActor
+    func testCapturesAdminLandingAndMemberDetailWebHierarchy() throws {
+        let app = launchServiceAdminApp()
+        defer { app.terminate() }
+
+        openAdministration(in: app)
+
+        XCTAssertTrue(app.descendants(matching: .any)["admin.tile.members"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["admin.tile.teams"].exists)
+        XCTAssertFalse(app.descendants(matching: .any)["admin.tile.development"].exists)
+        XCTAssertFalse(app.descendants(matching: .any)["admin.tile.apiDocumentation"].exists)
+        XCTAssertTrue(app.staticTexts["전체 회원"].exists)
+        XCTAssertTrue(app.staticTexts["활성 세션"].exists)
+        XCTAssertTrue(app.staticTexts["오늘 로그인"].exists)
+
+        let landingAttachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        landingAttachment.name = "parity-ios-admin-landing-web-hierarchy-ko-dark"
+        landingAttachment.lifetime = .keepAlways
+        add(landingAttachment)
+
+        let fixtureMember = app.staticTexts["관리자 검증 회원"].firstMatch
+        XCTAssertTrue(fixtureMember.waitForExistence(timeout: 10))
+        fixtureMember.tap()
+
+        XCTAssertTrue(app.descendants(matching: .any)["admin.member.identity"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.descendants(matching: .any)["admin.member.avatar.7"].exists)
+        XCTAssertTrue(app.staticTexts["ID 7"].exists)
+        XCTAssertTrue(app.staticTexts["visual-admin@duty.park"].exists)
+        XCTAssertTrue(app.staticTexts["서비스 관리자"].exists)
+        XCTAssertTrue(app.staticTexts["팀 매니저"].exists)
+        XCTAssertTrue(app.staticTexts["보조 계정"].firstMatch.exists)
+
+        let detailAttachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        detailAttachment.name = "parity-ios-admin-member-identity-web-hierarchy-ko-dark"
+        detailAttachment.lifetime = .keepAlways
+        add(detailAttachment)
+
+        let list = app.collectionViews.firstMatch
+        XCTAssertTrue(scrollToText("계정 상태", in: app, list: list))
+        XCTAssertTrue(scrollToText("최근 수정", in: app, list: list))
+        XCTAssertTrue(scrollToText("캘린더 공개 범위", in: app, list: list))
+        XCTAssertTrue(scrollToText("푸시 활성 세션", in: app, list: list))
+        XCTAssertTrue(scrollToText("읽지 않은 알림", in: app, list: list))
+        XCTAssertFalse(app.staticTexts["2026-08-15T09:00:00"].exists)
+
+        let metadataAttachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        metadataAttachment.name = "parity-ios-admin-member-account-metadata-ko-dark"
+        metadataAttachment.lifetime = .keepAlways
+        add(metadataAttachment)
     }
 
     @MainActor
