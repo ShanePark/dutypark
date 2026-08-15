@@ -50,6 +50,7 @@
 | 15 | 달력 | 근무 요약·액션이 없는데도 빈 도구행이 남아 월 그리드 위에 큰 공백이 생김 | 완료 | `a0aea3a8` |
 | 16 | Todo | 선택한 상태와 다른 열이 보여 카드가 화면 밖에 놓이고, 롱프레스 제스처가 일반 탭을 막음 | 완료 | `b84b2478` |
 | 17 | Todo | 웹의 `진행중` 상태가 iOS에서 `진행`으로 축약됨 | 완료 | `73fe7e0a` |
+| 18 | 대시보드 · 친구 | 수정 후 증빙이 빈 fixture라 친구 총수·목록 유지 여부를 비교할 수 없음 | 완료 | `ed29121c` |
 
 상태는 `대기 → 진행 중 → 수정됨·커밋 전 → 코드 커밋됨·시각 검증 전 → 완료` 순으로 관리한다.
 
@@ -92,6 +93,7 @@
 | `a0aea3a8` | 내용 없는 달력 근무 도구행 제거 | Calendar focused test, generic test build | iPhone 13 mini 월 그리드 상단 재캡처 | 완료 |
 | `b84b2478` | Todo 카드 탭·롱프레스·선택 열 정렬 복원 | Todo 단위 32건, iPhone 13 mini UI 5건 | 실제 카드 탭 삭제·작성 취소 패널 및 드래그·스크롤 검증 | 완료 |
 | `73fe7e0a` | Todo `진행중` 상태 문구 복원 | exact ko/en 테스트, generic build·test build, UI 1건 | 상단 탭·보드 열 `진행중` 재캡처 | 완료 |
+| `ed29121c` | 친구가 있는 Home parity fixture | HomeDashboard 11건, generic build·test build, UI 1건 | 친구 총수 3·고정 2·일반 1 재캡처 | 완료 |
 
 ## 상세 변경 보고
 
@@ -103,9 +105,10 @@
 
 - 원래 웹: 제목은 `친구관리`, 요청 카운트와 별도 재정렬 핸들이 없다.
 - 수정 전 iOS: 제목이 `친구`로 축약됐고 받은/보낸 요청 카운트 및 작은 핸들을 노출했다.
-- 수정 후 iOS: 제목을 복원하고 카운트와 핸들을 제거했다. 친구 카드 자체를 0.35초 이상 누르면 드래그 모드가 된다.
+- 수정 후 iOS: 제목을 복원하고 받은/보낸 요청 카운트와 핸들을 제거했다. 친구 총수 배지는 웹과 동일하게 유지하며, 친구 카드 자체를 0.35초 이상 누르면 드래그 모드가 된다.
 - 접근성: VoiceOver 위/아래 이동 액션은 유지했다.
-- 검증: `HomeDashboardTests` 11건 통과, iPhone 13 mini 수정 후 화면 확인.
+- 최초 수정 후 캡처는 빈 fixture여서 친구 총수와 목록을 검증할 수 없었다. `ed29121c`에서 고정 친구 2명과 일반 친구 1명을 제공해 총수 `3`, 요청 요약 부재, 핸들 부재, 롱프레스 후 Home 유지까지 실제 화면에서 확인했다.
+- 검증: `HomeDashboardTests` 11건과 전용 iPhone 13 mini UI 테스트 1/1 통과. 결과: `/tmp/Dutypark-HomeFriendEvidence-Unit.xcresult`, `/tmp/Dutypark-HomeFriendEvidence-Green-Retry.xcresult`.
 
 ### Todo 롱프레스 재정렬 — `a28f348c`
 
