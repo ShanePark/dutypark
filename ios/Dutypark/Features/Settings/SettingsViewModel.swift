@@ -185,21 +185,27 @@ final class SettingsViewModel: ObservableObject {
         guard let memberID = member?.id else { return }
         await work(success: "settings.visibility.updated") {
             try await service.updateVisibility(memberID: memberID, visibility: visibility)
-            member = try await service.member()
+            member = member?.replacing(calendarVisibility: visibility)
         }
     }
 
     func uploadProfilePhoto(_ jpegData: Data) async -> Bool {
         await workResult(success: "settings.photo.uploaded") {
             try await service.uploadProfilePhoto(jpegData: jpegData)
-            member = try await service.member()
+            member = member?.replacing(
+                hasProfilePhoto: true,
+                profilePhotoVersion: (member?.profilePhotoVersion ?? 0) + 1
+            )
         }
     }
 
     func deleteProfilePhoto() async -> Bool {
         await workResult(success: "settings.photo.deleted") {
             try await service.deleteProfilePhoto()
-            member = try await service.member()
+            member = member?.replacing(
+                hasProfilePhoto: false,
+                profilePhotoVersion: (member?.profilePhotoVersion ?? 0) + 1
+            )
         }
     }
 
@@ -213,14 +219,14 @@ final class SettingsViewModel: ObservableObject {
     func unassignManager(_ memberID: Int64) async {
         await work(success: "settings.manager.unassigned") {
             try await service.unassignManager(memberID)
-            managers = try await service.managers()
+            managers.removeAll { $0.id == memberID }
         }
     }
 
     func createAuxiliaryAccount(name: String) async {
         await work(success: "settings.auxiliary.created") {
-            _ = try await service.createAuxiliaryAccount(name: name)
-            managedMembers = try await service.managedMembers()
+            let created = try await service.createAuxiliaryAccount(name: name)
+            managedMembers.append(created)
         }
     }
 
@@ -279,7 +285,7 @@ final class SettingsViewModel: ObservableObject {
         }
         return await workResult(success: "settings.sessions.revoked") {
             try await service.revokeSession(id: id)
-            sessions = try await service.sessions()
+            sessions.removeAll { $0.id == id }
         }
     }
 
@@ -291,7 +297,7 @@ final class SettingsViewModel: ObservableObject {
         }
         return await workResult(success: "settings.sessions.othersRevoked") {
             _ = try await service.revokeOtherSessions()
-            sessions = try await service.sessions()
+            sessions.removeAll(where: SettingsSessionPolicy.canRevoke)
         }
     }
 
@@ -318,7 +324,14 @@ final class SettingsViewModel: ObservableObject {
     func deleteDutyPattern() async -> Bool {
         await workResult(success: "settings.pattern.deleted") {
             try await service.deleteDutyPattern()
-            dutyPattern = try await service.dutyPattern()
+            if let current = dutyPattern {
+                dutyPattern = DutyPatternDTO(
+                    configurable: current.configurable,
+                    reason: current.reason,
+                    dutyTypes: current.dutyTypes,
+                    pattern: nil
+                )
+            }
             loadedSections.insert(.dutyPattern)
         }
     }
@@ -448,4 +461,27 @@ final class SettingsViewModel: ObservableObject {
         loadedSections = [.family, .friends, .managers, .managedAccounts, .sessions, .dutyPattern]
     }
 #endif
+}
+
+private extension MemberDTO {
+    func replacing(
+        calendarVisibility: Visibility? = nil,
+        hasProfilePhoto: Bool? = nil,
+        profilePhotoVersion: Int64? = nil
+    ) -> MemberDTO {
+        MemberDTO(
+            id: id,
+            name: name,
+            email: email,
+            teamId: teamId,
+            team: team,
+            calendarVisibility: calendarVisibility ?? self.calendarVisibility,
+            kakaoId: kakaoId,
+            naverId: naverId,
+            appleId: appleId,
+            hasPassword: hasPassword,
+            hasProfilePhoto: hasProfilePhoto ?? self.hasProfilePhoto,
+            profilePhotoVersion: profilePhotoVersion ?? self.profilePhotoVersion
+        )
+    }
 }

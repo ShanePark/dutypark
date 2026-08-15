@@ -461,6 +461,102 @@ struct SettingsFeatureTests {
     }
 
     @Test
+    func successfulSettingsMutationsPatchLoadedStateWithoutFollowUpGets() async throws {
+        let recorder = SettingsRequestRecorder()
+        defer { SettingsURLProtocolStub.handler = nil }
+        let model = try await loadedSettingsModel(recorder: recorder)
+        let originalMember = try #require(model.member)
+        let originalDutyTypes = try #require(model.dutyPattern).dutyTypes
+        recorder.reset()
+
+        await model.updateVisibility(.privateAccess)
+        #expect(model.member?.calendarVisibility == .privateAccess)
+        #expect(model.member?.name == originalMember.name)
+        #expect(model.member?.email == originalMember.email)
+
+        #expect(await model.uploadProfilePhoto(Data([0x01, 0x02])))
+        #expect(model.member?.hasProfilePhoto == true)
+        #expect(model.member?.profilePhotoVersion == originalMember.profilePhotoVersion + 1)
+
+        #expect(await model.deleteProfilePhoto())
+        #expect(model.member?.hasProfilePhoto == false)
+        #expect(model.member?.profilePhotoVersion == originalMember.profilePhotoVersion + 2)
+
+        await model.unassignManager(2)
+        #expect(model.managers.map(\.id) == [3])
+
+        await model.createAuxiliaryAccount(name: "New child")
+        #expect(model.managedMembers.map(\.id) == [10, 11, 12])
+
+        #expect(await model.revokeSession(id: 102))
+        #expect(model.sessions.map(\.id) == [101, 103])
+        #expect(await model.revokeOtherSessions())
+        #expect(model.sessions.map(\.id) == [101])
+
+        #expect(await model.deleteDutyPattern())
+        #expect(model.dutyPattern?.pattern == nil)
+        #expect(model.dutyPattern?.dutyTypes == originalDutyTypes)
+        #expect(model.dutyPattern?.configurable == true)
+
+        let requests = recorder.requests
+        #expect(requests.map(\.httpMethod) == [
+            "PUT", "PUT", "DELETE", "DELETE", "POST", "DELETE", "DELETE", "DELETE",
+        ])
+        #expect(requests.compactMap { $0.url?.path } == [
+            "/api/members/1/visibility",
+            "/api/members/profile-photo",
+            "/api/members/profile-photo",
+            "/api/members/manager/2",
+            "/api/members/auxiliary",
+            "/api/auth/refresh-tokens/102",
+            "/api/auth/refresh-tokens/others",
+            "/api/duty/pattern/me",
+        ])
+        #expect(!requests.contains { $0.httpMethod == "GET" })
+    }
+
+    @Test
+    func failedSettingsMutationsPreserveAllLoadedStateWithoutFollowUpGets() async throws {
+        let recorder = SettingsRequestRecorder()
+        defer { SettingsURLProtocolStub.handler = nil }
+        let model = try await loadedSettingsModel(recorder: recorder)
+        let originalMember = model.member
+        let originalManagers = model.managers
+        let originalManagedMembers = model.managedMembers
+        let originalSessions = model.sessions
+        let originalPattern = model.dutyPattern
+        recorder.reset()
+        SettingsURLProtocolStub.handler = { request in
+            recorder.record(request)
+            return (
+                HTTPURLResponse(
+                    url: request.url!,
+                    statusCode: 500,
+                    httpVersion: nil,
+                    headerFields: nil
+                )!,
+                Data(#"{"code":"test.error"}"#.utf8)
+            )
+        }
+
+        await model.updateVisibility(.publicAccess)
+        #expect(!(await model.uploadProfilePhoto(Data([0x01]))))
+        #expect(!(await model.deleteProfilePhoto()))
+        await model.unassignManager(2)
+        await model.createAuxiliaryAccount(name: "Not created")
+        #expect(!(await model.revokeSession(id: 102)))
+        #expect(!(await model.revokeOtherSessions()))
+        #expect(!(await model.deleteDutyPattern()))
+
+        #expect(model.member == originalMember)
+        #expect(model.managers == originalManagers)
+        #expect(model.managedMembers == originalManagedMembers)
+        #expect(model.sessions == originalSessions)
+        #expect(model.dutyPattern == originalPattern)
+        #expect(!recorder.requests.contains { $0.httpMethod == "GET" })
+    }
+
+    @Test
     func socialAccountUnlinkMapsSpecificErrorsAndExplainsLocalOnlyDisconnect() {
         #expect(!SettingsSocialUnlinkPolicy.canUnlink(connectedProviderCount: 0))
         #expect(!SettingsSocialUnlinkPolicy.canUnlink(connectedProviderCount: 1))
@@ -858,6 +954,66 @@ struct SettingsFeatureTests {
         )
     }
 
+    private func loadedSettingsModel(
+        recorder: SettingsRequestRecorder
+    ) async throws -> SettingsViewModel {
+        SettingsURLProtocolStub.handler = { request in
+            recorder.record(request)
+            let path = request.url?.path
+            let body: String
+            let status: Int
+            switch (request.httpMethod, path) {
+            case ("GET", "/api/members/me"):
+                body = #"{"id":1,"name":"Owner","email":"owner@example.com","teamId":7,"team":"Team","calendarVisibility":"FRIENDS","kakaoId":"kakao","naverId":"naver","appleId":null,"hasPassword":true,"hasProfilePhoto":false,"profilePhotoVersion":4}"#
+                status = 200
+            case ("GET", "/api/members/family"):
+                body = "[]"
+                status = 200
+            case ("GET", "/api/friends"):
+                body = "[]"
+                status = 200
+            case ("GET", "/api/members/managers"):
+                body = #"[{"id":2,"name":"Manager A","email":null,"teamId":7,"team":"Team","calendarVisibility":"FRIENDS","kakaoId":null,"naverId":null,"appleId":null,"hasPassword":true,"hasProfilePhoto":false,"profilePhotoVersion":0},{"id":3,"name":"Manager B","email":null,"teamId":7,"team":"Team","calendarVisibility":"FRIENDS","kakaoId":null,"naverId":null,"appleId":null,"hasPassword":true,"hasProfilePhoto":false,"profilePhotoVersion":0}]"#
+                status = 200
+            case ("GET", "/api/members/managed"):
+                body = #"[{"id":10,"name":"Child A","email":null,"teamId":null,"team":null,"calendarVisibility":"FRIENDS","kakaoId":null,"naverId":null,"appleId":null,"hasPassword":false,"hasProfilePhoto":false,"profilePhotoVersion":0},{"id":11,"name":"Child B","email":null,"teamId":null,"team":null,"calendarVisibility":"FRIENDS","kakaoId":null,"naverId":null,"appleId":null,"hasPassword":false,"hasProfilePhoto":false,"profilePhotoVersion":0}]"#
+                status = 200
+            case ("GET", "/api/auth/refresh-tokens"):
+                body = #"[{"memberName":"Owner","memberId":1,"validUntil":"2026-09-01T10:00:00Z","createdDate":"2026-08-01T10:00:00Z","lastUsed":"2026-08-15T10:00:00Z","remoteAddr":"127.0.0.1","id":101,"userAgent":null,"isCurrentLogin":true},{"memberName":"Owner","memberId":1,"validUntil":"2026-09-01T10:00:00Z","createdDate":"2026-08-01T10:00:00Z","lastUsed":"2026-08-14T10:00:00Z","remoteAddr":"127.0.0.2","id":102,"userAgent":null,"isCurrentLogin":false},{"memberName":"Owner","memberId":1,"validUntil":"2026-09-01T10:00:00Z","createdDate":"2026-08-01T10:00:00Z","lastUsed":"2026-08-13T10:00:00Z","remoteAddr":"127.0.0.3","id":103,"userAgent":null,"isCurrentLogin":false}]"#
+                status = 200
+            case ("GET", "/api/policies/current"):
+                body = #"{"terms":null,"privacy":null}"#
+                status = 200
+            case ("GET", "/api/duty/pattern/me"):
+                body = ##"{"configurable":true,"reason":null,"dutyTypes":[{"id":4,"name":"Day","color":"#3B82F6"}],"pattern":{"days":[{"weekday":"MONDAY","dutyType":{"id":4,"name":"Day","color":"#3B82F6"}}],"holidayOff":true,"effectiveFrom":"2026-08-01"}}"##
+                status = 200
+            case ("POST", "/api/members/auxiliary"):
+                body = #"{"id":12,"name":"New child","email":null,"teamId":null,"team":null,"calendarVisibility":"FRIENDS","kakaoId":null,"naverId":null,"appleId":null,"hasPassword":false,"hasProfilePhoto":false,"profilePhotoVersion":0}"#
+                status = 200
+            case ("DELETE", "/api/auth/refresh-tokens/others"):
+                body = #"{"deletedCount":1}"#
+                status = 200
+            default:
+                body = ""
+                status = 204
+            }
+            return (
+                HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil, headerFields: nil)!,
+                Data(body.utf8)
+            )
+        }
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [SettingsURLProtocolStub.self]
+        let service = SettingsService(client: APIClient(
+            baseURL: URL(string: "https://dutypark.test/api/")!,
+            session: URLSession(configuration: configuration)
+        ))
+        let model = SettingsViewModel(service: service)
+        await model.load()
+        _ = try #require(model.member)
+        return model
+    }
+
     private static func jsonBody(_ body: Data) -> [String: Any]? {
         return try? JSONSerialization.jsonObject(with: body) as? [String: Any]
     }
@@ -886,6 +1042,13 @@ private final class SettingsRequestRecorder: @unchecked Sendable {
         lock.lock()
         defer { lock.unlock() }
         return bodyStorage
+    }
+
+    func reset() {
+        lock.lock()
+        storage.removeAll()
+        bodyStorage.removeAll()
+        lock.unlock()
     }
 
     private static func requestBody(_ request: URLRequest) -> Data? {
