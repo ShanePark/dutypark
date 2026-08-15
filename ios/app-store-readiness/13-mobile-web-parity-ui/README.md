@@ -60,6 +60,7 @@
 | 25 | 팀 상세 | 일정이 있는데도 빈 근무 영역에 `이 날의 팀 일정이 없습니다.`가 중복 표시됨 | 완료 | `9b37abb7` |
 | 26 | 게스트 · 이용 안내 | 네이티브 제목만 `이용 안내 및 릴리스 노트`로 길어 웹 본문 제목과 다름 | 완료 | `e60632a0` |
 | 27 | 게스트 · 공개 달력 | 웹과 달리 연월 직접 선택이 없어 먼 달까지 한 달씩 반복 이동해야 함 | 완료 | `41e1c184` |
+| 28 | 팀 근무 현황 | 근무 인원 배지가 단위 없이 `3`처럼 표시되어 의미가 불분명함 | 완료 | `1153345a` |
 
 상태는 `대기 → 진행 중 → 수정됨·커밋 전 → 코드 커밋됨·시각 검증 전 → 완료` 순으로 관리한다.
 
@@ -112,6 +113,7 @@
 | `9b37abb7` | 빈 팀 근무 영역의 일정 없음 오안내 제거 | TeamFeatureTests 27건, generic build·test build, UI 1건 | 일정 카드 유지·거짓 빈 문구 부재 재캡처 | 완료 |
 | `e60632a0` | 게스트 이용 안내 제목을 웹과 통일 | exact ko/en 테스트, generic build, UI 1건 | 네이티브·웹 본문 제목 일치 재캡처 | 완료 |
 | `41e1c184` | 게스트 공개 달력 연월 직접 선택 | focused unit 3건, generic build·test build, UI 1건 | 연월 선택기·2028년 2월 이동 재캡처 | 완료 |
+| `1153345a` | 팀 근무 인원 배지의 현지화 단위 복원 | exact ko/en 테스트, generic test build, UI 1건 | 2명 배지와 팀원 카드 재캡처 | 완료 |
 
 ## 상세 변경 보고
 
@@ -236,6 +238,15 @@
 - iOS는 해당 날짜의 근무 배정이 없을 때 근무 영역에서 일정 전용 빈 문구를 재사용해, 실제 `정기 팀 회의`가 있는데도 `이 날의 팀 일정이 없습니다.`라고 잘못 안내했다.
 - 모바일 웹과 동일하게 근무 배정 목록이 비면 해당 근무 영역 자체를 렌더하지 않고, 일정 빈 문구는 실제 일정 목록이 비었을 때만 유지한다.
 - generic 앱·테스트 빌드와 `TeamFeatureTests` 27건이 통과했다. iPhone 13 mini UI 테스트 1/1에서 `정기 팀 회의` 카드가 남고 거짓 빈 문구가 존재하지 않음을 확인했다: `/tmp/Dutypark-TeamEmptyShift-TeamSuite-Built.xcresult`, `/tmp/Dutypark-TeamEmptyShift-UI.xcresult`.
+
+### 팀 근무 인원 단위 — `1153345a`
+
+<img src="screenshots/team-shift-member-count-ios-after.png" width="240" alt="주간 근무 인원을 2명으로 표시한 iOS 팀 화면">
+
+- 모바일 웹은 근무 인원을 `3명`처럼 표시하지만 iOS는 숫자만 `3`으로 보여 배지가 무엇을 세는지 알기 어려웠다.
+- 이미 존재하던 공유 현지화 키를 실제 배지에 연결해 한국어 `3명`, 영어 `3 people`로 표시한다.
+- 기존 빈 근무 fixture를 보존하고 전용 opt-in fixture에서만 두 명의 근무 카드를 구성해 다른 회귀 테스트의 의미를 유지했다.
+- exact 한·영 테스트와 generic test build가 통과했다. iPhone 13 mini UI 테스트 1/1에서 `주간` 헤더의 `2명` 배지와 두 팀원 카드가 잘림·겹침 없이 표시되는 것을 확인했다: `/tmp/Dutypark-TeamShiftCount-Unit-20260815.xcresult`, `/tmp/Dutypark-TeamShiftCount-UI-Final-20260815.xcresult`.
 
 ### 달력·팀 비교 기준 확장 — `58cbf120`
 
