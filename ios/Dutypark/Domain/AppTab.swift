@@ -24,6 +24,10 @@ enum AppTab: String, CaseIterable, Identifiable, Sendable {
         }
     }
 
+    nonisolated var localizedTitle: String {
+        AppLocalization.string("tab.\(rawValue)", table: "Localizable")
+    }
+
     nonisolated var systemImage: String {
         switch self {
         case .home:

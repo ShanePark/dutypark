@@ -34,6 +34,11 @@ struct SharedComponentTests {
     }
 
     @Test
+    func dashboardHeaderChromeDoesNotUseTheSystemSharedBackground() {
+        #expect(DPDashboardHeaderChrome.sharedBackgroundVisibility == SwiftUI.Visibility.hidden)
+    }
+
+    @Test
     func customFontsAreBundledUnderTheirPostScriptNames() {
         #expect(DPFont.lightPostScriptName != DPFont.boldPostScriptName)
         #expect(UIFont(name: DPFont.lightPostScriptName, size: 16) != nil)

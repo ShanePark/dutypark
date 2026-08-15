@@ -96,9 +96,17 @@ final class DutyparkUITests: XCTestCase {
         ]
         app.launch()
 
+        let brand = app.buttons["header.brand"]
+        XCTAssertTrue(brand.waitForExistence(timeout: 10))
+        assertMinimumTouchTarget(brand)
+
         let notificationBell = app.buttons["notifications.bell"]
         XCTAssertTrue(notificationBell.waitForExistence(timeout: 10))
         assertMinimumTouchTarget(notificationBell)
+
+        let homeMenu = app.buttons["home.menu"]
+        XCTAssertTrue(homeMenu.waitForExistence(timeout: 10))
+        assertMinimumTouchTarget(homeMenu)
 
         primaryTab("tab.todo", in: app).tap()
         let todoAdd = app.buttons["todo.add"]

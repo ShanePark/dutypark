@@ -1,6 +1,37 @@
 import SwiftUI
 import UIKit
 
+enum DPDashboardHeaderChrome {
+    static let sharedBackgroundVisibility: SwiftUI.Visibility = .hidden
+}
+
+struct DPDashboardHeaderToolbarItem<Content: View>: ToolbarContent {
+    private let placement: ToolbarItemPlacement
+    private let content: Content
+
+    init(
+        placement: ToolbarItemPlacement,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.placement = placement
+        self.content = content()
+    }
+
+    @ToolbarContentBuilder
+    var body: some ToolbarContent {
+        if #available(iOS 26.0, *) {
+            ToolbarItem(placement: placement) {
+                content
+            }
+            .sharedBackgroundVisibility(DPDashboardHeaderChrome.sharedBackgroundVisibility)
+        } else {
+            ToolbarItem(placement: placement) {
+                content
+            }
+        }
+    }
+}
+
 struct DPBrandMark: View {
     let action: () -> Void
 

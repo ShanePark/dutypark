@@ -205,22 +205,22 @@ struct RootTabView: View {
                 .navigationBarTitleDisplayMode(.inline)
                 .accessibilityIdentifier("screen.home")
                 .toolbar {
-                    ToolbarItem(placement: .topBarLeading) {
+                    DPDashboardHeaderToolbarItem(placement: .topBarLeading) {
                         DPBrandMark(action: openHome)
                     }
-                    ToolbarItem(placement: .topBarTrailing) {
+                    DPDashboardHeaderToolbarItem(placement: .topBarTrailing) {
                         HStack(spacing: 0) {
-                        notificationBell
-                        Button {
-                            homePath.append(.menu)
-                        } label: {
-                            Image(systemName: "line.3.horizontal")
-                                .font(.system(size: 18, weight: .semibold))
-                                .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
-                                .contentShape(Rectangle())
-                        }
-                        .accessibilityLabel(Text("home.menu", tableName: "Home"))
-                        .accessibilityIdentifier("home.menu")
+                            notificationBell
+                            Button {
+                                homePath.append(.menu)
+                            } label: {
+                                Image(systemName: "line.3.horizontal")
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                                    .contentShape(Rectangle())
+                            }
+                            .accessibilityLabel(RootChromeLocalization.home("home.menu"))
+                            .accessibilityIdentifier("home.menu")
                         }
                         .fixedSize(horizontal: true, vertical: false)
                     }
@@ -330,7 +330,9 @@ struct RootTabView: View {
                 .ignoresSafeArea()
                 .contentShape(Rectangle())
                 .onTapGesture { showsNotifications = false }
-                .accessibilityLabel(String(localized: "notifications.common.close", table: "Notifications"))
+                .accessibilityLabel(
+                    RootChromeLocalization.notifications("notifications.common.close")
+                )
                 .accessibilityAddTraits(.isButton)
                 .accessibilityAction { showsNotifications = false }
 
@@ -536,6 +538,33 @@ nonisolated enum RootNavigationPolicy {
     }
 }
 
+nonisolated enum RootChromeLocalization {
+    static func localizable(_ key: String, locale: Locale? = nil) -> String {
+        AppLocalization.string(key, table: "Localizable", locale: locale)
+    }
+
+    static func home(_ key: String, locale: Locale? = nil) -> String {
+        AppLocalization.string(key, table: "Home", locale: locale)
+    }
+
+    static func notifications(_ key: String, locale: Locale? = nil) -> String {
+        AppLocalization.string(key, table: "Notifications", locale: locale)
+    }
+
+    static func settings(_ key: String, locale: Locale? = nil) -> String {
+        AppLocalization.string(key, table: "Settings", locale: locale)
+    }
+
+    static func impersonationRemaining(_ duration: String, locale: Locale? = nil) -> String {
+        let selectedLocale = locale ?? AppLocalization.locale
+        return String(
+            format: localizable("auth.impersonation.remaining", locale: selectedLocale),
+            locale: selectedLocale,
+            arguments: [duration]
+        )
+    }
+}
+
 nonisolated enum RootTabSelectionOrigin: Equatable, Sendable {
     case tabBar
     case explicitRoute
@@ -569,37 +598,37 @@ private struct AppMenuView: View {
             VStack(spacing: DPSpacing.medium) {
                 LazyVGrid(columns: columns, spacing: DPSpacing.small) {
                     AppMenuTile(
-                        title: String(localized: AppTab.calendar.tabTitle),
+                        title: AppTab.calendar.localizedTitle,
                         systemImage: AppTab.calendar.systemImage,
                         color: DPColor.accent,
                         action: onOpenCalendar
                     )
                     AppMenuTile(
-                        title: String(localized: AppTab.team.tabTitle),
+                        title: AppTab.team.localizedTitle,
                         systemImage: AppTab.team.systemImage,
                         color: DPColor.success,
                         action: onOpenTeam
                     )
                     AppMenuTile(
-                        title: String(localized: "home.friends", table: "Home"),
+                        title: RootChromeLocalization.home("home.friends"),
                         systemImage: "person.2",
                         color: DPColor.warning,
                         action: onOpenFriends
                     )
                     AppMenuTile(
-                        title: String(localized: AppTab.todo.tabTitle),
+                        title: AppTab.todo.localizedTitle,
                         systemImage: AppTab.todo.systemImage,
                         color: DPColor.danger,
                         action: onOpenTodo
                     )
                     AppMenuTile(
-                        title: String(localized: "notifications.title", table: "Notifications"),
+                        title: RootChromeLocalization.notifications("notifications.title"),
                         systemImage: "bell",
                         color: DPColor.accentHover,
                         action: onOpenNotifications
                     )
                     AppMenuTile(
-                        title: String(localized: AppTab.settings.tabTitle),
+                        title: AppTab.settings.localizedTitle,
                         systemImage: AppTab.settings.systemImage,
                         color: DPColor.textSecondary,
                         action: onOpenSettings
@@ -653,7 +682,7 @@ private struct AppMenuView: View {
             .padding(DPSpacing.medium)
         }
         .background(DPColor.backgroundPrimary)
-        .navigationTitle(Text("home.menu", tableName: "Home"))
+        .navigationTitle(RootChromeLocalization.home("home.menu"))
         .navigationBarTitleDisplayMode(.large)
         .accessibilityIdentifier("screen.menu")
     }
@@ -742,21 +771,15 @@ private struct ImpersonationBanner: View {
             HStack(spacing: 10) {
                 Image(systemName: "person.crop.circle.badge.clock")
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("auth.impersonation.active")
+                    Text(RootChromeLocalization.localizable("auth.impersonation.active"))
                         .font(.caption.weight(.semibold))
                     if let remaining = session.impersonationRemainingTime(at: context.date) {
-                        Text(
-                            String(
-                                format: String(localized: "auth.impersonation.remaining"),
-                                locale: .current,
-                                Self.duration(remaining)
-                            )
-                        )
+                        Text(RootChromeLocalization.impersonationRemaining(Self.duration(remaining)))
                         .font(.caption2.monospacedDigit())
                     }
                 }
                 Spacer(minLength: 4)
-                Button(String(localized: "settings.managed.restore", table: "Settings")) {
+                Button(RootChromeLocalization.settings("settings.managed.restore")) {
                     Task { await session.restoreOriginalAccount() }
                 }
                 .font(.caption.weight(.semibold))
@@ -783,7 +806,7 @@ private struct NotificationDropdown: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Text(String(localized: "notifications.title", table: "Notifications"))
+            Text(RootChromeLocalization.notifications("notifications.title"))
                 .font(DPFont.bold(size: 14, relativeTo: .subheadline))
                 .foregroundStyle(DPColor.textPrimary)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -795,12 +818,14 @@ private struct NotificationDropdown: View {
 
             Group {
                 if store.isLoading && store.notifications.isEmpty {
-                    ProgressView(String(localized: "notifications.common.loading", table: "Notifications"))
+                    ProgressView(
+                        RootChromeLocalization.notifications("notifications.common.loading")
+                    )
                         .font(DPTypography.label)
                         .foregroundStyle(DPColor.textMuted)
                         .frame(maxWidth: .infinity, minHeight: 96)
                 } else if store.notifications.isEmpty {
-                    Text(String(localized: "notifications.common.empty", table: "Notifications"))
+                    Text(RootChromeLocalization.notifications("notifications.common.empty"))
                         .font(DPTypography.label)
                         .foregroundStyle(DPColor.textMuted)
                         .frame(maxWidth: .infinity, minHeight: 96)
@@ -827,7 +852,9 @@ private struct NotificationDropdown: View {
 
             Button(action: onViewAll) {
                 HStack(spacing: DPSpacing.extraSmall) {
-                    Text(String(localized: "notifications.dropdown.viewAll", table: "Notifications"))
+                    Text(
+                        RootChromeLocalization.notifications("notifications.dropdown.viewAll")
+                    )
                     Image(systemName: "chevron.right")
                         .font(.system(size: 12, weight: .semibold))
                 }
@@ -911,7 +938,7 @@ private extension View {
     func primaryTabItem(_ tab: AppTab) -> some View {
         tabItem {
             Label {
-                Text(tab.tabTitle)
+                Text(tab.localizedTitle)
             } icon: {
                 Image(systemName: tab.systemImage)
                     .accessibilityIdentifier(tab.accessibilityIdentifier)
