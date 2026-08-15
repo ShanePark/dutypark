@@ -56,7 +56,7 @@
 | `abee3186` | 대시보드 친구 섹션 웹 동등성 | `HomeDashboardTests` 11건 | 웹·수정 전·수정 후 확보 | 완료 |
 | `a28f348c` | Todo 롱프레스 재정렬 | `TodoViewModelTests` 포함 전체 선택 테스트 | 웹·수정 후 확보, 빈 fixture라 실제 드래그는 단위 테스트로 검증 | 완료 |
 | `f5da2cd1` | 친구관리 롱프레스 재정렬 | `SocialFeatureTests` 포함 전체 선택 테스트 | 후속 UI 검증에서 fixture 결함 발견 | `24814f20`으로 보완 |
-| `92f3fa66` | 알림 삭제 중앙 확인 | `NotificationFeatureTests` 포함 전체 선택 테스트 | 삭제 가능한 알림 fixture 부재 | 코드 커밋됨·캡처 대기 |
+| `92f3fa66` | 알림 삭제 중앙 확인 | `NotificationFeatureTests` 포함 전체 선택 테스트 | `da97937c`에서 개별·일괄 삭제 캡처 확보 | 완료 |
 | `def118e2` | 첨부 삭제 중앙 확인 | `AttachmentTests` 포함 전체 선택 테스트 | 첨부 fixture 부재 | 코드 커밋됨·캡처 대기 |
 | `74858618` | 헤더 캡슐 제거, `달력` 복원, Root 메뉴 현지화 | AppTab·RootChrome·컴포넌트 테스트 및 UI 캡처 | 대시보드·메뉴 수정 후 확보 | 완료 |
 | `2cdc26ea` | 앱 언어 override 및 로그인·OAuth·API 오류 현지화 | 앱 언어 override·Auth 테스트 포함 전체 선택 테스트 | 한국어 메뉴·설정 화면에서 Foundation 조회 결과 확인 | 완료 |
@@ -74,6 +74,7 @@
 | `c47a77ea` | 달력 연도 치환의 천 단위 구분 제거 | 앱·테스트 빌드, exact 한국어 문자열 회귀 테스트 | 수정 후 월 일괄 변경 화면 재캡처 | 완료 |
 | `f390c6bc` | 달력 월 일괄 변경 시각 fixture | iPhone 13 mini UI 1건 | 중앙 선택 패널·`2026년` 표기 확보 | 완료 |
 | `22d0bc18` | 설정·Root 확인 패널 시각 fixture | iPhone 13 mini UI 3건 및 안정화 재캡처 1건 | 프로필 삭제·설정 로그아웃·메뉴 로그아웃 확보 | 완료 |
+| `da97937c` | 알림 삭제 확인 시각 fixture와 전환 안정성 검증 | iPhone 13 mini UI 2건 | 개별·읽은 알림 일괄 삭제 패널 확보 | 완료 |
 
 ## 상세 변경 보고
 
@@ -176,6 +177,17 @@
 - 기본 패턴 해제는 iPhone 13 mini UI 테스트에서 중앙 표시와 한국어 문구를 확인했다.
 - 알림 삭제(`92f3fa66`)와 첨부 삭제(`def118e2`)에도 같은 패널을 적용했다. 두 화면은 삭제 대상 fixture를 추가한 뒤 별도 캡처한다.
 - 관리자 팀 삭제와 회원 세션 종료(`2316075a`)도 중앙 패널로 통일했다. 진행 중에는 취소·외부 닫기·중복 제출을 막고, 세션 종료 패널에는 회원·기기·브라우저·IP 범위를 표시한다.
+
+### 알림 삭제 확인 — `92f3fa66`, `da97937c`
+
+| 개별 알림 삭제 | 읽은 알림 일괄 삭제 |
+| --- | --- |
+| <img src="screenshots/notification-delete-confirmation-ios-after.png" width="240" alt="iOS 개별 알림 삭제 확인"> | <img src="screenshots/notification-read-delete-confirmation-ios-after.png" width="240" alt="iOS 읽은 알림 일괄 삭제 확인"> |
+
+- 읽은 알림 1건과 안 읽은 알림 1건을 제공하는 DEBUG 전용 fixture로 두 destructive 경로를 검증했다.
+- 첫 캡처에서는 한 테스트 안에서 첫 cover를 닫자마자 두 번째 cover를 열어 전환 중간 프레임이 저장되는 문제를 발견했다.
+- 두 흐름을 각각 새 앱 launch로 분리하고, 제목·본문·버튼 문구, 44pt 터치 영역, 비중첩, 화면 bounds와 4회 연속 프레임 안정성을 통과한 뒤 캡처한다.
+- iPhone 13 mini UI 테스트 2/2 통과: `/tmp/Dutypark-NotificationVisualStability-20260815.xcresult`.
 
 ### 설정 계정·프로필 확인 — `84047661`
 
@@ -281,7 +293,7 @@
 - [x] 헤더·탭·Root 메뉴 현지화 기능 커밋 및 시각 보고
 - [x] 기본 근무 패턴 UI와 패턴 해제 중앙 확인 기능 커밋 및 시각 보고
 - [x] 캘린더 월 일괄 변경 중앙 선택 화면 스크린샷 추가
-- [ ] 알림 삭제용 UI fixture와 중앙 패널 스크린샷 추가
+- [x] 알림 삭제용 UI fixture와 중앙 패널 스크린샷 추가
 - [ ] 첨부 삭제용 UI fixture와 중앙 패널 스크린샷 추가
 - [ ] 관리자 팀 삭제·회원 세션 종료 UI fixture와 중앙 패널 스크린샷 추가
 - [x] 설정 로그아웃·프로필 삭제 중앙 패널 스크린샷 추가
