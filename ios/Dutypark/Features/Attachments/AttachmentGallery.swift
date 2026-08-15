@@ -203,21 +203,31 @@ struct AttachmentGallery: View {
                 AttachmentShareSheet(items: [shareURL])
             }
         }
-        .confirmationDialog(
-            AttachmentLocalization.text("attachment.delete.title"),
+        .fullScreenCover(
             isPresented: Binding(
                 get: { deleteCandidate != nil },
                 set: { if !$0 { deleteCandidate = nil } }
-            ),
-            titleVisibility: .visible
+            )
         ) {
-            Button(AttachmentLocalization.text("attachment.action.delete"), role: .destructive) {
-                guard let deleteCandidate else { return }
-                self.deleteCandidate = nil
-                Task { await model.delete(deleteCandidate) }
-            }
-            Button(AttachmentLocalization.text("attachment.action.cancel"), role: .cancel) {
-                deleteCandidate = nil
+            if let deleteCandidate {
+                DPModalOverlay(
+                    maximumContentWidth: DPConfirmationPanel.maximumWidth,
+                    onDismiss: { self.deleteCandidate = nil }
+                ) { availableSize, dismiss in
+                    DPConfirmationPanel(
+                        title: AttachmentLocalization.text("attachment.delete.title"),
+                        message: deleteCandidate.originalFilename,
+                        confirmTitle: AttachmentLocalization.text("attachment.action.delete"),
+                        cancelTitle: AttachmentLocalization.text("attachment.action.cancel"),
+                        isDestructive: true,
+                        maximumHeight: availableSize.height,
+                        cancel: dismiss,
+                        confirm: {
+                            dismiss()
+                            Task { await model.delete(deleteCandidate) }
+                        }
+                    )
+                }
             }
         }
         .alert(
