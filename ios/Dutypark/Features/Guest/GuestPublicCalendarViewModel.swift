@@ -88,6 +88,13 @@ final class GuestPublicCalendarViewModel: ObservableObject {
         await load()
     }
 
+    func selectYearMonth(year: Int, month: Int) async {
+        guard (1...12).contains(month) else { return }
+        self.year = year
+        self.month = month
+        await load()
+    }
+
     func goToToday() async {
         let parts = CalendarDateSupport.calendar.dateComponents([.year, .month], from: Date())
         year = parts.year ?? year
