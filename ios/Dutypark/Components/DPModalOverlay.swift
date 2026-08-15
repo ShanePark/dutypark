@@ -51,6 +51,7 @@ struct DPModalOverlay<Content: View>: View {
     @State private var isDismissing = false
 
     let onDismiss: () -> Void
+    let maximumContentWidth: CGFloat
     let closeOnBackdrop: Bool
     let canDismiss: Bool
     /// Intercepts backdrop and VoiceOver escape requests without closing immediately.
@@ -60,6 +61,7 @@ struct DPModalOverlay<Content: View>: View {
     private let content: (CGSize, @escaping () -> Void) -> Content
 
     init(
+        maximumContentWidth: CGFloat = 512,
         onDismiss: @escaping () -> Void,
         closeOnBackdrop: Bool = true,
         canDismiss: Bool = true,
@@ -67,6 +69,7 @@ struct DPModalOverlay<Content: View>: View {
         @ViewBuilder content: @escaping () -> Content
     ) {
         self.onDismiss = onDismiss
+        self.maximumContentWidth = maximumContentWidth
         self.closeOnBackdrop = closeOnBackdrop
         self.canDismiss = canDismiss
         self.onDismissRequest = onDismissRequest
@@ -74,6 +77,7 @@ struct DPModalOverlay<Content: View>: View {
     }
 
     init(
+        maximumContentWidth: CGFloat = 512,
         onDismiss: @escaping () -> Void,
         closeOnBackdrop: Bool = true,
         canDismiss: Bool = true,
@@ -81,6 +85,7 @@ struct DPModalOverlay<Content: View>: View {
         @ViewBuilder content: @escaping (CGSize) -> Content
     ) {
         self.onDismiss = onDismiss
+        self.maximumContentWidth = maximumContentWidth
         self.closeOnBackdrop = closeOnBackdrop
         self.canDismiss = canDismiss
         self.onDismissRequest = onDismissRequest
@@ -88,6 +93,7 @@ struct DPModalOverlay<Content: View>: View {
     }
 
     init(
+        maximumContentWidth: CGFloat = 512,
         onDismiss: @escaping () -> Void,
         closeOnBackdrop: Bool = true,
         canDismiss: Bool = true,
@@ -95,6 +101,7 @@ struct DPModalOverlay<Content: View>: View {
         @ViewBuilder content: @escaping (CGSize, @escaping () -> Void) -> Content
     ) {
         self.onDismiss = onDismiss
+        self.maximumContentWidth = maximumContentWidth
         self.closeOnBackdrop = closeOnBackdrop
         self.canDismiss = canDismiss
         self.onDismissRequest = onDismissRequest
@@ -103,7 +110,10 @@ struct DPModalOverlay<Content: View>: View {
 
     var body: some View {
         GeometryReader { proxy in
-            let panelWidth = min(max(proxy.size.width - 32, 0), 512)
+            let panelWidth = min(
+                max(proxy.size.width - 32, 0),
+                max(maximumContentWidth, 0)
+            )
             let panelHeight = max(proxy.size.height - 32, 0)
 
             ZStack {
