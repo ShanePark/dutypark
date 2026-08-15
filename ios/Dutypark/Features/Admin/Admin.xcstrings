@@ -713,6 +713,22 @@
         }
       }
     },
+    "admin.members.revokeSession.message": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "End %1$@'s %2$@ · %3$@ (%4$@) session?"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@님의 %2$@ · %3$@ (%4$@) 세션을 종료하시겠습니까?"
+          }
+        }
+      }
+    },
     "admin.members.revokeSession.title": {
       "localizations": {
         "en": {

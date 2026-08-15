@@ -235,7 +235,8 @@ private struct AdminMemberDetailView: View {
     @State private var showsPasswordSheet = false
     @State private var passwordModalState = AdminModalInteractionState()
     @State private var showsPasswordDiscardConfirmation = false
-    @State private var sessionToRevoke: SettingsRefreshToken?
+    @State private var sessionConfirmation: AdminSessionRevokeConfirmation?
+    @State private var isRevokingSession = false
     @State private var operationMessage: String?
 
     var body: some View {
@@ -280,7 +281,7 @@ private struct AdminMemberDetailView: View {
                 } else {
                     ForEach(sessions) { token in
                         AdminSessionRow(token: token) {
-                            sessionToRevoke = token
+                            sessionConfirmation = AdminSessionRevokeConfirmation(token: token)
                         }
                     }
                 }
@@ -318,26 +319,25 @@ private struct AdminMemberDetailView: View {
                 Text(AdminLocalization.string("admin.common.discard.message"))
             }
         }
-        .confirmationDialog(
-            AdminLocalization.string("admin.members.revokeSession.title"),
-            isPresented: Binding(
-                get: { sessionToRevoke != nil },
-                set: { if !$0 { sessionToRevoke = nil } }
-            )
-        ) {
-            Button(AdminLocalization.string("admin.members.revokeSession.action"), role: .destructive) {
-                guard let token = sessionToRevoke else { return }
-                Task {
-                    do {
-                        try await model.revokeSession(id: token.id)
-                        operationMessage = AdminLocalization.string("admin.members.sessionRevoked")
-                    } catch {
-                        operationMessage = AdminLocalization.string("admin.members.operationFailed")
-                    }
-                    sessionToRevoke = nil
-                }
+        .fullScreenCover(item: $sessionConfirmation) { confirmation in
+            DPModalOverlay(
+                maximumContentWidth: DPConfirmationPanel.maximumWidth,
+                onDismiss: { sessionConfirmation = nil },
+                canDismiss: !isRevokingSession
+            ) { availableSize, dismiss in
+                DPConfirmationPanel(
+                    title: confirmation.title,
+                    message: confirmation.message,
+                    confirmTitle: AdminLocalization.string("admin.members.revokeSession.action"),
+                    cancelTitle: AdminLocalization.string("admin.common.cancel"),
+                    isDestructive: true,
+                    isWorking: isRevokingSession,
+                    maximumHeight: availableSize.height,
+                    cancel: dismiss,
+                    confirm: { revokeSession(confirmation, dismiss: dismiss) }
+                )
             }
-            Button(AdminLocalization.string("admin.common.cancel"), role: .cancel) {}
+            .interactiveDismissDisabled(isRevokingSession)
         }
         .alert(
             AdminLocalization.string("admin.common.notice"),
@@ -406,6 +406,25 @@ private struct AdminMemberDetailView: View {
             break
         }
     }
+
+    private func revokeSession(
+        _ confirmation: AdminSessionRevokeConfirmation,
+        dismiss: @escaping () -> Void
+    ) {
+        guard !isRevokingSession else { return }
+        isRevokingSession = true
+
+        Task {
+            do {
+                try await model.revokeSession(id: confirmation.token.id)
+                operationMessage = AdminLocalization.string("admin.members.sessionRevoked")
+            } catch {
+                operationMessage = AdminLocalization.string("admin.members.operationFailed")
+            }
+            isRevokingSession = false
+            dismiss()
+        }
+    }
 }
 
 private struct AdminSessionRow: View {
@@ -435,6 +454,22 @@ private struct AdminSessionRow: View {
                 .foregroundStyle(DPColor.textMuted)
         }
         .padding(.vertical, DPSpacing.extraSmall)
+    }
+}
+
+nonisolated struct AdminSessionRevokeConfirmation: Identifiable, Equatable, Sendable {
+    let token: SettingsRefreshToken
+
+    var id: Int64 { token.id }
+    var title: String { AdminLocalization.string("admin.members.revokeSession.title") }
+    var message: String {
+        AdminLocalization.format(
+            "admin.members.revokeSession.message",
+            token.memberName,
+            token.userAgent?.device ?? AdminLocalization.string("admin.members.session.unknownDevice"),
+            token.userAgent?.browser ?? "-",
+            token.remoteAddr ?? "-"
+        )
     }
 }
 

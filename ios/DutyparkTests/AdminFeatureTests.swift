@@ -281,6 +281,34 @@ struct AdminFeatureTests {
         ))
     }
 
+    @Test("Session revoke confirmation keeps the selected session and explains its scope")
+    func sessionRevokeConfirmationContent() {
+        let token = SettingsRefreshToken(
+            memberName: "Shane",
+            memberId: 7,
+            validUntil: "2026-09-01T00:00:00",
+            createdDate: "2026-08-01T00:00:00",
+            lastUsed: nil,
+            remoteAddr: "127.0.0.1",
+            id: 99,
+            userAgent: .init(os: "iOS", browser: "Dutypark", device: "iPhone 13 mini"),
+            isCurrentLogin: false
+        )
+
+        let confirmation = AdminSessionRevokeConfirmation(token: token)
+
+        #expect(confirmation.id == token.id)
+        #expect(confirmation.token == token)
+        #expect(confirmation.title == AdminLocalization.string("admin.members.revokeSession.title"))
+        #expect(confirmation.message == AdminLocalization.format(
+            "admin.members.revokeSession.message",
+            "Shane",
+            "iPhone 13 mini",
+            "Dutypark",
+            "127.0.0.1"
+        ))
+    }
+
     fileprivate static let emptyPageJSON =
         #"{"content":[],"totalPages":0,"totalElements":0,"last":true,"first":true,"size":10,"number":0,"numberOfElements":0,"empty":true}"#
 

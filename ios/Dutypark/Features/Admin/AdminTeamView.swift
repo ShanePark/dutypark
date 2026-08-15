@@ -7,6 +7,7 @@ struct AdminTeamListView: View {
     @State private var createModalState = AdminModalInteractionState()
     @State private var showsCreateDiscardConfirmation = false
     @State private var teamToDelete: SimpleTeamDTO?
+    @State private var isDeletingTeam = false
     @State private var operationMessage: String?
 
     init(model: @autoclosure @escaping () -> AdminTeamListViewModel = AdminTeamListViewModel()) {
@@ -115,29 +116,36 @@ struct AdminTeamListView: View {
                 Text(AdminLocalization.string("admin.common.discard.message"))
             }
         }
-        .confirmationDialog(
-            AdminLocalization.string("admin.teams.delete.title"),
+        .fullScreenCover(
             isPresented: Binding(
                 get: { teamToDelete != nil },
-                set: { if !$0 { teamToDelete = nil } }
+                set: {
+                    if !$0 && !isDeletingTeam {
+                        teamToDelete = nil
+                    }
+                }
             )
         ) {
-            Button(AdminLocalization.string("admin.common.delete"), role: .destructive) {
-                guard let team = teamToDelete else { return }
-                Task {
-                    do {
-                        try await model.delete(team)
-                        operationMessage = AdminLocalization.string("admin.teams.deleted")
-                    } catch {
-                        operationMessage = AdminLocalization.string("admin.teams.deleteFailed")
-                    }
-                    teamToDelete = nil
-                }
-            }
-            Button(AdminLocalization.string("admin.common.cancel"), role: .cancel) {}
-        } message: {
             if let teamToDelete {
-                Text(AdminLocalization.format("admin.teams.delete.message", teamToDelete.name))
+                DPModalOverlay(
+                    maximumContentWidth: DPConfirmationPanel.maximumWidth,
+                    onDismiss: { self.teamToDelete = nil },
+                    canDismiss: !isDeletingTeam
+                ) { availableSize, dismiss in
+                    DPConfirmationPanel(
+                        title: AdminLocalization.string("admin.teams.delete.title"),
+                        message: AdminLocalization.format("admin.teams.delete.message", teamToDelete.name),
+                        confirmTitle: AdminLocalization.string("admin.common.delete"),
+                        cancelTitle: AdminLocalization.string("admin.common.cancel"),
+                        isDestructive: true,
+                        isWorking: isDeletingTeam,
+                        maximumHeight: availableSize.height,
+                        cancel: dismiss,
+                        confirm: {
+                            delete(teamToDelete, dismiss: dismiss)
+                        }
+                    )
+                }
             }
         }
         .alert(
@@ -164,6 +172,28 @@ struct AdminTeamListView: View {
         case .blocked:
             break
         }
+    }
+
+    private func delete(_ team: SimpleTeamDTO, dismiss: @escaping () -> Void) {
+        guard AdminTeamDeleteConfirmationPolicy.canSubmit(isDeleting: isDeletingTeam) else { return }
+        isDeletingTeam = true
+
+        Task {
+            do {
+                try await model.delete(team)
+                operationMessage = AdminLocalization.string("admin.teams.deleted")
+            } catch {
+                operationMessage = AdminLocalization.string("admin.teams.deleteFailed")
+            }
+            isDeletingTeam = false
+            dismiss()
+        }
+    }
+}
+
+nonisolated enum AdminTeamDeleteConfirmationPolicy {
+    static func canSubmit(isDeleting: Bool) -> Bool {
+        !isDeleting
     }
 }
 
