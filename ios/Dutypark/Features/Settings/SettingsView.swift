@@ -1723,6 +1723,16 @@ private struct DutyPatternSummary: View {
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundStyle(DPColor.accent)
                     }
+                    if hasHiddenDutyType(details) {
+                        Label {
+                            SettingsLocalization.text("settings.pattern.paused.title")
+                        } icon: {
+                            Image(systemName: "info.circle.fill")
+                        }
+                        .font(DPTypography.caption)
+                        .foregroundStyle(DPColor.warning)
+                        .accessibilityIdentifier("settings.pattern.paused.summary")
+                    }
                 }
                 .padding(DPSpacing.compact)
                 .background(DPColor.backgroundSecondary)
@@ -1757,6 +1767,37 @@ private struct DutyPatternSummary: View {
         }
         .buttonStyle(.plain)
         .disabled(!pattern.configurable)
+    }
+
+    private func hasHiddenDutyType(_ details: DutyPatternDetailsDTO) -> Bool {
+        let visibleDutyTypeIDs = Set(pattern.dutyTypes.map(\.id))
+        return details.days.contains { !visibleDutyTypeIDs.contains($0.dutyType.id) }
+    }
+}
+
+private struct DutyPatternPausedWarning: View {
+    var body: some View {
+        HStack(alignment: .top, spacing: DPSpacing.small) {
+            Image(systemName: "info.circle.fill")
+                .font(.system(size: DPSize.iconSmall, weight: .semibold))
+            VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+                SettingsLocalization.text("settings.pattern.paused.title")
+                    .font(DPTypography.bodyMedium)
+                SettingsLocalization.text("settings.pattern.paused.description")
+                    .font(DPTypography.caption)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .foregroundStyle(DPColor.warning)
+        .padding(DPSpacing.compact)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(DPColor.warningSoft, in: RoundedRectangle(cornerRadius: DPRadius.standard))
+        .overlay {
+            RoundedRectangle(cornerRadius: DPRadius.standard)
+                .stroke(DPColor.warningBorder)
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("settings.pattern.paused.warning")
     }
 }
 
@@ -1897,6 +1938,18 @@ struct DutyPatternSelectionState {
         return visibleDutyTypes.first(where: { $0.id == id })
             ?? pattern?.days.first(where: { $0.weekday == weekday && $0.dutyType.id == id })?.dutyType
     }
+
+    func hasHiddenSelection(visibleDutyTypes: [DutyPatternDutyTypeDTO]) -> Bool {
+        selectedWeekdays.contains { isHiddenSelection($0, visibleDutyTypes: visibleDutyTypes) }
+    }
+
+    func isHiddenSelection(
+        _ weekday: Weekday,
+        visibleDutyTypes: [DutyPatternDutyTypeDTO]
+    ) -> Bool {
+        guard let selectedID = dutyTypeID(for: weekday) else { return false }
+        return !visibleDutyTypes.contains { $0.id == selectedID }
+    }
 }
 
 enum DutyPatternConfirmation: String, Identifiable {
@@ -1988,6 +2041,10 @@ private struct DutyPatternSettingsModal: View {
 
     private var bodyContent: some View {
         VStack(alignment: .leading, spacing: DPSpacing.medium) {
+            if hasHiddenSelection {
+                DutyPatternPausedWarning()
+            }
+
             LazyVGrid(columns: weekdayColumns, spacing: DPSpacing.small) {
                 ForEach(weekdays, id: \.rawValue) { weekday in
                     weekdayButton(weekday)
@@ -2084,6 +2141,9 @@ private struct DutyPatternSettingsModal: View {
                                 .font(DPTypography.bodyMedium)
                                 .foregroundStyle(DPColor.textPrimary)
                                 .lineLimit(1)
+                            if isHiddenSelection(weekday) {
+                                hiddenBadge
+                            }
                         }
                         Spacer(minLength: DPSpacing.small)
                         Image(systemName: "chevron.down")
@@ -2098,7 +2158,7 @@ private struct DutyPatternSettingsModal: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(model.isWorking)
-                .accessibilityLabel("\(weekdayLong(weekday)): \(selectedDutyType(for: weekday)?.name ?? "")")
+                .accessibilityLabel(dutyTypeAccessibilityLabel(for: weekday))
             }
 
             if expandedWeekday == weekday {
@@ -2120,6 +2180,9 @@ private struct DutyPatternSettingsModal: View {
                                     .font(DPTypography.bodyMedium)
                                     .foregroundStyle(selected ? DPColor.accent : DPColor.textPrimary)
                                     .lineLimit(1)
+                                if !isVisibleDutyType(type) {
+                                    hiddenBadge
+                                }
                                 Spacer()
                                 if selected {
                                     Image(systemName: "checkmark")
@@ -2135,6 +2198,11 @@ private struct DutyPatternSettingsModal: View {
                         .disabled(model.isWorking || !isVisibleDutyType(type))
                         .opacity(isVisibleDutyType(type) ? 1 : 0.55)
                         .accessibilityAddTraits(selected ? .isSelected : [])
+                        .accessibilityLabel(
+                            isVisibleDutyType(type)
+                                ? type.name
+                                : "\(type.name), \(SettingsLocalization.string("settings.pattern.hidden"))"
+                        )
                     }
                 }
                 .padding(DPSpacing.small)
@@ -2155,8 +2223,34 @@ private struct DutyPatternSettingsModal: View {
         }
     }
     private var hasHiddenSelection: Bool {
-        let visible = Set(model.dutyPattern?.dutyTypes.map(\.id) ?? [])
-        return selectedIDs.contains { !visible.contains($0) }
+        selectionState.hasHiddenSelection(
+            visibleDutyTypes: model.dutyPattern?.dutyTypes ?? []
+        )
+    }
+
+    private var hiddenBadge: some View {
+        SettingsLocalization.text("settings.pattern.hidden")
+            .font(DPTypography.caption)
+            .foregroundStyle(DPColor.warning)
+            .padding(.horizontal, DPSpacing.small)
+            .padding(.vertical, 2)
+            .background(DPColor.warningSoft, in: Capsule())
+            .overlay(Capsule().stroke(DPColor.warningBorder))
+    }
+
+    private func isHiddenSelection(_ weekday: Weekday) -> Bool {
+        selectionState.isHiddenSelection(
+            weekday,
+            visibleDutyTypes: model.dutyPattern?.dutyTypes ?? []
+        )
+    }
+
+    private func dutyTypeAccessibilityLabel(for weekday: Weekday) -> String {
+        let name = selectedDutyType(for: weekday)?.name ?? ""
+        let hiddenSuffix = isHiddenSelection(weekday)
+            ? ", \(SettingsLocalization.string("settings.pattern.hidden"))"
+            : ""
+        return "\(weekdayLong(weekday)): \(name)\(hiddenSuffix)"
     }
 
     private func selectedDutyType(for weekday: Weekday) -> DutyPatternDutyTypeDTO? {

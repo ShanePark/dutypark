@@ -370,6 +370,9 @@ final class SettingsViewModel: ObservableObject {
         let includesAppleSocialConnection = ProcessInfo.processInfo.arguments.contains(
             "-ui-testing-apple-social-connection"
         )
+        let includesHiddenDutyPattern = ProcessInfo.processInfo.arguments.contains(
+            "-ui-testing-hidden-duty-pattern"
+        )
         member = MemberDTO(
             id: 1,
             name: "Test",
@@ -412,25 +415,30 @@ final class SettingsViewModel: ObservableObject {
                 isCurrentLogin: true
             )
         ]
+        let visibleDutyType = DutyPatternDutyTypeDTO(
+            id: 1,
+            name: includesHiddenDutyPattern ? "주간" : "Day",
+            color: "#3B82F6"
+        )
+        let patternDays: [DutyPatternDayDTO] = includesHiddenDutyPattern
+            ? [
+                DutyPatternDayDTO(weekday: .monday, dutyType: visibleDutyType),
+                DutyPatternDayDTO(
+                    weekday: .sunday,
+                    dutyType: DutyPatternDutyTypeDTO(id: 8, name: "야간", color: "#312E81")
+                ),
+            ]
+            : [
+                DutyPatternDayDTO(weekday: .monday, dutyType: visibleDutyType),
+                DutyPatternDayDTO(weekday: .wednesday, dutyType: visibleDutyType),
+                DutyPatternDayDTO(weekday: .friday, dutyType: visibleDutyType),
+            ]
         dutyPattern = DutyPatternDTO(
             configurable: true,
             reason: nil,
-            dutyTypes: [DutyPatternDutyTypeDTO(id: 1, name: "Day", color: "#3B82F6")],
+            dutyTypes: [visibleDutyType],
             pattern: DutyPatternDetailsDTO(
-                days: [
-                    DutyPatternDayDTO(
-                        weekday: .monday,
-                        dutyType: DutyPatternDutyTypeDTO(id: 1, name: "Day", color: "#3B82F6")
-                    ),
-                    DutyPatternDayDTO(
-                        weekday: .wednesday,
-                        dutyType: DutyPatternDutyTypeDTO(id: 1, name: "Day", color: "#3B82F6")
-                    ),
-                    DutyPatternDayDTO(
-                        weekday: .friday,
-                        dutyType: DutyPatternDutyTypeDTO(id: 1, name: "Day", color: "#3B82F6")
-                    ),
-                ],
+                days: patternDays,
                 holidayOff: true,
                 effectiveFrom: DateOnly(rawValue: "2026-08-01")
             )

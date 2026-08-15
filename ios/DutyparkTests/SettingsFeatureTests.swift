@@ -648,6 +648,25 @@ struct SettingsFeatureTests {
 
         #expect(state.selectedWeekdays == [.sunday])
         #expect(state.dutyType(for: .sunday, visibleDutyTypes: [visible], pattern: pattern) == hidden)
+        #expect(state.hasHiddenSelection(visibleDutyTypes: [visible]))
+        #expect(state.isHiddenSelection(.sunday, visibleDutyTypes: [visible]))
+    }
+
+    @Test
+    func selectingAVisibleDutyTypeClearsTheHiddenDutyPatternWarning() {
+        let hidden = DutyPatternDutyTypeDTO(id: 8, name: "Legacy night", color: "#312E81")
+        let visible = DutyPatternDutyTypeDTO(id: 4, name: "Day", color: "#3B82F6")
+        let pattern = DutyPatternDetailsDTO(
+            days: [.init(weekday: .sunday, dutyType: hidden)],
+            holidayOff: true,
+            effectiveFrom: DateOnly(rawValue: "2026-08-01")
+        )
+        var state = DutyPatternSelectionState(pattern: pattern, dutyTypes: [visible])
+
+        state.select(visible.id, for: .sunday)
+
+        #expect(!state.hasHiddenSelection(visibleDutyTypes: [visible]))
+        #expect(!state.isHiddenSelection(.sunday, visibleDutyTypes: [visible]))
     }
 
     @Test
