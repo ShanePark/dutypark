@@ -14,9 +14,16 @@ enum TodoModalLayout {
     }
 }
 
-enum TodoDestructiveConfirmation: Equatable {
+enum TodoDestructiveConfirmation: Equatable, Identifiable {
     case delete
     case leaveTag
+
+    var id: String {
+        switch self {
+        case .delete: "delete"
+        case .leaveTag: "leaveTag"
+        }
+    }
 
     var titleKey: String {
         switch self {
@@ -40,56 +47,13 @@ enum TodoDestructiveConfirmation: Equatable {
     }
 }
 
-struct TodoDestructiveConfirmationModal: View {
-    let confirmation: TodoDestructiveConfirmation
-    let isWorking: Bool
-    let cancel: () -> Void
-    let confirm: () -> Void
+nonisolated enum TodoConfirmationPolicy {
+    static func canBegin(isConfirming: Bool, isSaving: Bool) -> Bool {
+        !isConfirming && !isSaving
+    }
 
-    var body: some View {
-        VStack(spacing: 0) {
-            Text(todoLocalized(confirmation.titleKey))
-                .font(DPTypography.bodyMedium)
-                .foregroundStyle(DPColor.textPrimary)
-                .frame(maxWidth: .infinity, minHeight: 56)
-                .padding(.horizontal, DPSpacing.large)
-                .background(DPColor.backgroundTertiary)
-
-            Text(todoLocalized(confirmation.messageKey))
-                .font(DPTypography.supporting)
-                .foregroundStyle(DPColor.textSecondary)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(DPSpacing.large)
-                .frame(maxWidth: .infinity)
-
-            HStack(spacing: DPSpacing.compact) {
-                Button(action: confirm) {
-                    Group {
-                        if isWorking {
-                            ProgressView().tint(DPColor.textOnDark)
-                        } else {
-                            Text(todoLocalized(confirmation.actionKey))
-                        }
-                    }
-                    .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(DPDestructiveButtonStyle())
-                .disabled(isWorking)
-                .accessibilityIdentifier("todo.confirm.confirm")
-
-                Button(action: cancel) {
-                    Text(todoLocalized("common.cancel"))
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(DPOutlineButtonStyle())
-                .disabled(isWorking)
-                .accessibilityIdentifier("todo.confirm.cancel")
-            }
-            .padding(.horizontal, DPSpacing.large)
-            .padding(.bottom, DPSpacing.large)
-        }
-        .frame(maxWidth: .infinity)
+    static func canDismiss(isConfirming: Bool, isSaving: Bool) -> Bool {
+        !isConfirming && !isSaving
     }
 }
 
@@ -185,6 +149,8 @@ struct TodoDetailModal: View {
     @State private var showingEdit = false
     @State private var confirmation: TodoDestructiveConfirmation?
     @State private var isConfirming = false
+    @State private var dismissDetailAfterConfirmation = false
+    @State private var deferredConfirmationErrorKey: String?
     @State private var isLoadingEditAttachments = false
     @StateObject private var gallery: AttachmentGalleryModel
 
@@ -235,13 +201,6 @@ struct TodoDetailModal: View {
                     if updated { await onTodoChanged() }
                     return updated
                 }
-            } else if let confirmation {
-                TodoDestructiveConfirmationModal(
-                    confirmation: confirmation,
-                    isWorking: isConfirming || model.isSaving,
-                    cancel: { self.confirmation = nil },
-                    confirm: performConfirmation
-                )
             } else {
                 detailContent
             }
@@ -260,8 +219,37 @@ struct TodoDetailModal: View {
                 dismiss()
             }
         }
-        .onDisappear { onDismissabilityChange(true) }
-        .todoModalErrorAlert(model)
+        .onDisappear {
+            guard confirmation == nil else { return }
+            onDismissabilityChange(true)
+        }
+        .fullScreenCover(item: $confirmation) { requestedConfirmation in
+            DPModalOverlay(
+                maximumContentWidth: DPConfirmationPanel.maximumWidth,
+                onDismiss: { finishConfirmationDismissal() },
+                canDismiss: TodoConfirmationPolicy.canDismiss(
+                    isConfirming: isConfirming,
+                    isSaving: model.isSaving
+                )
+            ) { availableSize, confirmationDismiss in
+                DPConfirmationPanel(
+                    title: todoLocalized(requestedConfirmation.titleKey),
+                    message: todoLocalized(requestedConfirmation.messageKey),
+                    confirmTitle: todoLocalized(requestedConfirmation.actionKey),
+                    cancelTitle: todoLocalized("common.cancel"),
+                    isDestructive: true,
+                    isWorking: isConfirming || model.isSaving,
+                    maximumHeight: availableSize.height,
+                    cancel: confirmationDismiss,
+                    confirm: {
+                        performConfirmation(
+                            requestedConfirmation,
+                            dismissConfirmation: confirmationDismiss
+                        )
+                    }
+                )
+            }
+        }
     }
 
     private var detailContent: some View {
@@ -272,26 +260,56 @@ struct TodoDetailModal: View {
         } footer: {
             footer
         }
+        .todoModalErrorAlert(model)
     }
 
-    private func performConfirmation() {
-        guard !isConfirming, let confirmation else { return }
+    private func performConfirmation(
+        _ requestedConfirmation: TodoDestructiveConfirmation,
+        dismissConfirmation: @escaping () -> Void
+    ) {
+        guard confirmation == requestedConfirmation,
+              TodoConfirmationPolicy.canBegin(
+                  isConfirming: isConfirming,
+                  isSaving: model.isSaving
+              ) else { return }
         isConfirming = true
         onDismissabilityChange(false)
         Task {
             let succeeded: Bool
-            switch confirmation {
+            switch requestedConfirmation {
             case .delete:
                 succeeded = await model.delete(todo)
             case .leaveTag:
                 succeeded = await model.leaveTag(todo)
             }
             isConfirming = false
-            onDismissabilityChange(true)
             if succeeded {
                 await onTodoChanged()
+                dismissDetailAfterConfirmation = true
+            } else {
+                deferredConfirmationErrorKey = model.errorKey
+                model.errorKey = nil
+                onDismissabilityChange(true)
+            }
+            await Task.yield()
+            dismissConfirmation()
+        }
+    }
+
+    private func finishConfirmationDismissal() {
+        confirmation = nil
+        if dismissDetailAfterConfirmation {
+            dismissDetailAfterConfirmation = false
+            onDismissabilityChange(true)
+            Task {
                 await Task.yield()
                 dismiss()
+            }
+        } else if let deferredConfirmationErrorKey {
+            self.deferredConfirmationErrorKey = nil
+            Task {
+                await Task.yield()
+                model.errorKey = deferredConfirmationErrorKey
             }
         }
     }

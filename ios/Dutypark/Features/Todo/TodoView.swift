@@ -1186,6 +1186,7 @@ struct TodoFormSheet: View {
     @State private var didSave = false
     @State private var showsDiscardConfirmation = false
     @State private var isDiscarding = false
+    @State private var dismissFormAfterDiscard = false
     @State private var isSubmitting = false
     @StateObject private var attachmentModel: AttachmentPickerModel
     @FocusState private var focusedField: TodoFormField?
@@ -1248,18 +1249,32 @@ struct TodoFormSheet: View {
         .onChange(of: dismissRequest) { _, _ in requestDismissal() }
         .onAppear { onBusyChange(isBusy) }
         .onDisappear {
+            guard !showsDiscardConfirmation else { return }
             onBusyChange(false)
             guard !didSave else { return }
             Task { await attachmentModel.discard() }
         }
-        .alert(todoLocalized("todo.confirm.discardTitle"), isPresented: $showsDiscardConfirmation) {
-            Button(todoLocalized("todo.confirm.discardAction"), role: .destructive) {
-                confirmDiscard()
+        .fullScreenCover(isPresented: $showsDiscardConfirmation) {
+            DPModalOverlay(
+                maximumContentWidth: DPConfirmationPanel.maximumWidth,
+                onDismiss: { finishDiscardConfirmationDismissal() },
+                canDismiss: TodoConfirmationPolicy.canDismiss(
+                    isConfirming: isDiscarding,
+                    isSaving: isDiscardConfirmationSaving
+                )
+            ) { availableSize, confirmationDismiss in
+                DPConfirmationPanel(
+                    title: todoLocalized("todo.confirm.discardTitle"),
+                    message: todoLocalized("todo.confirm.discardMessage"),
+                    confirmTitle: todoLocalized("todo.confirm.discardAction"),
+                    cancelTitle: todoLocalized("common.cancel"),
+                    isDestructive: true,
+                    isWorking: isDiscarding || isDiscardConfirmationSaving,
+                    maximumHeight: availableSize.height,
+                    cancel: confirmationDismiss,
+                    confirm: { confirmDiscard(dismissConfirmation: confirmationDismiss) }
+                )
             }
-            .accessibilityIdentifier("todo.form.discard.confirm")
-            Button(todoLocalized("common.cancel"), role: .cancel) {}
-        } message: {
-            Text(todoLocalized("todo.confirm.discardMessage"))
         }
         .todoErrorAlert(model)
     }
@@ -1430,18 +1445,34 @@ struct TodoFormSheet: View {
         }
     }
 
-    private func confirmDiscard() {
-        guard !isOperationallyBusy else { return }
+    private func confirmDiscard(dismissConfirmation: @escaping () -> Void) {
+        guard TodoConfirmationPolicy.canBegin(
+            isConfirming: isDiscarding,
+            isSaving: isDiscardConfirmationSaving
+        ) else { return }
         isDiscarding = true
         onBusyChange(true)
         Task {
             let discarded = await attachmentModel.discard()
             isDiscarding = false
-            onBusyChange(isBusy)
             if discarded {
+                dismissFormAfterDiscard = true
                 await Task.yield()
-                dismissForm(saved: false)
+                dismissConfirmation()
+            } else {
+                onBusyChange(isBusy)
             }
+        }
+    }
+
+    private func finishDiscardConfirmationDismissal() {
+        showsDiscardConfirmation = false
+        guard dismissFormAfterDiscard else { return }
+        dismissFormAfterDiscard = false
+        onBusyChange(isBusy)
+        Task {
+            await Task.yield()
+            dismissForm(saved: false)
         }
     }
 
@@ -1485,11 +1516,17 @@ struct TodoFormSheet: View {
     }
 
     private var isOperationallyBusy: Bool {
-        isSubmitting || (!didSave && (isSaving || attachmentModel.isBusy || isDiscarding))
+        isSubmitting
+            || dismissFormAfterDiscard
+            || (!didSave && (isSaving || attachmentModel.isBusy || isDiscarding))
     }
 
     private var isBusy: Bool {
         isOperationallyBusy
+    }
+
+    private var isDiscardConfirmationSaving: Bool {
+        isSubmitting || isSaving || attachmentModel.isBusy
     }
 
     private func dismissForm(saved: Bool) {

@@ -145,11 +145,7 @@ final class DutyparkUITests: XCTestCase {
         }
 
         app.buttons["todo.form.cancel"].tap()
-        let discardAlert = app.alerts.firstMatch
-        XCTAssertTrue(discardAlert.waitForExistence(timeout: 5))
-        let discardButton = discardAlert.buttons
-            .matching(identifier: "todo.form.discard.confirm")
-            .firstMatch
+        let discardButton = app.buttons["dp.confirmation.confirm"]
         XCTAssertTrue(discardButton.waitForExistence(timeout: 5))
         discardButton.tap()
 

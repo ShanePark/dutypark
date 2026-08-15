@@ -577,6 +577,27 @@ struct TodoViewModelTests {
         #expect(TodoDestructiveConfirmation.leaveTag.actionKey == "todo.action.leaveTag")
     }
 
+    @Test(arguments: [
+        (false, false, true),
+        (true, false, false),
+        (false, true, false),
+        (true, true, false)
+    ])
+    func confirmationBlocksDuplicateActionsAndDismissalWhileWorking(
+        isConfirming: Bool,
+        isSaving: Bool,
+        expected: Bool
+    ) {
+        #expect(TodoConfirmationPolicy.canBegin(
+            isConfirming: isConfirming,
+            isSaving: isSaving
+        ) == expected)
+        #expect(TodoConfirmationPolicy.canDismiss(
+            isConfirming: isConfirming,
+            isSaving: isSaving
+        ) == expected)
+    }
+
     @Test
     func loadSelectsFirstNonemptyColumnAndCountsTaggedTodos() async {
         let own = makeTodo(title: "Own", status: .todo)
