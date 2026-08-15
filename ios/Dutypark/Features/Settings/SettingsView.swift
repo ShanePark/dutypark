@@ -110,7 +110,17 @@ struct SettingsView: View {
             }
         }
         .accessibilityIdentifier("screen.settings")
-        .task { await model.load() }
+        .task {
+            await model.load()
+#if DEBUG
+            let arguments = ProcessInfo.processInfo.arguments
+            if arguments.contains("-ui-testing-long-form-policy-terms") {
+                destination = .terms
+            } else if arguments.contains("-ui-testing-long-form-policy-privacy") {
+                destination = .privacy
+            }
+#endif
+        }
         .task { await push.resumeRegistration() }
         .task(id: model.member?.id) {
             guard let memberID = model.member?.id else { return }
@@ -2460,19 +2470,14 @@ private struct PolicyView: View {
         ScrollView {
             if let policy {
                 VStack(alignment: .leading, spacing: 16) {
-                    if let markdown = try? AttributedString(markdown: policy.content) {
-                        Text(markdown)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    } else {
-                        Text(policy.content)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
+                    DPLongFormDocument(content: policy.content)
                     Divider()
                     Text("\(policy.version) · \(policy.effectiveDate.rawValue)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-                .padding()
+                .padding(.horizontal, DPLongFormDocumentLayout.horizontalPadding)
+                .padding(.vertical, DPLongFormDocumentLayout.verticalPadding)
             } else {
                 ContentUnavailableView(
                     SettingsLocalization.string("settings.policy.unavailable"),
@@ -2555,15 +2560,7 @@ private struct AIScheduleConsentActivationModal: View {
                     .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
 
                 if let policy = store.response?.policy {
-                    if let markdown = try? AttributedString(markdown: policy.content) {
-                        Text(markdown)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .fixedSize(horizontal: false, vertical: true)
-                    } else {
-                        Text(policy.content)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+                    DPLongFormDocument(content: policy.content)
 
                     Divider()
 
@@ -2667,7 +2664,7 @@ private struct AIScheduleConsentPolicyView: View {
 
     var body: some View {
         Group {
-            if let policy = store.response?.policy {
+            if let policy = displayedPolicy {
                 ScrollView {
                     VStack(alignment: .leading, spacing: DPSpacing.medium) {
                         SettingsLocalization.text("settings.aiConsent.dataFlow")
@@ -2678,20 +2675,15 @@ private struct AIScheduleConsentPolicyView: View {
                             .background(DPColor.accentSoft)
                             .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
 
-                        if let markdown = try? AttributedString(markdown: policy.content) {
-                            Text(markdown)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        } else {
-                            Text(policy.content)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
+                        DPLongFormDocument(content: policy.content)
 
                         Divider()
                         Text("\(policy.version) · \(policy.effectiveDate.rawValue)")
                             .font(DPTypography.caption)
                             .foregroundStyle(DPColor.textMuted)
                     }
-                    .padding(DPSpacing.medium)
+                    .padding(.horizontal, DPLongFormDocumentLayout.horizontalPadding)
+                    .padding(.vertical, DPLongFormDocumentLayout.verticalPadding)
                 }
             } else if store.isLoading {
                 ProgressView(SettingsLocalization.string("settings.loading"))
@@ -2714,6 +2706,15 @@ private struct AIScheduleConsentPolicyView: View {
         }
         .navigationTitle(SettingsLocalization.string("settings.aiConsent.policy"))
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var displayedPolicy: PolicyDTO? {
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-ui-testing-long-form-policies") {
+            return SettingsLongFormPolicyFixture.ai
+        }
+#endif
+        return store.response?.policy
     }
 }
 

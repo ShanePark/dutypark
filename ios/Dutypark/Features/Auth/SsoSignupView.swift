@@ -240,12 +240,10 @@ struct SsoSignupView: View {
             if let displayedPolicy {
                 NavigationStack {
                     ScrollView {
-                        policyText(displayedPolicy.content)
-                            .font(DPTypography.body)
-                            .foregroundStyle(DPColor.textSecondary)
+                        DPLongFormDocument(content: displayedPolicy.content)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(DPSpacing.medium)
-                            .textSelection(.enabled)
+                            .padding(.horizontal, DPLongFormDocumentLayout.horizontalPadding)
+                            .padding(.vertical, DPLongFormDocumentLayout.verticalPadding)
                     }
                     .background(DPColor.backgroundSecondary)
                     .navigationTitle(policyTitle(for: displayedPolicy))
@@ -317,12 +315,9 @@ struct SsoSignupView: View {
             }
 
             ScrollView {
-                policyText(policy.content)
-                    .font(DPFont.light(size: 13, relativeTo: .caption))
-                    .foregroundStyle(DPColor.textSecondary)
+                DPLongFormDocument(content: policy.content, style: .compact)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(12)
-                    .textSelection(.enabled)
             }
             .frame(height: 128)
             .background(DPColor.backgroundTertiary)
@@ -385,13 +380,6 @@ struct SsoSignupView: View {
         } catch {
             errorKey = "auth.oauth.signup.policyError"
         }
-    }
-
-    private func policyText(_ content: String) -> Text {
-        guard let markdown = try? AttributedString(markdown: content) else {
-            return Text(content)
-        }
-        return Text(markdown)
     }
 
     private func policyTitle(for policy: PolicyDTO) -> String {

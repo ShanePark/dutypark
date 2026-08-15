@@ -386,6 +386,9 @@ final class SettingsViewModel: ObservableObject {
         let includesHiddenDutyPattern = ProcessInfo.processInfo.arguments.contains(
             "-ui-testing-hidden-duty-pattern"
         )
+        let includesLongFormPolicies = ProcessInfo.processInfo.arguments.contains(
+            "-ui-testing-long-form-policies"
+        )
         member = MemberDTO(
             id: 1,
             name: "Test",
@@ -457,11 +460,81 @@ final class SettingsViewModel: ObservableObject {
             )
         )
         dutyPatternLoadFailed = false
+        if includesLongFormPolicies {
+            policies = CurrentPoliciesDTO(
+                terms: SettingsLongFormPolicyFixture.terms,
+                privacy: SettingsLongFormPolicyFixture.privacy
+            )
+        }
         didAttemptMemberLoad = true
         loadedSections = [.family, .friends, .managers, .managedAccounts, .sessions, .dutyPattern]
+        if includesLongFormPolicies {
+            loadedSections.insert(.policies)
+        }
     }
 #endif
 }
+
+#if DEBUG
+nonisolated enum SettingsLongFormPolicyFixture {
+    static let terms = PolicyDTO(
+        policyType: .terms,
+        version: "2026-08-14",
+        content: """
+        # Dutypark 이용약관
+
+        시행일: 2026-08-14
+
+        ## 제1조 목적과 적용 범위
+
+        Dutypark 웹과 iOS 앱에서 제공하는 일정 및 협업 기능의 이용 조건을 안내합니다.
+
+        1. 이용자는 정확한 계정 정보를 제공해야 합니다.
+        2. 이용자는 비밀번호와 로그인 세션을 안전하게 관리해야 합니다.
+        3. 선택 기능은 설정에서 언제든 해제할 수 있습니다.
+        """,
+        effectiveDate: DateOnly(rawValue: "2026-08-14")
+    )
+
+    static let privacy = PolicyDTO(
+        policyType: .privacy,
+        version: "2026-08-15",
+        content: """
+        # 개인정보 처리방침
+
+        시행일: 2026-08-15
+
+        ## 수집 정보와 이용 목적
+
+        | 구분 | 처리 정보 | 이용 목적 |
+        | --- | --- | --- |
+        | 계정 | 이름, 회원 식별자와 로그인 세션 | 로그인과 계정 관리 |
+        | 일정 | 날짜와 사용자가 입력한 긴 일정 내용 | 캘린더 및 공유 기능 제공 |
+        """,
+        effectiveDate: DateOnly(rawValue: "2026-08-15")
+    )
+
+    static let ai = PolicyDTO(
+        policyType: .aiScheduleParsing,
+        version: "2026-08-14",
+        content: """
+        # AI 일정 시간 자동 인식 선택 동의 안내
+
+        시행일: 2026-08-14
+
+        ## 1. 이용 목적
+
+        Dutypark는 이용자가 선택한 경우 일정 문구에서 시작 시간과 종료 시간을 인식하기 위해 필요한 일정 날짜와 일정 내용 텍스트만 외부 AI 처리 서비스로 전송합니다.
+
+        ## 2. 선택 동의와 철회
+
+        1. 이 동의는 선택 사항입니다.
+        2. 설정에서 언제든 동의를 철회할 수 있습니다.
+        """,
+        effectiveDate: DateOnly(rawValue: "2026-08-14")
+    )
+}
+#endif
 
 private extension MemberDTO {
     func replacing(
