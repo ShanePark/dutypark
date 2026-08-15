@@ -27,7 +27,7 @@
 | 앱 | Debug UI fixture, 한국어, 다크 모드 |
 | 시뮬레이터 | Outcrop iPhone 13 mini `F0737016-7654-4967-83FA-1DFB951DB36E` |
 | 회귀 테스트 | 선택한 iOS 단위 테스트 전체 통과, `/tmp/dutypark-parity-main/Logs/Test/Test-Dutypark-2026.08.15_09-21-46-+0900.xcresult` |
-| 시각 캡처 | `ParityVisualCaptureUITests` 1건 통과, `/tmp/Dutypark-ParityVisualCapture-20260815-10.xcresult` |
+| 시각 캡처 | `ParityVisualCaptureUITests` 1건 통과, `/tmp/Dutypark-ParityVisualCapture-20260815-11.xcresult` |
 
 ## 진행 현황
 
@@ -136,11 +136,22 @@
 
 | 웹 기준 | iOS 수정 후 |
 | --- | --- |
-| <img src="screenshots/team-web-ko.png" width="240" alt="모바일 웹 팀 화면"> | 연월 선택기 캡처 대기 |
+| <img src="screenshots/team-web-ko.png" width="240" alt="모바일 웹 팀 화면"> | <img src="screenshots/team-ios-after.png" width="240" alt="iOS 팀 미가입 fixture 화면"> |
 
 - 기기 캘린더의 `monthSymbols`를 직접 사용하던 코드를 앱 locale 기반 `DateFormatter`로 교체했다.
 - 앱 한국어·기기 영어에서는 `8월`, 앱 영어에서는 `August`가 되는 회귀 테스트를 통과했다.
 - 팀 연월 선택기를 여는 UI fixture를 추가해 수정 후 스크린샷을 보강한다.
+
+### 달력·팀 비교 기준 확장 — `58cbf120`
+
+| 화면 | 모바일 웹 | iOS |
+| --- | --- | --- |
+| 달력 | <img src="screenshots/calendar-web-ko.png" width="240" alt="모바일 웹 달력"> | <img src="screenshots/calendar-ios-after.png" width="240" alt="iOS 달력"> |
+| 팀 | <img src="screenshots/team-web-ko.png" width="240" alt="모바일 웹 팀"> | <img src="screenshots/team-ios-after.png" width="240" alt="iOS 팀"> |
+
+- 달력은 웹과 iOS fixture의 일정·D-Day 데이터가 달라 데이터 개수는 판정에서 제외하고 월 그리드와 네비게이션 기준으로 보존한다.
+- 팀은 웹이 가입 팀, iOS가 미가입 fixture라 현재 직접 비교할 수 없다. 같은 팀 fixture를 제공한 뒤 연월 선택기와 팀 일정 UI를 판정한다.
+- 확장 캡처는 홈·Todo·달력·팀·메뉴·설정·패턴 편집·패턴 해제 확인 8개 화면을 한 흐름에서 검증한다.
 
 ### 중앙 확인 UI — `de46f754`, `b7bdc8ae` 및 후속 적용 커밋
 
@@ -160,12 +171,14 @@
 
 - 대시보드
 - Todo
+- 달력
+- 팀
 - 햄버거 메뉴
 - 설정
 - 기본 근무 패턴
 - 패턴 해제 중앙 확인
 
-2026-08-15 실행 결과: 1개 테스트, 실패 0건, 약 27초.
+2026-08-15 실행 결과: 1개 테스트, 실패 0건, 약 36.6초.
 
 ## 미해결·다음 순서
 
