@@ -53,6 +53,7 @@
 | 18 | 대시보드 · 친구 | 수정 후 증빙이 빈 fixture라 친구 총수·목록 유지 여부를 비교할 수 없음 | 완료 | `ed29121c` |
 | 19 | 설정 · 회원 탈퇴 | 영구 삭제 버튼이 `내 계정 삭제`로 축약되어 비가역성이 약하게 안내됨 | 완료 | `12974a63` |
 | 20 | 달력 · 일정 검색 | 상세도 검색하지만 placeholder가 `제목으로 검색`이라고 잘못 안내함 | 완료 | `83ea522e` |
+| 21 | 팀 관리 | 대표 취소 확인에서 대상 대표 이름이 빠져 권한 초기화 대상을 알 수 없음 | 완료 | `76e0f25f` |
 
 상태는 `대기 → 진행 중 → 수정됨·커밋 전 → 코드 커밋됨·시각 검증 전 → 완료` 순으로 관리한다.
 
@@ -98,6 +99,7 @@
 | `ed29121c` | 친구가 있는 Home parity fixture | HomeDashboard 11건, generic build·test build, UI 1건 | 친구 총수 3·고정 2·일반 1 재캡처 | 완료 |
 | `12974a63` | 회원 탈퇴 최종 버튼의 영구 삭제 경고 복원 | AccountDeletion 9건, generic build·test build, UI 1건 | 5/5 최종 확인 화면 재캡처 | 완료 |
 | `83ea522e` | 일정 검색 placeholder의 검색 범위 복원 | exact ko/en 테스트, generic build·test build, UI 1건 | 검색 모달 placeholder 재캡처 | 완료 |
+| `76e0f25f` | 팀 대표 취소 확인에 대상명 표시 | 포맷·fallback 2건, generic build·test build, UI 1건 | 김듀티 대상 중앙 패널 재캡처 | 완료 |
 
 ## 상세 변경 보고
 
@@ -335,6 +337,17 @@
 - `d444f095`의 가입 팀 fixture에서 실제 일정 삭제와 팀 관리 구성원 제외 패널을 캡처했다.
 - 제목·대상·영향 문구·버튼 중앙 배치를 확인하고, 취소 후 패널 소멸과 앱 foreground 유지까지 검증했다.
 - iPhone 13 mini UI 테스트 3/3 통과: `/tmp/Dutypark-TeamParityVisual-20260815-03.xcresult`.
+
+### 팀 대표 취소 대상 문구 — `76e0f25f`
+
+| 모바일 웹 기준 | iOS 수정 후 |
+| --- | --- |
+| 대표 취소 확인에 현재 대표 이름을 포함 | <img src="screenshots/team-reset-lead-confirmation-ios-after.png" width="240" alt="현재 대표 이름을 포함한 iOS 대표 취소 확인"> |
+
+- 모바일 웹은 권한을 초기화할 대표의 이름을 확인 문구에 포함하지만 iOS는 `팀 대표를 초기화하시겠습니까?`라고만 표시해 대상을 알기 어려웠다.
+- 팀의 `adminId`로 현재 대표 멤버를 찾아 `김듀티 님의 팀 대표 권한을 초기화하시겠습니까?`처럼 표시하며, 멤버 정보를 찾지 못할 때는 현지화된 기존 일반 문구로 안전하게 대체한다.
+- 기존 중앙 확인 패널과 처리 중 중복 제출·외부 dismiss 차단은 유지했고, UI 테스트에서는 파괴적 확인 버튼을 누르지 않았다.
+- 포맷·fallback 단위 테스트 2건과 generic 앱·테스트 빌드가 통과했다. iPhone 13 mini UI 테스트 1/1 통과 및 육안 검수 결과 제목·본문·취소·대표 취소 버튼이 모두 중앙에 잘림·겹침 없이 표시됐다: `/tmp/Dutypark-TeamLeadTarget-Green/Logs/Test/Test-Dutypark-2026.08.15_17-01-18-+0900.xcresult`, `/tmp/Dutypark-TeamResetLead-Final-20260815.xcresult`.
 
 ### Root 로그아웃 확인 — `8a6a3aae`
 
