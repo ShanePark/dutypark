@@ -961,14 +961,7 @@ private struct NotificationDropdownRow: View {
         Button(action: action) {
             HStack(alignment: .top, spacing: DPSpacing.compact) {
                 ZStack(alignment: .topTrailing) {
-                    Circle()
-                        .fill(DPColor.backgroundTertiary)
-                        .frame(width: 36, height: 36)
-                        .overlay {
-                            Image(systemName: "person.fill")
-                                .font(.system(size: 15))
-                                .foregroundStyle(DPColor.textMuted)
-                        }
+                    NotificationDropdownActorAvatar(notification: notification)
 
                     if !notification.isRead {
                         Circle()
@@ -1007,6 +1000,103 @@ private struct NotificationDropdownRow: View {
         .buttonStyle(.plain)
         .accessibilityIdentifier("notifications.dropdown.row.\(notification.id.uuidString)")
     }
+}
+
+nonisolated struct NotificationDropdownActorPhotoRequest {
+    let actorID: MemberID
+    let profilePhotoVersion: Int64
+
+    init?(notification: NotificationDTO) {
+        guard let actorID = notification.actorId,
+              notification.payload.actor?.hasProfilePhoto == true
+        else { return nil }
+        self.actorID = actorID
+        profilePhotoVersion = notification.payload.actor?.profilePhotoVersion ?? 0
+    }
+
+    var path: String {
+        "members/\(actorID)/profile-photo"
+    }
+
+    var queryItems: [URLQueryItem] {
+        [
+            URLQueryItem(name: "thumbnail", value: "true"),
+            URLQueryItem(name: "v", value: String(profilePhotoVersion)),
+        ]
+    }
+
+    var cacheIdentity: String {
+        "\(actorID)-\(profilePhotoVersion)"
+    }
+}
+
+private struct NotificationDropdownActorAvatar: View {
+    let notification: NotificationDTO
+    @State private var image: UIImage?
+
+    var body: some View {
+        Circle()
+            .fill(DPColor.backgroundTertiary)
+            .frame(width: 36, height: 36)
+            .overlay {
+                if let image {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFill()
+                        .clipShape(Circle())
+                } else {
+                    Image(systemName: "person.fill")
+                        .font(.system(size: 15))
+                        .foregroundStyle(DPColor.textMuted)
+                }
+            }
+            .accessibilityElement()
+            .accessibilityLabel(notification.payload.actor?.name ?? "")
+            .accessibilityIdentifier(accessibilityIdentifier)
+            .task(id: photoRequest?.cacheIdentity) {
+                await loadPhoto()
+            }
+    }
+
+    private var photoRequest: NotificationDropdownActorPhotoRequest? {
+        NotificationDropdownActorPhotoRequest(notification: notification)
+    }
+
+    private var accessibilityIdentifier: String {
+        let state = image == nil ? "fallback" : "photo"
+        return "notifications.dropdown.row.\(notification.id.uuidString).avatar.\(state)"
+    }
+
+    private func loadPhoto() async {
+        guard let photoRequest else {
+            image = nil
+            return
+        }
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-ui-testing-notification-actor-avatar") {
+            image = Self.uiTestingProfilePhoto()
+            return
+        }
+#endif
+        let data = try? await APIClient.shared.data(
+            photoRequest.path,
+            queryItems: photoRequest.queryItems
+        )
+        image = data.flatMap(UIImage.init(data:))
+    }
+
+#if DEBUG
+    private static func uiTestingProfilePhoto() -> UIImage {
+        let size = CGSize(width: 72, height: 72)
+        return UIGraphicsImageRenderer(size: size).image { context in
+            UIColor.systemIndigo.setFill()
+            context.cgContext.fill(CGRect(origin: .zero, size: size))
+            let symbol = UIImage(systemName: "person.crop.circle.fill")?
+                .withTintColor(.white, renderingMode: .alwaysOriginal)
+            symbol?.draw(in: CGRect(x: 10, y: 10, width: 52, height: 52))
+        }
+    }
+#endif
 }
 
 private extension View {

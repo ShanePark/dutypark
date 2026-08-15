@@ -254,7 +254,19 @@ final class NotificationStore: ObservableObject {
 
 #if DEBUG
     private func loadUITestingNotificationFixture() {
-        let data = Data(Self.uiTestingNotificationFixture.utf8)
+        let hasProfilePhoto = ProcessInfo.processInfo.arguments.contains(
+            "-ui-testing-notification-actor-avatar"
+        )
+        let fixture = Self.uiTestingNotificationFixture
+            .replacingOccurrences(
+                of: "__UI_ACTOR_HAS_PROFILE_PHOTO__",
+                with: hasProfilePhoto ? "true" : "false"
+            )
+            .replacingOccurrences(
+                of: "__UI_ACTOR_PROFILE_PHOTO_VERSION__",
+                with: hasProfilePhoto ? "3" : "0"
+            )
+        let data = Data(fixture.utf8)
         notifications = (try? JSONDecoder().decode([NotificationDTO].self, from: data)) ?? []
         unreadCount = notifications.filter { !$0.isRead }.count
         friendRequestCount = 1
@@ -275,8 +287,8 @@ final class NotificationStore: ObservableObject {
           "version": 1,
           "actor": {
             "name": "민지",
-            "hasProfilePhoto": false,
-            "profilePhotoVersion": 0
+            "hasProfilePhoto": __UI_ACTOR_HAS_PROFILE_PHOTO__,
+            "profilePhotoVersion": __UI_ACTOR_PROFILE_PHOTO_VERSION__
           }
         },
         "isRead": false,
