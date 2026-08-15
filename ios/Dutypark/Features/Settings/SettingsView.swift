@@ -307,7 +307,7 @@ struct SettingsView: View {
             HStack(spacing: DPSpacing.medium) {
                 ZStack(alignment: .bottomTrailing) {
                     Button {
-                        guard model.member?.hasProfilePhoto == true else { return }
+                        guard hasVisibleProfilePhoto else { return }
                         Task { await cropExistingPhoto() }
                     } label: { profilePhoto }
                     .buttonStyle(.plain)
@@ -334,14 +334,24 @@ struct SettingsView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            if model.member?.hasProfilePhoto == true {
+            if hasVisibleProfilePhoto {
                 Button { confirmation = .deleteProfilePhoto } label: {
                     Label(SettingsLocalization.string("settings.photo.delete"), systemImage: "trash")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(DangerSoftButtonStyle())
+                .accessibilityIdentifier("settings.photo.delete")
             }
         }
+    }
+
+    private var hasVisibleProfilePhoto: Bool {
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-ui-testing-profile-photo") {
+            return true
+        }
+#endif
+        return model.member?.hasProfilePhoto == true
     }
 
     @ViewBuilder

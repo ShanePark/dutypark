@@ -710,6 +710,7 @@ private struct AppMenuView: View {
                         role: .destructive,
                         action: onLogout
                     )
+                    .accessibilityIdentifier("menu.logout")
                 }
                 .background(DPColor.backgroundCard)
                 .clipShape(RoundedRectangle(cornerRadius: DPRadius.large))
