@@ -60,13 +60,13 @@
 | `def118e2` | 첨부 삭제 중앙 확인 | `AttachmentTests` 포함 전체 선택 테스트 | `28bfcbed`에서 실제 메뉴 경로 캡처 확보 | 완료 |
 | `74858618` | 헤더 캡슐 제거, `달력` 복원, Root 메뉴 현지화 | AppTab·RootChrome·컴포넌트 테스트 및 UI 캡처 | 대시보드·메뉴 수정 후 확보 | 완료 |
 | `2cdc26ea` | 앱 언어 override 및 로그인·OAuth·API 오류 현지화 | 앱 언어 override·Auth 테스트 포함 전체 선택 테스트 | 한국어 메뉴·설정 화면에서 Foundation 조회 결과 확인 | 완료 |
-| `3987ea66` | 팀 연월 선택기의 월 이름 현지화 | `TeamFeatureTests` 앱 ko·기기 en 조합 | 웹 기준 확보, iOS 연월 선택기 캡처 대기 | 코드 커밋됨·캡처 대기 |
+| `3987ea66` | 팀 연월 선택기의 월 이름 현지화 | `TeamFeatureTests` 앱 ko·기기 en 조합 | `d444f095`에서 1~12월 한국어 캡처 확보 | 완료 |
 | `b7bdc8ae` | 기본 근무 패턴 UI 및 캘린더 중앙 확인 흐름 | Settings·Calendar 테스트 및 UI 캡처 | 패턴 편집·해제 확인 확보, 월 일괄 변경 캡처 대기 | 패턴 완료·캘린더 캡처 대기 |
 | `24814f20` | 친구관리 UI fixture 안정화 및 실제 롱프레스 재정렬 | iPhone 13 mini 전용 UI 테스트 1건 | 친구관리 수정 후 화면 확보 | 완료 |
 | `2316075a` | 관리자 팀 삭제·회원 세션 종료 중앙 확인 | AdminTeam·AdminFeature 테스트 포함 전체 선택 테스트 | 관리자 fixture 부재 | 코드 커밋됨·캡처 대기 |
 | `84047661` | 설정의 계정·프로필 destructive 확인 5종 | iPhone 13 mini `SettingsFeatureTests` 29건 | 설정 화면 확보, 확인 패널 직접 캡처 대기 | 코드 커밋됨·패널 캡처 대기 |
 | `bd3a1fc4` | Todo 작성 취소·삭제·태그 해제 중앙 확인 | iPhone 13 mini 단위 32건·UI 1건 | Todo 화면 확보, 확인 패널 직접 캡처 대기 | 코드·상호작용 완료·캡처 대기 |
-| `2ecdbb70` | 팀 일정 삭제 및 팀 관리 확인 UI | iPhone 13 mini `TeamFeatureTests` 24건 | 팀 미가입 화면만 확보 | 코드·테스트 완료·가입 fixture 캡처 대기 |
+| `2ecdbb70` | 팀 일정 삭제 및 팀 관리 확인 UI | iPhone 13 mini `TeamFeatureTests` 24건 | `d444f095`에서 가입 팀 패널 2종 확보 | 완료 |
 | `8a6a3aae` | Root 햄버거 로그아웃 중앙 확인 | iPhone 13 mini 전용 테스트 3건 | 메뉴 화면 확보, 패널 직접 캡처 대기 | 코드·테스트 완료·캡처 대기 |
 | `a19f4047` | 소셜 계정 연결 해제 중앙 확인 | iPhone 13 mini 전용 테스트 3건 | 설정 화면 확보, 연결 관리 fixture 대기 | 코드·테스트 완료·캡처 대기 |
 | `cc673095` | SSO 추가정보 draft 폐기 중앙 확인 | iPhone 13 mini OAuth 가입 테스트 6건 | 인증 fixture 부재 | 코드·테스트 완료·캡처 대기 |
@@ -77,6 +77,7 @@
 | `da97937c` | 알림 삭제 확인 시각 fixture와 전환 안정성 검증 | iPhone 13 mini UI 2건 | 개별·읽은 알림 일괄 삭제 패널 확보 | 완료 |
 | `3bef215b` | DEBUG 전용 direct visual fixture 라우트 | Debug·Release 빌드 및 route 정책 테스트 | 첨부·SSO·관리자 캡처 경로 제공 | 완료 |
 | `28bfcbed` | 첨부 삭제 확인 시각 검증 | iPhone 13 mini UI 1건 | 메뉴→삭제 중앙 패널 확보 | 완료 |
+| `d444f095` | 가입 팀 달력·관리 시각 fixture | iPhone 13 mini UI 3건 | 연월 선택·일정 삭제·구성원 제외 확보 | 완료 |
 
 ## 상세 변경 보고
 
@@ -149,13 +150,13 @@
 
 ### 팀 월 이름 현지화 — `3987ea66`
 
-| 웹 기준 | iOS 수정 후 |
+| 웹 기준 | iOS 수정 후 연월 선택 |
 | --- | --- |
-| <img src="screenshots/team-web-ko.png" width="240" alt="모바일 웹 팀 화면"> | <img src="screenshots/team-ios-after.png" width="240" alt="iOS 팀 미가입 fixture 화면"> |
+| <img src="screenshots/team-web-ko.png" width="240" alt="모바일 웹 팀 화면"> | <img src="screenshots/team-month-picker-ios-after.png" width="240" alt="iOS 팀 연월 선택기"> |
 
 - 기기 캘린더의 `monthSymbols`를 직접 사용하던 코드를 앱 locale 기반 `DateFormatter`로 교체했다.
 - 앱 한국어·기기 영어에서는 `8월`, 앱 영어에서는 `August`가 되는 회귀 테스트를 통과했다.
-- 팀 연월 선택기를 여는 UI fixture를 추가해 수정 후 스크린샷을 보강한다.
+- 가입 팀 fixture에서 연월 선택기를 열어 `1월`부터 `12월`, 선택된 `8월`, `이번 달`을 직접 확인했다.
 
 ### 달력·팀 비교 기준 확장 — `58cbf120`
 
@@ -225,14 +226,16 @@
 
 ### 팀 일정·관리 확인 — `2ecdbb70`
 
-| 웹 팀 기준 | iOS 팀 fixture |
-| --- | --- |
-| <img src="screenshots/team-web-ko.png" width="240" alt="모바일 웹 팀"> | <img src="screenshots/team-ios-after.png" width="240" alt="iOS 팀 미가입 fixture"> |
+| 웹 팀 기준 | 일정 삭제 | 구성원 제외 |
+| --- | --- | --- |
+| <img src="screenshots/team-web-ko.png" width="240" alt="모바일 웹 팀"> | <img src="screenshots/team-schedule-delete-confirmation-ios-after.png" width="240" alt="iOS 팀 일정 삭제 확인"> | <img src="screenshots/team-member-remove-confirmation-ios-after.png" width="240" alt="iOS 팀 구성원 제외 확인"> |
 
 - 팀 일정 삭제에 일정 제목과 복구 불가 영향을 표시하고 중앙 패널로 통일했다.
 - 멤버 제외, 권한 변경, 관리자 위임·초기화, 멤버 추가, 근무유형·업로드 변경사항 폐기도 같은 패턴을 사용한다.
 - iPhone 13 mini에서 `TeamFeatureTests` 24건이 모두 통과했다.
-- 가입 팀 데이터가 있는 fixture를 준비한 뒤 실제 팀 일정 삭제·관리 패널을 캡처한다.
+- `d444f095`의 가입 팀 fixture에서 실제 일정 삭제와 팀 관리 구성원 제외 패널을 캡처했다.
+- 제목·대상·영향 문구·버튼 중앙 배치를 확인하고, 취소 후 패널 소멸과 앱 foreground 유지까지 검증했다.
+- iPhone 13 mini UI 테스트 3/3 통과: `/tmp/Dutypark-TeamParityVisual-20260815-03.xcresult`.
 
 ### Root 로그아웃 확인 — `8a6a3aae`
 
@@ -309,8 +312,8 @@
 - [ ] 관리자 팀 삭제·회원 세션 종료 UI fixture와 중앙 패널 스크린샷 추가
 - [x] 설정 로그아웃·프로필 삭제 중앙 패널 스크린샷 추가
 - [ ] Todo 작성 취소·삭제 중앙 패널 스크린샷 추가
-- [ ] 팀 연월 선택기 한국어 스크린샷 추가
-- [ ] 가입 팀 fixture로 일정 삭제·관리 중앙 패널 스크린샷 추가
+- [x] 팀 연월 선택기 한국어 스크린샷 추가
+- [x] 가입 팀 fixture로 일정 삭제·관리 중앙 패널 스크린샷 추가
 - [x] Root 햄버거 로그아웃 중앙 패널 스크린샷 추가
 - [ ] 소셜 연결 관리 fixture와 연결 해제 중앙 패널 스크린샷 추가
 - [ ] SSO 추가정보 fixture와 draft 폐기 중앙 패널 스크린샷 추가
