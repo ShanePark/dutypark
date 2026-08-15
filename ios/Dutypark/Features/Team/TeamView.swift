@@ -495,7 +495,7 @@ private struct TeamYearMonthPicker: View {
                         Button {
                             onSelect(year, month)
                         } label: {
-                            Text(verbatim: Calendar.current.monthSymbols[month - 1])
+                            Text(verbatim: TeamLocalization.monthName(month))
                                 .font(.subheadline.weight(.medium))
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.7)
@@ -751,6 +751,15 @@ private func teamScheduleDateRange(_ schedule: TeamScheduleDTO) -> String {
 
 func teamLocalized(_ key: String) -> String {
     AppLocalization.string(key, table: "Team")
+}
+
+nonisolated enum TeamLocalization {
+    static func monthName(_ month: Int, locale: Locale = AppLocalization.locale) -> String {
+        guard (1...12).contains(month) else { return String(month) }
+        let formatter = DateFormatter()
+        formatter.locale = locale
+        return formatter.monthSymbols[month - 1]
+    }
 }
 
 extension Color {

@@ -4,6 +4,29 @@ import Testing
 
 @Suite(.serialized)
 struct TeamFeatureTests {
+    @Test @MainActor
+    func monthNamesFollowTheAppLanguageInsteadOfTheDeviceCalendar() {
+        let defaults = UserDefaults.standard
+        let previousLanguage = defaults.string(forKey: SettingsPreference.languageKey)
+        defer {
+            if let previousLanguage {
+                defaults.set(previousLanguage, forKey: SettingsPreference.languageKey)
+            } else {
+                defaults.removeObject(forKey: SettingsPreference.languageKey)
+            }
+        }
+
+        var englishDeviceCalendar = Calendar(identifier: .gregorian)
+        englishDeviceCalendar.locale = Locale(identifier: "en_US")
+        #expect(englishDeviceCalendar.monthSymbols[7] == "August")
+
+        defaults.set(AppLanguage.korean.rawValue, forKey: SettingsPreference.languageKey)
+        #expect(TeamLocalization.monthName(8) == "8월")
+
+        defaults.set(AppLanguage.english.rawValue, forKey: SettingsPreference.languageKey)
+        #expect(TeamLocalization.monthName(8) == "August")
+    }
+
     @Test
     func teamAdminToolPermissionIncludesServiceAdminAndTeamRoles() {
         let team = managedTeam(
