@@ -49,6 +49,7 @@
 | 14 | 햄버거 메뉴 | 웹의 `이용 안내`가 iOS에서 `사용 가이드`로 변경됨 | 완료 | `f9291784` |
 | 15 | 달력 | 근무 요약·액션이 없는데도 빈 도구행이 남아 월 그리드 위에 큰 공백이 생김 | 완료 | `a0aea3a8` |
 | 16 | Todo | 선택한 상태와 다른 열이 보여 카드가 화면 밖에 놓이고, 롱프레스 제스처가 일반 탭을 막음 | 완료 | `b84b2478` |
+| 17 | Todo | 웹의 `진행중` 상태가 iOS에서 `진행`으로 축약됨 | 완료 | `73fe7e0a` |
 
 상태는 `대기 → 진행 중 → 수정됨·커밋 전 → 코드 커밋됨·시각 검증 전 → 완료` 순으로 관리한다.
 
@@ -90,6 +91,7 @@
 | `f9291784` | Root 메뉴의 가이드 문구 동등성 | Root 현지화 3건·UI 1건, generic test build | 햄버거 메뉴 `이용 안내` 캡처 | 완료 |
 | `a0aea3a8` | 내용 없는 달력 근무 도구행 제거 | Calendar focused test, generic test build | iPhone 13 mini 월 그리드 상단 재캡처 | 완료 |
 | `b84b2478` | Todo 카드 탭·롱프레스·선택 열 정렬 복원 | Todo 단위 32건, iPhone 13 mini UI 5건 | 실제 카드 탭 삭제·작성 취소 패널 및 드래그·스크롤 검증 | 완료 |
+| `73fe7e0a` | Todo `진행중` 상태 문구 복원 | exact ko/en 테스트, generic build·test build, UI 1건 | 상단 탭·보드 열 `진행중` 재캡처 | 완료 |
 
 ## 상세 변경 보고
 
@@ -284,6 +286,17 @@
 - DEBUG 전용 direct-open 우회 없이 실제 카드 탭 → 상세 → 삭제 경로와 0.5초 롱프레스 재정렬을 검증했다. 세로 스크롤은 상세를 열거나 순서를 바꾸지 않는다.
 - iPhone 13 mini에서 `TodoViewModelTests` 32건과 UI 5/5가 통과했다. 결과: `/tmp/Dutypark-TodoFallbackPolicy-Unit-20260815.xcresult`, `/tmp/Dutypark-TodoGesture-TapLongPress-20260815.xcresult`, `/tmp/Dutypark-TodoGesture-Remaining-20260815.xcresult`.
 - 두 확인 패널은 제목·본문·취소·destructive 버튼이 모두 표시되고, 버튼 겹침 없이 화면 중앙에 배치되는 것을 원본 PNG와 독립 crop으로 확인했다.
+
+### Todo `진행중` 문구 — `73fe7e0a`
+
+| 모바일 웹 기준 | iOS 수정 후 |
+| --- | --- |
+| <img src="screenshots/todo-web-ko.png" width="240" alt="진행중 상태가 표시된 모바일 웹 Todo"> | <img src="screenshots/todo-in-progress-copy-ios-after.png" width="240" alt="진행중 문구로 복원한 iOS Todo"> |
+
+- 모바일 웹의 상단 상태 탭과 보드 열은 모두 `진행중`인데 iOS만 `진행`으로 축약되어 있었다.
+- 양쪽 iOS 노출 위치가 공유하는 short status 키의 한국어 값만 `진행중`으로 복원했다. 영어 `Doing`은 웹과 이미 같아 유지했다.
+- exact ko/en 단위 테스트와 iPhone 13 mini UI 테스트 1/1이 통과했다. 실제 화면에서 `진행중`이 두 곳 이상 표시되고 구형 `진행`은 남지 않음을 확인했다.
+- 결과: `/tmp/Dutypark-TodoCopy-GREEN-20260815.xcresult`, `/tmp/Dutypark-TodoCopy-Visual-20260815.xcresult`.
 
 ### 팀 일정·관리 확인 — `2ecdbb70`
 
