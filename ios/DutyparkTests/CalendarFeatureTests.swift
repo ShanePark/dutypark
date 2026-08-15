@@ -643,6 +643,24 @@ final class CalendarFeatureTests: XCTestCase {
         XCTAssertEqual(CalendarLocalization.locale(languageCode: "fr-FR").identifier, "en")
     }
 
+    func testKoreanDutyBatchMonthDescriptionDoesNotGroupTheYear() {
+        let defaults = UserDefaults.standard
+        let previousLanguage = defaults.string(forKey: SettingsPreference.languageKey)
+        defaults.set("ko", forKey: SettingsPreference.languageKey)
+        defer {
+            if let previousLanguage {
+                defaults.set(previousLanguage, forKey: SettingsPreference.languageKey)
+            } else {
+                defaults.removeObject(forKey: SettingsPreference.languageKey)
+            }
+        }
+
+        XCTAssertEqual(
+            CalendarLocalization.format("calendar.duty.batch.description.month", 2026, 8),
+            "2026년 8월 전체에 적용할 근무를 선택하세요."
+        )
+    }
+
     func testCompactCalendarModalBodyFitsContentAndCapsForSmallPhones() {
         let maximumPanelHeight: CGFloat = 780
 

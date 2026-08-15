@@ -73,7 +73,13 @@ nonisolated enum CalendarLocalization {
     }
 
     static func format(_ key: String, _ arguments: CVarArg...) -> String {
-        String(format: text(key), locale: selectedLocale, arguments: arguments)
+        // These placeholders are calendar identifiers and counts, not display numbers.
+        // A Korean formatting locale groups a four-digit year (for example, `2,026`).
+        String(
+            format: text(key),
+            locale: Locale(identifier: "en_US_POSIX"),
+            arguments: arguments
+        )
     }
 }
 
