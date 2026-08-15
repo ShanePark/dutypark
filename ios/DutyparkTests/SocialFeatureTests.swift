@@ -197,8 +197,8 @@ final class SocialFeatureTests: XCTestCase {
         XCTAssertFalse(viewModel.isReordering)
     }
 
-    func testSuccessfulPinnedOrderIsKeptWhenOnlyReloadFails() async {
-        let repository = SocialRepositorySpy(failReloadAfterPinnedOrder: true)
+    func testSuccessfulPinnedOrderDoesNotReloadTheWholeSnapshot() async {
+        let repository = SocialRepositorySpy()
         let viewModel = SocialViewModel(repository: repository)
         await viewModel.load()
         var draftIDs = viewModel.pinnedFriends.compactMap(\.member.id)
@@ -208,8 +208,9 @@ final class SocialFeatureTests: XCTestCase {
 
         XCTAssertTrue(didSave)
         XCTAssertEqual(viewModel.pinnedFriends.compactMap(\.member.id), draftIDs)
-        XCTAssertEqual(viewModel.errorKey, "social.warning.reorderReload")
+        XCTAssertNil(viewModel.errorKey)
         XCTAssertEqual(repository.actions.filter { $0.hasPrefix("order:") }.count, 1)
+        XCTAssertEqual(repository.friendInfoRequestCount, 1)
         XCTAssertFalse(viewModel.isReordering)
     }
 
@@ -331,6 +332,63 @@ final class SocialFeatureTests: XCTestCase {
         XCTAssertEqual(effects, [true, false])
     }
 
+    func testKnownMutationsPatchOnlyTheirLocalItemsWithoutReloadingTheSnapshot() async throws {
+        let repository = SocialRepositorySpy()
+        let viewModel = SocialViewModel(repository: repository)
+        await viewModel.load()
+
+        let received = try XCTUnwrap(viewModel.receivedRequests.first)
+        await viewModel.reject(received)
+        XCTAssertTrue(viewModel.receivedRequests.isEmpty)
+
+        let sent = try XCTUnwrap(viewModel.sentRequests.first)
+        await viewModel.cancel(sent)
+        XCTAssertTrue(viewModel.sentRequests.isEmpty)
+
+        let family = try XCTUnwrap(viewModel.friends.first(where: { $0.member.id == 31 }))
+        XCTAssertTrue(family.isFamily)
+        await viewModel.removeFromFamily(family)
+        XCTAssertFalse(try XCTUnwrap(viewModel.friends.first(where: { $0.member.id == 31 })).isFamily)
+
+        let pinned = try XCTUnwrap(viewModel.friends.first(where: { $0.member.id == 31 }))
+        await viewModel.togglePin(pinned)
+        XCTAssertNil(viewModel.friends.first(where: { $0.member.id == 31 })?.pinOrder)
+
+        let removed = try XCTUnwrap(viewModel.friends.first(where: { $0.member.id == 32 }))
+        await viewModel.removeFriend(removed)
+        XCTAssertFalse(viewModel.friends.contains(where: { $0.member.id == 32 }))
+
+        XCTAssertEqual(repository.friendInfoRequestCount, 1)
+    }
+
+    func testFailedKnownMutationRollsBackItsOptimisticUpdate() async throws {
+        let repository = SocialRepositorySpy(failingAction: "remove:32")
+        let viewModel = SocialViewModel(repository: repository)
+        await viewModel.load()
+        let friend = try XCTUnwrap(viewModel.friends.first(where: { $0.member.id == 32 }))
+
+        await viewModel.removeFriend(friend)
+
+        XCTAssertTrue(viewModel.friends.contains(where: { $0.member.id == 32 }))
+        XCTAssertEqual(viewModel.errorKey, "social.error.removeFriend")
+        XCTAssertEqual(repository.friendInfoRequestCount, 1)
+    }
+
+    func testSuccessfulAcceptIsNotReportedAsFailureWhenReconciliationFails() async throws {
+        let repository = SocialRepositorySpy(failReloadAfterMutation: true)
+        var effects: [Bool] = []
+        let viewModel = SocialViewModel(repository: repository) { effects.append($0) }
+        await viewModel.load()
+        let request = try XCTUnwrap(viewModel.receivedRequests.first)
+
+        await viewModel.accept(request)
+
+        XCTAssertTrue(viewModel.receivedRequests.isEmpty)
+        XCTAssertNil(viewModel.errorKey)
+        XCTAssertEqual(effects, [true])
+        XCTAssertEqual(repository.friendInfoRequestCount, 2)
+    }
+
     private func makeClient() -> APIClient {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [SocialURLProtocolStub.self]
@@ -360,18 +418,22 @@ final class SocialFeatureTests: XCTestCase {
 private final class SocialRepositorySpy: SocialRepository, @unchecked Sendable {
     private let lock = NSLock()
     private let failPinnedOrder: Bool
-    private let failReloadAfterPinnedOrder: Bool
+    private let failReloadAfterMutation: Bool
+    private let failingAction: String?
     private let pinnedOrderDelayMilliseconds: Int64
     private var storedActions: [String] = []
-    private var didUpdatePinnedOrder = false
+    private var didPerformMutation = false
+    private var storedFriendInfoRequestCount = 0
 
     init(
         failPinnedOrder: Bool = false,
-        failReloadAfterPinnedOrder: Bool = false,
+        failReloadAfterMutation: Bool = false,
+        failingAction: String? = nil,
         pinnedOrderDelayMilliseconds: Int64 = 0
     ) {
         self.failPinnedOrder = failPinnedOrder
-        self.failReloadAfterPinnedOrder = failReloadAfterPinnedOrder
+        self.failReloadAfterMutation = failReloadAfterMutation
+        self.failingAction = failingAction
         self.pinnedOrderDelayMilliseconds = pinnedOrderDelayMilliseconds
     }
 
@@ -379,12 +441,19 @@ private final class SocialRepositorySpy: SocialRepository, @unchecked Sendable {
         lock.withLock { storedActions }
     }
 
+    var friendInfoRequestCount: Int {
+        lock.withLock { storedFriendInfoRequestCount }
+    }
+
     func friendInfo() async throws -> DashboardFriendInfoDTO {
-        let shouldFail = lock.withLock { failReloadAfterPinnedOrder && didUpdatePinnedOrder }
+        let shouldFail = lock.withLock {
+            storedFriendInfoRequestCount += 1
+            return failReloadAfterMutation && didPerformMutation
+        }
         if shouldFail { throw SocialTestError.reload }
         return DashboardFriendInfoDTO(
             friends: [
-                friend(id: 31, pinOrder: 1),
+                friend(id: 31, pinOrder: 1, isFamily: true),
                 friend(id: 32, pinOrder: 2),
                 friend(id: 33, pinOrder: nil)
             ],
@@ -397,26 +466,37 @@ private final class SocialRepositorySpy: SocialRepository, @unchecked Sendable {
         throw APIError.transport
     }
 
-    func sendFriendRequest(to memberID: MemberID) async throws { record("send:\(memberID)") }
-    func cancelRequest(to memberID: MemberID) async throws { record("cancel:\(memberID)") }
-    func acceptRequest(from memberID: MemberID) async throws { record("accept:\(memberID)") }
-    func rejectRequest(from memberID: MemberID) async throws { record("reject:\(memberID)") }
-    func sendFamilyRequest(to memberID: MemberID) async throws { record("family:\(memberID)") }
-    func removeFromFamily(_ memberID: MemberID) async throws { record("demote:\(memberID)") }
-    func removeFriend(_ memberID: MemberID) async throws { record("remove:\(memberID)") }
-    func pin(_ memberID: MemberID) async throws { record("pin:\(memberID)") }
-    func unpin(_ memberID: MemberID) async throws { record("unpin:\(memberID)") }
+    func sendFriendRequest(to memberID: MemberID) async throws { try perform("send:\(memberID)") }
+    func cancelRequest(to memberID: MemberID) async throws { try perform("cancel:\(memberID)") }
+    func acceptRequest(from memberID: MemberID) async throws { try perform("accept:\(memberID)") }
+    func rejectRequest(from memberID: MemberID) async throws { try perform("reject:\(memberID)") }
+    func sendFamilyRequest(to memberID: MemberID) async throws { try perform("family:\(memberID)") }
+    func removeFromFamily(_ memberID: MemberID) async throws { try perform("demote:\(memberID)") }
+    func removeFriend(_ memberID: MemberID) async throws { try perform("remove:\(memberID)") }
+    func pin(_ memberID: MemberID) async throws { try perform("pin:\(memberID)") }
+    func unpin(_ memberID: MemberID) async throws { try perform("unpin:\(memberID)") }
     func updatePinnedOrder(_ memberIDs: [MemberID]) async throws {
         record("order:\(memberIDs.map(String.init).joined(separator: ","))")
         if pinnedOrderDelayMilliseconds > 0 {
             try await Task.sleep(for: .milliseconds(pinnedOrderDelayMilliseconds))
         }
         if failPinnedOrder { throw SocialTestError.reorder }
-        lock.withLock { didUpdatePinnedOrder = true }
+        lock.withLock {
+            didPerformMutation = true
+        }
     }
 
     private func record(_ action: String) {
         lock.withLock { storedActions.append(action) }
+    }
+
+    private func perform(_ action: String) throws {
+        let shouldFail = lock.withLock {
+            storedActions.append(action)
+            didPerformMutation = true
+            return failingAction == action
+        }
+        if shouldFail { throw SocialTestError.mutation }
     }
 
     private func member(_ id: MemberID) -> MemberPreviewDTO {
@@ -430,12 +510,16 @@ private final class SocialRepositorySpy: SocialRepository, @unchecked Sendable {
         )
     }
 
-    private func friend(id: MemberID, pinOrder: Int64?) -> DashboardFriendDetailDTO {
+    private func friend(
+        id: MemberID,
+        pinOrder: Int64?,
+        isFamily: Bool = false
+    ) -> DashboardFriendDetailDTO {
         DashboardFriendDetailDTO(
             member: member(id),
             duty: nil,
             schedules: [],
-            isFamily: false,
+            isFamily: isFamily,
             pinOrder: pinOrder
         )
     }
@@ -455,6 +539,7 @@ private final class SocialRepositorySpy: SocialRepository, @unchecked Sendable {
 private enum SocialTestError: Error {
     case reorder
     case reload
+    case mutation
 }
 
 private final class SocialRequestRecorder: @unchecked Sendable {

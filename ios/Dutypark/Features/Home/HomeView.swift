@@ -17,6 +17,7 @@ struct HomeView: View {
     @State private var pinnedDragOriginalOrder: [MemberID] = []
     @State private var isSavingPinnedOrder = false
     @State private var showsPinnedOrderError = false
+    @State private var suppressFriendCalendarTap = false
     private let refreshID: Int
     private let onRoute: (HomeRoute) -> Void
     private let pinRepository: any SocialRepository
@@ -256,32 +257,31 @@ struct HomeView: View {
             } else {
                 LazyVStack(spacing: DPSpacing.small) {
                     ForEach(displayedFriends, id: \.member.id) { friend in
-                        FriendSummaryCard(
-                            friend: friend,
-                            isPinning: pinningMemberID == friend.member.id,
-                            isDragPreview: false,
-                            openCalendar: { openCalendar(for: friend.member.id) },
-                            togglePin: { await togglePin(friend) }
-                        )
-                        .opacity(draggedPinnedFriendID == friend.member.id ? 0 : 1)
-                        .background {
-                            if friend.pinOrder != nil, let memberID = friend.member.id {
-                                GeometryReader { proxy in
-                                    Color.clear.preference(
-                                        key: HomePinnedFriendDropTargetPreferenceKey.self,
-                                        value: [HomePinnedFriendDropTarget(
-                                            memberID: memberID,
-                                            frame: proxy.frame(
-                                                in: .named(HomePinnedFriendDragCoordinateSpace.name)
-                                            )
-                                        )]
-                                    )
+                        pinnedFriendDragSurface(
+                            FriendSummaryCard(
+                                friend: friend,
+                                isPinning: pinningMemberID == friend.member.id,
+                                isDragPreview: false,
+                                openCalendar: { openFriendCalendar(for: friend.member.id) },
+                                togglePin: { await togglePin(friend) }
+                            )
+                            .opacity(draggedPinnedFriendID == friend.member.id ? 0 : 1)
+                            .background {
+                                if friend.pinOrder != nil, let memberID = friend.member.id {
+                                    GeometryReader { proxy in
+                                        Color.clear.preference(
+                                            key: HomePinnedFriendDropTargetPreferenceKey.self,
+                                            value: [HomePinnedFriendDropTarget(
+                                                memberID: memberID,
+                                                frame: proxy.frame(
+                                                    in: .named(HomePinnedFriendDragCoordinateSpace.name)
+                                                )
+                                            )]
+                                        )
+                                    }
                                 }
-                            }
-                        }
-                        .highPriorityGesture(
-                            pinnedFriendDragGesture(friend),
-                            including: canReorder(friend) ? .all : .none
+                            },
+                            friend: friend
                         )
                         .accessibilityAction(
                             named: Text("home.action.moveUp", tableName: "Home")
@@ -371,6 +371,14 @@ struct HomeView: View {
         onRoute(.memberCalendar(memberId))
     }
 
+    private func openFriendCalendar(for memberId: MemberID?) {
+        if suppressFriendCalendarTap {
+            suppressFriendCalendarTap = false
+            return
+        }
+        openCalendar(for: memberId)
+    }
+
     private var pinnedFriends: [DashboardFriendDetailDTO] {
         viewModel.sortedFriends.filter { $0.pinOrder != nil }
     }
@@ -394,12 +402,65 @@ struct HomeView: View {
         friend.pinOrder != nil && pinnedFriends.count >= 2
     }
 
+    @ViewBuilder
+    private func pinnedFriendDragSurface<Content: View>(
+        _ content: Content,
+        friend: DashboardFriendDetailDTO
+    ) -> some View {
+        if canReorder(friend) {
+            if #available(iOS 18.0, *) {
+                content.gesture(modernPinnedFriendDragGesture(friend))
+            } else {
+                content.simultaneousGesture(pinnedFriendDragGesture(friend))
+            }
+        } else {
+            content
+        }
+    }
+
+    @available(iOS 18.0, *)
+    private func modernPinnedFriendDragGesture(
+        _ friend: DashboardFriendDetailDTO
+    ) -> DPLongPressGestureRecognizer {
+        DPLongPressGestureRecognizer(
+            minimumDuration: HomePinnedFriendDragLayout.minimumPressDuration,
+            maximumMovement: HomePinnedFriendDragLayout.maximumPressDistance,
+            coordinateSpaceName: HomePinnedFriendDragCoordinateSpace.name,
+            onBegan: { location in
+                guard let memberID = friend.member.id else { return }
+                suppressFriendCalendarTap = true
+                updatePinnedFriendDrag(memberID: memberID, location: location)
+            },
+            onChanged: { location in
+                guard let memberID = friend.member.id else { return }
+                updatePinnedFriendDrag(memberID: memberID, location: location)
+            },
+            onEnded: {
+                finishPinnedFriendDrag()
+                releaseFriendCalendarTapSuppression()
+            },
+            onCancelled: {
+                clearPinnedFriendDrag()
+                releaseFriendCalendarTapSuppression()
+            }
+        )
+    }
+
+    private func releaseFriendCalendarTapSuppression() {
+        DispatchQueue.main.async {
+            suppressFriendCalendarTap = false
+        }
+    }
+
     private func pinnedFriendDragGesture(
         _ friend: DashboardFriendDetailDTO
     ) -> some Gesture {
-        LongPressGesture(minimumDuration: HomePinnedFriendDragLayout.minimumPressDuration)
+        LongPressGesture(
+            minimumDuration: HomePinnedFriendDragLayout.minimumPressDuration,
+            maximumDistance: HomePinnedFriendDragLayout.maximumPressDistance
+        )
             .sequenced(before: DragGesture(
-                minimumDistance: 0,
+                minimumDistance: HomePinnedFriendDragLayout.activationDistance,
                 coordinateSpace: .named(HomePinnedFriendDragCoordinateSpace.name)
             ))
             .onChanged { value in
@@ -486,12 +547,22 @@ struct HomeView: View {
 
     private func savePinnedOrder(_ memberIDs: [MemberID]) {
         guard !isSavingPinnedOrder else { return }
+        let previousDashboard = viewModel.friendsDashboard
+        viewModel.setPinnedFriendOrder(memberIDs)
         isSavingPinnedOrder = true
+#if DEBUG
+        if isUITesting {
+            isSavingPinnedOrder = false
+            inlinePinnedOrder = nil
+            return
+        }
+#endif
         Task {
             do {
                 try await pinRepository.updatePinnedOrder(memberIDs)
                 await viewModel.retryFriendsDashboard()
             } catch {
+                viewModel.replaceFriendsDashboardForMutation(previousDashboard)
                 showsPinnedOrderError = true
             }
             isSavingPinnedOrder = false
@@ -517,18 +588,29 @@ struct HomeView: View {
               let memberID = friend.member.id else { return }
         pinningMemberID = memberID
         defer { pinningMemberID = nil }
+        let previousDashboard = viewModel.friendsDashboard
+        let isPinning = friend.pinOrder == nil
+        viewModel.setFriendPinned(memberID: memberID, isPinned: isPinning)
+#if DEBUG
+        if isUITesting { return }
+#endif
         do {
-            if friend.pinOrder == nil {
+            if isPinning {
                 try await pinRepository.pin(memberID)
             } else {
                 try await pinRepository.unpin(memberID)
             }
             await viewModel.retryFriendsDashboard()
         } catch {
-            // The card keeps the last confirmed server state when this compact
-            // dashboard action fails. Full error handling remains in Friends.
+            viewModel.replaceFriendsDashboardForMutation(previousDashboard)
         }
     }
+
+#if DEBUG
+    private var isUITesting: Bool {
+        ProcessInfo.processInfo.arguments.contains("-ui-testing-authenticated")
+    }
+#endif
 }
 
 private struct HomeScheduleRow: View {
@@ -559,79 +641,79 @@ private struct FriendSummaryCard: View {
     let togglePin: () async -> Void
 
     var body: some View {
-        Button(action: openCalendar) {
-            HStack(alignment: .top, spacing: DPSpacing.compact) {
-                HomeAvatar(
-                    memberId: friend.member.id,
-                    name: friend.member.name,
-                    hasProfilePhoto: friend.member.hasProfilePhoto,
-                    profilePhotoVersion: friend.member.profilePhotoVersion,
-                    size: 64
-                )
+        HStack(alignment: .top, spacing: DPSpacing.compact) {
+            HomeAvatar(
+                memberId: friend.member.id,
+                name: friend.member.name,
+                hasProfilePhoto: friend.member.hasProfilePhoto,
+                profilePhotoVersion: friend.member.profilePhotoVersion,
+                size: 64
+            )
 
-                VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 6) {
                     HStack(spacing: 6) {
-                        HStack(spacing: 6) {
-                            Text(friend.member.name)
-                                .font(DPTypography.label)
-                                .foregroundStyle(DPColor.textPrimary)
-                                .lineLimit(1)
-                            if friend.isFamily {
-                                Image(systemName: "house.fill")
-                                    .font(.system(size: 14))
-                                    .foregroundStyle(DPColor.warning)
-                                    .accessibilityLabel(Text("home.family", tableName: "Home"))
-                            }
-                        }
-                        Spacer(minLength: 0)
-                    }
-                    .frame(minHeight: DPSize.minimumTouchTarget)
-
-                    HStack(spacing: 6) {
-                        Image(systemName: "briefcase")
-                            .font(.system(size: 14))
-                            .foregroundStyle(DPColor.textMuted)
-                        Text("home.duty", tableName: "Home")
-                            .foregroundStyle(DPColor.textSecondary)
-                        if let duty = friend.duty {
-                            Text(duty.displayName)
-                                .foregroundStyle(DPColor.textPrimary)
-                                .lineLimit(1)
-                        } else {
-                            Text("-")
-                                .foregroundStyle(DPColor.textMuted)
+                        Text(friend.member.name)
+                            .font(DPTypography.label)
+                            .foregroundStyle(DPColor.textPrimary)
+                            .lineLimit(1)
+                        if friend.isFamily {
+                            Image(systemName: "house.fill")
+                                .font(.system(size: 14))
+                                .foregroundStyle(DPColor.warning)
+                                .accessibilityLabel(Text("home.family", tableName: "Home"))
                         }
                     }
-                    .font(DPTypography.caption)
-
-                    VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
-                        ForEach(friend.schedules.prefix(2), id: \.id) { schedule in
-                            Text(schedule.homeDisplayContent)
-                                .font(DPTypography.caption)
-                                .foregroundStyle(DPColor.textSecondary)
-                                .lineLimit(1)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, DPSpacing.extraSmall)
-                        }
-                        if friend.schedules.count > 2 {
-                            HStack(spacing: DPSpacing.extraSmall) {
-                                Text("+\(friend.schedules.count - 2)")
-                                Text("home.moreSchedules", tableName: "Home")
-                            }
-                            .font(DPTypography.caption)
-                            .foregroundStyle(DPColor.textMuted)
-                            .padding(.leading, DPSpacing.extraSmall)
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    Spacer(minLength: 0)
                 }
+                .frame(minHeight: DPSize.minimumTouchTarget)
+
+                HStack(spacing: 6) {
+                    Image(systemName: "briefcase")
+                        .font(.system(size: 14))
+                        .foregroundStyle(DPColor.textMuted)
+                    Text("home.duty", tableName: "Home")
+                        .foregroundStyle(DPColor.textSecondary)
+                    if let duty = friend.duty {
+                        Text(duty.displayName)
+                            .foregroundStyle(DPColor.textPrimary)
+                            .lineLimit(1)
+                    } else {
+                        Text("-")
+                            .foregroundStyle(DPColor.textMuted)
+                    }
+                }
+                .font(DPTypography.caption)
+
+                VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+                    ForEach(friend.schedules.prefix(2), id: \.id) { schedule in
+                        Text(schedule.homeDisplayContent)
+                            .font(DPTypography.caption)
+                            .foregroundStyle(DPColor.textSecondary)
+                            .lineLimit(1)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, DPSpacing.extraSmall)
+                    }
+                    if friend.schedules.count > 2 {
+                        HStack(spacing: DPSpacing.extraSmall) {
+                            Text("+\(friend.schedules.count - 2)")
+                            Text("home.moreSchedules", tableName: "Home")
+                        }
+                        .font(DPTypography.caption)
+                        .foregroundStyle(DPColor.textMuted)
+                        .padding(.leading, DPSpacing.extraSmall)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(DPSpacing.compact)
-            .padding(.trailing, DPSize.minimumTouchTarget)
-            .frame(maxWidth: .infinity, minHeight: 88, alignment: .leading)
-            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .padding(DPSpacing.compact)
+        .padding(.trailing, DPSize.minimumTouchTarget)
+        .frame(maxWidth: .infinity, minHeight: 88, alignment: .leading)
+        .contentShape(Rectangle())
+        .onTapGesture(perform: openCalendar)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
         .accessibilityIdentifier("home.friend.\(friend.member.id ?? -1)")
         .background {
             if friend.pinOrder == nil {
@@ -672,6 +754,7 @@ private struct FriendSummaryCard: View {
                 .accessibilityLabel(
                     Text(friend.pinOrder == nil ? "social.action.pin" : "social.action.unpin", tableName: "Social")
                 )
+                .accessibilityIdentifier("home.friend.\(friend.member.id ?? -1).pin")
                 .padding(.top, DPSpacing.compact)
                 .padding(.trailing, DPSpacing.small)
             }
@@ -812,6 +895,8 @@ private extension DutyDTO {
 
 enum HomePinnedFriendDragLayout {
     static let minimumPressDuration = 0.35
+    static let maximumPressDistance: CGFloat = 10
+    static let activationDistance: CGFloat = 4
     static let overlapThreshold: CGFloat = 12
 }
 

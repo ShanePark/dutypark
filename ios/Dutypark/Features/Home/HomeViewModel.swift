@@ -72,8 +72,14 @@ final class HomeViewModel: ObservableObject {
             return
         }
 #endif
-        myState = .loading
-        friendsState = .loading
+        let previousMyDashboard = myDashboard
+        let previousFriendsDashboard = friendsDashboard
+        if previousMyDashboard == nil {
+            myState = .loading
+        }
+        if previousFriendsDashboard == nil {
+            friendsState = .loading
+        }
         myRequestRevision += 1
         friendsRequestRevision += 1
         let myRevision = myRequestRevision
@@ -86,41 +92,82 @@ final class HomeViewModel: ObservableObject {
         if myRevision == myRequestRevision {
             myState = switch my {
             case .success(let dashboard): .loaded(dashboard)
-            case .failure: .failed
+            case .failure:
+                if let previousMyDashboard { .loaded(previousMyDashboard) } else { .failed }
             }
         }
         if friendsRevision == friendsRequestRevision {
             friendsState = switch friends {
             case .success(let dashboard): .loaded(dashboard)
-            case .failure: .failed
+            case .failure:
+                if let previousFriendsDashboard { .loaded(previousFriendsDashboard) } else { .failed }
             }
         }
     }
 
     func retryMyDashboard() async {
-        myState = .loading
+        let previousDashboard = myDashboard
+        if previousDashboard == nil {
+            myState = .loading
+        }
         myRequestRevision += 1
         let revision = myRequestRevision
         let result = await Self.fetchMy(using: service)
         if revision == myRequestRevision {
             myState = switch result {
             case .success(let dashboard): .loaded(dashboard)
-            case .failure: .failed
+            case .failure:
+                if let previousDashboard { .loaded(previousDashboard) } else { .failed }
             }
         }
     }
 
     func retryFriendsDashboard() async {
-        friendsState = .loading
+        let previousDashboard = friendsDashboard
+        if previousDashboard == nil {
+            friendsState = .loading
+        }
         friendsRequestRevision += 1
         let revision = friendsRequestRevision
         let result = await Self.fetchFriends(using: service)
         if revision == friendsRequestRevision {
             friendsState = switch result {
             case .success(let dashboard): .loaded(dashboard)
-            case .failure: .failed
+            case .failure:
+                if let previousDashboard { .loaded(previousDashboard) } else { .failed }
             }
         }
+    }
+
+    func replaceFriendsDashboardForMutation(_ dashboard: DashboardFriendInfoDTO?) {
+        guard let dashboard else { return }
+        friendsRequestRevision += 1
+        friendsState = .loaded(dashboard)
+    }
+
+    func setFriendPinned(memberID: MemberID, isPinned: Bool) {
+        guard let dashboard = friendsDashboard else { return }
+        let nextPinOrder = isPinned
+            ? (dashboard.friends.compactMap(\.pinOrder).max() ?? -1) + 1
+            : nil
+        let updatedFriends = dashboard.friends.map { friend in
+            guard friend.member.id == memberID else { return friend }
+            return friend.replacingPinOrder(nextPinOrder)
+        }
+        replaceFriendsDashboardForMutation(dashboard.replacingFriends(updatedFriends))
+    }
+
+    func setPinnedFriendOrder(_ memberIDs: [MemberID]) {
+        guard let dashboard = friendsDashboard else { return }
+        let pinOrders = Dictionary(
+            uniqueKeysWithValues: memberIDs.enumerated().map { ($1, Int64($0)) }
+        )
+        let updatedFriends = dashboard.friends.map { friend in
+            guard let memberID = friend.member.id,
+                  let pinOrder = pinOrders[memberID] else { return friend }
+            return friend.replacingPinOrder(pinOrder)
+        }
+        replaceFriendsDashboardForMutation(dashboard.replacingFriends(updatedFriends))
     }
 
     private nonisolated static func fetchMy(
@@ -202,6 +249,28 @@ final class HomeViewModel: ObservableObject {
         )
     }
 #endif
+}
+
+private extension DashboardFriendDetailDTO {
+    func replacingPinOrder(_ pinOrder: Int64?) -> DashboardFriendDetailDTO {
+        DashboardFriendDetailDTO(
+            member: member,
+            duty: duty,
+            schedules: schedules,
+            isFamily: isFamily,
+            pinOrder: pinOrder
+        )
+    }
+}
+
+private extension DashboardFriendInfoDTO {
+    func replacingFriends(_ friends: [DashboardFriendDetailDTO]) -> DashboardFriendInfoDTO {
+        DashboardFriendInfoDTO(
+            friends: friends,
+            pendingRequestsTo: pendingRequestsTo,
+            pendingRequestsFrom: pendingRequestsFrom
+        )
+    }
 }
 
 private nonisolated enum DashboardResult<Value: Sendable>: Sendable {

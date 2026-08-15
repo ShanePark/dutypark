@@ -11,6 +11,8 @@ final class HomeDashboardTests: XCTestCase {
 
     func testPinnedFriendLongPressUsesDeliberateActivationDelay() {
         XCTAssertEqual(HomePinnedFriendDragLayout.minimumPressDuration, 0.35)
+        XCTAssertEqual(HomePinnedFriendDragLayout.maximumPressDistance, 10)
+        XCTAssertEqual(HomePinnedFriendDragLayout.activationDistance, 4)
     }
 
     func testPinnedFriendDragMovesCardAfterItOverlapsTheNextCard() {
@@ -140,6 +142,99 @@ final class HomeDashboardTests: XCTestCase {
 
         XCTAssertEqual(viewModel.myDashboard?.member.name, "Newest")
         XCTAssertEqual(viewModel.sortedFriends.first?.member.name, "Newest Friend")
+    }
+
+    func testRefreshKeepsLoadedDashboardVisibleWhileRequestsAreInFlight() async throws {
+        let service = ControlledHomeService()
+        let viewModel = HomeViewModel(service: service)
+        let initialMy = try Self.decodeMyDashboard()
+        let initialFriends = try Self.decodeFriendsDashboard()
+        let initialRequests = HomeRequestCountSignal(description: "Initial requests started")
+        await service.notifyWhenRequestCountsReach(my: 1, friends: 1, signal: initialRequests)
+
+        let initialLoad = Task { await viewModel.refresh() }
+        await fulfillment(of: [initialRequests.expectation], timeout: 1)
+        await service.resolveMyRequest(at: 0, with: initialMy)
+        await service.resolveFriendsRequest(at: 0, with: initialFriends)
+        await initialLoad.value
+
+        let refreshRequests = HomeRequestCountSignal(description: "Refresh requests started")
+        await service.notifyWhenRequestCountsReach(my: 2, friends: 2, signal: refreshRequests)
+        let refresh = Task { await viewModel.refresh() }
+        await fulfillment(of: [refreshRequests.expectation], timeout: 1)
+
+        XCTAssertEqual(viewModel.myDashboard?.member.name, "Shane")
+        XCTAssertEqual(viewModel.sortedFriends.map(\.member.id), [2, 3, 4])
+
+        await service.resolveMyRequest(at: 1, with: initialMy)
+        await service.resolveFriendsRequest(at: 1, with: initialFriends)
+        await refresh.value
+    }
+
+    func testFriendsRetryKeepsLoadedFriendsVisibleWhileRequestIsInFlight() async throws {
+        let service = ControlledHomeService()
+        let viewModel = HomeViewModel(service: service)
+        let my = try Self.decodeMyDashboard()
+        let friends = try Self.decodeFriendsDashboard()
+        let initialRequests = HomeRequestCountSignal(description: "Initial requests started")
+        await service.notifyWhenRequestCountsReach(my: 1, friends: 1, signal: initialRequests)
+
+        let initialLoad = Task { await viewModel.refresh() }
+        await fulfillment(of: [initialRequests.expectation], timeout: 1)
+        await service.resolveMyRequest(at: 0, with: my)
+        await service.resolveFriendsRequest(at: 0, with: friends)
+        await initialLoad.value
+
+        let retryRequest = HomeRequestCountSignal(description: "Friends retry started")
+        await service.notifyWhenRequestCountsReach(my: 1, friends: 2, signal: retryRequest)
+        let retry = Task { await viewModel.retryFriendsDashboard() }
+        await fulfillment(of: [retryRequest.expectation], timeout: 1)
+
+        XCTAssertEqual(viewModel.sortedFriends.map(\.member.id), [2, 3, 4])
+
+        await service.resolveFriendsRequest(at: 1, with: friends)
+        await retry.value
+    }
+
+    func testOptimisticPinAndUnpinKeepFriendContentAndUpdateOnlyPinState() throws {
+        let friends = try Self.decodeFriendsDashboard()
+        let viewModel = HomeViewModel(
+            service: HomeServiceStub(my: try Self.decodeMyDashboard(), friends: friends)
+        )
+        viewModel.replaceFriendsDashboardForMutation(friends)
+
+        let snapshot = viewModel.friendsDashboard
+        viewModel.setFriendPinned(memberID: 4, isPinned: true)
+
+        XCTAssertEqual(viewModel.sortedFriends.map(\.member.id), [2, 3, 4])
+        XCTAssertNotNil(viewModel.sortedFriends.first(where: { $0.member.id == 4 })?.pinOrder)
+        XCTAssertEqual(viewModel.sortedFriends.first(where: { $0.member.id == 4 })?.member.name, "Unpinned")
+
+        viewModel.setFriendPinned(memberID: 4, isPinned: false)
+
+        XCTAssertNil(viewModel.sortedFriends.first(where: { $0.member.id == 4 })?.pinOrder)
+        XCTAssertEqual(viewModel.sortedFriends.map(\.member.id), [2, 3, 4])
+
+        viewModel.replaceFriendsDashboardForMutation(snapshot)
+        XCTAssertEqual(viewModel.friendsDashboard, snapshot)
+    }
+
+    func testOptimisticPinnedOrderPersistsInLoadedDashboard() throws {
+        let friends = try Self.decodeFriendsDashboard()
+        let viewModel = HomeViewModel(
+            service: HomeServiceStub(my: try Self.decodeMyDashboard(), friends: friends)
+        )
+        viewModel.replaceFriendsDashboardForMutation(friends)
+
+        viewModel.setPinnedFriendOrder([3, 2])
+
+        XCTAssertEqual(viewModel.sortedFriends.map(\.member.id), [3, 2, 4])
+        XCTAssertEqual(
+            viewModel.sortedFriends.compactMap { friend in
+                friend.pinOrder.map { (friend.member.id, $0) }
+            }.map(\.0),
+            [3, 2]
+        )
     }
 
     func testSectionRetryWinsAgainstAnOlderFullRefreshForThatSection() async throws {
