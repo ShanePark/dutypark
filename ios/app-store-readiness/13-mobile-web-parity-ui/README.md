@@ -68,7 +68,7 @@
 | `bd3a1fc4` | Todo 작성 취소·삭제·태그 해제 중앙 확인 | iPhone 13 mini 단위 32건·UI 1건 | Todo 화면 확보, 확인 패널 직접 캡처 대기 | 코드·상호작용 완료·캡처 대기 |
 | `2ecdbb70` | 팀 일정 삭제 및 팀 관리 확인 UI | iPhone 13 mini `TeamFeatureTests` 24건 | `d444f095`에서 가입 팀 패널 2종 확보 | 완료 |
 | `8a6a3aae` | Root 햄버거 로그아웃 중앙 확인 | iPhone 13 mini 전용 테스트 3건 | 메뉴 화면 확보, 패널 직접 캡처 대기 | 코드·테스트 완료·캡처 대기 |
-| `a19f4047` | 소셜 계정 연결 해제 중앙 확인 | iPhone 13 mini 전용 테스트 3건 | 설정 화면 확보, 연결 관리 fixture 대기 | 코드·테스트 완료·캡처 대기 |
+| `a19f4047` | 소셜 계정 연결 해제 중앙 확인 | iPhone 13 mini 전용 테스트 3건 | `8c947a62`에서 관리·확인 패널 캡처 확보 | 완료 |
 | `cc673095` | SSO 추가정보 draft 폐기 중앙 확인 | iPhone 13 mini OAuth 가입 테스트 6건 | 인증 fixture 부재 | 코드·테스트 완료·캡처 대기 |
 | `38dc5bca` | 친구 destructive 확인 4종 및 `더보기` 터치 복원 | Social 19건·재정렬 UI·삭제 패널 UI | 친구 삭제 중앙 패널 확보 | 완료 |
 | `c47a77ea` | 달력 연도 치환의 천 단위 구분 제거 | 앱·테스트 빌드, exact 한국어 문자열 회귀 테스트 | 수정 후 월 일괄 변경 화면 재캡처 | 완료 |
@@ -80,6 +80,7 @@
 | `d444f095` | 가입 팀 달력·관리 시각 fixture | iPhone 13 mini UI 3건 | 연월 선택·일정 삭제·구성원 제외 확보 | 완료 |
 | `aaca282c` | 긴 확인 문구의 취소·확인 버튼 겹침 방지 | 공통 패널 계약·generic test build | 관리자 세션 종료에서 픽셀 재검증 | 완료 |
 | `eee695a9` | 관리자 destructive 확인 시각 fixture | iPhone 13 mini UI 2건 | 팀 삭제·회원 세션 종료 확보 | 완료 |
+| `8c947a62` | 소셜 연결 관리 시각 fixture | iPhone 13 mini UI 1건 | Kakao 관리·연결 해제 패널 확보 | 완료 |
 
 ## 상세 변경 보고
 
@@ -276,10 +277,16 @@
 
 ### 소셜 계정 연결 해제 — `a19f4047`
 
+| 연결 관리 | 연결 해제 중앙 확인 |
+| --- | --- |
+| <img src="screenshots/social-connection-management-ios-after.png" width="240" alt="iOS 소셜 연결 관리"> | <img src="screenshots/social-unlink-confirmation-ios-after.png" width="240" alt="iOS 소셜 연결 해제 확인"> |
+
 - 카카오·Google·Apple 연결 해제 native alert를 공통 중앙 패널로 교체했다.
 - 처리 중에는 확인·취소·배경 탭·VoiceOver dismiss와 중복 제출을 차단한다.
 - 연결 해제 오류 notice는 정보 alert로 유지했다.
 - iPhone 13 mini에서 전용 테스트 3건이 통과했다: `/tmp/Dutypark-SocialConnectionManagementTests.xcresult`.
+- `8c947a62`의 DEBUG fixture로 Kakao 연결 상태, 내부 연결만 해제된다는 영향 안내, 취소·연결 해제 버튼을 직접 검증했다.
+- 시각 UI 테스트 1/1 통과: `/tmp/Dutypark-SocialConnectionVisual-20260815.xcresult`.
 
 ### SSO 추가정보 draft 폐기 — `cc673095`
 
@@ -329,7 +336,7 @@
 - [x] 팀 연월 선택기 한국어 스크린샷 추가
 - [x] 가입 팀 fixture로 일정 삭제·관리 중앙 패널 스크린샷 추가
 - [x] Root 햄버거 로그아웃 중앙 패널 스크린샷 추가
-- [ ] 소셜 연결 관리 fixture와 연결 해제 중앙 패널 스크린샷 추가
+- [x] 소셜 연결 관리 fixture와 연결 해제 중앙 패널 스크린샷 추가
 - [ ] SSO 추가정보 fixture와 draft 폐기 중앙 패널 스크린샷 추가
 - [x] 설정의 사진 삭제·관리자 해제·관리 계정 전환 확인 UI 조사 및 수정
 - [x] 로그아웃 등 남은 전역 `confirmationDialog` 조사 및 수정
