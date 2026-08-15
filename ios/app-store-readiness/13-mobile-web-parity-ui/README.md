@@ -65,6 +65,7 @@
 | 30 | 설정 · 기본 근무 패턴 | 숨김 근무유형이 남으면 저장이 막히지만 이유와 해결 방법이 표시되지 않음 | 완료 | `4ba4ab07` |
 | 31 | 게스트 · 이용 안내 | `홈으로 돌아가기`가 네이티브 게스트 화면 대신 WebView 안의 웹 홈을 열음 | 완료 | `6b69ce5a` |
 | 32 | 알림 드롭다운 | 작성자 프로필 사진이 있어도 항상 동일한 기본 사람 아이콘으로 표시됨 | 완료 | `0d16412b` |
+| 33 | 관리자 · 회원 상세 | API가 제공하는 일정·Todo·D-Day·친구 요청 지표가 iOS 상세에서 누락됨 | 완료 | `ec2cbf3f` |
 
 상태는 `대기 → 진행 중 → 수정됨·커밋 전 → 코드 커밋됨·시각 검증 전 → 완료` 순으로 관리한다.
 
@@ -122,6 +123,7 @@
 | `4ba4ab07` | 숨김 근무유형이 포함된 기본 패턴 경고 | Settings 32건, generic build, UI 1건 | 경고·숨김 배지·비활성 저장 상태 재캡처 | 완료 |
 | `6b69ce5a` | 게스트 이용 안내에서 네이티브 홈 복귀 | GuestPublicLinkTests 7건, generic build, UI 1건 | 웹 링크 탭 후 네이티브 게스트 화면 재캡처 | 완료 |
 | `0d16412b` | 알림 드롭다운 작성자 프로필 사진 표시 | endpoint 계약 3건, generic build·test build, UI 1건 | 사진 actor와 fallback을 한 화면에서 재캡처 | 완료 |
+| `ec2cbf3f` | 관리자 회원 상세의 상태 지표 확장 | 지표 mapping 1건, generic test build, UI 1건 | 일정·Todo 및 D-Day·요청 지표 2장 재캡처 | 완료 |
 
 ## 상세 변경 보고
 
@@ -272,6 +274,16 @@
 - 모바일 웹은 회원별 상태를 `N개의 활성 세션` 또는 `활성 세션 없음`으로 구분하지만 iOS는 `N개`만 표시해 숫자의 의미를 알기 어려웠고, 빈 상태도 `0개`로 노출했다.
 - 같은 회원 DTO의 세션 수를 유지하면서 한국어는 `N개의 활성 세션` / `활성 세션 없음`, 영어는 `N active sessions` / `No active sessions`로 분기했다.
 - exact 한·영 테스트와 generic test build가 통과했다. iPhone 13 mini UI 테스트 1/1에서 세션이 있는 회원과 없는 회원의 두 문구가 한 화면에 완전히 표시되고 잘림·겹침이 없음을 확인했다: `/tmp/Dutypark-AdminActiveSession-Unit-20260815.xcresult`, `/tmp/Dutypark-AdminActiveSession-UI-20260815.xcresult`.
+
+### 관리자 회원 상세 상태 지표 — `ec2cbf3f`
+
+| 일정·Todo 지표 | D-Day·관계 지표 |
+| --- | --- |
+| <img src="screenshots/admin-member-schedule-todo-metrics-ios-after.png" width="240" alt="일정과 Todo 상태 지표를 확장한 iOS 관리자 회원 상세"> | <img src="screenshots/admin-member-dday-request-metrics-ios-after.png" width="240" alt="D-Day와 친구 요청 지표를 확장한 iOS 관리자 회원 상세"> |
+
+- 모바일 웹은 관리자 회원 상세에서 일정 직접등록·예정·태그, Todo 상태별·기한초과·오늘마감, D-Day 공개 범위, 받은·보낸 친구 요청을 보여주지만 iOS는 API로 받은 값 대부분을 표시하지 않았다.
+- 새 API나 DTO를 추가하지 않고 기존 `AdminMemberDetailDTO` 값만 일정 요약, 할 일 요약, 디데이, 관계 섹션에 배치했다. 날짜 원문 포맷과 destructive 확인 동작은 이 작업 범위에서 변경하지 않았다.
+- 지표 mapping 테스트와 generic test build가 통과했다. iPhone 13 mini UI 테스트 1/1에서 일정·Todo와 D-Day·관계 두 구간의 수치·레이블을 캡처하고 잘림·겹침 없이 읽을 수 있음을 확인했다: `/tmp/Dutypark-AdminMemberMetrics-Unit-20260815.xcresult`, `/tmp/Dutypark-AdminMemberMetrics-UI-20260815.xcresult`.
 
 ### 달력·팀 비교 기준 확장 — `58cbf120`
 
