@@ -13,6 +13,7 @@ struct SocialView: View {
     @State private var pinnedFriendDropTargets: [PinnedFriendDropTarget] = []
     @State private var pinnedDragReferenceTargets: [PinnedFriendDropTarget] = []
     @State private var pinnedDragOriginalOrder: [MemberID] = []
+    @State private var suppressedCalendarFriendID: MemberID?
     @State private var isSavingPinnedOrder = false
 
     private let onOpenCalendar: (MemberID) -> Void
@@ -353,78 +354,81 @@ struct SocialView: View {
         isDragPreview: Bool = false
     ) -> some View {
         ZStack(alignment: .topTrailing) {
-            Button {
-                if let id = friend.member.id { onOpenCalendar(id) }
-            } label: {
-                HStack(alignment: .top, spacing: SocialFriendCardLayout.contentSpacing) {
-                    SocialAvatar(member: friend.member, size: SocialFriendCardLayout.avatarSize)
-
-                    VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
-                        HStack(spacing: 6) {
-                            Text(friend.member.name)
-                                .font(DPFont.bold(size: 15, relativeTo: .subheadline))
-                                .foregroundStyle(DPColor.textPrimary)
-                                .lineLimit(1)
-                            if friend.isFamily {
-                                Image(systemName: "house.fill")
-                                    .font(.system(size: 14))
-                                    .foregroundStyle(DPColor.warning)
-                                    .accessibilityLabel(social("social.label.family"))
-                            }
-                        }
-                        .padding(.trailing, SocialFriendCardLayout.topActionsWidth)
+            reorderableFriendContent(
+                Button {
+                    guard let id = friend.member.id else { return }
+                    guard suppressedCalendarFriendID != id else {
+                        suppressedCalendarFriendID = nil
+                        return
+                    }
+                    onOpenCalendar(id)
+                } label: {
+                    HStack(alignment: .top, spacing: SocialFriendCardLayout.contentSpacing) {
+                        SocialAvatar(member: friend.member, size: SocialFriendCardLayout.avatarSize)
 
                         VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
-                            if let team = friend.member.team, !team.isEmpty {
-                                Label(team, systemImage: "person.3")
-                                    .font(DPTypography.caption)
-                                    .foregroundStyle(DPColor.textSecondary)
+                            HStack(spacing: 6) {
+                                Text(friend.member.name)
+                                    .font(DPFont.bold(size: 15, relativeTo: .subheadline))
+                                    .foregroundStyle(DPColor.textPrimary)
                                     .lineLimit(1)
+                                if friend.isFamily {
+                                    Image(systemName: "house.fill")
+                                        .font(.system(size: 14))
+                                        .foregroundStyle(DPColor.warning)
+                                        .accessibilityLabel(social("social.label.family"))
+                                }
                             }
+                            .padding(.trailing, SocialFriendCardLayout.topActionsWidth)
 
-                            if let duty = friend.duty {
-                                Label(
-                                    duty.dutyType ?? social("social.label.offDuty"),
-                                    systemImage: "briefcase"
-                                )
-                                .font(DPTypography.caption)
-                                .foregroundStyle(DPColor.textSecondary)
-                                .lineLimit(1)
-                            }
+                            VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+                                if let team = friend.member.team, !team.isEmpty {
+                                    Label(team, systemImage: "person.3")
+                                        .font(DPTypography.caption)
+                                        .foregroundStyle(DPColor.textSecondary)
+                                        .lineLimit(1)
+                                }
 
-                            ForEach(Array(friend.schedules.prefix(2)), id: \.id) { schedule in
-                                Label(scheduleLabel(schedule), systemImage: "calendar")
-                                    .font(DPTypography.caption)
-                                    .foregroundStyle(DPColor.textSecondary)
-                                    .lineLimit(1)
-                            }
-
-                            if friend.schedules.count > 2 {
-                                Text(
-                                    socialFormat(
-                                        "social.label.moreSchedules",
-                                        String(friend.schedules.count - 2)
+                                if let duty = friend.duty {
+                                    Label(
+                                        duty.dutyType ?? social("social.label.offDuty"),
+                                        systemImage: "briefcase"
                                     )
-                                )
-                                .font(DPTypography.caption)
-                                .foregroundStyle(DPColor.textMuted)
-                                .lineLimit(1)
+                                    .font(DPTypography.caption)
+                                    .foregroundStyle(DPColor.textSecondary)
+                                    .lineLimit(1)
+                                }
+
+                                ForEach(Array(friend.schedules.prefix(2)), id: \.id) { schedule in
+                                    Label(scheduleLabel(schedule), systemImage: "calendar")
+                                        .font(DPTypography.caption)
+                                        .foregroundStyle(DPColor.textSecondary)
+                                        .lineLimit(1)
+                                }
+
+                                if friend.schedules.count > 2 {
+                                    Text(
+                                        socialFormat(
+                                            "social.label.moreSchedules",
+                                            String(friend.schedules.count - 2)
+                                        )
+                                    )
+                                    .font(DPTypography.caption)
+                                    .foregroundStyle(DPColor.textMuted)
+                                    .lineLimit(1)
+                                }
                             }
                         }
-                        .padding(
-                            .trailing,
-                            friend.pinOrder != nil && viewModel.pinnedFriends.count >= 2
-                                ? SocialFriendCardLayout.bottomActionInset
-                                : 0
-                        )
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
                 }
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .accessibilityHint(social("social.action.openCalendar"))
+                .buttonStyle(.plain)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityHint(social("social.action.openCalendar")),
+                friend: friend,
+                isDragPreview: isDragPreview
+            )
 
             HStack(spacing: 0) {
                 Button {
@@ -497,12 +501,6 @@ struct SocialView: View {
                     lineWidth: friend.pinOrder == nil ? 1 : 2
                 )
         }
-        .overlay(alignment: .bottomTrailing) {
-            if friend.pinOrder != nil && viewModel.pinnedFriends.count >= 2 {
-                pinnedFriendDragHandle(friend, isDragPreview: isDragPreview)
-                    .padding([.trailing, .bottom], DPSpacing.compact)
-            }
-        }
         .shadow(color: Color.black.opacity(friend.pinOrder == nil ? 0.05 : 0.10), radius: 2, y: 1)
         .contentShape(RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous))
         .opacity(draggedPinnedFriendID == friend.member.id && !isDragPreview ? 0 : 1)
@@ -521,44 +519,77 @@ struct SocialView: View {
         }
     }
 
-    private func pinnedFriendDragHandle(
-        _ friend: DashboardFriendDetailDTO,
+    @ViewBuilder
+    private func reorderableFriendContent<Content: View>(
+        _ content: Content,
+        friend: DashboardFriendDetailDTO,
         isDragPreview: Bool
     ) -> some View {
-        let memberID = friend.member.id
-        let pinnedIDs = displayedPinnedFriends.compactMap(\.member.id)
-        let index = memberID.flatMap { pinnedIDs.firstIndex(of: $0) }
+        if !isDragPreview,
+           friend.pinOrder != nil,
+           viewModel.pinnedFriends.count >= 2,
+           let memberID = friend.member.id {
+            let pinnedIDs = displayedPinnedFriends.compactMap(\.member.id)
+            let index = pinnedIDs.firstIndex(of: memberID)
 
-        return Image(systemName: "line.3.horizontal")
-            .font(.system(size: 16, weight: .semibold))
-            .foregroundStyle(DPColor.textMuted)
-            .frame(width: SocialFriendDragLayout.handleSize, height: SocialFriendDragLayout.handleSize)
-            .contentShape(Rectangle())
-            .highPriorityGesture(
-                DragGesture(
-                    minimumDistance: SocialFriendDragLayout.activationDistance,
-                    coordinateSpace: .named(SocialFriendDragCoordinateSpace.name)
+            content
+                .simultaneousGesture(pinnedFriendReorderGesture(memberID: memberID))
+                .accessibilityHint(
+                    Text(
+                        social("social.action.openCalendar")
+                            + " "
+                            + social("social.hint.pinnedOrder")
+                    )
                 )
-                .onChanged { value in
-                    guard !isDragPreview, let memberID else { return }
-                    updatePinnedFriendDrag(memberID: memberID, location: value.location)
+                .accessibilityAction(named: Text(social("social.action.moveUp"))) {
+                    guard let index, index > 0 else { return }
+                    movePinnedFriend(memberID: memberID, to: index - 1)
                 }
-                .onEnded { _ in
-                    guard !isDragPreview else { return }
-                    finishPinnedFriendDrag()
+                .accessibilityAction(named: Text(social("social.action.moveDown"))) {
+                    guard let index, index < pinnedIDs.count - 1 else { return }
+                    movePinnedFriend(memberID: memberID, to: index + 1)
                 }
+        } else {
+            content
+        }
+    }
+
+    private func pinnedFriendReorderGesture(memberID: MemberID) -> some Gesture {
+        LongPressGesture(
+            minimumDuration: SocialFriendDragLayout.activationDuration,
+            maximumDistance: SocialFriendDragLayout.activationMaximumDistance
+        )
+        .sequenced(
+            before: DragGesture(
+                minimumDistance: SocialFriendDragLayout.activationDistance,
+                coordinateSpace: .named(SocialFriendDragCoordinateSpace.name)
             )
-            .accessibilityLabel(social("social.section.pinnedOrder"))
-            .accessibilityHint(social("social.hint.pinnedOrder"))
-            .accessibilityAction(named: Text(social("social.action.moveUp"))) {
-                guard let memberID, let index, index > 0 else { return }
-                movePinnedFriend(memberID: memberID, to: index - 1)
+        )
+        .onChanged { value in
+            guard case .second(true, let dragValue) = value,
+                  let dragValue else { return }
+            updatePinnedFriendDrag(memberID: memberID, location: dragValue.location)
+        }
+        .onEnded { value in
+            guard case .second(true, let dragValue) = value,
+                  dragValue != nil else {
+                if draggedPinnedFriendID == memberID {
+                    clearPinnedFriendDrag()
+                    scheduleCalendarTapSuppressionReset(for: memberID)
+                }
+                return
             }
-            .accessibilityAction(named: Text(social("social.action.moveDown"))) {
-                guard let memberID, let index, index < pinnedIDs.count - 1 else { return }
-                movePinnedFriend(memberID: memberID, to: index + 1)
+            finishPinnedFriendDrag()
+        }
+    }
+
+    private func scheduleCalendarTapSuppressionReset(for memberID: MemberID) {
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(250))
+            if suppressedCalendarFriendID == memberID {
+                suppressedCalendarFriendID = nil
             }
-            .accessibilityHidden(isDragPreview)
+        }
     }
 
     private func updatePinnedFriendDrag(memberID: MemberID, location: CGPoint) {
@@ -567,6 +598,7 @@ struct SocialView: View {
             let ids = displayedPinnedFriends.compactMap(\.member.id)
             inlinePinnedOrder = ids
             draggedPinnedFriendID = memberID
+            suppressedCalendarFriendID = memberID
             pinnedDragOriginalOrder = ids
             pinnedDragReferenceTargets = pinnedFriendDropTargets.sorted { $0.frame.minY < $1.frame.minY }
             if let frame = pinnedFriendDropTargets.last(where: { $0.memberID == memberID })?.frame {
@@ -601,8 +633,12 @@ struct SocialView: View {
     }
 
     private func finishPinnedFriendDrag() {
+        let memberID = draggedPinnedFriendID
         let finalOrder = inlinePinnedOrder
         clearPinnedFriendDrag()
+        if let memberID {
+            scheduleCalendarTapSuppressionReset(for: memberID)
+        }
         guard let finalOrder,
               finalOrder != viewModel.pinnedFriends.compactMap(\.member.id) else {
             inlinePinnedOrder = nil
@@ -1179,12 +1215,12 @@ enum SocialFriendCardLayout {
     static let avatarSize: CGFloat = 56
     static let contentSpacing: CGFloat = 10
     static let topActionsWidth = DPSize.minimumTouchTarget * 2
-    static let bottomActionInset = SocialFriendDragLayout.handleSize + DPSpacing.compact
 }
 
 enum SocialFriendDragLayout {
-    static let handleSize: CGFloat = 44
-    static let activationDistance: CGFloat = 2
+    static let activationDuration: TimeInterval = 0.35
+    static let activationMaximumDistance: CGFloat = 10
+    static let activationDistance: CGFloat = 4
     static let overlapThreshold: CGFloat = 12
 }
 

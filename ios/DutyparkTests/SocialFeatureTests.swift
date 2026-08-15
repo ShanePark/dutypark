@@ -261,21 +261,18 @@ final class SocialFeatureTests: XCTestCase {
         XCTAssertEqual(reordered, [33, 31, 32])
     }
 
-    func testInlineDragUsesImmediateFortyFourPointHandle() {
-        XCTAssertEqual(SocialFriendDragLayout.handleSize, 44)
-        XCTAssertEqual(SocialFriendDragLayout.activationDistance, 2)
+    func testInlineDragRequiresLongPressBeforeMovement() {
+        XCTAssertEqual(SocialFriendDragLayout.activationDuration, 0.35)
+        XCTAssertEqual(SocialFriendDragLayout.activationMaximumDistance, 10)
+        XCTAssertEqual(SocialFriendDragLayout.activationDistance, 4)
     }
 
-    func testCompactFriendCardKeepsActionsOutOfTheContentLayout() {
+    func testCompactFriendCardKeepsManagementActionsOutOfTheContentLayout() {
         XCTAssertEqual(SocialFriendCardLayout.panelInset, 12)
         XCTAssertEqual(SocialFriendCardLayout.avatarSize, 56)
         XCTAssertEqual(
             SocialFriendCardLayout.topActionsWidth,
             DPSize.minimumTouchTarget * 2
-        )
-        XCTAssertEqual(
-            SocialFriendCardLayout.bottomActionInset,
-            SocialFriendDragLayout.handleSize + DPSpacing.compact
         )
     }
 
