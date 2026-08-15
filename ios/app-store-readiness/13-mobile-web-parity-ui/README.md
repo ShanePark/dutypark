@@ -26,15 +26,29 @@
 | 웹 | `http://localhost:5173`, viewport `375×812`, 한국어, 다크 모드 |
 | 앱 | Debug UI fixture, 한국어, 다크 모드 |
 | 시뮬레이터 | Outcrop iPhone 13 mini `F0737016-7654-4967-83FA-1DFB951DB36E` |
-| 회귀 테스트 | 선택한 iOS 단위 테스트 전체 통과, `/tmp/dutypark-parity-main/Logs/Test/Test-Dutypark-2026.08.15_09-21-46-+0900.xcresult` |
+| 회귀 테스트 | 최종 통합 `DutyparkTests` 489건·동적 파라미터 포함 501회 실행, 실패 0건, `/tmp/Dutypark-RefreshIntegration-Unit.xcresult` |
 | 시각 캡처 | `ParityVisualCaptureUITests` 1건 통과, `/tmp/Dutypark-ParityVisualCapture-20260815-11.xcresult` |
+| 최종 빌드 | 앱·단위·UI 3개 타깃 `build-for-testing` 성공, `/tmp/Dutypark-RefreshIntegration-Build` |
 
 ## 현재 요약
 
-- 진행표 36건 중 **33건 완료**, 소스 대조로 확정된 3건은 **대기** 상태다.
-- 완료 항목은 모두 기능 커밋, 집중 테스트, iPhone 13 mini 상호작용 확인, 저장소 내 스크린샷과 보고를 갖췄다.
-- 이번 마감 묶음에서는 관리자 활성 세션 문구, 숨김 근무유형 경고, 게스트 가이드의 네이티브 홈 복귀, 알림 작성자 아바타, 관리자 회원 상세 지표를 추가로 완료했다.
-- 이번 마감 범위에서는 새 회귀 발굴을 중단했다. 아래 `남은 확정 작업` 3건이 다음 작업의 기준이며, 그 밖의 항목은 다시 웹·iOS 근거를 확보한 뒤 추가한다.
+- 진행표 43건 중 **40건 완료**, 소스 대조로 확정된 3건은 **대기** 상태다.
+- 이번 새로고침 UX 마감에서는 Home·친구·Todo·달력·팀·설정·알림·관리자의 mutation 후 전체 재조회와 화면 점프를 제거했다.
+- Home 친구 카드의 세로 스크롤·핀 해제·친구 시간표 이동을 실제 입력 UI 3건으로 검증했고, 팀 일정 모달 종료 크래시는 crash log의 optional Binding 강제 해제 원인까지 확인해 수정했다.
+- UI 변화가 있는 Home과 달력 빠른 Todo 추가는 저장소 스크린샷을 남겼다. 네트워크·상태 전이만 바뀐 항목은 집중 단위 테스트와 통합 489건으로 검증했다.
+- 아래 `남은 확정 작업` 3건이 다음 작업의 기준이며, 그 밖의 항목은 다시 웹·iOS 근거를 확보한 뒤 추가한다.
+
+### 이번 새로고침 UX 기능 커밋
+
+| 완료 단위 | 기능 커밋 | 핵심 검증 |
+| --- | --- | --- |
+| Todo mutation 로컬 반영 | `c08cbb1c` | Todo focused 4/4 |
+| 팀 화면·관리 로컬 반영 및 일정 모달 크래시 | `8de613ab` | Team 36 tests/37회, modal UI 1/1 |
+| 설정 mutation 로컬 반영 | `1419cd1d` | Settings 34/34 |
+| Home 친구 입력·Social mutation 안정화 | `a5fb9279` | Home 15/15, Social 22/22, UI 3/3 |
+| 달력 부분 갱신·Todo 빠른 추가 | `157056ec` | Calendar 52/52, quick-add UI 1/1 |
+| 자동 갱신 병합·알림 count 분리 | `f1d6cb8f` | Root·Notification 44 tests/47회 |
+| 관리자 팀 목록 로컬 반영 | `279c9e3b` | Admin 17/17 |
 
 ### 최근 5개 마감 커밋
 
@@ -86,6 +100,13 @@
 | 34 | 관리자 · 회원 상세 | 가입일·최근 활동이 서버 ISO 원문으로 표시되고 최근 수정일이 누락됨 | 대기 | — |
 | 35 | 설정 · 접속 세션 | 개별 세션 종료 제목·동작이 모두 `로그아웃`으로 축약됨 | 대기 | — |
 | 36 | 친구관리 상세 | 카드가 팀·오늘 근무·일정까지 표시해 모바일 웹보다 과밀함 | 대기 | — |
+| 37 | Home · 친구 | 카드 위에서 세로 스크롤이 막히고, 핀 후 화면 점프·핀 해제 불가·친구 시간표 미진입 | 완료 | `a5fb9279` |
+| 38 | Todo | CRUD 뒤 보드 전체를 다시 받아 선택 열과 스크롤이 바뀔 수 있음 | 완료 | `c08cbb1c` |
+| 39 | 내 달력 | 일정·근무·Todo·D-Day 변경마다 월 전체를 다시 받고, `할 일 +` 빠른 추가 경로가 회귀 검증되지 않음 | 완료 | `157056ec` |
+| 40 | 팀 | 관리·일정 변경 뒤 전체 재조회와 전면 로딩이 발생하고, 일정 추가 모달을 닫으면 앱이 종료됨 | 완료 | `8de613ab` |
+| 41 | 설정 | 공개범위·사진·세션·패턴 등 mutation 성공 뒤 관련 데이터를 다시 GET함 | 완료 | `1419cd1d` |
+| 42 | Root · 알림 | 화면 복귀·탭 전환·드롭다운 열기에서 자동 갱신이 중복되고 친구 요청 수 하나 때문에 알림 목록까지 재조회함 | 완료 | `f1d6cb8f` |
+| 43 | 관리자 · 팀 목록 | 팀 생성·삭제 뒤 현재 페이지 전체를 다시 받아 빈 화면 spinner와 목록 교체가 발생함 | 완료 | `279c9e3b` |
 
 상태는 `대기 → 진행 중 → 수정됨·커밋 전 → 코드 커밋됨·시각 검증 전 → 완료` 순으로 관리한다.
 
@@ -146,6 +167,13 @@
 | `6b69ce5a` | 게스트 이용 안내에서 네이티브 홈 복귀 | GuestPublicLinkTests 7건, generic build, UI 1건 | 웹 링크 탭 후 네이티브 게스트 화면 재캡처 | 완료 |
 | `0d16412b` | 알림 드롭다운 작성자 프로필 사진 표시 | endpoint 계약 3건, generic build·test build, UI 1건 | 사진 actor와 fallback을 한 화면에서 재캡처 | 완료 |
 | `ec2cbf3f` | 관리자 회원 상세의 상태 지표 확장 | 지표 mapping 1건, generic test build, UI 1건 | 일정·Todo 및 D-Day·요청 지표 2장 재캡처 | 완료 |
+| `c08cbb1c` | Todo mutation 뒤 보드 로컬 패치 | focused 4/4, 통합 단위 포함 | 기존 선택 열 유지·추가 보드 GET 0회 | 완료 |
+| `8de613ab` | 팀 refresh 최소화와 일정 modal crash 수정 | Team 36 tests/37회, modal UI 1/1, crash log 재현 | 일정 modal open→cancel 후 앱 foreground 유지 | 완료 |
+| `1419cd1d` | 설정 mutation 뒤 local state 반영 | Settings 34/34 | 콘텐츠 유지, 후속 GET 0회 | 완료 |
+| `a5fb9279` | Home 친구 입력과 Social mutation 안정화 | Home 15/15, Social 22/22, UI 3/3 | 카드 스크롤·pin/unpin·친구 달력 4장 | 완료 |
+| `157056ec` | 달력 slice별 갱신과 Todo 빠른 추가 검증 | Calendar 52/52, quick-add UI 1/1 | `Doing` 기본 Todo 추가 modal 캡처 | 완료 |
+| `f1d6cb8f` | 자동 refresh freshness·dedup 및 count 분리 | Root·Notification 44 tests/47회 | 캐시 유지·중복 3-endpoint 요청 제거 | 완료 |
+| `279c9e3b` | 관리자 팀 생성·삭제 local page 반영 | Admin 17/17 | 목록·검색·page 상태 유지 | 완료 |
 
 ## 상세 변경 보고
 
@@ -568,6 +596,50 @@
 - `SocialFeatureTests` 19건, 친구 진입·재정렬 UI, 친구 삭제 중앙 패널 UI가 모두 통과했다.
 - 결과: `/tmp/dutypark-social-hit-symbol-20260815-1020.xcresult`, `/tmp/dutypark-social-reorder-20260815-1021.xcresult`.
 
+## 새로고침·입력 UX 안정화 상세
+
+### Home 친구 카드 — `a5fb9279`
+
+| pin → unpin 후 위치 유지 | 카드 내부 세로 스크롤 |
+| --- | --- |
+| <img src="screenshots/home-friend-pin-unpin-stable-ios-after.png" width="240" alt="친구 pin과 unpin 뒤 위치가 유지된 Home"> | <img src="screenshots/home-friend-card-vertical-swipe-ios-after.png" width="240" alt="친구 카드 내부에서 세로 스크롤된 Home"> |
+
+| 고정 친구 시간표 진입 | 일반 친구 시간표 진입 |
+| --- | --- |
+| <img src="screenshots/home-pinned-friend-calendar-ios-after.png" width="240" alt="고정 친구 시간표 진입"> | <img src="screenshots/home-unpinned-friend-calendar-ios-after.png" width="240" alt="일반 친구 시간표 진입"> |
+
+- 고정 카드의 우선순위 SwiftUI 제스처가 ScrollView·별 버튼·카드 탭을 선점하던 구조를 제거했다.
+- iOS 18 이상은 Todo에서 이미 검증한 `DPLongPressGestureRecognizer`를 재사용해 세로 스크롤과 0.35초 롱프레스 재정렬을 동시에 인식한다.
+- pin·unpin·정렬은 먼저 로컬 snapshot을 바꾸고 실패 시 rollback한다. 성공 뒤 동기화 중에도 기존 친구 콘텐츠를 유지하므로 180pt loader 축소·재팽창과 화면 점프가 없다.
+- 검증: Home 15/15, Social 22/22, 실제 카드 내부 swipe·pin/unpin·친구 달력 UI 3/3 통과. 결과: `/tmp/Dutypark-HomeFriendInteractions-UI-DPLongPress-Final-20260815.xcresult`.
+
+### 내 달력 Todo 빠른 추가·부분 갱신 — `157056ec`
+
+| 달력의 `할 일 +` 실제 경로 |
+| --- |
+| <img src="screenshots/calendar-todo-quick-add-ios-after.png" width="240" alt="달력 위 Todo 빠른 추가 modal과 Doing 기본 상태"> |
+
+- 웹과 동일하게 관리 버튼은 전체 Todo 화면, `+` 버튼은 `TodoCreateModal`로 분리한다. 실제 `calendar.todo.add` 요소를 탭했을 때 전체 Todo 화면이 없고 `Doing`이 기본 선택된 추가 modal이 나타나는 것을 고정했다.
+- 일정 저장은 schedules, 근무 변경은 duties, Todo 변경은 todoBoard만 다시 읽는다. 일정 삭제·태그 해제와 D-Day 저장·삭제는 로컬 셀만 갱신한다.
+- 기존 42일 grid와 선택 날짜·빠른 근무 날짜를 유지해 한 항목 변경 뒤 달력 전체가 다시 그려지는 현상을 없앴다.
+- 검증: Calendar 52/52, quick-add UI 1/1, 통합 단위 포함. 결과: `/tmp/Dutypark-CalendarRefresh-Unit-20260815.xcresult`, `/tmp/Dutypark-CalendarQuickAdd-UI-20260815.xcresult`.
+
+### 팀 갱신·일정 modal 크래시 — `8de613ab`
+
+- 기존 팀 데이터가 있으면 재진입·월 이동 중 전체 화면 loader로 교체하지 않고, 새 snapshot을 받은 뒤 원자적으로 바꾼다. 사용자가 선택한 날짜도 같은 day-of-month로 보존한다.
+- 관리 mutation 7계열과 멤버 추가, 일정 저장·삭제는 로컬 `TeamDTO`/일정 bucket을 갱신한다. 생성 ID가 필요한 신규 근무유형만 기존 콘텐츠를 유지한 채 조용히 재검증한다.
+- 일정 modal 종료 크래시는 `Binding($viewModel.scheduleDraft)`가 sheet teardown 중 nil을 강제 unwrap하며 발생한 `EXC_BREAKPOINT/SIGTRAP`이었다. 편집기가 non-optional `@State draft`를 소유하도록 바꿔 presentation 상태와 분리했다.
+- 전역 소스 감사에서 같은 optional Binding 강제 unwrap 패턴은 추가로 발견되지 않았다.
+- 검증: Team 36 tests/37회, modal open→cancel UI 1/1, 앱 foreground 유지. RED crash: `/tmp/Dutypark-TeamModal-Diagnostics.2AduyI`; GREEN: `/tmp/Dutypark-TeamModal-UI-GREEN-2.xcresult`.
+
+### 나머지 mutation·자동 refresh — `c08cbb1c`, `1419cd1d`, `f1d6cb8f`, `279c9e3b`
+
+- Todo는 생성·수정·상태 이동·삭제·태그 해제 응답을 보드에 직접 반영하고 현재 선택 열을 유지한다.
+- 설정은 공개범위·사진·관리자 해제·보조계정·세션·기본 패턴 변경을 해당 로컬 상태에만 반영한다. 응답에 필요한 DTO가 없는 관리자 추가만 기존 silent GET을 유지한다.
+- 알림은 최근 성공 snapshot과 진행 중 refresh를 재사용한다. 친구 요청 변화는 friend-request-count endpoint만 호출하고, 명시적 pull-to-refresh는 항상 강제 갱신한다.
+- 관리자 팀 목록은 생성·삭제를 현재 검색·페이지·개수에 즉시 반영한다.
+- 최종 통합 검증: 앱·단위·UI 타깃 `build-for-testing` 성공, `DutyparkTests` 489건·동적 파라미터 포함 501회 실행, 실패 0건.
+
 ## 시각 회귀 자동화
 
 `ParityVisualCaptureUITests`(`9925509a`, `58cbf120` 확장)는 한국어·다크모드로 앱을 실행해 다음 화면을 순서대로 캡처한다.
@@ -586,12 +658,19 @@
 ## 완료된 검증 범위
 
 - [x] 홈 친구관리·친구 상세의 실제 카드 롱프레스 재정렬과 총수 유지
+- [x] Home 친구 카드 내부 세로 스크롤·pin/unpin 무점프·고정/일반 친구 시간표 진입
 - [x] Todo 실제 카드 탭·롱프레스 재정렬·세로 스크롤·선택 열 정렬과 destructive 확인
+- [x] Todo CRUD 뒤 로컬 보드 반영과 현재 선택 열 유지
 - [x] 달력 월 그리드·연월 선택·일괄 변경·검색 범위와 한국어 연도 표기
+- [x] 달력 `할 일 +`의 진행중 빠른 추가 modal과 일정·근무·Todo·D-Day 부분 갱신
 - [x] 가입 팀 달력·팀 관리·요일·빈 근무 영역·근무 인원 단위
+- [x] 팀 관리·일정 local patch, 날짜 보존, 일정 modal open→cancel 크래시 방지
 - [x] 설정 첫 화면 카피·기본 근무 패턴·숨김 근무유형·계정·프로필·소셜 연결 확인
+- [x] 설정 mutation 후 관련 상태 local patch 및 후속 GET 제거
 - [x] 알림 읽음 정책·작성자 아바타·개별 및 읽은 알림 삭제 확인
+- [x] 알림 snapshot freshness·동시 refresh 병합과 친구 요청 count-only 갱신
 - [x] 관리자 팀 삭제·세션 종료·회원 목록 활성 세션·회원 상세 상태 지표
+- [x] 관리자 팀 생성·삭제의 현재 page local patch
 - [x] 게스트 이용 안내 제목·네이티브 홈 복귀·공개 달력 연월 직접 선택
 - [x] Root 메뉴·로그아웃·SSO draft·첨부 삭제를 포함한 전역 중앙 확인 UI
 
