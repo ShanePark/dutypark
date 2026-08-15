@@ -54,7 +54,7 @@
 | 19 | 설정 · 회원 탈퇴 | 영구 삭제 버튼이 `내 계정 삭제`로 축약되어 비가역성이 약하게 안내됨 | 완료 | `12974a63` |
 | 20 | 달력 · 일정 검색 | 상세도 검색하지만 placeholder가 `제목으로 검색`이라고 잘못 안내함 | 완료 | `83ea522e` |
 | 21 | 팀 관리 | 대표 취소 확인에서 대상 대표 이름이 빠져 권한 초기화 대상을 알 수 없음 | 완료 | `76e0f25f` |
-| 22 | 팀 달력 | 한국어 앱의 요일이 기기 언어를 따라 영어로 표시될 수 있음 | 진행 중 | — |
+| 22 | 팀 달력 | 한국어 앱의 요일이 기기 언어를 따라 영어로 표시될 수 있음 | 완료 | `3f9fe25a` |
 
 상태는 `대기 → 진행 중 → 수정됨·커밋 전 → 코드 커밋됨·시각 검증 전 → 완료` 순으로 관리한다.
 
@@ -101,6 +101,7 @@
 | `12974a63` | 회원 탈퇴 최종 버튼의 영구 삭제 경고 복원 | AccountDeletion 9건, generic build·test build, UI 1건 | 5/5 최종 확인 화면 재캡처 | 완료 |
 | `83ea522e` | 일정 검색 placeholder의 검색 범위 복원 | exact ko/en 테스트, generic build·test build, UI 1건 | 검색 모달 placeholder 재캡처 | 완료 |
 | `76e0f25f` | 팀 대표 취소 확인에 대상명 표시 | 포맷·fallback 2건, generic build·test build, UI 1건 | 김듀티 대상 중앙 패널 재캡처 | 완료 |
+| `3f9fe25a` | 팀 달력 요일을 앱 언어에 고정 | exact ko/en 테스트, generic test build, UI 1건 | 영어 기기·한국어 앱 조합 재캡처 | 완료 |
 
 ## 상세 변경 보고
 
@@ -204,6 +205,17 @@
 - 기기 캘린더의 `monthSymbols`를 직접 사용하던 코드를 앱 locale 기반 `DateFormatter`로 교체했다.
 - 앱 한국어·기기 영어에서는 `8월`, 앱 영어에서는 `August`가 되는 회귀 테스트를 통과했다.
 - 가입 팀 fixture에서 연월 선택기를 열어 `1월`부터 `12월`, 선택된 `8월`, `이번 달`을 직접 확인했다.
+
+### 팀 달력 요일 앱 언어 — `3f9fe25a`
+
+| 모바일 웹 기준 | iOS 수정 후 |
+| --- | --- |
+| 현재 앱 언어로 `일 월 화 수 목 금 토` 표시 | <img src="screenshots/team-weekdays-app-locale-ios-after.png" width="240" alt="영어 기기에서도 한국어 요일을 표시하는 iOS 팀 달력"> |
+
+- 모바일 웹은 선택한 앱 locale로 요일을 생성하지만 iOS는 `Calendar.current`의 기기 locale을 사용해 한국어 앱·영어 기기에서 `Sun, Mon…`이 표시될 수 있었다.
+- 팀 달력의 요일 생성에 `AppLocalization.locale`을 적용해 기기 설정과 앱 언어를 분리했다.
+- 한국어·영어 exact 단위 테스트와 generic test build가 통과했다.
+- iPhone 13 mini를 기기 언어 영어(`en_US`), 앱 언어 한국어로 실행한 UI 테스트 1/1에서 `일 월 화 수 목 금 토` 전부와 `Sun`·`Mon` 부재를 확인했다. 육안으로도 균등 정렬과 잘림·겹침이 없었다: `/tmp/Dutypark-TeamWeekday-Green/Logs/Test/Test-Dutypark-2026.08.15_17-20-40-+0900.xcresult`, `/tmp/Dutypark-TeamWeekday-UI-Final-20260815.xcresult`.
 
 ### 달력·팀 비교 기준 확장 — `58cbf120`
 
