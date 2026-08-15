@@ -181,6 +181,36 @@ final class SocialFeatureTests: XCTestCase {
         XCTAssertEqual(repository.actions.filter { $0.hasPrefix("order:") }.count, 1)
     }
 
+    func testSixPinnedFriendsReorderSavesExactlyOnceWithoutDashboardReload() async {
+        let repository = SocialRepositorySpy(pinnedFriendCount: 6)
+        let viewModel = SocialViewModel(repository: repository)
+        await viewModel.load()
+        let originalIDs = viewModel.pinnedFriends.compactMap(\.member.id)
+        let reorderedIDs: [MemberID] = [32, 33, 31, 34, 35, 36]
+
+        XCTAssertEqual(originalIDs, [31, 32, 33, 34, 35, 36])
+
+        let didSave = await viewModel.savePinnedOrder(reorderedIDs)
+
+        XCTAssertTrue(didSave)
+        XCTAssertEqual(viewModel.pinnedFriends.compactMap(\.member.id), reorderedIDs)
+        XCTAssertEqual(repository.actions, ["order:32,33,31,34,35,36"])
+        XCTAssertEqual(repository.friendInfoRequestCount, 1)
+    }
+
+    func testPinnedReorderUsesScrollCompatibleLongPressRecognizer() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark/Features/Social/SocialView.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+
+        XCTAssertTrue(source.contains("modernPinnedFriendReorderGesture"))
+        XCTAssertTrue(source.contains("DPLongPressGestureRecognizer("))
+        XCTAssertTrue(source.contains("content.gesture(modernPinnedFriendReorderGesture"))
+        XCTAssertTrue(source.contains("onCancelled:"))
+    }
+
     func testFailedInlineReorderRollsBackAndReportsFailure() async {
         let repository = SocialRepositorySpy(failPinnedOrder: true)
         let viewModel = SocialViewModel(repository: repository)
@@ -421,6 +451,7 @@ private final class SocialRepositorySpy: SocialRepository, @unchecked Sendable {
     private let failReloadAfterMutation: Bool
     private let failingAction: String?
     private let pinnedOrderDelayMilliseconds: Int64
+    private let pinnedFriendCount: Int?
     private var storedActions: [String] = []
     private var didPerformMutation = false
     private var storedFriendInfoRequestCount = 0
@@ -429,12 +460,14 @@ private final class SocialRepositorySpy: SocialRepository, @unchecked Sendable {
         failPinnedOrder: Bool = false,
         failReloadAfterMutation: Bool = false,
         failingAction: String? = nil,
-        pinnedOrderDelayMilliseconds: Int64 = 0
+        pinnedOrderDelayMilliseconds: Int64 = 0,
+        pinnedFriendCount: Int? = nil
     ) {
         self.failPinnedOrder = failPinnedOrder
         self.failReloadAfterMutation = failReloadAfterMutation
         self.failingAction = failingAction
         self.pinnedOrderDelayMilliseconds = pinnedOrderDelayMilliseconds
+        self.pinnedFriendCount = pinnedFriendCount
     }
 
     var actions: [String] {
@@ -451,12 +484,19 @@ private final class SocialRepositorySpy: SocialRepository, @unchecked Sendable {
             return failReloadAfterMutation && didPerformMutation
         }
         if shouldFail { throw SocialTestError.reload }
-        return DashboardFriendInfoDTO(
-            friends: [
+        let friends = if let pinnedFriendCount {
+            (0..<pinnedFriendCount).map { index in
+                friend(id: 31 + MemberID(index), pinOrder: Int64(index + 1))
+            }
+        } else {
+            [
                 friend(id: 31, pinOrder: 1, isFamily: true),
                 friend(id: 32, pinOrder: 2),
                 friend(id: 33, pinOrder: nil)
-            ],
+            ]
+        }
+        return DashboardFriendInfoDTO(
+            friends: friends,
             pendingRequestsTo: [request(id: 1, from: 11, to: 99)],
             pendingRequestsFrom: [request(id: 2, from: 99, to: 22)]
         )

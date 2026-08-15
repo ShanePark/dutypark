@@ -53,19 +53,30 @@ struct SocialView: View {
         }
         .scrollDisabled(draggedPinnedFriendID != nil)
         .overlay {
-            if let draggedPinnedFriendID,
-               let pinnedDragLocation,
-               let pinnedDragPreviewSize,
-               let pinnedDragGrabOffset,
-               let friend = displayedPinnedFriends.first(where: { $0.member.id == draggedPinnedFriendID }) {
-                friendCard(friend, isDragPreview: true)
-                    .frame(width: pinnedDragPreviewSize.width, height: pinnedDragPreviewSize.height)
-                    .position(
-                        x: pinnedDragLocation.x - pinnedDragGrabOffset.width,
-                        y: pinnedDragLocation.y - pinnedDragGrabOffset.height
-                    )
-                    .allowsHitTesting(false)
-                    .accessibilityHidden(true)
+            ZStack(alignment: .topLeading) {
+                if let draggedPinnedFriendID,
+                   let pinnedDragLocation,
+                   let pinnedDragPreviewSize,
+                   let pinnedDragGrabOffset,
+                   let friend = displayedPinnedFriends.first(where: { $0.member.id == draggedPinnedFriendID }) {
+                    friendCard(friend, isDragPreview: true)
+                        .frame(width: pinnedDragPreviewSize.width, height: pinnedDragPreviewSize.height)
+                        .position(
+                            x: pinnedDragLocation.x - pinnedDragGrabOffset.width,
+                            y: pinnedDragLocation.y - pinnedDragGrabOffset.height
+                        )
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                }
+#if DEBUG
+                if isSocialReorderUITesting {
+                    Text(String(viewModel.uiTestingPinnedOrderSaveCount))
+                        .font(.system(size: 1))
+                        .foregroundStyle(Color.clear)
+                        .frame(width: 1, height: 1)
+                        .accessibilityIdentifier("social.reorder.saveCount")
+                }
+#endif
             }
         }
         .fullScreenCover(isPresented: $isSearchPresented) {
@@ -444,11 +455,14 @@ struct SocialView: View {
             .buttonStyle(.plain)
             .frame(maxWidth: .infinity, alignment: .leading)
             .accessibilityIdentifier("social.friend.\(friend.member.id ?? -1)")
-            .simultaneousGesture(
-                pinnedFriendReorderGesture(memberID: friend.member.id),
-                including: isPinnedFriendReorderEnabled(friend, isDragPreview: isDragPreview)
-                    ? .all
-                    : .none
+            .modifier(
+                SocialPinnedFriendReorderGestureModifier(
+                    isEnabled: isPinnedFriendReorderEnabled(friend, isDragPreview: isDragPreview),
+                    memberID: friend.member.id,
+                    updateDrag: updatePinnedFriendDrag,
+                    finishDrag: finishPinnedFriendDrag,
+                    cancelDrag: cancelPinnedFriendDrag
+                )
             )
             .accessibilityHint(
                 isPinnedFriendReorderEnabled(friend, isDragPreview: isDragPreview)
@@ -582,35 +596,10 @@ struct SocialView: View {
         return moves
     }
 
-    private func pinnedFriendReorderGesture(memberID: MemberID?) -> some Gesture {
-        LongPressGesture(
-            minimumDuration: SocialFriendDragLayout.activationDuration,
-            maximumDistance: SocialFriendDragLayout.activationMaximumDistance
-        )
-        .sequenced(
-            before: DragGesture(
-                minimumDistance: SocialFriendDragLayout.activationDistance,
-                coordinateSpace: .named(SocialFriendDragCoordinateSpace.name)
-            )
-        )
-        .onChanged { value in
-            guard let memberID,
-                  case .second(true, let dragValue) = value,
-                  let dragValue else { return }
-            updatePinnedFriendDrag(memberID: memberID, location: dragValue.location)
-        }
-        .onEnded { value in
-            guard let memberID else { return }
-            guard case .second(true, let dragValue) = value,
-                  dragValue != nil else {
-                if draggedPinnedFriendID == memberID {
-                    clearPinnedFriendDrag()
-                    scheduleCalendarTapSuppressionReset(for: memberID)
-                }
-                return
-            }
-            finishPinnedFriendDrag()
-        }
+    private func cancelPinnedFriendDrag(_ memberID: MemberID) {
+        guard draggedPinnedFriendID == memberID else { return }
+        clearPinnedFriendDrag()
+        scheduleCalendarTapSuppressionReset(for: memberID)
     }
 
     private func scheduleCalendarTapSuppressionReset(for memberID: MemberID) {
@@ -714,6 +703,12 @@ struct SocialView: View {
         pinnedDragReferenceTargets = []
         pinnedDragOriginalOrder = []
     }
+
+#if DEBUG
+    private var isSocialReorderUITesting: Bool {
+        ProcessInfo.processInfo.arguments.contains("-ui-testing-social-reorder")
+    }
+#endif
 
     private var emptyFriends: some View {
         VStack(spacing: DPSpacing.compact) {
@@ -1257,6 +1252,74 @@ enum SocialFriendDragLayout {
     static let activationMaximumDistance: CGFloat = 10
     static let activationDistance: CGFloat = 4
     static let overlapThreshold: CGFloat = 12
+}
+
+private struct SocialPinnedFriendReorderGestureModifier: ViewModifier {
+    let isEnabled: Bool
+    let memberID: MemberID?
+    let updateDrag: (MemberID, CGPoint) -> Void
+    let finishDrag: () -> Void
+    let cancelDrag: (MemberID) -> Void
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if !isEnabled {
+            content
+        } else if #available(iOS 18.0, *) {
+            content.gesture(modernPinnedFriendReorderGesture)
+        } else {
+            content.simultaneousGesture(legacyPinnedFriendReorderGesture)
+        }
+    }
+
+    @available(iOS 18.0, *)
+    private var modernPinnedFriendReorderGesture: DPLongPressGestureRecognizer {
+        DPLongPressGestureRecognizer(
+            minimumDuration: SocialFriendDragLayout.activationDuration,
+            maximumMovement: SocialFriendDragLayout.activationMaximumDistance,
+            coordinateSpaceName: SocialFriendDragCoordinateSpace.name,
+            onBegan: update,
+            onChanged: update,
+            onEnded: finishDrag,
+            onCancelled: cancel
+        )
+    }
+
+    private var legacyPinnedFriendReorderGesture: some Gesture {
+        LongPressGesture(
+            minimumDuration: SocialFriendDragLayout.activationDuration,
+            maximumDistance: SocialFriendDragLayout.activationMaximumDistance
+        )
+        .sequenced(
+            before: DragGesture(
+                minimumDistance: SocialFriendDragLayout.activationDistance,
+                coordinateSpace: .named(SocialFriendDragCoordinateSpace.name)
+            )
+        )
+        .onChanged { value in
+            guard case .second(true, let dragValue) = value,
+                  let dragValue else { return }
+            update(dragValue.location)
+        }
+        .onEnded { value in
+            guard case .second(true, let dragValue) = value,
+                  dragValue != nil else {
+                cancel()
+                return
+            }
+            finishDrag()
+        }
+    }
+
+    private func update(_ location: CGPoint) {
+        guard let memberID else { return }
+        updateDrag(memberID, location)
+    }
+
+    private func cancel() {
+        guard let memberID else { return }
+        cancelDrag(memberID)
+    }
 }
 
 private struct PinnedFriendAccessibleMove {

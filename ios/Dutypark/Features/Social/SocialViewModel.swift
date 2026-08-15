@@ -15,6 +15,9 @@ final class SocialViewModel: ObservableObject {
     @Published private(set) var isPerformingAction = false
     @Published private(set) var isReordering = false
     @Published var errorKey: String?
+#if DEBUG
+    @Published private(set) var uiTestingPinnedOrderSaveCount = 0
+#endif
 
     private let repository: any SocialRepository
     private let searchPageSize: Int
@@ -196,6 +199,14 @@ final class SocialViewModel: ObservableObject {
 
     func togglePin(_ friend: DashboardFriendDetailDTO) async {
         guard let id = friend.member.id else { return }
+#if DEBUG
+        if isSocialReorderUITesting {
+            let pinOrder = friend.pinOrder == nil ? nextPinOrder : nil
+            replaceFriend(id: id) { $0.replacingPinOrder(pinOrder) }
+            await onMutation(false)
+            return
+        }
+#endif
         await perform(
             error: friend.pinOrder == nil ? "social.error.pin" : "social.error.unpin",
             affectsReceivedRequestCount: false,
@@ -226,6 +237,9 @@ final class SocialViewModel: ObservableObject {
 #if DEBUG
         if isUITesting {
             pinnedOrderIDs = memberIDs
+            if isSocialReorderUITesting {
+                uiTestingPinnedOrderSaveCount += 1
+            }
             await onMutation(false)
             return true
         }
@@ -345,16 +359,32 @@ final class SocialViewModel: ObservableObject {
         ProcessInfo.processInfo.arguments.contains("-ui-testing-authenticated")
     }
 
+    private var isSocialReorderUITesting: Bool {
+        ProcessInfo.processInfo.arguments.contains("-ui-testing-social-reorder")
+    }
+
     private func loadUITestingFixture() {
-        friends = [
-            uiTestingFriend(id: 31, name: "알렉스", pinOrder: 1),
-            uiTestingFriend(id: 32, name: "민지", pinOrder: 2),
-            uiTestingFriend(id: 33, name: "테일러", pinOrder: nil)
-        ]
+        if isSocialReorderUITesting {
+            friends = [
+                uiTestingFriend(id: 31, name: "알렉스", pinOrder: 1),
+                uiTestingFriend(id: 32, name: "민지", pinOrder: 2),
+                uiTestingFriend(id: 33, name: "테일러", pinOrder: 3),
+                uiTestingFriend(id: 34, name: "지우", pinOrder: 4),
+                uiTestingFriend(id: 35, name: "하늘", pinOrder: 5),
+                uiTestingFriend(id: 36, name: "유진", pinOrder: 6)
+            ]
+        } else {
+            friends = [
+                uiTestingFriend(id: 31, name: "알렉스", pinOrder: 1),
+                uiTestingFriend(id: 32, name: "민지", pinOrder: 2),
+                uiTestingFriend(id: 33, name: "테일러", pinOrder: nil)
+            ]
+        }
         receivedRequests = []
         sentRequests = []
         pinnedOrderIDs = nil
         errorKey = nil
+        uiTestingPinnedOrderSaveCount = 0
     }
 
     private func uiTestingFriend(
