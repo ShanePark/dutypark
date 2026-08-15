@@ -67,6 +67,9 @@ struct SettingsFeatureTests {
             "settings.theme.current.dark",
             "settings.pattern.title",
             "settings.pattern.createDescription",
+            "settings.pattern.unavailable.team",
+            "settings.pattern.unavailable.dutyType",
+            "settings.pattern.unavailable.default",
             "settings.pattern.saveConfirm",
             "settings.pattern.deleteConfirm",
             "settings.accessibility.on",
@@ -483,6 +486,68 @@ struct SettingsFeatureTests {
         #expect(pattern.configurable)
         #expect(pattern.pattern?.days.first?.weekday == .monday)
         #expect(pattern.pattern?.holidayOff == true)
+    }
+
+    @Test
+    func dutyPatternEditorShowsOnlySelectedWeekdaysAndUsesTheFirstTypeForNewSelections() {
+        let day = DutyPatternDutyTypeDTO(id: 4, name: "Day", color: "#3B82F6")
+        var state = DutyPatternSelectionState(pattern: nil, dutyTypes: [day])
+
+        #expect(state.selectedWeekdays == [.monday, .tuesday, .wednesday, .thursday, .friday])
+        #expect(state.dutyTypeID(for: .monday) == day.id)
+        #expect(!state.isSelected(.saturday))
+
+        state.toggle(.monday, defaultDutyTypeID: day.id)
+        state.toggle(.saturday, defaultDutyTypeID: day.id)
+
+        #expect(state.selectedWeekdays == [.tuesday, .wednesday, .thursday, .friday, .saturday])
+        #expect(state.dutyTypeID(for: .monday) == nil)
+        #expect(state.dutyTypeID(for: .saturday) == day.id)
+    }
+
+    @Test
+    func dutyPatternEditorPreservesAnExistingHiddenDutyTypeForItsWeekday() {
+        let hidden = DutyPatternDutyTypeDTO(id: 8, name: "Legacy night", color: "#312E81")
+        let visible = DutyPatternDutyTypeDTO(id: 4, name: "Day", color: "#3B82F6")
+        let pattern = DutyPatternDetailsDTO(
+            days: [.init(weekday: .sunday, dutyType: hidden)],
+            holidayOff: true,
+            effectiveFrom: DateOnly(rawValue: "2026-08-01")
+        )
+        let state = DutyPatternSelectionState(pattern: pattern, dutyTypes: [visible])
+
+        #expect(state.selectedWeekdays == [.sunday])
+        #expect(state.dutyType(for: .sunday, visibleDutyTypes: [visible], pattern: pattern) == hidden)
+    }
+
+    @Test
+    func dutyPatternConfirmationsKeepSaveAndDeleteRolesDistinct() {
+        #expect(DutyPatternConfirmation.save.titleKey == "settings.pattern.saveConfirmTitle")
+        #expect(DutyPatternConfirmation.save.messageKey == "settings.pattern.saveConfirm")
+        #expect(!DutyPatternConfirmation.save.isDestructive)
+        #expect(DutyPatternConfirmation.delete.titleKey == "settings.pattern.deleteConfirmTitle")
+        #expect(DutyPatternConfirmation.delete.messageKey == "settings.pattern.deleteConfirm")
+        #expect(DutyPatternConfirmation.delete.isDestructive)
+    }
+
+    @Test
+    func dutyPatternUnavailableReasonsUseLocalizedCopyInsteadOfServerCodes() {
+        #expect(DutyPatternUnavailableCopy.key(reason: "TEAM_REQUIRED") == "settings.pattern.unavailable.team")
+        #expect(DutyPatternUnavailableCopy.key(reason: "DUTY_TYPE_REQUIRED") == "settings.pattern.unavailable.dutyType")
+        #expect(DutyPatternUnavailableCopy.key(reason: "UNKNOWN_REASON") == "settings.pattern.unavailable.default")
+        #expect(DutyPatternUnavailableCopy.key(reason: nil) == "settings.pattern.unavailable.default")
+
+        let defaults = UserDefaults.standard
+        let previous = defaults.string(forKey: SettingsPreference.languageKey)
+        defer {
+            if let previous { defaults.set(previous, forKey: SettingsPreference.languageKey) }
+            else { defaults.removeObject(forKey: SettingsPreference.languageKey) }
+        }
+
+        defaults.set(AppLanguage.korean.rawValue, forKey: SettingsPreference.languageKey)
+        #expect(SettingsLocalization.string(DutyPatternUnavailableCopy.key(reason: "TEAM_REQUIRED")).contains("팀에 소속"))
+        #expect(SettingsLocalization.string(DutyPatternUnavailableCopy.key(reason: "DUTY_TYPE_REQUIRED")).contains("근무 유형"))
+        #expect(SettingsLocalization.string(DutyPatternUnavailableCopy.key(reason: "UNKNOWN")).contains("설정"))
     }
 
     @Test

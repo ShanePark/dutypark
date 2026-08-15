@@ -1588,6 +1588,16 @@ private struct SettingsModalActions<Content: View>: View {
     }
 }
 
+enum DutyPatternUnavailableCopy {
+    static func key(reason: String?) -> String {
+        switch reason?.uppercased() {
+        case "TEAM_REQUIRED": "settings.pattern.unavailable.team"
+        case "DUTY_TYPE_REQUIRED": "settings.pattern.unavailable.dutyType"
+        default: "settings.pattern.unavailable.default"
+        }
+    }
+}
+
 private struct DutyPatternSummary: View {
     let pattern: DutyPatternDTO
     let open: () -> Void
@@ -1665,7 +1675,7 @@ private struct DutyPatternSummary: View {
                 .padding(DPSpacing.medium)
                 .overlay(RoundedRectangle(cornerRadius: DPRadius.large).stroke(DPColor.borderPrimary, style: StrokeStyle(lineWidth: 2, dash: [6, 4])))
             } else {
-                Text(pattern.reason ?? CalendarLocalization.text("calendar.pattern.unavailable"))
+                SettingsLocalization.text(DutyPatternUnavailableCopy.key(reason: pattern.reason))
                     .font(DPTypography.supporting)
                     .foregroundStyle(DPColor.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -1761,15 +1771,90 @@ private struct VisibilitySettingsModal: View {
     }
 }
 
+struct DutyPatternSelectionState {
+    private static let weekdays: [Weekday] = [
+        .monday, .tuesday, .wednesday, .thursday, .friday, .saturday, .sunday,
+    ]
+    private var assignments: [Weekday: DutyTypeID]
+
+    init(pattern: DutyPatternDetailsDTO?, dutyTypes: [DutyPatternDutyTypeDTO]) {
+        if let pattern {
+            assignments = Dictionary(
+                uniqueKeysWithValues: pattern.days.map { ($0.weekday, $0.dutyType.id) }
+            )
+        } else if let defaultDutyTypeID = dutyTypes.first?.id {
+            assignments = Dictionary(
+                uniqueKeysWithValues: Self.weekdays.prefix(5).map { ($0, defaultDutyTypeID) }
+            )
+        } else {
+            assignments = [:]
+        }
+    }
+
+    var selectedWeekdays: [Weekday] {
+        Self.weekdays.filter { assignments[$0] != nil }
+    }
+
+    func isSelected(_ weekday: Weekday) -> Bool {
+        assignments[weekday] != nil
+    }
+
+    func dutyTypeID(for weekday: Weekday) -> DutyTypeID? {
+        assignments[weekday]
+    }
+
+    mutating func toggle(_ weekday: Weekday, defaultDutyTypeID: DutyTypeID?) {
+        if assignments.removeValue(forKey: weekday) != nil { return }
+        guard let defaultDutyTypeID else { return }
+        assignments[weekday] = defaultDutyTypeID
+    }
+
+    mutating func select(_ dutyTypeID: DutyTypeID, for weekday: Weekday) {
+        guard assignments[weekday] != nil else { return }
+        assignments[weekday] = dutyTypeID
+    }
+
+    func dutyType(
+        for weekday: Weekday,
+        visibleDutyTypes: [DutyPatternDutyTypeDTO],
+        pattern: DutyPatternDetailsDTO?
+    ) -> DutyPatternDutyTypeDTO? {
+        guard let id = dutyTypeID(for: weekday) else { return nil }
+        return visibleDutyTypes.first(where: { $0.id == id })
+            ?? pattern?.days.first(where: { $0.weekday == weekday && $0.dutyType.id == id })?.dutyType
+    }
+}
+
+enum DutyPatternConfirmation: String, Identifiable {
+    case save
+    case delete
+
+    var id: String { rawValue }
+    var titleKey: String {
+        switch self {
+        case .save: "settings.pattern.saveConfirmTitle"
+        case .delete: "settings.pattern.deleteConfirmTitle"
+        }
+    }
+    var messageKey: String {
+        switch self {
+        case .save: "settings.pattern.saveConfirm"
+        case .delete: "settings.pattern.deleteConfirm"
+        }
+    }
+    var isDestructive: Bool { self == .delete }
+}
+
 private struct DutyPatternSettingsModal: View {
     @ObservedObject var model: SettingsViewModel
     let maximumHeight: CGFloat
     let dismiss: () -> Void
-    @State private var selections: [Weekday: DutyTypeID?] = [:]
+    @State private var selectionState = DutyPatternSelectionState(pattern: nil, dutyTypes: [])
     @State private var holidayOff = true
-    @State private var confirmsSave = false
-    @State private var confirmsDelete = false
+    @State private var confirmation: DutyPatternConfirmation?
+    @State private var expandedWeekday: Weekday?
     private let weekdays: [Weekday] = [.monday, .tuesday, .wednesday, .thursday, .friday, .saturday, .sunday]
+    private let weekdayColumns = Array(repeating: GridItem(.flexible(), spacing: DPSpacing.small), count: 4)
 
     var body: some View {
         DPModalPanel(maximumPanelHeight: maximumHeight) {
@@ -1779,7 +1864,7 @@ private struct DutyPatternSettingsModal: View {
         } footer: {
             SettingsModalActions {
                 Button {
-                    confirmsSave = true
+                    confirmation = .save
                 } label: {
                     SettingsLocalization.text("settings.action.save")
                         .frame(maxWidth: .infinity)
@@ -1797,54 +1882,50 @@ private struct DutyPatternSettingsModal: View {
         }
         .onAppear {
             holidayOff = model.dutyPattern?.pattern?.holidayOff ?? true
-            selections = Dictionary(uniqueKeysWithValues: (model.dutyPattern?.pattern?.days ?? []).map { ($0.weekday, Optional($0.dutyType.id)) })
+            selectionState = DutyPatternSelectionState(
+                pattern: model.dutyPattern?.pattern,
+                dutyTypes: model.dutyPattern?.dutyTypes ?? []
+            )
         }
-        .confirmationDialog(SettingsLocalization.string("settings.pattern.saveConfirmTitle"), isPresented: $confirmsSave) {
-            Button(SettingsLocalization.string("settings.action.save")) {
-                Task {
-                    if await model.saveDutyPattern(days: submittedDays, holidayOff: holidayOff) { dismiss() }
-                }
+        .fullScreenCover(item: $confirmation) { requestedAction in
+            DPModalOverlay(
+                maximumContentWidth: DPConfirmationPanel.maximumWidth,
+                onDismiss: { confirmation = nil },
+                canDismiss: !model.isWorking
+            ) { availableSize, confirmationDismiss in
+                DPConfirmationPanel(
+                    title: SettingsLocalization.string(requestedAction.titleKey),
+                    message: SettingsLocalization.string(requestedAction.messageKey),
+                    confirmTitle: requestedAction == .save
+                        ? SettingsLocalization.string("settings.action.save")
+                        : CalendarLocalization.text("calendar.pattern.delete"),
+                    cancelTitle: SettingsLocalization.string("settings.action.cancel"),
+                    isDestructive: requestedAction.isDestructive,
+                    isWorking: model.isWorking,
+                    maximumHeight: availableSize.height,
+                    cancel: confirmationDismiss,
+                    confirm: {
+                        perform(requestedAction, confirmationDismiss: confirmationDismiss)
+                    }
+                )
             }
-            Button(SettingsLocalization.string("settings.action.cancel"), role: .cancel) {}
-        } message: {
-            SettingsLocalization.text("settings.pattern.saveConfirm")
-        }
-        .confirmationDialog(SettingsLocalization.string("settings.pattern.deleteConfirmTitle"), isPresented: $confirmsDelete) {
-            Button(CalendarLocalization.text("calendar.pattern.delete"), role: .destructive) {
-                Task { if await model.deleteDutyPattern() { dismiss() } }
-            }
-            Button(SettingsLocalization.string("settings.action.cancel"), role: .cancel) {}
-        } message: {
-            SettingsLocalization.text("settings.pattern.deleteConfirm")
         }
     }
 
     private var bodyContent: some View {
-        VStack(alignment: .leading, spacing: DPSpacing.compact) {
-            if let details = model.dutyPattern?.pattern {
-                Text("\(CalendarLocalization.text("calendar.pattern.effectiveFrom")) \(details.effectiveFrom.rawValue)")
-                    .font(DPTypography.supporting)
-                    .foregroundStyle(DPColor.textMuted)
-            }
-            ForEach(weekdays, id: \.rawValue) { weekday in
-                HStack {
-                    Text(weekdayLong(weekday))
-                        .font(DPTypography.bodyMedium)
-                        .foregroundStyle(DPColor.textPrimary)
-                    Spacer()
-                    Menu(selectionName(weekday)) {
-                        Button(CalendarLocalization.text("calendar.off")) { selections[weekday] = nil }
-                        ForEach(model.dutyPattern?.dutyTypes ?? [], id: \.id) { type in
-                            Button(type.name) { selections[weekday] = type.id }
-                        }
-                    }
-                    .foregroundStyle(DPColor.textPrimary)
+        VStack(alignment: .leading, spacing: DPSpacing.medium) {
+            LazyVGrid(columns: weekdayColumns, spacing: DPSpacing.small) {
+                ForEach(weekdays, id: \.rawValue) { weekday in
+                    weekdayButton(weekday)
                 }
-                .padding(.horizontal, DPSpacing.compact)
-                .frame(minHeight: 48)
-                .background(DPColor.backgroundSecondary, in: RoundedRectangle(cornerRadius: DPRadius.standard))
-                .overlay(RoundedRectangle(cornerRadius: DPRadius.standard).stroke(DPColor.borderPrimary))
             }
+
+            VStack(spacing: DPSpacing.small) {
+                ForEach(selectionState.selectedWeekdays, id: \.rawValue) { weekday in
+                    dutyTypeRow(weekday)
+                }
+            }
+
             Button { holidayOff.toggle() } label: {
                 HStack {
                     Text(CalendarLocalization.text("calendar.pattern.holidayOff"))
@@ -1853,15 +1934,24 @@ private struct DutyPatternSettingsModal: View {
                     Spacer()
                     SettingsSwitch(isOn: holidayOff)
                 }
+                .padding(.horizontal, DPSpacing.compact)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .frame(minHeight: DPSize.minimumTouchTarget)
+            .background(DPColor.backgroundSecondary, in: RoundedRectangle(cornerRadius: DPRadius.standard))
+            .overlay(RoundedRectangle(cornerRadius: DPRadius.standard).stroke(DPColor.borderPrimary))
             .accessibilityValue(SettingsLocalization.string(holidayOff ? "settings.accessibility.on" : "settings.accessibility.off"))
             .accessibilityAddTraits(.isButton)
 
+            if let details = model.dutyPattern?.pattern {
+                Text("\(CalendarLocalization.text("calendar.pattern.effectiveFrom")) \(details.effectiveFrom.rawValue)")
+                    .font(DPTypography.supporting)
+                    .foregroundStyle(DPColor.textMuted)
+            }
+
             if model.dutyPattern?.pattern != nil {
-                Button { confirmsDelete = true } label: {
+                Button { confirmation = .delete } label: {
                     Label(CalendarLocalization.text("calendar.pattern.delete"), systemImage: "trash")
                         .frame(maxWidth: .infinity)
                 }
@@ -1871,10 +1961,122 @@ private struct DutyPatternSettingsModal: View {
         .padding(DPSpacing.large)
     }
 
-    private var selectedIDs: [DutyTypeID] { selections.values.compactMap { $0 } }
+    private func weekdayButton(_ weekday: Weekday) -> some View {
+        let selected = selectionState.isSelected(weekday)
+        return Button {
+            selectionState.toggle(
+                weekday,
+                defaultDutyTypeID: model.dutyPattern?.dutyTypes.first?.id
+            )
+        } label: {
+            Text(weekdayLong(weekday))
+                .font(DPTypography.bodyMedium)
+                .foregroundStyle(selected ? DPColor.textOnDark : DPColor.textSecondary)
+                .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)
+                .background(
+                    selected ? DPColor.accent : DPColor.backgroundSecondary,
+                    in: RoundedRectangle(cornerRadius: DPRadius.standard)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: DPRadius.standard)
+                        .stroke(selected ? DPColor.accent : DPColor.borderPrimary)
+                )
+        }
+        .buttonStyle(.plain)
+        .disabled(model.isWorking)
+        .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+
+    private func dutyTypeRow(_ weekday: Weekday) -> some View {
+        VStack(spacing: DPSpacing.extraSmall) {
+            HStack(spacing: DPSpacing.compact) {
+                Text(weekdayLong(weekday))
+                    .font(DPTypography.bodyMedium)
+                    .foregroundStyle(DPColor.textSecondary)
+                    .frame(width: 44, alignment: .leading)
+
+                Button {
+                    withAnimation(.easeOut(duration: 0.15)) {
+                        expandedWeekday = expandedWeekday == weekday ? nil : weekday
+                    }
+                } label: {
+                    HStack(spacing: DPSpacing.compact) {
+                        if let selected = selectedDutyType(for: weekday) {
+                            Circle()
+                                .fill(Color(settingsHex: selected.color))
+                                .frame(width: 14, height: 14)
+                                .overlay(Circle().stroke(DPColor.borderSecondary))
+                            Text(selected.name)
+                                .font(DPTypography.bodyMedium)
+                                .foregroundStyle(DPColor.textPrimary)
+                                .lineLimit(1)
+                        }
+                        Spacer(minLength: DPSpacing.small)
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(DPColor.textMuted)
+                            .rotationEffect(.degrees(expandedWeekday == weekday ? 180 : 0))
+                    }
+                    .padding(.horizontal, DPSpacing.compact)
+                    .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)
+                    .background(DPColor.backgroundSecondary, in: RoundedRectangle(cornerRadius: DPRadius.standard))
+                    .overlay(RoundedRectangle(cornerRadius: DPRadius.standard).stroke(DPColor.borderPrimary))
+                }
+                .buttonStyle(.plain)
+                .disabled(model.isWorking)
+                .accessibilityLabel("\(weekdayLong(weekday)): \(selectedDutyType(for: weekday)?.name ?? "")")
+            }
+
+            if expandedWeekday == weekday {
+                VStack(spacing: 0) {
+                    ForEach(dutyTypeOptions(for: weekday), id: \.id) { type in
+                        let selected = selectionState.dutyTypeID(for: weekday) == type.id
+                        Button {
+                            selectionState.select(type.id, for: weekday)
+                            withAnimation(.easeOut(duration: 0.15)) {
+                                expandedWeekday = nil
+                            }
+                        } label: {
+                            HStack(spacing: DPSpacing.compact) {
+                                Circle()
+                                    .fill(Color(settingsHex: type.color))
+                                    .frame(width: DPSize.iconSmall, height: DPSize.iconSmall)
+                                    .overlay(Circle().stroke(DPColor.borderSecondary))
+                                Text(type.name)
+                                    .font(DPTypography.bodyMedium)
+                                    .foregroundStyle(selected ? DPColor.accent : DPColor.textPrimary)
+                                    .lineLimit(1)
+                                Spacer()
+                                if selected {
+                                    Image(systemName: "checkmark")
+                                        .font(.system(size: DPSize.iconSmall, weight: .semibold))
+                                        .foregroundStyle(DPColor.accent)
+                                }
+                            }
+                            .padding(.horizontal, DPSpacing.compact)
+                            .frame(maxWidth: .infinity, minHeight: 48)
+                            .background(selected ? DPColor.accentSoft : DPColor.backgroundCard)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(model.isWorking || !isVisibleDutyType(type))
+                        .opacity(isVisibleDutyType(type) ? 1 : 0.55)
+                        .accessibilityAddTraits(selected ? .isSelected : [])
+                    }
+                }
+                .padding(DPSpacing.small)
+                .background(DPColor.backgroundCard, in: RoundedRectangle(cornerRadius: DPRadius.large))
+                .overlay(RoundedRectangle(cornerRadius: DPRadius.large).stroke(DPColor.borderSecondary))
+                .padding(.leading, 44 + DPSpacing.compact)
+            }
+        }
+    }
+
+    private var selectedIDs: [DutyTypeID] {
+        selectionState.selectedWeekdays.compactMap { selectionState.dutyTypeID(for: $0) }
+    }
     private var submittedDays: [DutyPatternDayUpdateDTO] {
-        weekdays.compactMap { weekday in
-            guard let selected = selections[weekday], let id = selected else { return nil }
+        selectionState.selectedWeekdays.compactMap { weekday in
+            guard let id = selectionState.dutyTypeID(for: weekday) else { return nil }
             return DutyPatternDayUpdateDTO(weekday: weekday, dutyTypeId: id)
         }
     }
@@ -1882,11 +2084,43 @@ private struct DutyPatternSettingsModal: View {
         let visible = Set(model.dutyPattern?.dutyTypes.map(\.id) ?? [])
         return selectedIDs.contains { !visible.contains($0) }
     }
-    private func selectionName(_ weekday: Weekday) -> String {
-        guard let selected = selections[weekday], let id = selected else { return CalendarLocalization.text("calendar.off") }
-        return model.dutyPattern?.dutyTypes.first(where: { $0.id == id })?.name
-            ?? model.dutyPattern?.pattern?.days.first(where: { $0.weekday == weekday && $0.dutyType.id == id })?.dutyType.name
-            ?? CalendarLocalization.text("calendar.off")
+
+    private func selectedDutyType(for weekday: Weekday) -> DutyPatternDutyTypeDTO? {
+        selectionState.dutyType(
+            for: weekday,
+            visibleDutyTypes: model.dutyPattern?.dutyTypes ?? [],
+            pattern: model.dutyPattern?.pattern
+        )
+    }
+
+    private func dutyTypeOptions(for weekday: Weekday) -> [DutyPatternDutyTypeDTO] {
+        let visible = model.dutyPattern?.dutyTypes ?? []
+        guard let selected = selectedDutyType(for: weekday),
+              !visible.contains(where: { $0.id == selected.id })
+        else { return visible }
+        return [selected] + visible
+    }
+
+    private func isVisibleDutyType(_ dutyType: DutyPatternDutyTypeDTO) -> Bool {
+        model.dutyPattern?.dutyTypes.contains(where: { $0.id == dutyType.id }) == true
+    }
+
+    private func perform(
+        _ requestedAction: DutyPatternConfirmation,
+        confirmationDismiss: @escaping () -> Void
+    ) {
+        Task {
+            let succeeded = switch requestedAction {
+            case .save:
+                await model.saveDutyPattern(days: submittedDays, holidayOff: holidayOff)
+            case .delete:
+                await model.deleteDutyPattern()
+            }
+            guard succeeded else { return }
+            confirmationDismiss()
+            try? await Task.sleep(for: .milliseconds(180))
+            dismiss()
+        }
     }
 }
 

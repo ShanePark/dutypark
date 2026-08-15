@@ -173,6 +173,8 @@ final class CalendarFeatureTests: XCTestCase {
             "calendar.dday.pin.action",
             "calendar.dday.delete.confirm.title",
             "calendar.dday.delete.confirm.message",
+            "calendar.duty.batch.description.month",
+            "calendar.duty.batch.description.selection",
             "calendar.month.current",
             "calendar.discard.title",
             "calendar.discard.message",
@@ -200,6 +202,30 @@ final class CalendarFeatureTests: XCTestCase {
     func testDestructiveModalRejectsDuplicateConfirmationWhileWorking() {
         XCTAssertTrue(CalendarDestructiveActionPolicy.canBegin(isWorking: false))
         XCTAssertFalse(CalendarDestructiveActionPolicy.canBegin(isWorking: true))
+    }
+
+    func testDDayEditorDeleteUsesOnlyTheCentralConfirmationRoute() {
+        XCTAssertEqual(
+            CalendarDDayEditorDeleteRoutingPolicy.route(
+                hasExistingDDay: true,
+                hasCentralConfirmationHandler: true
+            ),
+            .centralConfirmation
+        )
+        XCTAssertEqual(
+            CalendarDDayEditorDeleteRoutingPolicy.route(
+                hasExistingDDay: true,
+                hasCentralConfirmationHandler: false
+            ),
+            .unavailable
+        )
+        XCTAssertEqual(
+            CalendarDDayEditorDeleteRoutingPolicy.route(
+                hasExistingDDay: false,
+                hasCentralConfirmationHandler: true
+            ),
+            .unavailable
+        )
     }
 
     func testDDayDeleteSuccessEnablesDismissalBeforeYieldingToPresenter() async {
