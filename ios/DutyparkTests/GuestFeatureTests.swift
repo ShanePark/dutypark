@@ -74,6 +74,27 @@ final class GuestPublicLinkTests: XCTestCase {
         )
     }
 
+    func testGuestGuideTitleMatchesTheWebGuideTitleInEverySupportedLocale() throws {
+        let expectedTitles = [
+            "en": "Guide",
+            "ko": "이용 안내"
+        ]
+
+        for (locale, expectedTitle) in expectedTitles {
+            let url = try XCTUnwrap(Bundle.main.url(forResource: locale, withExtension: "lproj"))
+            let bundle = try XCTUnwrap(Bundle(url: url))
+
+            XCTAssertEqual(
+                bundle.localizedString(
+                    forKey: "guest.guide.title",
+                    value: "guest.guide.title",
+                    table: "Guest"
+                ),
+                expectedTitle
+            )
+        }
+    }
+
     func testPublicCalendarDetailStringsResolveInEverySupportedLocale() throws {
         let keys = [
             "guest.calendar.duty",
