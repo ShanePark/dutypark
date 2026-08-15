@@ -246,7 +246,7 @@ struct TeamView: View {
         let columns = Array(repeating: GridItem(.flexible(), spacing: 0), count: 7)
         return VStack(spacing: 0) {
             LazyVGrid(columns: columns, spacing: 0) {
-                ForEach(Array(Calendar.current.shortStandaloneWeekdaySymbols.enumerated()), id: \.offset) { index, weekday in
+                ForEach(Array(TeamLocalization.shortStandaloneWeekdaySymbols.enumerated()), id: \.offset) { index, weekday in
                     Text(verbatim: weekday)
                         .font(DPTypography.caption)
                         .foregroundStyle(TeamVisualStyle.weekdayColor(index))
@@ -820,6 +820,12 @@ func teamLocalized(_ key: String) -> String {
 }
 
 nonisolated enum TeamLocalization {
+    static var shortStandaloneWeekdaySymbols: [String] {
+        var calendar = Calendar.current
+        calendar.locale = AppLocalization.locale
+        return calendar.shortStandaloneWeekdaySymbols
+    }
+
     static func monthName(_ month: Int, locale: Locale = AppLocalization.locale) -> String {
         guard (1...12).contains(month) else { return String(month) }
         let formatter = DateFormatter()

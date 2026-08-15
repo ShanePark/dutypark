@@ -75,6 +75,29 @@ struct TeamFeatureTests {
         #expect(TeamLocalization.monthName(8) == "August")
     }
 
+    @Test @MainActor
+    func weekdayNamesFollowTheAppLanguageInsteadOfTheDeviceCalendar() {
+        let defaults = UserDefaults.standard
+        let previousLanguage = defaults.string(forKey: SettingsPreference.languageKey)
+        defer {
+            if let previousLanguage {
+                defaults.set(previousLanguage, forKey: SettingsPreference.languageKey)
+            } else {
+                defaults.removeObject(forKey: SettingsPreference.languageKey)
+            }
+        }
+
+        var englishDeviceCalendar = Calendar(identifier: .gregorian)
+        englishDeviceCalendar.locale = Locale(identifier: "en_US")
+        #expect(englishDeviceCalendar.shortStandaloneWeekdaySymbols.first == "Sun")
+
+        defaults.set(AppLanguage.korean.rawValue, forKey: SettingsPreference.languageKey)
+        #expect(TeamLocalization.shortStandaloneWeekdaySymbols.first == "일")
+
+        defaults.set(AppLanguage.english.rawValue, forKey: SettingsPreference.languageKey)
+        #expect(TeamLocalization.shortStandaloneWeekdaySymbols.first == "Sun")
+    }
+
     @Test
     func teamAdminToolPermissionIncludesServiceAdminAndTeamRoles() {
         let team = managedTeam(

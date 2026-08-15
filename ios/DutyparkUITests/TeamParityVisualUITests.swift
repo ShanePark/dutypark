@@ -22,6 +22,19 @@ final class TeamParityVisualUITests: XCTestCase {
     }
 
     @MainActor
+    func testKoreanWeekdaysFollowAppLanguageWhenDeviceIsEnglish() {
+        let app = launchTeamFixture(deviceLanguage: "en", deviceLocale: "en_US")
+        defer { app.terminate() }
+
+        for weekday in ["일", "월", "화", "수", "목", "금", "토"] {
+            XCTAssertTrue(app.staticTexts[weekday].firstMatch.exists)
+        }
+        XCTAssertFalse(app.staticTexts["Sun"].exists)
+        XCTAssertFalse(app.staticTexts["Mon"].exists)
+        capture("parity-ios-team-weekdays-ko-app-en-device-after")
+    }
+
+    @MainActor
     func testJoinedTeamScheduleDeleteUsesCenteredConfirmation() {
         let app = launchTeamFixture()
         defer { app.terminate() }
@@ -113,13 +126,16 @@ final class TeamParityVisualUITests: XCTestCase {
     }
 
     @MainActor
-    private func launchTeamFixture() -> XCUIApplication {
+    private func launchTeamFixture(
+        deviceLanguage: String = "ko",
+        deviceLocale: String = "ko_KR"
+    ) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += [
             "-dp-language", "ko",
             "-dp-theme", "dark",
-            "-AppleLanguages", "(ko)",
-            "-AppleLocale", "ko_KR",
+            "-AppleLanguages", "(\(deviceLanguage))",
+            "-AppleLocale", deviceLocale,
             "-ui-testing-authenticated",
             "-ui-testing-team-fixture",
         ]
