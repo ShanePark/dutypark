@@ -72,6 +72,9 @@ struct SettingsFeatureTests {
             "settings.pattern.unavailable.default",
             "settings.pattern.saveConfirm",
             "settings.pattern.deleteConfirm",
+            "settings.photo.deleteConfirm",
+            "settings.manager.removeMessage",
+            "settings.managed.switchMessage",
             "settings.accessibility.on",
             "settings.accessibility.off",
             "settings.sessions.empty",
@@ -225,12 +228,47 @@ struct SettingsFeatureTests {
 
         let individual = SettingsSessionConfirmation.session(sessionToken(id: 9))
         #expect(individual.titleKey == "settings.sessions.revokeTitle")
-        #expect(individual.message.contains("해당 기기"))
+        #expect(individual.message.contains("Apple iOS Device"))
+        #expect(individual.message.contains("Dutypark"))
+        #expect(individual.message.contains("127.0.0.1"))
+        #expect(!individual.message.contains("{device}"))
 
         let allOthers = SettingsSessionConfirmation.otherSessions(count: 3)
         #expect(allOthers.titleKey == "settings.sessions.revokeOthersTitle")
         #expect(allOthers.message.contains("현재 접속을 제외"))
         #expect(allOthers.message.contains("3"))
+    }
+
+    @Test
+    func consequentialSettingsActionsUseCentralConfirmationContent() {
+        let defaults = UserDefaults.standard
+        let previous = defaults.string(forKey: SettingsPreference.languageKey)
+        defer {
+            if let previous { defaults.set(previous, forKey: SettingsPreference.languageKey) }
+            else { defaults.removeObject(forKey: SettingsPreference.languageKey) }
+        }
+        defaults.set(AppLanguage.korean.rawValue, forKey: SettingsPreference.languageKey)
+
+        let photo = SettingsConfirmation.deleteProfilePhoto
+        #expect(photo.titleKey == "settings.photo.delete")
+        #expect(photo.message.contains("프로필 사진"))
+        #expect(photo.confirmTitleKey == "settings.photo.delete")
+        #expect(photo.isDestructive)
+
+        let manager = SettingsConfirmation.removeManager(id: 7, name: "Alex")
+        #expect(manager.message.contains("Alex"))
+        #expect(!manager.message.contains("{name}"))
+        #expect(manager.isDestructive)
+
+        let managedAccount = SettingsConfirmation.switchManagedAccount(id: 9, name: "Mina")
+        #expect(managedAccount.message.contains("Mina"))
+        #expect(managedAccount.confirmTitleKey == "settings.managed.switch")
+        #expect(!managedAccount.isDestructive)
+
+        let sessions = SettingsConfirmation.session(.otherSessions(count: 2))
+        #expect(sessions.message.contains("2"))
+        #expect(sessions.isDestructive)
+        #expect(SettingsConfirmation.logout.isDestructive)
     }
 
     @Test
@@ -258,7 +296,7 @@ struct SettingsFeatureTests {
         ))
         var gate = SettingsDestructiveActionGate()
 
-        // Cancelling the system alert never starts the destructive action.
+        // Cancelling the confirmation panel never starts the destructive action.
         #expect(!gate.isWorking)
         #expect(recorder.requests.isEmpty)
 

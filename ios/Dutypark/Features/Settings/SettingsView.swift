@@ -35,20 +35,15 @@ struct SettingsView: View {
     @AppStorage(SettingsPreference.themeKey) private var themeCode = SettingsPreference.defaultTheme
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var photoToCrop: UIImage?
-    @State private var showPhotoActions = false
     @State private var showVisibility = false
     @State private var showPattern = false
     @State private var showPassword = false
     @State private var showAuxiliary = false
-    @State private var showLogout = false
     @State private var showAIConsentConfirmation = false
-    @State private var logoutAction = SettingsDestructiveActionGate()
     @State private var showAccountDeletion = false
     @State private var accountDeletionIsWorking = false
-    @State private var managerToRemove: MemberDTO?
-    @State private var sessionConfirmation: SettingsSessionConfirmation?
-    @State private var sessionAction = SettingsDestructiveActionGate()
-    @State private var memberToImpersonate: MemberDTO?
+    @State private var confirmation: SettingsConfirmation?
+    @State private var confirmationAction = SettingsDestructiveActionGate()
     @State private var isLinking: OAuthProvider?
     @State private var isUnlinking: OAuthProvider?
     @State private var socialManagementPresentation: SettingsSocialManagementPresentation?
@@ -226,15 +221,26 @@ struct SettingsView: View {
                 )
             }
         }
-        .alert(item: $sessionConfirmation) { confirmation in
-            Alert(
-                title: Text(SettingsLocalization.string(confirmation.titleKey)),
-                message: Text(confirmation.message),
-                primaryButton: .destructive(Text(SettingsLocalization.string("settings.action.confirm"))) {
-                    Task { await performSessionConfirmation(confirmation) }
-                },
-                secondaryButton: .cancel(Text(SettingsLocalization.string("settings.action.cancel")))
-            )
+        .fullScreenCover(item: $confirmation) { requestedAction in
+            DPModalOverlay(
+                maximumContentWidth: DPConfirmationPanel.maximumWidth,
+                onDismiss: { confirmation = nil },
+                canDismiss: !confirmationIsWorking
+            ) { availableSize, confirmationDismiss in
+                DPConfirmationPanel(
+                    title: SettingsLocalization.string(requestedAction.titleKey),
+                    message: requestedAction.message,
+                    confirmTitle: SettingsLocalization.string(requestedAction.confirmTitleKey),
+                    cancelTitle: SettingsLocalization.string("settings.action.cancel"),
+                    isDestructive: requestedAction.isDestructive,
+                    isWorking: confirmationIsWorking,
+                    maximumHeight: availableSize.height,
+                    cancel: confirmationDismiss,
+                    confirm: {
+                        performConfirmation(requestedAction, dismiss: confirmationDismiss)
+                    }
+                )
+            }
         }
         .sheet(isPresented: cropSheetBinding) {
             if let photoToCrop {
@@ -249,42 +255,6 @@ struct SettingsView: View {
                     self.photoToCrop = nil
                 }
             }
-        }
-        .confirmationDialog(SettingsLocalization.string("settings.photo.actions"), isPresented: $showPhotoActions) {
-            if model.member?.hasProfilePhoto == true {
-                Button(SettingsLocalization.string("settings.photo.delete"), role: .destructive) {
-                    Task {
-                        if await model.deleteProfilePhoto() {
-                            onProfilePhotoChanged()
-                        }
-                    }
-                }
-            }
-            Button(SettingsLocalization.string("settings.action.cancel"), role: .cancel) {}
-        }
-        .alert(SettingsLocalization.string("settings.logout.confirmTitle"), isPresented: $showLogout) {
-            Button(SettingsLocalization.string("settings.logout"), role: .destructive) {
-                Task { await performLogout() }
-            }
-            Button(SettingsLocalization.string("settings.action.cancel"), role: .cancel) {}
-        } message: {
-            SettingsLocalization.text("settings.logout.confirmMessage")
-        }
-        .confirmationDialog(SettingsLocalization.string("settings.manager.removeTitle"), isPresented: removeManagerBinding) {
-            Button(SettingsLocalization.string("settings.manager.remove"), role: .destructive) {
-                guard let id = managerToRemove?.id else { return }
-                Task { await model.unassignManager(id) }
-            }
-            Button(SettingsLocalization.string("settings.action.cancel"), role: .cancel) {}
-        }
-        .confirmationDialog(SettingsLocalization.string("settings.managed.switchTitle"), isPresented: impersonateBinding) {
-            Button(SettingsLocalization.string("settings.managed.switch")) {
-                guard let id = memberToImpersonate?.id else { return }
-                Task {
-                    try? await session.impersonate(memberId: id)
-                }
-            }
-            Button(SettingsLocalization.string("settings.action.cancel"), role: .cancel) {}
         }
         .alert(SettingsLocalization.string("settings.notice.title"), isPresented: noticeBinding) {
             Button(SettingsLocalization.string("settings.action.confirm")) {
@@ -315,7 +285,7 @@ struct SettingsView: View {
                 SettingsLocalization.text(key)
             }
         }
-        .disabled(model.isWorking || logoutAction.isWorking || sessionAction.isWorking)
+        .disabled(model.isWorking || confirmationAction.isWorking)
         .navigationDestination(item: $destination) { destination in
             switch destination {
             case .guide:
@@ -365,7 +335,7 @@ struct SettingsView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             if model.member?.hasProfilePhoto == true {
-                Button { showPhotoActions = true } label: {
+                Button { confirmation = .deleteProfilePhoto } label: {
                     Label(SettingsLocalization.string("settings.photo.delete"), systemImage: "trash")
                         .frame(maxWidth: .infinity)
                 }
@@ -622,7 +592,10 @@ struct SettingsView: View {
                     HStack {
                         Text(manager.name).font(DPTypography.body)
                         Spacer()
-                        Button { managerToRemove = manager } label: {
+                        Button {
+                            guard let id = manager.id else { return }
+                            confirmation = .removeManager(id: id, name: manager.name)
+                        } label: {
                             Image(systemName: "trash")
                                 .frame(width: 44, height: 44)
                         }
@@ -661,7 +634,10 @@ struct SettingsView: View {
                         }
                     }
                     Spacer()
-                    Button { memberToImpersonate = member } label: {
+                    Button {
+                        guard let id = member.id else { return }
+                        confirmation = .switchManagedAccount(id: id, name: member.name)
+                    } label: {
                         Image(systemName: "rectangle.portrait.and.arrow.right")
                             .frame(width: 44, height: 44)
                             .background(DPColor.accentSoft, in: RoundedRectangle(cornerRadius: DPRadius.standard))
@@ -692,7 +668,7 @@ struct SettingsView: View {
                 if otherSessionCount > 0 {
                     Button {
                         withoutPresentationAnimation {
-                            sessionConfirmation = .otherSessions(count: otherSessionCount)
+                            confirmation = .session(.otherSessions(count: otherSessionCount))
                         }
                     } label: {
                         Label(
@@ -717,7 +693,7 @@ struct SettingsView: View {
                 ForEach(sortedSessions) { token in
                     SettingsSessionCard(token: token) {
                         withoutPresentationAnimation {
-                            sessionConfirmation = .session(token)
+                            confirmation = .session(.session(token))
                         }
                     }
                 }
@@ -810,7 +786,7 @@ struct SettingsView: View {
 
     private var logoutSection: some View {
         VStack {
-            Button { showLogout = true } label: {
+            Button { confirmation = .logout } label: {
                 Label(SettingsLocalization.string("settings.logout"), systemImage: "rectangle.portrait.and.arrow.right")
                     .frame(maxWidth: .infinity)
             }
@@ -900,14 +876,6 @@ struct SettingsView: View {
                 }
             }
         )
-    }
-
-    private var removeManagerBinding: Binding<Bool> {
-        Binding(get: { managerToRemove != nil }, set: { if !$0 { managerToRemove = nil } })
-    }
-
-    private var impersonateBinding: Binding<Bool> {
-        Binding(get: { memberToImpersonate != nil }, set: { if !$0 { memberToImpersonate = nil } })
     }
 
     private var cropSheetBinding: Binding<Bool> {
@@ -1141,22 +1109,36 @@ struct SettingsView: View {
         }
     }
 
-    private func performLogout() async {
-        guard logoutAction.start() else { return }
-        defer { logoutAction.finish() }
-        await session.logout()
+    private var confirmationIsWorking: Bool {
+        confirmationAction.isWorking || model.isWorking
     }
 
-    private func performSessionConfirmation(_ confirmation: SettingsSessionConfirmation) async {
-        guard sessionAction.start() else { return }
-        defer { sessionAction.finish() }
-
-        switch confirmation {
-        case .session(let token):
-            guard SettingsSessionPolicy.canRevoke(token) else { return }
-            _ = await model.revokeSession(id: token.id)
-        case .otherSessions:
-            _ = await model.revokeOtherSessions()
+    private func performConfirmation(
+        _ requestedAction: SettingsConfirmation,
+        dismiss: @escaping () -> Void
+    ) {
+        guard confirmationAction.start() else { return }
+        Task {
+            switch requestedAction {
+            case .deleteProfilePhoto:
+                if await model.deleteProfilePhoto() {
+                    onProfilePhotoChanged()
+                }
+            case .logout:
+                await session.logout()
+            case .removeManager(let id, _):
+                await model.unassignManager(id)
+            case .switchManagedAccount(let id, _):
+                try? await session.impersonate(memberId: id)
+            case .session(.session(let token)):
+                if SettingsSessionPolicy.canRevoke(token) {
+                    _ = await model.revokeSession(id: token.id)
+                }
+            case .session(.otherSessions):
+                _ = await model.revokeOtherSessions()
+            }
+            confirmationAction.finish()
+            dismiss()
         }
     }
 
@@ -1303,6 +1285,69 @@ nonisolated enum SettingsSessionFormatter {
     }
 }
 
+enum SettingsConfirmation: Identifiable {
+    case deleteProfilePhoto
+    case logout
+    case removeManager(id: MemberID, name: String)
+    case switchManagedAccount(id: MemberID, name: String)
+    case session(SettingsSessionConfirmation)
+
+    var id: String {
+        switch self {
+        case .deleteProfilePhoto: "delete-profile-photo"
+        case .logout: "logout"
+        case .removeManager(let id, _): "remove-manager-\(id)"
+        case .switchManagedAccount(let id, _): "switch-managed-account-\(id)"
+        case .session(let confirmation): confirmation.id
+        }
+    }
+
+    var titleKey: String {
+        switch self {
+        case .deleteProfilePhoto: "settings.photo.delete"
+        case .logout: "settings.logout.confirmTitle"
+        case .removeManager: "settings.manager.removeTitle"
+        case .switchManagedAccount: "settings.managed.switch"
+        case .session(let confirmation): confirmation.titleKey
+        }
+    }
+
+    var confirmTitleKey: String {
+        switch self {
+        case .deleteProfilePhoto: "settings.photo.delete"
+        case .logout: "settings.logout"
+        case .removeManager: "settings.manager.remove"
+        case .switchManagedAccount: "settings.managed.switch"
+        case .session(.session): "settings.sessions.revoke"
+        case .session(.otherSessions): "settings.sessions.revokeOthers"
+        }
+    }
+
+    var message: String {
+        switch self {
+        case .deleteProfilePhoto:
+            SettingsLocalization.string("settings.photo.deleteConfirm")
+        case .logout:
+            SettingsLocalization.string("settings.logout.confirmMessage")
+        case .removeManager(_, let name):
+            SettingsLocalization.string("settings.manager.removeMessage")
+                .replacingOccurrences(of: "{name}", with: name)
+        case .switchManagedAccount(_, let name):
+            SettingsLocalization.string("settings.managed.switchMessage")
+                .replacingOccurrences(of: "{name}", with: name)
+        case .session(let confirmation):
+            confirmation.message
+        }
+    }
+
+    var isDestructive: Bool {
+        switch self {
+        case .switchManagedAccount: false
+        case .deleteProfilePhoto, .logout, .removeManager, .session: true
+        }
+    }
+}
+
 enum SettingsSessionConfirmation: Identifiable {
     case session(SettingsRefreshToken)
     case otherSessions(count: Int)
@@ -1323,8 +1368,11 @@ enum SettingsSessionConfirmation: Identifiable {
 
     var message: String {
         switch self {
-        case .session:
+        case .session(let token):
             SettingsLocalization.string("settings.sessions.revokeMessage")
+                .replacingOccurrences(of: "{device}", with: token.userAgent?.device ?? "-")
+                .replacingOccurrences(of: "{browser}", with: token.userAgent?.browser ?? "-")
+                .replacingOccurrences(of: "{ip}", with: token.remoteAddr ?? "-")
         case .otherSessions(let count):
             SettingsLocalization.string("settings.sessions.revokeOthersMessage")
                 .replacingOccurrences(of: "{count}", with: "\(count)")

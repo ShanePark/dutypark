@@ -386,13 +386,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Do you want to log out?"
+            "value": "Do you want to log out now?"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "로그아웃할까요?"
+            "value": "정말 로그아웃 하시겠습니까?"
           }
         }
       }
@@ -459,6 +459,12 @@
             "value": "계정 전환"
           }
         }
+      }
+    },
+    "settings.managed.switchMessage": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Switch to {name}?\n\nAfter switching, you can use all features in that account." } },
+        "ko": { "stringUnit": { "state": "translated", "value": "{name} 계정으로 전환하시겠습니까?\n\n전환 후에는 해당 계정의 모든 기능을 사용할 수 있습니다." } }
       }
     },
     "settings.managed.switchTitle": {
@@ -571,6 +577,12 @@
             "value": "해제"
           }
         }
+      }
+    },
+    "settings.manager.removeMessage": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Remove {name} from managers?" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "{name} 님의 관리자 권한을 해제하시겠습니까?" } }
       }
     },
     "settings.manager.removeTitle": {
@@ -829,6 +841,12 @@
         }
       }
     },
+    "settings.photo.deleteConfirm": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Delete the current profile photo?" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "현재 프로필 사진을 삭제하시겠습니까?" } }
+      }
+    },
     "settings.photo.deleted": {
       "localizations": {
         "en": {
@@ -1072,13 +1090,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Are you sure you want to sign out? This device will be signed out."
+            "value": "End the {device} · {browser} ({ip}) session?"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "정말 로그아웃 하시겠습니까? 해당 기기에서 로그아웃 됩니다."
+            "value": "{device} · {browser} ({ip}) 세션을 종료하시겠습니까?"
           }
         }
       }
