@@ -8,10 +8,98 @@ nonisolated protocol APNsRegistrationAPIProtocol: Sendable {
     func unregister(deviceToken: String) async throws
 }
 
+nonisolated enum EmbeddedProvisioningProfileState: Sendable {
+    case absent
+    case unreadable
+    case loaded(Data)
+}
+
+nonisolated enum APNsEnvironmentResolutionError: Error, Equatable {
+    case invalidEmbeddedProvisioningProfile
+}
+
+nonisolated enum APNsEnvironment {
+    static var usesSandbox: Bool {
+        get throws {
+            try usesSandbox(
+                profileState: embeddedProvisioningProfileState(),
+                fallback: compileConfigurationUsesSandbox
+            )
+        }
+    }
+
+    static func usesSandbox(
+        profileState: EmbeddedProvisioningProfileState,
+        fallback: Bool
+    ) throws -> Bool {
+        switch profileState {
+        case .absent:
+            return fallback
+        case .unreadable:
+            throw APNsEnvironmentResolutionError.invalidEmbeddedProvisioningProfile
+        case let .loaded(profileData):
+            guard let entitlementValue = entitlementValue(profileData: profileData) else {
+                throw APNsEnvironmentResolutionError.invalidEmbeddedProvisioningProfile
+            }
+            switch entitlementValue.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+            case "production":
+                return false
+            case "development":
+                return true
+            default:
+                throw APNsEnvironmentResolutionError.invalidEmbeddedProvisioningProfile
+            }
+        }
+    }
+
+    private static var compileConfigurationUsesSandbox: Bool {
+#if DEBUG
+        true
+#else
+        false
+#endif
+    }
+
+    private static func embeddedProvisioningProfileState(
+        bundle: Bundle = .main
+    ) -> EmbeddedProvisioningProfileState {
+        guard let profileURL = bundle.url(forResource: "embedded", withExtension: "mobileprovision") else {
+            return .absent
+        }
+        guard let profileData = try? Data(contentsOf: profileURL) else {
+            return .unreadable
+        }
+        return .loaded(profileData)
+    }
+
+    static func entitlementValue(profileData: Data) -> String? {
+        guard let plistStart = profileData.range(of: Data("<?xml".utf8))?.lowerBound,
+              let plistEndRange = profileData.range(of: Data("</plist>".utf8), options: .backwards)
+        else {
+            return nil
+        }
+        let plistEnd = plistEndRange.upperBound
+        guard plistStart < plistEnd,
+              let profile = try? PropertyListSerialization.propertyList(
+                from: profileData[plistStart..<plistEnd],
+                format: nil
+              ) as? [String: Any],
+              let entitlements = profile["Entitlements"] as? [String: Any]
+        else {
+            return nil
+        }
+        return entitlements["aps-environment"] as? String
+    }
+}
+
 nonisolated struct APNsRegistrationAPI: APNsRegistrationAPIProtocol {
-    private struct DeviceTokenRequest: Encodable, Sendable {
+    private struct RegistrationRequest: Encodable, Sendable {
         let deviceToken: String
         let sandbox: Bool
+    }
+
+    private struct UnregistrationRequest: Encodable, Sendable {
+        let deviceToken: String
     }
 
     private struct SuccessResponse: Decodable, Sendable {
@@ -25,10 +113,11 @@ nonisolated struct APNsRegistrationAPI: APNsRegistrationAPIProtocol {
     }
 
     func register(deviceToken: String) async throws {
+        let sandbox = try APNsEnvironment.usesSandbox
         let _: SuccessResponse = try await client.request(
             "auth/push/apns/register",
             method: .post,
-            body: DeviceTokenRequest(deviceToken: deviceToken, sandbox: Self.usesSandbox),
+            body: RegistrationRequest(deviceToken: deviceToken, sandbox: sandbox),
             authenticationFailureHandling: .deferred
         )
     }
@@ -37,17 +126,9 @@ nonisolated struct APNsRegistrationAPI: APNsRegistrationAPIProtocol {
         let _: SuccessResponse = try await client.request(
             "auth/push/apns/unregister",
             method: .post,
-            body: DeviceTokenRequest(deviceToken: deviceToken, sandbox: Self.usesSandbox),
+            body: UnregistrationRequest(deviceToken: deviceToken),
             retryingAfterUnauthorized: false
         )
-    }
-
-    private static var usesSandbox: Bool {
-#if DEBUG
-        true
-#else
-        false
-#endif
     }
 }
 
@@ -334,6 +415,13 @@ final class NotificationPushCenter: ObservableObject {
 
 /// Add with `@UIApplicationDelegateAdaptor` in `DutyparkApp` to bridge APNs callbacks.
 final class NotificationAppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCenterDelegate {
+    nonisolated static let foregroundPresentationOptions: UNNotificationPresentationOptions = [
+        .banner,
+        .list,
+        .sound,
+        .badge
+    ]
+
     func application(
         _ application: UIApplication,
         didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
@@ -370,7 +458,7 @@ final class NotificationAppDelegate: NSObject, UIApplicationDelegate, UNUserNoti
         willPresent notification: UNNotification,
         withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void
     ) {
-        completionHandler([.banner, .sound, .badge])
+        completionHandler(Self.foregroundPresentationOptions)
     }
 
     nonisolated func userNotificationCenter(

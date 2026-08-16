@@ -212,6 +212,94 @@ struct NotificationFeatureTests {
     }
 
     @Test
+    func derivesAPNsEnvironmentFromSignedEntitlement() throws {
+        #expect(try APNsEnvironment.usesSandbox(
+            profileState: .loaded(apnsProfile(environment: "development")),
+            fallback: false
+        ))
+        #expect(try !APNsEnvironment.usesSandbox(
+            profileState: .loaded(apnsProfile(environment: "production")),
+            fallback: true
+        ))
+    }
+
+    @Test
+    func readsAPNsEnvironmentFromEmbeddedProvisioningProfile() {
+        let profile = apnsProfile(environment: "development")
+
+        #expect(APNsEnvironment.entitlementValue(profileData: profile) == "development")
+    }
+
+    @Test
+    func missingEmbeddedProvisioningProfileUsesCompileConfigurationFallback() throws {
+        #expect(try APNsEnvironment.usesSandbox(profileState: .absent, fallback: true))
+        #expect(try !APNsEnvironment.usesSandbox(profileState: .absent, fallback: false))
+    }
+
+    @Test
+    func existingButUnusableEmbeddedProvisioningProfileFailsResolution() {
+        #expect(throws: APNsEnvironmentResolutionError.invalidEmbeddedProvisioningProfile) {
+            try APNsEnvironment.usesSandbox(profileState: .unreadable, fallback: false)
+        }
+        #expect(throws: APNsEnvironmentResolutionError.invalidEmbeddedProvisioningProfile) {
+            try APNsEnvironment.usesSandbox(
+                profileState: .loaded(Data("malformed".utf8)),
+                fallback: false
+            )
+        }
+        #expect(throws: APNsEnvironmentResolutionError.invalidEmbeddedProvisioningProfile) {
+            try APNsEnvironment.usesSandbox(
+                profileState: .loaded(apnsProfile(environment: "unknown")),
+                fallback: false
+            )
+        }
+    }
+
+    @Test
+    func unregisterStillSendsWhenEmbeddedProvisioningProfileIsUnusable() async throws {
+        #expect(throws: APNsEnvironmentResolutionError.invalidEmbeddedProvisioningProfile) {
+            try APNsEnvironment.usesSandbox(profileState: .unreadable, fallback: false)
+        }
+        #expect(throws: APNsEnvironmentResolutionError.invalidEmbeddedProvisioningProfile) {
+            try APNsEnvironment.usesSandbox(
+                profileState: .loaded(Data("malformed".utf8)),
+                fallback: false
+            )
+        }
+
+        let recorder = APNsUnregistrationRequestRecorder()
+        let host = "apns-\(UUID().uuidString).example.com"
+        APNsUnregistrationURLProtocolStub.recorders.register(recorder, for: host)
+        defer { APNsUnregistrationURLProtocolStub.recorders.unregister(host: host) }
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [APNsUnregistrationURLProtocolStub.self]
+        let client = APIClient(
+            baseURL: URL(string: "https://\(host)/api/")!,
+            session: URLSession(configuration: configuration)
+        )
+
+        try await APNsRegistrationAPI(client: client).unregister(deviceToken: "abc123")
+
+        let request = try #require(recorder.request)
+        #expect(request.httpMethod == "POST")
+        #expect(request.url?.path == "/api/auth/push/apns/unregister")
+        let body = try #require(recorder.body)
+        let json = try #require(
+            JSONSerialization.jsonObject(with: body) as? [String: Any]
+        )
+        #expect(json["deviceToken"] as? String == "abc123")
+        #expect(json["sandbox"] == nil)
+    }
+
+    @Test
+    func foregroundNotificationsArePresentedInNotificationCenter() {
+        #expect(NotificationAppDelegate.foregroundPresentationOptions.contains(.banner))
+        #expect(NotificationAppDelegate.foregroundPresentationOptions.contains(.list))
+        #expect(NotificationAppDelegate.foregroundPresentationOptions.contains(.sound))
+        #expect(NotificationAppDelegate.foregroundPresentationOptions.contains(.badge))
+    }
+
+    @Test
     func persistsExplicitPushPreferenceAndDefaultsToEnabled() throws {
         let suiteName = "NotificationFeatureTests.pushPreference.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suiteName))
@@ -629,6 +717,20 @@ struct NotificationFeatureTests {
         return try JSONDecoder().decode(PageResponse<NotificationDTO>.self, from: Data(contentsOf: url))
     }
 
+    private func apnsProfile(environment: String) -> Data {
+        Data("""
+            CMS prefix
+            <?xml version="1.0" encoding="UTF-8"?>
+            <plist version="1.0">
+            <dict>
+                <key>Entitlements</key>
+                <dict><key>aps-environment</key><string>\(environment)</string></dict>
+            </dict>
+            </plist>
+            CMS suffix
+            """.utf8)
+    }
+
     private func decodeNotification(
         type: String,
         referenceType: String,
@@ -654,6 +756,98 @@ struct NotificationFeatureTests {
 }
 
 private final class NotificationFixtureBundleToken {}
+
+private final class APNsUnregistrationRequestRecorder: @unchecked Sendable {
+    private let lock = NSLock()
+    private var storedRequest: URLRequest?
+    private var storedBody: Data?
+
+    var request: URLRequest? {
+        lock.lock()
+        defer { lock.unlock() }
+        return storedRequest
+    }
+
+    var body: Data? {
+        lock.lock()
+        defer { lock.unlock() }
+        return storedBody
+    }
+
+    func record(_ request: URLRequest) {
+        let body = request.httpBody ?? request.httpBodyStream.flatMap(Self.readBody)
+        lock.lock()
+        storedRequest = request
+        storedBody = body
+        lock.unlock()
+    }
+
+    private static func readBody(from stream: InputStream) -> Data? {
+        stream.open()
+        defer { stream.close() }
+        var data = Data()
+        var buffer = [UInt8](repeating: 0, count: 4_096)
+        while true {
+            let count = stream.read(&buffer, maxLength: buffer.count)
+            if count < 0 { return nil }
+            if count == 0 { return data }
+            data.append(contentsOf: buffer.prefix(count))
+        }
+    }
+}
+
+private final class APNsUnregistrationRecorderStore: @unchecked Sendable {
+    private let lock = NSLock()
+    private var recorders: [String: APNsUnregistrationRequestRecorder] = [:]
+
+    func register(_ recorder: APNsUnregistrationRequestRecorder, for host: String) {
+        lock.lock()
+        recorders[host] = recorder
+        lock.unlock()
+    }
+
+    func unregister(host: String) {
+        lock.lock()
+        recorders[host] = nil
+        lock.unlock()
+    }
+
+    func recorder(for host: String) -> APNsUnregistrationRequestRecorder? {
+        lock.lock()
+        defer { lock.unlock() }
+        return recorders[host]
+    }
+}
+
+private final class APNsUnregistrationURLProtocolStub: URLProtocol, @unchecked Sendable {
+    static let recorders = APNsUnregistrationRecorderStore()
+
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+
+    override func startLoading() {
+        guard let url = request.url,
+              let host = url.host,
+              let recorder = Self.recorders.recorder(for: host)
+        else {
+            client?.urlProtocol(self, didFailWithError: URLError(.badServerResponse))
+            return
+        }
+        recorder.record(request)
+        let response = HTTPURLResponse(
+            url: url,
+            statusCode: 200,
+            httpVersion: nil,
+            headerFields: nil
+        )!
+        let data = Data(#"{"success":true}"#.utf8)
+        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: data)
+        client?.urlProtocolDidFinishLoading(self)
+    }
+
+    override func stopLoading() {}
+}
 
 @MainActor
 private final class NotificationAuthorizationCenterMock: NotificationAuthorizationCenter {

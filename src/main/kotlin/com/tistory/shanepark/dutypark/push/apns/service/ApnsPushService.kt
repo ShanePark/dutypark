@@ -23,21 +23,25 @@ import java.net.http.HttpResponse
 import java.security.KeyFactory
 import java.security.PrivateKey
 import java.security.spec.PKCS8EncodedKeySpec
+import java.time.Clock
 import java.time.Duration
+import java.time.Instant
 import java.time.LocalDateTime
 import java.util.Base64
 import java.util.Date
+import java.util.UUID
 
 @Service
 class ApnsPushService @Autowired constructor(
     private val apnsInstallationRepository: ApnsInstallationRepository,
     private val objectMapper: ObjectMapper,
     @param:Value("\${dutypark.apns.team-id:}") private val teamId: String,
-    @param:Value("\${dutypark.apns.key-id:}") private val keyId: String,
-    @param:Value("\${dutypark.apns.private-key:}") private val privateKeyPem: String,
+    @param:Value("\${dutypark.apns.key-id:}") keyId: String,
+    @param:Value("\${dutypark.apns.private-key:}") privateKeyPem: String,
 ) {
     private val log = logger()
-    private val signingKey: PrivateKey? = parsePrivateKey(privateKeyPem)
+    private val credentials = credentials(keyId, privateKeyPem)
+    private var clock: Clock = Clock.systemUTC()
     private var httpClient: HttpClient = HttpClient.newBuilder()
         .version(HttpClient.Version.HTTP_2)
         .connectTimeout(Duration.ofSeconds(10))
@@ -50,27 +54,29 @@ class ApnsPushService @Autowired constructor(
         keyId: String,
         privateKeyPem: String,
         httpClient: HttpClient,
-    ) : this(apnsInstallationRepository, objectMapper, teamId, keyId, privateKeyPem) {
+        clock: Clock = Clock.systemUTC(),
+    ) : this(
+        apnsInstallationRepository,
+        objectMapper,
+        teamId,
+        keyId,
+        privateKeyPem,
+    ) {
         this.httpClient = httpClient
+        this.clock = clock
     }
 
     fun sendToMember(memberId: Long, payload: PushNotificationPayload) {
-        val key = signingKey ?: return
-        if (teamId.isBlank() || keyId.isBlank()) return
+        val credentials = credentials ?: return
+        if (teamId.isBlank()) return
 
         val installations = apnsInstallationRepository.findAllDeliverableByMemberId(memberId, LocalDateTime.now())
         if (installations.isEmpty()) return
 
-        val authorization = "bearer " + Jwts.builder()
-            .header().keyId(keyId).and()
-            .issuer(teamId)
-            .issuedAt(Date())
-            .signWith(key, Jwts.SIG.ES256)
-            .compact()
         val body = objectMapper.writeValueAsString(buildPayload(payload))
 
         installations.forEach { installation ->
-            send(installation, authorization, body)
+            send(installation, credentials.authorization(clock.instant()), body)
         }
     }
 
@@ -89,16 +95,37 @@ class ApnsPushService @Autowired constructor(
         httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
             .whenComplete { response, error ->
                 when {
-                    error != null -> log.warn("Failed to send APNs notification: {}", error.message)
+                    error != null -> log.warn("Failed to send APNs notification: {}", error.javaClass.simpleName)
                     response.statusCode() == 410 -> {
                         apnsInstallationRepository.delete(installation)
-                        log.info("Removed expired APNs installation")
+                        log.info(
+                            "Removed expired APNs installation: status={}, reason={}, apnsId={}",
+                            response.statusCode(),
+                            safeReason(response),
+                            safeApnsId(response),
+                        )
                     }
                     response.statusCode() !in 200..299 ->
-                        log.warn("APNs notification failed with status {}", response.statusCode())
+                        log.warn(
+                            "APNs notification failed: status={}, reason={}, apnsId={}",
+                            response.statusCode(),
+                            safeReason(response),
+                            safeApnsId(response),
+                        )
                 }
             }
     }
+
+    private fun safeReason(response: HttpResponse<String>): String = runCatching {
+        objectMapper.readTree(response.body()).get("reason")?.asText()
+            ?.takeIf(APNS_REASONS::contains)
+    }.getOrNull() ?: UNKNOWN_RESPONSE_VALUE
+
+    private fun safeApnsId(response: HttpResponse<String>): String = runCatching {
+        response.headers().firstValue("apns-id").orElse(null)
+            ?.let(UUID::fromString)
+            ?.toString()
+    }.getOrNull() ?: UNKNOWN_RESPONSE_VALUE
 
     internal fun buildPayload(payload: PushNotificationPayload): Map<String, Any> {
         val localized = localizedAlert(payload)
@@ -172,8 +199,13 @@ class ApnsPushService @Autowired constructor(
         LocalizedAlert("notifications.items.$name", listOf(actor, title))
     }
 
+    private fun credentials(keyId: String, privateKeyPem: String): ProviderCredentials? {
+        if (keyId.isBlank() || privateKeyPem.isBlank()) return null
+        val signingKey = parsePrivateKey(privateKeyPem) ?: return null
+        return ProviderCredentials(keyId, signingKey)
+    }
+
     private fun parsePrivateKey(value: String): PrivateKey? {
-        if (value.isBlank()) return null
         return try {
             val encoded = value.replace("\\n", "\n")
                 .replace("-----BEGIN PRIVATE KEY-----", "")
@@ -183,10 +215,44 @@ class ApnsPushService @Autowired constructor(
                 PKCS8EncodedKeySpec(Base64.getDecoder().decode(encoded))
             )
         } catch (e: Exception) {
-            log.error("APNs private key could not be loaded: {}", e.message)
+            log.error("APNs private key could not be loaded: {}", e.javaClass.simpleName)
             null
         }
     }
+
+    private inner class ProviderCredentials(
+        private val keyId: String,
+        private val signingKey: PrivateKey,
+    ) {
+        @Volatile
+        private var cachedToken: CachedProviderToken? = null
+
+        fun authorization(now: Instant): String {
+            val current = cachedToken
+            if (current != null && now.isBefore(current.refreshAt)) return current.authorization
+
+            return synchronized(this) {
+                val synchronizedCurrent = cachedToken
+                if (synchronizedCurrent != null && now.isBefore(synchronizedCurrent.refreshAt)) {
+                    synchronizedCurrent.authorization
+                } else {
+                    val authorization = "bearer " + Jwts.builder()
+                        .header().keyId(keyId).and()
+                        .issuer(teamId)
+                        .issuedAt(Date.from(now))
+                        .signWith(signingKey, Jwts.SIG.ES256)
+                        .compact()
+                    cachedToken = CachedProviderToken(authorization, now.plus(PROVIDER_TOKEN_REFRESH_INTERVAL))
+                    authorization
+                }
+            }
+        }
+    }
+
+    private data class CachedProviderToken(
+        val authorization: String,
+        val refreshAt: Instant,
+    )
 
     private data class LocalizedAlert(
         val key: String,
@@ -197,5 +263,41 @@ class ApnsPushService @Autowired constructor(
         private const val TOPIC = "io.github.shanepark.dutypark"
         private const val SANDBOX_HOST = "api.sandbox.push.apple.com"
         private const val PRODUCTION_HOST = "api.push.apple.com"
+        private const val UNKNOWN_RESPONSE_VALUE = "unknown"
+        private val PROVIDER_TOKEN_REFRESH_INTERVAL: Duration = Duration.ofMinutes(50)
+        private val APNS_REASONS = setOf(
+            "BadCollapseId",
+            "BadDeviceToken",
+            "BadEnvironmentKeyIdInToken",
+            "BadExpirationDate",
+            "BadMessageId",
+            "BadPriority",
+            "BadTopic",
+            "DeviceTokenNotForTopic",
+            "DuplicateHeaders",
+            "IdleTimeout",
+            "InvalidPushType",
+            "MissingDeviceToken",
+            "MissingTopic",
+            "PayloadEmpty",
+            "TopicDisallowed",
+            "BadCertificate",
+            "BadCertificateEnvironment",
+            "ExpiredProviderToken",
+            "Forbidden",
+            "InvalidProviderToken",
+            "MissingProviderToken",
+            "UnrelatedKeyIdInToken",
+            "BadPath",
+            "MethodNotAllowed",
+            "ExpiredToken",
+            "Unregistered",
+            "PayloadTooLarge",
+            "TooManyProviderTokenUpdates",
+            "TooManyRequests",
+            "InternalServerError",
+            "ServiceUnavailable",
+            "Shutdown",
+        )
     }
 }
