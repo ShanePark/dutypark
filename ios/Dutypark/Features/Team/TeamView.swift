@@ -73,16 +73,23 @@ struct TeamView: View {
             }
         }
         .sheet(isPresented: $monthPickerPresented) {
-            TeamYearMonthPicker(
+            DPYearMonthPicker(
                 selectedYear: viewModel.year,
-                selectedMonth: viewModel.month
-            ) { year, month in
-                monthPickerPresented = false
-                Task { await viewModel.goTo(year: year, month: month) }
-            } onToday: {
-                monthPickerPresented = false
-                Task { await viewModel.goToToday() }
-            }
+                selectedMonth: viewModel.month,
+                title: Text("team.view.calendar.chooseMonth", tableName: "Team"),
+                previousYearLabel: Text("team.view.calendar.previousYear", tableName: "Team"),
+                nextYearLabel: Text("team.view.calendar.nextYear", tableName: "Team"),
+                currentMonthTitle: Text("team.view.calendar.thisMonth", tableName: "Team"),
+                cancelTitle: teamLocalized("team.common.cancel"),
+                onSelect: { year, month in
+                    monthPickerPresented = false
+                    Task { await viewModel.goTo(year: year, month: month) }
+                },
+                onCurrentMonth: {
+                    monthPickerPresented = false
+                    Task { await viewModel.goToToday() }
+                }
+            )
         }
         .fullScreenCover(
             isPresented: Binding(
@@ -524,93 +531,6 @@ private struct TeamMemberAvatar: View {
     }
 }
 
-private struct TeamYearMonthPicker: View {
-    @Environment(\.dismiss) private var dismiss
-    @State private var year: Int
-    private let selectedYear: Int
-    private let selectedMonth: Int
-    let onSelect: (Int, Int) -> Void
-    let onToday: () -> Void
-
-    init(
-        selectedYear: Int,
-        selectedMonth: Int,
-        onSelect: @escaping (Int, Int) -> Void,
-        onToday: @escaping () -> Void
-    ) {
-        self.selectedYear = selectedYear
-        self.selectedMonth = selectedMonth
-        self.onSelect = onSelect
-        self.onToday = onToday
-        _year = State(initialValue: selectedYear)
-    }
-
-    var body: some View {
-        NavigationStack {
-            VStack(spacing: DPSpacing.medium) {
-                HStack {
-                    Button { year -= 1 } label: {
-                        Image(systemName: "chevron.left")
-                            .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
-                    }
-                    .accessibilityLabel(Text("team.view.calendar.previousYear", tableName: "Team"))
-                    Spacer()
-                    Text(verbatim: String(year)).font(.title3.bold())
-                    Spacer()
-                    Button { year += 1 } label: {
-                        Image(systemName: "chevron.right")
-                            .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
-                    }
-                    .accessibilityLabel(Text("team.view.calendar.nextYear", tableName: "Team"))
-                }
-
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4)) {
-                    ForEach(1...12, id: \.self) { month in
-                        Button {
-                            onSelect(year, month)
-                        } label: {
-                            Text(verbatim: TeamLocalization.monthName(month))
-                                .font(.subheadline.weight(.medium))
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.7)
-                                .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)
-                                .background(
-                                    year == selectedYear && month == selectedMonth
-                                        ? DPColor.accent
-                                        : DPColor.backgroundTertiary
-                                )
-                                .foregroundStyle(
-                                    year == selectedYear && month == selectedMonth
-                                        ? DPColor.textOnDark
-                                        : DPColor.textPrimary
-                                )
-                                .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-
-                Button {
-                    onToday()
-                } label: {
-                    Text("team.view.calendar.thisMonth", tableName: "Team")
-                        .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)
-                }
-                .buttonStyle(.borderedProminent)
-            }
-            .padding(DPSpacing.medium)
-            .navigationTitle(Text("team.view.calendar.chooseMonth", tableName: "Team"))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(teamLocalized("team.common.cancel")) { dismiss() }
-                }
-            }
-        }
-        .presentationDetents([.medium])
-    }
-}
-
 private struct TeamCalendarDayCell: View {
     let day: TeamDayDTO
     let currentMonth: Int
@@ -834,13 +754,6 @@ nonisolated enum TeamLocalization {
         var calendar = Calendar.current
         calendar.locale = AppLocalization.locale
         return calendar.shortStandaloneWeekdaySymbols
-    }
-
-    static func monthName(_ month: Int, locale: Locale = AppLocalization.locale) -> String {
-        guard (1...12).contains(month) else { return String(month) }
-        let formatter = DateFormatter()
-        formatter.locale = locale
-        return formatter.monthSymbols[month - 1]
     }
 
     static func scheduleDeletionMessage(title: String) -> String {

@@ -115,10 +115,10 @@ struct TeamFeatureTests {
         #expect(englishDeviceCalendar.monthSymbols[7] == "August")
 
         defaults.set(AppLanguage.korean.rawValue, forKey: SettingsPreference.languageKey)
-        #expect(TeamLocalization.monthName(8) == "8월")
+        #expect(DPYearMonthPickerLocalization.monthName(8) == "8월")
 
         defaults.set(AppLanguage.english.rawValue, forKey: SettingsPreference.languageKey)
-        #expect(TeamLocalization.monthName(8) == "August")
+        #expect(DPYearMonthPickerLocalization.monthName(8) == "August")
     }
 
     @Test @MainActor

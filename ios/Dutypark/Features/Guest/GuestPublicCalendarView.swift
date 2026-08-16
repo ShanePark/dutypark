@@ -77,9 +77,21 @@ struct GuestPublicCalendarView: View {
         .task { if model.days.isEmpty { await model.load() } }
         .refreshable { await model.load() }
         .sheet(isPresented: $showsMonthPicker) {
-            GuestYearMonthPicker(
+            DPYearMonthPicker(
                 selectedYear: model.year,
                 selectedMonth: model.month,
+                title: Text(verbatim: GuestLocalization.text("guest.calendar.month.choose")),
+                previousYearLabel: Text(
+                    verbatim: GuestLocalization.text("guest.calendar.month.previousYear")
+                ),
+                nextYearLabel: Text(
+                    verbatim: GuestLocalization.text("guest.calendar.month.nextYear")
+                ),
+                currentMonthTitle: Text(
+                    verbatim: GuestLocalization.text("guest.calendar.month.current")
+                ),
+                cancelTitle: GuestLocalization.text("guest.close"),
+                identifierPrefix: "guest.calendar.monthPicker",
                 onSelect: { year, month in
                     showsMonthPicker = false
                     Task { await model.selectYearMonth(year: year, month: month) }
@@ -273,98 +285,6 @@ struct GuestPublicCalendarView: View {
         .padding(DPSpacing.medium)
         .background(DPColor.backgroundCard)
         .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
-    }
-}
-
-private struct GuestYearMonthPicker: View {
-    @Environment(\.dismiss) private var dismiss
-    @State private var year: Int
-    private let selectedYear: Int
-    private let selectedMonth: Int
-    let onSelect: (Int, Int) -> Void
-    let onCurrentMonth: () -> Void
-
-    init(
-        selectedYear: Int,
-        selectedMonth: Int,
-        onSelect: @escaping (Int, Int) -> Void,
-        onCurrentMonth: @escaping () -> Void
-    ) {
-        self.selectedYear = selectedYear
-        self.selectedMonth = selectedMonth
-        self.onSelect = onSelect
-        self.onCurrentMonth = onCurrentMonth
-        _year = State(initialValue: selectedYear)
-    }
-
-    var body: some View {
-        NavigationStack {
-            VStack(spacing: DPSpacing.medium) {
-                HStack {
-                    Button { year -= 1 } label: {
-                        Image(systemName: "chevron.left")
-                            .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
-                    }
-                    .accessibilityLabel(GuestLocalization.text("guest.calendar.month.previousYear"))
-
-                    Spacer()
-                    Text(verbatim: String(year)).font(.title3.bold())
-                    Spacer()
-
-                    Button { year += 1 } label: {
-                        Image(systemName: "chevron.right")
-                            .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
-                    }
-                    .accessibilityLabel(GuestLocalization.text("guest.calendar.month.nextYear"))
-                    .accessibilityIdentifier("guest.calendar.monthPicker.nextYear")
-                }
-
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4)) {
-                    ForEach(1...12, id: \.self) { month in
-                        let isSelected = year == selectedYear && month == selectedMonth
-                        Button {
-                            onSelect(year, month)
-                        } label: {
-                            Text(verbatim: monthName(month))
-                                .font(.subheadline.weight(.medium))
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.7)
-                                .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)
-                                .background(isSelected ? DPColor.accent : DPColor.backgroundTertiary)
-                                .foregroundStyle(isSelected ? DPColor.textOnDark : DPColor.textPrimary)
-                                .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityIdentifier("guest.calendar.monthPicker.month.\(month)")
-                    }
-                }
-
-                Button {
-                    onCurrentMonth()
-                } label: {
-                    Text(GuestLocalization.text("guest.calendar.month.current"))
-                        .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)
-                }
-                .buttonStyle(.borderedProminent)
-            }
-            .padding(DPSpacing.medium)
-            .navigationTitle(GuestLocalization.text("guest.calendar.month.choose"))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(GuestLocalization.text("guest.close")) { dismiss() }
-                }
-            }
-        }
-        .presentationDetents([.medium])
-        .accessibilityIdentifier("guest.calendar.monthPicker")
-    }
-
-    private func monthName(_ month: Int) -> String {
-        guard (1...12).contains(month) else { return String(month) }
-        let formatter = DateFormatter()
-        formatter.locale = AppLocalization.locale
-        return formatter.monthSymbols[month - 1]
     }
 }
 
