@@ -94,6 +94,10 @@ struct DPFriendTagSelector: View {
     @State private var query = ""
     @State private var showsSelectedOnly = false
 
+    /// Icon sizes scale with the `.subheadline`-relative labels they sit next to.
+    @ScaledMetric(relativeTo: .subheadline) private var collapsedIconSize: CGFloat = 16
+    @ScaledMetric(relativeTo: .subheadline) private var selectionIconSize: CGFloat = 14
+
     init(
         items: [DPFriendTagItem],
         preservedItems: [DPFriendTagItem] = [],
@@ -123,7 +127,7 @@ struct DPFriendTagSelector: View {
         } label: {
             HStack(spacing: DPSpacing.compact) {
                 Image(systemName: "person.badge.plus")
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: collapsedIconSize, weight: .semibold))
                     .foregroundStyle(DPColor.accent)
                     .frame(width: 40, height: 40)
                     .background(DPColor.backgroundTertiary)
@@ -280,7 +284,7 @@ struct DPFriendTagSelector: View {
                 Spacer(minLength: 0)
                 if selected {
                     Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.system(size: selectionIconSize, weight: .semibold))
                         .foregroundStyle(DPColor.accent)
                 }
             }
