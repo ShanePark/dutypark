@@ -9,6 +9,9 @@ struct HomeView: View {
     @State private var pinningMemberID: MemberID?
     @State private var inlinePinnedOrder: [MemberID]?
     @State private var draggedPinnedFriendID: MemberID?
+    /// The card the finger is currently down on, as reported by the reorder
+    /// recognizer. Only the press progress ring reads it.
+    @State private var pressedPinnedFriendID: MemberID?
     @State private var pinnedDragLocation: CGPoint?
     @State private var pinnedDragPreviewSize: CGSize?
     @State private var pinnedDragGrabOffset: CGSize?
@@ -60,6 +63,7 @@ struct HomeView: View {
         }
         .scrollDisabled(draggedPinnedFriendID != nil)
         .dpDragFeedback(dragID: draggedPinnedFriendID)
+        .dpDragRetargetFeedback(target: pinnedDragRetargetSlot)
         .overlay {
             if let draggedPinnedFriendID,
                let pinnedDragLocation,
@@ -76,6 +80,7 @@ struct HomeView: View {
                     togglePin: {}
                 )
                 .frame(width: pinnedDragPreviewSize.width, height: pinnedDragPreviewSize.height)
+                .dpDragLift(tint: DPColor.accent, cornerRadius: DPRadius.large)
                 .position(
                     x: pinnedDragLocation.x - pinnedDragGrabOffset.width,
                     y: pinnedDragLocation.y - pinnedDragGrabOffset.height
@@ -265,7 +270,11 @@ struct HomeView: View {
                             openCalendar: { openFriendCalendar(for: friend.member.id) },
                             togglePin: { requestTogglePin(friend) }
                         )
-                        .opacity(draggedPinnedFriendID == friend.member.id ? 0 : 1)
+                        .dpDragSourceSlot(
+                            isLifted: draggedPinnedFriendID == friend.member.id,
+                            tint: DPColor.accent,
+                            cornerRadius: DPRadius.large
+                        )
                         .background {
                             if friend.pinOrder != nil, let memberID = friend.member.id {
                                 GeometryReader { proxy in
@@ -282,6 +291,11 @@ struct HomeView: View {
                             }
                         }
                         .modifier(pinnedFriendReorderGesture(friend))
+                        .dpPressProgress(
+                            isPressing: pressedPinnedFriendID == friend.member.id,
+                            isDragging: draggedPinnedFriendID == friend.member.id,
+                            tint: DPColor.accent
+                        )
                         .accessibilityAction(
                             named: Text("home.action.moveUp", tableName: "Home")
                         ) {
@@ -416,6 +430,14 @@ struct HomeView: View {
         friend.pinOrder != nil && pinnedFriends.count >= 2
     }
 
+    /// The slot the held card currently occupies. Only a drag has a slot, so an
+    /// accessibility move — and the inline order being dropped once a save
+    /// settles — rewrite `inlinePinnedOrder` without ticking.
+    private var pinnedDragRetargetSlot: Int? {
+        guard let draggedPinnedFriendID, let inlinePinnedOrder else { return nil }
+        return inlinePinnedOrder.firstIndex(of: draggedPinnedFriendID)
+    }
+
     /// Home only marks the card actions as suppressed on the iOS 18 lift, where
     /// the recognizer reports a distinct `began`. The iOS 17 fallback has no lift
     /// event of its own, so it keeps its historical behaviour of dragging without
@@ -426,6 +448,17 @@ struct HomeView: View {
         DPPinnedFriendReorderGesture(
             isEnabled: canReorder(friend),
             coordinateSpaceName: HomePinnedFriendDragCoordinateSpace.name,
+            onPressBegan: {
+                guard let memberID = friend.member.id else { return }
+                pressedPinnedFriendID = memberID
+            },
+            onPressEnded: {
+                // Only this card may end its own press: a late ending from a card
+                // released moments ago must not empty a ring that has since
+                // started filling somewhere else.
+                guard pressedPinnedFriendID == friend.member.id else { return }
+                pressedPinnedFriendID = nil
+            },
             onBegan: { location in
                 guard let memberID = friend.member.id else { return }
                 suppressFriendCardActions = true

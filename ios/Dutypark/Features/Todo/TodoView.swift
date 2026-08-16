@@ -10,8 +10,10 @@ enum TodoBoardLayout {
     static let columnGap: CGFloat = 10
     static let columnRadius: CGFloat = 12
     static let cardRadius: CGFloat = 14
-    static let dragLongPressDuration = 0.35
-    static let dragLongPressMaximumDistance: CGFloat = 10
+    /// Shared with the press progress ring so the gauge empties exactly when the
+    /// card lifts instead of counting down its own copy of the threshold.
+    static let dragLongPressDuration: TimeInterval = DPDragActivation.pressDuration
+    static let dragLongPressMaximumDistance: CGFloat = DPDragActivation.maximumPressMovement
     static let dragCollisionHysteresis: CGFloat = 2
     static let dragPushAnimationDuration = 0.1
 
@@ -127,6 +129,7 @@ struct TodoView: View {
     @State private var detailDismissRequest = 0
     @State private var visibleStatus: TodoStatus?
     @State private var draggedTodoID: TodoID?
+    @State private var pressedTodoID: TodoID?
     @State private var dragTargetStatus: TodoStatus?
     @State private var dragTargetTodoID: TodoID?
     @State private var dragInsertAfter = false
@@ -166,6 +169,7 @@ struct TodoView: View {
         .onPreferenceChange(TodoColumnDropTargetPreferenceKey.self) { columnDropTargets = $0 }
         .onPreferenceChange(TodoStatusDropTargetPreferenceKey.self) { statusDropTargets = $0 }
         .dpDragFeedback(dragID: draggedTodoID)
+        .dpDragRetargetFeedback(target: retargetDropSlot)
         .overlay {
             if let draggedTodoID,
                let dragLocation,
@@ -388,6 +392,18 @@ struct TodoView: View {
         )
     }
 
+    private func beginPress(on todo: TodoDTO) {
+        pressedTodoID = todo.uuid
+    }
+
+    private func endPress(on todo: TodoDTO) {
+        // A card's ending can arrive after the next card's press has begun — a
+        // finger that slides straight from one card to another reports that way.
+        // Only the card the ring is currently counting down for may clear it.
+        guard pressedTodoID == todo.uuid else { return }
+        pressedTodoID = nil
+    }
+
     private func clearInteractiveDrag() {
         draggedTodoID = nil
         dragTargetStatus = nil
@@ -487,6 +503,7 @@ struct TodoView: View {
                                     todos: displayedTodos(for: status),
                                     width: columnWidth,
                                     draggedTodoID: draggedTodoID,
+                                    pressedTodoID: pressedTodoID,
                                     dragTargetStatus: dragTargetStatus,
                                     dragTargetTodoID: dragTargetTodoID,
                                     dragInsertAfter: dragInsertAfter,
@@ -510,6 +527,8 @@ struct TodoView: View {
                                     updateDrag: updateInteractiveDrag,
                                     finishDrag: finishInteractiveDrag,
                                     cancelDrag: clearInteractiveDrag,
+                                    pressBegan: beginPress,
+                                    pressEnded: endPress,
                                     drop: { todoID, destinationStatus, targetTodoID, insertAfter in
                                         handleDrop(
                                             todoID: todoID,
@@ -558,6 +577,19 @@ struct TodoView: View {
         )
     }
 
+    /// The slot the drop would land in right now, which is what the retarget tick
+    /// counts. It shares the drag state with `inlineDropPlacement` but drops the
+    /// moving card from it: the finger feels where it is pointing, and the card it
+    /// is carrying never changes mid-drag.
+    private var retargetDropSlot: TodoDropSlot? {
+        TodoDropSlot.resolved(
+            draggedTodoID: draggedTodoID,
+            targetStatus: dragTargetStatus,
+            targetTodoID: dragTargetTodoID,
+            insertAfter: dragInsertAfter
+        )
+    }
+
     private func displayedTodos(for status: TodoStatus) -> [TodoDTO] {
         let columns = Dictionary(
             uniqueKeysWithValues: TodoStatus.boardStatuses.map { ($0, model.todos(for: $0)) }
@@ -576,6 +608,7 @@ private struct TodoKanbanColumn: View {
     let todos: [TodoDTO]
     let width: CGFloat
     let draggedTodoID: TodoID?
+    let pressedTodoID: TodoID?
     let dragTargetStatus: TodoStatus?
     let dragTargetTodoID: TodoID?
     let dragInsertAfter: Bool
@@ -586,6 +619,8 @@ private struct TodoKanbanColumn: View {
     let updateDrag: (TodoDTO, CGPoint) -> Void
     let finishDrag: (TodoDTO) -> Void
     let cancelDrag: () -> Void
+    let pressBegan: (TodoDTO) -> Void
+    let pressEnded: (TodoDTO) -> Void
     let drop: (TodoID, TodoStatus, TodoID?, Bool) -> Void
 
     var body: some View {
@@ -652,6 +687,8 @@ private struct TodoKanbanColumn: View {
                             TodoCard(
                                 todo: todo,
                                 status: status,
+                                isDragging: draggedTodoID == todo.uuid,
+                                isPressing: pressedTodoID == todo.uuid,
                                 canMoveUp: index > 0,
                                 canMoveDown: index < todos.count - 1,
                                 open: { open(todo) },
@@ -665,9 +702,15 @@ private struct TodoKanbanColumn: View {
                                     : nil,
                                 updateDrag: { location in updateDrag(todo, location) },
                                 finishDrag: { finishDrag(todo) },
-                                cancelDrag: cancelDrag
+                                cancelDrag: cancelDrag,
+                                pressBegan: { pressBegan(todo) },
+                                pressEnded: { pressEnded(todo) }
                             )
-                            .opacity(draggedTodoID == todo.uuid ? 0 : 1)
+                            .dpDragSourceSlot(
+                                isLifted: draggedTodoID == todo.uuid,
+                                tint: status.color,
+                                cornerRadius: TodoBoardLayout.cardRadius
+                            )
                         }
                     }
 
@@ -723,6 +766,8 @@ private struct TodoCard: View {
 
     let todo: TodoDTO
     let status: TodoStatus
+    let isDragging: Bool
+    let isPressing: Bool
     let canMoveUp: Bool
     let canMoveDown: Bool
     let open: () -> Void
@@ -733,6 +778,8 @@ private struct TodoCard: View {
     let updateDrag: (CGPoint) -> Void
     let finishDrag: () -> Void
     let cancelDrag: () -> Void
+    let pressBegan: () -> Void
+    let pressEnded: () -> Void
     var measuresDropTarget = true
 
     var body: some View {
@@ -813,8 +860,11 @@ private struct TodoCard: View {
             handleTap: handleTap,
             updateDrag: updateDrag,
             finishDrag: finishDrag,
-            cancelDrag: cancelDrag
+            cancelDrag: cancelDrag,
+            onPressBegan: pressBegan,
+            onPressEnded: pressEnded
         ))
+        .dpPressProgress(isPressing: isPressing, isDragging: isDragging, tint: status.color)
         .overlay(
             ZStack {
                 RoundedRectangle(cornerRadius: TodoBoardLayout.cardRadius)
@@ -882,6 +932,11 @@ private struct TodoCardGestureModifier: ViewModifier {
     let updateDrag: (CGPoint) -> Void
     let finishDrag: () -> Void
     let cancelDrag: () -> Void
+    /// Touch down and its ending, which is what the press progress ring counts
+    /// down. Reported by the reorder gesture itself so no second gesture has to be
+    /// layered on the card to notice the finger.
+    let onPressBegan: () -> Void
+    let onPressEnded: () -> Void
 
     @ViewBuilder
     func body(content: Content) -> some View {
@@ -902,6 +957,8 @@ private struct TodoCardGestureModifier: ViewModifier {
             minimumDuration: TodoBoardLayout.dragLongPressDuration,
             maximumMovement: TodoBoardLayout.dragLongPressMaximumDistance,
             coordinateSpaceName: TodoDragCoordinateSpace.name,
+            onPressBegan: onPressBegan,
+            onPressEnded: onPressEnded,
             onBegan: { location in
                 suppressTapAfterLongPress = true
                 updateDrag(location)
@@ -928,6 +985,10 @@ private struct TodoCardGestureModifier: ViewModifier {
             coordinateSpace: .named(TodoDragCoordinateSpace.name)
         ))
         .onChanged { phase in
+            if case .first(true) = phase {
+                onPressBegan()
+                return
+            }
             guard case let .second(didLongPress, dragValue) = phase,
                   TodoCardDragActivation.shouldReorder(
                       didLongPress: didLongPress,
@@ -937,6 +998,7 @@ private struct TodoCardGestureModifier: ViewModifier {
             updateDrag(dragValue.location)
         }
         .onEnded { phase in
+            onPressEnded()
             guard case let .second(didLongPress, dragValue) = phase,
                   TodoCardDragActivation.shouldReorder(
                       didLongPress: didLongPress,
@@ -987,6 +1049,10 @@ private struct TodoDragPreview: View {
         TodoCard(
             todo: todo,
             status: status,
+            // This copy is the held card itself, so it is past the countdown the
+            // ring shows: it is already dragging, and never pressing.
+            isDragging: true,
+            isPressing: false,
             canMoveUp: false,
             canMoveDown: false,
             open: {},
@@ -997,14 +1063,12 @@ private struct TodoDragPreview: View {
             updateDrag: { _ in },
             finishDrag: {},
             cancelDrag: {},
+            pressBegan: {},
+            pressEnded: {},
             measuresDropTarget: false
         )
         .frame(width: size.width, height: size.height)
-        .overlay(
-            RoundedRectangle(cornerRadius: TodoBoardLayout.cardRadius)
-                .stroke(status.color, lineWidth: 2)
-        )
-        .shadow(color: .black.opacity(0.18), radius: 12, y: 6)
+        .dpDragLift(tint: status.color, cornerRadius: TodoBoardLayout.cardRadius)
     }
 }
 
@@ -1013,6 +1077,30 @@ struct TodoDragPlacement: Equatable {
     let destinationStatus: TodoStatus
     let targetTodoID: TodoID?
     let insertAfter: Bool
+}
+
+/// Where the card under the finger would land, as the drag haptic sees it.
+nonisolated struct TodoDropSlot: Equatable, Sendable {
+    let status: TodoStatus
+    let targetTodoID: TodoID?
+    let insertAfter: Bool
+
+    /// `nil` whenever no drop is on offer — nothing held, or the finger outside
+    /// every column — which is what leaves the edges of a drag to the lift and
+    /// drop haptics and keeps the tick for genuine crossings between slots.
+    static func resolved(
+        draggedTodoID: TodoID?,
+        targetStatus: TodoStatus?,
+        targetTodoID: TodoID?,
+        insertAfter: Bool
+    ) -> TodoDropSlot? {
+        guard draggedTodoID != nil, let targetStatus else { return nil }
+        return TodoDropSlot(
+            status: targetStatus,
+            targetTodoID: targetTodoID,
+            insertAfter: insertAfter
+        )
+    }
 }
 
 enum TodoDragPresentation {

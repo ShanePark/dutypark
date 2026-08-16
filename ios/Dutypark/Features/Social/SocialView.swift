@@ -8,6 +8,9 @@ struct SocialView: View {
     @State private var actionCandidate: ActionCandidate?
     @State private var inlinePinnedOrder: [MemberID]?
     @State private var draggedPinnedFriendID: MemberID?
+    /// The card the finger is currently down on, as reported by the reorder
+    /// recognizer. Only the press progress ring reads it.
+    @State private var pressedPinnedFriendID: MemberID?
     @State private var pinnedDragLocation: CGPoint?
     @State private var pinnedDragPreviewSize: CGSize?
     @State private var pinnedDragGrabOffset: CGSize?
@@ -56,6 +59,7 @@ struct SocialView: View {
                    let friend = displayedPinnedFriends.first(where: { $0.member.id == draggedPinnedFriendID }) {
                     friendCard(friend, isDragPreview: true)
                         .frame(width: pinnedDragPreviewSize.width, height: pinnedDragPreviewSize.height)
+                        .dpDragLift(tint: DPColor.accent, cornerRadius: DPRadius.large)
                         .position(
                             x: pinnedDragLocation.x - pinnedDragGrabOffset.width,
                             y: pinnedDragLocation.y - pinnedDragGrabOffset.height
@@ -141,6 +145,7 @@ struct SocialView: View {
         }
         .scrollDisabled(draggedPinnedFriendID != nil)
         .dpDragFeedback(dragID: draggedPinnedFriendID)
+        .dpDragRetargetFeedback(target: pinnedDragRetargetSlot)
         .accessibilityIdentifier("social.list")
     }
 
@@ -509,7 +514,11 @@ struct SocialView: View {
         }
         .shadow(color: Color.black.opacity(friend.pinOrder == nil ? 0.05 : 0.10), radius: 2, y: 1)
         .contentShape(RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous))
-        .opacity(draggedPinnedFriendID == friend.member.id && !isDragPreview ? 0 : 1)
+        .dpDragSourceSlot(
+            isLifted: draggedPinnedFriendID == friend.member.id && !isDragPreview,
+            tint: DPColor.accent,
+            cornerRadius: DPRadius.large
+        )
         .background {
             if friend.pinOrder != nil && !isDragPreview, let memberID = friend.member.id {
                 GeometryReader { proxy in
@@ -524,6 +533,11 @@ struct SocialView: View {
             }
         }
         .modifier(pinnedFriendReorderGesture(friend, isDragPreview: isDragPreview))
+        .dpPressProgress(
+            isPressing: pressedPinnedFriendID == friend.member.id,
+            isDragging: draggedPinnedFriendID == friend.member.id,
+            tint: DPColor.accent
+        )
     }
 
     private func isPinnedFriendReorderEnabled(
@@ -544,6 +558,17 @@ struct SocialView: View {
         DPPinnedFriendReorderGesture(
             isEnabled: isPinnedFriendReorderEnabled(friend, isDragPreview: isDragPreview),
             coordinateSpaceName: SocialFriendDragCoordinateSpace.name,
+            onPressBegan: {
+                guard let memberID = friend.member.id else { return }
+                pressedPinnedFriendID = memberID
+            },
+            onPressEnded: {
+                // Only this card may end its own press: a late ending from a card
+                // released moments ago must not empty a ring that has since
+                // started filling somewhere else.
+                guard pressedPinnedFriendID == friend.member.id else { return }
+                pressedPinnedFriendID = nil
+            },
             onBegan: { location in
                 guard let memberID = friend.member.id else { return }
                 updatePinnedFriendDrag(memberID: memberID, location: location)
@@ -577,6 +602,14 @@ struct SocialView: View {
             moves.append(.init(offset: 1, destinationIndex: index + 1, key: "social.action.moveDown"))
         }
         return moves
+    }
+
+    /// The slot the held card currently occupies. Only a drag has a slot, so an
+    /// accessibility move — and the inline order being dropped once a save
+    /// settles — rewrite `inlinePinnedOrder` without ticking.
+    private var pinnedDragRetargetSlot: Int? {
+        guard let draggedPinnedFriendID, let inlinePinnedOrder else { return nil }
+        return inlinePinnedOrder.firstIndex(of: draggedPinnedFriendID)
     }
 
     private func cancelPinnedFriendDrag(_ memberID: MemberID) {

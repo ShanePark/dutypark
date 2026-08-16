@@ -18,6 +18,10 @@ nonisolated enum DPDragFeedback {
     /// A lighter settle when the card is released.
     static let drop: SensoryFeedback = .impact(flexibility: .soft, intensity: 0.5)
 
+    /// The tick as the card crosses into a new slot, matching the system list
+    /// reorder so the finger can feel the order settle without watching it.
+    static let retarget: SensoryFeedback = .selection
+
     static func firesOnLift<ID>(previous: ID?, next: ID?) -> Bool {
         previous == nil && next != nil
     }
@@ -26,6 +30,13 @@ nonisolated enum DPDragFeedback {
     /// down, and the finger cannot tell the difference at that moment.
     static func firesOnDrop<ID>(previous: ID?, next: ID?) -> Bool {
         previous != nil && next == nil
+    }
+
+    /// Only a move between two live slots ticks: picking the first slot up is
+    /// already covered by the lift, and losing the last one by the drop.
+    static func firesOnRetarget<Target: Equatable>(previous: Target?, next: Target?) -> Bool {
+        guard let previous, let next else { return false }
+        return previous != next
     }
 }
 
@@ -38,6 +49,13 @@ extension View {
         }
         .sensoryFeedback(DPDragFeedback.drop, trigger: dragID) { previous, next in
             DPDragFeedback.firesOnDrop(previous: previous, next: next)
+        }
+    }
+
+    /// Ticks once each time the slot the card would drop into changes.
+    func dpDragRetargetFeedback<Target: Equatable>(target: Target?) -> some View {
+        sensoryFeedback(DPDragFeedback.retarget, trigger: target) { previous, next in
+            DPDragFeedback.firesOnRetarget(previous: previous, next: next)
         }
     }
 }

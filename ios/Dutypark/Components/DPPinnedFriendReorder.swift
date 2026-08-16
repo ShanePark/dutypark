@@ -3,9 +3,12 @@ import SwiftUI
 /// Long-press activation thresholds for the pinned friend reorder drag, shared by
 /// the Home dashboard list and the Social friend list so both screens lift a card
 /// after the same deliberate press.
+///
+/// The threshold itself comes from `DPDragActivation` so the press progress ring
+/// empties exactly when the card lifts.
 enum DPPinnedFriendDragLayout {
-    static let minimumPressDuration: TimeInterval = 0.35
-    static let maximumPressDistance: CGFloat = 10
+    static let minimumPressDuration: TimeInterval = DPDragActivation.pressDuration
+    static let maximumPressDistance: CGFloat = DPDragActivation.maximumPressMovement
     static let activationDistance: CGFloat = 4
 }
 
@@ -64,6 +67,11 @@ enum DPPinnedFriendLiveOrder {
 struct DPPinnedFriendReorderGesture: ViewModifier {
     let isEnabled: Bool
     let coordinateSpaceName: String
+    /// Touch down and its ending, which is what the press progress ring counts
+    /// down. Reported by the reorder gesture itself so no second gesture has to be
+    /// layered on the card to notice the finger.
+    let onPressBegan: () -> Void
+    let onPressEnded: () -> Void
     let onBegan: (CGPoint) -> Void
     let onChanged: (CGPoint) -> Void
     let onEnded: (CGPoint?) -> Void
@@ -86,6 +94,8 @@ struct DPPinnedFriendReorderGesture: ViewModifier {
             minimumDuration: DPPinnedFriendDragLayout.minimumPressDuration,
             maximumMovement: DPPinnedFriendDragLayout.maximumPressDistance,
             coordinateSpaceName: coordinateSpaceName,
+            onPressBegan: onPressBegan,
+            onPressEnded: onPressEnded,
             onBegan: onBegan,
             onChanged: onChanged,
             onEnded: { self.onEnded(nil) },
@@ -105,11 +115,16 @@ struct DPPinnedFriendReorderGesture: ViewModifier {
             )
         )
         .onChanged { value in
+            if case .first(true) = value {
+                onPressBegan()
+                return
+            }
             guard case .second(true, let dragValue) = value,
                   let dragValue else { return }
             onChanged(dragValue.location)
         }
         .onEnded { value in
+            onPressEnded()
             guard case .second(true, let dragValue) = value,
                   let dragValue else {
                 onCancelled()
