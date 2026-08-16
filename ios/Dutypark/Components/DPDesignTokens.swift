@@ -23,17 +23,42 @@ nonisolated enum DPColor {
     // MARK: Text
 
     static let textPrimary = adaptive(light: 0x111827, dark: 0xF9FAFB)
-    static let textSecondary = adaptive(light: 0x4B5563, dark: 0xD1D5DB)
-    static let textMuted = adaptive(light: 0x6B7280, dark: 0x9CA3AF)
+    static let textSecondary = adaptive(
+        light: 0x4B5563,
+        dark: 0xD1D5DB,
+        lightHighContrast: 0x1F2937,
+        darkHighContrast: 0xF9FAFB
+    )
+    static let textMuted = adaptive(
+        light: 0x6B7280,
+        dark: 0x9CA3AF,
+        lightHighContrast: 0x374151,
+        darkHighContrast: 0xD1D5DB
+    )
     static let textOnDark = fixed(0xFFFFFF)
     static let textOnDarkMuted = fixed(0xFFFFFF, opacity: 0.70)
     static let textOnLight = fixed(0x1F2937)
 
     // MARK: Borders
 
-    static let borderPrimary = adaptive(light: 0xE5E7EB, dark: 0x374151)
-    static let borderSecondary = adaptive(light: 0xD1D5DB, dark: 0x4B5563)
-    static let borderInput = adaptive(light: 0xD1D5DB, dark: 0x4B5563)
+    static let borderPrimary = adaptive(
+        light: 0xE5E7EB,
+        dark: 0x374151,
+        lightHighContrast: 0x6B7280,
+        darkHighContrast: 0x9CA3AF
+    )
+    static let borderSecondary = adaptive(
+        light: 0xD1D5DB,
+        dark: 0x4B5563,
+        lightHighContrast: 0x4B5563,
+        darkHighContrast: 0x9CA3AF
+    )
+    static let borderInput = adaptive(
+        light: 0xD1D5DB,
+        dark: 0x4B5563,
+        lightHighContrast: 0x4B5563,
+        darkHighContrast: 0xD1D5DB
+    )
 
     // MARK: Actions and statuses
 
@@ -67,10 +92,24 @@ nonisolated enum DPColor {
         Color(uiColor: UIColor(hex: hex, alpha: opacity))
     }
 
-    private static func adaptive(light: UInt32, dark: UInt32) -> Color {
+    /// `light`/`dark` stay the literal `frontend/src/style.css` values so the native
+    /// theme keeps parity with the web UI. The optional high-contrast variants are
+    /// additive: they only apply when the user turns on Increase Contrast, and a
+    /// token without them simply keeps its web value in that mode.
+    private static func adaptive(
+        light: UInt32,
+        dark: UInt32,
+        lightHighContrast: UInt32? = nil,
+        darkHighContrast: UInt32? = nil
+    ) -> Color {
         Color(
             uiColor: UIColor { traits in
-                UIColor(hex: traits.userInterfaceStyle == .dark ? dark : light)
+                let isDark = traits.userInterfaceStyle == .dark
+                let base = isDark ? dark : light
+                guard traits.accessibilityContrast == .high else {
+                    return UIColor(hex: base)
+                }
+                return UIColor(hex: (isDark ? darkHighContrast : lightHighContrast) ?? base)
             }
         )
     }
