@@ -1007,10 +1007,22 @@
         }
       }
     },
+    "settings.sessions.appLabel": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "App" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "앱" } }
+      }
+    },
     "settings.sessions.browserLabel": {
       "localizations": {
         "en": { "stringUnit": { "state": "translated", "value": "Browser" } },
         "ko": { "stringUnit": { "state": "translated", "value": "브라우저" } }
+      }
+    },
+    "settings.sessions.client.iosApp": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "iOS App" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "iOS 앱" } }
       }
     },
     "settings.sessions.deviceLabel": {

@@ -1407,7 +1407,10 @@ enum SettingsSessionConfirmation: Identifiable {
         case .session(let token):
             SettingsLocalization.string("settings.sessions.revokeMessage")
                 .replacingOccurrences(of: "{device}", with: token.userAgent?.device ?? "-")
-                .replacingOccurrences(of: "{browser}", with: token.userAgent?.browser ?? "-")
+                .replacingOccurrences(
+                    of: "{browser}",
+                    with: SettingsSessionClientPresentation(token: token).clientValue
+                )
                 .replacingOccurrences(of: "{ip}", with: token.remoteAddr ?? "-")
         case .otherSessions(let count):
             SettingsLocalization.string("settings.sessions.revokeOthersMessage")
@@ -1460,17 +1463,17 @@ private struct SettingsSessionCard: View {
             SettingsSessionMetadataRow(
                 labelKey: "settings.sessions.ipLabel",
                 icon: "globe",
-                value: nonempty(token.remoteAddr)
+                value: SettingsSessionClientPresentation.nonempty(token.remoteAddr)
             )
             SettingsSessionMetadataRow(
                 labelKey: "settings.sessions.deviceLabel",
-                icon: deviceIcon,
-                value: nonempty(token.userAgent?.device)
+                icon: client.deviceIcon,
+                value: SettingsSessionClientPresentation.nonempty(token.userAgent?.device)
             )
             SettingsSessionMetadataRow(
-                labelKey: "settings.sessions.browserLabel",
-                icon: "globe",
-                value: nonempty(token.userAgent?.browser)
+                labelKey: client.clientLabelKey,
+                icon: client.clientIcon,
+                value: client.clientValue
             )
         }
         .padding(DPSpacing.medium)
@@ -1481,13 +1484,36 @@ private struct SettingsSessionCard: View {
         }
     }
 
-    private var deviceIcon: String {
-        let device = token.userAgent?.device.lowercased() ?? ""
-        let desktopTerms = ["other", "desktop", "mac", "windows", "linux"]
-        return desktopTerms.contains(where: device.contains) ? "desktopcomputer" : "iphone"
+    private var client: SettingsSessionClientPresentation {
+        SettingsSessionClientPresentation(token: token)
+    }
+}
+
+/// Native app sessions must not read as a browser named "Dutypark", so they replace the browser row
+/// with an app row instead of only swapping its value.
+nonisolated struct SettingsSessionClientPresentation: Equatable, Sendable {
+    let deviceIcon: String
+    let clientLabelKey: String
+    let clientIcon: String
+    let clientValue: String
+
+    init(token: SettingsRefreshToken) {
+        if token.resolvedClientType == .iosApp {
+            deviceIcon = "iphone"
+            clientLabelKey = "settings.sessions.appLabel"
+            clientIcon = "apps.iphone"
+            clientValue = SettingsLocalization.string("settings.sessions.client.iosApp")
+        } else {
+            let device = token.userAgent?.device.lowercased() ?? ""
+            let desktopTerms = ["other", "desktop", "mac", "windows", "linux"]
+            deviceIcon = desktopTerms.contains(where: device.contains) ? "desktopcomputer" : "iphone"
+            clientLabelKey = "settings.sessions.browserLabel"
+            clientIcon = "globe"
+            clientValue = Self.nonempty(token.userAgent?.browser)
+        }
     }
 
-    private func nonempty(_ value: String?) -> String {
+    static func nonempty(_ value: String?) -> String {
         guard let value, !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             return "-"
         }

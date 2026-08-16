@@ -2,6 +2,7 @@ package com.tistory.shanepark.dutypark.security.domain.dto
 
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.security.domain.entity.RefreshToken
+import com.tistory.shanepark.dutypark.security.domain.enums.ClientType
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import java.time.LocalDateTime
@@ -16,6 +17,7 @@ class RefreshTokenDtoTest {
                 "Linux; Android 14; Pixel 8 Pro) " +
                 "AppleWebKit/537.36 (KHTML, like Gecko) " +
                 "Chrome/122.0.0.0 Mobile Safari/537.36"
+    private val nativeAppUserAgent = "Dutypark/1 CFNetwork/3826.500.111.2.2 Darwin/24.4.0"
 
     @Test
     fun `of parses raw user agent values`() {
@@ -37,6 +39,34 @@ class RefreshTokenDtoTest {
         assertThat(result.userAgent?.os).isEqualTo("Android")
         assertThat(result.userAgent?.browser).isEqualTo("Chrome")
         assertThat(result.userAgent?.device).isEqualTo("Android Mobile")
+    }
+
+    @Test
+    fun `of reports native app sessions as IOS_APP`() {
+        val refreshToken = refreshToken(userAgent = nativeAppUserAgent)
+
+        val result = RefreshTokenDto.of(refreshToken)
+
+        assertThat(result.clientType).isEqualTo(ClientType.IOS_APP)
+    }
+
+    @Test
+    fun `of reports browser sessions as BROWSER`() {
+        val refreshToken = refreshToken(userAgent = chromeUserAgent)
+
+        val result = RefreshTokenDto.of(refreshToken)
+
+        assertThat(result.clientType).isEqualTo(ClientType.BROWSER)
+    }
+
+    @Test
+    fun `of keeps a browser that merely mentions the app name as BROWSER`() {
+        val refreshToken = refreshToken(userAgent = longAndroidChromeUserAgent)
+
+        val result = RefreshTokenDto.of(refreshToken)
+
+        assertThat(longAndroidChromeUserAgent).contains("DutyParkApp/")
+        assertThat(result.clientType).isEqualTo(ClientType.BROWSER)
     }
 
     @Test

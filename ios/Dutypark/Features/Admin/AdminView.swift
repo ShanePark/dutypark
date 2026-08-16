@@ -922,12 +922,16 @@ private struct AdminSessionRow: View {
     let token: SettingsRefreshToken
     let onRevoke: () -> Void
 
+    private var client: AdminSessionClientPresentation {
+        AdminSessionClientPresentation(token: token)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
             HStack {
                 Label(
                     token.userAgent?.device ?? AdminLocalization.string("admin.members.session.unknownDevice"),
-                    systemImage: "iphone"
+                    systemImage: client.icon
                 )
                 .font(DPTypography.label)
                 Spacer()
@@ -938,7 +942,7 @@ private struct AdminSessionRow: View {
                 .accessibilityLabel(AdminLocalization.string("admin.members.revokeSession.action"))
                 .accessibilityIdentifier("admin.member.session.revoke.\(token.id)")
             }
-            Text(token.userAgent.map { "\($0.os) · \($0.browser)" } ?? "-")
+            Text(client.summary)
                 .font(DPTypography.caption)
                 .foregroundStyle(DPColor.textMuted)
             Text(token.lastUsed ?? token.createdDate ?? token.validUntil)
@@ -946,6 +950,26 @@ private struct AdminSessionRow: View {
                 .foregroundStyle(DPColor.textMuted)
         }
         .padding(.vertical, DPSpacing.extraSmall)
+    }
+}
+
+/// Native app sessions must not be listed under the browser name the app's user agent carries.
+nonisolated struct AdminSessionClientPresentation: Equatable, Sendable {
+    let icon: String
+    let clientName: String
+    let summary: String
+
+    init(token: SettingsRefreshToken) {
+        let isNativeApp = token.resolvedClientType == .iosApp
+        icon = isNativeApp ? "apps.iphone" : "iphone"
+        clientName = isNativeApp
+            ? AdminLocalization.string("admin.members.session.iosApp")
+            : (token.userAgent?.browser ?? "-")
+        if let userAgent = token.userAgent {
+            summary = "\(userAgent.os) · \(clientName)"
+        } else {
+            summary = isNativeApp ? clientName : "-"
+        }
     }
 }
 
@@ -959,7 +983,7 @@ nonisolated struct AdminSessionRevokeConfirmation: Identifiable, Equatable, Send
             "admin.members.revokeSession.message",
             token.memberName,
             token.userAgent?.device ?? AdminLocalization.string("admin.members.session.unknownDevice"),
-            token.userAgent?.browser ?? "-",
+            AdminSessionClientPresentation(token: token).clientName,
             token.remoteAddr ?? "-"
         )
     }

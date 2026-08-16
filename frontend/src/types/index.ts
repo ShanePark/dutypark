@@ -543,6 +543,8 @@ export interface DDaySaveDto {
   isPrivate: boolean
 }
 
+export type SessionClientType = 'BROWSER' | 'IOS_APP'
+
 export interface RefreshTokenDto {
   memberName: string
   memberId: number
@@ -552,6 +554,7 @@ export interface RefreshTokenDto {
   remoteAddr: string | null
   id: number
   userAgent: RefreshTokenUserAgent | null
+  clientType: SessionClientType
   isCurrentLogin: boolean | null
 }
 

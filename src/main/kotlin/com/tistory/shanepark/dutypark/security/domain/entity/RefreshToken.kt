@@ -3,6 +3,7 @@ package com.tistory.shanepark.dutypark.security.domain.entity
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.tistory.shanepark.dutypark.common.domain.entity.BaseTimeEntity
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
+import com.tistory.shanepark.dutypark.security.domain.enums.ClientType
 import jakarta.persistence.*
 import java.time.LocalDateTime
 import java.util.*
@@ -27,6 +28,10 @@ class RefreshToken(
 
     @Column(name = "user_agent", nullable = true, length = USER_AGENT_MAX_LENGTH)
     var userAgent: String? = normalizeUserAgent(userAgent)
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "client_type", nullable = false, length = CLIENT_TYPE_MAX_LENGTH)
+    val clientType: ClientType = ClientType.fromUserAgent(userAgent)
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -66,6 +71,10 @@ class RefreshToken(
         return this.validUntil.isAfter(LocalDateTime.now())
     }
 
+    /**
+     * clientType is intentionally not refreshed here: the native app renews its token like any other
+     * client, and a request without the app user agent must never downgrade the session to BROWSER.
+     */
     fun slideValidUntil(remoteAddr: String?, userAgent: String?, validityDays: Long) {
         validUntil = LocalDateTime.now().plusDays(validityDays)
         this.lastUsed = LocalDateTime.now()
@@ -77,6 +86,7 @@ class RefreshToken(
 
     companion object {
         private const val USER_AGENT_MAX_LENGTH = 1024
+        private const val CLIENT_TYPE_MAX_LENGTH = 20
     }
 
 }

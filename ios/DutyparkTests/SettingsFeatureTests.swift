@@ -136,6 +136,8 @@ struct SettingsFeatureTests {
             "settings.sessions.ipLabel",
             "settings.sessions.deviceLabel",
             "settings.sessions.browserLabel",
+            "settings.sessions.appLabel",
+            "settings.sessions.client.iosApp",
             "settings.sessions.revokeMessage",
             "settings.sessions.revokeOthersTitle",
             "settings.sessions.revokeOthersMessage",
@@ -233,6 +235,58 @@ struct SettingsFeatureTests {
         #expect(session.id == 9)
         #expect(session.userAgent?.device == "iPhone")
         #expect(session.isCurrentLogin == true)
+    }
+
+    @Test
+    func decodesNativeAppSessionMarkerAndTreatsAnythingElseAsBrowser() throws {
+        func session(_ clientTypeField: String) throws -> SettingsRefreshToken {
+            let json = #"""
+            {"memberName":"Test","memberId":1,"validUntil":"2026-09-01T10:00:00",\#
+            "createdDate":"2026-08-01T10:00:00","lastUsed":null,"remoteAddr":"127.0.0.1","id":9,\#
+            "userAgent":{"os":"iOS","browser":"Dutypark","device":"iPhone"},"isCurrentLogin":true\#
+            \#(clientTypeField)}
+            """#
+            return try JSONDecoder().decode(SettingsRefreshToken.self, from: Data(json.utf8))
+        }
+
+        #expect(try session(#","clientType":"IOS_APP""#).resolvedClientType == .iosApp)
+        #expect(try session(#","clientType":"BROWSER""#).resolvedClientType == .browser)
+        #expect(try session("").resolvedClientType == .browser)
+        #expect(try session(#","clientType":null"#).resolvedClientType == .browser)
+        #expect(try session(#","clientType":"ANDROID_APP""#).resolvedClientType == .browser)
+        #expect(try session(#","clientType":7"#).resolvedClientType == .browser)
+    }
+
+    @Test
+    func nativeAppSessionsAreLabelledAsTheAppInsteadOfABrowserName() {
+        let defaults = UserDefaults.standard
+        let previous = defaults.string(forKey: SettingsPreference.languageKey)
+        defer {
+            if let previous { defaults.set(previous, forKey: SettingsPreference.languageKey) }
+            else { defaults.removeObject(forKey: SettingsPreference.languageKey) }
+        }
+        defaults.set("ko", forKey: SettingsPreference.languageKey)
+
+        let appSession = SettingsSessionClientPresentation(
+            token: sessionToken(id: 9, clientType: .iosApp)
+        )
+        #expect(appSession.clientLabelKey == "settings.sessions.appLabel")
+        #expect(SettingsLocalization.string(appSession.clientLabelKey) == "앱")
+        #expect(appSession.clientValue == "iOS 앱")
+        #expect(appSession.clientIcon != "globe")
+        #expect(appSession.deviceIcon == "iphone")
+
+        let browserSession = SettingsSessionClientPresentation(token: sessionToken(id: 10))
+        #expect(browserSession.clientLabelKey == "settings.sessions.browserLabel")
+        #expect(browserSession.clientValue == "Dutypark")
+        #expect(browserSession.clientIcon == "globe")
+
+        let confirmation = SettingsSessionConfirmation.session(
+            sessionToken(id: 9, clientType: .iosApp)
+        )
+        #expect(confirmation.message.contains("iOS 앱"))
+        #expect(!confirmation.message.contains("Dutypark"))
+        #expect(confirmation.message.contains("Apple iOS Device"))
     }
 
     @Test
@@ -960,7 +1014,8 @@ struct SettingsFeatureTests {
     private func sessionToken(
         id: Int64,
         lastUsed: String? = "2026-08-12T10:00:00Z",
-        isCurrent: Bool = false
+        isCurrent: Bool = false,
+        clientType: SessionClientType? = nil
     ) -> SettingsRefreshToken {
         SettingsRefreshToken(
             memberName: "Test",
@@ -971,7 +1026,8 @@ struct SettingsFeatureTests {
             remoteAddr: "127.0.0.1",
             id: id,
             userAgent: .init(os: "iOS", browser: "Dutypark", device: "Apple iOS Device"),
-            isCurrentLogin: isCurrent
+            isCurrentLogin: isCurrent,
+            clientType: clientType
         )
     }
 

@@ -1,5 +1,17 @@
 import Foundation
 
+nonisolated enum SessionClientType: String, Codable, Equatable, Sendable {
+    case browser = "BROWSER"
+    case iosApp = "IOS_APP"
+
+    /// Sessions created before the server started sending the marker, and markers this app build does
+    /// not know yet, must keep rendering as browser sessions instead of failing the whole decode.
+    init(from decoder: any Decoder) throws {
+        let raw = try? decoder.singleValueContainer().decode(String.self)
+        self = raw.flatMap(SessionClientType.init(rawValue:)) ?? .browser
+    }
+}
+
 nonisolated struct SettingsRefreshToken: Codable, Equatable, Identifiable, Sendable {
     struct UserAgent: Codable, Equatable, Sendable {
         let os: String
@@ -16,10 +28,15 @@ nonisolated struct SettingsRefreshToken: Codable, Equatable, Identifiable, Senda
     let id: Int64
     let userAgent: UserAgent?
     let isCurrentLogin: Bool?
+    var clientType: SessionClientType?
+
+    /// The server marker is optional on the wire until the backend change ships, so absent values
+    /// resolve to a browser session.
+    var resolvedClientType: SessionClientType { clientType ?? .browser }
 
     private enum CodingKeys: String, CodingKey {
         case memberName, memberId, validUntil, createdDate, lastUsed, remoteAddr
-        case id, userAgent, isCurrentLogin
+        case id, userAgent, isCurrentLogin, clientType
     }
 }
 

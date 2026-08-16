@@ -938,6 +938,8 @@ export default {
       ipLabel: 'IP',
       deviceLabel: '기기',
       browserLabel: '브라우저',
+      appLabel: '앱',
+      iosApp: 'iOS 앱',
       manageLabel: '관리',
       current: '현재',
       currentLogin: '현재 접속',

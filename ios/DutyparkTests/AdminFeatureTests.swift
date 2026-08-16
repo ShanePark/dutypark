@@ -557,6 +557,60 @@ struct AdminFeatureTests {
         ))
     }
 
+    @Test("Native app sessions are presented as the app instead of a browser named Dutypark")
+    func nativeAppSessionPresentation() {
+        let appLabel = AdminLocalization.string("admin.members.session.iosApp")
+        #expect(appLabel != "admin.members.session.iosApp")
+        #expect(appLabel != "Dutypark")
+
+        func token(clientType: SessionClientType?, userAgent: SettingsRefreshToken.UserAgent?)
+            -> SettingsRefreshToken {
+            SettingsRefreshToken(
+                memberName: "Shane",
+                memberId: 7,
+                validUntil: "2026-09-01T00:00:00",
+                createdDate: "2026-08-01T00:00:00",
+                lastUsed: nil,
+                remoteAddr: "127.0.0.1",
+                id: 99,
+                userAgent: userAgent,
+                isCurrentLogin: false,
+                clientType: clientType
+            )
+        }
+
+        let agent = SettingsRefreshToken.UserAgent(os: "iOS", browser: "Dutypark", device: "iPhone 13 mini")
+        let appSession = AdminSessionClientPresentation(token: token(clientType: .iosApp, userAgent: agent))
+        #expect(appSession.clientName == appLabel)
+        #expect(appSession.summary == "iOS · \(appLabel)")
+        #expect(appSession.icon != "iphone")
+
+        let appSessionWithoutAgent = AdminSessionClientPresentation(
+            token: token(clientType: .iosApp, userAgent: nil)
+        )
+        #expect(appSessionWithoutAgent.summary == appLabel)
+
+        let browserSession = AdminSessionClientPresentation(token: token(clientType: nil, userAgent: agent))
+        #expect(browserSession.clientName == "Dutypark")
+        #expect(browserSession.summary == "iOS · Dutypark")
+        #expect(browserSession.icon == "iphone")
+        #expect(AdminSessionClientPresentation(token: token(clientType: nil, userAgent: nil)).summary == "-")
+
+        let confirmation = AdminSessionRevokeConfirmation(token: token(clientType: .iosApp, userAgent: agent))
+        #expect(confirmation.message.contains(appLabel))
+        #expect(!confirmation.message.contains("Dutypark"))
+    }
+
+    @Test("Admin visual fixture represents a native app session")
+    func nativeAppSessionFixture() async throws {
+        let repository = AdminVisualFixtureRepository()
+
+        let members = try await repository.members(keyword: "", page: 0, size: 20)
+        let session = try #require(members.content.first?.tokens.first)
+
+        #expect(session.resolvedClientType == .iosApp)
+    }
+
     fileprivate static let emptyPageJSON =
         #"{"content":[],"totalPages":0,"totalElements":0,"last":true,"first":true,"size":10,"number":0,"numberOfElements":0,"empty":true}"#
 

@@ -100,6 +100,31 @@ class AdminControllerTest : DutyparkIntegrationTest() {
     }
 
     @Test
+    fun `admin refresh token list reports the client each session was created from`() {
+        val appToken = refreshTokenService.createRefreshToken(
+            memberId = TestData.member.id!!,
+            remoteAddr = "127.0.0.1",
+            userAgent = "Dutypark/1 CFNetwork/3826.500.111.2.2 Darwin/24.4.0"
+        )
+        val browserToken = refreshTokenService.createRefreshToken(
+            memberId = TestData.member2.id!!,
+            remoteAddr = "127.0.0.1",
+            userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 " +
+                    "(KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+        )
+        em.flush()
+        em.clear()
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.get("/admin/api/refresh-tokens")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(TestData.admin)}")
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$[?(@.id == ${appToken.id})].clientType").value(hasItem("IOS_APP")))
+            .andExpect(jsonPath("$[?(@.id == ${browserToken.id})].clientType").value(hasItem("BROWSER")))
+    }
+
+    @Test
     fun `admin can search members with keyword and sees valid tokens only`() {
         val validToken = refreshTokenService.createRefreshToken(
             memberId = TestData.member.id!!,

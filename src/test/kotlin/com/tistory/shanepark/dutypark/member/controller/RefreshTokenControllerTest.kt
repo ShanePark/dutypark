@@ -6,6 +6,7 @@ import com.tistory.shanepark.dutypark.member.service.RefreshTokenService
 import com.tistory.shanepark.dutypark.security.service.CookieService
 import jakarta.servlet.http.Cookie
 import org.assertj.core.api.Assertions.assertThat
+import org.hamcrest.Matchers.hasItem
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.MediaType
@@ -52,6 +53,33 @@ class RefreshTokenControllerTest : RestDocsTest() {
             .andExpect(jsonPath("$.length()").value(1))
             .andExpect(jsonPath("$[0].token").doesNotExist())
             .andExpect(jsonPath("$[0].isCurrentLogin").value(true))
+    }
+
+    @Test
+    fun `get refresh tokens reports native app sessions as IOS_APP and browser sessions as BROWSER`() {
+        val appSession = refreshTokenService.createRefreshToken(
+            memberId = TestData.member.id!!,
+            remoteAddr = "127.0.0.1",
+            userAgent = "Dutypark/1 CFNetwork/3826.500.111.2.2 Darwin/24.4.0"
+        )
+        val browserSession = refreshTokenService.createRefreshToken(
+            memberId = TestData.member.id!!,
+            remoteAddr = "127.0.0.1",
+            userAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 " +
+                    "(KHTML, like Gecko) Version/17.0 Safari/605.1.15"
+        )
+        em.flush()
+        em.clear()
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.get("/api/auth/refresh-tokens")
+                .accept(MediaType.APPLICATION_JSON)
+                .cookie(Cookie(CookieService.REFRESH_TOKEN_COOKIE, browserSession.token))
+                .withAuth(TestData.member, browserSession.id!!)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$[?(@.id == ${appSession.id})].clientType").value(hasItem("IOS_APP")))
+            .andExpect(jsonPath("$[?(@.id == ${browserSession.id})].clientType").value(hasItem("BROWSER")))
     }
 
     @Test

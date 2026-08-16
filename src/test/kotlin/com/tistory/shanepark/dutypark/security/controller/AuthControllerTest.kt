@@ -4,6 +4,7 @@ import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyUpdateDto
 import com.tistory.shanepark.dutypark.member.service.RefreshTokenService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginDto
+import com.tistory.shanepark.dutypark.security.domain.enums.ClientType
 import com.tistory.shanepark.dutypark.security.repository.LoginAttemptRepository
 import jakarta.servlet.http.Cookie
 import org.assertj.core.api.Assertions.assertThat
@@ -31,6 +32,9 @@ class AuthControllerTest : DutyparkIntegrationTest() {
     lateinit var loginAttemptRepository: LoginAttemptRepository
 
     private val testPass = TestData.testPass
+    private val nativeAppUserAgent = "Dutypark/1 CFNetwork/3826.500.111.2.2 Darwin/24.4.0"
+    private val browserUserAgent = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 " +
+            "(KHTML, like Gecko) Version/17.0 Safari/605.1.15"
 
     @BeforeEach
     fun cleanup() {
@@ -92,6 +96,53 @@ class AuthControllerTest : DutyparkIntegrationTest() {
             .andExpect(jsonPath("$.expiresIn").exists())
             .andExpect(cookie().exists("access_token"))
             .andExpect(cookie().exists("refresh_token"))
+    }
+
+    @Test
+    fun `login from the native app creates an IOS_APP session while a browser login stays BROWSER`() {
+        val json = objectMapper.writeValueAsString(LoginDto(TestData.member.email, testPass, false))
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/auth/token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header(HttpHeaders.USER_AGENT, nativeAppUserAgent)
+                .content(json)
+        ).andExpect(status().isOk)
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/auth/token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header(HttpHeaders.USER_AGENT, browserUserAgent)
+                .content(json)
+        ).andExpect(status().isOk)
+        em.flush()
+        em.clear()
+
+        val sessions = refreshTokenService.findRefreshTokens(TestData.member.id!!, validOnly = true)
+        assertThat(sessions.map { it.clientType })
+            .containsExactlyInAnyOrder(ClientType.IOS_APP, ClientType.BROWSER)
+    }
+
+    @Test
+    fun `refreshing a native app session does not downgrade it to BROWSER`() {
+        val refreshToken = refreshTokenService.createRefreshToken(
+            memberId = TestData.member.id!!,
+            remoteAddr = "127.0.0.1",
+            userAgent = nativeAppUserAgent
+        )
+        em.flush()
+        em.clear()
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/auth/refresh")
+                .cookie(Cookie("refresh_token", refreshToken.token))
+        ).andExpect(status().isOk)
+        em.flush()
+        em.clear()
+
+        val sessions = refreshTokenService.findRefreshTokens(TestData.member.id!!, validOnly = true)
+        assertThat(sessions).singleElement()
+            .extracting { it.clientType }.isEqualTo(ClientType.IOS_APP)
     }
 
     @Test

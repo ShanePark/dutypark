@@ -850,6 +850,22 @@
         }
       }
     },
+    "admin.members.session.iosApp": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS App"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS 앱"
+          }
+        }
+      }
+    },
     "admin.members.session.unknownDevice": {
       "localizations": {
         "en": {

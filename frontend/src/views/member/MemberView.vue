@@ -26,6 +26,7 @@ import { VISIBILITY_COLORS } from '@/utils/visibility'
 import BaseModal from '@/components/common/BaseModal.vue'
 import PageHeader from '@/components/common/PageHeader.vue'
 import SessionTokenList from '@/components/common/SessionTokenList.vue'
+import { sessionClientName } from '@/components/common/sessionClient'
 import ProfilePhotoUploader from '@/components/common/ProfilePhotoUploader.vue'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 import DutyPatternCard from '@/components/member/DutyPatternCard.vue'
@@ -555,7 +556,7 @@ async function deleteToken(token: RefreshTokenDto) {
   const confirmed = await confirm(
     t('member.sessions.signOutCurrentConfirm', {
       device: token.userAgent?.device ?? '-',
-      browser: token.userAgent?.browser ?? '-',
+      browser: sessionClientName(token, t),
       ip: token.remoteAddr ?? '-',
     }),
     t('member.sessions.signOutCurrentTitle')

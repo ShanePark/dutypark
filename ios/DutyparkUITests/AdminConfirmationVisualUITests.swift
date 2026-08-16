@@ -142,7 +142,7 @@ final class AdminConfirmationVisualUITests: XCTestCase {
         assertCenteredConfirmation(
             in: app,
             title: "이 세션을 종료할까요?",
-            message: "관리자 검증 회원님의 iPhone 13 mini · Dutypark (127.0.0.1) 세션을 종료하시겠습니까?",
+            message: "관리자 검증 회원님의 iPhone 13 mini · iOS 앱 (127.0.0.1) 세션을 종료하시겠습니까?",
             confirmTitle: "세션 종료",
             screenshotName: "parity-ios-admin-member-session-confirmation-ko-dark"
         )

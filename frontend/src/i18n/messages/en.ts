@@ -935,6 +935,8 @@ export default {
       ipLabel: 'IP',
       deviceLabel: 'Device',
       browserLabel: 'Browser',
+      appLabel: 'App',
+      iosApp: 'iOS App',
       manageLabel: 'Manage',
       current: 'Current',
       currentLogin: 'Current session',

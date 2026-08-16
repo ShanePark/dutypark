@@ -10,6 +10,7 @@ import { useSwal } from '@/composables/useSwal'
 import type { AdminMemberDetailDto, AdminMemberDto, RefreshTokenDto } from '@/types'
 import { resolveApiErrorMessage } from '@/utils/resolveApiError'
 import SessionTokenList from '@/components/common/SessionTokenList.vue'
+import { sessionClientName } from '@/components/common/sessionClient'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import AdminMemberDetailModal from '@/components/admin/AdminMemberDetailModal.vue'
@@ -145,7 +146,7 @@ async function handleRevokeToken(token: RefreshTokenDto, member: AdminMemberDto)
     t('admin.dashboard.messages.revokeSessionConfirm', {
       name: member.name,
       device: token.userAgent?.device ?? '-',
-      browser: token.userAgent?.browser ?? '-',
+      browser: sessionClientName(token, t),
       ip: token.remoteAddr ?? '-',
     }),
     t('admin.dashboard.messages.revokeSessionTitle'),
