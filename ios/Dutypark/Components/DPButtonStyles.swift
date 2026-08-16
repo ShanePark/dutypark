@@ -1,12 +1,55 @@
 import SwiftUI
 
+/// Roles shared by every `DP*ButtonStyle`, used to pick their press haptic.
+nonisolated enum DPButtonRole {
+    case primary
+    case success
+    case destructive
+    case secondary
+    case outline
+}
+
+/// Press-feedback rules factored out of the button styles so they stay testable.
+///
+/// Every value here is built with `impact(flexibility:intensity:)` rather than
+/// `impact(weight:)`: the `weight` form collapses `.light`, `.medium` and
+/// `.heavy` to one and the same light tap on the current SDK, so a `weight`
+/// based value can neither *feel* nor *compare* as heavier. The
+/// `flexibility`/`intensity` form carries both of its fields faithfully.
+nonisolated enum DPButtonFeedback {
+    /// Destructive taps are irreversible, so they get a firm, full-intensity
+    /// thud instead of the routine roles' soft tick.
+    static let destructiveImpact = SensoryFeedback.impact(flexibility: .solid, intensity: 1)
+
+    /// One shared tick for every reversible tap, so routine buttons stay
+    /// consistent with each other.
+    static let routineImpact = SensoryFeedback.impact(flexibility: .soft, intensity: 0.6)
+
+    static func feedback(for role: DPButtonRole) -> SensoryFeedback {
+        switch role {
+        case .destructive:
+            return destructiveImpact
+        case .primary, .success, .secondary, .outline:
+            return routineImpact
+        }
+    }
+
+    /// Haptics belong on the press-down edge only: firing on release would land
+    /// after the action already ran, and a disabled button must stay silent.
+    static func firesOnPress(isEnabled: Bool, wasPressed: Bool, isPressed: Bool) -> Bool {
+        isEnabled && !wasPressed && isPressed
+    }
+}
+
 private struct DPSolidButtonStyle: ButtonStyle {
+    let role: DPButtonRole
     let background: Color
     let pressedBackground: Color
     let isEnabled: Bool
 
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
+        let enabled = isEnabled
+        return configuration.label
             .font(DPTypography.bodyMedium)
             .foregroundStyle(DPColor.textOnDark)
             .padding(.horizontal, DPChrome.controlHorizontalPadding)
@@ -21,6 +64,16 @@ private struct DPSolidButtonStyle: ButtonStyle {
             .contentShape(Rectangle())
             .opacity(isEnabled ? 1 : DPChrome.disabledOpacity)
             .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+            .sensoryFeedback(
+                DPButtonFeedback.feedback(for: role),
+                trigger: configuration.isPressed
+            ) { wasPressed, isPressed in
+                DPButtonFeedback.firesOnPress(
+                    isEnabled: enabled,
+                    wasPressed: wasPressed,
+                    isPressed: isPressed
+                )
+            }
     }
 }
 
@@ -29,6 +82,7 @@ struct DPPrimaryButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         DPSolidButtonStyle(
+            role: .primary,
             background: DPColor.accent,
             pressedBackground: DPColor.accentHover,
             isEnabled: isEnabled
@@ -42,6 +96,7 @@ struct DPSuccessButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         DPSolidButtonStyle(
+            role: .success,
             background: DPColor.success,
             pressedBackground: DPColor.successHover,
             isEnabled: isEnabled
@@ -55,6 +110,7 @@ struct DPDestructiveButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         DPSolidButtonStyle(
+            role: .destructive,
             background: DPColor.danger,
             pressedBackground: DPColor.dangerHover,
             isEnabled: isEnabled
@@ -67,7 +123,8 @@ struct DPSecondaryButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled
 
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
+        let enabled = isEnabled
+        return configuration.label
             .font(DPTypography.bodyMedium)
             .foregroundStyle(DPColor.textPrimary)
             .padding(.horizontal, DPChrome.controlHorizontalPadding)
@@ -82,6 +139,16 @@ struct DPSecondaryButtonStyle: ButtonStyle {
             .contentShape(Rectangle())
             .opacity(isEnabled ? 1 : DPChrome.disabledOpacity)
             .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+            .sensoryFeedback(
+                DPButtonFeedback.feedback(for: .secondary),
+                trigger: configuration.isPressed
+            ) { wasPressed, isPressed in
+                DPButtonFeedback.firesOnPress(
+                    isEnabled: enabled,
+                    wasPressed: wasPressed,
+                    isPressed: isPressed
+                )
+            }
     }
 }
 
@@ -89,7 +156,8 @@ struct DPOutlineButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled
 
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
+        let enabled = isEnabled
+        return configuration.label
             .font(DPTypography.bodyMedium)
             .foregroundStyle(DPColor.textSecondary)
             .padding(.horizontal, DPChrome.controlHorizontalPadding)
@@ -108,6 +176,16 @@ struct DPOutlineButtonStyle: ButtonStyle {
             .contentShape(Rectangle())
             .opacity(isEnabled ? 1 : DPChrome.disabledOpacity)
             .animation(.easeOut(duration: 0.12), value: configuration.isPressed)
+            .sensoryFeedback(
+                DPButtonFeedback.feedback(for: .outline),
+                trigger: configuration.isPressed
+            ) { wasPressed, isPressed in
+                DPButtonFeedback.firesOnPress(
+                    isEnabled: enabled,
+                    wasPressed: wasPressed,
+                    isPressed: isPressed
+                )
+            }
     }
 }
 
