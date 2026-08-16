@@ -1005,29 +1005,49 @@ struct SettingsView: View {
                 .font(DPTypography.bodyMedium)
                 .foregroundStyle(DPColor.textPrimary)
             Spacer(minLength: DPSpacing.small)
-            if connected {
+            switch SettingsSocialRowAction.resolve(isConnected: connected) {
+            case .manage:
                 Label(SettingsLocalization.string("settings.social.connected"), systemImage: "checkmark.circle.fill")
                     .font(DPTypography.caption)
                     .foregroundStyle(DPColor.success)
                     .fixedSize()
-            }
-            Button {
-                guard !socialAction.isWorking else { return }
-                withoutPresentationAnimation {
-                    socialManagementPresentation = .init(provider: provider)
+                Button {
+                    guard !socialAction.isWorking else { return }
+                    withoutPresentationAnimation {
+                        socialManagementPresentation = .init(provider: provider)
+                    }
+                } label: {
+                    Image(systemName: "gearshape")
+                        .font(.system(size: 16, weight: .semibold))
+                        .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                        .background(DPColor.backgroundTertiary, in: RoundedRectangle(cornerRadius: DPRadius.standard))
                 }
-            } label: {
-                Image(systemName: "gearshape")
-                    .font(.system(size: 16, weight: .semibold))
-                    .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
-                    .background(DPColor.backgroundTertiary, in: RoundedRectangle(cornerRadius: DPRadius.standard))
+                .buttonStyle(.plain)
+                .foregroundStyle(DPColor.textSecondary)
+                .disabled(socialAction.isWorking)
+                .accessibilityLabel(SettingsSocialManagementPolicy.manageLabel(for: provider))
+                .accessibilityHint(SettingsLocalization.string("settings.social.manageHint"))
+                .accessibilityIdentifier("settings.social.manage.\(provider.rawValue.lowercased())")
+            case .connect:
+                Button {
+                    guard !socialAction.isWorking else { return }
+                    Task { await link(provider) }
+                } label: {
+                    HStack(spacing: DPSpacing.extraSmall) {
+                        if isLinking == provider {
+                            ProgressView()
+                                .tint(DPColor.accent)
+                        } else {
+                            Image(systemName: "link.badge.plus")
+                        }
+                        SettingsLocalization.text("settings.social.connect")
+                    }
+                    .fixedSize()
+                }
+                .buttonStyle(AccentSoftButtonStyle())
+                .disabled(socialAction.isWorking)
+                .accessibilityIdentifier("settings.social.connect.\(provider.rawValue.lowercased())")
             }
-            .buttonStyle(.plain)
-            .foregroundStyle(DPColor.textSecondary)
-            .disabled(socialAction.isWorking)
-            .accessibilityLabel(SettingsSocialManagementPolicy.manageLabel(for: provider))
-            .accessibilityHint(SettingsLocalization.string("settings.social.manageHint"))
-            .accessibilityIdentifier("settings.social.manage.\(provider.rawValue.lowercased())")
         }
         .padding(DPSpacing.compact)
         .background(DPColor.backgroundSecondary, in: RoundedRectangle(cornerRadius: DPRadius.standard))
