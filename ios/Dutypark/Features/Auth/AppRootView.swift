@@ -66,7 +66,7 @@ struct AppRootView: View {
         Group {
             switch session.state {
             case .restoring:
-                ProgressView()
+                LaunchSplashView()
                     .accessibilityLabel(Text("auth.session.restoring"))
             case .restoreFailed:
                 ContentUnavailableView {
@@ -122,6 +122,21 @@ struct AppRootView: View {
         }
     }
     #endif
+}
+
+nonisolated enum LaunchSplashPresentation {
+    static let assetName = "LaunchSplash"
+}
+
+private struct LaunchSplashView: View {
+    var body: some View {
+        Image(LaunchSplashPresentation.assetName)
+            .resizable()
+            .scaledToFill()
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .clipped()
+            .ignoresSafeArea()
+    }
 }
 
 enum AppRootDeepLinkPolicy {
