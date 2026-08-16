@@ -699,6 +699,27 @@ nonisolated enum TeamManageConfirmationCopy {
     }
 }
 
+private extension View {
+    /// Every team management modal asks the same question before throwing away
+    /// unsaved edits, so the copy and the wiring live in one place.
+    func teamDiscardConfirmation(
+        isPresented: Binding<Bool>,
+        discard: @escaping () -> Void
+    ) -> some View {
+        dpConfirmation(
+            isPresented: isPresented,
+            copy: DPConfirmationCopy(
+                title: teamLocalized("team.modal.discard.title"),
+                message: teamLocalized("team.modal.discard.message"),
+                confirmTitle: teamLocalized("team.modal.discard.action"),
+                cancelTitle: teamLocalized("team.modal.discard.continue"),
+                isDestructive: true
+            ),
+            confirm: { _ in discard() }
+        )
+    }
+}
+
 private struct TeamDutyTypeEditor: View {
     @ObservedObject var viewModel: TeamManageViewModel
     let maximumHeight: CGFloat
@@ -874,25 +895,9 @@ private struct TeamDutyTypeEditor: View {
         .onChange(of: isSubmitting) { _, _ in updateInteractionState() }
         .onChange(of: viewModel.isWorking) { _, _ in updateInteractionState() }
         .onChange(of: interaction.dismissRequestSerial) { _, _ in requestDismiss() }
-        .fullScreenCover(isPresented: $showsDiscardConfirmation) {
-            DPModalOverlay(
-                maximumContentWidth: DPConfirmationPanel.maximumWidth,
-                onDismiss: { showsDiscardConfirmation = false }
-            ) { availableSize, confirmationDismiss in
-                DPConfirmationPanel(
-                    title: teamLocalized("team.modal.discard.title"),
-                    message: teamLocalized("team.modal.discard.message"),
-                    confirmTitle: teamLocalized("team.modal.discard.action"),
-                    cancelTitle: teamLocalized("team.modal.discard.continue"),
-                    isDestructive: true,
-                    maximumHeight: availableSize.height,
-                    cancel: confirmationDismiss,
-                    confirm: {
-                        showsDiscardConfirmation = false
-                        dismiss()
-                    }
-                )
-            }
+        .teamDiscardConfirmation(isPresented: $showsDiscardConfirmation) {
+            showsDiscardConfirmation = false
+            dismiss()
         }
     }
 
@@ -1333,25 +1338,9 @@ private struct TeamBatchUploadView: View {
         .onChange(of: fileURL) { _, _ in updateInteractionState() }
         .onChange(of: viewModel.isWorking) { _, _ in updateInteractionState() }
         .onChange(of: interaction.dismissRequestSerial) { _, _ in requestDismiss() }
-        .fullScreenCover(isPresented: $showsDiscardConfirmation) {
-            DPModalOverlay(
-                maximumContentWidth: DPConfirmationPanel.maximumWidth,
-                onDismiss: { showsDiscardConfirmation = false }
-            ) { availableSize, confirmationDismiss in
-                DPConfirmationPanel(
-                    title: teamLocalized("team.modal.discard.title"),
-                    message: teamLocalized("team.modal.discard.message"),
-                    confirmTitle: teamLocalized("team.modal.discard.action"),
-                    cancelTitle: teamLocalized("team.modal.discard.continue"),
-                    isDestructive: true,
-                    maximumHeight: availableSize.height,
-                    cancel: confirmationDismiss,
-                    confirm: {
-                        showsDiscardConfirmation = false
-                        dismiss()
-                    }
-                )
-            }
+        .teamDiscardConfirmation(isPresented: $showsDiscardConfirmation) {
+            showsDiscardConfirmation = false
+            dismiss()
         }
     }
 

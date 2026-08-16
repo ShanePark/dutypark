@@ -71,7 +71,8 @@ struct AttachmentTests {
         let source = try String(contentsOf: gallerySourceURL, encoding: .utf8)
 
         #expect(!source.contains(".confirmationDialog("))
-        #expect(source.contains("DPConfirmationPanel("))
+        #expect(source.contains(".dpConfirmation("))
+        #expect(!source.contains("DPModalOverlay("))
     }
 
     @Test

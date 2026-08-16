@@ -112,26 +112,22 @@ struct NotificationCenterView: View {
         .onChange(of: scenePhase) { _, phase in
             Task { await store.setForeground(phase == .active) }
         }
-        .fullScreenCover(item: $deletionConfirmation) { confirmation in
-            DPModalOverlay(
-                maximumContentWidth: DPConfirmationPanel.maximumWidth,
-                onDismiss: { deletionConfirmation = nil }
-            ) { availableSize, dismiss in
-                DPConfirmationPanel(
+        .dpConfirmation(
+            item: $deletionConfirmation,
+            copy: { confirmation in
+                DPConfirmationCopy(
                     title: notificationLocalized(confirmation.titleKey),
                     message: notificationLocalized(confirmation.messageKey),
                     confirmTitle: notificationLocalized(confirmation.confirmTitleKey),
                     cancelTitle: notificationLocalized("notifications.common.cancel"),
-                    isDestructive: true,
-                    maximumHeight: availableSize.height,
-                    cancel: dismiss,
-                    confirm: {
-                        dismiss()
-                        Task { await delete(confirmation) }
-                    }
+                    isDestructive: true
                 )
+            },
+            confirm: { confirmation, dismiss in
+                dismiss()
+                Task { await delete(confirmation) }
             }
-        }
+        )
         .alert(
             alertTitle ?? notificationLocalized("notifications.common.error"),
             isPresented: Binding(
