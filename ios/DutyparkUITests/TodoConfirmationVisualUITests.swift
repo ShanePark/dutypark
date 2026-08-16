@@ -158,6 +158,50 @@ final class TodoConfirmationVisualUITests: XCTestCase {
     }
 
     @MainActor
+    func testFixtureTodoLongPressDragKeepsUnrelatedColumnCardsFixed() {
+        let app = launchApp()
+        defer { app.terminate() }
+
+        openTodoScreen(in: app)
+
+        let firstCard = app.descendants(matching: .any)[
+            "todo.card.A11CE000-0000-4000-8000-000000000001"
+        ]
+        let secondCard = app.descendants(matching: .any)[
+            "todo.card.A11CE000-0000-4000-8000-000000000002"
+        ]
+        let thirdCard = app.descendants(matching: .any)[
+            "todo.card.A11CE000-0000-4000-8000-000000000003"
+        ]
+        XCTAssertTrue(firstCard.waitForExistence(timeout: 10))
+        XCTAssertTrue(secondCard.waitForExistence(timeout: 10))
+        XCTAssertTrue(thirdCard.waitForExistence(timeout: 10))
+        XCTAssertLessThan(firstCard.frame.minY, secondCard.frame.minY)
+        let initialThirdCardFrame = thirdCard.frame
+
+        secondCard.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).press(
+            forDuration: 0.5,
+            thenDragTo: firstCard.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.18)),
+            withVelocity: .slow,
+            thenHoldForDuration: 0.2
+        )
+
+        XCTAssertLessThan(secondCard.frame.minY, firstCard.frame.minY)
+        XCTAssertEqual(
+            thirdCard.frame.minY,
+            initialThirdCardFrame.minY,
+            accuracy: 2,
+            "A card drag must not scroll its column, so cards outside the reorder must stay put."
+        )
+        XCTAssertEqual(
+            thirdCard.frame.height,
+            initialThirdCardFrame.height,
+            accuracy: 1
+        )
+        capture("parity-ios-todo-column-fixed-during-drag-after")
+    }
+
+    @MainActor
     func testFixtureTodoVerticalSwipeScrollsWithoutOpeningDetailOrReordering() {
         let app = launchApp()
         defer { app.terminate() }

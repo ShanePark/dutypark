@@ -670,6 +670,7 @@ private struct TodoKanbanColumn: View {
                 .padding(.bottom, DPSpacing.compact)
             }
             .scrollIndicators(.hidden)
+            .scrollDisabled(draggedTodoID != nil)
         }
         .frame(width: width)
         .background {

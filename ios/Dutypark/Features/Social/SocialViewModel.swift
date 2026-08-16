@@ -361,10 +361,29 @@ final class SocialViewModel: ObservableObject {
 
     private var isSocialReorderUITesting: Bool {
         ProcessInfo.processInfo.arguments.contains("-ui-testing-social-reorder")
+            || isSocialReorderOverflowUITesting
+    }
+
+    /// Well past the ~6 pinned cards an iPhone 16 Pro viewport shows at once.
+    static let uiTestingOverflowPinnedCount = 18
+
+    /// Seeds more pinned friends than fit on screen so the `LazyVStack` stops
+    /// publishing drop-target frames for the rows outside the viewport.
+    private var isSocialReorderOverflowUITesting: Bool {
+        ProcessInfo.processInfo.arguments.contains("-ui-testing-social-reorder-overflow")
     }
 
     private func loadUITestingFixture() {
-        if isSocialReorderUITesting {
+        if isSocialReorderOverflowUITesting {
+            var overflowFriends: [DashboardFriendDetailDTO] = []
+            for index in 0..<SocialViewModel.uiTestingOverflowPinnedCount {
+                let id = MemberID(41 + index)
+                overflowFriends.append(
+                    uiTestingFriend(id: id, name: "핀친구 \(index + 1)", pinOrder: Int64(index + 1))
+                )
+            }
+            friends = overflowFriends
+        } else if isSocialReorderUITesting {
             friends = [
                 uiTestingFriend(id: 31, name: "알렉스", pinOrder: 1),
                 uiTestingFriend(id: 32, name: "민지", pinOrder: 2),

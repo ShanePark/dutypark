@@ -329,6 +329,24 @@ final class SocialFeatureTests: XCTestCase {
         XCTAssertEqual(reordered, [33, 31, 32])
     }
 
+    func testInlineDragReordersWithOnlyVisibleLazyStackTargets() {
+        let targets = [
+            PinnedFriendDropTarget(memberID: 31, frame: CGRect(x: 0, y: 0, width: 300, height: 88)),
+            PinnedFriendDropTarget(memberID: 32, frame: CGRect(x: 0, y: 96, width: 300, height: 88)),
+            PinnedFriendDropTarget(memberID: 33, frame: CGRect(x: 0, y: 192, width: 300, height: 88)),
+            PinnedFriendDropTarget(memberID: 34, frame: CGRect(x: 0, y: 288, width: 300, height: 88))
+        ]
+
+        let reordered = PinnedFriendLiveOrder.reordered(
+            [31, 32, 33, 34, 35, 36],
+            draggedID: 31,
+            previewFrame: CGRect(x: 0, y: 20, width: 300, height: 88),
+            targets: targets
+        )
+
+        XCTAssertEqual(reordered, [32, 31, 33, 34, 35, 36])
+    }
+
     func testInlineDragRequiresLongPressBeforeMovement() {
         XCTAssertEqual(SocialFriendDragLayout.activationDuration, 0.35)
         XCTAssertEqual(SocialFriendDragLayout.activationMaximumDistance, 10)

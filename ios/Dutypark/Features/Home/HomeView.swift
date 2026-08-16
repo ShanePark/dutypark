@@ -17,7 +17,7 @@ struct HomeView: View {
     @State private var pinnedDragOriginalOrder: [MemberID] = []
     @State private var isSavingPinnedOrder = false
     @State private var showsPinnedOrderError = false
-    @State private var suppressFriendCalendarTap = false
+    @State private var suppressFriendCardActions = false
     private let refreshID: Int
     private let onRoute: (HomeRoute) -> Void
     private let pinRepository: any SocialRepository
@@ -263,7 +263,7 @@ struct HomeView: View {
                                 isPinning: pinningMemberID == friend.member.id,
                                 isDragPreview: false,
                                 openCalendar: { openFriendCalendar(for: friend.member.id) },
-                                togglePin: { await togglePin(friend) }
+                                togglePin: { requestTogglePin(friend) }
                             )
                             .opacity(draggedPinnedFriendID == friend.member.id ? 0 : 1)
                             .background {
@@ -372,11 +372,26 @@ struct HomeView: View {
     }
 
     private func openFriendCalendar(for memberId: MemberID?) {
-        if suppressFriendCalendarTap {
-            suppressFriendCalendarTap = false
-            return
-        }
+        guard !consumeDragSuppression() else { return }
         openCalendar(for: memberId)
+    }
+
+    /// A reorder drag keeps the pressed control alive underneath the finger — the
+    /// card moves with the drag, so the lift still lands inside the control that
+    /// started it. Every control on a friend card therefore has to swallow the
+    /// lift that ends a drag; the flag is only set once a drag has begun, so plain
+    /// taps are untouched. The check has to run synchronously inside the control's
+    /// action, before any `Task`, because the suppression is released on the next
+    /// main-queue turn.
+    private func consumeDragSuppression() -> Bool {
+        guard suppressFriendCardActions else { return false }
+        suppressFriendCardActions = false
+        return true
+    }
+
+    private func requestTogglePin(_ friend: DashboardFriendDetailDTO) {
+        guard !consumeDragSuppression() else { return }
+        Task { await togglePin(friend) }
     }
 
     private var pinnedFriends: [DashboardFriendDetailDTO] {
@@ -428,7 +443,7 @@ struct HomeView: View {
             coordinateSpaceName: HomePinnedFriendDragCoordinateSpace.name,
             onBegan: { location in
                 guard let memberID = friend.member.id else { return }
-                suppressFriendCalendarTap = true
+                suppressFriendCardActions = true
                 updatePinnedFriendDrag(memberID: memberID, location: location)
             },
             onChanged: { location in
@@ -437,18 +452,18 @@ struct HomeView: View {
             },
             onEnded: {
                 finishPinnedFriendDrag()
-                releaseFriendCalendarTapSuppression()
+                releaseFriendCardActionSuppression()
             },
             onCancelled: {
                 clearPinnedFriendDrag()
-                releaseFriendCalendarTapSuppression()
+                releaseFriendCardActionSuppression()
             }
         )
     }
 
-    private func releaseFriendCalendarTapSuppression() {
+    private func releaseFriendCardActionSuppression() {
         DispatchQueue.main.async {
-            suppressFriendCalendarTap = false
+            suppressFriendCardActions = false
         }
     }
 
@@ -638,7 +653,7 @@ private struct FriendSummaryCard: View {
     let isPinning: Bool
     let isDragPreview: Bool
     let openCalendar: () -> Void
-    let togglePin: () async -> Void
+    let togglePin: () -> Void
 
     var body: some View {
         HStack(alignment: .top, spacing: DPSpacing.compact) {
@@ -734,7 +749,7 @@ private struct FriendSummaryCard: View {
         .overlay(alignment: .topTrailing) {
             if !isDragPreview {
                 Button {
-                    Task { await togglePin() }
+                    togglePin()
                 } label: {
                     Group {
                         if isPinning {
@@ -897,7 +912,6 @@ enum HomePinnedFriendDragLayout {
     static let minimumPressDuration = 0.35
     static let maximumPressDistance: CGFloat = 10
     static let activationDistance: CGFloat = 4
-    static let overlapThreshold: CGFloat = 12
 }
 
 struct HomePinnedFriendDropTarget: Equatable {
@@ -912,44 +926,16 @@ enum HomePinnedFriendLiveOrder {
         previewFrame: CGRect,
         targets: [HomePinnedFriendDropTarget]
     ) -> [MemberID] {
-        guard let sourceIndex = originalOrder.firstIndex(of: draggedID) else {
-            return originalOrder
-        }
-
-        let framesByID = Dictionary(uniqueKeysWithValues: targets.map { ($0.memberID, $0.frame) })
-        guard let sourceFrame = framesByID[draggedID] else {
-            return originalOrder
-        }
-        var reordered = originalOrder
-        reordered.remove(at: sourceIndex)
-
-        if previewFrame.midY > sourceFrame.midY {
-            let candidates = originalOrder.indices.dropFirst(sourceIndex + 1)
-            guard let destinationIndex = candidates.last(where: { index in
-                guard let frame = framesByID[originalOrder[index]] else { return false }
-                let threshold = min(HomePinnedFriendDragLayout.overlapThreshold, frame.height * 0.2)
-                return previewFrame.maxY >= frame.minY + threshold
-            }) else {
-                reordered.insert(draggedID, at: sourceIndex)
-                return reordered
-            }
-            reordered.insert(draggedID, at: destinationIndex)
-        } else if previewFrame.midY < sourceFrame.midY {
-            let candidates = originalOrder.indices.prefix(sourceIndex)
-            guard let destinationIndex = candidates.first(where: { index in
-                guard let frame = framesByID[originalOrder[index]] else { return false }
-                let threshold = min(HomePinnedFriendDragLayout.overlapThreshold, frame.height * 0.2)
-                return previewFrame.minY <= frame.maxY - threshold
-            }) else {
-                reordered.insert(draggedID, at: sourceIndex)
-                return reordered
-            }
-            reordered.insert(draggedID, at: destinationIndex)
-        } else {
-            reordered.insert(draggedID, at: sourceIndex)
-        }
-
-        return reordered
+        PinnedFriendReorder.reordered(
+            originalOrder,
+            draggedID: draggedID,
+            previewFrame: previewFrame,
+            framesByID: PinnedFriendReorder.framesByID(
+                targets,
+                memberID: \.memberID,
+                frame: \.frame
+            )
+        )
     }
 }
 
