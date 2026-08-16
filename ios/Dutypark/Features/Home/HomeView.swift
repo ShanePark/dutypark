@@ -12,8 +12,8 @@ struct HomeView: View {
     @State private var pinnedDragLocation: CGPoint?
     @State private var pinnedDragPreviewSize: CGSize?
     @State private var pinnedDragGrabOffset: CGSize?
-    @State private var pinnedFriendDropTargets: [HomePinnedFriendDropTarget] = []
-    @State private var pinnedDragReferenceTargets: [HomePinnedFriendDropTarget] = []
+    @State private var pinnedFriendDropTargets: [DPPinnedFriendDropTarget] = []
+    @State private var pinnedDragReferenceTargets: [DPPinnedFriendDropTarget] = []
     @State private var pinnedDragOriginalOrder: [MemberID] = []
     @State private var isSavingPinnedOrder = false
     @State private var showsPinnedOrderError = false
@@ -55,10 +55,11 @@ struct HomeView: View {
             await viewModel.refresh()
         }
         .coordinateSpace(name: HomePinnedFriendDragCoordinateSpace.name)
-        .onPreferenceChange(HomePinnedFriendDropTargetPreferenceKey.self) {
+        .onPreferenceChange(DPPinnedFriendDropTargetPreferenceKey.self) {
             pinnedFriendDropTargets = $0
         }
         .scrollDisabled(draggedPinnedFriendID != nil)
+        .dpDragFeedback(dragID: draggedPinnedFriendID)
         .overlay {
             if let draggedPinnedFriendID,
                let pinnedDragLocation,
@@ -257,32 +258,30 @@ struct HomeView: View {
             } else {
                 LazyVStack(spacing: DPSpacing.small) {
                     ForEach(displayedFriends, id: \.member.id) { friend in
-                        pinnedFriendDragSurface(
-                            FriendSummaryCard(
-                                friend: friend,
-                                isPinning: pinningMemberID == friend.member.id,
-                                isDragPreview: false,
-                                openCalendar: { openFriendCalendar(for: friend.member.id) },
-                                togglePin: { requestTogglePin(friend) }
-                            )
-                            .opacity(draggedPinnedFriendID == friend.member.id ? 0 : 1)
-                            .background {
-                                if friend.pinOrder != nil, let memberID = friend.member.id {
-                                    GeometryReader { proxy in
-                                        Color.clear.preference(
-                                            key: HomePinnedFriendDropTargetPreferenceKey.self,
-                                            value: [HomePinnedFriendDropTarget(
-                                                memberID: memberID,
-                                                frame: proxy.frame(
-                                                    in: .named(HomePinnedFriendDragCoordinateSpace.name)
-                                                )
-                                            )]
-                                        )
-                                    }
-                                }
-                            },
-                            friend: friend
+                        FriendSummaryCard(
+                            friend: friend,
+                            isPinning: pinningMemberID == friend.member.id,
+                            isDragPreview: false,
+                            openCalendar: { openFriendCalendar(for: friend.member.id) },
+                            togglePin: { requestTogglePin(friend) }
                         )
+                        .opacity(draggedPinnedFriendID == friend.member.id ? 0 : 1)
+                        .background {
+                            if friend.pinOrder != nil, let memberID = friend.member.id {
+                                GeometryReader { proxy in
+                                    Color.clear.preference(
+                                        key: DPPinnedFriendDropTargetPreferenceKey.self,
+                                        value: [DPPinnedFriendDropTarget(
+                                            memberID: memberID,
+                                            frame: proxy.frame(
+                                                in: .named(HomePinnedFriendDragCoordinateSpace.name)
+                                            )
+                                        )]
+                                    )
+                                }
+                            }
+                        }
+                        .modifier(pinnedFriendReorderGesture(friend))
                         .accessibilityAction(
                             named: Text("home.action.moveUp", tableName: "Home")
                         ) {
@@ -417,29 +416,15 @@ struct HomeView: View {
         friend.pinOrder != nil && pinnedFriends.count >= 2
     }
 
-    @ViewBuilder
-    private func pinnedFriendDragSurface<Content: View>(
-        _ content: Content,
-        friend: DashboardFriendDetailDTO
-    ) -> some View {
-        if canReorder(friend) {
-            if #available(iOS 18.0, *) {
-                content.gesture(modernPinnedFriendDragGesture(friend))
-            } else {
-                content.simultaneousGesture(pinnedFriendDragGesture(friend))
-            }
-        } else {
-            content
-        }
-    }
-
-    @available(iOS 18.0, *)
-    private func modernPinnedFriendDragGesture(
+    /// Home only marks the card actions as suppressed on the iOS 18 lift, where
+    /// the recognizer reports a distinct `began`. The iOS 17 fallback has no lift
+    /// event of its own, so it keeps its historical behaviour of dragging without
+    /// arming the suppression flag.
+    private func pinnedFriendReorderGesture(
         _ friend: DashboardFriendDetailDTO
-    ) -> DPLongPressGestureRecognizer {
-        DPLongPressGestureRecognizer(
-            minimumDuration: HomePinnedFriendDragLayout.minimumPressDuration,
-            maximumMovement: HomePinnedFriendDragLayout.maximumPressDistance,
+    ) -> DPPinnedFriendReorderGesture {
+        DPPinnedFriendReorderGesture(
+            isEnabled: canReorder(friend),
             coordinateSpaceName: HomePinnedFriendDragCoordinateSpace.name,
             onBegan: { location in
                 guard let memberID = friend.member.id else { return }
@@ -450,7 +435,10 @@ struct HomeView: View {
                 guard let memberID = friend.member.id else { return }
                 updatePinnedFriendDrag(memberID: memberID, location: location)
             },
-            onEnded: {
+            onEnded: { location in
+                if let location, let memberID = friend.member.id {
+                    updatePinnedFriendDrag(memberID: memberID, location: location)
+                }
                 finishPinnedFriendDrag()
                 releaseFriendCardActionSuppression()
             },
@@ -465,33 +453,6 @@ struct HomeView: View {
         DispatchQueue.main.async {
             suppressFriendCardActions = false
         }
-    }
-
-    private func pinnedFriendDragGesture(
-        _ friend: DashboardFriendDetailDTO
-    ) -> some Gesture {
-        LongPressGesture(
-            minimumDuration: HomePinnedFriendDragLayout.minimumPressDuration,
-            maximumDistance: HomePinnedFriendDragLayout.maximumPressDistance
-        )
-            .sequenced(before: DragGesture(
-                minimumDistance: HomePinnedFriendDragLayout.activationDistance,
-                coordinateSpace: .named(HomePinnedFriendDragCoordinateSpace.name)
-            ))
-            .onChanged { value in
-                guard case .second(true, let drag?) = value,
-                      let memberID = friend.member.id else { return }
-                updatePinnedFriendDrag(memberID: memberID, location: drag.location)
-            }
-            .onEnded { value in
-                guard case .second(true, let drag?) = value,
-                      let memberID = friend.member.id else {
-                    clearPinnedFriendDrag()
-                    return
-                }
-                updatePinnedFriendDrag(memberID: memberID, location: drag.location)
-                finishPinnedFriendDrag()
-            }
     }
 
     private func updatePinnedFriendDrag(memberID: MemberID, location: CGPoint) {
@@ -521,7 +482,7 @@ struct HomeView: View {
             width: previewSize.width,
             height: previewSize.height
         )
-        let nextOrder = HomePinnedFriendLiveOrder.reordered(
+        let nextOrder = DPPinnedFriendLiveOrder.reordered(
             pinnedDragOriginalOrder,
             draggedID: memberID,
             previewFrame: previewFrame,
@@ -908,50 +869,8 @@ private extension DutyDTO {
     }
 }
 
-enum HomePinnedFriendDragLayout {
-    static let minimumPressDuration = 0.35
-    static let maximumPressDistance: CGFloat = 10
-    static let activationDistance: CGFloat = 4
-}
-
-struct HomePinnedFriendDropTarget: Equatable {
-    let memberID: MemberID
-    let frame: CGRect
-}
-
-enum HomePinnedFriendLiveOrder {
-    static func reordered(
-        _ originalOrder: [MemberID],
-        draggedID: MemberID,
-        previewFrame: CGRect,
-        targets: [HomePinnedFriendDropTarget]
-    ) -> [MemberID] {
-        PinnedFriendReorder.reordered(
-            originalOrder,
-            draggedID: draggedID,
-            previewFrame: previewFrame,
-            framesByID: PinnedFriendReorder.framesByID(
-                targets,
-                memberID: \.memberID,
-                frame: \.frame
-            )
-        )
-    }
-}
-
 private enum HomePinnedFriendDragCoordinateSpace {
     static let name = "home-pinned-friend-drag"
-}
-
-private struct HomePinnedFriendDropTargetPreferenceKey: PreferenceKey {
-    static let defaultValue: [HomePinnedFriendDropTarget] = []
-
-    static func reduce(
-        value: inout [HomePinnedFriendDropTarget],
-        nextValue: () -> [HomePinnedFriendDropTarget]
-    ) {
-        value.append(contentsOf: nextValue())
-    }
 }
 
 private extension View {

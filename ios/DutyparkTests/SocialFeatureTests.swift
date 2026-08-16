@@ -199,16 +199,54 @@ final class SocialFeatureTests: XCTestCase {
     }
 
     func testPinnedReorderUsesScrollCompatibleLongPressRecognizer() throws {
-        let sourceURL = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()
-            .deletingLastPathComponent()
-            .appending(path: "Dutypark/Features/Social/SocialView.swift")
-        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+        let source = try Self.sharedReorderGestureSource()
 
         XCTAssertTrue(source.contains("modernPinnedFriendReorderGesture"))
         XCTAssertTrue(source.contains("DPLongPressGestureRecognizer("))
         XCTAssertTrue(source.contains("content.gesture(modernPinnedFriendReorderGesture"))
         XCTAssertTrue(source.contains("onCancelled:"))
+    }
+
+    /// The iOS 17 deployment target still has no `UIGestureRecognizerRepresentable`,
+    /// so sharing the gesture must not quietly drop the sequenced fallback.
+    func testSharedPinnedReorderGestureKeepsTheLegacySequencedFallback() throws {
+        let source = try Self.sharedReorderGestureSource()
+
+        XCTAssertTrue(source.contains("LongPressGesture("))
+        XCTAssertTrue(source.contains(".sequenced("))
+        XCTAssertTrue(source.contains("DragGesture("))
+        XCTAssertTrue(source.contains("content.simultaneousGesture(legacyPinnedFriendReorderGesture"))
+    }
+
+    /// Both pinned lists adopt the shared gesture, so neither screen may keep a
+    /// private copy of the recognizer wiring.
+    func testPinnedListsAdoptTheSharedReorderGesture() throws {
+        for path in [
+            "Dutypark/Features/Social/SocialView.swift",
+            "Dutypark/Features/Home/HomeView.swift"
+        ] {
+            let source = try Self.projectSource(at: path)
+            XCTAssertTrue(
+                source.contains("DPPinnedFriendReorderGesture("),
+                "\(path) should adopt the shared reorder gesture"
+            )
+            XCTAssertFalse(
+                source.contains("DPLongPressGestureRecognizer("),
+                "\(path) should not re-implement the recognizer wiring"
+            )
+        }
+    }
+
+    private static func sharedReorderGestureSource() throws -> String {
+        try projectSource(at: "Dutypark/Components/DPPinnedFriendReorder.swift")
+    }
+
+    private static func projectSource(at path: String) throws -> String {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: path)
+        return try String(contentsOf: sourceURL, encoding: .utf8)
     }
 
     func testFailedInlineReorderRollsBackAndReportsFailure() async {
@@ -276,7 +314,7 @@ final class SocialFeatureTests: XCTestCase {
     func testInlineDragMovesCardAsSoonAsItOverlapsNextCard() {
         let targets = pinnedTargets()
 
-        let reordered = PinnedFriendLiveOrder.reordered(
+        let reordered = DPPinnedFriendLiveOrder.reordered(
             [31, 32, 33],
             draggedID: 31,
             previewFrame: CGRect(x: 0, y: 20, width: 300, height: 88),
@@ -287,7 +325,7 @@ final class SocialFeatureTests: XCTestCase {
     }
 
     func testInlineDragDoesNotMoveBeforeCardsOverlap() {
-        let reordered = PinnedFriendLiveOrder.reordered(
+        let reordered = DPPinnedFriendLiveOrder.reordered(
             [31, 32, 33],
             draggedID: 31,
             previewFrame: CGRect(x: 0, y: 4, width: 300, height: 88),
@@ -300,7 +338,7 @@ final class SocialFeatureTests: XCTestCase {
     func testInlineDragReturnsToOriginalOrderWhenPreviewLeavesOverlap() {
         let original: [MemberID] = [31, 32, 33]
         let targets = pinnedTargets()
-        let overlapped = PinnedFriendLiveOrder.reordered(
+        let overlapped = DPPinnedFriendLiveOrder.reordered(
             original,
             draggedID: 31,
             previewFrame: CGRect(x: 0, y: 20, width: 300, height: 88),
@@ -308,7 +346,7 @@ final class SocialFeatureTests: XCTestCase {
         )
         XCTAssertEqual(overlapped, [32, 31, 33])
 
-        let restored = PinnedFriendLiveOrder.reordered(
+        let restored = DPPinnedFriendLiveOrder.reordered(
             original,
             draggedID: 31,
             previewFrame: CGRect(x: 0, y: 4, width: 300, height: 88),
@@ -319,7 +357,7 @@ final class SocialFeatureTests: XCTestCase {
     }
 
     func testInlineDragCanMovePinnedCardUpMultiplePositions() {
-        let reordered = PinnedFriendLiveOrder.reordered(
+        let reordered = DPPinnedFriendLiveOrder.reordered(
             [31, 32, 33],
             draggedID: 33,
             previewFrame: CGRect(x: 0, y: 0, width: 300, height: 88),
@@ -331,13 +369,13 @@ final class SocialFeatureTests: XCTestCase {
 
     func testInlineDragReordersWithOnlyVisibleLazyStackTargets() {
         let targets = [
-            PinnedFriendDropTarget(memberID: 31, frame: CGRect(x: 0, y: 0, width: 300, height: 88)),
-            PinnedFriendDropTarget(memberID: 32, frame: CGRect(x: 0, y: 96, width: 300, height: 88)),
-            PinnedFriendDropTarget(memberID: 33, frame: CGRect(x: 0, y: 192, width: 300, height: 88)),
-            PinnedFriendDropTarget(memberID: 34, frame: CGRect(x: 0, y: 288, width: 300, height: 88))
+            DPPinnedFriendDropTarget(memberID: 31, frame: CGRect(x: 0, y: 0, width: 300, height: 88)),
+            DPPinnedFriendDropTarget(memberID: 32, frame: CGRect(x: 0, y: 96, width: 300, height: 88)),
+            DPPinnedFriendDropTarget(memberID: 33, frame: CGRect(x: 0, y: 192, width: 300, height: 88)),
+            DPPinnedFriendDropTarget(memberID: 34, frame: CGRect(x: 0, y: 288, width: 300, height: 88))
         ]
 
-        let reordered = PinnedFriendLiveOrder.reordered(
+        let reordered = DPPinnedFriendLiveOrder.reordered(
             [31, 32, 33, 34, 35, 36],
             draggedID: 31,
             previewFrame: CGRect(x: 0, y: 20, width: 300, height: 88),
@@ -348,9 +386,9 @@ final class SocialFeatureTests: XCTestCase {
     }
 
     func testInlineDragRequiresLongPressBeforeMovement() {
-        XCTAssertEqual(SocialFriendDragLayout.activationDuration, 0.35)
-        XCTAssertEqual(SocialFriendDragLayout.activationMaximumDistance, 10)
-        XCTAssertEqual(SocialFriendDragLayout.activationDistance, 4)
+        XCTAssertEqual(DPPinnedFriendDragLayout.minimumPressDuration, 0.35)
+        XCTAssertEqual(DPPinnedFriendDragLayout.maximumPressDistance, 10)
+        XCTAssertEqual(DPPinnedFriendDragLayout.activationDistance, 4)
     }
 
     func testCompactFriendCardKeepsManagementActionsOutOfTheContentLayout() {
@@ -466,11 +504,11 @@ final class SocialFeatureTests: XCTestCase {
         return APIClient(baseURL: baseURL, session: URLSession(configuration: configuration))
     }
 
-    private func pinnedTargets() -> [PinnedFriendDropTarget] {
+    private func pinnedTargets() -> [DPPinnedFriendDropTarget] {
         [
-            PinnedFriendDropTarget(memberID: 31, frame: CGRect(x: 0, y: 0, width: 300, height: 88)),
-            PinnedFriendDropTarget(memberID: 32, frame: CGRect(x: 0, y: 96, width: 300, height: 88)),
-            PinnedFriendDropTarget(memberID: 33, frame: CGRect(x: 0, y: 192, width: 300, height: 88))
+            DPPinnedFriendDropTarget(memberID: 31, frame: CGRect(x: 0, y: 0, width: 300, height: 88)),
+            DPPinnedFriendDropTarget(memberID: 32, frame: CGRect(x: 0, y: 96, width: 300, height: 88)),
+            DPPinnedFriendDropTarget(memberID: 33, frame: CGRect(x: 0, y: 192, width: 300, height: 88))
         ]
     }
 

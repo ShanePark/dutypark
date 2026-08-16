@@ -165,6 +165,7 @@ struct TodoView: View {
         .onPreferenceChange(TodoCardDropTargetPreferenceKey.self) { cardDropTargets = $0 }
         .onPreferenceChange(TodoColumnDropTargetPreferenceKey.self) { columnDropTargets = $0 }
         .onPreferenceChange(TodoStatusDropTargetPreferenceKey.self) { statusDropTargets = $0 }
+        .dpDragFeedback(dragID: draggedTodoID)
         .overlay {
             if let draggedTodoID,
                let dragLocation,

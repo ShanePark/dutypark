@@ -11,8 +11,8 @@ struct SocialView: View {
     @State private var pinnedDragLocation: CGPoint?
     @State private var pinnedDragPreviewSize: CGSize?
     @State private var pinnedDragGrabOffset: CGSize?
-    @State private var pinnedFriendDropTargets: [PinnedFriendDropTarget] = []
-    @State private var pinnedDragReferenceTargets: [PinnedFriendDropTarget] = []
+    @State private var pinnedFriendDropTargets: [DPPinnedFriendDropTarget] = []
+    @State private var pinnedDragReferenceTargets: [DPPinnedFriendDropTarget] = []
     @State private var pinnedDragOriginalOrder: [MemberID] = []
     @State private var dragSuppressedFriendID: MemberID?
     @State private var isSavingPinnedOrder = false
@@ -136,10 +136,11 @@ struct SocialView: View {
             .padding(.bottom, DPSpacing.large)
         }
         .coordinateSpace(name: SocialFriendDragCoordinateSpace.name)
-        .onPreferenceChange(PinnedFriendDropTargetPreferenceKey.self) {
+        .onPreferenceChange(DPPinnedFriendDropTargetPreferenceKey.self) {
             pinnedFriendDropTargets = $0
         }
         .scrollDisabled(draggedPinnedFriendID != nil)
+        .dpDragFeedback(dragID: draggedPinnedFriendID)
         .accessibilityIdentifier("social.list")
     }
 
@@ -513,8 +514,8 @@ struct SocialView: View {
             if friend.pinOrder != nil && !isDragPreview, let memberID = friend.member.id {
                 GeometryReader { proxy in
                     Color.clear.preference(
-                        key: PinnedFriendDropTargetPreferenceKey.self,
-                        value: [PinnedFriendDropTarget(
+                        key: DPPinnedFriendDropTargetPreferenceKey.self,
+                        value: [DPPinnedFriendDropTarget(
                             memberID: memberID,
                             frame: proxy.frame(in: .named(SocialFriendDragCoordinateSpace.name))
                         )]
@@ -522,15 +523,7 @@ struct SocialView: View {
                 }
             }
         }
-        .modifier(
-            SocialPinnedFriendReorderGestureModifier(
-                isEnabled: isPinnedFriendReorderEnabled(friend, isDragPreview: isDragPreview),
-                memberID: friend.member.id,
-                updateDrag: updatePinnedFriendDrag,
-                finishDrag: finishPinnedFriendDrag,
-                cancelDrag: cancelPinnedFriendDrag
-            )
-        )
+        .modifier(pinnedFriendReorderGesture(friend, isDragPreview: isDragPreview))
     }
 
     private func isPinnedFriendReorderEnabled(
@@ -538,6 +531,33 @@ struct SocialView: View {
         isDragPreview: Bool
     ) -> Bool {
         !isDragPreview && friend.pinOrder != nil && viewModel.pinnedFriends.count >= 2
+    }
+
+    /// Social arms the tap suppression inside `updatePinnedFriendDrag`, so both
+    /// gesture paths suppress the lift that ends a drag, and the final drag
+    /// location the iOS 17 fallback reports is unused: the last `onChanged`
+    /// already applied it.
+    private func pinnedFriendReorderGesture(
+        _ friend: DashboardFriendDetailDTO,
+        isDragPreview: Bool
+    ) -> DPPinnedFriendReorderGesture {
+        DPPinnedFriendReorderGesture(
+            isEnabled: isPinnedFriendReorderEnabled(friend, isDragPreview: isDragPreview),
+            coordinateSpaceName: SocialFriendDragCoordinateSpace.name,
+            onBegan: { location in
+                guard let memberID = friend.member.id else { return }
+                updatePinnedFriendDrag(memberID: memberID, location: location)
+            },
+            onChanged: { location in
+                guard let memberID = friend.member.id else { return }
+                updatePinnedFriendDrag(memberID: memberID, location: location)
+            },
+            onEnded: { _ in finishPinnedFriendDrag() },
+            onCancelled: {
+                guard let memberID = friend.member.id else { return }
+                cancelPinnedFriendDrag(memberID)
+            }
+        )
     }
 
     private func accessiblePinnedFriendMoves(
@@ -613,7 +633,7 @@ struct SocialView: View {
             width: previewSize.width,
             height: previewSize.height
         )
-        let nextOrder = PinnedFriendLiveOrder.reordered(
+        let nextOrder = DPPinnedFriendLiveOrder.reordered(
             pinnedDragOriginalOrder,
             draggedID: memberID,
             previewFrame: previewFrame,
@@ -1264,124 +1284,14 @@ enum SocialFriendCardLayout {
     static let topActionsWidth = DPSize.minimumTouchTarget * 2
 }
 
-enum SocialFriendDragLayout {
-    static let activationDuration: TimeInterval = 0.35
-    static let activationMaximumDistance: CGFloat = 10
-    static let activationDistance: CGFloat = 4
-}
-
-private struct SocialPinnedFriendReorderGestureModifier: ViewModifier {
-    let isEnabled: Bool
-    let memberID: MemberID?
-    let updateDrag: (MemberID, CGPoint) -> Void
-    let finishDrag: () -> Void
-    let cancelDrag: (MemberID) -> Void
-
-    @ViewBuilder
-    func body(content: Content) -> some View {
-        if !isEnabled {
-            content
-        } else if #available(iOS 18.0, *) {
-            content.gesture(modernPinnedFriendReorderGesture)
-        } else {
-            content.simultaneousGesture(legacyPinnedFriendReorderGesture)
-        }
-    }
-
-    @available(iOS 18.0, *)
-    private var modernPinnedFriendReorderGesture: DPLongPressGestureRecognizer {
-        DPLongPressGestureRecognizer(
-            minimumDuration: SocialFriendDragLayout.activationDuration,
-            maximumMovement: SocialFriendDragLayout.activationMaximumDistance,
-            coordinateSpaceName: SocialFriendDragCoordinateSpace.name,
-            onBegan: update,
-            onChanged: update,
-            onEnded: finishDrag,
-            onCancelled: cancel
-        )
-    }
-
-    private var legacyPinnedFriendReorderGesture: some Gesture {
-        LongPressGesture(
-            minimumDuration: SocialFriendDragLayout.activationDuration,
-            maximumDistance: SocialFriendDragLayout.activationMaximumDistance
-        )
-        .sequenced(
-            before: DragGesture(
-                minimumDistance: SocialFriendDragLayout.activationDistance,
-                coordinateSpace: .named(SocialFriendDragCoordinateSpace.name)
-            )
-        )
-        .onChanged { value in
-            guard case .second(true, let dragValue) = value,
-                  let dragValue else { return }
-            update(dragValue.location)
-        }
-        .onEnded { value in
-            guard case .second(true, let dragValue) = value,
-                  dragValue != nil else {
-                cancel()
-                return
-            }
-            finishDrag()
-        }
-    }
-
-    private func update(_ location: CGPoint) {
-        guard let memberID else { return }
-        updateDrag(memberID, location)
-    }
-
-    private func cancel() {
-        guard let memberID else { return }
-        cancelDrag(memberID)
-    }
-}
-
 private struct PinnedFriendAccessibleMove {
     let offset: Int
     let destinationIndex: Int
     let key: String
 }
 
-struct PinnedFriendDropTarget: Equatable {
-    let memberID: MemberID
-    let frame: CGRect
-}
-
-enum PinnedFriendLiveOrder {
-    static func reordered(
-        _ originalOrder: [MemberID],
-        draggedID: MemberID,
-        previewFrame: CGRect,
-        targets: [PinnedFriendDropTarget]
-    ) -> [MemberID] {
-        PinnedFriendReorder.reordered(
-            originalOrder,
-            draggedID: draggedID,
-            previewFrame: previewFrame,
-            framesByID: PinnedFriendReorder.framesByID(
-                targets,
-                memberID: \.memberID,
-                frame: \.frame
-            )
-        )
-    }
-}
-
 private enum SocialFriendDragCoordinateSpace {
     static let name = "social-friend-drag"
-}
-
-private struct PinnedFriendDropTargetPreferenceKey: PreferenceKey {
-    static let defaultValue: [PinnedFriendDropTarget] = []
-
-    static func reduce(
-        value: inout [PinnedFriendDropTarget],
-        nextValue: () -> [PinnedFriendDropTarget]
-    ) {
-        value.append(contentsOf: nextValue())
-    }
 }
 
 private enum SocialConfirmation: Identifiable {
