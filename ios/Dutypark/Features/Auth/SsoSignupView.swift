@@ -47,6 +47,7 @@ struct SsoSignupView: View {
     @State private var errorKey: String?
     @State private var displayedPolicy: PolicyDTO?
     @State private var showsDiscardConfirmation = false
+    @State private var dismissesSignupAfterDiscardConfirmation = false
     @FocusState private var isNameFocused: Bool
 
     var body: some View {
@@ -92,6 +93,7 @@ struct SsoSignupView: View {
                                         username = String(value.prefix(10))
                                     }
                                 }
+                                .accessibilityIdentifier("oauth.signup.name")
 
                                 Text(oauthString("auth.oauth.signup.name.help"))
                                     .font(DPTypography.supporting)
@@ -195,16 +197,39 @@ struct SsoSignupView: View {
         }
         .dpKeyboardDismissToolbar()
         .interactiveDismissDisabled(preventsInteractiveDismissal)
-        .alert(
-            oauthString("auth.oauth.signup.discard.title"),
-            isPresented: $showsDiscardConfirmation
+        .fullScreenCover(
+            isPresented: Binding(
+                get: { showsDiscardConfirmation },
+                set: { isPresented in
+                    guard !isPresented, !isWorking else { return }
+                    showsDiscardConfirmation = false
+                    dismissesSignupAfterDiscardConfirmation = false
+                }
+            )
         ) {
-            Button(oauthString("auth.oauth.signup.discard.action"), role: .destructive) {
-                dismiss()
+            DPModalOverlay(
+                maximumContentWidth: DPConfirmationPanel.maximumWidth,
+                onDismiss: finishDiscardConfirmationDismissal,
+                canDismiss: !isWorking
+            ) { availableSize, confirmationDismiss in
+                DPConfirmationPanel(
+                    title: oauthString("auth.oauth.signup.discard.title"),
+                    message: oauthString("auth.oauth.signup.discard.message"),
+                    confirmTitle: oauthString("auth.oauth.signup.discard.action"),
+                    cancelTitle: oauthString("auth.oauth.signup.discard.continue"),
+                    isDestructive: true,
+                    isWorking: isWorking,
+                    maximumHeight: availableSize.height,
+                    cancel: confirmationDismiss,
+                    confirm: {
+                        guard !isWorking else { return }
+                        dismissesSignupAfterDiscardConfirmation = true
+                        confirmationDismiss()
+                    }
+                )
+                .accessibilityIdentifier("oauth.signup.discard.confirmation")
             }
-            Button(oauthString("auth.oauth.signup.discard.continue"), role: .cancel) {}
-        } message: {
-            Text(oauthString("auth.oauth.signup.discard.message"))
+            .interactiveDismissDisabled(isWorking)
         }
         .sheet(
             isPresented: Binding(
@@ -215,12 +240,10 @@ struct SsoSignupView: View {
             if let displayedPolicy {
                 NavigationStack {
                     ScrollView {
-                        policyText(displayedPolicy.content)
-                            .font(DPTypography.body)
-                            .foregroundStyle(DPColor.textSecondary)
+                        DPLongFormDocument(content: displayedPolicy.content)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(DPSpacing.medium)
-                            .textSelection(.enabled)
+                            .padding(.horizontal, DPLongFormDocumentLayout.horizontalPadding)
+                            .padding(.vertical, DPLongFormDocumentLayout.verticalPadding)
                     }
                     .background(DPColor.backgroundSecondary)
                     .navigationTitle(policyTitle(for: displayedPolicy))
@@ -292,12 +315,9 @@ struct SsoSignupView: View {
             }
 
             ScrollView {
-                policyText(policy.content)
-                    .font(DPFont.light(size: 13, relativeTo: .caption))
-                    .foregroundStyle(DPColor.textSecondary)
+                DPLongFormDocument(content: policy.content, style: .compact)
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(12)
-                    .textSelection(.enabled)
             }
             .frame(height: 128)
             .background(DPColor.backgroundTertiary)
@@ -331,6 +351,25 @@ struct SsoSignupView: View {
 
     private func loadPolicies() async {
         guard policies == nil else { return }
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-ui-testing-sso-signup") {
+            policies = CurrentPoliciesDTO(
+                terms: PolicyDTO(
+                    policyType: .terms,
+                    version: "ui-test",
+                    content: "서비스 이용약관 테스트 내용",
+                    effectiveDate: DateOnly(rawValue: "2026-01-01")
+                ),
+                privacy: PolicyDTO(
+                    policyType: .privacy,
+                    version: "ui-test",
+                    content: "개인정보 처리방침 테스트 내용",
+                    effectiveDate: DateOnly(rawValue: "2026-01-01")
+                )
+            )
+            return
+        }
+        #endif
         do {
             let response = try await oauthClient.currentPolicies()
             guard response.terms != nil, response.privacy != nil else {
@@ -341,13 +380,6 @@ struct SsoSignupView: View {
         } catch {
             errorKey = "auth.oauth.signup.policyError"
         }
-    }
-
-    private func policyText(_ content: String) -> Text {
-        guard let markdown = try? AttributedString(markdown: content) else {
-            return Text(content)
-        }
-        return Text(markdown)
     }
 
     private func policyTitle(for policy: PolicyDTO) -> String {
@@ -371,6 +403,13 @@ struct SsoSignupView: View {
         case .blocked:
             break
         }
+    }
+
+    private func finishDiscardConfirmationDismissal() {
+        showsDiscardConfirmation = false
+        guard dismissesSignupAfterDiscardConfirmation else { return }
+        dismissesSignupAfterDiscardConfirmation = false
+        dismiss()
     }
 
     private func submit() {
@@ -400,6 +439,6 @@ struct SsoSignupView: View {
     }
 }
 
-func oauthString(_ key: String) -> String {
-    String(localized: String.LocalizationValue(key), table: "OAuth")
+nonisolated func oauthString(_ key: String) -> String {
+    AppLocalization.string(key, table: "OAuth")
 }

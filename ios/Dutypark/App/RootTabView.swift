@@ -70,6 +70,42 @@ enum RootPendingDestinationAction {
     }
 }
 
+struct RootNotificationDropdownReadPolicy {
+    private var shouldMarkAllAsReadOnClose = false
+
+    mutating func prepareForOpen() {
+        shouldMarkAllAsReadOnClose = false
+    }
+
+    mutating func finishLoading(didLoad: Bool, isPresented: Bool, hasUnread: Bool) {
+        shouldMarkAllAsReadOnClose = didLoad && isPresented && hasUnread
+    }
+
+    mutating func consumeClose() -> Bool {
+        defer { shouldMarkAllAsReadOnClose = false }
+        return shouldMarkAllAsReadOnClose
+    }
+}
+
+struct RootHomeRefreshPolicy {
+    static let minimumAutomaticInterval: TimeInterval = 5
+
+    private var lastAutomaticRefreshAt: Date?
+
+    init(initialRefreshAt: Date? = nil) {
+        lastAutomaticRefreshAt = initialRefreshAt
+    }
+
+    mutating func shouldRefreshAutomatically(at now: Date = Date()) -> Bool {
+        if let lastAutomaticRefreshAt,
+           now.timeIntervalSince(lastAutomaticRefreshAt) < Self.minimumAutomaticInterval {
+            return false
+        }
+        lastAutomaticRefreshAt = now
+        return true
+    }
+}
+
 struct RootTabView: View {
     @Environment(\.scenePhase) private var scenePhase
     @EnvironmentObject private var session: SessionStore
@@ -77,14 +113,17 @@ struct RootTabView: View {
     @StateObject private var pushCenter = NotificationPushCenter.shared
     @State private var selectedTab = AppTab.home
     @State private var homeRefreshID = 0
+    @State private var homeRefreshPolicy = RootHomeRefreshPolicy(initialRefreshAt: Date())
     @State private var homePath: [HomeDestination] = []
     @State private var calendarTarget = CalendarTarget()
     @State private var todoTarget: TodoID?
     @State private var settingsDestination: SettingsDestination?
     @State private var showsNotifications = false
+    @State private var notificationDropdownReadPolicy = RootNotificationDropdownReadPolicy()
     @State private var showsNotificationCenter = false
     @State private var showsUnsupportedLink = false
     @State private var showsLogoutConfirmation = false
+    @State private var isLoggingOut = false
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
@@ -122,6 +161,38 @@ struct RootTabView: View {
             NavigationStack {
                 NotificationCenterView(store: notifications, onOpen: openNotificationRoute)
             }
+            .presentationDetents([.large])
+            .presentationDragIndicator(.visible)
+        }
+        .fullScreenCover(
+            isPresented: Binding(
+                get: { showsLogoutConfirmation },
+                set: { isPresented in
+                    if !isPresented,
+                       RootLogoutConfirmationPolicy.canDismiss(isLoggingOut: isLoggingOut) {
+                        showsLogoutConfirmation = false
+                    }
+                }
+            )
+        ) {
+            DPModalOverlay(
+                maximumContentWidth: DPConfirmationPanel.maximumWidth,
+                onDismiss: { showsLogoutConfirmation = false },
+                canDismiss: RootLogoutConfirmationPolicy.canDismiss(isLoggingOut: isLoggingOut)
+            ) { availableSize, dismiss in
+                DPConfirmationPanel(
+                    title: SettingsLocalization.string("settings.logout.confirmTitle"),
+                    message: SettingsLocalization.string("settings.logout.confirmMessage"),
+                    confirmTitle: SettingsLocalization.string("settings.logout"),
+                    cancelTitle: SettingsLocalization.string("settings.action.cancel"),
+                    isDestructive: true,
+                    isWorking: isLoggingOut,
+                    maximumHeight: availableSize.height,
+                    cancel: dismiss,
+                    confirm: { logout(dismiss: dismiss) }
+                )
+            }
+            .interactiveDismissDisabled(isLoggingOut)
         }
         .task {
             await RootAuthenticatedStartupAction.perform(
@@ -144,7 +215,7 @@ struct RootTabView: View {
                     setNotificationForeground: {
                         await notifications.setForeground($0)
                     },
-                    refreshHome: { homeRefreshID &+= 1 },
+                    refreshHome: refreshHomeIfStale,
                     refreshConsent: refreshConsentIfNeeded,
                     resumePush: {
                         await APNsRegistrationManager.shared.resumeRegistration()
@@ -155,12 +226,21 @@ struct RootTabView: View {
         }
         .onChange(of: selectedTab) { _, tab in
             if tab == .home {
-                homeRefreshID &+= 1
+                refreshHomeIfStale()
             }
         }
         .onChange(of: showsNotifications) { _, isPresented in
             guard isPresented else { return }
-            Task { await notifications.refresh() }
+            notificationDropdownReadPolicy.prepareForOpen()
+            Task {
+                let didLoad = await notifications.refreshIfStale()
+                notificationDropdownReadPolicy.finishLoading(
+                    didLoad: didLoad,
+                    isPresented: showsNotifications,
+                    hasUnread: notifications.unreadCount > 0
+                        || notifications.notifications.contains(where: { !$0.isRead })
+                )
+            }
         }
         .onChange(of: pushCenter.pendingNotificationID) { _, notificationID in
             guard notificationID != nil else { return }
@@ -177,19 +257,6 @@ struct RootTabView: View {
         } message: {
             Text("link.unsupported.message")
         }
-        .confirmationDialog(
-            SettingsLocalization.string("settings.logout.confirmTitle"),
-            isPresented: $showsLogoutConfirmation
-        ) {
-            Button(SettingsLocalization.string("settings.logout"), role: .destructive) {
-                Task {
-                    await session.logout()
-                }
-            }
-            Button(SettingsLocalization.string("settings.action.cancel"), role: .cancel) {}
-        } message: {
-            SettingsLocalization.text("settings.logout.confirmMessage")
-        }
         .safeAreaInset(edge: .top, spacing: 0) {
             if case .authenticated(let member) = session.state, member.isImpersonating {
                 ImpersonationBanner()
@@ -205,22 +272,22 @@ struct RootTabView: View {
                 .navigationBarTitleDisplayMode(.inline)
                 .accessibilityIdentifier("screen.home")
                 .toolbar {
-                    ToolbarItem(placement: .topBarLeading) {
+                    DPDashboardHeaderToolbarItem(placement: .topBarLeading) {
                         DPBrandMark(action: openHome)
                     }
-                    ToolbarItem(placement: .topBarTrailing) {
+                    DPDashboardHeaderToolbarItem(placement: .topBarTrailing) {
                         HStack(spacing: 0) {
-                        notificationBell
-                        Button {
-                            homePath.append(.menu)
-                        } label: {
-                            Image(systemName: "line.3.horizontal")
-                                .font(.system(size: 18, weight: .semibold))
-                                .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
-                                .contentShape(Rectangle())
-                        }
-                        .accessibilityLabel(Text("home.menu", tableName: "Home"))
-                        .accessibilityIdentifier("home.menu")
+                            notificationBell
+                            Button {
+                                homePath.append(.menu)
+                            } label: {
+                                Image(systemName: "line.3.horizontal")
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                                    .contentShape(Rectangle())
+                            }
+                            .accessibilityLabel(RootChromeLocalization.home("home.menu"))
+                            .accessibilityIdentifier("home.menu")
                         }
                         .fixedSize(horizontal: true, vertical: false)
                     }
@@ -234,16 +301,12 @@ struct RootTabView: View {
                         )
                     case .menu:
                         AppMenuView(
-                            onOpenCalendar: openMyCalendar,
-                            onOpenTeam: { selectedTab = .team },
                             onOpenFriends: openFriends,
-                            onOpenTodo: { selectedTab = .todo },
                             onOpenNotifications: {
                                 homePath.removeAll()
                                 showsNotificationCenter = true
                             },
                             onOpenGuide: openGuide,
-                            onOpenSettings: openSettings,
                             isAdmin: authenticatedMember?.isAdmin == true,
                             onOpenAdmin: { homePath.append(.admin) },
                             onLogout: { showsLogoutConfirmation = true }
@@ -324,21 +387,34 @@ struct RootTabView: View {
         selectedTab = .settings
     }
 
+    private func logout(dismiss: @escaping () -> Void) {
+        guard RootLogoutConfirmationPolicy.canSubmit(isLoggingOut: isLoggingOut) else { return }
+        isLoggingOut = true
+
+        Task {
+            await session.logout()
+            isLoggingOut = false
+            dismiss()
+        }
+    }
+
     private var notificationDropdownLayer: some View {
         ZStack(alignment: .topTrailing) {
             DPColor.textOnLight.opacity(0.30)
                 .ignoresSafeArea()
                 .contentShape(Rectangle())
-                .onTapGesture { showsNotifications = false }
-                .accessibilityLabel(String(localized: "notifications.common.close", table: "Notifications"))
+                .onTapGesture(perform: closeNotificationDropdown)
+                .accessibilityLabel(
+                    RootChromeLocalization.notifications("notifications.common.close")
+                )
                 .accessibilityAddTraits(.isButton)
-                .accessibilityAction { showsNotifications = false }
+                .accessibilityAction { closeNotificationDropdown() }
 
             NotificationDropdown(
                 store: notifications,
                 onOpen: openDropdownNotification,
                 onViewAll: {
-                    showsNotifications = false
+                    closeNotificationDropdown()
                     showsNotificationCenter = true
                 }
             )
@@ -346,14 +422,21 @@ struct RootTabView: View {
             .padding(.horizontal, DPSpacing.medium)
             .padding(.top, DPSpacing.extraSmall)
         }
-        .accessibilityAction(.escape) { showsNotifications = false }
+        .accessibilityAction(.escape) { closeNotificationDropdown() }
         .zIndex(10)
+    }
+
+    private func closeNotificationDropdown() {
+        let shouldMarkAllAsRead = notificationDropdownReadPolicy.consumeClose()
+        showsNotifications = false
+        guard shouldMarkAllAsRead else { return }
+        Task { try? await notifications.markAllAsRead() }
     }
 
     private func openDropdownNotification(_ notification: NotificationDTO) async {
         guard let route = await notifications.open(notification) else { return }
         if await openNotificationRoute(route) {
-            showsNotifications = false
+            closeNotificationDropdown()
         }
     }
 
@@ -374,8 +457,13 @@ struct RootTabView: View {
     private func socialDidMutate(_ affectsReceivedRequestCount: Bool) async {
         homeRefreshID &+= 1
         if affectsReceivedRequestCount {
-            await notifications.refresh()
+            await notifications.refreshFriendRequestCount()
         }
+    }
+
+    private func refreshHomeIfStale() {
+        guard homeRefreshPolicy.shouldRefreshAutomatically() else { return }
+        homeRefreshID &+= 1
     }
 
     private func openNotificationRoute(_ route: NotificationRoute) async -> Bool {
@@ -536,6 +624,57 @@ nonisolated enum RootNavigationPolicy {
     }
 }
 
+nonisolated enum RootChromeLocalization {
+    static func localizable(_ key: String, locale: Locale? = nil) -> String {
+        AppLocalization.string(key, table: "Localizable", locale: locale)
+    }
+
+    static func home(_ key: String, locale: Locale? = nil) -> String {
+        AppLocalization.string(key, table: "Home", locale: locale)
+    }
+
+    static func notifications(_ key: String, locale: Locale? = nil) -> String {
+        AppLocalization.string(key, table: "Notifications", locale: locale)
+    }
+
+    static func settings(_ key: String, locale: Locale? = nil) -> String {
+        AppLocalization.string(key, table: "Settings", locale: locale)
+    }
+
+    static func impersonationRemaining(_ duration: String, locale: Locale? = nil) -> String {
+        let selectedLocale = locale ?? AppLocalization.locale
+        return String(
+            format: localizable("auth.impersonation.remaining", locale: selectedLocale),
+            locale: selectedLocale,
+            arguments: [duration]
+        )
+    }
+}
+
+nonisolated enum RootLogoutConfirmationPolicy {
+    static func canSubmit(isLoggingOut: Bool) -> Bool {
+        !isLoggingOut
+    }
+
+    static func canDismiss(isLoggingOut: Bool) -> Bool {
+        !isLoggingOut
+    }
+}
+
+nonisolated enum RootHamburgerMenuItem: String, CaseIterable, Hashable, Sendable {
+    case friends
+    case notifications
+    case admin
+    case guide
+    case logout
+
+    static let primaryItems: [Self] = [.friends, .notifications]
+
+    static func visibleItems(isAdmin: Bool) -> [Self] {
+        primaryItems + (isAdmin ? [.admin] : []) + [.guide, .logout]
+    }
+}
+
 nonisolated enum RootTabSelectionOrigin: Equatable, Sendable {
     case tabBar
     case explicitRoute
@@ -548,13 +687,9 @@ private enum HomeDestination: Hashable {
 }
 
 private struct AppMenuView: View {
-    let onOpenCalendar: () -> Void
-    let onOpenTeam: () -> Void
     let onOpenFriends: () -> Void
-    let onOpenTodo: () -> Void
     let onOpenNotifications: () -> Void
     let onOpenGuide: () -> Void
-    let onOpenSettings: () -> Void
     let isAdmin: Bool
     let onOpenAdmin: () -> Void
     let onLogout: () -> Void
@@ -568,42 +703,9 @@ private struct AppMenuView: View {
         ScrollView {
             VStack(spacing: DPSpacing.medium) {
                 LazyVGrid(columns: columns, spacing: DPSpacing.small) {
-                    AppMenuTile(
-                        title: String(localized: AppTab.calendar.tabTitle),
-                        systemImage: AppTab.calendar.systemImage,
-                        color: DPColor.accent,
-                        action: onOpenCalendar
-                    )
-                    AppMenuTile(
-                        title: String(localized: AppTab.team.tabTitle),
-                        systemImage: AppTab.team.systemImage,
-                        color: DPColor.success,
-                        action: onOpenTeam
-                    )
-                    AppMenuTile(
-                        title: String(localized: "home.friends", table: "Home"),
-                        systemImage: "person.2",
-                        color: DPColor.warning,
-                        action: onOpenFriends
-                    )
-                    AppMenuTile(
-                        title: String(localized: AppTab.todo.tabTitle),
-                        systemImage: AppTab.todo.systemImage,
-                        color: DPColor.danger,
-                        action: onOpenTodo
-                    )
-                    AppMenuTile(
-                        title: String(localized: "notifications.title", table: "Notifications"),
-                        systemImage: "bell",
-                        color: DPColor.accentHover,
-                        action: onOpenNotifications
-                    )
-                    AppMenuTile(
-                        title: String(localized: AppTab.settings.tabTitle),
-                        systemImage: AppTab.settings.systemImage,
-                        color: DPColor.textSecondary,
-                        action: onOpenSettings
-                    )
+                    ForEach(RootHamburgerMenuItem.primaryItems, id: \.self) { item in
+                        primaryTile(for: item)
+                    }
                 }
 
                 if isAdmin {
@@ -618,6 +720,7 @@ private struct AppMenuView: View {
                             systemImage: "lock.shield",
                             action: onOpenAdmin
                         )
+                        .accessibilityIdentifier("menu.admin")
                     }
                     .padding(DPSpacing.small)
                     .background(DPColor.backgroundCard)
@@ -631,10 +734,11 @@ private struct AppMenuView: View {
 
                 VStack(spacing: 0) {
                     AppMenuRow(
-                        title: SettingsLocalization.string("settings.guide"),
+                        title: RootChromeLocalization.localizable("root.menu.guide"),
                         systemImage: "book",
                         action: onOpenGuide
                     )
+                    .accessibilityIdentifier("menu.guide")
                     Divider().overlay(DPColor.borderPrimary)
                     AppMenuRow(
                         title: SettingsLocalization.string("settings.logout"),
@@ -642,6 +746,7 @@ private struct AppMenuView: View {
                         role: .destructive,
                         action: onLogout
                     )
+                    .accessibilityIdentifier("menu.logout")
                 }
                 .background(DPColor.backgroundCard)
                 .clipShape(RoundedRectangle(cornerRadius: DPRadius.large))
@@ -653,9 +758,33 @@ private struct AppMenuView: View {
             .padding(DPSpacing.medium)
         }
         .background(DPColor.backgroundPrimary)
-        .navigationTitle(Text("home.menu", tableName: "Home"))
+        .navigationTitle(RootChromeLocalization.home("home.menu"))
         .navigationBarTitleDisplayMode(.large)
         .accessibilityIdentifier("screen.menu")
+    }
+
+    @ViewBuilder
+    private func primaryTile(for item: RootHamburgerMenuItem) -> some View {
+        switch item {
+        case .friends:
+            AppMenuTile(
+                title: RootChromeLocalization.home("home.friends"),
+                systemImage: "person.2",
+                color: DPColor.warning,
+                action: onOpenFriends
+            )
+            .accessibilityIdentifier("menu.friends")
+        case .notifications:
+            AppMenuTile(
+                title: RootChromeLocalization.notifications("notifications.title"),
+                systemImage: "bell",
+                color: DPColor.accentHover,
+                action: onOpenNotifications
+            )
+            .accessibilityIdentifier("menu.notifications")
+        case .admin, .guide, .logout:
+            EmptyView()
+        }
     }
 }
 
@@ -742,21 +871,15 @@ private struct ImpersonationBanner: View {
             HStack(spacing: 10) {
                 Image(systemName: "person.crop.circle.badge.clock")
                 VStack(alignment: .leading, spacing: 1) {
-                    Text("auth.impersonation.active")
+                    Text(RootChromeLocalization.localizable("auth.impersonation.active"))
                         .font(.caption.weight(.semibold))
                     if let remaining = session.impersonationRemainingTime(at: context.date) {
-                        Text(
-                            String(
-                                format: String(localized: "auth.impersonation.remaining"),
-                                locale: .current,
-                                Self.duration(remaining)
-                            )
-                        )
+                        Text(RootChromeLocalization.impersonationRemaining(Self.duration(remaining)))
                         .font(.caption2.monospacedDigit())
                     }
                 }
                 Spacer(minLength: 4)
-                Button(String(localized: "settings.managed.restore", table: "Settings")) {
+                Button(RootChromeLocalization.settings("settings.managed.restore")) {
                     Task { await session.restoreOriginalAccount() }
                 }
                 .font(.caption.weight(.semibold))
@@ -783,7 +906,7 @@ private struct NotificationDropdown: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            Text(String(localized: "notifications.title", table: "Notifications"))
+            Text(RootChromeLocalization.notifications("notifications.title"))
                 .font(DPFont.bold(size: 14, relativeTo: .subheadline))
                 .foregroundStyle(DPColor.textPrimary)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -795,12 +918,14 @@ private struct NotificationDropdown: View {
 
             Group {
                 if store.isLoading && store.notifications.isEmpty {
-                    ProgressView(String(localized: "notifications.common.loading", table: "Notifications"))
+                    ProgressView(
+                        RootChromeLocalization.notifications("notifications.common.loading")
+                    )
                         .font(DPTypography.label)
                         .foregroundStyle(DPColor.textMuted)
                         .frame(maxWidth: .infinity, minHeight: 96)
                 } else if store.notifications.isEmpty {
-                    Text(String(localized: "notifications.common.empty", table: "Notifications"))
+                    Text(RootChromeLocalization.notifications("notifications.common.empty"))
                         .font(DPTypography.label)
                         .foregroundStyle(DPColor.textMuted)
                         .frame(maxWidth: .infinity, minHeight: 96)
@@ -827,7 +952,9 @@ private struct NotificationDropdown: View {
 
             Button(action: onViewAll) {
                 HStack(spacing: DPSpacing.extraSmall) {
-                    Text(String(localized: "notifications.dropdown.viewAll", table: "Notifications"))
+                    Text(
+                        RootChromeLocalization.notifications("notifications.dropdown.viewAll")
+                    )
                     Image(systemName: "chevron.right")
                         .font(.system(size: 12, weight: .semibold))
                 }
@@ -859,14 +986,7 @@ private struct NotificationDropdownRow: View {
         Button(action: action) {
             HStack(alignment: .top, spacing: DPSpacing.compact) {
                 ZStack(alignment: .topTrailing) {
-                    Circle()
-                        .fill(DPColor.backgroundTertiary)
-                        .frame(width: 36, height: 36)
-                        .overlay {
-                            Image(systemName: "person.fill")
-                                .font(.system(size: 15))
-                                .foregroundStyle(DPColor.textMuted)
-                        }
+                    NotificationDropdownActorAvatar(notification: notification)
 
                     if !notification.isRead {
                         Circle()
@@ -907,11 +1027,108 @@ private struct NotificationDropdownRow: View {
     }
 }
 
+nonisolated struct NotificationDropdownActorPhotoRequest {
+    let actorID: MemberID
+    let profilePhotoVersion: Int64
+
+    init?(notification: NotificationDTO) {
+        guard let actorID = notification.actorId,
+              notification.payload.actor?.hasProfilePhoto == true
+        else { return nil }
+        self.actorID = actorID
+        profilePhotoVersion = notification.payload.actor?.profilePhotoVersion ?? 0
+    }
+
+    var path: String {
+        "members/\(actorID)/profile-photo"
+    }
+
+    var queryItems: [URLQueryItem] {
+        [
+            URLQueryItem(name: "thumbnail", value: "true"),
+            URLQueryItem(name: "v", value: String(profilePhotoVersion)),
+        ]
+    }
+
+    var cacheIdentity: String {
+        "\(actorID)-\(profilePhotoVersion)"
+    }
+}
+
+private struct NotificationDropdownActorAvatar: View {
+    let notification: NotificationDTO
+    @State private var image: UIImage?
+
+    var body: some View {
+        Circle()
+            .fill(DPColor.backgroundTertiary)
+            .frame(width: 36, height: 36)
+            .overlay {
+                if let image {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFill()
+                        .clipShape(Circle())
+                } else {
+                    Image(systemName: "person.fill")
+                        .font(.system(size: 15))
+                        .foregroundStyle(DPColor.textMuted)
+                }
+            }
+            .accessibilityElement()
+            .accessibilityLabel(notification.payload.actor?.name ?? "")
+            .accessibilityIdentifier(accessibilityIdentifier)
+            .task(id: photoRequest?.cacheIdentity) {
+                await loadPhoto()
+            }
+    }
+
+    private var photoRequest: NotificationDropdownActorPhotoRequest? {
+        NotificationDropdownActorPhotoRequest(notification: notification)
+    }
+
+    private var accessibilityIdentifier: String {
+        let state = image == nil ? "fallback" : "photo"
+        return "notifications.dropdown.row.\(notification.id.uuidString).avatar.\(state)"
+    }
+
+    private func loadPhoto() async {
+        guard let photoRequest else {
+            image = nil
+            return
+        }
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-ui-testing-notification-actor-avatar") {
+            image = Self.uiTestingProfilePhoto()
+            return
+        }
+#endif
+        let data = try? await APIClient.shared.data(
+            photoRequest.path,
+            queryItems: photoRequest.queryItems
+        )
+        image = data.flatMap(UIImage.init(data:))
+    }
+
+#if DEBUG
+    private static func uiTestingProfilePhoto() -> UIImage {
+        let size = CGSize(width: 72, height: 72)
+        return UIGraphicsImageRenderer(size: size).image { context in
+            UIColor.systemIndigo.setFill()
+            context.cgContext.fill(CGRect(origin: .zero, size: size))
+            let symbol = UIImage(systemName: "person.crop.circle.fill")?
+                .withTintColor(.white, renderingMode: .alwaysOriginal)
+            symbol?.draw(in: CGRect(x: 10, y: 10, width: 52, height: 52))
+        }
+    }
+#endif
+}
+
 private extension View {
     func primaryTabItem(_ tab: AppTab) -> some View {
         tabItem {
             Label {
-                Text(tab.tabTitle)
+                Text(tab.localizedTitle)
             } icon: {
                 Image(systemName: tab.systemImage)
                     .accessibilityIdentifier(tab.accessibilityIdentifier)

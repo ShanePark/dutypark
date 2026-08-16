@@ -6,13 +6,32 @@ nonisolated enum GuestPublicCalendarLink {
     }
 }
 
+enum GuestCalendarLocalization {
+    static func yearMonth(
+        year: Int,
+        month: Int,
+        template: String = GuestLocalization.text("guest.calendar.month.format")
+    ) -> String {
+        String(
+            format: template,
+            locale: Locale(identifier: "en_US_POSIX"),
+            arguments: [year, month]
+        )
+    }
+}
+
 struct GuestPublicCalendarView: View {
     @StateObject private var model: GuestPublicCalendarViewModel
+    @State private var showsMonthPicker = false
     private let memberID: MemberID
 
     init(memberID: MemberID) {
         self.memberID = memberID
-        _model = StateObject(wrappedValue: GuestPublicCalendarViewModel(memberID: memberID))
+        _model = StateObject(wrappedValue: GuestPublicCalendarViewModel(
+            memberID: memberID,
+            api: GuestPublicCalendarAPIProvider.make(),
+            now: GuestPublicCalendarAPIProvider.now()
+        ))
     }
 
     var body: some View {
@@ -57,6 +76,20 @@ struct GuestPublicCalendarView: View {
         }
         .task { if model.days.isEmpty { await model.load() } }
         .refreshable { await model.load() }
+        .sheet(isPresented: $showsMonthPicker) {
+            GuestYearMonthPicker(
+                selectedYear: model.year,
+                selectedMonth: model.month,
+                onSelect: { year, month in
+                    showsMonthPicker = false
+                    Task { await model.selectYearMonth(year: year, month: month) }
+                },
+                onCurrentMonth: {
+                    showsMonthPicker = false
+                    Task { await model.goToToday() }
+                }
+            )
+        }
         .fullScreenCover(item: $model.selectedDay) { day in
             DPModalOverlay(
                 onDismiss: { model.selectedDay = nil },
@@ -116,9 +149,25 @@ struct GuestPublicCalendarView: View {
                     .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
             }
             Spacer()
-            Text(GuestLocalization.format("guest.calendar.month.format", model.year, model.month))
-                .font(.title3.bold())
+            Button {
+                showsMonthPicker = true
+            } label: {
+                HStack(spacing: DPSpacing.extraSmall) {
+                    Text(GuestCalendarLocalization.yearMonth(year: model.year, month: model.month))
+                        .font(.title3.bold())
+                    Image(systemName: "chevron.down")
+                        .font(.caption.bold())
+                }
                 .foregroundStyle(DPColor.textPrimary)
+                .frame(minHeight: DPSize.minimumTouchTarget)
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(GuestLocalization.text("guest.calendar.month.choose"))
+            .accessibilityValue(GuestCalendarLocalization.yearMonth(
+                year: model.year,
+                month: model.month
+            ))
+            .accessibilityIdentifier("guest.calendar.monthPicker.open")
             Spacer()
             Button { Task { await model.changeMonth(by: 1) } } label: {
                 Image(systemName: "chevron.right")
@@ -226,6 +275,171 @@ struct GuestPublicCalendarView: View {
         .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
     }
 }
+
+private struct GuestYearMonthPicker: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var year: Int
+    private let selectedYear: Int
+    private let selectedMonth: Int
+    let onSelect: (Int, Int) -> Void
+    let onCurrentMonth: () -> Void
+
+    init(
+        selectedYear: Int,
+        selectedMonth: Int,
+        onSelect: @escaping (Int, Int) -> Void,
+        onCurrentMonth: @escaping () -> Void
+    ) {
+        self.selectedYear = selectedYear
+        self.selectedMonth = selectedMonth
+        self.onSelect = onSelect
+        self.onCurrentMonth = onCurrentMonth
+        _year = State(initialValue: selectedYear)
+    }
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: DPSpacing.medium) {
+                HStack {
+                    Button { year -= 1 } label: {
+                        Image(systemName: "chevron.left")
+                            .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                    }
+                    .accessibilityLabel(GuestLocalization.text("guest.calendar.month.previousYear"))
+
+                    Spacer()
+                    Text(verbatim: String(year)).font(.title3.bold())
+                    Spacer()
+
+                    Button { year += 1 } label: {
+                        Image(systemName: "chevron.right")
+                            .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                    }
+                    .accessibilityLabel(GuestLocalization.text("guest.calendar.month.nextYear"))
+                    .accessibilityIdentifier("guest.calendar.monthPicker.nextYear")
+                }
+
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4)) {
+                    ForEach(1...12, id: \.self) { month in
+                        let isSelected = year == selectedYear && month == selectedMonth
+                        Button {
+                            onSelect(year, month)
+                        } label: {
+                            Text(verbatim: monthName(month))
+                                .font(.subheadline.weight(.medium))
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.7)
+                                .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)
+                                .background(isSelected ? DPColor.accent : DPColor.backgroundTertiary)
+                                .foregroundStyle(isSelected ? DPColor.textOnDark : DPColor.textPrimary)
+                                .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("guest.calendar.monthPicker.month.\(month)")
+                    }
+                }
+
+                Button {
+                    onCurrentMonth()
+                } label: {
+                    Text(GuestLocalization.text("guest.calendar.month.current"))
+                        .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)
+                }
+                .buttonStyle(.borderedProminent)
+            }
+            .padding(DPSpacing.medium)
+            .navigationTitle(GuestLocalization.text("guest.calendar.month.choose"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(GuestLocalization.text("guest.close")) { dismiss() }
+                }
+            }
+        }
+        .presentationDetents([.medium])
+        .accessibilityIdentifier("guest.calendar.monthPicker")
+    }
+
+    private func monthName(_ month: Int) -> String {
+        guard (1...12).contains(month) else { return String(month) }
+        let formatter = DateFormatter()
+        formatter.locale = AppLocalization.locale
+        return formatter.monthSymbols[month - 1]
+    }
+}
+
+private nonisolated enum GuestPublicCalendarAPIProvider {
+    static func make() -> GuestAPIProtocol {
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-ui-testing-guest-calendar") {
+            return GuestPublicCalendarUITestingAPI()
+        }
+#endif
+        return GuestAPI()
+    }
+
+    static func now() -> Date {
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-ui-testing-guest-calendar"),
+           let date = CalendarDateSupport.calendar.date(
+               from: DateComponents(year: 2026, month: 8, day: 15)
+           ) {
+            return date
+        }
+#endif
+        return Date()
+    }
+}
+
+#if DEBUG
+private nonisolated struct GuestPublicCalendarUITestingAPI: GuestAPIProtocol, Sendable {
+    func member(id: MemberID) async throws -> MemberPreviewDTO {
+        MemberPreviewDTO(
+            id: id,
+            name: "김듀티",
+            teamId: nil,
+            team: nil,
+            hasProfilePhoto: false,
+            profilePhotoVersion: 0
+        )
+    }
+
+    func calendar(year: Int, month: Int) async throws -> [TeamDayDTO] {
+        guard let firstDay = CalendarDateSupport.calendar.date(
+            from: DateComponents(year: year, month: month, day: 1)
+        ) else { return [] }
+        let weekday = CalendarDateSupport.calendar.component(.weekday, from: firstDay)
+        guard let gridStart = CalendarDateSupport.calendar.date(
+            byAdding: .day,
+            value: -(weekday - 1),
+            to: firstDay
+        ) else { return [] }
+
+        return (0..<42).compactMap { offset in
+            guard let date = CalendarDateSupport.calendar.date(
+                byAdding: .day,
+                value: offset,
+                to: gridStart
+            ) else { return nil }
+            let components = CalendarDateSupport.calendar.dateComponents([.year, .month, .day], from: date)
+            guard let year = components.year, let month = components.month, let day = components.day else {
+                return nil
+            }
+            return TeamDayDTO(year: year, month: month, day: day)
+        }
+    }
+
+    func duties(memberID: MemberID, year: Int, month: Int) async throws -> [DutyDTO] { [] }
+    func schedules(memberID: MemberID, year: Int, month: Int) async throws -> [[ScheduleDTO]] {
+        Array(repeating: [], count: 42)
+    }
+    func holidays(year: Int, month: Int) async throws -> [[HolidayDTO]] {
+        Array(repeating: [], count: 42)
+    }
+    func dDays(memberID: MemberID) async throws -> [DDayDTO] { [] }
+    func policy(_ type: PolicyType) async throws -> PolicyDTO { throw URLError(.unsupportedURL) }
+}
+#endif
 
 private struct GuestCalendarDayCell: View {
     let day: GuestCalendarDay

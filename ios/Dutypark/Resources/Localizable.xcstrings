@@ -225,7 +225,7 @@
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "캘린더"
+            "value" : "달력"
           }
         }
       }
@@ -242,6 +242,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "홈"
+          }
+        }
+      }
+    },
+    "root.menu.guide" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Guide"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이용 안내"
           }
         }
       }

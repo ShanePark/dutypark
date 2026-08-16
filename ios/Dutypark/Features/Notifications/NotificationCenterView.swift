@@ -1,13 +1,54 @@
 import SwiftUI
 
+nonisolated func notificationLocalized(_ key: String, locale: Locale? = nil) -> String {
+    AppLocalization.string(key, table: "Notifications", locale: locale)
+}
+
+nonisolated enum NotificationDeletionConfirmation: Equatable, Identifiable, Sendable {
+    enum ID: Equatable, Hashable, Sendable {
+        case notification(NotificationID)
+        case allRead
+    }
+
+    case notification(NotificationDTO)
+    case allRead
+
+    var id: ID {
+        switch self {
+        case let .notification(notification): .notification(notification.id)
+        case .allRead: .allRead
+        }
+    }
+
+    var titleKey: String {
+        switch self {
+        case .notification: "notifications.list.deleteConfirmTitle"
+        case .allRead: "notifications.list.deleteAllReadTitle"
+        }
+    }
+
+    var messageKey: String {
+        switch self {
+        case .notification: "notifications.list.deleteConfirmMessage"
+        case .allRead: "notifications.list.deleteAllReadConfirm"
+        }
+    }
+
+    var confirmTitleKey: String {
+        switch self {
+        case .notification: "notifications.common.delete"
+        case .allRead: "notifications.list.deleteRead"
+        }
+    }
+}
+
 struct NotificationCenterView: View {
     @ObservedObject var store: NotificationStore
     var onOpen: (NotificationRoute) async -> Bool
 
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.dismiss) private var dismiss
-    @State private var notificationToDelete: NotificationDTO?
-    @State private var showsDeleteReadConfirmation = false
+    @State private var deletionConfirmation: NotificationDeletionConfirmation?
     @State private var alertTitle: String?
     @State private var alertMessage: String?
 
@@ -25,7 +66,7 @@ struct NotificationCenterView: View {
                 pageHeader
                     .padding(.bottom, DPSpacing.medium)
 
-                Text(String(localized: "notifications.list.retentionNotice", table: "Notifications"))
+                Text(notificationLocalized("notifications.list.retentionNotice"))
                     .font(DPTypography.caption)
                     .foregroundStyle(DPColor.textMuted)
                     .padding(.bottom, DPSpacing.medium)
@@ -38,8 +79,29 @@ struct NotificationCenterView: View {
             .frame(maxWidth: .infinity)
         }
         .background(DPColor.backgroundPrimary)
+        .accessibilityIdentifier("screen.notifications")
         .toolbar(.hidden, for: .navigationBar)
-        .presentationDragIndicator(.visible)
+        .safeAreaInset(edge: .top, spacing: 0) {
+            HStack {
+                Spacer()
+                Button(action: dismiss.callAsFunction) {
+                    HStack(spacing: DPSpacing.extraSmall) {
+                        Image(systemName: "xmark")
+                        Text(notificationLocalized("notifications.common.close"))
+                    }
+                    .font(DPTypography.label)
+                    .frame(minWidth: DPSize.minimumTouchTarget, minHeight: DPSize.minimumTouchTarget)
+                    .contentShape(Rectangle())
+                }
+                .accessibilityLabel(notificationLocalized("notifications.common.close"))
+                .accessibilityIdentifier("notifications.close")
+            }
+            .padding(.horizontal, DPSpacing.medium)
+            .background(DPColor.backgroundPrimary)
+            .overlay(alignment: .bottom) {
+                Divider().overlay(DPColor.borderPrimary)
+            }
+        }
         .refreshable { await store.refresh() }
         .task {
             store.startPolling()
@@ -50,36 +112,28 @@ struct NotificationCenterView: View {
         .onChange(of: scenePhase) { _, phase in
             Task { await store.setForeground(phase == .active) }
         }
-        .confirmationDialog(
-            String(localized: "notifications.list.deleteConfirmTitle", table: "Notifications"),
-            isPresented: Binding(
-                get: { notificationToDelete != nil },
-                set: { if !$0 { notificationToDelete = nil } }
-            ),
-            titleVisibility: .visible
-        ) {
-            Button(String(localized: "notifications.common.delete", table: "Notifications"), role: .destructive) {
-                guard let notificationToDelete else { return }
-                Task { await delete(notificationToDelete) }
+        .fullScreenCover(item: $deletionConfirmation) { confirmation in
+            DPModalOverlay(
+                maximumContentWidth: DPConfirmationPanel.maximumWidth,
+                onDismiss: { deletionConfirmation = nil }
+            ) { availableSize, dismiss in
+                DPConfirmationPanel(
+                    title: notificationLocalized(confirmation.titleKey),
+                    message: notificationLocalized(confirmation.messageKey),
+                    confirmTitle: notificationLocalized(confirmation.confirmTitleKey),
+                    cancelTitle: notificationLocalized("notifications.common.cancel"),
+                    isDestructive: true,
+                    maximumHeight: availableSize.height,
+                    cancel: dismiss,
+                    confirm: {
+                        dismiss()
+                        Task { await delete(confirmation) }
+                    }
+                )
             }
-            Button(String(localized: "notifications.common.cancel", table: "Notifications"), role: .cancel) {}
-        } message: {
-            Text(String(localized: "notifications.list.deleteConfirmMessage", table: "Notifications"))
-        }
-        .confirmationDialog(
-            String(localized: "notifications.list.deleteAllReadTitle", table: "Notifications"),
-            isPresented: $showsDeleteReadConfirmation,
-            titleVisibility: .visible
-        ) {
-            Button(String(localized: "notifications.list.deleteRead", table: "Notifications"), role: .destructive) {
-                Task { await deleteAllRead() }
-            }
-            Button(String(localized: "notifications.common.cancel", table: "Notifications"), role: .cancel) {}
-        } message: {
-            Text(String(localized: "notifications.list.deleteAllReadConfirm", table: "Notifications"))
         }
         .alert(
-            alertTitle ?? String(localized: "notifications.common.error", table: "Notifications"),
+            alertTitle ?? notificationLocalized("notifications.common.error"),
             isPresented: Binding(
                 get: { alertMessage != nil },
                 set: {
@@ -90,7 +144,7 @@ struct NotificationCenterView: View {
                 }
             )
         ) {
-            Button(String(localized: "notifications.common.ok", table: "Notifications")) {}
+            Button(notificationLocalized("notifications.common.ok")) {}
         } message: {
             Text(alertMessage ?? "")
         }
@@ -125,7 +179,7 @@ struct NotificationCenterView: View {
                         .stroke(DPColor.borderPrimary, lineWidth: DPChrome.borderWidth)
                 }
 
-            Text(String(localized: "notifications.title", table: "Notifications"))
+            Text(notificationLocalized("notifications.title"))
                 .font(DPTypography.heading)
                 .foregroundStyle(DPColor.textPrimary)
                 .lineLimit(1)
@@ -136,19 +190,21 @@ struct NotificationCenterView: View {
     private var headerActions: some View {
         HStack(spacing: DPSpacing.small) {
             NotificationHeaderActionButton(
-                title: String(localized: "notifications.list.markAllAsReadShort", table: "Notifications"),
-                systemImage: "checkmark.circle"
+                title: notificationLocalized("notifications.list.markAllAsReadShort"),
+                systemImage: "checkmark.circle",
+                accessibilityIdentifier: "notifications.markAllAsRead"
             ) {
                 Task { await markAllAsRead() }
             }
 
             NotificationHeaderActionButton(
-                title: String(localized: "notifications.list.deleteReadShort", table: "Notifications"),
+                title: notificationLocalized("notifications.list.deleteReadShort"),
                 systemImage: "trash",
-                isDestructive: true
+                isDestructive: true,
+                accessibilityIdentifier: "notifications.deleteRead"
             ) {
                 if store.notifications.contains(where: \.isRead) {
-                    showsDeleteReadConfirmation = true
+                    deletionConfirmation = .allRead
                 } else {
                     showInformation("notifications.list.noReadNotifications")
                 }
@@ -160,18 +216,18 @@ struct NotificationCenterView: View {
     private var notificationCard: some View {
         LazyVStack(spacing: 0) {
             if store.isLoading && store.notifications.isEmpty {
-                Text(String(localized: "notifications.common.loading", table: "Notifications"))
+                Text(notificationLocalized("notifications.common.loading"))
                     .font(DPTypography.label)
                     .foregroundStyle(DPColor.textMuted)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, DPSpacing.extraLarge)
             } else if store.loadFailed && store.notifications.isEmpty {
                 VStack(spacing: DPSpacing.compact) {
-                    Text(String(localized: "notifications.messages.loadFailed", table: "Notifications"))
+                    Text(notificationLocalized("notifications.messages.loadFailed"))
                         .font(DPTypography.label)
                         .foregroundStyle(DPColor.textMuted)
 
-                    Button(String(localized: "notifications.common.retry", table: "Notifications")) {
+                    Button(notificationLocalized("notifications.common.retry")) {
                         Task { await store.refresh() }
                     }
                     .buttonStyle(DPSecondaryButtonStyle())
@@ -184,7 +240,7 @@ struct NotificationCenterView: View {
                         .font(.system(size: 48, weight: .light))
                         .foregroundStyle(DPColor.textMuted.opacity(0.5))
 
-                    Text(String(localized: "notifications.common.empty", table: "Notifications"))
+                    Text(notificationLocalized("notifications.common.empty"))
                         .font(DPTypography.label)
                         .foregroundStyle(DPColor.textMuted)
                 }
@@ -195,7 +251,7 @@ struct NotificationCenterView: View {
                     NotificationRow(
                         notification: notification,
                         onOpen: { Task { await open(notification) } },
-                        onDelete: { notificationToDelete = notification }
+                        onDelete: { deletionConfirmation = .notification(notification) }
                     )
 
                     if index < store.notifications.count - 1 || store.hasMore {
@@ -213,7 +269,7 @@ struct NotificationCenterView: View {
                                 ProgressView()
                                     .tint(DPColor.textSecondary)
                             } else {
-                                Text(String(localized: "notifications.list.loadMore", table: "Notifications"))
+                                Text(notificationLocalized("notifications.list.loadMore"))
                                     .font(DPTypography.label)
                                     .foregroundStyle(DPColor.textSecondary)
                             }
@@ -253,33 +309,28 @@ struct NotificationCenterView: View {
         do {
             try await store.markAllAsRead()
         } catch {
-            alertTitle = String(localized: "notifications.common.error", table: "Notifications")
-            alertMessage = String(localized: "notifications.messages.markAllAsReadFailed", table: "Notifications")
+            alertTitle = notificationLocalized("notifications.common.error")
+            alertMessage = notificationLocalized("notifications.messages.markAllAsReadFailed")
         }
     }
 
-    private func delete(_ notification: NotificationDTO) async {
+    private func delete(_ confirmation: NotificationDeletionConfirmation) async {
         do {
-            try await store.delete(notification)
+            switch confirmation {
+            case let .notification(notification):
+                try await store.delete(notification)
+            case .allRead:
+                try await store.deleteAllRead()
+            }
         } catch {
-            alertTitle = String(localized: "notifications.common.error", table: "Notifications")
-            alertMessage = String(localized: "notifications.messages.deleteFailed", table: "Notifications")
-        }
-        notificationToDelete = nil
-    }
-
-    private func deleteAllRead() async {
-        do {
-            try await store.deleteAllRead()
-        } catch {
-            alertTitle = String(localized: "notifications.common.error", table: "Notifications")
-            alertMessage = String(localized: "notifications.messages.deleteFailed", table: "Notifications")
+            alertTitle = notificationLocalized("notifications.common.error")
+            alertMessage = notificationLocalized("notifications.messages.deleteFailed")
         }
     }
 
     private func showInformation(_ key: String) {
-        alertTitle = String(localized: "notifications.title", table: "Notifications")
-        alertMessage = String(localized: String.LocalizationValue(key), table: "Notifications")
+        alertTitle = notificationLocalized("notifications.title")
+        alertMessage = notificationLocalized(key)
     }
 }
 
@@ -329,6 +380,7 @@ private struct NotificationRow: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier("notifications.row.\(notification.id.uuidString).open")
 
             Button(action: onDelete) {
                 Image(systemName: "trash")
@@ -338,7 +390,8 @@ private struct NotificationRow: View {
                     .contentShape(Rectangle())
                 }
             .buttonStyle(.plain)
-            .accessibilityLabel(String(localized: "notifications.common.delete", table: "Notifications"))
+            .accessibilityLabel(notificationLocalized("notifications.common.delete"))
+            .accessibilityIdentifier("notifications.row.\(notification.id.uuidString).delete")
         }
         .padding(.leading, DPSpacing.medium)
         .padding(.trailing, DPSpacing.small)
@@ -355,7 +408,6 @@ private struct NotificationRow: View {
             }
         }
         .contentShape(Rectangle())
-        .accessibilityIdentifier("notifications.row.\(notification.id.uuidString)")
     }
 }
 
@@ -363,6 +415,7 @@ private struct NotificationHeaderActionButton: View {
     let title: String
     let systemImage: String
     var isDestructive = false
+    let accessibilityIdentifier: String
     let action: () -> Void
 
     var body: some View {
@@ -380,6 +433,7 @@ private struct NotificationHeaderActionButton: View {
             .background(DPColor.backgroundTertiary, in: RoundedRectangle(cornerRadius: DPRadius.standard))
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier(accessibilityIdentifier)
     }
 }
 
@@ -480,7 +534,7 @@ struct NotificationBellButton: View {
                     .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
                     .contentShape(Rectangle())
             }
-            .accessibilityLabel(String(localized: "notifications.title", table: "Notifications"))
+            .accessibilityLabel(notificationLocalized("notifications.title"))
             .accessibilityValue(accessibilityValue)
             .accessibilityIdentifier("notifications.bell")
         }
@@ -489,15 +543,17 @@ struct NotificationBellButton: View {
     private var accessibilityValue: String {
         [
             store.unreadCount > 0
-                ? String(
-                    format: String(localized: "notifications.bell.unread", table: "Notifications"),
-                    store.unreadCountLabel
+                ? AppLocalization.format(
+                    "notifications.bell.unread",
+                    table: "Notifications",
+                    arguments: [store.unreadCountLabel]
                 )
                 : nil,
             store.hasFriendRequests
-                ? String(
-                    format: String(localized: "notifications.bell.friendRequests", table: "Notifications"),
-                    store.friendRequestCountLabel
+                ? AppLocalization.format(
+                    "notifications.bell.friendRequests",
+                    table: "Notifications",
+                    arguments: [store.friendRequestCountLabel]
                 )
                 : nil,
         ]

@@ -4,6 +4,76 @@ import XCTest
 
 @MainActor
 final class CalendarFeatureTests: XCTestCase {
+    func testCalendarTodoAddUsesTheQuickCreateModalAndTodoOnlyRefresh() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark/Features/Calendar/CalendarView.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+
+        XCTAssertTrue(source.contains("TodoCreateModal("))
+        XCTAssertTrue(source.contains("initialStatus: .inProgress"))
+        XCTAssertTrue(source.contains("refreshBoardAfterCreate: false"))
+        XCTAssertTrue(source.contains("onCreated: { await model.refreshTodoBoard() }"))
+        XCTAssertTrue(source.contains("TodoDetailModal("))
+        XCTAssertTrue(source.contains("Button { openTodo(todo) }"))
+        XCTAssertTrue(source.contains("calendar.day.todo.\\(todo.id)"))
+        XCTAssertFalse(source.contains("todoDetailModel.load()"))
+        XCTAssertFalse(source.contains("TodoView("), "Calendar Todo bubbles must not present the full board")
+        XCTAssertFalse(source.contains("private func openTodoBoard()"), "Calendar keeps only the quick-add entry")
+    }
+
+    func testCalendarHeaderAllocatesEqualSidesAroundMonthNavigation() {
+        XCTAssertEqual(
+            CalendarMainLayout.headerSideWidth(
+                containerWidth: 359,
+                monthControlsWidth: 176,
+                interColumnSpacing: 2
+            ),
+            89.5
+        )
+        XCTAssertEqual(
+            CalendarMainLayout.headerSideWidth(
+                containerWidth: 160,
+                monthControlsWidth: 176,
+                interColumnSpacing: 2
+            ),
+            0
+        )
+    }
+
+    func testComparedDutyRetainsProfileMetadataForCalendarAvatar() async throws {
+        let response = OtherDutyResponse(
+            memberId: 2,
+            name: "Profile friend",
+            hasProfilePhoto: true,
+            profilePhotoVersion: 17,
+            duties: [DutyDTO(
+                year: 2026,
+                month: 8,
+                day: 12,
+                dutyType: "Day",
+                dutyColor: "#3B82F6",
+                isOff: false,
+                dutyTypeId: 7,
+                source: .override
+            )]
+        )
+        let repository = CalendarRepositoryMock(otherDuties: [response])
+        let model = CalendarViewModel(repository: repository, now: date(2026, 8, 12))
+        model.comparedMemberIDs = [response.memberId]
+
+        await model.load()
+
+        let item = try XCTUnwrap(
+            model.days.first { $0.cell.day == 12 }?.comparedDuties.first
+        )
+        XCTAssertEqual(item.memberID, response.memberId)
+        XCTAssertEqual(item.name, response.name)
+        XCTAssertTrue(item.hasProfilePhoto)
+        XCTAssertEqual(item.profilePhotoVersion, response.profilePhotoVersion)
+    }
+
     func testSharedFriendTagSelectorMergesCurrentAndSelectedStaleItems() {
         let current = tagItem(id: 1, name: "Current name", team: "New team", isFamily: true, pinOrder: 2)
         let staleDuplicate = tagItem(id: 1, name: "Old name", team: "Old team")
@@ -173,6 +243,8 @@ final class CalendarFeatureTests: XCTestCase {
             "calendar.dday.pin.action",
             "calendar.dday.delete.confirm.title",
             "calendar.dday.delete.confirm.message",
+            "calendar.duty.batch.description.month",
+            "calendar.duty.batch.description.selection",
             "calendar.month.current",
             "calendar.discard.title",
             "calendar.discard.message",
@@ -200,6 +272,30 @@ final class CalendarFeatureTests: XCTestCase {
     func testDestructiveModalRejectsDuplicateConfirmationWhileWorking() {
         XCTAssertTrue(CalendarDestructiveActionPolicy.canBegin(isWorking: false))
         XCTAssertFalse(CalendarDestructiveActionPolicy.canBegin(isWorking: true))
+    }
+
+    func testDDayEditorDeleteUsesOnlyTheCentralConfirmationRoute() {
+        XCTAssertEqual(
+            CalendarDDayEditorDeleteRoutingPolicy.route(
+                hasExistingDDay: true,
+                hasCentralConfirmationHandler: true
+            ),
+            .centralConfirmation
+        )
+        XCTAssertEqual(
+            CalendarDDayEditorDeleteRoutingPolicy.route(
+                hasExistingDDay: true,
+                hasCentralConfirmationHandler: false
+            ),
+            .unavailable
+        )
+        XCTAssertEqual(
+            CalendarDDayEditorDeleteRoutingPolicy.route(
+                hasExistingDDay: false,
+                hasCentralConfirmationHandler: true
+            ),
+            .unavailable
+        )
     }
 
     func testDDayDeleteSuccessEnablesDismissalBeforeYieldingToPresenter() async {
@@ -617,6 +713,24 @@ final class CalendarFeatureTests: XCTestCase {
         XCTAssertEqual(CalendarLocalization.locale(languageCode: "fr-FR").identifier, "en")
     }
 
+    func testKoreanDutyBatchMonthDescriptionDoesNotGroupTheYear() {
+        let defaults = UserDefaults.standard
+        let previousLanguage = defaults.string(forKey: SettingsPreference.languageKey)
+        defaults.set("ko", forKey: SettingsPreference.languageKey)
+        defer {
+            if let previousLanguage {
+                defaults.set(previousLanguage, forKey: SettingsPreference.languageKey)
+            } else {
+                defaults.removeObject(forKey: SettingsPreference.languageKey)
+            }
+        }
+
+        XCTAssertEqual(
+            CalendarLocalization.format("calendar.duty.batch.description.month", 2026, 8),
+            "2026년 8월 전체에 적용할 근무를 선택하세요."
+        )
+    }
+
     func testCompactCalendarModalBodyFitsContentAndCapsForSmallPhones() {
         let maximumPanelHeight: CGFloat = 780
 
@@ -662,6 +776,51 @@ final class CalendarFeatureTests: XCTestCase {
         XCTAssertEqual(CalendarVisualLogic.compactCellMinimumHeight, 60)
         XCTAssertEqual(CalendarVisualLogic.maximumSchedulesPerCell, 3)
         XCTAssertEqual(CalendarVisualLogic.maximumTodosPerCell, 2)
+    }
+
+    func testCalendarOmitsEmptyDutyToolbarAboveMonthGrid() {
+        XCTAssertFalse(CalendarMainLayout.shouldShowDutyToolbar(
+            hasDutySummary: false,
+            hasComparisonAction: false,
+            hasQuickEditAction: false,
+            hasImportAction: false,
+            isQuickDutyEditing: false
+        ))
+        XCTAssertTrue(CalendarMainLayout.shouldShowDutyToolbar(
+            hasDutySummary: true,
+            hasComparisonAction: false,
+            hasQuickEditAction: false,
+            hasImportAction: false,
+            isQuickDutyEditing: false
+        ))
+        XCTAssertTrue(CalendarMainLayout.shouldShowDutyToolbar(
+            hasDutySummary: false,
+            hasComparisonAction: false,
+            hasQuickEditAction: false,
+            hasImportAction: false,
+            isQuickDutyEditing: true
+        ))
+        XCTAssertTrue(CalendarMainLayout.shouldShowDutyToolbar(
+            hasDutySummary: false,
+            hasComparisonAction: true,
+            hasQuickEditAction: false,
+            hasImportAction: false,
+            isQuickDutyEditing: false
+        ))
+        XCTAssertTrue(CalendarMainLayout.shouldShowDutyToolbar(
+            hasDutySummary: false,
+            hasComparisonAction: false,
+            hasQuickEditAction: true,
+            hasImportAction: false,
+            isQuickDutyEditing: false
+        ))
+        XCTAssertTrue(CalendarMainLayout.shouldShowDutyToolbar(
+            hasDutySummary: false,
+            hasComparisonAction: false,
+            hasQuickEditAction: false,
+            hasImportAction: true,
+            isQuickDutyEditing: false
+        ))
     }
 
     func testCalendarTypographyMatchesReadableMobileWebScale() {
@@ -758,6 +917,7 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
     let scheduleOwnerID: MemberID
     let failDestructiveMutations: Bool
     let returnsTaggedSchedule: Bool
+    let otherDutyValues: [OtherDutyResponse]
 
     init(
         canManage: Bool = false,
@@ -765,7 +925,8 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
         friends: [FriendDTO] = [],
         scheduleOwnerID: MemberID = 1,
         failDestructiveMutations: Bool = false,
-        returnsTaggedSchedule: Bool = false
+        returnsTaggedSchedule: Bool = false,
+        otherDuties: [OtherDutyResponse] = []
     ) {
         canManageValue = canManage
         self.cancelMemberLoad = cancelMemberLoad
@@ -773,6 +934,7 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
         self.scheduleOwnerID = scheduleOwnerID
         self.failDestructiveMutations = failDestructiveMutations
         self.returnsTaggedSchedule = returnsTaggedSchedule
+        otherDutyValues = otherDuties
     }
 
     func member() async throws -> MemberDTO {
@@ -794,7 +956,9 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
         (1...42).map { TeamDayDTO(year: year, month: month, day: $0) }
     }
     func duties(memberID: MemberID, year: Int, month: Int) async throws -> [DutyDTO] { [] }
-    func otherDuties(memberIDs: [MemberID], year: Int, month: Int) async throws -> [OtherDutyResponse] { [] }
+    func otherDuties(memberIDs: [MemberID], year: Int, month: Int) async throws -> [OtherDutyResponse] {
+        otherDutyValues
+    }
     func schedules(memberID: MemberID, year: Int, month: Int) async throws -> [[ScheduleDTO]] {
         requestedScheduleMemberID = memberID
         var result = Array(repeating: [ScheduleDTO](), count: 42)

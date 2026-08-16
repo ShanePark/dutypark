@@ -6,7 +6,14 @@ struct GuestRootView: View {
     @State private var showsUnsupportedLink = false
 
     init(initialRoute: GuestRoute? = nil) {
-        _path = State(initialValue: initialRoute.map { [$0] } ?? [])
+        var resolvedRoute = initialRoute
+#if DEBUG
+        if resolvedRoute == nil,
+           ProcessInfo.processInfo.arguments.contains("-ui-testing-guest-calendar") {
+            resolvedRoute = .publicCalendar(42)
+        }
+#endif
+        _path = State(initialValue: resolvedRoute.map { [$0] } ?? [])
     }
 
     var body: some View {

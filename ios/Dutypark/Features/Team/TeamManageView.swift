@@ -10,14 +10,26 @@ struct TeamManageView: View {
     @State private var memberSearchIsWorking = false
     @State private var dutyEditorInteraction = TeamModalInteractionState()
     @State private var batchUploadInteraction = TeamModalInteractionState()
+    private let onTeamChanged: (TeamDTO) -> Void
+    private let onDutyBatchChanged: (Int, Int) -> Void
+    private let onDeleteTeam: ((TeamDTO) async throws -> Void)?
 
-    init(teamID: TeamID, isServiceAdmin: Bool = false) {
+    init(
+        teamID: TeamID,
+        isServiceAdmin: Bool = false,
+        onTeamChanged: @escaping (TeamDTO) -> Void = { _ in },
+        onDutyBatchChanged: @escaping (Int, Int) -> Void = { _, _ in },
+        onDeleteTeam: ((TeamDTO) async throws -> Void)? = nil
+    ) {
         _viewModel = StateObject(
             wrappedValue: TeamManageViewModel(
                 teamID: teamID,
                 isServiceAdmin: isServiceAdmin
             )
         )
+        self.onTeamChanged = onTeamChanged
+        self.onDutyBatchChanged = onDutyBatchChanged
+        self.onDeleteTeam = onDeleteTeam
     }
 
     private var loginID: MemberID? {
@@ -53,19 +65,12 @@ struct TeamManageView: View {
             }
         }
         .navigationBarBackButtonHidden(true)
+        .dpInteractivePopGestureEnabled()
         .task { await viewModel.load() }
-        .disabled(viewModel.isWorking)
-        .overlay {
-            if viewModel.isWorking {
-                ProgressView()
-                    .padding(DPSpacing.medium)
-                    .background(.regularMaterial)
-                    .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
-            }
+        .onChange(of: viewModel.team) { _, team in
+            if let team { onTeamChanged(team) }
         }
-        .fullScreenCover(isPresented: $viewModel.memberSearchPresented, onDismiss: {
-            Task { await viewModel.load() }
-        }) {
+        .fullScreenCover(isPresented: $viewModel.memberSearchPresented) {
             DPModalOverlay(
                 onDismiss: { viewModel.memberSearchPresented = false },
                 closeOnBackdrop: true,
@@ -76,6 +81,7 @@ struct TeamManageView: View {
                     maximumHeight: availableSize.height,
                     isWorking: $memberSearchIsWorking,
                     dismissAfterSuccess: { viewModel.memberSearchPresented = false },
+                    didAdd: { viewModel.appendMember($0) },
                     dismiss: dismiss
                 )
             }
@@ -107,6 +113,7 @@ struct TeamManageView: View {
                     viewModel: viewModel,
                     maximumHeight: availableSize.height,
                     interaction: $batchUploadInteraction,
+                    didUpload: onDutyBatchChanged,
                     dismiss: dismiss
                 )
             }
@@ -134,16 +141,24 @@ struct TeamManageView: View {
         .fullScreenCover(
             isPresented: Binding(
                 get: { pendingAction != nil },
-                set: { if !$0 { pendingAction = nil } }
+                set: {
+                    if !$0, !viewModel.isWorking, !pendingActionIsWorking {
+                        pendingAction = nil
+                    }
+                }
             )
         ) {
             if let action = pendingAction {
                 DPModalOverlay(
-                    onDismiss: { pendingAction = nil },
+                    maximumContentWidth: DPConfirmationPanel.maximumWidth,
+                    onDismiss: {
+                        guard !viewModel.isWorking, !pendingActionIsWorking else { return }
+                        pendingAction = nil
+                    },
                     closeOnBackdrop: true,
                     canDismiss: !viewModel.isWorking && !pendingActionIsWorking
                 ) { availableSize, dismiss in
-                    TeamActionConfirmationModal(
+                    TeamAsyncConfirmationPanel(
                         title: confirmationTitle(for: action),
                         message: confirmationMessage(for: action),
                         confirmTitle: confirmationButtonTitle(for: action),
@@ -151,7 +166,12 @@ struct TeamManageView: View {
                         isWorking: viewModel.isWorking,
                         maximumHeight: availableSize.height,
                         dismiss: dismiss,
-                        dismissAfterSuccess: { pendingAction = nil },
+                        dismissAfterSuccess: {
+                            pendingAction = nil
+                            if case .deleteTeam = action {
+                                dismissView()
+                            }
+                        },
                         workingChanged: { pendingActionIsWorking = $0 }
                     ) {
                         await run(action)
@@ -163,6 +183,7 @@ struct TeamManageView: View {
                         Button(teamLocalized("team.common.confirm"), role: .cancel) {}
                     }
                 }
+                .interactiveDismissDisabled(viewModel.isWorking || pendingActionIsWorking)
             }
         }
     }
@@ -190,7 +211,24 @@ struct TeamManageView: View {
             .lineLimit(2)
             .multilineTextAlignment(.center)
             .frame(maxWidth: .infinity)
-            Color.clear.frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+            if canDeleteTeam(team) {
+                Button(role: .destructive) {
+                    if let team { present(.deleteTeam(team)) }
+                } label: {
+                    Image(systemName: "trash")
+                        .foregroundStyle(DPColor.textOnDark)
+                        .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                        .background(DPColor.danger)
+                        .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(Text("team.manage.actions.deleteTeam", tableName: "Team"))
+                .accessibilityIdentifier("team.manage.delete")
+            } else {
+                Color.clear
+                    .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                    .accessibilityHidden(true)
+            }
         }
         .foregroundStyle(DPColor.textOnDark)
         .padding(.horizontal, DPSpacing.medium)
@@ -199,6 +237,15 @@ struct TeamManageView: View {
         .clipShape(UnevenRoundedRectangle(topLeadingRadius: DPRadius.standard, topTrailingRadius: DPRadius.standard))
         .padding(.horizontal, DPSpacing.small)
         .padding(.top, DPSpacing.medium)
+    }
+
+    private func canDeleteTeam(_ team: TeamDTO?) -> Bool {
+        guard let team else { return false }
+        return TeamManageDeletePolicy.canShow(
+            isServiceAdmin: viewModel.isServiceAdmin,
+            hasMembers: !team.members.isEmpty,
+            hasDeleteAction: onDeleteTeam != nil
+        )
     }
 
     private func informationSection(_ team: TeamDTO) -> some View {
@@ -390,7 +437,7 @@ struct TeamManageView: View {
                                         dutyType.hidden ? "eye" : "eye.slash",
                                         label: dutyType.hidden ? teamLocalized("team.manage.actions.restoreDutyType") : teamLocalized("team.manage.actions.hideDutyType"),
                                         tint: dutyType.hidden ? DPColor.success : DPColor.warning
-                                    ) { Task { await viewModel.toggleVisibility(dutyType) } }
+                                    ) { present(.setDutyTypeVisibility(dutyType)) }
                                 }
                             }
                             .frame(width: 190)
@@ -512,6 +559,11 @@ struct TeamManageView: View {
             id == nil
                 ? teamLocalized("team.manage.actions.resetAdmin")
                 : teamLocalized("team.manage.actions.transferAdmin")
+        case .setDutyTypeVisibility(let dutyType):
+            dutyType.hidden
+                ? teamLocalized("team.manage.actions.restoreDutyType")
+                : teamLocalized("team.manage.actions.hideDutyType")
+        case .deleteTeam: teamLocalized("team.manage.actions.deleteTeam")
         }
     }
 
@@ -533,9 +585,33 @@ struct TeamManageView: View {
             key = "team.manage.messages.unassignManagerConfirm"
             memberID = id
         case .changeAdmin(let id):
-            guard let id else { return teamLocalized("team.manage.messages.resetAdminConfirm") }
+            guard let id else {
+                let team = viewModel.team
+                let name = TeamManageConfirmationCopy.currentAdminName(
+                    adminName: team?.adminName,
+                    adminID: team?.adminId,
+                    members: team?.members ?? [],
+                    fallback: teamLocalized("team.manage.labels.notAvailable")
+                )
+                return TeamManageConfirmationCopy.resetAdminMessage(name: name)
+            }
             key = "team.manage.messages.changeAdminConfirm"
             memberID = id
+        case .setDutyTypeVisibility(let dutyType):
+            key = dutyType.hidden
+                ? "team.dutyType.messages.restoreConfirm"
+                : "team.dutyType.messages.hideConfirm"
+            return String(
+                format: teamLocalized(key),
+                locale: AppLocalization.locale,
+                dutyType.name
+            )
+        case .deleteTeam(let team):
+            return String(
+                format: teamLocalized("team.manage.messages.deleteTeamConfirm"),
+                locale: AppLocalization.locale,
+                team.name
+            )
         }
         let name = viewModel.team?.members.first(where: { $0.id == memberID })?.name
             ?? teamLocalized("team.manage.labels.notAvailable")
@@ -544,11 +620,21 @@ struct TeamManageView: View {
 
     private func run(_ action: PendingAction?) async -> Bool {
         switch action {
-        case .removeMember(let id): await viewModel.removeMember(id)
-        case .addManager(let id): await viewModel.addManager(id)
-        case .removeManager(let id): await viewModel.removeManager(id)
-        case .changeAdmin(let id): await viewModel.changeAdmin(memberID: id)
-        case nil: false
+        case .removeMember(let id): return await viewModel.removeMember(id)
+        case .addManager(let id): return await viewModel.addManager(id)
+        case .removeManager(let id): return await viewModel.removeManager(id)
+        case .changeAdmin(let id): return await viewModel.changeAdmin(memberID: id)
+        case .setDutyTypeVisibility(let dutyType): return await viewModel.toggleVisibility(dutyType)
+        case .deleteTeam(let team):
+            guard let deleteTeam = onDeleteTeam else { return false }
+            do {
+                try await deleteTeam(team)
+                return true
+            } catch {
+                viewModel.showsError = true
+                return false
+            }
+        case nil: return false
         }
     }
 
@@ -557,13 +643,59 @@ struct TeamManageView: View {
         case addManager(MemberID)
         case removeManager(MemberID)
         case changeAdmin(MemberID?)
+        case setDutyTypeVisibility(DutyTypeDTO)
+        case deleteTeam(TeamDTO)
 
         var isDestructive: Bool {
             switch self {
-            case .removeMember, .removeManager, .changeAdmin(nil): true
+            case .removeMember, .removeManager, .changeAdmin(nil), .deleteTeam: true
+            case .setDutyTypeVisibility(let dutyType): !dutyType.hidden
             case .addManager, .changeAdmin: false
             }
         }
+    }
+}
+
+nonisolated enum TeamManageDeletePolicy {
+    static func canShow(
+        isServiceAdmin: Bool,
+        hasMembers: Bool,
+        hasDeleteAction: Bool
+    ) -> Bool {
+        isServiceAdmin && !hasMembers && hasDeleteAction
+    }
+}
+
+nonisolated enum TeamManageConfirmationCopy {
+    static func currentAdminName(
+        adminName: String?,
+        adminID: MemberID?,
+        members: [TeamMemberDTO],
+        fallback: String
+    ) -> String {
+        if let adminName = nonempty(adminName) {
+            return adminName
+        }
+        if let adminID,
+           let memberName = nonempty(members.first(where: { $0.id == adminID })?.name) {
+            return memberName
+        }
+        return fallback
+    }
+
+    static func resetAdminMessage(name: String) -> String {
+        AppLocalization.format(
+            "team.manage.messages.resetAdminConfirm",
+            table: "Team",
+            arguments: [name]
+        )
+    }
+
+    private static func nonempty(_ value: String?) -> String? {
+        guard let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !trimmed.isEmpty
+        else { return nil }
+        return trimmed
     }
 }
 
@@ -742,14 +874,25 @@ private struct TeamDutyTypeEditor: View {
         .onChange(of: isSubmitting) { _, _ in updateInteractionState() }
         .onChange(of: viewModel.isWorking) { _, _ in updateInteractionState() }
         .onChange(of: interaction.dismissRequestSerial) { _, _ in requestDismiss() }
-        .alert(
-            Text("team.modal.discard.title", tableName: "Team"),
-            isPresented: $showsDiscardConfirmation
-        ) {
-            Button(teamLocalized("team.modal.discard.action"), role: .destructive) { dismiss() }
-            Button(teamLocalized("team.modal.discard.continue"), role: .cancel) {}
-        } message: {
-            Text("team.modal.discard.message", tableName: "Team")
+        .fullScreenCover(isPresented: $showsDiscardConfirmation) {
+            DPModalOverlay(
+                maximumContentWidth: DPConfirmationPanel.maximumWidth,
+                onDismiss: { showsDiscardConfirmation = false }
+            ) { availableSize, confirmationDismiss in
+                DPConfirmationPanel(
+                    title: teamLocalized("team.modal.discard.title"),
+                    message: teamLocalized("team.modal.discard.message"),
+                    confirmTitle: teamLocalized("team.modal.discard.action"),
+                    cancelTitle: teamLocalized("team.modal.discard.continue"),
+                    isDestructive: true,
+                    maximumHeight: availableSize.height,
+                    cancel: confirmationDismiss,
+                    confirm: {
+                        showsDiscardConfirmation = false
+                        dismiss()
+                    }
+                )
+            }
         }
     }
 
@@ -775,8 +918,10 @@ private struct TeamMemberSearchView: View {
     let maximumHeight: CGFloat
     @Binding var isWorking: Bool
     let dismissAfterSuccess: () -> Void
+    let didAdd: (MemberInviteCandidateDTO) -> Void
     let dismiss: () -> Void
     @State private var candidateToAdd: MemberInviteCandidateDTO?
+    @State private var candidateSubmissionIsWorking = false
     @State private var didLoadInitialResults = false
 
     init(
@@ -784,37 +929,64 @@ private struct TeamMemberSearchView: View {
         maximumHeight: CGFloat,
         isWorking: Binding<Bool>,
         dismissAfterSuccess: @escaping () -> Void,
+        didAdd: @escaping (MemberInviteCandidateDTO) -> Void,
         dismiss: @escaping () -> Void
     ) {
         _viewModel = StateObject(wrappedValue: TeamMemberSearchViewModel(teamID: teamID))
         self.maximumHeight = maximumHeight
         _isWorking = isWorking
         self.dismissAfterSuccess = dismissAfterSuccess
+        self.didAdd = didAdd
         self.dismiss = dismiss
     }
 
     var body: some View {
-        Group {
-            if let candidate = candidateToAdd {
-                TeamActionConfirmationModal(
-                    title: teamLocalized("team.memberSearch.add"),
-                    message: String(
-                        format: teamLocalized("team.memberSearch.confirmAdd"),
-                        locale: AppLocalization.locale,
-                        candidate.name
-                    ),
-                    confirmTitle: teamLocalized("team.memberSearch.add"),
-                    isDestructive: false,
-                    isWorking: viewModel.isWorking,
-                    maximumHeight: maximumHeight,
-                    dismiss: { candidateToAdd = nil },
-                    dismissAfterSuccess: dismissAfterSuccess,
-                    workingChanged: { isWorking = $0 }
-                ) {
-                    await viewModel.add(candidate)
+        searchPanel
+        .fullScreenCover(
+            isPresented: Binding(
+                get: { candidateToAdd != nil },
+                set: {
+                    if !$0, !viewModel.isWorking, !candidateSubmissionIsWorking {
+                        candidateToAdd = nil
+                    }
                 }
-            } else {
-                searchPanel
+            )
+        ) {
+            if let candidate = candidateToAdd {
+                DPModalOverlay(
+                    maximumContentWidth: DPConfirmationPanel.maximumWidth,
+                    onDismiss: {
+                        guard !viewModel.isWorking, !candidateSubmissionIsWorking else { return }
+                        candidateToAdd = nil
+                    },
+                    canDismiss: !viewModel.isWorking && !candidateSubmissionIsWorking
+                ) { availableSize, confirmationDismiss in
+                    TeamAsyncConfirmationPanel(
+                        title: teamLocalized("team.memberSearch.add"),
+                        message: String(
+                            format: teamLocalized("team.memberSearch.confirmAdd"),
+                            locale: AppLocalization.locale,
+                            candidate.name
+                        ),
+                        confirmTitle: teamLocalized("team.memberSearch.add"),
+                        isDestructive: false,
+                        isWorking: viewModel.isWorking,
+                        maximumHeight: availableSize.height,
+                        dismiss: confirmationDismiss,
+                        dismissAfterSuccess: {
+                            didAdd(candidate)
+                            candidateToAdd = nil
+                            dismissAfterSuccess()
+                        },
+                        workingChanged: {
+                            candidateSubmissionIsWorking = $0
+                            isWorking = $0
+                        }
+                    ) {
+                        await viewModel.add(candidate)
+                    }
+                }
+                .interactiveDismissDisabled(viewModel.isWorking || candidateSubmissionIsWorking)
             }
         }
         .task {
@@ -986,6 +1158,7 @@ private struct TeamBatchUploadView: View {
     @ObservedObject var viewModel: TeamManageViewModel
     let maximumHeight: CGFloat
     @Binding var interaction: TeamModalInteractionState
+    let didUpload: (Int, Int) -> Void
     let dismiss: () -> Void
     @State private var year = Calendar.current.component(.year, from: Date())
     @State private var month = Calendar.current.component(.month, from: Date())
@@ -1111,6 +1284,9 @@ private struct TeamBatchUploadView: View {
                     else { return }
                     Task {
                         result = await viewModel.upload(fileURL: fileURL, year: year, month: month)
+                        if result?.result == true {
+                            didUpload(year, month)
+                        }
                         initialYear = year
                         initialMonth = month
                         initialFileURL = fileURL
@@ -1157,14 +1333,25 @@ private struct TeamBatchUploadView: View {
         .onChange(of: fileURL) { _, _ in updateInteractionState() }
         .onChange(of: viewModel.isWorking) { _, _ in updateInteractionState() }
         .onChange(of: interaction.dismissRequestSerial) { _, _ in requestDismiss() }
-        .alert(
-            Text("team.modal.discard.title", tableName: "Team"),
-            isPresented: $showsDiscardConfirmation
-        ) {
-            Button(teamLocalized("team.modal.discard.action"), role: .destructive) { dismiss() }
-            Button(teamLocalized("team.modal.discard.continue"), role: .cancel) {}
-        } message: {
-            Text("team.modal.discard.message", tableName: "Team")
+        .fullScreenCover(isPresented: $showsDiscardConfirmation) {
+            DPModalOverlay(
+                maximumContentWidth: DPConfirmationPanel.maximumWidth,
+                onDismiss: { showsDiscardConfirmation = false }
+            ) { availableSize, confirmationDismiss in
+                DPConfirmationPanel(
+                    title: teamLocalized("team.modal.discard.title"),
+                    message: teamLocalized("team.modal.discard.message"),
+                    confirmTitle: teamLocalized("team.modal.discard.action"),
+                    cancelTitle: teamLocalized("team.modal.discard.continue"),
+                    isDestructive: true,
+                    maximumHeight: availableSize.height,
+                    cancel: confirmationDismiss,
+                    confirm: {
+                        showsDiscardConfirmation = false
+                        dismiss()
+                    }
+                )
+            }
         }
     }
 
@@ -1199,7 +1386,7 @@ private struct TeamBatchUploadView: View {
     }
 }
 
-private struct TeamActionConfirmationModal: View {
+private struct TeamAsyncConfirmationPanel: View {
     let title: String
     let message: String
     let confirmTitle: String
@@ -1213,83 +1400,38 @@ private struct TeamActionConfirmationModal: View {
     @State private var isSubmitting = false
 
     var body: some View {
-        DPModalPanel(maximumPanelHeight: maximumHeight) {
-            teamModalHeader(
-                title: title,
-                isWorking: isWorking || isSubmitting,
-                dismiss: dismiss
-            )
-        } content: {
-            Text(verbatim: message)
-                .font(DPTypography.body)
-                .foregroundStyle(DPColor.textSecondary)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity)
-                .padding(.horizontal, DPSpacing.medium)
-                .padding(.vertical, DPSpacing.large)
-        } footer: {
-            HStack(spacing: DPSpacing.small) {
-                Button {
-                    guard !isSubmitting && !isWorking else { return }
-                    isSubmitting = true
-                    Task {
-                        let didSucceed = await confirm()
-                        isSubmitting = false
-                        workingChanged?(isWorking)
-                        if TeamManageModalLogic.shouldDismissConfirmation(didSucceed: didSucceed) {
-                            dismissAfterSuccess()
-                        }
-                    }
-                } label: {
-                    Text(verbatim: confirmTitle)
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(isDestructive ? AnyTeamButtonStyle.destructive : AnyTeamButtonStyle.primary)
-                .disabled(isSubmitting || isWorking)
-                Button {
-                    dismiss()
-                } label: {
-                    Text(verbatim: teamLocalized("team.common.cancel"))
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(DPSecondaryButtonStyle())
-                .disabled(isSubmitting || isWorking)
+        DPConfirmationPanel(
+            title: title,
+            message: message,
+            confirmTitle: confirmTitle,
+            cancelTitle: teamLocalized("team.common.cancel"),
+            isDestructive: isDestructive,
+            isWorking: isBusy,
+            maximumHeight: maximumHeight,
+            cancel: dismiss,
+            confirm: submit
+        )
+        .onAppear { workingChanged?(isBusy) }
+        .onChange(of: isWorking) { _, _ in workingChanged?(isBusy) }
+        .onChange(of: isSubmitting) { _, _ in workingChanged?(isBusy) }
+    }
+
+    private var isBusy: Bool {
+        isSubmitting || isWorking
+    }
+
+    private func submit() {
+        guard TeamConfirmationSubmissionPolicy.canSubmit(
+            isSubmitting: isSubmitting,
+            isWorking: isWorking
+        ) else { return }
+        isSubmitting = true
+        Task {
+            let didSucceed = await confirm()
+            isSubmitting = false
+            if TeamManageModalLogic.shouldDismissConfirmation(didSucceed: didSucceed) {
+                dismissAfterSuccess()
             }
-            .padding(DPSpacing.compact)
-            .background(DPColor.backgroundFooter)
-        }
-        .onAppear { workingChanged?(isWorking || isSubmitting) }
-        .onChange(of: isWorking) { _, _ in workingChanged?(isWorking || isSubmitting) }
-        .onChange(of: isSubmitting) { _, _ in workingChanged?(isWorking || isSubmitting) }
-    }
-}
-
-private struct AnyTeamButtonStyle: ButtonStyle {
-    enum Kind { case primary, destructive }
-    static let primary = AnyTeamButtonStyle(kind: .primary)
-    static let destructive = AnyTeamButtonStyle(kind: .destructive)
-
-    let kind: Kind
-    @Environment(\.isEnabled) private var isEnabled
-
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(DPTypography.bodyMedium)
-            .foregroundStyle(DPColor.textOnDark)
-            .padding(.horizontal, DPChrome.controlHorizontalPadding)
-            .frame(minHeight: DPSize.minimumTouchTarget)
-            .background(
-                RoundedRectangle(cornerRadius: DPRadius.standard)
-                    .fill(background(isPressed: configuration.isPressed))
-            )
-            .opacity(isEnabled ? 1 : DPChrome.disabledOpacity)
-    }
-
-    private func background(isPressed: Bool) -> Color {
-        switch kind {
-        case .primary: isPressed ? DPColor.accentHover : DPColor.accent
-        case .destructive: isPressed ? DPColor.dangerHover : DPColor.danger
         }
     }
 }
@@ -1339,6 +1481,12 @@ nonisolated struct TeamModalInteractionState: Equatable, Sendable {
     var dismissDecision: TeamModalDismissDecision {
         if isWorking { return .blocked }
         return isDirty ? .confirmDiscard : .dismiss
+    }
+}
+
+nonisolated enum TeamConfirmationSubmissionPolicy {
+    static func canSubmit(isSubmitting: Bool, isWorking: Bool) -> Bool {
+        !isSubmitting && !isWorking
     }
 }
 

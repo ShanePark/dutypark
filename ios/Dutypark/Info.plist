@@ -6,6 +6,8 @@
     <string>$(API_BASE_URL)</string>
     <key>ITSAppUsesNonExemptEncryption</key>
     <false/>
+    <key>UILaunchStoryboardName</key>
+    <string>LaunchScreen</string>
     <key>UIAppFonts</key>
     <array>
         <string>Maplestory OTF Light.otf</string>

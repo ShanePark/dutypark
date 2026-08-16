@@ -4,6 +4,8 @@ struct TeamView: View {
     @EnvironmentObject private var session: SessionStore
     @StateObject private var viewModel = TeamViewModel()
     @State private var monthPickerPresented = false
+    @State private var scheduleDeletionCandidate: TeamScheduleDTO?
+    @State private var scheduleDeletionIsWorking = false
     private let onOpenCalendar: (MemberID) -> Void
 
     init(onOpenCalendar: @escaping (MemberID) -> Void = { _ in }) {
@@ -16,9 +18,9 @@ struct TeamView: View {
 
     var body: some View {
         Group {
-            if viewModel.isLoading {
+            if viewModel.isLoading && viewModel.team == nil {
                 DPLoadingState(label: LocalizedStringKey(teamLocalized("team.common.loading")))
-            } else if viewModel.loadFailed {
+            } else if viewModel.loadFailed && viewModel.team == nil {
                 DPErrorState(
                     title: LocalizedStringKey(teamLocalized("team.common.error")),
                     message: nil,
@@ -50,7 +52,7 @@ struct TeamView: View {
                 .frame(maxHeight: .infinity, alignment: .top)
             }
         }
-        .task { await viewModel.load(memberID: memberID) }
+        .task { await viewModel.loadIfNeeded(memberID: memberID) }
         .refreshable { await viewModel.load(memberID: memberID) }
         .alert(
             Text("team.common.error", tableName: "Team"),
@@ -66,7 +68,9 @@ struct TeamView: View {
                 set: { if !$0 { viewModel.scheduleDraft = nil } }
             )
         ) {
-            TeamScheduleEditor(viewModel: viewModel)
+            if let draft = viewModel.scheduleDraft {
+                TeamScheduleEditor(viewModel: viewModel, draft: draft)
+            }
         }
         .sheet(isPresented: $monthPickerPresented) {
             TeamYearMonthPicker(
@@ -80,21 +84,62 @@ struct TeamView: View {
                 Task { await viewModel.goToToday() }
             }
         }
-        .alert(
-            Text("team.common.delete", tableName: "Team"),
+        .fullScreenCover(
             isPresented: Binding(
-                get: { viewModel.schedulePendingDeletion != nil },
-                set: { if !$0 { viewModel.schedulePendingDeletion = nil } }
+                get: { scheduleDeletionCandidate != nil },
+                set: {
+                    if !$0, TeamScheduleDeleteConfirmationPolicy.canDismiss(
+                        isDeleting: scheduleDeletionIsWorking
+                    ) {
+                        clearScheduleDeletion()
+                    }
+                }
             )
         ) {
-            Button(teamLocalized("team.common.delete"), role: .destructive) {
-                Task { await viewModel.deleteSchedule() }
+            if let scheduleDeletionCandidate {
+                DPModalOverlay(
+                    maximumContentWidth: DPConfirmationPanel.maximumWidth,
+                    onDismiss: {
+                        guard TeamScheduleDeleteConfirmationPolicy.canDismiss(
+                            isDeleting: scheduleDeletionIsWorking
+                        ) else { return }
+                        clearScheduleDeletion()
+                    },
+                    canDismiss: TeamScheduleDeleteConfirmationPolicy.canDismiss(
+                        isDeleting: scheduleDeletionIsWorking
+                    )
+                ) { availableSize, dismiss in
+                    DPConfirmationPanel(
+                        title: teamLocalized("team.view.actions.deleteSchedule"),
+                        message: TeamLocalization.scheduleDeletionMessage(
+                            title: scheduleDeletionCandidate.content
+                        ),
+                        confirmTitle: teamLocalized("team.common.delete"),
+                        cancelTitle: teamLocalized("team.common.cancel"),
+                        isDestructive: true,
+                        isWorking: scheduleDeletionIsWorking,
+                        maximumHeight: availableSize.height,
+                        cancel: {
+                            guard TeamScheduleDeleteConfirmationPolicy.canDismiss(
+                                isDeleting: scheduleDeletionIsWorking
+                            ) else { return }
+                            dismiss()
+                        },
+                        confirm: {
+                            deleteSchedule(dismiss: dismiss)
+                        }
+                    )
+                    .alert(
+                        Text("team.common.error", tableName: "Team"),
+                        isPresented: $viewModel.showsError
+                    ) {
+                        Button(teamLocalized("team.common.confirm"), role: .cancel) {}
+                    } message: {
+                        Text("team.common.error", tableName: "Team")
+                    }
+                }
+                .interactiveDismissDisabled(scheduleDeletionIsWorking)
             }
-            Button(teamLocalized("team.common.cancel"), role: .cancel) {
-                viewModel.schedulePendingDeletion = nil
-            }
-        } message: {
-            Text("team.view.schedule.deleteConfirm", tableName: "Team")
         }
     }
 
@@ -123,7 +168,15 @@ struct TeamView: View {
                     Group {
                     if viewModel.isTeamManager {
                         NavigationLink {
-                            TeamManageView(teamID: team.id)
+                            TeamManageView(
+                                teamID: team.id,
+                                onTeamChanged: { viewModel.applyManagedTeam($0) },
+                                onDutyBatchChanged: { year, month in
+                                    Task {
+                                        await viewModel.refreshDutiesAfterBatch(year: year, month: month)
+                                    }
+                                }
+                            )
                         } label: {
                             Image(systemName: "gearshape")
                                 .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
@@ -156,6 +209,7 @@ struct TeamView: View {
                     .frame(width: 36, height: DPSize.minimumTouchTarget)
             }
             .accessibilityLabel(Text("team.view.calendar.month", tableName: "Team"))
+            .disabled(viewModel.isLoading)
 
             VStack(spacing: -2) {
                 Button {
@@ -172,6 +226,7 @@ struct TeamView: View {
                     .frame(minHeight: 26)
                 }
                 .accessibilityLabel(Text("team.view.calendar.chooseMonth", tableName: "Team"))
+                .disabled(viewModel.isLoading)
                 if !isCurrentMonth {
                     Button {
                         Task { await viewModel.goToToday() }
@@ -191,6 +246,7 @@ struct TeamView: View {
                     .frame(width: 36, height: DPSize.minimumTouchTarget)
             }
             .accessibilityLabel(Text("team.view.calendar.month", tableName: "Team"))
+            .disabled(viewModel.isLoading)
         }
     }
 
@@ -203,7 +259,7 @@ struct TeamView: View {
         let columns = Array(repeating: GridItem(.flexible(), spacing: 0), count: 7)
         return VStack(spacing: 0) {
             LazyVGrid(columns: columns, spacing: 0) {
-                ForEach(Array(Calendar.current.shortStandaloneWeekdaySymbols.enumerated()), id: \.offset) { index, weekday in
+                ForEach(Array(TeamLocalization.shortStandaloneWeekdaySymbols.enumerated()), id: \.offset) { index, weekday in
                     Text(verbatim: weekday)
                         .font(DPTypography.caption)
                         .foregroundStyle(TeamVisualStyle.weekdayColor(index))
@@ -310,7 +366,10 @@ struct TeamView: View {
                                             .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
                                     }
                                     .accessibilityLabel(Text("team.view.actions.editSchedule", tableName: "Team"))
-                                    Button { viewModel.schedulePendingDeletion = schedule } label: {
+                                    Button {
+                                        viewModel.schedulePendingDeletion = schedule
+                                        scheduleDeletionCandidate = schedule
+                                    } label: {
                                         Image(systemName: "trash")
                                             .foregroundStyle(DPColor.danger)
                                             .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
@@ -334,57 +393,72 @@ struct TeamView: View {
         .overlay { RoundedRectangle(cornerRadius: DPRadius.standard).stroke(DPColor.borderPrimary) }
     }
 
+    private func deleteSchedule(dismiss: @escaping () -> Void) {
+        guard TeamScheduleDeleteConfirmationPolicy.canSubmit(
+            isDeleting: scheduleDeletionIsWorking
+        ) else { return }
+
+        scheduleDeletionIsWorking = true
+        Task {
+            await viewModel.deleteSchedule()
+            scheduleDeletionIsWorking = false
+            if viewModel.schedulePendingDeletion == nil {
+                dismiss()
+            }
+        }
+    }
+
+    private func clearScheduleDeletion() {
+        scheduleDeletionCandidate = nil
+        viewModel.schedulePendingDeletion = nil
+    }
+
     private var shiftList: some View {
         VStack(alignment: .leading, spacing: DPSpacing.small) {
-            if viewModel.shifts.isEmpty {
-                Text("team.view.schedule.empty", tableName: "Team")
-                    .foregroundStyle(DPColor.textMuted)
-                    .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)
-            } else {
-                ForEach(Array(viewModel.shifts.enumerated()), id: \.offset) { _, shift in
-                    VStack(alignment: .leading, spacing: 0) {
-                        HStack {
-                            Text(verbatim: shift.dutyType.name)
-                                .font(DPTypography.bodyMedium)
-                                .foregroundStyle(TeamVisualStyle.foregroundColor(on: shift.dutyType.color))
-                            Spacer()
-                            Text(verbatim: String(shift.members.count))
-                                .font(DPTypography.caption)
-                                .foregroundStyle(DPColor.textOnLight)
-                                .padding(.horizontal, DPSpacing.small)
-                                .padding(.vertical, 2)
-                                .background(Color.white.opacity(0.65))
-                                .clipShape(Capsule())
-                        }
-                        .padding(DPSpacing.compact)
-                        .background(Color(teamHex: shift.dutyType.color))
+            ForEach(Array(viewModel.shifts.enumerated()), id: \.offset) { _, shift in
+                VStack(alignment: .leading, spacing: 0) {
+                    HStack {
+                        Text(verbatim: shift.dutyType.name)
+                            .font(DPTypography.bodyMedium)
+                            .foregroundStyle(TeamVisualStyle.foregroundColor(on: shift.dutyType.color))
+                        Spacer()
+                        Text(verbatim: TeamLocalization.shiftMemberCount(shift.members.count))
+                            .font(DPTypography.caption)
+                            .foregroundStyle(DPColor.textOnLight)
+                            .padding(.horizontal, DPSpacing.small)
+                            .padding(.vertical, 2)
+                            .background(Color.white.opacity(0.65))
+                            .clipShape(Capsule())
+                            .accessibilityIdentifier("team.shift.memberCount")
+                    }
+                    .padding(DPSpacing.compact)
+                    .background(Color(teamHex: shift.dutyType.color))
 
-                        let memberColumns = Array(repeating: GridItem(.flexible(), spacing: DPSpacing.small), count: 2)
-                        LazyVGrid(columns: memberColumns, spacing: DPSpacing.small) {
-                            ForEach(Array(shift.members.enumerated()), id: \.offset) { _, member in
-                                Group {
-                                    if let id = member.id {
-                                        Button { onOpenCalendar(id) } label: { memberCard(member) }
-                                            .buttonStyle(.plain)
-                                    } else {
-                                        memberCard(member)
-                                    }
+                    let memberColumns = Array(repeating: GridItem(.flexible(), spacing: DPSpacing.small), count: 2)
+                    LazyVGrid(columns: memberColumns, spacing: DPSpacing.small) {
+                        ForEach(Array(shift.members.enumerated()), id: \.offset) { _, member in
+                            Group {
+                                if let id = member.id {
+                                    Button { onOpenCalendar(id) } label: { memberCard(member) }
+                                        .buttonStyle(.plain)
+                                } else {
+                                    memberCard(member)
                                 }
                             }
                         }
-                        .padding(DPSpacing.compact)
                     }
-                    .background(DPColor.backgroundCard)
-                    .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: DPRadius.standard)
-                            .stroke(
-                                TeamFeatureLogic.isMyShiftGroup(shift, memberID: memberID)
-                                    ? DPColor.textPrimary
-                                    : DPColor.borderSecondary,
-                                lineWidth: TeamFeatureLogic.isMyShiftGroup(shift, memberID: memberID) ? 2 : 1
-                            )
-                    }
+                    .padding(DPSpacing.compact)
+                }
+                .background(DPColor.backgroundCard)
+                .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+                .overlay {
+                    RoundedRectangle(cornerRadius: DPRadius.standard)
+                        .stroke(
+                            TeamFeatureLogic.isMyShiftGroup(shift, memberID: memberID)
+                                ? DPColor.textPrimary
+                                : DPColor.borderSecondary,
+                            lineWidth: TeamFeatureLogic.isMyShiftGroup(shift, memberID: memberID) ? 2 : 1
+                        )
                 }
             }
         }
@@ -495,7 +569,7 @@ private struct TeamYearMonthPicker: View {
                         Button {
                             onSelect(year, month)
                         } label: {
-                            Text(verbatim: Calendar.current.monthSymbols[month - 1])
+                            Text(verbatim: TeamLocalization.monthName(month))
                                 .font(.subheadline.weight(.medium))
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.7)
@@ -617,7 +691,13 @@ private struct TeamCalendarDayCell: View {
 
 private struct TeamScheduleEditor: View {
     @ObservedObject var viewModel: TeamViewModel
+    @State private var draft: TeamScheduleDraft
     @Environment(\.dismiss) private var dismiss
+
+    init(viewModel: TeamViewModel, draft: TeamScheduleDraft) {
+        self.viewModel = viewModel
+        _draft = State(initialValue: draft)
+    }
 
     var body: some View {
         NavigationStack {
@@ -627,7 +707,6 @@ private struct TeamScheduleEditor: View {
                         .font(DPTypography.bodyMedium)
                     Spacer()
                     Button {
-                        viewModel.scheduleDraft = nil
                         dismiss()
                     } label: {
                         Image(systemName: "xmark")
@@ -641,41 +720,40 @@ private struct TeamScheduleEditor: View {
                 .overlay(alignment: .bottom) { Rectangle().fill(DPColor.borderPrimary).frame(height: 1) }
 
                 ScrollView {
-                if let draft = Binding($viewModel.scheduleDraft) {
                     VStack(alignment: .leading, spacing: DPSpacing.medium) {
                         VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
                             HStack {
                                 Text("team.view.schedule.form.contentLabel", tableName: "Team").font(DPTypography.label)
                                 Spacer()
-                                Text(verbatim: "\(draft.wrappedValue.content.count)/50").font(DPTypography.caption).foregroundStyle(DPColor.textMuted)
+                                Text(verbatim: "\(draft.content.count)/50").font(DPTypography.caption).foregroundStyle(DPColor.textMuted)
                             }
                         TextField(
                             teamLocalized("team.view.schedule.form.contentPlaceholder"),
-                            text: draft.content
+                            text: $draft.content
                         )
-                        .dpInputChrome(isInvalid: draft.wrappedValue.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                        .onChange(of: draft.wrappedValue.content) { _, value in
-                            if value.count > 50 { draft.wrappedValue.content = String(value.prefix(50)) }
+                        .dpInputChrome(isInvalid: draft.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                        .onChange(of: draft.content) { _, value in
+                            if value.count > 50 { draft.content = String(value.prefix(50)) }
                         }
                         }
                         VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
                             Text("team.view.schedule.form.descriptionLabel", tableName: "Team").font(DPTypography.label)
                         TextField(
                             teamLocalized("team.view.schedule.form.descriptionPlaceholder"),
-                            text: draft.description,
+                            text: $draft.description,
                             axis: .vertical
                         )
                         .lineLimit(4...8)
                         .dpInputChrome()
                         }
                         VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
-                        DatePicker(selection: draft.startDate, displayedComponents: .date) {
+                        DatePicker(selection: $draft.startDate, displayedComponents: .date) {
                             Text("team.view.schedule.form.startDate", tableName: "Team")
                         }
                         .frame(minHeight: DPSize.minimumTouchTarget)
                         DatePicker(
-                            selection: draft.endDate,
-                            in: draft.wrappedValue.startDate...,
+                            selection: $draft.endDate,
+                            in: draft.startDate...,
                             displayedComponents: .date
                         ) {
                             Text("team.view.schedule.form.endDate", tableName: "Team")
@@ -685,15 +763,13 @@ private struct TeamScheduleEditor: View {
                     }
                     .padding(DPSpacing.medium)
                 }
-                }
                 HStack(spacing: DPSpacing.small) {
                     Button(teamLocalized("team.common.save")) {
-                        Task { await viewModel.saveSchedule() }
+                        Task { await viewModel.saveSchedule(draft) }
                     }
                     .buttonStyle(DPPrimaryButtonStyle())
-                    .disabled(viewModel.scheduleDraft?.isValid != true || viewModel.isWorking)
+                    .disabled(!draft.isValid || viewModel.isWorking)
                     Button(teamLocalized("team.common.cancel")) {
-                        viewModel.scheduleDraft = nil
                         dismiss()
                     }
                     .buttonStyle(DPSecondaryButtonStyle())
@@ -751,6 +827,47 @@ private func teamScheduleDateRange(_ schedule: TeamScheduleDTO) -> String {
 
 func teamLocalized(_ key: String) -> String {
     AppLocalization.string(key, table: "Team")
+}
+
+nonisolated enum TeamLocalization {
+    static var shortStandaloneWeekdaySymbols: [String] {
+        var calendar = Calendar.current
+        calendar.locale = AppLocalization.locale
+        return calendar.shortStandaloneWeekdaySymbols
+    }
+
+    static func monthName(_ month: Int, locale: Locale = AppLocalization.locale) -> String {
+        guard (1...12).contains(month) else { return String(month) }
+        let formatter = DateFormatter()
+        formatter.locale = locale
+        return formatter.monthSymbols[month - 1]
+    }
+
+    static func scheduleDeletionMessage(title: String) -> String {
+        AppLocalization.format(
+            "team.view.schedule.deleteConfirm",
+            table: "Team",
+            arguments: [title]
+        )
+    }
+
+    static func shiftMemberCount(_ count: Int) -> String {
+        AppLocalization.format(
+            "team.view.shift.memberCount",
+            table: "Team",
+            arguments: [Int64(count)]
+        )
+    }
+}
+
+nonisolated enum TeamScheduleDeleteConfirmationPolicy {
+    static func canSubmit(isDeleting: Bool) -> Bool {
+        !isDeleting
+    }
+
+    static func canDismiss(isDeleting: Bool) -> Bool {
+        !isDeleting
+    }
 }
 
 extension Color {

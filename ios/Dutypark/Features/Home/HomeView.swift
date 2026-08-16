@@ -1,8 +1,23 @@
 import SwiftUI
 
+func homeLocalized(_ key: String, locale: Locale? = nil) -> String {
+    AppLocalization.string(key, table: "Home", locale: locale)
+}
+
 struct HomeView: View {
     @StateObject private var viewModel: HomeViewModel
     @State private var pinningMemberID: MemberID?
+    @State private var inlinePinnedOrder: [MemberID]?
+    @State private var draggedPinnedFriendID: MemberID?
+    @State private var pinnedDragLocation: CGPoint?
+    @State private var pinnedDragPreviewSize: CGSize?
+    @State private var pinnedDragGrabOffset: CGSize?
+    @State private var pinnedFriendDropTargets: [HomePinnedFriendDropTarget] = []
+    @State private var pinnedDragReferenceTargets: [HomePinnedFriendDropTarget] = []
+    @State private var pinnedDragOriginalOrder: [MemberID] = []
+    @State private var isSavingPinnedOrder = false
+    @State private var showsPinnedOrderError = false
+    @State private var suppressFriendCardActions = false
     private let refreshID: Int
     private let onRoute: (HomeRoute) -> Void
     private let pinRepository: any SocialRepository
@@ -38,6 +53,43 @@ struct HomeView: View {
         }
         .refreshable {
             await viewModel.refresh()
+        }
+        .coordinateSpace(name: HomePinnedFriendDragCoordinateSpace.name)
+        .onPreferenceChange(HomePinnedFriendDropTargetPreferenceKey.self) {
+            pinnedFriendDropTargets = $0
+        }
+        .scrollDisabled(draggedPinnedFriendID != nil)
+        .overlay {
+            if let draggedPinnedFriendID,
+               let pinnedDragLocation,
+               let pinnedDragPreviewSize,
+               let pinnedDragGrabOffset,
+               let friend = displayedPinnedFriends.first(where: {
+                   $0.member.id == draggedPinnedFriendID
+               }) {
+                FriendSummaryCard(
+                    friend: friend,
+                    isPinning: false,
+                    isDragPreview: true,
+                    openCalendar: {},
+                    togglePin: {}
+                )
+                .frame(width: pinnedDragPreviewSize.width, height: pinnedDragPreviewSize.height)
+                .position(
+                    x: pinnedDragLocation.x - pinnedDragGrabOffset.width,
+                    y: pinnedDragLocation.y - pinnedDragGrabOffset.height
+                )
+                .allowsHitTesting(false)
+                .accessibilityHidden(true)
+            }
+        }
+        .alert(
+            Text("home.error.reorder", tableName: "Home"),
+            isPresented: $showsPinnedOrderError
+        ) {
+            Button {} label: {
+                Text("home.action.ok", tableName: "Home")
+            }
         }
         .accessibilityIdentifier("home.dashboard")
     }
@@ -168,6 +220,8 @@ struct HomeView: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(Text("home.friends", tableName: "Home"))
+            .accessibilityValue(String(viewModel.sortedFriends.count))
+            .accessibilityIdentifier("home.friends.total")
 
             Group {
                 switch viewModel.friendsState {
@@ -188,20 +242,6 @@ struct HomeView: View {
 
     private var friendsDashboardContent: some View {
         VStack(alignment: .leading, spacing: DPSpacing.small) {
-            HStack(spacing: DPSpacing.small) {
-                RequestSummaryPill(
-                    title: "home.requests.received",
-                    count: viewModel.receivedRequestCount,
-                    systemImage: "tray.and.arrow.down"
-                )
-                RequestSummaryPill(
-                    title: "home.requests.sent",
-                    count: viewModel.sentRequestCount,
-                    systemImage: "paperplane"
-                )
-            }
-            .padding(.bottom, DPSpacing.small)
-
             if viewModel.sortedFriends.isEmpty {
                 VStack(spacing: DPSpacing.compact) {
                     Image(systemName: "person.2")
@@ -216,13 +256,43 @@ struct HomeView: View {
                 .accessibilityIdentifier("home.friends.empty")
             } else {
                 LazyVStack(spacing: DPSpacing.small) {
-                    ForEach(viewModel.sortedFriends, id: \.member.id) { friend in
-                        FriendSummaryCard(
-                            friend: friend,
-                            isPinning: pinningMemberID == friend.member.id,
-                            openCalendar: { openCalendar(for: friend.member.id) },
-                            togglePin: { await togglePin(friend) }
+                    ForEach(displayedFriends, id: \.member.id) { friend in
+                        pinnedFriendDragSurface(
+                            FriendSummaryCard(
+                                friend: friend,
+                                isPinning: pinningMemberID == friend.member.id,
+                                isDragPreview: false,
+                                openCalendar: { openFriendCalendar(for: friend.member.id) },
+                                togglePin: { requestTogglePin(friend) }
+                            )
+                            .opacity(draggedPinnedFriendID == friend.member.id ? 0 : 1)
+                            .background {
+                                if friend.pinOrder != nil, let memberID = friend.member.id {
+                                    GeometryReader { proxy in
+                                        Color.clear.preference(
+                                            key: HomePinnedFriendDropTargetPreferenceKey.self,
+                                            value: [HomePinnedFriendDropTarget(
+                                                memberID: memberID,
+                                                frame: proxy.frame(
+                                                    in: .named(HomePinnedFriendDragCoordinateSpace.name)
+                                                )
+                                            )]
+                                        )
+                                    }
+                                }
+                            },
+                            friend: friend
                         )
+                        .accessibilityAction(
+                            named: Text("home.action.moveUp", tableName: "Home")
+                        ) {
+                            movePinnedFriend(friend, offset: -1)
+                        }
+                        .accessibilityAction(
+                            named: Text("home.action.moveDown", tableName: "Home")
+                        ) {
+                            movePinnedFriend(friend, offset: 1)
+                        }
                     }
                 }
             }
@@ -301,22 +371,261 @@ struct HomeView: View {
         onRoute(.memberCalendar(memberId))
     }
 
+    private func openFriendCalendar(for memberId: MemberID?) {
+        guard !consumeDragSuppression() else { return }
+        openCalendar(for: memberId)
+    }
+
+    /// A reorder drag keeps the pressed control alive underneath the finger — the
+    /// card moves with the drag, so the lift still lands inside the control that
+    /// started it. Every control on a friend card therefore has to swallow the
+    /// lift that ends a drag; the flag is only set once a drag has begun, so plain
+    /// taps are untouched. The check has to run synchronously inside the control's
+    /// action, before any `Task`, because the suppression is released on the next
+    /// main-queue turn.
+    private func consumeDragSuppression() -> Bool {
+        guard suppressFriendCardActions else { return false }
+        suppressFriendCardActions = false
+        return true
+    }
+
+    private func requestTogglePin(_ friend: DashboardFriendDetailDTO) {
+        guard !consumeDragSuppression() else { return }
+        Task { await togglePin(friend) }
+    }
+
+    private var pinnedFriends: [DashboardFriendDetailDTO] {
+        viewModel.sortedFriends.filter { $0.pinOrder != nil }
+    }
+
+    private var displayedPinnedFriends: [DashboardFriendDetailDTO] {
+        guard let inlinePinnedOrder else { return pinnedFriends }
+        let positions = Dictionary(
+            uniqueKeysWithValues: inlinePinnedOrder.enumerated().map { ($1, $0) }
+        )
+        return pinnedFriends.sorted {
+            positions[$0.member.id ?? -1, default: .max]
+                < positions[$1.member.id ?? -1, default: .max]
+        }
+    }
+
+    private var displayedFriends: [DashboardFriendDetailDTO] {
+        displayedPinnedFriends + viewModel.sortedFriends.filter { $0.pinOrder == nil }
+    }
+
+    private func canReorder(_ friend: DashboardFriendDetailDTO) -> Bool {
+        friend.pinOrder != nil && pinnedFriends.count >= 2
+    }
+
+    @ViewBuilder
+    private func pinnedFriendDragSurface<Content: View>(
+        _ content: Content,
+        friend: DashboardFriendDetailDTO
+    ) -> some View {
+        if canReorder(friend) {
+            if #available(iOS 18.0, *) {
+                content.gesture(modernPinnedFriendDragGesture(friend))
+            } else {
+                content.simultaneousGesture(pinnedFriendDragGesture(friend))
+            }
+        } else {
+            content
+        }
+    }
+
+    @available(iOS 18.0, *)
+    private func modernPinnedFriendDragGesture(
+        _ friend: DashboardFriendDetailDTO
+    ) -> DPLongPressGestureRecognizer {
+        DPLongPressGestureRecognizer(
+            minimumDuration: HomePinnedFriendDragLayout.minimumPressDuration,
+            maximumMovement: HomePinnedFriendDragLayout.maximumPressDistance,
+            coordinateSpaceName: HomePinnedFriendDragCoordinateSpace.name,
+            onBegan: { location in
+                guard let memberID = friend.member.id else { return }
+                suppressFriendCardActions = true
+                updatePinnedFriendDrag(memberID: memberID, location: location)
+            },
+            onChanged: { location in
+                guard let memberID = friend.member.id else { return }
+                updatePinnedFriendDrag(memberID: memberID, location: location)
+            },
+            onEnded: {
+                finishPinnedFriendDrag()
+                releaseFriendCardActionSuppression()
+            },
+            onCancelled: {
+                clearPinnedFriendDrag()
+                releaseFriendCardActionSuppression()
+            }
+        )
+    }
+
+    private func releaseFriendCardActionSuppression() {
+        DispatchQueue.main.async {
+            suppressFriendCardActions = false
+        }
+    }
+
+    private func pinnedFriendDragGesture(
+        _ friend: DashboardFriendDetailDTO
+    ) -> some Gesture {
+        LongPressGesture(
+            minimumDuration: HomePinnedFriendDragLayout.minimumPressDuration,
+            maximumDistance: HomePinnedFriendDragLayout.maximumPressDistance
+        )
+            .sequenced(before: DragGesture(
+                minimumDistance: HomePinnedFriendDragLayout.activationDistance,
+                coordinateSpace: .named(HomePinnedFriendDragCoordinateSpace.name)
+            ))
+            .onChanged { value in
+                guard case .second(true, let drag?) = value,
+                      let memberID = friend.member.id else { return }
+                updatePinnedFriendDrag(memberID: memberID, location: drag.location)
+            }
+            .onEnded { value in
+                guard case .second(true, let drag?) = value,
+                      let memberID = friend.member.id else {
+                    clearPinnedFriendDrag()
+                    return
+                }
+                updatePinnedFriendDrag(memberID: memberID, location: drag.location)
+                finishPinnedFriendDrag()
+            }
+    }
+
+    private func updatePinnedFriendDrag(memberID: MemberID, location: CGPoint) {
+        guard !isSavingPinnedOrder else { return }
+        if draggedPinnedFriendID != memberID {
+            let ids = displayedPinnedFriends.compactMap(\.member.id)
+            inlinePinnedOrder = ids
+            draggedPinnedFriendID = memberID
+            pinnedDragOriginalOrder = ids
+            pinnedDragReferenceTargets = pinnedFriendDropTargets.sorted { $0.frame.minY < $1.frame.minY }
+            if let frame = pinnedFriendDropTargets.last(where: { $0.memberID == memberID })?.frame {
+                pinnedDragPreviewSize = frame.size
+                pinnedDragGrabOffset = CGSize(
+                    width: location.x - frame.midX,
+                    height: location.y - frame.midY
+                )
+            }
+        }
+        guard let previewSize = pinnedDragPreviewSize,
+              let grabOffset = pinnedDragGrabOffset,
+              !pinnedDragOriginalOrder.isEmpty else { return }
+
+        pinnedDragLocation = location
+        let previewFrame = CGRect(
+            x: location.x - grabOffset.width - previewSize.width / 2,
+            y: location.y - grabOffset.height - previewSize.height / 2,
+            width: previewSize.width,
+            height: previewSize.height
+        )
+        let nextOrder = HomePinnedFriendLiveOrder.reordered(
+            pinnedDragOriginalOrder,
+            draggedID: memberID,
+            previewFrame: previewFrame,
+            targets: pinnedDragReferenceTargets
+        )
+        guard nextOrder != inlinePinnedOrder else { return }
+        withAnimation(.snappy(duration: 0.16, extraBounce: 0)) {
+            inlinePinnedOrder = nextOrder
+        }
+    }
+
+    private func finishPinnedFriendDrag() {
+        let finalOrder = inlinePinnedOrder
+        clearPinnedFriendDrag()
+        guard let finalOrder,
+              finalOrder != pinnedFriends.compactMap(\.member.id) else {
+            inlinePinnedOrder = nil
+            return
+        }
+        savePinnedOrder(finalOrder)
+    }
+
+    private func movePinnedFriend(_ friend: DashboardFriendDetailDTO, offset: Int) {
+        guard canReorder(friend),
+              !isSavingPinnedOrder,
+              let memberID = friend.member.id else { return }
+        var ids = displayedPinnedFriends.compactMap(\.member.id)
+        guard let sourceIndex = ids.firstIndex(of: memberID) else { return }
+        let destinationIndex = sourceIndex + offset
+        guard ids.indices.contains(destinationIndex) else { return }
+        ids.remove(at: sourceIndex)
+        ids.insert(memberID, at: destinationIndex)
+        withAnimation(.snappy(duration: 0.16, extraBounce: 0)) {
+            inlinePinnedOrder = ids
+        }
+        savePinnedOrder(ids)
+    }
+
+    private func savePinnedOrder(_ memberIDs: [MemberID]) {
+        guard !isSavingPinnedOrder else { return }
+        let previousDashboard = viewModel.friendsDashboard
+        viewModel.setPinnedFriendOrder(memberIDs)
+        isSavingPinnedOrder = true
+#if DEBUG
+        if isUITesting {
+            isSavingPinnedOrder = false
+            inlinePinnedOrder = nil
+            return
+        }
+#endif
+        Task {
+            do {
+                try await pinRepository.updatePinnedOrder(memberIDs)
+                await viewModel.retryFriendsDashboard()
+            } catch {
+                viewModel.replaceFriendsDashboardForMutation(previousDashboard)
+                showsPinnedOrderError = true
+            }
+            isSavingPinnedOrder = false
+            withAnimation(.snappy(duration: 0.16, extraBounce: 0)) {
+                inlinePinnedOrder = nil
+            }
+        }
+    }
+
+    private func clearPinnedFriendDrag() {
+        draggedPinnedFriendID = nil
+        pinnedDragLocation = nil
+        pinnedDragPreviewSize = nil
+        pinnedDragGrabOffset = nil
+        pinnedDragReferenceTargets = []
+        pinnedDragOriginalOrder = []
+    }
+
     private func togglePin(_ friend: DashboardFriendDetailDTO) async {
-        guard pinningMemberID == nil, let memberID = friend.member.id else { return }
+        guard pinningMemberID == nil,
+              !isSavingPinnedOrder,
+              draggedPinnedFriendID == nil,
+              let memberID = friend.member.id else { return }
         pinningMemberID = memberID
         defer { pinningMemberID = nil }
+        let previousDashboard = viewModel.friendsDashboard
+        let isPinning = friend.pinOrder == nil
+        viewModel.setFriendPinned(memberID: memberID, isPinned: isPinning)
+#if DEBUG
+        if isUITesting { return }
+#endif
         do {
-            if friend.pinOrder == nil {
+            if isPinning {
                 try await pinRepository.pin(memberID)
             } else {
                 try await pinRepository.unpin(memberID)
             }
             await viewModel.retryFriendsDashboard()
         } catch {
-            // The card keeps the last confirmed server state when this compact
-            // dashboard action fails. Full error handling remains in Friends.
+            viewModel.replaceFriendsDashboardForMutation(previousDashboard)
         }
     }
+
+#if DEBUG
+    private var isUITesting: Bool {
+        ProcessInfo.processInfo.arguments.contains("-ui-testing-authenticated")
+    }
+#endif
 }
 
 private struct HomeScheduleRow: View {
@@ -342,83 +651,85 @@ private struct HomeScheduleRow: View {
 private struct FriendSummaryCard: View {
     let friend: DashboardFriendDetailDTO
     let isPinning: Bool
+    let isDragPreview: Bool
     let openCalendar: () -> Void
-    let togglePin: () async -> Void
+    let togglePin: () -> Void
 
     var body: some View {
-        Button(action: openCalendar) {
-            HStack(alignment: .top, spacing: DPSpacing.compact) {
-                HomeAvatar(
-                    memberId: friend.member.id,
-                    name: friend.member.name,
-                    hasProfilePhoto: friend.member.hasProfilePhoto,
-                    profilePhotoVersion: friend.member.profilePhotoVersion,
-                    size: 64
-                )
+        HStack(alignment: .top, spacing: DPSpacing.compact) {
+            HomeAvatar(
+                memberId: friend.member.id,
+                name: friend.member.name,
+                hasProfilePhoto: friend.member.hasProfilePhoto,
+                profilePhotoVersion: friend.member.profilePhotoVersion,
+                size: 64
+            )
 
-                VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 6) {
                     HStack(spacing: 6) {
-                        HStack(spacing: 6) {
-                            Text(friend.member.name)
-                                .font(DPTypography.label)
-                                .foregroundStyle(DPColor.textPrimary)
-                                .lineLimit(1)
-                            if friend.isFamily {
-                                Image(systemName: "house.fill")
-                                    .font(.system(size: 14))
-                                    .foregroundStyle(DPColor.warning)
-                                    .accessibilityLabel(Text("home.family", tableName: "Home"))
-                            }
-                        }
-                        Spacer(minLength: 0)
-                    }
-                    .frame(minHeight: DPSize.minimumTouchTarget)
-
-                    HStack(spacing: 6) {
-                        Image(systemName: "briefcase")
-                            .font(.system(size: 14))
-                            .foregroundStyle(DPColor.textMuted)
-                        Text("home.duty", tableName: "Home")
-                            .foregroundStyle(DPColor.textSecondary)
-                        if let duty = friend.duty {
-                            Text(duty.displayName)
-                                .foregroundStyle(DPColor.textPrimary)
-                                .lineLimit(1)
-                        } else {
-                            Text("-")
-                                .foregroundStyle(DPColor.textMuted)
+                        Text(friend.member.name)
+                            .font(DPTypography.label)
+                            .foregroundStyle(DPColor.textPrimary)
+                            .lineLimit(1)
+                        if friend.isFamily {
+                            Image(systemName: "house.fill")
+                                .font(.system(size: 14))
+                                .foregroundStyle(DPColor.warning)
+                                .accessibilityLabel(Text("home.family", tableName: "Home"))
                         }
                     }
-                    .font(DPTypography.caption)
-
-                    VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
-                        ForEach(friend.schedules.prefix(2), id: \.id) { schedule in
-                            Text(schedule.homeDisplayContent)
-                                .font(DPTypography.caption)
-                                .foregroundStyle(DPColor.textSecondary)
-                                .lineLimit(1)
-                                .padding(.horizontal, 6)
-                                .padding(.vertical, DPSpacing.extraSmall)
-                        }
-                        if friend.schedules.count > 2 {
-                            HStack(spacing: DPSpacing.extraSmall) {
-                                Text("+\(friend.schedules.count - 2)")
-                                Text("home.moreSchedules", tableName: "Home")
-                            }
-                            .font(DPTypography.caption)
-                            .foregroundStyle(DPColor.textMuted)
-                            .padding(.leading, DPSpacing.extraSmall)
-                        }
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    Spacer(minLength: 0)
                 }
+                .frame(minHeight: DPSize.minimumTouchTarget)
+
+                HStack(spacing: 6) {
+                    Image(systemName: "briefcase")
+                        .font(.system(size: 14))
+                        .foregroundStyle(DPColor.textMuted)
+                    Text("home.duty", tableName: "Home")
+                        .foregroundStyle(DPColor.textSecondary)
+                    if let duty = friend.duty {
+                        Text(duty.displayName)
+                            .foregroundStyle(DPColor.textPrimary)
+                            .lineLimit(1)
+                    } else {
+                        Text("-")
+                            .foregroundStyle(DPColor.textMuted)
+                    }
+                }
+                .font(DPTypography.caption)
+
+                VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+                    ForEach(friend.schedules.prefix(2), id: \.id) { schedule in
+                        Text(schedule.homeDisplayContent)
+                            .font(DPTypography.caption)
+                            .foregroundStyle(DPColor.textSecondary)
+                            .lineLimit(1)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, DPSpacing.extraSmall)
+                    }
+                    if friend.schedules.count > 2 {
+                        HStack(spacing: DPSpacing.extraSmall) {
+                            Text("+\(friend.schedules.count - 2)")
+                            Text("home.moreSchedules", tableName: "Home")
+                        }
+                        .font(DPTypography.caption)
+                        .foregroundStyle(DPColor.textMuted)
+                        .padding(.leading, DPSpacing.extraSmall)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(DPSpacing.compact)
-            .padding(.trailing, DPSize.minimumTouchTarget)
-            .frame(maxWidth: .infinity, minHeight: 88, alignment: .leading)
-            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .padding(DPSpacing.compact)
+        .padding(.trailing, DPSize.minimumTouchTarget)
+        .frame(maxWidth: .infinity, minHeight: 88, alignment: .leading)
+        .contentShape(Rectangle())
+        .onTapGesture(perform: openCalendar)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityIdentifier("home.friend.\(friend.member.id ?? -1)")
         .background {
             if friend.pinOrder == nil {
                 DPColor.backgroundCard
@@ -435,76 +746,36 @@ private struct FriendSummaryCard: View {
             RoundedRectangle(cornerRadius: DPRadius.large)
                 .stroke(DPColor.borderPrimary, lineWidth: friend.pinOrder == nil ? 1 : 2)
         }
-        .overlay(alignment: .bottomTrailing) {
-            if friend.pinOrder != nil {
-                Image(systemName: "line.3.horizontal")
-                    .rotationEffect(.degrees(90))
-                    .font(.system(size: 16))
-                    .foregroundStyle(DPColor.textMuted)
-                    .padding(6)
-                    .background(DPColor.backgroundTertiary)
-                    .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
-                    .padding(DPSpacing.small)
-                    .accessibilityHidden(true)
-            }
-        }
         .overlay(alignment: .topTrailing) {
-            Button {
-                Task { await togglePin() }
-            } label: {
-                Group {
-                    if isPinning {
-                        ProgressView()
-                            .tint(DPColor.textMuted)
-                    } else {
-                        Image(systemName: friend.pinOrder == nil ? "star" : "star.fill")
-                            .font(.system(size: 16))
-                            .foregroundStyle(friend.pinOrder == nil ? DPColor.textMuted : DPColor.warning)
+            if !isDragPreview {
+                Button {
+                    togglePin()
+                } label: {
+                    Group {
+                        if isPinning {
+                            ProgressView()
+                                .tint(DPColor.textMuted)
+                        } else {
+                            Image(systemName: friend.pinOrder == nil ? "star" : "star.fill")
+                                .font(.system(size: 16))
+                                .foregroundStyle(friend.pinOrder == nil ? DPColor.textMuted : DPColor.warning)
+                        }
                     }
+                    .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                    .contentShape(Rectangle())
                 }
-                .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
-                .contentShape(Rectangle())
+                .buttonStyle(.plain)
+                .disabled(isPinning)
+                .accessibilityLabel(
+                    Text(friend.pinOrder == nil ? "social.action.pin" : "social.action.unpin", tableName: "Social")
+                )
+                .accessibilityIdentifier("home.friend.\(friend.member.id ?? -1).pin")
+                .padding(.top, DPSpacing.compact)
+                .padding(.trailing, DPSpacing.small)
             }
-            .buttonStyle(.plain)
-            .disabled(isPinning)
-            .accessibilityLabel(
-                Text(friend.pinOrder == nil ? "social.action.pin" : "social.action.unpin", tableName: "Social")
-            )
-            .padding(.top, DPSpacing.compact)
-            .padding(.trailing, DPSpacing.small)
         }
         .shadow(color: Color.black.opacity(0.05), radius: 2, y: 1)
         .accessibilityHint(Text("home.openCalendar", tableName: "Home"))
-    }
-}
-
-private struct RequestSummaryPill: View {
-    let title: LocalizedStringKey
-    let count: Int
-    let systemImage: String
-
-    var body: some View {
-        HStack(spacing: DPSpacing.small) {
-            Image(systemName: systemImage)
-                .font(.system(size: 14))
-                .foregroundStyle(DPColor.textMuted)
-            Text(title, tableName: "Home")
-                .font(DPTypography.caption)
-                .foregroundStyle(DPColor.textSecondary)
-                .lineLimit(1)
-            Spacer(minLength: DPSpacing.extraSmall)
-            Text("\(count)")
-                .font(DPFont.bold(size: 12, relativeTo: .caption))
-                .foregroundStyle(DPColor.textPrimary)
-        }
-        .padding(.horizontal, DPSpacing.compact)
-        .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)
-        .background(DPColor.backgroundSecondary)
-        .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
-        .overlay {
-            RoundedRectangle(cornerRadius: DPRadius.standard)
-                .stroke(DPColor.borderPrimary)
-        }
     }
 }
 
@@ -631,9 +902,55 @@ private extension ScheduleDTO {
 private extension DutyDTO {
     var displayName: String {
         guard let dutyType, !dutyType.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            return String(localized: "home.offDuty", table: "Home")
+            return homeLocalized("home.offDuty")
         }
         return dutyType
+    }
+}
+
+enum HomePinnedFriendDragLayout {
+    static let minimumPressDuration = 0.35
+    static let maximumPressDistance: CGFloat = 10
+    static let activationDistance: CGFloat = 4
+}
+
+struct HomePinnedFriendDropTarget: Equatable {
+    let memberID: MemberID
+    let frame: CGRect
+}
+
+enum HomePinnedFriendLiveOrder {
+    static func reordered(
+        _ originalOrder: [MemberID],
+        draggedID: MemberID,
+        previewFrame: CGRect,
+        targets: [HomePinnedFriendDropTarget]
+    ) -> [MemberID] {
+        PinnedFriendReorder.reordered(
+            originalOrder,
+            draggedID: draggedID,
+            previewFrame: previewFrame,
+            framesByID: PinnedFriendReorder.framesByID(
+                targets,
+                memberID: \.memberID,
+                frame: \.frame
+            )
+        )
+    }
+}
+
+private enum HomePinnedFriendDragCoordinateSpace {
+    static let name = "home-pinned-friend-drag"
+}
+
+private struct HomePinnedFriendDropTargetPreferenceKey: PreferenceKey {
+    static let defaultValue: [HomePinnedFriendDropTarget] = []
+
+    static func reduce(
+        value: inout [HomePinnedFriendDropTarget],
+        nextValue: () -> [HomePinnedFriendDropTarget]
+    ) {
+        value.append(contentsOf: nextValue())
     }
 }
 

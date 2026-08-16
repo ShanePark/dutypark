@@ -35,20 +35,15 @@ struct SettingsView: View {
     @AppStorage(SettingsPreference.themeKey) private var themeCode = SettingsPreference.defaultTheme
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var photoToCrop: UIImage?
-    @State private var showPhotoActions = false
     @State private var showVisibility = false
     @State private var showPattern = false
     @State private var showPassword = false
     @State private var showAuxiliary = false
-    @State private var showLogout = false
     @State private var showAIConsentConfirmation = false
-    @State private var logoutAction = SettingsDestructiveActionGate()
     @State private var showAccountDeletion = false
     @State private var accountDeletionIsWorking = false
-    @State private var managerToRemove: MemberDTO?
-    @State private var sessionConfirmation: SettingsSessionConfirmation?
-    @State private var sessionAction = SettingsDestructiveActionGate()
-    @State private var memberToImpersonate: MemberDTO?
+    @State private var confirmation: SettingsConfirmation?
+    @State private var confirmationAction = SettingsDestructiveActionGate()
     @State private var isLinking: OAuthProvider?
     @State private var isUnlinking: OAuthProvider?
     @State private var socialManagementPresentation: SettingsSocialManagementPresentation?
@@ -115,7 +110,17 @@ struct SettingsView: View {
             }
         }
         .accessibilityIdentifier("screen.settings")
-        .task { await model.load() }
+        .task {
+            await model.load()
+#if DEBUG
+            let arguments = ProcessInfo.processInfo.arguments
+            if arguments.contains("-ui-testing-long-form-policy-terms") {
+                destination = .terms
+            } else if arguments.contains("-ui-testing-long-form-policy-privacy") {
+                destination = .privacy
+            }
+#endif
+        }
         .task { await push.resumeRegistration() }
         .task(id: model.member?.id) {
             guard let memberID = model.member?.id else { return }
@@ -226,15 +231,26 @@ struct SettingsView: View {
                 )
             }
         }
-        .alert(item: $sessionConfirmation) { confirmation in
-            Alert(
-                title: Text(SettingsLocalization.string(confirmation.titleKey)),
-                message: Text(confirmation.message),
-                primaryButton: .destructive(Text(SettingsLocalization.string("settings.action.confirm"))) {
-                    Task { await performSessionConfirmation(confirmation) }
-                },
-                secondaryButton: .cancel(Text(SettingsLocalization.string("settings.action.cancel")))
-            )
+        .fullScreenCover(item: $confirmation) { requestedAction in
+            DPModalOverlay(
+                maximumContentWidth: DPConfirmationPanel.maximumWidth,
+                onDismiss: { confirmation = nil },
+                canDismiss: !confirmationIsWorking
+            ) { availableSize, confirmationDismiss in
+                DPConfirmationPanel(
+                    title: SettingsLocalization.string(requestedAction.titleKey),
+                    message: requestedAction.message,
+                    confirmTitle: SettingsLocalization.string(requestedAction.confirmTitleKey),
+                    cancelTitle: SettingsLocalization.string("settings.action.cancel"),
+                    isDestructive: requestedAction.isDestructive,
+                    isWorking: confirmationIsWorking,
+                    maximumHeight: availableSize.height,
+                    cancel: confirmationDismiss,
+                    confirm: {
+                        performConfirmation(requestedAction, dismiss: confirmationDismiss)
+                    }
+                )
+            }
         }
         .sheet(isPresented: cropSheetBinding) {
             if let photoToCrop {
@@ -249,42 +265,6 @@ struct SettingsView: View {
                     self.photoToCrop = nil
                 }
             }
-        }
-        .confirmationDialog(SettingsLocalization.string("settings.photo.actions"), isPresented: $showPhotoActions) {
-            if model.member?.hasProfilePhoto == true {
-                Button(SettingsLocalization.string("settings.photo.delete"), role: .destructive) {
-                    Task {
-                        if await model.deleteProfilePhoto() {
-                            onProfilePhotoChanged()
-                        }
-                    }
-                }
-            }
-            Button(SettingsLocalization.string("settings.action.cancel"), role: .cancel) {}
-        }
-        .alert(SettingsLocalization.string("settings.logout.confirmTitle"), isPresented: $showLogout) {
-            Button(SettingsLocalization.string("settings.logout"), role: .destructive) {
-                Task { await performLogout() }
-            }
-            Button(SettingsLocalization.string("settings.action.cancel"), role: .cancel) {}
-        } message: {
-            SettingsLocalization.text("settings.logout.confirmMessage")
-        }
-        .confirmationDialog(SettingsLocalization.string("settings.manager.removeTitle"), isPresented: removeManagerBinding) {
-            Button(SettingsLocalization.string("settings.manager.remove"), role: .destructive) {
-                guard let id = managerToRemove?.id else { return }
-                Task { await model.unassignManager(id) }
-            }
-            Button(SettingsLocalization.string("settings.action.cancel"), role: .cancel) {}
-        }
-        .confirmationDialog(SettingsLocalization.string("settings.managed.switchTitle"), isPresented: impersonateBinding) {
-            Button(SettingsLocalization.string("settings.managed.switch")) {
-                guard let id = memberToImpersonate?.id else { return }
-                Task {
-                    try? await session.impersonate(memberId: id)
-                }
-            }
-            Button(SettingsLocalization.string("settings.action.cancel"), role: .cancel) {}
         }
         .alert(SettingsLocalization.string("settings.notice.title"), isPresented: noticeBinding) {
             Button(SettingsLocalization.string("settings.action.confirm")) {
@@ -315,11 +295,11 @@ struct SettingsView: View {
                 SettingsLocalization.text(key)
             }
         }
-        .disabled(model.isWorking || logoutAction.isWorking || sessionAction.isWorking)
+        .disabled(model.isWorking || confirmationAction.isWorking)
         .navigationDestination(item: $destination) { destination in
             switch destination {
             case .guide:
-                GuideWebView(destination: .guide)
+                PublicGuideView()
             case .terms:
                 DeepLinkedPolicyView(type: .terms, model: model)
             case .privacy:
@@ -337,7 +317,7 @@ struct SettingsView: View {
             HStack(spacing: DPSpacing.medium) {
                 ZStack(alignment: .bottomTrailing) {
                     Button {
-                        guard model.member?.hasProfilePhoto == true else { return }
+                        guard hasVisibleProfilePhoto else { return }
                         Task { await cropExistingPhoto() }
                     } label: { profilePhoto }
                     .buttonStyle(.plain)
@@ -364,14 +344,24 @@ struct SettingsView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            if model.member?.hasProfilePhoto == true {
-                Button { showPhotoActions = true } label: {
+            if hasVisibleProfilePhoto {
+                Button { confirmation = .deleteProfilePhoto } label: {
                     Label(SettingsLocalization.string("settings.photo.delete"), systemImage: "trash")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(DangerSoftButtonStyle())
+                .accessibilityIdentifier("settings.photo.delete")
             }
         }
+    }
+
+    private var hasVisibleProfilePhoto: Bool {
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-ui-testing-profile-photo") {
+            return true
+        }
+#endif
+        return model.member?.hasProfilePhoto == true
     }
 
     @ViewBuilder
@@ -622,7 +612,10 @@ struct SettingsView: View {
                     HStack {
                         Text(manager.name).font(DPTypography.body)
                         Spacer()
-                        Button { managerToRemove = manager } label: {
+                        Button {
+                            guard let id = manager.id else { return }
+                            confirmation = .removeManager(id: id, name: manager.name)
+                        } label: {
                             Image(systemName: "trash")
                                 .frame(width: 44, height: 44)
                         }
@@ -661,7 +654,10 @@ struct SettingsView: View {
                         }
                     }
                     Spacer()
-                    Button { memberToImpersonate = member } label: {
+                    Button {
+                        guard let id = member.id else { return }
+                        confirmation = .switchManagedAccount(id: id, name: member.name)
+                    } label: {
                         Image(systemName: "rectangle.portrait.and.arrow.right")
                             .frame(width: 44, height: 44)
                             .background(DPColor.accentSoft, in: RoundedRectangle(cornerRadius: DPRadius.standard))
@@ -692,7 +688,7 @@ struct SettingsView: View {
                 if otherSessionCount > 0 {
                     Button {
                         withoutPresentationAnimation {
-                            sessionConfirmation = .otherSessions(count: otherSessionCount)
+                            confirmation = .session(.otherSessions(count: otherSessionCount))
                         }
                     } label: {
                         Label(
@@ -717,7 +713,7 @@ struct SettingsView: View {
                 ForEach(sortedSessions) { token in
                     SettingsSessionCard(token: token) {
                         withoutPresentationAnimation {
-                            sessionConfirmation = .session(token)
+                            confirmation = .session(.session(token))
                         }
                     }
                 }
@@ -800,17 +796,17 @@ struct SettingsView: View {
                 }
             }
             settingsNavigationLink("settings.guide", icon: "book") {
-                GuideWebView(destination: .guide)
+                PublicGuideView()
             }
             settingsNavigationLink("settings.releaseNotes", icon: "clock.arrow.circlepath") {
-                GuideWebView(destination: .releaseNotes)
+                PublicReleaseNotesView()
             }
         }
     }
 
     private var logoutSection: some View {
         VStack {
-            Button { showLogout = true } label: {
+            Button { confirmation = .logout } label: {
                 Label(SettingsLocalization.string("settings.logout"), systemImage: "rectangle.portrait.and.arrow.right")
                     .frame(maxWidth: .infinity)
             }
@@ -900,14 +896,6 @@ struct SettingsView: View {
                 }
             }
         )
-    }
-
-    private var removeManagerBinding: Binding<Bool> {
-        Binding(get: { managerToRemove != nil }, set: { if !$0 { managerToRemove = nil } })
-    }
-
-    private var impersonateBinding: Binding<Bool> {
-        Binding(get: { memberToImpersonate != nil }, set: { if !$0 { memberToImpersonate = nil } })
     }
 
     private var cropSheetBinding: Binding<Bool> {
@@ -1141,22 +1129,36 @@ struct SettingsView: View {
         }
     }
 
-    private func performLogout() async {
-        guard logoutAction.start() else { return }
-        defer { logoutAction.finish() }
-        await session.logout()
+    private var confirmationIsWorking: Bool {
+        confirmationAction.isWorking || model.isWorking
     }
 
-    private func performSessionConfirmation(_ confirmation: SettingsSessionConfirmation) async {
-        guard sessionAction.start() else { return }
-        defer { sessionAction.finish() }
-
-        switch confirmation {
-        case .session(let token):
-            guard SettingsSessionPolicy.canRevoke(token) else { return }
-            _ = await model.revokeSession(id: token.id)
-        case .otherSessions:
-            _ = await model.revokeOtherSessions()
+    private func performConfirmation(
+        _ requestedAction: SettingsConfirmation,
+        dismiss: @escaping () -> Void
+    ) {
+        guard confirmationAction.start() else { return }
+        Task {
+            switch requestedAction {
+            case .deleteProfilePhoto:
+                if await model.deleteProfilePhoto() {
+                    onProfilePhotoChanged()
+                }
+            case .logout:
+                await session.logout()
+            case .removeManager(let id, _):
+                await model.unassignManager(id)
+            case .switchManagedAccount(let id, _):
+                try? await session.impersonate(memberId: id)
+            case .session(.session(let token)):
+                if SettingsSessionPolicy.canRevoke(token) {
+                    _ = await model.revokeSession(id: token.id)
+                }
+            case .session(.otherSessions):
+                _ = await model.revokeOtherSessions()
+            }
+            confirmationAction.finish()
+            dismiss()
         }
     }
 
@@ -1181,7 +1183,23 @@ nonisolated enum SettingsSocialUnlinkPolicy {
         connectedProviderCount >= 2
     }
 
+    static func managementDescription(for provider: OAuthProvider) -> String {
+        switch provider {
+        case .apple:
+            SettingsLocalization.string("settings.social.unlinkAppleDescription")
+        case .kakao, .naver:
+            localOnlyMessage(for: provider)
+        }
+    }
+
     static func confirmationMessage(for provider: OAuthProvider) -> String {
+        if provider == .apple {
+            return SettingsLocalization.string("settings.social.unlinkAppleConfirmMessage")
+        }
+        return localOnlyMessage(for: provider)
+    }
+
+    private static func localOnlyMessage(for provider: OAuthProvider) -> String {
         SettingsLocalization.string("settings.social.unlinkConfirmMessage")
             .replacingOccurrences(of: "{provider}", with: providerName(provider))
     }
@@ -1303,6 +1321,69 @@ nonisolated enum SettingsSessionFormatter {
     }
 }
 
+enum SettingsConfirmation: Identifiable {
+    case deleteProfilePhoto
+    case logout
+    case removeManager(id: MemberID, name: String)
+    case switchManagedAccount(id: MemberID, name: String)
+    case session(SettingsSessionConfirmation)
+
+    var id: String {
+        switch self {
+        case .deleteProfilePhoto: "delete-profile-photo"
+        case .logout: "logout"
+        case .removeManager(let id, _): "remove-manager-\(id)"
+        case .switchManagedAccount(let id, _): "switch-managed-account-\(id)"
+        case .session(let confirmation): confirmation.id
+        }
+    }
+
+    var titleKey: String {
+        switch self {
+        case .deleteProfilePhoto: "settings.photo.delete"
+        case .logout: "settings.logout.confirmTitle"
+        case .removeManager: "settings.manager.removeTitle"
+        case .switchManagedAccount: "settings.managed.switch"
+        case .session(let confirmation): confirmation.titleKey
+        }
+    }
+
+    var confirmTitleKey: String {
+        switch self {
+        case .deleteProfilePhoto: "settings.photo.delete"
+        case .logout: "settings.logout"
+        case .removeManager: "settings.manager.remove"
+        case .switchManagedAccount: "settings.managed.switch"
+        case .session(.session): "settings.sessions.revoke"
+        case .session(.otherSessions): "settings.sessions.revokeOthers"
+        }
+    }
+
+    var message: String {
+        switch self {
+        case .deleteProfilePhoto:
+            SettingsLocalization.string("settings.photo.deleteConfirm")
+        case .logout:
+            SettingsLocalization.string("settings.logout.confirmMessage")
+        case .removeManager(_, let name):
+            SettingsLocalization.string("settings.manager.removeMessage")
+                .replacingOccurrences(of: "{name}", with: name)
+        case .switchManagedAccount(_, let name):
+            SettingsLocalization.string("settings.managed.switchMessage")
+                .replacingOccurrences(of: "{name}", with: name)
+        case .session(let confirmation):
+            confirmation.message
+        }
+    }
+
+    var isDestructive: Bool {
+        switch self {
+        case .switchManagedAccount: false
+        case .deleteProfilePhoto, .logout, .removeManager, .session: true
+        }
+    }
+}
+
 enum SettingsSessionConfirmation: Identifiable {
     case session(SettingsRefreshToken)
     case otherSessions(count: Int)
@@ -1323,8 +1404,11 @@ enum SettingsSessionConfirmation: Identifiable {
 
     var message: String {
         switch self {
-        case .session:
+        case .session(let token):
             SettingsLocalization.string("settings.sessions.revokeMessage")
+                .replacingOccurrences(of: "{device}", with: token.userAgent?.device ?? "-")
+                .replacingOccurrences(of: "{browser}", with: token.userAgent?.browser ?? "-")
+                .replacingOccurrences(of: "{ip}", with: token.remoteAddr ?? "-")
         case .otherSessions(let count):
             SettingsLocalization.string("settings.sessions.revokeOthersMessage")
                 .replacingOccurrences(of: "{count}", with: "\(count)")
@@ -1588,6 +1672,16 @@ private struct SettingsModalActions<Content: View>: View {
     }
 }
 
+enum DutyPatternUnavailableCopy {
+    static func key(reason: String?) -> String {
+        switch reason?.uppercased() {
+        case "TEAM_REQUIRED": "settings.pattern.unavailable.team"
+        case "DUTY_TYPE_REQUIRED": "settings.pattern.unavailable.dutyType"
+        default: "settings.pattern.unavailable.default"
+        }
+    }
+}
+
 private struct DutyPatternSummary: View {
     let pattern: DutyPatternDTO
     let open: () -> Void
@@ -1639,6 +1733,16 @@ private struct DutyPatternSummary: View {
                             .font(.system(size: 12, weight: .semibold))
                             .foregroundStyle(DPColor.accent)
                     }
+                    if hasHiddenDutyType(details) {
+                        Label {
+                            SettingsLocalization.text("settings.pattern.paused.title")
+                        } icon: {
+                            Image(systemName: "info.circle.fill")
+                        }
+                        .font(DPTypography.caption)
+                        .foregroundStyle(DPColor.warning)
+                        .accessibilityIdentifier("settings.pattern.paused.summary")
+                    }
                 }
                 .padding(DPSpacing.compact)
                 .background(DPColor.backgroundSecondary)
@@ -1665,7 +1769,7 @@ private struct DutyPatternSummary: View {
                 .padding(DPSpacing.medium)
                 .overlay(RoundedRectangle(cornerRadius: DPRadius.large).stroke(DPColor.borderPrimary, style: StrokeStyle(lineWidth: 2, dash: [6, 4])))
             } else {
-                Text(pattern.reason ?? CalendarLocalization.text("calendar.pattern.unavailable"))
+                SettingsLocalization.text(DutyPatternUnavailableCopy.key(reason: pattern.reason))
                     .font(DPTypography.supporting)
                     .foregroundStyle(DPColor.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -1673,6 +1777,37 @@ private struct DutyPatternSummary: View {
         }
         .buttonStyle(.plain)
         .disabled(!pattern.configurable)
+    }
+
+    private func hasHiddenDutyType(_ details: DutyPatternDetailsDTO) -> Bool {
+        let visibleDutyTypeIDs = Set(pattern.dutyTypes.map(\.id))
+        return details.days.contains { !visibleDutyTypeIDs.contains($0.dutyType.id) }
+    }
+}
+
+private struct DutyPatternPausedWarning: View {
+    var body: some View {
+        HStack(alignment: .top, spacing: DPSpacing.small) {
+            Image(systemName: "info.circle.fill")
+                .font(.system(size: DPSize.iconSmall, weight: .semibold))
+            VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+                SettingsLocalization.text("settings.pattern.paused.title")
+                    .font(DPTypography.bodyMedium)
+                SettingsLocalization.text("settings.pattern.paused.description")
+                    .font(DPTypography.caption)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .foregroundStyle(DPColor.warning)
+        .padding(DPSpacing.compact)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(DPColor.warningSoft, in: RoundedRectangle(cornerRadius: DPRadius.standard))
+        .overlay {
+            RoundedRectangle(cornerRadius: DPRadius.standard)
+                .stroke(DPColor.warningBorder)
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("settings.pattern.paused.warning")
     }
 }
 
@@ -1761,15 +1896,102 @@ private struct VisibilitySettingsModal: View {
     }
 }
 
+struct DutyPatternSelectionState {
+    private static let weekdays: [Weekday] = [
+        .monday, .tuesday, .wednesday, .thursday, .friday, .saturday, .sunday,
+    ]
+    private var assignments: [Weekday: DutyTypeID]
+
+    init(pattern: DutyPatternDetailsDTO?, dutyTypes: [DutyPatternDutyTypeDTO]) {
+        if let pattern {
+            assignments = Dictionary(
+                uniqueKeysWithValues: pattern.days.map { ($0.weekday, $0.dutyType.id) }
+            )
+        } else if let defaultDutyTypeID = dutyTypes.first?.id {
+            assignments = Dictionary(
+                uniqueKeysWithValues: Self.weekdays.prefix(5).map { ($0, defaultDutyTypeID) }
+            )
+        } else {
+            assignments = [:]
+        }
+    }
+
+    var selectedWeekdays: [Weekday] {
+        Self.weekdays.filter { assignments[$0] != nil }
+    }
+
+    func isSelected(_ weekday: Weekday) -> Bool {
+        assignments[weekday] != nil
+    }
+
+    func dutyTypeID(for weekday: Weekday) -> DutyTypeID? {
+        assignments[weekday]
+    }
+
+    mutating func toggle(_ weekday: Weekday, defaultDutyTypeID: DutyTypeID?) {
+        if assignments.removeValue(forKey: weekday) != nil { return }
+        guard let defaultDutyTypeID else { return }
+        assignments[weekday] = defaultDutyTypeID
+    }
+
+    mutating func select(_ dutyTypeID: DutyTypeID, for weekday: Weekday) {
+        guard assignments[weekday] != nil else { return }
+        assignments[weekday] = dutyTypeID
+    }
+
+    func dutyType(
+        for weekday: Weekday,
+        visibleDutyTypes: [DutyPatternDutyTypeDTO],
+        pattern: DutyPatternDetailsDTO?
+    ) -> DutyPatternDutyTypeDTO? {
+        guard let id = dutyTypeID(for: weekday) else { return nil }
+        return visibleDutyTypes.first(where: { $0.id == id })
+            ?? pattern?.days.first(where: { $0.weekday == weekday && $0.dutyType.id == id })?.dutyType
+    }
+
+    func hasHiddenSelection(visibleDutyTypes: [DutyPatternDutyTypeDTO]) -> Bool {
+        selectedWeekdays.contains { isHiddenSelection($0, visibleDutyTypes: visibleDutyTypes) }
+    }
+
+    func isHiddenSelection(
+        _ weekday: Weekday,
+        visibleDutyTypes: [DutyPatternDutyTypeDTO]
+    ) -> Bool {
+        guard let selectedID = dutyTypeID(for: weekday) else { return false }
+        return !visibleDutyTypes.contains { $0.id == selectedID }
+    }
+}
+
+enum DutyPatternConfirmation: String, Identifiable {
+    case save
+    case delete
+
+    var id: String { rawValue }
+    var titleKey: String {
+        switch self {
+        case .save: "settings.pattern.saveConfirmTitle"
+        case .delete: "settings.pattern.deleteConfirmTitle"
+        }
+    }
+    var messageKey: String {
+        switch self {
+        case .save: "settings.pattern.saveConfirm"
+        case .delete: "settings.pattern.deleteConfirm"
+        }
+    }
+    var isDestructive: Bool { self == .delete }
+}
+
 private struct DutyPatternSettingsModal: View {
     @ObservedObject var model: SettingsViewModel
     let maximumHeight: CGFloat
     let dismiss: () -> Void
-    @State private var selections: [Weekday: DutyTypeID?] = [:]
+    @State private var selectionState = DutyPatternSelectionState(pattern: nil, dutyTypes: [])
     @State private var holidayOff = true
-    @State private var confirmsSave = false
-    @State private var confirmsDelete = false
+    @State private var confirmation: DutyPatternConfirmation?
+    @State private var expandedWeekday: Weekday?
     private let weekdays: [Weekday] = [.monday, .tuesday, .wednesday, .thursday, .friday, .saturday, .sunday]
+    private let weekdayColumns = Array(repeating: GridItem(.flexible(), spacing: DPSpacing.small), count: 4)
 
     var body: some View {
         DPModalPanel(maximumPanelHeight: maximumHeight) {
@@ -1779,7 +2001,7 @@ private struct DutyPatternSettingsModal: View {
         } footer: {
             SettingsModalActions {
                 Button {
-                    confirmsSave = true
+                    confirmation = .save
                 } label: {
                     SettingsLocalization.text("settings.action.save")
                         .frame(maxWidth: .infinity)
@@ -1797,54 +2019,54 @@ private struct DutyPatternSettingsModal: View {
         }
         .onAppear {
             holidayOff = model.dutyPattern?.pattern?.holidayOff ?? true
-            selections = Dictionary(uniqueKeysWithValues: (model.dutyPattern?.pattern?.days ?? []).map { ($0.weekday, Optional($0.dutyType.id)) })
+            selectionState = DutyPatternSelectionState(
+                pattern: model.dutyPattern?.pattern,
+                dutyTypes: model.dutyPattern?.dutyTypes ?? []
+            )
         }
-        .confirmationDialog(SettingsLocalization.string("settings.pattern.saveConfirmTitle"), isPresented: $confirmsSave) {
-            Button(SettingsLocalization.string("settings.action.save")) {
-                Task {
-                    if await model.saveDutyPattern(days: submittedDays, holidayOff: holidayOff) { dismiss() }
-                }
+        .fullScreenCover(item: $confirmation) { requestedAction in
+            DPModalOverlay(
+                maximumContentWidth: DPConfirmationPanel.maximumWidth,
+                onDismiss: { confirmation = nil },
+                canDismiss: !model.isWorking
+            ) { availableSize, confirmationDismiss in
+                DPConfirmationPanel(
+                    title: SettingsLocalization.string(requestedAction.titleKey),
+                    message: SettingsLocalization.string(requestedAction.messageKey),
+                    confirmTitle: requestedAction == .save
+                        ? SettingsLocalization.string("settings.action.save")
+                        : CalendarLocalization.text("calendar.pattern.delete"),
+                    cancelTitle: SettingsLocalization.string("settings.action.cancel"),
+                    isDestructive: requestedAction.isDestructive,
+                    isWorking: model.isWorking,
+                    maximumHeight: availableSize.height,
+                    cancel: confirmationDismiss,
+                    confirm: {
+                        perform(requestedAction, confirmationDismiss: confirmationDismiss)
+                    }
+                )
             }
-            Button(SettingsLocalization.string("settings.action.cancel"), role: .cancel) {}
-        } message: {
-            SettingsLocalization.text("settings.pattern.saveConfirm")
-        }
-        .confirmationDialog(SettingsLocalization.string("settings.pattern.deleteConfirmTitle"), isPresented: $confirmsDelete) {
-            Button(CalendarLocalization.text("calendar.pattern.delete"), role: .destructive) {
-                Task { if await model.deleteDutyPattern() { dismiss() } }
-            }
-            Button(SettingsLocalization.string("settings.action.cancel"), role: .cancel) {}
-        } message: {
-            SettingsLocalization.text("settings.pattern.deleteConfirm")
         }
     }
 
     private var bodyContent: some View {
-        VStack(alignment: .leading, spacing: DPSpacing.compact) {
-            if let details = model.dutyPattern?.pattern {
-                Text("\(CalendarLocalization.text("calendar.pattern.effectiveFrom")) \(details.effectiveFrom.rawValue)")
-                    .font(DPTypography.supporting)
-                    .foregroundStyle(DPColor.textMuted)
+        VStack(alignment: .leading, spacing: DPSpacing.medium) {
+            if hasHiddenSelection {
+                DutyPatternPausedWarning()
             }
-            ForEach(weekdays, id: \.rawValue) { weekday in
-                HStack {
-                    Text(weekdayLong(weekday))
-                        .font(DPTypography.bodyMedium)
-                        .foregroundStyle(DPColor.textPrimary)
-                    Spacer()
-                    Menu(selectionName(weekday)) {
-                        Button(CalendarLocalization.text("calendar.off")) { selections[weekday] = nil }
-                        ForEach(model.dutyPattern?.dutyTypes ?? [], id: \.id) { type in
-                            Button(type.name) { selections[weekday] = type.id }
-                        }
-                    }
-                    .foregroundStyle(DPColor.textPrimary)
+
+            LazyVGrid(columns: weekdayColumns, spacing: DPSpacing.small) {
+                ForEach(weekdays, id: \.rawValue) { weekday in
+                    weekdayButton(weekday)
                 }
-                .padding(.horizontal, DPSpacing.compact)
-                .frame(minHeight: 48)
-                .background(DPColor.backgroundSecondary, in: RoundedRectangle(cornerRadius: DPRadius.standard))
-                .overlay(RoundedRectangle(cornerRadius: DPRadius.standard).stroke(DPColor.borderPrimary))
             }
+
+            VStack(spacing: DPSpacing.small) {
+                ForEach(selectionState.selectedWeekdays, id: \.rawValue) { weekday in
+                    dutyTypeRow(weekday)
+                }
+            }
+
             Button { holidayOff.toggle() } label: {
                 HStack {
                     Text(CalendarLocalization.text("calendar.pattern.holidayOff"))
@@ -1853,15 +2075,24 @@ private struct DutyPatternSettingsModal: View {
                     Spacer()
                     SettingsSwitch(isOn: holidayOff)
                 }
+                .padding(.horizontal, DPSpacing.compact)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .frame(minHeight: DPSize.minimumTouchTarget)
+            .background(DPColor.backgroundSecondary, in: RoundedRectangle(cornerRadius: DPRadius.standard))
+            .overlay(RoundedRectangle(cornerRadius: DPRadius.standard).stroke(DPColor.borderPrimary))
             .accessibilityValue(SettingsLocalization.string(holidayOff ? "settings.accessibility.on" : "settings.accessibility.off"))
             .accessibilityAddTraits(.isButton)
 
+            if let details = model.dutyPattern?.pattern {
+                Text("\(CalendarLocalization.text("calendar.pattern.effectiveFrom")) \(details.effectiveFrom.rawValue)")
+                    .font(DPTypography.supporting)
+                    .foregroundStyle(DPColor.textMuted)
+            }
+
             if model.dutyPattern?.pattern != nil {
-                Button { confirmsDelete = true } label: {
+                Button { confirmation = .delete } label: {
                     Label(CalendarLocalization.text("calendar.pattern.delete"), systemImage: "trash")
                         .frame(maxWidth: .infinity)
                 }
@@ -1871,22 +2102,203 @@ private struct DutyPatternSettingsModal: View {
         .padding(DPSpacing.large)
     }
 
-    private var selectedIDs: [DutyTypeID] { selections.values.compactMap { $0 } }
+    private func weekdayButton(_ weekday: Weekday) -> some View {
+        let selected = selectionState.isSelected(weekday)
+        return Button {
+            selectionState.toggle(
+                weekday,
+                defaultDutyTypeID: model.dutyPattern?.dutyTypes.first?.id
+            )
+        } label: {
+            Text(weekdayLong(weekday))
+                .font(DPTypography.bodyMedium)
+                .foregroundStyle(selected ? DPColor.textOnDark : DPColor.textSecondary)
+                .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)
+                .background(
+                    selected ? DPColor.accent : DPColor.backgroundSecondary,
+                    in: RoundedRectangle(cornerRadius: DPRadius.standard)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: DPRadius.standard)
+                        .stroke(selected ? DPColor.accent : DPColor.borderPrimary)
+                )
+        }
+        .buttonStyle(.plain)
+        .disabled(model.isWorking)
+        .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+
+    private func dutyTypeRow(_ weekday: Weekday) -> some View {
+        VStack(spacing: DPSpacing.extraSmall) {
+            HStack(spacing: DPSpacing.compact) {
+                Text(weekdayLong(weekday))
+                    .font(DPTypography.bodyMedium)
+                    .foregroundStyle(DPColor.textSecondary)
+                    .frame(width: 44, alignment: .leading)
+
+                Button {
+                    withAnimation(.easeOut(duration: 0.15)) {
+                        expandedWeekday = expandedWeekday == weekday ? nil : weekday
+                    }
+                } label: {
+                    HStack(spacing: DPSpacing.compact) {
+                        if let selected = selectedDutyType(for: weekday) {
+                            Circle()
+                                .fill(Color(settingsHex: selected.color))
+                                .frame(width: 14, height: 14)
+                                .overlay(Circle().stroke(DPColor.borderSecondary))
+                            Text(selected.name)
+                                .font(DPTypography.bodyMedium)
+                                .foregroundStyle(DPColor.textPrimary)
+                                .lineLimit(1)
+                            if isHiddenSelection(weekday) {
+                                hiddenBadge
+                            }
+                        }
+                        Spacer(minLength: DPSpacing.small)
+                        Image(systemName: "chevron.down")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(DPColor.textMuted)
+                            .rotationEffect(.degrees(expandedWeekday == weekday ? 180 : 0))
+                    }
+                    .padding(.horizontal, DPSpacing.compact)
+                    .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)
+                    .background(DPColor.backgroundSecondary, in: RoundedRectangle(cornerRadius: DPRadius.standard))
+                    .overlay(RoundedRectangle(cornerRadius: DPRadius.standard).stroke(DPColor.borderPrimary))
+                }
+                .buttonStyle(.plain)
+                .disabled(model.isWorking)
+                .accessibilityLabel(dutyTypeAccessibilityLabel(for: weekday))
+            }
+
+            if expandedWeekday == weekday {
+                VStack(spacing: 0) {
+                    ForEach(dutyTypeOptions(for: weekday), id: \.id) { type in
+                        let selected = selectionState.dutyTypeID(for: weekday) == type.id
+                        Button {
+                            selectionState.select(type.id, for: weekday)
+                            withAnimation(.easeOut(duration: 0.15)) {
+                                expandedWeekday = nil
+                            }
+                        } label: {
+                            HStack(spacing: DPSpacing.compact) {
+                                Circle()
+                                    .fill(Color(settingsHex: type.color))
+                                    .frame(width: DPSize.iconSmall, height: DPSize.iconSmall)
+                                    .overlay(Circle().stroke(DPColor.borderSecondary))
+                                Text(type.name)
+                                    .font(DPTypography.bodyMedium)
+                                    .foregroundStyle(selected ? DPColor.accent : DPColor.textPrimary)
+                                    .lineLimit(1)
+                                if !isVisibleDutyType(type) {
+                                    hiddenBadge
+                                }
+                                Spacer()
+                                if selected {
+                                    Image(systemName: "checkmark")
+                                        .font(.system(size: DPSize.iconSmall, weight: .semibold))
+                                        .foregroundStyle(DPColor.accent)
+                                }
+                            }
+                            .padding(.horizontal, DPSpacing.compact)
+                            .frame(maxWidth: .infinity, minHeight: 48)
+                            .background(selected ? DPColor.accentSoft : DPColor.backgroundCard)
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(model.isWorking || !isVisibleDutyType(type))
+                        .opacity(isVisibleDutyType(type) ? 1 : 0.55)
+                        .accessibilityAddTraits(selected ? .isSelected : [])
+                        .accessibilityLabel(
+                            isVisibleDutyType(type)
+                                ? type.name
+                                : "\(type.name), \(SettingsLocalization.string("settings.pattern.hidden"))"
+                        )
+                    }
+                }
+                .padding(DPSpacing.small)
+                .background(DPColor.backgroundCard, in: RoundedRectangle(cornerRadius: DPRadius.large))
+                .overlay(RoundedRectangle(cornerRadius: DPRadius.large).stroke(DPColor.borderSecondary))
+                .padding(.leading, 44 + DPSpacing.compact)
+            }
+        }
+    }
+
+    private var selectedIDs: [DutyTypeID] {
+        selectionState.selectedWeekdays.compactMap { selectionState.dutyTypeID(for: $0) }
+    }
     private var submittedDays: [DutyPatternDayUpdateDTO] {
-        weekdays.compactMap { weekday in
-            guard let selected = selections[weekday], let id = selected else { return nil }
+        selectionState.selectedWeekdays.compactMap { weekday in
+            guard let id = selectionState.dutyTypeID(for: weekday) else { return nil }
             return DutyPatternDayUpdateDTO(weekday: weekday, dutyTypeId: id)
         }
     }
     private var hasHiddenSelection: Bool {
-        let visible = Set(model.dutyPattern?.dutyTypes.map(\.id) ?? [])
-        return selectedIDs.contains { !visible.contains($0) }
+        selectionState.hasHiddenSelection(
+            visibleDutyTypes: model.dutyPattern?.dutyTypes ?? []
+        )
     }
-    private func selectionName(_ weekday: Weekday) -> String {
-        guard let selected = selections[weekday], let id = selected else { return CalendarLocalization.text("calendar.off") }
-        return model.dutyPattern?.dutyTypes.first(where: { $0.id == id })?.name
-            ?? model.dutyPattern?.pattern?.days.first(where: { $0.weekday == weekday && $0.dutyType.id == id })?.dutyType.name
-            ?? CalendarLocalization.text("calendar.off")
+
+    private var hiddenBadge: some View {
+        SettingsLocalization.text("settings.pattern.hidden")
+            .font(DPTypography.caption)
+            .foregroundStyle(DPColor.warning)
+            .padding(.horizontal, DPSpacing.small)
+            .padding(.vertical, 2)
+            .background(DPColor.warningSoft, in: Capsule())
+            .overlay(Capsule().stroke(DPColor.warningBorder))
+    }
+
+    private func isHiddenSelection(_ weekday: Weekday) -> Bool {
+        selectionState.isHiddenSelection(
+            weekday,
+            visibleDutyTypes: model.dutyPattern?.dutyTypes ?? []
+        )
+    }
+
+    private func dutyTypeAccessibilityLabel(for weekday: Weekday) -> String {
+        let name = selectedDutyType(for: weekday)?.name ?? ""
+        let hiddenSuffix = isHiddenSelection(weekday)
+            ? ", \(SettingsLocalization.string("settings.pattern.hidden"))"
+            : ""
+        return "\(weekdayLong(weekday)): \(name)\(hiddenSuffix)"
+    }
+
+    private func selectedDutyType(for weekday: Weekday) -> DutyPatternDutyTypeDTO? {
+        selectionState.dutyType(
+            for: weekday,
+            visibleDutyTypes: model.dutyPattern?.dutyTypes ?? [],
+            pattern: model.dutyPattern?.pattern
+        )
+    }
+
+    private func dutyTypeOptions(for weekday: Weekday) -> [DutyPatternDutyTypeDTO] {
+        let visible = model.dutyPattern?.dutyTypes ?? []
+        guard let selected = selectedDutyType(for: weekday),
+              !visible.contains(where: { $0.id == selected.id })
+        else { return visible }
+        return [selected] + visible
+    }
+
+    private func isVisibleDutyType(_ dutyType: DutyPatternDutyTypeDTO) -> Bool {
+        model.dutyPattern?.dutyTypes.contains(where: { $0.id == dutyType.id }) == true
+    }
+
+    private func perform(
+        _ requestedAction: DutyPatternConfirmation,
+        confirmationDismiss: @escaping () -> Void
+    ) {
+        Task {
+            let succeeded = switch requestedAction {
+            case .save:
+                await model.saveDutyPattern(days: submittedDays, holidayOff: holidayOff)
+            case .delete:
+                await model.deleteDutyPattern()
+            }
+            guard succeeded else { return }
+            confirmationDismiss()
+            try? await Task.sleep(for: .milliseconds(180))
+            dismiss()
+        }
     }
 }
 
@@ -2058,19 +2470,14 @@ private struct PolicyView: View {
         ScrollView {
             if let policy {
                 VStack(alignment: .leading, spacing: 16) {
-                    if let markdown = try? AttributedString(markdown: policy.content) {
-                        Text(markdown)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    } else {
-                        Text(policy.content)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
+                    DPLongFormDocument(content: policy.content)
                     Divider()
                     Text("\(policy.version) · \(policy.effectiveDate.rawValue)")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
-                .padding()
+                .padding(.horizontal, DPLongFormDocumentLayout.horizontalPadding)
+                .padding(.vertical, DPLongFormDocumentLayout.verticalPadding)
             } else {
                 ContentUnavailableView(
                     SettingsLocalization.string("settings.policy.unavailable"),
@@ -2153,15 +2560,7 @@ private struct AIScheduleConsentActivationModal: View {
                     .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
 
                 if let policy = store.response?.policy {
-                    if let markdown = try? AttributedString(markdown: policy.content) {
-                        Text(markdown)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .fixedSize(horizontal: false, vertical: true)
-                    } else {
-                        Text(policy.content)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+                    DPLongFormDocument(content: policy.content)
 
                     Divider()
 
@@ -2265,7 +2664,7 @@ private struct AIScheduleConsentPolicyView: View {
 
     var body: some View {
         Group {
-            if let policy = store.response?.policy {
+            if let policy = displayedPolicy {
                 ScrollView {
                     VStack(alignment: .leading, spacing: DPSpacing.medium) {
                         SettingsLocalization.text("settings.aiConsent.dataFlow")
@@ -2276,20 +2675,15 @@ private struct AIScheduleConsentPolicyView: View {
                             .background(DPColor.accentSoft)
                             .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
 
-                        if let markdown = try? AttributedString(markdown: policy.content) {
-                            Text(markdown)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        } else {
-                            Text(policy.content)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
+                        DPLongFormDocument(content: policy.content)
 
                         Divider()
                         Text("\(policy.version) · \(policy.effectiveDate.rawValue)")
                             .font(DPTypography.caption)
                             .foregroundStyle(DPColor.textMuted)
                     }
-                    .padding(DPSpacing.medium)
+                    .padding(.horizontal, DPLongFormDocumentLayout.horizontalPadding)
+                    .padding(.vertical, DPLongFormDocumentLayout.verticalPadding)
                 }
             } else if store.isLoading {
                 ProgressView(SettingsLocalization.string("settings.loading"))
@@ -2312,6 +2706,15 @@ private struct AIScheduleConsentPolicyView: View {
         }
         .navigationTitle(SettingsLocalization.string("settings.aiConsent.policy"))
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private var displayedPolicy: PolicyDTO? {
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-ui-testing-long-form-policies") {
+            return SettingsLongFormPolicyFixture.ai
+        }
+#endif
+        return store.response?.policy
     }
 }
 

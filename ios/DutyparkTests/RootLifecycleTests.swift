@@ -4,6 +4,105 @@ import Testing
 
 @MainActor
 struct RootLifecycleTests {
+    @Test(arguments: [
+        (1, false),
+        (2, true),
+        (4, true),
+    ])
+    func interactivePopOnlyBeginsForPushedScreens(
+        navigationDepth: Int,
+        expected: Bool
+    ) {
+        #expect(
+            DPInteractivePopGesturePolicy.shouldBegin(navigationDepth: navigationDepth) == expected
+        )
+    }
+
+    @Test
+    func pushedScreensThatHideTheSystemBackAffordanceRestoreInteractivePop() throws {
+        let iosDirectory = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+
+        let teamManageSource = try String(
+            contentsOf: iosDirectory.appending(path: "Dutypark/Features/Team/TeamManageView.swift"),
+            encoding: .utf8
+        )
+        let loginSource = try String(
+            contentsOf: iosDirectory.appending(path: "Dutypark/Features/Auth/LoginView.swift"),
+            encoding: .utf8
+        )
+
+        #expect(teamManageSource.contains(".navigationBarBackButtonHidden(true)"))
+        #expect(teamManageSource.contains(".dpInteractivePopGestureEnabled()"))
+        #expect(loginSource.contains(".toolbar(.hidden, for: .navigationBar)"))
+        #expect(loginSource.contains(".dpInteractivePopGestureEnabled()"))
+    }
+
+    @Test
+    func automaticHomeRefreshCoalescesImmediateSceneAndTabTriggers() {
+        var policy = RootHomeRefreshPolicy()
+        let now = Date(timeIntervalSince1970: 1_000)
+
+        let firstTrigger = policy.shouldRefreshAutomatically(at: now)
+        let immediateDuplicate = policy.shouldRefreshAutomatically(at: now.addingTimeInterval(1))
+        let triggerAfterInterval = policy.shouldRefreshAutomatically(
+            at: now.addingTimeInterval(RootHomeRefreshPolicy.minimumAutomaticInterval)
+        )
+
+        #expect(firstTrigger)
+        #expect(!immediateDuplicate)
+        #expect(triggerAfterInterval)
+    }
+
+    @Test
+    func notificationDropdownArmsReadOnCloseOnlyAfterVisibleSuccessfulUnreadLoad() {
+        var policy = RootNotificationDropdownReadPolicy()
+
+        policy.prepareForOpen()
+        policy.finishLoading(didLoad: true, isPresented: true, hasUnread: true)
+
+        let shouldMarkAllAsRead = policy.consumeClose()
+        #expect(shouldMarkAllAsRead)
+    }
+
+    @Test(arguments: [
+        (didLoad: false, isPresented: true, hasUnread: true),
+        (didLoad: true, isPresented: false, hasUnread: true),
+        (didLoad: true, isPresented: true, hasUnread: false),
+    ])
+    func notificationDropdownDoesNotArmReadOnCloseWithoutVisibleSuccessfulUnreadLoad(
+        input: (didLoad: Bool, isPresented: Bool, hasUnread: Bool)
+    ) {
+        var policy = RootNotificationDropdownReadPolicy()
+
+        policy.prepareForOpen()
+        policy.finishLoading(
+            didLoad: input.didLoad,
+            isPresented: input.isPresented,
+            hasUnread: input.hasUnread
+        )
+
+        let shouldMarkAllAsRead = policy.consumeClose()
+        #expect(!shouldMarkAllAsRead)
+    }
+
+    @Test
+    func notificationDropdownConsumesReadOnCloseOnlyOnceAndResetsOnReopen() {
+        var policy = RootNotificationDropdownReadPolicy()
+        policy.prepareForOpen()
+        policy.finishLoading(didLoad: true, isPresented: true, hasUnread: true)
+
+        let firstCloseShouldMarkAllAsRead = policy.consumeClose()
+        let repeatedCloseShouldMarkAllAsRead = policy.consumeClose()
+        #expect(firstCloseShouldMarkAllAsRead)
+        #expect(!repeatedCloseShouldMarkAllAsRead)
+
+        policy.prepareForOpen()
+        let reopenedCloseShouldMarkAllAsRead = policy.consumeClose()
+        #expect(!reopenedCloseShouldMarkAllAsRead)
+    }
+
     @Test
     func authenticatedStartupRunsRequiredWorkInOrder() async {
         var events: [String] = []

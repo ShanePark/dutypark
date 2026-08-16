@@ -59,10 +59,9 @@ nonisolated enum CalendarDateSupport {
     }
 }
 
-enum CalendarLocalization {
+nonisolated enum CalendarLocalization {
     static var selectedLocale: Locale {
-        let language = UserDefaults.standard.string(forKey: SettingsPreference.languageKey) ?? ""
-        return locale(languageCode: language)
+        AppLocalization.locale
     }
 
     static func locale(languageCode: String) -> Locale {
@@ -70,15 +69,17 @@ enum CalendarLocalization {
     }
 
     static func text(_ key: String, table: String = "Calendar") -> String {
-        String(
-            localized: String.LocalizationValue(key),
-            table: table,
-            locale: selectedLocale
-        )
+        AppLocalization.string(key, table: table, locale: selectedLocale)
     }
 
     static func format(_ key: String, _ arguments: CVarArg...) -> String {
-        String(format: text(key), locale: selectedLocale, arguments: arguments)
+        // These placeholders are calendar identifiers and counts, not display numbers.
+        // A Korean formatting locale groups a four-digit year (for example, `2,026`).
+        String(
+            format: text(key),
+            locale: Locale(identifier: "en_US_POSIX"),
+            arguments: arguments
+        )
     }
 }
 

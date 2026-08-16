@@ -54,7 +54,7 @@
     "settings.accountDeletion.error.reauthentication": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Could not verify your identity. Please try again." } }, "ko": { "stringUnit": { "state": "translated", "value": "본인 확인에 실패했습니다. 다시 시도해주세요." } } } },
     "settings.accountDeletion.error.transferInvalid": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "The selected member cannot receive administrator privileges. Choose another member." } }, "ko": { "stringUnit": { "state": "translated", "value": "선택한 팀원에게 관리자 권한을 이관할 수 없습니다. 다른 팀원을 선택해주세요." } } } },
     "settings.accountDeletion.error.transferRequired": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Choose a member to receive administrator privileges." } }, "ko": { "stringUnit": { "state": "translated", "value": "관리자 권한을 넘겨받을 팀원을 선택해주세요." } } } },
-    "settings.accountDeletion.final.action": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Delete my account" } }, "ko": { "stringUnit": { "state": "translated", "value": "내 계정 삭제" } } } },
+    "settings.accountDeletion.final.action": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Permanently delete account" } }, "ko": { "stringUnit": { "state": "translated", "value": "계정 영구 삭제" } } } },
     "settings.accountDeletion.final.irreversible": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Once processing starts, your account, related files, and any team scheduled for deletion cannot be recovered." } }, "ko": { "stringUnit": { "state": "translated", "value": "처리가 시작되면 계정과 관련 파일, 삭제 대상 팀을 복구할 수 없습니다." } } } },
     "settings.accountDeletion.final.message": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Your deletion request takes effect immediately and cannot be canceled." } }, "ko": { "stringUnit": { "state": "translated", "value": "삭제 요청은 즉시 적용되며 취소할 수 없습니다." } } } },
     "settings.accountDeletion.final.title": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Final confirmation" } }, "ko": { "stringUnit": { "state": "translated", "value": "최종 확인" } } } },
@@ -86,13 +86,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Account"
+            "value": "Account Management"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "계정"
+            "value": "회원정보 관리"
           }
         }
       }
@@ -182,13 +182,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Language and appearance"
+            "value": "Theme"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "언어 및 화면"
+            "value": "화면 테마 설정"
           }
         }
       }
@@ -386,13 +386,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Do you want to log out?"
+            "value": "Do you want to log out now?"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "로그아웃할까요?"
+            "value": "정말 로그아웃 하시겠습니까?"
           }
         }
       }
@@ -461,6 +461,12 @@
         }
       }
     },
+    "settings.managed.switchMessage": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Switch to {name}?\n\nAfter switching, you can use all features in that account." } },
+        "ko": { "stringUnit": { "state": "translated", "value": "{name} 계정으로 전환하시겠습니까?\n\n전환 후에는 해당 계정의 모든 기능을 사용할 수 있습니다." } }
+      }
+    },
     "settings.managed.switchTitle": {
       "localizations": {
         "en": {
@@ -482,13 +488,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Managed accounts"
+            "value": "Accounts I manage"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "관리 계정"
+            "value": "내가 관리 중인 계정"
           }
         }
       }
@@ -530,13 +536,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "A selected family member can manage your schedule."
+            "value": "Only family members can be added as managers."
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "선택한 가족이 내 일정을 관리할 수 있습니다."
+            "value": "가족만 관리자로 추가할 수 있어요"
           }
         }
       }
@@ -573,6 +579,12 @@
         }
       }
     },
+    "settings.manager.removeMessage": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Remove {name} from managers?" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "{name} 님의 관리자 권한을 해제하시겠습니까?" } }
+      }
+    },
     "settings.manager.removeTitle": {
       "localizations": {
         "en": {
@@ -594,13 +606,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Schedule managers"
+            "value": "Delegated Management"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "일정 관리 위임"
+            "value": "관리 권한 위임"
           }
         }
       }
@@ -829,6 +841,12 @@
         }
       }
     },
+    "settings.photo.deleteConfirm": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Delete the current profile photo?" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "현재 프로필 사진을 삭제하시겠습니까?" } }
+      }
+    },
     "settings.photo.deleted": {
       "localizations": {
         "en": {
@@ -946,13 +964,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "My profile"
+            "value": "Profile"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "내 정보"
+            "value": "기본 정보"
           }
         }
       }
@@ -1056,13 +1074,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sign out"
+            "value": "End session"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "로그아웃"
+            "value": "접속 종료"
           }
         }
       }
@@ -1072,13 +1090,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Are you sure you want to sign out? This device will be signed out."
+            "value": "End the {device} · {browser} ({ip}) session?"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "정말 로그아웃 하시겠습니까? 해당 기기에서 로그아웃 됩니다."
+            "value": "{device} · {browser} ({ip}) 세션을 종료하시겠습니까?"
           }
         }
       }
@@ -1126,13 +1144,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sign out"
+            "value": "End session"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "로그아웃"
+            "value": "접속 세션 종료"
           }
         }
       }
@@ -1158,7 +1176,7 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Session management"
+            "value": "Sessions"
           }
         },
         "ko": {
@@ -1351,6 +1369,38 @@
         }
       }
     },
+    "settings.social.unlinkAppleConfirmMessage": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This revokes Dutypark’s Apple authorization and deletes the saved connection. You will no longer be able to sign in to Dutypark with this Apple account."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple 인증 권한을 철회하고 Dutypark에 저장된 연결 정보를 삭제합니다. 이후 이 Apple 계정으로 Dutypark에 로그인할 수 없습니다."
+          }
+        }
+      }
+    },
+    "settings.social.unlinkAppleDescription": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "When you disconnect Apple, Dutypark first revokes its Apple authorization and then deletes the local connection. If revocation fails, both the Apple authorization and Dutypark connection remain active."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Apple 연동을 해제하면 Dutypark가 먼저 Apple 인증 권한을 철회한 뒤 연결 정보를 삭제합니다. 철회에 실패하면 Apple 권한과 Dutypark 연결 정보가 모두 유지됩니다."
+          }
+        }
+      }
+    },
     "settings.social.unlinkConfirmTitle": {
       "localizations": {
         "en": {
@@ -1436,13 +1486,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Social accounts"
+            "value": "Social Sign-in"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "소셜 계정"
+            "value": "소셜 계정 연동"
           }
         }
       }
@@ -1500,13 +1550,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Choose who can view your calendar."
+            "value": "Choose who can view your schedule."
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "내 캘린더를 볼 수 있는 범위를 선택합니다."
+            "value": "내 시간표를 볼 수 있는 사람을 설정합니다"
           }
         }
       }
@@ -1596,13 +1646,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Calendar visibility"
+            "value": "Calendar Visibility"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "캘린더 공개 범위"
+            "value": "시간표 공개 설정"
           }
         }
       }
@@ -1660,13 +1710,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Receive Dutypark notifications on this iPhone."
+            "value": "Get notified on this device when something new happens."
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "이 iPhone에서 Dutypark 알림을 받습니다."
+            "value": "새로운 알림이 있을 때 이 기기로 알려드려요."
           }
         }
       }
@@ -1724,13 +1774,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Notifications"
+            "value": "Push Notifications"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "알림"
+            "value": "푸시 알림 설정"
           }
         }
       }
@@ -1918,16 +1968,22 @@
     "settings.pattern.create": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "No default work pattern yet" } }, "ko": { "stringUnit": { "state": "translated", "value": "아직 기본 근무 패턴이 없어요" } } } },
     "settings.pattern.createDescription": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Register recurring workdays to fill the calendar automatically." } }, "ko": { "stringUnit": { "state": "translated", "value": "반복되는 근무 요일을 등록하면 달력이 자동으로 채워집니다." } } } },
     "settings.pattern.edit": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Edit" } }, "ko": { "stringUnit": { "state": "translated", "value": "변경" } } } },
+    "settings.pattern.hidden": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Hidden" } }, "ko": { "stringUnit": { "state": "translated", "value": "숨김" } } } },
+    "settings.pattern.paused.title": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Some weekdays are temporarily paused." } }, "ko": { "stringUnit": { "state": "translated", "value": "일부 요일의 자동 적용이 중지되었습니다." } } } },
+    "settings.pattern.paused.description": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Weekdays assigned to hidden duty types remain paused until you select another type or restore the hidden type." } }, "ko": { "stringUnit": { "state": "translated", "value": "숨겨진 근무 유형이 지정된 요일은 다른 유형을 선택하거나 해당 유형을 복원할 때까지 적용되지 않습니다." } } } },
+    "settings.pattern.unavailable.team": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Only members assigned to a team can configure a default work pattern." } }, "ko": { "stringUnit": { "state": "translated", "value": "팀에 소속된 회원만 기본 근무 패턴을 설정할 수 있습니다." } } } },
+    "settings.pattern.unavailable.dutyType": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Add at least one visible team duty type to use this setting." } }, "ko": { "stringUnit": { "state": "translated", "value": "팀에 보이는 근무 유형을 하나 이상 등록하면 사용할 수 있습니다." } } } },
+    "settings.pattern.unavailable.default": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Check the team duty type settings." } }, "ko": { "stringUnit": { "state": "translated", "value": "팀 근무 유형 설정을 확인해주세요." } } } },
     "settings.accessibility.on": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "On" } }, "ko": { "stringUnit": { "state": "translated", "value": "켜짐" } } } },
     "settings.accessibility.off": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Off" } }, "ko": { "stringUnit": { "state": "translated", "value": "꺼짐" } } } },
     "settings.pattern.saveConfirmTitle": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Save work pattern?" } }, "ko": { "stringUnit": { "state": "translated", "value": "근무 패턴을 저장할까요?" } } } },
     "settings.pattern.saveConfirm": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Saving deletes every duty from today onward, including manual entries, and recreates them from the new weekday rules. Continue?" } }, "ko": { "stringUnit": { "state": "translated", "value": "패턴을 저장하면 오늘 이후의 수동 입력을 포함한 모든 근무가 삭제되고 새 요일 규칙으로 다시 등록됩니다. 계속하시겠습니까?" } } } },
     "settings.pattern.deleteConfirmTitle": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Disable work pattern?" } }, "ko": { "stringUnit": { "state": "translated", "value": "근무 패턴을 해제할까요?" } } } },
     "settings.pattern.deleteConfirm": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Disabling the pattern deletes every duty from today onward, including manual entries. Continue?" } }, "ko": { "stringUnit": { "state": "translated", "value": "패턴을 해제하면 오늘 이후의 수동 입력을 포함한 모든 근무가 삭제됩니다. 계속하시겠습니까?" } } } },
-    "settings.aiConsent.title": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "AI schedule recognition" } }, "ko": { "stringUnit": { "state": "translated", "value": "AI 시간 자동 인식" } } } },
+    "settings.aiConsent.title": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Automatic AI time recognition" } }, "ko": { "stringUnit": { "state": "translated", "value": "AI 시간 자동 인식" } } } },
     "settings.aiConsent.toggle": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Recognize times automatically" } }, "ko": { "stringUnit": { "state": "translated", "value": "일정 시간 자동 인식" } } } },
-    "settings.aiConsent.description": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Optional. You can turn this off at any time and always enter start and end times manually." } }, "ko": { "stringUnit": { "state": "translated", "value": "선택 기능이며 언제든 철회할 수 있습니다. 시작·종료 시간은 항상 직접 입력할 수 있습니다." } } } },
-    "settings.aiConsent.dataFlow": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "To extract a time, the schedule date and text content are sent to an external AI processing service. Member and team identifiers are not sent." } }, "ko": { "stringUnit": { "state": "translated", "value": "시간 추출을 위해 일정 날짜와 내용 텍스트를 외부 AI 처리 서비스로 전송합니다. 회원·팀 식별자는 전송하지 않습니다." } } } },
+    "settings.aiConsent.description": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "This is optional and can be withdrawn at any time. You can still save schedules unchanged or enter times manually without consenting." } }, "ko": { "stringUnit": { "state": "translated", "value": "선택 동의이며 언제든 철회할 수 있습니다. 동의하지 않아도 일정을 그대로 저장하거나 시간을 직접 입력할 수 있습니다." } } } },
+    "settings.aiConsent.dataFlow": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Only the schedule date and content text are sent to an external AI processing service to extract start and end times. Member and team IDs are not sent." } }, "ko": { "stringUnit": { "state": "translated", "value": "일정의 날짜와 내용 텍스트만 외부 AI 처리 서비스로 전송해 시작·종료 시간을 추출합니다. 회원 ID와 팀 ID는 전송하지 않습니다." } } } },
     "settings.aiConsent.effectiveDate": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Effective date:" } }, "ko": { "stringUnit": { "state": "translated", "value": "시행일:" } } } },
     "settings.aiConsent.confirmAcknowledgement": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "I have reviewed and agree to the terms above" } }, "ko": { "stringUnit": { "state": "translated", "value": "위 약관을 확인했고 동의합니다" } } } },
     "settings.aiConsent.confirmAcknowledgementHint": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Required before AI time recognition can be enabled." } }, "ko": { "stringUnit": { "state": "translated", "value": "AI 시간 자동 인식을 켜려면 반드시 선택해야 합니다." } } } },

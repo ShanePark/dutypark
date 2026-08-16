@@ -58,9 +58,7 @@ struct GuestPolicyView: View {
             } else if let policy = model.policy {
                 ScrollView {
                     VStack(alignment: .leading, spacing: DPSpacing.medium) {
-                        Text(markdown(policy.content))
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .textSelection(.enabled)
+                        DPLongFormDocument(content: policy.content)
 
                         Divider()
 
@@ -72,7 +70,8 @@ struct GuestPolicyView: View {
                         .font(.caption)
                         .foregroundStyle(DPColor.textMuted)
                     }
-                    .padding(DPSpacing.medium)
+                    .padding(.horizontal, DPLongFormDocumentLayout.horizontalPadding)
+                    .padding(.vertical, DPLongFormDocumentLayout.verticalPadding)
                 }
             } else {
                 Text(GuestLocalization.text("guest.policy.unavailable"))
@@ -88,12 +87,5 @@ struct GuestPolicyView: View {
 
     private var title: String {
         GuestLocalization.text(model.type == .terms ? "guest.policy.terms" : "guest.policy.privacy")
-    }
-
-    private func markdown(_ content: String) -> AttributedString {
-        (try? AttributedString(
-            markdown: content,
-            options: .init(interpretedSyntax: .full)
-        )) ?? AttributedString(content)
     }
 }

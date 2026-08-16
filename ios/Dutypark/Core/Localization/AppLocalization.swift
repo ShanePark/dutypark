@@ -29,6 +29,10 @@ nonisolated enum AppLocalization {
         )
     }
 
+    static func bundle(for locale: Locale? = nil) -> Bundle {
+        localizedBundle(for: locale ?? self.locale) ?? .main
+    }
+
     static func format(_ key: String, table: String, arguments: [CVarArg]) -> String {
         String(
             format: string(key, table: table),

@@ -1,14 +1,14 @@
 # 11. 릴리스 엔지니어링과 App Store 빌드
 
 - 기준일: 2026-08-15
-- 상태: development 서명, Apple Distribution 인증서, Release Archive 생성·Validate App·App Store Connect 업로드 완료, Connect 처리와 최종 패키징 검증 대기
+- 상태: development 서명, Apple Distribution 인증서, Release Archive 생성·Validate App·App Store Connect 업로드·처리 완료, 최종 패키징 검증 대기
 - 공식 절차: [Distribute an app through the App Store](https://developer.apple.com/documentation/xcode/distributing-your-app-for-beta-testing-and-releases)
 
 2026-08-14 Xcode `Manage Certificates`에서 Apple Distribution 인증서가 생성되어 목록에 표시되는 것을 확인했다. 인증서 소유자의 개인 식별 정보는 이 문서에 기록하지 않는다.
 
 2026-08-15 Xcode 26.6 Organizer에서 `Dutypark` **1.0 (1)**이 Team과 연결된 arm64 `iOS App Archive`로 생성된 것을 확인했다.
 
-같은 날 Organizer의 권장 App Store Connect 설정으로 Validate App을 실행했고, `Dutypark` **1.0 (1)**이 경고 없이 모든 validation check를 통과했다. 이어 App Store Connect 배포를 실행해 Xcode의 `App upload complete` 결과를 확인했다. Connect의 빌드 처리 완료와 업로드된 바이너리의 최종 entitlement 확인은 아직 남아 있다.
+같은 날 Organizer의 권장 App Store Connect 설정으로 Validate App을 실행했고, `Dutypark` **1.0 (1)**이 경고 없이 모든 validation check를 통과했다. 이어 App Store Connect 배포를 실행해 Xcode의 `App upload complete` 결과를 확인했다. 이후 TestFlight 빌드 목록에 Version 1.0 / Build 1이 `Ready to Submit`으로 표시돼 Connect 처리 완료와 Archive·업로드 빌드 번호 일치를 확인했다. 업로드된 바이너리의 최종 entitlement 확인은 아직 남아 있다.
 
 이 문서는 **심사 후보 바이너리의 생성·검증·보관·배포 통제**만 다룬다.
 App Store 메타데이터와 심사 정보는 [07. App Store Connect](../07-app-store-connect/README.md), TestFlight 시나리오와 App Review 실행은 [08. TestFlight 및 App Review](../08-testflight-and-review/README.md)를 따른다.
@@ -20,7 +20,7 @@ App Store 메타데이터와 심사 정보는 [07. App Store Connect](../07-app-
 - [x] Generic iOS Device의 **Release Archive** `Dutypark` 1.0 (1)을 생성하고 Organizer에서 `iOS App Archive`임을 확인한다.
 - [x] 권장 App Store Connect 설정으로 Validate App을 실행해 distribution 검증을 통과한다.
 - [x] 검증한 `Dutypark` 1.0 (1)을 App Store Connect에 업로드하고 Xcode의 완료 결과를 확인한다.
-- [ ] 마케팅 버전과 빌드 번호가 이전 업로드보다 크고 Archive·업로드 빌드·출시 기록에서 일치한다.
+- [x] 첫 업로드인 마케팅 버전 1.0과 빌드 번호 1이 Archive·업로드·TestFlight 표시에서 일치하는지 확인한다.
 - [ ] 최종 서명 entitlement의 Team/App ID, `aps-environment=production`, Associated Domains와 Sign in with Apple capability를 확인한다.
 - [ ] 개발 URL, 테스트 플래그·계정, verbose logging, 내부 문서·fixture와 비밀 파일이 앱 번들에 없음을 확인한다.
 - [x] Xcode Organizer의 **Validate App**을 경고 없이 통과한다.

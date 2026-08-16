@@ -63,6 +63,18 @@ struct AttachmentTests {
     }
 
     @Test
+    func galleryDeleteConfirmationUsesTheCenteredSharedPanel() throws {
+        let gallerySourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark/Features/Attachments/AttachmentGallery.swift")
+        let source = try String(contentsOf: gallerySourceURL, encoding: .utf8)
+
+        #expect(!source.contains(".confirmationDialog("))
+        #expect(source.contains("DPConfirmationPanel("))
+    }
+
+    @Test
     func multipartBodyIncludesSessionAndUnmodifiedFileBytes() throws {
         let sessionId = UUID(uuidString: "11111111-2222-3333-4444-555555555555")!
         let bytes = Data([0x00, 0x01, 0xFE, 0xFF])

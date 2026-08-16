@@ -6,6 +6,29 @@ import UserNotifications
 @MainActor
 struct NotificationFeatureTests {
     @Test
+    func deletionConfirmationKeepsTheSelectedScopeAndLocalizationKeys() throws {
+        let page: PageResponse<NotificationDTO> = try decodeNotificationFixture()
+        let notification = try #require(page.content.first)
+
+        let single = NotificationDeletionConfirmation.notification(notification)
+        #expect(single.id == .notification(notification.id))
+        #expect(single.titleKey == "notifications.list.deleteConfirmTitle")
+        #expect(single.messageKey == "notifications.list.deleteConfirmMessage")
+        #expect(single.confirmTitleKey == "notifications.common.delete")
+        guard case let .notification(selectedNotification) = single else {
+            Issue.record("Expected a single-notification confirmation")
+            return
+        }
+        #expect(selectedNotification == notification)
+
+        let allRead = NotificationDeletionConfirmation.allRead
+        #expect(allRead.id == .allRead)
+        #expect(allRead.titleKey == "notifications.list.deleteAllReadTitle")
+        #expect(allRead.messageKey == "notifications.list.deleteAllReadConfirm")
+        #expect(allRead.confirmTitleKey == "notifications.list.deleteRead")
+    }
+
+    @Test
     func mapsNotificationReferencesToNativeRoutes() throws {
         let page: PageResponse<NotificationDTO> = try decodeNotificationFixture()
         let notification = try #require(page.content.first)
@@ -83,6 +106,68 @@ struct NotificationFeatureTests {
         #expect(store.friendRequestCount == 2)
         #expect(store.hasFriendRequests)
         #expect(store.friendRequestCountLabel == "2")
+    }
+
+    @Test
+    func freshCachedSnapshotSkipsARepeatedFullRefresh() async throws {
+        let page: PageResponse<NotificationDTO> = try decodeNotificationFixture()
+        let api = NotificationAPIMock(page: page)
+        var now = Date(timeIntervalSince1970: 1_000)
+        let store = NotificationStore(api: api, now: { now })
+
+        await store.refresh()
+        #expect(await api.callCounts() == NotificationAPICallCounts(list: 1, count: 1, friendCount: 1))
+
+        let usedFreshCache = await store.refreshIfStale(minimumInterval: 30)
+
+        #expect(usedFreshCache)
+        #expect(await api.callCounts() == NotificationAPICallCounts(list: 1, count: 1, friendCount: 1))
+
+        now = now.addingTimeInterval(31)
+        let refreshedStaleCache = await store.refreshIfStale(minimumInterval: 30)
+
+        #expect(refreshedStaleCache)
+        #expect(await api.callCounts() == NotificationAPICallCounts(list: 2, count: 2, friendCount: 2))
+
+        await store.refresh()
+
+        #expect(await api.callCounts() == NotificationAPICallCounts(list: 3, count: 3, friendCount: 3))
+    }
+
+    @Test
+    func staleRefreshJoinsAnInFlightFullRefresh() async throws {
+        let page: PageResponse<NotificationDTO> = try decodeNotificationFixture()
+        let api = NotificationRefreshGateAPIMock(page: page)
+        let store = NotificationStore(api: api)
+
+        let explicitRefresh = Task { await store.refresh() }
+        await api.waitUntilAllRequestsStart()
+        let staleRefresh = Task { await store.refreshIfStale(minimumInterval: 0) }
+
+        #expect(await api.callCounts() == NotificationAPICallCounts(list: 1, count: 1, friendCount: 1))
+
+        await api.releaseList()
+        await explicitRefresh.value
+        #expect(await staleRefresh.value)
+        #expect(await api.callCounts() == NotificationAPICallCounts(list: 1, count: 1, friendCount: 1))
+    }
+
+    @Test
+    func friendRequestCountRefreshDoesNotReloadOrEnterLoadingState() async throws {
+        let page: PageResponse<NotificationDTO> = try decodeNotificationFixture()
+        let api = NotificationAPIMock(page: page)
+        let store = NotificationStore(api: api)
+        await store.refresh()
+        let cachedNotifications = store.notifications
+        let cachedUnreadCount = store.unreadCount
+
+        let refreshed = await store.refreshFriendRequestCount()
+
+        #expect(refreshed)
+        #expect(await api.callCounts() == NotificationAPICallCounts(list: 1, count: 1, friendCount: 2))
+        #expect(store.notifications == cachedNotifications)
+        #expect(store.unreadCount == cachedUnreadCount)
+        #expect(!store.isLoading)
     }
 
     @Test
@@ -779,5 +864,84 @@ private actor NotificationAPIMock: NotificationAPIProtocol {
             count: countCalls,
             friendCount: friendCountCalls
         )
+    }
+}
+
+private actor NotificationRefreshGateAPIMock: NotificationAPIProtocol {
+    private let page: PageResponse<NotificationDTO>
+    private var listCalls = 0
+    private var countCalls = 0
+    private var friendCountCalls = 0
+    private var requestStartWaiters: [CheckedContinuation<Void, Never>] = []
+    private var listReleaseRequested = false
+    private var listReleaseContinuation: CheckedContinuation<Void, Never>?
+
+    init(page: PageResponse<NotificationDTO>) {
+        self.page = page
+    }
+
+    func notifications(page: Int, size: Int) async throws -> PageResponse<NotificationDTO> {
+        listCalls += 1
+        resumeRequestStartWaitersIfNeeded()
+        if !listReleaseRequested {
+            await withCheckedContinuation { continuation in
+                listReleaseContinuation = continuation
+            }
+        }
+        return self.page
+    }
+
+    func unreadNotifications() async throws -> [NotificationDTO] { [] }
+
+    func count() async throws -> NotificationCountDTO {
+        countCalls += 1
+        resumeRequestStartWaitersIfNeeded()
+        return NotificationCountDTO(unreadCount: 1, totalCount: 1)
+    }
+
+    func friendRequestCount() async throws -> Int {
+        friendCountCalls += 1
+        resumeRequestStartWaitersIfNeeded()
+        return 2
+    }
+
+    func markAsRead(id: NotificationID) async throws -> NotificationDTO {
+        try #require(page.content.first)
+    }
+
+    func markAllAsRead() async throws -> Int { 0 }
+    func delete(id: NotificationID) async throws {}
+    func deleteAllRead() async throws -> Int { 0 }
+
+    func waitUntilAllRequestsStart() async {
+        guard !allRequestsStarted else { return }
+        await withCheckedContinuation { continuation in
+            requestStartWaiters.append(continuation)
+        }
+    }
+
+    func releaseList() {
+        listReleaseRequested = true
+        listReleaseContinuation?.resume()
+        listReleaseContinuation = nil
+    }
+
+    func callCounts() -> NotificationAPICallCounts {
+        NotificationAPICallCounts(
+            list: listCalls,
+            count: countCalls,
+            friendCount: friendCountCalls
+        )
+    }
+
+    private var allRequestsStarted: Bool {
+        listCalls > 0 && countCalls > 0 && friendCountCalls > 0
+    }
+
+    private func resumeRequestStartWaitersIfNeeded() {
+        guard allRequestsStarted else { return }
+        let waiters = requestStartWaiters
+        requestStartWaiters.removeAll()
+        waiters.forEach { $0.resume() }
     }
 }

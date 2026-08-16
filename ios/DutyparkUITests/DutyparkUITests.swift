@@ -96,9 +96,17 @@ final class DutyparkUITests: XCTestCase {
         ]
         app.launch()
 
+        let brand = app.buttons["header.brand"]
+        XCTAssertTrue(brand.waitForExistence(timeout: 10))
+        assertMinimumTouchTarget(brand)
+
         let notificationBell = app.buttons["notifications.bell"]
         XCTAssertTrue(notificationBell.waitForExistence(timeout: 10))
         assertMinimumTouchTarget(notificationBell)
+
+        let homeMenu = app.buttons["home.menu"]
+        XCTAssertTrue(homeMenu.waitForExistence(timeout: 10))
+        assertMinimumTouchTarget(homeMenu)
 
         primaryTab("tab.todo", in: app).tap()
         let todoAdd = app.buttons["todo.add"]
@@ -137,11 +145,7 @@ final class DutyparkUITests: XCTestCase {
         }
 
         app.buttons["todo.form.cancel"].tap()
-        let discardAlert = app.alerts.firstMatch
-        XCTAssertTrue(discardAlert.waitForExistence(timeout: 5))
-        let discardButton = discardAlert.buttons
-            .matching(identifier: "todo.form.discard.confirm")
-            .firstMatch
+        let discardButton = app.buttons["dp.confirmation.confirm"]
         XCTAssertTrue(discardButton.waitForExistence(timeout: 5))
         discardButton.tap()
 
@@ -164,9 +168,20 @@ final class DutyparkUITests: XCTestCase {
         XCTAssertTrue(quickAdd.waitForExistence(timeout: 10))
         quickAdd.tap()
 
+        XCTAssertTrue(app.staticTexts["New Todo"].waitForExistence(timeout: 10))
         let titleField = app.textFields["todo.form.title"]
         XCTAssertTrue(titleField.waitForExistence(timeout: 10))
-        XCTAssertTrue(app.buttons["todo.form.status.in_progress"].exists)
+        let inProgressStatus = app.buttons["todo.form.status.in_progress"]
+        XCTAssertTrue(inProgressStatus.exists)
+        XCTAssertTrue(inProgressStatus.isSelected)
+        XCTAssertFalse(
+            app.descendants(matching: .any)["screen.todo"].exists,
+            "Calendar quick add must not route to the Todo management screen"
+        )
+        let evidence = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        evidence.name = "calendar-todo-quick-add-in-progress"
+        evidence.lifetime = .keepAlways
+        add(evidence)
         app.buttons["todo.form.cancel"].tap()
 
         XCTAssertTrue(waitForNonHittable(titleField, timeout: 3))
@@ -175,6 +190,60 @@ final class DutyparkUITests: XCTestCase {
             app.alerts.firstMatch.isHittable,
             "An interactive alert remained after closing Calendar quick add"
         )
+    }
+
+    @MainActor
+    func testCalendarParityCentersHeaderAndOpensOnlyTheTappedTodoDetail() throws {
+        let app = launchAuthenticatedApp(extraArguments: ["-ui-testing-calendar-parity"])
+        defer { app.terminate() }
+
+        primaryTab("tab.calendar", in: app).tap()
+        XCTAssertTrue(
+            app.descendants(matching: .any)["screen.calendar"].waitForExistence(timeout: 10)
+        )
+
+        let monthControls = app.descendants(matching: .any)["calendar.month.controls"]
+        XCTAssertTrue(monthControls.waitForExistence(timeout: 10))
+        XCTAssertEqual(monthControls.frame.midX, app.frame.midX, accuracy: 1)
+        XCTAssertTrue(app.buttons["calendar.todo.add"].exists)
+        XCTAssertTrue(app.buttons["tab.todo"].exists, "The dock Todo entry must remain")
+
+        let comparedDuty = app.descendants(matching: .any)["calendar.compared-duty.2"]
+        XCTAssertTrue(comparedDuty.waitForExistence(timeout: 10))
+
+        let calendarEvidence = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        calendarEvidence.name = "calendar-centered-header-todo-add-profile-duty"
+        calendarEvidence.lifetime = .keepAlways
+        add(calendarEvidence)
+
+        let todo = app.buttons["calendar.todo.item.A11CE000-0000-4000-8000-000000000011"]
+        XCTAssertTrue(todo.waitForExistence(timeout: 10))
+        todo.tap()
+
+        XCTAssertTrue(
+            app.descendants(matching: .any)["calendar.todo.detail"].waitForExistence(timeout: 10)
+        )
+        XCTAssertTrue(app.staticTexts["Calendar detail check"].exists)
+        XCTAssertFalse(app.descendants(matching: .any)["screen.todo"].exists)
+
+        let detailEvidence = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        detailEvidence.name = "calendar-direct-todo-detail"
+        detailEvidence.lifetime = .keepAlways
+        add(detailEvidence)
+
+        app.buttons["Close"].tap()
+        XCTAssertTrue(waitForNonHittable(
+            app.descendants(matching: .any)["calendar.todo.detail"],
+            timeout: 3
+        ))
+
+        let dayTodo = app.buttons["calendar.day.todo.A11CE000-0000-4000-8000-000000000011"]
+        XCTAssertTrue(dayTodo.waitForExistence(timeout: 10))
+        dayTodo.tap()
+        XCTAssertTrue(
+            app.descendants(matching: .any)["calendar.todo.detail"].waitForExistence(timeout: 10)
+        )
+        XCTAssertFalse(app.descendants(matching: .any)["screen.todo"].exists)
     }
 
     @MainActor
@@ -318,7 +387,7 @@ final class DutyparkUITests: XCTestCase {
     }
 
     @MainActor
-    private func launchAuthenticatedApp() -> XCUIApplication {
+    private func launchAuthenticatedApp(extraArguments: [String] = []) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += [
             "-dp-language", "en",
@@ -327,6 +396,7 @@ final class DutyparkUITests: XCTestCase {
             "-AppleLocale", "en_US",
             "-ui-testing-authenticated"
         ]
+        app.launchArguments += extraArguments
         app.launch()
         return app
     }

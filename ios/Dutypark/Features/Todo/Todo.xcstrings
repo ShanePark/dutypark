@@ -69,7 +69,7 @@
     "todo.status.todo" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "To do" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "할 일" } } } },
     "todo.status.unknown" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Unknown" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "알 수 없음" } } } },
     "todo.statusShort.done" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Done" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "완료" } } } },
-    "todo.statusShort.inProgress" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Doing" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "진행" } } } },
+    "todo.statusShort.inProgress" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Doing" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "진행중" } } } },
     "todo.statusShort.todo" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Todo" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "할 일" } } } }
   },
   "version" : "1.0"

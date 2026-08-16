@@ -17,21 +17,27 @@ final class NotificationStore: ObservableObject {
 
     private let api: any NotificationAPIProtocol
     private let pollingSleep: @Sendable (TimeInterval) async throws -> Void
+    private let now: () -> Date
     private var currentPage = 0
     private var totalPages = 0
     private var consecutiveFailures = 0
     private var pollingTask: Task<Void, Never>?
+    private var refreshTask: Task<Bool, Never>?
+    private var lastSuccessfulRefreshAt: Date?
     private var isForeground = true
     private var markingAsReadIDs: Set<NotificationID> = []
+    private var isMarkingAllAsRead = false
 
     init(
         api: any NotificationAPIProtocol = NotificationAPI(),
         pollingSleep: @escaping @Sendable (TimeInterval) async throws -> Void = { interval in
             try await Task.sleep(for: .seconds(interval))
-        }
+        },
+        now: @escaping () -> Date = Date.init
     ) {
         self.api = api
         self.pollingSleep = pollingSleep
+        self.now = now
     }
 
     var hasMore: Bool {
@@ -51,18 +57,73 @@ final class NotificationStore: ObservableObject {
     }
 
     func refresh() async {
+        _ = await performRefresh()
+    }
+
+    /// Reuses a recent successful snapshot and joins an in-flight refresh when possible.
+    /// Explicit pull-to-refresh continues to call `refresh()` and always requests fresh data.
+    @discardableResult
+    func refreshIfStale(minimumInterval: TimeInterval = NotificationStore.basePollingInterval) async -> Bool {
+        if let lastSuccessfulRefreshAt,
+           now().timeIntervalSince(lastSuccessfulRefreshAt) < minimumInterval {
+            return true
+        }
+        return await performRefresh()
+    }
+
+    /// Social mutations only invalidate the friend-request badge, not the notification list.
+    @discardableResult
+    func refreshFriendRequestCount() async -> Bool {
 #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-ui-testing-notification-fixture") {
+            friendRequestCount = 1
+            return true
+        }
+        if ProcessInfo.processInfo.arguments.contains("-ui-testing-authenticated") {
+            friendRequestCount = 0
+            return true
+        }
+#endif
+        do {
+            friendRequestCount = try await api.friendRequestCount()
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    private func performRefresh() async -> Bool {
+        if let refreshTask {
+            return await refreshTask.value
+        }
+
+        isLoading = true
+        let task = Task { @MainActor [weak self] in
+            await self?.loadFirstPageSnapshot() ?? false
+        }
+        refreshTask = task
+        let succeeded = await task.value
+        refreshTask = nil
+        isLoading = false
+        return succeeded
+    }
+
+    private func loadFirstPageSnapshot() async -> Bool {
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-ui-testing-notification-fixture") {
+            loadUITestingNotificationFixture()
+            lastSuccessfulRefreshAt = now()
+            return true
+        }
         if ProcessInfo.processInfo.arguments.contains("-ui-testing-authenticated") {
             notifications = []
             unreadCount = 0
             friendRequestCount = 0
             loadFailed = false
-            return
+            lastSuccessfulRefreshAt = now()
+            return true
         }
 #endif
-        guard !isLoading else { return }
-        isLoading = true
-        defer { isLoading = false }
 
         do {
             async let page = api.notifications(page: 0, size: Self.pageSize)
@@ -76,10 +137,13 @@ final class NotificationStore: ObservableObject {
             friendRequestCount = friendCountResult
             loadFailed = false
             consecutiveFailures = 0
+            lastSuccessfulRefreshAt = now()
             await updateBadge()
+            return true
         } catch {
             loadFailed = true
             consecutiveFailures += 1
+            return false
         }
     }
 
@@ -134,6 +198,17 @@ final class NotificationStore: ObservableObject {
     }
 
     func markAllAsRead() async throws {
+        guard !isMarkingAllAsRead else { return }
+        isMarkingAllAsRead = true
+        defer { isMarkingAllAsRead = false }
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-ui-testing-notification-fixture") {
+            notifications = notifications.map(markedAsRead)
+            unreadCount = 0
+            await updateBadge()
+            return
+        }
+#endif
         _ = try await api.markAllAsRead()
         notifications = notifications.map(markedAsRead)
         unreadCount = 0
@@ -184,7 +259,7 @@ final class NotificationStore: ObservableObject {
         if foreground {
             // A scene resume can include changes made by another session, including
             // read-notification deletion that does not alter the unread count.
-            await refresh()
+            _ = await refreshIfStale()
         }
     }
 
@@ -235,4 +310,68 @@ final class NotificationStore: ObservableObject {
     private func updateBadge() async {
         try? await UNUserNotificationCenter.current().setBadgeCount(unreadCount)
     }
+
+#if DEBUG
+    private func loadUITestingNotificationFixture() {
+        let hasProfilePhoto = ProcessInfo.processInfo.arguments.contains(
+            "-ui-testing-notification-actor-avatar"
+        )
+        let fixture = Self.uiTestingNotificationFixture
+            .replacingOccurrences(
+                of: "__UI_ACTOR_HAS_PROFILE_PHOTO__",
+                with: hasProfilePhoto ? "true" : "false"
+            )
+            .replacingOccurrences(
+                of: "__UI_ACTOR_PROFILE_PHOTO_VERSION__",
+                with: hasProfilePhoto ? "3" : "0"
+            )
+        let data = Data(fixture.utf8)
+        notifications = (try? JSONDecoder().decode([NotificationDTO].self, from: data)) ?? []
+        unreadCount = notifications.filter { !$0.isRead }.count
+        friendRequestCount = 1
+        currentPage = 0
+        totalPages = 1
+        loadFailed = false
+    }
+
+    private static let uiTestingNotificationFixture = #"""
+    [
+      {
+        "id": "00000000-0000-0000-0000-000000000101",
+        "type": "FRIEND_REQUEST_RECEIVED",
+        "referenceType": "FRIEND_REQUEST",
+        "referenceId": "101",
+        "actorId": 101,
+        "payload": {
+          "version": 1,
+          "actor": {
+            "name": "민지",
+            "hasProfilePhoto": __UI_ACTOR_HAS_PROFILE_PHOTO__,
+            "profilePhotoVersion": __UI_ACTOR_PROFILE_PHOTO_VERSION__
+          }
+        },
+        "isRead": false,
+        "createdAt": "2026-08-15T08:30:00"
+      },
+      {
+        "id": "00000000-0000-0000-0000-000000000102",
+        "type": "TODO_STATUS_DONE",
+        "referenceType": "TODO",
+        "referenceId": "00000000-0000-0000-0000-000000000202",
+        "actorId": 102,
+        "payload": {
+          "version": 1,
+          "actor": {
+            "name": "알렉스",
+            "hasProfilePhoto": false,
+            "profilePhotoVersion": 0
+          },
+          "todoTitle": "근무표 확인"
+        },
+        "isRead": true,
+        "createdAt": "2026-08-14T18:15:00"
+      }
+    ]
+    """#
+#endif
 }

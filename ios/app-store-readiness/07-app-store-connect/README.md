@@ -4,7 +4,7 @@
 
 - Apple Developer Program 멤버십, Team ID `2V47G42CDS`와 운영 Bundle ID `io.github.shanepark.dutypark`는 확정돼 있다.
 - App Store Connect에 `Dutypark` iOS 앱 레코드를 생성했으며 버전 `1.0`이 `Prepare for Submission` 상태인 것을 2026-08-14 화면에서 확인했다.
-- 2026-08-15 Xcode에서 `Dutypark` 1.0 (1)의 App Store Connect 업로드 완료를 확인했다. Connect의 처리 완료와 빌드 표시 여부는 아직 확인하지 않았다.
+- 2026-08-15 Xcode에서 `Dutypark` 1.0 (1)의 App Store Connect 업로드 완료를 확인했다. 같은 날 TestFlight 빌드 목록에 Version 1.0 / Build 1이 `Ready to Submit`으로 표시돼 Connect 처리 완료를 확인했다.
 - App Store Connect가 EU 배포 전 trader status 제공 필요 경고를 표시하고 있다. EU 판매 범위와 DSA trader 여부는 아직 확정하지 않았다.
 - 앱과 서버의 개인정보 데이터 inventory 및 수출 규정 기술 근거는 별도 상세 문서에 정리돼 있다.
 - 이 문서는 App Store Connect에 아직 입력·공개·확정해야 하는 정보만 관리한다. 빌드 서명·업로드는 [릴리스 엔지니어링](../11-release-engineering/README.md), TestFlight와 심사 실행은 [TestFlight 및 App Review](../08-testflight-and-review/README.md)를 따른다.

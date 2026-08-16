@@ -40,6 +40,60 @@ struct SettingsFeatureTests {
     }
 
     @Test
+    func settingsOverviewCopyMatchesResponsiveWeb() {
+        let defaults = UserDefaults.standard
+        let previous = defaults.string(forKey: SettingsPreference.languageKey)
+        defer {
+            if let previous { defaults.set(previous, forKey: SettingsPreference.languageKey) }
+            else { defaults.removeObject(forKey: SettingsPreference.languageKey) }
+        }
+
+        let expectedByLanguage: [String: [String: String]] = [
+            "ko": [
+                "settings.profile.title": "기본 정보",
+                "settings.visibility.title": "시간표 공개 설정",
+                "settings.visibility.description": "내 시간표를 볼 수 있는 사람을 설정합니다",
+                "settings.appearance.title": "화면 테마 설정",
+                "settings.push.title": "푸시 알림 설정",
+                "settings.push.description": "새로운 알림이 있을 때 이 기기로 알려드려요.",
+                "settings.aiConsent.title": "AI 시간 자동 인식",
+                "settings.aiConsent.description": "선택 동의이며 언제든 철회할 수 있습니다. 동의하지 않아도 일정을 그대로 저장하거나 시간을 직접 입력할 수 있습니다.",
+                "settings.aiConsent.dataFlow": "일정의 날짜와 내용 텍스트만 외부 AI 처리 서비스로 전송해 시작·종료 시간을 추출합니다. 회원 ID와 팀 ID는 전송하지 않습니다.",
+                "settings.manager.title": "관리 권한 위임",
+                "settings.manager.description": "가족만 관리자로 추가할 수 있어요",
+                "settings.managed.title": "내가 관리 중인 계정",
+                "settings.sessions.title": "접속 세션 관리",
+                "settings.social.title": "소셜 계정 연동",
+                "settings.account.title": "회원정보 관리",
+            ],
+            "en": [
+                "settings.profile.title": "Profile",
+                "settings.visibility.title": "Calendar Visibility",
+                "settings.visibility.description": "Choose who can view your schedule.",
+                "settings.appearance.title": "Theme",
+                "settings.push.title": "Push Notifications",
+                "settings.push.description": "Get notified on this device when something new happens.",
+                "settings.aiConsent.title": "Automatic AI time recognition",
+                "settings.aiConsent.description": "This is optional and can be withdrawn at any time. You can still save schedules unchanged or enter times manually without consenting.",
+                "settings.aiConsent.dataFlow": "Only the schedule date and content text are sent to an external AI processing service to extract start and end times. Member and team IDs are not sent.",
+                "settings.manager.title": "Delegated Management",
+                "settings.manager.description": "Only family members can be added as managers.",
+                "settings.managed.title": "Accounts I manage",
+                "settings.sessions.title": "Sessions",
+                "settings.social.title": "Social Sign-in",
+                "settings.account.title": "Account Management",
+            ],
+        ]
+
+        for (language, expectedCopy) in expectedByLanguage {
+            defaults.set(language, forKey: SettingsPreference.languageKey)
+            for (key, expected) in expectedCopy {
+                #expect(SettingsLocalization.string(key) == expected)
+            }
+        }
+    }
+
+    @Test
     func webParitySettingsCopyExistsInEverySupportedLanguage() {
         let defaults = UserDefaults.standard
         let previous = defaults.string(forKey: SettingsPreference.languageKey)
@@ -67,8 +121,14 @@ struct SettingsFeatureTests {
             "settings.theme.current.dark",
             "settings.pattern.title",
             "settings.pattern.createDescription",
+            "settings.pattern.unavailable.team",
+            "settings.pattern.unavailable.dutyType",
+            "settings.pattern.unavailable.default",
             "settings.pattern.saveConfirm",
             "settings.pattern.deleteConfirm",
+            "settings.photo.deleteConfirm",
+            "settings.manager.removeMessage",
+            "settings.managed.switchMessage",
             "settings.accessibility.on",
             "settings.accessibility.off",
             "settings.sessions.empty",
@@ -86,6 +146,8 @@ struct SettingsFeatureTests {
             "settings.social.unlinked",
             "settings.social.unlinkConfirmTitle",
             "settings.social.unlinkConfirmMessage",
+            "settings.social.unlinkAppleConfirmMessage",
+            "settings.social.unlinkAppleDescription",
             "settings.social.unlinkLastAuthenticationMethod",
             "settings.social.unlinkImpersonationForbidden",
             "settings.social.unlinkFailed",
@@ -222,12 +284,68 @@ struct SettingsFeatureTests {
 
         let individual = SettingsSessionConfirmation.session(sessionToken(id: 9))
         #expect(individual.titleKey == "settings.sessions.revokeTitle")
-        #expect(individual.message.contains("해당 기기"))
+        #expect(individual.message.contains("Apple iOS Device"))
+        #expect(individual.message.contains("Dutypark"))
+        #expect(individual.message.contains("127.0.0.1"))
+        #expect(!individual.message.contains("{device}"))
 
         let allOthers = SettingsSessionConfirmation.otherSessions(count: 3)
         #expect(allOthers.titleKey == "settings.sessions.revokeOthersTitle")
         #expect(allOthers.message.contains("현재 접속을 제외"))
         #expect(allOthers.message.contains("3"))
+    }
+
+    @Test
+    func individualSessionRevokeCopyMatchesResponsiveWeb() {
+        let defaults = UserDefaults.standard
+        let previous = defaults.string(forKey: SettingsPreference.languageKey)
+        defer {
+            if let previous { defaults.set(previous, forKey: SettingsPreference.languageKey) }
+            else { defaults.removeObject(forKey: SettingsPreference.languageKey) }
+        }
+
+        let expectedCopy: [(language: AppLanguage, title: String, action: String)] = [
+            (.korean, "접속 세션 종료", "접속 종료"),
+            (.english, "End session", "End session"),
+        ]
+
+        for expected in expectedCopy {
+            defaults.set(expected.language.rawValue, forKey: SettingsPreference.languageKey)
+            #expect(SettingsLocalization.string("settings.sessions.revokeTitle") == expected.title)
+            #expect(SettingsLocalization.string("settings.sessions.revoke") == expected.action)
+        }
+    }
+
+    @Test
+    func consequentialSettingsActionsUseCentralConfirmationContent() {
+        let defaults = UserDefaults.standard
+        let previous = defaults.string(forKey: SettingsPreference.languageKey)
+        defer {
+            if let previous { defaults.set(previous, forKey: SettingsPreference.languageKey) }
+            else { defaults.removeObject(forKey: SettingsPreference.languageKey) }
+        }
+        defaults.set(AppLanguage.korean.rawValue, forKey: SettingsPreference.languageKey)
+
+        let photo = SettingsConfirmation.deleteProfilePhoto
+        #expect(photo.titleKey == "settings.photo.delete")
+        #expect(photo.message.contains("프로필 사진"))
+        #expect(photo.confirmTitleKey == "settings.photo.delete")
+        #expect(photo.isDestructive)
+
+        let manager = SettingsConfirmation.removeManager(id: 7, name: "Alex")
+        #expect(manager.message.contains("Alex"))
+        #expect(!manager.message.contains("{name}"))
+        #expect(manager.isDestructive)
+
+        let managedAccount = SettingsConfirmation.switchManagedAccount(id: 9, name: "Mina")
+        #expect(managedAccount.message.contains("Mina"))
+        #expect(managedAccount.confirmTitleKey == "settings.managed.switch")
+        #expect(!managedAccount.isDestructive)
+
+        let sessions = SettingsConfirmation.session(.otherSessions(count: 2))
+        #expect(sessions.message.contains("2"))
+        #expect(sessions.isDestructive)
+        #expect(SettingsConfirmation.logout.isDestructive)
     }
 
     @Test
@@ -255,7 +373,7 @@ struct SettingsFeatureTests {
         ))
         var gate = SettingsDestructiveActionGate()
 
-        // Cancelling the system alert never starts the destructive action.
+        // Cancelling the confirmation panel never starts the destructive action.
         #expect(!gate.isWorking)
         #expect(recorder.requests.isEmpty)
 
@@ -364,6 +482,102 @@ struct SettingsFeatureTests {
     }
 
     @Test
+    func successfulSettingsMutationsPatchLoadedStateWithoutFollowUpGets() async throws {
+        let recorder = SettingsRequestRecorder()
+        defer { SettingsURLProtocolStub.handler = nil }
+        let model = try await loadedSettingsModel(recorder: recorder)
+        let originalMember = try #require(model.member)
+        let originalDutyTypes = try #require(model.dutyPattern).dutyTypes
+        recorder.reset()
+
+        await model.updateVisibility(.privateAccess)
+        #expect(model.member?.calendarVisibility == .privateAccess)
+        #expect(model.member?.name == originalMember.name)
+        #expect(model.member?.email == originalMember.email)
+
+        #expect(await model.uploadProfilePhoto(Data([0x01, 0x02])))
+        #expect(model.member?.hasProfilePhoto == true)
+        #expect(model.member?.profilePhotoVersion == originalMember.profilePhotoVersion + 1)
+
+        #expect(await model.deleteProfilePhoto())
+        #expect(model.member?.hasProfilePhoto == false)
+        #expect(model.member?.profilePhotoVersion == originalMember.profilePhotoVersion + 2)
+
+        await model.unassignManager(2)
+        #expect(model.managers.map(\.id) == [3])
+
+        await model.createAuxiliaryAccount(name: "New child")
+        #expect(model.managedMembers.map(\.id) == [10, 11, 12])
+
+        #expect(await model.revokeSession(id: 102))
+        #expect(model.sessions.map(\.id) == [101, 103])
+        #expect(await model.revokeOtherSessions())
+        #expect(model.sessions.map(\.id) == [101])
+
+        #expect(await model.deleteDutyPattern())
+        #expect(model.dutyPattern?.pattern == nil)
+        #expect(model.dutyPattern?.dutyTypes == originalDutyTypes)
+        #expect(model.dutyPattern?.configurable == true)
+
+        let requests = recorder.requests
+        #expect(requests.map(\.httpMethod) == [
+            "PUT", "PUT", "DELETE", "DELETE", "POST", "DELETE", "DELETE", "DELETE",
+        ])
+        #expect(requests.compactMap { $0.url?.path } == [
+            "/api/members/1/visibility",
+            "/api/members/profile-photo",
+            "/api/members/profile-photo",
+            "/api/members/manager/2",
+            "/api/members/auxiliary",
+            "/api/auth/refresh-tokens/102",
+            "/api/auth/refresh-tokens/others",
+            "/api/duty/pattern/me",
+        ])
+        #expect(!requests.contains { $0.httpMethod == "GET" })
+    }
+
+    @Test
+    func failedSettingsMutationsPreserveAllLoadedStateWithoutFollowUpGets() async throws {
+        let recorder = SettingsRequestRecorder()
+        defer { SettingsURLProtocolStub.handler = nil }
+        let model = try await loadedSettingsModel(recorder: recorder)
+        let originalMember = model.member
+        let originalManagers = model.managers
+        let originalManagedMembers = model.managedMembers
+        let originalSessions = model.sessions
+        let originalPattern = model.dutyPattern
+        recorder.reset()
+        SettingsURLProtocolStub.handler = { request in
+            recorder.record(request)
+            return (
+                HTTPURLResponse(
+                    url: request.url!,
+                    statusCode: 500,
+                    httpVersion: nil,
+                    headerFields: nil
+                )!,
+                Data(#"{"code":"test.error"}"#.utf8)
+            )
+        }
+
+        await model.updateVisibility(.publicAccess)
+        #expect(!(await model.uploadProfilePhoto(Data([0x01]))))
+        #expect(!(await model.deleteProfilePhoto()))
+        await model.unassignManager(2)
+        await model.createAuxiliaryAccount(name: "Not created")
+        #expect(!(await model.revokeSession(id: 102)))
+        #expect(!(await model.revokeOtherSessions()))
+        #expect(!(await model.deleteDutyPattern()))
+
+        #expect(model.member == originalMember)
+        #expect(model.managers == originalManagers)
+        #expect(model.managedMembers == originalManagedMembers)
+        #expect(model.sessions == originalSessions)
+        #expect(model.dutyPattern == originalPattern)
+        #expect(!recorder.requests.contains { $0.httpMethod == "GET" })
+    }
+
+    @Test
     func socialAccountUnlinkMapsSpecificErrorsAndExplainsLocalOnlyDisconnect() {
         #expect(!SettingsSocialUnlinkPolicy.canUnlink(connectedProviderCount: 0))
         #expect(!SettingsSocialUnlinkPolicy.canUnlink(connectedProviderCount: 1))
@@ -414,6 +628,42 @@ struct SettingsFeatureTests {
         defaults.set(AppLanguage.english.rawValue, forKey: SettingsPreference.languageKey)
         let appleMessage = SettingsSocialUnlinkPolicy.confirmationMessage(for: .apple)
         #expect(appleMessage.contains("Apple"))
+    }
+
+    @Test
+    func appleUnlinkCopyExplainsProviderRevocationWhileOtherProvidersStayLocalOnly() {
+        let defaults = UserDefaults.standard
+        let previous = defaults.string(forKey: SettingsPreference.languageKey)
+        defer {
+            if let previous { defaults.set(previous, forKey: SettingsPreference.languageKey) }
+            else { defaults.removeObject(forKey: SettingsPreference.languageKey) }
+        }
+
+        defaults.set(AppLanguage.korean.rawValue, forKey: SettingsPreference.languageKey)
+        let kakaoDescription = SettingsSocialUnlinkPolicy.managementDescription(for: .kakao)
+        let naverDescription = SettingsSocialUnlinkPolicy.managementDescription(for: .naver)
+        let appleDescription = SettingsSocialUnlinkPolicy.managementDescription(for: .apple)
+        let appleConfirmation = SettingsSocialUnlinkPolicy.confirmationMessage(for: .apple)
+
+        #expect(kakaoDescription.contains("권한은 삭제되지 않습니다"))
+        #expect(naverDescription.contains("Naver 계정"))
+        #expect(naverDescription.contains("권한은 삭제되지 않습니다"))
+        #expect(appleDescription.contains("먼저 Apple 인증 권한을 철회한 뒤"))
+        #expect(appleDescription.contains("철회에 실패하면"))
+        #expect(appleConfirmation.contains("Apple 인증 권한을 철회하고"))
+        #expect(appleConfirmation.contains("이후 이 Apple 계정으로 Dutypark에 로그인할 수 없습니다"))
+        #expect(!appleDescription.contains("권한은 삭제되지 않습니다"))
+        #expect(!appleConfirmation.contains("권한은 삭제되지 않습니다"))
+
+        defaults.set(AppLanguage.english.rawValue, forKey: SettingsPreference.languageKey)
+        #expect(
+            SettingsSocialUnlinkPolicy.managementDescription(for: .apple)
+                .contains("first revokes its Apple authorization")
+        )
+        #expect(
+            SettingsSocialUnlinkPolicy.confirmationMessage(for: .apple)
+                .contains("You will no longer be able to sign in")
+        )
     }
 
     @Test
@@ -483,6 +733,87 @@ struct SettingsFeatureTests {
         #expect(pattern.configurable)
         #expect(pattern.pattern?.days.first?.weekday == .monday)
         #expect(pattern.pattern?.holidayOff == true)
+    }
+
+    @Test
+    func dutyPatternEditorShowsOnlySelectedWeekdaysAndUsesTheFirstTypeForNewSelections() {
+        let day = DutyPatternDutyTypeDTO(id: 4, name: "Day", color: "#3B82F6")
+        var state = DutyPatternSelectionState(pattern: nil, dutyTypes: [day])
+
+        #expect(state.selectedWeekdays == [.monday, .tuesday, .wednesday, .thursday, .friday])
+        #expect(state.dutyTypeID(for: .monday) == day.id)
+        #expect(!state.isSelected(.saturday))
+
+        state.toggle(.monday, defaultDutyTypeID: day.id)
+        state.toggle(.saturday, defaultDutyTypeID: day.id)
+
+        #expect(state.selectedWeekdays == [.tuesday, .wednesday, .thursday, .friday, .saturday])
+        #expect(state.dutyTypeID(for: .monday) == nil)
+        #expect(state.dutyTypeID(for: .saturday) == day.id)
+    }
+
+    @Test
+    func dutyPatternEditorPreservesAnExistingHiddenDutyTypeForItsWeekday() {
+        let hidden = DutyPatternDutyTypeDTO(id: 8, name: "Legacy night", color: "#312E81")
+        let visible = DutyPatternDutyTypeDTO(id: 4, name: "Day", color: "#3B82F6")
+        let pattern = DutyPatternDetailsDTO(
+            days: [.init(weekday: .sunday, dutyType: hidden)],
+            holidayOff: true,
+            effectiveFrom: DateOnly(rawValue: "2026-08-01")
+        )
+        let state = DutyPatternSelectionState(pattern: pattern, dutyTypes: [visible])
+
+        #expect(state.selectedWeekdays == [.sunday])
+        #expect(state.dutyType(for: .sunday, visibleDutyTypes: [visible], pattern: pattern) == hidden)
+        #expect(state.hasHiddenSelection(visibleDutyTypes: [visible]))
+        #expect(state.isHiddenSelection(.sunday, visibleDutyTypes: [visible]))
+    }
+
+    @Test
+    func selectingAVisibleDutyTypeClearsTheHiddenDutyPatternWarning() {
+        let hidden = DutyPatternDutyTypeDTO(id: 8, name: "Legacy night", color: "#312E81")
+        let visible = DutyPatternDutyTypeDTO(id: 4, name: "Day", color: "#3B82F6")
+        let pattern = DutyPatternDetailsDTO(
+            days: [.init(weekday: .sunday, dutyType: hidden)],
+            holidayOff: true,
+            effectiveFrom: DateOnly(rawValue: "2026-08-01")
+        )
+        var state = DutyPatternSelectionState(pattern: pattern, dutyTypes: [visible])
+
+        state.select(visible.id, for: .sunday)
+
+        #expect(!state.hasHiddenSelection(visibleDutyTypes: [visible]))
+        #expect(!state.isHiddenSelection(.sunday, visibleDutyTypes: [visible]))
+    }
+
+    @Test
+    func dutyPatternConfirmationsKeepSaveAndDeleteRolesDistinct() {
+        #expect(DutyPatternConfirmation.save.titleKey == "settings.pattern.saveConfirmTitle")
+        #expect(DutyPatternConfirmation.save.messageKey == "settings.pattern.saveConfirm")
+        #expect(!DutyPatternConfirmation.save.isDestructive)
+        #expect(DutyPatternConfirmation.delete.titleKey == "settings.pattern.deleteConfirmTitle")
+        #expect(DutyPatternConfirmation.delete.messageKey == "settings.pattern.deleteConfirm")
+        #expect(DutyPatternConfirmation.delete.isDestructive)
+    }
+
+    @Test
+    func dutyPatternUnavailableReasonsUseLocalizedCopyInsteadOfServerCodes() {
+        #expect(DutyPatternUnavailableCopy.key(reason: "TEAM_REQUIRED") == "settings.pattern.unavailable.team")
+        #expect(DutyPatternUnavailableCopy.key(reason: "DUTY_TYPE_REQUIRED") == "settings.pattern.unavailable.dutyType")
+        #expect(DutyPatternUnavailableCopy.key(reason: "UNKNOWN_REASON") == "settings.pattern.unavailable.default")
+        #expect(DutyPatternUnavailableCopy.key(reason: nil) == "settings.pattern.unavailable.default")
+
+        let defaults = UserDefaults.standard
+        let previous = defaults.string(forKey: SettingsPreference.languageKey)
+        defer {
+            if let previous { defaults.set(previous, forKey: SettingsPreference.languageKey) }
+            else { defaults.removeObject(forKey: SettingsPreference.languageKey) }
+        }
+
+        defaults.set(AppLanguage.korean.rawValue, forKey: SettingsPreference.languageKey)
+        #expect(SettingsLocalization.string(DutyPatternUnavailableCopy.key(reason: "TEAM_REQUIRED")).contains("팀에 소속"))
+        #expect(SettingsLocalization.string(DutyPatternUnavailableCopy.key(reason: "DUTY_TYPE_REQUIRED")).contains("근무 유형"))
+        #expect(SettingsLocalization.string(DutyPatternUnavailableCopy.key(reason: "UNKNOWN")).contains("설정"))
     }
 
     @Test
@@ -644,6 +975,66 @@ struct SettingsFeatureTests {
         )
     }
 
+    private func loadedSettingsModel(
+        recorder: SettingsRequestRecorder
+    ) async throws -> SettingsViewModel {
+        SettingsURLProtocolStub.handler = { request in
+            recorder.record(request)
+            let path = request.url?.path
+            let body: String
+            let status: Int
+            switch (request.httpMethod, path) {
+            case ("GET", "/api/members/me"):
+                body = #"{"id":1,"name":"Owner","email":"owner@example.com","teamId":7,"team":"Team","calendarVisibility":"FRIENDS","kakaoId":"kakao","naverId":"naver","appleId":null,"hasPassword":true,"hasProfilePhoto":false,"profilePhotoVersion":4}"#
+                status = 200
+            case ("GET", "/api/members/family"):
+                body = "[]"
+                status = 200
+            case ("GET", "/api/friends"):
+                body = "[]"
+                status = 200
+            case ("GET", "/api/members/managers"):
+                body = #"[{"id":2,"name":"Manager A","email":null,"teamId":7,"team":"Team","calendarVisibility":"FRIENDS","kakaoId":null,"naverId":null,"appleId":null,"hasPassword":true,"hasProfilePhoto":false,"profilePhotoVersion":0},{"id":3,"name":"Manager B","email":null,"teamId":7,"team":"Team","calendarVisibility":"FRIENDS","kakaoId":null,"naverId":null,"appleId":null,"hasPassword":true,"hasProfilePhoto":false,"profilePhotoVersion":0}]"#
+                status = 200
+            case ("GET", "/api/members/managed"):
+                body = #"[{"id":10,"name":"Child A","email":null,"teamId":null,"team":null,"calendarVisibility":"FRIENDS","kakaoId":null,"naverId":null,"appleId":null,"hasPassword":false,"hasProfilePhoto":false,"profilePhotoVersion":0},{"id":11,"name":"Child B","email":null,"teamId":null,"team":null,"calendarVisibility":"FRIENDS","kakaoId":null,"naverId":null,"appleId":null,"hasPassword":false,"hasProfilePhoto":false,"profilePhotoVersion":0}]"#
+                status = 200
+            case ("GET", "/api/auth/refresh-tokens"):
+                body = #"[{"memberName":"Owner","memberId":1,"validUntil":"2026-09-01T10:00:00Z","createdDate":"2026-08-01T10:00:00Z","lastUsed":"2026-08-15T10:00:00Z","remoteAddr":"127.0.0.1","id":101,"userAgent":null,"isCurrentLogin":true},{"memberName":"Owner","memberId":1,"validUntil":"2026-09-01T10:00:00Z","createdDate":"2026-08-01T10:00:00Z","lastUsed":"2026-08-14T10:00:00Z","remoteAddr":"127.0.0.2","id":102,"userAgent":null,"isCurrentLogin":false},{"memberName":"Owner","memberId":1,"validUntil":"2026-09-01T10:00:00Z","createdDate":"2026-08-01T10:00:00Z","lastUsed":"2026-08-13T10:00:00Z","remoteAddr":"127.0.0.3","id":103,"userAgent":null,"isCurrentLogin":false}]"#
+                status = 200
+            case ("GET", "/api/policies/current"):
+                body = #"{"terms":null,"privacy":null}"#
+                status = 200
+            case ("GET", "/api/duty/pattern/me"):
+                body = ##"{"configurable":true,"reason":null,"dutyTypes":[{"id":4,"name":"Day","color":"#3B82F6"}],"pattern":{"days":[{"weekday":"MONDAY","dutyType":{"id":4,"name":"Day","color":"#3B82F6"}}],"holidayOff":true,"effectiveFrom":"2026-08-01"}}"##
+                status = 200
+            case ("POST", "/api/members/auxiliary"):
+                body = #"{"id":12,"name":"New child","email":null,"teamId":null,"team":null,"calendarVisibility":"FRIENDS","kakaoId":null,"naverId":null,"appleId":null,"hasPassword":false,"hasProfilePhoto":false,"profilePhotoVersion":0}"#
+                status = 200
+            case ("DELETE", "/api/auth/refresh-tokens/others"):
+                body = #"{"deletedCount":1}"#
+                status = 200
+            default:
+                body = ""
+                status = 204
+            }
+            return (
+                HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil, headerFields: nil)!,
+                Data(body.utf8)
+            )
+        }
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [SettingsURLProtocolStub.self]
+        let service = SettingsService(client: APIClient(
+            baseURL: URL(string: "https://dutypark.test/api/")!,
+            session: URLSession(configuration: configuration)
+        ))
+        let model = SettingsViewModel(service: service)
+        await model.load()
+        _ = try #require(model.member)
+        return model
+    }
+
     private static func jsonBody(_ body: Data) -> [String: Any]? {
         return try? JSONSerialization.jsonObject(with: body) as? [String: Any]
     }
@@ -672,6 +1063,13 @@ private final class SettingsRequestRecorder: @unchecked Sendable {
         lock.lock()
         defer { lock.unlock() }
         return bodyStorage
+    }
+
+    func reset() {
+        lock.lock()
+        storage.removeAll()
+        bodyStorage.removeAll()
+        lock.unlock()
     }
 
     private static func requestBody(_ request: URLRequest) -> Data? {

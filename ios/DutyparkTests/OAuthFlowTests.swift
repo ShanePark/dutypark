@@ -2,6 +2,35 @@ import XCTest
 @testable import Dutypark
 
 final class OAuthSignupPresentationTests: XCTestCase {
+    func testDirectUITestDestinationsStayBehindDebugCompilation() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark/Features/Auth/AppRootView.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+
+        XCTAssertTrue(source.contains("#if DEBUG\nnonisolated enum UITestingDestination"))
+        XCTAssertTrue(source.contains("UITestingDestination(arguments: ProcessInfo.processInfo.arguments)"))
+        XCTAssertTrue(source.contains("guard uiTestingDestination == nil else { return }"))
+    }
+
+    func testDirectUITestDestinationRequiresAnExplicitLaunchArgument() {
+        XCTAssertNil(UITestingDestination(arguments: []))
+        XCTAssertNil(UITestingDestination(arguments: ["-ui-testing-authenticated"]))
+        XCTAssertEqual(
+            UITestingDestination(arguments: ["-ui-testing-sso-signup"]),
+            .ssoSignup
+        )
+        XCTAssertEqual(
+            UITestingDestination(arguments: ["-ui-testing-direct-attachment-gallery"]),
+            .attachmentGallery
+        )
+        XCTAssertEqual(
+            UITestingDestination(arguments: ["-ui-testing-admin"]),
+            .admin
+        )
+    }
+
     func testEmptySignupCanDismissImmediately() {
         XCTAssertEqual(
             SsoSignupPresentationPolicy.cancellationDecision(
@@ -60,6 +89,24 @@ final class OAuthSignupPresentationTests: XCTestCase {
             ),
             .blocked
         )
+    }
+
+    func testDiscardConfirmationUsesCenteredPanelAndBlocksExternalDismissalWhileWorking() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark/Features/Auth/SsoSignupView.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+
+        XCTAssertFalse(
+            source.contains(
+                ".alert(\n            oauthString(\"auth.oauth.signup.discard.title\")"
+            )
+        )
+        XCTAssertTrue(source.contains("DPConfirmationPanel("))
+        XCTAssertTrue(source.contains("canDismiss: !isWorking"))
+        XCTAssertTrue(source.contains(".interactiveDismissDisabled(isWorking)"))
+        XCTAssertTrue(source.contains("case .blocked:"))
     }
 
     func testPresentationStringsResolveInEverySupportedLocale() throws {

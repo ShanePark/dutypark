@@ -15,6 +15,9 @@ final class SocialViewModel: ObservableObject {
     @Published private(set) var isPerformingAction = false
     @Published private(set) var isReordering = false
     @Published var errorKey: String?
+#if DEBUG
+    @Published private(set) var uiTestingPinnedOrderSaveCount = 0
+#endif
 
     private let repository: any SocialRepository
     private let searchPageSize: Int
@@ -51,6 +54,12 @@ final class SocialViewModel: ObservableObject {
     }
 
     func load() async {
+#if DEBUG
+        if isUITesting {
+            loadUITestingFixture()
+            return
+        }
+#endif
         isLoading = true
         defer { isLoading = false }
         do {
@@ -61,6 +70,12 @@ final class SocialViewModel: ObservableObject {
     }
 
     func refresh() async {
+#if DEBUG
+        if isUITesting {
+            loadUITestingFixture()
+            return
+        }
+#endif
         do {
             try await reload()
         } catch {
@@ -101,34 +116,47 @@ final class SocialViewModel: ObservableObject {
 
     func sendFriendRequest(to member: MemberPreviewDTO) async {
         guard let id = member.id else { return }
-        await perform(error: "social.error.sendFriend", affectsReceivedRequestCount: false) {
+        await perform(
+            error: "social.error.sendFriend",
+            affectsReceivedRequestCount: false,
+            reconcileAfterMutation: true,
+            optimisticUpdate: { searchResults.removeAll { $0.id == id } }
+        ) {
             try await repository.sendFriendRequest(to: id)
-            try await reload()
-            searchResults.removeAll { $0.id == id }
         }
     }
 
     func accept(_ request: FriendRequestDTO) async {
         guard let id = request.fromMember.id else { return }
-        await perform(error: "social.error.accept", affectsReceivedRequestCount: true) {
+        await perform(
+            error: "social.error.accept",
+            affectsReceivedRequestCount: true,
+            reconcileAfterMutation: true,
+            optimisticUpdate: { receivedRequests.removeAll { $0.id == request.id } }
+        ) {
             try await repository.acceptRequest(from: id)
-            try await reload()
         }
     }
 
     func reject(_ request: FriendRequestDTO) async {
         guard let id = request.fromMember.id else { return }
-        await perform(error: "social.error.reject", affectsReceivedRequestCount: true) {
+        await perform(
+            error: "social.error.reject",
+            affectsReceivedRequestCount: true,
+            optimisticUpdate: { receivedRequests.removeAll { $0.id == request.id } }
+        ) {
             try await repository.rejectRequest(from: id)
-            try await reload()
         }
     }
 
     func cancel(_ request: FriendRequestDTO) async {
         guard let id = request.toMember.id else { return }
-        await perform(error: "social.error.cancel", affectsReceivedRequestCount: false) {
+        await perform(
+            error: "social.error.cancel",
+            affectsReceivedRequestCount: false,
+            optimisticUpdate: { sentRequests.removeAll { $0.id == request.id } }
+        ) {
             try await repository.cancelRequest(to: id)
-            try await reload()
         }
     }
 
@@ -138,40 +166,60 @@ final class SocialViewModel: ObservableObject {
             errorKey = "social.error.familyAlreadyRequested"
             return
         }
-        await perform(error: "social.error.sendFamily", affectsReceivedRequestCount: false) {
+        await perform(
+            error: "social.error.sendFamily",
+            affectsReceivedRequestCount: false,
+            reconcileAfterMutation: true
+        ) {
             try await repository.sendFamilyRequest(to: id)
-            try await reload()
         }
     }
 
     func removeFromFamily(_ friend: DashboardFriendDetailDTO) async {
         guard let id = friend.member.id else { return }
-        await perform(error: "social.error.removeFamily", affectsReceivedRequestCount: false) {
+        await perform(
+            error: "social.error.removeFamily",
+            affectsReceivedRequestCount: false,
+            optimisticUpdate: { replaceFriend(id: id) { $0.replacingFamily(false) } }
+        ) {
             try await repository.removeFromFamily(id)
-            try await reload()
         }
     }
 
     func removeFriend(_ friend: DashboardFriendDetailDTO) async {
         guard let id = friend.member.id else { return }
-        await perform(error: "social.error.removeFriend", affectsReceivedRequestCount: false) {
+        await perform(
+            error: "social.error.removeFriend",
+            affectsReceivedRequestCount: false,
+            optimisticUpdate: { friends.removeAll { $0.member.id == id } }
+        ) {
             try await repository.removeFriend(id)
-            try await reload()
         }
     }
 
     func togglePin(_ friend: DashboardFriendDetailDTO) async {
         guard let id = friend.member.id else { return }
+#if DEBUG
+        if isSocialReorderUITesting {
+            let pinOrder = friend.pinOrder == nil ? nextPinOrder : nil
+            replaceFriend(id: id) { $0.replacingPinOrder(pinOrder) }
+            await onMutation(false)
+            return
+        }
+#endif
         await perform(
             error: friend.pinOrder == nil ? "social.error.pin" : "social.error.unpin",
-            affectsReceivedRequestCount: false
+            affectsReceivedRequestCount: false,
+            optimisticUpdate: {
+                let pinOrder = friend.pinOrder == nil ? nextPinOrder : nil
+                replaceFriend(id: id) { $0.replacingPinOrder(pinOrder) }
+            }
         ) {
             if friend.pinOrder == nil {
                 try await repository.pin(id)
             } else {
                 try await repository.unpin(id)
             }
-            try await reload()
         }
     }
 
@@ -186,6 +234,17 @@ final class SocialViewModel: ObservableObject {
         }
         guard memberIDs != currentIDs else { return true }
 
+#if DEBUG
+        if isUITesting {
+            pinnedOrderIDs = memberIDs
+            if isSocialReorderUITesting {
+                uiTestingPinnedOrderSaveCount += 1
+            }
+            await onMutation(false)
+            return true
+        }
+#endif
+
         let previousOrderIDs = pinnedOrderIDs
         pinnedOrderIDs = memberIDs
         isReordering = true
@@ -199,11 +258,8 @@ final class SocialViewModel: ObservableObject {
             return false
         }
 
-        do {
-            try await reload()
-        } catch {
-            errorKey = "social.warning.reorderReload"
-        }
+        applyPinnedOrder(memberIDs)
+        pinnedOrderIDs = nil
 
         await onMutation(false)
         return true
@@ -224,16 +280,173 @@ final class SocialViewModel: ObservableObject {
     private func perform(
         error errorKey: String,
         affectsReceivedRequestCount: Bool,
+        reconcileAfterMutation: Bool = false,
+        optimisticUpdate: () -> Void = {},
         operation: () async throws -> Void
     ) async {
         guard !isPerformingAction else { return }
+        let snapshot = mutationSnapshot
         isPerformingAction = true
         defer { isPerformingAction = false }
+        optimisticUpdate()
         do {
             try await operation()
-            await onMutation(affectsReceivedRequestCount)
         } catch {
+            restore(snapshot)
             self.errorKey = errorKey
+            return
         }
+        if reconcileAfterMutation {
+            // The mutation is already confirmed. A transient reconciliation
+            // failure must not roll it back or be reported as an action failure.
+            try? await reload()
+        }
+        await onMutation(affectsReceivedRequestCount)
+    }
+
+    private var nextPinOrder: Int64 {
+        (friends.compactMap(\.pinOrder).max() ?? -1) + 1
+    }
+
+    private func replaceFriend(
+        id: MemberID,
+        transform: (DashboardFriendDetailDTO) -> DashboardFriendDetailDTO
+    ) {
+        friends = friends.map { friend in
+            friend.member.id == id ? transform(friend) : friend
+        }
+    }
+
+    private func applyPinnedOrder(_ memberIDs: [MemberID]) {
+        let orders = Dictionary(
+            uniqueKeysWithValues: memberIDs.enumerated().map { ($1, Int64($0)) }
+        )
+        friends = friends.map { friend in
+            guard let memberID = friend.member.id,
+                  let pinOrder = orders[memberID] else { return friend }
+            return friend.replacingPinOrder(pinOrder)
+        }
+    }
+
+    private var mutationSnapshot: MutationSnapshot {
+        MutationSnapshot(
+            friends: friends,
+            receivedRequests: receivedRequests,
+            sentRequests: sentRequests,
+            searchResults: searchResults,
+            pinnedOrderIDs: pinnedOrderIDs
+        )
+    }
+
+    private func restore(_ snapshot: MutationSnapshot) {
+        friends = snapshot.friends
+        receivedRequests = snapshot.receivedRequests
+        sentRequests = snapshot.sentRequests
+        searchResults = snapshot.searchResults
+        pinnedOrderIDs = snapshot.pinnedOrderIDs
+    }
+
+    private struct MutationSnapshot {
+        let friends: [DashboardFriendDetailDTO]
+        let receivedRequests: [FriendRequestDTO]
+        let sentRequests: [FriendRequestDTO]
+        let searchResults: [MemberPreviewDTO]
+        let pinnedOrderIDs: [MemberID]?
+    }
+
+#if DEBUG
+    private var isUITesting: Bool {
+        ProcessInfo.processInfo.arguments.contains("-ui-testing-authenticated")
+    }
+
+    private var isSocialReorderUITesting: Bool {
+        ProcessInfo.processInfo.arguments.contains("-ui-testing-social-reorder")
+            || isSocialReorderOverflowUITesting
+    }
+
+    /// Well past the ~6 pinned cards an iPhone 16 Pro viewport shows at once.
+    static let uiTestingOverflowPinnedCount = 18
+
+    /// Seeds more pinned friends than fit on screen so the `LazyVStack` stops
+    /// publishing drop-target frames for the rows outside the viewport.
+    private var isSocialReorderOverflowUITesting: Bool {
+        ProcessInfo.processInfo.arguments.contains("-ui-testing-social-reorder-overflow")
+    }
+
+    private func loadUITestingFixture() {
+        if isSocialReorderOverflowUITesting {
+            var overflowFriends: [DashboardFriendDetailDTO] = []
+            for index in 0..<SocialViewModel.uiTestingOverflowPinnedCount {
+                let id = MemberID(41 + index)
+                overflowFriends.append(
+                    uiTestingFriend(id: id, name: "핀친구 \(index + 1)", pinOrder: Int64(index + 1))
+                )
+            }
+            friends = overflowFriends
+        } else if isSocialReorderUITesting {
+            friends = [
+                uiTestingFriend(id: 31, name: "알렉스", pinOrder: 1),
+                uiTestingFriend(id: 32, name: "민지", pinOrder: 2),
+                uiTestingFriend(id: 33, name: "테일러", pinOrder: 3),
+                uiTestingFriend(id: 34, name: "지우", pinOrder: 4),
+                uiTestingFriend(id: 35, name: "하늘", pinOrder: 5),
+                uiTestingFriend(id: 36, name: "유진", pinOrder: 6)
+            ]
+        } else {
+            friends = [
+                uiTestingFriend(id: 31, name: "알렉스", pinOrder: 1),
+                uiTestingFriend(id: 32, name: "민지", pinOrder: 2),
+                uiTestingFriend(id: 33, name: "테일러", pinOrder: nil)
+            ]
+        }
+        receivedRequests = []
+        sentRequests = []
+        pinnedOrderIDs = nil
+        errorKey = nil
+        uiTestingPinnedOrderSaveCount = 0
+    }
+
+    private func uiTestingFriend(
+        id: MemberID,
+        name: String,
+        pinOrder: Int64?
+    ) -> DashboardFriendDetailDTO {
+        DashboardFriendDetailDTO(
+            member: MemberPreviewDTO(
+                id: id,
+                name: name,
+                teamId: 1,
+                team: "Dutypark",
+                hasProfilePhoto: false,
+                profilePhotoVersion: 0
+            ),
+            duty: nil,
+            schedules: [],
+            isFamily: false,
+            pinOrder: pinOrder
+        )
+    }
+#endif
+}
+
+private extension DashboardFriendDetailDTO {
+    func replacingFamily(_ isFamily: Bool) -> DashboardFriendDetailDTO {
+        DashboardFriendDetailDTO(
+            member: member,
+            duty: duty,
+            schedules: schedules,
+            isFamily: isFamily,
+            pinOrder: pinOrder
+        )
+    }
+
+    func replacingPinOrder(_ pinOrder: Int64?) -> DashboardFriendDetailDTO {
+        DashboardFriendDetailDTO(
+            member: member,
+            duty: duty,
+            schedules: schedules,
+            isFamily: isFamily,
+            pinOrder: pinOrder
+        )
     }
 }

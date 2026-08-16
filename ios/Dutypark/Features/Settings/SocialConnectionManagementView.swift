@@ -46,7 +46,17 @@ nonisolated enum SettingsSocialManagementPolicy {
     }
 
     static func description(for provider: OAuthProvider) -> String {
-        SettingsSocialUnlinkPolicy.confirmationMessage(for: provider)
+        SettingsSocialUnlinkPolicy.managementDescription(for: provider)
+    }
+}
+
+nonisolated enum SettingsSocialUnlinkConfirmationPolicy {
+    static func canSubmit(isWorking: Bool) -> Bool {
+        !isWorking
+    }
+
+    static func canDismiss(isWorking: Bool) -> Bool {
+        !isWorking
     }
 }
 
@@ -58,6 +68,7 @@ struct SocialConnectionManagementView: View {
     let unlink: () async -> Void
 
     @State private var confirmsUnlink = false
+    @State private var unlinkAction = SettingsDestructiveActionGate()
 
     var body: some View {
         DPModalPanel(maximumPanelHeight: maximumHeight) {
@@ -89,13 +100,28 @@ struct SocialConnectionManagementView: View {
             .accessibilityIdentifier("settings.social.management.close")
         }
         .accessibilityIdentifier("settings.social.management.panel.\(providerID)")
-        .alert(SettingsLocalization.string("settings.social.unlinkConfirmTitle"), isPresented: $confirmsUnlink) {
-            Button(SettingsLocalization.string("settings.social.unlink"), role: .destructive) {
-                Task { await unlink() }
+        .fullScreenCover(isPresented: $confirmsUnlink) {
+            DPModalOverlay(
+                maximumContentWidth: DPConfirmationPanel.maximumWidth,
+                onDismiss: { confirmsUnlink = false },
+                canDismiss: SettingsSocialUnlinkConfirmationPolicy.canDismiss(
+                    isWorking: isUnlinkWorking
+                )
+            ) { availableSize, confirmationDismiss in
+                DPConfirmationPanel(
+                    title: SettingsLocalization.string("settings.social.unlinkConfirmTitle"),
+                    message: SettingsSocialUnlinkPolicy.confirmationMessage(for: state.provider),
+                    confirmTitle: SettingsLocalization.string("settings.social.unlink"),
+                    cancelTitle: SettingsLocalization.string("settings.action.cancel"),
+                    isDestructive: true,
+                    isWorking: isUnlinkWorking,
+                    maximumHeight: availableSize.height,
+                    cancel: confirmationDismiss,
+                    confirm: {
+                        performUnlink(confirmationDismiss: confirmationDismiss)
+                    }
+                )
             }
-            Button(SettingsLocalization.string("settings.action.cancel"), role: .cancel) {}
-        } message: {
-            Text(SettingsSocialUnlinkPolicy.confirmationMessage(for: state.provider))
         }
     }
 
@@ -225,6 +251,22 @@ struct SocialConnectionManagementView: View {
 
     private var providerID: String {
         state.provider.rawValue.lowercased()
+    }
+
+    private var isUnlinkWorking: Bool {
+        unlinkAction.isWorking || state.isDisconnecting
+    }
+
+    private func performUnlink(confirmationDismiss: @escaping () -> Void) {
+        guard SettingsSocialUnlinkConfirmationPolicy.canSubmit(isWorking: isUnlinkWorking),
+              !state.isWorking,
+              unlinkAction.start()
+        else { return }
+        Task {
+            await unlink()
+            unlinkAction.finish()
+            confirmationDismiss()
+        }
     }
 
     private var providerColor: Color {

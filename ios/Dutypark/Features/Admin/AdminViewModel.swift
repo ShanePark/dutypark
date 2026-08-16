@@ -106,9 +106,9 @@ final class AdminTeamListViewModel: ObservableObject {
     @Published private(set) var isLoading = false
     @Published private(set) var loadFailed = false
     @Published private(set) var nameCheckResult: AdminTeamNameCheckResult?
+    @Published private(set) var searchKeyword = ""
 
     private let repository: any AdminRepositoryProtocol
-    private var keyword = ""
     private var loadGeneration = 0
     private var nameCheckGeneration = 0
 
@@ -117,18 +117,21 @@ final class AdminTeamListViewModel: ObservableObject {
     }
 
     func load() async {
-        await load(keyword: keyword, page: page)
+        await load(keyword: searchKeyword, page: page)
     }
 
     func search(_ value: String) async {
-        keyword = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        await load(keyword: keyword, page: 0)
+        searchKeyword = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        await load(keyword: searchKeyword, page: 0)
     }
 
     func movePage(by offset: Int) async {
-        let nextPage = page + offset
+        await movePage(to: page + offset)
+    }
+
+    func movePage(to nextPage: Int) async {
         guard nextPage >= 0, nextPage < totalPages else { return }
-        await load(keyword: keyword, page: nextPage)
+        await load(keyword: searchKeyword, page: nextPage)
     }
 
     func checkName(_ name: String) async {
@@ -160,15 +163,52 @@ final class AdminTeamListViewModel: ObservableObject {
     }
 
     func create(name: String, description: String) async throws -> TeamDTO {
-        try await repository.createTeam(
+        let created = try await repository.createTeam(
             name: name.trimmingCharacters(in: .whitespacesAndNewlines),
             description: description.trimmingCharacters(in: .whitespacesAndNewlines)
         )
+        insertCreatedTeam(created)
+        return created
     }
 
     func delete(_ team: SimpleTeamDTO) async throws {
         try await repository.deleteTeam(id: team.id)
-        await load(keyword: keyword, page: min(page, max(0, totalPages - 1)))
+        guard teams.contains(where: { $0.id == team.id }) else { return }
+        teams.removeAll { $0.id == team.id }
+        totalElements = max(0, totalElements - 1)
+        totalPages = Self.pageCount(for: totalElements)
+        page = min(page, max(0, totalPages - 1))
+    }
+
+    private func insertCreatedTeam(_ team: TeamDTO) {
+        let matchesKeyword = searchKeyword.isEmpty
+            || team.name.localizedCaseInsensitiveContains(searchKeyword)
+            || team.description?.localizedCaseInsensitiveContains(searchKeyword) == true
+        guard matchesKeyword else { return }
+
+        let created = SimpleTeamDTO(
+            id: team.id,
+            name: team.name,
+            description: team.description,
+            memberCount: Int64(team.members.count)
+        )
+        if let existingIndex = teams.firstIndex(where: { $0.id == created.id }) {
+            teams[existingIndex] = created
+            return
+        }
+
+        totalElements += 1
+        totalPages = Self.pageCount(for: totalElements)
+        guard page == 0 else { return }
+        teams.insert(created, at: 0)
+        if teams.count > Self.pageSize {
+            teams.removeLast(teams.count - Self.pageSize)
+        }
+    }
+
+    private static func pageCount(for totalElements: Int64) -> Int {
+        guard totalElements > 0 else { return 0 }
+        return Int((totalElements + Int64(pageSize) - 1) / Int64(pageSize))
     }
 
     private func load(keyword: String, page: Int) async {

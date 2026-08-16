@@ -50,7 +50,7 @@ src/
 ├── i18n/          # Locale utilities and message bundles
 ├── notifications/ # Static notification rendering helpers for push/service worker contexts
 ├── push/          # Service worker runtime and push presentation helpers
-├── releaseNotes/  # In-app changelog metadata and localized release copy
+├── releaseNotes/  # Release-note authoring documentation
 ├── router/        # Route definitions and auth/admin guards
 ├── types/         # Shared TypeScript DTOs and UI types
 └── utils/         # Date, visibility, redirect, notification, and push utilities
@@ -94,7 +94,7 @@ When adding a user-facing route, update both `src/router/index.ts` and `src/comp
 
 ## Localization
 
-User-facing copy belongs in `src/i18n/messages/*.ts`. Supported locale files are `ko` and `en`; keep both synchronized with release-note copy and static notification templates. Language names are shown in their native forms through `localeUtils.ts`.
+User-facing copy belongs in `src/i18n/messages/*.ts`. Supported locale files are `ko` and `en`; keep both synchronized with static notification templates. Shared guide and release-note content is managed in the backend canonical JSON resources. Language names are shown in their native forms through `localeUtils.ts`.
 
 The locale store separates detected browser locale from explicit user choice and syncs the active locale to the service worker for localized push notifications.
 
@@ -106,7 +106,7 @@ The service worker handles install/activate, push presentation, notification-cli
 
 ## Release Notes
 
-Main-targeting PRs require exactly one in-app release note entry after the PR number is known. Update `src/releaseNotes/meta.ts` and both files under `src/releaseNotes/messages/`, then run:
+Main-targeting PRs require exactly one in-app release note entry after the PR number is known. Update the metadata item and both `locales.en.entries` and `locales.ko.entries` in `../src/main/resources/public-content/release-notes.json`, then run:
 
 ```bash
 npm run release-notes:check

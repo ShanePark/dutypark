@@ -65,6 +65,9 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
         working-directory: frontend
+      - name: Validate release notes
+        run: npm run release-notes:check
+        working-directory: frontend
       - name: Type check frontend
         run: npm run type-check
         working-directory: frontend

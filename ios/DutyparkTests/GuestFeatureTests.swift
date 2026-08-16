@@ -57,21 +57,42 @@ final class GuestPublicLinkTests: XCTestCase {
         )
     }
 
-    func testGuideWebLocaleFollowsExplicitAppSelection() {
-        XCTAssertEqual(GuideLocaleResolver.webLocale(languageCode: "ko"), "ko")
-        XCTAssertEqual(GuideLocaleResolver.webLocale(languageCode: "en"), "en")
-        XCTAssertEqual(GuideLocaleResolver.webLocale(languageCode: "fr-FR"), "en")
+    func testGuideContentLocaleFollowsExplicitAppSelection() {
+        XCTAssertEqual(PublicContentLocaleResolver.locale(languageCode: "ko"), "ko")
+        XCTAssertEqual(PublicContentLocaleResolver.locale(languageCode: "en"), "en")
+        XCTAssertEqual(PublicContentLocaleResolver.locale(languageCode: "fr-FR"), "en")
     }
 
-    func testGuideWebLocaleUsesDeviceLanguageOnlyWithoutSelection() {
+    func testGuideContentLocaleUsesDeviceLanguageOnlyWithoutSelection() {
         XCTAssertEqual(
-            GuideLocaleResolver.webLocale(languageCode: "", preferredLanguages: ["ko-KR"]),
+            PublicContentLocaleResolver.locale(languageCode: "", preferredLanguages: ["ko-KR"]),
             "ko"
         )
         XCTAssertEqual(
-            GuideLocaleResolver.webLocale(languageCode: "", preferredLanguages: ["fr-FR"]),
+            PublicContentLocaleResolver.locale(languageCode: "", preferredLanguages: ["fr-FR"]),
             "en"
         )
+    }
+
+    func testGuestGuideTitleMatchesTheWebGuideTitleInEverySupportedLocale() throws {
+        let expectedTitles = [
+            "en": "Guide",
+            "ko": "이용 안내"
+        ]
+
+        for (locale, expectedTitle) in expectedTitles {
+            let url = try XCTUnwrap(Bundle.main.url(forResource: locale, withExtension: "lproj"))
+            let bundle = try XCTUnwrap(Bundle(url: url))
+
+            XCTAssertEqual(
+                bundle.localizedString(
+                    forKey: "guest.guide.title",
+                    value: "guest.guide.title",
+                    table: "Guest"
+                ),
+                expectedTitle
+            )
+        }
     }
 
     func testPublicCalendarDetailStringsResolveInEverySupportedLocale() throws {

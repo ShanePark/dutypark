@@ -10,8 +10,8 @@ enum TodoBoardLayout {
     static let columnGap: CGFloat = 10
     static let columnRadius: CGFloat = 12
     static let cardRadius: CGFloat = 14
-    static let dragHandleSize: CGFloat = 44
-    static let dragActivationDistance: CGFloat = 2
+    static let dragLongPressDuration = 0.35
+    static let dragLongPressMaximumDistance: CGFloat = 10
     static let dragCollisionHysteresis: CGFloat = 2
     static let dragPushAnimationDuration = 0.1
 
@@ -227,11 +227,6 @@ struct TodoView: View {
             }
             visibleStatus = model.selectedStatus
             openInitialTodoIfPresent()
-        }
-        .onChange(of: model.selectedStatus) { _, status in
-            withAnimation(.easeInOut(duration: 0.2)) {
-                visibleStatus = status
-            }
         }
         .onChange(of: visibleStatus) { _, status in
             if let status, status != model.selectedStatus {
@@ -481,58 +476,70 @@ struct TodoView: View {
                     containerWidth: proxy.size.width,
                     columnWidth: columnWidth
                 )
-                ScrollView(.horizontal) {
-                    LazyHStack(alignment: .top, spacing: TodoBoardLayout.columnGap) {
-                        ForEach(TodoStatus.boardStatuses, id: \.rawValue) { status in
-                            TodoKanbanColumn(
-                                status: status,
-                                count: model.count(for: status),
-                                todos: displayedTodos(for: status),
-                                width: columnWidth,
-                                draggedTodoID: draggedTodoID,
-                                dragTargetStatus: dragTargetStatus,
-                                dragTargetTodoID: dragTargetTodoID,
-                                dragInsertAfter: dragInsertAfter,
-                                add: {
-                                    model.selectedStatus = status
-                                    withoutPresentationAnimation { showingCreate = true }
-                                },
-                                select: { model.selectedStatus = status },
-                                open: { todo in
-                                    selectedTodo = todo
-                                    withoutPresentationAnimation { showingDetail = true }
-                                },
-                                move: { todo, offset in
-                                    model.selectedStatus = status
-                                    Task {
-                                        if await model.moveWithinSelectedColumn(todo, offset: offset) {
-                                            await onTodoChanged()
+                ScrollViewReader { scrollProxy in
+                    ScrollView(.horizontal) {
+                        LazyHStack(alignment: .top, spacing: TodoBoardLayout.columnGap) {
+                            ForEach(TodoStatus.boardStatuses, id: \.rawValue) { status in
+                                TodoKanbanColumn(
+                                    status: status,
+                                    count: model.count(for: status),
+                                    todos: displayedTodos(for: status),
+                                    width: columnWidth,
+                                    draggedTodoID: draggedTodoID,
+                                    dragTargetStatus: dragTargetStatus,
+                                    dragTargetTodoID: dragTargetTodoID,
+                                    dragInsertAfter: dragInsertAfter,
+                                    add: {
+                                        model.selectedStatus = status
+                                        withoutPresentationAnimation { showingCreate = true }
+                                    },
+                                    select: { model.selectedStatus = status },
+                                    open: { todo in
+                                        selectedTodo = todo
+                                        withoutPresentationAnimation { showingDetail = true }
+                                    },
+                                    move: { todo, offset in
+                                        model.selectedStatus = status
+                                        Task {
+                                            if await model.moveWithinSelectedColumn(todo, offset: offset) {
+                                                await onTodoChanged()
+                                            }
                                         }
+                                    },
+                                    updateDrag: updateInteractiveDrag,
+                                    finishDrag: finishInteractiveDrag,
+                                    cancelDrag: clearInteractiveDrag,
+                                    drop: { todoID, destinationStatus, targetTodoID, insertAfter in
+                                        handleDrop(
+                                            todoID: todoID,
+                                            destinationStatus: destinationStatus,
+                                            targetTodoID: targetTodoID,
+                                            insertAfter: insertAfter
+                                        )
                                     }
-                                },
-                                updateDrag: updateInteractiveDrag,
-                                finishDrag: finishInteractiveDrag,
-                                drop: { todoID, destinationStatus, targetTodoID, insertAfter in
-                                    handleDrop(
-                                        todoID: todoID,
-                                        destinationStatus: destinationStatus,
-                                        targetTodoID: targetTodoID,
-                                        insertAfter: insertAfter
-                                    )
-                                }
-                            )
-                            .id(status)
-                            .containerRelativeFrame(.vertical)
+                                )
+                                .id(status)
+                                .containerRelativeFrame(.vertical)
+                            }
+                        }
+                        .scrollTargetLayout()
+                        .padding(.bottom, DPSpacing.small)
+                    }
+                    .contentMargins(.horizontal, centeredColumnInset, for: .scrollContent)
+                    .scrollIndicators(.hidden)
+                    .scrollTargetBehavior(.viewAligned(limitBehavior: .always))
+                    .scrollPosition(id: $visibleStatus, anchor: .center)
+                    .scrollDisabled(draggedTodoID != nil)
+                    .refreshable { await model.refresh() }
+                    .task(id: model.selectedStatus.rawValue) {
+                        let status = model.selectedStatus
+                        await Task.yield()
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            visibleStatus = status
+                            scrollProxy.scrollTo(status, anchor: .center)
                         }
                     }
-                    .scrollTargetLayout()
-                    .padding(.horizontal, centeredColumnInset)
-                    .padding(.bottom, DPSpacing.small)
                 }
-                .scrollIndicators(.hidden)
-                .scrollTargetBehavior(.viewAligned(limitBehavior: .always))
-                .scrollPosition(id: $visibleStatus, anchor: .center)
-                .refreshable { await model.refresh() }
             }
         }
     }
@@ -541,21 +548,9 @@ struct TodoView: View {
         let columns = Dictionary(
             uniqueKeysWithValues: TodoStatus.boardStatuses.map { ($0, model.todos(for: $0)) }
         )
-        let activePlacement: TodoDragPlacement? = draggedTodoID.flatMap { todoID in
-            guard let todo = draggedTodo(withID: todoID) else { return nil }
-            return dragTargetStatus.flatMap {
-                guard $0 == todo.status else { return nil }
-                return TodoDragPlacement(
-                    todoID: todoID,
-                    destinationStatus: $0,
-                    targetTodoID: dragTargetTodoID,
-                    insertAfter: dragInsertAfter
-                )
-            }
-        }
-        return TodoDragProjection.columns(
-            projecting: activePlacement ?? pendingDropPlacement,
-            from: columns
+        return TodoDragPresentation.columns(
+            from: columns,
+            pendingDropPlacement: pendingDropPlacement
         )[status] ?? []
     }
 }
@@ -575,6 +570,7 @@ private struct TodoKanbanColumn: View {
     let move: (TodoDTO, Int) -> Void
     let updateDrag: (TodoDTO, CGPoint) -> Void
     let finishDrag: (TodoDTO) -> Void
+    let cancelDrag: () -> Void
     let drop: (TodoID, TodoStatus, TodoID?, Bool) -> Void
 
     var body: some View {
@@ -653,7 +649,8 @@ private struct TodoKanbanColumn: View {
                                     ? (dragInsertAfter ? .after : .before)
                                     : nil,
                                 updateDrag: { location in updateDrag(todo, location) },
-                                finishDrag: { finishDrag(todo) }
+                                finishDrag: { finishDrag(todo) },
+                                cancelDrag: cancelDrag
                             )
                             .opacity(draggedTodoID == todo.uuid ? 0 : 1)
                         }
@@ -673,6 +670,7 @@ private struct TodoKanbanColumn: View {
                 .padding(.bottom, DPSpacing.compact)
             }
             .scrollIndicators(.hidden)
+            .scrollDisabled(draggedTodoID != nil)
         }
         .frame(width: width)
         .background {
@@ -706,6 +704,8 @@ private struct TodoKanbanColumn: View {
 }
 
 private struct TodoCard: View {
+    @State private var suppressTapAfterLongPress = false
+
     let todo: TodoDTO
     let status: TodoStatus
     let canMoveUp: Bool
@@ -717,11 +717,12 @@ private struct TodoCard: View {
     let dropEdge: TodoDropEdge?
     let updateDrag: (CGPoint) -> Void
     let finishDrag: () -> Void
+    let cancelDrag: () -> Void
     var measuresDropTarget = true
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
-            Button(action: open) {
+            Button(action: handleTap) {
                 VStack(alignment: .leading, spacing: 0) {
                     HStack(alignment: .top, spacing: DPSpacing.small) {
                         Text(todo.title)
@@ -736,7 +737,6 @@ private struct TodoCard: View {
                                 .foregroundStyle(DPColor.textMuted)
                                 .accessibilityLabel(Text(todoLocalized("todo.label.attachments")))
                         }
-                        Spacer(minLength: DPSize.minimumTouchTarget)
                     }
 
                     if !todo.content.isEmpty {
@@ -788,29 +788,18 @@ private struct TodoCard: View {
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-
-            Image(systemName: "line.3.horizontal")
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(DPColor.textMuted)
-                .frame(width: TodoBoardLayout.dragHandleSize, height: TodoBoardLayout.dragHandleSize)
-                .contentShape(Rectangle())
-                .simultaneousGesture(
-                    DragGesture(
-                        minimumDistance: TodoBoardLayout.dragActivationDistance,
-                        coordinateSpace: .named(TodoDragCoordinateSpace.name)
-                    )
-                    .onChanged { value in
-                        if TodoHandleDragActivation.shouldReorder(translation: value.translation) {
-                            updateDrag(value.location)
-                        }
-                    }
-                    .onEnded { _ in finishDrag() }
-                )
-                .accessibilityHidden(true)
         }
         .padding(14)
         .background(DPColor.backgroundCard)
         .clipShape(RoundedRectangle(cornerRadius: TodoBoardLayout.cardRadius))
+        .contentShape(RoundedRectangle(cornerRadius: TodoBoardLayout.cardRadius))
+        .modifier(TodoCardGestureModifier(
+            suppressTapAfterLongPress: $suppressTapAfterLongPress,
+            handleTap: handleTap,
+            updateDrag: updateDrag,
+            finishDrag: finishDrag,
+            cancelDrag: cancelDrag
+        ))
         .overlay(
             ZStack {
                 RoundedRectangle(cornerRadius: TodoBoardLayout.cardRadius)
@@ -860,16 +849,98 @@ private struct TodoCard: View {
                 }
             }
         }
-        .accessibilityHint(todoLocalized("todo.drag.hint"))
         .accessibilityIdentifier("todo.card.\(todo.id)")
+    }
+
+    private func handleTap() {
+        if suppressTapAfterLongPress {
+            suppressTapAfterLongPress = false
+            return
+        }
+        open()
     }
 }
 
-enum TodoHandleDragActivation {
-    static func shouldReorder(translation: CGSize) -> Bool {
-        let horizontal = abs(translation.width)
-        let vertical = abs(translation.height)
-        return hypot(horizontal, vertical) >= TodoBoardLayout.dragActivationDistance
+private struct TodoCardGestureModifier: ViewModifier {
+    @Binding var suppressTapAfterLongPress: Bool
+    let handleTap: () -> Void
+    let updateDrag: (CGPoint) -> Void
+    let finishDrag: () -> Void
+    let cancelDrag: () -> Void
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if #available(iOS 18.0, *) {
+            content
+                .gesture(modernLongPressGesture)
+                .simultaneousGesture(
+                    TapGesture().onEnded(handleTap)
+                )
+        } else {
+            content.highPriorityGesture(legacyLongPressGesture)
+        }
+    }
+
+    @available(iOS 18.0, *)
+    private var modernLongPressGesture: DPLongPressGestureRecognizer {
+        DPLongPressGestureRecognizer(
+            minimumDuration: TodoBoardLayout.dragLongPressDuration,
+            maximumMovement: TodoBoardLayout.dragLongPressMaximumDistance,
+            coordinateSpaceName: TodoDragCoordinateSpace.name,
+            onBegan: { location in
+                suppressTapAfterLongPress = true
+                updateDrag(location)
+            },
+            onChanged: updateDrag,
+            onEnded: {
+                finishDrag()
+                releaseTapSuppression()
+            },
+            onCancelled: {
+                cancelDrag()
+                releaseTapSuppression()
+            }
+        )
+    }
+
+    private var legacyLongPressGesture: some Gesture {
+        LongPressGesture(
+            minimumDuration: TodoBoardLayout.dragLongPressDuration,
+            maximumDistance: TodoBoardLayout.dragLongPressMaximumDistance
+        )
+        .sequenced(before: DragGesture(
+            minimumDistance: 0,
+            coordinateSpace: .named(TodoDragCoordinateSpace.name)
+        ))
+        .onChanged { phase in
+            guard case let .second(didLongPress, dragValue) = phase,
+                  TodoCardDragActivation.shouldReorder(
+                      didLongPress: didLongPress,
+                      hasDragValue: dragValue != nil
+                  ),
+                  let dragValue else { return }
+            updateDrag(dragValue.location)
+        }
+        .onEnded { phase in
+            guard case let .second(didLongPress, dragValue) = phase,
+                  TodoCardDragActivation.shouldReorder(
+                      didLongPress: didLongPress,
+                      hasDragValue: dragValue != nil
+                  ) else { return }
+            finishDrag()
+        }
+    }
+
+    private func releaseTapSuppression() {
+        DispatchQueue.main.async {
+            suppressTapAfterLongPress = false
+        }
+    }
+}
+
+enum TodoCardDragActivation {
+    static func shouldReorder(didLongPress: Bool, hasDragValue: Bool) -> Bool {
+        didLongPress && hasDragValue
     }
 }
 
@@ -910,6 +981,7 @@ private struct TodoDragPreview: View {
             dropEdge: nil,
             updateDrag: { _ in },
             finishDrag: {},
+            cancelDrag: {},
             measuresDropTarget: false
         )
         .frame(width: size.width, height: size.height)
@@ -926,6 +998,18 @@ struct TodoDragPlacement: Equatable {
     let destinationStatus: TodoStatus
     let targetTodoID: TodoID?
     let insertAfter: Bool
+}
+
+enum TodoDragPresentation {
+    static func columns(
+        from columns: [TodoStatus: [TodoDTO]],
+        pendingDropPlacement: TodoDragPlacement?
+    ) -> [TodoStatus: [TodoDTO]] {
+        TodoDragProjection.columns(
+            projecting: pendingDropPlacement,
+            from: columns
+        )
+    }
 }
 
 enum TodoDragProjection {
@@ -1039,8 +1123,8 @@ enum TodoDragTargetResolver {
             )
         }
 
-        // A two-point movement should activate the handle without accidentally
-        // sending the card to the end of its own column.
+        // The first zero-distance sample after the long press should not
+        // accidentally send the card to the end of its own column.
         if cards.contains(where: { $0.todoID == draggedTodoID && $0.frame.contains(location) }) {
             return nil
         }
@@ -1179,6 +1263,7 @@ struct TodoFormSheet: View {
     @State private var didSave = false
     @State private var showsDiscardConfirmation = false
     @State private var isDiscarding = false
+    @State private var dismissFormAfterDiscard = false
     @State private var isSubmitting = false
     @StateObject private var attachmentModel: AttachmentPickerModel
     @FocusState private var focusedField: TodoFormField?
@@ -1241,18 +1326,32 @@ struct TodoFormSheet: View {
         .onChange(of: dismissRequest) { _, _ in requestDismissal() }
         .onAppear { onBusyChange(isBusy) }
         .onDisappear {
+            guard !showsDiscardConfirmation else { return }
             onBusyChange(false)
             guard !didSave else { return }
             Task { await attachmentModel.discard() }
         }
-        .alert(todoLocalized("todo.confirm.discardTitle"), isPresented: $showsDiscardConfirmation) {
-            Button(todoLocalized("todo.confirm.discardAction"), role: .destructive) {
-                confirmDiscard()
+        .fullScreenCover(isPresented: $showsDiscardConfirmation) {
+            DPModalOverlay(
+                maximumContentWidth: DPConfirmationPanel.maximumWidth,
+                onDismiss: { finishDiscardConfirmationDismissal() },
+                canDismiss: TodoConfirmationPolicy.canDismiss(
+                    isConfirming: isDiscarding,
+                    isSaving: isDiscardConfirmationSaving
+                )
+            ) { availableSize, confirmationDismiss in
+                DPConfirmationPanel(
+                    title: todoLocalized("todo.confirm.discardTitle"),
+                    message: todoLocalized("todo.confirm.discardMessage"),
+                    confirmTitle: todoLocalized("todo.confirm.discardAction"),
+                    cancelTitle: todoLocalized("common.cancel"),
+                    isDestructive: true,
+                    isWorking: isDiscarding || isDiscardConfirmationSaving,
+                    maximumHeight: availableSize.height,
+                    cancel: confirmationDismiss,
+                    confirm: { confirmDiscard(dismissConfirmation: confirmationDismiss) }
+                )
             }
-            .accessibilityIdentifier("todo.form.discard.confirm")
-            Button(todoLocalized("common.cancel"), role: .cancel) {}
-        } message: {
-            Text(todoLocalized("todo.confirm.discardMessage"))
         }
         .todoErrorAlert(model)
     }
@@ -1423,18 +1522,34 @@ struct TodoFormSheet: View {
         }
     }
 
-    private func confirmDiscard() {
-        guard !isOperationallyBusy else { return }
+    private func confirmDiscard(dismissConfirmation: @escaping () -> Void) {
+        guard TodoConfirmationPolicy.canBegin(
+            isConfirming: isDiscarding,
+            isSaving: isDiscardConfirmationSaving
+        ) else { return }
         isDiscarding = true
         onBusyChange(true)
         Task {
             let discarded = await attachmentModel.discard()
             isDiscarding = false
-            onBusyChange(isBusy)
             if discarded {
+                dismissFormAfterDiscard = true
                 await Task.yield()
-                dismissForm(saved: false)
+                dismissConfirmation()
+            } else {
+                onBusyChange(isBusy)
             }
+        }
+    }
+
+    private func finishDiscardConfirmationDismissal() {
+        showsDiscardConfirmation = false
+        guard dismissFormAfterDiscard else { return }
+        dismissFormAfterDiscard = false
+        onBusyChange(isBusy)
+        Task {
+            await Task.yield()
+            dismissForm(saved: false)
         }
     }
 
@@ -1478,11 +1593,17 @@ struct TodoFormSheet: View {
     }
 
     private var isOperationallyBusy: Bool {
-        isSubmitting || (!didSave && (isSaving || attachmentModel.isBusy || isDiscarding))
+        isSubmitting
+            || dismissFormAfterDiscard
+            || (!didSave && (isSaving || attachmentModel.isBusy || isDiscarding))
     }
 
     private var isBusy: Bool {
         isOperationallyBusy
+    }
+
+    private var isDiscardConfirmationSaving: Bool {
+        isSubmitting || isSaving || attachmentModel.isBusy
     }
 
     private func dismissForm(saved: Bool) {

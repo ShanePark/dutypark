@@ -50,6 +50,7 @@ final class AttachmentGalleryModel: ObservableObject {
     @Published var failure: AttachmentGalleryFailure?
 
     private let client: AttachmentClient
+    private let loadsRemotely: Bool
 
     init(
         contextType: AttachmentContextType,
@@ -59,9 +60,21 @@ final class AttachmentGalleryModel: ObservableObject {
         self.contextType = contextType
         self.contextId = contextId
         self.client = client
+        self.loadsRemotely = true
     }
 
+#if DEBUG
+    init(uiTestingAttachments: [AttachmentDTO]) {
+        self.contextType = .todo
+        self.contextId = "attachment-gallery-ui-testing-fixture"
+        self.client = AttachmentClient()
+        self.loadsRemotely = false
+        self.attachments = uiTestingAttachments
+    }
+#endif
+
     func load() async {
+        guard loadsRemotely else { return }
         isLoading = true
         defer { isLoading = false }
         do {
@@ -203,21 +216,31 @@ struct AttachmentGallery: View {
                 AttachmentShareSheet(items: [shareURL])
             }
         }
-        .confirmationDialog(
-            AttachmentLocalization.text("attachment.delete.title"),
+        .fullScreenCover(
             isPresented: Binding(
                 get: { deleteCandidate != nil },
                 set: { if !$0 { deleteCandidate = nil } }
-            ),
-            titleVisibility: .visible
+            )
         ) {
-            Button(AttachmentLocalization.text("attachment.action.delete"), role: .destructive) {
-                guard let deleteCandidate else { return }
-                self.deleteCandidate = nil
-                Task { await model.delete(deleteCandidate) }
-            }
-            Button(AttachmentLocalization.text("attachment.action.cancel"), role: .cancel) {
-                deleteCandidate = nil
+            if let deleteCandidate {
+                DPModalOverlay(
+                    maximumContentWidth: DPConfirmationPanel.maximumWidth,
+                    onDismiss: { self.deleteCandidate = nil }
+                ) { availableSize, dismiss in
+                    DPConfirmationPanel(
+                        title: AttachmentLocalization.text("attachment.delete.title"),
+                        message: deleteCandidate.originalFilename,
+                        confirmTitle: AttachmentLocalization.text("attachment.action.delete"),
+                        cancelTitle: AttachmentLocalization.text("attachment.action.cancel"),
+                        isDestructive: true,
+                        maximumHeight: availableSize.height,
+                        cancel: dismiss,
+                        confirm: {
+                            dismiss()
+                            Task { await model.delete(deleteCandidate) }
+                        }
+                    )
+                }
             }
         }
         .alert(
@@ -310,6 +333,7 @@ struct AttachmentGallery: View {
                             .contentShape(Rectangle())
                     }
                     .accessibilityLabel(AttachmentLocalization.text("attachment.action.more"))
+                    .accessibilityIdentifier("attachment.\(attachment.id.uuidString).more")
                 }
 
                 Button {
@@ -392,6 +416,53 @@ struct AttachmentGallery: View {
         }
     }
 }
+
+#if DEBUG
+struct AttachmentGalleryUITestingFixtureView: View {
+    private static let attachmentID = UUID(
+        uuidString: "11111111-2222-3333-4444-555555555555"
+    )!
+
+    @StateObject private var model: AttachmentGalleryModel
+
+    init() {
+        _model = StateObject(
+            wrappedValue: AttachmentGalleryModel(
+                uiTestingAttachments: [
+                    AttachmentDTO(
+                        id: Self.attachmentID,
+                        contextType: .todo,
+                        contextId: "attachment-gallery-ui-testing-fixture",
+                        originalFilename: "교대표-확인용.pdf",
+                        contentType: "application/pdf",
+                        size: 128_000,
+                        hasThumbnail: false,
+                        thumbnailUrl: nil,
+                        orderIndex: 0,
+                        createdAt: "2026-08-15T00:00:00Z",
+                        createdBy: 1
+                    )
+                ]
+            )
+        )
+    }
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: DPSpacing.large) {
+                Text(verbatim: "첨부파일 삭제 UI 검증")
+                    .font(DPTypography.heading)
+                    .foregroundStyle(DPColor.textPrimary)
+
+                AttachmentGallery(model: model, canEdit: true)
+            }
+            .padding(DPSpacing.large)
+        }
+        .background(DPColor.backgroundPrimary)
+        .accessibilityIdentifier("screen.attachmentGallery.fixture")
+    }
+}
+#endif
 
 private struct AttachmentShareSheet: UIViewControllerRepresentable {
     let items: [Any]

@@ -128,8 +128,8 @@ struct TodoViewModelTests {
         #expect(TodoBoardLayout.columnGap == 10)
         #expect(TodoBoardLayout.columnRadius == 12)
         #expect(TodoBoardLayout.cardRadius == 14)
-        #expect(TodoBoardLayout.dragHandleSize == 44)
-        #expect(TodoBoardLayout.dragActivationDistance == 2)
+        #expect(TodoBoardLayout.dragLongPressDuration == 0.35)
+        #expect(TodoBoardLayout.dragLongPressMaximumDistance == 10)
         #expect(TodoBoardLayout.dragCollisionHysteresis == 2)
         #expect(TodoBoardLayout.dragPushAnimationDuration == 0.1)
 
@@ -151,21 +151,24 @@ struct TodoViewModelTests {
     }
 
     @Test(arguments: [
-        (CGSize(width: 0, height: 2), true),
-        (CGSize(width: 0, height: -12), true),
-        (CGSize(width: 2, height: 0), true),
-        (CGSize(width: -8, height: 10), true),
-        (CGSize(width: 1, height: 1), false)
+        (false, false, false),
+        (false, true, false),
+        (true, false, false),
+        (true, true, true)
     ])
-    func handleDragReordersImmediatelyInEveryDirection(
-        translation: CGSize,
+    func cardDragStartsOnlyAfterLongPressAndDragValueExist(
+        didLongPress: Bool,
+        hasDragValue: Bool,
         expected: Bool
     ) {
-        #expect(TodoHandleDragActivation.shouldReorder(translation: translation) == expected)
+        #expect(TodoCardDragActivation.shouldReorder(
+            didLongPress: didLongPress,
+            hasDragValue: hasDragValue
+        ) == expected)
     }
 
     @Test
-    func immediateHandleDragDoesNotMoveWhileStillInsideItsSourceCard() {
+    func longPressedCardDoesNotMoveWhileStillInsideItsSourceFrame() {
         let sourceID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
         let otherID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
         let cards = [
@@ -393,7 +396,7 @@ struct TodoViewModelTests {
     }
 
     @Test
-    func handleDragMapsCardGapsAndColumnBottomToStableDropTargets() {
+    func cardDragMapsCardGapsAndColumnBottomToStableDropTargets() {
         let sourceID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
         let otherID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
         let cards = [
@@ -462,7 +465,7 @@ struct TodoViewModelTests {
     }
 
     @Test
-    func interactiveDragProjectionMovesTheFullCardAndPushesAdjacentItemsBeforeDrop() {
+    func cardDragKeepsTheBoardFixedUntilDropThenProjectsTheCommittedPlacement() {
         let first = makeTodo(
             id: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!,
             title: "First"
@@ -481,27 +484,33 @@ struct TodoViewModelTests {
             .done: []
         ]
 
-        let projected = TodoDragProjection.columns(
-            projecting: TodoDragPlacement(
+        let duringInteractiveDrag = TodoDragPresentation.columns(
+            from: original,
+            pendingDropPlacement: nil
+        )
+        #expect(duringInteractiveDrag == original)
+
+        let projected = TodoDragPresentation.columns(
+            from: original,
+            pendingDropPlacement: TodoDragPlacement(
                 todoID: moving.uuid,
                 destinationStatus: .todo,
                 targetTodoID: last.uuid,
                 insertAfter: true
-            ),
-            from: original
+            )
         )
 
         #expect(projected[.todo]?.map(\.uuid) == [first.uuid, last.uuid, moving.uuid])
         #expect(original[.todo]?.map(\.uuid) == [first.uuid, moving.uuid, last.uuid])
 
-        let crossColumnProjection = TodoDragProjection.columns(
-            projecting: TodoDragPlacement(
+        let crossColumnProjection = TodoDragPresentation.columns(
+            from: original,
+            pendingDropPlacement: TodoDragPlacement(
                 todoID: moving.uuid,
                 destinationStatus: .inProgress,
                 targetTodoID: nil,
                 insertAfter: false
-            ),
-            from: original
+            )
         )
         #expect(crossColumnProjection == original)
     }
@@ -572,6 +581,27 @@ struct TodoViewModelTests {
         #expect(TodoDestructiveConfirmation.leaveTag.titleKey == "todo.confirm.leaveTitle")
         #expect(TodoDestructiveConfirmation.leaveTag.messageKey == "todo.confirm.leaveMessage")
         #expect(TodoDestructiveConfirmation.leaveTag.actionKey == "todo.action.leaveTag")
+    }
+
+    @Test(arguments: [
+        (false, false, true),
+        (true, false, false),
+        (false, true, false),
+        (true, true, false)
+    ])
+    func confirmationBlocksDuplicateActionsAndDismissalWhileWorking(
+        isConfirming: Bool,
+        isSaving: Bool,
+        expected: Bool
+    ) {
+        #expect(TodoConfirmationPolicy.canBegin(
+            isConfirming: isConfirming,
+            isSaving: isSaving
+        ) == expected)
+        #expect(TodoConfirmationPolicy.canDismiss(
+            isConfirming: isConfirming,
+            isSaving: isSaving
+        ) == expected)
     }
 
     @Test
