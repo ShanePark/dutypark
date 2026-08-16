@@ -1,58 +1,53 @@
 # Dutypark iOS App Store 출시 준비
 
-> 현재 판정: 핵심 기능 구현은 후반부지만, 활성 상세 문서의 출시 차단 항목과 실기기·운영·심사 검증이 끝나지 않아 아직 출시 승인 상태가 아니다.
+제출까지 **실제로 만들어야 하거나 설정해야 하는 것**만 적는다. "동작하는지 확인한다" 류의 검증 항목은 여기서 관리하지 않고, 문제가 드러나면 그때 이슈로 다룬다.
 
-이 문서는 출시 준비 문서의 인덱스다. 상태, 체크 항목, 근거와 실행 절차는 각 상세 문서에서 관리한다.
+## 1. 사용자 신고·차단 (미구현)
 
-## 단계별 진행과 문서 현행화 규칙
+App Review Guideline 1.2가 요구하는 항목이다. Dutypark는 회원 검색으로 모르는 사람에게 친구 요청을 보낼 수 있고, 공개 달력은 비로그인 상태에서도 열린다. 현재 차단·신고 기능이 없다.
 
-- 출시 준비는 한 번에 한 단계씩 진행하고, 현재 단계의 완료 여부와 근거를 확인하기 전에는 다음 단계를 시작하지 않는다.
-- 구현·설정·검증·배포 작업이 끝나면 같은 작업 안에서 이 인덱스와 관련 상세 문서 및 하위 문서의 상태, 체크리스트, 최종 확인일과 검증 근거를 즉시 현행화한다.
-- App Store Connect, Apple Developer, 운영 서버와 실기기처럼 저장소 밖에서 수행한 작업은 실제 결과를 확인한 뒤에만 완료 처리한다. 확인할 수 없는 항목은 사용자 확인 또는 증거를 기다리는 상태로 남긴다.
+- [ ] 사용자 차단·차단 목록·차단 해제를 서버, 웹, iOS에 구현한다. 차단하면 일정·Todo·프로필·첨부, 검색, 친구 요청과 알림이 양방향으로 끊긴다.
+- [ ] 일정, Todo, 프로필 사진, 첨부파일, 공개 달력에서 신고 동작을 제공하고 사유·대상·신고자·시각을 서버에 저장한다.
+- [ ] 운영자가 신고 목록과 대상 콘텐츠를 조회하고 숨김·삭제·계정 제한을 실행할 관리자 화면을 만든다.
+- [ ] 금지 콘텐츠, 제재 단계, 이의제기와 신고 후 24시간 이내 조치 기준을 담은 이용 정책을 로그인 없이 열리는 URL로 공개한다.
+- [ ] 실제 응답 가능한 문의 이메일 또는 양식을 앱 설정과 Support URL에 게시한다.
 
-## 상태 정의
+## 2. 운영 환경 설정
 
-- `[ ] 미착수`: 범위 또는 실행을 시작하지 않음
-- `[-] 진행 중`: 구현·설정·검증이 진행 중
-- `[x] 완료`: 상세 완료 조건과 검증 근거를 충족함
-- `[!] 차단`: 외부 권한, 설정 또는 결정이 필요함
-- `[~] 해당 없음`: 제외 근거를 상세 문서에 기록함
+- [ ] APNs Auth Key(`.p8`)를 `Sandbox & Production` / `Team Scoped`로 발급하고 `APNS_TEAM_ID`, `APNS_KEY_ID`, `APNS_PRIVATE_KEY`를 운영 서버에 주입한다. 셋 중 하나라도 비면 APNs 발송이 비활성화된다.
+- [ ] `https://dutypark.o-r.kr/.well-known/apple-app-site-association`를 운영에 배포한다. 배포 전에는 Universal Link가 동작하지 않는다.
+- [ ] Apple 로그인 운영 환경변수(`APPLE_CLIENT_ID`, `APPLE_WEB_CLIENT_ID`, `APPLE_WEB_REDIRECT_URI`, `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_PRIVATE_KEY`, `APPLE_CREDENTIAL_ENCRYPTION_KEY`)를 주입한다. private key와 암호화 key는 secret manager에서만 공급한다.
+- [ ] 운영 프런트엔드 빌드에 `VITE_APPLE_CLIENT_ID=io.github.shanepark.dutypark.web`, `VITE_APPLE_REDIRECT_URI=https://dutypark.o-r.kr/auth/apple/callback`을 반영한다.
 
-한 항목 안에서 구현과 출시 준비 상태가 다르면 `구현 [x] / 출시 검증 [!]`처럼 분리해 적는다. 따라서 `[!]`는 코드 미구현을 뜻하지 않을 수 있으며, 외부 설정이나 운영·실기기 검증이 남은 경우에도 사용한다.
+## 3. App Store Connect 입력물
 
-## P0 — 출시 차단
+- [ ] 앱 이름, 기본 언어, SKU, 기본·보조 카테고리를 확정한다.
+- [ ] 판매 국가·지역을 정한다. EU에 배포하면 DSA trader 정보와 연락처·주소 검증을 완료한다.
+- [ ] App Store가 요구하는 기기 크기별 스크린샷을 전용 테스트 데이터로 제작한다.
+- [ ] `ko`, `en`의 앱 이름, 부제, 설명, 키워드, 프로모션 텍스트와 `What's New`를 작성한다.
+- [ ] 로그인 없이 열리는 지원 URL과 개인정보 처리방침 URL을 입력한다.
+- [ ] App Privacy에 데이터 유형, 목적, 사용자 연결 여부와 non-tracking 답변을 입력해 Publish한다.
+- [ ] 연령 등급, 콘텐츠 권리, 광고 식별자와 수출 규정 질문에 답한다.
+- [ ] 신고·차단 기능을 사실대로 선언한다.
+- [ ] App Review 연락처를 입력하고 심사용 전용 계정과 팀·친구 기능용 보조 계정을 준비한다.
+- [ ] Review Notes에 로그인, 소셜·Apple 로그인, 회원 탈퇴, 푸시, Universal Link, 신고·차단의 재현 경로를 작성한다.
+- [ ] AI 선택 동의와 외부 AI 전송·철회·수동 입력 경로를 current 개인정보 처리방침과 일치하게 설명한다.
 
-- `iOS·서버·웹 로그인/가입 구현 [x] / 출시 검증 [!]` [01-apple-sign-in/README.md](./01-apple-sign-in/README.md)
-- `[-]` [02-account-deletion/README.md](./02-account-deletion/README.md)
-- `정책·AI 동의·Manifest 구현 [x] / App Store 개인정보 검증 [!]` [03-privacy-and-ai-consent/README.md](./03-privacy-and-ai-consent/README.md)
-- `[-]` [04-auth-and-session-hardening/README.md](./04-auth-and-session-hardening/README.md)
+## 4. 개인정보 처리방침 확정
 
-## P1 — 제출 전 필수
+- [ ] 계정 삭제, 운영 감사 로그와 법정 보존 데이터의 근거·기간·삭제 또는 익명화 방식을 정책 문구에 반영한다.
+- [ ] production AI 일정 분석을 켤 경우에만: 외부 AI 처리업체, 처리 국가, 보관·삭제와 국외 이전 조건을 정책에 공개한다. 그 전까지 production AI 분석은 비활성 상태로 둔다.
 
-- `[!]` [05-push-notifications/README.md](./05-push-notifications/README.md)
-- `[!]` [06-associated-domains/README.md](./06-associated-domains/README.md)
-- `앱 레코드 [x] / 메타데이터·Privacy·규제 응답 [!]` [07-app-store-connect/README.md](./07-app-store-connect/README.md)
-- `자동 테스트·Archive·Validate·Upload·Connect 처리·내부 그룹·빌드·테스터 초대·리딤·설치·로그인 smoke [x] / 운영 기능·실기기 E2E [ ]` [08-testflight-and-review/README.md](./08-testflight-and-review/README.md)
-- `[-]` [09-quality-accessibility/README.md](./09-quality-accessibility/README.md)
-- `[ ]` [10-user-generated-content/README.md](./10-user-generated-content/README.md)
-- `인증서·Archive·Validate·Upload·Connect 처리 [x] / 최종 패키징 검증 [ ]` [11-release-engineering/README.md](./11-release-engineering/README.md)
-- `[x]` [13-mobile-web-parity-ui/README.md](./13-mobile-web-parity-ui/README.md)
+## 5. 제출
 
-## 권장 순서
+- [ ] 위 변경을 반영한 Release Archive를 새 빌드 번호로 생성해 App Store Connect에 업로드한다.
+- [ ] 업로드한 빌드를 선택하고 출시 방식을 정해 App Review에 제출한다.
 
-1. P0의 인증·계정·개인정보 차단 항목을 닫는다.
-2. 웹·앱 동등성, UGC, 품질·접근성 검증을 완료한다.
-3. OAuth, APNs, AASA와 운영 환경을 연결한다.
-4. 동일 Release 빌드를 Archive하고 TestFlight 실기기 E2E를 통과한다.
-5. App Store Connect 정보와 Review Notes를 확정한 뒤 제출한다.
-6. 배포·모니터링·지원·롤백 담당자와 기준을 확인한다.
+## 참고
 
-## 출시 승인 기준
+- Team ID `2V47G42CDS` / Bundle ID `io.github.shanepark.dutypark` / 웹 Services ID `io.github.shanepark.dutypark.web`
+- 마지막 업로드: `Dutypark` 1.0 (1) — Validate·업로드·내부 TestFlight 설치까지 완료
+- [App Review Guidelines 1.2 — UGC](https://developer.apple.com/app-store/review/guidelines/#user-generated-content)
+- [App Store Connect: DSA trader requirements](https://developer.apple.com/help/app-store-connect/manage-compliance-information/manage-european-union-digital-services-act-trader-requirements/)
 
-- P0는 모두 완료돼야 한다.
-- P1 미완료는 출시 책임자의 명시적 승인과 대응 계획이 있어야 한다.
-- 제출할 동일 Release 빌드가 자동 검증과 지원 실기기 핵심 E2E를 통과해야 한다.
-- 운영 OAuth, Production APNs, Universal Link와 개인정보 URL이 외부 환경에서 검증돼야 한다.
-- App Store Connect 답변, Review Notes와 앱의 실제 동작이 일치해야 한다.
-
-비밀값, 개인 키, 토큰, 비밀번호와 심사 계정 비밀번호는 문서나 Git에 기록하지 않는다.
+비밀값, 개인 키, 토큰과 심사 계정 비밀번호는 문서나 Git에 기록하지 않는다.
