@@ -15,12 +15,16 @@ data class GuideSection(
     val id: String,
     val title: String,
     val summary: String,
+    val icon: String,
+    val tone: String,
     val cards: List<GuideCard>,
 )
 
 data class GuideCard(
     val id: String,
     val title: String,
+    val icon: String,
+    val tone: String,
     val items: List<String>,
 )
 
@@ -68,7 +72,19 @@ data class ReleaseNoteItem(
 
 internal data class GuideContentSource(
     val schemaVersion: Int,
+    val visuals: Map<String, GuideSectionVisual>,
     val locales: Map<String, GuideLocaleSource>,
+)
+
+internal data class GuideSectionVisual(
+    val icon: String,
+    val tone: String,
+    val cards: Map<String, GuideCardVisual>,
+)
+
+internal data class GuideCardVisual(
+    val icon: String,
+    val tone: String,
 )
 
 internal data class GuideLocaleSource(
@@ -76,7 +92,20 @@ internal data class GuideLocaleSource(
     val description: String,
     val actions: GuideActionLabels,
     val footer: String,
-    val sections: List<GuideSection>,
+    val sections: List<GuideSectionSource>,
+)
+
+internal data class GuideSectionSource(
+    val id: String,
+    val title: String,
+    val summary: String,
+    val cards: List<GuideCardSource>,
+)
+
+internal data class GuideCardSource(
+    val id: String,
+    val title: String,
+    val items: List<String>,
 )
 
 internal data class ReleaseNotesSource(

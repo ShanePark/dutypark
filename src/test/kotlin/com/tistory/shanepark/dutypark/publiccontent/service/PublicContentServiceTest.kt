@@ -30,6 +30,36 @@ class PublicContentServiceTest {
     }
 
     @Test
+    fun `guide merges locale independent visuals into every section and card`() {
+        val guide = service.getGuide("ko")
+
+        val dashboard = guide.sections.first { it.id == "dashboard" }
+        assertThat(dashboard.icon).isEqualTo("home")
+        assertThat(dashboard.tone).isEqualTo("accent")
+        assertThat(dashboard.cards.first { it.id == "friends" }.icon).isEqualTo("users")
+        assertThat(dashboard.cards.first { it.id == "friends" }.tone).isEqualTo("neutral")
+
+        val settings = guide.sections.first { it.id == "settings" }
+        assertThat(settings.icon).isEqualTo("settings")
+        assertThat(settings.tone).isEqualTo("muted")
+        assertThat(settings.cards.first { it.id == "theme" }.icon).isEqualTo("sun")
+        assertThat(settings.cards.first { it.id == "theme" }.tone).isEqualTo("warning")
+
+        assertThat(guide.sections.flatMap { section ->
+            listOf(section.icon) + section.cards.map { it.icon }
+        }).allMatch { it.isNotBlank() }
+    }
+
+    @Test
+    fun `guide visuals are identical across locales for the same ids`() {
+        fun visualShape(locale: String) = service.getGuide(locale).sections.map { section ->
+            Triple(section.id, section.icon to section.tone, section.cards.map { it.id to (it.icon to it.tone) })
+        }
+
+        assertThat(visualShape("ko")).isEqualTo(visualShape("en"))
+    }
+
+    @Test
     fun `release notes merge locale copy with metadata and preserve escaped text as rendered text`() {
         val page = service.getReleaseNotes(locale = "en", page = 0, size = 50)
 

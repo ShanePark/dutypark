@@ -7,46 +7,25 @@ import { useLocaleStore } from '@/stores/locale'
 import { formatPublicContentLabel } from './publicContentLabel'
 import { useGuideContent } from './useGuideContent'
 import {
+  resolveGuideIcon,
+  resolveGuideToneClass,
+  type GuideIconComponent,
+} from './guideVisuals'
+import {
   BookOpen,
-  Home,
   ArrowLeft,
-  Calendar,
-  Users,
-  UserPlus,
-  Settings,
-  CalendarCheck,
-  ClipboardList,
-  Search,
-  FileSpreadsheet,
-  Eye,
-  Shield,
-  Smartphone,
-  Link,
-  Lock,
-  Sun,
   ChevronDown,
   ChevronUp,
-  Building2,
-  Pencil,
-  Plus,
-  Trash2,
-  Bell,
-  Sparkles,
-  Camera,
-  Palette,
-  UserCog,
   History,
   ExternalLink,
   Loader2,
   RotateCcw,
 } from 'lucide-vue-next'
 
-type GuideIcon = typeof Home
-
 interface GuideCardView {
   id: string
   title: string
-  icon: GuideIcon
+  icon: GuideIconComponent
   iconClass: string
   items: string[]
 }
@@ -54,21 +33,11 @@ interface GuideCardView {
 interface GuideSectionView {
   id: string
   title: string
-  icon: GuideIcon
+  icon: GuideIconComponent
   iconClass: string
   isOpen: boolean
   summary: string
   cards: GuideCardView[]
-}
-
-interface CardVisualConfig {
-  id: string
-  icon: GuideIcon
-  iconClass: string
-}
-
-interface SectionVisualConfig extends CardVisualConfig {
-  cards: readonly CardVisualConfig[]
 }
 
 const { t } = useI18n()
@@ -90,74 +59,6 @@ const {
   loadMoreReleaseNotes: fetchMoreReleaseNotes,
   retryLoadMoreReleaseNotes,
 } = useGuideContent()
-
-const sectionConfigs: readonly SectionVisualConfig[] = [
-  {
-    id: 'dashboard',
-    icon: Home,
-    iconClass: 'text-dp-accent',
-    cards: [
-      { id: 'today', icon: Calendar, iconClass: 'text-dp-accent' },
-      { id: 'friends', icon: Users, iconClass: 'text-dp-text-secondary' },
-    ],
-  },
-  {
-    id: 'calendar',
-    icon: Calendar,
-    iconClass: 'text-dp-success',
-    cards: [
-      { id: 'duty', icon: Pencil, iconClass: 'text-dp-warning' },
-      { id: 'excel', icon: FileSpreadsheet, iconClass: 'text-dp-success' },
-      { id: 'schedule', icon: Plus, iconClass: 'text-dp-accent' },
-      { id: 'ai', icon: Sparkles, iconClass: 'text-dp-accent-light' },
-      { id: 'visibility', icon: Eye, iconClass: 'text-dp-success' },
-      { id: 'dday', icon: CalendarCheck, iconClass: 'text-dp-accent-light' },
-      { id: 'todo', icon: ClipboardList, iconClass: 'text-dp-accent' },
-      { id: 'search', icon: Search, iconClass: 'text-dp-text-secondary' },
-      { id: 'together', icon: Users, iconClass: 'text-dp-success' },
-      { id: 'others', icon: UserPlus, iconClass: 'text-dp-accent-light' },
-    ],
-  },
-  {
-    id: 'team',
-    icon: Building2,
-    iconClass: 'text-dp-accent-light',
-    cards: [
-      { id: 'calendar', icon: Calendar, iconClass: 'text-dp-accent-light' },
-      { id: 'staff', icon: Users, iconClass: 'text-dp-accent' },
-      { id: 'schedule', icon: Plus, iconClass: 'text-dp-success' },
-      { id: 'members', icon: UserCog, iconClass: 'text-dp-accent' },
-      { id: 'dutyTypes', icon: Palette, iconClass: 'text-dp-accent-light' },
-      { id: 'excel', icon: FileSpreadsheet, iconClass: 'text-dp-success' },
-    ],
-  },
-  {
-    id: 'friends',
-    icon: UserPlus,
-    iconClass: 'text-dp-warning',
-    cards: [
-      { id: 'add', icon: UserPlus, iconClass: 'text-dp-accent' },
-      { id: 'requests', icon: Bell, iconClass: 'text-dp-danger' },
-      { id: 'family', icon: Home, iconClass: 'text-dp-warning' },
-      { id: 'pinning', icon: Users, iconClass: 'text-dp-warning' },
-      { id: 'remove', icon: Trash2, iconClass: 'text-dp-danger' },
-    ],
-  },
-  {
-    id: 'settings',
-    icon: Settings,
-    iconClass: 'text-dp-text-muted',
-    cards: [
-      { id: 'photo', icon: Camera, iconClass: 'text-dp-accent-light' },
-      { id: 'visibility', icon: Eye, iconClass: 'text-dp-accent' },
-      { id: 'theme', icon: Sun, iconClass: 'text-dp-warning' },
-      { id: 'delegation', icon: Shield, iconClass: 'text-dp-success' },
-      { id: 'sessions', icon: Smartphone, iconClass: 'text-dp-accent-light' },
-      { id: 'social', icon: Link, iconClass: 'text-dp-warning' },
-      { id: 'password', icon: Lock, iconClass: 'text-dp-text-secondary' },
-    ],
-  },
-] as const
 
 const sectionState = ref<Record<string, boolean>>({
   dashboard: true,
@@ -204,22 +105,20 @@ const guideSections = computed<GuideSectionView[]>(() => {
   const sections = guideContent.value?.sections ?? []
 
   return sections.map((section, sectionIndex) => {
-    const sectionConfig = sectionConfigs.find(config => config.id === section.id)
     const defaultOpen = sectionIndex === 0
 
     return {
       id: section.id,
       title: section.title,
-      icon: sectionConfig?.icon ?? BookOpen,
-      iconClass: sectionConfig?.iconClass ?? 'text-dp-text-secondary',
+      icon: resolveGuideIcon(section.icon),
+      iconClass: resolveGuideToneClass(section.tone),
       isOpen: sectionState.value[section.id] ?? defaultOpen,
       summary: section.summary,
       cards: section.cards.map(card => ({
         id: card.id,
         title: card.title,
-        icon: sectionConfig?.cards.find(config => config.id === card.id)?.icon ?? BookOpen,
-        iconClass: sectionConfig?.cards.find(config => config.id === card.id)?.iconClass
-          ?? 'text-dp-text-secondary',
+        icon: resolveGuideIcon(card.icon),
+        iconClass: resolveGuideToneClass(card.tone),
         items: card.items,
       })),
     }

@@ -1,5 +1,67 @@
 {
   "schemaVersion": 1,
+  "visuals": {
+    "dashboard": {
+      "icon": "home",
+      "tone": "accent",
+      "cards": {
+        "today": { "icon": "calendar", "tone": "accent" },
+        "friends": { "icon": "users", "tone": "neutral" }
+      }
+    },
+    "calendar": {
+      "icon": "calendar",
+      "tone": "success",
+      "cards": {
+        "duty": { "icon": "pencil", "tone": "warning" },
+        "excel": { "icon": "spreadsheet", "tone": "success" },
+        "schedule": { "icon": "plus", "tone": "accent" },
+        "ai": { "icon": "sparkles", "tone": "accentLight" },
+        "visibility": { "icon": "eye", "tone": "success" },
+        "dday": { "icon": "calendarCheck", "tone": "accentLight" },
+        "todo": { "icon": "checklist", "tone": "accent" },
+        "search": { "icon": "search", "tone": "neutral" },
+        "together": { "icon": "users", "tone": "success" },
+        "others": { "icon": "personAdd", "tone": "accentLight" }
+      }
+    },
+    "team": {
+      "icon": "building",
+      "tone": "accentLight",
+      "cards": {
+        "calendar": { "icon": "calendar", "tone": "accentLight" },
+        "staff": { "icon": "users", "tone": "accent" },
+        "schedule": { "icon": "plus", "tone": "success" },
+        "members": { "icon": "userCog", "tone": "accent" },
+        "dutyTypes": { "icon": "palette", "tone": "accentLight" },
+        "excel": { "icon": "spreadsheet", "tone": "success" }
+      }
+    },
+    "friends": {
+      "icon": "personAdd",
+      "tone": "warning",
+      "cards": {
+        "add": { "icon": "personAdd", "tone": "accent" },
+        "requests": { "icon": "bell", "tone": "danger" },
+        "family": { "icon": "home", "tone": "warning" },
+        "pinning": { "icon": "pin", "tone": "warning" },
+        "remove": { "icon": "trash", "tone": "danger" }
+      }
+    },
+    "settings": {
+      "icon": "settings",
+      "tone": "muted",
+      "cards": {
+        "photo": { "icon": "camera", "tone": "accentLight" },
+        "visibility": { "icon": "eye", "tone": "accent" },
+        "theme": { "icon": "sun", "tone": "warning" },
+        "delegation": { "icon": "shield", "tone": "success" },
+        "sessions": { "icon": "phone", "tone": "accentLight" },
+        "social": { "icon": "link", "tone": "warning" },
+        "password": { "icon": "lock", "tone": "neutral" }
+      }
+    }
+  },
   "locales": {
     "ko": {
       "title": "이용 안내",

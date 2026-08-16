@@ -958,6 +958,7 @@ struct SettingsView: View {
             .font(DPTypography.body)
             .foregroundStyle(DPColor.textPrimary)
             .frame(minHeight: DPSize.minimumTouchTarget)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
     }

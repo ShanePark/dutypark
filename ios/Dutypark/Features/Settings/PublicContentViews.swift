@@ -16,11 +16,9 @@ struct PublicGuideView: View {
 
     var body: some View {
         Group {
-            if model.isLoading, model.content == nil {
-                ProgressView(SettingsLocalization.string("settings.loading"))
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .accessibilityIdentifier("guide.loading")
-            } else if model.hasError, model.content == nil {
+            if let content = model.content {
+                guide(content)
+            } else if model.hasError {
                 ContentUnavailableView {
                     Label(
                         SettingsLocalization.string("settings.guide.loadError.title"),
@@ -35,8 +33,13 @@ struct PublicGuideView: View {
                     .frame(minHeight: DPSize.minimumTouchTarget)
                 }
                 .accessibilityIdentifier("guide.error")
-            } else if let content = model.content {
-                guide(content)
+            } else {
+                // The `else` branch must stay unconditional: before `.task` runs the model is
+                // neither loading nor failed, and an empty `Group` would drop the modifiers
+                // below - including the `.task` that starts the load.
+                ProgressView(SettingsLocalization.string("settings.loading"))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .accessibilityIdentifier("guide.loading")
             }
         }
         .background(DPColor.backgroundPrimary)
@@ -146,7 +149,10 @@ private struct PublicGuideSectionView: View {
             }
             .padding(.top, DPSpacing.medium)
         } label: {
-            let presentation = PublicContentPresentation.guideSection(id: section.id)
+            let presentation = PublicContentPresentation.guideVisual(
+                icon: section.icon,
+                tone: section.tone
+            )
             Label {
                 Text(verbatim: section.title)
                     .font(DPTypography.heading)
@@ -173,7 +179,7 @@ private struct PublicGuideCardView: View {
     let card: PublicGuideCard
 
     var body: some View {
-        let presentation = PublicContentPresentation.guideCard(id: card.id)
+        let presentation = PublicContentPresentation.guideVisual(icon: card.icon, tone: card.tone)
         VStack(alignment: .leading, spacing: DPSpacing.small) {
             Label {
                 Text(verbatim: card.title)
@@ -408,20 +414,24 @@ private extension PublicContentTone {
     var color: Color {
         switch self {
         case .accent: DPColor.accent
+        case .accentLight: DPColor.accentHover
         case .success: DPColor.success
         case .warning: DPColor.warning
         case .danger: DPColor.danger
         case .neutral: DPColor.textSecondary
+        case .muted: DPColor.textMuted
         }
     }
 
     var softColor: Color {
         switch self {
         case .accent: DPColor.accentSoft
+        case .accentLight: DPColor.accentSoft
         case .success: DPColor.successSoft
         case .warning: DPColor.warningSoft
         case .danger: DPColor.dangerSoft
         case .neutral: DPColor.backgroundTertiary
+        case .muted: DPColor.backgroundTertiary
         }
     }
 }

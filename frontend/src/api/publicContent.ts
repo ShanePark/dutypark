@@ -2,9 +2,20 @@ import apiClient from './client'
 
 export type ContentLocale = 'ko' | 'en'
 
+export type GuideTone =
+  | 'accent'
+  | 'accentLight'
+  | 'success'
+  | 'warning'
+  | 'danger'
+  | 'neutral'
+  | 'muted'
+
 export interface GuideCard {
   id: string
   title: string
+  icon: string
+  tone: string
   items: string[]
 }
 
@@ -12,6 +23,8 @@ export interface GuideSection {
   id: string
   title: string
   summary: string
+  icon: string
+  tone: string
   cards: GuideCard[]
 }
 

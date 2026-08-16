@@ -1,7 +1,9 @@
 package com.tistory.shanepark.dutypark.publiccontent.service
 
+import com.tistory.shanepark.dutypark.publiccontent.domain.GuideCard
 import com.tistory.shanepark.dutypark.publiccontent.domain.GuideContentResponse
 import com.tistory.shanepark.dutypark.publiccontent.domain.GuideContentSource
+import com.tistory.shanepark.dutypark.publiccontent.domain.GuideSection
 import com.tistory.shanepark.dutypark.publiccontent.domain.ReleaseNoteItem
 import com.tistory.shanepark.dutypark.publiccontent.domain.ReleaseNoteLabels
 import com.tistory.shanepark.dutypark.publiccontent.domain.ReleaseNotesResponse
@@ -33,7 +35,26 @@ class PublicContentService(
             description = localized.description,
             actions = localized.actions,
             footer = localized.footer,
-            sections = localized.sections,
+            sections = localized.sections.map { section ->
+                val sectionVisual = checkNotNull(guide.visuals[section.id])
+                GuideSection(
+                    id = section.id,
+                    title = section.title,
+                    summary = section.summary,
+                    icon = sectionVisual.icon,
+                    tone = sectionVisual.tone,
+                    cards = section.cards.map { card ->
+                        val cardVisual = checkNotNull(sectionVisual.cards[card.id])
+                        GuideCard(
+                            id = card.id,
+                            title = card.title,
+                            icon = cardVisual.icon,
+                            tone = cardVisual.tone,
+                            items = card.items,
+                        )
+                    },
+                )
+            },
         )
     }
 
@@ -118,6 +139,44 @@ class PublicContentService(
             locale.sections.map { section -> section.id to section.cards.map { it.id to it.items.size } }
         }
         check(sectionShape.distinct().size == 1)
+        validateGuideVisuals(source)
+    }
+
+    /**
+     * Visuals are locale-independent, so every section/card id in every locale must resolve to exactly one
+     * visual entry and vice versa: drift in either direction must fail startup instead of reaching a client.
+     */
+    private fun validateGuideVisuals(source: GuideContentSource) {
+        source.locales.values.forEach { locale ->
+            locale.sections.forEach { section ->
+                val sectionVisual = requireNotNull(source.visuals[section.id]) {
+                    "Guide section '${section.id}' has no visuals entry"
+                }
+                section.cards.forEach { card ->
+                    requireNotNull(sectionVisual.cards[card.id]) {
+                        "Guide card '${section.id}/${card.id}' has no visuals entry"
+                    }
+                }
+            }
+        }
+        val contentCardIds = source.locales.values
+            .flatMap { it.sections }
+            .groupBy({ it.id }, { section -> section.cards.map { it.id }.toSet() })
+            .mapValues { (_, cardIds) -> cardIds.flatten().toSet() }
+        check(source.visuals.keys == contentCardIds.keys) {
+            "Guide visuals sections ${source.visuals.keys} do not match content sections ${contentCardIds.keys}"
+        }
+        source.visuals.forEach { (sectionId, sectionVisual) ->
+            check(sectionVisual.cards.keys == contentCardIds.getValue(sectionId)) {
+                "Guide visuals cards for section '$sectionId' do not match content cards"
+            }
+            check(sectionVisual.icon in ICON_KEYS) { "Unknown guide icon '${sectionVisual.icon}'" }
+            check(sectionVisual.tone in TONE_KEYS) { "Unknown guide tone '${sectionVisual.tone}'" }
+            sectionVisual.cards.forEach { (cardId, cardVisual) ->
+                check(cardVisual.icon in ICON_KEYS) { "Unknown guide icon '${cardVisual.icon}' on '$sectionId/$cardId'" }
+                check(cardVisual.tone in TONE_KEYS) { "Unknown guide tone '${cardVisual.tone}' on '$sectionId/$cardId'" }
+            }
+        }
     }
 
     private fun validateReleaseNotes(source: ReleaseNotesSource) {
@@ -152,6 +211,16 @@ class PublicContentService(
         private val SUPPORTED_LOCALES = setOf("ko", "en")
         private const val GUIDE_RESOURCE = "public-content/guide.json"
         private const val RELEASE_NOTES_RESOURCE = "public-content/release-notes.json"
+
+        /** Closed vocabularies shared with every client's icon/colour mapping table. */
+        private val TONE_KEYS = setOf(
+            "accent", "accentLight", "success", "warning", "danger", "neutral", "muted",
+        )
+        private val ICON_KEYS = setOf(
+            "home", "calendar", "calendarCheck", "building", "settings", "users",
+            "personAdd", "userCog", "pencil", "spreadsheet", "plus", "sparkles", "eye", "checklist",
+            "search", "palette", "sun", "bell", "pin", "trash", "camera", "shield", "phone", "link", "lock",
+        )
     }
 
     private data class LoadedResource<T>(
