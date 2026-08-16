@@ -407,12 +407,14 @@ private struct NotificationRow: View {
     }
 }
 
-private struct NotificationHeaderActionButton: View {
+struct NotificationHeaderActionButton: View {
     let title: String
     let systemImage: String
     var isDestructive = false
     let accessibilityIdentifier: String
     let action: () -> Void
+
+    @Environment(\.isEnabled) private var isEnabled
 
     var body: some View {
         Button(action: action) {
@@ -427,6 +429,7 @@ private struct NotificationHeaderActionButton: View {
             .padding(.horizontal, 10)
             .frame(minHeight: DPSize.minimumTouchTarget)
             .background(DPColor.backgroundTertiary, in: RoundedRectangle(cornerRadius: DPRadius.standard))
+            .opacity(isEnabled ? 1 : DPChrome.disabledOpacity)
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier(accessibilityIdentifier)

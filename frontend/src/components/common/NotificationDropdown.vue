@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { ChevronRight } from 'lucide-vue-next'
+import { CheckCheck, ChevronRight } from 'lucide-vue-next'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import 'dayjs/locale/ko'
@@ -44,6 +44,10 @@ const displayNotifications = computed(() => {
   return notificationStore.recentNotifications.slice(0, 10)
 })
 
+const hasUnreadInDropdown = computed(() => {
+  return displayNotifications.value.some(n => !n.isRead)
+})
+
 function formatTimeAgo(dateString: string): string {
   return dayjs(dateString).locale(dayjsLocale.value).fromNow()
 }
@@ -83,6 +87,14 @@ async function handleNotificationClick(notification: NotificationDto) {
   emit('close')
 }
 
+async function handleMarkAllAsRead() {
+  try {
+    await notificationStore.markAllAsRead()
+  } catch {
+    // Keep the dropdown open; the unread state simply stays as-is
+  }
+}
+
 function handleViewAll() {
   router.push('/notifications')
   emit('close')
@@ -118,6 +130,15 @@ function handleOverlayClick() {
       <!-- Header -->
       <div class="notification-dropdown-header flex items-center justify-between px-4 py-3">
         <h3 class="text-sm font-semibold">{{ t('notifications.dropdown.title') }}</h3>
+        <button
+          type="button"
+          class="notification-mark-all-btn cursor-pointer flex items-center gap-1 text-xs px-2 py-1.5 rounded transition-all duration-150"
+          :disabled="!hasUnreadInDropdown"
+          @click="handleMarkAllAsRead"
+        >
+          <CheckCheck class="w-3.5 h-3.5" />
+          {{ t('notifications.list.markAllAsReadShort') }}
+        </button>
       </div>
 
       <!-- Notification List -->
@@ -207,6 +228,21 @@ function handleOverlayClick() {
   background-color: var(--dp-bg-tertiary);
   border-bottom: 1px solid var(--dp-border-primary);
   color: var(--dp-text-primary);
+}
+
+.notification-mark-all-btn {
+  color: var(--dp-text-secondary);
+  background-color: var(--dp-bg-card);
+}
+
+.notification-mark-all-btn:hover:not(:disabled) {
+  color: var(--dp-text-primary);
+  background-color: var(--dp-bg-hover);
+}
+
+.notification-mark-all-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
 }
 
 .notification-dropdown-body {

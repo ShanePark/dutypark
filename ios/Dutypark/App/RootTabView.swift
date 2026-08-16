@@ -921,15 +921,40 @@ private struct NotificationDropdown: View {
     let onOpen: (NotificationDTO) async -> Void
     let onViewAll: () -> Void
 
+    private var displayedNotifications: [NotificationDTO] {
+        Array(store.notifications.prefix(10))
+    }
+
+    private var hasUnreadDisplayedNotifications: Bool {
+        displayedNotifications.contains { !$0.isRead }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
-            Text(RootChromeLocalization.notifications("notifications.title"))
-                .font(DPFont.bold(size: 14, relativeTo: .subheadline))
-                .foregroundStyle(DPColor.textPrimary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, DPSpacing.medium)
-                .frame(minHeight: DPSize.minimumTouchTarget)
-                .background(DPColor.backgroundTertiary)
+            HStack(spacing: DPSpacing.small) {
+                Text(RootChromeLocalization.notifications("notifications.title"))
+                    .font(DPFont.bold(size: 14, relativeTo: .subheadline))
+                    .foregroundStyle(DPColor.textPrimary)
+
+                Spacer(minLength: 0)
+
+                NotificationHeaderActionButton(
+                    title: RootChromeLocalization.notifications(
+                        "notifications.list.markAllAsReadShort"
+                    ),
+                    systemImage: "checkmark.circle",
+                    accessibilityIdentifier: "notifications.dropdown.markAllAsRead"
+                ) {
+                    Task { try? await store.markAllAsRead() }
+                }
+                .disabled(!hasUnreadDisplayedNotifications)
+            }
+            .padding(.horizontal, DPSpacing.medium)
+            .frame(minHeight: DPSize.minimumTouchTarget)
+            .background(DPColor.backgroundTertiary)
+            // Keeps the dropdown-wide accessibility identifier from overwriting the
+            // header button's own identifier.
+            .accessibilityElement(children: .contain)
 
             Divider().overlay(DPColor.borderPrimary)
 
@@ -949,12 +974,12 @@ private struct NotificationDropdown: View {
                 } else {
                     ScrollView {
                         LazyVStack(spacing: 0) {
-                            ForEach(Array(store.notifications.prefix(10)), id: \.id) { notification in
+                            ForEach(displayedNotifications, id: \.id) { notification in
                                 NotificationDropdownRow(notification: notification) {
                                     Task { await onOpen(notification) }
                                 }
 
-                                if notification.id != store.notifications.prefix(10).last?.id {
+                                if notification.id != displayedNotifications.last?.id {
                                     Divider().overlay(DPColor.borderPrimary)
                                 }
                             }
