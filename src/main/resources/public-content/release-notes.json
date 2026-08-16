@@ -40,6 +40,15 @@
         }
       },
       "entries": {
+        "pr-404": {
+          "title": "iOS 앱 기능 일치와 공용 콘텐츠 통합",
+          "summary": "iOS 앱의 화면과 상호작용을 모바일 웹 수준으로 다듬고, 이용 안내와 변경사항을 웹과 앱이 같은 공용 콘텐츠에서 제공하도록 통합했습니다.",
+          "changes": [
+            "iOS 캘린더, Todo, 친구, 팀, 관리자 및 설정 화면의 문구, 확인창, 탐색, 정렬과 새로고침 경험을 모바일 웹과 맞췄습니다.",
+            "이용 안내와 변경사항을 서버 공용 콘텐츠로 통합해 웹과 iOS에서 같은 최신 내용을 제공합니다.",
+            "출시 화면과 자동 검증을 보강해 앱 시작 경험과 공용 콘텐츠 배포 안정성을 높였습니다."
+          ]
+        },
         "pr-403": {
           "title": "Dutypark 네이티브 iOS 앱 출시",
           "summary": "익숙한 캘린더, Todo, 팀, 친구, 설정을 새로운 네이티브 iOS 앱에서 이용하고, 웹과 모바일에서 일관된 로그인 및 계정 관리 기능을 사용할 수 있습니다.",
@@ -2192,6 +2201,15 @@
         }
       },
       "entries": {
+        "pr-404": {
+          "title": "iOS parity and shared public content",
+          "summary": "Polishes native iOS screens and interactions to match the mobile web experience, while serving guides and release notes from shared public content across web and iOS.",
+          "changes": [
+            "Align copy, confirmations, navigation, reordering, and refresh behavior across iOS calendars, todos, friends, teams, admin, and settings with mobile web.",
+            "Serve guides and release notes from shared server content so web and iOS receive the same current information.",
+            "Improve app startup and public-content delivery reliability with a refreshed launch experience and stronger automated checks."
+          ]
+        },
         "pr-403": {
           "title": "Dutypark comes to iPhone",
           "summary": "Use Dutypark in a new native iOS app with familiar calendars, todos, teams, friends, and settings, backed by sign-in and account controls that work consistently across web and mobile.",
@@ -4307,6 +4325,19 @@
     }
   },
   "items": [
+    {
+      "id": "pr-404",
+      "version": "2026.08.16",
+      "date": "2026-08-16",
+      "pr": 404,
+      "url": "https://github.com/ShanePark/dutypark/pull/404",
+      "category": "improvement",
+      "areas": [
+        "guide",
+        "localization",
+        "ui"
+      ]
+    },
     {
       "id": "pr-403",
       "version": "2026.08.15",
