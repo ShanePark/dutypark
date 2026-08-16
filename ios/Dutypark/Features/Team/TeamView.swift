@@ -290,6 +290,9 @@ struct TeamView: View {
 
     private var calendar: some View {
         let columns = Array(repeating: GridItem(.flexible(), spacing: 0), count: 7)
+        // The weekday header and the day cells are indexed from zero, so sharing one
+        // grid makes the first week collide with the header row in the grid's
+        // identity space and render blank. Two grids keep the identities apart.
         return VStack(spacing: 0) {
             LazyVGrid(columns: columns, spacing: 0) {
                 ForEach(Array(TeamLocalization.shortStandaloneWeekdaySymbols.enumerated()), id: \.offset) { index, weekday in
@@ -303,6 +306,8 @@ struct TeamView: View {
                         }
                         .overlay(alignment: .bottom) { Rectangle().fill(DPColor.borderSecondary).frame(height: 1) }
                 }
+            }
+            LazyVGrid(columns: columns, spacing: 0) {
                 ForEach(Array(viewModel.days.enumerated()), id: \.offset) { index, day in
                     TeamCalendarDayCell(
                         day: day,
