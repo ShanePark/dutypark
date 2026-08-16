@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 import Testing
 import UIKit
 @testable import Dutypark
@@ -487,6 +488,20 @@ struct AdminFeatureTests {
         #expect(AdminTeamPaginationPolicy.compactItems(currentPage: 4, totalPages: 10) == [
             .page(0), .gap, .page(4), .gap, .page(9),
         ])
+    }
+
+    /// The empty state is a list row, so it must keep the 132pt height floor the
+    /// web parity layout relies on and stay driven by the localized catalog copy
+    /// rather than a system-supplied string.
+    @Test("The team list empty state keeps its row height floor and localized copy") @MainActor
+    func teamEmptyStatePresentation() {
+        let size = UIHostingController(rootView: AdminTeamEmptyState()).sizeThatFits(
+            in: CGSize(width: 320, height: 1_000)
+        )
+
+        #expect(size.width > 0, "empty state width was \(size.width)")
+        #expect(size.height >= 132, "empty state height was \(size.height)")
+        #expect(!AdminLocalization.string("admin.teams.empty").isEmpty)
     }
 
     @Test("Admin edit modals use one dirty-form dismissal policy for every request source")

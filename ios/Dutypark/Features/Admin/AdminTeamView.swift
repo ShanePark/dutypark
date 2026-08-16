@@ -209,15 +209,18 @@ private struct AdminTeamListSummary: View {
     }
 }
 
-private struct AdminTeamEmptyState: View {
+struct AdminTeamEmptyState: View {
     var body: some View {
-        VStack(spacing: DPSpacing.small) {
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 28, weight: .medium))
-                .foregroundStyle(DPColor.textMuted)
-            Text(AdminLocalization.string("admin.teams.empty"))
-                .font(DPTypography.body)
-                .foregroundStyle(DPColor.textMuted)
+        ContentUnavailableView {
+            Label {
+                Text(AdminLocalization.string("admin.teams.empty"))
+                    .font(DPTypography.body)
+                    .foregroundStyle(DPColor.textMuted)
+            } icon: {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 28, weight: .medium))
+                    .foregroundStyle(DPColor.textMuted)
+            }
         }
         .frame(maxWidth: .infinity, minHeight: 132)
         .accessibilityIdentifier("admin.teams.empty")
