@@ -63,6 +63,22 @@ final class AttachmentGalleryModel: ObservableObject {
         self.loadsRemotely = true
     }
 
+    /// Schedule payloads already embed their attachment metadata, so a gallery built
+    /// this way renders thumbnails right away instead of waiting for a redundant list
+    /// request. The owner keeps it in sync through `apply(_:)`.
+    init(
+        contextType: AttachmentContextType,
+        contextId: String,
+        attachments: [AttachmentDTO],
+        client: AttachmentClient = AttachmentClient()
+    ) {
+        self.contextType = contextType
+        self.contextId = contextId
+        self.client = client
+        self.loadsRemotely = false
+        self.attachments = attachments
+    }
+
 #if DEBUG
     init(uiTestingAttachments: [AttachmentDTO]) {
         self.contextType = .todo
@@ -82,6 +98,11 @@ final class AttachmentGalleryModel: ObservableObject {
         } catch {
             failure = .loadFailed
         }
+    }
+
+    func apply(_ attachments: [AttachmentDTO]) {
+        guard !loadsRemotely else { return }
+        self.attachments = attachments
     }
 
     func delete(_ attachment: AttachmentDTO) async {

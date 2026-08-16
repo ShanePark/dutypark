@@ -575,17 +575,16 @@ private struct GuestScheduleAttachments: View {
         self.schedule = schedule
         _gallery = StateObject(wrappedValue: AttachmentGalleryModel(
             contextType: .schedule,
-            contextId: schedule.id.uuidString
+            contextId: schedule.id.uuidString,
+            attachments: schedule.attachments
         ))
     }
 
     var body: some View {
-        DisclosureGroup {
-            AttachmentGallery(model: gallery, canEdit: false)
-        } label: {
-            Label("\(schedule.attachments.count)", systemImage: "paperclip")
-                .font(.caption)
-        }
+        AttachmentGallery(model: gallery, canEdit: false)
+            .onChange(of: schedule.attachments) { _, attachments in
+                gallery.apply(attachments)
+            }
     }
 }
 

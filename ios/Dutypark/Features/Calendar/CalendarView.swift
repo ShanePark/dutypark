@@ -2588,18 +2588,16 @@ private struct ScheduleAttachmentGallery: View {
         self.canEdit = canEdit
         _gallery = StateObject(wrappedValue: AttachmentGalleryModel(
             contextType: .schedule,
-            contextId: schedule.id.uuidString
+            contextId: schedule.id.uuidString,
+            attachments: schedule.attachments
         ))
     }
 
     var body: some View {
-        DisclosureGroup {
-            AttachmentGallery(model: gallery, canEdit: canEdit)
-        } label: {
-            Label("\(schedule.attachments.count)", systemImage: "paperclip")
-                .font(.caption)
-        }
-        .buttonStyle(.plain)
+        AttachmentGallery(model: gallery, canEdit: canEdit)
+            .onChange(of: schedule.attachments) { _, attachments in
+                gallery.apply(attachments)
+            }
     }
 }
 
