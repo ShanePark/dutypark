@@ -465,7 +465,7 @@ struct TodoViewModelTests {
     }
 
     @Test
-    func cardDragKeepsTheBoardFixedUntilDropThenProjectsTheCommittedPlacement() {
+    func cardDragProjectsNeighbourShiftsInsideAndAcrossColumns() {
         let first = makeTodo(
             id: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!,
             title: "First"
@@ -484,13 +484,7 @@ struct TodoViewModelTests {
             .done: []
         ]
 
-        let duringInteractiveDrag = TodoDragPresentation.columns(
-            from: original,
-            pendingDropPlacement: nil
-        )
-        #expect(duringInteractiveDrag == original)
-
-        let projected = TodoDragPresentation.columns(
+        let withinColumn = TodoDragPresentation.columns(
             from: original,
             pendingDropPlacement: TodoDragPlacement(
                 todoID: moving.uuid,
@@ -499,11 +493,9 @@ struct TodoViewModelTests {
                 insertAfter: true
             )
         )
+        #expect(withinColumn[.todo]?.map(\.uuid) == [first.uuid, last.uuid, moving.uuid])
 
-        #expect(projected[.todo]?.map(\.uuid) == [first.uuid, last.uuid, moving.uuid])
-        #expect(original[.todo]?.map(\.uuid) == [first.uuid, moving.uuid, last.uuid])
-
-        let crossColumnProjection = TodoDragPresentation.columns(
+        let acrossColumns = TodoDragPresentation.columns(
             from: original,
             pendingDropPlacement: TodoDragPlacement(
                 todoID: moving.uuid,
@@ -512,7 +504,86 @@ struct TodoViewModelTests {
                 insertAfter: false
             )
         )
-        #expect(crossColumnProjection == original)
+        #expect(acrossColumns[.todo]?.map(\.uuid) == [first.uuid, last.uuid])
+        #expect(acrossColumns[.inProgress]?.map(\.uuid) == [moving.uuid])
+
+        #expect(original[.todo]?.map(\.uuid) == [first.uuid, moving.uuid, last.uuid])
+        #expect(original[.inProgress]?.isEmpty == true)
+    }
+
+    @Test
+    func liveDragPlacementMovesTheBoardAndHandsOffToTheCommittedPlacement() {
+        let first = makeTodo(
+            id: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!,
+            title: "First"
+        )
+        let moving = makeTodo(
+            id: UUID(uuidString: "22222222-2222-2222-2222-222222222222")!,
+            title: "Moving"
+        )
+        let last = makeTodo(
+            id: UUID(uuidString: "33333333-3333-3333-3333-333333333333")!,
+            title: "Last"
+        )
+        let original: [TodoStatus: [TodoDTO]] = [
+            .todo: [first, moving, last],
+            .inProgress: [],
+            .done: []
+        ]
+        let placement = TodoDragPlacement(
+            todoID: moving.uuid,
+            destinationStatus: .todo,
+            targetTodoID: last.uuid,
+            insertAfter: true
+        )
+
+        let idle = TodoDragPresentation.columns(
+            from: original,
+            interactivePlacement: nil,
+            pendingDropPlacement: nil
+        )
+        #expect(idle == original)
+
+        let duringDrag = TodoDragPresentation.columns(
+            from: original,
+            interactivePlacement: placement,
+            pendingDropPlacement: nil
+        )
+        #expect(duringDrag[.todo]?.map(\.uuid) == [first.uuid, last.uuid, moving.uuid])
+
+        let afterLift = TodoDragPresentation.columns(
+            from: original,
+            interactivePlacement: nil,
+            pendingDropPlacement: placement
+        )
+        #expect(afterLift == duringDrag)
+
+        let stillHeld = TodoDragPresentation.columns(
+            from: original,
+            interactivePlacement: placement,
+            pendingDropPlacement: TodoDragPlacement(
+                todoID: moving.uuid,
+                destinationStatus: .done,
+                targetTodoID: nil,
+                insertAfter: false
+            )
+        )
+        #expect(stillHeld == duringDrag)
+    }
+
+    @Test
+    func todoBoardRendersTheLiveDragTargetAndCommitsTheSamePlacement() throws {
+        let source = try String(
+            contentsOf: URL(fileURLWithPath: #filePath)
+                .deletingLastPathComponent()
+                .deletingLastPathComponent()
+                .appending(path: "Dutypark/Features/Todo/TodoView.swift"),
+            encoding: .utf8
+        )
+
+        #expect(source.contains("private var inlineDropPlacement: TodoDragPlacement?"))
+        #expect(source.contains("interactivePlacement: inlineDropPlacement"))
+        #expect(!source.contains("destinationStatus == todo.status"))
     }
 
     @Test

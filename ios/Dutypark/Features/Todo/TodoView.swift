@@ -370,14 +370,14 @@ struct TodoView: View {
             clearInteractiveDrag()
             return
         }
-        let placement = destinationStatus == todo.status
-            ? TodoDragPlacement(
-                todoID: todo.uuid,
-                destinationStatus: destinationStatus,
-                targetTodoID: targetTodoID,
-                insertAfter: insertAfter
-            )
-            : nil
+        // The same placement the drag was already rendering, so swapping the live
+        // projection for the committed one on lift changes nothing on screen.
+        let placement = TodoDragPlacement(
+            todoID: todo.uuid,
+            destinationStatus: destinationStatus,
+            targetTodoID: targetTodoID,
+            insertAfter: insertAfter
+        )
         handleDrop(
             todoID: todo.uuid,
             destinationStatus: destinationStatus,
@@ -544,12 +544,26 @@ struct TodoView: View {
         }
     }
 
+    /// The drop target resolved from the current gesture sample, expressed as the
+    /// placement the drop would commit. Rendering it makes the neighbouring cards
+    /// step aside live and turns the hidden dragged row into a moving placeholder.
+    private var inlineDropPlacement: TodoDragPlacement? {
+        guard let draggedTodoID, let dragTargetStatus else { return nil }
+        return TodoDragPlacement(
+            todoID: draggedTodoID,
+            destinationStatus: dragTargetStatus,
+            targetTodoID: dragTargetTodoID,
+            insertAfter: dragInsertAfter
+        )
+    }
+
     private func displayedTodos(for status: TodoStatus) -> [TodoDTO] {
         let columns = Dictionary(
             uniqueKeysWithValues: TodoStatus.boardStatuses.map { ($0, model.todos(for: $0)) }
         )
         return TodoDragPresentation.columns(
             from: columns,
+            interactivePlacement: inlineDropPlacement,
             pendingDropPlacement: pendingDropPlacement
         )[status] ?? []
     }
@@ -1001,32 +1015,43 @@ struct TodoDragPlacement: Equatable {
 }
 
 enum TodoDragPresentation {
+    /// The board follows the finger: while a card is held the live interactive
+    /// placement drives the layout, and the committed placement takes over for
+    /// the frames between the lift and the model update. Both project the same
+    /// board at the hand-off, so the card never jumps on drop.
     static func columns(
         from columns: [TodoStatus: [TodoDTO]],
+        interactivePlacement: TodoDragPlacement? = nil,
         pendingDropPlacement: TodoDragPlacement?
     ) -> [TodoStatus: [TodoDTO]] {
         TodoDragProjection.columns(
-            projecting: pendingDropPlacement,
+            projecting: interactivePlacement ?? pendingDropPlacement,
             from: columns
         )
     }
 }
 
 enum TodoDragProjection {
+    /// Mirrors `TodoViewModel.drop` so the projected board is exactly the board
+    /// the drop will commit. The moving card is looked up in whichever column
+    /// currently holds it, which is what lets the same projection drive both a
+    /// same-column reorder and a cross-column preview.
     static func columns(
         projecting placement: TodoDragPlacement?,
         from columns: [TodoStatus: [TodoDTO]]
     ) -> [TodoStatus: [TodoDTO]] {
-        guard let placement else { return columns }
-
-        var result = columns
-        guard let sourceItems = result[placement.destinationStatus],
-              let movingTodo = sourceItems.first(where: { $0.uuid == placement.todoID }) else {
+        guard let placement, placement.targetTodoID != placement.todoID else { return columns }
+        guard let sourceStatus = TodoStatus.boardStatuses.first(where: { status in
+            columns[status]?.contains { $0.uuid == placement.todoID } == true
+        }),
+            let movingTodo = columns[sourceStatus]?.first(where: { $0.uuid == placement.todoID }),
+            columns[placement.destinationStatus] != nil else {
             return columns
         }
 
-        var destination = sourceItems
-        destination.removeAll { $0.uuid == placement.todoID }
+        var result = columns
+        result[sourceStatus]?.removeAll { $0.uuid == placement.todoID }
+        var destination = result[placement.destinationStatus] ?? []
         let insertionIndex: Int
         if let targetTodoID = placement.targetTodoID,
            let targetIndex = destination.firstIndex(where: { $0.uuid == targetTodoID }) {
@@ -1034,7 +1059,7 @@ enum TodoDragProjection {
         } else {
             insertionIndex = destination.endIndex
         }
-        destination.insert(movingTodo, at: min(insertionIndex, destination.endIndex))
+        destination.insert(movingTodo, at: min(max(0, insertionIndex), destination.endIndex))
         result[placement.destinationStatus] = destination
         return result
     }
