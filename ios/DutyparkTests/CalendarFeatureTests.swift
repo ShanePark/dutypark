@@ -23,25 +23,6 @@ final class CalendarFeatureTests: XCTestCase {
         XCTAssertFalse(source.contains("private func openTodoBoard()"), "Calendar keeps only the quick-add entry")
     }
 
-    func testCalendarHeaderAllocatesEqualSidesAroundMonthNavigation() {
-        XCTAssertEqual(
-            CalendarMainLayout.headerSideWidth(
-                containerWidth: 359,
-                monthControlsWidth: 176,
-                interColumnSpacing: 2
-            ),
-            89.5
-        )
-        XCTAssertEqual(
-            CalendarMainLayout.headerSideWidth(
-                containerWidth: 160,
-                monthControlsWidth: 176,
-                interColumnSpacing: 2
-            ),
-            0
-        )
-    }
-
     func testComparedDutyRetainsProfileMetadataForCalendarAvatar() async throws {
         let response = OtherDutyResponse(
             memberId: 2,

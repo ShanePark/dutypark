@@ -143,7 +143,7 @@ struct RootTabView: View {
         ZStack(alignment: .topTrailing) {
             TabView(selection: tabSelection) {
                 homeTab
-                primaryTab(.calendar) {
+                primaryTab(.calendar, showsNavigationBar: true) {
                     CalendarView(
                         memberID: calendarTarget.memberID,
                         date: calendarTarget.date,
@@ -156,8 +156,10 @@ struct RootTabView: View {
                         todoTarget = nil
                     }
                 }
-                primaryTab(.team) { TeamView(onOpenCalendar: openMemberCalendar) }
-                primaryTab(.settings) {
+                primaryTab(.team, showsNavigationBar: true) {
+                    TeamView(onOpenCalendar: openMemberCalendar)
+                }
+                primaryTab(.settings, showsNavigationBar: true, showsTabTitle: true) {
                     SettingsView(destination: $settingsDestination) {
                         homeRefreshID &+= 1
                     }
@@ -337,11 +339,13 @@ struct RootTabView: View {
     private func primaryTab<Content: View>(
         _ tab: AppTab,
         showsNavigationBar: Bool = false,
+        showsTabTitle: Bool = false,
         @ViewBuilder content: () -> Content
     ) -> some View {
         NavigationStack {
             content()
-                .navigationTitle("")
+                .navigationTitle(showsTabTitle ? tab.localizedTitle : "")
+                .navigationBarTitleDisplayMode(.inline)
                 .toolbar(showsNavigationBar ? .visible : .hidden, for: .navigationBar)
                 .accessibilityIdentifier("screen.\(tab.rawValue)")
         }

@@ -153,49 +153,6 @@ struct TeamView: View {
     private func teamContent(_ team: TeamDTO) -> some View {
         ScrollView {
             VStack(spacing: DPSpacing.compact) {
-                HStack(spacing: DPSpacing.extraSmall) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "building.2")
-                            .font(.system(size: 14))
-                        Text(verbatim: team.name)
-                            .font(DPTypography.caption)
-                            .lineLimit(1)
-                    }
-                    .foregroundStyle(DPColor.textPrimary)
-                    .padding(.horizontal, DPSpacing.small)
-                    .frame(width: 80, alignment: .leading)
-                    .frame(minHeight: 32)
-                    .background(DPColor.backgroundTertiary)
-                    .clipShape(Capsule())
-                    .overlay { Capsule().stroke(DPColor.borderSecondary) }
-
-                    monthHeader
-                        .frame(maxWidth: .infinity)
-
-                    Group {
-                    if viewModel.isTeamManager {
-                        NavigationLink {
-                            TeamManageView(
-                                teamID: team.id,
-                                onTeamChanged: { viewModel.applyManagedTeam($0) },
-                                onDutyBatchChanged: { year, month in
-                                    Task {
-                                        await viewModel.refreshDutiesAfterBatch(year: year, month: month)
-                                    }
-                                }
-                            )
-                        } label: {
-                            Image(systemName: "gearshape")
-                                .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel(Text("team.view.actions.manage", tableName: "Team"))
-                    } else {
-                        Color.clear.frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
-                    }
-                    }
-                }
-
                 calendar
                 selectedSchedules
                 shiftList
@@ -204,6 +161,86 @@ struct TeamView: View {
             .padding(.vertical, DPSpacing.medium)
         }
         .background(DPColor.backgroundPrimary)
+        .toolbar { teamToolbar(team) }
+    }
+
+    // The leading and trailing bar items claim the same width so the month
+    // navigation in the principal slot stays centred on the screen.
+    private static let barSideWidth: CGFloat = 88
+
+    @ToolbarContentBuilder
+    private func teamToolbar(_ team: TeamDTO) -> some ToolbarContent {
+        DPDashboardHeaderToolbarItem(placement: .topBarLeading) {
+            teamNameChip(team)
+                .frame(width: Self.barSideWidth, alignment: .leading)
+        }
+        DPDashboardHeaderToolbarItem(placement: .principal) {
+            monthHeader
+        }
+        DPDashboardHeaderToolbarItem(placement: .topBarTrailing) {
+            HStack(spacing: 0) {
+                if !isCurrentMonth {
+                    thisMonthControl
+                }
+                if viewModel.isTeamManager {
+                    manageControl(team)
+                }
+            }
+            .frame(width: Self.barSideWidth, alignment: .trailing)
+        }
+    }
+
+    private func teamNameChip(_ team: TeamDTO) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: "building.2")
+                .font(.system(size: 14))
+            Text(verbatim: team.name)
+                .font(DPTypography.caption)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+        }
+        .foregroundStyle(DPColor.textPrimary)
+        .padding(.horizontal, DPSpacing.small)
+        .frame(minHeight: 32)
+        .background(DPColor.backgroundTertiary)
+        .clipShape(Capsule())
+        .overlay { Capsule().stroke(DPColor.borderSecondary) }
+        .accessibilityElement(children: .combine)
+    }
+
+    private func manageControl(_ team: TeamDTO) -> some View {
+        NavigationLink {
+            TeamManageView(
+                teamID: team.id,
+                onTeamChanged: { viewModel.applyManagedTeam($0) },
+                onDutyBatchChanged: { year, month in
+                    Task {
+                        await viewModel.refreshDutiesAfterBatch(year: year, month: month)
+                    }
+                }
+            )
+        } label: {
+            Image(systemName: "gearshape")
+                .frame(width: 36, height: DPSize.minimumTouchTarget)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text("team.view.actions.manage", tableName: "Team"))
+    }
+
+    // Mirrors the calendar tab: the navigation bar cannot host the stacked
+    // "this month" shortcut, so it becomes a trailing bar button.
+    private var thisMonthControl: some View {
+        Button {
+            Task { await viewModel.goToToday() }
+        } label: {
+            Text("team.view.calendar.thisMonth", tableName: "Team")
+                .font(DPTypography.caption)
+                .lineLimit(1)
+                .padding(.horizontal, DPSpacing.extraSmall)
+                .frame(height: DPSize.minimumTouchTarget)
+                .contentShape(Rectangle())
+        }
+        .disabled(viewModel.isLoading)
     }
 
     private var monthHeader: some View {
@@ -218,32 +255,21 @@ struct TeamView: View {
             .accessibilityLabel(Text("team.view.calendar.month", tableName: "Team"))
             .disabled(viewModel.isLoading)
 
-            VStack(spacing: -2) {
-                Button {
-                    monthPickerPresented = true
-                } label: {
-                    HStack(spacing: DPSpacing.extraSmall) {
-                        Text(
-                            verbatim: "\(viewModel.year)-\(String(format: "%02d", locale: AppLocalization.locale, viewModel.month))"
-                        )
-                            .font(DPTypography.label)
-                        Image(systemName: "chevron.down")
-                            .font(.caption2.weight(.bold))
-                    }
-                    .frame(minHeight: 26)
+            Button {
+                monthPickerPresented = true
+            } label: {
+                HStack(spacing: DPSpacing.extraSmall) {
+                    Text(
+                        verbatim: "\(viewModel.year)-\(String(format: "%02d", locale: AppLocalization.locale, viewModel.month))"
+                    )
+                        .font(DPTypography.label)
+                    Image(systemName: "chevron.down")
+                        .font(.caption2.weight(.bold))
                 }
-                .accessibilityLabel(Text("team.view.calendar.chooseMonth", tableName: "Team"))
-                .disabled(viewModel.isLoading)
-                if !isCurrentMonth {
-                    Button {
-                        Task { await viewModel.goToToday() }
-                    } label: {
-                        Text("team.view.calendar.thisMonth", tableName: "Team")
-                            .font(DPTypography.caption)
-                    }
-                }
+                .frame(minHeight: DPSize.minimumTouchTarget)
             }
-            .frame(maxWidth: .infinity)
+            .accessibilityLabel(Text("team.view.calendar.chooseMonth", tableName: "Team"))
+            .disabled(viewModel.isLoading)
 
             Button {
                 Task { await viewModel.nextMonth() }

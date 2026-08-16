@@ -19,14 +19,6 @@ private struct CalendarTodoSelection: Identifiable {
 }
 
 nonisolated enum CalendarMainLayout {
-    static func headerSideWidth(
-        containerWidth: CGFloat,
-        monthControlsWidth: CGFloat,
-        interColumnSpacing: CGFloat
-    ) -> CGFloat {
-        max(0, (containerWidth - monthControlsWidth - interColumnSpacing * 2) / 2)
-    }
-
     static func shouldShowDutyToolbar(
         hasDutySummary: Bool,
         hasComparisonAction: Bool,
@@ -62,7 +54,6 @@ struct CalendarView: View {
     @State private var searchModalCanDismiss = true
     @State private var dayDismissRequest = 0
     @State private var dDayDismissRequest = 0
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     init(memberID: MemberID? = nil, date: DateOnly? = nil, scheduleID: ScheduleID? = nil) {
         _model = StateObject(wrappedValue: CalendarViewModel(memberID: memberID, date: date, scheduleID: scheduleID))
@@ -85,6 +76,7 @@ struct CalendarView: View {
         }
         .dpKeyboardDismissToolbar()
         .background(DPColor.backgroundPrimary)
+        .toolbar { calendarToolbar }
         .task { if model.days.isEmpty { await model.load() } }
         .fullScreenCover(item: $model.selectedDay) { day in
             DPModalOverlay(
@@ -233,7 +225,6 @@ struct CalendarView: View {
     private var calendarContent: some View {
         ScrollView {
             LazyVStack(spacing: DPSpacing.small) {
-                calendarHeader
                 if model.isMyCalendar, !model.isQuickDutyEditing {
                     dutyTodoRow
                 }
@@ -252,37 +243,28 @@ struct CalendarView: View {
         .refreshable { await model.load() }
     }
 
-    private var calendarHeader: some View {
-        GeometryReader { geometry in
-            let monthControlsWidth: CGFloat = 176
-            let spacing: CGFloat = 2
-            let sideWidth = CalendarMainLayout.headerSideWidth(
-                containerWidth: geometry.size.width,
-                monthControlsWidth: monthControlsWidth,
-                interColumnSpacing: spacing
-            )
-            HStack(spacing: spacing) {
-                memberIdentity
-                    .frame(width: sideWidth, alignment: .leading)
-                    .clipped()
-                monthControls
-                    .frame(width: monthControlsWidth)
-                    .zIndex(1)
-                    .accessibilityElement(children: .contain)
-                    .accessibilityIdentifier("calendar.month.controls")
-                Group {
-                    if model.canSearchSchedules {
-                        searchControl
-                    } else {
-                        Color.clear
-                            .frame(height: 44)
-                            .accessibilityHidden(true)
-                    }
-                }
-                .frame(width: sideWidth, alignment: .trailing)
-            }
+    @ToolbarContentBuilder
+    private var calendarToolbar: some ToolbarContent {
+        DPDashboardHeaderToolbarItem(placement: .topBarLeading) {
+            memberIdentity
+                .frame(width: Self.barSideWidth, alignment: .leading)
         }
-        .frame(height: DPSize.minimumTouchTarget)
+        DPDashboardHeaderToolbarItem(placement: .principal) {
+            monthControls
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier("calendar.month.controls")
+        }
+        DPDashboardHeaderToolbarItem(placement: .topBarTrailing) {
+            HStack(spacing: 0) {
+                if !isViewingCurrentMonth {
+                    thisMonthControl
+                }
+                if model.canSearchSchedules {
+                    searchControl
+                }
+            }
+            .frame(width: Self.barSideWidth, alignment: .trailing)
+        }
     }
 
     private var memberIdentity: some View {
@@ -323,40 +305,32 @@ struct CalendarView: View {
         .accessibilityIdentifier("calendar.month.display")
     }
 
-    private var thisMonthBubble: some View {
+    // Every bar control is narrower than `DPSize.minimumTouchTarget`; the 44pt-tall
+    // navigation bar cannot fit the leading identity, the month navigation and two
+    // trailing actions otherwise. Height stays at the full touch target.
+    private static let barControlWidth: CGFloat = 36
+
+    // The leading and trailing bar items claim the same width so the month
+    // navigation in the principal slot stays centred on the screen.
+    private static let barSideWidth: CGFloat = 88
+
+    // The former floating callout cannot survive inside the navigation bar, so the
+    // "go to this month" affordance follows the platform convention of a plain
+    // trailing bar button instead.
+    private var thisMonthControl: some View {
         Button { Task { await model.goToToday() } } label: {
-            HStack(spacing: 3) {
-                Image(systemName: "arrow.uturn.backward")
-                    .font(.system(size: 10, weight: .bold))
-                Text(CalendarLocalization.text("calendar.month.goToThisMonth"))
-                    .font(DPFont.bold(size: 11, relativeTo: .caption2))
-                    .lineLimit(1)
-            }
-            .foregroundStyle(DPColor.textOnDark)
-            .padding(.horizontal, 8)
-            .frame(height: 22)
-            .background(DPColor.accent, in: Capsule())
-            .background(alignment: .bottomLeading) {
-                RoundedRectangle(cornerRadius: 1)
-                    .fill(DPColor.accent)
-                    .frame(width: 8, height: 8)
-                    .rotationEffect(.degrees(45))
-                    .offset(x: 8, y: 3)
-            }
-            .compositingGroup()
-            .shadow(color: DPColor.accent.opacity(0.35), radius: 4, x: 0, y: 2)
-            .padding(.top, 12)
-            .padding(.leading, 12)
-            .padding(.trailing, 3)
-            .padding(.bottom, 4)
-            .contentShape(Rectangle())
+            Image(systemName: "arrow.uturn.backward")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(DPColor.accent)
+                .frame(width: Self.barControlWidth, height: DPSize.minimumTouchTarget)
+                .contentShape(Rectangle())
         }
         .accessibilityLabel(CalendarLocalization.text("calendar.month.goToThisMonth"))
     }
 
     private var monthCenterControls: some View {
         monthLabel
-            .frame(width: 88)
+            .frame(width: 78)
             .clipShape(RoundedRectangle(cornerRadius: DPRadius.compact))
     }
 
@@ -365,56 +339,29 @@ struct CalendarView: View {
             Button { Task { await model.changeMonth(by: -1) } } label: {
                 Image(systemName: "chevron.left")
                     .font(.system(size: 18, weight: .semibold))
-                    .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                    .frame(width: Self.barControlWidth, height: DPSize.minimumTouchTarget)
             }
             monthCenterControls
             Button { Task { await model.changeMonth(by: 1) } } label: {
                 Image(systemName: "chevron.right")
                     .font(.system(size: 18, weight: .semibold))
-                    .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                    .frame(width: Self.barControlWidth, height: DPSize.minimumTouchTarget)
             }
         }
         .foregroundStyle(DPColor.accent)
-        // Attached to the whole HStack so the bubble wins hit-testing over the
-        // chevron buttons wherever it is drawn; the offset keeps the capsule in
-        // the same spot above the year-month label.
-        .overlay(alignment: .topTrailing) {
-            if !isViewingCurrentMonth {
-                thisMonthBubble
-                    .offset(x: -21, y: -24)
-                    .transition(.offset(y: 4).combined(with: .opacity))
-            }
-        }
-        .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: isViewingCurrentMonth)
     }
 
+    // The navigation bar has no room for the inline query field; tapping opens the
+    // search modal, which already carries its own field and the full placeholder.
     private var searchControl: some View {
-        HStack(spacing: 0) {
-            TextField(
-                "",
-                text: $model.searchQuery,
-                prompt: Text(CalendarLocalization.text("calendar.search.short"))
-                    .foregroundStyle(DPColor.textMuted)
-            )
-                .font(DPFont.light(size: 12, relativeTo: .caption))
-                .foregroundStyle(DPColor.textPrimary)
-                .padding(.horizontal, 10)
-                .frame(minWidth: 0, minHeight: 44)
-                .submitLabel(.search)
-                .onSubmit { performSearch() }
-            Button(action: performSearch) {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(DPColor.accentHover)
-                    .frame(width: 44, height: 44)
-                    .background(DPColor.accentSoft)
-            }
-            .accessibilityLabel(CalendarLocalization.text("calendar.search"))
+        Button(action: performSearch) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(DPColor.accentHover)
+                .frame(width: Self.barControlWidth, height: DPSize.minimumTouchTarget)
+                .contentShape(Rectangle())
         }
-        .frame(maxWidth: 116, minHeight: 44, maxHeight: 44)
-        .background(DPColor.backgroundInput)
-        .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
-        .overlay(RoundedRectangle(cornerRadius: DPRadius.standard).stroke(DPColor.borderSecondary))
+        .accessibilityLabel(CalendarLocalization.text("calendar.search"))
     }
 
     private func performSearch() {
