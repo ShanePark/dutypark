@@ -24,6 +24,8 @@ struct DPErrorState: View {
     let retryTitle: LocalizedStringKey?
     let retryAction: (() -> Void)?
 
+    @ScaledMetric(relativeTo: .largeTitle) private var iconSize: CGFloat = 32
+
     init(
         title: LocalizedStringKey,
         message: LocalizedStringKey? = nil,
@@ -37,31 +39,30 @@ struct DPErrorState: View {
     }
 
     var body: some View {
-        VStack(spacing: DPSpacing.medium) {
-            VStack(spacing: DPSpacing.small) {
-                Image(systemName: "exclamationmark.triangle")
-                    .font(.system(size: 32))
-                    .foregroundStyle(DPColor.danger)
-                    .accessibilityHidden(true)
+        ContentUnavailableView {
+            Label {
                 Text(title)
                     .font(DPTypography.heading)
                     .foregroundStyle(DPColor.textPrimary)
-                    .multilineTextAlignment(.center)
-                if let message {
-                    Text(message)
-                        .font(DPTypography.supporting)
-                        .foregroundStyle(DPColor.textSecondary)
-                        .multilineTextAlignment(.center)
-                }
+            } icon: {
+                Image(systemName: "exclamationmark.triangle")
+                    .font(.system(size: iconSize))
+                    .foregroundStyle(DPColor.danger)
+                    .accessibilityHidden(true)
             }
-
+        } description: {
+            if let message {
+                Text(message)
+                    .font(DPTypography.supporting)
+                    .foregroundStyle(DPColor.textSecondary)
+            }
+        } actions: {
             if let retryTitle, let retryAction {
                 Button(retryTitle, action: retryAction)
                     .buttonStyle(DPPrimaryButtonStyle())
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(DPSpacing.large)
         .accessibilityIdentifier("state.error")
     }
 }
