@@ -126,6 +126,20 @@ struct RootTabView: View {
     @State private var isLoggingOut = false
 
     var body: some View {
+        // The banner is stacked above the tab content rather than attached with
+        // `safeAreaInset`: the tabs' UIKit navigation bars do not adopt a safe-area
+        // inset applied outside the `TabView`, so the banner would paint on top of
+        // the header instead of pushing it down.
+        VStack(spacing: 0) {
+            if authenticatedMember?.isImpersonating == true {
+                ImpersonationBanner()
+            }
+            rootContent
+        }
+        .tint(DPColor.accent)
+    }
+
+    private var rootContent: some View {
         ZStack(alignment: .topTrailing) {
             TabView(selection: tabSelection) {
                 homeTab
@@ -257,12 +271,6 @@ struct RootTabView: View {
         } message: {
             Text("link.unsupported.message")
         }
-        .safeAreaInset(edge: .top, spacing: 0) {
-            if case .authenticated(let member) = session.state, member.isImpersonating {
-                ImpersonationBanner()
-            }
-        }
-        .tint(DPColor.accent)
     }
 
     private var homeTab: some View {
@@ -884,11 +892,20 @@ private struct ImpersonationBanner: View {
                 }
                 .font(.caption.weight(.semibold))
                 .buttonStyle(.bordered)
+                .tint(DPColor.warningHover)
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
             .frame(maxWidth: .infinity)
-            .background(.orange.opacity(0.18))
+            // Opaque so the tab content behind it never shows through, and extended
+            // upwards so the status bar strip is tinted with the banner instead of
+            // being left unpainted.
+            .background(DPColor.warningSoft.ignoresSafeArea(edges: .top))
+            .overlay(alignment: .bottom) {
+                Rectangle()
+                    .fill(DPColor.warningBorder)
+                    .frame(height: 1)
+            }
             .accessibilityIdentifier("impersonation.banner")
         }
     }
