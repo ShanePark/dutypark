@@ -112,6 +112,59 @@ final class SocialViewEntryUITests: XCTestCase {
         XCTAssertTrue(moreTab.isSelected)
     }
 
+    // Friend management is itself pushed onto the More stack, so a friend's calendar
+    // stacks on top of it: the More tab stays selected and back returns to the friend
+    // list rather than to the menu or to the calendar tab.
+    @MainActor
+    func testFriendCalendarStacksOnTopOfFriendManagementInTheMoreTab() {
+        let app = XCUIApplication()
+        app.launchArguments += [
+            "-dp-language", "ko",
+            "-dp-theme", "dark",
+            "-AppleLanguages", "(ko)",
+            "-AppleLocale", "ko_KR",
+            "-ui-testing-authenticated",
+        ]
+        app.launch()
+        defer { app.terminate() }
+
+        XCTAssertTrue(
+            app.descendants(matching: .any)["screen.home"].waitForExistence(timeout: 20)
+        )
+        let moreTab = app.buttons.matching(identifier: "tab.more").firstMatch
+        XCTAssertTrue(moreTab.waitForExistence(timeout: 10))
+        moreTab.tap()
+
+        let friendManagementButton = app.buttons["more.friends"].firstMatch
+        XCTAssertTrue(friendManagementButton.waitForExistence(timeout: 10))
+        friendManagementButton.tap()
+
+        let socialList = app.descendants(matching: .any)["social.list"]
+        XCTAssertTrue(socialList.waitForExistence(timeout: 10))
+
+        let friendButton = socialList.buttons["알렉스"].firstMatch
+        XCTAssertTrue(friendButton.waitForExistence(timeout: 10))
+        friendButton.tap()
+
+        let memberCalendar = app.descendants(matching: .any)["screen.calendar.member"]
+        XCTAssertTrue(memberCalendar.waitForExistence(timeout: 10))
+        XCTAssertTrue(
+            moreTab.isSelected,
+            "A friend calendar opened from the More stack must not jump to the calendar tab"
+        )
+
+        let identityChip = app.buttons["calendar.member.back"].firstMatch
+        XCTAssertTrue(identityChip.waitForExistence(timeout: 10))
+        identityChip.tap()
+
+        XCTAssertTrue(memberCalendar.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(
+            socialList.waitForExistence(timeout: 10),
+            "Back from a friend calendar must return to the friend list it was opened from"
+        )
+        XCTAssertTrue(moreTab.isSelected)
+    }
+
     @MainActor
     func testRemoveFriendUsesCenteredSharedConfirmation() {
         let app = XCUIApplication()
