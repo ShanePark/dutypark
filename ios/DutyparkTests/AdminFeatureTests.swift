@@ -75,6 +75,31 @@ struct AdminFeatureTests {
         #expect(AdminMemberSearchPolicy.normalized("  Shane  ") == "Shane")
     }
 
+    @Test("Admin stats band pairs every value with the web's kicker and note copy")
+    func dashboardStatsBandPresentation() {
+        let stats = AdminDashboardStatsPresentation(
+            totalMembers: 24,
+            loadedMembers: [],
+            sessions: [],
+            today: "2026-08-15"
+        )
+
+        #expect(AdminDashboardStatsPresentation.localizationKeys.map(\.label) == [
+            "admin.dashboard.stats.totalMembersLabel",
+            "admin.dashboard.stats.totalTeamsLabel",
+            "admin.dashboard.stats.activeTokensLabel",
+            "admin.dashboard.stats.todayLoginsLabel",
+        ])
+        #expect(AdminDashboardStatsPresentation.localizationKeys.map(\.note) == [
+            "admin.dashboard.stats.totalMembersNote",
+            "admin.dashboard.stats.totalTeamsNote",
+            "admin.dashboard.stats.activeTokensNote",
+            "admin.dashboard.stats.todayLoginsNote",
+        ])
+        #expect(stats.tiles.map(\.value) == stats.values)
+        #expect(stats.tiles.map(\.key) == AdminDashboardStatsPresentation.localizationKeys)
+    }
+
     @Test("Selected admin tile keeps readable contrast in light and dark appearances")
     func selectedAdminTileContrast() {
         for style in [UIUserInterfaceStyle.light, .dark] {
@@ -86,6 +111,116 @@ struct AdminFeatureTests {
 
             #expect(contrastRatio(foreground, background) >= 4.5)
         }
+        #expect(AdminTopTilePresentation.columnCount == 4)
+    }
+
+    @Test("Admin member session list collapses to the most recent session and expands on demand")
+    func memberSessionListCollapsing() {
+        let tokens = [
+            Self.token(id: 1, lastUsed: "2026-08-10T09:00:00", isCurrentLogin: false),
+            Self.token(id: 2, lastUsed: "2026-08-15T09:00:00", isCurrentLogin: false),
+            Self.token(id: 3, lastUsed: "2026-08-01T09:00:00", isCurrentLogin: true),
+        ]
+
+        let collapsed = AdminMemberSessionListPresentation(tokens: tokens, isExpanded: false)
+        let expanded = AdminMemberSessionListPresentation(tokens: tokens, isExpanded: true)
+
+        #expect(collapsed.tokens.map(\.id) == [3, 2, 1])
+        #expect(collapsed.tokens.map(\.id) == SettingsSessionFormatter.sorted(tokens).map(\.id))
+        #expect(collapsed.visibleTokens.map(\.id) == [3])
+        #expect(collapsed.hiddenCount == 2)
+        #expect(collapsed.showsToggle(at: 0))
+        #expect(!collapsed.showsToggle(at: 1))
+        #expect(collapsed.toggleTitle == "+2")
+        #expect(expanded.visibleTokens.map(\.id) == [3, 2, 1])
+        #expect(expanded.toggleTitle == "-")
+
+        let single = AdminMemberSessionListPresentation(tokens: [tokens[0]], isExpanded: false)
+        #expect(single.hiddenCount == 0)
+        #expect(!single.showsToggle(at: 0))
+    }
+
+    @Test("Admin member rows expose the login session IP, device and client details inline")
+    func memberSessionListDetails() {
+        let browserToken = Self.token(
+            id: 4,
+            lastUsed: "2026-08-15T09:00:00",
+            isCurrentLogin: false,
+            remoteAddr: "203.0.113.7",
+            userAgent: .init(os: "macOS", browser: "Chrome", device: "Mac"),
+            clientType: .browser
+        )
+        let appToken = Self.token(
+            id: 5,
+            lastUsed: "2026-08-16T09:00:00",
+            isCurrentLogin: false,
+            remoteAddr: nil,
+            userAgent: .init(os: "iOS", browser: "Dutypark", device: "iPhone 13 mini"),
+            clientType: .iosApp
+        )
+        let presentation = AdminMemberSessionListPresentation(
+            tokens: [browserToken, appToken],
+            isExpanded: false
+        )
+        let mostRecent = try? #require(presentation.visibleTokens.first)
+
+        #expect(mostRecent?.id == 5)
+        #expect(AdminMemberSessionListPresentation.ipText(browserToken) == "203.0.113.7")
+        #expect(AdminMemberSessionListPresentation.ipText(appToken) == "-")
+        #expect(AdminMemberSessionListPresentation.deviceText(browserToken) == "Mac")
+        #expect(AdminMemberSessionListPresentation.deviceText(appToken) == "iPhone 13 mini")
+        #expect(AdminMemberSessionListPresentation.deviceIcon(browserToken) == "desktopcomputer")
+        #expect(AdminMemberSessionListPresentation.deviceIcon(appToken) == "iphone")
+        #expect(AdminMemberSessionListPresentation.clientText(browserToken) == "Chrome")
+        #expect(!AdminMemberSessionListPresentation.isAppSession(browserToken))
+        #expect(AdminMemberSessionListPresentation.isAppSession(appToken))
+        #expect(
+            AdminMemberSessionListPresentation.clientText(appToken)
+                == SettingsLocalization.string("settings.sessions.client.iosApp")
+        )
+        #expect(AdminMemberSessionListPresentation.clientText(appToken) != "Dutypark")
+    }
+
+    @Test("Admin member pagination summarizes the visible range like the web")
+    func memberPaginationRange() {
+        let firstPage = AdminMemberPaginationPresentation(page: 0, pageSize: 10, totalElements: 24)
+        let lastPage = AdminMemberPaginationPresentation(page: 2, pageSize: 10, totalElements: 24)
+
+        #expect(firstPage.start == 1)
+        #expect(firstPage.end == 10)
+        #expect(firstPage.total == 24)
+        #expect(lastPage.start == 21)
+        #expect(lastPage.end == 24)
+        #expect(lastPage.total == 24)
+        #expect(lastPage.text.contains("21"))
+        #expect(lastPage.text.contains("24"))
+        #expect(!lastPage.text.contains("%"))
+    }
+
+    private static func token(
+        id: Int64,
+        lastUsed: String?,
+        isCurrentLogin: Bool,
+        remoteAddr: String? = "127.0.0.1",
+        userAgent: SettingsRefreshToken.UserAgent? = .init(
+            os: "iOS",
+            browser: "Safari",
+            device: "iPhone"
+        ),
+        clientType: SessionClientType? = nil
+    ) -> SettingsRefreshToken {
+        SettingsRefreshToken(
+            memberName: "Alpha",
+            memberId: 1,
+            validUntil: "2026-09-01T00:00:00",
+            createdDate: "2026-08-01T00:00:00",
+            lastUsed: lastUsed,
+            remoteAddr: remoteAddr,
+            id: id,
+            userAgent: userAgent,
+            isCurrentLogin: isCurrentLogin,
+            clientType: clientType
+        )
     }
 
     @Test("Admin member identity metadata is localized and profile-photo URLs are cache-safe")
