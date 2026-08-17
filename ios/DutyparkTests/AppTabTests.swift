@@ -51,35 +51,20 @@ struct AppTabTests {
     }
 
     @Test
-    func selectingCalendarFromTabBarResetsToMyCalendar() {
-        #expect(
-            RootNavigationPolicy.resetsCalendarTarget(
-                for: .calendar,
-                origin: .tabBar
-            )
-        )
-        #expect(
-            !RootNavigationPolicy.resetsCalendarTarget(
-                for: .calendar,
-                origin: .explicitRoute
-            )
-        )
+    func tappingATabInTheTabBarPopsThatTabToItsRoot() {
+        #expect(RootNavigationPolicy.popsToRoot(origin: .tabBar))
+        // A route that pushed a screen must keep it: it selects the tab itself.
+        #expect(!RootNavigationPolicy.popsToRoot(origin: .explicitRoute))
     }
 
     @Test
-    func openingAMemberCalendarRecordsTheOriginatingTab() {
-        for tab in AppTab.allCases where tab != .calendar {
-            #expect(RootNavigationPolicy.calendarOrigin(from: tab) == tab)
+    func aMemberCalendarIsPushedOntoTheStackOfTheTabItWasOpenedFrom() {
+        for tab in AppTab.allCases where tab != .todo {
+            #expect(RootNavigationPolicy.memberCalendarHost(for: tab) == tab)
         }
-        #expect(RootNavigationPolicy.calendarOrigin(from: .calendar) == nil)
-    }
-
-    @Test
-    func memberCalendarBackReturnsToTheOriginOrFallsBackToOwnCalendar() {
-        for tab in AppTab.allCases where tab != .calendar {
-            #expect(RootNavigationPolicy.calendarBackTab(origin: tab) == tab)
-        }
-        #expect(RootNavigationPolicy.calendarBackTab(origin: nil) == .calendar)
+        // The todo tab has no member entry point, so a calendar reached from it lands on
+        // the calendar tab, whose root is the member's own calendar.
+        #expect(RootNavigationPolicy.memberCalendarHost(for: .todo) == .calendar)
     }
 
     @Test
@@ -105,14 +90,23 @@ struct AppTabTests {
     }
 
     @Test
-    func selectingOtherTabsDoesNotMutateCalendarTarget() {
-        for tab in AppTab.allCases where tab != .calendar {
-            #expect(
-                !RootNavigationPolicy.resetsCalendarTarget(
-                    for: tab,
-                    origin: .tabBar
-                )
-            )
+    func everyTabWithAStackIsPoppedByItsOwnTabBarItem() throws {
+        let rootSource = try String(
+            contentsOf: URL(fileURLWithPath: #filePath)
+                .deletingLastPathComponent()
+                .deletingLastPathComponent()
+                .appending(path: "Dutypark/App/RootTabView.swift"),
+            encoding: .utf8
+        )
+
+        #expect(rootSource.contains("popToRoot(destination, origin: .tabBar)"))
+        for pop in [
+            "case .home:\n            homePath.removeAll()",
+            "case .calendar:\n            calendarPath.removeAll()",
+            "case .team:\n            teamPath.removeAll()",
+            "case .more:\n            morePath.removeAll()",
+        ] {
+            #expect(rootSource.contains(pop), "RootTabView is missing: \(pop)")
         }
     }
 

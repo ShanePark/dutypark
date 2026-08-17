@@ -166,11 +166,10 @@ struct AdminFeatureTests {
         #expect(AdminMemberSessionCountPresentation.text(count: 0, locale: Locale(identifier: "en")) == "No active sessions")
     }
 
-    @Test("Selecting Home always resets its navigation path")
-    func homeNavigationResetPolicy() {
-        #expect(RootNavigationPolicy.resetsHomePath(for: .home))
-        #expect(!RootNavigationPolicy.resetsHomePath(for: .calendar))
-        #expect(!RootNavigationPolicy.resetsHomePath(for: .more))
+    @Test("A tab-bar tap always returns the selected tab to its root screen")
+    func tabBarNavigationResetPolicy() {
+        #expect(RootNavigationPolicy.popsToRoot(origin: .tabBar))
+        #expect(!RootNavigationPolicy.popsToRoot(origin: .explicitRoute))
     }
 
     @Test("Admin member contract decodes without exposing the raw refresh token")

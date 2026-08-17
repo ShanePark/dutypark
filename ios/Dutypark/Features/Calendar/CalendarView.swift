@@ -35,6 +35,7 @@ nonisolated enum CalendarMainLayout {
 }
 
 struct CalendarView: View {
+    @Environment(\.dismiss) private var dismiss
     @StateObject private var model: CalendarViewModel
     @StateObject private var todoCreateModel = TodoViewModel()
     @StateObject private var todoDetailModel = TodoViewModel()
@@ -55,16 +56,16 @@ struct CalendarView: View {
     @State private var dayDismissRequest = 0
     @State private var dDayDismissRequest = 0
 
-    private let onBack: (() -> Void)?
+    private let isPushedMemberCalendar: Bool
 
     init(
         memberID: MemberID? = nil,
         date: DateOnly? = nil,
         scheduleID: ScheduleID? = nil,
-        onBack: (() -> Void)? = nil
+        isPushed: Bool = false
     ) {
         _model = StateObject(wrappedValue: CalendarViewModel(memberID: memberID, date: date, scheduleID: scheduleID))
-        self.onBack = onBack
+        isPushedMemberCalendar = isPushed
     }
 
     var body: some View {
@@ -84,6 +85,11 @@ struct CalendarView: View {
         }
         .dpKeyboardDismissToolbar()
         .background(DPColor.backgroundPrimary)
+        .navigationBarBackButtonHidden(isPushedMemberCalendar)
+        // The identity chip stands in for the system back button, so the pushed screen
+        // restores UIKit's edge pop itself; at the calendar tab root there is nothing to
+        // pop and the gesture policy declines it.
+        .dpInteractivePopGestureEnabled()
         .toolbar { calendarToolbar }
         .task { if model.days.isEmpty { await model.load() } }
         .fullScreenCover(item: $model.selectedDay) { day in
@@ -275,14 +281,21 @@ struct CalendarView: View {
         }
     }
 
-    // Another member's calendar replaces the calendar tab root instead of being pushed,
-    // so it carries its own way back to the screen it was opened from. The whole
-    // identity chip is the touch target: the leading bar slot cannot also fit a separate
-    // 44pt-wide control next to the avatar and the name.
+    // A member calendar is pushed onto the stack of the tab it was opened from, so back
+    // is a plain pop. Whose calendar it is does not matter: a team shift grid and Admin
+    // can both open your own calendar, and that push needs a way back too. The calendar
+    // tab root is not pushed and keeps the bare identity.
+    private var memberBackAction: (() -> Void)? {
+        guard isPushedMemberCalendar else { return nil }
+        return { dismiss() }
+    }
+
+    // The whole identity chip is the touch target: the leading bar slot cannot also
+    // fit a separate 44pt-wide control next to the avatar and the name.
     @ViewBuilder
     private var memberIdentityBar: some View {
-        if let onBack, !model.isMyCalendar {
-            Button(action: onBack) {
+        if let memberBackAction {
+            Button(action: memberBackAction) {
                 HStack(spacing: 2) {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 14, weight: .semibold))

@@ -115,10 +115,10 @@ struct RootTabView: View {
     @State private var homeRefreshID = 0
     @State private var homeRefreshPolicy = RootHomeRefreshPolicy(initialRefreshAt: Date())
     @State private var homePath: [HomeDestination] = []
-    @State private var calendarTarget = CalendarTarget()
-    @State private var calendarOrigin: CalendarOrigin?
+    @State private var calendarPath: [MemberCalendarRoute] = []
+    @State private var teamPath: [MemberCalendarRoute] = []
+    @State private var morePath: [MoreDestination] = []
     @State private var todoTarget: TodoID?
-    @State private var moreDestination: MoreDestination?
     @State private var settingsDestination: SettingsDestination?
     // Bumped when the profile photo changes so the cached avatar in the "more" tab is
     // refetched instead of showing the replaced image.
@@ -148,31 +148,31 @@ struct RootTabView: View {
         ZStack(alignment: .topTrailing) {
             TabView(selection: tabSelection) {
                 homeTab
-                primaryTab(.calendar, showsNavigationBar: true) {
-                    CalendarView(
-                        memberID: calendarTarget.memberID,
-                        date: calendarTarget.date,
-                        scheduleID: calendarTarget.scheduleID,
-                        onBack: closeMemberCalendar
-                    )
-                        .id(calendarTarget)
+                primaryTab(.calendar, path: $calendarPath, showsNavigationBar: true) {
+                    CalendarView()
+                        .navigationDestination(for: MemberCalendarRoute.self) { route in
+                            memberCalendar(route)
+                        }
                 }
                 primaryTab(.todo, showsNavigationBar: true) {
                     TodoView(initialTodoID: todoTarget) {
                         todoTarget = nil
                     }
                 }
-                primaryTab(.team, showsNavigationBar: true) {
+                primaryTab(.team, path: $teamPath, showsNavigationBar: true) {
                     TeamView(onOpenCalendar: openMemberCalendar)
+                        .navigationDestination(for: MemberCalendarRoute.self) { route in
+                            memberCalendar(route)
+                        }
                 }
-                primaryTab(.more, showsNavigationBar: true, showsTabTitle: true) {
+                primaryTab(.more, path: $morePath, showsNavigationBar: true, showsTabTitle: true) {
                     MoreView(
                         isAdmin: authenticatedMember?.isAdmin == true,
                         profile: moreProfile,
                         onOpenMyInfo: openMyInfo,
                         onSelect: openMoreMenuItem
                     )
-                    .navigationDestination(item: $moreDestination) { destination in
+                    .navigationDestination(for: MoreDestination.self) { destination in
                         moreDestinationView(destination)
                     }
                 }
@@ -310,6 +310,8 @@ struct RootTabView: View {
                             onOpenCalendar: openMemberCalendar
                         )
                         .navigationTitle("")
+                    case .memberCalendar(let route):
+                        memberCalendar(route)
                     }
                 }
         }
@@ -323,13 +325,54 @@ struct RootTabView: View {
         @ViewBuilder content: () -> Content
     ) -> some View {
         NavigationStack {
-            content()
-                .navigationTitle(showsTabTitle ? tab.localizedTitle : "")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar(showsNavigationBar ? .visible : .hidden, for: .navigationBar)
-                .accessibilityIdentifier("screen.\(tab.rawValue)")
+            tabRoot(tab, showsNavigationBar: showsNavigationBar, showsTabTitle: showsTabTitle) {
+                content()
+            }
         }
         .primaryTabItem(tab)
+    }
+
+    private func primaryTab<Destination: Hashable, Content: View>(
+        _ tab: AppTab,
+        path: Binding<[Destination]>,
+        showsNavigationBar: Bool = false,
+        showsTabTitle: Bool = false,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        NavigationStack(path: path) {
+            tabRoot(tab, showsNavigationBar: showsNavigationBar, showsTabTitle: showsTabTitle) {
+                content()
+            }
+        }
+        .primaryTabItem(tab)
+    }
+
+    private func tabRoot<Content: View>(
+        _ tab: AppTab,
+        showsNavigationBar: Bool,
+        showsTabTitle: Bool,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        content()
+            .navigationTitle(showsTabTitle ? tab.localizedTitle : "")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar(showsNavigationBar ? .visible : .hidden, for: .navigationBar)
+            .accessibilityIdentifier("screen.\(tab.rawValue)")
+    }
+
+    // A member calendar is a pushed screen wherever it is opened from, so it carries the
+    // navigation bar it needs and pops with the system back affordances.
+    private func memberCalendar(_ route: MemberCalendarRoute) -> some View {
+        CalendarView(
+            memberID: route.memberID,
+            date: route.date,
+            scheduleID: route.scheduleID,
+            isPushed: true
+        )
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.visible, for: .navigationBar)
+        .accessibilityIdentifier("screen.calendar.member")
     }
 
     private var notificationBell: some View {
@@ -340,19 +383,28 @@ struct RootTabView: View {
         Binding(
             get: { selectedTab },
             set: { destination in
-                if RootNavigationPolicy.resetsHomePath(for: destination) {
-                    homePath.removeAll()
-                }
-                if RootNavigationPolicy.resetsCalendarTarget(
-                    for: destination,
-                    origin: .tabBar
-                ) {
-                    calendarTarget = CalendarTarget(memberID: authenticatedMemberID)
-                    calendarOrigin = nil
-                }
+                popToRoot(destination, origin: .tabBar)
                 selectedTab = destination
             }
         )
+    }
+
+    // Every tab owns a navigation stack, so a tab-bar tap returns that tab to its root
+    // screen; the calendar tab root is the authenticated member's own calendar.
+    private func popToRoot(_ tab: AppTab, origin: RootTabSelectionOrigin) {
+        guard RootNavigationPolicy.popsToRoot(origin: origin) else { return }
+        switch tab {
+        case .home:
+            homePath.removeAll()
+        case .calendar:
+            calendarPath.removeAll()
+        case .team:
+            teamPath.removeAll()
+        case .more:
+            morePath.removeAll()
+        case .todo:
+            break
+        }
     }
 
     private func openHome() {
@@ -374,7 +426,7 @@ struct RootTabView: View {
     }
 
     private func openMyInfo() {
-        moreDestination = .myInfo
+        morePath.append(.myInfo)
     }
 
     private func openMoreMenuItem(_ item: MoreMenuItem) {
@@ -421,9 +473,13 @@ struct RootTabView: View {
             SettingsView(destination: $settingsDestination)
                 .navigationTitle(RootChromeLocalization.localizable("root.menu.settings"))
                 .navigationBarTitleDisplayMode(.inline)
+        case .memberCalendar(let route):
+            memberCalendar(route)
         }
     }
 
+    // Routed entries have no menu screen behind them, so the requested screen becomes
+    // the only thing on the "more" stack instead of stacking on whatever was open.
     private func openMore(
         _ destination: MoreDestination,
         settingsDestination: SettingsDestination? = nil
@@ -432,7 +488,7 @@ struct RootTabView: View {
             for: destination,
             requested: settingsDestination
         )
-        moreDestination = destination
+        morePath = [destination]
         selectedTab = .more
     }
 
@@ -498,30 +554,37 @@ struct RootTabView: View {
         }
     }
 
+    // The calendar is pushed onto the stack of the tab it was opened from, so back is a
+    // real pop to the member card, friend row or admin detail that opened it.
     private func openMemberCalendar(_ memberID: MemberID) {
-        calendarOrigin = RootNavigationPolicy.calendarOrigin(from: selectedTab)
-            .map { CalendarOrigin(tab: $0, homePath: homePath, moreDestination: moreDestination) }
-        calendarTarget = CalendarTarget(memberID: memberID)
-        selectedTab = .calendar
+        let host = RootNavigationPolicy.memberCalendarHost(for: selectedTab)
+        push(MemberCalendarRoute(memberID: memberID), onto: host)
+        selectedTab = host
     }
 
-    // Routed entries have no in-app screen behind them, so back falls back to the
-    // authenticated member's own calendar instead of a stale origin.
-    private func routeToMemberCalendar(_ memberID: MemberID) {
-        calendarOrigin = nil
-        calendarTarget = CalendarTarget(memberID: memberID)
-        selectedTab = .calendar
-    }
-
-    private func closeMemberCalendar() {
-        let origin = calendarOrigin
-        calendarOrigin = nil
-        calendarTarget = CalendarTarget(memberID: authenticatedMemberID)
-        if let origin {
-            homePath = origin.homePath
-            moreDestination = origin.moreDestination
+    private func push(_ route: MemberCalendarRoute, onto tab: AppTab) {
+        switch tab {
+        case .home:
+            homePath.append(.memberCalendar(route))
+        case .team:
+            teamPath.append(route)
+        case .more:
+            morePath.append(.memberCalendar(route))
+        case .calendar, .todo:
+            calendarPath.append(route)
         }
-        selectedTab = RootNavigationPolicy.calendarBackTab(origin: origin?.tab)
+    }
+
+    // Routed entries have no in-app screen behind them, so they push onto the calendar
+    // tab: back lands on the authenticated member's own calendar instead of a stale
+    // origin.
+    private func routeToMemberCalendar(_ memberID: MemberID) {
+        routeToCalendar(MemberCalendarRoute(memberID: memberID))
+    }
+
+    private func routeToCalendar(_ route: MemberCalendarRoute) {
+        calendarPath = [route]
+        selectedTab = .calendar
     }
 
     private func socialDidMutate(_ affectsReceivedRequestCount: Bool) async {
@@ -569,17 +632,17 @@ struct RootTabView: View {
         guard let schedule: ScheduleBasicInfoDTO = try? await APIClient.shared.request(
             "schedules/\(scheduleID.uuidString)"
         ) else { return false }
-        calendarOrigin = nil
-        calendarTarget = CalendarTarget(
-            memberID: RootNavigationPolicy.scheduleMemberID(
-                for: route,
-                authenticatedMemberID: authenticatedMemberID,
-                scheduleOwnerID: schedule.memberId
-            ),
-            date: DateOnly(rawValue: String(schedule.startDateTime.rawValue.prefix(10))),
-            scheduleID: scheduleID
+        routeToCalendar(
+            MemberCalendarRoute(
+                memberID: RootNavigationPolicy.scheduleMemberID(
+                    for: route,
+                    authenticatedMemberID: authenticatedMemberID,
+                    scheduleOwnerID: schedule.memberId
+                ),
+                date: DateOnly(rawValue: String(schedule.startDateTime.rawValue.prefix(10))),
+                scheduleID: scheduleID
+            )
         )
-        selectedTab = .calendar
         return true
     }
 
@@ -662,27 +725,22 @@ nonisolated enum RootNavigationPolicy {
             && url.host?.lowercased() == "dutypark.o-r.kr"
     }
 
-    static func resetsHomePath(for destination: AppTab) -> Bool {
-        destination == .home
+    // Tapping a tab in the tab bar goes to that tab's root screen; a programmatic route
+    // keeps the stack it just pushed.
+    static func popsToRoot(origin: RootTabSelectionOrigin) -> Bool {
+        origin == .tabBar
     }
 
-    static func resetsCalendarTarget(
-        for destination: AppTab,
-        origin: RootTabSelectionOrigin
-    ) -> Bool {
-        destination == .calendar && origin == .tabBar
-    }
-
-    // A member calendar replaces the calendar tab root instead of being pushed, so the
-    // screen it was opened from has to be recorded to offer a back affordance.
-    static func calendarOrigin(from tab: AppTab) -> AppTab? {
-        tab == .calendar ? nil : tab
-    }
-
-    // Without a recorded origin (deep link, push route, cold launch) back stays on the
-    // calendar tab, which is reset to the member's own calendar.
-    static func calendarBackTab(origin: AppTab?) -> AppTab {
-        origin ?? .calendar
+    // A member calendar is pushed onto the stack of the tab that opened it, so back
+    // returns to the screen it was opened from. The todo tab has no entry point, so a
+    // calendar reached from it falls back to the calendar tab's own stack.
+    static func memberCalendarHost(for tab: AppTab) -> AppTab {
+        switch tab {
+        case .home, .calendar, .team, .more:
+            tab
+        case .todo:
+            .calendar
+        }
     }
 
     // The "more" tab owns its own navigation stack, so a menu entry with a screen is
@@ -771,6 +829,7 @@ nonisolated enum RootTabSelectionOrigin: Equatable, Sendable {
 
 private enum HomeDestination: Hashable {
     case friends
+    case memberCalendar(MemberCalendarRoute)
 }
 
 nonisolated enum MoreDestination: Hashable, Sendable {
@@ -779,6 +838,16 @@ nonisolated enum MoreDestination: Hashable, Sendable {
     case guide
     case myInfo
     case settings
+    case memberCalendar(MemberCalendarRoute)
+}
+
+/// A member calendar pushed onto a tab's navigation stack. It carries the deep-link
+/// details the calendar screen needs, so a schedule notification can highlight its day
+/// on the pushed screen instead of replacing a tab root.
+nonisolated struct MemberCalendarRoute: Hashable, Sendable {
+    var memberID: MemberID?
+    var date: DateOnly?
+    var scheduleID: ScheduleID?
 }
 
 /// Routes first-party links to the "more" tab screen that owns them. The account
@@ -806,18 +875,6 @@ nonisolated enum RootMoreDeepLinkPolicy {
     static func destination(for settingsDestination: SettingsDestination) -> MoreDestination {
         settingsDestination == .guide ? .guide : .settings
     }
-}
-
-private struct CalendarTarget: Hashable {
-    var memberID: MemberID?
-    var date: DateOnly?
-    var scheduleID: ScheduleID?
-}
-
-private struct CalendarOrigin: Equatable {
-    var tab: AppTab
-    var homePath: [HomeDestination]
-    var moreDestination: MoreDestination?
 }
 
 private struct ImpersonationBanner: View {
