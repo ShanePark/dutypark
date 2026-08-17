@@ -15,6 +15,9 @@ struct MyInfoView: View {
     @State private var appleSignInClient = AppleSignInClient()
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var photoToCrop: UIImage?
+    @State private var cameraPhoto: UIImage?
+    @State private var showPhotoLibrary = false
+    @State private var showCamera = false
     @State private var showPattern = false
     @State private var showPassword = false
     @State private var showAuxiliary = false
@@ -81,6 +84,18 @@ struct MyInfoView: View {
         .onChange(of: selectedPhoto) { _, item in
             guard let item else { return }
             Task { await upload(item) }
+        }
+        .photosPicker(
+            isPresented: $showPhotoLibrary,
+            selection: $selectedPhoto,
+            matching: .images
+        )
+        .fullScreenCover(isPresented: $showCamera, onDismiss: cameraDidDismiss) {
+            ProfileCameraPicker { image in
+                cameraPhoto = image
+                showCamera = false
+            }
+            .ignoresSafeArea()
         }
         .fullScreenCover(isPresented: $showPassword) {
             if let memberID = model.member?.id {
@@ -212,15 +227,44 @@ struct MyInfoView: View {
         let touchTarget = DPSize.minimumTouchTarget
         return SettingsCard(title: "settings.profile.title", icon: "person") {
             HStack(spacing: DPSpacing.medium) {
-                ZStack(alignment: .bottomTrailing) {
+                Menu {
                     Button {
-                        guard hasVisibleProfilePhoto else { return }
-                        Task { await cropExistingPhoto() }
-                    } label: { profilePhoto }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(SettingsLocalization.text("settings.crop.existing"))
+                        showCamera = true
+                    } label: {
+                        Label(
+                            SettingsLocalization.string("settings.photo.take"),
+                            systemImage: "camera"
+                        )
+                    }
+                    .disabled(!UIImagePickerController.isSourceTypeAvailable(.camera))
+                    .accessibilityIdentifier("settings.photo.take")
 
-                    PhotosPicker(selection: $selectedPhoto, matching: .images) {
+                    Button {
+                        showPhotoLibrary = true
+                    } label: {
+                        Label(
+                            SettingsLocalization.string("settings.photo.library"),
+                            systemImage: "photo.on.rectangle"
+                        )
+                    }
+                    .accessibilityIdentifier("settings.photo.library")
+
+                    if hasVisibleProfilePhoto {
+                        Divider()
+                        Button(role: .destructive) {
+                            confirmation = .deleteProfilePhoto
+                        } label: {
+                            Label(
+                                SettingsLocalization.string("settings.photo.delete"),
+                                systemImage: "trash"
+                            )
+                        }
+                        .accessibilityIdentifier("settings.photo.delete")
+                    }
+                } label: {
+                    ZStack(alignment: .bottomTrailing) {
+                        profilePhoto
+
                         Image(systemName: "camera.fill")
                             .font(.system(size: 13, weight: .semibold))
                             .foregroundStyle(cameraForeground)
@@ -228,9 +272,12 @@ struct MyInfoView: View {
                             .background(cameraBackground, in: Circle())
                             .overlay(Circle().stroke(cameraBorder, lineWidth: 2))
                             .frame(width: touchTarget, height: touchTarget)
+                            .offset(x: DPSpacing.small, y: DPSpacing.small)
                     }
-                    .accessibilityLabel(SettingsLocalization.text("settings.photo.choose"))
                 }
+                .buttonStyle(.plain)
+                .accessibilityLabel(SettingsLocalization.text("settings.photo.actions"))
+                .accessibilityIdentifier("settings.photo.actions")
 
                 VStack(alignment: .leading, spacing: DPSpacing.small) {
                     memberInfoRow("person", "settings.profile.name", model.member?.name ?? "-")
@@ -240,14 +287,6 @@ struct MyInfoView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            if hasVisibleProfilePhoto {
-                Button { confirmation = .deleteProfilePhoto } label: {
-                    Label(SettingsLocalization.string("settings.photo.delete"), systemImage: "trash")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(DangerSoftButtonStyle())
-                .accessibilityIdentifier("settings.photo.delete")
             }
         }
     }
@@ -625,13 +664,10 @@ struct MyInfoView: View {
         photoToCrop = image
     }
 
-    private func cropExistingPhoto() async {
-        guard let data = await model.profilePhotoData(), let image = UIImage(data: data) else {
-            model.noticeKey = "settings.photo.invalid"
-            model.noticeIsError = true
-            return
-        }
-        photoToCrop = image
+    private func cameraDidDismiss() {
+        guard let cameraPhoto else { return }
+        self.cameraPhoto = nil
+        photoToCrop = cameraPhoto
     }
 
     private func link(_ provider: OAuthProvider) async {
@@ -737,6 +773,43 @@ struct MyInfoView: View {
             }
             confirmationAction.finish()
             dismiss()
+        }
+    }
+}
+
+private struct ProfileCameraPicker: UIViewControllerRepresentable {
+    let completion: (UIImage?) -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(completion: completion)
+    }
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.sourceType = .camera
+        picker.cameraCaptureMode = .photo
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+
+    final class Coordinator: NSObject, UINavigationControllerDelegate, UIImagePickerControllerDelegate {
+        let completion: (UIImage?) -> Void
+
+        init(completion: @escaping (UIImage?) -> Void) {
+            self.completion = completion
+        }
+
+        func imagePickerController(
+            _ picker: UIImagePickerController,
+            didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]
+        ) {
+            completion(info[.originalImage] as? UIImage)
+        }
+
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            completion(nil)
         }
     }
 }

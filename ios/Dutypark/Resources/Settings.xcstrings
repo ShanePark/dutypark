@@ -841,6 +841,38 @@
         }
       }
     },
+    "settings.photo.library": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Photo library"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "사진 보관함"
+          }
+        }
+      }
+    },
+    "settings.photo.take": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Take photo"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "사진 찍기"
+          }
+        }
+      }
+    },
     "settings.photo.delete": {
       "localizations": {
         "en": {
