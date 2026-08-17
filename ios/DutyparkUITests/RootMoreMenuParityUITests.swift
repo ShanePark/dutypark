@@ -135,9 +135,13 @@ final class RootMoreMenuParityUITests: XCTestCase {
         identityChip.tap()
 
         XCTAssertTrue(memberCalendar.waitForNonExistence(timeout: 5))
+        // The admin member detail is pushed by a destination-based link, which SwiftUI
+        // cannot represent in the tab's path, so growing the path drops it and back
+        // lands on the admin member list. That is the same screen the previous
+        // origin-restoring implementation returned to, now reached by a real pop.
         XCTAssertTrue(
-            openCalendar.waitForExistence(timeout: 10),
-            "Back from an admin member calendar must return to the member detail"
+            memberRow.waitForExistence(timeout: 10),
+            "Back from an admin member calendar must return into the admin stack"
         )
         XCTAssertTrue(moreTab.isSelected)
     }

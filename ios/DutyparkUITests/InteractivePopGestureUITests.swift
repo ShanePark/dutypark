@@ -131,6 +131,46 @@ final class InteractivePopGestureUITests: XCTestCase {
         XCTAssertTrue(teamTab.isSelected)
     }
 
+    // The home dashboard opens a pinned friend's calendar through its own route, which
+    // pushes onto the home stack instead of switching to the calendar tab.
+    @MainActor
+    func testMemberCalendarPushedFromTheHomeDashboardPopsBackToIt() {
+        let app = XCUIApplication()
+        app.launchArguments += [
+            "-dp-language", "ko",
+            "-dp-theme", "light",
+            "-AppleLanguages", "(ko)",
+            "-AppleLocale", "ko_KR",
+            "-ui-testing-authenticated",
+        ]
+        app.launch()
+        defer { app.terminate() }
+
+        let home = app.descendants(matching: .any)["screen.home"]
+        XCTAssertTrue(home.waitForExistence(timeout: 20))
+        let homeTab = app.buttons.matching(identifier: "tab.home").firstMatch
+
+        let friendCard = app.buttons["home.friend.21"]
+        XCTAssertTrue(friendCard.waitForExistence(timeout: 10))
+        for _ in 0..<6 where !friendCard.isHittable {
+            home.swipeUp(velocity: .slow)
+        }
+        friendCard.tap()
+
+        let memberCalendar = app.descendants(matching: .any)["screen.calendar.member"]
+        XCTAssertTrue(memberCalendar.waitForExistence(timeout: 10))
+        XCTAssertTrue(
+            homeTab.isSelected,
+            "A friend calendar opened from the dashboard must not jump to the calendar tab"
+        )
+
+        swipeFromLeftEdge(in: app)
+
+        XCTAssertTrue(memberCalendar.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(friendCard.waitForExistence(timeout: 10))
+        XCTAssertTrue(homeTab.isSelected)
+    }
+
     @MainActor
     private func swipeFromLeftEdge(in app: XCUIApplication) {
         let start = app.coordinate(withNormalizedOffset: CGVector(dx: 0.005, dy: 0.5))
