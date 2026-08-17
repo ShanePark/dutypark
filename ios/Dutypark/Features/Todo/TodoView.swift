@@ -1358,10 +1358,8 @@ nonisolated enum TodoFriendTagAdapter {
 
 struct TodoFormSheet: View {
     let titleKey: String
-    let initialDraft: TodoDraft
     let friends: [FriendDTO]
     let preservedTags: [MemberPreviewDTO]
-    let initialAttachmentIDs: [AttachmentID]
     let isSaving: Bool
     let maximumHeight: CGFloat?
     let dismissAction: (() -> Void)?
@@ -1374,6 +1372,12 @@ struct TodoFormSheet: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var draft: TodoDraft
+    /// The dismissal baseline is pinned to the same snapshot that seeded `draft` and
+    /// `attachmentModel`. Presenters rebuild `initialDraft` on every render, so reading it
+    /// directly would let an unrelated re-render redefine "unchanged" and mark an untouched
+    /// form dirty.
+    @State private var baselineDraft: TodoDraft
+    @State private var baselineAttachmentIDs: [AttachmentID]
     @State private var didSave = false
     @State private var showsDiscardConfirmation = false
     @State private var isDiscarding = false
@@ -1400,10 +1404,8 @@ struct TodoFormSheet: View {
         save: @escaping (TodoDraft) async -> Bool
     ) {
         self.titleKey = titleKey
-        self.initialDraft = initialDraft
         self.friends = friends
         self.preservedTags = preservedTags
-        self.initialAttachmentIDs = existingAttachments.map(\.id)
         self.model = model
         self.isSaving = isSaving
         self.maximumHeight = maximumHeight
@@ -1413,6 +1415,8 @@ struct TodoFormSheet: View {
         self.onBusyChange = onBusyChange
         self.save = save
         _draft = State(initialValue: initialDraft)
+        _baselineDraft = State(initialValue: initialDraft)
+        _baselineAttachmentIDs = State(initialValue: existingAttachments.map(\.id))
         _attachmentModel = StateObject(
             wrappedValue: AttachmentPickerModel(
                 contextType: .todo,
@@ -1712,9 +1716,9 @@ struct TodoFormSheet: View {
 
     private var isDirty: Bool {
         !didSave && TodoFormDismissalPolicy.isDirty(
-            initialDraft: initialDraft,
+            initialDraft: baselineDraft,
             draft: draft,
-            initialAttachmentIDs: initialAttachmentIDs,
+            initialAttachmentIDs: baselineAttachmentIDs,
             attachmentIDs: attachmentModel.attachments.map(\.id),
             hasAttachmentSession: attachmentModel.attachmentSessionId != nil
         )

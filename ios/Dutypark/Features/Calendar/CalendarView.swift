@@ -2068,13 +2068,16 @@ private struct ScheduleEditorView<Header: View>: View {
     let dismissRequest: Int
     let onWorkingChange: (Bool) -> Void
     let header: Header
-    let initialContent: String
-    let initialDescription: String
-    let initialVisibility: Visibility
-    let initialStart: Date
-    let initialEnd: Date
-    let initialTagIDs: Set<MemberID>
-    let initialAttachmentIDs: [AttachmentID]
+    /// The dismissal baseline is pinned to the same snapshot that seeded the editable state.
+    /// Recomputing it per render lets an unrelated re-render redefine "unchanged" — the
+    /// `?? base` fallbacks resolve to a fresh `Date()` — and marks an untouched editor dirty.
+    @State private var initialContent: String
+    @State private var initialDescription: String
+    @State private var initialVisibility: Visibility
+    @State private var initialStart: Date
+    @State private var initialEnd: Date
+    @State private var initialTagIDs: Set<MemberID>
+    @State private var initialAttachmentIDs: [AttachmentID]
     @State private var content: String
     @State private var description: String
     @State private var visibility: Visibility
@@ -2124,13 +2127,13 @@ private struct ScheduleEditorView<Header: View>: View {
         let initialEnd = existing.flatMap { CalendarDateSupport.date(from: $0.endDateTime) } ?? base
         let initialTagIDs = Set(existing?.tags.compactMap(\.id) ?? [])
         let initialAttachmentIDs = existing?.attachments.map(\.id) ?? []
-        self.initialContent = initialContent
-        self.initialDescription = initialDescription
-        self.initialVisibility = initialVisibility
-        self.initialStart = initialStart
-        self.initialEnd = initialEnd
-        self.initialTagIDs = initialTagIDs
-        self.initialAttachmentIDs = initialAttachmentIDs
+        _initialContent = State(initialValue: initialContent)
+        _initialDescription = State(initialValue: initialDescription)
+        _initialVisibility = State(initialValue: initialVisibility)
+        _initialStart = State(initialValue: initialStart)
+        _initialEnd = State(initialValue: initialEnd)
+        _initialTagIDs = State(initialValue: initialTagIDs)
+        _initialAttachmentIDs = State(initialValue: initialAttachmentIDs)
         _content = State(initialValue: initialContent)
         _description = State(initialValue: initialDescription)
         _visibility = State(initialValue: initialVisibility)
@@ -3212,9 +3215,12 @@ private struct DDayEditorView: View {
     let onDeleteRequest: ((DDayDTO) -> Void)?
     let dismissRequest: Int
     let onWorkingChange: (Bool) -> Void
-    let initialTitle: String
-    let initialDate: Date
-    let initialIsPrivate: Bool
+    /// The dismissal baseline is pinned to the same snapshot that seeded the editable state.
+    /// Recomputing it per render lets an unrelated re-render redefine "unchanged" — for a new
+    /// D-Day the fallback is a fresh `Date()` — and marks an untouched editor dirty.
+    @State private var initialTitle: String
+    @State private var initialDate: Date
+    @State private var initialIsPrivate: Bool
     @State private var title: String
     @State private var date: Date
     @State private var isPrivate: Bool
@@ -3245,9 +3251,9 @@ private struct DDayEditorView: View {
         let initialTitle = existing?.title ?? ""
         let initialDate = existing.flatMap { CalendarDateSupport.date(from: $0.date) } ?? Date()
         let initialIsPrivate = existing?.isPrivate ?? false
-        self.initialTitle = initialTitle
-        self.initialDate = initialDate
-        self.initialIsPrivate = initialIsPrivate
+        _initialTitle = State(initialValue: initialTitle)
+        _initialDate = State(initialValue: initialDate)
+        _initialIsPrivate = State(initialValue: initialIsPrivate)
         _title = State(initialValue: initialTitle)
         _date = State(initialValue: initialDate)
         _isPrivate = State(initialValue: initialIsPrivate)
