@@ -618,13 +618,6 @@ struct CalendarView: View {
             .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
             .overlay(RoundedRectangle(cornerRadius: DPRadius.standard).stroke(DPColor.borderSecondary))
 
-            quickDutyButton(
-                id: nil,
-                name: CalendarLocalization.text("calendar.off"),
-                color: DPColor.backgroundCard,
-                foreground: DPColor.textPrimary
-            )
-
             ForEach(batchDutyTypes, id: \.id) { type in
                 quickDutyButton(
                     id: type.id,
@@ -1757,7 +1750,6 @@ private struct DayDetailView: View {
             if model.canEdit, !showsEditor, !model.visibleDutyTypes.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 6) {
-                        dutyButton(id: nil, name: CalendarLocalization.text("calendar.off"), color: DPColor.backgroundCard)
                         ForEach(model.visibleDutyTypes, id: \.id) { type in
                             dutyButton(id: type.id, name: type.name, color: calendarColor(type.color))
                         }
