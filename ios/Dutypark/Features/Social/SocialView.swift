@@ -999,12 +999,18 @@ private struct FriendSearchModalView: View {
     @ObservedObject var viewModel: SocialViewModel
     @State private var keyword = ""
     @State private var candidate: SearchCandidate?
+    @FocusState private var focusedField: Field?
 
     let availableSize: CGSize
     let onDismiss: () -> Void
 
+    private enum Field { case keyword }
+
     var body: some View {
-        DPModalPanel(maximumPanelHeight: min(availableSize.height, 620)) {
+        DPModalPanel(
+            maximumPanelHeight: min(availableSize.height, 620),
+            scrollTarget: focusedField
+        ) {
             modalHeader
         } content: {
             modalBody
@@ -1113,6 +1119,7 @@ private struct FriendSearchModalView: View {
                     .textInputAutocapitalization(.never)
                     .autocorrectionDisabled()
                     .submitLabel(.search)
+                    .focused($focusedField, equals: .keyword)
                     .onSubmit { search(page: 0) }
             }
             .padding(.horizontal, 14)
@@ -1142,6 +1149,7 @@ private struct FriendSearchModalView: View {
             .disabled(keyword.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isSearching)
             .opacity(keyword.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.5 : 1)
         }
+        .id(Field.keyword)
     }
 
     private var searchResults: some View {

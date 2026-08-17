@@ -1381,6 +1381,7 @@ struct TodoFormSheet: View {
     @State private var isSubmitting = false
     @StateObject private var attachmentModel: AttachmentPickerModel
     @FocusState private var focusedField: TodoFormField?
+    @State private var isTagSearchFocused = false
 
     init(
         titleKey: String,
@@ -1427,8 +1428,17 @@ struct TodoFormSheet: View {
         min(maximumHeight.map { $0 * TodoModalLayout.maximumPanelHeightRatio } ?? .infinity, 786)
     }
 
+    /// The tag search field belongs to `DPFriendTagSelector`, so it never appears in
+    /// `focusedField`; fall back to it only when no field of this sheet holds focus.
+    private var scrollTarget: TodoFormField? {
+        focusedField ?? (isTagSearchFocused ? .tags : nil)
+    }
+
     var body: some View {
-        DPModalPanel(maximumPanelHeight: maximumPanelHeight) {
+        DPModalPanel(
+            maximumPanelHeight: maximumPanelHeight,
+            scrollTarget: scrollTarget
+        ) {
             formHeader
         } content: {
             formContent
@@ -1539,6 +1549,7 @@ struct TodoFormSheet: View {
                     .foregroundStyle(draft.title.count > 50 ? DPColor.danger : DPColor.textMuted)
                     .frame(maxWidth: .infinity, alignment: .trailing)
             }
+            .id(TodoFormField.title)
 
             TodoFormSection(title: todoLocalized("todo.field.content")) {
                 TextEditor(text: $draft.content)
@@ -1559,6 +1570,7 @@ struct TodoFormSheet: View {
                         }
                     }
             }
+            .id(TodoFormField.content)
 
             TodoFormSection(title: todoLocalized("todo.field.dueDate")) {
                 Toggle(isOn: $draft.hasDueDate) {
@@ -1586,9 +1598,11 @@ struct TodoFormSheet: View {
                         items: friends.map(TodoFriendTagAdapter.item),
                         preservedItems: preservedTags.compactMap(TodoFriendTagAdapter.item),
                         selection: $draft.taggedFriendIDs,
-                        disabled: isBusy
+                        disabled: isBusy,
+                        isSearchFocused: $isTagSearchFocused
                     )
                 }
+                .id(TodoFormField.tags)
             }
 
             TodoFormSection(title: todoLocalized("todo.label.attachments")) {
@@ -1731,9 +1745,10 @@ struct TodoFormSheet: View {
     }
 }
 
-private enum TodoFormField {
+private enum TodoFormField: Hashable {
     case title
     case content
+    case tags
 }
 
 private struct TodoFormSection<Content: View>: View {

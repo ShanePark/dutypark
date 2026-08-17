@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, toRef, type HTMLAttributes } from 'vue'
+import { computed, onUnmounted, toRef, watch, type HTMLAttributes } from 'vue'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import { useEscapeKey } from '@/composables/useEscapeKey'
+import { useVisualViewport } from '@/composables/useVisualViewport'
 
 type ModalSize = 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '5xl'
 type ModalHeight = 'fit' | 'default' | 'search' | 'viewport' | 'schedule'
@@ -43,6 +44,7 @@ const emit = defineEmits<{
 }>()
 
 useBodyScrollLock(toRef(props, 'isOpen'))
+useVisualViewport(toRef(props, 'isOpen'))
 useEscapeKey(toRef(props, 'isOpen'), () => {
   if (props.closeOnEscape) {
     emit('close')
@@ -98,6 +100,36 @@ function handleOverlayClick(event: MouseEvent) {
     handleBackdrop('click')
   }
 }
+
+let focusScrollTimer: ReturnType<typeof setTimeout> | undefined
+
+function cancelFocusScroll() {
+  clearTimeout(focusScrollTimer)
+  focusScrollTimer = undefined
+}
+
+function handlePanelFocusIn(event: FocusEvent) {
+  const target = event.target
+  if (!(target instanceof HTMLElement)) {
+    return
+  }
+
+  // Wait out the soft keyboard's opening animation: only once the visual
+  // viewport has settled does the panel know how much room is left to scroll into.
+  cancelFocusScroll()
+  focusScrollTimer = setTimeout(() => {
+    focusScrollTimer = undefined
+    target.scrollIntoView({ block: 'nearest' })
+  }, 300)
+}
+
+watch(() => props.isOpen, (open) => {
+  if (!open) {
+    cancelFocusScroll()
+  }
+})
+
+onUnmounted(cancelFocusScroll)
 </script>
 
 <template>
@@ -115,6 +147,7 @@ function handleOverlayClick(event: MouseEvent) {
         aria-modal="true"
         :aria-labelledby="props.ariaLabelledby"
         :aria-describedby="props.ariaDescribedby"
+        @focusin="handlePanelFocusIn"
       >
         <slot />
       </div>

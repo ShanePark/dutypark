@@ -2363,7 +2363,7 @@ private struct PasswordChangeView: View {
     private enum Field { case current, new, confirmation }
 
     var body: some View {
-        DPModalPanel(maximumPanelHeight: maximumHeight) {
+        DPModalPanel(maximumPanelHeight: maximumHeight, scrollTarget: focusedField) {
             SettingsModalHeader(
                 titleKey: "settings.password.change",
                 closeDisabled: model.isWorking,
@@ -2431,6 +2431,7 @@ private struct PasswordChangeView: View {
                 .focused($focusedField, equals: field)
                 .dpInputChrome(isFocused: focusedField == field)
         }
+        .id(field)
     }
 
     private var validationKey: String? {
@@ -2449,8 +2450,10 @@ private struct AuxiliaryAccountModal: View {
     @State private var name = ""
     @FocusState private var focused: Bool
 
+    private enum Field { case name }
+
     var body: some View {
-        DPModalPanel(maximumPanelHeight: maximumHeight) {
+        DPModalPanel(maximumPanelHeight: maximumHeight, scrollTarget: focused ? Field.name : nil) {
             SettingsModalHeader(
                 titleKey: "settings.auxiliary.create",
                 closeDisabled: model.isWorking,
@@ -2491,6 +2494,7 @@ private struct AuxiliaryAccountModal: View {
                 .focused($focused)
                 .dpInputChrome(isFocused: focused)
                 .onSubmit(createAccount)
+                .id(Field.name)
             Text("\(name.count)/10")
                 .font(DPTypography.caption)
                 .foregroundStyle(DPColor.textMuted)

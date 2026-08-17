@@ -386,7 +386,7 @@ private struct AdminTeamCreateModal: View {
     private enum Field { case name, description }
 
     var body: some View {
-        DPModalPanel(maximumPanelHeight: maximumHeight) {
+        DPModalPanel(maximumPanelHeight: maximumHeight, scrollTarget: focusedField) {
             header
         } content: {
             formContent
@@ -449,6 +449,7 @@ private struct AdminTeamCreateModal: View {
                     .disabled(interactionState.isSaving)
                     .accessibilityIdentifier("admin.teams.create.name")
             }
+            .id(Field.name)
 
             Button {
                 let candidate = normalizedName
@@ -498,6 +499,7 @@ private struct AdminTeamCreateModal: View {
                 .disabled(interactionState.isSaving)
                 .accessibilityIdentifier("admin.teams.create.description")
             }
+            .id(Field.description)
 
             Text(AdminLocalization.string("admin.teams.createHint"))
                 .font(DPTypography.caption)

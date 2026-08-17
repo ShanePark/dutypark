@@ -329,9 +329,12 @@ struct AccountDeletionView: View {
     let maximumHeight: CGFloat
     let dismiss: () -> Void
     var workingChanged: (Bool) -> Void = { _ in }
+    @FocusState private var focusedField: Field?
+
+    private enum Field { case password, name }
 
     var body: some View {
-        DPModalPanel(maximumPanelHeight: maximumHeight) {
+        DPModalPanel(maximumPanelHeight: maximumHeight, scrollTarget: focusedField) {
             header
         } content: {
             bodyContent
@@ -479,10 +482,12 @@ struct AccountDeletionView: View {
                 )
                 .textContentType(.password)
                 .submitLabel(.done)
+                .focused($focusedField, equals: .password)
                 .padding(.horizontal, DPSpacing.medium)
                 .frame(minHeight: DPSize.minimumTouchTarget)
                 .background(DPColor.backgroundSecondary, in: RoundedRectangle(cornerRadius: DPRadius.standard))
                 .accessibilityIdentifier("accountDeletion.password")
+                .id(Field.password)
                 Button(SettingsLocalization.string("settings.accountDeletion.reauth.passwordAction")) {
                     Task { await model.reauthenticateWithPassword() }
                 }
@@ -525,10 +530,12 @@ struct AccountDeletionView: View {
             )
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled()
+            .focused($focusedField, equals: .name)
             .padding(.horizontal, DPSpacing.medium)
             .frame(minHeight: DPSize.minimumTouchTarget)
             .background(DPColor.backgroundSecondary, in: RoundedRectangle(cornerRadius: DPRadius.standard))
             .accessibilityIdentifier("accountDeletion.nameConfirmation")
+            .id(Field.name)
         }
     }
 

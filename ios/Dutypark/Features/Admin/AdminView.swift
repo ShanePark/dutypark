@@ -1042,7 +1042,7 @@ private struct AdminPasswordChangeModal: View {
     private enum Field { case password, confirmation }
 
     var body: some View {
-        DPModalPanel(maximumPanelHeight: maximumHeight) {
+        DPModalPanel(maximumPanelHeight: maximumHeight, scrollTarget: focusedField) {
             header
         } content: {
             formContent
@@ -1153,6 +1153,7 @@ private struct AdminPasswordChangeModal: View {
                 .dpInputChrome(isFocused: focusedField == field)
                 .disabled(interactionState.isSaving)
         }
+        .id(field)
     }
 
     private var isValid: Bool {

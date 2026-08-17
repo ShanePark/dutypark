@@ -732,6 +732,9 @@ private struct TeamDutyTypeEditor: View {
     @State private var initialName = ""
     @State private var initialColorHex = Color.blue.teamHexRGB
     @State private var showsDiscardConfirmation = false
+    @FocusState private var focusedField: Field?
+
+    private enum Field { case name }
 
     private var trimmedName: String {
         TeamManageModalLogic.normalizedDutyName(name)
@@ -751,7 +754,10 @@ private struct TeamDutyTypeEditor: View {
     }
 
     var body: some View {
-        DPModalPanel(maximumPanelHeight: min(maximumHeight * 0.64, 500)) {
+        DPModalPanel(
+            maximumPanelHeight: min(maximumHeight * 0.64, 500),
+            scrollTarget: focusedField
+        ) {
             teamModalHeader(
                 title: teamLocalized(
                     viewModel.editingDutyType == nil
@@ -802,6 +808,7 @@ private struct TeamDutyTypeEditor: View {
                             )
                     }
                     TextField(teamLocalized("team.dutyType.placeholders.name"), text: $name)
+                        .focused($focusedField, equals: .name)
                         .dpInputChrome(isInvalid: name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                         .onChange(of: name) { _, newValue in
                             name = String(newValue.prefix(TeamManageModalLogic.maximumDutyNameLength))
@@ -818,6 +825,7 @@ private struct TeamDutyTypeEditor: View {
                         .foregroundStyle(DPColor.danger)
                     }
                 }
+                .id(Field.name)
 
                 VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
                     Text("team.dutyType.fields.color", tableName: "Team")
@@ -928,6 +936,9 @@ private struct TeamMemberSearchView: View {
     @State private var candidateToAdd: MemberInviteCandidateDTO?
     @State private var candidateSubmissionIsWorking = false
     @State private var didLoadInitialResults = false
+    @FocusState private var focusedField: Field?
+
+    private enum Field { case keyword }
 
     init(
         teamID: TeamID,
@@ -1010,7 +1021,7 @@ private struct TeamMemberSearchView: View {
     }
 
     private var searchPanel: some View {
-        DPModalPanel(maximumPanelHeight: maximumHeight) {
+        DPModalPanel(maximumPanelHeight: maximumHeight, scrollTarget: focusedField) {
             teamModalHeader(
                 title: teamLocalized("team.memberSearch.title"),
                 isWorking: viewModel.isWorking,
@@ -1025,6 +1036,7 @@ private struct TeamMemberSearchView: View {
                     )
                     .textInputAutocapitalization(.never)
                     .submitLabel(.search)
+                    .focused($focusedField, equals: .keyword)
                     .dpInputChrome()
                     .onSubmit { Task { await viewModel.search(resetPage: true) } }
 
@@ -1041,6 +1053,7 @@ private struct TeamMemberSearchView: View {
                     .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
                     .accessibilityLabel(Text("team.memberSearch.searchPlaceholder", tableName: "Team"))
                 }
+                .id(Field.keyword)
 
                 VStack(spacing: DPSpacing.small) {
                     ForEach(Array(viewModel.results.enumerated()), id: \.offset) { index, member in

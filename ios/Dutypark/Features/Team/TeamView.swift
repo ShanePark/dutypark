@@ -62,14 +62,21 @@ struct TeamView: View {
         } message: {
             Text("team.common.error", tableName: "Team")
         }
-        .sheet(
+        .fullScreenCover(
             isPresented: Binding(
                 get: { viewModel.scheduleDraft != nil },
                 set: { if !$0 { viewModel.scheduleDraft = nil } }
             )
         ) {
             if let draft = viewModel.scheduleDraft {
-                TeamScheduleEditor(viewModel: viewModel, draft: draft)
+                DPModalOverlay(onDismiss: { viewModel.scheduleDraft = nil }) { availableSize, dismiss in
+                    TeamScheduleEditor(
+                        viewModel: viewModel,
+                        draft: draft,
+                        maximumHeight: availableSize.height,
+                        dismiss: dismiss
+                    )
+                }
             }
         }
         .sheet(isPresented: $monthPickerPresented) {
@@ -640,100 +647,124 @@ private struct TeamCalendarDayCell: View {
     }
 }
 
+private enum TeamScheduleField: Hashable {
+    case content
+    case description
+}
+
 private struct TeamScheduleEditor: View {
     @ObservedObject var viewModel: TeamViewModel
+    let maximumHeight: CGFloat
+    let dismiss: () -> Void
     @State private var draft: TeamScheduleDraft
-    @Environment(\.dismiss) private var dismiss
+    @FocusState private var focusedField: TeamScheduleField?
 
-    init(viewModel: TeamViewModel, draft: TeamScheduleDraft) {
+    init(
+        viewModel: TeamViewModel,
+        draft: TeamScheduleDraft,
+        maximumHeight: CGFloat,
+        dismiss: @escaping () -> Void
+    ) {
         self.viewModel = viewModel
+        self.maximumHeight = maximumHeight
+        self.dismiss = dismiss
         _draft = State(initialValue: draft)
     }
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                HStack {
-                    Text("team.view.schedule.modal.title", tableName: "Team")
-                        .font(DPTypography.bodyMedium)
-                    Spacer()
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark")
-                            .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
-                    }
-                    .buttonStyle(.plain)
-                }
-                .padding(.horizontal, DPSpacing.medium)
-                .padding(.vertical, DPSpacing.small)
-                .background(DPColor.backgroundTertiary)
-                .overlay(alignment: .bottom) { Rectangle().fill(DPColor.borderPrimary).frame(height: 1) }
-
-                ScrollView {
-                    VStack(alignment: .leading, spacing: DPSpacing.medium) {
-                        VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
-                            HStack {
-                                Text("team.view.schedule.form.contentLabel", tableName: "Team").font(DPTypography.label)
-                                Spacer()
-                                Text(verbatim: "\(draft.content.count)/50").font(DPTypography.caption).foregroundStyle(DPColor.textMuted)
-                            }
-                        TextField(
-                            teamLocalized("team.view.schedule.form.contentPlaceholder"),
-                            text: $draft.content
-                        )
-                        .dpInputChrome(isInvalid: draft.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                        .onChange(of: draft.content) { _, value in
-                            if value.count > 50 { draft.content = String(value.prefix(50)) }
-                        }
-                        }
-                        VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
-                            Text("team.view.schedule.form.descriptionLabel", tableName: "Team").font(DPTypography.label)
-                        TextField(
-                            teamLocalized("team.view.schedule.form.descriptionPlaceholder"),
-                            text: $draft.description,
-                            axis: .vertical
-                        )
-                        .lineLimit(4...8)
-                        .dpInputChrome()
-                        }
-                        VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
-                        DatePicker(selection: $draft.startDate, displayedComponents: .date) {
-                            Text("team.view.schedule.form.startDate", tableName: "Team")
-                        }
-                        .frame(minHeight: DPSize.minimumTouchTarget)
-                        DatePicker(
-                            selection: $draft.endDate,
-                            in: draft.startDate...,
-                            displayedComponents: .date
-                        ) {
-                            Text("team.view.schedule.form.endDate", tableName: "Team")
-                        }
-                        .frame(minHeight: DPSize.minimumTouchTarget)
-                        }
-                    }
-                    .padding(DPSpacing.medium)
-                }
-                HStack(spacing: DPSpacing.small) {
-                    Button(teamLocalized("team.common.save")) {
-                        Task { await viewModel.saveSchedule(draft) }
-                    }
-                    .buttonStyle(DPPrimaryButtonStyle())
-                    .disabled(!draft.isValid || viewModel.isWorking)
-                    Button(teamLocalized("team.common.cancel")) {
-                        dismiss()
-                    }
-                    .buttonStyle(DPSecondaryButtonStyle())
-                }
-                .frame(maxWidth: .infinity, alignment: .trailing)
-                .padding(DPSpacing.medium)
-                .overlay(alignment: .top) { Rectangle().fill(DPColor.borderPrimary).frame(height: 1) }
-            }
-            .background(DPColor.backgroundModal)
-            .navigationBarHidden(true)
+        DPModalPanel(
+            maximumPanelHeight: maximumHeight,
+            scrollTarget: focusedField
+        ) {
+            editorHeader
+        } content: {
+            editorForm
+        } footer: {
+            editorFooter
         }
-        .dpKeyboardDismissToolbar()
-        .presentationDetents([.medium, .large])
+    }
+
+    private var editorHeader: some View {
+        HStack {
+            Text("team.view.schedule.modal.title", tableName: "Team")
+                .font(DPTypography.bodyMedium)
+            Spacer()
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "xmark")
+                    .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, DPSpacing.medium)
+        .padding(.vertical, DPSpacing.small)
+        .background(DPColor.backgroundTertiary)
+    }
+
+    private var editorForm: some View {
+        VStack(alignment: .leading, spacing: DPSpacing.medium) {
+            VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+                HStack {
+                    Text("team.view.schedule.form.contentLabel", tableName: "Team").font(DPTypography.label)
+                    Spacer()
+                    Text(verbatim: "\(draft.content.count)/50").font(DPTypography.caption).foregroundStyle(DPColor.textMuted)
+                }
+                TextField(
+                    teamLocalized("team.view.schedule.form.contentPlaceholder"),
+                    text: $draft.content
+                )
+                .focused($focusedField, equals: .content)
+                .dpInputChrome(isInvalid: draft.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .onChange(of: draft.content) { _, value in
+                    if value.count > 50 { draft.content = String(value.prefix(50)) }
+                }
+            }
+            .id(TeamScheduleField.content)
+            VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+                Text("team.view.schedule.form.descriptionLabel", tableName: "Team").font(DPTypography.label)
+                TextField(
+                    teamLocalized("team.view.schedule.form.descriptionPlaceholder"),
+                    text: $draft.description,
+                    axis: .vertical
+                )
+                .lineLimit(4...8)
+                .focused($focusedField, equals: .description)
+                .dpInputChrome()
+            }
+            .id(TeamScheduleField.description)
+            VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+                DatePicker(selection: $draft.startDate, displayedComponents: .date) {
+                    Text("team.view.schedule.form.startDate", tableName: "Team")
+                }
+                .frame(minHeight: DPSize.minimumTouchTarget)
+                DatePicker(
+                    selection: $draft.endDate,
+                    in: draft.startDate...,
+                    displayedComponents: .date
+                ) {
+                    Text("team.view.schedule.form.endDate", tableName: "Team")
+                }
+                .frame(minHeight: DPSize.minimumTouchTarget)
+            }
+        }
+        .padding(DPSpacing.medium)
+    }
+
+    private var editorFooter: some View {
+        HStack(spacing: DPSpacing.small) {
+            Button(teamLocalized("team.common.save")) {
+                Task { await viewModel.saveSchedule(draft) }
+            }
+            .buttonStyle(DPPrimaryButtonStyle())
+            .disabled(!draft.isValid || viewModel.isWorking)
+            Button(teamLocalized("team.common.cancel")) {
+                dismiss()
+            }
+            .buttonStyle(DPSecondaryButtonStyle())
+        }
+        .frame(maxWidth: .infinity, alignment: .trailing)
+        .padding(DPSpacing.medium)
     }
 }
 

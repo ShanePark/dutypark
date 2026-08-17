@@ -89,25 +89,32 @@ struct DPFriendTagSelector: View {
     let preservedItems: [DPFriendTagItem]
     @Binding var selection: Set<MemberID>
     let disabled: Bool
+    private let isSearchFocusedBinding: Binding<Bool>?
 
     @State private var isExpanded: Bool
     @State private var query = ""
     @State private var showsSelectedOnly = false
+    @FocusState private var isSearchFocused: Bool
 
     /// Icon sizes scale with the `.subheadline`-relative labels they sit next to.
     @ScaledMetric(relativeTo: .subheadline) private var collapsedIconSize: CGFloat = 16
     @ScaledMetric(relativeTo: .subheadline) private var selectionIconSize: CGFloat = 14
 
+    /// - Parameter isSearchFocused: mirrors the focus state of the internal search field so a
+    ///   host form can keep the selector visible while the keyboard is up. The selector owns the
+    ///   focus; this binding only reports it.
     init(
         items: [DPFriendTagItem],
         preservedItems: [DPFriendTagItem] = [],
         selection: Binding<Set<MemberID>>,
-        disabled: Bool = false
+        disabled: Bool = false,
+        isSearchFocused: Binding<Bool>? = nil
     ) {
         self.items = items
         self.preservedItems = preservedItems
         _selection = selection
         self.disabled = disabled
+        self.isSearchFocusedBinding = isSearchFocused
         _isExpanded = State(initialValue: !selection.wrappedValue.isEmpty)
     }
 
@@ -118,6 +125,9 @@ struct DPFriendTagSelector: View {
             } else {
                 collapsedButton
             }
+        }
+        .onChange(of: isSearchFocused) { _, focused in
+            isSearchFocusedBinding?.wrappedValue = focused
         }
     }
 
@@ -208,6 +218,7 @@ struct DPFriendTagSelector: View {
             TextField(localized("friendTag.search"), text: $query)
                 .font(DPTypography.label)
                 .textInputAutocapitalization(.never)
+                .focused($isSearchFocused)
                 .disabled(disabled)
             if !query.isEmpty {
                 Button { query = "" } label: {

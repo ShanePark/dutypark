@@ -1678,23 +1678,19 @@ private struct DayDetailView: View {
                     confirm: performDestructiveAction
                 )
             } else if showsEditor {
-                VStack(spacing: 0) {
+                ScheduleEditorView(
+                    model: model,
+                    day: day,
+                    existing: editorSchedule,
+                    maximumPanelHeight: maximumHeight,
+                    onCancel: closeEditor,
+                    onSaved: closeEditor,
+                    dismissRequest: editorDismissRequest,
+                    onWorkingChange: updateEditorWorking
+                ) {
                     modalHeader
-
-                    Divider().overlay(DPColor.borderPrimary)
-
-                    ScheduleEditorView(
-                        model: model,
-                        day: day,
-                        existing: editorSchedule,
-                        onCancel: closeEditor,
-                        onSaved: closeEditor,
-                        dismissRequest: editorDismissRequest,
-                        onWorkingChange: updateEditorWorking
-                    )
-                    .id(editorSchedule?.id.uuidString ?? "new-\(day.id)")
                 }
-                .frame(height: maximumHeight, alignment: .top)
+                .id(editorSchedule?.id.uuidString ?? "new-\(day.id)")
             } else {
                 DPModalPanel(
                     maximumPanelHeight: maximumHeight * CalendarCompactModalLayout.maximumPanelHeightRatio
@@ -2062,14 +2058,16 @@ private struct DayDetailView: View {
     }
 }
 
-private struct ScheduleEditorView: View {
+private struct ScheduleEditorView<Header: View>: View {
     @ObservedObject var model: CalendarViewModel
     let day: CalendarDayContent
     let existing: ScheduleDTO?
+    let maximumPanelHeight: CGFloat
     let onCancel: () -> Void
     let onSaved: () -> Void
     let dismissRequest: Int
     let onWorkingChange: (Bool) -> Void
+    let header: Header
     let initialContent: String
     let initialDescription: String
     let initialVisibility: Visibility
@@ -2090,28 +2088,34 @@ private struct ScheduleEditorView: View {
     @StateObject private var attachmentModel: AttachmentPickerModel
     @StateObject private var aiConsent = AIScheduleParsingConsentStore.shared
     @FocusState private var focusedField: Field?
+    @State private var isTagSearchFocused = false
 
     private enum Field {
         case title
         case details
+        case tags
     }
 
     init(
         model: CalendarViewModel,
         day: CalendarDayContent,
         existing: ScheduleDTO?,
+        maximumPanelHeight: CGFloat,
         onCancel: @escaping () -> Void,
         onSaved: @escaping () -> Void,
         dismissRequest: Int = 0,
-        onWorkingChange: @escaping (Bool) -> Void = { _ in }
+        onWorkingChange: @escaping (Bool) -> Void = { _ in },
+        @ViewBuilder header: () -> Header
     ) {
         self.model = model
         self.day = day
         self.existing = existing
+        self.maximumPanelHeight = maximumPanelHeight
         self.onCancel = onCancel
         self.onSaved = onSaved
         self.dismissRequest = dismissRequest
         self.onWorkingChange = onWorkingChange
+        self.header = header()
         let base = CalendarDateSupport.date(from: day.cell.date) ?? Date()
         let initialContent = existing?.content ?? ""
         let initialDescription = existing?.description ?? ""
@@ -2140,118 +2144,22 @@ private struct ScheduleEditorView: View {
         ))
     }
 
+    /// The tag search field belongs to `DPFriendTagSelector`, so it never appears in
+    /// `focusedField`; fall back to it only when no field of this editor holds focus.
+    private var scrollTarget: Field? {
+        focusedField ?? (isTagSearchFocused ? .tags : nil)
+    }
+
     var body: some View {
-        VStack(spacing: 0) {
-            ScrollView {
-                VStack(spacing: DPSpacing.small) {
-                    formRow("calendar.schedule.content") {
-                        ZStack(alignment: .trailing) {
-                            TextField(CalendarLocalization.text("calendar.schedule.content.placeholder"), text: $content)
-                                .textInputAutocapitalization(.sentences)
-                                .font(DPFont.light(size: 15, relativeTo: .body))
-                                .focused($focusedField, equals: .title)
-                                .padding(.trailing, 54)
-                                .dpInputChrome(isInvalid: content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || content.count > 50)
-                            Text("\(content.count)/50")
-                                .font(DPTypography.caption)
-                                .foregroundStyle(content.count > 50 ? DPColor.danger : DPColor.textMuted)
-                                .padding(.trailing, DPSpacing.small)
-                        }
-                    }
-
-                    formRow(existing == nil ? "calendar.schedule.startTime" : "calendar.schedule.start") {
-                        DatePicker(
-                            CalendarLocalization.text("calendar.schedule.start"),
-                            selection: $start,
-                            displayedComponents: existing == nil ? [.hourAndMinute] : [.date, .hourAndMinute]
-                        )
-                        .labelsHidden()
-                        .environment(\.locale, CalendarLocalization.selectedLocale)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-
-                    formRow("calendar.schedule.end") {
-                        DatePicker(
-                            CalendarLocalization.text("calendar.schedule.end"),
-                            selection: $end,
-                            displayedComponents: [.date, .hourAndMinute]
-                        )
-                        .labelsHidden()
-                        .environment(\.locale, CalendarLocalization.selectedLocale)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-
-                    formRow("calendar.schedule.description", alignment: .top) {
-                        TextField(
-                            CalendarLocalization.text("calendar.schedule.description.placeholder"),
-                            text: $description,
-                            axis: .vertical
-                        )
-                        .font(DPFont.light(size: 15, relativeTo: .body))
-                        .focused($focusedField, equals: .details)
-                        .lineLimit(2...4)
-                        .dpInputChrome()
-                    }
-
-                    formRow("calendar.schedule.visibility", alignment: .top) {
-                        HStack(spacing: DPSpacing.extraSmall) {
-                            visibilityButton(.publicAccess, icon: "globe")
-                            visibilityButton(.friends, icon: "person.2")
-                            visibilityButton(.family, icon: "heart")
-                            visibilityButton(.privateAccess, icon: "lock")
-                        }
-                    }
-
-                    formRow("calendar.schedule.attachments", alignment: .top) {
-                        AttachmentPicker(model: attachmentModel)
-                    }
-
-                    if ScheduleFriendTagSelectorPolicy.shouldShow(
-                        isMyCalendar: model.isMyCalendar,
-                        currentFriendCount: model.friends.count,
-                        selectedIDs: tagIDs,
-                        preservedValidIDCount: existing?.tags.compactMap(\.id).count ?? 0
-                    ) {
-                        formRow("calendar.schedule.tags", alignment: .top) {
-                            DPFriendTagSelector(
-                                items: model.friends.map(DPFriendTagAdapter.item),
-                                preservedItems: (existing?.tags ?? []).compactMap(DPFriendTagAdapter.item),
-                                selection: $tagIDs,
-                                disabled: interactionsDisabled
-                            )
-                        }
-                    }
-                }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-            }
-            .scrollDismissesKeyboard(.interactively)
-
-            HStack(spacing: DPSpacing.small) {
-                Button {
-                    requestDismissal()
-                } label: {
-                    Text(CalendarLocalization.text("calendar.cancel"))
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(DPOutlineButtonStyle())
-                .disabled(interactionsDisabled)
-
-                Button {
-                    save()
-                } label: {
-                    Text(CalendarLocalization.text("calendar.save"))
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(DPPrimaryButtonStyle())
-                .disabled(saveDisabled)
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .background(DPColor.backgroundModal)
-            .overlay(alignment: .top) {
-                Rectangle().fill(DPColor.borderPrimary).frame(height: 1)
-            }
+        DPModalPanel(
+            maximumPanelHeight: maximumPanelHeight,
+            scrollTarget: scrollTarget
+        ) {
+            header
+        } content: {
+            editorForm
+        } footer: {
+            editorActions
         }
         .onAppear { onWorkingChange(interactionsDisabled) }
         .onChange(of: interactionsDisabled) { _, isWorking in
@@ -2305,6 +2213,118 @@ private struct ScheduleEditorView: View {
         } message: {
             Text(CalendarLocalization.text("calendar.aiConsent.prompt.message"))
         }
+    }
+
+    private var editorForm: some View {
+        VStack(spacing: DPSpacing.small) {
+            formRow("calendar.schedule.content") {
+                ZStack(alignment: .trailing) {
+                    TextField(CalendarLocalization.text("calendar.schedule.content.placeholder"), text: $content)
+                        .textInputAutocapitalization(.sentences)
+                        .font(DPFont.light(size: 15, relativeTo: .body))
+                        .focused($focusedField, equals: .title)
+                        .padding(.trailing, 54)
+                        .dpInputChrome(isInvalid: content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || content.count > 50)
+                    Text("\(content.count)/50")
+                        .font(DPTypography.caption)
+                        .foregroundStyle(content.count > 50 ? DPColor.danger : DPColor.textMuted)
+                        .padding(.trailing, DPSpacing.small)
+                }
+            }
+            .id(Field.title)
+
+            formRow(existing == nil ? "calendar.schedule.startTime" : "calendar.schedule.start") {
+                DatePicker(
+                    CalendarLocalization.text("calendar.schedule.start"),
+                    selection: $start,
+                    displayedComponents: existing == nil ? [.hourAndMinute] : [.date, .hourAndMinute]
+                )
+                .labelsHidden()
+                .environment(\.locale, CalendarLocalization.selectedLocale)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            formRow("calendar.schedule.end") {
+                DatePicker(
+                    CalendarLocalization.text("calendar.schedule.end"),
+                    selection: $end,
+                    displayedComponents: [.date, .hourAndMinute]
+                )
+                .labelsHidden()
+                .environment(\.locale, CalendarLocalization.selectedLocale)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            formRow("calendar.schedule.description", alignment: .top) {
+                TextField(
+                    CalendarLocalization.text("calendar.schedule.description.placeholder"),
+                    text: $description,
+                    axis: .vertical
+                )
+                .font(DPFont.light(size: 15, relativeTo: .body))
+                .focused($focusedField, equals: .details)
+                .lineLimit(2...4)
+                .dpInputChrome()
+            }
+            .id(Field.details)
+
+            formRow("calendar.schedule.visibility", alignment: .top) {
+                HStack(spacing: DPSpacing.extraSmall) {
+                    visibilityButton(.publicAccess, icon: "globe")
+                    visibilityButton(.friends, icon: "person.2")
+                    visibilityButton(.family, icon: "heart")
+                    visibilityButton(.privateAccess, icon: "lock")
+                }
+            }
+
+            formRow("calendar.schedule.attachments", alignment: .top) {
+                AttachmentPicker(model: attachmentModel)
+            }
+
+            if ScheduleFriendTagSelectorPolicy.shouldShow(
+                isMyCalendar: model.isMyCalendar,
+                currentFriendCount: model.friends.count,
+                selectedIDs: tagIDs,
+                preservedValidIDCount: existing?.tags.compactMap(\.id).count ?? 0
+            ) {
+                formRow("calendar.schedule.tags", alignment: .top) {
+                    DPFriendTagSelector(
+                        items: model.friends.map(DPFriendTagAdapter.item),
+                        preservedItems: (existing?.tags ?? []).compactMap(DPFriendTagAdapter.item),
+                        selection: $tagIDs,
+                        disabled: interactionsDisabled,
+                        isSearchFocused: $isTagSearchFocused
+                    )
+                }
+                .id(Field.tags)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+    }
+
+    private var editorActions: some View {
+        HStack(spacing: DPSpacing.small) {
+            Button {
+                requestDismissal()
+            } label: {
+                Text(CalendarLocalization.text("calendar.cancel"))
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(DPOutlineButtonStyle())
+            .disabled(interactionsDisabled)
+
+            Button {
+                save()
+            } label: {
+                Text(CalendarLocalization.text("calendar.save"))
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(DPPrimaryButtonStyle())
+            .disabled(saveDisabled)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
     }
 
     private func formRow<Content: View>(
@@ -3200,6 +3220,9 @@ private struct DDayEditorView: View {
     @State private var isPrivate: Bool
     @State private var isSaving = false
     @State private var showsDiscardConfirmation = false
+    @FocusState private var focusedField: Field?
+
+    private enum Field { case title }
 
     init(
         model: CalendarViewModel,
@@ -3239,7 +3262,10 @@ private struct DDayEditorView: View {
     }
 
     var body: some View {
-        DPModalPanel(maximumPanelHeight: maximumPanelHeight) {
+        DPModalPanel(
+            maximumPanelHeight: maximumPanelHeight,
+            scrollTarget: focusedField
+        ) {
             header
         } content: {
             editorBody
@@ -3298,9 +3324,11 @@ private struct DDayEditorView: View {
                         .foregroundStyle(title.count > 30 ? DPColor.danger : DPColor.textMuted)
                 }
                 TextField(CalendarLocalization.text("calendar.dday.name"), text: $title)
+                    .focused($focusedField, equals: .title)
                     .dpInputChrome(isInvalid: !canSave)
                     .disabled(isSaving)
             }
+            .id(Field.title)
 
             VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
                 Text("calendar.dday.date", tableName: "Calendar")
