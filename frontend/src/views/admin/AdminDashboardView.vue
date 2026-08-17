@@ -273,7 +273,7 @@ function clearHoverBg(e: Event, bgColor = 'var(--dp-bg-card)') {
 
 onMounted(async () => {
   if (!authStore.isAdmin) {
-    router.push('/')
+    router.replace('/')
     return
   }
   await fetchData()

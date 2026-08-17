@@ -15,12 +15,12 @@ const redirectTarget = computed(() => getSafeRedirect(route.query.redirect) || '
 
 onMounted(() => {
   if (!authStore.isLoggedIn) {
-    router.push('/')
+    router.replace('/')
   }
 })
 
 function goHome() {
-  router.push(redirectTarget.value)
+  router.replace(redirectTarget.value)
 }
 </script>
 

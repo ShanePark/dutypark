@@ -1,8 +1,27 @@
 import { describe, expect, it } from 'vitest'
 import { MORE_MENU_PATHS, MORE_PROFILE_PATH, buildMoreMenuGroups } from './moreMenu'
+import friendsView from '../member/FriendsView.vue?raw'
+import memberView from '../member/MemberView.vue?raw'
+import notificationListView from '../notification/NotificationListView.vue?raw'
+import settingsView from '../settings/SettingsView.vue?raw'
 
 function itemIds(isAdmin: boolean) {
   return buildMoreMenuGroups({ isAdmin }).flat().map((item) => item.id)
+}
+
+/** More destinations whose header comes from PageHeader, so back is a shared prop. */
+const PAGE_HEADER_VIEWS: Record<string, string> = {
+  '/member': memberView,
+  '/friends': friendsView,
+  '/notifications': notificationListView,
+  '/settings': settingsView,
+}
+
+/** These render bespoke headers instead of PageHeader and have no back button yet. */
+const BESPOKE_HEADER_PATHS = ['/admin', '/guide']
+
+function pageHeaderTag(source: string): string {
+  return source.match(/<PageHeader\b[^>]*>/)?.[0] ?? ''
 }
 
 describe('buildMoreMenuGroups', () => {
@@ -53,5 +72,20 @@ describe('buildMoreMenuGroups', () => {
       '/guide',
       '/settings',
     ])
+  })
+})
+
+describe('more sub-page back navigation', () => {
+  it('accounts for every more destination', () => {
+    expect([...Object.keys(PAGE_HEADER_VIEWS), ...BESPOKE_HEADER_PATHS].sort())
+      .toEqual([...MORE_MENU_PATHS].sort())
+  })
+
+  it('sends back to the more tab when the page was entered directly', () => {
+    for (const [path, source] of Object.entries(PAGE_HEADER_VIEWS)) {
+      const header = pageHeaderTag(source)
+      expect(header, path).toContain('show-back')
+      expect(header, path).toContain('back-fallback="/more"')
+    }
   })
 })

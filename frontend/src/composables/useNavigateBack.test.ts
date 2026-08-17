@@ -55,6 +55,15 @@ describe('useNavigateBack', () => {
     expect(mocks.back).not.toHaveBeenCalled()
   })
 
+  it('replaces with a section fallback so a directly entered sub-page returns to its tab', () => {
+    setHistoryState({ back: null })
+
+    useNavigateBack().goBack('/more')
+
+    expect(mocks.replace).toHaveBeenCalledWith('/more')
+    expect(mocks.back).not.toHaveBeenCalled()
+  })
+
   it('falls back to the home route by default', () => {
     setHistoryState(null)
 

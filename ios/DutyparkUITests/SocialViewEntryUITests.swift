@@ -64,6 +64,55 @@ final class SocialViewEntryUITests: XCTestCase {
     }
 
     @MainActor
+    func testFriendManagementStaysOnTheMoreTabAndReturnsToTheMenu() {
+        let app = XCUIApplication()
+        app.launchArguments += [
+            "-dp-language", "ko",
+            "-dp-theme", "dark",
+            "-AppleLanguages", "(ko)",
+            "-AppleLocale", "ko_KR",
+            "-ui-testing-authenticated",
+        ]
+        app.launch()
+        defer { app.terminate() }
+
+        XCTAssertTrue(
+            app.descendants(matching: .any)["screen.home"].waitForExistence(timeout: 20)
+        )
+
+        let moreTab = app.buttons.matching(identifier: "tab.more").firstMatch
+        XCTAssertTrue(moreTab.waitForExistence(timeout: 10))
+        moreTab.tap()
+
+        let friendManagementButton = app.buttons["more.friends"].firstMatch
+        XCTAssertTrue(friendManagementButton.waitForExistence(timeout: 10))
+        friendManagementButton.tap()
+
+        XCTAssertTrue(
+            app.descendants(matching: .any)["social.list"].waitForExistence(timeout: 10)
+        )
+        capture("more-friends-after-tap")
+        XCTAssertTrue(
+            moreTab.isSelected,
+            "Friend management opened from the More menu must stay on the More tab"
+        )
+        XCTAssertTrue(
+            app.navigationBars.staticTexts["친구관리"].waitForExistence(timeout: 10),
+            "The pushed friend management screen must keep its own title"
+        )
+
+        let backButton = app.navigationBars.buttons.firstMatch
+        XCTAssertTrue(backButton.waitForExistence(timeout: 10))
+        backButton.tap()
+
+        XCTAssertTrue(
+            friendManagementButton.waitForExistence(timeout: 10),
+            "Back from friend management must return to the More menu"
+        )
+        XCTAssertTrue(moreTab.isSelected)
+    }
+
+    @MainActor
     func testRemoveFriendUsesCenteredSharedConfirmation() {
         let app = XCUIApplication()
         app.launchArguments += [

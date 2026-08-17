@@ -41,7 +41,7 @@ function clearHoverBg(e: Event, bgColor = 'var(--dp-bg-card)') {
 
 onMounted(() => {
   if (!authStore.isAdmin) {
-    router.push('/')
+    router.replace('/')
   }
 })
 </script>

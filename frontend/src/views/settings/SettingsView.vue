@@ -367,7 +367,7 @@ onUnmounted(() => {
 
 <template>
   <div class="max-w-4xl mx-auto px-4 py-6">
-    <PageHeader :title="t('header.menu.settings')" :icon="Settings" />
+    <PageHeader :title="t('header.menu.settings')" :icon="Settings" show-back back-fallback="/more" />
 
     <!-- Loading State -->
     <div v-if="loading" class="flex items-center justify-center py-20">

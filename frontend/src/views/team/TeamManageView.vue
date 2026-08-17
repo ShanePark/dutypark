@@ -3,6 +3,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useSwal } from '@/composables/useSwal'
+import { useNavigateBack } from '@/composables/useNavigateBack'
 import { useAuthStore } from '@/stores/auth'
 import { teamApi } from '@/api/team'
 import MemberSearchModal from '@/components/team/MemberSearchModal.vue'
@@ -41,6 +42,7 @@ const router = useRouter()
 const authStore = useAuthStore()
 const { t } = useI18n()
 const { showError, toastSuccess, confirmDelete, confirm } = useSwal()
+const { goBack } = useNavigateBack()
 const teamId = Number(route.params.teamId)
 
 const loading = ref(false)
@@ -76,7 +78,8 @@ async function fetchTeam() {
   } catch (error) {
     console.error('Failed to fetch team:', error)
     showError(t('team.manage.messages.fetchFailed'))
-    router.push('/team')
+    // Replace so back does not re-enter the page that just failed and re-fire the error.
+    router.replace('/team')
   } finally {
     loading.value = false
   }
@@ -286,7 +289,8 @@ async function removeTeam() {
   try {
     await adminApi.deleteTeam(teamId)
     toastSuccess(t('team.manage.messages.deleteTeamSuccess'))
-    router.push('/admin/teams')
+    // The team is gone, so its manage page must not stay reachable through back.
+    router.replace('/admin/teams')
   } catch (e: unknown) {
     const message = resolveApiErrorMessage(e, { fallbackKey: 'team.manage.messages.deleteTeamFailed' }, t)
     showError(message)
@@ -308,7 +312,7 @@ onMounted(() => {
     <template v-else-if="team">
       <div class="font-bold text-xl py-3 rounded-t-lg flex items-center justify-between px-4" :style="{ backgroundColor: 'var(--dp-modal-header-bg)', color: 'var(--dp-text-on-dark)' }">
         <button
-          @click="router.back()"
+          @click="goBack('/team')"
           class="px-3 py-1 text-dp-text-on-dark text-sm rounded-lg hover:bg-dp-border-secondary transition flex items-center gap-1 cursor-pointer bg-dp-surface-strong-alt"
         >
           <ChevronLeft class="w-4 h-4" />

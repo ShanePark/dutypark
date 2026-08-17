@@ -63,13 +63,13 @@ async function handleAutoRestore() {
   try {
     await authStore.restore()
     showInfo(t('impersonation.messages.sessionExpiredRestore'))
-    window.location.href = '/'
+    window.location.replace('/')
   } catch (error) {
     console.error('Failed to auto-restore account:', error)
     // Clear auth state and redirect to login on failure
     authStore.clearAuth()
     showError(t('impersonation.messages.sessionExpiredLogin'))
-    window.location.href = buildLoginPath(route.fullPath)
+    window.location.replace(buildLoginPath(route.fullPath))
   }
 }
 
@@ -84,7 +84,7 @@ async function handleRestore() {
   restoring.value = true
   try {
     await authStore.restore()
-    window.location.href = router.resolve('/').href
+    window.location.replace(router.resolve('/').href)
   } catch (error) {
     console.error('Failed to restore account:', error)
     showError(t('impersonation.messages.restoreFailed'))

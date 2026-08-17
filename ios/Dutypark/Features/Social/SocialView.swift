@@ -46,7 +46,8 @@ struct SocialView: View {
             }
         }
         .background(DPColor.backgroundPrimary.ignoresSafeArea())
-        .navigationTitle("")
+        // The hosting stack owns the title: the dashboard pushes this screen under the
+        // brand mark, while the "more" menu pushes it under its own menu entry.
         .navigationBarTitleDisplayMode(.inline)
         .task { await viewModel.load() }
         .refreshable { await viewModel.refresh() }

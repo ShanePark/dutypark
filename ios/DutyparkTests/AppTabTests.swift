@@ -83,6 +83,28 @@ struct AppTabTests {
     }
 
     @Test
+    func moreMenuScreensPushOntoTheMoreTabInsteadOfSwitchingTabs() {
+        #expect(RootNavigationPolicy.moreDestination(for: .friends) == .friends)
+        #expect(RootNavigationPolicy.moreDestination(for: .admin) == .admin)
+        #expect(RootNavigationPolicy.moreDestination(for: .guide) == .guide)
+        #expect(RootNavigationPolicy.moreDestination(for: .settings) == .settings)
+        // Presented as an overlay and a confirmation, so neither owns a pushed screen.
+        #expect(RootNavigationPolicy.moreDestination(for: .notifications) == nil)
+        #expect(RootNavigationPolicy.moreDestination(for: .logout) == nil)
+    }
+
+    @Test
+    func onlyNavigationThatAsksForAPolicyPageCarriesASettingsDestination() {
+        #expect(
+            RootNavigationPolicy.settingsDestination(for: .settings, requested: .terms) == .terms
+        )
+        #expect(RootNavigationPolicy.settingsDestination(for: .settings, requested: nil) == nil)
+        // Opening settings from the menu must not re-push a page a deep link asked for.
+        #expect(RootNavigationPolicy.settingsDestination(for: .myInfo, requested: .terms) == nil)
+        #expect(RootNavigationPolicy.settingsDestination(for: .guide, requested: .guide) == nil)
+    }
+
+    @Test
     func selectingOtherTabsDoesNotMutateCalendarTarget() {
         for tab in AppTab.allCases where tab != .calendar {
             #expect(

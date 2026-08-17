@@ -44,6 +44,10 @@ final class CalendarFeatureTests: XCTestCase {
             "RootNavigationPolicy.calendarBackTab(origin: origin?.tab)",
             "private func routeToMemberCalendar(_ memberID: MemberID)",
             "routeToMemberCalendar(memberID)",
+            // A calendar opened from a pushed "more" screen has to restore that screen,
+            // not the bare "more" menu.
+            "CalendarOrigin(tab: $0, homePath: homePath, moreDestination: moreDestination)",
+            "moreDestination = origin.moreDestination",
         ] {
             XCTAssertTrue(rootSource.contains(wiring), "RootTabView is missing: \(wiring)")
         }

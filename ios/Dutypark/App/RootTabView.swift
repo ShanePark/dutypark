@@ -309,6 +309,7 @@ struct RootTabView: View {
                             onMutation: socialDidMutate,
                             onOpenCalendar: openMemberCalendar
                         )
+                        .navigationTitle("")
                     }
                 }
         }
@@ -359,11 +360,8 @@ struct RootTabView: View {
         selectedTab = .home
     }
 
-    private func openMyCalendar() {
-        calendarTarget = CalendarTarget(memberID: authenticatedMemberID)
-        selectedTab = .calendar
-    }
-
+    // Routed entries have no "more" menu behind them, so friend management replaces the
+    // home tab root instead of being pushed onto the menu's stack.
     private func openFriends() {
         homePath = [.friends]
         selectedTab = .home
@@ -381,18 +379,13 @@ struct RootTabView: View {
 
     private func openMoreMenuItem(_ item: MoreMenuItem) {
         switch item {
-        case .friends:
-            openFriends()
         case .notifications:
             showsNotificationCenter = true
-        case .admin:
-            moreDestination = .admin
-        case .guide:
-            moreDestination = .guide
-        case .settings:
-            moreDestination = .settings
         case .logout:
             showsLogoutConfirmation = true
+        case .friends, .admin, .guide, .settings:
+            guard let destination = RootNavigationPolicy.moreDestination(for: item) else { return }
+            openMore(destination)
         }
     }
 
@@ -408,6 +401,13 @@ struct RootTabView: View {
                     systemImage: "lock.shield"
                 )
             }
+        case .friends:
+            SocialView(
+                onMutation: socialDidMutate,
+                onOpenCalendar: openMemberCalendar
+            )
+            .navigationTitle(MoreMenuItem.friends.title)
+            .navigationBarTitleDisplayMode(.inline)
         case .guide:
             PublicGuideView()
         case .myInfo:
@@ -428,9 +428,10 @@ struct RootTabView: View {
         _ destination: MoreDestination,
         settingsDestination: SettingsDestination? = nil
     ) {
-        if destination == .settings {
-            self.settingsDestination = settingsDestination
-        }
+        self.settingsDestination = RootNavigationPolicy.settingsDestination(
+            for: destination,
+            requested: settingsDestination
+        )
         moreDestination = destination
         selectedTab = .more
     }
@@ -499,7 +500,7 @@ struct RootTabView: View {
 
     private func openMemberCalendar(_ memberID: MemberID) {
         calendarOrigin = RootNavigationPolicy.calendarOrigin(from: selectedTab)
-            .map { CalendarOrigin(tab: $0, homePath: homePath) }
+            .map { CalendarOrigin(tab: $0, homePath: homePath, moreDestination: moreDestination) }
         calendarTarget = CalendarTarget(memberID: memberID)
         selectedTab = .calendar
     }
@@ -518,6 +519,7 @@ struct RootTabView: View {
         calendarTarget = CalendarTarget(memberID: authenticatedMemberID)
         if let origin {
             homePath = origin.homePath
+            moreDestination = origin.moreDestination
         }
         selectedTab = RootNavigationPolicy.calendarBackTab(origin: origin?.tab)
     }
@@ -537,8 +539,7 @@ struct RootTabView: View {
     private func openNotificationRoute(_ route: NotificationRoute) async -> Bool {
         switch route {
         case .friends:
-            selectedTab = .home
-            homePath = [.friends]
+            openFriends()
             return true
         case .schedule(let scheduleID), .taggedSchedule(let scheduleID):
             return await openScheduleCalendar(scheduleID, route: route)
@@ -643,12 +644,11 @@ struct RootTabView: View {
         case "team":
             selectedTab = .team
         case "friends":
-            selectedTab = .home
-            homePath = [.friends]
+            openFriends()
         case "notifications":
             showsNotifications = true
         case nil:
-            selectedTab = .home
+            openHome()
         default:
             return false
         }
@@ -683,6 +683,32 @@ nonisolated enum RootNavigationPolicy {
     // calendar tab, which is reset to the member's own calendar.
     static func calendarBackTab(origin: AppTab?) -> AppTab {
         origin ?? .calendar
+    }
+
+    // The "more" tab owns its own navigation stack, so a menu entry with a screen is
+    // pushed onto it instead of switching tabs: back returns to the menu it came from.
+    static func moreDestination(for item: MoreMenuItem) -> MoreDestination? {
+        switch item {
+        case .friends:
+            .friends
+        case .admin:
+            .admin
+        case .guide:
+            .guide
+        case .settings:
+            .settings
+        case .notifications, .logout:
+            nil
+        }
+    }
+
+    // Settings owns the policy pages, so only navigation that explicitly asks for one
+    // may carry it; otherwise a stale request would be pushed again on the next visit.
+    static func settingsDestination(
+        for destination: MoreDestination,
+        requested: SettingsDestination?
+    ) -> SettingsDestination? {
+        destination == .settings ? requested : nil
     }
 
     static func scheduleMemberID(
@@ -749,6 +775,7 @@ private enum HomeDestination: Hashable {
 
 nonisolated enum MoreDestination: Hashable, Sendable {
     case admin
+    case friends
     case guide
     case myInfo
     case settings
@@ -790,6 +817,7 @@ private struct CalendarTarget: Hashable {
 private struct CalendarOrigin: Equatable {
     var tab: AppTab
     var homePath: [HomeDestination]
+    var moreDestination: MoreDestination?
 }
 
 private struct ImpersonationBanner: View {

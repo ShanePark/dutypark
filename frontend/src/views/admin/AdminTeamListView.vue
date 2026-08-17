@@ -183,7 +183,7 @@ function clearHoverBgWithColor(e: Event, bgColor: string, textColor: string) {
 
 onMounted(() => {
   if (!authStore.isAdmin) {
-    router.push('/')
+    router.replace('/')
     return
   }
   fetchTeams()

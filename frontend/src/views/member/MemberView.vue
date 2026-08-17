@@ -710,7 +710,7 @@ onMounted(async () => {
     </section>
 
     <template v-else>
-    <PageHeader :title="t('member.pageTitle')" :icon="User" />
+    <PageHeader :title="t('member.pageTitle')" :icon="User" show-back back-fallback="/more" />
 
     <!-- Loading State -->
     <div v-if="loading" class="flex items-center justify-center py-20">
