@@ -76,7 +76,7 @@ class PublicContentServiceTest {
 
         val allNotes = (0 until page.totalPages)
             .flatMap { service.getReleaseNotes("en", it, 50).items }
-        assertThat(allNotes.sumOf { it.changes.size }).isEqualTo(485)
+        assertThat(allNotes.sumOf { it.changes.size }).isEqualTo(486)
         val componentNote = allNotes.first { it.title.contains("Component annotation") }
         assertThat(componentNote.title).contains("@Component")
         assertThat(componentNote.title).doesNotContain("{'@'}")

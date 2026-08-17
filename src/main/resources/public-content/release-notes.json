@@ -46,7 +46,8 @@
           "changes": [
             "더보기에서 자주 찾는 기능으로 이동하고, 프로필과 계정 관리는 내 정보에서, 앱 환경 설정은 설정에서 구분해 관리할 수 있습니다.",
             "iOS의 캘린더, Todo, 친구와 팀 화면에서 드래그, 정렬, 확인창, 월 선택과 뒤로 가기 동작을 개선했습니다.",
-            "알림과 로그인 세션 처리를 보강하고 웹과 iOS의 모달, 버튼, 빈 상태와 오류 안내를 더 일관되게 정리했습니다."
+            "알림과 로그인 세션 처리를 보강하고 웹과 iOS의 모달, 버튼, 빈 상태와 오류 안내를 더 일관되게 정리했습니다.",
+            "관리자 회원 목록을 웹과 동일한 구성으로 정리하고, iOS 앱에서도 회원별 최근 접속 시간과 IP, 기기 정보를 목록에서 바로 확인할 수 있습니다."
           ]
         },
         "pr-404": {
@@ -2216,7 +2217,8 @@
           "changes": [
             "Open frequently used destinations from More, manage profiles and accounts in My Info, and keep app preferences in Settings.",
             "Improve dragging, reordering, confirmations, month selection, and back navigation across iOS calendars, todos, friends, and teams.",
-            "Strengthen notification and sign-in session handling, and make modals, buttons, empty states, and error guidance more consistent across web and iOS."
+            "Strengthen notification and sign-in session handling, and make modals, buttons, empty states, and error guidance more consistent across web and iOS.",
+            "Align the admin member list across web and iOS, so the iPhone app also shows each member's recent sign-in time, IP, and device details directly in the list."
           ]
         },
         "pr-404": {
@@ -4351,6 +4353,7 @@
       "url": "https://github.com/ShanePark/dutypark/pull/405",
       "category": "improvement",
       "areas": [
+        "admin",
         "auth",
         "calendar",
         "friends",
