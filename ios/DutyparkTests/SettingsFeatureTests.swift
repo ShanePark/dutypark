@@ -399,7 +399,6 @@ struct SettingsFeatureTests {
         let sessions = SettingsConfirmation.session(.otherSessions(count: 2))
         #expect(sessions.message.contains("2"))
         #expect(sessions.isDestructive)
-        #expect(SettingsConfirmation.logout.isDestructive)
     }
 
     @Test

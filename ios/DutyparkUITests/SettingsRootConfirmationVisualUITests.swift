@@ -6,30 +6,11 @@ final class SettingsRootConfirmationVisualUITests: XCTestCase {
     }
 
     @MainActor
-    func testSettingsLogoutUsesCenteredKoreanConfirmation() {
-        let app = launchAuthenticatedApp()
-        defer { app.terminate() }
-
-        openSettings(in: app)
-        let logoutButton = app.buttons["settings.logout"]
-        XCTAssertTrue(revealSettingsElement(logoutButton, in: app))
-        logoutButton.tap()
-
-        assertCenteredConfirmation(
-            in: app,
-            title: "로그아웃",
-            message: "정말 로그아웃 하시겠습니까?",
-            confirmTitle: "로그아웃"
-        )
-        capture("parity-ios-settings-logout-confirmation-after")
-    }
-
-    @MainActor
     func testProfilePhotoDeleteUsesCenteredKoreanConfirmation() {
         let app = launchAuthenticatedApp(profilePhotoFixture: true)
         defer { app.terminate() }
 
-        openSettings(in: app)
+        openMyInfo(in: app)
         let deleteButton = app.buttons["settings.photo.delete"]
         XCTAssertTrue(deleteButton.waitForExistence(timeout: 10))
         XCTAssertTrue(deleteButton.isHittable)
@@ -111,7 +92,7 @@ final class SettingsRootConfirmationVisualUITests: XCTestCase {
     }
 
     @MainActor
-    private func openSettings(in app: XCUIApplication) {
+    private func openMyInfo(in app: XCUIApplication) {
         XCTAssertTrue(
             app.descendants(matching: .any)["screen.home"].waitForExistence(timeout: 20)
         )
@@ -121,28 +102,12 @@ final class SettingsRootConfirmationVisualUITests: XCTestCase {
         XCTAssertTrue(
             app.descendants(matching: .any)["screen.more"].waitForExistence(timeout: 10)
         )
-        let settingsEntry = app.buttons["more.settings"]
-        XCTAssertTrue(settingsEntry.waitForExistence(timeout: 10))
-        settingsEntry.tap()
+        let myInfoEntry = app.buttons["more.myInfo"]
+        XCTAssertTrue(myInfoEntry.waitForExistence(timeout: 10))
+        myInfoEntry.tap()
         XCTAssertTrue(
-            app.descendants(matching: .any)["screen.settings"].waitForExistence(timeout: 10)
+            app.descendants(matching: .any)["screen.myInfo"].waitForExistence(timeout: 10)
         )
-    }
-
-    @MainActor
-    private func revealSettingsElement(
-        _ element: XCUIElement,
-        in app: XCUIApplication,
-        timeout: TimeInterval = 10
-    ) -> Bool {
-        let scrollView = app.scrollViews["screen.settings"].firstMatch
-        guard scrollView.waitForExistence(timeout: 2) else { return false }
-
-        let deadline = Date().addingTimeInterval(timeout)
-        while Date() < deadline, !element.isHittable {
-            scrollView.swipeUp(velocity: .fast)
-        }
-        return element.isHittable
     }
 
     @MainActor

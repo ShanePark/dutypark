@@ -56,6 +56,41 @@ enum SettingsLoadedSection: Hashable {
     case policies
 }
 
+/// The account and preference screens render different sections, so each one loads
+/// only the resources its own sections need. The member profile is always loaded
+/// because both screens read it.
+nonisolated struct SettingsLoadPlan: Equatable, Sendable {
+    var familyMembers = false
+    var friends = false
+    var managers = false
+    var managedAccounts = false
+    var sessions = false
+    var policies = false
+    var dutyPattern = false
+
+    static let all = SettingsLoadPlan(
+        familyMembers: true,
+        friends: true,
+        managers: true,
+        managedAccounts: true,
+        sessions: true,
+        policies: true,
+        dutyPattern: true
+    )
+
+    /// Friends back the calendar visibility audience preview and policies back the
+    /// information section.
+    static let settings = SettingsLoadPlan(friends: true, policies: true)
+
+    static let myInfo = SettingsLoadPlan(
+        familyMembers: true,
+        managers: true,
+        managedAccounts: true,
+        sessions: true,
+        dutyPattern: true
+    )
+}
+
 @MainActor
 final class SettingsViewModel: ObservableObject {
     private let service: SettingsService
@@ -88,7 +123,7 @@ final class SettingsViewModel: ObservableObject {
         }
     }
 
-    func load() async {
+    func load(_ plan: SettingsLoadPlan = .all) async {
         guard !isLoading else { return }
 #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-ui-testing-authenticated") {
@@ -100,13 +135,23 @@ final class SettingsViewModel: ObservableObject {
         defer { isLoading = false }
 
         async let loadedMember = try? service.member()
-        async let loadedFamily = try? service.familyMembers()
-        async let loadedFriends = try? service.friends()
-        async let loadedManagers = try? service.managers()
-        async let loadedManaged = try? service.managedMembers()
-        async let loadedSessions = try? service.sessions()
-        async let loadedPolicies = try? service.policies()
-        async let loadedPattern = try? service.dutyPattern()
+        async let loadedFamily: [MemberPreviewDTO]? = plan.familyMembers
+            ? try? service.familyMembers()
+            : nil
+        async let loadedFriends: [FriendDTO]? = plan.friends ? try? service.friends() : nil
+        async let loadedManagers: [MemberDTO]? = plan.managers ? try? service.managers() : nil
+        async let loadedManaged: [MemberDTO]? = plan.managedAccounts
+            ? try? service.managedMembers()
+            : nil
+        async let loadedSessions: [SettingsRefreshToken]? = plan.sessions
+            ? try? service.sessions()
+            : nil
+        async let loadedPolicies: CurrentPoliciesDTO? = plan.policies
+            ? try? service.policies()
+            : nil
+        async let loadedPattern: DutyPatternDTO? = plan.dutyPattern
+            ? try? service.dutyPattern()
+            : nil
         let values = await (
             loadedMember,
             loadedFamily,
@@ -139,19 +184,23 @@ final class SettingsViewModel: ObservableObject {
             sessions = value
             loadedSections.insert(.sessions)
         }
-        if let value = values.6 {
-            policies = value
-            loadedSections.insert(.policies)
-            policyLoadFailed = false
-        } else {
-            policyLoadFailed = true
+        if plan.policies {
+            if let value = values.6 {
+                policies = value
+                loadedSections.insert(.policies)
+                policyLoadFailed = false
+            } else {
+                policyLoadFailed = true
+            }
         }
-        if let value = values.7 {
-            dutyPattern = value
-            dutyPatternLoadFailed = false
-            loadedSections.insert(.dutyPattern)
-        } else {
-            dutyPatternLoadFailed = true
+        if plan.dutyPattern {
+            if let value = values.7 {
+                dutyPattern = value
+                dutyPatternLoadFailed = false
+                loadedSections.insert(.dutyPattern)
+            } else {
+                dutyPatternLoadFailed = true
+            }
         }
         if values.0 == nil, member != nil {
             showError("settings.error.load")

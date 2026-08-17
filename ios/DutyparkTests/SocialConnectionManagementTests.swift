@@ -26,7 +26,7 @@ struct SocialConnectionManagementTests {
         let sourceURL = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
-            .appending(path: "Dutypark/Features/Settings/SettingsView.swift")
+            .appending(path: "Dutypark/Features/Settings/MyInfoView.swift")
         let source = try String(contentsOf: sourceURL, encoding: .utf8)
 
         #expect(source.contains("switch SettingsSocialRowAction.resolve(isConnected: connected)"))

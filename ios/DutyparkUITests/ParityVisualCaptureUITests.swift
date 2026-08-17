@@ -101,15 +101,15 @@ final class ParityVisualCaptureUITests: XCTestCase {
         XCTAssertTrue(more.waitForExistence(timeout: 10))
         capture("parity-ios-05-more-ko-dark")
 
-        let settingsRow = app.buttons["more.settings"]
-        XCTAssertTrue(settingsRow.waitForExistence(timeout: 10))
-        settingsRow.tap()
+        let myInfoRow = app.buttons["more.myInfo"]
+        XCTAssertTrue(myInfoRow.waitForExistence(timeout: 10))
+        myInfoRow.tap()
 
-        let settings = app.descendants(matching: .any)["screen.settings"]
-        XCTAssertTrue(settings.waitForExistence(timeout: 10))
+        let myInfo = app.descendants(matching: .any)["screen.myInfo"]
+        XCTAssertTrue(myInfo.waitForExistence(timeout: 10))
         let patternTitle = app.staticTexts["기본 근무 패턴"].firstMatch
         XCTAssertTrue(patternTitle.waitForExistence(timeout: 10))
-        capture("parity-ios-06-settings-ko-dark")
+        capture("parity-ios-06-my-info-ko-dark")
 
         let editPatternButton = app.buttons
             .matching(NSPredicate(format: "label CONTAINS %@", "변경"))

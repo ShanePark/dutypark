@@ -52,16 +52,16 @@ final class AccountDeletionParityUITests: XCTestCase {
         moreTab.tap()
 
         XCTAssertTrue(app.descendants(matching: .any)["screen.more"].waitForExistence(timeout: 10))
-        let settingsEntry = app.buttons["more.settings"]
-        XCTAssertTrue(settingsEntry.waitForExistence(timeout: 10))
-        settingsEntry.tap()
+        let myInfoEntry = app.buttons["more.myInfo"]
+        XCTAssertTrue(myInfoEntry.waitForExistence(timeout: 10))
+        myInfoEntry.tap()
 
-        let settingsScreen = app.scrollViews["screen.settings"].firstMatch
-        XCTAssertTrue(settingsScreen.waitForExistence(timeout: 10))
+        let myInfoScreen = app.scrollViews["screen.myInfo"].firstMatch
+        XCTAssertTrue(myInfoScreen.waitForExistence(timeout: 10))
         let deleteEntry = app.buttons["settings.account.delete"]
         let deadline = Date().addingTimeInterval(10)
         while Date() < deadline, !deleteEntry.isHittable {
-            settingsScreen.swipeUp(velocity: .fast)
+            myInfoScreen.swipeUp(velocity: .fast)
         }
         XCTAssertTrue(deleteEntry.isHittable)
         deleteEntry.tap()

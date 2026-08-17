@@ -120,6 +120,9 @@ struct RootTabView: View {
     @State private var todoTarget: TodoID?
     @State private var moreDestination: MoreDestination?
     @State private var settingsDestination: SettingsDestination?
+    // Bumped when the profile photo changes so the cached avatar in the "more" tab is
+    // refetched instead of showing the replaced image.
+    @State private var profilePhotoVersion: Int64 = 0
     @State private var showsNotifications = false
     @State private var notificationDropdownReadPolicy = RootNotificationDropdownReadPolicy()
     @State private var showsNotificationCenter = false
@@ -165,6 +168,8 @@ struct RootTabView: View {
                 primaryTab(.more, showsNavigationBar: true, showsTabTitle: true) {
                     MoreView(
                         isAdmin: authenticatedMember?.isAdmin == true,
+                        profile: moreProfile,
+                        onOpenMyInfo: openMyInfo,
                         onSelect: openMoreMenuItem
                     )
                     .navigationDestination(item: $moreDestination) { destination in
@@ -364,6 +369,16 @@ struct RootTabView: View {
         selectedTab = .home
     }
 
+    private var moreProfile: MoreProfileSummary? {
+        authenticatedMember.map {
+            MoreProfileSummary(member: $0, profilePhotoVersion: profilePhotoVersion)
+        }
+    }
+
+    private func openMyInfo() {
+        moreDestination = .myInfo
+    }
+
     private func openMoreMenuItem(_ item: MoreMenuItem) {
         switch item {
         case .friends:
@@ -395,24 +410,28 @@ struct RootTabView: View {
             }
         case .guide:
             PublicGuideView()
-        case .settings:
-            SettingsView(destination: $settingsDestination) {
+        case .myInfo:
+            MyInfoView {
                 homeRefreshID &+= 1
+                profilePhotoVersion &+= 1
             }
-            .navigationTitle(RootChromeLocalization.localizable("root.menu.settings"))
+            .navigationTitle(RootChromeLocalization.localizable("root.menu.myInfo"))
             .navigationBarTitleDisplayMode(.inline)
+        case .settings:
+            SettingsView(destination: $settingsDestination)
+                .navigationTitle(RootChromeLocalization.localizable("root.menu.settings"))
+                .navigationBarTitleDisplayMode(.inline)
         }
     }
 
-    private func openSettings(_ destination: SettingsDestination? = nil) {
-        // The guide has no dependency on the settings model, so it opens directly under
-        // More; the policy screens are rendered by the settings model and stay behind it.
-        if destination == .guide {
-            moreDestination = .guide
-        } else {
-            settingsDestination = destination
-            moreDestination = .settings
+    private func openMore(
+        _ destination: MoreDestination,
+        settingsDestination: SettingsDestination? = nil
+    ) {
+        if destination == .settings {
+            self.settingsDestination = settingsDestination
         }
+        moreDestination = destination
         selectedTab = .more
     }
 
@@ -613,8 +632,8 @@ struct RootTabView: View {
             routeToMemberCalendar(memberID)
             return true
         }
-        if let destination = SettingsDeepLink.destination(from: url) {
-            openSettings(destination)
+        if let destination = RootMoreDeepLinkPolicy.destination(from: url) {
+            openMore(destination, settingsDestination: SettingsDeepLink.destination(from: url))
             return true
         }
 
@@ -623,8 +642,6 @@ struct RootTabView: View {
             selectedTab = .todo
         case "team":
             selectedTab = .team
-        case "member":
-            openSettings()
         case "friends":
             selectedTab = .home
             homePath = [.friends]
@@ -730,10 +747,38 @@ private enum HomeDestination: Hashable {
     case friends
 }
 
-private enum MoreDestination: Hashable {
+nonisolated enum MoreDestination: Hashable, Sendable {
     case admin
     case guide
+    case myInfo
     case settings
+}
+
+/// Routes first-party links to the "more" tab screen that owns them. The account
+/// sections moved to `MyInfoView`, so a member link no longer lands on settings.
+nonisolated enum RootMoreDeepLinkPolicy {
+    static func destination(
+        from url: URL,
+        allowedHost: String = "dutypark.o-r.kr"
+    ) -> MoreDestination? {
+        if let settingsDestination = SettingsDeepLink.destination(
+            from: url,
+            allowedHost: allowedHost
+        ) {
+            return destination(for: settingsDestination)
+        }
+        guard url.scheme?.lowercased() == "https",
+              url.host?.lowercased() == allowedHost.lowercased(),
+              url.pathComponents.filter({ $0 != "/" }).first == "member"
+        else { return nil }
+        return .myInfo
+    }
+
+    // The guide has no dependency on the settings model, so it opens directly under
+    // More; the policy screens are rendered by the settings model and stay behind it.
+    static func destination(for settingsDestination: SettingsDestination) -> MoreDestination {
+        settingsDestination == .guide ? .guide : .settings
+    }
 }
 
 private struct CalendarTarget: Hashable {

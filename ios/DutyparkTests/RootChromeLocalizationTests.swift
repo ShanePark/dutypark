@@ -76,6 +76,52 @@ struct RootChromeLocalizationTests {
     }
 
     @Test
+    func myInfoEntryIsLocalizedWithoutBecomingAMenuRow() {
+        #expect(RootChromeLocalization.localizable("root.menu.myInfo", locale: korean) == "내 정보")
+        #expect(
+            RootChromeLocalization.localizable("root.menu.myInfo", locale: Locale(identifier: "en"))
+                == "My info"
+        )
+        // The profile card is the entry point, so the menu must not duplicate it.
+        #expect(!MoreMenuItem.allCases.map(\.rawValue).contains("myInfo"))
+    }
+
+    @Test
+    func profileCardPrefersTheTeamAndFallsBackToTheEmail() {
+        #expect(summary(team: "1팀", email: "member@dutypark.dev").supportingText == "1팀")
+        #expect(summary(team: nil, email: "member@dutypark.dev").supportingText == "member@dutypark.dev")
+        #expect(summary(team: "  ", email: "member@dutypark.dev").supportingText == "member@dutypark.dev")
+        #expect(summary(team: nil, email: nil).supportingText == nil)
+    }
+
+    @Test
+    func profileCardFallsBackToTheScreenTitleWhenTheMemberHasNoName() {
+        #expect(summary(name: "선우").displayName == "선우")
+        #expect(summary(name: "   ").displayName == RootChromeLocalization.localizable("root.menu.myInfo"))
+    }
+
+    private func summary(
+        name: String = "선우",
+        team: String? = nil,
+        email: String? = nil,
+        profilePhotoVersion: Int64 = 0
+    ) -> MoreProfileSummary {
+        MoreProfileSummary(
+            member: LoginMember(
+                id: 7,
+                email: email,
+                name: name,
+                teamId: team == nil ? nil : 3,
+                team: team,
+                isAdmin: false,
+                isImpersonating: false,
+                originalMemberId: nil
+            ),
+            profilePhotoVersion: profilePhotoVersion
+        )
+    }
+
+    @Test
     func impersonationBannerUsesTheRequestedLocale() {
         #expect(
             RootChromeLocalization.localizable("auth.impersonation.active", locale: korean)

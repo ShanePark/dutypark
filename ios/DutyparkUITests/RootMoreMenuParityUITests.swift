@@ -38,6 +38,7 @@ final class RootMoreMenuParityUITests: XCTestCase {
         XCTAssertEqual(
             Set(moreButtons.map(\.identifier)),
             [
+                "more.myInfo",
                 "more.friends",
                 "more.notifications",
                 "more.guide",
@@ -48,6 +49,14 @@ final class RootMoreMenuParityUITests: XCTestCase {
         for button in moreButtons {
             XCTAssertTrue(button.isHittable, "More action is not hittable: \(button.identifier)")
             XCTAssertGreaterThanOrEqual(button.frame.height, 44)
+        }
+
+        // The profile card is the only entry point to the account screen, so it has to
+        // stay at the top of the list with a comfortable target.
+        let myInfoCard = app.buttons["more.myInfo"]
+        XCTAssertGreaterThanOrEqual(myInfoCard.frame.height, 64)
+        for button in moreButtons where button.identifier != "more.myInfo" {
+            XCTAssertLessThan(myInfoCard.frame.minY, button.frame.minY)
         }
 
         for removedIdentifier in [
@@ -74,5 +83,10 @@ final class RootMoreMenuParityUITests: XCTestCase {
         attachment.name = "parity-ios-root-more-deduplicated-after"
         attachment.lifetime = .keepAlways
         add(attachment)
+
+        myInfoCard.tap()
+        XCTAssertTrue(
+            app.descendants(matching: .any)["screen.myInfo"].waitForExistence(timeout: 10)
+        )
     }
 }

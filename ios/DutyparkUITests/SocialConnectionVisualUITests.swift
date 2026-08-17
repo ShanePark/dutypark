@@ -29,11 +29,11 @@ final class SocialConnectionVisualUITests: XCTestCase {
             app.descendants(matching: .any)["screen.more"].waitForExistence(timeout: 10)
         )
 
-        let settingsRow = app.buttons["more.settings"]
-        XCTAssertTrue(settingsRow.waitForExistence(timeout: 10))
-        settingsRow.tap()
+        let myInfoRow = app.buttons["more.myInfo"]
+        XCTAssertTrue(myInfoRow.waitForExistence(timeout: 10))
+        myInfoRow.tap()
         XCTAssertTrue(
-            app.descendants(matching: .any)["screen.settings"].waitForExistence(timeout: 10)
+            app.descendants(matching: .any)["screen.myInfo"].waitForExistence(timeout: 10)
         )
 
         let manageKakao = app.buttons["settings.social.manage.kakao"]
@@ -96,11 +96,11 @@ final class SocialConnectionVisualUITests: XCTestCase {
             app.descendants(matching: .any)["screen.more"].waitForExistence(timeout: 10)
         )
 
-        let settingsRow = app.buttons["more.settings"]
-        XCTAssertTrue(settingsRow.waitForExistence(timeout: 10))
-        settingsRow.tap()
+        let myInfoRow = app.buttons["more.myInfo"]
+        XCTAssertTrue(myInfoRow.waitForExistence(timeout: 10))
+        myInfoRow.tap()
         XCTAssertTrue(
-            app.descendants(matching: .any)["screen.settings"].waitForExistence(timeout: 10)
+            app.descendants(matching: .any)["screen.myInfo"].waitForExistence(timeout: 10)
         )
 
         let connectApple = app.buttons["settings.social.connect.apple"]
@@ -137,11 +137,11 @@ final class SocialConnectionVisualUITests: XCTestCase {
             app.descendants(matching: .any)["screen.more"].waitForExistence(timeout: 10)
         )
 
-        let settingsRow = app.buttons["more.settings"]
-        XCTAssertTrue(settingsRow.waitForExistence(timeout: 10))
-        settingsRow.tap()
+        let myInfoRow = app.buttons["more.myInfo"]
+        XCTAssertTrue(myInfoRow.waitForExistence(timeout: 10))
+        myInfoRow.tap()
         XCTAssertTrue(
-            app.descendants(matching: .any)["screen.settings"].waitForExistence(timeout: 10)
+            app.descendants(matching: .any)["screen.myInfo"].waitForExistence(timeout: 10)
         )
 
         let manageApple = app.buttons["settings.social.manage.apple"]

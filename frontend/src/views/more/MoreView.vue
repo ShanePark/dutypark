@@ -1,12 +1,15 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ChevronRight, LogOut, MoreHorizontal } from 'lucide-vue-next'
 import PageHeader from '@/components/common/PageHeader.vue'
+import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notification'
 import { useLogout } from '@/composables/useLogout'
-import { buildMoreMenuGroups } from './moreMenu'
+import { memberApi } from '@/api/member'
+import type { MemberDto } from '@/types'
+import { MORE_PROFILE_PATH, buildMoreMenuGroups } from './moreMenu'
 
 const { t } = useI18n()
 const authStore = useAuthStore()
@@ -14,11 +17,59 @@ const notificationStore = useNotificationStore()
 const { confirmAndLogout } = useLogout()
 
 const menuGroups = computed(() => buildMoreMenuGroups({ isAdmin: authStore.isAdmin }))
+
+// Rendered from the cached login state first, then enriched with the profile photo
+// that only the member API knows about.
+const profile = ref<MemberDto | null>(null)
+
+const profileMemberId = computed(() => profile.value?.id ?? authStore.user?.id ?? null)
+const profileName = computed(
+  () => profile.value?.name || authStore.user?.name || t('member.pageTitle')
+)
+const profileSubtitle = computed(
+  () =>
+    profile.value?.team ||
+    authStore.user?.team ||
+    profile.value?.email ||
+    authStore.user?.email ||
+    ''
+)
+
+onMounted(async () => {
+  try {
+    const response = await memberApi.getMyInfo()
+    profile.value = response.data
+  } catch (error) {
+    console.error('Failed to load profile summary:', error)
+  }
+})
 </script>
 
 <template>
   <div class="max-w-4xl mx-auto px-4 py-6">
     <PageHeader :title="t('more.title')" :icon="MoreHorizontal" />
+
+    <section class="mb-4 overflow-hidden rounded-xl border border-dp-border-primary bg-dp-bg-card shadow-sm">
+      <router-link
+        :to="MORE_PROFILE_PATH"
+        class="more-menu-item flex min-h-16 w-full items-center gap-3 px-4 py-3 transition-colors"
+      >
+        <ProfileAvatar
+          :member-id="profileMemberId"
+          :name="profileName"
+          :has-profile-photo="profile?.hasProfilePhoto"
+          :profile-photo-version="profile?.profilePhotoVersion"
+          size="md"
+        />
+        <span class="flex min-w-0 flex-1 flex-col">
+          <span class="truncate text-sm font-medium text-dp-text-primary">{{ profileName }}</span>
+          <span v-if="profileSubtitle" class="truncate text-xs text-dp-text-secondary">
+            {{ profileSubtitle }}
+          </span>
+        </span>
+        <ChevronRight class="h-4 w-4 shrink-0 text-dp-text-muted" />
+      </router-link>
+    </section>
 
     <section
       v-for="(group, groupIndex) in menuGroups"

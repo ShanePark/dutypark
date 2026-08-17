@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { MORE_MENU_PATHS, buildMoreMenuGroups } from './moreMenu'
+import { MORE_MENU_PATHS, MORE_PROFILE_PATH, buildMoreMenuGroups } from './moreMenu'
 
 function itemIds(isAdmin: boolean) {
   return buildMoreMenuGroups({ isAdmin }).flat().map((item) => item.id)
@@ -30,7 +30,28 @@ describe('buildMoreMenuGroups', () => {
     expect(badged.map((item) => item.id)).toEqual(['friends'])
   })
 
+  it('points the settings entry at the app preference page', () => {
+    const settings = buildMoreMenuGroups({ isAdmin: false })
+      .flat()
+      .find((item) => item.id === 'settings')
+
+    expect(settings?.path).toBe('/settings')
+  })
+
+  it('keeps the account page out of the list because the profile card links to it', () => {
+    expect(MORE_PROFILE_PATH).toBe('/member')
+    expect(buildMoreMenuGroups({ isAdmin: true }).flat().map((item) => item.path))
+      .not.toContain(MORE_PROFILE_PATH)
+  })
+
   it('exposes every more destination for the footer active state', () => {
-    expect(MORE_MENU_PATHS).toEqual(['/friends', '/notifications', '/admin', '/guide', '/member'])
+    expect(MORE_MENU_PATHS).toEqual([
+      '/member',
+      '/friends',
+      '/notifications',
+      '/admin',
+      '/guide',
+      '/settings',
+    ])
   })
 })

@@ -25,11 +25,11 @@ final class DutyPatternHiddenSelectionParityUITests: XCTestCase {
         moreTab.tap()
 
         XCTAssertTrue(app.descendants(matching: .any)["screen.more"].waitForExistence(timeout: 10))
-        let settingsEntry = app.buttons["more.settings"]
-        XCTAssertTrue(settingsEntry.waitForExistence(timeout: 10))
-        settingsEntry.tap()
+        let myInfoEntry = app.buttons["more.myInfo"]
+        XCTAssertTrue(myInfoEntry.waitForExistence(timeout: 10))
+        myInfoEntry.tap()
 
-        XCTAssertTrue(app.descendants(matching: .any)["screen.settings"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.descendants(matching: .any)["screen.myInfo"].waitForExistence(timeout: 10))
         XCTAssertTrue(
             app.staticTexts["일부 요일의 자동 적용이 중지되었습니다."].firstMatch
                 .waitForExistence(timeout: 10)
