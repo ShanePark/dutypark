@@ -1109,6 +1109,13 @@ private struct AdminPasswordChangeModal: View {
 
     private var footer: some View {
         HStack(spacing: DPSpacing.small) {
+            Button(action: requestDismiss) {
+                Text(AdminLocalization.string("admin.common.close"))
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(DPSecondaryButtonStyle())
+            .disabled(interactionState.isSaving)
+
             Button {
                 Task { await save() }
             } label: {
@@ -1123,13 +1130,6 @@ private struct AdminPasswordChangeModal: View {
             }
             .buttonStyle(DPPrimaryButtonStyle())
             .disabled(!isValid || interactionState.isSaving)
-
-            Button(action: requestDismiss) {
-                Text(AdminLocalization.string("admin.common.cancel"))
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(DPSecondaryButtonStyle())
-            .disabled(interactionState.isSaving)
         }
         .padding(DPSpacing.compact)
     }

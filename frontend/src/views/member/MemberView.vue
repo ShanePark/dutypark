@@ -1083,20 +1083,20 @@ onMounted(async () => {
       </div>
       <div class="modal-actions modal-footer-safe sm:px-6 sm:py-6">
         <button
+          @click="showPasswordModal = false"
+          :disabled="changingPassword"
+          class="flex-1 px-4 py-3 sm:py-2 min-h-11 rounded-lg font-medium hover-interactive cursor-pointer disabled:opacity-50"
+          :style="{ backgroundColor: 'var(--dp-bg-hover)', color: 'var(--dp-text-primary)' }"
+        >
+          {{ t('common.actions.close') }}
+        </button>
+        <button
           @click="changePassword"
           :disabled="isPasswordSubmitDisabled"
           class="flex-1 px-4 py-3 sm:py-2 min-h-11 bg-dp-accent hover:bg-dp-accent-hover rounded-lg text-dp-text-on-dark font-medium transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
         >
           <Loader2 v-if="changingPassword" class="w-4 h-4 animate-spin" />
           {{ changingPassword ? t('member.password.submitting') : t('member.password.submit') }}
-        </button>
-        <button
-          @click="showPasswordModal = false"
-          :disabled="changingPassword"
-          class="flex-1 px-4 py-3 sm:py-2 min-h-11 rounded-lg font-medium hover-interactive cursor-pointer disabled:opacity-50"
-          :style="{ backgroundColor: 'var(--dp-bg-hover)', color: 'var(--dp-text-primary)' }"
-        >
-          {{ t('common.actions.cancel') }}
         </button>
       </div>
     </BaseModal>
@@ -1135,20 +1135,20 @@ onMounted(async () => {
       </div>
       <div class="modal-actions modal-footer-safe sm:px-6 sm:py-6">
         <button
+          @click="showAuxiliaryModal = false"
+          :disabled="creatingAuxiliary"
+          class="flex-1 px-4 py-3 sm:py-2 min-h-11 rounded-lg font-medium hover-interactive cursor-pointer disabled:opacity-50"
+          :style="{ backgroundColor: 'var(--dp-bg-hover)', color: 'var(--dp-text-primary)' }"
+        >
+          {{ t('common.actions.close') }}
+        </button>
+        <button
           @click="createAuxiliaryAccount"
           :disabled="creatingAuxiliary || !auxiliaryName.trim()"
           class="flex-1 px-4 py-3 sm:py-2 min-h-11 bg-dp-accent hover:bg-dp-accent-hover rounded-lg text-dp-text-on-dark font-medium transition disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
         >
           <Loader2 v-if="creatingAuxiliary" class="w-4 h-4 animate-spin" />
           {{ creatingAuxiliary ? t('member.auxiliary.submitting') : t('member.auxiliary.submit') }}
-        </button>
-        <button
-          @click="showAuxiliaryModal = false"
-          :disabled="creatingAuxiliary"
-          class="flex-1 px-4 py-3 sm:py-2 min-h-11 rounded-lg font-medium hover-interactive cursor-pointer disabled:opacity-50"
-          :style="{ backgroundColor: 'var(--dp-bg-hover)', color: 'var(--dp-text-primary)' }"
-        >
-          {{ t('common.actions.cancel') }}
         </button>
       </div>
     </BaseModal>

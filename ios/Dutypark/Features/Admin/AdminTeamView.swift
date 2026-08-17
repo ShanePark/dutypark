@@ -517,6 +517,13 @@ private struct AdminTeamCreateModal: View {
 
     private var footer: some View {
         HStack(spacing: DPSpacing.small) {
+            Button(action: requestDismiss) {
+                Text(AdminLocalization.string("admin.common.close"))
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(DPSecondaryButtonStyle())
+            .disabled(interactionState.isWorking)
+
             Button {
                 Task { await create() }
             } label: {
@@ -532,13 +539,6 @@ private struct AdminTeamCreateModal: View {
             .buttonStyle(DPPrimaryButtonStyle())
             .disabled(!canCreate || interactionState.isSaving)
             .accessibilityIdentifier("admin.teams.create.submit")
-
-            Button(action: requestDismiss) {
-                Text(AdminLocalization.string("admin.common.cancel"))
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(DPSecondaryButtonStyle())
-            .disabled(interactionState.isWorking)
         }
         .padding(DPSpacing.compact)
     }

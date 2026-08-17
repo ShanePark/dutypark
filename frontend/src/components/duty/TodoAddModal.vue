@@ -255,7 +255,7 @@ function onUploadError(message: string) {
         @click="handleClose"
         class="flex-1 sm:flex-none px-4 py-2 rounded-lg transition btn-outline cursor-pointer"
       >
-        {{ t('common.actions.cancel') }}
+        {{ t('common.actions.close') }}
       </button>
       <button
         @click="handleSave"

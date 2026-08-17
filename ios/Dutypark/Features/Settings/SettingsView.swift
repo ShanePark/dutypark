@@ -1118,6 +1118,14 @@ private struct AIScheduleConsentActivationModal: View {
             .padding(DPSpacing.large)
         } footer: {
             SettingsModalActions {
+                Button(action: dismiss) {
+                    SettingsLocalization.text("settings.action.cancel")
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(DPSecondaryButtonStyle())
+                .disabled(store.isUpdating)
+
                 Button(action: enable) {
                     Group {
                         if store.isUpdating {
@@ -1134,14 +1142,6 @@ private struct AIScheduleConsentActivationModal: View {
                 .disabled(!canSubmit)
                 .accessibilityHint(SettingsLocalization.string("settings.aiConsent.confirmEnableHint"))
                 .accessibilityIdentifier("settings.aiConsent.confirmEnable")
-
-                Button(action: dismiss) {
-                    SettingsLocalization.text("settings.action.cancel")
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(DPSecondaryButtonStyle())
-                .disabled(store.isUpdating)
             }
         }
     }

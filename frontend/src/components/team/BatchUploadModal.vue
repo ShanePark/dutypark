@@ -156,18 +156,18 @@ async function uploadBatch() {
 
     <div class="modal-actions modal-actions-end modal-footer-safe">
       <button
+        @click="close"
+        class="flex-1 sm:flex-none px-4 py-2 rounded-lg font-medium hover-interactive cursor-pointer bg-dp-bg-tertiary text-dp-text-secondary"
+      >
+        {{ t('common.actions.close') }}
+      </button>
+      <button
         @click="uploadBatch"
         :disabled="isUploadDisabled"
-        class="px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg font-medium hover:bg-dp-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer"
+        class="flex-1 sm:flex-none px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg font-medium hover:bg-dp-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
       >
         <Loader2 v-if="saving" class="w-4 h-4 animate-spin" />
         {{ t('common.actions.upload') }}
-      </button>
-      <button
-        @click="close"
-        class="px-4 py-2 rounded-lg font-medium hover-interactive cursor-pointer bg-dp-bg-tertiary text-dp-text-secondary"
-      >
-        {{ t('common.actions.cancel') }}
       </button>
     </div>
   </BaseModal>

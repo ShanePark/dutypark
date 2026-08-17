@@ -113,6 +113,22 @@
         }
       }
     },
+    "settings.action.close": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Close"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "닫기"
+          }
+        }
+      }
+    },
     "settings.action.confirm": {
       "localizations": {
         "en": {

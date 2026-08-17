@@ -2303,7 +2303,7 @@ private struct ScheduleEditorView<Header: View>: View {
             Button {
                 requestDismissal()
             } label: {
-                Text(CalendarLocalization.text("calendar.cancel"))
+                Text(CalendarLocalization.text("calendar.close"))
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(DPOutlineButtonStyle())
@@ -3398,7 +3398,7 @@ private struct DDayEditorView: View {
     private var footer: some View {
         HStack(spacing: DPSpacing.small) {
             Button(action: guardedDismiss) {
-                Text(CalendarLocalization.text("calendar.cancel"))
+                Text(CalendarLocalization.text("calendar.close"))
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(DPOutlineButtonStyle())

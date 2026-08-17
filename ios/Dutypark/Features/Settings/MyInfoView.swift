@@ -1109,6 +1109,13 @@ private struct DutyPatternSettingsModal: View {
         } footer: {
             SettingsModalActions {
                 Button {
+                    dismiss()
+                } label: {
+                    SettingsLocalization.text("settings.action.close")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(DPSecondaryButtonStyle())
+                Button {
                     confirmation = .save
                 } label: {
                     SettingsLocalization.text("settings.action.save")
@@ -1116,13 +1123,6 @@ private struct DutyPatternSettingsModal: View {
                 }
                 .buttonStyle(DPPrimaryButtonStyle())
                 .disabled(selectedIDs.isEmpty || hasHiddenSelection || model.isWorking)
-                Button {
-                    dismiss()
-                } label: {
-                    SettingsLocalization.text("settings.action.cancel")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(DPSecondaryButtonStyle())
             }
         }
         .onAppear {
@@ -1434,18 +1434,18 @@ private struct PasswordChangeView: View {
             bodyContent
         } footer: {
             SettingsModalActions {
+                Button(action: dismiss) {
+                    SettingsLocalization.text("settings.action.close")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(DPSecondaryButtonStyle())
+                .disabled(model.isWorking)
                 Button(action: changePassword) {
                     SettingsLocalization.text("settings.action.save")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(DPPrimaryButtonStyle())
                 .disabled(validationKey != nil || model.isWorking)
-                Button(action: dismiss) {
-                    SettingsLocalization.text("settings.action.cancel")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(DPSecondaryButtonStyle())
-                .disabled(model.isWorking)
             }
         }
     }
@@ -1524,18 +1524,18 @@ private struct AuxiliaryAccountModal: View {
             bodyContent
         } footer: {
             SettingsModalActions {
+                Button(action: dismiss) {
+                    SettingsLocalization.text("settings.action.close")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(DPSecondaryButtonStyle())
+                .disabled(model.isWorking)
                 Button(action: createAccount) {
                     SettingsLocalization.text("settings.action.create")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(DPPrimaryButtonStyle())
                 .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || model.isWorking)
-                Button(action: dismiss) {
-                    SettingsLocalization.text("settings.action.cancel")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(DPSecondaryButtonStyle())
-                .disabled(model.isWorking)
             }
         }
     }

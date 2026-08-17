@@ -50,15 +50,8 @@ function confirm() {
       </div>
       <div class="modal-actions modal-actions-center modal-footer-safe pt-0">
         <button
-          @click="confirm"
-        class="px-5 py-2 bg-dp-warning hover:bg-dp-warning-hover text-dp-text-on-dark rounded-lg text-sm font-medium transition-all duration-200 hover:-translate-y-px cursor-pointer"
-        style="box-shadow: var(--dp-shadow-md), var(--dp-shadow-sm);"
-      >
-          {{ t('duty.untagConfirm.action') }}
-        </button>
-        <button
           @click="close"
-          class="px-5 py-2 rounded-lg text-sm font-medium transition-all duration-200 border hover:-translate-y-px cursor-pointer"
+          class="flex-1 sm:flex-none px-5 py-2 rounded-lg text-sm font-medium transition-all duration-200 border hover:-translate-y-px cursor-pointer"
           :style="{
             backgroundColor: 'var(--dp-bg-card)',
             color: 'var(--dp-text-secondary)',
@@ -67,6 +60,13 @@ function confirm() {
           }"
         >
           {{ t('common.actions.cancel') }}
+        </button>
+        <button
+          @click="confirm"
+          class="flex-1 sm:flex-none px-5 py-2 bg-dp-warning hover:bg-dp-warning-hover text-dp-text-on-dark rounded-lg text-sm font-medium transition-all duration-200 hover:-translate-y-px cursor-pointer"
+          style="box-shadow: var(--dp-shadow-md), var(--dp-shadow-sm);"
+        >
+          {{ t('duty.untagConfirm.action') }}
         </button>
       </div>
     </div>

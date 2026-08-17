@@ -473,18 +473,18 @@ onMounted(() => {
       </div>
       <div class="modal-actions modal-actions-end modal-footer-safe">
         <button
+          @click="closeNewTeamModal"
+          class="flex-1 sm:flex-none px-4 py-2 text-sm font-medium rounded-lg transition cursor-pointer bg-dp-bg-tertiary text-dp-text-primary hover-interactive"
+        >
+          {{ t('common.actions.close') }}
+        </button>
+        <button
           @click="handleCreateTeam"
           :disabled="isCreateTeamDisabled"
-          class="px-4 py-2 text-sm font-medium text-dp-text-on-dark bg-dp-accent hover:bg-dp-accent-hover rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center gap-2"
+          class="flex-1 sm:flex-none px-4 py-2 text-sm font-medium text-dp-text-on-dark bg-dp-accent hover:bg-dp-accent-hover rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
         >
           <Loader2 v-if="isCreating" class="w-4 h-4 animate-spin" />
           {{ t('admin.teamList.modal.createButton') }}
-        </button>
-        <button
-          @click="closeNewTeamModal"
-          class="px-4 py-2 text-sm font-medium rounded-lg transition cursor-pointer bg-dp-bg-tertiary text-dp-text-primary hover-interactive"
-        >
-          {{ t('common.actions.cancel') }}
         </button>
       </div>
     </BaseModal>

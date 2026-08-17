@@ -753,18 +753,23 @@ private struct TeamScheduleEditor: View {
 
     private var editorFooter: some View {
         HStack(spacing: DPSpacing.small) {
-            Button(teamLocalized("team.common.save")) {
+            Button {
+                dismiss()
+            } label: {
+                Text(verbatim: teamLocalized("team.common.close"))
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(DPSecondaryButtonStyle())
+            Button {
                 Task { await viewModel.saveSchedule(draft) }
+            } label: {
+                Text(verbatim: teamLocalized("team.common.save"))
+                    .frame(maxWidth: .infinity)
             }
             .buttonStyle(DPPrimaryButtonStyle())
             .disabled(!draft.isValid || viewModel.isWorking)
-            Button(teamLocalized("team.common.cancel")) {
-                dismiss()
-            }
-            .buttonStyle(DPSecondaryButtonStyle())
         }
-        .frame(maxWidth: .infinity, alignment: .trailing)
-        .padding(DPSpacing.medium)
+        .padding(DPSpacing.compact)
     }
 }
 

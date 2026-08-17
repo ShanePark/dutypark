@@ -1636,7 +1636,7 @@ struct TodoFormSheet: View {
             Button {
                 requestDismissal()
             } label: {
-                Text(todoLocalized("common.cancel"))
+                Text(todoLocalized("common.close"))
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(DPOutlineButtonStyle())

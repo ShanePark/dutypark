@@ -49,6 +49,22 @@
         }
       }
     },
+    "admin.common.close": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Close"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "닫기"
+          }
+        }
+      }
+    },
     "admin.common.create": {
       "localizations": {
         "en": {

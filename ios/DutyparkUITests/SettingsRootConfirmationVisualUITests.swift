@@ -11,6 +11,14 @@ final class SettingsRootConfirmationVisualUITests: XCTestCase {
         defer { app.terminate() }
 
         openMyInfo(in: app)
+        let photoActionsButton = app.buttons["settings.photo.actions"]
+        XCTAssertTrue(photoActionsButton.waitForExistence(timeout: 10))
+        XCTAssertTrue(photoActionsButton.isHittable)
+        XCTAssertGreaterThanOrEqual(photoActionsButton.frame.width, 80)
+        XCTAssertGreaterThanOrEqual(photoActionsButton.frame.height, 80)
+        XCTAssertFalse(app.buttons["현재 프로필 사진 자르기"].exists)
+        photoActionsButton.tap()
+
         let deleteButton = app.buttons["settings.photo.delete"]
         XCTAssertTrue(deleteButton.waitForExistence(timeout: 10))
         XCTAssertTrue(deleteButton.isHittable)

@@ -863,6 +863,14 @@ private struct TeamDutyTypeEditor: View {
         } footer: {
             HStack(spacing: DPSpacing.small) {
                 Button {
+                    requestDismiss()
+                } label: {
+                    Text(verbatim: teamLocalized("team.common.close"))
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(DPSecondaryButtonStyle())
+                .disabled(isSubmitting || viewModel.isWorking)
+                Button {
                     guard canSave else { return }
                     isSubmitting = true
                     Task {
@@ -877,14 +885,6 @@ private struct TeamDutyTypeEditor: View {
                 }
                 .buttonStyle(DPSuccessButtonStyle())
                 .disabled(!canSave)
-                Button {
-                    requestDismiss()
-                } label: {
-                    Text(verbatim: teamLocalized("team.common.cancel"))
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(DPSecondaryButtonStyle())
-                .disabled(isSubmitting || viewModel.isWorking)
             }
             .padding(DPSpacing.compact)
             .background(DPColor.backgroundFooter)
@@ -1112,11 +1112,11 @@ private struct TeamMemberSearchView: View {
             .padding(DPSpacing.medium)
         } footer: {
             HStack(spacing: DPSpacing.small) {
-                Spacer()
                 Button {
                     dismiss()
                 } label: {
-                    Text(verbatim: teamLocalized("team.common.cancel"))
+                    Text(verbatim: teamLocalized("team.common.close"))
+                        .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(DPSecondaryButtonStyle())
                 .disabled(viewModel.isWorking)
@@ -1297,6 +1297,14 @@ private struct TeamBatchUploadView: View {
         } footer: {
             HStack(spacing: DPSpacing.small) {
                 Button {
+                    requestDismiss()
+                } label: {
+                    Text(verbatim: teamLocalized("team.common.close"))
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(DPSecondaryButtonStyle())
+                .disabled(viewModel.isWorking)
+                Button {
                     guard let fileURL,
                           TeamFeatureLogic.isValidDutyBatchYear(year, currentYear: currentYear)
                     else { return }
@@ -1320,14 +1328,6 @@ private struct TeamBatchUploadView: View {
                         || !TeamFeatureLogic.isValidDutyBatchYear(year, currentYear: currentYear)
                         || viewModel.isWorking
                 )
-                Button {
-                    requestDismiss()
-                } label: {
-                    Text(verbatim: teamLocalized("team.common.cancel"))
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(DPSecondaryButtonStyle())
-                .disabled(viewModel.isWorking)
             }
             .padding(DPSpacing.compact)
             .background(DPColor.backgroundFooter)

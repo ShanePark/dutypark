@@ -1248,17 +1248,16 @@ private struct FriendSearchModalView: View {
     }
 
     private var modalFooter: some View {
-        HStack {
-            Spacer()
-            Button(social("social.action.close")) { onDismiss() }
-                .font(DPFont.light(size: 14, relativeTo: .subheadline))
-                .foregroundStyle(DPColor.textPrimary)
-                .padding(.horizontal, 20)
-                .frame(minHeight: DPSize.minimumTouchTarget)
-                .background(DPColor.backgroundTertiary)
-                .clipShape(RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous))
+        HStack(spacing: DPSpacing.small) {
+            Button {
+                onDismiss()
+            } label: {
+                Text(verbatim: social("social.action.close"))
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(DPSecondaryButtonStyle())
         }
-        .padding(DPSpacing.medium)
+        .padding(DPSpacing.compact)
     }
 
     private func search(page: Int) {

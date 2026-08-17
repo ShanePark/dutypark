@@ -514,14 +514,14 @@ onMounted(async () => {
         <button
           @click="closePasswordModal"
           :disabled="changingPassword"
-          class="px-4 py-2 text-sm font-medium rounded-lg transition disabled:opacity-50 cursor-pointer bg-dp-bg-tertiary text-dp-text-primary hover-interactive"
+          class="flex-1 sm:flex-none px-4 py-2 text-sm font-medium rounded-lg transition disabled:opacity-50 cursor-pointer bg-dp-bg-tertiary text-dp-text-primary hover-interactive"
         >
-          {{ t('common.actions.cancel') }}
+          {{ t('common.actions.close') }}
         </button>
         <button
           @click="handleChangePassword"
           :disabled="isAdminPasswordSubmitDisabled"
-          class="px-4 py-2 text-sm font-medium text-dp-text-on-dark bg-dp-surface-strong hover:bg-dp-surface-strong-hover rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer"
+          class="flex-1 sm:flex-none px-4 py-2 text-sm font-medium text-dp-text-on-dark bg-dp-surface-strong hover:bg-dp-surface-strong-hover rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
         >
           <Loader2 v-if="changingPassword" class="w-4 h-4 animate-spin" />
           {{ changingPassword ? t('admin.dashboard.password.changing') : t('admin.dashboard.password.change') }}
