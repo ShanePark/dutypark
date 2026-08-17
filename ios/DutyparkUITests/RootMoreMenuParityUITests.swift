@@ -89,4 +89,56 @@ final class RootMoreMenuParityUITests: XCTestCase {
             app.descendants(matching: .any)["screen.myInfo"].waitForExistence(timeout: 10)
         )
     }
+
+    // Admin sits two pushes deep in the More stack, so a member calendar opened from a
+    // member detail has to stack on top of it instead of replacing the calendar tab.
+    @MainActor
+    func testAdminMemberCalendarPushesOntoTheMoreStack() {
+        let app = XCUIApplication()
+        app.launchArguments += [
+            "-dp-language", "ko",
+            "-dp-theme", "dark",
+            "-AppleLanguages", "(ko)",
+            "-AppleLocale", "ko_KR",
+            "-ui-testing-service-admin",
+            "-ui-testing-authenticated",
+            "-ui-testing-admin-visual-fixture",
+        ]
+        app.launch()
+        defer { app.terminate() }
+
+        let moreTab = app.buttons.matching(identifier: "tab.more").firstMatch
+        XCTAssertTrue(moreTab.waitForExistence(timeout: 20))
+        moreTab.tap()
+
+        let adminButton = app.buttons["more.admin"].firstMatch
+        XCTAssertTrue(adminButton.waitForExistence(timeout: 10))
+        adminButton.tap()
+
+        let memberRow = app.descendants(matching: .any)["admin.member.7"].firstMatch
+        XCTAssertTrue(memberRow.waitForExistence(timeout: 10))
+        memberRow.tap()
+
+        let openCalendar = app.buttons["달력으로 이동"].firstMatch
+        XCTAssertTrue(openCalendar.waitForExistence(timeout: 10))
+        openCalendar.tap()
+
+        let memberCalendar = app.descendants(matching: .any)["screen.calendar.member"]
+        XCTAssertTrue(memberCalendar.waitForExistence(timeout: 10))
+        XCTAssertTrue(
+            moreTab.isSelected,
+            "A member calendar opened from Admin must not jump to the calendar tab"
+        )
+
+        let identityChip = app.buttons["calendar.member.back"].firstMatch
+        XCTAssertTrue(identityChip.waitForExistence(timeout: 10))
+        identityChip.tap()
+
+        XCTAssertTrue(memberCalendar.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(
+            openCalendar.waitForExistence(timeout: 10),
+            "Back from an admin member calendar must return to the member detail"
+        )
+        XCTAssertTrue(moreTab.isSelected)
+    }
 }
