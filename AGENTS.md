@@ -52,6 +52,7 @@ The source code, tests, and task-specific documentation are the source of truth 
 - Backend: run focused Gradle tests first, then expand by risk.
 - Web: run `npm run type-check` and `npm run build`, plus affected tests.
 - iOS: when affected, run the build and tests documented in `ios/README.md`.
+- After completing an iOS app change, install the latest successfully verified build on the simulator named exactly `iPhone 13 mini` so the user can inspect it immediately. This does not authorize starting a development server. If that simulator is unavailable or installation is blocked by CoreSimulator or another error, report the exact reason.
 
 ## Git
 
