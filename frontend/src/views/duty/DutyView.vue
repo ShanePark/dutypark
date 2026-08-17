@@ -1016,36 +1016,6 @@ async function handleTodoUpdate(data: {
   }
 }
 
-async function handleTodoComplete(id: string) {
-  const fromDetailModal = isTodoDetailModalOpen.value
-  try {
-    await todoApi.completeTodo(id)
-    await loadTodos()
-  } catch (error) {
-    console.error('Failed to complete todo:', error)
-    showError(t('duty.todo.messages.completeFailed'))
-  }
-  // Only close detail modal and return to overview if called from detail modal
-  if (fromDetailModal) {
-    isTodoDetailModalOpen.value = false
-  }
-}
-
-async function handleTodoReopen(id: string) {
-  const fromDetailModal = isTodoDetailModalOpen.value
-  try {
-    await todoApi.reopenTodo(id)
-    await loadTodos()
-  } catch (error) {
-    console.error('Failed to reopen todo:', error)
-    showError(t('duty.todo.messages.reopenFailed'))
-  }
-  // Only close detail modal if called from detail modal
-  if (fromDetailModal) {
-    isTodoDetailModalOpen.value = false
-  }
-}
-
 async function handleTodoDelete(todo: Pick<LocalTodo, 'id' | 'title'>) {
   if (!await confirmDelete(t('duty.todo.messages.deleteConfirm', { title: todo.title }))) return
   const fromDetailModal = isTodoDetailModalOpen.value
@@ -1619,8 +1589,6 @@ async function showExcelUploadModal() {
       :friends="friends"
       @close="isTodoDetailModalOpen = false"
       @update="handleTodoUpdate"
-      @complete="handleTodoComplete"
-      @reopen="handleTodoReopen"
       @delete="handleTodoDelete"
       @untag-self="handleTodoUntagSelf"
       @back-to-list="handleTodoBackToList"

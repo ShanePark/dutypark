@@ -72,6 +72,12 @@ enum TodoFormDismissalPolicy {
     }
 }
 
+nonisolated enum TodoFormStatusSelectionPolicy {
+    static func isVisible(targetTodoID: String?) -> Bool {
+        targetTodoID == nil
+    }
+}
+
 /// The single Todo creation presentation shared by the Todo board and Calendar quick-add.
 struct TodoCreateModal: View {
     @ObservedObject var model: TodoViewModel
@@ -1367,6 +1373,7 @@ struct TodoFormSheet: View {
     let dismissRequest: Int
     let onBusyChange: (Bool) -> Void
     let save: (TodoDraft) async -> Bool
+    let showsStatusSelection: Bool
 
     @ObservedObject var model: TodoViewModel
 
@@ -1414,6 +1421,9 @@ struct TodoFormSheet: View {
         self.dismissRequest = dismissRequest
         self.onBusyChange = onBusyChange
         self.save = save
+        self.showsStatusSelection = TodoFormStatusSelectionPolicy.isVisible(
+            targetTodoID: targetTodoID
+        )
         _draft = State(initialValue: initialDraft)
         _baselineDraft = State(initialValue: initialDraft)
         _baselineAttachmentIDs = State(initialValue: existingAttachments.map(\.id))
@@ -1510,31 +1520,33 @@ struct TodoFormSheet: View {
 
     private var formContent: some View {
         VStack(alignment: .leading, spacing: DPSpacing.large) {
-            TodoFormSection(title: todoLocalized("todo.field.status")) {
-                HStack(spacing: DPSpacing.small) {
-                    ForEach(TodoStatus.boardStatuses, id: \.rawValue) { status in
-                        Button {
-                            draft.status = status
-                        } label: {
-                            VStack(spacing: 6) {
-                                Image(systemName: status.systemImage)
-                                    .font(.system(size: 16, weight: .semibold))
-                                Text(todoLocalized(status.shortTitleKey))
-                                    .font(DPTypography.caption)
-                                    .lineLimit(1)
+            if showsStatusSelection {
+                TodoFormSection(title: todoLocalized("todo.field.status")) {
+                    HStack(spacing: DPSpacing.small) {
+                        ForEach(TodoStatus.boardStatuses, id: \.rawValue) { status in
+                            Button {
+                                draft.status = status
+                            } label: {
+                                VStack(spacing: 6) {
+                                    Image(systemName: status.systemImage)
+                                        .font(.system(size: 16, weight: .semibold))
+                                    Text(todoLocalized(status.shortTitleKey))
+                                        .font(DPTypography.caption)
+                                        .lineLimit(1)
+                                }
+                                .foregroundStyle(status.color)
+                                .frame(maxWidth: .infinity, minHeight: 62)
+                                .background(status.softColor)
+                                .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: DPRadius.standard)
+                                        .stroke(draft.status == status ? status.color : Color.clear, lineWidth: 2)
+                                )
                             }
-                            .foregroundStyle(status.color)
-                            .frame(maxWidth: .infinity, minHeight: 62)
-                            .background(status.softColor)
-                            .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: DPRadius.standard)
-                                    .stroke(draft.status == status ? status.color : Color.clear, lineWidth: 2)
-                            )
+                            .buttonStyle(.plain)
+                            .accessibilityAddTraits(draft.status == status ? .isSelected : [])
+                            .accessibilityIdentifier("todo.form.status.\(status.rawValue.lowercased())")
                         }
-                        .buttonStyle(.plain)
-                        .accessibilityAddTraits(draft.status == status ? .isSelected : [])
-                        .accessibilityIdentifier("todo.form.status.\(status.rawValue.lowercased())")
                     }
                 }
             }

@@ -318,30 +318,6 @@ async function handleUpdateTodo(data: {
   }
 }
 
-async function handleCompleteTodo(id: string) {
-  try {
-    await todoApi.completeTodo(id)
-    showSuccess(t('todoBoard.messages.completeSuccess'))
-    closeDetailModal()
-    await loadBoard()
-  } catch (error) {
-    console.error('Failed to complete todo:', error)
-    showError(t('todoBoard.messages.completeFailed'))
-  }
-}
-
-async function handleReopenTodo(id: string) {
-  try {
-    await todoApi.reopenTodo(id)
-    showSuccess(t('todoBoard.messages.reopenSuccess'))
-    closeDetailModal()
-    await loadBoard()
-  } catch (error) {
-    console.error('Failed to reopen todo:', error)
-    showError(t('todoBoard.messages.reopenFailed'))
-  }
-}
-
 async function handleDeleteTodo(todo: Pick<Todo, 'id' | 'title'>) {
   const confirmed = await confirmDelete(t('todoBoard.messages.deleteConfirm', { title: todo.title }))
   if (!confirmed) return
@@ -549,8 +525,6 @@ onBeforeUnmount(() => {
       :show-back-to-list="false"
       @close="closeDetailModal"
       @update="handleUpdateTodo"
-      @complete="handleCompleteTodo"
-      @reopen="handleReopenTodo"
       @delete="handleDeleteTodo"
       @untag-self="handleUntagSelf"
       @back-to-list="handleBackToList"

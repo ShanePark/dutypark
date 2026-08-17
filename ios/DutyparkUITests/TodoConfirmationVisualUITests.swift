@@ -66,6 +66,52 @@ final class TodoConfirmationVisualUITests: XCTestCase {
     }
 
     @MainActor
+    func testStatusControlsStayOnCreateAndOutOfDetailAndEdit() {
+        let app = launchApp()
+        defer { app.terminate() }
+
+        openTodoScreen(in: app)
+
+        let addButton = app.buttons["todo.add"]
+        XCTAssertTrue(addButton.waitForExistence(timeout: 10))
+        addButton.tap()
+        XCTAssertTrue(app.buttons["todo.form.status.todo"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons["todo.form.status.in_progress"].exists)
+        XCTAssertTrue(app.buttons["todo.form.status.done"].exists)
+        app.buttons["todo.form.cancel"].tap()
+
+        let fixtureCard = app.descendants(matching: .any)[
+            "todo.card.A11CE000-0000-4000-8000-000000000001"
+        ]
+        XCTAssertTrue(fixtureCard.waitForExistence(timeout: 10))
+        fixtureCard.tap()
+
+        let editButton = app.buttons
+            .matching(NSPredicate(format: "label == %@", "수정"))
+            .firstMatch
+        XCTAssertTrue(editButton.waitForExistence(timeout: 10))
+        let detailButtons = app.buttons.matching(identifier: "todo.detail")
+        let detailEditButton = detailButtons
+            .matching(NSPredicate(format: "label == %@", "수정"))
+            .firstMatch
+        let detailDeleteButton = detailButtons
+            .matching(NSPredicate(format: "label == %@", "삭제"))
+            .firstMatch
+        XCTAssertTrue(detailEditButton.exists)
+        XCTAssertTrue(detailDeleteButton.exists)
+        XCTAssertGreaterThan(detailEditButton.frame.width, 120)
+        XCTAssertEqual(detailEditButton.frame.width, detailDeleteButton.frame.width, accuracy: 2)
+        XCTAssertFalse(detailButtons.matching(NSPredicate(format: "label == %@", "완료")).firstMatch.exists)
+        XCTAssertFalse(detailButtons.matching(NSPredicate(format: "label == %@", "다시 열기")).firstMatch.exists)
+
+        editButton.tap()
+        XCTAssertTrue(app.textFields["todo.form.title"].waitForExistence(timeout: 10))
+        XCTAssertFalse(app.buttons["todo.form.status.todo"].exists)
+        XCTAssertFalse(app.buttons["todo.form.status.in_progress"].exists)
+        XCTAssertFalse(app.buttons["todo.form.status.done"].exists)
+    }
+
+    @MainActor
     func testSelectedStatusKeepsMatchingColumnFullyVisible() {
         let app = launchApp()
         defer { app.terminate() }

@@ -587,6 +587,40 @@ struct TodoViewModelTests {
     }
 
     @Test
+    func todoStatusControlsOnlyAppearWhenCreatingATodo() throws {
+        #expect(TodoFormStatusSelectionPolicy.isVisible(targetTodoID: nil))
+        #expect(!TodoFormStatusSelectionPolicy.isVisible(targetTodoID: UUID().uuidString))
+
+        let source = try String(
+            contentsOf: URL(fileURLWithPath: #filePath)
+                .deletingLastPathComponent()
+                .deletingLastPathComponent()
+                .appending(path: "Dutypark/Features/Todo/TodoModalViews.swift"),
+            encoding: .utf8
+        )
+
+        #expect(!source.contains("await model.complete(todo)"))
+        #expect(!source.contains("await model.reopen(todo)"))
+        #expect(!source.contains("todo.action.complete"))
+        #expect(!source.contains("todo.action.reopen"))
+    }
+
+    @Test
+    func todoDetailFooterActionsFillTheAvailableWidth() throws {
+        let source = try String(
+            contentsOf: URL(fileURLWithPath: #filePath)
+                .deletingLastPathComponent()
+                .deletingLastPathComponent()
+                .appending(path: "Dutypark/Features/Todo/TodoModalViews.swift"),
+            encoding: .utf8
+        )
+
+        #expect(source.contains(
+            ".frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)"
+        ))
+    }
+
+    @Test
     func todoCatalogResolvesFeatureAndCommonKeysInEverySupportedLocale() {
         let keys = [
             "todo.action.add",
