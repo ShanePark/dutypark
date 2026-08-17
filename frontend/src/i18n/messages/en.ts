@@ -291,6 +291,7 @@ export default {
       or: 'or',
     },
     navigation: {
+      back: 'Back',
       backHome: 'Back to home',
     },
     calendar: {

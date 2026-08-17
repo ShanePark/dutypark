@@ -67,6 +67,22 @@ struct AppTabTests {
     }
 
     @Test
+    func openingAMemberCalendarRecordsTheOriginatingTab() {
+        for tab in AppTab.allCases where tab != .calendar {
+            #expect(RootNavigationPolicy.calendarOrigin(from: tab) == tab)
+        }
+        #expect(RootNavigationPolicy.calendarOrigin(from: .calendar) == nil)
+    }
+
+    @Test
+    func memberCalendarBackReturnsToTheOriginOrFallsBackToOwnCalendar() {
+        for tab in AppTab.allCases where tab != .calendar {
+            #expect(RootNavigationPolicy.calendarBackTab(origin: tab) == tab)
+        }
+        #expect(RootNavigationPolicy.calendarBackTab(origin: nil) == .calendar)
+    }
+
+    @Test
     func selectingOtherTabsDoesNotMutateCalendarTarget() {
         for tab in AppTab.allCases where tab != .calendar {
             #expect(

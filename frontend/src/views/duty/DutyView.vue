@@ -4,6 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import Swal from 'sweetalert2'
 import { useSwal } from '@/composables/useSwal'
+import { useNavigateBack } from '@/composables/useNavigateBack'
 import { isLightColor } from '@/utils/color'
 import { resolveApiCodeMessage, resolveApiErrorMessage } from '@/utils/resolveApiError'
 import { buildDutyTypeCounts } from '@/utils/dutyTypeCounts'
@@ -37,6 +38,7 @@ const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const { showError, confirm, confirmDelete, toastSuccess } = useSwal()
+const { goBack } = useNavigateBack()
 const { t } = useI18n()
 
 const today = new Date()
@@ -1506,7 +1508,9 @@ async function showExcelUploadModal() {
       :current-year="currentYear"
       :current-month="currentMonth"
       :can-search="canSearch"
+      :show-back="!isMyCalendar"
       v-model:searchQuery="searchQuery"
+      @back="goBack('/')"
       @prev-month="prevMonth"
       @next-month="nextMonth"
       @open-year-month-picker="isYearMonthPickerOpen = true"

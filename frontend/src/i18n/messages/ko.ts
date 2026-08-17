@@ -293,6 +293,7 @@ export default {
       or: '또는',
     },
     navigation: {
+      back: '뒤로',
       backHome: '홈으로 돌아가기',
     },
     calendar: {

@@ -116,6 +116,7 @@ struct RootTabView: View {
     @State private var homeRefreshPolicy = RootHomeRefreshPolicy(initialRefreshAt: Date())
     @State private var homePath: [HomeDestination] = []
     @State private var calendarTarget = CalendarTarget()
+    @State private var calendarOrigin: CalendarOrigin?
     @State private var todoTarget: TodoID?
     @State private var settingsDestination: SettingsDestination?
     @State private var showsNotifications = false
@@ -147,7 +148,8 @@ struct RootTabView: View {
                     CalendarView(
                         memberID: calendarTarget.memberID,
                         date: calendarTarget.date,
-                        scheduleID: calendarTarget.scheduleID
+                        scheduleID: calendarTarget.scheduleID,
+                        onBack: closeMemberCalendar
                     )
                         .id(calendarTarget)
                 }
@@ -368,6 +370,7 @@ struct RootTabView: View {
                     origin: .tabBar
                 ) {
                     calendarTarget = CalendarTarget(memberID: authenticatedMemberID)
+                    calendarOrigin = nil
                 }
                 selectedTab = destination
             }
@@ -462,8 +465,28 @@ struct RootTabView: View {
     }
 
     private func openMemberCalendar(_ memberID: MemberID) {
+        calendarOrigin = RootNavigationPolicy.calendarOrigin(from: selectedTab)
+            .map { CalendarOrigin(tab: $0, homePath: homePath) }
         calendarTarget = CalendarTarget(memberID: memberID)
         selectedTab = .calendar
+    }
+
+    // Routed entries have no in-app screen behind them, so back falls back to the
+    // authenticated member's own calendar instead of a stale origin.
+    private func routeToMemberCalendar(_ memberID: MemberID) {
+        calendarOrigin = nil
+        calendarTarget = CalendarTarget(memberID: memberID)
+        selectedTab = .calendar
+    }
+
+    private func closeMemberCalendar() {
+        let origin = calendarOrigin
+        calendarOrigin = nil
+        calendarTarget = CalendarTarget(memberID: authenticatedMemberID)
+        if let origin {
+            homePath = origin.homePath
+        }
+        selectedTab = RootNavigationPolicy.calendarBackTab(origin: origin?.tab)
     }
 
     private func socialDidMutate(_ affectsReceivedRequestCount: Bool) async {
@@ -487,7 +510,7 @@ struct RootTabView: View {
         case .schedule(let scheduleID), .taggedSchedule(let scheduleID):
             return await openScheduleCalendar(scheduleID, route: route)
         case .member(let memberID):
-            openMemberCalendar(memberID)
+            routeToMemberCalendar(memberID)
             return true
         case .todo(let todoID):
             todoTarget = todoID
@@ -512,6 +535,7 @@ struct RootTabView: View {
         guard let schedule: ScheduleBasicInfoDTO = try? await APIClient.shared.request(
             "schedules/\(scheduleID.uuidString)"
         ) else { return false }
+        calendarOrigin = nil
         calendarTarget = CalendarTarget(
             memberID: RootNavigationPolicy.scheduleMemberID(
                 for: route,
@@ -572,7 +596,7 @@ struct RootTabView: View {
            components[0] == "duty",
            let memberID = MemberID(components[1]),
            memberID > 0 {
-            openMemberCalendar(memberID)
+            routeToMemberCalendar(memberID)
             return true
         }
         if let destination = SettingsDeepLink.destination(from: url) {
@@ -618,6 +642,18 @@ nonisolated enum RootNavigationPolicy {
         origin: RootTabSelectionOrigin
     ) -> Bool {
         destination == .calendar && origin == .tabBar
+    }
+
+    // A member calendar replaces the calendar tab root instead of being pushed, so the
+    // screen it was opened from has to be recorded to offer a back affordance.
+    static func calendarOrigin(from tab: AppTab) -> AppTab? {
+        tab == .calendar ? nil : tab
+    }
+
+    // Without a recorded origin (deep link, push route, cold launch) back stays on the
+    // calendar tab, which is reset to the member's own calendar.
+    static func calendarBackTab(origin: AppTab?) -> AppTab {
+        origin ?? .calendar
     }
 
     static func scheduleMemberID(
@@ -873,6 +909,11 @@ private struct CalendarTarget: Hashable {
     var memberID: MemberID?
     var date: DateOnly?
     var scheduleID: ScheduleID?
+}
+
+private struct CalendarOrigin: Equatable {
+    var tab: AppTab
+    var homePath: [HomeDestination]
 }
 
 private struct ImpersonationBanner: View {

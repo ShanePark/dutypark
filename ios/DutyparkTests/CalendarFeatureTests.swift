@@ -23,6 +23,52 @@ final class CalendarFeatureTests: XCTestCase {
         XCTAssertFalse(source.contains("private func openTodoBoard()"), "Calendar keeps only the quick-add entry")
     }
 
+    func testAnotherMembersCalendarOffersALocalizedBackControlWiredToTheRecordedOrigin() throws {
+        let projectRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let calendarSource = try String(
+            contentsOf: projectRoot.appending(path: "Dutypark/Features/Calendar/CalendarView.swift"),
+            encoding: .utf8
+        )
+        XCTAssertTrue(calendarSource.contains("if let onBack, !model.isMyCalendar"))
+        XCTAssertTrue(calendarSource.contains("calendar.member.back"))
+        XCTAssertTrue(calendarSource.contains("chevron.left"))
+
+        let rootSource = try String(
+            contentsOf: projectRoot.appending(path: "Dutypark/App/RootTabView.swift"),
+            encoding: .utf8
+        )
+        for wiring in [
+            "onBack: closeMemberCalendar",
+            "RootNavigationPolicy.calendarBackTab(origin: origin?.tab)",
+            "private func routeToMemberCalendar(_ memberID: MemberID)",
+            "routeToMemberCalendar(memberID)",
+        ] {
+            XCTAssertTrue(rootSource.contains(wiring), "RootTabView is missing: \(wiring)")
+        }
+        XCTAssertEqual(
+            rootSource.components(separatedBy: "calendarOrigin = nil").count - 1,
+            4,
+            "Back, the calendar tab reset, routed member calendars and schedule routes must all clear the origin"
+        )
+
+        let catalog = try XCTUnwrap(
+            JSONSerialization.jsonObject(
+                with: Data(contentsOf: projectRoot.appending(path: "Dutypark/Features/Calendar/Calendar.xcstrings"))
+            ) as? [String: Any]
+        )
+        let strings = try XCTUnwrap(catalog["strings"] as? [String: Any])
+        let entry = try XCTUnwrap(strings["calendar.member.back"] as? [String: Any])
+        let localizations = try XCTUnwrap(entry["localizations"] as? [String: Any])
+        for language in ["en", "ko"] {
+            let localization = try XCTUnwrap(localizations[language] as? [String: Any])
+            let stringUnit = try XCTUnwrap(localization["stringUnit"] as? [String: Any])
+            XCTAssertEqual(stringUnit["state"] as? String, "translated")
+            XCTAssertFalse((stringUnit["value"] as? String ?? "").isEmpty)
+        }
+    }
+
     func testComparedDutyRetainsProfileMetadataForCalendarAvatar() async throws {
         let response = OtherDutyResponse(
             memberId: 2,

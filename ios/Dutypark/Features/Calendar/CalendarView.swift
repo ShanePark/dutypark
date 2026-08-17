@@ -55,8 +55,16 @@ struct CalendarView: View {
     @State private var dayDismissRequest = 0
     @State private var dDayDismissRequest = 0
 
-    init(memberID: MemberID? = nil, date: DateOnly? = nil, scheduleID: ScheduleID? = nil) {
+    private let onBack: (() -> Void)?
+
+    init(
+        memberID: MemberID? = nil,
+        date: DateOnly? = nil,
+        scheduleID: ScheduleID? = nil,
+        onBack: (() -> Void)? = nil
+    ) {
         _model = StateObject(wrappedValue: CalendarViewModel(memberID: memberID, date: date, scheduleID: scheduleID))
+        self.onBack = onBack
     }
 
     var body: some View {
@@ -246,7 +254,7 @@ struct CalendarView: View {
     @ToolbarContentBuilder
     private var calendarToolbar: some ToolbarContent {
         DPDashboardHeaderToolbarItem(placement: .topBarLeading) {
-            memberIdentity
+            memberIdentityBar
                 .frame(width: Self.barSideWidth, alignment: .leading)
         }
         DPDashboardHeaderToolbarItem(placement: .principal) {
@@ -264,6 +272,36 @@ struct CalendarView: View {
                 }
             }
             .frame(width: Self.barSideWidth, alignment: .trailing)
+        }
+    }
+
+    // Another member's calendar replaces the calendar tab root instead of being pushed,
+    // so it carries its own way back to the screen it was opened from. The whole
+    // identity chip is the touch target: the leading bar slot cannot also fit a separate
+    // 44pt-wide control next to the avatar and the name.
+    @ViewBuilder
+    private var memberIdentityBar: some View {
+        if let onBack, !model.isMyCalendar {
+            Button(action: onBack) {
+                HStack(spacing: 2) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(DPColor.accent)
+                    memberIdentity
+                }
+                .frame(
+                    maxWidth: .infinity,
+                    minHeight: DPSize.minimumTouchTarget,
+                    alignment: .leading
+                )
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(CalendarLocalization.text("calendar.member.back"))
+            .accessibilityValue(model.targetName)
+            .accessibilityIdentifier("calendar.member.back")
+        } else {
+            memberIdentity
         }
     }
 
