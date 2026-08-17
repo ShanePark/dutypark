@@ -40,6 +40,15 @@
         }
       },
       "entries": {
+        "pr-405": {
+          "title": "탐색 구조와 iOS 상호작용 개선",
+          "summary": "웹과 iOS의 주요 화면을 더 쉽게 찾도록 더보기, 내 정보, 설정 구조를 정리하고 iPhone에서 탐색과 편집 동작을 한층 자연스럽게 다듬었습니다.",
+          "changes": [
+            "더보기에서 자주 찾는 기능으로 이동하고, 프로필과 계정 관리는 내 정보에서, 앱 환경 설정은 설정에서 구분해 관리할 수 있습니다.",
+            "iOS의 캘린더, Todo, 친구와 팀 화면에서 드래그, 정렬, 확인창, 월 선택과 뒤로 가기 동작을 개선했습니다.",
+            "알림과 로그인 세션 처리를 보강하고 웹과 iOS의 모달, 버튼, 빈 상태와 오류 안내를 더 일관되게 정리했습니다."
+          ]
+        },
         "pr-404": {
           "title": "iOS 앱 기능 일치와 공용 콘텐츠 통합",
           "summary": "iOS 앱의 화면과 상호작용을 모바일 웹 수준으로 다듬고, 이용 안내와 변경사항을 웹과 앱이 같은 공용 콘텐츠에서 제공하도록 통합했습니다.",
@@ -2201,6 +2210,15 @@
         }
       },
       "entries": {
+        "pr-405": {
+          "title": "Clearer navigation and smoother iOS interactions",
+          "summary": "Makes key destinations easier to find across web and iOS with a clearer More, My Info, and Settings structure, while making navigation and editing feel more natural on iPhone.",
+          "changes": [
+            "Open frequently used destinations from More, manage profiles and accounts in My Info, and keep app preferences in Settings.",
+            "Improve dragging, reordering, confirmations, month selection, and back navigation across iOS calendars, todos, friends, and teams.",
+            "Strengthen notification and sign-in session handling, and make modals, buttons, empty states, and error guidance more consistent across web and iOS."
+          ]
+        },
         "pr-404": {
           "title": "iOS parity and shared public content",
           "summary": "Polishes native iOS screens and interactions to match the mobile web experience, while serving guides and release notes from shared public content across web and iOS.",
@@ -4325,6 +4343,24 @@
     }
   },
   "items": [
+    {
+      "id": "pr-405",
+      "version": "2026.08.17",
+      "date": "2026-08-17",
+      "pr": 405,
+      "url": "https://github.com/ShanePark/dutypark/pull/405",
+      "category": "improvement",
+      "areas": [
+        "auth",
+        "calendar",
+        "friends",
+        "notifications",
+        "profile",
+        "team",
+        "todo",
+        "ui"
+      ]
+    },
     {
       "id": "pr-404",
       "version": "2026.08.16",
