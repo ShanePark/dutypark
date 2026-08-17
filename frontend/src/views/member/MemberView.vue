@@ -17,6 +17,7 @@ import {
 } from '@/api/member'
 import { authApi } from '@/api/auth'
 import { useSwal } from '@/composables/useSwal'
+import { useLogout } from '@/composables/useLogout'
 import { useKakao } from '@/composables/useKakao'
 import { useNaver } from '@/composables/useNaver'
 import { AppleSignInError, isAppleSignInCancellation, useApple } from '@/composables/useApple'
@@ -78,6 +79,7 @@ const themeStore = useThemeStore()
 const aiConsentStore = useAiScheduleConsentStore()
 const { t } = useI18n()
 const { showSuccess, showError, showWarning, showInfo, confirm, confirmDelete, toastSuccess } = useSwal()
+const { logoutAndRedirect, confirmAndLogout } = useLogout()
 
 const showAiPolicyModal = ref(false)
 const aiPolicyModalMode = ref<'read' | 'consent'>('read')
@@ -921,18 +923,6 @@ async function changePassword() {
   }
 }
 
-async function logoutAndRedirect() {
-  const serverSessionCleared = await authStore.logout()
-  await router.push('/auth/login')
-  if (!serverSessionCleared) {
-    await showWarning(
-      t('sessionRecovery.logoutUnconfirmed'),
-      t('sessionRecovery.logoutUnconfirmedTitle')
-    )
-  }
-  window.location.replace('/auth/login')
-}
-
 // Account deletion
 const showAccountDeletionModal = ref(false)
 const accountDeletionCompletion = ref<AccountDeletionCompletion | null>(null)
@@ -953,17 +943,6 @@ function completeAccountDeletion(completion: AccountDeletionCompletion) {
 
 async function finishAccountDeletionCompletion() {
   await router.push('/')
-}
-
-// Logout
-async function logout() {
-  const confirmed = await confirm(
-    t('member.logoutDialog.message'),
-    t('member.logoutDialog.title')
-  )
-  if (confirmed) {
-    await logoutAndRedirect()
-  }
 }
 
 // Member info (fetched from API)
@@ -1479,7 +1458,7 @@ onUnmounted(() => {
       <!-- Logout Section -->
       <section class="rounded-xl shadow-sm p-4 sm:p-6 bg-dp-bg-card border border-dp-border-primary">
         <button
-          @click="logout"
+          @click="confirmAndLogout"
           class="w-full px-4 py-3 min-h-12 text-dp-warning bg-dp-warning-soft hover:bg-dp-warning-soft-hover rounded-lg font-medium transition flex items-center justify-center gap-2 cursor-pointer"
         >
           <LogOut class="w-5 h-5" />

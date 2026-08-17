@@ -20,13 +20,14 @@ final class DutyPatternHiddenSelectionParityUITests: XCTestCase {
         defer { app.terminate() }
 
         XCTAssertTrue(app.descendants(matching: .any)["screen.home"].waitForExistence(timeout: 20))
-        let menuButton = app.buttons["home.menu"]
-        XCTAssertTrue(menuButton.waitForExistence(timeout: 10))
-        menuButton.tap()
+        let moreTab = app.buttons.matching(identifier: "tab.more").firstMatch
+        XCTAssertTrue(moreTab.waitForExistence(timeout: 10))
+        moreTab.tap()
 
-        let settingsTab = app.buttons.matching(identifier: "tab.settings").firstMatch
-        XCTAssertTrue(settingsTab.waitForExistence(timeout: 10))
-        settingsTab.tap()
+        XCTAssertTrue(app.descendants(matching: .any)["screen.more"].waitForExistence(timeout: 10))
+        let settingsEntry = app.buttons["more.settings"]
+        XCTAssertTrue(settingsEntry.waitForExistence(timeout: 10))
+        settingsEntry.tap()
 
         XCTAssertTrue(app.descendants(matching: .any)["screen.settings"].waitForExistence(timeout: 10))
         XCTAssertTrue(

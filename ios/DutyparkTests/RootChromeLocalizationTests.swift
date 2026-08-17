@@ -6,10 +6,10 @@ struct RootChromeLocalizationTests {
     private let korean = Locale(identifier: "ko")
 
     @Test
-    func hamburgerMenuAndNotificationChromeUseTheRequestedLocale() {
-        #expect(RootChromeLocalization.home("home.menu", locale: korean) == "메뉴")
+    func moreMenuAndNotificationChromeUseTheRequestedLocale() {
         #expect(RootChromeLocalization.home("home.friends", locale: korean) == "친구관리")
         #expect(RootChromeLocalization.localizable("root.menu.guide", locale: korean) == "이용 안내")
+        #expect(RootChromeLocalization.localizable("root.menu.settings", locale: korean) == "설정")
         #expect(RootChromeLocalization.notifications("notifications.title", locale: korean) == "알림")
         #expect(RootChromeLocalization.notifications("notifications.common.close", locale: korean) == "알림 닫기")
         #expect(RootChromeLocalization.notifications("notifications.common.loading", locale: korean) == "불러오는 중...")
@@ -18,7 +18,7 @@ struct RootChromeLocalizationTests {
     }
 
     @Test
-    func hamburgerGuideLabelKeepsTheSameEnglishMeaningAsTheWebMenu() {
+    func moreGuideLabelKeepsTheSameEnglishMeaningAsTheWebMenu() {
         #expect(
             RootChromeLocalization.localizable("root.menu.guide", locale: Locale(identifier: "en"))
                 == "Guide"
@@ -26,33 +26,53 @@ struct RootChromeLocalizationTests {
     }
 
     @Test
-    func hamburgerKeepsGlobalActionsAndExcludesDockOnlyDestinations() {
-        #expect(RootHamburgerMenuItem.primaryItems == [
-            .friends,
-            .notifications,
-        ])
-        #expect(RootHamburgerMenuItem.visibleItems(isAdmin: false) == [
+    func moreMenuKeepsGlobalActionsAndExcludesDockDestinations() {
+        #expect(MoreMenuItem.visibleItems(isAdmin: false) == [
             .friends,
             .notifications,
             .guide,
+            .settings,
             .logout,
         ])
-        #expect(RootHamburgerMenuItem.visibleItems(isAdmin: true) == [
+        #expect(MoreMenuItem.visibleItems(isAdmin: true) == [
             .friends,
             .notifications,
             .admin,
             .guide,
+            .settings,
             .logout,
         ])
+        #expect(MoreMenuItem.visibleGroups(isAdmin: true) == [
+            [.friends, .notifications],
+            [.admin, .guide, .settings],
+            [.logout],
+        ])
 
-        let exposedIdentifiers = Set(RootHamburgerMenuItem.allCases.map(\.rawValue))
+        let exposedIdentifiers = Set(MoreMenuItem.allCases.map(\.rawValue))
+        #expect(exposedIdentifiers.isDisjoint(with: AppTab.allCases.map(\.rawValue)))
         #expect(exposedIdentifiers.isDisjoint(with: [
             "home",
             "calendar",
             "todo",
             "team",
-            "settings",
+            "more",
         ]))
+    }
+
+    @Test
+    func moreMenuRowsExposeStableIdentifiers() {
+        #expect(MoreMenuItem.logout.isDestructive)
+        #expect(!MoreMenuItem.settings.isDestructive)
+        #expect(
+            MoreMenuItem.allCases.map(\.accessibilityIdentifier) == [
+                "more.friends",
+                "more.notifications",
+                "more.admin",
+                "more.guide",
+                "more.settings",
+                "more.logout",
+            ]
+        )
     }
 
     @Test

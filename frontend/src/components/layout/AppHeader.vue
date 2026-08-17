@@ -1,23 +1,16 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
-import { useNotificationStore } from '@/stores/notification'
-import { useSwal } from '@/composables/useSwal'
-import { Menu, Home, Calendar, Users, UserPlus, Bell, Shield, Settings, LogOut, Sun, Moon, BookOpen, ListTodo } from 'lucide-vue-next'
+import { Sun, Moon } from 'lucide-vue-next'
 import NotificationBell from '@/components/common/NotificationBell.vue'
 import NotificationDropdown from '@/components/common/NotificationDropdown.vue'
 import LocaleSwitcher from '@/components/layout/LocaleSwitcher.vue'
 import { useThemeStore } from '@/stores/theme'
 
-const router = useRouter()
-const route = useRoute()
 const authStore = useAuthStore()
-const notificationStore = useNotificationStore()
 const themeStore = useThemeStore()
 const { t } = useI18n()
-const { confirm, showWarning } = useSwal()
 
 const themeToggleAriaLabel = computed(() => {
   return themeStore.isDark
@@ -25,30 +18,11 @@ const themeToggleAriaLabel = computed(() => {
     : t('header.actions.switchToDarkMode')
 })
 
-function isActiveRoute(path: string): boolean {
-  if (path === '/') {
-    return route.path === '/'
-  }
-  if (path.startsWith('/duty/')) {
-    return route.path.startsWith('/duty/')
-  }
-  return route.path.startsWith(path)
-}
-
 const isNotificationDropdownVisible = ref(false)
-const isMenuDropdownVisible = ref(false)
 const bellRef = ref<InstanceType<typeof NotificationBell> | null>(null)
-const menuRef = ref<HTMLDivElement | null>(null)
-
-const myDutyPath = computed(() => {
-  return authStore.user?.id ? `/duty/${authStore.user.id}` : '/duty'
-})
 
 function handleNotificationToggle(visible: boolean) {
   isNotificationDropdownVisible.value = visible
-  if (visible) {
-    isMenuDropdownVisible.value = false
-  }
 }
 
 function handleNotificationClose() {
@@ -60,52 +34,6 @@ function handleNotificationNavigate() {
   isNotificationDropdownVisible.value = false
   bellRef.value?.closeDropdown()
 }
-
-function toggleMenuDropdown() {
-  isMenuDropdownVisible.value = !isMenuDropdownVisible.value
-  if (isMenuDropdownVisible.value) {
-    isNotificationDropdownVisible.value = false
-    bellRef.value?.closeDropdown()
-  }
-}
-
-function handleClickOutside(event: MouseEvent) {
-  if (menuRef.value && !menuRef.value.contains(event.target as Node)) {
-    isMenuDropdownVisible.value = false
-  }
-}
-
-function navigateTo(path: string) {
-  isMenuDropdownVisible.value = false
-  router.push(path)
-}
-
-const handleLogout = async () => {
-  isMenuDropdownVisible.value = false
-  const confirmed = await confirm(
-    t('header.logout.confirmMessage'),
-    t('header.logout.confirmTitle')
-  )
-  if (confirmed) {
-    const serverSessionCleared = await authStore.logout()
-    await router.push('/auth/login')
-    if (!serverSessionCleared) {
-      await showWarning(
-        t('sessionRecovery.logoutUnconfirmed'),
-        t('sessionRecovery.logoutUnconfirmedTitle')
-      )
-    }
-    window.location.replace('/auth/login')
-  }
-}
-
-onMounted(() => {
-  document.addEventListener('click', handleClickOutside)
-})
-
-onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside)
-})
 </script>
 
 <template>
@@ -153,105 +81,6 @@ onUnmounted(() => {
                 @close="handleNotificationClose"
                 @navigate="handleNotificationNavigate"
               />
-            </div>
-            <div ref="menuRef" class="relative">
-              <button
-                type="button"
-                class="menu-btn cursor-pointer p-2 rounded-full transition-all duration-150 min-h-[44px] min-w-[44px] flex items-center justify-center"
-                @click.stop="toggleMenuDropdown"
-                :aria-label="t('header.actions.menu')"
-              >
-                <Menu class="w-5 h-5 menu-icon transition-transform duration-200" />
-              </button>
-              <div
-                v-if="isMenuDropdownVisible"
-                class="menu-dropdown absolute right-0 top-full mt-2 w-44 rounded-lg shadow-lg border z-50 py-1"
-              >
-                <button
-                  :class="['menu-item w-full px-4 py-2.5 flex items-center gap-3 text-sm cursor-pointer', { 'menu-item-active': isActiveRoute('/') }]"
-                  @click="navigateTo('/')"
-                >
-                  <Home class="w-4 h-4" />
-                  {{ t('header.menu.home') }}
-                </button>
-                <button
-                  :class="['menu-item w-full px-4 py-2.5 flex items-center gap-3 text-sm cursor-pointer', { 'menu-item-active': isActiveRoute(myDutyPath) }]"
-                  @click="navigateTo(myDutyPath)"
-                >
-                  <Calendar class="w-4 h-4" />
-                  {{ t('header.menu.myCalendar') }}
-                </button>
-                <button
-                  :class="['menu-item w-full px-4 py-2.5 flex items-center gap-3 text-sm cursor-pointer', { 'menu-item-active': isActiveRoute('/team') }]"
-                  @click="navigateTo('/team')"
-                >
-                  <Users class="w-4 h-4" />
-                  {{ t('header.menu.myTeam') }}
-                </button>
-                <button
-                  :class="['menu-item w-full px-4 py-2.5 flex items-center gap-3 text-sm cursor-pointer', { 'menu-item-active': isActiveRoute('/friends') }]"
-                  @click="navigateTo('/friends')"
-                >
-                  <UserPlus class="w-4 h-4" />
-                  {{ t('header.menu.friends') }}
-                  <span
-                    v-if="notificationStore.hasFriendRequests"
-                    class="ml-auto px-1.5 py-0.5 text-xs font-bold bg-dp-danger text-dp-text-on-dark rounded-full min-w-[18px] text-center"
-                  >
-                    {{ notificationStore.friendRequestCountDisplay }}
-                  </span>
-                </button>
-                <button
-                  :class="['menu-item w-full px-4 py-2.5 flex items-center gap-3 text-sm cursor-pointer', { 'menu-item-active': isActiveRoute('/todo') }]"
-                  @click="navigateTo('/todo')"
-                >
-                  <ListTodo class="w-4 h-4" />
-                  {{ t('header.menu.todo') }}
-                </button>
-                <button
-                  :class="['menu-item w-full px-4 py-2.5 flex items-center gap-3 text-sm cursor-pointer', { 'menu-item-active': isActiveRoute('/notifications') }]"
-                  @click="navigateTo('/notifications')"
-                >
-                  <Bell class="w-4 h-4" />
-                  {{ t('header.menu.notifications') }}
-                </button>
-
-                <div class="menu-divider my-1"></div>
-
-                <button
-                  v-if="authStore.isAdmin"
-                  :class="['menu-item w-full px-4 py-2.5 flex items-center gap-3 text-sm cursor-pointer', { 'menu-item-active': isActiveRoute('/admin') }]"
-                  @click="navigateTo('/admin')"
-                >
-                  <Shield class="w-4 h-4" />
-                  {{ t('header.menu.admin') }}
-                </button>
-
-                <button
-                  :class="['menu-item w-full px-4 py-2.5 flex items-center gap-3 text-sm cursor-pointer', { 'menu-item-active': isActiveRoute('/guide') }]"
-                  @click="navigateTo('/guide')"
-                >
-                  <BookOpen class="w-4 h-4" />
-                  {{ t('header.menu.guide') }}
-                </button>
-                <button
-                  :class="['menu-item w-full px-4 py-2.5 flex items-center gap-3 text-sm cursor-pointer', { 'menu-item-active': isActiveRoute('/member') }]"
-                  @click="navigateTo('/member')"
-                >
-                  <Settings class="w-4 h-4" />
-                  {{ t('header.menu.settings') }}
-                </button>
-
-                <div class="menu-divider my-1"></div>
-
-                <button
-                  class="menu-item menu-item-danger w-full px-4 py-2.5 flex items-center gap-3 text-sm cursor-pointer"
-                  @click="handleLogout"
-                >
-                  <LogOut class="w-4 h-4" />
-                  {{ t('member.logout') }}
-                </button>
-              </div>
             </div>
           </template>
           <template v-else>
@@ -326,67 +155,6 @@ onUnmounted(() => {
   0% { transform: rotate(0deg); }
   50% { transform: rotate(-20deg); }
   100% { transform: rotate(0deg); }
-}
-
-.menu-btn {
-  color: var(--dp-text-muted);
-}
-
-.menu-btn:hover {
-  color: var(--dp-text-primary);
-  background-color: var(--dp-bg-hover);
-}
-
-.menu-btn:hover .menu-icon {
-  animation: menu-wiggle 0.4s ease-in-out;
-}
-
-@keyframes menu-wiggle {
-  0% { transform: rotate(0deg); }
-  25% { transform: rotate(-10deg); }
-  75% { transform: rotate(10deg); }
-  100% { transform: rotate(0deg); }
-}
-
-.menu-dropdown {
-  background-color: var(--dp-bg-card);
-  border-color: var(--dp-border-primary);
-}
-
-.menu-item {
-  color: var(--dp-text-secondary);
-}
-
-.menu-item:hover {
-  background-color: var(--dp-bg-hover);
-  color: var(--dp-text-primary);
-}
-
-.menu-item-active {
-  background-color: var(--dp-accent-bg);
-  color: var(--dp-accent-hover);
-  font-weight: 600;
-  border-left: 3px solid var(--dp-accent-hover);
-  padding-left: calc(1rem - 3px);
-}
-
-.menu-item-active:hover {
-  background-color: var(--dp-accent-bg-hover);
-  color: var(--dp-accent-hover);
-}
-
-.menu-item-danger {
-  color: var(--dp-danger);
-}
-
-.menu-item-danger:hover {
-  background-color: var(--dp-danger-bg);
-  color: var(--dp-danger-hover);
-}
-
-.menu-divider {
-  height: 1px;
-  background-color: var(--dp-border-primary);
 }
 
 .guide-link {

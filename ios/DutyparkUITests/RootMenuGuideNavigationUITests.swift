@@ -6,7 +6,7 @@ final class RootMenuGuideNavigationUITests: XCTestCase {
     }
 
     @MainActor
-    func testHamburgerMenuGuideOpensNativeGuideScreen() {
+    func testMoreMenuGuideOpensNativeGuideScreen() {
         let app = launchApp()
         defer { app.terminate() }
 
@@ -15,23 +15,23 @@ final class RootMenuGuideNavigationUITests: XCTestCase {
                 .waitForExistence(timeout: 20)
         )
 
-        let menuButton = app.buttons["home.menu"]
-        XCTAssertTrue(menuButton.waitForExistence(timeout: 10))
-        menuButton.tap()
+        let moreTab = app.buttons.matching(identifier: "tab.more").firstMatch
+        XCTAssertTrue(moreTab.waitForExistence(timeout: 10))
+        moreTab.tap()
 
         XCTAssertTrue(
-            app.descendants(matching: .any)["screen.menu"]
+            app.descendants(matching: .any)["screen.more"]
                 .waitForExistence(timeout: 10)
         )
 
-        let guideAction = app.buttons["menu.guide"]
+        let guideAction = app.buttons["more.guide"]
         XCTAssertTrue(guideAction.waitForExistence(timeout: 10))
         guideAction.tap()
 
         let guideScreen = app.descendants(matching: .any)["screen.nativeGuide"]
         let appeared = guideScreen.waitForExistence(timeout: 10)
-        capture("menu-guide-after-tap", in: app)
-        XCTAssertTrue(appeared, "screen.nativeGuide never appeared from the home menu")
+        capture("more-guide-after-tap", in: app)
+        XCTAssertTrue(appeared, "screen.nativeGuide never appeared from the More menu")
         XCTAssertTrue(
             app.buttons["guide.expandAll"].waitForExistence(timeout: 10),
             "The guide screen never rendered its content"
@@ -48,9 +48,13 @@ final class RootMenuGuideNavigationUITests: XCTestCase {
                 .waitForExistence(timeout: 20)
         )
 
-        let settingsTab = app.buttons.matching(identifier: "tab.settings").firstMatch
-        XCTAssertTrue(settingsTab.waitForExistence(timeout: 10))
-        settingsTab.tap()
+        let moreTab = app.buttons.matching(identifier: "tab.more").firstMatch
+        XCTAssertTrue(moreTab.waitForExistence(timeout: 10))
+        moreTab.tap()
+
+        let settingsRow = app.buttons["more.settings"]
+        XCTAssertTrue(settingsRow.waitForExistence(timeout: 10))
+        settingsRow.tap()
 
         let settings = app.scrollViews["screen.settings"].firstMatch
         XCTAssertTrue(settings.waitForExistence(timeout: 10))

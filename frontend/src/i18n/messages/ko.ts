@@ -347,16 +347,9 @@ export default {
       switchToDarkMode: '다크 모드로 전환',
       changeLanguage: '언어 변경',
       languageUpdateFailed: '앱 언어 설정을 저장하지 못했습니다.',
-      menu: '메뉴',
       login: '로그인',
     },
-    logout: {
-      confirmMessage: '정말 로그아웃 하시겠습니까?',
-      confirmTitle: '로그아웃',
-    },
     menu: {
-      home: '홈',
-      myCalendar: '내 달력',
       myTeam: '내 팀',
       friends: '친구 관리',
       todo: '할일',
@@ -482,7 +475,10 @@ export default {
     myCalendar: '달력',
     todo: '할일',
     myTeam: '팀',
-    settings: '설정',
+    more: '더보기',
+  },
+  more: {
+    title: '더보기',
   },
   impersonation: {
     messages: {

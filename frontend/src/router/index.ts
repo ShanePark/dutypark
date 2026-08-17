@@ -52,6 +52,12 @@ const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true },
   },
   {
+    path: '/more',
+    name: 'more',
+    component: () => import('@/views/more/MoreView.vue'),
+    meta: { requiresAuth: true },
+  },
+  {
     path: '/member',
     name: 'member',
     component: () => import('@/views/member/MemberView.vue'),

@@ -22,16 +22,16 @@ final class SocialConnectionVisualUITests: XCTestCase {
         XCTAssertTrue(
             app.descendants(matching: .any)["screen.home"].waitForExistence(timeout: 20)
         )
-        let menuButton = app.buttons["home.menu"]
-        XCTAssertTrue(menuButton.waitForExistence(timeout: 10))
-        menuButton.tap()
+        let moreTab = app.buttons.matching(identifier: "tab.more").firstMatch
+        XCTAssertTrue(moreTab.waitForExistence(timeout: 10))
+        moreTab.tap()
         XCTAssertTrue(
-            app.descendants(matching: .any)["screen.menu"].waitForExistence(timeout: 10)
+            app.descendants(matching: .any)["screen.more"].waitForExistence(timeout: 10)
         )
 
-        let settingsTab = app.buttons.matching(identifier: "tab.settings").firstMatch
-        XCTAssertTrue(settingsTab.waitForExistence(timeout: 10))
-        settingsTab.tap()
+        let settingsRow = app.buttons["more.settings"]
+        XCTAssertTrue(settingsRow.waitForExistence(timeout: 10))
+        settingsRow.tap()
         XCTAssertTrue(
             app.descendants(matching: .any)["screen.settings"].waitForExistence(timeout: 10)
         )
@@ -89,16 +89,16 @@ final class SocialConnectionVisualUITests: XCTestCase {
         XCTAssertTrue(
             app.descendants(matching: .any)["screen.home"].waitForExistence(timeout: 20)
         )
-        let menuButton = app.buttons["home.menu"]
-        XCTAssertTrue(menuButton.waitForExistence(timeout: 10))
-        menuButton.tap()
+        let moreTab = app.buttons.matching(identifier: "tab.more").firstMatch
+        XCTAssertTrue(moreTab.waitForExistence(timeout: 10))
+        moreTab.tap()
         XCTAssertTrue(
-            app.descendants(matching: .any)["screen.menu"].waitForExistence(timeout: 10)
+            app.descendants(matching: .any)["screen.more"].waitForExistence(timeout: 10)
         )
 
-        let settingsTab = app.buttons.matching(identifier: "tab.settings").firstMatch
-        XCTAssertTrue(settingsTab.waitForExistence(timeout: 10))
-        settingsTab.tap()
+        let settingsRow = app.buttons["more.settings"]
+        XCTAssertTrue(settingsRow.waitForExistence(timeout: 10))
+        settingsRow.tap()
         XCTAssertTrue(
             app.descendants(matching: .any)["screen.settings"].waitForExistence(timeout: 10)
         )
@@ -130,16 +130,16 @@ final class SocialConnectionVisualUITests: XCTestCase {
         XCTAssertTrue(
             app.descendants(matching: .any)["screen.home"].waitForExistence(timeout: 20)
         )
-        let menuButton = app.buttons["home.menu"]
-        XCTAssertTrue(menuButton.waitForExistence(timeout: 10))
-        menuButton.tap()
+        let moreTab = app.buttons.matching(identifier: "tab.more").firstMatch
+        XCTAssertTrue(moreTab.waitForExistence(timeout: 10))
+        moreTab.tap()
         XCTAssertTrue(
-            app.descendants(matching: .any)["screen.menu"].waitForExistence(timeout: 10)
+            app.descendants(matching: .any)["screen.more"].waitForExistence(timeout: 10)
         )
 
-        let settingsTab = app.buttons.matching(identifier: "tab.settings").firstMatch
-        XCTAssertTrue(settingsTab.waitForExistence(timeout: 10))
-        settingsTab.tap()
+        let settingsRow = app.buttons["more.settings"]
+        XCTAssertTrue(settingsRow.waitForExistence(timeout: 10))
+        settingsRow.tap()
         XCTAssertTrue(
             app.descendants(matching: .any)["screen.settings"].waitForExistence(timeout: 10)
         )

@@ -24,10 +24,8 @@ final class ImpersonationBannerLayoutUITests: XCTestCase {
 
         let brand = app.descendants(matching: .any)["header.brand"].firstMatch
         let bell = app.descendants(matching: .any)["notifications.bell"].firstMatch
-        let menu = app.buttons["home.menu"].firstMatch
         XCTAssertTrue(brand.waitForExistence(timeout: 10), "Brand mark is missing")
         XCTAssertTrue(bell.waitForExistence(timeout: 10), "Notification bell is missing")
-        XCTAssertTrue(menu.waitForExistence(timeout: 10), "Hamburger menu button is missing")
 
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         attachment.name = "regression-ios-impersonation-banner-header-overlap"
@@ -52,7 +50,7 @@ final class ImpersonationBannerLayoutUITests: XCTestCase {
         )
 
         let epsilon: CGFloat = 1
-        for (name, element) in [("header.brand", brand), ("notifications.bell", bell), ("home.menu", menu)] {
+        for (name, element) in [("header.brand", brand), ("notifications.bell", bell)] {
             let headerFrame = element.frame
             let overlap = bannerFrame.maxY - headerFrame.minY
             XCTAssertLessThanOrEqual(

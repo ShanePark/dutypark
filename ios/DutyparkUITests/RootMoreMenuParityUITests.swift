@@ -1,12 +1,12 @@
 import XCTest
 
-final class RootHamburgerMenuParityUITests: XCTestCase {
+final class RootMoreMenuParityUITests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
     }
 
     @MainActor
-    func testHamburgerShowsGlobalActionsWithoutDuplicatingDockDestinations() {
+    func testMoreMenuShowsGlobalActionsWithoutDuplicatingDockDestinations() {
         let app = XCUIApplication()
         app.launchArguments += [
             "-dp-language", "ko",
@@ -22,38 +22,40 @@ final class RootHamburgerMenuParityUITests: XCTestCase {
             app.descendants(matching: .any)["screen.home"]
                 .waitForExistence(timeout: 20)
         )
-        let menuButton = app.buttons["home.menu"]
-        XCTAssertTrue(menuButton.waitForExistence(timeout: 10))
-        menuButton.tap()
+        let moreTab = app.buttons.matching(identifier: "tab.more").firstMatch
+        XCTAssertTrue(moreTab.waitForExistence(timeout: 10))
+        moreTab.tap()
 
         XCTAssertTrue(
-            app.descendants(matching: .any)["screen.menu"]
+            app.descendants(matching: .any)["screen.more"]
                 .waitForExistence(timeout: 10)
         )
 
-        let menuButtons = app.buttons.matching(
-            NSPredicate(format: "identifier BEGINSWITH %@", "menu.")
+        let moreButtons = app.buttons.matching(
+            NSPredicate(format: "identifier BEGINSWITH %@", "more.")
         ).allElementsBoundByIndex
+        // The UI-test fixture user is not an admin, so `more.admin` must stay absent.
         XCTAssertEqual(
-            Set(menuButtons.map(\.identifier)),
+            Set(moreButtons.map(\.identifier)),
             [
-                "menu.friends",
-                "menu.notifications",
-                "menu.guide",
-                "menu.logout",
+                "more.friends",
+                "more.notifications",
+                "more.guide",
+                "more.settings",
+                "more.logout",
             ]
         )
-        for button in menuButtons {
-            XCTAssertTrue(button.isHittable, "Menu action is not hittable: \(button.identifier)")
+        for button in moreButtons {
+            XCTAssertTrue(button.isHittable, "More action is not hittable: \(button.identifier)")
             XCTAssertGreaterThanOrEqual(button.frame.height, 44)
         }
 
         for removedIdentifier in [
-            "menu.home",
-            "menu.calendar",
-            "menu.todo",
-            "menu.team",
-            "menu.settings",
+            "more.home",
+            "more.calendar",
+            "more.todo",
+            "more.team",
+            "more.more",
         ] {
             XCTAssertFalse(app.buttons[removedIdentifier].exists)
         }
@@ -63,13 +65,13 @@ final class RootHamburgerMenuParityUITests: XCTestCase {
             "tab.calendar",
             "tab.todo",
             "tab.team",
-            "tab.settings",
+            "tab.more",
         ] {
             XCTAssertTrue(app.buttons[dockIdentifier].exists)
         }
 
         let attachment = XCTAttachment(screenshot: app.screenshot())
-        attachment.name = "parity-ios-root-menu-deduplicated-after"
+        attachment.name = "parity-ios-root-more-deduplicated-after"
         attachment.lifetime = .keepAlways
         add(attachment)
     }

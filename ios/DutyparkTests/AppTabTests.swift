@@ -7,7 +7,7 @@ import Testing
 struct AppTabTests {
     @Test
     func exposesTheFiveWebNavigationTabsInOrder() {
-        #expect(AppTab.allCases == [.home, .calendar, .todo, .team, .settings])
+        #expect(AppTab.allCases == [.home, .calendar, .todo, .team, .more])
     }
 
     @Test
@@ -46,7 +46,7 @@ struct AppTabTests {
 
         #expect(
             AppTab.allCases.map(\.localizedTitle)
-                == ["홈", "달력", "할일", "팀", "설정"]
+                == ["홈", "달력", "할일", "팀", "더보기"]
         )
     }
 

@@ -170,7 +170,7 @@ struct AdminFeatureTests {
     func homeNavigationResetPolicy() {
         #expect(RootNavigationPolicy.resetsHomePath(for: .home))
         #expect(!RootNavigationPolicy.resetsHomePath(for: .calendar))
-        #expect(!RootNavigationPolicy.resetsHomePath(for: .settings))
+        #expect(!RootNavigationPolicy.resetsHomePath(for: .more))
     }
 
     @Test("Admin member contract decodes without exposing the raw refresh token")

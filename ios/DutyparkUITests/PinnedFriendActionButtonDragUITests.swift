@@ -181,11 +181,13 @@ final class PinnedFriendActionButtonDragUITests: XCTestCase {
         XCTAssertTrue(
             app.descendants(matching: .any)["screen.home"].waitForExistence(timeout: 20)
         )
-        app.buttons["home.menu"].tap()
+        let moreTab = app.buttons.matching(identifier: "tab.more").firstMatch
+        XCTAssertTrue(moreTab.waitForExistence(timeout: 10))
+        moreTab.tap()
         XCTAssertTrue(
-            app.descendants(matching: .any)["screen.menu"].waitForExistence(timeout: 10)
+            app.descendants(matching: .any)["screen.more"].waitForExistence(timeout: 10)
         )
-        let friendManagement = app.buttons["친구관리"].firstMatch
+        let friendManagement = app.buttons["more.friends"].firstMatch
         XCTAssertTrue(friendManagement.waitForExistence(timeout: 10))
         friendManagement.tap()
         XCTAssertTrue(

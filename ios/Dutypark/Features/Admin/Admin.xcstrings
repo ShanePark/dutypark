@@ -265,22 +265,6 @@
         }
       }
     },
-    "admin.menu.section": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Service administration"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "서비스 관리"
-          }
-        }
-      }
-    },
     "admin.menu.title": {
       "localizations": {
         "en": {

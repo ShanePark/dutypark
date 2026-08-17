@@ -345,16 +345,9 @@ export default {
       switchToDarkMode: 'Switch to dark mode',
       changeLanguage: 'Change language',
       languageUpdateFailed: 'Failed to update the app language.',
-      menu: 'Menu',
       login: 'Log in',
     },
-    logout: {
-      confirmMessage: 'Are you sure you want to log out?',
-      confirmTitle: 'Log out',
-    },
     menu: {
-      home: 'Home',
-      myCalendar: 'My calendar',
       myTeam: 'My team',
       friends: 'Friends',
       todo: 'To-do',
@@ -480,7 +473,10 @@ export default {
     myCalendar: 'Calendar',
     todo: 'To-do',
     myTeam: 'Team',
-    settings: 'Settings',
+    more: 'More',
+  },
+  more: {
+    title: 'More',
   },
   impersonation: {
     messages: {

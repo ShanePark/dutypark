@@ -52,14 +52,14 @@ final class SettingsRootConfirmationVisualUITests: XCTestCase {
         XCTAssertTrue(
             app.descendants(matching: .any)["screen.home"].waitForExistence(timeout: 20)
         )
-        let menuButton = app.buttons["home.menu"]
-        XCTAssertTrue(menuButton.waitForExistence(timeout: 10))
-        menuButton.tap()
+        let moreTab = app.buttons.matching(identifier: "tab.more").firstMatch
+        XCTAssertTrue(moreTab.waitForExistence(timeout: 10))
+        moreTab.tap()
         XCTAssertTrue(
-            app.descendants(matching: .any)["screen.menu"].waitForExistence(timeout: 10)
+            app.descendants(matching: .any)["screen.more"].waitForExistence(timeout: 10)
         )
 
-        let logoutButton = app.buttons["menu.logout"]
+        let logoutButton = app.buttons["more.logout"]
         XCTAssertTrue(logoutButton.waitForExistence(timeout: 10))
         XCTAssertTrue(logoutButton.isHittable)
         logoutButton.tap()
@@ -81,11 +81,11 @@ final class SettingsRootConfirmationVisualUITests: XCTestCase {
         XCTAssertTrue(
             app.descendants(matching: .any)["screen.home"].waitForExistence(timeout: 20)
         )
-        let menuButton = app.buttons["home.menu"]
-        XCTAssertTrue(menuButton.waitForExistence(timeout: 10))
-        menuButton.tap()
+        let moreTab = app.buttons.matching(identifier: "tab.more").firstMatch
+        XCTAssertTrue(moreTab.waitForExistence(timeout: 10))
+        moreTab.tap()
         XCTAssertTrue(
-            app.descendants(matching: .any)["screen.menu"].waitForExistence(timeout: 10)
+            app.descendants(matching: .any)["screen.more"].waitForExistence(timeout: 10)
         )
 
         XCTAssertTrue(app.staticTexts["이용 안내"].waitForExistence(timeout: 10))
@@ -115,9 +115,15 @@ final class SettingsRootConfirmationVisualUITests: XCTestCase {
         XCTAssertTrue(
             app.descendants(matching: .any)["screen.home"].waitForExistence(timeout: 20)
         )
-        let settingsTab = app.buttons.matching(identifier: "tab.settings").firstMatch
-        XCTAssertTrue(settingsTab.waitForExistence(timeout: 10))
-        settingsTab.tap()
+        let moreTab = app.buttons.matching(identifier: "tab.more").firstMatch
+        XCTAssertTrue(moreTab.waitForExistence(timeout: 10))
+        moreTab.tap()
+        XCTAssertTrue(
+            app.descendants(matching: .any)["screen.more"].waitForExistence(timeout: 10)
+        )
+        let settingsEntry = app.buttons["more.settings"]
+        XCTAssertTrue(settingsEntry.waitForExistence(timeout: 10))
+        settingsEntry.tap()
         XCTAssertTrue(
             app.descendants(matching: .any)["screen.settings"].waitForExistence(timeout: 10)
         )

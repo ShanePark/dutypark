@@ -47,9 +47,14 @@ final class AccountDeletionParityUITests: XCTestCase {
     @MainActor
     private func openAccountDeletion(in app: XCUIApplication) {
         XCTAssertTrue(app.descendants(matching: .any)["screen.home"].waitForExistence(timeout: 20))
-        let settingsTab = app.buttons.matching(identifier: "tab.settings").firstMatch
-        XCTAssertTrue(settingsTab.waitForExistence(timeout: 10))
-        settingsTab.tap()
+        let moreTab = app.buttons.matching(identifier: "tab.more").firstMatch
+        XCTAssertTrue(moreTab.waitForExistence(timeout: 10))
+        moreTab.tap()
+
+        XCTAssertTrue(app.descendants(matching: .any)["screen.more"].waitForExistence(timeout: 10))
+        let settingsEntry = app.buttons["more.settings"]
+        XCTAssertTrue(settingsEntry.waitForExistence(timeout: 10))
+        settingsEntry.tap()
 
         let settingsScreen = app.scrollViews["screen.settings"].firstMatch
         XCTAssertTrue(settingsScreen.waitForExistence(timeout: 10))

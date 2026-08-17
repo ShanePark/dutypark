@@ -93,17 +93,17 @@ final class ParityVisualCaptureUITests: XCTestCase {
         homeTab.tap()
         XCTAssertTrue(home.waitForExistence(timeout: 10))
 
-        let menuButton = app.buttons["home.menu"]
-        XCTAssertTrue(menuButton.waitForExistence(timeout: 10))
-        menuButton.tap()
+        let moreTab = app.buttons.matching(identifier: "tab.more").firstMatch
+        XCTAssertTrue(moreTab.waitForExistence(timeout: 10))
+        moreTab.tap()
 
-        let menu = app.descendants(matching: .any)["screen.menu"]
-        XCTAssertTrue(menu.waitForExistence(timeout: 10))
-        capture("parity-ios-05-menu-ko-dark")
+        let more = app.descendants(matching: .any)["screen.more"]
+        XCTAssertTrue(more.waitForExistence(timeout: 10))
+        capture("parity-ios-05-more-ko-dark")
 
-        let settingsTab = app.buttons.matching(identifier: "tab.settings").firstMatch
-        XCTAssertTrue(settingsTab.waitForExistence(timeout: 10))
-        settingsTab.tap()
+        let settingsRow = app.buttons["more.settings"]
+        XCTAssertTrue(settingsRow.waitForExistence(timeout: 10))
+        settingsRow.tap()
 
         let settings = app.descendants(matching: .any)["screen.settings"]
         XCTAssertTrue(settings.waitForExistence(timeout: 10))

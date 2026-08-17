@@ -22,15 +22,15 @@ final class SocialViewEntryUITests: XCTestCase {
             app.descendants(matching: .any)["screen.home"].waitForExistence(timeout: 20)
         )
 
-        let menuButton = app.buttons["home.menu"]
-        XCTAssertTrue(menuButton.waitForExistence(timeout: 10))
-        menuButton.tap()
+        let moreTab = app.buttons.matching(identifier: "tab.more").firstMatch
+        XCTAssertTrue(moreTab.waitForExistence(timeout: 10))
+        moreTab.tap()
 
         XCTAssertTrue(
-            app.descendants(matching: .any)["screen.menu"].waitForExistence(timeout: 10)
+            app.descendants(matching: .any)["screen.more"].waitForExistence(timeout: 10)
         )
 
-        let friendManagementButton = app.buttons["친구관리"].firstMatch
+        let friendManagementButton = app.buttons["more.friends"].firstMatch
         XCTAssertTrue(friendManagementButton.waitForExistence(timeout: 10))
         friendManagementButton.tap()
 
@@ -79,11 +79,13 @@ final class SocialViewEntryUITests: XCTestCase {
         XCTAssertTrue(
             app.descendants(matching: .any)["screen.home"].waitForExistence(timeout: 20)
         )
-        app.buttons["home.menu"].tap()
+        let moreTab = app.buttons.matching(identifier: "tab.more").firstMatch
+        XCTAssertTrue(moreTab.waitForExistence(timeout: 10))
+        moreTab.tap()
         XCTAssertTrue(
-            app.descendants(matching: .any)["screen.menu"].waitForExistence(timeout: 10)
+            app.descendants(matching: .any)["screen.more"].waitForExistence(timeout: 10)
         )
-        let friendManagementButton = app.buttons["친구관리"].firstMatch
+        let friendManagementButton = app.buttons["more.friends"].firstMatch
         XCTAssertTrue(friendManagementButton.waitForExistence(timeout: 10))
         friendManagementButton.tap()
         let socialList = app.descendants(matching: .any)["social.list"]

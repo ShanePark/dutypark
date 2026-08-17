@@ -2,20 +2,24 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch, type Component, type ComponentPublicInstance } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Calendar, Home, ListTodo, Settings, Users } from 'lucide-vue-next'
+import { Calendar, Home, ListTodo, MoreHorizontal, Users } from 'lucide-vue-next'
 import { useAuthStore } from '@/stores/auth'
+import { useNotificationStore } from '@/stores/notification'
 import { useDragClickGuard } from '@/composables/useDragClickGuard'
+import { MORE_MENU_PATHS } from '@/views/more/moreMenu'
 
 type FooterNavItem = {
   id: string
   path: string
   icon: Component
   label: string
+  matchPaths?: string[]
 }
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const notificationStore = useNotificationStore()
 const { t } = useI18n()
 const dragClickGuard = useDragClickGuard({ resetDelay: 320 })
 const navListRef = ref<HTMLElement | null>(null)
@@ -49,18 +53,28 @@ const navItems = computed(() => {
     },
     { id: 'todo', path: '/todo', icon: ListTodo, label: t('footer.todo') },
     { id: 'team', path: '/team', icon: Users, label: t('footer.myTeam') },
-    { id: 'settings', path: '/member', icon: Settings, label: t('footer.settings') },
+    {
+      id: 'more',
+      path: '/more',
+      icon: MoreHorizontal,
+      label: t('footer.more'),
+      matchPaths: MORE_MENU_PATHS,
+    },
   ]
   return items
 })
 
 const activeIndex = computed(() => {
-  return navItems.value.findIndex((item) => isActive(item.path))
+  return navItems.value.findIndex((item) => isActive(item))
 })
 
-const isActive = (path: string) => {
+const matchesPath = (path: string) => {
   if (path === '/') return route.path === '/'
   return route.path.startsWith(path)
+}
+
+const isActive = (item: FooterNavItem) => {
+  return matchesPath(item.path) || (item.matchPaths?.some(matchesPath) ?? false)
 }
 
 function setNavItemRef(element: Element | ComponentPublicInstance | null, index: number) {
@@ -202,7 +216,7 @@ function getSwipeTargetIndex(deltaX: number) {
 }
 
 function handleNavClick(item: FooterNavItem, event: MouseEvent) {
-  if (item.id === 'calendar' && isActive(item.path)) {
+  if (item.id === 'calendar' && isActive(item)) {
     event.preventDefault()
     window.dispatchEvent(new CustomEvent('duty-go-to-today'))
   }
@@ -369,14 +383,21 @@ watch(
               :to="item.path"
               @click="handleNavClick(item, $event)"
               class="footer-nav-link relative flex w-full flex-col items-center justify-center rounded-xl px-2 py-1.5 text-xs transition-colors min-h-[48px] sm:min-h-[64px] sm:px-3 sm:py-3 sm:text-sm"
-              :class="isActive(item.path) ? 'footer-nav-active' : 'footer-nav-inactive'"
+              :class="isActive(item) ? 'footer-nav-active' : 'footer-nav-inactive'"
             >
-              <component
-                :is="item.icon"
-                class="w-6 h-6 sm:w-7 sm:h-7 mb-0.5 sm:mb-1"
-                :stroke-width="2"
-                aria-hidden="true"
-              />
+              <span class="relative mb-0.5 sm:mb-1">
+                <component
+                  :is="item.icon"
+                  class="w-6 h-6 sm:w-7 sm:h-7"
+                  :stroke-width="2"
+                  aria-hidden="true"
+                />
+                <span
+                  v-if="item.id === 'more' && notificationStore.hasFriendRequests"
+                  class="footer-nav-dot absolute -top-0.5 -right-0.5 block h-2 w-2 rounded-full"
+                  aria-hidden="true"
+                />
+              </span>
               <span class="footer-nav-label">{{ item.label }}</span>
             </router-link>
           </li>
@@ -435,6 +456,11 @@ watch(
 
 .footer-nav-list--indicator-ready .footer-nav-active:hover {
   background-color: transparent;
+}
+
+.footer-nav-dot {
+  background-color: var(--dp-danger);
+  border: 1px solid var(--dp-bg-footer);
 }
 
 .footer-nav-label {

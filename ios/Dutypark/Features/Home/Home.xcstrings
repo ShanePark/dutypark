@@ -67,12 +67,6 @@
         "ko" : { "stringUnit" : { "state" : "translated", "value" : "불러오는 중..." } }
       }
     },
-    "home.menu" : {
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Menu" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "메뉴" } }
-      }
-    },
     "home.moreSchedules" : {
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "more" } },
