@@ -3,6 +3,7 @@
 > 상태: 설계 확정, 구현 대기
 > 작성일: 2026-08-18
 > 근거 문서: [ios/app-store-readiness/README.md §1](../../ios/app-store-readiness/README.md) · [App Review Guidelines 1.2 — UGC](https://developer.apple.com/app-store/review/guidelines/#user-generated-content)
+> 후속 변경: D7의 "앱 내 답변 기능 없음"은 [내 문의 내역 + 앱 내 답변 구현 계획](inquiry-my-history-plan.md)이 대체한다.
 > 원칙: **심사를 통과하는 최소 변경.** 이 문서에 없는 기능은 만들지 않는다.
 
 이 문서는 병렬 구현을 위한 단일 계약(contract)이다. 데이터 모델, API, 에러 코드, i18n 키 소유권, 파일 소유권을 여기서 확정하고, 각 작업 패키지는 이 문서만 보고 독립적으로 구현·검증할 수 있어야 한다.
