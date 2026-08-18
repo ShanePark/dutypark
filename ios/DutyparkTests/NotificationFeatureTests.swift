@@ -90,6 +90,109 @@ struct NotificationFeatureTests {
     }
 
     @Test
+    func inquiryAnswersDecodeAndRouteToTheSupportHistory() throws {
+        let notification = try decodeInquiryNotification(subject: "Reporting a user")
+
+        #expect(notification.type == .inquiryAnswered)
+        #expect(notification.type.rawValue == "INQUIRY_ANSWERED")
+        #expect(notification.referenceType == .inquiry)
+        #expect(notification.referenceType?.rawValue == "INQUIRY")
+        // The answering administrator stays anonymous, so the row has no actor to show.
+        #expect(notification.actorId == nil)
+        #expect(notification.payload.subject == "Reporting a user")
+        #expect(NotificationRoute(notification: notification) == .support)
+    }
+
+    @Test
+    func unknownServerEnumsKeepFallingBackAfterTheInquiryTypeIsAdded() throws {
+        let notification = try decodeNotification(
+            type: "SOMETHING_NEW",
+            referenceType: "SOMETHING_ELSE",
+            referenceID: nil
+        )
+
+        #expect(notification.type == .unknown("SOMETHING_NEW"))
+        #expect(notification.referenceType == .unknown("SOMETHING_ELSE"))
+        #expect(NotificationRoute(notification: notification) == nil)
+    }
+
+    @Test
+    func inquiryAnsweredMessagesFallBackWhenTheInquiryHasNoSubject() throws {
+        let titled = try decodeInquiryNotification(subject: "Reporting a user")
+        let blank = try decodeInquiryNotification(subject: "   ")
+        let missing = try decodeInquiryNotification(subject: nil)
+
+        #expect(
+            NotificationPresentation.message(for: titled, locale: Locale(identifier: "ko"))
+                == "문의 [Reporting a user]에 답변이 등록되었습니다."
+        )
+        #expect(
+            NotificationPresentation.message(for: titled, locale: Locale(identifier: "en"))
+                == "Your inquiry [Reporting a user] has been answered."
+        )
+        for withoutSubject in [blank, missing] {
+            #expect(
+                NotificationPresentation.message(for: withoutSubject, locale: Locale(identifier: "ko"))
+                    == "문의에 답변이 등록되었습니다."
+            )
+            #expect(
+                NotificationPresentation.message(for: withoutSubject, locale: Locale(identifier: "en"))
+                    == "Your inquiry has been answered."
+            )
+        }
+    }
+
+    /// APNs resolves `loc-key` against `Localizable.strings`, so the alert copy has to
+    /// exist there as well as in the in-app `Notifications` table the list renders from.
+    @Test
+    func inquiryPushAlertKeysResolveInEveryLocale() throws {
+        for locale in ["en", "ko"] {
+            let url = try #require(Bundle.main.url(forResource: locale, withExtension: "lproj"))
+            let bundle = try #require(Bundle(url: url))
+            for key in [
+                "notifications.items.inquiryAnswered",
+                "notifications.items.inquiryAnsweredFallback"
+            ] {
+                for table in ["Localizable", "Notifications"] {
+                    #expect(
+                        bundle.localizedString(forKey: key, value: key, table: table) != key,
+                        "Missing \(key) in \(table) for \(locale)"
+                    )
+                }
+            }
+        }
+    }
+
+    @Test
+    func onlyAnExplicitSupportRequestOpensTheHistoryTab() {
+        #expect(RootNavigationPolicy.supportTab(for: .support, requested: .history) == .history)
+        #expect(RootNavigationPolicy.supportTab(for: .support, requested: nil) == .form)
+        // A stale history request must not follow the member into an unrelated screen.
+        #expect(RootNavigationPolicy.supportTab(for: .settings, requested: .history) == .form)
+    }
+
+    @Test
+    func reopeningSupportAdvancesThePresentationIDEvenWhenTheRequestedTabIsUnchanged() {
+        let firstOpen = RootNavigationPolicy.supportPresentationID(
+            for: .support,
+            current: 0
+        )
+        let secondOpen = RootNavigationPolicy.supportPresentationID(
+            for: .support,
+            current: firstOpen
+        )
+
+        #expect(firstOpen == 1)
+        #expect(secondOpen == 2)
+        #expect(
+            RootNavigationPolicy.supportPresentationID(
+                for: .settings,
+                current: secondOpen
+            ) == secondOpen
+        )
+    }
+
+    @Test
     func sceneResumeRefreshesListAndBothCounts() async throws {
         let page: PageResponse<NotificationDTO> = try decodeNotificationFixture()
         let api = NotificationAPIMock(page: page)
@@ -729,6 +832,25 @@ struct NotificationFeatureTests {
             </plist>
             CMS suffix
             """.utf8)
+    }
+
+    private func decodeInquiryNotification(subject: String?) throws -> NotificationDTO {
+        let subjectJSON = subject.map { #""subject": "\#($0)""# } ?? #""subject": null"#
+        return try JSONDecoder().decode(
+            NotificationDTO.self,
+            from: Data("""
+                {
+                  "id": "ae71ee7d-3af9-4936-a6e8-75b9c0d37822",
+                  "type": "INQUIRY_ANSWERED",
+                  "referenceType": "INQUIRY",
+                  "referenceId": "6d2a4c86-1d8b-4c6f-9c1f-6a3a5b2f9c11",
+                  "actorId": null,
+                  "payload": {"version": 1, \(subjectJSON)},
+                  "isRead": false,
+                  "createdAt": "2026-08-12T09:51:51.163702"
+                }
+                """.utf8)
+        )
     }
 
     private func decodeNotification(

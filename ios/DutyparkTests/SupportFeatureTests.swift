@@ -135,6 +135,211 @@ struct SupportFeatureTests {
     }
 
     @Test
+    func theGuestScreenKeepsTheEmailReplyCopyAndHidesTheHistoryTab() {
+        let model = SupportViewModel(
+            prefilledEmail: nil,
+            isSignedIn: false,
+            initialTab: .history,
+            repository: SupportRepositorySpy()
+        )
+
+        #expect(!model.showsTabs)
+        // A guest has no history to open, so a routed tab request cannot strand the form.
+        #expect(model.selectedTab == .form)
+        #expect(model.formDescriptionKey == "support.form.description")
+        #expect(model.successMessageKey == "support.success.message")
+        #expect(model.showsSignInHint)
+    }
+
+    @Test
+    func aSignedInMemberGetsTheHistoryTabAndTheInAppReplyCopy() {
+        let model = SupportViewModel(
+            prefilledEmail: "member@dutypark.dev",
+            isSignedIn: true,
+            repository: SupportRepositorySpy()
+        )
+
+        #expect(model.showsTabs)
+        #expect(model.selectedTab == .form)
+        #expect(model.formDescriptionKey == "support.form.description.member")
+        #expect(model.successMessageKey == "support.success.message.member")
+        #expect(!model.showsSignInHint)
+
+        let routed = SupportViewModel(
+            prefilledEmail: "member@dutypark.dev",
+            isSignedIn: true,
+            initialTab: .history,
+            repository: SupportRepositorySpy()
+        )
+        #expect(routed.selectedTab == .history)
+    }
+
+    @Test
+    func theHistoryRequestsTenPerPageAndAccumulatesEveryLoadedPage() async {
+        let repository = SupportRepositorySpy(
+            pages: [
+                SupportFeatureTests.inquiryPage(number: 0, totalPages: 2, subjects: (0..<10).map { "Inquiry \($0)" }),
+                SupportFeatureTests.inquiryPage(number: 1, totalPages: 2, subjects: ["Inquiry 10", "Inquiry 11"])
+            ]
+        )
+        let model = SupportViewModel(prefilledEmail: "member@dutypark.dev", isSignedIn: true, repository: repository)
+
+        await model.loadInquiriesIfNeeded()
+
+        #expect(repository.inquiryRequests == [SupportInquiryRequest(page: 0, size: 10)])
+        #expect(model.inquiries.count == 10)
+        #expect(model.hasMoreInquiries)
+
+        await model.loadMoreInquiries()
+
+        #expect(repository.inquiryRequests == [
+            SupportInquiryRequest(page: 0, size: 10),
+            SupportInquiryRequest(page: 1, size: 10)
+        ])
+        #expect(model.inquiries.compactMap(\.subject) == (0..<12).map { "Inquiry \($0)" })
+        #expect(!model.hasMoreInquiries)
+        #expect(!model.isLoadingInquiries)
+
+        // A second visit to the tab reuses the pages that are already on screen.
+        await model.loadInquiriesIfNeeded()
+        #expect(repository.inquiryRequests.count == 2)
+    }
+
+    @Test
+    func aFailedHistoryLoadCanBeRetried() async {
+        let repository = SupportRepositorySpy(
+            pages: [SupportFeatureTests.inquiryPage(number: 0, totalPages: 1, subjects: ["Only inquiry"])],
+            failure: .transport
+        )
+        let model = SupportViewModel(prefilledEmail: "member@dutypark.dev", isSignedIn: true, repository: repository)
+
+        await model.loadInquiriesIfNeeded()
+
+        #expect(model.inquiryLoadFailed)
+        #expect(model.inquiries.isEmpty)
+        #expect(!model.isLoadingInquiries)
+
+        repository.stopFailing()
+        await model.loadInquiries()
+
+        #expect(!model.inquiryLoadFailed)
+        #expect(model.inquiries.compactMap(\.subject) == ["Only inquiry"])
+    }
+
+    @Test
+    func aNewSubmissionInvalidatesTheLoadedHistory() async {
+        let repository = SupportRepositorySpy(
+            pages: [SupportFeatureTests.inquiryPage(number: 0, totalPages: 1, subjects: ["Only inquiry"])]
+        )
+        let model = SupportViewModel(prefilledEmail: "member@dutypark.dev", isSignedIn: true, repository: repository)
+        await model.loadInquiriesIfNeeded()
+        #expect(repository.inquiryRequests.count == 1)
+
+        model.content = "One more question."
+        await model.submit()
+        await model.loadInquiriesIfNeeded()
+
+        #expect(repository.inquiryRequests.count == 2)
+    }
+
+    @Test
+    func theHistoryIsNeverRequestedForAGuest() async {
+        let repository = SupportRepositorySpy(
+            pages: [SupportFeatureTests.inquiryPage(number: 0, totalPages: 1, subjects: ["Only inquiry"])]
+        )
+        let model = SupportViewModel(prefilledEmail: nil, isSignedIn: false, repository: repository)
+
+        await model.loadInquiriesIfNeeded()
+        await model.loadInquiries()
+
+        #expect(repository.inquiryRequests.isEmpty)
+        #expect(model.inquiries.isEmpty)
+    }
+
+    @Test
+    func theServerContractIsDecodedWithoutTheAdminOnlyFields() throws {
+        let page = try JSONDecoder().decode(
+            PageResponse<MyInquiryDTO>.self,
+            from: Data("""
+                {
+                  "content": [
+                    {
+                      "id": "6d2a4c86-1d8b-4c6f-9c1f-6a3a5b2f9c11",
+                      "email": "member@dutypark.dev",
+                      "subject": "Reporting a user",
+                      "content": "The other member keeps posting spam.",
+                      "status": "CLOSED",
+                      "createdAt": "2026-08-12T09:51:51.163702",
+                      "answer": "We removed the content.",
+                      "answeredAt": "2026-08-13T10:00:00"
+                    },
+                    {
+                      "id": "0b1f6a2c-5d5e-4a9e-9c11-9a2f7d3e1b40",
+                      "email": "member@dutypark.dev",
+                      "subject": null,
+                      "content": "Any update?",
+                      "status": "OPEN",
+                      "createdAt": "2026-08-14T09:00:00",
+                      "answer": null,
+                      "answeredAt": null
+                    }
+                  ],
+                  "totalPages": 1,
+                  "totalElements": 2,
+                  "last": true,
+                  "first": true,
+                  "size": 10,
+                  "number": 0,
+                  "numberOfElements": 2,
+                  "empty": false
+                }
+                """.utf8)
+        )
+
+        let answered = try #require(page.content.first)
+        #expect(answered.status == .closed)
+        #expect(answered.hasAnswer)
+        #expect(answered.answerText == "We removed the content.")
+        #expect(answered.answeredAt?.rawValue == "2026-08-13T10:00:00")
+
+        let awaiting = try #require(page.content.last)
+        #expect(awaiting.status == .open)
+        #expect(!awaiting.hasAnswer)
+        #expect(awaiting.answerText == nil)
+    }
+
+    @Test
+    func theHistoryRowLabelsFollowTheStatusAndTheAnswer() {
+        let answered = SupportFeatureTests.inquiry(subject: "Reporting a user", status: .closed, answer: "We removed the content.")
+        let awaiting = SupportFeatureTests.inquiry(subject: "   ", status: .open, answer: "   ")
+
+        #expect(MyInquiryPresentation.statusKey(answered.status) == "support.history.status.closed")
+        #expect(MyInquiryPresentation.statusKey(awaiting.status) == "support.history.status.open")
+        #expect(MyInquiryPresentation.answerStateKey(answered) == "support.history.answered")
+        #expect(MyInquiryPresentation.answerStateKey(awaiting) == "support.history.awaiting")
+        // A blank answer is the same as no answer: the row must not promise a reply.
+        #expect(!awaiting.hasAnswer)
+
+        #expect(
+            MyInquiryPresentation.subjectText(answered, locale: Locale(identifier: "ko")) == "Reporting a user"
+        )
+        #expect(
+            MyInquiryPresentation.subjectText(awaiting, locale: Locale(identifier: "ko")) == "제목 없음"
+        )
+        #expect(
+            MyInquiryPresentation.subjectText(awaiting, locale: Locale(identifier: "en")) == "No subject"
+        )
+    }
+
+    @Test
+    func historyDatesUseTheSelectedLocale() {
+        let value = LocalDateTimeValue(rawValue: "2026-08-12T09:51:51.163702")
+
+        #expect(MyInquiryPresentation.date(value, locale: Locale(identifier: "ko")) == "2026.08.12")
+        #expect(MyInquiryPresentation.date(value, locale: Locale(identifier: "en")) == "Aug 12, 2026")
+    }
+
+    @Test
     func theSupportCatalogIsFullyTranslated() throws {
         let catalogURL = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
@@ -172,7 +377,15 @@ struct SupportFeatureTests {
                 "support.form.submit",
                 "support.success.title",
                 "support.error.rateLimit",
-                "support.guest.entry"
+                "support.guest.entry",
+                "support.guest.signInHint",
+                "support.tab.form",
+                "support.tab.history",
+                "support.history.empty",
+                "support.history.loadMore",
+                "support.history.pendingAnswer",
+                "support.form.description.member",
+                "support.success.message.member"
             ] {
                 #expect(
                     bundle.localizedString(forKey: key, value: key, table: "Support") != key,
@@ -183,21 +396,89 @@ struct SupportFeatureTests {
     }
 }
 
+nonisolated struct SupportInquiryRequest: Equatable, Sendable {
+    let page: Int
+    let size: Int
+}
+
 private final class SupportRepositorySpy: SupportRepository, @unchecked Sendable {
     private let lock = NSLock()
     private let failure: APIError?
+    private let pages: [PageResponse<MyInquiryDTO>]
     private var storedSubmissions: [CreateInquiryRequest] = []
+    private var storedInquiryRequests: [SupportInquiryRequest] = []
+    private var isFailing: Bool
 
-    init(failure: APIError? = nil) {
+    init(
+        pages: [PageResponse<MyInquiryDTO>] = [],
+        failure: APIError? = nil
+    ) {
+        self.pages = pages
         self.failure = failure
+        self.isFailing = failure != nil
     }
 
     var submissions: [CreateInquiryRequest] {
         lock.withLock { storedSubmissions }
     }
 
+    var inquiryRequests: [SupportInquiryRequest] {
+        lock.withLock { storedInquiryRequests }
+    }
+
+    func stopFailing() {
+        lock.withLock { isFailing = false }
+    }
+
     func submitInquiry(_ request: CreateInquiryRequest) async throws {
         lock.withLock { storedSubmissions.append(request) }
-        if let failure { throw failure }
+        if let failure, lock.withLock({ isFailing }) { throw failure }
+    }
+
+    func fetchMyInquiries(page: Int, size: Int) async throws -> PageResponse<MyInquiryDTO> {
+        lock.withLock { storedInquiryRequests.append(SupportInquiryRequest(page: page, size: size)) }
+        if let failure, lock.withLock({ isFailing }) { throw failure }
+        guard let response = pages.first(where: { $0.number == page }) else {
+            throw APIError.invalidResponse
+        }
+        return response
+    }
+}
+
+extension SupportFeatureTests {
+    static func inquiry(
+        id: UUID = UUID(),
+        subject: String?,
+        status: InquiryStatus = .open,
+        answer: String? = nil
+    ) -> MyInquiryDTO {
+        MyInquiryDTO(
+            id: id,
+            email: "member@dutypark.dev",
+            subject: subject,
+            content: "The other member keeps posting spam.",
+            status: status,
+            createdAt: LocalDateTimeValue(rawValue: "2026-08-12T09:51:51.163702"),
+            answer: answer,
+            answeredAt: answer == nil ? nil : LocalDateTimeValue(rawValue: "2026-08-13T10:00:00")
+        )
+    }
+
+    static func inquiryPage(
+        number: Int,
+        totalPages: Int,
+        subjects: [String]
+    ) -> PageResponse<MyInquiryDTO> {
+        PageResponse(
+            content: subjects.map { inquiry(subject: $0) },
+            totalPages: totalPages,
+            totalElements: Int64(subjects.count),
+            last: number == totalPages - 1,
+            first: number == 0,
+            size: 10,
+            number: number,
+            numberOfElements: subjects.count,
+            empty: subjects.isEmpty
+        )
     }
 }

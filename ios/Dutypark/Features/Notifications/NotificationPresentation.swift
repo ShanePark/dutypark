@@ -6,6 +6,7 @@ nonisolated enum NotificationRoute: Equatable, Hashable, Sendable {
     case taggedSchedule(ScheduleID)
     case todo(TodoID?)
     case member(MemberID)
+    case support
 
     init?(notification: NotificationDTO) {
         switch notification.referenceType {
@@ -24,6 +25,10 @@ nonisolated enum NotificationRoute: Equatable, Hashable, Sendable {
         case .member:
             guard let value = notification.referenceId, let id = Int64(value) else { return nil }
             self = .member(id)
+        // The inquiry itself has no screen of its own: the answer is read in the
+        // support screen's history tab, which loads the member's whole list.
+        case .inquiry:
+            self = .support
         case .unknown, nil:
             return nil
         }
@@ -111,6 +116,13 @@ nonisolated enum NotificationPresentation {
                 fallbackKey: "notifications.items.todoStatusDoneFallback",
                 locale: locale
             )
+        case .inquiryAnswered:
+            return subjectMessage(
+                notification.payload.subject,
+                key: "notifications.items.inquiryAnswered",
+                fallbackKey: "notifications.items.inquiryAnsweredFallback",
+                locale: locale
+            )
         case .unknown:
             return localized("notifications.items.generic", locale: locale)
         }
@@ -158,6 +170,21 @@ nonisolated enum NotificationPresentation {
             return localized(fallbackKey, locale: locale)
         }
         return String(format: localized(key, locale: locale), locale: locale, actor)
+    }
+
+    /// The answering administrator stays anonymous, so an inquiry message is built
+    /// from its own subject instead of an actor name.
+    private static func subjectMessage(
+        _ subject: String?,
+        key: String,
+        fallbackKey: String,
+        locale: Locale
+    ) -> String {
+        let trimmed = subject?.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard let trimmed, !trimmed.isEmpty else {
+            return localized(fallbackKey, locale: locale)
+        }
+        return String(format: localized(key, locale: locale), locale: locale, trimmed)
     }
 
     private static func titledMessage(

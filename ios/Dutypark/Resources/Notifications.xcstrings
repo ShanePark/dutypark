@@ -94,6 +94,12 @@
     "notifications.items.todoStatusDoneFallback" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "TODO [%@] was marked as done." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "[%@] TODO가 완료 처리되었습니다." } }
     } },
+    "notifications.items.inquiryAnswered" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Your inquiry [%@] has been answered." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "문의 [%@]에 답변이 등록되었습니다." } }
+    } },
+    "notifications.items.inquiryAnsweredFallback" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Your inquiry has been answered." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "문의에 답변이 등록되었습니다." } }
+    } },
 
     "notifications.list.markAllAsRead" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Mark all as read" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "전체 읽음" } }

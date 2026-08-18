@@ -120,6 +120,8 @@ struct RootTabView: View {
     @State private var morePath: [MoreDestination] = []
     @State private var todoTarget: TodoID?
     @State private var settingsDestination: SettingsDestination?
+    @State private var supportTab: SupportTab = .form
+    @State private var supportPresentationID = 0
     // Bumped when the profile photo changes so the cached avatar in the "more" tab is
     // refetched instead of showing the replaced image.
     @State private var profilePhotoVersion: Int64 = 0
@@ -463,7 +465,14 @@ struct RootTabView: View {
         case .guide:
             PublicGuideView()
         case .support:
-            SupportView(prefilledEmail: authenticatedMember?.email)
+            SupportView(
+                prefilledEmail: authenticatedMember?.email,
+                isSignedIn: authenticatedMember != nil,
+                initialTab: supportTab
+            )
+            // The screen owns its tab once it exists, so a notification arriving while
+            // support is already open has to rebuild it to land on the history tab.
+            .id(supportPresentationID)
         case .myInfo:
             MyInfoView {
                 homeRefreshID &+= 1
@@ -484,11 +493,20 @@ struct RootTabView: View {
     // the only thing on the "more" stack instead of stacking on whatever was open.
     private func openMore(
         _ destination: MoreDestination,
-        settingsDestination: SettingsDestination? = nil
+        settingsDestination: SettingsDestination? = nil,
+        supportTab: SupportTab? = nil
     ) {
         self.settingsDestination = RootNavigationPolicy.settingsDestination(
             for: destination,
             requested: settingsDestination
+        )
+        self.supportTab = RootNavigationPolicy.supportTab(
+            for: destination,
+            requested: supportTab
+        )
+        supportPresentationID = RootNavigationPolicy.supportPresentationID(
+            for: destination,
+            current: supportPresentationID
         )
         morePath = [destination]
         selectedTab = .more
@@ -614,6 +632,9 @@ struct RootTabView: View {
         case .todo(let todoID):
             todoTarget = todoID
             selectedTab = .todo
+            return true
+        case .support:
+            openMore(.support, supportTab: .history)
             return true
         }
     }
@@ -771,6 +792,24 @@ nonisolated enum RootNavigationPolicy {
         requested: SettingsDestination?
     ) -> SettingsDestination? {
         destination == .settings ? requested : nil
+    }
+
+    // Only an inquiry-answered notification asks for the history tab; every other way
+    // into support opens the inquiry form, so a stale request cannot follow the member.
+    static func supportTab(
+        for destination: MoreDestination,
+        requested: SupportTab?
+    ) -> SupportTab {
+        destination == .support ? (requested ?? .form) : .form
+    }
+
+    /// Reopening support must rebuild its state even when the requested tab has not
+    /// changed, because the member may have switched tabs since the previous route.
+    static func supportPresentationID(
+        for destination: MoreDestination,
+        current: Int
+    ) -> Int {
+        destination == .support ? current &+ 1 : current
     }
 
     static func scheduleMemberID(

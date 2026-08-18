@@ -2,6 +2,7 @@ import Foundation
 
 nonisolated protocol SupportRepository: Sendable {
     func submitInquiry(_ request: CreateInquiryRequest) async throws
+    func fetchMyInquiries(page: Int, size: Int) async throws -> PageResponse<MyInquiryDTO>
 }
 
 nonisolated struct LiveSupportRepository: SupportRepository {
@@ -25,6 +26,18 @@ nonisolated struct LiveSupportRepository: SupportRepository {
             method: .post,
             body: body,
             retryingAfterUnauthorized: false
+        )
+    }
+
+    /// Members only. The server scopes the page to the caller's own inquiries, so no
+    /// member identifier is sent.
+    func fetchMyInquiries(page: Int, size: Int) async throws -> PageResponse<MyInquiryDTO> {
+        try await client.request(
+            "inquiries/me",
+            queryItems: [
+                URLQueryItem(name: "page", value: String(page)),
+                URLQueryItem(name: "size", value: String(size))
+            ]
         )
     }
 }

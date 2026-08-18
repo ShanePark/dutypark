@@ -1,14 +1,17 @@
 import SwiftUI
 
 nonisolated enum SupportLocalization {
-    static func text(_ key: String) -> String {
-        AppLocalization.string(key, table: "Support")
+    static func text(_ key: String, locale: Locale? = nil) -> String {
+        AppLocalization.string(key, table: "Support", locale: locale)
     }
 }
 
 /// Public contact point required by App Review 1.2: it explains how reporting and
 /// blocking work and carries the inquiry form. Guests reach it from the landing screen,
 /// members from the "more" menu with their account e-mail already filled in.
+///
+/// Only members get the second tab: the answer history needs a session, and the
+/// signed-out screen has to keep working as the public contact page.
 struct SupportView: View {
     private enum Field: Hashable {
         case email
@@ -21,11 +24,15 @@ struct SupportView: View {
 
     init(
         prefilledEmail: String? = nil,
+        isSignedIn: Bool = false,
+        initialTab: SupportTab = .form,
         repository: any SupportRepository = LiveSupportRepository()
     ) {
         _model = StateObject(
             wrappedValue: SupportViewModel(
                 prefilledEmail: prefilledEmail,
+                isSignedIn: isSignedIn,
+                initialTab: initialTab,
                 repository: repository
             )
         )
@@ -34,11 +41,19 @@ struct SupportView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: DPSpacing.medium) {
-                guidance
-                if model.didSubmit {
-                    confirmation
-                } else {
-                    form
+                if model.showsTabs {
+                    tabPicker
+                }
+                switch model.selectedTab {
+                case .form:
+                    guidance
+                    if model.didSubmit {
+                        confirmation
+                    } else {
+                        form
+                    }
+                case .history:
+                    MyInquiryListView(model: model)
                 }
             }
             .padding(DPSpacing.medium)
@@ -49,6 +64,17 @@ struct SupportView: View {
         .navigationTitle(SupportLocalization.text("support.title"))
         .navigationBarTitleDisplayMode(.inline)
         .accessibilityIdentifier("screen.support")
+    }
+
+    private var tabPicker: some View {
+        Picker("", selection: $model.selectedTab) {
+            ForEach(SupportTab.allCases) { tab in
+                Text(verbatim: SupportLocalization.text(tab.titleKey))
+                    .tag(tab)
+            }
+        }
+        .pickerStyle(.segmented)
+        .accessibilityIdentifier("support.tabs")
     }
 
     private var guidance: some View {
@@ -112,10 +138,11 @@ struct SupportView: View {
                     Text(verbatim: SupportLocalization.text("support.form.title"))
                         .font(DPTypography.heading)
                         .foregroundStyle(DPColor.textPrimary)
-                    Text(verbatim: SupportLocalization.text("support.form.description"))
+                    Text(verbatim: SupportLocalization.text(model.formDescriptionKey))
                         .font(DPTypography.supporting)
                         .foregroundStyle(DPColor.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityIdentifier("support.form.description")
                 }
 
                 field(label: "support.form.email") {
@@ -211,6 +238,15 @@ struct SupportView: View {
                 .buttonStyle(DPPrimaryButtonStyle())
                 .disabled(!model.canSubmit)
                 .accessibilityIdentifier("support.form.submit")
+
+                if model.showsSignInHint {
+                    Text(verbatim: SupportLocalization.text("support.guest.signInHint"))
+                        .font(DPTypography.caption)
+                        .foregroundStyle(DPColor.textMuted)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .accessibilityIdentifier("support.guest.signInHint")
+                }
             }
             .padding(DPSpacing.medium)
         }
@@ -227,11 +263,12 @@ struct SupportView: View {
                     .font(DPTypography.heading)
                     .foregroundStyle(DPColor.textPrimary)
                     .multilineTextAlignment(.center)
-                Text(verbatim: SupportLocalization.text("support.success.message"))
+                Text(verbatim: SupportLocalization.text(model.successMessageKey))
                     .font(DPTypography.supporting)
                     .foregroundStyle(DPColor.textSecondary)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityIdentifier("support.success.message")
                 Button {
                     model.startNewInquiry()
                 } label: {
@@ -267,7 +304,21 @@ struct SupportView: View {
     }
 
     private func card<Content: View>(@ViewBuilder content: () -> Content) -> some View {
-        VStack(spacing: 0) { content() }
+        SupportCard(content: content)
+    }
+}
+
+/// Shared card chrome for the support screen so the inquiry history matches the
+/// guidance and form cards it sits beside.
+struct SupportCard<Content: View>: View {
+    private let content: Content
+
+    init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(spacing: 0) { content }
             .background(DPColor.backgroundCard)
             .clipShape(RoundedRectangle(cornerRadius: DPRadius.large))
             .overlay {

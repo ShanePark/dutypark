@@ -129,6 +129,22 @@
         }
       }
     },
+    "support.form.description.member" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "We notify you when your inquiry is answered, and the reply appears in My inquiries."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "답변이 등록되면 알림으로 알려드리고, 내 문의 내역에서 확인할 수 있습니다."
+          }
+        }
+      }
+    },
     "support.form.email" : {
       "localizations" : {
         "en" : {
@@ -257,6 +273,22 @@
         }
       }
     },
+    "support.guest.signInHint" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign in before sending an inquiry to read the reply in the app."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "로그인 후 문의하면 앱에서 답변을 확인할 수 있습니다."
+          }
+        }
+      }
+    },
     "support.guide.block.description" : {
       "localizations" : {
         "en" : {
@@ -353,6 +385,198 @@
         }
       }
     },
+    "support.history.answerTitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reply"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "답변"
+          }
+        }
+      }
+    },
+    "support.history.answered" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Answered"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "답변 있음"
+          }
+        }
+      }
+    },
+    "support.history.awaiting" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Awaiting reply"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "답변 대기"
+          }
+        }
+      }
+    },
+    "support.history.empty" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You have not sent any inquiries yet."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "아직 접수한 문의가 없습니다."
+          }
+        }
+      }
+    },
+    "support.history.loadFailed" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not load your inquiries."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "문의 내역을 불러오지 못했습니다."
+          }
+        }
+      }
+    },
+    "support.history.loadMore" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Load more"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "더 보기"
+          }
+        }
+      }
+    },
+    "support.history.loading" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loading your inquiries…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "문의 내역을 불러오는 중…"
+          }
+        }
+      }
+    },
+    "support.history.pendingAnswer" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "We will reply after reviewing your inquiry."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "확인 후 답변드리겠습니다."
+          }
+        }
+      }
+    },
+    "support.history.retry" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Try again"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다시 시도"
+          }
+        }
+      }
+    },
+    "support.history.status.closed" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Closed"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "처리완료"
+          }
+        }
+      }
+    },
+    "support.history.status.open" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Received"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "접수됨"
+          }
+        }
+      }
+    },
+    "support.history.subjectFallback" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No subject"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "제목 없음"
+          }
+        }
+      }
+    },
     "support.intro.description" : {
       "localizations" : {
         "en" : {
@@ -401,6 +625,22 @@
         }
       }
     },
+    "support.success.message.member" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "We review inquiries within 24 hours. The reply appears in My inquiries."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "접수 후 24시간 이내에 확인합니다. 답변은 내 문의 내역에서 확인할 수 있습니다."
+          }
+        }
+      }
+    },
     "support.success.newInquiry" : {
       "localizations" : {
         "en" : {
@@ -429,6 +669,38 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "문의가 접수되었습니다"
+          }
+        }
+      }
+    },
+    "support.tab.form" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Send inquiry"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "문의하기"
+          }
+        }
+      }
+    },
+    "support.tab.history" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "My inquiries"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 문의 내역"
           }
         }
       }
