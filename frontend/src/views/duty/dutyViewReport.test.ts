@@ -68,4 +68,16 @@ describe('duty calendar report entry points', () => {
   it('passes the alsoBlock choice straight through to the API', () => {
     expect(dutyView).toContain('alsoBlock: submission.alsoBlock')
   })
+
+  it('refreshes my own calendar instead of leaving it when the report also blocks', () => {
+    expect(dutyView).toMatch(
+      /if \(submission\.alsoBlock\) \{\s*if \(isMyCalendar\.value\) \{\s*await refreshAfterBlock\(\)\s*\} else \{\s*goBack\('\/'\)\s*\}\s*\}/
+    )
+  })
+
+  it('reloads the friend, tagged and overlay state the block invalidated', () => {
+    expect(dutyView).toMatch(
+      /async function refreshAfterBlock\(\)[\s\S]*?await loadFriends\(\)[\s\S]*?selectedFriendIds\.value = selectedFriendIds\.value\.filter[\s\S]*?loadSchedules\(\)[\s\S]*?loadTodos\(\)[\s\S]*?loadOtherDuties\(\)/
+    )
+  })
 })

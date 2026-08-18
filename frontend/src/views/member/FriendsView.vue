@@ -37,6 +37,8 @@ const friendInfo = ref<DashboardFriendInfo | null>(null)
 
 const blockedMembers = ref<BlockedMember[]>([])
 const blockedLoading = ref(false)
+const blockedLoadFailed = ref(false)
+const unblockingId = ref<number | null>(null)
 
 const openDropdownId = ref<number | null>(null)
 const dropdownPosition = ref({ top: 0, left: 0 })
@@ -93,10 +95,14 @@ async function loadFriendInfo() {
 
 async function loadBlockedMembers() {
   blockedLoading.value = true
+  blockedLoadFailed.value = false
   try {
     blockedMembers.value = await blockApi.getBlockedMembers()
   } catch (e) {
     console.error('Failed to load blocked members:', e)
+    // An empty list would read as "nothing is blocked", so the failure is kept separate.
+    blockedMembers.value = []
+    blockedLoadFailed.value = true
   } finally {
     blockedLoading.value = false
   }
@@ -278,11 +284,13 @@ async function blockFriend(member: { id: number | null; name: string }) {
 }
 
 async function unblockMember(member: BlockedMember) {
+  if (unblockingId.value !== null) return
   if (!await confirm(
     t('friends.block.unblockConfirmMessage', { name: member.name }),
     t('friends.block.unblockConfirmTitle'),
     t('friends.block.unblockAction'),
   )) return
+  unblockingId.value = member.id
   try {
     await blockApi.unblock(member.id)
     blockedMembers.value = blockedMembers.value.filter((m) => m.id !== member.id)
@@ -290,6 +298,8 @@ async function unblockMember(member: BlockedMember) {
   } catch (e) {
     console.error('Failed to unblock member:', e)
     showWarning(t('friends.block.unblockFailed'))
+  } finally {
+    unblockingId.value = null
   }
 }
 
@@ -589,7 +599,10 @@ onUnmounted(() => {
       class="mt-6"
       :members="blockedMembers"
       :loading="blockedLoading"
+      :load-failed="blockedLoadFailed"
+      :unblocking-id="unblockingId"
       @unblock="unblockMember"
+      @retry="loadBlockedMembers"
     />
 
     <FriendActionMenu

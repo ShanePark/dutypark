@@ -1397,8 +1397,12 @@ async function handleReportSubmit(submission: ReportSubmission) {
     })
     reportTarget.value = null
     toastSuccess(t('report.messages.submitted'))
-    if (submission.alsoBlock && !isMyCalendar.value) {
-      goBack('/')
+    if (submission.alsoBlock) {
+      if (isMyCalendar.value) {
+        await refreshAfterBlock()
+      } else {
+        goBack('/')
+      }
     }
   } catch (error) {
     console.error('Failed to submit report:', error)
@@ -1406,6 +1410,17 @@ async function handleReportSubmit(submission: ReportSubmission) {
   } finally {
     isSubmittingReport.value = false
   }
+}
+
+/**
+ * Blocking also ends the friendship, so on my own calendar the blocked member's tagged content,
+ * the friend selector and any duties overlaid from them are stale until they are refetched.
+ */
+async function refreshAfterBlock() {
+  await loadFriends()
+  const remainingFriendIds = new Set(friends.value.map((friend) => friend.id))
+  selectedFriendIds.value = selectedFriendIds.value.filter((id) => remainingFriendIds.has(id))
+  await Promise.all([loadSchedules(), loadTodos(), loadOtherDuties()])
 }
 
 async function handleBlockMember() {

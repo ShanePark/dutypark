@@ -113,6 +113,38 @@ describe('friend blocking', () => {
   })
 })
 
+describe('blocked list loading failures', () => {
+  it('remembers that the blocked list failed to load and clears it on the next try', () => {
+    const load = functionBody(friendsView, 'loadBlockedMembers')
+
+    expect(load).toContain('blockedLoadFailed.value = false')
+    expect(load).toContain('blockedLoadFailed.value = true')
+    expect(friendsView).toContain(':load-failed="blockedLoadFailed"')
+    expect(friendsView).toContain('@retry="loadBlockedMembers"')
+  })
+
+  it('shows a failure state with a retry instead of the empty state', () => {
+    expect(blockedMemberList).toContain('loadFailed?: boolean')
+    expect(blockedMemberList).toMatch(
+      /v-else-if="loadFailed"[\s\S]*?friends\.messages\.loadFailed[\s\S]*?emit\('retry'\)[\s\S]*?common\.actions\.retry/
+    )
+    // A failed load must not fall through to "no blocked users", nor claim a count of zero.
+    expect(blockedMemberList).toMatch(/v-else-if="loadFailed"[\s\S]*?v-else-if="members\.length === 0"/)
+    expect(blockedMemberList).toMatch(/v-if="!loadFailed"[\s\S]*?\{\{ members\.length \}\}/)
+  })
+
+  it('disables the unblock button while its request is in flight', () => {
+    const unblock = functionBody(friendsView, 'unblockMember')
+
+    expect(unblock).toContain('if (unblockingId.value !== null) return')
+    expect(unblock).toContain('unblockingId.value = member.id')
+    expect(unblock).toContain('unblockingId.value = null')
+    expect(friendsView).toContain(':unblocking-id="unblockingId"')
+    expect(blockedMemberList).toContain('unblockingId?: number | null')
+    expect(blockedMemberList).toContain(':disabled="unblockingId === member.id"')
+  })
+})
+
 describe('block translations', () => {
   it.each([
     ['ko', ko],
