@@ -4,11 +4,8 @@ import {
   X,
   Pencil,
   Trash2,
-  Check,
-  RotateCcw,
   List,
   Calendar,
-  ListTodo,
   Clock,
   CheckCircle2,
 } from 'lucide-vue-next'
@@ -30,10 +27,6 @@ type TodoDetailItem = Omit<TodoDto, 'attachments'>
 
 const { showWarning, showError } = useSwal()
 const { t } = useI18n()
-
-function isActiveTodo(status: string): boolean {
-  return status === 'TODO' || status === 'IN_PROGRESS'
-}
 
 function getStatusLabel(status: string): string {
   switch (status) {
@@ -74,8 +67,6 @@ const emit = defineEmits<{
     attachmentSessionId?: string
     orderedAttachmentIds?: string[]
   }): void
-  (e: 'complete', id: string): void
-  (e: 'reopen', id: string): void
   (e: 'delete', todo: Pick<TodoDetailItem, 'id' | 'title'>): void
   (e: 'untagSelf', todo: Pick<TodoDetailItem, 'id' | 'title'>): void
   (e: 'backToList'): void
@@ -84,7 +75,6 @@ const emit = defineEmits<{
 const isEditMode = ref(false)
 const editTitle = ref('')
 const editContent = ref('')
-const editStatus = ref<TodoStatus>('TODO')
 const editDueDate = ref('')
 const editTagFriendIds = ref<number[]>([])
 const editAttachments = ref<NormalizedAttachment[]>([])
@@ -93,12 +83,6 @@ const isUploading = ref(false)
 const fileUploaderRef = ref<InstanceType<typeof FileUploader> | null>(null)
 const viewAttachments = ref<NormalizedAttachment[]>([])
 const isLoadingAttachments = ref(false)
-
-const statusOptions = computed<Array<{ value: TodoStatus; label: string; icon: typeof ListTodo; colorClass: string }>>(() => [
-  { value: 'TODO', label: t('duty.todo.status.todo'), icon: ListTodo, colorClass: 'status-card-todo' },
-  { value: 'IN_PROGRESS', label: t('duty.todo.status.inProgress'), icon: Clock, colorClass: 'status-card-in-progress' },
-  { value: 'DONE', label: t('duty.todo.status.done'), icon: CheckCircle2, colorClass: 'status-card-done' },
-])
 
 const selectedTagSummaries = computed(() => {
   return editTagFriendIds.value.flatMap((id) => {
@@ -116,7 +100,6 @@ watch(
     if (open && props.todo) {
       editTitle.value = props.todo.title
       editContent.value = props.todo.content
-      editStatus.value = props.todo.status
       editDueDate.value = props.todo.dueDate || ''
       editTagFriendIds.value = props.todo.tags.flatMap((tag) => tag.id == null ? [] : [tag.id])
       sessionId.value = null
@@ -142,7 +125,6 @@ watch(
       // Same todo was updated, reload attachments and reset edit mode
       editTitle.value = newTodo.title
       editContent.value = newTodo.content
-      editStatus.value = newTodo.status
       editDueDate.value = newTodo.dueDate || ''
       editTagFriendIds.value = newTodo.tags.flatMap((tag) => tag.id == null ? [] : [tag.id])
       await loadAttachments()
@@ -167,7 +149,6 @@ async function loadAttachments() {
   }
 }
 
-const isActive = computed(() => props.todo ? isActiveTodo(props.todo.status) : false)
 const isTaggedTodo = computed(() => props.todo?.isTagged ?? false)
 
 const taggedOwnerMembers = computed(() => {
@@ -209,7 +190,6 @@ function enterEditMode() {
   isEditMode.value = true
   editTitle.value = props.todo.title
   editContent.value = props.todo.content
-  editStatus.value = props.todo.status
   editDueDate.value = props.todo.dueDate || ''
   editTagFriendIds.value = props.todo.tags.flatMap((tag) => tag.id == null ? [] : [tag.id])
   editAttachments.value = [...viewAttachments.value]
@@ -226,7 +206,6 @@ function cancelEdit() {
   if (props.todo) {
     editTitle.value = props.todo.title
     editContent.value = props.todo.content
-    editStatus.value = props.todo.status
     editDueDate.value = props.todo.dueDate || ''
     editTagFriendIds.value = props.todo.tags.flatMap((tag) => tag.id == null ? [] : [tag.id])
     editAttachments.value = [...viewAttachments.value]
@@ -251,7 +230,7 @@ function saveEdit() {
     id: props.todo.id,
     title: editTitle.value.trim(),
     content: editContent.value.trim(),
-    status: editStatus.value,
+    status: props.todo.status,
     dueDate: editDueDate.value || null,
     tagFriendIds: [...editTagFriendIds.value],
     attachmentSessionId: sessionId.value || undefined,
@@ -381,23 +360,6 @@ function onUploadError(message: string) {
 
         <template v-else>
           <div>
-            <label class="block text-sm font-medium mb-2 text-dp-text-secondary">{{ t('duty.todo.fields.status') }}</label>
-            <div class="grid grid-cols-3 gap-2">
-              <button
-                v-for="option in statusOptions"
-                :key="option.value"
-                type="button"
-                @click="editStatus = option.value"
-                class="status-card cursor-pointer"
-                :class="[option.colorClass, { 'status-card-selected': editStatus === option.value }]"
-              >
-                <component :is="option.icon" class="w-4 h-4" />
-                <span class="text-xs font-medium">{{ option.label }}</span>
-              </button>
-            </div>
-          </div>
-
-          <div>
             <label class="form-label">
               {{ t('duty.todo.fields.title') }} <span class="text-dp-danger">*</span>
               <CharacterCounter :current="editTitle.length" :max="50" />
@@ -472,69 +434,36 @@ function onUploadError(message: string) {
             <button
               v-if="showBackToList"
               @click="emit('backToList')"
-              class="flex min-h-11 items-center gap-1 px-3 py-2 text-sm rounded-lg transition btn-outline cursor-pointer"
+              class="flex flex-1 sm:flex-none min-h-11 items-center justify-center gap-1 px-3 py-2 text-sm rounded-lg transition btn-outline cursor-pointer"
               :title="t('duty.todo.actions.backToList')"
             >
               <List class="w-4 h-4" />
               <span class="whitespace-nowrap">{{ t('duty.todo.actions.list') }}</span>
             </button>
 
-            <div class="flex flex-wrap justify-end gap-2">
-              <template v-if="isTaggedTodo">
-                <button
-                  @click="emit('untagSelf', { id: todo.id, title: todo.title })"
-                  class="flex min-h-11 items-center justify-center gap-1 px-3 py-2 text-sm border border-dp-warning-border text-dp-warning rounded-lg hover:bg-dp-warning-soft transition cursor-pointer"
-                >
-                  <X class="w-4 h-4" />
-                  <span class="whitespace-nowrap">{{ t('duty.todo.actions.removeTag') }}</span>
-                </button>
-                <button
-                  v-if="isActive"
-                  @click="emit('complete', todo.id)"
-                  class="flex min-h-11 items-center justify-center gap-1 px-3 py-2 text-sm bg-dp-success text-dp-text-on-dark rounded-lg hover:bg-dp-success-hover transition cursor-pointer"
-                >
-                  <Check class="w-4 h-4" />
-                  <span class="whitespace-nowrap">{{ t('duty.todo.actions.complete') }}</span>
-                </button>
-                <button
-                  v-else
-                  @click="emit('reopen', todo.id)"
-                  class="flex min-h-11 items-center justify-center gap-1 px-3 py-2 text-sm bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition cursor-pointer"
-                >
-                  <RotateCcw class="w-4 h-4" />
-                  <span class="whitespace-nowrap">{{ t('duty.todo.actions.reopen') }}</span>
-                </button>
-              </template>
+            <div class="flex flex-1 sm:flex-none flex-wrap justify-end gap-2">
+              <button
+                v-if="isTaggedTodo"
+                @click="emit('untagSelf', { id: todo.id, title: todo.title })"
+                class="flex-1 sm:flex-none flex min-h-11 items-center justify-center gap-1 px-3 py-2 text-sm border border-dp-warning-border text-dp-warning rounded-lg hover:bg-dp-warning-soft transition cursor-pointer"
+              >
+                <X class="w-4 h-4" />
+                <span class="whitespace-nowrap">{{ t('duty.todo.actions.removeTag') }}</span>
+              </button>
               <template v-else>
                 <button
                   @click="enterEditMode"
-                  class="flex min-h-11 items-center justify-center gap-1 px-3 py-2 text-sm border border-dp-accent-border text-dp-accent rounded-lg hover:bg-dp-accent-soft transition cursor-pointer"
+                  class="flex-1 sm:flex-none flex min-h-11 items-center justify-center gap-1 px-3 py-2 text-sm border border-dp-accent-border text-dp-accent rounded-lg hover:bg-dp-accent-soft transition cursor-pointer"
                 >
                   <Pencil class="w-4 h-4" />
                   <span class="whitespace-nowrap">{{ t('duty.todo.actions.edit') }}</span>
                 </button>
                 <button
                   @click="emit('delete', { id: todo.id, title: todo.title })"
-                  class="flex min-h-11 items-center justify-center gap-1 px-3 py-2 text-sm border border-dp-danger-border text-dp-danger rounded-lg hover:bg-dp-danger-soft transition cursor-pointer"
+                  class="flex-1 sm:flex-none flex min-h-11 items-center justify-center gap-1 px-3 py-2 text-sm border border-dp-danger-border text-dp-danger rounded-lg hover:bg-dp-danger-soft transition cursor-pointer"
                 >
                   <Trash2 class="w-4 h-4" />
                   <span class="whitespace-nowrap">{{ t('common.actions.delete') }}</span>
-                </button>
-                <button
-                  v-if="isActive"
-                  @click="emit('complete', todo.id)"
-                  class="flex min-h-11 items-center justify-center gap-1 px-3 py-2 text-sm bg-dp-success text-dp-text-on-dark rounded-lg hover:bg-dp-success-hover transition cursor-pointer"
-                >
-                  <Check class="w-4 h-4" />
-                  <span class="whitespace-nowrap">{{ t('duty.todo.actions.complete') }}</span>
-                </button>
-                <button
-                  v-else
-                  @click="emit('reopen', todo.id)"
-                  class="flex min-h-11 items-center justify-center gap-1 px-3 py-2 text-sm bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition cursor-pointer"
-                >
-                  <RotateCcw class="w-4 h-4" />
-                  <span class="whitespace-nowrap">{{ t('duty.todo.actions.reopen') }}</span>
                 </button>
               </template>
             </div>
@@ -545,7 +474,7 @@ function onUploadError(message: string) {
             @click="cancelEdit"
             class="flex-1 sm:flex-none px-4 py-2 rounded-lg transition btn-outline cursor-pointer"
           >
-            {{ t('common.actions.cancel') }}
+            {{ t('common.actions.close') }}
           </button>
           <button
             @click="saveEdit"
@@ -559,63 +488,3 @@ function onUploadError(message: string) {
     </template>
   </BaseModal>
 </template>
-
-<style scoped>
-.status-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 0.375rem;
-  padding: 0.75rem 0.5rem;
-  border-radius: 0.5rem;
-  border: 2px solid transparent;
-  transition: all 0.15s ease;
-}
-
-.status-card:hover {
-  transform: translateY(-1px);
-}
-
-.status-card-todo {
-  background-color: var(--dp-bg-tertiary);
-  color: var(--dp-text-primary);
-}
-
-.status-card-todo:hover {
-  background-color: var(--dp-bg-hover);
-}
-
-.status-card-todo.status-card-selected {
-  border-color: var(--dp-text-primary);
-  background-color: var(--dp-bg-hover);
-}
-
-.status-card-in-progress {
-  background-color: color-mix(in srgb, var(--dp-warning) 15%, var(--dp-bg-tertiary));
-  color: var(--dp-warning);
-}
-
-.status-card-in-progress:hover {
-  background-color: color-mix(in srgb, var(--dp-warning) 25%, var(--dp-bg-tertiary));
-}
-
-.status-card-in-progress.status-card-selected {
-  border-color: var(--dp-warning);
-  background-color: color-mix(in srgb, var(--dp-warning) 25%, var(--dp-bg-tertiary));
-}
-
-.status-card-done {
-  background-color: color-mix(in srgb, var(--dp-success) 15%, var(--dp-bg-tertiary));
-  color: var(--dp-success);
-}
-
-.status-card-done:hover {
-  background-color: color-mix(in srgb, var(--dp-success) 25%, var(--dp-bg-tertiary));
-}
-
-.status-card-done.status-card-selected {
-  border-color: var(--dp-success);
-  background-color: color-mix(in srgb, var(--dp-success) 25%, var(--dp-bg-tertiary));
-}
-</style>

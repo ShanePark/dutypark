@@ -49,6 +49,22 @@
         }
       }
     },
+    "admin.common.close": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Close"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "닫기"
+          }
+        }
+      }
+    },
     "admin.common.create": {
       "localizations": {
         "en": {
@@ -185,22 +201,6 @@
         }
       }
     },
-    "admin.common.page": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$d of %2$d"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$d / %2$d"
-          }
-        }
-      }
-    },
     "admin.common.previous": {
       "localizations": {
         "en": {
@@ -265,22 +265,6 @@
         }
       }
     },
-    "admin.menu.section": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Service administration"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "서비스 관리"
-          }
-        }
-      }
-    },
     "admin.menu.title": {
       "localizations": {
         "en": {
@@ -297,14 +281,23 @@
         }
       }
     },
-    "admin.dashboard.activeSessions": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Active sessions" } }, "ko": { "stringUnit": { "state": "translated", "value": "활성 세션" } } } },
-    "admin.dashboard.teams": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Teams on page" } }, "ko": { "stringUnit": { "state": "translated", "value": "현재 팀" } } } },
-    "admin.dashboard.todayLogins": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Today's logins" } }, "ko": { "stringUnit": { "state": "translated", "value": "오늘 로그인" } } } },
-    "admin.dashboard.totalMembers": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Total members" } }, "ko": { "stringUnit": { "state": "translated", "value": "전체 회원" } } } },
+    "admin.dashboard.empty": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "No matching members found." } }, "ko": { "stringUnit": { "state": "translated", "value": "검색 결과가 없습니다" } } } },
+    "admin.dashboard.memberRow.noTeam": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "No team" } }, "ko": { "stringUnit": { "state": "translated", "value": "팀 없음" } } } },
+    "admin.dashboard.pagination": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Showing %1$d-%2$d of %3$d" } }, "ko": { "stringUnit": { "state": "translated", "value": "총 %3$d명 중 %1$d-%2$d" } } } },
+    "admin.dashboard.searchPlaceholder": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Search members..." } }, "ko": { "stringUnit": { "state": "translated", "value": "회원 검색..." } } } },
+    "admin.dashboard.stats.activeTokensLabel": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Active tokens" } }, "ko": { "stringUnit": { "state": "translated", "value": "활성 토큰" } } } },
+    "admin.dashboard.stats.activeTokensNote": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Valid" } }, "ko": { "stringUnit": { "state": "translated", "value": "유효" } } } },
+    "admin.dashboard.stats.todayLoginsLabel": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Logins" } }, "ko": { "stringUnit": { "state": "translated", "value": "접속 횟수" } } } },
+    "admin.dashboard.stats.todayLoginsNote": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Today" } }, "ko": { "stringUnit": { "state": "translated", "value": "오늘" } } } },
+    "admin.dashboard.stats.totalMembersLabel": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Members" } }, "ko": { "stringUnit": { "state": "translated", "value": "등록 회원" } } } },
+    "admin.dashboard.stats.totalMembersNote": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Total" } }, "ko": { "stringUnit": { "state": "translated", "value": "전체" } } } },
+    "admin.dashboard.stats.totalTeamsLabel": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Teams" } }, "ko": { "stringUnit": { "state": "translated", "value": "등록 팀" } } } },
+    "admin.dashboard.stats.totalTeamsNote": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Active" } }, "ko": { "stringUnit": { "state": "translated", "value": "활성" } } } },
+    "admin.dashboard.statsAriaLabel": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Admin summary stats" } }, "ko": { "stringUnit": { "state": "translated", "value": "관리자 요약 통계" } } } },
+    "admin.dashboard.title": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Member management" } }, "ko": { "stringUnit": { "state": "translated", "value": "회원 관리" } } } },
     "admin.members.accountStatus": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Account status" } }, "ko": { "stringUnit": { "state": "translated", "value": "계정 상태" } } } },
     "admin.members.auxiliaryAccount": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Auxiliary account" } }, "ko": { "stringUnit": { "state": "translated", "value": "보조 계정" } } } },
     "admin.members.basicInfo": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Basic information" } }, "ko": { "stringUnit": { "state": "translated", "value": "기본 정보" } } } },
-    "admin.members.empty": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "No members found" } }, "ko": { "stringUnit": { "state": "translated", "value": "검색된 회원이 없습니다" } } } },
     "admin.members.hasPassword": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Password configured" } }, "ko": { "stringUnit": { "state": "translated", "value": "비밀번호 설정" } } } },
     "admin.members.id": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "ID %lld" } }, "ko": { "stringUnit": { "state": "translated", "value": "ID %lld" } } } },
     "admin.members.lastModified": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Last updated" } }, "ko": { "stringUnit": { "state": "translated", "value": "최근 수정" } } } },
@@ -834,18 +827,18 @@
         }
       }
     },
-    "admin.members.search": {
+    "admin.members.session.iosApp": {
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Search name or email"
+            "value": "iOS App"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "이름 또는 이메일 검색"
+            "value": "iOS 앱"
           }
         }
       }

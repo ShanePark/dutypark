@@ -10,19 +10,19 @@ final class HomeDashboardTests: XCTestCase {
     }
 
     func testPinnedFriendLongPressUsesDeliberateActivationDelay() {
-        XCTAssertEqual(HomePinnedFriendDragLayout.minimumPressDuration, 0.35)
-        XCTAssertEqual(HomePinnedFriendDragLayout.maximumPressDistance, 10)
-        XCTAssertEqual(HomePinnedFriendDragLayout.activationDistance, 4)
+        XCTAssertEqual(DPPinnedFriendDragLayout.minimumPressDuration, 0.35)
+        XCTAssertEqual(DPPinnedFriendDragLayout.maximumPressDistance, 10)
+        XCTAssertEqual(DPPinnedFriendDragLayout.activationDistance, 4)
     }
 
     func testPinnedFriendDragMovesCardAfterItOverlapsTheNextCard() {
         let targets = [
-            HomePinnedFriendDropTarget(memberID: 2, frame: CGRect(x: 0, y: 0, width: 300, height: 88)),
-            HomePinnedFriendDropTarget(memberID: 3, frame: CGRect(x: 0, y: 96, width: 300, height: 88)),
-            HomePinnedFriendDropTarget(memberID: 4, frame: CGRect(x: 0, y: 192, width: 300, height: 88))
+            DPPinnedFriendDropTarget(memberID: 2, frame: CGRect(x: 0, y: 0, width: 300, height: 88)),
+            DPPinnedFriendDropTarget(memberID: 3, frame: CGRect(x: 0, y: 96, width: 300, height: 88)),
+            DPPinnedFriendDropTarget(memberID: 4, frame: CGRect(x: 0, y: 192, width: 300, height: 88))
         ]
 
-        let reordered = HomePinnedFriendLiveOrder.reordered(
+        let reordered = DPPinnedFriendLiveOrder.reordered(
             [2, 3, 4],
             draggedID: 2,
             previewFrame: CGRect(x: 0, y: 20, width: 300, height: 88),
@@ -34,11 +34,11 @@ final class HomeDashboardTests: XCTestCase {
 
     func testPinnedFriendDragKeepsOrderBeforeCardsOverlap() {
         let targets = [
-            HomePinnedFriendDropTarget(memberID: 2, frame: CGRect(x: 0, y: 0, width: 300, height: 88)),
-            HomePinnedFriendDropTarget(memberID: 3, frame: CGRect(x: 0, y: 96, width: 300, height: 88))
+            DPPinnedFriendDropTarget(memberID: 2, frame: CGRect(x: 0, y: 0, width: 300, height: 88)),
+            DPPinnedFriendDropTarget(memberID: 3, frame: CGRect(x: 0, y: 96, width: 300, height: 88))
         ]
 
-        let reordered = HomePinnedFriendLiveOrder.reordered(
+        let reordered = DPPinnedFriendLiveOrder.reordered(
             [2, 3],
             draggedID: 2,
             previewFrame: CGRect(x: 0, y: 4, width: 300, height: 88),
@@ -50,13 +50,13 @@ final class HomeDashboardTests: XCTestCase {
 
     func testPinnedFriendDragReordersWithOnlyVisibleLazyStackTargets() {
         let targets = [
-            HomePinnedFriendDropTarget(memberID: 21, frame: CGRect(x: 0, y: 0, width: 300, height: 88)),
-            HomePinnedFriendDropTarget(memberID: 22, frame: CGRect(x: 0, y: 96, width: 300, height: 88)),
-            HomePinnedFriendDropTarget(memberID: 23, frame: CGRect(x: 0, y: 192, width: 300, height: 88)),
-            HomePinnedFriendDropTarget(memberID: 24, frame: CGRect(x: 0, y: 288, width: 300, height: 88))
+            DPPinnedFriendDropTarget(memberID: 21, frame: CGRect(x: 0, y: 0, width: 300, height: 88)),
+            DPPinnedFriendDropTarget(memberID: 22, frame: CGRect(x: 0, y: 96, width: 300, height: 88)),
+            DPPinnedFriendDropTarget(memberID: 23, frame: CGRect(x: 0, y: 192, width: 300, height: 88)),
+            DPPinnedFriendDropTarget(memberID: 24, frame: CGRect(x: 0, y: 288, width: 300, height: 88))
         ]
 
-        let reordered = HomePinnedFriendLiveOrder.reordered(
+        let reordered = DPPinnedFriendLiveOrder.reordered(
             [21, 22, 23, 24, 25, 26],
             draggedID: 21,
             previewFrame: CGRect(x: 0, y: 20, width: 300, height: 88),

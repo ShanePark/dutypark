@@ -124,7 +124,7 @@ onMounted(async () => {
     uuid.value = uuidParam
   } else {
     showError(t('auth.ssoSignup.errors.invalidAccess'))
-    router.push('/auth/login')
+    router.replace('/auth/login')
     return
   }
 
@@ -159,8 +159,8 @@ async function handleSubmit() {
     // Initialize auth store to fetch user info
     await authStore.checkAuth()
 
-    // Navigate to congrats page
-    await router.push({
+    // Navigate to congrats page, replacing the consumed signup form
+    await router.replace({
       path: '/auth/sso-congrats',
       query: redirectTarget.value ? { redirect: redirectTarget.value } : undefined,
     })

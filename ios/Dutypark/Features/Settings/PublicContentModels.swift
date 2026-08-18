@@ -24,12 +24,16 @@ nonisolated struct PublicGuideSection: Decodable, Equatable, Identifiable, Senda
     let id: String
     let title: String
     let summary: String
+    let icon: String
+    let tone: String
     let cards: [PublicGuideCard]
 }
 
 nonisolated struct PublicGuideCard: Decodable, Equatable, Identifiable, Sendable {
     let id: String
     let title: String
+    let icon: String
+    let tone: String
     let items: [String]
 }
 
@@ -95,12 +99,15 @@ nonisolated enum PublicContentLocaleResolver {
     }
 }
 
-nonisolated enum PublicContentTone: Equatable, Sendable {
+/// Raw values are the server's tone vocabulary keys; both clients share the same closed set.
+nonisolated enum PublicContentTone: String, Equatable, Sendable {
     case accent
+    case accentLight
     case success
     case warning
     case danger
     case neutral
+    case muted
 }
 
 nonisolated struct PublicContentSymbol: Equatable, Sendable {
@@ -109,43 +116,48 @@ nonisolated struct PublicContentSymbol: Equatable, Sendable {
 }
 
 nonisolated enum PublicContentPresentation {
-    static func guideSection(id: String) -> PublicContentSymbol {
-        switch id.lowercased() {
-        case "dashboard", "home": .init(symbol: "house.fill", tone: .accent)
-        case "calendar": .init(symbol: "calendar", tone: .success)
-        case "team": .init(symbol: "building.2.fill", tone: .accent)
-        case "friends": .init(symbol: "person.badge.plus", tone: .warning)
-        case "settings": .init(symbol: "gearshape.fill", tone: .neutral)
-        default: .init(symbol: "book.closed.fill", tone: .accent)
-        }
+    static let fallbackSymbol = "book.closed.fill"
+
+    /// The design vocabulary shared with the web client. It changes only when the vocabulary
+    /// itself changes - guide content changes ship in the canonical content file alone.
+    private static let guideSymbols: [String: String] = [
+        "home": "house.fill",
+        "calendar": "calendar",
+        "calendarCheck": "calendar.badge.clock",
+        "building": "building.2.fill",
+        "settings": "gearshape.fill",
+        "users": "person.2.fill",
+        "personAdd": "person.badge.plus",
+        "userCog": "person.crop.circle.badge.checkmark",
+        "pencil": "pencil",
+        "spreadsheet": "tablecells",
+        "plus": "plus.circle.fill",
+        "sparkles": "sparkles",
+        "eye": "eye.fill",
+        "checklist": "checklist",
+        "search": "magnifyingglass",
+        "palette": "paintpalette.fill",
+        "sun": "sun.max.fill",
+        "bell": "bell.badge.fill",
+        "pin": "pin.fill",
+        "trash": "trash.fill",
+        "camera": "camera.fill",
+        "shield": "shield.checkered",
+        "phone": "iphone",
+        "link": "link",
+        "lock": "lock.fill",
+    ]
+
+    static func symbol(icon: String) -> String {
+        guideSymbols[icon] ?? fallbackSymbol
     }
 
-    static func guideCard(id: String) -> PublicContentSymbol {
-        switch id.lowercased() {
-        case "today", "calendar": .init(symbol: "calendar", tone: .accent)
-        case "friends", "together", "staff": .init(symbol: "person.2.fill", tone: .neutral)
-        case "duty": .init(symbol: "pencil", tone: .warning)
-        case "excel": .init(symbol: "tablecells", tone: .success)
-        case "schedule", "add": .init(symbol: "plus.circle.fill", tone: .accent)
-        case "ai": .init(symbol: "sparkles", tone: .accent)
-        case "visibility": .init(symbol: "eye.fill", tone: .success)
-        case "dday": .init(symbol: "calendar.badge.clock", tone: .accent)
-        case "todo": .init(symbol: "checklist", tone: .accent)
-        case "search": .init(symbol: "magnifyingglass", tone: .neutral)
-        case "others": .init(symbol: "person.badge.plus", tone: .accent)
-        case "members": .init(symbol: "person.crop.circle.badge.checkmark", tone: .accent)
-        case "dutytypes", "theme": .init(symbol: "paintpalette.fill", tone: .warning)
-        case "requests": .init(symbol: "bell.badge.fill", tone: .danger)
-        case "family": .init(symbol: "house.fill", tone: .warning)
-        case "pinning": .init(symbol: "pin.fill", tone: .warning)
-        case "remove": .init(symbol: "trash.fill", tone: .danger)
-        case "photo": .init(symbol: "camera.fill", tone: .accent)
-        case "delegation": .init(symbol: "shield.checkered", tone: .success)
-        case "sessions": .init(symbol: "iphone", tone: .accent)
-        case "social": .init(symbol: "link", tone: .warning)
-        case "password": .init(symbol: "lock.fill", tone: .neutral)
-        default: .init(symbol: "info.circle.fill", tone: .neutral)
-        }
+    static func tone(_ tone: String) -> PublicContentTone {
+        PublicContentTone(rawValue: tone) ?? .neutral
+    }
+
+    static func guideVisual(icon: String, tone: String) -> PublicContentSymbol {
+        PublicContentSymbol(symbol: symbol(icon: icon), tone: self.tone(tone))
     }
 
     static func releaseCategory(_ category: String) -> PublicContentSymbol {
@@ -159,3 +171,37 @@ nonisolated enum PublicContentPresentation {
         }
     }
 }
+
+#if DEBUG
+extension PublicGuideContent {
+    static func uiTestingFixture(locale: String) -> PublicGuideContent {
+        PublicGuideContent(
+            schemaVersion: 1,
+            contentVersion: "ui-testing",
+            locale: locale,
+            title: "이용 안내",
+            description: "Dutypark의 주요 기능과 사용 방법을 안내합니다.",
+            footer: "더 궁금한 점이 있으시면 관리자에게 문의해주세요.",
+            actions: PublicGuideActions(expandAll: "모두 펼치기", collapseAll: "모두 접기"),
+            sections: [
+                PublicGuideSection(
+                    id: "dashboard",
+                    title: "대시보드 (홈)",
+                    summary: "오늘의 근무와 일정을 한눈에 확인합니다.",
+                    icon: "home",
+                    tone: "accent",
+                    cards: [
+                        PublicGuideCard(
+                            id: "today",
+                            title: "오늘의 정보 확인",
+                            icon: "calendar",
+                            tone: "accent",
+                            items: ["오늘 날짜와 요일을 확인할 수 있습니다."]
+                        )
+                    ]
+                )
+            ]
+        )
+    }
+}
+#endif

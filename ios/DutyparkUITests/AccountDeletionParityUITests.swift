@@ -47,16 +47,21 @@ final class AccountDeletionParityUITests: XCTestCase {
     @MainActor
     private func openAccountDeletion(in app: XCUIApplication) {
         XCTAssertTrue(app.descendants(matching: .any)["screen.home"].waitForExistence(timeout: 20))
-        let settingsTab = app.buttons.matching(identifier: "tab.settings").firstMatch
-        XCTAssertTrue(settingsTab.waitForExistence(timeout: 10))
-        settingsTab.tap()
+        let moreTab = app.buttons.matching(identifier: "tab.more").firstMatch
+        XCTAssertTrue(moreTab.waitForExistence(timeout: 10))
+        moreTab.tap()
 
-        let settingsScreen = app.scrollViews["screen.settings"].firstMatch
-        XCTAssertTrue(settingsScreen.waitForExistence(timeout: 10))
+        XCTAssertTrue(app.descendants(matching: .any)["screen.more"].waitForExistence(timeout: 10))
+        let myInfoEntry = app.buttons["more.myInfo"]
+        XCTAssertTrue(myInfoEntry.waitForExistence(timeout: 10))
+        myInfoEntry.tap()
+
+        let myInfoScreen = app.scrollViews["screen.myInfo"].firstMatch
+        XCTAssertTrue(myInfoScreen.waitForExistence(timeout: 10))
         let deleteEntry = app.buttons["settings.account.delete"]
         let deadline = Date().addingTimeInterval(10)
         while Date() < deadline, !deleteEntry.isHittable {
-            settingsScreen.swipeUp(velocity: .fast)
+            myInfoScreen.swipeUp(velocity: .fast)
         }
         XCTAssertTrue(deleteEntry.isHittable)
         deleteEntry.tap()

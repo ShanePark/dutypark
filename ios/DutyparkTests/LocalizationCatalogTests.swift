@@ -8,6 +8,7 @@ struct LocalizationCatalogTests {
     private static let expectedCatalogNames: Set<String> = [
         "Attachments.xcstrings",
         "Errors.xcstrings",
+        "InfoPlist.xcstrings",
         "Localizable.xcstrings",
         "Notifications.xcstrings",
         "OAuth.xcstrings",

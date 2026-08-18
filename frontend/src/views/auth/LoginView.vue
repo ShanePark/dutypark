@@ -91,7 +91,7 @@ async function handleLogin() {
       localStorage.removeItem(REMEMBER_EMAIL_KEY)
     }
 
-    await router.push(redirectTarget())
+    await router.replace(redirectTarget())
   } catch (e: unknown) {
     if (e instanceof AxiosError && e.response?.data) {
       error.value = resolveApiErrorMessage(e, { fallbackKey: 'auth.login.error.generic' }, t)
@@ -182,7 +182,7 @@ async function handleAppleLogin() {
     }
 
     await authStore.checkAuth()
-    await router.push(redirect)
+    await router.replace(redirect)
   } catch (exception) {
     if (isAppleSignInCancellation(exception)) return
     appleMessage.value = getAppleErrorMessage(exception)

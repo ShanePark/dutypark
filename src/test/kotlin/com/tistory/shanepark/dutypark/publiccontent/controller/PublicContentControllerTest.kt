@@ -38,6 +38,11 @@ class PublicContentControllerTest {
             .andExpect(jsonPath("$.actions.collapseAll").value("Collapse all"))
             .andExpect(jsonPath("$.contentVersion").value(matchesPattern("[0-9a-f]{64}")))
             .andExpect(jsonPath("$.sections[0].id").value("dashboard"))
+            .andExpect(jsonPath("$.sections[0].icon").value("home"))
+            .andExpect(jsonPath("$.sections[0].tone").value("accent"))
+            .andExpect(jsonPath("$.sections[0].cards[0].id").value("today"))
+            .andExpect(jsonPath("$.sections[0].cards[0].icon").value("calendar"))
+            .andExpect(jsonPath("$.sections[0].cards[0].tone").value("accent"))
             .andExpect(
                 header().string(
                     "Cache-Control",

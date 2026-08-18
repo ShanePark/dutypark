@@ -115,9 +115,14 @@ struct RootTabView: View {
     @State private var homeRefreshID = 0
     @State private var homeRefreshPolicy = RootHomeRefreshPolicy(initialRefreshAt: Date())
     @State private var homePath: [HomeDestination] = []
-    @State private var calendarTarget = CalendarTarget()
+    @State private var calendarPath: [MemberCalendarRoute] = []
+    @State private var teamPath: [MemberCalendarRoute] = []
+    @State private var morePath: [MoreDestination] = []
     @State private var todoTarget: TodoID?
     @State private var settingsDestination: SettingsDestination?
+    // Bumped when the profile photo changes so the cached avatar in the "more" tab is
+    // refetched instead of showing the replaced image.
+    @State private var profilePhotoVersion: Int64 = 0
     @State private var showsNotifications = false
     @State private var notificationDropdownReadPolicy = RootNotificationDropdownReadPolicy()
     @State private var showsNotificationCenter = false
@@ -126,26 +131,49 @@ struct RootTabView: View {
     @State private var isLoggingOut = false
 
     var body: some View {
+        // The banner is stacked above the tab content rather than attached with
+        // `safeAreaInset`: the tabs' UIKit navigation bars do not adopt a safe-area
+        // inset applied outside the `TabView`, so the banner would paint on top of
+        // the header instead of pushing it down.
+        VStack(spacing: 0) {
+            if authenticatedMember?.isImpersonating == true {
+                ImpersonationBanner()
+            }
+            rootContent
+        }
+        .tint(DPColor.accent)
+    }
+
+    private var rootContent: some View {
         ZStack(alignment: .topTrailing) {
             TabView(selection: tabSelection) {
                 homeTab
-                primaryTab(.calendar) {
-                    CalendarView(
-                        memberID: calendarTarget.memberID,
-                        date: calendarTarget.date,
-                        scheduleID: calendarTarget.scheduleID
-                    )
-                        .id(calendarTarget)
+                primaryTab(.calendar, path: $calendarPath, showsNavigationBar: true) {
+                    CalendarView()
+                        .navigationDestination(for: MemberCalendarRoute.self) { route in
+                            memberCalendar(route)
+                        }
                 }
                 primaryTab(.todo, showsNavigationBar: true) {
                     TodoView(initialTodoID: todoTarget) {
                         todoTarget = nil
                     }
                 }
-                primaryTab(.team) { TeamView(onOpenCalendar: openMemberCalendar) }
-                primaryTab(.settings) {
-                    SettingsView(destination: $settingsDestination) {
-                        homeRefreshID &+= 1
+                primaryTab(.team, path: $teamPath, showsNavigationBar: true) {
+                    TeamView(onOpenCalendar: openMemberCalendar)
+                        .navigationDestination(for: MemberCalendarRoute.self) { route in
+                            memberCalendar(route)
+                        }
+                }
+                primaryTab(.more, path: $morePath, showsNavigationBar: true, showsTabTitle: true) {
+                    MoreView(
+                        isAdmin: authenticatedMember?.isAdmin == true,
+                        profile: moreProfile,
+                        onOpenMyInfo: openMyInfo,
+                        onSelect: openMoreMenuItem
+                    )
+                    .navigationDestination(for: MoreDestination.self) { destination in
+                        moreDestinationView(destination)
                     }
                 }
             }
@@ -257,12 +285,6 @@ struct RootTabView: View {
         } message: {
             Text("link.unsupported.message")
         }
-        .safeAreaInset(edge: .top, spacing: 0) {
-            if case .authenticated(let member) = session.state, member.isImpersonating {
-                ImpersonationBanner()
-            }
-        }
-        .tint(DPColor.accent)
     }
 
     private var homeTab: some View {
@@ -276,20 +298,8 @@ struct RootTabView: View {
                         DPBrandMark(action: openHome)
                     }
                     DPDashboardHeaderToolbarItem(placement: .topBarTrailing) {
-                        HStack(spacing: 0) {
-                            notificationBell
-                            Button {
-                                homePath.append(.menu)
-                            } label: {
-                                Image(systemName: "line.3.horizontal")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
-                                    .contentShape(Rectangle())
-                            }
-                            .accessibilityLabel(RootChromeLocalization.home("home.menu"))
-                            .accessibilityIdentifier("home.menu")
-                        }
-                        .fixedSize(horizontal: true, vertical: false)
+                        notificationBell
+                            .fixedSize(horizontal: true, vertical: false)
                     }
                 }
                 .navigationDestination(for: HomeDestination.self) { destination in
@@ -299,27 +309,9 @@ struct RootTabView: View {
                             onMutation: socialDidMutate,
                             onOpenCalendar: openMemberCalendar
                         )
-                    case .menu:
-                        AppMenuView(
-                            onOpenFriends: openFriends,
-                            onOpenNotifications: {
-                                homePath.removeAll()
-                                showsNotificationCenter = true
-                            },
-                            onOpenGuide: openGuide,
-                            isAdmin: authenticatedMember?.isAdmin == true,
-                            onOpenAdmin: { homePath.append(.admin) },
-                            onLogout: { showsLogoutConfirmation = true }
-                        )
-                    case .admin:
-                        if authenticatedMember?.isAdmin == true {
-                            AdminRootView(onOpenCalendar: openMemberCalendar)
-                        } else {
-                            ContentUnavailableView(
-                                AdminLocalization.string("admin.access.title"),
-                                systemImage: "lock.shield"
-                            )
-                        }
+                        .navigationTitle("")
+                    case .memberCalendar(let route):
+                        memberCalendar(route)
                     }
                 }
         }
@@ -329,15 +321,58 @@ struct RootTabView: View {
     private func primaryTab<Content: View>(
         _ tab: AppTab,
         showsNavigationBar: Bool = false,
+        showsTabTitle: Bool = false,
         @ViewBuilder content: () -> Content
     ) -> some View {
         NavigationStack {
-            content()
-                .navigationTitle("")
-                .toolbar(showsNavigationBar ? .visible : .hidden, for: .navigationBar)
-                .accessibilityIdentifier("screen.\(tab.rawValue)")
+            tabRoot(tab, showsNavigationBar: showsNavigationBar, showsTabTitle: showsTabTitle) {
+                content()
+            }
         }
         .primaryTabItem(tab)
+    }
+
+    private func primaryTab<Destination: Hashable, Content: View>(
+        _ tab: AppTab,
+        path: Binding<[Destination]>,
+        showsNavigationBar: Bool = false,
+        showsTabTitle: Bool = false,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        NavigationStack(path: path) {
+            tabRoot(tab, showsNavigationBar: showsNavigationBar, showsTabTitle: showsTabTitle) {
+                content()
+            }
+        }
+        .primaryTabItem(tab)
+    }
+
+    private func tabRoot<Content: View>(
+        _ tab: AppTab,
+        showsNavigationBar: Bool,
+        showsTabTitle: Bool,
+        @ViewBuilder content: () -> Content
+    ) -> some View {
+        content()
+            .navigationTitle(showsTabTitle ? tab.localizedTitle : "")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar(showsNavigationBar ? .visible : .hidden, for: .navigationBar)
+            .accessibilityIdentifier("screen.\(tab.rawValue)")
+    }
+
+    // A member calendar is a pushed screen wherever it is opened from, so it carries the
+    // navigation bar it needs and pops with the system back affordances.
+    private func memberCalendar(_ route: MemberCalendarRoute) -> some View {
+        CalendarView(
+            memberID: route.memberID,
+            date: route.date,
+            scheduleID: route.scheduleID,
+            isPushed: true
+        )
+        .navigationTitle("")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.visible, for: .navigationBar)
+        .accessibilityIdentifier("screen.calendar.member")
     }
 
     private var notificationBell: some View {
@@ -348,18 +383,28 @@ struct RootTabView: View {
         Binding(
             get: { selectedTab },
             set: { destination in
-                if RootNavigationPolicy.resetsHomePath(for: destination) {
-                    homePath.removeAll()
-                }
-                if RootNavigationPolicy.resetsCalendarTarget(
-                    for: destination,
-                    origin: .tabBar
-                ) {
-                    calendarTarget = CalendarTarget(memberID: authenticatedMemberID)
-                }
+                popToRoot(destination, origin: .tabBar)
                 selectedTab = destination
             }
         )
+    }
+
+    // Every tab owns a navigation stack, so a tab-bar tap returns that tab to its root
+    // screen; the calendar tab root is the authenticated member's own calendar.
+    private func popToRoot(_ tab: AppTab, origin: RootTabSelectionOrigin) {
+        guard RootNavigationPolicy.popsToRoot(origin: origin) else { return }
+        switch tab {
+        case .home:
+            homePath.removeAll()
+        case .calendar:
+            calendarPath.removeAll()
+        case .team:
+            teamPath.removeAll()
+        case .more:
+            morePath.removeAll()
+        case .todo:
+            break
+        }
     }
 
     private func openHome() {
@@ -367,24 +412,84 @@ struct RootTabView: View {
         selectedTab = .home
     }
 
-    private func openMyCalendar() {
-        calendarTarget = CalendarTarget(memberID: authenticatedMemberID)
-        selectedTab = .calendar
-    }
-
+    // Routed entries have no "more" menu behind them, so friend management replaces the
+    // home tab root instead of being pushed onto the menu's stack.
     private func openFriends() {
         homePath = [.friends]
         selectedTab = .home
     }
 
-    private func openGuide() {
-        settingsDestination = .guide
-        selectedTab = .settings
+    private var moreProfile: MoreProfileSummary? {
+        authenticatedMember.map {
+            MoreProfileSummary(member: $0, profilePhotoVersion: profilePhotoVersion)
+        }
     }
 
-    private func openSettings() {
-        settingsDestination = nil
-        selectedTab = .settings
+    private func openMyInfo() {
+        morePath.append(.myInfo)
+    }
+
+    private func openMoreMenuItem(_ item: MoreMenuItem) {
+        switch item {
+        case .notifications:
+            showsNotificationCenter = true
+        case .logout:
+            showsLogoutConfirmation = true
+        case .friends, .admin, .guide, .settings:
+            guard let destination = RootNavigationPolicy.moreDestination(for: item) else { return }
+            openMore(destination)
+        }
+    }
+
+    @ViewBuilder
+    private func moreDestinationView(_ destination: MoreDestination) -> some View {
+        switch destination {
+        case .admin:
+            if authenticatedMember?.isAdmin == true {
+                AdminRootView(onOpenCalendar: openMemberCalendar)
+            } else {
+                ContentUnavailableView(
+                    AdminLocalization.string("admin.access.title"),
+                    systemImage: "lock.shield"
+                )
+            }
+        case .friends:
+            SocialView(
+                onMutation: socialDidMutate,
+                onOpenCalendar: openMemberCalendar
+            )
+            .navigationTitle(MoreMenuItem.friends.title)
+            .navigationBarTitleDisplayMode(.inline)
+        case .guide:
+            PublicGuideView()
+        case .myInfo:
+            MyInfoView {
+                homeRefreshID &+= 1
+                profilePhotoVersion &+= 1
+            }
+            .navigationTitle(RootChromeLocalization.localizable("root.menu.myInfo"))
+            .navigationBarTitleDisplayMode(.inline)
+        case .settings:
+            SettingsView(destination: $settingsDestination)
+                .navigationTitle(RootChromeLocalization.localizable("root.menu.settings"))
+                .navigationBarTitleDisplayMode(.inline)
+        case .memberCalendar(let route):
+            memberCalendar(route)
+        }
+    }
+
+    // Routed entries have no menu screen behind them, so the requested screen becomes
+    // the only thing on the "more" stack instead of stacking on whatever was open.
+    private func openMore(
+        _ destination: MoreDestination,
+        settingsDestination: SettingsDestination? = nil
+    ) {
+        self.settingsDestination = RootNavigationPolicy.settingsDestination(
+            for: destination,
+            requested: settingsDestination
+        )
+        morePath = [destination]
+        selectedTab = .more
     }
 
     private func logout(dismiss: @escaping () -> Void) {
@@ -449,8 +554,36 @@ struct RootTabView: View {
         }
     }
 
+    // The calendar is pushed onto the stack of the tab it was opened from, so back is a
+    // real pop to the member card, friend row or admin detail that opened it.
     private func openMemberCalendar(_ memberID: MemberID) {
-        calendarTarget = CalendarTarget(memberID: memberID)
+        let host = RootNavigationPolicy.memberCalendarHost(for: selectedTab)
+        push(MemberCalendarRoute(memberID: memberID), onto: host)
+        selectedTab = host
+    }
+
+    private func push(_ route: MemberCalendarRoute, onto tab: AppTab) {
+        switch tab {
+        case .home:
+            homePath.append(.memberCalendar(route))
+        case .team:
+            teamPath.append(route)
+        case .more:
+            morePath.append(.memberCalendar(route))
+        case .calendar, .todo:
+            calendarPath.append(route)
+        }
+    }
+
+    // Routed entries have no in-app screen behind them, so they push onto the calendar
+    // tab: back lands on the authenticated member's own calendar instead of a stale
+    // origin.
+    private func routeToMemberCalendar(_ memberID: MemberID) {
+        routeToCalendar(MemberCalendarRoute(memberID: memberID))
+    }
+
+    private func routeToCalendar(_ route: MemberCalendarRoute) {
+        calendarPath = [route]
         selectedTab = .calendar
     }
 
@@ -469,13 +602,12 @@ struct RootTabView: View {
     private func openNotificationRoute(_ route: NotificationRoute) async -> Bool {
         switch route {
         case .friends:
-            selectedTab = .home
-            homePath = [.friends]
+            openFriends()
             return true
         case .schedule(let scheduleID), .taggedSchedule(let scheduleID):
             return await openScheduleCalendar(scheduleID, route: route)
         case .member(let memberID):
-            openMemberCalendar(memberID)
+            routeToMemberCalendar(memberID)
             return true
         case .todo(let todoID):
             todoTarget = todoID
@@ -500,16 +632,17 @@ struct RootTabView: View {
         guard let schedule: ScheduleBasicInfoDTO = try? await APIClient.shared.request(
             "schedules/\(scheduleID.uuidString)"
         ) else { return false }
-        calendarTarget = CalendarTarget(
-            memberID: RootNavigationPolicy.scheduleMemberID(
-                for: route,
-                authenticatedMemberID: authenticatedMemberID,
-                scheduleOwnerID: schedule.memberId
-            ),
-            date: DateOnly(rawValue: String(schedule.startDateTime.rawValue.prefix(10))),
-            scheduleID: scheduleID
+        routeToCalendar(
+            MemberCalendarRoute(
+                memberID: RootNavigationPolicy.scheduleMemberID(
+                    for: route,
+                    authenticatedMemberID: authenticatedMemberID,
+                    scheduleOwnerID: schedule.memberId
+                ),
+                date: DateOnly(rawValue: String(schedule.startDateTime.rawValue.prefix(10))),
+                scheduleID: scheduleID
+            )
         )
-        selectedTab = .calendar
         return true
     }
 
@@ -560,12 +693,11 @@ struct RootTabView: View {
            components[0] == "duty",
            let memberID = MemberID(components[1]),
            memberID > 0 {
-            openMemberCalendar(memberID)
+            routeToMemberCalendar(memberID)
             return true
         }
-        if let destination = SettingsDeepLink.destination(from: url) {
-            settingsDestination = destination
-            selectedTab = .settings
+        if let destination = RootMoreDeepLinkPolicy.destination(from: url) {
+            openMore(destination, settingsDestination: SettingsDeepLink.destination(from: url))
             return true
         }
 
@@ -574,16 +706,12 @@ struct RootTabView: View {
             selectedTab = .todo
         case "team":
             selectedTab = .team
-        case "member":
-            settingsDestination = nil
-            selectedTab = .settings
         case "friends":
-            selectedTab = .home
-            homePath = [.friends]
+            openFriends()
         case "notifications":
             showsNotifications = true
         case nil:
-            selectedTab = .home
+            openHome()
         default:
             return false
         }
@@ -597,15 +725,48 @@ nonisolated enum RootNavigationPolicy {
             && url.host?.lowercased() == "dutypark.o-r.kr"
     }
 
-    static func resetsHomePath(for destination: AppTab) -> Bool {
-        destination == .home
+    // Tapping a tab in the tab bar goes to that tab's root screen; a programmatic route
+    // keeps the stack it just pushed.
+    static func popsToRoot(origin: RootTabSelectionOrigin) -> Bool {
+        origin == .tabBar
     }
 
-    static func resetsCalendarTarget(
-        for destination: AppTab,
-        origin: RootTabSelectionOrigin
-    ) -> Bool {
-        destination == .calendar && origin == .tabBar
+    // A member calendar is pushed onto the stack of the tab that opened it, so back
+    // returns to the screen it was opened from. The todo tab has no entry point, so a
+    // calendar reached from it falls back to the calendar tab's own stack.
+    static func memberCalendarHost(for tab: AppTab) -> AppTab {
+        switch tab {
+        case .home, .calendar, .team, .more:
+            tab
+        case .todo:
+            .calendar
+        }
+    }
+
+    // The "more" tab owns its own navigation stack, so a menu entry with a screen is
+    // pushed onto it instead of switching tabs: back returns to the menu it came from.
+    static func moreDestination(for item: MoreMenuItem) -> MoreDestination? {
+        switch item {
+        case .friends:
+            .friends
+        case .admin:
+            .admin
+        case .guide:
+            .guide
+        case .settings:
+            .settings
+        case .notifications, .logout:
+            nil
+        }
+    }
+
+    // Settings owns the policy pages, so only navigation that explicitly asks for one
+    // may carry it; otherwise a stale request would be pushed again on the next visit.
+    static func settingsDestination(
+        for destination: MoreDestination,
+        requested: SettingsDestination?
+    ) -> SettingsDestination? {
+        destination == .settings ? requested : nil
     }
 
     static func scheduleMemberID(
@@ -661,20 +822,6 @@ nonisolated enum RootLogoutConfirmationPolicy {
     }
 }
 
-nonisolated enum RootHamburgerMenuItem: String, CaseIterable, Hashable, Sendable {
-    case friends
-    case notifications
-    case admin
-    case guide
-    case logout
-
-    static let primaryItems: [Self] = [.friends, .notifications]
-
-    static func visibleItems(isAdmin: Bool) -> [Self] {
-        primaryItems + (isAdmin ? [.admin] : []) + [.guide, .logout]
-    }
-}
-
 nonisolated enum RootTabSelectionOrigin: Equatable, Sendable {
     case tabBar
     case explicitRoute
@@ -682,185 +829,52 @@ nonisolated enum RootTabSelectionOrigin: Equatable, Sendable {
 
 private enum HomeDestination: Hashable {
     case friends
-    case menu
+    case memberCalendar(MemberCalendarRoute)
+}
+
+nonisolated enum MoreDestination: Hashable, Sendable {
     case admin
+    case friends
+    case guide
+    case myInfo
+    case settings
+    case memberCalendar(MemberCalendarRoute)
 }
 
-private struct AppMenuView: View {
-    let onOpenFriends: () -> Void
-    let onOpenNotifications: () -> Void
-    let onOpenGuide: () -> Void
-    let isAdmin: Bool
-    let onOpenAdmin: () -> Void
-    let onLogout: () -> Void
-
-    private let columns = [
-        GridItem(.flexible(), spacing: DPSpacing.small),
-        GridItem(.flexible(), spacing: DPSpacing.small)
-    ]
-
-    var body: some View {
-        ScrollView {
-            VStack(spacing: DPSpacing.medium) {
-                LazyVGrid(columns: columns, spacing: DPSpacing.small) {
-                    ForEach(RootHamburgerMenuItem.primaryItems, id: \.self) { item in
-                        primaryTile(for: item)
-                    }
-                }
-
-                if isAdmin {
-                    VStack(alignment: .leading, spacing: DPSpacing.small) {
-                        Text(AdminLocalization.string("admin.menu.section"))
-                            .font(DPTypography.caption)
-                            .foregroundStyle(DPColor.textMuted)
-                            .padding(.horizontal, DPSpacing.extraSmall)
-
-                        AppMenuRow(
-                            title: AdminLocalization.string("admin.menu.title"),
-                            systemImage: "lock.shield",
-                            action: onOpenAdmin
-                        )
-                        .accessibilityIdentifier("menu.admin")
-                    }
-                    .padding(DPSpacing.small)
-                    .background(DPColor.backgroundCard)
-                    .clipShape(RoundedRectangle(cornerRadius: DPRadius.large))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: DPRadius.large)
-                            .stroke(DPColor.borderPrimary, lineWidth: DPChrome.borderWidth)
-                    }
-                    .accessibilityIdentifier("menu.admin.section")
-                }
-
-                VStack(spacing: 0) {
-                    AppMenuRow(
-                        title: RootChromeLocalization.localizable("root.menu.guide"),
-                        systemImage: "book",
-                        action: onOpenGuide
-                    )
-                    .accessibilityIdentifier("menu.guide")
-                    Divider().overlay(DPColor.borderPrimary)
-                    AppMenuRow(
-                        title: SettingsLocalization.string("settings.logout"),
-                        systemImage: "rectangle.portrait.and.arrow.right",
-                        role: .destructive,
-                        action: onLogout
-                    )
-                    .accessibilityIdentifier("menu.logout")
-                }
-                .background(DPColor.backgroundCard)
-                .clipShape(RoundedRectangle(cornerRadius: DPRadius.large))
-                .overlay {
-                    RoundedRectangle(cornerRadius: DPRadius.large)
-                        .stroke(DPColor.borderPrimary, lineWidth: DPChrome.borderWidth)
-                }
-            }
-            .padding(DPSpacing.medium)
-        }
-        .background(DPColor.backgroundPrimary)
-        .navigationTitle(RootChromeLocalization.home("home.menu"))
-        .navigationBarTitleDisplayMode(.large)
-        .accessibilityIdentifier("screen.menu")
-    }
-
-    @ViewBuilder
-    private func primaryTile(for item: RootHamburgerMenuItem) -> some View {
-        switch item {
-        case .friends:
-            AppMenuTile(
-                title: RootChromeLocalization.home("home.friends"),
-                systemImage: "person.2",
-                color: DPColor.warning,
-                action: onOpenFriends
-            )
-            .accessibilityIdentifier("menu.friends")
-        case .notifications:
-            AppMenuTile(
-                title: RootChromeLocalization.notifications("notifications.title"),
-                systemImage: "bell",
-                color: DPColor.accentHover,
-                action: onOpenNotifications
-            )
-            .accessibilityIdentifier("menu.notifications")
-        case .admin, .guide, .logout:
-            EmptyView()
-        }
-    }
-}
-
-private struct AppMenuTile: View {
-    let title: String
-    let systemImage: String
-    let color: Color
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            VStack(alignment: .leading, spacing: DPSpacing.medium) {
-                Image(systemName: systemImage)
-                    .font(.system(size: 22, weight: .semibold))
-                    .foregroundStyle(color)
-                    .frame(width: 44, height: 44)
-                    .background(color.opacity(0.12))
-                    .clipShape(RoundedRectangle(cornerRadius: DPRadius.large))
-
-                HStack(spacing: DPSpacing.extraSmall) {
-                    Text(title)
-                        .font(DPFont.bold(size: 16, relativeTo: .body))
-                        .foregroundStyle(DPColor.textPrimary)
-                        .lineLimit(1)
-                    Spacer(minLength: 0)
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(DPColor.textMuted)
-                }
-            }
-            .padding(DPSpacing.medium)
-            .frame(maxWidth: .infinity, minHeight: 124, alignment: .leading)
-            .background(DPColor.backgroundCard)
-            .clipShape(RoundedRectangle(cornerRadius: DPRadius.large))
-            .overlay {
-                RoundedRectangle(cornerRadius: DPRadius.large)
-                    .stroke(DPColor.borderPrimary, lineWidth: DPChrome.borderWidth)
-            }
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-private struct AppMenuRow: View {
-    let title: String
-    let systemImage: String
-    var role: ButtonRole?
-    let action: () -> Void
-
-    var body: some View {
-        Button(role: role, action: action) {
-            HStack(spacing: DPSpacing.compact) {
-                Image(systemName: systemImage)
-                    .font(.system(size: 18, weight: .semibold))
-                    .frame(width: 32)
-                Text(title)
-                    .font(DPTypography.body)
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundStyle(DPColor.textMuted)
-            }
-            .foregroundStyle(role == .destructive ? DPColor.danger : DPColor.textPrimary)
-            .padding(.horizontal, DPSpacing.medium)
-            .frame(maxWidth: .infinity, minHeight: 56)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-private struct CalendarTarget: Hashable {
+/// A member calendar pushed onto a tab's navigation stack. It carries the deep-link
+/// details the calendar screen needs, so a schedule notification can highlight its day
+/// on the pushed screen instead of replacing a tab root.
+nonisolated struct MemberCalendarRoute: Hashable, Sendable {
     var memberID: MemberID?
     var date: DateOnly?
     var scheduleID: ScheduleID?
+}
+
+/// Routes first-party links to the "more" tab screen that owns them. The account
+/// sections moved to `MyInfoView`, so a member link no longer lands on settings.
+nonisolated enum RootMoreDeepLinkPolicy {
+    static func destination(
+        from url: URL,
+        allowedHost: String = "dutypark.o-r.kr"
+    ) -> MoreDestination? {
+        if let settingsDestination = SettingsDeepLink.destination(
+            from: url,
+            allowedHost: allowedHost
+        ) {
+            return destination(for: settingsDestination)
+        }
+        guard url.scheme?.lowercased() == "https",
+              url.host?.lowercased() == allowedHost.lowercased(),
+              url.pathComponents.filter({ $0 != "/" }).first == "member"
+        else { return nil }
+        return .myInfo
+    }
+
+    // The guide has no dependency on the settings model, so it opens directly under
+    // More; the policy screens are rendered by the settings model and stay behind it.
+    static func destination(for settingsDestination: SettingsDestination) -> MoreDestination {
+        settingsDestination == .guide ? .guide : .settings
+    }
 }
 
 private struct ImpersonationBanner: View {
@@ -884,11 +898,20 @@ private struct ImpersonationBanner: View {
                 }
                 .font(.caption.weight(.semibold))
                 .buttonStyle(.bordered)
+                .tint(DPColor.warningHover)
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
             .frame(maxWidth: .infinity)
-            .background(.orange.opacity(0.18))
+            // Opaque so the tab content behind it never shows through, and extended
+            // upwards so the status bar strip is tinted with the banner instead of
+            // being left unpainted.
+            .background(DPColor.warningSoft.ignoresSafeArea(edges: .top))
+            .overlay(alignment: .bottom) {
+                Rectangle()
+                    .fill(DPColor.warningBorder)
+                    .frame(height: 1)
+            }
             .accessibilityIdentifier("impersonation.banner")
         }
     }
@@ -904,15 +927,40 @@ private struct NotificationDropdown: View {
     let onOpen: (NotificationDTO) async -> Void
     let onViewAll: () -> Void
 
+    private var displayedNotifications: [NotificationDTO] {
+        Array(store.notifications.prefix(10))
+    }
+
+    private var hasUnreadDisplayedNotifications: Bool {
+        displayedNotifications.contains { !$0.isRead }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
-            Text(RootChromeLocalization.notifications("notifications.title"))
-                .font(DPFont.bold(size: 14, relativeTo: .subheadline))
-                .foregroundStyle(DPColor.textPrimary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, DPSpacing.medium)
-                .frame(minHeight: DPSize.minimumTouchTarget)
-                .background(DPColor.backgroundTertiary)
+            HStack(spacing: DPSpacing.small) {
+                Text(RootChromeLocalization.notifications("notifications.title"))
+                    .font(DPFont.bold(size: 14, relativeTo: .subheadline))
+                    .foregroundStyle(DPColor.textPrimary)
+
+                Spacer(minLength: 0)
+
+                NotificationHeaderActionButton(
+                    title: RootChromeLocalization.notifications(
+                        "notifications.list.markAllAsReadShort"
+                    ),
+                    systemImage: "checkmark.circle",
+                    accessibilityIdentifier: "notifications.dropdown.markAllAsRead"
+                ) {
+                    Task { try? await store.markAllAsRead() }
+                }
+                .disabled(!hasUnreadDisplayedNotifications)
+            }
+            .padding(.horizontal, DPSpacing.medium)
+            .frame(minHeight: DPSize.minimumTouchTarget)
+            .background(DPColor.backgroundTertiary)
+            // Keeps the dropdown-wide accessibility identifier from overwriting the
+            // header button's own identifier.
+            .accessibilityElement(children: .contain)
 
             Divider().overlay(DPColor.borderPrimary)
 
@@ -932,12 +980,12 @@ private struct NotificationDropdown: View {
                 } else {
                     ScrollView {
                         LazyVStack(spacing: 0) {
-                            ForEach(Array(store.notifications.prefix(10)), id: \.id) { notification in
+                            ForEach(displayedNotifications, id: \.id) { notification in
                                 NotificationDropdownRow(notification: notification) {
                                     Task { await onOpen(notification) }
                                 }
 
-                                if notification.id != store.notifications.prefix(10).last?.id {
+                                if notification.id != displayedNotifications.last?.id {
                                     Divider().overlay(DPColor.borderPrimary)
                                 }
                             }

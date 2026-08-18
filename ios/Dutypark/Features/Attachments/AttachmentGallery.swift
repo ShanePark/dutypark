@@ -63,6 +63,22 @@ final class AttachmentGalleryModel: ObservableObject {
         self.loadsRemotely = true
     }
 
+    /// Schedule payloads already embed their attachment metadata, so a gallery built
+    /// this way renders thumbnails right away instead of waiting for a redundant list
+    /// request. The owner keeps it in sync through `apply(_:)`.
+    init(
+        contextType: AttachmentContextType,
+        contextId: String,
+        attachments: [AttachmentDTO],
+        client: AttachmentClient = AttachmentClient()
+    ) {
+        self.contextType = contextType
+        self.contextId = contextId
+        self.client = client
+        self.loadsRemotely = false
+        self.attachments = attachments
+    }
+
 #if DEBUG
     init(uiTestingAttachments: [AttachmentDTO]) {
         self.contextType = .todo
@@ -82,6 +98,11 @@ final class AttachmentGalleryModel: ObservableObject {
         } catch {
             failure = .loadFailed
         }
+    }
+
+    func apply(_ attachments: [AttachmentDTO]) {
+        guard !loadsRemotely else { return }
+        self.attachments = attachments
     }
 
     func delete(_ attachment: AttachmentDTO) async {
@@ -151,13 +172,21 @@ nonisolated enum AttachmentGalleryFailure: String, Identifiable, Sendable {
     }
 }
 
+/// Identifies the attachment awaiting delete confirmation so the shared
+/// confirmation presentation can be driven by its item binding.
+nonisolated struct AttachmentDeletionCandidate: Identifiable, Equatable, Sendable {
+    let attachment: AttachmentDTO
+
+    var id: AttachmentID { attachment.id }
+}
+
 struct AttachmentGallery: View {
     @ObservedObject var model: AttachmentGalleryModel
     let canEdit: Bool
 
     @State private var previewURL: URL?
     @State private var shareURL: URL?
-    @State private var deleteCandidate: AttachmentDTO?
+    @State private var deleteCandidate: AttachmentDeletionCandidate?
     @State private var isPreparingFile = false
 
     init(model: AttachmentGalleryModel, canEdit: Bool = false) {
@@ -216,33 +245,22 @@ struct AttachmentGallery: View {
                 AttachmentShareSheet(items: [shareURL])
             }
         }
-        .fullScreenCover(
-            isPresented: Binding(
-                get: { deleteCandidate != nil },
-                set: { if !$0 { deleteCandidate = nil } }
-            )
-        ) {
-            if let deleteCandidate {
-                DPModalOverlay(
-                    maximumContentWidth: DPConfirmationPanel.maximumWidth,
-                    onDismiss: { self.deleteCandidate = nil }
-                ) { availableSize, dismiss in
-                    DPConfirmationPanel(
-                        title: AttachmentLocalization.text("attachment.delete.title"),
-                        message: deleteCandidate.originalFilename,
-                        confirmTitle: AttachmentLocalization.text("attachment.action.delete"),
-                        cancelTitle: AttachmentLocalization.text("attachment.action.cancel"),
-                        isDestructive: true,
-                        maximumHeight: availableSize.height,
-                        cancel: dismiss,
-                        confirm: {
-                            dismiss()
-                            Task { await model.delete(deleteCandidate) }
-                        }
-                    )
-                }
+        .dpConfirmation(
+            item: $deleteCandidate,
+            copy: { candidate in
+                DPConfirmationCopy(
+                    title: AttachmentLocalization.text("attachment.delete.title"),
+                    message: candidate.attachment.originalFilename,
+                    confirmTitle: AttachmentLocalization.text("attachment.action.delete"),
+                    cancelTitle: AttachmentLocalization.text("attachment.action.cancel"),
+                    isDestructive: true
+                )
+            },
+            confirm: { candidate, dismiss in
+                dismiss()
+                Task { await model.delete(candidate.attachment) }
             }
-        }
+        )
         .alert(
             AttachmentLocalization.text("attachment.error.title"),
             isPresented: Binding(
@@ -318,7 +336,7 @@ struct AttachmentGallery: View {
                         .disabled(index == model.attachments.count - 1)
 
                         Button(role: .destructive) {
-                            deleteCandidate = attachment
+                            deleteCandidate = AttachmentDeletionCandidate(attachment: attachment)
                         } label: {
                             Label(
                                 AttachmentLocalization.text("attachment.action.delete"),
@@ -387,7 +405,7 @@ struct AttachmentGallery: View {
                 .disabled(index == model.attachments.count - 1)
 
                 Button(role: .destructive) {
-                    deleteCandidate = attachment
+                    deleteCandidate = AttachmentDeletionCandidate(attachment: attachment)
                 } label: {
                     Label(
                         AttachmentLocalization.text("attachment.action.delete"),

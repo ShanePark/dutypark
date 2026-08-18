@@ -280,6 +280,26 @@ struct AttachmentFlowTests {
         #expect((await client.snapshot()).discardedSessionIds.isEmpty)
     }
 
+    @Test
+    func embeddedAttachmentsAreVisibleBeforeAnyRemoteLoad() async {
+        let contextId = UUID().uuidString
+        let attachment = embeddedAttachment(contextId: contextId, filename: "photo.jpg")
+        let model = AttachmentGalleryModel(
+            contextType: .schedule,
+            contextId: contextId,
+            attachments: [attachment]
+        )
+
+        #expect(model.attachments.map(\.id) == [attachment.id])
+
+        await model.load()
+        #expect(model.attachments.map(\.id) == [attachment.id])
+
+        let added = embeddedAttachment(contextId: contextId, filename: "second.jpg")
+        model.apply([attachment, added])
+        #expect(model.attachments.map(\.id) == [attachment.id, added.id])
+    }
+
     private func temporaryFile(
         contents: Data,
         extension pathExtension: String = "bin"
@@ -289,6 +309,22 @@ struct AttachmentFlowTests {
             .appendingPathExtension(pathExtension)
         try contents.write(to: url, options: .atomic)
         return url
+    }
+
+    private func embeddedAttachment(contextId: String, filename: String) -> AttachmentDTO {
+        AttachmentDTO(
+            id: UUID(),
+            contextType: .schedule,
+            contextId: contextId,
+            originalFilename: filename,
+            contentType: "image/jpeg",
+            size: 2048,
+            hasThumbnail: true,
+            thumbnailUrl: nil,
+            orderIndex: 0,
+            createdAt: "2026-08-17T00:00:00Z",
+            createdBy: 1
+        )
     }
 
     private func uploadFile(named filename: String) throws -> AttachmentUploadFile {

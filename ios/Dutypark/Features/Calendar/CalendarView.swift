@@ -19,14 +19,6 @@ private struct CalendarTodoSelection: Identifiable {
 }
 
 nonisolated enum CalendarMainLayout {
-    static func headerSideWidth(
-        containerWidth: CGFloat,
-        monthControlsWidth: CGFloat,
-        interColumnSpacing: CGFloat
-    ) -> CGFloat {
-        max(0, (containerWidth - monthControlsWidth - interColumnSpacing * 2) / 2)
-    }
-
     static func shouldShowDutyToolbar(
         hasDutySummary: Bool,
         hasComparisonAction: Bool,
@@ -43,6 +35,7 @@ nonisolated enum CalendarMainLayout {
 }
 
 struct CalendarView: View {
+    @Environment(\.dismiss) private var dismiss
     @StateObject private var model: CalendarViewModel
     @StateObject private var todoCreateModel = TodoViewModel()
     @StateObject private var todoDetailModel = TodoViewModel()
@@ -62,10 +55,17 @@ struct CalendarView: View {
     @State private var searchModalCanDismiss = true
     @State private var dayDismissRequest = 0
     @State private var dDayDismissRequest = 0
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    init(memberID: MemberID? = nil, date: DateOnly? = nil, scheduleID: ScheduleID? = nil) {
+    private let isPushedMemberCalendar: Bool
+
+    init(
+        memberID: MemberID? = nil,
+        date: DateOnly? = nil,
+        scheduleID: ScheduleID? = nil,
+        isPushed: Bool = false
+    ) {
         _model = StateObject(wrappedValue: CalendarViewModel(memberID: memberID, date: date, scheduleID: scheduleID))
+        isPushedMemberCalendar = isPushed
     }
 
     var body: some View {
@@ -85,6 +85,12 @@ struct CalendarView: View {
         }
         .dpKeyboardDismissToolbar()
         .background(DPColor.backgroundPrimary)
+        .navigationBarBackButtonHidden(isPushedMemberCalendar)
+        // The identity chip stands in for the system back button, so the pushed screen
+        // restores UIKit's edge pop itself; at the calendar tab root there is nothing to
+        // pop and the gesture policy declines it.
+        .dpInteractivePopGestureEnabled()
+        .toolbar { calendarToolbar }
         .task { if model.days.isEmpty { await model.load() } }
         .fullScreenCover(item: $model.selectedDay) { day in
             DPModalOverlay(
@@ -233,7 +239,6 @@ struct CalendarView: View {
     private var calendarContent: some View {
         ScrollView {
             LazyVStack(spacing: DPSpacing.small) {
-                calendarHeader
                 if model.isMyCalendar, !model.isQuickDutyEditing {
                     dutyTodoRow
                 }
@@ -252,37 +257,65 @@ struct CalendarView: View {
         .refreshable { await model.load() }
     }
 
-    private var calendarHeader: some View {
-        GeometryReader { geometry in
-            let monthControlsWidth: CGFloat = 176
-            let spacing: CGFloat = 2
-            let sideWidth = CalendarMainLayout.headerSideWidth(
-                containerWidth: geometry.size.width,
-                monthControlsWidth: monthControlsWidth,
-                interColumnSpacing: spacing
-            )
-            HStack(spacing: spacing) {
-                memberIdentity
-                    .frame(width: sideWidth, alignment: .leading)
-                    .clipped()
-                monthControls
-                    .frame(width: monthControlsWidth)
-                    .zIndex(1)
-                    .accessibilityElement(children: .contain)
-                    .accessibilityIdentifier("calendar.month.controls")
-                Group {
-                    if model.canSearchSchedules {
-                        searchControl
-                    } else {
-                        Color.clear
-                            .frame(height: 44)
-                            .accessibilityHidden(true)
-                    }
-                }
-                .frame(width: sideWidth, alignment: .trailing)
-            }
+    @ToolbarContentBuilder
+    private var calendarToolbar: some ToolbarContent {
+        DPDashboardHeaderToolbarItem(placement: .topBarLeading) {
+            memberIdentityBar
+                .frame(width: Self.barSideWidth, alignment: .leading)
         }
-        .frame(height: DPSize.minimumTouchTarget)
+        DPDashboardHeaderToolbarItem(placement: .principal) {
+            monthControls
+                .accessibilityElement(children: .contain)
+                .accessibilityIdentifier("calendar.month.controls")
+        }
+        DPDashboardHeaderToolbarItem(placement: .topBarTrailing) {
+            HStack(spacing: 0) {
+                if !isViewingCurrentMonth {
+                    thisMonthControl
+                }
+                if model.canSearchSchedules {
+                    searchControl
+                }
+            }
+            .frame(width: Self.barSideWidth, alignment: .trailing)
+        }
+    }
+
+    // A member calendar is pushed onto the stack of the tab it was opened from, so back
+    // is a plain pop. Whose calendar it is does not matter: a team shift grid and Admin
+    // can both open your own calendar, and that push needs a way back too. The calendar
+    // tab root is not pushed and keeps the bare identity.
+    private var memberBackAction: (() -> Void)? {
+        guard isPushedMemberCalendar else { return nil }
+        return { dismiss() }
+    }
+
+    // The whole identity chip is the touch target: the leading bar slot cannot also
+    // fit a separate 44pt-wide control next to the avatar and the name.
+    @ViewBuilder
+    private var memberIdentityBar: some View {
+        if let memberBackAction {
+            Button(action: memberBackAction) {
+                HStack(spacing: 2) {
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(DPColor.accent)
+                    memberIdentity
+                }
+                .frame(
+                    maxWidth: .infinity,
+                    minHeight: DPSize.minimumTouchTarget,
+                    alignment: .leading
+                )
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(CalendarLocalization.text("calendar.member.back"))
+            .accessibilityValue(model.targetName)
+            .accessibilityIdentifier("calendar.member.back")
+        } else {
+            memberIdentity
+        }
     }
 
     private var memberIdentity: some View {
@@ -323,40 +356,32 @@ struct CalendarView: View {
         .accessibilityIdentifier("calendar.month.display")
     }
 
-    private var thisMonthBubble: some View {
+    // Every bar control is narrower than `DPSize.minimumTouchTarget`; the 44pt-tall
+    // navigation bar cannot fit the leading identity, the month navigation and two
+    // trailing actions otherwise. Height stays at the full touch target.
+    private static let barControlWidth: CGFloat = 36
+
+    // The leading and trailing bar items claim the same width so the month
+    // navigation in the principal slot stays centred on the screen.
+    private static let barSideWidth: CGFloat = 88
+
+    // The former floating callout cannot survive inside the navigation bar, so the
+    // "go to this month" affordance follows the platform convention of a plain
+    // trailing bar button instead.
+    private var thisMonthControl: some View {
         Button { Task { await model.goToToday() } } label: {
-            HStack(spacing: 3) {
-                Image(systemName: "arrow.uturn.backward")
-                    .font(.system(size: 10, weight: .bold))
-                Text(CalendarLocalization.text("calendar.month.goToThisMonth"))
-                    .font(DPFont.bold(size: 11, relativeTo: .caption2))
-                    .lineLimit(1)
-            }
-            .foregroundStyle(DPColor.textOnDark)
-            .padding(.horizontal, 8)
-            .frame(height: 22)
-            .background(DPColor.accent, in: Capsule())
-            .background(alignment: .bottomLeading) {
-                RoundedRectangle(cornerRadius: 1)
-                    .fill(DPColor.accent)
-                    .frame(width: 8, height: 8)
-                    .rotationEffect(.degrees(45))
-                    .offset(x: 8, y: 3)
-            }
-            .compositingGroup()
-            .shadow(color: DPColor.accent.opacity(0.35), radius: 4, x: 0, y: 2)
-            .padding(.top, 12)
-            .padding(.leading, 12)
-            .padding(.trailing, 3)
-            .padding(.bottom, 4)
-            .contentShape(Rectangle())
+            Image(systemName: "arrow.uturn.backward")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(DPColor.accent)
+                .frame(width: Self.barControlWidth, height: DPSize.minimumTouchTarget)
+                .contentShape(Rectangle())
         }
         .accessibilityLabel(CalendarLocalization.text("calendar.month.goToThisMonth"))
     }
 
     private var monthCenterControls: some View {
         monthLabel
-            .frame(width: 88)
+            .frame(width: 78)
             .clipShape(RoundedRectangle(cornerRadius: DPRadius.compact))
     }
 
@@ -365,56 +390,29 @@ struct CalendarView: View {
             Button { Task { await model.changeMonth(by: -1) } } label: {
                 Image(systemName: "chevron.left")
                     .font(.system(size: 18, weight: .semibold))
-                    .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                    .frame(width: Self.barControlWidth, height: DPSize.minimumTouchTarget)
             }
             monthCenterControls
             Button { Task { await model.changeMonth(by: 1) } } label: {
                 Image(systemName: "chevron.right")
                     .font(.system(size: 18, weight: .semibold))
-                    .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                    .frame(width: Self.barControlWidth, height: DPSize.minimumTouchTarget)
             }
         }
         .foregroundStyle(DPColor.accent)
-        // Attached to the whole HStack so the bubble wins hit-testing over the
-        // chevron buttons wherever it is drawn; the offset keeps the capsule in
-        // the same spot above the year-month label.
-        .overlay(alignment: .topTrailing) {
-            if !isViewingCurrentMonth {
-                thisMonthBubble
-                    .offset(x: -21, y: -24)
-                    .transition(.offset(y: 4).combined(with: .opacity))
-            }
-        }
-        .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: isViewingCurrentMonth)
     }
 
+    // The navigation bar has no room for the inline query field; tapping opens the
+    // search modal, which already carries its own field and the full placeholder.
     private var searchControl: some View {
-        HStack(spacing: 0) {
-            TextField(
-                "",
-                text: $model.searchQuery,
-                prompt: Text(CalendarLocalization.text("calendar.search.short"))
-                    .foregroundStyle(DPColor.textMuted)
-            )
-                .font(DPFont.light(size: 12, relativeTo: .caption))
-                .foregroundStyle(DPColor.textPrimary)
-                .padding(.horizontal, 10)
-                .frame(minWidth: 0, minHeight: 44)
-                .submitLabel(.search)
-                .onSubmit { performSearch() }
-            Button(action: performSearch) {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(DPColor.accentHover)
-                    .frame(width: 44, height: 44)
-                    .background(DPColor.accentSoft)
-            }
-            .accessibilityLabel(CalendarLocalization.text("calendar.search"))
+        Button(action: performSearch) {
+            Image(systemName: "magnifyingglass")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(DPColor.accentHover)
+                .frame(width: Self.barControlWidth, height: DPSize.minimumTouchTarget)
+                .contentShape(Rectangle())
         }
-        .frame(maxWidth: 116, minHeight: 44, maxHeight: 44)
-        .background(DPColor.backgroundInput)
-        .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
-        .overlay(RoundedRectangle(cornerRadius: DPRadius.standard).stroke(DPColor.borderSecondary))
+        .accessibilityLabel(CalendarLocalization.text("calendar.search"))
     }
 
     private func performSearch() {
@@ -632,13 +630,6 @@ struct CalendarView: View {
             .background(DPColor.backgroundTertiary)
             .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
             .overlay(RoundedRectangle(cornerRadius: DPRadius.standard).stroke(DPColor.borderSecondary))
-
-            quickDutyButton(
-                id: nil,
-                name: CalendarLocalization.text("calendar.off"),
-                color: DPColor.backgroundCard,
-                foreground: DPColor.textPrimary
-            )
 
             ForEach(batchDutyTypes, id: \.id) { type in
                 quickDutyButton(
@@ -1693,23 +1684,19 @@ private struct DayDetailView: View {
                     confirm: performDestructiveAction
                 )
             } else if showsEditor {
-                VStack(spacing: 0) {
+                ScheduleEditorView(
+                    model: model,
+                    day: day,
+                    existing: editorSchedule,
+                    maximumPanelHeight: maximumHeight,
+                    onCancel: closeEditor,
+                    onSaved: closeEditor,
+                    dismissRequest: editorDismissRequest,
+                    onWorkingChange: updateEditorWorking
+                ) {
                     modalHeader
-
-                    Divider().overlay(DPColor.borderPrimary)
-
-                    ScheduleEditorView(
-                        model: model,
-                        day: day,
-                        existing: editorSchedule,
-                        onCancel: closeEditor,
-                        onSaved: closeEditor,
-                        dismissRequest: editorDismissRequest,
-                        onWorkingChange: updateEditorWorking
-                    )
-                    .id(editorSchedule?.id.uuidString ?? "new-\(day.id)")
                 }
-                .frame(height: maximumHeight, alignment: .top)
+                .id(editorSchedule?.id.uuidString ?? "new-\(day.id)")
             } else {
                 DPModalPanel(
                     maximumPanelHeight: maximumHeight * CalendarCompactModalLayout.maximumPanelHeightRatio
@@ -1776,7 +1763,6 @@ private struct DayDetailView: View {
             if model.canEdit, !showsEditor, !model.visibleDutyTypes.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 6) {
-                        dutyButton(id: nil, name: CalendarLocalization.text("calendar.off"), color: DPColor.backgroundCard)
                         ForEach(model.visibleDutyTypes, id: \.id) { type in
                             dutyButton(id: type.id, name: type.name, color: calendarColor(type.color))
                         }
@@ -2077,21 +2063,26 @@ private struct DayDetailView: View {
     }
 }
 
-private struct ScheduleEditorView: View {
+private struct ScheduleEditorView<Header: View>: View {
     @ObservedObject var model: CalendarViewModel
     let day: CalendarDayContent
     let existing: ScheduleDTO?
+    let maximumPanelHeight: CGFloat
     let onCancel: () -> Void
     let onSaved: () -> Void
     let dismissRequest: Int
     let onWorkingChange: (Bool) -> Void
-    let initialContent: String
-    let initialDescription: String
-    let initialVisibility: Visibility
-    let initialStart: Date
-    let initialEnd: Date
-    let initialTagIDs: Set<MemberID>
-    let initialAttachmentIDs: [AttachmentID]
+    let header: Header
+    /// The dismissal baseline is pinned to the same snapshot that seeded the editable state.
+    /// Recomputing it per render lets an unrelated re-render redefine "unchanged" — the
+    /// `?? base` fallbacks resolve to a fresh `Date()` — and marks an untouched editor dirty.
+    @State private var initialContent: String
+    @State private var initialDescription: String
+    @State private var initialVisibility: Visibility
+    @State private var initialStart: Date
+    @State private var initialEnd: Date
+    @State private var initialTagIDs: Set<MemberID>
+    @State private var initialAttachmentIDs: [AttachmentID]
     @State private var content: String
     @State private var description: String
     @State private var visibility: Visibility
@@ -2105,28 +2096,34 @@ private struct ScheduleEditorView: View {
     @StateObject private var attachmentModel: AttachmentPickerModel
     @StateObject private var aiConsent = AIScheduleParsingConsentStore.shared
     @FocusState private var focusedField: Field?
+    @State private var isTagSearchFocused = false
 
     private enum Field {
         case title
         case details
+        case tags
     }
 
     init(
         model: CalendarViewModel,
         day: CalendarDayContent,
         existing: ScheduleDTO?,
+        maximumPanelHeight: CGFloat,
         onCancel: @escaping () -> Void,
         onSaved: @escaping () -> Void,
         dismissRequest: Int = 0,
-        onWorkingChange: @escaping (Bool) -> Void = { _ in }
+        onWorkingChange: @escaping (Bool) -> Void = { _ in },
+        @ViewBuilder header: () -> Header
     ) {
         self.model = model
         self.day = day
         self.existing = existing
+        self.maximumPanelHeight = maximumPanelHeight
         self.onCancel = onCancel
         self.onSaved = onSaved
         self.dismissRequest = dismissRequest
         self.onWorkingChange = onWorkingChange
+        self.header = header()
         let base = CalendarDateSupport.date(from: day.cell.date) ?? Date()
         let initialContent = existing?.content ?? ""
         let initialDescription = existing?.description ?? ""
@@ -2135,13 +2132,13 @@ private struct ScheduleEditorView: View {
         let initialEnd = existing.flatMap { CalendarDateSupport.date(from: $0.endDateTime) } ?? base
         let initialTagIDs = Set(existing?.tags.compactMap(\.id) ?? [])
         let initialAttachmentIDs = existing?.attachments.map(\.id) ?? []
-        self.initialContent = initialContent
-        self.initialDescription = initialDescription
-        self.initialVisibility = initialVisibility
-        self.initialStart = initialStart
-        self.initialEnd = initialEnd
-        self.initialTagIDs = initialTagIDs
-        self.initialAttachmentIDs = initialAttachmentIDs
+        _initialContent = State(initialValue: initialContent)
+        _initialDescription = State(initialValue: initialDescription)
+        _initialVisibility = State(initialValue: initialVisibility)
+        _initialStart = State(initialValue: initialStart)
+        _initialEnd = State(initialValue: initialEnd)
+        _initialTagIDs = State(initialValue: initialTagIDs)
+        _initialAttachmentIDs = State(initialValue: initialAttachmentIDs)
         _content = State(initialValue: initialContent)
         _description = State(initialValue: initialDescription)
         _visibility = State(initialValue: initialVisibility)
@@ -2155,118 +2152,22 @@ private struct ScheduleEditorView: View {
         ))
     }
 
+    /// The tag search field belongs to `DPFriendTagSelector`, so it never appears in
+    /// `focusedField`; fall back to it only when no field of this editor holds focus.
+    private var scrollTarget: Field? {
+        focusedField ?? (isTagSearchFocused ? .tags : nil)
+    }
+
     var body: some View {
-        VStack(spacing: 0) {
-            ScrollView {
-                VStack(spacing: DPSpacing.small) {
-                    formRow("calendar.schedule.content") {
-                        ZStack(alignment: .trailing) {
-                            TextField(CalendarLocalization.text("calendar.schedule.content.placeholder"), text: $content)
-                                .textInputAutocapitalization(.sentences)
-                                .font(DPFont.light(size: 15, relativeTo: .body))
-                                .focused($focusedField, equals: .title)
-                                .padding(.trailing, 54)
-                                .dpInputChrome(isInvalid: content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || content.count > 50)
-                            Text("\(content.count)/50")
-                                .font(DPTypography.caption)
-                                .foregroundStyle(content.count > 50 ? DPColor.danger : DPColor.textMuted)
-                                .padding(.trailing, DPSpacing.small)
-                        }
-                    }
-
-                    formRow(existing == nil ? "calendar.schedule.startTime" : "calendar.schedule.start") {
-                        DatePicker(
-                            CalendarLocalization.text("calendar.schedule.start"),
-                            selection: $start,
-                            displayedComponents: existing == nil ? [.hourAndMinute] : [.date, .hourAndMinute]
-                        )
-                        .labelsHidden()
-                        .environment(\.locale, CalendarLocalization.selectedLocale)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-
-                    formRow("calendar.schedule.end") {
-                        DatePicker(
-                            CalendarLocalization.text("calendar.schedule.end"),
-                            selection: $end,
-                            displayedComponents: [.date, .hourAndMinute]
-                        )
-                        .labelsHidden()
-                        .environment(\.locale, CalendarLocalization.selectedLocale)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-
-                    formRow("calendar.schedule.description", alignment: .top) {
-                        TextField(
-                            CalendarLocalization.text("calendar.schedule.description.placeholder"),
-                            text: $description,
-                            axis: .vertical
-                        )
-                        .font(DPFont.light(size: 15, relativeTo: .body))
-                        .focused($focusedField, equals: .details)
-                        .lineLimit(2...4)
-                        .dpInputChrome()
-                    }
-
-                    formRow("calendar.schedule.visibility", alignment: .top) {
-                        HStack(spacing: DPSpacing.extraSmall) {
-                            visibilityButton(.publicAccess, icon: "globe")
-                            visibilityButton(.friends, icon: "person.2")
-                            visibilityButton(.family, icon: "heart")
-                            visibilityButton(.privateAccess, icon: "lock")
-                        }
-                    }
-
-                    formRow("calendar.schedule.attachments", alignment: .top) {
-                        AttachmentPicker(model: attachmentModel)
-                    }
-
-                    if ScheduleFriendTagSelectorPolicy.shouldShow(
-                        isMyCalendar: model.isMyCalendar,
-                        currentFriendCount: model.friends.count,
-                        selectedIDs: tagIDs,
-                        preservedValidIDCount: existing?.tags.compactMap(\.id).count ?? 0
-                    ) {
-                        formRow("calendar.schedule.tags", alignment: .top) {
-                            DPFriendTagSelector(
-                                items: model.friends.map(DPFriendTagAdapter.item),
-                                preservedItems: (existing?.tags ?? []).compactMap(DPFriendTagAdapter.item),
-                                selection: $tagIDs,
-                                disabled: interactionsDisabled
-                            )
-                        }
-                    }
-                }
-                .padding(.horizontal, 14)
-                .padding(.vertical, 10)
-            }
-            .scrollDismissesKeyboard(.interactively)
-
-            HStack(spacing: DPSpacing.small) {
-                Button {
-                    requestDismissal()
-                } label: {
-                    Text(CalendarLocalization.text("calendar.cancel"))
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(DPOutlineButtonStyle())
-                .disabled(interactionsDisabled)
-
-                Button {
-                    save()
-                } label: {
-                    Text(CalendarLocalization.text("calendar.save"))
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(DPPrimaryButtonStyle())
-                .disabled(saveDisabled)
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .background(DPColor.backgroundModal)
-            .overlay(alignment: .top) {
-                Rectangle().fill(DPColor.borderPrimary).frame(height: 1)
-            }
+        DPModalPanel(
+            maximumPanelHeight: maximumPanelHeight,
+            scrollTarget: scrollTarget
+        ) {
+            header
+        } content: {
+            editorForm
+        } footer: {
+            editorActions
         }
         .onAppear { onWorkingChange(interactionsDisabled) }
         .onChange(of: interactionsDisabled) { _, isWorking in
@@ -2320,6 +2221,118 @@ private struct ScheduleEditorView: View {
         } message: {
             Text(CalendarLocalization.text("calendar.aiConsent.prompt.message"))
         }
+    }
+
+    private var editorForm: some View {
+        VStack(spacing: DPSpacing.small) {
+            formRow("calendar.schedule.content") {
+                ZStack(alignment: .trailing) {
+                    TextField(CalendarLocalization.text("calendar.schedule.content.placeholder"), text: $content)
+                        .textInputAutocapitalization(.sentences)
+                        .font(DPFont.light(size: 15, relativeTo: .body))
+                        .focused($focusedField, equals: .title)
+                        .padding(.trailing, 54)
+                        .dpInputChrome(isInvalid: content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || content.count > 50)
+                    Text("\(content.count)/50")
+                        .font(DPTypography.caption)
+                        .foregroundStyle(content.count > 50 ? DPColor.danger : DPColor.textMuted)
+                        .padding(.trailing, DPSpacing.small)
+                }
+            }
+            .id(Field.title)
+
+            formRow(existing == nil ? "calendar.schedule.startTime" : "calendar.schedule.start") {
+                DatePicker(
+                    CalendarLocalization.text("calendar.schedule.start"),
+                    selection: $start,
+                    displayedComponents: existing == nil ? [.hourAndMinute] : [.date, .hourAndMinute]
+                )
+                .labelsHidden()
+                .environment(\.locale, CalendarLocalization.selectedLocale)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            formRow("calendar.schedule.end") {
+                DatePicker(
+                    CalendarLocalization.text("calendar.schedule.end"),
+                    selection: $end,
+                    displayedComponents: [.date, .hourAndMinute]
+                )
+                .labelsHidden()
+                .environment(\.locale, CalendarLocalization.selectedLocale)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+
+            formRow("calendar.schedule.description", alignment: .top) {
+                TextField(
+                    CalendarLocalization.text("calendar.schedule.description.placeholder"),
+                    text: $description,
+                    axis: .vertical
+                )
+                .font(DPFont.light(size: 15, relativeTo: .body))
+                .focused($focusedField, equals: .details)
+                .lineLimit(2...4)
+                .dpInputChrome()
+            }
+            .id(Field.details)
+
+            formRow("calendar.schedule.visibility", alignment: .top) {
+                HStack(spacing: DPSpacing.extraSmall) {
+                    visibilityButton(.publicAccess, icon: "globe")
+                    visibilityButton(.friends, icon: "person.2")
+                    visibilityButton(.family, icon: "heart")
+                    visibilityButton(.privateAccess, icon: "lock")
+                }
+            }
+
+            formRow("calendar.schedule.attachments", alignment: .top) {
+                AttachmentPicker(model: attachmentModel)
+            }
+
+            if ScheduleFriendTagSelectorPolicy.shouldShow(
+                isMyCalendar: model.isMyCalendar,
+                currentFriendCount: model.friends.count,
+                selectedIDs: tagIDs,
+                preservedValidIDCount: existing?.tags.compactMap(\.id).count ?? 0
+            ) {
+                formRow("calendar.schedule.tags", alignment: .top) {
+                    DPFriendTagSelector(
+                        items: model.friends.map(DPFriendTagAdapter.item),
+                        preservedItems: (existing?.tags ?? []).compactMap(DPFriendTagAdapter.item),
+                        selection: $tagIDs,
+                        disabled: interactionsDisabled,
+                        isSearchFocused: $isTagSearchFocused
+                    )
+                }
+                .id(Field.tags)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+    }
+
+    private var editorActions: some View {
+        HStack(spacing: DPSpacing.small) {
+            Button {
+                requestDismissal()
+            } label: {
+                Text(CalendarLocalization.text("calendar.close"))
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(DPOutlineButtonStyle())
+            .disabled(interactionsDisabled)
+
+            Button {
+                save()
+            } label: {
+                Text(CalendarLocalization.text("calendar.save"))
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(DPPrimaryButtonStyle())
+            .disabled(saveDisabled)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
     }
 
     private func formRow<Content: View>(
@@ -2588,18 +2601,16 @@ private struct ScheduleAttachmentGallery: View {
         self.canEdit = canEdit
         _gallery = StateObject(wrappedValue: AttachmentGalleryModel(
             contextType: .schedule,
-            contextId: schedule.id.uuidString
+            contextId: schedule.id.uuidString,
+            attachments: schedule.attachments
         ))
     }
 
     var body: some View {
-        DisclosureGroup {
-            AttachmentGallery(model: gallery, canEdit: canEdit)
-        } label: {
-            Label("\(schedule.attachments.count)", systemImage: "paperclip")
-                .font(.caption)
-        }
-        .buttonStyle(.plain)
+        AttachmentGallery(model: gallery, canEdit: canEdit)
+            .onChange(of: schedule.attachments) { _, attachments in
+                gallery.apply(attachments)
+            }
     }
 }
 
@@ -3209,14 +3220,20 @@ private struct DDayEditorView: View {
     let onDeleteRequest: ((DDayDTO) -> Void)?
     let dismissRequest: Int
     let onWorkingChange: (Bool) -> Void
-    let initialTitle: String
-    let initialDate: Date
-    let initialIsPrivate: Bool
+    /// The dismissal baseline is pinned to the same snapshot that seeded the editable state.
+    /// Recomputing it per render lets an unrelated re-render redefine "unchanged" — for a new
+    /// D-Day the fallback is a fresh `Date()` — and marks an untouched editor dirty.
+    @State private var initialTitle: String
+    @State private var initialDate: Date
+    @State private var initialIsPrivate: Bool
     @State private var title: String
     @State private var date: Date
     @State private var isPrivate: Bool
     @State private var isSaving = false
     @State private var showsDiscardConfirmation = false
+    @FocusState private var focusedField: Field?
+
+    private enum Field { case title }
 
     init(
         model: CalendarViewModel,
@@ -3239,9 +3256,9 @@ private struct DDayEditorView: View {
         let initialTitle = existing?.title ?? ""
         let initialDate = existing.flatMap { CalendarDateSupport.date(from: $0.date) } ?? Date()
         let initialIsPrivate = existing?.isPrivate ?? false
-        self.initialTitle = initialTitle
-        self.initialDate = initialDate
-        self.initialIsPrivate = initialIsPrivate
+        _initialTitle = State(initialValue: initialTitle)
+        _initialDate = State(initialValue: initialDate)
+        _initialIsPrivate = State(initialValue: initialIsPrivate)
         _title = State(initialValue: initialTitle)
         _date = State(initialValue: initialDate)
         _isPrivate = State(initialValue: initialIsPrivate)
@@ -3256,7 +3273,10 @@ private struct DDayEditorView: View {
     }
 
     var body: some View {
-        DPModalPanel(maximumPanelHeight: maximumPanelHeight) {
+        DPModalPanel(
+            maximumPanelHeight: maximumPanelHeight,
+            scrollTarget: focusedField
+        ) {
             header
         } content: {
             editorBody
@@ -3315,9 +3335,11 @@ private struct DDayEditorView: View {
                         .foregroundStyle(title.count > 30 ? DPColor.danger : DPColor.textMuted)
                 }
                 TextField(CalendarLocalization.text("calendar.dday.name"), text: $title)
+                    .focused($focusedField, equals: .title)
                     .dpInputChrome(isInvalid: !canSave)
                     .disabled(isSaving)
             }
+            .id(Field.title)
 
             VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
                 Text("calendar.dday.date", tableName: "Calendar")
@@ -3389,7 +3411,7 @@ private struct DDayEditorView: View {
     private var footer: some View {
         HStack(spacing: DPSpacing.small) {
             Button(action: guardedDismiss) {
-                Text(CalendarLocalization.text("calendar.cancel"))
+                Text(CalendarLocalization.text("calendar.close"))
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(DPOutlineButtonStyle())

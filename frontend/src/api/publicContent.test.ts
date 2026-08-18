@@ -5,9 +5,9 @@ vi.mock('./client', () => ({
 }))
 
 import apiClient from './client'
-import { publicContentApi } from './publicContent'
+import { publicContentApi, type GuideContent } from './publicContent'
 
-const guide = {
+const guide: GuideContent = {
   schemaVersion: 1,
   contentVersion: '2026-08-15',
   locale: 'ko' as const,
@@ -23,10 +23,14 @@ const guide = {
       id: 'schedule',
       title: '일정',
       summary: '일정을 관리해요.',
+      icon: 'calendar',
+      tone: 'success',
       cards: [
         {
           id: 'create-schedule',
           title: '일정 등록',
+          icon: 'plus',
+          tone: 'accent',
           items: ['날짜를 선택하세요.', '일정을 저장하세요.'],
         },
       ],
@@ -80,6 +84,12 @@ describe('publicContentApi', () => {
     expect(guide.actions).toEqual({
       expandAll: '모두 펼치기',
       collapseAll: '모두 접기',
+    })
+
+    expect(guide.sections[0]).toMatchObject({
+      icon: 'calendar',
+      tone: 'success',
+      cards: [{ icon: 'plus', tone: 'accent' }],
     })
 
     expect(apiClient.get).toHaveBeenCalledWith('/public-content/guide', {

@@ -115,10 +115,10 @@ struct TeamFeatureTests {
         #expect(englishDeviceCalendar.monthSymbols[7] == "August")
 
         defaults.set(AppLanguage.korean.rawValue, forKey: SettingsPreference.languageKey)
-        #expect(TeamLocalization.monthName(8) == "8월")
+        #expect(DPYearMonthPickerLocalization.monthName(8) == "8월")
 
         defaults.set(AppLanguage.english.rawValue, forKey: SettingsPreference.languageKey)
-        #expect(TeamLocalization.monthName(8) == "August")
+        #expect(DPYearMonthPickerLocalization.monthName(8) == "August")
     }
 
     @Test @MainActor
@@ -800,7 +800,23 @@ struct TeamFeatureTests {
         #expect(!source.contains("TeamActionConfirmationModal"))
         #expect(!source.contains(".confirmationDialog("))
         #expect(source.components(separatedBy: ".alert(").count - 1 == 4)
-        #expect(source.components(separatedBy: "DPConfirmationPanel(").count - 1 >= 3)
+        #expect(source.contains("DPConfirmationPanel("))
+        #expect(source.contains("dpConfirmation("))
+    }
+
+    @Test
+    func bothTeamModalsShareASingleDiscardConfirmation() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark/Features/Team/TeamManageView.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+
+        #expect(source.components(separatedBy: "team.modal.discard.title").count - 1 == 1)
+        #expect(source.components(separatedBy: "team.modal.discard.continue").count - 1 == 1)
+        #expect(
+            source.components(separatedBy: ".teamDiscardConfirmation(isPresented:").count - 1 == 2
+        )
     }
 
     @Test @MainActor

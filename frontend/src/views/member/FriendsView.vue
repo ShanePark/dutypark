@@ -453,7 +453,7 @@ onUnmounted(() => {
 
 <template>
   <div class="max-w-4xl mx-auto px-4 py-6">
-    <PageHeader :title="t('header.menu.friends')" :icon="UserPlus">
+    <PageHeader :title="t('header.menu.friends')" :icon="UserPlus" show-back back-fallback="/more">
       <button
         class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-dp-surface-strong to-dp-surface-strong-alt text-dp-text-on-dark rounded-xl hover:from-dp-surface-strong-alt hover:to-dp-surface-strong-hover transition-all shadow-lg font-medium cursor-pointer"
         @click="openSearchModal"

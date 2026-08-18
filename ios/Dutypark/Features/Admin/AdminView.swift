@@ -7,6 +7,13 @@ struct AdminRootView: View {
     @State private var searchText = ""
     @State private var searchTask: Task<Void, Never>?
     @State private var destination: AdminRootDestination?
+    @State private var sessionConfirmation: AdminSessionRevokeConfirmation?
+    @State private var isRevokingSession = false
+    @State private var operationMessage: String?
+    @FocusState private var isSearchFocused: Bool
+    /// The web keeps a separate initial-load flag so a search that empties the list never replaces
+    /// the whole page — and never tears the focused search field out of the hierarchy.
+    @State private var hasCompletedInitialLoad = false
     let onOpenCalendar: (MemberID) -> Void
     private let repository: any AdminRepositoryProtocol
 
@@ -36,149 +43,7 @@ struct AdminRootView: View {
     var body: some View {
         Group {
             if isAdmin {
-                List {
-                    Section {
-                        LazyVGrid(columns: dashboardColumns, spacing: DPSpacing.small) {
-                            AdminTopTile(
-                                title: AdminLocalization.string("admin.nav.members"),
-                                systemImage: "person.3.fill",
-                                color: DPColor.accent,
-                                isSelected: true
-                            )
-                            .accessibilityIdentifier("admin.tile.members")
-
-                            Button {
-                                destination = .teams
-                            } label: {
-                                AdminTopTile(
-                                    title: AdminLocalization.string("admin.nav.teams"),
-                                    systemImage: "building.2.fill",
-                                    color: DPColor.success
-                                )
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityIdentifier("admin.tile.teams")
-
-                            Button {
-                                destination = .development
-                            } label: {
-                                AdminTopTile(
-                                    title: AdminLocalization.string("admin.nav.development"),
-                                    systemImage: "chevron.left.forwardslash.chevron.right",
-                                    color: DPColor.warning
-                                )
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityIdentifier("admin.tile.development")
-
-                            Button {
-                                openURL(AdminWebDestination.apiDocumentationURL())
-                            } label: {
-                                AdminTopTile(
-                                    title: AdminLocalization.string("admin.nav.apiDocumentation"),
-                                    systemImage: "doc.text.fill",
-                                    color: DPColor.surfaceStrong
-                                )
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityLabel(AdminLocalization.string("admin.nav.apiDocumentation"))
-                            .accessibilityHint(
-                                AdminLocalization.string("admin.nav.apiDocumentation.externalHint")
-                            )
-                            .accessibilityIdentifier("admin.tile.apiDocumentation")
-                        }
-                        .padding(.vertical, DPSpacing.extraSmall)
-                    }
-                    .listRowInsets(.init(
-                        top: 0,
-                        leading: DPSpacing.compact,
-                        bottom: 0,
-                        trailing: DPSpacing.compact
-                    ))
-                    .listRowBackground(Color.clear)
-
-                    Section {
-                        LazyVGrid(columns: dashboardColumns, spacing: DPSpacing.small) {
-                            ForEach(Array(summaryCards.enumerated()), id: \.offset) { _, card in
-                                AdminSummaryCard(
-                                    title: AdminLocalization.string(card.key),
-                                    value: card.value
-                                )
-                            }
-                        }
-                        .padding(.vertical, DPSpacing.extraSmall)
-                    }
-                    .listRowInsets(.init(
-                        top: 0,
-                        leading: DPSpacing.compact,
-                        bottom: 0,
-                        trailing: DPSpacing.compact
-                    ))
-                    .listRowBackground(Color.clear)
-
-                    Section(AdminLocalization.string("admin.members.title")) {
-                        if memberModel.isLoading && memberModel.members.isEmpty {
-                            ProgressView(AdminLocalization.string("admin.common.loading"))
-                                .frame(maxWidth: .infinity)
-                        } else if memberModel.loadFailed && memberModel.members.isEmpty {
-                            Button {
-                                Task { await memberModel.load() }
-                            } label: {
-                                Label(
-                                    AdminLocalization.string("admin.members.loadFailed"),
-                                    systemImage: "arrow.clockwise"
-                                )
-                            }
-                        } else if memberModel.members.isEmpty {
-                            ContentUnavailableView(
-                                AdminLocalization.string("admin.members.empty"),
-                                systemImage: "person.crop.circle.badge.questionmark"
-                            )
-                            .accessibilityIdentifier("admin.members.empty")
-                        } else {
-                            ForEach(memberModel.members) { member in
-                                NavigationLink {
-                                    AdminMemberDetailView(
-                                        member: member,
-                                        model: memberModel,
-                                        onOpenCalendar: onOpenCalendar
-                                    )
-                                } label: {
-                                    AdminMemberRow(member: member)
-                                }
-                            }
-                        }
-                    }
-
-                    if memberModel.totalPages > 1 {
-                        Section {
-                            AdminPaginationFooter(
-                                page: memberModel.page,
-                                totalPages: memberModel.totalPages,
-                                onPrevious: { Task { await memberModel.movePage(by: -1) } },
-                                onNext: { Task { await memberModel.movePage(by: 1) } }
-                            )
-                        }
-                    }
-                }
-                .listStyle(.insetGrouped)
-                .refreshable { await memberModel.load() }
-                .searchable(
-                    text: $searchText,
-                    placement: .navigationBarDrawer(displayMode: .always),
-                    prompt: AdminLocalization.string("admin.members.search")
-                )
-                .onChange(of: searchText) { _, newValue in
-                    searchTask?.cancel()
-                    let keyword = AdminMemberSearchPolicy.normalized(newValue)
-                    searchTask = Task {
-                        try? await Task.sleep(for: AdminMemberSearchPolicy.debounce)
-                        guard !Task.isCancelled else { return }
-                        await memberModel.search(keyword)
-                    }
-                }
-                .task { await memberModel.load() }
-                .onDisappear { searchTask?.cancel() }
+                dashboard
             } else {
                 ContentUnavailableView(
                     AdminLocalization.string("admin.access.title"),
@@ -205,120 +70,537 @@ struct AdminRootView: View {
         .accessibilityIdentifier("screen.admin")
     }
 
+    private var dashboard: some View {
+        ScrollView {
+            VStack(spacing: 0) {
+                if !hasCompletedInitialLoad && memberModel.isLoading {
+                    ProgressView()
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 80)
+                } else {
+                    navigationTiles
+                    statsBand
+                    memberCard
+                }
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.horizontal, DPSpacing.medium)
+            .padding(.vertical, DPSpacing.large)
+        }
+        .background(DPColor.backgroundSecondary)
+        .refreshable { await memberModel.load() }
+        .dpKeyboardDismissToolbar()
+        .onChange(of: searchText) { _, newValue in
+            searchTask?.cancel()
+            let keyword = AdminMemberSearchPolicy.normalized(newValue)
+            searchTask = Task {
+                try? await Task.sleep(for: AdminMemberSearchPolicy.debounce)
+                guard !Task.isCancelled else { return }
+                await memberModel.search(keyword)
+            }
+        }
+        .task {
+            await memberModel.load()
+            hasCompletedInitialLoad = true
+        }
+        .onDisappear { searchTask?.cancel() }
+        .fullScreenCover(item: $sessionConfirmation) { confirmation in
+            DPModalOverlay(
+                maximumContentWidth: DPConfirmationPanel.maximumWidth,
+                onDismiss: { sessionConfirmation = nil },
+                canDismiss: !isRevokingSession
+            ) { availableSize, dismiss in
+                DPConfirmationPanel(
+                    title: confirmation.title,
+                    message: confirmation.message,
+                    confirmTitle: AdminLocalization.string("admin.members.revokeSession.action"),
+                    cancelTitle: AdminLocalization.string("admin.common.cancel"),
+                    isDestructive: true,
+                    isWorking: isRevokingSession,
+                    maximumHeight: availableSize.height,
+                    cancel: dismiss,
+                    confirm: { revokeSession(confirmation, dismiss: dismiss) }
+                )
+            }
+            .interactiveDismissDisabled(isRevokingSession)
+        }
+        .alert(
+            AdminLocalization.string("admin.common.notice"),
+            isPresented: Binding(
+                get: { operationMessage != nil },
+                set: { if !$0 { operationMessage = nil } }
+            )
+        ) {
+            Button(AdminLocalization.string("admin.common.ok"), role: .cancel) {}
+        } message: {
+            Text(operationMessage ?? "")
+        }
+    }
+
+    private var navigationTiles: some View {
+        LazyVGrid(columns: dashboardColumns, spacing: DPSpacing.small) {
+            AdminTopTile(
+                title: AdminLocalization.string("admin.nav.members"),
+                systemImage: "person.3.fill",
+                isSelected: true
+            )
+            .accessibilityIdentifier("admin.tile.members")
+
+            Button {
+                destination = .teams
+            } label: {
+                AdminTopTile(
+                    title: AdminLocalization.string("admin.nav.teams"),
+                    systemImage: "building.2.fill"
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("admin.tile.teams")
+
+            Button {
+                destination = .development
+            } label: {
+                AdminTopTile(
+                    title: AdminLocalization.string("admin.nav.development"),
+                    systemImage: "chevron.left.forwardslash.chevron.right"
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("admin.tile.development")
+
+            Button {
+                openURL(AdminWebDestination.apiDocumentationURL())
+            } label: {
+                AdminTopTile(
+                    title: AdminLocalization.string("admin.nav.apiDocumentation"),
+                    systemImage: "doc.text.fill"
+                )
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(AdminLocalization.string("admin.nav.apiDocumentation"))
+            .accessibilityHint(
+                AdminLocalization.string("admin.nav.apiDocumentation.externalHint")
+            )
+            .accessibilityIdentifier("admin.tile.apiDocumentation")
+        }
+        .padding(.bottom, DPSpacing.medium)
+    }
+
+    private var statsBand: some View {
+        HStack(spacing: 0) {
+            ForEach(Array(stats.tiles.enumerated()), id: \.offset) { index, tile in
+                if index > 0 {
+                    DPColor.borderPrimary.opacity(0.78)
+                        .frame(width: 1)
+                }
+                AdminStatTile(
+                    kicker: AdminLocalization.string(tile.key.label),
+                    value: tile.value,
+                    note: AdminLocalization.string(tile.key.note)
+                )
+            }
+        }
+        .fixedSize(horizontal: false, vertical: true)
+        .background(AdminStatsBandBackground())
+        .clipShape(RoundedRectangle(cornerRadius: AdminStatsBandPresentation.cornerRadius))
+        .overlay {
+            RoundedRectangle(cornerRadius: AdminStatsBandPresentation.cornerRadius)
+                .stroke(DPColor.borderPrimary, lineWidth: DPChrome.borderWidth)
+        }
+        .padding(.bottom, DPSpacing.medium)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(AdminLocalization.string("admin.dashboard.statsAriaLabel"))
+    }
+
+    private var memberCard: some View {
+        VStack(spacing: 0) {
+            memberCardHeader
+            memberCardBody
+            if memberModel.totalPages > 1 {
+                DPColor.borderPrimary.frame(height: 1)
+                AdminMemberPaginationFooter(
+                    presentation: AdminMemberPaginationPresentation(
+                        page: memberModel.page,
+                        pageSize: AdminMemberListViewModel.pageSize,
+                        totalElements: memberModel.totalElements
+                    ),
+                    page: memberModel.page,
+                    totalPages: memberModel.totalPages,
+                    onPrevious: { Task { await memberModel.movePage(by: -1) } },
+                    onNext: { Task { await memberModel.movePage(by: 1) } }
+                )
+            }
+        }
+        .background(DPColor.backgroundCard)
+        .clipShape(RoundedRectangle(cornerRadius: DPRadius.large))
+        .overlay {
+            RoundedRectangle(cornerRadius: DPRadius.large)
+                .stroke(DPColor.borderPrimary, lineWidth: DPChrome.borderWidth)
+        }
+    }
+
+    private var memberCardHeader: some View {
+        VStack(alignment: .leading, spacing: DPSpacing.compact) {
+            Text(AdminLocalization.string("admin.dashboard.title"))
+                .font(DPFont.bold(size: 18, relativeTo: .headline))
+                .foregroundStyle(DPColor.textPrimary)
+
+            HStack(spacing: 0) {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: DPSize.iconSmall))
+                    .foregroundStyle(DPColor.textMuted)
+                    .padding(.leading, DPSpacing.compact)
+                TextField(
+                    "",
+                    text: $searchText,
+                    prompt: Text(AdminLocalization.string("admin.dashboard.searchPlaceholder"))
+                        .foregroundColor(DPColor.textMuted)
+                )
+                .font(DPTypography.label)
+                .foregroundStyle(DPColor.textPrimary)
+                .focused($isSearchFocused)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .submitLabel(.search)
+                .padding(.leading, DPSpacing.small)
+                .padding(.trailing, DPSpacing.medium)
+                .padding(.vertical, DPSpacing.small)
+                .accessibilityIdentifier("admin.members.search")
+            }
+            .frame(minHeight: DPSize.minimumTouchTarget)
+            .background(DPColor.backgroundInput)
+            .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+            .overlay {
+                RoundedRectangle(cornerRadius: DPRadius.standard)
+                    .stroke(
+                        isSearchFocused ? DPColor.textPrimary : DPColor.borderInput,
+                        lineWidth: isSearchFocused ? DPChrome.focusRingWidth : DPChrome.borderWidth
+                    )
+            }
+        }
+        .padding(DPSpacing.medium)
+        .overlay(alignment: .bottom) {
+            DPColor.borderPrimary.frame(height: 1)
+        }
+    }
+
+    @ViewBuilder
+    private var memberCardBody: some View {
+        if memberModel.isLoading {
+            ProgressView()
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 48)
+        } else if memberModel.loadFailed && memberModel.members.isEmpty {
+            Button {
+                Task { await memberModel.load() }
+            } label: {
+                Label(
+                    AdminLocalization.string("admin.members.loadFailed"),
+                    systemImage: "arrow.clockwise"
+                )
+                .font(DPTypography.supporting)
+                .foregroundStyle(DPColor.accent)
+                .frame(maxWidth: .infinity)
+                .padding(DPSpacing.extraLarge)
+            }
+            .buttonStyle(.plain)
+        } else if memberModel.members.isEmpty {
+            Text(AdminLocalization.string("admin.dashboard.empty"))
+                .font(DPTypography.supporting)
+                .foregroundStyle(DPColor.textMuted)
+                .multilineTextAlignment(.center)
+                .frame(maxWidth: .infinity)
+                .padding(DPSpacing.extraLarge)
+                .accessibilityIdentifier("admin.members.empty")
+        } else {
+            ForEach(memberModel.members) { member in
+                AdminMemberRow(member: member) { token in
+                    sessionConfirmation = AdminSessionRevokeConfirmation(token: token)
+                } detail: {
+                    AdminMemberDetailView(
+                        member: member,
+                        model: memberModel,
+                        onOpenCalendar: onOpenCalendar
+                    )
+                }
+            }
+        }
+    }
+
     private var isAdmin: Bool {
         guard case .authenticated(let member) = session.state else { return false }
         return member.isAdmin
     }
 
     private var dashboardColumns: [GridItem] {
-        [GridItem(.adaptive(minimum: 140), spacing: DPSpacing.small)]
+        Array(
+            repeating: GridItem(.flexible(), spacing: DPSpacing.small),
+            count: AdminTopTilePresentation.columnCount
+        )
     }
 
-    private var summaryCards: [(key: String, value: Int)] {
-        let stats = AdminDashboardStatsPresentation(
+    private var stats: AdminDashboardStatsPresentation {
+        AdminDashboardStatsPresentation(
             totalMembers: memberModel.totalElements,
             loadedMembers: memberModel.members,
             sessions: memberModel.sessions,
             today: AdminDashboardStatsPresentation.todayString()
         )
-        return zip(AdminDashboardStatsPresentation.localizationKeys, stats.values)
-            .map { (key: $0.0, value: $0.1) }
+    }
+
+    private func revokeSession(
+        _ confirmation: AdminSessionRevokeConfirmation,
+        dismiss: @escaping () -> Void
+    ) {
+        guard !isRevokingSession else { return }
+        isRevokingSession = true
+
+        Task {
+            do {
+                try await memberModel.revokeSession(id: confirmation.token.id)
+                operationMessage = AdminLocalization.string("admin.members.sessionRevoked")
+            } catch {
+                operationMessage = AdminLocalization.string("admin.members.operationFailed")
+            }
+            isRevokingSession = false
+            dismiss()
+        }
     }
 }
 
 private struct AdminTopTile: View {
     let title: String
     let systemImage: String
-    let color: Color
     var isSelected = false
 
     var body: some View {
-        HStack(spacing: DPSpacing.small) {
+        VStack(spacing: 0) {
             Image(systemName: systemImage)
-                .font(.system(size: 17, weight: .semibold))
-                .foregroundStyle(isSelected ? AdminTopTilePresentation.selectedForeground : color)
-                .frame(width: 30, height: 30)
-                .background(
-                    (isSelected ? Color.white.opacity(0.16) : color.opacity(0.12)),
-                    in: RoundedRectangle(cornerRadius: DPRadius.small)
+                .font(.system(size: 18.4, weight: .semibold))
+                .foregroundStyle(
+                    isSelected ? AdminTopTilePresentation.selectedForeground : DPColor.textSecondary
                 )
+                .padding(.bottom, DPSpacing.small)
             Text(title)
-                .font(DPTypography.label)
+                .font(DPFont.bold(size: 11.5, relativeTo: .caption2))
                 .foregroundStyle(
                     isSelected ? AdminTopTilePresentation.selectedForeground : DPColor.textPrimary
                 )
                 .lineLimit(2)
+                .multilineTextAlignment(.center)
                 .minimumScaleFactor(0.8)
-            Spacer(minLength: 0)
         }
-        .padding(DPSpacing.small)
-        .frame(maxWidth: .infinity, minHeight: 62, alignment: .leading)
+        .padding(.vertical, DPSpacing.compact)
+        .padding(.horizontal, 6.4)
+        .frame(maxWidth: .infinity, minHeight: 85)
         .background(
-            isSelected ? AdminTopTilePresentation.selectedBackground : DPColor.backgroundSecondary,
-            in: RoundedRectangle(cornerRadius: DPRadius.standard)
+            isSelected ? AdminTopTilePresentation.selectedBackground : DPColor.backgroundCard,
+            in: RoundedRectangle(cornerRadius: DPRadius.extraLarge)
         )
         .overlay {
-            RoundedRectangle(cornerRadius: DPRadius.standard)
-                .stroke(color.opacity(isSelected ? 0 : 0.18), lineWidth: 1)
+            RoundedRectangle(cornerRadius: DPRadius.extraLarge)
+                .stroke(
+                    isSelected ? Color.clear : DPColor.borderPrimary,
+                    lineWidth: DPChrome.borderWidth
+                )
         }
     }
 }
 
-private struct AdminSummaryCard: View {
-    let title: String
+private struct AdminStatTile: View {
+    let kicker: String
     let value: Int
+    let note: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
-            Text(value.formatted())
-                .font(DPTypography.heading)
-                .foregroundStyle(DPColor.textPrimary)
-            Text(title)
-                .font(DPTypography.caption)
+        VStack(spacing: 0) {
+            Text(kicker)
+                .font(DPFont.bold(size: 10.9, relativeTo: .caption2))
                 .foregroundStyle(DPColor.textMuted)
+                .lineLimit(2)
+                .minimumScaleFactor(0.8)
+            Text(value.formatted())
+                .font(DPFont.bold(size: 24.8, relativeTo: .title2))
+                .foregroundStyle(DPColor.textPrimary)
                 .lineLimit(1)
-                .minimumScaleFactor(0.75)
+                .minimumScaleFactor(0.6)
+                .padding(.top, 3.2)
+            Text(note)
+                .font(DPFont.light(size: 10.9, relativeTo: .caption2))
+                .foregroundStyle(DPColor.textSecondary)
+                .lineLimit(2)
+                .minimumScaleFactor(0.8)
+                .padding(.top, 2.6)
         }
-        .padding(DPSpacing.small)
-        .frame(maxWidth: .infinity, minHeight: 68, alignment: .leading)
-        .background(DPColor.backgroundSecondary, in: RoundedRectangle(cornerRadius: DPRadius.standard))
+        .multilineTextAlignment(.center)
+        .padding(.top, 10.9)
+        .padding(.horizontal, 4.8)
+        .padding(.bottom, 9.9)
+        .frame(maxWidth: .infinity, minHeight: 82.4)
     }
 }
 
-private struct AdminMemberRow: View {
+nonisolated enum AdminStatsBandPresentation {
+    static let cornerRadius: CGFloat = 18.4
+}
+
+/// The web paints the band with `color-mix`, which SwiftUI has no direct equivalent for, so the
+/// same result is layered as translucent secondary/tertiary tints over the card color.
+private struct AdminStatsBandBackground: View {
+    var body: some View {
+        DPColor.backgroundCard
+            .overlay {
+                LinearGradient(
+                    colors: [
+                        DPColor.backgroundSecondary.opacity(0.08),
+                        DPColor.backgroundTertiary.opacity(0.20),
+                    ],
+                    startPoint: .top,
+                    endPoint: .bottom
+                )
+            }
+    }
+}
+
+private struct AdminMemberRow<Detail: View>: View {
     let member: AdminMemberDTO
+    let onRevoke: (SettingsRefreshToken) -> Void
+    @ViewBuilder let detail: Detail
+
+    init(
+        member: AdminMemberDTO,
+        onRevoke: @escaping (SettingsRefreshToken) -> Void,
+        @ViewBuilder detail: () -> Detail
+    ) {
+        self.member = member
+        self.onRevoke = onRevoke
+        self.detail = detail()
+    }
 
     var body: some View {
-        HStack(spacing: DPSpacing.compact) {
+        VStack(alignment: .leading, spacing: 0) {
+            NavigationLink {
+                detail
+            } label: {
+                header
+            }
+            .buttonStyle(.plain)
+            // The identifier stays on the link rather than the row: SwiftUI pushes a container
+            // identifier down onto its children, which would hide the inline session controls.
+            .accessibilityIdentifier("admin.member.\(member.id)")
+            .padding(.bottom, DPSpacing.compact)
+
+            if !member.tokens.isEmpty {
+                AdminMemberSessionList(
+                    memberID: member.id,
+                    tokens: member.tokens,
+                    onRevoke: onRevoke
+                )
+                .padding(.top, DPSpacing.small)
+            }
+        }
+        .padding(DPSpacing.medium)
+        .overlay(alignment: .bottom) {
+            DPColor.borderSecondary.frame(height: 1)
+        }
+    }
+
+    private var header: some View {
+        HStack(alignment: .top, spacing: DPSpacing.compact) {
             AdminMemberAvatar(
                 memberID: member.id,
                 name: member.name,
                 hasProfilePhoto: member.hasProfilePhoto,
                 version: member.profilePhotoVersion,
-                size: 44
+                size: 36
             )
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 0) {
                 Text(member.name)
-                    .font(DPTypography.body)
+                    .font(DPFont.bold(size: 16, relativeTo: .body))
                     .foregroundStyle(DPColor.textPrimary)
-                Text(member.email ?? AdminLocalization.string("admin.members.noEmail"))
-                    .font(DPTypography.caption)
-                    .foregroundStyle(DPColor.textMuted)
                     .lineLimit(1)
-                if let teamName = member.teamName {
-                    Label(teamName, systemImage: "building.2")
-                        .font(DPTypography.caption)
-                        .foregroundStyle(DPColor.textSecondary)
-                }
+                    .truncationMode(.tail)
+                Text(AdminMemberSessionCountPresentation.text(count: member.tokens.count))
+                    .font(DPTypography.supporting)
+                    .foregroundStyle(DPColor.textSecondary)
             }
-            Spacer(minLength: DPSpacing.extraSmall)
-            Text(AdminMemberSessionCountPresentation.text(count: member.tokens.count))
+            Spacer(minLength: DPSpacing.compact)
+            VStack(alignment: .trailing, spacing: DPSpacing.extraSmall) {
+                Text(
+                    member.teamName
+                        ?? AdminLocalization.string("admin.dashboard.memberRow.noTeam")
+                )
                 .font(DPTypography.caption)
                 .foregroundStyle(DPColor.textMuted)
+                .lineLimit(1)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: DPSize.iconSmall))
+                    .foregroundStyle(DPColor.textMuted)
+            }
         }
-        .padding(.vertical, DPSpacing.extraSmall)
-        .frame(minHeight: 60)
-        .accessibilityIdentifier("admin.member.\(member.id)")
+        .contentShape(Rectangle())
+    }
+}
+
+private struct AdminMemberPaginationFooter: View {
+    let presentation: AdminMemberPaginationPresentation
+    let page: Int
+    let totalPages: Int
+    let onPrevious: () -> Void
+    let onNext: () -> Void
+
+    var body: some View {
+        HStack(spacing: 0) {
+            Text(presentation.text)
+                .font(DPTypography.supporting)
+                .foregroundStyle(DPColor.textSecondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            Spacer(minLength: DPSpacing.small)
+            HStack(spacing: DPSpacing.small) {
+                pageButton(
+                    systemImage: "chevron.left",
+                    label: AdminLocalization.string("admin.common.previous"),
+                    isDisabled: page <= 0,
+                    action: onPrevious
+                )
+                Text("\(page + 1) / \(max(totalPages, 1))")
+                    .font(DPTypography.supporting)
+                    .foregroundStyle(DPColor.textPrimary)
+                    .padding(.horizontal, DPSpacing.small)
+                pageButton(
+                    systemImage: "chevron.right",
+                    label: AdminLocalization.string("admin.common.next"),
+                    isDisabled: page >= totalPages - 1,
+                    action: onNext
+                )
+            }
+        }
+        .padding(DPSpacing.medium)
+    }
+
+    private func pageButton(
+        systemImage: String,
+        label: String,
+        isDisabled: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.system(size: DPSize.iconSmall))
+                .foregroundStyle(DPColor.textSecondary)
+                .padding(DPSpacing.small)
+                .background(
+                    DPColor.backgroundTertiary,
+                    in: RoundedRectangle(cornerRadius: DPRadius.standard)
+                )
+                // The web chip is smaller than the iOS minimum touch target, so only the hit area grows.
+                .contentShape(Rectangle().inset(by: -6))
+        }
+        .buttonStyle(.plain)
+        .disabled(isDisabled)
+        .opacity(isDisabled ? DPChrome.disabledOpacity : 1)
+        .accessibilityLabel(label)
     }
 }
 
@@ -361,6 +643,8 @@ private struct AdminMemberAvatar: View {
 }
 
 nonisolated enum AdminTopTilePresentation {
+    /// The web tile row is always four-up, including at the mobile breakpoint.
+    static let columnCount = 4
     static let selectedBackground = DPColor.surfaceStrong
     static let selectedForeground = DPColor.textOnDark
 }
@@ -396,12 +680,35 @@ nonisolated enum AdminMemberSearchPolicy {
     }
 }
 
+/// Each stats-band tile carries a kicker and a note, matching the web band.
+nonisolated struct AdminDashboardStatKey: Equatable, Sendable {
+    let label: String
+    let note: String
+}
+
+nonisolated struct AdminDashboardStatTile: Equatable, Sendable {
+    let key: AdminDashboardStatKey
+    let value: Int
+}
+
 nonisolated struct AdminDashboardStatsPresentation: Equatable, Sendable {
     static let localizationKeys = [
-        "admin.dashboard.totalMembers",
-        "admin.dashboard.teams",
-        "admin.dashboard.activeSessions",
-        "admin.dashboard.todayLogins",
+        AdminDashboardStatKey(
+            label: "admin.dashboard.stats.totalMembersLabel",
+            note: "admin.dashboard.stats.totalMembersNote"
+        ),
+        AdminDashboardStatKey(
+            label: "admin.dashboard.stats.totalTeamsLabel",
+            note: "admin.dashboard.stats.totalTeamsNote"
+        ),
+        AdminDashboardStatKey(
+            label: "admin.dashboard.stats.activeTokensLabel",
+            note: "admin.dashboard.stats.activeTokensNote"
+        ),
+        AdminDashboardStatKey(
+            label: "admin.dashboard.stats.todayLoginsLabel",
+            note: "admin.dashboard.stats.todayLoginsNote"
+        ),
     ]
 
     let totalMembers: Int64
@@ -411,6 +718,10 @@ nonisolated struct AdminDashboardStatsPresentation: Equatable, Sendable {
 
     var values: [Int] {
         [Int(totalMembers), teamCount, activeSessionCount, todayLoginCount]
+    }
+
+    var tiles: [AdminDashboardStatTile] {
+        zip(Self.localizationKeys, values).map { AdminDashboardStatTile(key: $0, value: $1) }
     }
 
     init(
@@ -922,12 +1233,16 @@ private struct AdminSessionRow: View {
     let token: SettingsRefreshToken
     let onRevoke: () -> Void
 
+    private var client: AdminSessionClientPresentation {
+        AdminSessionClientPresentation(token: token)
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
             HStack {
                 Label(
                     token.userAgent?.device ?? AdminLocalization.string("admin.members.session.unknownDevice"),
-                    systemImage: "iphone"
+                    systemImage: client.icon
                 )
                 .font(DPTypography.label)
                 Spacer()
@@ -938,7 +1253,7 @@ private struct AdminSessionRow: View {
                 .accessibilityLabel(AdminLocalization.string("admin.members.revokeSession.action"))
                 .accessibilityIdentifier("admin.member.session.revoke.\(token.id)")
             }
-            Text(token.userAgent.map { "\($0.os) · \($0.browser)" } ?? "-")
+            Text(client.summary)
                 .font(DPTypography.caption)
                 .foregroundStyle(DPColor.textMuted)
             Text(token.lastUsed ?? token.createdDate ?? token.validUntil)
@@ -946,6 +1261,26 @@ private struct AdminSessionRow: View {
                 .foregroundStyle(DPColor.textMuted)
         }
         .padding(.vertical, DPSpacing.extraSmall)
+    }
+}
+
+/// Native app sessions must not be listed under the browser name the app's user agent carries.
+nonisolated struct AdminSessionClientPresentation: Equatable, Sendable {
+    let icon: String
+    let clientName: String
+    let summary: String
+
+    init(token: SettingsRefreshToken) {
+        let isNativeApp = token.resolvedClientType == .iosApp
+        icon = isNativeApp ? "apps.iphone" : "iphone"
+        clientName = isNativeApp
+            ? AdminLocalization.string("admin.members.session.iosApp")
+            : (token.userAgent?.browser ?? "-")
+        if let userAgent = token.userAgent {
+            summary = "\(userAgent.os) · \(clientName)"
+        } else {
+            summary = isNativeApp ? clientName : "-"
+        }
     }
 }
 
@@ -959,7 +1294,7 @@ nonisolated struct AdminSessionRevokeConfirmation: Identifiable, Equatable, Send
             "admin.members.revokeSession.message",
             token.memberName,
             token.userAgent?.device ?? AdminLocalization.string("admin.members.session.unknownDevice"),
-            token.userAgent?.browser ?? "-",
+            AdminSessionClientPresentation(token: token).clientName,
             token.remoteAddr ?? "-"
         )
     }
@@ -1018,7 +1353,7 @@ private struct AdminPasswordChangeModal: View {
     private enum Field { case password, confirmation }
 
     var body: some View {
-        DPModalPanel(maximumPanelHeight: maximumHeight) {
+        DPModalPanel(maximumPanelHeight: maximumHeight, scrollTarget: focusedField) {
             header
         } content: {
             formContent
@@ -1085,6 +1420,13 @@ private struct AdminPasswordChangeModal: View {
 
     private var footer: some View {
         HStack(spacing: DPSpacing.small) {
+            Button(action: requestDismiss) {
+                Text(AdminLocalization.string("admin.common.close"))
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(DPSecondaryButtonStyle())
+            .disabled(interactionState.isSaving)
+
             Button {
                 Task { await save() }
             } label: {
@@ -1099,13 +1441,6 @@ private struct AdminPasswordChangeModal: View {
             }
             .buttonStyle(DPPrimaryButtonStyle())
             .disabled(!isValid || interactionState.isSaving)
-
-            Button(action: requestDismiss) {
-                Text(AdminLocalization.string("admin.common.cancel"))
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(DPSecondaryButtonStyle())
-            .disabled(interactionState.isSaving)
         }
         .padding(DPSpacing.compact)
     }
@@ -1129,6 +1464,7 @@ private struct AdminPasswordChangeModal: View {
                 .dpInputChrome(isFocused: focusedField == field)
                 .disabled(interactionState.isSaving)
         }
+        .id(field)
     }
 
     private var isValid: Bool {
@@ -1163,34 +1499,6 @@ private struct AdminPasswordChangeModal: View {
         } catch {
             interactionState.isSaving = false
             saveFailed = true
-        }
-    }
-}
-
-struct AdminPaginationFooter: View {
-    let page: Int
-    let totalPages: Int
-    let onPrevious: () -> Void
-    let onNext: () -> Void
-
-    var body: some View {
-        HStack {
-            Button(action: onPrevious) {
-                Label(AdminLocalization.string("admin.common.previous"), systemImage: "chevron.left")
-                    .frame(minHeight: DPSize.minimumTouchTarget)
-            }
-            .disabled(page <= 0)
-            Spacer()
-            Text(AdminLocalization.format("admin.common.page", page + 1, max(totalPages, 1)))
-                .font(DPTypography.label)
-                .foregroundStyle(DPColor.textSecondary)
-            Spacer()
-            Button(action: onNext) {
-                Label(AdminLocalization.string("admin.common.next"), systemImage: "chevron.right")
-                    .labelStyle(.titleAndIcon)
-                    .frame(minHeight: DPSize.minimumTouchTarget)
-            }
-            .disabled(page >= totalPages - 1)
         }
     }
 }

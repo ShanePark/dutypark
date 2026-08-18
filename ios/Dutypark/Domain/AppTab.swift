@@ -5,7 +5,7 @@ enum AppTab: String, CaseIterable, Identifiable, Sendable {
     case calendar
     case todo
     case team
-    case settings
+    case more
 
     nonisolated var id: Self { self }
 
@@ -19,8 +19,8 @@ enum AppTab: String, CaseIterable, Identifiable, Sendable {
             "tab.todo"
         case .team:
             "tab.team"
-        case .settings:
-            "tab.settings"
+        case .more:
+            "tab.more"
         }
     }
 
@@ -38,8 +38,8 @@ enum AppTab: String, CaseIterable, Identifiable, Sendable {
             "checklist"
         case .team:
             "person.2"
-        case .settings:
-            "gearshape"
+        case .more:
+            "ellipsis.circle"
         }
     }
 

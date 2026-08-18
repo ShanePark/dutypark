@@ -214,7 +214,7 @@ async function addMember(member: MemberInviteCandidateDto) {
     <div class="modal-actions modal-actions-end modal-footer-safe">
       <button
         @click="close"
-        class="px-4 py-2 rounded-lg font-medium hover-interactive cursor-pointer bg-dp-bg-tertiary text-dp-text-secondary"
+        class="flex-1 sm:flex-none px-4 py-2 rounded-lg font-medium hover-interactive cursor-pointer bg-dp-bg-tertiary text-dp-text-secondary"
       >
         {{ t('common.actions.close') }}
       </button>

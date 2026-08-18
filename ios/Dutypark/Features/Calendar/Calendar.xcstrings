@@ -106,6 +106,7 @@
     "calendar.month.current" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "This month" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "이번 달" } } } },
     "calendar.month.goToThisMonth" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "This month" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "이번달" } } } },
     "calendar.month.short" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "%lld" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%lld월" } } } },
+    "calendar.member.back" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Back" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "뒤로" } } } },
     "calendar.duty.quick.start" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Edit mode" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "편집 모드" } } } },
     "calendar.duty.quick.exit" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Exit edit mode" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "편집 종료" } } } },
     "calendar.duty.quick.description" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Choose a duty to save it and move to the next day." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "근무를 선택하면 저장 후 다음 날로 이동합니다." } } } },

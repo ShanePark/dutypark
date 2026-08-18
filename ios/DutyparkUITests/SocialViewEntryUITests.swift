@@ -22,15 +22,15 @@ final class SocialViewEntryUITests: XCTestCase {
             app.descendants(matching: .any)["screen.home"].waitForExistence(timeout: 20)
         )
 
-        let menuButton = app.buttons["home.menu"]
-        XCTAssertTrue(menuButton.waitForExistence(timeout: 10))
-        menuButton.tap()
+        let moreTab = app.buttons.matching(identifier: "tab.more").firstMatch
+        XCTAssertTrue(moreTab.waitForExistence(timeout: 10))
+        moreTab.tap()
 
         XCTAssertTrue(
-            app.descendants(matching: .any)["screen.menu"].waitForExistence(timeout: 10)
+            app.descendants(matching: .any)["screen.more"].waitForExistence(timeout: 10)
         )
 
-        let friendManagementButton = app.buttons["친구관리"].firstMatch
+        let friendManagementButton = app.buttons["more.friends"].firstMatch
         XCTAssertTrue(friendManagementButton.waitForExistence(timeout: 10))
         friendManagementButton.tap()
 
@@ -64,6 +64,108 @@ final class SocialViewEntryUITests: XCTestCase {
     }
 
     @MainActor
+    func testFriendManagementStaysOnTheMoreTabAndReturnsToTheMenu() {
+        let app = XCUIApplication()
+        app.launchArguments += [
+            "-dp-language", "ko",
+            "-dp-theme", "dark",
+            "-AppleLanguages", "(ko)",
+            "-AppleLocale", "ko_KR",
+            "-ui-testing-authenticated",
+        ]
+        app.launch()
+        defer { app.terminate() }
+
+        XCTAssertTrue(
+            app.descendants(matching: .any)["screen.home"].waitForExistence(timeout: 20)
+        )
+
+        let moreTab = app.buttons.matching(identifier: "tab.more").firstMatch
+        XCTAssertTrue(moreTab.waitForExistence(timeout: 10))
+        moreTab.tap()
+
+        let friendManagementButton = app.buttons["more.friends"].firstMatch
+        XCTAssertTrue(friendManagementButton.waitForExistence(timeout: 10))
+        friendManagementButton.tap()
+
+        XCTAssertTrue(
+            app.descendants(matching: .any)["social.list"].waitForExistence(timeout: 10)
+        )
+        capture("more-friends-after-tap")
+        XCTAssertTrue(
+            moreTab.isSelected,
+            "Friend management opened from the More menu must stay on the More tab"
+        )
+        XCTAssertTrue(
+            app.navigationBars.staticTexts["친구관리"].waitForExistence(timeout: 10),
+            "The pushed friend management screen must keep its own title"
+        )
+
+        let backButton = app.navigationBars.buttons.firstMatch
+        XCTAssertTrue(backButton.waitForExistence(timeout: 10))
+        backButton.tap()
+
+        XCTAssertTrue(
+            friendManagementButton.waitForExistence(timeout: 10),
+            "Back from friend management must return to the More menu"
+        )
+        XCTAssertTrue(moreTab.isSelected)
+    }
+
+    // Friend management is itself pushed onto the More stack, so a friend's calendar
+    // stacks on top of it: the More tab stays selected and back returns to the friend
+    // list rather than to the menu or to the calendar tab.
+    @MainActor
+    func testFriendCalendarStacksOnTopOfFriendManagementInTheMoreTab() {
+        let app = XCUIApplication()
+        app.launchArguments += [
+            "-dp-language", "ko",
+            "-dp-theme", "dark",
+            "-AppleLanguages", "(ko)",
+            "-AppleLocale", "ko_KR",
+            "-ui-testing-authenticated",
+        ]
+        app.launch()
+        defer { app.terminate() }
+
+        XCTAssertTrue(
+            app.descendants(matching: .any)["screen.home"].waitForExistence(timeout: 20)
+        )
+        let moreTab = app.buttons.matching(identifier: "tab.more").firstMatch
+        XCTAssertTrue(moreTab.waitForExistence(timeout: 10))
+        moreTab.tap()
+
+        let friendManagementButton = app.buttons["more.friends"].firstMatch
+        XCTAssertTrue(friendManagementButton.waitForExistence(timeout: 10))
+        friendManagementButton.tap()
+
+        let socialList = app.descendants(matching: .any)["social.list"]
+        XCTAssertTrue(socialList.waitForExistence(timeout: 10))
+
+        let friendButton = socialList.buttons["알렉스"].firstMatch
+        XCTAssertTrue(friendButton.waitForExistence(timeout: 10))
+        friendButton.tap()
+
+        let memberCalendar = app.descendants(matching: .any)["screen.calendar.member"]
+        XCTAssertTrue(memberCalendar.waitForExistence(timeout: 10))
+        XCTAssertTrue(
+            moreTab.isSelected,
+            "A friend calendar opened from the More stack must not jump to the calendar tab"
+        )
+
+        let identityChip = app.buttons["calendar.member.back"].firstMatch
+        XCTAssertTrue(identityChip.waitForExistence(timeout: 10))
+        identityChip.tap()
+
+        XCTAssertTrue(memberCalendar.waitForNonExistence(timeout: 5))
+        XCTAssertTrue(
+            socialList.waitForExistence(timeout: 10),
+            "Back from a friend calendar must return to the friend list it was opened from"
+        )
+        XCTAssertTrue(moreTab.isSelected)
+    }
+
+    @MainActor
     func testRemoveFriendUsesCenteredSharedConfirmation() {
         let app = XCUIApplication()
         app.launchArguments += [
@@ -79,11 +181,13 @@ final class SocialViewEntryUITests: XCTestCase {
         XCTAssertTrue(
             app.descendants(matching: .any)["screen.home"].waitForExistence(timeout: 20)
         )
-        app.buttons["home.menu"].tap()
+        let moreTab = app.buttons.matching(identifier: "tab.more").firstMatch
+        XCTAssertTrue(moreTab.waitForExistence(timeout: 10))
+        moreTab.tap()
         XCTAssertTrue(
-            app.descendants(matching: .any)["screen.menu"].waitForExistence(timeout: 10)
+            app.descendants(matching: .any)["screen.more"].waitForExistence(timeout: 10)
         )
-        let friendManagementButton = app.buttons["친구관리"].firstMatch
+        let friendManagementButton = app.buttons["more.friends"].firstMatch
         XCTAssertTrue(friendManagementButton.waitForExistence(timeout: 10))
         friendManagementButton.tap()
         let socialList = app.descendants(matching: .any)["social.list"]

@@ -293,6 +293,7 @@ export default {
       or: '또는',
     },
     navigation: {
+      back: '뒤로',
       backHome: '홈으로 돌아가기',
     },
     calendar: {
@@ -346,16 +347,9 @@ export default {
       switchToDarkMode: '다크 모드로 전환',
       changeLanguage: '언어 변경',
       languageUpdateFailed: '앱 언어 설정을 저장하지 못했습니다.',
-      menu: '메뉴',
       login: '로그인',
     },
-    logout: {
-      confirmMessage: '정말 로그아웃 하시겠습니까?',
-      confirmTitle: '로그아웃',
-    },
     menu: {
-      home: '홈',
-      myCalendar: '내 달력',
       myTeam: '내 팀',
       friends: '친구 관리',
       todo: '할일',
@@ -369,7 +363,7 @@ export default {
     checkFailed: '세션을 확인하지 못했습니다. 공개 기능은 계속 사용하거나 다시 로그인할 수 있습니다.',
     signIn: '로그인으로 이동',
     logoutUnconfirmedTitle: '서버 로그아웃 확인 실패',
-    logoutUnconfirmed: '이 기기의 로그인 정보는 안전하게 정리했지만 서버 세션이 남아 있을 수 있습니다. 다시 로그인한 뒤 설정 > 접속 세션 관리에서 종료하거나, 로그인된 다른 기기에서 해당 세션을 종료해 주세요.',
+    logoutUnconfirmed: '이 기기의 로그인 정보는 안전하게 정리했지만 서버 세션이 남아 있을 수 있습니다. 다시 로그인한 뒤 내 정보 > 접속 세션 관리에서 종료하거나, 로그인된 다른 기기에서 해당 세션을 종료해 주세요.',
   },
   notifications: {
     common: {
@@ -481,7 +475,10 @@ export default {
     myCalendar: '달력',
     todo: '할일',
     myTeam: '팀',
-    settings: '설정',
+    more: '더보기',
+  },
+  more: {
+    title: '더보기',
   },
   impersonation: {
     messages: {
@@ -812,6 +809,7 @@ export default {
     },
   },
   member: {
+    pageTitle: '내 정보',
     dutyPattern: {
       sectionTitle: '기본 근무 패턴', modalTitle: '기본 근무 패턴 설정', description: '달력을 조회하면 비어 있는 날짜가 반복 요일에 맞춰 자동 등록됩니다. 패턴을 변경하거나 해제하면 오늘 이후 근무는 수동 입력을 포함해 모두 새 규칙에 맞게 초기화됩니다.',
       summary: { edit: '변경', offDay: '휴무', holidayOffBadge: '공휴일 휴무', setupTitle: '아직 기본 근무 패턴이 없어요', setupDescription: '반복되는 근무 요일을 등록하면 달력이 자동으로 채워집니다.', setupAction: '패턴 설정하기' },
@@ -938,6 +936,8 @@ export default {
       ipLabel: 'IP',
       deviceLabel: '기기',
       browserLabel: '브라우저',
+      appLabel: '앱',
+      iosApp: 'iOS 앱',
       manageLabel: '관리',
       current: '현재',
       currentLogin: '현재 접속',

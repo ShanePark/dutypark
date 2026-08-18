@@ -35,6 +35,21 @@ final class TeamParityVisualUITests: XCTestCase {
     }
 
     @MainActor
+    func testCalendarRendersTheFirstWeekOfDayCells() {
+        let app = launchTeamFixture()
+        defer { app.terminate() }
+
+        let now = Calendar.current.dateComponents([.year, .month], from: Date())
+        guard let year = now.year, let month = now.month else {
+            return XCTFail("The current year and month must be resolvable")
+        }
+        for day in 1...7 {
+            let cell = app.buttons["\(year)-\(month)-\(day)"]
+            XCTAssertTrue(cell.waitForExistence(timeout: 10), "Day \(day) must render in the first week row")
+        }
+    }
+
+    @MainActor
     func testScheduledDayDoesNotShowAFalseEmptyMessageWhenShiftsAreEmpty() {
         let app = launchTeamFixture()
         defer { app.terminate() }

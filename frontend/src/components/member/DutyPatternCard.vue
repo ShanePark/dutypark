@@ -391,21 +391,21 @@ onMounted(loadPattern)
       <div class="modal-actions modal-footer-safe sm:px-6 sm:py-6">
         <button
           type="button"
+          :disabled="saving"
+          class="flex-1 px-4 py-3 sm:py-2 min-h-11 rounded-lg font-medium hover-interactive cursor-pointer disabled:opacity-50"
+          :style="{ backgroundColor: 'var(--dp-bg-hover)', color: 'var(--dp-text-primary)' }"
+          @click="closeModal"
+        >
+          {{ t('common.actions.close') }}
+        </button>
+        <button
+          type="button"
           :disabled="saving || assignments.length === 0 || applicationPaused"
           class="flex-1 px-4 py-3 sm:py-2 min-h-11 bg-dp-accent hover:bg-dp-accent-hover rounded-lg text-dp-text-on-dark font-medium transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
           @click="savePattern"
         >
           <Loader2 v-if="saving" class="w-4 h-4 animate-spin" />
           {{ hasPattern ? t('member.dutyPattern.actions.update') : t('member.dutyPattern.actions.save') }}
-        </button>
-        <button
-          type="button"
-          :disabled="saving"
-          class="flex-1 px-4 py-3 sm:py-2 min-h-11 rounded-lg font-medium hover-interactive cursor-pointer disabled:opacity-50"
-          :style="{ backgroundColor: 'var(--dp-bg-hover)', color: 'var(--dp-text-primary)' }"
-          @click="closeModal"
-        >
-          {{ t('common.actions.cancel') }}
         </button>
       </div>
     </BaseModal>

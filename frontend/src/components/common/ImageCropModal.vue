@@ -315,7 +315,7 @@ function maxSizeDefault({ imageSize }: { imageSize: { width: number; height: num
             class="btn-cancel"
             :disabled="isProcessing"
           >
-            {{ t('common.actions.cancel') }}
+            {{ t('common.actions.close') }}
           </button>
           <button
             v-if="hasExistingPhoto"
@@ -609,6 +609,16 @@ function maxSizeDefault({ imageSize }: { imageSize: { width: number; height: num
 .btn-confirm:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Match the shared modal footer sizing: full-width actions below the sm breakpoint. */
+@media (max-width: 639px) {
+  .btn-cancel,
+  .btn-delete,
+  .btn-confirm {
+    flex: 1 1 0;
+    min-width: 0;
+  }
 }
 
 .hidden {

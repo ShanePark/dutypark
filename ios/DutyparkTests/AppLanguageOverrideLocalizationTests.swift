@@ -30,7 +30,21 @@ struct AppLanguageOverrideLocalizationTests {
             #expect(AppTab.calendar.localizedTitle == "달력")
             #expect(AppTab.todo.localizedTitle == "할일")
             #expect(AppTab.team.localizedTitle == "팀")
-            #expect(AppTab.settings.localizedTitle == "설정")
+            #expect(AppTab.more.localizedTitle == "더보기")
+        }
+    }
+
+    @Test
+    func moreMenuTitlesFollowTheAppLanguageOverride() {
+        withKoreanOverride {
+            #expect(MoreMenuItem.visibleItems(isAdmin: true).map(\.title) == [
+                "친구관리",
+                "알림",
+                "관리자",
+                "이용 안내",
+                "설정",
+                "로그아웃",
+            ])
         }
     }
 

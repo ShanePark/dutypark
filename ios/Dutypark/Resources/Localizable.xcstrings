@@ -262,7 +262,23 @@
         }
       }
     },
-    "tab.settings" : {
+    "root.menu.myInfo" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "My info"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 정보"
+          }
+        }
+      }
+    },
+    "root.menu.settings" : {
       "localizations" : {
         "en" : {
           "stringUnit" : {
@@ -274,6 +290,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "설정"
+          }
+        }
+      }
+    },
+    "tab.more" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "More"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "더보기"
           }
         }
       }

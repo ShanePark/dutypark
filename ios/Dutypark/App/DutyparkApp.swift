@@ -18,6 +18,20 @@ nonisolated enum DutyparkLaunchPolicy {
                 )
             )
         }
+        if arguments.contains("-ui-testing-impersonating") {
+            return .authenticated(
+                LoginMember(
+                    id: 2,
+                    email: "managed@duty.park",
+                    name: "Managed",
+                    teamId: nil,
+                    team: nil,
+                    isAdmin: false,
+                    isImpersonating: true,
+                    originalMemberId: 1
+                )
+            )
+        }
         if arguments.contains("-ui-testing-authenticated") {
             return .authenticated(
                 LoginMember(
@@ -38,6 +52,20 @@ nonisolated enum DutyparkLaunchPolicy {
 #endif
         return .restoring
     }
+
+    /// Deterministic impersonation countdown for the UI-test fixture so the banner's
+    /// remaining-time row renders without a live impersonation session.
+    static func initialImpersonationExpiration(
+        arguments: [String],
+        now: Date = .now
+    ) -> Date? {
+#if DEBUG
+        if arguments.contains("-ui-testing-impersonating") {
+            return now.addingTimeInterval(600)
+        }
+#endif
+        return nil
+    }
 }
 
 @main
@@ -48,9 +76,13 @@ struct DutyparkApp: App {
     @AppStorage(SettingsPreference.themeKey) private var themeCode = SettingsPreference.defaultTheme
 
     init() {
-        let initialState = DutyparkLaunchPolicy.initialSessionState(arguments: CommandLine.arguments)
+        let arguments = CommandLine.arguments
+        let initialState = DutyparkLaunchPolicy.initialSessionState(arguments: arguments)
         _session = StateObject(wrappedValue: SessionStore(
             initialState: initialState,
+            impersonationExpiresAt: DutyparkLaunchPolicy.initialImpersonationExpiration(
+                arguments: arguments
+            ),
             unregisterPush: { await APNsRegistrationManager.shared.unregister() }
         ))
     }

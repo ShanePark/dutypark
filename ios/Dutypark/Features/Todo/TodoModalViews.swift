@@ -260,6 +260,7 @@ struct TodoDetailModal: View {
         } footer: {
             footer
         }
+        .accessibilityIdentifier("todo.detail")
         .todoModalErrorAlert(model)
     }
 
@@ -400,18 +401,8 @@ struct TodoDetailModal: View {
     }
 
     private var footer: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: DPSpacing.small) {
-                secondaryActions
-                primaryAction
-            }
-
-            VStack(spacing: DPSpacing.small) {
-                primaryAction
-                HStack(spacing: DPSpacing.small) {
-                    secondaryActions
-                }
-            }
+        HStack(spacing: DPSpacing.small) {
+            secondaryActions
         }
         .padding(DPSpacing.compact)
     }
@@ -444,34 +435,6 @@ struct TodoDetailModal: View {
         }
     }
 
-    private var primaryAction: some View {
-        Button {
-            Task {
-                let succeeded = todo.status == .done
-                    ? await model.reopen(todo)
-                    : await model.complete(todo)
-                if succeeded {
-                    await onTodoChanged()
-                    dismiss()
-                }
-            }
-        } label: {
-            Label(
-                todoLocalized(todo.status == .done ? "todo.action.reopen" : "todo.action.complete"),
-                systemImage: todo.status == .done ? "arrow.uturn.backward" : "checkmark"
-            )
-            .font(DPTypography.label)
-            .lineLimit(1)
-            .minimumScaleFactor(0.75)
-            .foregroundStyle(DPColor.textOnDark)
-            .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)
-            .padding(.horizontal, DPSpacing.small)
-            .background(todo.status == .done ? DPColor.accent : DPColor.success)
-            .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
-        }
-        .buttonStyle(.plain)
-        .disabled(model.isSaving)
-    }
 }
 
 private struct TodoModalBorderedAction: View {
@@ -499,7 +462,7 @@ private struct TodoModalBorderedAction: View {
                 .minimumScaleFactor(0.75)
                 .foregroundStyle(color)
                 .padding(.horizontal, DPSpacing.small)
-                .frame(minHeight: DPSize.minimumTouchTarget)
+                .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)
                 .background(DPColor.backgroundCard)
                 .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
                 .overlay(

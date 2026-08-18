@@ -6,10 +6,10 @@ struct RootChromeLocalizationTests {
     private let korean = Locale(identifier: "ko")
 
     @Test
-    func hamburgerMenuAndNotificationChromeUseTheRequestedLocale() {
-        #expect(RootChromeLocalization.home("home.menu", locale: korean) == "메뉴")
+    func moreMenuAndNotificationChromeUseTheRequestedLocale() {
         #expect(RootChromeLocalization.home("home.friends", locale: korean) == "친구관리")
         #expect(RootChromeLocalization.localizable("root.menu.guide", locale: korean) == "이용 안내")
+        #expect(RootChromeLocalization.localizable("root.menu.settings", locale: korean) == "설정")
         #expect(RootChromeLocalization.notifications("notifications.title", locale: korean) == "알림")
         #expect(RootChromeLocalization.notifications("notifications.common.close", locale: korean) == "알림 닫기")
         #expect(RootChromeLocalization.notifications("notifications.common.loading", locale: korean) == "불러오는 중...")
@@ -18,7 +18,7 @@ struct RootChromeLocalizationTests {
     }
 
     @Test
-    func hamburgerGuideLabelKeepsTheSameEnglishMeaningAsTheWebMenu() {
+    func moreGuideLabelKeepsTheSameEnglishMeaningAsTheWebMenu() {
         #expect(
             RootChromeLocalization.localizable("root.menu.guide", locale: Locale(identifier: "en"))
                 == "Guide"
@@ -26,33 +26,99 @@ struct RootChromeLocalizationTests {
     }
 
     @Test
-    func hamburgerKeepsGlobalActionsAndExcludesDockOnlyDestinations() {
-        #expect(RootHamburgerMenuItem.primaryItems == [
-            .friends,
-            .notifications,
-        ])
-        #expect(RootHamburgerMenuItem.visibleItems(isAdmin: false) == [
+    func moreMenuKeepsGlobalActionsAndExcludesDockDestinations() {
+        #expect(MoreMenuItem.visibleItems(isAdmin: false) == [
             .friends,
             .notifications,
             .guide,
+            .settings,
             .logout,
         ])
-        #expect(RootHamburgerMenuItem.visibleItems(isAdmin: true) == [
+        #expect(MoreMenuItem.visibleItems(isAdmin: true) == [
             .friends,
             .notifications,
             .admin,
             .guide,
+            .settings,
             .logout,
         ])
+        #expect(MoreMenuItem.visibleGroups(isAdmin: true) == [
+            [.friends, .notifications],
+            [.admin, .guide, .settings],
+            [.logout],
+        ])
 
-        let exposedIdentifiers = Set(RootHamburgerMenuItem.allCases.map(\.rawValue))
+        let exposedIdentifiers = Set(MoreMenuItem.allCases.map(\.rawValue))
+        #expect(exposedIdentifiers.isDisjoint(with: AppTab.allCases.map(\.rawValue)))
         #expect(exposedIdentifiers.isDisjoint(with: [
             "home",
             "calendar",
             "todo",
             "team",
-            "settings",
+            "more",
         ]))
+    }
+
+    @Test
+    func moreMenuRowsExposeStableIdentifiers() {
+        #expect(MoreMenuItem.logout.isDestructive)
+        #expect(!MoreMenuItem.settings.isDestructive)
+        #expect(
+            MoreMenuItem.allCases.map(\.accessibilityIdentifier) == [
+                "more.friends",
+                "more.notifications",
+                "more.admin",
+                "more.guide",
+                "more.settings",
+                "more.logout",
+            ]
+        )
+    }
+
+    @Test
+    func myInfoEntryIsLocalizedWithoutBecomingAMenuRow() {
+        #expect(RootChromeLocalization.localizable("root.menu.myInfo", locale: korean) == "내 정보")
+        #expect(
+            RootChromeLocalization.localizable("root.menu.myInfo", locale: Locale(identifier: "en"))
+                == "My info"
+        )
+        // The profile card is the entry point, so the menu must not duplicate it.
+        #expect(!MoreMenuItem.allCases.map(\.rawValue).contains("myInfo"))
+    }
+
+    @Test
+    func profileCardPrefersTheTeamAndFallsBackToTheEmail() {
+        #expect(summary(team: "1팀", email: "member@dutypark.dev").supportingText == "1팀")
+        #expect(summary(team: nil, email: "member@dutypark.dev").supportingText == "member@dutypark.dev")
+        #expect(summary(team: "  ", email: "member@dutypark.dev").supportingText == "member@dutypark.dev")
+        #expect(summary(team: nil, email: nil).supportingText == nil)
+    }
+
+    @Test
+    func profileCardFallsBackToTheScreenTitleWhenTheMemberHasNoName() {
+        #expect(summary(name: "선우").displayName == "선우")
+        #expect(summary(name: "   ").displayName == RootChromeLocalization.localizable("root.menu.myInfo"))
+    }
+
+    private func summary(
+        name: String = "선우",
+        team: String? = nil,
+        email: String? = nil,
+        profilePhotoVersion: Int64 = 0
+    ) -> MoreProfileSummary {
+        MoreProfileSummary(
+            member: LoginMember(
+                id: 7,
+                email: email,
+                name: name,
+                teamId: team == nil ? nil : 3,
+                team: team,
+                isAdmin: false,
+                isImpersonating: false,
+                originalMemberId: nil
+            ),
+            profilePhotoVersion: profilePhotoVersion
+        )
     }
 
     @Test

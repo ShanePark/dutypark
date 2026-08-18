@@ -22,18 +22,18 @@ final class SocialConnectionVisualUITests: XCTestCase {
         XCTAssertTrue(
             app.descendants(matching: .any)["screen.home"].waitForExistence(timeout: 20)
         )
-        let menuButton = app.buttons["home.menu"]
-        XCTAssertTrue(menuButton.waitForExistence(timeout: 10))
-        menuButton.tap()
+        let moreTab = app.buttons.matching(identifier: "tab.more").firstMatch
+        XCTAssertTrue(moreTab.waitForExistence(timeout: 10))
+        moreTab.tap()
         XCTAssertTrue(
-            app.descendants(matching: .any)["screen.menu"].waitForExistence(timeout: 10)
+            app.descendants(matching: .any)["screen.more"].waitForExistence(timeout: 10)
         )
 
-        let settingsTab = app.buttons.matching(identifier: "tab.settings").firstMatch
-        XCTAssertTrue(settingsTab.waitForExistence(timeout: 10))
-        settingsTab.tap()
+        let myInfoRow = app.buttons["more.myInfo"]
+        XCTAssertTrue(myInfoRow.waitForExistence(timeout: 10))
+        myInfoRow.tap()
         XCTAssertTrue(
-            app.descendants(matching: .any)["screen.settings"].waitForExistence(timeout: 10)
+            app.descendants(matching: .any)["screen.myInfo"].waitForExistence(timeout: 10)
         )
 
         let manageKakao = app.buttons["settings.social.manage.kakao"]
@@ -74,6 +74,47 @@ final class SocialConnectionVisualUITests: XCTestCase {
     }
 
     @MainActor
+    func testDisconnectedProviderRowOffersConnectInsteadOfManagement() {
+        let app = XCUIApplication()
+        app.launchArguments += [
+            "-dp-language", "ko",
+            "-dp-theme", "dark",
+            "-AppleLanguages", "(ko)",
+            "-AppleLocale", "ko_KR",
+            "-ui-testing-authenticated",
+        ]
+        app.launch()
+        defer { app.terminate() }
+
+        XCTAssertTrue(
+            app.descendants(matching: .any)["screen.home"].waitForExistence(timeout: 20)
+        )
+        let moreTab = app.buttons.matching(identifier: "tab.more").firstMatch
+        XCTAssertTrue(moreTab.waitForExistence(timeout: 10))
+        moreTab.tap()
+        XCTAssertTrue(
+            app.descendants(matching: .any)["screen.more"].waitForExistence(timeout: 10)
+        )
+
+        let myInfoRow = app.buttons["more.myInfo"]
+        XCTAssertTrue(myInfoRow.waitForExistence(timeout: 10))
+        myInfoRow.tap()
+        XCTAssertTrue(
+            app.descendants(matching: .any)["screen.myInfo"].waitForExistence(timeout: 10)
+        )
+
+        let connectApple = app.buttons["settings.social.connect.apple"]
+        scrollUntilHittable(connectApple, in: app)
+        XCTAssertTrue(connectApple.isHittable)
+        XCTAssertTrue(app.buttons["settings.social.connect.naver"].exists)
+        XCTAssertFalse(app.buttons["settings.social.manage.apple"].exists)
+        XCTAssertFalse(app.buttons["settings.social.manage.naver"].exists)
+        XCTAssertTrue(app.buttons["settings.social.manage.kakao"].exists)
+        XCTAssertFalse(app.buttons["settings.social.connect.kakao"].exists)
+        capture("parity-ios-social-connection-rows-after")
+    }
+
+    @MainActor
     func testAppleUnlinkPanelsExplainAuthorizationRevocation() {
         let app = XCUIApplication()
         app.launchArguments += [
@@ -89,18 +130,18 @@ final class SocialConnectionVisualUITests: XCTestCase {
         XCTAssertTrue(
             app.descendants(matching: .any)["screen.home"].waitForExistence(timeout: 20)
         )
-        let menuButton = app.buttons["home.menu"]
-        XCTAssertTrue(menuButton.waitForExistence(timeout: 10))
-        menuButton.tap()
+        let moreTab = app.buttons.matching(identifier: "tab.more").firstMatch
+        XCTAssertTrue(moreTab.waitForExistence(timeout: 10))
+        moreTab.tap()
         XCTAssertTrue(
-            app.descendants(matching: .any)["screen.menu"].waitForExistence(timeout: 10)
+            app.descendants(matching: .any)["screen.more"].waitForExistence(timeout: 10)
         )
 
-        let settingsTab = app.buttons.matching(identifier: "tab.settings").firstMatch
-        XCTAssertTrue(settingsTab.waitForExistence(timeout: 10))
-        settingsTab.tap()
+        let myInfoRow = app.buttons["more.myInfo"]
+        XCTAssertTrue(myInfoRow.waitForExistence(timeout: 10))
+        myInfoRow.tap()
         XCTAssertTrue(
-            app.descendants(matching: .any)["screen.settings"].waitForExistence(timeout: 10)
+            app.descendants(matching: .any)["screen.myInfo"].waitForExistence(timeout: 10)
         )
 
         let manageApple = app.buttons["settings.social.manage.apple"]

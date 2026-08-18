@@ -291,6 +291,7 @@ export default {
       or: 'or',
     },
     navigation: {
+      back: 'Back',
       backHome: 'Back to home',
     },
     calendar: {
@@ -344,16 +345,9 @@ export default {
       switchToDarkMode: 'Switch to dark mode',
       changeLanguage: 'Change language',
       languageUpdateFailed: 'Failed to update the app language.',
-      menu: 'Menu',
       login: 'Log in',
     },
-    logout: {
-      confirmMessage: 'Are you sure you want to log out?',
-      confirmTitle: 'Log out',
-    },
     menu: {
-      home: 'Home',
-      myCalendar: 'My calendar',
       myTeam: 'My team',
       friends: 'Friends',
       todo: 'To-do',
@@ -367,7 +361,7 @@ export default {
     checkFailed: 'We could not verify your session. You can keep using public features or sign in again.',
     signIn: 'Go to sign in',
     logoutUnconfirmedTitle: 'Server sign-out not confirmed',
-    logoutUnconfirmed: 'This device was signed out safely, but a server session may remain. Sign in again and open Settings > Sessions, or use another signed-in device, to end it.',
+    logoutUnconfirmed: 'This device was signed out safely, but a server session may remain. Sign in again and open My info > Sessions, or use another signed-in device, to end it.',
   },
   notifications: {
     common: {
@@ -479,7 +473,10 @@ export default {
     myCalendar: 'Calendar',
     todo: 'To-do',
     myTeam: 'Team',
-    settings: 'Settings',
+    more: 'More',
+  },
+  more: {
+    title: 'More',
   },
   impersonation: {
     messages: {
@@ -810,6 +807,7 @@ export default {
     },
   },
   member: {
+    pageTitle: 'My info',
     dutyPattern: {
       sectionTitle: 'Default work pattern', modalTitle: 'Set default work pattern', description: 'Opening the calendar automatically saves missing dates from your recurring weekdays. Changing or disabling the pattern resets every duty from today, including manual entries.',
       summary: { edit: 'Edit', offDay: 'Off', holidayOffBadge: 'Holidays off', setupTitle: 'No default work pattern yet', setupDescription: 'Register your recurring workdays and the calendar fills in automatically.', setupAction: 'Set up pattern' },
@@ -935,6 +933,8 @@ export default {
       ipLabel: 'IP',
       deviceLabel: 'Device',
       browserLabel: 'Browser',
+      appLabel: 'App',
+      iosApp: 'iOS App',
       manageLabel: 'Manage',
       current: 'Current',
       currentLogin: 'Current session',

@@ -9,8 +9,10 @@ import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
+import java.time.Clock
 import java.time.DayOfWeek.MONDAY
 import java.time.LocalDate
+import java.time.ZoneId
 
 class DutyTypeServiceIntegrationTest : DutyparkIntegrationTest() {
 
@@ -25,6 +27,9 @@ class DutyTypeServiceIntegrationTest : DutyparkIntegrationTest() {
 
     @Autowired
     private lateinit var dutyResolver: DutyResolver
+
+    @Autowired
+    private lateinit var clock: Clock
 
     @Test
     fun `When DutyType is hidden, related duties are preserved`() {
@@ -73,7 +78,8 @@ class DutyTypeServiceIntegrationTest : DutyparkIntegrationTest() {
     fun `hiding and restoring the sole visible duty type pauses and resumes the pattern`() {
         leaveOnlyFirstDutyTypeVisible()
         dutyPatternService.updateMine(TestData.member.id!!, DutyPatternUpdateDto(setOf(MONDAY), false))
-        val monday = generateSequence(LocalDate.now()) { it.plusDays(1) }.first { it.dayOfWeek == MONDAY }
+        val monday = generateSequence(LocalDate.now(clock.withZone(ZoneId.of("Asia/Seoul")))) { it.plusDays(1) }
+            .first { it.dayOfWeek == MONDAY }
         dutyTypeService.updateVisibility(TestData.dutyTypes.first().id!!, true)
         assertThat(dutyResolver.resolve(TestData.member, monday).source).isEqualTo(DutySource.PATTERN_PAUSED)
         assertThat(dutyPatternService.getMine(TestData.member.id!!).pattern).isNotNull()

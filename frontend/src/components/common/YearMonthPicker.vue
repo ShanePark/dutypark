@@ -92,16 +92,16 @@ function handleGoToThisMonth() {
 
     <div class="modal-actions modal-footer-safe">
       <button
-        @click="handleGoToThisMonth"
-        class="flex-[3] px-3 sm:px-4 py-2 bg-dp-accent hover:bg-dp-accent-hover rounded-lg text-dp-text-on-dark font-medium transition text-sm cursor-pointer"
-      >
-        {{ t('common.calendar.thisMonth', { date: dateFormatter.format(new Date()) }) }}
-      </button>
-      <button
         @click="emit('close')"
         class="close-btn flex-1 px-3 sm:px-4 py-2 rounded-lg font-medium transition text-sm cursor-pointer bg-dp-bg-tertiary text-dp-text-secondary"
       >
         {{ t('common.actions.close') }}
+      </button>
+      <button
+        @click="handleGoToThisMonth"
+        class="flex-[3] px-3 sm:px-4 py-2 bg-dp-accent hover:bg-dp-accent-hover rounded-lg text-dp-text-on-dark font-medium transition text-sm cursor-pointer"
+      >
+        {{ t('common.calendar.thisMonth', { date: dateFormatter.format(new Date()) }) }}
       </button>
     </div>
   </BaseModal>

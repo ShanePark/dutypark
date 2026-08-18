@@ -13,13 +13,19 @@ struct PublicContentFeatureTests {
           "title":"이용 안내","description":"주요 기능 안내","footer":"문의해 주세요.",
           "actions":{"expandAll":"모두 펼치기","collapseAll":"모두 접기"},
           "sections":[{"id":"calendar","title":"내 달력","summary":"일정을 관리합니다.",
-            "cards":[{"id":"schedule","title":"일정 관리","items":["일정을 추가합니다."]}]}]
+            "icon":"calendar","tone":"success",
+            "cards":[{"id":"schedule","title":"일정 관리","icon":"plus","tone":"accent",
+              "items":["일정을 추가합니다."]}]}]
         }
         """#.utf8))
 
         #expect(guide.locale == "ko")
         #expect(guide.actions.expandAll == "모두 펼치기")
         #expect(guide.sections.first?.cards.first?.items == ["일정을 추가합니다."])
+        #expect(guide.sections.first?.icon == "calendar")
+        #expect(guide.sections.first?.tone == "success")
+        #expect(guide.sections.first?.cards.first?.icon == "plus")
+        #expect(guide.sections.first?.cards.first?.tone == "accent")
 
         let page = try JSONDecoder().decode(PublicReleaseNotesPage.self, from: Data(#"""
         {
@@ -224,11 +230,78 @@ struct PublicContentFeatureTests {
 
     @Test("Server identifiers map to native symbols and semantic tones")
     func nativePresentationMapping() {
-        #expect(PublicContentPresentation.guideSection(id: "calendar").symbol == "calendar")
-        #expect(PublicContentPresentation.guideCard(id: "ai").symbol == "sparkles")
+        let section = PublicContentPresentation.guideVisual(icon: "calendar", tone: "success")
+        #expect(section.symbol == "calendar")
+        #expect(section.tone == .success)
+        let card = PublicContentPresentation.guideVisual(icon: "sparkles", tone: "accentLight")
+        #expect(card.symbol == "sparkles")
+        #expect(card.tone == .accentLight)
         #expect(PublicContentPresentation.releaseCategory("security").symbol == "lock.shield")
         #expect(PublicContentPresentation.releaseCategory("fix").tone == .danger)
         #expect(PublicContentPresentation.releaseCategory("future").tone == .neutral)
+    }
+
+    /// The shared vocabulary is the only thing keeping the iOS and web guides visually aligned,
+    /// so every key of both closed sets is asserted here rather than a representative sample.
+    @Test("Every guide vocabulary key resolves to its own native symbol and tone")
+    func guideVocabularyIsComplete() {
+        let symbols: [String: String] = [
+            "home": "house.fill",
+            "calendar": "calendar",
+            "calendarCheck": "calendar.badge.clock",
+            "building": "building.2.fill",
+            "settings": "gearshape.fill",
+            "users": "person.2.fill",
+            "personAdd": "person.badge.plus",
+            "userCog": "person.crop.circle.badge.checkmark",
+            "pencil": "pencil",
+            "spreadsheet": "tablecells",
+            "plus": "plus.circle.fill",
+            "sparkles": "sparkles",
+            "eye": "eye.fill",
+            "checklist": "checklist",
+            "search": "magnifyingglass",
+            "palette": "paintpalette.fill",
+            "sun": "sun.max.fill",
+            "bell": "bell.badge.fill",
+            "pin": "pin.fill",
+            "trash": "trash.fill",
+            "camera": "camera.fill",
+            "shield": "shield.checkered",
+            "phone": "iphone",
+            "link": "link",
+            "lock": "lock.fill",
+        ]
+        #expect(symbols.count == 25)
+        for (key, expected) in symbols {
+            let resolved = PublicContentPresentation.symbol(icon: key)
+            #expect(resolved == expected)
+            #expect(resolved != PublicContentPresentation.fallbackSymbol)
+        }
+        #expect(Set(symbols.values).count == symbols.count)
+
+        let tones: [String: PublicContentTone] = [
+            "accent": .accent,
+            "accentLight": .accentLight,
+            "success": .success,
+            "warning": .warning,
+            "danger": .danger,
+            "neutral": .neutral,
+            "muted": .muted,
+        ]
+        #expect(tones.count == 7)
+        for (key, expected) in tones {
+            #expect(PublicContentPresentation.tone(key) == expected)
+        }
+    }
+
+    @Test("Unknown guide vocabulary keys fall back to the documented symbol and tone")
+    func guideVocabularyFallback() {
+        let unknown = PublicContentPresentation.guideVisual(icon: "rocket", tone: "electric")
+        #expect(unknown.symbol == "book.closed.fill")
+        #expect(unknown.tone == .neutral)
+        #expect(PublicContentPresentation.symbol(icon: "Home") == "book.closed.fill")
+        #expect(PublicContentPresentation.tone("Accent") == .neutral)
     }
 
     private static func guide(locale: String) -> PublicGuideContent {

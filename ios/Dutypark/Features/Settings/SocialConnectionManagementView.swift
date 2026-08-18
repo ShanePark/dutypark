@@ -31,6 +31,17 @@ nonisolated struct SettingsSocialManagementState: Equatable, Sendable {
     }
 }
 
+/// Mirrors the responsive web member page: a connected provider exposes management,
+/// a disconnected provider exposes a direct connect action.
+nonisolated enum SettingsSocialRowAction: Equatable, Sendable {
+    case manage
+    case connect
+
+    static func resolve(isConnected: Bool) -> SettingsSocialRowAction {
+        isConnected ? .manage : .connect
+    }
+}
+
 nonisolated enum SettingsSocialManagementPolicy {
     static func providerName(_ provider: OAuthProvider) -> String {
         switch provider {

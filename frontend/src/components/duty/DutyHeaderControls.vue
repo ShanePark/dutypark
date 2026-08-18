@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Search } from 'lucide-vue-next'
+import { ChevronLeft, Search } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import CalendarMonthNavigator from '@/components/common/CalendarMonthNavigator.vue'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
@@ -13,9 +13,11 @@ const props = defineProps<{
   currentMonth: number
   canSearch: boolean
   searchQuery: string
+  showBack?: boolean
 }>()
 
 const emit = defineEmits<{
+  (e: 'back'): void
   (e: 'prev-month'): void
   (e: 'next-month'): void
   (e: 'open-year-month-picker'): void
@@ -45,8 +47,18 @@ function handleSearchClick() {
   <div class="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center mb-2 px-1 gap-0.5 sm:gap-1">
     <!-- Left: Profile Photo + Name -->
     <div class="flex items-center gap-1.5 min-w-0">
-      <!-- Profile Photo (smaller on mobile) -->
-      <ProfileAvatar :member-id="memberId" :has-profile-photo="memberHasProfilePhoto" :profile-photo-version="memberProfilePhotoVersion" size="md" class="flex-shrink-0 sm:hidden" :name="memberName" />
+      <!-- Back (only when viewing someone else's calendar) -->
+      <button
+        v-if="showBack"
+        type="button"
+        @click="emit('back')"
+        :aria-label="t('common.navigation.back')"
+        class="calendar-nav-btn flex min-h-11 min-w-11 flex-shrink-0 cursor-pointer items-center justify-center rounded-full p-1 sm:p-2"
+      >
+        <ChevronLeft class="h-5 w-5 sm:h-6 sm:w-6" />
+      </button>
+      <!-- Profile Photo (smaller on mobile; dropped when the back button is shown so the name keeps its room) -->
+      <ProfileAvatar v-if="!showBack" :member-id="memberId" :has-profile-photo="memberHasProfilePhoto" :profile-photo-version="memberProfilePhotoVersion" size="md" class="flex-shrink-0 sm:hidden" :name="memberName" />
       <ProfileAvatar :member-id="memberId" :has-profile-photo="memberHasProfilePhoto" :profile-photo-version="memberProfilePhotoVersion" size="xl" class="flex-shrink-0 hidden sm:block" :name="memberName" />
       <!-- Name -->
       <span

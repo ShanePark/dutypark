@@ -7,7 +7,7 @@ import Testing
 struct AppTabTests {
     @Test
     func exposesTheFiveWebNavigationTabsInOrder() {
-        #expect(AppTab.allCases == [.home, .calendar, .todo, .team, .settings])
+        #expect(AppTab.allCases == [.home, .calendar, .todo, .team, .more])
     }
 
     @Test
@@ -46,35 +46,67 @@ struct AppTabTests {
 
         #expect(
             AppTab.allCases.map(\.localizedTitle)
-                == ["홈", "달력", "할일", "팀", "설정"]
+                == ["홈", "달력", "할일", "팀", "더보기"]
         )
     }
 
     @Test
-    func selectingCalendarFromTabBarResetsToMyCalendar() {
-        #expect(
-            RootNavigationPolicy.resetsCalendarTarget(
-                for: .calendar,
-                origin: .tabBar
-            )
-        )
-        #expect(
-            !RootNavigationPolicy.resetsCalendarTarget(
-                for: .calendar,
-                origin: .explicitRoute
-            )
-        )
+    func tappingATabInTheTabBarPopsThatTabToItsRoot() {
+        #expect(RootNavigationPolicy.popsToRoot(origin: .tabBar))
+        // A route that pushed a screen must keep it: it selects the tab itself.
+        #expect(!RootNavigationPolicy.popsToRoot(origin: .explicitRoute))
     }
 
     @Test
-    func selectingOtherTabsDoesNotMutateCalendarTarget() {
-        for tab in AppTab.allCases where tab != .calendar {
-            #expect(
-                !RootNavigationPolicy.resetsCalendarTarget(
-                    for: tab,
-                    origin: .tabBar
-                )
-            )
+    func aMemberCalendarIsPushedOntoTheStackOfTheTabItWasOpenedFrom() {
+        for tab in AppTab.allCases where tab != .todo {
+            #expect(RootNavigationPolicy.memberCalendarHost(for: tab) == tab)
+        }
+        // The todo tab has no member entry point, so a calendar reached from it lands on
+        // the calendar tab, whose root is the member's own calendar.
+        #expect(RootNavigationPolicy.memberCalendarHost(for: .todo) == .calendar)
+    }
+
+    @Test
+    func moreMenuScreensPushOntoTheMoreTabInsteadOfSwitchingTabs() {
+        #expect(RootNavigationPolicy.moreDestination(for: .friends) == .friends)
+        #expect(RootNavigationPolicy.moreDestination(for: .admin) == .admin)
+        #expect(RootNavigationPolicy.moreDestination(for: .guide) == .guide)
+        #expect(RootNavigationPolicy.moreDestination(for: .settings) == .settings)
+        // Presented as an overlay and a confirmation, so neither owns a pushed screen.
+        #expect(RootNavigationPolicy.moreDestination(for: .notifications) == nil)
+        #expect(RootNavigationPolicy.moreDestination(for: .logout) == nil)
+    }
+
+    @Test
+    func onlyNavigationThatAsksForAPolicyPageCarriesASettingsDestination() {
+        #expect(
+            RootNavigationPolicy.settingsDestination(for: .settings, requested: .terms) == .terms
+        )
+        #expect(RootNavigationPolicy.settingsDestination(for: .settings, requested: nil) == nil)
+        // Opening settings from the menu must not re-push a page a deep link asked for.
+        #expect(RootNavigationPolicy.settingsDestination(for: .myInfo, requested: .terms) == nil)
+        #expect(RootNavigationPolicy.settingsDestination(for: .guide, requested: .guide) == nil)
+    }
+
+    @Test
+    func everyTabWithAStackIsPoppedByItsOwnTabBarItem() throws {
+        let rootSource = try String(
+            contentsOf: URL(fileURLWithPath: #filePath)
+                .deletingLastPathComponent()
+                .deletingLastPathComponent()
+                .appending(path: "Dutypark/App/RootTabView.swift"),
+            encoding: .utf8
+        )
+
+        #expect(rootSource.contains("popToRoot(destination, origin: .tabBar)"))
+        for pop in [
+            "case .home:\n            homePath.removeAll()",
+            "case .calendar:\n            calendarPath.removeAll()",
+            "case .team:\n            teamPath.removeAll()",
+            "case .more:\n            morePath.removeAll()",
+        ] {
+            #expect(rootSource.contains(pop), "RootTabView is missing: \(pop)")
         }
     }
 

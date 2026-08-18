@@ -3,6 +3,7 @@ import { ref, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import type { RefreshTokenDto } from '@/types'
 import {
+  AppWindow,
   Clock,
   Monitor,
   Globe,
@@ -10,6 +11,7 @@ import {
   Loader2,
   LogOut,
 } from 'lucide-vue-next'
+import { isAppSession, sessionClientIcon, sessionClientLabelKey, sessionClientName } from './sessionClient'
 
 const props = withDefaults(defineProps<{
   tokens: RefreshTokenDto[]
@@ -164,7 +166,11 @@ function handleDelete(token: RefreshTokenDto) {
               <div class="flex items-center gap-2 text-dp-text-secondary">
                 <component :is="isDesktopDevice(token.userAgent?.device) ? Monitor : Smartphone" class="w-4 h-4 flex-shrink-0 text-dp-text-muted" />
                 <span>{{ token.userAgent?.device || '-' }}</span>
-                <span class="text-dp-text-muted">{{ token.userAgent?.browser || '-' }}</span>
+                <span v-if="isAppSession(token)" class="flex items-center gap-1 text-dp-text-muted">
+                  <AppWindow class="w-4 h-4 flex-shrink-0" />
+                  {{ t('member.sessions.iosApp') }}
+                </span>
+                <span v-else class="text-dp-text-muted">{{ token.userAgent?.browser || '-' }}</span>
               </div>
             </div>
           </div>
@@ -197,7 +203,11 @@ function handleDelete(token: RefreshTokenDto) {
               <component :is="isDesktopDevice(token.userAgent?.device) ? Monitor : Smartphone" class="w-4 h-4 flex-shrink-0 text-dp-text-muted" />
               <span class="truncate">{{ token.userAgent?.device || '-' }}</span>
             </div>
-            <div class="truncate flex items-center text-dp-text-muted">
+            <div v-if="isAppSession(token)" class="truncate flex items-center gap-1 text-dp-text-muted">
+              <AppWindow class="w-4 h-4 flex-shrink-0" />
+              <span class="truncate">{{ t('member.sessions.iosApp') }}</span>
+            </div>
+            <div v-else class="truncate flex items-center text-dp-text-muted">
               {{ token.userAgent?.browser || '-' }}
             </div>
             <div v-if="showDeleteButton" class="flex items-center justify-end">
@@ -268,10 +278,10 @@ function handleDelete(token: RefreshTokenDto) {
                 </span>
               </div>
               <div class="flex items-center gap-2 text-dp-text-secondary">
-                <span class="w-16 text-dp-text-muted">{{ t('member.sessions.browserLabel') }}</span>
+                <span class="w-16 text-dp-text-muted">{{ t(sessionClientLabelKey(token)) }}</span>
                 <span class="flex items-center gap-1">
-                  <Globe class="w-4 h-4 text-dp-text-muted" />
-                  {{ token.userAgent?.browser || '-' }}
+                  <component :is="sessionClientIcon(token)" class="w-4 h-4 text-dp-text-muted" />
+                  {{ sessionClientName(token, t) }}
                 </span>
               </div>
             </div>
@@ -313,8 +323,8 @@ function handleDelete(token: RefreshTokenDto) {
                 </td>
                 <td class="py-3 px-2">
                   <span class="flex items-center gap-1 text-dp-text-primary">
-                    <Globe class="w-4 h-4 text-dp-text-muted" />
-                    {{ token.userAgent?.browser || '-' }}
+                    <component :is="sessionClientIcon(token)" class="w-4 h-4 text-dp-text-muted" />
+                    {{ sessionClientName(token, t) }}
                   </span>
                 </td>
                 <td v-if="showDeleteButton" class="py-3 px-2 text-center">

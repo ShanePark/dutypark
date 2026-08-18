@@ -699,6 +699,27 @@ nonisolated enum TeamManageConfirmationCopy {
     }
 }
 
+private extension View {
+    /// Every team management modal asks the same question before throwing away
+    /// unsaved edits, so the copy and the wiring live in one place.
+    func teamDiscardConfirmation(
+        isPresented: Binding<Bool>,
+        discard: @escaping () -> Void
+    ) -> some View {
+        dpConfirmation(
+            isPresented: isPresented,
+            copy: DPConfirmationCopy(
+                title: teamLocalized("team.modal.discard.title"),
+                message: teamLocalized("team.modal.discard.message"),
+                confirmTitle: teamLocalized("team.modal.discard.action"),
+                cancelTitle: teamLocalized("team.modal.discard.continue"),
+                isDestructive: true
+            ),
+            confirm: { _ in discard() }
+        )
+    }
+}
+
 private struct TeamDutyTypeEditor: View {
     @ObservedObject var viewModel: TeamManageViewModel
     let maximumHeight: CGFloat
@@ -711,6 +732,9 @@ private struct TeamDutyTypeEditor: View {
     @State private var initialName = ""
     @State private var initialColorHex = Color.blue.teamHexRGB
     @State private var showsDiscardConfirmation = false
+    @FocusState private var focusedField: Field?
+
+    private enum Field { case name }
 
     private var trimmedName: String {
         TeamManageModalLogic.normalizedDutyName(name)
@@ -730,7 +754,10 @@ private struct TeamDutyTypeEditor: View {
     }
 
     var body: some View {
-        DPModalPanel(maximumPanelHeight: min(maximumHeight * 0.64, 500)) {
+        DPModalPanel(
+            maximumPanelHeight: min(maximumHeight * 0.64, 500),
+            scrollTarget: focusedField
+        ) {
             teamModalHeader(
                 title: teamLocalized(
                     viewModel.editingDutyType == nil
@@ -781,6 +808,7 @@ private struct TeamDutyTypeEditor: View {
                             )
                     }
                     TextField(teamLocalized("team.dutyType.placeholders.name"), text: $name)
+                        .focused($focusedField, equals: .name)
                         .dpInputChrome(isInvalid: name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
                         .onChange(of: name) { _, newValue in
                             name = String(newValue.prefix(TeamManageModalLogic.maximumDutyNameLength))
@@ -797,6 +825,7 @@ private struct TeamDutyTypeEditor: View {
                         .foregroundStyle(DPColor.danger)
                     }
                 }
+                .id(Field.name)
 
                 VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
                     Text("team.dutyType.fields.color", tableName: "Team")
@@ -834,6 +863,14 @@ private struct TeamDutyTypeEditor: View {
         } footer: {
             HStack(spacing: DPSpacing.small) {
                 Button {
+                    requestDismiss()
+                } label: {
+                    Text(verbatim: teamLocalized("team.common.close"))
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(DPSecondaryButtonStyle())
+                .disabled(isSubmitting || viewModel.isWorking)
+                Button {
                     guard canSave else { return }
                     isSubmitting = true
                     Task {
@@ -848,14 +885,6 @@ private struct TeamDutyTypeEditor: View {
                 }
                 .buttonStyle(DPSuccessButtonStyle())
                 .disabled(!canSave)
-                Button {
-                    requestDismiss()
-                } label: {
-                    Text(verbatim: teamLocalized("team.common.cancel"))
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(DPSecondaryButtonStyle())
-                .disabled(isSubmitting || viewModel.isWorking)
             }
             .padding(DPSpacing.compact)
             .background(DPColor.backgroundFooter)
@@ -874,25 +903,9 @@ private struct TeamDutyTypeEditor: View {
         .onChange(of: isSubmitting) { _, _ in updateInteractionState() }
         .onChange(of: viewModel.isWorking) { _, _ in updateInteractionState() }
         .onChange(of: interaction.dismissRequestSerial) { _, _ in requestDismiss() }
-        .fullScreenCover(isPresented: $showsDiscardConfirmation) {
-            DPModalOverlay(
-                maximumContentWidth: DPConfirmationPanel.maximumWidth,
-                onDismiss: { showsDiscardConfirmation = false }
-            ) { availableSize, confirmationDismiss in
-                DPConfirmationPanel(
-                    title: teamLocalized("team.modal.discard.title"),
-                    message: teamLocalized("team.modal.discard.message"),
-                    confirmTitle: teamLocalized("team.modal.discard.action"),
-                    cancelTitle: teamLocalized("team.modal.discard.continue"),
-                    isDestructive: true,
-                    maximumHeight: availableSize.height,
-                    cancel: confirmationDismiss,
-                    confirm: {
-                        showsDiscardConfirmation = false
-                        dismiss()
-                    }
-                )
-            }
+        .teamDiscardConfirmation(isPresented: $showsDiscardConfirmation) {
+            showsDiscardConfirmation = false
+            dismiss()
         }
     }
 
@@ -923,6 +936,9 @@ private struct TeamMemberSearchView: View {
     @State private var candidateToAdd: MemberInviteCandidateDTO?
     @State private var candidateSubmissionIsWorking = false
     @State private var didLoadInitialResults = false
+    @FocusState private var focusedField: Field?
+
+    private enum Field { case keyword }
 
     init(
         teamID: TeamID,
@@ -1005,7 +1021,7 @@ private struct TeamMemberSearchView: View {
     }
 
     private var searchPanel: some View {
-        DPModalPanel(maximumPanelHeight: maximumHeight) {
+        DPModalPanel(maximumPanelHeight: maximumHeight, scrollTarget: focusedField) {
             teamModalHeader(
                 title: teamLocalized("team.memberSearch.title"),
                 isWorking: viewModel.isWorking,
@@ -1020,6 +1036,7 @@ private struct TeamMemberSearchView: View {
                     )
                     .textInputAutocapitalization(.never)
                     .submitLabel(.search)
+                    .focused($focusedField, equals: .keyword)
                     .dpInputChrome()
                     .onSubmit { Task { await viewModel.search(resetPage: true) } }
 
@@ -1036,6 +1053,7 @@ private struct TeamMemberSearchView: View {
                     .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
                     .accessibilityLabel(Text("team.memberSearch.searchPlaceholder", tableName: "Team"))
                 }
+                .id(Field.keyword)
 
                 VStack(spacing: DPSpacing.small) {
                     ForEach(Array(viewModel.results.enumerated()), id: \.offset) { index, member in
@@ -1094,11 +1112,11 @@ private struct TeamMemberSearchView: View {
             .padding(DPSpacing.medium)
         } footer: {
             HStack(spacing: DPSpacing.small) {
-                Spacer()
                 Button {
                     dismiss()
                 } label: {
-                    Text(verbatim: teamLocalized("team.common.cancel"))
+                    Text(verbatim: teamLocalized("team.common.close"))
+                        .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(DPSecondaryButtonStyle())
                 .disabled(viewModel.isWorking)
@@ -1279,6 +1297,14 @@ private struct TeamBatchUploadView: View {
         } footer: {
             HStack(spacing: DPSpacing.small) {
                 Button {
+                    requestDismiss()
+                } label: {
+                    Text(verbatim: teamLocalized("team.common.close"))
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(DPSecondaryButtonStyle())
+                .disabled(viewModel.isWorking)
+                Button {
                     guard let fileURL,
                           TeamFeatureLogic.isValidDutyBatchYear(year, currentYear: currentYear)
                     else { return }
@@ -1302,14 +1328,6 @@ private struct TeamBatchUploadView: View {
                         || !TeamFeatureLogic.isValidDutyBatchYear(year, currentYear: currentYear)
                         || viewModel.isWorking
                 )
-                Button {
-                    requestDismiss()
-                } label: {
-                    Text(verbatim: teamLocalized("team.common.cancel"))
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(DPSecondaryButtonStyle())
-                .disabled(viewModel.isWorking)
             }
             .padding(DPSpacing.compact)
             .background(DPColor.backgroundFooter)
@@ -1333,25 +1351,9 @@ private struct TeamBatchUploadView: View {
         .onChange(of: fileURL) { _, _ in updateInteractionState() }
         .onChange(of: viewModel.isWorking) { _, _ in updateInteractionState() }
         .onChange(of: interaction.dismissRequestSerial) { _, _ in requestDismiss() }
-        .fullScreenCover(isPresented: $showsDiscardConfirmation) {
-            DPModalOverlay(
-                maximumContentWidth: DPConfirmationPanel.maximumWidth,
-                onDismiss: { showsDiscardConfirmation = false }
-            ) { availableSize, confirmationDismiss in
-                DPConfirmationPanel(
-                    title: teamLocalized("team.modal.discard.title"),
-                    message: teamLocalized("team.modal.discard.message"),
-                    confirmTitle: teamLocalized("team.modal.discard.action"),
-                    cancelTitle: teamLocalized("team.modal.discard.continue"),
-                    isDestructive: true,
-                    maximumHeight: availableSize.height,
-                    cancel: confirmationDismiss,
-                    confirm: {
-                        showsDiscardConfirmation = false
-                        dismiss()
-                    }
-                )
-            }
+        .teamDiscardConfirmation(isPresented: $showsDiscardConfirmation) {
+            showsDiscardConfirmation = false
+            dismiss()
         }
     }
 

@@ -128,12 +128,18 @@ nonisolated enum LaunchSplashPresentation {
     static let assetName = "LaunchSplash"
 }
 
-private struct LaunchSplashView: View {
+struct LaunchSplashView: View {
     var body: some View {
-        Image(LaunchSplashPresentation.assetName)
-            .resizable()
-            .scaledToFill()
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        // `Color.clear` pins the layout to the proposed screen size so the aspect-filled
+        // artwork overflows symmetrically. Sizing the image itself would make this view
+        // wider than the screen, and the window would pin it to the leading edge, shifting
+        // the artwork sideways as the launch storyboard hands off to SwiftUI.
+        Color.clear
+            .overlay {
+                Image(LaunchSplashPresentation.assetName)
+                    .resizable()
+                    .scaledToFill()
+            }
             .clipped()
             .ignoresSafeArea()
     }

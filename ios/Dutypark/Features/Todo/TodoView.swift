@@ -10,8 +10,10 @@ enum TodoBoardLayout {
     static let columnGap: CGFloat = 10
     static let columnRadius: CGFloat = 12
     static let cardRadius: CGFloat = 14
-    static let dragLongPressDuration = 0.35
-    static let dragLongPressMaximumDistance: CGFloat = 10
+    /// Shared with the press progress ring so the gauge empties exactly when the
+    /// card lifts instead of counting down its own copy of the threshold.
+    static let dragLongPressDuration: TimeInterval = DPDragActivation.pressDuration
+    static let dragLongPressMaximumDistance: CGFloat = DPDragActivation.maximumPressMovement
     static let dragCollisionHysteresis: CGFloat = 2
     static let dragPushAnimationDuration = 0.1
 
@@ -67,6 +69,12 @@ enum TodoFormDismissalPolicy {
     static func action(isDirty: Bool, isBusy: Bool) -> TodoFormDismissalAction {
         guard !isBusy else { return .ignore }
         return isDirty ? .confirmDiscard : .dismiss
+    }
+}
+
+nonisolated enum TodoFormStatusSelectionPolicy {
+    static func isVisible(targetTodoID: String?) -> Bool {
+        targetTodoID == nil
     }
 }
 
@@ -127,6 +135,7 @@ struct TodoView: View {
     @State private var detailDismissRequest = 0
     @State private var visibleStatus: TodoStatus?
     @State private var draggedTodoID: TodoID?
+    @State private var pressedTodoID: TodoID?
     @State private var dragTargetStatus: TodoStatus?
     @State private var dragTargetTodoID: TodoID?
     @State private var dragInsertAfter = false
@@ -165,6 +174,8 @@ struct TodoView: View {
         .onPreferenceChange(TodoCardDropTargetPreferenceKey.self) { cardDropTargets = $0 }
         .onPreferenceChange(TodoColumnDropTargetPreferenceKey.self) { columnDropTargets = $0 }
         .onPreferenceChange(TodoStatusDropTargetPreferenceKey.self) { statusDropTargets = $0 }
+        .dpDragFeedback(dragID: draggedTodoID)
+        .dpDragRetargetFeedback(target: retargetDropSlot)
         .overlay {
             if let draggedTodoID,
                let dragLocation,
@@ -370,14 +381,14 @@ struct TodoView: View {
             clearInteractiveDrag()
             return
         }
-        let placement = destinationStatus == todo.status
-            ? TodoDragPlacement(
-                todoID: todo.uuid,
-                destinationStatus: destinationStatus,
-                targetTodoID: targetTodoID,
-                insertAfter: insertAfter
-            )
-            : nil
+        // The same placement the drag was already rendering, so swapping the live
+        // projection for the committed one on lift changes nothing on screen.
+        let placement = TodoDragPlacement(
+            todoID: todo.uuid,
+            destinationStatus: destinationStatus,
+            targetTodoID: targetTodoID,
+            insertAfter: insertAfter
+        )
         handleDrop(
             todoID: todo.uuid,
             destinationStatus: destinationStatus,
@@ -385,6 +396,18 @@ struct TodoView: View {
             insertAfter: insertAfter,
             visualPlacement: placement
         )
+    }
+
+    private func beginPress(on todo: TodoDTO) {
+        pressedTodoID = todo.uuid
+    }
+
+    private func endPress(on todo: TodoDTO) {
+        // A card's ending can arrive after the next card's press has begun — a
+        // finger that slides straight from one card to another reports that way.
+        // Only the card the ring is currently counting down for may clear it.
+        guard pressedTodoID == todo.uuid else { return }
+        pressedTodoID = nil
     }
 
     private func clearInteractiveDrag() {
@@ -486,6 +509,7 @@ struct TodoView: View {
                                     todos: displayedTodos(for: status),
                                     width: columnWidth,
                                     draggedTodoID: draggedTodoID,
+                                    pressedTodoID: pressedTodoID,
                                     dragTargetStatus: dragTargetStatus,
                                     dragTargetTodoID: dragTargetTodoID,
                                     dragInsertAfter: dragInsertAfter,
@@ -509,6 +533,8 @@ struct TodoView: View {
                                     updateDrag: updateInteractiveDrag,
                                     finishDrag: finishInteractiveDrag,
                                     cancelDrag: clearInteractiveDrag,
+                                    pressBegan: beginPress,
+                                    pressEnded: endPress,
                                     drop: { todoID, destinationStatus, targetTodoID, insertAfter in
                                         handleDrop(
                                             todoID: todoID,
@@ -544,12 +570,39 @@ struct TodoView: View {
         }
     }
 
+    /// The drop target resolved from the current gesture sample, expressed as the
+    /// placement the drop would commit. Rendering it makes the neighbouring cards
+    /// step aside live and turns the hidden dragged row into a moving placeholder.
+    private var inlineDropPlacement: TodoDragPlacement? {
+        guard let draggedTodoID, let dragTargetStatus else { return nil }
+        return TodoDragPlacement(
+            todoID: draggedTodoID,
+            destinationStatus: dragTargetStatus,
+            targetTodoID: dragTargetTodoID,
+            insertAfter: dragInsertAfter
+        )
+    }
+
+    /// The slot the drop would land in right now, which is what the retarget tick
+    /// counts. It shares the drag state with `inlineDropPlacement` but drops the
+    /// moving card from it: the finger feels where it is pointing, and the card it
+    /// is carrying never changes mid-drag.
+    private var retargetDropSlot: TodoDropSlot? {
+        TodoDropSlot.resolved(
+            draggedTodoID: draggedTodoID,
+            targetStatus: dragTargetStatus,
+            targetTodoID: dragTargetTodoID,
+            insertAfter: dragInsertAfter
+        )
+    }
+
     private func displayedTodos(for status: TodoStatus) -> [TodoDTO] {
         let columns = Dictionary(
             uniqueKeysWithValues: TodoStatus.boardStatuses.map { ($0, model.todos(for: $0)) }
         )
         return TodoDragPresentation.columns(
             from: columns,
+            interactivePlacement: inlineDropPlacement,
             pendingDropPlacement: pendingDropPlacement
         )[status] ?? []
     }
@@ -561,6 +614,7 @@ private struct TodoKanbanColumn: View {
     let todos: [TodoDTO]
     let width: CGFloat
     let draggedTodoID: TodoID?
+    let pressedTodoID: TodoID?
     let dragTargetStatus: TodoStatus?
     let dragTargetTodoID: TodoID?
     let dragInsertAfter: Bool
@@ -571,6 +625,8 @@ private struct TodoKanbanColumn: View {
     let updateDrag: (TodoDTO, CGPoint) -> Void
     let finishDrag: (TodoDTO) -> Void
     let cancelDrag: () -> Void
+    let pressBegan: (TodoDTO) -> Void
+    let pressEnded: (TodoDTO) -> Void
     let drop: (TodoID, TodoStatus, TodoID?, Bool) -> Void
 
     var body: some View {
@@ -637,6 +693,8 @@ private struct TodoKanbanColumn: View {
                             TodoCard(
                                 todo: todo,
                                 status: status,
+                                isDragging: draggedTodoID == todo.uuid,
+                                isPressing: pressedTodoID == todo.uuid,
                                 canMoveUp: index > 0,
                                 canMoveDown: index < todos.count - 1,
                                 open: { open(todo) },
@@ -650,9 +708,15 @@ private struct TodoKanbanColumn: View {
                                     : nil,
                                 updateDrag: { location in updateDrag(todo, location) },
                                 finishDrag: { finishDrag(todo) },
-                                cancelDrag: cancelDrag
+                                cancelDrag: cancelDrag,
+                                pressBegan: { pressBegan(todo) },
+                                pressEnded: { pressEnded(todo) }
                             )
-                            .opacity(draggedTodoID == todo.uuid ? 0 : 1)
+                            .dpDragSourceSlot(
+                                isLifted: draggedTodoID == todo.uuid,
+                                tint: status.color,
+                                cornerRadius: TodoBoardLayout.cardRadius
+                            )
                         }
                     }
 
@@ -708,6 +772,8 @@ private struct TodoCard: View {
 
     let todo: TodoDTO
     let status: TodoStatus
+    let isDragging: Bool
+    let isPressing: Bool
     let canMoveUp: Bool
     let canMoveDown: Bool
     let open: () -> Void
@@ -718,6 +784,8 @@ private struct TodoCard: View {
     let updateDrag: (CGPoint) -> Void
     let finishDrag: () -> Void
     let cancelDrag: () -> Void
+    let pressBegan: () -> Void
+    let pressEnded: () -> Void
     var measuresDropTarget = true
 
     var body: some View {
@@ -798,8 +866,11 @@ private struct TodoCard: View {
             handleTap: handleTap,
             updateDrag: updateDrag,
             finishDrag: finishDrag,
-            cancelDrag: cancelDrag
+            cancelDrag: cancelDrag,
+            onPressBegan: pressBegan,
+            onPressEnded: pressEnded
         ))
+        .dpPressProgress(isPressing: isPressing, isDragging: isDragging, tint: status.color)
         .overlay(
             ZStack {
                 RoundedRectangle(cornerRadius: TodoBoardLayout.cardRadius)
@@ -867,6 +938,11 @@ private struct TodoCardGestureModifier: ViewModifier {
     let updateDrag: (CGPoint) -> Void
     let finishDrag: () -> Void
     let cancelDrag: () -> Void
+    /// Touch down and its ending, which is what the press progress ring counts
+    /// down. Reported by the reorder gesture itself so no second gesture has to be
+    /// layered on the card to notice the finger.
+    let onPressBegan: () -> Void
+    let onPressEnded: () -> Void
 
     @ViewBuilder
     func body(content: Content) -> some View {
@@ -887,6 +963,8 @@ private struct TodoCardGestureModifier: ViewModifier {
             minimumDuration: TodoBoardLayout.dragLongPressDuration,
             maximumMovement: TodoBoardLayout.dragLongPressMaximumDistance,
             coordinateSpaceName: TodoDragCoordinateSpace.name,
+            onPressBegan: onPressBegan,
+            onPressEnded: onPressEnded,
             onBegan: { location in
                 suppressTapAfterLongPress = true
                 updateDrag(location)
@@ -913,6 +991,10 @@ private struct TodoCardGestureModifier: ViewModifier {
             coordinateSpace: .named(TodoDragCoordinateSpace.name)
         ))
         .onChanged { phase in
+            if case .first(true) = phase {
+                onPressBegan()
+                return
+            }
             guard case let .second(didLongPress, dragValue) = phase,
                   TodoCardDragActivation.shouldReorder(
                       didLongPress: didLongPress,
@@ -922,6 +1004,7 @@ private struct TodoCardGestureModifier: ViewModifier {
             updateDrag(dragValue.location)
         }
         .onEnded { phase in
+            onPressEnded()
             guard case let .second(didLongPress, dragValue) = phase,
                   TodoCardDragActivation.shouldReorder(
                       didLongPress: didLongPress,
@@ -972,6 +1055,10 @@ private struct TodoDragPreview: View {
         TodoCard(
             todo: todo,
             status: status,
+            // This copy is the held card itself, so it is past the countdown the
+            // ring shows: it is already dragging, and never pressing.
+            isDragging: true,
+            isPressing: false,
             canMoveUp: false,
             canMoveDown: false,
             open: {},
@@ -982,14 +1069,12 @@ private struct TodoDragPreview: View {
             updateDrag: { _ in },
             finishDrag: {},
             cancelDrag: {},
+            pressBegan: {},
+            pressEnded: {},
             measuresDropTarget: false
         )
         .frame(width: size.width, height: size.height)
-        .overlay(
-            RoundedRectangle(cornerRadius: TodoBoardLayout.cardRadius)
-                .stroke(status.color, lineWidth: 2)
-        )
-        .shadow(color: .black.opacity(0.18), radius: 12, y: 6)
+        .dpDragLift(tint: status.color, cornerRadius: TodoBoardLayout.cardRadius)
     }
 }
 
@@ -1000,33 +1085,68 @@ struct TodoDragPlacement: Equatable {
     let insertAfter: Bool
 }
 
+/// Where the card under the finger would land, as the drag haptic sees it.
+nonisolated struct TodoDropSlot: Equatable, Sendable {
+    let status: TodoStatus
+    let targetTodoID: TodoID?
+    let insertAfter: Bool
+
+    /// `nil` whenever no drop is on offer — nothing held, or the finger outside
+    /// every column — which is what leaves the edges of a drag to the lift and
+    /// drop haptics and keeps the tick for genuine crossings between slots.
+    static func resolved(
+        draggedTodoID: TodoID?,
+        targetStatus: TodoStatus?,
+        targetTodoID: TodoID?,
+        insertAfter: Bool
+    ) -> TodoDropSlot? {
+        guard draggedTodoID != nil, let targetStatus else { return nil }
+        return TodoDropSlot(
+            status: targetStatus,
+            targetTodoID: targetTodoID,
+            insertAfter: insertAfter
+        )
+    }
+}
+
 enum TodoDragPresentation {
+    /// The board follows the finger: while a card is held the live interactive
+    /// placement drives the layout, and the committed placement takes over for
+    /// the frames between the lift and the model update. Both project the same
+    /// board at the hand-off, so the card never jumps on drop.
     static func columns(
         from columns: [TodoStatus: [TodoDTO]],
+        interactivePlacement: TodoDragPlacement? = nil,
         pendingDropPlacement: TodoDragPlacement?
     ) -> [TodoStatus: [TodoDTO]] {
         TodoDragProjection.columns(
-            projecting: pendingDropPlacement,
+            projecting: interactivePlacement ?? pendingDropPlacement,
             from: columns
         )
     }
 }
 
 enum TodoDragProjection {
+    /// Mirrors `TodoViewModel.drop` so the projected board is exactly the board
+    /// the drop will commit. The moving card is looked up in whichever column
+    /// currently holds it, which is what lets the same projection drive both a
+    /// same-column reorder and a cross-column preview.
     static func columns(
         projecting placement: TodoDragPlacement?,
         from columns: [TodoStatus: [TodoDTO]]
     ) -> [TodoStatus: [TodoDTO]] {
-        guard let placement else { return columns }
-
-        var result = columns
-        guard let sourceItems = result[placement.destinationStatus],
-              let movingTodo = sourceItems.first(where: { $0.uuid == placement.todoID }) else {
+        guard let placement, placement.targetTodoID != placement.todoID else { return columns }
+        guard let sourceStatus = TodoStatus.boardStatuses.first(where: { status in
+            columns[status]?.contains { $0.uuid == placement.todoID } == true
+        }),
+            let movingTodo = columns[sourceStatus]?.first(where: { $0.uuid == placement.todoID }),
+            columns[placement.destinationStatus] != nil else {
             return columns
         }
 
-        var destination = sourceItems
-        destination.removeAll { $0.uuid == placement.todoID }
+        var result = columns
+        result[sourceStatus]?.removeAll { $0.uuid == placement.todoID }
+        var destination = result[placement.destinationStatus] ?? []
         let insertionIndex: Int
         if let targetTodoID = placement.targetTodoID,
            let targetIndex = destination.firstIndex(where: { $0.uuid == targetTodoID }) {
@@ -1034,7 +1154,7 @@ enum TodoDragProjection {
         } else {
             insertionIndex = destination.endIndex
         }
-        destination.insert(movingTodo, at: min(insertionIndex, destination.endIndex))
+        destination.insert(movingTodo, at: min(max(0, insertionIndex), destination.endIndex))
         result[placement.destinationStatus] = destination
         return result
     }
@@ -1244,10 +1364,8 @@ nonisolated enum TodoFriendTagAdapter {
 
 struct TodoFormSheet: View {
     let titleKey: String
-    let initialDraft: TodoDraft
     let friends: [FriendDTO]
     let preservedTags: [MemberPreviewDTO]
-    let initialAttachmentIDs: [AttachmentID]
     let isSaving: Bool
     let maximumHeight: CGFloat?
     let dismissAction: (() -> Void)?
@@ -1255,11 +1373,18 @@ struct TodoFormSheet: View {
     let dismissRequest: Int
     let onBusyChange: (Bool) -> Void
     let save: (TodoDraft) async -> Bool
+    let showsStatusSelection: Bool
 
     @ObservedObject var model: TodoViewModel
 
     @Environment(\.dismiss) private var dismiss
     @State private var draft: TodoDraft
+    /// The dismissal baseline is pinned to the same snapshot that seeded `draft` and
+    /// `attachmentModel`. Presenters rebuild `initialDraft` on every render, so reading it
+    /// directly would let an unrelated re-render redefine "unchanged" and mark an untouched
+    /// form dirty.
+    @State private var baselineDraft: TodoDraft
+    @State private var baselineAttachmentIDs: [AttachmentID]
     @State private var didSave = false
     @State private var showsDiscardConfirmation = false
     @State private var isDiscarding = false
@@ -1267,6 +1392,7 @@ struct TodoFormSheet: View {
     @State private var isSubmitting = false
     @StateObject private var attachmentModel: AttachmentPickerModel
     @FocusState private var focusedField: TodoFormField?
+    @State private var isTagSearchFocused = false
 
     init(
         titleKey: String,
@@ -1285,10 +1411,8 @@ struct TodoFormSheet: View {
         save: @escaping (TodoDraft) async -> Bool
     ) {
         self.titleKey = titleKey
-        self.initialDraft = initialDraft
         self.friends = friends
         self.preservedTags = preservedTags
-        self.initialAttachmentIDs = existingAttachments.map(\.id)
         self.model = model
         self.isSaving = isSaving
         self.maximumHeight = maximumHeight
@@ -1297,7 +1421,12 @@ struct TodoFormSheet: View {
         self.dismissRequest = dismissRequest
         self.onBusyChange = onBusyChange
         self.save = save
+        self.showsStatusSelection = TodoFormStatusSelectionPolicy.isVisible(
+            targetTodoID: targetTodoID
+        )
         _draft = State(initialValue: initialDraft)
+        _baselineDraft = State(initialValue: initialDraft)
+        _baselineAttachmentIDs = State(initialValue: existingAttachments.map(\.id))
         _attachmentModel = StateObject(
             wrappedValue: AttachmentPickerModel(
                 contextType: .todo,
@@ -1313,8 +1442,17 @@ struct TodoFormSheet: View {
         min(maximumHeight.map { $0 * TodoModalLayout.maximumPanelHeightRatio } ?? .infinity, 786)
     }
 
+    /// The tag search field belongs to `DPFriendTagSelector`, so it never appears in
+    /// `focusedField`; fall back to it only when no field of this sheet holds focus.
+    private var scrollTarget: TodoFormField? {
+        focusedField ?? (isTagSearchFocused ? .tags : nil)
+    }
+
     var body: some View {
-        DPModalPanel(maximumPanelHeight: maximumPanelHeight) {
+        DPModalPanel(
+            maximumPanelHeight: maximumPanelHeight,
+            scrollTarget: scrollTarget
+        ) {
             formHeader
         } content: {
             formContent
@@ -1382,31 +1520,33 @@ struct TodoFormSheet: View {
 
     private var formContent: some View {
         VStack(alignment: .leading, spacing: DPSpacing.large) {
-            TodoFormSection(title: todoLocalized("todo.field.status")) {
-                HStack(spacing: DPSpacing.small) {
-                    ForEach(TodoStatus.boardStatuses, id: \.rawValue) { status in
-                        Button {
-                            draft.status = status
-                        } label: {
-                            VStack(spacing: 6) {
-                                Image(systemName: status.systemImage)
-                                    .font(.system(size: 16, weight: .semibold))
-                                Text(todoLocalized(status.shortTitleKey))
-                                    .font(DPTypography.caption)
-                                    .lineLimit(1)
+            if showsStatusSelection {
+                TodoFormSection(title: todoLocalized("todo.field.status")) {
+                    HStack(spacing: DPSpacing.small) {
+                        ForEach(TodoStatus.boardStatuses, id: \.rawValue) { status in
+                            Button {
+                                draft.status = status
+                            } label: {
+                                VStack(spacing: 6) {
+                                    Image(systemName: status.systemImage)
+                                        .font(.system(size: 16, weight: .semibold))
+                                    Text(todoLocalized(status.shortTitleKey))
+                                        .font(DPTypography.caption)
+                                        .lineLimit(1)
+                                }
+                                .foregroundStyle(status.color)
+                                .frame(maxWidth: .infinity, minHeight: 62)
+                                .background(status.softColor)
+                                .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: DPRadius.standard)
+                                        .stroke(draft.status == status ? status.color : Color.clear, lineWidth: 2)
+                                )
                             }
-                            .foregroundStyle(status.color)
-                            .frame(maxWidth: .infinity, minHeight: 62)
-                            .background(status.softColor)
-                            .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
-                            .overlay(
-                                RoundedRectangle(cornerRadius: DPRadius.standard)
-                                    .stroke(draft.status == status ? status.color : Color.clear, lineWidth: 2)
-                            )
+                            .buttonStyle(.plain)
+                            .accessibilityAddTraits(draft.status == status ? .isSelected : [])
+                            .accessibilityIdentifier("todo.form.status.\(status.rawValue.lowercased())")
                         }
-                        .buttonStyle(.plain)
-                        .accessibilityAddTraits(draft.status == status ? .isSelected : [])
-                        .accessibilityIdentifier("todo.form.status.\(status.rawValue.lowercased())")
                     }
                 }
             }
@@ -1425,6 +1565,7 @@ struct TodoFormSheet: View {
                     .foregroundStyle(draft.title.count > 50 ? DPColor.danger : DPColor.textMuted)
                     .frame(maxWidth: .infinity, alignment: .trailing)
             }
+            .id(TodoFormField.title)
 
             TodoFormSection(title: todoLocalized("todo.field.content")) {
                 TextEditor(text: $draft.content)
@@ -1445,6 +1586,7 @@ struct TodoFormSheet: View {
                         }
                     }
             }
+            .id(TodoFormField.content)
 
             TodoFormSection(title: todoLocalized("todo.field.dueDate")) {
                 Toggle(isOn: $draft.hasDueDate) {
@@ -1472,9 +1614,11 @@ struct TodoFormSheet: View {
                         items: friends.map(TodoFriendTagAdapter.item),
                         preservedItems: preservedTags.compactMap(TodoFriendTagAdapter.item),
                         selection: $draft.taggedFriendIDs,
-                        disabled: isBusy
+                        disabled: isBusy,
+                        isSearchFocused: $isTagSearchFocused
                     )
                 }
+                .id(TodoFormField.tags)
             }
 
             TodoFormSection(title: todoLocalized("todo.label.attachments")) {
@@ -1492,7 +1636,7 @@ struct TodoFormSheet: View {
             Button {
                 requestDismissal()
             } label: {
-                Text(todoLocalized("common.cancel"))
+                Text(todoLocalized("common.close"))
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(DPOutlineButtonStyle())
@@ -1584,9 +1728,9 @@ struct TodoFormSheet: View {
 
     private var isDirty: Bool {
         !didSave && TodoFormDismissalPolicy.isDirty(
-            initialDraft: initialDraft,
+            initialDraft: baselineDraft,
             draft: draft,
-            initialAttachmentIDs: initialAttachmentIDs,
+            initialAttachmentIDs: baselineAttachmentIDs,
             attachmentIDs: attachmentModel.attachments.map(\.id),
             hasAttachmentSession: attachmentModel.attachmentSessionId != nil
         )
@@ -1617,9 +1761,10 @@ struct TodoFormSheet: View {
     }
 }
 
-private enum TodoFormField {
+private enum TodoFormField: Hashable {
     case title
     case content
+    case tags
 }
 
 private struct TodoFormSection<Content: View>: View {

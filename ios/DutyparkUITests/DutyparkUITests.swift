@@ -22,7 +22,7 @@ final class DutyparkUITests: XCTestCase {
             (tab: "tab.calendar", screen: "screen.calendar"),
             (tab: "tab.todo", screen: "screen.todo"),
             (tab: "tab.team", screen: "screen.team"),
-            (tab: "tab.settings", screen: "screen.settings")
+            (tab: "tab.more", screen: "screen.more")
         ]
 
         for destination in destinations {
@@ -103,10 +103,6 @@ final class DutyparkUITests: XCTestCase {
         let notificationBell = app.buttons["notifications.bell"]
         XCTAssertTrue(notificationBell.waitForExistence(timeout: 10))
         assertMinimumTouchTarget(notificationBell)
-
-        let homeMenu = app.buttons["home.menu"]
-        XCTAssertTrue(homeMenu.waitForExistence(timeout: 10))
-        assertMinimumTouchTarget(homeMenu)
 
         primaryTab("tab.todo", in: app).tap()
         let todoAdd = app.buttons["todo.add"]
@@ -323,10 +319,17 @@ final class DutyparkUITests: XCTestCase {
                 XCTAssertTrue(homeTab.isHittable)
                 assertMinimumTouchTarget(homeTab)
 
-                let settingsTab = primaryTab("tab.settings", in: app, timeout: 20)
-                XCTAssertTrue(settingsTab.isHittable)
-                assertMinimumTouchTarget(settingsTab)
-                settingsTab.tap()
+                let moreTab = primaryTab("tab.more", in: app, timeout: 20)
+                XCTAssertTrue(moreTab.isHittable)
+                assertMinimumTouchTarget(moreTab)
+                moreTab.tap()
+                XCTAssertTrue(
+                    app.descendants(matching: .any)["screen.more"].waitForExistence(timeout: 10)
+                )
+
+                let settingsRow = app.buttons["more.settings"]
+                XCTAssertTrue(settingsRow.waitForExistence(timeout: 10))
+                settingsRow.tap()
                 XCTAssertTrue(
                     app.descendants(matching: .any)["screen.settings"].waitForExistence(timeout: 10)
                 )

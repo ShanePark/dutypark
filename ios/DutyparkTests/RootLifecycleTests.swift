@@ -294,6 +294,32 @@ struct RootLifecycleTests {
         #expect(member.id == 1)
         #expect(member.email == "test@duty.park")
     }
+
+    @Test
+    func launchArgumentsProvideDeterministicImpersonationFixture() {
+        let arguments = ["-ui-testing-authenticated", "-ui-testing-impersonating"]
+        guard case .authenticated(let member) = DutyparkLaunchPolicy.initialSessionState(
+            arguments: arguments
+        ) else {
+            Issue.record("Expected authenticated UI-test state")
+            return
+        }
+        #expect(member.isImpersonating)
+        #expect(member.originalMemberId == 1)
+        #expect(member.id == 2)
+
+        let now = Date(timeIntervalSince1970: 1_700_000_000)
+        #expect(
+            DutyparkLaunchPolicy.initialImpersonationExpiration(arguments: arguments, now: now)
+                == now.addingTimeInterval(600)
+        )
+        #expect(
+            DutyparkLaunchPolicy.initialImpersonationExpiration(
+                arguments: ["-ui-testing-authenticated"],
+                now: now
+            ) == nil
+        )
+    }
 }
 
 private enum StubError: Error {

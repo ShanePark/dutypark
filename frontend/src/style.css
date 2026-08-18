@@ -737,6 +737,12 @@ html.dark {
 .modal-overlay {
     @apply fixed inset-0 flex justify-center bg-dp-overlay-dark/50;
     align-items: center;
+    /* A soft keyboard shrinks the visual viewport but not the layout viewport that
+       `inset: 0` resolves against, so `useVisualViewport` supplies the visible box
+       while a modal is open. Without it the fallbacks reproduce `inset: 0`. */
+    top: var(--dp-viewport-offset-top, 0px);
+    bottom: auto;
+    height: var(--dp-viewport-height, 100%);
 }
 
 .modal-overlay-padding-default {
@@ -776,23 +782,23 @@ html.dark {
 }
 
 .modal-height-fit {
-    max-height: calc(100dvh - 2rem);
+    max-height: calc(var(--dp-viewport-height, 100dvh) - 2rem);
 }
 
 .modal-height-default {
-    max-height: 90dvh;
+    max-height: calc(var(--dp-viewport-height, 100dvh) * 0.9);
 }
 
 .modal-height-search {
-    max-height: 85dvh;
+    max-height: calc(var(--dp-viewport-height, 100dvh) * 0.85);
 }
 
 .modal-height-viewport {
-    max-height: calc(100dvh - 2rem);
+    max-height: calc(var(--dp-viewport-height, 100dvh) - 2rem);
 }
 
 .modal-height-schedule {
-    max-height: calc(100dvh - 5rem);
+    max-height: calc(var(--dp-viewport-height, 100dvh) - 5rem);
 }
 
 .modal-header {
@@ -910,23 +916,23 @@ html.dark {
     }
 
     .modal-height-fit {
-        max-height: calc(100vh - 2rem);
+        max-height: calc(var(--dp-viewport-height, 100vh) - 2rem);
     }
 
     .modal-height-default {
-        max-height: 90vh;
+        max-height: calc(var(--dp-viewport-height, 100vh) * 0.9);
     }
 
     .modal-height-search {
-        max-height: 70vh;
+        max-height: calc(var(--dp-viewport-height, 100vh) * 0.7);
     }
 
     .modal-height-viewport {
-        max-height: 90vh;
+        max-height: calc(var(--dp-viewport-height, 100vh) * 0.9);
     }
 
     .modal-height-schedule {
-        max-height: 85vh;
+        max-height: calc(var(--dp-viewport-height, 100vh) * 0.85);
     }
 }
 

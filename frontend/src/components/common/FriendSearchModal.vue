@@ -156,7 +156,7 @@ function handleKeywordInput(event: Event) {
 
     <div class="modal-actions modal-actions-end modal-footer-safe">
       <button
-        class="px-5 py-2.5 rounded-xl font-medium hover-interactive cursor-pointer bg-dp-bg-tertiary text-dp-text-primary"
+        class="flex-1 sm:flex-none px-5 py-2.5 rounded-xl font-medium hover-interactive cursor-pointer bg-dp-bg-tertiary text-dp-text-primary"
         @click="emit('close')"
       >
         {{ t('common.actions.close') }}

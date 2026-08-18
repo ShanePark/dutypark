@@ -23,23 +23,102 @@ final class CalendarFeatureTests: XCTestCase {
         XCTAssertFalse(source.contains("private func openTodoBoard()"), "Calendar keeps only the quick-add entry")
     }
 
-    func testCalendarHeaderAllocatesEqualSidesAroundMonthNavigation() {
-        XCTAssertEqual(
-            CalendarMainLayout.headerSideWidth(
-                containerWidth: 359,
-                monthControlsWidth: 176,
-                interColumnSpacing: 2
-            ),
-            89.5
+    func testAMemberCalendarIsPushedOntoTheStackOfTheTabItWasOpenedFrom() throws {
+        let projectRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let calendarSource = try String(
+            contentsOf: projectRoot.appending(path: "Dutypark/Features/Calendar/CalendarView.swift"),
+            encoding: .utf8
         )
-        XCTAssertEqual(
-            CalendarMainLayout.headerSideWidth(
-                containerWidth: 160,
-                monthControlsWidth: 176,
-                interColumnSpacing: 2
-            ),
-            0
+        // The identity chip is the back control of a pushed member calendar, and the
+        // screen is genuinely pushed, so the back action is a pop and the system edge
+        // gesture is restored instead of being re-implemented.
+        for wiring in [
+            "private let isPushedMemberCalendar: Bool",
+            "isPushed: Bool = false",
+            "@Environment(\\.dismiss) private var dismiss",
+            "private var memberBackAction: (() -> Void)?",
+            "guard isPushedMemberCalendar else { return nil }",
+            "return { dismiss() }",
+            "Button(action: memberBackAction)",
+            ".navigationBarBackButtonHidden(isPushedMemberCalendar)",
+            ".dpInteractivePopGestureEnabled()",
+            "calendar.member.back",
+            "chevron.left",
+        ] {
+            XCTAssertTrue(calendarSource.contains(wiring), "CalendarView is missing: \(wiring)")
+        }
+        // Whose calendar it is no longer decides whether there is a way back: opening
+        // your own calendar from a team shift grid or from Admin pushes it too.
+        XCTAssertFalse(calendarSource.contains("if let onBack, !model.isMyCalendar"))
+        XCTAssertFalse(calendarSource.contains("onBack"))
+        XCTAssertFalse(
+            calendarSource.contains("dpSwipeBackGesture"),
+            "The stopgap swipe recognizer is replaced by the real interactive pop"
         )
+        XCTAssertFalse(
+            FileManager.default.fileExists(
+                atPath: projectRoot.appending(path: "Dutypark/Components/DPSwipeBackGesture.swift").path
+            )
+        )
+
+        let rootSource = try String(
+            contentsOf: projectRoot.appending(path: "Dutypark/App/RootTabView.swift"),
+            encoding: .utf8
+        )
+        for wiring in [
+            // Every tab that can open a member calendar owns a navigation stack for it.
+            "@State private var homePath: [HomeDestination] = []",
+            "@State private var calendarPath: [MemberCalendarRoute] = []",
+            "@State private var teamPath: [MemberCalendarRoute] = []",
+            "@State private var morePath: [MoreDestination] = []",
+            "NavigationStack(path: path)",
+            ".navigationDestination(for: MemberCalendarRoute.self)",
+            ".navigationDestination(for: MoreDestination.self)",
+            "case .memberCalendar(let route):",
+            "isPushed: true",
+            // The calendar is pushed onto the stack of the tab it was opened from.
+            "homePath.append(.memberCalendar(route))",
+            "teamPath.append(route)",
+            "morePath.append(.memberCalendar(route))",
+            "calendarPath.append(route)",
+            "selectedTab = host",
+            // Routed entries have nothing behind them, so they push onto the calendar
+            // tab whose root is the authenticated member's own calendar.
+            "private func routeToMemberCalendar(_ memberID: MemberID)",
+            "routeToMemberCalendar(memberID)",
+            "calendarPath = [route]",
+        ] {
+            XCTAssertTrue(rootSource.contains(wiring), "RootTabView is missing: \(wiring)")
+        }
+        // The origin machinery only existed to fake a back destination for a screen
+        // that replaced the calendar tab root.
+        for removed in [
+            "calendarOrigin",
+            "CalendarOrigin",
+            "closeMemberCalendar",
+            "calendarBackTab",
+            "CalendarTarget",
+            "navigationDestination(item: $moreDestination)",
+        ] {
+            XCTAssertFalse(rootSource.contains(removed), "RootTabView still carries: \(removed)")
+        }
+
+        let catalog = try XCTUnwrap(
+            JSONSerialization.jsonObject(
+                with: Data(contentsOf: projectRoot.appending(path: "Dutypark/Features/Calendar/Calendar.xcstrings"))
+            ) as? [String: Any]
+        )
+        let strings = try XCTUnwrap(catalog["strings"] as? [String: Any])
+        let entry = try XCTUnwrap(strings["calendar.member.back"] as? [String: Any])
+        let localizations = try XCTUnwrap(entry["localizations"] as? [String: Any])
+        for language in ["en", "ko"] {
+            let localization = try XCTUnwrap(localizations[language] as? [String: Any])
+            let stringUnit = try XCTUnwrap(localization["stringUnit"] as? [String: Any])
+            XCTAssertEqual(stringUnit["state"] as? String, "translated")
+            XCTAssertFalse((stringUnit["value"] as? String ?? "").isEmpty)
+        }
     }
 
     func testComparedDutyRetainsProfileMetadataForCalendarAvatar() async throws {

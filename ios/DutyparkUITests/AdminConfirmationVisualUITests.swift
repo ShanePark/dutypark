@@ -56,6 +56,16 @@ final class AdminConfirmationVisualUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["세션 없는 회원"].firstMatch.exists)
         XCTAssertTrue(app.staticTexts["활성 세션 없음"].firstMatch.exists)
 
+        // The member row lists its login sessions inline, exactly like the web dashboard.
+        XCTAssertTrue(app.staticTexts["127.0.0.1"].firstMatch.exists)
+        XCTAssertTrue(app.staticTexts["iPhone 13 mini"].firstMatch.exists)
+        XCTAssertTrue(app.staticTexts["iOS 앱"].firstMatch.exists)
+        // The inline revoke control is a plain-styled button inside a ScrollView, which XCUITest
+        // may surface as an image rather than a button, so match it by identifier only.
+        let inlineRevoke = app.descendants(matching: .any)["admin.member.session.revoke.99"].firstMatch
+        XCTAssertTrue(inlineRevoke.exists)
+        XCTAssertTrue(inlineRevoke.isHittable)
+
         let attachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         attachment.name = "parity-ios-admin-member-active-session-count-ko-dark"
         attachment.lifetime = .keepAlways
@@ -69,10 +79,11 @@ final class AdminConfirmationVisualUITests: XCTestCase {
 
         openAdministration(in: app)
 
-        let searchField = app.searchFields["이름 또는 이메일 검색"].firstMatch
+        let keyword = "존재하지 않는 회원"
+        let searchField = app.textFields["admin.members.search"].firstMatch
         XCTAssertTrue(searchField.waitForExistence(timeout: 10))
         searchField.tap()
-        searchField.typeText("존재하지 않는 회원")
+        searchField.typeText(keyword)
 
         XCTAssertTrue(
             app.descendants(matching: .any)["admin.members.empty"]
@@ -85,9 +96,9 @@ final class AdminConfirmationVisualUITests: XCTestCase {
         emptyAttachment.lifetime = .keepAlways
         add(emptyAttachment)
 
-        let clearButton = searchField.buttons.firstMatch
-        XCTAssertTrue(clearButton.waitForExistence(timeout: 5))
-        clearButton.tap()
+        searchField.typeText(
+            String(repeating: XCUIKeyboardKey.delete.rawValue, count: keyword.count)
+        )
 
         XCTAssertTrue(app.staticTexts["관리자 검증 회원"].waitForExistence(timeout: 10))
         XCTAssertTrue(app.staticTexts["세션 없는 회원"].exists)
@@ -131,7 +142,8 @@ final class AdminConfirmationVisualUITests: XCTestCase {
         XCTAssertTrue(fixtureMember.waitForExistence(timeout: 10))
         fixtureMember.tap()
 
-        let revokeButton = app.buttons["admin.member.session.revoke.99"]
+        // The member list now shows the same session inline, so scope the query to the detail list.
+        let revokeButton = app.collectionViews.buttons["admin.member.session.revoke.99"].firstMatch
         for _ in 0..<4 where !(revokeButton.exists && revokeButton.isHittable) {
             app.collectionViews.firstMatch.swipeUp()
         }
@@ -142,7 +154,7 @@ final class AdminConfirmationVisualUITests: XCTestCase {
         assertCenteredConfirmation(
             in: app,
             title: "이 세션을 종료할까요?",
-            message: "관리자 검증 회원님의 iPhone 13 mini · Dutypark (127.0.0.1) 세션을 종료하시겠습니까?",
+            message: "관리자 검증 회원님의 iPhone 13 mini · iOS 앱 (127.0.0.1) 세션을 종료하시겠습니까?",
             confirmTitle: "세션 종료",
             screenshotName: "parity-ios-admin-member-session-confirmation-ko-dark"
         )
@@ -159,9 +171,11 @@ final class AdminConfirmationVisualUITests: XCTestCase {
         XCTAssertTrue(app.descendants(matching: .any)["admin.tile.teams"].exists)
         XCTAssertTrue(app.descendants(matching: .any)["admin.tile.development"].exists)
         XCTAssertTrue(app.descendants(matching: .any)["admin.tile.apiDocumentation"].exists)
-        XCTAssertTrue(app.staticTexts["전체 회원"].exists)
-        XCTAssertTrue(app.staticTexts["활성 세션"].exists)
-        XCTAssertTrue(app.staticTexts["오늘 로그인"].exists)
+        XCTAssertTrue(app.staticTexts["등록 회원"].exists)
+        XCTAssertTrue(app.staticTexts["등록 팀"].exists)
+        XCTAssertTrue(app.staticTexts["활성 토큰"].exists)
+        XCTAssertTrue(app.staticTexts["접속 횟수"].exists)
+        XCTAssertTrue(app.staticTexts["회원 관리"].firstMatch.exists)
 
         let landingAttachment = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
         landingAttachment.name = "parity-ios-admin-landing-web-hierarchy-ko-dark"

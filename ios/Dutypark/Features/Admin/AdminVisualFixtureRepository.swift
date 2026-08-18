@@ -33,7 +33,8 @@ nonisolated struct AdminVisualFixtureRepository: AdminRepositoryProtocol, Sendab
         remoteAddr: "127.0.0.1",
         id: 99,
         userAgent: .init(os: "iOS", browser: "Dutypark", device: "iPhone 13 mini"),
-        isCurrentLogin: false
+        isCurrentLogin: false,
+        clientType: .iosApp
     )
 
     private static let teamFixtures: [SimpleTeamDTO] = [

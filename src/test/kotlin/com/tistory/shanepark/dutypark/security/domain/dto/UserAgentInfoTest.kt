@@ -52,6 +52,15 @@ class UserAgentInfoTest {
     }
 
     @Test
+    fun `native iOS app default user agent is reported as a browser named Dutypark`() {
+        val ua = "Dutypark/1 CFNetwork/3826.500.111.2.2 Darwin/24.4.0"
+        val result = UserAgentInfo.parse(ua)
+
+        assertThat(result?.os).isEqualTo("iOS")
+        assertThat(result?.browser).isEqualTo("Dutypark")
+    }
+
+    @Test
     fun `toJson and fromJson should work correctly`() {
         val ua = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0"
         val original = UserAgentInfo.parse(ua)

@@ -113,6 +113,22 @@
         }
       }
     },
+    "settings.action.close": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Close"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "닫기"
+          }
+        }
+      }
+    },
     "settings.action.confirm": {
       "localizations": {
         "en": {
@@ -825,6 +841,38 @@
         }
       }
     },
+    "settings.photo.library": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Photo library"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "사진 보관함"
+          }
+        }
+      }
+    },
+    "settings.photo.take": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Take photo"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "사진 찍기"
+          }
+        }
+      }
+    },
     "settings.photo.delete": {
       "localizations": {
         "en": {
@@ -1007,10 +1055,22 @@
         }
       }
     },
+    "settings.sessions.appLabel": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "App" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "앱" } }
+      }
+    },
     "settings.sessions.browserLabel": {
       "localizations": {
         "en": { "stringUnit": { "state": "translated", "value": "Browser" } },
         "ko": { "stringUnit": { "state": "translated", "value": "브라우저" } }
+      }
+    },
+    "settings.sessions.client.iosApp": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "iOS App" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "iOS 앱" } }
       }
     },
     "settings.sessions.deviceLabel": {

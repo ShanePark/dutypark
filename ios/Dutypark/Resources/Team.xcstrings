@@ -15,6 +15,7 @@
     "team.batchUpload.validation.period" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Enter a valid year and month."}},"ko":{"stringUnit":{"state":"translated","value":"올바른 연도와 월을 입력해주세요."}}}},
     "team.batchUpload.year" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Year"}},"ko":{"stringUnit":{"state":"translated","value":"연도"}}}},
     "team.common.cancel" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Cancel"}},"ko":{"stringUnit":{"state":"translated","value":"취소"}}}},
+    "team.common.close" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Close"}},"ko":{"stringUnit":{"state":"translated","value":"닫기"}}}},
     "team.common.confirm" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Confirm"}},"ko":{"stringUnit":{"state":"translated","value":"확인"}}}},
     "team.common.delete" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Delete"}},"ko":{"stringUnit":{"state":"translated","value":"삭제"}}}},
     "team.common.error" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Something went wrong."}},"ko":{"stringUnit":{"state":"translated","value":"오류가 발생했습니다."}}}},

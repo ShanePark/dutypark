@@ -10,6 +10,7 @@ import { useSwal } from '@/composables/useSwal'
 import type { AdminMemberDetailDto, AdminMemberDto, RefreshTokenDto } from '@/types'
 import { resolveApiErrorMessage } from '@/utils/resolveApiError'
 import SessionTokenList from '@/components/common/SessionTokenList.vue'
+import { sessionClientName } from '@/components/common/sessionClient'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import AdminMemberDetailModal from '@/components/admin/AdminMemberDetailModal.vue'
@@ -145,7 +146,7 @@ async function handleRevokeToken(token: RefreshTokenDto, member: AdminMemberDto)
     t('admin.dashboard.messages.revokeSessionConfirm', {
       name: member.name,
       device: token.userAgent?.device ?? '-',
-      browser: token.userAgent?.browser ?? '-',
+      browser: sessionClientName(token, t),
       ip: token.remoteAddr ?? '-',
     }),
     t('admin.dashboard.messages.revokeSessionTitle'),
@@ -272,7 +273,7 @@ function clearHoverBg(e: Event, bgColor = 'var(--dp-bg-card)') {
 
 onMounted(async () => {
   if (!authStore.isAdmin) {
-    router.push('/')
+    router.replace('/')
     return
   }
   await fetchData()
@@ -513,14 +514,14 @@ onMounted(async () => {
         <button
           @click="closePasswordModal"
           :disabled="changingPassword"
-          class="px-4 py-2 text-sm font-medium rounded-lg transition disabled:opacity-50 cursor-pointer bg-dp-bg-tertiary text-dp-text-primary hover-interactive"
+          class="flex-1 sm:flex-none px-4 py-2 text-sm font-medium rounded-lg transition disabled:opacity-50 cursor-pointer bg-dp-bg-tertiary text-dp-text-primary hover-interactive"
         >
-          {{ t('common.actions.cancel') }}
+          {{ t('common.actions.close') }}
         </button>
         <button
           @click="handleChangePassword"
           :disabled="isAdminPasswordSubmitDisabled"
-          class="px-4 py-2 text-sm font-medium text-dp-text-on-dark bg-dp-surface-strong hover:bg-dp-surface-strong-hover rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 cursor-pointer"
+          class="flex-1 sm:flex-none px-4 py-2 text-sm font-medium text-dp-text-on-dark bg-dp-surface-strong hover:bg-dp-surface-strong-hover rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
         >
           <Loader2 v-if="changingPassword" class="w-4 h-4 animate-spin" />
           {{ changingPassword ? t('admin.dashboard.password.changing') : t('admin.dashboard.password.change') }}

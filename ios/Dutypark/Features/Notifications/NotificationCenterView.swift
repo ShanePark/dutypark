@@ -112,26 +112,22 @@ struct NotificationCenterView: View {
         .onChange(of: scenePhase) { _, phase in
             Task { await store.setForeground(phase == .active) }
         }
-        .fullScreenCover(item: $deletionConfirmation) { confirmation in
-            DPModalOverlay(
-                maximumContentWidth: DPConfirmationPanel.maximumWidth,
-                onDismiss: { deletionConfirmation = nil }
-            ) { availableSize, dismiss in
-                DPConfirmationPanel(
+        .dpConfirmation(
+            item: $deletionConfirmation,
+            copy: { confirmation in
+                DPConfirmationCopy(
                     title: notificationLocalized(confirmation.titleKey),
                     message: notificationLocalized(confirmation.messageKey),
                     confirmTitle: notificationLocalized(confirmation.confirmTitleKey),
                     cancelTitle: notificationLocalized("notifications.common.cancel"),
-                    isDestructive: true,
-                    maximumHeight: availableSize.height,
-                    cancel: dismiss,
-                    confirm: {
-                        dismiss()
-                        Task { await delete(confirmation) }
-                    }
+                    isDestructive: true
                 )
+            },
+            confirm: { confirmation, dismiss in
+                dismiss()
+                Task { await delete(confirmation) }
             }
-        }
+        )
         .alert(
             alertTitle ?? notificationLocalized("notifications.common.error"),
             isPresented: Binding(
@@ -411,12 +407,14 @@ private struct NotificationRow: View {
     }
 }
 
-private struct NotificationHeaderActionButton: View {
+struct NotificationHeaderActionButton: View {
     let title: String
     let systemImage: String
     var isDestructive = false
     let accessibilityIdentifier: String
     let action: () -> Void
+
+    @Environment(\.isEnabled) private var isEnabled
 
     var body: some View {
         Button(action: action) {
@@ -431,6 +429,7 @@ private struct NotificationHeaderActionButton: View {
             .padding(.horizontal, 10)
             .frame(minHeight: DPSize.minimumTouchTarget)
             .background(DPColor.backgroundTertiary, in: RoundedRectangle(cornerRadius: DPRadius.standard))
+            .opacity(isEnabled ? 1 : DPChrome.disabledOpacity)
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier(accessibilityIdentifier)

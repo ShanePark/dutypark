@@ -209,15 +209,18 @@ private struct AdminTeamListSummary: View {
     }
 }
 
-private struct AdminTeamEmptyState: View {
+struct AdminTeamEmptyState: View {
     var body: some View {
-        VStack(spacing: DPSpacing.small) {
-            Image(systemName: "magnifyingglass")
-                .font(.system(size: 28, weight: .medium))
-                .foregroundStyle(DPColor.textMuted)
-            Text(AdminLocalization.string("admin.teams.empty"))
-                .font(DPTypography.body)
-                .foregroundStyle(DPColor.textMuted)
+        ContentUnavailableView {
+            Label {
+                Text(AdminLocalization.string("admin.teams.empty"))
+                    .font(DPTypography.body)
+                    .foregroundStyle(DPColor.textMuted)
+            } icon: {
+                Image(systemName: "magnifyingglass")
+                    .font(.system(size: 28, weight: .medium))
+                    .foregroundStyle(DPColor.textMuted)
+            }
         }
         .frame(maxWidth: .infinity, minHeight: 132)
         .accessibilityIdentifier("admin.teams.empty")
@@ -383,7 +386,7 @@ private struct AdminTeamCreateModal: View {
     private enum Field { case name, description }
 
     var body: some View {
-        DPModalPanel(maximumPanelHeight: maximumHeight) {
+        DPModalPanel(maximumPanelHeight: maximumHeight, scrollTarget: focusedField) {
             header
         } content: {
             formContent
@@ -446,6 +449,7 @@ private struct AdminTeamCreateModal: View {
                     .disabled(interactionState.isSaving)
                     .accessibilityIdentifier("admin.teams.create.name")
             }
+            .id(Field.name)
 
             Button {
                 let candidate = normalizedName
@@ -495,6 +499,7 @@ private struct AdminTeamCreateModal: View {
                 .disabled(interactionState.isSaving)
                 .accessibilityIdentifier("admin.teams.create.description")
             }
+            .id(Field.description)
 
             Text(AdminLocalization.string("admin.teams.createHint"))
                 .font(DPTypography.caption)
@@ -512,6 +517,13 @@ private struct AdminTeamCreateModal: View {
 
     private var footer: some View {
         HStack(spacing: DPSpacing.small) {
+            Button(action: requestDismiss) {
+                Text(AdminLocalization.string("admin.common.close"))
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(DPSecondaryButtonStyle())
+            .disabled(interactionState.isWorking)
+
             Button {
                 Task { await create() }
             } label: {
@@ -527,13 +539,6 @@ private struct AdminTeamCreateModal: View {
             .buttonStyle(DPPrimaryButtonStyle())
             .disabled(!canCreate || interactionState.isSaving)
             .accessibilityIdentifier("admin.teams.create.submit")
-
-            Button(action: requestDismiss) {
-                Text(AdminLocalization.string("admin.common.cancel"))
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(DPSecondaryButtonStyle())
-            .disabled(interactionState.isWorking)
         }
         .padding(DPSpacing.compact)
     }

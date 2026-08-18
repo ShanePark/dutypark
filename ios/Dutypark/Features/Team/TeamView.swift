@@ -62,27 +62,41 @@ struct TeamView: View {
         } message: {
             Text("team.common.error", tableName: "Team")
         }
-        .sheet(
+        .fullScreenCover(
             isPresented: Binding(
                 get: { viewModel.scheduleDraft != nil },
                 set: { if !$0 { viewModel.scheduleDraft = nil } }
             )
         ) {
             if let draft = viewModel.scheduleDraft {
-                TeamScheduleEditor(viewModel: viewModel, draft: draft)
+                DPModalOverlay(onDismiss: { viewModel.scheduleDraft = nil }) { availableSize, dismiss in
+                    TeamScheduleEditor(
+                        viewModel: viewModel,
+                        draft: draft,
+                        maximumHeight: availableSize.height,
+                        dismiss: dismiss
+                    )
+                }
             }
         }
         .sheet(isPresented: $monthPickerPresented) {
-            TeamYearMonthPicker(
+            DPYearMonthPicker(
                 selectedYear: viewModel.year,
-                selectedMonth: viewModel.month
-            ) { year, month in
-                monthPickerPresented = false
-                Task { await viewModel.goTo(year: year, month: month) }
-            } onToday: {
-                monthPickerPresented = false
-                Task { await viewModel.goToToday() }
-            }
+                selectedMonth: viewModel.month,
+                title: Text("team.view.calendar.chooseMonth", tableName: "Team"),
+                previousYearLabel: Text("team.view.calendar.previousYear", tableName: "Team"),
+                nextYearLabel: Text("team.view.calendar.nextYear", tableName: "Team"),
+                currentMonthTitle: Text("team.view.calendar.thisMonth", tableName: "Team"),
+                cancelTitle: teamLocalized("team.common.cancel"),
+                onSelect: { year, month in
+                    monthPickerPresented = false
+                    Task { await viewModel.goTo(year: year, month: month) }
+                },
+                onCurrentMonth: {
+                    monthPickerPresented = false
+                    Task { await viewModel.goToToday() }
+                }
+            )
         }
         .fullScreenCover(
             isPresented: Binding(
@@ -146,49 +160,6 @@ struct TeamView: View {
     private func teamContent(_ team: TeamDTO) -> some View {
         ScrollView {
             VStack(spacing: DPSpacing.compact) {
-                HStack(spacing: DPSpacing.extraSmall) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "building.2")
-                            .font(.system(size: 14))
-                        Text(verbatim: team.name)
-                            .font(DPTypography.caption)
-                            .lineLimit(1)
-                    }
-                    .foregroundStyle(DPColor.textPrimary)
-                    .padding(.horizontal, DPSpacing.small)
-                    .frame(width: 80, alignment: .leading)
-                    .frame(minHeight: 32)
-                    .background(DPColor.backgroundTertiary)
-                    .clipShape(Capsule())
-                    .overlay { Capsule().stroke(DPColor.borderSecondary) }
-
-                    monthHeader
-                        .frame(maxWidth: .infinity)
-
-                    Group {
-                    if viewModel.isTeamManager {
-                        NavigationLink {
-                            TeamManageView(
-                                teamID: team.id,
-                                onTeamChanged: { viewModel.applyManagedTeam($0) },
-                                onDutyBatchChanged: { year, month in
-                                    Task {
-                                        await viewModel.refreshDutiesAfterBatch(year: year, month: month)
-                                    }
-                                }
-                            )
-                        } label: {
-                            Image(systemName: "gearshape")
-                                .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel(Text("team.view.actions.manage", tableName: "Team"))
-                    } else {
-                        Color.clear.frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
-                    }
-                    }
-                }
-
                 calendar
                 selectedSchedules
                 shiftList
@@ -197,6 +168,86 @@ struct TeamView: View {
             .padding(.vertical, DPSpacing.medium)
         }
         .background(DPColor.backgroundPrimary)
+        .toolbar { teamToolbar(team) }
+    }
+
+    // The leading and trailing bar items claim the same width so the month
+    // navigation in the principal slot stays centred on the screen.
+    private static let barSideWidth: CGFloat = 88
+
+    @ToolbarContentBuilder
+    private func teamToolbar(_ team: TeamDTO) -> some ToolbarContent {
+        DPDashboardHeaderToolbarItem(placement: .topBarLeading) {
+            teamNameChip(team)
+                .frame(width: Self.barSideWidth, alignment: .leading)
+        }
+        DPDashboardHeaderToolbarItem(placement: .principal) {
+            monthHeader
+        }
+        DPDashboardHeaderToolbarItem(placement: .topBarTrailing) {
+            HStack(spacing: 0) {
+                if !isCurrentMonth {
+                    thisMonthControl
+                }
+                if viewModel.isTeamManager {
+                    manageControl(team)
+                }
+            }
+            .frame(width: Self.barSideWidth, alignment: .trailing)
+        }
+    }
+
+    private func teamNameChip(_ team: TeamDTO) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: "building.2")
+                .font(.system(size: 14))
+            Text(verbatim: team.name)
+                .font(DPTypography.caption)
+                .lineLimit(1)
+                .minimumScaleFactor(0.75)
+        }
+        .foregroundStyle(DPColor.textPrimary)
+        .padding(.horizontal, DPSpacing.small)
+        .frame(minHeight: 32)
+        .background(DPColor.backgroundTertiary)
+        .clipShape(Capsule())
+        .overlay { Capsule().stroke(DPColor.borderSecondary) }
+        .accessibilityElement(children: .combine)
+    }
+
+    private func manageControl(_ team: TeamDTO) -> some View {
+        NavigationLink {
+            TeamManageView(
+                teamID: team.id,
+                onTeamChanged: { viewModel.applyManagedTeam($0) },
+                onDutyBatchChanged: { year, month in
+                    Task {
+                        await viewModel.refreshDutiesAfterBatch(year: year, month: month)
+                    }
+                }
+            )
+        } label: {
+            Image(systemName: "gearshape")
+                .frame(width: 36, height: DPSize.minimumTouchTarget)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(Text("team.view.actions.manage", tableName: "Team"))
+    }
+
+    // Mirrors the calendar tab: the navigation bar cannot host the stacked
+    // "this month" shortcut, so it becomes a trailing bar button.
+    private var thisMonthControl: some View {
+        Button {
+            Task { await viewModel.goToToday() }
+        } label: {
+            Text("team.view.calendar.thisMonth", tableName: "Team")
+                .font(DPTypography.caption)
+                .lineLimit(1)
+                .padding(.horizontal, DPSpacing.extraSmall)
+                .frame(height: DPSize.minimumTouchTarget)
+                .contentShape(Rectangle())
+        }
+        .disabled(viewModel.isLoading)
     }
 
     private var monthHeader: some View {
@@ -211,32 +262,21 @@ struct TeamView: View {
             .accessibilityLabel(Text("team.view.calendar.month", tableName: "Team"))
             .disabled(viewModel.isLoading)
 
-            VStack(spacing: -2) {
-                Button {
-                    monthPickerPresented = true
-                } label: {
-                    HStack(spacing: DPSpacing.extraSmall) {
-                        Text(
-                            verbatim: "\(viewModel.year)-\(String(format: "%02d", locale: AppLocalization.locale, viewModel.month))"
-                        )
-                            .font(DPTypography.label)
-                        Image(systemName: "chevron.down")
-                            .font(.caption2.weight(.bold))
-                    }
-                    .frame(minHeight: 26)
+            Button {
+                monthPickerPresented = true
+            } label: {
+                HStack(spacing: DPSpacing.extraSmall) {
+                    Text(
+                        verbatim: "\(viewModel.year)-\(String(format: "%02d", locale: AppLocalization.locale, viewModel.month))"
+                    )
+                        .font(DPTypography.label)
+                    Image(systemName: "chevron.down")
+                        .font(.caption2.weight(.bold))
                 }
-                .accessibilityLabel(Text("team.view.calendar.chooseMonth", tableName: "Team"))
-                .disabled(viewModel.isLoading)
-                if !isCurrentMonth {
-                    Button {
-                        Task { await viewModel.goToToday() }
-                    } label: {
-                        Text("team.view.calendar.thisMonth", tableName: "Team")
-                            .font(DPTypography.caption)
-                    }
-                }
+                .frame(minHeight: DPSize.minimumTouchTarget)
             }
-            .frame(maxWidth: .infinity)
+            .accessibilityLabel(Text("team.view.calendar.chooseMonth", tableName: "Team"))
+            .disabled(viewModel.isLoading)
 
             Button {
                 Task { await viewModel.nextMonth() }
@@ -257,6 +297,9 @@ struct TeamView: View {
 
     private var calendar: some View {
         let columns = Array(repeating: GridItem(.flexible(), spacing: 0), count: 7)
+        // The weekday header and the day cells are indexed from zero, so sharing one
+        // grid makes the first week collide with the header row in the grid's
+        // identity space and render blank. Two grids keep the identities apart.
         return VStack(spacing: 0) {
             LazyVGrid(columns: columns, spacing: 0) {
                 ForEach(Array(TeamLocalization.shortStandaloneWeekdaySymbols.enumerated()), id: \.offset) { index, weekday in
@@ -270,6 +313,8 @@ struct TeamView: View {
                         }
                         .overlay(alignment: .bottom) { Rectangle().fill(DPColor.borderSecondary).frame(height: 1) }
                 }
+            }
+            LazyVGrid(columns: columns, spacing: 0) {
                 ForEach(Array(viewModel.days.enumerated()), id: \.offset) { index, day in
                     TeamCalendarDayCell(
                         day: day,
@@ -524,93 +569,6 @@ private struct TeamMemberAvatar: View {
     }
 }
 
-private struct TeamYearMonthPicker: View {
-    @Environment(\.dismiss) private var dismiss
-    @State private var year: Int
-    private let selectedYear: Int
-    private let selectedMonth: Int
-    let onSelect: (Int, Int) -> Void
-    let onToday: () -> Void
-
-    init(
-        selectedYear: Int,
-        selectedMonth: Int,
-        onSelect: @escaping (Int, Int) -> Void,
-        onToday: @escaping () -> Void
-    ) {
-        self.selectedYear = selectedYear
-        self.selectedMonth = selectedMonth
-        self.onSelect = onSelect
-        self.onToday = onToday
-        _year = State(initialValue: selectedYear)
-    }
-
-    var body: some View {
-        NavigationStack {
-            VStack(spacing: DPSpacing.medium) {
-                HStack {
-                    Button { year -= 1 } label: {
-                        Image(systemName: "chevron.left")
-                            .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
-                    }
-                    .accessibilityLabel(Text("team.view.calendar.previousYear", tableName: "Team"))
-                    Spacer()
-                    Text(verbatim: String(year)).font(.title3.bold())
-                    Spacer()
-                    Button { year += 1 } label: {
-                        Image(systemName: "chevron.right")
-                            .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
-                    }
-                    .accessibilityLabel(Text("team.view.calendar.nextYear", tableName: "Team"))
-                }
-
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4)) {
-                    ForEach(1...12, id: \.self) { month in
-                        Button {
-                            onSelect(year, month)
-                        } label: {
-                            Text(verbatim: TeamLocalization.monthName(month))
-                                .font(.subheadline.weight(.medium))
-                                .lineLimit(1)
-                                .minimumScaleFactor(0.7)
-                                .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)
-                                .background(
-                                    year == selectedYear && month == selectedMonth
-                                        ? DPColor.accent
-                                        : DPColor.backgroundTertiary
-                                )
-                                .foregroundStyle(
-                                    year == selectedYear && month == selectedMonth
-                                        ? DPColor.textOnDark
-                                        : DPColor.textPrimary
-                                )
-                                .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
-                        }
-                        .buttonStyle(.plain)
-                    }
-                }
-
-                Button {
-                    onToday()
-                } label: {
-                    Text("team.view.calendar.thisMonth", tableName: "Team")
-                        .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)
-                }
-                .buttonStyle(.borderedProminent)
-            }
-            .padding(DPSpacing.medium)
-            .navigationTitle(Text("team.view.calendar.chooseMonth", tableName: "Team"))
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button(teamLocalized("team.common.cancel")) { dismiss() }
-                }
-            }
-        }
-        .presentationDetents([.medium])
-    }
-}
-
 private struct TeamCalendarDayCell: View {
     let day: TeamDayDTO
     let currentMonth: Int
@@ -689,100 +647,129 @@ private struct TeamCalendarDayCell: View {
     }
 }
 
+private enum TeamScheduleField: Hashable {
+    case content
+    case description
+}
+
 private struct TeamScheduleEditor: View {
     @ObservedObject var viewModel: TeamViewModel
+    let maximumHeight: CGFloat
+    let dismiss: () -> Void
     @State private var draft: TeamScheduleDraft
-    @Environment(\.dismiss) private var dismiss
+    @FocusState private var focusedField: TeamScheduleField?
 
-    init(viewModel: TeamViewModel, draft: TeamScheduleDraft) {
+    init(
+        viewModel: TeamViewModel,
+        draft: TeamScheduleDraft,
+        maximumHeight: CGFloat,
+        dismiss: @escaping () -> Void
+    ) {
         self.viewModel = viewModel
+        self.maximumHeight = maximumHeight
+        self.dismiss = dismiss
         _draft = State(initialValue: draft)
     }
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                HStack {
-                    Text("team.view.schedule.modal.title", tableName: "Team")
-                        .font(DPTypography.bodyMedium)
-                    Spacer()
-                    Button {
-                        dismiss()
-                    } label: {
-                        Image(systemName: "xmark")
-                            .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
-                    }
-                    .buttonStyle(.plain)
-                }
-                .padding(.horizontal, DPSpacing.medium)
-                .padding(.vertical, DPSpacing.small)
-                .background(DPColor.backgroundTertiary)
-                .overlay(alignment: .bottom) { Rectangle().fill(DPColor.borderPrimary).frame(height: 1) }
-
-                ScrollView {
-                    VStack(alignment: .leading, spacing: DPSpacing.medium) {
-                        VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
-                            HStack {
-                                Text("team.view.schedule.form.contentLabel", tableName: "Team").font(DPTypography.label)
-                                Spacer()
-                                Text(verbatim: "\(draft.content.count)/50").font(DPTypography.caption).foregroundStyle(DPColor.textMuted)
-                            }
-                        TextField(
-                            teamLocalized("team.view.schedule.form.contentPlaceholder"),
-                            text: $draft.content
-                        )
-                        .dpInputChrome(isInvalid: draft.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                        .onChange(of: draft.content) { _, value in
-                            if value.count > 50 { draft.content = String(value.prefix(50)) }
-                        }
-                        }
-                        VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
-                            Text("team.view.schedule.form.descriptionLabel", tableName: "Team").font(DPTypography.label)
-                        TextField(
-                            teamLocalized("team.view.schedule.form.descriptionPlaceholder"),
-                            text: $draft.description,
-                            axis: .vertical
-                        )
-                        .lineLimit(4...8)
-                        .dpInputChrome()
-                        }
-                        VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
-                        DatePicker(selection: $draft.startDate, displayedComponents: .date) {
-                            Text("team.view.schedule.form.startDate", tableName: "Team")
-                        }
-                        .frame(minHeight: DPSize.minimumTouchTarget)
-                        DatePicker(
-                            selection: $draft.endDate,
-                            in: draft.startDate...,
-                            displayedComponents: .date
-                        ) {
-                            Text("team.view.schedule.form.endDate", tableName: "Team")
-                        }
-                        .frame(minHeight: DPSize.minimumTouchTarget)
-                        }
-                    }
-                    .padding(DPSpacing.medium)
-                }
-                HStack(spacing: DPSpacing.small) {
-                    Button(teamLocalized("team.common.save")) {
-                        Task { await viewModel.saveSchedule(draft) }
-                    }
-                    .buttonStyle(DPPrimaryButtonStyle())
-                    .disabled(!draft.isValid || viewModel.isWorking)
-                    Button(teamLocalized("team.common.cancel")) {
-                        dismiss()
-                    }
-                    .buttonStyle(DPSecondaryButtonStyle())
-                }
-                .frame(maxWidth: .infinity, alignment: .trailing)
-                .padding(DPSpacing.medium)
-                .overlay(alignment: .top) { Rectangle().fill(DPColor.borderPrimary).frame(height: 1) }
-            }
-            .background(DPColor.backgroundModal)
-            .navigationBarHidden(true)
+        DPModalPanel(
+            maximumPanelHeight: maximumHeight,
+            scrollTarget: focusedField
+        ) {
+            editorHeader
+        } content: {
+            editorForm
+        } footer: {
+            editorFooter
         }
-        .dpKeyboardDismissToolbar()
-        .presentationDetents([.medium, .large])
+    }
+
+    private var editorHeader: some View {
+        HStack {
+            Text("team.view.schedule.modal.title", tableName: "Team")
+                .font(DPTypography.bodyMedium)
+            Spacer()
+            Button {
+                dismiss()
+            } label: {
+                Image(systemName: "xmark")
+                    .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, DPSpacing.medium)
+        .padding(.vertical, DPSpacing.small)
+        .background(DPColor.backgroundTertiary)
+    }
+
+    private var editorForm: some View {
+        VStack(alignment: .leading, spacing: DPSpacing.medium) {
+            VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+                HStack {
+                    Text("team.view.schedule.form.contentLabel", tableName: "Team").font(DPTypography.label)
+                    Spacer()
+                    Text(verbatim: "\(draft.content.count)/50").font(DPTypography.caption).foregroundStyle(DPColor.textMuted)
+                }
+                TextField(
+                    teamLocalized("team.view.schedule.form.contentPlaceholder"),
+                    text: $draft.content
+                )
+                .focused($focusedField, equals: .content)
+                .dpInputChrome(isInvalid: draft.content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .onChange(of: draft.content) { _, value in
+                    if value.count > 50 { draft.content = String(value.prefix(50)) }
+                }
+            }
+            .id(TeamScheduleField.content)
+            VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+                Text("team.view.schedule.form.descriptionLabel", tableName: "Team").font(DPTypography.label)
+                TextField(
+                    teamLocalized("team.view.schedule.form.descriptionPlaceholder"),
+                    text: $draft.description,
+                    axis: .vertical
+                )
+                .lineLimit(4...8)
+                .focused($focusedField, equals: .description)
+                .dpInputChrome()
+            }
+            .id(TeamScheduleField.description)
+            VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+                DatePicker(selection: $draft.startDate, displayedComponents: .date) {
+                    Text("team.view.schedule.form.startDate", tableName: "Team")
+                }
+                .frame(minHeight: DPSize.minimumTouchTarget)
+                DatePicker(
+                    selection: $draft.endDate,
+                    in: draft.startDate...,
+                    displayedComponents: .date
+                ) {
+                    Text("team.view.schedule.form.endDate", tableName: "Team")
+                }
+                .frame(minHeight: DPSize.minimumTouchTarget)
+            }
+        }
+        .padding(DPSpacing.medium)
+    }
+
+    private var editorFooter: some View {
+        HStack(spacing: DPSpacing.small) {
+            Button {
+                dismiss()
+            } label: {
+                Text(verbatim: teamLocalized("team.common.close"))
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(DPSecondaryButtonStyle())
+            Button {
+                Task { await viewModel.saveSchedule(draft) }
+            } label: {
+                Text(verbatim: teamLocalized("team.common.save"))
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(DPPrimaryButtonStyle())
+            .disabled(!draft.isValid || viewModel.isWorking)
+        }
+        .padding(DPSpacing.compact)
     }
 }
 
@@ -834,13 +821,6 @@ nonisolated enum TeamLocalization {
         var calendar = Calendar.current
         calendar.locale = AppLocalization.locale
         return calendar.shortStandaloneWeekdaySymbols
-    }
-
-    static func monthName(_ month: Int, locale: Locale = AppLocalization.locale) -> String {
-        guard (1...12).contains(month) else { return String(month) }
-        let formatter = DateFormatter()
-        formatter.locale = locale
-        return formatter.monthSymbols[month - 1]
     }
 
     static func scheduleDeletionMessage(title: String) -> String {

@@ -25,6 +25,15 @@ final class PublicGuideViewModel: ObservableObject {
         isLoading = true
         hasError = false
 
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-ui-testing-authenticated") {
+            content = PublicGuideContent.uiTestingFixture(locale: locale)
+            loadedLocale = locale
+            isLoading = false
+            return
+        }
+#endif
+
         do {
             let content = try await service.guide(locale: locale)
             guard requestID == currentRequestID else { return }
