@@ -48,6 +48,28 @@ final class ReportBlockNavigationTests: XCTestCase {
         XCTAssertFalse(model.didBlock, "A rejected report leaves the user where they are")
     }
 
+    func testBlockOutcomeUsesTheValueSentBeforeTheRequestSuspends() async {
+        let repository = SuspendedReportRepository()
+        let model = ReportViewModel(
+            target: ReportTarget(type: .member, targetID: "7", name: "홍길동"),
+            repository: repository
+        )
+        model.alsoBlock = true
+
+        let submission = Task { await model.submit() }
+        while await repository.recordedRequest == nil {
+            await Task.yield()
+        }
+        model.alsoBlock = false
+        await repository.finish()
+
+        let submitted = await submission.value
+        let recordedRequest = await repository.recordedRequest
+        XCTAssertTrue(submitted)
+        XCTAssertEqual(recordedRequest?.alsoBlock, true)
+        XCTAssertTrue(model.didBlock, "The server received alsoBlock=true")
+    }
+
     // MARK: - What the sheet tells its host
 
     func testTheReportSheetHandsTheBlockOutcomeToItsHostBeforeDismissing() throws {
@@ -97,26 +119,37 @@ final class ReportBlockNavigationTests: XCTestCase {
             "private func blockEndsCalendarAccess(_ schedule: ScheduleDTO) -> Bool",
             "!model.isMyCalendar && !schedule.isTagged",
             "reportBlockEndsCalendarAccess = blockEndsCalendarAccess(schedule)",
-            "onBlocked: { leavesAfterBlock = reportBlockEndsCalendarAccess }",
-            "let onBlockedCalendarOwner: () -> Void",
-            "onBlockedCalendarOwner: { leavesAfterBlock = true }",
+            "onBlocked: { dismissesAfterReportedBlock = true }",
+            "let onBlockedScheduleOwner: (Bool) -> Void",
+            "onBlockedScheduleOwner: { leavesCalendar in",
             // The day modal has to be gone before the calendar pops.
-            "onBlockedCalendarOwner()",
+            "onBlockedScheduleOwner(reportBlockEndsCalendarAccess)",
             "leaveBlockedMemberCalendar()",
+            "refreshesAfterReportedBlock",
+            "await model.load()",
         ] {
             XCTAssertTrue(source.contains(wiring), "CalendarView is missing: \(wiring)")
         }
     }
 
-    func testTheToDoReportStaysPutBecauseTheBoardBelongsToTheReporter() throws {
+    func testTheToDoReportThatBlocksRefreshesTheBoardAndClosesTheRemovedDetail() throws {
         let source = try source(of: "Dutypark/Features/Todo/TodoModalViews.swift")
 
-        // The to-do board is always the signed-in member's own, and only a to-do somebody
-        // else tagged them into is reportable, so blocking that owner never revokes access
-        // to the screen the reporter is standing on.
+        // The board remains accessible, but blocking the owner deletes this tag on the
+        // server. Refresh the board and close the detail that is no longer accessible.
         XCTAssertTrue(source.contains("if todo.isTagged {"))
-        XCTAssertFalse(source.contains("onBlocked:"), "Nothing to leave from the reporter's own board")
-        XCTAssertFalse(source.contains("leavesAfterBlock"))
+        XCTAssertTrue(source.contains("onBlocked: { dismissesAfterReportedBlock = true }"))
+        XCTAssertTrue(source.contains("await model.refresh()"))
+        XCTAssertTrue(source.contains("await onTodoChanged()"))
+        XCTAssertTrue(source.contains("dismiss()"))
+        let finish = try XCTUnwrap(source.range(of: "private func finishReportDismissal()"))
+        let dismiss = try XCTUnwrap(
+            source.range(of: "dismiss()", range: finish.lowerBound..<source.endIndex)
+        )
+        let refresh = try XCTUnwrap(
+            source.range(of: "await model.refresh()", range: dismiss.upperBound..<source.endIndex)
+        )
+        XCTAssertLessThan(dismiss.lowerBound, refresh.lowerBound)
     }
 
     // MARK: - Helpers
@@ -145,5 +178,23 @@ private final class ReportBlockRepositoryStub: ReportRepository, @unchecked Send
 
     func block(memberID: MemberID) async throws {
         if let error { throw error }
+    }
+}
+
+private actor SuspendedReportRepository: ReportRepository {
+    private(set) var recordedRequest: CreateReportRequest?
+    private var isFinished = false
+
+    func createReport(_ request: CreateReportRequest) async throws {
+        recordedRequest = request
+        while !isFinished {
+            await Task.yield()
+        }
+    }
+
+    func block(memberID: MemberID) async throws {}
+
+    func finish() {
+        isFinished = true
     }
 }

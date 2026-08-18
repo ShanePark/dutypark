@@ -71,6 +71,27 @@ final class APIClientAuthTests: XCTestCase {
     }
 
     @MainActor
+    func testLoginPreservesSuspendedAccountErrorCode() async {
+        URLProtocolStub.handler = { request in
+            Self.response(
+                request,
+                status: 401,
+                body: #"{"status":401,"code":"auth.account.suspended"}"#
+            )
+        }
+
+        let store = SessionStore(
+            authService: AuthService(client: makeClient()),
+            initialState: .guest
+        )
+        await store.login(email: "test@duty.park", password: "12345678", rememberMe: false)
+
+        XCTAssertEqual(store.loginErrorKey, "auth.account.suspended")
+        XCTAssertNil(store.loginErrorStatus)
+        XCTAssertNil(store.loginRemainingAttempts)
+    }
+
+    @MainActor
     func testLoginReportsServerOutageWithTheStatusCode() async {
         URLProtocolStub.handler = { request in
             Self.response(

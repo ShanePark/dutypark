@@ -159,7 +159,7 @@ struct ReportSheet: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     Spacer(minLength: 0)
-                    Text(verbatim: "\(model.detail.count)/\(ReportSubmissionPolicy.detailLimit)")
+                    Text(verbatim: "\(model.detailLength)/\(ReportSubmissionPolicy.detailLimit)")
                         .font(DPTypography.caption)
                         .foregroundStyle(model.isDetailTooLong ? DPColor.danger : DPColor.textMuted)
                 }
@@ -178,6 +178,7 @@ struct ReportSheet: View {
             .frame(minHeight: DPSize.minimumTouchTarget)
             .accessibilityIdentifier("report.alsoBlock")
         }
+        .disabled(model.isSubmitting)
         .padding(DPSpacing.medium)
     }
 

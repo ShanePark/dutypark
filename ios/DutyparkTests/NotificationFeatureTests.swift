@@ -172,6 +172,25 @@ struct NotificationFeatureTests {
     }
 
     @Test
+    func supportHistoryUniversalLinkPreservesItsRequestedTab() {
+        #expect(
+            RootMoreDeepLinkPolicy.supportTab(
+                from: URL(string: "https://dutypark.o-r.kr/support?tab=history")!
+            ) == .history
+        )
+        #expect(
+            RootMoreDeepLinkPolicy.supportTab(
+                from: URL(string: "https://dutypark.o-r.kr/support")!
+            ) == nil
+        )
+        #expect(
+            RootMoreDeepLinkPolicy.supportTab(
+                from: URL(string: "https://dutypark.o-r.kr/support?tab=unknown")!
+            ) == nil
+        )
+    }
+
+    @Test
     func reopeningSupportAdvancesThePresentationIDEvenWhenTheRequestedTabIsUnchanged() {
         let firstOpen = RootNavigationPolicy.supportPresentationID(
             for: .support,

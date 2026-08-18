@@ -26,6 +26,42 @@ final class ReportFeatureTests: XCTestCase {
         )
     }
 
+    func testDetailLimitUsesTheUTF16LengthSentToTheServer() {
+        XCTAssertTrue(
+            ReportSubmissionPolicy.canSubmit(
+                reason: .spam,
+                detail: String(repeating: "😀", count: ReportSubmissionPolicy.detailLimit / 2)
+            )
+        )
+        XCTAssertFalse(
+            ReportSubmissionPolicy.canSubmit(
+                reason: .spam,
+                detail: String(repeating: "😀", count: ReportSubmissionPolicy.detailLimit / 2 + 1)
+            )
+        )
+    }
+
+    func testScheduleOwnedByTheReporterIsNotReportableFromAnotherMembersCalendar() {
+        XCTAssertFalse(
+            CalendarReportPolicy.canReport(
+                isSignedIn: true,
+                isMyCalendar: false,
+                isTagged: true,
+                scheduleOwnerID: 7,
+                reporterID: 7
+            )
+        )
+        XCTAssertTrue(
+            CalendarReportPolicy.canReport(
+                isSignedIn: true,
+                isMyCalendar: false,
+                isTagged: true,
+                scheduleOwnerID: 8,
+                reporterID: 7
+            )
+        )
+    }
+
     func testSubmitSendsTrimmedDetailAndAlsoBlockFlag() async {
         let repository = ReportRepositorySpy()
         let model = ReportViewModel(
@@ -201,7 +237,8 @@ final class ReportFeatureTests: XCTestCase {
             "memberBackAction?()",
             // Reporting one schedule reuses the same sheet.
             "calendar.schedule.report",
-            "model.me != nil && (!model.isMyCalendar || schedule.isTagged)",
+            "CalendarReportPolicy.canReport(",
+            "scheduleOwnerID: schedule.taggedByMember?.id ?? model.targetMemberID",
             "ReportSheet(",
         ] {
             XCTAssertTrue(source.contains(wiring), "CalendarView is missing: \(wiring)")

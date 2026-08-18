@@ -154,6 +154,7 @@ struct TodoDetailModal: View {
     @State private var isLoadingEditAttachments = false
     @State private var reportTarget: ReportTarget?
     @State private var reportCanDismiss = true
+    @State private var dismissesAfterReportedBlock = false
     @StateObject private var gallery: AttachmentGalleryModel
 
     init(
@@ -227,16 +228,14 @@ struct TodoDetailModal: View {
         }
         .fullScreenCover(item: $reportTarget) { target in
             DPModalOverlay(
-                onDismiss: {
-                    reportTarget = nil
-                    reportCanDismiss = true
-                },
+                onDismiss: { finishReportDismissal() },
                 canDismiss: reportCanDismiss
             ) { availableSize, dismissReport in
                 ReportSheet(
                     target: target,
                     maximumHeight: availableSize.height,
                     onDismissabilityChange: { reportCanDismiss = $0 },
+                    onBlocked: { dismissesAfterReportedBlock = true },
                     dismiss: dismissReport
                 )
             }
@@ -330,6 +329,19 @@ struct TodoDetailModal: View {
                 await Task.yield()
                 model.errorKey = deferredConfirmationErrorKey
             }
+        }
+    }
+
+    private func finishReportDismissal() {
+        reportTarget = nil
+        reportCanDismiss = true
+        guard dismissesAfterReportedBlock else { return }
+        dismissesAfterReportedBlock = false
+        Task {
+            await Task.yield()
+            dismiss()
+            await model.refresh()
+            await onTodoChanged()
         }
     }
 

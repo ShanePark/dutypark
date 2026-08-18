@@ -22,8 +22,12 @@ nonisolated enum ReportSubmissionPolicy {
         return trimmed.isEmpty ? nil : trimmed
     }
 
+    static func detailLength(_ detail: String) -> Int {
+        normalizedDetail(detail)?.utf16.count ?? 0
+    }
+
     static func canSubmit(reason: ReportReason, detail: String) -> Bool {
-        guard detail.count <= detailLimit else { return false }
+        guard detailLength(detail) <= detailLimit else { return false }
         guard reason == .other else { return true }
         return normalizedDetail(detail) != nil
     }
@@ -58,7 +62,11 @@ final class ReportViewModel: ObservableObject {
     }
 
     var isDetailTooLong: Bool {
-        detail.count > ReportSubmissionPolicy.detailLimit
+        detailLength > ReportSubmissionPolicy.detailLimit
+    }
+
+    var detailLength: Int {
+        ReportSubmissionPolicy.detailLength(detail)
     }
 
     var canSubmit: Bool {
@@ -72,18 +80,17 @@ final class ReportViewModel: ObservableObject {
         guard canSubmit else { return false }
         isSubmitting = true
         defer { isSubmitting = false }
+        let request = CreateReportRequest(
+            targetType: target.type,
+            targetId: target.targetID,
+            reason: reason,
+            detail: ReportSubmissionPolicy.normalizedDetail(detail),
+            alsoBlock: alsoBlock
+        )
         do {
-            try await repository.createReport(
-                CreateReportRequest(
-                    targetType: target.type,
-                    targetId: target.targetID,
-                    reason: reason,
-                    detail: ReportSubmissionPolicy.normalizedDetail(detail),
-                    alsoBlock: alsoBlock
-                )
-            )
+            try await repository.createReport(request)
             didSubmit = true
-            didBlock = alsoBlock
+            didBlock = request.alsoBlock
             return true
         } catch {
             errorMessage = error.localizedDescription

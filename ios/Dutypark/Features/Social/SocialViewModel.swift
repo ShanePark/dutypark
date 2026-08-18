@@ -202,9 +202,12 @@ final class SocialViewModel: ObservableObject {
     /// mutation is reconciled instead of patched locally.
     func block(_ friend: DashboardFriendDetailDTO) async {
         guard let id = friend.member.id else { return }
+        let affectsReceivedRequestCount = receivedRequests.contains {
+            $0.fromMember.id == id
+        }
         await perform(
             error: "social.error.block",
-            affectsReceivedRequestCount: false,
+            affectsReceivedRequestCount: affectsReceivedRequestCount,
             reconcileAfterMutation: true,
             optimisticUpdate: { friends.removeAll { $0.member.id == id } }
         ) {

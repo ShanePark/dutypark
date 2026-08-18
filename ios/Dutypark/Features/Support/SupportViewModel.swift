@@ -101,9 +101,16 @@ final class SupportViewModel: ObservableObject {
                     email: trimmedEmail,
                     subject: trimmedSubject.isEmpty
                         ? nil
-                        : String(trimmedSubject.prefix(CreateInquiryRequest.subjectMaximumLength)),
-                    content: String(trimmedContent.prefix(CreateInquiryRequest.contentMaximumLength))
-                )
+                        : Self.limited(
+                            trimmedSubject,
+                            maximumUTF16Length: CreateInquiryRequest.subjectMaximumLength
+                        ),
+                    content: Self.limited(
+                        trimmedContent,
+                        maximumUTF16Length: CreateInquiryRequest.contentMaximumLength
+                    )
+                ),
+                authenticated: isSignedIn
             )
             subject = ""
             content = ""
@@ -194,6 +201,22 @@ final class SupportViewModel: ObservableObject {
             return false
         }
         return true
+    }
+
+    /// Jakarta `@Size` measures a Java string in UTF-16 code units. Preserve complete
+    /// Swift characters while keeping the encoded value within that same server limit.
+    nonisolated static func limited(_ value: String, maximumUTF16Length: Int) -> String {
+        guard value.utf16.count > maximumUTF16Length else { return value }
+
+        var result = ""
+        var usedUTF16Length = 0
+        for character in value {
+            let characterUTF16Length = String(character).utf16.count
+            guard usedUTF16Length + characterUTF16Length <= maximumUTF16Length else { break }
+            result.append(character)
+            usedUTF16Length += characterUTF16Length
+        }
+        return result
     }
 
     nonisolated static func errorKey(for error: Error) -> String {

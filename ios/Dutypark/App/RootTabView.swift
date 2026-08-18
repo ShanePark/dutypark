@@ -720,7 +720,11 @@ struct RootTabView: View {
             return true
         }
         if let destination = RootMoreDeepLinkPolicy.destination(from: url) {
-            openMore(destination, settingsDestination: SettingsDeepLink.destination(from: url))
+            openMore(
+                destination,
+                settingsDestination: SettingsDeepLink.destination(from: url),
+                supportTab: RootMoreDeepLinkPolicy.supportTab(from: url)
+            )
             return true
         }
 
@@ -925,6 +929,20 @@ nonisolated enum RootMoreDeepLinkPolicy {
     // More; the policy screens are rendered by the settings model and stay behind it.
     static func destination(for settingsDestination: SettingsDestination) -> MoreDestination {
         settingsDestination == .guide ? .guide : .settings
+    }
+
+    static func supportTab(
+        from url: URL,
+        allowedHost: String = "dutypark.o-r.kr"
+    ) -> SupportTab? {
+        guard destination(from: url, allowedHost: allowedHost) == .support,
+              URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                .queryItems?
+                .first(where: { $0.name == "tab" })?
+                .value?
+                .lowercased() == SupportTab.history.rawValue
+        else { return nil }
+        return .history
     }
 }
 

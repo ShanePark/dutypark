@@ -60,6 +60,18 @@ final class GuestPublicLinkTests: XCTestCase {
         )
     }
 
+    @MainActor
+    func testReportLoginDefersThePublicCalendarUntilAuthentication() {
+        let session = SessionStore(initialState: .guest)
+
+        GuestReportLoginNavigation.prepare(memberID: 42, session: session)
+
+        XCTAssertEqual(
+            session.pendingDestination,
+            URL(string: "https://dutypark.o-r.kr/duty/42")
+        )
+    }
+
     func testGuideContentLocaleFollowsExplicitAppSelection() {
         XCTAssertEqual(PublicContentLocaleResolver.locale(languageCode: "ko"), "ko")
         XCTAssertEqual(PublicContentLocaleResolver.locale(languageCode: "en"), "en")

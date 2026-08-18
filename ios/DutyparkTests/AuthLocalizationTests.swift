@@ -53,6 +53,16 @@ struct AuthLocalizationTests {
         }
     }
 
+    @Test
+    func suspendedAccountLoginUsesTheServerErrorLocalization() {
+        withKoreanOverride {
+            #expect(
+                LoginErrorMessage.text(key: "auth.account.suspended", status: nil)
+                    == "계정이 이용 정지되었습니다. 이의제기는 문의 페이지를 이용해 주세요."
+            )
+        }
+    }
+
     private func withKoreanOverride(_ body: () -> Void) {
         let defaults = UserDefaults.standard
         let previous = defaults.string(forKey: SettingsPreference.languageKey)

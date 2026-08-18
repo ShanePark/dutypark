@@ -6,6 +6,15 @@ nonisolated enum GuestPublicCalendarLink {
     }
 }
 
+@MainActor
+enum GuestReportLoginNavigation {
+    static func prepare(memberID: MemberID, session: SessionStore) {
+        session.deferDestinationUntilAuthenticated(
+            GuestPublicCalendarLink.url(memberID: memberID)
+        )
+    }
+}
+
 enum GuestCalendarLocalization {
     static func yearMonth(
         year: Int,
@@ -21,6 +30,7 @@ enum GuestCalendarLocalization {
 }
 
 struct GuestPublicCalendarView: View {
+    @EnvironmentObject private var session: SessionStore
     @StateObject private var model: GuestPublicCalendarViewModel
     @State private var showsMonthPicker = false
     @State private var showsReportLoginPrompt = false
@@ -152,7 +162,10 @@ struct GuestPublicCalendarView: View {
                     GuestReportLoginPrompt(
                         maximumHeight: availableSize.height,
                         cancel: dismissPrompt,
-                        willNavigate: { showsReportLoginPrompt = false }
+                        willNavigate: {
+                            GuestReportLoginNavigation.prepare(memberID: memberID, session: session)
+                            showsReportLoginPrompt = false
+                        }
                     )
                 }
             }

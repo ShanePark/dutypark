@@ -174,14 +174,17 @@ struct SupportView: View {
                     .submitLabel(.next)
                     .focused($focusedField, equals: .subject)
                     .onChange(of: model.subject) { _, value in
-                        if value.count > CreateInquiryRequest.subjectMaximumLength {
-                            model.subject = String(value.prefix(CreateInquiryRequest.subjectMaximumLength))
+                        if value.utf16.count > CreateInquiryRequest.subjectMaximumLength {
+                            model.subject = SupportViewModel.limited(
+                                value,
+                                maximumUTF16Length: CreateInquiryRequest.subjectMaximumLength
+                            )
                         }
                     }
                     .onSubmit { focusedField = .content }
                     .dpInputChrome(isFocused: focusedField == .subject)
                     .accessibilityIdentifier("support.form.subject")
-                    counter(model.subject.count, limit: CreateInquiryRequest.subjectMaximumLength)
+                    counter(model.subject.utf16.count, limit: CreateInquiryRequest.subjectMaximumLength)
                 }
 
                 field(label: "support.form.content") {
@@ -192,8 +195,11 @@ struct SupportView: View {
                         .focused($focusedField, equals: .content)
                         .frame(minHeight: 152)
                         .onChange(of: model.content) { _, value in
-                            if value.count > CreateInquiryRequest.contentMaximumLength {
-                                model.content = String(value.prefix(CreateInquiryRequest.contentMaximumLength))
+                            if value.utf16.count > CreateInquiryRequest.contentMaximumLength {
+                                model.content = SupportViewModel.limited(
+                                    value,
+                                    maximumUTF16Length: CreateInquiryRequest.contentMaximumLength
+                                )
                             }
                         }
                         .dpInputChrome(isFocused: focusedField == .content)
@@ -208,7 +214,7 @@ struct SupportView: View {
                             }
                         }
                         .accessibilityIdentifier("support.form.content")
-                    counter(model.content.count, limit: CreateInquiryRequest.contentMaximumLength)
+                    counter(model.content.utf16.count, limit: CreateInquiryRequest.contentMaximumLength)
                 }
 
                 if let errorKey = model.errorKey {

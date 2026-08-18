@@ -415,6 +415,9 @@ struct LoginView: View {
 nonisolated enum LoginErrorMessage {
     /// Server side failures carry their HTTP status so a user can report what happened.
     static func text(key: String, status: Int?) -> String {
+        if key == "auth.account.suspended" {
+            return APIErrorLocalization.message(code: key)
+        }
         guard let status else {
             return AppLocalization.string(key, table: "Localizable")
         }

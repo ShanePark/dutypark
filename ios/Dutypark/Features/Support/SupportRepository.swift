@@ -1,7 +1,7 @@
 import Foundation
 
 nonisolated protocol SupportRepository: Sendable {
-    func submitInquiry(_ request: CreateInquiryRequest) async throws
+    func submitInquiry(_ request: CreateInquiryRequest, authenticated: Bool) async throws
     func fetchMyInquiries(page: Int, size: Int) async throws -> PageResponse<MyInquiryDTO>
 }
 
@@ -12,9 +12,20 @@ nonisolated struct LiveSupportRepository: SupportRepository {
         self.client = client
     }
 
-    /// The endpoint is open to guests, so a missing session must surface the server's
-    /// own response instead of driving the shared refresh/logout path.
-    func submitInquiry(_ request: CreateInquiryRequest) async throws {
+    func submitInquiry(_ request: CreateInquiryRequest, authenticated: Bool) async throws {
+        if authenticated {
+            // The create endpoint also accepts guests, so an expired access cookie would
+            // otherwise return 201 while silently dropping the member association. Probe
+            // a protected endpoint first to use the shared refresh/logout lifecycle.
+            _ = try await client.data(
+                "inquiries/me",
+                queryItems: [
+                    URLQueryItem(name: "page", value: "0"),
+                    URLQueryItem(name: "size", value: "1")
+                ]
+            )
+        }
+
         let body: Data
         do {
             body = try JSONEncoder().encode(request)
@@ -25,6 +36,8 @@ nonisolated struct LiveSupportRepository: SupportRepository {
             "inquiries",
             method: .post,
             body: body,
+            // Guests must be able to use the public endpoint without entering the
+            // authenticated session failure path. Members were verified above.
             retryingAfterUnauthorized: false
         )
     }

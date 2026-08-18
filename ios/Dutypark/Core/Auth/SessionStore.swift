@@ -95,11 +95,15 @@ final class SessionStore: ObservableObject {
             case .serverWithDetails(status: 429, _, let details):
                 loginErrorKey = "auth.login.error.rateLimited"
                 loginRemainingAttempts = details.remainingAttempts
+            case .serverWithDetails(status: 401, code: "auth.account.suspended", _):
+                loginErrorKey = "auth.account.suspended"
             case .serverWithDetails(status: 401, _, let details):
                 loginErrorKey = "auth.login.error.invalidCredentials"
                 loginRemainingAttempts = details.remainingAttempts
             case .server(status: 429, _):
                 loginErrorKey = "auth.login.error.rateLimited"
+            case .server(status: 401, code: "auth.account.suspended"):
+                loginErrorKey = "auth.account.suspended"
             case .server(status: 401, _):
                 loginErrorKey = "auth.login.error.invalidCredentials"
             case .transport:

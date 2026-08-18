@@ -627,6 +627,19 @@ final class SocialFeatureTests: XCTestCase {
         XCTAssertNil(viewModel.errorKey)
     }
 
+    func testBlockingAFriendWithAReceivedFamilyRequestRefreshesTheRequestBadge() async throws {
+        let repository = SocialRepositorySpy(receivedRequestFromMemberID: 32)
+        var effects: [Bool] = []
+        let viewModel = SocialViewModel(repository: repository) { effects.append($0) }
+        await viewModel.load()
+        let friend = try XCTUnwrap(viewModel.friends.first(where: { $0.member.id == 32 }))
+
+        await viewModel.block(friend)
+
+        XCTAssertTrue(viewModel.receivedRequests.isEmpty)
+        XCTAssertEqual(effects, [true])
+    }
+
     func testFailedBlockRestoresTheFriendAndReportsTheFailure() async throws {
         let repository = SocialRepositorySpy(failingAction: "block:32")
         let viewModel = SocialViewModel(repository: repository)
@@ -700,6 +713,7 @@ private final class SocialRepositorySpy: SocialRepository, @unchecked Sendable {
     private let failingAction: String?
     private let pinnedOrderDelayMilliseconds: Int64
     private let pinnedFriendCount: Int?
+    private let receivedRequestFromMemberID: MemberID
     private var storedActions: [String] = []
     private var didPerformMutation = false
     private var storedFriendInfoRequestCount = 0
@@ -711,7 +725,8 @@ private final class SocialRepositorySpy: SocialRepository, @unchecked Sendable {
         failingAction: String? = nil,
         pinnedOrderDelayMilliseconds: Int64 = 0,
         pinnedFriendCount: Int? = nil,
-        blockedMemberIDs: [MemberID] = []
+        blockedMemberIDs: [MemberID] = [],
+        receivedRequestFromMemberID: MemberID = 11
     ) {
         self.failPinnedOrder = failPinnedOrder
         self.failReloadAfterMutation = failReloadAfterMutation
@@ -719,6 +734,7 @@ private final class SocialRepositorySpy: SocialRepository, @unchecked Sendable {
         self.pinnedOrderDelayMilliseconds = pinnedOrderDelayMilliseconds
         self.pinnedFriendCount = pinnedFriendCount
         self.storedBlockedMemberIDs = blockedMemberIDs
+        self.receivedRequestFromMemberID = receivedRequestFromMemberID
     }
 
     var actions: [String] {
@@ -750,7 +766,9 @@ private final class SocialRepositorySpy: SocialRepository, @unchecked Sendable {
         let blockedIDs = Set(lock.withLock { storedBlockedMemberIDs })
         return DashboardFriendInfoDTO(
             friends: friends.filter { !blockedIDs.contains($0.member.id ?? -1) },
-            pendingRequestsTo: [request(id: 1, from: 11, to: 99)],
+            pendingRequestsTo: blockedIDs.contains(receivedRequestFromMemberID)
+                ? []
+                : [request(id: 1, from: receivedRequestFromMemberID, to: 99)],
             pendingRequestsFrom: [request(id: 2, from: 99, to: 22)]
         )
     }

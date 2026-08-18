@@ -85,6 +85,77 @@ struct SupportFeatureTests {
     }
 
     @Test
+    func submissionCarriesWhetherTheSenderMustRemainAuthenticated() async {
+        let memberRepository = SupportRepositorySpy()
+        let memberModel = SupportViewModel(
+            prefilledEmail: "member@dutypark.dev",
+            isSignedIn: true,
+            repository: memberRepository
+        )
+        memberModel.content = "Please keep this inquiry in my history."
+
+        await memberModel.submit()
+
+        #expect(memberRepository.authenticatedSubmissions == [true])
+
+        let guestRepository = SupportRepositorySpy()
+        let guestModel = SupportViewModel(
+            prefilledEmail: "guest@dutypark.dev",
+            isSignedIn: false,
+            repository: guestRepository
+        )
+        guestModel.content = "Please reply by email."
+
+        await guestModel.submit()
+
+        #expect(guestRepository.authenticatedSubmissions == [false])
+    }
+
+    @Test
+    func liveMemberSubmissionRefreshesThroughTheProtectedProbeWhileGuestPostsDirectly() async throws {
+        let recorder = SupportRequestRecorder()
+        defer { SupportURLProtocolStub.handler = nil }
+        SupportURLProtocolStub.handler = { request in
+            recorder.append(request)
+            switch (request.httpMethod, request.url?.path, recorder.count(of: "/api/inquiries/me")) {
+            case ("GET", "/api/inquiries/me", 1):
+                return Self.httpResponse(
+                    request,
+                    status: 401,
+                    body: #"{"status":401,"code":"auth.required"}"#
+                )
+            case ("POST", "/api/auth/refresh", _):
+                return Self.httpResponse(request, status: 200, body: #"{"expiresIn":3600}"#)
+            case ("GET", "/api/inquiries/me", 2):
+                return Self.httpResponse(request, status: 200, body: "{}")
+            case ("POST", "/api/inquiries", _):
+                return Self.httpResponse(request, status: 201, body: #"{"id":"6d2a4c86-1d8b-4c6f-9c1f-6a3a5b2f9c11"}"#)
+            default:
+                return Self.httpResponse(request, status: 404)
+            }
+        }
+
+        let repository = LiveSupportRepository(client: Self.supportClient())
+        let request = CreateInquiryRequest(
+            email: "member@dutypark.dev",
+            subject: nil,
+            content: "Please keep this inquiry in my history."
+        )
+        try await repository.submitInquiry(request, authenticated: true)
+
+        #expect(recorder.paths == [
+            "/api/inquiries/me",
+            "/api/auth/refresh",
+            "/api/inquiries/me",
+            "/api/inquiries"
+        ])
+
+        recorder.removeAll()
+        try await repository.submitInquiry(request, authenticated: false)
+        #expect(recorder.paths == ["/api/inquiries"])
+    }
+
+    @Test
     func anEmptySubjectIsOmittedFromTheRequest() async {
         let repository = SupportRepositorySpy()
         let model = SupportViewModel(prefilledEmail: "member@dutypark.dev", repository: repository)
@@ -132,6 +203,22 @@ struct SupportFeatureTests {
 
         #expect(repository.submissions.first?.subject?.count == CreateInquiryRequest.subjectMaximumLength)
         #expect(repository.submissions.first?.content.count == CreateInquiryRequest.contentMaximumLength)
+    }
+
+    @Test
+    func nonBMPFieldsAreCappedUsingTheServersUTF16LengthContract() async throws {
+        let repository = SupportRepositorySpy()
+        let model = SupportViewModel(prefilledEmail: "member@dutypark.dev", repository: repository)
+        model.subject = String(repeating: "😀", count: CreateInquiryRequest.subjectMaximumLength)
+        model.content = String(repeating: "😀", count: CreateInquiryRequest.contentMaximumLength)
+
+        await model.submit()
+
+        let request = try #require(repository.submissions.first)
+        #expect(request.subject?.utf16.count == CreateInquiryRequest.subjectMaximumLength)
+        #expect(request.content.utf16.count == CreateInquiryRequest.contentMaximumLength)
+        #expect(request.subject?.count == CreateInquiryRequest.subjectMaximumLength / 2)
+        #expect(request.content.count == CreateInquiryRequest.contentMaximumLength / 2)
     }
 
     @Test
@@ -406,6 +493,7 @@ private final class SupportRepositorySpy: SupportRepository, @unchecked Sendable
     private let failure: APIError?
     private let pages: [PageResponse<MyInquiryDTO>]
     private var storedSubmissions: [CreateInquiryRequest] = []
+    private var storedAuthenticatedSubmissions: [Bool] = []
     private var storedInquiryRequests: [SupportInquiryRequest] = []
     private var isFailing: Bool
 
@@ -426,12 +514,19 @@ private final class SupportRepositorySpy: SupportRepository, @unchecked Sendable
         lock.withLock { storedInquiryRequests }
     }
 
+    var authenticatedSubmissions: [Bool] {
+        lock.withLock { storedAuthenticatedSubmissions }
+    }
+
     func stopFailing() {
         lock.withLock { isFailing = false }
     }
 
-    func submitInquiry(_ request: CreateInquiryRequest) async throws {
-        lock.withLock { storedSubmissions.append(request) }
+    func submitInquiry(_ request: CreateInquiryRequest, authenticated: Bool) async throws {
+        lock.withLock {
+            storedSubmissions.append(request)
+            storedAuthenticatedSubmissions.append(authenticated)
+        }
         if let failure, lock.withLock({ isFailing }) { throw failure }
     }
 
@@ -446,6 +541,31 @@ private final class SupportRepositorySpy: SupportRepository, @unchecked Sendable
 }
 
 extension SupportFeatureTests {
+    nonisolated static func supportClient() -> APIClient {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [SupportURLProtocolStub.self]
+        return APIClient(
+            baseURL: URL(string: "https://dutypark.test/api/")!,
+            session: URLSession(configuration: configuration)
+        )
+    }
+
+    nonisolated static func httpResponse(
+        _ request: URLRequest,
+        status: Int,
+        body: String = ""
+    ) -> (HTTPURLResponse, Data) {
+        (
+            HTTPURLResponse(
+                url: request.url!,
+                statusCode: status,
+                httpVersion: nil,
+                headerFields: nil
+            )!,
+            Data(body.utf8)
+        )
+    }
+
     static func inquiry(
         id: UUID = UUID(),
         subject: String?,
@@ -481,4 +601,44 @@ extension SupportFeatureTests {
             empty: subjects.isEmpty
         )
     }
+}
+
+private final class SupportRequestRecorder: @unchecked Sendable {
+    private let lock = NSLock()
+    private var requests: [URLRequest] = []
+
+    var paths: [String] {
+        lock.withLock { requests.compactMap(\.url?.path) }
+    }
+
+    func append(_ request: URLRequest) {
+        lock.withLock { requests.append(request) }
+    }
+
+    func count(of path: String) -> Int {
+        lock.withLock { requests.count(where: { $0.url?.path == path }) }
+    }
+
+    func removeAll() {
+        lock.withLock { requests.removeAll() }
+    }
+}
+
+private final class SupportURLProtocolStub: URLProtocol, @unchecked Sendable {
+    nonisolated(unsafe) static var handler: (@Sendable (URLRequest) -> (HTTPURLResponse, Data))?
+
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+
+    override func startLoading() {
+        guard let handler = Self.handler else {
+            fatalError("Missing SupportURLProtocolStub handler")
+        }
+        let result = handler(request)
+        client?.urlProtocol(self, didReceive: result.0, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: result.1)
+        client?.urlProtocolDidFinishLoading(self)
+    }
+
+    override func stopLoading() {}
 }

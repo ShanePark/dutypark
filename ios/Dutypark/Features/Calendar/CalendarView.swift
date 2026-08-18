@@ -34,6 +34,19 @@ nonisolated enum CalendarMainLayout {
     }
 }
 
+nonisolated enum CalendarReportPolicy {
+    static func canReport(
+        isSignedIn: Bool,
+        isMyCalendar: Bool,
+        isTagged: Bool,
+        scheduleOwnerID: MemberID?,
+        reporterID: MemberID?
+    ) -> Bool {
+        guard isSignedIn, let reporterID else { return false }
+        return (!isMyCalendar || isTagged) && scheduleOwnerID != reporterID
+    }
+}
+
 struct CalendarView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var model: CalendarViewModel
@@ -59,6 +72,7 @@ struct CalendarView: View {
     @State private var reportCanDismiss = true
     @State private var showsBlockConfirmation = false
     @State private var leavesAfterBlock = false
+    @State private var refreshesAfterReportedBlock = false
     @StateObject private var blockModel = MemberBlockViewModel()
 
     private let isPushedMemberCalendar: Bool
@@ -102,7 +116,7 @@ struct CalendarView: View {
                 onDismiss: {
                     model.selectedDay = nil
                     dayModalCanDismiss = true
-                    leaveBlockedMemberCalendar()
+                    finishDayDismissal()
                 },
                 canDismiss: dayModalCanDismiss,
                 onDismissRequest: { _ in dayDismissRequest += 1 }
@@ -112,7 +126,10 @@ struct CalendarView: View {
                     initialDay: day,
                     maximumHeight: availableSize.height,
                     onDismissabilityChange: { dayModalCanDismiss = $0 },
-                    onBlockedCalendarOwner: { leavesAfterBlock = true },
+                    onBlockedScheduleOwner: { leavesCalendar in
+                        refreshesAfterReportedBlock = true
+                        leavesAfterBlock = leavesCalendar
+                    },
                     dismissRequest: dayDismissRequest
                 ) {
                     dismiss()
@@ -527,6 +544,15 @@ struct CalendarView: View {
     private func finishReportDismissal() {
         reportTarget = nil
         reportCanDismiss = true
+        leaveBlockedMemberCalendar()
+    }
+
+    private func finishDayDismissal() {
+        let shouldRefresh = refreshesAfterReportedBlock && !leavesAfterBlock
+        refreshesAfterReportedBlock = false
+        if shouldRefresh {
+            Task { await model.load() }
+        }
         leaveBlockedMemberCalendar()
     }
 
@@ -1784,9 +1810,9 @@ private struct DayDetailView: View {
     let initialDay: CalendarDayContent
     let maximumHeight: CGFloat
     let onDismissabilityChange: (Bool) -> Void
-    /// Raised when a report from this modal blocked the member whose calendar is behind
-    /// it, so the calendar can leave once this modal is off screen.
-    let onBlockedCalendarOwner: () -> Void
+    /// Raised after a report blocks the schedule owner. The argument says whether that
+    /// owner is also the calendar owner, whose block ends access to this screen.
+    let onBlockedScheduleOwner: (Bool) -> Void
     let dismissRequest: Int
     let dismiss: () -> Void
     @State private var editorSchedule: ScheduleDTO?
@@ -1798,7 +1824,7 @@ private struct DayDetailView: View {
     @State private var reportTarget: ReportTarget?
     @State private var reportCanDismiss = true
     @State private var reportBlockEndsCalendarAccess = false
-    @State private var leavesAfterBlock = false
+    @State private var dismissesAfterReportedBlock = false
 
     private var day: CalendarDayContent {
         model.selectedDay ?? initialDay
@@ -1858,7 +1884,7 @@ private struct DayDetailView: View {
                     target: target,
                     maximumHeight: availableSize.height,
                     onDismissabilityChange: { reportCanDismiss = $0 },
-                    onBlocked: { leavesAfterBlock = reportBlockEndsCalendarAccess },
+                    onBlocked: { dismissesAfterReportedBlock = true },
                     dismiss: dismissReport
                 )
             }
@@ -2078,7 +2104,13 @@ private struct DayDetailView: View {
     // Only a signed-in member can report, and only content that is not their own:
     // another member's calendar, or a schedule someone else tagged them into.
     private func canReport(_ schedule: ScheduleDTO) -> Bool {
-        model.me != nil && (!model.isMyCalendar || schedule.isTagged)
+        CalendarReportPolicy.canReport(
+            isSignedIn: model.me != nil,
+            isMyCalendar: model.isMyCalendar,
+            isTagged: schedule.isTagged,
+            scheduleOwnerID: schedule.taggedByMember?.id ?? model.targetMemberID,
+            reporterID: model.me?.id
+        )
     }
 
     // Reporting with "also block" blocks whoever owns the reported schedule, and only
@@ -2157,14 +2189,14 @@ private struct DayDetailView: View {
         reportDismissability()
     }
 
-    // Blocking the calendar's owner ends this modal's access too, so it steps aside and
-    // hands the departure to the calendar, which pops once this cover is off screen.
+    // Blocking removes this schedule from every board or calendar where it was tagged,
+    // so the detail closes and lets the calendar refresh or leave once the cover is gone.
     private func finishReportDismissal() {
         reportTarget = nil
         reportCanDismiss = true
-        guard leavesAfterBlock else { return }
-        leavesAfterBlock = false
-        onBlockedCalendarOwner()
+        guard dismissesAfterReportedBlock else { return }
+        dismissesAfterReportedBlock = false
+        onBlockedScheduleOwner(reportBlockEndsCalendarAccess)
         Task {
             await Task.yield()
             dismiss()
