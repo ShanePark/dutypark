@@ -26,6 +26,7 @@ class ScheduleSearchServiceDBImpl(
         query: String
     ): PageResponse<ScheduleSearchResult> {
         val target = memberRepository.findById(targetMemberId).orElseThrow()
+        friendService.checkVisibility(loginMember, target, scheduleVisibilityCheck = true)
         val availableVisibilities = friendService.availableScheduleVisibilities(loginMember, target)
 
         val pageOfIds = scheduleRepository.findSearchIdsByMemberAndContentContainingAndVisibilityIn(

@@ -1,6 +1,8 @@
 package com.tistory.shanepark.dutypark.schedule.service
 
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
+import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.member.block.service.BlockService
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleSaveDto
@@ -9,6 +11,7 @@ import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.data.domain.Pageable
 import org.springframework.test.context.TestPropertySource
@@ -27,6 +30,9 @@ class ScheduleSearchServiceDBImplTest : DutyparkIntegrationTest() {
 
     @Autowired
     lateinit var scheduleRepository: ScheduleRepository
+
+    @Autowired
+    lateinit var blockService: BlockService
 
     @Test
     fun `search schedules 3 results, it should be sorted by date desc and paged`() {
@@ -152,15 +158,34 @@ class ScheduleSearchServiceDBImplTest : DutyparkIntegrationTest() {
         assertThat(result.content.map { it.content }).containsExactlyElementsOf(expectedContents)
     }
 
+    @Test
+    fun `search fails when the target blocked the viewer`() {
+        val owner = TestData.member
+        val viewer = TestData.member2
+        updateVisibility(owner, Visibility.PUBLIC)
+        makeSchedule(
+            loginMember(owner), "blocked-search-target", LocalDateTime.of(2024, 1, 1, 0, 0), Visibility.PUBLIC
+        )
+
+        blockService.block(owner.id!!, viewer.id!!)
+        em.flush()
+        em.clear()
+
+        assertThrows<AuthException> {
+            scheduleSearchServiceDBImpl.search(loginMember(viewer), owner.id!!, Pageable.ofSize(10), "blocked")
+        }
+    }
+
     private fun makeSchedule(
-        loginMember: LoginMember, title: String, date: LocalDateTime
+        loginMember: LoginMember, title: String, date: LocalDateTime,
+        visibility: Visibility = Visibility.FRIENDS
     ): Schedule {
         return scheduleService.createSchedule(
             loginMember,
             ScheduleSaveDto(
                 memberId = loginMember.id,
                 content = title,
-                visibility = Visibility.FRIENDS,
+                visibility = visibility,
                 startDateTime = date,
                 endDateTime = date
             )

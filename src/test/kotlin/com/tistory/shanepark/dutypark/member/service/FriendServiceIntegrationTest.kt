@@ -269,6 +269,39 @@ class FriendServiceIntegrationTest : DutyparkIntegrationTest() {
         assertThat(exception.message).isEqualTo("friend.request.blocked")
     }
 
+    @Test
+    fun `isVisible is false when a blocked member has no team`() {
+        val viewer = TestData.member
+        val target = TestData.member2
+        clearTeams(viewer, target)
+        updateVisibility(target, Visibility.PUBLIC)
+
+        blockService.block(viewer.id!!, target.id!!)
+        em.flush()
+        em.clear()
+
+        assertThat(friendService.isVisible(loginMember(viewer), target.id)).isFalse()
+    }
+
+    @Test
+    fun `isVisible is false for a private calendar when neither member has a team`() {
+        val viewer = TestData.member
+        val target = TestData.member2
+        clearTeams(viewer, target)
+        updateVisibility(target, Visibility.PRIVATE)
+        em.flush()
+        em.clear()
+
+        assertThat(friendService.isVisible(loginMember(viewer), target.id)).isFalse()
+    }
+
+    private fun clearTeams(vararg members: Member) {
+        members.forEach {
+            it.team = null
+            memberRepository.save(it)
+        }
+    }
+
     private fun separateTeams(member1: Member, member2: Member) {
         member1.team = TestData.team
         member2.team = TestData.team2

@@ -297,7 +297,9 @@ class FriendService(
         loginMember: Member,
         targetMember: Member
     ): Boolean {
-        return loginMember.team == targetMember.team
+        // Compare ids: team is a lazy association, and two members without a team are not teammates.
+        val loginTeamId = loginMember.team?.id ?: return false
+        return loginTeamId == targetMember.team?.id
     }
 
     @Transactional(readOnly = true)
