@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { MoreHorizontal } from 'lucide-vue-next'
 import { useEscapeKey } from '@/composables/useEscapeKey'
 
 defineProps<{
   menuLabel: string
+  triggerClass: string
 }>()
 
 const isOpen = ref(false)
@@ -23,23 +23,24 @@ defineExpose({ close })
 </script>
 
 <template>
-  <div class="relative flex-shrink-0">
+  <div class="relative min-w-0">
     <button
       type="button"
-      class="calendar-nav-btn flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-full p-1 sm:p-2"
+      :class="triggerClass"
       :aria-label="menuLabel"
       :aria-expanded="isOpen"
+      :data-open="isOpen"
       aria-haspopup="menu"
       @click="toggle"
     >
-      <MoreHorizontal class="h-5 w-5 sm:h-6 sm:w-6" />
+      <slot name="trigger" />
     </button>
 
     <template v-if="isOpen">
       <!-- Full-screen catcher so a tap anywhere else dismisses the menu. -->
       <div class="fixed inset-0 z-[9998]" @click="close"></div>
       <div
-        class="overflow-menu absolute right-0 top-full z-[9999] mt-1 w-44 overflow-hidden rounded-xl text-left"
+        class="overflow-menu absolute left-0 top-full z-[9999] mt-2 w-44 overflow-hidden rounded-xl text-left"
         role="menu"
         @click="close"
       >

@@ -1,16 +1,27 @@
 import { describe, expect, it } from 'vitest'
 import dutyView from './DutyView.vue?raw'
 import dutyHeaderControls from '@/components/duty/DutyHeaderControls.vue?raw'
+import overflowMenu from '@/components/common/OverflowMenu.vue?raw'
 import scheduleList from '@/components/duty/ScheduleList.vue?raw'
 import todoDetailModal from '@/components/duty/TodoDetailModal.vue?raw'
 import dayDetailModal from '@/components/duty/DayDetailModal.vue?raw'
 
 describe('duty calendar report entry points', () => {
-  it('shows the overflow menu on other members calendars only', () => {
-    expect(dutyView).toContain(':show-overflow="!isMyCalendar"')
+  it('shows the member menu on other members calendars only', () => {
+    expect(dutyView).toContain(':show-member-menu="!isMyCalendar"')
     expect(dutyView).toContain(':show-block="isLoggedIn && !isMyCalendar"')
     expect(dutyHeaderControls).toContain("emit('report-member')")
     expect(dutyHeaderControls).toContain("emit('block-member')")
+  })
+
+  // The profile photo and the name are the menu trigger, the way a social app opens
+  // member actions from the identity itself, so there is no separate overflow button.
+  it('hangs the member menu off the profile photo and name', () => {
+    expect(dutyHeaderControls).toMatch(
+      /<OverflowMenu[\s\S]*?<template #trigger>[\s\S]*?<ProfileAvatar[\s\S]*?\{\{ memberName \}\}[\s\S]*?<\/template>[\s\S]*?emit\('report-member'\)/
+    )
+    expect(overflowMenu).toContain("<slot name=\"trigger\" />")
+    expect(overflowMenu).not.toContain('MoreHorizontal')
   })
 
   it('hides the block menu item from guests', () => {

@@ -1573,7 +1573,7 @@ async function showExcelUploadModal() {
       :current-month="currentMonth"
       :can-search="canSearch"
       :show-back="!isMyCalendar"
-      :show-overflow="!isMyCalendar"
+      :show-member-menu="!isMyCalendar"
       :show-block="isLoggedIn && !isMyCalendar"
       v-model:searchQuery="searchQuery"
       @back="goBack('/')"

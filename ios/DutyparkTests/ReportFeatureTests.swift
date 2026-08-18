@@ -180,19 +180,22 @@ final class ReportFeatureTests: XCTestCase {
 
     // MARK: - Entry points
 
-    func testMemberCalendarOffersReportAndBlockThroughAnOverflowMenu() throws {
+    func testMemberCalendarOffersReportAndBlockFromTheIdentityChip() throws {
         let source = try source(of: "Dutypark/Features/Calendar/CalendarView.swift")
 
         for wiring in [
             // The menu belongs to a signed-in visitor looking at somebody else's calendar.
             "isPushedMemberCalendar && !model.isMyCalendar && model.me != nil",
-            "private var memberOverflowMenu: some View",
+            // The avatar and the name are the menu label, the way a social app opens
+            // member actions from the identity itself.
+            "private var memberActionsMenu: some View",
+            "        } label: {\n            memberIdentity",
             "calendar.report.member",
             "calendar.block.member",
             "calendar.member.menu",
-            // The fixed-width trailing slot only ever holds two controls, so the menu
-            // takes over "this month" while it is on screen.
-            "if !isViewingCurrentMonth, !showsMemberOverflowMenu {",
+            // With the overflow button gone the trailing slot is free to keep
+            // "this month" as a plain bar button again.
+            "if !isViewingCurrentMonth {",
             "calendar.block.confirm.message",
             "isWorking: blockModel.isBlocking",
             "memberBackAction?()",
@@ -203,6 +206,26 @@ final class ReportFeatureTests: XCTestCase {
         ] {
             XCTAssertTrue(source.contains(wiring), "CalendarView is missing: \(wiring)")
         }
+
+        XCTAssertFalse(
+            source.contains("Image(systemName: \"ellipsis\")"),
+            "The member calendar must not keep a separate overflow button"
+        )
+    }
+
+    // Back stays a control of its own so the identity chip is free to open the menu.
+    func testMemberCalendarKeepsBackSeparateFromTheIdentityChip() throws {
+        let source = try source(of: "Dutypark/Features/Calendar/CalendarView.swift")
+
+        let backButton = try XCTUnwrap(
+            source.range(of: "accessibilityIdentifier(\"calendar.member.back\")")
+                .map { source[source.startIndex..<$0.lowerBound] }
+        )
+        let button = try XCTUnwrap(backButton.range(of: "Button(action: memberBackAction)", options: .backwards))
+        XCTAssertFalse(
+            backButton[button.upperBound...].contains("memberIdentity"),
+            "The back button must not wrap the avatar and the name"
+        )
     }
 
     func testTaggedTodoDetailOffersReport() throws {

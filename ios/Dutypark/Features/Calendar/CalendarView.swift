@@ -320,15 +320,11 @@ struct CalendarView: View {
             HStack(spacing: 0) {
                 // The trailing slot is a fixed width that holds exactly two controls, and
                 // widening it would push the centred month navigation off a 375pt screen.
-                // The overflow menu therefore absorbs "this month" whenever it is present.
-                if !isViewingCurrentMonth, !showsMemberOverflowMenu {
+                if !isViewingCurrentMonth {
                     thisMonthControl
                 }
                 if model.canSearchSchedules {
                     searchControl
-                }
-                if showsMemberOverflowMenu {
-                    memberOverflowMenu
                 }
             }
             .frame(width: Self.barSideWidth, alignment: .trailing)
@@ -336,22 +332,14 @@ struct CalendarView: View {
     }
 
     // Report and block belong to someone else's calendar opened from another screen.
-    private var showsMemberOverflowMenu: Bool {
+    private var showsMemberActions: Bool {
         isPushedMemberCalendar && !model.isMyCalendar && model.me != nil
     }
 
-    private var memberOverflowMenu: some View {
+    // The avatar and the name are the menu label, the way a social app opens member
+    // actions from the identity itself instead of a separate overflow button.
+    private var memberActionsMenu: some View {
         Menu {
-            if !isViewingCurrentMonth {
-                Button {
-                    Task { await model.goToToday() }
-                } label: {
-                    Label(
-                        CalendarLocalization.text("calendar.month.goToThisMonth"),
-                        systemImage: "arrow.uturn.backward"
-                    )
-                }
-            }
             Button {
                 guard let memberID = model.targetMemberID else { return }
                 withoutPresentationAnimation {
@@ -373,13 +361,12 @@ struct CalendarView: View {
             }
             .accessibilityIdentifier("calendar.member.block")
         } label: {
-            Image(systemName: "ellipsis")
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(DPColor.accent)
-                .frame(width: Self.barControlWidth, height: DPSize.minimumTouchTarget)
+            memberIdentity
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(Rectangle())
         }
         .accessibilityLabel(CalendarLocalization.text("calendar.more"))
+        .accessibilityValue(model.targetName)
         .accessibilityIdentifier("calendar.member.menu")
     }
 
@@ -392,32 +379,31 @@ struct CalendarView: View {
         return { dismiss() }
     }
 
-    // The whole identity chip is the touch target: the leading bar slot cannot also
-    // fit a separate 44pt-wide control next to the avatar and the name.
-    @ViewBuilder
+    // Back is a control of its own so the avatar and the name stay free to open the
+    // member actions. The leading bar slot cannot fit two 44pt-wide controls, so the
+    // chevron claims only its own width and the identity takes the rest.
     private var memberIdentityBar: some View {
-        if let memberBackAction {
-            Button(action: memberBackAction) {
-                HStack(spacing: 2) {
+        HStack(spacing: 0) {
+            if let memberBackAction {
+                Button(action: memberBackAction) {
                     Image(systemName: "chevron.left")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(DPColor.accent)
-                    memberIdentity
+                        .frame(width: Self.barBackWidth, height: DPSize.minimumTouchTarget)
+                        .contentShape(Rectangle())
                 }
-                .frame(
-                    maxWidth: .infinity,
-                    minHeight: DPSize.minimumTouchTarget,
-                    alignment: .leading
-                )
-                .contentShape(Rectangle())
+                .buttonStyle(.plain)
+                .accessibilityLabel(CalendarLocalization.text("calendar.member.back"))
+                .accessibilityValue(model.targetName)
+                .accessibilityIdentifier("calendar.member.back")
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(CalendarLocalization.text("calendar.member.back"))
-            .accessibilityValue(model.targetName)
-            .accessibilityIdentifier("calendar.member.back")
-        } else {
-            memberIdentity
+            if showsMemberActions {
+                memberActionsMenu
+            } else {
+                memberIdentity
+            }
         }
+        .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget, alignment: .leading)
     }
 
     private var memberIdentity: some View {
@@ -462,6 +448,11 @@ struct CalendarView: View {
     // navigation bar cannot fit the leading identity, the month navigation and two
     // trailing actions otherwise. Height stays at the full touch target.
     private static let barControlWidth: CGFloat = 36
+
+    // Back sits inside the leading slot next to the identity, so it claims barely
+    // more than the chevron itself and leaves the name its room. Height still spans
+    // the full touch target.
+    private static let barBackWidth: CGFloat = 16
 
     // The leading and trailing bar items claim the same width so the month
     // navigation in the principal slot stays centred on the screen.
