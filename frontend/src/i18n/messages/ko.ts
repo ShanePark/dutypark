@@ -504,6 +504,12 @@ export default {
       todoStatusDoneFallback: {
         v1: '[{todoTitle}] TODO가 완료 처리되었습니다.',
       },
+      inquiryAnswered: {
+        v1: '문의 [{subject}]에 답변이 등록되었습니다.',
+      },
+      inquiryAnsweredFallback: {
+        v1: '문의에 답변이 등록되었습니다.',
+      },
     },
     list: {
       markAllAsRead: '전체 읽음',
@@ -1953,6 +1959,8 @@ export default {
         loadDetailFailed: '문의 상세 정보를 불러오는데 실패했습니다.',
         updateStatusSuccess: '문의 상태를 변경했습니다.',
         updateStatusFailed: '문의 상태 변경에 실패했습니다.',
+        saveSuccess: '문의 처리 내용을 저장했습니다.',
+        saveFailed: '문의 처리 내용을 저장하지 못했습니다.',
         copyEmailSuccess: '이메일 주소를 복사했습니다.',
         copyEmailFailed: '이메일 주소 복사에 실패했습니다.',
       },
@@ -1964,14 +1972,18 @@ export default {
         retry: '다시 불러오기',
         actionsTitle: '처리',
         memoPlaceholder: '처리 내용을 기록하세요 (선택)',
-        replyHint: '회신은 기록된 이메일 주소로 직접 보내주세요.',
+        replyHint: '회원 문의는 아래 답변란을 이용하고, 비회원 문의는 기록된 이메일 주소로 직접 회신해 주세요.',
+        answerPlaceholder: '사용자에게 보여줄 답변을 입력하세요',
+        answerWarning: '이 내용은 사용자에게 그대로 보입니다. 처음 저장할 때 회원에게 알림이 발송되며, 이후 수정해도 다시 알리지 않습니다.',
         fields: {
           email: '회신 이메일',
           member: '작성자',
           content: '문의 내용',
           memo: '관리자 메모',
+          answer: '사용자에게 보낼 답변',
           createdAt: '접수일',
           closedAt: '처리일',
+          answeredAt: '답변일',
         },
         values: {
           noSubject: '(제목 없음)',
@@ -1981,6 +1993,7 @@ export default {
         actions: {
           copyEmail: '복사',
           replyByEmail: '메일로 회신',
+          saveChanges: '변경사항 저장',
           markClosed: '처리 완료',
           reopen: '다시 열기',
           viewCalendar: '달력',
@@ -1990,6 +2003,10 @@ export default {
   },
   support: {
     title: '문의·지원',
+    tabs: {
+      form: '문의하기',
+      history: '내 문의 내역',
+    },
     subtitle: '신고와 차단 방법을 확인하고, 궁금한 점이나 이의제기를 접수할 수 있습니다.',
     guide: {
       title: '신고와 차단',
@@ -2005,6 +2022,8 @@ export default {
     form: {
       title: '문의하기',
       description: '답변은 입력하신 이메일로 보내드립니다. 회신받을 주소를 정확히 입력해 주세요.',
+      descriptionSignedIn: '답변이 등록되면 알림으로 알려드리고, 내 문의 내역에서 확인할 수 있습니다.',
+      guestHint: '로그인 후 문의하면 앱에서 답변을 확인할 수 있습니다.',
       emailLabel: '회신 이메일',
       emailPlaceholder: "you{'@'}example.com",
       subjectLabel: '제목 (선택)',
@@ -2023,7 +2042,28 @@ export default {
     success: {
       title: '문의가 접수되었습니다',
       description: '입력하신 이메일로 답변을 보내드립니다. 확인까지 최대 24시간이 걸릴 수 있습니다.',
+      descriptionSignedIn: '답변이 등록되면 내 문의 내역에서 확인할 수 있습니다. 확인까지 최대 24시간이 걸릴 수 있습니다.',
       another: '문의 하나 더 작성하기',
+    },
+    history: {
+      loading: '문의 내역을 불러오는 중입니다...',
+      loadFailed: '문의 내역을 불러오지 못했습니다.',
+      retry: '다시 시도',
+      empty: '접수한 문의가 없습니다.',
+      emptyAction: '문의하기',
+      loadMore: '더 보기',
+      noSubject: '(제목 없음)',
+      submittedAt: '접수일',
+      status: {
+        open: '접수됨',
+        closed: '처리완료',
+      },
+      answered: '답변 있음',
+      awaiting: '답변 대기',
+      contentTitle: '문의 내용',
+      answerTitle: '답변',
+      answeredAt: '답변일',
+      awaitingDescription: '확인 후 답변드리겠습니다.',
     },
   },
 } as const

@@ -9,6 +9,7 @@ import { resolveApiErrorMessage } from '@/utils/resolveApiError'
 import AdminNavTiles from '@/components/admin/AdminNavTiles.vue'
 import AdminInquiryDetailModal from '@/components/admin/AdminInquiryDetailModal.vue'
 import { INQUIRY_STATUS_LABEL_KEYS, inquiryStatusToneClass } from '@/components/admin/adminModerationLabels'
+import { buildInquiryUpdateRequest } from './inquiryUpdateRequest'
 import type { AdminInquiryDto, InquiryStatus, InquiryStatusFilter } from '@/types/adminModeration'
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-vue-next'
 
@@ -108,21 +109,26 @@ function closeInquiryDetail() {
   isDetailLoading.value = false
 }
 
-async function handleUpdateStatus(status: InquiryStatus, memo: string) {
-  if (!selectedInquiryId.value) return
+async function handleUpdateStatus(status: InquiryStatus, memo: string, answer: string) {
+  if (!selectedInquiryId.value || !selectedInquiry.value) return
 
+  const statusChanged = status !== selectedInquiry.value.status
   isWorking.value = true
   try {
-    const res = await adminApi.updateInquiryStatus(selectedInquiryId.value, {
-      status,
-      memo: memo.trim() || undefined,
-    })
+    const request = buildInquiryUpdateRequest(status, memo, answer, selectedInquiry.value.answer)
+    const res = await adminApi.updateInquiryStatus(selectedInquiryId.value, request)
     selectedInquiry.value = res.data
-    toastSuccess(t('admin.inquiries.messages.updateStatusSuccess'))
+    toastSuccess(t(statusChanged
+      ? 'admin.inquiries.messages.updateStatusSuccess'
+      : 'admin.inquiries.messages.saveSuccess'))
     await fetchInquiries()
   } catch (error) {
     console.error('Failed to update inquiry status:', error)
-    showError(resolveApiErrorMessage(error, { fallbackKey: 'admin.inquiries.messages.updateStatusFailed' }, t))
+    showError(resolveApiErrorMessage(error, {
+      fallbackKey: statusChanged
+        ? 'admin.inquiries.messages.updateStatusFailed'
+        : 'admin.inquiries.messages.saveFailed',
+    }, t))
   } finally {
     isWorking.value = false
   }

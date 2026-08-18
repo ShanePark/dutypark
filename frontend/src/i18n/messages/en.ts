@@ -502,6 +502,12 @@ export default {
       todoStatusDoneFallback: {
         v1: 'TODO [{todoTitle}] was marked as done.',
       },
+      inquiryAnswered: {
+        v1: 'Your inquiry [{subject}] has been answered.',
+      },
+      inquiryAnsweredFallback: {
+        v1: 'Your inquiry has been answered.',
+      },
     },
     list: {
       markAllAsRead: 'Mark all as read',
@@ -2018,6 +2024,8 @@ export default {
         loadDetailFailed: 'Failed to load the inquiry details.',
         updateStatusSuccess: 'The inquiry status has been updated.',
         updateStatusFailed: 'Failed to update the inquiry status.',
+        saveSuccess: 'The inquiry details have been saved.',
+        saveFailed: 'Failed to save the inquiry details.',
         copyEmailSuccess: 'The email address has been copied.',
         copyEmailFailed: 'Failed to copy the email address.',
       },
@@ -2029,14 +2037,18 @@ export default {
         retry: 'Try again',
         actionsTitle: 'Actions',
         memoPlaceholder: 'Record what you did (optional)',
-        replyHint: 'Reply directly to the email address on file.',
+        replyHint: 'Answer members in the reply box below; for guest inquiries write to the email address on file.',
+        answerPlaceholder: 'Write the reply the user will read',
+        answerWarning: 'This text is shown to the user exactly as written. Saving it the first time notifies the member; later edits do not notify again.',
         fields: {
           email: 'Reply email',
           member: 'Submitted by',
           content: 'Inquiry',
           memo: 'Admin memo',
+          answer: 'Reply to the user',
           createdAt: 'Received at',
           closedAt: 'Closed at',
+          answeredAt: 'Answered at',
         },
         values: {
           noSubject: '(No subject)',
@@ -2046,6 +2058,7 @@ export default {
         actions: {
           copyEmail: 'Copy',
           replyByEmail: 'Reply by email',
+          saveChanges: 'Save changes',
           markClosed: 'Mark closed',
           reopen: 'Reopen',
           viewCalendar: 'Calendar',
@@ -2055,6 +2068,10 @@ export default {
   },
   support: {
     title: 'Support',
+    tabs: {
+      form: 'Contact us',
+      history: 'My inquiries',
+    },
     subtitle: 'Find out how to report or block someone, and send us a question or an appeal.',
     guide: {
       title: 'Reporting and blocking',
@@ -2070,6 +2087,8 @@ export default {
     form: {
       title: 'Contact us',
       description: 'We reply by e-mail, so please double-check the address you enter.',
+      descriptionSignedIn: 'We will notify you once your inquiry is answered, and you can read the reply under My inquiries.',
+      guestHint: 'Sign in before sending an inquiry to read the reply right here in the app.',
       emailLabel: 'Reply e-mail',
       emailPlaceholder: "you{'@'}example.com",
       subjectLabel: 'Subject (optional)',
@@ -2088,7 +2107,28 @@ export default {
     success: {
       title: 'Your inquiry has been received',
       description: 'We will reply to the e-mail address you provided. It can take up to 24 hours.',
+      descriptionSignedIn: 'You can read the reply under My inquiries once it arrives. It can take up to 24 hours.',
       another: 'Send another inquiry',
+    },
+    history: {
+      loading: 'Loading your inquiries...',
+      loadFailed: 'We could not load your inquiries.',
+      retry: 'Try again',
+      empty: 'You have not sent an inquiry yet.',
+      emptyAction: 'Contact us',
+      loadMore: 'Load more',
+      noSubject: '(No subject)',
+      submittedAt: 'Submitted',
+      status: {
+        open: 'Received',
+        closed: 'Handled',
+      },
+      answered: 'Answered',
+      awaiting: 'Awaiting reply',
+      contentTitle: 'Your message',
+      answerTitle: 'Reply',
+      answeredAt: 'Answered',
+      awaitingDescription: 'We will look into it and get back to you.',
     },
   },
 } as const

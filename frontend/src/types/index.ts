@@ -623,8 +623,9 @@ export type NotificationType =
   | 'TODO_STATUS_TODO'
   | 'TODO_STATUS_IN_PROGRESS'
   | 'TODO_STATUS_DONE'
+  | 'INQUIRY_ANSWERED'
 
-export type NotificationReferenceType = 'FRIEND_REQUEST' | 'SCHEDULE' | 'TODO' | 'MEMBER'
+export type NotificationReferenceType = 'FRIEND_REQUEST' | 'SCHEDULE' | 'TODO' | 'MEMBER' | 'INQUIRY'
 
 export interface NotificationActorSnapshotV1 {
   name: string | null
@@ -674,6 +675,11 @@ export interface TodoStatusDonePayloadV1 extends ActorNotificationPayloadV1 {
   todoTitle: string
 }
 
+/** Answered by an admin, whose identity is never exposed, so this payload carries no actor. */
+export interface InquiryAnsweredPayloadV1 extends NotificationPayloadBaseV1 {
+  subject: string | null
+}
+
 export interface NotificationPayloadByTypeV1 {
   FRIEND_REQUEST_RECEIVED: FriendRequestReceivedPayloadV1
   FRIEND_REQUEST_ACCEPTED: FriendRequestAcceptedPayloadV1
@@ -684,6 +690,7 @@ export interface NotificationPayloadByTypeV1 {
   TODO_STATUS_TODO: TodoStatusTodoPayloadV1
   TODO_STATUS_IN_PROGRESS: TodoStatusInProgressPayloadV1
   TODO_STATUS_DONE: TodoStatusDonePayloadV1
+  INQUIRY_ANSWERED: InquiryAnsweredPayloadV1
 }
 
 export interface NotificationPayloadByTypeV0 {
@@ -696,6 +703,7 @@ export interface NotificationPayloadByTypeV0 {
   TODO_STATUS_TODO: UnknownNotificationPayloadV0
   TODO_STATUS_IN_PROGRESS: UnknownNotificationPayloadV0
   TODO_STATUS_DONE: UnknownNotificationPayloadV0
+  INQUIRY_ANSWERED: UnknownNotificationPayloadV0
 }
 
 export interface NotificationPayloadRegistry {

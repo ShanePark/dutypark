@@ -119,4 +119,13 @@ export const notificationRenderersV1 = {
         todoTitle: notification.payload.todoTitle,
       })
   },
+  INQUIRY_ANSWERED: (
+    notification: NotificationDtoForTypeAndVersion<'INQUIRY_ANSWERED', 1>,
+    t: NotificationTranslate,
+  ) => {
+    const subject = notification.payload.subject?.trim()
+    return subject
+      ? t(messageKey('inquiryAnswered'), { subject })
+      : t(messageKey('inquiryAnsweredFallback'))
+  },
 } as const

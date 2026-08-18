@@ -1,4 +1,5 @@
 import type { MemberStatus } from '@/types'
+import type { InquiryStatus } from './inquiry'
 
 // Report moderation types (admin only)
 export type ReportTargetType = 'MEMBER' | 'SCHEDULE' | 'TODO'
@@ -54,7 +55,7 @@ export interface UpdateReportStatusRequest {
 }
 
 // Inquiry management types (admin only)
-export type InquiryStatus = 'OPEN' | 'CLOSED'
+export type { InquiryStatus }
 
 /** Status query value accepted by the admin inquiry list API. `ALL` means "no status filter". */
 export type InquiryStatusFilter = InquiryStatus | 'ALL'
@@ -71,9 +72,15 @@ export interface AdminInquiryDto {
   adminMemo: string | null
   createdAt: string
   closedAt: string | null
+  /** Published to the member verbatim; null until an admin writes one. */
+  answer: string | null
+  answeredAt: string | null
+  answeredBy: number | null
 }
 
 export interface UpdateInquiryStatusRequest {
   status: InquiryStatus
   memo?: string
+  /** Blank or omitted keeps the current answer; answers are never cleared. */
+  answer?: string
 }

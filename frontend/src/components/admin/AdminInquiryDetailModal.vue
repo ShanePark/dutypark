@@ -2,9 +2,12 @@
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import BaseModal from '@/components/common/BaseModal.vue'
+import CharacterCounter from '@/components/common/CharacterCounter.vue'
 import type { AdminInquiryDto, InquiryStatus } from '@/types/adminModeration'
 import { INQUIRY_STATUS_LABEL_KEYS, inquiryStatusToneClass } from './adminModerationLabels'
-import { ChevronRight, Copy, Loader2, X } from 'lucide-vue-next'
+import { AlertTriangle, ChevronRight, Copy, Loader2, X } from 'lucide-vue-next'
+
+const ANSWER_MAX_LENGTH = 2000
 
 const props = defineProps<{
   open: boolean
@@ -17,7 +20,7 @@ const props = defineProps<{
 const emit = defineEmits<{
   close: []
   retry: []
-  updateStatus: [status: InquiryStatus, memo: string]
+  updateStatus: [status: InquiryStatus, memo: string, answer: string]
   copyEmail: [email: string]
   goToCalendar: [memberId: number]
 }>()
@@ -25,11 +28,13 @@ const emit = defineEmits<{
 const { t, locale } = useI18n()
 
 const memo = ref('')
+const answer = ref('')
 
 watch(
   () => props.inquiry,
   (inquiry) => {
     memo.value = inquiry?.adminMemo ?? ''
+    answer.value = inquiry?.answer ?? ''
   },
   { immediate: true },
 )
@@ -157,6 +162,25 @@ function formatDateTime(value: string | null) {
           <p class="mt-2 text-sm text-dp-text-muted">{{ t('admin.inquiries.detail.replyHint') }}</p>
         </section>
 
+        <section class="rounded-2xl border-2 border-dp-warning-border bg-dp-warning-soft p-4">
+          <h3 class="flex items-center gap-2 text-base font-semibold text-dp-text-primary">
+            <AlertTriangle class="w-4 h-4 shrink-0 text-dp-warning" />
+            {{ t('admin.inquiries.detail.fields.answer') }}
+            <CharacterCounter :current="answer.length" :max="ANSWER_MAX_LENGTH" />
+          </h3>
+          <p class="mt-1 text-sm font-medium text-dp-warning">{{ t('admin.inquiries.detail.answerWarning') }}</p>
+          <textarea
+            v-model="answer"
+            rows="5"
+            :maxlength="ANSWER_MAX_LENGTH"
+            class="form-control-neutral mt-2"
+            :placeholder="t('admin.inquiries.detail.answerPlaceholder')"
+          ></textarea>
+          <p v-if="inquiry.answeredAt" class="mt-2 text-xs text-dp-text-muted">
+            {{ t('admin.inquiries.detail.fields.answeredAt') }} · {{ formatDateTime(inquiry.answeredAt) }}
+          </p>
+        </section>
+
         <section class="rounded-2xl border border-dp-border-primary bg-dp-bg-card p-4">
           <h3 class="text-base font-semibold text-dp-text-primary">{{ t('admin.inquiries.detail.fields.memo') }}</h3>
           <textarea
@@ -178,10 +202,18 @@ function formatDateTime(value: string | null) {
               {{ t('admin.inquiries.detail.actions.replyByEmail') }}
             </a>
             <button
+              data-testid="save-inquiry"
+              class="min-h-11 px-4 py-2 text-sm font-medium rounded-lg transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed border border-dp-border-primary bg-dp-bg-tertiary text-dp-text-primary hover-interactive"
+              :disabled="working"
+              @click="emit('updateStatus', inquiry.status, memo, answer)"
+            >
+              {{ t('admin.inquiries.detail.actions.saveChanges') }}
+            </button>
+            <button
               v-if="!isClosed"
               class="min-h-11 px-4 py-2 text-sm font-medium rounded-lg transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed text-dp-text-on-dark bg-dp-surface-strong hover:bg-dp-surface-strong-hover"
               :disabled="working"
-              @click="emit('updateStatus', 'CLOSED', memo)"
+              @click="emit('updateStatus', 'CLOSED', memo, answer)"
             >
               {{ t('admin.inquiries.detail.actions.markClosed') }}
             </button>
@@ -189,7 +221,7 @@ function formatDateTime(value: string | null) {
               v-else
               class="min-h-11 px-4 py-2 text-sm font-medium rounded-lg transition cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed bg-dp-warning-soft text-dp-warning hover:bg-dp-warning-soft-hover"
               :disabled="working"
-              @click="emit('updateStatus', 'OPEN', memo)"
+              @click="emit('updateStatus', 'OPEN', memo, answer)"
             >
               {{ t('admin.inquiries.detail.actions.reopen') }}
             </button>

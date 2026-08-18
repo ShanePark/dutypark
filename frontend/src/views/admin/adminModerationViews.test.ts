@@ -88,6 +88,11 @@ describe('AdminInquiryListView', () => {
   it('copies the reply address to the clipboard', () => {
     expect(inquiryListView).toContain('navigator.clipboard.writeText(email)')
   })
+
+  it('sends the in-app answer along with the status change', () => {
+    expect(inquiryListView).toContain('async function handleUpdateStatus(status: InquiryStatus, memo: string, answer: string)')
+    expect(inquiryListView).toContain('buildInquiryUpdateRequest(status, memo, answer, selectedInquiry.value.answer)')
+  })
 })
 
 describe('AdminInquiryDetailModal', () => {
@@ -98,8 +103,29 @@ describe('AdminInquiryDetailModal', () => {
   })
 
   it('toggles between closing and reopening an inquiry', () => {
-    expect(inquiryDetailModal).toContain('@click="emit(\'updateStatus\', \'CLOSED\', memo)"')
-    expect(inquiryDetailModal).toContain('@click="emit(\'updateStatus\', \'OPEN\', memo)"')
+    expect(inquiryDetailModal).toContain('@click="emit(\'updateStatus\', \'CLOSED\', memo, answer)"')
+    expect(inquiryDetailModal).toContain('@click="emit(\'updateStatus\', \'OPEN\', memo, answer)"')
+  })
+
+  it('saves memo and answer while preserving the current inquiry status', () => {
+    expect(inquiryDetailModal).toContain('data-testid="save-inquiry"')
+    expect(inquiryDetailModal).toContain('@click="emit(\'updateStatus\', inquiry.status, memo, answer)"')
+    expect(inquiryDetailModal).toContain('admin.inquiries.detail.actions.saveChanges')
+  })
+
+  it('collects the answer the user will read, capped and counted', () => {
+    expect(inquiryDetailModal).toContain('v-model="answer"')
+    expect(inquiryDetailModal).toContain(':maxlength="ANSWER_MAX_LENGTH"')
+    expect(inquiryDetailModal).toContain('ANSWER_MAX_LENGTH = 2000')
+    expect(inquiryDetailModal).toContain('<CharacterCounter :current="answer.length" :max="ANSWER_MAX_LENGTH" />')
+  })
+
+  it('warns that the answer is published to the user verbatim', () => {
+    expect(inquiryDetailModal).toContain('admin.inquiries.detail.answerWarning')
+  })
+
+  it('prefills the answer already sent to the user', () => {
+    expect(inquiryDetailModal).toContain("answer.value = inquiry?.answer ?? ''")
   })
 })
 
