@@ -285,7 +285,7 @@ final class ReportFeatureTests: XCTestCase {
         )
         XCTAssertEqual(
             korean.localizedString(forKey: "report.field.alsoBlock", value: "", table: "Report"),
-            "이 사용자도 차단"
+            "이 사용자 차단하기"
         )
     }
 

@@ -376,7 +376,7 @@ export default {
       detailLabel: '상세 내용',
       detailPlaceholder: '신고 내용을 자세히 알려주세요.',
       detailRequired: '기타를 선택한 경우 상세 내용을 입력해 주세요.',
-      alsoBlock: '이 사용자도 차단',
+      alsoBlock: '이 사용자 차단하기',
       submit: '신고하기',
       submitting: '접수 중...',
     },

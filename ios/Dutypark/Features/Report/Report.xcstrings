@@ -54,13 +54,13 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Also block this user"
+            "value" : "Block this user"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "이 사용자도 차단"
+            "value" : "이 사용자 차단하기"
           }
         }
       }

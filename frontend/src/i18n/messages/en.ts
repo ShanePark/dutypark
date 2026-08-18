@@ -374,7 +374,7 @@ export default {
       detailLabel: 'Details',
       detailPlaceholder: 'Tell us what happened.',
       detailRequired: 'Please describe the problem when you choose Other.',
-      alsoBlock: 'Also block this user',
+      alsoBlock: 'Block this user',
       submit: 'Submit report',
       submitting: 'Submitting...',
     },

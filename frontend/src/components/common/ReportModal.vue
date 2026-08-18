@@ -114,7 +114,7 @@ function handleSubmit() {
       </button>
     </div>
 
-    <div class="modal-body-form-compact">
+    <div class="modal-body-form-compact report-modal-body">
       <p class="rounded-lg bg-dp-bg-tertiary px-3 py-2 text-sm break-all text-dp-text-primary">
         {{ targetLabel }}
       </p>
@@ -134,7 +134,7 @@ function handleSubmit() {
               type="radio"
               name="report-reason"
               :value="option.value"
-              class="h-4 w-4 shrink-0 cursor-pointer text-dp-accent focus:ring-2 focus:ring-dp-accent-ring"
+              class="h-4 w-4 shrink-0 cursor-pointer rounded-full text-dp-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dp-accent-ring"
               :disabled="isSubmitting"
             />
             <span>{{ option.label }}</span>
@@ -171,12 +171,16 @@ function handleSubmit() {
           <input
             v-model="alsoBlock"
             type="checkbox"
-            class="h-5 w-5 shrink-0 cursor-pointer rounded border-dp-border-input text-dp-accent focus:ring-2 focus:ring-dp-accent-ring"
+            class="h-5 w-5 shrink-0 cursor-pointer rounded border-dp-border-input text-dp-accent focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dp-accent-ring"
             :disabled="isSubmitting"
           />
           <span>{{ t('report.modal.alsoBlock') }}</span>
         </label>
-        <p v-if="alsoBlock" class="mt-1 px-2 text-xs text-dp-text-muted">
+        <!-- Always laid out so ticking the box reveals the notice without reflowing the form. -->
+        <p
+          class="mt-1 px-2 text-xs text-dp-text-muted"
+          :class="{ invisible: !alsoBlock }"
+        >
           {{ t('report.block.message') }}
         </p>
       </div>
@@ -202,3 +206,12 @@ function handleSubmit() {
     </div>
   </BaseModal>
 </template>
+
+<style scoped>
+/* The shared body class caps at a fixed 580px, a hair under this form's natural height,
+   which leaves the block notice stranded behind a scrollbar. The modal container already
+   caps itself to the viewport, so this form only needs the fixed cap lifted. */
+.report-modal-body {
+  max-height: none;
+}
+</style>
