@@ -2002,7 +2002,7 @@ export default {
       title: '문의하기',
       description: '답변은 입력하신 이메일로 보내드립니다. 회신받을 주소를 정확히 입력해 주세요.',
       emailLabel: '회신 이메일',
-      emailPlaceholder: 'you@example.com',
+      emailPlaceholder: "you{'@'}example.com",
       subjectLabel: '제목 (선택)',
       subjectPlaceholder: '문의 제목',
       contentLabel: '문의 내용',

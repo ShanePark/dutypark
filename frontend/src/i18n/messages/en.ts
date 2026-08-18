@@ -2067,7 +2067,7 @@ export default {
       title: 'Contact us',
       description: 'We reply by e-mail, so please double-check the address you enter.',
       emailLabel: 'Reply e-mail',
-      emailPlaceholder: 'you@example.com',
+      emailPlaceholder: "you{'@'}example.com",
       subjectLabel: 'Subject (optional)',
       subjectPlaceholder: 'Subject of your inquiry',
       contentLabel: 'Message',
