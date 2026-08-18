@@ -1,12 +1,14 @@
 package com.tistory.shanepark.dutypark.inquiry.controller
 
 import com.tistory.shanepark.dutypark.common.domain.dto.PageResponse
+import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.inquiry.domain.dto.CreateInquiryRequest
 import com.tistory.shanepark.dutypark.inquiry.domain.dto.CreateInquiryResponse
 import com.tistory.shanepark.dutypark.inquiry.domain.dto.MyInquiryDto
 import com.tistory.shanepark.dutypark.inquiry.service.InquiryService
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
+import com.tistory.shanepark.dutypark.security.filters.JwtAuthFilter
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.data.domain.Pageable
 import org.springframework.data.web.PageableDefault
@@ -32,6 +34,11 @@ class InquiryController(
         @RequestBody @Validated request: CreateInquiryRequest,
         servletRequest: HttpServletRequest,
     ): CreateInquiryResponse {
+        if (loginMember == null &&
+            servletRequest.getAttribute(JwtAuthFilter.AUTHENTICATION_FAILED_ATTRIBUTE) == true
+        ) {
+            throw AuthException()
+        }
         return inquiryService.createInquiry(
             memberId = loginMember?.id,
             request = request,

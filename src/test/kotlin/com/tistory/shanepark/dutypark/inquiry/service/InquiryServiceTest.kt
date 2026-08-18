@@ -4,6 +4,7 @@ import com.tistory.shanepark.dutypark.inquiry.config.InquiryRateLimitConfig
 import com.tistory.shanepark.dutypark.inquiry.domain.dto.UpdateInquiryStatusRequest
 import com.tistory.shanepark.dutypark.inquiry.domain.entity.Inquiry
 import com.tistory.shanepark.dutypark.inquiry.domain.enums.InquiryStatus
+import com.tistory.shanepark.dutypark.inquiry.repository.InquiryRateLimitLockRepository
 import com.tistory.shanepark.dutypark.inquiry.repository.InquiryRepository
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
@@ -23,6 +24,7 @@ import org.springframework.data.jpa.repository.Lock
 import org.springframework.test.util.ReflectionTestUtils
 import java.time.Clock
 import java.time.Instant
+import java.time.LocalDateTime
 import java.time.ZoneId
 import java.util.Optional
 import java.util.UUID
@@ -30,12 +32,14 @@ import java.util.UUID
 class InquiryServiceTest {
 
     private val inquiryRepository: InquiryRepository = mock()
+    private val rateLimitLockRepository: InquiryRateLimitLockRepository = mock()
     private val memberRepository: MemberRepository = mock()
     private val eventPublisher: ApplicationEventPublisher = mock()
     private val clock: Clock = Clock.fixed(Instant.parse("2026-08-18T01:00:00Z"), ZoneId.of("UTC"))
 
     private val inquiryService = InquiryService(
         inquiryRepository = inquiryRepository,
+        rateLimitLockRepository = rateLimitLockRepository,
         memberRepository = memberRepository,
         rateLimitConfig = InquiryRateLimitConfig(maxPerHour = 5),
         clock = clock,
@@ -123,6 +127,30 @@ class InquiryServiceTest {
         assertThat(inquiry.answeredAt).isNull()
         assertThat(inquiry.answeredBy).isNull()
         verifyNoInteractions(eventPublisher)
+    }
+
+    @Test
+    fun `updating a closed inquiry keeps the original closer and closed time`() {
+        val originalClosedAt = LocalDateTime.of(2026, 8, 17, 9, 30)
+        val originalAdminId = 42L
+        val inquiry = inquiry(member = null, subject = "종료 정보 보존")
+        inquiry.changeStatus(InquiryStatus.CLOSED, "최초 메모", originalAdminId, originalClosedAt)
+        whenever(inquiryRepository.findByIdForUpdate(inquiry.id)).thenReturn(Optional.of(inquiry))
+
+        inquiryService.changeStatus(
+            id = inquiry.id,
+            request = UpdateInquiryStatusRequest(
+                status = InquiryStatus.CLOSED,
+                memo = "수정한 메모",
+                answer = "추가 답변",
+            ),
+            adminId = adminId,
+        )
+
+        assertThat(inquiry.adminMemo).isEqualTo("수정한 메모")
+        assertThat(inquiry.answer).isEqualTo("추가 답변")
+        assertThat(inquiry.closedAt).isEqualTo(originalClosedAt)
+        assertThat(inquiry.closedBy).isEqualTo(originalAdminId)
     }
 
     @Test

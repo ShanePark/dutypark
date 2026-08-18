@@ -30,8 +30,12 @@ class BlockService(
         if (loginMemberId == targetMemberId)
             throw BadRequestException("block.self")
 
-        val blocker = memberRepository.findById(loginMemberId).orElseThrow()
-        val blocked = memberRepository.findById(targetMemberId).orElseThrow()
+        // A stable pair order prevents reciprocal blocks from acquiring the member rows in opposite orders.
+        val lockedMembers = listOf(loginMemberId, targetMemberId)
+            .sorted()
+            .associateWith { memberRepository.findMemberWithTeamForUpdate(it).orElseThrow() }
+        val blocker = lockedMembers.getValue(loginMemberId)
+        val blocked = lockedMembers.getValue(targetMemberId)
 
         if (!memberBlockRepository.existsByBlockerIdAndBlockedId(loginMemberId, targetMemberId)) {
             memberBlockRepository.save(MemberBlock(blocker = blocker, blocked = blocked))

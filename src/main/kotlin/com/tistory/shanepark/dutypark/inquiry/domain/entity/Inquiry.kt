@@ -87,14 +87,17 @@ class Inquiry(
     }
 
     fun changeStatus(status: InquiryStatus, memo: String?, adminId: Long, now: LocalDateTime) {
+        val statusChanged = this.status != status
         this.status = status
         memo?.let { this.adminMemo = it.ifBlank { null } }
-        if (status == InquiryStatus.CLOSED) {
-            closedAt = now
-            closedBy = adminId
-        } else {
-            closedAt = null
-            closedBy = null
+        if (statusChanged) {
+            if (status == InquiryStatus.CLOSED) {
+                closedAt = now
+                closedBy = adminId
+            } else {
+                closedAt = null
+                closedBy = null
+            }
         }
     }
 }

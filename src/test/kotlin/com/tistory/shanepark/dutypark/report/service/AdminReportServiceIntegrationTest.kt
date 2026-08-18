@@ -184,6 +184,35 @@ class AdminReportServiceIntegrationTest : DutyparkIntegrationTest() {
     }
 
     @Test
+    fun `updating a resolved report keeps the original resolver and resolved time`() {
+        val report = saveReport()
+        flushAndClear()
+
+        adminReportService.updateStatus(
+            reportId = report.id,
+            adminMemberId = TestData.admin.id!!,
+            request = UpdateReportStatusRequest(status = ReportStatus.RESOLVED, memo = "최초 처리"),
+        )
+        flushAndClear()
+        val original = contentReportRepository.findById(report.id).orElseThrow()
+        val originalResolvedAt = original.resolvedAt
+        val originalResolvedBy = original.resolvedBy
+        flushAndClear()
+
+        val detail = adminReportService.updateStatus(
+            reportId = report.id,
+            adminMemberId = TestData.member.id!!,
+            request = UpdateReportStatusRequest(status = ReportStatus.RESOLVED, memo = "수정한 메모"),
+        )
+        flushAndClear()
+
+        val saved = contentReportRepository.findById(report.id).orElseThrow()
+        assertThat(detail.adminMemo).isEqualTo("수정한 메모")
+        assertThat(saved.resolvedAt).isEqualTo(originalResolvedAt)
+        assertThat(saved.resolvedBy).isEqualTo(originalResolvedBy)
+    }
+
+    @Test
     fun `update status to dismissed is allowed`() {
         val report = saveReport()
         flushAndClear()

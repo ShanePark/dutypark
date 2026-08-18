@@ -35,18 +35,22 @@ class ReportService(
      * Reporting does not check whether the reporter can still see the target:
      * a member must stay able to report content of somebody they already blocked.
      */
-    @SlackNotification
+    @SlackNotification(includeArguments = false)
     fun createReport(loginMemberId: Long, request: CreateReportRequest): ReportCreateResult {
         if (request.reason == ReportReason.OTHER && request.detail.isNullOrBlank()) {
             throw BadRequestException("report.detail.required")
         }
 
-        val reporter = memberRepository.findById(loginMemberId).orElseThrow()
         val target = resolveTarget(request.targetType, request.targetId)
-        val owner = target.owner
-        if (owner.id == reporter.id) {
+        val ownerId = target.owner.id!!
+        if (ownerId == loginMemberId) {
             throw BadRequestException("report.self")
         }
+        val lockedMembers = listOf(loginMemberId, ownerId)
+            .sorted()
+            .associateWith { memberRepository.findMemberWithTeamForUpdate(it).orElseThrow() }
+        val reporter = lockedMembers.getValue(loginMemberId)
+        val owner = lockedMembers.getValue(ownerId)
 
         val result = existingOpenReport(loginMemberId, request)
             ?.let { ReportCreateResult(id = it.id, isNew = false) }

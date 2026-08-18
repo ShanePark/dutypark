@@ -11,6 +11,9 @@ class InquiryMigrationTest {
     private val migration = Path.of(System.getProperty("user.dir")).resolve(
         "src/main/resources/db/migration/v2/V2.2.40__inquiry.sql"
     )
+    private val rateLimitLockMigration = Path.of(System.getProperty("user.dir")).resolve(
+        "src/main/resources/db/migration/v2/V2.2.45__add_inquiry_rate_limit_locks.sql"
+    )
 
     @Test
     fun `migration creates inquiry table whose member reference is nullified when the member is deleted`() {
@@ -46,6 +49,28 @@ class InquiryMigrationTest {
                 statement.executeQuery("SELECT COUNT(*) AS remaining FROM inquiry WHERE member_id IS NULL").use { rs ->
                     assertThat(rs.next()).isTrue()
                     assertThat(rs.getInt("remaining")).isEqualTo(1)
+                }
+            }
+        }
+    }
+
+    @Test
+    fun `rate limit lock migration creates every fixed bucket`() {
+        assertThat(Files.exists(rateLimitLockMigration)).isTrue()
+
+        DriverManager.getConnection("jdbc:h2:mem:inquiry-rate-limit-lock-migration;MODE=MySQL").use { connection ->
+            connection.createStatement().use { statement ->
+                Files.readString(rateLimitLockMigration)
+                    .split(";")
+                    .map(String::trim)
+                    .filter(String::isNotEmpty)
+                    .forEach(statement::execute)
+
+                statement.executeQuery(
+                    "SELECT COUNT(*) AS bucket_count FROM inquiry_rate_limit_lock"
+                ).use { result ->
+                    assertThat(result.next()).isTrue()
+                    assertThat(result.getInt("bucket_count")).isEqualTo(256)
                 }
             }
         }

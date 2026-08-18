@@ -128,7 +128,7 @@ class AdminService(
 
     @Transactional
     fun suspendMember(memberId: Long) {
-        val member = memberRepository.findById(memberId).orElseThrow()
+        val member = memberRepository.findMemberWithTeamForUpdate(memberId).orElseThrow()
         when (member.status) {
             MemberStatus.SUSPENDED -> return
             MemberStatus.DELETION_PENDING -> throw MemberSuspensionException("member.suspend.deletionPending")
@@ -141,7 +141,7 @@ class AdminService(
 
     @Transactional
     fun reinstateMember(memberId: Long) {
-        val member = memberRepository.findById(memberId).orElseThrow()
+        val member = memberRepository.findMemberWithTeamForUpdate(memberId).orElseThrow()
         if (member.status != MemberStatus.SUSPENDED) {
             return
         }

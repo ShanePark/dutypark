@@ -2,4 +2,6 @@ package com.tistory.shanepark.dutypark.common.slack.annotation
 
 @Target(AnnotationTarget.FUNCTION)
 @Retention(AnnotationRetention.RUNTIME)
-annotation class SlackNotification
+annotation class SlackNotification(
+    val includeArguments: Boolean = true,
+)

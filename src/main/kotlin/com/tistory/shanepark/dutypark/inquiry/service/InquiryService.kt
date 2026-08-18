@@ -10,7 +10,9 @@ import com.tistory.shanepark.dutypark.inquiry.domain.dto.CreateInquiryResponse
 import com.tistory.shanepark.dutypark.inquiry.domain.dto.MyInquiryDto
 import com.tistory.shanepark.dutypark.inquiry.domain.dto.UpdateInquiryStatusRequest
 import com.tistory.shanepark.dutypark.inquiry.domain.entity.Inquiry
+import com.tistory.shanepark.dutypark.inquiry.domain.entity.InquiryRateLimitLock
 import com.tistory.shanepark.dutypark.inquiry.domain.enums.InquiryStatus
+import com.tistory.shanepark.dutypark.inquiry.repository.InquiryRateLimitLockRepository
 import com.tistory.shanepark.dutypark.inquiry.repository.InquiryRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.notification.event.InquiryAnsweredEvent
@@ -28,6 +30,7 @@ import java.util.UUID
 @Transactional(readOnly = true)
 class InquiryService(
     private val inquiryRepository: InquiryRepository,
+    private val rateLimitLockRepository: InquiryRateLimitLockRepository,
     private val memberRepository: MemberRepository,
     private val rateLimitConfig: InquiryRateLimitConfig,
     private val clock: Clock,
@@ -36,8 +39,9 @@ class InquiryService(
     private val log = logger()
 
     @Transactional
-    @SlackNotification
+    @SlackNotification(includeArguments = false)
     fun createInquiry(memberId: Long?, request: CreateInquiryRequest, ipAddress: String): CreateInquiryResponse {
+        lockRateLimitBucket(ipAddress)
         val now = now()
         val recentCount = inquiryRepository.countByIpAddressAndCreatedDateAfter(
             ipAddress = ipAddress,
@@ -61,6 +65,17 @@ class InquiryService(
             )
         )
         return CreateInquiryResponse(id = inquiry.id)
+    }
+
+    private fun lockRateLimitBucket(ipAddress: String) {
+        val bucketId = Math.floorMod(ipAddress.hashCode(), RATE_LIMIT_LOCK_BUCKETS)
+        if (rateLimitLockRepository.findByIdForUpdate(bucketId).isPresent) {
+            return
+        }
+
+        // 운영 DB에는 migration 이 모든 버킷을 미리 만든다. create-drop 을 쓰는 테스트 DB도
+        // 실제 잠금 경로를 사용할 수 있도록 누락된 행만 지연 생성한다.
+        rateLimitLockRepository.saveAndFlush(InquiryRateLimitLock(bucketId))
     }
 
     fun findMyInquiries(memberId: Long, pageable: Pageable): Page<MyInquiryDto> {
@@ -113,5 +128,6 @@ class InquiryService(
 
     companion object {
         private const val RATE_LIMIT_WINDOW_MINUTES = 60L
+        private const val RATE_LIMIT_LOCK_BUCKETS = 256
     }
 }

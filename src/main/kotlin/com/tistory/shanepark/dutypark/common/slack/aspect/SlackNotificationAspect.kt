@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.common.slack.aspect
 
 import com.tistory.shanepark.dutypark.common.config.logger
+import com.tistory.shanepark.dutypark.common.slack.annotation.SlackNotification
 import com.tistory.shanepark.dutypark.common.slack.notifier.SlackNotifier
 import net.gpedro.integrations.slack.SlackAttachment
 import net.gpedro.integrations.slack.SlackField
@@ -26,23 +27,24 @@ class SlackNotificationAspect(
     fun slackNotification(proceedingJoinPoint: ProceedingJoinPoint): Any? {
         return try {
             val result = proceedingJoinPoint.proceed()
-
-            val arguments = (proceedingJoinPoint.signature as MethodSignature).method.parameters
-                .map { it.name }
-                .zip(proceedingJoinPoint.args)
-                .joinToString { "${it.first} : ${it.second}" }
+            val method = (proceedingJoinPoint.signature as MethodSignature).method
+            val notification = method.getAnnotation(SlackNotification::class.java)
 
             val slackAttachment = SlackAttachment()
             slackAttachment.setFallback("Post")
             slackAttachment.setColor("good")
             slackAttachment.setTitle("Data save detected")
 
-            slackAttachment.setFields(
-                listOf(
-                    SlackField().setTitle("Arguments").setValue(arguments),
-                    SlackField().setTitle("method").setValue(proceedingJoinPoint.signature.name),
-                )
-            )
+            val fields = mutableListOf<SlackField>()
+            if (notification.includeArguments) {
+                val arguments = method.parameters
+                    .map { it.name }
+                    .zip(proceedingJoinPoint.args)
+                    .joinToString { "${it.first} : ${it.second}" }
+                fields += SlackField().setTitle("Arguments").setValue(arguments)
+            }
+            fields += SlackField().setTitle("method").setValue(proceedingJoinPoint.signature.name)
+            slackAttachment.setFields(fields)
 
             val slackMessage = SlackMessage()
             slackMessage.setAttachments(listOf(slackAttachment))

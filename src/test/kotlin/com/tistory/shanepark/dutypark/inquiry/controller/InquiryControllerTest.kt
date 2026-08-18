@@ -8,6 +8,7 @@ import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document
 import org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders
@@ -69,6 +70,28 @@ class InquiryControllerTest : RestDocsTest() {
         assertThat(inquiry.ipAddress).isEqualTo("127.0.0.1")
         assertThat(inquiry.closedAt).isNull()
         assertThat(inquiry.closedBy).isNull()
+    }
+
+    @Test
+    fun `inquiry with invalid authentication credentials is rejected instead of stored as guest`() {
+        val json = """
+            {
+                "email": "guest@dutypark.o-r.kr",
+                "content": "인증 실패 요청은 비회원 문의가 되어서는 안 됩니다."
+            }
+        """.trimIndent()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.post("/api/inquiries")
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .header(HttpHeaders.AUTHORIZATION, "Bearer invalid-access-token")
+                .content(json)
+        )
+            .andExpect(status().isUnauthorized)
+            .andExpect(jsonPath("$.code").value("auth.unauthorized"))
+
+        assertThat(inquiryRepository.findAll()).isEmpty()
     }
 
     @Test

@@ -64,10 +64,12 @@ class AdminReportService(
             throw BadRequestException()
         }
         val report = findReportOrThrow(reportId)
-        report.status = request.status
+        if (report.status != request.status) {
+            report.status = request.status
+            report.resolvedAt = LocalDateTime.now()
+            report.resolvedBy = adminMemberId
+        }
         request.memo?.let { report.adminMemo = it.ifBlank { null } }
-        report.resolvedAt = LocalDateTime.now()
-        report.resolvedBy = adminMemberId
 
         return toDetail(report, targetExists = targetExists(report))
     }
