@@ -209,4 +209,21 @@ interface ScheduleRepository : JpaRepository<Schedule, UUID> {
         contentWithoutTime: String,
     ): Int
 
+    /**
+     * Bulk-deletes every tag that links the two members in either direction: tags on one
+     * member's schedules that point at the other. Deliberately bypasses the Schedule
+     * aggregate, so the persistence context is cleared to drop stale tag collections.
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+        """
+        DELETE FROM ScheduleTag st
+        WHERE (st.member.id = :memberId2
+               AND st.schedule.id IN (SELECT s.id FROM Schedule s WHERE s.member.id = :memberId1))
+           OR (st.member.id = :memberId1
+               AND st.schedule.id IN (SELECT s.id FROM Schedule s WHERE s.member.id = :memberId2))
+        """
+    )
+    fun deleteTagsBetweenMembers(memberId1: Long, memberId2: Long): Int
+
 }

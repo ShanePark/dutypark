@@ -8,10 +8,16 @@ import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.enums.FriendRequestStatus.PENDING
 import com.tistory.shanepark.dutypark.member.domain.enums.FriendRequestType
 import com.tistory.shanepark.dutypark.member.repository.FriendRequestRepository
+import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
+import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
+import com.tistory.shanepark.dutypark.todo.domain.entity.Todo
+import com.tistory.shanepark.dutypark.todo.repository.TodoRepository
+import com.tistory.shanepark.dutypark.todo.service.TodoService
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
+import java.time.LocalDateTime
 
 class BlockServiceIntegrationTest : DutyparkIntegrationTest() {
 
@@ -23,6 +29,15 @@ class BlockServiceIntegrationTest : DutyparkIntegrationTest() {
 
     @Autowired
     lateinit var friendRequestRepository: FriendRequestRepository
+
+    @Autowired
+    lateinit var scheduleRepository: ScheduleRepository
+
+    @Autowired
+    lateinit var todoRepository: TodoRepository
+
+    @Autowired
+    lateinit var todoService: TodoService
 
     @Test
     fun `block creates a block record`() {
@@ -254,6 +269,115 @@ class BlockServiceIntegrationTest : DutyparkIntegrationTest() {
         flushAndClear()
 
         assertThat(memberBlockRepository.findAll()).isEmpty()
+    }
+
+    @Test
+    fun `block removes schedule tags in both directions`() {
+        val blocker = TestData.member
+        val blocked = TestData.member2
+        makeThemFriend(blocker, blocked)
+        val blockerSchedule = saveScheduleTagging(blocker, blocked)
+        val blockedSchedule = saveScheduleTagging(blocked, blocker)
+        flushAndClear()
+
+        blockService.block(blocker.id!!, blocked.id!!)
+        flushAndClear()
+
+        assertThat(scheduleRepository.findById(blockerSchedule.id).orElseThrow().tags).isEmpty()
+        assertThat(scheduleRepository.findById(blockedSchedule.id).orElseThrow().tags).isEmpty()
+    }
+
+    @Test
+    fun `block removes todo tags in both directions`() {
+        val blocker = TestData.member
+        val blocked = TestData.member2
+        makeThemFriend(blocker, blocked)
+        val blockerTodo = saveTodoTagging(blocker, blocked)
+        val blockedTodo = saveTodoTagging(blocked, blocker)
+        flushAndClear()
+
+        blockService.block(blocker.id!!, blocked.id!!)
+        flushAndClear()
+
+        assertThat(todoRepository.findById(blockerTodo.id).orElseThrow().tags).isEmpty()
+        assertThat(todoRepository.findById(blockedTodo.id).orElseThrow().tags).isEmpty()
+    }
+
+    @Test
+    fun `blocked member can no longer change the status of the blocker todo`() {
+        val blocker = TestData.member
+        val blocked = TestData.member2
+        makeThemFriend(blocker, blocked)
+        val todo = saveTodoTagging(blocker, blocked)
+        flushAndClear()
+
+        blockService.block(blocker.id!!, blocked.id!!)
+        flushAndClear()
+
+        val exception = assertThrows<IllegalArgumentException> {
+            todoService.completeTodo(loginMember(blocked), todo.id)
+        }
+        assertThat(exception.message).isEqualTo("Todo status change is not allowed")
+    }
+
+    @Test
+    fun `block keeps tags of members outside the blocked pair`() {
+        val blocker = TestData.member
+        val blocked = TestData.member2
+        val third = memberRepository.save(Member("third", "third@duty.park", "pass"))
+        makeThemFriend(blocker, blocked)
+        makeThemFriend(blocker, third)
+        val schedule = saveScheduleTagging(blocker, blocked, third)
+        val todo = saveTodoTagging(blocker, blocked, third)
+        flushAndClear()
+
+        blockService.block(blocker.id!!, blocked.id!!)
+        flushAndClear()
+
+        assertThat(scheduleRepository.findById(schedule.id).orElseThrow().tags.map { it.member.id })
+            .containsExactly(third.id)
+        assertThat(todoRepository.findById(todo.id).orElseThrow().tags.map { it.member.id })
+            .containsExactly(third.id)
+    }
+
+    @Test
+    fun `unblock does not restore the tags removed by the block`() {
+        val blocker = TestData.member
+        val blocked = TestData.member2
+        makeThemFriend(blocker, blocked)
+        val schedule = saveScheduleTagging(blocker, blocked)
+        val todo = saveTodoTagging(blocker, blocked)
+        flushAndClear()
+
+        blockService.block(blocker.id!!, blocked.id!!)
+        flushAndClear()
+        blockService.unblock(blocker.id!!, blocked.id!!)
+        flushAndClear()
+
+        assertThat(scheduleRepository.findById(schedule.id).orElseThrow().tags).isEmpty()
+        assertThat(todoRepository.findById(todo.id).orElseThrow().tags).isEmpty()
+    }
+
+    private fun saveScheduleTagging(owner: Member, vararg tagged: Member): Schedule {
+        val schedule = Schedule(
+            member = owner,
+            content = "schedule of ${owner.name}",
+            startDateTime = LocalDateTime.of(2026, 8, 18, 9, 0),
+            endDateTime = LocalDateTime.of(2026, 8, 18, 10, 0),
+        )
+        tagged.forEach(schedule::addTag)
+        return scheduleRepository.saveAndFlush(schedule)
+    }
+
+    private fun saveTodoTagging(owner: Member, vararg tagged: Member): Todo {
+        val todo = Todo(
+            member = owner,
+            title = "todo of ${owner.name}",
+            content = "content",
+            position = 0,
+        )
+        tagged.forEach(todo::addTag)
+        return todoRepository.saveAndFlush(todo)
     }
 
     private fun reload(member: Member): Member = memberRepository.findById(member.id!!).orElseThrow()

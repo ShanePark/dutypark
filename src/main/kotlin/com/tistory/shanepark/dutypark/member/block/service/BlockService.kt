@@ -10,6 +10,8 @@ import com.tistory.shanepark.dutypark.member.domain.enums.FriendRequestStatus.PE
 import com.tistory.shanepark.dutypark.member.repository.FriendRelationRepository
 import com.tistory.shanepark.dutypark.member.repository.FriendRequestRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
+import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
+import com.tistory.shanepark.dutypark.todo.repository.TodoRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -20,6 +22,8 @@ class BlockService(
     private val memberRepository: MemberRepository,
     private val friendRelationRepository: FriendRelationRepository,
     private val friendRequestRepository: FriendRequestRepository,
+    private val scheduleRepository: ScheduleRepository,
+    private val todoRepository: TodoRepository,
 ) {
 
     fun block(loginMemberId: Long, targetMemberId: Long) {
@@ -35,6 +39,7 @@ class BlockService(
 
         unfriendBothWays(blocker, blocked)
         deletePendingRequestsBothWays(blocker, blocked)
+        deleteTagsBothWays(loginMemberId, targetMemberId)
     }
 
     fun unblock(loginMemberId: Long, targetMemberId: Long) {
@@ -55,6 +60,16 @@ class BlockService(
     private fun unfriendBothWays(member1: Member, member2: Member) {
         friendRelationRepository.deleteByMemberAndFriend(member1, member2)
         friendRelationRepository.deleteByMemberAndFriend(member2, member1)
+    }
+
+    /**
+     * A tag that predates the block would otherwise survive it, keeping the other member's
+     * schedule on the calendar and letting them change the owner's todo status. Runs last
+     * because the bulk deletes clear the persistence context.
+     */
+    private fun deleteTagsBothWays(memberId1: Long, memberId2: Long) {
+        scheduleRepository.deleteTagsBetweenMembers(memberId1, memberId2)
+        todoRepository.deleteTagsBetweenMembers(memberId1, memberId2)
     }
 
     private fun deletePendingRequestsBothWays(member1: Member, member2: Member) {

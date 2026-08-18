@@ -6,6 +6,7 @@ import com.tistory.shanepark.dutypark.todo.domain.entity.TodoStatus
 import jakarta.persistence.LockModeType
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Lock
+import org.springframework.data.jpa.repository.Modifying
 import org.springframework.data.jpa.repository.Query
 import org.springframework.data.repository.query.Param
 import java.time.LocalDate
@@ -171,5 +172,22 @@ interface TodoRepository : JpaRepository<Todo, UUID> {
         @Param("todoId") todoId: UUID,
         @Param("memberId") memberId: Long
     ): Boolean
+
+    /**
+     * Bulk-deletes every tag that links the two members in either direction: tags on one
+     * member's todos that point at the other. Deliberately bypasses the Todo aggregate,
+     * so the persistence context is cleared to drop stale tag collections.
+     */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(
+        """
+        DELETE FROM TodoTag tt
+        WHERE (tt.member.id = :memberId2
+               AND tt.todo.id IN (SELECT t.id FROM Todo t WHERE t.member.id = :memberId1))
+           OR (tt.member.id = :memberId1
+               AND tt.todo.id IN (SELECT t.id FROM Todo t WHERE t.member.id = :memberId2))
+        """
+    )
+    fun deleteTagsBetweenMembers(memberId1: Long, memberId2: Long): Int
 
 }
