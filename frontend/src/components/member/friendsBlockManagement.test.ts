@@ -81,6 +81,27 @@ describe('friend blocking', () => {
     expect(addFamily).toMatch(/confirm\([\s\S]*?friendApi\.sendFamilyRequest\(/)
   })
 
+  it('closes the kebab menu before running its action, so a dialog it opens stays clickable', () => {
+    // The menu keeps a full-screen click catcher above the confirmation dialog's layer. Left open,
+    // the catcher swallows the dialog's buttons and the tap only dismisses the menu.
+    for (const [wrapper, action] of [
+      ['addFamilyFromMenu', 'addFamily('],
+      ['demoteFromFamilyFromMenu', 'demoteFromFamily('],
+      ['unfriendFromMenu', 'unfriend('],
+      ['blockFromMenu', 'blockFriend('],
+    ] as const) {
+      const body = functionBody(friendsView, wrapper)
+      const closedAt = body.indexOf('closeDropdown()')
+
+      expect(closedAt, wrapper).toBeGreaterThan(-1)
+      expect(closedAt, wrapper).toBeLessThan(body.indexOf(action))
+    }
+
+    for (const handler of ['addFamily', 'demoteFromFamily', 'unfriend', 'blockFriend']) {
+      expect(functionBody(friendsView, handler), handler).not.toContain('closeDropdown()')
+    }
+  })
+
   it('always renders the blocked section with an empty state', () => {
     expect(blockedMemberList).toMatch(/<template>\s*<div class="rounded-2xl/)
     expect(blockedMemberList).toContain('friends.block.sectionTitle')

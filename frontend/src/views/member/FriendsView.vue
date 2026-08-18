@@ -218,7 +218,6 @@ async function addFamily(member: { id: number | null; name: string }) {
     t('friends.messages.familyRequestConfirm', { name: member.name }),
     t('friends.messages.familyRequestTitle'),
   )) return
-  closeDropdown()
   try {
     await friendApi.sendFamilyRequest(member.id)
     await loadFriendInfo()
@@ -235,7 +234,6 @@ async function demoteFromFamily(member: { id: number | null; name: string }) {
     t('friends.messages.removeFamilyConfirm', { name: member.name }),
     t('friends.messages.removeFamilyTitle'),
   )) return
-  closeDropdown()
   try {
     await friendApi.demoteFromFamily(member.id)
     const friend = friendInfo.value.friends.find((f) => f.member.id === member.id)
@@ -251,30 +249,24 @@ async function demoteFromFamily(member: { id: number | null; name: string }) {
 
 async function unfriend(member: { id: number | null; name: string }) {
   if (!friendInfo.value || !member.id) return
-  if (await confirmDelete(t('friends.messages.unfriendConfirm', { name: member.name }))) {
-    closeDropdown()
-    try {
-      await friendApi.unfriend(member.id)
-      friendInfo.value.friends = friendInfo.value.friends.filter((f) => f.member.id !== member.id)
-      toastSuccess(t('friends.messages.unfriendSuccess', { name: member.name }))
-    } catch (e) {
-      console.error('Failed to unfriend:', e)
-      showWarning(t('friends.messages.unfriendFailed'))
-    }
-  } else {
-    closeDropdown()
+  if (!await confirmDelete(t('friends.messages.unfriendConfirm', { name: member.name }))) return
+  try {
+    await friendApi.unfriend(member.id)
+    friendInfo.value.friends = friendInfo.value.friends.filter((f) => f.member.id !== member.id)
+    toastSuccess(t('friends.messages.unfriendSuccess', { name: member.name }))
+  } catch (e) {
+    console.error('Failed to unfriend:', e)
+    showWarning(t('friends.messages.unfriendFailed'))
   }
 }
 
 async function blockFriend(member: { id: number | null; name: string }) {
   if (!friendInfo.value || !member.id) return
-  const confirmed = await confirmDelete(
+  if (!await confirmDelete(
     t('friends.block.confirmMessage', { name: member.name }),
     t('friends.block.confirmTitle'),
     t('friends.block.confirmAction'),
-  )
-  closeDropdown()
-  if (!confirmed) return
+  )) return
   try {
     await blockApi.block(member.id)
     await Promise.all([loadFriendInfo(), loadBlockedMembers()])
@@ -301,20 +293,34 @@ async function unblockMember(member: BlockedMember) {
   }
 }
 
+// The menu keeps a full-screen click catcher above the confirmation dialog's layer, so it has to
+// close the moment an item is picked; left open, the catcher swallows the dialog's buttons.
 function addFamilyFromMenu() {
-  if (openDropdownFriend.value) addFamily(openDropdownFriend.value.member)
+  const friend = openDropdownFriend.value
+  if (!friend) return
+  closeDropdown()
+  addFamily(friend.member)
 }
 
 function demoteFromFamilyFromMenu() {
-  if (openDropdownFriend.value) demoteFromFamily(openDropdownFriend.value.member)
+  const friend = openDropdownFriend.value
+  if (!friend) return
+  closeDropdown()
+  demoteFromFamily(friend.member)
 }
 
 function unfriendFromMenu() {
-  if (openDropdownFriend.value) unfriend(openDropdownFriend.value.member)
+  const friend = openDropdownFriend.value
+  if (!friend) return
+  closeDropdown()
+  unfriend(friend.member)
 }
 
 function blockFromMenu() {
-  if (openDropdownFriend.value) blockFriend(openDropdownFriend.value.member)
+  const friend = openDropdownFriend.value
+  if (!friend) return
+  closeDropdown()
+  blockFriend(friend.member)
 }
 
 function toggleDropdown(memberId: number, event: Event) {
