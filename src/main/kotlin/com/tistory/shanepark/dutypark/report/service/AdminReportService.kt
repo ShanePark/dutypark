@@ -65,7 +65,7 @@ class AdminReportService(
         }
         val report = findReportOrThrow(reportId)
         report.status = request.status
-        report.adminMemo = request.memo
+        request.memo?.let { report.adminMemo = it.ifBlank { null } }
         report.resolvedAt = LocalDateTime.now()
         report.resolvedBy = adminMemberId
 

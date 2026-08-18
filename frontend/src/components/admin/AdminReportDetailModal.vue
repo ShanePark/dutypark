@@ -35,10 +35,12 @@ const { t, locale } = useI18n()
 
 const memo = ref('')
 
+// Keyed on the id, not the object: suspending a member or deleting the reported content replaces the
+// report object with a refreshed copy of the SAME report, and that must not discard a memo being typed.
 watch(
-  () => props.report,
-  (report) => {
-    memo.value = report?.adminMemo ?? ''
+  () => props.report?.id ?? null,
+  () => {
+    memo.value = props.report?.adminMemo ?? ''
   },
   { immediate: true },
 )

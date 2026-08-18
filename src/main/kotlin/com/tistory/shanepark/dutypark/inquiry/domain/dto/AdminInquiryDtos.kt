@@ -45,6 +45,7 @@ data class AdminInquiryDto(
 
 data class UpdateInquiryStatusRequest(
     @field:NotNull val status: InquiryStatus,
+    /** 생략하면(또는 null 이면) 기존 메모를 유지하고, 빈 문자열을 보내면 메모를 지운다. */
     @field:Size(max = 1000) val memo: String? = null,
     // 사용자에게 그대로 공개된다. 공백만 있으면 무시하고 기존 답변을 유지한다.
     @field:Size(max = 2000) val answer: String? = null,

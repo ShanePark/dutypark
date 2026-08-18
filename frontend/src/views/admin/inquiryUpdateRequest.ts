@@ -18,7 +18,8 @@ export function buildInquiryUpdateRequest(
 
   return {
     status,
-    memo: memo.trim() || undefined,
+    // Always send the box contents: an emptied box must clear the stored memo, not be treated as "keep".
+    memo: memo.trim(),
     answer: normalizedAnswer && normalizedAnswer !== normalizedPreviousAnswer
       ? normalizedAnswer
       : undefined,

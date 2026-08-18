@@ -17,4 +17,12 @@ describe('buildInquiryUpdateRequest', () => {
       answer: undefined,
     })
   })
+
+  it('keeps an empty memo so clearing the box clears the stored memo', () => {
+    expect(buildInquiryUpdateRequest('OPEN', '   ', '', null)).toEqual({
+      status: 'OPEN',
+      memo: '',
+      answer: undefined,
+    })
+  })
 })

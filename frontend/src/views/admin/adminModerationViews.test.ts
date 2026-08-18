@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import reportListView from './AdminReportListView.vue?raw'
 import inquiryListView from './AdminInquiryListView.vue?raw'
+import inquiryUpdateRequest from './inquiryUpdateRequest.ts?raw'
 import adminDashboardView from './AdminDashboardView.vue?raw'
 import reportDetailModal from '@/components/admin/AdminReportDetailModal.vue?raw'
 import inquiryDetailModal from '@/components/admin/AdminInquiryDetailModal.vue?raw'
@@ -43,6 +44,11 @@ describe('AdminReportListView', () => {
   it('sends the admin to the reported member calendar', () => {
     expect(reportListView).toContain("router.push({ name: 'duty', params: { id: String(memberId) } })")
   })
+
+  it('submits the memo box verbatim so emptying it clears the stored memo', () => {
+    expect(reportListView).toContain('memo: memo.trim(),')
+    expect(reportListView).not.toContain('memo.trim() || undefined')
+  })
 })
 
 describe('AdminReportDetailModal', () => {
@@ -67,6 +73,11 @@ describe('AdminReportDetailModal', () => {
     expect(reportDetailModal).toContain('@click="emit(\'goToCalendar\')"')
   })
 
+  it('keys the memo box on the report id so refreshing one report keeps typed text', () => {
+    expect(reportDetailModal).toContain('() => props.report?.id ?? null')
+    expect(reportDetailModal).not.toContain('() => props.report,')
+  })
+
   it('renders the snapshot verbatim with its line breaks', () => {
     expect(reportDetailModal).toContain('whitespace-pre-wrap break-words text-dp-text-primary">{{ report.contentSnapshot }}')
   })
@@ -83,6 +94,12 @@ describe('AdminInquiryListView', () => {
   it('marks itself as the inquiries tab and mounts the detail modal', () => {
     expect(inquiryListView).toContain('<AdminNavTiles active="inquiries" />')
     expect(inquiryListView).toContain('<AdminInquiryDetailModal')
+  })
+
+  it('submits the memo box verbatim so emptying it clears the stored memo', () => {
+    expect(inquiryListView).toContain('buildInquiryUpdateRequest(status, memo, answer, selectedInquiry.value.answer)')
+    expect(inquiryUpdateRequest).toContain('memo: memo.trim(),')
+    expect(inquiryUpdateRequest).not.toContain('memo.trim() || undefined')
   })
 
   it('copies the reply address to the clipboard', () => {

@@ -181,7 +181,10 @@ class AdminReportControllerTest : RestDocsTest() {
                         fieldWithPath("status").type(JsonFieldType.STRING)
                             .description("New status (`RESOLVED` or `DISMISSED`)"),
                         fieldWithPath("memo").type(JsonFieldType.STRING).optional()
-                            .description("Optional admin memo (max 1000 chars)"),
+                            .description(
+                                "Admin memo (max 1000 chars). Omit to keep the memo already recorded, " +
+                                    "send a blank string to clear it"
+                            ),
                     ),
                     detailResponseFields(),
                 )

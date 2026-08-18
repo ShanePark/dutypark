@@ -241,7 +241,7 @@ class AdminInquiryControllerTest : RestDocsTest() {
                     ),
                     requestFields(
                         fieldWithPath("status").description("변경할 상태 (OPEN, CLOSED)"),
-                        fieldWithPath("memo").description("관리자 메모 (생략하면 기존 메모 유지)").optional(),
+                        fieldWithPath("memo").description("관리자 메모 (생략하면 기존 메모 유지, 빈 문자열이면 메모 삭제)").optional(),
                         fieldWithPath("answer").type(JsonFieldType.STRING)
                             .description("사용자에게 공개되는 답변 (생략하거나 공백이면 기존 답변 유지)").optional(),
                     ),
@@ -396,6 +396,39 @@ class AdminInquiryControllerTest : RestDocsTest() {
                 .withAuth(TestData.admin)
         )
             .andExpect(status().isBadRequest)
+    }
+
+    @Test
+    fun `blank memo clears the memo already recorded`() {
+        val inquiry = saveInquiry(
+            content = "메모를 지울 문의",
+            createdDate = baseTime,
+            status = InquiryStatus.CLOSED,
+            memo = "잘못 적은 메모",
+        )
+        em.flush()
+        em.clear()
+
+        val json = """
+            {
+                "status": "CLOSED",
+                "memo": ""
+            }
+        """.trimIndent()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.patch("/admin/api/inquiries/{id}/status", inquiry.id)
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json)
+                .withAuth(TestData.admin)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.adminMemo").doesNotExist())
+
+        em.flush()
+        em.clear()
+        assertThat(inquiryRepository.findById(inquiry.id).orElseThrow().adminMemo).isNull()
     }
 
     private fun saveInquiry(

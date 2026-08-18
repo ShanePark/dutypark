@@ -9,6 +9,7 @@ data class UpdateReportStatusRequest(
     @field:NotNull
     val status: ReportStatus,
 
+    /** Omit (or send null) to keep the memo already recorded; send a blank string to clear it. */
     @field:Size(max = 1000)
     val memo: String? = null,
 )

@@ -199,6 +199,53 @@ class AdminReportServiceIntegrationTest : DutyparkIntegrationTest() {
     }
 
     @Test
+    fun `update status without a memo keeps the memo already recorded`() {
+        val report = saveReport()
+        flushAndClear()
+
+        adminReportService.updateStatus(
+            reportId = report.id,
+            adminMemberId = TestData.admin.id!!,
+            request = UpdateReportStatusRequest(status = ReportStatus.RESOLVED, memo = "콘텐츠 삭제 완료"),
+        )
+        flushAndClear()
+
+        val detail = adminReportService.updateStatus(
+            reportId = report.id,
+            adminMemberId = TestData.admin.id!!,
+            request = UpdateReportStatusRequest(status = ReportStatus.DISMISSED, memo = null),
+        )
+        flushAndClear()
+
+        assertThat(detail.status).isEqualTo(ReportStatus.DISMISSED)
+        assertThat(detail.adminMemo).isEqualTo("콘텐츠 삭제 완료")
+        assertThat(contentReportRepository.findById(report.id).orElseThrow().adminMemo).isEqualTo("콘텐츠 삭제 완료")
+    }
+
+    @Test
+    fun `update status with a blank memo clears the memo already recorded`() {
+        val report = saveReport()
+        flushAndClear()
+
+        adminReportService.updateStatus(
+            reportId = report.id,
+            adminMemberId = TestData.admin.id!!,
+            request = UpdateReportStatusRequest(status = ReportStatus.RESOLVED, memo = "잘못 적은 메모"),
+        )
+        flushAndClear()
+
+        val detail = adminReportService.updateStatus(
+            reportId = report.id,
+            adminMemberId = TestData.admin.id!!,
+            request = UpdateReportStatusRequest(status = ReportStatus.RESOLVED, memo = ""),
+        )
+        flushAndClear()
+
+        assertThat(detail.adminMemo).isNull()
+        assertThat(contentReportRepository.findById(report.id).orElseThrow().adminMemo).isNull()
+    }
+
+    @Test
     fun `update status back to open is rejected`() {
         val report = saveReport()
         flushAndClear()

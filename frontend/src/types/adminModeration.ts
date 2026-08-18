@@ -51,6 +51,7 @@ export interface AdminReportDetailDto extends AdminReportSummaryDto {
 
 export interface UpdateReportStatusRequest {
   status: ReportResolutionStatus
+  /** Omitted keeps the memo already recorded; an empty string clears it. */
   memo?: string
 }
 
@@ -80,6 +81,7 @@ export interface AdminInquiryDto {
 
 export interface UpdateInquiryStatusRequest {
   status: InquiryStatus
+  /** Omitted keeps the memo already recorded; an empty string clears it. */
   memo?: string
   /** Blank or omitted keeps the current answer; answers are never cleared. */
   answer?: string

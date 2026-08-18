@@ -128,9 +128,10 @@ async function handleUpdateStatus(status: ReportResolutionStatus, memo: string) 
 
   isWorking.value = true
   try {
+    // Always send the box contents: an emptied box must clear the stored memo, not be treated as "keep".
     const res = await adminApi.updateReportStatus(selectedReportId.value, {
       status,
-      memo: memo.trim() || undefined,
+      memo: memo.trim(),
     })
     selectedReport.value = res.data
     toastSuccess(t('admin.reports.messages.updateStatusSuccess'))

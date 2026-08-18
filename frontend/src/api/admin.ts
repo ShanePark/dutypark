@@ -125,7 +125,8 @@ export const adminApi = {
   },
 
   /**
-   * Resolve or dismiss a report, optionally recording an admin memo
+   * Resolve or dismiss a report, optionally recording an admin memo.
+   * An omitted memo keeps the one already recorded; an empty memo clears it.
    */
   updateReportStatus(reportId: string, request: UpdateReportStatusRequest) {
     return adminClient.patch<AdminReportDetailDto>(`/reports/${reportId}/status`, request)
@@ -157,7 +158,8 @@ export const adminApi = {
   },
 
   /**
-   * Change an inquiry status, optionally recording an admin memo
+   * Change an inquiry status, optionally recording an admin memo.
+   * An omitted memo keeps the one already recorded; an empty memo clears it.
    */
   updateInquiryStatus(inquiryId: string, request: UpdateInquiryStatusRequest) {
     return adminClient.patch<AdminInquiryDto>(`/inquiries/${inquiryId}/status`, request)
