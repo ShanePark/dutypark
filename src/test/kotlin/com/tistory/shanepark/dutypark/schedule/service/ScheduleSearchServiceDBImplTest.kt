@@ -1,7 +1,6 @@
 package com.tistory.shanepark.dutypark.schedule.service
 
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
-import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.member.block.service.BlockService
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
@@ -11,7 +10,6 @@ import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
-import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.data.domain.Pageable
 import org.springframework.test.context.TestPropertySource
@@ -159,7 +157,7 @@ class ScheduleSearchServiceDBImplTest : DutyparkIntegrationTest() {
     }
 
     @Test
-    fun `search fails when the target blocked the viewer`() {
+    fun `search returns an empty page when the target blocked the viewer`() {
         val owner = TestData.member
         val viewer = TestData.member2
         updateVisibility(owner, Visibility.PUBLIC)
@@ -171,9 +169,32 @@ class ScheduleSearchServiceDBImplTest : DutyparkIntegrationTest() {
         em.flush()
         em.clear()
 
-        assertThrows<AuthException> {
-            scheduleSearchServiceDBImpl.search(loginMember(viewer), owner.id!!, Pageable.ofSize(10), "blocked")
-        }
+        val result = scheduleSearchServiceDBImpl.search(
+            loginMember(viewer), owner.id!!, Pageable.ofSize(10), "blocked"
+        )
+
+        assertThat(result.content).isEmpty()
+        assertThat(result.totalElements).isEqualTo(0)
+        assertThat(result.totalPages).isEqualTo(0)
+        assertThat(result.size).isEqualTo(10)
+        assertThat(result.number).isEqualTo(0)
+    }
+
+    @Test
+    fun `search returns an empty page rather than failing for a teammate with a private calendar`() {
+        val owner = TestData.member
+        val viewer = TestData.member2
+        updateVisibility(owner, Visibility.PRIVATE)
+        makeSchedule(loginMember(owner), "private-teammate", LocalDateTime.of(2024, 1, 1, 0, 0))
+        em.flush()
+        em.clear()
+
+        val result = scheduleSearchServiceDBImpl.search(
+            loginMember(viewer), owner.id!!, Pageable.ofSize(10), "private"
+        )
+
+        assertThat(result.content).isEmpty()
+        assertThat(result.totalElements).isEqualTo(0)
     }
 
     private fun makeSchedule(

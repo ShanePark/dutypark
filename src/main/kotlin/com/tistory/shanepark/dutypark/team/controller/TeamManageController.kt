@@ -126,7 +126,9 @@ class TeamManageController(
         @RequestParam(required = false, defaultValue = "") keyword: String,
     ): PageResponse<MemberInviteCandidateDto> {
         checkCanManage(login = loginMember, teamId = teamId)
-        return PageResponse(memberService.searchMembersToInviteTeam(page = page, keyword = keyword))
+        return PageResponse(
+            memberService.searchMembersToInviteTeam(page = page, keyword = keyword, loginMemberId = loginMember.id)
+        )
     }
 
     @PostMapping("/{teamId}/manager")
