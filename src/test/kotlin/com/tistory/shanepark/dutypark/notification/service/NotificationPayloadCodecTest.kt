@@ -2,6 +2,7 @@ package com.tistory.shanepark.dutypark.notification.service
 
 import com.tistory.shanepark.dutypark.notification.domain.enums.NotificationType
 import com.tistory.shanepark.dutypark.notification.domain.payload.FriendRequestReceivedPayload
+import com.tistory.shanepark.dutypark.notification.domain.payload.InquiryAnsweredPayload
 import com.tistory.shanepark.dutypark.notification.domain.payload.NotificationActorSnapshot
 import com.tistory.shanepark.dutypark.notification.domain.payload.ScheduleTaggedPayload
 import org.assertj.core.api.Assertions.assertThat
@@ -42,6 +43,27 @@ class NotificationPayloadCodecTest {
         val decoded = codec.safeDeserialize(NotificationType.SCHEDULE_TAGGED, payload.version, json)
 
         assertThat(decoded).isEqualTo(NotificationPayloadDecodeResult.Success(payload))
+    }
+
+    @Test
+    fun `round-trips inquiry answered payload with and without subject`() {
+        val withSubject = InquiryAnsweredPayload(subject = "일정이 보이지 않습니다")
+        val withoutSubject = InquiryAnsweredPayload(subject = null)
+
+        assertThat(
+            codec.safeDeserialize(
+                NotificationType.INQUIRY_ANSWERED,
+                withSubject.version,
+                codec.serialize(withSubject),
+            )
+        ).isEqualTo(NotificationPayloadDecodeResult.Success(withSubject))
+        assertThat(
+            codec.safeDeserialize(
+                NotificationType.INQUIRY_ANSWERED,
+                withoutSubject.version,
+                codec.serialize(withoutSubject),
+            )
+        ).isEqualTo(NotificationPayloadDecodeResult.Success(withoutSubject))
     }
 
     @Test

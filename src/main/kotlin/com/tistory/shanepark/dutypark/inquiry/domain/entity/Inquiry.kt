@@ -22,6 +22,7 @@ import java.time.LocalDateTime
     indexes = [
         Index(name = "idx_inquiry_status_created", columnList = "status, created_date"),
         Index(name = "idx_inquiry_ip_created", columnList = "ip_address, created_date"),
+        Index(name = "idx_inquiry_member_created", columnList = "member_id, created_date"),
     ],
 )
 class Inquiry(
@@ -60,6 +61,30 @@ class Inquiry(
     @Column(name = "closed_by")
     var closedBy: Long? = null
         protected set
+
+    @Column(name = "answer", length = 2000)
+    var answer: String? = null
+        protected set
+
+    @Column(name = "answered_at")
+    var answeredAt: LocalDateTime? = null
+        protected set
+
+    @Column(name = "answered_by")
+    var answeredBy: Long? = null
+        protected set
+
+    /**
+     * 답변을 저장하고, 이번 호출이 최초 답변이면 true 를 반환한다.
+     * 최초 답변에만 알림을 보내야 하므로(오타 수정 재알림 방지) 호출자가 이 값으로 판단한다.
+     */
+    fun writeAnswer(answer: String, adminId: Long, now: LocalDateTime): Boolean {
+        val firstAnswer = this.answer == null
+        this.answer = answer
+        this.answeredAt = now
+        this.answeredBy = adminId
+        return firstAnswer
+    }
 
     fun changeStatus(status: InquiryStatus, memo: String?, adminId: Long, now: LocalDateTime) {
         this.status = status

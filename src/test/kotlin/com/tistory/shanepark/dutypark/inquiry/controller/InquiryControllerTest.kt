@@ -4,6 +4,7 @@ import com.tistory.shanepark.dutypark.RestDocsTest
 import com.tistory.shanepark.dutypark.inquiry.domain.entity.Inquiry
 import com.tistory.shanepark.dutypark.inquiry.domain.enums.InquiryStatus
 import com.tistory.shanepark.dutypark.inquiry.repository.InquiryRepository
+import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -13,13 +14,18 @@ import org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders
 import org.springframework.restdocs.payload.PayloadDocumentation.fieldWithPath
 import org.springframework.restdocs.payload.PayloadDocumentation.requestFields
 import org.springframework.restdocs.payload.PayloadDocumentation.responseFields
+import org.springframework.restdocs.request.RequestDocumentation.parameterWithName
+import org.springframework.restdocs.request.RequestDocumentation.queryParameters
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import java.time.LocalDateTime
 
 class InquiryControllerTest : RestDocsTest() {
 
     @Autowired
     lateinit var inquiryRepository: InquiryRepository
+
+    private val baseTime: LocalDateTime = LocalDateTime.of(2026, 8, 18, 10, 0, 0)
 
     @Test
     fun `guest creates inquiry`() {
@@ -248,5 +254,126 @@ class InquiryControllerTest : RestDocsTest() {
                 .content(json)
         )
             .andExpect(status().isCreated)
+    }
+
+    @Test
+    fun `member reads own inquiries in created date desc order`() {
+        // created_date 는 JPA Auditing 이 채우므로 저장 순서가 곧 오래된 순이다.
+        saveInquiry(member = null, subject = "비회원 문의", content = "비회원 문의 내용")
+        saveInquiry(member = TestData.member2, subject = "다른 회원 문의", content = "다른 회원 문의 내용")
+        saveInquiry(member = TestData.member, content = "답변 대기 문의")
+        val answered = saveInquiry(
+            member = TestData.member,
+            subject = "답변 완료 문의",
+            content = "언제 답변이 오나요?",
+        )
+        answered.writeAnswer("확인 후 처리했습니다.", TestData.admin.id!!, baseTime)
+        em.flush()
+        em.clear()
+
+        val response = mockMvc.perform(
+            RestDocumentationRequestBuilders.get("/api/inquiries/me")
+                .param("page", "0")
+                .param("size", "10")
+                .accept(MediaType.APPLICATION_JSON)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.totalElements").value(2))
+            .andExpect(jsonPath("$.content[0].id").value(answered.id.toString()))
+            .andExpect(jsonPath("$.content[0].subject").value("답변 완료 문의"))
+            .andExpect(jsonPath("$.content[0].status").value("OPEN"))
+            .andExpect(jsonPath("$.content[0].answer").value("확인 후 처리했습니다."))
+            .andExpect(jsonPath("$.content[0].answeredAt").exists())
+            .andExpect(jsonPath("$.content[1].content").value("답변 대기 문의"))
+            .andExpect(jsonPath("$.content[1].answer").doesNotExist())
+            .andExpect(jsonPath("$.content[1].answeredAt").doesNotExist())
+            .andDo(
+                document(
+                    "inquiry/my-list",
+                    queryParameters(
+                        parameterWithName("page").description("페이지 번호(0부터)"),
+                        parameterWithName("size").description("페이지 크기"),
+                    ),
+                    responseFields(
+                        fieldWithPath("content").description("내 문의 목록"),
+                        fieldWithPath("content[].id").description("문의 ID"),
+                        fieldWithPath("content[].email").description("회신 이메일"),
+                        fieldWithPath("content[].subject").description("제목 (선택)").optional(),
+                        fieldWithPath("content[].content").description("문의 내용"),
+                        fieldWithPath("content[].status").description("처리 상태 (OPEN, CLOSED)"),
+                        fieldWithPath("content[].createdAt").description("접수 일시"),
+                        fieldWithPath("content[].answer").description("관리자 답변 (없으면 null)").optional(),
+                        fieldWithPath("content[].answeredAt").description("답변 일시 (없으면 null)").optional(),
+                        fieldWithPath("totalPages").description("전체 페이지 수"),
+                        fieldWithPath("totalElements").description("전체 건수"),
+                        fieldWithPath("first").description("첫 페이지 여부"),
+                        fieldWithPath("last").description("마지막 페이지 여부"),
+                        fieldWithPath("size").description("페이지 크기"),
+                        fieldWithPath("number").description("현재 페이지 번호"),
+                        fieldWithPath("numberOfElements").description("현재 페이지 요소 수"),
+                        fieldWithPath("empty").description("비어 있는지 여부"),
+                        fieldWithPath("pageable").description("페이지 정보"),
+                        fieldWithPath("pageable.pageNumber").description("페이지 번호"),
+                        fieldWithPath("pageable.pageSize").description("페이지 크기"),
+                        fieldWithPath("pageable.sort").description("정렬 정보"),
+                        fieldWithPath("pageable.sort.empty").description("정렬 조건 없음 여부"),
+                        fieldWithPath("pageable.sort.sorted").description("정렬 여부"),
+                        fieldWithPath("pageable.sort.unsorted").description("미정렬 여부"),
+                        fieldWithPath("pageable.offset").description("오프셋"),
+                        fieldWithPath("pageable.paged").description("페이징 여부"),
+                        fieldWithPath("pageable.unpaged").description("비페이징 여부"),
+                    )
+                )
+            )
+            .andReturn().response.contentAsString
+
+        assertThat(response).doesNotContain("adminMemo", "ipAddress", "closedBy", "closedAt", "answeredBy", "memberId")
+    }
+
+    @Test
+    fun `my inquiry list requires login`() {
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.get("/api/inquiries/me")
+                .accept(MediaType.APPLICATION_JSON)
+        )
+            .andExpect(status().isUnauthorized)
+    }
+
+    @Test
+    fun `my inquiry list is paged`() {
+        saveInquiry(member = TestData.member, content = "문의 1")
+        saveInquiry(member = TestData.member, content = "문의 2")
+        em.flush()
+        em.clear()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.get("/api/inquiries/me")
+                .param("page", "1")
+                .param("size", "1")
+                .accept(MediaType.APPLICATION_JSON)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.totalElements").value(2))
+            .andExpect(jsonPath("$.totalPages").value(2))
+            .andExpect(jsonPath("$.numberOfElements").value(1))
+            .andExpect(jsonPath("$.content[0].content").value("문의 1"))
+    }
+
+    private fun saveInquiry(
+        member: Member?,
+        content: String,
+        subject: String? = null,
+    ): Inquiry {
+        return inquiryRepository.save(
+            Inquiry(
+                member = member,
+                email = "guest@dutypark.o-r.kr",
+                subject = subject,
+                content = content,
+                ipAddress = "127.0.0.1",
+            )
+        )
     }
 }

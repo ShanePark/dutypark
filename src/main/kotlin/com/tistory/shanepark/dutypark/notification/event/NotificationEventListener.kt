@@ -10,6 +10,7 @@ import com.tistory.shanepark.dutypark.notification.domain.payload.FamilyRequestA
 import com.tistory.shanepark.dutypark.notification.domain.payload.FamilyRequestReceivedPayload
 import com.tistory.shanepark.dutypark.notification.domain.payload.FriendRequestAcceptedPayload
 import com.tistory.shanepark.dutypark.notification.domain.payload.FriendRequestReceivedPayload
+import com.tistory.shanepark.dutypark.notification.domain.payload.InquiryAnsweredPayload
 import com.tistory.shanepark.dutypark.notification.domain.payload.NotificationActorSnapshot
 import com.tistory.shanepark.dutypark.notification.domain.payload.NotificationPayload
 import com.tistory.shanepark.dutypark.notification.domain.payload.ScheduleTaggedPayload
@@ -189,6 +190,24 @@ class NotificationEventListener(
         }
     }
 
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Async("notificationExecutor")
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    fun handleInquiryAnswered(event: InquiryAnsweredEvent) {
+        try {
+            createNotificationAndSendPush(
+                memberId = event.memberId,
+                type = NotificationType.INQUIRY_ANSWERED,
+                actorId = null,
+                referenceType = NotificationReferenceType.INQUIRY,
+                referenceId = event.inquiryId.toString(),
+                payload = InquiryAnsweredPayload(subject = event.subject),
+            )
+        } catch (e: Exception) {
+            log.error("Failed to create inquiry answered notification: {}", e.message, e)
+        }
+    }
+
     private fun createNotificationAndSendPush(
         memberId: Long,
         type: NotificationType,
@@ -252,6 +271,7 @@ class NotificationEventListener(
             NotificationReferenceType.SCHEDULE -> "/duty/${notification.member.id}"
             NotificationReferenceType.TODO -> "/todo"
             NotificationReferenceType.MEMBER -> "/duty/${notification.referenceId}"
+            NotificationReferenceType.INQUIRY -> "/support?tab=history"
             else -> "/"
         }
     }

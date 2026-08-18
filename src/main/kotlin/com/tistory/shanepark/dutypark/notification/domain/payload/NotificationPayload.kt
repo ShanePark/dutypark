@@ -67,3 +67,11 @@ data class TodoStatusDonePayload(
     override val actor: NotificationActorSnapshot,
     val todoTitle: String,
 ) : ActorNotificationPayload
+
+/**
+ * 문의 답변 알림은 관리자 신원을 노출하지 않으므로 actor 를 담지 않는다.
+ */
+data class InquiryAnsweredPayload(
+    override val version: Int = 1,
+    val subject: String?,
+) : NotificationPayload

@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.MediaType
 import org.springframework.restdocs.mockmvc.MockMvcRestDocumentation.document
 import org.springframework.restdocs.mockmvc.RestDocumentationRequestBuilders
+import org.springframework.restdocs.payload.JsonFieldType
 import org.springframework.restdocs.payload.PayloadDocumentation.fieldWithPath
 import org.springframework.restdocs.payload.PayloadDocumentation.requestFields
 import org.springframework.restdocs.payload.PayloadDocumentation.responseFields
@@ -69,6 +70,9 @@ class AdminInquiryControllerTest : RestDocsTest() {
                         fieldWithPath("content[].adminMemo").description("관리자 메모").optional(),
                         fieldWithPath("content[].createdAt").description("접수 일시"),
                         fieldWithPath("content[].closedAt").description("종료 일시").optional(),
+                        fieldWithPath("content[].answer").description("사용자에게 공개되는 답변").optional(),
+                        fieldWithPath("content[].answeredAt").description("답변 일시").optional(),
+                        fieldWithPath("content[].answeredBy").description("답변 작성 관리자 ID").optional(),
                         fieldWithPath("totalPages").description("전체 페이지 수"),
                         fieldWithPath("totalElements").description("전체 건수"),
                         fieldWithPath("first").description("첫 페이지 여부"),
@@ -187,6 +191,9 @@ class AdminInquiryControllerTest : RestDocsTest() {
                         fieldWithPath("adminMemo").description("관리자 메모").optional(),
                         fieldWithPath("createdAt").description("접수 일시"),
                         fieldWithPath("closedAt").description("종료 일시").optional(),
+                        fieldWithPath("answer").description("사용자에게 공개되는 답변").optional(),
+                        fieldWithPath("answeredAt").description("답변 일시").optional(),
+                        fieldWithPath("answeredBy").description("답변 작성 관리자 ID").optional(),
                     )
                 )
             )
@@ -235,6 +242,8 @@ class AdminInquiryControllerTest : RestDocsTest() {
                     requestFields(
                         fieldWithPath("status").description("변경할 상태 (OPEN, CLOSED)"),
                         fieldWithPath("memo").description("관리자 메모 (생략하면 기존 메모 유지)").optional(),
+                        fieldWithPath("answer").type(JsonFieldType.STRING)
+                            .description("사용자에게 공개되는 답변 (생략하거나 공백이면 기존 답변 유지)").optional(),
                     ),
                     responseFields(
                         fieldWithPath("id").description("문의 ID"),
@@ -247,6 +256,9 @@ class AdminInquiryControllerTest : RestDocsTest() {
                         fieldWithPath("adminMemo").description("관리자 메모").optional(),
                         fieldWithPath("createdAt").description("접수 일시"),
                         fieldWithPath("closedAt").description("종료 일시").optional(),
+                        fieldWithPath("answer").description("사용자에게 공개되는 답변").optional(),
+                        fieldWithPath("answeredAt").description("답변 일시").optional(),
+                        fieldWithPath("answeredBy").description("답변 작성 관리자 ID").optional(),
                     )
                 )
             )
@@ -296,6 +308,94 @@ class AdminInquiryControllerTest : RestDocsTest() {
         assertThat(reopened.closedAt).isNull()
         assertThat(reopened.closedBy).isNull()
         assertThat(reopened.adminMemo).isEqualTo("처리 완료")
+    }
+
+    @Test
+    fun `admin answer is stored and returned`() {
+        val inquiry = saveInquiry(content = "답변이 필요한 문의", createdDate = baseTime, member = TestData.member)
+        em.flush()
+        em.clear()
+
+        val json = """
+            {
+                "status": "CLOSED",
+                "memo": "내부 메모",
+                "answer": "앱에서 확인하실 수 있도록 답변드립니다."
+            }
+        """.trimIndent()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.patch("/admin/api/inquiries/{id}/status", inquiry.id)
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json)
+                .withAuth(TestData.admin)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.answer").value("앱에서 확인하실 수 있도록 답변드립니다."))
+            .andExpect(jsonPath("$.answeredAt").exists())
+            .andExpect(jsonPath("$.answeredBy").value(TestData.admin.id))
+
+        em.flush()
+        em.clear()
+        val answered = inquiryRepository.findById(inquiry.id).orElseThrow()
+        assertThat(answered.answer).isEqualTo("앱에서 확인하실 수 있도록 답변드립니다.")
+        assertThat(answered.answeredAt).isNotNull()
+        assertThat(answered.answeredBy).isEqualTo(TestData.admin.id)
+        assertThat(answered.adminMemo).isEqualTo("내부 메모")
+    }
+
+    @Test
+    fun `blank answer keeps the existing answer`() {
+        val inquiry = saveInquiry(content = "이미 답변한 문의", createdDate = baseTime, member = TestData.member)
+        inquiry.writeAnswer("기존 답변입니다.", TestData.admin.id!!, baseTime)
+        em.flush()
+        em.clear()
+
+        val json = """
+            {
+                "status": "OPEN",
+                "answer": "   "
+            }
+        """.trimIndent()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.patch("/admin/api/inquiries/{id}/status", inquiry.id)
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json)
+                .withAuth(TestData.admin)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.answer").value("기존 답변입니다."))
+
+        em.flush()
+        em.clear()
+        val kept = inquiryRepository.findById(inquiry.id).orElseThrow()
+        assertThat(kept.answer).isEqualTo("기존 답변입니다.")
+    }
+
+    @Test
+    fun `too long answer is rejected`() {
+        val inquiry = saveInquiry(content = "답변 길이 검증", createdDate = baseTime, member = TestData.member)
+        em.flush()
+        em.clear()
+
+        val json = """
+            {
+                "status": "OPEN",
+                "answer": "${"답".repeat(2001)}"
+            }
+        """.trimIndent()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.patch("/admin/api/inquiries/{id}/status", inquiry.id)
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json)
+                .withAuth(TestData.admin)
+        )
+            .andExpect(status().isBadRequest)
     }
 
     private fun saveInquiry(

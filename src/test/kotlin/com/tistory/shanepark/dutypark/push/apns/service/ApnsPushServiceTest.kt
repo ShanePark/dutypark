@@ -7,6 +7,7 @@ import com.tistory.shanepark.dutypark.TestUtils
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.notification.domain.enums.NotificationType
 import com.tistory.shanepark.dutypark.notification.domain.payload.FriendRequestReceivedPayload
+import com.tistory.shanepark.dutypark.notification.domain.payload.InquiryAnsweredPayload
 import com.tistory.shanepark.dutypark.notification.domain.payload.NotificationActorSnapshot
 import com.tistory.shanepark.dutypark.notification.dto.NotificationDto
 import com.tistory.shanepark.dutypark.push.apns.domain.entity.ApnsInstallation
@@ -233,6 +234,41 @@ class ApnsPushServiceTest {
         val alert = aps["alert"] as Map<String, Any>
         assertThat(alert["loc-key"]).isEqualTo("notifications.items.friendRequestReceived")
         assertThat(alert["loc-args"]).isEqualTo(listOf("Shane"))
+    }
+
+    @Test
+    fun `inquiry answered payload localizes with subject and falls back when it is blank`() {
+        val service = disabledService()
+
+        assertThat(locKeyAndArgs(service, "일정이 보이지 않습니다"))
+            .isEqualTo("notifications.items.inquiryAnswered" to listOf("일정이 보이지 않습니다"))
+        assertThat(locKeyAndArgs(service, null))
+            .isEqualTo("notifications.items.inquiryAnsweredFallback" to null)
+        assertThat(locKeyAndArgs(service, "  "))
+            .isEqualTo("notifications.items.inquiryAnsweredFallback" to null)
+    }
+
+    private fun locKeyAndArgs(service: ApnsPushService, subject: String?): Pair<String?, Any?> {
+        val notification = NotificationDto(
+            id = UUID.randomUUID(),
+            type = NotificationType.INQUIRY_ANSWERED,
+            referenceType = null,
+            referenceId = null,
+            actorId = null,
+            payload = InquiryAnsweredPayload(subject = subject),
+            isRead = false,
+            createdAt = LocalDateTime.now(),
+        )
+
+        val result = service.buildPayload(
+            PushNotificationPayload(type = NotificationType.INQUIRY_ANSWERED, notification = notification)
+        )
+
+        @Suppress("UNCHECKED_CAST")
+        val aps = result["aps"] as Map<String, Any>
+        @Suppress("UNCHECKED_CAST")
+        val alert = aps["alert"] as Map<String, Any>
+        return alert["loc-key"] as String? to alert["loc-args"]
     }
 
     private fun enabledService(httpClient: HttpClient) = ApnsPushService(

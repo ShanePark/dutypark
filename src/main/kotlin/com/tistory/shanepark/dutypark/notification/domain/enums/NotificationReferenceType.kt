@@ -4,5 +4,6 @@ enum class NotificationReferenceType {
     FRIEND_REQUEST,
     SCHEDULE,
     TODO,
-    MEMBER
+    MEMBER,
+    INQUIRY
 }

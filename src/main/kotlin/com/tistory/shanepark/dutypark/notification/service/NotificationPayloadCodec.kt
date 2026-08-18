@@ -5,6 +5,7 @@ import com.tistory.shanepark.dutypark.notification.domain.payload.FamilyRequestA
 import com.tistory.shanepark.dutypark.notification.domain.payload.FamilyRequestReceivedPayload
 import com.tistory.shanepark.dutypark.notification.domain.payload.FriendRequestAcceptedPayload
 import com.tistory.shanepark.dutypark.notification.domain.payload.FriendRequestReceivedPayload
+import com.tistory.shanepark.dutypark.notification.domain.payload.InquiryAnsweredPayload
 import com.tistory.shanepark.dutypark.notification.domain.payload.NotificationPayload
 import com.tistory.shanepark.dutypark.notification.domain.payload.ScheduleTaggedPayload
 import com.tistory.shanepark.dutypark.notification.domain.payload.TodoStatusDonePayload
@@ -76,6 +77,7 @@ class NotificationPayloadCodec(
                 NotificationType.TODO_STATUS_TODO -> TodoStatusTodoPayload::class.java
                 NotificationType.TODO_STATUS_IN_PROGRESS -> TodoStatusInProgressPayload::class.java
                 NotificationType.TODO_STATUS_DONE -> TodoStatusDonePayload::class.java
+                NotificationType.INQUIRY_ANSWERED -> InquiryAnsweredPayload::class.java
             }
 
             else -> throw IllegalArgumentException("Unsupported notification payload version $version for $type")

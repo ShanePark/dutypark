@@ -394,6 +394,10 @@ operation::reports/create-detail-required[]
 
 operation::inquiry/create[]
 
+=== My Inquiries
+
+operation::inquiry/my-list[]
+
 == Notifications
 
 === Get Notifications (Paginated)

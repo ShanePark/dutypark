@@ -46,3 +46,9 @@ data class TodoStatusChangedEvent(
     val todoTitle: String,
     val newStatus: TodoStatus
 )
+
+data class InquiryAnsweredEvent(
+    val inquiryId: UUID,
+    val memberId: Long,
+    val subject: String?
+)

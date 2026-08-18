@@ -18,6 +18,9 @@ data class AdminInquiryDto(
     val adminMemo: String?,
     val createdAt: LocalDateTime,
     val closedAt: LocalDateTime?,
+    val answer: String?,
+    val answeredAt: LocalDateTime?,
+    val answeredBy: Long?,
 ) {
     companion object {
         fun of(inquiry: Inquiry): AdminInquiryDto {
@@ -32,6 +35,9 @@ data class AdminInquiryDto(
                 adminMemo = inquiry.adminMemo,
                 createdAt = inquiry.createdDate,
                 closedAt = inquiry.closedAt,
+                answer = inquiry.answer,
+                answeredAt = inquiry.answeredAt,
+                answeredBy = inquiry.answeredBy,
             )
         }
     }
@@ -40,4 +46,6 @@ data class AdminInquiryDto(
 data class UpdateInquiryStatusRequest(
     @field:NotNull val status: InquiryStatus,
     @field:Size(max = 1000) val memo: String? = null,
+    // 사용자에게 그대로 공개된다. 공백만 있으면 무시하고 기존 답변을 유지한다.
+    @field:Size(max = 2000) val answer: String? = null,
 )
