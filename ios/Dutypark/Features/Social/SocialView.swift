@@ -3,6 +3,7 @@ import SwiftUI
 struct SocialView: View {
     @StateObject private var viewModel: SocialViewModel
     @State private var isSearchPresented = false
+    @State private var candidate: SearchCandidate?
     @State private var confirmation: SocialConfirmation?
     @State private var isPerformingConfirmation = false
     @State private var actionCandidate: ActionCandidate?
@@ -80,8 +81,22 @@ struct SocialView: View {
                 FriendSearchModalView(
                     viewModel: viewModel,
                     availableSize: availableSize,
+                    onSelectCandidate: { candidate = SearchCandidate(member: $0) },
                     onDismiss: dismiss
                 )
+                .alert(item: $candidate) { candidate in
+                    Alert(
+                        title: Text(social("social.confirm.sendFriend.title")),
+                        message: Text(socialFormat("social.confirm.sendFriend.message", candidate.member.name)),
+                        primaryButton: .default(Text(social("social.action.sendRequest"))) {
+                            Task {
+                                await viewModel.sendFriendRequest(to: candidate.member)
+                                if viewModel.errorKey == nil { dismiss() }
+                            }
+                        },
+                        secondaryButton: .cancel(Text(social("social.action.cancelDialog")))
+                    )
+                }
             }
         }
         .fullScreenCover(item: $confirmation) { confirmation in
@@ -127,7 +142,11 @@ struct SocialView: View {
 
     private var friendContent: some View {
         ScrollView {
-            LazyVStack(spacing: DPSpacing.large) {
+            // The panels stack eagerly: the friend panel's own `LazyVStack` keeps
+            // the rows lazy, while a lazy outer stack made the scroll content
+            // height unstable once a panel followed the friend list, and the
+            // pinned drop-target geometry then re-published forever.
+            VStack(spacing: DPSpacing.large) {
                 pageHeader
 
                 if viewModel.hasPendingRequests {
@@ -135,6 +154,14 @@ struct SocialView: View {
                 }
 
                 friendsPanel
+
+                BlockedMembersPanel(
+                    members: viewModel.blockedMembers,
+                    isDisabled: isMutationInFlight,
+                    unblock: { member in
+                        Task { await viewModel.unblock(member) }
+                    }
+                )
             }
             .padding(.horizontal, DPSpacing.medium)
             .padding(.top, DPSpacing.small)
@@ -486,6 +513,10 @@ struct SocialView: View {
                     removeFriend: {
                         actionCandidate = nil
                         confirmation = .removeFriend(friend)
+                    },
+                    onBlock: {
+                        actionCandidate = nil
+                        confirmation = .block(friend)
                     }
                 )
                 .presentationCompactAdaptation(.popover)
@@ -852,11 +883,12 @@ struct SocialView: View {
         case .cancel(let request): await viewModel.cancel(request)
         case .removeFamily(let friend): await viewModel.removeFromFamily(friend)
         case .removeFriend(let friend): await viewModel.removeFriend(friend)
+        case .block(let friend): await viewModel.block(friend)
         }
     }
 }
 
-private struct SocialPanelHeader: View {
+struct SocialPanelHeader: View {
     let title: String
     let count: Int
     let systemImage: String
@@ -918,364 +950,12 @@ private struct RequestAvatar: View {
     }
 }
 
-private struct FriendActionPopover: View {
-    let friend: DashboardFriendDetailDTO
-    let close: () -> Void
-    let addFamily: () -> Void
-    let removeFamily: () -> Void
-    let removeFriend: () -> Void
-
-    var body: some View {
-        VStack(spacing: 0) {
-            HStack(spacing: DPSpacing.small) {
-                Text(friend.member.name)
-                    .font(DPFont.bold(size: 14, relativeTo: .subheadline))
-                    .foregroundStyle(DPColor.textPrimary)
-                    .lineLimit(1)
-                Spacer()
-                Button(action: close) {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(DPColor.textMuted)
-                        .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
-                }
-                .buttonStyle(.plain)
-            }
-            .padding(.leading, DPSpacing.medium)
-            .padding(.trailing, 6)
-            .background(DPColor.backgroundTertiary)
-
-            Divider().overlay(DPColor.borderPrimary)
-
-            if friend.isFamily {
-                actionButton(
-                    social("social.action.removeFamily"),
-                    image: "person.badge.minus",
-                    color: DPColor.warning,
-                    action: removeFamily
-                )
-            } else {
-                actionButton(
-                    social("social.action.addFamily"),
-                    image: "house",
-                    color: DPColor.accent,
-                    action: addFamily
-                )
-            }
-
-            actionButton(
-                social("social.action.removeFriend"),
-                image: "trash",
-                color: DPColor.danger,
-                action: removeFriend
-            )
-        }
-        .frame(width: 176)
-        .background(DPColor.backgroundCard)
-    }
-
-    private func actionButton(
-        _ title: String,
-        image: String,
-        color: Color,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            HStack(spacing: 10) {
-                Image(systemName: image).frame(width: 16)
-                Text(title).lineLimit(1)
-                Spacer()
-            }
-            .font(DPFont.light(size: 14, relativeTo: .subheadline))
-            .foregroundStyle(color)
-            .padding(.horizontal, DPSpacing.medium)
-            .frame(minHeight: DPSize.minimumTouchTarget)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-    }
-}
-
-private struct FriendSearchModalView: View {
-    @ObservedObject var viewModel: SocialViewModel
-    @State private var keyword = ""
-    @State private var candidate: SearchCandidate?
-    @FocusState private var focusedField: Field?
-
-    let availableSize: CGSize
-    let onDismiss: () -> Void
-
-    private enum Field { case keyword }
-
-    var body: some View {
-        DPModalPanel(
-            maximumPanelHeight: min(availableSize.height, 620),
-            scrollTarget: focusedField
-        ) {
-            modalHeader
-        } content: {
-            modalBody
-        } footer: {
-            modalFooter
-        }
-        .onDisappear { viewModel.clearSearch() }
-        .alert(item: $candidate) { candidate in
-            Alert(
-                title: Text(social("social.confirm.sendFriend.title")),
-                message: Text(socialFormat("social.confirm.sendFriend.message", candidate.member.name)),
-                primaryButton: .default(Text(social("social.action.sendRequest"))) {
-                    Task {
-                        await viewModel.sendFriendRequest(to: candidate.member)
-                        if viewModel.errorKey == nil { onDismiss() }
-                    }
-                },
-                secondaryButton: .cancel(Text(social("social.action.cancelDialog")))
-            )
-        }
-        .alert(
-            social("social.error.title"),
-            isPresented: Binding(
-                get: { viewModel.errorKey != nil },
-                set: { if !$0 { viewModel.dismissError() } }
-            )
-        ) {
-            Button(social("social.action.ok")) { viewModel.dismissError() }
-        } message: {
-            Text(social(viewModel.errorKey ?? "social.error.generic"))
-        }
-    }
-
-    private var modalHeader: some View {
-        HStack(spacing: DPSpacing.compact) {
-            Image(systemName: "person.badge.plus")
-                .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(DPColor.textOnDark)
-                .frame(width: 40, height: 40)
-                .background {
-                    LinearGradient(
-                        colors: [DPColor.accent, DPColor.accentHover],
-                        startPoint: .topLeading,
-                        endPoint: .bottomTrailing
-                    )
-                }
-                .clipShape(RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous))
-
-            Text(social("social.search.title"))
-                .font(DPFont.bold(size: 18, relativeTo: .headline))
-                .foregroundStyle(DPColor.textPrimary)
-                .lineLimit(1)
-
-            Spacer()
-
-            Button { onDismiss() } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(DPColor.textMuted)
-                    .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(social("social.action.close"))
-        }
-        .padding(.horizontal, DPSpacing.medium)
-        .padding(.vertical, DPSpacing.compact)
-        .background(DPColor.backgroundTertiary)
-    }
-
-    private var modalBody: some View {
-        VStack(spacing: DPSpacing.medium) {
-            searchBar
-
-            if viewModel.isSearching {
-                ProgressView(social("social.search.loading"))
-                    .font(DPTypography.supporting)
-                    .foregroundStyle(DPColor.accent)
-                    .frame(maxWidth: .infinity, minHeight: 112)
-            } else if viewModel.searchResults.isEmpty {
-                VStack(spacing: DPSpacing.compact) {
-                    Image(systemName: "magnifyingglass")
-                        .font(.system(size: 44, weight: .light))
-                        .foregroundStyle(DPColor.borderSecondary)
-                    Text(social("social.search.empty"))
-                        .font(DPTypography.supporting)
-                        .foregroundStyle(DPColor.textSecondary)
-                        .multilineTextAlignment(.center)
-                }
-                .frame(maxWidth: .infinity, minHeight: 152)
-            } else {
-                searchResults
-            }
-        }
-        .padding(DPSpacing.medium)
-    }
-
-    private var searchBar: some View {
-        HStack(spacing: DPSpacing.small) {
-            HStack(spacing: DPSpacing.small) {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 17, weight: .medium))
-                    .foregroundStyle(DPColor.textMuted)
-                TextField(social("social.search.prompt"), text: $keyword)
-                    .font(DPTypography.body)
-                    .foregroundStyle(DPColor.textPrimary)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .submitLabel(.search)
-                    .focused($focusedField, equals: .keyword)
-                    .onSubmit { search(page: 0) }
-            }
-            .padding(.horizontal, 14)
-            .frame(minHeight: 48)
-            .background(DPColor.backgroundInput)
-            .clipShape(RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous)
-                    .stroke(DPColor.borderInput, lineWidth: 1)
-            }
-
-            Button { search(page: 0) } label: {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(DPColor.textOnDark)
-                    .frame(width: 48, height: 48)
-                    .background {
-                        LinearGradient(
-                            colors: [DPColor.surfaceStrong, DPColor.surfaceStrongAlt],
-                            startPoint: .leading,
-                            endPoint: .trailing
-                        )
-                    }
-                    .clipShape(RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous))
-            }
-            .buttonStyle(.plain)
-            .disabled(keyword.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isSearching)
-            .opacity(keyword.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? 0.5 : 1)
-        }
-        .id(Field.keyword)
-    }
-
-    private var searchResults: some View {
-        VStack(spacing: DPSpacing.medium) {
-            VStack(spacing: DPSpacing.small) {
-                ForEach(viewModel.searchResults, id: \.id) { member in
-                    HStack(spacing: DPSpacing.compact) {
-                        SocialAvatar(member: member, size: 36)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(member.name)
-                                .font(DPFont.bold(size: 16, relativeTo: .body))
-                                .foregroundStyle(DPColor.textPrimary)
-                                .lineLimit(1)
-                            if let team = member.team, !team.isEmpty {
-                                Text(team)
-                                    .font(DPTypography.supporting)
-                                    .foregroundStyle(DPColor.textSecondary)
-                                    .lineLimit(1)
-                            }
-                        }
-                        Spacer(minLength: DPSpacing.small)
-                        Button(social("social.action.sendRequest")) {
-                            candidate = SearchCandidate(member: member)
-                        }
-                        .font(DPFont.light(size: 14, relativeTo: .subheadline))
-                        .foregroundStyle(DPColor.textOnDark)
-                        .padding(.horizontal, DPSpacing.compact)
-                        .frame(minHeight: DPSize.minimumTouchTarget)
-                        .background(DPColor.success)
-                        .clipShape(RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous))
-                    }
-                    .padding(DPSpacing.medium)
-                    .background(DPColor.backgroundSecondary)
-                    .clipShape(RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous))
-                }
-            }
-
-            if viewModel.searchTotalPages > 1 {
-                HStack(spacing: DPSpacing.small) {
-                    pageButton(systemImage: "chevron.left", disabled: viewModel.searchPage == 0) {
-                        search(page: viewModel.searchPage - 1)
-                    }
-                    Text(
-                        socialFormat(
-                            "social.search.page",
-                            String(viewModel.searchPage + 1),
-                            String(viewModel.searchTotalPages)
-                        )
-                    )
-                    .font(DPFont.light(size: 14, relativeTo: .subheadline))
-                    .foregroundStyle(DPColor.textPrimary)
-                    .frame(maxWidth: .infinity, minHeight: 40)
-                    pageButton(
-                        systemImage: "chevron.right",
-                        disabled: viewModel.searchPage + 1 >= viewModel.searchTotalPages
-                    ) {
-                        search(page: viewModel.searchPage + 1)
-                    }
-                }
-            }
-
-            Text(
-                socialFormat(
-                    "social.search.resultsSummary",
-                    String(viewModel.searchPage + 1),
-                    String(max(viewModel.searchTotalPages, 1)),
-                    String(viewModel.searchTotalElements)
-                )
-            )
-            .font(DPTypography.supporting)
-            .foregroundStyle(DPColor.textSecondary)
-        }
-    }
-
-    private func pageButton(
-        systemImage: String,
-        disabled: Bool,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            Image(systemName: systemImage)
-                .font(.system(size: 14, weight: .semibold))
-                .foregroundStyle(DPColor.textPrimary)
-                .frame(width: 40, height: 40)
-                .background(DPColor.backgroundCard)
-                .clipShape(RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous)
-                        .stroke(DPColor.borderPrimary, lineWidth: 1)
-                }
-        }
-        .buttonStyle(.plain)
-        .disabled(disabled)
-        .opacity(disabled ? 0.5 : 1)
-    }
-
-    private var modalFooter: some View {
-        HStack(spacing: DPSpacing.small) {
-            Button {
-                onDismiss()
-            } label: {
-                Text(verbatim: social("social.action.close"))
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(DPSecondaryButtonStyle())
-        }
-        .padding(DPSpacing.compact)
-    }
-
-    private func search(page: Int) {
-        Task { await viewModel.search(keyword: keyword, page: page) }
-    }
-}
-
-private struct SearchCandidate: Identifiable {
-    let member: MemberPreviewDTO
-    var id: MemberID { member.id ?? -1 }
-}
-
 private struct ActionCandidate: Identifiable {
     let friend: DashboardFriendDetailDTO
     var id: MemberID { friend.member.id ?? -1 }
 }
 
-private struct SocialAvatar: View {
+struct SocialAvatar: View {
     let member: MemberPreviewDTO
     let size: CGFloat
 
@@ -1335,57 +1015,6 @@ private enum SocialFriendDragCoordinateSpace {
     static let name = "social-friend-drag"
 }
 
-private enum SocialConfirmation: Identifiable {
-    case reject(FriendRequestDTO)
-    case cancel(FriendRequestDTO)
-    case removeFamily(DashboardFriendDetailDTO)
-    case removeFriend(DashboardFriendDetailDTO)
-
-    var id: String {
-        switch self {
-        case .reject(let request): "reject-\(request.id)"
-        case .cancel(let request): "cancel-\(request.id)"
-        case .removeFamily(let friend): "family-\(friend.member.id ?? -1)"
-        case .removeFriend(let friend): "friend-\(friend.member.id ?? -1)"
-        }
-    }
-
-    var memberName: String {
-        switch self {
-        case .reject(let request): request.fromMember.name
-        case .cancel(let request): request.toMember.name
-        case .removeFamily(let friend), .removeFriend(let friend): friend.member.name
-        }
-    }
-
-    var titleKey: String {
-        switch self {
-        case .reject: "social.confirm.reject.title"
-        case .cancel: "social.confirm.cancel.title"
-        case .removeFamily: "social.confirm.removeFamily.title"
-        case .removeFriend: "social.confirm.removeFriend.title"
-        }
-    }
-
-    var messageKey: String {
-        switch self {
-        case .reject: "social.confirm.reject.message"
-        case .cancel: "social.confirm.cancel.message"
-        case .removeFamily: "social.confirm.removeFamily.message"
-        case .removeFriend: "social.confirm.removeFriend.message"
-        }
-    }
-
-    var confirmKey: String {
-        switch self {
-        case .reject: "social.action.reject"
-        case .cancel: "social.action.cancel"
-        case .removeFamily: "social.action.removeFamily"
-        case .removeFriend: "social.action.removeFriend"
-        }
-    }
-}
-
 nonisolated enum SocialConfirmationActionPolicy {
     static func canBegin(
         isPerformingConfirmation: Bool,
@@ -1399,10 +1028,11 @@ private func requestTypeLabel(_ type: FriendRequestType) -> String {
     social(type == .family ? "social.request.family" : "social.request.friend")
 }
 
-private func social(_ key: String) -> String {
+/// Shared by every file in the Social feature.
+func social(_ key: String) -> String {
     AppLocalization.string(key, table: "Social")
 }
 
-private func socialFormat(_ key: String, _ arguments: CVarArg...) -> String {
+func socialFormat(_ key: String, _ arguments: CVarArg...) -> String {
     AppLocalization.format(key, table: "Social", arguments: arguments)
 }

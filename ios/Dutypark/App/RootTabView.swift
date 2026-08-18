@@ -435,7 +435,7 @@ struct RootTabView: View {
             showsNotificationCenter = true
         case .logout:
             showsLogoutConfirmation = true
-        case .friends, .admin, .guide, .settings:
+        case .friends, .admin, .guide, .support, .settings:
             guard let destination = RootNavigationPolicy.moreDestination(for: item) else { return }
             openMore(destination)
         }
@@ -462,6 +462,8 @@ struct RootTabView: View {
             .navigationBarTitleDisplayMode(.inline)
         case .guide:
             PublicGuideView()
+        case .support:
+            SupportView(prefilledEmail: authenticatedMember?.email)
         case .myInfo:
             MyInfoView {
                 homeRefreshID &+= 1
@@ -753,6 +755,8 @@ nonisolated enum RootNavigationPolicy {
             .admin
         case .guide:
             .guide
+        case .support:
+            .support
         case .settings:
             .settings
         case .notifications, .logout:
@@ -836,6 +840,7 @@ nonisolated enum MoreDestination: Hashable, Sendable {
     case admin
     case friends
     case guide
+    case support
     case myInfo
     case settings
     case memberCalendar(MemberCalendarRoute)
@@ -864,9 +869,16 @@ nonisolated enum RootMoreDeepLinkPolicy {
             return destination(for: settingsDestination)
         }
         guard url.scheme?.lowercased() == "https",
-              url.host?.lowercased() == allowedHost.lowercased(),
-              url.pathComponents.filter({ $0 != "/" }).first == "member"
+              url.host?.lowercased() == allowedHost.lowercased()
         else { return nil }
+
+        let components = url.pathComponents.filter { $0 != "/" }
+        // Support is not a preference document, so it opens directly under More
+        // instead of going through the settings screen.
+        if components == ["support"] {
+            return .support
+        }
+        guard components.first == "member" else { return nil }
         return .myInfo
     }
 

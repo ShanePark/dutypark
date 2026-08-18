@@ -65,6 +65,45 @@ final class SocialFeatureTests: XCTestCase {
         }
     }
 
+    func testBlockStringsResolveInEveryLocale() throws {
+        let keys = [
+            "social.action.block",
+            "social.action.unblock",
+            "social.blocked.since",
+            "social.confirm.block.message",
+            "social.confirm.block.title",
+            "social.empty.blocked",
+            "social.error.block",
+            "social.error.unblock",
+            "social.section.blocked"
+        ]
+
+        for locale in ["en", "ko"] {
+            let url = try XCTUnwrap(Bundle.main.url(forResource: locale, withExtension: "lproj"))
+            let bundle = try XCTUnwrap(Bundle(url: url))
+            for key in keys {
+                XCTAssertNotEqual(
+                    bundle.localizedString(forKey: key, value: key, table: "Social"),
+                    key,
+                    "Missing \(key) for \(locale)"
+                )
+            }
+        }
+    }
+
+    /// The extracted components keep the friend list screen's block entry points,
+    /// which SwiftUI leaves unreachable from a unit test.
+    func testBlockEntryPointsStayWiredIntoTheExtractedComponents() throws {
+        let popover = try Self.projectSource(at: "Dutypark/Features/Social/FriendActionPopover.swift")
+        XCTAssertTrue(popover.contains("social.action.block"))
+        XCTAssertTrue(popover.contains("onBlock"))
+
+        let socialView = try Self.projectSource(at: "Dutypark/Features/Social/SocialView.swift")
+        XCTAssertTrue(socialView.contains("BlockedMembersPanel("))
+        XCTAssertTrue(socialView.contains("confirmation = .block(friend)"))
+        XCTAssertTrue(socialView.contains("FriendSearchModalView("))
+    }
+
     override func tearDown() {
         SocialURLProtocolStub.handler = nil
         super.tearDown()
@@ -137,6 +176,33 @@ final class SocialFeatureTests: XCTestCase {
             "/api/friends/unpin/18",
             "/api/friends/pin/order"
         ])
+    }
+
+    func testRepositoryUsesTheBlockEndpointContracts() async throws {
+        let recorder = SocialRequestRecorder()
+        SocialURLProtocolStub.handler = { request in
+            recorder.append(request)
+            let isBlockedList = request.url?.path == "/api/blocks" && request.httpMethod == "GET"
+            let body = isBlockedList
+                ? #"[{"id":41,"name":"Blocked","hasProfilePhoto":true,"profilePhotoVersion":3,"blockedAt":"2026-08-18T09:30:00"}]"#
+                : ""
+            return Self.response(request, status: isBlockedList ? 200 : 204, body: body)
+        }
+
+        let repository = LiveSocialRepository(client: makeClient())
+        try await repository.block(41)
+        try await repository.unblock(41)
+        let blocked = try await repository.blockedMembers()
+
+        let requests = recorder.requests
+        XCTAssertEqual(requests.map { $0.httpMethod }, ["POST", "DELETE", "GET"])
+        XCTAssertEqual(requests.map { $0.url!.path }, ["/api/blocks/41", "/api/blocks/41", "/api/blocks"])
+        XCTAssertEqual(blocked.count, 1)
+        XCTAssertEqual(blocked.first?.id, 41)
+        XCTAssertEqual(blocked.first?.name, "Blocked")
+        XCTAssertEqual(blocked.first?.hasProfilePhoto, true)
+        XCTAssertEqual(blocked.first?.profilePhotoVersion, 3)
+        XCTAssertEqual(blocked.first?.blockedAt.rawValue, "2026-08-18T09:30:00")
     }
 
     func testPinnedOrderPayloadUsesArrayJSONShape() throws {
@@ -498,6 +564,61 @@ final class SocialFeatureTests: XCTestCase {
         XCTAssertEqual(repository.friendInfoRequestCount, 2)
     }
 
+    func testBlockingAFriendUnfriendsThemAndAddsThemToTheBlockList() async throws {
+        let repository = SocialRepositorySpy()
+        let viewModel = SocialViewModel(repository: repository)
+        await viewModel.load()
+        XCTAssertTrue(viewModel.blockedMembers.isEmpty)
+        let friend = try XCTUnwrap(viewModel.friends.first(where: { $0.member.id == 32 }))
+
+        await viewModel.block(friend)
+
+        XCTAssertFalse(viewModel.friends.contains(where: { $0.member.id == 32 }))
+        XCTAssertEqual(viewModel.blockedMembers.map(\.id), [32])
+        XCTAssertEqual(repository.actions, ["block:32"])
+        XCTAssertNil(viewModel.errorKey)
+    }
+
+    func testFailedBlockRestoresTheFriendAndReportsTheFailure() async throws {
+        let repository = SocialRepositorySpy(failingAction: "block:32")
+        let viewModel = SocialViewModel(repository: repository)
+        await viewModel.load()
+        let friend = try XCTUnwrap(viewModel.friends.first(where: { $0.member.id == 32 }))
+
+        await viewModel.block(friend)
+
+        XCTAssertTrue(viewModel.friends.contains(where: { $0.member.id == 32 }))
+        XCTAssertTrue(viewModel.blockedMembers.isEmpty)
+        XCTAssertEqual(viewModel.errorKey, "social.error.block")
+    }
+
+    func testUnblockingRemovesTheMemberFromTheBlockList() async throws {
+        let repository = SocialRepositorySpy(blockedMemberIDs: [32])
+        let viewModel = SocialViewModel(repository: repository)
+        await viewModel.load()
+        let blocked = try XCTUnwrap(viewModel.blockedMembers.first)
+
+        XCTAssertFalse(viewModel.friends.contains(where: { $0.member.id == 32 }))
+
+        await viewModel.unblock(blocked)
+
+        XCTAssertTrue(viewModel.blockedMembers.isEmpty)
+        XCTAssertEqual(repository.actions, ["unblock:32"])
+        XCTAssertNil(viewModel.errorKey)
+    }
+
+    func testFailedUnblockRestoresTheBlockList() async throws {
+        let repository = SocialRepositorySpy(failingAction: "unblock:32", blockedMemberIDs: [32])
+        let viewModel = SocialViewModel(repository: repository)
+        await viewModel.load()
+        let blocked = try XCTUnwrap(viewModel.blockedMembers.first)
+
+        await viewModel.unblock(blocked)
+
+        XCTAssertEqual(viewModel.blockedMembers.map(\.id), [32])
+        XCTAssertEqual(viewModel.errorKey, "social.error.unblock")
+    }
+
     private func makeClient() -> APIClient {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [SocialURLProtocolStub.self]
@@ -534,19 +655,22 @@ private final class SocialRepositorySpy: SocialRepository, @unchecked Sendable {
     private var storedActions: [String] = []
     private var didPerformMutation = false
     private var storedFriendInfoRequestCount = 0
+    private var storedBlockedMemberIDs: [MemberID]
 
     init(
         failPinnedOrder: Bool = false,
         failReloadAfterMutation: Bool = false,
         failingAction: String? = nil,
         pinnedOrderDelayMilliseconds: Int64 = 0,
-        pinnedFriendCount: Int? = nil
+        pinnedFriendCount: Int? = nil,
+        blockedMemberIDs: [MemberID] = []
     ) {
         self.failPinnedOrder = failPinnedOrder
         self.failReloadAfterMutation = failReloadAfterMutation
         self.failingAction = failingAction
         self.pinnedOrderDelayMilliseconds = pinnedOrderDelayMilliseconds
         self.pinnedFriendCount = pinnedFriendCount
+        self.storedBlockedMemberIDs = blockedMemberIDs
     }
 
     var actions: [String] {
@@ -574,8 +698,10 @@ private final class SocialRepositorySpy: SocialRepository, @unchecked Sendable {
                 friend(id: 33, pinOrder: nil)
             ]
         }
+        // The server unfriends a blocked member, so the dashboard drops them too.
+        let blockedIDs = Set(lock.withLock { storedBlockedMemberIDs })
         return DashboardFriendInfoDTO(
-            friends: friends,
+            friends: friends.filter { !blockedIDs.contains($0.member.id ?? -1) },
             pendingRequestsTo: [request(id: 1, from: 11, to: 99)],
             pendingRequestsFrom: [request(id: 2, from: 99, to: 22)]
         )
@@ -594,6 +720,32 @@ private final class SocialRepositorySpy: SocialRepository, @unchecked Sendable {
     func removeFriend(_ memberID: MemberID) async throws { try perform("remove:\(memberID)") }
     func pin(_ memberID: MemberID) async throws { try perform("pin:\(memberID)") }
     func unpin(_ memberID: MemberID) async throws { try perform("unpin:\(memberID)") }
+    func block(_ memberID: MemberID) async throws {
+        try perform("block:\(memberID)")
+        lock.withLock {
+            if !storedBlockedMemberIDs.contains(memberID) {
+                storedBlockedMemberIDs.append(memberID)
+            }
+        }
+    }
+
+    func unblock(_ memberID: MemberID) async throws {
+        try perform("unblock:\(memberID)")
+        lock.withLock { storedBlockedMemberIDs.removeAll { $0 == memberID } }
+    }
+
+    func blockedMembers() async throws -> [BlockedMemberDTO] {
+        lock.withLock { storedBlockedMemberIDs }.map {
+            BlockedMemberDTO(
+                id: $0,
+                name: "Member \($0)",
+                hasProfilePhoto: false,
+                profilePhotoVersion: 0,
+                blockedAt: LocalDateTimeValue(rawValue: "2026-08-18T09:30:00")
+            )
+        }
+    }
+
     func updatePinnedOrder(_ memberIDs: [MemberID]) async throws {
         record("order:\(memberIDs.map(String.init).joined(separator: ","))")
         if pinnedOrderDelayMilliseconds > 0 {

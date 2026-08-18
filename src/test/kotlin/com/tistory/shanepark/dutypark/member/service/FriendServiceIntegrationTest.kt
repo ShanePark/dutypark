@@ -2,6 +2,8 @@ package com.tistory.shanepark.dutypark.member.service
 
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
+import com.tistory.shanepark.dutypark.member.block.service.BlockService
 import com.tistory.shanepark.dutypark.member.domain.entity.FriendRelation
 import com.tistory.shanepark.dutypark.member.domain.entity.FriendRequest
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
@@ -26,6 +28,9 @@ class FriendServiceIntegrationTest : DutyparkIntegrationTest() {
 
     @Autowired
     lateinit var friendRequestRepository: FriendRequestRepository
+
+    @Autowired
+    lateinit var blockService: BlockService
 
     @Autowired
     lateinit var sessionFactory: SessionFactory
@@ -164,6 +169,111 @@ class FriendServiceIntegrationTest : DutyparkIntegrationTest() {
         assertThat(queryCount)
             .describedAs("Query count should be at most 2 (search with subquery + count)")
             .isLessThanOrEqualTo(2)
+    }
+
+    @Test
+    fun `isVisible is false when the target blocked the viewer`() {
+        val viewer = TestData.member
+        val target = TestData.member2
+        separateTeams(viewer, target)
+        updateVisibility(target, Visibility.PUBLIC)
+
+        blockService.block(target.id!!, viewer.id!!)
+        em.flush()
+        em.clear()
+
+        assertThat(friendService.isVisible(loginMember(viewer), target.id)).isFalse()
+    }
+
+    @Test
+    fun `isVisible is false when the viewer blocked the target`() {
+        val viewer = TestData.member
+        val target = TestData.member2
+        separateTeams(viewer, target)
+        updateVisibility(target, Visibility.PUBLIC)
+
+        blockService.block(viewer.id!!, target.id!!)
+        em.flush()
+        em.clear()
+
+        assertThat(friendService.isVisible(loginMember(viewer), target.id)).isFalse()
+    }
+
+    @Test
+    fun `isVisible stays true for blocked members of the same team`() {
+        val viewer = TestData.member
+        val target = TestData.member2
+        updateVisibility(target, Visibility.PRIVATE)
+
+        blockService.block(viewer.id!!, target.id!!)
+        em.flush()
+        em.clear()
+
+        assertThat(friendService.isVisible(loginMember(viewer), target.id)).isTrue()
+    }
+
+    @Test
+    fun `search Possible friends test - must not include members I blocked`() {
+        val loginMember = loginMember(TestData.member)
+        val target = TestData.member2
+
+        blockService.block(TestData.member.id!!, target.id!!)
+        em.flush()
+        em.clear()
+
+        val searchResult = friendService.searchPossibleFriends(loginMember, "", Pageable.ofSize(5))
+
+        assertThat(searchResult.content).noneMatch { it.id == target.id }
+    }
+
+    @Test
+    fun `search Possible friends test - must not include members who blocked me`() {
+        val loginMember = loginMember(TestData.member)
+        val target = TestData.member2
+
+        blockService.block(target.id!!, TestData.member.id!!)
+        em.flush()
+        em.clear()
+
+        val searchResult = friendService.searchPossibleFriends(loginMember, "", Pageable.ofSize(5))
+
+        assertThat(searchResult.content).noneMatch { it.id == target.id }
+    }
+
+    @Test
+    fun `send friend request fails when blocked`() {
+        val target = TestData.member2
+        blockService.block(target.id!!, TestData.member.id!!)
+        em.flush()
+        em.clear()
+
+        val exception = assertThrows<BadRequestException> {
+            friendService.sendFriendRequest(loginMember(TestData.member), target.id!!)
+        }
+
+        assertThat(exception.message).isEqualTo("friend.request.blocked")
+    }
+
+    @Test
+    fun `send family request fails when blocked`() {
+        val target = TestData.member2
+        setFriend(TestData.member, target)
+        blockService.block(TestData.member.id!!, target.id!!)
+        em.flush()
+        em.clear()
+
+        val exception = assertThrows<BadRequestException> {
+            friendService.sendFamilyRequest(loginMember(TestData.member), target.id!!)
+        }
+
+        assertThat(exception.message).isEqualTo("friend.request.blocked")
+    }
+
+    private fun separateTeams(member1: Member, member2: Member) {
+        member1.team = TestData.team
+        member2.team = TestData.team2
+        memberRepository.save(member1)
+        memberRepository.save(member2)
     }
 
     private fun setFriend(

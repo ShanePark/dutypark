@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.admin.domain.dto
 
 import com.tistory.shanepark.dutypark.member.domain.dto.DDayDto
+import com.tistory.shanepark.dutypark.member.domain.enums.MemberStatus
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import java.time.LocalDateTime
 
@@ -10,6 +11,7 @@ data class AdminMemberDetailDto(
     val email: String?,
     val teamId: Long?,
     val teamName: String?,
+    val status: MemberStatus,
     val calendarVisibility: Visibility,
     val hasProfilePhoto: Boolean,
     val profilePhotoVersion: Long,

@@ -14,6 +14,7 @@
     "todo.action.moveDown" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Move down" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "아래로" } } } },
     "todo.action.moveUp" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Move up" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "위로" } } } },
     "todo.action.reopen" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Reopen" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "다시 열기" } } } },
+    "todo.action.report" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Report" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "신고" } } } },
     "todo.action.status" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Change status" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "상태 변경" } } } },
     "todo.confirm.discardAction" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Discard" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "변경사항 버리기" } } } },
     "todo.confirm.discardMessage" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Your unsaved changes will be lost." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "저장하지 않은 변경사항이 사라집니다." } } } },

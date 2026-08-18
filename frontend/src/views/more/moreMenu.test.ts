@@ -4,6 +4,7 @@ import friendsView from '../member/FriendsView.vue?raw'
 import memberView from '../member/MemberView.vue?raw'
 import notificationListView from '../notification/NotificationListView.vue?raw'
 import settingsView from '../settings/SettingsView.vue?raw'
+import supportView from '../support/SupportView.vue?raw'
 
 function itemIds(isAdmin: boolean) {
   return buildMoreMenuGroups({ isAdmin }).flat().map((item) => item.id)
@@ -15,6 +16,7 @@ const PAGE_HEADER_VIEWS: Record<string, string> = {
   '/friends': friendsView,
   '/notifications': notificationListView,
   '/settings': settingsView,
+  '/support': supportView,
 }
 
 /** These render bespoke headers instead of PageHeader and have no back button yet. */
@@ -26,11 +28,11 @@ function pageHeaderTag(source: string): string {
 
 describe('buildMoreMenuGroups', () => {
   it('lists the destinations that are not already in the dock', () => {
-    expect(itemIds(false)).toEqual(['friends', 'notifications', 'guide', 'settings'])
+    expect(itemIds(false)).toEqual(['friends', 'notifications', 'guide', 'support', 'settings'])
   })
 
   it('adds the admin entry only for admins', () => {
-    expect(itemIds(true)).toEqual(['friends', 'notifications', 'admin', 'guide', 'settings'])
+    expect(itemIds(true)).toEqual(['friends', 'notifications', 'admin', 'guide', 'support', 'settings'])
   })
 
   it('groups social entries apart from app entries', () => {
@@ -38,7 +40,7 @@ describe('buildMoreMenuGroups', () => {
 
     expect(groups).toHaveLength(2)
     expect(groups[0]?.map((item) => item.id)).toEqual(['friends', 'notifications'])
-    expect(groups[1]?.map((item) => item.id)).toEqual(['guide', 'settings'])
+    expect(groups[1]?.map((item) => item.id)).toEqual(['guide', 'support', 'settings'])
   })
 
   it('marks only the friends entry with the friend request badge', () => {
@@ -70,6 +72,7 @@ describe('buildMoreMenuGroups', () => {
       '/notifications',
       '/admin',
       '/guide',
+      '/support',
       '/settings',
     ])
   })

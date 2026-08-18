@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.notification.event
 
 import com.tistory.shanepark.dutypark.common.config.logger
+import com.tistory.shanepark.dutypark.member.block.service.BlockService
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.notification.domain.entity.Notification
 import com.tistory.shanepark.dutypark.notification.domain.enums.NotificationReferenceType
@@ -37,6 +38,7 @@ class NotificationEventListener(
     private val memberRepository: MemberRepository,
     private val webPushService: WebPushService,
     private val apnsPushService: ApnsPushService,
+    private val blockService: BlockService,
 ) {
     private val log = logger()
 
@@ -195,6 +197,11 @@ class NotificationEventListener(
         referenceId: String?,
         payload: NotificationPayload,
     ) {
+        if (actorId != null && blockService.isBlockedEitherWay(actorId, memberId)) {
+            log.info("Skip {} notification because member {} and actor {} are blocked", type, memberId, actorId)
+            return
+        }
+
         val notification = notificationService.createNotification(
             memberId = memberId,
             type = type,

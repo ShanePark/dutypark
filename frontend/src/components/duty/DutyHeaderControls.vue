@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { ChevronLeft, Search } from 'lucide-vue-next'
+import { ChevronLeft, Flag, Search, UserX } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import CalendarMonthNavigator from '@/components/common/CalendarMonthNavigator.vue'
+import OverflowMenu from '@/components/common/OverflowMenu.vue'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 
 const props = defineProps<{
@@ -14,6 +15,8 @@ const props = defineProps<{
   canSearch: boolean
   searchQuery: string
   showBack?: boolean
+  showOverflow?: boolean
+  showBlock?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -24,6 +27,8 @@ const emit = defineEmits<{
   (e: 'go-to-this-month'): void
   (e: 'search'): void
   (e: 'open-search-modal'): void
+  (e: 'report-member'): void
+  (e: 'block-member'): void
   (e: 'update:searchQuery', value: string): void
 }>()
 
@@ -76,8 +81,8 @@ function handleSearchClick() {
       @go-to-this-month="emit('go-to-this-month')"
     />
 
-    <!-- Right: Search -->
-    <div class="flex min-w-0 justify-end">
+    <!-- Right: Search + overflow menu -->
+    <div class="flex min-w-0 items-center justify-end gap-0.5 sm:gap-1">
       <div
         v-if="canSearch"
         class="flex min-h-[42px] min-w-0 w-full max-w-[8.5rem] items-stretch overflow-hidden rounded-lg border border-dp-border-secondary bg-dp-bg-card transition-colors focus-within:border-dp-accent sm:min-h-[44px] sm:max-w-[10rem] sm:rounded-xl sm:shadow-sm"
@@ -99,6 +104,28 @@ function handleSearchClick() {
           <Search class="h-[15px] w-[15px] sm:h-4 sm:w-4" />
         </button>
       </div>
+
+      <OverflowMenu v-if="showOverflow" :menu-label="t('report.actions.menu')">
+        <button
+          type="button"
+          class="flex w-full min-h-11 cursor-pointer items-center gap-2.5 px-4 py-2.5 text-left text-sm text-dp-text-primary transition hover:bg-dp-bg-hover"
+          role="menuitem"
+          @click="emit('report-member')"
+        >
+          <Flag class="h-4 w-4 flex-shrink-0" />
+          {{ t('report.actions.reportMember') }}
+        </button>
+        <button
+          v-if="showBlock"
+          type="button"
+          class="flex w-full min-h-11 cursor-pointer items-center gap-2.5 px-4 py-2.5 text-left text-sm text-dp-danger transition hover:bg-dp-danger-soft"
+          role="menuitem"
+          @click="emit('block-member')"
+        >
+          <UserX class="h-4 w-4 flex-shrink-0" />
+          {{ t('report.actions.blockMember') }}
+        </button>
+      </OverflowMenu>
     </div>
   </div>
 </template>

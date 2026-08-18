@@ -5,6 +5,7 @@ nonisolated enum MoreMenuItem: String, CaseIterable, Hashable, Sendable {
     case notifications
     case admin
     case guide
+    case support
     case settings
     case logout
 
@@ -13,7 +14,7 @@ nonisolated enum MoreMenuItem: String, CaseIterable, Hashable, Sendable {
     static func visibleGroups(isAdmin: Bool) -> [[Self]] {
         [
             [.friends, .notifications],
-            (isAdmin ? [.admin] : []) + [.guide, .settings],
+            (isAdmin ? [.admin] : []) + [.guide, .support, .settings],
             [.logout],
         ]
     }
@@ -36,6 +37,8 @@ nonisolated enum MoreMenuItem: String, CaseIterable, Hashable, Sendable {
             "lock.shield"
         case .guide:
             "book"
+        case .support:
+            "questionmark.circle"
         case .settings:
             "gearshape"
         case .logout:
@@ -57,6 +60,8 @@ nonisolated enum MoreMenuItem: String, CaseIterable, Hashable, Sendable {
             AdminLocalization.string("admin.menu.title")
         case .guide:
             RootChromeLocalization.localizable("root.menu.guide")
+        case .support:
+            RootChromeLocalization.localizable("root.menu.support")
         case .settings:
             RootChromeLocalization.localizable("root.menu.settings")
         case .logout:

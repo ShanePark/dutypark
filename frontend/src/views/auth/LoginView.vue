@@ -401,6 +401,10 @@ async function handleAppleRetry() {
         >
           {{ t('policy.privacy.title') }}
         </button>
+        <span class="mx-2 text-xs text-dp-text-muted">|</span>
+        <router-link to="/support" class="text-xs transition hover:underline text-dp-text-muted">
+          {{ t('header.menu.support') }}
+        </router-link>
       </div>
     </div>
 

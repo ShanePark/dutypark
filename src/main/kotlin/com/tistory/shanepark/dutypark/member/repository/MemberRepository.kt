@@ -65,6 +65,8 @@ interface MemberRepository : JpaRepository<Member, Long> {
         AND m.id != :memberId
         AND m.id NOT IN (SELECT fr.friend.id FROM FriendRelation fr WHERE fr.member.id = :memberId)
         AND m.id NOT IN (SELECT req.toMember.id FROM FriendRequest req WHERE req.fromMember.id = :memberId AND req.status = 'PENDING')
+        AND m.id NOT IN (SELECT b.blocked.id FROM MemberBlock b WHERE b.blocker.id = :memberId)
+        AND m.id NOT IN (SELECT b.blocker.id FROM MemberBlock b WHERE b.blocked.id = :memberId)
         """,
         countQuery = """
         SELECT COUNT(m) FROM Member m
@@ -72,6 +74,8 @@ interface MemberRepository : JpaRepository<Member, Long> {
         AND m.id != :memberId
         AND m.id NOT IN (SELECT fr.friend.id FROM FriendRelation fr WHERE fr.member.id = :memberId)
         AND m.id NOT IN (SELECT req.toMember.id FROM FriendRequest req WHERE req.fromMember.id = :memberId AND req.status = 'PENDING')
+        AND m.id NOT IN (SELECT b.blocked.id FROM MemberBlock b WHERE b.blocker.id = :memberId)
+        AND m.id NOT IN (SELECT b.blocker.id FROM MemberBlock b WHERE b.blocked.id = :memberId)
         """
     )
     fun searchPossibleFriends(keyword: String, memberId: Long, pageable: Pageable): Page<Member>

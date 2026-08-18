@@ -55,6 +55,11 @@ struct CalendarView: View {
     @State private var searchModalCanDismiss = true
     @State private var dayDismissRequest = 0
     @State private var dDayDismissRequest = 0
+    @State private var reportTarget: ReportTarget?
+    @State private var reportCanDismiss = true
+    @State private var showsBlockConfirmation = false
+    @State private var leavesAfterBlock = false
+    @StateObject private var blockModel = MemberBlockViewModel()
 
     private let isPushedMemberCalendar: Bool
 
@@ -220,6 +225,49 @@ struct CalendarView: View {
                 .accessibilityIdentifier("calendar.todo.detail")
             }
         }
+        .fullScreenCover(item: $reportTarget) { target in
+            DPModalOverlay(
+                onDismiss: {
+                    reportTarget = nil
+                    reportCanDismiss = true
+                },
+                canDismiss: reportCanDismiss
+            ) { availableSize, dismiss in
+                ReportSheet(
+                    target: target,
+                    maximumHeight: availableSize.height,
+                    onDismissabilityChange: { reportCanDismiss = $0 },
+                    dismiss: dismiss
+                )
+            }
+        }
+        .fullScreenCover(isPresented: $showsBlockConfirmation) {
+            DPModalOverlay(
+                maximumContentWidth: DPConfirmationPanel.maximumWidth,
+                onDismiss: { finishBlockConfirmationDismissal() },
+                canDismiss: !blockModel.isBlocking
+            ) { availableSize, dismiss in
+                DPConfirmationPanel(
+                    title: CalendarLocalization.text("calendar.block.confirm.title"),
+                    message: CalendarLocalization.text("calendar.block.confirm.message"),
+                    confirmTitle: CalendarLocalization.text("calendar.block.confirm.action"),
+                    cancelTitle: CalendarLocalization.text("calendar.cancel"),
+                    isDestructive: true,
+                    isWorking: blockModel.isBlocking,
+                    maximumHeight: availableSize.height,
+                    cancel: dismiss,
+                    confirm: { confirmBlock(dismissConfirmation: dismiss) }
+                )
+            }
+        }
+        .alert(CalendarLocalization.text("calendar.error.title"), isPresented: Binding(
+            get: { blockModel.errorMessage != nil },
+            set: { if !$0 { blockModel.errorMessage = nil } }
+        )) {
+            Button(CalendarLocalization.text("calendar.ok"), role: .cancel) { blockModel.errorMessage = nil }
+        } message: {
+            Text(blockModel.errorMessage ?? "")
+        }
         .alert(CalendarLocalization.text("calendar.error.title"), isPresented: Binding(
             get: { model.errorMessage != nil && !model.days.isEmpty },
             set: { if !$0 { model.errorMessage = nil } }
@@ -270,15 +318,69 @@ struct CalendarView: View {
         }
         DPDashboardHeaderToolbarItem(placement: .topBarTrailing) {
             HStack(spacing: 0) {
-                if !isViewingCurrentMonth {
+                // The trailing slot is a fixed width that holds exactly two controls, and
+                // widening it would push the centred month navigation off a 375pt screen.
+                // The overflow menu therefore absorbs "this month" whenever it is present.
+                if !isViewingCurrentMonth, !showsMemberOverflowMenu {
                     thisMonthControl
                 }
                 if model.canSearchSchedules {
                     searchControl
                 }
+                if showsMemberOverflowMenu {
+                    memberOverflowMenu
+                }
             }
             .frame(width: Self.barSideWidth, alignment: .trailing)
         }
+    }
+
+    // Report and block belong to someone else's calendar opened from another screen.
+    private var showsMemberOverflowMenu: Bool {
+        isPushedMemberCalendar && !model.isMyCalendar && model.me != nil
+    }
+
+    private var memberOverflowMenu: some View {
+        Menu {
+            if !isViewingCurrentMonth {
+                Button {
+                    Task { await model.goToToday() }
+                } label: {
+                    Label(
+                        CalendarLocalization.text("calendar.month.goToThisMonth"),
+                        systemImage: "arrow.uturn.backward"
+                    )
+                }
+            }
+            Button {
+                guard let memberID = model.targetMemberID else { return }
+                withoutPresentationAnimation {
+                    reportTarget = ReportTarget(
+                        type: .member,
+                        targetID: String(memberID),
+                        name: model.targetName
+                    )
+                }
+            } label: {
+                Label(CalendarLocalization.text("calendar.report.member"), systemImage: "flag")
+            }
+            .accessibilityIdentifier("calendar.member.report")
+
+            Button(role: .destructive) {
+                withoutPresentationAnimation { showsBlockConfirmation = true }
+            } label: {
+                Label(CalendarLocalization.text("calendar.block.member"), systemImage: "hand.raised")
+            }
+            .accessibilityIdentifier("calendar.member.block")
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(DPColor.accent)
+                .frame(width: Self.barControlWidth, height: DPSize.minimumTouchTarget)
+                .contentShape(Rectangle())
+        }
+        .accessibilityLabel(CalendarLocalization.text("calendar.more"))
+        .accessibilityIdentifier("calendar.member.menu")
     }
 
     // A member calendar is pushed onto the stack of the tab it was opened from, so back
@@ -413,6 +515,27 @@ struct CalendarView: View {
                 .contentShape(Rectangle())
         }
         .accessibilityLabel(CalendarLocalization.text("calendar.search"))
+    }
+
+    private func confirmBlock(dismissConfirmation: @escaping () -> Void) {
+        guard let memberID = model.targetMemberID, !blockModel.isBlocking else { return }
+        Task {
+            leavesAfterBlock = await blockModel.block(memberID: memberID)
+            await Task.yield()
+            dismissConfirmation()
+        }
+    }
+
+    // A blocked member's calendar stops loading immediately, so the screen this one was
+    // pushed from is the only place left to land.
+    private func finishBlockConfirmationDismissal() {
+        showsBlockConfirmation = false
+        guard leavesAfterBlock else { return }
+        leavesAfterBlock = false
+        Task {
+            await Task.yield()
+            memberBackAction?()
+        }
     }
 
     private func performSearch() {
@@ -1665,6 +1788,8 @@ private struct DayDetailView: View {
     @State private var isPerformingDestructiveAction = false
     @State private var isEditorWorking = false
     @State private var editorDismissRequest = 0
+    @State private var reportTarget: ReportTarget?
+    @State private var reportCanDismiss = true
 
     private var day: CalendarDayContent {
         model.selectedDay ?? initialDay
@@ -1715,6 +1840,22 @@ private struct DayDetailView: View {
         .onChange(of: isPerformingDestructiveAction) { _, _ in reportDismissability() }
         .onChange(of: dismissRequest) { _, _ in requestDismissal() }
         .onDisappear { onDismissabilityChange(true) }
+        .fullScreenCover(item: $reportTarget) { target in
+            DPModalOverlay(
+                onDismiss: {
+                    reportTarget = nil
+                    reportCanDismiss = true
+                },
+                canDismiss: reportCanDismiss
+            ) { availableSize, dismissReport in
+                ReportSheet(
+                    target: target,
+                    maximumHeight: availableSize.height,
+                    onDismissabilityChange: { reportCanDismiss = $0 },
+                    dismiss: dismissReport
+                )
+            }
+        }
         .alert(
             CalendarLocalization.text("calendar.error.title"),
             isPresented: Binding(
@@ -1875,6 +2016,28 @@ private struct DayDetailView: View {
                     .buttonStyle(.plain)
                     .foregroundStyle(DPColor.danger)
                 }
+
+                // Reporting is orthogonal to the edit and untag branches above: someone
+                // else's schedule offers neither, and a schedule you were tagged into
+                // offers untag and report at once.
+                if canReport(schedule) {
+                    Button {
+                        withoutPresentationAnimation {
+                            reportTarget = ReportTarget(
+                                type: .schedule,
+                                targetID: schedule.id.uuidString,
+                                name: schedule.content
+                            )
+                        }
+                    } label: {
+                        Image(systemName: "flag")
+                            .frame(width: 44, height: 44)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(DPColor.textMuted)
+                    .accessibilityLabel(CalendarLocalization.text("calendar.report.schedule"))
+                    .accessibilityIdentifier("calendar.schedule.report")
+                }
             }
 
             scheduleMetadata(schedule)
@@ -1902,6 +2065,12 @@ private struct DayDetailView: View {
             RoundedRectangle(cornerRadius: DPRadius.standard)
                 .stroke(DPColor.borderPrimary, lineWidth: 1)
         }
+    }
+
+    // Only a signed-in member can report, and only content that is not their own:
+    // another member's calendar, or a schedule someone else tagged them into.
+    private func canReport(_ schedule: ScheduleDTO) -> Bool {
+        model.me != nil && (!model.isMyCalendar || schedule.isTagged)
     }
 
     @ViewBuilder

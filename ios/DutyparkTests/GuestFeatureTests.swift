@@ -5,6 +5,7 @@ import XCTest
 final class GuestDeepLinkTests: XCTestCase {
     func testParsesSupportedHTTPSRoutes() {
         XCTAssertEqual(route("https://dutypark.o-r.kr/guide"), .guide)
+        XCTAssertEqual(route("https://dutypark.o-r.kr/support"), .support)
         XCTAssertEqual(route("https://dutypark.o-r.kr/terms"), .terms)
         XCTAssertEqual(route("https://dutypark.o-r.kr/privacy"), .privacy)
         XCTAssertEqual(route("https://dutypark.o-r.kr/duty/42?month=8"), .publicCalendar(42))
@@ -25,6 +26,8 @@ final class GuestDeepLinkTests: XCTestCase {
         XCTAssertEqual(route("https://dutypark.o-r.kr/guide/"), .guide)
         XCTAssertNil(route("https://dutypark.o-r.kr/duty/42/edit"))
         XCTAssertNil(route("https://dutypark.o-r.kr/guide/archive"))
+        XCTAssertEqual(route("https://dutypark.o-r.kr/support/"), .support)
+        XCTAssertNil(route("https://dutypark.o-r.kr/support/faq"))
     }
 
     func testWarmLinkParsingDoesNotTrustLookalikeHostsOrInvalidMemberIDs() {

@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.notification.event
 
+import com.tistory.shanepark.dutypark.member.block.service.BlockService
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.notification.domain.entity.Notification
@@ -48,12 +49,15 @@ class NotificationEventListenerTest {
     private val webPushService: WebPushService = mock()
     private val apnsPushService: ApnsPushService = mock()
 
+    private val blockService: BlockService = mock()
+
     private val listener = NotificationEventListener(
         notificationService = notificationService,
         notificationRepository = notificationRepository,
         memberRepository = memberRepository,
         webPushService = webPushService,
         apnsPushService = apnsPushService,
+        blockService = blockService,
     )
 
     @Test
@@ -522,6 +526,35 @@ class NotificationEventListenerTest {
             listener.handleFriendRequestSent(FriendRequestSentEvent(1L, 2L, 3L))
         }
 
+        verifyNoInteractions(webPushService)
+        verifyNoInteractions(apnsPushService)
+    }
+
+    @Test
+    fun `skips notification and push when actor and recipient are blocked`() {
+        whenever(blockService.isBlockedEitherWay(2L, 3L)).thenReturn(true)
+
+        listener.handleFriendRequestSent(FriendRequestSentEvent(1L, 2L, 3L))
+
+        verifyNoInteractions(notificationService)
+        verifyNoInteractions(webPushService)
+        verifyNoInteractions(apnsPushService)
+    }
+
+    @Test
+    fun `skips tagged notification when actor and recipient are blocked`() {
+        whenever(blockService.isBlockedEitherWay(2L, 3L)).thenReturn(true)
+
+        listener.handleScheduleTagged(
+            ScheduleTaggedEvent(
+                scheduleId = UUID.randomUUID(),
+                ownerId = 2L,
+                taggedMemberId = 3L,
+                scheduleTitle = "title",
+            )
+        )
+
+        verifyNoInteractions(notificationService)
         verifyNoInteractions(webPushService)
         verifyNoInteractions(apnsPushService)
     }

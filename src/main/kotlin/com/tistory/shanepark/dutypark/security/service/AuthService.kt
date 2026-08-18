@@ -36,6 +36,7 @@ class AuthService(
     companion object {
         private const val LOGIN_FAILED_MESSAGE = "auth.login.failed"
         private const val RATE_LIMIT_MESSAGE = "auth.login.rateLimited"
+        const val SUSPENDED_MESSAGE = "auth.account.suspended"
     }
 
     @Transactional(readOnly = true)
@@ -108,14 +109,15 @@ class AuthService(
 
         val member = memberRepository.findByEmail(email).orElse(null)
 
-        if (
-            member == null || member.status != MemberStatus.ACTIVE ||
-            !passwordEncoder.matches(login.password, member.password)
-        ) {
+        if (member == null || !passwordEncoder.matches(login.password, member.password)) {
             loginAttemptService.recordFailedAttempt(ipAddress, email)
             log.info("Login failed: ip={}, email={}", ipAddress, email)
             throw AuthException(LOGIN_FAILED_MESSAGE)
         }
+
+        // Checked only after the password matched, so a suspended account learns why it is
+        // rejected while a wrong password stays indistinguishable from an unknown account.
+        ensureActive(member, LOGIN_FAILED_MESSAGE)
 
         loginAttemptService.recordSuccessfulAttempt(ipAddress, email)
 
@@ -251,6 +253,9 @@ class AuthService(
     }
 
     private fun ensureActive(member: Member, code: String = "auth.account.inactive") {
+        if (member.status == MemberStatus.SUSPENDED) {
+            throw AuthException(SUSPENDED_MESSAGE)
+        }
         if (member.status != MemberStatus.ACTIVE) {
             throw AuthException(code)
         }

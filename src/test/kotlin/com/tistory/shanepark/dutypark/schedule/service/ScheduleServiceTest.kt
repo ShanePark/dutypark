@@ -736,6 +736,41 @@ class ScheduleServiceTest {
     }
 
     @Test
+    fun `deleteScheduleInternal removes attachments, the context directory and the entity without a permission check`() {
+        val scheduleId = UUID.randomUUID()
+        val schedule = Schedule(
+            member = member2,
+            content = "schedule1",
+            startDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
+            endDateTime = LocalDateTime.of(2023, 4, 10, 0, 0),
+            position = 0
+        )
+        ReflectionTestUtils.setField(schedule, "id", scheduleId)
+        val attachment = mock<com.tistory.shanepark.dutypark.attachment.domain.entity.Attachment>()
+        val contextDir = java.nio.file.Paths.get("/tmp/test")
+
+        whenever(
+            attachmentRepository.findAllByContextTypeAndContextId(
+                com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType.SCHEDULE,
+                scheduleId.toString()
+            )
+        ).thenReturn(listOf(attachment))
+        whenever(
+            pathResolver.resolveContextDirectory(
+                com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType.SCHEDULE,
+                scheduleId.toString()
+            )
+        ).thenReturn(contextDir)
+
+        scheduleService.deleteScheduleInternal(schedule)
+
+        verify(attachmentService).deleteAttachment(attachment)
+        verify(fileSystemService).deleteDirectory(contextDir)
+        verify(scheduleRepository).delete(schedule)
+        verifyNoInteractions(schedulePermissionService)
+    }
+
+    @Test
     fun `can't delete other member's schedule`() {
         val scheduleId = UUID.randomUUID()
         val schedule = Schedule(

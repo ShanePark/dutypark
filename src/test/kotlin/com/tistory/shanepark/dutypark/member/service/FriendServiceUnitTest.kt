@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.member.service
 
 import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
+import com.tistory.shanepark.dutypark.member.block.service.BlockService
 import com.tistory.shanepark.dutypark.member.domain.entity.FriendRelation
 import com.tistory.shanepark.dutypark.member.domain.entity.FriendRequest
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
@@ -43,6 +44,9 @@ class FriendServiceUnitTest {
     private lateinit var memberService: MemberService
 
     @Mock
+    private lateinit var blockService: BlockService
+
+    @Mock
     private lateinit var eventPublisher: ApplicationEventPublisher
 
     private lateinit var friendService: FriendService
@@ -54,6 +58,7 @@ class FriendServiceUnitTest {
             friendRequestRepository = friendRequestRepository,
             memberRepository = memberRepository,
             memberService = memberService,
+            blockService = blockService,
             eventPublisher = eventPublisher,
         )
     }

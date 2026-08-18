@@ -257,12 +257,15 @@ export interface ApiError {
 }
 
 // Admin types
+export type MemberStatus = 'ACTIVE' | 'SUSPENDED' | 'DELETION_PENDING'
+
 export interface AdminMemberDto {
   id: number
   name: string
   email: string | null
   teamId: number | null
   teamName: string | null
+  status: MemberStatus
   tokens: RefreshTokenDto[]
   hasProfilePhoto?: boolean
   profilePhotoVersion?: number
@@ -274,6 +277,7 @@ export interface AdminMemberDetailDto {
   email: string | null
   teamId: number | null
   teamName: string | null
+  status: MemberStatus
   calendarVisibility: CalendarVisibility
   hasProfilePhoto: boolean
   profilePhotoVersion: number

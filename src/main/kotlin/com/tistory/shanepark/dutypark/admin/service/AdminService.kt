@@ -4,7 +4,9 @@ import com.tistory.shanepark.dutypark.admin.domain.dto.AdminMemberDto
 import com.tistory.shanepark.dutypark.admin.domain.dto.AdminMemberDetailDto
 import com.tistory.shanepark.dutypark.member.domain.dto.DDayDto
 import com.tistory.shanepark.dutypark.member.domain.enums.FriendRequestStatus
+import com.tistory.shanepark.dutypark.member.domain.enums.MemberStatus
 import com.tistory.shanepark.dutypark.member.domain.enums.SsoType
+import com.tistory.shanepark.dutypark.member.exception.MemberSuspensionException
 import com.tistory.shanepark.dutypark.member.repository.DDayRepository
 import com.tistory.shanepark.dutypark.member.repository.FriendRelationRepository
 import com.tistory.shanepark.dutypark.member.repository.FriendRequestRepository
@@ -12,6 +14,7 @@ import com.tistory.shanepark.dutypark.member.repository.MemberManagerRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.repository.RefreshTokenRepository
 import com.tistory.shanepark.dutypark.member.service.MemberSocialAccountService
+import com.tistory.shanepark.dutypark.member.service.RefreshTokenService
 import com.tistory.shanepark.dutypark.notification.domain.repository.NotificationRepository
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
 import com.tistory.shanepark.dutypark.security.config.DutyparkProperties
@@ -38,6 +41,7 @@ class AdminService(
     private val dDayRepository: DDayRepository,
     private val notificationRepository: NotificationRepository,
     private val memberSocialAccountService: MemberSocialAccountService,
+    private val refreshTokenService: RefreshTokenService,
     private val dutyparkProperties: DutyparkProperties,
 ) {
 
@@ -84,6 +88,7 @@ class AdminService(
             email = member.email,
             teamId = team?.id,
             teamName = team?.name,
+            status = member.status,
             calendarVisibility = member.calendarVisibility,
             hasProfilePhoto = member.hasProfilePhoto(),
             profilePhotoVersion = member.profilePhotoVersion,
@@ -119,6 +124,28 @@ class AdminService(
             totalNotificationCount = notificationRepository.countByMemberId(memberId),
             unreadNotificationCount = notificationRepository.countByMemberIdAndIsReadFalse(memberId),
         )
+    }
+
+    @Transactional
+    fun suspendMember(memberId: Long) {
+        val member = memberRepository.findById(memberId).orElseThrow()
+        when (member.status) {
+            MemberStatus.SUSPENDED -> return
+            MemberStatus.DELETION_PENDING -> throw MemberSuspensionException("member.suspend.deletionPending")
+            MemberStatus.ACTIVE -> {
+                member.suspend()
+                refreshTokenService.revokeAllRefreshTokensByMember(member)
+            }
+        }
+    }
+
+    @Transactional
+    fun reinstateMember(memberId: Long) {
+        val member = memberRepository.findById(memberId).orElseThrow()
+        if (member.status != MemberStatus.SUSPENDED) {
+            return
+        }
+        member.reinstate()
     }
 
 }

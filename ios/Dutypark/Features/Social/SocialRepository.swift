@@ -13,6 +13,9 @@ nonisolated protocol SocialRepository: Sendable {
     func pin(_ memberID: MemberID) async throws
     func unpin(_ memberID: MemberID) async throws
     func updatePinnedOrder(_ memberIDs: [MemberID]) async throws
+    func block(_ memberID: MemberID) async throws
+    func unblock(_ memberID: MemberID) async throws
+    func blockedMembers() async throws -> [BlockedMemberDTO]
 }
 
 nonisolated struct LiveSocialRepository: SocialRepository {
@@ -81,6 +84,19 @@ nonisolated struct LiveSocialRepository: SocialRepository {
             throw APIError.decoding
         }
         _ = try await client.data("friends/pin/order", method: .patch, body: body)
+    }
+
+    /// Blocking is idempotent on the server, so a repeated call is not an error.
+    func block(_ memberID: MemberID) async throws {
+        try await mutation("blocks/\(memberID)", method: .post)
+    }
+
+    func unblock(_ memberID: MemberID) async throws {
+        try await mutation("blocks/\(memberID)", method: .delete)
+    }
+
+    func blockedMembers() async throws -> [BlockedMemberDTO] {
+        try await client.request("blocks")
     }
 
     private func mutation(_ path: String, method: HTTPMethod) async throws {

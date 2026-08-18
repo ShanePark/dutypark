@@ -58,6 +58,7 @@ interface Props {
   friends: TaggableFriend[]
   memberId: number
   isMyCalendar: boolean
+  isLoggedIn?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -94,6 +95,7 @@ const emit = defineEmits<{
   (e: 'deleteSchedule', schedule: Pick<Schedule, 'id' | 'content'>): void
   (e: 'reorderSchedules', scheduleIds: string[]): void
   (e: 'untagSelf', schedule: Pick<Schedule, 'id' | 'content'>): void
+  (e: 'reportSchedule', schedule: Pick<Schedule, 'id' | 'content'>): void
 }>()
 
 const isCreateMode = ref(false)
@@ -521,10 +523,12 @@ function handleUploadError(message: string) {
             :can-edit="canEdit"
             :is-my-calendar="isMyCalendar"
             :member-id="memberId"
+            :is-logged-in="isLoggedIn"
             @edit="startEditMode"
             @delete="(schedule) => emit('deleteSchedule', schedule)"
             @reorder="(scheduleIds) => emit('reorderSchedules', scheduleIds)"
             @request-untag="openUntagConfirmModal"
+            @report="(schedule) => emit('reportSchedule', schedule)"
           />
 
           <ScheduleForm

@@ -152,6 +152,8 @@ struct TodoDetailModal: View {
     @State private var dismissDetailAfterConfirmation = false
     @State private var deferredConfirmationErrorKey: String?
     @State private var isLoadingEditAttachments = false
+    @State private var reportTarget: ReportTarget?
+    @State private var reportCanDismiss = true
     @StateObject private var gallery: AttachmentGalleryModel
 
     init(
@@ -222,6 +224,22 @@ struct TodoDetailModal: View {
         .onDisappear {
             guard confirmation == nil else { return }
             onDismissabilityChange(true)
+        }
+        .fullScreenCover(item: $reportTarget) { target in
+            DPModalOverlay(
+                onDismiss: {
+                    reportTarget = nil
+                    reportCanDismiss = true
+                },
+                canDismiss: reportCanDismiss
+            ) { availableSize, dismissReport in
+                ReportSheet(
+                    target: target,
+                    maximumHeight: availableSize.height,
+                    onDismissabilityChange: { reportCanDismiss = $0 },
+                    dismiss: dismissReport
+                )
+            }
         }
         .fullScreenCover(item: $confirmation) { requestedConfirmation in
             DPModalOverlay(
@@ -409,6 +427,8 @@ struct TodoDetailModal: View {
 
     @ViewBuilder
     private var secondaryActions: some View {
+        // This modal only ever shows the signed-in member's own board, so the reportable
+        // case is a to-do someone else owns and tagged them into.
         if todo.isTagged {
             TodoModalBorderedAction(
                 title: todoLocalized("todo.action.leaveTag"),
@@ -416,6 +436,22 @@ struct TodoDetailModal: View {
                 color: DPColor.warning,
                 action: { confirmation = .leaveTag }
             )
+
+            TodoModalBorderedAction(
+                title: todoLocalized("todo.action.report"),
+                systemImage: "flag",
+                color: DPColor.textMuted,
+                action: {
+                    withoutPresentationAnimation {
+                        reportTarget = ReportTarget(
+                            type: .todo,
+                            targetID: todo.id,
+                            name: todo.title
+                        )
+                    }
+                }
+            )
+            .accessibilityIdentifier("todo.detail.report")
         } else {
             TodoModalBorderedAction(
                 title: todoLocalized("common.edit"),

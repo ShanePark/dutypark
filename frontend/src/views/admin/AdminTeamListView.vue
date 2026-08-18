@@ -8,6 +8,7 @@ import { useSwal } from '@/composables/useSwal'
 import BaseModal from '@/components/common/BaseModal.vue'
 import CharacterCounter from '@/components/common/CharacterCounter.vue'
 import type { SimpleTeam, TeamNameCheckResult } from '@/types'
+import AdminNavTiles from '@/components/admin/AdminNavTiles.vue'
 import {
   Building2,
   Users,
@@ -15,13 +16,10 @@ import {
   Plus,
   ChevronLeft,
   ChevronRight,
-  Code2,
   X,
   Check,
   AlertCircle,
   Loader2,
-  FileText,
-  ExternalLink,
 } from 'lucide-vue-next'
 
 const router = useRouter()
@@ -192,46 +190,7 @@ onMounted(() => {
 
 <template>
   <div class="max-w-4xl mx-auto px-4 py-6">
-      <div class="grid grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
-        <router-link
-          to="/admin"
-          class="admin-top-tile bg-dp-bg-card border border-dp-border-primary"
-          @mouseover="(e: Event) => setHoverBg(e)"
-          @mouseleave="(e: Event) => clearHoverBg(e)"
-        >
-          <Users class="admin-top-tile-icon text-dp-text-secondary" />
-          <span class="admin-top-tile-label text-dp-text-primary">{{ t('admin.nav.members') }}</span>
-        </router-link>
-        <router-link
-          to="/admin/teams"
-          class="admin-top-tile admin-top-tile-active hover:bg-dp-surface-strong-hover"
-        >
-          <Building2 class="admin-top-tile-icon text-dp-text-on-dark" />
-          <span class="admin-top-tile-label text-dp-text-on-dark">{{ t('admin.nav.teams') }}</span>
-        </router-link>
-        <router-link
-          to="/admin/dev"
-          class="admin-top-tile bg-dp-bg-card border border-dp-border-primary"
-          @mouseover="(e: Event) => setHoverBg(e)"
-          @mouseleave="(e: Event) => clearHoverBg(e)"
-        >
-          <Code2 class="admin-top-tile-icon text-dp-text-secondary" />
-          <span class="admin-top-tile-label text-dp-text-primary">{{ t('admin.nav.dev') }}</span>
-        </router-link>
-        <a
-          href="/docs/index.html"
-          target="_blank"
-          class="admin-top-tile bg-dp-bg-card border border-dp-border-primary"
-          @mouseover="(e: Event) => setHoverBg(e)"
-          @mouseleave="(e: Event) => clearHoverBg(e)"
-        >
-          <div class="mb-2 flex items-center gap-1">
-            <FileText class="admin-top-tile-icon mb-0 text-dp-text-secondary" />
-            <ExternalLink class="hidden sm:block w-3 h-3 text-dp-text-muted" />
-          </div>
-          <span class="admin-top-tile-label text-dp-text-primary">{{ t('admin.nav.apiDocs') }}</span>
-        </a>
-      </div>
+      <AdminNavTiles active="teams" />
 
       <div class="rounded-xl bg-dp-bg-card border border-dp-border-primary">
         <div class="p-4 border-b border-dp-border-primary">
@@ -491,64 +450,3 @@ onMounted(() => {
 
   </div>
 </template>
-
-<style scoped>
-.admin-top-tile {
-  display: flex;
-  min-width: 0;
-  min-height: 5.3rem;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  border-radius: 1rem;
-  padding: 0.75rem 0.4rem;
-  text-align: center;
-  transition:
-    background-color 160ms ease,
-    box-shadow 180ms ease,
-    transform 180ms ease;
-}
-
-.admin-top-tile-active {
-  background-color: var(--dp-modal-header-bg);
-}
-
-.admin-top-tile-icon {
-  width: 1.15rem;
-  height: 1.15rem;
-  margin-bottom: 0.5rem;
-  flex-shrink: 0;
-}
-
-.admin-top-tile-label {
-  font-size: 0.72rem;
-  line-height: 1.1rem;
-  font-weight: 700;
-  word-break: keep-all;
-}
-
-@media (hover: hover) {
-  .admin-top-tile:hover {
-    transform: translateY(-1px);
-  }
-}
-
-@media (min-width: 640px) {
-  .admin-top-tile {
-    min-height: auto;
-    align-items: flex-start;
-    padding: 1rem;
-    text-align: left;
-  }
-
-  .admin-top-tile-icon {
-    width: 1.5rem;
-    height: 1.5rem;
-  }
-
-  .admin-top-tile-label {
-    font-size: 1rem;
-    line-height: 1.4rem;
-  }
-}
-</style>

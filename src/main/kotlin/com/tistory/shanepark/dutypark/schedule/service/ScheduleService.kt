@@ -227,7 +227,15 @@ class ScheduleService(
         val schedule = scheduleRepository.findById(id).orElseThrow()
         schedulePermissionService.checkScheduleWriteAuthority(schedule = schedule, loginMember = loginMember)
 
-        val contextId = id.toString()
+        deleteScheduleInternal(schedule)
+    }
+
+    /**
+     * Deletes a schedule with its attachments and context directory, without any permission check.
+     * Callers are responsible for authorization (admin moderation calls this directly).
+     */
+    internal fun deleteScheduleInternal(schedule: Schedule) {
+        val contextId = schedule.id.toString()
         val attachments = attachmentRepository.findAllByContextTypeAndContextId(SCHEDULE, contextId)
 
         attachments.forEach(attachmentService::deleteAttachment)

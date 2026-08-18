@@ -294,6 +294,22 @@
         }
       }
     },
+    "root.menu.support" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Support"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "문의하기"
+          }
+        }
+      }
+    },
     "tab.more" : {
       "localizations" : {
         "en" : {
