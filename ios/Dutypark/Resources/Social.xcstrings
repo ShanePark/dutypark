@@ -10,6 +10,9 @@
     "social.action.addFriend" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Add friend" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 추가" } }
     } },
+    "social.action.block" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Block" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "차단" } }
+    } },
     "social.action.cancel" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Cancel request" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "요청 취소" } }
     } },
@@ -55,10 +58,22 @@
     "social.action.sendRequest" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Send request" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "요청 보내기" } }
     } },
+    "social.action.unblock" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Unblock" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "차단 해제" } }
+    } },
     "social.action.unpin" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Unpin" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "고정 해제" } }
     } },
 
+    "social.blocked.since" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Blocked %@" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@ 차단" } }
+    } },
+    "social.confirm.block.message" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Block %@? Blocking removes your friend connection and blocks each other's calendar, search, requests and notifications. Duty schedules for the same team stay visible." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님을 차단하시겠습니까? 차단하면 친구 관계가 해제되고 서로의 달력·검색·요청·알림이 차단됩니다. 같은 팀 근무표는 계속 표시됩니다." } }
+    } },
+    "social.confirm.block.title" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Block user" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "사용자 차단" } }
+    } },
     "social.confirm.cancel.message" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Cancel the request sent to %@?" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님에게 보낸 요청을 취소하시겠습니까?" } }
     } },
@@ -83,13 +98,28 @@
     "social.confirm.removeFriend.title" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Remove friend" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 삭제" } }
     } },
+    "social.confirm.sendFamily.message" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Send a family request to %@?" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님에게 가족 요청을 보내시겠습니까?" } }
+    } },
+    "social.confirm.sendFamily.title" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Family request" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "가족 요청" } }
+    } },
     "social.confirm.sendFriend.message" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Send a friend request to %@?" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님에게 친구 요청을 보내시겠습니까?" } }
     } },
     "social.confirm.sendFriend.title" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Friend request" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 요청" } }
     } },
+    "social.confirm.unblock.message" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Unblock %@? You will be able to find each other in search and send friend requests again. Your friend connection is not restored." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님의 차단을 해제하시겠습니까? 서로 다시 검색하고 친구 요청을 보낼 수 있게 됩니다. 친구 관계는 복구되지 않습니다." } }
+    } },
+    "social.confirm.unblock.title" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Unblock" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "차단 해제" } }
+    } },
 
+    "social.empty.blocked" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "No blocked users." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "차단한 사용자가 없습니다." } }
+    } },
     "social.empty.friends" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "No friends yet." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "아직 친구가 없습니다." } }
     } },
@@ -110,6 +140,9 @@
     } },
     "social.request.sent" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "%@ · Pending" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@ · 대기 중" } }
+    } },
+    "social.section.blocked" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Blocked users" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "차단한 사용자" } }
     } },
     "social.section.friends" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Friends" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 목록" } }
@@ -153,6 +186,7 @@
     } },
 
     "social.error.accept" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to accept the request." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "요청 수락에 실패했습니다." } } } },
+    "social.error.block" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to block the user." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "사용자 차단에 실패했습니다." } } } },
     "social.error.cancel" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to cancel the request." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "요청 취소에 실패했습니다." } } } },
     "social.error.familyAlreadyRequested" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "A family request has already been sent." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "이미 가족 요청을 보낸 상태입니다." } } } },
     "social.error.generic" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "The request could not be completed." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "요청을 완료하지 못했습니다." } } } },
@@ -166,6 +200,7 @@
     "social.error.sendFamily" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to send the family request." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "가족 요청 전송에 실패했습니다." } } } },
     "social.error.sendFriend" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to send the friend request." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 요청 전송에 실패했습니다." } } } },
     "social.error.title" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Unable to complete action" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "작업을 완료하지 못했습니다" } } } },
+    "social.error.unblock" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to unblock the user." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "차단 해제에 실패했습니다." } } } },
     "social.error.unpin" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to unpin the friend." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 고정 해제에 실패했습니다." } } } },
     "social.warning.reorderReload" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "The friend order was saved, but the latest list could not be reloaded. Pull down to refresh." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 순서는 저장됐지만 최신 목록을 다시 불러오지 못했습니다. 아래로 당겨 새로고침해 주세요." } } } }
   },

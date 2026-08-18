@@ -3,6 +3,7 @@ import Foundation
 nonisolated enum GuestRoute: Hashable, Sendable {
     case login
     case guide
+    case support
     case terms
     case privacy
     case publicCalendar(MemberID)
@@ -22,6 +23,9 @@ nonisolated enum GuestDeepLink {
         let components = url.pathComponents.filter { $0 != "/" }
         if components == ["guide"] {
             return .guide
+        }
+        if components == ["support"] {
+            return .support
         }
         if components == ["terms"] {
             return .terms

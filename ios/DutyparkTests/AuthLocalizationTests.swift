@@ -35,6 +35,34 @@ struct AuthLocalizationTests {
         }
     }
 
+    @Test
+    func loginFailuresSeparateNetworkAndServerMessages() {
+        withKoreanOverride {
+            #expect(
+                LoginErrorMessage.text(key: "auth.login.error.network", status: nil)
+                    == "서버에 연결할 수 없습니다. 네트워크 상태를 확인한 뒤 다시 시도해주세요."
+            )
+            #expect(
+                LoginErrorMessage.text(key: "auth.login.error.server", status: 502)
+                    == "서버에 일시적인 문제가 발생했습니다. 잠시 후 다시 시도해주세요. (오류 502)"
+            )
+            #expect(
+                LoginErrorMessage.text(key: "auth.login.error.unknown", status: 400)
+                    == "로그인에 실패했습니다. 잠시 후 다시 시도해주세요. (오류 400)"
+            )
+        }
+    }
+
+    @Test
+    func suspendedAccountLoginUsesTheServerErrorLocalization() {
+        withKoreanOverride {
+            #expect(
+                LoginErrorMessage.text(key: "auth.account.suspended", status: nil)
+                    == "계정이 이용 정지되었습니다. 이의제기는 문의 페이지를 이용해 주세요."
+            )
+        }
+    }
+
     private func withKoreanOverride(_ body: () -> Void) {
         let defaults = UserDefaults.standard
         let previous = defaults.string(forKey: SettingsPreference.languageKey)

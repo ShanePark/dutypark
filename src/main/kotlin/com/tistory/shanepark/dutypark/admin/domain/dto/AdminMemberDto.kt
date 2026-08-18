@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.admin.domain.dto
 
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
+import com.tistory.shanepark.dutypark.member.domain.enums.MemberStatus
 import com.tistory.shanepark.dutypark.security.domain.dto.RefreshTokenDto
 import com.tistory.shanepark.dutypark.security.domain.entity.RefreshToken
 
@@ -10,6 +11,7 @@ data class AdminMemberDto(
     val email: String?,
     val teamId: Long?,
     val teamName: String?,
+    val status: MemberStatus,
     val tokens: List<RefreshTokenDto>,
     val hasProfilePhoto: Boolean = false,
     val profilePhotoVersion: Long = 0,
@@ -22,6 +24,7 @@ data class AdminMemberDto(
                 email = member.email,
                 teamId = member.team?.id,
                 teamName = member.team?.name,
+                status = member.status,
                 tokens = tokens.filter { it.isValid() }.map { RefreshTokenDto.of(it) },
                 hasProfilePhoto = member.hasProfilePhoto(),
                 profilePhotoVersion = member.profilePhotoVersion,

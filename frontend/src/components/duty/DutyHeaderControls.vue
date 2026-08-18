@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { ChevronLeft, Search } from 'lucide-vue-next'
+import { computed } from 'vue'
+import { ChevronLeft, Flag, Search, UserX } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import CalendarMonthNavigator from '@/components/common/CalendarMonthNavigator.vue'
+import OverflowMenu from '@/components/common/OverflowMenu.vue'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 
 const props = defineProps<{
@@ -14,6 +16,8 @@ const props = defineProps<{
   canSearch: boolean
   searchQuery: string
   showBack?: boolean
+  showMemberMenu?: boolean
+  showBlock?: boolean
 }>()
 
 const emit = defineEmits<{
@@ -24,10 +28,19 @@ const emit = defineEmits<{
   (e: 'go-to-this-month'): void
   (e: 'search'): void
   (e: 'open-search-modal'): void
+  (e: 'report-member'): void
+  (e: 'block-member'): void
   (e: 'update:searchQuery', value: string): void
 }>()
 
 const { t } = useI18n()
+
+const avatarProps = computed(() => ({
+  memberId: props.memberId,
+  hasProfilePhoto: props.memberHasProfilePhoto,
+  profilePhotoVersion: props.memberProfilePhotoVersion,
+  name: props.memberName,
+}))
 
 function handleSearchInput(event: Event) {
   emit('update:searchQuery', (event.target as HTMLInputElement).value)
@@ -57,13 +70,46 @@ function handleSearchClick() {
       >
         <ChevronLeft class="h-5 w-5 sm:h-6 sm:w-6" />
       </button>
-      <!-- Profile Photo (smaller on mobile; dropped when the back button is shown so the name keeps its room) -->
-      <ProfileAvatar v-if="!showBack" :member-id="memberId" :has-profile-photo="memberHasProfilePhoto" :profile-photo-version="memberProfilePhotoVersion" size="md" class="flex-shrink-0 sm:hidden" :name="memberName" />
-      <ProfileAvatar :member-id="memberId" :has-profile-photo="memberHasProfilePhoto" :profile-photo-version="memberProfilePhotoVersion" size="xl" class="flex-shrink-0 hidden sm:block" :name="memberName" />
-      <!-- Name -->
-      <span
-        class="text-xs sm:text-sm font-semibold truncate text-dp-text-primary"
-      >{{ memberName }}</span>
+
+      <!-- The identity itself opens the member actions, so the header needs no
+           separate overflow button. Profile photo is smaller on mobile, and dropped
+           when the back button is shown so the name keeps its room. -->
+      <OverflowMenu
+        v-if="showMemberMenu"
+        :menu-label="t('report.actions.menu')"
+        trigger-class="flex min-h-11 w-full min-w-0 cursor-pointer items-center gap-2 rounded-full px-2 py-1 transition-colors duration-150 hover:bg-dp-bg-tertiary active:bg-dp-bg-hover data-[open=true]:bg-dp-bg-tertiary sm:gap-2.5 sm:pl-1 sm:pr-3.5"
+      >
+        <template #trigger>
+          <ProfileAvatar v-if="!showBack" v-bind="avatarProps" size="md" class="flex-shrink-0 sm:hidden" />
+          <ProfileAvatar v-bind="avatarProps" size="xl" class="flex-shrink-0 hidden sm:block" />
+          <span class="text-xs sm:text-sm font-semibold truncate text-dp-text-primary">{{ memberName }}</span>
+        </template>
+
+        <button
+          type="button"
+          class="flex w-full min-h-11 cursor-pointer items-center gap-2.5 px-4 py-2.5 text-left text-sm text-dp-text-primary transition hover:bg-dp-bg-hover"
+          role="menuitem"
+          @click="emit('report-member')"
+        >
+          <Flag class="h-4 w-4 flex-shrink-0" />
+          {{ t('report.actions.reportMember') }}
+        </button>
+        <button
+          v-if="showBlock"
+          type="button"
+          class="flex w-full min-h-11 cursor-pointer items-center gap-2.5 px-4 py-2.5 text-left text-sm text-dp-danger transition hover:bg-dp-danger-soft"
+          role="menuitem"
+          @click="emit('block-member')"
+        >
+          <UserX class="h-4 w-4 flex-shrink-0" />
+          {{ t('report.actions.blockMember') }}
+        </button>
+      </OverflowMenu>
+      <template v-else>
+        <ProfileAvatar v-if="!showBack" v-bind="avatarProps" size="md" class="flex-shrink-0 sm:hidden" />
+        <ProfileAvatar v-bind="avatarProps" size="xl" class="flex-shrink-0 hidden sm:block" />
+        <span class="text-xs sm:text-sm font-semibold truncate text-dp-text-primary">{{ memberName }}</span>
+      </template>
     </div>
 
     <!-- Center: Year-Month Navigation -->
@@ -77,7 +123,7 @@ function handleSearchClick() {
     />
 
     <!-- Right: Search -->
-    <div class="flex min-w-0 justify-end">
+    <div class="flex min-w-0 items-center justify-end gap-0.5 sm:gap-1">
       <div
         v-if="canSearch"
         class="flex min-h-[42px] min-w-0 w-full max-w-[8.5rem] items-stretch overflow-hidden rounded-lg border border-dp-border-secondary bg-dp-bg-card transition-colors focus-within:border-dp-accent sm:min-h-[44px] sm:max-w-[10rem] sm:rounded-xl sm:shadow-sm"

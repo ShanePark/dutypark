@@ -1,5 +1,5 @@
 import type { Component } from 'vue'
-import { Bell, BookOpen, Settings, Shield, UserPlus } from 'lucide-vue-next'
+import { Bell, BookOpen, LifeBuoy, Settings, Shield, UserPlus } from 'lucide-vue-next'
 
 export type MoreMenuItem = {
   id: string
@@ -29,6 +29,7 @@ export function buildMoreMenuGroups(options: { isAdmin: boolean }): MoreMenuItem
 
   appGroup.push(
     { id: 'guide', path: '/guide', labelKey: 'header.menu.guide', icon: BookOpen },
+    { id: 'support', path: '/support', labelKey: 'header.menu.support', icon: LifeBuoy },
     { id: 'settings', path: '/settings', labelKey: 'header.menu.settings', icon: Settings }
   )
 

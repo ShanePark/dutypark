@@ -63,9 +63,9 @@ class PublicContentServiceTest {
     fun `release notes merge locale copy with metadata and preserve escaped text as rendered text`() {
         val page = service.getReleaseNotes(locale = "ko", page = 0, size = 50)
 
-        assertThat(page.totalElements).isEqualTo(274)
-        assertThat(page.items.first().id).isEqualTo("pr-405")
-        assertThat(page.items.first().title).isEqualTo("탐색 구조와 iOS 상호작용 개선")
+        assertThat(page.totalElements).isEqualTo(275)
+        assertThat(page.items.first().id).isEqualTo("pr-406")
+        assertThat(page.items.first().title).isEqualTo("신고·차단과 앱 내 문의 답변 추가")
         assertThat(page.labels.categoryLabels["feature"]).isEqualTo("기능")
         assertThat(page.labels.count).isEqualTo("총 {count}개의 변경사항")
         assertThat(page.labels.loadMore).isEqualTo("더보기")
@@ -76,7 +76,7 @@ class PublicContentServiceTest {
 
         val allNotes = (0 until page.totalPages)
             .flatMap { service.getReleaseNotes("en", it, 50).items }
-        assertThat(allNotes.sumOf { it.changes.size }).isEqualTo(486)
+        assertThat(allNotes.sumOf { it.changes.size }).isEqualTo(490)
         val componentNote = allNotes.first { it.title.contains("Component annotation") }
         assertThat(componentNote.title).contains("@Component")
         assertThat(componentNote.title).doesNotContain("{'@'}")

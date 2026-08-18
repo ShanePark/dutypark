@@ -14,6 +14,7 @@ import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.domain.dto.PasswordChangeDto
 import com.tistory.shanepark.dutypark.security.domain.entity.RefreshToken
 import com.tistory.shanepark.dutypark.security.domain.enums.TokenStatus
+import jakarta.persistence.EntityManager
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -50,6 +51,7 @@ class AuthServiceTest {
     private val refreshTokenService: RefreshTokenService = mock()
     private val jwtProvider: JwtProvider = mock()
     private val loginAttemptService: LoginAttemptService = mock()
+    private val entityManager: EntityManager = mock()
     private val jwtConfig = JwtConfig(secret = "secret", tokenValidityInSeconds = 1000, refreshTokenValidityInDays = 30)
 
     private lateinit var authService: AuthService
@@ -63,7 +65,8 @@ class AuthServiceTest {
             refreshTokenService = refreshTokenService,
             jwtProvider = jwtProvider,
             jwtConfig = jwtConfig,
-            loginAttemptService = loginAttemptService
+            loginAttemptService = loginAttemptService,
+            entityManager = entityManager,
         )
     }
 
@@ -217,6 +220,7 @@ class AuthServiceTest {
         whenever(loginAttemptService.isBlocked("127.0.0.1", "user@duty.park")).thenReturn(false)
         whenever(memberRepository.findByEmail("user@duty.park")).thenReturn(Optional.of(member))
         whenever(passwordEncoder.matches("pass", "encoded-pass")).thenReturn(true)
+        whenever(memberRepository.findMemberWithTeamForUpdate(4L)).thenReturn(Optional.of(member))
         val refreshToken = RefreshToken(
             member = member,
             validUntil = futureDateTime,
@@ -233,6 +237,7 @@ class AuthServiceTest {
         assertThat(result.accessToken).isEqualTo("jwt-token")
         assertThat(result.refreshToken).isEqualTo(refreshToken.token)
         assertThat(result.expiresIn).isEqualTo(1000)
+        verify(entityManager).refresh(member)
         verify(loginAttemptService).recordSuccessfulAttempt("127.0.0.1", "user@duty.park")
     }
 
@@ -392,6 +397,104 @@ class AuthServiceTest {
         assertThrows<AuthException> {
             authService.restore(LoginMember(id = 1L, name = "user"), null, request)
         }
+    }
+
+    @Test
+    fun `tokenToLoginMember rejects suspended member`() {
+        val loginMember = LoginMember(id = 1L, name = "user", sessionId = 10L)
+        val member = memberWithId(1L).also { it.suspend() }
+        whenever(jwtProvider.validateToken("token")).thenReturn(TokenStatus.VALID)
+        whenever(jwtProvider.parseToken("token")).thenReturn(loginMember)
+        whenever(refreshTokenService.isSessionActive(10L, 1L)).thenReturn(true)
+        whenever(memberRepository.findById(1L)).thenReturn(Optional.of(member))
+
+        val exception = assertThrows<AuthException> {
+            authService.tokenToLoginMember("token")
+        }
+
+        assertThat(exception.message).isEqualTo("auth.account.suspended")
+    }
+
+    @Test
+    fun `getTokenResponse rejects suspended member with suspended code`() {
+        val member = memberWithId(4L).also { it.suspend() }
+        member.password = "encoded-pass"
+        whenever(loginAttemptService.isBlocked("127.0.0.1", "user@duty.park")).thenReturn(false)
+        whenever(memberRepository.findByEmail("user@duty.park")).thenReturn(Optional.of(member))
+        whenever(passwordEncoder.matches("pass", "encoded-pass")).thenReturn(true)
+        whenever(memberRepository.findMemberWithTeamForUpdate(4L)).thenReturn(Optional.of(member))
+        val request = requestWith("127.0.0.1", "user@duty.park")
+
+        val exception = assertThrows<AuthException> {
+            authService.getTokenResponse(LoginDto("user@duty.park", "pass"), request)
+        }
+
+        assertThat(exception.message).isEqualTo("auth.account.suspended")
+        verify(loginAttemptService, never()).recordFailedAttempt(any(), any())
+        verify(jwtProvider, never()).createToken(any<Member>(), any())
+    }
+
+    @Test
+    fun `getTokenResponse keeps the generic failure when a suspended member sends a wrong password`() {
+        val member = memberWithId(4L).also { it.suspend() }
+        member.password = "encoded-pass"
+        whenever(loginAttemptService.isBlocked("127.0.0.1", "user@duty.park")).thenReturn(false)
+        whenever(memberRepository.findByEmail("user@duty.park")).thenReturn(Optional.of(member))
+        whenever(passwordEncoder.matches("wrong", "encoded-pass")).thenReturn(false)
+        val request = requestWith("127.0.0.1", "user@duty.park")
+
+        val exception = assertThrows<AuthException> {
+            authService.getTokenResponse(LoginDto("user@duty.park", "wrong"), request)
+        }
+
+        assertThat(exception.message).isEqualTo("auth.login.failed")
+        verify(loginAttemptService).recordFailedAttempt("127.0.0.1", "user@duty.park")
+    }
+
+    @Test
+    fun `refreshAccessToken rejects suspended member`() {
+        val member = memberWithId(6L).also { it.suspend() }
+        val refreshToken = RefreshToken(
+            member = member,
+            validUntil = futureDateTime,
+            remoteAddr = "127.0.0.1",
+            userAgent = chromeUserAgent
+        )
+        whenever(refreshTokenService.findByToken("valid")).thenReturn(refreshToken)
+        val request = requestWith("127.0.0.1", firefoxUserAgent)
+
+        val exception = assertThrows<AuthException> {
+            authService.refreshAccessToken("valid", request)
+        }
+
+        assertThat(exception.message).isEqualTo("auth.account.suspended")
+    }
+
+    @Test
+    fun `impersonate rejects suspended target`() {
+        val manager = memberWithId(8L)
+        val target = memberWithId(9L).also { it.suspend() }
+        whenever(memberRepository.findById(8L)).thenReturn(Optional.of(manager))
+        whenever(memberRepository.findById(9L)).thenReturn(Optional.of(target))
+
+        val exception = assertThrows<AuthException> {
+            authService.impersonate(LoginMember(id = 8L, name = "manager", sessionId = 80L), 9L)
+        }
+
+        assertThat(exception.message).isEqualTo("auth.account.suspended")
+    }
+
+    @Test
+    fun `verifyPasswordForReauth rejects suspended member`() {
+        val member = memberWithId(1L).also { it.suspend() }
+        member.password = "encoded-pass"
+        whenever(memberRepository.findById(1L)).thenReturn(Optional.of(member))
+
+        val exception = assertThrows<AuthException> {
+            authService.verifyPasswordForReauth(1L, "pass")
+        }
+
+        assertThat(exception.message).isEqualTo("auth.account.suspended")
     }
 
     private fun requestWith(ip: String, userAgent: String = "test-agent"): MockHttpServletRequest {

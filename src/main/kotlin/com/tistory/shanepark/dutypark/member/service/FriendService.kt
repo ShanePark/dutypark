@@ -2,6 +2,7 @@ package com.tistory.shanepark.dutypark.member.service
 
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
+import com.tistory.shanepark.dutypark.member.block.service.BlockService
 import com.tistory.shanepark.dutypark.member.domain.dto.FriendDto
 import com.tistory.shanepark.dutypark.member.domain.dto.MemberPreviewDto
 import com.tistory.shanepark.dutypark.member.domain.dto.toFriendDto
@@ -34,6 +35,7 @@ class FriendService(
     private val friendRequestRepository: FriendRequestRepository,
     private val memberService: MemberService,
     private val memberRepository: MemberRepository,
+    private val blockService: BlockService,
     private val eventPublisher: ApplicationEventPublisher,
 ) {
 
@@ -59,6 +61,8 @@ class FriendService(
     fun sendFriendRequest(loginMember: LoginMember, toMemberId: Long) {
         val fromMember = loginMemberToMember(loginMember)
         val toMember = memberRepository.findById(toMemberId).orElseThrow()
+
+        checkNotBlocked(fromMember, toMember)
 
         if (fromMember == toMember)
             throw BadRequestException("friend.request.self")
@@ -86,6 +90,8 @@ class FriendService(
     fun sendFamilyRequest(loginMember: LoginMember, toMemberId: Long) {
         val fromMember = loginMemberToMember(loginMember)
         val toMember = memberRepository.findById(toMemberId).orElseThrow()
+
+        checkNotBlocked(fromMember, toMember)
 
         if (!isFriend(fromMember, toMember)) {
             throw BadRequestException("friend.family.notFriend")
@@ -228,6 +234,11 @@ class FriendService(
         return false
     }
 
+    private fun checkNotBlocked(fromMember: Member, toMember: Member) {
+        if (blockService.isBlockedEitherWay(fromMember.id!!, toMember.id!!))
+            throw BadRequestException("friend.request.blocked")
+    }
+
     private fun findPendingFriendRequestOrThrow(from: Member, to: Member): FriendRequest {
         return friendRequestRepository.findAllByFromMemberAndToMemberAndStatus(
             from, to, PENDING
@@ -272,6 +283,8 @@ class FriendService(
             return true
         if (memberService.isManager(login, targetMember))
             return true
+        if (blockService.isBlockedEitherWay(login.id, targetMember.id!!))
+            return false
         return when (targetMember.calendarVisibility) {
             Visibility.PUBLIC -> true
             Visibility.FRIENDS -> isFriend(loginMember, targetMember)
@@ -284,7 +297,9 @@ class FriendService(
         loginMember: Member,
         targetMember: Member
     ): Boolean {
-        return loginMember.team == targetMember.team
+        // Compare ids: team is a lazy association, and two members without a team are not teammates.
+        val loginTeamId = loginMember.team?.id ?: return false
+        return loginTeamId == targetMember.team?.id
     }
 
     @Transactional(readOnly = true)

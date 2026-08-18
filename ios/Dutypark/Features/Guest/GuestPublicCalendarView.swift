@@ -6,6 +6,15 @@ nonisolated enum GuestPublicCalendarLink {
     }
 }
 
+@MainActor
+enum GuestReportLoginNavigation {
+    static func prepare(memberID: MemberID, session: SessionStore) {
+        session.deferDestinationUntilAuthenticated(
+            GuestPublicCalendarLink.url(memberID: memberID)
+        )
+    }
+}
+
 enum GuestCalendarLocalization {
     static func yearMonth(
         year: Int,
@@ -21,8 +30,10 @@ enum GuestCalendarLocalization {
 }
 
 struct GuestPublicCalendarView: View {
+    @EnvironmentObject private var session: SessionStore
     @StateObject private var model: GuestPublicCalendarViewModel
     @State private var showsMonthPicker = false
+    @State private var showsReportLoginPrompt = false
     private let memberID: MemberID
 
     init(memberID: MemberID) {
@@ -73,6 +84,23 @@ struct GuestPublicCalendarView: View {
                 }
                 .accessibilityIdentifier("guest.calendar.share")
             }
+            ToolbarItem(placement: .topBarTrailing) {
+                Menu {
+                    Button {
+                        showsReportLoginPrompt = true
+                    } label: {
+                        Label(
+                            GuestLocalization.text("guest.calendar.report"),
+                            systemImage: "flag"
+                        )
+                    }
+                    .accessibilityIdentifier("guest.calendar.report")
+                } label: {
+                    Image(systemName: "ellipsis")
+                }
+                .accessibilityLabel(GuestLocalization.text("guest.calendar.more"))
+                .accessibilityIdentifier("guest.calendar.menu")
+            }
         }
         .task { if model.days.isEmpty { await model.load() } }
         .refreshable { await model.load() }
@@ -121,6 +149,26 @@ struct GuestPublicCalendarView: View {
             Button(GuestLocalization.text("guest.ok"), role: .cancel) {}
         } message: {
             Text("guest.calendar.error.message", tableName: "Guest")
+        }
+        // The prompt stays inside the navigation stack instead of a cover so its
+        // confirm control can be a real `NavigationLink` to `GuestRoute.login`;
+        // a covered link would have no stack to push onto.
+        .overlay {
+            if showsReportLoginPrompt {
+                DPModalOverlay(
+                    maximumContentWidth: DPConfirmationPanel.maximumWidth,
+                    onDismiss: { showsReportLoginPrompt = false }
+                ) { availableSize, dismissPrompt in
+                    GuestReportLoginPrompt(
+                        maximumHeight: availableSize.height,
+                        cancel: dismissPrompt,
+                        willNavigate: {
+                            GuestReportLoginNavigation.prepare(memberID: memberID, session: session)
+                            showsReportLoginPrompt = false
+                        }
+                    )
+                }
+            }
         }
     }
 
@@ -360,6 +408,58 @@ private nonisolated struct GuestPublicCalendarUITestingAPI: GuestAPIProtocol, Se
     func policy(_ type: PolicyType) async throws -> PolicyDTO { throw URLError(.unsupportedURL) }
 }
 #endif
+
+/// Reporting requires an account, so a guest is asked to sign in first and lands on
+/// the same login screen the rest of the guest experience uses.
+private struct GuestReportLoginPrompt: View {
+    let maximumHeight: CGFloat
+    let cancel: () -> Void
+    let willNavigate: () -> Void
+
+    var body: some View {
+        DPModalPanel(maximumPanelHeight: maximumHeight) {
+            Text(verbatim: GuestLocalization.text("guest.calendar.report.loginTitle"))
+                .font(DPTypography.bodyMedium)
+                .foregroundStyle(DPColor.textPrimary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, minHeight: 56)
+                .padding(.horizontal, DPSpacing.large)
+                .background(DPColor.backgroundTertiary)
+                .accessibilityAddTraits(.isHeader)
+        } content: {
+            Text(verbatim: GuestLocalization.text("guest.calendar.report.loginMessage"))
+                .font(DPTypography.supporting)
+                .foregroundStyle(DPColor.textSecondary)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity)
+                .padding(DPSpacing.large)
+        } footer: {
+            HStack(spacing: DPSpacing.compact) {
+                Button(role: .cancel, action: cancel) {
+                    Text(verbatim: GuestLocalization.text("guest.close"))
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(DPOutlineButtonStyle())
+                .frame(maxWidth: .infinity)
+
+                NavigationLink(value: GuestRoute.login) {
+                    Text(verbatim: GuestLocalization.text("guest.login.short"))
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(DPPrimaryButtonStyle())
+                .frame(maxWidth: .infinity)
+                .simultaneousGesture(TapGesture().onEnded { willNavigate() })
+                .accessibilityIdentifier("guest.calendar.report.login")
+            }
+            .padding(.horizontal, DPSpacing.large)
+            .padding(.vertical, DPSpacing.medium)
+        }
+        .frame(minWidth: DPConfirmationPanel.minimumWidth, maxWidth: DPConfirmationPanel.maximumWidth)
+        .accessibilityElement(children: .contain)
+    }
+}
 
 private struct GuestCalendarDayCell: View {
     let day: GuestCalendarDay

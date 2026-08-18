@@ -39,4 +39,7 @@ export const notificationRendererRegistry: NotificationRendererRegistry = {
   TODO_STATUS_DONE: {
     1: rendererV1<'TODO_STATUS_DONE'>(notificationRenderersV1.TODO_STATUS_DONE),
   },
+  INQUIRY_ANSWERED: {
+    1: rendererV1<'INQUIRY_ANSWERED'>(notificationRenderersV1.INQUIRY_ANSWERED),
+  },
 }

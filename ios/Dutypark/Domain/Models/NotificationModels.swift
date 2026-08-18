@@ -10,6 +10,7 @@ nonisolated enum NotificationType: Codable, Hashable, Sendable {
     case todoStatusTodo
     case todoStatusInProgress
     case todoStatusDone
+    case inquiryAnswered
     case unknown(String)
 
     var rawValue: String {
@@ -23,6 +24,7 @@ nonisolated enum NotificationType: Codable, Hashable, Sendable {
         case .todoStatusTodo: "TODO_STATUS_TODO"
         case .todoStatusInProgress: "TODO_STATUS_IN_PROGRESS"
         case .todoStatusDone: "TODO_STATUS_DONE"
+        case .inquiryAnswered: "INQUIRY_ANSWERED"
         case .unknown(let value): value
         }
     }
@@ -39,6 +41,7 @@ nonisolated enum NotificationType: Codable, Hashable, Sendable {
         case "TODO_STATUS_TODO": .todoStatusTodo
         case "TODO_STATUS_IN_PROGRESS": .todoStatusInProgress
         case "TODO_STATUS_DONE": .todoStatusDone
+        case "INQUIRY_ANSWERED": .inquiryAnswered
         default: .unknown(value)
         }
     }
@@ -54,6 +57,7 @@ nonisolated enum NotificationReferenceType: Codable, Hashable, Sendable {
     case schedule
     case todo
     case member
+    case inquiry
     case unknown(String)
 
     var rawValue: String {
@@ -62,6 +66,7 @@ nonisolated enum NotificationReferenceType: Codable, Hashable, Sendable {
         case .schedule: "SCHEDULE"
         case .todo: "TODO"
         case .member: "MEMBER"
+        case .inquiry: "INQUIRY"
         case .unknown(let value): value
         }
     }
@@ -73,6 +78,7 @@ nonisolated enum NotificationReferenceType: Codable, Hashable, Sendable {
         case "SCHEDULE": .schedule
         case "TODO": .todo
         case "MEMBER": .member
+        case "INQUIRY": .inquiry
         default: .unknown(value)
         }
     }
@@ -94,9 +100,10 @@ nonisolated struct NotificationPayloadDTO: Codable, Equatable, Sendable {
     let actor: NotificationActorDTO?
     let scheduleTitle: String?
     let todoTitle: String?
+    let subject: String?
 
     private enum CodingKeys: String, CodingKey {
-        case version, actor, scheduleTitle, todoTitle
+        case version, actor, scheduleTitle, todoTitle, subject
     }
 
     init(from decoder: Decoder) throws {
@@ -105,6 +112,7 @@ nonisolated struct NotificationPayloadDTO: Codable, Equatable, Sendable {
         actor = try container.decodeIfPresent(NotificationActorDTO.self, forKey: .actor)
         scheduleTitle = try container.decodeIfPresent(String.self, forKey: .scheduleTitle)
         todoTitle = try container.decodeIfPresent(String.self, forKey: .todoTitle)
+        subject = try container.decodeIfPresent(String.self, forKey: .subject)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -113,6 +121,7 @@ nonisolated struct NotificationPayloadDTO: Codable, Equatable, Sendable {
         try container.encodeIfPresent(actor, forKey: .actor)
         try container.encodeIfPresent(scheduleTitle, forKey: .scheduleTitle)
         try container.encodeIfPresent(todoTitle, forKey: .todoTitle)
+        try container.encodeIfPresent(subject, forKey: .subject)
     }
 }
 

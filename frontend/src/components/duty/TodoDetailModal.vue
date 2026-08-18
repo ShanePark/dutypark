@@ -2,6 +2,7 @@
 import { ref, computed, watch } from 'vue'
 import {
   X,
+  Flag,
   Pencil,
   Trash2,
   List,
@@ -47,11 +48,13 @@ interface Props {
   friends?: TaggableFriend[]
   startInEditMode?: boolean
   showBackToList?: boolean
+  canReport?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   startInEditMode: false,
   showBackToList: true,
+  canReport: false,
   friends: () => [],
 })
 
@@ -69,6 +72,7 @@ const emit = defineEmits<{
   }): void
   (e: 'delete', todo: Pick<TodoDetailItem, 'id' | 'title'>): void
   (e: 'untagSelf', todo: Pick<TodoDetailItem, 'id' | 'title'>): void
+  (e: 'report', todo: Pick<TodoDetailItem, 'id' | 'title'>): void
   (e: 'backToList'): void
 }>()
 
@@ -442,6 +446,14 @@ function onUploadError(message: string) {
             </button>
 
             <div class="flex flex-1 sm:flex-none flex-wrap justify-end gap-2">
+              <button
+                v-if="canReport"
+                @click="emit('report', { id: todo.id, title: todo.title })"
+                class="flex-1 sm:flex-none flex min-h-11 items-center justify-center gap-1 px-3 py-2 text-sm rounded-lg transition btn-outline cursor-pointer"
+              >
+                <Flag class="w-4 h-4" />
+                <span class="whitespace-nowrap">{{ t('report.actions.report') }}</span>
+              </button>
               <button
                 v-if="isTaggedTodo"
                 @click="emit('untagSelf', { id: todo.id, title: todo.title })"

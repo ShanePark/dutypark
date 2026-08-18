@@ -40,6 +40,16 @@
         }
       },
       "entries": {
+        "pr-406": {
+          "title": "신고·차단과 앱 내 문의 답변 추가",
+          "summary": "웹과 iPhone 앱에서 부적절한 사용자·일정·Todo를 신고하거나 회원을 차단하고, 문의 내역과 관리자 답변을 앱 안에서 확인할 수 있습니다.",
+          "changes": [
+            "사용자, 일정과 Todo를 신고하고 필요하면 신고와 동시에 상대 회원을 차단할 수 있습니다.",
+            "차단한 회원은 검색, 친구 요청, 알림과 개인 캘린더에서 제외되며 기존 일정·Todo 태그 관계도 정리됩니다.",
+            "로그인한 회원은 문의 내역과 관리자 답변을 웹과 iPhone 앱에서 확인하고 답변 알림을 받을 수 있습니다.",
+            "관리자는 신고, 문의와 회원 제재를 전용 화면에서 처리하고 내부 메모와 사용자 공개 답변을 구분해 관리할 수 있습니다."
+          ]
+        },
         "pr-405": {
           "title": "탐색 구조와 iOS 상호작용 개선",
           "summary": "웹과 iOS의 주요 화면을 더 쉽게 찾도록 더보기, 내 정보, 설정 구조를 정리하고 iPhone에서 탐색과 편집 동작을 한층 자연스럽게 다듬었습니다.",
@@ -2211,6 +2221,16 @@
         }
       },
       "entries": {
+        "pr-406": {
+          "title": "Reporting, blocking, and in-app inquiry answers",
+          "summary": "Report inappropriate members, schedules, and todos or block members from the web and iPhone app, then review inquiry history and admin answers in the app.",
+          "changes": [
+            "Report members, schedules, and todos, with an option to block the member at the same time.",
+            "Keep blocked members out of search, friend requests, notifications, and personal calendars while removing existing schedule and todo tags between both members.",
+            "Review inquiry history and admin answers on the web or iPhone and receive a notification when an answer is posted.",
+            "Manage reports, inquiries, account restrictions, internal memos, and member-visible answers from dedicated admin screens."
+          ]
+        },
         "pr-405": {
           "title": "Clearer navigation and smoother iOS interactions",
           "summary": "Makes key destinations easier to find across web and iOS with a clearer More, My Info, and Settings structure, while making navigation and editing feel more natural on iPhone.",
@@ -4345,6 +4365,25 @@
     }
   },
   "items": [
+    {
+      "id": "pr-406",
+      "version": "2026.08.19",
+      "date": "2026-08-19",
+      "pr": 406,
+      "url": "https://github.com/ShanePark/dutypark/pull/406",
+      "category": "feature",
+      "areas": [
+        "admin",
+        "auth",
+        "calendar",
+        "friends",
+        "notifications",
+        "policy",
+        "security",
+        "todo",
+        "ui"
+      ]
+    },
     {
       "id": "pr-405",
       "version": "2026.08.17",

@@ -56,10 +56,6 @@ cookie:
   domain: ${DOMAIN_NAME:}
 
 dutypark:
-  account-deletion:
-    worker:
-      fixed-delay-ms: 5000
-      initial-delay-ms: 5000
   ai:
     chat:
       connect-timeout: ${AI_CHAT_CONNECT_TIMEOUT:30s}

@@ -28,6 +28,7 @@ final class SessionStore: ObservableObject {
     @Published private(set) var state: SessionState
     @Published private(set) var isWorking = false
     @Published private(set) var loginErrorKey: String?
+    @Published private(set) var loginErrorStatus: Int?
     @Published private(set) var loginRemainingAttempts: Int?
     @Published private(set) var impersonationExpiresAt: Date?
     @Published private(set) var pendingDestination: URL?
@@ -78,6 +79,7 @@ final class SessionStore: ObservableObject {
         isWorking = true
         accountDeletionAcceptedPresentation = nil
         loginErrorKey = nil
+        loginErrorStatus = nil
         loginRemainingAttempts = nil
         defer { isWorking = false }
 
@@ -93,13 +95,24 @@ final class SessionStore: ObservableObject {
             case .serverWithDetails(status: 429, _, let details):
                 loginErrorKey = "auth.login.error.rateLimited"
                 loginRemainingAttempts = details.remainingAttempts
+            case .serverWithDetails(status: 401, code: "auth.account.suspended", _):
+                loginErrorKey = "auth.account.suspended"
             case .serverWithDetails(status: 401, _, let details):
                 loginErrorKey = "auth.login.error.invalidCredentials"
                 loginRemainingAttempts = details.remainingAttempts
             case .server(status: 429, _):
                 loginErrorKey = "auth.login.error.rateLimited"
+            case .server(status: 401, code: "auth.account.suspended"):
+                loginErrorKey = "auth.account.suspended"
             case .server(status: 401, _):
                 loginErrorKey = "auth.login.error.invalidCredentials"
+            case .transport:
+                loginErrorKey = "auth.login.error.network"
+            case .server(let status, _), .serverWithDetails(let status, _, _):
+                loginErrorKey = status >= 500
+                    ? "auth.login.error.server"
+                    : "auth.login.error.unknown"
+                loginErrorStatus = status
             default:
                 loginErrorKey = "auth.login.error.generic"
             }

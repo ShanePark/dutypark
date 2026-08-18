@@ -1,0 +1,726 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "support.error.contentRequired" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter the message you want to send."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "문의 내용을 입력해 주세요."
+          }
+        }
+      }
+    },
+    "support.error.emailInvalid" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter a valid e-mail address."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이메일 주소 형식이 올바르지 않습니다."
+          }
+        }
+      }
+    },
+    "support.error.emailRequired" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Enter an e-mail address for our reply."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "회신받을 이메일 주소를 입력해 주세요."
+          }
+        }
+      }
+    },
+    "support.error.rateLimit" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Too many inquiries were sent. Please try again in a moment."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "문의가 너무 많이 접수되었습니다. 잠시 후 다시 시도해 주세요."
+          }
+        }
+      }
+    },
+    "support.error.submit" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not send the inquiry. Please try again in a moment."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "문의를 보내지 못했습니다. 잠시 후 다시 시도해 주세요."
+          }
+        }
+      }
+    },
+    "support.form.content" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Message"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "문의 내용"
+          }
+        }
+      }
+    },
+    "support.form.content.placeholder" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Describe your question, or the content you are reporting, in detail."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "문의하실 내용이나 신고하실 내용을 자세히 적어 주세요."
+          }
+        }
+      }
+    },
+    "support.form.description" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "We reply by e-mail, so please make sure the address is correct."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "입력하신 이메일로 답변드리니 주소를 정확히 확인해 주세요."
+          }
+        }
+      }
+    },
+    "support.form.description.member" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "We notify you when your inquiry is answered, and the reply appears in My inquiries."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "답변이 등록되면 알림으로 알려드리고, 내 문의 내역에서 확인할 수 있습니다."
+          }
+        }
+      }
+    },
+    "support.form.email" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "E-mail"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "이메일"
+          }
+        }
+      }
+    },
+    "support.form.email.placeholder" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Address we should reply to"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "회신받을 이메일 주소"
+          }
+        }
+      }
+    },
+    "support.form.subject" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Subject (optional)"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "제목 (선택)"
+          }
+        }
+      }
+    },
+    "support.form.subject.placeholder" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Short summary of your inquiry"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "문의 내용을 한 줄로 요약"
+          }
+        }
+      }
+    },
+    "support.form.submit" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Send inquiry"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "문의 보내기"
+          }
+        }
+      }
+    },
+    "support.form.submitting" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sending…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "보내는 중…"
+          }
+        }
+      }
+    },
+    "support.form.title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Send an inquiry"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "문의 남기기"
+          }
+        }
+      }
+    },
+    "support.guest.entry" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Contact support"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "문의하기"
+          }
+        }
+      }
+    },
+    "support.guest.signInHint" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Sign in before sending an inquiry to read the reply in the app."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "로그인 후 문의하면 앱에서 답변을 확인할 수 있습니다."
+          }
+        }
+      }
+    },
+    "support.guide.block.description" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Block from the ⋯ menu on a friend card, or from the ⋯ menu on the member's calendar. Blocking removes the friendship and hides both calendars, search results, requests and notifications from each other. Duty rosters of the same team stay visible."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "친구 카드의 ⋯ 메뉴 또는 상대방 달력의 ⋯ 메뉴에서 차단할 수 있습니다. 차단하면 친구 관계가 해제되고 서로의 달력·검색·요청·알림이 차단됩니다. 같은 팀 근무표는 계속 표시됩니다."
+          }
+        }
+      }
+    },
+    "support.guide.block.title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Blocking a user"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "사용자 차단"
+          }
+        }
+      }
+    },
+    "support.guide.policy.description" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Every report is reviewed within 24 hours of submission, and we remove the content or suspend the account when needed. To appeal an account suspension, use the inquiry form below."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "접수된 신고는 24시간 이내에 확인해 콘텐츠 삭제나 계정 이용 정지 등 필요한 조치를 합니다. 계정 이용 정지에 대한 이의제기도 아래 문의 양식으로 접수해 주세요."
+          }
+        }
+      }
+    },
+    "support.guide.policy.title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "How we handle reports"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "처리 기준"
+          }
+        }
+      }
+    },
+    "support.guide.report.description" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Open the member's calendar and choose \"Report user\" from the ⋯ menu at the top right, or use the report action on a schedule row or a to-do."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "상대방 달력 우측 상단 ⋯ 메뉴에서 '사용자 신고'를 선택하거나, 일정과 할일의 신고 버튼으로 접수할 수 있습니다."
+          }
+        }
+      }
+    },
+    "support.guide.report.title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reporting a user or content"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "사용자·콘텐츠 신고"
+          }
+        }
+      }
+    },
+    "support.history.answerTitle" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reply"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "답변"
+          }
+        }
+      }
+    },
+    "support.history.answered" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Answered"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "답변 있음"
+          }
+        }
+      }
+    },
+    "support.history.awaiting" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Awaiting reply"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "답변 대기"
+          }
+        }
+      }
+    },
+    "support.history.empty" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You have not sent any inquiries yet."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "아직 접수한 문의가 없습니다."
+          }
+        }
+      }
+    },
+    "support.history.loadFailed" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not load your inquiries."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "문의 내역을 불러오지 못했습니다."
+          }
+        }
+      }
+    },
+    "support.history.loadMore" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Load more"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "더 보기"
+          }
+        }
+      }
+    },
+    "support.history.loading" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loading your inquiries…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "문의 내역을 불러오는 중…"
+          }
+        }
+      }
+    },
+    "support.history.pendingAnswer" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "We will reply after reviewing your inquiry."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "확인 후 답변드리겠습니다."
+          }
+        }
+      }
+    },
+    "support.history.retry" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Try again"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다시 시도"
+          }
+        }
+      }
+    },
+    "support.history.status.closed" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Closed"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "처리완료"
+          }
+        }
+      }
+    },
+    "support.history.status.open" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Received"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "접수됨"
+          }
+        }
+      }
+    },
+    "support.history.subjectFallback" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No subject"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "제목 없음"
+          }
+        }
+      }
+    },
+    "support.intro.description" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Check how reporting and blocking work, then send us a message with the form below."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "신고와 차단 방법, 처리 기준을 확인한 뒤 아래 양식으로 문의를 남겨 주세요."
+          }
+        }
+      }
+    },
+    "support.intro.title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Need help or want to report something?"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "도움이 필요하거나 신고할 내용이 있나요?"
+          }
+        }
+      }
+    },
+    "support.success.message" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "We will reply to the e-mail address you provided. Reports are reviewed within 24 hours."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "입력하신 이메일 주소로 답변드리겠습니다. 신고 건은 접수 후 24시간 이내에 확인합니다."
+          }
+        }
+      }
+    },
+    "support.success.message.member" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "We review inquiries within 24 hours. The reply appears in My inquiries."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "접수 후 24시간 이내에 확인합니다. 답변은 내 문의 내역에서 확인할 수 있습니다."
+          }
+        }
+      }
+    },
+    "support.success.newInquiry" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Write another inquiry"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "새 문의 작성"
+          }
+        }
+      }
+    },
+    "support.success.title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your inquiry has been received"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "문의가 접수되었습니다"
+          }
+        }
+      }
+    },
+    "support.tab.form" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Send inquiry"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "문의하기"
+          }
+        }
+      }
+    },
+    "support.tab.history" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "My inquiries"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 문의 내역"
+          }
+        }
+      }
+    },
+    "support.title" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Support"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "문의하기"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

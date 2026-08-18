@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.todo.service
 
 import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
+import com.tistory.shanepark.dutypark.attachment.repository.AttachmentRepository
 import com.tistory.shanepark.dutypark.attachment.service.AttachmentService
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
@@ -29,6 +30,7 @@ import java.util.*
 class TodoService(
     private val memberRepository: MemberRepository,
     private val todoRepository: TodoRepository,
+    private val attachmentRepository: AttachmentRepository,
     private val attachmentService: AttachmentService,
     private val friendService: FriendService,
     private val eventPublisher: ApplicationEventPublisher
@@ -203,11 +205,18 @@ class TodoService(
         val todo = todoRepository.findById(id).orElseThrow { IllegalArgumentException("Todo not found") }
         verifyOwnership(todo, member)
 
+        deleteTodoInternal(todo)
+    }
+
+    /**
+     * Deletes a todo with its attachments, without any ownership check. Callers are responsible
+     * for authorization (admin moderation calls this directly). Unlike schedules, the todo context
+     * directory is intentionally left untouched, preserving the existing behaviour.
+     */
+    internal fun deleteTodoInternal(todo: Todo) {
         val attachments =
-            attachmentService.listAttachments(loginMember, AttachmentContextType.TODO, id.toString())
-        attachments.forEach { attachmentDto ->
-            attachmentService.deleteAttachment(loginMember, attachmentDto.id)
-        }
+            attachmentRepository.findAllByContextTypeAndContextId(AttachmentContextType.TODO, todo.id.toString())
+        attachments.forEach(attachmentService::deleteAttachment)
 
         todoRepository.delete(todo)
     }

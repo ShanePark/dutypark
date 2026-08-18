@@ -22,7 +22,23 @@ interface MemberRepository : JpaRepository<Member, Long> {
     fun findByEmail(email: String?): Optional<Member>
 
     @EntityGraph(attributePaths = ["team"])
-    fun findMembersByNameContainingIgnoreCaseAndTeamIsNull(name: String, pageable: Pageable): Page<Member>
+    @Query(
+        """
+        SELECT m FROM Member m
+        WHERE LOWER(m.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
+        AND m.team IS NULL
+        AND m.id NOT IN (SELECT b.blocked.id FROM MemberBlock b WHERE b.blocker.id = :memberId)
+        AND m.id NOT IN (SELECT b.blocker.id FROM MemberBlock b WHERE b.blocked.id = :memberId)
+        """,
+        countQuery = """
+        SELECT COUNT(m) FROM Member m
+        WHERE LOWER(m.name) LIKE LOWER(CONCAT('%', :keyword, '%'))
+        AND m.team IS NULL
+        AND m.id NOT IN (SELECT b.blocked.id FROM MemberBlock b WHERE b.blocker.id = :memberId)
+        AND m.id NOT IN (SELECT b.blocker.id FROM MemberBlock b WHERE b.blocked.id = :memberId)
+        """
+    )
+    fun searchMembersToInviteTeam(keyword: String, memberId: Long, pageable: Pageable): Page<Member>
 
     @Query("select m from Member m left join fetch m.team d  where m.id = :memberId")
     fun findMemberWithTeam(memberId: Long): Optional<Member>
@@ -65,6 +81,8 @@ interface MemberRepository : JpaRepository<Member, Long> {
         AND m.id != :memberId
         AND m.id NOT IN (SELECT fr.friend.id FROM FriendRelation fr WHERE fr.member.id = :memberId)
         AND m.id NOT IN (SELECT req.toMember.id FROM FriendRequest req WHERE req.fromMember.id = :memberId AND req.status = 'PENDING')
+        AND m.id NOT IN (SELECT b.blocked.id FROM MemberBlock b WHERE b.blocker.id = :memberId)
+        AND m.id NOT IN (SELECT b.blocker.id FROM MemberBlock b WHERE b.blocked.id = :memberId)
         """,
         countQuery = """
         SELECT COUNT(m) FROM Member m
@@ -72,6 +90,8 @@ interface MemberRepository : JpaRepository<Member, Long> {
         AND m.id != :memberId
         AND m.id NOT IN (SELECT fr.friend.id FROM FriendRelation fr WHERE fr.member.id = :memberId)
         AND m.id NOT IN (SELECT req.toMember.id FROM FriendRequest req WHERE req.fromMember.id = :memberId AND req.status = 'PENDING')
+        AND m.id NOT IN (SELECT b.blocked.id FROM MemberBlock b WHERE b.blocker.id = :memberId)
+        AND m.id NOT IN (SELECT b.blocker.id FROM MemberBlock b WHERE b.blocked.id = :memberId)
         """
     )
     fun searchPossibleFriends(keyword: String, memberId: Long, pageable: Pageable): Page<Member>

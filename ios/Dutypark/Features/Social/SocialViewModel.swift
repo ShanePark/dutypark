@@ -7,6 +7,7 @@ final class SocialViewModel: ObservableObject {
     @Published private(set) var receivedRequests: [FriendRequestDTO] = []
     @Published private(set) var sentRequests: [FriendRequestDTO] = []
     @Published private(set) var searchResults: [MemberPreviewDTO] = []
+    @Published private(set) var blockedMembers: [BlockedMemberDTO] = []
     @Published private(set) var searchPage = 0
     @Published private(set) var searchTotalPages = 0
     @Published private(set) var searchTotalElements: Int64 = 0
@@ -197,6 +198,33 @@ final class SocialViewModel: ObservableObject {
         }
     }
 
+    /// Blocking unfriends both directions on the server, so the confirmed
+    /// mutation is reconciled instead of patched locally.
+    func block(_ friend: DashboardFriendDetailDTO) async {
+        guard let id = friend.member.id else { return }
+        let affectsReceivedRequestCount = receivedRequests.contains {
+            $0.fromMember.id == id
+        }
+        await perform(
+            error: "social.error.block",
+            affectsReceivedRequestCount: affectsReceivedRequestCount,
+            reconcileAfterMutation: true,
+            optimisticUpdate: { friends.removeAll { $0.member.id == id } }
+        ) {
+            try await repository.block(id)
+        }
+    }
+
+    func unblock(_ member: BlockedMemberDTO) async {
+        await perform(
+            error: "social.error.unblock",
+            affectsReceivedRequestCount: false,
+            optimisticUpdate: { blockedMembers.removeAll { $0.id == member.id } }
+        ) {
+            try await repository.unblock(member.id)
+        }
+    }
+
     func togglePin(_ friend: DashboardFriendDetailDTO) async {
         guard let id = friend.member.id else { return }
 #if DEBUG
@@ -275,6 +303,7 @@ final class SocialViewModel: ObservableObject {
         receivedRequests = info.pendingRequestsTo
         sentRequests = info.pendingRequestsFrom
         pinnedOrderIDs = nil
+        blockedMembers = try await repository.blockedMembers()
     }
 
     private func perform(
@@ -334,6 +363,7 @@ final class SocialViewModel: ObservableObject {
             receivedRequests: receivedRequests,
             sentRequests: sentRequests,
             searchResults: searchResults,
+            blockedMembers: blockedMembers,
             pinnedOrderIDs: pinnedOrderIDs
         )
     }
@@ -343,6 +373,7 @@ final class SocialViewModel: ObservableObject {
         receivedRequests = snapshot.receivedRequests
         sentRequests = snapshot.sentRequests
         searchResults = snapshot.searchResults
+        blockedMembers = snapshot.blockedMembers
         pinnedOrderIDs = snapshot.pinnedOrderIDs
     }
 
@@ -351,6 +382,7 @@ final class SocialViewModel: ObservableObject {
         let receivedRequests: [FriendRequestDTO]
         let sentRequests: [FriendRequestDTO]
         let searchResults: [MemberPreviewDTO]
+        let blockedMembers: [BlockedMemberDTO]
         let pinnedOrderIDs: [MemberID]?
     }
 
@@ -401,6 +433,7 @@ final class SocialViewModel: ObservableObject {
         }
         receivedRequests = []
         sentRequests = []
+        blockedMembers = []
         pinnedOrderIDs = nil
         errorKey = nil
         uiTestingPinnedOrderSaveCount = 0

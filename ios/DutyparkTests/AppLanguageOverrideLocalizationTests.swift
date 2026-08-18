@@ -42,6 +42,7 @@ struct AppLanguageOverrideLocalizationTests {
                 "알림",
                 "관리자",
                 "이용 안내",
+                "문의하기",
                 "설정",
                 "로그아웃",
             ])

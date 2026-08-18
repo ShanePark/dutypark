@@ -120,6 +120,8 @@ struct RootTabView: View {
     @State private var morePath: [MoreDestination] = []
     @State private var todoTarget: TodoID?
     @State private var settingsDestination: SettingsDestination?
+    @State private var supportTab: SupportTab = .form
+    @State private var supportPresentationID = 0
     // Bumped when the profile photo changes so the cached avatar in the "more" tab is
     // refetched instead of showing the replaced image.
     @State private var profilePhotoVersion: Int64 = 0
@@ -435,7 +437,7 @@ struct RootTabView: View {
             showsNotificationCenter = true
         case .logout:
             showsLogoutConfirmation = true
-        case .friends, .admin, .guide, .settings:
+        case .friends, .admin, .guide, .support, .settings:
             guard let destination = RootNavigationPolicy.moreDestination(for: item) else { return }
             openMore(destination)
         }
@@ -462,6 +464,15 @@ struct RootTabView: View {
             .navigationBarTitleDisplayMode(.inline)
         case .guide:
             PublicGuideView()
+        case .support:
+            SupportView(
+                prefilledEmail: authenticatedMember?.email,
+                isSignedIn: authenticatedMember != nil,
+                initialTab: supportTab
+            )
+            // The screen owns its tab once it exists, so a notification arriving while
+            // support is already open has to rebuild it to land on the history tab.
+            .id(supportPresentationID)
         case .myInfo:
             MyInfoView {
                 homeRefreshID &+= 1
@@ -482,11 +493,20 @@ struct RootTabView: View {
     // the only thing on the "more" stack instead of stacking on whatever was open.
     private func openMore(
         _ destination: MoreDestination,
-        settingsDestination: SettingsDestination? = nil
+        settingsDestination: SettingsDestination? = nil,
+        supportTab: SupportTab? = nil
     ) {
         self.settingsDestination = RootNavigationPolicy.settingsDestination(
             for: destination,
             requested: settingsDestination
+        )
+        self.supportTab = RootNavigationPolicy.supportTab(
+            for: destination,
+            requested: supportTab
+        )
+        supportPresentationID = RootNavigationPolicy.supportPresentationID(
+            for: destination,
+            current: supportPresentationID
         )
         morePath = [destination]
         selectedTab = .more
@@ -613,6 +633,9 @@ struct RootTabView: View {
             todoTarget = todoID
             selectedTab = .todo
             return true
+        case .support:
+            openMore(.support, supportTab: .history)
+            return true
         }
     }
 
@@ -697,7 +720,11 @@ struct RootTabView: View {
             return true
         }
         if let destination = RootMoreDeepLinkPolicy.destination(from: url) {
-            openMore(destination, settingsDestination: SettingsDeepLink.destination(from: url))
+            openMore(
+                destination,
+                settingsDestination: SettingsDeepLink.destination(from: url),
+                supportTab: RootMoreDeepLinkPolicy.supportTab(from: url)
+            )
             return true
         }
 
@@ -753,6 +780,8 @@ nonisolated enum RootNavigationPolicy {
             .admin
         case .guide:
             .guide
+        case .support:
+            .support
         case .settings:
             .settings
         case .notifications, .logout:
@@ -767,6 +796,24 @@ nonisolated enum RootNavigationPolicy {
         requested: SettingsDestination?
     ) -> SettingsDestination? {
         destination == .settings ? requested : nil
+    }
+
+    // Only an inquiry-answered notification asks for the history tab; every other way
+    // into support opens the inquiry form, so a stale request cannot follow the member.
+    static func supportTab(
+        for destination: MoreDestination,
+        requested: SupportTab?
+    ) -> SupportTab {
+        destination == .support ? (requested ?? .form) : .form
+    }
+
+    /// Reopening support must rebuild its state even when the requested tab has not
+    /// changed, because the member may have switched tabs since the previous route.
+    static func supportPresentationID(
+        for destination: MoreDestination,
+        current: Int
+    ) -> Int {
+        destination == .support ? current &+ 1 : current
     }
 
     static func scheduleMemberID(
@@ -836,6 +883,7 @@ nonisolated enum MoreDestination: Hashable, Sendable {
     case admin
     case friends
     case guide
+    case support
     case myInfo
     case settings
     case memberCalendar(MemberCalendarRoute)
@@ -864,9 +912,16 @@ nonisolated enum RootMoreDeepLinkPolicy {
             return destination(for: settingsDestination)
         }
         guard url.scheme?.lowercased() == "https",
-              url.host?.lowercased() == allowedHost.lowercased(),
-              url.pathComponents.filter({ $0 != "/" }).first == "member"
+              url.host?.lowercased() == allowedHost.lowercased()
         else { return nil }
+
+        let components = url.pathComponents.filter { $0 != "/" }
+        // Support is not a preference document, so it opens directly under More
+        // instead of going through the settings screen.
+        if components == ["support"] {
+            return .support
+        }
+        guard components.first == "member" else { return nil }
         return .myInfo
     }
 
@@ -874,6 +929,20 @@ nonisolated enum RootMoreDeepLinkPolicy {
     // More; the policy screens are rendered by the settings model and stay behind it.
     static func destination(for settingsDestination: SettingsDestination) -> MoreDestination {
         settingsDestination == .guide ? .guide : .settings
+    }
+
+    static func supportTab(
+        from url: URL,
+        allowedHost: String = "dutypark.o-r.kr"
+    ) -> SupportTab? {
+        guard destination(from: url, allowedHost: allowedHost) == .support,
+              URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                .queryItems?
+                .first(where: { $0.name == "tab" })?
+                .value?
+                .lowercased() == SupportTab.history.rawValue
+        else { return nil }
+        return .history
     }
 }
 

@@ -9,6 +9,7 @@ import { isLightColor } from '@/utils/color'
 import { resolveApiCodeMessage, resolveApiErrorMessage } from '@/utils/resolveApiError'
 import { buildDutyTypeCounts } from '@/utils/dutyTypeCounts'
 import { isOwnedCalendarSchedule } from '@/utils/schedulePermissions'
+import { buildLoginRoute } from '@/utils/redirect'
 import { Loader2 } from 'lucide-vue-next'
 
 import DayDetailModal from '@/components/duty/DayDetailModal.vue'
@@ -24,11 +25,15 @@ import DutyTypesBar from '@/components/duty/DutyTypesBar.vue'
 import DutyCalendarContent from '@/components/duty/DutyCalendarContent.vue'
 import DDayList from '@/components/duty/DDayList.vue'
 import YearMonthPicker from '@/components/common/YearMonthPicker.vue'
+import ReportModal from '@/components/common/ReportModal.vue'
 
 import { todoApi } from '@/api/todo'
 import { dutyApi } from '@/api/duty'
 import { ddayApi, memberApi, friendApi } from '@/api/member'
 import { scheduleApi, type ScheduleDto } from '@/api/schedule'
+import { reportApi } from '@/api/report'
+import { blockApi } from '@/api/block'
+import type { ReportSubmission, ReportTarget } from '@/types/report'
 import type { DutyCalendarDay, TeamDto, DDayDto, DDaySaveDto, HolidayDto, TaggableFriend, Todo as TodoDto, TodoStatus } from '@/types'
 import type { LocalTodo, DutyType, Schedule, LocalDDay, CalendarDay, OtherDuty, DutyTypeWithCount, DutyDay, TodoDueItem } from './dutyViewTypes'
 
@@ -58,6 +63,7 @@ const isMyCalendar = computed(() => {
   return loggedInUserId !== undefined && loggedInUserId === memberId.value
 })
 const amIManager = ref(false)
+const isLoggedIn = computed(() => authStore.isLoggedIn)
 
 // canEdit: true if own calendar or manager of target member
 const canEdit = computed(() => isMyCalendar.value || amIManager.value)
@@ -1329,6 +1335,109 @@ async function handleUntagSelf(schedule: Pick<Schedule, 'id' | 'content'>) {
   }
 }
 
+const reportTarget = ref<ReportTarget | null>(null)
+const isSubmittingReport = ref(false)
+
+// The to-do detail modal on this view only ever shows my own board, so a to-do is
+// someone else's content exactly when it was tagged onto me.
+const canReportSelectedTodo = computed(
+  () => isLoggedIn.value && (!isMyCalendar.value || !!selectedTodo.value?.isTagged)
+)
+
+/** Guests can see the report entry points; tapping one sends them to login and back. */
+async function requireLogin(): Promise<boolean> {
+  if (isLoggedIn.value) return true
+
+  if (await confirm(t('report.login.message'), t('report.login.title'), t('report.login.confirm'))) {
+    router.push(buildLoginRoute(route.fullPath))
+  }
+  return false
+}
+
+async function openMemberReport() {
+  if (!await requireLogin()) return
+  reportTarget.value = {
+    targetType: 'MEMBER',
+    targetId: String(memberId.value),
+    targetName: memberName.value,
+  }
+}
+
+async function openScheduleReport(schedule: Pick<Schedule, 'id' | 'content'>) {
+  if (!await requireLogin()) return
+  reportTarget.value = {
+    targetType: 'SCHEDULE',
+    targetId: schedule.id,
+    targetName: schedule.content,
+  }
+}
+
+async function openTodoReport(todo: Pick<LocalTodo, 'id' | 'title'>) {
+  if (!await requireLogin()) return
+  reportTarget.value = {
+    targetType: 'TODO',
+    targetId: todo.id,
+    targetName: todo.title,
+  }
+}
+
+async function handleReportSubmit(submission: ReportSubmission) {
+  const target = reportTarget.value
+  if (!target || isSubmittingReport.value) return
+
+  isSubmittingReport.value = true
+  try {
+    // A duplicate open report answers 200 instead of 201; both mean the report is on file.
+    await reportApi.createReport({
+      targetType: target.targetType,
+      targetId: target.targetId,
+      reason: submission.reason,
+      detail: submission.detail || undefined,
+      alsoBlock: submission.alsoBlock,
+    })
+    reportTarget.value = null
+    toastSuccess(t('report.messages.submitted'))
+    if (submission.alsoBlock) {
+      if (isMyCalendar.value) {
+        await refreshAfterBlock()
+      } else {
+        goBack('/')
+      }
+    }
+  } catch (error) {
+    console.error('Failed to submit report:', error)
+    showError(resolveApiErrorMessage(error, { fallbackKey: 'report.messages.submitFailed' }, t))
+  } finally {
+    isSubmittingReport.value = false
+  }
+}
+
+/**
+ * Blocking also ends the friendship, so on my own calendar the blocked member's tagged content,
+ * the friend selector and any duties overlaid from them are stale until they are refetched.
+ */
+async function refreshAfterBlock() {
+  await loadFriends()
+  const remainingFriendIds = new Set(friends.value.map((friend) => friend.id))
+  selectedFriendIds.value = selectedFriendIds.value.filter((id) => remainingFriendIds.has(id))
+  await Promise.all([loadSchedules(), loadTodos(), loadOtherDuties()])
+}
+
+async function handleBlockMember() {
+  if (!isLoggedIn.value || isMyCalendar.value) return
+  if (!await confirm(t('report.block.message'), t('report.block.title'), t('report.block.confirm'))) return
+
+  try {
+    await blockApi.block(memberId.value)
+    toastSuccess(t('report.block.success', { name: memberName.value }))
+    // The calendar is no longer visible to either side, so leave it right away.
+    goBack('/')
+  } catch (error) {
+    console.error('Failed to block member:', error)
+    showError(resolveApiErrorMessage(error, { fallbackKey: 'report.block.failed' }, t))
+  }
+}
+
 async function handleChangeDutyType(dutyTypeId: number | null) {
   if (!memberId.value || !selectedDay.value) return
   // Allow if viewing own calendar OR if user has manager permission
@@ -1479,6 +1588,8 @@ async function showExcelUploadModal() {
       :current-month="currentMonth"
       :can-search="canSearch"
       :show-back="!isMyCalendar"
+      :show-member-menu="!isMyCalendar"
+      :show-block="isLoggedIn && !isMyCalendar"
       v-model:searchQuery="searchQuery"
       @back="goBack('/')"
       @prev-month="prevMonth"
@@ -1487,6 +1598,8 @@ async function showExcelUploadModal() {
       @go-to-this-month="goToToday"
       @search="handleSearch()"
       @open-search-modal="openSearchModal"
+      @report-member="openMemberReport"
+      @block-member="handleBlockMember"
     />
 
     <DutyTodoRow
@@ -1566,12 +1679,15 @@ async function showExcelUploadModal() {
       :friends="friends"
       :member-id="memberId"
       :is-my-calendar="isMyCalendar"
+      :is-logged-in="isLoggedIn"
+      :viewer-member-id="authStore.user?.id ?? null"
       @close="isDayDetailModalOpen = false"
       @create-schedule="handleCreateSchedule"
       @edit-schedule="handleEditSchedule"
       @delete-schedule="handleDeleteSchedule"
       @reorder-schedules="handleReorderSchedules"
       @untag-self="handleUntagSelf"
+      @report-schedule="openScheduleReport"
       @change-duty-type="handleChangeDutyType"
     />
 
@@ -1587,10 +1703,12 @@ async function showExcelUploadModal() {
       :is-open="isTodoDetailModalOpen"
       :todo="selectedTodo"
       :friends="friends"
+      :can-report="canReportSelectedTodo"
       @close="isTodoDetailModalOpen = false"
       @update="handleTodoUpdate"
       @delete="handleTodoDelete"
       @untag-self="handleTodoUntagSelf"
+      @report="openTodoReport"
       @back-to-list="handleTodoBackToList"
     />
 
@@ -1634,6 +1752,14 @@ async function showExcelUploadModal() {
     />
 
     </template>
+
+    <ReportModal
+      :is-open="!!reportTarget"
+      :target="reportTarget"
+      :is-submitting="isSubmittingReport"
+      @close="reportTarget = null"
+      @submit="handleReportSubmit"
+    />
 
     <YearMonthPicker
       :is-open="isYearMonthPickerOpen"

@@ -60,6 +60,16 @@ class Member(
         deletionRequestedAt = requestedAt
     }
 
+    fun suspend() {
+        check(status == MemberStatus.ACTIVE)
+        status = MemberStatus.SUSPENDED
+    }
+
+    fun reinstate() {
+        check(status == MemberStatus.SUSPENDED)
+        status = MemberStatus.ACTIVE
+    }
+
     override fun toString(): String {
         return "Member(name='$name', id=$id)"
     }

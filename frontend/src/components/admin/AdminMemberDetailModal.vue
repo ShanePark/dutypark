@@ -5,6 +5,7 @@ import BaseModal from '@/components/common/BaseModal.vue'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 import type { AdminMemberDetailDto, AdminMemberDto } from '@/types'
 import { getVisibilityIcon, getVisibilityLabel } from '@/utils/visibility'
+import { MEMBER_STATUS_LABEL_KEYS, memberStatusToneClass } from './adminModerationLabels'
 import {
   Bell,
   CalendarDays,
@@ -20,23 +21,30 @@ import {
   X,
 } from 'lucide-vue-next'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   open: boolean
   member: AdminMemberDto | null
   memberDetail: AdminMemberDetailDto | null
   loading: boolean
   loadError: string | null
-}>()
+  suspensionWorking?: boolean
+}>(), {
+  suspensionWorking: false,
+})
 
 const emit = defineEmits<{
   close: []
   retry: []
   goToSchedule: [memberId: number]
   changePassword: [member: AdminMemberDto]
+  suspend: [member: AdminMemberDto]
+  unsuspend: [member: AdminMemberDto]
 }>()
 
 const { t, locale } = useI18n()
 const effectiveMember = computed(() => props.memberDetail ?? props.member)
+const memberStatus = computed(() => props.memberDetail?.status ?? props.member?.status ?? null)
+const isSuspended = computed(() => memberStatus.value === 'SUSPENDED')
 const visibilityLabel = computed(() => {
   locale.value
   if (!props.memberDetail) return t('admin.memberDetail.loading')
@@ -253,6 +261,15 @@ function openPasswordModal() {
   if (!props.member) return
   emit('changePassword', props.member)
 }
+
+function toggleSuspension() {
+  if (!props.member) return
+  if (isSuspended.value) {
+    emit('unsuspend', props.member)
+  } else {
+    emit('suspend', props.member)
+  }
+}
 </script>
 
 <template>
@@ -315,6 +332,11 @@ function openPasswordModal() {
                         {{ effectiveMember?.name ?? t('admin.memberDetail.titleFallback') }}
                       </h3>
                       <span class="member-inline-badge">ID {{ effectiveMember?.id ?? '-' }}</span>
+                      <span
+                        v-if="memberStatus"
+                        class="member-chip"
+                        :class="memberStatusToneClass(memberStatus)"
+                      >{{ t(MEMBER_STATUS_LABEL_KEYS[memberStatus]) }}</span>
                     </div>
                     <p class="mt-1 text-sm sm:text-base text-dp-text-secondary break-all">
                       {{ effectiveMember?.email || t('admin.memberDetail.values.noEmail') }}
@@ -350,6 +372,16 @@ function openPasswordModal() {
                     @click="openPasswordModal"
                   >
                     {{ t('admin.memberDetail.actions.changePassword') }}
+                  </button>
+                  <button
+                    class="member-action-button col-span-2"
+                    :class="isSuspended ? 'member-action-button-warning' : 'member-action-button-danger'"
+                    :disabled="suspensionWorking"
+                    @click="toggleSuspension"
+                  >
+                    {{ isSuspended
+                      ? t('admin.memberDetail.suspension.unsuspend')
+                      : t('admin.memberDetail.suspension.suspend') }}
                   </button>
                 </div>
               </div>
@@ -595,6 +627,16 @@ function openPasswordModal() {
 .member-action-button-warning {
   background-color: var(--dp-warning-bg);
   color: var(--dp-warning);
+}
+
+.member-action-button-danger {
+  background-color: var(--dp-danger-bg);
+  color: var(--dp-danger);
+}
+
+.member-action-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .member-action-button-icon {

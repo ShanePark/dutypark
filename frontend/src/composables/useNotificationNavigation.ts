@@ -20,6 +20,7 @@ export function useNotificationNavigation() {
       SCHEDULE: null,
       TODO: '/todo',
       MEMBER: referenceId ? `/duty/${referenceId}` : null,
+      INQUIRY: '/support?tab=history',
     }
 
     return typeRoutes[referenceType] || null

@@ -32,6 +32,8 @@ class JwtAuthFilter(
         var jwt = ""
         var status = NOT_EXIST
         var tokenFromCookie = false
+        var credentialsPresented = request.getHeader(HttpHeaders.AUTHORIZATION) != null
+        var authenticated = false
 
         val bearerToken = extractBearerToken(request)
         if (bearerToken != null) {
@@ -44,6 +46,7 @@ class JwtAuthFilter(
         if (status != VALID) {
             val cookieToken = cookieService.extractAccessToken(request.cookies)
             if (cookieToken != null) {
+                credentialsPresented = true
                 val cookieStatus = authService.validateToken(cookieToken)
                 if (cookieStatus == VALID) {
                     jwt = cookieToken
@@ -57,11 +60,16 @@ class JwtAuthFilter(
             try {
                 val loginMember = authService.tokenToLoginMember(jwt)
                 request.setAttribute(LoginMember.ATTR_NAME, loginMember)
+                authenticated = true
             } catch (_: AuthException) {
                 if (tokenFromCookie) {
                     cookieService.clearTokenCookies(response)
                 }
             }
+        }
+
+        if (credentialsPresented && !authenticated) {
+            request.setAttribute(AUTHENTICATION_FAILED_ATTRIBUTE, true)
         }
 
         chain.doFilter(req, response)
@@ -92,6 +100,7 @@ class JwtAuthFilter(
     }
 
     companion object {
+        const val AUTHENTICATION_FAILED_ATTRIBUTE = "dutypark.authentication.failed"
         private const val BEARER_PREFIX = "Bearer "
     }
 }

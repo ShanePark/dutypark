@@ -27,6 +27,8 @@ const templates: Record<string, string> = {
   'notifications.items.todoStatusInProgressFallback.v1': '[{todoTitle}] TODO가 진행중으로 변경되었습니다.',
   'notifications.items.todoStatusDone.v1': '{actorName}님이 [{todoTitle}] TODO를 완료 처리했습니다.',
   'notifications.items.todoStatusDoneFallback.v1': '[{todoTitle}] TODO가 완료 처리되었습니다.',
+  'notifications.items.inquiryAnswered.v1': '문의 [{subject}]에 답변이 등록되었습니다.',
+  'notifications.items.inquiryAnsweredFallback.v1': '문의에 답변이 등록되었습니다.',
 }
 
 const t: NotificationTranslate = (key, params = {}) => {
@@ -72,6 +74,7 @@ const supportedTypes: NotificationDto['type'][] = [
   'TODO_STATUS_TODO',
   'TODO_STATUS_IN_PROGRESS',
   'TODO_STATUS_DONE',
+  'INQUIRY_ANSWERED',
 ]
 
 describe('notificationFormatter', () => {
@@ -264,6 +267,36 @@ describe('notificationFormatter', () => {
     cases.forEach(({ notification, expected }) => {
       expect(formatNotificationMessage(notification, t)).toBe(expected)
     })
+  })
+
+  it('names the inquiry in the answered notification', () => {
+    const notification = createNotification({
+      type: 'INQUIRY_ANSWERED',
+      referenceType: 'INQUIRY',
+      referenceId: '0f2b6d4c-2d5f-4f4c-9a53-9d0f2b6d4c2d',
+      actorId: null,
+      payload: {
+        version: 1,
+        subject: '결제 오류',
+      },
+    })
+
+    expect(formatNotificationMessage(notification, t)).toBe('문의 [결제 오류]에 답변이 등록되었습니다.')
+    expect(getNotificationActor(notification)).toBeNull()
+  })
+
+  it.each([null, '   '])('falls back to subject-less inquiry copy for %j', (subject) => {
+    const notification = createNotification({
+      type: 'INQUIRY_ANSWERED',
+      referenceType: 'INQUIRY',
+      actorId: null,
+      payload: {
+        version: 1,
+        subject,
+      },
+    })
+
+    expect(formatNotificationMessage(notification, t)).toBe('문의에 답변이 등록되었습니다.')
   })
 
   it('uses fallback copy when actor name is blank', () => {

@@ -9,6 +9,15 @@ import type {
   AdminMemberDetailDto,
   RefreshTokenDto,
 } from '@/types'
+import type {
+  AdminInquiryDto,
+  AdminReportDetailDto,
+  AdminReportSummaryDto,
+  InquiryStatusFilter,
+  ReportStatusFilter,
+  UpdateInquiryStatusRequest,
+  UpdateReportStatusRequest,
+} from '@/types/adminModeration'
 
 // Separate axios instance for admin API (different base path)
 // Cookies are sent automatically via withCredentials
@@ -50,6 +59,21 @@ export const adminApi = {
     return adminClient.get<RefreshTokenDto[]>('/refresh-tokens')
   },
 
+  /**
+   * Suspend a member: sign-in is refused and every existing session is revoked.
+   * Idempotent when the member is already suspended.
+   */
+  suspendMember(memberId: number) {
+    return adminClient.post(`/members/${memberId}/suspension`)
+  },
+
+  /**
+   * Lift a member suspension. Idempotent when the member is not suspended.
+   */
+  unsuspendMember(memberId: number) {
+    return adminClient.delete(`/members/${memberId}/suspension`)
+  },
+
   // ========== Team Management ==========
 
   /**
@@ -80,6 +104,65 @@ export const adminApi = {
    */
   deleteTeam(teamId: number) {
     return adminClient.delete(`/teams/${teamId}`)
+  },
+
+  // ========== Report Management ==========
+
+  /**
+   * Get content reports with pagination. `ALL` drops the status filter.
+   */
+  getReports(status: ReportStatusFilter = 'OPEN', page: number = 0, size: number = 10) {
+    return adminClient.get<PageResponse<AdminReportSummaryDto>>('/reports', {
+      params: { status: status === 'ALL' ? undefined : status, page, size },
+    })
+  },
+
+  /**
+   * Get a single report with its snapshot and moderation state
+   */
+  getReport(reportId: string) {
+    return adminClient.get<AdminReportDetailDto>(`/reports/${reportId}`)
+  },
+
+  /**
+   * Resolve or dismiss a report, optionally recording an admin memo.
+   * An omitted memo keeps the one already recorded; an empty memo clears it.
+   */
+  updateReportStatus(reportId: string, request: UpdateReportStatusRequest) {
+    return adminClient.patch<AdminReportDetailDto>(`/reports/${reportId}/status`, request)
+  },
+
+  /**
+   * Delete the reported content. Member targets are not deletable.
+   */
+  deleteReportTarget(reportId: string) {
+    return adminClient.delete<AdminReportDetailDto>(`/reports/${reportId}/target`)
+  },
+
+  // ========== Inquiry Management ==========
+
+  /**
+   * Get inquiries with pagination. `ALL` drops the status filter.
+   */
+  getInquiries(status: InquiryStatusFilter = 'OPEN', page: number = 0, size: number = 10) {
+    return adminClient.get<PageResponse<AdminInquiryDto>>('/inquiries', {
+      params: { status: status === 'ALL' ? undefined : status, page, size },
+    })
+  },
+
+  /**
+   * Get a single inquiry
+   */
+  getInquiry(inquiryId: string) {
+    return adminClient.get<AdminInquiryDto>(`/inquiries/${inquiryId}`)
+  },
+
+  /**
+   * Change an inquiry status, optionally recording an admin memo.
+   * An omitted memo keeps the one already recorded; an empty memo clears it.
+   */
+  updateInquiryStatus(inquiryId: string, request: UpdateInquiryStatusRequest) {
+    return adminClient.patch<AdminInquiryDto>(`/inquiries/${inquiryId}/status`, request)
   },
 }
 

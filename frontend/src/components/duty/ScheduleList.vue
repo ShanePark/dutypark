@@ -3,6 +3,7 @@ import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import Sortable from 'sortablejs'
 import { useI18n } from 'vue-i18n'
 import {
+  Flag,
   GripVertical,
   Paperclip,
   Pencil,
@@ -17,7 +18,7 @@ import { useDragClickGuard } from '@/composables/useDragClickGuard'
 import type { NormalizedAttachment } from '@/types'
 import { normalizeAttachment } from '@/api/attachment'
 import { buildDisplayTagMembers } from '@/utils/tagMembers'
-import { canEditCalendarSchedule } from '@/utils/schedulePermissions'
+import { canEditCalendarSchedule, canReportCalendarSchedule } from '@/utils/schedulePermissions'
 
 interface Schedule {
   id: string
@@ -59,6 +60,8 @@ const props = defineProps<{
   canEdit: boolean
   isMyCalendar: boolean
   memberId: number
+  isLoggedIn?: boolean
+  viewerMemberId?: number | null
 }>()
 
 const emit = defineEmits<{
@@ -66,6 +69,7 @@ const emit = defineEmits<{
   (e: 'delete', schedule: Pick<Schedule, 'id' | 'content'>): void
   (e: 'reorder', scheduleIds: string[]): void
   (e: 'request-untag', schedule: Pick<Schedule, 'id' | 'content'>): void
+  (e: 'report', schedule: Pick<Schedule, 'id' | 'content'>): void
 }>()
 
 const { t } = useI18n()
@@ -205,6 +209,15 @@ function canUntagSchedule(schedule: Schedule) {
   return schedule.isTagged && props.isMyCalendar
 }
 
+function canReportSchedule(schedule: Schedule) {
+  const ownerMemberId = schedule.isTagged ? schedule.taggedByMember?.id ?? null : props.memberId
+  return canReportCalendarSchedule(
+    !!props.isLoggedIn,
+    props.viewerMemberId ?? null,
+    ownerMemberId,
+  )
+}
+
 function shouldShowVisibility(schedule: Schedule) {
   return props.isMyCalendar && schedule.isMine
 }
@@ -272,7 +285,7 @@ function handleTagClick(schedule: Schedule) {
               </div>
 
               <div
-                v-if="shouldShowVisibility(schedule) || canUntagSchedule(schedule) || canEditSchedule(schedule)"
+                v-if="shouldShowVisibility(schedule) || canUntagSchedule(schedule) || canEditSchedule(schedule) || canReportSchedule(schedule)"
                 class="schedule-action-row flex shrink-0 items-center gap-1"
               >
                 <VisibilityHintIcon
@@ -281,6 +294,15 @@ function handleTagClick(schedule: Schedule) {
                   size="sm"
                   class="schedule-primary-visibility"
                 />
+                <button
+                  v-if="canReportSchedule(schedule)"
+                  @click="emit('report', { id: schedule.id, content: schedule.content })"
+                  class="p-1.5 rounded-lg hover-icon-btn cursor-pointer text-dp-text-muted"
+                  :title="t('report.actions.report')"
+                  :aria-label="t('report.actions.report')"
+                >
+                  <Flag class="w-4 h-4" />
+                </button>
                 <button
                   v-if="canUntagSchedule(schedule)"
                   @click="emit('request-untag', { id: schedule.id, content: schedule.content })"

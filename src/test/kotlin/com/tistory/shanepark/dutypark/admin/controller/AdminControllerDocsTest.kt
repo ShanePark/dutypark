@@ -52,6 +52,7 @@ class AdminControllerDocsTest : RestDocsTest() {
                         fieldWithPath("email").description("이메일").optional(),
                         fieldWithPath("teamId").description("소속 팀 ID").optional(),
                         fieldWithPath("teamName").description("소속 팀 이름").optional(),
+                        fieldWithPath("status").description("계정 상태(ACTIVE, DELETION_PENDING, SUSPENDED)"),
                         fieldWithPath("calendarVisibility").description("캘린더 공개 범위"),
                         fieldWithPath("hasProfilePhoto").description("프로필 사진 보유 여부"),
                         fieldWithPath("profilePhotoVersion").description("프로필 사진 버전"),
@@ -92,6 +93,46 @@ class AdminControllerDocsTest : RestDocsTest() {
                         subsectionWithPath("managedMemberNames").description("이 회원이 관리하는 계정 이름 목록"),
                         fieldWithPath("totalNotificationCount").description("전체 알림 수"),
                         fieldWithPath("unreadNotificationCount").description("읽지 않은 알림 수"),
+                    )
+                )
+            )
+    }
+
+    @Test
+    fun `admin suspends a member`() {
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.post("/admin/api/members/{memberId}/suspension", TestData.member.id!!)
+                .withAuth(TestData.admin)
+        )
+            .andExpect(status().isOk)
+            .andDo(
+                document(
+                    "admin/members-suspend",
+                    pathParameters(
+                        parameterWithName("memberId").description("이용 정지할 회원 ID")
+                    )
+                )
+            )
+    }
+
+    @Test
+    fun `admin lifts a member suspension`() {
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.post("/admin/api/members/{memberId}/suspension", TestData.member.id!!)
+                .withAuth(TestData.admin)
+        )
+            .andExpect(status().isOk)
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.delete("/admin/api/members/{memberId}/suspension", TestData.member.id!!)
+                .withAuth(TestData.admin)
+        )
+            .andExpect(status().isOk)
+            .andDo(
+                document(
+                    "admin/members-reinstate",
+                    pathParameters(
+                        parameterWithName("memberId").description("이용 정지를 해제할 회원 ID")
                     )
                 )
             )

@@ -58,6 +58,12 @@
     "notifications.items.todoStatusDoneFallback" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "TODO [%@] was marked as done." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "[%@] TODO가 완료 처리되었습니다." } }
     } },
+    "notifications.items.inquiryAnswered" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Your inquiry [%@] has been answered." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "문의 [%@]에 답변이 등록되었습니다." } }
+    } },
+    "notifications.items.inquiryAnsweredFallback" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Your inquiry has been answered." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "문의에 답변이 등록되었습니다." } }
+    } },
     "auth.login.backHome" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Back to home" } },
       "ko" : { "stringUnit" : { "state" : "translated", "value" : "홈으로 돌아가기" } }
@@ -98,6 +104,24 @@
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Login has been temporarily blocked. Please try again later." } },
         "ko" : { "stringUnit" : { "state" : "translated", "value" : "로그인이 차단되었습니다. 잠시 후 다시 시도해주세요." } }
+      }
+    },
+    "auth.login.error.network" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Unable to reach the server. Check your network connection and try again." } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "서버에 연결할 수 없습니다. 네트워크 상태를 확인한 뒤 다시 시도해주세요." } }
+      }
+    },
+    "auth.login.error.server" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "The server is temporarily unavailable. Please try again shortly. (error %lld)" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "서버에 일시적인 문제가 발생했습니다. 잠시 후 다시 시도해주세요. (오류 %lld)" } }
+      }
+    },
+    "auth.login.error.unknown" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to log in. Please try again shortly. (error %lld)" } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "로그인에 실패했습니다. 잠시 후 다시 시도해주세요. (오류 %lld)" } }
       }
     },
     "auth.login.passwordLabel" : {
@@ -290,6 +314,22 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "설정"
+          }
+        }
+      }
+    },
+    "root.menu.support" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Support"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "문의하기"
           }
         }
       }

@@ -22,12 +22,14 @@ final class SettingsDeepLinkTests: XCTestCase {
         XCTAssertEqual(moreRoute("https://dutypark.o-r.kr/privacy"), .settings)
         XCTAssertEqual(moreRoute("https://dutypark.o-r.kr/member"), .myInfo)
         XCTAssertEqual(moreRoute("https://dutypark.o-r.kr/member/edit"), .myInfo)
+        XCTAssertEqual(moreRoute("https://dutypark.o-r.kr/support"), .support)
     }
 
     func testRejectsUntrustedOrUnknownMoreRoutes() {
         XCTAssertNil(moreRoute("http://dutypark.o-r.kr/member"))
         XCTAssertNil(moreRoute("https://example.com/member"))
         XCTAssertNil(moreRoute("https://dutypark.o-r.kr/todo"))
+        XCTAssertNil(moreRoute("https://dutypark.o-r.kr/support/faq"))
         XCTAssertNil(moreRoute("https://dutypark.o-r.kr/"))
     }
 

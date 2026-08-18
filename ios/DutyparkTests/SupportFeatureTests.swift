@@ -1,0 +1,644 @@
+import Foundation
+import Testing
+@testable import Dutypark
+
+@MainActor
+struct SupportFeatureTests {
+    @Test
+    func theAccountEmailIsPrefilledAndTrimmed() {
+        let model = SupportViewModel(prefilledEmail: "  member@dutypark.dev  ", repository: SupportRepositorySpy())
+        #expect(model.email == "member@dutypark.dev")
+        #expect(SupportViewModel(prefilledEmail: nil, repository: SupportRepositorySpy()).email.isEmpty)
+    }
+
+    @Test
+    func submissionRequiresAnEmailAddress() async {
+        let repository = SupportRepositorySpy()
+        let model = SupportViewModel(prefilledEmail: "   ", repository: repository)
+        model.content = "The other member keeps posting spam."
+
+        await model.submit()
+
+        #expect(model.errorKey == "support.error.emailRequired")
+        #expect(repository.submissions.isEmpty)
+        #expect(!model.didSubmit)
+    }
+
+    @Test
+    func submissionRejectsAMalformedEmailAddress() async {
+        let repository = SupportRepositorySpy()
+        let model = SupportViewModel(prefilledEmail: "member@dutypark", repository: repository)
+        model.content = "The other member keeps posting spam."
+
+        await model.submit()
+
+        #expect(model.errorKey == "support.error.emailInvalid")
+        #expect(repository.submissions.isEmpty)
+
+        for rejected in ["member", "@dutypark.dev", "member@", "mem ber@dutypark.dev", "member@.dev", "member@dutypark..dev"] {
+            #expect(!SupportViewModel.isValidEmail(rejected), "Accepted \(rejected)")
+        }
+        for accepted in ["member@dutypark.dev", "first.last+tag@sub.dutypark.co.kr"] {
+            #expect(SupportViewModel.isValidEmail(accepted), "Rejected \(accepted)")
+        }
+    }
+
+    @Test
+    func submissionRequiresContent() async {
+        let repository = SupportRepositorySpy()
+        let model = SupportViewModel(prefilledEmail: "member@dutypark.dev", repository: repository)
+        model.subject = "Report"
+        model.content = "   \n  "
+
+        await model.submit()
+
+        #expect(model.errorKey == "support.error.contentRequired")
+        #expect(repository.submissions.isEmpty)
+    }
+
+    @Test
+    func aSuccessfulSubmissionSendsTheTrimmedInquiryAndShowsTheConfirmation() async {
+        let repository = SupportRepositorySpy()
+        let model = SupportViewModel(prefilledEmail: "member@dutypark.dev", repository: repository)
+        model.subject = "  Reporting a user  "
+        model.content = "  The other member keeps posting spam.  "
+
+        await model.submit()
+
+        #expect(repository.submissions == [
+            CreateInquiryRequest(
+                email: "member@dutypark.dev",
+                subject: "Reporting a user",
+                content: "The other member keeps posting spam."
+            )
+        ])
+        #expect(model.didSubmit)
+        #expect(model.errorKey == nil)
+        #expect(!model.isSubmitting)
+        // The address is kept so a follow-up inquiry does not have to be retyped.
+        #expect(model.email == "member@dutypark.dev")
+        #expect(model.subject.isEmpty)
+        #expect(model.content.isEmpty)
+
+        model.startNewInquiry()
+        #expect(!model.didSubmit)
+    }
+
+    @Test
+    func submissionCarriesWhetherTheSenderMustRemainAuthenticated() async {
+        let memberRepository = SupportRepositorySpy()
+        let memberModel = SupportViewModel(
+            prefilledEmail: "member@dutypark.dev",
+            isSignedIn: true,
+            repository: memberRepository
+        )
+        memberModel.content = "Please keep this inquiry in my history."
+
+        await memberModel.submit()
+
+        #expect(memberRepository.authenticatedSubmissions == [true])
+
+        let guestRepository = SupportRepositorySpy()
+        let guestModel = SupportViewModel(
+            prefilledEmail: "guest@dutypark.dev",
+            isSignedIn: false,
+            repository: guestRepository
+        )
+        guestModel.content = "Please reply by email."
+
+        await guestModel.submit()
+
+        #expect(guestRepository.authenticatedSubmissions == [false])
+    }
+
+    @Test
+    func liveMemberSubmissionRefreshesThroughTheProtectedProbeWhileGuestPostsDirectly() async throws {
+        let recorder = SupportRequestRecorder()
+        defer { SupportURLProtocolStub.handler = nil }
+        SupportURLProtocolStub.handler = { request in
+            recorder.append(request)
+            switch (request.httpMethod, request.url?.path, recorder.count(of: "/api/inquiries/me")) {
+            case ("GET", "/api/inquiries/me", 1):
+                return Self.httpResponse(
+                    request,
+                    status: 401,
+                    body: #"{"status":401,"code":"auth.required"}"#
+                )
+            case ("POST", "/api/auth/refresh", _):
+                return Self.httpResponse(request, status: 200, body: #"{"expiresIn":3600}"#)
+            case ("GET", "/api/inquiries/me", 2):
+                return Self.httpResponse(request, status: 200, body: "{}")
+            case ("POST", "/api/inquiries", _):
+                return Self.httpResponse(request, status: 201, body: #"{"id":"6d2a4c86-1d8b-4c6f-9c1f-6a3a5b2f9c11"}"#)
+            default:
+                return Self.httpResponse(request, status: 404)
+            }
+        }
+
+        let repository = LiveSupportRepository(client: Self.supportClient())
+        let request = CreateInquiryRequest(
+            email: "member@dutypark.dev",
+            subject: nil,
+            content: "Please keep this inquiry in my history."
+        )
+        try await repository.submitInquiry(request, authenticated: true)
+
+        #expect(recorder.paths == [
+            "/api/inquiries/me",
+            "/api/auth/refresh",
+            "/api/inquiries/me",
+            "/api/inquiries"
+        ])
+
+        recorder.removeAll()
+        try await repository.submitInquiry(request, authenticated: false)
+        #expect(recorder.paths == ["/api/inquiries"])
+    }
+
+    @Test
+    func anEmptySubjectIsOmittedFromTheRequest() async {
+        let repository = SupportRepositorySpy()
+        let model = SupportViewModel(prefilledEmail: "member@dutypark.dev", repository: repository)
+        model.content = "Please review this account."
+
+        await model.submit()
+
+        #expect(repository.submissions.first?.subject == nil)
+    }
+
+    @Test
+    func aRateLimitedSubmissionAsksTheSenderToRetryLater() async {
+        let repository = SupportRepositorySpy(failure: .server(status: 429, code: "inquiry.rateLimit.exceeded"))
+        let model = SupportViewModel(prefilledEmail: "member@dutypark.dev", repository: repository)
+        model.content = "Please review this account."
+
+        await model.submit()
+
+        #expect(model.errorKey == "support.error.rateLimit")
+        #expect(!model.didSubmit)
+        #expect(!model.isSubmitting)
+    }
+
+    @Test
+    func anyOtherFailureKeepsTheFormWithAGenericMessage() async {
+        let repository = SupportRepositorySpy(failure: .transport)
+        let model = SupportViewModel(prefilledEmail: "member@dutypark.dev", repository: repository)
+        model.content = "Please review this account."
+
+        await model.submit()
+
+        #expect(model.errorKey == "support.error.submit")
+        #expect(!model.didSubmit)
+        #expect(model.content == "Please review this account.")
+    }
+
+    @Test
+    func longFieldsAreCappedToTheServerLimits() async {
+        let repository = SupportRepositorySpy()
+        let model = SupportViewModel(prefilledEmail: "member@dutypark.dev", repository: repository)
+        model.subject = String(repeating: "s", count: 140)
+        model.content = String(repeating: "c", count: 2400)
+
+        await model.submit()
+
+        #expect(repository.submissions.first?.subject?.count == CreateInquiryRequest.subjectMaximumLength)
+        #expect(repository.submissions.first?.content.count == CreateInquiryRequest.contentMaximumLength)
+    }
+
+    @Test
+    func nonBMPFieldsAreCappedUsingTheServersUTF16LengthContract() async throws {
+        let repository = SupportRepositorySpy()
+        let model = SupportViewModel(prefilledEmail: "member@dutypark.dev", repository: repository)
+        model.subject = String(repeating: "😀", count: CreateInquiryRequest.subjectMaximumLength)
+        model.content = String(repeating: "😀", count: CreateInquiryRequest.contentMaximumLength)
+
+        await model.submit()
+
+        let request = try #require(repository.submissions.first)
+        #expect(request.subject?.utf16.count == CreateInquiryRequest.subjectMaximumLength)
+        #expect(request.content.utf16.count == CreateInquiryRequest.contentMaximumLength)
+        #expect(request.subject?.count == CreateInquiryRequest.subjectMaximumLength / 2)
+        #expect(request.content.count == CreateInquiryRequest.contentMaximumLength / 2)
+    }
+
+    @Test
+    func theGuestScreenKeepsTheEmailReplyCopyAndHidesTheHistoryTab() {
+        let model = SupportViewModel(
+            prefilledEmail: nil,
+            isSignedIn: false,
+            initialTab: .history,
+            repository: SupportRepositorySpy()
+        )
+
+        #expect(!model.showsTabs)
+        // A guest has no history to open, so a routed tab request cannot strand the form.
+        #expect(model.selectedTab == .form)
+        #expect(model.formDescriptionKey == "support.form.description")
+        #expect(model.successMessageKey == "support.success.message")
+        #expect(model.showsSignInHint)
+    }
+
+    @Test
+    func aSignedInMemberGetsTheHistoryTabAndTheInAppReplyCopy() {
+        let model = SupportViewModel(
+            prefilledEmail: "member@dutypark.dev",
+            isSignedIn: true,
+            repository: SupportRepositorySpy()
+        )
+
+        #expect(model.showsTabs)
+        #expect(model.selectedTab == .form)
+        #expect(model.formDescriptionKey == "support.form.description.member")
+        #expect(model.successMessageKey == "support.success.message.member")
+        #expect(!model.showsSignInHint)
+
+        let routed = SupportViewModel(
+            prefilledEmail: "member@dutypark.dev",
+            isSignedIn: true,
+            initialTab: .history,
+            repository: SupportRepositorySpy()
+        )
+        #expect(routed.selectedTab == .history)
+    }
+
+    @Test
+    func theHistoryRequestsTenPerPageAndAccumulatesEveryLoadedPage() async {
+        let repository = SupportRepositorySpy(
+            pages: [
+                SupportFeatureTests.inquiryPage(number: 0, totalPages: 2, subjects: (0..<10).map { "Inquiry \($0)" }),
+                SupportFeatureTests.inquiryPage(number: 1, totalPages: 2, subjects: ["Inquiry 10", "Inquiry 11"])
+            ]
+        )
+        let model = SupportViewModel(prefilledEmail: "member@dutypark.dev", isSignedIn: true, repository: repository)
+
+        await model.loadInquiriesIfNeeded()
+
+        #expect(repository.inquiryRequests == [SupportInquiryRequest(page: 0, size: 10)])
+        #expect(model.inquiries.count == 10)
+        #expect(model.hasMoreInquiries)
+
+        await model.loadMoreInquiries()
+
+        #expect(repository.inquiryRequests == [
+            SupportInquiryRequest(page: 0, size: 10),
+            SupportInquiryRequest(page: 1, size: 10)
+        ])
+        #expect(model.inquiries.compactMap(\.subject) == (0..<12).map { "Inquiry \($0)" })
+        #expect(!model.hasMoreInquiries)
+        #expect(!model.isLoadingInquiries)
+
+        // A second visit to the tab reuses the pages that are already on screen.
+        await model.loadInquiriesIfNeeded()
+        #expect(repository.inquiryRequests.count == 2)
+    }
+
+    @Test
+    func aFailedHistoryLoadCanBeRetried() async {
+        let repository = SupportRepositorySpy(
+            pages: [SupportFeatureTests.inquiryPage(number: 0, totalPages: 1, subjects: ["Only inquiry"])],
+            failure: .transport
+        )
+        let model = SupportViewModel(prefilledEmail: "member@dutypark.dev", isSignedIn: true, repository: repository)
+
+        await model.loadInquiriesIfNeeded()
+
+        #expect(model.inquiryLoadFailed)
+        #expect(model.inquiries.isEmpty)
+        #expect(!model.isLoadingInquiries)
+
+        repository.stopFailing()
+        await model.loadInquiries()
+
+        #expect(!model.inquiryLoadFailed)
+        #expect(model.inquiries.compactMap(\.subject) == ["Only inquiry"])
+    }
+
+    @Test
+    func aNewSubmissionInvalidatesTheLoadedHistory() async {
+        let repository = SupportRepositorySpy(
+            pages: [SupportFeatureTests.inquiryPage(number: 0, totalPages: 1, subjects: ["Only inquiry"])]
+        )
+        let model = SupportViewModel(prefilledEmail: "member@dutypark.dev", isSignedIn: true, repository: repository)
+        await model.loadInquiriesIfNeeded()
+        #expect(repository.inquiryRequests.count == 1)
+
+        model.content = "One more question."
+        await model.submit()
+        await model.loadInquiriesIfNeeded()
+
+        #expect(repository.inquiryRequests.count == 2)
+    }
+
+    @Test
+    func theHistoryIsNeverRequestedForAGuest() async {
+        let repository = SupportRepositorySpy(
+            pages: [SupportFeatureTests.inquiryPage(number: 0, totalPages: 1, subjects: ["Only inquiry"])]
+        )
+        let model = SupportViewModel(prefilledEmail: nil, isSignedIn: false, repository: repository)
+
+        await model.loadInquiriesIfNeeded()
+        await model.loadInquiries()
+
+        #expect(repository.inquiryRequests.isEmpty)
+        #expect(model.inquiries.isEmpty)
+    }
+
+    @Test
+    func theServerContractIsDecodedWithoutTheAdminOnlyFields() throws {
+        let page = try JSONDecoder().decode(
+            PageResponse<MyInquiryDTO>.self,
+            from: Data("""
+                {
+                  "content": [
+                    {
+                      "id": "6d2a4c86-1d8b-4c6f-9c1f-6a3a5b2f9c11",
+                      "email": "member@dutypark.dev",
+                      "subject": "Reporting a user",
+                      "content": "The other member keeps posting spam.",
+                      "status": "CLOSED",
+                      "createdAt": "2026-08-12T09:51:51.163702",
+                      "answer": "We removed the content.",
+                      "answeredAt": "2026-08-13T10:00:00"
+                    },
+                    {
+                      "id": "0b1f6a2c-5d5e-4a9e-9c11-9a2f7d3e1b40",
+                      "email": "member@dutypark.dev",
+                      "subject": null,
+                      "content": "Any update?",
+                      "status": "OPEN",
+                      "createdAt": "2026-08-14T09:00:00",
+                      "answer": null,
+                      "answeredAt": null
+                    }
+                  ],
+                  "totalPages": 1,
+                  "totalElements": 2,
+                  "last": true,
+                  "first": true,
+                  "size": 10,
+                  "number": 0,
+                  "numberOfElements": 2,
+                  "empty": false
+                }
+                """.utf8)
+        )
+
+        let answered = try #require(page.content.first)
+        #expect(answered.status == .closed)
+        #expect(answered.hasAnswer)
+        #expect(answered.answerText == "We removed the content.")
+        #expect(answered.answeredAt?.rawValue == "2026-08-13T10:00:00")
+
+        let awaiting = try #require(page.content.last)
+        #expect(awaiting.status == .open)
+        #expect(!awaiting.hasAnswer)
+        #expect(awaiting.answerText == nil)
+    }
+
+    @Test
+    func theHistoryRowLabelsFollowTheStatusAndTheAnswer() {
+        let answered = SupportFeatureTests.inquiry(subject: "Reporting a user", status: .closed, answer: "We removed the content.")
+        let awaiting = SupportFeatureTests.inquiry(subject: "   ", status: .open, answer: "   ")
+
+        #expect(MyInquiryPresentation.statusKey(answered.status) == "support.history.status.closed")
+        #expect(MyInquiryPresentation.statusKey(awaiting.status) == "support.history.status.open")
+        #expect(MyInquiryPresentation.answerStateKey(answered) == "support.history.answered")
+        #expect(MyInquiryPresentation.answerStateKey(awaiting) == "support.history.awaiting")
+        // A blank answer is the same as no answer: the row must not promise a reply.
+        #expect(!awaiting.hasAnswer)
+
+        #expect(
+            MyInquiryPresentation.subjectText(answered, locale: Locale(identifier: "ko")) == "Reporting a user"
+        )
+        #expect(
+            MyInquiryPresentation.subjectText(awaiting, locale: Locale(identifier: "ko")) == "제목 없음"
+        )
+        #expect(
+            MyInquiryPresentation.subjectText(awaiting, locale: Locale(identifier: "en")) == "No subject"
+        )
+    }
+
+    @Test
+    func historyDatesUseTheSelectedLocale() {
+        let value = LocalDateTimeValue(rawValue: "2026-08-12T09:51:51.163702")
+
+        #expect(MyInquiryPresentation.date(value, locale: Locale(identifier: "ko")) == "2026.08.12")
+        #expect(MyInquiryPresentation.date(value, locale: Locale(identifier: "en")) == "Aug 12, 2026")
+    }
+
+    @Test
+    func theSupportCatalogIsFullyTranslated() throws {
+        let catalogURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark/Features/Support/Support.xcstrings")
+        let root = try #require(
+            JSONSerialization.jsonObject(with: Data(contentsOf: catalogURL)) as? [String: Any]
+        )
+        let strings = try #require(root["strings"] as? [String: Any])
+        #expect(!strings.isEmpty)
+
+        for (key, rawEntry) in strings {
+            let entry = try #require(rawEntry as? [String: Any], "Invalid entry \(key)")
+            let localizations = try #require(entry["localizations"] as? [String: Any], "No localizations for \(key)")
+            for language in ["en", "ko"] {
+                let localization = try #require(localizations[language] as? [String: Any], "Missing \(language) for \(key)")
+                let stringUnit = try #require(localization["stringUnit"] as? [String: Any])
+                #expect(stringUnit["state"] as? String == "translated", "Untranslated \(language) value for \(key)")
+                let value = try #require(stringUnit["value"] as? String)
+                #expect(!value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, "Empty \(language) value for \(key)")
+            }
+        }
+    }
+
+    @Test
+    func theSupportCatalogResolvesInEveryLocale() throws {
+        for locale in ["en", "ko"] {
+            let url = try #require(Bundle.main.url(forResource: locale, withExtension: "lproj"))
+            let bundle = try #require(Bundle(url: url))
+            for key in [
+                "support.title",
+                "support.guide.report.title",
+                "support.guide.block.title",
+                "support.guide.policy.description",
+                "support.form.submit",
+                "support.success.title",
+                "support.error.rateLimit",
+                "support.guest.entry",
+                "support.guest.signInHint",
+                "support.tab.form",
+                "support.tab.history",
+                "support.history.empty",
+                "support.history.loadMore",
+                "support.history.pendingAnswer",
+                "support.form.description.member",
+                "support.success.message.member"
+            ] {
+                #expect(
+                    bundle.localizedString(forKey: key, value: key, table: "Support") != key,
+                    "Missing \(key) for \(locale)"
+                )
+            }
+        }
+    }
+}
+
+nonisolated struct SupportInquiryRequest: Equatable, Sendable {
+    let page: Int
+    let size: Int
+}
+
+private final class SupportRepositorySpy: SupportRepository, @unchecked Sendable {
+    private let lock = NSLock()
+    private let failure: APIError?
+    private let pages: [PageResponse<MyInquiryDTO>]
+    private var storedSubmissions: [CreateInquiryRequest] = []
+    private var storedAuthenticatedSubmissions: [Bool] = []
+    private var storedInquiryRequests: [SupportInquiryRequest] = []
+    private var isFailing: Bool
+
+    init(
+        pages: [PageResponse<MyInquiryDTO>] = [],
+        failure: APIError? = nil
+    ) {
+        self.pages = pages
+        self.failure = failure
+        self.isFailing = failure != nil
+    }
+
+    var submissions: [CreateInquiryRequest] {
+        lock.withLock { storedSubmissions }
+    }
+
+    var inquiryRequests: [SupportInquiryRequest] {
+        lock.withLock { storedInquiryRequests }
+    }
+
+    var authenticatedSubmissions: [Bool] {
+        lock.withLock { storedAuthenticatedSubmissions }
+    }
+
+    func stopFailing() {
+        lock.withLock { isFailing = false }
+    }
+
+    func submitInquiry(_ request: CreateInquiryRequest, authenticated: Bool) async throws {
+        lock.withLock {
+            storedSubmissions.append(request)
+            storedAuthenticatedSubmissions.append(authenticated)
+        }
+        if let failure, lock.withLock({ isFailing }) { throw failure }
+    }
+
+    func fetchMyInquiries(page: Int, size: Int) async throws -> PageResponse<MyInquiryDTO> {
+        lock.withLock { storedInquiryRequests.append(SupportInquiryRequest(page: page, size: size)) }
+        if let failure, lock.withLock({ isFailing }) { throw failure }
+        guard let response = pages.first(where: { $0.number == page }) else {
+            throw APIError.invalidResponse
+        }
+        return response
+    }
+}
+
+extension SupportFeatureTests {
+    nonisolated static func supportClient() -> APIClient {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [SupportURLProtocolStub.self]
+        return APIClient(
+            baseURL: URL(string: "https://dutypark.test/api/")!,
+            session: URLSession(configuration: configuration)
+        )
+    }
+
+    nonisolated static func httpResponse(
+        _ request: URLRequest,
+        status: Int,
+        body: String = ""
+    ) -> (HTTPURLResponse, Data) {
+        (
+            HTTPURLResponse(
+                url: request.url!,
+                statusCode: status,
+                httpVersion: nil,
+                headerFields: nil
+            )!,
+            Data(body.utf8)
+        )
+    }
+
+    static func inquiry(
+        id: UUID = UUID(),
+        subject: String?,
+        status: InquiryStatus = .open,
+        answer: String? = nil
+    ) -> MyInquiryDTO {
+        MyInquiryDTO(
+            id: id,
+            email: "member@dutypark.dev",
+            subject: subject,
+            content: "The other member keeps posting spam.",
+            status: status,
+            createdAt: LocalDateTimeValue(rawValue: "2026-08-12T09:51:51.163702"),
+            answer: answer,
+            answeredAt: answer == nil ? nil : LocalDateTimeValue(rawValue: "2026-08-13T10:00:00")
+        )
+    }
+
+    static func inquiryPage(
+        number: Int,
+        totalPages: Int,
+        subjects: [String]
+    ) -> PageResponse<MyInquiryDTO> {
+        PageResponse(
+            content: subjects.map { inquiry(subject: $0) },
+            totalPages: totalPages,
+            totalElements: Int64(subjects.count),
+            last: number == totalPages - 1,
+            first: number == 0,
+            size: 10,
+            number: number,
+            numberOfElements: subjects.count,
+            empty: subjects.isEmpty
+        )
+    }
+}
+
+private final class SupportRequestRecorder: @unchecked Sendable {
+    private let lock = NSLock()
+    private var requests: [URLRequest] = []
+
+    var paths: [String] {
+        lock.withLock { requests.compactMap(\.url?.path) }
+    }
+
+    func append(_ request: URLRequest) {
+        lock.withLock { requests.append(request) }
+    }
+
+    func count(of path: String) -> Int {
+        lock.withLock { requests.count(where: { $0.url?.path == path }) }
+    }
+
+    func removeAll() {
+        lock.withLock { requests.removeAll() }
+    }
+}
+
+private final class SupportURLProtocolStub: URLProtocol, @unchecked Sendable {
+    nonisolated(unsafe) static var handler: (@Sendable (URLRequest) -> (HTTPURLResponse, Data))?
+
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+
+    override func startLoading() {
+        guard let handler = Self.handler else {
+            fatalError("Missing SupportURLProtocolStub handler")
+        }
+        let result = handler(request)
+        client?.urlProtocol(self, didReceive: result.0, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: result.1)
+        client?.urlProtocolDidFinishLoading(self)
+    }
+
+    override func stopLoading() {}
+}

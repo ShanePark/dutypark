@@ -70,6 +70,14 @@ class AuthController(
                 )
             )
         } catch (e: AuthException) {
+            if (e.message == AuthService.SUSPENDED_MESSAGE) {
+                return ResponseEntity.status(401).body(
+                    DutyParkErrorResponse.of(
+                        status = 401,
+                        code = AuthService.SUSPENDED_MESSAGE,
+                    )
+                )
+            }
             val email = loginDto.email ?: ""
             val ipAddress = req.remoteAddr ?: "unknown"
             val remainingAttempts = loginAttemptService.getRemainingAttempts(ipAddress, email)

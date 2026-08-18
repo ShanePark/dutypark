@@ -42,6 +42,7 @@ final class RootMoreMenuParityUITests: XCTestCase {
                 "more.friends",
                 "more.notifications",
                 "more.guide",
+                "more.support",
                 "more.settings",
                 "more.logout",
             ]

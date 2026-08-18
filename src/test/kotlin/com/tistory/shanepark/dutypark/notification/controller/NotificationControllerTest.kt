@@ -60,8 +60,8 @@ class NotificationControllerTest : RestDocsTest() {
                     responseFields(
                         fieldWithPath("content").description("List of notifications"),
                         fieldWithPath("content[].id").description("Notification ID (UUID)").optional(),
-                        fieldWithPath("content[].type").description("Notification type (FRIEND_REQUEST_RECEIVED, FRIEND_REQUEST_ACCEPTED, FAMILY_REQUEST_RECEIVED, FAMILY_REQUEST_ACCEPTED, SCHEDULE_TAGGED, TODO_TAGGED, TODO_STATUS_TODO, TODO_STATUS_IN_PROGRESS, TODO_STATUS_DONE)").optional(),
-                        fieldWithPath("content[].referenceType").description("Reference entity type (FRIEND_REQUEST, SCHEDULE, TODO, MEMBER) (nullable)").optional(),
+                        fieldWithPath("content[].type").description("Notification type (FRIEND_REQUEST_RECEIVED, FRIEND_REQUEST_ACCEPTED, FAMILY_REQUEST_RECEIVED, FAMILY_REQUEST_ACCEPTED, SCHEDULE_TAGGED, TODO_TAGGED, TODO_STATUS_TODO, TODO_STATUS_IN_PROGRESS, TODO_STATUS_DONE, INQUIRY_ANSWERED)").optional(),
+                        fieldWithPath("content[].referenceType").description("Reference entity type (FRIEND_REQUEST, SCHEDULE, TODO, MEMBER, INQUIRY) (nullable)").optional(),
                         fieldWithPath("content[].referenceId").description("Reference entity ID (nullable)").optional(),
                         fieldWithPath("content[].actorId").description("Actor member ID who triggered the notification (nullable)").optional(),
                         subsectionWithPath("content[].payload").description("Notification payload snapshot used for client-side rendering (missing or invalid payloads fall back to version 0 generic payload)").optional(),
@@ -129,8 +129,8 @@ class NotificationControllerTest : RestDocsTest() {
                     "notifications/get-unread",
                     responseFields(
                         fieldWithPath("[].id").description("Notification ID (UUID)"),
-                        fieldWithPath("[].type").description("Notification type (FRIEND_REQUEST_RECEIVED, FRIEND_REQUEST_ACCEPTED, FAMILY_REQUEST_RECEIVED, FAMILY_REQUEST_ACCEPTED, SCHEDULE_TAGGED, TODO_TAGGED, TODO_STATUS_TODO, TODO_STATUS_IN_PROGRESS, TODO_STATUS_DONE)"),
-                        fieldWithPath("[].referenceType").description("Reference entity type (FRIEND_REQUEST, SCHEDULE, TODO, MEMBER) (nullable)"),
+                        fieldWithPath("[].type").description("Notification type (FRIEND_REQUEST_RECEIVED, FRIEND_REQUEST_ACCEPTED, FAMILY_REQUEST_RECEIVED, FAMILY_REQUEST_ACCEPTED, SCHEDULE_TAGGED, TODO_TAGGED, TODO_STATUS_TODO, TODO_STATUS_IN_PROGRESS, TODO_STATUS_DONE, INQUIRY_ANSWERED)"),
+                        fieldWithPath("[].referenceType").description("Reference entity type (FRIEND_REQUEST, SCHEDULE, TODO, MEMBER, INQUIRY) (nullable)"),
                         fieldWithPath("[].referenceId").description("Reference entity ID (nullable)"),
                         fieldWithPath("[].actorId").description("Actor member ID who triggered the notification (nullable)"),
                         subsectionWithPath("[].payload").description("Notification payload snapshot used for client-side rendering (missing or invalid payloads fall back to version 0 generic payload)"),
@@ -266,8 +266,8 @@ class NotificationControllerTest : RestDocsTest() {
                     ),
                     responseFields(
                         fieldWithPath("id").description("Notification ID"),
-                        fieldWithPath("type").description("Notification type (FRIEND_REQUEST_RECEIVED, FRIEND_REQUEST_ACCEPTED, FAMILY_REQUEST_RECEIVED, FAMILY_REQUEST_ACCEPTED, SCHEDULE_TAGGED, TODO_TAGGED, TODO_STATUS_TODO, TODO_STATUS_IN_PROGRESS, TODO_STATUS_DONE)"),
-                        fieldWithPath("referenceType").description("Reference entity type (nullable)"),
+                        fieldWithPath("type").description("Notification type (FRIEND_REQUEST_RECEIVED, FRIEND_REQUEST_ACCEPTED, FAMILY_REQUEST_RECEIVED, FAMILY_REQUEST_ACCEPTED, SCHEDULE_TAGGED, TODO_TAGGED, TODO_STATUS_TODO, TODO_STATUS_IN_PROGRESS, TODO_STATUS_DONE, INQUIRY_ANSWERED)"),
+                        fieldWithPath("referenceType").description("Reference entity type (FRIEND_REQUEST, SCHEDULE, TODO, MEMBER, INQUIRY) (nullable)"),
                         fieldWithPath("referenceId").description("Reference entity ID (nullable)"),
                         fieldWithPath("actorId").description("Actor member ID (nullable)"),
                         subsectionWithPath("payload").description("Notification payload snapshot used for client-side rendering (missing or invalid payloads fall back to version 0 generic payload)"),

@@ -4,26 +4,20 @@ import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { dashboardApi } from '@/api/dashboard'
 import { friendApi } from '@/api/member'
+import { blockApi } from '@/api/block'
 import { useSwal } from '@/composables/useSwal'
 import { useDragClickGuard } from '@/composables/useDragClickGuard'
 import { useNotificationStore } from '@/stores/notification'
 import Sortable from 'sortablejs'
-import type { DashboardFriendInfo, MemberPreviewDto } from '@/types'
-import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
+import type { DashboardFriendInfo, DashboardFriendRequestDto, MemberPreviewDto } from '@/types'
+import type { BlockedMember } from '@/types/block'
 import FriendSearchModal from '@/components/common/FriendSearchModal.vue'
 import PageHeader from '@/components/common/PageHeader.vue'
-import {
-  Users,
-  UserCheck,
-  UserPlus,
-  UserMinus,
-  Home,
-  Star,
-  GripVertical,
-  MoreVertical,
-  Trash2,
-  X,
-} from 'lucide-vue-next'
+import FriendRequestList from '@/components/member/FriendRequestList.vue'
+import FriendCard from '@/components/member/FriendCard.vue'
+import FriendActionMenu from '@/components/member/FriendActionMenu.vue'
+import BlockedMemberList from '@/components/member/BlockedMemberList.vue'
+import { Users, UserPlus } from 'lucide-vue-next'
 
 const router = useRouter()
 const notificationStore = useNotificationStore()
@@ -41,10 +35,14 @@ const loading = ref(false)
 const error = ref<string | null>(null)
 const friendInfo = ref<DashboardFriendInfo | null>(null)
 
+const blockedMembers = ref<BlockedMember[]>([])
+const blockedLoading = ref(false)
+const blockedLoadFailed = ref(false)
+const unblockingId = ref<number | null>(null)
+
 const openDropdownId = ref<number | null>(null)
 const dropdownPosition = ref({ top: 0, left: 0 })
-const dropdownRef = ref<HTMLElement | null>(null)
-const MENU_WIDTH = 176 // w-44
+const MENU_WIDTH = 176 // w-44, matches FriendActionMenu
 
 let friendSortable: Sortable | null = null
 const friendListRef = ref<HTMLElement | null>(null)
@@ -58,11 +56,6 @@ const searchTotalPage = ref(0)
 const searchTotalElements = ref(0)
 const searchPageSize = 5
 const searchLoading = ref(false)
-
-const hasPendingRequests = computed(() => {
-  if (!friendInfo.value) return false
-  return friendInfo.value.pendingRequestsTo.length > 0 || friendInfo.value.pendingRequestsFrom.length > 0
-})
 
 const sortedFriends = computed(() => {
   if (!friendInfo.value) return []
@@ -84,12 +77,6 @@ const openDropdownFriend = computed(() => {
   return friendInfo.value.friends.find(f => f.member.id === openDropdownId.value) || null
 })
 
-function getRequestTypeLabel(requestType: string) {
-  return requestType === 'FAMILY_REQUEST'
-    ? t('friends.labels.familyRequest')
-    : t('friends.labels.friendRequest')
-}
-
 async function loadFriendInfo() {
   loading.value = true
   error.value = null
@@ -106,7 +93,22 @@ async function loadFriendInfo() {
   }
 }
 
-async function acceptFriendRequest(req: { fromMember: { id: number | null; name: string } }) {
+async function loadBlockedMembers() {
+  blockedLoading.value = true
+  blockedLoadFailed.value = false
+  try {
+    blockedMembers.value = await blockApi.getBlockedMembers()
+  } catch (e) {
+    console.error('Failed to load blocked members:', e)
+    // An empty list would read as "nothing is blocked", so the failure is kept separate.
+    blockedMembers.value = []
+    blockedLoadFailed.value = true
+  } finally {
+    blockedLoading.value = false
+  }
+}
+
+async function acceptFriendRequest(req: DashboardFriendRequestDto) {
   if (!friendInfo.value || !req.fromMember.id) return
   try {
     await friendApi.acceptFriendRequest(req.fromMember.id)
@@ -119,7 +121,7 @@ async function acceptFriendRequest(req: { fromMember: { id: number | null; name:
   }
 }
 
-async function rejectFriendRequest(req: { fromMember: { id: number | null; name: string } }) {
+async function rejectFriendRequest(req: DashboardFriendRequestDto) {
   if (!friendInfo.value || !req.fromMember.id) return
   if (!await confirm(
     t('friends.messages.rejectConfirm', { name: req.fromMember.name }),
@@ -138,7 +140,7 @@ async function rejectFriendRequest(req: { fromMember: { id: number | null; name:
   }
 }
 
-async function cancelRequest(req: { toMember: { id: number | null; name: string } }) {
+async function cancelRequest(req: DashboardFriendRequestDto) {
   if (!friendInfo.value || !req.toMember.id) return
   if (!await confirm(
     t('friends.messages.cancelConfirm', { name: req.toMember.name }),
@@ -218,7 +220,10 @@ async function addFamily(member: { id: number | null; name: string }) {
     showWarning(t('friends.messages.familyAlreadyRequested'))
     return
   }
-  closeDropdown()
+  if (!await confirm(
+    t('friends.messages.familyRequestConfirm', { name: member.name }),
+    t('friends.messages.familyRequestTitle'),
+  )) return
   try {
     await friendApi.sendFamilyRequest(member.id)
     await loadFriendInfo()
@@ -235,7 +240,6 @@ async function demoteFromFamily(member: { id: number | null; name: string }) {
     t('friends.messages.removeFamilyConfirm', { name: member.name }),
     t('friends.messages.removeFamilyTitle'),
   )) return
-  closeDropdown()
   try {
     await friendApi.demoteFromFamily(member.id)
     const friend = friendInfo.value.friends.find((f) => f.member.id === member.id)
@@ -251,19 +255,82 @@ async function demoteFromFamily(member: { id: number | null; name: string }) {
 
 async function unfriend(member: { id: number | null; name: string }) {
   if (!friendInfo.value || !member.id) return
-  if (await confirmDelete(t('friends.messages.unfriendConfirm', { name: member.name }))) {
-    closeDropdown()
-    try {
-      await friendApi.unfriend(member.id)
-      friendInfo.value.friends = friendInfo.value.friends.filter((f) => f.member.id !== member.id)
-      toastSuccess(t('friends.messages.unfriendSuccess', { name: member.name }))
-    } catch (e) {
-      console.error('Failed to unfriend:', e)
-      showWarning(t('friends.messages.unfriendFailed'))
-    }
-  } else {
-    closeDropdown()
+  if (!await confirmDelete(t('friends.messages.unfriendConfirm', { name: member.name }))) return
+  try {
+    await friendApi.unfriend(member.id)
+    friendInfo.value.friends = friendInfo.value.friends.filter((f) => f.member.id !== member.id)
+    toastSuccess(t('friends.messages.unfriendSuccess', { name: member.name }))
+  } catch (e) {
+    console.error('Failed to unfriend:', e)
+    showWarning(t('friends.messages.unfriendFailed'))
   }
+}
+
+async function blockFriend(member: { id: number | null; name: string }) {
+  if (!friendInfo.value || !member.id) return
+  if (!await confirmDelete(
+    t('friends.block.confirmMessage', { name: member.name }),
+    t('friends.block.confirmTitle'),
+    t('friends.block.confirmAction'),
+  )) return
+  try {
+    await blockApi.block(member.id)
+    await Promise.all([loadFriendInfo(), loadBlockedMembers()])
+    toastSuccess(t('friends.block.blockSuccess', { name: member.name }))
+  } catch (e) {
+    console.error('Failed to block member:', e)
+    showWarning(t('friends.block.blockFailed'))
+  }
+}
+
+async function unblockMember(member: BlockedMember) {
+  if (unblockingId.value !== null) return
+  if (!await confirm(
+    t('friends.block.unblockConfirmMessage', { name: member.name }),
+    t('friends.block.unblockConfirmTitle'),
+    t('friends.block.unblockAction'),
+  )) return
+  unblockingId.value = member.id
+  try {
+    await blockApi.unblock(member.id)
+    blockedMembers.value = blockedMembers.value.filter((m) => m.id !== member.id)
+    toastSuccess(t('friends.block.unblockSuccess', { name: member.name }))
+  } catch (e) {
+    console.error('Failed to unblock member:', e)
+    showWarning(t('friends.block.unblockFailed'))
+  } finally {
+    unblockingId.value = null
+  }
+}
+
+// The menu keeps a full-screen click catcher above the confirmation dialog's layer, so it has to
+// close the moment an item is picked; left open, the catcher swallows the dialog's buttons.
+function addFamilyFromMenu() {
+  const friend = openDropdownFriend.value
+  if (!friend) return
+  closeDropdown()
+  addFamily(friend.member)
+}
+
+function demoteFromFamilyFromMenu() {
+  const friend = openDropdownFriend.value
+  if (!friend) return
+  closeDropdown()
+  demoteFromFamily(friend.member)
+}
+
+function unfriendFromMenu() {
+  const friend = openDropdownFriend.value
+  if (!friend) return
+  closeDropdown()
+  unfriend(friend.member)
+}
+
+function blockFromMenu() {
+  const friend = openDropdownFriend.value
+  if (!friend) return
+  closeDropdown()
+  blockFriend(friend.member)
 }
 
 function toggleDropdown(memberId: number, event: Event) {
@@ -282,16 +349,6 @@ function toggleDropdown(memberId: number, event: Event) {
     top: cardTop + window.scrollY,
     left: Math.max(8, rect.right - MENU_WIDTH) + window.scrollX
   }
-  nextTick(() => {
-    const menu = dropdownRef.value
-    if (!menu) return
-    if (cardTop + menu.offsetHeight > window.innerHeight - 8) {
-      dropdownPosition.value = {
-        ...dropdownPosition.value,
-        top: Math.max(window.scrollY + 8, window.scrollY + window.innerHeight - 8 - menu.offsetHeight)
-      }
-    }
-  })
 }
 
 function closeDropdown() {
@@ -438,6 +495,7 @@ function onDocumentKeydown(event: KeyboardEvent) {
 onMounted(async () => {
   document.addEventListener('click', closeDropdown)
   document.addEventListener('keydown', onDocumentKeydown)
+  loadBlockedMembers()
   await loadFriendInfo()
   nextTick(() => {
     initFriendSortable()
@@ -472,99 +530,13 @@ onUnmounted(() => {
     </div>
 
     <template v-else-if="friendInfo">
-      <div
-        v-if="hasPendingRequests"
-        class="rounded-2xl shadow-sm border mb-6 overflow-hidden bg-dp-bg-card border-dp-border-primary"
-      >
-        <div class="bg-gradient-to-r from-dp-warning to-dp-warning-hover px-5 py-3">
-          <div class="flex items-center gap-2">
-            <UserCheck class="w-5 h-5 text-dp-text-on-dark" />
-            <span class="text-dp-text-on-dark font-bold">{{ t('friends.sections.requests') }}</span>
-            <span class="ml-2 px-2 py-0.5 bg-dp-overlay-light/20 rounded-full text-xs text-dp-text-on-dark">
-              {{ friendInfo.pendingRequestsTo.length + friendInfo.pendingRequestsFrom.length }}
-            </span>
-          </div>
-        </div>
-        <div class="p-4 space-y-3">
-          <div
-            v-for="req in friendInfo.pendingRequestsTo"
-            :key="'to-' + req.fromMember.id"
-            class="p-4 rounded-xl friend-request-received"
-          >
-            <div class="flex justify-between items-center">
-              <div class="font-medium flex items-center gap-3 friend-request-name">
-                <div class="relative">
-                  <ProfileAvatar
-                    :member-id="req.fromMember.id"
-                    :has-profile-photo="req.fromMember.hasProfilePhoto"
-                    :profile-photo-version="req.fromMember.profilePhotoVersion"
-                    size="md"
-                  />
-                  <div class="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full flex items-center justify-center ring-2 ring-dp-overlay-light" :class="req.requestType === 'FAMILY_REQUEST' ? 'bg-dp-warning' : 'bg-dp-accent'">
-                    <Home v-if="req.requestType === 'FAMILY_REQUEST'" class="w-3 h-3 text-dp-text-on-dark" />
-                    <UserPlus v-else class="w-3 h-3 text-dp-text-on-dark" />
-                  </div>
-                </div>
-                <div>
-                  <p class="text-dp-text-primary">{{ req.fromMember.name }}</p>
-                  <p class="text-xs text-dp-text-secondary">
-                    {{ getRequestTypeLabel(req.requestType) }}
-                  </p>
-                </div>
-              </div>
-              <div class="flex gap-2">
-                <button
-                  class="px-4 py-2 text-sm font-medium bg-dp-success text-dp-text-on-dark rounded-lg hover:bg-dp-success-hover transition shadow-sm cursor-pointer"
-                  @click="acceptFriendRequest(req)"
-                >
-                  {{ t('friends.actions.approve') }}
-                </button>
-                <button
-                  class="px-4 py-2 text-sm font-medium border border-dp-danger-border rounded-lg hover:bg-dp-danger-soft transition cursor-pointer bg-dp-bg-card text-dp-danger"
-                  @click="rejectFriendRequest(req)"
-                >
-                  {{ t('friends.actions.reject') }}
-                </button>
-              </div>
-            </div>
-          </div>
-
-          <div
-            v-for="req in friendInfo.pendingRequestsFrom"
-            :key="'from-' + req.toMember.id"
-            class="p-4 rounded-xl friend-request-sent"
-          >
-            <div class="flex justify-between items-center">
-              <div class="font-medium flex items-center gap-3 friend-request-name">
-                <div class="relative">
-                  <ProfileAvatar
-                    :member-id="req.toMember.id"
-                    :has-profile-photo="req.toMember.hasProfilePhoto"
-                    :profile-photo-version="req.toMember.profilePhotoVersion"
-                    size="md"
-                  />
-                  <div class="absolute -bottom-0.5 -right-0.5 w-5 h-5 rounded-full flex items-center justify-center bg-dp-warning ring-2 ring-dp-overlay-light">
-                    <Home v-if="req.requestType === 'FAMILY_REQUEST'" class="w-3 h-3 text-dp-text-on-dark" />
-                    <UserPlus v-else class="w-3 h-3 text-dp-text-on-dark" />
-                  </div>
-                </div>
-                <div>
-                  <p class="text-dp-text-primary">{{ req.toMember.name }}</p>
-                  <p class="text-xs text-dp-text-secondary">
-                    {{ t('friends.labels.sentRequestStatus', { type: getRequestTypeLabel(req.requestType) }) }}
-                  </p>
-                </div>
-              </div>
-              <button
-                class="px-4 py-2 text-sm font-medium border border-dp-warning-border rounded-lg hover:bg-dp-warning-soft transition cursor-pointer bg-dp-bg-card text-dp-warning-hover"
-                @click="cancelRequest(req)"
-              >
-                {{ t('friends.actions.cancelRequest') }}
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
+      <FriendRequestList
+        :requests-to="friendInfo.pendingRequestsTo"
+        :requests-from="friendInfo.pendingRequestsFrom"
+        @accept="acceptFriendRequest"
+        @reject="rejectFriendRequest"
+        @cancel="cancelRequest"
+      />
 
       <div
         ref="friendSectionRef"
@@ -598,74 +570,15 @@ onUnmounted(() => {
             @pointerdown.capture="dragClickGuard.handlePointerDown"
             @click.capture="dragClickGuard.handleClick"
           >
-            <div
+            <FriendCard
               v-for="friend in sortedFriends"
               :key="friend.member.id ?? 'unknown'"
-              :data-member-id="friend.member.id"
-              class="friend-card relative overflow-hidden rounded-xl sm:rounded-2xl cursor-pointer"
-              :class="[
-                friend.pinOrder
-                  ? 'pinned-friend pinned-friend-highlight border-2 shadow-md'
-                  : 'border hover:border-dp-accent-border'
-              ]"
-              :style="!friend.pinOrder ? { backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-primary)' } : {}"
-              @click="moveTo(friend.member.id)"
-            >
-              <div class="flex p-3">
-                <div class="flex-shrink-0 mr-3">
-                  <ProfileAvatar
-                    :member-id="friend.member.id"
-                    :name="friend.member.name"
-                    :has-profile-photo="friend.member.hasProfilePhoto"
-                    :profile-photo-version="friend.member.profilePhotoVersion"
-                    size="xl"
-                  />
-                </div>
-
-                <div class="flex-1 min-w-0">
-                  <div class="flex items-center justify-between mb-1.5">
-                    <div class="flex items-center gap-1.5 min-w-0">
-                      <span class="font-medium text-sm truncate text-dp-text-primary">{{ friend.member.name }}</span>
-                      <Home v-if="friend.isFamily" class="w-3.5 h-3.5 flex-shrink-0 text-dp-warning" :title="t('friends.labels.familyMember')" />
-                    </div>
-                    <div class="flex items-center flex-shrink-0" @click.stop>
-                      <button
-                        v-if="friend.pinOrder"
-                        class="p-1 text-dp-warning hover:text-dp-warning transition cursor-pointer"
-                        @click.stop="unpinFriend(friend.member)"
-                        :title="t('friends.actions.unpin')"
-                      >
-                        <Star class="w-4 h-4" fill="currentColor" />
-                      </button>
-                      <button
-                        v-else
-                        class="p-1 text-dp-text-muted hover:text-dp-warning transition cursor-pointer"
-                        @click.stop="pinFriend(friend.member)"
-                        :title="t('friends.actions.pin')"
-                      >
-                        <Star class="w-4 h-4" />
-                      </button>
-                      <button
-                        v-if="friend.member.id"
-                        class="p-1.5 rounded-lg transition hover:bg-opacity-80 cursor-pointer text-dp-text-muted"
-                        @click="toggleDropdown(friend.member.id, $event)"
-                      >
-                        <MoreVertical class="w-5 h-5" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div v-if="friend.pinOrder" class="absolute bottom-2 right-2" @click.stop>
-                <div
-                  class="handle friend-drag-handle rounded-lg p-1.5 transition hover:bg-dp-overlay-dark/10 !cursor-grab active:!cursor-grabbing"
-                  :title="t('friends.actions.dragToReorder')"
-                >
-                  <GripVertical class="w-4 h-4" />
-                </div>
-              </div>
-            </div>
+              :friend="friend"
+              @select="moveTo(friend.member.id)"
+              @pin="pinFriend(friend.member)"
+              @unpin="unpinFriend(friend.member)"
+              @open-menu="toggleDropdown"
+            />
 
             <div
               class="group rounded-xl sm:rounded-2xl border-2 border-dashed cursor-pointer hover:border-dp-accent-border hover:bg-dp-accent-soft transition-all duration-300 flex flex-col items-center justify-center min-h-[80px] sm:min-h-[120px] border-dp-border-secondary"
@@ -681,62 +594,26 @@ onUnmounted(() => {
       </div>
     </template>
 
-    <!-- Friend Menu (Teleported to body): bottom sheet on mobile, anchored popover on desktop -->
-    <Teleport to="body">
-      <Transition name="friend-menu-overlay">
-        <div
-          v-if="openDropdownId && openDropdownFriend"
-          class="friend-menu-overlay fixed inset-0 z-[9998]"
-          @click.stop="closeDropdown"
-        />
-      </Transition>
-      <Transition name="friend-menu-pop">
-        <div
-          v-if="openDropdownId && openDropdownFriend"
-          ref="dropdownRef"
-          class="friend-menu absolute w-44 rounded-xl z-[9999] overflow-hidden"
-          :style="{
-            top: dropdownPosition.top + 'px',
-            left: dropdownPosition.left + 'px'
-          }"
-          @click.stop
-        >
-          <div class="friend-menu-header flex items-center justify-between gap-2 pl-4 pr-1.5 py-1.5">
-            <span class="text-sm font-semibold truncate text-dp-text-primary">{{ openDropdownFriend.member.name }}</span>
-            <button
-              class="p-2.5 rounded-lg text-dp-text-muted hover:text-dp-text-primary hover:bg-dp-bg-hover transition cursor-pointer"
-              :aria-label="t('common.actions.close')"
-              @click="closeDropdown"
-            >
-              <X class="w-5 h-5" />
-            </button>
-          </div>
-          <button
-            v-if="!openDropdownFriend.isFamily"
-            class="w-full min-h-[44px] px-4 py-2.5 text-left text-sm text-dp-accent hover:bg-dp-accent-soft flex items-center gap-2.5 transition cursor-pointer"
-            @click="addFamily(openDropdownFriend.member)"
-          >
-            <Home class="w-4 h-4 flex-shrink-0" />
-            {{ t('friends.actions.addFamily') }}
-          </button>
-          <button
-            v-if="openDropdownFriend.isFamily"
-            class="w-full min-h-[44px] px-4 py-2.5 text-left text-sm text-dp-warning hover:bg-dp-warning-soft flex items-center gap-2.5 transition cursor-pointer"
-            @click="demoteFromFamily(openDropdownFriend.member)"
-          >
-            <UserMinus class="w-4 h-4 flex-shrink-0" />
-            {{ t('friends.actions.removeFamily') }}
-          </button>
-          <button
-            class="w-full min-h-[44px] px-4 py-2.5 text-left text-sm text-dp-danger hover:bg-dp-danger-soft flex items-center gap-2.5 transition cursor-pointer"
-            @click="unfriend(openDropdownFriend.member)"
-          >
-            <Trash2 class="w-4 h-4 flex-shrink-0" />
-            {{ t('friends.actions.removeFriend') }}
-          </button>
-        </div>
-      </Transition>
-    </Teleport>
+    <BlockedMemberList
+      v-if="!loading"
+      class="mt-6"
+      :members="blockedMembers"
+      :loading="blockedLoading"
+      :load-failed="blockedLoadFailed"
+      :unblocking-id="unblockingId"
+      @unblock="unblockMember"
+      @retry="loadBlockedMembers"
+    />
+
+    <FriendActionMenu
+      :friend="openDropdownFriend"
+      :position="dropdownPosition"
+      @close="closeDropdown"
+      @add-family="addFamilyFromMenu"
+      @remove-family="demoteFromFamilyFromMenu"
+      @unfriend="unfriendFromMenu"
+      @block="blockFromMenu"
+    />
 
     <FriendSearchModal
       :is-open="showSearchModal"
@@ -754,52 +631,3 @@ onUnmounted(() => {
     />
   </div>
 </template>
-
-<style scoped>
-/* Dim background on mobile so the sheet stands out; transparent on desktop like NotificationDropdown */
-.friend-menu-overlay {
-  background-color: var(--dp-overlay-scrim-soft);
-}
-
-@media (min-width: 640px) {
-  .friend-menu-overlay {
-    background-color: transparent;
-  }
-}
-
-.friend-menu {
-  background-color: var(--dp-bg-card);
-  border: 1px solid var(--dp-border-primary);
-  box-shadow: var(--dp-shadow-dropdown);
-}
-
-:global(.dark) .friend-menu {
-  box-shadow: var(--dp-shadow-dropdown-dark);
-}
-
-.friend-menu-header {
-  background-color: var(--dp-bg-tertiary);
-  border-bottom: 1px solid var(--dp-border-primary);
-}
-
-.friend-menu-overlay-enter-active,
-.friend-menu-overlay-leave-active {
-  transition: opacity 0.2s ease;
-}
-
-.friend-menu-overlay-enter-from,
-.friend-menu-overlay-leave-to {
-  opacity: 0;
-}
-
-.friend-menu-pop-enter-active,
-.friend-menu-pop-leave-active {
-  transition: opacity 0.15s ease, transform 0.15s ease;
-}
-
-.friend-menu-pop-enter-from,
-.friend-menu-pop-leave-to {
-  opacity: 0;
-  transform: translateY(-8px);
-}
-</style>

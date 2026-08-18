@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.notification.event
 
+import com.tistory.shanepark.dutypark.member.block.service.BlockService
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.notification.domain.entity.Notification
@@ -9,6 +10,7 @@ import com.tistory.shanepark.dutypark.notification.domain.payload.FamilyRequestA
 import com.tistory.shanepark.dutypark.notification.domain.payload.FamilyRequestReceivedPayload
 import com.tistory.shanepark.dutypark.notification.domain.payload.FriendRequestAcceptedPayload
 import com.tistory.shanepark.dutypark.notification.domain.payload.FriendRequestReceivedPayload
+import com.tistory.shanepark.dutypark.notification.domain.payload.InquiryAnsweredPayload
 import com.tistory.shanepark.dutypark.notification.domain.payload.NotificationActorSnapshot
 import com.tistory.shanepark.dutypark.notification.domain.payload.NotificationPayload
 import com.tistory.shanepark.dutypark.notification.domain.payload.ScheduleTaggedPayload
@@ -48,12 +50,15 @@ class NotificationEventListenerTest {
     private val webPushService: WebPushService = mock()
     private val apnsPushService: ApnsPushService = mock()
 
+    private val blockService: BlockService = mock()
+
     private val listener = NotificationEventListener(
         notificationService = notificationService,
         notificationRepository = notificationRepository,
         memberRepository = memberRepository,
         webPushService = webPushService,
         apnsPushService = apnsPushService,
+        blockService = blockService,
     )
 
     @Test
@@ -524,6 +529,86 @@ class NotificationEventListenerTest {
 
         verifyNoInteractions(webPushService)
         verifyNoInteractions(apnsPushService)
+    }
+
+    @Test
+    fun `skips notification and push when actor and recipient are blocked`() {
+        whenever(blockService.isBlockedEitherWay(2L, 3L)).thenReturn(true)
+
+        listener.handleFriendRequestSent(FriendRequestSentEvent(1L, 2L, 3L))
+
+        verifyNoInteractions(notificationService)
+        verifyNoInteractions(webPushService)
+        verifyNoInteractions(apnsPushService)
+    }
+
+    @Test
+    fun `skips tagged notification when actor and recipient are blocked`() {
+        whenever(blockService.isBlockedEitherWay(2L, 3L)).thenReturn(true)
+
+        listener.handleScheduleTagged(
+            ScheduleTaggedEvent(
+                scheduleId = UUID.randomUUID(),
+                ownerId = 2L,
+                taggedMemberId = 3L,
+                scheduleTitle = "title",
+            )
+        )
+
+        verifyNoInteractions(notificationService)
+        verifyNoInteractions(webPushService)
+        verifyNoInteractions(apnsPushService)
+    }
+
+    @Test
+    fun `handleInquiryAnswered notifies without actor and links to the support history tab`() {
+        val member = memberWithId(1L, "receiver")
+        val inquiryId = UUID.randomUUID()
+        val payload = InquiryAnsweredPayload(subject = "일정이 보이지 않습니다")
+        val notification = notificationWith(
+            member = member,
+            type = NotificationType.INQUIRY_ANSWERED,
+            referenceType = NotificationReferenceType.INQUIRY,
+            referenceId = inquiryId.toString(),
+            actorId = null,
+            payload = payload,
+        )
+
+        whenever(
+            notificationService.createNotification(
+                member.id!!,
+                NotificationType.INQUIRY_ANSWERED,
+                null,
+                NotificationReferenceType.INQUIRY,
+                inquiryId.toString(),
+                payload,
+            )
+        ).thenReturn(notification)
+        whenever(notificationRepository.countByMemberIdAndIsReadFalse(member.id!!)).thenReturn(1)
+
+        listener.handleInquiryAnswered(
+            InquiryAnsweredEvent(
+                inquiryId = inquiryId,
+                memberId = member.id!!,
+                subject = "일정이 보이지 않습니다",
+            )
+        )
+
+        verify(notificationService).createNotification(
+            member.id!!,
+            NotificationType.INQUIRY_ANSWERED,
+            null,
+            NotificationReferenceType.INQUIRY,
+            inquiryId.toString(),
+            payload,
+        )
+        verifyNoInteractions(blockService)
+        val payloadCaptor = argumentCaptor<PushNotificationPayload>()
+        verify(webPushService).sendToMember(eq(member.id!!), payloadCaptor.capture())
+        assertThat(payloadCaptor.firstValue.type).isEqualTo(NotificationType.INQUIRY_ANSWERED)
+        assertThat(payloadCaptor.firstValue.url).isEqualTo("/support?tab=history")
+        assertThat(payloadCaptor.firstValue.notification).isEqualTo(NotificationDto.of(notification, payload))
+        assertThat(payloadCaptor.firstValue.notification?.actorId).isNull()
     }
 
     private fun notificationWith(

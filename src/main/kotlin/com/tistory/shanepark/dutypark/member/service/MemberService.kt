@@ -58,9 +58,9 @@ class MemberService(
 
     @Transactional(readOnly = true)
     fun searchMembersToInviteTeam(
-        page: Pageable, keyword: String
+        page: Pageable, keyword: String, loginMemberId: Long
     ): Page<MemberInviteCandidateDto> {
-        val membersPage = memberRepository.findMembersByNameContainingIgnoreCaseAndTeamIsNull(keyword, page)
+        val membersPage = memberRepository.searchMembersToInviteTeam(keyword, loginMemberId, page)
         return membersPage.map { it.toMemberInviteCandidateDto() }
     }
 

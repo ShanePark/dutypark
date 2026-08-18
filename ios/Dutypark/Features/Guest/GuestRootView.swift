@@ -55,6 +55,8 @@ struct GuestRootView: View {
             LoginView(wrapsInNavigationStack: false)
         case .guide:
             GuestGuideView()
+        case .support:
+            SupportView()
         case .terms:
             GuestPolicyView(type: .terms)
         case .privacy:
@@ -387,6 +389,23 @@ private struct GuestLandingView: View {
             .buttonStyle(.plain)
             .padding(.top, 20)
             .accessibilityIdentifier("guest.guide")
+
+            // App Review 1.2 requires the contact point to be reachable without an
+            // account, so it sits with the login call to action.
+            NavigationLink(value: GuestRoute.support) {
+                Label(
+                    SupportLocalization.text("support.guest.entry"),
+                    systemImage: "questionmark.circle"
+                )
+                .font(DPFont.light(size: 15, relativeTo: .subheadline))
+                .foregroundStyle(DPColor.textMuted)
+                .padding(.horizontal, 20)
+                .frame(minHeight: 44)
+                .contentShape(Capsule())
+            }
+            .buttonStyle(.plain)
+            .padding(.top, 4)
+            .accessibilityIdentifier("guest.support")
 
             Spacer()
         }

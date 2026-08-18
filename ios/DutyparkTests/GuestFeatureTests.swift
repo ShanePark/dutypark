@@ -5,6 +5,7 @@ import XCTest
 final class GuestDeepLinkTests: XCTestCase {
     func testParsesSupportedHTTPSRoutes() {
         XCTAssertEqual(route("https://dutypark.o-r.kr/guide"), .guide)
+        XCTAssertEqual(route("https://dutypark.o-r.kr/support"), .support)
         XCTAssertEqual(route("https://dutypark.o-r.kr/terms"), .terms)
         XCTAssertEqual(route("https://dutypark.o-r.kr/privacy"), .privacy)
         XCTAssertEqual(route("https://dutypark.o-r.kr/duty/42?month=8"), .publicCalendar(42))
@@ -25,6 +26,8 @@ final class GuestDeepLinkTests: XCTestCase {
         XCTAssertEqual(route("https://dutypark.o-r.kr/guide/"), .guide)
         XCTAssertNil(route("https://dutypark.o-r.kr/duty/42/edit"))
         XCTAssertNil(route("https://dutypark.o-r.kr/guide/archive"))
+        XCTAssertEqual(route("https://dutypark.o-r.kr/support/"), .support)
+        XCTAssertNil(route("https://dutypark.o-r.kr/support/faq"))
     }
 
     func testWarmLinkParsingDoesNotTrustLookalikeHostsOrInvalidMemberIDs() {
@@ -54,6 +57,18 @@ final class GuestPublicLinkTests: XCTestCase {
         XCTAssertEqual(
             GuestPublicCalendarLink.url(memberID: 42).absoluteString,
             "https://dutypark.o-r.kr/duty/42"
+        )
+    }
+
+    @MainActor
+    func testReportLoginDefersThePublicCalendarUntilAuthentication() {
+        let session = SessionStore(initialState: .guest)
+
+        GuestReportLoginNavigation.prepare(memberID: 42, session: session)
+
+        XCTAssertEqual(
+            session.pendingDestination,
+            URL(string: "https://dutypark.o-r.kr/duty/42")
         )
     }
 

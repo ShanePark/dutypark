@@ -10,4 +10,5 @@ enum class NotificationType {
     TODO_STATUS_TODO,
     TODO_STATUS_IN_PROGRESS,
     TODO_STATUS_DONE,
+    INQUIRY_ANSWERED,
 }

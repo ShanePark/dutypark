@@ -14,17 +14,13 @@ import { sessionClientName } from '@/components/common/sessionClient'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import AdminMemberDetailModal from '@/components/admin/AdminMemberDetailModal.vue'
+import AdminNavTiles from '@/components/admin/AdminNavTiles.vue'
 import { countTodayLogins } from './adminDashboardStats'
 import {
-  Users,
-  Building2,
   ChevronLeft,
   ChevronRight,
   Search,
-  Code2,
   Loader2,
-  FileText,
-  ExternalLink,
   X,
 } from 'lucide-vue-next'
 
@@ -36,6 +32,9 @@ const { showSuccess, showError, confirm, toastSuccess } = useSwal()
 const loading = ref(true)
 const members = ref<AdminMemberDto[]>([])
 const allTokens = ref<RefreshTokenDto[]>([])
+const openReportCount = ref(0)
+const openInquiryCount = ref(0)
+const isSuspensionWorking = ref(false)
 
 const currentPage = ref(0)
 const totalPages = ref(0)
@@ -240,10 +239,62 @@ async function fetchTokens() {
   }
 }
 
+// Only the total is needed for the nav badge, so a single-element page is requested.
+async function fetchModerationCounts() {
+  try {
+    const [reports, inquiries] = await Promise.all([
+      adminApi.getReports('OPEN', 0, 1),
+      adminApi.getInquiries('OPEN', 0, 1),
+    ])
+    openReportCount.value = reports.data.totalElements
+    openInquiryCount.value = inquiries.data.totalElements
+  } catch (error) {
+    console.error('Failed to fetch moderation counts:', error)
+  }
+}
+
+async function handleSuspendMember(member: AdminMemberDto) {
+  if (!await confirm(
+    t('admin.memberDetail.suspension.suspendConfirm', { name: member.name }),
+    t('admin.memberDetail.suspension.suspendConfirmTitle'),
+  )) return
+
+  isSuspensionWorking.value = true
+  try {
+    await adminApi.suspendMember(member.id)
+    toastSuccess(t('admin.memberDetail.suspension.suspendSuccess', { name: member.name }))
+    await Promise.all([fetchSelectedMemberDetail(member.id), fetchMembers()])
+  } catch (error) {
+    console.error('Failed to suspend member:', error)
+    showError(resolveApiErrorMessage(error, { fallbackKey: 'admin.memberDetail.suspension.suspendFailed' }, t))
+  } finally {
+    isSuspensionWorking.value = false
+  }
+}
+
+async function handleUnsuspendMember(member: AdminMemberDto) {
+  if (!await confirm(
+    t('admin.memberDetail.suspension.unsuspendConfirm', { name: member.name }),
+    t('admin.memberDetail.suspension.unsuspendConfirmTitle'),
+  )) return
+
+  isSuspensionWorking.value = true
+  try {
+    await adminApi.unsuspendMember(member.id)
+    toastSuccess(t('admin.memberDetail.suspension.unsuspendSuccess', { name: member.name }))
+    await Promise.all([fetchSelectedMemberDetail(member.id), fetchMembers()])
+  } catch (error) {
+    console.error('Failed to lift member suspension:', error)
+    showError(resolveApiErrorMessage(error, { fallbackKey: 'admin.memberDetail.suspension.unsuspendFailed' }, t))
+  } finally {
+    isSuspensionWorking.value = false
+  }
+}
+
 async function fetchData() {
   loading.value = true
   try {
-    await Promise.all([fetchMembers(), fetchTokens()])
+    await Promise.all([fetchMembers(), fetchTokens(), fetchModerationCounts()])
   } catch (error) {
     console.error('Failed to fetch admin data:', error)
     showError(t('admin.dashboard.messages.loadDataFailed'))
@@ -256,18 +307,6 @@ function goToPage(page: number) {
   if (page >= 0 && page < totalPages.value) {
     currentPage.value = page
     fetchMembers()
-  }
-}
-
-function setHoverBg(e: Event) {
-  if (e.currentTarget) {
-    (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--dp-bg-hover)'
-  }
-}
-
-function clearHoverBg(e: Event, bgColor = 'var(--dp-bg-card)') {
-  if (e.currentTarget) {
-    (e.currentTarget as HTMLElement).style.backgroundColor = bgColor
   }
 }
 
@@ -287,46 +326,11 @@ onMounted(async () => {
       </div>
 
       <template v-else>
-        <div class="grid grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
-          <router-link
-            to="/admin"
-            class="admin-top-tile admin-top-tile-active hover:bg-dp-surface-strong-hover"
-          >
-            <Users class="admin-top-tile-icon text-dp-text-on-dark" />
-            <span class="admin-top-tile-label text-dp-text-on-dark">{{ t('admin.nav.members') }}</span>
-          </router-link>
-          <router-link
-            to="/admin/teams"
-            class="admin-top-tile bg-dp-bg-card border border-dp-border-primary"
-            @mouseover="(e: Event) => setHoverBg(e)"
-            @mouseleave="(e: Event) => clearHoverBg(e)"
-          >
-            <Building2 class="admin-top-tile-icon text-dp-text-secondary" />
-            <span class="admin-top-tile-label text-dp-text-primary">{{ t('admin.nav.teams') }}</span>
-          </router-link>
-          <router-link
-            to="/admin/dev"
-            class="admin-top-tile bg-dp-bg-card border border-dp-border-primary"
-            @mouseover="(e: Event) => setHoverBg(e)"
-            @mouseleave="(e: Event) => clearHoverBg(e)"
-          >
-            <Code2 class="admin-top-tile-icon text-dp-text-secondary" />
-            <span class="admin-top-tile-label text-dp-text-primary">{{ t('admin.nav.dev') }}</span>
-          </router-link>
-          <a
-            href="/docs/index.html"
-            target="_blank"
-            class="admin-top-tile bg-dp-bg-card border border-dp-border-primary"
-            @mouseover="(e: Event) => setHoverBg(e)"
-            @mouseleave="(e: Event) => clearHoverBg(e)"
-          >
-            <div class="mb-2 flex items-center gap-1">
-              <FileText class="admin-top-tile-icon mb-0 text-dp-text-secondary" />
-              <ExternalLink class="hidden sm:block w-3 h-3 text-dp-text-muted" />
-            </div>
-            <span class="admin-top-tile-label text-dp-text-primary">{{ t('admin.nav.apiDocs') }}</span>
-          </a>
-        </div>
+        <AdminNavTiles
+          active="members"
+          :open-report-count="openReportCount"
+          :open-inquiry-count="openInquiryCount"
+        />
 
         <div class="admin-stats-band mb-4 sm:mb-6" :aria-label="t('admin.dashboard.statsAriaLabel')">
           <div class="admin-stats-grid">
@@ -463,8 +467,11 @@ onMounted(async () => {
       :load-error="memberDetailError"
       @close="closeMemberDetailModal"
       @retry="fetchSelectedMemberDetail()"
+      :suspension-working="isSuspensionWorking"
       @go-to-schedule="goToMemberSchedule"
       @change-password="openPasswordModalFromDetail"
+      @suspend="handleSuspendMember"
+      @unsuspend="handleUnsuspendMember"
     />
 
     <BaseModal
@@ -532,43 +539,6 @@ onMounted(async () => {
 </template>
 
 <style scoped>
-.admin-top-tile {
-  min-width: 0;
-  transition:
-    background-color 160ms ease,
-    box-shadow 180ms ease,
-    transform 180ms ease;
-}
-
-.admin-top-tile {
-  display: flex;
-  min-height: 5.3rem;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  border-radius: 1rem;
-  padding: 0.75rem 0.4rem;
-  text-align: center;
-}
-
-.admin-top-tile-active {
-  background-color: var(--dp-modal-header-bg);
-}
-
-.admin-top-tile-icon {
-  width: 1.15rem;
-  height: 1.15rem;
-  margin-bottom: 0.5rem;
-  flex-shrink: 0;
-}
-
-.admin-top-tile-label {
-  font-size: 0.72rem;
-  line-height: 1.1rem;
-  font-weight: 700;
-  word-break: keep-all;
-}
-
 .admin-stats-band {
   overflow: hidden;
   border: 1px solid var(--dp-border-primary);
@@ -656,10 +626,6 @@ onMounted(async () => {
 }
 
 @media (hover: hover) {
-  .admin-top-tile:hover {
-    transform: translateY(-1px);
-  }
-
   .admin-member-row:hover {
     background-color: color-mix(in srgb, var(--dp-bg-hover) 74%, var(--dp-accent-bg));
     box-shadow: inset 3px 0 0 color-mix(in srgb, var(--dp-accent) 72%, transparent);
@@ -693,23 +659,6 @@ onMounted(async () => {
 }
 
 @media (min-width: 640px) {
-  .admin-top-tile {
-    min-height: auto;
-    align-items: flex-start;
-    padding: 1rem;
-    text-align: left;
-  }
-
-  .admin-top-tile-icon {
-    width: 1.5rem;
-    height: 1.5rem;
-  }
-
-  .admin-top-tile-label {
-    font-size: 1rem;
-    line-height: 1.4rem;
-  }
-
   .admin-stats-band {
     border-radius: 1.35rem;
   }

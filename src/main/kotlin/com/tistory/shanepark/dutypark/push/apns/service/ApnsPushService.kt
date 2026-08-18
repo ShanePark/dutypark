@@ -3,6 +3,7 @@ package com.tistory.shanepark.dutypark.push.apns.service
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.notification.domain.enums.NotificationType
 import com.tistory.shanepark.dutypark.notification.domain.payload.ActorNotificationPayload
+import com.tistory.shanepark.dutypark.notification.domain.payload.InquiryAnsweredPayload
 import com.tistory.shanepark.dutypark.notification.domain.payload.ScheduleTaggedPayload
 import com.tistory.shanepark.dutypark.notification.domain.payload.TodoStatusDonePayload
 import com.tistory.shanepark.dutypark.notification.domain.payload.TodoStatusInProgressPayload
@@ -184,6 +185,10 @@ class ApnsPushService @Autowired constructor(
                 (notificationPayload as? TodoStatusDonePayload)?.todoTitle.orEmpty(),
                 "todoStatusDone",
             )
+            NotificationType.INQUIRY_ANSWERED -> subjectAlert(
+                (notificationPayload as? InquiryAnsweredPayload)?.subject,
+                "inquiryAnswered",
+            )
         }
     }
 
@@ -191,6 +196,12 @@ class ApnsPushService @Autowired constructor(
         LocalizedAlert("notifications.items.${name}Fallback")
     } else {
         LocalizedAlert("notifications.items.$name", listOf(actor))
+    }
+
+    private fun subjectAlert(subject: String?, name: String): LocalizedAlert {
+        val trimmed = subject?.trim()?.takeIf(String::isNotEmpty)
+            ?: return LocalizedAlert("notifications.items.${name}Fallback")
+        return LocalizedAlert("notifications.items.$name", listOf(trimmed))
     }
 
     private fun titledAlert(actor: String?, title: String, name: String): LocalizedAlert = if (actor == null) {

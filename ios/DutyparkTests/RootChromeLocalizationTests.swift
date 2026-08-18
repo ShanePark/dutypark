@@ -9,6 +9,7 @@ struct RootChromeLocalizationTests {
     func moreMenuAndNotificationChromeUseTheRequestedLocale() {
         #expect(RootChromeLocalization.home("home.friends", locale: korean) == "친구관리")
         #expect(RootChromeLocalization.localizable("root.menu.guide", locale: korean) == "이용 안내")
+        #expect(RootChromeLocalization.localizable("root.menu.support", locale: korean) == "문의하기")
         #expect(RootChromeLocalization.localizable("root.menu.settings", locale: korean) == "설정")
         #expect(RootChromeLocalization.notifications("notifications.title", locale: korean) == "알림")
         #expect(RootChromeLocalization.notifications("notifications.common.close", locale: korean) == "알림 닫기")
@@ -31,6 +32,7 @@ struct RootChromeLocalizationTests {
             .friends,
             .notifications,
             .guide,
+            .support,
             .settings,
             .logout,
         ])
@@ -39,12 +41,13 @@ struct RootChromeLocalizationTests {
             .notifications,
             .admin,
             .guide,
+            .support,
             .settings,
             .logout,
         ])
         #expect(MoreMenuItem.visibleGroups(isAdmin: true) == [
             [.friends, .notifications],
-            [.admin, .guide, .settings],
+            [.admin, .guide, .support, .settings],
             [.logout],
         ])
 
@@ -69,6 +72,7 @@ struct RootChromeLocalizationTests {
                 "more.notifications",
                 "more.admin",
                 "more.guide",
+                "more.support",
                 "more.settings",
                 "more.logout",
             ]

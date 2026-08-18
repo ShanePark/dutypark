@@ -283,6 +283,22 @@
         }
       }
     },
+    "auth.account.suspended": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This account has been suspended. Please use the support page to appeal."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "계정이 이용 정지되었습니다. 이의제기는 문의 페이지를 이용해 주세요."
+          }
+        }
+      }
+    },
     "auth.impersonation.alreadyImpersonating": {
       "localizations": {
         "en": {
@@ -615,6 +631,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "인증이 필요합니다."
+          }
+        }
+      }
+    },
+    "block.self": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You cannot block yourself."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자기 자신은 차단할 수 없습니다."
           }
         }
       }
@@ -1099,6 +1131,22 @@
         }
       }
     },
+    "friend.request.blocked": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You cannot send a request to a blocked user."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "차단된 사용자에게는 요청을 보낼 수 없습니다."
+          }
+        }
+      }
+    },
     "friend.request.notFound": {
       "localizations": {
         "en": {
@@ -1131,6 +1179,22 @@
         }
       }
     },
+    "inquiry.rateLimit.exceeded": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Too many inquiries were sent. Please try again later."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "문의를 너무 많이 보냈습니다. 잠시 후 다시 시도해주세요."
+          }
+        }
+      }
+    },
     "member.auxiliary.name.required": {
       "localizations": {
         "en": {
@@ -1143,6 +1207,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "이름은 필수입니다."
+          }
+        }
+      }
+    },
+    "member.suspend.deletionPending": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "An account that is pending deletion cannot be suspended."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "삭제 대기 중인 계정은 이용 정지할 수 없습니다."
           }
         }
       }
@@ -1239,6 +1319,54 @@
           "stringUnit": {
             "state": "translated",
             "value": "이용약관 버전 정보가 필요합니다."
+          }
+        }
+      }
+    },
+    "report.detail.required": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Please add details when the reason is Other."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "사유가 기타이면 상세 내용을 입력해주세요."
+          }
+        }
+      }
+    },
+    "report.self": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "You cannot report your own content."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자신의 콘텐츠는 신고할 수 없습니다."
+          }
+        }
+      }
+    },
+    "report.target.notDeletable": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A member report has no content to delete."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회원 신고는 삭제할 콘텐츠가 없습니다."
           }
         }
       }

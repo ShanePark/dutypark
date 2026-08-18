@@ -105,10 +105,29 @@ export const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: true, requiresAdmin: true },
   },
   {
+    path: '/admin/reports',
+    name: 'admin-reports',
+    component: () => import('@/views/admin/AdminReportListView.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true },
+  },
+  {
+    path: '/admin/inquiries',
+    name: 'admin-inquiries',
+    component: () => import('@/views/admin/AdminInquiryListView.vue'),
+    meta: { requiresAuth: true, requiresAdmin: true },
+  },
+  {
     path: '/admin/dev',
     name: 'admin-dev',
     component: () => import('@/views/admin/DevPlaygroundView.vue'),
     meta: { requiresAuth: true, requiresAdmin: true },
+  },
+  // Support page (published contact channel, reachable without a session)
+  {
+    path: '/support',
+    name: 'support',
+    component: () => import('@/views/support/SupportView.vue'),
+    meta: { requiresAuth: false },
   },
   // Guide page
   {

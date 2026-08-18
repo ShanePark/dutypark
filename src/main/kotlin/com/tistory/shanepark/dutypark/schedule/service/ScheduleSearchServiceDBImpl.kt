@@ -26,6 +26,10 @@ class ScheduleSearchServiceDBImpl(
         query: String
     ): PageResponse<ScheduleSearchResult> {
         val target = memberRepository.findById(targetMemberId).orElseThrow()
+        // Matches the calendar screen: an unreadable target yields no results rather than an error.
+        if (!friendService.isVisible(loginMember, targetMemberId, scheduleVisibilityCheck = true)) {
+            return PageResponse(PageImpl(emptyList(), page, 0))
+        }
         val availableVisibilities = friendService.availableScheduleVisibilities(loginMember, target)
 
         val pageOfIds = scheduleRepository.findSearchIdsByMemberAndContentContainingAndVisibilityIn(

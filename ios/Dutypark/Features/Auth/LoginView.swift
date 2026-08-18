@@ -117,9 +117,9 @@ struct LoginView: View {
                                 .accessibilityLabel(Text("auth.login.passwordLabel"))
                         }
 
-                        if let errorKey = session.loginErrorKey {
+                        if let loginErrorMessage {
                             VStack(alignment: .leading, spacing: 4) {
-                                Text(LocalizedStringKey(errorKey))
+                                Text(verbatim: loginErrorMessage)
                                     .accessibilityIdentifier("login.error")
                                 if let attemptsMessage = remainingAttemptsMessage {
                                     Text(attemptsMessage)
@@ -282,6 +282,11 @@ struct LoginView: View {
         .dpInteractivePopGestureEnabled()
     }
 
+    private var loginErrorMessage: String? {
+        guard let key = session.loginErrorKey else { return nil }
+        return LoginErrorMessage.text(key: key, status: session.loginErrorStatus)
+    }
+
     private var remainingAttemptsMessage: String? {
         LoginAttemptMessage.text(remainingAttempts: session.loginRemainingAttempts)
     }
@@ -404,6 +409,19 @@ struct LoginView: View {
                 oauthErrorMessage = OAuthLoginErrorMessage.text(for: error)
             }
         }
+    }
+}
+
+nonisolated enum LoginErrorMessage {
+    /// Server side failures carry their HTTP status so a user can report what happened.
+    static func text(key: String, status: Int?) -> String {
+        if key == "auth.account.suspended" {
+            return APIErrorLocalization.message(code: key)
+        }
+        guard let status else {
+            return AppLocalization.string(key, table: "Localizable")
+        }
+        return AppLocalization.format(key, table: "Localizable", arguments: [status])
     }
 }
 

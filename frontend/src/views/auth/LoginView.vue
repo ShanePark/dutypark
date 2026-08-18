@@ -7,10 +7,10 @@ import { useKakao } from '@/composables/useKakao'
 import { useNaver } from '@/composables/useNaver'
 import { AppleSignInError, isAppleSignInCancellation, useApple } from '@/composables/useApple'
 import { useLoginAttemptGate } from '@/composables/useLoginAttemptGate'
-import { AxiosError } from 'axios'
 import PolicyModal from '@/components/common/PolicyModal.vue'
 import { getSafeRedirect } from '@/utils/redirect'
-import { getApiErrorDetail, resolveApiErrorMessage } from '@/utils/resolveApiError'
+import { getApiErrorDetail } from '@/utils/resolveApiError'
+import { resolveLoginErrorMessage } from '@/utils/loginError'
 
 const REMEMBER_EMAIL_KEY = 'dp-remember-email'
 
@@ -93,14 +93,10 @@ async function handleLogin() {
 
     await router.replace(redirectTarget())
   } catch (e: unknown) {
-    if (e instanceof AxiosError && e.response?.data) {
-      error.value = resolveApiErrorMessage(e, { fallbackKey: 'auth.login.error.generic' }, t)
-      const attempts = getApiErrorDetail<number>(e, 'remainingAttempts')
-      if (typeof attempts === 'number') {
-        remainingAttempts.value = attempts
-      }
-    } else {
-      error.value = t('auth.login.error.invalidCredentials')
+    error.value = resolveLoginErrorMessage(e, t)
+    const attempts = getApiErrorDetail<number>(e, 'remainingAttempts')
+    if (typeof attempts === 'number') {
+      remainingAttempts.value = attempts
     }
   } finally {
     finishAttempt('PASSWORD')
@@ -114,11 +110,7 @@ async function handleKakaoLogin() {
   try {
     await kakaoLogin(redirectTarget())
   } catch (exception) {
-    error.value = resolveApiErrorMessage(
-      exception,
-      { fallbackKey: 'auth.login.error.generic' },
-      t,
-    )
+    error.value = resolveLoginErrorMessage(exception, t)
   } finally {
     finishAttempt('KAKAO')
   }
@@ -131,11 +123,7 @@ async function handleNaverLogin() {
   try {
     await naverLogin(redirectTarget())
   } catch (exception) {
-    error.value = resolveApiErrorMessage(
-      exception,
-      { fallbackKey: 'auth.login.error.generic' },
-      t,
-    )
+    error.value = resolveLoginErrorMessage(exception, t)
   } finally {
     finishAttempt('NAVER')
   }
@@ -156,11 +144,9 @@ function getAppleErrorMessage(exception: unknown): string {
     }
   }
 
-  return resolveApiErrorMessage(
-    exception,
-    { fallbackKey: 'auth.login.apple.generic' },
-    t,
-  )
+  return resolveLoginErrorMessage(exception, t, {
+    genericKey: 'auth.login.apple.generic',
+  })
 }
 
 async function handleAppleLogin() {
@@ -401,6 +387,10 @@ async function handleAppleRetry() {
         >
           {{ t('policy.privacy.title') }}
         </button>
+        <span class="mx-2 text-xs text-dp-text-muted">|</span>
+        <router-link to="/support" class="text-xs transition hover:underline text-dp-text-muted">
+          {{ t('header.menu.support') }}
+        </router-link>
       </div>
     </div>
 

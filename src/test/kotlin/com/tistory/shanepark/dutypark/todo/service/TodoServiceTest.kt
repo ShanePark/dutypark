@@ -1,7 +1,8 @@
 package com.tistory.shanepark.dutypark.todo.service
 
+import com.tistory.shanepark.dutypark.attachment.domain.entity.Attachment
 import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
-import com.tistory.shanepark.dutypark.attachment.dto.AttachmentDto
+import com.tistory.shanepark.dutypark.attachment.repository.AttachmentRepository
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.attachment.service.AttachmentService
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
@@ -29,8 +30,6 @@ import org.springframework.context.ApplicationEventPublisher
 import org.springframework.test.util.ReflectionTestUtils
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.time.ZoneId
-import java.time.ZonedDateTime
 import java.util.*
 
 class TodoServiceTest {
@@ -38,6 +37,7 @@ class TodoServiceTest {
     private lateinit var todoService: TodoService
     private lateinit var memberRepository: MemberRepository
     private lateinit var todoRepository: TodoRepository
+    private lateinit var attachmentRepository: AttachmentRepository
     private lateinit var attachmentService: AttachmentService
     private lateinit var friendService: FriendService
     private lateinit var eventPublisher: ApplicationEventPublisher
@@ -50,11 +50,19 @@ class TodoServiceTest {
     fun setUp() {
         memberRepository = mock(MemberRepository::class.java)
         todoRepository = mock(TodoRepository::class.java)
+        attachmentRepository = mock(AttachmentRepository::class.java)
         attachmentService = mock(AttachmentService::class.java)
         friendService = mock(FriendService::class.java)
         eventPublisher = mock(ApplicationEventPublisher::class.java)
         ReflectionTestUtils.setField(member, "id", loginMember.id)
-        todoService = TodoService(memberRepository, todoRepository, attachmentService, friendService, eventPublisher)
+        todoService = TodoService(
+            memberRepository,
+            todoRepository,
+            attachmentRepository,
+            attachmentService,
+            friendService,
+            eventPublisher
+        )
         // Mockito returns 0 (not null) by default for a nullable Int repository method;
         // mirror the real "no tagged rows" result so top-position math stays correct.
         `when`(todoRepository.findMinTagOrderByMemberAndStatus(anyArg(), anyArg()))
@@ -320,21 +328,38 @@ class TodoServiceTest {
         val todo = Todo(member, "title", "content", 1)
         ReflectionTestUtils.setField(todo, "id", todoId)
         val attachments = listOf(
-            createAttachmentDto(UUID.randomUUID()),
-            createAttachmentDto(UUID.randomUUID())
+            mock(Attachment::class.java),
+            mock(Attachment::class.java)
         )
 
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
         `when`(todoRepository.findById(todoId)).thenReturn(Optional.of(todo))
-        `when`(attachmentService.listAttachments(loginMember, AttachmentContextType.TODO, todoId.toString()))
+        `when`(attachmentRepository.findAllByContextTypeAndContextId(AttachmentContextType.TODO, todoId.toString()))
             .thenReturn(attachments)
 
         todoService.deleteTodo(loginMember, todoId)
 
         attachments.forEach { attachment ->
-            verify(attachmentService, times(1)).deleteAttachment(loginMember, attachment.id)
+            verify(attachmentService, times(1)).deleteAttachment(attachment)
         }
         verify(todoRepository, times(1)).delete(todo)
+    }
+
+    @Test
+    fun `deleteTodoInternal removes attachments and the entity without an ownership check`() {
+        val todoId = UUID.randomUUID()
+        val todo = Todo(otherMember(), "title", "content", 1)
+        ReflectionTestUtils.setField(todo, "id", todoId)
+        val attachment = mock(Attachment::class.java)
+
+        `when`(attachmentRepository.findAllByContextTypeAndContextId(AttachmentContextType.TODO, todoId.toString()))
+            .thenReturn(listOf(attachment))
+
+        todoService.deleteTodoInternal(todo)
+
+        verify(attachmentService, times(1)).deleteAttachment(attachment)
+        verify(todoRepository, times(1)).delete(todo)
+        verifyNoInteractions(memberRepository)
     }
 
     @Test
@@ -369,22 +394,6 @@ class TodoServiceTest {
     }
 
     private fun otherMember(): Member = memberWithId(2L)
-
-    private fun createAttachmentDto(id: UUID): AttachmentDto {
-        return AttachmentDto(
-            id = id,
-            contextType = AttachmentContextType.TODO,
-            contextId = UUID.randomUUID().toString(),
-            originalFilename = "file_$id.jpg",
-            contentType = "image/jpeg",
-            size = 1024L,
-            hasThumbnail = false,
-            thumbnailUrl = null,
-            orderIndex = 0,
-            createdAt = ZonedDateTime.of(2024, 1, 1, 0, 0, 0, 0, ZoneId.systemDefault()),
-            createdBy = loginMember.id
-        )
-    }
 
     // ========== getBoard Tests ==========
 

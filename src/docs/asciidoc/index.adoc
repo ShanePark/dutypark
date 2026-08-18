@@ -67,6 +67,46 @@ operation::members/update-visibility[]
 
 operation::admin/members-detail[]
 
+=== Suspend Member
+
+operation::admin/members-suspend[]
+
+=== Lift Member Suspension
+
+operation::admin/members-reinstate[]
+
+=== Report List
+
+operation::admin/reports-list[]
+
+=== Report Detail
+
+operation::admin/reports-detail[]
+
+=== Update Report Status
+
+operation::admin/reports-update-status[]
+
+=== Delete Reported Content
+
+operation::admin/reports-delete-target[]
+
+==== Delete Reported Content [Not Deletable]
+
+operation::admin/reports-delete-target-not-deletable[]
+
+=== Inquiry List
+
+operation::admin/inquiries-list[]
+
+=== Inquiry Detail
+
+operation::admin/inquiries-detail[]
+
+=== Update Inquiry Status
+
+operation::admin/inquiries-change-status[]
+
 == Duty
 
 === Get Duties
@@ -311,6 +351,52 @@ operation::friends/demote-family[]
 ==== Demote Family Member [Bad Request]
 
 operation::friends/demote-family-bad-request[]
+
+== Blocks
+
+=== Block Member
+
+operation::blocks/block[]
+
+==== Block Member [Bad Request]
+
+operation::blocks/block-bad-request[]
+
+=== Unblock Member
+
+operation::blocks/unblock[]
+
+=== Get Blocked Members
+
+operation::blocks/get-list[]
+
+== Reports
+
+=== Create Report
+
+operation::reports/create[]
+
+==== Create Report [Duplicate Open Report]
+
+operation::reports/create-duplicate[]
+
+==== Create Report [Self Report]
+
+operation::reports/create-self[]
+
+==== Create Report [Detail Required]
+
+operation::reports/create-detail-required[]
+
+== Inquiries
+
+=== Create Inquiry
+
+operation::inquiry/create[]
+
+=== My Inquiries
+
+operation::inquiry/my-list[]
 
 == Notifications
 
