@@ -49,6 +49,13 @@ describe('AdminReportListView', () => {
     expect(reportListView).toContain('memo: memo.trim(),')
     expect(reportListView).not.toContain('memo.trim() || undefined')
   })
+
+  it('ignores stale list responses and retries the last valid page', () => {
+    expect(reportListView).toContain('reportRequestTracker.start()')
+    expect(reportListView).toContain('reportRequestTracker.isLatest(requestId)')
+    expect(reportListView).toContain('lastValidPage(requestedPage, res.data.totalPages)')
+    expect(reportListView).toContain('await fetchReports()')
+  })
 })
 
 describe('AdminReportDetailModal', () => {
@@ -109,6 +116,13 @@ describe('AdminInquiryListView', () => {
   it('sends the in-app answer along with the status change', () => {
     expect(inquiryListView).toContain('async function handleUpdateStatus(status: InquiryStatus, memo: string, answer: string)')
     expect(inquiryListView).toContain('buildInquiryUpdateRequest(status, memo, answer, selectedInquiry.value.answer)')
+  })
+
+  it('ignores stale list responses and retries the last valid page', () => {
+    expect(inquiryListView).toContain('inquiryRequestTracker.start()')
+    expect(inquiryListView).toContain('inquiryRequestTracker.isLatest(requestId)')
+    expect(inquiryListView).toContain('lastValidPage(requestedPage, res.data.totalPages)')
+    expect(inquiryListView).toContain('await fetchInquiries()')
   })
 })
 

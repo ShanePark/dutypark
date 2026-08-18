@@ -1680,6 +1680,7 @@ async function showExcelUploadModal() {
       :member-id="memberId"
       :is-my-calendar="isMyCalendar"
       :is-logged-in="isLoggedIn"
+      :viewer-member-id="authStore.user?.id ?? null"
       @close="isDayDetailModalOpen = false"
       @create-schedule="handleCreateSchedule"
       @edit-schedule="handleEditSchedule"

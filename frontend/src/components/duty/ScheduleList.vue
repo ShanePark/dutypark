@@ -18,7 +18,7 @@ import { useDragClickGuard } from '@/composables/useDragClickGuard'
 import type { NormalizedAttachment } from '@/types'
 import { normalizeAttachment } from '@/api/attachment'
 import { buildDisplayTagMembers } from '@/utils/tagMembers'
-import { canEditCalendarSchedule } from '@/utils/schedulePermissions'
+import { canEditCalendarSchedule, canReportCalendarSchedule } from '@/utils/schedulePermissions'
 
 interface Schedule {
   id: string
@@ -61,6 +61,7 @@ const props = defineProps<{
   isMyCalendar: boolean
   memberId: number
   isLoggedIn?: boolean
+  viewerMemberId?: number | null
 }>()
 
 const emit = defineEmits<{
@@ -208,9 +209,13 @@ function canUntagSchedule(schedule: Schedule) {
   return schedule.isTagged && props.isMyCalendar
 }
 
-// Someone else owns the schedule when it is not on my calendar, or when it was tagged onto mine.
 function canReportSchedule(schedule: Schedule) {
-  return !!props.isLoggedIn && (!props.isMyCalendar || schedule.isTagged)
+  const ownerMemberId = schedule.isTagged ? schedule.taggedByMember?.id ?? null : props.memberId
+  return canReportCalendarSchedule(
+    !!props.isLoggedIn,
+    props.viewerMemberId ?? null,
+    ownerMemberId,
+  )
 }
 
 function shouldShowVisibility(schedule: Schedule) {

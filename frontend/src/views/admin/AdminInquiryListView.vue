@@ -10,6 +10,7 @@ import AdminNavTiles from '@/components/admin/AdminNavTiles.vue'
 import AdminInquiryDetailModal from '@/components/admin/AdminInquiryDetailModal.vue'
 import { INQUIRY_STATUS_LABEL_KEYS, inquiryStatusToneClass } from '@/components/admin/adminModerationLabels'
 import { buildInquiryUpdateRequest } from './inquiryUpdateRequest'
+import { createLatestRequestTracker, lastValidPage } from './moderationListState'
 import type { AdminInquiryDto, InquiryStatus, InquiryStatusFilter } from '@/types/adminModeration'
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-vue-next'
 
@@ -39,19 +40,35 @@ const isDetailLoading = ref(false)
 const detailError = ref<string | null>(null)
 const isWorking = ref(false)
 let detailRequestId = 0
+const inquiryRequestTracker = createLatestRequestTracker()
 
 async function fetchInquiries() {
+  const requestId = inquiryRequestTracker.start()
+  const requestedStatus = statusFilter.value
+  const requestedPage = page.value
   isLoading.value = true
   try {
-    const res = await adminApi.getInquiries(statusFilter.value, page.value, pageSize)
+    const res = await adminApi.getInquiries(requestedStatus, requestedPage, pageSize)
+    if (!inquiryRequestTracker.isLatest(requestId)) return
+
+    const validPage = lastValidPage(requestedPage, res.data.totalPages)
+    if (validPage !== requestedPage) {
+      page.value = validPage
+      await fetchInquiries()
+      return
+    }
+
     inquiries.value = res.data.content
     totalElements.value = res.data.totalElements
     totalPages.value = res.data.totalPages
   } catch (error) {
+    if (!inquiryRequestTracker.isLatest(requestId)) return
     console.error('Failed to fetch inquiries:', error)
     showError(t('admin.inquiries.messages.loadFailed'))
   } finally {
-    isLoading.value = false
+    if (inquiryRequestTracker.isLatest(requestId)) {
+      isLoading.value = false
+    }
   }
 }
 

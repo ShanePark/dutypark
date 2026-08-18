@@ -59,6 +59,7 @@ interface Props {
   memberId: number
   isMyCalendar: boolean
   isLoggedIn?: boolean
+  viewerMemberId?: number | null
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -524,6 +525,7 @@ function handleUploadError(message: string) {
             :is-my-calendar="isMyCalendar"
             :member-id="memberId"
             :is-logged-in="isLoggedIn"
+            :viewer-member-id="viewerMemberId"
             @edit="startEditMode"
             @delete="(schedule) => emit('deleteSchedule', schedule)"
             @reorder="(scheduleIds) => emit('reorderSchedules', scheduleIds)"

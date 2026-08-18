@@ -39,10 +39,13 @@ describe('duty calendar report entry points', () => {
   })
 
   it('reports schedules only when someone else owns them', () => {
-    expect(scheduleList).toContain('return !!props.isLoggedIn && (!props.isMyCalendar || schedule.isTagged)')
+    expect(scheduleList).toContain('canReportCalendarSchedule(')
+    expect(scheduleList).toContain('schedule.isTagged ? schedule.taggedByMember?.id ?? null : props.memberId')
+    expect(scheduleList).toContain('props.viewerMemberId')
     expect(scheduleList).toMatch(/v-if="canReportSchedule\(schedule\)"[\s\S]*?emit\('report'/)
     expect(dayDetailModal).toContain("@report=\"(schedule) => emit('reportSchedule', schedule)\"")
     expect(dutyView).toContain('@report-schedule="openScheduleReport"')
+    expect(dutyView).toContain(':viewer-member-id="authStore.user?.id ?? null"')
   })
 
   it('reports to-dos only when they were tagged onto me', () => {

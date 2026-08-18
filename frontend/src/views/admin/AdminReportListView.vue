@@ -8,6 +8,7 @@ import { useSwal } from '@/composables/useSwal'
 import { resolveApiErrorMessage } from '@/utils/resolveApiError'
 import AdminNavTiles from '@/components/admin/AdminNavTiles.vue'
 import AdminReportDetailModal from '@/components/admin/AdminReportDetailModal.vue'
+import { createLatestRequestTracker, lastValidPage } from './moderationListState'
 import {
   MEMBER_STATUS_LABEL_KEYS,
   REPORT_REASON_LABEL_KEYS,
@@ -51,21 +52,37 @@ const isDetailLoading = ref(false)
 const detailError = ref<string | null>(null)
 const isWorking = ref(false)
 let detailRequestId = 0
+const reportRequestTracker = createLatestRequestTracker()
 
 const reportedMemberId = computed(() => selectedReport.value?.reportedMember?.id ?? null)
 
 async function fetchReports() {
+  const requestId = reportRequestTracker.start()
+  const requestedStatus = statusFilter.value
+  const requestedPage = page.value
   isLoading.value = true
   try {
-    const res = await adminApi.getReports(statusFilter.value, page.value, pageSize)
+    const res = await adminApi.getReports(requestedStatus, requestedPage, pageSize)
+    if (!reportRequestTracker.isLatest(requestId)) return
+
+    const validPage = lastValidPage(requestedPage, res.data.totalPages)
+    if (validPage !== requestedPage) {
+      page.value = validPage
+      await fetchReports()
+      return
+    }
+
     reports.value = res.data.content
     totalElements.value = res.data.totalElements
     totalPages.value = res.data.totalPages
   } catch (error) {
+    if (!reportRequestTracker.isLatest(requestId)) return
     console.error('Failed to fetch reports:', error)
     showError(t('admin.reports.messages.loadFailed'))
   } finally {
-    isLoading.value = false
+    if (reportRequestTracker.isLatest(requestId)) {
+      isLoading.value = false
+    }
   }
 }
 
