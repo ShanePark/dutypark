@@ -824,7 +824,9 @@ export default {
       },
       error: {
         generic: 'Failed to log in.',
-        invalidCredentials: 'Login failed. Check your email and password.',
+        network: 'Unable to reach the server. Check your network connection and try again.',
+        server: 'The server is temporarily unavailable. Please try again shortly. (error {status})',
+        unknown: 'Failed to log in. Please try again shortly. (error {status})',
         locked: 'Login has been temporarily blocked. Please try again later.',
         lastAttempt: 'Warning: this is your last attempt.',
         remainingAttempts: 'Remaining attempts: {count}',

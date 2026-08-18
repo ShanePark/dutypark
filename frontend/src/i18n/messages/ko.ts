@@ -826,7 +826,9 @@ export default {
       },
       error: {
         generic: '로그인에 실패했습니다.',
-        invalidCredentials: '로그인에 실패했습니다. 이메일과 비밀번호를 확인해주세요.',
+        network: '서버에 연결할 수 없습니다. 네트워크 상태를 확인한 뒤 다시 시도해주세요.',
+        server: '서버에 일시적인 문제가 발생했습니다. 잠시 후 다시 시도해주세요. (오류 {status})',
+        unknown: '로그인에 실패했습니다. 잠시 후 다시 시도해주세요. (오류 {status})',
         locked: '로그인이 차단되었습니다. 잠시 후 다시 시도해주세요.',
         lastAttempt: '주의: 마지막 시도입니다!',
         remainingAttempts: '남은 시도 횟수: {count}회',

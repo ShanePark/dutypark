@@ -70,6 +70,56 @@ final class APIClientAuthTests: XCTestCase {
         XCTAssertEqual(store.loginRemainingAttempts, 2)
     }
 
+    @MainActor
+    func testLoginReportsServerOutageWithTheStatusCode() async {
+        URLProtocolStub.handler = { request in
+            Self.response(
+                request,
+                status: 502,
+                body: "<html><body>502 Bad Gateway</body></html>"
+            )
+        }
+
+        let store = SessionStore(
+            authService: AuthService(client: makeClient()),
+            initialState: .guest
+        )
+        await store.login(email: "test@duty.park", password: "12345678", rememberMe: false)
+
+        XCTAssertEqual(store.loginErrorKey, "auth.login.error.server")
+        XCTAssertEqual(store.loginErrorStatus, 502)
+    }
+
+    @MainActor
+    func testLoginReportsUnreachableServerAsANetworkFailure() async {
+        URLProtocolStub.error = URLError(.notConnectedToInternet)
+
+        let store = SessionStore(
+            authService: AuthService(client: makeClient()),
+            initialState: .guest
+        )
+        await store.login(email: "test@duty.park", password: "12345678", rememberMe: false)
+
+        XCTAssertEqual(store.loginErrorKey, "auth.login.error.network")
+        XCTAssertNil(store.loginErrorStatus)
+    }
+
+    @MainActor
+    func testLoginReportsUnclassifiedFailuresWithTheStatusCode() async {
+        URLProtocolStub.handler = { request in
+            Self.response(request, status: 400, body: "Bad Request")
+        }
+
+        let store = SessionStore(
+            authService: AuthService(client: makeClient()),
+            initialState: .guest
+        )
+        await store.login(email: "test@duty.park", password: "12345678", rememberMe: false)
+
+        XCTAssertEqual(store.loginErrorKey, "auth.login.error.unknown")
+        XCTAssertEqual(store.loginErrorStatus, 400)
+    }
+
     func testStatusHandlesMemberAndEmptyGuestResponse() async throws {
         let responses = LockedCounter()
         URLProtocolStub.handler = { request in
