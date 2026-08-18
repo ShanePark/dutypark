@@ -56,10 +56,6 @@ cookie:
   domain: ${DOMAIN_NAME:}
 
 dutypark:
-  account-deletion:
-    worker:
-      fixed-delay-ms: 5000
-      initial-delay-ms: 5000
   ai:
     chat:
       connect-timeout: ${AI_CHAT_CONNECT_TIMEOUT:30s}
@@ -79,9 +75,6 @@ dutypark:
       max-attempts: ${LOGIN_MAX_ATTEMPTS:5}
       window-minutes: ${LOGIN_WINDOW_MINUTES:15}
       cleanup-retention-days: ${LOGIN_CLEANUP_DAYS:7}
-  inquiry:
-    rate-limit:
-      max-per-hour: 5
   oauth:
     authorize-rate-limit:
       max-attempts: ${OAUTH_AUTHORIZE_MAX_ATTEMPTS:30}

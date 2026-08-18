@@ -19,8 +19,8 @@ class AccountDeletionWorker(
     private val log = logger()
 
     @Scheduled(
-        fixedDelayString = "\${dutypark.account-deletion.worker.fixed-delay-ms}",
-        initialDelayString = "\${dutypark.account-deletion.worker.initial-delay-ms}",
+        fixedDelayString = "\${dutypark.account-deletion.worker.fixed-delay-ms:5000}",
+        initialDelayString = "\${dutypark.account-deletion.worker.initial-delay-ms:5000}",
     )
     fun processPendingJobs() {
         while (true) {

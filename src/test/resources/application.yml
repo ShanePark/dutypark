@@ -36,9 +36,6 @@ dutypark:
     worker:
       fixed-delay-ms: 3600000
       initial-delay-ms: 3600000
-  inquiry:
-    rate-limit:
-      max-per-hour: 5
   slack:
     token: ""
   adminEmails:
