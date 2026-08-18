@@ -90,6 +90,8 @@ async function handleSubmit() {
       email: email.value.trim(),
       subject: subject.value.trim() || undefined,
       content: content.value.trim(),
+    }, {
+      verifyMemberSession: isSignedIn.value,
     })
     isSubmitted.value = true
   } catch (exception) {

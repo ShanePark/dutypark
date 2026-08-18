@@ -55,6 +55,7 @@ describe('support page', () => {
 
   it('submits through the inquiry api and confirms receipt', () => {
     expect(supportView).toContain('inquiryApi.create')
+    expect(supportView).toContain('verifyMemberSession: isSignedIn.value')
     expect(supportView).toContain('support.success.title')
   })
 
