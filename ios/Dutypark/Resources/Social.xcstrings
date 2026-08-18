@@ -98,11 +98,23 @@
     "social.confirm.removeFriend.title" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Remove friend" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 삭제" } }
     } },
+    "social.confirm.sendFamily.message" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Send a family request to %@?" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님에게 가족 요청을 보내시겠습니까?" } }
+    } },
+    "social.confirm.sendFamily.title" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Family request" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "가족 요청" } }
+    } },
     "social.confirm.sendFriend.message" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Send a friend request to %@?" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님에게 친구 요청을 보내시겠습니까?" } }
     } },
     "social.confirm.sendFriend.title" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Friend request" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 요청" } }
+    } },
+    "social.confirm.unblock.message" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Unblock %@? You will be able to find each other in search and send friend requests again. Your friend connection is not restored." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님의 차단을 해제하시겠습니까? 서로 다시 검색하고 친구 요청을 보낼 수 있게 됩니다. 친구 관계는 복구되지 않습니다." } }
+    } },
+    "social.confirm.unblock.title" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Unblock" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "차단 해제" } }
     } },
 
     "social.empty.blocked" : { "localizations" : {

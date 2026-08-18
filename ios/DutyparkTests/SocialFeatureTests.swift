@@ -18,8 +18,52 @@ final class SocialFeatureTests: XCTestCase {
         XCTAssertTrue(source.contains("DPConfirmationPanel("))
         XCTAssertTrue(source.contains("canDismiss: !isPerformingConfirmation"))
         XCTAssertTrue(source.contains("isWorking: isPerformingConfirmation"))
-        XCTAssertTrue(source.contains("isDestructive: true"))
+        XCTAssertTrue(source.contains("isDestructive: confirmation.isDestructive"))
         XCTAssertTrue(source.contains(".alert(item: $candidate)"))
+    }
+
+    func testUnblockAndFamilyRequestGoThroughTheConfirmationPanel() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark/Features/Social/SocialView.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+
+        // Unblocking undoes a protective action and a family request goes out to somebody
+        // else, so neither may fire straight from the tap.
+        XCTAssertFalse(source.contains("Task { await viewModel.unblock(member) }"))
+        XCTAssertTrue(source.contains("confirmation = .unblock(member)"))
+        XCTAssertFalse(source.contains("Task { await viewModel.sendFamilyRequest(to: friend) }"))
+        XCTAssertTrue(source.contains("confirmation = .sendFamily(friend)"))
+    }
+
+    func testOnlyTheDestructiveConfirmationsAreStyledAsDestructive() {
+        let target = DashboardFriendDetailDTO(
+            member: MemberPreviewDTO(
+                id: 7,
+                name: "Nari",
+                teamId: nil,
+                team: nil,
+                hasProfilePhoto: false,
+                profilePhotoVersion: 0
+            ),
+            duty: nil,
+            schedules: [],
+            isFamily: false,
+            pinOrder: nil
+        )
+        let blocked = BlockedMemberDTO(
+            id: 7,
+            name: "Nari",
+            hasProfilePhoto: false,
+            profilePhotoVersion: 0,
+            blockedAt: LocalDateTimeValue(rawValue: "2026-08-19T00:00:00")
+        )
+
+        XCTAssertTrue(SocialConfirmation.block(target).isDestructive)
+        XCTAssertTrue(SocialConfirmation.removeFriend(target).isDestructive)
+        XCTAssertFalse(SocialConfirmation.unblock(blocked).isDestructive)
+        XCTAssertFalse(SocialConfirmation.sendFamily(target).isDestructive)
     }
 
     func testConfirmationActionPolicyBlocksDuplicateSubmissions() {
@@ -72,6 +116,10 @@ final class SocialFeatureTests: XCTestCase {
             "social.blocked.since",
             "social.confirm.block.message",
             "social.confirm.block.title",
+            "social.confirm.sendFamily.message",
+            "social.confirm.sendFamily.title",
+            "social.confirm.unblock.message",
+            "social.confirm.unblock.title",
             "social.empty.blocked",
             "social.error.block",
             "social.error.unblock",

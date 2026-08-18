@@ -214,6 +214,10 @@ async function addFamily(member: { id: number | null; name: string }) {
     showWarning(t('friends.messages.familyAlreadyRequested'))
     return
   }
+  if (!await confirm(
+    t('friends.messages.familyRequestConfirm', { name: member.name }),
+    t('friends.messages.familyRequestTitle'),
+  )) return
   closeDropdown()
   try {
     await friendApi.sendFamilyRequest(member.id)
@@ -282,6 +286,11 @@ async function blockFriend(member: { id: number | null; name: string }) {
 }
 
 async function unblockMember(member: BlockedMember) {
+  if (!await confirm(
+    t('friends.block.unblockConfirmMessage', { name: member.name }),
+    t('friends.block.unblockConfirmTitle'),
+    t('friends.block.unblockAction'),
+  )) return
   try {
     await blockApi.unblock(member.id)
     blockedMembers.value = blockedMembers.value.filter((m) => m.id !== member.id)

@@ -710,6 +710,8 @@ export default {
       pinFailed: 'Failed to pin the friend.',
       unpinFailed: 'Failed to unpin the friend.',
       familyAlreadyRequested: 'A family request has already been sent.',
+      familyRequestTitle: 'Family request',
+      familyRequestConfirm: 'Send a family request to {name}?',
       familyRequestSuccess: 'Sent a family request to {name}.',
       familyRequestFailed: 'Failed to send the family request.',
       removeFamilyTitle: 'Remove from family',
@@ -738,6 +740,8 @@ export default {
       blockFailed: 'Failed to block the user.',
       unblockSuccess: 'Unblocked {name}.',
       unblockFailed: 'Failed to unblock the user.',
+      unblockConfirmTitle: 'Unblock',
+      unblockConfirmMessage: 'Unblock {name}? You will be able to find each other in search and send friend requests again. Your friend connection is not restored.',
     },
   },
   todoBoard: {

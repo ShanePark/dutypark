@@ -67,11 +67,18 @@ describe('friend blocking', () => {
     expect(block).toContain('loadBlockedMembers()')
   })
 
-  it('unblocks immediately without a confirmation', () => {
+  it('asks before unblocking, since it undoes a protective action', () => {
     const unblock = functionBody(friendsView, 'unblockMember')
 
-    expect(unblock).toContain('blockApi.unblock(')
-    expect(unblock).not.toContain('confirm')
+    expect(unblock).toMatch(/confirm\([\s\S]*?friends\.block\.unblockConfirmMessage/)
+    expect(unblock).toMatch(/confirm\([\s\S]*?blockApi\.unblock\(/)
+  })
+
+  it('asks before sending a family request, the way a friend request already does', () => {
+    const addFamily = functionBody(friendsView, 'addFamily')
+
+    expect(addFamily).toMatch(/confirm\([\s\S]*?friends\.messages\.familyRequestConfirm/)
+    expect(addFamily).toMatch(/confirm\([\s\S]*?friendApi\.sendFamilyRequest\(/)
   })
 
   it('always renders the blocked section with an empty state', () => {
@@ -104,5 +111,15 @@ describe('block translations', () => {
     expect(block.blockFailed).toBeTruthy()
     expect(block.unblockSuccess).toContain('{name}')
     expect(block.unblockFailed).toBeTruthy()
+    expect(block.unblockConfirmTitle).toBeTruthy()
+    expect(block.unblockConfirmMessage).toContain('{name}')
+  })
+
+  it.each([
+    ['ko', ko],
+    ['en', en],
+  ])('defines the family request confirmation copy in %s', (_locale, messages) => {
+    expect(messages.friends.messages.familyRequestTitle).toBeTruthy()
+    expect(messages.friends.messages.familyRequestConfirm).toContain('{name}')
   })
 })

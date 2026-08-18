@@ -110,7 +110,7 @@ struct SocialView: View {
                     message: socialFormat(confirmation.messageKey, confirmation.memberName),
                     confirmTitle: social(confirmation.confirmKey),
                     cancelTitle: social("social.action.cancelDialog"),
-                    isDestructive: true,
+                    isDestructive: confirmation.isDestructive,
                     isWorking: isPerformingConfirmation,
                     maximumHeight: availableSize.height,
                     cancel: dismiss,
@@ -159,7 +159,7 @@ struct SocialView: View {
                     members: viewModel.blockedMembers,
                     isDisabled: isMutationInFlight,
                     unblock: { member in
-                        Task { await viewModel.unblock(member) }
+                        confirmation = .unblock(member)
                     }
                 )
             }
@@ -504,7 +504,7 @@ struct SocialView: View {
                     close: { actionCandidate = nil },
                     addFamily: {
                         actionCandidate = nil
-                        Task { await viewModel.sendFamilyRequest(to: friend) }
+                        confirmation = .sendFamily(friend)
                     },
                     removeFamily: {
                         actionCandidate = nil
@@ -884,6 +884,8 @@ struct SocialView: View {
         case .removeFamily(let friend): await viewModel.removeFromFamily(friend)
         case .removeFriend(let friend): await viewModel.removeFriend(friend)
         case .block(let friend): await viewModel.block(friend)
+        case .unblock(let member): await viewModel.unblock(member)
+        case .sendFamily(let friend): await viewModel.sendFamilyRequest(to: friend)
         }
     }
 }

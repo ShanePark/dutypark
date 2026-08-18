@@ -712,6 +712,8 @@ export default {
       pinFailed: '친구 고정에 실패했습니다.',
       unpinFailed: '친구 고정 해제에 실패했습니다.',
       familyAlreadyRequested: '이미 가족 요청을 보낸 상태입니다.',
+      familyRequestTitle: '가족 요청',
+      familyRequestConfirm: '{name}님에게 가족 요청을 보낼까요?',
       familyRequestSuccess: '{name}님에게 가족 요청을 보냈습니다.',
       familyRequestFailed: '가족 요청 전송에 실패했습니다.',
       removeFamilyTitle: '가족에서 제외',
@@ -740,6 +742,8 @@ export default {
       blockFailed: '사용자 차단에 실패했습니다.',
       unblockSuccess: '{name}님의 차단을 해제했습니다.',
       unblockFailed: '차단 해제에 실패했습니다.',
+      unblockConfirmTitle: '차단 해제',
+      unblockConfirmMessage: '{name}님의 차단을 해제할까요?\n서로 다시 검색하고 친구 요청을 보낼 수 있게 됩니다. 친구 관계는 복구되지 않습니다.',
     },
   },
   todoBoard: {
