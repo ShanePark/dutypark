@@ -14,6 +14,7 @@ import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.domain.dto.PasswordChangeDto
 import com.tistory.shanepark.dutypark.security.domain.entity.RefreshToken
 import com.tistory.shanepark.dutypark.security.domain.enums.TokenStatus
+import jakarta.persistence.EntityManager
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -50,6 +51,7 @@ class AuthServiceTest {
     private val refreshTokenService: RefreshTokenService = mock()
     private val jwtProvider: JwtProvider = mock()
     private val loginAttemptService: LoginAttemptService = mock()
+    private val entityManager: EntityManager = mock()
     private val jwtConfig = JwtConfig(secret = "secret", tokenValidityInSeconds = 1000, refreshTokenValidityInDays = 30)
 
     private lateinit var authService: AuthService
@@ -63,7 +65,8 @@ class AuthServiceTest {
             refreshTokenService = refreshTokenService,
             jwtProvider = jwtProvider,
             jwtConfig = jwtConfig,
-            loginAttemptService = loginAttemptService
+            loginAttemptService = loginAttemptService,
+            entityManager = entityManager,
         )
     }
 
@@ -217,6 +220,7 @@ class AuthServiceTest {
         whenever(loginAttemptService.isBlocked("127.0.0.1", "user@duty.park")).thenReturn(false)
         whenever(memberRepository.findByEmail("user@duty.park")).thenReturn(Optional.of(member))
         whenever(passwordEncoder.matches("pass", "encoded-pass")).thenReturn(true)
+        whenever(memberRepository.findMemberWithTeamForUpdate(4L)).thenReturn(Optional.of(member))
         val refreshToken = RefreshToken(
             member = member,
             validUntil = futureDateTime,
@@ -233,6 +237,7 @@ class AuthServiceTest {
         assertThat(result.accessToken).isEqualTo("jwt-token")
         assertThat(result.refreshToken).isEqualTo(refreshToken.token)
         assertThat(result.expiresIn).isEqualTo(1000)
+        verify(entityManager).refresh(member)
         verify(loginAttemptService).recordSuccessfulAttempt("127.0.0.1", "user@duty.park")
     }
 
@@ -417,6 +422,7 @@ class AuthServiceTest {
         whenever(loginAttemptService.isBlocked("127.0.0.1", "user@duty.park")).thenReturn(false)
         whenever(memberRepository.findByEmail("user@duty.park")).thenReturn(Optional.of(member))
         whenever(passwordEncoder.matches("pass", "encoded-pass")).thenReturn(true)
+        whenever(memberRepository.findMemberWithTeamForUpdate(4L)).thenReturn(Optional.of(member))
         val request = requestWith("127.0.0.1", "user@duty.park")
 
         val exception = assertThrows<AuthException> {

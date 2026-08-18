@@ -14,6 +14,7 @@ import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.domain.dto.PasswordChangeDto
 import com.tistory.shanepark.dutypark.security.domain.dto.TokenResponse
 import com.tistory.shanepark.dutypark.security.domain.enums.TokenStatus
+import jakarta.persistence.EntityManager
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.http.HttpHeaders
 import org.springframework.security.crypto.password.PasswordEncoder
@@ -30,6 +31,7 @@ class AuthService(
     private val jwtProvider: JwtProvider,
     private val jwtConfig: JwtConfig,
     private val loginAttemptService: LoginAttemptService,
+    private val entityManager: EntityManager,
 ) {
     private val log = logger()
 
@@ -115,18 +117,25 @@ class AuthService(
             throw AuthException(LOGIN_FAILED_MESSAGE)
         }
 
-        // Checked only after the password matched, so a suspended account learns why it is
-        // rejected while a wrong password stays indistinguishable from an unknown account.
-        ensureActive(member, LOGIN_FAILED_MESSAGE)
+        // Lock only after the password matched, so failed logins do not contend on the account.
+        // Suspension uses the same row lock and therefore cannot revoke sessions before this
+        // successful login finishes creating its refresh token.
+        val lockedMember = memberRepository.findMemberWithTeamForUpdate(requireNotNull(member.id)).orElseThrow {
+            AuthException(LOGIN_FAILED_MESSAGE)
+        }
+        // The password lookup already put this entity in the persistence context. Refresh after
+        // acquiring the row lock so a suspension committed between the two reads is visible.
+        entityManager.refresh(lockedMember)
+        ensureActive(lockedMember, LOGIN_FAILED_MESSAGE)
 
         loginAttemptService.recordSuccessfulAttempt(ipAddress, email)
 
         val refreshToken = refreshTokenService.createRefreshToken(
-            memberId = member.id!!,
+            memberId = requireNotNull(lockedMember.id),
             remoteAddr = ipAddress,
             userAgent = req.getHeader(HttpHeaders.USER_AGENT)
         )
-        val jwt = jwtProvider.createToken(member, requireNotNull(refreshToken.id))
+        val jwt = jwtProvider.createToken(lockedMember, requireNotNull(refreshToken.id))
 
         return TokenResponse(
             accessToken = jwt,
