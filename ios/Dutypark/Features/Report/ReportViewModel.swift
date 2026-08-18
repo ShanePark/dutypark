@@ -36,6 +36,9 @@ final class ReportViewModel: ObservableObject {
     @Published var alsoBlock = false
     @Published private(set) var isSubmitting = false
     @Published private(set) var didSubmit = false
+    /// Whether the accepted report also blocked the reported member. Snapshotting the
+    /// toggle keeps the outcome true to what the server was actually asked to do.
+    @Published private(set) var didBlock = false
     @Published var errorMessage: String?
 
     let target: ReportTarget
@@ -80,6 +83,7 @@ final class ReportViewModel: ObservableObject {
                 )
             )
             didSubmit = true
+            didBlock = alsoBlock
             return true
         } catch {
             errorMessage = error.localizedDescription

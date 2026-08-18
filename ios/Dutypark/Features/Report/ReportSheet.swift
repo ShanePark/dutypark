@@ -13,6 +13,10 @@ struct ReportSheet: View {
 
     private let maximumHeight: CGFloat
     private let onDismissabilityChange: (Bool) -> Void
+    /// Reported once, right before the sheet closes, when the accepted report also
+    /// blocked the reported member. The host may no longer be allowed to show what it is
+    /// showing, so it decides where the reporter lands.
+    private let onBlocked: () -> Void
     private let dismiss: () -> Void
 
     init(
@@ -20,6 +24,7 @@ struct ReportSheet: View {
         maximumHeight: CGFloat,
         repository: any ReportRepository = ReportAPIRepository(),
         onDismissabilityChange: @escaping (Bool) -> Void = { _ in },
+        onBlocked: @escaping () -> Void = {},
         dismiss: @escaping () -> Void
     ) {
         _model = StateObject(
@@ -27,6 +32,7 @@ struct ReportSheet: View {
         )
         self.maximumHeight = maximumHeight
         self.onDismissabilityChange = onDismissabilityChange
+        self.onBlocked = onBlocked
         self.dismiss = dismiss
     }
 
@@ -50,7 +56,12 @@ struct ReportSheet: View {
             ReportLocalization.text("report.success.title"),
             isPresented: $showsSuccess
         ) {
-            Button(ReportLocalization.text("report.ok"), role: .cancel) { dismiss() }
+            // The outcome reaches the host while the cover is still up, so the host's own
+            // dismissal callback already knows whether it has to leave.
+            Button(ReportLocalization.text("report.ok"), role: .cancel) {
+                if model.didBlock { onBlocked() }
+                dismiss()
+            }
         } message: {
             Text(verbatim: ReportLocalization.text("report.success.message"))
         }

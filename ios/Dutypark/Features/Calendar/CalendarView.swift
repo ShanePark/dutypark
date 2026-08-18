@@ -102,6 +102,7 @@ struct CalendarView: View {
                 onDismiss: {
                     model.selectedDay = nil
                     dayModalCanDismiss = true
+                    leaveBlockedMemberCalendar()
                 },
                 canDismiss: dayModalCanDismiss,
                 onDismissRequest: { _ in dayDismissRequest += 1 }
@@ -111,6 +112,7 @@ struct CalendarView: View {
                     initialDay: day,
                     maximumHeight: availableSize.height,
                     onDismissabilityChange: { dayModalCanDismiss = $0 },
+                    onBlockedCalendarOwner: { leavesAfterBlock = true },
                     dismissRequest: dayDismissRequest
                 ) {
                     dismiss()
@@ -227,16 +229,16 @@ struct CalendarView: View {
         }
         .fullScreenCover(item: $reportTarget) { target in
             DPModalOverlay(
-                onDismiss: {
-                    reportTarget = nil
-                    reportCanDismiss = true
-                },
+                onDismiss: { finishReportDismissal() },
                 canDismiss: reportCanDismiss
             ) { availableSize, dismiss in
                 ReportSheet(
                     target: target,
                     maximumHeight: availableSize.height,
                     onDismissabilityChange: { reportCanDismiss = $0 },
+                    // The menu that opens this sheet only exists on somebody else's
+                    // calendar, so the blocked member is this calendar's own.
+                    onBlocked: { leavesAfterBlock = true },
                     dismiss: dismiss
                 )
             }
@@ -517,10 +519,21 @@ struct CalendarView: View {
         }
     }
 
-    // A blocked member's calendar stops loading immediately, so the screen this one was
-    // pushed from is the only place left to land.
     private func finishBlockConfirmationDismissal() {
         showsBlockConfirmation = false
+        leaveBlockedMemberCalendar()
+    }
+
+    private func finishReportDismissal() {
+        reportTarget = nil
+        reportCanDismiss = true
+        leaveBlockedMemberCalendar()
+    }
+
+    // A blocked member's calendar stops loading immediately, so the screen this one was
+    // pushed from is the only place left to land. Every caller is a cover's dismissal
+    // callback: SwiftUI drops navigation requested while a cover is still on screen.
+    private func leaveBlockedMemberCalendar() {
         guard leavesAfterBlock else { return }
         leavesAfterBlock = false
         Task {
@@ -1771,6 +1784,9 @@ private struct DayDetailView: View {
     let initialDay: CalendarDayContent
     let maximumHeight: CGFloat
     let onDismissabilityChange: (Bool) -> Void
+    /// Raised when a report from this modal blocked the member whose calendar is behind
+    /// it, so the calendar can leave once this modal is off screen.
+    let onBlockedCalendarOwner: () -> Void
     let dismissRequest: Int
     let dismiss: () -> Void
     @State private var editorSchedule: ScheduleDTO?
@@ -1781,6 +1797,8 @@ private struct DayDetailView: View {
     @State private var editorDismissRequest = 0
     @State private var reportTarget: ReportTarget?
     @State private var reportCanDismiss = true
+    @State private var reportBlockEndsCalendarAccess = false
+    @State private var leavesAfterBlock = false
 
     private var day: CalendarDayContent {
         model.selectedDay ?? initialDay
@@ -1833,16 +1851,14 @@ private struct DayDetailView: View {
         .onDisappear { onDismissabilityChange(true) }
         .fullScreenCover(item: $reportTarget) { target in
             DPModalOverlay(
-                onDismiss: {
-                    reportTarget = nil
-                    reportCanDismiss = true
-                },
+                onDismiss: { finishReportDismissal() },
                 canDismiss: reportCanDismiss
             ) { availableSize, dismissReport in
                 ReportSheet(
                     target: target,
                     maximumHeight: availableSize.height,
                     onDismissabilityChange: { reportCanDismiss = $0 },
+                    onBlocked: { leavesAfterBlock = reportBlockEndsCalendarAccess },
                     dismiss: dismissReport
                 )
             }
@@ -2014,6 +2030,7 @@ private struct DayDetailView: View {
                 if canReport(schedule) {
                     Button {
                         withoutPresentationAnimation {
+                            reportBlockEndsCalendarAccess = blockEndsCalendarAccess(schedule)
                             reportTarget = ReportTarget(
                                 type: .schedule,
                                 targetID: schedule.id.uuidString,
@@ -2062,6 +2079,14 @@ private struct DayDetailView: View {
     // another member's calendar, or a schedule someone else tagged them into.
     private func canReport(_ schedule: ScheduleDTO) -> Bool {
         model.me != nil && (!model.isMyCalendar || schedule.isTagged)
+    }
+
+    // Reporting with "also block" blocks whoever owns the reported schedule, and only
+    // the calendar's own member owning it revokes access to this screen. A schedule a
+    // third party tagged this member into belongs to somebody else, whose block leaves
+    // the calendar perfectly readable.
+    private func blockEndsCalendarAccess(_ schedule: ScheduleDTO) -> Bool {
+        !model.isMyCalendar && !schedule.isTagged
     }
 
     @ViewBuilder
@@ -2130,6 +2155,20 @@ private struct DayDetailView: View {
         editorSchedule = nil
         isEditorWorking = false
         reportDismissability()
+    }
+
+    // Blocking the calendar's owner ends this modal's access too, so it steps aside and
+    // hands the departure to the calendar, which pops once this cover is off screen.
+    private func finishReportDismissal() {
+        reportTarget = nil
+        reportCanDismiss = true
+        guard leavesAfterBlock else { return }
+        leavesAfterBlock = false
+        onBlockedCalendarOwner()
+        Task {
+            await Task.yield()
+            dismiss()
+        }
     }
 
     private var dayModalCanRequestDismissal: Bool {
