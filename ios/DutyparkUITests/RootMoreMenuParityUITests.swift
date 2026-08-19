@@ -60,6 +60,14 @@ final class RootMoreMenuParityUITests: XCTestCase {
             XCTAssertLessThan(myInfoCard.frame.minY, button.frame.minY)
         }
 
+        // The version footer closes the list the way other apps end their settings screen.
+        let versionLabel = app.staticTexts["more.appVersion"]
+        XCTAssertTrue(versionLabel.waitForExistence(timeout: 10))
+        XCTAssertTrue(versionLabel.label.hasPrefix("버전 "), "Unexpected version label: \(versionLabel.label)")
+        for button in moreButtons {
+            XCTAssertLessThan(button.frame.minY, versionLabel.frame.minY)
+        }
+
         for removedIdentifier in [
             "more.home",
             "more.calendar",

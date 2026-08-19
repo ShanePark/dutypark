@@ -119,6 +119,14 @@ struct MoreView: View {
                 ) { _, group in
                     section(group)
                 }
+                if let versionText = MoreAppVersion.displayText {
+                    Text(verbatim: versionText)
+                        .font(DPTypography.caption)
+                        .foregroundStyle(DPColor.textMuted)
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, DPSpacing.small)
+                        .accessibilityIdentifier("more.appVersion")
+                }
             }
             .padding(DPSpacing.medium)
         }
