@@ -224,7 +224,7 @@ final class CalendarFeatureTests: XCTestCase {
         XCTAssertEqual(merged.map(\.id), [3, 4, 5, 6, 7, 8, 9])
     }
 
-    func testSharedFriendTagSelectorFiltersNameAndTeamAndIntersectsSelectedOnly() {
+    func testSharedFriendTagSelectorFiltersNameAndTeamIndependentlyOfSelection() {
         let items = [
             tagItem(id: 1, name: "Alice", team: "Emergency"),
             tagItem(id: 2, name: "Bob", team: "Emergency"),
@@ -232,31 +232,45 @@ final class CalendarFeatureTests: XCTestCase {
         ]
 
         XCTAssertEqual(
-            DPFriendTagSelectionLogic.visibleItems(
-                items: items,
-                query: "emerg",
-                selectedOnly: false,
-                selection: [2]
-            ).map(\.id),
+            DPFriendTagSelectionLogic.visibleItems(items: items, query: "emerg").map(\.id),
             [1, 2]
         )
         XCTAssertEqual(
-            DPFriendTagSelectionLogic.visibleItems(
-                items: items,
-                query: "emerg",
-                selectedOnly: true,
-                selection: [2, 3]
-            ).map(\.id),
-            [2]
+            DPFriendTagSelectionLogic.visibleItems(items: items, query: "alice").map(\.id),
+            [1]
         )
         XCTAssertEqual(
-            DPFriendTagSelectionLogic.visibleItems(
-                items: items,
-                query: "alice",
-                selectedOnly: false,
-                selection: []
-            ).map(\.id),
-            [1]
+            DPFriendTagSelectionLogic.visibleItems(items: items, query: "   ").map(\.id),
+            [1, 2, 3],
+            "A blank query keeps the whole rail browsable"
+        )
+    }
+
+    func testSharedFriendTagRailKeepsThreePortraitsVisibleAtAnyFormWidth() {
+        let spacing: CGFloat = 8
+
+        // The labelled schedule editor column on the smallest supported phone is the tightest rail.
+        let narrow = DPFriendTagSelectionLogic.cardWidth(
+            availableWidth: 217, spacing: spacing, minimum: 60, maximum: 88
+        )
+        XCTAssertLessThanOrEqual(
+            narrow * 3 + spacing * 2, 217,
+            "Three portraits must fit the narrowest form without clipping the third"
+        )
+
+        XCTAssertEqual(
+            DPFriendTagSelectionLogic.cardWidth(
+                availableWidth: 900, spacing: spacing, minimum: 60, maximum: 88
+            ),
+            88,
+            "A roomy container must not stretch portraits past the comfortable maximum"
+        )
+        XCTAssertEqual(
+            DPFriendTagSelectionLogic.cardWidth(
+                availableWidth: 40, spacing: spacing, minimum: 60, maximum: 88
+            ),
+            60,
+            "A collapsed container must not shrink portraits below the legible minimum"
         )
     }
 
@@ -309,9 +323,10 @@ final class CalendarFeatureTests: XCTestCase {
 
     func testSharedFriendTagStringsResolveInEveryLocale() throws {
         let keys = [
-            "friendTag.clear", "friendTag.clearSearch", "friendTag.empty", "friendTag.expand",
-            "friendTag.noneSelected", "friendTag.notSelectedState", "friendTag.search",
-            "friendTag.selected", "friendTag.selectedOnly", "friendTag.selectedState", "friendTag.title"
+            "friendTag.clear", "friendTag.clearSearch", "friendTag.clearShort", "friendTag.empty",
+            "friendTag.expand", "friendTag.noneSelected", "friendTag.notSelectedState",
+            "friendTag.remove", "friendTag.search", "friendTag.selected", "friendTag.selectedState",
+            "friendTag.title"
         ]
 
         for locale in ["en", "ko"] {

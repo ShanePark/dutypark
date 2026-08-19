@@ -47,23 +47,29 @@ nonisolated enum DPFriendTagSelectionLogic {
         return merged.values.sorted(by: precedes)
     }
 
-    static func visibleItems(
-        items: [DPFriendTagItem],
-        query: String,
-        selectedOnly: Bool,
-        selection: Set<MemberID>
-    ) -> [DPFriendTagItem] {
+    static func visibleItems(items: [DPFriendTagItem], query: String) -> [DPFriendTagItem] {
         let normalizedQuery = query.trimmingCharacters(in: .whitespacesAndNewlines).localizedLowercase
+        guard !normalizedQuery.isEmpty else { return items }
         return items.filter { item in
-            let matchesSelection = !selectedOnly || selection.contains(item.id)
-            let matchesQuery = normalizedQuery.isEmpty
-                || "\(item.name) \(item.team ?? "")".localizedLowercase.contains(normalizedQuery)
-            return matchesSelection && matchesQuery
+            "\(item.name) \(item.team ?? "")".localizedLowercase.contains(normalizedQuery)
         }
     }
 
     static func sortedIDs(_ selection: Set<MemberID>) -> [MemberID] {
         selection.sorted()
+    }
+
+    /// Width of one portrait card so three of them plus a peek of the next always fit `availableWidth`.
+    /// The peek is what makes the sideways scroll discoverable; the clamp keeps cards legible in a
+    /// labelled schedule column and stops them stretching in a roomy sheet.
+    static func cardWidth(
+        availableWidth: CGFloat,
+        spacing: CGFloat,
+        minimum: CGFloat,
+        maximum: CGFloat
+    ) -> CGFloat {
+        let ideal = (availableWidth - spacing * 3) / 3.2
+        return min(max(ideal, minimum), maximum)
     }
 
     private static func precedes(_ lhs: DPFriendTagItem, _ rhs: DPFriendTagItem) -> Bool {
@@ -93,12 +99,28 @@ struct DPFriendTagSelector: View {
 
     @State private var isExpanded: Bool
     @State private var query = ""
-    @State private var showsSelectedOnly = false
+    @State private var railWidth: CGFloat = 0
     @FocusState private var isSearchFocused: Bool
 
     /// Icon sizes scale with the `.subheadline`-relative labels they sit next to.
     @ScaledMetric(relativeTo: .subheadline) private var collapsedIconSize: CGFloat = 16
-    @ScaledMetric(relativeTo: .subheadline) private var selectionIconSize: CGFloat = 14
+    /// The rail sizes its cards from the width it actually gets, between these bounds.
+    @ScaledMetric(relativeTo: .subheadline) private var minimumCardWidth: CGFloat = 60
+    @ScaledMetric(relativeTo: .subheadline) private var maximumCardWidth: CGFloat = 88
+    @ScaledMetric(relativeTo: .caption) private var chipAvatarSize: CGFloat = 22
+
+    private var cardWidth: CGFloat {
+        guard railWidth > 0 else { return minimumCardWidth }
+        return DPFriendTagSelectionLogic.cardWidth(
+            availableWidth: railWidth - DPSpacing.small * 2,
+            spacing: DPSpacing.small,
+            minimum: minimumCardWidth,
+            maximum: maximumCardWidth
+        )
+    }
+
+    private var portraitWidth: CGFloat { cardWidth - DPSpacing.small }
+    private var portraitHeight: CGFloat { portraitWidth * 4 / 3 }
 
     /// - Parameter isSearchFocused: mirrors the focus state of the internal search field so a
     ///   host form can keep the selector visible while the keyboard is up. The selector owns the
@@ -173,33 +195,21 @@ struct DPFriendTagSelector: View {
 
     private var expandedSelector: some View {
         VStack(spacing: DPSpacing.small) {
-            HStack(spacing: 6) {
-                searchField
-                if !selection.isEmpty {
-                    selectedOnlyButton
-                    clearButton
-                }
+            if !selectedItems.isEmpty {
+                selectedStrip
             }
 
-            if visibleItems.isEmpty {
+            searchField
+
+            if railItems.isEmpty {
                 Text(localized("friendTag.empty"))
                     .font(DPTypography.label)
                     .foregroundStyle(DPColor.textMuted)
                     .frame(maxWidth: .infinity, minHeight: 96)
+                    .background(DPColor.backgroundSecondary)
+                    .clipShape(RoundedRectangle(cornerRadius: DPRadius.large))
             } else {
-                ScrollView {
-                    LazyVGrid(
-                        columns: [GridItem(.flexible(), spacing: 1), GridItem(.flexible(), spacing: 1)],
-                        spacing: 1
-                    ) {
-                        ForEach(visibleItems) { item in
-                            friendButton(item)
-                        }
-                    }
-                }
-                .frame(maxHeight: 146)
-                .background(DPColor.borderPrimary)
-                .clipShape(RoundedRectangle(cornerRadius: DPRadius.large))
+                rail
             }
         }
         .padding(10)
@@ -209,6 +219,55 @@ struct DPFriendTagSelector: View {
             RoundedRectangle(cornerRadius: DPRadius.large)
                 .stroke(DPColor.borderPrimary)
         }
+    }
+
+    private var selectedStrip: some View {
+        VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+            HStack(spacing: DPSpacing.small) {
+                Text(format("friendTag.selected", selection.count))
+                    .font(DPFont.bold(size: 12, relativeTo: .caption))
+                    .foregroundStyle(DPColor.textSecondary)
+                Spacer(minLength: 0)
+                clearButton
+            }
+            .padding(.horizontal, 2)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 6) {
+                    ForEach(selectedItems) { item in
+                        chip(item)
+                    }
+                }
+                .padding(.horizontal, 2)
+            }
+        }
+        .padding(DPSpacing.small)
+        .background(DPColor.accentSoft)
+        .clipShape(RoundedRectangle(cornerRadius: DPRadius.large))
+        .overlay {
+            RoundedRectangle(cornerRadius: DPRadius.large)
+                .stroke(DPColor.accentBorder)
+        }
+    }
+
+    private var rail: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            LazyHStack(spacing: DPSpacing.small) {
+                ForEach(railItems) { item in
+                    card(item)
+                }
+            }
+            .padding(DPSpacing.small)
+        }
+        .background {
+            GeometryReader { proxy in
+                Color.clear
+                    .onAppear { railWidth = proxy.size.width }
+                    .onChange(of: proxy.size.width) { _, width in railWidth = width }
+            }
+        }
+        .background(DPColor.backgroundSecondary)
+        .clipShape(RoundedRectangle(cornerRadius: DPRadius.large))
     }
 
     private var searchField: some View {
@@ -241,67 +300,90 @@ struct DPFriendTagSelector: View {
         }
     }
 
-    private var selectedOnlyButton: some View {
-        Button {
-            showsSelectedOnly.toggle()
-        } label: {
-            Text(format("friendTag.selected", selection.count))
-                .font(DPFont.bold(size: 12, relativeTo: .caption))
-                .foregroundStyle(showsSelectedOnly ? DPColor.textOnDark : DPColor.textPrimary)
-                .padding(.horizontal, 8)
-                .frame(minHeight: DPSize.minimumTouchTarget)
-                .background(showsSelectedOnly ? DPColor.accent : DPColor.accentSoft)
-                .clipShape(Capsule())
-        }
-        .buttonStyle(.plain)
-        .disabled(disabled)
-        .accessibilityLabel(localized("friendTag.selectedOnly"))
-        .accessibilityAddTraits(showsSelectedOnly ? .isSelected : [])
-    }
-
     private var clearButton: some View {
         Button {
             selection.removeAll()
-            showsSelectedOnly = false
         } label: {
-            Image(systemName: "arrow.counterclockwise")
-                .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+            HStack(spacing: 3) {
+                Image(systemName: "arrow.counterclockwise")
+                    .font(.system(size: 10, weight: .semibold))
+                Text(localized("friendTag.clearShort"))
+                    .font(DPFont.bold(size: 11, relativeTo: .caption2))
+            }
+            .foregroundStyle(DPColor.textSecondary)
+            .padding(.horizontal, DPSpacing.small)
+            .padding(.vertical, 6)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .foregroundStyle(DPColor.textSecondary)
         .disabled(disabled)
         .accessibilityLabel(localized("friendTag.clear"))
     }
 
-    private func friendButton(_ item: DPFriendTagItem) -> some View {
+    private func chip(_ item: DPFriendTagItem) -> some View {
+        Button {
+            selection.remove(item.id)
+        } label: {
+            HStack(spacing: 5) {
+                chipAvatar(item)
+                Text(item.name)
+                    .font(DPFont.light(size: 12, relativeTo: .caption))
+                    .foregroundStyle(DPColor.textPrimary)
+                    .lineLimit(1)
+                Image(systemName: "xmark")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(DPColor.textMuted)
+            }
+            .padding(.leading, 3)
+            .padding(.trailing, DPSpacing.small)
+            .padding(.vertical, 3)
+            .background(DPColor.backgroundCard, in: Capsule())
+            .overlay {
+                Capsule().stroke(DPColor.accentBorder)
+            }
+            // Keeps the tappable area at the 44pt target while the capsule stays chip-sized.
+            .padding(.vertical, 5)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(disabled)
+        .accessibilityLabel(format("friendTag.remove", item.name))
+    }
+
+    private func card(_ item: DPFriendTagItem) -> some View {
         let selected = selection.contains(item.id)
         return Button {
             if selected { selection.remove(item.id) } else { selection.insert(item.id) }
         } label: {
-            HStack(spacing: DPSpacing.small) {
-                avatar(item)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(item.name)
-                        .font(DPFont.light(size: 13, relativeTo: .subheadline))
-                        .foregroundStyle(DPColor.textPrimary)
-                        .lineLimit(1)
-                    if let team = item.team, !team.isEmpty {
-                        Text(team)
-                            .font(DPFont.light(size: 11, relativeTo: .caption))
-                            .foregroundStyle(DPColor.textMuted)
-                            .lineLimit(1)
+            VStack(spacing: DPSpacing.extraSmall) {
+                ZStack(alignment: .bottomTrailing) {
+                    portrait(item)
+                    if selected {
+                        checkBadge
                     }
                 }
-                Spacer(minLength: 0)
-                if selected {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: selectionIconSize, weight: .semibold))
-                        .foregroundStyle(DPColor.accent)
+                Text(item.name)
+                    .font(DPFont.bold(size: 12, relativeTo: .caption))
+                    .foregroundStyle(selected ? DPColor.accent : DPColor.textPrimary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                if let team = item.team, !team.isEmpty {
+                    Text(team)
+                        .font(DPFont.light(size: 10, relativeTo: .caption2))
+                        .foregroundStyle(DPColor.textMuted)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                 }
             }
-            .padding(.horizontal, DPSpacing.small)
-            .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
-            .background(selected ? DPColor.accentSoftHover : DPColor.backgroundPrimary)
+            .padding(.vertical, 6)
+            .padding(.horizontal, DPSpacing.extraSmall)
+            .frame(width: cardWidth)
+            .background(selected ? DPColor.accentSoft : DPColor.backgroundPrimary)
+            .clipShape(RoundedRectangle(cornerRadius: DPRadius.large))
+            .overlay {
+                RoundedRectangle(cornerRadius: DPRadius.large)
+                    .stroke(selected ? DPColor.accent : DPColor.borderPrimary, lineWidth: selected ? 1.5 : 1)
+            }
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -311,25 +393,67 @@ struct DPFriendTagSelector: View {
         .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
+    private var checkBadge: some View {
+        Image(systemName: "checkmark")
+            .font(.system(size: 10, weight: .bold))
+            .foregroundStyle(DPColor.textOnDark)
+            .frame(width: 20, height: 20)
+            .background(DPColor.accent, in: Circle())
+            .overlay {
+                Circle().stroke(DPColor.backgroundPrimary, lineWidth: 2)
+            }
+            .padding(DPSpacing.extraSmall)
+    }
+
     @ViewBuilder
-    private func avatar(_ item: DPFriendTagItem) -> some View {
+    private func portrait(_ item: DPFriendTagItem) -> some View {
+        Group {
+            if item.hasProfilePhoto {
+                AsyncImage(url: profileURL(item)) { image in
+                    image.resizable().scaledToFill()
+                } placeholder: {
+                    portraitFallback(item)
+                }
+            } else {
+                portraitFallback(item)
+            }
+        }
+        .frame(width: portraitWidth, height: portraitHeight)
+        .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+        .overlay {
+            RoundedRectangle(cornerRadius: DPRadius.standard)
+                .stroke(DPColor.borderPrimary)
+        }
+    }
+
+    private func portraitFallback(_ item: DPFriendTagItem) -> some View {
+        DPColor.backgroundTertiary
+            .overlay {
+                Text(String(item.name.prefix(1)))
+                    .font(DPFont.bold(size: 22, relativeTo: .title3))
+                    .foregroundStyle(DPColor.textSecondary)
+            }
+    }
+
+    @ViewBuilder
+    private func chipAvatar(_ item: DPFriendTagItem) -> some View {
         if item.hasProfilePhoto {
             AsyncImage(url: profileURL(item)) { image in
                 image.resizable().scaledToFill()
             } placeholder: {
-                avatarFallback(item)
+                chipAvatarFallback(item)
             }
-            .frame(width: 24, height: 24)
+            .frame(width: chipAvatarSize, height: chipAvatarSize)
             .clipShape(Circle())
         } else {
-            avatarFallback(item)
+            chipAvatarFallback(item)
         }
     }
 
-    private func avatarFallback(_ item: DPFriendTagItem) -> some View {
+    private func chipAvatarFallback(_ item: DPFriendTagItem) -> some View {
         Circle()
             .fill(DPColor.backgroundTertiary)
-            .frame(width: 24, height: 24)
+            .frame(width: chipAvatarSize, height: chipAvatarSize)
             .overlay {
                 Text(String(item.name.prefix(1)))
                     .font(DPFont.bold(size: 10, relativeTo: .caption2))
@@ -337,13 +461,17 @@ struct DPFriendTagSelector: View {
             }
     }
 
-    private var visibleItems: [DPFriendTagItem] {
-        DPFriendTagSelectionLogic.visibleItems(
-            items: allItems,
-            query: query,
-            selectedOnly: showsSelectedOnly,
-            selection: selection
-        )
+    /// The rail only offers friends that can still be tagged; a stale pick stays removable through its chip.
+    private var railItems: [DPFriendTagItem] {
+        DPFriendTagSelectionLogic.visibleItems(items: currentItems, query: query)
+    }
+
+    private var selectedItems: [DPFriendTagItem] {
+        allItems.filter { selection.contains($0.id) }
+    }
+
+    private var currentItems: [DPFriendTagItem] {
+        DPFriendTagSelectionLogic.mergedItems(items: items, preservedItems: [], selection: [])
     }
 
     private var allItems: [DPFriendTagItem] {
@@ -368,6 +496,10 @@ struct DPFriendTagSelector: View {
     }
 
     private func format(_ key: String, _ argument: Int) -> String {
+        String(format: localized(key), locale: AppLocalization.locale, argument)
+    }
+
+    private func format(_ key: String, _ argument: String) -> String {
         String(format: localized(key), locale: AppLocalization.locale, argument)
     }
 }

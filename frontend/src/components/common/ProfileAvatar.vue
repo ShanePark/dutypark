@@ -6,6 +6,8 @@ import { fetchAuthenticatedImage } from '@/api/attachment'
 interface Props {
   memberId?: number | null
   size?: 'xs' | 'sm' | 'md' | 'xl'
+  /** `portrait` fills the parent box with an ID-photo style rounded rectangle; `size` then only scales the fallback icon. */
+  shape?: 'circle' | 'portrait'
   name?: string
   hasProfilePhoto?: boolean
   profilePhotoVersion?: number
@@ -14,6 +16,7 @@ interface Props {
 const props = withDefaults(defineProps<Props>(), {
   memberId: null,
   size: 'md',
+  shape: 'circle',
   name: '',
   hasProfilePhoto: false,
   profilePhotoVersion: 0,
@@ -25,6 +28,10 @@ const photoUrl = computed(() => {
 })
 
 const sizeClasses = computed(() => {
+  if (props.shape === 'portrait') {
+    return 'w-full h-full'
+  }
+
   switch (props.size) {
     case 'xs':
       return 'w-3.5 h-3.5 sm:w-4 sm:h-4'
@@ -100,8 +107,8 @@ onUnmounted(() => {
 
 <template>
   <div
-    class="profile-avatar rounded-full flex items-center justify-center overflow-hidden flex-shrink-0"
-    :class="sizeClasses"
+    class="profile-avatar flex items-center justify-center overflow-hidden flex-shrink-0"
+    :class="[sizeClasses, shape === 'portrait' ? 'rounded-xl' : 'rounded-full']"
   >
     <img
       v-if="imageBlobUrl && !imageError"

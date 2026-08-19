@@ -202,6 +202,14 @@
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Not selected" } },
       "ko" : { "stringUnit" : { "state" : "translated", "value" : "선택 안 됨" } }
     } },
+    "friendTag.clearShort" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Clear" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "초기화" } }
+    } },
+    "friendTag.remove" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Remove %@ tag" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@ 태그 해제" } }
+    } },
     "friendTag.search" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Search name or team" } },
       "ko" : { "stringUnit" : { "state" : "translated", "value" : "이름 또는 팀 검색" } }
@@ -209,10 +217,6 @@
     "friendTag.selected" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "%lld selected" } },
       "ko" : { "stringUnit" : { "state" : "translated", "value" : "%lld명 선택됨" } }
-    } },
-    "friendTag.selectedOnly" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Show selected only" } },
-      "ko" : { "stringUnit" : { "state" : "translated", "value" : "선택한 친구만 보기" } }
     } },
     "friendTag.selectedState" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Selected" } },
