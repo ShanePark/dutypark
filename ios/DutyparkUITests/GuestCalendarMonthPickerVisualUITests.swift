@@ -9,7 +9,6 @@ final class GuestCalendarMonthPickerVisualUITests: XCTestCase {
     func testSelectsDistantMonthFromPublicCalendar() {
         let app = XCUIApplication()
         app.launchArguments += [
-            "-dp-language", "ko",
             "-dp-theme", "light",
             "-AppleLanguages", "(ko)",
             "-AppleLocale", "ko_KR",

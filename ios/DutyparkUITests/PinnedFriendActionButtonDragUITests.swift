@@ -205,7 +205,6 @@ final class PinnedFriendActionButtonDragUITests: XCTestCase {
     private func launch(extraArguments: [String]) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += [
-            "-dp-language", "ko",
             "-dp-theme", "dark",
             "-AppleLanguages", "(ko)",
             "-AppleLocale", "ko_KR",

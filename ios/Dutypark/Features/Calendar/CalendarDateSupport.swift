@@ -68,15 +68,15 @@ nonisolated enum CalendarLocalization {
         AppLocalization.supportedLocale(languageCode: languageCode)
     }
 
-    static func text(_ key: String, table: String = "Calendar") -> String {
-        AppLocalization.string(key, table: table, locale: selectedLocale)
+    static func text(_ key: String, table: String = "Calendar", locale: Locale? = nil) -> String {
+        AppLocalization.string(key, table: table, locale: locale)
     }
 
-    static func format(_ key: String, _ arguments: CVarArg...) -> String {
+    static func format(_ key: String, _ arguments: CVarArg..., locale: Locale? = nil) -> String {
         // These placeholders are calendar identifiers and counts, not display numbers.
         // A Korean formatting locale groups a four-digit year (for example, `2,026`).
         String(
-            format: text(key),
+            format: text(key, locale: locale),
             locale: Locale(identifier: "en_US_POSIX"),
             arguments: arguments
         )
@@ -89,6 +89,14 @@ nonisolated enum CalendarVisualLogic {
     static let compactCellMinimumHeight: CGFloat = 60
     static let maximumSchedulesPerCell = 3
     static let maximumTodosPerCell = 2
+
+    /// Korean form labels are all two-character words ("공개 범위", "첨부파일"), so a
+    /// two-character column wraps the four-character ones into an even block and leaves the date
+    /// and time controls beside them the room a phone cannot spare. Latin labels have no such
+    /// break point inside a word, so they keep a column wide enough for the longest of them.
+    static func formLabelWidth(locale: Locale) -> CGFloat {
+        locale.language.languageCode?.identifier == "ko" ? 28 : 88
+    }
 
     /// The pinned D-day is drawn next to the day number, where only a few characters fit,
     /// so it carries the counter alone as the web calendar does. Its title is already

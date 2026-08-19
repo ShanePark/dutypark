@@ -302,7 +302,7 @@ struct TeamView: View {
         // identity space and render blank. Two grids keep the identities apart.
         return VStack(spacing: 0) {
             LazyVGrid(columns: columns, spacing: 0) {
-                ForEach(Array(TeamLocalization.shortStandaloneWeekdaySymbols.enumerated()), id: \.offset) { index, weekday in
+                ForEach(Array(TeamLocalization.shortStandaloneWeekdaySymbols().enumerated()), id: \.offset) { index, weekday in
                     Text(verbatim: weekday)
                         .font(DPTypography.caption)
                         .foregroundStyle(TeamVisualStyle.weekdayColor(index))
@@ -812,30 +812,32 @@ private func teamScheduleDateRange(_ schedule: TeamScheduleDTO) -> String {
     return "\(start) – \(end)"
 }
 
-func teamLocalized(_ key: String) -> String {
-    AppLocalization.string(key, table: "Team")
+func teamLocalized(_ key: String, locale: Locale? = nil) -> String {
+    AppLocalization.string(key, table: "Team", locale: locale)
 }
 
 nonisolated enum TeamLocalization {
-    static var shortStandaloneWeekdaySymbols: [String] {
+    static func shortStandaloneWeekdaySymbols(locale: Locale? = nil) -> [String] {
         var calendar = Calendar.current
-        calendar.locale = AppLocalization.locale
+        calendar.locale = locale ?? AppLocalization.locale
         return calendar.shortStandaloneWeekdaySymbols
     }
 
-    static func scheduleDeletionMessage(title: String) -> String {
+    static func scheduleDeletionMessage(title: String, locale: Locale? = nil) -> String {
         AppLocalization.format(
             "team.view.schedule.deleteConfirm",
             table: "Team",
-            arguments: [title]
+            arguments: [title],
+            locale: locale
         )
     }
 
-    static func shiftMemberCount(_ count: Int) -> String {
+    static func shiftMemberCount(_ count: Int, locale: Locale? = nil) -> String {
         AppLocalization.format(
             "team.view.shift.memberCount",
             table: "Team",
-            arguments: [Int64(count)]
+            arguments: [Int64(count)],
+            locale: locale
         )
     }
 }

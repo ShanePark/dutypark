@@ -231,7 +231,6 @@ final class TeamParityVisualUITests: XCTestCase {
     ) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += [
-            "-dp-language", "ko",
             "-dp-theme", "dark",
             "-AppleLanguages", "(\(deviceLanguage))",
             "-AppleLocale", deviceLocale,

@@ -9,7 +9,6 @@ final class SocialViewEntryUITests: XCTestCase {
     func testFriendManagementOpensWithoutCrashing() {
         let app = XCUIApplication()
         app.launchArguments += [
-            "-dp-language", "ko",
             "-dp-theme", "dark",
             "-AppleLanguages", "(ko)",
             "-AppleLocale", "ko_KR",
@@ -67,7 +66,6 @@ final class SocialViewEntryUITests: XCTestCase {
     func testFriendManagementStaysOnTheMoreTabAndReturnsToTheMenu() {
         let app = XCUIApplication()
         app.launchArguments += [
-            "-dp-language", "ko",
             "-dp-theme", "dark",
             "-AppleLanguages", "(ko)",
             "-AppleLocale", "ko_KR",
@@ -119,7 +117,6 @@ final class SocialViewEntryUITests: XCTestCase {
     func testFriendCalendarStacksOnTopOfFriendManagementInTheMoreTab() {
         let app = XCUIApplication()
         app.launchArguments += [
-            "-dp-language", "ko",
             "-dp-theme", "dark",
             "-AppleLanguages", "(ko)",
             "-AppleLocale", "ko_KR",
@@ -169,7 +166,6 @@ final class SocialViewEntryUITests: XCTestCase {
     func testRemoveFriendUsesCenteredSharedConfirmation() {
         let app = XCUIApplication()
         app.launchArguments += [
-            "-dp-language", "ko",
             "-dp-theme", "dark",
             "-AppleLanguages", "(ko)",
             "-AppleLocale", "ko_KR",

@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct PublicGuideView: View {
-    @AppStorage(SettingsPreference.languageKey) private var languageCode = ""
     @StateObject private var model: PublicGuideViewModel
     @State private var expandedSections: Set<String> = []
     private let fallbackTitle: String
@@ -57,7 +56,7 @@ struct PublicGuideView: View {
     }
 
     private var locale: String {
-        PublicContentLocaleResolver.locale(languageCode: languageCode)
+        PublicContentLocaleResolver.locale(languageCode: AppLocalization.locale.identifier)
     }
 
     private func guide(_ content: PublicGuideContent) -> some View {
@@ -216,7 +215,6 @@ private struct PublicGuideCardView: View {
 }
 
 struct PublicReleaseNotesView: View {
-    @AppStorage(SettingsPreference.languageKey) private var languageCode = ""
     @StateObject private var model: PublicReleaseNotesViewModel
 
     init(service: any PublicContentServicing = PublicContentService()) {
@@ -256,7 +254,7 @@ struct PublicReleaseNotesView: View {
     }
 
     private var locale: String {
-        PublicContentLocaleResolver.locale(languageCode: languageCode)
+        PublicContentLocaleResolver.locale(languageCode: AppLocalization.locale.identifier)
     }
 
     private var notes: some View {

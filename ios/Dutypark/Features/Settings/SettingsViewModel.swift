@@ -3,7 +3,6 @@ import Combine
 import SwiftUI
 
 enum SettingsPreference {
-    static let languageKey = "dp-language"
     static let themeKey = "dp-theme"
     static let defaultTheme = AppTheme.system.rawValue
 }
@@ -13,6 +12,11 @@ enum AppLanguage: String, CaseIterable, Identifiable {
     case english = "en"
 
     var id: String { rawValue }
+
+    /// The language iOS resolved for this app, which the whole UI follows.
+    static var current: AppLanguage {
+        AppLanguage(rawValue: AppLocalization.locale.identifier) ?? .english
+    }
 
     var nativeName: String {
         switch self {

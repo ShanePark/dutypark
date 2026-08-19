@@ -9,7 +9,6 @@ final class AdminTeamListParityUITests: XCTestCase {
     func testCapturesSearchEmptyClearAndCreatedTeamManagementRoute() throws {
         let app = XCUIApplication()
         app.launchArguments += [
-            "-dp-language", "ko",
             "-dp-theme", "dark",
             "-AppleLanguages", "(ko)",
             "-AppleLocale", "ko_KR",

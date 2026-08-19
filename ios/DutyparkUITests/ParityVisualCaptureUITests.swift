@@ -9,7 +9,6 @@ final class ParityVisualCaptureUITests: XCTestCase {
     func testCapturesPopulatedHomeFriendsParity() throws {
         let app = XCUIApplication()
         app.launchArguments += [
-            "-dp-language", "ko",
             "-dp-theme", "dark",
             "-AppleLanguages", "(ko)",
             "-AppleLocale", "ko_KR",
@@ -51,7 +50,6 @@ final class ParityVisualCaptureUITests: XCTestCase {
     func testCapturesKoreanDarkModeParityFlow() throws {
         let app = XCUIApplication()
         app.launchArguments += [
-            "-dp-language", "ko",
             "-dp-theme", "dark",
             "-AppleLanguages", "(ko)",
             "-AppleLocale", "ko_KR",

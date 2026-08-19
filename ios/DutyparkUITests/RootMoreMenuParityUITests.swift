@@ -9,7 +9,6 @@ final class RootMoreMenuParityUITests: XCTestCase {
     func testMoreMenuShowsGlobalActionsWithoutDuplicatingDockDestinations() {
         let app = XCUIApplication()
         app.launchArguments += [
-            "-dp-language", "ko",
             "-dp-theme", "dark",
             "-AppleLanguages", "(ko)",
             "-AppleLocale", "ko_KR",
@@ -105,7 +104,6 @@ final class RootMoreMenuParityUITests: XCTestCase {
     func testAdminMemberCalendarPushesOntoTheMoreStack() {
         let app = XCUIApplication()
         app.launchArguments += [
-            "-dp-language", "ko",
             "-dp-theme", "dark",
             "-AppleLanguages", "(ko)",
             "-AppleLocale", "ko_KR",

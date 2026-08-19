@@ -216,7 +216,6 @@ final class AdminConfirmationVisualUITests: XCTestCase {
     private func launchServiceAdminApp() -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += [
-            "-dp-language", "ko",
             "-dp-theme", "dark",
             "-AppleLanguages", "(ko)",
             "-AppleLocale", "ko_KR",

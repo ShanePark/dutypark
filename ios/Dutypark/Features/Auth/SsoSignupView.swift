@@ -439,6 +439,6 @@ struct SsoSignupView: View {
     }
 }
 
-nonisolated func oauthString(_ key: String) -> String {
-    AppLocalization.string(key, table: "OAuth")
+nonisolated func oauthString(_ key: String, locale: Locale? = nil) -> String {
+    AppLocalization.string(key, table: "OAuth", locale: locale)
 }

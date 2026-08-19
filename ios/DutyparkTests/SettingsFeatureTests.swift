@@ -10,6 +10,9 @@ struct SettingsFeatureTests {
     func supportsKoreanAndEnglishLanguageChoices() {
         #expect(AppLanguage.allCases.map(\.rawValue) == ["ko", "en"])
         #expect(AppLanguage.allCases.map(\.nativeName) == ["한국어", "English"])
+
+        // The settings row only mirrors the language iOS resolved for the app.
+        #expect(AppLanguage.current.rawValue == AppLocalization.locale.identifier)
     }
 
     @Test
@@ -41,15 +44,8 @@ struct SettingsFeatureTests {
 
     @Test
     func settingsOverviewCopyMatchesResponsiveWeb() {
-        let defaults = UserDefaults.standard
-        let previous = defaults.string(forKey: SettingsPreference.languageKey)
-        defer {
-            if let previous { defaults.set(previous, forKey: SettingsPreference.languageKey) }
-            else { defaults.removeObject(forKey: SettingsPreference.languageKey) }
-        }
-
-        let expectedByLanguage: [String: [String: String]] = [
-            "ko": [
+        let expectedByLanguage: [Locale: [String: String]] = [
+            .korean: [
                 "settings.profile.title": "기본 정보",
                 "settings.visibility.title": "시간표 공개 설정",
                 "settings.visibility.description": "내 시간표를 볼 수 있는 사람을 설정합니다",
@@ -66,7 +62,7 @@ struct SettingsFeatureTests {
                 "settings.social.title": "소셜 계정 연동",
                 "settings.account.title": "회원정보 관리",
             ],
-            "en": [
+            .english: [
                 "settings.profile.title": "Profile",
                 "settings.visibility.title": "Calendar Visibility",
                 "settings.visibility.description": "Choose who can view your schedule.",
@@ -85,23 +81,15 @@ struct SettingsFeatureTests {
             ],
         ]
 
-        for (language, expectedCopy) in expectedByLanguage {
-            defaults.set(language, forKey: SettingsPreference.languageKey)
+        for (locale, expectedCopy) in expectedByLanguage {
             for (key, expected) in expectedCopy {
-                #expect(SettingsLocalization.string(key) == expected)
+                #expect(SettingsLocalization.string(key, locale: locale) == expected)
             }
         }
     }
 
     @Test
     func webParitySettingsCopyExistsInEverySupportedLanguage() {
-        let defaults = UserDefaults.standard
-        let previous = defaults.string(forKey: SettingsPreference.languageKey)
-        defer {
-            if let previous { defaults.set(previous, forKey: SettingsPreference.languageKey) }
-            else { defaults.removeObject(forKey: SettingsPreference.languageKey) }
-        }
-
         let keys = [
             "settings.profile.name",
             "settings.visibility.modalTitle",
@@ -160,10 +148,9 @@ struct SettingsFeatureTests {
             "settings.social.manageHint",
             "settings.social.disconnected",
         ]
-        for language in AppLanguage.allCases {
-            defaults.set(language.rawValue, forKey: SettingsPreference.languageKey)
+        for locale in [Locale.korean, .english] {
             for key in keys {
-                #expect(SettingsLocalization.string(key) != key)
+                #expect(SettingsLocalization.string(key, locale: locale) != key)
             }
         }
     }
@@ -212,19 +199,19 @@ struct SettingsFeatureTests {
     }
 
     @Test
-    func localizationHelpersFollowTheExplicitAppLanguage() {
-        let defaults = UserDefaults.standard
-        let previous = defaults.string(forKey: SettingsPreference.languageKey)
-        defer {
-            if let previous { defaults.set(previous, forKey: SettingsPreference.languageKey) }
-            else { defaults.removeObject(forKey: SettingsPreference.languageKey) }
-        }
-
-        defaults.set("ko", forKey: SettingsPreference.languageKey)
-
-        #expect(SettingsLocalization.string("settings.guide") == "사용 가이드")
-        #expect(GuestLocalization.text("guest.retry") == "다시 시도")
-        #expect(SettingsLocalization.string("settings.guide.loadError.title") == "페이지를 불러올 수 없습니다")
+    func localizationHelpersResolveEverySupportedLanguage() {
+        #expect(SettingsLocalization.string("settings.guide", locale: .korean) == "사용 가이드")
+        #expect(SettingsLocalization.string("settings.guide", locale: .english) == "Guide")
+        #expect(GuestLocalization.text("guest.retry", locale: .korean) == "다시 시도")
+        #expect(GuestLocalization.text("guest.retry", locale: .english) == "Try again")
+        #expect(
+            SettingsLocalization.string("settings.guide.loadError.title", locale: .korean)
+                == "페이지를 불러올 수 없습니다"
+        )
+        #expect(
+            SettingsLocalization.string("settings.guide.loadError.title", locale: .english)
+                == "Unable to load the page"
+        )
     }
 
     @Test
@@ -262,20 +249,15 @@ struct SettingsFeatureTests {
 
     @Test
     func nativeAppSessionsAreLabelledAsTheAppInsteadOfABrowserName() {
-        let defaults = UserDefaults.standard
-        let previous = defaults.string(forKey: SettingsPreference.languageKey)
-        defer {
-            if let previous { defaults.set(previous, forKey: SettingsPreference.languageKey) }
-            else { defaults.removeObject(forKey: SettingsPreference.languageKey) }
-        }
-        defaults.set("ko", forKey: SettingsPreference.languageKey)
-
         let appSession = SettingsSessionClientPresentation(
             token: sessionToken(id: 9, clientType: .iosApp)
         )
         #expect(appSession.clientLabelKey == "settings.sessions.appLabel")
-        #expect(SettingsLocalization.string(appSession.clientLabelKey) == "앱")
-        #expect(appSession.clientValue == "iOS 앱")
+        #expect(SettingsLocalization.string(appSession.clientLabelKey, locale: .korean) == "앱")
+        #expect(SettingsLocalization.string(appSession.clientLabelKey, locale: .english) == "App")
+        #expect(SettingsLocalization.string("settings.sessions.client.iosApp", locale: .korean) == "iOS 앱")
+        #expect(SettingsLocalization.string("settings.sessions.client.iosApp", locale: .english) == "iOS App")
+        #expect(appSession.clientValue == SettingsLocalization.string("settings.sessions.client.iosApp"))
         #expect(appSession.clientIcon != "globe")
         #expect(appSession.deviceIcon == "iphone")
 
@@ -287,23 +269,21 @@ struct SettingsFeatureTests {
         let confirmation = SettingsSessionConfirmation.session(
             sessionToken(id: 9, clientType: .iosApp)
         )
-        #expect(confirmation.message.contains("iOS 앱"))
+        #expect(confirmation.message.contains(appSession.clientValue))
         #expect(!confirmation.message.contains("Dutypark"))
         #expect(confirmation.message.contains("Apple iOS Device"))
     }
 
     @Test
     func formatsSessionDatesWithoutExposingRawISOValues() throws {
-        let defaults = UserDefaults.standard
-        let previous = defaults.string(forKey: SettingsPreference.languageKey)
-        defer {
-            if let previous { defaults.set(previous, forKey: SettingsPreference.languageKey) }
-            else { defaults.removeObject(forKey: SettingsPreference.languageKey) }
-        }
-        defaults.set("ko", forKey: SettingsPreference.languageKey)
+        #expect(SettingsLocalization.string("settings.sessions.justNow", locale: .korean) == "방금 전")
+        #expect(SettingsLocalization.string("settings.sessions.justNow", locale: .english) == "Just now")
 
         let now = try #require(SettingsSessionFormatter.date(from: "2026-08-12T12:00:00Z"))
-        #expect(SettingsSessionFormatter.relativeTime("2026-08-12T11:59:30Z", now: now) == "방금 전")
+        #expect(
+            SettingsSessionFormatter.relativeTime("2026-08-12T11:59:30Z", now: now)
+                == SettingsLocalization.string("settings.sessions.justNow")
+        )
         #expect(SettingsSessionFormatter.relativeTime("2026-08-12T11:55:00Z", now: now).contains("5"))
         #expect(SettingsSessionFormatter.relativeTime("2026-08-12T10:00:00Z", now: now).contains("2"))
         #expect(SettingsSessionFormatter.relativeTime("2026-08-10T12:00:00Z", now: now).contains("2"))
@@ -331,14 +311,6 @@ struct SettingsFeatureTests {
 
     @Test
     func sessionConfirmationsExplainTheAffectedScope() {
-        let defaults = UserDefaults.standard
-        let previous = defaults.string(forKey: SettingsPreference.languageKey)
-        defer {
-            if let previous { defaults.set(previous, forKey: SettingsPreference.languageKey) }
-            else { defaults.removeObject(forKey: SettingsPreference.languageKey) }
-        }
-        defaults.set("ko", forKey: SettingsPreference.languageKey)
-
         let individual = SettingsSessionConfirmation.session(sessionToken(id: 9))
         #expect(individual.titleKey == "settings.sessions.revokeTitle")
         #expect(individual.message.contains("Apple iOS Device"))
@@ -348,44 +320,50 @@ struct SettingsFeatureTests {
 
         let allOthers = SettingsSessionConfirmation.otherSessions(count: 3)
         #expect(allOthers.titleKey == "settings.sessions.revokeOthersTitle")
-        #expect(allOthers.message.contains("현재 접속을 제외"))
         #expect(allOthers.message.contains("3"))
+        #expect(!allOthers.message.contains("{count}"))
+        #expect(
+            SettingsLocalization.string("settings.sessions.revokeOthersMessage", locale: .korean)
+                .contains("현재 접속을 제외")
+        )
+        #expect(
+            SettingsLocalization.string("settings.sessions.revokeOthersMessage", locale: .english)
+                .contains("keeping your current session")
+        )
     }
 
     @Test
     func individualSessionRevokeCopyMatchesResponsiveWeb() {
-        let defaults = UserDefaults.standard
-        let previous = defaults.string(forKey: SettingsPreference.languageKey)
-        defer {
-            if let previous { defaults.set(previous, forKey: SettingsPreference.languageKey) }
-            else { defaults.removeObject(forKey: SettingsPreference.languageKey) }
-        }
-
-        let expectedCopy: [(language: AppLanguage, title: String, action: String)] = [
+        let expectedCopy: [(locale: Locale, title: String, action: String)] = [
             (.korean, "접속 세션 종료", "접속 종료"),
             (.english, "End session", "End session"),
         ]
 
         for expected in expectedCopy {
-            defaults.set(expected.language.rawValue, forKey: SettingsPreference.languageKey)
-            #expect(SettingsLocalization.string("settings.sessions.revokeTitle") == expected.title)
-            #expect(SettingsLocalization.string("settings.sessions.revoke") == expected.action)
+            #expect(
+                SettingsLocalization.string("settings.sessions.revokeTitle", locale: expected.locale)
+                    == expected.title
+            )
+            #expect(
+                SettingsLocalization.string("settings.sessions.revoke", locale: expected.locale)
+                    == expected.action
+            )
         }
     }
 
     @Test
     func consequentialSettingsActionsUseCentralConfirmationContent() {
-        let defaults = UserDefaults.standard
-        let previous = defaults.string(forKey: SettingsPreference.languageKey)
-        defer {
-            if let previous { defaults.set(previous, forKey: SettingsPreference.languageKey) }
-            else { defaults.removeObject(forKey: SettingsPreference.languageKey) }
-        }
-        defaults.set(AppLanguage.korean.rawValue, forKey: SettingsPreference.languageKey)
-
         let photo = SettingsConfirmation.deleteProfilePhoto
         #expect(photo.titleKey == "settings.photo.delete")
-        #expect(photo.message.contains("프로필 사진"))
+        #expect(photo.message == SettingsLocalization.string("settings.photo.deleteConfirm"))
+        #expect(
+            SettingsLocalization.string("settings.photo.deleteConfirm", locale: .korean)
+                .contains("프로필 사진")
+        )
+        #expect(
+            SettingsLocalization.string("settings.photo.deleteConfirm", locale: .english)
+                .contains("profile photo")
+        )
         #expect(photo.confirmTitleKey == "settings.photo.delete")
         #expect(photo.isDestructive)
 
@@ -651,55 +629,39 @@ struct SettingsFeatureTests {
             code: "errors.generic"
         )) == "settings.social.unlinkFailed")
 
-        let defaults = UserDefaults.standard
-        let previous = defaults.string(forKey: SettingsPreference.languageKey)
-        defer {
-            if let previous { defaults.set(previous, forKey: SettingsPreference.languageKey) }
-            else { defaults.removeObject(forKey: SettingsPreference.languageKey) }
-        }
-
-        defaults.set(AppLanguage.korean.rawValue, forKey: SettingsPreference.languageKey)
-        let koreanMessage = SettingsSocialUnlinkPolicy.confirmationMessage(for: .kakao)
+        let koreanMessage = SettingsSocialUnlinkPolicy.confirmationMessage(for: .kakao, locale: .korean)
         #expect(koreanMessage.contains("Dutypark 내부 연결만 해제"))
         #expect(koreanMessage.contains("Kakao 계정"))
         #expect(koreanMessage.contains("권한은 삭제되지 않습니다"))
         let koreanLastProviderReason = SettingsLocalization.string(
-            "settings.social.unlinkLastAuthenticationMethod"
+            "settings.social.unlinkLastAuthenticationMethod",
+            locale: .korean
         )
         #expect(koreanLastProviderReason.contains("다른 소셜 계정을 먼저 연결"))
         #expect(!koreanLastProviderReason.contains("비밀번호"))
 
-        for language in AppLanguage.allCases {
-            defaults.set(language.rawValue, forKey: SettingsPreference.languageKey)
-            let message = SettingsSocialUnlinkPolicy.confirmationMessage(for: .kakao)
+        for locale in [Locale.korean, .english] {
+            let message = SettingsSocialUnlinkPolicy.confirmationMessage(for: .kakao, locale: locale)
             #expect(message.contains("Kakao"))
             #expect(message != "settings.social.unlinkConfirmMessage")
             let lastProviderReason = SettingsLocalization.string(
-                "settings.social.unlinkLastAuthenticationMethod"
+                "settings.social.unlinkLastAuthenticationMethod",
+                locale: locale
             )
             #expect(!lastProviderReason.contains("{count}"))
             #expect(lastProviderReason != "settings.social.unlinkLastAuthenticationMethod")
         }
 
-        defaults.set(AppLanguage.english.rawValue, forKey: SettingsPreference.languageKey)
-        let appleMessage = SettingsSocialUnlinkPolicy.confirmationMessage(for: .apple)
+        let appleMessage = SettingsSocialUnlinkPolicy.confirmationMessage(for: .apple, locale: .english)
         #expect(appleMessage.contains("Apple"))
     }
 
     @Test
     func appleUnlinkCopyExplainsProviderRevocationWhileOtherProvidersStayLocalOnly() {
-        let defaults = UserDefaults.standard
-        let previous = defaults.string(forKey: SettingsPreference.languageKey)
-        defer {
-            if let previous { defaults.set(previous, forKey: SettingsPreference.languageKey) }
-            else { defaults.removeObject(forKey: SettingsPreference.languageKey) }
-        }
-
-        defaults.set(AppLanguage.korean.rawValue, forKey: SettingsPreference.languageKey)
-        let kakaoDescription = SettingsSocialUnlinkPolicy.managementDescription(for: .kakao)
-        let naverDescription = SettingsSocialUnlinkPolicy.managementDescription(for: .naver)
-        let appleDescription = SettingsSocialUnlinkPolicy.managementDescription(for: .apple)
-        let appleConfirmation = SettingsSocialUnlinkPolicy.confirmationMessage(for: .apple)
+        let kakaoDescription = SettingsSocialUnlinkPolicy.managementDescription(for: .kakao, locale: .korean)
+        let naverDescription = SettingsSocialUnlinkPolicy.managementDescription(for: .naver, locale: .korean)
+        let appleDescription = SettingsSocialUnlinkPolicy.managementDescription(for: .apple, locale: .korean)
+        let appleConfirmation = SettingsSocialUnlinkPolicy.confirmationMessage(for: .apple, locale: .korean)
 
         #expect(kakaoDescription.contains("권한은 삭제되지 않습니다"))
         #expect(naverDescription.contains("Naver 계정"))
@@ -711,13 +673,12 @@ struct SettingsFeatureTests {
         #expect(!appleDescription.contains("권한은 삭제되지 않습니다"))
         #expect(!appleConfirmation.contains("권한은 삭제되지 않습니다"))
 
-        defaults.set(AppLanguage.english.rawValue, forKey: SettingsPreference.languageKey)
         #expect(
-            SettingsSocialUnlinkPolicy.managementDescription(for: .apple)
+            SettingsSocialUnlinkPolicy.managementDescription(for: .apple, locale: .english)
                 .contains("first revokes its Apple authorization")
         )
         #expect(
-            SettingsSocialUnlinkPolicy.confirmationMessage(for: .apple)
+            SettingsSocialUnlinkPolicy.confirmationMessage(for: .apple, locale: .english)
                 .contains("You will no longer be able to sign in")
         )
     }
@@ -859,17 +820,42 @@ struct SettingsFeatureTests {
         #expect(DutyPatternUnavailableCopy.key(reason: "UNKNOWN_REASON") == "settings.pattern.unavailable.default")
         #expect(DutyPatternUnavailableCopy.key(reason: nil) == "settings.pattern.unavailable.default")
 
-        let defaults = UserDefaults.standard
-        let previous = defaults.string(forKey: SettingsPreference.languageKey)
-        defer {
-            if let previous { defaults.set(previous, forKey: SettingsPreference.languageKey) }
-            else { defaults.removeObject(forKey: SettingsPreference.languageKey) }
-        }
-
-        defaults.set(AppLanguage.korean.rawValue, forKey: SettingsPreference.languageKey)
-        #expect(SettingsLocalization.string(DutyPatternUnavailableCopy.key(reason: "TEAM_REQUIRED")).contains("팀에 소속"))
-        #expect(SettingsLocalization.string(DutyPatternUnavailableCopy.key(reason: "DUTY_TYPE_REQUIRED")).contains("근무 유형"))
-        #expect(SettingsLocalization.string(DutyPatternUnavailableCopy.key(reason: "UNKNOWN")).contains("설정"))
+        #expect(
+            SettingsLocalization.string(
+                DutyPatternUnavailableCopy.key(reason: "TEAM_REQUIRED"),
+                locale: .korean
+            ).contains("팀에 소속")
+        )
+        #expect(
+            SettingsLocalization.string(
+                DutyPatternUnavailableCopy.key(reason: "TEAM_REQUIRED"),
+                locale: .english
+            ).contains("assigned to a team")
+        )
+        #expect(
+            SettingsLocalization.string(
+                DutyPatternUnavailableCopy.key(reason: "DUTY_TYPE_REQUIRED"),
+                locale: .korean
+            ).contains("근무 유형")
+        )
+        #expect(
+            SettingsLocalization.string(
+                DutyPatternUnavailableCopy.key(reason: "DUTY_TYPE_REQUIRED"),
+                locale: .english
+            ).contains("duty type")
+        )
+        #expect(
+            SettingsLocalization.string(
+                DutyPatternUnavailableCopy.key(reason: "UNKNOWN"),
+                locale: .korean
+            ).contains("설정")
+        )
+        #expect(
+            SettingsLocalization.string(
+                DutyPatternUnavailableCopy.key(reason: "UNKNOWN"),
+                locale: .english
+            ).contains("settings")
+        )
     }
 
     @Test

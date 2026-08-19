@@ -7,19 +7,14 @@ import Testing
 struct AccountDeletionFlowTests {
     @Test
     func finalDestructiveActionCopyMatchesResponsiveWebInEveryLanguage() {
-        let defaults = UserDefaults.standard
-        let previous = defaults.string(forKey: SettingsPreference.languageKey)
-        defer {
-            if let previous { defaults.set(previous, forKey: SettingsPreference.languageKey) }
-            else { defaults.removeObject(forKey: SettingsPreference.languageKey) }
-        }
-
-        for (language, expected) in [
-            (AppLanguage.korean, "계정 영구 삭제"),
-            (AppLanguage.english, "Permanently delete account"),
+        for (locale, expected) in [
+            (Locale.korean, "계정 영구 삭제"),
+            (Locale.english, "Permanently delete account"),
         ] {
-            defaults.set(language.rawValue, forKey: SettingsPreference.languageKey)
-            #expect(SettingsLocalization.string("settings.accountDeletion.final.action") == expected)
+            #expect(
+                SettingsLocalization.string("settings.accountDeletion.final.action", locale: locale)
+                    == expected
+            )
         }
     }
 

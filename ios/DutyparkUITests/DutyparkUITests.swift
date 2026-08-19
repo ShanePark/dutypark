@@ -9,7 +9,6 @@ final class DutyparkUITests: XCTestCase {
     func testNavigatesThroughFivePrimaryTabs() throws {
         let app = XCUIApplication()
         app.launchArguments += [
-            "-dp-language", "en",
             "-dp-theme", "light",
             "-AppleLanguages", "(en)",
             "-AppleLocale", "en_US",
@@ -39,7 +38,6 @@ final class DutyparkUITests: XCTestCase {
     func testLoginOffersAppleKakaoAndNaver() throws {
         let app = XCUIApplication()
         app.launchArguments += [
-            "-dp-language", "ko",
             "-dp-theme", "light",
             "-AppleLanguages", "(ko)",
             "-AppleLocale", "ko_KR",
@@ -60,7 +58,6 @@ final class DutyparkUITests: XCTestCase {
     func testKeyboardProvidesAnExplicitDismissAction() throws {
         let app = XCUIApplication()
         app.launchArguments += [
-            "-dp-language", "ko",
             "-dp-theme", "light",
             "-AppleLanguages", "(ko)",
             "-AppleLocale", "ko_KR",
@@ -88,7 +85,6 @@ final class DutyparkUITests: XCTestCase {
     func testPrimaryToolbarActionsMeetMinimumTouchTarget() throws {
         let app = XCUIApplication()
         app.launchArguments += [
-            "-dp-language", "en",
             "-dp-theme", "light",
             "-AppleLanguages", "(en)",
             "-AppleLocale", "en_US",
@@ -254,7 +250,6 @@ final class DutyparkUITests: XCTestCase {
             ) { _ in
                 let app = XCUIApplication()
                 app.launchArguments += [
-                    "-dp-language", combination.language,
                     "-dp-theme", combination.theme,
                     "-AppleLanguages", "(\(combination.language))",
                     "-AppleLocale", combination.locale,
@@ -351,7 +346,6 @@ final class DutyparkUITests: XCTestCase {
     private func launchAuthenticatedApp(extraArguments: [String] = []) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += [
-            "-dp-language", "en",
             "-dp-theme", "light",
             "-AppleLanguages", "(en)",
             "-AppleLocale", "en_US",

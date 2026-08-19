@@ -9,7 +9,6 @@ final class CalendarSearchPlaceholderVisualUITests: XCTestCase {
     func testKoreanSearchPlaceholderMatchesWebAndFitsOnIPhone13Mini() {
         let app = XCUIApplication()
         app.launchArguments += [
-            "-dp-language", "ko",
             "-dp-theme", "dark",
             "-AppleLanguages", "(ko)",
             "-AppleLocale", "ko_KR",

@@ -86,7 +86,6 @@ final class SettingsRootConfirmationVisualUITests: XCTestCase {
     private func launchAuthenticatedApp(profilePhotoFixture: Bool = false) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += [
-            "-dp-language", "ko",
             "-dp-theme", "dark",
             "-AppleLanguages", "(ko)",
             "-AppleLocale", "ko_KR",

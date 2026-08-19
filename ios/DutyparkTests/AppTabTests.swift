@@ -33,21 +33,21 @@ struct AppTabTests {
     }
 
     @Test
-    func localizedTitlesPreferKoreanAppLanguageOverEnglishDeviceLanguage() {
-        let defaults = UserDefaults.standard
-        let previousAppLanguage = defaults.object(forKey: SettingsPreference.languageKey)
-        let previousDeviceLanguages = defaults.object(forKey: "AppleLanguages")
-        defaults.set("ko", forKey: SettingsPreference.languageKey)
-        defaults.set(["en"], forKey: "AppleLanguages")
-        defer {
-            restore(previousAppLanguage, forKey: SettingsPreference.languageKey, in: defaults)
-            restore(previousDeviceLanguages, forKey: "AppleLanguages", in: defaults)
-        }
-
+    func localizedTitlesAreTranslatedInEverySupportedLanguage() {
         #expect(
-            AppTab.allCases.map(\.localizedTitle)
+            AppTab.allCases.map { title(for: $0, locale: .korean) }
                 == ["홈", "달력", "할일", "팀", "더보기"]
         )
+        #expect(
+            AppTab.allCases.map { title(for: $0, locale: .english) }
+                == ["Home", "Calendar", "Todo", "Team", "More"]
+        )
+        // The tab bar reads the same entry for whichever language iOS resolved.
+        #expect(AppTab.home.localizedTitle == title(for: .home, locale: nil))
+    }
+
+    private func title(for tab: AppTab, locale: Locale?) -> String {
+        AppLocalization.string("tab.\(tab.rawValue)", table: "Localizable", locale: locale)
     }
 
     @Test
@@ -107,14 +107,6 @@ struct AppTabTests {
             "case .more:\n            morePath.removeAll()",
         ] {
             #expect(rootSource.contains(pop), "RootTabView is missing: \(pop)")
-        }
-    }
-
-    private func restore(_ value: Any?, forKey key: String, in defaults: UserDefaults) {
-        if let value {
-            defaults.set(value, forKey: key)
-        } else {
-            defaults.removeObject(forKey: key)
         }
     }
 }
