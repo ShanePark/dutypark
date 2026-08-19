@@ -756,7 +756,6 @@ export default {
     },
   },
   todoBoard: {
-    title: '할일',
     loading: '로딩 중...',
     statusTabsAriaLabel: '할일 상태',
     status: {
@@ -1322,9 +1321,6 @@ export default {
       warning2: '내 태그만 제거됩니다.',
       action: '태그 제거',
     },
-    todoRow: {
-      filterTitle: '할 일만 보기',
-    },
     todo: {
       status: {
         todo: '할 일',
@@ -1362,8 +1358,6 @@ export default {
         loadingAttachments: '첨부파일을 불러오는 중...',
       },
       messages: {
-        added: '할 일이 추가되었습니다.',
-        addFailed: '할 일 추가에 실패했습니다.',
         updateFailed: '할 일 수정에 실패했습니다.',
         completeFailed: '할 일 완료 처리에 실패했습니다.',
         reopenFailed: '할 일을 다시 여는데 실패했습니다.',

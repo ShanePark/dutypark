@@ -73,8 +73,6 @@
     "calendar.visibility.private" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Private" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "비공개" } } } },
     "calendar.todo.title" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Due todos" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "마감 Todo" } } } },
     "calendar.todo.manage" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Todos" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "할 일" } } } },
-    "calendar.todo.add" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Add todo" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "할 일 추가" } } } },
-    "calendar.todo.showTodo" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Show Todo" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "할 일 표시" } } } },
     "calendar.todo.status" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Status" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "상태" } } } },
     "calendar.todo.hasDueDate" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Due date" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "마감일" } } } },
     "calendar.todo.complete" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Complete" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "완료" } } } },

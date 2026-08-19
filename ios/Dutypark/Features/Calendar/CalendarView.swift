@@ -50,7 +50,6 @@ nonisolated enum CalendarReportPolicy {
 struct CalendarView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var model: CalendarViewModel
-    @StateObject private var todoCreateModel = TodoViewModel()
     @StateObject private var todoDetailModel = TodoViewModel()
     @State private var showsSearch = false
     @State private var dDayModalSelection: DDayModalSelection?
@@ -58,7 +57,6 @@ struct CalendarView: View {
     @State private var showsMonthPicker = false
     @State private var showsDutyComparison = false
     @State private var importsDutyBatch = false
-    @State private var showsTodoCreate = false
     @State private var todoSelection: CalendarTodoSelection?
     @State private var todoDetailCanDismiss = true
     @State private var todoDetailDismissRequest = 0
@@ -212,16 +210,6 @@ struct CalendarView: View {
                 )
             }
         }
-        .fullScreenCover(isPresented: $showsTodoCreate) {
-            TodoCreateModal(
-                model: todoCreateModel,
-                initialStatus: .inProgress,
-                friends: model.friends,
-                refreshBoardAfterCreate: false,
-                onCreated: { await model.refreshTodoBoard() },
-                onDismiss: { showsTodoCreate = false }
-            )
-        }
         .fullScreenCover(item: $todoSelection) { selection in
             DPModalOverlay(
                 onDismiss: {
@@ -306,9 +294,6 @@ struct CalendarView: View {
     private var calendarContent: some View {
         ScrollView {
             LazyVStack(spacing: DPSpacing.small) {
-                if model.isMyCalendar, !model.isQuickDutyEditing {
-                    dutyTodoRow
-                }
                 if showsDutyToolbar {
                     dutyToolbar
                 }
@@ -679,59 +664,6 @@ struct CalendarView: View {
         .background(DPColor.warningSoft)
         .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
         .overlay(RoundedRectangle(cornerRadius: DPRadius.standard).stroke(DPColor.warningBorder))
-    }
-
-    private var dutyTodoRow: some View {
-        HStack(spacing: DPSpacing.small) {
-            Button { withoutPresentationAnimation { showsTodoCreate = true } } label: {
-                Image(systemName: "plus")
-                    .foregroundStyle(DPColor.textSecondary)
-                    .frame(width: 44, height: 44)
-            }
-            .accessibilityLabel(CalendarLocalization.text("calendar.todo.add"))
-            .accessibilityIdentifier("calendar.todo.add")
-            .background(DPColor.backgroundCard)
-            .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
-            .overlay(RoundedRectangle(cornerRadius: DPRadius.standard).stroke(DPColor.borderSecondary))
-
-            Button { Task { await model.toggleTodoItems() } } label: {
-                Image(systemName: model.showTodoItems ? "checkmark.square.fill" : "list.bullet")
-                    .foregroundStyle(model.showTodoItems ? DPColor.accent : DPColor.textMuted)
-                    .frame(width: 44, height: 44)
-                    .background(model.showTodoItems ? DPColor.accentSoft : DPColor.backgroundCard)
-                    .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
-            }
-            .accessibilityLabel(CalendarLocalization.text("calendar.todo.showTodo"))
-
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 6) {
-                    ForEach(calendarTodoItems, id: \.id) { todo in
-                        Button { openTodo(todo) } label: {
-                            Text(todo.isTagged ? "\(todo.owner) · \(todo.title)" : todo.title)
-                                .font(DPTypography.caption)
-                                .foregroundStyle(DPColor.textPrimary)
-                                .lineLimit(1)
-                                .padding(.horizontal, 9)
-                                .frame(maxWidth: 150, minHeight: 32)
-                                .background(todo.status == .inProgress ? DPColor.warningSoft : DPColor.accentSoft)
-                                .clipShape(RoundedRectangle(cornerRadius: DPRadius.compact))
-                                .overlay {
-                                    RoundedRectangle(cornerRadius: DPRadius.compact)
-                                        .stroke(todo.status == .inProgress ? DPColor.warningBorder : DPColor.accentBorder)
-                                }
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityIdentifier("calendar.todo.item.\(todo.id)")
-                    }
-                }
-                .frame(minHeight: 44)
-            }
-            .frame(maxWidth: .infinity)
-        }
-    }
-
-    private var calendarTodoItems: [TodoDTO] {
-        (model.todoBoard?.inProgress ?? []) + (model.showTodoItems ? (model.todoBoard?.todo ?? []) : [])
     }
 
     private func openTodo(_ todo: TodoDTO) {

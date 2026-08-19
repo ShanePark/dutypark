@@ -37,23 +37,25 @@ final class CalendarFeatureTests: XCTestCase {
         )
     }
 
-    func testCalendarTodoAddUsesTheQuickCreateModalAndTodoOnlyRefresh() throws {
+    /// The strip above the calendar is gone: due-date bubbles inside the day cells are the
+    /// only Todo surface the calendar keeps, and they open the detail modal in place.
+    func testCalendarTodosLiveOnlyInDayCellsAndOpenTheDetailModal() throws {
         let sourceURL = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .appending(path: "Dutypark/Features/Calendar/CalendarView.swift")
         let source = try String(contentsOf: sourceURL, encoding: .utf8)
 
-        XCTAssertTrue(source.contains("TodoCreateModal("))
-        XCTAssertTrue(source.contains("initialStatus: .inProgress"))
-        XCTAssertTrue(source.contains("refreshBoardAfterCreate: false"))
-        XCTAssertTrue(source.contains("onCreated: { await model.refreshTodoBoard() }"))
         XCTAssertTrue(source.contains("TodoDetailModal("))
+        XCTAssertTrue(source.contains("onTodoChanged: { await model.refreshTodoBoard() }"))
         XCTAssertTrue(source.contains("Button { openTodo(todo) }"))
         XCTAssertTrue(source.contains("calendar.day.todo.\\(todo.id)"))
         XCTAssertFalse(source.contains("todoDetailModel.load()"))
+        XCTAssertFalse(source.contains("dutyTodoRow"), "The Todo strip above the calendar is removed")
+        XCTAssertFalse(source.contains("calendar.todo.item."), "The Todo strip above the calendar is removed")
+        XCTAssertFalse(source.contains("TodoCreateModal("), "Calendar no longer creates Todos")
         XCTAssertFalse(source.contains("TodoView("), "Calendar Todo bubbles must not present the full board")
-        XCTAssertFalse(source.contains("private func openTodoBoard()"), "Calendar keeps only the quick-add entry")
+        XCTAssertFalse(source.contains("private func openTodoBoard()"), "Calendar never opens the Todo board")
     }
 
     func testAMemberCalendarIsPushedOntoTheStackOfTheTabItWasOpenedFrom() throws {
@@ -340,7 +342,6 @@ final class CalendarFeatureTests: XCTestCase {
             "calendar.compare.empty",
             "calendar.compare.reset",
             "calendar.todo.manage",
-            "calendar.todo.add",
             "calendar.search.hint",
             "calendar.search.empty",
             "calendar.search.summary",

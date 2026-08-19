@@ -5,18 +5,10 @@ import XCTest
 @MainActor
 final class CalendarUserFlowTests: XCTestCase {
     func testMutationsRefreshOnlyTheirAffectedCalendarSlice() async throws {
-        let defaults = UserDefaults.standard
-        let previousTodoVisibility = defaults.object(forKey: "dutyViewShowTodo")
-        defaults.set(false, forKey: "dutyViewShowTodo")
-        defer {
-            if let previousTodoVisibility {
-                defaults.set(previousTodoVisibility, forKey: "dutyViewShowTodo")
-            } else {
-                defaults.removeObject(forKey: "dutyViewShowTodo")
-            }
-        }
-
-        let repository = CalendarUserFlowRepository(todo: Self.todo())
+        let repository = CalendarUserFlowRepository(
+            todo: Self.todo(),
+            inProgressTodo: Self.todo(title: "Local in-progress todo", status: .inProgress)
+        )
         let model = CalendarViewModel(repository: repository, now: date(2026, 8, 12))
         await model.load()
         let originalDayIDs = model.days.map(\.id)
@@ -25,12 +17,13 @@ final class CalendarUserFlowTests: XCTestCase {
         expectedBaseline.canManage = 0
         XCTAssertEqual(baseline, expectedBaseline)
 
-        await model.toggleTodoItems()
+        // Due-date bubbles are unconditional now that the Todo visibility toggle is gone,
+        // so both TODO and IN_PROGRESS items land on their day without any extra fetch.
         var actualFetchCounts = await repository.fetchCounts
         XCTAssertEqual(actualFetchCounts, baseline)
         XCTAssertEqual(
             model.days.first { $0.cell.date.rawValue == "2026-08-12" }?.todos.map(\.title),
-            ["Local todo"]
+            ["Local todo", "Local in-progress todo"]
         )
 
         await model.refreshTodoBoard()
@@ -38,6 +31,11 @@ final class CalendarUserFlowTests: XCTestCase {
         expected.todoBoard += 1
         actualFetchCounts = await repository.fetchCounts
         XCTAssertEqual(actualFetchCounts, expected)
+        XCTAssertEqual(
+            model.days.first { $0.cell.date.rawValue == "2026-08-12" }?.todos.map(\.title),
+            ["Local todo", "Local in-progress todo"],
+            "Rebuilding Todo days must keep every due-dated Todo visible"
+        )
 
         model.selectedDay = try XCTUnwrap(
             model.days.first { $0.cell.date.rawValue == "2026-08-12" }
@@ -112,7 +110,10 @@ final class CalendarUserFlowTests: XCTestCase {
         XCTAssertEqual(actualFetchCounts, expected)
         XCTAssertTrue(model.selectedDay?.dDays.isEmpty == true)
         XCTAssertEqual(model.days.map(\.id), originalDayIDs)
-        XCTAssertEqual(model.selectedDay?.todos.map(\.title), ["Local todo"])
+        XCTAssertEqual(
+            model.selectedDay?.todos.map(\.title),
+            ["Local todo", "Local in-progress todo"]
+        )
     }
 
     func testScheduleCreateEditDeleteRefreshesTheOpenDay() async throws {
@@ -342,13 +343,16 @@ final class CalendarUserFlowTests: XCTestCase {
         )!
     }
 
-    nonisolated private static func todo() -> TodoDTO {
+    nonisolated private static func todo(
+        title: String = "Local todo",
+        status: TodoStatus = .todo
+    ) -> TodoDTO {
         TodoDTO(
             id: UUID().uuidString,
-            title: "Local todo",
+            title: title,
             content: "",
             position: 0,
-            status: .todo,
+            status: status,
             createdDate: LocalDateTimeValue(rawValue: "2026-08-12T00:00:00"),
             completedDate: nil,
             dueDate: DateOnly(rawValue: "2026-08-12"),
@@ -391,6 +395,7 @@ private actor CalendarUserFlowRepository: CalendarRepositoryProtocol {
     private let scheduleOwnerID: MemberID
     private var storedDuty: DutyDTO?
     private var storedTodo: TodoDTO?
+    private var storedInProgressTodo: TodoDTO?
     private(set) var fetchCounts = CalendarFetchCounts()
 
     private(set) var savedRequests: [ScheduleSaveDTO] = []
@@ -402,12 +407,14 @@ private actor CalendarUserFlowRepository: CalendarRepositoryProtocol {
         schedule: ScheduleDTO? = nil,
         canManage: Bool = false,
         scheduleOwnerID: MemberID = 1,
-        todo: TodoDTO? = nil
+        todo: TodoDTO? = nil,
+        inProgressTodo: TodoDTO? = nil
     ) {
         storedSchedule = schedule
         canManageValue = canManage
         self.scheduleOwnerID = scheduleOwnerID
         storedTodo = todo
+        storedInProgressTodo = inProgressTodo
     }
 
     func member() async throws -> MemberDTO {
@@ -485,11 +492,18 @@ private actor CalendarUserFlowRepository: CalendarRepositoryProtocol {
 
     func todoBoard() async throws -> TodoBoardDTO {
         fetchCounts.todoBoard += 1
+        let todos = storedTodo.map { [$0] } ?? []
+        let inProgress = storedInProgressTodo.map { [$0] } ?? []
         return TodoBoardDTO(
-            todo: storedTodo.map { [$0] } ?? [],
-            inProgress: [],
+            todo: todos,
+            inProgress: inProgress,
             done: [],
-            counts: TodoCountsDTO(todo: storedTodo == nil ? 0 : 1, inProgress: 0, done: 0, total: storedTodo == nil ? 0 : 1)
+            counts: TodoCountsDTO(
+                todo: todos.count,
+                inProgress: inProgress.count,
+                done: 0,
+                total: todos.count + inProgress.count
+            )
         )
     }
 

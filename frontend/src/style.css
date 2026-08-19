@@ -946,16 +946,6 @@ html.dark {
     color: var(--dp-accent) !important;
 }
 
-.todo-btn-add:hover {
-    background-color: var(--dp-success-bg) !important;
-    color: var(--dp-success) !important;
-}
-
-.todo-item-bubble:hover {
-    background-color: color-mix(in srgb, var(--dp-warning) 25%, var(--dp-bg-card)) !important;
-    box-shadow: 0 2px 4px var(--dp-warning-ring);
-}
-
 /* Footer Navigation */
 .footer-nav {
     @apply fixed bottom-0 left-0 right-0 text-dp-text-on-dark z-50;
@@ -1827,60 +1817,3 @@ div.swal2-popup.swal2-toast.colored-toast-info {
     z-index: 10;
 }
 
-/* ====================================
-   Todo Filter Buttons (DutyView)
-   ==================================== */
-
-.todo-filter-btn {
-    background-color: var(--dp-bg-card);
-    color: var(--dp-text-muted);
-    border: 2px solid transparent;
-}
-
-.todo-filter-btn:first-child {
-    border-radius: 0.375rem 0 0 0.375rem;
-}
-
-.todo-filter-btn:last-child {
-    border-radius: 0 0.375rem 0.375rem 0;
-}
-
-.todo-filter-btn:hover {
-    background-color: var(--dp-bg-hover);
-}
-
-.todo-filter-btn-inactive {
-    background-color: var(--dp-bg-card);
-    color: var(--dp-border-secondary);
-    opacity: 0.5;
-}
-
-.todo-filter-btn-inactive:hover {
-    opacity: 0.8;
-}
-
-.todo-filter-btn-active-todo {
-    background-color: var(--dp-accent-bg);
-    color: var(--dp-accent);
-    border-color: var(--dp-accent);
-}
-
-.todo-filter-btn-active-progress {
-    background-color: var(--dp-warning-bg);
-    color: var(--dp-warning);
-    border-color: var(--dp-warning);
-}
-
-/* Todo Management Button (DutyView) */
-.todo-manage-btn:hover {
-    background-color: var(--dp-bg-hover) !important;
-}
-
-.todo-btn-add:hover {
-    background-color: var(--dp-bg-hover) !important;
-    color: var(--dp-accent) !important;
-}
-
-.todo-btn-add:hover .todo-btn-add-icon {
-    transform: rotate(90deg);
-}

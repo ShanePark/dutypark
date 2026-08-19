@@ -754,7 +754,6 @@ export default {
     },
   },
   todoBoard: {
-    title: 'To-do',
     loading: 'Loading...',
     statusTabsAriaLabel: 'To-do status',
     status: {
@@ -1387,9 +1386,6 @@ export default {
       warning2: 'Only your tag will be removed.',
       action: 'Remove tag',
     },
-    todoRow: {
-      filterTitle: 'Show to-dos only',
-    },
     todo: {
       status: {
         todo: 'To-do',
@@ -1427,8 +1423,6 @@ export default {
         loadingAttachments: 'Loading attachments...',
       },
       messages: {
-        added: 'The to-do has been added.',
-        addFailed: 'Failed to add the to-do.',
         updateFailed: 'Failed to update the to-do.',
         completeFailed: 'Failed to complete the to-do.',
         reopenFailed: 'Failed to reopen the to-do.',

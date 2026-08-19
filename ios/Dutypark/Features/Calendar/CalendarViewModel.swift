@@ -47,9 +47,6 @@ final class CalendarViewModel: ObservableObject {
     @Published var isQuickDutyEditing = false
     @Published private(set) var quickDutyDay: CalendarDayContent?
     @Published private(set) var canLoadMoreSearchResults = false
-    @Published var showTodoItems: Bool {
-        didSet { UserDefaults.standard.set(showTodoItems, forKey: "dutyViewShowTodo") }
-    }
     @Published private(set) var pinnedDDayID: Int64?
     @Published var dutyBatchMessage: String?
     private var searchPage = 0
@@ -70,7 +67,6 @@ final class CalendarViewModel: ObservableObject {
         month = parts.month ?? 1
         selectedMemberID = memberID
         highlightedDate = date
-        showTodoItems = UserDefaults.standard.bool(forKey: "dutyViewShowTodo")
     }
 
     var targetMemberID: MemberID? { selectedMemberID ?? me?.id }
@@ -175,7 +171,7 @@ final class CalendarViewModel: ObservableObject {
         todoBoard = try await todoResult
         let compared = try await comparedResult
         dDays = loadedDDays.sorted { $0.date.rawValue < $1.date.rawValue }
-        let activeTodos = (showTodoItems ? (todoBoard?.todo ?? []) : []) + (todoBoard?.inProgress ?? [])
+        let activeTodos = (todoBoard?.todo ?? []) + (todoBoard?.inProgress ?? [])
         let pinKey = pinnedDDayKey(memberID)
         pinnedDDayID = UserDefaults.standard.object(forKey: pinKey) == nil ? nil : Int64(UserDefaults.standard.integer(forKey: pinKey))
         days = cells.enumerated().map { index, cell in
@@ -414,11 +410,6 @@ final class CalendarViewModel: ObservableObject {
         }
     }
 
-    func toggleTodoItems() async {
-        showTodoItems.toggle()
-        rebuildTodoDays()
-    }
-
     func refreshTodoBoard() async {
         guard isMyCalendar else { return }
         do {
@@ -645,7 +636,7 @@ final class CalendarViewModel: ObservableObject {
     }
 
     private func rebuildTodoDays() {
-        let visibleTodos = (showTodoItems ? (todoBoard?.todo ?? []) : []) + (todoBoard?.inProgress ?? [])
+        let visibleTodos = (todoBoard?.todo ?? []) + (todoBoard?.inProgress ?? [])
         days = days.map { day in
             replacing(day, todos: visibleTodos.filter { $0.dueDate == day.cell.date })
         }
