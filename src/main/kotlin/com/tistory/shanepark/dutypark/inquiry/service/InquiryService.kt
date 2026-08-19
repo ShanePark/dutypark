@@ -3,7 +3,6 @@ package com.tistory.shanepark.dutypark.inquiry.service
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
 import com.tistory.shanepark.dutypark.common.exceptions.RateLimitException
-import com.tistory.shanepark.dutypark.common.slack.annotation.SlackNotification
 import com.tistory.shanepark.dutypark.inquiry.config.InquiryRateLimitConfig
 import com.tistory.shanepark.dutypark.inquiry.domain.dto.AdminInquiryDto
 import com.tistory.shanepark.dutypark.inquiry.domain.dto.CreateInquiryRequest
@@ -37,11 +36,11 @@ class InquiryService(
     private val rateLimitConfig: InquiryRateLimitConfig,
     private val clock: Clock,
     private val eventPublisher: ApplicationEventPublisher,
+    private val slackNotifier: InquirySlackNotifier,
 ) {
     private val log = logger()
 
     @Transactional
-    @SlackNotification(includeArguments = false)
     fun createInquiry(memberId: Long?, request: CreateInquiryRequest, ipAddress: String): CreateInquiryResponse {
         lockRateLimitBucket(ipAddress)
         val now = now()
@@ -66,6 +65,7 @@ class InquiryService(
                 ipAddress = ipAddress,
             )
         )
+        slackNotifier.inquiryCreated(inquiry)
         return CreateInquiryResponse(id = inquiry.id)
     }
 

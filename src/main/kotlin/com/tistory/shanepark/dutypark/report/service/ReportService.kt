@@ -3,7 +3,6 @@ package com.tistory.shanepark.dutypark.report.service
 import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
 import com.tistory.shanepark.dutypark.attachment.repository.AttachmentRepository
 import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
-import com.tistory.shanepark.dutypark.common.slack.annotation.SlackNotification
 import com.tistory.shanepark.dutypark.member.block.service.BlockService
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
@@ -32,13 +31,13 @@ class ReportService(
     private val todoRepository: TodoRepository,
     private val attachmentRepository: AttachmentRepository,
     private val blockService: BlockService,
+    private val slackNotifier: ReportSlackNotifier,
 ) {
 
     /**
      * Reporting does not check whether the reporter can still see the target:
      * a member must stay able to report content of somebody they already blocked.
      */
-    @SlackNotification(includeArguments = false)
     fun createReport(loginMemberId: Long, request: CreateReportRequest): ReportCreateResult {
         if (request.reason == ReportReason.OTHER && request.detail.isNullOrBlank()) {
             throw BadRequestException("report.detail.required")
@@ -62,6 +61,7 @@ class ReportService(
         if (request.alsoBlock) {
             blockService.block(reporter.id!!, owner.id!!)
         }
+        slackNotifier.reportCreated(result = result, reporter = reporter, reported = owner, request = request)
 
         return result
     }

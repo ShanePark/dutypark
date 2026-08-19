@@ -44,6 +44,7 @@ class InquiryServiceTest {
         rateLimitConfig = InquiryRateLimitConfig(maxPerHour = 5),
         clock = clock,
         eventPublisher = eventPublisher,
+        slackNotifier = mock<InquirySlackNotifier>(),
     )
 
     private val adminId = 99L
