@@ -366,8 +366,6 @@ final class CalendarFeatureTests: XCTestCase {
             "calendar.schedule.untag.confirm.message",
             "calendar.dday.detail.title",
             "calendar.dday.edit.action",
-            "calendar.dday.pin.enabled",
-            "calendar.dday.pin.disabled",
             "calendar.dday.pin.action",
             "calendar.dday.delete.confirm.title",
             "calendar.dday.delete.confirm.message",

@@ -1318,8 +1318,7 @@ export default {
         title: 'Title',
         date: 'Date',
       },
-      pinEnabled: 'Pinned on calendar',
-      pinDisabled: 'Not pinned',
+      pin: 'Show on calendar',
       edit: 'Edit',
     },
     schedule: {

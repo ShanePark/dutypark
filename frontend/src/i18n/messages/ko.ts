@@ -1253,8 +1253,7 @@ export default {
         title: '제목',
         date: '날짜',
       },
-      pinEnabled: '달력에 고정됨',
-      pinDisabled: '달력에 고정되지 않음',
+      pin: '달력에 표시',
       edit: '수정',
     },
     schedule: {

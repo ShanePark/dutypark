@@ -3222,7 +3222,7 @@ private struct DDayDetailModal: View {
             if canManage {
                 HStack(spacing: DPSpacing.small) {
                     Label(
-                        CalendarLocalization.text(isPinned ? "calendar.dday.pin.enabled" : "calendar.dday.pin.disabled"),
+                        CalendarLocalization.text("calendar.dday.pin.action"),
                         systemImage: isPinned ? "star.fill" : "star"
                     )
                     .font(DPTypography.label)

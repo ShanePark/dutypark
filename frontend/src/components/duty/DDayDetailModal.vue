@@ -144,7 +144,7 @@ const ddayBadgeClass = computed(() => {
               :style="!isPinned ? { color: 'var(--dp-text-muted)' } : {}"
             />
             <span class="text-sm text-dp-text-primary">
-              {{ isPinned ? t('duty.ddayDetail.pinEnabled') : t('duty.ddayDetail.pinDisabled') }}
+              {{ t('duty.ddayDetail.pin') }}
             </span>
           </div>
           <button
