@@ -1509,8 +1509,8 @@ private struct CalendarDayCell: View {
                     .font(DPFont.bold(size: CalendarTypography.dayNumber, relativeTo: .caption))
                     .foregroundStyle(dayNumberColor)
                 Spacer(minLength: 0)
-                if let pinnedDDay, !hidesDetails {
-                    Text(relativeLabel(pinnedDDay))
+                if let pinnedDDay, !hidesDetails, let label = relativeLabel(pinnedDDay) {
+                    Text(label)
                         .font(DPFont.light(size: CalendarTypography.cellMicro, relativeTo: .caption2))
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
@@ -1663,11 +1663,8 @@ private struct CalendarDayCell: View {
         .accessibilityIdentifier("calendar.compared-duty.\(item.memberID)")
     }
 
-    private func relativeLabel(_ item: DDayDTO) -> String {
-        guard let target = CalendarDateSupport.date(from: item.date), let cell = CalendarDateSupport.date(from: day.cell.date) else { return item.title }
-        let difference = CalendarDateSupport.calendar.dateComponents([.day], from: cell, to: target).day ?? 0
-        let label = difference == 0 ? "D-Day" : difference > 0 ? "D-\(difference)" : "D+\(-difference)"
-        return "\(item.title) \(label)"
+    private func relativeLabel(_ item: DDayDTO) -> String? {
+        CalendarVisualLogic.pinnedDDayLabel(cell: day.cell.date, target: item.date)
     }
 }
 

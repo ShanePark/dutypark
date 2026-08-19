@@ -4,6 +4,39 @@ import XCTest
 
 @MainActor
 final class CalendarFeatureTests: XCTestCase {
+    /// The pinned D-day shares the day-number row, so only the counter fits. Adding the
+    /// title pushed the number out of the single line, which is the one part the pin is
+    /// for; the title already appears as a bubble on the D-day's own date.
+    func testThePinnedDDayCellShowsTheCounterWithoutTheTitle() throws {
+        let target = DateOnly(rawValue: "2026-08-19")
+
+        XCTAssertEqual(
+            CalendarVisualLogic.pinnedDDayLabel(cell: DateOnly(rawValue: "2026-08-19"), target: target),
+            "D-Day"
+        )
+        XCTAssertEqual(
+            CalendarVisualLogic.pinnedDDayLabel(cell: DateOnly(rawValue: "2026-08-16"), target: target),
+            "D-3"
+        )
+        XCTAssertEqual(
+            CalendarVisualLogic.pinnedDDayLabel(cell: DateOnly(rawValue: "2026-08-20"), target: target),
+            "D+1"
+        )
+        XCTAssertNil(CalendarVisualLogic.pinnedDDayLabel(cell: DateOnly(rawValue: "2026-08"), target: target))
+
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark/Features/Calendar/CalendarView.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+
+        XCTAssertTrue(source.contains("CalendarVisualLogic.pinnedDDayLabel("))
+        XCTAssertFalse(
+            source.contains("item.title) \\(label)"),
+            "The pinned counter must not be prefixed with the D-day title"
+        )
+    }
+
     func testCalendarTodoAddUsesTheQuickCreateModalAndTodoOnlyRefresh() throws {
         let sourceURL = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()

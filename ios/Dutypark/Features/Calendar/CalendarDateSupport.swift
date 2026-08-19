@@ -90,6 +90,19 @@ nonisolated enum CalendarVisualLogic {
     static let maximumSchedulesPerCell = 3
     static let maximumTodosPerCell = 2
 
+    /// The pinned D-day is drawn next to the day number, where only a few characters fit,
+    /// so it carries the counter alone as the web calendar does. Its title is already
+    /// shown as a bubble on the D-day's own date.
+    static func pinnedDDayLabel(cell: DateOnly, target: DateOnly) -> String? {
+        guard let cellDate = CalendarDateSupport.date(from: cell),
+              let targetDate = CalendarDateSupport.date(from: target),
+              let difference = CalendarDateSupport.calendar
+                  .dateComponents([.day], from: cellDate, to: targetDate).day
+        else { return nil }
+        if difference == 0 { return "D-Day" }
+        return difference > 0 ? "D-\(difference)" : "D+\(-difference)"
+    }
+
     static func usesLightForeground(on hex: String?) -> Bool {
         guard let components = rgb(hex) else { return false }
         let luminance = (Double(components.red) * 299 + Double(components.green) * 587 + Double(components.blue) * 114) / 1_000
