@@ -69,6 +69,10 @@ struct CalendarView: View {
     @State private var reportTarget: ReportTarget?
     @State private var reportCanDismiss = true
     @State private var showsBlockConfirmation = false
+    @State private var monthSlideOffset: CGFloat = 0
+    @State private var calendarGridWidth: CGFloat = 0
+    @State private var isSlidingMonth = false
+    @State private var isSwipingMonth = false
     @State private var leavesAfterBlock = false
     @State private var refreshesAfterReportedBlock = false
     @StateObject private var blockModel = MemberBlockViewModel()
@@ -297,7 +301,7 @@ struct CalendarView: View {
                 if showsDutyToolbar {
                     dutyToolbar
                 }
-                calendarGrid
+                swipeableCalendarGrid
                 if !model.isQuickDutyEditing {
                     dDaySection
                 }
@@ -786,6 +790,9 @@ struct CalendarView: View {
                         openTodo: openTodo
                     )
                         .onTapGesture {
+                            // A finger that pulled the grid sideways was swiping, not
+                            // tapping, even when it gave up short of the next month.
+                            guard !isSwipingMonth, !isSlidingMonth else { return }
                             if model.isQuickDutyEditing { model.focusQuickDuty(on: day) }
                             else {
                                 withoutPresentationAnimation { model.selectedDay = day }
@@ -798,6 +805,67 @@ struct CalendarView: View {
         .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
         .overlay(RoundedRectangle(cornerRadius: DPRadius.standard).stroke(DPColor.borderSecondary))
         .shadow(color: .black.opacity(0.05), radius: 1, y: 1)
+    }
+
+    // Swiping the grid sideways is the quick way through the months; the chevrons in
+    // the navigation bar stay for taps and for VoiceOver, which never sees this drag.
+    private var swipeableCalendarGrid: some View {
+        calendarGrid
+            .background {
+                GeometryReader { proxy in
+                    Color.clear
+                        .onAppear { calendarGridWidth = proxy.size.width }
+                        .onChange(of: proxy.size.width) { _, width in calendarGridWidth = width }
+                }
+            }
+            .offset(x: monthSlideOffset)
+            .simultaneousGesture(monthSwipeGesture)
+    }
+
+    private var monthSwipeGesture: some Gesture {
+        DragGesture(minimumDistance: 12)
+            .onChanged { value in
+                guard !isSlidingMonth else { return }
+                monthSlideOffset = CalendarMonthSwipe.followOffset(translation: value.translation)
+                if monthSlideOffset != 0 { isSwipingMonth = true }
+            }
+            .onEnded { value in
+                guard !isSlidingMonth else { return }
+                // The cell's own tap lands around the same moment, so the swipe flag
+                // outlives the drag just long enough for that tap to be turned away.
+                Task {
+                    try? await Task.sleep(nanoseconds: 100_000_000)
+                    isSwipingMonth = false
+                }
+                let offset = CalendarMonthSwipe.monthOffset(translation: value.translation)
+                guard offset != 0 else {
+                    withAnimation(.easeOut(duration: CalendarMonthSwipe.slideInDuration)) {
+                        monthSlideOffset = 0
+                    }
+                    return
+                }
+                slideMonth(by: offset)
+            }
+    }
+
+    private func slideMonth(by offset: Int) {
+        isSlidingMonth = true
+        // The month itself changes now and its days arrive later, so the grid slides
+        // out, reappears on the far side and slides back in without waiting for the
+        // response; a slow month lands its cells into a calendar that is already home.
+        let travel = calendarGridWidth > 0 ? calendarGridWidth : CalendarMonthSwipe.maximumFollowDistance
+        withAnimation(.easeIn(duration: CalendarMonthSwipe.slideOutDuration)) {
+            monthSlideOffset = offset > 0 ? -travel : travel
+        }
+        Task { await model.changeMonth(by: offset) }
+        Task {
+            try? await Task.sleep(nanoseconds: UInt64(CalendarMonthSwipe.slideOutDuration * 1_000_000_000))
+            monthSlideOffset = offset > 0 ? travel : -travel
+            withAnimation(.easeOut(duration: CalendarMonthSwipe.slideInDuration)) {
+                monthSlideOffset = 0
+            }
+            isSlidingMonth = false
+        }
     }
 
     private var dDaySection: some View {

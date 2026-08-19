@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { CalendarCheck, MessageSquareText, CheckSquare } from 'lucide-vue-next'
 import { isLightColor } from '@/utils/color'
 import { parseDateOnly } from '@/utils/date'
@@ -9,6 +9,7 @@ import VisibilityHintIcon from '@/components/common/VisibilityHintIcon.vue'
 import type { HolidayDto } from '@/types'
 import type { CalendarDay, DutyType, Schedule, OtherDuty, LocalDDay, DutyDay, TodoDueItem } from '@/views/duty/dutyViewTypes'
 import { buildDisplayTagMembers } from '@/utils/tagMembers'
+import { useCalendarMonthSwipe } from '@/composables/useCalendarMonthSwipe'
 
 const props = defineProps<{
   days: CalendarDay[]
@@ -36,7 +37,18 @@ const emit = defineEmits<{
   (e: 'batch-duty-change', day: CalendarDay, dutyTypeId: number | null): void
   (e: 'todo-click', todo: TodoDueItem): void
   (e: 'dday-click', dday: LocalDDay): void
+  (e: 'prev-month'): void
+  (e: 'next-month'): void
 }>()
+
+// Swiping the grid sideways is the quick way through the months; the header
+// chevrons stay for taps and for keyboard and assistive-technology users.
+const swipeContainer = ref<HTMLElement | null>(null)
+const monthSwipe = useCalendarMonthSwipe({
+  onPrevMonth: () => emit('prev-month'),
+  onNextMonth: () => emit('next-month'),
+  getWidth: () => swipeContainer.value?.clientWidth ?? 0,
+})
 
 const focusedCalendarDay = computed(() => {
   if (!props.batchEditMode || !props.focusedDay) return null
@@ -179,197 +191,218 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
 </script>
 
 <template>
-  <CalendarGrid
-    :days="days"
-    :current-year="currentYear"
-    :current-month="currentMonth"
-    :holidays="displayHolidays"
-    :get-duty-color="getDutyColorForDay"
-    :highlight-day="highlightDay"
-    :focused-day="focusedCalendarDay"
-    :clickable="!batchEditMode || canEdit"
-    @day-click="(day, index) => emit('day-click', day, index)"
+  <div
+    ref="swipeContainer"
+    class="calendar-month-swipe"
+    @touchstart.passive="monthSwipe.handleTouchStart"
+    @touchmove.passive="monthSwipe.handleTouchMove"
+    @touchend="monthSwipe.handleTouchEnd"
+    @touchcancel="monthSwipe.handleTouchCancel"
+    @pointerdown.capture="monthSwipe.dragClickGuard.handlePointerDown"
+    @click.capture="monthSwipe.dragClickGuard.handleClick"
   >
-    <template #day-header="{ day, index }">
-      <span
-        v-if="!batchEditMode && calcDDayForDay(day)"
-        class="text-[9px] sm:text-xs"
-        :style="{ color: getMutedTextColor(getDutyColorAt(index)) }"
+    <div class="calendar-month-swipe__track" :style="monthSwipe.trackStyle.value">
+      <CalendarGrid
+        :days="days"
+        :current-year="currentYear"
+        :current-month="currentMonth"
+        :holidays="displayHolidays"
+        :get-duty-color="getDutyColorForDay"
+        :highlight-day="highlightDay"
+        :focused-day="focusedCalendarDay"
+        :clickable="!batchEditMode || canEdit"
+        @day-click="(day, index) => emit('day-click', day, index)"
       >
-        {{ calcDDayForDay(day) }}
-      </span>
-    </template>
-
-    <template #day-content="{ day, index }">
-      <div v-if="batchEditMode && day.isCurrentMonth" class="mt-1 hidden sm:grid grid-cols-2 gap-0.5">
-        <button
-          v-for="dutyType in dutyTypes"
-          :key="dutyType.id ?? 'off'"
-          @click.stop="emit('batch-duty-change', day, dutyType.id)"
-          class="text-[10px] sm:text-xs px-1 py-1 rounded border transition-all min-h-[22px] sm:min-h-[26px] cursor-pointer"
-          :class="{
-            'ring-2 ring-dp-text-primary font-bold shadow-sm':
-              (duties[index]?.dutyType === dutyType.name) ||
-              (!duties[index]?.dutyType && dutyType.id === null),
-            'hover:opacity-80': true,
-          }"
-          :style="{
-            backgroundColor: dutyType.color || 'var(--dp-duty-fallback)',
-            color: isLightColor(dutyType.color) ? 'var(--dp-text-on-light)' : 'var(--dp-text-on-dark)',
-            borderColor: dutyType.color || 'var(--dp-duty-fallback)',
-          }"
-        >
-          <span class="sm:hidden">{{ dutyType.name.charAt(0) }}</span>
-          <span class="hidden sm:inline">{{ dutyType.name.length > 4 ? dutyType.name.substring(0, 4) : dutyType.name }}</span>
-        </button>
-      </div>
-
-      <div v-if="!batchEditMode" class="mt-0.5">
-        <div v-if="otherDuties.length > 0" class="mb-1 grid gap-0.5 sm:flex sm:flex-wrap sm:justify-center sm:gap-1">
-          <div
-            v-for="otherDuty in otherDuties"
-            :key="otherDuty.memberId"
-            class="other-duty-chip w-full max-w-full border border-dp-overlay-light/50 sm:w-auto"
-            :title="`${otherDuty.memberName}: ${otherDuty.duties[index]?.dutyType ?? ''}`"
-            :style="{
-              backgroundColor: otherDuty.duties[index]?.dutyColor || 'var(--dp-duty-fallback)',
-              color: getOtherDutyTextColor(otherDuty.duties[index]?.dutyColor || null),
-            }"
+        <template #day-header="{ day, index }">
+          <span
+            v-if="!batchEditMode && calcDDayForDay(day)"
+            class="text-[9px] sm:text-xs"
+            :style="{ color: getMutedTextColor(getDutyColorAt(index)) }"
           >
-            <ProfileAvatar
-              :member-id="otherDuty.memberId"
-              :name="otherDuty.memberName"
-              :has-profile-photo="otherDuty.hasProfilePhoto"
-              :profile-photo-version="otherDuty.profilePhotoVersion"
-              size="xs"
-              class="other-duty-chip__avatar"
-            />
-            <span class="other-duty-chip__label">
-              {{ otherDuty.duties[index]?.dutyType ?? '' }}
-            </span>
-          </div>
-        </div>
-
-        <button
-          v-for="dday in getDDaysForDay(day)"
-          :key="dday.id"
-          type="button"
-          :aria-label="dday.title"
-          :title="dday.title"
-          @click.stop="emit('dday-click', dday)"
-          class="calendar-action-bubble calendar-action-bubble--dday mt-0.5 text-[10px] sm:text-xs"
-        >
-          <span class="calendar-action-bubble__text">
-            <CalendarCheck class="calendar-action-bubble__icon" />
-            <span class="sm:hidden">{{ getMobileCalendarDDayTitle(dday) }}</span>
-            <span class="hidden sm:inline">{{ dday.title }}</span>
+            {{ calcDDayForDay(day) }}
           </span>
-        </button>
+        </template>
 
-        <div
-          v-for="schedule in schedulesByDays[index]?.slice(0, 3)"
-          :key="schedule.id"
-          class="px-0.5 text-[10px] leading-snug border-t-2 border-dashed sm:text-sm"
-          :style="{ color: getPrimaryTextColor(getDutyColorAt(index)), borderColor: getBorderColor(getDutyColorAt(index)) }"
-        >
-          <div class="calendar-inline-text sm:whitespace-normal sm:break-words">
-            <VisibilityHintIcon
-              v-if="shouldShowPrivateVisibility(schedule)"
-              :visibility="schedule.visibility"
-              size="xs"
-              class="mr-0.5 inline-flex align-[-2px] sm:align-[-3px]"
-            /><span class="sm:hidden">{{ getMobileCalendarScheduleTitle(schedule) }}</span><span class="hidden sm:inline">{{ schedule.contentWithoutTime || schedule.content }}</span>{{ formatScheduleTime(schedule) }}<template v-if="schedule.totalDays > 1">({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</template><MessageSquareText
-              v-if="hasScheduleDetails(schedule)"
-              class="w-2.5 h-2.5 sm:w-3 sm:h-3 inline align-[-1px] sm:align-[-2px] ml-0.5"
-              :style="{ color: getPrimaryTextColor(getDutyColorAt(index)) }"
-            />
-          </div>
-          <div
-            v-if="getDisplayTagMembers(schedule).length"
-            class="mt-px flex flex-wrap justify-end gap-px sm:hidden"
-          >
-            <span
-              v-for="tag in getMobileCalendarTagMembers(schedule)"
-              :key="tag.key"
-              class="schedule-tag schedule-tag-with-avatar"
+        <template #day-content="{ day, index }">
+          <div v-if="batchEditMode && day.isCurrentMonth" class="mt-1 hidden sm:grid grid-cols-2 gap-0.5">
+            <button
+              v-for="dutyType in dutyTypes"
+              :key="dutyType.id ?? 'off'"
+              @click.stop="emit('batch-duty-change', day, dutyType.id)"
+              class="text-[10px] sm:text-xs px-1 py-1 rounded border transition-all min-h-[22px] sm:min-h-[26px] cursor-pointer"
+              :class="{
+                'ring-2 ring-dp-text-primary font-bold shadow-sm':
+                  (duties[index]?.dutyType === dutyType.name) ||
+                  (!duties[index]?.dutyType && dutyType.id === null),
+                'hover:opacity-80': true,
+              }"
+              :style="{
+                backgroundColor: dutyType.color || 'var(--dp-duty-fallback)',
+                color: isLightColor(dutyType.color) ? 'var(--dp-text-on-light)' : 'var(--dp-text-on-dark)',
+                borderColor: dutyType.color || 'var(--dp-duty-fallback)',
+              }"
             >
-              <ProfileAvatar
-                :member-id="tag.id ?? null"
-                :name="tag.name"
-                :has-profile-photo="tag.hasProfilePhoto"
-                :profile-photo-version="tag.profilePhotoVersion"
-                size="xs"
-                class="schedule-tag-avatar"
-              />
-              <span class="schedule-tag-label">{{ getCalendarTagLabel(tag.name) }}</span>
-            </span>
-            <span
-              v-if="getHiddenMobileCalendarTagCount(schedule) > 0"
-              class="schedule-tag schedule-tag-count"
-            >
-              +{{ getHiddenMobileCalendarTagCount(schedule) }}
-            </span>
+              <span class="sm:hidden">{{ dutyType.name.charAt(0) }}</span>
+              <span class="hidden sm:inline">{{ dutyType.name.length > 4 ? dutyType.name.substring(0, 4) : dutyType.name }}</span>
+            </button>
           </div>
-          <div
-            v-if="getDisplayTagMembers(schedule).length"
-            class="mt-px hidden flex-wrap justify-end gap-px sm:mt-0.5 sm:flex sm:gap-0.5"
-          >
-            <span
-              v-for="tag in getDisplayTagMembers(schedule)"
-              :key="tag.key"
-              class="schedule-tag schedule-tag-with-avatar"
-            >
-              <ProfileAvatar
-                :member-id="tag.id ?? null"
-                :name="tag.name"
-                :has-profile-photo="tag.hasProfilePhoto"
-                :profile-photo-version="tag.profilePhotoVersion"
-                size="xs"
-                class="schedule-tag-avatar"
-              />
-              <span class="schedule-tag-label">{{ getCalendarTagLabel(tag.name) }}</span>
-            </span>
-          </div>
-        </div>
-        <div
-          v-if="(schedulesByDays[index]?.length ?? 0) > 3"
-          class="text-[10px] font-medium"
-          :style="{ color: getMutedTextColor(getDutyColorAt(index)) }"
-        >
-          +{{ (schedulesByDays[index]?.length ?? 0) - 3 }}
-        </div>
 
-        <template v-if="isMyCalendar && todosDueByDays[index]?.length">
-          <button
-            v-for="todo in todosDueByDays[index].slice(0, 2)"
-            :key="'due-' + todo.id"
-            type="button"
-            :aria-label="todo.title"
-            :title="todo.title"
-            @click.stop="emit('todo-click', todo)"
-            class="calendar-action-bubble mt-0.5 text-[10px] sm:text-xs"
-            :class="todo.status === 'IN_PROGRESS' ? 'calendar-action-bubble--progress' : 'calendar-action-bubble--todo'"
-          >
-            <span class="calendar-action-bubble__text">
-              <CheckSquare class="calendar-action-bubble__icon" />
-              <span class="sm:hidden">{{ getMobileCalendarTodoTitle(todo) }}</span>
-              <span class="hidden sm:inline">{{ todo.title }}</span>
-            </span>
-          </button>
-          <div
-            v-if="todosDueByDays[index].length > 2"
-            class="text-[10px] font-medium"
-            :style="{ color: 'var(--dp-text-muted)' }"
-          >
-            +{{ todosDueByDays[index].length - 2 }}
+          <div v-if="!batchEditMode" class="mt-0.5">
+            <div v-if="otherDuties.length > 0" class="mb-1 grid gap-0.5 sm:flex sm:flex-wrap sm:justify-center sm:gap-1">
+              <div
+                v-for="otherDuty in otherDuties"
+                :key="otherDuty.memberId"
+                class="other-duty-chip w-full max-w-full border border-dp-overlay-light/50 sm:w-auto"
+                :title="`${otherDuty.memberName}: ${otherDuty.duties[index]?.dutyType ?? ''}`"
+                :style="{
+                  backgroundColor: otherDuty.duties[index]?.dutyColor || 'var(--dp-duty-fallback)',
+                  color: getOtherDutyTextColor(otherDuty.duties[index]?.dutyColor || null),
+                }"
+              >
+                <ProfileAvatar
+                  :member-id="otherDuty.memberId"
+                  :name="otherDuty.memberName"
+                  :has-profile-photo="otherDuty.hasProfilePhoto"
+                  :profile-photo-version="otherDuty.profilePhotoVersion"
+                  size="xs"
+                  class="other-duty-chip__avatar"
+                />
+                <span class="other-duty-chip__label">
+                  {{ otherDuty.duties[index]?.dutyType ?? '' }}
+                </span>
+              </div>
+            </div>
+
+            <button
+              v-for="dday in getDDaysForDay(day)"
+              :key="dday.id"
+              type="button"
+              :aria-label="dday.title"
+              :title="dday.title"
+              @click.stop="emit('dday-click', dday)"
+              class="calendar-action-bubble calendar-action-bubble--dday mt-0.5 text-[10px] sm:text-xs"
+            >
+              <span class="calendar-action-bubble__text">
+                <CalendarCheck class="calendar-action-bubble__icon" />
+                <span class="sm:hidden">{{ getMobileCalendarDDayTitle(dday) }}</span>
+                <span class="hidden sm:inline">{{ dday.title }}</span>
+              </span>
+            </button>
+
+            <div
+              v-for="schedule in schedulesByDays[index]?.slice(0, 3)"
+              :key="schedule.id"
+              class="px-0.5 text-[10px] leading-snug border-t-2 border-dashed sm:text-sm"
+              :style="{ color: getPrimaryTextColor(getDutyColorAt(index)), borderColor: getBorderColor(getDutyColorAt(index)) }"
+            >
+              <div class="calendar-inline-text sm:whitespace-normal sm:break-words">
+                <VisibilityHintIcon
+                  v-if="shouldShowPrivateVisibility(schedule)"
+                  :visibility="schedule.visibility"
+                  size="xs"
+                  class="mr-0.5 inline-flex align-[-2px] sm:align-[-3px]"
+                /><span class="sm:hidden">{{ getMobileCalendarScheduleTitle(schedule) }}</span><span class="hidden sm:inline">{{ schedule.contentWithoutTime || schedule.content }}</span>{{ formatScheduleTime(schedule) }}<template v-if="schedule.totalDays > 1">({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</template><MessageSquareText
+                  v-if="hasScheduleDetails(schedule)"
+                  class="w-2.5 h-2.5 sm:w-3 sm:h-3 inline align-[-1px] sm:align-[-2px] ml-0.5"
+                  :style="{ color: getPrimaryTextColor(getDutyColorAt(index)) }"
+                />
+              </div>
+              <div
+                v-if="getDisplayTagMembers(schedule).length"
+                class="mt-px flex flex-wrap justify-end gap-px sm:hidden"
+              >
+                <span
+                  v-for="tag in getMobileCalendarTagMembers(schedule)"
+                  :key="tag.key"
+                  class="schedule-tag schedule-tag-with-avatar"
+                >
+                  <ProfileAvatar
+                    :member-id="tag.id ?? null"
+                    :name="tag.name"
+                    :has-profile-photo="tag.hasProfilePhoto"
+                    :profile-photo-version="tag.profilePhotoVersion"
+                    size="xs"
+                    class="schedule-tag-avatar"
+                  />
+                  <span class="schedule-tag-label">{{ getCalendarTagLabel(tag.name) }}</span>
+                </span>
+                <span
+                  v-if="getHiddenMobileCalendarTagCount(schedule) > 0"
+                  class="schedule-tag schedule-tag-count"
+                >
+                  +{{ getHiddenMobileCalendarTagCount(schedule) }}
+                </span>
+              </div>
+              <div
+                v-if="getDisplayTagMembers(schedule).length"
+                class="mt-px hidden flex-wrap justify-end gap-px sm:mt-0.5 sm:flex sm:gap-0.5"
+              >
+                <span
+                  v-for="tag in getDisplayTagMembers(schedule)"
+                  :key="tag.key"
+                  class="schedule-tag schedule-tag-with-avatar"
+                >
+                  <ProfileAvatar
+                    :member-id="tag.id ?? null"
+                    :name="tag.name"
+                    :has-profile-photo="tag.hasProfilePhoto"
+                    :profile-photo-version="tag.profilePhotoVersion"
+                    size="xs"
+                    class="schedule-tag-avatar"
+                  />
+                  <span class="schedule-tag-label">{{ getCalendarTagLabel(tag.name) }}</span>
+                </span>
+              </div>
+            </div>
+            <div
+              v-if="(schedulesByDays[index]?.length ?? 0) > 3"
+              class="text-[10px] font-medium"
+              :style="{ color: getMutedTextColor(getDutyColorAt(index)) }"
+            >
+              +{{ (schedulesByDays[index]?.length ?? 0) - 3 }}
+            </div>
+
+            <template v-if="isMyCalendar && todosDueByDays[index]?.length">
+              <button
+                v-for="todo in todosDueByDays[index].slice(0, 2)"
+                :key="'due-' + todo.id"
+                type="button"
+                :aria-label="todo.title"
+                :title="todo.title"
+                @click.stop="emit('todo-click', todo)"
+                class="calendar-action-bubble mt-0.5 text-[10px] sm:text-xs"
+                :class="todo.status === 'IN_PROGRESS' ? 'calendar-action-bubble--progress' : 'calendar-action-bubble--todo'"
+              >
+                <span class="calendar-action-bubble__text">
+                  <CheckSquare class="calendar-action-bubble__icon" />
+                  <span class="sm:hidden">{{ getMobileCalendarTodoTitle(todo) }}</span>
+                  <span class="hidden sm:inline">{{ todo.title }}</span>
+                </span>
+              </button>
+              <div
+                v-if="todosDueByDays[index].length > 2"
+                class="text-[10px] font-medium"
+                :style="{ color: 'var(--dp-text-muted)' }"
+              >
+                +{{ todosDueByDays[index].length - 2 }}
+              </div>
+            </template>
           </div>
         </template>
-      </div>
-    </template>
-  </CalendarGrid>
+      </CalendarGrid>
+    </div>
+  </div>
 </template>
 
 <style scoped>
+.calendar-month-swipe {
+  /* The grid slides a full width out and back in, and only the horizontal overflow
+     may be hidden: day bubbles and tooltips still need to spill downwards. */
+  overflow-x: clip;
+  /* The browser keeps the vertical scroll; sideways is this component's gesture. */
+  touch-action: pan-y;
+}
+
 .calendar-inline-text {
   white-space: normal;
   overflow-wrap: anywhere;

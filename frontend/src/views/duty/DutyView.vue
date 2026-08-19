@@ -1551,6 +1551,8 @@ async function showExcelUploadModal() {
       @batch-duty-change="handleBatchDutyChange"
       @dday-click="openDDayDetail"
       @todo-click="handleTodoBubbleClick"
+      @prev-month="prevMonth"
+      @next-month="nextMonth"
     />
 
     <DDayList
