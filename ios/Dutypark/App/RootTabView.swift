@@ -466,7 +466,6 @@ struct RootTabView: View {
             PublicGuideView()
         case .support:
             SupportView(
-                prefilledEmail: authenticatedMember?.email,
                 isSignedIn: authenticatedMember != nil,
                 initialTab: supportTab
             )
@@ -798,8 +797,8 @@ nonisolated enum RootNavigationPolicy {
         destination == .settings ? requested : nil
     }
 
-    // Only an inquiry-answered notification asks for the history tab; every other way
-    // into support opens the inquiry form, so a stale request cannot follow the member.
+    // Only an explicit request asks for one of the history tabs; every other way into
+    // support opens the inquiry form, so a stale request cannot follow the member.
     static func supportTab(
         for destination: MoreDestination,
         requested: SupportTab?
@@ -931,18 +930,22 @@ nonisolated enum RootMoreDeepLinkPolicy {
         settingsDestination == .guide ? .guide : .settings
     }
 
+    /// The web carries the section in `?tab=`, so a link to either history opens there.
+    /// The form needs no request: it is where support opens anyway.
     static func supportTab(
         from url: URL,
         allowedHost: String = "dutypark.o-r.kr"
     ) -> SupportTab? {
         guard destination(from: url, allowedHost: allowedHost) == .support,
-              URLComponents(url: url, resolvingAgainstBaseURL: false)?
+              let requested = URLComponents(url: url, resolvingAgainstBaseURL: false)?
                 .queryItems?
                 .first(where: { $0.name == "tab" })?
                 .value?
-                .lowercased() == SupportTab.history.rawValue
+                .lowercased(),
+              let tab = SupportTab(rawValue: requested),
+              tab != .form
         else { return nil }
-        return .history
+        return tab
     }
 }
 

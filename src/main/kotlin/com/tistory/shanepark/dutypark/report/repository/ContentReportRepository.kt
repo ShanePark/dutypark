@@ -19,4 +19,6 @@ interface ContentReportRepository : JpaRepository<ContentReport, UUID> {
 
     fun findAllByStatus(status: ReportStatus, pageable: Pageable): Page<ContentReport>
 
+    fun findAllByReporterIdOrderByCreatedDateDesc(reporterId: Long, pageable: Pageable): Page<ContentReport>
+
 }

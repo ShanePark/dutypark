@@ -31,11 +31,54 @@ describe('my inquiry history translations', () => {
       history.answerTitle,
       history.answeredAt,
       history.awaitingDescription,
+      history.answeredNotice,
+      history.expand,
+      history.collapse,
     ]) {
       expect(value).toEqual(expect.any(String))
     }
+    expect(history.countSummary).toContain('{total}')
     expect(messages.support.tabs.form).toEqual(expect.any(String))
     expect(messages.support.tabs.history).toEqual(expect.any(String))
+    expect(messages.support.tabs.reports).toEqual(expect.any(String))
+  })
+
+  it.each(locales)('names every state of the report list in %s', (_locale, messages) => {
+    const reports = messages.support.reports
+    for (const value of [
+      reports.loading,
+      reports.loadFailed,
+      reports.retry,
+      reports.empty,
+      reports.emptyDescription,
+      reports.loadMore,
+      reports.reportedAt,
+      reports.handledAt,
+      reports.targetLabel,
+      reports.reasonLabel,
+      reports.detailLabel,
+      reports.expand,
+      reports.collapse,
+      reports.privacyNotice,
+      reports.targetType.member,
+      reports.targetType.schedule,
+      reports.targetType.todo,
+      reports.status.open,
+      reports.status.resolved,
+      reports.status.dismissed,
+      reports.statusDescription.open,
+      reports.statusDescription.resolved,
+      reports.statusDescription.dismissed,
+    ]) {
+      expect(value).toEqual(expect.any(String))
+    }
+    expect(reports.countSummary).toContain('{total}')
+  })
+
+  /** A member is answered in the app, so the inquiry may carry no reply address at all. */
+  it.each(locales)('explains a missing reply address on both sides in %s', (_locale, messages) => {
+    expect(messages.apiErrors.inquiry.email.required).toEqual(expect.any(String))
+    expect(messages.admin.inquiries.detail.values.inAppOnly).toEqual(expect.any(String))
   })
 
   it.each(locales)('promises an in-app answer to signed-in members in %s', (_locale, messages) => {

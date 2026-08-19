@@ -58,7 +58,7 @@ struct MyInquiryListView: View {
                 Button {
                     model.selectedTab = .form
                 } label: {
-                    Text(verbatim: SupportLocalization.text("support.tab.form"))
+                    Text(verbatim: SupportLocalization.text("support.history.emptyAction"))
                 }
                 .buttonStyle(DPSecondaryButtonStyle())
                 .accessibilityIdentifier("support.history.emptyAction")

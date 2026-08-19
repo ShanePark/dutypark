@@ -66,7 +66,8 @@ export interface AdminInquiryDto {
   /** null when the inquiry was submitted without signing in. */
   memberId: number | null
   memberName: string | null
-  email: string
+  /** null when a signed-in member sent the inquiry without an account e-mail to reply to. */
+  email: string | null
   subject: string | null
   content: string
   status: InquiryStatus

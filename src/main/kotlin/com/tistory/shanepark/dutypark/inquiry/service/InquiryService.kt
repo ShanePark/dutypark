@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.inquiry.service
 
 import com.tistory.shanepark.dutypark.common.config.logger
+import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
 import com.tistory.shanepark.dutypark.common.exceptions.RateLimitException
 import com.tistory.shanepark.dutypark.common.slack.annotation.SlackNotification
 import com.tistory.shanepark.dutypark.inquiry.config.InquiryRateLimitConfig
@@ -14,6 +15,7 @@ import com.tistory.shanepark.dutypark.inquiry.domain.entity.InquiryRateLimitLock
 import com.tistory.shanepark.dutypark.inquiry.domain.enums.InquiryStatus
 import com.tistory.shanepark.dutypark.inquiry.repository.InquiryRateLimitLockRepository
 import com.tistory.shanepark.dutypark.inquiry.repository.InquiryRepository
+import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.notification.event.InquiryAnsweredEvent
 import org.springframework.context.ApplicationEventPublisher
@@ -58,13 +60,25 @@ class InquiryService(
         val inquiry = inquiryRepository.save(
             Inquiry(
                 member = member,
-                email = request.email,
+                email = resolveEmail(request, member),
                 subject = request.subject,
                 content = request.content,
                 ipAddress = ipAddress,
             )
         )
         return CreateInquiryResponse(id = inquiry.id)
+    }
+
+    /**
+     * 회원 문의의 답변은 앱 안에서 읽으므로 회신 주소를 묻지 않는다. 계정 이메일이 있으면 기록해 두고,
+     * 소셜 계정처럼 이메일이 없으면 비워 둔다. 비회원 문의는 답변을 보낼 곳이 이메일뿐이라 필수다.
+     */
+    private fun resolveEmail(request: CreateInquiryRequest, member: Member?): String? {
+        val requested = request.email?.trim()?.takeIf(String::isNotEmpty)
+        if (member != null) {
+            return requested ?: member.email
+        }
+        return requested ?: throw BadRequestException("inquiry.email.required")
     }
 
     private fun lockRateLimitBucket(ipAddress: String) {

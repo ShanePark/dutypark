@@ -128,9 +128,17 @@ describe('AdminInquiryListView', () => {
 
 describe('AdminInquiryDetailModal', () => {
   it('supports replying by email rather than in-app answers', () => {
-    expect(inquiryDetailModal).toContain('mailto:${props.inquiry.email}')
+    expect(inquiryDetailModal).toContain('mailto:${replyEmail.value}')
     expect(inquiryDetailModal).toContain("emit('copyEmail', inquiry.email)")
     expect(inquiryDetailModal).toContain('admin.inquiries.detail.replyHint')
+  })
+
+  // A signed-in member is answered in the app, so the inquiry can carry no reply address.
+  it('hides the e-mail actions when the inquiry has no reply address', () => {
+    expect(inquiryDetailModal).toContain("const replyEmail = computed(() => props.inquiry?.email ?? '')")
+    expect(inquiryDetailModal).toContain('admin.inquiries.detail.values.inAppOnly')
+    expect(inquiryDetailModal).toContain('v-if="replyEmail"')
+    expect(inquiryDetailModal).toContain('v-if="inquiry.email"')
   })
 
   it('toggles between closing and reopening an inquiry', () => {

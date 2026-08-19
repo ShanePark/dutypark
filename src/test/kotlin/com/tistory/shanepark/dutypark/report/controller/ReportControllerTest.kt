@@ -2,7 +2,9 @@ package com.tistory.shanepark.dutypark.report.controller
 
 import com.tistory.shanepark.dutypark.RestDocsTest
 import com.tistory.shanepark.dutypark.member.block.repository.MemberBlockRepository
+import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.report.domain.dto.CreateReportRequest
+import com.tistory.shanepark.dutypark.report.domain.entity.ContentReport
 import com.tistory.shanepark.dutypark.report.domain.enums.ReportReason
 import com.tistory.shanepark.dutypark.report.domain.enums.ReportTargetType
 import com.tistory.shanepark.dutypark.report.repository.ContentReportRepository
@@ -16,6 +18,8 @@ import org.springframework.restdocs.payload.JsonFieldType
 import org.springframework.restdocs.payload.PayloadDocumentation.fieldWithPath
 import org.springframework.restdocs.payload.PayloadDocumentation.requestFields
 import org.springframework.restdocs.payload.PayloadDocumentation.responseFields
+import org.springframework.restdocs.request.RequestDocumentation.parameterWithName
+import org.springframework.restdocs.request.RequestDocumentation.queryParameters
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
@@ -218,6 +222,132 @@ class ReportControllerTest : RestDocsTest() {
                 .content(objectMapper.writeValueAsString(memberReportRequest()))
         )
             .andExpect(status().isUnauthorized)
+    }
+
+    @Test
+    fun `reporter reads own reports in created date desc order`() {
+        val firstId = createReport(TestData.member, TestData.member2, ReportReason.SPAM, detail = "Posts spam links")
+        val otherMemberReportId = createReport(TestData.member2, TestData.member, ReportReason.HARASSMENT)
+        val latestId = createReport(TestData.member, TestData.admin, ReportReason.OTHER, detail = "Impersonates staff")
+        em.flush()
+        em.clear()
+
+        val response = mockMvc.perform(
+            RestDocumentationRequestBuilders.get("/api/reports/me")
+                .param("page", "0")
+                .param("size", "10")
+                .accept(MediaType.APPLICATION_JSON)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.totalElements").value(2))
+            .andExpect(jsonPath("$.content[0].id").value(latestId))
+            .andExpect(jsonPath("$.content[0].reason").value("OTHER"))
+            .andExpect(jsonPath("$.content[0].detail").value("Impersonates staff"))
+            .andExpect(jsonPath("$.content[0].status").value("OPEN"))
+            .andExpect(jsonPath("$.content[0].reportedMemberName").value(TestData.admin.name))
+            .andExpect(jsonPath("$.content[1].id").value(firstId))
+            .andDo(
+                document(
+                    "reports/my-list",
+                    queryParameters(
+                        parameterWithName("page").description("Page number (0 based)"),
+                        parameterWithName("size").description("Page size"),
+                    ),
+                    responseFields(
+                        fieldWithPath("content").description("Reports the caller filed"),
+                        fieldWithPath("content[].id").description("Report ID"),
+                        fieldWithPath("content[].targetType").description("Reported target type (`MEMBER`, `SCHEDULE`, `TODO`)"),
+                        fieldWithPath("content[].reportedMemberName").description("Reported member name captured when the report was filed"),
+                        fieldWithPath("content[].reason").description("Report reason"),
+                        fieldWithPath("content[].detail").optional().description("Free-form detail the reporter wrote"),
+                        fieldWithPath("content[].status").description("Handling status (`OPEN`, `RESOLVED`, `DISMISSED`)"),
+                        fieldWithPath("content[].createdAt").description("Filed at"),
+                        fieldWithPath("content[].resolvedAt").optional().description("Handled at (null while open)"),
+                        fieldWithPath("totalPages").description("Total page count"),
+                        fieldWithPath("totalElements").description("Total element count"),
+                        fieldWithPath("first").description("Whether this is the first page"),
+                        fieldWithPath("last").description("Whether this is the last page"),
+                        fieldWithPath("size").description("Page size"),
+                        fieldWithPath("number").description("Current page number"),
+                        fieldWithPath("numberOfElements").description("Element count on this page"),
+                        fieldWithPath("empty").description("Whether the page is empty"),
+                        fieldWithPath("pageable").description("Page information"),
+                        fieldWithPath("pageable.pageNumber").description("Page number"),
+                        fieldWithPath("pageable.pageSize").description("Page size"),
+                        fieldWithPath("pageable.sort").description("Sort information"),
+                        fieldWithPath("pageable.sort.empty").description("Whether sorting is absent"),
+                        fieldWithPath("pageable.sort.sorted").description("Whether sorted"),
+                        fieldWithPath("pageable.sort.unsorted").description("Whether unsorted"),
+                        fieldWithPath("pageable.offset").description("Offset"),
+                        fieldWithPath("pageable.paged").description("Whether paged"),
+                        fieldWithPath("pageable.unpaged").description("Whether unpaged"),
+                    )
+                )
+            )
+            .andReturn().response.contentAsString
+
+        // The reporter must never see the moderation trail or the evidence snapshot.
+        assertThat(response).doesNotContain(
+            "adminMemo",
+            "resolvedBy",
+            "contentSnapshot",
+            "snapshotPreview",
+            "reporterName",
+            "targetId",
+        )
+        assertThat(response).doesNotContain(otherMemberReportId)
+    }
+
+    @Test
+    fun `my report list requires login`() {
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.get("/api/reports/me")
+                .accept(MediaType.APPLICATION_JSON)
+        )
+            .andExpect(status().isUnauthorized)
+    }
+
+    @Test
+    fun `my report list is paged`() {
+        createReport(TestData.member, TestData.member2, ReportReason.SPAM)
+        createReport(TestData.member, TestData.admin, ReportReason.HARASSMENT)
+        em.flush()
+        em.clear()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.get("/api/reports/me")
+                .param("page", "1")
+                .param("size", "1")
+                .accept(MediaType.APPLICATION_JSON)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.totalElements").value(2))
+            .andExpect(jsonPath("$.totalPages").value(2))
+            .andExpect(jsonPath("$.numberOfElements").value(1))
+            .andExpect(jsonPath("$.content[0].reportedMemberName").value(TestData.member2.name))
+    }
+
+    private fun createReport(
+        reporter: Member,
+        reported: Member,
+        reason: ReportReason,
+        detail: String? = null,
+    ): String {
+        return contentReportRepository.save(
+            ContentReport(
+                reporter = reporter,
+                reportedMember = reported,
+                targetType = ReportTargetType.MEMBER,
+                targetId = reported.id!!.toString(),
+                reason = reason,
+                detail = detail,
+                contentSnapshot = "이름: ${reported.name}",
+                reporterName = reporter.name,
+                reportedMemberName = reported.name,
+            )
+        ).id.toString()
     }
 
     private fun memberReportRequest(

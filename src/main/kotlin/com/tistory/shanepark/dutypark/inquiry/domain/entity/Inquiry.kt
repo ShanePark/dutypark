@@ -32,8 +32,9 @@ class Inquiry(
     @OnDelete(action = OnDeleteAction.SET_NULL)
     val member: Member? = null,
 
-    @Column(name = "email", nullable = false, length = 255)
-    val email: String,
+    // 로그인 회원은 앱 안에서 답변을 읽으므로 회신 주소가 없을 수 있다. 비회원 문의는 항상 채워진다.
+    @Column(name = "email", length = 255)
+    val email: String? = null,
 
     @Column(name = "subject", length = 100)
     val subject: String? = null,

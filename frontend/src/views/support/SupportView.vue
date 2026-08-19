@@ -7,6 +7,7 @@ import { CircleCheck, Clock, FileText, Flag, LifeBuoy, Send, UserX } from 'lucid
 import PageHeader from '@/components/common/PageHeader.vue'
 import CharacterCounter from '@/components/common/CharacterCounter.vue'
 import MyInquiryList from './MyInquiryList.vue'
+import MyReportList from './MyReportList.vue'
 import { inquiryApi } from '@/api/inquiry'
 import { useAuthStore } from '@/stores/auth'
 
@@ -14,11 +15,12 @@ const SUBJECT_MAX_LENGTH = 100
 const CONTENT_MAX_LENGTH = 2000
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
-type SupportTab = 'form' | 'history'
+type SupportTab = 'form' | 'history' | 'reports'
 
 const TABS: { value: SupportTab; labelKey: string }[] = [
   { value: 'form', labelKey: 'support.tabs.form' },
   { value: 'history', labelKey: 'support.tabs.history' },
+  { value: 'reports', labelKey: 'support.tabs.reports' },
 ]
 
 const { t } = useI18n()
@@ -30,11 +32,14 @@ const authStore = useAuthStore()
 const isSignedIn = computed(() => authStore.isLoggedIn)
 
 function resolveTab(value: unknown): SupportTab {
-  return value === 'history' ? 'history' : 'form'
+  if (value === 'history') return 'history'
+  if (value === 'reports') return 'reports'
+  return 'form'
 }
 
 const activeTab = ref<SupportTab>(resolveTab(route.query.tab))
-const showHistory = computed(() => isSignedIn.value && activeTab.value === 'history')
+/** A signed-out visitor always gets the form, even when a stale link asks for a history tab. */
+const activeSection = computed<SupportTab>(() => (isSignedIn.value ? activeTab.value : 'form'))
 
 // A notification opened while already on /support only swaps the query, so follow it.
 watch(() => route.query.tab, (value) => {
@@ -46,8 +51,8 @@ function selectTab(tab: SupportTab) {
   activeTab.value = tab
 
   const query = { ...route.query }
-  if (tab === 'history') query.tab = 'history'
-  else delete query.tab
+  if (tab === 'form') delete query.tab
+  else query.tab = tab
   router.replace({ query })
 }
 
@@ -58,15 +63,18 @@ const successDescription = computed(() => isSignedIn.value
   ? t('support.success.descriptionSignedIn')
   : t('support.success.description'))
 
-/** Signed-in members get their account address, but it stays editable for a different reply inbox. */
-const email = ref(authStore.user?.email ?? '')
+/**
+ * Only guests name a reply address: a member reads the answer in the app, and the server
+ * records the account e-mail on its own.
+ */
+const email = ref('')
 const subject = ref('')
 const content = ref('')
 const isSubmitting = ref(false)
 const isSubmitted = ref(false)
 const error = ref('')
 
-const isEmailValid = computed(() => EMAIL_PATTERN.test(email.value.trim()))
+const isEmailValid = computed(() => isSignedIn.value || EMAIL_PATTERN.test(email.value.trim()))
 const hasContent = computed(() => content.value.trim().length > 0)
 const canSubmit = computed(() => isEmailValid.value && hasContent.value && !isSubmitting.value)
 
@@ -87,7 +95,7 @@ async function handleSubmit() {
   isSubmitting.value = true
   try {
     await inquiryApi.create({
-      email: email.value.trim(),
+      email: isSignedIn.value ? undefined : email.value.trim(),
       subject: subject.value.trim() || undefined,
       content: content.value.trim(),
     }, {
@@ -121,7 +129,7 @@ function startAnotherInquiry() {
     <div
       v-if="isSignedIn"
       role="tablist"
-      class="mb-4 grid grid-cols-2 gap-1 rounded-xl bg-dp-bg-tertiary p-1"
+      class="mb-4 grid grid-cols-3 gap-1 rounded-xl bg-dp-bg-tertiary p-1"
     >
       <button
         v-for="tab in TABS"
@@ -129,19 +137,19 @@ function startAnotherInquiry() {
         type="button"
         role="tab"
         :aria-selected="activeTab === tab.value"
-        class="min-h-11 rounded-lg px-3 py-2 text-sm font-medium transition-colors"
+        class="min-h-11 rounded-lg px-2 py-2 text-sm transition-colors"
         :class="activeTab === tab.value
-          ? 'bg-dp-surface-strong text-dp-text-on-dark'
-          : 'text-dp-text-secondary hover:bg-dp-bg-hover'"
+          ? 'bg-dp-accent-soft text-dp-accent font-bold shadow-sm ring-1 ring-dp-accent-border'
+          : 'font-medium text-dp-text-secondary hover:bg-dp-bg-hover'"
         @click="selectTab(tab.value)"
       >
         {{ t(tab.labelKey) }}
       </button>
     </div>
 
-    <section v-if="showHistory" class="card card-body">
-      <MyInquiryList @go-to-form="selectTab('form')" />
-    </section>
+    <MyInquiryList v-if="activeSection === 'history'" @go-to-form="selectTab('form')" />
+
+    <MyReportList v-else-if="activeSection === 'reports'" />
 
     <template v-else>
       <section class="card card-body mb-4">
@@ -203,7 +211,7 @@ function startAnotherInquiry() {
             <p class="mt-1 text-sm leading-relaxed text-dp-text-muted">{{ formDescription }}</p>
           </div>
 
-          <div>
+          <div v-if="!isSignedIn">
             <label for="support-email" class="form-label">
               {{ t('support.form.emailLabel') }} <span class="text-dp-danger">*</span>
             </label>

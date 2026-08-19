@@ -449,6 +449,22 @@
         }
       }
     },
+    "support.history.emptyAction" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Send inquiry"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "문의하기"
+          }
+        }
+      }
+    },
     "support.history.loadFailed" : {
       "localizations" : {
         "en" : {
@@ -609,6 +625,342 @@
         }
       }
     },
+    "support.reports.detail" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "What you wrote"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "작성한 내용"
+          }
+        }
+      }
+    },
+    "support.reports.empty" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "You have not filed any reports yet."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "아직 접수한 신고가 없습니다."
+          }
+        }
+      }
+    },
+    "support.reports.empty.description" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reports you file from a calendar, a schedule or a to-do appear here."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "상대방 달력이나 일정, 할 일에서 신고하면 여기에 표시됩니다."
+          }
+        }
+      }
+    },
+    "support.reports.handledAt" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Handled"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "처리일"
+          }
+        }
+      }
+    },
+    "support.reports.loadFailed" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Could not load your reports."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "신고 내역을 불러오지 못했습니다."
+          }
+        }
+      }
+    },
+    "support.reports.loadMore" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Load more"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "더 보기"
+          }
+        }
+      }
+    },
+    "support.reports.loading" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Loading your reports…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "신고 내역을 불러오는 중…"
+          }
+        }
+      }
+    },
+    "support.reports.privacyNotice" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "To protect the other member’s privacy, we do not share what action was taken."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "상대방의 개인정보 보호를 위해 구체적인 조치 내용은 알려드리지 않습니다."
+          }
+        }
+      }
+    },
+    "support.reports.reason" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reason"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "신고 사유"
+          }
+        }
+      }
+    },
+    "support.reports.reportedAt" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Filed"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "접수일"
+          }
+        }
+      }
+    },
+    "support.reports.retry" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Try again"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "다시 시도"
+          }
+        }
+      }
+    },
+    "support.reports.status.dismissed" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "No action"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "조치 없음"
+          }
+        }
+      }
+    },
+    "support.reports.status.open" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Received"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "접수됨"
+          }
+        }
+      }
+    },
+    "support.reports.status.resolved" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Action taken"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "조치 완료"
+          }
+        }
+      }
+    },
+    "support.reports.statusDescription.dismissed" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "We reviewed your report but found no breach of the terms, so no action was taken."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "검토했지만 이용약관 위반이 확인되지 않아 별도 조치를 하지 않았습니다."
+          }
+        }
+      }
+    },
+    "support.reports.statusDescription.open" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Your report has been received. We review it within 24 hours."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "접수되었습니다. 24시간 이내에 확인합니다."
+          }
+        }
+      }
+    },
+    "support.reports.statusDescription.resolved" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "We reviewed your report and took the action it needed."
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "검토 후 필요한 조치를 완료했습니다."
+          }
+        }
+      }
+    },
+    "support.reports.target" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reported"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "신고 대상"
+          }
+        }
+      }
+    },
+    "support.reports.targetType.member" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "User"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "사용자"
+          }
+        }
+      }
+    },
+    "support.reports.targetType.schedule" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Schedule"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "일정"
+          }
+        }
+      }
+    },
+    "support.reports.targetType.todo" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "To-do"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "할 일"
+          }
+        }
+      }
+    },
     "support.success.message" : {
       "localizations" : {
         "en" : {
@@ -678,7 +1030,7 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Send inquiry"
+            "value" : "Contact"
           }
         },
         "ko" : {
@@ -694,13 +1046,29 @@
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "My inquiries"
+            "value" : "Inquiries"
           }
         },
         "ko" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "내 문의 내역"
+            "value" : "내 문의"
+          }
+        }
+      }
+    },
+    "support.tab.reports" : {
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Reports"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "내 신고"
           }
         }
       }

@@ -290,6 +290,9 @@ const apiErrors = {
     rateLimit: {
       exceeded: 'Too many inquiries. Please try again later.',
     },
+    email: {
+      required: 'Enter the e-mail address we should reply to.',
+    },
   },
 } as const
 
@@ -2054,6 +2057,7 @@ export default {
           noSubject: '(No subject)',
           guest: 'Guest inquiry',
           none: '-',
+          inAppOnly: 'Answered in the app (no reply e-mail)',
         },
         actions: {
           copyEmail: 'Copy',
@@ -2070,7 +2074,8 @@ export default {
     title: 'Support',
     tabs: {
       form: 'Contact us',
-      history: 'My inquiries',
+      history: 'Inquiries',
+      reports: 'Reports',
     },
     subtitle: 'Find out how to report or block someone, and send us a question or an appeal.',
     guide: {
@@ -2087,7 +2092,7 @@ export default {
     form: {
       title: 'Contact us',
       description: 'We reply by e-mail, so please double-check the address you enter.',
-      descriptionSignedIn: 'We will notify you once your inquiry is answered, and you can read the reply under My inquiries.',
+      descriptionSignedIn: 'We will notify you once your inquiry is answered, and you can read the reply on the Inquiries tab. We do not ask for a reply e-mail.',
       guestHint: 'Sign in before sending an inquiry to read the reply right here in the app.',
       emailLabel: 'Reply e-mail',
       emailPlaceholder: "you{'@'}example.com",
@@ -2107,7 +2112,7 @@ export default {
     success: {
       title: 'Your inquiry has been received',
       description: 'We will reply to the e-mail address you provided. It can take up to 24 hours.',
-      descriptionSignedIn: 'You can read the reply under My inquiries once it arrives. It can take up to 24 hours.',
+      descriptionSignedIn: 'You can read the reply on the Inquiries tab once it arrives. It can take up to 24 hours.',
       another: 'Send another inquiry',
     },
     history: {
@@ -2128,7 +2133,43 @@ export default {
       contentTitle: 'Your message',
       answerTitle: 'Reply',
       answeredAt: 'Answered',
-      awaitingDescription: 'We will look into it and get back to you.',
+      awaitingDescription: 'We will look into it and get back to you. This can take up to 24 hours.',
+      answeredNotice: 'We will send you a notification as soon as the reply is posted.',
+      countSummary: '{total} total',
+      expand: 'Show the full inquiry',
+      collapse: 'Hide the full inquiry',
+    },
+    reports: {
+      loading: 'Loading your reports...',
+      loadFailed: 'We could not load your reports.',
+      retry: 'Try again',
+      empty: 'You have not filed a report yet.',
+      emptyDescription: 'Reports you file from a member calendar, schedule or to-do show up here.',
+      loadMore: 'Load more',
+      countSummary: '{total} total',
+      reportedAt: 'Filed',
+      handledAt: 'Handled',
+      targetLabel: 'Reported',
+      reasonLabel: 'Reason',
+      detailLabel: 'What you wrote',
+      expand: 'Show the full report',
+      collapse: 'Hide the full report',
+      targetType: {
+        member: 'User',
+        schedule: 'Schedule',
+        todo: 'To-do',
+      },
+      status: {
+        open: 'Received',
+        resolved: 'Action taken',
+        dismissed: 'No action',
+      },
+      statusDescription: {
+        open: 'We have received your report and will review it within 24 hours.',
+        resolved: 'We reviewed the report and took the action it called for.',
+        dismissed: 'We reviewed the report but found no breach of the terms of service, so no action was taken.',
+      },
+      privacyNotice: 'To protect the other member\'s privacy we cannot share what action was taken.',
     },
   },
 } as const

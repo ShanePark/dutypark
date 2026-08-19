@@ -11,7 +11,7 @@ data class AdminInquiryDto(
     val id: UUID,
     val memberId: Long?,
     val memberName: String?,
-    val email: String,
+    val email: String?,
     val subject: String?,
     val content: String,
     val status: InquiryStatus,

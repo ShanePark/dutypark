@@ -51,3 +51,26 @@ nonisolated struct CreateReportRequest: Codable, Equatable, Sendable {
     let detail: String?
     let alsoBlock: Bool
 }
+
+/// How far a report has been handled. `open` is the intake state; the other two are the
+/// outcomes an administrator can record.
+nonisolated enum ReportStatus: String, Codable, Equatable, Sendable {
+    case open = "OPEN"
+    case resolved = "RESOLVED"
+    case dismissed = "DISMISSED"
+}
+
+/// One row of `GET /api/reports/me`. The endpoint deliberately omits the
+/// administrator-only fields (`adminMemo`, `resolvedBy`, `contentSnapshot`) and the target
+/// identifier, so nothing here can leak them to the reporter. The reported name is a
+/// snapshot taken when the report was filed, so it survives the member being deleted.
+nonisolated struct MyReportDTO: Codable, Equatable, Sendable, Identifiable {
+    let id: UUID
+    let targetType: ReportTargetType
+    let reportedMemberName: String
+    let reason: ReportReason
+    let detail: String?
+    let status: ReportStatus
+    let createdAt: LocalDateTimeValue
+    let resolvedAt: LocalDateTimeValue?
+}

@@ -1,12 +1,13 @@
 import Foundation
 
-/// Body of `POST /api/inquiries`. The endpoint accepts guests, so the reply address is
-/// always carried in the request instead of being derived from the session.
+/// Body of `POST /api/inquiries`. A guest is answered by e-mail and must name an address;
+/// a member reads the answer in the app, so the field is left out and the server records
+/// the account e-mail on its own — a social account has none to send anyway.
 nonisolated struct CreateInquiryRequest: Encodable, Equatable, Sendable {
     static let subjectMaximumLength = 100
     static let contentMaximumLength = 2000
 
-    let email: String
+    let email: String?
     let subject: String?
     let content: String
 }
@@ -21,7 +22,8 @@ nonisolated enum InquiryStatus: String, Codable, Equatable, Sendable {
 /// can leak them into the member-facing list.
 nonisolated struct MyInquiryDTO: Codable, Equatable, Sendable, Identifiable {
     let id: UUID
-    let email: String
+    /// Null when a member sent the inquiry without an account e-mail to reply to.
+    let email: String?
     let subject: String?
     let content: String
     let status: InquiryStatus

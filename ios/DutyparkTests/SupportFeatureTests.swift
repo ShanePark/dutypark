@@ -4,17 +4,38 @@ import Testing
 
 @MainActor
 struct SupportFeatureTests {
+    /// A member reads the answer in the app, so the reply address is neither asked for nor
+    /// sent; the server records the account e-mail when the account has one. A social
+    /// account has none at all, which is why the field cannot simply be prefilled.
     @Test
-    func theAccountEmailIsPrefilledAndTrimmed() {
-        let model = SupportViewModel(prefilledEmail: "  member@dutypark.dev  ", repository: SupportRepositorySpy())
-        #expect(model.email == "member@dutypark.dev")
-        #expect(SupportViewModel(prefilledEmail: nil, repository: SupportRepositorySpy()).email.isEmpty)
+    func aSignedInMemberIsNeverAskedForAReplyAddress() async {
+        let repository = SupportRepositorySpy()
+        let model = SupportViewModel(isSignedIn: true, repository: repository)
+        #expect(!model.showsEmailField)
+        #expect(model.email.isEmpty)
+
+        model.content = "Please keep this inquiry in my history."
+        #expect(model.canSubmit)
+        await model.submit()
+
+        #expect(repository.submissions == [
+            CreateInquiryRequest(
+                email: nil,
+                subject: nil,
+                content: "Please keep this inquiry in my history."
+            )
+        ])
+        #expect(model.errorKey == nil)
+        #expect(model.didSubmit)
+
+        #expect(SupportViewModel(isSignedIn: false, repository: SupportRepositorySpy()).showsEmailField)
     }
 
     @Test
     func submissionRequiresAnEmailAddress() async {
         let repository = SupportRepositorySpy()
-        let model = SupportViewModel(prefilledEmail: "   ", repository: repository)
+        let model = SupportViewModel(repository: repository)
+        model.email = "   "
         model.content = "The other member keeps posting spam."
 
         await model.submit()
@@ -27,7 +48,8 @@ struct SupportFeatureTests {
     @Test
     func submissionRejectsAMalformedEmailAddress() async {
         let repository = SupportRepositorySpy()
-        let model = SupportViewModel(prefilledEmail: "member@dutypark", repository: repository)
+        let model = SupportViewModel(repository: repository)
+        model.email = "member@dutypark"
         model.content = "The other member keeps posting spam."
 
         await model.submit()
@@ -46,7 +68,8 @@ struct SupportFeatureTests {
     @Test
     func submissionRequiresContent() async {
         let repository = SupportRepositorySpy()
-        let model = SupportViewModel(prefilledEmail: "member@dutypark.dev", repository: repository)
+        let model = SupportViewModel(repository: repository)
+        model.email = "member@dutypark.dev"
         model.subject = "Report"
         model.content = "   \n  "
 
@@ -59,7 +82,8 @@ struct SupportFeatureTests {
     @Test
     func aSuccessfulSubmissionSendsTheTrimmedInquiryAndShowsTheConfirmation() async {
         let repository = SupportRepositorySpy()
-        let model = SupportViewModel(prefilledEmail: "member@dutypark.dev", repository: repository)
+        let model = SupportViewModel(repository: repository)
+        model.email = "member@dutypark.dev"
         model.subject = "  Reporting a user  "
         model.content = "  The other member keeps posting spam.  "
 
@@ -87,11 +111,7 @@ struct SupportFeatureTests {
     @Test
     func submissionCarriesWhetherTheSenderMustRemainAuthenticated() async {
         let memberRepository = SupportRepositorySpy()
-        let memberModel = SupportViewModel(
-            prefilledEmail: "member@dutypark.dev",
-            isSignedIn: true,
-            repository: memberRepository
-        )
+        let memberModel = SupportViewModel(isSignedIn: true, repository: memberRepository)
         memberModel.content = "Please keep this inquiry in my history."
 
         await memberModel.submit()
@@ -99,11 +119,8 @@ struct SupportFeatureTests {
         #expect(memberRepository.authenticatedSubmissions == [true])
 
         let guestRepository = SupportRepositorySpy()
-        let guestModel = SupportViewModel(
-            prefilledEmail: "guest@dutypark.dev",
-            isSignedIn: false,
-            repository: guestRepository
-        )
+        let guestModel = SupportViewModel(isSignedIn: false, repository: guestRepository)
+        guestModel.email = "guest@dutypark.dev"
         guestModel.content = "Please reply by email."
 
         await guestModel.submit()
@@ -158,7 +175,8 @@ struct SupportFeatureTests {
     @Test
     func anEmptySubjectIsOmittedFromTheRequest() async {
         let repository = SupportRepositorySpy()
-        let model = SupportViewModel(prefilledEmail: "member@dutypark.dev", repository: repository)
+        let model = SupportViewModel(repository: repository)
+        model.email = "member@dutypark.dev"
         model.content = "Please review this account."
 
         await model.submit()
@@ -169,7 +187,8 @@ struct SupportFeatureTests {
     @Test
     func aRateLimitedSubmissionAsksTheSenderToRetryLater() async {
         let repository = SupportRepositorySpy(failure: .server(status: 429, code: "inquiry.rateLimit.exceeded"))
-        let model = SupportViewModel(prefilledEmail: "member@dutypark.dev", repository: repository)
+        let model = SupportViewModel(repository: repository)
+        model.email = "member@dutypark.dev"
         model.content = "Please review this account."
 
         await model.submit()
@@ -182,7 +201,8 @@ struct SupportFeatureTests {
     @Test
     func anyOtherFailureKeepsTheFormWithAGenericMessage() async {
         let repository = SupportRepositorySpy(failure: .transport)
-        let model = SupportViewModel(prefilledEmail: "member@dutypark.dev", repository: repository)
+        let model = SupportViewModel(repository: repository)
+        model.email = "member@dutypark.dev"
         model.content = "Please review this account."
 
         await model.submit()
@@ -195,7 +215,8 @@ struct SupportFeatureTests {
     @Test
     func longFieldsAreCappedToTheServerLimits() async {
         let repository = SupportRepositorySpy()
-        let model = SupportViewModel(prefilledEmail: "member@dutypark.dev", repository: repository)
+        let model = SupportViewModel(repository: repository)
+        model.email = "member@dutypark.dev"
         model.subject = String(repeating: "s", count: 140)
         model.content = String(repeating: "c", count: 2400)
 
@@ -208,7 +229,8 @@ struct SupportFeatureTests {
     @Test
     func nonBMPFieldsAreCappedUsingTheServersUTF16LengthContract() async throws {
         let repository = SupportRepositorySpy()
-        let model = SupportViewModel(prefilledEmail: "member@dutypark.dev", repository: repository)
+        let model = SupportViewModel(repository: repository)
+        model.email = "member@dutypark.dev"
         model.subject = String(repeating: "😀", count: CreateInquiryRequest.subjectMaximumLength)
         model.content = String(repeating: "😀", count: CreateInquiryRequest.contentMaximumLength)
 
@@ -224,7 +246,6 @@ struct SupportFeatureTests {
     @Test
     func theGuestScreenKeepsTheEmailReplyCopyAndHidesTheHistoryTab() {
         let model = SupportViewModel(
-            prefilledEmail: nil,
             isSignedIn: false,
             initialTab: .history,
             repository: SupportRepositorySpy()
@@ -240,11 +261,7 @@ struct SupportFeatureTests {
 
     @Test
     func aSignedInMemberGetsTheHistoryTabAndTheInAppReplyCopy() {
-        let model = SupportViewModel(
-            prefilledEmail: "member@dutypark.dev",
-            isSignedIn: true,
-            repository: SupportRepositorySpy()
-        )
+        let model = SupportViewModel(isSignedIn: true, repository: SupportRepositorySpy())
 
         #expect(model.showsTabs)
         #expect(model.selectedTab == .form)
@@ -253,7 +270,6 @@ struct SupportFeatureTests {
         #expect(!model.showsSignInHint)
 
         let routed = SupportViewModel(
-            prefilledEmail: "member@dutypark.dev",
             isSignedIn: true,
             initialTab: .history,
             repository: SupportRepositorySpy()
@@ -269,7 +285,7 @@ struct SupportFeatureTests {
                 SupportFeatureTests.inquiryPage(number: 1, totalPages: 2, subjects: ["Inquiry 10", "Inquiry 11"])
             ]
         )
-        let model = SupportViewModel(prefilledEmail: "member@dutypark.dev", isSignedIn: true, repository: repository)
+        let model = SupportViewModel(isSignedIn: true, repository: repository)
 
         await model.loadInquiriesIfNeeded()
 
@@ -298,7 +314,7 @@ struct SupportFeatureTests {
             pages: [SupportFeatureTests.inquiryPage(number: 0, totalPages: 1, subjects: ["Only inquiry"])],
             failure: .transport
         )
-        let model = SupportViewModel(prefilledEmail: "member@dutypark.dev", isSignedIn: true, repository: repository)
+        let model = SupportViewModel(isSignedIn: true, repository: repository)
 
         await model.loadInquiriesIfNeeded()
 
@@ -318,7 +334,7 @@ struct SupportFeatureTests {
         let repository = SupportRepositorySpy(
             pages: [SupportFeatureTests.inquiryPage(number: 0, totalPages: 1, subjects: ["Only inquiry"])]
         )
-        let model = SupportViewModel(prefilledEmail: "member@dutypark.dev", isSignedIn: true, repository: repository)
+        let model = SupportViewModel(isSignedIn: true, repository: repository)
         await model.loadInquiriesIfNeeded()
         #expect(repository.inquiryRequests.count == 1)
 
@@ -334,7 +350,7 @@ struct SupportFeatureTests {
         let repository = SupportRepositorySpy(
             pages: [SupportFeatureTests.inquiryPage(number: 0, totalPages: 1, subjects: ["Only inquiry"])]
         )
-        let model = SupportViewModel(prefilledEmail: nil, isSignedIn: false, repository: repository)
+        let model = SupportViewModel(isSignedIn: false, repository: repository)
 
         await model.loadInquiriesIfNeeded()
         await model.loadInquiries()
@@ -362,7 +378,7 @@ struct SupportFeatureTests {
                     },
                     {
                       "id": "0b1f6a2c-5d5e-4a9e-9c11-9a2f7d3e1b40",
-                      "email": "member@dutypark.dev",
+                      "email": null,
                       "subject": null,
                       "content": "Any update?",
                       "status": "OPEN",
@@ -390,6 +406,8 @@ struct SupportFeatureTests {
         #expect(answered.answeredAt?.rawValue == "2026-08-13T10:00:00")
 
         let awaiting = try #require(page.content.last)
+        // A member answered in the app may have sent no reply address at all.
+        #expect(awaiting.email == nil)
         #expect(awaiting.status == .open)
         #expect(!awaiting.hasAnswer)
         #expect(awaiting.answerText == nil)
@@ -424,6 +442,139 @@ struct SupportFeatureTests {
 
         #expect(MyInquiryPresentation.date(value, locale: Locale(identifier: "ko")) == "2026.08.12")
         #expect(MyInquiryPresentation.date(value, locale: Locale(identifier: "en")) == "Aug 12, 2026")
+    }
+
+    @Test
+    func theReportHistoryRequestsTenPerPageAndAccumulatesEveryLoadedPage() async {
+        let repository = SupportRepositorySpy(
+            reportPages: [
+                SupportFeatureTests.reportPage(number: 0, totalPages: 2, names: (0..<10).map { "Member \($0)" }),
+                SupportFeatureTests.reportPage(number: 1, totalPages: 2, names: ["Member 10", "Member 11"])
+            ]
+        )
+        let model = SupportViewModel(isSignedIn: true, repository: repository)
+
+        await model.loadReportsIfNeeded()
+
+        #expect(repository.reportRequests == [SupportInquiryRequest(page: 0, size: 10)])
+        #expect(model.reports.count == 10)
+        #expect(model.hasMoreReports)
+
+        await model.loadMoreReports()
+
+        #expect(model.reports.map(\.reportedMemberName) == (0..<12).map { "Member \($0)" })
+        #expect(!model.hasMoreReports)
+
+        // A second visit to the tab reuses the pages that are already on screen.
+        await model.loadReportsIfNeeded()
+        #expect(repository.reportRequests.count == 2)
+    }
+
+    @Test
+    func aFailedReportHistoryLoadCanBeRetried() async {
+        let repository = SupportRepositorySpy(
+            reportPages: [SupportFeatureTests.reportPage(number: 0, totalPages: 1, names: ["Only member"])],
+            failure: .transport
+        )
+        let model = SupportViewModel(isSignedIn: true, repository: repository)
+
+        await model.loadReportsIfNeeded()
+
+        #expect(model.reportLoadFailed)
+        #expect(model.reports.isEmpty)
+
+        repository.stopFailing()
+        await model.loadReports()
+
+        #expect(!model.reportLoadFailed)
+        #expect(model.reports.map(\.reportedMemberName) == ["Only member"])
+    }
+
+    @Test
+    func theReportHistoryIsNeverRequestedForAGuest() async {
+        let repository = SupportRepositorySpy(
+            reportPages: [SupportFeatureTests.reportPage(number: 0, totalPages: 1, names: ["Only member"])]
+        )
+        let model = SupportViewModel(isSignedIn: false, repository: repository)
+
+        #expect(!model.showsTabs)
+        await model.loadReportsIfNeeded()
+        await model.loadReports()
+
+        #expect(repository.reportRequests.isEmpty)
+        #expect(model.reports.isEmpty)
+    }
+
+    /// The reporter sees the outcome, never how it was reached: the memo, the moderator and
+    /// the stored evidence are administrator-only, and the target identifier is not sent.
+    @Test
+    func theReportContractIsDecodedWithoutTheAdminOnlyFields() throws {
+        let page = try JSONDecoder().decode(
+            PageResponse<MyReportDTO>.self,
+            from: Data("""
+                {
+                  "content": [
+                    {
+                      "id": "5f6b0a52-6d4f-4a02-9e6a-3a6b1d2c4e88",
+                      "targetType": "SCHEDULE",
+                      "reportedMemberName": "Spammer",
+                      "reason": "SPAM",
+                      "detail": "Posts the same advertisement every day.",
+                      "status": "RESOLVED",
+                      "createdAt": "2026-08-12T09:51:51.163702",
+                      "resolvedAt": "2026-08-13T10:00:00"
+                    },
+                    {
+                      "id": "1a2b3c4d-5e6f-4a1b-8c2d-3e4f5a6b7c8d",
+                      "targetType": "MEMBER",
+                      "reportedMemberName": "Impostor",
+                      "reason": "IMPERSONATION",
+                      "detail": null,
+                      "status": "OPEN",
+                      "createdAt": "2026-08-14T09:00:00",
+                      "resolvedAt": null
+                    }
+                  ],
+                  "totalPages": 1,
+                  "totalElements": 2,
+                  "last": true,
+                  "first": true,
+                  "size": 10,
+                  "number": 0,
+                  "numberOfElements": 2,
+                  "empty": false
+                }
+                """.utf8)
+        )
+
+        let resolved = try #require(page.content.first)
+        #expect(resolved.targetType == .schedule)
+        #expect(resolved.reason == .spam)
+        #expect(resolved.status == .resolved)
+        #expect(resolved.resolvedAt?.rawValue == "2026-08-13T10:00:00")
+
+        let open = try #require(page.content.last)
+        #expect(open.status == .open)
+        #expect(open.detail == nil)
+        #expect(open.resolvedAt == nil)
+    }
+
+    @Test
+    func theReportRowLabelsFollowTheHandlingState() {
+        #expect(MyReportPresentation.statusKey(.open) == "support.reports.status.open")
+        #expect(MyReportPresentation.statusKey(.resolved) == "support.reports.status.resolved")
+        #expect(MyReportPresentation.statusKey(.dismissed) == "support.reports.status.dismissed")
+
+        #expect(MyReportPresentation.statusDescriptionKey(.open) == "support.reports.statusDescription.open")
+        #expect(MyReportPresentation.statusDescriptionKey(.resolved) == "support.reports.statusDescription.resolved")
+        #expect(MyReportPresentation.statusDescriptionKey(.dismissed) == "support.reports.statusDescription.dismissed")
+
+        #expect(MyReportPresentation.targetTypeKey(.member) == "support.reports.targetType.member")
+        #expect(MyReportPresentation.targetTypeKey(.schedule) == "support.reports.targetType.schedule")
+        #expect(MyReportPresentation.targetTypeKey(.todo) == "support.reports.targetType.todo")
+
+        // The reason keeps the wording the reporter already read in the report sheet.
+        #expect(MyReportPresentation.reasonText(.spam) == ReportLocalization.text("report.reason.spam"))
     }
 
     @Test
@@ -468,6 +619,23 @@ struct SupportFeatureTests {
                 "support.guest.signInHint",
                 "support.tab.form",
                 "support.tab.history",
+                "support.tab.reports",
+                "support.history.emptyAction",
+                "support.reports.empty",
+                "support.reports.empty.description",
+                "support.reports.loadMore",
+                "support.reports.reportedAt",
+                "support.reports.handledAt",
+                "support.reports.target",
+                "support.reports.reason",
+                "support.reports.detail",
+                "support.reports.privacyNotice",
+                "support.reports.status.open",
+                "support.reports.status.resolved",
+                "support.reports.status.dismissed",
+                "support.reports.statusDescription.open",
+                "support.reports.statusDescription.resolved",
+                "support.reports.statusDescription.dismissed",
                 "support.history.empty",
                 "support.history.loadMore",
                 "support.history.pendingAnswer",
@@ -492,16 +660,20 @@ private final class SupportRepositorySpy: SupportRepository, @unchecked Sendable
     private let lock = NSLock()
     private let failure: APIError?
     private let pages: [PageResponse<MyInquiryDTO>]
+    private let reportPages: [PageResponse<MyReportDTO>]
     private var storedSubmissions: [CreateInquiryRequest] = []
     private var storedAuthenticatedSubmissions: [Bool] = []
     private var storedInquiryRequests: [SupportInquiryRequest] = []
+    private var storedReportRequests: [SupportInquiryRequest] = []
     private var isFailing: Bool
 
     init(
         pages: [PageResponse<MyInquiryDTO>] = [],
+        reportPages: [PageResponse<MyReportDTO>] = [],
         failure: APIError? = nil
     ) {
         self.pages = pages
+        self.reportPages = reportPages
         self.failure = failure
         self.isFailing = failure != nil
     }
@@ -512,6 +684,10 @@ private final class SupportRepositorySpy: SupportRepository, @unchecked Sendable
 
     var inquiryRequests: [SupportInquiryRequest] {
         lock.withLock { storedInquiryRequests }
+    }
+
+    var reportRequests: [SupportInquiryRequest] {
+        lock.withLock { storedReportRequests }
     }
 
     var authenticatedSubmissions: [Bool] {
@@ -534,6 +710,15 @@ private final class SupportRepositorySpy: SupportRepository, @unchecked Sendable
         lock.withLock { storedInquiryRequests.append(SupportInquiryRequest(page: page, size: size)) }
         if let failure, lock.withLock({ isFailing }) { throw failure }
         guard let response = pages.first(where: { $0.number == page }) else {
+            throw APIError.invalidResponse
+        }
+        return response
+    }
+
+    func fetchMyReports(page: Int, size: Int) async throws -> PageResponse<MyReportDTO> {
+        lock.withLock { storedReportRequests.append(SupportInquiryRequest(page: page, size: size)) }
+        if let failure, lock.withLock({ isFailing }) { throw failure }
+        guard let response = reportPages.first(where: { $0.number == page }) else {
             throw APIError.invalidResponse
         }
         return response
@@ -581,6 +766,41 @@ extension SupportFeatureTests {
             createdAt: LocalDateTimeValue(rawValue: "2026-08-12T09:51:51.163702"),
             answer: answer,
             answeredAt: answer == nil ? nil : LocalDateTimeValue(rawValue: "2026-08-13T10:00:00")
+        )
+    }
+
+    static func report(
+        id: UUID = UUID(),
+        name: String,
+        status: ReportStatus = .open
+    ) -> MyReportDTO {
+        MyReportDTO(
+            id: id,
+            targetType: .member,
+            reportedMemberName: name,
+            reason: .spam,
+            detail: "Posts the same advertisement every day.",
+            status: status,
+            createdAt: LocalDateTimeValue(rawValue: "2026-08-12T09:51:51.163702"),
+            resolvedAt: status == .open ? nil : LocalDateTimeValue(rawValue: "2026-08-13T10:00:00")
+        )
+    }
+
+    static func reportPage(
+        number: Int,
+        totalPages: Int,
+        names: [String]
+    ) -> PageResponse<MyReportDTO> {
+        PageResponse(
+            content: names.map { report(name: $0) },
+            totalPages: totalPages,
+            totalElements: Int64(names.count),
+            last: number == totalPages - 1,
+            first: number == 0,
+            size: 10,
+            number: number,
+            numberOfElements: names.count,
+            empty: names.isEmpty
         )
     }
 

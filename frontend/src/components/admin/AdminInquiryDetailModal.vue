@@ -40,10 +40,12 @@ watch(
 )
 
 const isClosed = computed(() => props.inquiry?.status === 'CLOSED')
+/** Members read answers in the app, so an inquiry can arrive without a reply address. */
+const replyEmail = computed(() => props.inquiry?.email ?? '')
 const mailtoHref = computed(() => {
-  if (!props.inquiry) return '#'
-  const subject = props.inquiry.subject ?? ''
-  return `mailto:${props.inquiry.email}?subject=${encodeURIComponent(subject)}`
+  if (!replyEmail.value) return '#'
+  const subject = props.inquiry?.subject ?? ''
+  return `mailto:${replyEmail.value}?subject=${encodeURIComponent(subject)}`
 })
 
 function formatDateTime(value: string | null) {
@@ -119,8 +121,11 @@ function formatDateTime(value: string | null) {
             <div class="rounded-xl border border-dp-border-primary px-3 py-2.5">
               <dt class="text-xs font-semibold text-dp-text-muted">{{ t('admin.inquiries.detail.fields.email') }}</dt>
               <dd class="mt-1 flex flex-wrap items-center gap-2">
-                <span class="text-sm font-bold break-all text-dp-text-primary">{{ inquiry.email }}</span>
+                <span class="text-sm font-bold break-all text-dp-text-primary">
+                  {{ inquiry.email || t('admin.inquiries.detail.values.inAppOnly') }}
+                </span>
                 <button
+                  v-if="inquiry.email"
                   class="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-xs font-medium transition cursor-pointer bg-dp-bg-tertiary text-dp-text-primary hover-interactive"
                   @click="emit('copyEmail', inquiry.email)"
                 >
@@ -196,6 +201,7 @@ function formatDateTime(value: string | null) {
           <h3 class="text-base font-semibold text-dp-text-primary">{{ t('admin.inquiries.detail.actionsTitle') }}</h3>
           <div class="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-3">
             <a
+              v-if="replyEmail"
               :href="mailtoHref"
               class="min-h-11 px-4 py-2 text-sm font-medium rounded-lg transition cursor-pointer inline-flex items-center justify-center bg-dp-bg-tertiary text-dp-text-primary hover-interactive"
             >

@@ -8,8 +8,12 @@ import jakarta.validation.constraints.Size
 import java.time.LocalDateTime
 import java.util.UUID
 
+/**
+ * 로그인 회원은 회신 이메일을 보내지 않는다. 답변을 앱 안에서 읽으므로 서버가 계정 이메일을 대신 기록한다.
+ * 비회원 문의는 답변을 보낼 곳이 이메일뿐이므로 여전히 필수다.
+ */
 data class CreateInquiryRequest(
-    @field:NotBlank @field:Email @field:Size(max = 255) val email: String,
+    @field:Email @field:Size(max = 255) val email: String? = null,
     @field:Size(max = 100) val subject: String? = null,
     @field:NotBlank @field:Size(max = 2000) val content: String,
 )
@@ -23,7 +27,7 @@ data class CreateInquiryResponse(
  */
 data class MyInquiryDto(
     val id: UUID,
-    val email: String,
+    val email: String?,
     val subject: String?,
     val content: String,
     val status: InquiryStatus,

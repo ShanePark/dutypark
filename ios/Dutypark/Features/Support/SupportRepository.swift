@@ -3,6 +3,7 @@ import Foundation
 nonisolated protocol SupportRepository: Sendable {
     func submitInquiry(_ request: CreateInquiryRequest, authenticated: Bool) async throws
     func fetchMyInquiries(page: Int, size: Int) async throws -> PageResponse<MyInquiryDTO>
+    func fetchMyReports(page: Int, size: Int) async throws -> PageResponse<MyReportDTO>
 }
 
 nonisolated struct LiveSupportRepository: SupportRepository {
@@ -47,6 +48,17 @@ nonisolated struct LiveSupportRepository: SupportRepository {
     func fetchMyInquiries(page: Int, size: Int) async throws -> PageResponse<MyInquiryDTO> {
         try await client.request(
             "inquiries/me",
+            queryItems: [
+                URLQueryItem(name: "page", value: String(page)),
+                URLQueryItem(name: "size", value: String(size))
+            ]
+        )
+    }
+
+    /// Members only, and scoped to the caller's own reports the same way.
+    func fetchMyReports(page: Int, size: Int) async throws -> PageResponse<MyReportDTO> {
+        try await client.request(
+            "reports/me",
             queryItems: [
                 URLQueryItem(name: "page", value: String(page)),
                 URLQueryItem(name: "size", value: String(size))

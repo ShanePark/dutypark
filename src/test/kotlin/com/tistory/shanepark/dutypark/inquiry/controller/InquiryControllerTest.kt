@@ -50,7 +50,7 @@ class InquiryControllerTest : RestDocsTest() {
                 document(
                     "inquiry/create",
                     requestFields(
-                        fieldWithPath("email").description("회신 받을 이메일 (필수, 최대 255자)"),
+                        fieldWithPath("email").description("회신 받을 이메일 (비회원 필수, 회원은 생략 - 최대 255자)").optional(),
                         fieldWithPath("subject").description("제목 (선택, 최대 100자)").optional(),
                         fieldWithPath("content").description("문의 내용 (필수, 최대 2000자)"),
                     ),
@@ -117,6 +117,73 @@ class InquiryControllerTest : RestDocsTest() {
         assertThat(inquiry.member?.id).isEqualTo(TestData.member.id)
         assertThat(inquiry.email).isEqualTo("another@dutypark.o-r.kr")
         assertThat(inquiry.subject).isNull()
+    }
+
+    @Test
+    fun `logged in member inquiry without email records the account email`() {
+        val json = """
+            {
+                "content": "회신 주소를 묻지 않는 회원 문의입니다."
+            }
+        """.trimIndent()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.post("/api/inquiries")
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isCreated)
+
+        val inquiry = inquiryRepository.findAll().first()
+        assertThat(inquiry.member?.id).isEqualTo(TestData.member.id)
+        assertThat(inquiry.email).isEqualTo(TestData.member.email)
+    }
+
+    @Test
+    fun `member without an account email can send an inquiry without a reply address`() {
+        val socialMember = memberRepository.save(Member(name = "social"))
+        em.flush()
+        em.clear()
+
+        val json = """
+            {
+                "content": "소셜 로그인 계정이라 이메일이 없습니다."
+            }
+        """.trimIndent()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.post("/api/inquiries")
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json)
+                .withAuth(socialMember)
+        )
+            .andExpect(status().isCreated)
+
+        val inquiry = inquiryRepository.findAll().first()
+        assertThat(inquiry.member?.id).isEqualTo(socialMember.id)
+        assertThat(inquiry.email).isNull()
+    }
+
+    @Test
+    fun `guest inquiry without email is rejected`() {
+        val json = """
+            {
+                "content": "비회원은 답변을 받을 곳이 이메일뿐입니다."
+            }
+        """.trimIndent()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.post("/api/inquiries")
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json)
+        )
+            .andExpect(status().isBadRequest)
+
+        assertThat(inquiryRepository.findAll()).isEmpty()
     }
 
     @Test

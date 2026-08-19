@@ -292,6 +292,9 @@ const apiErrors = {
     rateLimit: {
       exceeded: '문의가 너무 많습니다. 잠시 후 다시 시도해 주세요.',
     },
+    email: {
+      required: '회신 받을 이메일을 입력해 주세요.',
+    },
   },
 } as const
 
@@ -1989,6 +1992,7 @@ export default {
           noSubject: '(제목 없음)',
           guest: '비회원 문의',
           none: '-',
+          inAppOnly: '앱 내 답변 (회신 이메일 없음)',
         },
         actions: {
           copyEmail: '복사',
@@ -2005,7 +2009,8 @@ export default {
     title: '문의·지원',
     tabs: {
       form: '문의하기',
-      history: '내 문의 내역',
+      history: '내 문의',
+      reports: '내 신고',
     },
     subtitle: '신고와 차단 방법을 확인하고, 궁금한 점이나 이의제기를 접수할 수 있습니다.',
     guide: {
@@ -2022,7 +2027,7 @@ export default {
     form: {
       title: '문의하기',
       description: '답변은 입력하신 이메일로 보내드립니다. 회신받을 주소를 정확히 입력해 주세요.',
-      descriptionSignedIn: '답변이 등록되면 알림으로 알려드리고, 내 문의 내역에서 확인할 수 있습니다.',
+      descriptionSignedIn: '답변이 등록되면 알림으로 알려드리고, 내 문의 탭에서 확인할 수 있습니다. 회신 이메일은 받지 않습니다.',
       guestHint: '로그인 후 문의하면 앱에서 답변을 확인할 수 있습니다.',
       emailLabel: '회신 이메일',
       emailPlaceholder: "you{'@'}example.com",
@@ -2042,7 +2047,7 @@ export default {
     success: {
       title: '문의가 접수되었습니다',
       description: '입력하신 이메일로 답변을 보내드립니다. 확인까지 최대 24시간이 걸릴 수 있습니다.',
-      descriptionSignedIn: '답변이 등록되면 내 문의 내역에서 확인할 수 있습니다. 확인까지 최대 24시간이 걸릴 수 있습니다.',
+      descriptionSignedIn: '답변이 등록되면 내 문의 탭에서 확인할 수 있습니다. 확인까지 최대 24시간이 걸릴 수 있습니다.',
       another: '문의 하나 더 작성하기',
     },
     history: {
@@ -2058,12 +2063,48 @@ export default {
         open: '접수됨',
         closed: '처리완료',
       },
-      answered: '답변 있음',
+      answered: '답변 완료',
       awaiting: '답변 대기',
       contentTitle: '문의 내용',
       answerTitle: '답변',
       answeredAt: '답변일',
-      awaitingDescription: '확인 후 답변드리겠습니다.',
+      awaitingDescription: '확인 후 답변드리겠습니다. 접수 후 최대 24시간이 걸릴 수 있습니다.',
+      answeredNotice: '답변이 등록되면 알림으로 알려드립니다.',
+      countSummary: '전체 {total}건',
+      expand: '문의 내용 펼치기',
+      collapse: '문의 내용 접기',
+    },
+    reports: {
+      loading: '신고 내역을 불러오는 중입니다...',
+      loadFailed: '신고 내역을 불러오지 못했습니다.',
+      retry: '다시 시도',
+      empty: '접수한 신고가 없습니다.',
+      emptyDescription: '다른 회원의 달력이나 일정에서 신고하면 여기에 표시됩니다.',
+      loadMore: '더 보기',
+      countSummary: '전체 {total}건',
+      reportedAt: '접수일',
+      handledAt: '처리일',
+      targetLabel: '신고 대상',
+      reasonLabel: '신고 사유',
+      detailLabel: '작성한 내용',
+      expand: '신고 내용 펼치기',
+      collapse: '신고 내용 접기',
+      targetType: {
+        member: '사용자',
+        schedule: '일정',
+        todo: '할 일',
+      },
+      status: {
+        open: '접수됨',
+        resolved: '조치 완료',
+        dismissed: '조치 없음',
+      },
+      statusDescription: {
+        open: '접수되었습니다. 24시간 이내에 확인합니다.',
+        resolved: '검토 후 필요한 조치를 완료했습니다.',
+        dismissed: '검토했지만 이용약관 위반이 확인되지 않아 별도 조치를 하지 않았습니다.',
+      },
+      privacyNotice: '상대방의 개인정보 보호를 위해 구체적인 조치 내용은 알려드리지 않습니다.',
     },
   },
 } as const

@@ -1,12 +1,13 @@
 import Combine
 import Foundation
 
-/// The two sections of the support screen. Guests only ever see `form`: the history
-/// needs a session, and the signed-out screen stays the public contact page App Review
+/// The three sections of the support screen. Guests only ever see `form`: both histories
+/// need a session, and the signed-out screen stays the public contact page App Review
 /// 1.2 asks for.
 nonisolated enum SupportTab: String, Hashable, CaseIterable, Identifiable, Sendable {
     case form
     case history
+    case reports
 
     var id: String { rawValue }
 
@@ -14,6 +15,7 @@ nonisolated enum SupportTab: String, Hashable, CaseIterable, Identifiable, Senda
         switch self {
         case .form: "support.tab.form"
         case .history: "support.tab.history"
+        case .reports: "support.tab.reports"
         }
     }
 }
@@ -22,7 +24,8 @@ nonisolated enum SupportTab: String, Hashable, CaseIterable, Identifiable, Senda
 final class SupportViewModel: ObservableObject {
     static let inquiryPageSize = 10
 
-    @Published var email: String
+    /// Only a guest fills this in; see `showsEmailField`.
+    @Published var email = ""
     @Published var subject = ""
     @Published var content = ""
     @Published private(set) var isSubmitting = false
@@ -33,20 +36,25 @@ final class SupportViewModel: ObservableObject {
     @Published private(set) var isLoadingInquiries = false
     @Published private(set) var isLoadingMoreInquiries = false
     @Published private(set) var inquiryLoadFailed = false
+    @Published private(set) var reports: [MyReportDTO] = []
+    @Published private(set) var isLoadingReports = false
+    @Published private(set) var isLoadingMoreReports = false
+    @Published private(set) var reportLoadFailed = false
 
     let isSignedIn: Bool
     private let repository: any SupportRepository
     private var loadedInquiryPage = 0
     private var totalInquiryPages = 0
     private var hasLoadedInquiries = false
+    private var loadedReportPage = 0
+    private var totalReportPages = 0
+    private var hasLoadedReports = false
 
     init(
-        prefilledEmail: String? = nil,
         isSignedIn: Bool = false,
         initialTab: SupportTab = .form,
         repository: any SupportRepository = LiveSupportRepository()
     ) {
-        self.email = prefilledEmail?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         self.isSignedIn = isSignedIn
         self.selectedTab = isSignedIn ? initialTab : .form
         self.repository = repository
@@ -54,6 +62,13 @@ final class SupportViewModel: ObservableObject {
 
     var showsTabs: Bool {
         isSignedIn
+    }
+
+    /// A member is answered in the app, so no reply address is asked for: the server
+    /// records the account e-mail when the account has one. A guest has nowhere else to
+    /// be answered, so the field stays required there.
+    var showsEmailField: Bool {
+        !isSignedIn
     }
 
     /// Members read the answer in the app, so the form must not promise an e-mail that
@@ -74,9 +89,13 @@ final class SupportViewModel: ObservableObject {
         loadedInquiryPage < totalInquiryPages - 1
     }
 
+    var hasMoreReports: Bool {
+        loadedReportPage < totalReportPages - 1
+    }
+
     var canSubmit: Bool {
         !isSubmitting
-            && !email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            && (isSignedIn || !email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             && !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
@@ -86,7 +105,11 @@ final class SupportViewModel: ObservableObject {
         let trimmedSubject = subject.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedContent = content.trimmingCharacters(in: .whitespacesAndNewlines)
 
-        if let validationKey = Self.validationErrorKey(email: trimmedEmail, content: trimmedContent) {
+        if let validationKey = Self.validationErrorKey(
+            email: trimmedEmail,
+            content: trimmedContent,
+            isSignedIn: isSignedIn
+        ) {
             errorKey = validationKey
             return
         }
@@ -98,7 +121,7 @@ final class SupportViewModel: ObservableObject {
         do {
             try await repository.submitInquiry(
                 CreateInquiryRequest(
-                    email: trimmedEmail,
+                    email: isSignedIn ? nil : trimmedEmail,
                     subject: trimmedSubject.isEmpty
                         ? nil
                         : Self.limited(
@@ -172,6 +195,55 @@ final class SupportViewModel: ObservableObject {
         }
     }
 
+    func loadReportsIfNeeded() async {
+        guard !hasLoadedReports else { return }
+        await loadReports()
+    }
+
+    func loadReports() async {
+        guard isSignedIn, !isLoadingReports else { return }
+#if DEBUG
+        if isUITesting {
+            loadUITestingReportFixture()
+            return
+        }
+#endif
+        isLoadingReports = true
+        defer { isLoadingReports = false }
+
+        do {
+            let page = try await repository.fetchMyReports(page: 0, size: Self.inquiryPageSize)
+            reports = page.content
+            loadedReportPage = page.number
+            totalReportPages = page.totalPages
+            reportLoadFailed = false
+            hasLoadedReports = true
+        } catch {
+            reportLoadFailed = true
+        }
+    }
+
+    func loadMoreReports() async {
+        guard hasMoreReports, !isLoadingReports, !isLoadingMoreReports else { return }
+        isLoadingMoreReports = true
+        defer { isLoadingMoreReports = false }
+
+        do {
+            let page = try await repository.fetchMyReports(
+                page: loadedReportPage + 1,
+                size: Self.inquiryPageSize
+            )
+            reports.append(contentsOf: page.content.filter { next in
+                !reports.contains(where: { $0.id == next.id })
+            })
+            loadedReportPage = page.number
+            totalReportPages = page.totalPages
+            reportLoadFailed = false
+        } catch {
+            reportLoadFailed = true
+        }
+    }
+
     /// The confirmation replaces the form, so writing again has to restore it without
     /// losing the reply address the sender already confirmed.
     func startNewInquiry() {
@@ -179,9 +251,15 @@ final class SupportViewModel: ObservableObject {
         errorKey = nil
     }
 
-    nonisolated static func validationErrorKey(email: String, content: String) -> String? {
-        if email.isEmpty { return "support.error.emailRequired" }
-        if !isValidEmail(email) { return "support.error.emailInvalid" }
+    nonisolated static func validationErrorKey(
+        email: String,
+        content: String,
+        isSignedIn: Bool
+    ) -> String? {
+        if !isSignedIn {
+            if email.isEmpty { return "support.error.emailRequired" }
+            if !isValidEmail(email) { return "support.error.emailInvalid" }
+        }
         if content.isEmpty { return "support.error.contentRequired" }
         return nil
     }
@@ -265,6 +343,36 @@ final class SupportViewModel: ObservableObject {
         inquiryLoadFailed = false
         hasLoadedInquiries = true
     }
+
+    /// One handled and one waiting report cover both badge tones and both detail states.
+    private func loadUITestingReportFixture() {
+        reports = [
+            MyReportDTO(
+                id: UUID(uuidString: "00000000-0000-0000-0000-000000000401")!,
+                targetType: .schedule,
+                reportedMemberName: "김스팸",
+                reason: .spam,
+                detail: "같은 광고 일정을 매일 올립니다.",
+                status: .resolved,
+                createdAt: LocalDateTimeValue(rawValue: "2026-08-14T11:20:00"),
+                resolvedAt: LocalDateTimeValue(rawValue: "2026-08-15T08:10:00")
+            ),
+            MyReportDTO(
+                id: UUID(uuidString: "00000000-0000-0000-0000-000000000402")!,
+                targetType: .member,
+                reportedMemberName: "이사칭",
+                reason: .impersonation,
+                detail: nil,
+                status: .open,
+                createdAt: LocalDateTimeValue(rawValue: "2026-08-18T19:05:00"),
+                resolvedAt: nil
+            )
+        ]
+        loadedReportPage = 0
+        totalReportPages = 1
+        reportLoadFailed = false
+        hasLoadedReports = true
+    }
 #endif
 }
 
@@ -315,5 +423,37 @@ nonisolated enum MyInquiryPresentation {
         formatter.timeZone = .current
         formatter.dateFormat = supportedLocale.identifier == "ko" ? "yyyy.MM.dd" : "MMM d, yyyy"
         return formatter.string(from: date)
+    }
+}
+
+nonisolated enum MyReportPresentation {
+    static func statusKey(_ status: ReportStatus) -> String {
+        switch status {
+        case .open: "support.reports.status.open"
+        case .resolved: "support.reports.status.resolved"
+        case .dismissed: "support.reports.status.dismissed"
+        }
+    }
+
+    static func statusDescriptionKey(_ status: ReportStatus) -> String {
+        switch status {
+        case .open: "support.reports.statusDescription.open"
+        case .resolved: "support.reports.statusDescription.resolved"
+        case .dismissed: "support.reports.statusDescription.dismissed"
+        }
+    }
+
+    static func targetTypeKey(_ type: ReportTargetType) -> String {
+        switch type {
+        case .member: "support.reports.targetType.member"
+        case .schedule: "support.reports.targetType.schedule"
+        case .todo: "support.reports.targetType.todo"
+        }
+    }
+
+    /// The reason keeps the wording the reporter already read in the report sheet, so it
+    /// comes from the report catalog rather than being duplicated here.
+    static func reasonText(_ reason: ReportReason) -> String {
+        ReportLocalization.text(reason.titleKey)
     }
 }

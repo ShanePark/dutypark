@@ -1,7 +1,8 @@
 export type InquiryStatus = 'OPEN' | 'CLOSED'
 
+/** Only a guest names a reply address; the server records the member's account e-mail. */
 export interface CreateInquiryRequest {
-  email: string
+  email?: string
   subject?: string
   content: string
 }
@@ -16,7 +17,7 @@ export interface CreateInquiryResponse {
  */
 export interface MyInquiry {
   id: string
-  email: string
+  email: string | null
   subject: string | null
   content: string
   status: InquiryStatus

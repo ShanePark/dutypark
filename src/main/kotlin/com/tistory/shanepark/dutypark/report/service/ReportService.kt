@@ -8,6 +8,7 @@ import com.tistory.shanepark.dutypark.member.block.service.BlockService
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.report.domain.dto.CreateReportRequest
+import com.tistory.shanepark.dutypark.report.domain.dto.MyReportDto
 import com.tistory.shanepark.dutypark.report.domain.dto.ReportCreateResult
 import com.tistory.shanepark.dutypark.report.domain.entity.ContentReport
 import com.tistory.shanepark.dutypark.report.domain.enums.ReportReason
@@ -16,6 +17,8 @@ import com.tistory.shanepark.dutypark.report.domain.enums.ReportTargetType
 import com.tistory.shanepark.dutypark.report.repository.ContentReportRepository
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
 import com.tistory.shanepark.dutypark.todo.repository.TodoRepository
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.*
@@ -61,6 +64,15 @@ class ReportService(
         }
 
         return result
+    }
+
+    /**
+     * 신고자 본인의 접수 내역. 관리자 판단 근거는 빼고 처리 상태까지만 알려 준다.
+     */
+    @Transactional(readOnly = true)
+    fun findMyReports(reporterId: Long, pageable: Pageable): Page<MyReportDto> {
+        return contentReportRepository.findAllByReporterIdOrderByCreatedDateDesc(reporterId, pageable)
+            .map(MyReportDto::of)
     }
 
     private fun existingOpenReport(reporterId: Long, request: CreateReportRequest): ContentReport? {
