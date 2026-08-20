@@ -87,6 +87,20 @@ describe('home friend list keeps the pin toggle (D4)', () => {
 })
 
 describe('home friend rail shape (D1/D2)', () => {
+  it('places the rail directly in the section body without an intermediate panel', () => {
+    expect(template).toMatch(
+      /<div class="dashboard-friend-rail-frame">\s*<div v-if="friendInfoError"/,
+    )
+
+    const frame = ruleFor('.dashboard-friend-rail-frame')
+    expect(frame).toContain('position: relative')
+    expect(frame).toContain('overflow: hidden')
+    expect(frame).not.toContain('border:')
+    expect(frame).not.toContain('border-radius:')
+    expect(frame).not.toContain('background:')
+    expect(ruleFor('.dashboard-friend-rail')).toContain('padding: 0.5rem')
+  })
+
   it('lays the friends out as a horizontally scrolling rail', () => {
     expect(template).toContain('class="dashboard-friend-rail"')
     const rail = ruleFor('.dashboard-friend-rail')

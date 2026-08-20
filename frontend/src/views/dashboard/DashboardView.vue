@@ -424,7 +424,7 @@ watch(
             <ChevronRight class="w-5 h-5 text-dp-text-muted group-hover:text-dp-text-on-dark group-hover:translate-x-1 transition-all" />
           </div>
         </div>
-        <div class="p-5">
+        <div class="dashboard-friend-rail-frame">
           <div v-if="friendInfoError" class="text-center py-4 text-dp-danger">
             {{ friendInfoError }}
           </div>
@@ -444,7 +444,7 @@ watch(
             </button>
           </div>
 
-          <div v-else class="dashboard-friend-rail-frame">
+          <template v-else>
             <div
               ref="friendRailRef"
               class="dashboard-friend-rail"
@@ -534,7 +534,7 @@ watch(
             >
               <ChevronRight class="h-4 w-4" />
             </button>
-          </div>
+          </template>
         </div>
       </div>
 
@@ -559,9 +559,6 @@ watch(
 .dashboard-friend-rail-frame {
   position: relative;
   overflow: hidden;
-  border: 1px solid var(--dp-border-primary);
-  border-radius: 1rem;
-  background: var(--dp-bg-secondary);
 }
 
 .dashboard-friend-rail {
