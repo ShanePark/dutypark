@@ -67,9 +67,19 @@ describe('FriendTagSelector expanded layout (D8)', () => {
     expect(emptyState).toBeLessThan(selected)
   })
 
-  it('still shows the selected block only once something is picked', () => {
+  it('reserves the selected summary block as soon as the selector expands', () => {
     const selected = templateIndex('class="friend-tag-selector__selected"')
-    expect(template.slice(selected - 120, selected)).toContain('v-if="selectedFriends.length"')
+    expect(template.slice(selected - 120, selected)).not.toContain('v-if="selectedFriends.length"')
+    expect(template).toContain("t('friendTagSelector.selectedCount', { count: selectedCount })")
+    expect(ruleFor('.friend-tag-selector__selected-header')).toContain('min-height: 1.5rem')
+    expect(ruleFor('.friend-tag-selector__chips')).toContain('min-height: 2rem')
+  })
+
+  it('scrolls the selected summary into view after opening on mobile', () => {
+    expect(template).toContain('ref="selectedBlockRef"')
+    expect(script).toContain("window.matchMedia('(max-width: 639px)').matches")
+    expect(script).toContain("behavior: 'smooth'")
+    expect(script).toContain("block: 'nearest'")
   })
 
   it('keeps the rail scroll hints wired to the rail itself, not to the block order', () => {

@@ -33,6 +33,7 @@ const { confirm } = useSwal()
 const searchQuery = ref('')
 const isExpanded = ref(props.modelValue.length > 0)
 const railRef = ref<HTMLElement | null>(null)
+const selectedBlockRef = ref<HTMLElement | null>(null)
 const canScrollPrev = ref(false)
 const canScrollNext = ref(false)
 
@@ -96,8 +97,18 @@ async function clearSelection() {
   emit('update:modelValue', [])
 }
 
-function openSelector() {
+async function openSelector() {
   isExpanded.value = true
+  await nextTick()
+
+  if (!window.matchMedia('(max-width: 639px)').matches) {
+    return
+  }
+
+  selectedBlockRef.value?.scrollIntoView({
+    behavior: 'smooth',
+    block: 'nearest',
+  })
 }
 
 function updateRailHints() {
@@ -247,12 +258,13 @@ function getSubtitle(friend: TaggableFriend) {
         <p class="mt-1 text-xs text-dp-text-muted">{{ t('friendTagSelector.emptyDescription') }}</p>
       </div>
 
-      <div v-if="selectedFriends.length" class="friend-tag-selector__selected">
+      <div ref="selectedBlockRef" class="friend-tag-selector__selected">
         <div class="friend-tag-selector__selected-header">
           <span class="text-xs font-semibold text-dp-text-secondary">
             {{ t('friendTagSelector.selectedCount', { count: selectedCount }) }}
           </span>
           <button
+            v-if="selectedFriends.length"
             type="button"
             class="friend-tag-selector__clear"
             :aria-label="t('friendTagSelector.clearSelectionAria')"
@@ -308,6 +320,7 @@ function getSubtitle(friend: TaggableFriend) {
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
+  min-height: 1.5rem;
   padding-inline: 0.125rem;
 }
 
@@ -337,6 +350,7 @@ function getSubtitle(friend: TaggableFriend) {
 .friend-tag-selector__chips {
   display: flex;
   gap: 0.375rem;
+  min-height: 2rem;
   overflow-x: auto;
   padding-bottom: 0.125rem;
   scrollbar-width: none;

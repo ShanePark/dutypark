@@ -73,13 +73,30 @@ final class DPFriendTagSelectorLayoutTests: XCTestCase {
         )
     }
 
-    func testTheSelectedStripStaysConditionalOnHavingASelection() throws {
+    func testTheSelectedStripReservesItsPlaceBeforeAnyoneIsSelected() throws {
         let body = try Self.expandedSelectorBody()
 
-        XCTAssertTrue(
+        XCTAssertFalse(
             body.contains("if !selectedItems.isEmpty"),
-            "An empty selection must not leave an empty strip behind"
+            "Expanding the selector must immediately reserve the summary area so the form does not jump after the first selection"
         )
+        XCTAssertTrue(
+            body.contains("selectedStrip"),
+            "The expanded selector must render the zero-selection summary before the first friend is picked"
+        )
+        XCTAssertTrue(
+            body.contains(".id(DPFriendTagSelectorScrollAnchor.selectionSummary)"),
+            "The host form needs a stable target at the summary so expansion can reveal the selector's bottom edge"
+        )
+    }
+
+    func testTheEmptySummaryKeepsClearOutOfSightAndInteraction() throws {
+        let strip = try Self.selectedStripBody()
+        let clear = try Self.clearButtonBody()
+
+        XCTAssertTrue(strip.contains(".opacity(selection.isEmpty ? 0 : 1)"))
+        XCTAssertTrue(strip.contains(".accessibilityHidden(selection.isEmpty)"))
+        XCTAssertTrue(clear.contains(".disabled(disabled || selection.isEmpty)"))
     }
 
     /// `minimumScaleFactor` shrinks the line box along with the glyphs, so a card
@@ -121,6 +138,20 @@ final class DPFriendTagSelectorLayoutTests: XCTestCase {
         let source = try selectorSource()
         let start = try XCTUnwrap(source.range(of: "private func card(_ item: DPFriendTagItem)"))
         let end = try XCTUnwrap(source.range(of: "private func teamLine("))
+        return source[start.upperBound..<end.lowerBound]
+    }
+
+    private static func selectedStripBody() throws -> Substring {
+        let source = try selectorSource()
+        let start = try XCTUnwrap(source.range(of: "private var selectedStrip: some View {"))
+        let end = try XCTUnwrap(source.range(of: "private var rail: some View {"))
+        return source[start.upperBound..<end.lowerBound]
+    }
+
+    private static func clearButtonBody() throws -> Substring {
+        let source = try selectorSource()
+        let start = try XCTUnwrap(source.range(of: "private var clearButton: some View {"))
+        let end = try XCTUnwrap(source.range(of: "private func chip("))
         return source[start.upperBound..<end.lowerBound]
     }
 

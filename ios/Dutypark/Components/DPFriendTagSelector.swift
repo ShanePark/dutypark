@@ -96,11 +96,16 @@ nonisolated enum DPFriendTagSelectionLogic {
     }
 }
 
+nonisolated enum DPFriendTagSelectorScrollAnchor: Hashable, Sendable {
+    case selectionSummary
+}
+
 struct DPFriendTagSelector: View {
     let items: [DPFriendTagItem]
     let preservedItems: [DPFriendTagItem]
     @Binding var selection: Set<MemberID>
     let disabled: Bool
+    private let onExpand: () -> Void
     private let isSearchFocusedBinding: Binding<Bool>?
 
     @State private var isExpanded: Bool
@@ -136,12 +141,14 @@ struct DPFriendTagSelector: View {
         preservedItems: [DPFriendTagItem] = [],
         selection: Binding<Set<MemberID>>,
         disabled: Bool = false,
-        isSearchFocused: Binding<Bool>? = nil
+        isSearchFocused: Binding<Bool>? = nil,
+        onExpand: @escaping () -> Void = {}
     ) {
         self.items = items
         self.preservedItems = preservedItems
         _selection = selection
         self.disabled = disabled
+        self.onExpand = onExpand
         self.isSearchFocusedBinding = isSearchFocused
         _isExpanded = State(initialValue: !selection.wrappedValue.isEmpty)
     }
@@ -169,6 +176,7 @@ struct DPFriendTagSelector: View {
     private var collapsedButton: some View {
         Button {
             isExpanded = true
+            onExpand()
         } label: {
             HStack(spacing: DPSpacing.compact) {
                 Image(systemName: "person.badge.plus")
@@ -221,11 +229,9 @@ struct DPFriendTagSelector: View {
                 rail
             }
 
-            if !selectedItems.isEmpty {
-                selectedStrip
-            }
+            selectedStrip
+                .id(DPFriendTagSelectorScrollAnchor.selectionSummary)
         }
-        .animation(.easeOut(duration: 0.2), value: selectedItems.isEmpty)
         .padding(10)
         .background(DPColor.backgroundCard)
         .clipShape(RoundedRectangle(cornerRadius: DPRadius.large))
@@ -243,6 +249,8 @@ struct DPFriendTagSelector: View {
                     .foregroundStyle(DPColor.textSecondary)
                 Spacer(minLength: 0)
                 clearButton
+                    .opacity(selection.isEmpty ? 0 : 1)
+                    .accessibilityHidden(selection.isEmpty)
             }
             .padding(.horizontal, 2)
 
@@ -254,6 +262,9 @@ struct DPFriendTagSelector: View {
                 }
                 .padding(.horizontal, 2)
             }
+            // Reserve the chip rail before the first selection so picking a friend changes
+            // only the rail's contents, never the form's height or scroll position.
+            .frame(minHeight: chipAvatarSize + 16)
         }
         .padding(DPSpacing.small)
         .background(DPColor.accentSoft)
@@ -330,7 +341,7 @@ struct DPFriendTagSelector: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .disabled(disabled)
+        .disabled(disabled || selection.isEmpty)
         .accessibilityLabel(localized("friendTag.clear"))
     }
 

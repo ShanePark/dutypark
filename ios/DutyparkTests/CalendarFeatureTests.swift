@@ -919,6 +919,22 @@ final class CalendarFeatureTests: XCTestCase {
         XCTAssertTrue(editor.contains(".id(ScheduleDateField.end)"))
     }
 
+    func testExpandingFriendTagsScrollsToTheReservedSelectionSummary() throws {
+        let editor = try Self.scheduleEditorSource()
+        let target = try Self.declaration(named: "private var scrollTarget: AnyHashable?", in: editor)
+
+        XCTAssertTrue(
+            target.contains("isTagSelectorExpanded")
+                && target.contains("DPFriendTagSelectorScrollAnchor.selectionSummary"),
+            "Once friend tagging expands, the panel must target the reserved selection summary below the rail"
+        )
+        XCTAssertTrue(
+            editor.contains("focusedField = nil")
+                && editor.contains("isTagSelectorExpanded = true"),
+            "Expansion must release any focused field before requesting the selector summary"
+        )
+    }
+
     /// A tap outside the expanded calendar closed the whole editor — and offered to discard the
     /// form on the way out — because the backdrop request reached the editor's own dismissal.
     /// It closes the innermost thing that is open instead: the calendar first, the editor only

@@ -2575,6 +2575,7 @@ private struct ScheduleEditorView<Header: View>: View {
     @StateObject private var aiConsent = AIScheduleParsingConsentStore.shared
     @FocusState private var focusedField: Field?
     @State private var isTagSearchFocused = false
+    @State private var isTagSelectorExpanded = false
     @ScaledMetric(relativeTo: .subheadline) private var rowLabelWidth: CGFloat =
         CalendarVisualLogic.formLabelWidth(locale: CalendarLocalization.selectedLocale)
     /// Reserved on every date and time cell so a row keeps its height in each of the time's
@@ -2677,11 +2678,15 @@ private struct ScheduleEditorView<Header: View>: View {
     /// tallest thing this form can grow, and its own confirm lands below the modal's footer the
     /// moment it opens — a step the user has to see to take. Otherwise it is the focused field,
     /// and finally the tag search, which belongs to `DPFriendTagSelector` and so never appears
-    /// in `focusedField` at all.
+    /// in `focusedField` at all. Expanding friend tags targets the reserved summary at the
+    /// selector's bottom edge, so the zero-selection state is visible before the first pick.
     private var scrollTarget: AnyHashable? {
         if let expandedDateField { return AnyHashable(expandedDateField) }
         if let focusedField { return AnyHashable(focusedField) }
-        return isTagSearchFocused ? AnyHashable(Field.tags) : nil
+        if isTagSearchFocused { return AnyHashable(Field.tags) }
+        return isTagSelectorExpanded
+            ? AnyHashable(DPFriendTagSelectorScrollAnchor.selectionSummary)
+            : nil
     }
 
     var body: some View {
@@ -2807,7 +2812,12 @@ private struct ScheduleEditorView<Header: View>: View {
                         preservedItems: (existing?.tags ?? []).compactMap(DPFriendTagAdapter.item),
                         selection: $tagIDs,
                         disabled: interactionsDisabled,
-                        isSearchFocused: $isTagSearchFocused
+                        isSearchFocused: $isTagSearchFocused,
+                        onExpand: {
+                            expandedDateField = nil
+                            focusedField = nil
+                            isTagSelectorExpanded = true
+                        }
                     )
                 }
                 .id(Field.tags)
