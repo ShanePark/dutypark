@@ -58,7 +58,7 @@ struct SupportView: View {
             }
             .padding(DPSpacing.medium)
         }
-        .background(DPColor.backgroundPrimary)
+        .background(DPColor.backgroundSecondary)
         .scrollDismissesKeyboard(.interactively)
         .dpKeyboardDismissToolbar()
         .navigationTitle(SupportLocalization.text("support.title"))

@@ -130,7 +130,7 @@ struct MoreView: View {
             }
             .padding(DPSpacing.medium)
         }
-        .background(DPColor.backgroundPrimary)
+        .background(DPColor.backgroundSecondary)
     }
 
     private func section(_ items: [MoreMenuItem]) -> some View {

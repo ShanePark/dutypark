@@ -41,7 +41,7 @@ struct PublicGuideView: View {
                     .accessibilityIdentifier("guide.loading")
             }
         }
-        .background(DPColor.backgroundPrimary)
+        .background(DPColor.backgroundSecondary)
         .navigationTitle(model.content?.title ?? fallbackTitle)
         .navigationBarTitleDisplayMode(.inline)
         .task(id: locale) {
@@ -246,7 +246,7 @@ struct PublicReleaseNotesView: View {
                 notes
             }
         }
-        .background(DPColor.backgroundPrimary)
+        .background(DPColor.backgroundSecondary)
         .navigationTitle(model.labels?.title ?? SettingsLocalization.string("settings.releaseNotes"))
         .navigationBarTitleDisplayMode(.inline)
         .task(id: locale) { await model.load(locale: locale) }

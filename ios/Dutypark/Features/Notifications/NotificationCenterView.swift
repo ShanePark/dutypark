@@ -78,7 +78,7 @@ struct NotificationCenterView: View {
             .padding(.vertical, DPSpacing.large)
             .frame(maxWidth: .infinity)
         }
-        .background(DPColor.backgroundPrimary)
+        .background(DPColor.backgroundSecondary)
         .accessibilityIdentifier("screen.notifications")
         .toolbar(.hidden, for: .navigationBar)
         .safeAreaInset(edge: .top, spacing: 0) {
@@ -97,7 +97,7 @@ struct NotificationCenterView: View {
                 .accessibilityIdentifier("notifications.close")
             }
             .padding(.horizontal, DPSpacing.medium)
-            .background(DPColor.backgroundPrimary)
+            .background(DPColor.backgroundSecondary)
             .overlay(alignment: .bottom) {
                 Divider().overlay(DPColor.borderPrimary)
             }

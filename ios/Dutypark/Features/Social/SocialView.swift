@@ -46,7 +46,7 @@ struct SocialView: View {
                 friendContent
             }
         }
-        .background(DPColor.backgroundPrimary.ignoresSafeArea())
+        .background(DPColor.backgroundSecondary.ignoresSafeArea())
         // The hosting stack owns the title: the dashboard pushes this screen under the
         // brand mark, while the "more" menu pushes it under its own menu entry.
         .navigationBarTitleDisplayMode(.inline)
