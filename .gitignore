@@ -39,6 +39,8 @@ out/
 ### Xcode ###
 **/xcuserdata/
 *.xcuserstate
+# xcodebuild -derivedDataPath writes here; the bare `build/` rule above misses the siblings.
+/ios/build-*/
 
 ### Ignore other profiles ###
 src/main/resources/application-**.yml
