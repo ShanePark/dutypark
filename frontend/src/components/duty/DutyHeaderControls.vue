@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { ChevronLeft, Flag, Search, UserX } from 'lucide-vue-next'
+import { ChevronLeft, Search, Siren, UserX } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import CalendarMonthNavigator from '@/components/common/CalendarMonthNavigator.vue'
 import OverflowMenu from '@/components/common/OverflowMenu.vue'
@@ -87,11 +87,11 @@ function handleSearchClick() {
 
         <button
           type="button"
-          class="flex w-full min-h-11 cursor-pointer items-center gap-2.5 px-4 py-2.5 text-left text-sm text-dp-text-primary transition hover:bg-dp-bg-hover"
+          class="flex w-full min-h-11 cursor-pointer items-center gap-2.5 px-4 py-2.5 text-left text-sm text-dp-danger transition hover:bg-dp-danger-soft"
           role="menuitem"
           @click="emit('report-member')"
         >
-          <Flag class="h-4 w-4 flex-shrink-0" />
+          <Siren class="h-4 w-4 flex-shrink-0" />
           {{ t('report.actions.reportMember') }}
         </button>
         <button

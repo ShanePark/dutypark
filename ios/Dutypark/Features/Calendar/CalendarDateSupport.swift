@@ -89,6 +89,9 @@ nonisolated enum CalendarVisualLogic {
     static let compactCellMinimumHeight: CGFloat = 60
     static let maximumSchedulesPerCell = 3
     static let maximumTodosPerCell = 2
+    /// A cell can show three faces beside a schedule before the row stops reading as
+    /// names and starts reading as texture; the rest are counted, as on the mobile web.
+    static let maximumTagsPerCellSchedule = 3
 
     /// Korean form labels are all two-character words ("공개 범위", "첨부파일"), so a
     /// two-character column wraps the four-character ones into an even block and leaves the date

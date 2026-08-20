@@ -47,6 +47,51 @@ nonisolated enum CalendarReportPolicy {
     }
 }
 
+/// Whether tapping a day is worth anything.
+///
+/// The day detail lists schedules and nothing else: the duty is already told by the
+/// colour of the cell, and holidays, D-Days and to-dos are drawn in the cell itself.
+/// So a reader who cannot write opens a sheet with nothing in it on a day that holds
+/// no schedule — a tap that answers with silence — and the day stays shut instead.
+/// Where the reader can write, on their own calendar or one they manage, an empty day
+/// is the way a schedule gets added and always opens.
+nonisolated enum CalendarDayOpenPolicy {
+    static func showsNothing(_ day: CalendarDayContent) -> Bool {
+        day.schedules.isEmpty
+    }
+
+    static func opensDetail(_ day: CalendarDayContent, canEdit: Bool) -> Bool {
+        canEdit || !showsNothing(day)
+    }
+}
+
+/// Who a schedule names, in the order the web names them.
+///
+/// A schedule's tags leave out the member whose calendar is being read — their own
+/// name beside their own day says nothing — and whoever did the tagging comes first,
+/// because on a tagged schedule they are the one the reader does not already know.
+nonisolated enum ScheduleTagDisplayPolicy {
+    static func displayTags(for schedule: ScheduleDTO, calendarMemberID: MemberID?) -> [DPMemberTagItem] {
+        var items = schedule.tags
+            .filter { !$0.name.isEmpty && $0.id != calendarMemberID }
+            .map(DPMemberTagItem.init)
+
+        guard schedule.isTagged else { return items }
+
+        if let taggedBy = schedule.taggedByMember, !taggedBy.name.isEmpty {
+            let owner = DPMemberTagItem(taggedBy)
+            let alreadyListed = owner.memberID != nil && items.contains { $0.memberID == owner.memberID }
+            if !alreadyListed { items.insert(owner, at: 0) }
+        } else if !schedule.owner.isEmpty {
+            // A tagger whose account is gone is remembered by name alone, so the tag
+            // carries the name without a photo rather than disappearing.
+            items.insert(DPMemberTagItem(memberID: nil, name: schedule.owner), at: 0)
+        }
+
+        return items
+    }
+}
+
 /// The tail of the "this month" callout: a slender pointer that climbs from the capsule to
 /// the month label sitting in the navigation bar above it.
 private struct CalloutTail: Shape {
@@ -357,7 +402,8 @@ struct CalendarView: View {
     // actions from the identity itself instead of a separate overflow button.
     private var memberActionsMenu: some View {
         Menu {
-            Button {
+            // The same siren in the same red as every other report in the app.
+            Button(role: .destructive) {
                 guard let memberID = model.targetMemberID else { return }
                 withoutPresentationAnimation {
                     reportTarget = ReportTarget(
@@ -367,7 +413,11 @@ struct CalendarView: View {
                     )
                 }
             } label: {
-                Label(CalendarLocalization.text("calendar.report.member"), systemImage: "flag")
+                Label {
+                    Text(CalendarLocalization.text("calendar.report.member"))
+                } icon: {
+                    DPReportBeaconIcon()
+                }
             }
             .accessibilityIdentifier("calendar.member.report")
 
@@ -899,15 +949,19 @@ struct CalendarView: View {
                         .overlay(alignment: .bottom) { Rectangle().fill(DPColor.borderSecondary).frame(height: 2) }
                 }
                 ForEach(Array(model.days.enumerated()), id: \.element.id) { index, day in
-                    CalendarDayCell(
+                    let opensDetail = CalendarDayOpenPolicy.opensDetail(day, canEdit: model.canEdit)
+                    let cell = CalendarDayCell(
                         day: day,
                         weekday: index % 7,
                         highlighted: model.highlightedDate == day.cell.date,
                         pinnedDDay: model.pinnedDDay,
                         hidesDetails: model.isQuickDutyEditing,
+                        calendarMemberID: model.targetMemberID,
+                        opensDetail: opensDetail,
                         openTodo: openTodo
                     )
-                        .onTapGesture {
+                    if opensDetail {
+                        cell.onTapGesture {
                             // A finger that pulled the grid sideways was swiping, not
                             // tapping, even when it gave up short of the next month.
                             guard !isSwipingMonth, !isSlidingMonth else { return }
@@ -916,6 +970,9 @@ struct CalendarView: View {
                                 withoutPresentationAnimation { model.selectedDay = day }
                             }
                         }
+                    } else {
+                        cell
+                    }
                 }
             }
         }
@@ -1618,6 +1675,8 @@ private struct CalendarDayCell: View {
     let highlighted: Bool
     let pinnedDDay: DDayDTO?
     let hidesDetails: Bool
+    let calendarMemberID: MemberID?
+    let opensDetail: Bool
     let openTodo: (TodoDTO) -> Void
 
     var body: some View {
@@ -1686,6 +1745,9 @@ private struct CalendarDayCell: View {
         .overlay(Rectangle().stroke(focusBorder, lineWidth: highlighted || isToday ? 2 : 0))
         .contentShape(Rectangle())
         .accessibilityLabel(day.cell.date.rawValue)
+        // A day that opens nothing carries no tap gesture, so it must not offer itself
+        // as a button either.
+        .accessibilityAddTraits(opensDetail ? .isButton : [])
     }
 
     private var cellBackground: Color {
@@ -1733,18 +1795,45 @@ private struct CalendarDayCell: View {
     }
 
     private func scheduleText(_ schedule: ScheduleDTO) -> some View {
-        Text(schedule.content)
-            .font(DPFont.light(size: CalendarTypography.cellContent, relativeTo: .caption2))
-            .foregroundStyle(primaryForeground)
-            .lineLimit(2)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.top, 1)
-            .overlay(alignment: .top) {
-                Rectangle()
-                    .stroke(style: StrokeStyle(lineWidth: 0.75, dash: [2, 2]))
-                    .foregroundStyle(cellBorder)
-                    .frame(height: 0.75)
+        let tags = ScheduleTagDisplayPolicy.displayTags(for: schedule, calendarMemberID: calendarMemberID)
+        return VStack(alignment: .leading, spacing: 1) {
+            scheduleTitleLine(schedule)
+                .font(DPFont.light(size: CalendarTypography.cellContent, relativeTo: .caption2))
+                .foregroundStyle(primaryForeground)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            if !tags.isEmpty {
+                // Two tags already outgrow a 47pt cell, so they wrap and settle against
+                // the trailing edge, as they do in the same cell on the web.
+                DPMemberTagChips(
+                    items: tags,
+                    size: .micro,
+                    limit: CalendarVisualLogic.maximumTagsPerCellSchedule,
+                    alignment: .trailing
+                )
+                .frame(maxWidth: .infinity, alignment: .trailing)
             }
+        }
+        .padding(.top, 1)
+        .overlay(alignment: .top) {
+            Rectangle()
+                .stroke(style: StrokeStyle(lineWidth: 0.75, dash: [2, 2]))
+                .foregroundStyle(cellBorder)
+                .frame(height: 0.75)
+        }
+    }
+
+    /// The title and everything that qualifies it run as one flow of text, so the counter
+    /// and the details mark stay with the last word instead of claiming a line of their own.
+    private func scheduleTitleLine(_ schedule: ScheduleDTO) -> Text {
+        var line = Text(verbatim: schedule.content)
+        if schedule.totalDays > 1 {
+            line = line + Text(verbatim: "(\(schedule.daysFromStart)/\(schedule.totalDays))")
+        }
+        if !schedule.description.isEmpty || !schedule.attachments.isEmpty {
+            line = line + Text(verbatim: " ") + Text(Image(systemName: "text.bubble"))
+        }
+        return line
     }
 
     private func statusBubble(_ text: String, image: String, background: Color, border: Color, foreground: Color) -> some View {
@@ -2049,6 +2138,8 @@ private struct DayDetailView: View {
                 .accessibilityLabel(CalendarLocalization.text("calendar.close"))
             }
 
+            // Somebody else's duty is already told by the colour of the day in the grid
+            // behind this sheet, so the sheet does not repeat it.
             if model.canEdit, !showsEditor, !model.visibleDutyTypes.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 6) {
@@ -2058,14 +2149,6 @@ private struct DayDetailView: View {
                     }
                 }
                 .fixedSize(horizontal: false, vertical: true)
-            } else if let duty = day.duty, !model.canEdit, !showsEditor {
-                Text(duty.dutyType ?? CalendarLocalization.text("calendar.off"))
-                    .font(DPTypography.caption)
-                    .foregroundStyle(DPColor.textOnDark)
-                    .padding(.horizontal, 10)
-                    .frame(minHeight: 28)
-                    .background(calendarColor(duty.dutyColor))
-                    .clipShape(RoundedRectangle(cornerRadius: DPRadius.compact))
             }
         }
         .padding(.leading, 14)
@@ -2136,18 +2219,7 @@ private struct DayDetailView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
 
                 HStack(spacing: 0) {
-                    if schedule.isTagged, model.isMyCalendar {
-                        // Untagging is not something a glyph can explain on its own, so
-                        // this one action keeps its wording next to the icon.
-                        DPIconActionButton(
-                            systemImage: "tag.slash",
-                            label: CalendarLocalization.text("calendar.schedule.untag"),
-                            showsLabel: true,
-                            tone: .warning
-                        ) {
-                            destructiveAction = .untag(schedule)
-                        }
-                    } else if model.canEdit {
+                    if model.canEdit, !canUntag(schedule) {
                         DPIconActionButton(
                             systemImage: "pencil",
                             label: CalendarLocalization.text("calendar.schedule.edit"),
@@ -2165,24 +2237,12 @@ private struct DayDetailView: View {
                         }
                     }
 
-                    // Reporting is orthogonal to the edit and untag branches above: someone
-                    // else's schedule offers neither, and a schedule you were tagged into
-                    // offers untag and report at once.
-                    if canReport(schedule) {
-                        DPIconActionButton(
-                            systemImage: "flag",
-                            label: CalendarLocalization.text("calendar.report.schedule")
-                        ) {
-                            withoutPresentationAnimation {
-                                reportBlockEndsCalendarAccess = blockEndsCalendarAccess(schedule)
-                                reportTarget = ReportTarget(
-                                    type: .schedule,
-                                    targetID: schedule.id.uuidString,
-                                    name: schedule.content
-                                )
-                            }
-                        }
-                        .accessibilityIdentifier("calendar.schedule.report")
+                    // Untag and report both act on somebody else's doing rather than on
+                    // the schedule's content, and a schedule you were tagged into offers
+                    // the two at once. One overflow keeps them from competing with edit
+                    // and delete for the same corner of the row.
+                    if canUntag(schedule) || canReport(schedule) {
+                        scheduleOverflowMenu(schedule)
                     }
                 }
                 // The chips carry their own touch padding, so the row lines them up with
@@ -2218,6 +2278,67 @@ private struct DayDetailView: View {
         }
     }
 
+    private func scheduleOverflowMenu(_ schedule: ScheduleDTO) -> some View {
+        Menu {
+            if canUntag(schedule) {
+                Button {
+                    destructiveAction = .untag(schedule)
+                } label: {
+                    Label(CalendarLocalization.text("calendar.schedule.untag"), systemImage: "tag.slash")
+                }
+                .accessibilityIdentifier("calendar.schedule.untag")
+            }
+
+            if canReport(schedule) {
+                // Reporting is the one action here that reaches another member, so it
+                // carries the siren the rest of the app reports with, in danger red.
+                Button(role: .destructive) {
+                    withoutPresentationAnimation {
+                        reportBlockEndsCalendarAccess = blockEndsCalendarAccess(schedule)
+                        reportTarget = ReportTarget(
+                            type: .schedule,
+                            targetID: schedule.id.uuidString,
+                            name: schedule.content
+                        )
+                    }
+                } label: {
+                    Label {
+                        Text(CalendarLocalization.text("calendar.report.schedule"))
+                    } icon: {
+                        DPReportBeaconIcon()
+                    }
+                }
+                .accessibilityIdentifier("calendar.schedule.report")
+            }
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.system(size: DPIconActionMetrics.iconSize, weight: .semibold))
+                .foregroundStyle(DPIconActionTone.neutral.foreground)
+                .frame(
+                    minWidth: DPIconActionMetrics.controlSize,
+                    minHeight: DPIconActionMetrics.controlSize
+                )
+                .background(
+                    RoundedRectangle(cornerRadius: DPRadius.standard)
+                        .fill(DPIconActionTone.neutral.background)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: DPRadius.standard)
+                        .stroke(DPIconActionTone.neutral.border, lineWidth: DPChrome.borderWidth)
+                )
+                .padding(DPIconActionMetrics.touchPadding)
+                .contentShape(Rectangle())
+        }
+        .accessibilityLabel(CalendarLocalization.text("calendar.schedule.more"))
+        .accessibilityIdentifier("calendar.schedule.menu")
+    }
+
+    // Only the tagged member can shed a tag, and only from their own calendar, where
+    // the schedule is somebody else's doing.
+    private func canUntag(_ schedule: ScheduleDTO) -> Bool {
+        schedule.isTagged && model.isMyCalendar
+    }
+
     // Only a signed-in member can report, and only content that is not their own:
     // another member's calendar, or a schedule someone else tagged them into.
     private func canReport(_ schedule: ScheduleDTO) -> Bool {
@@ -2240,24 +2361,28 @@ private struct DayDetailView: View {
 
     @ViewBuilder
     private func scheduleMetadata(_ schedule: ScheduleDTO) -> some View {
-        if schedule.isTagged || !schedule.tags.isEmpty || schedule.visibility != nil {
+        let tags = ScheduleTagDisplayPolicy.displayTags(
+            for: schedule,
+            calendarMemberID: model.targetMemberID
+        )
+        let showsVisibility = schedule.visibility != nil && model.isMyCalendar
+
+        if !tags.isEmpty || showsVisibility {
             HStack(spacing: DPSpacing.small) {
-                if schedule.isTagged {
-                    Label(schedule.owner, systemImage: "person.crop.circle.badge.checkmark")
-                }
-                if !schedule.tags.isEmpty {
-                    Label(schedule.tags.map(\.name).joined(separator: ", "), systemImage: "tag")
+                if !tags.isEmpty {
+                    DPMemberTagChips(items: tags, size: .regular)
                 }
                 if let visibility = schedule.visibility, model.isMyCalendar {
                     Label(
                         CalendarLocalization.text("calendar.visibility.\(visibilityKey(visibility))"),
                         systemImage: "eye"
                     )
+                    .font(DPFont.light(size: CalendarTypography.detailMetadata, relativeTo: .subheadline))
+                    .foregroundStyle(DPColor.textMuted)
+                    .lineLimit(1)
                 }
+                Spacer(minLength: 0)
             }
-            .font(DPFont.light(size: CalendarTypography.detailMetadata, relativeTo: .subheadline))
-            .foregroundStyle(DPColor.textMuted)
-            .lineLimit(1)
         }
     }
 
@@ -3531,7 +3656,6 @@ private struct ScheduleSearchView: View {
                             Text(item.content)
                                 .font(DPTypography.label)
                                 .foregroundStyle(DPColor.textPrimary)
-                                .lineLimit(2)
                             Label(
                                 item.startDateTime.rawValue.replacingOccurrences(of: "T", with: " "),
                                 systemImage: "calendar"

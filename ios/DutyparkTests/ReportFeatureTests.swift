@@ -241,8 +241,18 @@ final class ReportFeatureTests: XCTestCase {
             XCTAssertTrue(source.contains(wiring), "CalendarView is missing: \(wiring)")
         }
 
+        // Scoped to the member menu: a schedule row does have an overflow of its own,
+        // but member actions must keep opening from the identity rather than a glyph
+        // parked beside it.
+        let memberMenu = try XCTUnwrap(
+            source.range(of: "private var memberActionsMenu: some View")
+                .flatMap { start in
+                    source.range(of: "calendar.member.menu", range: start.upperBound..<source.endIndex)
+                        .map { source[start.lowerBound..<$0.upperBound] }
+                }
+        )
         XCTAssertFalse(
-            source.contains("Image(systemName: \"ellipsis\")"),
+            memberMenu.contains("Image(systemName: \"ellipsis\")"),
             "The member calendar must not keep a separate overflow button"
         )
     }

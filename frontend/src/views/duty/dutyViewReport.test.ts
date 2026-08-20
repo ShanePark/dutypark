@@ -84,3 +84,61 @@ describe('duty calendar report entry points', () => {
     )
   })
 })
+
+describe('schedule and to-do overflow actions', () => {
+  it('hangs untag and report off one overflow trigger on a schedule row', () => {
+    expect(scheduleList).toContain("import OverflowMenu from '@/components/common/OverflowMenu.vue'")
+    expect(scheduleList).toContain(
+      'v-if="canUntagSchedule(schedule) || canReportSchedule(schedule)"'
+    )
+    expect(scheduleList).toMatch(
+      /<OverflowMenu[\s\S]*?v-if="canUntagSchedule\(schedule\)"[\s\S]*?emit\('request-untag'/
+    )
+    expect(scheduleList).toMatch(
+      /<OverflowMenu[\s\S]*?v-if="canReportSchedule\(schedule\)"[\s\S]*?emit\('report'/
+    )
+  })
+
+  it('keeps the visibility hint, edit and delete inline next to the trigger', () => {
+    expect(scheduleList).toMatch(/<VisibilityHintIcon[\s\S]*?<OverflowMenu/)
+    expect(scheduleList).toMatch(
+      /<\/OverflowMenu>\s*<template v-if="canEditSchedule\(schedule\)">/
+    )
+  })
+
+  it('hangs untag and report off one overflow trigger in the to-do detail footer', () => {
+    expect(todoDetailModal).toContain(
+      "import OverflowMenu from '@/components/common/OverflowMenu.vue'"
+    )
+    expect(todoDetailModal).toContain('v-if="canReport || isTaggedTodo"')
+    expect(todoDetailModal).toMatch(
+      /<OverflowMenu[\s\S]*?v-if="isTaggedTodo"[\s\S]*?emit\('untagSelf'/
+    )
+    expect(todoDetailModal).toMatch(/<OverflowMenu[\s\S]*?v-if="canReport"[\s\S]*?emit\('report'/)
+    // The footer sits at the bottom of the modal, so its menu has to open upwards.
+    expect(todoDetailModal).toContain('placement="above"')
+    expect(todoDetailModal).toMatch(
+      /<\/OverflowMenu>\s*<template v-if="!isTaggedTodo">/
+    )
+  })
+
+  it('reports with a red siren wherever the calendar offers a report', () => {
+    for (const source of [scheduleList, todoDetailModal, dutyHeaderControls]) {
+      expect(source).not.toContain('Flag')
+      expect(source).toContain('Siren')
+      expect(source).toMatch(/text-dp-danger[\s\S]*?<Siren/)
+    }
+  })
+
+  it('lets a row-level menu align to the right without moving the member menu', () => {
+    expect(overflowMenu).toContain("align?: 'left' | 'right'")
+    expect(overflowMenu).toContain("placement?: 'below' | 'above'")
+    expect(overflowMenu).toContain("align: 'left'")
+    expect(overflowMenu).toContain("placement: 'below'")
+    expect(scheduleList).toContain('align="right"')
+    expect(todoDetailModal).toContain('align="right"')
+    // The member menu takes the defaults, so it stays where it was.
+    expect(dutyHeaderControls).not.toContain('align="right"')
+    expect(dutyHeaderControls).not.toContain('placement=')
+  })
+})

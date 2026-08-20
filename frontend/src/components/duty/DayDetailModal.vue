@@ -463,6 +463,8 @@ function handleUploadError(message: string) {
             <X class="w-6 h-6 text-dp-text-primary" />
           </button>
         </div>
+        <!-- A reader who cannot change the duty is told it by the colour of the day in
+             the grid behind this modal, so the modal does not repeat it. -->
         <div v-if="!isCreateMode && !isEditMode && canEdit && dutyTypes.length > 0" class="flex flex-wrap gap-1.5 mt-2">
           <span
             v-if="unavailableCurrentDuty"
@@ -495,14 +497,6 @@ function handleUploadError(message: string) {
             ></span>
             {{ dutyType.name }}
           </button>
-        </div>
-        <div v-else-if="duty && !canEdit" class="mt-2">
-          <span
-            class="px-2.5 py-1 rounded-md text-xs font-medium text-dp-text-on-dark"
-            :style="{ backgroundColor: duty.dutyColor || 'var(--dp-duty-fallback)' }"
-          >
-            {{ duty.dutyType || t('duty.common.off') }}
-          </span>
         </div>
       </div>
     </div>

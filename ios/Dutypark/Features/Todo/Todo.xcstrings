@@ -11,6 +11,7 @@
     "todo.action.complete" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Complete" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "완료" } } } },
     "todo.action.delete" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "삭제" } } } },
     "todo.action.leaveTag" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Remove my tag" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "내 태그 해제" } } } },
+    "todo.action.more" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "More" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "더보기" } } } },
     "todo.action.moveDown" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Move down" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "아래로" } } } },
     "todo.action.moveUp" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Move up" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "위로" } } } },
     "todo.action.reopen" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Reopen" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "다시 열기" } } } },

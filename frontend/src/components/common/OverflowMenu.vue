@@ -1,13 +1,25 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useEscapeKey } from '@/composables/useEscapeKey'
 
-defineProps<{
+const props = withDefaults(defineProps<{
   menuLabel: string
   triggerClass: string
-}>()
+  align?: 'left' | 'right'
+  placement?: 'below' | 'above'
+}>(), {
+  align: 'left',
+  placement: 'below',
+})
 
 const isOpen = ref(false)
+
+// A trigger at the right edge of a row, or one sitting in a modal footer, has no
+// room the default way round: the panel would run off the side or out of the modal.
+const panelPositionClass = computed(() => [
+  props.align === 'right' ? 'right-0' : 'left-0',
+  props.placement === 'above' ? 'bottom-full mb-2' : 'top-full mt-2',
+])
 
 useEscapeKey(isOpen, () => close())
 
@@ -40,7 +52,8 @@ defineExpose({ close })
       <!-- Full-screen catcher so a tap anywhere else dismisses the menu. -->
       <div class="fixed inset-0 z-[9998]" @click="close"></div>
       <div
-        class="overflow-menu absolute left-0 top-full z-[9999] mt-2 w-44 overflow-hidden rounded-xl text-left"
+        class="overflow-menu absolute z-[9999] w-44 overflow-hidden rounded-xl text-left"
+        :class="panelPositionClass"
         role="menu"
         @click="close"
       >

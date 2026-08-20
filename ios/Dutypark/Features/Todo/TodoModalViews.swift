@@ -367,7 +367,11 @@ struct TodoDetailModal: View {
                     Text(todoLocalized(todo.isTagged ? "todo.field.owner" : "todo.field.tags"))
                         .font(DPFont.bold(size: 12, relativeTo: .caption))
                         .foregroundStyle(DPColor.textMuted)
-                    TodoModalMemberChips(names: todo.isTagged ? [todo.owner] : todo.tags.map(\.name))
+                    TodoModalFlowLayout(spacing: DPSpacing.small) {
+                        ForEach(TodoMemberTagAdapter.items(of: todo)) { item in
+                            DPMemberTagChip(item: item, size: .regular)
+                        }
+                    }
                 }
             }
 
@@ -404,28 +408,8 @@ struct TodoDetailModal: View {
         // This modal only ever shows the signed-in member's own board, so the reportable
         // case is a to-do someone else owns and tagged them into.
         if todo.isTagged {
-            TodoModalBorderedAction(
-                title: todoLocalized("todo.action.leaveTag"),
-                systemImage: "xmark",
-                color: DPColor.warning,
-                action: { confirmation = .leaveTag }
-            )
-
-            TodoModalBorderedAction(
-                title: todoLocalized("todo.action.report"),
-                systemImage: "flag",
-                color: DPColor.textMuted,
-                action: {
-                    withoutPresentationAnimation {
-                        reportTarget = ReportTarget(
-                            type: .todo,
-                            targetID: todo.id,
-                            name: todo.title
-                        )
-                    }
-                }
-            )
-            .accessibilityIdentifier("todo.detail.report")
+            Spacer(minLength: 0)
+            overflowMenu
         } else {
             TodoModalBorderedAction(
                 title: todoLocalized("common.edit"),
@@ -443,6 +427,48 @@ struct TodoDetailModal: View {
                 action: { confirmation = .delete }
             )
         }
+    }
+
+    /// Leaving a tag and reporting are both rare, and side by side they read as two
+    /// equally likely choices, so the row offers one "more" control and keeps them
+    /// behind it.
+    private var overflowMenu: some View {
+        Menu {
+            Button {
+                confirmation = .leaveTag
+            } label: {
+                Label(todoLocalized("todo.action.leaveTag"), systemImage: "xmark")
+            }
+            .accessibilityIdentifier("todo.detail.leaveTag")
+
+            // A destructive menu item is drawn in the system red the app tokenises as
+            // `DPColor.danger`, and the beacon reads as raising an alarm where a flag
+            // reads as bookmarking.
+            Button(role: .destructive) {
+                withoutPresentationAnimation {
+                    reportTarget = ReportTarget(
+                        type: .todo,
+                        targetID: todo.id,
+                        name: todo.title
+                    )
+                }
+            } label: {
+                Label {
+                    Text(todoLocalized("todo.action.report"))
+                } icon: {
+                    DPReportBeaconIcon()
+                }
+            }
+            .accessibilityIdentifier("todo.detail.report")
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(DPColor.textSecondary)
+                .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                .contentShape(Rectangle())
+        }
+        .accessibilityLabel(todoLocalized("todo.action.more"))
+        .accessibilityIdentifier("todo.detail.menu")
     }
 
 }
@@ -481,23 +507,6 @@ private struct TodoModalBorderedAction: View {
                 )
         }
         .buttonStyle(.plain)
-    }
-}
-
-private struct TodoModalMemberChips: View {
-    let names: [String]
-
-    var body: some View {
-        TodoModalFlowLayout(spacing: DPSpacing.small) {
-            ForEach(Array(names.enumerated()), id: \.offset) { _, name in
-                Label(name, systemImage: "person.fill")
-                    .font(DPTypography.caption)
-                    .foregroundStyle(DPColor.textSecondary)
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 5)
-                    .background(DPColor.backgroundTertiary, in: Capsule())
-            }
-        }
     }
 }
 

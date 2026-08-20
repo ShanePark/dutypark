@@ -812,26 +812,11 @@ private struct TodoCard: View {
                             .padding(.top, 6)
                     }
 
-                    let names = todo.isTagged ? [todo.taggedByMember?.name ?? todo.owner] : todo.tags.map(\.name)
-                    if !names.isEmpty {
-                        HStack(spacing: 4) {
-                            ForEach(Array(names.prefix(2).enumerated()), id: \.offset) { _, name in
-                                Text(name)
-                                    .font(DPFont.light(size: 11, relativeTo: .caption2))
-                                    .foregroundStyle(DPColor.textSecondary)
-                                    .lineLimit(1)
-                                    .padding(.horizontal, 7)
-                                    .padding(.vertical, 4)
-                                    .background(DPColor.backgroundTertiary, in: Capsule())
-                            }
-                            if names.count > 2 {
-                                Text(verbatim: "+\(names.count - 2)")
-                                    .font(DPFont.bold(size: 10, relativeTo: .caption2))
-                                    .foregroundStyle(DPColor.textMuted)
-                            }
-                        }
-                        .frame(maxWidth: .infinity, alignment: .trailing)
-                        .padding(.top, DPSpacing.small)
+                    let tags = TodoMemberTagAdapter.items(of: todo)
+                    if !tags.isEmpty {
+                        DPMemberTagChips(items: tags, size: .compact, limit: 2)
+                            .frame(maxWidth: .infinity, alignment: .trailing)
+                            .padding(.top, DPSpacing.small)
                     }
 
                     if let dueDate = todo.dueDate {
@@ -1327,6 +1312,25 @@ enum TodoDragTargetResolver {
         return isMaintainingCurrentTarget
             ? -TodoBoardLayout.dragCollisionHysteresis
             : TodoBoardLayout.dragCollisionHysteresis
+    }
+}
+
+
+/// The people a to-do names.
+///
+/// Someone else's to-do names whoever tagged you into it; your own names the friends
+/// you tagged. Either way the tag carries the member behind it so it can show a face.
+nonisolated enum TodoMemberTagAdapter {
+    static func items(of todo: TodoDTO) -> [DPMemberTagItem] {
+        guard todo.isTagged else {
+            return todo.tags.map { DPMemberTagItem($0) }
+        }
+        // A to-do can remember its owner by name alone, so that tag keeps the name and
+        // goes without a face rather than disappearing.
+        guard let taggedByMember = todo.taggedByMember else {
+            return [DPMemberTagItem(memberID: nil, name: todo.owner)]
+        }
+        return [DPMemberTagItem(taggedByMember)]
     }
 }
 

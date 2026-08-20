@@ -9,6 +9,7 @@ import VisibilityHintIcon from '@/components/common/VisibilityHintIcon.vue'
 import type { HolidayDto } from '@/types'
 import type { CalendarDay, DutyType, Schedule, OtherDuty, LocalDDay, DutyDay, TodoDueItem } from '@/views/duty/dutyViewTypes'
 import { buildDisplayTagMembers } from '@/utils/tagMembers'
+import { canOpenCalendarDay } from '@/utils/calendarDayOpening'
 import { useCalendarMonthSwipe } from '@/composables/useCalendarMonthSwipe'
 
 const props = defineProps<{
@@ -100,6 +101,11 @@ function getDDaysForDay(day: CalendarDay): LocalDDay[] {
       ddayDate.getDate() === day.day
     )
   })
+}
+
+function isDayClickable(_day: CalendarDay, index: number): boolean {
+  if (props.batchEditMode) return true
+  return canOpenCalendarDay(props.canEdit, props.schedulesByDays[index]?.length ?? 0)
 }
 
 function formatScheduleTime(schedule: Schedule) {
@@ -211,6 +217,7 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
         :highlight-day="highlightDay"
         :focused-day="focusedCalendarDay"
         :clickable="!batchEditMode || canEdit"
+        :is-day-clickable="isDayClickable"
         @day-click="(day, index) => emit('day-click', day, index)"
       >
         <template #day-header="{ day, index }">

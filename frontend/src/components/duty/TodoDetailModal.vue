@@ -2,8 +2,9 @@
 import { ref, computed, watch } from 'vue'
 import {
   X,
-  Flag,
+  MoreHorizontal,
   Pencil,
+  Siren,
   Trash2,
   List,
   Calendar,
@@ -12,6 +13,7 @@ import {
 } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import BaseModal from '@/components/common/BaseModal.vue'
+import OverflowMenu from '@/components/common/OverflowMenu.vue'
 import FileUploader from '@/components/common/FileUploader.vue'
 import AttachmentGrid from '@/components/common/AttachmentGrid.vue'
 import CharacterCounter from '@/components/common/CharacterCounter.vue'
@@ -446,23 +448,39 @@ function onUploadError(message: string) {
             </button>
 
             <div class="flex flex-1 sm:flex-none flex-wrap justify-end gap-2">
-              <button
-                v-if="canReport"
-                @click="emit('report', { id: todo.id, title: todo.title })"
-                class="flex-1 sm:flex-none flex min-h-11 items-center justify-center gap-1 px-3 py-2 text-sm rounded-lg transition btn-outline cursor-pointer"
+              <OverflowMenu
+                v-if="canReport || isTaggedTodo"
+                :menu-label="t('report.actions.menu')"
+                align="right"
+                placement="above"
+                trigger-class="flex min-h-11 items-center justify-center gap-1 px-3 py-2 text-sm rounded-lg transition btn-outline cursor-pointer"
               >
-                <Flag class="w-4 h-4" />
-                <span class="whitespace-nowrap">{{ t('report.actions.report') }}</span>
-              </button>
-              <button
-                v-if="isTaggedTodo"
-                @click="emit('untagSelf', { id: todo.id, title: todo.title })"
-                class="flex-1 sm:flex-none flex min-h-11 items-center justify-center gap-1 px-3 py-2 text-sm border border-dp-warning-border text-dp-warning rounded-lg hover:bg-dp-warning-soft transition cursor-pointer"
-              >
-                <X class="w-4 h-4" />
-                <span class="whitespace-nowrap">{{ t('duty.todo.actions.removeTag') }}</span>
-              </button>
-              <template v-else>
+                <template #trigger>
+                  <MoreHorizontal class="w-4 h-4" />
+                </template>
+
+                <button
+                  v-if="isTaggedTodo"
+                  type="button"
+                  role="menuitem"
+                  class="flex w-full min-h-11 cursor-pointer items-center gap-2.5 px-4 py-2.5 text-left text-sm text-dp-text-primary transition hover:bg-dp-bg-hover"
+                  @click="emit('untagSelf', { id: todo.id, title: todo.title })"
+                >
+                  <X class="h-4 w-4 flex-shrink-0" />
+                  {{ t('duty.todo.actions.removeTag') }}
+                </button>
+                <button
+                  v-if="canReport"
+                  type="button"
+                  role="menuitem"
+                  class="flex w-full min-h-11 cursor-pointer items-center gap-2.5 px-4 py-2.5 text-left text-sm text-dp-danger transition hover:bg-dp-danger-soft"
+                  @click="emit('report', { id: todo.id, title: todo.title })"
+                >
+                  <Siren class="h-4 w-4 flex-shrink-0" />
+                  {{ t('report.actions.report') }}
+                </button>
+              </OverflowMenu>
+              <template v-if="!isTaggedTodo">
                 <button
                   @click="enterEditMode"
                   class="flex-1 sm:flex-none flex min-h-11 items-center justify-center gap-1 px-3 py-2 text-sm border border-dp-accent-border text-dp-accent rounded-lg hover:bg-dp-accent-soft transition cursor-pointer"

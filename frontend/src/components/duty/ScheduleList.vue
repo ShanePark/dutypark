@@ -3,10 +3,11 @@ import { ref, computed, watch, nextTick, onMounted, onUnmounted } from 'vue'
 import Sortable from 'sortablejs'
 import { useI18n } from 'vue-i18n'
 import {
-  Flag,
   GripVertical,
+  MoreHorizontal,
   Paperclip,
   Pencil,
+  Siren,
   Trash2,
   X,
 } from 'lucide-vue-next'
@@ -14,6 +15,7 @@ import AttachmentGrid from '@/components/common/AttachmentGrid.vue'
 import MemberTagChips from '@/components/common/MemberTagChips.vue'
 import VisibilityHintIcon from '@/components/common/VisibilityHintIcon.vue'
 import CopyTextButton from '@/components/common/CopyTextButton.vue'
+import OverflowMenu from '@/components/common/OverflowMenu.vue'
 import { useDragClickGuard } from '@/composables/useDragClickGuard'
 import type { NormalizedAttachment } from '@/types'
 import { normalizeAttachment } from '@/api/attachment'
@@ -294,25 +296,37 @@ function handleTagClick(schedule: Schedule) {
                   size="sm"
                   class="schedule-primary-visibility"
                 />
-                <button
-                  v-if="canReportSchedule(schedule)"
-                  @click="emit('report', { id: schedule.id, content: schedule.content })"
-                  class="p-1.5 rounded-lg hover-icon-btn cursor-pointer text-dp-text-muted"
-                  :title="t('report.actions.report')"
-                  :aria-label="t('report.actions.report')"
+                <OverflowMenu
+                  v-if="canUntagSchedule(schedule) || canReportSchedule(schedule)"
+                  :menu-label="t('report.actions.menu')"
+                  align="right"
+                  trigger-class="p-1.5 rounded-lg hover-icon-btn cursor-pointer text-dp-text-muted"
                 >
-                  <Flag class="w-4 h-4" />
-                </button>
-                <button
-                  v-if="canUntagSchedule(schedule)"
-                  @click="emit('request-untag', { id: schedule.id, content: schedule.content })"
-                  class="inline-flex min-h-[44px] shrink-0 items-center gap-1 whitespace-nowrap rounded border border-dp-warning-border px-2 py-1 text-xs font-medium text-dp-warning transition hover:bg-dp-warning-soft cursor-pointer"
-                  :title="t('duty.schedule.list.untag')"
-                >
-                  <X class="w-3.5 h-3.5" />
-                  {{ t('duty.schedule.list.untag') }}
-                </button>
+                  <template #trigger>
+                    <MoreHorizontal class="w-4 h-4" />
+                  </template>
 
+                  <button
+                    v-if="canUntagSchedule(schedule)"
+                    type="button"
+                    role="menuitem"
+                    class="flex w-full min-h-11 cursor-pointer items-center gap-2.5 px-4 py-2.5 text-left text-sm text-dp-text-primary transition hover:bg-dp-bg-hover"
+                    @click="emit('request-untag', { id: schedule.id, content: schedule.content })"
+                  >
+                    <X class="h-4 w-4 flex-shrink-0" />
+                    {{ t('duty.schedule.list.untag') }}
+                  </button>
+                  <button
+                    v-if="canReportSchedule(schedule)"
+                    type="button"
+                    role="menuitem"
+                    class="flex w-full min-h-11 cursor-pointer items-center gap-2.5 px-4 py-2.5 text-left text-sm text-dp-danger transition hover:bg-dp-danger-soft"
+                    @click="emit('report', { id: schedule.id, content: schedule.content })"
+                  >
+                    <Siren class="h-4 w-4 flex-shrink-0" />
+                    {{ t('report.actions.report') }}
+                  </button>
+                </OverflowMenu>
                 <template v-if="canEditSchedule(schedule)">
                   <button
                     @click="emit('edit', schedule)"

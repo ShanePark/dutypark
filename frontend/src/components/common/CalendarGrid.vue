@@ -23,6 +23,7 @@ interface Props {
   focusedDay?: { year: number; month: number; day: number } | null
   useAdaptiveBorder?: boolean
   clickable?: boolean
+  isDayClickable?: (day: CalendarDay, index: number) => boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -33,6 +34,7 @@ const props = withDefaults(defineProps<Props>(), {
   focusedDay: null,
   useAdaptiveBorder: false,
   clickable: true,
+  isDayClickable: () => true,
 })
 
 const emit = defineEmits<{
@@ -122,6 +124,7 @@ function getHolidayColor(day: CalendarDay, holiday: HolidayDto): string {
 }
 
 function handleDayClick(day: CalendarDay, index: number) {
+  if (!props.isDayClickable(day, index)) return
   emit('day-click', day, index)
 }
 </script>
@@ -147,7 +150,7 @@ function handleDayClick(day: CalendarDay, index: number) {
         @click="handleDayClick(day, idx)"
         class="min-h-[60px] sm:min-h-[80px] md:min-h-[100px] border-b border-r p-0.5 sm:p-1 transition-all duration-150 relative"
         :class="[
-          clickable ? 'cursor-pointer hover:brightness-95 dark:hover:brightness-110 hover:shadow-inner' : '',
+          clickable && isDayClickable(day, idx) ? 'cursor-pointer hover:brightness-95 dark:hover:brightness-110 hover:shadow-inner' : '',
           {
             'highlight-pulse-glow': !focusedDay && isHighlighted(day),
             'ring-2 ring-dp-danger ring-inset': !focusedDay && isToday(day) && !isHighlighted(day),
