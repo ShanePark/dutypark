@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ChevronDown, CircleCheck, Clock, Loader2, ShieldCheck, ShieldOff } from 'lucide-vue-next'
+import { ChevronDown, CircleCheck, CircleSlash, Clock, Loader2, ShieldCheck, ShieldOff } from 'lucide-vue-next'
 import { reportApi } from '@/api/report'
+import { useSwal } from '@/composables/useSwal'
+import { resolveApiErrorMessage } from '@/utils/resolveApiError'
 import type { MyReport } from '@/types/report'
 import {
   MY_REPORT_REASON_LABEL_KEYS,
@@ -19,9 +21,11 @@ const STATUS_ICONS = {
   OPEN: Clock,
   RESOLVED: ShieldCheck,
   DISMISSED: ShieldOff,
+  CANCELED: CircleSlash,
 } as const
 
 const { t, locale } = useI18n()
+const { confirm } = useSwal()
 
 const reports = ref<MyReport[]>([])
 const currentPage = ref(0)
@@ -30,6 +34,9 @@ const totalElements = ref(0)
 const isLoading = ref(false)
 const loadError = ref('')
 const expandedId = ref<string | null>(null)
+const cancelingId = ref<string | null>(null)
+const cancelErrorId = ref<string | null>(null)
+const cancelError = ref('')
 
 const hasMorePages = computed(() => currentPage.value < totalPages.value - 1)
 const isInitialLoading = computed(() => isLoading.value && reports.value.length === 0)
@@ -61,6 +68,35 @@ function loadMore() {
 /** A failed first page restarts; a failed page N retries that same page. */
 function retry() {
   loadReports(reports.value.length === 0 ? 0 : currentPage.value + 1)
+}
+
+/**
+ * A withdrawal is not a delete: the row stays with a muted badge, and the block the member may
+ * have set alongside the report is deliberately left alone.
+ */
+async function cancelReport(report: MyReport) {
+  if (cancelingId.value) return
+
+  const confirmed = await confirm(
+    t('support.reports.cancel.confirmMessage'),
+    t('support.reports.cancel.confirmTitle'),
+    t('support.reports.cancel.confirmAction'),
+  )
+  if (!confirmed) return
+
+  cancelingId.value = report.id
+  cancelErrorId.value = null
+  cancelError.value = ''
+  try {
+    const updated = await reportApi.cancelMine(report.id)
+    reports.value = reports.value.map((item) => (item.id === updated.id ? updated : item))
+  } catch (error) {
+    console.error('Failed to cancel my report:', error)
+    cancelErrorId.value = report.id
+    cancelError.value = resolveApiErrorMessage(error, { fallbackKey: 'support.reports.cancel.failed' }, t)
+  } finally {
+    cancelingId.value = null
+  }
 }
 
 function toggleExpanded(id: string) {
@@ -153,16 +189,30 @@ onMounted(() => loadReports(0))
 
               <div class="rounded-xl bg-dp-bg-tertiary p-3">
                 <p class="flex items-start gap-2 text-sm leading-relaxed text-dp-text-secondary">
-                  <CircleCheck v-if="report.status !== 'OPEN'" class="mt-0.5 h-4 w-4 shrink-0 text-dp-text-muted" />
+                  <CircleSlash v-if="report.status === 'CANCELED'" class="mt-0.5 h-4 w-4 shrink-0 text-dp-text-muted" />
+                  <CircleCheck v-else-if="report.status !== 'OPEN'" class="mt-0.5 h-4 w-4 shrink-0 text-dp-text-muted" />
                   <Clock v-else class="mt-0.5 h-4 w-4 shrink-0 text-dp-text-muted" />
                   {{ t(MY_REPORT_STATUS_DESCRIPTION_KEYS[report.status]) }}
                 </p>
                 <p v-if="report.resolvedAt" class="mt-1.5 text-xs text-dp-text-muted">
-                  {{ t('support.reports.handledAt') }} · {{ formatDate(report.resolvedAt) }}
+                  {{ report.status === 'CANCELED' ? t('support.reports.canceledAt') : t('support.reports.handledAt') }} · {{ formatDate(report.resolvedAt) }}
                 </p>
-                <p v-if="report.status !== 'OPEN'" class="mt-1.5 text-xs leading-relaxed text-dp-text-muted">
+                <p v-if="report.status === 'RESOLVED' || report.status === 'DISMISSED'" class="mt-1.5 text-xs leading-relaxed text-dp-text-muted">
                   {{ t('support.reports.privacyNotice') }}
                 </p>
+              </div>
+
+              <div v-if="report.status === 'OPEN'" class="space-y-2">
+                <button
+                  type="button"
+                  :disabled="cancelingId === report.id"
+                  class="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-lg border border-dp-border-primary px-4 py-2 text-sm font-medium text-dp-danger transition-colors hover:bg-dp-bg-hover disabled:cursor-not-allowed disabled:opacity-50"
+                  @click="cancelReport(report)"
+                >
+                  <Loader2 v-if="cancelingId === report.id" class="h-4 w-4 animate-spin" />
+                  {{ cancelingId === report.id ? t('support.reports.cancel.pending') : t('support.reports.cancel.action') }}
+                </button>
+                <p v-if="cancelErrorId === report.id" role="alert" class="text-sm text-dp-danger">{{ cancelError }}</p>
               </div>
             </div>
           </li>

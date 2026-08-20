@@ -16,4 +16,10 @@ export const reportApi = {
     })
     return response.data
   },
+
+  // A withdrawal, not a delete: the reporter's own OPEN report comes back as CANCELED.
+  cancelMine: async (reportId: string): Promise<MyReport> => {
+    const response = await apiClient.post<MyReport>(`/reports/${reportId}/cancel`)
+    return response.data
+  },
 }

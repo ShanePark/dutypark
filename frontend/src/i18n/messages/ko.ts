@@ -284,6 +284,9 @@ const apiErrors = {
     detail: {
       required: '기타 사유를 선택한 경우 상세 내용을 입력해 주세요.',
     },
+    cancel: {
+      notOpen: '이미 처리되었거나 취소된 신고입니다.',
+    },
     target: {
       notDeletable: '사용자 신고는 콘텐츠 삭제를 할 수 없습니다.',
     },
@@ -1893,12 +1896,14 @@ export default {
         open: '미처리',
         resolved: '처리 완료',
         dismissed: '반려',
+        canceled: '신고 취소',
         all: '전체',
       },
       status: {
         open: '미처리',
         resolved: '처리 완료',
         dismissed: '반려',
+        canceled: '신고 취소',
       },
       reason: {
         spam: '스팸 / 광고',
@@ -2104,6 +2109,7 @@ export default {
       countSummary: '전체 {total}건',
       reportedAt: '접수일',
       handledAt: '처리일',
+      canceledAt: '취소일',
       targetLabel: '신고 대상',
       reasonLabel: '신고 사유',
       detailLabel: '작성한 내용',
@@ -2118,11 +2124,21 @@ export default {
         open: '접수됨',
         resolved: '조치 완료',
         dismissed: '조치 없음',
+        canceled: '취소됨',
       },
       statusDescription: {
         open: '접수되었습니다. 24시간 이내에 확인합니다.',
         resolved: '검토 후 필요한 조치를 완료했습니다.',
         dismissed: '검토했지만 이용약관 위반이 확인되지 않아 별도 조치를 하지 않았습니다.',
+        canceled: '내가 취소한 신고입니다. 더 이상 검토하지 않습니다.',
+      },
+      cancel: {
+        action: '신고 취소',
+        pending: '취소하는 중...',
+        confirmTitle: '신고를 취소할까요?',
+        confirmMessage: '취소하면 검토가 중단되고 목록에는 취소됨으로 남습니다. 차단은 그대로 유지되며 친구 설정의 차단한 사용자 목록에서 관리할 수 있습니다.',
+        confirmAction: '신고 취소',
+        failed: '신고를 취소하지 못했습니다. 잠시 후 다시 시도해 주세요.',
       },
       privacyNotice: '상대방의 개인정보 보호를 위해 구체적인 조치 내용은 알려드리지 않습니다.',
     },

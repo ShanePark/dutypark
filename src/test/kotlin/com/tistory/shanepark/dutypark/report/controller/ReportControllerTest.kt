@@ -6,6 +6,7 @@ import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.report.domain.dto.CreateReportRequest
 import com.tistory.shanepark.dutypark.report.domain.entity.ContentReport
 import com.tistory.shanepark.dutypark.report.domain.enums.ReportReason
+import com.tistory.shanepark.dutypark.report.domain.enums.ReportStatus
 import com.tistory.shanepark.dutypark.report.domain.enums.ReportTargetType
 import com.tistory.shanepark.dutypark.report.repository.ContentReportRepository
 import org.assertj.core.api.Assertions.assertThat
@@ -19,10 +20,12 @@ import org.springframework.restdocs.payload.PayloadDocumentation.fieldWithPath
 import org.springframework.restdocs.payload.PayloadDocumentation.requestFields
 import org.springframework.restdocs.payload.PayloadDocumentation.responseFields
 import org.springframework.restdocs.request.RequestDocumentation.parameterWithName
+import org.springframework.restdocs.request.RequestDocumentation.pathParameters
 import org.springframework.restdocs.request.RequestDocumentation.queryParameters
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import java.util.UUID
 
 class ReportControllerTest : RestDocsTest() {
 
@@ -261,9 +264,10 @@ class ReportControllerTest : RestDocsTest() {
                         fieldWithPath("content[].reportedMemberName").description("Reported member name captured when the report was filed"),
                         fieldWithPath("content[].reason").description("Report reason"),
                         fieldWithPath("content[].detail").optional().description("Free-form detail the reporter wrote"),
-                        fieldWithPath("content[].status").description("Handling status (`OPEN`, `RESOLVED`, `DISMISSED`)"),
+                        fieldWithPath("content[].status").description("Handling status (`OPEN`, `RESOLVED`, `DISMISSED`, `CANCELED`)"),
                         fieldWithPath("content[].createdAt").description("Filed at"),
-                        fieldWithPath("content[].resolvedAt").optional().description("Handled at (null while open)"),
+                        fieldWithPath("content[].resolvedAt").optional()
+                            .description("Handled or withdrawn at (null while open)"),
                         fieldWithPath("totalPages").description("Total page count"),
                         fieldWithPath("totalElements").description("Total element count"),
                         fieldWithPath("first").description("Whether this is the first page"),
@@ -329,25 +333,142 @@ class ReportControllerTest : RestDocsTest() {
             .andExpect(jsonPath("$.content[0].reportedMemberName").value(TestData.member2.name))
     }
 
+    @Test
+    fun `reporter cancels own open report`() {
+        val reportId = createReport(TestData.member, TestData.member2, ReportReason.SPAM, detail = "Posts spam links")
+        em.flush()
+        em.clear()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.post("/api/reports/{reportId}/cancel", reportId)
+                .accept(MediaType.APPLICATION_JSON)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.id").value(reportId))
+            .andExpect(jsonPath("$.status").value("CANCELED"))
+            .andExpect(jsonPath("$.resolvedAt").isNotEmpty)
+            .andDo(MockMvcResultHandlers.print())
+            .andDo(
+                document(
+                    "reports/cancel",
+                    pathParameters(parameterWithName("reportId").description("Report ID to withdraw")),
+                    responseFields(
+                        fieldWithPath("id").description("Report ID"),
+                        fieldWithPath("targetType").description("Reported target type (`MEMBER`, `SCHEDULE`, `TODO`)"),
+                        fieldWithPath("reportedMemberName").description("Reported member name captured when the report was filed"),
+                        fieldWithPath("reason").description("Report reason"),
+                        fieldWithPath("detail").optional().description("Free-form detail the reporter wrote"),
+                        fieldWithPath("status").description("Handling status, always `CANCELED` here"),
+                        fieldWithPath("createdAt").description("Filed at"),
+                        fieldWithPath("resolvedAt").description("Withdrawn at"),
+                    )
+                )
+            )
+    }
+
+    @Test
+    fun `cancel keeps the report as evidence`() {
+        val reportId = createReport(TestData.member, TestData.member2, ReportReason.SPAM)
+        em.flush()
+        em.clear()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.post("/api/reports/{reportId}/cancel", reportId)
+                .accept(MediaType.APPLICATION_JSON)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isOk)
+
+        assertThat(contentReportRepository.findAll()).hasSize(1)
+    }
+
+    @Test
+    fun `cancel a report filed by someone else returns not found`() {
+        val reportId = createReport(TestData.member2, TestData.member, ReportReason.HARASSMENT)
+        em.flush()
+        em.clear()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.post("/api/reports/{reportId}/cancel", reportId)
+                .accept(MediaType.APPLICATION_JSON)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.code").value("common.notFound"))
+    }
+
+    @Test
+    fun `cancel an unknown report returns not found`() {
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.post("/api/reports/{reportId}/cancel", UUID.randomUUID())
+                .accept(MediaType.APPLICATION_JSON)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.code").value("common.notFound"))
+    }
+
+    @Test
+    fun `cancel a report that is no longer open returns bad request`() {
+        val reportId = createReport(
+            TestData.member,
+            TestData.member2,
+            ReportReason.SPAM,
+            status = ReportStatus.RESOLVED,
+        )
+        em.flush()
+        em.clear()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.post("/api/reports/{reportId}/cancel", reportId)
+                .accept(MediaType.APPLICATION_JSON)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("report.cancel.notOpen"))
+            .andDo(MockMvcResultHandlers.print())
+            .andDo(
+                document(
+                    "reports/cancel-not-open",
+                    standardErrorResponseFields("Machine-readable error code (`report.cancel.notOpen`)")
+                )
+            )
+    }
+
+    @Test
+    fun `cancel without login is unauthorized`() {
+        val reportId = createReport(TestData.member, TestData.member2, ReportReason.SPAM)
+        em.flush()
+        em.clear()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.post("/api/reports/{reportId}/cancel", reportId)
+                .accept(MediaType.APPLICATION_JSON)
+        )
+            .andExpect(status().isUnauthorized)
+    }
+
     private fun createReport(
         reporter: Member,
         reported: Member,
         reason: ReportReason,
         detail: String? = null,
+        status: ReportStatus = ReportStatus.OPEN,
     ): String {
-        return contentReportRepository.save(
-            ContentReport(
-                reporter = reporter,
-                reportedMember = reported,
-                targetType = ReportTargetType.MEMBER,
-                targetId = reported.id!!.toString(),
-                reason = reason,
-                detail = detail,
-                contentSnapshot = "이름: ${reported.name}",
-                reporterName = reporter.name,
-                reportedMemberName = reported.name,
-            )
-        ).id.toString()
+        val report = ContentReport(
+            reporter = reporter,
+            reportedMember = reported,
+            targetType = ReportTargetType.MEMBER,
+            targetId = reported.id!!.toString(),
+            reason = reason,
+            detail = detail,
+            contentSnapshot = "이름: ${reported.name}",
+            reporterName = reporter.name,
+            reportedMemberName = reported.name,
+        )
+        report.status = status
+        return contentReportRepository.save(report).id.toString()
     }
 
     private fun memberReportRequest(

@@ -6,6 +6,7 @@ import SwiftUI
 struct MyReportListView: View {
     @ObservedObject var model: SupportViewModel
     @State private var expandedReportID: UUID?
+    @State private var reportPendingCancellation: MyReportDTO?
 
     var body: some View {
         SupportCard {
@@ -14,6 +15,37 @@ struct MyReportListView: View {
             }
         }
         .task { await model.loadReportsIfNeeded() }
+        .dpConfirmation(
+            item: $reportPendingCancellation,
+            copy: { _ in
+                DPConfirmationCopy(
+                    title: SupportLocalization.text("support.reports.cancel.confirmTitle"),
+                    message: SupportLocalization.text("support.reports.cancel.confirmMessage"),
+                    confirmTitle: SupportLocalization.text("support.reports.cancel.confirmAction"),
+                    cancelTitle: SupportLocalization.text("support.reports.cancel.keep"),
+                    isDestructive: true
+                )
+            },
+            confirm: { report, dismiss in
+                // The row carries the in-flight state, so the panel can leave immediately
+                // instead of holding the reporter in a modal.
+                dismiss()
+                Task { await model.cancelReport(id: report.id) }
+            }
+        )
+        .alert(
+            SupportLocalization.text("support.reports.cancel.errorTitle"),
+            isPresented: Binding(
+                get: { model.reportCancelErrorKey != nil },
+                set: { if !$0 { model.reportCancelErrorKey = nil } }
+            )
+        ) {
+            Button(SupportLocalization.text("support.reports.cancel.ok"), role: .cancel) {
+                model.reportCancelErrorKey = nil
+            }
+        } message: {
+            Text(verbatim: SupportLocalization.text(model.reportCancelErrorKey ?? ""))
+        }
     }
 
     @ViewBuilder
@@ -204,7 +236,7 @@ struct MyReportListView: View {
                     }
                 }
 
-                if report.status != .open {
+                if MyReportPresentation.showsPrivacyNotice(report) {
                     Text(verbatim: SupportLocalization.text("support.reports.privacyNotice"))
                         .font(DPTypography.caption)
                         .foregroundStyle(DPColor.textMuted)
@@ -218,9 +250,45 @@ struct MyReportListView: View {
                 in: RoundedRectangle(cornerRadius: DPRadius.standard)
             )
             .accessibilityIdentifier("support.reports.status")
+
+            if MyReportPresentation.canCancel(report) {
+                cancelButton(report)
+            }
         }
         .padding(.horizontal, DPSpacing.medium)
         .padding(.bottom, DPSpacing.medium)
+    }
+
+    /// Withdrawing is undoing one's own report, not deleting someone else's data, so only the
+    /// label carries the danger colour: the chrome stays the neutral outline every other
+    /// secondary control uses, which separates it from "load more" without reading as a delete.
+    private func cancelButton(_ report: MyReportDTO) -> some View {
+        let isCanceling = model.isCancelingReport(report.id)
+
+        return Button {
+            reportPendingCancellation = report
+        } label: {
+            Group {
+                if isCanceling {
+                    ProgressView()
+                        .tint(DPColor.danger)
+                } else {
+                    Text(verbatim: SupportLocalization.text("support.reports.cancel"))
+                        .font(DPTypography.label)
+                        .foregroundStyle(DPColor.danger)
+                }
+            }
+            .padding(.horizontal, DPSpacing.large)
+            .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)
+            .overlay {
+                RoundedRectangle(cornerRadius: DPRadius.standard)
+                    .stroke(DPColor.borderPrimary, lineWidth: DPChrome.borderWidth)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(isCanceling)
+        .accessibilityIdentifier("support.reports.cancel")
     }
 
     private func summaryRow(label: String, value: String) -> some View {
@@ -245,12 +313,13 @@ struct MyReportListView: View {
     }
 
     /// A dismissed report is not a failure on the reporter's side, so it stays neutral
-    /// rather than being coloured like an error.
+    /// rather than being coloured like an error. A withdrawn one was the reporter's own
+    /// decision, which is no more of an error, so it reads the same way.
     private func statusForeground(_ status: ReportStatus) -> Color {
         switch status {
         case .open: DPColor.warningHover
         case .resolved: DPColor.successHover
-        case .dismissed: DPColor.textSecondary
+        case .dismissed, .canceled: DPColor.textSecondary
         }
     }
 
@@ -258,7 +327,7 @@ struct MyReportListView: View {
         switch status {
         case .open: DPColor.warningSoft
         case .resolved: DPColor.successSoft
-        case .dismissed: DPColor.backgroundTertiary
+        case .dismissed, .canceled: DPColor.backgroundTertiary
         }
     }
 

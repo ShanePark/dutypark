@@ -289,6 +289,31 @@ class AdminReportServiceIntegrationTest : DutyparkIntegrationTest() {
     }
 
     @Test
+    fun `update status to canceled is rejected`() {
+        val report = saveReport()
+        flushAndClear()
+
+        assertThrows<BadRequestException> {
+            adminReportService.updateStatus(
+                reportId = report.id,
+                adminMemberId = TestData.admin.id!!,
+                request = UpdateReportStatusRequest(status = ReportStatus.CANCELED, memo = null),
+            )
+        }
+    }
+
+    @Test
+    fun `a canceled report leaves the open queue`() {
+        val open = saveReport()
+        val canceled = saveReport(status = ReportStatus.CANCELED)
+        flushAndClear()
+
+        assertThat(findIds(ReportStatus.OPEN)).containsExactly(open.id)
+        assertThat(findIds(ReportStatus.CANCELED)).containsExactly(canceled.id)
+        assertThat(findIds(null)).containsExactlyInAnyOrder(open.id, canceled.id)
+    }
+
+    @Test
     fun `delete target removes the schedule with its attachments and context directory`() {
         val schedule = saveSchedule(TestData.member2)
         val contextId = schedule.id.toString()

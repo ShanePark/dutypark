@@ -5,12 +5,14 @@ export const MY_REPORT_STATUS_LABEL_KEYS: Record<ReportStatus, string> = {
   OPEN: 'support.reports.status.open',
   RESOLVED: 'support.reports.status.resolved',
   DISMISSED: 'support.reports.status.dismissed',
+  CANCELED: 'support.reports.status.canceled',
 }
 
 export const MY_REPORT_STATUS_DESCRIPTION_KEYS: Record<ReportStatus, string> = {
   OPEN: 'support.reports.statusDescription.open',
   RESOLVED: 'support.reports.statusDescription.resolved',
   DISMISSED: 'support.reports.statusDescription.dismissed',
+  CANCELED: 'support.reports.statusDescription.canceled',
 }
 
 export const MY_REPORT_REASON_LABEL_KEYS: Record<ReportReason, string> = {

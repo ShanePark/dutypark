@@ -20,6 +20,7 @@ import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.LocalDateTime
 import java.util.*
 
 @Service
@@ -73,6 +74,25 @@ class ReportService(
     fun findMyReports(reporterId: Long, pageable: Pageable): Page<MyReportDto> {
         return contentReportRepository.findAllByReporterIdOrderByCreatedDateDesc(reporterId, pageable)
             .map(MyReportDto::of)
+    }
+
+    /**
+     * 신고자 본인의 철회. 레코드는 증거로 남기고 관리자 대기열에서만 뺀다.
+     * resolvedBy 는 신고를 처리한 관리자를 가리키는 자리라 본인 철회에는 비워 둔다.
+     */
+    fun cancelReport(loginMemberId: Long, reportId: UUID): MyReportDto {
+        val report = contentReportRepository.findById(reportId).orElse(null)
+            ?.takeIf { it.reporter?.id == loginMemberId }
+            ?: notFound()
+        if (report.status != ReportStatus.OPEN) {
+            throw BadRequestException("report.cancel.notOpen")
+        }
+
+        report.status = ReportStatus.CANCELED
+        report.resolvedAt = LocalDateTime.now()
+        slackNotifier.reportCanceled(report)
+
+        return MyReportDto.of(report)
     }
 
     private fun existingOpenReport(reporterId: Long, request: CreateReportRequest): ContentReport? {

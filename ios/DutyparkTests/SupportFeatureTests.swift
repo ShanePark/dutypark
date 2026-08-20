@@ -564,10 +564,12 @@ struct SupportFeatureTests {
         #expect(MyReportPresentation.statusKey(.open) == "support.reports.status.open")
         #expect(MyReportPresentation.statusKey(.resolved) == "support.reports.status.resolved")
         #expect(MyReportPresentation.statusKey(.dismissed) == "support.reports.status.dismissed")
+        #expect(MyReportPresentation.statusKey(.canceled) == "support.reports.status.canceled")
 
         #expect(MyReportPresentation.statusDescriptionKey(.open) == "support.reports.statusDescription.open")
         #expect(MyReportPresentation.statusDescriptionKey(.resolved) == "support.reports.statusDescription.resolved")
         #expect(MyReportPresentation.statusDescriptionKey(.dismissed) == "support.reports.statusDescription.dismissed")
+        #expect(MyReportPresentation.statusDescriptionKey(.canceled) == "support.reports.statusDescription.canceled")
 
         #expect(MyReportPresentation.targetTypeKey(.member) == "support.reports.targetType.member")
         #expect(MyReportPresentation.targetTypeKey(.schedule) == "support.reports.targetType.schedule")
@@ -575,6 +577,184 @@ struct SupportFeatureTests {
 
         // The reason keeps the wording the reporter already read in the report sheet.
         #expect(MyReportPresentation.reasonText(.spam) == ReportLocalization.text("report.reason.spam"))
+    }
+
+    /// A withdrawal only takes back a review that has not happened yet, so every other
+    /// state — including a report already withdrawn — offers nothing to press.
+    @Test
+    func onlyAReportStillWaitingForReviewOffersTheWithdrawal() {
+        #expect(MyReportPresentation.canCancel(SupportFeatureTests.report(name: "Spammer", status: .open)))
+        for handled: ReportStatus in [.resolved, .dismissed, .canceled] {
+            #expect(
+                !MyReportPresentation.canCancel(
+                    SupportFeatureTests.report(name: "Spammer", status: handled)
+                ),
+                "Offered a withdrawal for \(handled)"
+            )
+        }
+    }
+
+    @Test
+    func aWithdrawnReportIsDecodedFromTheServersOwnStatus() throws {
+        let report = try JSONDecoder().decode(
+            MyReportDTO.self,
+            from: Data("""
+                {
+                  "id": "5f6b0a52-6d4f-4a02-9e6a-3a6b1d2c4e88",
+                  "targetType": "MEMBER",
+                  "reportedMemberName": "Spammer",
+                  "reason": "SPAM",
+                  "detail": null,
+                  "status": "CANCELED",
+                  "createdAt": "2026-08-12T09:51:51.163702",
+                  "resolvedAt": "2026-08-13T10:00:00"
+                }
+                """.utf8)
+        )
+
+        #expect(report.status == .canceled)
+        #expect(report.resolvedAt?.rawValue == "2026-08-13T10:00:00")
+    }
+
+    /// Withdrawing keeps the reporter's place in the list: only the answered row changes,
+    /// and the pages already on screen are neither dropped nor fetched again.
+    @Test
+    func withdrawingAnOpenReportReplacesOnlyThatRow() async {
+        let repository = SupportRepositorySpy(
+            reportPages: [
+                SupportFeatureTests.reportPage(
+                    number: 0,
+                    totalPages: 2,
+                    reports: [
+                        SupportFeatureTests.report(id: Self.withdrawnID, name: "Spammer"),
+                        SupportFeatureTests.report(id: Self.untouchedID, name: "Impostor")
+                    ]
+                )
+            ],
+            cancelResult: SupportFeatureTests.report(
+                id: Self.withdrawnID,
+                name: "Spammer",
+                status: .canceled
+            )
+        )
+        let model = SupportViewModel(isSignedIn: true, repository: repository)
+        await model.loadReportsIfNeeded()
+
+        await model.cancelReport(id: Self.withdrawnID)
+
+        #expect(repository.cancelRequests == [Self.withdrawnID])
+        #expect(model.reports.map(\.id) == [Self.withdrawnID, Self.untouchedID])
+        #expect(model.reports.map(\.status) == [.canceled, .open])
+        #expect(model.reports.first?.resolvedAt?.rawValue == "2026-08-13T10:00:00")
+        #expect(model.hasMoreReports)
+        #expect(repository.reportRequests.count == 1)
+        #expect(!model.isCancelingReport(Self.withdrawnID))
+        #expect(model.reportCancelErrorKey == nil)
+    }
+
+    @Test
+    func aReportThatIsNoLongerOpenSaysSoInsteadOfFailingGenerically() async {
+        let repository = SupportRepositorySpy(
+            reportPages: [
+                SupportFeatureTests.reportPage(
+                    number: 0,
+                    totalPages: 1,
+                    reports: [SupportFeatureTests.report(id: Self.withdrawnID, name: "Spammer")]
+                )
+            ],
+            cancelFailure: .server(status: 400, code: "report.cancel.notOpen")
+        )
+        let model = SupportViewModel(isSignedIn: true, repository: repository)
+        await model.loadReportsIfNeeded()
+
+        await model.cancelReport(id: Self.withdrawnID)
+
+        #expect(model.reportCancelErrorKey == "support.reports.cancel.error.notOpen")
+        #expect(model.reports.map(\.status) == [.open])
+        #expect(!model.isCancelingReport(Self.withdrawnID))
+    }
+
+    @Test
+    func anyOtherWithdrawalFailureKeepsTheRowAndShowsTheGenericMessage() async {
+        let repository = SupportRepositorySpy(
+            reportPages: [
+                SupportFeatureTests.reportPage(
+                    number: 0,
+                    totalPages: 1,
+                    reports: [SupportFeatureTests.report(id: Self.withdrawnID, name: "Spammer")]
+                )
+            ],
+            cancelFailure: .transport
+        )
+        let model = SupportViewModel(isSignedIn: true, repository: repository)
+        await model.loadReportsIfNeeded()
+
+        await model.cancelReport(id: Self.withdrawnID)
+
+        #expect(model.reportCancelErrorKey == "support.reports.cancel.error")
+        #expect(model.reports.map(\.status) == [.open])
+    }
+
+    /// The row offers no control for a handled report, so a stale request must not reach
+    /// the server either.
+    @Test
+    func aHandledReportIsNeverSentToTheWithdrawalEndpoint() async {
+        let repository = SupportRepositorySpy(
+            reportPages: [
+                SupportFeatureTests.reportPage(
+                    number: 0,
+                    totalPages: 1,
+                    reports: [
+                        SupportFeatureTests.report(
+                            id: Self.withdrawnID,
+                            name: "Spammer",
+                            status: .resolved
+                        )
+                    ]
+                )
+            ]
+        )
+        let model = SupportViewModel(isSignedIn: true, repository: repository)
+        await model.loadReportsIfNeeded()
+
+        await model.cancelReport(id: Self.withdrawnID)
+        await model.cancelReport(id: Self.untouchedID)
+
+        #expect(repository.cancelRequests.isEmpty)
+        #expect(model.reportCancelErrorKey == nil)
+    }
+
+    @Test
+    func theWithdrawalPostsToTheDocumentedEndpointAndReturnsTheUpdatedRow() async throws {
+        let recorder = SupportRequestRecorder()
+        defer { SupportCancelURLProtocolStub.handler = nil }
+        SupportCancelURLProtocolStub.handler = { request in
+            recorder.append(request)
+            return SupportFeatureTests.httpResponse(
+                request,
+                status: 200,
+                body: """
+                    {
+                      "id": "\(Self.withdrawnID.uuidString.lowercased())",
+                      "targetType": "MEMBER",
+                      "reportedMemberName": "Spammer",
+                      "reason": "SPAM",
+                      "detail": null,
+                      "status": "CANCELED",
+                      "createdAt": "2026-08-12T09:51:51.163702",
+                      "resolvedAt": "2026-08-13T10:00:00"
+                    }
+                    """
+            )
+        }
+
+        let repository = LiveSupportRepository(client: Self.cancelClient())
+        let updated = try await repository.cancelReport(id: Self.withdrawnID)
+
+        #expect(recorder.paths == ["/api/reports/\(Self.withdrawnID.uuidString)/cancel"])
+        #expect(recorder.methods == ["POST"])
+        #expect(updated.id == Self.withdrawnID)
+        #expect(updated.status == .canceled)
     }
 
     @Test
@@ -633,9 +813,20 @@ struct SupportFeatureTests {
                 "support.reports.status.open",
                 "support.reports.status.resolved",
                 "support.reports.status.dismissed",
+                "support.reports.status.canceled",
                 "support.reports.statusDescription.open",
                 "support.reports.statusDescription.resolved",
                 "support.reports.statusDescription.dismissed",
+                "support.reports.statusDescription.canceled",
+                "support.reports.cancel",
+                "support.reports.cancel.confirmTitle",
+                "support.reports.cancel.confirmMessage",
+                "support.reports.cancel.confirmAction",
+                "support.reports.cancel.keep",
+                "support.reports.cancel.errorTitle",
+                "support.reports.cancel.error",
+                "support.reports.cancel.error.notOpen",
+                "support.reports.cancel.ok",
                 "support.history.empty",
                 "support.history.loadMore",
                 "support.history.pendingAnswer",
@@ -661,19 +852,26 @@ private final class SupportRepositorySpy: SupportRepository, @unchecked Sendable
     private let failure: APIError?
     private let pages: [PageResponse<MyInquiryDTO>]
     private let reportPages: [PageResponse<MyReportDTO>]
+    private let cancelResult: MyReportDTO?
+    private let cancelFailure: APIError?
     private var storedSubmissions: [CreateInquiryRequest] = []
     private var storedAuthenticatedSubmissions: [Bool] = []
     private var storedInquiryRequests: [SupportInquiryRequest] = []
     private var storedReportRequests: [SupportInquiryRequest] = []
+    private var storedCancelRequests: [UUID] = []
     private var isFailing: Bool
 
     init(
         pages: [PageResponse<MyInquiryDTO>] = [],
         reportPages: [PageResponse<MyReportDTO>] = [],
+        cancelResult: MyReportDTO? = nil,
+        cancelFailure: APIError? = nil,
         failure: APIError? = nil
     ) {
         self.pages = pages
         self.reportPages = reportPages
+        self.cancelResult = cancelResult
+        self.cancelFailure = cancelFailure
         self.failure = failure
         self.isFailing = failure != nil
     }
@@ -688,6 +886,10 @@ private final class SupportRepositorySpy: SupportRepository, @unchecked Sendable
 
     var reportRequests: [SupportInquiryRequest] {
         lock.withLock { storedReportRequests }
+    }
+
+    var cancelRequests: [UUID] {
+        lock.withLock { storedCancelRequests }
     }
 
     var authenticatedSubmissions: [Bool] {
@@ -723,12 +925,36 @@ private final class SupportRepositorySpy: SupportRepository, @unchecked Sendable
         }
         return response
     }
+
+    func cancelReport(id: UUID) async throws -> MyReportDTO {
+        lock.withLock { storedCancelRequests.append(id) }
+        if let cancelFailure { throw cancelFailure }
+        if let failure, lock.withLock({ isFailing }) { throw failure }
+        guard let cancelResult else { throw APIError.invalidResponse }
+        return cancelResult
+    }
 }
 
 extension SupportFeatureTests {
+    /// Fixed identifiers so a withdrawal test can name the row it expects to change and
+    /// the row it expects to be left alone.
+    nonisolated static let withdrawnID = UUID(uuidString: "5f6b0a52-6d4f-4a02-9e6a-3a6b1d2c4e88")!
+    nonisolated static let untouchedID = UUID(uuidString: "1a2b3c4d-5e6f-4a1b-8c2d-3e4f5a6b7c8d")!
+
     nonisolated static func supportClient() -> APIClient {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [SupportURLProtocolStub.self]
+        return APIClient(
+            baseURL: URL(string: "https://dutypark.test/api/")!,
+            session: URLSession(configuration: configuration)
+        )
+    }
+
+    /// The withdrawal contract gets its own protocol stub so it cannot race the inquiry
+    /// contract test for the one shared handler.
+    nonisolated static func cancelClient() -> APIClient {
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [SupportCancelURLProtocolStub.self]
         return APIClient(
             baseURL: URL(string: "https://dutypark.test/api/")!,
             session: URLSession(configuration: configuration)
@@ -791,16 +1017,24 @@ extension SupportFeatureTests {
         totalPages: Int,
         names: [String]
     ) -> PageResponse<MyReportDTO> {
+        reportPage(number: number, totalPages: totalPages, reports: names.map { report(name: $0) })
+    }
+
+    static func reportPage(
+        number: Int,
+        totalPages: Int,
+        reports: [MyReportDTO]
+    ) -> PageResponse<MyReportDTO> {
         PageResponse(
-            content: names.map { report(name: $0) },
+            content: reports,
             totalPages: totalPages,
-            totalElements: Int64(names.count),
+            totalElements: Int64(reports.count),
             last: number == totalPages - 1,
             first: number == 0,
             size: 10,
             number: number,
-            numberOfElements: names.count,
-            empty: names.isEmpty
+            numberOfElements: reports.count,
+            empty: reports.isEmpty
         )
     }
 
@@ -831,6 +1065,10 @@ private final class SupportRequestRecorder: @unchecked Sendable {
         lock.withLock { requests.compactMap(\.url?.path) }
     }
 
+    var methods: [String] {
+        lock.withLock { requests.compactMap(\.httpMethod) }
+    }
+
     func append(_ request: URLRequest) {
         lock.withLock { requests.append(request) }
     }
@@ -853,6 +1091,25 @@ private final class SupportURLProtocolStub: URLProtocol, @unchecked Sendable {
     override func startLoading() {
         guard let handler = Self.handler else {
             fatalError("Missing SupportURLProtocolStub handler")
+        }
+        let result = handler(request)
+        client?.urlProtocol(self, didReceive: result.0, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: result.1)
+        client?.urlProtocolDidFinishLoading(self)
+    }
+
+    override func stopLoading() {}
+}
+
+private final class SupportCancelURLProtocolStub: URLProtocol, @unchecked Sendable {
+    nonisolated(unsafe) static var handler: (@Sendable (URLRequest) -> (HTTPURLResponse, Data))?
+
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+
+    override func startLoading() {
+        guard let handler = Self.handler else {
+            fatalError("Missing SupportCancelURLProtocolStub handler")
         }
         let result = handler(request)
         client?.urlProtocol(self, didReceive: result.0, cacheStoragePolicy: .notAllowed)

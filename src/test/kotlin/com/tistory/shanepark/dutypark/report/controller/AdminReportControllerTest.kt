@@ -61,7 +61,7 @@ class AdminReportControllerTest : RestDocsTest() {
                     "admin/reports-list",
                     queryParameters(
                         parameterWithName("status").optional()
-                            .description("Report status filter (`OPEN`, `RESOLVED`, `DISMISSED`). Omitted or `ALL` returns every report"),
+                            .description("Report status filter (`OPEN`, `RESOLVED`, `DISMISSED`, `CANCELED`). Omitted or `ALL` returns every report"),
                         parameterWithName("page").optional().description("Page number (0-based)"),
                         parameterWithName("size").optional().description("Page size (default 10)"),
                     ),
@@ -189,6 +189,28 @@ class AdminReportControllerTest : RestDocsTest() {
                     detailResponseFields(),
                 )
             )
+    }
+
+    @Test
+    fun `admin cannot cancel a report on the reporter's behalf`() {
+        val report = saveReport()
+        em.flush()
+        em.clear()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.patch("/admin/api/reports/{reportId}/status", report.id)
+                .contentType(MediaType.APPLICATION_JSON)
+                .accept(MediaType.APPLICATION_JSON)
+                .content(
+                    objectMapper.writeValueAsString(
+                        UpdateReportStatusRequest(status = ReportStatus.CANCELED, memo = null)
+                    )
+                )
+                .withAuth(TestData.admin)
+        )
+            .andExpect(status().isBadRequest)
+
+        assertThat(contentReportRepository.findById(report.id).orElseThrow().status).isEqualTo(ReportStatus.OPEN)
     }
 
     @Test

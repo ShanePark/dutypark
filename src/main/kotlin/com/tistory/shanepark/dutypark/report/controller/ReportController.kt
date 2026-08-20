@@ -13,10 +13,12 @@ import org.springframework.data.web.PageableDefault
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
+import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RestController
+import java.util.UUID
 
 @RestController
 @RequestMapping("/api/reports")
@@ -32,6 +34,14 @@ class ReportController(
         val result = reportService.createReport(loginMember.id, request)
         val status = if (result.isNew) HttpStatus.CREATED else HttpStatus.OK
         return ResponseEntity.status(status).body(ReportIdResponse(result.id))
+    }
+
+    @PostMapping("/{reportId}/cancel")
+    fun cancelReport(
+        @Login loginMember: LoginMember,
+        @PathVariable reportId: UUID,
+    ): MyReportDto {
+        return reportService.cancelReport(loginMemberId = loginMember.id, reportId = reportId)
     }
 
     @GetMapping("/me")

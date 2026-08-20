@@ -66,9 +66,18 @@ describe('my inquiry history translations', () => {
       reports.status.open,
       reports.status.resolved,
       reports.status.dismissed,
+      reports.status.canceled,
       reports.statusDescription.open,
       reports.statusDescription.resolved,
       reports.statusDescription.dismissed,
+      reports.statusDescription.canceled,
+      reports.canceledAt,
+      reports.cancel.action,
+      reports.cancel.pending,
+      reports.cancel.confirmTitle,
+      reports.cancel.confirmMessage,
+      reports.cancel.confirmAction,
+      reports.cancel.failed,
     ]) {
       expect(value).toEqual(expect.any(String))
     }

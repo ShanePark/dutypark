@@ -282,6 +282,9 @@ const apiErrors = {
     detail: {
       required: 'Please describe the problem when you choose Other.',
     },
+    cancel: {
+      notOpen: 'This report has already been handled or withdrawn.',
+    },
     target: {
       notDeletable: 'A member report has no content to delete.',
     },
@@ -1958,12 +1961,14 @@ export default {
         open: 'Open',
         resolved: 'Resolved',
         dismissed: 'Dismissed',
+        canceled: 'Withdrawn',
         all: 'All',
       },
       status: {
         open: 'Open',
         resolved: 'Resolved',
         dismissed: 'Dismissed',
+        canceled: 'Withdrawn',
       },
       reason: {
         spam: 'Spam / ads',
@@ -2169,6 +2174,7 @@ export default {
       countSummary: '{total} total',
       reportedAt: 'Filed',
       handledAt: 'Handled',
+      canceledAt: 'Withdrawn',
       targetLabel: 'Reported',
       reasonLabel: 'Reason',
       detailLabel: 'What you wrote',
@@ -2183,11 +2189,21 @@ export default {
         open: 'Received',
         resolved: 'Action taken',
         dismissed: 'No action',
+        canceled: 'Withdrawn',
       },
       statusDescription: {
         open: 'We have received your report and will review it within 24 hours.',
         resolved: 'We reviewed the report and took the action it called for.',
         dismissed: 'We reviewed the report but found no breach of the terms of service, so no action was taken.',
+        canceled: 'You withdrew this report, so we are no longer reviewing it.',
+      },
+      cancel: {
+        action: 'Withdraw report',
+        pending: 'Withdrawing...',
+        confirmTitle: 'Withdraw this report?',
+        confirmMessage: 'Withdrawing stops the review and the report stays in this list as withdrawn. Any block you set stays in place; manage it in the blocked list under friend settings.',
+        confirmAction: 'Withdraw',
+        failed: 'We could not withdraw the report. Please try again in a moment.',
       },
       privacyNotice: 'To protect the other member\'s privacy we cannot share what action was taken.',
     },

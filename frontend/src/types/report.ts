@@ -10,7 +10,7 @@ export const REPORT_REASONS = [
 ] as const
 export type ReportReason = (typeof REPORT_REASONS)[number]
 
-export const REPORT_STATUS = ['OPEN', 'RESOLVED', 'DISMISSED'] as const
+export const REPORT_STATUS = ['OPEN', 'RESOLVED', 'DISMISSED', 'CANCELED'] as const
 export type ReportStatus = (typeof REPORT_STATUS)[number]
 
 export const REPORT_DETAIL_MAX_LENGTH = 500

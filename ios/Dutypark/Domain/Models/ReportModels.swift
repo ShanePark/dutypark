@@ -52,12 +52,15 @@ nonisolated struct CreateReportRequest: Codable, Equatable, Sendable {
     let alsoBlock: Bool
 }
 
-/// How far a report has been handled. `open` is the intake state; the other two are the
-/// outcomes an administrator can record.
+/// How far a report has been handled. `open` is the intake state, `resolved` and
+/// `dismissed` are the outcomes an administrator can record, and `canceled` is the
+/// reporter taking their own open report back. A withdrawal is not a deletion: the row
+/// is kept as evidence and only leaves the administrator's queue.
 nonisolated enum ReportStatus: String, Codable, Equatable, Sendable {
     case open = "OPEN"
     case resolved = "RESOLVED"
     case dismissed = "DISMISSED"
+    case canceled = "CANCELED"
 }
 
 /// One row of `GET /api/reports/me`. The endpoint deliberately omits the

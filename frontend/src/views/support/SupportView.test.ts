@@ -177,15 +177,17 @@ describe('my report list', () => {
     expect(myReportList).toContain('reportApi.fetchMine(page, PAGE_SIZE)')
   })
 
-  it('shows all three handling states with their own tone', () => {
+  it('shows every handling state with its own tone', () => {
     expect(MY_REPORT_STATUS_LABEL_KEYS).toEqual({
       OPEN: 'support.reports.status.open',
       RESOLVED: 'support.reports.status.resolved',
       DISMISSED: 'support.reports.status.dismissed',
+      CANCELED: 'support.reports.status.canceled',
     })
     expect(myReportStatusToneClass('OPEN')).toContain('warning')
     expect(myReportStatusToneClass('RESOLVED')).toContain('success')
     expect(myReportStatusToneClass('DISMISSED')).not.toContain('danger')
+    expect(myReportStatusToneClass('CANCELED')).toBe(myReportStatusToneClass('DISMISSED'))
     expect(myReportList).toContain('myReportStatusToneClass(report.status)')
   })
 
@@ -221,5 +223,47 @@ describe('my report list', () => {
     expect(myReportList).toContain('support.reports.loadFailed')
     expect(myReportList).toContain('support.reports.retry')
     expect(myReportList).toContain('support.reports.loadMore')
+  })
+})
+
+/**
+ * Withdrawing is not a delete: the row stays as evidence with a muted badge, and the block the
+ * member may have set alongside the report is untouched.
+ */
+describe('withdrawing my own report', () => {
+  it('offers the withdrawal only on a report still waiting for review', () => {
+    expect(myReportList).toContain('v-if="report.status === \'OPEN\'"')
+    expect(myReportList).toContain('support.reports.cancel.action')
+    expect(myReportList).toContain('min-h-11')
+  })
+
+  it('asks for confirmation before withdrawing', () => {
+    expect(myReportList).toContain('useSwal')
+    expect(myReportList).toContain("t('support.reports.cancel.confirmMessage')")
+    expect(myReportList).toContain("t('support.reports.cancel.confirmTitle')")
+    expect(myReportList).toContain('if (!confirmed) return')
+  })
+
+  it('marks only the row being withdrawn as pending', () => {
+    expect(myReportList).toContain('cancelingId')
+    expect(myReportList).toContain(':disabled="cancelingId === report.id"')
+    expect(myReportList).toContain('support.reports.cancel.pending')
+  })
+
+  it('swaps the withdrawn row in place instead of reloading the list', () => {
+    expect(myReportList).toContain('reportApi.cancelMine(report.id)')
+    expect(myReportList).toContain('reports.value = reports.value.map((item) => (item.id === updated.id ? updated : item))')
+    expect(myReportList).not.toContain('await loadReports(currentPage.value)')
+  })
+
+  it('reports a failed withdrawal inline without emptying the list', () => {
+    expect(myReportList).toContain('role="alert"')
+    expect(myReportList).toContain("fallbackKey: 'support.reports.cancel.failed'")
+    expect(myReportList).toContain('cancelErrorId === report.id')
+  })
+
+  it('dates a withdrawn report as withdrawn rather than handled', () => {
+    expect(myReportList).toContain('support.reports.canceledAt')
+    expect(myReportList).toContain('support.reports.handledAt')
   })
 })

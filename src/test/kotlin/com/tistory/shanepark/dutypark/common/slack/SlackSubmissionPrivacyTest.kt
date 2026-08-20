@@ -11,6 +11,7 @@ import com.tistory.shanepark.dutypark.inquiry.service.InquiryService
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.report.domain.dto.CreateReportRequest
 import com.tistory.shanepark.dutypark.report.domain.dto.ReportCreateResult
+import com.tistory.shanepark.dutypark.report.domain.entity.ContentReport
 import com.tistory.shanepark.dutypark.report.domain.enums.ReportReason
 import com.tistory.shanepark.dutypark.report.domain.enums.ReportTargetType
 import com.tistory.shanepark.dutypark.report.service.ReportService
@@ -174,6 +175,50 @@ class SlackSubmissionPrivacyTest {
             """.trimIndent()
         )
         assertThat(attachment["color"].asString).isEqualTo(SlackEventLevel.MUTED.color)
+    }
+
+    @Test
+    fun `canceled report is dimmed so the queue drop is only recorded`() {
+        val report = report(reported = memberWithId(id = 9L, name = "피신고자"))
+
+        ReportSlackNotifier(eventNotifier).reportCanceled(report)
+
+        val attachment = capturedAttachment()
+        assertThat(attachment["title"].asString).isEqualTo("↩️ Report canceled  ·  신고자 (#7) → 피신고자 (#9)")
+        assertThat(attachment["text"].asString).isEqualTo(
+            """
+            *HARASSMENT*
+            `SCHEDULE`
+            > 욕설이 포함되어 있습니다
+            """.trimIndent()
+        )
+        assertThat(attachment["footer"].asString)
+            .isEqualTo("${report.id.toString().take(8)}  ·  target 9b7f1f0e")
+        assertThat(attachment["color"].asString).isEqualTo(SlackEventLevel.MUTED.color)
+        // 신고 대상 콘텐츠 원문은 관리자 화면에서만 본다.
+        assertThat(captured().toString()).doesNotContain("제목: 회식")
+    }
+
+    @Test
+    fun `canceled report of a deleted account falls back to the name snapshot`() {
+        ReportSlackNotifier(eventNotifier).reportCanceled(report(reported = null))
+
+        assertThat(capturedAttachment()["title"].asString)
+            .isEqualTo("↩️ Report canceled  ·  신고자 (#7) → 피신고자")
+    }
+
+    private fun report(reported: Member?): ContentReport {
+        return ContentReport(
+            reporter = memberWithId(id = 7L, name = "신고자"),
+            reportedMember = reported,
+            targetType = ReportTargetType.SCHEDULE,
+            targetId = "9b7f1f0e-0000-0000-0000-000000000001",
+            reason = ReportReason.HARASSMENT,
+            detail = "욕설이 포함되어 있습니다",
+            contentSnapshot = "제목: 회식\n내용: 설명\n첨부: 없음",
+            reporterName = "신고자",
+            reportedMemberName = "피신고자",
+        )
     }
 
     private fun captured(): JsonObject {

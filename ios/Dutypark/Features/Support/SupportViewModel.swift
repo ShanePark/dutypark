@@ -40,6 +40,10 @@ final class SupportViewModel: ObservableObject {
     @Published private(set) var isLoadingReports = false
     @Published private(set) var isLoadingMoreReports = false
     @Published private(set) var reportLoadFailed = false
+    /// Tracked per report rather than as one flag: each row carries its own control, so
+    /// withdrawing one report must not disable the others.
+    @Published private(set) var cancelingReportIDs: Set<UUID> = []
+    @Published var reportCancelErrorKey: String?
 
     let isSignedIn: Bool
     private let repository: any SupportRepository
@@ -244,6 +248,33 @@ final class SupportViewModel: ObservableObject {
         }
     }
 
+    func isCancelingReport(_ id: UUID) -> Bool {
+        cancelingReportIDs.contains(id)
+    }
+
+    /// Withdraws one open report. The server answers with the updated row, which replaces
+    /// the one on screen in place: the reporter keeps the pages they already loaded
+    /// instead of being sent back to the top of the list.
+    func cancelReport(id: UUID) async {
+        guard let report = reports.first(where: { $0.id == id }),
+              MyReportPresentation.canCancel(report),
+              !cancelingReportIDs.contains(id)
+        else { return }
+
+        reportCancelErrorKey = nil
+        cancelingReportIDs.insert(id)
+        defer { cancelingReportIDs.remove(id) }
+
+        do {
+            let updated = try await repository.cancelReport(id: id)
+            if let index = reports.firstIndex(where: { $0.id == id }) {
+                reports[index] = updated
+            }
+        } catch {
+            reportCancelErrorKey = Self.cancelErrorKey(for: error)
+        }
+    }
+
     /// The confirmation replaces the form, so writing again has to restore it without
     /// losing the reply address the sender already confirmed.
     func startNewInquiry() {
@@ -304,6 +335,19 @@ final class SupportViewModel: ObservableObject {
             "support.error.rateLimit"
         default:
             "support.error.submit"
+        }
+    }
+
+    /// The one failure worth naming is a report the server no longer considers open: the
+    /// list on screen was simply stale, so retrying would fail the same way.
+    nonisolated static func cancelErrorKey(for error: Error) -> String {
+        guard let apiError = error as? APIError else { return "support.reports.cancel.error" }
+        return switch apiError {
+        case .server(status: 400, code: "report.cancel.notOpen"),
+             .serverWithDetails(status: 400, code: "report.cancel.notOpen", _):
+            "support.reports.cancel.error.notOpen"
+        default:
+            "support.reports.cancel.error"
         }
     }
 
@@ -432,6 +476,7 @@ nonisolated enum MyReportPresentation {
         case .open: "support.reports.status.open"
         case .resolved: "support.reports.status.resolved"
         case .dismissed: "support.reports.status.dismissed"
+        case .canceled: "support.reports.status.canceled"
         }
     }
 
@@ -440,6 +485,23 @@ nonisolated enum MyReportPresentation {
         case .open: "support.reports.statusDescription.open"
         case .resolved: "support.reports.statusDescription.resolved"
         case .dismissed: "support.reports.statusDescription.dismissed"
+        case .canceled: "support.reports.statusDescription.canceled"
+        }
+    }
+
+    /// A withdrawal takes back a review that has not happened yet, so only a report still
+    /// waiting for one offers it. The server enforces the same rule with
+    /// `report.cancel.notOpen`.
+    static func canCancel(_ report: MyReportDTO) -> Bool {
+        report.status == .open
+    }
+
+    /// Whether the row explains that the outcome itself stays private. A withdrawn report
+    /// was never acted on, so the notice would be about nothing.
+    static func showsPrivacyNotice(_ report: MyReportDTO) -> Bool {
+        switch report.status {
+        case .resolved, .dismissed: true
+        case .open, .canceled: false
         }
     }
 
