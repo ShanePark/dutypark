@@ -40,9 +40,10 @@
 └──────────────┘
 ```
 
-- 카드 폭: 태그 셀렉터와 동일한 3.2분할 공식
+- 카드 폭: 모바일·태블릿은 태그 셀렉터와 동일한 3.2분할 공식을 유지하고, 웹 데스크톱은 rail의 빈 공간을 줄이도록 별도 확대한다.
   - iOS `DPFriendTagSelector.cardWidth(availableWidth:spacing:minimum:maximum:)` (min 60 / max 88, `@ScaledMetric`)
-  - 웹 `clamp(3.75rem, (100% - gap*3)/3.2, 5.5rem)`
+  - 웹 `< 1024px`: `clamp(3.75rem, (100% - gap*3)/3.2, 5.5rem)`
+  - 웹 `>= 1024px`: 같은 공식을 `clamp(7.25rem, ..., 8.5rem)` 경계와 `0.75rem` gap/padding으로 적용한다. rail과 가로 스크롤은 그대로 유지한다.
 - 정렬: 가로 스택은 **top 정렬** (iOS `LazyHStack(alignment: .top)`, 웹 `align-items: flex-start`).
   팀/근무 줄 자리 확보와 함께 카드 높이가 항상 같아진다.
 - 순서: 핀 친구 먼저(핀 순서), 그다음 일반 친구 — 기존 정렬 로직 그대로.

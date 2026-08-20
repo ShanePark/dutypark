@@ -76,6 +76,14 @@ describe('home friend list keeps the pin toggle (D4)', () => {
     expect(template).toContain('@click.stop="unpinFriend(friend.member)"')
     expect(ruleFor('.dashboard-friend-card__pin')).toContain('position: absolute')
   })
+
+  it('uses only the yellow star to distinguish pinned friends', () => {
+    expect(template).not.toContain('dashboard-friend-card--pinned')
+    expect(style).not.toContain('.dashboard-friend-card--pinned')
+    expect(ruleFor('.dashboard-friend-card')).not.toContain('var(--dp-accent-border)')
+    expect(ruleFor('.dashboard-friend-card')).not.toContain('var(--dp-accent-bg)')
+    expect(ruleFor('.dashboard-friend-card__pin--on')).toContain('var(--dp-warning)')
+  })
 })
 
 describe('home friend rail shape (D1/D2)', () => {
@@ -91,6 +99,24 @@ describe('home friend rail shape (D1/D2)', () => {
     const card = ruleFor('.dashboard-friend-card')
     expect(card).toContain('calc((100% - var(--friend-card-gap) * 3) / 3.2)')
     expect(card).toContain('scroll-snap-align: start')
+  })
+
+  it('uses larger cards and roomier spacing on desktop', () => {
+    const desktopAt = style.indexOf('@media (min-width: 1024px)')
+    expect(desktopAt).toBeGreaterThan(-1)
+    const desktop = style.slice(desktopAt)
+    expect(desktop).toContain('--friend-card-min: 7.25rem')
+    expect(desktop).toContain('--friend-card-max: 8.5rem')
+    expect(desktop).toContain('--friend-card-gap: 0.75rem')
+    expect(desktop).toMatch(/padding:\s*0\.75rem/)
+  })
+
+  it('makes each calendar card keyboard focusable', () => {
+    const cardAction = tagWith('class="dashboard-friend-card__main"')
+    expect(cardAction).toContain('<button')
+    expect(cardAction).toContain('type="button"')
+    expect(cardAction).toContain('@click="moveTo(friend.member.id)"')
+    expect(style).toContain('.dashboard-friend-card__main:focus-visible')
   })
 
   it('shows the friend as a portrait photo', () => {
