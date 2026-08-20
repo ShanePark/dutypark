@@ -38,6 +38,14 @@ struct DPDesignTokensTests {
         #expect(DPChrome.shadowOpacity(for: .dark) == 0.30)
     }
 
+    /// The frosted backdrop is laid down part-way on purpose. At full strength the
+    /// thinnest system material still blanks out everything behind a modal, which
+    /// reads as a broken screen rather than as focus.
+    @Test
+    func theModalBackdropLeavesTheScreenBehindVisible() {
+        #expect(DPChrome.overlayMaterialOpacity == 0.45)
+    }
+
     @Test
     func typographyContractSnapshotMatchesWebScaleAndBundledFamily() {
         #expect(

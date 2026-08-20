@@ -134,8 +134,9 @@ onUnmounted(() => {
   window.removeEventListener('resize', updateRailHints)
 })
 
+/** Blank rather than null: the team line always renders so every card keeps one identical layout. */
 function getSubtitle(friend: TaggableFriend) {
-  return friend.team || null
+  return friend.team || ''
 }
 </script>
 
@@ -162,48 +163,6 @@ function getSubtitle(friend: TaggableFriend) {
     </button>
 
     <div v-else class="space-y-2 sm:space-y-2.5">
-      <div v-if="selectedFriends.length" class="friend-tag-selector__selected">
-        <div class="friend-tag-selector__selected-header">
-          <span class="text-xs font-semibold text-dp-text-secondary">
-            {{ t('friendTagSelector.selectedCount', { count: selectedCount }) }}
-          </span>
-          <button
-            type="button"
-            class="friend-tag-selector__clear"
-            :aria-label="t('friendTagSelector.clearSelectionAria')"
-            :title="t('friendTagSelector.clearTitle')"
-            @click="clearSelection"
-          >
-            <RotateCcw class="h-3 w-3" />
-            {{ t('friendTagSelector.clearTitle') }}
-          </button>
-        </div>
-
-        <div class="friend-tag-selector__chips">
-          <button
-            v-for="friend in selectedFriends"
-            :key="`chip-${friend.id}`"
-            type="button"
-            class="friend-tag-selector__chip"
-            :class="friend.isUnavailable ? 'friend-tag-selector__chip--unavailable' : ''"
-            :title="friend.isUnavailable ? t('friendTagSelector.unavailable') : friend.name"
-            :aria-label="t('friendTagSelector.removeTagAria', { name: friend.name })"
-            @click="removeFriend(friend.id)"
-          >
-            <ProfileAvatar
-              :member-id="friend.isUnavailable ? null : friend.id"
-              :name="friend.name"
-              :has-profile-photo="friend.hasProfilePhoto"
-              :profile-photo-version="friend.profilePhotoVersion"
-              size="sm"
-              class="friend-tag-selector__chip-avatar"
-            />
-            <span class="friend-tag-selector__chip-name">{{ friend.name }}</span>
-            <X class="h-3 w-3 flex-shrink-0" />
-          </button>
-        </div>
-      </div>
-
       <div class="friend-tag-selector__search">
         <label for="friend-tag-search" class="sr-only">{{ t('friendTagSelector.searchLabel') }}</label>
         <Search class="friend-tag-selector__search-icon" />
@@ -256,7 +215,10 @@ function getSubtitle(friend: TaggableFriend) {
               </span>
             </span>
             <span class="friend-tag-selector__card-name">{{ friend.name }}</span>
-            <span v-if="getSubtitle(friend)" class="friend-tag-selector__card-team">{{ getSubtitle(friend) }}</span>
+            <span
+              class="friend-tag-selector__card-team"
+              :aria-hidden="getSubtitle(friend) ? undefined : 'true'"
+            >{{ getSubtitle(friend) }}</span>
           </button>
         </div>
 
@@ -283,6 +245,48 @@ function getSubtitle(friend: TaggableFriend) {
       <div v-else class="rounded-2xl border border-dp-border-primary bg-dp-bg-secondary px-4 py-8 text-center">
         <p class="text-sm font-medium text-dp-text-primary">{{ t('friendTagSelector.emptyTitle') }}</p>
         <p class="mt-1 text-xs text-dp-text-muted">{{ t('friendTagSelector.emptyDescription') }}</p>
+      </div>
+
+      <div v-if="selectedFriends.length" class="friend-tag-selector__selected">
+        <div class="friend-tag-selector__selected-header">
+          <span class="text-xs font-semibold text-dp-text-secondary">
+            {{ t('friendTagSelector.selectedCount', { count: selectedCount }) }}
+          </span>
+          <button
+            type="button"
+            class="friend-tag-selector__clear"
+            :aria-label="t('friendTagSelector.clearSelectionAria')"
+            :title="t('friendTagSelector.clearTitle')"
+            @click="clearSelection"
+          >
+            <RotateCcw class="h-3 w-3" />
+            {{ t('friendTagSelector.clearTitle') }}
+          </button>
+        </div>
+
+        <div class="friend-tag-selector__chips">
+          <button
+            v-for="friend in selectedFriends"
+            :key="`chip-${friend.id}`"
+            type="button"
+            class="friend-tag-selector__chip"
+            :class="friend.isUnavailable ? 'friend-tag-selector__chip--unavailable' : ''"
+            :title="friend.isUnavailable ? t('friendTagSelector.unavailable') : friend.name"
+            :aria-label="t('friendTagSelector.removeTagAria', { name: friend.name })"
+            @click="removeFriend(friend.id)"
+          >
+            <ProfileAvatar
+              :member-id="friend.isUnavailable ? null : friend.id"
+              :name="friend.name"
+              :has-profile-photo="friend.hasProfilePhoto"
+              :profile-photo-version="friend.profilePhotoVersion"
+              size="sm"
+              class="friend-tag-selector__chip-avatar"
+            />
+            <span class="friend-tag-selector__chip-name">{{ friend.name }}</span>
+            <X class="h-3 w-3 flex-shrink-0" />
+          </button>
+        </div>
       </div>
     </div>
   </section>
@@ -399,6 +403,7 @@ function getSubtitle(friend: TaggableFriend) {
   --friend-card-min: 3.75rem;
   --friend-card-max: 5.5rem;
   display: flex;
+  align-items: flex-start;
   gap: var(--friend-card-gap);
   overflow-x: auto;
   padding: 0.5rem;
@@ -496,8 +501,11 @@ function getSubtitle(friend: TaggableFriend) {
   color: var(--dp-accent);
 }
 
+/* An empty element collapses, so the blank slot of a team-less friend needs its one line
+   reserved explicitly; 1.2em matches the line box this font-size and line-height produce. */
 .friend-tag-selector__card-team {
   overflow: hidden;
+  min-height: 1.2em;
   font-size: 0.625rem;
   line-height: 1.2;
   color: var(--dp-text-muted);

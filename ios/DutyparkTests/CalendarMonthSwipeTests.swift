@@ -74,8 +74,10 @@ final class CalendarMonthSwipeTests: XCTestCase {
     }
 
     /// The swipe has to ride along with the enclosing scroll view and the day cells'
-    /// own tap, which is what `simultaneousGesture` buys; claiming the drag outright
-    /// would break vertical scrolling over the grid.
+    /// own tap. `simultaneousGesture(DragGesture())` was not enough: it claimed every
+    /// drag that passed its minimum distance whichever way it went, so a scroll that
+    /// set off with the slightest sideways lean never moved the page. The pager reads
+    /// the drag's direction first now and leaves the vertical ones alone.
     func testTheCalendarGridCarriesTheSwipeAlongsideItsOtherGestures() throws {
         let source = try String(
             contentsOf: URL(fileURLWithPath: #filePath)
@@ -85,7 +87,11 @@ final class CalendarMonthSwipeTests: XCTestCase {
             encoding: .utf8
         )
 
-        XCTAssertTrue(source.contains("simultaneousGesture(monthSwipeGesture)"))
+        XCTAssertTrue(source.contains("dpHorizontalPan(onChanged:"))
+        XCTAssertFalse(
+            source.contains("simultaneousGesture(monthSwipeGesture)"),
+            "A plain DragGesture over the grid takes drags that belong to the scroll"
+        )
         XCTAssertTrue(
             source.contains("guard !isSwipingMonth, !isSlidingMonth else { return }"),
             "A day that was dragged sideways must not open its detail modal"

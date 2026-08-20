@@ -19,6 +19,10 @@ nonisolated enum DPColor {
     static let backgroundInput = adaptive(light: 0xFFFFFF, dark: 0x374151)
     static let backgroundModal = adaptive(light: 0xFFFFFF, dark: 0x1F2937)
     static let backgroundFooter = adaptive(light: 0x1F2937, dark: 0x030712)
+    /// Scrim behind a modal or dropdown. Lighter than the web's `--dp-overlay-scrim`
+    /// because the native backdrop pairs it with `DPChrome.overlayMaterial`, which
+    /// already dims and desaturates whatever it samples.
+    static let overlayScrim = fixed(0x000000, opacity: 0.28)
 
     // MARK: Text
 
@@ -164,6 +168,13 @@ enum DPChrome {
     static let inputHorizontalPadding: CGFloat = 12
     static let inputVerticalPadding: CGFloat = 8
     static let disabledOpacity: Double = 0.5
+    /// Frosted backdrop behind modals and dropdowns; the web's `--dp-overlay-blur`.
+    static let overlayMaterial: Material = .ultraThinMaterial
+    /// How much of that material is laid down. Even the thinnest system material
+    /// blurs far harder than the web's 4px, and its radius cannot be dialled in
+    /// numerically, so the backdrop is composited part-way instead: the screen
+    /// behind a modal stays readable as shapes rather than going blank.
+    static let overlayMaterialOpacity: Double = 0.45
 
     static func shadowOpacity(for colorScheme: ColorScheme) -> Double {
         colorScheme == .dark ? 0.30 : 0.05

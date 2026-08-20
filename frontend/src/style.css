@@ -205,6 +205,7 @@
     --dp-overlay-scrim-medium: rgba(0, 0, 0, 0.4);
     --dp-overlay-scrim-strong: rgba(0, 0, 0, 0.6);
     --dp-overlay-transparent: rgba(0, 0, 0, 0);
+    --dp-overlay-blur: 4px;
     --dp-chip-on-dark-bg: rgba(255, 255, 255, 0.9);
 
     --dp-footer-active-bg: rgba(255, 255, 255, 0.25);
@@ -305,6 +306,7 @@
     --dp-overlay-scrim-medium: rgba(0, 0, 0, 0.4);
     --dp-overlay-scrim-strong: rgba(0, 0, 0, 0.6);
     --dp-overlay-transparent: rgba(0, 0, 0, 0);
+    --dp-overlay-blur: 4px;
     --dp-chip-on-dark-bg: rgba(255, 255, 255, 0.9);
 
     --dp-footer-active-bg: rgba(255, 255, 255, 0.25);
@@ -735,8 +737,9 @@ html.dark {
 
 /* Modal */
 .modal-overlay {
-    @apply fixed inset-0 flex justify-center bg-dp-overlay-dark/50;
+    @apply fixed inset-0 flex justify-center bg-dp-overlay-dark/35;
     align-items: center;
+    backdrop-filter: blur(var(--dp-overlay-blur));
     /* A soft keyboard shrinks the visual viewport but not the layout viewport that
        `inset: 0` resolves against, so `useVisualViewport` supplies the visible box
        while a modal is open. Without it the fallbacks reproduce `inset: 0`. */
@@ -1366,6 +1369,11 @@ html.dark {
 /* ====================================
    SweetAlert2 Custom Styles
    ==================================== */
+
+/* Toasts share the full-screen container but show no backdrop, so only dialogs frost. */
+.swal2-container:not(.swal2-toast-shown) {
+    backdrop-filter: blur(var(--dp-overlay-blur));
+}
 
 .swal2-popup {
     @apply rounded-2xl p-0 overflow-hidden;

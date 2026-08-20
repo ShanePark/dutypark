@@ -678,13 +678,13 @@ export default {
       friends: 'Friends',
       noFriends: 'No friends yet.',
       familyMember: 'Family member',
-      moreSchedules: '+{count} more',
     },
     actions: {
       addFriend: 'Add friend',
       pin: 'Pin',
       unpin: 'Unpin',
-      dragToReorder: 'Drag to reorder',
+      scrollPrevAria: 'Show previous friends',
+      scrollNextAria: 'Show next friends',
     },
     friendRequest: {
       title: 'Friend request',
@@ -697,7 +697,6 @@ export default {
       pinFailed: 'Failed to pin the friend.',
       unpinFailed: 'Failed to unpin the friend.',
       friendRequestFailed: 'Failed to send the friend request.',
-      reorderFailed: 'Failed to update the friend order.',
     },
   },
   friends: {

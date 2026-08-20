@@ -157,7 +157,8 @@ struct GuestPublicCalendarView: View {
             if showsReportLoginPrompt {
                 DPModalOverlay(
                     maximumContentWidth: DPConfirmationPanel.maximumWidth,
-                    onDismiss: { showsReportLoginPrompt = false }
+                    onDismiss: { showsReportLoginPrompt = false },
+                    isHostedInline: true
                 ) { availableSize, dismissPrompt in
                     GuestReportLoginPrompt(
                         maximumHeight: availableSize.height,

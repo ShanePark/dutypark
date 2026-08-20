@@ -994,33 +994,34 @@ struct CalendarView: View {
                 }
             }
             .offset(x: monthSlideOffset)
-            .simultaneousGesture(monthSwipeGesture)
+            // A plain DragGesture claimed every drag that passed its minimum distance,
+            // so a scroll that set off with the slightest sideways lean never reached
+            // the page underneath. This one takes sideways drags and nothing else.
+            .dpHorizontalPan(onChanged: followMonthSwipe, onEnded: finishMonthSwipe)
     }
 
-    private var monthSwipeGesture: some Gesture {
-        DragGesture(minimumDistance: 12)
-            .onChanged { value in
-                guard !isSlidingMonth else { return }
-                monthSlideOffset = CalendarMonthSwipe.followOffset(translation: value.translation)
-                if monthSlideOffset != 0 { isSwipingMonth = true }
+    private func followMonthSwipe(translation: CGSize) {
+        guard !isSlidingMonth else { return }
+        monthSlideOffset = CalendarMonthSwipe.followOffset(translation: translation)
+        if monthSlideOffset != 0 { isSwipingMonth = true }
+    }
+
+    private func finishMonthSwipe(translation: CGSize) {
+        guard !isSlidingMonth else { return }
+        // The cell's own tap lands around the same moment, so the swipe flag
+        // outlives the drag just long enough for that tap to be turned away.
+        Task {
+            try? await Task.sleep(nanoseconds: 100_000_000)
+            isSwipingMonth = false
+        }
+        let offset = CalendarMonthSwipe.monthOffset(translation: translation)
+        guard offset != 0 else {
+            withAnimation(.easeOut(duration: CalendarMonthSwipe.slideInDuration)) {
+                monthSlideOffset = 0
             }
-            .onEnded { value in
-                guard !isSlidingMonth else { return }
-                // The cell's own tap lands around the same moment, so the swipe flag
-                // outlives the drag just long enough for that tap to be turned away.
-                Task {
-                    try? await Task.sleep(nanoseconds: 100_000_000)
-                    isSwipingMonth = false
-                }
-                let offset = CalendarMonthSwipe.monthOffset(translation: value.translation)
-                guard offset != 0 else {
-                    withAnimation(.easeOut(duration: CalendarMonthSwipe.slideInDuration)) {
-                        monthSlideOffset = 0
-                    }
-                    return
-                }
-                slideMonth(by: offset)
-            }
+            return
+        }
+        slideMonth(by: offset)
     }
 
     private func slideMonth(by offset: Int) {

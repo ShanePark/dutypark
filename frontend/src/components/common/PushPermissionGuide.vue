@@ -185,6 +185,7 @@ onMounted(() => {
   position: fixed;
   inset: 0;
   z-index: 100;
+  backdrop-filter: blur(var(--dp-overlay-blur));
   display: flex;
   align-items: flex-end;
   justify-content: center;

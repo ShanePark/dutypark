@@ -115,11 +115,13 @@ watch(
 /* Dim background on mobile so the sheet stands out; transparent on desktop like NotificationDropdown */
 .friend-menu-overlay {
   background-color: var(--dp-overlay-scrim-soft);
+  backdrop-filter: blur(var(--dp-overlay-blur));
 }
 
 @media (min-width: 640px) {
   .friend-menu-overlay {
     background-color: transparent;
+    backdrop-filter: none;
   }
 }
 

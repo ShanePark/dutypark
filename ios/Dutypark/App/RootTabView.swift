@@ -527,7 +527,12 @@ struct RootTabView: View {
 
     private var notificationDropdownLayer: some View {
         ZStack(alignment: .topTrailing) {
-            DPColor.textOnLight.opacity(0.30)
+            DPColor.overlayScrim
+                .background {
+                    Rectangle()
+                        .fill(DPChrome.overlayMaterial)
+                        .opacity(DPChrome.overlayMaterialOpacity)
+                }
                 .ignoresSafeArea()
                 .contentShape(Rectangle())
                 .onTapGesture(perform: closeNotificationDropdown)

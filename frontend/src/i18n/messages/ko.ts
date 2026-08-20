@@ -680,13 +680,13 @@ export default {
       friends: '친구',
       noFriends: '아직 친구가 없습니다.',
       familyMember: '가족 구성원',
-      moreSchedules: '+{count}개 더보기',
     },
     actions: {
       addFriend: '친구 추가하기',
       pin: '고정',
       unpin: '고정 해제',
-      dragToReorder: '드래그하여 순서 변경',
+      scrollPrevAria: '이전 친구 보기',
+      scrollNextAria: '다음 친구 보기',
     },
     friendRequest: {
       title: '친구 요청',
@@ -699,7 +699,6 @@ export default {
       pinFailed: '친구 고정에 실패했습니다.',
       unpinFailed: '친구 고정 해제에 실패했습니다.',
       friendRequestFailed: '친구 요청을 보내는데 실패했습니다.',
-      reorderFailed: '친구 순서 변경에 실패했습니다.',
     },
   },
   friends: {

@@ -1,24 +1,6 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "home.action.moveDown" : {
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Move down" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "아래로 이동" } }
-      }
-    },
-    "home.action.moveUp" : {
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Move up" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "위로 이동" } }
-      }
-    },
-    "home.action.ok" : {
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "OK" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "확인" } }
-      }
-    },
     "home.duty" : {
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Duty" } },
@@ -43,12 +25,6 @@
         "ko" : { "stringUnit" : { "state" : "translated", "value" : "대시보드 정보를 불러오지 못했습니다." } }
       }
     },
-    "home.error.reorder" : {
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to update the friend order." } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 순서를 변경하지 못했습니다." } }
-      }
-    },
     "home.family" : {
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Family member" } },
@@ -65,12 +41,6 @@
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Loading..." } },
         "ko" : { "stringUnit" : { "state" : "translated", "value" : "불러오는 중..." } }
-      }
-    },
-    "home.moreSchedules" : {
-      "localizations" : {
-        "en" : { "stringUnit" : { "state" : "translated", "value" : "more" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "개 더보기" } }
       }
     },
     "home.myDashboard" : {

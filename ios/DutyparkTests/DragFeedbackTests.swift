@@ -73,12 +73,13 @@ final class DragFeedbackTests: XCTestCase {
         XCTAssertNotEqual(DPDragFeedback.lift, DPButtonFeedback.feedback(for: .primary))
     }
 
-    /// All three drag surfaces route their held-card state through the shared
+    /// Both remaining drag surfaces route their held-card state through the shared
     /// feedback modifier instead of firing haptics from inside a gesture callback,
     /// which is what keeps a lift to one haptic instead of one per drag update.
+    /// The home dashboard is no longer one of them: its friend rail does not
+    /// reorder, so it must not carry a drag haptic at all.
     func testEveryDragSurfaceUsesTheSharedFeedbackModifier() throws {
         let expectations = [
-            "Dutypark/Features/Home/HomeView.swift": "dpDragFeedback(dragID: draggedPinnedFriendID)",
             "Dutypark/Features/Social/SocialView.swift": "dpDragFeedback(dragID: draggedPinnedFriendID)",
             "Dutypark/Features/Todo/TodoView.swift": "dpDragFeedback(dragID: draggedTodoID)"
         ]
@@ -87,19 +88,25 @@ final class DragFeedbackTests: XCTestCase {
             let source = try Self.projectSource(at: path)
             XCTAssertTrue(source.contains(expected), "\(path) should apply \(expected)")
         }
+
+        let home = try Self.projectSource(at: "Dutypark/Features/Home/HomeView.swift")
+        XCTAssertFalse(home.contains("dpDragFeedback"), "The home friend rail has no drag to give feedback for")
     }
 
     /// The pinned friend drag keeps the pressed control alive under the finger, so
     /// the rationale for swallowing the lift that ends a drag has to stay next to
-    /// the code that does it.
+    /// the code that does it. Only friend management still drags.
     func testTapSuppressionRationaleStaysDocumented() throws {
-        let home = try Self.projectSource(at: "Dutypark/Features/Home/HomeView.swift")
         let social = try Self.projectSource(at: "Dutypark/Features/Social/SocialView.swift")
 
-        XCTAssertTrue(home.contains("A reorder drag keeps the pressed control alive underneath the finger"))
-        XCTAssertTrue(home.contains("private func consumeDragSuppression() -> Bool"))
         XCTAssertTrue(social.contains("A reorder drag keeps the pressed control alive underneath the finger"))
         XCTAssertTrue(social.contains("private func consumeDragSuppression(for memberID: MemberID?) -> Bool"))
+
+        let home = try Self.projectSource(at: "Dutypark/Features/Home/HomeView.swift")
+        XCTAssertFalse(
+            home.contains("consumeDragSuppression"),
+            "A rail that never drags has no lift to swallow"
+        )
     }
 
     private static func projectSource(at path: String) throws -> String {

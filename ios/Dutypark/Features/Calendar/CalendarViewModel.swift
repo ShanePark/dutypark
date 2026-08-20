@@ -240,7 +240,21 @@ final class CalendarViewModel: ObservableObject {
         )
         friends = includesCalendarParity ? [parityFriend] : []
         team = nil
-        dDays = []
+        // A page that already fits its screen cannot show a scroll either way, so the
+        // scroll test asks for enough D-Days to push the calendar past the bottom.
+        // The dates sit outside the grid so the cells themselves stay as they were.
+        dDays = ProcessInfo.processInfo.arguments.contains("-ui-testing-calendar-tall")
+            ? (1...6).map { index in
+                DDayDTO(
+                    id: Int64(900 + index),
+                    title: "D-Day \(index)",
+                    date: DateOnly(rawValue: String(format: "2030-01-%02d", index)),
+                    isPrivate: false,
+                    calc: 0,
+                    daysLeft: Int64(index)
+                )
+            }
+            : []
         let parityTodo = TodoDTO(
             id: "A11CE000-0000-4000-8000-000000000011",
             title: "Calendar detail check",

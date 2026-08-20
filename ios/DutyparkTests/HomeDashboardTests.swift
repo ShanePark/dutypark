@@ -9,6 +9,9 @@ final class HomeDashboardTests: XCTestCase {
         XCTAssertEqual(homeLocalized("home.offDuty", locale: Locale(identifier: "en")), "Off")
     }
 
+    /// The home rail no longer reorders, but the shared pinned-friend reorder
+    /// machinery still backs the friend management list, so its domain-level
+    /// coverage stays here rather than disappearing with the home drag.
     func testPinnedFriendLongPressUsesDeliberateActivationDelay() {
         XCTAssertEqual(DPPinnedFriendDragLayout.minimumPressDuration, 0.35)
         XCTAssertEqual(DPPinnedFriendDragLayout.maximumPressDistance, 10)
@@ -237,22 +240,116 @@ final class HomeDashboardTests: XCTestCase {
         XCTAssertEqual(viewModel.friendsDashboard, snapshot)
     }
 
-    func testOptimisticPinnedOrderPersistsInLoadedDashboard() throws {
-        let friends = try Self.decodeFriendsDashboard()
-        let viewModel = HomeViewModel(
-            service: HomeServiceStub(my: try Self.decodeMyDashboard(), friends: friends)
-        )
-        viewModel.replaceFriendsDashboardForMutation(friends)
+    /// The rail sizes its cards exactly like the friend tag selector, so three
+    /// cards plus a peek of the next one stay visible on every screen width.
+    func testFriendRailCardWidthMatchesTheTagSelectorFormula() {
+        for availableWidth in [200, 320, 375, 430, 800] as [CGFloat] {
+            XCTAssertEqual(
+                HomeFriendCardLayout.cardWidth(
+                    availableWidth: availableWidth,
+                    spacing: DPSpacing.small,
+                    minimum: 60,
+                    maximum: 88
+                ),
+                DPFriendTagSelectionLogic.cardWidth(
+                    availableWidth: availableWidth,
+                    spacing: DPSpacing.small,
+                    minimum: 60,
+                    maximum: 88
+                ),
+                "Rail card width must stay in step with the tag selector at \(availableWidth)pt"
+            )
+        }
+    }
 
-        viewModel.setPinnedFriendOrder([3, 2])
+    /// A friend without a team, or without a duty, must not shrink its card: both
+    /// lines always render text, which is what keeps every card the same height.
+    func testFriendCardAlwaysReservesTheTeamAndDutyLines() {
+        XCTAssertEqual(HomeFriendCardLayout.teamLine(for: "간호1팀"), "간호1팀")
+        XCTAssertFalse(HomeFriendCardLayout.teamLine(for: nil).isEmpty)
+        XCTAssertFalse(HomeFriendCardLayout.teamLine(for: "").isEmpty)
+        XCTAssertFalse(HomeFriendCardLayout.teamLine(for: "   ").isEmpty)
+    }
 
-        XCTAssertEqual(viewModel.sortedFriends.map(\.member.id), [3, 2, 4])
+    /// The duty line keeps the wording the full-width row used: a duty without a
+    /// type reads as off duty, and a missing duty reads as a dash.
+    func testFriendCardDutyLineKeepsTheOffDutyWording() {
+        let korean = Locale(identifier: "ko")
         XCTAssertEqual(
-            viewModel.sortedFriends.compactMap { friend in
-                friend.pinOrder.map { (friend.member.id, $0) }
-            }.map(\.0),
-            [3, 2]
+            HomeFriendCardLayout.dutyLine(for: Self.duty(type: "주간"), locale: korean),
+            "주간"
         )
+        XCTAssertEqual(
+            HomeFriendCardLayout.dutyLine(for: Self.duty(type: nil), locale: korean),
+            "휴무"
+        )
+        XCTAssertEqual(
+            HomeFriendCardLayout.dutyLine(for: Self.duty(type: "  "), locale: korean),
+            "휴무"
+        )
+        XCTAssertEqual(HomeFriendCardLayout.dutyLine(for: nil, locale: korean), "-")
+    }
+
+    /// D3: the home dashboard no longer reorders pinned friends, so none of the
+    /// drag machinery may survive on this screen.
+    func testHomeFriendRailDroppedTheReorderMachinery() throws {
+        let source = try Self.projectSource(at: "Dutypark/Features/Home/HomeView.swift")
+
+        for removed in [
+            "DPPinnedFriendReorderGesture",
+            "DPPinnedFriendDropTargetPreferenceKey",
+            "DPPinnedFriendLiveOrder",
+            "dpDragFeedback",
+            "dpDragSourceSlot",
+            "dpPressProgress",
+            "consumeDragSuppression",
+            "savePinnedOrder",
+            "setPinnedFriendOrder",
+            "home.action.moveUp",
+            "home.action.moveDown"
+        ] {
+            XCTAssertFalse(source.contains(removed), "HomeView should no longer reference \(removed)")
+        }
+    }
+
+    /// D1: every card is the same height, so no line on it may shrink its font —
+    /// a scaled-down `Text` also shrinks its line box and shortens the card.
+    func testHomeFriendCardLinesNeverShrinkTheirFont() throws {
+        let source = try Self.projectSource(at: "Dutypark/Features/Home/HomeView.swift")
+
+        XCTAssertFalse(
+            source.contains(".minimumScaleFactor("),
+            "A shrinking line breaks the rail's uniform card height"
+        )
+    }
+
+    /// D1: the friend list is a horizontal rail of top-aligned portrait cards.
+    func testHomeFriendListIsAHorizontalRail() throws {
+        let source = try Self.projectSource(at: "Dutypark/Features/Home/HomeView.swift")
+
+        XCTAssertTrue(source.contains("ScrollView(.horizontal, showsIndicators: false)"))
+        XCTAssertTrue(source.contains("LazyHStack(alignment: .top, spacing: DPSpacing.small)"))
+    }
+
+    private nonisolated static func duty(type: String?) -> DutyDTO {
+        DutyDTO(
+            year: 2026,
+            month: 8,
+            day: 20,
+            dutyType: type,
+            dutyColor: type == nil ? nil : "#2563EB",
+            isOff: type == nil,
+            dutyTypeId: nil,
+            source: .pattern
+        )
+    }
+
+    private nonisolated static func projectSource(at path: String) throws -> String {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: path)
+        return try String(contentsOf: sourceURL, encoding: .utf8)
     }
 
     func testSectionRetryWinsAgainstAnOlderFullRefreshForThatSection() async throws {

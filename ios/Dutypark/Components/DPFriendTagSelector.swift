@@ -59,6 +59,12 @@ nonisolated enum DPFriendTagSelectionLogic {
         selection.sorted()
     }
 
+    /// Bounds of one portrait card. Every portrait rail in the app shares them so the schedule
+    /// tag selector and the home friend list read as the same component rather than two that
+    /// happen to look alike.
+    static let minimumCardWidth: CGFloat = 60
+    static let maximumCardWidth: CGFloat = 88
+
     /// Width of one portrait card so three of them plus a peek of the next always fit `availableWidth`.
     /// The peek is what makes the sideways scroll discoverable; the clamp keeps cards legible in a
     /// labelled schedule column and stops them stretching in a roomy sheet.
@@ -105,8 +111,8 @@ struct DPFriendTagSelector: View {
     /// Icon sizes scale with the `.subheadline`-relative labels they sit next to.
     @ScaledMetric(relativeTo: .subheadline) private var collapsedIconSize: CGFloat = 16
     /// The rail sizes its cards from the width it actually gets, between these bounds.
-    @ScaledMetric(relativeTo: .subheadline) private var minimumCardWidth: CGFloat = 60
-    @ScaledMetric(relativeTo: .subheadline) private var maximumCardWidth: CGFloat = 88
+    @ScaledMetric(relativeTo: .subheadline) private var minimumCardWidth = DPFriendTagSelectionLogic.minimumCardWidth
+    @ScaledMetric(relativeTo: .subheadline) private var maximumCardWidth = DPFriendTagSelectionLogic.maximumCardWidth
     @ScaledMetric(relativeTo: .caption) private var chipAvatarSize: CGFloat = 22
 
     private var cardWidth: CGFloat {
@@ -195,10 +201,6 @@ struct DPFriendTagSelector: View {
 
     private var expandedSelector: some View {
         VStack(spacing: DPSpacing.small) {
-            if !selectedItems.isEmpty {
-                selectedStrip
-            }
-
             searchField
 
             if railItems.isEmpty {
@@ -211,7 +213,12 @@ struct DPFriendTagSelector: View {
             } else {
                 rail
             }
+
+            if !selectedItems.isEmpty {
+                selectedStrip
+            }
         }
+        .animation(.easeOut(duration: 0.2), value: selectedItems.isEmpty)
         .padding(10)
         .background(DPColor.backgroundCard)
         .clipShape(RoundedRectangle(cornerRadius: DPRadius.large))
@@ -252,7 +259,7 @@ struct DPFriendTagSelector: View {
 
     private var rail: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            LazyHStack(spacing: DPSpacing.small) {
+            LazyHStack(alignment: .top, spacing: DPSpacing.small) {
                 ForEach(railItems) { item in
                     card(item)
                 }
@@ -362,18 +369,17 @@ struct DPFriendTagSelector: View {
                         checkBadge
                     }
                 }
+                // No `minimumScaleFactor` on either line: a shrunk `Text` also shrinks its
+                // line box, so a long name or team name would produce a shorter card.
+                // Truncation keeps every line — and so every card — the same height.
                 Text(item.name)
                     .font(DPFont.bold(size: 12, relativeTo: .caption))
                     .foregroundStyle(selected ? DPColor.accent : DPColor.textPrimary)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.8)
-                if let team = item.team, !team.isEmpty {
-                    Text(team)
-                        .font(DPFont.light(size: 10, relativeTo: .caption2))
-                        .foregroundStyle(DPColor.textMuted)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                }
+                Text(teamLine(item))
+                    .font(DPFont.light(size: 10, relativeTo: .caption2))
+                    .foregroundStyle(DPColor.textMuted)
+                    .lineLimit(1)
             }
             .padding(.vertical, 6)
             .padding(.horizontal, DPSpacing.extraSmall)
@@ -391,6 +397,14 @@ struct DPFriendTagSelector: View {
         .accessibilityLabel(item.team.map { "\(item.name), \($0)" } ?? item.name)
         .accessibilityValue(selected ? localized("friendTag.selectedState") : localized("friendTag.notSelectedState"))
         .accessibilityAddTraits(selected ? .isSelected : [])
+    }
+
+    /// Every card spends the team line, so a friend without a team keeps the slot blank
+    /// instead of shrinking the card out of line with its neighbours. The blank slot is a
+    /// non-breaking space because an empty `Text` collapses to no height at all.
+    private func teamLine(_ item: DPFriendTagItem) -> String {
+        guard let team = item.team, !team.isEmpty else { return "\u{00A0}" }
+        return team
     }
 
     private var checkBadge: some View {

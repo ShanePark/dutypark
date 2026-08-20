@@ -24,7 +24,6 @@ const { t } = useI18n()
     size="lg"
     height="default"
     rounded
-    overlay-class="backdrop-blur-sm"
     panel-class="border border-dp-border-primary"
     :panel-style="{ backgroundColor: 'var(--dp-bg-card)' }"
     @close="emit('close')"
