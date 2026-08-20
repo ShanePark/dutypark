@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.publiccontent.controller
 
 import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
+import com.tistory.shanepark.dutypark.publiccontent.domain.BannedWordsResponse
 import com.tistory.shanepark.dutypark.publiccontent.domain.GuideContentResponse
 import com.tistory.shanepark.dutypark.publiccontent.domain.ReleaseNotesResponse
 import com.tistory.shanepark.dutypark.publiccontent.service.PublicContentService
@@ -41,6 +42,15 @@ class PublicContentController(
         return ResponseEntity.ok()
             .cacheControl(PUBLIC_CACHE_CONTROL)
             .eTag("release-notes-${content.contentVersion}-$locale-$page-$size")
+            .body(content)
+    }
+
+    @GetMapping("/banned-words")
+    fun getBannedWords(): ResponseEntity<BannedWordsResponse> {
+        val content = publicContentService.getBannedWords()
+        return ResponseEntity.ok()
+            .cacheControl(PUBLIC_CACHE_CONTROL)
+            .eTag("banned-words-${content.contentVersion}")
             .body(content)
     }
 

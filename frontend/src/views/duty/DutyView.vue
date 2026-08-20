@@ -36,11 +36,13 @@ import type { DutyCalendarDay, TeamDto, DDayDto, DDaySaveDto, HolidayDto, Taggab
 import type { LocalTodo, DutyType, Schedule, LocalDDay, CalendarDay, OtherDuty, DutyTypeWithCount, DutyDay, TodoDueItem } from './dutyViewTypes'
 
 import { useAuthStore } from '@/stores/auth'
+import { useContentFilterStore } from '@/stores/contentFilter'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const { showError, confirm, confirmDelete, toastSuccess } = useSwal()
+const contentFilterStore = useContentFilterStore()
 const { goBack } = useNavigateBack()
 const { t } = useI18n()
 
@@ -944,6 +946,11 @@ async function handleTodoUpdate(data: {
   attachmentSessionId?: string
   orderedAttachmentIds?: string[]
 }) {
+  if (contentFilterStore.isBlocked(data.title, data.content)) {
+    showError(t('contentFilter.blocked'))
+    return
+  }
+
   try {
     const updatedTodo = await todoApi.updateTodo(data.id, {
       title: data.title,

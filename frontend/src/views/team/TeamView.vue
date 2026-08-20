@@ -17,6 +17,7 @@ import { useAuthStore } from '@/stores/auth'
 import { teamApi } from '@/api/team'
 import { dutyApi } from '@/api/duty'
 import { useSwal } from '@/composables/useSwal'
+import { useContentFilterStore } from '@/stores/contentFilter'
 import { isLightColor } from '@/utils/color'
 import BaseModal from '@/components/common/BaseModal.vue'
 import CalendarMonthNavigator from '@/components/common/CalendarMonthNavigator.vue'
@@ -36,6 +37,7 @@ const router = useRouter()
 const authStore = useAuthStore()
 const { t } = useI18n()
 const { showError, confirmDelete, toastSuccess } = useSwal()
+const contentFilterStore = useContentFilterStore()
 
 const loading = ref(false)
 const shiftLoading = ref(false)
@@ -330,6 +332,11 @@ function closeScheduleModal() {
 async function saveSchedule() {
   if (!team.value) return
   if (isTeamScheduleTitleMissing.value || isTeamScheduleDateRangeInvalid.value) {
+    return
+  }
+
+  if (contentFilterStore.isBlocked(scheduleForm.value.content, scheduleForm.value.description)) {
+    showError(t('contentFilter.blocked'))
     return
   }
 

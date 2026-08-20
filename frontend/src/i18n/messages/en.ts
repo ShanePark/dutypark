@@ -365,6 +365,9 @@ export default {
     },
   },
   apiErrors,
+  contentFilter: {
+    blocked: 'This includes wording that violates the community guidelines. Please revise it before saving.',
+  },
   report: {
     actions: {
       menu: 'More',

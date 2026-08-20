@@ -100,6 +100,35 @@ class PublicContentServiceTest {
         assertThat(beyondLastPage.hasNext).isFalse()
     }
 
+    @Test
+    fun `banned words are served in the normalized form clients match against`() {
+        val bannedWords = service.getBannedWords()
+
+        assertThat(bannedWords.schemaVersion).isEqualTo(1)
+        assertThat(bannedWords.contentVersion).isEqualTo(sha256("public-content/banned-words.json"))
+        assertThat(bannedWords.words).isNotEmpty
+        assertThat(bannedWords.words).doesNotHaveDuplicates()
+        assertThat(bannedWords.words).allMatch { word -> word.isNotBlank() }
+        assertThat(bannedWords.words).allMatch { word -> word == word.lowercase() }
+        assertThat(bannedWords.words).allMatch { word -> word.all(Char::isLetterOrDigit) }
+    }
+
+    @Test
+    fun `banned words exclude everyday superstrings that substring matching would flag`() {
+        val words = service.getBannedWords().words
+
+        // Clients match by substring, so these would block ordinary text such as
+        // "보지 못했다", "자지 않았다", "grape", "title", "cocktail" or "assassin".
+        assertThat(words).doesNotContain("보지", "자지", "미친", "씹", "rape", "tit", "cock", "ass", "sex")
+    }
+
+    @Test
+    fun `no banned word contains another so the list stays minimal`() {
+        val words = service.getBannedWords().words
+
+        assertThat(words.filter { word -> words.any { other -> other != word && word.contains(other) } }).isEmpty()
+    }
+
     private fun sha256(path: String): String {
         val bytes = ClassPathResource(path).inputStream.use { it.readBytes() }
         return MessageDigest.getInstance("SHA-256")

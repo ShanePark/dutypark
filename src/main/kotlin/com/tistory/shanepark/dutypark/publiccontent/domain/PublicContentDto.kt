@@ -70,6 +70,12 @@ data class ReleaseNoteItem(
     val changes: List<String>,
 )
 
+data class BannedWordsResponse(
+    val schemaVersion: Int,
+    val contentVersion: String,
+    val words: List<String>,
+)
+
 internal data class GuideContentSource(
     val schemaVersion: Int,
     val visuals: Map<String, GuideSectionVisual>,
@@ -144,4 +150,10 @@ internal data class ReleaseNoteCopy(
     val title: String,
     val summary: String,
     val changes: List<String>,
+)
+
+
+internal data class BannedWordsSource(
+    val schemaVersion: Int,
+    val words: List<String>,
 )

@@ -14,6 +14,7 @@ import {
 } from '@/api/member'
 import { authApi } from '@/api/auth'
 import { useSwal } from '@/composables/useSwal'
+import { useContentFilterStore } from '@/stores/contentFilter'
 import { useLogout } from '@/composables/useLogout'
 import { useKakao } from '@/composables/useKakao'
 import { useNaver } from '@/composables/useNaver'
@@ -64,6 +65,7 @@ const router = useRouter()
 const authStore = useAuthStore()
 const { t } = useI18n()
 const { showSuccess, showError, showWarning, showInfo, confirm, confirmDelete, toastSuccess } = useSwal()
+const contentFilterStore = useContentFilterStore()
 const { logoutAndRedirect } = useLogout()
 
 // Managed members (accounts I manage)
@@ -101,6 +103,10 @@ async function createAuxiliaryAccount() {
   }
   if (name.length > 10) {
     showError(t('member.auxiliary.validation.max'))
+    return
+  }
+  if (contentFilterStore.isBlocked(name)) {
+    showError(t('contentFilter.blocked'))
     return
   }
 

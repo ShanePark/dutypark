@@ -60,7 +60,7 @@ struct TeamView: View {
         ) {
             Button(teamLocalized("team.common.confirm"), role: .cancel) {}
         } message: {
-            Text("team.common.error", tableName: "Team")
+            Text(viewModel.errorMessage ?? teamLocalized("team.common.error"))
         }
         .fullScreenCover(
             isPresented: Binding(
@@ -149,7 +149,7 @@ struct TeamView: View {
                     ) {
                         Button(teamLocalized("team.common.confirm"), role: .cancel) {}
                     } message: {
-                        Text("team.common.error", tableName: "Team")
+                        Text(viewModel.errorMessage ?? teamLocalized("team.common.error"))
                     }
                 }
                 .interactiveDismissDisabled(scheduleDeletionIsWorking)

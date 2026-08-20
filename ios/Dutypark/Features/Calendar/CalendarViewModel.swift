@@ -51,15 +51,18 @@ final class CalendarViewModel: ObservableObject {
     @Published var dutyBatchMessage: String?
     private var searchPage = 0
     private let initialScheduleID: ScheduleID?
+    private let contentFilter: ContentFilterStore
 
     init(
         repository: CalendarRepositoryProtocol = CalendarRepository(),
         now: Date = Date(),
         memberID: MemberID? = nil,
         date: DateOnly? = nil,
-        scheduleID: ScheduleID? = nil
+        scheduleID: ScheduleID? = nil,
+        contentFilter: ContentFilterStore = .shared
     ) {
         self.repository = repository
+        self.contentFilter = contentFilter
         initialScheduleID = scheduleID
         let initialDate = date.flatMap(CalendarDateSupport.date(from:)) ?? now
         let parts = CalendarDateSupport.calendar.dateComponents([.year, .month], from: initialDate)
@@ -492,6 +495,10 @@ final class CalendarViewModel: ObservableObject {
         guard canEdit, let memberID = targetMemberID else { return false }
         let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, trimmed.count <= 50, end >= start else { return false }
+        guard !contentFilter.isBlocked(trimmed, description) else {
+            errorMessage = CalendarLocalization.text("calendar.error.contentFilter")
+            return false
+        }
         do {
             _ = try await repository.saveSchedule(ScheduleSaveDTO(
                 id: existing?.id, memberId: memberID, content: trimmed, description: description,

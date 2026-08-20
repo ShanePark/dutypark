@@ -1,5 +1,7 @@
 package com.tistory.shanepark.dutypark.publiccontent.service
 
+import com.tistory.shanepark.dutypark.publiccontent.domain.BannedWordsResponse
+import com.tistory.shanepark.dutypark.publiccontent.domain.BannedWordsSource
 import com.tistory.shanepark.dutypark.publiccontent.domain.GuideCard
 import com.tistory.shanepark.dutypark.publiccontent.domain.GuideContentResponse
 import com.tistory.shanepark.dutypark.publiccontent.domain.GuideContentSource
@@ -13,6 +15,7 @@ import org.springframework.stereotype.Service
 import tools.jackson.databind.json.JsonMapper
 import tools.jackson.module.kotlin.readValue
 import java.security.MessageDigest
+import java.text.Normalizer
 
 @Service
 class PublicContentService(
@@ -23,6 +26,9 @@ class PublicContentService(
     private val releaseNotesResource = load<ReleaseNotesSource>(RELEASE_NOTES_RESOURCE).also {
         validateReleaseNotes(it.content)
     }
+    private val bannedWordsResource = load<BannedWordsSource>(BANNED_WORDS_RESOURCE).let { loaded ->
+        loaded.copy(content = loaded.content.copy(words = loaded.content.words.map(::normalizeForMatching)))
+    }.also { validateBannedWords(it.content) }
 
     fun getGuide(locale: String): GuideContentResponse {
         val guide = guideResource.content
@@ -105,6 +111,12 @@ class PublicContentService(
         )
     }
 
+    fun getBannedWords(): BannedWordsResponse = BannedWordsResponse(
+        schemaVersion = bannedWordsResource.content.schemaVersion,
+        contentVersion = bannedWordsResource.contentVersion,
+        words = bannedWordsResource.content.words,
+    )
+
     private inline fun <reified T> load(path: String): LoadedResource<T> = try {
         val bytes = ClassPathResource(path).inputStream.use { it.readBytes() }
         LoadedResource(
@@ -179,6 +191,27 @@ class PublicContentService(
         }
     }
 
+    /**
+     * Clients match a banned word as a substring of the same normalization, so the list is stored in that
+     * normalized form and must stay flat: an entry containing another entry never matches on its own, and a
+     * short entry that occurs inside everyday text would block it everywhere.
+     */
+    private fun validateBannedWords(source: BannedWordsSource) {
+        check(source.schemaVersion == SUPPORTED_SCHEMA_VERSION)
+        check(source.words.isNotEmpty())
+        check(source.words.all(String::isNotBlank)) { "Banned words must not normalize to an empty string" }
+        check(source.words.distinct().size == source.words.size) { "Banned words contain a duplicate" }
+        source.words.forEach { word ->
+            val redundant = source.words.firstOrNull { other -> other != word && word.contains(other) }
+            check(redundant == null) { "Banned word '$word' is already matched by '$redundant'" }
+        }
+    }
+
+    private fun normalizeForMatching(value: String): String = Normalizer
+        .normalize(value, Normalizer.Form.NFKC)
+        .lowercase()
+        .filter(Char::isLetterOrDigit)
+
     private fun validateReleaseNotes(source: ReleaseNotesSource) {
         check(source.schemaVersion == SUPPORTED_SCHEMA_VERSION)
         check(source.locales.keys == SUPPORTED_LOCALES)
@@ -211,6 +244,7 @@ class PublicContentService(
         private val SUPPORTED_LOCALES = setOf("ko", "en")
         private const val GUIDE_RESOURCE = "public-content/guide.json"
         private const val RELEASE_NOTES_RESOURCE = "public-content/release-notes.json"
+        private const val BANNED_WORDS_RESOURCE = "public-content/banned-words.json"
 
         /** Closed vocabularies shared with every client's icon/colour mapping table. */
         private val TONE_KEYS = setOf(

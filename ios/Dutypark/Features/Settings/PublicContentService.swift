@@ -3,6 +3,7 @@ import Foundation
 nonisolated protocol PublicContentServicing: Sendable {
     func guide(locale: String) async throws -> PublicGuideContent
     func releaseNotes(locale: String, page: Int, size: Int) async throws -> PublicReleaseNotesPage
+    func bannedWords() async throws -> PublicBannedWords
 }
 
 nonisolated final class PublicContentService: PublicContentServicing, Sendable {
@@ -32,6 +33,10 @@ nonisolated final class PublicContentService: PublicContentServicing, Sendable {
                 URLQueryItem(name: "size", value: String(size)),
             ]
         )
+    }
+
+    func bannedWords() async throws -> PublicBannedWords {
+        try await get("public-content/banned-words", queryItems: [])
     }
 
     private func get<Response: PublicContentEnvelope>(

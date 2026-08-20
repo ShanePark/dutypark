@@ -7,6 +7,7 @@ import { ListTodo, Clock, CheckCircle2, Lightbulb, LayoutGrid, Plus } from 'luci
 import { todoApi } from '@/api/todo'
 import { friendApi } from '@/api/member'
 import { useSwal } from '@/composables/useSwal'
+import { useContentFilterStore } from '@/stores/contentFilter'
 import { useDragClickGuard } from '@/composables/useDragClickGuard'
 import HelpButton from '@/components/common/HelpButton.vue'
 import HelpModal from '@/components/common/HelpModal.vue'
@@ -21,6 +22,7 @@ import type { TaggableFriend, Todo, TodoBoard, TodoStatus } from '@/types'
 
 const { t } = useI18n()
 const { showSuccess, showError, confirm, confirmDelete, toastSuccess } = useSwal()
+const contentFilterStore = useContentFilterStore()
 const dragClickGuard = useDragClickGuard()
 
 const isHelpModalOpen = ref(false)
@@ -267,6 +269,11 @@ async function handleAddTodo(data: {
   attachmentSessionId?: string
   orderedAttachmentIds?: string[]
 }) {
+  if (contentFilterStore.isBlocked(data.title, data.content)) {
+    showError(t('contentFilter.blocked'))
+    return
+  }
+
   try {
     await todoApi.createTodo({
       title: data.title,
@@ -296,6 +303,11 @@ async function handleUpdateTodo(data: {
   attachmentSessionId?: string
   orderedAttachmentIds?: string[]
 }) {
+  if (contentFilterStore.isBlocked(data.title, data.content)) {
+    showError(t('contentFilter.blocked'))
+    return
+  }
+
   try {
     await todoApi.updateTodo(data.id, {
       title: data.title,

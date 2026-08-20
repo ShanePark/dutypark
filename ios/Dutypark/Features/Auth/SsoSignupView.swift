@@ -415,6 +415,10 @@ struct SsoSignupView: View {
     private func submit() {
         guard canSubmit, let terms = policies?.terms, let privacy = policies?.privacy else { return }
         let trimmedName = username.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !ContentFilterStore.shared.isBlocked(trimmedName) else {
+            errorKey = "auth.oauth.signup.contentFilter"
+            return
+        }
         isNameFocused = false
         isWorking = true
         errorKey = nil

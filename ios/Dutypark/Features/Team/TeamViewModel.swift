@@ -15,18 +15,26 @@ final class TeamViewModel: ObservableObject {
     @Published private(set) var shifts: [DutyByShiftDTO] = []
     @Published var selectedIndex = 0
     @Published var showsError = false
+    /// Set only when the failure carries its own message; the alert falls back to the generic one.
+    @Published private(set) var errorMessage: String?
     @Published var scheduleDraft: TeamScheduleDraft?
     @Published var schedulePendingDeletion: TeamScheduleDTO?
 
     private let repository: TeamRepository
+    private let contentFilter: ContentFilterStore
     private var memberID: MemberID?
     private(set) var hasLoaded = false
 
     var year: Int
     var month: Int
 
-    init(repository: TeamRepository = TeamRepository(), now: Date = Date()) {
+    init(
+        repository: TeamRepository = TeamRepository(),
+        now: Date = Date(),
+        contentFilter: ContentFilterStore = .shared
+    ) {
         self.repository = repository
+        self.contentFilter = contentFilter
         let components = Calendar.current.dateComponents([.year, .month], from: now)
         year = components.year ?? 2000
         month = components.month ?? 1
@@ -150,7 +158,7 @@ final class TeamViewModel: ObservableObject {
             hasLoaded = true
         } catch {
             loadFailed = true
-            showsError = true
+            presentError()
         }
     }
 
@@ -256,6 +264,10 @@ final class TeamViewModel: ObservableObject {
 
     func saveSchedule(_ draft: TeamScheduleDraft) async {
         guard let team, draft.isValid else { return }
+        guard !contentFilter.isBlocked(draft.content, draft.description) else {
+            presentError(teamLocalized("team.common.contentFilterError"))
+            return
+        }
         isWorking = true
         defer { isWorking = false }
         do {
@@ -276,7 +288,7 @@ final class TeamViewModel: ObservableObject {
             applySavedSchedule(savedSchedule)
             scheduleDraft = nil
         } catch {
-            showsError = true
+            presentError()
         }
     }
 
@@ -291,8 +303,13 @@ final class TeamViewModel: ObservableObject {
             }
             schedulePendingDeletion = nil
         } catch {
-            showsError = true
+            presentError()
         }
+    }
+
+    private func presentError(_ message: String? = nil) {
+        errorMessage = message
+        showsError = true
     }
 
     func duty(for day: TeamDayDTO) -> DutyDTO? {
@@ -317,7 +334,7 @@ final class TeamViewModel: ObservableObject {
             duties = try await repository.duties(memberID: memberID, year: year, month: month)
             await loadShifts()
         } catch {
-            showsError = true
+            presentError()
         }
     }
 
@@ -330,7 +347,7 @@ final class TeamViewModel: ObservableObject {
             shifts = try await repository.shifts(year: day.year, month: day.month, day: day.day)
         } catch {
             shifts = []
-            showsError = true
+            presentError()
         }
     }
 

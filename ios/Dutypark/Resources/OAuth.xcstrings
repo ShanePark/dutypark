@@ -49,6 +49,12 @@
         "ko" : { "stringUnit" : { "state" : "translated", "value" : "동의합니다 (필수)" } }
       }
     },
+    "auth.oauth.signup.contentFilter" : {
+      "localizations" : {
+        "en" : { "stringUnit" : { "state" : "translated", "value" : "This includes wording that violates the community guidelines. Please revise it before saving." } },
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "커뮤니티 가이드라인에 어긋나는 표현이 포함되어 있어 저장할 수 없습니다. 내용을 수정해 주세요." } }
+      }
+    },
     "auth.oauth.signup.discard.action" : {
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Discard" } },

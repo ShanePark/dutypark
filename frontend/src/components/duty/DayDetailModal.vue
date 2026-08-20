@@ -10,6 +10,7 @@ import type { NormalizedAttachment, TaggableFriend } from '@/types'
 import { normalizeAttachment } from '@/api/attachment'
 import { useSwal } from '@/composables/useSwal'
 import { useAiScheduleConsentStore } from '@/stores/aiScheduleConsent'
+import { useContentFilterStore } from '@/stores/contentFilter'
 import {
   getAiScheduleConsentAction,
   isAiTimeParsingCandidate,
@@ -18,6 +19,7 @@ import { VISIBILITY_ICONS, VISIBILITY_COLORS, type CalendarVisibility } from '@/
 import { effectiveEndDateTime, isRangeInvalid } from '@/utils/scheduleDateTime'
 
 const { showWarning, showError, confirm, choose } = useSwal()
+const contentFilterStore = useContentFilterStore()
 const aiConsentStore = useAiScheduleConsentStore()
 
 interface Schedule {
@@ -405,6 +407,11 @@ async function saveSchedule() {
 
   if (scheduleFormRef.value?.isUploading()) {
     showWarning(t('duty.schedule.warnings.uploadInProgress'))
+    return
+  }
+
+  if (contentFilterStore.isBlocked(newSchedule.value.content, newSchedule.value.description)) {
+    showError(t('contentFilter.blocked'))
     return
   }
 

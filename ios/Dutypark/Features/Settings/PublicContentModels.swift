@@ -4,6 +4,12 @@ nonisolated protocol PublicContentEnvelope: Decodable, Sendable {
     var schemaVersion: Int { get }
 }
 
+nonisolated struct PublicBannedWords: PublicContentEnvelope, Equatable {
+    let schemaVersion: Int
+    let contentVersion: String
+    let words: [String]
+}
+
 nonisolated struct PublicGuideContent: PublicContentEnvelope, Equatable {
     let schemaVersion: Int
     let contentVersion: String

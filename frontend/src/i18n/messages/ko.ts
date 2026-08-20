@@ -367,6 +367,9 @@ export default {
     },
   },
   apiErrors,
+  contentFilter: {
+    blocked: '커뮤니티 가이드라인에 어긋나는 표현이 포함되어 있어 저장할 수 없습니다. 내용을 수정해 주세요.',
+  },
   report: {
     actions: {
       menu: '더 보기',

@@ -98,6 +98,7 @@ nonisolated struct SettingsLoadPlan: Equatable, Sendable {
 @MainActor
 final class SettingsViewModel: ObservableObject {
     private let service: SettingsService
+    private let contentFilter: ContentFilterStore
 
     @Published private(set) var member: MemberDTO?
     @Published private(set) var familyMembers: [MemberPreviewDTO] = []
@@ -116,8 +117,12 @@ final class SettingsViewModel: ObservableObject {
     @Published var noticeKey: String?
     @Published var noticeIsError = false
 
-    init(service: SettingsService = SettingsService()) {
+    init(
+        service: SettingsService = SettingsService(),
+        contentFilter: ContentFilterStore = .shared
+    ) {
         self.service = service
+        self.contentFilter = contentFilter
     }
 
     var availableManagers: [MemberPreviewDTO] {
@@ -277,6 +282,10 @@ final class SettingsViewModel: ObservableObject {
     }
 
     func createAuxiliaryAccount(name: String) async {
+        guard !contentFilter.isBlocked(name) else {
+            showError("settings.error.contentFilter")
+            return
+        }
         await work(success: "settings.auxiliary.created") {
             let created = try await service.createAuxiliaryAccount(name: name)
             managedMembers.append(created)

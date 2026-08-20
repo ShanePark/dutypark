@@ -6,6 +6,7 @@ import { authApi } from '@/api/auth'
 import { policyApi, type CurrentPoliciesDto } from '@/api/policy'
 import { useAuthStore } from '@/stores/auth'
 import { useSwal } from '@/composables/useSwal'
+import { useContentFilterStore } from '@/stores/contentFilter'
 import CharacterCounter from '@/components/common/CharacterCounter.vue'
 import PolicyModal from '@/components/common/PolicyModal.vue'
 import { renderPolicyMarkdown } from '@/utils/policyMarkdown'
@@ -16,6 +17,7 @@ const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const { showError } = useSwal()
+const contentFilterStore = useContentFilterStore()
 const { t } = useI18n()
 
 const uuid = ref('')
@@ -144,6 +146,12 @@ async function handleSubmit() {
   }
 
   if (!isFormValid.value || isLoading.value) return
+
+  if (contentFilterStore.isBlocked(trimmedUsername.value)) {
+    showError(t('contentFilter.blocked'))
+    usernameInput.value?.focus()
+    return
+  }
 
   isLoading.value = true
   try {
