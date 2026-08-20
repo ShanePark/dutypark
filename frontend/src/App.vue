@@ -3,8 +3,10 @@ import { onMounted, ref, watch } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import AppLayout from '@/components/layout/AppLayout.vue'
 import { usePushNotification } from '@/composables/usePushNotification'
+import { useContentFilterStore } from '@/stores/contentFilter'
 
 const authStore = useAuthStore()
+const contentFilterStore = useContentFilterStore()
 const pushNotification = usePushNotification()
 const hasAttemptedPush = ref(false)
 
@@ -26,6 +28,7 @@ const tryAutoSubscribe = async () => {
 }
 
 onMounted(async () => {
+  void contentFilterStore.load()
   await authStore.initialize()
   await preparePushServiceWorker()
   if (authStore.isLoggedIn) {

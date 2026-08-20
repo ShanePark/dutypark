@@ -3,6 +3,7 @@ import SwiftUI
 struct SocialView: View {
     @StateObject private var viewModel: SocialViewModel
     @State private var isSearchPresented = false
+    @State private var isHelpPresented = false
     @State private var candidate: SearchCandidate?
     @State private var confirmation: SocialConfirmation?
     @State private var isPerformingConfirmation = false
@@ -46,10 +47,13 @@ struct SocialView: View {
                 friendContent
             }
         }
-        .background(DPColor.backgroundPrimary.ignoresSafeArea())
-        // The hosting stack owns the title: the dashboard pushes this screen under the
-        // brand mark, while the "more" menu pushes it under its own menu entry.
+        .background(DPColor.backgroundSecondary.ignoresSafeArea())
+        // The screen names itself once, in the navigation bar it is pushed under, and
+        // hangs its actions there as well. Pushed from the dashboard that bar held a
+        // back button and nothing else, while the content below repeated the name.
+        .navigationTitle(social("social.title"))
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar { headerActions }
         .task { await viewModel.load() }
         .refreshable { await viewModel.refresh() }
         .overlay {
@@ -74,6 +78,11 @@ struct SocialView: View {
                     uiTestingProbes
                 }
 #endif
+            }
+        }
+        .fullScreenCover(isPresented: $isHelpPresented) {
+            DPModalOverlay(onDismiss: { isHelpPresented = false }) { availableSize, dismiss in
+                SocialHelpModal(maximumHeight: availableSize.height, dismiss: dismiss)
             }
         }
         .fullScreenCover(isPresented: $isSearchPresented) {
@@ -147,8 +156,6 @@ struct SocialView: View {
             // height unstable once a panel followed the friend list, and the
             // pinned drop-target geometry then re-published forever.
             VStack(spacing: DPSpacing.large) {
-                pageHeader
-
                 if viewModel.hasPendingRequests {
                     requestsPanel
                 }
@@ -177,54 +184,28 @@ struct SocialView: View {
         .accessibilityIdentifier("social.list")
     }
 
-    private var pageHeader: some View {
-        HStack(spacing: DPSpacing.compact) {
-            Image(systemName: "person.badge.plus")
-                .font(.system(size: 18, weight: .medium))
-                .foregroundStyle(DPColor.textSecondary)
-                .frame(width: 36, height: 36)
-                .background(DPColor.backgroundTertiary)
-                .clipShape(RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous))
-                .overlay {
-                    RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous)
-                        .stroke(DPColor.borderPrimary, lineWidth: 1)
-                }
-
-            Text(social("social.title"))
-                .font(DPFont.bold(size: 18, relativeTo: .headline))
-                .foregroundStyle(DPColor.textPrimary)
-                .lineLimit(1)
-
-            Spacer(minLength: DPSpacing.small)
+    // Help and add friend live in the navigation bar next to the screen's name, so
+    // the list starts at the top of the content instead of under a header row that
+    // said the same thing as the bar above it.
+    @ToolbarContentBuilder
+    private var headerActions: some ToolbarContent {
+        ToolbarItemGroup(placement: .topBarTrailing) {
+            DPHelpButton(label: social("social.help.open")) {
+                withoutPresentationAnimation { isHelpPresented = true }
+            }
+            .accessibilityIdentifier("social.help")
 
             Button {
                 withoutPresentationAnimation { isSearchPresented = true }
             } label: {
-                HStack(spacing: DPSpacing.small) {
-                    Image(systemName: "person.badge.plus")
-                        .font(.system(size: 16, weight: .semibold))
-                    Text(social("social.action.addFriend"))
-                        .font(DPFont.light(size: 14, relativeTo: .subheadline))
-                        .lineLimit(1)
-                }
-                .foregroundStyle(DPColor.textOnDark)
-                .padding(.horizontal, DPSpacing.medium)
-                .frame(minHeight: DPSize.minimumTouchTarget)
-                .background {
-                    LinearGradient(
-                        colors: [DPColor.surfaceStrong, DPColor.surfaceStrongAlt],
-                        startPoint: .leading,
-                        endPoint: .trailing
-                    )
-                }
-                .clipShape(RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous))
-                .shadow(color: Color.black.opacity(0.12), radius: 4, y: 2)
+                Image(systemName: "person.badge.plus")
+                    .frame(minWidth: DPSize.minimumTouchTarget, minHeight: DPSize.minimumTouchTarget)
+                    .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .accessibilityLabel(social("social.action.addFriend"))
             .accessibilityIdentifier("social.addFriend")
             .disabled(isMutationInFlight)
         }
-        .frame(minHeight: DPSize.minimumTouchTarget)
     }
 
     private var requestsPanel: some View {

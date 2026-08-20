@@ -39,6 +39,7 @@ class InquiryRateLimitServiceTest {
         rateLimitConfig = InquiryRateLimitConfig(maxPerHour = 5),
         clock = clock,
         eventPublisher = mock<ApplicationEventPublisher>(),
+        slackNotifier = mock<InquirySlackNotifier>(),
     )
 
     @Test

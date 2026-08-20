@@ -9,7 +9,6 @@ final class SocialConnectionVisualUITests: XCTestCase {
     func testCapturesConnectedProviderAndCenteredUnlinkConfirmation() {
         let app = XCUIApplication()
         app.launchArguments += [
-            "-dp-language", "ko",
             "-dp-theme", "dark",
             "-AppleLanguages", "(ko)",
             "-AppleLocale", "ko_KR",
@@ -77,7 +76,6 @@ final class SocialConnectionVisualUITests: XCTestCase {
     func testDisconnectedProviderRowOffersConnectInsteadOfManagement() {
         let app = XCUIApplication()
         app.launchArguments += [
-            "-dp-language", "ko",
             "-dp-theme", "dark",
             "-AppleLanguages", "(ko)",
             "-AppleLocale", "ko_KR",
@@ -118,7 +116,6 @@ final class SocialConnectionVisualUITests: XCTestCase {
     func testAppleUnlinkPanelsExplainAuthorizationRevocation() {
         let app = XCUIApplication()
         app.launchArguments += [
-            "-dp-language", "ko",
             "-dp-theme", "dark",
             "-AppleLanguages", "(ko)",
             "-AppleLocale", "ko_KR",

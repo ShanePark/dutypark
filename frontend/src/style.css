@@ -205,6 +205,7 @@
     --dp-overlay-scrim-medium: rgba(0, 0, 0, 0.4);
     --dp-overlay-scrim-strong: rgba(0, 0, 0, 0.6);
     --dp-overlay-transparent: rgba(0, 0, 0, 0);
+    --dp-overlay-blur: 4px;
     --dp-chip-on-dark-bg: rgba(255, 255, 255, 0.9);
 
     --dp-footer-active-bg: rgba(255, 255, 255, 0.25);
@@ -305,6 +306,7 @@
     --dp-overlay-scrim-medium: rgba(0, 0, 0, 0.4);
     --dp-overlay-scrim-strong: rgba(0, 0, 0, 0.6);
     --dp-overlay-transparent: rgba(0, 0, 0, 0);
+    --dp-overlay-blur: 4px;
     --dp-chip-on-dark-bg: rgba(255, 255, 255, 0.9);
 
     --dp-footer-active-bg: rgba(255, 255, 255, 0.25);
@@ -735,8 +737,9 @@ html.dark {
 
 /* Modal */
 .modal-overlay {
-    @apply fixed inset-0 flex justify-center bg-dp-overlay-dark/50;
+    @apply fixed inset-0 flex justify-center bg-dp-overlay-dark/35;
     align-items: center;
+    backdrop-filter: blur(var(--dp-overlay-blur));
     /* A soft keyboard shrinks the visual viewport but not the layout viewport that
        `inset: 0` resolves against, so `useVisualViewport` supplies the visible box
        while a modal is open. Without it the fallbacks reproduce `inset: 0`. */
@@ -944,16 +947,6 @@ html.dark {
 .todo-btn-list:hover svg,
 .todo-btn-list:hover span {
     color: var(--dp-accent) !important;
-}
-
-.todo-btn-add:hover {
-    background-color: var(--dp-success-bg) !important;
-    color: var(--dp-success) !important;
-}
-
-.todo-item-bubble:hover {
-    background-color: color-mix(in srgb, var(--dp-warning) 25%, var(--dp-bg-card)) !important;
-    box-shadow: 0 2px 4px var(--dp-warning-ring);
 }
 
 /* Footer Navigation */
@@ -1376,6 +1369,11 @@ html.dark {
 /* ====================================
    SweetAlert2 Custom Styles
    ==================================== */
+
+/* Toasts share the full-screen container but show no backdrop, so only dialogs frost. */
+.swal2-container:not(.swal2-toast-shown) {
+    backdrop-filter: blur(var(--dp-overlay-blur));
+}
 
 .swal2-popup {
     @apply rounded-2xl p-0 overflow-hidden;
@@ -1827,60 +1825,3 @@ div.swal2-popup.swal2-toast.colored-toast-info {
     z-index: 10;
 }
 
-/* ====================================
-   Todo Filter Buttons (DutyView)
-   ==================================== */
-
-.todo-filter-btn {
-    background-color: var(--dp-bg-card);
-    color: var(--dp-text-muted);
-    border: 2px solid transparent;
-}
-
-.todo-filter-btn:first-child {
-    border-radius: 0.375rem 0 0 0.375rem;
-}
-
-.todo-filter-btn:last-child {
-    border-radius: 0 0.375rem 0.375rem 0;
-}
-
-.todo-filter-btn:hover {
-    background-color: var(--dp-bg-hover);
-}
-
-.todo-filter-btn-inactive {
-    background-color: var(--dp-bg-card);
-    color: var(--dp-border-secondary);
-    opacity: 0.5;
-}
-
-.todo-filter-btn-inactive:hover {
-    opacity: 0.8;
-}
-
-.todo-filter-btn-active-todo {
-    background-color: var(--dp-accent-bg);
-    color: var(--dp-accent);
-    border-color: var(--dp-accent);
-}
-
-.todo-filter-btn-active-progress {
-    background-color: var(--dp-warning-bg);
-    color: var(--dp-warning);
-    border-color: var(--dp-warning);
-}
-
-/* Todo Management Button (DutyView) */
-.todo-manage-btn:hover {
-    background-color: var(--dp-bg-hover) !important;
-}
-
-.todo-btn-add:hover {
-    background-color: var(--dp-bg-hover) !important;
-    color: var(--dp-accent) !important;
-}
-
-.todo-btn-add:hover .todo-btn-add-icon {
-    transform: rotate(90deg);
-}

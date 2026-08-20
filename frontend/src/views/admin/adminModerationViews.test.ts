@@ -16,10 +16,11 @@ import {
   memberStatusToneClass,
   reportStatusToneClass,
 } from '@/components/admin/adminModerationLabels'
+import type { ReportResolutionStatus } from '@/types/adminModeration'
 
 describe('AdminReportListView', () => {
   it('offers every report status filter and opens on the unhandled queue', () => {
-    for (const value of ['OPEN', 'RESOLVED', 'DISMISSED', 'ALL']) {
+    for (const value of ['OPEN', 'RESOLVED', 'DISMISSED', 'CANCELED', 'ALL']) {
       expect(reportListView).toContain(`value: '${value}'`)
     }
     expect(reportListView).toContain("ref<ReportStatusFilter>('OPEN')")
@@ -128,9 +129,17 @@ describe('AdminInquiryListView', () => {
 
 describe('AdminInquiryDetailModal', () => {
   it('supports replying by email rather than in-app answers', () => {
-    expect(inquiryDetailModal).toContain('mailto:${props.inquiry.email}')
+    expect(inquiryDetailModal).toContain('mailto:${replyEmail.value}')
     expect(inquiryDetailModal).toContain("emit('copyEmail', inquiry.email)")
     expect(inquiryDetailModal).toContain('admin.inquiries.detail.replyHint')
+  })
+
+  // A signed-in member is answered in the app, so the inquiry can carry no reply address.
+  it('hides the e-mail actions when the inquiry has no reply address', () => {
+    expect(inquiryDetailModal).toContain("const replyEmail = computed(() => props.inquiry?.email ?? '')")
+    expect(inquiryDetailModal).toContain('admin.inquiries.detail.values.inAppOnly')
+    expect(inquiryDetailModal).toContain('v-if="replyEmail"')
+    expect(inquiryDetailModal).toContain('v-if="inquiry.email"')
   })
 
   it('toggles between closing and reopening an inquiry', () => {
@@ -187,9 +196,20 @@ describe('AdminDashboardView moderation entry points', () => {
   })
 })
 
+describe('admin report resolution', () => {
+  it('never lets an admin withdraw a report on the reporter behalf', () => {
+    const resolutions: ReportResolutionStatus[] = ['RESOLVED', 'DISMISSED']
+
+    expect(resolutions).toEqual(['RESOLVED', 'DISMISSED'])
+    // @ts-expect-error CANCELED is the reporter's own withdrawal, not an admin decision
+    const adminChoice: ReportResolutionStatus = 'CANCELED'
+    expect(adminChoice).toBe('CANCELED')
+  })
+})
+
 describe('admin moderation label maps', () => {
   it('maps every enum value to a translation key', () => {
-    expect(Object.keys(REPORT_STATUS_LABEL_KEYS)).toEqual(['OPEN', 'RESOLVED', 'DISMISSED'])
+    expect(Object.keys(REPORT_STATUS_LABEL_KEYS)).toEqual(['OPEN', 'RESOLVED', 'DISMISSED', 'CANCELED'])
     expect(Object.keys(REPORT_REASON_LABEL_KEYS)).toEqual([
       'SPAM',
       'HARASSMENT',
@@ -205,6 +225,7 @@ describe('admin moderation label maps', () => {
   it('separates unhandled, handled and suspended tones', () => {
     expect(reportStatusToneClass('OPEN')).not.toBe(reportStatusToneClass('RESOLVED'))
     expect(reportStatusToneClass('DISMISSED')).not.toBe(reportStatusToneClass('RESOLVED'))
+    expect(reportStatusToneClass('CANCELED')).not.toBe(reportStatusToneClass('OPEN'))
     expect(inquiryStatusToneClass('OPEN')).not.toBe(inquiryStatusToneClass('CLOSED'))
     expect(memberStatusToneClass('SUSPENDED')).toContain('danger')
     expect(memberStatusToneClass('ACTIVE')).not.toContain('danger')

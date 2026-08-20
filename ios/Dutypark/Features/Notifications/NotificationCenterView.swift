@@ -47,7 +47,6 @@ struct NotificationCenterView: View {
     var onOpen: (NotificationRoute) async -> Bool
 
     @Environment(\.scenePhase) private var scenePhase
-    @Environment(\.dismiss) private var dismiss
     @State private var deletionConfirmation: NotificationDeletionConfirmation?
     @State private var alertTitle: String?
     @State private var alertMessage: String?
@@ -63,12 +62,7 @@ struct NotificationCenterView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                pageHeader
-                    .padding(.bottom, DPSpacing.medium)
-
-                Text(notificationLocalized("notifications.list.retentionNotice"))
-                    .font(DPTypography.caption)
-                    .foregroundStyle(DPColor.textMuted)
+                bulkActionBar
                     .padding(.bottom, DPSpacing.medium)
 
                 notificationCard
@@ -78,30 +72,12 @@ struct NotificationCenterView: View {
             .padding(.vertical, DPSpacing.large)
             .frame(maxWidth: .infinity)
         }
-        .background(DPColor.backgroundPrimary)
+        .background(DPColor.backgroundSecondary)
         .accessibilityIdentifier("screen.notifications")
-        .toolbar(.hidden, for: .navigationBar)
-        .safeAreaInset(edge: .top, spacing: 0) {
-            HStack {
-                Spacer()
-                Button(action: dismiss.callAsFunction) {
-                    HStack(spacing: DPSpacing.extraSmall) {
-                        Image(systemName: "xmark")
-                        Text(notificationLocalized("notifications.common.close"))
-                    }
-                    .font(DPTypography.label)
-                    .frame(minWidth: DPSize.minimumTouchTarget, minHeight: DPSize.minimumTouchTarget)
-                    .contentShape(Rectangle())
-                }
-                .accessibilityLabel(notificationLocalized("notifications.common.close"))
-                .accessibilityIdentifier("notifications.close")
-            }
-            .padding(.horizontal, DPSpacing.medium)
-            .background(DPColor.backgroundPrimary)
-            .overlay(alignment: .bottom) {
-                Divider().overlay(DPColor.borderPrimary)
-            }
-        }
+        // Pushed like every other menu screen, so it leaves through the navigation bar
+        // instead of a sheet-only swipe down.
+        .navigationTitle(notificationLocalized("notifications.title"))
+        .navigationBarTitleDisplayMode(.inline)
         .refreshable { await store.refresh() }
         .task {
             store.startPolling()
@@ -146,66 +122,42 @@ struct NotificationCenterView: View {
         }
     }
 
-    private var pageHeader: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: DPSpacing.compact) {
-                pageTitle
-                Spacer(minLength: 0)
-                headerActions
-            }
+    // The retention notice never filled its row and the bulk actions read as two
+    // unlabelled glyphs in the navigation bar, so they share the row instead: named
+    // buttons at its trailing end, where there is width to spare.
+    private var bulkActionBar: some View {
+        HStack(alignment: .center, spacing: DPSpacing.compact) {
+            Text(notificationLocalized("notifications.list.retentionNotice"))
+                .font(DPTypography.caption)
+                .foregroundStyle(DPColor.textMuted)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-            VStack(alignment: .leading, spacing: DPSpacing.compact) {
-                pageTitle
-                headerActions
-                    .frame(maxWidth: .infinity, alignment: .trailing)
+            HStack(spacing: DPSpacing.small) {
+                NotificationHeaderActionButton(
+                    title: notificationLocalized("notifications.list.markAllAsReadShort"),
+                    systemImage: "checkmark.circle",
+                    accessibilityIdentifier: "notifications.markAllAsRead"
+                ) {
+                    Task { await markAllAsRead() }
+                }
+
+                NotificationHeaderActionButton(
+                    title: notificationLocalized("notifications.list.deleteReadShort"),
+                    systemImage: "trash",
+                    isDestructive: true,
+                    accessibilityIdentifier: "notifications.deleteRead"
+                ) {
+                    if store.notifications.contains(where: \.isRead) {
+                        deletionConfirmation = .allRead
+                    } else {
+                        showInformation("notifications.list.noReadNotifications")
+                    }
+                }
             }
+            .layoutPriority(1)
         }
         .frame(minHeight: DPSize.minimumTouchTarget)
-    }
-
-    private var pageTitle: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "bell")
-                .font(.system(size: 18, weight: .regular))
-                .foregroundStyle(DPColor.textSecondary)
-                .frame(width: 36, height: 36)
-                .background(DPColor.backgroundTertiary, in: RoundedRectangle(cornerRadius: DPRadius.large))
-                .overlay {
-                    RoundedRectangle(cornerRadius: DPRadius.large)
-                        .stroke(DPColor.borderPrimary, lineWidth: DPChrome.borderWidth)
-                }
-
-            Text(notificationLocalized("notifications.title"))
-                .font(DPTypography.heading)
-                .foregroundStyle(DPColor.textPrimary)
-                .lineLimit(1)
-        }
-        .fixedSize(horizontal: true, vertical: false)
-    }
-
-    private var headerActions: some View {
-        HStack(spacing: DPSpacing.small) {
-            NotificationHeaderActionButton(
-                title: notificationLocalized("notifications.list.markAllAsReadShort"),
-                systemImage: "checkmark.circle",
-                accessibilityIdentifier: "notifications.markAllAsRead"
-            ) {
-                Task { await markAllAsRead() }
-            }
-
-            NotificationHeaderActionButton(
-                title: notificationLocalized("notifications.list.deleteReadShort"),
-                systemImage: "trash",
-                isDestructive: true,
-                accessibilityIdentifier: "notifications.deleteRead"
-            ) {
-                if store.notifications.contains(where: \.isRead) {
-                    deletionConfirmation = .allRead
-                } else {
-                    showInformation("notifications.list.noReadNotifications")
-                }
-            }
-        }
     }
 
     @ViewBuilder
@@ -290,10 +242,11 @@ struct NotificationCenterView: View {
         .shadow(color: .black.opacity(0.05), radius: 1, x: 0, y: 1)
     }
 
+    // Every route either switches tabs or replaces the stack this screen sits on, so
+    // opening a notification needs no dismissal of its own.
     private func open(_ notification: NotificationDTO) async {
-        if let route = await store.open(notification), await onOpen(route) {
-            dismiss()
-        }
+        guard let route = await store.open(notification) else { return }
+        _ = await onOpen(route)
     }
 
     private func markAllAsRead() async {
@@ -337,7 +290,11 @@ private struct NotificationRow: View {
     @Environment(\.locale) private var locale
 
     var body: some View {
-        HStack(alignment: .top, spacing: 0) {
+        NotificationRowSwipe(
+            deleteLabel: notificationLocalized("notifications.common.delete"),
+            deleteIdentifier: "notifications.row.\(notification.id.uuidString).delete",
+            onDelete: onDelete
+        ) {
             Button(action: onOpen) {
                 HStack(alignment: .top, spacing: DPSpacing.compact) {
                     ZStack(alignment: .topTrailing) {
@@ -377,33 +334,73 @@ private struct NotificationRow: View {
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("notifications.row.\(notification.id.uuidString).open")
-
-            Button(action: onDelete) {
-                Image(systemName: "trash")
-                    .font(.system(size: 16, weight: .regular))
-                    .foregroundStyle(DPColor.textMuted)
-                    .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
-                    .contentShape(Rectangle())
-                }
-            .buttonStyle(.plain)
-            .accessibilityLabel(notificationLocalized("notifications.common.delete"))
-            .accessibilityIdentifier("notifications.row.\(notification.id.uuidString).delete")
-        }
-        .padding(.leading, DPSpacing.medium)
-        .padding(.trailing, DPSpacing.small)
-        .padding(.vertical, DPSpacing.compact)
-        .background {
-            if !notification.isRead {
+            .padding(.horizontal, DPSpacing.medium)
+            .padding(.vertical, DPSpacing.compact)
+            .background {
                 ZStack(alignment: .leading) {
                     DPColor.backgroundCard
-                    DPColor.accentSoft.opacity(0.45)
-                    Rectangle()
-                        .fill(DPColor.accent)
-                        .frame(width: 4)
+                    if !notification.isRead {
+                        DPColor.accentSoft.opacity(0.45)
+                        Rectangle()
+                            .fill(DPColor.accent)
+                            .frame(width: 4)
+                    }
                 }
             }
+            .contentShape(Rectangle())
         }
-        .contentShape(Rectangle())
+    }
+}
+
+/// Reveals a delete button when the row is swiped left.
+///
+/// The rows sit in a lazy stack rather than a `List`, so `swipeActions` is not
+/// available and a `DragGesture` of the row's own would compete with the vertical
+/// scroll view it lives in. A nested horizontal scroll view carries the swipe
+/// instead: perpendicular axes coexist, so scrolling the list from a row still works.
+private struct NotificationRowSwipe<Content: View>: View {
+    let deleteLabel: String
+    let deleteIdentifier: String
+    let onDelete: () -> Void
+    @ViewBuilder let content: Content
+
+    private static var actionWidth: CGFloat { 84 }
+
+    var body: some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: 0) {
+                content
+                    .containerRelativeFrame(.horizontal)
+
+                Button(action: onDelete) {
+                    VStack(spacing: DPSpacing.extraSmall) {
+                        Image(systemName: "trash")
+                            .font(.system(size: 18, weight: .regular))
+                        Text(deleteLabel)
+                            .font(DPFont.light(size: 12, relativeTo: .caption))
+                            .lineLimit(1)
+                    }
+                    .foregroundStyle(DPColor.textOnDark)
+                    .frame(width: Self.actionWidth)
+                    .frame(maxHeight: .infinity)
+                    .background(DPColor.danger)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier(deleteIdentifier)
+            }
+        }
+        .scrollIndicators(.hidden)
+        .scrollTargetBehavior(NotificationRowSwipeSnap(actionWidth: Self.actionWidth))
+    }
+}
+
+/// Settles a swiped row either closed or fully open, never part-way.
+private struct NotificationRowSwipeSnap: ScrollTargetBehavior {
+    let actionWidth: CGFloat
+
+    func updateTarget(_ target: inout ScrollTarget, context: TargetContext) {
+        target.rect.origin.x = target.rect.minX > actionWidth / 2 ? actionWidth : 0
     }
 }
 

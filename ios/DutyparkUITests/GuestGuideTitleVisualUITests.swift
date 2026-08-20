@@ -9,7 +9,6 @@ final class GuestGuideTitleVisualUITests: XCTestCase {
     func testGuestGuideUsesTheSameKoreanTitleAsTheWebGuide() throws {
         let app = XCUIApplication()
         app.launchArguments += [
-            "-dp-language", "ko",
             "-dp-theme", "light",
             "-AppleLanguages", "(ko)",
             "-AppleLocale", "ko_KR",
@@ -43,7 +42,6 @@ final class GuestGuideTitleVisualUITests: XCTestCase {
     func testGuestGuideBackButtonReturnsToTheNativeGuestLanding() throws {
         let app = XCUIApplication()
         app.launchArguments += [
-            "-dp-language", "ko",
             "-dp-theme", "light",
             "-AppleLanguages", "(ko)",
             "-AppleLocale", "ko_KR",

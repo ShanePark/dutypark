@@ -9,7 +9,6 @@ final class DutyparkUITests: XCTestCase {
     func testNavigatesThroughFivePrimaryTabs() throws {
         let app = XCUIApplication()
         app.launchArguments += [
-            "-dp-language", "en",
             "-dp-theme", "light",
             "-AppleLanguages", "(en)",
             "-AppleLocale", "en_US",
@@ -39,7 +38,6 @@ final class DutyparkUITests: XCTestCase {
     func testLoginOffersAppleKakaoAndNaver() throws {
         let app = XCUIApplication()
         app.launchArguments += [
-            "-dp-language", "ko",
             "-dp-theme", "light",
             "-AppleLanguages", "(ko)",
             "-AppleLocale", "ko_KR",
@@ -60,7 +58,6 @@ final class DutyparkUITests: XCTestCase {
     func testKeyboardProvidesAnExplicitDismissAction() throws {
         let app = XCUIApplication()
         app.launchArguments += [
-            "-dp-language", "ko",
             "-dp-theme", "light",
             "-AppleLanguages", "(ko)",
             "-AppleLocale", "ko_KR",
@@ -88,7 +85,6 @@ final class DutyparkUITests: XCTestCase {
     func testPrimaryToolbarActionsMeetMinimumTouchTarget() throws {
         let app = XCUIApplication()
         app.launchArguments += [
-            "-dp-language", "en",
             "-dp-theme", "light",
             "-AppleLanguages", "(en)",
             "-AppleLocale", "en_US",
@@ -151,44 +147,6 @@ final class DutyparkUITests: XCTestCase {
     }
 
     @MainActor
-    func testCalendarQuickAddOpensAndClosesTodoForm() throws {
-        let app = launchAuthenticatedApp()
-        defer { app.terminate() }
-
-        primaryTab("tab.calendar", in: app).tap()
-        XCTAssertTrue(
-            app.descendants(matching: .any)["screen.calendar"].waitForExistence(timeout: 10)
-        )
-
-        let quickAdd = app.buttons["calendar.todo.add"]
-        XCTAssertTrue(quickAdd.waitForExistence(timeout: 10))
-        quickAdd.tap()
-
-        XCTAssertTrue(app.staticTexts["New Todo"].waitForExistence(timeout: 10))
-        let titleField = app.textFields["todo.form.title"]
-        XCTAssertTrue(titleField.waitForExistence(timeout: 10))
-        let inProgressStatus = app.buttons["todo.form.status.in_progress"]
-        XCTAssertTrue(inProgressStatus.exists)
-        XCTAssertTrue(inProgressStatus.isSelected)
-        XCTAssertFalse(
-            app.descendants(matching: .any)["screen.todo"].exists,
-            "Calendar quick add must not route to the Todo management screen"
-        )
-        let evidence = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
-        evidence.name = "calendar-todo-quick-add-in-progress"
-        evidence.lifetime = .keepAlways
-        add(evidence)
-        app.buttons["todo.form.cancel"].tap()
-
-        XCTAssertTrue(waitForNonHittable(titleField, timeout: 3))
-        XCTAssertTrue(app.descendants(matching: .any)["screen.calendar"].exists)
-        XCTAssertFalse(
-            app.alerts.firstMatch.isHittable,
-            "An interactive alert remained after closing Calendar quick add"
-        )
-    }
-
-    @MainActor
     func testCalendarParityCentersHeaderAndOpensOnlyTheTappedTodoDetail() throws {
         let app = launchAuthenticatedApp(extraArguments: ["-ui-testing-calendar-parity"])
         defer { app.terminate() }
@@ -201,20 +159,23 @@ final class DutyparkUITests: XCTestCase {
         let monthControls = app.descendants(matching: .any)["calendar.month.controls"]
         XCTAssertTrue(monthControls.waitForExistence(timeout: 10))
         XCTAssertEqual(monthControls.frame.midX, app.frame.midX, accuracy: 1)
-        XCTAssertTrue(app.buttons["calendar.todo.add"].exists)
+        XCTAssertFalse(
+            app.buttons["calendar.todo.add"].exists,
+            "The Todo strip above the calendar is removed"
+        )
         XCTAssertTrue(app.buttons["tab.todo"].exists, "The dock Todo entry must remain")
 
         let comparedDuty = app.descendants(matching: .any)["calendar.compared-duty.2"]
         XCTAssertTrue(comparedDuty.waitForExistence(timeout: 10))
 
         let calendarEvidence = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
-        calendarEvidence.name = "calendar-centered-header-todo-add-profile-duty"
+        calendarEvidence.name = "calendar-centered-header-profile-duty"
         calendarEvidence.lifetime = .keepAlways
         add(calendarEvidence)
 
-        let todo = app.buttons["calendar.todo.item.A11CE000-0000-4000-8000-000000000011"]
-        XCTAssertTrue(todo.waitForExistence(timeout: 10))
-        todo.tap()
+        let dayTodo = app.buttons["calendar.day.todo.A11CE000-0000-4000-8000-000000000011"]
+        XCTAssertTrue(dayTodo.waitForExistence(timeout: 10))
+        dayTodo.tap()
 
         XCTAssertTrue(
             app.descendants(matching: .any)["calendar.todo.detail"].waitForExistence(timeout: 10)
@@ -232,14 +193,7 @@ final class DutyparkUITests: XCTestCase {
             app.descendants(matching: .any)["calendar.todo.detail"],
             timeout: 3
         ))
-
-        let dayTodo = app.buttons["calendar.day.todo.A11CE000-0000-4000-8000-000000000011"]
-        XCTAssertTrue(dayTodo.waitForExistence(timeout: 10))
-        dayTodo.tap()
-        XCTAssertTrue(
-            app.descendants(matching: .any)["calendar.todo.detail"].waitForExistence(timeout: 10)
-        )
-        XCTAssertFalse(app.descendants(matching: .any)["screen.todo"].exists)
+        XCTAssertTrue(app.descendants(matching: .any)["screen.calendar"].exists)
     }
 
     @MainActor
@@ -296,7 +250,6 @@ final class DutyparkUITests: XCTestCase {
             ) { _ in
                 let app = XCUIApplication()
                 app.launchArguments += [
-                    "-dp-language", combination.language,
                     "-dp-theme", combination.theme,
                     "-AppleLanguages", "(\(combination.language))",
                     "-AppleLocale", combination.locale,
@@ -393,7 +346,6 @@ final class DutyparkUITests: XCTestCase {
     private func launchAuthenticatedApp(extraArguments: [String] = []) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += [
-            "-dp-language", "en",
             "-dp-theme", "light",
             "-AppleLanguages", "(en)",
             "-AppleLocale", "en_US",

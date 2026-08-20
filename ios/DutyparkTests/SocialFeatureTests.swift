@@ -332,23 +332,25 @@ final class SocialFeatureTests: XCTestCase {
         XCTAssertTrue(source.contains("content.simultaneousGesture(legacyPinnedFriendReorderGesture"))
     }
 
-    /// Both pinned lists adopt the shared gesture, so neither screen may keep a
-    /// private copy of the recognizer wiring.
-    func testPinnedListsAdoptTheSharedReorderGesture() throws {
-        for path in [
-            "Dutypark/Features/Social/SocialView.swift",
-            "Dutypark/Features/Home/HomeView.swift"
-        ] {
-            let source = try Self.projectSource(at: path)
-            XCTAssertTrue(
-                source.contains("DPPinnedFriendReorderGesture("),
-                "\(path) should adopt the shared reorder gesture"
-            )
-            XCTAssertFalse(
-                source.contains("DPLongPressGestureRecognizer("),
-                "\(path) should not re-implement the recognizer wiring"
-            )
-        }
+    /// Friend management is the only screen that reorders pinned friends, and it
+    /// adopts the shared gesture rather than keeping a private copy of the
+    /// recognizer wiring. The home dashboard dropped reordering altogether.
+    func testPinnedListAdoptsTheSharedReorderGesture() throws {
+        let social = try Self.projectSource(at: "Dutypark/Features/Social/SocialView.swift")
+        XCTAssertTrue(
+            social.contains("DPPinnedFriendReorderGesture("),
+            "Friend management should adopt the shared reorder gesture"
+        )
+        XCTAssertFalse(
+            social.contains("DPLongPressGestureRecognizer("),
+            "Friend management should not re-implement the recognizer wiring"
+        )
+
+        let home = try Self.projectSource(at: "Dutypark/Features/Home/HomeView.swift")
+        XCTAssertFalse(
+            home.contains("DPPinnedFriendReorderGesture("),
+            "The home friend rail should not reorder pinned friends"
+        )
     }
 
     private static func sharedReorderGestureSource() throws -> String {

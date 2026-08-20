@@ -5,7 +5,10 @@ import jakarta.validation.constraints.NotNull
 import jakarta.validation.constraints.Size
 
 data class UpdateReportStatusRequest(
-    /** Only [ReportStatus.RESOLVED] and [ReportStatus.DISMISSED] are accepted: a report cannot be reopened. */
+    /**
+     * Only [ReportStatus.RESOLVED] and [ReportStatus.DISMISSED] are accepted: a report cannot be reopened,
+     * and [ReportStatus.CANCELED] is the reporter withdrawing it, never a moderation decision.
+     */
     @field:NotNull
     val status: ReportStatus,
 

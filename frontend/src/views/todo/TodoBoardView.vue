@@ -3,12 +3,16 @@ import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Sortable from 'sortablejs'
 import type { SortableEvent } from 'sortablejs'
-import { HelpCircle, X, ListTodo, Clock, CheckCircle2, Lightbulb, LayoutGrid, Plus } from 'lucide-vue-next'
+import { ListTodo, Clock, CheckCircle2, Lightbulb, LayoutGrid, Plus } from 'lucide-vue-next'
 import { todoApi } from '@/api/todo'
 import { friendApi } from '@/api/member'
 import { useSwal } from '@/composables/useSwal'
+import { useContentFilterStore } from '@/stores/contentFilter'
 import { useDragClickGuard } from '@/composables/useDragClickGuard'
-import BaseModal from '@/components/common/BaseModal.vue'
+import HelpButton from '@/components/common/HelpButton.vue'
+import HelpModal from '@/components/common/HelpModal.vue'
+import HelpNote from '@/components/common/HelpNote.vue'
+import HelpSection from '@/components/common/HelpSection.vue'
 import PageHeader from '@/components/common/PageHeader.vue'
 import KanbanColumn from '@/components/todo/KanbanColumn.vue'
 import KanbanCard from '@/components/todo/KanbanCard.vue'
@@ -18,6 +22,7 @@ import type { TaggableFriend, Todo, TodoBoard, TodoStatus } from '@/types'
 
 const { t } = useI18n()
 const { showSuccess, showError, confirm, confirmDelete, toastSuccess } = useSwal()
+const contentFilterStore = useContentFilterStore()
 const dragClickGuard = useDragClickGuard()
 
 const isHelpModalOpen = ref(false)
@@ -264,6 +269,11 @@ async function handleAddTodo(data: {
   attachmentSessionId?: string
   orderedAttachmentIds?: string[]
 }) {
+  if (contentFilterStore.isBlocked(data.title, data.content)) {
+    showError(t('contentFilter.blocked'))
+    return
+  }
+
   try {
     await todoApi.createTodo({
       title: data.title,
@@ -293,6 +303,11 @@ async function handleUpdateTodo(data: {
   attachmentSessionId?: string
   orderedAttachmentIds?: string[]
 }) {
+  if (contentFilterStore.isBlocked(data.title, data.content)) {
+    showError(t('contentFilter.blocked'))
+    return
+  }
+
   try {
     await todoApi.updateTodo(data.id, {
       title: data.title,
@@ -381,13 +396,10 @@ onBeforeUnmount(() => {
 <template>
   <div class="todo-board-container">
     <PageHeader :title="t('header.menu.todo')" :icon="ListTodo" class="shrink-0">
-      <button
-        class="todo-board-help-btn"
+      <HelpButton
+        :label="t('todoBoard.help.openAriaLabel')"
         @click="isHelpModalOpen = true"
-        :aria-label="t('todoBoard.help.openAriaLabel')"
-      >
-        <HelpCircle />
-      </button>
+      />
     </PageHeader>
 
     <div class="todo-board-tabs" role="tablist" :aria-label="t('todoBoard.statusTabsAriaLabel')">
@@ -530,74 +542,47 @@ onBeforeUnmount(() => {
       @back-to-list="handleBackToList"
     />
 
-    <BaseModal
+    <HelpModal
       :is-open="isHelpModalOpen"
-      size="lg"
-      height="default"
-      rounded
-      overlay-class="backdrop-blur-sm"
-      panel-class="border border-dp-border-primary"
-      :panel-style="{ backgroundColor: 'var(--dp-bg-card)' }"
+      :title="t('todoBoard.help.title')"
       @close="isHelpModalOpen = false"
     >
-      <div class="modal-header">
-        <h2>{{ t('todoBoard.help.title') }}</h2>
-        <button
-          class="p-2 rounded-full hover-close-btn cursor-pointer text-dp-text-muted"
-          @click="isHelpModalOpen = false"
-          :aria-label="t('common.actions.close')"
-        >
-          <X class="w-5 h-5" />
-        </button>
-      </div>
-      <div class="modal-body-form-lg">
-        <section class="help-section">
-          <h3 class="help-section-title">
-            <LayoutGrid class="help-section-icon" />
-            {{ t('todoBoard.help.whatIsKanbanTitle') }}
-          </h3>
-          <p class="help-section-text">{{ t('todoBoard.help.whatIsKanbanText') }}</p>
-        </section>
+      <!-- The blocks describe the board and its three columns rather than steps to
+           follow in order, so they stay unnumbered. -->
+      <HelpSection
+        :icon="LayoutGrid"
+        :title="t('todoBoard.help.whatIsKanbanTitle')"
+        :text="t('todoBoard.help.whatIsKanbanText')"
+      />
+      <HelpSection
+        :icon="ListTodo"
+        :title="t('todoBoard.help.todoTitle')"
+        :text="t('todoBoard.help.todoText')"
+      />
+      <HelpSection
+        :icon="Clock"
+        :title="t('todoBoard.help.inProgressTitle')"
+        :text="t('todoBoard.help.inProgressText')"
+      />
+      <HelpSection
+        :icon="CheckCircle2"
+        :title="t('todoBoard.help.doneTitle')"
+        :text="t('todoBoard.help.doneText')"
+      />
 
-        <section class="help-section">
-          <h3 class="help-section-title">
-            <ListTodo class="help-section-icon" />
-            {{ t('todoBoard.help.todoTitle') }}
-          </h3>
-          <p class="help-section-text">{{ t('todoBoard.help.todoText') }}</p>
-        </section>
-
-        <section class="help-section">
-          <h3 class="help-section-title">
-            <Clock class="help-section-icon" />
-            {{ t('todoBoard.help.inProgressTitle') }}
-          </h3>
-          <p class="help-section-text">{{ t('todoBoard.help.inProgressText') }}</p>
-        </section>
-
-        <section class="help-section">
-          <h3 class="help-section-title">
-            <CheckCircle2 class="help-section-icon" />
-            {{ t('todoBoard.help.doneTitle') }}
-          </h3>
-          <p class="help-section-text">{{ t('todoBoard.help.doneText') }}</p>
-        </section>
-
-        <section class="help-section">
-          <h3 class="help-section-title">
-            <Lightbulb class="help-section-icon" />
-            {{ t('todoBoard.help.tipsTitle') }}
-          </h3>
-          <ul class="help-tips-list">
-            <li>{{ t('todoBoard.help.tips.drag') }}</li>
-            <li>{{ t('todoBoard.help.tips.reorder') }}</li>
-            <li>{{ t('todoBoard.help.tips.details') }}</li>
-            <li>{{ t('todoBoard.help.tips.dueDate') }}</li>
-            <li>{{ t('todoBoard.help.tips.attachments') }}</li>
-          </ul>
-        </section>
-      </div>
-    </BaseModal>
+      <HelpNote
+        :icon="Lightbulb"
+        tone="warning"
+        :title="t('todoBoard.help.tipsTitle')"
+        :messages="[
+          t('todoBoard.help.tips.drag'),
+          t('todoBoard.help.tips.reorder'),
+          t('todoBoard.help.tips.details'),
+          t('todoBoard.help.tips.dueDate'),
+          t('todoBoard.help.tips.attachments'),
+        ]"
+      />
+    </HelpModal>
   </div>
 </template>
 
@@ -622,31 +607,6 @@ onBeforeUnmount(() => {
     padding: 1rem;
     padding-bottom: 0;
   }
-}
-
-.todo-board-help-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.75rem;
-  min-height: 44px;
-  border-radius: 0.75rem;
-  border: 1px solid var(--dp-border-primary);
-  background-color: var(--dp-bg-card);
-  color: var(--dp-text-muted);
-  cursor: pointer;
-  transition: all 0.15s ease;
-  flex-shrink: 0;
-}
-
-.todo-board-help-btn:hover {
-  background-color: var(--dp-bg-hover);
-  color: var(--dp-text-secondary);
-}
-
-.todo-board-help-btn svg {
-  width: 1.25rem;
-  height: 1.25rem;
 }
 
 .todo-board-tabs {
@@ -881,62 +841,6 @@ onBeforeUnmount(() => {
 
 .kanban-empty-state-clickable:hover .kanban-empty-icon {
   opacity: 1;
-}
-
-.help-section {
-  margin-bottom: 1.25rem;
-}
-
-.help-section:last-child {
-  margin-bottom: 0;
-}
-
-.help-section-title {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.9375rem;
-  font-weight: 600;
-  color: var(--dp-text-primary);
-  margin-bottom: 0.5rem;
-}
-
-.help-section-icon {
-  width: 1.125rem;
-  height: 1.125rem;
-  flex-shrink: 0;
-  color: var(--dp-text-secondary);
-}
-
-.help-section-text {
-  font-size: 0.875rem;
-  color: var(--dp-text-secondary);
-  line-height: 1.6;
-}
-
-.help-tips-list {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.help-tips-list li {
-  font-size: 0.875rem;
-  color: var(--dp-text-secondary);
-  line-height: 1.5;
-  padding-left: 1.25rem;
-  position: relative;
-}
-
-.help-tips-list li::before {
-  content: '•';
-  position: absolute;
-  left: 0;
-  color: var(--dp-accent);
-  font-weight: bold;
 }
 
 </style>

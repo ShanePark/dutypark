@@ -47,10 +47,67 @@ nonisolated enum CalendarReportPolicy {
     }
 }
 
+/// Whether tapping a day is worth anything.
+///
+/// The day detail lists schedules and nothing else: the duty is already told by the
+/// colour of the cell, and holidays, D-Days and to-dos are drawn in the cell itself.
+/// So a reader who cannot write opens a sheet with nothing in it on a day that holds
+/// no schedule — a tap that answers with silence — and the day stays shut instead.
+/// Where the reader can write, on their own calendar or one they manage, an empty day
+/// is the way a schedule gets added and always opens.
+nonisolated enum CalendarDayOpenPolicy {
+    static func showsNothing(_ day: CalendarDayContent) -> Bool {
+        day.schedules.isEmpty
+    }
+
+    static func opensDetail(_ day: CalendarDayContent, canEdit: Bool) -> Bool {
+        canEdit || !showsNothing(day)
+    }
+}
+
+/// Who a schedule names, in the order the web names them.
+///
+/// A schedule's tags leave out the member whose calendar is being read — their own
+/// name beside their own day says nothing — and whoever did the tagging comes first,
+/// because on a tagged schedule they are the one the reader does not already know.
+nonisolated enum ScheduleTagDisplayPolicy {
+    static func displayTags(for schedule: ScheduleDTO, calendarMemberID: MemberID?) -> [DPMemberTagItem] {
+        var items = schedule.tags
+            .filter { !$0.name.isEmpty && $0.id != calendarMemberID }
+            .map(DPMemberTagItem.init)
+
+        guard schedule.isTagged else { return items }
+
+        if let taggedBy = schedule.taggedByMember, !taggedBy.name.isEmpty {
+            let owner = DPMemberTagItem(taggedBy)
+            let alreadyListed = owner.memberID != nil && items.contains { $0.memberID == owner.memberID }
+            if !alreadyListed { items.insert(owner, at: 0) }
+        } else if !schedule.owner.isEmpty {
+            // A tagger whose account is gone is remembered by name alone, so the tag
+            // carries the name without a photo rather than disappearing.
+            items.insert(DPMemberTagItem(memberID: nil, name: schedule.owner), at: 0)
+        }
+
+        return items
+    }
+}
+
+/// The tail of the "this month" callout: a slender pointer that climbs from the capsule to
+/// the month label sitting in the navigation bar above it.
+private struct CalloutTail: Shape {
+    func path(in rect: CGRect) -> Path {
+        Path { path in
+            path.move(to: CGPoint(x: rect.midX, y: rect.minY))
+            path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+            path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
+            path.closeSubpath()
+        }
+    }
+}
+
 struct CalendarView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var model: CalendarViewModel
-    @StateObject private var todoCreateModel = TodoViewModel()
     @StateObject private var todoDetailModel = TodoViewModel()
     @State private var showsSearch = false
     @State private var dDayModalSelection: DDayModalSelection?
@@ -58,7 +115,6 @@ struct CalendarView: View {
     @State private var showsMonthPicker = false
     @State private var showsDutyComparison = false
     @State private var importsDutyBatch = false
-    @State private var showsTodoCreate = false
     @State private var todoSelection: CalendarTodoSelection?
     @State private var todoDetailCanDismiss = true
     @State private var todoDetailDismissRequest = 0
@@ -71,9 +127,14 @@ struct CalendarView: View {
     @State private var reportTarget: ReportTarget?
     @State private var reportCanDismiss = true
     @State private var showsBlockConfirmation = false
+    @State private var monthSlideOffset: CGFloat = 0
+    @State private var calendarGridWidth: CGFloat = 0
+    @State private var isSlidingMonth = false
+    @State private var isSwipingMonth = false
     @State private var leavesAfterBlock = false
     @State private var refreshesAfterReportedBlock = false
     @StateObject private var blockModel = MemberBlockViewModel()
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private let isPushedMemberCalendar: Bool
 
@@ -212,16 +273,6 @@ struct CalendarView: View {
                 )
             }
         }
-        .fullScreenCover(isPresented: $showsTodoCreate) {
-            TodoCreateModal(
-                model: todoCreateModel,
-                initialStatus: .inProgress,
-                friends: model.friends,
-                refreshBoardAfterCreate: false,
-                onCreated: { await model.refreshTodoBoard() },
-                onDismiss: { showsTodoCreate = false }
-            )
-        }
         .fullScreenCover(item: $todoSelection) { selection in
             DPModalOverlay(
                 onDismiss: {
@@ -306,13 +357,10 @@ struct CalendarView: View {
     private var calendarContent: some View {
         ScrollView {
             LazyVStack(spacing: DPSpacing.small) {
-                if model.isMyCalendar, !model.isQuickDutyEditing {
-                    dutyTodoRow
-                }
                 if showsDutyToolbar {
                     dutyToolbar
                 }
-                calendarGrid
+                swipeableCalendarGrid
                 if !model.isQuickDutyEditing {
                     dDaySection
                 }
@@ -336,12 +384,7 @@ struct CalendarView: View {
                 .accessibilityIdentifier("calendar.month.controls")
         }
         DPDashboardHeaderToolbarItem(placement: .topBarTrailing) {
-            HStack(spacing: 0) {
-                // The trailing slot is a fixed width that holds exactly two controls, and
-                // widening it would push the centred month navigation off a 375pt screen.
-                if !isViewingCurrentMonth {
-                    thisMonthControl
-                }
+            Group {
                 if model.canSearchSchedules {
                     searchControl
                 }
@@ -359,7 +402,8 @@ struct CalendarView: View {
     // actions from the identity itself instead of a separate overflow button.
     private var memberActionsMenu: some View {
         Menu {
-            Button {
+            // The same siren in the same red as every other report in the app.
+            Button(role: .destructive) {
                 guard let memberID = model.targetMemberID else { return }
                 withoutPresentationAnimation {
                     reportTarget = ReportTarget(
@@ -369,7 +413,11 @@ struct CalendarView: View {
                     )
                 }
             } label: {
-                Label(CalendarLocalization.text("calendar.report.member"), systemImage: "flag")
+                Label {
+                    Text(CalendarLocalization.text("calendar.report.member"))
+                } icon: {
+                    DPReportBeaconIcon()
+                }
             }
             .accessibilityIdentifier("calendar.member.report")
 
@@ -444,9 +492,8 @@ struct CalendarView: View {
         .accessibilityElement(children: .combine)
     }
 
-    private var isViewingCurrentMonth: Bool {
-        let current = CalendarDateSupport.calendar.dateComponents([.year, .month], from: Date())
-        return current.year == model.year && current.month == model.month
+    private var showsThisMonthCallout: Bool {
+        CalendarVisualLogic.showsThisMonthCallout(year: model.year, month: model.month, today: Date())
     }
 
     private var monthLabel: some View {
@@ -477,16 +524,74 @@ struct CalendarView: View {
     // navigation in the principal slot stays centred on the screen.
     private static let barSideWidth: CGFloat = 88
 
-    // The former floating callout cannot survive inside the navigation bar, so the
-    // "go to this month" affordance follows the platform convention of a plain
-    // trailing bar button instead.
-    private var thisMonthControl: some View {
+    // The web calendar draws the tail near the leading edge of the bubble; these place that
+    // tail on the horizontal centre, so it points at the month label whatever the label reads.
+    private static let calloutCapsuleHeight: CGFloat = 20
+    private nonisolated static let calloutTailInset: CGFloat = 8
+    private nonisolated static let calloutTailWidth: CGFloat = 12
+    private static let calloutTailHeight: CGFloat = 6
+    // Overlap that keeps the tail and the capsule reading as one shape.
+    private static let calloutTailOverlap: CGFloat = 2
+    // The capsule is shorter than a touch target, so it takes what room the bar leaves
+    // around itself; a taller hit area would only reach past the bar, which passes on
+    // nothing it does not draw.
+    private nonisolated static let calloutHitInsetX: CGFloat = 6
+    private static let calloutHitInsetY: CGFloat = 4
+    private nonisolated static let calloutTailCenter: CGFloat =
+        calloutHitInsetX + calloutTailInset + calloutTailWidth / 2
+
+    // A 44pt bar button around a 16pt label leaves about this much room between the text and
+    // the button's bottom edge. The callout hangs from the edge of the room reserved below
+    // it, so that reserve is its own height less the slack it can borrow, and one point less
+    // again so the tail bites into the label rather than stopping a hair short of it.
+    private static let calloutLabelSlack: CGFloat = 8
+    private static let calloutLabelBite: CGFloat = 1
+
+    // Hanging the bubble straight off the label left the two glued together. It drops
+    // this much further before it starts, which is enough air to read them apart.
+    private static let calloutLabelDrop: CGFloat = 5
+    private static let calloutReach: CGFloat =
+        calloutHitInsetY * 2 + calloutCapsuleHeight - calloutLabelSlack - calloutLabelBite
+            + calloutLabelDrop
+
+    // The month label lives in the navigation bar, so the callout is hung inside the bar too:
+    // content below it cannot be tapped through the bar, and a bubble that only looks right
+    // while being unreachable is worse than the bare arrow it replaced.
+    @ViewBuilder
+    private var thisMonthCalloutLayer: some View {
+        if showsThisMonthCallout {
+            thisMonthCallout
+                .transition(.offset(y: -4).combined(with: .opacity))
+        }
+    }
+
+    private var thisMonthCallout: some View {
         Button { Task { await model.goToToday() } } label: {
-            Image(systemName: "arrow.uturn.backward")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(DPColor.accent)
-                .frame(width: Self.barControlWidth, height: DPSize.minimumTouchTarget)
-                .contentShape(Rectangle())
+            HStack(spacing: 3) {
+                Image(systemName: "arrow.uturn.backward")
+                    .font(.system(size: 10, weight: .bold))
+                Text(CalendarLocalization.text("calendar.month.goToThisMonth"))
+                    .font(DPFont.bold(size: 11, relativeTo: .caption2))
+                    .lineLimit(1)
+            }
+            .foregroundStyle(DPColor.textOnDark)
+            .padding(.horizontal, 8)
+            .frame(height: Self.calloutCapsuleHeight)
+            .background(DPColor.accent, in: Capsule())
+            .background(alignment: .topLeading) {
+                CalloutTail()
+                    .fill(DPColor.accent)
+                    .frame(width: Self.calloutTailWidth, height: Self.calloutTailHeight)
+                    .offset(
+                        x: Self.calloutTailInset,
+                        y: Self.calloutTailOverlap - Self.calloutTailHeight
+                    )
+            }
+            .compositingGroup()
+            .shadow(color: DPColor.accent.opacity(0.35), radius: 4, x: 0, y: 2)
+            .padding(.horizontal, Self.calloutHitInsetX)
+            .padding(.vertical, Self.calloutHitInsetY)
+            .contentShape(Rectangle())
         }
         .accessibilityLabel(CalendarLocalization.text("calendar.month.goToThisMonth"))
     }
@@ -512,6 +617,16 @@ struct CalendarView: View {
             }
         }
         .foregroundStyle(DPColor.accent)
+        // The bar hit-tests only what its own item covers, so the callout is reserved as part
+        // of the item rather than merely drawn over the bar; a bubble nobody can press is
+        // worse than the bare arrow it replaced. The bar centres the item it is given, so the
+        // reserve is matched above to keep the month navigation on the bar's own centre line.
+        .padding(.vertical, Self.calloutReach)
+        .overlay(alignment: .bottom) {
+            thisMonthCalloutLayer
+                .alignmentGuide(HorizontalAlignment.center) { _ in Self.calloutTailCenter }
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: showsThisMonthCallout)
+        }
     }
 
     // The navigation bar has no room for the inline query field; tapping opens the
@@ -577,10 +692,9 @@ struct CalendarView: View {
     }
 
     private var dutyToolbar: some View {
-        VStack(spacing: DPSpacing.extraSmall) {
+        Group {
             if model.isQuickDutyEditing {
-                editModeNotice
-                quickDutyBar
+                quickDutyPanel
             } else {
                 HStack(spacing: DPSpacing.small) {
                     dutySummary
@@ -643,95 +757,56 @@ struct CalendarView: View {
         .overlay(RoundedRectangle(cornerRadius: DPRadius.standard).stroke(DPColor.borderSecondary))
     }
 
-    private var editModeNotice: some View {
+    // Edit mode used to be a notice card with a full-width exit button stacked on top of
+    // a loose row of controls, which read as two unrelated blocks and pushed the calendar
+    // itself off the first screen. One panel says the mode once and keeps its controls
+    // inside it.
+    private var quickDutyPanel: some View {
         VStack(alignment: .leading, spacing: DPSpacing.small) {
-            HStack(alignment: .top, spacing: DPSpacing.small) {
-                Circle()
-                    .fill(DPColor.backgroundPrimary)
-                    .frame(width: 36, height: 36)
-                    .overlay {
-                        Image(systemName: "pencil.line")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(DPColor.warning)
-                    }
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(CalendarLocalization.text("calendar.duty.quick.start"))
-                        .font(DPTypography.label)
-                        .foregroundStyle(DPColor.textPrimary)
-                    Text("calendar.duty.quick.description", tableName: "Calendar")
-                        .font(DPTypography.caption)
-                        .foregroundStyle(DPColor.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-
-            Button { model.setQuickDutyEditing(false) } label: {
-                Label(CalendarLocalization.text("calendar.duty.quick.exit"), systemImage: "xmark")
-                    .font(DPTypography.caption)
-                    .frame(maxWidth: .infinity, minHeight: 44)
-            }
-            .buttonStyle(.bordered)
-            .tint(DPColor.warning)
+            editModeHeader
+            Divider().overlay(DPColor.warningBorder)
+            quickDutyBar
         }
         .padding(DPSpacing.small)
         .background(DPColor.warningSoft)
-        .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
-        .overlay(RoundedRectangle(cornerRadius: DPRadius.standard).stroke(DPColor.warningBorder))
+        .clipShape(RoundedRectangle(cornerRadius: DPRadius.large))
+        .overlay(RoundedRectangle(cornerRadius: DPRadius.large).stroke(DPColor.warningBorder))
     }
 
-    private var dutyTodoRow: some View {
+    private var editModeHeader: some View {
         HStack(spacing: DPSpacing.small) {
-            Button { withoutPresentationAnimation { showsTodoCreate = true } } label: {
-                Image(systemName: "plus")
-                    .foregroundStyle(DPColor.textSecondary)
-                    .frame(width: 44, height: 44)
-            }
-            .accessibilityLabel(CalendarLocalization.text("calendar.todo.add"))
-            .accessibilityIdentifier("calendar.todo.add")
-            .background(DPColor.backgroundCard)
-            .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
-            .overlay(RoundedRectangle(cornerRadius: DPRadius.standard).stroke(DPColor.borderSecondary))
-
-            Button { Task { await model.toggleTodoItems() } } label: {
-                Image(systemName: model.showTodoItems ? "checkmark.square.fill" : "list.bullet")
-                    .foregroundStyle(model.showTodoItems ? DPColor.accent : DPColor.textMuted)
-                    .frame(width: 44, height: 44)
-                    .background(model.showTodoItems ? DPColor.accentSoft : DPColor.backgroundCard)
-                    .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
-            }
-            .accessibilityLabel(CalendarLocalization.text("calendar.todo.showTodo"))
-
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 6) {
-                    ForEach(calendarTodoItems, id: \.id) { todo in
-                        Button { openTodo(todo) } label: {
-                            Text(todo.isTagged ? "\(todo.owner) · \(todo.title)" : todo.title)
-                                .font(DPTypography.caption)
-                                .foregroundStyle(DPColor.textPrimary)
-                                .lineLimit(1)
-                                .padding(.horizontal, 9)
-                                .frame(maxWidth: 150, minHeight: 32)
-                                .background(todo.status == .inProgress ? DPColor.warningSoft : DPColor.accentSoft)
-                                .clipShape(RoundedRectangle(cornerRadius: DPRadius.compact))
-                                .overlay {
-                                    RoundedRectangle(cornerRadius: DPRadius.compact)
-                                        .stroke(todo.status == .inProgress ? DPColor.warningBorder : DPColor.accentBorder)
-                                }
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityIdentifier("calendar.todo.item.\(todo.id)")
-                    }
+            Image(systemName: "pencil.line")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(DPColor.warningHover)
+                .frame(width: 28, height: 28)
+                .background(DPColor.backgroundCard, in: RoundedRectangle(cornerRadius: DPRadius.compact))
+                .overlay {
+                    RoundedRectangle(cornerRadius: DPRadius.compact)
+                        .stroke(DPColor.warningBorder, lineWidth: DPChrome.borderWidth)
                 }
-                .frame(minHeight: 44)
-            }
-            .frame(maxWidth: .infinity)
-        }
-    }
 
-    private var calendarTodoItems: [TodoDTO] {
-        (model.todoBoard?.inProgress ?? []) + (model.showTodoItems ? (model.todoBoard?.todo ?? []) : [])
+            VStack(alignment: .leading, spacing: 1) {
+                Text(CalendarLocalization.text("calendar.duty.quick.start"))
+                    .font(DPFont.bold(size: 13, relativeTo: .subheadline))
+                    .foregroundStyle(DPColor.textPrimary)
+                Text("calendar.duty.quick.description", tableName: "Calendar")
+                    .font(DPTypography.caption)
+                    .foregroundStyle(DPColor.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            DPIconActionButton(
+                systemImage: "xmark",
+                label: CalendarLocalization.text("calendar.duty.quick.exit"),
+                showsLabel: true,
+                tone: .warning
+            ) {
+                model.setQuickDutyEditing(false)
+            }
+            .padding(.trailing, -DPIconActionMetrics.touchPadding)
+            .accessibilityIdentifier("calendar.duty.quick.exit")
+        }
     }
 
     private func openTodo(_ todo: TodoDTO) {
@@ -766,21 +841,28 @@ struct CalendarView: View {
         })
     }
 
+    // Every control on this row is a card-coloured chip of the same height and corner
+    // radius, so the day stepper, the duty types and the batch action read as one set
+    // instead of a stepper, some tiles and a stray capsule.
     private var quickDutyBar: some View {
         CalendarFlowLayout(spacing: DPSpacing.small) {
             HStack(spacing: 0) {
                 Button { model.moveQuickDutyFocus(by: -1) } label: {
-                    Image(systemName: "chevron.left").frame(width: 44, height: 44)
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 14, weight: .semibold))
+                        .frame(width: Self.quickDutyStepWidth, height: DPSize.minimumTouchTarget)
                 }
                 Text(CalendarLocalization.format("calendar.duty.quick.day", model.quickDutyDay?.cell.day ?? 1))
-                    .font(DPTypography.label)
-                    .foregroundStyle(DPColor.warning)
-                    .frame(minWidth: 34)
+                    .font(DPFont.bold(size: 14, relativeTo: .subheadline))
+                    .foregroundStyle(DPColor.warningHover)
+                    .frame(minWidth: 38)
                 Button { model.moveQuickDutyFocus(by: 1) } label: {
-                    Image(systemName: "chevron.right").frame(width: 44, height: 44)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14, weight: .semibold))
+                        .frame(width: Self.quickDutyStepWidth, height: DPSize.minimumTouchTarget)
                 }
             }
-            .background(DPColor.backgroundTertiary)
+            .background(DPColor.backgroundCard)
             .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
             .overlay(RoundedRectangle(cornerRadius: DPRadius.standard).stroke(DPColor.borderSecondary))
 
@@ -797,12 +879,19 @@ struct CalendarView: View {
 
             if model.isMyCalendar {
                 Button { showsBatchUpdate = true } label: {
-                    Text(CalendarLocalization.text("calendar.duty.batch"))
+                    Label(CalendarLocalization.text("calendar.duty.batch"), systemImage: "calendar")
                         .font(DPTypography.caption)
-                        .frame(minHeight: 44)
+                        .foregroundStyle(DPColor.textSecondary)
+                        .padding(.horizontal, DPSpacing.compact)
+                        .frame(minHeight: DPSize.minimumTouchTarget)
+                        .background(DPColor.backgroundCard)
+                        .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: DPRadius.standard)
+                                .stroke(DPColor.borderSecondary, lineWidth: DPChrome.borderWidth)
+                        }
                 }
-                .buttonStyle(.bordered)
-                .tint(DPColor.textSecondary)
+                .buttonStyle(.plain)
                 .accessibilityIdentifier("calendar.duty.batch.open")
             }
         }
@@ -820,17 +909,32 @@ struct CalendarView: View {
             Text(name)
                 .font(DPTypography.label)
                 .foregroundStyle(foreground)
-                .padding(.horizontal, 12)
-                .frame(minHeight: 44)
+                .padding(.horizontal, DPSpacing.compact)
+                .frame(minHeight: DPSize.minimumTouchTarget)
                 .background(color)
                 .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+                // The selected type keeps a ring rather than a 3pt slab: at that weight the
+                // stroke ate into the duty colour it is meant to point at.
                 .overlay {
                     RoundedRectangle(cornerRadius: DPRadius.standard)
-                        .stroke(selected ? DPColor.warning : DPColor.borderPrimary, lineWidth: selected ? 3 : 1)
+                        .stroke(
+                            selected ? DPColor.warningHover : DPColor.borderPrimary,
+                            lineWidth: selected ? 2 : DPChrome.borderWidth
+                        )
                 }
+                .shadow(
+                    color: DPColor.warningHover.opacity(selected ? 0.35 : 0),
+                    radius: 3,
+                    y: 1
+                )
         }
         .buttonStyle(.plain)
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
+
+    // The stepper's chevrons stay narrower than a full touch target so the day readout
+    // between them keeps its room; the group is still 44pt tall.
+    private static let quickDutyStepWidth: CGFloat = 36
 
     private var calendarGrid: some View {
         VStack(spacing: 0) {
@@ -845,20 +949,30 @@ struct CalendarView: View {
                         .overlay(alignment: .bottom) { Rectangle().fill(DPColor.borderSecondary).frame(height: 2) }
                 }
                 ForEach(Array(model.days.enumerated()), id: \.element.id) { index, day in
-                    CalendarDayCell(
+                    let opensDetail = CalendarDayOpenPolicy.opensDetail(day, canEdit: model.canEdit)
+                    let cell = CalendarDayCell(
                         day: day,
                         weekday: index % 7,
                         highlighted: model.highlightedDate == day.cell.date,
                         pinnedDDay: model.pinnedDDay,
                         hidesDetails: model.isQuickDutyEditing,
+                        calendarMemberID: model.targetMemberID,
+                        opensDetail: opensDetail,
                         openTodo: openTodo
                     )
-                        .onTapGesture {
+                    if opensDetail {
+                        cell.onTapGesture {
+                            // A finger that pulled the grid sideways was swiping, not
+                            // tapping, even when it gave up short of the next month.
+                            guard !isSwipingMonth, !isSlidingMonth else { return }
                             if model.isQuickDutyEditing { model.focusQuickDuty(on: day) }
                             else {
                                 withoutPresentationAnimation { model.selectedDay = day }
                             }
                         }
+                    } else {
+                        cell
+                    }
                 }
             }
         }
@@ -866,6 +980,68 @@ struct CalendarView: View {
         .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
         .overlay(RoundedRectangle(cornerRadius: DPRadius.standard).stroke(DPColor.borderSecondary))
         .shadow(color: .black.opacity(0.05), radius: 1, y: 1)
+    }
+
+    // Swiping the grid sideways is the quick way through the months; the chevrons in
+    // the navigation bar stay for taps and for VoiceOver, which never sees this drag.
+    private var swipeableCalendarGrid: some View {
+        calendarGrid
+            .background {
+                GeometryReader { proxy in
+                    Color.clear
+                        .onAppear { calendarGridWidth = proxy.size.width }
+                        .onChange(of: proxy.size.width) { _, width in calendarGridWidth = width }
+                }
+            }
+            .offset(x: monthSlideOffset)
+            // A plain DragGesture claimed every drag that passed its minimum distance,
+            // so a scroll that set off with the slightest sideways lean never reached
+            // the page underneath. This one takes sideways drags and nothing else.
+            .dpHorizontalPan(onChanged: followMonthSwipe, onEnded: finishMonthSwipe)
+    }
+
+    private func followMonthSwipe(translation: CGSize) {
+        guard !isSlidingMonth else { return }
+        monthSlideOffset = CalendarMonthSwipe.followOffset(translation: translation)
+        if monthSlideOffset != 0 { isSwipingMonth = true }
+    }
+
+    private func finishMonthSwipe(translation: CGSize) {
+        guard !isSlidingMonth else { return }
+        // The cell's own tap lands around the same moment, so the swipe flag
+        // outlives the drag just long enough for that tap to be turned away.
+        Task {
+            try? await Task.sleep(nanoseconds: 100_000_000)
+            isSwipingMonth = false
+        }
+        let offset = CalendarMonthSwipe.monthOffset(translation: translation)
+        guard offset != 0 else {
+            withAnimation(.easeOut(duration: CalendarMonthSwipe.slideInDuration)) {
+                monthSlideOffset = 0
+            }
+            return
+        }
+        slideMonth(by: offset)
+    }
+
+    private func slideMonth(by offset: Int) {
+        isSlidingMonth = true
+        // The month itself changes now and its days arrive later, so the grid slides
+        // out, reappears on the far side and slides back in without waiting for the
+        // response; a slow month lands its cells into a calendar that is already home.
+        let travel = calendarGridWidth > 0 ? calendarGridWidth : CalendarMonthSwipe.maximumFollowDistance
+        withAnimation(.easeIn(duration: CalendarMonthSwipe.slideOutDuration)) {
+            monthSlideOffset = offset > 0 ? -travel : travel
+        }
+        Task { await model.changeMonth(by: offset) }
+        Task {
+            try? await Task.sleep(nanoseconds: UInt64(CalendarMonthSwipe.slideOutDuration * 1_000_000_000))
+            monthSlideOffset = offset > 0 ? travel : -travel
+            withAnimation(.easeOut(duration: CalendarMonthSwipe.slideInDuration)) {
+                monthSlideOffset = 0
+            }
+            isSlidingMonth = false
+        }
     }
 
     private var dDaySection: some View {
@@ -1500,6 +1676,8 @@ private struct CalendarDayCell: View {
     let highlighted: Bool
     let pinnedDDay: DDayDTO?
     let hidesDetails: Bool
+    let calendarMemberID: MemberID?
+    let opensDetail: Bool
     let openTodo: (TodoDTO) -> Void
 
     var body: some View {
@@ -1509,8 +1687,8 @@ private struct CalendarDayCell: View {
                     .font(DPFont.bold(size: CalendarTypography.dayNumber, relativeTo: .caption))
                     .foregroundStyle(dayNumberColor)
                 Spacer(minLength: 0)
-                if let pinnedDDay, !hidesDetails {
-                    Text(relativeLabel(pinnedDDay))
+                if let pinnedDDay, !hidesDetails, let label = relativeLabel(pinnedDDay) {
+                    Text(label)
                         .font(DPFont.light(size: CalendarTypography.cellMicro, relativeTo: .caption2))
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
@@ -1568,6 +1746,9 @@ private struct CalendarDayCell: View {
         .overlay(Rectangle().stroke(focusBorder, lineWidth: highlighted || isToday ? 2 : 0))
         .contentShape(Rectangle())
         .accessibilityLabel(day.cell.date.rawValue)
+        // A day that opens nothing carries no tap gesture, so it must not offer itself
+        // as a button either.
+        .accessibilityAddTraits(opensDetail ? .isButton : [])
     }
 
     private var cellBackground: Color {
@@ -1615,18 +1796,45 @@ private struct CalendarDayCell: View {
     }
 
     private func scheduleText(_ schedule: ScheduleDTO) -> some View {
-        Text(schedule.content)
-            .font(DPFont.light(size: CalendarTypography.cellContent, relativeTo: .caption2))
-            .foregroundStyle(primaryForeground)
-            .lineLimit(2)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.top, 1)
-            .overlay(alignment: .top) {
-                Rectangle()
-                    .stroke(style: StrokeStyle(lineWidth: 0.75, dash: [2, 2]))
-                    .foregroundStyle(cellBorder)
-                    .frame(height: 0.75)
+        let tags = ScheduleTagDisplayPolicy.displayTags(for: schedule, calendarMemberID: calendarMemberID)
+        return VStack(alignment: .leading, spacing: 1) {
+            scheduleTitleLine(schedule)
+                .font(DPFont.light(size: CalendarTypography.cellContent, relativeTo: .caption2))
+                .foregroundStyle(primaryForeground)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            if !tags.isEmpty {
+                // Two tags already outgrow a 47pt cell, so they wrap and settle against
+                // the trailing edge, as they do in the same cell on the web.
+                DPMemberTagChips(
+                    items: tags,
+                    size: .micro,
+                    limit: CalendarVisualLogic.maximumTagsPerCellSchedule,
+                    alignment: .trailing
+                )
+                .frame(maxWidth: .infinity, alignment: .trailing)
             }
+        }
+        .padding(.top, 1)
+        .overlay(alignment: .top) {
+            Rectangle()
+                .stroke(style: StrokeStyle(lineWidth: 0.75, dash: [2, 2]))
+                .foregroundStyle(cellBorder)
+                .frame(height: 0.75)
+        }
+    }
+
+    /// The title and everything that qualifies it run as one flow of text, so the counter
+    /// and the details mark stay with the last word instead of claiming a line of their own.
+    private func scheduleTitleLine(_ schedule: ScheduleDTO) -> Text {
+        var line = Text(verbatim: schedule.content)
+        if schedule.totalDays > 1 {
+            line = line + Text(verbatim: "(\(schedule.daysFromStart)/\(schedule.totalDays))")
+        }
+        if !schedule.description.isEmpty || !schedule.attachments.isEmpty {
+            line = line + Text(verbatim: " ") + Text(Image(systemName: "text.bubble"))
+        }
+        return line
     }
 
     private func statusBubble(_ text: String, image: String, background: Color, border: Color, foreground: Color) -> some View {
@@ -1663,11 +1871,8 @@ private struct CalendarDayCell: View {
         .accessibilityIdentifier("calendar.compared-duty.\(item.memberID)")
     }
 
-    private func relativeLabel(_ item: DDayDTO) -> String {
-        guard let target = CalendarDateSupport.date(from: item.date), let cell = CalendarDateSupport.date(from: day.cell.date) else { return item.title }
-        let difference = CalendarDateSupport.calendar.dateComponents([.day], from: cell, to: target).day ?? 0
-        let label = difference == 0 ? "D-Day" : difference > 0 ? "D-\(difference)" : "D+\(-difference)"
-        return "\(item.title) \(label)"
+    private func relativeLabel(_ item: DDayDTO) -> String? {
+        CalendarVisualLogic.pinnedDDayLabel(cell: day.cell.date, target: item.date)
     }
 }
 
@@ -1934,6 +2139,8 @@ private struct DayDetailView: View {
                 .accessibilityLabel(CalendarLocalization.text("calendar.close"))
             }
 
+            // Somebody else's duty is already told by the colour of the day in the grid
+            // behind this sheet, so the sheet does not repeat it.
             if model.canEdit, !showsEditor, !model.visibleDutyTypes.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 6) {
@@ -1943,14 +2150,6 @@ private struct DayDetailView: View {
                     }
                 }
                 .fixedSize(horizontal: false, vertical: true)
-            } else if let duty = day.duty, !model.canEdit, !showsEditor {
-                Text(duty.dutyType ?? CalendarLocalization.text("calendar.off"))
-                    .font(DPTypography.caption)
-                    .foregroundStyle(DPColor.textOnDark)
-                    .padding(.horizontal, 10)
-                    .frame(minHeight: 28)
-                    .background(calendarColor(duty.dutyColor))
-                    .clipShape(RoundedRectangle(cornerRadius: DPRadius.compact))
             }
         }
         .padding(.leading, 14)
@@ -2020,58 +2219,37 @@ private struct DayDetailView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                if schedule.isTagged, model.isMyCalendar {
-                    Button {
-                        destructiveAction = .untag(schedule)
-                    } label: {
-                        Label(CalendarLocalization.text("calendar.schedule.untag"), systemImage: "xmark")
-                            .font(DPTypography.caption)
-                            .frame(minHeight: 44)
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(DPColor.warning)
-                } else if model.canEdit {
-                    Button {
-                        editorSchedule = schedule
-                    } label: {
-                        Image(systemName: "pencil")
-                            .frame(width: 44, height: 44)
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(DPColor.accent)
-
-                    Button {
-                        destructiveAction = .delete(schedule)
-                    } label: {
-                        Image(systemName: "trash")
-                            .frame(width: 44, height: 44)
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(DPColor.danger)
-                }
-
-                // Reporting is orthogonal to the edit and untag branches above: someone
-                // else's schedule offers neither, and a schedule you were tagged into
-                // offers untag and report at once.
-                if canReport(schedule) {
-                    Button {
-                        withoutPresentationAnimation {
-                            reportBlockEndsCalendarAccess = blockEndsCalendarAccess(schedule)
-                            reportTarget = ReportTarget(
-                                type: .schedule,
-                                targetID: schedule.id.uuidString,
-                                name: schedule.content
-                            )
+                HStack(spacing: 0) {
+                    if model.canEdit, !canUntag(schedule) {
+                        DPIconActionButton(
+                            systemImage: "pencil",
+                            label: CalendarLocalization.text("calendar.schedule.edit"),
+                            tone: .accent
+                        ) {
+                            editorSchedule = schedule
                         }
-                    } label: {
-                        Image(systemName: "flag")
-                            .frame(width: 44, height: 44)
+
+                        DPIconActionButton(
+                            systemImage: "trash",
+                            label: CalendarLocalization.text("calendar.schedule.delete"),
+                            tone: .danger
+                        ) {
+                            destructiveAction = .delete(schedule)
+                        }
                     }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(DPColor.textMuted)
-                    .accessibilityLabel(CalendarLocalization.text("calendar.report.schedule"))
-                    .accessibilityIdentifier("calendar.schedule.report")
+
+                    // Untag and report both act on somebody else's doing rather than on
+                    // the schedule's content, and a schedule you were tagged into offers
+                    // the two at once. One overflow keeps them from competing with edit
+                    // and delete for the same corner of the row.
+                    if canUntag(schedule) || canReport(schedule) {
+                        scheduleOverflowMenu(schedule)
+                    }
                 }
+                // The chips carry their own touch padding, so the row lines them up with
+                // the title instead of adding another gap on top of it.
+                .padding(.top, -DPIconActionMetrics.touchPadding)
+                .padding(.trailing, -DPIconActionMetrics.touchPadding)
             }
 
             scheduleMetadata(schedule)
@@ -2101,6 +2279,67 @@ private struct DayDetailView: View {
         }
     }
 
+    private func scheduleOverflowMenu(_ schedule: ScheduleDTO) -> some View {
+        Menu {
+            if canUntag(schedule) {
+                Button {
+                    destructiveAction = .untag(schedule)
+                } label: {
+                    Label(CalendarLocalization.text("calendar.schedule.untag"), systemImage: "tag.slash")
+                }
+                .accessibilityIdentifier("calendar.schedule.untag")
+            }
+
+            if canReport(schedule) {
+                // Reporting is the one action here that reaches another member, so it
+                // carries the siren the rest of the app reports with, in danger red.
+                Button(role: .destructive) {
+                    withoutPresentationAnimation {
+                        reportBlockEndsCalendarAccess = blockEndsCalendarAccess(schedule)
+                        reportTarget = ReportTarget(
+                            type: .schedule,
+                            targetID: schedule.id.uuidString,
+                            name: schedule.content
+                        )
+                    }
+                } label: {
+                    Label {
+                        Text(CalendarLocalization.text("calendar.report.schedule"))
+                    } icon: {
+                        DPReportBeaconIcon()
+                    }
+                }
+                .accessibilityIdentifier("calendar.schedule.report")
+            }
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.system(size: DPIconActionMetrics.iconSize, weight: .semibold))
+                .foregroundStyle(DPIconActionTone.neutral.foreground)
+                .frame(
+                    minWidth: DPIconActionMetrics.controlSize,
+                    minHeight: DPIconActionMetrics.controlSize
+                )
+                .background(
+                    RoundedRectangle(cornerRadius: DPRadius.standard)
+                        .fill(DPIconActionTone.neutral.background)
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: DPRadius.standard)
+                        .stroke(DPIconActionTone.neutral.border, lineWidth: DPChrome.borderWidth)
+                )
+                .padding(DPIconActionMetrics.touchPadding)
+                .contentShape(Rectangle())
+        }
+        .accessibilityLabel(CalendarLocalization.text("calendar.schedule.more"))
+        .accessibilityIdentifier("calendar.schedule.menu")
+    }
+
+    // Only the tagged member can shed a tag, and only from their own calendar, where
+    // the schedule is somebody else's doing.
+    private func canUntag(_ schedule: ScheduleDTO) -> Bool {
+        schedule.isTagged && model.isMyCalendar
+    }
+
     // Only a signed-in member can report, and only content that is not their own:
     // another member's calendar, or a schedule someone else tagged them into.
     private func canReport(_ schedule: ScheduleDTO) -> Bool {
@@ -2123,24 +2362,28 @@ private struct DayDetailView: View {
 
     @ViewBuilder
     private func scheduleMetadata(_ schedule: ScheduleDTO) -> some View {
-        if schedule.isTagged || !schedule.tags.isEmpty || schedule.visibility != nil {
+        let tags = ScheduleTagDisplayPolicy.displayTags(
+            for: schedule,
+            calendarMemberID: model.targetMemberID
+        )
+        let showsVisibility = schedule.visibility != nil && model.isMyCalendar
+
+        if !tags.isEmpty || showsVisibility {
             HStack(spacing: DPSpacing.small) {
-                if schedule.isTagged {
-                    Label(schedule.owner, systemImage: "person.crop.circle.badge.checkmark")
-                }
-                if !schedule.tags.isEmpty {
-                    Label(schedule.tags.map(\.name).joined(separator: ", "), systemImage: "tag")
+                if !tags.isEmpty {
+                    DPMemberTagChips(items: tags, size: .regular)
                 }
                 if let visibility = schedule.visibility, model.isMyCalendar {
                     Label(
                         CalendarLocalization.text("calendar.visibility.\(visibilityKey(visibility))"),
                         systemImage: "eye"
                     )
+                    .font(DPFont.light(size: CalendarTypography.detailMetadata, relativeTo: .subheadline))
+                    .foregroundStyle(DPColor.textMuted)
+                    .lineLimit(1)
                 }
+                Spacer(minLength: 0)
             }
-            .font(DPFont.light(size: CalendarTypography.detailMetadata, relativeTo: .subheadline))
-            .foregroundStyle(DPColor.textMuted)
-            .lineLimit(1)
         }
     }
 
@@ -2317,8 +2560,12 @@ private struct ScheduleEditorView<Header: View>: View {
     @State private var content: String
     @State private var description: String
     @State private var visibility: Visibility
-    @State private var start: Date
-    @State private var end: Date
+    /// The schedule model stores "no time" as midnight, so the editor keeps each date and
+    /// its optional time apart and only recombines them for saving and dirty checks.
+    @State private var startDate: Date
+    @State private var startTime: Date?
+    @State private var endDate: Date
+    @State private var endTime: Date?
     @State private var tagIDs: Set<MemberID>
     @State private var isSaving = false
     @State private var isDiscarding = false
@@ -2328,12 +2575,30 @@ private struct ScheduleEditorView<Header: View>: View {
     @StateObject private var aiConsent = AIScheduleParsingConsentStore.shared
     @FocusState private var focusedField: Field?
     @State private var isTagSearchFocused = false
+    @State private var isTagSelectorExpanded = false
+    @ScaledMetric(relativeTo: .subheadline) private var rowLabelWidth: CGFloat =
+        CalendarVisualLogic.formLabelWidth(locale: CalendarLocalization.selectedLocale)
+    /// Reserved on every date and time cell so a row keeps its height in each of the time's
+    /// states. It follows the body text style because the pickers it has to fit do.
+    @ScaledMetric(relativeTo: .body) private var dateRowHeight: CGFloat =
+        CalendarVisualLogic.scheduleDateRowHeight
 
     private enum Field {
         case title
         case details
         case tags
     }
+
+    /// Which of the two date rows has its calendar open, if any. The editor has to know: an
+    /// outside tap has to close that calendar rather than the whole form, and the panel has to
+    /// scroll the calendar's own confirm into view. One value covers both rows, so opening one
+    /// calendar closes the other.
+    private enum ScheduleDateField: Hashable {
+        case start
+        case end
+    }
+
+    @State private var expandedDateField: ScheduleDateField?
 
     init(
         model: CalendarViewModel,
@@ -2373,8 +2638,17 @@ private struct ScheduleEditorView<Header: View>: View {
         _content = State(initialValue: initialContent)
         _description = State(initialValue: initialDescription)
         _visibility = State(initialValue: initialVisibility)
-        _start = State(initialValue: initialStart)
-        _end = State(initialValue: initialEnd)
+        _startDate = State(initialValue: initialStart)
+        _startTime = State(initialValue: ScheduleEditorTimePolicy.time(
+            of: initialStart,
+            calendar: CalendarDateSupport.calendar
+        ))
+        _endDate = State(initialValue: initialEnd)
+        _endTime = State(initialValue: ScheduleEditorTimePolicy.endTime(
+            of: initialEnd,
+            start: initialStart,
+            calendar: CalendarDateSupport.calendar
+        ))
         _tagIDs = State(initialValue: initialTagIDs)
         _attachmentModel = StateObject(wrappedValue: AttachmentPickerModel(
             contextType: .schedule,
@@ -2383,10 +2657,36 @@ private struct ScheduleEditorView<Header: View>: View {
         ))
     }
 
-    /// The tag search field belongs to `DPFriendTagSelector`, so it never appears in
-    /// `focusedField`; fall back to it only when no field of this editor holds focus.
-    private var scrollTarget: Field? {
-        focusedField ?? (isTagSearchFocused ? .tags : nil)
+    private var start: Date {
+        ScheduleEditorTimePolicy.combine(
+            date: startDate,
+            time: startTime,
+            calendar: CalendarDateSupport.calendar
+        )
+    }
+
+    private var end: Date {
+        ScheduleEditorTimePolicy.effectiveEnd(
+            start: start,
+            endDate: endDate,
+            endTime: endTime,
+            calendar: CalendarDateSupport.calendar
+        )
+    }
+
+    /// What the panel keeps in view. An open date calendar outranks everything: it is the
+    /// tallest thing this form can grow, and its own confirm lands below the modal's footer the
+    /// moment it opens — a step the user has to see to take. Otherwise it is the focused field,
+    /// and finally the tag search, which belongs to `DPFriendTagSelector` and so never appears
+    /// in `focusedField` at all. Expanding friend tags targets the reserved summary at the
+    /// selector's bottom edge, so the zero-selection state is visible before the first pick.
+    private var scrollTarget: AnyHashable? {
+        if let expandedDateField { return AnyHashable(expandedDateField) }
+        if let focusedField { return AnyHashable(focusedField) }
+        if isTagSearchFocused { return AnyHashable(Field.tags) }
+        return isTagSelectorExpanded
+            ? AnyHashable(DPFriendTagSelectorScrollAnchor.selectionSummary)
+            : nil
     }
 
     var body: some View {
@@ -2404,7 +2704,7 @@ private struct ScheduleEditorView<Header: View>: View {
         .onChange(of: interactionsDisabled) { _, isWorking in
             onWorkingChange(isWorking)
         }
-        .onChange(of: dismissRequest) { _, _ in requestDismissal() }
+        .onChange(of: dismissRequest) { _, _ in handleOutsideDismissRequest() }
         .onDisappear { onWorkingChange(false) }
         .alert(
             CalendarLocalization.text("calendar.discard.title"),
@@ -2472,27 +2772,7 @@ private struct ScheduleEditorView<Header: View>: View {
             }
             .id(Field.title)
 
-            formRow(existing == nil ? "calendar.schedule.startTime" : "calendar.schedule.start") {
-                DatePicker(
-                    CalendarLocalization.text("calendar.schedule.start"),
-                    selection: $start,
-                    displayedComponents: existing == nil ? [.hourAndMinute] : [.date, .hourAndMinute]
-                )
-                .labelsHidden()
-                .environment(\.locale, CalendarLocalization.selectedLocale)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-
-            formRow("calendar.schedule.end") {
-                DatePicker(
-                    CalendarLocalization.text("calendar.schedule.end"),
-                    selection: $end,
-                    displayedComponents: [.date, .hourAndMinute]
-                )
-                .labelsHidden()
-                .environment(\.locale, CalendarLocalization.selectedLocale)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
+            scheduleDateSection
 
             formRow("calendar.schedule.description", alignment: .top) {
                 TextField(
@@ -2532,7 +2812,12 @@ private struct ScheduleEditorView<Header: View>: View {
                         preservedItems: (existing?.tags ?? []).compactMap(DPFriendTagAdapter.item),
                         selection: $tagIDs,
                         disabled: interactionsDisabled,
-                        isSearchFocused: $isTagSearchFocused
+                        isSearchFocused: $isTagSearchFocused,
+                        onExpand: {
+                            expandedDateField = nil
+                            focusedField = nil
+                            isTagSelectorExpanded = true
+                        }
                     )
                 }
                 .id(Field.tags)
@@ -2566,17 +2851,267 @@ private struct ScheduleEditorView<Header: View>: View {
         .padding(.vertical, 10)
     }
 
+    /// Start and end are two rows of one shape: a label, the day, and the optional time beside
+    /// it — the arrangement the web keeps as well. The two controls have to share a line: the
+    /// end's time button is deliberately absent until a start time exists, and a row that
+    /// stacked them had to reserve that absent button's height anyway (a time may never move
+    /// the fields below it), which left a visible hole under the end date. Beside the date the
+    /// same reserve is invisible.
+    ///
+    /// The calendar the day is picked in does not share the row's width: it bleeds back across
+    /// the label column, because seven columns squeezed into what the label leaves are 29
+    /// points wide in English.
+    private var scheduleDateSection: some View {
+        VStack(alignment: .leading, spacing: DPSpacing.small) {
+            formRow("calendar.schedule.start", alignment: .top) {
+                startDateControl
+            }
+            .id(ScheduleDateField.start)
+            formRow("calendar.schedule.end", alignment: .top) {
+                endDateControl
+            }
+            .id(ScheduleDateField.end)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        // The calendar needs the height the keyboard is holding, and it has just taken the
+        // screen from whatever field was being typed into.
+        .onChange(of: expandedDateField) { _, field in
+            if field != nil { focusedField = nil }
+        }
+        // Bounding the end controls cannot stop the *start* from moving past the end, which
+        // edit mode allows, so the end follows the start whenever the start changes. The end
+        // date is watched too: its clock has to stay anchored to the day it is shown on for
+        // the bound on the end time to mean anything.
+        .onChange(of: startDate) { _, _ in alignEndWithStart() }
+        .onChange(of: startTime) { _, _ in alignEndWithStart() }
+        .onChange(of: endDate) { _, _ in alignEndWithStart() }
+    }
+
+    /// The day the start falls on: the floor the end calendar is measured from, and the anchor
+    /// its range is painted from.
+    private var startDay: DateOnly {
+        ScheduleEditorTimePolicy.day(of: startDate)
+    }
+
+    private func alignEndWithStart() {
+        let aligned = ScheduleEditorTimePolicy.endFollowingStart(
+            start: start,
+            endDate: endDate,
+            endTime: endTime,
+            calendar: CalendarDateSupport.calendar
+        )
+        if aligned.date != endDate { endDate = aligned.date }
+        if aligned.time != endTime { endTime = aligned.time }
+    }
+
+    /// A new schedule belongs to the day that opened the editor, so its start date is fixed —
+    /// but it stays the very field the end row draws, only handed its read-only state. That
+    /// state is what carries the lock, the drained colour and the one static VoiceOver reading;
+    /// the editor no longer bolts decoration on beside an editable control to imitate them.
+    ///
+    /// An existing schedule's start is editable and deliberately single-select: only the end is
+    /// a range, exactly as the web has it. A start picked as a range would ask the user to
+    /// confirm a span whose other end the end row already owns.
+    private var startDateControl: some View {
+        dateControl(
+            $startDate,
+            fieldKey: "calendar.schedule.start",
+            field: .start,
+            isReadOnly: existing == nil
+        ) {
+            timeControl(
+                time: $startTime,
+                fieldKey: "calendar.schedule.start",
+                canAdd: true,
+                add: {
+                    startTime = ScheduleEditorTimePolicy.defaultStartTime(
+                        on: startDate,
+                        now: Date(),
+                        calendar: CalendarDateSupport.calendar
+                    )
+                },
+                remove: {
+                    startTime = nil
+                    // Midnight is how the model stores "no time", so an end time left behind on
+                    // its own would read back as a real 00:00 start.
+                    endTime = nil
+                }
+            )
+        }
+    }
+
+    /// The end is picked as a range anchored at the start, so the calendar paints the schedule's
+    /// whole span as the user moves through it and every day before the start is untappable.
+    /// The bound lives on the control, not on a check run once an impossible date is already in.
+    private var endDateControl: some View {
+        dateControl(
+            $endDate,
+            fieldKey: "calendar.schedule.end",
+            field: .end,
+            mode: .range(anchor: startDay),
+            minimum: startDay
+        ) {
+            timeControl(
+                time: $endTime,
+                fieldKey: "calendar.schedule.end",
+                canAdd: startTime != nil,
+                notEarlierThan: start,
+                add: {
+                    let defaultEnd = ScheduleEditorTimePolicy.defaultEnd(
+                        start: start,
+                        endDate: endDate,
+                        calendar: CalendarDateSupport.calendar
+                    )
+                    // The default can have to move the end date itself, so it sets both.
+                    endDate = defaultEnd
+                    endTime = ScheduleEditorTimePolicy.time(
+                        of: defaultEnd,
+                        calendar: CalendarDateSupport.calendar
+                    )
+                },
+                remove: { endTime = nil }
+            )
+        }
+    }
+
+    /// Both date rows go through this one builder, so the locked start and the range end differ
+    /// in nothing but the state handed to them. No fixed height wraps the field: it is told the
+    /// row height it must hold when collapsed and grows past it when its calendar opens.
+    private func dateControl<Accessory: View>(
+        _ selection: Binding<Date>,
+        fieldKey: String,
+        field: ScheduleDateField,
+        mode: DPDateFieldMode = .single,
+        minimum: DateOnly? = nil,
+        isReadOnly: Bool = false,
+        @ViewBuilder accessory: () -> Accessory
+    ) -> some View {
+        DPDateField(
+            value: dayBinding(selection),
+            fieldName: CalendarLocalization.text(fieldKey),
+            rowHeight: dateRowHeight,
+            mode: mode,
+            minimum: minimum,
+            isReadOnly: isReadOnly,
+            locale: CalendarLocalization.selectedLocale,
+            calendarLeadingBleed: CalendarVisualLogic.formRowContentInset(labelWidth: rowLabelWidth),
+            expansion: expansion(of: field),
+            accessory: accessory
+        )
+    }
+
+    /// The editor holds the open state so it can answer for the calendar — closing it on an
+    /// outside tap and keeping its confirm in view — while the field goes on driving it.
+    /// Writing `false` only ever closes the field's own calendar, never one that has since
+    /// taken over.
+    private func expansion(of field: ScheduleDateField) -> Binding<Bool> {
+        Binding(
+            get: { expandedDateField == field },
+            set: { isExpanded in
+                if isExpanded {
+                    expandedDateField = field
+                } else if expandedDateField == field {
+                    expandedDateField = nil
+                }
+            }
+        )
+    }
+
+    /// The editor stores instants and the field speaks calendar days, so a written day moves the
+    /// stored date without disturbing the clock it carries — the time controls beside it are
+    /// still editing that clock.
+    private func dayBinding(_ selection: Binding<Date>) -> Binding<DateOnly> {
+        Binding(
+            get: { ScheduleEditorTimePolicy.day(of: selection.wrappedValue) },
+            set: {
+                selection.wrappedValue = ScheduleEditorTimePolicy.date(
+                    selection.wrappedValue,
+                    movedTo: $0,
+                    calendar: CalendarDateSupport.calendar
+                )
+            }
+        )
+    }
+
+    /// The time is optional: until it is added the field stays empty instead of showing a
+    /// midnight the user would feel obliged to correct.
+    @ViewBuilder
+    /// The end time depends on the start, so until a start time exists the end offers no button
+    /// at all: an always-visible control the user cannot use reads as something broken.
+    private func timeControl(
+        time: Binding<Date?>,
+        fieldKey: String,
+        canAdd: Bool,
+        notEarlierThan lowerBound: Date? = nil,
+        add: @escaping () -> Void,
+        remove: @escaping () -> Void
+    ) -> some View {
+        HStack(spacing: DPSpacing.extraSmall) {
+            if time.wrappedValue != nil {
+                // The bound is a whole instant, not a clock reading, so it only narrows the
+                // wheel while the end sits on the start's own day; a later end day is free.
+                // That holds because the end's clock is kept anchored to the end's own date.
+                DatePicker(
+                    CalendarLocalization.text(fieldKey),
+                    selection: Binding(
+                        get: { time.wrappedValue ?? startDate },
+                        set: { time.wrappedValue = $0 }
+                    ),
+                    in: (lowerBound ?? .distantPast)...,
+                    displayedComponents: .hourAndMinute
+                )
+                .labelsHidden()
+                .datePickerStyle(.compact)
+                .environment(\.locale, CalendarLocalization.selectedLocale)
+
+                Button(action: remove) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 16))
+                        .foregroundStyle(DPColor.textMuted)
+                        .frame(width: 30, height: 30)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(CalendarLocalization.text("calendar.schedule.time.remove"))
+            } else if canAdd {
+                Button(action: add) {
+                    Label(
+                        CalendarLocalization.text("calendar.schedule.time.add"),
+                        systemImage: "clock"
+                    )
+                    .font(DPFont.light(size: 13, relativeTo: .subheadline))
+                    .foregroundStyle(DPColor.accent)
+                    .padding(.horizontal, DPSpacing.small)
+                    .padding(.vertical, 7)
+                    .background(DPColor.accentSoft)
+                    .clipShape(RoundedRectangle(cornerRadius: DPRadius.compact))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        // The button that adds a time is shorter than the picker that replaces it, so a row
+        // sized to whichever it holds moved every field below it the moment a time was added.
+        // The height is fixed rather than a floor because a picker handed a taller proposal
+        // grows into it, and `fixedSize` keeps each control at its own size within that height.
+        .fixedSize(horizontal: false, vertical: true)
+        .frame(height: dateRowHeight, alignment: .leading)
+    }
+
+    private func rowLabel(_ key: String, topPadding: CGFloat = 0) -> some View {
+        Text(CalendarLocalization.text(key))
+            .font(DPFont.light(size: 13, relativeTo: .subheadline))
+            .foregroundStyle(DPColor.textSecondary)
+            .frame(width: rowLabelWidth, alignment: .leading)
+            .padding(.top, topPadding)
+    }
+
     private func formRow<Content: View>(
         _ key: String,
         alignment: VerticalAlignment = .center,
         @ViewBuilder content: () -> Content
     ) -> some View {
         HStack(alignment: alignment, spacing: DPSpacing.small) {
-            Text(CalendarLocalization.text(key))
-                .font(DPFont.light(size: 13, relativeTo: .subheadline))
-                .foregroundStyle(DPColor.textSecondary)
-                .frame(width: 64, alignment: .leading)
-                .padding(.top, alignment == .top ? 10 : 0)
+            rowLabel(key, topPadding: alignment == .top ? 10 : 0)
             content()
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -2614,6 +3149,20 @@ private struct ScheduleEditorView<Header: View>: View {
             }
         }
         .buttonStyle(.plain)
+    }
+
+    /// A tap on the modal's backdrop, or a VoiceOver escape, arrives here. It closes the
+    /// innermost thing that is open: with a calendar expanded that is the calendar, whose own
+    /// backdrop is the editor's, and only otherwise the editor itself.
+    private func handleOutsideDismissRequest() {
+        switch ScheduleEditorDismissalPolicy.outsideRequest(
+            hasOpenDateCalendar: expandedDateField != nil
+        ) {
+        case .closeDateCalendar:
+            expandedDateField = nil
+        case .requestEditorDismissal:
+            requestDismissal()
+        }
     }
 
     private func requestDismissal() {
@@ -2783,6 +3332,142 @@ nonisolated enum ScheduleFriendTagSelectorPolicy {
     }
 }
 
+/// The schedule model has no "has a time" flag: midnight means the schedule carries no
+/// time at all, which is why the editor edits a date and an optional time separately and
+/// only folds them back together on save.
+nonisolated enum ScheduleEditorTimePolicy {
+    /// `nil` for a stored value that means "no time", so the editor leaves the field empty
+    /// instead of offering a midnight the user feels obliged to change.
+    static func time(of date: Date, calendar: Foundation.Calendar) -> Date? {
+        let parts = calendar.dateComponents([.hour, .minute, .second], from: date)
+        let isMidnight = (parts.hour ?? 0) == 0
+            && (parts.minute ?? 0) == 0
+            && (parts.second ?? 0) == 0
+        return isMidnight ? nil : date
+    }
+
+    /// Takes the calendar day from `date` and the clock reading from `time`; a missing time
+    /// folds back to midnight, which is exactly how the model records "no time".
+    static func combine(date: Date, time: Date?, calendar: Foundation.Calendar) -> Date {
+        var parts = calendar.dateComponents([.year, .month, .day], from: date)
+        let timeParts = time.map { calendar.dateComponents([.hour, .minute, .second], from: $0) }
+        parts.hour = timeParts?.hour ?? 0
+        parts.minute = timeParts?.minute ?? 0
+        parts.second = timeParts?.second ?? 0
+        return calendar.date(from: parts) ?? date
+    }
+
+    /// The calendar day a stored instant falls on. The editor keeps instants; the date field
+    /// speaks days, so this is one half of the bridge between them. It reads through the app
+    /// calendar's own time zone — the same one every calendar cell and schedule bound is built
+    /// on — so a late-evening start cannot read back as the following day.
+    static func day(of date: Date) -> DateOnly {
+        DatePickerGridLogic.day(from: date)
+    }
+
+    /// `date` moved onto `day`, carrying its clock with it: the editor still needs the time it
+    /// holds, and only the day is being picked. A value that names no real day leaves the
+    /// instant alone rather than collapsing it onto some fallback.
+    static func date(_ date: Date, movedTo day: DateOnly, calendar: Foundation.Calendar) -> Date {
+        guard DatePickerGridLogic.isValidDay(day),
+              let target = CalendarDateSupport.date(from: day)
+        else { return date }
+        return combine(date: target, time: date, calendar: calendar)
+    }
+
+    /// An end equal to the start is how the model stores a schedule that has a start time
+    /// but no end time — it rejects an end before the start — so it reads back as no end time.
+    static func endTime(of end: Date, start: Date, calendar: Foundation.Calendar) -> Date? {
+        end == start ? nil : time(of: end, calendar: calendar)
+    }
+
+    /// Without an end time the end means that whole day, but the model rejects an end before
+    /// the start, so a same-day end collapses onto the start — which is exactly how the day
+    /// list already renders it, as a single time.
+    static func effectiveEnd(
+        start: Date,
+        endDate: Date,
+        endTime: Date?,
+        calendar: Foundation.Calendar
+    ) -> Date {
+        let composed = combine(date: endDate, time: endTime, calendar: calendar)
+        guard endTime == nil, calendar.isDate(endDate, inSameDayAs: start) else { return composed }
+        return start
+    }
+
+    /// The next full hour, so adding a time lands on something usable — and never on
+    /// midnight, which the model would read back as no time at all.
+    static func defaultStartTime(on date: Date, now: Date, calendar: Foundation.Calendar) -> Date {
+        let nextHour = calendar.component(.hour, from: now) + 1
+        var parts = calendar.dateComponents([.year, .month, .day], from: date)
+        parts.hour = nextHour > 23 ? 9 : nextHour
+        parts.minute = 0
+        parts.second = 0
+        return calendar.date(from: parts) ?? date
+    }
+
+    /// An hour after the start. An added end has to stay visible, so it can be neither midnight
+    /// — which reads back as no time at all — nor equal to the start, which reads back as no end
+    /// time: it falls back to the last minute of the chosen end date, and rolls a day forward
+    /// only when the start already sits on that minute. The end date can move, so this answers
+    /// with the whole end rather than a clock reading.
+    static func defaultEnd(start: Date, endDate: Date, calendar: Foundation.Calendar) -> Date {
+        let parts = calendar.dateComponents([.hour, .minute], from: start)
+        let hour = parts.hour ?? 0
+        let minute = parts.minute ?? 0
+        if hour + 1 <= 23 {
+            return at(hour: hour + 1, minute: minute, on: endDate, calendar: calendar)
+        }
+        let lastMinute = at(hour: 23, minute: 59, on: endDate, calendar: calendar)
+        if lastMinute > start { return lastMinute }
+        let nextDay = calendar.date(byAdding: .day, value: 1, to: endDate) ?? endDate
+        return at(hour: 0, minute: minute, on: nextDay, calendar: calendar)
+    }
+
+    /// The end may never precede the start, so the end date control is bounded here rather
+    /// than corrected after the fact. The bound is the start of the start's day: the start's
+    /// own date has to stay selectable whatever time of it the start carries.
+    static func endDateLowerBound(start: Date, calendar: Foundation.Calendar) -> Date {
+        calendar.startOfDay(for: start)
+    }
+
+    /// A bound on the end control cannot stop the start from moving past it, which edit mode
+    /// allows — so the end follows the start instead of being left in a range the editor would
+    /// only reject on save. The date rises to the start's day, and an end time that no longer
+    /// falls after the start is re-proposed by the same rule that first offered one. An end
+    /// without a time needs no bump: that end means the whole day, and `effectiveEnd` already
+    /// folds a same-day one onto the start.
+    static func endFollowingStart(
+        start: Date,
+        endDate: Date,
+        endTime: Date?,
+        calendar: Foundation.Calendar
+    ) -> (date: Date, time: Date?) {
+        let floor = endDateLowerBound(start: start, calendar: calendar)
+        let date = calendar.startOfDay(for: endDate) < floor ? floor : endDate
+        guard let endTime else { return (date, nil) }
+        // The clock is kept on the end's own day so the bound on the end time control weighs
+        // it against the day the user is actually editing.
+        let anchored = combine(date: date, time: endTime, calendar: calendar)
+        if anchored > start { return (date, anchored) }
+        let proposed = defaultEnd(start: start, endDate: date, calendar: calendar)
+        return (proposed, time(of: proposed, calendar: calendar))
+    }
+
+    private static func at(
+        hour: Int,
+        minute: Int,
+        on date: Date,
+        calendar: Foundation.Calendar
+    ) -> Date {
+        var parts = calendar.dateComponents([.year, .month, .day], from: date)
+        parts.hour = hour
+        parts.minute = minute
+        parts.second = 0
+        return calendar.date(from: parts) ?? date
+    }
+}
+
 nonisolated enum ScheduleEditorInteractionPolicy {
     static func interactionsDisabled(
         isSaving: Bool,
@@ -2793,7 +3478,25 @@ nonisolated enum ScheduleEditorInteractionPolicy {
     }
 }
 
+/// What a dismissal asked for from outside the editor — a tap on the modal's backdrop, or a
+/// VoiceOver escape — should actually close.
+nonisolated enum ScheduleEditorOutsideRequestAction: Equatable, Sendable {
+    case closeDateCalendar
+    case requestEditorDismissal
+}
+
 nonisolated enum ScheduleEditorDismissalPolicy {
+    /// An outside request closes the innermost thing that is open. The date field's calendar
+    /// expands inside the editor rather than on a layer of its own, so the backdrop behind it
+    /// is the editor's: left to reach the editor's own dismissal, a tap next to the calendar
+    /// threw the user out of the form — and offered to discard it on the way.
+    ///
+    /// The close button is deliberately not routed through here: pressing it is an explicit
+    /// intent to leave, whatever else happens to be open.
+    static func outsideRequest(hasOpenDateCalendar: Bool) -> ScheduleEditorOutsideRequestAction {
+        hasOpenDateCalendar ? .closeDateCalendar : .requestEditorDismissal
+    }
+
     static func isDirty(
         initialContent: String,
         content: String,
@@ -2964,7 +3667,6 @@ private struct ScheduleSearchView: View {
                             Text(item.content)
                                 .font(DPTypography.label)
                                 .foregroundStyle(DPColor.textPrimary)
-                                .lineLimit(2)
                             Label(
                                 item.startDateTime.rawValue.replacingOccurrences(of: "T", with: " "),
                                 systemImage: "calendar"
@@ -3225,7 +3927,7 @@ private struct DDayDetailModal: View {
             if canManage {
                 HStack(spacing: DPSpacing.small) {
                     Label(
-                        CalendarLocalization.text(isPinned ? "calendar.dday.pin.enabled" : "calendar.dday.pin.disabled"),
+                        CalendarLocalization.text("calendar.dday.pin.action"),
                         systemImage: isPinned ? "star.fill" : "star"
                     )
                     .font(DPTypography.label)

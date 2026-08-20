@@ -9,7 +9,6 @@ final class ParityVisualCaptureUITests: XCTestCase {
     func testCapturesPopulatedHomeFriendsParity() throws {
         let app = XCUIApplication()
         app.launchArguments += [
-            "-dp-language", "ko",
             "-dp-theme", "dark",
             "-AppleLanguages", "(ko)",
             "-AppleLocale", "ko_KR",
@@ -42,7 +41,9 @@ final class ParityVisualCaptureUITests: XCTestCase {
             0
         )
 
-        firstPinnedFriend.press(forDuration: 0.5)
+        // The rail no longer reorders (D3), so there is no drag state left to
+        // capture: a stationary long press on a card is just a slow tap that
+        // opens the friend's calendar, which the home interaction tests cover.
         XCTAssertTrue(home.exists)
         capture("parity-ios-home-friends-populated-after")
     }
@@ -51,7 +52,6 @@ final class ParityVisualCaptureUITests: XCTestCase {
     func testCapturesKoreanDarkModeParityFlow() throws {
         let app = XCUIApplication()
         app.launchArguments += [
-            "-dp-language", "ko",
             "-dp-theme", "dark",
             "-AppleLanguages", "(ko)",
             "-AppleLocale", "ko_KR",

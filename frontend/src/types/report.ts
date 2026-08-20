@@ -10,6 +10,9 @@ export const REPORT_REASONS = [
 ] as const
 export type ReportReason = (typeof REPORT_REASONS)[number]
 
+export const REPORT_STATUS = ['OPEN', 'RESOLVED', 'DISMISSED', 'CANCELED'] as const
+export type ReportStatus = (typeof REPORT_STATUS)[number]
+
 export const REPORT_DETAIL_MAX_LENGTH = 500
 
 export interface CreateReportRequest {
@@ -35,4 +38,19 @@ export interface ReportSubmission {
   reason: ReportReason
   detail: string
   alsoBlock: boolean
+}
+
+/**
+ * The reporter's own view of a report. Deliberately narrower than the admin DTOs: the
+ * moderation memo, the evidence snapshot and the target identifier never reach the reporter.
+ */
+export interface MyReport {
+  id: string
+  targetType: ReportTargetType
+  reportedMemberName: string
+  reason: ReportReason
+  detail: string | null
+  status: ReportStatus
+  createdAt: string
+  resolvedAt: string | null
 }

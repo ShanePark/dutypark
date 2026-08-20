@@ -9,7 +9,6 @@ final class InteractivePopGestureUITests: XCTestCase {
     func testTeamManageReturnsToTeamWithLeftEdgeSwipe() {
         let app = XCUIApplication()
         app.launchArguments += [
-            "-dp-language", "ko",
             "-dp-theme", "light",
             "-AppleLanguages", "(ko)",
             "-AppleLocale", "ko_KR",
@@ -40,7 +39,6 @@ final class InteractivePopGestureUITests: XCTestCase {
     func testGuestLoginReturnsToLandingWithLeftEdgeSwipe() {
         let app = XCUIApplication()
         app.launchArguments += [
-            "-dp-language", "ko",
             "-dp-theme", "light",
             "-AppleLanguages", "(ko)",
             "-AppleLocale", "ko_KR",
@@ -80,7 +78,6 @@ final class InteractivePopGestureUITests: XCTestCase {
     func testMemberCalendarPushedFromTheTeamTabPopsBackToTheShiftGrid() {
         let app = XCUIApplication()
         app.launchArguments += [
-            "-dp-language", "ko",
             "-dp-theme", "light",
             "-AppleLanguages", "(ko)",
             "-AppleLocale", "ko_KR",
@@ -137,7 +134,6 @@ final class InteractivePopGestureUITests: XCTestCase {
     func testMemberCalendarPushedFromTheHomeDashboardPopsBackToIt() {
         let app = XCUIApplication()
         app.launchArguments += [
-            "-dp-language", "ko",
             "-dp-theme", "light",
             "-AppleLanguages", "(ko)",
             "-AppleLocale", "ko_KR",

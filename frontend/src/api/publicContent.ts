@@ -86,6 +86,12 @@ export interface ReleaseNotesContent {
   hasNext: boolean
 }
 
+export interface BannedWords {
+  schemaVersion: number
+  contentVersion: string
+  words: string[]
+}
+
 function requireSupportedSchema<T extends { schemaVersion: number }>(
   content: T,
 ): T {
@@ -116,6 +122,11 @@ export const publicContentApi = {
         params: { locale, page, size },
       }
     )
+    return requireSupportedSchema(response.data)
+  },
+
+  getBannedWords: async (): Promise<BannedWords> => {
+    const response = await apiClient.get<BannedWords>('/public-content/banned-words')
     return requireSupportedSchema(response.data)
   },
 }

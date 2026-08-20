@@ -1,14 +1,14 @@
 import Foundation
 
+/// The app follows the system language (Settings > Dutypark > Language), so lookups
+/// resolve against `Bundle.main`. Callers that need a specific language - server
+/// content requests and copy tests - pass an explicit locale.
 nonisolated enum AppLocalization {
-    private static let languageKey = "dp-language"
-
     static var locale: Locale {
-        supportedLocale(
-            languageCode: UserDefaults.standard.string(forKey: languageKey) ?? ""
-        )
+        supportedLocale(languageCode: Bundle.main.preferredLocalizations.first ?? "")
     }
 
+    /// Narrows an arbitrary language tag to the two languages the app ships.
     static func supportedLocale(
         languageCode: String,
         preferredLanguages: [String] = Locale.preferredLanguages
@@ -18,35 +18,28 @@ nonisolated enum AppLocalization {
     }
 
     static func string(_ key: String, table: String, locale override: Locale? = nil) -> String {
-        let selectedLocale = override ?? locale
-        if let bundle = localizedBundle(for: selectedLocale) {
-            return bundle.localizedString(forKey: key, value: key, table: table)
-        }
-        return String(
-            localized: String.LocalizationValue(key),
-            table: table,
-            locale: selectedLocale
-        )
+        bundle(for: override).localizedString(forKey: key, value: key, table: table)
     }
 
     static func bundle(for locale: Locale? = nil) -> Bundle {
-        localizedBundle(for: locale ?? self.locale) ?? .main
+        guard let locale else { return .main }
+        let language = supportedLocale(languageCode: locale.identifier).identifier
+        guard let url = Bundle.main.url(forResource: language, withExtension: "lproj"),
+              let bundle = Bundle(url: url)
+        else { return .main }
+        return bundle
     }
 
-    static func format(_ key: String, table: String, arguments: [CVarArg]) -> String {
+    static func format(
+        _ key: String,
+        table: String,
+        arguments: [CVarArg],
+        locale override: Locale? = nil
+    ) -> String {
         String(
-            format: string(key, table: table),
-            locale: locale,
+            format: string(key, table: table, locale: override),
+            locale: override ?? locale,
             arguments: arguments
         )
-    }
-
-    private static func localizedBundle(for locale: Locale) -> Bundle? {
-        let identifier = locale.identifier.lowercased()
-        let language = identifier.hasPrefix("ko") ? "ko" : "en"
-        guard let url = Bundle.main.url(forResource: language, withExtension: "lproj") else {
-            return nil
-        }
-        return Bundle(url: url)
     }
 }

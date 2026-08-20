@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import UserNotifications
 
 nonisolated enum SettingsDestination: Hashable, Sendable {
@@ -28,8 +29,8 @@ struct SettingsView: View {
     @StateObject private var model = SettingsViewModel()
     @StateObject private var push = APNsRegistrationManager.shared
     @StateObject private var aiConsent = AIScheduleParsingConsentStore.shared
-    @AppStorage(SettingsPreference.languageKey) private var languageCode = ""
     @AppStorage(SettingsPreference.themeKey) private var themeCode = SettingsPreference.defaultTheme
+    @Environment(\.openURL) private var openURL
     @State private var showVisibility = false
     @State private var showAIConsentConfirmation = false
     @Binding private var destination: SettingsDestination?
@@ -319,18 +320,7 @@ struct SettingsView: View {
 
     private var informationSection: some View {
         SettingsCard(title: "settings.information.title", icon: "info.circle") {
-            HStack {
-                SettingsLocalization.text("settings.language")
-                    .font(DPTypography.body)
-                    .foregroundStyle(DPColor.textPrimary)
-                Spacer()
-                Picker(SettingsLocalization.string("settings.language"), selection: languageBinding) {
-                    ForEach(AppLanguage.allCases) { language in
-                        Text(language.nativeName).tag(language.rawValue)
-                    }
-                }
-                .labelsHidden()
-            }
+            languageRow
             if model.loadedSections.contains(.policies) {
                 settingsNavigationLink("settings.policy.terms") {
                     PolicyView(titleKey: "settings.policy.terms", policy: model.policies?.terms)
@@ -410,11 +400,36 @@ struct SettingsView: View {
         }
     }
 
-    private var languageBinding: Binding<String> {
-        Binding(
-            get: { AppLocalization.supportedLocale(languageCode: languageCode).identifier },
-            set: { languageCode = $0 }
-        )
+    /// iOS owns the per-app language, so this row mirrors the resolved language and
+    /// hands the change off to Settings instead of keeping a second source of truth.
+    private var languageRow: some View {
+        Button {
+            guard let url = URL(string: UIApplication.openSettingsURLString) else { return }
+            openURL(url)
+        } label: {
+            HStack(spacing: DPSpacing.medium) {
+                VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+                    SettingsLocalization.text("settings.language")
+                        .font(DPTypography.bodyMedium)
+                        .foregroundStyle(DPColor.textPrimary)
+                    SettingsLocalization.text("settings.language.systemHint")
+                        .font(DPTypography.supporting)
+                        .foregroundStyle(DPColor.textSecondary)
+                        .multilineTextAlignment(.leading)
+                }
+                Spacer(minLength: DPSpacing.small)
+                Text(verbatim: AppLanguage.current.nativeName)
+                    .font(DPTypography.body)
+                    .foregroundStyle(DPColor.textSecondary)
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(DPColor.textMuted)
+            }
+            .frame(minHeight: DPSize.minimumTouchTarget)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("settings.language")
     }
 
     private var noticeBinding: Binding<Bool> {
@@ -514,25 +529,28 @@ nonisolated enum SettingsSocialUnlinkPolicy {
         connectedProviderCount >= 2
     }
 
-    static func managementDescription(for provider: OAuthProvider) -> String {
+    static func managementDescription(for provider: OAuthProvider, locale: Locale? = nil) -> String {
         switch provider {
         case .apple:
-            SettingsLocalization.string("settings.social.unlinkAppleDescription")
+            SettingsLocalization.string("settings.social.unlinkAppleDescription", locale: locale)
         case .kakao, .naver:
-            localOnlyMessage(for: provider)
+            localOnlyMessage(for: provider, locale: locale)
         }
     }
 
-    static func confirmationMessage(for provider: OAuthProvider) -> String {
+    static func confirmationMessage(for provider: OAuthProvider, locale: Locale? = nil) -> String {
         if provider == .apple {
-            return SettingsLocalization.string("settings.social.unlinkAppleConfirmMessage")
+            return SettingsLocalization.string(
+                "settings.social.unlinkAppleConfirmMessage",
+                locale: locale
+            )
         }
-        return localOnlyMessage(for: provider)
+        return localOnlyMessage(for: provider, locale: locale)
     }
 
-    private static func localOnlyMessage(for provider: OAuthProvider) -> String {
-        SettingsLocalization.string("settings.social.unlinkConfirmMessage")
-            .replacingOccurrences(of: "{provider}", with: providerName(provider))
+    private static func localOnlyMessage(for provider: OAuthProvider, locale: Locale?) -> String {
+        SettingsLocalization.string("settings.social.unlinkConfirmMessage", locale: locale)
+            .replacingOccurrences(of: "{provider}", with: providerName(provider, locale: locale))
     }
 
     static func noticeKey(for error: Error) -> String {
@@ -559,11 +577,11 @@ nonisolated enum SettingsSocialUnlinkPolicy {
         return "settings.social.unlinkFailed"
     }
 
-    private static func providerName(_ provider: OAuthProvider) -> String {
+    private static func providerName(_ provider: OAuthProvider, locale: Locale?) -> String {
         switch provider {
         case .kakao: "Kakao"
         case .naver: "Naver"
-        case .apple: SettingsLocalization.string("settings.social.apple")
+        case .apple: SettingsLocalization.string("settings.social.apple", locale: locale)
         }
     }
 }

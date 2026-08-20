@@ -61,77 +61,39 @@ struct TodoHelpModal: View {
     let maximumHeight: CGFloat
     let dismiss: () -> Void
 
-    private let sections: [(String, String, String, Color)] = [
+    private let sections: [(icon: String, titleKey: String, bodyKey: String, tint: Color)] = [
         ("square.grid.2x2", "todo.help.kanban.title", "todo.help.kanban.body", DPColor.accent),
         ("list.bullet", "todo.help.todo.title", "todo.help.todo.body", DPColor.accent),
         ("clock", "todo.help.progress.title", "todo.help.progress.body", DPColor.warning),
         ("checkmark.circle", "todo.help.done.title", "todo.help.done.body", DPColor.success)
     ]
 
+    private static let tipCount = 5
+
     var body: some View {
-        DPModalPanel(
-            maximumPanelHeight: min(maximumHeight * TodoModalLayout.maximumPanelHeightRatio, 720)
+        DPHelpModal(
+            title: todoLocalized("todo.help.title"),
+            closeLabel: todoLocalized("common.close"),
+            maximumHeight: maximumHeight,
+            dismiss: dismiss
         ) {
-            header
-        } content: {
-            helpBody
-        }
-    }
-
-    private var header: some View {
-        HStack {
-            Text(todoLocalized("todo.help.title"))
-                .font(DPTypography.heading)
-                .foregroundStyle(DPColor.textPrimary)
-            Spacer()
-            Button(action: dismiss) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 17, weight: .semibold))
-                    .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(todoLocalized("common.close"))
-        }
-        .padding(.leading, DPSpacing.medium)
-        .padding(.trailing, DPSpacing.small)
-        .padding(.vertical, DPSpacing.small)
-        .background(DPColor.backgroundTertiary)
-    }
-
-    private var helpBody: some View {
-        VStack(alignment: .leading, spacing: DPSpacing.large) {
+            // The blocks describe the board and its three columns rather than steps to
+            // follow in order, so they stay unnumbered.
             ForEach(Array(sections.enumerated()), id: \.offset) { _, section in
-                helpSection(icon: section.0, titleKey: section.1, bodyKey: section.2, color: section.3)
+                DPHelpSection(
+                    systemImage: section.icon,
+                    title: todoLocalized(section.titleKey),
+                    message: todoLocalized(section.bodyKey),
+                    tint: section.tint
+                )
             }
 
-            VStack(alignment: .leading, spacing: DPSpacing.small) {
-                Label(todoLocalized("todo.help.tips.title"), systemImage: "lightbulb")
-                    .font(DPTypography.bodyMedium)
-                    .foregroundStyle(DPColor.warning)
-                ForEach(1...5, id: \.self) { index in
-                    HStack(alignment: .firstTextBaseline, spacing: DPSpacing.small) {
-                        Text("•")
-                        Text(todoLocalized("todo.help.tip.\(index)"))
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    .font(DPTypography.supporting)
-                    .foregroundStyle(DPColor.textSecondary)
-                }
-            }
-        }
-        .padding(DPSpacing.medium)
-    }
-
-    private func helpSection(icon: String, titleKey: String, bodyKey: String, color: Color) -> some View {
-        VStack(alignment: .leading, spacing: DPSpacing.small) {
-            Label(todoLocalized(titleKey), systemImage: icon)
-                .font(DPTypography.bodyMedium)
-                .foregroundStyle(color)
-            Text(todoLocalized(bodyKey))
-                .font(DPTypography.supporting)
-                .foregroundStyle(DPColor.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
+            DPHelpNote(
+                systemImage: "lightbulb",
+                title: todoLocalized("todo.help.tips.title"),
+                tint: DPColor.warning,
+                messages: (1...Self.tipCount).map { todoLocalized("todo.help.tip.\($0)") }
+            )
         }
     }
 }
@@ -405,7 +367,11 @@ struct TodoDetailModal: View {
                     Text(todoLocalized(todo.isTagged ? "todo.field.owner" : "todo.field.tags"))
                         .font(DPFont.bold(size: 12, relativeTo: .caption))
                         .foregroundStyle(DPColor.textMuted)
-                    TodoModalMemberChips(names: todo.isTagged ? [todo.owner] : todo.tags.map(\.name))
+                    TodoModalFlowLayout(spacing: DPSpacing.small) {
+                        ForEach(TodoMemberTagAdapter.items(of: todo)) { item in
+                            DPMemberTagChip(item: item, size: .regular)
+                        }
+                    }
                 }
             }
 
@@ -442,28 +408,8 @@ struct TodoDetailModal: View {
         // This modal only ever shows the signed-in member's own board, so the reportable
         // case is a to-do someone else owns and tagged them into.
         if todo.isTagged {
-            TodoModalBorderedAction(
-                title: todoLocalized("todo.action.leaveTag"),
-                systemImage: "xmark",
-                color: DPColor.warning,
-                action: { confirmation = .leaveTag }
-            )
-
-            TodoModalBorderedAction(
-                title: todoLocalized("todo.action.report"),
-                systemImage: "flag",
-                color: DPColor.textMuted,
-                action: {
-                    withoutPresentationAnimation {
-                        reportTarget = ReportTarget(
-                            type: .todo,
-                            targetID: todo.id,
-                            name: todo.title
-                        )
-                    }
-                }
-            )
-            .accessibilityIdentifier("todo.detail.report")
+            Spacer(minLength: 0)
+            overflowMenu
         } else {
             TodoModalBorderedAction(
                 title: todoLocalized("common.edit"),
@@ -481,6 +427,48 @@ struct TodoDetailModal: View {
                 action: { confirmation = .delete }
             )
         }
+    }
+
+    /// Leaving a tag and reporting are both rare, and side by side they read as two
+    /// equally likely choices, so the row offers one "more" control and keeps them
+    /// behind it.
+    private var overflowMenu: some View {
+        Menu {
+            Button {
+                confirmation = .leaveTag
+            } label: {
+                Label(todoLocalized("todo.action.leaveTag"), systemImage: "xmark")
+            }
+            .accessibilityIdentifier("todo.detail.leaveTag")
+
+            // A destructive menu item is drawn in the system red the app tokenises as
+            // `DPColor.danger`, and the beacon reads as raising an alarm where a flag
+            // reads as bookmarking.
+            Button(role: .destructive) {
+                withoutPresentationAnimation {
+                    reportTarget = ReportTarget(
+                        type: .todo,
+                        targetID: todo.id,
+                        name: todo.title
+                    )
+                }
+            } label: {
+                Label {
+                    Text(todoLocalized("todo.action.report"))
+                } icon: {
+                    DPReportBeaconIcon()
+                }
+            }
+            .accessibilityIdentifier("todo.detail.report")
+        } label: {
+            Image(systemName: "ellipsis")
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(DPColor.textSecondary)
+                .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                .contentShape(Rectangle())
+        }
+        .accessibilityLabel(todoLocalized("todo.action.more"))
+        .accessibilityIdentifier("todo.detail.menu")
     }
 
 }
@@ -519,23 +507,6 @@ private struct TodoModalBorderedAction: View {
                 )
         }
         .buttonStyle(.plain)
-    }
-}
-
-private struct TodoModalMemberChips: View {
-    let names: [String]
-
-    var body: some View {
-        TodoModalFlowLayout(spacing: DPSpacing.small) {
-            ForEach(Array(names.enumerated()), id: \.offset) { _, name in
-                Label(name, systemImage: "person.fill")
-                    .font(DPTypography.caption)
-                    .foregroundStyle(DPColor.textSecondary)
-                    .padding(.horizontal, 9)
-                    .padding(.vertical, 5)
-                    .background(DPColor.backgroundTertiary, in: Capsule())
-            }
-        }
     }
 }
 

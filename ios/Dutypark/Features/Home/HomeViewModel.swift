@@ -157,19 +157,6 @@ final class HomeViewModel: ObservableObject {
         replaceFriendsDashboardForMutation(dashboard.replacingFriends(updatedFriends))
     }
 
-    func setPinnedFriendOrder(_ memberIDs: [MemberID]) {
-        guard let dashboard = friendsDashboard else { return }
-        let pinOrders = Dictionary(
-            uniqueKeysWithValues: memberIDs.enumerated().map { ($1, Int64($0)) }
-        )
-        let updatedFriends = dashboard.friends.map { friend in
-            guard let memberID = friend.member.id,
-                  let pinOrder = pinOrders[memberID] else { return friend }
-            return friend.replacingPinOrder(pinOrder)
-        }
-        replaceFriendsDashboardForMutation(dashboard.replacingFriends(updatedFriends))
-    }
-
     private nonisolated static func fetchMy(
         using service: any HomeDashboardServing
     ) async -> DashboardResult<DashboardMyDetailDTO> {
@@ -207,20 +194,29 @@ final class HomeViewModel: ObservableObject {
             profilePhotoVersion: 0
         )
         myState = .loaded(DashboardMyDetailDTO(member: member, duty: nil, schedules: []))
+        // The many-pinned fixture spans every card variant — team or not, duty or
+        // not, off duty, and a team name long enough to need shrinking — so a UI
+        // test can prove none of them changes the card's size.
         let friends = if ProcessInfo.processInfo.arguments.contains("-ui-testing-home-many-pinned") {
             [
-                uiTestingFriend(id: 31, name: "첫째 친구", dutyType: "주간", pinOrder: 0),
-                uiTestingFriend(id: 32, name: "둘째 친구", dutyType: "야간", pinOrder: 1),
-                uiTestingFriend(id: 33, name: "셋째 친구", dutyType: "휴무", pinOrder: 2),
-                uiTestingFriend(id: 34, name: "넷째 친구", dutyType: "주간", pinOrder: 3),
-                uiTestingFriend(id: 35, name: "다섯째 친구", dutyType: "야간", pinOrder: 4),
-                uiTestingFriend(id: 36, name: "여섯째 친구", dutyType: "휴무", pinOrder: 5),
+                uiTestingFriend(id: 31, name: "첫째 친구", team: "간호1팀", duty: uiTestingDuty("주간"), pinOrder: 0),
+                uiTestingFriend(id: 32, name: "둘째 친구", duty: uiTestingDuty("야간"), pinOrder: 1),
+                uiTestingFriend(id: 33, name: "셋째 친구", team: "간호2팀", pinOrder: 2),
+                uiTestingFriend(id: 34, name: "넷째 친구", pinOrder: 3),
+                uiTestingFriend(
+                    id: 35,
+                    name: "다섯째 친구",
+                    team: "아주 긴 이름의 병동 간호팀",
+                    duty: uiTestingDuty("주간"),
+                    pinOrder: 4
+                ),
+                uiTestingFriend(id: 36, name: "여섯째 친구", duty: uiTestingDuty(nil), pinOrder: 5),
             ]
         } else {
             [
-                uiTestingFriend(id: 21, name: "김간호", dutyType: "주간", pinOrder: 0),
-                uiTestingFriend(id: 22, name: "박야간", dutyType: "야간", pinOrder: 1),
-                uiTestingFriend(id: 23, name: "이휴무", dutyType: nil, pinOrder: nil),
+                uiTestingFriend(id: 21, name: "김간호", team: "간호1팀", duty: uiTestingDuty("주간"), pinOrder: 0),
+                uiTestingFriend(id: 22, name: "박야간", duty: uiTestingDuty("야간"), pinOrder: 1),
+                uiTestingFriend(id: 23, name: "이휴무", team: "응급팀", duty: uiTestingDuty(nil), pinOrder: nil),
             ]
         }
         friendsState = .loaded(DashboardFriendInfoDTO(
@@ -233,31 +229,36 @@ final class HomeViewModel: ObservableObject {
     private func uiTestingFriend(
         id: MemberID,
         name: String,
-        dutyType: String?,
+        team: String? = nil,
+        duty: DutyDTO? = nil,
         pinOrder: Int64?
     ) -> DashboardFriendDetailDTO {
         DashboardFriendDetailDTO(
             member: MemberPreviewDTO(
                 id: id,
                 name: name,
-                teamId: nil,
-                team: nil,
+                teamId: team == nil ? nil : 7,
+                team: team,
                 hasProfilePhoto: false,
                 profilePhotoVersion: 0
             ),
-            duty: DutyDTO(
-                year: 2026,
-                month: 8,
-                day: 15,
-                dutyType: dutyType,
-                dutyColor: dutyType == nil ? nil : "#2563EB",
-                isOff: dutyType == nil,
-                dutyTypeId: nil,
-                source: .pattern
-            ),
+            duty: duty,
             schedules: [],
             isFamily: id == 21,
             pinOrder: pinOrder
+        )
+    }
+
+    private func uiTestingDuty(_ dutyType: String?) -> DutyDTO {
+        DutyDTO(
+            year: 2026,
+            month: 8,
+            day: 15,
+            dutyType: dutyType,
+            dutyColor: dutyType == nil ? nil : "#2563EB",
+            isOff: dutyType == nil,
+            dutyTypeId: nil,
+            source: .pattern
         )
     }
 #endif

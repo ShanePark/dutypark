@@ -10,6 +10,7 @@ export const REPORT_STATUS_LABEL_KEYS: Record<ReportStatus, string> = {
   OPEN: 'admin.reports.status.open',
   RESOLVED: 'admin.reports.status.resolved',
   DISMISSED: 'admin.reports.status.dismissed',
+  CANCELED: 'admin.reports.status.canceled',
 }
 
 export const REPORT_REASON_LABEL_KEYS: Record<ReportReason, string> = {

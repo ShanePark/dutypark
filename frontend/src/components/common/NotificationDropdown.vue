@@ -205,11 +205,13 @@ function handleOverlayClick() {
 /* Overlay for mobile - adds dim background to make dropdown stand out */
 .notification-overlay {
   background-color: var(--dp-overlay-scrim-soft);
+  backdrop-filter: blur(var(--dp-overlay-blur));
 }
 
 @media (min-width: 640px) {
   .notification-overlay {
     background-color: transparent;
+    backdrop-filter: none;
   }
 }
 

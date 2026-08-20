@@ -12,10 +12,12 @@ import {
   Loader2,
 } from 'lucide-vue-next'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
+import DatePickerField from '@/components/common/DatePickerField.vue'
 import { useAuthStore } from '@/stores/auth'
 import { teamApi } from '@/api/team'
 import { dutyApi } from '@/api/duty'
 import { useSwal } from '@/composables/useSwal'
+import { useContentFilterStore } from '@/stores/contentFilter'
 import { isLightColor } from '@/utils/color'
 import BaseModal from '@/components/common/BaseModal.vue'
 import CalendarMonthNavigator from '@/components/common/CalendarMonthNavigator.vue'
@@ -35,6 +37,7 @@ const router = useRouter()
 const authStore = useAuthStore()
 const { t } = useI18n()
 const { showError, confirmDelete, toastSuccess } = useSwal()
+const contentFilterStore = useContentFilterStore()
 
 const loading = ref(false)
 const shiftLoading = ref(false)
@@ -329,6 +332,11 @@ function closeScheduleModal() {
 async function saveSchedule() {
   if (!team.value) return
   if (isTeamScheduleTitleMissing.value || isTeamScheduleDateRangeInvalid.value) {
+    return
+  }
+
+  if (contentFilterStore.isBlocked(scheduleForm.value.content, scheduleForm.value.description)) {
+    showError(t('contentFilter.blocked'))
     return
   }
 
@@ -630,23 +638,24 @@ onMounted(() => {
             <label class="form-label text-dp-text-primary">
               {{ t('team.view.schedule.modal.startDate') }}
             </label>
-            <input
+            <DatePickerField
               v-model="scheduleForm.startDate"
-              type="date"
               readonly
-              class="form-control"
+              :aria-label="t('team.view.schedule.modal.startDate')"
             />
           </div>
           <div>
             <label class="form-label text-dp-text-primary">
               {{ t('team.view.schedule.modal.endDate') }}
             </label>
-            <input
+            <!-- Range mode makes the anchor the floor, so `invalid` is left for what the control
+                 cannot reach: a schedule opened without a start date, where there is no anchor. -->
+            <DatePickerField
               v-model="scheduleForm.endDate"
-              type="date"
-              :min="scheduleForm.startDate"
-              class="form-control"
-              :aria-invalid="isTeamScheduleDateRangeInvalid"
+              mode="range"
+              :range-start="scheduleForm.startDate"
+              :invalid="isTeamScheduleDateRangeInvalid"
+              :aria-label="t('team.view.schedule.modal.endDate')"
             />
           </div>
         </div>

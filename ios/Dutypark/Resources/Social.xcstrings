@@ -156,8 +156,35 @@
     "social.section.requests" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Friend requests" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 요청" } }
     } },
+    "social.help.open" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "How the friend list is ordered" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 순서 도움말" } }
+    } },
+    "social.help.title" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Changing the friend order" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 순서 변경하기" } }
+    } },
+    "social.help.pin.title" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Pin the friends you want first" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "먼저 볼 친구를 고정하세요" } }
+    } },
+    "social.help.pin.body" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Tap the star on a friend card. Pinned friends move to the top of the list and can be put in any order you like." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 카드의 별 아이콘을 누르면 고정됩니다. 고정한 친구는 목록 맨 위로 올라가고, 원하는 순서로 정렬할 수 있습니다." } }
+    } },
+    "social.help.reorder.title" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Press and hold, then drag" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "길게 누른 뒤 끌어서 옮기세요" } }
+    } },
+    "social.help.reorder.body" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Press a pinned friend's card until the ring around it fills, then drag it to where you want it and let go. You need at least two pinned friends." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "고정한 친구 카드를 테두리가 채워질 때까지 길게 누른 다음, 원하는 위치로 끌어다 놓으세요. 고정한 친구가 두 명 이상이어야 합니다." } }
+    } },
+    "social.help.save.title" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "The order saves itself" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "순서는 자동으로 저장됩니다" } }
+    } },
+    "social.help.save.body" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "The new order is saved the moment you let go, and the home screen shows your friends in the same order." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "손을 떼는 즉시 새 순서가 저장되고, 홈 화면의 친구 목록도 같은 순서로 표시됩니다." } }
+    } },
+    "social.help.note" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Friends that are not pinned always follow the pinned ones and keep their default order. With VoiceOver on, use the \"Move up\" and \"Move down\" actions on a pinned friend instead." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "고정하지 않은 친구는 항상 고정 친구 뒤에 기본 순서로 표시됩니다. VoiceOver를 사용할 때는 고정 친구 카드의 \"위로 이동\", \"아래로 이동\" 동작을 이용하세요." } }
+    } },
     "social.title" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Friends" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Manage friends" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구관리" } }
     } },
 
     "social.search.empty" : { "localizations" : {

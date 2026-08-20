@@ -60,7 +60,8 @@ class AdminReportService(
         adminMemberId: Long,
         request: UpdateReportStatusRequest,
     ): AdminReportDetailDto {
-        if (request.status == ReportStatus.OPEN) {
+        // 신고는 다시 열지 못하고, CANCELED 는 신고자 본인만 남길 수 있는 상태다.
+        if (request.status == ReportStatus.OPEN || request.status == ReportStatus.CANCELED) {
             throw BadRequestException()
         }
         val report = findReportOrThrow(reportId)

@@ -13,6 +13,7 @@ const requiredApiErrorCodes = [
   'report.self',
   'report.detail.required',
   'report.target.notDeletable',
+  'report.cancel.notOpen',
   'member.suspend.deletionPending',
   'auth.account.suspended',
   'inquiry.rateLimit.exceeded',

@@ -60,7 +60,6 @@ final class LongFormPolicyReadabilityUITests: XCTestCase {
     private func launchApp(policyRoute: String? = nil) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += [
-            "-dp-language", "ko",
             "-dp-theme", "light",
             "-AppleLanguages", "(ko)",
             "-AppleLocale", "ko_KR",

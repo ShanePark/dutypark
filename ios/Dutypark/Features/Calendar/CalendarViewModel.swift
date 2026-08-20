@@ -47,22 +47,22 @@ final class CalendarViewModel: ObservableObject {
     @Published var isQuickDutyEditing = false
     @Published private(set) var quickDutyDay: CalendarDayContent?
     @Published private(set) var canLoadMoreSearchResults = false
-    @Published var showTodoItems: Bool {
-        didSet { UserDefaults.standard.set(showTodoItems, forKey: "dutyViewShowTodo") }
-    }
     @Published private(set) var pinnedDDayID: Int64?
     @Published var dutyBatchMessage: String?
     private var searchPage = 0
     private let initialScheduleID: ScheduleID?
+    private let contentFilter: ContentFilterStore
 
     init(
         repository: CalendarRepositoryProtocol = CalendarRepository(),
         now: Date = Date(),
         memberID: MemberID? = nil,
         date: DateOnly? = nil,
-        scheduleID: ScheduleID? = nil
+        scheduleID: ScheduleID? = nil,
+        contentFilter: ContentFilterStore = .shared
     ) {
         self.repository = repository
+        self.contentFilter = contentFilter
         initialScheduleID = scheduleID
         let initialDate = date.flatMap(CalendarDateSupport.date(from:)) ?? now
         let parts = CalendarDateSupport.calendar.dateComponents([.year, .month], from: initialDate)
@@ -70,7 +70,6 @@ final class CalendarViewModel: ObservableObject {
         month = parts.month ?? 1
         selectedMemberID = memberID
         highlightedDate = date
-        showTodoItems = UserDefaults.standard.bool(forKey: "dutyViewShowTodo")
     }
 
     var targetMemberID: MemberID? { selectedMemberID ?? me?.id }
@@ -175,7 +174,7 @@ final class CalendarViewModel: ObservableObject {
         todoBoard = try await todoResult
         let compared = try await comparedResult
         dDays = loadedDDays.sorted { $0.date.rawValue < $1.date.rawValue }
-        let activeTodos = (showTodoItems ? (todoBoard?.todo ?? []) : []) + (todoBoard?.inProgress ?? [])
+        let activeTodos = (todoBoard?.todo ?? []) + (todoBoard?.inProgress ?? [])
         let pinKey = pinnedDDayKey(memberID)
         pinnedDDayID = UserDefaults.standard.object(forKey: pinKey) == nil ? nil : Int64(UserDefaults.standard.integer(forKey: pinKey))
         days = cells.enumerated().map { index, cell in
@@ -241,7 +240,21 @@ final class CalendarViewModel: ObservableObject {
         )
         friends = includesCalendarParity ? [parityFriend] : []
         team = nil
-        dDays = []
+        // A page that already fits its screen cannot show a scroll either way, so the
+        // scroll test asks for enough D-Days to push the calendar past the bottom.
+        // The dates sit outside the grid so the cells themselves stay as they were.
+        dDays = ProcessInfo.processInfo.arguments.contains("-ui-testing-calendar-tall")
+            ? (1...6).map { index in
+                DDayDTO(
+                    id: Int64(900 + index),
+                    title: "D-Day \(index)",
+                    date: DateOnly(rawValue: String(format: "2030-01-%02d", index)),
+                    isPrivate: false,
+                    calc: 0,
+                    daysLeft: Int64(index)
+                )
+            }
+            : []
         let parityTodo = TodoDTO(
             id: "A11CE000-0000-4000-8000-000000000011",
             title: "Calendar detail check",
@@ -414,11 +427,6 @@ final class CalendarViewModel: ObservableObject {
         }
     }
 
-    func toggleTodoItems() async {
-        showTodoItems.toggle()
-        rebuildTodoDays()
-    }
-
     func refreshTodoBoard() async {
         guard isMyCalendar else { return }
         do {
@@ -501,6 +509,10 @@ final class CalendarViewModel: ObservableObject {
         guard canEdit, let memberID = targetMemberID else { return false }
         let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, trimmed.count <= 50, end >= start else { return false }
+        guard !contentFilter.isBlocked(trimmed, description) else {
+            errorMessage = CalendarLocalization.text("calendar.error.contentFilter")
+            return false
+        }
         do {
             _ = try await repository.saveSchedule(ScheduleSaveDTO(
                 id: existing?.id, memberId: memberID, content: trimmed, description: description,
@@ -645,7 +657,7 @@ final class CalendarViewModel: ObservableObject {
     }
 
     private func rebuildTodoDays() {
-        let visibleTodos = (showTodoItems ? (todoBoard?.todo ?? []) : []) + (todoBoard?.inProgress ?? [])
+        let visibleTodos = (todoBoard?.todo ?? []) + (todoBoard?.inProgress ?? [])
         days = days.map { day in
             replacing(day, todos: visibleTodos.filter { $0.dueDate == day.cell.date })
         }

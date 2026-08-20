@@ -1,7 +1,6 @@
 import SwiftUI
 
 struct PublicGuideView: View {
-    @AppStorage(SettingsPreference.languageKey) private var languageCode = ""
     @StateObject private var model: PublicGuideViewModel
     @State private var expandedSections: Set<String> = []
     private let fallbackTitle: String
@@ -42,7 +41,7 @@ struct PublicGuideView: View {
                     .accessibilityIdentifier("guide.loading")
             }
         }
-        .background(DPColor.backgroundPrimary)
+        .background(DPColor.backgroundSecondary)
         .navigationTitle(model.content?.title ?? fallbackTitle)
         .navigationBarTitleDisplayMode(.inline)
         .task(id: locale) {
@@ -57,13 +56,15 @@ struct PublicGuideView: View {
     }
 
     private var locale: String {
-        PublicContentLocaleResolver.locale(languageCode: languageCode)
+        PublicContentLocaleResolver.locale(languageCode: AppLocalization.locale.identifier)
     }
 
     private func guide(_ content: PublicGuideContent) -> some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: DPSpacing.medium) {
-                HStack(alignment: .top, spacing: DPSpacing.compact) {
+                // The navigation bar already carries the guide's title, so the intro
+                // only says what the guide is for.
+                HStack(alignment: .center, spacing: DPSpacing.compact) {
                     Image(systemName: "book.closed.fill")
                         .font(.system(size: 24, weight: .semibold))
                         .foregroundStyle(DPColor.textOnDark)
@@ -71,14 +72,10 @@ struct PublicGuideView: View {
                         .background(DPColor.accent, in: RoundedRectangle(cornerRadius: DPRadius.large))
                         .accessibilityHidden(true)
 
-                    VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
-                        Text(verbatim: content.title)
-                            .font(DPTypography.pageTitle)
-                            .foregroundStyle(DPColor.textPrimary)
-                        Text(verbatim: content.description)
-                            .font(DPTypography.supporting)
-                            .foregroundStyle(DPColor.textSecondary)
-                    }
+                    Text(verbatim: content.description)
+                        .font(DPTypography.supporting)
+                        .foregroundStyle(DPColor.textSecondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .accessibilityElement(children: .combine)
 
@@ -216,7 +213,6 @@ private struct PublicGuideCardView: View {
 }
 
 struct PublicReleaseNotesView: View {
-    @AppStorage(SettingsPreference.languageKey) private var languageCode = ""
     @StateObject private var model: PublicReleaseNotesViewModel
 
     init(service: any PublicContentServicing = PublicContentService()) {
@@ -248,7 +244,7 @@ struct PublicReleaseNotesView: View {
                 notes
             }
         }
-        .background(DPColor.backgroundPrimary)
+        .background(DPColor.backgroundSecondary)
         .navigationTitle(model.labels?.title ?? SettingsLocalization.string("settings.releaseNotes"))
         .navigationBarTitleDisplayMode(.inline)
         .task(id: locale) { await model.load(locale: locale) }
@@ -256,7 +252,7 @@ struct PublicReleaseNotesView: View {
     }
 
     private var locale: String {
-        PublicContentLocaleResolver.locale(languageCode: languageCode)
+        PublicContentLocaleResolver.locale(languageCode: AppLocalization.locale.identifier)
     }
 
     private var notes: some View {

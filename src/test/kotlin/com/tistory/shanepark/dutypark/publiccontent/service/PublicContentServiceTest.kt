@@ -63,9 +63,9 @@ class PublicContentServiceTest {
     fun `release notes merge locale copy with metadata and preserve escaped text as rendered text`() {
         val page = service.getReleaseNotes(locale = "ko", page = 0, size = 50)
 
-        assertThat(page.totalElements).isEqualTo(275)
-        assertThat(page.items.first().id).isEqualTo("pr-406")
-        assertThat(page.items.first().title).isEqualTo("신고·차단과 앱 내 문의 답변 추가")
+        assertThat(page.totalElements).isEqualTo(276)
+        assertThat(page.items.first().id).isEqualTo("pr-407")
+        assertThat(page.items.first().title).isEqualTo("캘린더·친구 태그와 신고·문의 경험 개선")
         assertThat(page.labels.categoryLabels["feature"]).isEqualTo("기능")
         assertThat(page.labels.count).isEqualTo("총 {count}개의 변경사항")
         assertThat(page.labels.loadMore).isEqualTo("더보기")
@@ -76,7 +76,7 @@ class PublicContentServiceTest {
 
         val allNotes = (0 until page.totalPages)
             .flatMap { service.getReleaseNotes("en", it, 50).items }
-        assertThat(allNotes.sumOf { it.changes.size }).isEqualTo(490)
+        assertThat(allNotes.sumOf { it.changes.size }).isEqualTo(494)
         val componentNote = allNotes.first { it.title.contains("Component annotation") }
         assertThat(componentNote.title).contains("@Component")
         assertThat(componentNote.title).doesNotContain("{'@'}")
@@ -92,12 +92,41 @@ class PublicContentServiceTest {
         assertThat(firstPage.items.map { it.id }).doesNotContainAnyElementsOf(secondPage.items.map { it.id })
         assertThat(firstPage.page).isZero()
         assertThat(firstPage.size).isEqualTo(5)
-        assertThat(firstPage.totalPages).isEqualTo(55)
+        assertThat(firstPage.totalPages).isEqualTo(56)
         assertThat(firstPage.hasNext).isTrue()
 
         val beyondLastPage = service.getReleaseNotes(locale = "ko", page = Int.MAX_VALUE, size = 5)
         assertThat(beyondLastPage.items).isEmpty()
         assertThat(beyondLastPage.hasNext).isFalse()
+    }
+
+    @Test
+    fun `banned words are served in the normalized form clients match against`() {
+        val bannedWords = service.getBannedWords()
+
+        assertThat(bannedWords.schemaVersion).isEqualTo(1)
+        assertThat(bannedWords.contentVersion).isEqualTo(sha256("public-content/banned-words.json"))
+        assertThat(bannedWords.words).isNotEmpty
+        assertThat(bannedWords.words).doesNotHaveDuplicates()
+        assertThat(bannedWords.words).allMatch { word -> word.isNotBlank() }
+        assertThat(bannedWords.words).allMatch { word -> word == word.lowercase() }
+        assertThat(bannedWords.words).allMatch { word -> word.all(Char::isLetterOrDigit) }
+    }
+
+    @Test
+    fun `banned words exclude everyday superstrings that substring matching would flag`() {
+        val words = service.getBannedWords().words
+
+        // Clients match by substring, so these would block ordinary text such as
+        // "보지 못했다", "자지 않았다", "grape", "title", "cocktail" or "assassin".
+        assertThat(words).doesNotContain("보지", "자지", "미친", "씹", "rape", "tit", "cock", "ass", "sex")
+    }
+
+    @Test
+    fun `no banned word contains another so the list stays minimal`() {
+        val words = service.getBannedWords().words
+
+        assertThat(words.filter { word -> words.any { other -> other != word && word.contains(other) } }).isEmpty()
     }
 
     private fun sha256(path: String): String {

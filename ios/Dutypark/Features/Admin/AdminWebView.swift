@@ -5,7 +5,6 @@ import WebKit
 struct AdminAuthenticatedWebView: View {
     let path: String
     let title: String
-    @AppStorage(SettingsPreference.languageKey) private var languageCode = ""
     @AppStorage(SettingsPreference.themeKey) private var themeCode = SettingsPreference.defaultTheme
     @Environment(\.colorScheme) private var colorScheme
     @State private var loadFailed = false
@@ -27,7 +26,7 @@ struct AdminAuthenticatedWebView: View {
                 AdminCookieWebView(
                     path: path,
                     preferences: AdminWebPreferences.resolve(
-                        languageCode: languageCode,
+                        languageCode: AppLocalization.locale.identifier,
                         themeCode: themeCode,
                         systemIsDark: colorScheme == .dark
                     ),

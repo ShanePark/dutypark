@@ -67,7 +67,6 @@ final class ImpersonationBannerLayoutUITests: XCTestCase {
     private func launchImpersonatingApp() -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += [
-            "-dp-language", "ko",
             "-dp-theme", "dark",
             "-AppleLanguages", "(ko)",
             "-AppleLocale", "ko_KR",

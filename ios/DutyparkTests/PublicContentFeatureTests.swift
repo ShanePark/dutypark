@@ -377,6 +377,7 @@ private final class PublicContentServiceMock: PublicContentServicing, @unchecked
 
     var guideResults: [Result<PublicGuideContent, Error>] = []
     var releaseResults: [Result<PublicReleaseNotesPage, Error>] = []
+    var bannedWordsResults: [Result<PublicBannedWords, Error>] = []
     private(set) var guideLocales: [String] = []
     private(set) var releaseRequests: [Request] = []
 
@@ -388,6 +389,10 @@ private final class PublicContentServiceMock: PublicContentServicing, @unchecked
     func releaseNotes(locale: String, page: Int, size: Int) async throws -> PublicReleaseNotesPage {
         releaseRequests.append(.init(locale: locale, page: page, size: size))
         return try releaseResults.removeFirst().get()
+    }
+
+    func bannedWords() async throws -> PublicBannedWords {
+        try bannedWordsResults.removeFirst().get()
     }
 }
 

@@ -22,7 +22,7 @@ xcodebuild \
   build
 ```
 
-Run unit tests by specifying the name of an installed iPhone simulator:
+By default, run only the `DutyparkTests` unit test target by specifying the name of an installed iPhone simulator. The `-only-testing` option prevents the scheme's UI test target from running:
 
 ```sh
 xcodebuild \
@@ -31,6 +31,37 @@ xcodebuild \
   -destination 'platform=iOS Simulator,name=iPhone 16 Pro' \
   -derivedDataPath build \
   CODE_SIGNING_ALLOWED=NO \
+  -only-testing:DutyparkTests \
+  test
+```
+
+### UI Tests (Explicit Request Only)
+
+Do not run `DutyparkUITests` during default verification, even when an iOS UI change affects an existing UI test. Run a specific UI test or the full UI test target only when the user explicitly requests it.
+
+To run a requested test class or method, use its Xcode test identifier:
+
+```sh
+xcodebuild \
+  -project Dutypark.xcodeproj \
+  -scheme Dutypark \
+  -destination 'platform=iOS Simulator,name=iPhone 16 Pro' \
+  -derivedDataPath build \
+  CODE_SIGNING_ALLOWED=NO \
+  -only-testing:DutyparkUITests/TestClassName/testMethodName \
+  test
+```
+
+To run the full UI test target when the user explicitly requests a full UI test run:
+
+```sh
+xcodebuild \
+  -project Dutypark.xcodeproj \
+  -scheme Dutypark \
+  -destination 'platform=iOS Simulator,name=iPhone 16 Pro' \
+  -derivedDataPath build \
+  CODE_SIGNING_ALLOWED=NO \
+  -only-testing:DutyparkUITests \
   test
 ```
 

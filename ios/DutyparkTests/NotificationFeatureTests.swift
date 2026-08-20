@@ -185,7 +185,18 @@ struct NotificationFeatureTests {
         )
         #expect(
             RootMoreDeepLinkPolicy.supportTab(
+                from: URL(string: "https://dutypark.o-r.kr/support?tab=reports")!
+            ) == .reports
+        )
+        #expect(
+            RootMoreDeepLinkPolicy.supportTab(
                 from: URL(string: "https://dutypark.o-r.kr/support?tab=unknown")!
+            ) == nil
+        )
+        // The form is where support opens anyway, so it never has to travel in the link.
+        #expect(
+            RootMoreDeepLinkPolicy.supportTab(
+                from: URL(string: "https://dutypark.o-r.kr/support?tab=form")!
             ) == nil
         )
     }

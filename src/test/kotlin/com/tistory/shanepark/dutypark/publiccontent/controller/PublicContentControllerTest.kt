@@ -85,6 +85,20 @@ class PublicContentControllerTest {
     }
 
     @Test
+    fun `banned words are served to anonymous clients with cache headers`() {
+        mockMvc.perform(get("/api/public-content/banned-words"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.schemaVersion").value(1))
+            .andExpect(jsonPath("$.contentVersion").value(matchesPattern("[0-9a-f]{64}")))
+            .andExpect(jsonPath("$.words").isArray)
+            .andExpect(jsonPath("$.words[0]").isString)
+            .andExpect(header().string("Cache-Control", containsString("public")))
+            .andExpect(header().string("Cache-Control", containsString("no-cache")))
+            .andExpect(header().string("Cache-Control", containsString("must-revalidate")))
+            .andExpect(header().exists("ETag"))
+    }
+
+    @Test
     fun `invalid locale page and size return bad request`() {
         listOf(
             "/api/public-content/guide?locale=ja",

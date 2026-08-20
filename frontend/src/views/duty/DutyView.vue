@@ -13,14 +13,12 @@ import { buildLoginRoute } from '@/utils/redirect'
 import { Loader2 } from 'lucide-vue-next'
 
 import DayDetailModal from '@/components/duty/DayDetailModal.vue'
-import TodoAddModal from '@/components/duty/TodoAddModal.vue'
 import TodoDetailModal from '@/components/duty/TodoDetailModal.vue'
 import DDayModal from '@/components/duty/DDayModal.vue'
 import DDayDetailModal from '@/components/duty/DDayDetailModal.vue'
 import SearchResultModal from '@/components/duty/SearchResultModal.vue'
 import OtherDutiesModal from '@/components/duty/OtherDutiesModal.vue'
 import DutyHeaderControls from '@/components/duty/DutyHeaderControls.vue'
-import DutyTodoRow from '@/components/duty/DutyTodoRow.vue'
 import DutyTypesBar from '@/components/duty/DutyTypesBar.vue'
 import DutyCalendarContent from '@/components/duty/DutyCalendarContent.vue'
 import DDayList from '@/components/duty/DDayList.vue'
@@ -38,11 +36,13 @@ import type { DutyCalendarDay, TeamDto, DDayDto, DDaySaveDto, HolidayDto, Taggab
 import type { LocalTodo, DutyType, Schedule, LocalDDay, CalendarDay, OtherDuty, DutyTypeWithCount, DutyDay, TodoDueItem } from './dutyViewTypes'
 
 import { useAuthStore } from '@/stores/auth'
+import { useContentFilterStore } from '@/stores/contentFilter'
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const { showError, confirm, confirmDelete, toastSuccess } = useSwal()
+const contentFilterStore = useContentFilterStore()
 const { goBack } = useNavigateBack()
 const { t } = useI18n()
 
@@ -83,7 +83,6 @@ const searchQuery = ref('')
 const lastDayInMonth = computed(() => new Date(currentYear.value, currentMonth.value, 0).getDate())
 
 const isDayDetailModalOpen = ref(false)
-const isTodoAddModalOpen = ref(false)
 const isTodoDetailModalOpen = ref(false)
 const isDDayModalOpen = ref(false)
 const isDDayDetailModalOpen = ref(false)
@@ -108,19 +107,15 @@ const selectedDDay = ref<LocalDDay | null>(null)
 const pinnedDDay = ref<LocalDDay | null>(null)
 
 const todos = ref<LocalTodo[]>([])
-const completedTodos = ref<LocalTodo[]>([])
-const isLoadingTodos = ref(false)
 
-// Todos with due dates computed from existing todos (respects filter settings)
+// Todos with due dates computed from existing todos
 const todosDueByDays = computed(() => {
   if (!isMyCalendar.value || !calendarDays.value.length) return []
 
-  // Build map by date from todos that have dueDate and match filter
+  // Build map by date from todos that have dueDate
   const todoMap = new Map<string, TodoDueItem[]>()
   todos.value.forEach((todo) => {
     if (!todo.dueDate) return
-    // Apply filter settings (IN_PROGRESS always shown)
-    if (todo.status === 'TODO' && !showTodoTodo.value) return
 
     const key = todo.dueDate
     if (!todoMap.has(key)) {
@@ -137,49 +132,6 @@ const todosDueByDays = computed(() => {
   return calendarDays.value.map((day) => {
     const key = `${day.year}-${String(day.month).padStart(2, '0')}-${String(day.day).padStart(2, '0')}`
     return todoMap.get(key) || []
-  })
-})
-
-// Todo filter settings (stored in localStorage)
-const STORAGE_KEY_TODO_FILTER = 'dutyViewTodoFilter'
-const showTodoTodo = ref(false)
-
-// Load todo filter settings from localStorage
-function loadTodoFilterSettings() {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY_TODO_FILTER)
-    if (stored) {
-      const settings = JSON.parse(stored)
-      showTodoTodo.value = settings.showTodo ?? false
-    }
-  } catch (e) {
-    console.error('Failed to load todo filter settings:', e)
-  }
-}
-
-// Save todo filter settings to localStorage
-function saveTodoFilterSettings() {
-  try {
-    localStorage.setItem(STORAGE_KEY_TODO_FILTER, JSON.stringify({
-      showTodo: showTodoTodo.value,
-    }))
-  } catch (e) {
-    console.error('Failed to save todo filter settings:', e)
-  }
-}
-
-// Toggle todo filter and save to localStorage
-function toggleTodoFilter() {
-  showTodoTodo.value = !showTodoTodo.value
-  saveTodoFilterSettings()
-}
-
-// Filter todos based on selected filters (IN_PROGRESS always shown)
-const filteredTodos = computed(() => {
-  return todos.value.filter(t => {
-    if (t.status === 'IN_PROGRESS') return true
-    if (t.status === 'TODO' && showTodoTodo.value) return true
-    return false
   })
 })
 
@@ -215,11 +167,8 @@ function applyTodoUpdate(apiTodo: TodoDto) {
   const localTodo = mapToLocalTodo(apiTodo)
 
   todos.value = todos.value.filter((t) => t.id !== apiTodo.id)
-  completedTodos.value = completedTodos.value.filter((t) => t.id !== apiTodo.id)
 
-  if (apiTodo.status === 'DONE') {
-    completedTodos.value.unshift(localTodo)
-  } else {
+  if (apiTodo.status !== 'DONE') {
     todos.value.unshift(localTodo)
   }
 
@@ -243,16 +192,12 @@ function mapToLocalDDay(apiDDay: DDayDto): LocalDDay {
 async function loadTodos() {
   if (!isMyCalendar.value) return
 
-  isLoadingTodos.value = true
   try {
     const board = await todoApi.getBoard()
     // Combine TODO and IN_PROGRESS for active todos
     todos.value = [...board.todo, ...board.inProgress].map(mapToLocalTodo)
-    completedTodos.value = board.done.map(mapToLocalTodo)
   } catch (error) {
     console.error('Failed to load todos:', error)
-  } finally {
-    isLoadingTodos.value = false
   }
 }
 
@@ -613,9 +558,6 @@ onMounted(async () => {
   // Listen for "go to date" event from notification navigation
   window.addEventListener('duty-go-to-date', handleGoToDate)
 
-  // Load todo filter settings from localStorage
-  loadTodoFilterSettings()
-
   try {
     // Load calendar structure first (needed for index alignment with holidays)
     await loadCalendar()
@@ -705,7 +647,6 @@ watch(
     currentYear.value = now.getFullYear()
     currentMonth.value = now.getMonth() + 1
     todos.value = []
-    completedTodos.value = []
     dDays.value = []
     rawDuties.value = []
     schedulesByDays.value = []
@@ -1005,6 +946,11 @@ async function handleTodoUpdate(data: {
   attachmentSessionId?: string
   orderedAttachmentIds?: string[]
 }) {
+  if (contentFilterStore.isBlocked(data.title, data.content)) {
+    showError(t('contentFilter.blocked'))
+    return
+  }
+
   try {
     const updatedTodo = await todoApi.updateTodo(data.id, {
       title: data.title,
@@ -1028,7 +974,6 @@ async function handleTodoDelete(todo: Pick<LocalTodo, 'id' | 'title'>) {
   try {
     await todoApi.deleteTodo(todo.id)
     todos.value = todos.value.filter((t) => t.id !== todo.id)
-    completedTodos.value = completedTodos.value.filter((t) => t.id !== todo.id)
   } catch (error) {
     console.error('Failed to delete todo:', error)
     showError(t('duty.todo.messages.deleteFailed'))
@@ -1039,46 +984,12 @@ async function handleTodoDelete(todo: Pick<LocalTodo, 'id' | 'title'>) {
   }
 }
 
-async function handleTodoAdd(data: {
-  title: string
-  content: string
-  status: TodoStatus
-  dueDate?: string
-  tagFriendIds?: number[]
-  attachmentSessionId?: string
-  orderedAttachmentIds?: string[]
-}) {
-  try {
-    const newTodo = await todoApi.createTodo({
-      title: data.title,
-      content: data.content,
-      status: data.status,
-      dueDate: data.dueDate,
-      tagFriendIds: data.tagFriendIds,
-      attachmentSessionId: data.attachmentSessionId,
-      orderedAttachmentIds: data.orderedAttachmentIds,
-    })
-    // Only add to the list if it's not DONE (active todos)
-    if (newTodo.status === 'DONE') {
-      completedTodos.value.unshift(mapToLocalTodo(newTodo))
-    } else {
-      todos.value.unshift(mapToLocalTodo(newTodo))
-    }
-    toastSuccess(t('duty.todo.messages.added'))
-  } catch (error) {
-    console.error('Failed to add todo:', error)
-    showError(t('duty.todo.messages.addFailed'))
-  }
-  isTodoAddModalOpen.value = false
-}
-
 async function handleTodoUntagSelf(todo: Pick<LocalTodo, 'id' | 'title'>) {
   if (!await confirm(t('duty.todo.messages.untagConfirm', { title: todo.title }), t('duty.todo.messages.untagTitle'))) return
 
   try {
     await todoApi.untagSelf(todo.id)
     todos.value = todos.value.filter((item) => item.id !== todo.id)
-    completedTodos.value = completedTodos.value.filter((item) => item.id !== todo.id)
     isTodoDetailModalOpen.value = false
     toastSuccess(t('duty.todo.messages.untagged'))
   } catch (error) {
@@ -1602,16 +1513,6 @@ async function showExcelUploadModal() {
       @block-member="handleBlockMember"
     />
 
-    <DutyTodoRow
-      v-if="isMyCalendar && !batchEditMode"
-      :show-todo-todo="showTodoTodo"
-      :filtered-todos="filteredTodos"
-      @toggle-filter="toggleTodoFilter"
-      @open-todo-board="router.push('/todo')"
-      @add-todo="isTodoAddModalOpen = true"
-      @todo-click="handleTodoBubbleClick"
-    />
-
     <DutyTypesBar
       :batch-edit-mode="batchEditMode"
       :duty-types="dutyTypes"
@@ -1657,6 +1558,8 @@ async function showExcelUploadModal() {
       @batch-duty-change="handleBatchDutyChange"
       @dday-click="openDDayDetail"
       @todo-click="handleTodoBubbleClick"
+      @prev-month="prevMonth"
+      @next-month="nextMonth"
     />
 
     <DDayList
@@ -1689,14 +1592,6 @@ async function showExcelUploadModal() {
       @untag-self="handleUntagSelf"
       @report-schedule="openScheduleReport"
       @change-duty-type="handleChangeDutyType"
-    />
-
-    <TodoAddModal
-      :is-open="isTodoAddModalOpen"
-      initial-status="IN_PROGRESS"
-      :friends="friends"
-      @close="isTodoAddModalOpen = false"
-      @save="handleTodoAdd"
     />
 
     <TodoDetailModal

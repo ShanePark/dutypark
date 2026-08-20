@@ -387,15 +387,15 @@ struct MyInfoView: View {
                     HStack {
                         Text(manager.name).font(DPTypography.body)
                         Spacer()
-                        Button {
+                        DPIconActionButton(
+                            systemImage: "trash",
+                            label: SettingsLocalization.string("settings.manager.remove"),
+                            tone: .danger
+                        ) {
                             guard let id = manager.id else { return }
                             confirmation = .removeManager(id: id, name: manager.name)
-                        } label: {
-                            Image(systemName: "trash")
-                                .frame(width: 44, height: 44)
                         }
-                        .buttonStyle(.plain)
-                        .foregroundStyle(DPColor.textMuted)
+                        .padding(.trailing, DPSpacing.extraSmall - DPIconActionMetrics.touchPadding)
                     }
                     .padding(.leading, DPSpacing.compact)
                     .background(DPColor.backgroundHover, in: RoundedRectangle(cornerRadius: DPRadius.standard))

@@ -19,6 +19,8 @@ describe('admin moderation translations', () => {
     expect(reports.row.reportedMember).toContain('{name}')
     expect(reports.row.reporter).toContain('{name}')
     expect(reports.messages.deleteTargetConfirm).toContain('{name}')
+    expect(reports.status.canceled).toBeTruthy()
+    expect(reports.filters.canceled).toBeTruthy()
     expect(reports.detail.memberTargetNotDeletable).toBeTruthy()
     expect(reports.detail.targetDeleted).toBeTruthy()
     expect(reports.detail.actions.viewCalendar).toBeTruthy()

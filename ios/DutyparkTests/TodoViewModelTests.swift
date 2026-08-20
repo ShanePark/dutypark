@@ -930,6 +930,25 @@ struct TodoViewModelTests {
         #expect(model.board == original)
         #expect(model.errorKey == "todo.error.reorder")
     }
+
+    @Test
+    func bannedWordingStopsATodoBeforeItReachesTheRepository() async {
+        let defaults = UserDefaults(suiteName: "todo-content-filter-\(UUID().uuidString)")!
+        defaults.set(["시발"], forKey: "dp-banned-words")
+        // Never loaded, so the cached list is the whole list and no request is made.
+        let contentFilter = ContentFilterStore(defaults: defaults)
+        let repository = FakeTodoRepository(board: makeBoard())
+        let model = TodoViewModel(repository: repository, contentFilter: contentFilter)
+        var draft = TodoDraft(status: .inProgress)
+        draft.title = "시발 회의"
+
+        let succeeded = await model.create(draft: draft)
+        let request = await repository.createRequest
+
+        #expect(!succeeded)
+        #expect(request == nil)
+        #expect(model.errorKey == "todo.error.contentFilter")
+    }
 }
 
 private actor FakeTodoRepository: TodoRepository {

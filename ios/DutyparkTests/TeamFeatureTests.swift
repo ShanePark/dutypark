@@ -18,44 +18,19 @@ struct TeamFeatureTests {
 
     @Test @MainActor
     func scheduleDeleteConfirmationNamesTheScheduleAndExplainsTheIrreversibleImpact() {
-        let defaults = UserDefaults.standard
-        let previousLanguage = defaults.string(forKey: SettingsPreference.languageKey)
-        defer {
-            if let previousLanguage {
-                defaults.set(previousLanguage, forKey: SettingsPreference.languageKey)
-            } else {
-                defaults.removeObject(forKey: SettingsPreference.languageKey)
-            }
-        }
-
-        defaults.set(AppLanguage.korean.rawValue, forKey: SettingsPreference.languageKey)
-        let korean = TeamLocalization.scheduleDeletionMessage(title: "회의")
+        let korean = TeamLocalization.scheduleDeletionMessage(title: "회의", locale: .korean)
         #expect(korean.contains("“회의”"))
         #expect(korean.contains("삭제된 일정은 복구할 수 없습니다"))
 
-        defaults.set(AppLanguage.english.rawValue, forKey: SettingsPreference.languageKey)
-        let english = TeamLocalization.scheduleDeletionMessage(title: "Meeting")
+        let english = TeamLocalization.scheduleDeletionMessage(title: "Meeting", locale: .english)
         #expect(english.contains("“Meeting”"))
         #expect(english.contains("Deleted schedules cannot be restored"))
     }
 
     @Test @MainActor
     func shiftMemberCountIncludesTheLocalizedUnit() {
-        let defaults = UserDefaults.standard
-        let previousLanguage = defaults.string(forKey: SettingsPreference.languageKey)
-        defer {
-            if let previousLanguage {
-                defaults.set(previousLanguage, forKey: SettingsPreference.languageKey)
-            } else {
-                defaults.removeObject(forKey: SettingsPreference.languageKey)
-            }
-        }
-
-        defaults.set(AppLanguage.korean.rawValue, forKey: SettingsPreference.languageKey)
-        #expect(TeamLocalization.shiftMemberCount(3) == "3명")
-
-        defaults.set(AppLanguage.english.rawValue, forKey: SettingsPreference.languageKey)
-        #expect(TeamLocalization.shiftMemberCount(3) == "3 people")
+        #expect(TeamLocalization.shiftMemberCount(3, locale: .korean) == "3명")
+        #expect(TeamLocalization.shiftMemberCount(3, locale: .english) == "3 people")
     }
 
     @Test
@@ -99,49 +74,23 @@ struct TeamFeatureTests {
     }
 
     @Test @MainActor
-    func monthNamesFollowTheAppLanguageInsteadOfTheDeviceCalendar() {
-        let defaults = UserDefaults.standard
-        let previousLanguage = defaults.string(forKey: SettingsPreference.languageKey)
-        defer {
-            if let previousLanguage {
-                defaults.set(previousLanguage, forKey: SettingsPreference.languageKey)
-            } else {
-                defaults.removeObject(forKey: SettingsPreference.languageKey)
-            }
-        }
-
+    func monthNamesFollowTheAppLanguageInsteadOfTheDeviceRegion() {
         var englishDeviceCalendar = Calendar(identifier: .gregorian)
         englishDeviceCalendar.locale = Locale(identifier: "en_US")
         #expect(englishDeviceCalendar.monthSymbols[7] == "August")
 
-        defaults.set(AppLanguage.korean.rawValue, forKey: SettingsPreference.languageKey)
-        #expect(DPYearMonthPickerLocalization.monthName(8) == "8월")
-
-        defaults.set(AppLanguage.english.rawValue, forKey: SettingsPreference.languageKey)
-        #expect(DPYearMonthPickerLocalization.monthName(8) == "August")
+        #expect(DPYearMonthPickerLocalization.monthName(8, locale: .korean) == "8월")
+        #expect(DPYearMonthPickerLocalization.monthName(8, locale: .english) == "August")
     }
 
     @Test @MainActor
-    func weekdayNamesFollowTheAppLanguageInsteadOfTheDeviceCalendar() {
-        let defaults = UserDefaults.standard
-        let previousLanguage = defaults.string(forKey: SettingsPreference.languageKey)
-        defer {
-            if let previousLanguage {
-                defaults.set(previousLanguage, forKey: SettingsPreference.languageKey)
-            } else {
-                defaults.removeObject(forKey: SettingsPreference.languageKey)
-            }
-        }
-
+    func weekdayNamesFollowTheAppLanguageInsteadOfTheDeviceRegion() {
         var englishDeviceCalendar = Calendar(identifier: .gregorian)
         englishDeviceCalendar.locale = Locale(identifier: "en_US")
         #expect(englishDeviceCalendar.shortStandaloneWeekdaySymbols.first == "Sun")
 
-        defaults.set(AppLanguage.korean.rawValue, forKey: SettingsPreference.languageKey)
-        #expect(TeamLocalization.shortStandaloneWeekdaySymbols.first == "일")
-
-        defaults.set(AppLanguage.english.rawValue, forKey: SettingsPreference.languageKey)
-        #expect(TeamLocalization.shortStandaloneWeekdaySymbols.first == "Sun")
+        #expect(TeamLocalization.shortStandaloneWeekdaySymbols(locale: .korean).first == "일")
+        #expect(TeamLocalization.shortStandaloneWeekdaySymbols(locale: .english).first == "Sun")
     }
 
     @Test
@@ -209,25 +158,12 @@ struct TeamFeatureTests {
 
     @Test @MainActor
     func resetLeadConfirmationNamesTheCurrentLeadInEachAppLanguage() {
-        let defaults = UserDefaults.standard
-        let previousLanguage = defaults.string(forKey: SettingsPreference.languageKey)
-        defer {
-            if let previousLanguage {
-                defaults.set(previousLanguage, forKey: SettingsPreference.languageKey)
-            } else {
-                defaults.removeObject(forKey: SettingsPreference.languageKey)
-            }
-        }
-
-        defaults.set(AppLanguage.korean.rawValue, forKey: SettingsPreference.languageKey)
         #expect(
-            TeamManageConfirmationCopy.resetAdminMessage(name: "테스트 관리자")
+            TeamManageConfirmationCopy.resetAdminMessage(name: "테스트 관리자", locale: .korean)
                 == "테스트 관리자 님의 팀 대표 권한을 초기화하시겠습니까?"
         )
-
-        defaults.set(AppLanguage.english.rawValue, forKey: SettingsPreference.languageKey)
         #expect(
-            TeamManageConfirmationCopy.resetAdminMessage(name: "Test Admin")
+            TeamManageConfirmationCopy.resetAdminMessage(name: "Test Admin", locale: .english)
                 == "Remove Test Admin as the team lead?"
         )
     }

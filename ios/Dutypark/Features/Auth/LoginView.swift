@@ -414,30 +414,36 @@ struct LoginView: View {
 
 nonisolated enum LoginErrorMessage {
     /// Server side failures carry their HTTP status so a user can report what happened.
-    static func text(key: String, status: Int?) -> String {
+    static func text(key: String, status: Int?, locale: Locale? = nil) -> String {
         if key == "auth.account.suspended" {
-            return APIErrorLocalization.message(code: key)
+            return APIErrorLocalization.message(code: key, bundle: AppLocalization.bundle(for: locale))
         }
         guard let status else {
-            return AppLocalization.string(key, table: "Localizable")
+            return AppLocalization.string(key, table: "Localizable", locale: locale)
         }
-        return AppLocalization.format(key, table: "Localizable", arguments: [status])
+        return AppLocalization.format(
+            key,
+            table: "Localizable",
+            arguments: [status],
+            locale: locale
+        )
     }
 }
 
 nonisolated enum LoginAttemptMessage {
-    static func text(remainingAttempts: Int?) -> String? {
+    static func text(remainingAttempts: Int?, locale: Locale? = nil) -> String? {
         guard let remainingAttempts, remainingAttempts <= 3 else { return nil }
         switch remainingAttempts {
         case ...0:
-            return AppLocalization.string("auth.login.error.locked", table: "Localizable")
+            return AppLocalization.string("auth.login.error.locked", table: "Localizable", locale: locale)
         case 1:
-            return AppLocalization.string("auth.login.error.lastAttempt", table: "Localizable")
+            return AppLocalization.string("auth.login.error.lastAttempt", table: "Localizable", locale: locale)
         default:
             return AppLocalization.format(
                 "auth.login.error.remainingAttempts",
                 table: "Localizable",
-                arguments: [remainingAttempts]
+                arguments: [remainingAttempts],
+                locale: locale
             )
         }
     }

@@ -72,7 +72,6 @@ nonisolated enum DutyparkLaunchPolicy {
 struct DutyparkApp: App {
     @UIApplicationDelegateAdaptor(NotificationAppDelegate.self) private var notificationDelegate
     @StateObject private var session: SessionStore
-    @AppStorage(SettingsPreference.languageKey) private var languageCode = ""
     @AppStorage(SettingsPreference.themeKey) private var themeCode = SettingsPreference.defaultTheme
 
     init() {
@@ -91,13 +90,8 @@ struct DutyparkApp: App {
         WindowGroup {
             AppRootView()
                 .environmentObject(session)
-                .environment(\.locale, selectedLocale)
                 .preferredColorScheme(selectedColorScheme)
         }
-    }
-
-    private var selectedLocale: Locale {
-        AppLocalization.supportedLocale(languageCode: languageCode)
     }
 
     private var selectedColorScheme: ColorScheme? {

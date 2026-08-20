@@ -34,6 +34,7 @@ const STATUS_FILTERS: { value: ReportStatusFilter; labelKey: string }[] = [
   { value: 'OPEN', labelKey: 'admin.reports.filters.open' },
   { value: 'RESOLVED', labelKey: 'admin.reports.filters.resolved' },
   { value: 'DISMISSED', labelKey: 'admin.reports.filters.dismissed' },
+  { value: 'CANCELED', labelKey: 'admin.reports.filters.canceled' },
   { value: 'ALL', labelKey: 'admin.reports.filters.all' },
 ]
 

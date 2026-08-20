@@ -54,6 +54,12 @@ struct DPModalOverlay<Content: View>: View {
     let maximumContentWidth: CGFloat
     let closeOnBackdrop: Bool
     let canDismiss: Bool
+    /// `true` when the overlay is placed with `.overlay` instead of `.fullScreenCover`.
+    /// A cover is its own presentation context, so a material inside the ZStack samples
+    /// nothing there and reads as flat grey; only `.presentationBackground` frosts the app
+    /// behind it. An inline overlay shares the presenting view's context, where the reverse
+    /// holds: `.presentationBackground` is inert and the material has to sit in the ZStack.
+    let isHostedInline: Bool
     /// Intercepts backdrop and VoiceOver escape requests without closing immediately.
     /// `closeOnBackdrop == false` suppresses backdrop requests; `canDismiss == false` suppresses all requests.
     let onDismissRequest: ((DPModalDismissSource) -> Void)?
@@ -65,6 +71,7 @@ struct DPModalOverlay<Content: View>: View {
         onDismiss: @escaping () -> Void,
         closeOnBackdrop: Bool = true,
         canDismiss: Bool = true,
+        isHostedInline: Bool = false,
         onDismissRequest: ((DPModalDismissSource) -> Void)? = nil,
         @ViewBuilder content: @escaping () -> Content
     ) {
@@ -72,6 +79,7 @@ struct DPModalOverlay<Content: View>: View {
         self.maximumContentWidth = maximumContentWidth
         self.closeOnBackdrop = closeOnBackdrop
         self.canDismiss = canDismiss
+        self.isHostedInline = isHostedInline
         self.onDismissRequest = onDismissRequest
         self.content = { _, _ in content() }
     }
@@ -81,6 +89,7 @@ struct DPModalOverlay<Content: View>: View {
         onDismiss: @escaping () -> Void,
         closeOnBackdrop: Bool = true,
         canDismiss: Bool = true,
+        isHostedInline: Bool = false,
         onDismissRequest: ((DPModalDismissSource) -> Void)? = nil,
         @ViewBuilder content: @escaping (CGSize) -> Content
     ) {
@@ -88,6 +97,7 @@ struct DPModalOverlay<Content: View>: View {
         self.maximumContentWidth = maximumContentWidth
         self.closeOnBackdrop = closeOnBackdrop
         self.canDismiss = canDismiss
+        self.isHostedInline = isHostedInline
         self.onDismissRequest = onDismissRequest
         self.content = { size, _ in content(size) }
     }
@@ -97,6 +107,7 @@ struct DPModalOverlay<Content: View>: View {
         onDismiss: @escaping () -> Void,
         closeOnBackdrop: Bool = true,
         canDismiss: Bool = true,
+        isHostedInline: Bool = false,
         onDismissRequest: ((DPModalDismissSource) -> Void)? = nil,
         @ViewBuilder content: @escaping (CGSize, @escaping () -> Void) -> Content
     ) {
@@ -104,6 +115,7 @@ struct DPModalOverlay<Content: View>: View {
         self.maximumContentWidth = maximumContentWidth
         self.closeOnBackdrop = closeOnBackdrop
         self.canDismiss = canDismiss
+        self.isHostedInline = isHostedInline
         self.onDismissRequest = onDismissRequest
         self.content = content
     }
@@ -117,7 +129,15 @@ struct DPModalOverlay<Content: View>: View {
             let panelHeight = max(proxy.size.height - 32, 0)
 
             ZStack {
-                Color.black.opacity(isVisible ? 0.36 : 0)
+                DPColor.overlayScrim
+                    .background {
+                        if isHostedInline {
+                            Rectangle()
+                                .fill(DPChrome.overlayMaterial)
+                                .opacity(DPChrome.overlayMaterialOpacity)
+                        }
+                    }
+                    .opacity(isVisible ? 1 : 0)
                     .ignoresSafeArea()
                     .contentShape(Rectangle())
                     .onTapGesture {
@@ -143,7 +163,7 @@ struct DPModalOverlay<Content: View>: View {
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .presentationBackground(.clear)
+        .presentationBackground { presentationBackdrop }
         .accessibilityAddTraits(.isModal)
         .accessibilityAction(.escape) {
             dismiss(source: .accessibilityEscape)
@@ -152,6 +172,17 @@ struct DPModalOverlay<Content: View>: View {
             withAnimation(presentationAnimation) {
                 isVisible = true
             }
+        }
+    }
+
+    @ViewBuilder
+    private var presentationBackdrop: some View {
+        if isHostedInline {
+            Color.clear
+        } else {
+            Rectangle()
+                .fill(DPChrome.overlayMaterial)
+                .opacity(DPChrome.overlayMaterialOpacity)
         }
     }
 

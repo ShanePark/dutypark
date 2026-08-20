@@ -8,10 +8,10 @@ nonisolated enum SupportLocalization {
 
 /// Public contact point required by App Review 1.2: it explains how reporting and
 /// blocking work and carries the inquiry form. Guests reach it from the landing screen,
-/// members from the "more" menu with their account e-mail already filled in.
+/// members from the "more" menu.
 ///
-/// Only members get the second tab: the answer history needs a session, and the
-/// signed-out screen has to keep working as the public contact page.
+/// Only members get the two history tabs: they need a session, and the signed-out screen
+/// has to keep working as the public contact page.
 struct SupportView: View {
     private enum Field: Hashable {
         case email
@@ -23,14 +23,12 @@ struct SupportView: View {
     @FocusState private var focusedField: Field?
 
     init(
-        prefilledEmail: String? = nil,
         isSignedIn: Bool = false,
         initialTab: SupportTab = .form,
         repository: any SupportRepository = LiveSupportRepository()
     ) {
         _model = StateObject(
             wrappedValue: SupportViewModel(
-                prefilledEmail: prefilledEmail,
                 isSignedIn: isSignedIn,
                 initialTab: initialTab,
                 repository: repository
@@ -54,11 +52,13 @@ struct SupportView: View {
                     }
                 case .history:
                     MyInquiryListView(model: model)
+                case .reports:
+                    MyReportListView(model: model)
                 }
             }
             .padding(DPSpacing.medium)
         }
-        .background(DPColor.backgroundPrimary)
+        .background(DPColor.backgroundSecondary)
         .scrollDismissesKeyboard(.interactively)
         .dpKeyboardDismissToolbar()
         .navigationTitle(SupportLocalization.text("support.title"))
@@ -145,22 +145,24 @@ struct SupportView: View {
                         .accessibilityIdentifier("support.form.description")
                 }
 
-                field(label: "support.form.email") {
-                    TextField(
-                        "",
-                        text: $model.email,
-                        prompt: Text(verbatim: SupportLocalization.text("support.form.email.placeholder"))
-                    )
-                    .font(DPTypography.body)
-                    .textContentType(.emailAddress)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .keyboardType(.emailAddress)
-                    .submitLabel(.next)
-                    .focused($focusedField, equals: .email)
-                    .onSubmit { focusedField = .subject }
-                    .dpInputChrome(isFocused: focusedField == .email)
-                    .accessibilityIdentifier("support.form.email")
+                if model.showsEmailField {
+                    field(label: "support.form.email") {
+                        TextField(
+                            "",
+                            text: $model.email,
+                            prompt: Text(verbatim: SupportLocalization.text("support.form.email.placeholder"))
+                        )
+                        .font(DPTypography.body)
+                        .textContentType(.emailAddress)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .keyboardType(.emailAddress)
+                        .submitLabel(.next)
+                        .focused($focusedField, equals: .email)
+                        .onSubmit { focusedField = .subject }
+                        .dpInputChrome(isFocused: focusedField == .email)
+                        .accessibilityIdentifier("support.form.email")
+                    }
                 }
 
                 field(label: "support.form.subject") {

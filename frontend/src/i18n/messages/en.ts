@@ -282,6 +282,9 @@ const apiErrors = {
     detail: {
       required: 'Please describe the problem when you choose Other.',
     },
+    cancel: {
+      notOpen: 'This report has already been handled or withdrawn.',
+    },
     target: {
       notDeletable: 'A member report has no content to delete.',
     },
@@ -289,6 +292,9 @@ const apiErrors = {
   inquiry: {
     rateLimit: {
       exceeded: 'Too many inquiries. Please try again later.',
+    },
+    email: {
+      required: 'Enter the e-mail address we should reply to.',
     },
   },
 } as const
@@ -327,6 +333,20 @@ export default {
       thisMonth: 'This month ({date})',
       goToThisMonth: 'This month',
     },
+    datePicker: {
+      placeholder: 'Select date',
+      dialogLabel: 'Date picker calendar',
+      today: 'Today',
+      goToToday: 'Go to today',
+      locked: 'Locked date',
+      rangeDialogLabel: 'Date range picker calendar',
+      rangeStart: 'Start',
+      rangeEnd: 'End',
+      rangeHint: 'Select an end date',
+      rangeDuration: '{count} day | {count} days',
+      confirm: 'Confirm',
+      cancel: 'Cancel',
+    },
     swal: {
       error: 'Error',
       warning: 'Warning',
@@ -348,6 +368,9 @@ export default {
     },
   },
   apiErrors,
+  contentFilter: {
+    blocked: 'This includes wording that violates the community guidelines. Please revise it before saving.',
+  },
   report: {
     actions: {
       menu: 'More',
@@ -655,13 +678,13 @@ export default {
       friends: 'Friends',
       noFriends: 'No friends yet.',
       familyMember: 'Family member',
-      moreSchedules: '+{count} more',
     },
     actions: {
       addFriend: 'Add friend',
       pin: 'Pin',
       unpin: 'Unpin',
-      dragToReorder: 'Drag to reorder',
+      scrollPrevAria: 'Show previous friends',
+      scrollNextAria: 'Show next friends',
     },
     friendRequest: {
       title: 'Friend request',
@@ -674,13 +697,23 @@ export default {
       pinFailed: 'Failed to pin the friend.',
       unpinFailed: 'Failed to unpin the friend.',
       friendRequestFailed: 'Failed to send the friend request.',
-      reorderFailed: 'Failed to update the friend order.',
     },
   },
   friends: {
     sections: {
       requests: 'Friend requests',
       list: 'Friends list',
+    },
+    help: {
+      openAriaLabel: 'How the friend list is ordered',
+      title: 'Changing the friend order',
+      pinTitle: 'Pin the friends you check most',
+      pinText: 'Tap the star on a friend card to pin it to the top of the list. Only pinned friends can be reordered.',
+      reorderTitle: 'Drag the handle to move a friend',
+      reorderText: 'Once two or more friends are pinned, a handle appears at the bottom right of each card. Drag it to the position you want.',
+      saveTitle: 'The order saves itself',
+      saveText: 'Dropping a card saves the new order right away, so it looks the same on your other devices.',
+      note: 'Friends you have not pinned stay in the default order below the pinned ones.',
     },
     actions: {
       addFriend: 'Add friend',
@@ -751,7 +784,6 @@ export default {
     },
   },
   todoBoard: {
-    title: 'To-do',
     loading: 'Loading...',
     statusTabsAriaLabel: 'To-do status',
     status: {
@@ -1316,8 +1348,7 @@ export default {
         title: 'Title',
         date: 'Date',
       },
-      pinEnabled: 'Pinned on calendar',
-      pinDisabled: 'Not pinned',
+      pin: 'Show on calendar',
       edit: 'Edit',
     },
     schedule: {
@@ -1332,7 +1363,6 @@ export default {
       },
       fields: {
         title: 'Title',
-        startTime: 'Time',
         startDateTime: 'Start',
         endDateTime: 'End',
         description: 'Details',
@@ -1340,6 +1370,7 @@ export default {
         attachments: 'Attachments',
         friendTag: 'Friend tags',
       },
+      time: { add: 'Add time', remove: 'Remove time' },
       placeholders: {
         title: 'Enter a schedule title',
         description: 'Add details',
@@ -1384,9 +1415,6 @@ export default {
       warning2: 'Only your tag will be removed.',
       action: 'Remove tag',
     },
-    todoRow: {
-      filterTitle: 'Show to-dos only',
-    },
     todo: {
       status: {
         todo: 'To-do',
@@ -1424,8 +1452,6 @@ export default {
         loadingAttachments: 'Loading attachments...',
       },
       messages: {
-        added: 'The to-do has been added.',
-        addFailed: 'Failed to add the to-do.',
         updateFailed: 'Failed to update the to-do.',
         completeFailed: 'Failed to complete the to-do.',
         reopenFailed: 'Failed to reopen the to-do.',
@@ -1615,14 +1641,13 @@ export default {
     searchLabel: 'Search friends',
     searchPlaceholder: 'Search friends',
     clearSearchAria: 'Clear friend search',
-    selectedOnly: 'Selected only ({count})',
-    selectedOnlyActive: 'Selected only enabled ({count})',
     selectedCount: '{count} selected',
+    removeTagAria: 'Remove {name} tag',
     clearSelectionAria: 'Clear selected friends',
     clearTitle: 'Clear selection',
     clearConfirm: 'Clear all {count} selected friend tags?',
-    loadMoreAria: 'Load more friends',
-    loadMore: 'Load more',
+    scrollPrevAria: 'Show previous friends',
+    scrollNextAria: 'Show next friends',
     emptyTitle: 'No friends found',
     emptyDescription: 'Try a different keyword or add friends first.',
   },
@@ -1935,12 +1960,14 @@ export default {
         open: 'Open',
         resolved: 'Resolved',
         dismissed: 'Dismissed',
+        canceled: 'Withdrawn',
         all: 'All',
       },
       status: {
         open: 'Open',
         resolved: 'Resolved',
         dismissed: 'Dismissed',
+        canceled: 'Withdrawn',
       },
       reason: {
         spam: 'Spam / ads',
@@ -2054,6 +2081,7 @@ export default {
           noSubject: '(No subject)',
           guest: 'Guest inquiry',
           none: '-',
+          inAppOnly: 'Answered in the app (no reply e-mail)',
         },
         actions: {
           copyEmail: 'Copy',
@@ -2070,7 +2098,8 @@ export default {
     title: 'Support',
     tabs: {
       form: 'Contact us',
-      history: 'My inquiries',
+      history: 'Inquiries',
+      reports: 'Reports',
     },
     subtitle: 'Find out how to report or block someone, and send us a question or an appeal.',
     guide: {
@@ -2087,7 +2116,7 @@ export default {
     form: {
       title: 'Contact us',
       description: 'We reply by e-mail, so please double-check the address you enter.',
-      descriptionSignedIn: 'We will notify you once your inquiry is answered, and you can read the reply under My inquiries.',
+      descriptionSignedIn: 'We will notify you once your inquiry is answered, and you can read the reply on the Inquiries tab. We do not ask for a reply e-mail.',
       guestHint: 'Sign in before sending an inquiry to read the reply right here in the app.',
       emailLabel: 'Reply e-mail',
       emailPlaceholder: "you{'@'}example.com",
@@ -2107,7 +2136,7 @@ export default {
     success: {
       title: 'Your inquiry has been received',
       description: 'We will reply to the e-mail address you provided. It can take up to 24 hours.',
-      descriptionSignedIn: 'You can read the reply under My inquiries once it arrives. It can take up to 24 hours.',
+      descriptionSignedIn: 'You can read the reply on the Inquiries tab once it arrives. It can take up to 24 hours.',
       another: 'Send another inquiry',
     },
     history: {
@@ -2128,7 +2157,54 @@ export default {
       contentTitle: 'Your message',
       answerTitle: 'Reply',
       answeredAt: 'Answered',
-      awaitingDescription: 'We will look into it and get back to you.',
+      awaitingDescription: 'We will look into it and get back to you. This can take up to 24 hours.',
+      answeredNotice: 'We will send you a notification as soon as the reply is posted.',
+      countSummary: '{total} total',
+      expand: 'Show the full inquiry',
+      collapse: 'Hide the full inquiry',
+    },
+    reports: {
+      loading: 'Loading your reports...',
+      loadFailed: 'We could not load your reports.',
+      retry: 'Try again',
+      empty: 'You have not filed a report yet.',
+      emptyDescription: 'Reports you file from a member calendar, schedule or to-do show up here.',
+      loadMore: 'Load more',
+      countSummary: '{total} total',
+      reportedAt: 'Filed',
+      handledAt: 'Handled',
+      canceledAt: 'Withdrawn',
+      targetLabel: 'Reported',
+      reasonLabel: 'Reason',
+      detailLabel: 'What you wrote',
+      expand: 'Show the full report',
+      collapse: 'Hide the full report',
+      targetType: {
+        member: 'User',
+        schedule: 'Schedule',
+        todo: 'To-do',
+      },
+      status: {
+        open: 'Received',
+        resolved: 'Action taken',
+        dismissed: 'No action',
+        canceled: 'Withdrawn',
+      },
+      statusDescription: {
+        open: 'We have received your report and will review it within 24 hours.',
+        resolved: 'We reviewed the report and took the action it called for.',
+        dismissed: 'We reviewed the report but found no breach of the terms of service, so no action was taken.',
+        canceled: 'You withdrew this report, so we are no longer reviewing it.',
+      },
+      cancel: {
+        action: 'Withdraw report',
+        pending: 'Withdrawing...',
+        confirmTitle: 'Withdraw this report?',
+        confirmMessage: 'Withdrawing stops the review and the report stays in this list as withdrawn. Any block you set stays in place; manage it in the blocked list under friend settings.',
+        confirmAction: 'Withdraw',
+        failed: 'We could not withdraw the report. Please try again in a moment.',
+      },
+      privacyNotice: 'To protect the other member\'s privacy we cannot share what action was taken.',
     },
   },
 } as const

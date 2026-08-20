@@ -52,8 +52,10 @@ nonisolated enum MoreMenuItem: String, CaseIterable, Hashable, Sendable {
 
     var title: String {
         switch self {
+        // The menu entry names the screen it opens, which is friend management; the home
+        // dashboard's own panel keeps the shorter "friends" wording.
         case .friends:
-            RootChromeLocalization.home("home.friends")
+            RootChromeLocalization.social("social.title")
         case .notifications:
             RootChromeLocalization.notifications("notifications.title")
         case .admin:
@@ -119,10 +121,18 @@ struct MoreView: View {
                 ) { _, group in
                     section(group)
                 }
+                if let versionText = MoreAppVersion.displayText {
+                    Text(verbatim: versionText)
+                        .font(DPTypography.caption)
+                        .foregroundStyle(DPColor.textMuted)
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, DPSpacing.small)
+                        .accessibilityIdentifier("more.appVersion")
+                }
             }
             .padding(DPSpacing.medium)
         }
-        .background(DPColor.backgroundPrimary)
+        .background(DPColor.backgroundSecondary)
     }
 
     private func section(_ items: [MoreMenuItem]) -> some View {

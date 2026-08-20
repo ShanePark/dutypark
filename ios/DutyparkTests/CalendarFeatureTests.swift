@@ -4,23 +4,97 @@ import XCTest
 
 @MainActor
 final class CalendarFeatureTests: XCTestCase {
-    func testCalendarTodoAddUsesTheQuickCreateModalAndTodoOnlyRefresh() throws {
+    /// The pinned D-day shares the day-number row, so only the counter fits. Adding the
+    /// title pushed the number out of the single line, which is the one part the pin is
+    /// for; the title already appears as a bubble on the D-day's own date.
+    func testThePinnedDDayCellShowsTheCounterWithoutTheTitle() throws {
+        let target = DateOnly(rawValue: "2026-08-19")
+
+        XCTAssertEqual(
+            CalendarVisualLogic.pinnedDDayLabel(cell: DateOnly(rawValue: "2026-08-19"), target: target),
+            "D-Day"
+        )
+        XCTAssertEqual(
+            CalendarVisualLogic.pinnedDDayLabel(cell: DateOnly(rawValue: "2026-08-16"), target: target),
+            "D-3"
+        )
+        XCTAssertEqual(
+            CalendarVisualLogic.pinnedDDayLabel(cell: DateOnly(rawValue: "2026-08-20"), target: target),
+            "D+1"
+        )
+        XCTAssertNil(CalendarVisualLogic.pinnedDDayLabel(cell: DateOnly(rawValue: "2026-08"), target: target))
+
         let sourceURL = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
             .appending(path: "Dutypark/Features/Calendar/CalendarView.swift")
         let source = try String(contentsOf: sourceURL, encoding: .utf8)
 
-        XCTAssertTrue(source.contains("TodoCreateModal("))
-        XCTAssertTrue(source.contains("initialStatus: .inProgress"))
-        XCTAssertTrue(source.contains("refreshBoardAfterCreate: false"))
-        XCTAssertTrue(source.contains("onCreated: { await model.refreshTodoBoard() }"))
+        XCTAssertTrue(source.contains("CalendarVisualLogic.pinnedDDayLabel("))
+        XCTAssertFalse(
+            source.contains("item.title) \\(label)"),
+            "The pinned counter must not be prefixed with the D-day title"
+        )
+    }
+
+    /// The callout is the only one-tap way back from a distant month, so it has to appear for
+    /// every month but the one the clock is in — the same month of another year included.
+    func testTheThisMonthCalloutAppearsForEveryMonthButTheCurrentOne() throws {
+        let today = try XCTUnwrap(CalendarDateSupport.date(from: DateOnly(rawValue: "2026-08-20")))
+
+        XCTAssertFalse(CalendarVisualLogic.showsThisMonthCallout(year: 2026, month: 8, today: today))
+        XCTAssertTrue(CalendarVisualLogic.showsThisMonthCallout(year: 2026, month: 7, today: today))
+        XCTAssertTrue(CalendarVisualLogic.showsThisMonthCallout(year: 2025, month: 8, today: today))
+    }
+
+    /// Moving the month header into the navigation bar left the return to today as a bare
+    /// arrow among the bar buttons, where nothing says what it does. It goes back to the
+    /// labelled speech bubble the web calendar draws, hung off the month label itself so it
+    /// stays inside the bar, which hit-tests nothing but its own items.
+    func testTheThisMonthAffordanceIsALabelledCalloutHangingFromTheMonthLabel() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark/Features/Calendar/CalendarView.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+
+        XCTAssertTrue(source.contains("private var thisMonthCallout: some View"))
+        XCTAssertTrue(
+            source.contains("Text(CalendarLocalization.text(\"calendar.month.goToThisMonth\"))"),
+            "The callout carries its label, not just the return arrow"
+        )
+        XCTAssertFalse(
+            source.contains("thisMonthControl"),
+            "The bare trailing bar icon gives way to the callout"
+        )
+        let controls = try XCTUnwrap(source.range(of: "private var monthControls: some View"))
+        let body = source[controls.upperBound...]
+        let end = try XCTUnwrap(body.range(of: "\n    private var"))
+        XCTAssertTrue(
+            body[..<end.lowerBound].contains("thisMonthCalloutLayer"),
+            "The callout hangs off the month controls, inside the bar, so it stays tappable"
+        )
+    }
+
+    /// The strip above the calendar is gone: due-date bubbles inside the day cells are the
+    /// only Todo surface the calendar keeps, and they open the detail modal in place.
+    func testCalendarTodosLiveOnlyInDayCellsAndOpenTheDetailModal() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark/Features/Calendar/CalendarView.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+
         XCTAssertTrue(source.contains("TodoDetailModal("))
+        XCTAssertTrue(source.contains("onTodoChanged: { await model.refreshTodoBoard() }"))
         XCTAssertTrue(source.contains("Button { openTodo(todo) }"))
         XCTAssertTrue(source.contains("calendar.day.todo.\\(todo.id)"))
         XCTAssertFalse(source.contains("todoDetailModel.load()"))
+        XCTAssertFalse(source.contains("dutyTodoRow"), "The Todo strip above the calendar is removed")
+        XCTAssertFalse(source.contains("calendar.todo.item."), "The Todo strip above the calendar is removed")
+        XCTAssertFalse(source.contains("TodoCreateModal("), "Calendar no longer creates Todos")
         XCTAssertFalse(source.contains("TodoView("), "Calendar Todo bubbles must not present the full board")
-        XCTAssertFalse(source.contains("private func openTodoBoard()"), "Calendar keeps only the quick-add entry")
+        XCTAssertFalse(source.contains("private func openTodoBoard()"), "Calendar never opens the Todo board")
     }
 
     func testAMemberCalendarIsPushedOntoTheStackOfTheTabItWasOpenedFrom() throws {
@@ -189,7 +263,7 @@ final class CalendarFeatureTests: XCTestCase {
         XCTAssertEqual(merged.map(\.id), [3, 4, 5, 6, 7, 8, 9])
     }
 
-    func testSharedFriendTagSelectorFiltersNameAndTeamAndIntersectsSelectedOnly() {
+    func testSharedFriendTagSelectorFiltersNameAndTeamIndependentlyOfSelection() {
         let items = [
             tagItem(id: 1, name: "Alice", team: "Emergency"),
             tagItem(id: 2, name: "Bob", team: "Emergency"),
@@ -197,31 +271,45 @@ final class CalendarFeatureTests: XCTestCase {
         ]
 
         XCTAssertEqual(
-            DPFriendTagSelectionLogic.visibleItems(
-                items: items,
-                query: "emerg",
-                selectedOnly: false,
-                selection: [2]
-            ).map(\.id),
+            DPFriendTagSelectionLogic.visibleItems(items: items, query: "emerg").map(\.id),
             [1, 2]
         )
         XCTAssertEqual(
-            DPFriendTagSelectionLogic.visibleItems(
-                items: items,
-                query: "emerg",
-                selectedOnly: true,
-                selection: [2, 3]
-            ).map(\.id),
-            [2]
+            DPFriendTagSelectionLogic.visibleItems(items: items, query: "alice").map(\.id),
+            [1]
         )
         XCTAssertEqual(
-            DPFriendTagSelectionLogic.visibleItems(
-                items: items,
-                query: "alice",
-                selectedOnly: false,
-                selection: []
-            ).map(\.id),
-            [1]
+            DPFriendTagSelectionLogic.visibleItems(items: items, query: "   ").map(\.id),
+            [1, 2, 3],
+            "A blank query keeps the whole rail browsable"
+        )
+    }
+
+    func testSharedFriendTagRailKeepsThreePortraitsVisibleAtAnyFormWidth() {
+        let spacing: CGFloat = 8
+
+        // The labelled schedule editor column on the smallest supported phone is the tightest rail.
+        let narrow = DPFriendTagSelectionLogic.cardWidth(
+            availableWidth: 217, spacing: spacing, minimum: 60, maximum: 88
+        )
+        XCTAssertLessThanOrEqual(
+            narrow * 3 + spacing * 2, 217,
+            "Three portraits must fit the narrowest form without clipping the third"
+        )
+
+        XCTAssertEqual(
+            DPFriendTagSelectionLogic.cardWidth(
+                availableWidth: 900, spacing: spacing, minimum: 60, maximum: 88
+            ),
+            88,
+            "A roomy container must not stretch portraits past the comfortable maximum"
+        )
+        XCTAssertEqual(
+            DPFriendTagSelectionLogic.cardWidth(
+                availableWidth: 40, spacing: spacing, minimum: 60, maximum: 88
+            ),
+            60,
+            "A collapsed container must not shrink portraits below the legible minimum"
         )
     }
 
@@ -274,9 +362,10 @@ final class CalendarFeatureTests: XCTestCase {
 
     func testSharedFriendTagStringsResolveInEveryLocale() throws {
         let keys = [
-            "friendTag.clear", "friendTag.clearSearch", "friendTag.empty", "friendTag.expand",
-            "friendTag.noneSelected", "friendTag.notSelectedState", "friendTag.search",
-            "friendTag.selected", "friendTag.selectedOnly", "friendTag.selectedState", "friendTag.title"
+            "friendTag.clear", "friendTag.clearSearch", "friendTag.clearShort", "friendTag.empty",
+            "friendTag.expand", "friendTag.noneSelected", "friendTag.notSelectedState",
+            "friendTag.remove", "friendTag.search", "friendTag.selected", "friendTag.selectedState",
+            "friendTag.title"
         ]
 
         for locale in ["en", "ko"] {
@@ -297,7 +386,10 @@ final class CalendarFeatureTests: XCTestCase {
             "calendar.schedule.attachments",
             "calendar.schedule.content.placeholder",
             "calendar.schedule.description.placeholder",
-            "calendar.schedule.startTime",
+            "calendar.schedule.start",
+            "calendar.schedule.end",
+            "calendar.schedule.time.add",
+            "calendar.schedule.time.remove",
             "calendar.schedule.tags.search",
             "calendar.schedule.tags.selected",
             "calendar.schedule.tags.selectedOnly",
@@ -307,7 +399,6 @@ final class CalendarFeatureTests: XCTestCase {
             "calendar.compare.empty",
             "calendar.compare.reset",
             "calendar.todo.manage",
-            "calendar.todo.add",
             "calendar.search.hint",
             "calendar.search.empty",
             "calendar.search.summary",
@@ -317,8 +408,6 @@ final class CalendarFeatureTests: XCTestCase {
             "calendar.schedule.untag.confirm.message",
             "calendar.dday.detail.title",
             "calendar.dday.edit.action",
-            "calendar.dday.pin.enabled",
-            "calendar.dday.pin.disabled",
             "calendar.dday.pin.action",
             "calendar.dday.delete.confirm.title",
             "calendar.dday.delete.confirm.message",
@@ -491,6 +580,762 @@ final class CalendarFeatureTests: XCTestCase {
             initialAttachmentIDs: [attachmentID], attachmentIDs: [attachmentID],
             hasAttachmentSession: true
         ))
+    }
+
+    func testScheduleEditorTreatsMidnightAsNoTime() {
+        let calendar = CalendarDateSupport.calendar
+        let midnight = Self.moment(2026, 8, 19, 0, 0)
+        let morning = Self.moment(2026, 8, 19, 9, 30)
+
+        XCTAssertNil(ScheduleEditorTimePolicy.time(of: midnight, calendar: calendar))
+        XCTAssertEqual(ScheduleEditorTimePolicy.time(of: morning, calendar: calendar), morning)
+    }
+
+    func testScheduleEditorCombinesADateWithItsOptionalTime() {
+        let calendar = CalendarDateSupport.calendar
+        let day = Self.moment(2026, 8, 19, 0, 0)
+        let timeOnAnotherDay = Self.moment(2026, 1, 2, 14, 45)
+
+        XCTAssertEqual(
+            ScheduleEditorTimePolicy.combine(date: day, time: nil, calendar: calendar),
+            Self.moment(2026, 8, 19, 0, 0)
+        )
+        XCTAssertEqual(
+            ScheduleEditorTimePolicy.combine(date: day, time: timeOnAnotherDay, calendar: calendar),
+            Self.moment(2026, 8, 19, 14, 45)
+        )
+    }
+
+    /// Splitting a stored value and folding it straight back must reproduce it exactly,
+    /// otherwise merely opening an untouched editor would look dirty and warn on close.
+    func testScheduleEditorRoundTripsAStoredValueUnchanged() {
+        let calendar = CalendarDateSupport.calendar
+        for stored in [Self.moment(2026, 8, 19, 0, 0), Self.moment(2026, 8, 19, 21, 5)] {
+            XCTAssertEqual(
+                ScheduleEditorTimePolicy.combine(
+                    date: stored,
+                    time: ScheduleEditorTimePolicy.time(of: stored, calendar: calendar),
+                    calendar: calendar
+                ),
+                stored
+            )
+        }
+    }
+
+    /// The model rejects an end before the start, so "start at 22:00, no end time" has to be
+    /// stored as an end equal to the start — otherwise the editor could not save it at all.
+    func testScheduleEditorCollapsesASameDayEndWithoutATimeOntoTheStart() {
+        let calendar = CalendarDateSupport.calendar
+        let start = Self.moment(2026, 8, 19, 22, 0)
+
+        XCTAssertEqual(
+            ScheduleEditorTimePolicy.effectiveEnd(
+                start: start,
+                endDate: Self.moment(2026, 8, 19, 0, 0),
+                endTime: nil,
+                calendar: calendar
+            ),
+            start
+        )
+        XCTAssertEqual(
+            ScheduleEditorTimePolicy.effectiveEnd(
+                start: start,
+                endDate: Self.moment(2026, 8, 21, 0, 0),
+                endTime: nil,
+                calendar: calendar
+            ),
+            Self.moment(2026, 8, 21, 0, 0)
+        )
+        XCTAssertEqual(
+            ScheduleEditorTimePolicy.effectiveEnd(
+                start: start,
+                endDate: Self.moment(2026, 8, 19, 0, 0),
+                endTime: Self.moment(2026, 1, 2, 23, 30),
+                calendar: calendar
+            ),
+            Self.moment(2026, 8, 19, 23, 30)
+        )
+        // An end date before the start stays invalid instead of being quietly bumped.
+        XCTAssertEqual(
+            ScheduleEditorTimePolicy.effectiveEnd(
+                start: start,
+                endDate: Self.moment(2026, 8, 18, 0, 0),
+                endTime: nil,
+                calendar: calendar
+            ),
+            Self.moment(2026, 8, 18, 0, 0)
+        )
+    }
+
+    /// A stored end that equals the start carries no end time of its own, so the editor
+    /// leaves that field empty and folds it back to the same value on save.
+    func testScheduleEditorReadsAnEndEqualToTheStartAsNoEndTime() {
+        let calendar = CalendarDateSupport.calendar
+        let start = Self.moment(2026, 8, 19, 9, 0)
+
+        XCTAssertNil(ScheduleEditorTimePolicy.endTime(of: start, start: start, calendar: calendar))
+        XCTAssertEqual(
+            ScheduleEditorTimePolicy.endTime(
+                of: Self.moment(2026, 8, 19, 18, 0),
+                start: start,
+                calendar: calendar
+            ),
+            Self.moment(2026, 8, 19, 18, 0)
+        )
+        XCTAssertEqual(
+            ScheduleEditorTimePolicy.effectiveEnd(
+                start: start,
+                endDate: start,
+                endTime: nil,
+                calendar: calendar
+            ),
+            start
+        )
+    }
+
+    func testScheduleEditorDefaultStartTimeTakesTheNextHourAndAvoidsMidnight() {
+        let calendar = CalendarDateSupport.calendar
+        let day = Self.moment(2026, 8, 19, 0, 0)
+
+        XCTAssertEqual(
+            ScheduleEditorTimePolicy.defaultStartTime(
+                on: day,
+                now: Self.moment(2026, 1, 2, 9, 15),
+                calendar: calendar
+            ),
+            Self.moment(2026, 8, 19, 10, 0)
+        )
+        // 23:xx would roll over to midnight, which the model reads back as "no time".
+        XCTAssertEqual(
+            ScheduleEditorTimePolicy.defaultStartTime(
+                on: day,
+                now: Self.moment(2026, 1, 2, 23, 40),
+                calendar: calendar
+            ),
+            Self.moment(2026, 8, 19, 9, 0)
+        )
+    }
+
+    func testScheduleEditorDefaultEndIsAlwaysAVisibleTimeAfterTheStart() {
+        let calendar = CalendarDateSupport.calendar
+        let sameDay = Self.moment(2026, 8, 19, 0, 0)
+
+        XCTAssertEqual(
+            ScheduleEditorTimePolicy.defaultEnd(
+                start: Self.moment(2026, 8, 19, 10, 0),
+                endDate: sameDay,
+                calendar: calendar
+            ),
+            Self.moment(2026, 8, 19, 11, 0)
+        )
+        // An hour later would cross midnight, which reads back as no time at all.
+        XCTAssertEqual(
+            ScheduleEditorTimePolicy.defaultEnd(
+                start: Self.moment(2026, 8, 19, 23, 0),
+                endDate: sameDay,
+                calendar: calendar
+            ),
+            Self.moment(2026, 8, 19, 23, 59)
+        )
+        XCTAssertEqual(
+            ScheduleEditorTimePolicy.defaultEnd(
+                start: Self.moment(2026, 8, 19, 23, 30),
+                endDate: Self.moment(2026, 8, 20, 0, 0),
+                calendar: calendar
+            ),
+            Self.moment(2026, 8, 20, 23, 59)
+        )
+        // Nothing later is left on the start's own day, so the end rolls over.
+        XCTAssertEqual(
+            ScheduleEditorTimePolicy.defaultEnd(
+                start: Self.moment(2026, 8, 31, 23, 59),
+                endDate: Self.moment(2026, 8, 31, 0, 0),
+                calendar: calendar
+            ),
+            Self.moment(2026, 9, 1, 0, 59)
+        )
+    }
+
+    /// An end time only makes sense once a start time exists, and a control the user cannot
+    /// use reads as broken — so the end offers no button at all until then.
+    /// Korean form labels are all two-character words ("공개 범위", "첨부파일"), so a two-character
+    /// column wraps the four-character ones into an even block and leaves the date and time
+    /// controls beside them the room a phone cannot spare. Latin labels have no such break point
+    /// inside a word, so they keep a column wide enough for the longest of them.
+    func testFormLabelColumnIsTwoCharactersWideInKorean() {
+        let korean = CalendarVisualLogic.formLabelWidth(locale: Locale(identifier: "ko_KR"))
+        let english = CalendarVisualLogic.formLabelWidth(locale: Locale(identifier: "en_US"))
+
+        XCTAssertEqual(korean, 28)
+        XCTAssertLessThan(korean, english)
+    }
+
+    /// Every row of the editor hangs its label off the one shared width token, and the date
+    /// bounds are no exception: they go through the very row builder the rest of the form uses,
+    /// so a start or end label cannot drift away from the fields above and below it.
+    func testScheduleEditorRowLabelsShareOneWidthToken() throws {
+        let source = try Self.calendarViewSource()
+        let section = try Self.declaration(
+            named: "private var scheduleDateSection: some View",
+            in: try Self.scheduleEditorSource()
+        )
+
+        XCTAssertTrue(source.contains(".frame(width: rowLabelWidth, alignment: .leading)"))
+        XCTAssertFalse(
+            source.contains(".frame(width: 64, alignment: .leading)"),
+            "Every row label takes its width from the shared token"
+        )
+        XCTAssertTrue(section.contains(#"formRow("calendar.schedule.start", alignment: .top)"#))
+        XCTAssertTrue(section.contains(#"formRow("calendar.schedule.end", alignment: .top)"#))
+    }
+
+    /// A new schedule's start cannot be changed and the end is picked as a range, but the two
+    /// rows still draw one control through one builder: the same box, the same reserved height,
+    /// the same language. Only the state handed to it differs.
+    func testScheduleEditorStartAndEndDatesDrawTheSameControl() throws {
+        let editor = try Self.scheduleEditorSource()
+        let builder = try Self.declaration(named: "private func dateControl", in: editor)
+
+        XCTAssertEqual(
+            editor.components(separatedBy: "DPDateField(").count - 1,
+            1,
+            "Both date rows go through the one builder"
+        )
+        XCTAssertTrue(builder.contains("DPDateField("))
+        XCTAssertTrue(builder.contains("isReadOnly: isReadOnly"), "The locked look is a state of the shared field")
+        XCTAssertTrue(editor.contains("isReadOnly: existing == nil"))
+        XCTAssertTrue(editor.contains("mode: .range(anchor: startDay)"))
+        XCTAssertFalse(
+            editor.contains("displayedComponents: .date"),
+            "A date is picked through the shared field, not a native date picker"
+        )
+        XCTAssertFalse(
+            editor.contains("ScheduleEditorTimePolicy.dateText"),
+            "The fixed start date is the shared date control, not a text stand-in styled to match it"
+        )
+    }
+
+    /// The time is optional, so its cell draws either a button that adds one or a time picker.
+    /// Sized to whichever it holds, the cell grew the moment a time was added and shifted every
+    /// field below it, so it reserves the taller control's height in every state. The date field
+    /// is handed the same budget as its own row height rather than being wrapped in it: a fixed
+    /// frame around the field would cut off the calendar it opens.
+    func testScheduleDateRowsReserveOneHeightWhetherOrNotATimeIsSet() throws {
+        let editor = try Self.scheduleEditorSource()
+        let builder = try Self.declaration(named: "private func dateControl", in: editor)
+
+        XCTAssertEqual(CalendarVisualLogic.scheduleDateRowHeight, 36)
+        XCTAssertTrue(
+            builder.contains("rowHeight: dateRowHeight"),
+            "The date field holds the reserved row height"
+        )
+        XCTAssertFalse(
+            builder.contains(".frame(height:"),
+            "Wrapping the date field in a fixed height would clip the calendar it opens"
+        )
+        XCTAssertTrue(
+            editor.contains(".frame(height: dateRowHeight, alignment: .leading)"),
+            "The time cell holds the reserved row height in both of its states"
+        )
+        XCTAssertFalse(
+            editor.contains(".frame(minHeight: dateRowHeight"),
+            "A floor still lets a picker grow the row past it; the height is fixed"
+        )
+    }
+
+    func testScheduleEditorHidesTheEndTimeButtonUntilAStartTimeExists() throws {
+        let editor = try Self.scheduleEditorSource()
+
+        XCTAssertTrue(editor.contains("} else if canAdd {"))
+        XCTAssertTrue(editor.contains("canAdd: startTime != nil"))
+        XCTAssertFalse(
+            editor.contains(".disabled(!canAdd)"),
+            "The end time button is hidden, not shown disabled"
+        )
+        // The empty cell keeps its height all the same: otherwise adding a start time would
+        // reveal the end's button and push every field below the end date down by a row.
+        XCTAssertTrue(editor.contains(".frame(height: dateRowHeight, alignment: .leading)"))
+    }
+
+    /// The time sits *beside* its date, not under it. Stacked, the end's hidden button left a
+    /// reserved-but-empty band under the end date — a 36-point hole between the row and the
+    /// next field — and the reserve itself cannot be dropped: it is what keeps adding a time
+    /// from pushing every field below it down. Beside the date the same reserve is invisible,
+    /// exactly as the web keeps the two controls on one line.
+    func testTheDateAndItsTimeShareOneRow() throws {
+        let editor = try Self.scheduleEditorSource()
+        let builder = try Self.declaration(named: "private func dateControl", in: editor)
+        let start = try Self.declaration(named: "private var startDateControl: some View", in: editor)
+        let end = try Self.declaration(named: "private var endDateControl: some View", in: editor)
+
+        XCTAssertTrue(
+            builder.contains("accessory: accessory"),
+            "The time is handed to the date field as the accessory of its own row"
+        )
+        for (name, row) in [("start", start), ("end", end)] {
+            XCTAssertTrue(row.contains("timeControl("), "The \(name) row still owns its time control")
+            XCTAssertFalse(
+                row.contains("VStack"),
+                "The \(name) row no longer stacks its time under its date"
+            )
+        }
+    }
+
+    /// The label column narrows the row's content, and a calendar confined to it is cramped —
+    /// 29 points a cell in English. The expanded calendar owes the label nothing, so it bleeds
+    /// back across the column and takes the whole row in both languages.
+    func testTheExpandedCalendarSpansTheRowRatherThanTheLabelledColumn() throws {
+        let editor = try Self.scheduleEditorSource()
+        let builder = try Self.declaration(named: "private func dateControl", in: editor)
+
+        XCTAssertTrue(
+            builder.contains(
+                "calendarLeadingBleed: CalendarVisualLogic.formRowContentInset(labelWidth: rowLabelWidth)"
+            ),
+            "The calendar bleeds back across exactly the label column the row hangs off"
+        )
+        XCTAssertEqual(CalendarVisualLogic.formRowContentInset(labelWidth: 28), 36)
+        XCTAssertEqual(CalendarVisualLogic.formRowContentInset(labelWidth: 88), 96)
+    }
+
+    /// Expanding a calendar grows the form well past the fold, so the calendar's own confirm
+    /// lands under the modal's footer where only a scroll the user has no reason to try reaches
+    /// it. The panel already scrolls to whatever the body names as its target, so an open
+    /// calendar becomes that target — outranking a focused text field, whose keyboard the
+    /// calendar has just taken the room from.
+    func testExpandingADateCalendarScrollsItsConfirmIntoView() throws {
+        let editor = try Self.scheduleEditorSource()
+        let target = try Self.declaration(named: "private var scrollTarget: AnyHashable?", in: editor)
+        let expanded = try XCTUnwrap(target.range(of: "expandedDateField"))
+        let focused = try XCTUnwrap(target.range(of: "focusedField"))
+
+        XCTAssertLessThan(
+            expanded.lowerBound,
+            focused.lowerBound,
+            "An open calendar outranks the focused field the panel would otherwise reveal"
+        )
+        XCTAssertTrue(editor.contains("scrollTarget: scrollTarget"))
+        XCTAssertTrue(editor.contains(".id(ScheduleDateField.start)"))
+        XCTAssertTrue(editor.contains(".id(ScheduleDateField.end)"))
+    }
+
+    func testExpandingFriendTagsScrollsToTheReservedSelectionSummary() throws {
+        let editor = try Self.scheduleEditorSource()
+        let target = try Self.declaration(named: "private var scrollTarget: AnyHashable?", in: editor)
+
+        XCTAssertTrue(
+            target.contains("isTagSelectorExpanded")
+                && target.contains("DPFriendTagSelectorScrollAnchor.selectionSummary"),
+            "Once friend tagging expands, the panel must target the reserved selection summary below the rail"
+        )
+        XCTAssertTrue(
+            editor.contains("focusedField = nil")
+                && editor.contains("isTagSelectorExpanded = true"),
+            "Expansion must release any focused field before requesting the selector summary"
+        )
+    }
+
+    /// A tap outside the expanded calendar closed the whole editor — and offered to discard the
+    /// form on the way out — because the backdrop request reached the editor's own dismissal.
+    /// It closes the innermost thing that is open instead: the calendar first, the editor only
+    /// once no calendar is left. The close button is untouched: pressing it is an explicit
+    /// intent to leave.
+    func testATapOutsideAnOpenDateCalendarClosesTheCalendarAndNotTheEditor() throws {
+        let editor = try Self.scheduleEditorSource()
+
+        XCTAssertEqual(
+            ScheduleEditorDismissalPolicy.outsideRequest(hasOpenDateCalendar: true),
+            .closeDateCalendar
+        )
+        XCTAssertEqual(
+            ScheduleEditorDismissalPolicy.outsideRequest(hasOpenDateCalendar: false),
+            .requestEditorDismissal
+        )
+        XCTAssertTrue(editor.contains(".onChange(of: dismissRequest) { _, _ in handleOutsideDismissRequest() }"))
+        let handler = try Self.declaration(named: "private func handleOutsideDismissRequest()", in: editor)
+        XCTAssertTrue(handler.contains("ScheduleEditorDismissalPolicy.outsideRequest("))
+        let actions = try Self.declaration(named: "private var editorActions: some View", in: editor)
+        XCTAssertTrue(actions.contains("requestDismissal()"), "The close button still leaves the editor")
+    }
+
+    /// "종료 날짜 선정할 때, 시작 날짜보다 이전은 절대 눌리면 안되지." The end date control is
+    /// bounded at the start's own day, so an earlier date cannot be tapped at all. The bound is
+    /// the start of that day: the start's own date stays reachable whatever time it carries.
+    func testEndDateIsBoundedAtTheStartsOwnDay() {
+        let calendar = CalendarDateSupport.calendar
+
+        XCTAssertEqual(
+            ScheduleEditorTimePolicy.endDateLowerBound(
+                start: Self.moment(2026, 8, 19, 22, 30),
+                calendar: calendar
+            ),
+            Self.moment(2026, 8, 19, 0, 0)
+        )
+    }
+
+    /// No bound on the end control can stop the start from moving past it, which edit mode
+    /// allows — so the end follows the start instead of being left in a range only the save
+    /// button would reject.
+    func testEndFollowsTheStartWhenTheStartMovesPastIt() {
+        let calendar = CalendarDateSupport.calendar
+
+        // The start jumps beyond an end that carries no time: the end date rises with it.
+        var aligned = ScheduleEditorTimePolicy.endFollowingStart(
+            start: Self.moment(2026, 8, 21, 10, 0),
+            endDate: Self.moment(2026, 8, 19, 0, 0),
+            endTime: nil,
+            calendar: calendar
+        )
+        XCTAssertEqual(aligned.date, Self.moment(2026, 8, 21, 0, 0))
+        XCTAssertNil(aligned.time)
+
+        // An end already after the start is left exactly as the user set it.
+        aligned = ScheduleEditorTimePolicy.endFollowingStart(
+            start: Self.moment(2026, 8, 19, 10, 0),
+            endDate: Self.moment(2026, 8, 21, 0, 0),
+            endTime: nil,
+            calendar: calendar
+        )
+        XCTAssertEqual(aligned.date, Self.moment(2026, 8, 21, 0, 0))
+        XCTAssertNil(aligned.time)
+
+        // A same-day end time the start has overtaken is re-proposed by the rule that first
+        // offered one, so it stays a visible time after the start.
+        aligned = ScheduleEditorTimePolicy.endFollowingStart(
+            start: Self.moment(2026, 8, 19, 14, 0),
+            endDate: Self.moment(2026, 8, 19, 0, 0),
+            endTime: Self.moment(2026, 8, 19, 9, 0),
+            calendar: calendar
+        )
+        XCTAssertEqual(aligned.date, Self.moment(2026, 8, 19, 15, 0))
+        XCTAssertEqual(aligned.time, Self.moment(2026, 8, 19, 15, 0))
+
+        // An end time still after the start survives untouched.
+        aligned = ScheduleEditorTimePolicy.endFollowingStart(
+            start: Self.moment(2026, 8, 19, 14, 0),
+            endDate: Self.moment(2026, 8, 19, 0, 0),
+            endTime: Self.moment(2026, 8, 19, 18, 0),
+            calendar: calendar
+        )
+        XCTAssertEqual(aligned.time, Self.moment(2026, 8, 19, 18, 0))
+
+        // The end's clock is re-anchored onto the day the end is shown on, which is what lets
+        // the bound on the end time control weigh it against the right day.
+        aligned = ScheduleEditorTimePolicy.endFollowingStart(
+            start: Self.moment(2026, 8, 19, 9, 0),
+            endDate: Self.moment(2026, 8, 20, 0, 0),
+            endTime: Self.moment(2026, 8, 19, 18, 0),
+            calendar: calendar
+        )
+        XCTAssertEqual(aligned.time, Self.moment(2026, 8, 20, 18, 0))
+    }
+
+    /// Whatever the start is moved to, the end that follows it has to be a range the editor
+    /// can actually save — never an end before its own start.
+    func testEndFollowingTheStartIsNeverBeforeIt() {
+        let calendar = CalendarDateSupport.calendar
+        let endDate = Self.moment(2026, 8, 19, 0, 0)
+
+        for hour in 0..<24 {
+            for endHour in [0, 9, 23] {
+                let start = Self.moment(2026, 8, 19, hour, 30)
+                let endTime = endHour == 0 ? nil : Self.moment(2026, 8, 19, endHour, 0)
+                let aligned = ScheduleEditorTimePolicy.endFollowingStart(
+                    start: start,
+                    endDate: endDate,
+                    endTime: endTime,
+                    calendar: calendar
+                )
+                let end = ScheduleEditorTimePolicy.effectiveEnd(
+                    start: start,
+                    endDate: aligned.date,
+                    endTime: aligned.time,
+                    calendar: calendar
+                )
+                XCTAssertGreaterThanOrEqual(
+                    end,
+                    start,
+                    "start \(hour):30 with end hour \(endHour) left an end before its start"
+                )
+            }
+        }
+    }
+
+    /// The end date is barred from going before the start by the control itself, not by a check
+    /// that only fires once the user has already picked an impossible date: a day before the
+    /// start cannot be tapped at all.
+    func testEndDateControlIsBoundedRatherThanValidatedAfterwards() throws {
+        let start = DateOnly(rawValue: "2026-08-19")
+        let mode = DPDateFieldMode.range(anchor: start)
+
+        XCTAssertEqual(
+            DPDateFieldPolicy.lowerBound(mode: mode, minimum: start),
+            start,
+            "The end calendar's floor is the start's own day"
+        )
+        for earlier in ["2026-08-18", "2026-07-31", "2025-12-31"] {
+            XCTAssertEqual(
+                DPDateFieldPolicy.tap(DateOnly(rawValue: earlier), mode: mode, minimum: start, maximum: nil),
+                .ignored,
+                "\(earlier) sits before the start and must not be selectable"
+            )
+        }
+        XCTAssertFalse(
+            DPDateFieldPolicy.canGoToPreviousMonth(
+                from: DatePickerMonth(year: 2026, month: 8),
+                mode: mode,
+                minimum: start
+            ),
+            "Paging back to a month of dead days is closed too"
+        )
+        XCTAssertEqual(
+            DPDateFieldPolicy.tap(start, mode: mode, minimum: start, maximum: nil),
+            .staged(start),
+            "A same-day end is still a legal end"
+        )
+
+        let editor = try Self.scheduleEditorSource()
+        XCTAssertTrue(
+            editor.contains("mode: .range(anchor: startDay)"),
+            "The end date is bounded at the start's own day"
+        )
+        XCTAssertTrue(editor.contains("minimum: startDay"))
+        XCTAssertTrue(
+            editor.contains("in: (lowerBound ?? .distantPast)..."),
+            "The end time keeps the same bounded initialiser"
+        )
+        XCTAssertTrue(
+            editor.contains("notEarlierThan: start,"),
+            "The end time is bounded at the start instant"
+        )
+        XCTAssertTrue(
+            editor.contains(".onChange(of: startDate) { _, _ in alignEndWithStart() }"),
+            "Edit mode lets the start move, so the end follows it"
+        )
+        XCTAssertTrue(editor.contains(".onChange(of: startTime) { _, _ in alignEndWithStart() }"))
+        XCTAssertTrue(editor.contains(".onChange(of: endDate) { _, _ in alignEndWithStart() }"))
+    }
+
+    /// A tap in the end calendar paints the span it would produce; it does not write it. Only
+    /// the confirm button commits, which is what keeps the editor clean — and its discard alert
+    /// disarmed — while the user is still deciding.
+    func testTappingAnEndDayStagesItRatherThanCommittingIt() {
+        let start = DateOnly(rawValue: "2026-08-19")
+        let mode = DPDateFieldMode.range(anchor: start)
+
+        for day in ["2026-08-19", "2026-08-20", "2026-09-04"] {
+            XCTAssertEqual(
+                DPDateFieldPolicy.tap(DateOnly(rawValue: day), mode: mode, minimum: start, maximum: nil),
+                .staged(DateOnly(rawValue: day)),
+                "\(day) must be staged, never written straight through"
+            )
+        }
+        // The span is painted from the anchor, so the user sees the schedule's length forming.
+        XCTAssertEqual(
+            DPDateFieldPolicy.rangeState(
+                DateOnly(rawValue: "2026-08-20"),
+                mode: mode,
+                stagedDay: DateOnly(rawValue: "2026-08-21")
+            ),
+            .middle
+        )
+
+        // The start row is deliberately not a range: it commits on the tap, exactly as the web's
+        // single-select start input does.
+        XCTAssertEqual(
+            DPDateFieldPolicy.tap(DateOnly(rawValue: "2026-08-20"), mode: .single, minimum: nil, maximum: nil),
+            .committed(DateOnly(rawValue: "2026-08-20"))
+        )
+    }
+
+    /// A staged day is unwritten, so the editor cannot see it. Dirtiness keys off the committed
+    /// dates alone, which is what leaves the discard alert disarmed until confirm.
+    func testAStagedEndDayLeavesTheEditorClean() {
+        let start = Self.moment(2026, 8, 19, 9, 30)
+        let end = Self.moment(2026, 8, 19, 10, 30)
+        let confirmed = Self.moment(2026, 8, 21, 10, 30)
+
+        func isDirty(end current: Date) -> Bool {
+            ScheduleEditorDismissalPolicy.isDirty(
+                initialContent: "Shift", content: "Shift",
+                initialDescription: "Notes", description: "Notes",
+                initialVisibility: .family, visibility: .family,
+                initialStart: start, start: start,
+                initialEnd: end, end: current,
+                initialTagIDs: [], tagIDs: [],
+                initialAttachmentIDs: [], attachmentIDs: [],
+                hasAttachmentSession: false
+            )
+        }
+
+        XCTAssertFalse(isDirty(end: end), "Staging cannot reach the editor, so nothing is dirty yet")
+        XCTAssertTrue(isDirty(end: confirmed), "Confirming writes the day through and arms the alert")
+    }
+
+    /// The editor stores instants; the date field speaks calendar days. The bridge has to move
+    /// the day without shifting it across a time-zone boundary and without dropping the clock
+    /// the editor still needs.
+    func testMovingAScheduleDateKeepsItsClockAndItsDay() {
+        let calendar = CalendarDateSupport.calendar
+
+        for hour in [0, 9, 12, 23] {
+            let original = Self.moment(2026, 8, 19, hour, 30)
+            XCTAssertEqual(
+                ScheduleEditorTimePolicy.day(of: original),
+                DateOnly(rawValue: "2026-08-19"),
+                "\(hour):30 must read as the day it is shown on"
+            )
+
+            for target in ["2026-08-19", "2026-08-20", "2026-09-01", "2027-03-01"] {
+                let moved = ScheduleEditorTimePolicy.date(
+                    original,
+                    movedTo: DateOnly(rawValue: target),
+                    calendar: calendar
+                )
+                XCTAssertEqual(
+                    ScheduleEditorTimePolicy.day(of: moved),
+                    DateOnly(rawValue: target),
+                    "moving \(hour):30 to \(target) landed on another day"
+                )
+                XCTAssertEqual(
+                    calendar.dateComponents([.hour, .minute], from: moved),
+                    calendar.dateComponents([.hour, .minute], from: original),
+                    "moving \(hour):30 to \(target) lost the clock the editor still needs"
+                )
+            }
+        }
+
+        // A value that names no real day leaves the stored instant alone rather than collapsing
+        // it to some fallback.
+        let untouched = Self.moment(2026, 8, 19, 9, 30)
+        for broken in ["", "2026-02-30", "not-a-day"] {
+            XCTAssertEqual(
+                ScheduleEditorTimePolicy.date(untouched, movedTo: DateOnly(rawValue: broken), calendar: calendar),
+                untouched,
+                "\(broken) is not a day and must not move the schedule"
+            )
+        }
+    }
+
+    /// The date field defaults to `AppLocalization.locale` while the editor formats through
+    /// `CalendarLocalization.selectedLocale`. They are the same locale; the editor passes it
+    /// explicitly so a future divergence shows up here rather than as a half-translated row.
+    func testTheDateFieldFollowsTheEditorsOwnLocale() throws {
+        XCTAssertEqual(CalendarLocalization.selectedLocale, AppLocalization.locale)
+
+        let editor = try Self.scheduleEditorSource()
+        let builder = try Self.declaration(named: "private func dateControl", in: editor)
+        XCTAssertTrue(builder.contains("locale: CalendarLocalization.selectedLocale"))
+    }
+
+    /// The start and end controls were asked to look identical, so the locked start may differ
+    /// only in *state*: it is the same field with `isReadOnly` set, and the lock, the drained
+    /// colour and the one static VoiceOver reading all come from that state rather than from
+    /// decoration the editor bolts on beside the control.
+    func testLockedStartDiffersFromTheEndOnlyInState() throws {
+        let editor = try Self.scheduleEditorSource()
+
+        XCTAssertTrue(
+            editor.contains("isReadOnly: existing == nil"),
+            "A new schedule's start is locked; an existing schedule's start is editable"
+        )
+        XCTAssertFalse(
+            editor.contains(#"Image(systemName: "lock.fill")"#),
+            "The lock is the field's own read-only state, not a badge bolted on beside it"
+        )
+        XCTAssertFalse(
+            editor.contains(".grayscale(1)"),
+            "Draining the control's colour was decoration standing in for a state it now has"
+        )
+        XCTAssertFalse(
+            editor.contains(".allowsHitTesting(false)"),
+            "Read-only is a state of the field, not a touch barrier laid over an editable one"
+        )
+        XCTAssertFalse(
+            editor.contains(".datePickerStyle(.wheel)"),
+            "The locked start is the same field the end row draws"
+        )
+
+        // VoiceOver meets the locked row as one static reading: the date it shows plus why it
+        // will not move, in the language the row is drawn in.
+        let day = DateOnly(rawValue: "2026-08-19")
+        for identifier in ["ko_KR", "en_US"] {
+            let locale = Locale(identifier: identifier)
+            let spoken = DPDateFieldLocalization.lockedAccessibilityValue(day, locale: locale)
+            let reason = CalendarLocalization.text("calendar.schedule.start.locked", locale: locale)
+
+            XCTAssertFalse(reason.isEmpty, "\(identifier) has no reason string for the locked start")
+            XCTAssertTrue(spoken.hasSuffix(", \(reason)"), "\(identifier) spoke \(spoken)")
+            XCTAssertTrue(spoken.contains("2026"), "\(identifier) spoke \(spoken)")
+            XCTAssertTrue(spoken.contains("19"), "\(identifier) spoke \(spoken)")
+        }
+    }
+
+    /// The schedule editor alone. `CalendarView.swift` also holds the D-day editor, which
+    /// legitimately draws its own lock badge and its own date picker, so a check meant for the
+    /// schedule editor has to be asked of the schedule editor.
+    private static func scheduleEditorSource() throws -> String {
+        try declaration(
+            named: "private struct ScheduleEditorView<Header: View>: View",
+            in: calendarViewSource()
+        )
+    }
+
+    /// Reads one declaration out of the view's source so a check meant for the shared date
+    /// builder cannot be satisfied by an unrelated line elsewhere in a 4,000-line file.
+    private static func declaration(named signature: String, in source: String) throws -> String {
+        let start = try XCTUnwrap(
+            source.range(of: signature),
+            "\(signature) is no longer declared in CalendarView.swift"
+        ).lowerBound
+        var depth = 0
+        var opened = false
+        var index = start
+        while index < source.endIndex {
+            let character = source[index]
+            if character == "{" {
+                depth += 1
+                opened = true
+            } else if character == "}" {
+                depth -= 1
+                if opened, depth == 0 { return String(source[start...index]) }
+            }
+            index = source.index(after: index)
+        }
+        return String(source[start...])
+    }
+
+    private static func calendarViewSource() throws -> String {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark/Features/Calendar/CalendarView.swift")
+        return try String(contentsOf: sourceURL, encoding: .utf8)
+    }
+
+    /// The end chip only appears for an end that differs from the start and is not midnight,
+    /// so adding an end right after a start has to produce one at every hour of the day.
+    func testScheduleEditorAddingAnEndAfterAStartAlwaysYieldsAnEndTime() {
+        let calendar = CalendarDateSupport.calendar
+        let day = Self.moment(2026, 8, 19, 0, 0)
+
+        for hour in 0..<24 {
+            let now = Self.moment(2026, 8, 19, hour, 15)
+            let startTime = ScheduleEditorTimePolicy.defaultStartTime(on: day, now: now, calendar: calendar)
+            let start = ScheduleEditorTimePolicy.combine(date: day, time: startTime, calendar: calendar)
+            let end = ScheduleEditorTimePolicy.defaultEnd(start: start, endDate: day, calendar: calendar)
+
+            XCTAssertNotNil(
+                ScheduleEditorTimePolicy.endTime(of: end, start: start, calendar: calendar),
+                "no end time offered for a start added at \(hour):15"
+            )
+        }
+    }
+
+    private static func moment(_ year: Int, _ month: Int, _ day: Int, _ hour: Int, _ minute: Int) -> Date {
+        CalendarDateSupport.calendar.date(
+            from: DateComponents(year: year, month: month, day: day, hour: hour, minute: minute)
+        )!
     }
 
     func testDDayEditorDismissalDetectsChanges() {
@@ -793,19 +1638,13 @@ final class CalendarFeatureTests: XCTestCase {
     }
 
     func testKoreanDutyBatchMonthDescriptionDoesNotGroupTheYear() {
-        let defaults = UserDefaults.standard
-        let previousLanguage = defaults.string(forKey: SettingsPreference.languageKey)
-        defaults.set("ko", forKey: SettingsPreference.languageKey)
-        defer {
-            if let previousLanguage {
-                defaults.set(previousLanguage, forKey: SettingsPreference.languageKey)
-            } else {
-                defaults.removeObject(forKey: SettingsPreference.languageKey)
-            }
-        }
-
         XCTAssertEqual(
-            CalendarLocalization.format("calendar.duty.batch.description.month", 2026, 8),
+            CalendarLocalization.format(
+                "calendar.duty.batch.description.month",
+                2026,
+                8,
+                locale: .korean
+            ),
             "2026년 8월 전체에 적용할 근무를 선택하세요."
         )
     }

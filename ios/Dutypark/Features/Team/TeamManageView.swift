@@ -683,11 +683,12 @@ nonisolated enum TeamManageConfirmationCopy {
         return fallback
     }
 
-    static func resetAdminMessage(name: String) -> String {
+    static func resetAdminMessage(name: String, locale: Locale? = nil) -> String {
         AppLocalization.format(
             "team.manage.messages.resetAdminConfirm",
             table: "Team",
-            arguments: [name]
+            arguments: [name],
+            locale: locale
         )
     }
 

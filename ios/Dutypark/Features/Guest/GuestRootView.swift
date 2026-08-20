@@ -421,29 +421,11 @@ private struct GuestLandingView: View {
 }
 
 enum GuestLocalization {
-    static func text(_ key: String) -> String {
-        NSLocalizedString(
-            key,
-            tableName: "Guest",
-            bundle: selectedBundle,
-            value: key,
-            comment: ""
-        )
+    static func text(_ key: String, locale: Locale? = nil) -> String {
+        AppLocalization.string(key, table: "Guest", locale: locale)
     }
 
     static func format(_ key: String, _ arguments: CVarArg...) -> String {
-        String(format: text(key), locale: selectedLocale, arguments: arguments)
-    }
-
-    private static var selectedLocale: Locale {
-        AppLocalization.locale
-    }
-
-    private static var selectedBundle: Bundle {
-        guard let path = Bundle.main.path(
-            forResource: selectedLocale.identifier,
-            ofType: "lproj"
-        ), let bundle = Bundle(path: path) else { return .main }
-        return bundle
+        AppLocalization.format(key, table: "Guest", arguments: arguments)
     }
 }

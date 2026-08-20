@@ -36,6 +36,7 @@ struct AppRootView: View {
             #endif
         }
         .task {
+            ContentFilterStore.shared.load()
             #if DEBUG
             guard uiTestingDestination == nil else { return }
             #endif

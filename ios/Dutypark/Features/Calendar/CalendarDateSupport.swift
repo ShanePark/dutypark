@@ -68,15 +68,15 @@ nonisolated enum CalendarLocalization {
         AppLocalization.supportedLocale(languageCode: languageCode)
     }
 
-    static func text(_ key: String, table: String = "Calendar") -> String {
-        AppLocalization.string(key, table: table, locale: selectedLocale)
+    static func text(_ key: String, table: String = "Calendar", locale: Locale? = nil) -> String {
+        AppLocalization.string(key, table: table, locale: locale)
     }
 
-    static func format(_ key: String, _ arguments: CVarArg...) -> String {
+    static func format(_ key: String, _ arguments: CVarArg..., locale: Locale? = nil) -> String {
         // These placeholders are calendar identifiers and counts, not display numbers.
         // A Korean formatting locale groups a four-digit year (for example, `2,026`).
         String(
-            format: text(key),
+            format: text(key, locale: locale),
             locale: Locale(identifier: "en_US_POSIX"),
             arguments: arguments
         )
@@ -89,6 +89,55 @@ nonisolated enum CalendarVisualLogic {
     static let compactCellMinimumHeight: CGFloat = 60
     static let maximumSchedulesPerCell = 3
     static let maximumTodosPerCell = 2
+    /// A cell can show three faces beside a schedule before the row stops reading as
+    /// names and starts reading as texture; the rest are counted, as on the mobile web.
+    static let maximumTagsPerCellSchedule = 3
+
+    /// Korean form labels are all two-character words ("공개 범위", "첨부파일"), so a
+    /// two-character column wraps the four-character ones into an even block and leaves the date
+    /// and time controls beside them the room a phone cannot spare. Latin labels have no such
+    /// break point inside a word, so they keep a column wide enough for the longest of them.
+    static func formLabelWidth(locale: Locale) -> CGFloat {
+        locale.language.languageCode?.identifier == "ko" ? 28 : 88
+    }
+
+    /// How far a form row's content sits from the form's own leading edge: the label column and
+    /// the gap after it. Most controls belong in that column, but one does not — the date
+    /// field's expanded calendar is a seven-column grid, and a label column charged against it
+    /// leaves cells too narrow to hit. It bleeds back across exactly this much instead.
+    ///
+    /// The gap is `DPSpacing.small`, inlined because that token is main-actor isolated in this
+    /// target and this table is not.
+    static func formRowContentInset(labelWidth: CGFloat) -> CGFloat {
+        labelWidth + 8
+    }
+
+    /// A start or end row holds this height whether or not it carries a time: the time is
+    /// optional, and a row sized to whichever control it happened to hold moved every field
+    /// below it the moment a time was added. The value clears the tallest of the three — the
+    /// compact time `DatePicker` (35) — as well as the date picker (33) and the button that
+    /// adds a time (29).
+    static let scheduleDateRowHeight: CGFloat = 36
+
+    /// The "this month" callout only makes sense while another month is on screen. Year and
+    /// month are compared together, so the same month of another year still offers the way back.
+    static func showsThisMonthCallout(year: Int, month: Int, today: Date) -> Bool {
+        let current = CalendarDateSupport.calendar.dateComponents([.year, .month], from: today)
+        return current.year != year || current.month != month
+    }
+
+    /// The pinned D-day is drawn next to the day number, where only a few characters fit,
+    /// so it carries the counter alone as the web calendar does. Its title is already
+    /// shown as a bubble on the D-day's own date.
+    static func pinnedDDayLabel(cell: DateOnly, target: DateOnly) -> String? {
+        guard let cellDate = CalendarDateSupport.date(from: cell),
+              let targetDate = CalendarDateSupport.date(from: target),
+              let difference = CalendarDateSupport.calendar
+                  .dateComponents([.day], from: cellDate, to: targetDate).day
+        else { return nil }
+        if difference == 0 { return "D-Day" }
+        return difference > 0 ? "D-\(difference)" : "D+\(-difference)"
+    }
 
     static func usesLightForeground(on hex: String?) -> Bool {
         guard let components = rgb(hex) else { return false }

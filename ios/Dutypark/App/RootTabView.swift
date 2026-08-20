@@ -127,7 +127,6 @@ struct RootTabView: View {
     @State private var profilePhotoVersion: Int64 = 0
     @State private var showsNotifications = false
     @State private var notificationDropdownReadPolicy = RootNotificationDropdownReadPolicy()
-    @State private var showsNotificationCenter = false
     @State private var showsUnsupportedLink = false
     @State private var showsLogoutConfirmation = false
     @State private var isLoggingOut = false
@@ -167,7 +166,9 @@ struct RootTabView: View {
                             memberCalendar(route)
                         }
                 }
-                primaryTab(.more, path: $morePath, showsNavigationBar: true, showsTabTitle: true) {
+                // The tab bar already names this tab, and the menu carries no toolbar of
+                // its own, so an empty navigation bar would only push the list down.
+                primaryTab(.more, path: $morePath) {
                     MoreView(
                         isAdmin: authenticatedMember?.isAdmin == true,
                         profile: moreProfile,
@@ -187,13 +188,6 @@ struct RootTabView: View {
             }
         }
         .animation(.easeOut(duration: 0.2), value: showsNotifications)
-        .sheet(isPresented: $showsNotificationCenter) {
-            NavigationStack {
-                NotificationCenterView(store: notifications, onOpen: openNotificationRoute)
-            }
-            .presentationDetents([.large])
-            .presentationDragIndicator(.visible)
-        }
         .fullScreenCover(
             isPresented: Binding(
                 get: { showsLogoutConfirmation },
@@ -306,12 +300,13 @@ struct RootTabView: View {
                 }
                 .navigationDestination(for: HomeDestination.self) { destination in
                     switch destination {
+                    case .notifications:
+                        notificationCenter
                     case .friends:
                         SocialView(
                             onMutation: socialDidMutate,
                             onOpenCalendar: openMemberCalendar
                         )
-                        .navigationTitle("")
                     case .memberCalendar(let route):
                         memberCalendar(route)
                     }
@@ -323,11 +318,10 @@ struct RootTabView: View {
     private func primaryTab<Content: View>(
         _ tab: AppTab,
         showsNavigationBar: Bool = false,
-        showsTabTitle: Bool = false,
         @ViewBuilder content: () -> Content
     ) -> some View {
         NavigationStack {
-            tabRoot(tab, showsNavigationBar: showsNavigationBar, showsTabTitle: showsTabTitle) {
+            tabRoot(tab, showsNavigationBar: showsNavigationBar) {
                 content()
             }
         }
@@ -338,11 +332,10 @@ struct RootTabView: View {
         _ tab: AppTab,
         path: Binding<[Destination]>,
         showsNavigationBar: Bool = false,
-        showsTabTitle: Bool = false,
         @ViewBuilder content: () -> Content
     ) -> some View {
         NavigationStack(path: path) {
-            tabRoot(tab, showsNavigationBar: showsNavigationBar, showsTabTitle: showsTabTitle) {
+            tabRoot(tab, showsNavigationBar: showsNavigationBar) {
                 content()
             }
         }
@@ -352,11 +345,10 @@ struct RootTabView: View {
     private func tabRoot<Content: View>(
         _ tab: AppTab,
         showsNavigationBar: Bool,
-        showsTabTitle: Bool,
         @ViewBuilder content: () -> Content
     ) -> some View {
         content()
-            .navigationTitle(showsTabTitle ? tab.localizedTitle : "")
+            .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar(showsNavigationBar ? .visible : .hidden, for: .navigationBar)
             .accessibilityIdentifier("screen.\(tab.rawValue)")
@@ -379,6 +371,12 @@ struct RootTabView: View {
 
     private var notificationBell: some View {
         NotificationBellButton(store: notifications, isPresented: $showsNotifications)
+    }
+
+    // The notification list is a screen like every other menu entry, so it is pushed onto
+    // the stack it was opened from and leaves with the same back affordances.
+    private var notificationCenter: some View {
+        NotificationCenterView(store: notifications, onOpen: openNotificationRoute)
     }
 
     private var tabSelection: Binding<AppTab> {
@@ -421,6 +419,13 @@ struct RootTabView: View {
         selectedTab = .home
     }
 
+    // The bell lives on the home tab root, so opening the full list from its dropdown
+    // pushes onto the home stack: back returns to the dashboard the bell belongs to.
+    private func openNotifications() {
+        homePath = [.notifications]
+        selectedTab = .home
+    }
+
     private var moreProfile: MoreProfileSummary? {
         authenticatedMember.map {
             MoreProfileSummary(member: $0, profilePhotoVersion: profilePhotoVersion)
@@ -433,11 +438,9 @@ struct RootTabView: View {
 
     private func openMoreMenuItem(_ item: MoreMenuItem) {
         switch item {
-        case .notifications:
-            showsNotificationCenter = true
         case .logout:
             showsLogoutConfirmation = true
-        case .friends, .admin, .guide, .support, .settings:
+        case .notifications, .friends, .admin, .guide, .support, .settings:
             guard let destination = RootNavigationPolicy.moreDestination(for: item) else { return }
             openMore(destination)
         }
@@ -446,6 +449,8 @@ struct RootTabView: View {
     @ViewBuilder
     private func moreDestinationView(_ destination: MoreDestination) -> some View {
         switch destination {
+        case .notifications:
+            notificationCenter
         case .admin:
             if authenticatedMember?.isAdmin == true {
                 AdminRootView(onOpenCalendar: openMemberCalendar)
@@ -460,13 +465,10 @@ struct RootTabView: View {
                 onMutation: socialDidMutate,
                 onOpenCalendar: openMemberCalendar
             )
-            .navigationTitle(MoreMenuItem.friends.title)
-            .navigationBarTitleDisplayMode(.inline)
         case .guide:
             PublicGuideView()
         case .support:
             SupportView(
-                prefilledEmail: authenticatedMember?.email,
                 isSignedIn: authenticatedMember != nil,
                 initialTab: supportTab
             )
@@ -525,7 +527,12 @@ struct RootTabView: View {
 
     private var notificationDropdownLayer: some View {
         ZStack(alignment: .topTrailing) {
-            DPColor.textOnLight.opacity(0.30)
+            DPColor.overlayScrim
+                .background {
+                    Rectangle()
+                        .fill(DPChrome.overlayMaterial)
+                        .opacity(DPChrome.overlayMaterialOpacity)
+                }
                 .ignoresSafeArea()
                 .contentShape(Rectangle())
                 .onTapGesture(perform: closeNotificationDropdown)
@@ -540,7 +547,7 @@ struct RootTabView: View {
                 onOpen: openDropdownNotification,
                 onViewAll: {
                     closeNotificationDropdown()
-                    showsNotificationCenter = true
+                    openNotifications()
                 }
             )
             .frame(maxWidth: 384)
@@ -736,7 +743,7 @@ struct RootTabView: View {
         case "friends":
             openFriends()
         case "notifications":
-            showsNotifications = true
+            openNotifications()
         case nil:
             openHome()
         default:
@@ -776,6 +783,8 @@ nonisolated enum RootNavigationPolicy {
         switch item {
         case .friends:
             .friends
+        case .notifications:
+            .notifications
         case .admin:
             .admin
         case .guide:
@@ -784,7 +793,7 @@ nonisolated enum RootNavigationPolicy {
             .support
         case .settings:
             .settings
-        case .notifications, .logout:
+        case .logout:
             nil
         }
     }
@@ -798,8 +807,8 @@ nonisolated enum RootNavigationPolicy {
         destination == .settings ? requested : nil
     }
 
-    // Only an inquiry-answered notification asks for the history tab; every other way
-    // into support opens the inquiry form, so a stale request cannot follow the member.
+    // Only an explicit request asks for one of the history tabs; every other way into
+    // support opens the inquiry form, so a stale request cannot follow the member.
     static func supportTab(
         for destination: MoreDestination,
         requested: SupportTab?
@@ -849,6 +858,10 @@ nonisolated enum RootChromeLocalization {
         AppLocalization.string(key, table: "Settings", locale: locale)
     }
 
+    static func social(_ key: String, locale: Locale? = nil) -> String {
+        AppLocalization.string(key, table: "Social", locale: locale)
+    }
+
     static func impersonationRemaining(_ duration: String, locale: Locale? = nil) -> String {
         let selectedLocale = locale ?? AppLocalization.locale
         return String(
@@ -876,12 +889,14 @@ nonisolated enum RootTabSelectionOrigin: Equatable, Sendable {
 
 private enum HomeDestination: Hashable {
     case friends
+    case notifications
     case memberCalendar(MemberCalendarRoute)
 }
 
 nonisolated enum MoreDestination: Hashable, Sendable {
     case admin
     case friends
+    case notifications
     case guide
     case support
     case myInfo
@@ -931,18 +946,22 @@ nonisolated enum RootMoreDeepLinkPolicy {
         settingsDestination == .guide ? .guide : .settings
     }
 
+    /// The web carries the section in `?tab=`, so a link to either history opens there.
+    /// The form needs no request: it is where support opens anyway.
     static func supportTab(
         from url: URL,
         allowedHost: String = "dutypark.o-r.kr"
     ) -> SupportTab? {
         guard destination(from: url, allowedHost: allowedHost) == .support,
-              URLComponents(url: url, resolvingAgainstBaseURL: false)?
+              let requested = URLComponents(url: url, resolvingAgainstBaseURL: false)?
                 .queryItems?
                 .first(where: { $0.name == "tab" })?
                 .value?
-                .lowercased() == SupportTab.history.rawValue
+                .lowercased(),
+              let tab = SupportTab(rawValue: requested),
+              tab != .form
         else { return nil }
-        return .history
+        return tab
     }
 }
 

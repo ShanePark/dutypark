@@ -3,11 +3,11 @@ package com.tistory.shanepark.dutypark.report.service
 import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
 import com.tistory.shanepark.dutypark.attachment.repository.AttachmentRepository
 import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
-import com.tistory.shanepark.dutypark.common.slack.annotation.SlackNotification
 import com.tistory.shanepark.dutypark.member.block.service.BlockService
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.report.domain.dto.CreateReportRequest
+import com.tistory.shanepark.dutypark.report.domain.dto.MyReportDto
 import com.tistory.shanepark.dutypark.report.domain.dto.ReportCreateResult
 import com.tistory.shanepark.dutypark.report.domain.entity.ContentReport
 import com.tistory.shanepark.dutypark.report.domain.enums.ReportReason
@@ -16,8 +16,11 @@ import com.tistory.shanepark.dutypark.report.domain.enums.ReportTargetType
 import com.tistory.shanepark.dutypark.report.repository.ContentReportRepository
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
 import com.tistory.shanepark.dutypark.todo.repository.TodoRepository
+import org.springframework.data.domain.Page
+import org.springframework.data.domain.Pageable
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.time.LocalDateTime
 import java.util.*
 
 @Service
@@ -29,13 +32,13 @@ class ReportService(
     private val todoRepository: TodoRepository,
     private val attachmentRepository: AttachmentRepository,
     private val blockService: BlockService,
+    private val slackNotifier: ReportSlackNotifier,
 ) {
 
     /**
      * Reporting does not check whether the reporter can still see the target:
      * a member must stay able to report content of somebody they already blocked.
      */
-    @SlackNotification(includeArguments = false)
     fun createReport(loginMemberId: Long, request: CreateReportRequest): ReportCreateResult {
         if (request.reason == ReportReason.OTHER && request.detail.isNullOrBlank()) {
             throw BadRequestException("report.detail.required")
@@ -59,8 +62,37 @@ class ReportService(
         if (request.alsoBlock) {
             blockService.block(reporter.id!!, owner.id!!)
         }
+        slackNotifier.reportCreated(result = result, reporter = reporter, reported = owner, request = request)
 
         return result
+    }
+
+    /**
+     * 신고자 본인의 접수 내역. 관리자 판단 근거는 빼고 처리 상태까지만 알려 준다.
+     */
+    @Transactional(readOnly = true)
+    fun findMyReports(reporterId: Long, pageable: Pageable): Page<MyReportDto> {
+        return contentReportRepository.findAllByReporterIdOrderByCreatedDateDesc(reporterId, pageable)
+            .map(MyReportDto::of)
+    }
+
+    /**
+     * 신고자 본인의 철회. 레코드는 증거로 남기고 관리자 대기열에서만 뺀다.
+     * resolvedBy 는 신고를 처리한 관리자를 가리키는 자리라 본인 철회에는 비워 둔다.
+     */
+    fun cancelReport(loginMemberId: Long, reportId: UUID): MyReportDto {
+        val report = contentReportRepository.findById(reportId).orElse(null)
+            ?.takeIf { it.reporter?.id == loginMemberId }
+            ?: notFound()
+        if (report.status != ReportStatus.OPEN) {
+            throw BadRequestException("report.cancel.notOpen")
+        }
+
+        report.status = ReportStatus.CANCELED
+        report.resolvedAt = LocalDateTime.now()
+        slackNotifier.reportCanceled(report)
+
+        return MyReportDto.of(report)
     }
 
     private fun existingOpenReport(reporterId: Long, request: CreateReportRequest): ContentReport? {

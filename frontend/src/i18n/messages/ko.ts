@@ -284,6 +284,9 @@ const apiErrors = {
     detail: {
       required: '기타 사유를 선택한 경우 상세 내용을 입력해 주세요.',
     },
+    cancel: {
+      notOpen: '이미 처리되었거나 취소된 신고입니다.',
+    },
     target: {
       notDeletable: '사용자 신고는 콘텐츠 삭제를 할 수 없습니다.',
     },
@@ -291,6 +294,9 @@ const apiErrors = {
   inquiry: {
     rateLimit: {
       exceeded: '문의가 너무 많습니다. 잠시 후 다시 시도해 주세요.',
+    },
+    email: {
+      required: '회신 받을 이메일을 입력해 주세요.',
     },
   },
 } as const
@@ -329,6 +335,20 @@ export default {
       thisMonth: '이번달 ({date})',
       goToThisMonth: '이번달',
     },
+    datePicker: {
+      placeholder: '날짜 선택',
+      dialogLabel: '날짜 선택 달력',
+      today: '오늘',
+      goToToday: '오늘로 이동',
+      locked: '변경할 수 없는 날짜',
+      rangeDialogLabel: '기간 선택 달력',
+      rangeStart: '시작',
+      rangeEnd: '종료',
+      rangeHint: '종료 날짜를 선택하세요',
+      rangeDuration: '{count}일',
+      confirm: '확인',
+      cancel: '취소',
+    },
     swal: {
       error: '오류',
       warning: '주의',
@@ -350,6 +370,9 @@ export default {
     },
   },
   apiErrors,
+  contentFilter: {
+    blocked: '커뮤니티 가이드라인에 어긋나는 표현이 포함되어 있어 저장할 수 없습니다. 내용을 수정해 주세요.',
+  },
   report: {
     actions: {
       menu: '더 보기',
@@ -654,16 +677,16 @@ export default {
       none: '없음',
       todaySchedules: '오늘 일정',
       noSchedules: '오늘의 일정이 없습니다.',
-      friends: '친구관리',
+      friends: '친구',
       noFriends: '아직 친구가 없습니다.',
       familyMember: '가족 구성원',
-      moreSchedules: '+{count}개 더보기',
     },
     actions: {
       addFriend: '친구 추가하기',
       pin: '고정',
       unpin: '고정 해제',
-      dragToReorder: '드래그하여 순서 변경',
+      scrollPrevAria: '이전 친구 보기',
+      scrollNextAria: '다음 친구 보기',
     },
     friendRequest: {
       title: '친구 요청',
@@ -676,13 +699,23 @@ export default {
       pinFailed: '친구 고정에 실패했습니다.',
       unpinFailed: '친구 고정 해제에 실패했습니다.',
       friendRequestFailed: '친구 요청을 보내는데 실패했습니다.',
-      reorderFailed: '친구 순서 변경에 실패했습니다.',
     },
   },
   friends: {
     sections: {
       requests: '친구 요청',
       list: '친구 목록',
+    },
+    help: {
+      openAriaLabel: '친구 순서 도움말',
+      title: '친구 순서 변경하기',
+      pinTitle: '먼저 볼 친구를 고정하세요',
+      pinText: '친구 카드의 별 아이콘을 누르면 목록 맨 위에 고정됩니다. 고정한 친구만 순서를 바꿀 수 있어요.',
+      reorderTitle: '손잡이를 끌어서 옮기세요',
+      reorderText: '고정한 친구가 두 명 이상이면 카드 오른쪽 아래에 손잡이가 나타납니다. 손잡이를 끌어 원하는 자리에 놓으세요.',
+      saveTitle: '순서는 자동으로 저장됩니다',
+      saveText: '카드를 놓는 순간 바뀐 순서가 저장되어 다른 기기에서도 똑같이 보입니다.',
+      note: '고정하지 않은 친구는 기본 순서대로 고정한 친구 아래에 표시됩니다.',
     },
     actions: {
       addFriend: '친구 추가',
@@ -753,7 +786,6 @@ export default {
     },
   },
   todoBoard: {
-    title: '할일',
     loading: '로딩 중...',
     statusTabsAriaLabel: '할일 상태',
     status: {
@@ -1251,8 +1283,7 @@ export default {
         title: '제목',
         date: '날짜',
       },
-      pinEnabled: '달력에 고정됨',
-      pinDisabled: '달력에 고정되지 않음',
+      pin: '달력에 표시',
       edit: '수정',
     },
     schedule: {
@@ -1267,7 +1298,6 @@ export default {
       },
       fields: {
         title: '제목',
-        startTime: '시간',
         startDateTime: '시작',
         endDateTime: '종료',
         description: '상세',
@@ -1275,6 +1305,7 @@ export default {
         attachments: '첨부파일',
         friendTag: '친구 태그',
       },
+      time: { add: '시간 추가', remove: '시간 삭제' },
       placeholders: {
         title: '일정 제목을 입력하세요',
         description: '일정 상세를 입력하세요',
@@ -1319,9 +1350,6 @@ export default {
       warning2: '내 태그만 제거됩니다.',
       action: '태그 제거',
     },
-    todoRow: {
-      filterTitle: '할 일만 보기',
-    },
     todo: {
       status: {
         todo: '할 일',
@@ -1359,8 +1387,6 @@ export default {
         loadingAttachments: '첨부파일을 불러오는 중...',
       },
       messages: {
-        added: '할 일이 추가되었습니다.',
-        addFailed: '할 일 추가에 실패했습니다.',
         updateFailed: '할 일 수정에 실패했습니다.',
         completeFailed: '할 일 완료 처리에 실패했습니다.',
         reopenFailed: '할 일을 다시 여는데 실패했습니다.',
@@ -1550,14 +1576,13 @@ export default {
     searchLabel: '친구 검색',
     searchPlaceholder: '친구 검색',
     clearSearchAria: '친구 검색어 지우기',
-    selectedOnly: '선택만 보기 ({count})',
-    selectedOnlyActive: '선택만 보기 켜짐 ({count})',
     selectedCount: '{count}명 선택됨',
+    removeTagAria: '{name} 태그 해제',
     clearSelectionAria: '선택한 친구 지우기',
     clearTitle: '선택 초기화',
     clearConfirm: '선택한 친구 태그 {count}개를 모두 지우시겠습니까?',
-    loadMoreAria: '친구 더 불러오기',
-    loadMore: '더보기',
+    scrollPrevAria: '이전 친구 보기',
+    scrollNextAria: '다음 친구 보기',
     emptyTitle: '표시할 친구가 없습니다.',
     emptyDescription: '다른 검색어를 사용하거나 친구를 먼저 추가해주세요.',
   },
@@ -1870,12 +1895,14 @@ export default {
         open: '미처리',
         resolved: '처리 완료',
         dismissed: '반려',
+        canceled: '신고 취소',
         all: '전체',
       },
       status: {
         open: '미처리',
         resolved: '처리 완료',
         dismissed: '반려',
+        canceled: '신고 취소',
       },
       reason: {
         spam: '스팸 / 광고',
@@ -1989,6 +2016,7 @@ export default {
           noSubject: '(제목 없음)',
           guest: '비회원 문의',
           none: '-',
+          inAppOnly: '앱 내 답변 (회신 이메일 없음)',
         },
         actions: {
           copyEmail: '복사',
@@ -2005,7 +2033,8 @@ export default {
     title: '문의·지원',
     tabs: {
       form: '문의하기',
-      history: '내 문의 내역',
+      history: '내 문의',
+      reports: '내 신고',
     },
     subtitle: '신고와 차단 방법을 확인하고, 궁금한 점이나 이의제기를 접수할 수 있습니다.',
     guide: {
@@ -2022,7 +2051,7 @@ export default {
     form: {
       title: '문의하기',
       description: '답변은 입력하신 이메일로 보내드립니다. 회신받을 주소를 정확히 입력해 주세요.',
-      descriptionSignedIn: '답변이 등록되면 알림으로 알려드리고, 내 문의 내역에서 확인할 수 있습니다.',
+      descriptionSignedIn: '답변이 등록되면 알림으로 알려드리고, 내 문의 탭에서 확인할 수 있습니다. 회신 이메일은 받지 않습니다.',
       guestHint: '로그인 후 문의하면 앱에서 답변을 확인할 수 있습니다.',
       emailLabel: '회신 이메일',
       emailPlaceholder: "you{'@'}example.com",
@@ -2042,7 +2071,7 @@ export default {
     success: {
       title: '문의가 접수되었습니다',
       description: '입력하신 이메일로 답변을 보내드립니다. 확인까지 최대 24시간이 걸릴 수 있습니다.',
-      descriptionSignedIn: '답변이 등록되면 내 문의 내역에서 확인할 수 있습니다. 확인까지 최대 24시간이 걸릴 수 있습니다.',
+      descriptionSignedIn: '답변이 등록되면 내 문의 탭에서 확인할 수 있습니다. 확인까지 최대 24시간이 걸릴 수 있습니다.',
       another: '문의 하나 더 작성하기',
     },
     history: {
@@ -2058,12 +2087,59 @@ export default {
         open: '접수됨',
         closed: '처리완료',
       },
-      answered: '답변 있음',
+      answered: '답변 완료',
       awaiting: '답변 대기',
       contentTitle: '문의 내용',
       answerTitle: '답변',
       answeredAt: '답변일',
-      awaitingDescription: '확인 후 답변드리겠습니다.',
+      awaitingDescription: '확인 후 답변드리겠습니다. 접수 후 최대 24시간이 걸릴 수 있습니다.',
+      answeredNotice: '답변이 등록되면 알림으로 알려드립니다.',
+      countSummary: '전체 {total}건',
+      expand: '문의 내용 펼치기',
+      collapse: '문의 내용 접기',
+    },
+    reports: {
+      loading: '신고 내역을 불러오는 중입니다...',
+      loadFailed: '신고 내역을 불러오지 못했습니다.',
+      retry: '다시 시도',
+      empty: '접수한 신고가 없습니다.',
+      emptyDescription: '다른 회원의 달력이나 일정에서 신고하면 여기에 표시됩니다.',
+      loadMore: '더 보기',
+      countSummary: '전체 {total}건',
+      reportedAt: '접수일',
+      handledAt: '처리일',
+      canceledAt: '취소일',
+      targetLabel: '신고 대상',
+      reasonLabel: '신고 사유',
+      detailLabel: '작성한 내용',
+      expand: '신고 내용 펼치기',
+      collapse: '신고 내용 접기',
+      targetType: {
+        member: '사용자',
+        schedule: '일정',
+        todo: '할 일',
+      },
+      status: {
+        open: '접수됨',
+        resolved: '조치 완료',
+        dismissed: '조치 없음',
+        canceled: '취소됨',
+      },
+      statusDescription: {
+        open: '접수되었습니다. 24시간 이내에 확인합니다.',
+        resolved: '검토 후 필요한 조치를 완료했습니다.',
+        dismissed: '검토했지만 이용약관 위반이 확인되지 않아 별도 조치를 하지 않았습니다.',
+        canceled: '내가 취소한 신고입니다. 더 이상 검토하지 않습니다.',
+      },
+      cancel: {
+        action: '신고 취소',
+        pending: '취소하는 중...',
+        confirmTitle: '신고를 취소할까요?',
+        confirmMessage: '취소하면 검토가 중단되고 목록에는 취소됨으로 남습니다. 차단은 그대로 유지되며 친구 설정의 차단한 사용자 목록에서 관리할 수 있습니다.',
+        confirmAction: '신고 취소',
+        failed: '신고를 취소하지 못했습니다. 잠시 후 다시 시도해 주세요.',
+      },
+      privacyNotice: '상대방의 개인정보 보호를 위해 구체적인 조치 내용은 알려드리지 않습니다.',
     },
   },
 } as const

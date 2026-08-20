@@ -6,11 +6,10 @@ import { useAuthStore } from '@/stores/auth'
 import { dashboardApi } from '@/api/dashboard'
 import { friendApi } from '@/api/member'
 import { useSwal } from '@/composables/useSwal'
-import { useDragClickGuard } from '@/composables/useDragClickGuard'
 import { isLightColor } from '@/utils/color'
-import Sortable from 'sortablejs'
 import type {
   DashboardMyDetail,
+  DashboardFriendDetail,
   DashboardFriendInfo,
   MemberPreviewDto,
 } from '@/types'
@@ -23,8 +22,8 @@ import {
   ClipboardList,
   Users,
   Star,
-  GripVertical,
   Home,
+  ChevronLeft,
   ChevronRight,
 } from 'lucide-vue-next'
 
@@ -32,7 +31,6 @@ const router = useRouter()
 const authStore = useAuthStore()
 const { t, locale } = useI18n()
 const { showWarning, confirm, toastSuccess } = useSwal()
-const dragClickGuard = useDragClickGuard()
 
 const myInfoLoading = ref(false)
 const friendInfoLoading = ref(false)
@@ -93,9 +91,9 @@ const searchTotalElements = ref(0)
 const searchPageSize = 5
 const searchLoading = ref(false)
 
-let friendSortable: Sortable | null = null
-const friendListRef = ref<HTMLElement | null>(null)
-const friendSectionRef = ref<HTMLElement | null>(null)
+const friendRailRef = ref<HTMLElement | null>(null)
+const canScrollPrev = ref(false)
+const canScrollNext = ref(false)
 
 const sortedFriends = computed(() => {
   if (!friendInfo.value) return []
@@ -116,6 +114,37 @@ function moveTo(memberId?: number | null) {
   const id = memberId || myInfo.value?.member.id
   if (!id) return
   router.push(`/duty/${id}`)
+}
+
+/** The duty slot always renders, so a friend without a duty gets a dash instead of an empty line. */
+function dutyLabel(friend: DashboardFriendDetail) {
+  if (!friend.duty) return '-'
+  return friend.duty.dutyType || t('dashboard.labels.offDuty')
+}
+
+function updateRailHints() {
+  const rail = friendRailRef.value
+  if (!rail) {
+    canScrollPrev.value = false
+    canScrollNext.value = false
+    return
+  }
+
+  const maxScroll = rail.scrollWidth - rail.clientWidth
+  canScrollPrev.value = rail.scrollLeft > 4
+  canScrollNext.value = maxScroll - rail.scrollLeft > 4
+}
+
+function scrollRail(direction: -1 | 1) {
+  const rail = friendRailRef.value
+  if (!rail) {
+    return
+  }
+
+  rail.scrollBy({
+    left: direction * Math.max(rail.clientWidth * 0.8, 160),
+    behavior: 'smooth',
+  })
 }
 
 function printSchedule(schedule: { content: string; totalDays: number; daysFromStart: number; isTagged: boolean; owner: string }) {
@@ -152,9 +181,6 @@ async function pinFriend(member: { id: number | null; name: string }) {
     const maxOrder = Math.max(0, ...friendInfo.value.friends.map((f) => f.pinOrder || 0))
     friend.pinOrder = maxOrder + 1
     sortFriendsByPinOrder()
-    nextTick(() => {
-      initFriendSortable()
-    })
     try {
       await friendApi.pinFriend(member.id)
     } catch (error) {
@@ -173,9 +199,6 @@ async function unpinFriend(member: { id: number | null; name: string }) {
     const oldPinOrder = friend.pinOrder
     friend.pinOrder = null
     sortFriendsByPinOrder()
-    nextTick(() => {
-      initFriendSortable()
-    })
     try {
       await friendApi.unpinFriend(member.id)
     } catch (error) {
@@ -265,93 +288,21 @@ function goToPage(page: number) {
   search()
 }
 
-function initFriendSortable() {
-  if (!friendListRef.value) {
-    destroyFriendSortable()
-    return
-  }
-
-  destroyFriendSortable()
-
-  friendSortable = new Sortable(friendListRef.value, {
-    animation: 150,
-    draggable: '.pinned-friend',
-    handle: '.handle',
-    ghostClass: 'sortable-ghost',
-    fallbackClass: 'sortable-fallback',
-    fallbackOnBody: true,
-    forceFallback: true,
-    chosenClass: 'sortable-chosen',
-    onStart: () => {
-      dragClickGuard.startDrag()
-      friendSectionRef.value?.classList.add('friend-section-sorting')
-    },
-    onEnd: () => {
-      dragClickGuard.endDrag()
-      friendSectionRef.value?.classList.remove('friend-section-sorting')
-      updateFriendsPin()
-    },
-  })
-}
-
-async function updateFriendsPin() {
-  if (!friendListRef.value || !friendInfo.value) return
-
-  const pinnedElements = friendListRef.value.querySelectorAll('.pinned-friend')
-  const friendIds = Array.from(pinnedElements)
-    .map((el) => Number(el.getAttribute('data-member-id')))
-    .filter((id) => !isNaN(id) && id > 0)
-
-  if (friendIds.length === 0) return
-
-  applyFriendOrder(friendIds)
-
-  nextTick(() => {
-    initFriendSortable()
-  })
-
-  try {
-    await friendApi.updateFriendsPinOrder(friendIds)
-  } catch (error) {
-    console.error('Failed to update friend pin order:', error)
-    showWarning(t('dashboard.messages.reorderFailed'))
-  }
-}
-
-function applyFriendOrder(friendIds: number[]) {
-  if (!friendInfo.value || friendIds.length === 0) return
-
-  const friendMap = new Map(friendInfo.value.friends.map((f) => [f.member.id, f]))
-  const pinnedSet = new Set(friendIds)
-  const pinnedFriends = friendIds.map((id) => friendMap.get(id)).filter(Boolean)
-  const unpinnedFriends = friendInfo.value.friends.filter((f) => f.member.id !== null && !pinnedSet.has(f.member.id))
-
-  friendInfo.value.friends = [...pinnedFriends, ...unpinnedFriends] as typeof friendInfo.value.friends
-}
-
-function destroyFriendSortable() {
-  if (friendSortable) {
-    friendSortable.destroy()
-    friendSortable = null
-  }
-  if (dragClickGuard.isDragging.value) {
-    dragClickGuard.cancelDrag()
-  }
-}
-
 onMounted(async () => {
+  window.addEventListener('resize', updateRailHints)
   if (authStore.isLoggedIn) {
     // Load both APIs in parallel
     await Promise.all([loadMyDashboard(), loadFriendsDashboard()])
-    // Initialize sortable after data is loaded
-    nextTick(() => {
-      initFriendSortable()
-    })
   }
 })
 
 onUnmounted(() => {
-  destroyFriendSortable()
+  window.removeEventListener('resize', updateRailHints)
+})
+
+watch(sortedFriends, async () => {
+  await nextTick()
+  updateRailHints()
 })
 
 watch(
@@ -359,16 +310,11 @@ watch(
   async (isLoggedIn) => {
     if (isLoggedIn) {
       await Promise.all([loadMyDashboard(), loadFriendsDashboard()])
-      // Initialize sortable after data is loaded
-      nextTick(() => {
-        initFriendSortable()
-      })
     } else {
       // Clear data on logout
       myInfo.value = null
       friendInfo.value = null
       friendInfoInitialized.value = false
-      destroyFriendSortable()
     }
   }
 )
@@ -462,7 +408,7 @@ watch(
         </div>
       </div>
 
-      <div ref="friendSectionRef" class="friend-section rounded-2xl shadow-sm border overflow-hidden bg-dp-bg-card border-dp-border-primary">
+      <div class="friend-section rounded-2xl shadow-sm border overflow-hidden bg-dp-bg-card border-dp-border-primary">
         <div
           class="dashboard-panel-header group px-6 py-3 cursor-pointer"
           @click="router.push('/friends')"
@@ -478,7 +424,7 @@ watch(
             <ChevronRight class="w-5 h-5 text-dp-text-muted group-hover:text-dp-text-on-dark group-hover:translate-x-1 transition-all" />
           </div>
         </div>
-        <div class="p-5">
+        <div class="dashboard-friend-rail-frame">
           <div v-if="friendInfoError" class="text-center py-4 text-dp-danger">
             {{ friendInfoError }}
           </div>
@@ -498,96 +444,97 @@ watch(
             </button>
           </div>
 
-          <div
-            v-else
-            ref="friendListRef"
-            class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3"
-            @pointerdown.capture="dragClickGuard.handlePointerDown"
-            @click.capture="dragClickGuard.handleClick"
-          >
+          <template v-else>
             <div
-              v-for="friend in sortedFriends"
-              :key="friend.member.id ?? 'unknown'"
-              :data-member-id="friend.member.id"
-              class="friend-card relative overflow-hidden rounded-xl sm:rounded-2xl cursor-pointer"
-              :class="[
-                friend.pinOrder
-                  ? 'pinned-friend pinned-friend-highlight border-2 shadow-md'
-                  : 'border hover:border-dp-accent-border'
-              ]"
-              :style="!friend.pinOrder ? { backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-primary)' } : {}"
-              @click="moveTo(friend.member.id)"
+              ref="friendRailRef"
+              class="dashboard-friend-rail"
+              @scroll.passive="updateRailHints"
             >
-              <div class="flex p-3">
-                <div class="flex-shrink-0 mr-3">
-                  <ProfileAvatar
-                    :member-id="friend.member.id"
-                    :name="friend.member.name"
-                    :has-profile-photo="friend.member.hasProfilePhoto"
-                    :profile-photo-version="friend.member.profilePhotoVersion"
-                    size="xl"
-                  />
-                </div>
-
-                <div class="flex-1 min-w-0">
-                  <div class="flex items-center justify-between mb-1.5">
-                    <div class="flex items-center gap-1.5 min-w-0">
-                      <span class="font-medium text-sm truncate text-dp-text-primary">{{ friend.member.name }}</span>
-                      <Home v-if="friend.isFamily" class="w-3.5 h-3.5 flex-shrink-0 text-dp-warning" :title="t('dashboard.labels.familyMember')" />
-                    </div>
-                    <div class="flex items-center flex-shrink-0" @click.stop>
-                    <button
-                      v-if="friend.pinOrder"
-                      class="p-1 text-dp-warning hover:text-dp-warning transition cursor-pointer"
-                      @click.stop="unpinFriend(friend.member)"
-                      :title="t('dashboard.actions.unpin')"
-                    >
-                      <Star class="w-4 h-4" fill="currentColor" />
-                    </button>
-                    <button
-                      v-else
-                      class="p-1 text-dp-text-muted hover:text-dp-warning transition cursor-pointer"
-                      @click.stop="pinFriend(friend.member)"
-                      :title="t('dashboard.actions.pin')"
-                    >
-                      <Star class="w-4 h-4" />
-                    </button>
-                  </div>
-                  </div>
-
-                  <div class="flex items-center gap-1.5 mb-1.5">
-                    <Briefcase class="w-3.5 h-3.5 flex-shrink-0 text-dp-text-muted" />
-                    <span class="text-xs text-dp-text-secondary">{{ t('dashboard.labels.duty') }}</span>
-                    <span v-if="friend.duty" class="text-xs font-medium truncate text-dp-text-primary">{{ friend.duty.dutyType || t('dashboard.labels.offDuty') }}</span>
-                    <span v-else class="text-xs text-dp-text-muted">-</span>
-                  </div>
-
-                  <div v-if="friend.schedules && friend.schedules.length" class="space-y-1">
-                    <div
-                      v-for="schedule in friend.schedules.slice(0, 2)"
-                      :key="schedule.id"
-                      class="text-xs py-1 px-1.5 rounded-md truncate friend-schedule-item"
-                    >
-                      {{ printSchedule(schedule) }}
-                    </div>
-                    <div v-if="friend.schedules.length > 2" class="text-xs pl-1" :style="{ color: 'var(--dp-text-muted)' }">
-                      {{ t('dashboard.labels.moreSchedules', { count: friend.schedules.length - 2 }) }}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div v-if="friend.pinOrder" class="absolute bottom-2 right-2" @click.stop>
-                <div
-                  class="handle friend-drag-handle rounded-lg p-1.5 transition hover:bg-dp-overlay-dark/10 !cursor-grab active:!cursor-grabbing"
-                  :title="t('dashboard.actions.dragToReorder')"
+              <div
+                v-for="friend in sortedFriends"
+                :key="friend.member.id ?? 'unknown'"
+                class="dashboard-friend-card"
+              >
+                <button
+                  type="button"
+                  class="dashboard-friend-card__main"
+                  :aria-label="friend.member.name"
+                  @click="moveTo(friend.member.id)"
                 >
-                  <GripVertical class="w-4 h-4" />
-                </div>
+                  <span class="dashboard-friend-card__photo">
+                    <ProfileAvatar
+                      :member-id="friend.member.id"
+                      :name="friend.member.name"
+                      :has-profile-photo="friend.member.hasProfilePhoto"
+                      :profile-photo-version="friend.member.profilePhotoVersion"
+                      shape="portrait"
+                      size="xl"
+                    />
+                  </span>
+
+                  <span class="dashboard-friend-card__name">
+                    <span class="dashboard-friend-card__name-text" :title="friend.member.name">{{ friend.member.name }}</span>
+                    <Home
+                      v-if="friend.isFamily"
+                      class="dashboard-friend-card__family"
+                      :title="t('dashboard.labels.familyMember')"
+                    />
+                  </span>
+
+                  <span class="dashboard-friend-card__team">{{ friend.member.team || '' }}</span>
+
+                  <span
+                    class="dashboard-friend-card__duty"
+                    :style="friend.duty ? {
+                      backgroundColor: friend.duty.dutyColor || 'var(--dp-duty-fallback)',
+                      color: isLightColor(friend.duty.dutyColor) ? 'var(--dp-text-on-light)' : 'var(--dp-text-on-dark)'
+                    } : undefined"
+                    :title="friend.duty ? dutyLabel(friend) : undefined"
+                  >{{ dutyLabel(friend) }}</span>
+                </button>
+
+                <button
+                  v-if="friend.pinOrder"
+                  type="button"
+                  class="dashboard-friend-card__pin dashboard-friend-card__pin--on"
+                  :title="t('dashboard.actions.unpin')"
+                  :aria-label="t('dashboard.actions.unpin')"
+                  @click.stop="unpinFriend(friend.member)"
+                >
+                  <Star class="h-3 w-3" fill="currentColor" />
+                </button>
+                <button
+                  v-else
+                  type="button"
+                  class="dashboard-friend-card__pin"
+                  :title="t('dashboard.actions.pin')"
+                  :aria-label="t('dashboard.actions.pin')"
+                  @click.stop="pinFriend(friend.member)"
+                >
+                  <Star class="h-3 w-3" />
+                </button>
               </div>
             </div>
 
-          </div>
+            <button
+              v-if="canScrollPrev"
+              type="button"
+              class="dashboard-friend-rail-nav dashboard-friend-rail-nav--prev"
+              :aria-label="t('dashboard.actions.scrollPrevAria')"
+              @click="scrollRail(-1)"
+            >
+              <ChevronLeft class="h-4 w-4" />
+            </button>
+            <button
+              v-if="canScrollNext"
+              type="button"
+              class="dashboard-friend-rail-nav dashboard-friend-rail-nav--next"
+              :aria-label="t('dashboard.actions.scrollNextAria')"
+              @click="scrollRail(1)"
+            >
+              <ChevronRight class="h-4 w-4" />
+            </button>
+          </template>
         </div>
       </div>
 
@@ -607,3 +554,297 @@ watch(
     />
   </div>
 </template>
+
+<style scoped>
+.dashboard-friend-rail-frame {
+  position: relative;
+  overflow: hidden;
+}
+
+.dashboard-friend-rail {
+  --friend-card-gap: 0.375rem;
+  --friend-card-min: 3.75rem;
+  --friend-card-max: 5.5rem;
+  display: flex;
+  align-items: flex-start;
+  gap: var(--friend-card-gap);
+  overflow-x: auto;
+  padding: 0.5rem;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+}
+
+.dashboard-friend-rail::-webkit-scrollbar {
+  display: none;
+}
+
+/* Three portraits plus a peek of the next one always fit the visible rail, so the
+   sideways scroll is discoverable, and cards never grow past a comfortable size. */
+.dashboard-friend-card {
+  --friend-card-width: clamp(
+    var(--friend-card-min),
+    calc((100% - var(--friend-card-gap) * 3) / 3.2),
+    var(--friend-card-max)
+  );
+  display: flex;
+  flex: 0 0 var(--friend-card-width);
+  width: var(--friend-card-width);
+  flex-direction: column;
+  align-items: stretch;
+  position: relative;
+  padding: 0.3125rem;
+  border: 1px solid var(--dp-border-secondary);
+  border-radius: 0.875rem;
+  background: linear-gradient(
+    180deg,
+    var(--dp-bg-card),
+    color-mix(in srgb, var(--dp-bg-card) 88%, var(--dp-bg-secondary))
+  );
+  box-shadow: var(--dp-shadow-sm);
+  scroll-snap-align: start;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.18s ease,
+    transform 0.18s ease;
+}
+
+.dashboard-friend-card__main {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.25rem;
+  padding: 0;
+  border: 0;
+  border-radius: 0.625rem;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+}
+
+.dashboard-friend-card__main:focus-visible {
+  outline: 2px solid var(--dp-accent);
+  outline-offset: 2px;
+}
+
+.dashboard-friend-card__photo {
+  position: relative;
+  display: block;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+}
+
+.dashboard-friend-card__pin {
+  position: absolute;
+  top: 0.125rem;
+  right: 0.125rem;
+  display: inline-flex;
+  width: 1.25rem;
+  height: 1.25rem;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--dp-bg-card);
+  border-radius: 9999px;
+  background: var(--dp-bg-card);
+  color: var(--dp-text-muted);
+  cursor: pointer;
+}
+
+.dashboard-friend-card__pin:hover {
+  color: var(--dp-warning);
+}
+
+.dashboard-friend-card__pin:focus-visible {
+  outline: 2px solid var(--dp-accent);
+  outline-offset: 2px;
+}
+
+.dashboard-friend-card__pin--on {
+  color: var(--dp-warning);
+}
+
+.dashboard-friend-card__name {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.1875rem;
+  min-width: 0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--dp-text-primary);
+}
+
+.dashboard-friend-card__name-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-friend-card__family {
+  width: 0.75rem;
+  height: 0.75rem;
+  flex-shrink: 0;
+  color: var(--dp-warning);
+}
+
+/* Team and duty keep their slot even when empty, so a team-less or duty-less
+   friend never shortens its card next to a neighbour that has both. */
+.dashboard-friend-card__team {
+  overflow: hidden;
+  min-height: 1.2em;
+  font-size: 0.625rem;
+  line-height: 1.2;
+  color: var(--dp-text-muted);
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-friend-card__duty {
+  overflow: hidden;
+  min-height: 1.4rem;
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.375rem;
+  background: var(--dp-bg-tertiary);
+  font-size: 0.625rem;
+  font-weight: 600;
+  line-height: 1.4rem;
+  color: var(--dp-text-muted);
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dashboard-friend-rail-nav {
+  position: absolute;
+  top: 50%;
+  display: none;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  width: 1.875rem;
+  height: 1.875rem;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--dp-border-primary);
+  border-radius: 9999px;
+  background: color-mix(in srgb, var(--dp-bg-card) 92%, transparent);
+  color: var(--dp-text-secondary);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--dp-overlay-dark) 12%, transparent);
+  backdrop-filter: blur(4px);
+  transform: translateY(-50%);
+  cursor: pointer;
+}
+
+.dashboard-friend-rail-nav:hover {
+  border-color: var(--dp-accent-border);
+  color: var(--dp-text-primary);
+}
+
+.dashboard-friend-rail-nav:focus-visible {
+  outline: 2px solid var(--dp-accent);
+  outline-offset: 2px;
+}
+
+.dashboard-friend-rail-nav--prev {
+  left: 0.25rem;
+}
+
+.dashboard-friend-rail-nav--next {
+  right: 0.25rem;
+}
+
+/* Touch users flick the rail, so the arrows only earn their space on pointer devices,
+   and they stay out of the portraits until the pointer or keyboard reaches the rail. */
+@media (hover: hover) and (pointer: fine) {
+  .dashboard-friend-card:hover {
+    border-color: color-mix(in srgb, var(--dp-text-muted) 65%, var(--dp-border-secondary));
+    box-shadow: var(--dp-shadow-md);
+    transform: translateY(-2px);
+  }
+
+  .dashboard-friend-rail-nav {
+    display: inline-flex;
+  }
+
+  .dashboard-friend-rail-frame:hover .dashboard-friend-rail-nav,
+  .dashboard-friend-rail-frame:focus-within .dashboard-friend-rail-nav {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dashboard-friend-card,
+  .dashboard-friend-rail-nav {
+    transition: none;
+  }
+
+  .dashboard-friend-card:hover {
+    transform: none;
+  }
+}
+
+@media (min-width: 640px) {
+  .dashboard-friend-rail {
+    --friend-card-gap: 0.5rem;
+  }
+
+  .dashboard-friend-card__name {
+    font-size: 0.8125rem;
+  }
+
+  .dashboard-friend-card__team {
+    font-size: 0.6875rem;
+  }
+
+  .dashboard-friend-card__duty {
+    font-size: 0.6875rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .dashboard-friend-rail {
+    --friend-card-gap: 0.75rem;
+    --friend-card-min: 7.25rem;
+    --friend-card-max: 8.5rem;
+    padding: 0.75rem;
+  }
+
+  .dashboard-friend-card {
+    padding: 0.5rem;
+    border-radius: 1rem;
+  }
+
+  .dashboard-friend-card__main {
+    gap: 0.375rem;
+  }
+
+  .dashboard-friend-card__pin {
+    top: 0.25rem;
+    right: 0.25rem;
+    width: 1.625rem;
+    height: 1.625rem;
+  }
+
+  .dashboard-friend-card__pin svg {
+    width: 0.9375rem;
+    height: 0.9375rem;
+  }
+
+  .dashboard-friend-card__name {
+    font-size: 0.875rem;
+  }
+
+  .dashboard-friend-card__team,
+  .dashboard-friend-card__duty {
+    font-size: 0.75rem;
+  }
+
+  .dashboard-friend-card__duty {
+    min-height: 1.75rem;
+    line-height: 1.5rem;
+  }
+}
+</style>

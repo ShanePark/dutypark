@@ -17,7 +17,11 @@ import FriendRequestList from '@/components/member/FriendRequestList.vue'
 import FriendCard from '@/components/member/FriendCard.vue'
 import FriendActionMenu from '@/components/member/FriendActionMenu.vue'
 import BlockedMemberList from '@/components/member/BlockedMemberList.vue'
-import { Users, UserPlus } from 'lucide-vue-next'
+import HelpButton from '@/components/common/HelpButton.vue'
+import HelpModal from '@/components/common/HelpModal.vue'
+import HelpNote from '@/components/common/HelpNote.vue'
+import HelpSection from '@/components/common/HelpSection.vue'
+import { Users, UserPlus, Star, GripVertical, CheckCircle2 } from 'lucide-vue-next'
 
 const router = useRouter()
 const notificationStore = useNotificationStore()
@@ -30,6 +34,8 @@ watch(() => notificationStore.friendsRefreshTrigger, (newValue) => {
     loadFriendInfo()
   }
 })
+
+const isHelpModalOpen = ref(false)
 
 const loading = ref(false)
 const error = ref<string | null>(null)
@@ -512,6 +518,10 @@ onUnmounted(() => {
 <template>
   <div class="max-w-4xl mx-auto px-4 py-6">
     <PageHeader :title="t('header.menu.friends')" :icon="UserPlus" show-back back-fallback="/more">
+      <HelpButton
+        :label="t('friends.help.openAriaLabel')"
+        @click="isHelpModalOpen = true"
+      />
       <button
         class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-dp-surface-strong to-dp-surface-strong-alt text-dp-text-on-dark rounded-xl hover:from-dp-surface-strong-alt hover:to-dp-surface-strong-hover transition-all shadow-lg font-medium cursor-pointer"
         @click="openSearchModal"
@@ -629,5 +639,33 @@ onUnmounted(() => {
       @request-friend="requestFriend"
       @change-page="goToPage"
     />
+
+    <HelpModal
+      :is-open="isHelpModalOpen"
+      :title="t('friends.help.title')"
+      @close="isHelpModalOpen = false"
+    >
+      <!-- The three blocks are one procedure, so they are numbered. -->
+      <HelpSection
+        :step="1"
+        :icon="Star"
+        :title="t('friends.help.pinTitle')"
+        :text="t('friends.help.pinText')"
+      />
+      <HelpSection
+        :step="2"
+        :icon="GripVertical"
+        :title="t('friends.help.reorderTitle')"
+        :text="t('friends.help.reorderText')"
+      />
+      <HelpSection
+        :step="3"
+        :icon="CheckCircle2"
+        :title="t('friends.help.saveTitle')"
+        :text="t('friends.help.saveText')"
+      />
+
+      <HelpNote :messages="[t('friends.help.note')]" />
+    </HelpModal>
   </div>
 </template>

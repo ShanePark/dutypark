@@ -21,6 +21,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
 import java.time.LocalDateTime
+import java.util.UUID
 
 class ReportServiceIntegrationTest : DutyparkIntegrationTest() {
 
@@ -371,6 +372,111 @@ class ReportServiceIntegrationTest : DutyparkIntegrationTest() {
         assertThat(report.reportedMember).isNull()
         assertThat(report.reporterName).isEqualTo("reporter")
         assertThat(report.reportedMemberName).isEqualTo("reported")
+    }
+
+    @Test
+    fun `cancel own open report withdraws it and keeps the record`() {
+        val created = reportService.createReport(TestData.member.id!!, memberReportRequest(TestData.member2))
+        flushAndClear()
+
+        val canceled = reportService.cancelReport(TestData.member.id!!, created.id)
+        flushAndClear()
+
+        assertThat(canceled.id).isEqualTo(created.id)
+        assertThat(canceled.status).isEqualTo(ReportStatus.CANCELED)
+        assertThat(canceled.resolvedAt).isNotNull()
+
+        val saved = contentReportRepository.findById(created.id).orElseThrow()
+        assertThat(saved.status).isEqualTo(ReportStatus.CANCELED)
+        assertThat(saved.resolvedAt).isNotNull()
+        // resolvedBy 는 처리한 관리자 자리라 본인 철회에는 남지 않는다.
+        assertThat(saved.resolvedBy).isNull()
+    }
+
+    @Test
+    fun `canceling a report of another reporter throws not found`() {
+        val created = reportService.createReport(TestData.member.id!!, memberReportRequest(TestData.member2))
+        flushAndClear()
+
+        val exception = assertThrows<NoSuchElementException> {
+            reportService.cancelReport(TestData.member2.id!!, created.id)
+        }
+
+        assertThat(exception.message).isEqualTo("common.notFound")
+        assertThat(contentReportRepository.findById(created.id).orElseThrow().status).isEqualTo(ReportStatus.OPEN)
+    }
+
+    @Test
+    fun `canceling an unknown report throws not found`() {
+        val exception = assertThrows<NoSuchElementException> {
+            reportService.cancelReport(TestData.member.id!!, UUID.randomUUID())
+        }
+
+        assertThat(exception.message).isEqualTo("common.notFound")
+    }
+
+    @Test
+    fun `canceling a report the admin already handled throws report-cancel-notOpen`() {
+        assertCancelRejected(TestData.member2, ReportStatus.RESOLVED)
+        assertCancelRejected(TestData.admin, ReportStatus.DISMISSED)
+    }
+
+    @Test
+    fun `canceling an already canceled report throws report-cancel-notOpen`() {
+        val created = reportService.createReport(TestData.member.id!!, memberReportRequest(TestData.member2))
+        flushAndClear()
+        reportService.cancelReport(TestData.member.id!!, created.id)
+        flushAndClear()
+
+        val exception = assertThrows<BadRequestException> {
+            reportService.cancelReport(TestData.member.id!!, created.id)
+        }
+
+        assertThat(exception.message).isEqualTo("report.cancel.notOpen")
+    }
+
+    @Test
+    fun `canceling a report leaves the block it created in place`() {
+        val created = reportService.createReport(
+            TestData.member.id!!,
+            memberReportRequest(TestData.member2).copy(alsoBlock = true),
+        )
+        flushAndClear()
+
+        reportService.cancelReport(TestData.member.id!!, created.id)
+        flushAndClear()
+
+        assertThat(memberBlockRepository.existsByBlockerIdAndBlockedId(TestData.member.id!!, TestData.member2.id!!))
+            .isTrue()
+    }
+
+    @Test
+    fun `report is created again once the previous one is canceled`() {
+        val first = reportService.createReport(TestData.member.id!!, memberReportRequest(TestData.member2))
+        flushAndClear()
+        reportService.cancelReport(TestData.member.id!!, first.id)
+        flushAndClear()
+
+        val second = reportService.createReport(TestData.member.id!!, memberReportRequest(TestData.member2))
+        flushAndClear()
+
+        assertThat(second.isNew).isTrue()
+        assertThat(second.id).isNotEqualTo(first.id)
+        assertThat(contentReportRepository.findAll()).hasSize(2)
+    }
+
+    private fun assertCancelRejected(target: Member, status: ReportStatus) {
+        val created = reportService.createReport(TestData.member.id!!, memberReportRequest(target))
+        flushAndClear()
+        contentReportRepository.findById(created.id).orElseThrow().status = status
+        flushAndClear()
+
+        val exception = assertThrows<BadRequestException> {
+            reportService.cancelReport(TestData.member.id!!, created.id)
+        }
+
+        assertThat(exception.message).isEqualTo("report.cancel.notOpen")
+        assertThat(contentReportRepository.findById(created.id).orElseThrow().status).isEqualTo(status)
     }
 
     private fun memberReportRequest(

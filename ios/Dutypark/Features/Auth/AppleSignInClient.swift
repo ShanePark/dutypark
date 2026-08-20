@@ -314,6 +314,10 @@ final class AppleSignInClient {
         attempt: AppleSignInAttempt,
         purpose: AppleSignInPurpose
     ) async throws -> AppleExchangeResponse {
+        // Apple can hand back a credential after the caller abandoned the flow. Exchanging it
+        // would still link or authenticate the account server side, so a cancelled task must
+        // stop before the credential leaves the device.
+        try Task.checkCancellation()
         guard credential.state == attempt.state else {
             throw AppleSignInError.stateMismatch
         }

@@ -10,13 +10,16 @@ import type { NormalizedAttachment, TaggableFriend } from '@/types'
 import { normalizeAttachment } from '@/api/attachment'
 import { useSwal } from '@/composables/useSwal'
 import { useAiScheduleConsentStore } from '@/stores/aiScheduleConsent'
+import { useContentFilterStore } from '@/stores/contentFilter'
 import {
   getAiScheduleConsentAction,
   isAiTimeParsingCandidate,
 } from '@/utils/aiScheduleConsentFlow'
 import { VISIBILITY_ICONS, VISIBILITY_COLORS, type CalendarVisibility } from '@/utils/visibility'
+import { effectiveEndDateTime, isRangeInvalid } from '@/utils/scheduleDateTime'
 
 const { showWarning, showError, confirm, choose } = useSwal()
+const contentFilterStore = useContentFilterStore()
 const aiConsentStore = useAiScheduleConsentStore()
 
 interface Schedule {
@@ -202,8 +205,7 @@ const visibilityOptions = computed(() => [
 const isScheduleTitleMissing = computed(() => !newSchedule.value.content.trim())
 const isScheduleTimeRangeInvalid = computed(() => {
   const { startDateTime, endDateTime } = newSchedule.value
-  if (!startDateTime || !endDateTime) return false
-  return endDateTime < startDateTime
+  return isRangeInvalid(startDateTime, endDateTime)
 })
 const isScheduleSaveDisabled = computed(() =>
   isScheduleTitleMissing.value || isScheduleTimeRangeInvalid.value || isUploading.value || isResolvingAiConsent.value
@@ -225,17 +227,6 @@ watch(
       selectedTagSummaries.value = []
     } else {
       scheduleFormRef.value?.cleanup()
-    }
-  }
-)
-
-watch(
-  () => newSchedule.value.startDateTime,
-  (startDateTime) => {
-    if (!startDateTime) return
-    const endDateTime = newSchedule.value.endDateTime
-    if (endDateTime && endDateTime < startDateTime) {
-      newSchedule.value.endDateTime = startDateTime
     }
   }
 )
@@ -326,8 +317,10 @@ function buildScheduleData(): ScheduleSaveData {
   const startDateTime = newSchedule.value.startDateTime
     ? `${newSchedule.value.startDateTime}:00`
     : defaultDateTime
+  // An end with no time of its own on the start's own day collapses onto the start: the
+  // API rejects an end before the start, so that is how "no end time" has to be stored.
   const endDateTime = newSchedule.value.endDateTime
-    ? `${newSchedule.value.endDateTime}:00`
+    ? effectiveEndDateTime(startDateTime, `${newSchedule.value.endDateTime}:00`)
     : defaultDateTime
 
   const sessionId = scheduleFormRef.value?.getSessionId() || null
@@ -417,6 +410,11 @@ async function saveSchedule() {
     return
   }
 
+  if (contentFilterStore.isBlocked(newSchedule.value.content, newSchedule.value.description)) {
+    showError(t('contentFilter.blocked'))
+    return
+  }
+
   isResolvingAiConsent.value = true
   try {
     const data = buildScheduleData()
@@ -472,6 +470,8 @@ function handleUploadError(message: string) {
             <X class="w-6 h-6 text-dp-text-primary" />
           </button>
         </div>
+        <!-- A reader who cannot change the duty is told it by the colour of the day in
+             the grid behind this modal, so the modal does not repeat it. -->
         <div v-if="!isCreateMode && !isEditMode && canEdit && dutyTypes.length > 0" class="flex flex-wrap gap-1.5 mt-2">
           <span
             v-if="unavailableCurrentDuty"
@@ -504,14 +504,6 @@ function handleUploadError(message: string) {
             ></span>
             {{ dutyType.name }}
           </button>
-        </div>
-        <div v-else-if="duty && !canEdit" class="mt-2">
-          <span
-            class="px-2.5 py-1 rounded-md text-xs font-medium text-dp-text-on-dark"
-            :style="{ backgroundColor: duty.dutyColor || 'var(--dp-duty-fallback)' }"
-          >
-            {{ duty.dutyType || t('duty.common.off') }}
-          </span>
         </div>
       </div>
     </div>

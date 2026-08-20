@@ -16,12 +16,14 @@ The source code, tests, and task-specific documentation are the source of truth 
 ### Dutypark Scope
 
 - Do not start development servers (`./gradlew bootRun`, `npm run dev`) unless the user explicitly asks.
+- The user usually keeps the dev servers running already: the web on `http://localhost:5173` and the backend on `http://localhost:8080`. Check those ports before concluding a server is unavailable, and use the running ones for verification instead of starting your own.
 - Unless explicitly platform-specific, complete service features and user-facing policy, UI, or UX changes across the backend, responsive web, and native iOS. If a client is deferred, report the gap and do not mark the work complete.
 
 ### Local Development
 
 - The local development database is defined in `dutypark_dev_db/docker-compose.yml`. Start it with `(cd dutypark_dev_db && docker compose up -d)`.
 - Local backend database connection settings are in `src/main/resources/application-dev.yml`.
+- Check for already-running servers with `lsof -nP -iTCP:5173 -iTCP:8080 -sTCP:LISTEN`. If a port is listening, that server is the user's: use it, and never restart or stop it.
 
 ### Flyway Migrations
 
@@ -51,7 +53,8 @@ The source code, tests, and task-specific documentation are the source of truth 
 
 - Backend: run focused Gradle tests first, then expand by risk.
 - Web: run `npm run type-check` and `npm run build`, plus affected tests.
-- iOS: when affected, run the build and tests documented in `ios/README.md`.
+- iOS: when affected, run the build and `DutyparkTests` unit tests documented in `ios/README.md` by default.
+- Do not run `DutyparkUITests` as part of default verification, including UI tests related to the changed area. Run specific or full iOS UI tests only when the user explicitly requests them; full iOS UI test runs are strictly opt-in.
 - After completing an iOS app change, install the latest successfully verified build on the simulator named exactly `iPhone 13 mini` so the user can inspect it immediately. This does not authorize starting a development server. If that simulator is unavailable or installation is blocked by CoreSimulator or another error, report the exact reason.
 
 ## Git

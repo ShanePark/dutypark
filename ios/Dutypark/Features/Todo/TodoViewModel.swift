@@ -12,9 +12,14 @@ final class TodoViewModel: ObservableObject {
     @Published var errorKey: String?
 
     private let repository: any TodoRepository
+    private let contentFilter: ContentFilterStore
 
-    init(repository: any TodoRepository = TodoAPIRepository()) {
+    init(
+        repository: any TodoRepository = TodoAPIRepository(),
+        contentFilter: ContentFilterStore = .shared
+    ) {
         self.repository = repository
+        self.contentFilter = contentFilter
     }
 
     var selectedTodos: [TodoDTO] {
@@ -102,6 +107,10 @@ final class TodoViewModel: ObservableObject {
 
     func create(draft: TodoDraft, refreshBoard: Bool = true) async -> Bool {
         guard !isSaving else { return false }
+        guard !contentFilter.isBlocked(draft.title, draft.content) else {
+            errorKey = "todo.error.contentFilter"
+            return false
+        }
         isSaving = true
         defer { isSaving = false }
         do {
@@ -119,6 +128,10 @@ final class TodoViewModel: ObservableObject {
     func update(todo: TodoDTO, draft: TodoDraft) async -> Bool {
         guard !todo.hasAttachments || attachmentsByTodoID[todo.uuid] != nil else {
             errorKey = "todo.error.attachmentsRequired"
+            return false
+        }
+        guard !contentFilter.isBlocked(draft.title, draft.content) else {
+            errorKey = "todo.error.contentFilter"
             return false
         }
         return await performMutation(errorKey: "todo.error.update") {

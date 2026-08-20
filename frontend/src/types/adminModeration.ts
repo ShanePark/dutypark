@@ -11,13 +11,16 @@ export type ReportReason =
   | 'IMPERSONATION'
   | 'OTHER'
 
-export type ReportStatus = 'OPEN' | 'RESOLVED' | 'DISMISSED'
+export type ReportStatus = 'OPEN' | 'RESOLVED' | 'DISMISSED' | 'CANCELED'
 
 /** Status query value accepted by the admin report list API. `ALL` means "no status filter". */
 export type ReportStatusFilter = ReportStatus | 'ALL'
 
-/** Resolution states an admin can move a report into. `OPEN` is the intake state only. */
-export type ReportResolutionStatus = Exclude<ReportStatus, 'OPEN'>
+/**
+ * Resolution states an admin can move a report into. `OPEN` is the intake state only, and
+ * `CANCELED` is the reporter's own withdrawal — never an admin decision.
+ */
+export type ReportResolutionStatus = Exclude<ReportStatus, 'OPEN' | 'CANCELED'>
 
 export interface ReportPartyDto {
   id: number
@@ -66,7 +69,8 @@ export interface AdminInquiryDto {
   /** null when the inquiry was submitted without signing in. */
   memberId: number | null
   memberName: string | null
-  email: string
+  /** null when a signed-in member sent the inquiry without an account e-mail to reply to. */
+  email: string | null
   subject: string | null
   content: string
   status: InquiryStatus

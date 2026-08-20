@@ -309,9 +309,10 @@ async function handleAppleRetry() {
               >
                 <span
                   aria-hidden="true"
-                  class="absolute inset-0 flex items-center justify-center font-semibold text-white"
+                  class="absolute inset-0 flex items-center justify-center gap-3 font-semibold text-white"
                 >
-                  {{ t('auth.login.social.apple') }}
+                  <img src="/img/apple.svg" alt="" class="w-5 h-5" />
+                  <span>{{ t('auth.login.social.apple') }}</span>
                 </span>
                 <div
                   id="appleid-signin"

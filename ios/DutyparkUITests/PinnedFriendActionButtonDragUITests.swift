@@ -108,14 +108,17 @@ final class PinnedFriendActionButtonDragUITests: XCTestCase {
         capture("social-action-buttons-plain-taps")
     }
 
+    /// The home rail does not reorder any more, but its star still sits on top of a
+    /// card that scrolls sideways, so a drag that starts on the star must neither
+    /// unpin the friend nor open their calendar when the finger lifts elsewhere.
     @MainActor
-    func testHomeReorderDragStartingOnThePinButtonReordersInsteadOfUnpinning() {
+    func testHomeDragStartingOnThePinButtonDoesNotUnpinTheFriend() {
         let app = launchHome()
         let home = app.descendants(matching: .any)["screen.home"]
         XCTAssertTrue(home.waitForExistence(timeout: 20))
 
         let source = app.buttons["home.friend.31"]
-        let target = app.buttons["home.friend.34"]
+        let target = app.buttons["home.friend.33"]
         let pin = app.buttons["home.friend.31.pin"]
         for _ in 0..<6 where !(source.isHittable && target.isHittable) {
             home.swipeUp(velocity: .slow)
@@ -124,39 +127,38 @@ final class PinnedFriendActionButtonDragUITests: XCTestCase {
         XCTAssertTrue(target.isHittable)
         XCTAssertTrue(pin.waitForExistence(timeout: 10))
         XCTAssertEqual(pin.label, unpinLabel)
-        XCTAssertLessThan(source.frame.minY, target.frame.minY)
+        XCTAssertLessThan(source.frame.minX, target.frame.minX)
 
-        // Drop where the dragged row's own star ends up once the live reorder has
-        // shifted it down, so the finger lifts inside the star's frame.
-        let end = app.coordinate(withNormalizedOffset: .zero).withOffset(
-            CGVector(dx: pin.frame.midX, dy: target.frame.minY + pin.frame.height / 2)
-        )
         pin.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).press(
             forDuration: 0.4,
-            thenDragTo: end,
+            thenDragTo: target.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)),
             withVelocity: .slow,
             thenHoldForDuration: 0.2
         )
 
-        // Unpinning moves the row to the bottom of the list, out of the LazyVStack's
-        // instantiated range, so a missing star is itself the unpin symptom.
         let pinAfter = app.buttons["home.friend.31.pin"]
         XCTAssertTrue(
             pinAfter.waitForExistence(timeout: 5),
-            "A drag started on the star must not unpin the friend: the row left the pinned section."
+            "A drag started on the star must leave the card in place."
         )
         XCTAssertEqual(
             pinAfter.label,
             unpinLabel,
             "A drag started on the star must not unpin the friend."
         )
-        XCTAssertGreaterThan(
-            app.buttons["home.friend.31"].frame.minY,
-            app.buttons["home.friend.34"].frame.minY,
-            "A drag started on the star must still reorder the pinned friend downwards."
+        XCTAssertLessThan(
+            app.buttons["home.friend.31"].frame.minX,
+            app.buttons["home.friend.33"].frame.minX,
+            "The home rail must keep its order through a drag."
         )
-        XCTAssertFalse(app.descendants(matching: .any)["screen.calendar"].exists)
-        capture("home-pin-button-drag-reorders")
+        XCTAssertFalse(
+            app.descendants(matching: .any)
+                .matching(NSPredicate(format: "identifier BEGINSWITH %@", "screen.calendar"))
+                .firstMatch
+                .exists,
+            "A drag started on the star must not open the friend's calendar."
+        )
+        capture("home-pin-button-drag-keeps-pin")
     }
 
     @MainActor
@@ -205,7 +207,6 @@ final class PinnedFriendActionButtonDragUITests: XCTestCase {
     private func launch(extraArguments: [String]) -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments += [
-            "-dp-language", "ko",
             "-dp-theme", "dark",
             "-AppleLanguages", "(ko)",
             "-AppleLocale", "ko_KR",

@@ -36,3 +36,11 @@ describe('TodoDetailModal status changes', () => {
     }
   })
 })
+
+describe('TodoDetailModal due date field', () => {
+  it('edits the due date with the shared date picker instead of a native date input', () => {
+    expect(todoDetailModal).toContain('DatePickerField')
+    expect(todoDetailModal).toMatch(/<DatePickerField[\s\S]*?v-model="editDueDate"/)
+    expect(todoDetailModal).not.toContain('type="date"')
+  })
+})
