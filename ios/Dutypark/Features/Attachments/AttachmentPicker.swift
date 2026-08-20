@@ -371,17 +371,15 @@ struct AttachmentPicker: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            Button(role: .destructive) {
+            DPIconActionButton(
+                systemImage: "xmark",
+                label: AttachmentLocalization.text("attachment.action.remove"),
+                tone: .danger
+            ) {
                 model.remove(attachment.id)
-            } label: {
-                Image(systemName: "xmark")
-                    .foregroundStyle(DPColor.textSecondary)
-                    .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
-                    .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
             .disabled(model.isBusy)
-            .accessibilityLabel(AttachmentLocalization.text("attachment.action.remove"))
+            .padding(.trailing, -DPIconActionMetrics.touchPadding)
         }
         .padding(DPSpacing.small)
         .background(DPColor.backgroundCard)

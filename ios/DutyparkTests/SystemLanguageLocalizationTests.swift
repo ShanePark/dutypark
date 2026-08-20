@@ -38,7 +38,7 @@ struct SystemLanguageLocalizationTests {
             "로그아웃",
         ])
         #expect(moreMenuTitles(locale: .english) == [
-            "Friends",
+            "Manage friends",
             "Notifications",
             "Administration",
             "Guide",
@@ -100,7 +100,7 @@ struct SystemLanguageLocalizationTests {
 
     private func moreMenuTitles(locale: Locale?) -> [String] {
         [
-            RootChromeLocalization.home("home.friends", locale: locale),
+            RootChromeLocalization.social("social.title", locale: locale),
             RootChromeLocalization.notifications("notifications.title", locale: locale),
             AdminLocalization.string("admin.menu.title", locale: locale),
             RootChromeLocalization.localizable("root.menu.guide", locale: locale),

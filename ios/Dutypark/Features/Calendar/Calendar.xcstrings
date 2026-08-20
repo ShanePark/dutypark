@@ -139,7 +139,8 @@
     "datePicker.range.dialogLabel" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Date range picker calendar" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "기간 선택 달력" } } } },
     "datePicker.range.hint" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Select an end date" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "종료 날짜를 선택하세요" } } } },
     "datePicker.range.duration.one" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "%lld day" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%lld일" } } } },
-    "datePicker.range.duration.other" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "%lld days" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%lld일" } } } }
+    "datePicker.range.duration.other" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "%lld days" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%lld일" } } } },
+    "calendar.schedule.delete" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete schedule" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "일정 삭제" } } } }
   },
   "version" : "1.0"
 }

@@ -405,23 +405,24 @@ struct TeamView: View {
                             Spacer()
                             if viewModel.isTeamManager {
                                 HStack(spacing: 0) {
-                                    Button { viewModel.editSchedule(schedule) } label: {
-                                        Image(systemName: "pencil")
-                                            .foregroundStyle(DPColor.accent)
-                                            .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                                    DPIconActionButton(
+                                        systemImage: "pencil",
+                                        label: teamLocalized("team.view.actions.editSchedule"),
+                                        tone: .accent
+                                    ) {
+                                        viewModel.editSchedule(schedule)
                                     }
-                                    .accessibilityLabel(Text("team.view.actions.editSchedule", tableName: "Team"))
-                                    Button {
+                                    DPIconActionButton(
+                                        systemImage: "trash",
+                                        label: teamLocalized("team.view.actions.deleteSchedule"),
+                                        tone: .danger
+                                    ) {
                                         viewModel.schedulePendingDeletion = schedule
                                         scheduleDeletionCandidate = schedule
-                                    } label: {
-                                        Image(systemName: "trash")
-                                            .foregroundStyle(DPColor.danger)
-                                            .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
                                     }
-                                    .accessibilityLabel(Text("team.view.actions.deleteSchedule", tableName: "Team"))
                                 }
-                                .buttonStyle(.plain)
+                                .padding(.top, -DPIconActionMetrics.touchPadding)
+                                .padding(.trailing, -DPIconActionMetrics.touchPadding)
                             }
                         }
                     }

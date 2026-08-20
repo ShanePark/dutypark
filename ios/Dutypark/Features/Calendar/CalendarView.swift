@@ -496,8 +496,13 @@ struct CalendarView: View {
     // again so the tail bites into the label rather than stopping a hair short of it.
     private static let calloutLabelSlack: CGFloat = 8
     private static let calloutLabelBite: CGFloat = 1
+
+    // Hanging the bubble straight off the label left the two glued together. It drops
+    // this much further before it starts, which is enough air to read them apart.
+    private static let calloutLabelDrop: CGFloat = 5
     private static let calloutReach: CGFloat =
         calloutHitInsetY * 2 + calloutCapsuleHeight - calloutLabelSlack - calloutLabelBite
+            + calloutLabelDrop
 
     // The month label lives in the navigation bar, so the callout is hung inside the bar too:
     // content below it cannot be tapped through the bar, and a bubble that only looks right
@@ -637,10 +642,9 @@ struct CalendarView: View {
     }
 
     private var dutyToolbar: some View {
-        VStack(spacing: DPSpacing.extraSmall) {
+        Group {
             if model.isQuickDutyEditing {
-                editModeNotice
-                quickDutyBar
+                quickDutyPanel
             } else {
                 HStack(spacing: DPSpacing.small) {
                     dutySummary
@@ -703,42 +707,56 @@ struct CalendarView: View {
         .overlay(RoundedRectangle(cornerRadius: DPRadius.standard).stroke(DPColor.borderSecondary))
     }
 
-    private var editModeNotice: some View {
+    // Edit mode used to be a notice card with a full-width exit button stacked on top of
+    // a loose row of controls, which read as two unrelated blocks and pushed the calendar
+    // itself off the first screen. One panel says the mode once and keeps its controls
+    // inside it.
+    private var quickDutyPanel: some View {
         VStack(alignment: .leading, spacing: DPSpacing.small) {
-            HStack(alignment: .top, spacing: DPSpacing.small) {
-                Circle()
-                    .fill(DPColor.backgroundPrimary)
-                    .frame(width: 36, height: 36)
-                    .overlay {
-                        Image(systemName: "pencil.line")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(DPColor.warning)
-                    }
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(CalendarLocalization.text("calendar.duty.quick.start"))
-                        .font(DPTypography.label)
-                        .foregroundStyle(DPColor.textPrimary)
-                    Text("calendar.duty.quick.description", tableName: "Calendar")
-                        .font(DPTypography.caption)
-                        .foregroundStyle(DPColor.textSecondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-
-            Button { model.setQuickDutyEditing(false) } label: {
-                Label(CalendarLocalization.text("calendar.duty.quick.exit"), systemImage: "xmark")
-                    .font(DPTypography.caption)
-                    .frame(maxWidth: .infinity, minHeight: 44)
-            }
-            .buttonStyle(.bordered)
-            .tint(DPColor.warning)
+            editModeHeader
+            Divider().overlay(DPColor.warningBorder)
+            quickDutyBar
         }
         .padding(DPSpacing.small)
         .background(DPColor.warningSoft)
-        .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
-        .overlay(RoundedRectangle(cornerRadius: DPRadius.standard).stroke(DPColor.warningBorder))
+        .clipShape(RoundedRectangle(cornerRadius: DPRadius.large))
+        .overlay(RoundedRectangle(cornerRadius: DPRadius.large).stroke(DPColor.warningBorder))
+    }
+
+    private var editModeHeader: some View {
+        HStack(spacing: DPSpacing.small) {
+            Image(systemName: "pencil.line")
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(DPColor.warningHover)
+                .frame(width: 28, height: 28)
+                .background(DPColor.backgroundCard, in: RoundedRectangle(cornerRadius: DPRadius.compact))
+                .overlay {
+                    RoundedRectangle(cornerRadius: DPRadius.compact)
+                        .stroke(DPColor.warningBorder, lineWidth: DPChrome.borderWidth)
+                }
+
+            VStack(alignment: .leading, spacing: 1) {
+                Text(CalendarLocalization.text("calendar.duty.quick.start"))
+                    .font(DPFont.bold(size: 13, relativeTo: .subheadline))
+                    .foregroundStyle(DPColor.textPrimary)
+                Text("calendar.duty.quick.description", tableName: "Calendar")
+                    .font(DPTypography.caption)
+                    .foregroundStyle(DPColor.textSecondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            DPIconActionButton(
+                systemImage: "xmark",
+                label: CalendarLocalization.text("calendar.duty.quick.exit"),
+                showsLabel: true,
+                tone: .warning
+            ) {
+                model.setQuickDutyEditing(false)
+            }
+            .padding(.trailing, -DPIconActionMetrics.touchPadding)
+            .accessibilityIdentifier("calendar.duty.quick.exit")
+        }
     }
 
     private func openTodo(_ todo: TodoDTO) {
@@ -773,21 +791,28 @@ struct CalendarView: View {
         })
     }
 
+    // Every control on this row is a card-coloured chip of the same height and corner
+    // radius, so the day stepper, the duty types and the batch action read as one set
+    // instead of a stepper, some tiles and a stray capsule.
     private var quickDutyBar: some View {
         CalendarFlowLayout(spacing: DPSpacing.small) {
             HStack(spacing: 0) {
                 Button { model.moveQuickDutyFocus(by: -1) } label: {
-                    Image(systemName: "chevron.left").frame(width: 44, height: 44)
+                    Image(systemName: "chevron.left")
+                        .font(.system(size: 14, weight: .semibold))
+                        .frame(width: Self.quickDutyStepWidth, height: DPSize.minimumTouchTarget)
                 }
                 Text(CalendarLocalization.format("calendar.duty.quick.day", model.quickDutyDay?.cell.day ?? 1))
-                    .font(DPTypography.label)
-                    .foregroundStyle(DPColor.warning)
-                    .frame(minWidth: 34)
+                    .font(DPFont.bold(size: 14, relativeTo: .subheadline))
+                    .foregroundStyle(DPColor.warningHover)
+                    .frame(minWidth: 38)
                 Button { model.moveQuickDutyFocus(by: 1) } label: {
-                    Image(systemName: "chevron.right").frame(width: 44, height: 44)
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14, weight: .semibold))
+                        .frame(width: Self.quickDutyStepWidth, height: DPSize.minimumTouchTarget)
                 }
             }
-            .background(DPColor.backgroundTertiary)
+            .background(DPColor.backgroundCard)
             .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
             .overlay(RoundedRectangle(cornerRadius: DPRadius.standard).stroke(DPColor.borderSecondary))
 
@@ -804,12 +829,19 @@ struct CalendarView: View {
 
             if model.isMyCalendar {
                 Button { showsBatchUpdate = true } label: {
-                    Text(CalendarLocalization.text("calendar.duty.batch"))
+                    Label(CalendarLocalization.text("calendar.duty.batch"), systemImage: "calendar")
                         .font(DPTypography.caption)
-                        .frame(minHeight: 44)
+                        .foregroundStyle(DPColor.textSecondary)
+                        .padding(.horizontal, DPSpacing.compact)
+                        .frame(minHeight: DPSize.minimumTouchTarget)
+                        .background(DPColor.backgroundCard)
+                        .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+                        .overlay {
+                            RoundedRectangle(cornerRadius: DPRadius.standard)
+                                .stroke(DPColor.borderSecondary, lineWidth: DPChrome.borderWidth)
+                        }
                 }
-                .buttonStyle(.bordered)
-                .tint(DPColor.textSecondary)
+                .buttonStyle(.plain)
                 .accessibilityIdentifier("calendar.duty.batch.open")
             }
         }
@@ -827,17 +859,32 @@ struct CalendarView: View {
             Text(name)
                 .font(DPTypography.label)
                 .foregroundStyle(foreground)
-                .padding(.horizontal, 12)
-                .frame(minHeight: 44)
+                .padding(.horizontal, DPSpacing.compact)
+                .frame(minHeight: DPSize.minimumTouchTarget)
                 .background(color)
                 .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+                // The selected type keeps a ring rather than a 3pt slab: at that weight the
+                // stroke ate into the duty colour it is meant to point at.
                 .overlay {
                     RoundedRectangle(cornerRadius: DPRadius.standard)
-                        .stroke(selected ? DPColor.warning : DPColor.borderPrimary, lineWidth: selected ? 3 : 1)
+                        .stroke(
+                            selected ? DPColor.warningHover : DPColor.borderPrimary,
+                            lineWidth: selected ? 2 : DPChrome.borderWidth
+                        )
                 }
+                .shadow(
+                    color: DPColor.warningHover.opacity(selected ? 0.35 : 0),
+                    radius: 3,
+                    y: 1
+                )
         }
         .buttonStyle(.plain)
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
+
+    // The stepper's chevrons stay narrower than a full touch target so the day readout
+    // between them keeps its room; the group is still 44pt tall.
+    private static let quickDutyStepWidth: CGFloat = 36
 
     private var calendarGrid: some View {
         VStack(spacing: 0) {
@@ -2088,58 +2135,60 @@ private struct DayDetailView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
 
-                if schedule.isTagged, model.isMyCalendar {
-                    Button {
-                        destructiveAction = .untag(schedule)
-                    } label: {
-                        Label(CalendarLocalization.text("calendar.schedule.untag"), systemImage: "xmark")
-                            .font(DPTypography.caption)
-                            .frame(minHeight: 44)
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(DPColor.warning)
-                } else if model.canEdit {
-                    Button {
-                        editorSchedule = schedule
-                    } label: {
-                        Image(systemName: "pencil")
-                            .frame(width: 44, height: 44)
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(DPColor.accent)
-
-                    Button {
-                        destructiveAction = .delete(schedule)
-                    } label: {
-                        Image(systemName: "trash")
-                            .frame(width: 44, height: 44)
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(DPColor.danger)
-                }
-
-                // Reporting is orthogonal to the edit and untag branches above: someone
-                // else's schedule offers neither, and a schedule you were tagged into
-                // offers untag and report at once.
-                if canReport(schedule) {
-                    Button {
-                        withoutPresentationAnimation {
-                            reportBlockEndsCalendarAccess = blockEndsCalendarAccess(schedule)
-                            reportTarget = ReportTarget(
-                                type: .schedule,
-                                targetID: schedule.id.uuidString,
-                                name: schedule.content
-                            )
+                HStack(spacing: 0) {
+                    if schedule.isTagged, model.isMyCalendar {
+                        // Untagging is not something a glyph can explain on its own, so
+                        // this one action keeps its wording next to the icon.
+                        DPIconActionButton(
+                            systemImage: "tag.slash",
+                            label: CalendarLocalization.text("calendar.schedule.untag"),
+                            showsLabel: true,
+                            tone: .warning
+                        ) {
+                            destructiveAction = .untag(schedule)
                         }
-                    } label: {
-                        Image(systemName: "flag")
-                            .frame(width: 44, height: 44)
+                    } else if model.canEdit {
+                        DPIconActionButton(
+                            systemImage: "pencil",
+                            label: CalendarLocalization.text("calendar.schedule.edit"),
+                            tone: .accent
+                        ) {
+                            editorSchedule = schedule
+                        }
+
+                        DPIconActionButton(
+                            systemImage: "trash",
+                            label: CalendarLocalization.text("calendar.schedule.delete"),
+                            tone: .danger
+                        ) {
+                            destructiveAction = .delete(schedule)
+                        }
                     }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(DPColor.textMuted)
-                    .accessibilityLabel(CalendarLocalization.text("calendar.report.schedule"))
-                    .accessibilityIdentifier("calendar.schedule.report")
+
+                    // Reporting is orthogonal to the edit and untag branches above: someone
+                    // else's schedule offers neither, and a schedule you were tagged into
+                    // offers untag and report at once.
+                    if canReport(schedule) {
+                        DPIconActionButton(
+                            systemImage: "flag",
+                            label: CalendarLocalization.text("calendar.report.schedule")
+                        ) {
+                            withoutPresentationAnimation {
+                                reportBlockEndsCalendarAccess = blockEndsCalendarAccess(schedule)
+                                reportTarget = ReportTarget(
+                                    type: .schedule,
+                                    targetID: schedule.id.uuidString,
+                                    name: schedule.content
+                                )
+                            }
+                        }
+                        .accessibilityIdentifier("calendar.schedule.report")
+                    }
                 }
+                // The chips carry their own touch padding, so the row lines them up with
+                // the title instead of adding another gap on top of it.
+                .padding(.top, -DPIconActionMetrics.touchPadding)
+                .padding(.trailing, -DPIconActionMetrics.touchPadding)
             }
 
             scheduleMetadata(schedule)

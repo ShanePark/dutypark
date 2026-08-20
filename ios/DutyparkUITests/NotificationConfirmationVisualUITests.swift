@@ -89,22 +89,22 @@ final class NotificationConfirmationVisualUITests: XCTestCase {
     }
 
     @MainActor
-    func testNotificationCenterHasClearCloseControlAndPreservesBadgeAfterDismissal() {
+    func testNotificationCenterIsAPushedPageThatLeavesThroughTheNavigationBar() {
         let app = makeApp()
         app.launch()
         defer { app.terminate() }
 
         openNotificationCenter(in: app)
 
-        let closeButton = app.buttons["notifications.close"]
-        XCTAssertTrue(closeButton.waitForExistence(timeout: 10))
-        XCTAssertTrue(closeButton.isHittable)
-        XCTAssertGreaterThanOrEqual(closeButton.frame.width, 44)
-        XCTAssertGreaterThanOrEqual(closeButton.frame.height, 44)
-        XCTAssertEqual(closeButton.label, "알림 닫기")
+        let navigationBar = app.navigationBars["알림"]
+        XCTAssertTrue(navigationBar.waitForExistence(timeout: 10))
+
+        let backButton = navigationBar.buttons.firstMatch
+        XCTAssertTrue(backButton.waitForExistence(timeout: 10))
+        XCTAssertTrue(backButton.isHittable)
         capture("parity-ios-notification-center-close-control-after")
 
-        closeButton.tap()
+        backButton.tap()
 
         let notificationCenter = app.descendants(matching: .any)["screen.notifications"]
         XCTAssertTrue(notificationCenter.waitForNonExistence(timeout: 10))
@@ -112,7 +112,7 @@ final class NotificationConfirmationVisualUITests: XCTestCase {
     }
 
     @MainActor
-    func testNotificationCenterSupportsSwipeDownDismissalAndPreservesBadge() {
+    func testNotificationCenterIsNotDismissedBySwipingDownLikeASheet() {
         let app = makeApp()
         app.launch()
         defer { app.terminate() }
@@ -120,12 +120,12 @@ final class NotificationConfirmationVisualUITests: XCTestCase {
         openNotificationCenter(in: app)
 
         let notificationCenter = app.descendants(matching: .any)["screen.notifications"]
-        let dragStart = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.08))
-        let dragEnd = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.78))
+        let dragStart = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.2))
+        let dragEnd = app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.9))
         dragStart.press(forDuration: 0.1, thenDragTo: dragEnd)
 
-        XCTAssertTrue(notificationCenter.waitForNonExistence(timeout: 10))
-        assertHomeNotificationBadgeState(in: app)
+        XCTAssertTrue(notificationCenter.exists)
+        XCTAssertTrue(app.navigationBars["알림"].exists)
     }
 
     @MainActor

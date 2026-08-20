@@ -3,6 +3,7 @@ import SwiftUI
 struct SocialView: View {
     @StateObject private var viewModel: SocialViewModel
     @State private var isSearchPresented = false
+    @State private var isHelpPresented = false
     @State private var candidate: SearchCandidate?
     @State private var confirmation: SocialConfirmation?
     @State private var isPerformingConfirmation = false
@@ -74,6 +75,11 @@ struct SocialView: View {
                     uiTestingProbes
                 }
 #endif
+            }
+        }
+        .fullScreenCover(isPresented: $isHelpPresented) {
+            DPModalOverlay(onDismiss: { isHelpPresented = false }) { availableSize, dismiss in
+                SocialHelpModal(maximumHeight: availableSize.height, dismiss: dismiss)
             }
         }
         .fullScreenCover(isPresented: $isSearchPresented) {
@@ -177,7 +183,26 @@ struct SocialView: View {
         .accessibilityIdentifier("social.list")
     }
 
+    // Help, title and add no longer fit on one line on the narrowest phones, so the
+    // header wraps onto a second row instead of truncating the add button's label.
     private var pageHeader: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: DPSpacing.compact) {
+                pageTitle
+                Spacer(minLength: DPSpacing.small)
+                headerActions
+            }
+
+            VStack(alignment: .leading, spacing: DPSpacing.compact) {
+                pageTitle
+                headerActions
+                    .frame(maxWidth: .infinity, alignment: .trailing)
+            }
+        }
+        .frame(minHeight: DPSize.minimumTouchTarget)
+    }
+
+    private var pageTitle: some View {
         HStack(spacing: DPSpacing.compact) {
             Image(systemName: "person.badge.plus")
                 .font(.system(size: 18, weight: .medium))
@@ -194,8 +219,19 @@ struct SocialView: View {
                 .font(DPFont.bold(size: 18, relativeTo: .headline))
                 .foregroundStyle(DPColor.textPrimary)
                 .lineLimit(1)
+        }
+        .fixedSize(horizontal: true, vertical: false)
+    }
 
-            Spacer(minLength: DPSpacing.small)
+    private var headerActions: some View {
+        HStack(spacing: DPSpacing.compact) {
+            DPIconActionButton(
+                systemImage: "questionmark",
+                label: social("social.help.open")
+            ) {
+                withoutPresentationAnimation { isHelpPresented = true }
+            }
+            .accessibilityIdentifier("social.help")
 
             Button {
                 withoutPresentationAnimation { isSearchPresented = true }
@@ -224,7 +260,7 @@ struct SocialView: View {
             .accessibilityIdentifier("social.addFriend")
             .disabled(isMutationInFlight)
         }
-        .frame(minHeight: DPSize.minimumTouchTarget)
+        .fixedSize(horizontal: true, vertical: false)
     }
 
     private var requestsPanel: some View {

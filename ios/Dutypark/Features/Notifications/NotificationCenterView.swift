@@ -47,7 +47,6 @@ struct NotificationCenterView: View {
     var onOpen: (NotificationRoute) async -> Bool
 
     @Environment(\.scenePhase) private var scenePhase
-    @Environment(\.dismiss) private var dismiss
     @State private var deletionConfirmation: NotificationDeletionConfirmation?
     @State private var alertTitle: String?
     @State private var alertMessage: String?
@@ -80,28 +79,10 @@ struct NotificationCenterView: View {
         }
         .background(DPColor.backgroundSecondary)
         .accessibilityIdentifier("screen.notifications")
-        .toolbar(.hidden, for: .navigationBar)
-        .safeAreaInset(edge: .top, spacing: 0) {
-            HStack {
-                Spacer()
-                Button(action: dismiss.callAsFunction) {
-                    HStack(spacing: DPSpacing.extraSmall) {
-                        Image(systemName: "xmark")
-                        Text(notificationLocalized("notifications.common.close"))
-                    }
-                    .font(DPTypography.label)
-                    .frame(minWidth: DPSize.minimumTouchTarget, minHeight: DPSize.minimumTouchTarget)
-                    .contentShape(Rectangle())
-                }
-                .accessibilityLabel(notificationLocalized("notifications.common.close"))
-                .accessibilityIdentifier("notifications.close")
-            }
-            .padding(.horizontal, DPSpacing.medium)
-            .background(DPColor.backgroundSecondary)
-            .overlay(alignment: .bottom) {
-                Divider().overlay(DPColor.borderPrimary)
-            }
-        }
+        // Pushed like every other menu screen, so it leaves through the navigation bar
+        // instead of a sheet-only swipe down.
+        .navigationTitle(notificationLocalized("notifications.title"))
+        .navigationBarTitleDisplayMode(.inline)
         .refreshable { await store.refresh() }
         .task {
             store.startPolling()
@@ -290,10 +271,11 @@ struct NotificationCenterView: View {
         .shadow(color: .black.opacity(0.05), radius: 1, x: 0, y: 1)
     }
 
+    // Every route either switches tabs or replaces the stack this screen sits on, so
+    // opening a notification needs no dismissal of its own.
     private func open(_ notification: NotificationDTO) async {
-        if let route = await store.open(notification), await onOpen(route) {
-            dismiss()
-        }
+        guard let route = await store.open(notification) else { return }
+        _ = await onOpen(route)
     }
 
     private func markAllAsRead() async {
@@ -378,15 +360,12 @@ private struct NotificationRow: View {
             .buttonStyle(.plain)
             .accessibilityIdentifier("notifications.row.\(notification.id.uuidString).open")
 
-            Button(action: onDelete) {
-                Image(systemName: "trash")
-                    .font(.system(size: 16, weight: .regular))
-                    .foregroundStyle(DPColor.textMuted)
-                    .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
-                    .contentShape(Rectangle())
-                }
-            .buttonStyle(.plain)
-            .accessibilityLabel(notificationLocalized("notifications.common.delete"))
+            DPIconActionButton(
+                systemImage: "trash",
+                label: notificationLocalized("notifications.common.delete"),
+                tone: .danger,
+                action: onDelete
+            )
             .accessibilityIdentifier("notifications.row.\(notification.id.uuidString).delete")
         }
         .padding(.leading, DPSpacing.medium)

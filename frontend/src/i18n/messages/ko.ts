@@ -671,7 +671,7 @@ export default {
       none: '없음',
       todaySchedules: '오늘 일정',
       noSchedules: '오늘의 일정이 없습니다.',
-      friends: '친구관리',
+      friends: '친구',
       noFriends: '아직 친구가 없습니다.',
       familyMember: '가족 구성원',
       moreSchedules: '+{count}개 더보기',
@@ -700,6 +700,17 @@ export default {
     sections: {
       requests: '친구 요청',
       list: '친구 목록',
+    },
+    help: {
+      openAriaLabel: '친구 순서 도움말',
+      title: '친구 순서 변경하기',
+      pinTitle: '먼저 볼 친구를 고정하세요',
+      pinText: '친구 카드의 별 아이콘을 누르면 목록 맨 위에 고정됩니다. 고정한 친구만 순서를 바꿀 수 있어요.',
+      reorderTitle: '손잡이를 끌어서 옮기세요',
+      reorderText: '고정한 친구가 두 명 이상이면 카드 오른쪽 아래에 손잡이가 나타납니다. 손잡이를 끌어 원하는 자리에 놓으세요.',
+      saveTitle: '순서는 자동으로 저장됩니다',
+      saveText: '카드를 놓는 순간 바뀐 순서가 저장되어 다른 기기에서도 똑같이 보입니다.',
+      note: '고정하지 않은 친구는 기본 순서대로 고정한 친구 아래에 표시됩니다.',
     },
     actions: {
       addFriend: '친구 추가',

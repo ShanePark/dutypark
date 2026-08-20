@@ -699,6 +699,17 @@ export default {
       requests: 'Friend requests',
       list: 'Friends list',
     },
+    help: {
+      openAriaLabel: 'How the friend list is ordered',
+      title: 'Changing the friend order',
+      pinTitle: 'Pin the friends you check most',
+      pinText: 'Tap the star on a friend card to pin it to the top of the list. Only pinned friends can be reordered.',
+      reorderTitle: 'Drag the handle to move a friend',
+      reorderText: 'Once two or more friends are pinned, a handle appears at the bottom right of each card. Drag it to the position you want.',
+      saveTitle: 'The order saves itself',
+      saveText: 'Dropping a card saves the new order right away, so it looks the same on your other devices.',
+      note: 'Friends you have not pinned stay in the default order below the pinned ones.',
+    },
     actions: {
       addFriend: 'Add friend',
       approve: 'Approve',

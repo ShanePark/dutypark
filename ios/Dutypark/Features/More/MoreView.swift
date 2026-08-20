@@ -52,8 +52,10 @@ nonisolated enum MoreMenuItem: String, CaseIterable, Hashable, Sendable {
 
     var title: String {
         switch self {
+        // The menu entry names the screen it opens, which is friend management; the home
+        // dashboard's own panel keeps the shorter "friends" wording.
         case .friends:
-            RootChromeLocalization.home("home.friends")
+            RootChromeLocalization.social("social.title")
         case .notifications:
             RootChromeLocalization.notifications("notifications.title")
         case .admin:

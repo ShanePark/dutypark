@@ -7,7 +7,9 @@ struct RootChromeLocalizationTests {
 
     @Test
     func moreMenuAndNotificationChromeUseTheRequestedLocale() {
-        #expect(RootChromeLocalization.home("home.friends", locale: korean) == "친구관리")
+        // The dashboard panel names the people; the menu entry names the screen it opens.
+        #expect(RootChromeLocalization.home("home.friends", locale: korean) == "친구")
+        #expect(RootChromeLocalization.social("social.title", locale: korean) == "친구관리")
         #expect(RootChromeLocalization.localizable("root.menu.guide", locale: korean) == "이용 안내")
         #expect(RootChromeLocalization.localizable("root.menu.support", locale: korean) == "문의하기")
         #expect(RootChromeLocalization.localizable("root.menu.settings", locale: korean) == "설정")

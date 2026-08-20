@@ -58,7 +58,7 @@
     "home.friends" : {
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Friends" } },
-        "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구관리" } }
+        "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구" } }
       }
     },
     "home.loading" : {

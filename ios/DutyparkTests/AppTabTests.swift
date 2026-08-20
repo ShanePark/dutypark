@@ -73,8 +73,9 @@ struct AppTabTests {
         #expect(RootNavigationPolicy.moreDestination(for: .admin) == .admin)
         #expect(RootNavigationPolicy.moreDestination(for: .guide) == .guide)
         #expect(RootNavigationPolicy.moreDestination(for: .settings) == .settings)
-        // Presented as an overlay and a confirmation, so neither owns a pushed screen.
-        #expect(RootNavigationPolicy.moreDestination(for: .notifications) == nil)
+        // Notifications are a screen like every other menu entry, so they are pushed too.
+        #expect(RootNavigationPolicy.moreDestination(for: .notifications) == .notifications)
+        // Logout is a confirmation, so it owns no pushed screen.
         #expect(RootNavigationPolicy.moreDestination(for: .logout) == nil)
     }
 
