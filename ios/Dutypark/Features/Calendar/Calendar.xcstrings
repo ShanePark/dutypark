@@ -130,7 +130,16 @@
     "calendar.aiConsent.prompt.title" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Recognize a time with AI?" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "AI로 일정 시간을 인식할까요?" } } } },
     "calendar.aiConsent.prompt.message" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "To extract a time, the schedule date and text content are sent to an external AI processing service. Member and team identifiers are not sent. This is optional, can be withdrawn in Settings, and manual time entry is always available. If the consent request fails, the schedule is still saved without AI." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "시간 추출을 위해 일정 날짜와 내용 텍스트를 외부 AI 처리 서비스로 전송합니다. 회원·팀 식별자는 전송하지 않습니다. 선택 사항이며 설정에서 철회할 수 있고, 수동 시간 입력도 항상 가능합니다. 동의 처리에 실패해도 일정은 AI 없이 저장됩니다." } } } },
     "calendar.aiConsent.prompt.agree" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Agree and recognize" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "동의하고 자동 인식" } } } },
-    "calendar.aiConsent.prompt.decline" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Save without AI" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "동의하지 않고 그대로 저장" } } } }
+    "calendar.aiConsent.prompt.decline" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Save without AI" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "동의하지 않고 그대로 저장" } } } },
+    "datePicker.placeholder" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Select date" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "날짜 선택" } } } },
+    "datePicker.dialogLabel" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Date picker calendar" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "날짜 선택 달력" } } } },
+    "datePicker.goToToday" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Go to today" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "오늘로 이동" } } } },
+    "datePicker.previousMonth" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Previous month" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "이전 월" } } } },
+    "datePicker.nextMonth" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Next month" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "다음 월" } } } },
+    "datePicker.range.dialogLabel" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Date range picker calendar" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "기간 선택 달력" } } } },
+    "datePicker.range.hint" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Select an end date" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "종료 날짜를 선택하세요" } } } },
+    "datePicker.range.duration.one" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "%lld day" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%lld일" } } } },
+    "datePicker.range.duration.other" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "%lld days" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%lld일" } } } }
   },
   "version" : "1.0"
 }

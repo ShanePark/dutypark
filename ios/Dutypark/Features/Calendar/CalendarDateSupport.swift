@@ -98,18 +98,23 @@ nonisolated enum CalendarVisualLogic {
         locale.language.languageCode?.identifier == "ko" ? 28 : 88
     }
 
+    /// How far a form row's content sits from the form's own leading edge: the label column and
+    /// the gap after it. Most controls belong in that column, but one does not — the date
+    /// field's expanded calendar is a seven-column grid, and a label column charged against it
+    /// leaves cells too narrow to hit. It bleeds back across exactly this much instead.
+    ///
+    /// The gap is `DPSpacing.small`, inlined because that token is main-actor isolated in this
+    /// target and this table is not.
+    static func formRowContentInset(labelWidth: CGFloat) -> CGFloat {
+        labelWidth + 8
+    }
+
     /// A start or end row holds this height whether or not it carries a time: the time is
     /// optional, and a row sized to whichever control it happened to hold moved every field
     /// below it the moment a time was added. The value clears the tallest of the three — the
     /// compact time `DatePicker` (35) — as well as the date picker (33) and the button that
     /// adds a time (29).
     static let scheduleDateRowHeight: CGFloat = 36
-
-    /// A start date the user cannot change keeps the editable end date's exact shape — same
-    /// height, width behaviour, corner radius and font — because the pair was asked to look
-    /// identical. Only its *state* may differ, so it is drained of colour, dimmed to this
-    /// opacity and badged with a lock instead of being drawn as some other control.
-    static let lockedDateControlOpacity: Double = 0.6
 
     /// The "this month" callout only makes sense while another month is on screen. Year and
     /// month are compared together, so the same month of another year still offers the way back.
