@@ -62,9 +62,6 @@ struct NotificationCenterView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
-                pageHeader
-                    .padding(.bottom, DPSpacing.medium)
-
                 Text(notificationLocalized("notifications.list.retentionNotice"))
                     .font(DPTypography.caption)
                     .foregroundStyle(DPColor.textMuted)
@@ -83,6 +80,7 @@ struct NotificationCenterView: View {
         // instead of a sheet-only swipe down.
         .navigationTitle(notificationLocalized("notifications.title"))
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar { headerActions }
         .refreshable { await store.refresh() }
         .task {
             store.startPolling()
@@ -127,65 +125,36 @@ struct NotificationCenterView: View {
         }
     }
 
-    private var pageHeader: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: DPSpacing.compact) {
-                pageTitle
-                Spacer(minLength: 0)
-                headerActions
-            }
-
-            VStack(alignment: .leading, spacing: DPSpacing.compact) {
-                pageTitle
-                headerActions
-                    .frame(maxWidth: .infinity, alignment: .trailing)
-            }
-        }
-        .frame(minHeight: DPSize.minimumTouchTarget)
-    }
-
-    private var pageTitle: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "bell")
-                .font(.system(size: 18, weight: .regular))
-                .foregroundStyle(DPColor.textSecondary)
-                .frame(width: 36, height: 36)
-                .background(DPColor.backgroundTertiary, in: RoundedRectangle(cornerRadius: DPRadius.large))
-                .overlay {
-                    RoundedRectangle(cornerRadius: DPRadius.large)
-                        .stroke(DPColor.borderPrimary, lineWidth: DPChrome.borderWidth)
-                }
-
-            Text(notificationLocalized("notifications.title"))
-                .font(DPTypography.heading)
-                .foregroundStyle(DPColor.textPrimary)
-                .lineLimit(1)
-        }
-        .fixedSize(horizontal: true, vertical: false)
-    }
-
-    private var headerActions: some View {
-        HStack(spacing: DPSpacing.small) {
-            NotificationHeaderActionButton(
-                title: notificationLocalized("notifications.list.markAllAsReadShort"),
-                systemImage: "checkmark.circle",
-                accessibilityIdentifier: "notifications.markAllAsRead"
-            ) {
+    // The navigation bar this screen is pushed under already names it, so mark-all
+    // and delete-read hang there instead of under a header row that repeated the
+    // name back at the reader.
+    @ToolbarContentBuilder
+    private var headerActions: some ToolbarContent {
+        ToolbarItemGroup(placement: .topBarTrailing) {
+            Button {
                 Task { await markAllAsRead() }
+            } label: {
+                Image(systemName: "checkmark.circle")
+                    .frame(minWidth: DPSize.minimumTouchTarget, minHeight: DPSize.minimumTouchTarget)
+                    .contentShape(Rectangle())
             }
+            .accessibilityLabel(notificationLocalized("notifications.list.markAllAsReadShort"))
+            .accessibilityIdentifier("notifications.markAllAsRead")
 
-            NotificationHeaderActionButton(
-                title: notificationLocalized("notifications.list.deleteReadShort"),
-                systemImage: "trash",
-                isDestructive: true,
-                accessibilityIdentifier: "notifications.deleteRead"
-            ) {
+            Button {
                 if store.notifications.contains(where: \.isRead) {
                     deletionConfirmation = .allRead
                 } else {
                     showInformation("notifications.list.noReadNotifications")
                 }
+            } label: {
+                Image(systemName: "trash")
+                    .frame(minWidth: DPSize.minimumTouchTarget, minHeight: DPSize.minimumTouchTarget)
+                    .contentShape(Rectangle())
             }
+            .tint(DPColor.danger)
+            .accessibilityLabel(notificationLocalized("notifications.list.deleteReadShort"))
+            .accessibilityIdentifier("notifications.deleteRead")
         }
     }
 

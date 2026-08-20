@@ -62,7 +62,9 @@ struct PublicGuideView: View {
     private func guide(_ content: PublicGuideContent) -> some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: DPSpacing.medium) {
-                HStack(alignment: .top, spacing: DPSpacing.compact) {
+                // The navigation bar already carries the guide's title, so the intro
+                // only says what the guide is for.
+                HStack(alignment: .center, spacing: DPSpacing.compact) {
                     Image(systemName: "book.closed.fill")
                         .font(.system(size: 24, weight: .semibold))
                         .foregroundStyle(DPColor.textOnDark)
@@ -70,14 +72,10 @@ struct PublicGuideView: View {
                         .background(DPColor.accent, in: RoundedRectangle(cornerRadius: DPRadius.large))
                         .accessibilityHidden(true)
 
-                    VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
-                        Text(verbatim: content.title)
-                            .font(DPTypography.pageTitle)
-                            .foregroundStyle(DPColor.textPrimary)
-                        Text(verbatim: content.description)
-                            .font(DPTypography.supporting)
-                            .foregroundStyle(DPColor.textSecondary)
-                    }
+                    Text(verbatim: content.description)
+                        .font(DPTypography.supporting)
+                        .foregroundStyle(DPColor.textSecondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .accessibilityElement(children: .combine)
 

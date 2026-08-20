@@ -166,7 +166,9 @@ struct RootTabView: View {
                             memberCalendar(route)
                         }
                 }
-                primaryTab(.more, path: $morePath, showsNavigationBar: true, showsTabTitle: true) {
+                // The tab bar already names this tab, and the menu carries no toolbar of
+                // its own, so an empty navigation bar would only push the list down.
+                primaryTab(.more, path: $morePath) {
                     MoreView(
                         isAdmin: authenticatedMember?.isAdmin == true,
                         profile: moreProfile,
@@ -305,7 +307,6 @@ struct RootTabView: View {
                             onMutation: socialDidMutate,
                             onOpenCalendar: openMemberCalendar
                         )
-                        .navigationTitle("")
                     case .memberCalendar(let route):
                         memberCalendar(route)
                     }
@@ -317,11 +318,10 @@ struct RootTabView: View {
     private func primaryTab<Content: View>(
         _ tab: AppTab,
         showsNavigationBar: Bool = false,
-        showsTabTitle: Bool = false,
         @ViewBuilder content: () -> Content
     ) -> some View {
         NavigationStack {
-            tabRoot(tab, showsNavigationBar: showsNavigationBar, showsTabTitle: showsTabTitle) {
+            tabRoot(tab, showsNavigationBar: showsNavigationBar) {
                 content()
             }
         }
@@ -332,11 +332,10 @@ struct RootTabView: View {
         _ tab: AppTab,
         path: Binding<[Destination]>,
         showsNavigationBar: Bool = false,
-        showsTabTitle: Bool = false,
         @ViewBuilder content: () -> Content
     ) -> some View {
         NavigationStack(path: path) {
-            tabRoot(tab, showsNavigationBar: showsNavigationBar, showsTabTitle: showsTabTitle) {
+            tabRoot(tab, showsNavigationBar: showsNavigationBar) {
                 content()
             }
         }
@@ -346,11 +345,10 @@ struct RootTabView: View {
     private func tabRoot<Content: View>(
         _ tab: AppTab,
         showsNavigationBar: Bool,
-        showsTabTitle: Bool,
         @ViewBuilder content: () -> Content
     ) -> some View {
         content()
-            .navigationTitle(showsTabTitle ? tab.localizedTitle : "")
+            .navigationTitle("")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar(showsNavigationBar ? .visible : .hidden, for: .navigationBar)
             .accessibilityIdentifier("screen.\(tab.rawValue)")
@@ -467,8 +465,6 @@ struct RootTabView: View {
                 onMutation: socialDidMutate,
                 onOpenCalendar: openMemberCalendar
             )
-            .navigationTitle(MoreMenuItem.friends.title)
-            .navigationBarTitleDisplayMode(.inline)
         case .guide:
             PublicGuideView()
         case .support:

@@ -53,7 +53,9 @@ struct AdminRootView: View {
             }
         }
         .navigationTitle(AdminLocalization.string("admin.menu.title"))
-        .navigationBarTitleDisplayMode(.large)
+        // Inline like every other pushed screen: a large title spent a whole row on a
+        // word the navigation bar above it was already free to carry.
+        .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(item: $destination) { destination in
             switch destination {
             case .teams:
