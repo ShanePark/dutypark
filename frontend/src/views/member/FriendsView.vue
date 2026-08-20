@@ -17,8 +17,11 @@ import FriendRequestList from '@/components/member/FriendRequestList.vue'
 import FriendCard from '@/components/member/FriendCard.vue'
 import FriendActionMenu from '@/components/member/FriendActionMenu.vue'
 import BlockedMemberList from '@/components/member/BlockedMemberList.vue'
-import BaseModal from '@/components/common/BaseModal.vue'
-import { Users, UserPlus, HelpCircle, X, Star, GripVertical, CheckCircle2 } from 'lucide-vue-next'
+import HelpButton from '@/components/common/HelpButton.vue'
+import HelpModal from '@/components/common/HelpModal.vue'
+import HelpNote from '@/components/common/HelpNote.vue'
+import HelpSection from '@/components/common/HelpSection.vue'
+import { Users, UserPlus, Star, GripVertical, CheckCircle2 } from 'lucide-vue-next'
 
 const router = useRouter()
 const notificationStore = useNotificationStore()
@@ -515,13 +518,10 @@ onUnmounted(() => {
 <template>
   <div class="max-w-4xl mx-auto px-4 py-6">
     <PageHeader :title="t('header.menu.friends')" :icon="UserPlus" show-back back-fallback="/more">
-      <button
-        class="friends-help-btn"
-        :aria-label="t('friends.help.openAriaLabel')"
+      <HelpButton
+        :label="t('friends.help.openAriaLabel')"
         @click="isHelpModalOpen = true"
-      >
-        <HelpCircle />
-      </button>
+      />
       <button
         class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-dp-surface-strong to-dp-surface-strong-alt text-dp-text-on-dark rounded-xl hover:from-dp-surface-strong-alt hover:to-dp-surface-strong-hover transition-all shadow-lg font-medium cursor-pointer"
         @click="openSearchModal"
@@ -640,122 +640,32 @@ onUnmounted(() => {
       @change-page="goToPage"
     />
 
-    <BaseModal
+    <HelpModal
       :is-open="isHelpModalOpen"
-      size="lg"
-      height="default"
-      rounded
-      overlay-class="backdrop-blur-sm"
-      panel-class="border border-dp-border-primary"
-      :panel-style="{ backgroundColor: 'var(--dp-bg-card)' }"
+      :title="t('friends.help.title')"
       @close="isHelpModalOpen = false"
     >
-      <div class="modal-header">
-        <h2>{{ t('friends.help.title') }}</h2>
-        <button
-          class="p-2 rounded-full hover-close-btn cursor-pointer text-dp-text-muted"
-          :aria-label="t('common.actions.close')"
-          @click="isHelpModalOpen = false"
-        >
-          <X class="w-5 h-5" />
-        </button>
-      </div>
-      <div class="modal-body-form-lg">
-        <section class="help-section">
-          <h3 class="help-section-title">
-            <Star class="help-section-icon" />
-            {{ t('friends.help.pinTitle') }}
-          </h3>
-          <p class="help-section-text">{{ t('friends.help.pinText') }}</p>
-        </section>
+      <!-- The three blocks are one procedure, so they are numbered. -->
+      <HelpSection
+        :step="1"
+        :icon="Star"
+        :title="t('friends.help.pinTitle')"
+        :text="t('friends.help.pinText')"
+      />
+      <HelpSection
+        :step="2"
+        :icon="GripVertical"
+        :title="t('friends.help.reorderTitle')"
+        :text="t('friends.help.reorderText')"
+      />
+      <HelpSection
+        :step="3"
+        :icon="CheckCircle2"
+        :title="t('friends.help.saveTitle')"
+        :text="t('friends.help.saveText')"
+      />
 
-        <section class="help-section">
-          <h3 class="help-section-title">
-            <GripVertical class="help-section-icon" />
-            {{ t('friends.help.reorderTitle') }}
-          </h3>
-          <p class="help-section-text">{{ t('friends.help.reorderText') }}</p>
-        </section>
-
-        <section class="help-section">
-          <h3 class="help-section-title">
-            <CheckCircle2 class="help-section-icon" />
-            {{ t('friends.help.saveTitle') }}
-          </h3>
-          <p class="help-section-text">{{ t('friends.help.saveText') }}</p>
-        </section>
-
-        <section class="help-section">
-          <p class="help-section-note">{{ t('friends.help.note') }}</p>
-        </section>
-      </div>
-    </BaseModal>
+      <HelpNote :messages="[t('friends.help.note')]" />
+    </HelpModal>
   </div>
 </template>
-
-<style scoped>
-.friends-help-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.75rem;
-  min-height: 44px;
-  border-radius: 0.75rem;
-  border: 1px solid var(--dp-border-primary);
-  background-color: var(--dp-bg-card);
-  color: var(--dp-text-muted);
-  cursor: pointer;
-  transition: all 0.15s ease;
-  flex-shrink: 0;
-}
-
-.friends-help-btn:hover {
-  background-color: var(--dp-bg-hover);
-  color: var(--dp-text-secondary);
-}
-
-.friends-help-btn svg {
-  width: 1.25rem;
-  height: 1.25rem;
-}
-
-.help-section {
-  margin-bottom: 1.25rem;
-}
-
-.help-section:last-child {
-  margin-bottom: 0;
-}
-
-.help-section-title {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.9375rem;
-  font-weight: 600;
-  color: var(--dp-text-primary);
-  margin-bottom: 0.5rem;
-}
-
-.help-section-icon {
-  width: 1.125rem;
-  height: 1.125rem;
-  flex-shrink: 0;
-  color: var(--dp-text-secondary);
-}
-
-.help-section-text {
-  font-size: 0.875rem;
-  color: var(--dp-text-secondary);
-  line-height: 1.6;
-}
-
-.help-section-note {
-  font-size: 0.8125rem;
-  color: var(--dp-text-secondary);
-  line-height: 1.6;
-  padding: 0.75rem;
-  border-radius: 0.75rem;
-  background-color: var(--dp-bg-tertiary);
-}
-</style>

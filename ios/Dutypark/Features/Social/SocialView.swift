@@ -225,10 +225,7 @@ struct SocialView: View {
 
     private var headerActions: some View {
         HStack(spacing: DPSpacing.compact) {
-            DPIconActionButton(
-                systemImage: "questionmark",
-                label: social("social.help.open")
-            ) {
+            DPHelpButton(label: social("social.help.open")) {
                 withoutPresentationAnimation { isHelpPresented = true }
             }
             .accessibilityIdentifier("social.help")

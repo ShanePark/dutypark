@@ -197,14 +197,9 @@ struct TodoView: View {
         }
         .toolbar {
             ToolbarItemGroup(placement: .topBarTrailing) {
-                Button {
+                DPHelpButton(label: todoLocalized("todo.help.open")) {
                     withoutPresentationAnimation { showingHelp = true }
-                } label: {
-                    Image(systemName: "questionmark.circle")
-                        .frame(minWidth: DPSize.minimumTouchTarget, minHeight: DPSize.minimumTouchTarget)
-                        .contentShape(Rectangle())
                 }
-                .accessibilityLabel(todoLocalized("todo.help.open"))
                 .accessibilityIdentifier("todo.help")
 
                 Button {

@@ -61,77 +61,39 @@ struct TodoHelpModal: View {
     let maximumHeight: CGFloat
     let dismiss: () -> Void
 
-    private let sections: [(String, String, String, Color)] = [
+    private let sections: [(icon: String, titleKey: String, bodyKey: String, tint: Color)] = [
         ("square.grid.2x2", "todo.help.kanban.title", "todo.help.kanban.body", DPColor.accent),
         ("list.bullet", "todo.help.todo.title", "todo.help.todo.body", DPColor.accent),
         ("clock", "todo.help.progress.title", "todo.help.progress.body", DPColor.warning),
         ("checkmark.circle", "todo.help.done.title", "todo.help.done.body", DPColor.success)
     ]
 
+    private static let tipCount = 5
+
     var body: some View {
-        DPModalPanel(
-            maximumPanelHeight: min(maximumHeight * TodoModalLayout.maximumPanelHeightRatio, 720)
+        DPHelpModal(
+            title: todoLocalized("todo.help.title"),
+            closeLabel: todoLocalized("common.close"),
+            maximumHeight: maximumHeight,
+            dismiss: dismiss
         ) {
-            header
-        } content: {
-            helpBody
-        }
-    }
-
-    private var header: some View {
-        HStack {
-            Text(todoLocalized("todo.help.title"))
-                .font(DPTypography.heading)
-                .foregroundStyle(DPColor.textPrimary)
-            Spacer()
-            Button(action: dismiss) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 17, weight: .semibold))
-                    .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(todoLocalized("common.close"))
-        }
-        .padding(.leading, DPSpacing.medium)
-        .padding(.trailing, DPSpacing.small)
-        .padding(.vertical, DPSpacing.small)
-        .background(DPColor.backgroundTertiary)
-    }
-
-    private var helpBody: some View {
-        VStack(alignment: .leading, spacing: DPSpacing.large) {
+            // The blocks describe the board and its three columns rather than steps to
+            // follow in order, so they stay unnumbered.
             ForEach(Array(sections.enumerated()), id: \.offset) { _, section in
-                helpSection(icon: section.0, titleKey: section.1, bodyKey: section.2, color: section.3)
+                DPHelpSection(
+                    systemImage: section.icon,
+                    title: todoLocalized(section.titleKey),
+                    message: todoLocalized(section.bodyKey),
+                    tint: section.tint
+                )
             }
 
-            VStack(alignment: .leading, spacing: DPSpacing.small) {
-                Label(todoLocalized("todo.help.tips.title"), systemImage: "lightbulb")
-                    .font(DPTypography.bodyMedium)
-                    .foregroundStyle(DPColor.warning)
-                ForEach(1...5, id: \.self) { index in
-                    HStack(alignment: .firstTextBaseline, spacing: DPSpacing.small) {
-                        Text("•")
-                        Text(todoLocalized("todo.help.tip.\(index)"))
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                    .font(DPTypography.supporting)
-                    .foregroundStyle(DPColor.textSecondary)
-                }
-            }
-        }
-        .padding(DPSpacing.medium)
-    }
-
-    private func helpSection(icon: String, titleKey: String, bodyKey: String, color: Color) -> some View {
-        VStack(alignment: .leading, spacing: DPSpacing.small) {
-            Label(todoLocalized(titleKey), systemImage: icon)
-                .font(DPTypography.bodyMedium)
-                .foregroundStyle(color)
-            Text(todoLocalized(bodyKey))
-                .font(DPTypography.supporting)
-                .foregroundStyle(DPColor.textSecondary)
-                .fixedSize(horizontal: false, vertical: true)
+            DPHelpNote(
+                systemImage: "lightbulb",
+                title: todoLocalized("todo.help.tips.title"),
+                tint: DPColor.warning,
+                messages: (1...Self.tipCount).map { todoLocalized("todo.help.tip.\($0)") }
+            )
         }
     }
 }

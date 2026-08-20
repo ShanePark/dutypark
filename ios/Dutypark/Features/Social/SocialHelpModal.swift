@@ -21,83 +21,25 @@ struct SocialHelpModal: View {
     ]
 
     var body: some View {
-        DPModalPanel(maximumPanelHeight: min(maximumHeight * 0.9, 720)) {
-            header
-        } content: {
-            helpBody
-        }
-    }
-
-    private var header: some View {
-        HStack {
-            Text(social("social.help.title"))
-                .font(DPTypography.heading)
-                .foregroundStyle(DPColor.textPrimary)
-            Spacer()
-            Button(action: dismiss) {
-                Image(systemName: "xmark")
-                    .font(.system(size: 17, weight: .semibold))
-                    .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(social("social.action.close"))
-            .accessibilityIdentifier("social.help.close")
-        }
-        .padding(.leading, DPSpacing.medium)
-        .padding(.trailing, DPSpacing.small)
-        .padding(.vertical, DPSpacing.small)
-        .background(DPColor.backgroundTertiary)
-    }
-
-    private var helpBody: some View {
-        VStack(alignment: .leading, spacing: DPSpacing.large) {
+        DPHelpModal(
+            title: social("social.help.title"),
+            closeLabel: social("social.action.close"),
+            maximumHeight: maximumHeight,
+            closeAccessibilityIdentifier: "social.help.close",
+            dismiss: dismiss
+        ) {
+            // The three blocks are one procedure, so they are numbered.
             ForEach(Array(steps.enumerated()), id: \.offset) { index, step in
-                helpStep(number: index + 1, step: step)
+                DPHelpSection(
+                    systemImage: step.icon,
+                    title: social(step.titleKey),
+                    message: social(step.bodyKey),
+                    tint: step.tint,
+                    step: index + 1
+                )
             }
 
-            HStack(alignment: .firstTextBaseline, spacing: DPSpacing.small) {
-                Image(systemName: "info.circle")
-                    .font(.system(size: 14))
-                    .foregroundStyle(DPColor.textMuted)
-                Text(social("social.help.note"))
-                    .font(DPTypography.supporting)
-                    .foregroundStyle(DPColor.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .padding(DPSpacing.compact)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(DPColor.backgroundTertiary)
-            .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard, style: .continuous))
-        }
-        .padding(DPSpacing.medium)
-    }
-
-    private func helpStep(
-        number: Int,
-        step: (icon: String, titleKey: String, bodyKey: String, tint: Color)
-    ) -> some View {
-        HStack(alignment: .top, spacing: DPSpacing.compact) {
-            Text(verbatim: "\(number)")
-                .font(DPFont.bold(size: 13, relativeTo: .footnote))
-                .foregroundStyle(step.tint)
-                .frame(width: 26, height: 26)
-                .background(DPColor.backgroundTertiary, in: Circle())
-                .overlay {
-                    Circle().stroke(step.tint.opacity(0.5), lineWidth: DPChrome.borderWidth)
-                }
-                .accessibilityHidden(true)
-
-            VStack(alignment: .leading, spacing: DPSpacing.small) {
-                Label(social(step.titleKey), systemImage: step.icon)
-                    .font(DPTypography.bodyMedium)
-                    .foregroundStyle(step.tint)
-                Text(social(step.bodyKey))
-                    .font(DPTypography.supporting)
-                    .foregroundStyle(DPColor.textSecondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+            DPHelpNote(messages: [social("social.help.note")])
         }
     }
 }
