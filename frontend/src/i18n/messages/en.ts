@@ -330,6 +330,20 @@ export default {
       thisMonth: 'This month ({date})',
       goToThisMonth: 'This month',
     },
+    datePicker: {
+      placeholder: 'Select date',
+      dialogLabel: 'Date picker calendar',
+      today: 'Today',
+      goToToday: 'Go to today',
+      locked: 'Locked date',
+      rangeDialogLabel: 'Date range picker calendar',
+      rangeStart: 'Start',
+      rangeEnd: 'End',
+      rangeHint: 'Select an end date',
+      rangeDuration: '{count} day | {count} days',
+      confirm: 'Confirm',
+      cancel: 'Cancel',
+    },
     swal: {
       error: 'Error',
       warning: 'Warning',
@@ -1333,7 +1347,6 @@ export default {
       },
       fields: {
         title: 'Title',
-        startTime: 'Time',
         startDateTime: 'Start',
         endDateTime: 'End',
         description: 'Details',
@@ -1341,6 +1354,7 @@ export default {
         attachments: 'Attachments',
         friendTag: 'Friend tags',
       },
+      time: { add: 'Add time', remove: 'Remove time' },
       placeholders: {
         title: 'Enter a schedule title',
         description: 'Add details',

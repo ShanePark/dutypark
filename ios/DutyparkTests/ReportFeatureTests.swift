@@ -229,9 +229,6 @@ final class ReportFeatureTests: XCTestCase {
             "calendar.report.member",
             "calendar.block.member",
             "calendar.member.menu",
-            // With the overflow button gone the trailing slot is free to keep
-            // "this month" as a plain bar button again.
-            "if !isViewingCurrentMonth {",
             "calendar.block.confirm.message",
             "isWorking: blockModel.isBlocking",
             "memberBackAction?()",

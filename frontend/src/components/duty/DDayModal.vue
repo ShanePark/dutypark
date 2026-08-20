@@ -4,6 +4,7 @@ import { X, Plus, Minus, RotateCcw, Lock, Unlock } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import BaseModal from '@/components/common/BaseModal.vue'
 import CharacterCounter from '@/components/common/CharacterCounter.vue'
+import DatePickerField from '@/components/common/DatePickerField.vue'
 import { formatDateOnly, parseDateOnly } from '@/utils/date'
 
 interface DDay {
@@ -116,11 +117,10 @@ function handleClose() {
         <label class="form-label">
           {{ t('duty.ddayModal.fields.date') }} <span class="text-dp-danger">*</span>
         </label>
-        <input
+        <DatePickerField
           v-model="date"
-          type="date"
-          class="form-control"
-          :aria-invalid="isDateMissing"
+          :invalid="isDateMissing"
+          :aria-label="t('duty.ddayModal.fields.date')"
         />
       </div>
 

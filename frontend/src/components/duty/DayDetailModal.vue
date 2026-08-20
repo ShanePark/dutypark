@@ -15,6 +15,7 @@ import {
   isAiTimeParsingCandidate,
 } from '@/utils/aiScheduleConsentFlow'
 import { VISIBILITY_ICONS, VISIBILITY_COLORS, type CalendarVisibility } from '@/utils/visibility'
+import { effectiveEndDateTime, isRangeInvalid } from '@/utils/scheduleDateTime'
 
 const { showWarning, showError, confirm, choose } = useSwal()
 const aiConsentStore = useAiScheduleConsentStore()
@@ -202,8 +203,7 @@ const visibilityOptions = computed(() => [
 const isScheduleTitleMissing = computed(() => !newSchedule.value.content.trim())
 const isScheduleTimeRangeInvalid = computed(() => {
   const { startDateTime, endDateTime } = newSchedule.value
-  if (!startDateTime || !endDateTime) return false
-  return endDateTime < startDateTime
+  return isRangeInvalid(startDateTime, endDateTime)
 })
 const isScheduleSaveDisabled = computed(() =>
   isScheduleTitleMissing.value || isScheduleTimeRangeInvalid.value || isUploading.value || isResolvingAiConsent.value
@@ -225,17 +225,6 @@ watch(
       selectedTagSummaries.value = []
     } else {
       scheduleFormRef.value?.cleanup()
-    }
-  }
-)
-
-watch(
-  () => newSchedule.value.startDateTime,
-  (startDateTime) => {
-    if (!startDateTime) return
-    const endDateTime = newSchedule.value.endDateTime
-    if (endDateTime && endDateTime < startDateTime) {
-      newSchedule.value.endDateTime = startDateTime
     }
   }
 )
@@ -326,8 +315,10 @@ function buildScheduleData(): ScheduleSaveData {
   const startDateTime = newSchedule.value.startDateTime
     ? `${newSchedule.value.startDateTime}:00`
     : defaultDateTime
+  // An end with no time of its own on the start's own day collapses onto the start: the
+  // API rejects an end before the start, so that is how "no end time" has to be stored.
   const endDateTime = newSchedule.value.endDateTime
-    ? `${newSchedule.value.endDateTime}:00`
+    ? effectiveEndDateTime(startDateTime, `${newSchedule.value.endDateTime}:00`)
     : defaultDateTime
 
   const sessionId = scheduleFormRef.value?.getSessionId() || null

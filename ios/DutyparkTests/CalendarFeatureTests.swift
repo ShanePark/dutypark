@@ -37,6 +37,37 @@ final class CalendarFeatureTests: XCTestCase {
         )
     }
 
+    /// The callout is the only one-tap way back from a distant month, so it has to appear for
+    /// every month but the one the clock is in — the same month of another year included.
+    func testTheThisMonthCalloutAppearsForEveryMonthButTheCurrentOne() throws {
+        let today = try XCTUnwrap(CalendarDateSupport.date(from: DateOnly(rawValue: "2026-08-20")))
+
+        XCTAssertFalse(CalendarVisualLogic.showsThisMonthCallout(year: 2026, month: 8, today: today))
+        XCTAssertTrue(CalendarVisualLogic.showsThisMonthCallout(year: 2026, month: 7, today: today))
+        XCTAssertTrue(CalendarVisualLogic.showsThisMonthCallout(year: 2025, month: 8, today: today))
+    }
+
+    /// Moving the month header into the navigation bar left the return to today as a bare
+    /// arrow among the bar buttons, where nothing says what it does. It goes back to the
+    /// labelled speech bubble the web calendar draws, hung under the bar so its text fits.
+    func testTheThisMonthAffordanceIsALabelledCalloutBelowTheNavigationBar() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark/Features/Calendar/CalendarView.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+
+        XCTAssertTrue(source.contains("private var thisMonthCallout: some View"))
+        XCTAssertTrue(
+            source.contains("Text(CalendarLocalization.text(\"calendar.month.goToThisMonth\"))"),
+            "The callout carries its label, not just the return arrow"
+        )
+        XCTAssertFalse(
+            source.contains("thisMonthControl"),
+            "The bare trailing bar icon gives way to the callout"
+        )
+    }
+
     /// The strip above the calendar is gone: due-date bubbles inside the day cells are the
     /// only Todo surface the calendar keeps, and they open the detail modal in place.
     func testCalendarTodosLiveOnlyInDayCellsAndOpenTheDetailModal() throws {
@@ -347,7 +378,10 @@ final class CalendarFeatureTests: XCTestCase {
             "calendar.schedule.attachments",
             "calendar.schedule.content.placeholder",
             "calendar.schedule.description.placeholder",
-            "calendar.schedule.startTime",
+            "calendar.schedule.start",
+            "calendar.schedule.end",
+            "calendar.schedule.time.add",
+            "calendar.schedule.time.remove",
             "calendar.schedule.tags.search",
             "calendar.schedule.tags.selected",
             "calendar.schedule.tags.selectedOnly",
@@ -538,6 +572,479 @@ final class CalendarFeatureTests: XCTestCase {
             initialAttachmentIDs: [attachmentID], attachmentIDs: [attachmentID],
             hasAttachmentSession: true
         ))
+    }
+
+    func testScheduleEditorTreatsMidnightAsNoTime() {
+        let calendar = CalendarDateSupport.calendar
+        let midnight = Self.moment(2026, 8, 19, 0, 0)
+        let morning = Self.moment(2026, 8, 19, 9, 30)
+
+        XCTAssertNil(ScheduleEditorTimePolicy.time(of: midnight, calendar: calendar))
+        XCTAssertEqual(ScheduleEditorTimePolicy.time(of: morning, calendar: calendar), morning)
+    }
+
+    func testScheduleEditorCombinesADateWithItsOptionalTime() {
+        let calendar = CalendarDateSupport.calendar
+        let day = Self.moment(2026, 8, 19, 0, 0)
+        let timeOnAnotherDay = Self.moment(2026, 1, 2, 14, 45)
+
+        XCTAssertEqual(
+            ScheduleEditorTimePolicy.combine(date: day, time: nil, calendar: calendar),
+            Self.moment(2026, 8, 19, 0, 0)
+        )
+        XCTAssertEqual(
+            ScheduleEditorTimePolicy.combine(date: day, time: timeOnAnotherDay, calendar: calendar),
+            Self.moment(2026, 8, 19, 14, 45)
+        )
+    }
+
+    /// Splitting a stored value and folding it straight back must reproduce it exactly,
+    /// otherwise merely opening an untouched editor would look dirty and warn on close.
+    func testScheduleEditorRoundTripsAStoredValueUnchanged() {
+        let calendar = CalendarDateSupport.calendar
+        for stored in [Self.moment(2026, 8, 19, 0, 0), Self.moment(2026, 8, 19, 21, 5)] {
+            XCTAssertEqual(
+                ScheduleEditorTimePolicy.combine(
+                    date: stored,
+                    time: ScheduleEditorTimePolicy.time(of: stored, calendar: calendar),
+                    calendar: calendar
+                ),
+                stored
+            )
+        }
+    }
+
+    /// The model rejects an end before the start, so "start at 22:00, no end time" has to be
+    /// stored as an end equal to the start — otherwise the editor could not save it at all.
+    func testScheduleEditorCollapsesASameDayEndWithoutATimeOntoTheStart() {
+        let calendar = CalendarDateSupport.calendar
+        let start = Self.moment(2026, 8, 19, 22, 0)
+
+        XCTAssertEqual(
+            ScheduleEditorTimePolicy.effectiveEnd(
+                start: start,
+                endDate: Self.moment(2026, 8, 19, 0, 0),
+                endTime: nil,
+                calendar: calendar
+            ),
+            start
+        )
+        XCTAssertEqual(
+            ScheduleEditorTimePolicy.effectiveEnd(
+                start: start,
+                endDate: Self.moment(2026, 8, 21, 0, 0),
+                endTime: nil,
+                calendar: calendar
+            ),
+            Self.moment(2026, 8, 21, 0, 0)
+        )
+        XCTAssertEqual(
+            ScheduleEditorTimePolicy.effectiveEnd(
+                start: start,
+                endDate: Self.moment(2026, 8, 19, 0, 0),
+                endTime: Self.moment(2026, 1, 2, 23, 30),
+                calendar: calendar
+            ),
+            Self.moment(2026, 8, 19, 23, 30)
+        )
+        // An end date before the start stays invalid instead of being quietly bumped.
+        XCTAssertEqual(
+            ScheduleEditorTimePolicy.effectiveEnd(
+                start: start,
+                endDate: Self.moment(2026, 8, 18, 0, 0),
+                endTime: nil,
+                calendar: calendar
+            ),
+            Self.moment(2026, 8, 18, 0, 0)
+        )
+    }
+
+    /// A stored end that equals the start carries no end time of its own, so the editor
+    /// leaves that field empty and folds it back to the same value on save.
+    func testScheduleEditorReadsAnEndEqualToTheStartAsNoEndTime() {
+        let calendar = CalendarDateSupport.calendar
+        let start = Self.moment(2026, 8, 19, 9, 0)
+
+        XCTAssertNil(ScheduleEditorTimePolicy.endTime(of: start, start: start, calendar: calendar))
+        XCTAssertEqual(
+            ScheduleEditorTimePolicy.endTime(
+                of: Self.moment(2026, 8, 19, 18, 0),
+                start: start,
+                calendar: calendar
+            ),
+            Self.moment(2026, 8, 19, 18, 0)
+        )
+        XCTAssertEqual(
+            ScheduleEditorTimePolicy.effectiveEnd(
+                start: start,
+                endDate: start,
+                endTime: nil,
+                calendar: calendar
+            ),
+            start
+        )
+    }
+
+    func testScheduleEditorDefaultStartTimeTakesTheNextHourAndAvoidsMidnight() {
+        let calendar = CalendarDateSupport.calendar
+        let day = Self.moment(2026, 8, 19, 0, 0)
+
+        XCTAssertEqual(
+            ScheduleEditorTimePolicy.defaultStartTime(
+                on: day,
+                now: Self.moment(2026, 1, 2, 9, 15),
+                calendar: calendar
+            ),
+            Self.moment(2026, 8, 19, 10, 0)
+        )
+        // 23:xx would roll over to midnight, which the model reads back as "no time".
+        XCTAssertEqual(
+            ScheduleEditorTimePolicy.defaultStartTime(
+                on: day,
+                now: Self.moment(2026, 1, 2, 23, 40),
+                calendar: calendar
+            ),
+            Self.moment(2026, 8, 19, 9, 0)
+        )
+    }
+
+    func testScheduleEditorDefaultEndIsAlwaysAVisibleTimeAfterTheStart() {
+        let calendar = CalendarDateSupport.calendar
+        let sameDay = Self.moment(2026, 8, 19, 0, 0)
+
+        XCTAssertEqual(
+            ScheduleEditorTimePolicy.defaultEnd(
+                start: Self.moment(2026, 8, 19, 10, 0),
+                endDate: sameDay,
+                calendar: calendar
+            ),
+            Self.moment(2026, 8, 19, 11, 0)
+        )
+        // An hour later would cross midnight, which reads back as no time at all.
+        XCTAssertEqual(
+            ScheduleEditorTimePolicy.defaultEnd(
+                start: Self.moment(2026, 8, 19, 23, 0),
+                endDate: sameDay,
+                calendar: calendar
+            ),
+            Self.moment(2026, 8, 19, 23, 59)
+        )
+        XCTAssertEqual(
+            ScheduleEditorTimePolicy.defaultEnd(
+                start: Self.moment(2026, 8, 19, 23, 30),
+                endDate: Self.moment(2026, 8, 20, 0, 0),
+                calendar: calendar
+            ),
+            Self.moment(2026, 8, 20, 23, 59)
+        )
+        // Nothing later is left on the start's own day, so the end rolls over.
+        XCTAssertEqual(
+            ScheduleEditorTimePolicy.defaultEnd(
+                start: Self.moment(2026, 8, 31, 23, 59),
+                endDate: Self.moment(2026, 8, 31, 0, 0),
+                calendar: calendar
+            ),
+            Self.moment(2026, 9, 1, 0, 59)
+        )
+    }
+
+    /// An end time only makes sense once a start time exists, and a control the user cannot
+    /// use reads as broken — so the end offers no button at all until then.
+    /// Korean form labels are all two-character words ("공개 범위", "첨부파일"), so a two-character
+    /// column wraps the four-character ones into an even block and leaves the date and time
+    /// controls beside them the room a phone cannot spare. Latin labels have no such break point
+    /// inside a word, so they keep a column wide enough for the longest of them.
+    func testFormLabelColumnIsTwoCharactersWideInKorean() {
+        let korean = CalendarVisualLogic.formLabelWidth(locale: Locale(identifier: "ko_KR"))
+        let english = CalendarVisualLogic.formLabelWidth(locale: Locale(identifier: "en_US"))
+
+        XCTAssertEqual(korean, 28)
+        XCTAssertLessThan(korean, english)
+    }
+
+    func testScheduleEditorRowLabelsShareOneWidthToken() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark/Features/Calendar/CalendarView.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+
+        XCTAssertTrue(source.contains(".frame(width: rowLabelWidth, alignment: .leading)"))
+        XCTAssertFalse(
+            source.contains(".frame(width: 64, alignment: .leading)"),
+            "Every row label takes its width from the shared token"
+        )
+    }
+
+    /// A new schedule belongs to the day that opened the editor, so its start date is fixed —
+    /// but a stand-in drawn as text carried its own corner radius and width, so the two rows
+    /// read as two different controls. The fixed start date stays the very `DatePicker` the
+    /// other rows use, only barred from editing, the way the web keeps a read-only date input.
+    func testScheduleEditorStartAndEndDatesDrawTheSameControl() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark/Features/Calendar/CalendarView.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+
+        XCTAssertTrue(
+            source.contains(#"dateControl(.constant(startDate), fieldKey: "calendar.schedule.start")"#)
+        )
+        XCTAssertTrue(
+            source.contains(".allowsHitTesting(false)"),
+            "The fixed start date is closed to touches; disabling it would drop the picker's own chrome"
+        )
+        XCTAssertFalse(
+            source.contains("ScheduleEditorTimePolicy.dateText"),
+            "The fixed start date is the shared date control, not a text stand-in styled to match it"
+        )
+    }
+
+    /// The time is optional, so a row draws either a button that adds one or a time picker.
+    /// Sized to whichever it holds, the row grew the moment a time was added and shifted every
+    /// field below it, so both cells reserve the taller control's height in every state.
+    func testScheduleDateRowsReserveOneHeightWhetherOrNotATimeIsSet() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark/Features/Calendar/CalendarView.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+
+        XCTAssertEqual(CalendarVisualLogic.scheduleDateRowHeight, 36)
+        XCTAssertTrue(
+            source.contains(".frame(height: dateRowHeight)"),
+            "The date cell holds the reserved row height"
+        )
+        XCTAssertTrue(
+            source.contains(".frame(height: dateRowHeight, alignment: .leading)"),
+            "The time cell holds the reserved row height in both of its states"
+        )
+        XCTAssertFalse(
+            source.contains(".frame(minHeight: dateRowHeight"),
+            "A floor still lets a picker grow the row past it; the height is fixed"
+        )
+    }
+
+    func testScheduleEditorHidesTheEndTimeButtonUntilAStartTimeExists() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark/Features/Calendar/CalendarView.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+
+        XCTAssertTrue(source.contains("} else if canAdd {"))
+        XCTAssertTrue(source.contains("canAdd: startTime != nil"))
+        XCTAssertFalse(
+            source.contains(".disabled(!canAdd)"),
+            "The end time button is hidden, not shown disabled"
+        )
+    }
+
+    /// "종료 날짜 선정할 때, 시작 날짜보다 이전은 절대 눌리면 안되지." The end date control is
+    /// bounded at the start's own day, so an earlier date cannot be tapped at all. The bound is
+    /// the start of that day: the start's own date stays reachable whatever time it carries.
+    func testEndDateIsBoundedAtTheStartsOwnDay() {
+        let calendar = CalendarDateSupport.calendar
+
+        XCTAssertEqual(
+            ScheduleEditorTimePolicy.endDateLowerBound(
+                start: Self.moment(2026, 8, 19, 22, 30),
+                calendar: calendar
+            ),
+            Self.moment(2026, 8, 19, 0, 0)
+        )
+    }
+
+    /// No bound on the end control can stop the start from moving past it, which edit mode
+    /// allows — so the end follows the start instead of being left in a range only the save
+    /// button would reject.
+    func testEndFollowsTheStartWhenTheStartMovesPastIt() {
+        let calendar = CalendarDateSupport.calendar
+
+        // The start jumps beyond an end that carries no time: the end date rises with it.
+        var aligned = ScheduleEditorTimePolicy.endFollowingStart(
+            start: Self.moment(2026, 8, 21, 10, 0),
+            endDate: Self.moment(2026, 8, 19, 0, 0),
+            endTime: nil,
+            calendar: calendar
+        )
+        XCTAssertEqual(aligned.date, Self.moment(2026, 8, 21, 0, 0))
+        XCTAssertNil(aligned.time)
+
+        // An end already after the start is left exactly as the user set it.
+        aligned = ScheduleEditorTimePolicy.endFollowingStart(
+            start: Self.moment(2026, 8, 19, 10, 0),
+            endDate: Self.moment(2026, 8, 21, 0, 0),
+            endTime: nil,
+            calendar: calendar
+        )
+        XCTAssertEqual(aligned.date, Self.moment(2026, 8, 21, 0, 0))
+        XCTAssertNil(aligned.time)
+
+        // A same-day end time the start has overtaken is re-proposed by the rule that first
+        // offered one, so it stays a visible time after the start.
+        aligned = ScheduleEditorTimePolicy.endFollowingStart(
+            start: Self.moment(2026, 8, 19, 14, 0),
+            endDate: Self.moment(2026, 8, 19, 0, 0),
+            endTime: Self.moment(2026, 8, 19, 9, 0),
+            calendar: calendar
+        )
+        XCTAssertEqual(aligned.date, Self.moment(2026, 8, 19, 15, 0))
+        XCTAssertEqual(aligned.time, Self.moment(2026, 8, 19, 15, 0))
+
+        // An end time still after the start survives untouched.
+        aligned = ScheduleEditorTimePolicy.endFollowingStart(
+            start: Self.moment(2026, 8, 19, 14, 0),
+            endDate: Self.moment(2026, 8, 19, 0, 0),
+            endTime: Self.moment(2026, 8, 19, 18, 0),
+            calendar: calendar
+        )
+        XCTAssertEqual(aligned.time, Self.moment(2026, 8, 19, 18, 0))
+
+        // The end's clock is re-anchored onto the day the end is shown on, which is what lets
+        // the bound on the end time control weigh it against the right day.
+        aligned = ScheduleEditorTimePolicy.endFollowingStart(
+            start: Self.moment(2026, 8, 19, 9, 0),
+            endDate: Self.moment(2026, 8, 20, 0, 0),
+            endTime: Self.moment(2026, 8, 19, 18, 0),
+            calendar: calendar
+        )
+        XCTAssertEqual(aligned.time, Self.moment(2026, 8, 20, 18, 0))
+    }
+
+    /// Whatever the start is moved to, the end that follows it has to be a range the editor
+    /// can actually save — never an end before its own start.
+    func testEndFollowingTheStartIsNeverBeforeIt() {
+        let calendar = CalendarDateSupport.calendar
+        let endDate = Self.moment(2026, 8, 19, 0, 0)
+
+        for hour in 0..<24 {
+            for endHour in [0, 9, 23] {
+                let start = Self.moment(2026, 8, 19, hour, 30)
+                let endTime = endHour == 0 ? nil : Self.moment(2026, 8, 19, endHour, 0)
+                let aligned = ScheduleEditorTimePolicy.endFollowingStart(
+                    start: start,
+                    endDate: endDate,
+                    endTime: endTime,
+                    calendar: calendar
+                )
+                let end = ScheduleEditorTimePolicy.effectiveEnd(
+                    start: start,
+                    endDate: aligned.date,
+                    endTime: aligned.time,
+                    calendar: calendar
+                )
+                XCTAssertGreaterThanOrEqual(
+                    end,
+                    start,
+                    "start \(hour):30 with end hour \(endHour) left an end before its start"
+                )
+            }
+        }
+    }
+
+    /// The locked start date must not reach VoiceOver as an adjustable date picker, so the row
+    /// is published as one static reading: the date it shows plus why it will not move.
+    func testLockedStartDateIsReadAsAStaticDateWithItsReason() {
+        let day = Self.moment(2026, 8, 19, 0, 0)
+
+        let korean = ScheduleEditorTimePolicy.lockedStartAccessibilityValue(
+            date: day,
+            locale: Locale(identifier: "ko_KR"),
+            lockedDescription: "변경할 수 없음"
+        )
+        XCTAssertTrue(korean.hasSuffix(", 변경할 수 없음"))
+        XCTAssertTrue(korean.contains("2026"))
+        XCTAssertTrue(korean.contains("19"))
+
+        let english = ScheduleEditorTimePolicy.lockedStartAccessibilityValue(
+            date: day,
+            locale: Locale(identifier: "en_US"),
+            lockedDescription: "Can't be changed"
+        )
+        XCTAssertTrue(english.hasSuffix(", Can't be changed"))
+        XCTAssertTrue(english.contains("2026"))
+        XCTAssertTrue(english.contains("19"))
+    }
+
+    /// The end date is barred from going before the start by the control itself, not by a check
+    /// that only fires once the user has already picked an impossible date. Both rows run
+    /// through the one bounded initialiser so the bound costs them no difference in geometry.
+    func testEndDateControlIsBoundedRatherThanValidatedAfterwards() throws {
+        let source = try Self.calendarViewSource()
+
+        XCTAssertTrue(
+            source.contains("in: (lowerBound ?? .distantPast)..."),
+            "Every date and time picker takes the same bounded initialiser"
+        )
+        XCTAssertTrue(
+            source.contains("notEarlierThan: endDateLowerBound"),
+            "The end date is bounded at the start's own day"
+        )
+        XCTAssertTrue(
+            source.contains("notEarlierThan: start,"),
+            "The end time is bounded at the start instant"
+        )
+        XCTAssertTrue(
+            source.contains(".onChange(of: startDate) { _, _ in alignEndWithStart() }"),
+            "Edit mode lets the start move, so the end follows it"
+        )
+        XCTAssertTrue(source.contains(".onChange(of: startTime) { _, _ in alignEndWithStart() }"))
+        XCTAssertTrue(source.contains(".onChange(of: endDate) { _, _ in alignEndWithStart() }"))
+    }
+
+    /// The start and end controls were asked to look identical, so the locked start may differ
+    /// only in *state*: it keeps the shared control untouched — same height, width behaviour,
+    /// corner radius and font — and adds colour, opacity and a lock badge beside it.
+    func testLockedStartDiffersFromTheEndOnlyInState() throws {
+        let source = try Self.calendarViewSource()
+
+        XCTAssertLessThan(CalendarVisualLogic.lockedDateControlOpacity, 1)
+        XCTAssertTrue(source.contains(#"Image(systemName: "lock.fill")"#))
+        XCTAssertTrue(source.contains(".opacity(CalendarVisualLogic.lockedDateControlOpacity)"))
+        XCTAssertTrue(source.contains(".grayscale(1)"))
+        XCTAssertTrue(
+            source.contains(".accessibilityElement(children: .ignore)"),
+            "VoiceOver meets the locked row as one static element, not an adjustable picker"
+        )
+        XCTAssertTrue(source.contains("ScheduleEditorTimePolicy.lockedStartAccessibilityValue("))
+        XCTAssertFalse(
+            source.contains(".datePickerStyle(.wheel)"),
+            "The locked start is the same compact picker the end row draws"
+        )
+    }
+
+    private static func calendarViewSource() throws -> String {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark/Features/Calendar/CalendarView.swift")
+        return try String(contentsOf: sourceURL, encoding: .utf8)
+    }
+
+    /// The end chip only appears for an end that differs from the start and is not midnight,
+    /// so adding an end right after a start has to produce one at every hour of the day.
+    func testScheduleEditorAddingAnEndAfterAStartAlwaysYieldsAnEndTime() {
+        let calendar = CalendarDateSupport.calendar
+        let day = Self.moment(2026, 8, 19, 0, 0)
+
+        for hour in 0..<24 {
+            let now = Self.moment(2026, 8, 19, hour, 15)
+            let startTime = ScheduleEditorTimePolicy.defaultStartTime(on: day, now: now, calendar: calendar)
+            let start = ScheduleEditorTimePolicy.combine(date: day, time: startTime, calendar: calendar)
+            let end = ScheduleEditorTimePolicy.defaultEnd(start: start, endDate: day, calendar: calendar)
+
+            XCTAssertNotNil(
+                ScheduleEditorTimePolicy.endTime(of: end, start: start, calendar: calendar),
+                "no end time offered for a start added at \(hour):15"
+            )
+        }
+    }
+
+    private static func moment(_ year: Int, _ month: Int, _ day: Int, _ hour: Int, _ minute: Int) -> Date {
+        CalendarDateSupport.calendar.date(
+            from: DateComponents(year: year, month: month, day: day, hour: hour, minute: minute)
+        )!
     }
 
     func testDDayEditorDismissalDetectsChanges() {

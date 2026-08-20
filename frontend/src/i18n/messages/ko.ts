@@ -332,6 +332,20 @@ export default {
       thisMonth: '이번달 ({date})',
       goToThisMonth: '이번달',
     },
+    datePicker: {
+      placeholder: '날짜 선택',
+      dialogLabel: '날짜 선택 달력',
+      today: '오늘',
+      goToToday: '오늘로 이동',
+      locked: '변경할 수 없는 날짜',
+      rangeDialogLabel: '기간 선택 달력',
+      rangeStart: '시작',
+      rangeEnd: '종료',
+      rangeHint: '종료 날짜를 선택하세요',
+      rangeDuration: '{count}일',
+      confirm: '확인',
+      cancel: '취소',
+    },
     swal: {
       error: '오류',
       warning: '주의',
@@ -1268,7 +1282,6 @@ export default {
       },
       fields: {
         title: '제목',
-        startTime: '시간',
         startDateTime: '시작',
         endDateTime: '종료',
         description: '상세',
@@ -1276,6 +1289,7 @@ export default {
         attachments: '첨부파일',
         friendTag: '친구 태그',
       },
+      time: { add: '시간 추가', remove: '시간 삭제' },
       placeholders: {
         title: '일정 제목을 입력하세요',
         description: '일정 상세를 입력하세요',

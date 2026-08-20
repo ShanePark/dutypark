@@ -16,12 +16,14 @@ The source code, tests, and task-specific documentation are the source of truth 
 ### Dutypark Scope
 
 - Do not start development servers (`./gradlew bootRun`, `npm run dev`) unless the user explicitly asks.
+- The user usually keeps the dev servers running already: the web on `http://localhost:5173` and the backend on `http://localhost:8080`. Check those ports before concluding a server is unavailable, and use the running ones for verification instead of starting your own.
 - Unless explicitly platform-specific, complete service features and user-facing policy, UI, or UX changes across the backend, responsive web, and native iOS. If a client is deferred, report the gap and do not mark the work complete.
 
 ### Local Development
 
 - The local development database is defined in `dutypark_dev_db/docker-compose.yml`. Start it with `(cd dutypark_dev_db && docker compose up -d)`.
 - Local backend database connection settings are in `src/main/resources/application-dev.yml`.
+- Check for already-running servers with `lsof -nP -iTCP:5173 -iTCP:8080 -sTCP:LISTEN`. If a port is listening, that server is the user's: use it, and never restart or stop it.
 
 ### Flyway Migrations
 

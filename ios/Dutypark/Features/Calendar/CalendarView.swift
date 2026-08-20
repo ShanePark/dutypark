@@ -47,6 +47,19 @@ nonisolated enum CalendarReportPolicy {
     }
 }
 
+/// The tail of the "this month" callout: a slender pointer that climbs from the capsule to
+/// the month label sitting in the navigation bar above it.
+private struct CalloutTail: Shape {
+    func path(in rect: CGRect) -> Path {
+        Path { path in
+            path.move(to: CGPoint(x: rect.midX, y: rect.minY))
+            path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+            path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
+            path.closeSubpath()
+        }
+    }
+}
+
 struct CalendarView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var model: CalendarViewModel
@@ -76,6 +89,7 @@ struct CalendarView: View {
     @State private var leavesAfterBlock = false
     @State private var refreshesAfterReportedBlock = false
     @StateObject private var blockModel = MemberBlockViewModel()
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private let isPushedMemberCalendar: Bool
 
@@ -325,12 +339,7 @@ struct CalendarView: View {
                 .accessibilityIdentifier("calendar.month.controls")
         }
         DPDashboardHeaderToolbarItem(placement: .topBarTrailing) {
-            HStack(spacing: 0) {
-                // The trailing slot is a fixed width that holds exactly two controls, and
-                // widening it would push the centred month navigation off a 375pt screen.
-                if !isViewingCurrentMonth {
-                    thisMonthControl
-                }
+            Group {
                 if model.canSearchSchedules {
                     searchControl
                 }
@@ -433,9 +442,8 @@ struct CalendarView: View {
         .accessibilityElement(children: .combine)
     }
 
-    private var isViewingCurrentMonth: Bool {
-        let current = CalendarDateSupport.calendar.dateComponents([.year, .month], from: Date())
-        return current.year == model.year && current.month == model.month
+    private var showsThisMonthCallout: Bool {
+        CalendarVisualLogic.showsThisMonthCallout(year: model.year, month: model.month, today: Date())
     }
 
     private var monthLabel: some View {
@@ -466,16 +474,67 @@ struct CalendarView: View {
     // navigation in the principal slot stays centred on the screen.
     private static let barSideWidth: CGFloat = 88
 
-    // The former floating callout cannot survive inside the navigation bar, so the
-    // "go to this month" affordance follows the platform convention of a plain
-    // trailing bar button instead.
-    private var thisMonthControl: some View {
+    // The web calendar draws the tail near the leading edge of the bubble; these place that
+    // tail on the horizontal centre, so it points at the month label whatever the label reads.
+    private static let calloutCapsuleHeight: CGFloat = 20
+    private static let calloutTailInset: CGFloat = 8
+    private static let calloutTailWidth: CGFloat = 12
+    private static let calloutTailHeight: CGFloat = 6
+    // Overlap that keeps the tail and the capsule reading as one shape.
+    private static let calloutTailOverlap: CGFloat = 2
+    // The capsule is shorter than a touch target, so it takes what room the bar leaves
+    // around itself; a taller hit area would only reach past the bar, which passes on
+    // nothing it does not draw.
+    private static let calloutHitInsetX: CGFloat = 6
+    private static let calloutHitInsetY: CGFloat = 4
+    private static let calloutTailCenter: CGFloat =
+        calloutHitInsetX + calloutTailInset + calloutTailWidth / 2
+
+    // Every bar control is 44pt tall around a 16pt label, so the month button's bottom edge
+    // sits a good 12pt below the year-month text. The callout hangs from that edge, so it
+    // drops by the slack plus its own hit inset to tuck its tail right under the text.
+    private static let calloutDrop: CGFloat =
+        calloutHitInsetY + calloutTailHeight + calloutBarLabelSlack
+    private static let calloutBarLabelSlack: CGFloat = 4
+
+    // The month label lives in the navigation bar, so the callout is hung inside the bar too:
+    // content below it cannot be tapped through the bar, and a bubble that only looks right
+    // while being unreachable is worse than the bare arrow it replaced.
+    @ViewBuilder
+    private var thisMonthCalloutLayer: some View {
+        if showsThisMonthCallout {
+            thisMonthCallout
+                .transition(.offset(y: -4).combined(with: .opacity))
+        }
+    }
+
+    private var thisMonthCallout: some View {
         Button { Task { await model.goToToday() } } label: {
-            Image(systemName: "arrow.uturn.backward")
-                .font(.system(size: 16, weight: .semibold))
-                .foregroundStyle(DPColor.accent)
-                .frame(width: Self.barControlWidth, height: DPSize.minimumTouchTarget)
-                .contentShape(Rectangle())
+            HStack(spacing: 3) {
+                Image(systemName: "arrow.uturn.backward")
+                    .font(.system(size: 10, weight: .bold))
+                Text(CalendarLocalization.text("calendar.month.goToThisMonth"))
+                    .font(DPFont.bold(size: 11, relativeTo: .caption2))
+                    .lineLimit(1)
+            }
+            .foregroundStyle(DPColor.textOnDark)
+            .padding(.horizontal, 8)
+            .frame(height: Self.calloutCapsuleHeight)
+            .background(DPColor.accent, in: Capsule())
+            .background(alignment: .topLeading) {
+                CalloutTail()
+                    .fill(DPColor.accent)
+                    .frame(width: Self.calloutTailWidth, height: Self.calloutTailHeight)
+                    .offset(
+                        x: Self.calloutTailInset,
+                        y: Self.calloutTailOverlap - Self.calloutTailHeight
+                    )
+            }
+            .compositingGroup()
+            .shadow(color: DPColor.accent.opacity(0.35), radius: 4, x: 0, y: 2)
+            .padding(.horizontal, Self.calloutHitInsetX)
+            .padding(.vertical, Self.calloutHitInsetY)
+            .contentShape(Rectangle())
         }
         .accessibilityLabel(CalendarLocalization.text("calendar.month.goToThisMonth"))
     }
@@ -501,6 +560,12 @@ struct CalendarView: View {
             }
         }
         .foregroundStyle(DPColor.accent)
+        .overlay(alignment: .bottom) {
+            thisMonthCalloutLayer
+                .alignmentGuide(HorizontalAlignment.center) { _ in Self.calloutTailCenter }
+                .offset(y: Self.calloutDrop)
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: showsThisMonthCallout)
+        }
     }
 
     // The navigation bar has no room for the inline query field; tapping opens the
@@ -2314,8 +2379,12 @@ private struct ScheduleEditorView<Header: View>: View {
     @State private var content: String
     @State private var description: String
     @State private var visibility: Visibility
-    @State private var start: Date
-    @State private var end: Date
+    /// The schedule model stores "no time" as midnight, so the editor keeps each date and
+    /// its optional time apart and only recombines them for saving and dirty checks.
+    @State private var startDate: Date
+    @State private var startTime: Date?
+    @State private var endDate: Date
+    @State private var endTime: Date?
     @State private var tagIDs: Set<MemberID>
     @State private var isSaving = false
     @State private var isDiscarding = false
@@ -2325,6 +2394,12 @@ private struct ScheduleEditorView<Header: View>: View {
     @StateObject private var aiConsent = AIScheduleParsingConsentStore.shared
     @FocusState private var focusedField: Field?
     @State private var isTagSearchFocused = false
+    @ScaledMetric(relativeTo: .subheadline) private var rowLabelWidth: CGFloat =
+        CalendarVisualLogic.formLabelWidth(locale: CalendarLocalization.selectedLocale)
+    /// Reserved on every date and time cell so a row keeps its height in each of the time's
+    /// states. It follows the body text style because the pickers it has to fit do.
+    @ScaledMetric(relativeTo: .body) private var dateRowHeight: CGFloat =
+        CalendarVisualLogic.scheduleDateRowHeight
 
     private enum Field {
         case title
@@ -2370,14 +2445,40 @@ private struct ScheduleEditorView<Header: View>: View {
         _content = State(initialValue: initialContent)
         _description = State(initialValue: initialDescription)
         _visibility = State(initialValue: initialVisibility)
-        _start = State(initialValue: initialStart)
-        _end = State(initialValue: initialEnd)
+        _startDate = State(initialValue: initialStart)
+        _startTime = State(initialValue: ScheduleEditorTimePolicy.time(
+            of: initialStart,
+            calendar: CalendarDateSupport.calendar
+        ))
+        _endDate = State(initialValue: initialEnd)
+        _endTime = State(initialValue: ScheduleEditorTimePolicy.endTime(
+            of: initialEnd,
+            start: initialStart,
+            calendar: CalendarDateSupport.calendar
+        ))
         _tagIDs = State(initialValue: initialTagIDs)
         _attachmentModel = StateObject(wrappedValue: AttachmentPickerModel(
             contextType: .schedule,
             targetContextId: existing?.id.uuidString,
             existingAttachments: existing?.attachments ?? []
         ))
+    }
+
+    private var start: Date {
+        ScheduleEditorTimePolicy.combine(
+            date: startDate,
+            time: startTime,
+            calendar: CalendarDateSupport.calendar
+        )
+    }
+
+    private var end: Date {
+        ScheduleEditorTimePolicy.effectiveEnd(
+            start: start,
+            endDate: endDate,
+            endTime: endTime,
+            calendar: CalendarDateSupport.calendar
+        )
     }
 
     /// The tag search field belongs to `DPFriendTagSelector`, so it never appears in
@@ -2469,27 +2570,7 @@ private struct ScheduleEditorView<Header: View>: View {
             }
             .id(Field.title)
 
-            formRow(existing == nil ? "calendar.schedule.startTime" : "calendar.schedule.start") {
-                DatePicker(
-                    CalendarLocalization.text("calendar.schedule.start"),
-                    selection: $start,
-                    displayedComponents: existing == nil ? [.hourAndMinute] : [.date, .hourAndMinute]
-                )
-                .labelsHidden()
-                .environment(\.locale, CalendarLocalization.selectedLocale)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-
-            formRow("calendar.schedule.end") {
-                DatePicker(
-                    CalendarLocalization.text("calendar.schedule.end"),
-                    selection: $end,
-                    displayedComponents: [.date, .hourAndMinute]
-                )
-                .labelsHidden()
-                .environment(\.locale, CalendarLocalization.selectedLocale)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
+            scheduleDateSection
 
             formRow("calendar.schedule.description", alignment: .top) {
                 TextField(
@@ -2563,17 +2644,235 @@ private struct ScheduleEditorView<Header: View>: View {
         .padding(.vertical, 10)
     }
 
+    /// Start and end share one grid so their date and time controls line up in columns.
+    /// Laid out as independent rows they sized themselves separately, which left the two
+    /// lines ragged — the create-mode start row carried a lone time picker while the end
+    /// row carried a date picker and a time picker.
+    private var scheduleDateSection: some View {
+        Grid(
+            alignment: .leading,
+            horizontalSpacing: DPSpacing.small,
+            verticalSpacing: DPSpacing.small
+        ) {
+            GridRow {
+                rowLabel("calendar.schedule.start")
+                startDateControl
+                timeControl(
+                    time: $startTime,
+                    fieldKey: "calendar.schedule.start",
+                    canAdd: true,
+                    add: {
+                        startTime = ScheduleEditorTimePolicy.defaultStartTime(
+                            on: startDate,
+                            now: Date(),
+                            calendar: CalendarDateSupport.calendar
+                        )
+                    },
+                    remove: {
+                        startTime = nil
+                        // Midnight is how the model stores "no time", so an end time left
+                        // behind on its own would read back as a real 00:00 start.
+                        endTime = nil
+                    }
+                )
+            }
+            GridRow {
+                rowLabel("calendar.schedule.end")
+                dateControl(
+                    $endDate,
+                    fieldKey: "calendar.schedule.end",
+                    notEarlierThan: endDateLowerBound
+                )
+                timeControl(
+                    time: $endTime,
+                    fieldKey: "calendar.schedule.end",
+                    canAdd: startTime != nil,
+                    notEarlierThan: start,
+                    add: {
+                        let defaultEnd = ScheduleEditorTimePolicy.defaultEnd(
+                            start: start,
+                            endDate: endDate,
+                            calendar: CalendarDateSupport.calendar
+                        )
+                        // The default can have to move the end date itself, so it sets both.
+                        endDate = defaultEnd
+                        endTime = ScheduleEditorTimePolicy.time(
+                            of: defaultEnd,
+                            calendar: CalendarDateSupport.calendar
+                        )
+                    },
+                    remove: { endTime = nil }
+                )
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        // Bounding the end controls cannot stop the *start* from moving past the end, which
+        // edit mode allows, so the end follows the start whenever the start changes. The end
+        // date is watched too: its clock has to stay anchored to the day it is shown on for
+        // the bound on the end time to mean anything.
+        .onChange(of: startDate) { _, _ in alignEndWithStart() }
+        .onChange(of: startTime) { _, _ in alignEndWithStart() }
+        .onChange(of: endDate) { _, _ in alignEndWithStart() }
+    }
+
+    /// The end date can never precede the start's own day. The bound is the start of that day
+    /// so the start's date itself stays selectable whatever time the start carries.
+    private var endDateLowerBound: Date {
+        ScheduleEditorTimePolicy.endDateLowerBound(
+            start: start,
+            calendar: CalendarDateSupport.calendar
+        )
+    }
+
+    private func alignEndWithStart() {
+        let aligned = ScheduleEditorTimePolicy.endFollowingStart(
+            start: start,
+            endDate: endDate,
+            endTime: endTime,
+            calendar: CalendarDateSupport.calendar
+        )
+        if aligned.date != endDate { endDate = aligned.date }
+        if aligned.time != endTime { endTime = aligned.time }
+    }
+
+    @ViewBuilder
+    private var startDateControl: some View {
+        if existing == nil {
+            // A new schedule belongs to the day that opened the editor, so its start date is
+            // fixed. Drawn as text styled to imitate the picker it sits above, it kept its own
+            // corner radius and width; it stays the row's own control so the two rows share one
+            // shape and size by construction. It is closed to touches rather than disabled —
+            // the same choice the web's read-only date input makes — because a disabled compact
+            // picker drops the very chrome the two rows have to share.
+            //
+            // Sharing the shape left nothing at all to say it cannot be changed, so its *state*
+            // carries that instead: drained of the tint the editable end date carries, dimmed,
+            // and badged with a lock. The badge sits beside the control rather than over it, so
+            // the picker's own geometry is untouched. VoiceOver is handed one static reading of
+            // the row for the same reason a finger gets nothing: an untouchable control that
+            // still announces itself as an adjustable date picker is worse than no affordance.
+            HStack(spacing: DPSpacing.extraSmall) {
+                dateControl(.constant(startDate), fieldKey: "calendar.schedule.start")
+                    .allowsHitTesting(false)
+                    .grayscale(1)
+                    .opacity(CalendarVisualLogic.lockedDateControlOpacity)
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(DPColor.textMuted)
+            }
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(CalendarLocalization.text("calendar.schedule.start"))
+            .accessibilityValue(ScheduleEditorTimePolicy.lockedStartAccessibilityValue(
+                date: startDate,
+                locale: CalendarLocalization.selectedLocale,
+                lockedDescription: CalendarLocalization.text("calendar.schedule.start.locked")
+            ))
+        } else {
+            dateControl($startDate, fieldKey: "calendar.schedule.start")
+        }
+    }
+
+    /// The bound lives on the control, not on a check run once the user has already picked an
+    /// impossible date: a date below `lowerBound` cannot be tapped at all. Every row goes
+    /// through this one initialiser — an unbounded row passes `Date.distantPast` — so the
+    /// bounded and unbounded rows keep the very same geometry.
+    private func dateControl(
+        _ selection: Binding<Date>,
+        fieldKey: String,
+        notEarlierThan lowerBound: Date? = nil
+    ) -> some View {
+        DatePicker(
+            CalendarLocalization.text(fieldKey),
+            selection: selection,
+            in: (lowerBound ?? .distantPast)...,
+            displayedComponents: .date
+        )
+        .labelsHidden()
+        .datePickerStyle(.compact)
+        .environment(\.locale, CalendarLocalization.selectedLocale)
+        .fixedSize(horizontal: false, vertical: true)
+        .frame(height: dateRowHeight)
+    }
+
+    /// The time is optional: until it is added the field stays empty instead of showing a
+    /// midnight the user would feel obliged to correct.
+    @ViewBuilder
+    /// The end time depends on the start, so until a start time exists the end offers no button
+    /// at all: an always-visible control the user cannot use reads as something broken.
+    private func timeControl(
+        time: Binding<Date?>,
+        fieldKey: String,
+        canAdd: Bool,
+        notEarlierThan lowerBound: Date? = nil,
+        add: @escaping () -> Void,
+        remove: @escaping () -> Void
+    ) -> some View {
+        HStack(spacing: DPSpacing.extraSmall) {
+            if time.wrappedValue != nil {
+                // The bound is a whole instant, not a clock reading, so it only narrows the
+                // wheel while the end sits on the start's own day; a later end day is free.
+                // That holds because the end's clock is kept anchored to the end's own date.
+                DatePicker(
+                    CalendarLocalization.text(fieldKey),
+                    selection: Binding(
+                        get: { time.wrappedValue ?? startDate },
+                        set: { time.wrappedValue = $0 }
+                    ),
+                    in: (lowerBound ?? .distantPast)...,
+                    displayedComponents: .hourAndMinute
+                )
+                .labelsHidden()
+                .datePickerStyle(.compact)
+                .environment(\.locale, CalendarLocalization.selectedLocale)
+
+                Button(action: remove) {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 16))
+                        .foregroundStyle(DPColor.textMuted)
+                        .frame(width: 30, height: 30)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(CalendarLocalization.text("calendar.schedule.time.remove"))
+            } else if canAdd {
+                Button(action: add) {
+                    Label(
+                        CalendarLocalization.text("calendar.schedule.time.add"),
+                        systemImage: "clock"
+                    )
+                    .font(DPFont.light(size: 13, relativeTo: .subheadline))
+                    .foregroundStyle(DPColor.accent)
+                    .padding(.horizontal, DPSpacing.small)
+                    .padding(.vertical, 7)
+                    .background(DPColor.accentSoft)
+                    .clipShape(RoundedRectangle(cornerRadius: DPRadius.compact))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        // The button that adds a time is shorter than the picker that replaces it, so a row
+        // sized to whichever it holds moved every field below it the moment a time was added.
+        // The height is fixed rather than a floor because a picker handed a taller proposal
+        // grows into it, and `fixedSize` keeps each control at its own size within that height.
+        .fixedSize(horizontal: false, vertical: true)
+        .frame(height: dateRowHeight, alignment: .leading)
+    }
+
+    private func rowLabel(_ key: String, topPadding: CGFloat = 0) -> some View {
+        Text(CalendarLocalization.text(key))
+            .font(DPFont.light(size: 13, relativeTo: .subheadline))
+            .foregroundStyle(DPColor.textSecondary)
+            .frame(width: rowLabelWidth, alignment: .leading)
+            .padding(.top, topPadding)
+    }
+
     private func formRow<Content: View>(
         _ key: String,
         alignment: VerticalAlignment = .center,
         @ViewBuilder content: () -> Content
     ) -> some View {
         HStack(alignment: alignment, spacing: DPSpacing.small) {
-            Text(CalendarLocalization.text(key))
-                .font(DPFont.light(size: 13, relativeTo: .subheadline))
-                .foregroundStyle(DPColor.textSecondary)
-                .frame(width: 64, alignment: .leading)
-                .padding(.top, alignment == .top ? 10 : 0)
+            rowLabel(key, topPadding: alignment == .top ? 10 : 0)
             content()
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -2777,6 +3076,144 @@ nonisolated enum ScheduleFriendTagSelectorPolicy {
     ) -> Bool {
         isMyCalendar
             && (currentFriendCount > 0 || !selectedIDs.isEmpty || preservedValidIDCount > 0)
+    }
+}
+
+/// The schedule model has no "has a time" flag: midnight means the schedule carries no
+/// time at all, which is why the editor edits a date and an optional time separately and
+/// only folds them back together on save.
+nonisolated enum ScheduleEditorTimePolicy {
+    /// `nil` for a stored value that means "no time", so the editor leaves the field empty
+    /// instead of offering a midnight the user feels obliged to change.
+    static func time(of date: Date, calendar: Foundation.Calendar) -> Date? {
+        let parts = calendar.dateComponents([.hour, .minute, .second], from: date)
+        let isMidnight = (parts.hour ?? 0) == 0
+            && (parts.minute ?? 0) == 0
+            && (parts.second ?? 0) == 0
+        return isMidnight ? nil : date
+    }
+
+    /// Takes the calendar day from `date` and the clock reading from `time`; a missing time
+    /// folds back to midnight, which is exactly how the model records "no time".
+    static func combine(date: Date, time: Date?, calendar: Foundation.Calendar) -> Date {
+        var parts = calendar.dateComponents([.year, .month, .day], from: date)
+        let timeParts = time.map { calendar.dateComponents([.hour, .minute, .second], from: $0) }
+        parts.hour = timeParts?.hour ?? 0
+        parts.minute = timeParts?.minute ?? 0
+        parts.second = timeParts?.second ?? 0
+        return calendar.date(from: parts) ?? date
+    }
+
+    /// An end equal to the start is how the model stores a schedule that has a start time
+    /// but no end time — it rejects an end before the start — so it reads back as no end time.
+    static func endTime(of end: Date, start: Date, calendar: Foundation.Calendar) -> Date? {
+        end == start ? nil : time(of: end, calendar: calendar)
+    }
+
+    /// Without an end time the end means that whole day, but the model rejects an end before
+    /// the start, so a same-day end collapses onto the start — which is exactly how the day
+    /// list already renders it, as a single time.
+    static func effectiveEnd(
+        start: Date,
+        endDate: Date,
+        endTime: Date?,
+        calendar: Foundation.Calendar
+    ) -> Date {
+        let composed = combine(date: endDate, time: endTime, calendar: calendar)
+        guard endTime == nil, calendar.isDate(endDate, inSameDayAs: start) else { return composed }
+        return start
+    }
+
+    /// The next full hour, so adding a time lands on something usable — and never on
+    /// midnight, which the model would read back as no time at all.
+    static func defaultStartTime(on date: Date, now: Date, calendar: Foundation.Calendar) -> Date {
+        let nextHour = calendar.component(.hour, from: now) + 1
+        var parts = calendar.dateComponents([.year, .month, .day], from: date)
+        parts.hour = nextHour > 23 ? 9 : nextHour
+        parts.minute = 0
+        parts.second = 0
+        return calendar.date(from: parts) ?? date
+    }
+
+    /// An hour after the start. An added end has to stay visible, so it can be neither midnight
+    /// — which reads back as no time at all — nor equal to the start, which reads back as no end
+    /// time: it falls back to the last minute of the chosen end date, and rolls a day forward
+    /// only when the start already sits on that minute. The end date can move, so this answers
+    /// with the whole end rather than a clock reading.
+    static func defaultEnd(start: Date, endDate: Date, calendar: Foundation.Calendar) -> Date {
+        let parts = calendar.dateComponents([.hour, .minute], from: start)
+        let hour = parts.hour ?? 0
+        let minute = parts.minute ?? 0
+        if hour + 1 <= 23 {
+            return at(hour: hour + 1, minute: minute, on: endDate, calendar: calendar)
+        }
+        let lastMinute = at(hour: 23, minute: 59, on: endDate, calendar: calendar)
+        if lastMinute > start { return lastMinute }
+        let nextDay = calendar.date(byAdding: .day, value: 1, to: endDate) ?? endDate
+        return at(hour: 0, minute: minute, on: nextDay, calendar: calendar)
+    }
+
+    /// The end may never precede the start, so the end date control is bounded here rather
+    /// than corrected after the fact. The bound is the start of the start's day: the start's
+    /// own date has to stay selectable whatever time of it the start carries.
+    static func endDateLowerBound(start: Date, calendar: Foundation.Calendar) -> Date {
+        calendar.startOfDay(for: start)
+    }
+
+    /// A bound on the end control cannot stop the start from moving past it, which edit mode
+    /// allows — so the end follows the start instead of being left in a range the editor would
+    /// only reject on save. The date rises to the start's day, and an end time that no longer
+    /// falls after the start is re-proposed by the same rule that first offered one. An end
+    /// without a time needs no bump: that end means the whole day, and `effectiveEnd` already
+    /// folds a same-day one onto the start.
+    static func endFollowingStart(
+        start: Date,
+        endDate: Date,
+        endTime: Date?,
+        calendar: Foundation.Calendar
+    ) -> (date: Date, time: Date?) {
+        let floor = endDateLowerBound(start: start, calendar: calendar)
+        let date = calendar.startOfDay(for: endDate) < floor ? floor : endDate
+        guard let endTime else { return (date, nil) }
+        // The clock is kept on the end's own day so the bound on the end time control weighs
+        // it against the day the user is actually editing.
+        let anchored = combine(date: date, time: endTime, calendar: calendar)
+        if anchored > start { return (date, anchored) }
+        let proposed = defaultEnd(start: start, endDate: date, calendar: calendar)
+        return (proposed, time(of: proposed, calendar: calendar))
+    }
+
+    /// VoiceOver must not meet a start date that cannot be changed as an adjustable date
+    /// picker, so the row is published as one static reading: the date it shows, followed by
+    /// the reason it will not move.
+    static func lockedStartAccessibilityValue(
+        date: Date,
+        locale: Locale,
+        lockedDescription: String
+    ) -> String {
+        var calendar = Foundation.Calendar(identifier: .gregorian)
+        calendar.locale = locale
+        calendar.timeZone = .current
+        let formatter = DateFormatter()
+        formatter.calendar = calendar
+        formatter.locale = locale
+        formatter.timeZone = .current
+        formatter.dateStyle = .long
+        formatter.timeStyle = .none
+        return "\(formatter.string(from: date)), \(lockedDescription)"
+    }
+
+    private static func at(
+        hour: Int,
+        minute: Int,
+        on date: Date,
+        calendar: Foundation.Calendar
+    ) -> Date {
+        var parts = calendar.dateComponents([.year, .month, .day], from: date)
+        parts.hour = hour
+        parts.minute = minute
+        parts.second = 0
+        return calendar.date(from: parts) ?? date
     }
 }
 

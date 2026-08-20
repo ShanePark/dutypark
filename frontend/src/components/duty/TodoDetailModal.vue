@@ -15,6 +15,7 @@ import BaseModal from '@/components/common/BaseModal.vue'
 import FileUploader from '@/components/common/FileUploader.vue'
 import AttachmentGrid from '@/components/common/AttachmentGrid.vue'
 import CharacterCounter from '@/components/common/CharacterCounter.vue'
+import DatePickerField from '@/components/common/DatePickerField.vue'
 import FriendTagSelector from '@/components/common/FriendTagSelector.vue'
 import MemberTagChips from '@/components/common/MemberTagChips.vue'
 import CopyTextButton from '@/components/common/CopyTextButton.vue'
@@ -391,10 +392,9 @@ function onUploadError(message: string) {
               <Calendar class="w-4 h-4 inline-block mr-1 -mt-0.5" />
               {{ t('duty.todo.fields.dueDate') }}
             </label>
-            <input
+            <DatePickerField
               v-model="editDueDate"
-              type="date"
-              class="form-control"
+              :aria-label="t('duty.todo.fields.dueDate')"
             />
           </div>
 
