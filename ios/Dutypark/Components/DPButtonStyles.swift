@@ -41,6 +41,19 @@ nonisolated enum DPButtonFeedback {
     }
 }
 
+/// Feedback for friend-tag selection mutations. The selector owns this at the
+/// binding boundary so cards, chips, and clear-all cannot drift apart.
+nonisolated enum DPFriendTagFeedback {
+    static func feedback(
+        isEnabled: Bool,
+        previous: Set<MemberID>,
+        current: Set<MemberID>
+    ) -> SensoryFeedback? {
+        guard isEnabled, previous != current else { return nil }
+        return current.count > previous.count ? .selection : DPButtonFeedback.routineImpact
+    }
+}
+
 private struct DPSolidButtonStyle: ButtonStyle {
     let role: DPButtonRole
     let background: Color

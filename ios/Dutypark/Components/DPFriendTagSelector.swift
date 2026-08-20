@@ -157,6 +157,13 @@ struct DPFriendTagSelector: View {
         .onChange(of: isSearchFocused) { _, focused in
             isSearchFocusedBinding?.wrappedValue = focused
         }
+        .sensoryFeedback(trigger: selection) { previous, current in
+            DPFriendTagFeedback.feedback(
+                isEnabled: !disabled,
+                previous: previous,
+                current: current
+            )
+        }
     }
 
     private var collapsedButton: some View {
