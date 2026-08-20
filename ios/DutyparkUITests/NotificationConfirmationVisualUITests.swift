@@ -136,6 +136,13 @@ final class NotificationConfirmationVisualUITests: XCTestCase {
 
         openNotificationCenter(in: app)
 
+        // The delete button rides behind the row now, so the swipe is part of the flow.
+        let row = app.descendants(matching: .any)[
+            "notifications.row.\(unreadNotificationID).open"
+        ]
+        XCTAssertTrue(row.waitForExistence(timeout: 10))
+        row.swipeLeft()
+
         let rowDeleteButton = app.buttons[
             "notifications.row.\(unreadNotificationID).delete"
         ]
