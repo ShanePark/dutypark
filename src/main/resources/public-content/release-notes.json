@@ -40,6 +40,16 @@
         }
       },
       "entries": {
+        "pr-407": {
+          "title": "캘린더·친구 태그와 신고·문의 경험 개선",
+          "summary": "웹과 iPhone 앱에서 일정 날짜 선택과 친구 태그, 신고·문의 내역, 알림과 탐색 동작을 함께 개선하고 안전한 콘텐츠 정책을 강화했습니다.",
+          "changes": [
+            "일정의 시작·종료 날짜를 공용 달력에서 고르고 월을 스와이프해 이동하며, 친구 태그를 열면 선택 영역이 먼저 보이도록 개선했습니다.",
+            "친구 카드와 태그 선택 화면을 웹과 iPhone에서 일관된 세로형 카드로 정리하고 선택 피드백과 모바일 배치를 다듬었습니다.",
+            "신고 내역을 확인하고 처리 전 신고를 취소할 수 있으며, 문의·신고 알림과 개인정보 보호 처리를 강화했습니다.",
+            "앱 탐색, 도움말, 알림 액션, 다국어 문구와 콘텐츠 필터 정책을 웹과 iPhone 전반에서 일관되게 정리했습니다."
+          ]
+        },
         "pr-406": {
           "title": "신고·차단과 앱 내 문의 답변 추가",
           "summary": "웹과 iPhone 앱에서 부적절한 사용자·일정·Todo를 신고하거나 회원을 차단하고, 문의 내역과 관리자 답변을 앱 안에서 확인할 수 있습니다.",
@@ -2221,6 +2231,16 @@
         }
       },
       "entries": {
+        "pr-407": {
+          "title": "Improved calendars, friend tags, reports, and inquiries",
+          "summary": "Improves schedule date selection, friend tagging, report and inquiry history, notifications, and navigation across the web and iPhone app while strengthening content-safety policies.",
+          "changes": [
+            "Pick schedule start and end dates from a shared calendar, swipe between months, and reveal the reserved friend-selection area as soon as tagging opens.",
+            "Use consistent portrait cards for friends and tags across web and iPhone, with clearer selection feedback and improved mobile layouts.",
+            "Review report history, withdraw reports before processing, and benefit from stronger privacy handling for inquiry and report notifications.",
+            "Use more consistent navigation, help controls, notification actions, localized copy, and content-filter policies across web and iPhone."
+          ]
+        },
         "pr-406": {
           "title": "Reporting, blocking, and in-app inquiry answers",
           "summary": "Report inappropriate members, schedules, and todos or block members from the web and iPhone app, then review inquiry history and admin answers in the app.",
@@ -4365,6 +4385,27 @@
     }
   },
   "items": [
+    {
+      "id": "pr-407",
+      "version": "2026.08.21",
+      "date": "2026-08-21",
+      "pr": 407,
+      "url": "https://github.com/ShanePark/dutypark/pull/407",
+      "category": "improvement",
+      "areas": [
+        "auth",
+        "calendar",
+        "dashboard",
+        "friends",
+        "localization",
+        "notifications",
+        "policy",
+        "schedule",
+        "security",
+        "todo",
+        "ui"
+      ]
+    },
     {
       "id": "pr-406",
       "version": "2026.08.19",
