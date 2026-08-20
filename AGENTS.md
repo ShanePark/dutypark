@@ -53,7 +53,8 @@ The source code, tests, and task-specific documentation are the source of truth 
 
 - Backend: run focused Gradle tests first, then expand by risk.
 - Web: run `npm run type-check` and `npm run build`, plus affected tests.
-- iOS: when affected, run the build and tests documented in `ios/README.md`.
+- iOS: when affected, run the build and `DutyparkTests` unit tests documented in `ios/README.md` by default.
+- Do not run `DutyparkUITests` as part of default verification, including UI tests related to the changed area. Run specific or full iOS UI tests only when the user explicitly requests them; full iOS UI test runs are strictly opt-in.
 - After completing an iOS app change, install the latest successfully verified build on the simulator named exactly `iPhone 13 mini` so the user can inspect it immediately. This does not authorize starting a development server. If that simulator is unavailable or installation is blocked by CoreSimulator or another error, report the exact reason.
 
 ## Git
