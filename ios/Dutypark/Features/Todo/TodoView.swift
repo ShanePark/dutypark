@@ -16,6 +16,7 @@ enum TodoBoardLayout {
     static let dragLongPressMaximumDistance: CGFloat = DPDragActivation.maximumPressMovement
     static let dragCollisionHysteresis: CGFloat = 2
     static let dragPushAnimationDuration = 0.1
+    static let dragAutoScrollDuration: TimeInterval = 0.3
 
     static func mobileColumnWidth(in containerWidth: CGFloat) -> CGFloat {
         containerWidth * mobileColumnWidthRatio
@@ -143,8 +144,7 @@ struct TodoView: View {
     @State private var dragPreviewSize: CGSize?
     @State private var dragGrabOffset: CGSize?
     @State private var pendingDropPlacement: TodoDragPlacement?
-    @State private var dragReferenceCardTargets: [TodoCardDropTarget] = []
-    @State private var dragReferenceColumnTargets: [TodoColumnDropTarget] = []
+    @State private var lastAutoScrolledStatus: TodoStatus?
     @State private var cardDropTargets: [TodoCardDropTarget] = []
     @State private var columnDropTargets: [TodoColumnDropTarget] = []
     @State private var statusDropTargets: [TodoStatusDropTarget] = []
@@ -315,14 +315,37 @@ struct TodoView: View {
         }
     }
 
-    private func updateInteractiveDrag(todo: TodoDTO, location: CGPoint) {
+    private func updateInteractiveDrag(
+        todo: TodoDTO,
+        location: CGPoint,
+        viewport: CGRect,
+        scrollTo: (TodoStatus) -> Void
+    ) {
         guard !model.isSaving else { return }
+
+        if let status = TodoDragAutoScrollPolicy.nextStatus(
+            location: location,
+            viewport: viewport,
+            visibleStatus: visibleStatus ?? model.selectedStatus,
+            lastAutoScrolledStatus: lastAutoScrolledStatus
+        ) {
+            lastAutoScrolledStatus = status
+            // Keep the selector and scroll-position binding in lockstep before
+            // the animated scroll has delivered its next preference frame.
+            model.selectedStatus = status
+            visibleStatus = status
+            scrollTo(status)
+        } else if !TodoDragAutoScrollPolicy.isInsideActivationEdge(
+            location: location,
+            viewport: viewport
+        ) {
+            lastAutoScrolledStatus = nil
+        }
+
         var previewSize = dragPreviewSize
         var grabOffset = dragGrabOffset
         if draggedTodoID != todo.uuid {
             draggedTodoID = todo.uuid
-            dragReferenceCardTargets = cardDropTargets
-            dragReferenceColumnTargets = columnDropTargets
             if let frame = cardDropTargets.last(where: { $0.todoID == todo.uuid })?.frame {
                 previewSize = frame.size
                 grabOffset = CGSize(
@@ -354,8 +377,11 @@ struct TodoView: View {
         let target = TodoDragTargetResolver.resolve(
             location: location,
             draggedTodoID: todo.uuid,
-            cards: dragReferenceCardTargets,
-            columns: dragReferenceColumnTargets,
+            // These preferences move with the ScrollView. Keeping a snapshot
+            // from lift time would resolve against stale coordinates after an
+            // automatic column scroll and prevent Y-axis reordering there.
+            cards: cardDropTargets,
+            columns: columnDropTargets,
             statuses: statusDropTargets,
             movingFrame: movingFrame,
             previousTarget: previousTarget
@@ -413,8 +439,7 @@ struct TodoView: View {
         dragLocation = nil
         dragPreviewSize = nil
         dragGrabOffset = nil
-        dragReferenceCardTargets = []
-        dragReferenceColumnTargets = []
+        lastAutoScrolledStatus = nil
     }
 
     private var statusSelector: some View {
@@ -525,7 +550,21 @@ struct TodoView: View {
                                             }
                                         }
                                     },
-                                    updateDrag: updateInteractiveDrag,
+                                    updateDrag: { todo, location in
+                                        updateInteractiveDrag(
+                                            todo: todo,
+                                            location: location,
+                                            viewport: proxy.frame(in: .named(TodoDragCoordinateSpace.name)),
+                                            scrollTo: { status in
+                                                withAnimation(.smooth(
+                                                    duration: TodoBoardLayout.dragAutoScrollDuration,
+                                                    extraBounce: 0
+                                                )) {
+                                                    scrollProxy.scrollTo(status, anchor: .center)
+                                                }
+                                            }
+                                        )
+                                    },
                                     finishDrag: finishInteractiveDrag,
                                     cancelDrag: clearInteractiveDrag,
                                     pressBegan: beginPress,
@@ -555,6 +594,7 @@ struct TodoView: View {
                     .task(id: model.selectedStatus.rawValue) {
                         let status = model.selectedStatus
                         await Task.yield()
+                        guard draggedTodoID == nil else { return }
                         withAnimation(.easeInOut(duration: 0.2)) {
                             visibleStatus = status
                             scrollProxy.scrollTo(status, anchor: .center)
@@ -1063,6 +1103,36 @@ struct TodoDragPlacement: Equatable {
     let destinationStatus: TodoStatus
     let targetTodoID: TodoID?
     let insertAfter: Bool
+}
+
+enum TodoDragAutoScrollPolicy {
+    static let activationEdgeWidth: CGFloat = 56
+
+    static func isInsideActivationEdge(location: CGPoint, viewport: CGRect) -> Bool {
+        guard viewport.minX...viewport.maxX ~= location.x else { return false }
+        return location.x <= viewport.minX + activationEdgeWidth
+            || location.x >= viewport.maxX - activationEdgeWidth
+    }
+
+    static func nextStatus(
+        location: CGPoint,
+        viewport: CGRect,
+        visibleStatus: TodoStatus?,
+        lastAutoScrolledStatus: TodoStatus?,
+        statuses: [TodoStatus] = TodoStatus.boardStatuses
+    ) -> TodoStatus? {
+        guard lastAutoScrolledStatus == nil,
+              isInsideActivationEdge(location: location, viewport: viewport),
+              let visibleStatus,
+              let visibleIndex = statuses.firstIndex(of: visibleStatus) else {
+            return nil
+        }
+
+        let direction = location.x <= viewport.minX + activationEdgeWidth ? -1 : 1
+        let destinationIndex = visibleIndex + direction
+        guard statuses.indices.contains(destinationIndex) else { return nil }
+        return statuses[destinationIndex]
+    }
 }
 
 /// Where the card under the finger would land, as the drag haptic sees it.
