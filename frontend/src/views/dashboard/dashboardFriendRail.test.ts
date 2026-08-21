@@ -5,8 +5,9 @@ import ko from '@/i18n/messages/ko'
 
 /**
  * The home friend list is a portrait card rail (D1/D2/D6) with no reordering of its own (D3):
- * dragging lives only on the friends page. These markers pin the rail's shape so a card can
- * never grow a taller neighbour, and pin the fact that the sortable wiring stays removed.
+ * reordering lives only on the friends page; this rail's drag is scroll-only. These markers
+ * pin the rail's shape so a card can never grow a taller neighbour, and pin the fact that
+ * the sortable wiring stays removed.
  */
 
 const templateAt = dashboardView.indexOf('<template>')
@@ -190,5 +191,58 @@ describe('home friend rail arrows (D6)', () => {
       expect(messages.dashboard.actions, name).toHaveProperty('scrollPrevAria')
       expect(messages.dashboard.actions, name).toHaveProperty('scrollNextAria')
     }
+  })
+})
+
+describe('home friend rail pointer dragging', () => {
+  it('keeps ordinary clicks tolerant of small pointer jitter', () => {
+    expect(script).toContain('const FRIEND_RAIL_DRAG_THRESHOLD = 8')
+  })
+
+  it('captures the original pointer target so card clicks can still bubble', () => {
+    expect(script).toContain('const captureTarget = event.target instanceof Element ? event.target : rail')
+    expect(script).toContain('friendRailDrag.captureTarget = captureTarget')
+    expect(script).toContain('captureTarget.setPointerCapture(event.pointerId)')
+    expect(script).not.toContain('rail.setPointerCapture(event.pointerId)')
+  })
+
+  it('adds conservative momentum after a real drag is released', () => {
+    expect(script).toContain('FRIEND_RAIL_MOMENTUM_FRICTION')
+    expect(script).toContain('friendRailDrag.velocity')
+    expect(script).toContain('function startFriendRailMomentum')
+    expect(script).toContain('requestAnimationFrame')
+    expect(script).toContain('cancelAnimationFrame')
+    expect(script).toContain('startFriendRailMomentum(rail)')
+  })
+
+  it('wires mouse dragging to the rail and tracks its horizontal scroll', () => {
+    expect(script).toContain('function handleFriendRailPointerDown')
+    expect(script).toContain("event.pointerType !== 'mouse'")
+    expect(script).toContain('event.button !== 0')
+    expect(script).toContain('captureTarget.setPointerCapture(event.pointerId)')
+    expect(script).toContain('function handleFriendRailPointerMove')
+    expect(script).toContain('rail.scrollLeft = friendRailDrag.startScrollLeft - deltaX')
+    expect(script).toContain('function handleFriendRailPointerUp')
+    expect(script).toContain('function handleFriendRailPointerCancel')
+    expect(script).toContain('captureTarget.releasePointerCapture(pointerId)')
+    expect(template).toContain('@pointerdown.capture="handleFriendRailPointerDown"')
+    expect(template).toContain('@pointermove="handleFriendRailPointerMove"')
+    expect(template).toContain('@pointerup="handleFriendRailPointerUp"')
+    expect(template).toContain('@pointercancel="handleFriendRailPointerCancel"')
+  })
+
+  it('suppresses only the click emitted after a real drag', () => {
+    expect(script).toContain('event.detail === 0')
+    expect(script).toContain('event.preventDefault()')
+    expect(script).toContain('event.stopPropagation()')
+    expect(script).toContain('event.stopImmediatePropagation()')
+    expect(template).toContain('@click.capture="handleFriendRailClick"')
+  })
+
+  it('keeps touch swipes and the existing keyboard-friendly card action available', () => {
+    const rail = ruleFor('.dashboard-friend-rail')
+    expect(rail).toContain('overflow-x: auto')
+    expect(template).toContain('type="button"')
+    expect(template).toContain('@click="moveTo(friend.member.id)"')
   })
 })

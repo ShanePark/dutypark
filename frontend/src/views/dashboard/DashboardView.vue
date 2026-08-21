@@ -94,6 +94,22 @@ const searchLoading = ref(false)
 const friendRailRef = ref<HTMLElement | null>(null)
 const canScrollPrev = ref(false)
 const canScrollNext = ref(false)
+// Leave a little room for normal mouse jitter so a click is not mistaken for a drag.
+const FRIEND_RAIL_DRAG_THRESHOLD = 8
+const FRIEND_RAIL_MOMENTUM_MIN_VELOCITY = 0.02
+const FRIEND_RAIL_MOMENTUM_FRICTION = 0.92
+const friendRailDrag = {
+  captureTarget: null as Element | null,
+  pointerId: null as number | null,
+  startX: 0,
+  startScrollLeft: 0,
+  lastX: 0,
+  lastTime: 0,
+  velocity: 0,
+  hasMoved: false,
+  suppressClick: false,
+  momentumFrame: null as number | null,
+}
 
 const sortedFriends = computed(() => {
   if (!friendInfo.value) return []
@@ -135,16 +151,143 @@ function updateRailHints() {
   canScrollNext.value = maxScroll - rail.scrollLeft > 4
 }
 
+function stopFriendRailMomentum() {
+  if (friendRailDrag.momentumFrame !== null) {
+    cancelAnimationFrame(friendRailDrag.momentumFrame)
+    friendRailDrag.momentumFrame = null
+  }
+  friendRailDrag.velocity = 0
+}
+
+function startFriendRailMomentum(rail: HTMLElement) {
+  let velocity = friendRailDrag.velocity
+  if (Math.abs(velocity) < FRIEND_RAIL_MOMENTUM_MIN_VELOCITY) return
+
+  let previousTime = performance.now()
+  const animate = (time: number) => {
+    const elapsed = Math.min(time - previousTime, 32)
+    previousTime = time
+    rail.scrollLeft += velocity * elapsed
+
+    const maxScroll = rail.scrollWidth - rail.clientWidth
+    const isAtEdge = rail.scrollLeft <= 0 || rail.scrollLeft >= maxScroll
+    velocity *= Math.pow(FRIEND_RAIL_MOMENTUM_FRICTION, elapsed / 16)
+
+    if (isAtEdge || Math.abs(velocity) < FRIEND_RAIL_MOMENTUM_MIN_VELOCITY) {
+      friendRailDrag.momentumFrame = null
+      friendRailDrag.velocity = 0
+      return
+    }
+
+    friendRailDrag.momentumFrame = requestAnimationFrame(animate)
+  }
+
+  friendRailDrag.momentumFrame = requestAnimationFrame(animate)
+}
+
 function scrollRail(direction: -1 | 1) {
   const rail = friendRailRef.value
   if (!rail) {
     return
   }
 
+  stopFriendRailMomentum()
   rail.scrollBy({
     left: direction * Math.max(rail.clientWidth * 0.8, 160),
     behavior: 'smooth',
   })
+}
+
+function releaseFriendRailPointerCapture() {
+  const captureTarget = friendRailDrag.captureTarget
+  const pointerId = friendRailDrag.pointerId
+  if (captureTarget && pointerId !== null && captureTarget.hasPointerCapture(pointerId)) {
+    captureTarget.releasePointerCapture(pointerId)
+  }
+  friendRailDrag.captureTarget = null
+  friendRailDrag.pointerId = null
+}
+
+function handleFriendRailPointerDown(event: PointerEvent) {
+  friendRailDrag.suppressClick = false
+  stopFriendRailMomentum()
+  const rail = friendRailRef.value
+  if (!rail || event.pointerType !== 'mouse' || event.button !== 0) return
+
+  releaseFriendRailPointerCapture()
+  const captureTarget = event.target instanceof Element ? event.target : rail
+  const pointerTime = event.timeStamp > 0 ? event.timeStamp : performance.now()
+  friendRailDrag.captureTarget = captureTarget
+  friendRailDrag.pointerId = event.pointerId
+  friendRailDrag.startX = event.clientX
+  friendRailDrag.startScrollLeft = rail.scrollLeft
+  friendRailDrag.lastX = event.clientX
+  friendRailDrag.lastTime = pointerTime
+  friendRailDrag.velocity = 0
+  friendRailDrag.hasMoved = false
+  friendRailDrag.suppressClick = false
+  captureTarget.setPointerCapture(event.pointerId)
+}
+
+function handleFriendRailPointerMove(event: PointerEvent) {
+  if (event.pointerId !== friendRailDrag.pointerId) return
+  const rail = friendRailRef.value
+  if (!rail) return
+
+  const pointerTime = event.timeStamp > 0 ? event.timeStamp : performance.now()
+  const deltaX = event.clientX - friendRailDrag.startX
+  if (!friendRailDrag.hasMoved && Math.abs(deltaX) < FRIEND_RAIL_DRAG_THRESHOLD) {
+    friendRailDrag.lastX = event.clientX
+    friendRailDrag.lastTime = pointerTime
+    return
+  }
+
+  const elapsed = pointerTime - friendRailDrag.lastTime
+  if (elapsed > 0) {
+    const pointerDelta = event.clientX - friendRailDrag.lastX
+    const instantaneousVelocity = -pointerDelta / elapsed
+    friendRailDrag.velocity = friendRailDrag.velocity * 0.65 + instantaneousVelocity * 0.35
+  }
+  friendRailDrag.lastX = event.clientX
+  friendRailDrag.lastTime = pointerTime
+
+  friendRailDrag.hasMoved = true
+  friendRailDrag.suppressClick = true
+  rail.scrollLeft = friendRailDrag.startScrollLeft - deltaX
+  event.preventDefault()
+}
+
+function handleFriendRailPointerUp(event: PointerEvent) {
+  if (event.pointerId !== friendRailDrag.pointerId) return
+  const rail = friendRailRef.value
+  const wasDragging = friendRailDrag.hasMoved
+  releaseFriendRailPointerCapture()
+  if (wasDragging && rail) {
+    startFriendRailMomentum(rail)
+  } else {
+    friendRailDrag.velocity = 0
+  }
+  friendRailDrag.hasMoved = false
+}
+
+function handleFriendRailPointerCancel(event: PointerEvent) {
+  if (event.pointerId !== friendRailDrag.pointerId) return
+  releaseFriendRailPointerCapture()
+  friendRailDrag.velocity = 0
+  friendRailDrag.hasMoved = false
+}
+
+function handleFriendRailClick(event: MouseEvent) {
+  if (!friendRailDrag.suppressClick) return
+  if (event.detail === 0) {
+    friendRailDrag.suppressClick = false
+    return
+  }
+
+  event.preventDefault()
+  event.stopPropagation()
+  event.stopImmediatePropagation()
+  friendRailDrag.suppressClick = false
 }
 
 function printSchedule(schedule: { content: string; totalDays: number; daysFromStart: number; isTagged: boolean; owner: string }) {
@@ -298,6 +441,10 @@ onMounted(async () => {
 
 onUnmounted(() => {
   window.removeEventListener('resize', updateRailHints)
+  stopFriendRailMomentum()
+  releaseFriendRailPointerCapture()
+  friendRailDrag.hasMoved = false
+  friendRailDrag.suppressClick = false
 })
 
 watch(sortedFriends, async () => {
@@ -448,6 +595,11 @@ watch(
             <div
               ref="friendRailRef"
               class="dashboard-friend-rail"
+              @pointerdown.capture="handleFriendRailPointerDown"
+              @pointermove="handleFriendRailPointerMove"
+              @pointerup="handleFriendRailPointerUp"
+              @pointercancel="handleFriendRailPointerCancel"
+              @click.capture="handleFriendRailClick"
               @scroll.passive="updateRailHints"
             >
               <div
