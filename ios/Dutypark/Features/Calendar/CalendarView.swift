@@ -536,7 +536,7 @@ struct CalendarView: View {
     // around itself; a taller hit area would only reach past the bar, which passes on
     // nothing it does not draw.
     private nonisolated static let calloutHitInsetX: CGFloat = 6
-    private static let calloutHitInsetY: CGFloat = 4
+    private static let calloutHitInsetY: CGFloat = 6
     private nonisolated static let calloutTailCenter: CGFloat =
         calloutHitInsetX + calloutTailInset + calloutTailWidth / 2
 
