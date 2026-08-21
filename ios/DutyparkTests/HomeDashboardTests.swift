@@ -9,9 +9,8 @@ final class HomeDashboardTests: XCTestCase {
         XCTAssertEqual(homeLocalized("home.offDuty", locale: Locale(identifier: "en")), "Off")
     }
 
-    /// The home rail no longer reorders, but the shared pinned-friend reorder
-    /// machinery still backs the friend management list, so its domain-level
-    /// coverage stays here rather than disappearing with the home drag.
+    /// The home rail and friend management list share the same deliberate hold
+    /// before a pinned friend becomes draggable.
     func testPinnedFriendLongPressUsesDeliberateActivationDelay() {
         XCTAssertEqual(DPPinnedFriendDragLayout.minimumPressDuration, 0.35)
         XCTAssertEqual(DPPinnedFriendDragLayout.maximumPressDistance, 10)
@@ -49,6 +48,28 @@ final class HomeDashboardTests: XCTestCase {
         )
 
         XCTAssertEqual(reordered, [2, 3])
+    }
+
+    func testPinnedFriendDragMovesCardAfterItOverlapsNextCardHorizontally() {
+        let targets = [
+            DPPinnedFriendDropTarget(memberID: 2, frame: CGRect(x: 0, y: 0, width: 88, height: 200)),
+            DPPinnedFriendDropTarget(memberID: 3, frame: CGRect(x: 96, y: 0, width: 88, height: 200)),
+            DPPinnedFriendDropTarget(memberID: 4, frame: CGRect(x: 192, y: 0, width: 88, height: 200))
+        ]
+
+        let reordered = PinnedFriendReorder.reordered(
+            [2, 3, 4],
+            draggedID: 2,
+            previewFrame: CGRect(x: 20, y: 0, width: 88, height: 200),
+            axis: .horizontal,
+            framesByID: PinnedFriendReorder.framesByID(
+                targets,
+                memberID: \.memberID,
+                frame: \.frame
+            )
+        )
+
+        XCTAssertEqual(reordered, [3, 2, 4])
     }
 
     func testPinnedFriendDragReordersWithOnlyVisibleLazyStackTargets() {
@@ -240,6 +261,21 @@ final class HomeDashboardTests: XCTestCase {
         XCTAssertEqual(viewModel.friendsDashboard, snapshot)
     }
 
+    func testPinnedFriendOrderUpdatesOnlyPinnedFriends() throws {
+        let friends = try Self.decodeFriendsDashboard()
+        let viewModel = HomeViewModel(
+            service: HomeServiceStub(my: try Self.decodeMyDashboard(), friends: friends)
+        )
+        viewModel.replaceFriendsDashboardForMutation(friends)
+
+        viewModel.setPinnedFriendOrder([3, 2])
+
+        XCTAssertEqual(viewModel.sortedFriends.map(\.member.id), [3, 2, 4])
+        XCTAssertEqual(viewModel.sortedFriends.first(where: { $0.member.id == 3 })?.pinOrder, 0)
+        XCTAssertEqual(viewModel.sortedFriends.first(where: { $0.member.id == 2 })?.pinOrder, 1)
+        XCTAssertNil(viewModel.sortedFriends.first(where: { $0.member.id == 4 })?.pinOrder)
+    }
+
     /// The rail sizes its cards exactly like the friend tag selector, so three
     /// cards plus a peek of the next one stay visible on every screen width.
     func testFriendRailCardWidthMatchesTheTagSelectorFormula() {
@@ -290,12 +326,12 @@ final class HomeDashboardTests: XCTestCase {
         XCTAssertEqual(HomeFriendCardLayout.dutyLine(for: nil, locale: korean), "-")
     }
 
-    /// D3: the home dashboard no longer reorders pinned friends, so none of the
-    /// drag machinery may survive on this screen.
-    func testHomeFriendRailDroppedTheReorderMachinery() throws {
+    /// The home rail uses the shared drag surface, but selects the horizontal
+    /// axis because its cards live in a horizontal scroll rail.
+    func testHomeFriendRailUsesSharedHorizontalReorderMachinery() throws {
         let source = try Self.projectSource(at: "Dutypark/Features/Home/HomeView.swift")
 
-        for removed in [
+        for expected in [
             "DPPinnedFriendReorderGesture",
             "DPPinnedFriendDropTargetPreferenceKey",
             "DPPinnedFriendLiveOrder",
@@ -304,12 +340,30 @@ final class HomeDashboardTests: XCTestCase {
             "dpPressProgress",
             "consumeDragSuppression",
             "savePinnedOrder",
-            "setPinnedFriendOrder",
+            "setPinnedFriendOrder(memberIDs)",
             "home.action.moveUp",
             "home.action.moveDown"
         ] {
-            XCTAssertFalse(source.contains(removed), "HomeView should no longer reference \(removed)")
+            XCTAssertTrue(source.contains(expected), "HomeView should reference \(expected)")
         }
+        XCTAssertTrue(source.contains("axis: .horizontal"))
+    }
+
+    func testHomeFriendRailLocksItsHorizontalScrollWhileReordering() throws {
+        let source = try Self.projectSource(at: "Dutypark/Features/Home/HomeView.swift")
+        let railStart = try XCTUnwrap(source.range(of: "    private var friendsRail: some View {"))
+        let railEnd = try XCTUnwrap(
+            source.range(
+                of: "    private var cardWidth: CGFloat {",
+                range: railStart.upperBound..<source.endIndex
+            )
+        )
+        let rail = String(source[railStart.lowerBound..<railEnd.lowerBound])
+
+        XCTAssertTrue(
+            rail.contains(".scrollDisabled(draggedPinnedFriendID != nil)"),
+            "The nested horizontal rail must stop scrolling once a card is lifted"
+        )
     }
 
     /// D1: every card is the same height, so no line on it may shrink its font —

@@ -16,7 +16,7 @@
 |---|---|
 | D1 | 홈 친구 목록을 태그 셀렉터와 같은 포트레이트 카드 rail로 통일한다 |
 | D2 | 홈 카드 내용 = 사진 + 이름 + 팀(자리 항상 확보) + **오늘 근무 배지**. 일정 미리보기는 제거 |
-| D3 | 홈에서 순서 변경(드래그/롱프레스/접근성 이동 액션)을 완전히 제거한다 |
+| D3 | iOS 홈에서 핀 친구 순서 변경(드래그/롱프레스/접근성 이동 액션)을 친구관리와 동일하게 지원한다. 웹 홈은 rail 스크롤만 유지한다 |
 | D4 | 핀(별) 토글 버튼은 홈 카드에 **유지**한다 |
 | D5 | 친구관리(웹 `FriendsView.vue`, iOS `SocialView.swift`)는 **현행 유지** — 목록 모양도, 순서 변경도 그대로 |
 | D6 | 웹 데스크톱도 rail 유지 + 화살표 네비(태그 셀렉터의 `hover:hover` 패턴 재사용) |
@@ -24,7 +24,7 @@
 | D8 | 태그 셀렉터의 선택된 친구 목록을 검색창 **위 → 아래(rail 밑)** 로 옮긴다 |
 | D9 | iOS에 "표준 세트" 햅틱을 추가한다 |
 
-백엔드 변경 없음. `PATCH /friends/pin/order` 는 친구관리에서 계속 쓰인다.
+백엔드 변경 없음. `PATCH /friends/pin/order` 를 홈과 친구관리에서 함께 사용한다.
 
 ## 카드 스펙 (홈 rail · 웹/iOS 공통)
 
@@ -98,7 +98,7 @@ rail
 |---|---|---|
 | WP1 | iOS 태그 셀렉터 D7·D8 | `DPFriendTagSelector.swift`, 신규 테스트 파일 |
 | WP2 | 웹 태그 셀렉터 D7·D8 | `FriendTagSelector.vue`, `friendTagSelection.test.ts` 인접 |
-| WP3 | iOS 홈 rail 전환 + 순서변경 제거 | `HomeView.swift`, `HomeDashboardTests`, `DragFeedbackTests`, `SocialFeatureTests`, 홈 UI 테스트 |
+| WP3 | iOS 홈 rail 전환 + 가로 순서변경 연결 | `HomeView.swift`, `HomeDashboardTests`, `DragFeedbackTests`, `SocialFeatureTests`, 홈 UI 테스트 |
 | WP4 | 웹 홈 rail 전환 + 순서변경 제거 | `DashboardView.vue`, `i18n/messages/{ko,en}.ts` |
 | WP5 | iOS 햅틱 표준 세트 | 다수 (WP1·WP3 이후) |
 

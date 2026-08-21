@@ -1,10 +1,16 @@
 import CoreGraphics
 
+/// The axis along which a pinned-friend list lays out its cards.
+enum PinnedFriendReorderAxis {
+    case horizontal
+    case vertical
+}
+
 /// Live drag-reorder math shared by the pinned friend lists on Home and Social.
 ///
 /// Drop-target frames are looked up by member ID rather than by position because
-/// both lists render in a `LazyVStack`: rows outside the viewport publish no
-/// frame, so the target set is routinely a subset of the pinned order.
+/// both lists render in lazy stacks: cards outside the viewport publish no frame,
+/// so the target set is routinely a subset of the pinned order.
 enum PinnedFriendReorder {
     static let overlapThreshold: CGFloat = 12
 
@@ -12,6 +18,7 @@ enum PinnedFriendReorder {
         _ originalOrder: [MemberID],
         draggedID: MemberID,
         previewFrame: CGRect,
+        axis: PinnedFriendReorderAxis = .vertical,
         framesByID: [MemberID: CGRect]
     ) -> [MemberID] {
         guard let sourceIndex = originalOrder.firstIndex(of: draggedID),
@@ -22,21 +29,24 @@ enum PinnedFriendReorder {
         var reordered = originalOrder
         reordered.remove(at: sourceIndex)
 
-        if previewFrame.midY > sourceFrame.midY {
+        let previewPosition = axis.position(of: previewFrame)
+        let sourcePosition = axis.position(of: sourceFrame)
+
+        if previewPosition > sourcePosition {
             let candidates = originalOrder.indices.dropFirst(sourceIndex + 1)
             guard let destinationIndex = candidates.last(where: { index in
                 guard let frame = framesByID[originalOrder[index]] else { return false }
-                return previewFrame.maxY >= frame.minY + threshold(for: frame)
+                return axis.trailingEdge(of: previewFrame) >= axis.leadingEdge(of: frame) + threshold(for: frame, axis: axis)
             }) else {
                 reordered.insert(draggedID, at: sourceIndex)
                 return reordered
             }
             reordered.insert(draggedID, at: destinationIndex)
-        } else if previewFrame.midY < sourceFrame.midY {
+        } else if previewPosition < sourcePosition {
             let candidates = originalOrder.indices.prefix(sourceIndex)
             guard let destinationIndex = candidates.first(where: { index in
                 guard let frame = framesByID[originalOrder[index]] else { return false }
-                return previewFrame.minY <= frame.maxY - threshold(for: frame)
+                return axis.leadingEdge(of: previewFrame) <= axis.trailingEdge(of: frame) - threshold(for: frame, axis: axis)
             }) else {
                 reordered.insert(draggedID, at: sourceIndex)
                 return reordered
@@ -62,7 +72,40 @@ enum PinnedFriendReorder {
         )
     }
 
-    private static func threshold(for frame: CGRect) -> CGFloat {
-        min(overlapThreshold, frame.height * 0.2)
+    private static func threshold(
+        for frame: CGRect,
+        axis: PinnedFriendReorderAxis
+    ) -> CGFloat {
+        min(overlapThreshold, axis.length(of: frame) * 0.2)
+    }
+}
+
+private extension PinnedFriendReorderAxis {
+    func position(of frame: CGRect) -> CGFloat {
+        switch self {
+        case .horizontal: frame.midX
+        case .vertical: frame.midY
+        }
+    }
+
+    func leadingEdge(of frame: CGRect) -> CGFloat {
+        switch self {
+        case .horizontal: frame.minX
+        case .vertical: frame.minY
+        }
+    }
+
+    func trailingEdge(of frame: CGRect) -> CGFloat {
+        switch self {
+        case .horizontal: frame.maxX
+        case .vertical: frame.maxY
+        }
+    }
+
+    func length(of frame: CGRect) -> CGFloat {
+        switch self {
+        case .horizontal: frame.width
+        case .vertical: frame.height
+        }
     }
 }
