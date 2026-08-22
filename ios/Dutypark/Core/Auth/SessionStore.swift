@@ -90,6 +90,7 @@ final class SessionStore: ObservableObject {
                 rememberMe: rememberMe
             )
             await authenticate(member)
+            DPHapticCenter.shared.emit(.success)
         } catch let error as APIError {
             switch error {
             case .serverWithDetails(status: 429, _, let details):
@@ -116,8 +117,10 @@ final class SessionStore: ObservableObject {
             default:
                 loginErrorKey = "auth.login.error.generic"
             }
+            DPHapticCenter.shared.emit(.error)
         } catch {
             loginErrorKey = "auth.login.error.generic"
+            DPHapticCenter.shared.emit(.error)
         }
     }
 
@@ -140,6 +143,7 @@ final class SessionStore: ObservableObject {
         pendingDestination = nil
         await becomeGuest()
         accountDeletionAcceptedPresentation = .accepted
+        DPHapticCenter.shared.emit(.success)
     }
 
     func dismissAccountDeletionAcceptedPresentation() {
@@ -150,11 +154,14 @@ final class SessionStore: ObservableObject {
         serverSessionWarning = nil
     }
 
-    func finishExternalLogin() async throws {
+    func finishExternalLogin(emitsHaptic: Bool = true) async throws {
         guard let member = try await authService.status() else {
             throw APIError.invalidResponse
         }
         await authenticate(member)
+        if emitsHaptic {
+            DPHapticCenter.shared.emit(.success)
+        }
     }
 
     func impersonate(memberId: Int64) async throws {
@@ -166,6 +173,7 @@ final class SessionStore: ObservableObject {
         accountDeletionAcceptedPresentation = nil
         state = .authenticated(member)
         scheduleImpersonationExpiration(at: expiration)
+        DPHapticCenter.shared.emit(.success)
     }
 
     func restoreOriginalAccount() async {
@@ -175,6 +183,7 @@ final class SessionStore: ObservableObject {
             AIScheduleParsingConsentStore.shared.scope(to: member.id)
             accountDeletionAcceptedPresentation = nil
             state = .authenticated(member)
+            DPHapticCenter.shared.emit(.success)
         } catch {
             pendingDestination = nil
             await terminateSession(reportServerFailure: true)

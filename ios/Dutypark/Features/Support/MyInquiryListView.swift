@@ -56,7 +56,7 @@ struct MyInquiryListView: View {
                     .multilineTextAlignment(.center)
 
                 Button {
-                    model.selectedTab = .form
+                    model.selectTab(.form)
                 } label: {
                     Text(verbatim: SupportLocalization.text("support.history.emptyAction"))
                 }
@@ -118,6 +118,7 @@ struct MyInquiryListView: View {
         VStack(alignment: .leading, spacing: 0) {
             Button {
                 expandedInquiryID = isExpanded ? nil : inquiry.id
+                DPHapticCenter.shared.emit(.selection)
             } label: {
                 HStack(alignment: .top, spacing: DPSpacing.compact) {
                     VStack(alignment: .leading, spacing: DPSpacing.small) {

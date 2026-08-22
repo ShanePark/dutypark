@@ -47,6 +47,7 @@ final class SupportViewModel: ObservableObject {
 
     let isSignedIn: Bool
     private let repository: any SupportRepository
+    private let hapticCenter: DPHapticCenter
     private var loadedInquiryPage = 0
     private var totalInquiryPages = 0
     private var hasLoadedInquiries = false
@@ -57,11 +58,13 @@ final class SupportViewModel: ObservableObject {
     init(
         isSignedIn: Bool = false,
         initialTab: SupportTab = .form,
-        repository: any SupportRepository = LiveSupportRepository()
+        repository: any SupportRepository = LiveSupportRepository(),
+        hapticCenter: DPHapticCenter = .shared
     ) {
         self.isSignedIn = isSignedIn
         self.selectedTab = isSignedIn ? initialTab : .form
         self.repository = repository
+        self.hapticCenter = hapticCenter
     }
 
     var showsTabs: Bool {
@@ -103,6 +106,14 @@ final class SupportViewModel: ObservableObject {
             && !content.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
+    /// Selects a support section after the user commits a different tab. The guard keeps
+    /// picker rebindings and programmatic no-ops silent.
+    func selectTab(_ tab: SupportTab) {
+        guard isSignedIn, selectedTab != tab else { return }
+        selectedTab = tab
+        hapticCenter.emit(.selection)
+    }
+
     func submit() async {
         guard !isSubmitting else { return }
         let trimmedEmail = email.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -115,6 +126,7 @@ final class SupportViewModel: ObservableObject {
             isSignedIn: isSignedIn
         ) {
             errorKey = validationKey
+            hapticCenter.emit(.warning)
             return
         }
 
@@ -142,11 +154,13 @@ final class SupportViewModel: ObservableObject {
             subject = ""
             content = ""
             didSubmit = true
+            hapticCenter.emit(.success)
             // The list on screen no longer contains every inquiry, so the next visit to
             // the history tab has to fetch the first page again.
             hasLoadedInquiries = false
         } catch {
             errorKey = Self.errorKey(for: error)
+            hapticCenter.emit(.error)
         }
     }
 
@@ -270,8 +284,10 @@ final class SupportViewModel: ObservableObject {
             if let index = reports.firstIndex(where: { $0.id == id }) {
                 reports[index] = updated
             }
+            hapticCenter.emit(.success)
         } catch {
             reportCancelErrorKey = Self.cancelErrorKey(for: error)
+            hapticCenter.emit(.error)
         }
     }
 

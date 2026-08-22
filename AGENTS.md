@@ -57,6 +57,13 @@ The source code, tests, and task-specific documentation are the source of truth 
 - Do not run `DutyparkUITests` as part of default verification, including UI tests related to the changed area. Run specific or full iOS UI tests only when the user explicitly requests them; full iOS UI test runs are strictly opt-in.
 - After completing an iOS app change, install the latest successfully verified build on the simulator named exactly `iPhone 13 mini` so the user can inspect it immediately. This does not authorize starting a development server. If that simulator is unavailable or installation is blocked by CoreSimulator or another error, report the exact reason.
 
+### iOS Interaction Feedback
+
+- Use semantic haptics consistently throughout the iOS app: `.selection` for tabs, menus, pickers, toggles, consent choices, and other discrete value changes; a routine impact for explicit modal dismissal and navigation; `.warning` before logout, deletion, or other destructive intent; and `.success` only after a create, update, delete, or save operation has actually completed.
+- Use `.error` or `.warning` for actionable validation or API failures. A deliberately dismissed modal may use a routine impact, but a cancelled operation must not emit outcome feedback. Keep no-op actions, disabled controls, and passive modal/view disappearance silent.
+- Centralize feedback through the shared `sensoryFeedback` helper (or the existing shared abstraction), trigger one event per semantic transition, and avoid duplicate press-plus-result feedback for the same action.
+- Keep haptic decisions at the UI/view-model/store result boundary so feedback reflects the completed outcome rather than merely a button press. Add focused tests for the mapping and trigger guards; hardware haptic output itself does not need UI-test coverage.
+
 ## Git
 
 - Write all GitHub-facing communication and metadata in English, including issue and PR titles and bodies, comments, and review comments. This does not require localized user-facing product content or app release note copy to be in English.

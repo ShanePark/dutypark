@@ -206,7 +206,7 @@ struct TodoView: View {
                 .accessibilityIdentifier("todo.help")
 
                 Button {
-                    withoutPresentationAnimation { showingCreate = true }
+                    presentCreate()
                 } label: {
                     Image(systemName: "plus")
                         .frame(minWidth: DPSize.minimumTouchTarget, minHeight: DPSize.minimumTouchTarget)
@@ -214,7 +214,7 @@ struct TodoView: View {
                 }
                 .accessibilityRepresentation {
                     Button {
-                        withoutPresentationAnimation { showingCreate = true }
+                        presentCreate()
                     } label: {
                         Color.clear
                             .frame(
@@ -517,7 +517,7 @@ struct TodoView: View {
         HStack(spacing: DPSpacing.small) {
             ForEach(TodoStatus.boardStatuses, id: \.rawValue) { status in
                 Button {
-                    model.selectedStatus = status
+                    selectStatus(status)
                 } label: {
                     HStack(spacing: 5) {
                         Image(systemName: status.systemImage)
@@ -605,11 +605,12 @@ struct TodoView: View {
                                     dragTargetTodoID: dragTargetTodoID,
                                     dragInsertAfter: dragInsertAfter,
                                     add: {
-                                        model.selectedStatus = status
+                                        selectStatus(status)
                                         withoutPresentationAnimation { showingCreate = true }
                                     },
-                                    select: { model.selectedStatus = status },
+                                    select: { selectStatus(status) },
                                     open: { todo in
+                                        model.emitHaptic(.routine)
                                         selectedTodo = todo
                                         withoutPresentationAnimation { showingDetail = true }
                                     },
@@ -674,6 +675,17 @@ struct TodoView: View {
                 }
             }
         }
+    }
+
+    private func selectStatus(_ status: TodoStatus) {
+        guard model.selectedStatus != status else { return }
+        model.selectedStatus = status
+        model.emitHaptic(.selection)
+    }
+
+    private func presentCreate() {
+        model.emitHaptic(.routine)
+        withoutPresentationAnimation { showingCreate = true }
     }
 
     /// The drop target resolved from the current gesture sample, expressed as the
@@ -1616,7 +1628,10 @@ struct TodoFormSheet: View {
                 canDismiss: TodoConfirmationPolicy.canDismiss(
                     isConfirming: isDiscarding,
                     isSaving: isDiscardConfirmationSaving
-                )
+                ),
+                // The destructive confirmation button already acknowledges its
+                // press; avoid a second haptic as the panel closes.
+                dismissHaptic: nil
             ) { availableSize, confirmationDismiss in
                 DPConfirmationPanel(
                     title: todoLocalized("todo.confirm.discardTitle"),
@@ -1665,7 +1680,9 @@ struct TodoFormSheet: View {
                     HStack(spacing: DPSpacing.small) {
                         ForEach(TodoStatus.boardStatuses, id: \.rawValue) { status in
                             Button {
+                                guard draft.status != status else { return }
                                 draft.status = status
+                                model.emitHaptic(.selection)
                             } label: {
                                 VStack(spacing: 6) {
                                     Image(systemName: status.systemImage)
@@ -1736,6 +1753,9 @@ struct TodoFormSheet: View {
                 }
                 .tint(DPColor.accent)
                 .frame(minHeight: DPSize.minimumTouchTarget)
+                .onChange(of: draft.hasDueDate) { _, _ in
+                    model.emitHaptic(.selection)
+                }
                 if draft.hasDueDate {
                     DatePicker(
                         todoLocalized("todo.field.dueDate"),

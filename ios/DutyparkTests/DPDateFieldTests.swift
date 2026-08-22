@@ -47,6 +47,19 @@ struct DPDateFieldTests {
         #expect(DPDateFieldPolicy.tap(day, mode: rangeMode, minimum: nil, maximum: nil) == .staged(day))
     }
 
+    @Test
+    func dateFieldHapticsAreSemanticAndSilentForIgnoredOrNoOpTransitions() {
+        let day = value("2026-08-24")
+        #expect(DPDateFieldHapticPolicy.selection(for: .ignored) == nil)
+        #expect(DPDateFieldHapticPolicy.selection(for: .staged(day)) == .selection)
+        #expect(DPDateFieldHapticPolicy.selection(for: .committed(day)) == .selection)
+
+        let august = DatePickerMonth(year: 2026, month: 8)
+        let september = DatePickerMonth(year: 2026, month: 9)
+        #expect(DPDateFieldHapticPolicy.monthNavigation(from: august, to: august) == nil)
+        #expect(DPDateFieldHapticPolicy.monthNavigation(from: august, to: september) == .routine)
+    }
+
     /// The floor is not a validation run on submit: a day before the anchor answers nothing at
     /// all, so it can neither be committed nor staged.
     @Test

@@ -13,13 +13,24 @@ final class TodoViewModel: ObservableObject {
 
     private let repository: any TodoRepository
     private let contentFilter: ContentFilterStore
+    private let hapticCenter: DPHapticCenter
 
     init(
         repository: any TodoRepository = TodoAPIRepository(),
-        contentFilter: ContentFilterStore = .shared
+        contentFilter: ContentFilterStore = .shared,
+        hapticCenter: DPHapticCenter = .shared
     ) {
         self.repository = repository
         self.contentFilter = contentFilter
+        self.hapticCenter = hapticCenter
+    }
+
+    /// Emits semantic feedback from the view-model result boundary. Keeping the
+    /// event center injectable makes mutation feedback testable without needing
+    /// a device, while the app default still routes through the root haptic host.
+    @discardableResult
+    func emitHaptic(_ kind: DPHapticKind) -> DPHapticEvent {
+        hapticCenter.emit(kind)
     }
 
     var selectedTodos: [TodoDTO] {
@@ -109,6 +120,7 @@ final class TodoViewModel: ObservableObject {
         guard !isSaving else { return false }
         guard !contentFilter.isBlocked(draft.title, draft.content) else {
             errorKey = "todo.error.contentFilter"
+            emitHaptic(.error)
             return false
         }
         isSaving = true
@@ -118,20 +130,25 @@ final class TodoViewModel: ObservableObject {
             if refreshBoard {
                 patchBoard(with: created)
             }
+            emitHaptic(.success)
             return true
         } catch {
             errorKey = "todo.error.create"
+            emitHaptic(.error)
             return false
         }
     }
 
     func update(todo: TodoDTO, draft: TodoDraft) async -> Bool {
+        guard !isSaving else { return false }
         guard !todo.hasAttachments || attachmentsByTodoID[todo.uuid] != nil else {
             errorKey = "todo.error.attachmentsRequired"
+            emitHaptic(.warning)
             return false
         }
         guard !contentFilter.isBlocked(draft.title, draft.content) else {
             errorKey = "todo.error.contentFilter"
+            emitHaptic(.error)
             return false
         }
         return await performMutation(errorKey: "todo.error.update") {
@@ -252,6 +269,7 @@ final class TodoViewModel: ObservableObject {
             errorKey = sourceStatus == destinationStatus
                 ? "todo.error.reorder"
                 : "todo.error.status"
+            emitHaptic(.error)
             return false
         }
     }
@@ -271,9 +289,11 @@ final class TodoViewModel: ObservableObject {
         defer { isSaving = false }
         do {
             patchBoard(with: try await operation())
+            emitHaptic(.success)
             return true
         } catch {
             self.errorKey = errorKey
+            emitHaptic(.error)
             return false
         }
     }
@@ -290,9 +310,11 @@ final class TodoViewModel: ObservableObject {
             try await operation()
             removeFromBoard(todoID: todoID)
             attachmentsByTodoID[todoID] = nil
+            emitHaptic(.success)
             return true
         } catch {
             self.errorKey = errorKey
+            emitHaptic(.error)
             return false
         }
     }

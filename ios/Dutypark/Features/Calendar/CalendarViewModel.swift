@@ -21,6 +21,34 @@ nonisolated struct ComparedDuty: Equatable, Sendable {
     let duty: DutyDTO
 }
 
+/// Semantic feedback decisions owned by the calendar state boundary.
+///
+/// The calendar has several ways to reach the same month (buttons, a swipe and the picker),
+/// so the view model keeps the committed month transition in one place. The optional result
+/// also makes no-op transitions naturally silent.
+nonisolated enum CalendarHapticPolicy {
+    static func monthNavigation(
+        fromYear: Int,
+        fromMonth: Int,
+        toYear: Int,
+        toMonth: Int
+    ) -> DPHapticKind? {
+        fromYear == toYear && fromMonth == toMonth ? nil : .routine
+    }
+
+    static func selectionChanged(from: DateOnly?, to: DateOnly?) -> DPHapticKind? {
+        from == to ? nil : .selection
+    }
+
+    static func mutationResult(succeeded: Bool) -> DPHapticKind {
+        succeeded ? .success : .error
+    }
+
+    static func validationFailure(isActionable: Bool = true) -> DPHapticKind? {
+        isActionable ? .warning : nil
+    }
+}
+
 @MainActor
 final class CalendarViewModel: ObservableObject {
     private let repository: CalendarRepositoryProtocol
@@ -52,6 +80,7 @@ final class CalendarViewModel: ObservableObject {
     private var searchPage = 0
     private let initialScheduleID: ScheduleID?
     private let contentFilter: ContentFilterStore
+    private let hapticCenter: DPHapticCenter
 
     init(
         repository: CalendarRepositoryProtocol = CalendarRepository(),
@@ -59,10 +88,12 @@ final class CalendarViewModel: ObservableObject {
         memberID: MemberID? = nil,
         date: DateOnly? = nil,
         scheduleID: ScheduleID? = nil,
-        contentFilter: ContentFilterStore = .shared
+        contentFilter: ContentFilterStore = .shared,
+        hapticCenter: DPHapticCenter = .shared
     ) {
         self.repository = repository
         self.contentFilter = contentFilter
+        self.hapticCenter = hapticCenter
         initialScheduleID = scheduleID
         let initialDate = date.flatMap(CalendarDateSupport.date(from:)) ?? now
         let parts = CalendarDateSupport.calendar.dateComponents([.year, .month], from: initialDate)
@@ -97,7 +128,7 @@ final class CalendarViewModel: ObservableObject {
     }
     var visibleDutyTypes: [DutyTypeDTO] { team?.dutyTypes.filter { !$0.hidden } ?? [] }
 
-    func load() async {
+    func load(emitErrorFeedback: Bool = false) async {
 #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-ui-testing-authenticated") {
             loadUITestingFixture()
@@ -142,6 +173,7 @@ final class CalendarViewModel: ObservableObject {
             return
         } catch {
             errorMessage = CalendarLocalization.text("calendar.error.load")
+            if emitErrorFeedback { emit(.error) }
         }
     }
 
@@ -205,6 +237,7 @@ final class CalendarViewModel: ObservableObject {
     func toggleMyDutyComparison() async {
         guard !isMyCalendar, let myID = me?.id else { return }
         comparedMemberIDs = comparedMemberIDs.contains(myID) ? [] : [myID]
+        emit(.selection)
         await reloadMonth()
     }
 
@@ -349,26 +382,50 @@ final class CalendarViewModel: ObservableObject {
         }.prefix(3))
         guard validIDs != comparedMemberIDs else { return }
         comparedMemberIDs = validIDs
+        emit(.selection)
         await reloadMonth()
     }
 
-    func selectYearMonth(year: Int, month: Int) async {
+    func selectYearMonth(year: Int, month: Int, emitFeedback: Bool = true) async {
         guard (1...12).contains(month) else { return }
+        let feedback = CalendarHapticPolicy.monthNavigation(
+            fromYear: self.year,
+            fromMonth: self.month,
+            toYear: year,
+            toMonth: month
+        )
         self.year = year
         self.month = month
+        if emitFeedback, feedback != nil { emit(.routine) }
         await reloadMonth()
     }
 
-    func setQuickDutyEditing(_ enabled: Bool) {
+    func setQuickDutyEditing(_ enabled: Bool, emitFeedback: Bool = true) {
         guard !enabled || canEdit else { return }
+        guard isQuickDutyEditing != enabled else { return }
         isQuickDutyEditing = enabled
         quickDutyDay = enabled ? (days.first(where: { $0.cell.date == highlightedDate && $0.cell.isCurrentMonth }) ?? days.first(where: \.cell.isCurrentMonth)) : nil
+        if emitFeedback { emit(.selection) }
     }
 
-    func focusQuickDuty(on day: CalendarDayContent) {
+    func focusQuickDuty(on day: CalendarDayContent, emitFeedback: Bool = true) {
         guard canEdit, day.cell.isCurrentMonth else { return }
+        let previousDate = quickDutyDay?.cell.date
         quickDutyDay = day
         highlightedDate = day.cell.date
+        if emitFeedback,
+           CalendarHapticPolicy.selectionChanged(from: previousDate, to: day.cell.date) != nil {
+            emit(.selection)
+        }
+    }
+
+    func selectDay(_ day: CalendarDayContent) {
+        let previousDate = selectedDay?.cell.date
+        selectedDay = day
+        highlightedDate = day.cell.date
+        if CalendarHapticPolicy.selectionChanged(from: previousDate, to: day.cell.date) != nil {
+            emit(.selection)
+        }
     }
 
     func moveQuickDutyFocus(by offset: Int) {
@@ -381,18 +438,28 @@ final class CalendarViewModel: ObservableObject {
 
     func applyQuickDuty(dutyTypeID: DutyTypeID?) async {
         guard canEdit, let day = quickDutyDay, let memberID = targetMemberID else { return }
+        let currentMonthDays = days.filter(\.cell.isCurrentMonth)
+        let nextDate = currentMonthDays.firstIndex(where: { $0.id == day.id }).flatMap { index in
+            currentMonthDays.indices.contains(index + 1) ? currentMonthDays[index + 1].cell.date : nil
+        }
         do {
             try await repository.updateDuty(DutyUpdateDTO(
                 year: day.cell.year, month: day.cell.month, day: day.cell.day,
                 dutyTypeId: dutyTypeID, memberId: memberID
             ))
-            let currentMonthDays = days.filter(\.cell.isCurrentMonth)
-            let nextDate = currentMonthDays.firstIndex(where: { $0.id == day.id }).flatMap { index in
-                currentMonthDays.indices.contains(index + 1) ? currentMonthDays[index + 1].cell.date : nil
+            emit(.success)
+            do {
+                try await refreshDuties()
+            } catch {
+                errorMessage = CalendarLocalization.text("calendar.error.save")
             }
-            try await refreshDuties()
-            if let nextDate, let next = days.first(where: { $0.cell.date == nextDate }) { focusQuickDuty(on: next) }
-        } catch { errorMessage = CalendarLocalization.text("calendar.error.save") }
+            if let nextDate, let next = days.first(where: { $0.cell.date == nextDate }) {
+                focusQuickDuty(on: next, emitFeedback: false)
+            }
+        } catch {
+            errorMessage = CalendarLocalization.text("calendar.error.save")
+            emit(.error)
+        }
     }
 
     func changeMonth(by offset: Int) async {
@@ -401,16 +468,36 @@ final class CalendarViewModel: ObservableObject {
               let changed = CalendarDateSupport.calendar.date(byAdding: .month, value: offset, to: date)
         else { return }
         components = CalendarDateSupport.calendar.dateComponents([.year, .month], from: changed)
-        year = components.year ?? year
-        month = components.month ?? month
+        let nextYear = components.year ?? year
+        let nextMonth = components.month ?? month
+        guard CalendarHapticPolicy.monthNavigation(
+            fromYear: year,
+            fromMonth: month,
+            toYear: nextYear,
+            toMonth: nextMonth
+        ) != nil else { return }
+        year = nextYear
+        month = nextMonth
+        emit(.routine)
         await reloadMonth()
     }
 
-    func goToToday() async {
+    func goToToday(emitFeedback: Bool = true) async {
         let components = CalendarDateSupport.calendar.dateComponents([.year, .month, .day], from: Date())
-        year = components.year ?? year
-        month = components.month ?? month
-        highlightedDate = DateOnly(rawValue: String(format: "%04d-%02d-%02d", year, month, components.day ?? 1))
+        let nextYear = components.year ?? year
+        let nextMonth = components.month ?? month
+        let nextDate = DateOnly(rawValue: String(format: "%04d-%02d-%02d", nextYear, nextMonth, components.day ?? 1))
+        let monthChanged = CalendarHapticPolicy.monthNavigation(
+            fromYear: year,
+            fromMonth: month,
+            toYear: nextYear,
+            toMonth: nextMonth
+        ) != nil
+        let dateChanged = CalendarHapticPolicy.selectionChanged(from: highlightedDate, to: nextDate) != nil
+        year = nextYear
+        month = nextMonth
+        highlightedDate = nextDate
+        if emitFeedback, monthChanged || dateChanged { emit(.routine) }
         await reloadMonth()
     }
 
@@ -425,6 +512,7 @@ final class CalendarViewModel: ObservableObject {
             pinnedDDayID = item.id
             UserDefaults.standard.set(item.id, forKey: pinnedDDayKey(memberID))
         }
+        emit(.selection)
     }
 
     func refreshTodoBoard() async {
@@ -434,6 +522,7 @@ final class CalendarViewModel: ObservableObject {
             rebuildTodoDays()
         } catch {
             errorMessage = CalendarLocalization.text("calendar.error.load")
+            emit(.error)
         }
     }
 
@@ -444,8 +533,16 @@ final class CalendarViewModel: ObservableObject {
                 year: day.cell.year, month: day.cell.month, day: day.cell.day,
                 dutyTypeId: dutyTypeID, memberId: memberID
             ))
-            try await refreshDuties()
-        } catch { errorMessage = CalendarLocalization.text("calendar.error.save") }
+            emit(.success)
+            do {
+                try await refreshDuties()
+            } catch {
+                errorMessage = CalendarLocalization.text("calendar.error.save")
+            }
+        } catch {
+            errorMessage = CalendarLocalization.text("calendar.error.save")
+            emit(.error)
+        }
     }
 
     func batchUpdateDuty(dutyTypeID: DutyTypeID?) async {
@@ -454,8 +551,16 @@ final class CalendarViewModel: ObservableObject {
             try await repository.batchUpdateDuty(DutyBatchUpdateDTO(
                 year: year, month: month, dutyTypeId: dutyTypeID, memberId: memberID
             ))
-            try await refreshDuties()
-        } catch { errorMessage = CalendarLocalization.text("calendar.error.save") }
+            emit(.success)
+            do {
+                try await refreshDuties()
+            } catch {
+                errorMessage = CalendarLocalization.text("calendar.error.save")
+            }
+        } catch {
+            errorMessage = CalendarLocalization.text("calendar.error.save")
+            emit(.error)
+        }
     }
 
     func uploadDutyBatch(url: URL) async {
@@ -473,6 +578,7 @@ final class CalendarViewModel: ObservableObject {
                     )
                 ]
             )
+            emit(.warning)
             return
         }
         let accessed = url.startAccessingSecurityScopedResource()
@@ -481,6 +587,7 @@ final class CalendarViewModel: ObservableObject {
             let data = try Data(contentsOf: url)
             guard data.count < AttachmentUploadPolicy.safeMaximumBytes else {
                 dutyBatchMessage = CalendarLocalization.text("calendar.duty.excel.tooLarge")
+                emit(.warning)
                 return
             }
             let result = try await repository.uploadDutyBatch(
@@ -493,11 +600,20 @@ final class CalendarViewModel: ObservableObject {
                 } else { "" }
                 dutyBatchMessage = [period, CalendarLocalization.format("calendar.duty.excel.success", result.workingDays, result.offDays)]
                     .filter { !$0.isEmpty }.joined(separator: "\n")
-                try await refreshDuties()
+                emit(.success)
+                do {
+                    try await refreshDuties()
+                } catch {
+                    dutyBatchMessage = CalendarLocalization.text("calendar.duty.excel.failed")
+                }
             } else {
                 dutyBatchMessage = CalendarFeatureLogic.dutyBatchFailureMessage(result)
+                emit(.error)
             }
-        } catch { dutyBatchMessage = CalendarLocalization.text("calendar.duty.excel.failed") }
+        } catch {
+            dutyBatchMessage = CalendarLocalization.text("calendar.duty.excel.failed")
+            emit(.error)
+        }
     }
 
     func saveSchedule(
@@ -508,9 +624,13 @@ final class CalendarViewModel: ObservableObject {
     ) async -> Bool {
         guard canEdit, let memberID = targetMemberID else { return false }
         let trimmed = content.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, trimmed.count <= 50, end >= start else { return false }
+        guard !trimmed.isEmpty, trimmed.count <= 50, end >= start else {
+            emit(.warning)
+            return false
+        }
         guard !contentFilter.isBlocked(trimmed, description) else {
             errorMessage = CalendarLocalization.text("calendar.error.contentFilter")
+            emit(.error)
             return false
         }
         do {
@@ -523,10 +643,17 @@ final class CalendarViewModel: ObservableObject {
                 orderedAttachmentIds: orderedAttachmentIDs,
                 aiTimeParsingRequested: aiTimeParsingRequested
             ))
-            try await refreshSchedules()
+            emit(.success)
+            do {
+                try await refreshSchedules()
+            } catch {
+                errorMessage = CalendarLocalization.text("calendar.error.save")
+                return false
+            }
             return true
         } catch {
             errorMessage = CalendarLocalization.text("calendar.error.save")
+            emit(.error)
             return false
         }
     }
@@ -537,9 +664,11 @@ final class CalendarViewModel: ObservableObject {
             try await repository.deleteSchedule(id: schedule.id)
         } catch {
             errorMessage = CalendarLocalization.text("calendar.error.delete")
+            emit(.error)
             return false
         }
         removeSchedule(id: schedule.id)
+        emit(.success)
         return true
     }
 
@@ -549,9 +678,11 @@ final class CalendarViewModel: ObservableObject {
             try await repository.untagSelf(scheduleID: schedule.id)
         } catch {
             errorMessage = CalendarLocalization.text("calendar.error.delete")
+            emit(.error)
             return false
         }
         removeSchedule(id: schedule.id)
+        emit(.success)
         return true
     }
 
@@ -566,7 +697,10 @@ final class CalendarViewModel: ObservableObject {
             searchPage = 0
             canLoadMoreSearchResults = !response.last
         }
-        catch { errorMessage = CalendarLocalization.text("calendar.error.search") }
+        catch {
+            errorMessage = CalendarLocalization.text("calendar.error.search")
+            emit(.error)
+        }
     }
 
     func loadMoreSearchResults() async {
@@ -580,22 +714,31 @@ final class CalendarViewModel: ObservableObject {
             searchResults.append(contentsOf: response.content)
             searchPage = nextPage
             canLoadMoreSearchResults = !response.last
-        } catch { errorMessage = CalendarLocalization.text("calendar.error.search") }
+        } catch {
+            errorMessage = CalendarLocalization.text("calendar.error.search")
+            emit(.error)
+        }
     }
 
     func showSearchResult(_ result: ScheduleSearchResultDTO) async {
         guard let date = CalendarDateSupport.date(from: result.startDateTime) else { return }
         let parts = CalendarDateSupport.calendar.dateComponents([.year, .month, .day], from: date)
-        year = parts.year ?? year
-        month = parts.month ?? month
-        highlightedDate = DateOnly(rawValue: String(format: "%04d-%02d-%02d", year, month, parts.day ?? 1))
+        let nextYear = parts.year ?? year
+        let nextMonth = parts.month ?? month
+        let nextDate = DateOnly(rawValue: String(format: "%04d-%02d-%02d", nextYear, nextMonth, parts.day ?? 1))
+        year = nextYear
+        month = nextMonth
+        highlightedDate = nextDate
         await reloadMonth()
     }
 
     func saveDDay(existing: DDayDTO?, title: String, date: Date, isPrivate: Bool) async -> Bool {
         guard isMyCalendar else { return false }
         let trimmed = title.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty, trimmed.count <= 30 else { return false }
+        guard !trimmed.isEmpty, trimmed.count <= 30 else {
+            emit(.warning)
+            return false
+        }
         let parts = CalendarDateSupport.calendar.dateComponents([.year, .month, .day], from: date)
         let dateOnly = DateOnly(rawValue: String(format: "%04d-%02d-%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0))
         do {
@@ -603,8 +746,13 @@ final class CalendarViewModel: ObservableObject {
                 DDaySaveDTO(id: existing?.id, title: trimmed, date: dateOnly, isPrivate: isPrivate)
             )
             upsertDDay(saved)
+            emit(.success)
             return true
-        } catch { errorMessage = CalendarLocalization.text("calendar.error.save"); return false }
+        } catch {
+            errorMessage = CalendarLocalization.text("calendar.error.save")
+            emit(.error)
+            return false
+        }
     }
 
     func deleteDDay(_ dDay: DDayDTO) async -> Bool {
@@ -613,9 +761,11 @@ final class CalendarViewModel: ObservableObject {
             try await repository.deleteDDay(id: dDay.id)
         } catch {
             errorMessage = CalendarLocalization.text("calendar.error.delete")
+            emit(.error)
             return false
         }
         removeDDay(id: dDay.id)
+        emit(.success)
         return true
     }
 
@@ -722,10 +872,17 @@ final class CalendarViewModel: ObservableObject {
         defer { isLoading = false }
         do { try await loadMonth() }
         catch is CancellationError { return }
-        catch { errorMessage = CalendarLocalization.text("calendar.error.load") }
+        catch {
+            errorMessage = CalendarLocalization.text("calendar.error.load")
+            emit(.error)
+        }
     }
 
     private func pinnedDDayKey(_ memberID: MemberID) -> String { "selectedDday_\(memberID)" }
+
+    private func emit(_ kind: DPHapticKind) {
+        hapticCenter.emit(kind)
+    }
 }
 
 enum CalendarFeatureLogic {

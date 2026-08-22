@@ -210,6 +210,9 @@ private struct GuestLandingView: View {
                 .shadow(color: DPColor.accent.opacity(0.20), radius: 20, y: 10)
             }
             .buttonStyle(.plain)
+            .simultaneousGesture(TapGesture().onEnded {
+                DPHapticCenter.shared.emit(.routine)
+            })
             .padding(.top, 38)
             .accessibilityIdentifier("guest.login")
 
@@ -374,6 +377,9 @@ private struct GuestLandingView: View {
                 .shadow(color: DPColor.accent.opacity(0.20), radius: 20, y: 10)
             }
             .buttonStyle(.plain)
+            .simultaneousGesture(TapGesture().onEnded {
+                DPHapticCenter.shared.emit(.routine)
+            })
             .accessibilityIdentifier("guest.login.cta")
 
             NavigationLink(value: GuestRoute.guide) {
@@ -387,6 +393,9 @@ private struct GuestLandingView: View {
                     .overlay { Capsule().stroke(DPColor.borderSecondary) }
             }
             .buttonStyle(.plain)
+            .simultaneousGesture(TapGesture().onEnded {
+                DPHapticCenter.shared.emit(.routine)
+            })
             .padding(.top, 20)
             .accessibilityIdentifier("guest.guide")
 
@@ -404,6 +413,9 @@ private struct GuestLandingView: View {
                 .contentShape(Capsule())
             }
             .buttonStyle(.plain)
+            .simultaneousGesture(TapGesture().onEnded {
+                DPHapticCenter.shared.emit(.routine)
+            })
             .padding(.top, 4)
             .accessibilityIdentifier("guest.support")
 

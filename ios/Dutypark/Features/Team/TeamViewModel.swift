@@ -22,6 +22,7 @@ final class TeamViewModel: ObservableObject {
 
     private let repository: TeamRepository
     private let contentFilter: ContentFilterStore
+    private let haptics: DPHapticCenter
     private var memberID: MemberID?
     private(set) var hasLoaded = false
 
@@ -31,10 +32,12 @@ final class TeamViewModel: ObservableObject {
     init(
         repository: TeamRepository = TeamRepository(),
         now: Date = Date(),
-        contentFilter: ContentFilterStore = .shared
+        contentFilter: ContentFilterStore = .shared,
+        haptics: DPHapticCenter = .shared
     ) {
         self.repository = repository
         self.contentFilter = contentFilter
+        self.haptics = haptics
         let components = Calendar.current.dateComponents([.year, .month], from: now)
         year = components.year ?? 2000
         month = components.month ?? 1
@@ -177,10 +180,14 @@ final class TeamViewModel: ObservableObject {
         } else {
             month -= 1
         }
+        let eventIDBeforeReload = haptics.event?.id
         await reloadForChangedMonth()
         if loadFailed {
             year = previousYear
             month = previousMonth
+        } else if (year != previousYear || month != previousMonth),
+                  haptics.event?.id == eventIDBeforeReload {
+            haptics.emit(.routine)
         }
     }
 
@@ -194,10 +201,14 @@ final class TeamViewModel: ObservableObject {
         } else {
             month += 1
         }
+        let eventIDBeforeReload = haptics.event?.id
         await reloadForChangedMonth()
         if loadFailed {
             year = previousYear
             month = previousMonth
+        } else if (year != previousYear || month != previousMonth),
+                  haptics.event?.id == eventIDBeforeReload {
+            haptics.emit(.routine)
         }
     }
 
@@ -208,10 +219,14 @@ final class TeamViewModel: ObservableObject {
         let components = Calendar.current.dateComponents([.year, .month], from: Date())
         year = components.year ?? year
         month = components.month ?? month
+        let eventIDBeforeReload = haptics.event?.id
         await reloadForChangedMonth()
         if loadFailed {
             year = previousYear
             month = previousMonth
+        } else if (year != previousYear || month != previousMonth),
+                  haptics.event?.id == eventIDBeforeReload {
+            haptics.emit(.routine)
         }
     }
 
@@ -221,16 +236,24 @@ final class TeamViewModel: ObservableObject {
         let previousMonth = self.month
         self.year = year
         self.month = month
+        let eventIDBeforeReload = haptics.event?.id
         await reloadForChangedMonth()
         if loadFailed {
             self.year = previousYear
             self.month = previousMonth
+        } else if (year != previousYear || month != previousMonth),
+                  haptics.event?.id == eventIDBeforeReload {
+            haptics.emit(.routine)
         }
     }
 
     func selectDay(at index: Int) async {
         guard days.indices.contains(index) else { return }
+        let didChangeSelection = selectedIndex != index
         selectedIndex = index
+        if didChangeSelection {
+            haptics.emit(.selection)
+        }
         await loadShifts()
     }
 
@@ -287,6 +310,7 @@ final class TeamViewModel: ObservableObject {
             )
             applySavedSchedule(savedSchedule)
             scheduleDraft = nil
+            haptics.emit(.success)
         } catch {
             presentError()
         }
@@ -302,6 +326,7 @@ final class TeamViewModel: ObservableObject {
                 daySchedules.filter { $0.id != schedule.id }
             }
             schedulePendingDeletion = nil
+            haptics.emit(.success)
         } catch {
             presentError()
         }
@@ -310,6 +335,7 @@ final class TeamViewModel: ObservableObject {
     private func presentError(_ message: String? = nil) {
         errorMessage = message
         showsError = true
+        haptics.emit(.error)
     }
 
     func duty(for day: TeamDayDTO) -> DutyDTO? {
@@ -492,6 +518,7 @@ final class TeamManageViewModel: ObservableObject {
             templates = (try? await loadedTemplates) ?? []
         } catch {
             showsError = true
+            DPHapticCenter.shared.emit(.error)
         }
     }
 
@@ -713,10 +740,16 @@ final class TeamManageViewModel: ObservableObject {
             if result.result {
                 showsSuccess = true
                 batchUploadPresented = false
+                DPHapticCenter.shared.emit(.success)
+            } else {
+                // The server returned a handled batch result with actionable row
+                // errors; keep the inline report and still give the user feedback.
+                DPHapticCenter.shared.emit(.error)
             }
             return result
         } catch {
             showsError = true
+            DPHapticCenter.shared.emit(.error)
             return nil
         }
     }
@@ -730,9 +763,13 @@ final class TeamManageViewModel: ObservableObject {
         guard !isWorking else { return false }
         isWorking = true
         showsError = false
+        showsSuccess = false
         defer { isWorking = false }
         do {
             try await operation()
+            // Emit at the request boundary. A best-effort reconciliation fetch
+            // below must not turn an already-completed mutation into an error.
+            DPHapticCenter.shared.emit(.success)
             if let team, let update {
                 self.team = update(team)
             }
@@ -743,6 +780,7 @@ final class TeamManageViewModel: ObservableObject {
             return true
         } catch {
             showsError = true
+            DPHapticCenter.shared.emit(.error)
             return false
         }
     }
@@ -973,6 +1011,7 @@ final class TeamMemberSearchViewModel: ObservableObject {
             totalElements = response.totalElements
         } catch {
             showsError = true
+            DPHapticCenter.shared.emit(.error)
         }
     }
 
@@ -982,9 +1021,11 @@ final class TeamMemberSearchViewModel: ObservableObject {
         defer { isWorking = false }
         do {
             try await repository.addMember(teamID: teamID, memberID: id)
+            DPHapticCenter.shared.emit(.success)
             return true
         } catch {
             showsError = true
+            DPHapticCenter.shared.emit(.error)
             return false
         }
     }

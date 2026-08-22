@@ -149,7 +149,7 @@ struct NotificationCenterView: View {
                     accessibilityIdentifier: "notifications.deleteRead"
                 ) {
                     if store.notifications.contains(where: \.isRead) {
-                        deletionConfirmation = .allRead
+                        requestDelete(.allRead)
                     } else {
                         showInformation("notifications.list.noReadNotifications")
                     }
@@ -199,7 +199,7 @@ struct NotificationCenterView: View {
                     NotificationRow(
                         notification: notification,
                         onOpen: { Task { await open(notification) } },
-                        onDelete: { deletionConfirmation = .notification(notification) }
+                        onDelete: { requestDelete(.notification(notification)) }
                     )
 
                     if index < store.notifications.count - 1 || store.hasMore {
@@ -280,6 +280,10 @@ struct NotificationCenterView: View {
     private func showInformation(_ key: String) {
         alertTitle = notificationLocalized("notifications.title")
         alertMessage = notificationLocalized(key)
+    }
+
+    private func requestDelete(_ confirmation: NotificationDeletionConfirmation) {
+        deletionConfirmation = confirmation
     }
 }
 
@@ -364,7 +368,10 @@ private struct NotificationRowSwipe<Content: View>: View {
     let onDelete: () -> Void
     @ViewBuilder let content: Content
 
+    @State private var isDeleteActionRevealed = false
+
     private static var actionWidth: CGFloat { 84 }
+    private var coordinateSpaceName: String { "notification-row-swipe-(deleteIdentifier)" }
 
     var body: some View {
         ScrollView(.horizontal) {
@@ -389,9 +396,34 @@ private struct NotificationRowSwipe<Content: View>: View {
                 .buttonStyle(.plain)
                 .accessibilityIdentifier(deleteIdentifier)
             }
+            .background {
+                GeometryReader { proxy in
+                    Color.clear
+                        .preference(
+                            key: NotificationRowSwipeOffsetKey.self,
+                            value: proxy.frame(in: .named(coordinateSpaceName)).minX
+                        )
+                }
+            }
         }
         .scrollIndicators(.hidden)
         .scrollTargetBehavior(NotificationRowSwipeSnap(actionWidth: Self.actionWidth))
+        .coordinateSpace(name: coordinateSpaceName)
+        .onPreferenceChange(NotificationRowSwipeOffsetKey.self) { offset in
+            let revealed = offset <= -Self.actionWidth / 2
+            guard revealed != isDeleteActionRevealed else { return }
+            isDeleteActionRevealed = revealed
+            guard revealed else { return }
+            DPHapticCenter.shared.emit(.selection)
+        }
+    }
+}
+
+private struct NotificationRowSwipeOffsetKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = nextValue()
     }
 }
 
@@ -451,7 +483,7 @@ struct NotificationBellButton: View {
 
     var body: some View {
         Button {
-            isPresented = true
+            present()
         } label: {
             Image(systemName: store.unreadCount > 0 ? "bell.badge.fill" : "bell")
                 .symbolRenderingMode(.hierarchical)
@@ -487,7 +519,7 @@ struct NotificationBellButton: View {
         }
         .accessibilityRepresentation {
             Button {
-                isPresented = true
+                present()
             } label: {
                 Color.clear
                     .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
@@ -497,6 +529,11 @@ struct NotificationBellButton: View {
             .accessibilityValue(accessibilityValue)
             .accessibilityIdentifier("notifications.bell")
         }
+    }
+
+    private func present() {
+        guard !isPresented else { return }
+        isPresented = true
     }
 
     private var accessibilityValue: String {

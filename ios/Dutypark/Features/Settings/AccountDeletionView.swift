@@ -121,11 +121,13 @@ final class AccountDeletionViewModel: ObservableObject {
             preview = try await service.accountDeletionPreview()
         } catch {
             errorKey = Self.errorKey(for: error)
+            DPHapticCenter.shared.emit(.error)
         }
     }
 
     func advance(memberName: String) {
         errorKey = nil
+        let previousStep = flow.step
         switch flow.step {
         case .scope:
             flow.step = .team
@@ -134,29 +136,36 @@ final class AccountDeletionViewModel: ObservableObject {
                 errorKey = hasTransferCandidates
                     ? "settings.accountDeletion.error.transferRequired"
                     : "settings.accountDeletion.error.noTransferCandidate"
+                DPHapticCenter.shared.emit(.warning)
                 return
             }
             flow.step = .reauthentication
         case .reauthentication:
             guard flow.validProof() != nil else {
                 errorKey = "settings.accountDeletion.error.proofExpired"
+                DPHapticCenter.shared.emit(.warning)
                 return
             }
             flow.step = .nameConfirmation
         case .nameConfirmation:
             guard flow.nameMatches(memberName) else {
                 errorKey = "settings.accountDeletion.error.nameMismatch"
+                DPHapticCenter.shared.emit(.warning)
                 return
             }
             flow.step = .finalConfirmation
         case .finalConfirmation:
             break
         }
+        if flow.step != previousStep {
+            DPHapticCenter.shared.emit(.selection)
+        }
     }
 
     func goBack() {
         guard !isWorking else { return }
         errorKey = nil
+        let previousStep = flow.step
         switch flow.step {
         case .scope: break
         case .team: flow.step = .scope
@@ -166,6 +175,9 @@ final class AccountDeletionViewModel: ObservableObject {
             flow.step = .team
         case .nameConfirmation: flow.step = .reauthentication
         case .finalConfirmation: flow.step = .nameConfirmation
+        }
+        if flow.step != previousStep {
+            DPHapticCenter.shared.emit(.selection)
         }
     }
 
@@ -186,9 +198,11 @@ final class AccountDeletionViewModel: ObservableObject {
         do {
             let response = try await service.reauthenticateForAccountDeletion(password: password)
             flow.storeProof(response.reauthProof, expiresIn: response.expiresIn)
+            DPHapticCenter.shared.emit(.success)
         } catch {
             flow.clearProof()
             errorKey = Self.errorKey(for: error)
+            DPHapticCenter.shared.emit(.error)
         }
     }
 
@@ -204,6 +218,7 @@ final class AccountDeletionViewModel: ObservableObject {
                 try await oauthClient.reauthenticateForAccountDeletion(provider: provider)
             }
             flow.storeProof(proof.value, expiresIn: proof.expiresIn)
+            DPHapticCenter.shared.emit(.success)
         } catch MobileOAuthError.cancelled {
             flow.clearProof()
         } catch AppleSignInError.cancelled {
@@ -211,6 +226,7 @@ final class AccountDeletionViewModel: ObservableObject {
         } catch {
             flow.clearProof()
             errorKey = Self.errorKey(for: error)
+            DPHapticCenter.shared.emit(.error)
         }
     }
 
@@ -220,6 +236,7 @@ final class AccountDeletionViewModel: ObservableObject {
         guard let proof = flow.validProof() else {
             errorKey = "settings.accountDeletion.error.proofExpired"
             flow.step = .reauthentication
+            DPHapticCenter.shared.emit(.warning)
             return nil
         }
         isWorking = true
@@ -238,6 +255,7 @@ final class AccountDeletionViewModel: ObservableObject {
             return .alreadyPending
         } catch {
             errorKey = Self.errorKey(for: error)
+            DPHapticCenter.shared.emit(.error)
             // The backend consumes a valid proof before applying later team checks,
             // so every failed final request must require a fresh proof.
             flow.step = .reauthentication
@@ -447,7 +465,7 @@ struct AccountDeletionView: View {
                     } else {
                         Picker(
                             SettingsLocalization.string("settings.accountDeletion.team.successor"),
-                            selection: $model.flow.selectedTransferMemberID
+                            selection: transferMemberSelection
                         ) {
                             Text(SettingsLocalization.string("settings.accountDeletion.team.select"))
                                 .tag(Int64?.none)
@@ -614,6 +632,17 @@ struct AccountDeletionView: View {
         await push.completeAccountDeletionCleanup()
         await session.completeAccountDeletion()
         dismiss()
+    }
+
+    private var transferMemberSelection: Binding<Int64?> {
+        Binding(
+            get: { model.flow.selectedTransferMemberID },
+            set: { value in
+                guard model.flow.selectedTransferMemberID != value else { return }
+                model.flow.selectedTransferMemberID = value
+                DPHapticCenter.shared.emit(.selection)
+            }
+        )
     }
 
     private func stepTitle(_ key: String) -> some View {

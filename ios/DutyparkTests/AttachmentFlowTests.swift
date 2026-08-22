@@ -139,6 +139,78 @@ struct AttachmentFlowTests {
     }
 
     @Test
+    func pickerEmitsOneOutcomeForAnEntireUploadBatch() async throws {
+        let haptics = DPHapticCenter()
+        let client = AttachmentFlowClientStub(
+            uploadOutcomes: [
+                .success(attachment(id: UUID(), filename: "first.txt")),
+                .success(attachment(id: UUID(), filename: "second.txt"))
+            ]
+        )
+        let model = AttachmentPickerModel(
+            contextType: .todo,
+            client: client,
+            haptics: haptics
+        )
+
+        await model.add(files: [
+            try uploadFile(named: "first.txt"),
+            try uploadFile(named: "second.txt")
+        ])
+
+        #expect(haptics.event?.kind == .success)
+        #expect(haptics.event?.id == 1)
+    }
+
+    @Test
+    func pickerUsesSelectionForValidReorderWhileRemovalReliesOnItsWarningButton() async throws {
+        let first = attachment(id: UUID(), filename: "first.txt")
+        let second = attachment(id: UUID(), filename: "second.txt")
+        let haptics = DPHapticCenter()
+        let model = AttachmentPickerModel(
+            contextType: .todo,
+            existingAttachments: [first, second],
+            haptics: haptics
+        )
+
+        model.move(from: 0, by: 1)
+        #expect(haptics.event?.kind == .selection)
+        #expect(haptics.event?.id == 1)
+
+        model.move(from: 0, by: -1)
+        #expect(haptics.event?.id == 1)
+
+        model.remove(first.id)
+        #expect(haptics.event?.kind == .selection)
+        #expect(haptics.event?.id == 1)
+
+        model.remove(first.id)
+        #expect(haptics.event?.id == 1)
+    }
+
+    @Test
+    func galleryUsesSelectionForReorderAndSuccessForCompletedDeletion() async {
+        let first = attachment(id: UUID(), filename: "first.txt")
+        let second = attachment(id: UUID(), filename: "second.txt")
+        let haptics = DPHapticCenter()
+        let model = AttachmentGalleryModel(
+            contextType: .todo,
+            contextId: "todo-1",
+            attachments: [first, second],
+            client: AttachmentGalleryFlowClientStub(),
+            haptics: haptics
+        )
+
+        await model.move(from: 0, by: 1)
+        #expect(haptics.event?.kind == .selection)
+        #expect(haptics.event?.id == 1)
+
+        await model.delete(second)
+        #expect(haptics.event?.kind == .success)
+        #expect(haptics.event?.id == 2)
+    }
+
+    @Test
     func pickerStopsAfterFailureThenRetriesWithTheExistingSession() async throws {
         let sessionId = UUID(uuidString: "11111111-2222-3333-4444-555555555555")!
         let firstAttachment = attachment(id: UUID(), filename: "first.txt")
@@ -448,6 +520,34 @@ private actor AttachmentFlowClientStub: AttachmentPickerClient {
             uploadSessionIds: uploadSessionIds,
             cancelledUploadCount: cancelledUploadCount,
             discardedSessionIds: discardedSessionIds
+        )
+    }
+}
+
+private struct AttachmentGalleryFlowClientStub: AttachmentGalleryClient, Sendable {
+    func list(
+        contextType: AttachmentContextType,
+        contextId: String
+    ) async throws -> [AttachmentDTO] {
+        []
+    }
+
+    func delete(_ attachmentId: AttachmentID) async throws {}
+
+    func reorder(
+        contextType: AttachmentContextType,
+        contextId: String,
+        orderedAttachmentIds: [AttachmentID]
+    ) async throws {}
+
+    func download(
+        _ attachment: AttachmentDTO,
+        inline: Bool
+    ) async throws -> DownloadedAttachment {
+        DownloadedAttachment(
+            data: Data([0x01]),
+            filename: attachment.originalFilename,
+            contentType: attachment.contentType
         )
     }
 }

@@ -90,6 +90,7 @@ struct DutyparkApp: App {
         WindowGroup {
             AppRootView()
                 .environmentObject(session)
+                .dpHapticEventHost()
                 .preferredColorScheme(selectedColorScheme)
         }
     }

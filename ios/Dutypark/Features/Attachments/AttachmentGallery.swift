@@ -3,6 +3,28 @@ import QuickLook
 import SwiftUI
 import UIKit
 
+nonisolated protocol AttachmentGalleryClient: Sendable {
+    func list(
+        contextType: AttachmentContextType,
+        contextId: String
+    ) async throws -> [AttachmentDTO]
+
+    func delete(_ attachmentId: AttachmentID) async throws
+
+    func reorder(
+        contextType: AttachmentContextType,
+        contextId: String,
+        orderedAttachmentIds: [AttachmentID]
+    ) async throws
+
+    func download(
+        _ attachment: AttachmentDTO,
+        inline: Bool
+    ) async throws -> DownloadedAttachment
+}
+
+extension AttachmentClient: AttachmentGalleryClient {}
+
 struct AttachmentThumbnail: View {
     let attachment: AttachmentDTO
     var client = AttachmentClient()
@@ -49,18 +71,21 @@ final class AttachmentGalleryModel: ObservableObject {
     @Published private(set) var isLoading = false
     @Published var failure: AttachmentGalleryFailure?
 
-    private let client: AttachmentClient
+    private let client: any AttachmentGalleryClient
     private let loadsRemotely: Bool
+    private let haptics: DPHapticCenter
 
     init(
         contextType: AttachmentContextType,
         contextId: String,
-        client: AttachmentClient = AttachmentClient()
+        client: any AttachmentGalleryClient = AttachmentClient(),
+        haptics: DPHapticCenter = .shared
     ) {
         self.contextType = contextType
         self.contextId = contextId
         self.client = client
         self.loadsRemotely = true
+        self.haptics = haptics
     }
 
     /// Schedule payloads already embed their attachment metadata, so a gallery built
@@ -70,13 +95,15 @@ final class AttachmentGalleryModel: ObservableObject {
         contextType: AttachmentContextType,
         contextId: String,
         attachments: [AttachmentDTO],
-        client: AttachmentClient = AttachmentClient()
+        client: any AttachmentGalleryClient = AttachmentClient(),
+        haptics: DPHapticCenter = .shared
     ) {
         self.contextType = contextType
         self.contextId = contextId
         self.client = client
         self.loadsRemotely = false
         self.attachments = attachments
+        self.haptics = haptics
     }
 
 #if DEBUG
@@ -86,6 +113,7 @@ final class AttachmentGalleryModel: ObservableObject {
         self.client = AttachmentClient()
         self.loadsRemotely = false
         self.attachments = uiTestingAttachments
+        self.haptics = .shared
     }
 #endif
 
@@ -96,6 +124,7 @@ final class AttachmentGalleryModel: ObservableObject {
         do {
             attachments = try await client.list(contextType: contextType, contextId: contextId)
         } catch {
+            guard !Task.isCancelled else { return }
             failure = .loadFailed
         }
     }
@@ -109,17 +138,21 @@ final class AttachmentGalleryModel: ObservableObject {
         do {
             try await client.delete(attachment.id)
             attachments.removeAll { $0.id == attachment.id }
+            haptics.emit(.success)
         } catch {
-            failure = .deleteFailed
+            guard !Task.isCancelled, !(error is CancellationError) else { return }
+            recordFailure(.deleteFailed)
         }
     }
 
     func move(from index: Int, by offset: Int) async {
+        guard offset != 0 else { return }
         let destination = index + offset
         guard attachments.indices.contains(index), attachments.indices.contains(destination) else {
             return
         }
         attachments.swapAt(index, destination)
+        haptics.emit(.selection)
         do {
             try await client.reorder(
                 contextType: contextType,
@@ -128,12 +161,13 @@ final class AttachmentGalleryModel: ObservableObject {
             )
         } catch {
             attachments.swapAt(index, destination)
-            failure = .reorderFailed
+            if Task.isCancelled || error is CancellationError { return }
+            recordFailure(.reorderFailed)
         }
     }
 
     func localFile(for attachment: AttachmentDTO) async throws -> URL {
-        let downloaded = try await client.download(attachment)
+        let downloaded = try await client.download(attachment, inline: false)
         let directory = FileManager.default.temporaryDirectory
             .appending(path: "DutyparkAttachments", directoryHint: .isDirectory)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -143,6 +177,15 @@ final class AttachmentGalleryModel: ObservableObject {
         )
         try downloaded.data.write(to: url, options: .atomic)
         return url
+    }
+
+    func recordFailure(_ failure: AttachmentGalleryFailure) {
+        self.failure = failure
+        haptics.emit(.error)
+    }
+
+    func attachmentOpened() {
+        haptics.emit(.routine)
     }
 
     private func safeFilename(_ filename: String) -> String {
@@ -336,7 +379,7 @@ struct AttachmentGallery: View {
                         .disabled(index == model.attachments.count - 1)
 
                         Button(role: .destructive) {
-                            deleteCandidate = AttachmentDeletionCandidate(attachment: attachment)
+                            requestDelete(attachment)
                         } label: {
                             Label(
                                 AttachmentLocalization.text("attachment.action.delete"),
@@ -405,7 +448,7 @@ struct AttachmentGallery: View {
                 .disabled(index == model.attachments.count - 1)
 
                 Button(role: .destructive) {
-                    deleteCandidate = AttachmentDeletionCandidate(attachment: attachment)
+                    requestDelete(attachment)
                 } label: {
                     Label(
                         AttachmentLocalization.text("attachment.action.delete"),
@@ -428,10 +471,16 @@ struct AttachmentGallery: View {
                 } else {
                     previewURL = url
                 }
+                model.attachmentOpened()
             } catch {
-                model.failure = .downloadFailed
+                guard !Task.isCancelled else { return }
+                model.recordFailure(.downloadFailed)
             }
         }
+    }
+
+    private func requestDelete(_ attachment: AttachmentDTO) {
+        deleteCandidate = AttachmentDeletionCandidate(attachment: attachment)
     }
 }
 

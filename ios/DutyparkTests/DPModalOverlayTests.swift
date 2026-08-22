@@ -3,6 +3,38 @@ import Testing
 
 struct DPModalOverlayTests {
     @Test
+    func onlyImmediateDismissalsProduceRoutineFeedback() {
+        #expect(
+            DPModalDismissFeedback.kind(
+                for: .dismissImmediately,
+                configured: .routine
+            ) == .routine
+        )
+        #expect(
+            DPModalDismissFeedback.kind(
+                for: .request(.backdrop),
+                configured: .routine
+            ) == nil
+        )
+        #expect(
+            DPModalDismissFeedback.kind(
+                for: .ignore,
+                configured: .routine
+            ) == nil
+        )
+    }
+
+    @Test
+    func dismissalFeedbackCanBeDisabledForConfirmationScaffolds() {
+        #expect(
+            DPModalDismissFeedback.kind(
+                for: .dismissImmediately,
+                configured: nil
+            ) == nil
+        )
+    }
+
+    @Test
     func defaultExternalDismissalClosesImmediately() {
         let policy = makePolicy()
 

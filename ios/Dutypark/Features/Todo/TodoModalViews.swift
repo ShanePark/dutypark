@@ -157,7 +157,10 @@ struct TodoDetailModal: View {
                     preservedTags: todo.tags,
                     isSaving: model.isSaving,
                     maximumHeight: maximumHeight,
-                    dismissAction: { showingEdit = false },
+                    dismissAction: {
+                        model.emitHaptic(.routine)
+                        showingEdit = false
+                    },
                     savedDismissAction: dismiss,
                     dismissRequest: dismissRequest,
                     onBusyChange: { onDismissabilityChange(!$0) }
@@ -209,7 +212,10 @@ struct TodoDetailModal: View {
                 canDismiss: TodoConfirmationPolicy.canDismiss(
                     isConfirming: isConfirming,
                     isSaving: model.isSaving
-                )
+                ),
+                // The confirmation buttons already provide their press feedback;
+                // do not add a second tick when the panel itself closes.
+                dismissHaptic: nil
             ) { availableSize, confirmationDismiss in
                 DPConfirmationPanel(
                     title: todoLocalized(requestedConfirmation.titleKey),
@@ -416,7 +422,10 @@ struct TodoDetailModal: View {
                 systemImage: "pencil",
                 color: DPColor.accent,
                 isLoading: isLoadingEditAttachments,
-                action: { showingEdit = true }
+                action: {
+                    model.emitHaptic(.routine)
+                    showingEdit = true
+                }
             )
             .disabled(todo.hasAttachments && model.attachmentsByTodoID[todo.uuid] == nil)
 

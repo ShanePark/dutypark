@@ -4,6 +4,30 @@ import XCTest
 
 @MainActor
 final class CalendarFeatureTests: XCTestCase {
+    func testCalendarHapticPolicyLeavesNoOpTransitionsSilent() {
+        XCTAssertNil(CalendarHapticPolicy.monthNavigation(fromYear: 2026, fromMonth: 8, toYear: 2026, toMonth: 8))
+        XCTAssertEqual(
+            CalendarHapticPolicy.monthNavigation(fromYear: 2026, fromMonth: 8, toYear: 2026, toMonth: 9),
+            .routine
+        )
+        XCTAssertNil(
+            CalendarHapticPolicy.selectionChanged(
+                from: DateOnly(rawValue: "2026-08-12"),
+                to: DateOnly(rawValue: "2026-08-12")
+            )
+        )
+        XCTAssertEqual(
+            CalendarHapticPolicy.mutationResult(succeeded: true),
+            .success
+        )
+        XCTAssertEqual(
+            CalendarHapticPolicy.mutationResult(succeeded: false),
+            .error
+        )
+        XCTAssertEqual(CalendarHapticPolicy.validationFailure(), .warning)
+        XCTAssertNil(CalendarHapticPolicy.validationFailure(isActionable: false))
+    }
+
     func testSearchResultDateOmitsMidnightPlaceholderButKeepsExplicitTime() {
         XCTAssertEqual(
             CalendarVisualLogic.searchResultDateText(
@@ -140,7 +164,8 @@ final class CalendarFeatureTests: XCTestCase {
             "@Environment(\\.dismiss) private var dismiss",
             "private var memberBackAction: (() -> Void)?",
             "guard isPushedMemberCalendar else { return nil }",
-            "return { dismiss() }",
+            "DPHapticCenter.shared.emit(.routine)",
+            "dismiss()",
             "Button(action: memberBackAction)",
             ".navigationBarBackButtonHidden(isPushedMemberCalendar)",
             ".dpInteractivePopGestureEnabled()",
@@ -1462,6 +1487,104 @@ final class CalendarFeatureTests: XCTestCase {
         await model.changeMonth(by: -1)
         XCTAssertEqual(model.year, 2026)
         XCTAssertEqual(model.month, 12)
+    }
+
+    func testCalendarMonthNavigationAndPickerUseRoutineFeedback() async {
+        let repository = CalendarRepositoryMock()
+        let haptics = DPHapticCenter()
+        let model = CalendarViewModel(
+            repository: repository,
+            now: date(2026, 8, 12),
+            hapticCenter: haptics
+        )
+        await model.load()
+        XCTAssertNil(haptics.event)
+
+        await model.changeMonth(by: 1)
+        guard let navigationEvent = haptics.event else {
+            XCTFail("Changing the month should emit a routine event")
+            return
+        }
+        XCTAssertEqual(navigationEvent.kind, .routine)
+        let navigationEventID = navigationEvent.id
+
+        await model.changeMonth(by: 0)
+        XCTAssertEqual(haptics.event?.id, navigationEventID, "A no-op month change stays silent")
+
+        await model.selectYearMonth(year: 2028, month: 2)
+        XCTAssertEqual(haptics.event?.kind, .routine)
+    }
+
+    func testScheduleMutationEmitsSuccessOnlyAfterTheSaveCompletes() async {
+        let repository = CalendarRepositoryMock()
+        let haptics = DPHapticCenter()
+        let model = CalendarViewModel(
+            repository: repository,
+            now: date(2026, 8, 12),
+            hapticCenter: haptics
+        )
+        await model.load()
+
+        let saved = await model.saveSchedule(
+            existing: nil,
+            content: "Dinner",
+            description: "",
+            visibility: .friends,
+            start: date(2026, 8, 12),
+            end: date(2026, 8, 12, hour: 1),
+            tagFriendIDs: [],
+            attachmentSessionID: nil,
+            orderedAttachmentIDs: [],
+            aiTimeParsingRequested: false
+        )
+
+        XCTAssertTrue(saved)
+        XCTAssertEqual(haptics.event?.kind, .success)
+    }
+
+    func testScheduleValidationUsesWarningFeedbackWithoutCallingTheRepository() async {
+        let repository = CalendarRepositoryMock()
+        let haptics = DPHapticCenter()
+        let model = CalendarViewModel(
+            repository: repository,
+            now: date(2026, 8, 12),
+            hapticCenter: haptics
+        )
+        await model.load()
+
+        let saved = await model.saveSchedule(
+            existing: nil,
+            content: "   ",
+            description: "",
+            visibility: .friends,
+            start: date(2026, 8, 12),
+            end: date(2026, 8, 12),
+            tagFriendIDs: [],
+            attachmentSessionID: nil,
+            orderedAttachmentIDs: [],
+            aiTimeParsingRequested: false
+        )
+
+        XCTAssertFalse(saved)
+        XCTAssertEqual(haptics.event?.kind, .warning)
+        let request = await repository.savedSchedule
+        XCTAssertNil(request)
+    }
+
+    func testFailedScheduleDeleteUsesErrorFeedback() async {
+        let repository = CalendarRepositoryMock(failDestructiveMutations: true)
+        let haptics = DPHapticCenter()
+        let model = CalendarViewModel(
+            repository: repository,
+            now: date(2026, 8, 12),
+            hapticCenter: haptics
+        )
+        await model.load()
+
+        let succeeded = await model.deleteSchedule(model.days[11].schedules[0])
+
+        XCTAssertFalse(succeeded)
+        XCTAssertEqual(haptics.event?.kind, .error)
     }
 
     func testScheduleSavePreservesEveryOrderedAttachmentIdentifier() async {

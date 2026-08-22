@@ -14,11 +14,16 @@ final class AdminMemberListViewModel: ObservableObject {
     @Published private(set) var loadFailed = false
 
     private let repository: any AdminRepositoryProtocol
+    private let haptics: DPHapticCenter
     private var keyword = ""
     private var loadGeneration = 0
 
-    init(repository: any AdminRepositoryProtocol = AdminRepository()) {
+    init(
+        repository: any AdminRepositoryProtocol = AdminRepository(),
+        haptics: DPHapticCenter = .shared
+    ) {
         self.repository = repository
+        self.haptics = haptics
     }
 
     func load() async {
@@ -41,7 +46,13 @@ final class AdminMemberListViewModel: ObservableObject {
     }
 
     func revokeSession(id: Int64) async throws {
-        try await repository.revokeSession(id: id)
+        do {
+            try await repository.revokeSession(id: id)
+        } catch {
+            haptics.emit(.error)
+            throw error
+        }
+        haptics.emit(.success)
         sessions.removeAll { $0.id == id }
         members = members.map { member in
             guard member.tokens.contains(where: { $0.id == id }) else { return member }
@@ -59,7 +70,13 @@ final class AdminMemberListViewModel: ObservableObject {
     }
 
     func changePassword(memberID: MemberID, newPassword: String) async throws {
-        try await repository.changePassword(memberID: memberID, newPassword: newPassword)
+        do {
+            try await repository.changePassword(memberID: memberID, newPassword: newPassword)
+        } catch {
+            haptics.emit(.error)
+            throw error
+        }
+        haptics.emit(.success)
     }
 
     private func load(keyword: String, page: Int) async {
@@ -109,11 +126,16 @@ final class AdminTeamListViewModel: ObservableObject {
     @Published private(set) var searchKeyword = ""
 
     private let repository: any AdminRepositoryProtocol
+    private let haptics: DPHapticCenter
     private var loadGeneration = 0
     private var nameCheckGeneration = 0
 
-    init(repository: any AdminRepositoryProtocol = AdminRepository()) {
+    init(
+        repository: any AdminRepositoryProtocol = AdminRepository(),
+        haptics: DPHapticCenter = .shared
+    ) {
         self.repository = repository
+        self.haptics = haptics
     }
 
     func load() async {
@@ -141,7 +163,9 @@ final class AdminTeamListViewModel: ObservableObject {
         nameCheckResult = nil
 
         guard (2...20).contains(trimmed.count) else {
-            nameCheckResult = trimmed.count < 2 ? .tooShort : .tooLong
+            let result: AdminTeamNameCheckResult = trimmed.count < 2 ? .tooShort : .tooLong
+            nameCheckResult = result
+            haptics.emit(.warning)
             return
         }
 
@@ -149,11 +173,15 @@ final class AdminTeamListViewModel: ObservableObject {
             let result = try await repository.checkTeamName(trimmed)
             guard generation == nameCheckGeneration else { return }
             nameCheckResult = result
+            if result != .ok {
+                haptics.emit(.warning)
+            }
         } catch is CancellationError {
             return
         } catch {
             guard generation == nameCheckGeneration else { return }
             nameCheckResult = nil
+            haptics.emit(.error)
         }
     }
 
@@ -163,15 +191,25 @@ final class AdminTeamListViewModel: ObservableObject {
     }
 
     func create(name: String, description: String) async throws -> TeamDTO {
-        let created = try await repository.createTeam(
-            name: name.trimmingCharacters(in: .whitespacesAndNewlines),
-            description: description.trimmingCharacters(in: .whitespacesAndNewlines)
-        )
+        let created: TeamDTO
+        do {
+            created = try await repository.createTeam(
+                name: name.trimmingCharacters(in: .whitespacesAndNewlines),
+                description: description.trimmingCharacters(in: .whitespacesAndNewlines)
+            )
+        } catch {
+            haptics.emit(.error)
+            throw error
+        }
+        haptics.emit(.success)
         insertCreatedTeam(created)
         return created
     }
 
     func delete(_ team: SimpleTeamDTO) async throws {
+        // TeamManageView owns the confirmation/result boundary for this action and emits the
+        // outcome once after this closure returns. Keeping this repository method silent avoids
+        // a duplicate success/error event when the admin route deletes a team.
         try await repository.deleteTeam(id: team.id)
         guard teams.contains(where: { $0.id == team.id }) else { return }
         teams.removeAll { $0.id == team.id }

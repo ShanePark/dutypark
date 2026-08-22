@@ -157,7 +157,7 @@ struct CalendarView: View {
                     title: LocalizedStringKey(CalendarLocalization.text("calendar.error.title")),
                     message: LocalizedStringKey(error),
                     retryTitle: LocalizedStringKey(CalendarLocalization.text("calendar.retry")),
-                    retryAction: { Task { await model.load() } }
+                    retryAction: { Task { await model.load(emitErrorFeedback: true) } }
                 )
             } else {
                 calendarContent
@@ -315,7 +315,8 @@ struct CalendarView: View {
             DPModalOverlay(
                 maximumContentWidth: DPConfirmationPanel.maximumWidth,
                 onDismiss: { finishBlockConfirmationDismissal() },
-                canDismiss: !blockModel.isBlocking
+                canDismiss: !blockModel.isBlocking,
+                dismissHaptic: nil
             ) { availableSize, dismiss in
                 DPConfirmationPanel(
                     title: CalendarLocalization.text("calendar.block.confirm.title"),
@@ -405,6 +406,7 @@ struct CalendarView: View {
             // The same siren in the same red as every other report in the app.
             Button(role: .destructive) {
                 guard let memberID = model.targetMemberID else { return }
+                DPHapticCenter.shared.emit(.routine)
                 withoutPresentationAnimation {
                     reportTarget = ReportTarget(
                         type: .member,
@@ -443,7 +445,10 @@ struct CalendarView: View {
     // tab root is not pushed and keeps the bare identity.
     private var memberBackAction: (() -> Void)? {
         guard isPushedMemberCalendar else { return nil }
-        return { dismiss() }
+        return {
+            DPHapticCenter.shared.emit(.routine)
+            dismiss()
+        }
     }
 
     // Back is a control of its own so the avatar and the name stay free to open the
@@ -495,7 +500,10 @@ struct CalendarView: View {
     }
 
     private var monthLabel: some View {
-        Button { withoutPresentationAnimation { showsMonthPicker = true } } label: {
+        Button {
+            DPHapticCenter.shared.emit(.routine)
+            withoutPresentationAnimation { showsMonthPicker = true }
+        } label: {
             Text(String(format: "%04d-%02d", model.year, model.month))
                 .font(DPFont.bold(size: 16, relativeTo: .headline))
                 .foregroundStyle(DPColor.textPrimary)
@@ -683,6 +691,7 @@ struct CalendarView: View {
 
     private func performSearch() {
         guard model.canSearchSchedules else { return }
+        DPHapticCenter.shared.emit(.routine)
         withoutPresentationAnimation { showsSearch = true }
         if !model.searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             Task { await model.search() }
@@ -718,6 +727,7 @@ struct CalendarView: View {
         HStack(spacing: 0) {
             if model.isMyCalendar && !model.friends.isEmpty {
                 Button {
+                    DPHapticCenter.shared.emit(.routine)
                     withoutPresentationAnimation { showsDutyComparison = true }
                 } label: {
                     Image(systemName: "person.2")
@@ -741,7 +751,10 @@ struct CalendarView: View {
                 .accessibilityIdentifier("calendar.duty.quick.start")
             }
             if model.isMyCalendar, model.team?.dutyBatchTemplate != nil {
-                Button { importsDutyBatch = true } label: {
+                Button {
+                    DPHapticCenter.shared.emit(.routine)
+                    importsDutyBatch = true
+                } label: {
                     Image(systemName: "doc.badge.arrow.up")
                         .foregroundStyle(DPColor.textSecondary)
                         .frame(width: 44, height: 44)
@@ -800,7 +813,7 @@ struct CalendarView: View {
                 showsLabel: true,
                 tone: .warning
             ) {
-                model.setQuickDutyEditing(false)
+                model.setQuickDutyEditing(false, emitFeedback: false)
             }
             .padding(.trailing, -DPIconActionMetrics.touchPadding)
             .accessibilityIdentifier("calendar.duty.quick.exit")
@@ -809,6 +822,7 @@ struct CalendarView: View {
 
     private func openTodo(_ todo: TodoDTO) {
         guard TodoID(uuidString: todo.id) != nil else { return }
+        DPHapticCenter.shared.emit(.routine)
         todoSelection = CalendarTodoSelection(todo: todo)
     }
 
@@ -876,7 +890,10 @@ struct CalendarView: View {
             }
 
             if model.isMyCalendar {
-                Button { showsBatchUpdate = true } label: {
+                Button {
+                    DPHapticCenter.shared.emit(.routine)
+                    showsBatchUpdate = true
+                } label: {
                     Label(CalendarLocalization.text("calendar.duty.batch"), systemImage: "calendar")
                         .font(DPTypography.caption)
                         .foregroundStyle(DPColor.textSecondary)
@@ -965,7 +982,7 @@ struct CalendarView: View {
                             guard !isSwipingMonth, !isSlidingMonth else { return }
                             if model.isQuickDutyEditing { model.focusQuickDuty(on: day) }
                             else {
-                                withoutPresentationAnimation { model.selectedDay = day }
+                                withoutPresentationAnimation { model.selectDay(day) }
                             }
                         }
                     } else {
@@ -1046,11 +1063,15 @@ struct CalendarView: View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: DPSpacing.small) {
             ForEach(model.dDays, id: \.id) { item in
                 DDayCard(item: item, model: model) {
+                    DPHapticCenter.shared.emit(.routine)
                     withoutPresentationAnimation { dDayModalSelection = .detail(item) }
                 }
             }
             if model.isMyCalendar {
-                Button { withoutPresentationAnimation { dDayModalSelection = .create } } label: {
+                Button {
+                    DPHapticCenter.shared.emit(.routine)
+                    withoutPresentationAnimation { dDayModalSelection = .create }
+                } label: {
                     VStack(spacing: 6) {
                         Circle()
                             .fill(DPColor.backgroundTertiary)
@@ -1330,7 +1351,10 @@ private struct YearMonthPickerView: View {
     private var pickerBody: some View {
         VStack(spacing: DPSpacing.medium) {
             HStack(spacing: DPSpacing.small) {
-                Button { pickerYear -= 1 } label: {
+                Button {
+                    pickerYear -= 1
+                    DPHapticCenter.shared.emit(.selection)
+                } label: {
                     Image(systemName: "chevron.left")
                         .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
                 }
@@ -1345,7 +1369,10 @@ private struct YearMonthPickerView: View {
 
                 Spacer(minLength: 0)
 
-                Button { pickerYear += 1 } label: {
+                Button {
+                    pickerYear += 1
+                    DPHapticCenter.shared.emit(.selection)
+                } label: {
                     Image(systemName: "chevron.right")
                         .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
                 }
@@ -1417,7 +1444,7 @@ private struct YearMonthPickerView: View {
         guard !isSelecting else { return }
         isSelecting = true
         Task {
-            await model.selectYearMonth(year: pickerYear, month: month)
+            await model.selectYearMonth(year: pickerYear, month: month, emitFeedback: false)
             dismiss()
         }
     }
@@ -1426,7 +1453,7 @@ private struct YearMonthPickerView: View {
         guard !isSelecting else { return }
         isSelecting = true
         Task {
-            await model.goToToday()
+            await model.goToToday(emitFeedback: false)
             dismiss()
         }
     }
@@ -2688,7 +2715,11 @@ private struct ScheduleEditorView<Header: View>: View {
                 pendingAIConsentPolicy = nil
                 isSaving = true
                 Task {
-                    let granted = await aiConsent.grant(for: memberID, policyVersion: version)
+                    let granted = await aiConsent.grant(
+                        for: memberID,
+                        policyVersion: version,
+                        emitsHaptic: false
+                    )
                     await performSave(aiTimeParsingRequested: granted)
                 }
             }
@@ -2697,7 +2728,9 @@ private struct ScheduleEditorView<Header: View>: View {
                 pendingAIConsentPolicy = nil
                 isSaving = true
                 Task {
-                    if let memberID { _ = await aiConsent.revoke(for: memberID) }
+                    if let memberID {
+                        _ = await aiConsent.revoke(for: memberID, emitsHaptic: false)
+                    }
                     await performSave(aiTimeParsingRequested: false)
                 }
             }
@@ -3017,7 +3050,10 @@ private struct ScheduleEditorView<Header: View>: View {
                 .datePickerStyle(.compact)
                 .environment(\.locale, CalendarLocalization.selectedLocale)
 
-                Button(action: remove) {
+                Button {
+                    remove()
+                    DPHapticCenter.shared.emit(.selection)
+                } label: {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 16))
                         .foregroundStyle(DPColor.textMuted)
@@ -3027,7 +3063,10 @@ private struct ScheduleEditorView<Header: View>: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel(CalendarLocalization.text("calendar.schedule.time.remove"))
             } else if canAdd {
-                Button(action: add) {
+                Button {
+                    add()
+                    DPHapticCenter.shared.emit(.selection)
+                } label: {
                     Label(
                         CalendarLocalization.text("calendar.schedule.time.add"),
                         systemImage: "clock"
@@ -3073,7 +3112,9 @@ private struct ScheduleEditorView<Header: View>: View {
     private func visibilityButton(_ option: Visibility, icon: String) -> some View {
         let selected = visibility == option
         return Button {
+            guard visibility != option else { return }
             visibility = option
+            DPHapticCenter.shared.emit(.selection)
         } label: {
             VStack(spacing: 4) {
                 ZStack(alignment: .topTrailing) {
@@ -4171,6 +4212,14 @@ private struct DDayEditorView: View {
         }
         .onAppear { onWorkingChange(isSaving) }
         .onChange(of: isSaving) { _, isWorking in onWorkingChange(isWorking) }
+        .onChange(of: date) { _, _ in
+            guard !isSaving else { return }
+            DPHapticCenter.shared.emit(.selection)
+        }
+        .onChange(of: isPrivate) { _, _ in
+            guard !isSaving else { return }
+            DPHapticCenter.shared.emit(.selection)
+        }
         .onChange(of: dismissRequest) { _, _ in guardedDismiss() }
         .onDisappear { onWorkingChange(false) }
         .alert(

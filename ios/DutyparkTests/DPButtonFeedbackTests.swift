@@ -5,23 +5,21 @@ import Testing
 @MainActor
 struct DPButtonFeedbackTests {
     @Test
-    func destructiveButtonsFeelHeavierThanTheRoutineRoles() {
+    func destructiveButtonsUseWarningFeedbackInsteadOfRoutineFeedback() {
         let routine: [DPButtonRole] = [.primary, .success, .secondary, .outline]
         let destructive = DPButtonFeedback.feedback(for: .destructive)
 
-        #expect(destructive == .impact(flexibility: .solid, intensity: 1))
+        #expect(destructive == .warning)
         for role in routine {
             #expect(
                 DPButtonFeedback.feedback(for: role) != destructive,
-                "\(role) should not share the destructive haptic"
+                "\(role) should not share the destructive warning"
             )
         }
     }
 
-    /// Pins the SDK behaviour the values above are shaped around: `impact(weight:)`
-    /// collapses every weight to one light tap, so a `weight` based value could
-    /// neither feel nor compare as heavier. Should this ever start failing, Apple
-    /// has fixed the weight form and the two roles may use it again.
+    /// Keep the impact comparison covered because routine button taps and drag
+    /// feedback still rely on the flexibility/intensity form.
     @Test
     func weightBasedImpactCannotExpressAHeavierTap() {
         #expect(SensoryFeedback.impact(weight: .heavy) == .impact(weight: .light))

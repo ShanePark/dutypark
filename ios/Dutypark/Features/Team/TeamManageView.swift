@@ -156,7 +156,8 @@ struct TeamManageView: View {
                         pendingAction = nil
                     },
                     closeOnBackdrop: true,
-                    canDismiss: !viewModel.isWorking && !pendingActionIsWorking
+                    canDismiss: !viewModel.isWorking && !pendingActionIsWorking,
+                    dismissHaptic: nil
                 ) { availableSize, dismiss in
                     TeamAsyncConfirmationPanel(
                         title: confirmationTitle(for: action),
@@ -192,6 +193,7 @@ struct TeamManageView: View {
         HStack(spacing: DPSpacing.small) {
             Button {
                 dismissView()
+                DPHapticCenter.shared.emit(.routine)
             } label: {
                 Image(systemName: "chevron.left")
                     .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
@@ -286,7 +288,12 @@ struct TeamManageView: View {
                     teamLocalized("team.manage.fields.batchTemplate"),
                     selection: Binding(
                         get: { team.dutyBatchTemplate?.name ?? "" },
-                        set: { name in Task { await viewModel.updateTemplate(name.isEmpty ? nil : name) } }
+                        set: { name in
+                            let currentName = team.dutyBatchTemplate?.name ?? ""
+                            guard name != currentName else { return }
+                            DPHapticCenter.shared.emit(.selection)
+                            Task { await viewModel.updateTemplate(name.isEmpty ? nil : name) }
+                        }
                     )
                 ) {
                     Text("team.manage.labels.none", tableName: "Team").tag("")
@@ -335,6 +342,7 @@ struct TeamManageView: View {
                 systemImage: "person.badge.plus"
             ) {
                 memberSearchIsWorking = false
+                DPHapticCenter.shared.emit(.routine)
                 withoutPresentationAnimation { viewModel.memberSearchPresented = true }
             }
             if team.members.isEmpty {
@@ -387,6 +395,7 @@ struct TeamManageView: View {
             ) {
                 viewModel.editingDutyType = nil
                 dutyEditorInteraction = TeamModalInteractionState()
+                DPHapticCenter.shared.emit(.routine)
                 withoutPresentationAnimation { viewModel.dutyEditorPresented = true }
             }
             if team.dutyTypes.isEmpty {
@@ -430,6 +439,7 @@ struct TeamManageView: View {
                                 teamToolButton("pencil", label: teamLocalized("team.dutyType.actions.edit"), tint: DPColor.accent) {
                             viewModel.editingDutyType = dutyType
                             dutyEditorInteraction = TeamModalInteractionState()
+                            DPHapticCenter.shared.emit(.routine)
                             withoutPresentationAnimation { viewModel.dutyEditorPresented = true }
                                 }
                                 if dutyType.id != nil {
@@ -547,6 +557,9 @@ struct TeamManageView: View {
 
     private func present(_ action: PendingAction) {
         pendingActionIsWorking = false
+        if !action.isDestructive {
+            DPHapticCenter.shared.emit(.routine)
+        }
         withoutPresentationAnimation { pendingAction = action }
     }
 
@@ -629,9 +642,11 @@ struct TeamManageView: View {
             guard let deleteTeam = onDeleteTeam else { return false }
             do {
                 try await deleteTeam(team)
+                DPHapticCenter.shared.emit(.success)
                 return true
             } catch {
                 viewModel.showsError = true
+                DPHapticCenter.shared.emit(.error)
                 return false
             }
         case nil: return false
@@ -900,7 +915,12 @@ private struct TeamDutyTypeEditor: View {
             updateInteractionState()
         }
         .onChange(of: name) { _, _ in updateInteractionState() }
-        .onChange(of: color) { _, _ in updateInteractionState() }
+        .onChange(of: color) { oldValue, newValue in
+            if oldValue != newValue {
+                DPHapticCenter.shared.emit(.selection)
+            }
+            updateInteractionState()
+        }
         .onChange(of: isSubmitting) { _, _ in updateInteractionState() }
         .onChange(of: viewModel.isWorking) { _, _ in updateInteractionState() }
         .onChange(of: interaction.dismissRequestSerial) { _, _ in requestDismiss() }
@@ -976,7 +996,8 @@ private struct TeamMemberSearchView: View {
                         guard !viewModel.isWorking, !candidateSubmissionIsWorking else { return }
                         candidateToAdd = nil
                     },
-                    canDismiss: !viewModel.isWorking && !candidateSubmissionIsWorking
+                    canDismiss: !viewModel.isWorking && !candidateSubmissionIsWorking,
+                    dismissHaptic: nil
                 ) { availableSize, confirmationDismiss in
                     TeamAsyncConfirmationPanel(
                         title: teamLocalized("team.memberSearch.add"),
@@ -1147,6 +1168,7 @@ private struct TeamMemberSearchView: View {
             Button(member.teamId == nil
                 ? teamLocalized("team.memberSearch.add")
                 : teamLocalized("team.memberSearch.alreadyAssigned")) {
+                DPHapticCenter.shared.emit(.routine)
                 withoutPresentationAnimation { candidateToAdd = member }
             }
             .buttonStyle(.plain)
@@ -1171,6 +1193,7 @@ private struct TeamMemberSearchView: View {
                 .stroke(DPColor.borderPrimary)
         }
     }
+
 }
 
 private struct TeamBatchUploadView: View {
@@ -1204,6 +1227,7 @@ private struct TeamBatchUploadView: View {
                     Text("team.batchUpload.fileLabel", tableName: "Team")
                         .font(DPTypography.label)
                     Button {
+                        DPHapticCenter.shared.emit(.routine)
                         fileImporterPresented = true
                     } label: {
                         HStack {
@@ -1243,6 +1267,12 @@ private struct TeamBatchUploadView: View {
                         .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)
                         .background(DPColor.backgroundInput)
                         .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+                        .onChange(of: year) { oldValue, newValue in
+                            if oldValue != newValue {
+                                DPHapticCenter.shared.emit(.selection)
+                            }
+                            updateInteractionState()
+                        }
                     }
                     VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
                         Text("team.batchUpload.month", tableName: "Team")
@@ -1254,6 +1284,12 @@ private struct TeamBatchUploadView: View {
                         .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)
                         .background(DPColor.backgroundInput)
                         .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+                        .onChange(of: month) { oldValue, newValue in
+                            if oldValue != newValue {
+                                DPHapticCenter.shared.emit(.selection)
+                            }
+                            updateInteractionState()
+                        }
                     }
                 }
 
@@ -1347,8 +1383,6 @@ private struct TeamBatchUploadView: View {
             fileURL = selectedURL
         }
         .onAppear { updateInteractionState() }
-        .onChange(of: year) { _, _ in updateInteractionState() }
-        .onChange(of: month) { _, _ in updateInteractionState() }
         .onChange(of: fileURL) { _, _ in updateInteractionState() }
         .onChange(of: viewModel.isWorking) { _, _ in updateInteractionState() }
         .onChange(of: interaction.dismissRequestSerial) { _, _ in requestDismiss() }

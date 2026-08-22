@@ -32,9 +32,28 @@ struct SupportFeatureTests {
     }
 
     @Test
+    func supportTabSelectionEmitsOnlyForAnActualChange() {
+        let haptics = DPHapticCenter()
+        let model = SupportViewModel(
+            isSignedIn: true,
+            repository: SupportRepositorySpy(),
+            hapticCenter: haptics
+        )
+
+        #expect(haptics.event == nil)
+        model.selectTab(.history)
+        #expect(haptics.event?.kind == .selection)
+        let firstEvent = haptics.event
+
+        model.selectTab(.history)
+        #expect(haptics.event == firstEvent, "A no-op tab selection must stay silent")
+    }
+
+    @Test
     func submissionRequiresAnEmailAddress() async {
         let repository = SupportRepositorySpy()
-        let model = SupportViewModel(repository: repository)
+        let haptics = DPHapticCenter()
+        let model = SupportViewModel(repository: repository, hapticCenter: haptics)
         model.email = "   "
         model.content = "The other member keeps posting spam."
 
@@ -43,6 +62,7 @@ struct SupportFeatureTests {
         #expect(model.errorKey == "support.error.emailRequired")
         #expect(repository.submissions.isEmpty)
         #expect(!model.didSubmit)
+        #expect(haptics.event?.kind == .warning)
     }
 
     @Test
@@ -82,7 +102,8 @@ struct SupportFeatureTests {
     @Test
     func aSuccessfulSubmissionSendsTheTrimmedInquiryAndShowsTheConfirmation() async {
         let repository = SupportRepositorySpy()
-        let model = SupportViewModel(repository: repository)
+        let haptics = DPHapticCenter()
+        let model = SupportViewModel(repository: repository, hapticCenter: haptics)
         model.email = "member@dutypark.dev"
         model.subject = "  Reporting a user  "
         model.content = "  The other member keeps posting spam.  "
@@ -103,6 +124,7 @@ struct SupportFeatureTests {
         #expect(model.email == "member@dutypark.dev")
         #expect(model.subject.isEmpty)
         #expect(model.content.isEmpty)
+        #expect(haptics.event?.kind == .success)
 
         model.startNewInquiry()
         #expect(!model.didSubmit)
@@ -201,7 +223,8 @@ struct SupportFeatureTests {
     @Test
     func anyOtherFailureKeepsTheFormWithAGenericMessage() async {
         let repository = SupportRepositorySpy(failure: .transport)
-        let model = SupportViewModel(repository: repository)
+        let haptics = DPHapticCenter()
+        let model = SupportViewModel(repository: repository, hapticCenter: haptics)
         model.email = "member@dutypark.dev"
         model.content = "Please review this account."
 
@@ -210,6 +233,7 @@ struct SupportFeatureTests {
         #expect(model.errorKey == "support.error.submit")
         #expect(!model.didSubmit)
         #expect(model.content == "Please review this account.")
+        #expect(haptics.event?.kind == .error)
     }
 
     @Test
@@ -620,6 +644,7 @@ struct SupportFeatureTests {
     /// and the pages already on screen are neither dropped nor fetched again.
     @Test
     func withdrawingAnOpenReportReplacesOnlyThatRow() async {
+        let haptics = DPHapticCenter()
         let repository = SupportRepositorySpy(
             reportPages: [
                 SupportFeatureTests.reportPage(
@@ -637,7 +662,11 @@ struct SupportFeatureTests {
                 status: .canceled
             )
         )
-        let model = SupportViewModel(isSignedIn: true, repository: repository)
+        let model = SupportViewModel(
+            isSignedIn: true,
+            repository: repository,
+            hapticCenter: haptics
+        )
         await model.loadReportsIfNeeded()
 
         await model.cancelReport(id: Self.withdrawnID)
@@ -650,10 +679,12 @@ struct SupportFeatureTests {
         #expect(repository.reportRequests.count == 1)
         #expect(!model.isCancelingReport(Self.withdrawnID))
         #expect(model.reportCancelErrorKey == nil)
+        #expect(haptics.event?.kind == .success)
     }
 
     @Test
     func aReportThatIsNoLongerOpenSaysSoInsteadOfFailingGenerically() async {
+        let haptics = DPHapticCenter()
         let repository = SupportRepositorySpy(
             reportPages: [
                 SupportFeatureTests.reportPage(
@@ -664,7 +695,11 @@ struct SupportFeatureTests {
             ],
             cancelFailure: .server(status: 400, code: "report.cancel.notOpen")
         )
-        let model = SupportViewModel(isSignedIn: true, repository: repository)
+        let model = SupportViewModel(
+            isSignedIn: true,
+            repository: repository,
+            hapticCenter: haptics
+        )
         await model.loadReportsIfNeeded()
 
         await model.cancelReport(id: Self.withdrawnID)
@@ -672,6 +707,7 @@ struct SupportFeatureTests {
         #expect(model.reportCancelErrorKey == "support.reports.cancel.error.notOpen")
         #expect(model.reports.map(\.status) == [.open])
         #expect(!model.isCancelingReport(Self.withdrawnID))
+        #expect(haptics.event?.kind == .error)
     }
 
     @Test
@@ -699,6 +735,7 @@ struct SupportFeatureTests {
     /// the server either.
     @Test
     func aHandledReportIsNeverSentToTheWithdrawalEndpoint() async {
+        let haptics = DPHapticCenter()
         let repository = SupportRepositorySpy(
             reportPages: [
                 SupportFeatureTests.reportPage(
@@ -714,7 +751,11 @@ struct SupportFeatureTests {
                 )
             ]
         )
-        let model = SupportViewModel(isSignedIn: true, repository: repository)
+        let model = SupportViewModel(
+            isSignedIn: true,
+            repository: repository,
+            hapticCenter: haptics
+        )
         await model.loadReportsIfNeeded()
 
         await model.cancelReport(id: Self.withdrawnID)
@@ -722,6 +763,7 @@ struct SupportFeatureTests {
 
         #expect(repository.cancelRequests.isEmpty)
         #expect(model.reportCancelErrorKey == nil)
+        #expect(haptics.event == nil, "Passive loading and stale no-op cancellation stay silent")
     }
 
     @Test

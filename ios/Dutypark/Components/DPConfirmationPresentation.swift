@@ -45,7 +45,12 @@ private struct DPConfirmationCover: View {
             maximumContentWidth: DPConfirmationPanel.maximumWidth,
             onDismiss: finishDismissal,
             closeOnBackdrop: closeOnBackdrop,
-            canDismiss: canDismiss
+            canDismiss: canDismiss,
+            // The confirmation buttons already provide press feedback. A
+            // cancellation is a no-op, and a confirm action gets its result
+            // feedback from the owning feature, so the scaffold must not add a
+            // second dismissal tick.
+            dismissHaptic: nil
         ) { availableSize, dismiss in
             DPConfirmationPanel(
                 title: copy.title,

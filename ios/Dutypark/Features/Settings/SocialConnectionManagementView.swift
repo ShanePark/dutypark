@@ -117,7 +117,8 @@ struct SocialConnectionManagementView: View {
                 onDismiss: { confirmsUnlink = false },
                 canDismiss: SettingsSocialUnlinkConfirmationPolicy.canDismiss(
                     isWorking: isUnlinkWorking
-                )
+                ),
+                dismissHaptic: nil
             ) { availableSize, confirmationDismiss in
                 DPConfirmationPanel(
                     title: SettingsLocalization.string("settings.social.unlinkConfirmTitle"),

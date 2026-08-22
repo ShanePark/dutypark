@@ -202,7 +202,16 @@ struct RootTabView: View {
             DPModalOverlay(
                 maximumContentWidth: DPConfirmationPanel.maximumWidth,
                 onDismiss: { showsLogoutConfirmation = false },
-                canDismiss: RootLogoutConfirmationPolicy.canDismiss(isLoggingOut: isLoggingOut)
+                canDismiss: RootLogoutConfirmationPolicy.canDismiss(isLoggingOut: isLoggingOut),
+                onDismissRequest: { _ in
+                    guard RootLogoutConfirmationPolicy.canDismiss(isLoggingOut: isLoggingOut)
+                    else { return }
+                    showsLogoutConfirmation = false
+                    DPHapticCenter.shared.emit(.routine)
+                },
+                // Confirmation buttons already acknowledge their press. Backdrop and
+                // VoiceOver dismissal requests emit the routine event above instead.
+                dismissHaptic: nil
             ) { availableSize, dismiss in
                 DPConfirmationPanel(
                     title: SettingsLocalization.string("settings.logout.confirmTitle"),
@@ -370,21 +379,48 @@ struct RootTabView: View {
     }
 
     private var notificationBell: some View {
-        NotificationBellButton(store: notifications, isPresented: $showsNotifications)
+        NotificationBellButton(
+            store: notifications,
+            isPresented: notificationPresentationBinding
+        )
     }
 
     // The notification list is a screen like every other menu entry, so it is pushed onto
     // the stack it was opened from and leaves with the same back affordances.
     private var notificationCenter: some View {
-        NotificationCenterView(store: notifications, onOpen: openNotificationRoute)
+        NotificationCenterView(store: notifications) { route in
+            let didOpen = await openNotificationRoute(route)
+            if didOpen {
+                DPHapticCenter.shared.emit(RootHapticPolicy.notificationNavigationFeedback)
+            }
+            return didOpen
+        }
+    }
+
+    private var notificationPresentationBinding: Binding<Bool> {
+        Binding(
+            get: { showsNotifications },
+            set: { isPresented in
+                guard isPresented != showsNotifications else { return }
+                showsNotifications = isPresented
+                DPHapticCenter.shared.emit(RootHapticPolicy.notificationDropdownFeedback)
+            }
+        )
     }
 
     private var tabSelection: Binding<AppTab> {
         Binding(
             get: { selectedTab },
             set: { destination in
+                let feedback = RootHapticPolicy.tabSelectionFeedback(
+                    from: selectedTab,
+                    to: destination
+                )
                 popToRoot(destination, origin: .tabBar)
                 selectedTab = destination
+                if let feedback {
+                    DPHapticCenter.shared.emit(feedback)
+                }
             }
         )
     }
@@ -433,10 +469,14 @@ struct RootTabView: View {
     }
 
     private func openMyInfo() {
+        DPHapticCenter.shared.emit(.routine)
         morePath.append(.myInfo)
     }
 
     private func openMoreMenuItem(_ item: MoreMenuItem) {
+        if let feedback = RootHapticPolicy.moreMenuFeedback(for: item) {
+            DPHapticCenter.shared.emit(feedback)
+        }
         switch item {
         case .logout:
             showsLogoutConfirmation = true
@@ -559,16 +599,25 @@ struct RootTabView: View {
     }
 
     private func closeNotificationDropdown() {
+        closeNotificationDropdown(emitHaptic: true)
+    }
+
+    private func closeNotificationDropdown(emitHaptic: Bool) {
+        let wasPresented = showsNotifications
         let shouldMarkAllAsRead = notificationDropdownReadPolicy.consumeClose()
         showsNotifications = false
+        if wasPresented, emitHaptic {
+            DPHapticCenter.shared.emit(RootHapticPolicy.notificationDropdownFeedback)
+        }
         guard shouldMarkAllAsRead else { return }
-        Task { try? await notifications.markAllAsRead() }
+        Task { try? await notifications.markAllAsRead(emitsHaptic: false) }
     }
 
     private func openDropdownNotification(_ notification: NotificationDTO) async {
         guard let route = await notifications.open(notification) else { return }
         if await openNotificationRoute(route) {
-            closeNotificationDropdown()
+            DPHapticCenter.shared.emit(RootHapticPolicy.notificationNavigationFeedback)
+            closeNotificationDropdown(emitHaptic: false)
         }
     }
 
@@ -880,6 +929,31 @@ nonisolated enum RootLogoutConfirmationPolicy {
     static func canDismiss(isLoggingOut: Bool) -> Bool {
         !isLoggingOut
     }
+}
+
+/// Semantic feedback decisions for root-level interactions. Programmatic routes do not
+/// call the tab-bar binding or menu callbacks, so keeping these rules at their user-action
+/// boundaries prevents navigation driven by a deep link or push notification from buzzing.
+nonisolated enum RootHapticPolicy {
+    static func tabSelectionFeedback(
+        from current: AppTab,
+        to destination: AppTab
+    ) -> DPHapticKind? {
+        current == destination ? nil : .selection
+    }
+
+    static func tabSelectionFeedback(origin: RootTabSelectionOrigin) -> DPHapticKind? {
+        origin == .tabBar ? .selection : nil
+    }
+
+    static func moreMenuFeedback(for item: MoreMenuItem) -> DPHapticKind? {
+        // Logout's destructive confirmation button owns the warning feedback. The menu
+        // row only presents that confirmation and should not warn twice for one action.
+        item == .logout ? nil : .routine
+    }
+
+    static let notificationDropdownFeedback = DPHapticKind.routine
+    static let notificationNavigationFeedback = DPHapticKind.routine
 }
 
 nonisolated enum RootTabSelectionOrigin: Equatable, Sendable {

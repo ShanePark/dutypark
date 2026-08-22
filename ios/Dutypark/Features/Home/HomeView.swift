@@ -283,7 +283,10 @@ struct HomeView: View {
 
     private var friendsDashboardPanel: some View {
         VStack(spacing: 0) {
-            Button { onRoute(.friends) } label: {
+            Button {
+                DPHapticCenter.shared.emit(.routine)
+                onRoute(.friends)
+            } label: {
                 panelHeader(
                     title: Text("home.friends", tableName: "Home"),
                     systemImage: "person.2.fill",
@@ -748,9 +751,11 @@ struct HomeView: View {
 #endif
             do {
                 try await pinRepository.updatePinnedOrder(memberIDs)
+                DPHapticCenter.shared.emit(.success)
             } catch {
                 viewModel.replaceFriendsDashboardForMutation(previousDashboard)
                 showsPinnedOrderError = true
+                DPHapticCenter.shared.emit(.error)
             }
             withAnimation(.snappy(duration: 0.16, extraBounce: 0)) {
                 inlinePinnedOrder = nil
@@ -840,11 +845,16 @@ struct HomeView: View {
 
     private func openCalendar(for memberId: MemberID?) {
         guard let memberId else { return }
+        DPHapticCenter.shared.emit(.routine)
         onRoute(.memberCalendar(memberId))
     }
 
     private func requestTogglePin(_ friend: DashboardFriendDetailDTO) {
+        guard pinningMemberID == nil,
+              !isSavingPinnedOrder,
+              draggedPinnedFriendID == nil else { return }
         if friend.pinOrder == nil {
+            DPHapticCenter.shared.emit(.selection)
             Task { await togglePin(friend) }
         } else {
             pendingUnpinConfirmation = HomeUnpinConfirmation(friend: friend)
@@ -870,9 +880,14 @@ struct HomeView: View {
             } else {
                 try await pinRepository.unpin(memberID)
             }
+            // The endpoint is the mutation boundary. Refreshing the rail
+            // below is reconciliation and must not replace this success
+            // event with a second or misleading result.
+            DPHapticCenter.shared.emit(.success)
             await viewModel.retryFriendsDashboard()
         } catch {
             viewModel.replaceFriendsDashboardForMutation(previousDashboard)
+            DPHapticCenter.shared.emit(.error)
         }
     }
 

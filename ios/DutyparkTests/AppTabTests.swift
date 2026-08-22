@@ -58,6 +58,37 @@ struct AppTabTests {
     }
 
     @Test
+    func tabBarHapticsOnlyFireForAnActualUserTabChange() {
+        #expect(
+            RootHapticPolicy.tabSelectionFeedback(from: .home, to: .calendar)
+                == .selection
+        )
+        // SwiftUI may write the selected value again while updating the tab view; that
+        // is not a new interaction and must stay silent.
+        #expect(RootHapticPolicy.tabSelectionFeedback(from: .home, to: .home) == nil)
+        // Programmatic routes assign the state directly and therefore do not consult
+        // the tab-bar binding, but this policy keeps the distinction explicit in tests.
+        #expect(
+            RootHapticPolicy.tabSelectionFeedback(origin: .explicitRoute) == nil
+        )
+    }
+
+    @Test
+    func moreMenuHapticsSeparateNavigationFromDestructiveIntent() {
+        #expect(RootHapticPolicy.moreMenuFeedback(for: .guide) == .routine)
+        #expect(RootHapticPolicy.moreMenuFeedback(for: .admin) == .routine)
+        // The destructive confirmation button emits the warning; opening the prompt
+        // itself stays silent so one logout action does not warn twice.
+        #expect(RootHapticPolicy.moreMenuFeedback(for: .logout) == nil)
+    }
+
+    @Test
+    func notificationDropdownUsesRoutineFeedbackForExplicitOpenAndDismiss() {
+        #expect(RootHapticPolicy.notificationDropdownFeedback == .routine)
+        #expect(RootHapticPolicy.notificationNavigationFeedback == .routine)
+    }
+
+    @Test
     func aMemberCalendarIsPushedOntoTheStackOfTheTabItWasOpenedFrom() {
         for tab in AppTab.allCases where tab != .todo {
             #expect(RootNavigationPolicy.memberCalendarHost(for: tab) == tab)

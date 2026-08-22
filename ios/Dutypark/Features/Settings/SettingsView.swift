@@ -167,7 +167,10 @@ struct SettingsView: View {
                     .font(DPTypography.supporting)
                     .foregroundStyle(DPColor.textSecondary)
             }
-            Button { withoutPresentationAnimation { showVisibility = true } } label: {
+            Button {
+                DPHapticCenter.shared.emit(.routine)
+                withoutPresentationAnimation { showVisibility = true }
+            } label: {
                 HStack(spacing: DPSpacing.small) {
                     Circle()
                         .fill(visibilityColor(model.member?.calendarVisibility ?? .friends))
@@ -215,13 +218,20 @@ struct SettingsView: View {
     private var themeSelection: Binding<AppTheme> {
         Binding(
             get: { selectedTheme },
-            set: { themeCode = $0.rawValue }
+            set: {
+                guard selectedTheme != $0 else { return }
+                themeCode = $0.rawValue
+                DPHapticCenter.shared.emit(.selection)
+            }
         )
     }
 
     private var pushSection: some View {
         SettingsCard(title: "settings.push.title", icon: "bell") {
-            Button { pushBinding.wrappedValue.toggle() } label: {
+            Button {
+                DPHapticCenter.shared.emit(.selection)
+                pushBinding.wrappedValue.toggle()
+            } label: {
                 HStack(spacing: DPSpacing.medium) {
                     VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
                         SettingsLocalization.text("settings.push.toggle")
@@ -354,7 +364,11 @@ struct SettingsView: View {
     private var visibilityBinding: Binding<Visibility> {
         Binding(
             get: { model.member?.calendarVisibility ?? .friends },
-            set: { value in Task { await model.updateVisibility(value) } }
+            set: { value in
+                guard model.member?.calendarVisibility != value else { return }
+                DPHapticCenter.shared.emit(.selection)
+                Task { await model.updateVisibility(value) }
+            }
         )
     }
 
@@ -382,6 +396,7 @@ struct SettingsView: View {
     private func toggleAIConsent() {
         guard let memberID = model.member?.id else { return }
         if aiConsent.isEnabled {
+            DPHapticCenter.shared.emit(.selection)
             Task { _ = await aiConsent.revoke(for: memberID) }
             return
         }
@@ -392,11 +407,13 @@ struct SettingsView: View {
             showAIConsentConfirmation = true
         case let .grant(policyVersion):
             aiConsent.dismissError()
+            DPHapticCenter.shared.emit(.selection)
             Task {
                 _ = await aiConsent.grant(for: memberID, policyVersion: policyVersion)
             }
         case .unavailable:
             aiConsent.reportLoadFailure()
+            DPHapticCenter.shared.emit(.warning)
         }
     }
 
@@ -429,6 +446,9 @@ struct SettingsView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .simultaneousGesture(TapGesture().onEnded {
+            DPHapticCenter.shared.emit(.routine)
+        })
         .accessibilityIdentifier("settings.language")
     }
 
@@ -486,6 +506,9 @@ struct SettingsView: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
+        .simultaneousGesture(TapGesture().onEnded {
+            DPHapticCenter.shared.emit(.routine)
+        })
     }
 
     private func visibilityLabelKey(_ visibility: Visibility) -> String {
@@ -721,9 +744,13 @@ enum SettingsConfirmation: Identifiable {
 
     var isDestructive: Bool {
         switch self {
-        case .switchManagedAccount, .deleteProfilePhoto: false
-        case .removeManager, .session: true
+        case .switchManagedAccount: false
+        case .deleteProfilePhoto, .removeManager, .session: true
         }
+    }
+
+    var requiresWarning: Bool {
+        false
     }
 }
 
@@ -951,6 +978,9 @@ private struct VisibilitySettingsModal: View {
         let selected = model.member?.calendarVisibility == option
         let audience = option == .friends ? model.friends : option == .family ? model.friends.filter(\.isFamily) : []
         return Button {
+            if model.member?.calendarVisibility != option {
+                DPHapticCenter.shared.emit(.selection)
+            }
             Task {
                 await model.updateVisibility(option)
                 if model.member?.calendarVisibility == option { dismiss() }
@@ -1117,6 +1147,10 @@ private struct AIScheduleConsentActivationModal: View {
                 .tint(DPColor.accent)
                 .frame(minHeight: DPSize.minimumTouchTarget)
                 .disabled(store.isUpdating || store.response?.policy == nil)
+                .onChange(of: hasConfirmedTerms) { _, _ in
+                    guard !store.isUpdating, store.response?.policy != nil else { return }
+                    DPHapticCenter.shared.emit(.selection)
+                }
                 .accessibilityLabel(SettingsLocalization.string("settings.aiConsent.confirmAcknowledgement"))
                 .accessibilityValue(SettingsLocalization.string(
                     hasConfirmedTerms ? "settings.accessibility.on" : "settings.accessibility.off"

@@ -18,6 +18,7 @@ final class NotificationStore: ObservableObject {
     private let api: any NotificationAPIProtocol
     private let pollingSleep: @Sendable (TimeInterval) async throws -> Void
     private let now: () -> Date
+    private let haptics: DPHapticCenter
     private var currentPage = 0
     private var totalPages = 0
     private var consecutiveFailures = 0
@@ -33,11 +34,13 @@ final class NotificationStore: ObservableObject {
         pollingSleep: @escaping @Sendable (TimeInterval) async throws -> Void = { interval in
             try await Task.sleep(for: .seconds(interval))
         },
-        now: @escaping () -> Date = Date.init
+        now: @escaping () -> Date = Date.init,
+        haptics: DPHapticCenter = .shared
     ) {
         self.api = api
         self.pollingSleep = pollingSleep
         self.now = now
+        self.haptics = haptics
     }
 
     var hasMore: Bool {
@@ -164,6 +167,7 @@ final class NotificationStore: ObservableObject {
         } catch {
             loadFailed = true
             consecutiveFailures += 1
+            haptics.emit(.error)
         }
     }
 
@@ -190,14 +194,20 @@ final class NotificationStore: ObservableObject {
 
     /// Resolves a notification opened from an APNs payload using the same server contract as the web app.
     func open(id: NotificationID) async throws -> NotificationRoute? {
-        let notification = try await api.markAsRead(id: id)
-        replace(notification)
-        unreadCount = try await api.count().unreadCount
-        await updateBadge()
-        return NotificationRoute(notification: notification)
+        do {
+            let notification = try await api.markAsRead(id: id)
+            replace(notification)
+            unreadCount = try await api.count().unreadCount
+            await updateBadge()
+            haptics.emit(.routine)
+            return NotificationRoute(notification: notification)
+        } catch {
+            haptics.emit(.error)
+            throw error
+        }
     }
 
-    func markAllAsRead() async throws {
+    func markAllAsRead(emitsHaptic: Bool = true) async throws {
         guard !isMarkingAllAsRead else { return }
         isMarkingAllAsRead = true
         defer { isMarkingAllAsRead = false }
@@ -206,27 +216,52 @@ final class NotificationStore: ObservableObject {
             notifications = notifications.map(markedAsRead)
             unreadCount = 0
             await updateBadge()
+            if emitsHaptic {
+                haptics.emit(.success)
+            }
             return
         }
 #endif
-        _ = try await api.markAllAsRead()
+        do {
+            _ = try await api.markAllAsRead()
+        } catch {
+            if emitsHaptic {
+                haptics.emit(.error)
+            }
+            throw error
+        }
         notifications = notifications.map(markedAsRead)
         unreadCount = 0
         await updateBadge()
+        if emitsHaptic {
+            haptics.emit(.success)
+        }
     }
 
     func delete(_ notification: NotificationDTO) async throws {
-        try await api.delete(id: notification.id)
+        do {
+            try await api.delete(id: notification.id)
+        } catch {
+            haptics.emit(.error)
+            throw error
+        }
         notifications.removeAll { $0.id == notification.id }
         if !notification.isRead {
             unreadCount = max(0, unreadCount - 1)
             await updateBadge()
         }
+        haptics.emit(.success)
     }
 
     func deleteAllRead() async throws {
-        _ = try await api.deleteAllRead()
+        do {
+            _ = try await api.deleteAllRead()
+        } catch {
+            haptics.emit(.error)
+            throw error
+        }
         notifications.removeAll(where: \.isRead)
+        haptics.emit(.success)
     }
 
     func startPolling() {

@@ -26,6 +26,29 @@ final class ReportFeatureTests: XCTestCase {
         )
     }
 
+    func testReasonAndBlockChoiceEmitSelectionOnlyWhenTheirValueChanges() {
+        let haptics = DPHapticCenter()
+        let model = ReportViewModel(
+            target: ReportTarget(type: .member, targetID: "7", name: "홍길동"),
+            repository: ReportRepositorySpy(),
+            hapticCenter: haptics
+        )
+
+        model.selectReason(.harassment)
+        XCTAssertEqual(haptics.event?.kind, .selection)
+        let reasonEvent = haptics.event
+
+        model.selectReason(.harassment)
+        XCTAssertEqual(haptics.event, reasonEvent)
+
+        model.setAlsoBlock(true)
+        XCTAssertEqual(haptics.event?.kind, .selection)
+        let blockEvent = haptics.event
+
+        model.setAlsoBlock(true)
+        XCTAssertEqual(haptics.event, blockEvent)
+    }
+
     func testDetailLimitUsesTheUTF16LengthSentToTheServer() {
         XCTAssertTrue(
             ReportSubmissionPolicy.canSubmit(
@@ -64,9 +87,11 @@ final class ReportFeatureTests: XCTestCase {
 
     func testSubmitSendsTrimmedDetailAndAlsoBlockFlag() async {
         let repository = ReportRepositorySpy()
+        let haptics = DPHapticCenter()
         let model = ReportViewModel(
             target: ReportTarget(type: .schedule, targetID: "42", name: "회식"),
-            repository: repository
+            repository: repository,
+            hapticCenter: haptics
         )
         model.reason = .harassment
         model.detail = "  욕설을 했습니다  "
@@ -77,6 +102,7 @@ final class ReportFeatureTests: XCTestCase {
         XCTAssertTrue(submitted)
         XCTAssertTrue(model.didSubmit)
         XCTAssertNil(model.errorMessage)
+        XCTAssertEqual(haptics.event?.kind, .success)
         XCTAssertEqual(
             repository.reports,
             [
@@ -92,6 +118,10 @@ final class ReportFeatureTests: XCTestCase {
         // `alsoBlock` travels with the report; the client never calls the block API itself.
         XCTAssertTrue(repository.blockedMembers.isEmpty)
         XCTAssertFalse(model.canSubmit, "A submitted report cannot be sent twice")
+        let completedEvent = haptics.event
+        let duplicateSubmission = await model.submit()
+        XCTAssertFalse(duplicateSubmission)
+        XCTAssertEqual(haptics.event, completedEvent, "A completed report cannot re-trigger feedback")
     }
 
     func testSubmitOmitsBlankDetailAndKeepsTheDefaultReason() async {
@@ -111,9 +141,11 @@ final class ReportFeatureTests: XCTestCase {
 
     func testOtherReasonWithoutDetailNeverReachesTheServer() async {
         let repository = ReportRepositorySpy()
+        let haptics = DPHapticCenter()
         let model = ReportViewModel(
             target: ReportTarget(type: .todo, targetID: "9", name: "청소"),
-            repository: repository
+            repository: repository,
+            hapticCenter: haptics
         )
         model.reason = .other
 
@@ -123,13 +155,16 @@ final class ReportFeatureTests: XCTestCase {
         XCTAssertFalse(submitted)
         XCTAssertTrue(repository.reports.isEmpty)
         XCTAssertFalse(model.didSubmit)
+        XCTAssertEqual(haptics.event?.kind, .warning)
     }
 
     func testSubmitFailureSurfacesTheServerMessageWithoutMarkingSuccess() async {
         let repository = ReportRepositorySpy(error: APIError.server(status: 400, code: "report.self"))
+        let haptics = DPHapticCenter()
         let model = ReportViewModel(
             target: ReportTarget(type: .member, targetID: "7", name: "홍길동"),
-            repository: repository
+            repository: repository,
+            hapticCenter: haptics
         )
 
         let submitted = await model.submit()
@@ -139,6 +174,7 @@ final class ReportFeatureTests: XCTestCase {
         XCTAssertFalse(message.isEmpty)
         XCTAssertNotEqual(message, "report.self")
         XCTAssertTrue(model.canSubmit, "A failed report can be retried")
+        XCTAssertEqual(haptics.event?.kind, .error)
     }
 
     // MARK: - Repository contract
@@ -194,11 +230,16 @@ final class ReportFeatureTests: XCTestCase {
             return Self.response(request, status: 204)
         }
 
-        let model = MemberBlockViewModel(repository: ReportAPIRepository(client: makeClient()))
+        let haptics = DPHapticCenter()
+        let model = MemberBlockViewModel(
+            repository: ReportAPIRepository(client: makeClient()),
+            hapticCenter: haptics
+        )
 
         let blocked = await model.block(memberID: 7)
         XCTAssertTrue(blocked)
         XCTAssertNil(model.errorMessage)
+        XCTAssertEqual(haptics.event?.kind, .success)
         let request = try XCTUnwrap(recorder.requests.first)
         XCTAssertEqual(request.url?.path, "/api/blocks/7")
         XCTAssertEqual(request.httpMethod, "POST")
@@ -206,12 +247,14 @@ final class ReportFeatureTests: XCTestCase {
 
     func testAFailedBlockKeepsTheUserOnTheCalendar() async {
         let repository = ReportRepositorySpy(error: APIError.server(status: 400, code: "block.self"))
-        let model = MemberBlockViewModel(repository: repository)
+        let haptics = DPHapticCenter()
+        let model = MemberBlockViewModel(repository: repository, hapticCenter: haptics)
 
         let blocked = await model.block(memberID: 7)
         XCTAssertFalse(blocked)
         XCTAssertFalse(model.isBlocking)
         XCTAssertFalse((model.errorMessage ?? "").isEmpty)
+        XCTAssertEqual(haptics.event?.kind, .error)
     }
 
     // MARK: - Entry points

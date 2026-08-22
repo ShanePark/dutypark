@@ -53,6 +53,9 @@ struct DPYearMonthPicker: View {
                 monthGrid
 
                 Button {
+                    if isCurrentMonthAlreadySelected {
+                        DPHapticCenter.shared.emit(.routine)
+                    }
                     onCurrentMonth()
                 } label: {
                     currentMonthTitle
@@ -65,7 +68,10 @@ struct DPYearMonthPicker: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button(cancelTitle) { dismiss() }
+                    Button(cancelTitle) {
+                        DPHapticCenter.shared.emit(.routine)
+                        dismiss()
+                    }
                 }
             }
         }
@@ -75,7 +81,10 @@ struct DPYearMonthPicker: View {
 
     private var yearStepper: some View {
         HStack {
-            Button { year -= 1 } label: {
+            Button {
+                year -= 1
+                DPHapticCenter.shared.emit(.selection)
+            } label: {
                 Image(systemName: "chevron.left")
                     .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
             }
@@ -85,7 +94,10 @@ struct DPYearMonthPicker: View {
             Text(verbatim: String(year)).font(.title3.bold())
             Spacer()
 
-            Button { year += 1 } label: {
+            Button {
+                year += 1
+                DPHapticCenter.shared.emit(.selection)
+            } label: {
                 Image(systemName: "chevron.right")
                     .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
             }
@@ -99,6 +111,11 @@ struct DPYearMonthPicker: View {
             ForEach(1...12, id: \.self) { month in
                 let isSelected = year == selectedYear && month == selectedMonth
                 Button {
+                    if isSelected {
+                        // There is no committed transition for this choice; the sheet still
+                        // closes, so acknowledge that explicit dismissal here.
+                        DPHapticCenter.shared.emit(.routine)
+                    }
                     onSelect(year, month)
                 } label: {
                     Text(verbatim: DPYearMonthPickerLocalization.monthName(month))
@@ -114,6 +131,11 @@ struct DPYearMonthPicker: View {
                 .dpIdentifier(identifierPrefix.map { "\($0).month.\(month)" })
             }
         }
+    }
+
+    private var isCurrentMonthAlreadySelected: Bool {
+        let components = CalendarDateSupport.calendar.dateComponents([.year, .month], from: Date())
+        return selectedYear == components.year && selectedMonth == components.month
     }
 }
 

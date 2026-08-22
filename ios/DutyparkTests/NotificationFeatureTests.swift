@@ -242,6 +242,42 @@ struct NotificationFeatureTests {
     }
 
     @Test
+    func notificationMutationsEmitTheirCompletedOutcomeOnce() async throws {
+        let page: PageResponse<NotificationDTO> = try decodeNotificationFixture()
+        let notification = try #require(page.content.first)
+        let haptics = DPHapticCenter()
+        let store = NotificationStore(
+            api: NotificationAPIMock(page: page),
+            haptics: haptics
+        )
+        await store.refresh()
+
+        _ = await store.open(notification)
+        #expect(haptics.event == nil)
+
+        try await store.markAllAsRead()
+        #expect(haptics.event?.kind == .success)
+        #expect(haptics.event?.id == 1)
+
+        try await store.delete(notification)
+        #expect(haptics.event?.kind == .success)
+        #expect(haptics.event?.id == 2)
+    }
+
+    @Test
+    func passiveNotificationRefreshDoesNotEmitHaptics() async throws {
+        let page: PageResponse<NotificationDTO> = try decodeNotificationFixture()
+        let haptics = DPHapticCenter()
+        let store = NotificationStore(
+            api: NotificationAPIMock(page: page),
+            haptics: haptics
+        )
+
+        await store.refresh()
+        #expect(haptics.event == nil)
+    }
+
+    @Test
     func freshCachedSnapshotSkipsARepeatedFullRefresh() async throws {
         let page: PageResponse<NotificationDTO> = try decodeNotificationFixture()
         let api = NotificationAPIMock(page: page)

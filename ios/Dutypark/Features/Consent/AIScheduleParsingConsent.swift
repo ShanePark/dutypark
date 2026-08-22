@@ -320,19 +320,34 @@ final class AIScheduleParsingConsentStore: ObservableObject {
     }
 
     @discardableResult
-    func grant(for memberID: Int64, policyVersion: String) async -> Bool {
-        await update(for: memberID, consented: true, policyVersion: policyVersion)
+    func grant(
+        for memberID: Int64,
+        policyVersion: String,
+        emitsHaptic: Bool = true
+    ) async -> Bool {
+        await update(
+            for: memberID,
+            consented: true,
+            policyVersion: policyVersion,
+            emitsHaptic: emitsHaptic
+        )
     }
 
     @discardableResult
-    func revoke(for memberID: Int64) async -> Bool {
-        await update(for: memberID, consented: false, policyVersion: nil)
+    func revoke(for memberID: Int64, emitsHaptic: Bool = true) async -> Bool {
+        await update(
+            for: memberID,
+            consented: false,
+            policyVersion: nil,
+            emitsHaptic: emitsHaptic
+        )
     }
 
     private func update(
         for memberID: Int64,
         consented: Bool,
-        policyVersion: String?
+        policyVersion: String?,
+        emitsHaptic: Bool
     ) async -> Bool {
         scope(to: memberID)
         guard !isUpdating else { return false }
@@ -349,12 +364,19 @@ final class AIScheduleParsingConsentStore: ObservableObject {
             guard self.memberID == memberID else { return false }
             response = updated
             lastSuccessfulRefreshAt = now()
-            return consented ? updated.hasCurrentConsent : !updated.consented
+            let didApply = consented ? updated.hasCurrentConsent : !updated.consented
+            if emitsHaptic {
+                DPHapticCenter.shared.emit(didApply ? .success : .error)
+            }
+            return didApply
         } catch {
             guard self.memberID == memberID else { return false }
             errorKey = consented
                 ? "settings.aiConsent.enableFailed"
                 : "settings.aiConsent.disableFailed"
+            if emitsHaptic {
+                DPHapticCenter.shared.emit(.error)
+            }
             return false
         }
     }

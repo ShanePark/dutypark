@@ -84,6 +84,8 @@ struct ReportSheet: View {
                 .font(DPTypography.heading)
                 .foregroundStyle(DPColor.textPrimary)
             Spacer(minLength: 0)
+            // The authorized `dismiss` closure comes from `DPModalOverlay`, which owns
+            // the routine haptic for an immediate modal dismissal.
             Button(action: dismiss) {
                 Image(systemName: "xmark")
                     .font(.system(size: 17, weight: .semibold))
@@ -113,7 +115,10 @@ struct ReportSheet: View {
                 .accessibilityIdentifier("report.target")
 
             ReportFormSection(title: ReportLocalization.text("report.field.reason")) {
-                Picker(selection: $model.reason) {
+                Picker(selection: Binding(
+                    get: { model.reason },
+                    set: { model.selectReason($0) }
+                )) {
                     ForEach(ReportReason.allCases) { reason in
                         Text(verbatim: ReportLocalization.text(reason.titleKey))
                             .tag(reason)
@@ -166,7 +171,10 @@ struct ReportSheet: View {
             }
             .id(Field.detail)
 
-            Toggle(isOn: $model.alsoBlock) {
+            Toggle(isOn: Binding(
+                get: { model.alsoBlock },
+                set: { model.setAlsoBlock($0) }
+            )) {
                 Label(
                     ReportLocalization.text("report.field.alsoBlock"),
                     systemImage: "hand.raised"
@@ -217,6 +225,7 @@ struct ReportSheet: View {
             }
         }
     }
+
 }
 
 nonisolated enum ReportSheetLayout {

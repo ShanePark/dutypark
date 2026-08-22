@@ -166,6 +166,7 @@ struct FriendSearchModalView: View {
                         }
                         Spacer(minLength: DPSpacing.small)
                         Button(social("social.action.sendRequest")) {
+                            DPHapticCenter.shared.emit(.selection)
                             onSelectCandidate(member)
                         }
                         .font(DPFont.light(size: 14, relativeTo: .subheadline))

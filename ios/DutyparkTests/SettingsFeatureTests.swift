@@ -365,7 +365,7 @@ struct SettingsFeatureTests {
                 == "Use default image"
         )
         #expect(photo.confirmTitleKey == "settings.photo.delete")
-        #expect(!photo.isDestructive)
+        #expect(photo.isDestructive)
         #expect(
             SettingsLocalization.string("settings.photo.deleteConfirm", locale: .korean)
                 == "프로필 사진을 기본 이미지로 변경하시겠습니까?"

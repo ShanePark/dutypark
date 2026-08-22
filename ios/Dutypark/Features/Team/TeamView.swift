@@ -69,7 +69,9 @@ struct TeamView: View {
             )
         ) {
             if let draft = viewModel.scheduleDraft {
-                DPModalOverlay(onDismiss: { viewModel.scheduleDraft = nil }) { availableSize, dismiss in
+                DPModalOverlay(
+                    onDismiss: { viewModel.scheduleDraft = nil }
+                ) { availableSize, dismiss in
                     TeamScheduleEditor(
                         viewModel: viewModel,
                         draft: draft,
@@ -121,7 +123,8 @@ struct TeamView: View {
                     },
                     canDismiss: TeamScheduleDeleteConfirmationPolicy.canDismiss(
                         isDeleting: scheduleDeletionIsWorking
-                    )
+                    ),
+                    dismissHaptic: nil
                 ) { availableSize, dismiss in
                     DPConfirmationPanel(
                         title: teamLocalized("team.view.actions.deleteSchedule"),
@@ -231,6 +234,11 @@ struct TeamView: View {
                 .frame(width: 36, height: DPSize.minimumTouchTarget)
         }
         .buttonStyle(.plain)
+        .simultaneousGesture(
+            TapGesture().onEnded {
+                DPHapticCenter.shared.emit(.routine)
+            }
+        )
         .accessibilityLabel(Text("team.view.actions.manage", tableName: "Team"))
     }
 
@@ -360,6 +368,7 @@ struct TeamView: View {
                 }
                 if viewModel.isTeamManager {
                     Button {
+                        guard viewModel.selectedDay != nil else { return }
                         viewModel.newSchedule()
                     } label: {
                         Label {
@@ -485,7 +494,10 @@ struct TeamView: View {
                         ForEach(Array(shift.members.enumerated()), id: \.offset) { _, member in
                             Group {
                                 if let id = member.id {
-                                    Button { onOpenCalendar(id) } label: { memberCard(member) }
+                                    Button {
+                                        DPHapticCenter.shared.emit(.routine)
+                                        onOpenCalendar(id)
+                                    } label: { memberCard(member) }
                                         .buttonStyle(.plain)
                                 } else {
                                     memberCard(member)
@@ -712,6 +724,11 @@ private struct TeamScheduleEditor: View {
                     Text("team.view.schedule.form.startDate", tableName: "Team")
                 }
                 .frame(minHeight: DPSize.minimumTouchTarget)
+                .onChange(of: draft.startDate) { oldValue, newValue in
+                    if oldValue != newValue {
+                        DPHapticCenter.shared.emit(.selection)
+                    }
+                }
                 DatePicker(
                     selection: $draft.endDate,
                     in: draft.startDate...,
@@ -720,6 +737,11 @@ private struct TeamScheduleEditor: View {
                     Text("team.view.schedule.form.endDate", tableName: "Team")
                 }
                 .frame(minHeight: DPSize.minimumTouchTarget)
+                .onChange(of: draft.endDate) { oldValue, newValue in
+                    if oldValue != newValue {
+                        DPHapticCenter.shared.emit(.selection)
+                    }
+                }
             }
         }
         .padding(DPSpacing.medium)

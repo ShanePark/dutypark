@@ -49,7 +49,7 @@ struct GuestPolicyView: View {
                     Text(GuestLocalization.text("guest.policy.error"))
                         .foregroundStyle(DPColor.textSecondary)
                     Button(GuestLocalization.text("guest.retry")) {
-                        Task { await model.load() }
+                        Task { await retryLoad() }
                     }
                     .buttonStyle(DPPrimaryButtonStyle())
                 }
@@ -87,5 +87,12 @@ struct GuestPolicyView: View {
 
     private var title: String {
         GuestLocalization.text(model.type == .terms ? "guest.policy.terms" : "guest.policy.privacy")
+    }
+
+    private func retryLoad() async {
+        await model.load()
+        if model.hasError {
+            DPHapticCenter.shared.emit(.error)
+        }
     }
 }

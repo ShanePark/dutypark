@@ -122,6 +122,80 @@ struct TodoViewModelTests {
     }
 
     @Test
+    func completedTodoMutationsEmitSuccessOnlyAfterTheRepositoryReturns() async throws {
+        let todo = makeTodo()
+        let repository = FakeTodoRepository(board: makeBoard(todo: [todo]))
+        let haptics = DPHapticCenter()
+        let model = TodoViewModel(repository: repository, hapticCenter: haptics)
+        var draft = TodoDraft(todo: todo)
+        draft.title = "Updated title"
+
+        #expect(await model.create(draft: draft))
+        let createEvent = try #require(haptics.event)
+        #expect(createEvent.kind == .success)
+
+        #expect(await model.update(todo: todo, draft: draft))
+        let updateEvent = try #require(haptics.event)
+        #expect(updateEvent.kind == .success)
+        #expect(updateEvent.id > createEvent.id)
+
+        #expect(await model.delete(todo))
+        let deleteEvent = try #require(haptics.event)
+        #expect(deleteEvent.kind == .success)
+        #expect(deleteEvent.id > updateEvent.id)
+
+        #expect(await model.leaveTag(todo))
+        let leaveTagEvent = try #require(haptics.event)
+        #expect(leaveTagEvent.kind == .success)
+        #expect(leaveTagEvent.id > deleteEvent.id)
+    }
+
+    @Test
+    func contentFilterAndAttachmentValidationUseActionableFailureFeedback() async {
+        let defaults = UserDefaults(suiteName: "todo-haptic-content-filter-\(UUID().uuidString)")!
+        defaults.set(["시발"], forKey: "dp-banned-words")
+        let contentFilter = ContentFilterStore(defaults: defaults)
+        let todo = makeTodo(hasAttachments: true)
+        let repository = FakeTodoRepository(board: makeBoard(todo: [todo]))
+        let haptics = DPHapticCenter()
+        let model = TodoViewModel(
+            repository: repository,
+            contentFilter: contentFilter,
+            hapticCenter: haptics
+        )
+        var blockedDraft = TodoDraft(todo: todo)
+        blockedDraft.title = "시발 회의"
+
+        #expect(!(await model.create(draft: blockedDraft)))
+        #expect(haptics.event?.kind == .error)
+
+        var validDraft = TodoDraft(todo: todo)
+        validDraft.title = "Updated"
+        #expect(!(await model.update(todo: todo, draft: validDraft)))
+        #expect(haptics.event?.kind == .warning)
+    }
+
+    @Test
+    func todoControlsWireSelectionAndModalFeedbackWithoutConfirmationDuplication() throws {
+        let root = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let boardSource = try String(
+            contentsOf: root.appending(path: "Dutypark/Features/Todo/TodoView.swift"),
+            encoding: .utf8
+        )
+        let modalSource = try String(
+            contentsOf: root.appending(path: "Dutypark/Features/Todo/TodoModalViews.swift"),
+            encoding: .utf8
+        )
+
+        #expect(boardSource.contains("model.emitHaptic(.selection)"))
+        #expect(boardSource.contains("model.emitHaptic(.routine)"))
+        #expect(boardSource.contains("onChange(of: draft.hasDueDate)"))
+        #expect(modalSource.contains("dismissHaptic: nil"))
+    }
+
+    @Test
     func mobileBoardMatchesWebColumnGeometry() {
         #expect(TodoBoardLayout.mobileColumnWidthRatio == 0.62)
         #expect(TodoBoardLayout.boardPadding == 8)
@@ -858,7 +932,8 @@ struct TodoViewModelTests {
             isTagged: true
         )
         let repository = FakeTodoRepository(board: makeBoard(todo: [first, tagged]))
-        let model = TodoViewModel(repository: repository)
+        let haptics = DPHapticCenter()
+        let model = TodoViewModel(repository: repository, hapticCenter: haptics)
         await model.load()
 
         let succeeded = await model.drop(
@@ -870,6 +945,9 @@ struct TodoViewModelTests {
         let request = await repository.positionRequest
 
         #expect(succeeded)
+        // Lift, slot changes, and drop already have dedicated drag feedback;
+        // a successful reorder must not add another result tick.
+        #expect(haptics.event == nil)
         #expect(model.todos(for: .todo).map(\.uuid) == [tagged.uuid, first.uuid])
         #expect(request == TodoPositionUpdateRequest(status: .todo, orderedIds: [tagged.uuid, first.uuid]))
     }
@@ -916,7 +994,8 @@ struct TodoViewModelTests {
         let second = makeTodo(id: UUID(uuidString: "22222222-2222-2222-2222-222222222222")!, title: "Second")
         let original = makeBoard(todo: [first, second])
         let repository = FakeTodoRepository(board: original, shouldFailPositionUpdate: true)
-        let model = TodoViewModel(repository: repository)
+        let haptics = DPHapticCenter()
+        let model = TodoViewModel(repository: repository, hapticCenter: haptics)
         await model.load()
 
         let succeeded = await model.drop(
@@ -929,6 +1008,7 @@ struct TodoViewModelTests {
         #expect(!succeeded)
         #expect(model.board == original)
         #expect(model.errorKey == "todo.error.reorder")
+        #expect(haptics.event?.kind == .error)
     }
 
     @Test
