@@ -126,6 +126,25 @@ nonisolated enum CalendarVisualLogic {
         return current.year != year || current.month != month
     }
 
+    /// Midnight is the server's sentinel for a schedule without an explicitly selected time.
+    /// Keep the existing raw date-time text for real times, but omit that placeholder time.
+    static func searchResultDateText(_ value: LocalDateTimeValue) -> String {
+        let display = value.rawValue.replacingOccurrences(of: "T", with: " ")
+        guard let separator = display.firstIndex(of: " ") else { return display }
+
+        let date = String(display[..<separator])
+        let time = display[display.index(after: separator)...]
+        let components = time.split(separator: ":", maxSplits: 2, omittingEmptySubsequences: false)
+        guard components.count >= 2, components[0] == "00", components[1] == "00" else {
+            return display
+        }
+        if components.count == 3 {
+            let seconds = components[2].split(separator: ".", maxSplits: 1, omittingEmptySubsequences: false)[0]
+            guard seconds == "00" else { return display }
+        }
+        return date
+    }
+
     /// The pinned D-day is drawn next to the day number, where only a few characters fit,
     /// so it carries the counter alone as the web calendar does. Its title is already
     /// shown as a bubble on the D-day's own date.

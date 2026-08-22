@@ -63,15 +63,29 @@ export function formatDateTime(dateTimeStr: string): string {
 }
 
 /**
- * Format date range for display
- * If same day, shows: YYYY-MM-DD HH:mm ~ HH:mm (or just start if end is 00:00)
- * If different days, shows: YYYY-MM-DD HH:mm ~ YYYY-MM-DD HH:mm
+ * Format a datetime for display, omitting midnight because it represents no time.
+ */
+function formatDateTimeOrDate(dateTimeStr: string): string {
+  const time = (dateTimeStr.split('T')[1] ?? '').slice(0, 5)
+  if (!time || time === '00:00') {
+    return formatWithLocale(new Date(dateTimeStr), {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    })
+  }
+  return formatDateTime(dateTimeStr)
+}
+
+/**
+ * Format date range for display.
+ * If a datetime has no time, its date is shown without a midnight time.
  */
 export function formatDateRange(start: string, end: string): string {
   const startDate = new Date(start)
   const endDate = new Date(end)
 
-  const startStr = formatDateTime(start)
+  const startStr = formatDateTimeOrDate(start)
 
   if (startDate.toDateString() === endDate.toDateString()) {
     const endTime = formatWithLocale(endDate, {
@@ -85,7 +99,7 @@ export function formatDateRange(start: string, end: string): string {
     return `${startStr} ~ ${endTime}`
   }
 
-  return `${startStr} ~ ${formatDateTime(end)}`
+  return `${startStr} ~ ${formatDateTimeOrDate(end)}`
 }
 
 /**

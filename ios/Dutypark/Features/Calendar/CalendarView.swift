@@ -3621,7 +3621,7 @@ private struct ScheduleSearchView: View {
                                 .font(DPTypography.label)
                                 .foregroundStyle(DPColor.textPrimary)
                             Label(
-                                item.startDateTime.rawValue.replacingOccurrences(of: "T", with: " "),
+                                CalendarVisualLogic.searchResultDateText(item.startDateTime),
                                 systemImage: "calendar"
                             )
                             Text(item.author)

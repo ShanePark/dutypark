@@ -4,6 +4,21 @@ import XCTest
 
 @MainActor
 final class CalendarFeatureTests: XCTestCase {
+    func testSearchResultDateOmitsMidnightPlaceholderButKeepsExplicitTime() {
+        XCTAssertEqual(
+            CalendarVisualLogic.searchResultDateText(
+                LocalDateTimeValue(rawValue: "2026-08-22T00:00:00")
+            ),
+            "2026-08-22"
+        )
+        XCTAssertEqual(
+            CalendarVisualLogic.searchResultDateText(
+                LocalDateTimeValue(rawValue: "2026-08-22T09:30:00")
+            ),
+            "2026-08-22 09:30:00"
+        )
+    }
+
     /// The pinned D-day shares the day-number row, so only the counter fits. Adding the
     /// title pushed the number out of the single line, which is the one part the pin is
     /// for; the title already appears as a bubble on the D-day's own date.
