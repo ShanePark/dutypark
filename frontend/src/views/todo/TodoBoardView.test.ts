@@ -130,4 +130,8 @@ describe('todo board mobile drag navigation', () => {
     expect(script).toContain('activeStatus.value = statusToRestore')
     expect(script).toContain("focusStatus(statusToRestore, 'smooth')")
   })
+
+  it('keeps the empty column add action visually identifiable', () => {
+    expect(style).toContain('border: 2px dashed var(--dp-accent-border);')
+  })
 })
