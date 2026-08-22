@@ -447,7 +447,7 @@ struct SocialView: View {
             HStack(spacing: 0) {
                 Button {
                     guard !consumeDragSuppression(for: friend.member.id) else { return }
-                    Task { await viewModel.togglePin(friend) }
+                    requestPinToggle(friend)
                 } label: {
                     Image(systemName: friend.pinOrder == nil ? "star" : "star.fill")
                         .font(.system(size: 16))
@@ -551,6 +551,14 @@ struct SocialView: View {
             isDragging: draggedPinnedFriendID == friend.member.id,
             tint: DPColor.accent
         )
+    }
+
+    private func requestPinToggle(_ friend: DashboardFriendDetailDTO) {
+        if friend.pinOrder == nil {
+            Task { await viewModel.togglePin(friend) }
+        } else {
+            confirmation = .unpin(friend)
+        }
     }
 
     private func isPinnedFriendReorderEnabled(
@@ -867,6 +875,7 @@ struct SocialView: View {
         case .block(let friend): await viewModel.block(friend)
         case .unblock(let member): await viewModel.unblock(member)
         case .sendFamily(let friend): await viewModel.sendFamilyRequest(to: friend)
+        case .unpin(let friend): await viewModel.togglePin(friend)
         }
     }
 }

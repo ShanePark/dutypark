@@ -123,13 +123,13 @@ final class HomeFriendInteractionUITests: XCTestCase {
         XCTAssertTrue(unpinnedFriend.exists)
         XCTAssertEqual(unpinnedFriend.frame.minY, initialFrame.minY, accuracy: 10)
         XCTAssertEqual(unpinnedFriend.frame.minX, initialFrame.minX, accuracy: 10)
-        XCTAssertEqual(pinButton.label, "고정 해제")
+        XCTAssertEqual(pinButton.label, "즐겨찾기 해제")
 
         pinButton.tap()
 
         XCTAssertFalse(app.descendants(matching: .any)["home.loading"].exists)
         XCTAssertTrue(unpinnedFriend.exists)
-        XCTAssertEqual(pinButton.label, "고정")
+        XCTAssertEqual(pinButton.label, "즐겨찾기에 추가")
         XCTAssertTrue(home.exists)
         XCTAssertFalse(anyCalendar(app).exists)
         attachScreenshot(named: "home-friend-pin-unpin-stable")

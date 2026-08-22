@@ -5,8 +5,8 @@ import XCTest
 /// buttons underneath must not fire when the finger lifts, otherwise reaching for
 /// "anywhere on the card" silently unpins the friend or opens the action menu.
 final class PinnedFriendActionButtonDragUITests: XCTestCase {
-    private let pinLabel = "고정"
-    private let unpinLabel = "고정 해제"
+    private let pinLabel = "즐겨찾기에 추가"
+    private let unpinLabel = "즐겨찾기 해제"
     private let removeFriendLabel = "친구 삭제"
 
     override func setUpWithError() throws {

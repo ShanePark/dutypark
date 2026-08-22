@@ -56,6 +56,7 @@ enum HomeFriendCardLayout {
 
 struct HomeView: View {
     @StateObject private var viewModel: HomeViewModel
+    @State private var pendingUnpinConfirmation: HomeUnpinConfirmation?
     @State private var pinningMemberID: MemberID?
     @State private var inlinePinnedOrder: [MemberID]?
     @State private var draggedPinnedFriendID: MemberID?
@@ -153,6 +154,16 @@ struct HomeView: View {
             Button {} label: {
                 Text("home.action.ok", tableName: "Home")
             }
+        }
+        .alert(item: $pendingUnpinConfirmation) { confirmation in
+            Alert(
+                title: Text(social("social.confirm.unpin.title")),
+                message: Text(socialFormat("social.confirm.unpin.message", confirmation.friend.member.name)),
+                primaryButton: .destructive(Text(social("social.action.unpin"))) {
+                    Task { await togglePin(confirmation.friend) }
+                },
+                secondaryButton: .cancel(Text(social("social.action.cancelDialog")))
+            )
         }
         .accessibilityIdentifier("home.dashboard")
     }
@@ -834,7 +845,11 @@ struct HomeView: View {
     }
 
     private func requestTogglePin(_ friend: DashboardFriendDetailDTO) {
-        Task { await togglePin(friend) }
+        if friend.pinOrder == nil {
+            Task { await togglePin(friend) }
+        } else {
+            pendingUnpinConfirmation = HomeUnpinConfirmation(friend: friend)
+        }
     }
 
     private func togglePin(_ friend: DashboardFriendDetailDTO) async {
@@ -867,6 +882,12 @@ struct HomeView: View {
         ProcessInfo.processInfo.arguments.contains("-ui-testing-authenticated")
     }
 #endif
+}
+
+private struct HomeUnpinConfirmation: Identifiable {
+    let friend: DashboardFriendDetailDTO
+
+    var id: MemberID { friend.member.id ?? -1 }
 }
 
 private struct HomeScheduleRow: View {

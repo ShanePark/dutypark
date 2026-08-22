@@ -78,6 +78,23 @@ describe('home friend list keeps the pin toggle (D4)', () => {
     expect(ruleFor('.dashboard-friend-card__pin')).toContain('position: absolute')
   })
 
+  it('asks for confirmation before removing a friend from favorites', () => {
+    const unpinStart = script.indexOf('async function unpinFriend')
+    expect(unpinStart).toBeGreaterThan(-1)
+    const unpinEnd = script.indexOf('\nfunction sortFriendsByPinOrder', unpinStart)
+    const unpin = script.slice(unpinStart, unpinEnd)
+
+    expect(unpin).toContain('friend?.pinOrder == null')
+    expect(unpin).toMatch(/await confirm\([\s\S]*?dashboard\.messages\.unpinConfirm/)
+    expect(unpin).toMatch(/dashboard\.messages\.unpinTitle/)
+    expect(unpin).toMatch(/confirm\([\s\S]*?friendApi\.unpinFriend\(/)
+  })
+
+  it('treats a zero pin order as a pinned friend', () => {
+    expect(script).toContain('a.pinOrder == null ? 1 : 0')
+    expect(template).toContain('v-if="friend.pinOrder != null"')
+  })
+
   it('uses only the yellow star to distinguish pinned friends', () => {
     expect(template).not.toContain('dashboard-friend-card--pinned')
     expect(style).not.toContain('.dashboard-friend-card--pinned')

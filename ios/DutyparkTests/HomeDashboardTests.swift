@@ -349,6 +349,15 @@ final class HomeDashboardTests: XCTestCase {
         XCTAssertTrue(source.contains("axis: .horizontal"))
     }
 
+    func testUnpinFromHomeGoesThroughAConfirmationAlert() throws {
+        let source = try Self.projectSource(at: "Dutypark/Features/Home/HomeView.swift")
+
+        XCTAssertTrue(source.contains("pendingUnpinConfirmation"))
+        XCTAssertTrue(source.contains("pendingUnpinConfirmation = HomeUnpinConfirmation(friend: friend)"))
+        XCTAssertTrue(source.contains("social.confirm.unpin.title"))
+        XCTAssertTrue(source.contains("social.action.unpin"))
+    }
+
     func testHomeFriendRailLocksItsHorizontalScrollWhileReordering() throws {
         let source = try Self.projectSource(at: "Dutypark/Features/Home/HomeView.swift")
         let railStart = try XCTUnwrap(source.range(of: "    private var friendsRail: some View {"))

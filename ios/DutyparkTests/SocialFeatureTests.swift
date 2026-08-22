@@ -37,6 +37,13 @@ final class SocialFeatureTests: XCTestCase {
         XCTAssertTrue(source.contains("confirmation = .sendFamily(friend)"))
     }
 
+    func testUnpinGoesThroughTheConfirmationPanel() throws {
+        let source = try Self.projectSource(at: "Dutypark/Features/Social/SocialView.swift")
+
+        XCTAssertTrue(source.contains("confirmation = .unpin(friend)"))
+        XCTAssertTrue(source.contains("case .unpin(let friend): await viewModel.togglePin(friend)"))
+    }
+
     func testOnlyTheDestructiveConfirmationsAreStyledAsDestructive() {
         let target = DashboardFriendDetailDTO(
             member: MemberPreviewDTO(
@@ -118,6 +125,8 @@ final class SocialFeatureTests: XCTestCase {
             "social.confirm.block.title",
             "social.confirm.sendFamily.message",
             "social.confirm.sendFamily.title",
+            "social.confirm.unpin.message",
+            "social.confirm.unpin.title",
             "social.confirm.unblock.message",
             "social.confirm.unblock.title",
             "social.empty.blocked",
@@ -134,6 +143,75 @@ final class SocialFeatureTests: XCTestCase {
                     bundle.localizedString(forKey: key, value: key, table: "Social"),
                     key,
                     "Missing \(key) for \(locale)"
+                )
+            }
+        }
+    }
+
+    func testFavoriteFriendStringsUseConsistentTerminology() throws {
+        let expected: [String: [String: String]] = [
+            "social.action.pin": [
+                "en": "Add to favorites",
+                "ko": "즐겨찾기에 추가"
+            ],
+            "social.action.unpin": [
+                "en": "Remove from favorites",
+                "ko": "즐겨찾기 해제"
+            ],
+            "social.confirm.unpin.message": [
+                "en": "Remove %@ from your favorites?",
+                "ko": "%@님을 즐겨찾기에서 해제할까요?"
+            ],
+            "social.confirm.unpin.title": [
+                "en": "Remove from favorites",
+                "ko": "즐겨찾기 해제"
+            ],
+            "social.hint.pinnedOrder": [
+                "en": "Drag this handle to reorder favorite friends.",
+                "ko": "이 핸들을 드래그해 즐겨찾는 친구 순서를 바꿔주세요."
+            ],
+            "social.section.pinned": [
+                "en": "Favorite friends",
+                "ko": "즐겨찾는 친구"
+            ],
+            "social.section.pinnedOrder": [
+                "en": "Favorite friend order",
+                "ko": "즐겨찾는 친구 순서"
+            ],
+            "social.help.pin.title": [
+                "en": "Add friends you check often to your favorites",
+                "ko": "자주 보는 친구를 즐겨찾기에 추가하세요"
+            ],
+            "social.help.pin.body": [
+                "en": "Tap the star to add a friend to your favorites. Favorite friends move to the top and can be reordered.",
+                "ko": "별 아이콘을 누르면 즐겨찾는 친구로 추가되어 목록 맨 위에 표시됩니다. 즐겨찾는 친구는 원하는 순서로 바꿀 수 있어요."
+            ],
+            "social.help.reorder.body": [
+                "en": "Press a favorite friend's card until the ring around it fills, then drag it to where you want it and let go. You need at least two favorite friends.",
+                "ko": "즐겨찾는 친구 카드를 테두리가 채워질 때까지 길게 누른 다음, 원하는 위치로 끌어다 놓으세요. 즐겨찾는 친구가 두 명 이상이어야 합니다."
+            ],
+            "social.help.note": [
+                "en": "Friends not in your favorites stay below in the default order. With VoiceOver on, use the \"Move up\" and \"Move down\" actions on a favorite friend instead.",
+                "ko": "즐겨찾기에 추가하지 않은 친구는 기본 순서대로 아래에 표시됩니다. VoiceOver를 사용할 때는 즐겨찾는 친구 카드의 \"위로 이동\", \"아래로 이동\" 동작을 이용하세요."
+            ],
+            "social.error.pin": [
+                "en": "Failed to add the friend to your favorites.",
+                "ko": "친구를 즐겨찾기에 추가하지 못했습니다."
+            ],
+            "social.error.unpin": [
+                "en": "Failed to remove the friend from your favorites.",
+                "ko": "친구를 즐겨찾기에서 해제하지 못했습니다."
+            ]
+        ]
+
+        for locale in ["en", "ko"] {
+            let url = try XCTUnwrap(Bundle.main.url(forResource: locale, withExtension: "lproj"))
+            let bundle = try XCTUnwrap(Bundle(url: url))
+            for (key, values) in expected {
+                XCTAssertEqual(
+                    bundle.localizedString(forKey: key, value: key, table: "Social"),
+                    values[locale],
+                    "Unexpected favorite-friend copy for \(key) in \(locale)"
                 )
             }
         }
