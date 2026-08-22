@@ -258,7 +258,10 @@ final class SettingsViewModel: ObservableObject {
     }
 
     func deleteProfilePhoto() async -> Bool {
-        await workResult(success: "settings.photo.deleted") {
+        await workResult(
+            success: "settings.photo.deleted",
+            failure: "settings.photo.deleteFailed"
+        ) {
             try await service.deleteProfilePhoto()
             member = member?.replacing(
                 hasProfilePhoto: false,
@@ -412,6 +415,7 @@ final class SettingsViewModel: ObservableObject {
 
     private func workResult(
         success: String,
+        failure: String = "settings.error.generic",
         operation: () async throws -> Void
     ) async -> Bool {
         guard !isWorking else { return false }
@@ -422,7 +426,7 @@ final class SettingsViewModel: ObservableObject {
             showNotice(success)
             return true
         } catch {
-            showError("settings.error.generic")
+            showError(failure)
             return false
         }
     }

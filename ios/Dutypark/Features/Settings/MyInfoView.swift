@@ -251,7 +251,7 @@ struct MyInfoView: View {
 
                     if hasVisibleProfilePhoto {
                         Divider()
-                        Button(role: .destructive) {
+                        Button {
                             confirmation = .deleteProfilePhoto
                         } label: {
                             Label(

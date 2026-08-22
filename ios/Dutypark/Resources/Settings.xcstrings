@@ -910,21 +910,21 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Delete profile photo"
+            "value": "Use default image"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "프로필 사진 삭제"
+            "value": "기본 이미지로 변경"
           }
         }
       }
     },
     "settings.photo.deleteConfirm": {
       "localizations": {
-        "en": { "stringUnit": { "state": "translated", "value": "Delete the current profile photo?" } },
-        "ko": { "stringUnit": { "state": "translated", "value": "현재 프로필 사진을 삭제하시겠습니까?" } }
+        "en": { "stringUnit": { "state": "translated", "value": "Change your profile photo to the default image?" } },
+        "ko": { "stringUnit": { "state": "translated", "value": "프로필 사진을 기본 이미지로 변경하시겠습니까?" } }
       }
     },
     "settings.photo.deleted": {
@@ -932,13 +932,29 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Profile photo deleted."
+            "value": "Your profile photo is now set to the default image."
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "프로필 사진을 삭제했습니다."
+            "value": "프로필 사진이 기본 이미지로 변경되었습니다."
+          }
+        }
+      }
+    },
+    "settings.photo.deleteFailed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Failed to change your profile photo to the default image."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "프로필 사진을 기본 이미지로 변경하지 못했습니다."
           }
         }
       }

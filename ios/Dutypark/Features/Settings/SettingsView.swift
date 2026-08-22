@@ -721,8 +721,8 @@ enum SettingsConfirmation: Identifiable {
 
     var isDestructive: Bool {
         switch self {
-        case .switchManagedAccount: false
-        case .deleteProfilePhoto, .removeManager, .session: true
+        case .switchManagedAccount, .deleteProfilePhoto: false
+        case .removeManager, .session: true
         }
     }
 }
