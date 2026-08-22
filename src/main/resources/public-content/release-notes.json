@@ -40,6 +40,15 @@
         }
       },
       "entries": {
+        "pr-408": {
+          "title": "Todo와 친구 보드 드래그 이동 개선",
+          "summary": "웹과 iOS에서 Todo 상태 이동과 친구 카드 재정렬을 더 자연스럽게 하고, 모바일 드래그 중 화면 이동과 터치 피드백을 안정화했습니다.",
+          "changes": [
+            "Todo 카드를 드래그할 때 상태 열을 따라 화면이 연속으로 이동하고, iOS에서도 여러 상태를 한 번에 건널 수 있습니다.",
+            "웹과 iOS 대시보드에서 친구 카드를 드래그해 순서를 바꾸고, 드래그 중 카드와 화면 피드백을 개선했습니다.",
+            "달력의 이번 달 이동 버튼 터치 영역과 드래그 후 상호작용을 다듬어 실수로 다른 동작이 실행되는 문제를 줄였습니다."
+          ]
+        },
         "pr-407": {
           "title": "캘린더·친구 태그와 신고·문의 경험 개선",
           "summary": "웹과 iPhone 앱에서 일정 날짜 선택과 친구 태그, 신고·문의 내역, 알림과 탐색 동작을 함께 개선하고 안전한 콘텐츠 정책을 강화했습니다.",
@@ -2231,6 +2240,15 @@
         }
       },
       "entries": {
+        "pr-408": {
+          "title": "Smoother dragging across Todo and friend boards",
+          "summary": "Makes Todo status moves and friend-card reordering feel more natural across web and iOS, with steadier scrolling and touch feedback during mobile drags.",
+          "changes": [
+            "Keep the board moving through consecutive Todo status columns while dragging, including multi-column moves on iOS.",
+            "Reorder friend cards by dragging them on web and iOS dashboards, with clearer card and screen feedback during the gesture.",
+            "Improve the calendar jump-to-this-month touch target and post-drag interactions to reduce accidental actions."
+          ]
+        },
         "pr-407": {
           "title": "Improved calendars, friend tags, reports, and inquiries",
           "summary": "Improves schedule date selection, friend tagging, report and inquiry history, notifications, and navigation across the web and iPhone app while strengthening content-safety policies.",
@@ -4385,6 +4403,21 @@
     }
   },
   "items": [
+    {
+      "id": "pr-408",
+      "version": "2026.08.22",
+      "date": "2026-08-22",
+      "pr": 408,
+      "url": "https://github.com/ShanePark/dutypark/pull/408",
+      "category": "fix",
+      "areas": [
+        "calendar",
+        "dashboard",
+        "friends",
+        "todo",
+        "ui"
+      ]
+    },
     {
       "id": "pr-407",
       "version": "2026.08.21",

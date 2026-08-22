@@ -5,8 +5,8 @@ import XCTest
 /// buttons underneath must not fire when the finger lifts, otherwise reaching for
 /// "anywhere on the card" silently unpins the friend or opens the action menu.
 final class PinnedFriendActionButtonDragUITests: XCTestCase {
-    private let pinLabel = "고정"
-    private let unpinLabel = "고정 해제"
+    private let pinLabel = "즐겨찾기에 추가"
+    private let unpinLabel = "즐겨찾기 해제"
     private let removeFriendLabel = "친구 삭제"
 
     override func setUpWithError() throws {
@@ -108,9 +108,9 @@ final class PinnedFriendActionButtonDragUITests: XCTestCase {
         capture("social-action-buttons-plain-taps")
     }
 
-    /// The home rail does not reorder any more, but its star still sits on top of a
-    /// card that scrolls sideways, so a drag that starts on the star must neither
-    /// unpin the friend nor open their calendar when the finger lifts elsewhere.
+    /// The home rail reorders pinned friends too, so a drag that starts on the
+    /// star must neither unpin the friend nor open their calendar when the finger
+    /// lifts elsewhere.
     @MainActor
     func testHomeDragStartingOnThePinButtonDoesNotUnpinTheFriend() {
         let app = launchHome()
@@ -146,10 +146,10 @@ final class PinnedFriendActionButtonDragUITests: XCTestCase {
             unpinLabel,
             "A drag started on the star must not unpin the friend."
         )
-        XCTAssertLessThan(
+        XCTAssertGreaterThan(
             app.buttons["home.friend.31"].frame.minX,
             app.buttons["home.friend.33"].frame.minX,
-            "The home rail must keep its order through a drag."
+            "The home rail must reorder while preserving the pin."
         )
         XCTAssertFalse(
             app.descendants(matching: .any)
@@ -158,7 +158,7 @@ final class PinnedFriendActionButtonDragUITests: XCTestCase {
                 .exists,
             "A drag started on the star must not open the friend's calendar."
         )
-        capture("home-pin-button-drag-keeps-pin")
+        capture("home-pin-button-drag-reorders-keeps-pin")
     }
 
     @MainActor

@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Sortable from 'sortablejs'
-import type { SortableEvent } from 'sortablejs'
+import type { MoveEvent, SortableEvent } from 'sortablejs'
 import { ListTodo, Clock, CheckCircle2, Lightbulb, LayoutGrid, Plus } from 'lucide-vue-next'
 import { todoApi } from '@/api/todo'
 import { friendApi } from '@/api/member'
@@ -38,6 +38,12 @@ const startInEditMode = ref(false)
 const activeStatus = ref<TodoStatus>('IN_PROGRESS')
 const friends = ref<TaggableFriend[]>([])
 let scrollRafId: number | null = null
+let dragFocusRafId: number | null = null
+let activeDragStatus: TodoStatus | null = null
+let dragStartStatus: TodoStatus | null = null
+let dragEdgeStatus: TodoStatus | null = null
+let dragFocusTargetStatus: TodoStatus | null = null
+let dragUsesTouchInput = false
 
 let sortableInstances: Record<string, Sortable> = {}
 
@@ -116,13 +122,176 @@ function initSortables() {
       scrollSensitivity: 80,
       scrollSpeed: 10,
       swapThreshold: 0.65,
-      onStart: dragClickGuard.startDrag,
+      onStart: () => {
+        activeDragStatus = null
+        dragEdgeStatus = null
+        dragStartStatus = activeStatus.value
+        dragUsesTouchInput = false
+        document.addEventListener('pointermove', handleDragPointerMove, { capture: true })
+        document.addEventListener('touchmove', handleDragPointerMove, { capture: true, passive: false })
+        dragClickGuard.startDrag()
+      },
+      onMove: handleDragMove,
       onEnd: (event) => {
+        const previousActiveStatus = dragStartStatus
+        removeDragPointerListeners()
+        activeDragStatus = null
+        dragEdgeStatus = null
+        dragStartStatus = null
+        dragUsesTouchInput = false
         dragClickGuard.endDrag()
-        void handleDragEnd(event)
+        void handleDragEnd(event, previousActiveStatus)
       },
     })
   })
+}
+
+function handleDragMove(event: MoveEvent) {
+  const toColumn = event.to.getAttribute('data-column') as TodoStatus | null
+  if (!toColumn || toColumn === activeDragStatus) return
+
+  // After edge navigation starts, Sortable can keep reporting the source list until
+  // the moving viewport places the destination beneath the finger. Do not let that
+  // stale report undo the status the user just navigated to.
+  if (
+    toColumn === dragStartStatus
+    && activeDragStatus !== null
+    && activeDragStatus !== dragStartStatus
+  ) return
+
+  activeDragStatus = toColumn
+  // Sortable keeps the fallback drag's Y-axis placement/reordering. We only move the
+  // board horizontally when the destination changes, so following a mobile column does
+  // not interfere with the user's vertical finger movement inside that column.
+  activeStatus.value = toColumn
+  focusDraggedStatus(toColumn)
+}
+
+function handleDragPointerMove(event: PointerEvent | TouchEvent) {
+  const touch = 'touches' in event ? event.touches[0] : undefined
+  const clientX = touch?.clientX ?? (event as PointerEvent).clientX
+  const isTouchInput = 'touches' in event || (event as PointerEvent).pointerType === 'touch'
+  if (isTouchInput) dragUsesTouchInput = true
+  const container = boardScroller.value
+  if (!container || !Number.isFinite(clientX)) return
+  if (container.scrollWidth <= container.clientWidth) return
+
+  const rect = container.getBoundingClientRect()
+  const insideViewport = clientX >= rect.left && clientX <= rect.right
+  if (!insideViewport) {
+    dragEdgeStatus = null
+    return
+  }
+
+  const atLeadingEdge = clientX <= rect.left + 56
+  const atTrailingEdge = clientX >= rect.right - 56
+  if (!atLeadingEdge && !atTrailingEdge) {
+    dragEdgeStatus = null
+    return
+  }
+  if (isTouchInput && event.cancelable) event.preventDefault()
+  if (dragEdgeStatus !== null) {
+    focusDraggedStatus(dragEdgeStatus)
+    return
+  }
+
+  const statuses: TodoStatus[] = ['TODO', 'IN_PROGRESS', 'DONE']
+  const currentIndex = statuses.indexOf(activeStatus.value)
+  if (currentIndex < 0) return
+
+  const direction = atLeadingEdge ? -1 : 1
+  const nextStatus = statuses[currentIndex + direction]
+  if (!nextStatus) return
+
+  dragEdgeStatus = nextStatus
+  activeDragStatus = nextStatus
+  focusDraggedStatus(nextStatus)
+}
+
+function focusDraggedStatus(status: TodoStatus) {
+  activeStatus.value = status
+  dragFocusTargetStatus = status
+
+  // Mobile browsers may defer animation frames until the active touch gesture ends.
+  // Apply the actual board position in this touchmove so the column changes while
+  // the card is still held. Mouse dragging keeps the eased animation below.
+  if (dragUsesTouchInput) {
+    if (dragFocusRafId !== null) {
+      window.cancelAnimationFrame(dragFocusRafId)
+      dragFocusRafId = null
+    }
+    const container = boardScroller.value
+    const target = container
+      ?.querySelector(`[data-column="${status}"]`)
+      ?.closest('.kanban-column') as HTMLElement | null
+    if (!container || !target) {
+      dragFocusTargetStatus = null
+      return
+    }
+
+    const desiredLeft = target.offsetLeft - (container.clientWidth - target.clientWidth) / 2
+    const maxLeft = Math.max(0, container.scrollWidth - container.clientWidth)
+    const left = Math.min(Math.max(desiredLeft, 0), maxLeft)
+    container.scrollLeft = left
+    dragFocusTargetStatus = null
+    return
+  }
+
+  if (dragFocusRafId !== null) return
+
+  // A programmatic smooth scroll issued inside a mobile touchmove can be discarded
+  // when the browser finishes handling that same gesture. Drive the real scroll
+  // position from the next frame instead, and keep it pinned while the edge is held.
+  const moveBoardToDraggedStatus = () => {
+    dragFocusRafId = null
+    const targetStatus = dragFocusTargetStatus
+    const container = boardScroller.value
+    if (!targetStatus || !container) {
+      dragFocusTargetStatus = null
+      return
+    }
+
+    const target = container
+      .querySelector(`[data-column="${targetStatus}"]`)
+      ?.closest('.kanban-column') as HTMLElement | null
+    if (!target) {
+      dragFocusTargetStatus = null
+      return
+    }
+
+    const desiredLeft = target.offsetLeft - (container.clientWidth - target.clientWidth) / 2
+    const maxLeft = Math.max(0, container.scrollWidth - container.clientWidth)
+    const left = Math.min(Math.max(desiredLeft, 0), maxLeft)
+    const distance = left - container.scrollLeft
+    if (Math.abs(distance) <= 1) {
+      container.scrollLeft = left
+    } else {
+      container.scrollLeft += distance * 0.42
+    }
+
+    const shouldKeepMoving = Math.abs(left - container.scrollLeft) > 1
+      || dragEdgeStatus === targetStatus
+    if (shouldKeepMoving) {
+      dragFocusRafId = window.requestAnimationFrame(moveBoardToDraggedStatus)
+    } else {
+      dragFocusTargetStatus = null
+    }
+  }
+
+  dragFocusRafId = window.requestAnimationFrame(moveBoardToDraggedStatus)
+}
+
+function cancelDragStatusFocus() {
+  if (dragFocusRafId !== null) {
+    window.cancelAnimationFrame(dragFocusRafId)
+    dragFocusRafId = null
+  }
+  dragFocusTargetStatus = null
+}
+
+function removeDragPointerListeners() {
+  document.removeEventListener('pointermove', handleDragPointerMove, { capture: true })
+  document.removeEventListener('touchmove', handleDragPointerMove, { capture: true })
 }
 
 function collectOrderedIds(container: Element | null): string[] {
@@ -139,6 +308,9 @@ function collectOrderedIds(container: Element | null): string[] {
 }
 
 function destroySortables() {
+  cancelDragStatusFocus()
+  removeDragPointerListeners()
+  dragUsesTouchInput = false
   Object.values(sortableInstances).forEach((instance) => {
     if (instance) {
       instance.destroy()
@@ -150,12 +322,13 @@ function destroySortables() {
   }
 }
 
-async function handleDragEnd(evt: SortableEvent) {
+async function handleDragEnd(evt: SortableEvent, previousActiveStatus: TodoStatus | null = null) {
   const todoId = evt.item.getAttribute('data-id')
   if (!todoId) return
 
   const fromColumn = evt.from.getAttribute('data-column') as TodoStatus
   const toColumn = evt.to.getAttribute('data-column') as TodoStatus
+  const statusToRestore = previousActiveStatus ?? fromColumn
 
   // Full order of the destination column after SortableJS moved the card.
   const orderedIds = collectOrderedIds(evt.to)
@@ -185,6 +358,10 @@ async function handleDragEnd(evt: SortableEvent) {
       console.error('Failed to change status:', error)
       showError(t('todoBoard.messages.changeStatusFailed'))
       await loadBoard()
+      // A failed save must return the board to the status that was visible before
+      // the live drag-follow moved the viewport to its destination.
+      activeStatus.value = statusToRestore
+      focusStatus(statusToRestore, 'smooth')
     }
   }
 }
@@ -201,6 +378,7 @@ function getDefaultStatus(): TodoStatus {
 }
 
 function focusStatus(status: TodoStatus, behavior: ScrollBehavior = 'smooth') {
+  cancelDragStatusFocus()
   activeStatus.value = status
   const container = boardScroller.value
   if (!container) return
@@ -225,6 +403,8 @@ function handleBoardScroll() {
 function syncActiveStatusWithScroll() {
   const container = boardScroller.value
   if (!container) return
+  if (dragClickGuard.isDragging.value && activeDragStatus) return
+  if (dragFocusTargetStatus) return
   const columns = Array.from(container.querySelectorAll('.kanban-column')) as HTMLElement[]
   if (columns.length === 0) return
   const containerRect = container.getBoundingClientRect()

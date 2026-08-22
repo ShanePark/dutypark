@@ -35,12 +35,14 @@ enum DPPinnedFriendLiveOrder {
         _ originalOrder: [MemberID],
         draggedID: MemberID,
         previewFrame: CGRect,
+        axis: PinnedFriendReorderAxis = .vertical,
         targets: [DPPinnedFriendDropTarget]
     ) -> [MemberID] {
         PinnedFriendReorder.reordered(
             originalOrder,
             draggedID: draggedID,
             previewFrame: previewFrame,
+            axis: axis,
             framesByID: PinnedFriendReorder.framesByID(
                 targets,
                 memberID: \.memberID,

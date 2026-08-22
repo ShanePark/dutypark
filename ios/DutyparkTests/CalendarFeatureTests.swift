@@ -76,6 +76,17 @@ final class CalendarFeatureTests: XCTestCase {
         )
     }
 
+    func testTheThisMonthCalloutAddsATallerVerticalTouchArea() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark/Features/Calendar/CalendarView.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+
+        XCTAssertTrue(source.contains("private static let calloutHitInsetY: CGFloat = 6"))
+        XCTAssertTrue(source.contains(".padding(.vertical, Self.calloutHitInsetY)"))
+    }
+
     /// The strip above the calendar is gone: due-date bubbles inside the day cells are the
     /// only Todo surface the calendar keeps, and they open the detail modal in place.
     func testCalendarTodosLiveOnlyInDayCellsAndOpenTheDetailModal() throws {

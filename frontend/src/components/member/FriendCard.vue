@@ -24,11 +24,11 @@ const { t } = useI18n()
     :data-member-id="friend.member.id"
     class="friend-card relative overflow-hidden rounded-xl sm:rounded-2xl cursor-pointer"
     :class="[
-      friend.pinOrder
+      friend.pinOrder != null
         ? 'pinned-friend pinned-friend-highlight border-2 shadow-md'
         : 'border hover:border-dp-accent-border'
     ]"
-    :style="!friend.pinOrder ? { backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-primary)' } : {}"
+    :style="friend.pinOrder == null ? { backgroundColor: 'var(--dp-bg-card)', borderColor: 'var(--dp-border-primary)' } : {}"
     @click="emit('select')"
   >
     <div class="flex p-3">
@@ -50,7 +50,7 @@ const { t } = useI18n()
           </div>
           <div class="flex items-center flex-shrink-0" @click.stop>
             <button
-              v-if="friend.pinOrder"
+              v-if="friend.pinOrder != null"
               class="p-1 text-dp-warning hover:text-dp-warning transition cursor-pointer"
               @click.stop="emit('unpin')"
               :title="t('friends.actions.unpin')"
@@ -77,7 +77,7 @@ const { t } = useI18n()
       </div>
     </div>
 
-    <div v-if="friend.pinOrder" class="absolute bottom-2 right-2" @click.stop>
+    <div v-if="friend.pinOrder != null" class="absolute bottom-2 right-2" @click.stop>
       <div
         class="handle friend-drag-handle rounded-lg p-1.5 transition hover:bg-dp-overlay-dark/10 !cursor-grab active:!cursor-grabbing"
         :title="t('friends.actions.dragToReorder')"

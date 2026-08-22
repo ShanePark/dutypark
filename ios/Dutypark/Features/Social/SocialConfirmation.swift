@@ -8,6 +8,7 @@ enum SocialConfirmation: Identifiable {
     case block(DashboardFriendDetailDTO)
     case unblock(BlockedMemberDTO)
     case sendFamily(DashboardFriendDetailDTO)
+    case unpin(DashboardFriendDetailDTO)
 
     var id: String {
         switch self {
@@ -18,6 +19,7 @@ enum SocialConfirmation: Identifiable {
         case .block(let friend): "block-\(friend.member.id ?? -1)"
         case .unblock(let member): "unblock-\(member.id)"
         case .sendFamily(let friend): "sendFamily-\(friend.member.id ?? -1)"
+        case .unpin(let friend): "unpin-\(friend.member.id ?? -1)"
         }
     }
 
@@ -26,7 +28,7 @@ enum SocialConfirmation: Identifiable {
         case .reject(let request): request.fromMember.name
         case .cancel(let request): request.toMember.name
         case .removeFamily(let friend), .removeFriend(let friend), .block(let friend),
-            .sendFamily(let friend): friend.member.name
+            .sendFamily(let friend), .unpin(let friend): friend.member.name
         case .unblock(let member): member.name
         }
     }
@@ -40,6 +42,7 @@ enum SocialConfirmation: Identifiable {
         case .block: "social.confirm.block.title"
         case .unblock: "social.confirm.unblock.title"
         case .sendFamily: "social.confirm.sendFamily.title"
+        case .unpin: "social.confirm.unpin.title"
         }
     }
 
@@ -52,6 +55,7 @@ enum SocialConfirmation: Identifiable {
         case .block: "social.confirm.block.message"
         case .unblock: "social.confirm.unblock.message"
         case .sendFamily: "social.confirm.sendFamily.message"
+        case .unpin: "social.confirm.unpin.message"
         }
     }
 
@@ -64,6 +68,7 @@ enum SocialConfirmation: Identifiable {
         case .block: "social.action.block"
         case .unblock: "social.action.unblock"
         case .sendFamily: "social.action.sendRequest"
+        case .unpin: "social.action.unpin"
         }
     }
 
@@ -71,7 +76,7 @@ enum SocialConfirmation: Identifiable {
     /// takes anything away, so only the removing actions get the destructive styling.
     var isDestructive: Bool {
         switch self {
-        case .reject, .cancel, .removeFamily, .removeFriend, .block: true
+        case .reject, .cancel, .removeFamily, .removeFriend, .block, .unpin: true
         case .unblock, .sendFamily: false
         }
     }

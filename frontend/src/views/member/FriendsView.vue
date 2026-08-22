@@ -66,12 +66,12 @@ const searchLoading = ref(false)
 const sortedFriends = computed(() => {
   if (!friendInfo.value) return []
   return [...friendInfo.value.friends].sort((a, b) => {
-    const aPinned = a.pinOrder ? 0 : 1
-    const bPinned = b.pinOrder ? 0 : 1
+    const aPinned = a.pinOrder == null ? 1 : 0
+    const bPinned = b.pinOrder == null ? 1 : 0
     if (aPinned !== bPinned) {
       return aPinned - bPinned
     }
-    if (a.pinOrder && b.pinOrder) {
+    if (a.pinOrder != null && b.pinOrder != null) {
       return (a.pinOrder || 0) - (b.pinOrder || 0)
     }
     return 0
@@ -186,33 +186,37 @@ async function pinFriend(member: { id: number | null; name: string }) {
 async function unpinFriend(member: { id: number | null; name: string }) {
   if (!friendInfo.value || !member.id) return
   const friend = friendInfo.value.friends.find((f) => f.member.id === member.id)
-  if (friend) {
-    const oldPinOrder = friend.pinOrder
-    friend.pinOrder = null
+  if (friend?.pinOrder == null) return
+  if (!await confirm(
+    t('friends.messages.unpinConfirm', { name: member.name }),
+    t('friends.messages.unpinTitle'),
+  )) return
+
+  const oldPinOrder = friend.pinOrder
+  friend.pinOrder = null
+  sortFriendsByPinOrder()
+  nextTick(() => {
+    initFriendSortable()
+  })
+  try {
+    await friendApi.unpinFriend(member.id)
+  } catch (e) {
+    console.error('Failed to unpin friend:', e)
+    friend.pinOrder = oldPinOrder
     sortFriendsByPinOrder()
-    nextTick(() => {
-      initFriendSortable()
-    })
-    try {
-      await friendApi.unpinFriend(member.id)
-    } catch (e) {
-      console.error('Failed to unpin friend:', e)
-      friend.pinOrder = oldPinOrder
-      sortFriendsByPinOrder()
-      showWarning(t('friends.messages.unpinFailed'))
-    }
+    showWarning(t('friends.messages.unpinFailed'))
   }
 }
 
 function sortFriendsByPinOrder() {
   if (!friendInfo.value) return
   friendInfo.value.friends.sort((a, b) => {
-    const aPinned = a.pinOrder ? 0 : 1
-    const bPinned = b.pinOrder ? 0 : 1
+    const aPinned = a.pinOrder == null ? 1 : 0
+    const bPinned = b.pinOrder == null ? 1 : 0
     if (aPinned !== bPinned) {
       return aPinned - bPinned
     }
-    if (a.pinOrder && b.pinOrder) {
+    if (a.pinOrder != null && b.pinOrder != null) {
       return (a.pinOrder || 0) - (b.pinOrder || 0)
     }
     return 0

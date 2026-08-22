@@ -157,6 +157,25 @@ final class HomeViewModel: ObservableObject {
         replaceFriendsDashboardForMutation(dashboard.replacingFriends(updatedFriends))
     }
 
+    func setPinnedFriendOrder(_ memberIDs: [MemberID]) {
+        guard let dashboard = friendsDashboard else { return }
+        let currentIDs = dashboard.friends.compactMap { friend in
+            friend.pinOrder == nil ? nil : friend.member.id
+        }
+        guard memberIDs.count == currentIDs.count,
+              Set(memberIDs) == Set(currentIDs) else { return }
+
+        let orders = Dictionary(
+            uniqueKeysWithValues: memberIDs.enumerated().map { ($1, Int64($0)) }
+        )
+        let updatedFriends = dashboard.friends.map { friend in
+            guard let memberID = friend.member.id,
+                  let pinOrder = orders[memberID] else { return friend }
+            return friend.replacingPinOrder(pinOrder)
+        }
+        replaceFriendsDashboardForMutation(dashboard.replacingFriends(updatedFriends))
+    }
+
     private nonisolated static func fetchMy(
         using service: any HomeDashboardServing
     ) async -> DashboardResult<DashboardMyDetailDTO> {

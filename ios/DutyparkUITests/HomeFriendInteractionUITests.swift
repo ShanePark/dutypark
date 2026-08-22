@@ -123,22 +123,21 @@ final class HomeFriendInteractionUITests: XCTestCase {
         XCTAssertTrue(unpinnedFriend.exists)
         XCTAssertEqual(unpinnedFriend.frame.minY, initialFrame.minY, accuracy: 10)
         XCTAssertEqual(unpinnedFriend.frame.minX, initialFrame.minX, accuracy: 10)
-        XCTAssertEqual(pinButton.label, "고정 해제")
+        XCTAssertEqual(pinButton.label, "즐겨찾기 해제")
 
         pinButton.tap()
 
         XCTAssertFalse(app.descendants(matching: .any)["home.loading"].exists)
         XCTAssertTrue(unpinnedFriend.exists)
-        XCTAssertEqual(pinButton.label, "고정")
+        XCTAssertEqual(pinButton.label, "즐겨찾기에 추가")
         XCTAssertTrue(home.exists)
         XCTAssertFalse(anyCalendar(app).exists)
         attachScreenshot(named: "home-friend-pin-unpin-stable")
     }
 
-    /// D3: reordering pinned friends lives in friend management only. A long press
-    /// on a home card must leave the rail's order alone.
+    /// A long press on a pinned home card reorders the horizontal friend rail.
     @MainActor
-    func testLongPressDragOnFriendCardNoLongerReorders() {
+    func testLongPressDragOnFriendCardReordersPinnedFriends() {
         let app = launchApp(manyPinnedFriends: true)
         let home = app.descendants(matching: .any)["screen.home"]
         XCTAssertTrue(home.waitForExistence(timeout: 20))
@@ -157,14 +156,14 @@ final class HomeFriendInteractionUITests: XCTestCase {
             thenHoldForDuration: 0.3
         )
 
-        XCTAssertLessThan(
+        XCTAssertGreaterThan(
             source.frame.minX,
             target.frame.minX,
-            "A long press drag must not reorder the home friend rail"
+            "A long press drag must reorder the home friend rail"
         )
         XCTAssertTrue(home.exists)
         XCTAssertFalse(anyCalendar(app).exists)
-        attachScreenshot(named: "home-friend-long-press-no-reorder")
+        attachScreenshot(named: "home-friend-long-press-reordered")
     }
 
     /// D1/D7: a friend without a team, or without a duty, still gets a card of the

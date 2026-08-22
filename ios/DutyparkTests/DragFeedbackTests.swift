@@ -73,13 +73,12 @@ final class DragFeedbackTests: XCTestCase {
         XCTAssertNotEqual(DPDragFeedback.lift, DPButtonFeedback.feedback(for: .primary))
     }
 
-    /// Both remaining drag surfaces route their held-card state through the shared
-    /// feedback modifier instead of firing haptics from inside a gesture callback,
-    /// which is what keeps a lift to one haptic instead of one per drag update.
-    /// The home dashboard is no longer one of them: its friend rail does not
-    /// reorder, so it must not carry a drag haptic at all.
+    /// Every drag surface routes its held-card state through the shared feedback
+    /// modifier instead of firing haptics from inside a gesture callback, which is
+    /// what keeps a lift to one haptic instead of one per drag update.
     func testEveryDragSurfaceUsesTheSharedFeedbackModifier() throws {
         let expectations = [
+            "Dutypark/Features/Home/HomeView.swift": "dpDragFeedback(dragID: draggedPinnedFriendID)",
             "Dutypark/Features/Social/SocialView.swift": "dpDragFeedback(dragID: draggedPinnedFriendID)",
             "Dutypark/Features/Todo/TodoView.swift": "dpDragFeedback(dragID: draggedTodoID)"
         ]
@@ -89,13 +88,11 @@ final class DragFeedbackTests: XCTestCase {
             XCTAssertTrue(source.contains(expected), "\(path) should apply \(expected)")
         }
 
-        let home = try Self.projectSource(at: "Dutypark/Features/Home/HomeView.swift")
-        XCTAssertFalse(home.contains("dpDragFeedback"), "The home friend rail has no drag to give feedback for")
     }
 
     /// The pinned friend drag keeps the pressed control alive under the finger, so
     /// the rationale for swallowing the lift that ends a drag has to stay next to
-    /// the code that does it. Only friend management still drags.
+    /// the code that does it on both friend surfaces.
     func testTapSuppressionRationaleStaysDocumented() throws {
         let social = try Self.projectSource(at: "Dutypark/Features/Social/SocialView.swift")
 
@@ -103,10 +100,7 @@ final class DragFeedbackTests: XCTestCase {
         XCTAssertTrue(social.contains("private func consumeDragSuppression(for memberID: MemberID?) -> Bool"))
 
         let home = try Self.projectSource(at: "Dutypark/Features/Home/HomeView.swift")
-        XCTAssertFalse(
-            home.contains("consumeDragSuppression"),
-            "A rail that never drags has no lift to swallow"
-        )
+        XCTAssertTrue(home.contains("consumeDragSuppression"))
     }
 
     private static func projectSource(at path: String) throws -> String {

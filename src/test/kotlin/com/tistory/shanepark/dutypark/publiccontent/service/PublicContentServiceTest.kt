@@ -1,14 +1,21 @@
 package com.tistory.shanepark.dutypark.publiccontent.service
 
 import com.tistory.shanepark.dutypark.TestUtils
+import com.tistory.shanepark.dutypark.publiccontent.domain.ReleaseNotesSource
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.core.io.ClassPathResource
+import tools.jackson.module.kotlin.readValue
 import java.security.MessageDigest
 
 class PublicContentServiceTest {
 
-    private val service = PublicContentService(TestUtils.jsr310JsonMapper())
+    private val jsonMapper = TestUtils.jsr310JsonMapper()
+    private val service = PublicContentService(jsonMapper)
+    private val canonicalReleaseNotes = ClassPathResource("public-content/release-notes.json")
+        .inputStream.use { inputStream ->
+            jsonMapper.readValue<ReleaseNotesSource>(inputStream)
+        }
 
     @Test
     fun `guide preserves canonical section and card order`() {
@@ -61,11 +68,14 @@ class PublicContentServiceTest {
 
     @Test
     fun `release notes merge locale copy with metadata and preserve escaped text as rendered text`() {
+        val canonicalItems = canonicalReleaseNotes.items
+        val latestMetadata = canonicalItems.first()
+        val latestCopy = canonicalReleaseNotes.locales.getValue("ko").entries.getValue(latestMetadata.id)
         val page = service.getReleaseNotes(locale = "ko", page = 0, size = 50)
 
-        assertThat(page.totalElements).isEqualTo(276)
-        assertThat(page.items.first().id).isEqualTo("pr-407")
-        assertThat(page.items.first().title).isEqualTo("캘린더·친구 태그와 신고·문의 경험 개선")
+        assertThat(page.totalElements).isEqualTo(canonicalItems.size)
+        assertThat(page.items.first().id).isEqualTo(latestMetadata.id)
+        assertThat(page.items.first().title).isEqualTo(latestCopy.title)
         assertThat(page.labels.categoryLabels["feature"]).isEqualTo("기능")
         assertThat(page.labels.count).isEqualTo("총 {count}개의 변경사항")
         assertThat(page.labels.loadMore).isEqualTo("더보기")
@@ -76,7 +86,10 @@ class PublicContentServiceTest {
 
         val allNotes = (0 until page.totalPages)
             .flatMap { service.getReleaseNotes("en", it, 50).items }
-        assertThat(allNotes.sumOf { it.changes.size }).isEqualTo(494)
+        val canonicalChangeCount = canonicalItems.sumOf { metadata ->
+            canonicalReleaseNotes.locales.getValue("en").entries.getValue(metadata.id).changes.size
+        }
+        assertThat(allNotes.sumOf { it.changes.size }).isEqualTo(canonicalChangeCount)
         val componentNote = allNotes.first { it.title.contains("Component annotation") }
         assertThat(componentNote.title).contains("@Component")
         assertThat(componentNote.title).doesNotContain("{'@'}")
@@ -87,12 +100,13 @@ class PublicContentServiceTest {
     fun `release notes paginate without reordering`() {
         val firstPage = service.getReleaseNotes(locale = "ko", page = 0, size = 5)
         val secondPage = service.getReleaseNotes(locale = "ko", page = 1, size = 5)
+        val expectedTotalPages = (canonicalReleaseNotes.items.size + firstPage.size - 1) / firstPage.size
 
         assertThat(firstPage.items).hasSize(5)
         assertThat(firstPage.items.map { it.id }).doesNotContainAnyElementsOf(secondPage.items.map { it.id })
         assertThat(firstPage.page).isZero()
         assertThat(firstPage.size).isEqualTo(5)
-        assertThat(firstPage.totalPages).isEqualTo(56)
+        assertThat(firstPage.totalPages).isEqualTo(expectedTotalPages)
         assertThat(firstPage.hasNext).isTrue()
 
         val beyondLastPage = service.getReleaseNotes(locale = "ko", page = Int.MAX_VALUE, size = 5)

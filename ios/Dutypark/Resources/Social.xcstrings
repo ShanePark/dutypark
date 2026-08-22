@@ -44,7 +44,7 @@
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Open calendar" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "캘린더 열기" } }
     } },
     "social.action.pin" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Pin" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "고정" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Add to favorites" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "즐겨찾기에 추가" } }
     } },
     "social.action.reject" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Reject" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "거절" } }
@@ -62,7 +62,7 @@
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Unblock" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "차단 해제" } }
     } },
     "social.action.unpin" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Unpin" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "고정 해제" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Remove from favorites" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "즐겨찾기 해제" } }
     } },
 
     "social.blocked.since" : { "localizations" : {
@@ -110,6 +110,12 @@
     "social.confirm.sendFriend.title" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Friend request" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 요청" } }
     } },
+    "social.confirm.unpin.message" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Remove %@ from your favorites?" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님을 즐겨찾기에서 해제할까요?" } }
+    } },
+    "social.confirm.unpin.title" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Remove from favorites" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "즐겨찾기 해제" } }
+    } },
     "social.confirm.unblock.message" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Unblock %@? You will be able to find each other in search and send friend requests again. Your friend connection is not restored." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "%@님의 차단을 해제하시겠습니까? 서로 다시 검색하고 친구 요청을 보낼 수 있게 됩니다. 친구 관계는 복구되지 않습니다." } }
     } },
@@ -124,7 +130,7 @@
       "en" : { "stringUnit" : { "state" : "translated", "value" : "No friends yet." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "아직 친구가 없습니다." } }
     } },
     "social.hint.pinnedOrder" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Drag this handle to reorder pinned friends." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "이 핸들을 드래그해 고정 친구 순서를 바꿔주세요." } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Drag this handle to reorder favorite friends." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "이 핸들을 드래그해 즐겨찾는 친구 순서를 바꿔주세요." } }
     } },
     "social.label.family" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Family member" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "가족 구성원" } }
@@ -148,10 +154,10 @@
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Friends" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 목록" } }
     } },
     "social.section.pinned" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Pinned" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "고정한 친구" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Favorite friends" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "즐겨찾는 친구" } }
     } },
     "social.section.pinnedOrder" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Pinned friend order" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "고정 친구 순서" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Favorite friend order" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "즐겨찾는 친구 순서" } }
     } },
     "social.section.requests" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Friend requests" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 요청" } }
@@ -163,16 +169,16 @@
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Changing the friend order" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 순서 변경하기" } }
     } },
     "social.help.pin.title" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Pin the friends you want first" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "먼저 볼 친구를 고정하세요" } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Add friends you check often to your favorites" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "자주 보는 친구를 즐겨찾기에 추가하세요" } }
     } },
     "social.help.pin.body" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Tap the star on a friend card. Pinned friends move to the top of the list and can be put in any order you like." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 카드의 별 아이콘을 누르면 고정됩니다. 고정한 친구는 목록 맨 위로 올라가고, 원하는 순서로 정렬할 수 있습니다." } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Tap the star to add a friend to your favorites. Favorite friends move to the top and can be reordered." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "별 아이콘을 누르면 즐겨찾는 친구로 추가되어 목록 맨 위에 표시됩니다. 즐겨찾는 친구는 원하는 순서로 바꿀 수 있어요." } }
     } },
     "social.help.reorder.title" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Press and hold, then drag" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "길게 누른 뒤 끌어서 옮기세요" } }
     } },
     "social.help.reorder.body" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Press a pinned friend's card until the ring around it fills, then drag it to where you want it and let go. You need at least two pinned friends." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "고정한 친구 카드를 테두리가 채워질 때까지 길게 누른 다음, 원하는 위치로 끌어다 놓으세요. 고정한 친구가 두 명 이상이어야 합니다." } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Press a favorite friend's card until the ring around it fills, then drag it to where you want it and let go. You need at least two favorite friends." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "즐겨찾는 친구 카드를 테두리가 채워질 때까지 길게 누른 다음, 원하는 위치로 끌어다 놓으세요. 즐겨찾는 친구가 두 명 이상이어야 합니다." } }
     } },
     "social.help.save.title" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "The order saves itself" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "순서는 자동으로 저장됩니다" } }
@@ -181,7 +187,7 @@
       "en" : { "stringUnit" : { "state" : "translated", "value" : "The new order is saved the moment you let go, and the home screen shows your friends in the same order." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "손을 떼는 즉시 새 순서가 저장되고, 홈 화면의 친구 목록도 같은 순서로 표시됩니다." } }
     } },
     "social.help.note" : { "localizations" : {
-      "en" : { "stringUnit" : { "state" : "translated", "value" : "Friends that are not pinned always follow the pinned ones and keep their default order. With VoiceOver on, use the \"Move up\" and \"Move down\" actions on a pinned friend instead." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "고정하지 않은 친구는 항상 고정 친구 뒤에 기본 순서로 표시됩니다. VoiceOver를 사용할 때는 고정 친구 카드의 \"위로 이동\", \"아래로 이동\" 동작을 이용하세요." } }
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Friends not in your favorites stay below in the default order. With VoiceOver on, use the \"Move up\" and \"Move down\" actions on a favorite friend instead." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "즐겨찾기에 추가하지 않은 친구는 기본 순서대로 아래에 표시됩니다. VoiceOver를 사용할 때는 즐겨찾는 친구 카드의 \"위로 이동\", \"아래로 이동\" 동작을 이용하세요." } }
     } },
     "social.title" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Manage friends" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구관리" } }
@@ -218,7 +224,7 @@
     "social.error.familyAlreadyRequested" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "A family request has already been sent." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "이미 가족 요청을 보낸 상태입니다." } } } },
     "social.error.generic" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "The request could not be completed." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "요청을 완료하지 못했습니다." } } } },
     "social.error.load" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to load friends." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 정보를 불러오지 못했습니다." } } } },
-    "social.error.pin" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to pin the friend." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 고정에 실패했습니다." } } } },
+    "social.error.pin" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to add the friend to your favorites." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구를 즐겨찾기에 추가하지 못했습니다." } } } },
     "social.error.reject" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to reject the request." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "요청 거절에 실패했습니다." } } } },
     "social.error.removeFamily" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to remove the family connection." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "가족에서 제외하지 못했습니다." } } } },
     "social.error.removeFriend" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to remove the friend." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 삭제에 실패했습니다." } } } },
@@ -228,7 +234,7 @@
     "social.error.sendFriend" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to send the friend request." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 요청 전송에 실패했습니다." } } } },
     "social.error.title" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Unable to complete action" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "작업을 완료하지 못했습니다" } } } },
     "social.error.unblock" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to unblock the user." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "차단 해제에 실패했습니다." } } } },
-    "social.error.unpin" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to unpin the friend." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 고정 해제에 실패했습니다." } } } },
+    "social.error.unpin" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Failed to remove the friend from your favorites." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구를 즐겨찾기에서 해제하지 못했습니다." } } } },
     "social.warning.reorderReload" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "The friend order was saved, but the latest list could not be reloaded. Pull down to refresh." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 순서는 저장됐지만 최신 목록을 다시 불러오지 못했습니다. 아래로 당겨 새로고침해 주세요." } } } }
   },
   "version" : "1.0"
