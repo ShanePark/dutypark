@@ -114,6 +114,7 @@ onUnmounted(() => {
       v-if="imageBlobUrl && !imageError"
       :src="imageBlobUrl"
       :alt="name || 'Profile'"
+      draggable="false"
       class="w-full h-full object-cover"
       @error="handleImageError"
     />
