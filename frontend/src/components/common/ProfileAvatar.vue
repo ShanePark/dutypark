@@ -1,12 +1,11 @@
 <script setup lang="ts">
 import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
-import { User } from 'lucide-vue-next'
 import { fetchAuthenticatedImage } from '@/api/attachment'
 
 interface Props {
   memberId?: number | null
   size?: 'xs' | 'sm' | 'md' | 'xl'
-  /** `portrait` fills the parent box with an ID-photo style rounded rectangle; `size` then only scales the fallback icon. */
+  /** `portrait` fills the parent box with an ID-photo style rounded rectangle. */
   shape?: 'circle' | 'portrait'
   name?: string
   hasProfilePhoto?: boolean
@@ -43,21 +42,6 @@ const sizeClasses = computed(() => {
       return 'w-16 h-16'
     default:
       return 'w-9 h-9'
-  }
-})
-
-const iconSizeClasses = computed(() => {
-  switch (props.size) {
-    case 'xs':
-      return 'w-2 h-2 sm:w-2.5 sm:h-2.5'
-    case 'sm':
-      return 'w-3 h-3 sm:w-4 sm:h-4'
-    case 'md':
-      return 'w-5 h-5'
-    case 'xl':
-      return 'w-8 h-8'
-    default:
-      return 'w-5 h-5'
   }
 })
 
@@ -118,12 +102,13 @@ onUnmounted(() => {
       class="w-full h-full object-cover"
       @error="handleImageError"
     />
-    <div
+    <img
       v-else
-      class="w-full h-full flex items-center justify-center profile-avatar-fallback"
-    >
-      <User :class="iconSizeClasses" />
-    </div>
+      src="/img/default-profile.png"
+      :alt="name || 'Profile'"
+      draggable="false"
+      class="w-full h-full object-cover"
+    />
   </div>
 </template>
 
@@ -133,7 +118,4 @@ onUnmounted(() => {
   border: 2px solid var(--dp-border-primary);
 }
 
-.profile-avatar-fallback {
-  color: var(--dp-text-muted);
-}
 </style>

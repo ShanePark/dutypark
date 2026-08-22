@@ -302,30 +302,11 @@ struct MyInfoView: View {
 
     @ViewBuilder
     private var profilePhoto: some View {
-        if let url = model.profilePhotoURL() {
-            AsyncImage(url: url) { phase in
-                if case .success(let image) = phase {
-                    image.resizable().scaledToFill()
-                } else {
-                    profilePlaceholder
-                }
-            }
-            .frame(width: 80, height: 80)
-            .clipShape(Circle())
-        } else {
-            profilePlaceholder
-                .frame(width: 80, height: 80)
-        }
-    }
-
-    private var profilePlaceholder: some View {
-        Circle()
-            .fill(.secondary.opacity(0.15))
-            .overlay {
-                Text(String(model.member?.name.first ?? "?"))
-                    .font(.title2.bold())
-                    .foregroundStyle(.secondary)
-            }
+        DPProfileAvatar(
+            memberID: model.member?.id,
+            profilePhotoVersion: model.member?.profilePhotoVersion ?? 0,
+            size: 80
+        )
     }
 
     private var patternSection: some View {
@@ -421,7 +402,11 @@ struct MyInfoView: View {
             }
             ForEach(model.managedMembers, id: \.id) { member in
                 HStack(spacing: DPSpacing.compact) {
-                    ProfileInitial(name: member.name)
+                    DPProfileAvatar(
+                        memberID: member.id,
+                        profilePhotoVersion: member.profilePhotoVersion,
+                        size: 40
+                    )
                     VStack(alignment: .leading, spacing: 2) {
                         Text(member.name).font(DPTypography.bodyMedium).foregroundStyle(DPColor.textPrimary)
                         if let team = member.team {
@@ -904,21 +889,6 @@ private struct SettingsSessionMetadataRow: View {
             }
         }
         .font(DPTypography.supporting)
-    }
-}
-
-private struct ProfileInitial: View {
-    let name: String
-
-    var body: some View {
-        Circle()
-            .fill(DPColor.backgroundTertiary)
-            .frame(width: 40, height: 40)
-            .overlay {
-                Text(String(name.first ?? "?"))
-                    .font(DPTypography.bodyMedium)
-                    .foregroundStyle(DPColor.textSecondary)
-            }
     }
 }
 

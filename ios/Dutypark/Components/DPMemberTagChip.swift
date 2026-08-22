@@ -136,42 +136,18 @@ nonisolated enum DPMemberTagPresentation {
     }
 }
 
-/// A member's photo, circular, falling back to the first letter of their name.
+/// A member's photo, circular, falling back to the shared profile asset.
 struct DPMemberAvatar: View {
     let item: DPMemberTagItem
     var diameter: CGFloat
 
     var body: some View {
-        Group {
-            if item.hasProfilePhoto, let memberID = item.memberID {
-                AsyncImage(
-                    url: DPMemberTagPresentation.profilePhotoURL(
-                        memberID: memberID,
-                        version: item.profilePhotoVersion
-                    )
-                ) { image in
-                    image.resizable().scaledToFill()
-                } placeholder: {
-                    fallback
-                }
-                .frame(width: diameter, height: diameter)
-                .clipShape(Circle())
-            } else {
-                fallback
-            }
-        }
+        DPProfileAvatar(
+            memberID: item.memberID,
+            profilePhotoVersion: item.profilePhotoVersion,
+            size: diameter
+        )
         .accessibilityHidden(true)
-    }
-
-    private var fallback: some View {
-        Circle()
-            .fill(DPColor.backgroundTertiary)
-            .frame(width: diameter, height: diameter)
-            .overlay {
-                Text(String(item.name.prefix(1)))
-                    .font(DPFont.bold(size: max(8, diameter * 0.5), relativeTo: .caption2))
-                    .foregroundStyle(DPColor.textSecondary)
-            }
     }
 }
 

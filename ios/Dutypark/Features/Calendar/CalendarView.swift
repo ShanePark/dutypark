@@ -477,8 +477,6 @@ struct CalendarView: View {
         HStack(spacing: 6) {
             CalendarMemberAvatar(
                 memberID: model.targetMemberID,
-                name: model.targetName,
-                hasProfilePhoto: model.targetHasProfilePhoto,
                 profilePhotoVersion: model.targetProfilePhotoVersion,
                 size: 32
             )
@@ -1577,8 +1575,6 @@ private struct DutyComparisonView: View {
             HStack(spacing: DPSpacing.small) {
                 CalendarMemberAvatar(
                     memberID: friend.id,
-                    name: friend.name,
-                    hasProfilePhoto: friend.hasProfilePhoto,
                     profilePhotoVersion: friend.profilePhotoVersion,
                     size: 34
                 )
@@ -1616,57 +1612,16 @@ private struct DutyComparisonView: View {
 
 private struct CalendarMemberAvatar: View {
     let memberID: MemberID?
-    let name: String
-    let hasProfilePhoto: Bool
     let profilePhotoVersion: Int64
     let size: CGFloat
 
     var body: some View {
-        Group {
-            if hasProfilePhoto, let photoURL {
-                AsyncImage(url: photoURL) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image.resizable().scaledToFill()
-                    case .empty:
-                        ProgressView().controlSize(.small).tint(DPColor.textMuted)
-                    case .failure:
-                        fallback
-                    @unknown default:
-                        fallback
-                    }
-                }
-            } else {
-                fallback
-            }
-        }
-        .frame(width: size, height: size)
-        .background(DPColor.backgroundTertiary)
-        .clipShape(Circle())
-        .accessibilityHidden(true)
-    }
-
-    private var fallback: some View {
-        Circle()
-            .fill(DPColor.backgroundTertiary)
-            .overlay {
-                Text(name.prefix(1).uppercased())
-                    .font(DPFont.bold(size: max(11, size * 0.38), relativeTo: .caption))
-                    .foregroundStyle(DPColor.textSecondary)
-            }
-    }
-
-    private var photoURL: URL? {
-        guard let memberID else { return nil }
-        var components = URLComponents(
-            url: AppConfiguration.apiBaseURL.appending(path: "members/\(memberID)/profile-photo"),
-            resolvingAgainstBaseURL: false
+        DPProfileAvatar(
+            memberID: memberID,
+            profilePhotoVersion: profilePhotoVersion,
+            size: size
         )
-        components?.queryItems = [
-            URLQueryItem(name: "thumbnail", value: "true"),
-            URLQueryItem(name: "v", value: String(profilePhotoVersion))
-        ]
-        return components?.url
+        .accessibilityHidden(true)
     }
 }
 
@@ -1855,8 +1810,6 @@ private struct CalendarDayCell: View {
         HStack(spacing: 2) {
             CalendarMemberAvatar(
                 memberID: item.memberID,
-                name: item.name,
-                hasProfilePhoto: item.hasProfilePhoto,
                 profilePhotoVersion: item.profilePhotoVersion,
                 size: 12
             )

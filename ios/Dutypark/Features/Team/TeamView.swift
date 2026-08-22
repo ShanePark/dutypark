@@ -534,39 +534,12 @@ private struct TeamMemberAvatar: View {
     let size: CGFloat
 
     var body: some View {
-        Group {
-            if member.hasProfilePhoto, let memberID = member.id {
-                AsyncImage(url: profileURL(memberID)) { image in
-                    image.resizable().scaledToFill()
-                } placeholder: {
-                    fallback
-                }
-            } else {
-                fallback
-            }
-        }
-        .frame(width: size, height: size)
-        .clipShape(Circle())
+        DPProfileAvatar(
+            memberID: member.id,
+            profilePhotoVersion: member.profilePhotoVersion,
+            size: size
+        )
         .accessibilityHidden(true)
-    }
-
-    private var fallback: some View {
-        Circle()
-            .fill(DPColor.backgroundCard)
-            .overlay {
-                Text(verbatim: String(member.name.prefix(1)).uppercased())
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(DPColor.textSecondary)
-            }
-    }
-
-    private func profileURL(_ memberID: MemberID) -> URL {
-        AppConfiguration.apiBaseURL
-            .appending(path: "members/\(memberID)/profile-photo")
-            .appending(queryItems: [
-                URLQueryItem(name: "thumbnail", value: "true"),
-                URLQueryItem(name: "v", value: String(member.profilePhotoVersion))
-            ])
     }
 }
 

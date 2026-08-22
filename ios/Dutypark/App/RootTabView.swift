@@ -1168,9 +1168,7 @@ nonisolated struct NotificationDropdownActorPhotoRequest {
     let profilePhotoVersion: Int64
 
     init?(notification: NotificationDTO) {
-        guard let actorID = notification.actorId,
-              notification.payload.actor?.hasProfilePhoto == true
-        else { return nil }
+        guard let actorID = notification.actorId else { return nil }
         self.actorID = actorID
         profilePhotoVersion = notification.payload.actor?.profilePhotoVersion ?? 0
     }
@@ -1206,9 +1204,10 @@ private struct NotificationDropdownActorAvatar: View {
                         .scaledToFill()
                         .clipShape(Circle())
                 } else {
-                    Image(systemName: "person.fill")
-                        .font(.system(size: 15))
-                        .foregroundStyle(DPColor.textMuted)
+                    Image(DPProfileAvatarPresentation.defaultAssetName)
+                        .resizable()
+                        .scaledToFill()
+                        .clipShape(Circle())
                 }
             }
             .accessibilityElement()

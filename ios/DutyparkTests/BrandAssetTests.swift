@@ -5,6 +5,7 @@ import Testing
 struct BrandAssetTests {
     @Test func visualParityAssetsAreAvailable() {
         let names = [
+            "DefaultProfile",
             "DutyparkLogo",
             "IntroDDay",
             "IntroDuty",

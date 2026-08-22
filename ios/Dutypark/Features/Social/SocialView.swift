@@ -952,41 +952,13 @@ struct SocialAvatar: View {
     let size: CGFloat
 
     var body: some View {
-        Group {
-            if member.hasProfilePhoto, let id = member.id {
-                AsyncImage(url: profileURL(id: id)) { image in
-                    image.resizable().scaledToFill()
-                } placeholder: {
-                    fallback
-                }
-            } else {
-                fallback
-            }
-        }
-        .frame(width: size, height: size)
-        .background(DPColor.backgroundTertiary)
-        .clipShape(Circle())
+        DPProfileAvatar(
+            memberID: member.id,
+            profilePhotoVersion: member.profilePhotoVersion,
+            size: size
+        )
         .overlay { Circle().stroke(DPColor.borderPrimary, lineWidth: 2) }
         .accessibilityHidden(true)
-    }
-
-    private var fallback: some View {
-        Circle()
-            .fill(DPColor.backgroundTertiary)
-            .overlay {
-                Image(systemName: "person.fill")
-                    .font(.system(size: size * 0.42))
-                    .foregroundStyle(DPColor.textMuted)
-            }
-    }
-
-    private func profileURL(id: MemberID) -> URL {
-        AppConfiguration.apiBaseURL
-            .appending(path: "members/\(id)/profile-photo")
-            .appending(queryItems: [
-                URLQueryItem(name: "thumbnail", value: "true"),
-                URLQueryItem(name: "v", value: String(member.profilePhotoVersion))
-            ])
     }
 }
 

@@ -399,7 +399,7 @@ final class SettingsViewModel: ObservableObject {
     }
 
     func profilePhotoURL() -> URL? {
-        guard let member, let id = member.id, member.hasProfilePhoto else { return nil }
+        guard let member, let id = member.id else { return nil }
         return service.profilePhotoURL(memberID: id, version: member.profilePhotoVersion)
     }
 

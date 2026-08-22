@@ -512,7 +512,6 @@ private struct AdminMemberRow<Detail: View>: View {
             AdminMemberAvatar(
                 memberID: member.id,
                 name: member.name,
-                hasProfilePhoto: member.hasProfilePhoto,
                 version: member.profilePhotoVersion,
                 size: 36
             )
@@ -609,38 +608,18 @@ private struct AdminMemberPaginationFooter: View {
 private struct AdminMemberAvatar: View {
     let memberID: MemberID
     let name: String
-    let hasProfilePhoto: Bool
     let version: Int64
     let size: CGFloat
 
     var body: some View {
-        Group {
-            if hasProfilePhoto {
-                AsyncImage(url: AdminMemberAvatarPresentation.url(memberID: memberID, version: version)) { phase in
-                    if let image = phase.image {
-                        image.resizable().scaledToFill()
-                    } else {
-                        fallback
-                    }
-                }
-            } else {
-                fallback
-            }
-        }
-        .frame(width: size, height: size)
-        .clipShape(Circle())
+        DPProfileAvatar(
+            memberID: memberID,
+            profilePhotoVersion: version,
+            size: size
+        )
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(name)
         .accessibilityIdentifier("admin.member.avatar.\(memberID)")
-    }
-
-    private var fallback: some View {
-        ZStack {
-            DPColor.accent.opacity(0.14)
-            Text(String(name.prefix(1)))
-                .font(.system(size: size * 0.38, weight: .semibold))
-                .foregroundStyle(DPColor.accent)
-        }
     }
 }
 
@@ -1102,7 +1081,6 @@ private struct AdminMemberDetailView: View {
             AdminMemberAvatar(
                 memberID: member.id,
                 name: member.name,
-                hasProfilePhoto: member.hasProfilePhoto,
                 version: member.profilePhotoVersion,
                 size: 76
             )

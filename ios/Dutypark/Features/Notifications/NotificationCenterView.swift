@@ -435,50 +435,13 @@ struct NotificationHeaderActionButton: View {
 
 private struct NotificationActorAvatar: View {
     let notification: NotificationDTO
-    @State private var image: UIImage?
 
     var body: some View {
-        Circle()
-            .fill(DPColor.backgroundTertiary)
-            .frame(width: 40, height: 40)
-            .overlay {
-                if let image {
-                    Image(uiImage: image)
-                        .resizable()
-                        .scaledToFill()
-                        .clipShape(Circle())
-                } else {
-                    Image(systemName: "person.fill")
-                        .foregroundStyle(DPColor.textMuted)
-                }
-            }
-            .task(id: photoVersion) {
-                await loadPhoto()
-            }
-    }
-
-    private var photoVersion: String {
-        "\(notification.actorId ?? 0)-\(notification.payload.actor?.profilePhotoVersion ?? 0)"
-    }
-
-    private func loadPhoto() async {
-        guard let actorID = notification.actorId,
-              notification.payload.actor?.hasProfilePhoto == true
-        else {
-            image = nil
-            return
-        }
-        let data = try? await APIClient.shared.data(
-            "members/\(actorID)/profile-photo",
-            queryItems: [
-                URLQueryItem(name: "thumbnail", value: "true"),
-                URLQueryItem(
-                    name: "v",
-                    value: String(notification.payload.actor?.profilePhotoVersion ?? 0)
-                ),
-            ]
+        DPProfileAvatar(
+            memberID: notification.actorId,
+            profilePhotoVersion: notification.payload.actor?.profilePhotoVersion ?? 0,
+            size: 40
         )
-        image = data.flatMap(UIImage.init(data:))
     }
 }
 

@@ -195,45 +195,12 @@ private struct MoreProfilePhoto: View {
     let profile: MoreProfileSummary
 
     var body: some View {
-        Group {
-            if let url = photoURL {
-                AsyncImage(url: url) { phase in
-                    if case .success(let image) = phase {
-                        image.resizable().scaledToFill()
-                    } else {
-                        placeholder
-                    }
-                }
-            } else {
-                placeholder
-            }
-        }
-        .frame(width: 48, height: 48)
-        .clipShape(Circle())
-        .accessibilityHidden(true)
-    }
-
-    private var placeholder: some View {
-        Circle()
-            .fill(DPColor.backgroundTertiary)
-            .overlay {
-                Text(verbatim: String(profile.displayName.first ?? "?"))
-                    .font(DPTypography.bodyMedium)
-                    .foregroundStyle(DPColor.textSecondary)
-            }
-    }
-
-    private var photoURL: URL? {
-        var components = URLComponents(
-            url: AppConfiguration.apiBaseURL
-                .appending(path: "members/\(profile.memberID)/profile-photo"),
-            resolvingAgainstBaseURL: false
+        DPProfileAvatar(
+            memberID: profile.memberID,
+            profilePhotoVersion: profile.profilePhotoVersion,
+            size: 48
         )
-        components?.queryItems = [
-            URLQueryItem(name: "thumbnail", value: "true"),
-            URLQueryItem(name: "v", value: String(profile.profilePhotoVersion)),
-        ]
-        return components?.url
+        .accessibilityHidden(true)
     }
 }
 

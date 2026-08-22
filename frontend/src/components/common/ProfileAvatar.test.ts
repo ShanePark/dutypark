@@ -11,3 +11,11 @@ describe('ProfileAvatar image dragging', () => {
     expect(template).toMatch(/<img\b[^>]*\sdraggable="false"[^>]*>/)
   })
 })
+
+describe('ProfileAvatar fallback image', () => {
+  it('uses the shared full-size silhouette when a photo is unavailable', () => {
+    expect(template).toContain('src="/img/default-profile.png"')
+    expect(template).toMatch(/<img\b[^>]*class="w-full h-full object-cover"/)
+    expect(template).not.toContain('<User')
+  })
+})
