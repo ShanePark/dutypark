@@ -100,4 +100,34 @@ struct TodoDragAutoScrollTests {
         #expect(source.contains("extraBounce: 0"))
         #expect(source.contains("guard draggedTodoID == nil else { return }"))
     }
+
+    @Test
+    func holdingAnEdgeRepeatsAutoScrollUntilTheNextColumnIsVisible() throws {
+        let source = try String(
+            contentsOf: URL(fileURLWithPath: #filePath)
+                .deletingLastPathComponent()
+                .deletingLastPathComponent()
+                .appending(path: "Dutypark/Features/Todo/TodoView.swift"),
+            encoding: .utf8
+        )
+
+        #expect(source.contains("private var dragAutoScrollTask: Task<Void, Never>?"))
+        #expect(source.contains("while !Task.isCancelled"))
+        #expect(source.contains("TodoBoardLayout.dragAutoScrollInterval"))
+    }
+
+    @Test
+    func cancellingAnAutoScrollCannotClearItsReplacementTask() throws {
+        let source = try String(
+            contentsOf: URL(fileURLWithPath: #filePath)
+                .deletingLastPathComponent()
+                .deletingLastPathComponent()
+                .appending(path: "Dutypark/Features/Todo/TodoView.swift"),
+            encoding: .utf8
+        )
+
+        #expect(source.contains("private var dragAutoScrollGeneration = 0"))
+        #expect(source.contains("let generation = dragAutoScrollGeneration"))
+        #expect(source.contains("dragAutoScrollGeneration == generation"))
+    }
 }

@@ -17,6 +17,7 @@ enum TodoBoardLayout {
     static let dragCollisionHysteresis: CGFloat = 2
     static let dragPushAnimationDuration = 0.1
     static let dragAutoScrollDuration: TimeInterval = 0.3
+    static let dragAutoScrollInterval = Duration.milliseconds(300)
 
     static func mobileColumnWidth(in containerWidth: CGFloat) -> CGFloat {
         containerWidth * mobileColumnWidthRatio
@@ -145,6 +146,8 @@ struct TodoView: View {
     @State private var dragGrabOffset: CGSize?
     @State private var pendingDropPlacement: TodoDragPlacement?
     @State private var lastAutoScrolledStatus: TodoStatus?
+    @State private var dragAutoScrollTask: Task<Void, Never>?
+    @State private var dragAutoScrollGeneration = 0
     @State private var cardDropTargets: [TodoCardDropTarget] = []
     @State private var columnDropTargets: [TodoColumnDropTarget] = []
     @State private var statusDropTargets: [TodoStatusDropTarget] = []
@@ -319,16 +322,17 @@ struct TodoView: View {
         todo: TodoDTO,
         location: CGPoint,
         viewport: CGRect,
-        scrollTo: (TodoStatus) -> Void
+        scrollTo: @escaping (TodoStatus) -> Void
     ) {
         guard !model.isSaving else { return }
 
-        if let status = TodoDragAutoScrollPolicy.nextStatus(
+        let nextAutoScrollStatus = TodoDragAutoScrollPolicy.nextStatus(
             location: location,
             viewport: viewport,
             visibleStatus: visibleStatus ?? model.selectedStatus,
             lastAutoScrolledStatus: lastAutoScrolledStatus
-        ) {
+        )
+        if let status = nextAutoScrollStatus {
             lastAutoScrolledStatus = status
             // Keep the selector and scroll-position binding in lockstep before
             // the animated scroll has delivered its next preference frame.
@@ -339,6 +343,7 @@ struct TodoView: View {
             location: location,
             viewport: viewport
         ) {
+            cancelDragAutoScroll()
             lastAutoScrolledStatus = nil
         }
 
@@ -357,6 +362,13 @@ struct TodoView: View {
             }
         }
         dragLocation = location
+        if nextAutoScrollStatus != nil {
+            startDragAutoScroll(
+                todo: todo,
+                viewport: viewport,
+                scrollTo: scrollTo
+            )
+        }
         let movingFrame = previewSize.flatMap { size in
             grabOffset.map { offset in
                 CGRect(
@@ -390,6 +402,58 @@ struct TodoView: View {
             dragTargetStatus = target?.status
             dragTargetTodoID = target?.todoID
             dragInsertAfter = target?.insertAfter ?? false
+        }
+    }
+
+    private func startDragAutoScroll(
+        todo: TodoDTO,
+        viewport: CGRect,
+        scrollTo: @escaping (TodoStatus) -> Void
+    ) {
+        guard dragAutoScrollTask == nil else { return }
+        dragAutoScrollGeneration += 1
+        let generation = dragAutoScrollGeneration
+
+        // A long-press drag may not emit another gesture sample while the finger
+        // stays at the edge. Keep advancing at the same cadence as the scroll
+        // animation so a single hold can cross more than one column.
+        dragAutoScrollTask = Task { @MainActor in
+            while !Task.isCancelled,
+                  draggedTodoID == todo.uuid,
+                  dragAutoScrollGeneration == generation {
+                try? await Task.sleep(for: TodoBoardLayout.dragAutoScrollInterval)
+                guard !Task.isCancelled,
+                      draggedTodoID == todo.uuid,
+                      dragAutoScrollGeneration == generation,
+                      let location = dragLocation else {
+                    break
+                }
+                let canAdvance = TodoDragAutoScrollPolicy.nextStatus(
+                    location: location,
+                    viewport: viewport,
+                    visibleStatus: visibleStatus ?? model.selectedStatus,
+                    lastAutoScrolledStatus: nil
+                ) != nil
+
+                lastAutoScrolledStatus = nil
+                // Re-run target resolution after every animation, including the
+                // final boundary tick, so lifting immediately after a scroll
+                // still commits the column now under the finger.
+                updateInteractiveDrag(
+                    todo: todo,
+                    location: location,
+                    viewport: viewport,
+                    scrollTo: scrollTo
+                )
+                guard canAdvance else {
+                    break
+                }
+            }
+
+            if draggedTodoID == todo.uuid,
+               dragAutoScrollGeneration == generation {
+                dragAutoScrollTask = nil
+            }
         }
     }
 
@@ -431,7 +495,14 @@ struct TodoView: View {
         pressedTodoID = nil
     }
 
+    private func cancelDragAutoScroll() {
+        dragAutoScrollGeneration += 1
+        dragAutoScrollTask?.cancel()
+        dragAutoScrollTask = nil
+    }
+
     private func clearInteractiveDrag() {
+        cancelDragAutoScroll()
         draggedTodoID = nil
         dragTargetStatus = nil
         dragTargetTodoID = nil
