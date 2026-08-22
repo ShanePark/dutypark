@@ -4,12 +4,11 @@ set -Eeuo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 IOS_DIR="$(cd -- "$SCRIPT_DIR/.." && pwd)"
-REPOSITORY_ROOT="$(cd -- "$IOS_DIR/.." && pwd)"
 
 PROJECT_PATH="$IOS_DIR/Dutypark.xcodeproj"
+PROJECT_FILE_PATH="$PROJECT_PATH/project.pbxproj"
 SCHEME="Dutypark"
 TEAM_ID="2V47G42CDS"
-RELEASE_NOTES_PATH="$REPOSITORY_ROOT/src/main/resources/public-content/release-notes.json"
 EXPORT_OPTIONS_PATH="$IOS_DIR/ExportOptions-TestFlight.plist"
 
 die() {
@@ -32,37 +31,33 @@ run() {
 }
 
 command -v xcodebuild >/dev/null 2>&1 || die "xcodebuild is required. Run this script on macOS with Xcode installed."
-command -v node >/dev/null 2>&1 || die "Node.js is required to read the canonical release-note version."
 [[ -d "$PROJECT_PATH" ]] || die "Xcode project not found: $PROJECT_PATH"
-[[ -f "$RELEASE_NOTES_PATH" ]] || die "Canonical release notes not found: $RELEASE_NOTES_PATH"
+[[ -f "$PROJECT_FILE_PATH" ]] || die "Xcode project file not found: $PROJECT_FILE_PATH"
 [[ -f "$EXPORT_OPTIONS_PATH" ]] || die "Export options not found: $EXPORT_OPTIONS_PATH"
 
 if [[ -n "${MARKETING_VERSION:-}" ]]; then
 	marketing_version="$MARKETING_VERSION"
 else
-	marketing_version="$(node -e '
-const fs = require("node:fs");
-const source = JSON.parse(fs.readFileSync(process.argv[1], "utf8"));
-const version = source.items?.[0]?.version;
-if (typeof version !== "string" || version.trim() === "") {
-  console.error("The newest release-note item has no version.");
-  process.exit(1);
-}
-process.stdout.write(version.trim());
-' "$RELEASE_NOTES_PATH")" || die "Unable to read the newest release-note version."
+	marketing_version="$(awk -F ' = |;' '
+		$1 ~ /^[[:space:]]*MARKETING_VERSION[[:space:]]*$/ {
+			print $2
+			exit
+		}
+	' "$PROJECT_FILE_PATH")"
+	[[ -n "$marketing_version" ]] || die "Unable to read MARKETING_VERSION from the Xcode project."
 fi
 
-[[ "$marketing_version" =~ ^[0-9]+(\.[0-9]+){0,2}$ ]] || die \
-	"MARKETING_VERSION must contain one to three numeric components: $marketing_version"
+[[ "$marketing_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || die \
+	"MARKETING_VERSION must contain three numeric components: $marketing_version"
 
 if [[ -n "${BUILD_NUMBER:-}" ]]; then
 	build_number="$BUILD_NUMBER"
 else
-	build_number="$(date -u +%s)"
+	build_number="$(TZ=Asia/Seoul date +%Y%m%d)"
 fi
 
-[[ "$build_number" =~ ^[1-9][0-9]{0,17}$ ]] || die \
-	"BUILD_NUMBER must be a positive integer with at most 18 digits: $build_number"
+[[ "$build_number" =~ ^[0-9]{1,18}(\.[0-9]{1,18}){0,2}$ ]] || die \
+	"BUILD_NUMBER must contain one to three numeric components, each at most 18 digits: $build_number"
 
 build_root="${TESTFLIGHT_BUILD_DIR:-$IOS_DIR/build/testflight}"
 run_id="${marketing_version}-${build_number}"

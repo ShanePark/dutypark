@@ -43,7 +43,7 @@ After logging into the Apple Developer account in Xcode (`Xcode > Settings > Acc
 ./ios/scripts/upload-testflight.sh
 ```
 
-The script reads the newest version from `src/main/resources/public-content/release-notes.json`, generates a unique timestamp build number, creates a Release archive, exports it with App Store distribution signing, and uploads it to App Store Connect. Artifacts are written under `ios/build/testflight/`, which is ignored by Git.
+The script reads the app marketing version from the Xcode project, generates a `YYYYMMDD` build number, creates a Release archive, exports it with App Store distribution signing, and uploads it to App Store Connect. Release-note metadata keeps its separate `YYYY.MM.DD` changelog version format. Artifacts are written under `ios/build/testflight/`, which is ignored by Git.
 
 For a command preview without archiving or uploading:
 
@@ -51,7 +51,7 @@ For a command preview without archiving or uploading:
 DRY_RUN=1 ./ios/scripts/upload-testflight.sh
 ```
 
-Set `BUILD_NUMBER` to override the generated build number. Set `MARKETING_VERSION` only when the newest release-note version is not a valid one-to-three-component App Store version. App Store Connect processing continues after the upload command succeeds.
+Set `BUILD_NUMBER` to override the generated build number, for example `BUILD_NUMBER=20260822.1` for another upload on the same day. Set `MARKETING_VERSION` to override the Xcode project's marketing version for a one-off build. App Store Connect processing continues after the upload command succeeds.
 
 ### UI Tests (Explicit Request Only)
 
