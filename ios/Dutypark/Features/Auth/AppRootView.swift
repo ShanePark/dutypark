@@ -94,15 +94,23 @@ struct AppRootView: View {
                     GuestRootView()
                 }
             case .authenticated(let member):
-                RootTabView()
-                    .id("\(member.id)-\(member.isImpersonating)-\(member.originalMemberId ?? 0)")
-                    .safeAreaInset(edge: .top, spacing: 0) {
-                        OfflineSessionBanner(
-                            accountID: member.id,
-                            availability: session.availability,
-                            coordinator: offlineSyncCoordinator
-                        )
-                    }
+                // Keep the offline status in the root layout itself. An outer
+                // `safeAreaInset` is not adopted by the UIKit navigation bars inside
+                // RootTabView, so it can paint over the header and blend with its
+                // material backdrop. A sibling in this stack reserves real vertical
+                // space and keeps the status text readable in every root tab.
+                VStack(spacing: 0) {
+                    OfflineSessionBanner(
+                        accountID: member.id,
+                        availability: session.availability,
+                        coordinator: offlineSyncCoordinator
+                    )
+                    .fixedSize(horizontal: false, vertical: true)
+                    .layoutPriority(1)
+                    RootTabView()
+                        .frame(minHeight: 0, maxHeight: .infinity)
+                        .id("\(member.id)-\(member.isImpersonating)-\(member.originalMemberId ?? 0)")
+                }
             }
         }
     }
@@ -191,7 +199,16 @@ private struct OfflineSessionBanner: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
-                .background(.orange.opacity(0.12))
+                // This surface must be opaque. A translucent fill lets the system
+                // navigation/tab materials show through the text when the banner is
+                // stacked above a root tab.
+                .background(DPColor.backgroundSecondary)
+                .overlay(alignment: .bottom) {
+                    Rectangle()
+                        .fill(DPColor.warningBorder)
+                        .frame(height: 1)
+                }
+                .fixedSize(horizontal: false, vertical: true)
                 .accessibilityElement(children: .combine)
                 .accessibilityIdentifier("session.offline")
             }
