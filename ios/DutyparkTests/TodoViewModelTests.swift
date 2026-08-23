@@ -196,7 +196,7 @@ struct TodoViewModelTests {
     }
 
     @Test
-    func mobileBoardMatchesWebColumnGeometry() {
+    func mobileBoardMatchesWebColumnGeometryAndAnchors() {
         #expect(TodoBoardLayout.mobileColumnWidthRatio == 0.62)
         #expect(TodoBoardLayout.boardPadding == 8)
         #expect(TodoBoardLayout.columnGap == 10)
@@ -212,16 +212,10 @@ struct TodoViewModelTests {
         #expect(miniColumnWidth == 232.5)
         #expect(proColumnWidth == 249.24)
 
-        #expect(TodoBoardLayout.centeredColumnInset(containerWidth: 375, columnWidth: miniColumnWidth) == 71.25)
-        #expect(TodoBoardLayout.centeredColumnInset(containerWidth: 402, columnWidth: proColumnWidth) == 76.38)
-        #expect(TodoBoardLayout.adjacentColumnPeekWidth(containerWidth: 375, columnWidth: miniColumnWidth) == 61.25)
-        #expect(TodoBoardLayout.adjacentColumnPeekWidth(containerWidth: 402, columnWidth: proColumnWidth) == 66.38)
-    }
-
-    @Test
-    func narrowBoardKeepsMinimumHorizontalPadding() {
-        #expect(TodoBoardLayout.centeredColumnInset(containerWidth: 100, columnWidth: 96) == 8)
-        #expect(TodoBoardLayout.adjacentColumnPeekWidth(containerWidth: 100, columnWidth: 96) == 0)
+        #expect(TodoBoardLayout.scrollAnchor(for: .todo) == .leading)
+        #expect(TodoBoardLayout.scrollAnchor(for: .inProgress) == .center)
+        #expect(TodoBoardLayout.scrollAnchor(for: .done) == .trailing)
+        #expect(TodoBoardLayout.scrollAnchor(for: .unknown("future")) == .center)
     }
 
     @Test(arguments: [

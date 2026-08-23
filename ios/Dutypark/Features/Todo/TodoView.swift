@@ -23,14 +23,19 @@ enum TodoBoardLayout {
         containerWidth * mobileColumnWidthRatio
     }
 
-    /// Gives the first and last columns enough scroll content on both sides to
-    /// use the same centered snap position as the middle column.
-    static func centeredColumnInset(containerWidth: CGFloat, columnWidth: CGFloat) -> CGFloat {
-        max(boardPadding, (containerWidth - columnWidth) / 2)
-    }
-
-    static func adjacentColumnPeekWidth(containerWidth: CGFloat, columnWidth: CGFloat) -> CGFloat {
-        max(0, centeredColumnInset(containerWidth: containerWidth, columnWidth: columnWidth) - columnGap)
+    /// Mirrors the responsive web board: the edge columns snap to the viewport
+    /// edges while the middle column remains centered.
+    static func scrollAnchor(for status: TodoStatus) -> UnitPoint {
+        switch status {
+        case .todo:
+            .leading
+        case .inProgress:
+            .center
+        case .done:
+            .trailing
+        case .unknown:
+            .center
+        }
     }
 }
 
@@ -566,6 +571,7 @@ struct TodoView: View {
                 }
                 .accessibilityLabel(Text(todoLocalized(status.titleKey)))
                 .accessibilityValue(Text("\(model.count(for: status))"))
+                .accessibilityIdentifier("todo.status.\(status.rawValue)")
             }
         }
         .padding(.top, DPSpacing.small)
@@ -586,10 +592,6 @@ struct TodoView: View {
         } else {
             GeometryReader { proxy in
                 let columnWidth = TodoBoardLayout.mobileColumnWidth(in: proxy.size.width)
-                let centeredColumnInset = TodoBoardLayout.centeredColumnInset(
-                    containerWidth: proxy.size.width,
-                    columnWidth: columnWidth
-                )
                 ScrollViewReader { scrollProxy in
                     ScrollView(.horizontal) {
                         LazyHStack(alignment: .top, spacing: TodoBoardLayout.columnGap) {
@@ -657,7 +659,7 @@ struct TodoView: View {
                         .scrollTargetLayout()
                         .padding(.bottom, DPSpacing.small)
                     }
-                    .contentMargins(.horizontal, centeredColumnInset, for: .scrollContent)
+                    .contentMargins(.horizontal, TodoBoardLayout.boardPadding, for: .scrollContent)
                     .scrollIndicators(.hidden)
                     .scrollTargetBehavior(.viewAligned(limitBehavior: .always))
                     .scrollPosition(id: $visibleStatus, anchor: .center)
@@ -669,7 +671,10 @@ struct TodoView: View {
                         guard draggedTodoID == nil else { return }
                         withAnimation(.easeInOut(duration: 0.2)) {
                             visibleStatus = status
-                            scrollProxy.scrollTo(status, anchor: .center)
+                            scrollProxy.scrollTo(
+                                status,
+                                anchor: TodoBoardLayout.scrollAnchor(for: status)
+                            )
                         }
                     }
                 }

@@ -112,23 +112,38 @@ final class TodoConfirmationVisualUITests: XCTestCase {
     }
 
     @MainActor
-    func testSelectedStatusKeepsMatchingColumnFullyVisible() {
+    func testSelectedStatusMatchesResponsiveWebColumnAlignment() {
         let app = launchApp()
         defer { app.terminate() }
 
         openTodoScreen(in: app)
 
+        let todoStatus = app.buttons["todo.status.TODO"]
+        XCTAssertTrue(todoStatus.waitForExistence(timeout: 10))
+        todoStatus.tap()
+
+        let todoColumn = app.scrollViews["todo.column.TODO"]
+        XCTAssertTrue(todoColumn.waitForExistence(timeout: 10))
+        assertWebColumnAlignment(todoColumn, .leading, in: app)
+        capture("todo-alignment-todo")
+
+        let inProgressStatus = app.buttons["todo.status.IN_PROGRESS"]
+        XCTAssertTrue(inProgressStatus.waitForExistence(timeout: 10))
+        inProgressStatus.tap()
+
         let inProgressColumn = app.scrollViews["todo.column.IN_PROGRESS"]
         XCTAssertTrue(inProgressColumn.waitForExistence(timeout: 10))
-        assertCenteredAndStable(inProgressColumn, in: app)
+        assertWebColumnAlignment(inProgressColumn, .center, in: app)
+        capture("todo-alignment-in-progress")
 
-        let doneStatus = app.buttons["완료"]
+        let doneStatus = app.buttons["todo.status.DONE"]
         XCTAssertTrue(doneStatus.waitForExistence(timeout: 10))
         doneStatus.tap()
 
         let doneColumn = app.scrollViews["todo.column.DONE"]
         XCTAssertTrue(doneColumn.waitForExistence(timeout: 10))
-        assertCenteredAndStable(doneColumn, in: app)
+        assertWebColumnAlignment(doneColumn, .trailing, in: app)
+        capture("todo-alignment-done")
     }
 
     @MainActor
@@ -355,23 +370,40 @@ final class TodoConfirmationVisualUITests: XCTestCase {
         )
     }
 
+    private enum WebColumnAlignment {
+        case leading
+        case center
+        case trailing
+    }
+
     @MainActor
-    private func assertCenteredAndStable(
+    private func assertWebColumnAlignment(
         _ element: XCUIElement,
+        _ alignment: WebColumnAlignment,
         in app: XCUIApplication,
         file: StaticString = #filePath,
         line: UInt = #line
     ) {
         let predicate = NSPredicate { _, _ in
-            element.frame.minX >= app.frame.minX
-                && element.frame.maxX <= app.frame.maxX
-                && abs(element.frame.midX - app.frame.midX) <= 2
+            let frame = element.frame
+            guard frame.minX >= app.frame.minX,
+                  frame.maxX <= app.frame.maxX else {
+                return false
+            }
+            switch alignment {
+            case .leading:
+                return abs(frame.minX - (app.frame.minX + 8)) <= 2
+            case .center:
+                return abs(frame.midX - app.frame.midX) <= 2
+            case .trailing:
+                return abs((app.frame.maxX - 8) - frame.maxX) <= 2
+            }
         }
         let expectation = XCTNSPredicateExpectation(predicate: predicate, object: element)
         XCTAssertEqual(
             XCTWaiter.wait(for: [expectation], timeout: 3),
             .completed,
-            "The selected Todo column must be centered and fully visible.",
+            "The selected Todo column must match the responsive web alignment.",
             file: file,
             line: line
         )
