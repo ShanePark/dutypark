@@ -90,6 +90,8 @@ struct TodoCreateModal: View {
     @ObservedObject var model: TodoViewModel
     let initialStatus: TodoStatus
     let friends: [FriendDTO]
+    let accountID: MemberID?
+    let availability: SessionAvailability?
     let refreshBoardAfterCreate: Bool
     let onCreated: () async -> Void
     let onDismiss: () -> Void
@@ -119,6 +121,8 @@ struct TodoCreateModal: View {
             ) { draft in
                 let created = await model.create(
                     draft: draft,
+                    accountID: accountID,
+                    availability: availability,
                     refreshBoard: refreshBoardAfterCreate
                 )
                 if created { await onCreated() }
@@ -129,6 +133,7 @@ struct TodoCreateModal: View {
 }
 
 struct TodoView: View {
+    @EnvironmentObject private var session: SessionStore
     let initialTodoID: TodoID?
     let onTodoChanged: () async -> Void
     let onInitialTodoOpened: () -> Void
@@ -171,6 +176,9 @@ struct TodoView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            if model.isShowingCachedData || model.pendingOperationCount > 0 {
+                todoAvailabilityBanner
+            }
             statusSelector
                 .padding(.horizontal, TodoBoardLayout.boardPadding)
                 .padding(.bottom, DPSpacing.compact)
@@ -235,9 +243,15 @@ struct TodoView: View {
         }
         .task(id: initialTodoID) {
             if model.board == nil {
-                await model.load()
+                await model.load(
+                    accountID: authenticatedAccountID,
+                    availability: session.availability
+                )
             } else {
-                await model.refresh()
+                await model.refresh(
+                    accountID: authenticatedAccountID,
+                    availability: session.availability
+                )
             }
             visibleStatus = model.selectedStatus
             openInitialTodoIfPresent()
@@ -247,11 +261,41 @@ struct TodoView: View {
                 model.selectedStatus = status
             }
         }
+        .onChange(of: session.availability) { _, availability in
+            Task {
+                if availability == .online || model.board == nil {
+                    await model.refresh(
+                        accountID: authenticatedAccountID,
+                        availability: availability
+                    )
+                } else {
+                    await model.load(
+                        accountID: authenticatedAccountID,
+                        availability: availability
+                    )
+                }
+            }
+        }
+        .onReceive(
+            NotificationCenter.default.publisher(
+                for: Notification.Name("offlineSyncDidComplete")
+            )
+        ) { notification in
+            guard offlineSyncAccountID(from: notification) == authenticatedAccountID else { return }
+            Task {
+                await model.handleOfflineSyncCompleted(accountID: authenticatedAccountID)
+            }
+        }
+        .onDisappear {
+            model.cancelRecovery()
+        }
         .fullScreenCover(isPresented: $showingCreate) {
             TodoCreateModal(
                 model: model,
                 initialStatus: model.selectedStatus,
                 friends: model.friends,
+                accountID: authenticatedAccountID,
+                availability: session.availability,
                 refreshBoardAfterCreate: true,
                 onCreated: onTodoChanged,
                 onDismiss: { showingCreate = false }
@@ -282,6 +326,47 @@ struct TodoView: View {
             }
         }
         .todoErrorAlert(model)
+    }
+
+    private var authenticatedAccountID: MemberID? {
+        guard case .authenticated(let member) = session.state else { return nil }
+        return member.id
+    }
+
+    private var todoAvailabilityBanner: some View {
+        HStack(spacing: DPSpacing.small) {
+            Image(systemName: model.isShowingCachedData ? "wifi.slash" : "arrow.triangle.2.circlepath")
+            VStack(alignment: .leading, spacing: 1) {
+                if model.isShowingCachedData {
+                    Text(todoLocalized("todo.offline.cached"))
+                }
+                if model.pendingOperationCount > 0 {
+                    Text(
+                        todoLocalized("todo.offline.pending")
+                            .replacingOccurrences(
+                                of: "%d",
+                                with: String(model.pendingOperationCount)
+                            )
+                    )
+                }
+            }
+            .font(.caption.weight(.semibold))
+            Spacer(minLength: 0)
+        }
+        .foregroundStyle(.orange)
+        .padding(.horizontal, TodoBoardLayout.boardPadding)
+        .padding(.vertical, 6)
+        .background(.orange.opacity(0.12))
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("todo.offline.status")
+    }
+
+    private func offlineSyncAccountID(from notification: Notification) -> MemberID? {
+        if let accountID = notification.object as? MemberID { return accountID }
+        if let accountID = notification.object as? NSNumber { return accountID.int64Value }
+        if let accountID = notification.userInfo?["accountID"] as? MemberID { return accountID }
+        if let accountID = notification.userInfo?["accountID"] as? NSNumber { return accountID.int64Value }
+        return nil
     }
 
     private func openInitialTodoIfPresent() {
@@ -587,7 +672,14 @@ struct TodoView: View {
             DPErrorState(
                 title: LocalizedStringKey(todoLocalized("todo.error.load")),
                 retryTitle: LocalizedStringKey(todoLocalized("common.retry")),
-                retryAction: { Task { await model.load() } }
+                retryAction: {
+                    Task {
+                        await model.load(
+                            accountID: authenticatedAccountID,
+                            availability: session.availability
+                        )
+                    }
+                }
             )
         } else {
             GeometryReader { proxy in
@@ -664,7 +756,12 @@ struct TodoView: View {
                     .scrollTargetBehavior(.viewAligned(limitBehavior: .always))
                     .scrollPosition(id: $visibleStatus, anchor: .center)
                     .scrollDisabled(draggedTodoID != nil)
-                    .refreshable { await model.refresh() }
+                    .refreshable {
+                        await model.refresh(
+                            accountID: authenticatedAccountID,
+                            availability: session.availability
+                        )
+                    }
                     .task(id: model.selectedStatus.rawValue) {
                         let status = model.selectedStatus
                         await Task.yield()

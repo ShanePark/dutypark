@@ -10,19 +10,60 @@ final class TodoViewModel: ObservableObject {
     @Published private(set) var isSaving = false
     @Published var selectedStatus: TodoStatus = .inProgress
     @Published var errorKey: String?
+    /// True while the board shown to the user came from the durable cache
+    /// instead of the latest server response.  Mutating operations stay
+    /// disabled in this state, except for the deliberately supported plain
+    /// Todo create flow.
+    @Published private(set) var isOffline = false
+    @Published private(set) var isShowingCachedData = false
+    @Published private(set) var lastSyncedAt: Date?
+    @Published private(set) var pendingOperationCount = 0
+
+    var isStale: Bool { isShowingCachedData }
+    var hasPendingWrites: Bool { pendingOperationCount > 0 }
+    var isOfflineMode: Bool { isOffline }
+    var cacheStoredAt: Date? { lastSyncedAt }
+    var pendingTodoCount: Int { pendingOperationCount }
 
     private let repository: any TodoRepository
     private let contentFilter: ContentFilterStore
     private let hapticCenter: DPHapticCenter
+    private let cache: any OfflineCacheProviding
+    private let outbox: any OfflineOutboxProviding
+    private let recoveryDelays: [Duration]
+    private let recoverySleep: @Sendable (Duration) async throws -> Void
+    private let syncQueuedOutbox: @MainActor @Sendable (MemberID) async -> Void
+    private var accountID: MemberID?
+    private var sessionAvailability: SessionAvailability?
+    private var recoveryTask: Task<Void, Never>?
+    private var recoveryGeneration = 0
 
     init(
         repository: any TodoRepository = TodoAPIRepository(),
         contentFilter: ContentFilterStore = .shared,
-        hapticCenter: DPHapticCenter = .shared
+        hapticCenter: DPHapticCenter = .shared,
+        cache: any OfflineCacheProviding = OfflineCacheStore.shared,
+        outbox: any OfflineOutboxProviding = OfflineOutboxStore.shared,
+        recoveryDelays: [Duration] = [.seconds(2), .seconds(5), .seconds(15), .seconds(30)],
+        recoverySleep: @escaping @Sendable (Duration) async throws -> Void = { duration in
+            try await Task.sleep(for: duration)
+        },
+        syncQueuedOutbox: @escaping @MainActor @Sendable (MemberID) async -> Void = { accountID in
+            await OfflineSyncCoordinator.shared.synchronize(accountID: accountID)
+        }
     ) {
         self.repository = repository
         self.contentFilter = contentFilter
         self.hapticCenter = hapticCenter
+        self.cache = cache
+        self.outbox = outbox
+        self.recoveryDelays = recoveryDelays
+        self.recoverySleep = recoverySleep
+        self.syncQueuedOutbox = syncQueuedOutbox
+    }
+
+    deinit {
+        recoveryTask?.cancel()
     }
 
     /// Emits semantic feedback from the view-model result boundary. Keeping the
@@ -69,7 +110,10 @@ final class TodoViewModel: ObservableObject {
         return nil
     }
 
-    func load() async {
+    func load(
+        accountID: MemberID? = nil,
+        availability: SessionAvailability? = nil
+    ) async {
         guard !isLoading else { return }
 #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-ui-testing-authenticated") {
@@ -77,34 +121,211 @@ final class TodoViewModel: ObservableObject {
             return
         }
 #endif
+        if let accountID { setAccountID(accountID) }
+        if let availability {
+            sessionAvailability = availability
+            if availability.isOffline {
+                isOffline = true
+            }
+        }
         isLoading = true
         defer { isLoading = false }
-        do {
-            board = try await repository.fetchBoard()
-            selectNonemptyStatusIfNeeded()
-        } catch {
-            errorKey = "todo.error.load"
-            return
-        }
-        friends = ((try? await repository.fetchFriends()) ?? []).sorted(by: friendOrder)
+        await fetchBoardAndFriends()
     }
 
-    func refresh() async {
+    func refresh(
+        accountID: MemberID? = nil,
+        availability: SessionAvailability? = nil
+    ) async {
 #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-ui-testing-authenticated") {
             loadUITestingFixture()
             return
         }
 #endif
-        do {
-            board = try await repository.fetchBoard()
-            selectNonemptyStatusIfNeeded()
-        } catch {
-            errorKey = "todo.error.load"
+        if let accountID { setAccountID(accountID) }
+        if let availability {
+            sessionAvailability = availability
+            if availability.isOffline {
+                isOffline = true
+            }
         }
+        await fetchBoardAndFriends()
+    }
+
+    /// Public seam used by the outbox synchronizer after it has successfully
+    /// sent queued creates. It intentionally goes through the same cache
+    /// refresh path as a user pull-to-refresh so a provisional card is
+    /// replaced by its server representation.
+    func refreshAfterSync(
+        accountID: MemberID? = nil,
+        availability: SessionAvailability? = nil
+    ) async {
+        await refresh(
+            accountID: accountID ?? self.accountID,
+            // A completed outbox sync is itself proof that a live transport
+            // is available, so this seam must not remain in the cached-only
+            // branch left by the previous offline session.
+            availability: availability ?? .online
+        )
+    }
+
+    /// Called by the app-level outbox coordinator after a successful drain.
+    /// This refresh intentionally emits no haptic feedback: the background
+    /// sync is not a direct user action.
+    func handleOfflineSyncCompleted(accountID: MemberID? = nil) async {
+        guard let accountID = accountID ?? self.accountID else { return }
+        await refreshAfterSync(accountID: accountID, availability: .online)
+    }
+
+    /// Stops the bounded server-recovery loop when the view leaves the
+    /// hierarchy. A later appearance starts a fresh load and can schedule a
+    /// new loop if the server is still unavailable.
+    func cancelRecovery() {
+        recoveryGeneration &+= 1
+        recoveryTask?.cancel()
+        recoveryTask = nil
+    }
+
+    private func setAccountID(_ accountID: MemberID) {
+        guard self.accountID != accountID else { return }
+        cancelRecovery()
+        self.accountID = accountID
+    }
+
+    private func fetchBoardAndFriends(allowsRecoveryScheduling: Bool = true) async {
+        let currentAccountID = accountID
+        let cachedAccount: OfflineAccountSnapshot?
+        if let currentAccountID {
+            cachedAccount = await cache.loadAccount(memberID: currentAccountID)
+        } else {
+            cachedAccount = nil
+        }
+
+        if sessionAvailability?.isOffline == true {
+            guard let currentAccountID,
+                  let cachedBoard = await cache.loadTodoBoard(accountID: currentAccountID)
+            else {
+                board = nil
+                isShowingCachedData = false
+                lastSyncedAt = nil
+                errorKey = "todo.error.load"
+                await refreshPendingOperationState()
+                return
+            }
+            board = cachedBoard
+            friends = cachedAccount?.friends.sorted(by: friendOrder) ?? []
+            isOffline = true
+            isShowingCachedData = true
+            lastSyncedAt = cachedAccount?.storedAt
+            errorKey = nil
+            await overlayQueuedTodos(accountID: currentAccountID)
+            await saveCurrentBoardToCache(accountID: currentAccountID)
+            selectNonemptyStatusIfNeeded()
+            await refreshPendingOperationState()
+            return
+        }
+
+        var usedFallback = false
+        var boardLoaded = false
+        do {
+            let serverBoard = try await repository.fetchBoard()
+            board = serverBoard
+            boardLoaded = true
+            isOffline = false
+            isShowingCachedData = false
+            lastSyncedAt = .now
+            if let currentAccountID {
+                try? await cache.saveTodoBoard(
+                    accountID: currentAccountID,
+                    board: serverBoard,
+                    now: .now
+                )
+            }
+        } catch {
+            guard isOfflineEligible(error),
+                  let currentAccountID,
+                  let cachedBoard = await cache.loadTodoBoard(accountID: currentAccountID)
+            else {
+                errorKey = "todo.error.load"
+                await refreshPendingOperationState()
+                return
+            }
+            board = cachedBoard
+            boardLoaded = true
+            usedFallback = true
+            isOffline = true
+            isShowingCachedData = true
+            lastSyncedAt = cachedAccount?.storedAt
+            errorKey = nil
+            selectNonemptyStatusIfNeeded()
+        }
+
+        guard boardLoaded else {
+            errorKey = "todo.error.load"
+            await refreshPendingOperationState()
+            return
+        }
+        if let currentAccountID {
+            await overlayQueuedTodos(accountID: currentAccountID)
+            await saveCurrentBoardToCache(accountID: currentAccountID)
+        }
+        selectNonemptyStatusIfNeeded()
+
+        do {
+            let serverFriends = try await repository.fetchFriends()
+            friends = serverFriends.sorted(by: friendOrder)
+            if let cachedAccount {
+                let updated = OfflineAccountSnapshot(
+                    memberID: cachedAccount.memberID,
+                    profile: cachedAccount.profile,
+                    friends: friends,
+                    dDays: cachedAccount.dDays,
+                    storedAt: .now
+                )
+                try? await cache.saveAccount(updated)
+            }
+        } catch {
+            if isOfflineEligible(error), let cachedAccount {
+                friends = cachedAccount.friends.sorted(by: friendOrder)
+                usedFallback = true
+                isOffline = true
+                isShowingCachedData = true
+                lastSyncedAt = cachedAccount.storedAt
+            } else {
+                // Preserve the pre-existing behavior for a non-transport
+                // friends failure: the board remains usable and an empty
+                // friends list simply disables optional tagging UI.
+                friends = []
+                // Continue through the normal completion path so a fresh
+                // board can clear a prior fallback state and wake the
+                // outbox even when friends have no usable cache.
+                if !usedFallback {
+                    isOffline = false
+                    isShowingCachedData = false
+                }
+                if !usedFallback {
+                    errorKey = nil
+                }
+            }
+        }
+
+        if !usedFallback {
+            isOffline = false
+            isShowingCachedData = false
+            errorKey = nil
+            if allowsRecoveryScheduling {
+                cancelRecovery()
+            }
+            await syncQueuedOutboxIfNeeded(accountID: currentAccountID)
+        } else if allowsRecoveryScheduling, let currentAccountID {
+            scheduleRecovery(for: currentAccountID)
+        }
+        await refreshPendingOperationState()
     }
 
     func loadAttachments(for todo: TodoDTO) async {
+        guard ensureOnlineMutationAllowed() else { return }
         guard todo.hasAttachments, attachmentsByTodoID[todo.uuid] == nil else {
             if !todo.hasAttachments { attachmentsByTodoID[todo.uuid] = [] }
             return
@@ -116,30 +337,77 @@ final class TodoViewModel: ObservableObject {
         }
     }
 
-    func create(draft: TodoDraft, refreshBoard: Bool = true) async -> Bool {
+    func create(
+        draft: TodoDraft,
+        accountID: MemberID? = nil,
+        availability: SessionAvailability? = nil,
+        refreshBoard: Bool = true
+    ) async -> Bool {
         guard !isSaving else { return false }
+        if let accountID { setAccountID(accountID) }
+        if let availability {
+            sessionAvailability = availability
+            if availability.isOffline {
+                isOffline = true
+            }
+        }
         guard !contentFilter.isBlocked(draft.title, draft.content) else {
             errorKey = "todo.error.contentFilter"
             emitHaptic(.error)
             return false
         }
+
+        let currentAccountID = accountID ?? self.accountID
+        if isOffline && !draft.request().supportsOfflineCreate {
+            errorKey = "todo.error.offlineUnsupported"
+            emitHaptic(.warning)
+            return false
+        }
+
         isSaving = true
         defer { isSaving = false }
+        // Keep this UUID for the entire attempt. If the transport fails, the
+        // exact request and operation identity are placed in the durable
+        // outbox; server-side dedupe is handled by the sync transport.
+        let operationID = UUID()
+        let request = draft.request()
+        if isOffline {
+            return await enqueueOfflineCreate(
+                request,
+                operationID: operationID,
+                accountID: currentAccountID,
+                triggerSync: sessionAvailability?.isOffline != true
+            )
+        }
         do {
-            let created = try await repository.create(draft.request())
+            let created = try await repository.create(request)
             if refreshBoard {
                 patchBoard(with: created)
+                await saveCurrentBoardToCache(accountID: currentAccountID)
             }
+            isOffline = false
+            isShowingCachedData = false
+            await refreshPendingOperationState(accountID: currentAccountID)
             emitHaptic(.success)
             return true
-        } catch {
-            errorKey = "todo.error.create"
-            emitHaptic(.error)
-            return false
+        } catch let error {
+            guard isCreateOfflineEligible(error) else {
+                errorKey = "todo.error.create"
+                emitHaptic(.error)
+                return false
+            }
+
+            return await enqueueOfflineCreate(
+                request,
+                operationID: operationID,
+                accountID: currentAccountID,
+                triggerSync: true
+            )
         }
     }
 
     func update(todo: TodoDTO, draft: TodoDraft) async -> Bool {
+        guard ensureOnlineMutationAllowed() else { return false }
         guard !isSaving else { return false }
         guard !todo.hasAttachments || attachmentsByTodoID[todo.uuid] != nil else {
             errorKey = "todo.error.attachmentsRequired"
@@ -160,24 +428,28 @@ final class TodoViewModel: ObservableObject {
     }
 
     func delete(_ todo: TodoDTO) async -> Bool {
-        await performRemoval(todoID: todo.uuid, errorKey: "todo.error.delete") {
+        guard ensureOnlineMutationAllowed() else { return false }
+        return await performRemoval(todoID: todo.uuid, errorKey: "todo.error.delete") {
             try await repository.delete(id: todo.uuid)
         }
     }
 
     func complete(_ todo: TodoDTO) async -> Bool {
-        await performMutation(errorKey: "todo.error.status") {
+        guard ensureOnlineMutationAllowed() else { return false }
+        return await performMutation(errorKey: "todo.error.status") {
             try await repository.complete(id: todo.uuid)
         }
     }
 
     func reopen(_ todo: TodoDTO) async -> Bool {
-        await performMutation(errorKey: "todo.error.status") {
+        guard ensureOnlineMutationAllowed() else { return false }
+        return await performMutation(errorKey: "todo.error.status") {
             try await repository.reopen(id: todo.uuid)
         }
     }
 
     func move(_ todo: TodoDTO, to status: TodoStatus) async -> Bool {
+        guard ensureOnlineMutationAllowed() else { return false }
         guard todo.status != status else { return true }
         return await performMutation(errorKey: "todo.error.status") {
             try await repository.changeStatus(
@@ -212,6 +484,7 @@ final class TodoViewModel: ObservableObject {
         relativeTo targetTodoID: TodoID? = nil,
         insertAfter: Bool = false
     ) async -> Bool {
+        guard ensureOnlineMutationAllowed() else { return false }
         guard !isSaving, let originalBoard = board else { return false }
         guard let sourceStatus = boardStatus(of: todoID, in: originalBoard) else { return false }
 
@@ -262,6 +535,7 @@ final class TodoViewModel: ObservableObject {
                     )
                 )
             }
+            await saveCurrentBoardToCache(accountID: accountID)
             return true
         } catch {
             board = originalBoard
@@ -275,7 +549,8 @@ final class TodoViewModel: ObservableObject {
     }
 
     func leaveTag(_ todo: TodoDTO) async -> Bool {
-        await performRemoval(todoID: todo.uuid, errorKey: "todo.error.leaveTag") {
+        guard ensureOnlineMutationAllowed() else { return false }
+        return await performRemoval(todoID: todo.uuid, errorKey: "todo.error.leaveTag") {
             try await repository.leaveTag(id: todo.uuid)
         }
     }
@@ -289,6 +564,7 @@ final class TodoViewModel: ObservableObject {
         defer { isSaving = false }
         do {
             patchBoard(with: try await operation())
+            await saveCurrentBoardToCache(accountID: accountID)
             emitHaptic(.success)
             return true
         } catch {
@@ -310,6 +586,7 @@ final class TodoViewModel: ObservableObject {
             try await operation()
             removeFromBoard(todoID: todoID)
             attachmentsByTodoID[todoID] = nil
+            await saveCurrentBoardToCache(accountID: accountID)
             emitHaptic(.success)
             return true
         } catch {
@@ -317,6 +594,199 @@ final class TodoViewModel: ObservableObject {
             emitHaptic(.error)
             return false
         }
+    }
+
+    private func ensureOnlineMutationAllowed() -> Bool {
+        guard !isOffline else {
+            errorKey = "todo.error.offlineReadOnly"
+            emitHaptic(.warning)
+            return false
+        }
+        return true
+    }
+
+    private func scheduleRecovery(for accountID: MemberID) {
+        guard accountID > 0, !recoveryDelays.isEmpty else { return }
+        cancelRecovery()
+        let generation = recoveryGeneration
+        let delays = recoveryDelays
+        let sleep = recoverySleep
+        recoveryTask = Task { @MainActor [weak self] in
+            defer {
+                if let self, self.recoveryGeneration == generation {
+                    self.recoveryTask = nil
+                }
+            }
+
+            for delay in delays {
+                do {
+                    try await sleep(delay)
+                } catch {
+                    return
+                }
+                guard let self,
+                      self.recoveryGeneration == generation,
+                      self.accountID == accountID
+                else { return }
+
+                // Keep this request silent. The user did not initiate a new
+                // mutation, and the regular refresh path never emits haptics.
+                await self.fetchBoardAndFriends(allowsRecoveryScheduling: false)
+                guard self.recoveryGeneration == generation,
+                      self.accountID == accountID
+                else { return }
+                if !self.isOffline && !self.isShowingCachedData { return }
+            }
+        }
+    }
+
+    private func syncQueuedOutboxIfNeeded(accountID: MemberID?) async {
+        guard let accountID else { return }
+        let hasPending = await outbox.entries(accountID: accountID).contains {
+            $0.state == .pending
+        }
+        guard hasPending else { return }
+        // The coordinator uses a satisfied transport hint here deliberately:
+        // this path exists for a server outage with an unchanged NWPath, where
+        // waiting for another path transition would leave the queue stuck.
+        await syncQueuedOutbox(accountID)
+    }
+
+    private func isOfflineEligible(_ error: Error) -> Bool {
+        guard let error = error as? APIError else { return false }
+        switch error {
+        case .transport:
+            return true
+        case .server(let status, _), .serverWithDetails(let status, _, _):
+            return status >= 500
+        default:
+            return false
+        }
+    }
+
+    /// A create response can be ambiguous even when the HTTP request reached
+    /// the server: a 2xx with an empty or malformed body may have committed the
+    /// Todo before decoding failed. Keep GET fallback strict, but preserve the
+    /// same idempotent create request for a later server reconciliation.
+    private func isCreateOfflineEligible(_ error: Error) -> Bool {
+        guard let error = error as? APIError else { return false }
+        switch error {
+        case .transport, .invalidResponse, .decoding:
+            return true
+        case .server(let status, _), .serverWithDetails(let status, _, _):
+            return status >= 500
+        default:
+            return false
+        }
+    }
+
+    private func refreshPendingOperationState(accountID: MemberID? = nil) async {
+        guard let accountID = accountID ?? self.accountID else {
+            pendingOperationCount = 0
+            return
+        }
+        pendingOperationCount = await outbox.entries(accountID: accountID).filter {
+            $0.state == .pending
+        }.count
+    }
+
+    private func saveCurrentBoardToCache(accountID: MemberID? = nil) async {
+        guard let accountID = accountID ?? self.accountID, let board else { return }
+        try? await cache.saveTodoBoard(accountID: accountID, board: board, now: .now)
+    }
+
+    /// Rebuilds locally-created cards from the durable outbox on every board
+    /// load. The cache is normally enough, but this overlay also survives an
+    /// interrupted cache write and keeps a queued card visible after a relaunch.
+    private func overlayQueuedTodos(accountID: MemberID) async {
+        for entry in await outbox.entries(accountID: accountID) {
+            guard case .todoCreate(let request) = entry.payload else { continue }
+            patchBoard(with: provisionalTodo(
+                from: request,
+                id: entry.operationID,
+                createdAt: entry.createdAt
+            ))
+        }
+    }
+
+    private func enqueueOfflineCreate(
+        _ request: TodoRequest,
+        operationID: UUID,
+        accountID: MemberID?,
+        triggerSync: Bool
+    ) async -> Bool {
+        guard let accountID,
+              request.supportsOfflineCreate
+        else {
+            errorKey = "todo.error.offlineUnsupported"
+            emitHaptic(.warning)
+            return false
+        }
+
+        do {
+            _ = try await outbox.enqueueTodoCreate(
+                accountID: accountID,
+                request: request,
+                operationID: operationID,
+                now: .now,
+                requiresPreflight: triggerSync
+            )
+        } catch {
+            // A failed durable write must never be presented as a queued
+            // success. Keep the in-memory board untouched so the caller can
+            // retry without losing the last confirmed state.
+            errorKey = "todo.error.offlineQueue"
+            emitHaptic(.error)
+            return false
+        }
+
+        let provisional = provisionalTodo(
+            from: request,
+            id: operationID,
+            createdAt: .now
+        )
+        patchBoard(with: provisional)
+        isOffline = true
+        isShowingCachedData = true
+        await saveCurrentBoardToCache(accountID: accountID)
+        await refreshPendingOperationState(accountID: accountID)
+        errorKey = nil
+        // The user's local save completed durably; the later network drain
+        // is silent and must not emit a second success event.
+        emitHaptic(.success)
+        if triggerSync {
+            let sync = syncQueuedOutbox
+            Task { @MainActor in
+                await sync(accountID)
+            }
+        }
+        return true
+    }
+
+    private func provisionalTodo(
+        from request: TodoRequest,
+        id: TodoID,
+        createdAt: Date
+    ) -> TodoDTO {
+        let status = request.status ?? .todo
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withDashSeparatorInDate, .withColonSeparatorInTime]
+        return TodoDTO(
+            id: id.uuidString,
+            title: request.title,
+            content: request.content,
+            position: todos(for: status).count,
+            status: status,
+            createdDate: LocalDateTimeValue(rawValue: formatter.string(from: createdAt)),
+            completedDate: nil,
+            dueDate: request.dueDate,
+            isOverdue: false,
+            isTagged: false,
+            owner: "Me",
+            taggedByMember: nil,
+            tags: [],
+            hasAttachments: false
+        )
     }
 
     private func patchBoard(with todo: TodoDTO) {
@@ -439,6 +909,10 @@ final class TodoViewModel: ObservableObject {
         attachmentsByTodoID = [:]
         errorKey = nil
         selectedStatus = .inProgress
+        isOffline = false
+        isShowingCachedData = false
+        lastSyncedAt = nil
+        pendingOperationCount = 0
     }
 #endif
 }
@@ -620,5 +1094,13 @@ enum TodoDateFormatter {
 extension TodoDTO {
     var uuid: TodoID {
         UUID(uuidString: id)!
+    }
+}
+
+private extension TodoRequest {
+    var supportsOfflineCreate: Bool {
+        tagFriendIds?.isEmpty != false
+            && attachmentSessionId == nil
+            && orderedAttachmentIds.isEmpty
     }
 }

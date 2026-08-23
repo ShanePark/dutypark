@@ -163,6 +163,82 @@ struct RootLifecycleTests {
     }
 
     @Test
+    func offlineStartupSkipsNotificationAndPushNetworkWork() async {
+        var events: [String] = []
+
+        await RootAuthenticatedStartupAction.perform(
+            isOffline: true,
+            startPolling: { events.append("polling") },
+            refreshNotifications: { events.append("refresh") },
+            activatePush: { events.append("activate-push") },
+            consumePendingPush: { events.append("push") },
+            consumePendingDestination: { events.append("destination") }
+        )
+
+        #expect(events.isEmpty)
+    }
+
+    @Test
+    func offlineSceneDoesNotSetNotificationForegroundOrRunNetworkWork() async {
+        var events: [String] = []
+
+        await RootSceneLifecycleAction.perform(
+            isActive: true,
+            isNetworkAvailable: false,
+            setNotificationForeground: { events.append("foreground-\($0)") },
+            refreshHome: { events.append("home") },
+            refreshConsent: { events.append("consent") },
+            resumePush: { events.append("push") },
+            consumePendingPush: { events.append("pending-push") }
+        )
+
+        #expect(events == ["foreground-false"])
+    }
+
+    @Test
+    func connectivityRecoveryRevalidatesOnlyOnSatisfiedPathAndStartsWorkAfterOnline() async {
+        var availability = SessionAvailability.offline
+        var events: [String] = []
+
+        await RootConnectivityRecoveryAction.perform(
+            networkStatus: .satisfied,
+            availability: { availability },
+            revalidate: {
+                events.append("revalidate")
+                availability = .online
+            },
+            startOnlineWork: { events.append("online-work") }
+        )
+
+        #expect(events == ["revalidate", "online-work"])
+    }
+
+    @Test
+    func offlineAuthenticatedLaunchSelectsCalendarOnce() {
+        #expect(
+            RootOfflineDefaultTabPolicy.selectedTab(
+                availability: .offline,
+                current: .home,
+                hasApplied: false
+            ) == .calendar
+        )
+        #expect(
+            RootOfflineDefaultTabPolicy.selectedTab(
+                availability: .offline,
+                current: .todo,
+                hasApplied: true
+            ) == .todo
+        )
+        #expect(
+            RootOfflineDefaultTabPolicy.selectedTab(
+                availability: .online,
+                current: .home,
+                hasApplied: false
+            ) == .home
+        )
+    }
+
+    @Test
     func pendingPushOpensTheIdentifierProvidedByTheConsumer() async {
         let notificationID = UUID()
         var openedIDs: [UUID] = []

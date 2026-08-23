@@ -278,6 +278,21 @@ struct NotificationFeatureTests {
     }
 
     @Test
+    func passivePendingPushOpenFailureDoesNotEmitHaptics() async {
+        let haptics = DPHapticCenter()
+        let store = NotificationStore(
+            api: NotificationOpenFailureAPI(),
+            haptics: haptics
+        )
+
+        await #expect(throws: APIError.invalidResponse) {
+            try await store.open(id: UUID(), emitsHaptic: false)
+        }
+
+        #expect(haptics.event == nil)
+    }
+
+    @Test
     func freshCachedSnapshotSkipsARepeatedFullRefresh() async throws {
         let page: PageResponse<NotificationDTO> = try decodeNotificationFixture()
         let api = NotificationAPIMock(page: page)
@@ -944,6 +959,40 @@ struct NotificationFeatureTests {
 }
 
 private final class NotificationFixtureBundleToken {}
+
+private struct NotificationOpenFailureAPI: NotificationAPIProtocol {
+    func notifications(page: Int, size: Int) async throws -> PageResponse<NotificationDTO> {
+        throw APIError.invalidResponse
+    }
+
+    func unreadNotifications() async throws -> [NotificationDTO] {
+        throw APIError.invalidResponse
+    }
+
+    func count() async throws -> NotificationCountDTO {
+        throw APIError.invalidResponse
+    }
+
+    func friendRequestCount() async throws -> Int {
+        throw APIError.invalidResponse
+    }
+
+    func markAsRead(id: NotificationID) async throws -> NotificationDTO {
+        throw APIError.invalidResponse
+    }
+
+    func markAllAsRead() async throws -> Int {
+        throw APIError.invalidResponse
+    }
+
+    func delete(id: NotificationID) async throws {
+        throw APIError.invalidResponse
+    }
+
+    func deleteAllRead() async throws -> Int {
+        throw APIError.invalidResponse
+    }
+}
 
 private final class APNsUnregistrationRequestRecorder: @unchecked Sendable {
     private let lock = NSLock()

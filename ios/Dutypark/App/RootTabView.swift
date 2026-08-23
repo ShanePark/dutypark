@@ -3,12 +3,14 @@ import SwiftUI
 @MainActor
 enum RootAuthenticatedStartupAction {
     static func perform(
+        isOffline: Bool = false,
         startPolling: () -> Void,
         refreshNotifications: () async -> Void,
         activatePush: () async -> Void,
         consumePendingPush: () async -> Void,
         consumePendingDestination: () -> Void
     ) async {
+        guard !isOffline else { return }
         startPolling()
         await refreshNotifications()
         await activatePush()
@@ -21,18 +23,53 @@ enum RootAuthenticatedStartupAction {
 enum RootSceneLifecycleAction {
     static func perform(
         isActive: Bool,
+        isNetworkAvailable: Bool = true,
         setNotificationForeground: (Bool) async -> Void,
         refreshHome: () -> Void,
         refreshConsent: () -> Void,
         resumePush: () async -> Void,
         consumePendingPush: () async -> Void
     ) async {
-        await setNotificationForeground(isActive)
-        guard isActive else { return }
+        // NotificationStore.refreshIfStale() is called when foreground becomes
+        // true. Keep it false while the account is offline so scene activation
+        // cannot create a request storm.
+        await setNotificationForeground(isActive && isNetworkAvailable)
+        guard isActive, isNetworkAvailable else { return }
         refreshHome()
         refreshConsent()
         await resumePush()
         await consumePendingPush()
+    }
+}
+
+/// Coordinates the boundary between a cached session and the online-only root
+/// features. The path monitor only permits an attempt; `revalidate` decides
+/// whether the server session is actually alive.
+@MainActor
+enum RootConnectivityRecoveryAction {
+    static func perform(
+        networkStatus: OfflineNetworkStatus,
+        availability: () -> SessionAvailability,
+        revalidate: () async -> Void,
+        startOnlineWork: () async -> Void
+    ) async {
+        guard networkStatus.isSatisfied else { return }
+        if availability().isOffline {
+            await revalidate()
+        }
+        guard !availability().isOffline else { return }
+        await startOnlineWork()
+    }
+}
+
+nonisolated enum RootOfflineDefaultTabPolicy {
+    static func selectedTab(
+        availability: SessionAvailability,
+        current: AppTab,
+        hasApplied: Bool
+    ) -> AppTab {
+        guard !hasApplied, availability.isOffline else { return current }
+        return .calendar
     }
 }
 
@@ -111,7 +148,12 @@ struct RootTabView: View {
     @EnvironmentObject private var session: SessionStore
     @StateObject private var notifications = NotificationStore()
     @StateObject private var pushCenter = NotificationPushCenter.shared
+    @StateObject private var offlineNetworkMonitor = OfflineNetworkMonitor.shared
+    @StateObject private var offlineSyncCoordinator = OfflineSyncCoordinator.shared
     @State private var selectedTab = AppTab.home
+    @State private var didApplyOfflineDefaultTab = false
+    @State private var didStartOnlineWork = false
+    @State private var isRecoveringConnectivity = false
     @State private var homeRefreshID = 0
     @State private var homeRefreshPolicy = RootHomeRefreshPolicy(initialRefreshAt: Date())
     @State private var homePath: [HomeDestination] = []
@@ -161,10 +203,14 @@ struct RootTabView: View {
                     }
                 }
                 primaryTab(.team, path: $teamPath, showsNavigationBar: true) {
-                    TeamView(onOpenCalendar: openMemberCalendar)
-                        .navigationDestination(for: MemberCalendarRoute.self) { route in
-                            memberCalendar(route)
-                        }
+                    if session.availability.isOffline {
+                        RootOnlineRequiredView(feature: .team)
+                    } else {
+                        TeamView(onOpenCalendar: openMemberCalendar)
+                            .navigationDestination(for: MemberCalendarRoute.self) { route in
+                                memberCalendar(route)
+                            }
+                    }
                 }
                 // The tab bar already names this tab, and the menu carries no toolbar of
                 // its own, so an empty navigation bar would only push the list down.
@@ -228,23 +274,21 @@ struct RootTabView: View {
             .interactiveDismissDisabled(isLoggingOut)
         }
         .task {
-            await RootAuthenticatedStartupAction.perform(
-                startPolling: { notifications.startPolling() },
-                refreshNotifications: { await notifications.refresh() },
-                activatePush: {
-                    await APNsRegistrationManager.shared.activateForAuthenticatedSession()
-                },
-                consumePendingPush: { await openPendingPushIfNeeded() },
-                consumePendingDestination: openPendingDestinationIfNeeded
-            )
+            offlineNetworkMonitor.start()
+            applyOfflineDefaultTabIfNeeded()
+            await startOnlineWorkIfAllowed()
+            await recoverConnectivityIfReachable()
         }
         .onDisappear {
             notifications.stopPolling()
+            offlineSyncCoordinator.cancelAll()
         }
         .onChange(of: scenePhase) { _, phase in
             Task {
                 await RootSceneLifecycleAction.perform(
                     isActive: phase == .active,
+                    isNetworkAvailable: session.availability == .online
+                        && offlineNetworkMonitor.status != .unsatisfied,
                     setNotificationForeground: {
                         await notifications.setForeground($0)
                     },
@@ -255,7 +299,18 @@ struct RootTabView: View {
                     },
                     consumePendingPush: { await openPendingPushIfNeeded() }
                 )
+                guard phase == .active else { return }
+                await recoverConnectivityIfReachable()
             }
+        }
+        .onChange(of: offlineNetworkMonitor.status) { _, status in
+            guard status == .satisfied else { return }
+            Task { await recoverConnectivityIfReachable() }
+        }
+        .onChange(of: session.availability) { _, availability in
+            applyOfflineDefaultTabIfNeeded()
+            guard availability == .online else { return }
+            Task { await startOnlineWorkIfAllowed() }
         }
         .onChange(of: selectedTab) { _, tab in
             if tab == .home {
@@ -294,7 +349,13 @@ struct RootTabView: View {
 
     private var homeTab: some View {
         NavigationStack(path: $homePath) {
-            HomeView(refreshID: homeRefreshID, onRoute: openHomeRoute)
+            Group {
+                if session.availability.isOffline {
+                    RootOnlineRequiredView(feature: .home)
+                } else {
+                    HomeView(refreshID: homeRefreshID, onRoute: openHomeRoute)
+                }
+            }
                 .navigationTitle("")
                 .navigationBarTitleDisplayMode(.inline)
                 .accessibilityIdentifier("screen.home")
@@ -310,18 +371,86 @@ struct RootTabView: View {
                 .navigationDestination(for: HomeDestination.self) { destination in
                     switch destination {
                     case .notifications:
-                        notificationCenter
+                        if session.availability.isOffline {
+                            RootOnlineRequiredView(feature: .notifications)
+                        } else {
+                            notificationCenter
+                        }
                     case .friends:
-                        SocialView(
-                            onMutation: socialDidMutate,
-                            onOpenCalendar: openMemberCalendar
-                        )
+                        if session.availability.isOffline {
+                            RootOnlineRequiredView(feature: .social)
+                        } else {
+                            SocialView(
+                                onMutation: socialDidMutate,
+                                onOpenCalendar: openMemberCalendar
+                            )
+                        }
                     case .memberCalendar(let route):
                         memberCalendar(route)
                     }
                 }
         }
         .primaryTabItem(.home)
+    }
+
+    private func applyOfflineDefaultTabIfNeeded() {
+        guard !didApplyOfflineDefaultTab else { return }
+        didApplyOfflineDefaultTab = true
+        let nextTab = RootOfflineDefaultTabPolicy.selectedTab(
+            availability: session.availability,
+            current: selectedTab,
+            hasApplied: false
+        )
+        if nextTab != selectedTab {
+            selectedTab = nextTab
+            homePath.removeAll()
+        }
+    }
+
+    private func startOnlineWorkIfAllowed() async {
+        guard session.availability == .online,
+              offlineNetworkMonitor.status != .unsatisfied,
+              let accountID = authenticatedMemberID
+        else { return }
+
+        if !didStartOnlineWork {
+            didStartOnlineWork = true
+            await RootAuthenticatedStartupAction.perform(
+                isOffline: false,
+                startPolling: { notifications.startPolling() },
+                refreshNotifications: { await notifications.refresh() },
+                activatePush: {
+                    await APNsRegistrationManager.shared.activateForAuthenticatedSession()
+                },
+                consumePendingPush: { await openPendingPushIfNeeded() },
+                consumePendingDestination: openPendingDestinationIfNeeded
+            )
+        }
+        guard session.availability == .online,
+              authenticatedMemberID == accountID
+        else { return }
+        await notifications.setForeground(scenePhase == .active)
+        await offlineSyncCoordinator.synchronize(
+            accountID: accountID,
+            networkStatus: offlineNetworkMonitor.status == .unsatisfied
+                ? .unsatisfied
+                : .satisfied
+        )
+    }
+
+    private func recoverConnectivityIfReachable() async {
+        guard offlineNetworkMonitor.status.isSatisfied,
+              !isRecoveringConnectivity
+        else { return }
+
+        isRecoveringConnectivity = true
+        defer { isRecoveringConnectivity = false }
+        await RootConnectivityRecoveryAction.perform(
+            networkStatus: offlineNetworkMonitor.status,
+            availability: { session.availability },
+            revalidate: { await session.revalidate() },
+            startOnlineWork: { await startOnlineWorkIfAllowed() }
+        )
     }
 
     private func primaryTab<Content: View>(
@@ -401,6 +530,7 @@ struct RootTabView: View {
         Binding(
             get: { showsNotifications },
             set: { isPresented in
+                guard !session.availability.isOffline else { return }
                 guard isPresented != showsNotifications else { return }
                 showsNotifications = isPresented
                 DPHapticCenter.shared.emit(RootHapticPolicy.notificationDropdownFeedback)
@@ -490,7 +620,11 @@ struct RootTabView: View {
     private func moreDestinationView(_ destination: MoreDestination) -> some View {
         switch destination {
         case .notifications:
-            notificationCenter
+            if session.availability.isOffline {
+                RootOnlineRequiredView(feature: .notifications)
+            } else {
+                notificationCenter
+            }
         case .admin:
             if authenticatedMember?.isAdmin == true {
                 AdminRootView(onOpenCalendar: openMemberCalendar)
@@ -501,10 +635,14 @@ struct RootTabView: View {
                 )
             }
         case .friends:
-            SocialView(
-                onMutation: socialDidMutate,
-                onOpenCalendar: openMemberCalendar
-            )
+            if session.availability.isOffline {
+                RootOnlineRequiredView(feature: .social)
+            } else {
+                SocialView(
+                    onMutation: socialDidMutate,
+                    onOpenCalendar: openMemberCalendar
+                )
+            }
         case .guide:
             PublicGuideView()
         case .support:
@@ -744,7 +882,10 @@ struct RootTabView: View {
         await RootPendingPushAction.perform(
             consume: pushCenter.consumePendingNotificationID,
             open: { notificationID in
-                guard let route = try await notifications.open(id: notificationID) else {
+                guard let route = try await notifications.open(
+                    id: notificationID,
+                    emitsHaptic: false
+                ) else {
                     return false
                 }
                 return await openNotificationRoute(route)
@@ -959,6 +1100,40 @@ nonisolated enum RootHapticPolicy {
 nonisolated enum RootTabSelectionOrigin: Equatable, Sendable {
     case tabBar
     case explicitRoute
+}
+
+private enum RootOnlineRequiredFeature {
+    case home
+    case social
+    case team
+    case notifications
+
+    var titleKey: String { "root.offline.onlineOnly.\(rawValue).title" }
+
+    var rawValue: String {
+        switch self {
+        case .home: "home"
+        case .social: "social"
+        case .team: "team"
+        case .notifications: "notifications"
+        }
+    }
+}
+
+private struct RootOnlineRequiredView: View {
+    let feature: RootOnlineRequiredFeature
+
+    var body: some View {
+        ContentUnavailableView {
+            Label(
+                RootChromeLocalization.localizable(feature.titleKey),
+                systemImage: "wifi.exclamationmark"
+            )
+        } description: {
+            Text(RootChromeLocalization.localizable("root.offline.onlineOnly.message"))
+        }
+        .accessibilityIdentifier("offline.online-required.\(feature.rawValue)")
+    }
 }
 
 private enum HomeDestination: Hashable {

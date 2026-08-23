@@ -193,16 +193,23 @@ final class NotificationStore: ObservableObject {
     }
 
     /// Resolves a notification opened from an APNs payload using the same server contract as the web app.
-    func open(id: NotificationID) async throws -> NotificationRoute? {
+    func open(
+        id: NotificationID,
+        emitsHaptic: Bool = true
+    ) async throws -> NotificationRoute? {
         do {
             let notification = try await api.markAsRead(id: id)
             replace(notification)
             unreadCount = try await api.count().unreadCount
             await updateBadge()
-            haptics.emit(.routine)
+            if emitsHaptic {
+                haptics.emit(.routine)
+            }
             return NotificationRoute(notification: notification)
         } catch {
-            haptics.emit(.error)
+            if emitsHaptic {
+                haptics.emit(.error)
+            }
             throw error
         }
     }

@@ -107,6 +107,7 @@ private struct CalloutTail: Shape {
 
 struct CalendarView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var session: SessionStore
     @StateObject private var model: CalendarViewModel
     @StateObject private var todoDetailModel = TodoViewModel()
     @State private var showsSearch = false
@@ -171,7 +172,31 @@ struct CalendarView: View {
         // pop and the gesture policy declines it.
         .dpInteractivePopGestureEnabled()
         .toolbar { calendarToolbar }
-        .task { if model.days.isEmpty { await model.load() } }
+        .task {
+            configureFromSession()
+            if model.days.isEmpty {
+                await model.load()
+            } else {
+                model.resumeServerRecoveryIfNeeded()
+            }
+        }
+        .onDisappear { model.cancelBackgroundTasks() }
+        .onChange(of: session.availability) { _, availability in
+            configureFromSession()
+            Task {
+                if availability == .online || model.days.isEmpty {
+                    await model.load()
+                }
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(
+            for: Notification.Name("offlineSyncDidComplete")
+        )) { notification in
+            guard case .authenticated(let member) = session.state,
+                  offlineSyncAccountID(from: notification) == member.id
+            else { return }
+            Task { await model.handleOfflineSyncCompleted() }
+        }
         .fullScreenCover(item: $model.selectedDay) { day in
             DPModalOverlay(
                 onDismiss: {
@@ -358,6 +383,9 @@ struct CalendarView: View {
     private var calendarContent: some View {
         ScrollView {
             LazyVStack(spacing: DPSpacing.small) {
+                if model.isShowingCachedData || model.pendingScheduleCount > 0 {
+                    offlineStateBanner
+                }
                 if showsDutyToolbar {
                     dutyToolbar
                 }
@@ -371,6 +399,54 @@ struct CalendarView: View {
             .padding(.bottom, DPSpacing.large)
         }
         .refreshable { await model.load() }
+    }
+
+    private var offlineStateBanner: some View {
+        VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+            if model.isShowingCachedData {
+                Label {
+                    Text(CalendarLocalization.text("calendar.offline.cached"))
+                } icon: {
+                    Image(systemName: "wifi.slash")
+                }
+                if let storedAt = model.cacheStoredAt {
+                    Text(CalendarLocalization.format(
+                        "calendar.offline.cachedAt",
+                        DateFormatter.localizedString(from: storedAt, dateStyle: .short, timeStyle: .short)
+                    ))
+                    .font(.caption)
+                    .foregroundStyle(DPColor.textSecondary)
+                }
+            }
+            if model.pendingScheduleCount > 0 {
+                Text(CalendarLocalization.format(
+                    "calendar.offline.pending",
+                    model.pendingScheduleCount
+                ))
+                .font(.caption)
+                .foregroundStyle(DPColor.textSecondary)
+            }
+        }
+        .font(.caption)
+        .foregroundStyle(DPColor.textPrimary)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, DPSpacing.small)
+        .padding(.vertical, DPSpacing.extraSmall)
+        .background(DPColor.backgroundSecondary, in: RoundedRectangle(cornerRadius: 10))
+        .accessibilityIdentifier("calendar.offline.banner")
+    }
+
+    private func configureFromSession() {
+        guard case .authenticated(let member) = session.state else { return }
+        model.configure(accountID: member.id, isOffline: session.availability.isOffline)
+    }
+
+    private func offlineSyncAccountID(from notification: Notification) -> MemberID? {
+        if let accountID = notification.object as? MemberID { return accountID }
+        if let accountID = notification.object as? NSNumber { return accountID.int64Value }
+        if let accountID = notification.userInfo?["accountID"] as? MemberID { return accountID }
+        if let accountID = notification.userInfo?["accountID"] as? NSNumber { return accountID.int64Value }
+        return nil
     }
 
     @ToolbarContentBuilder
