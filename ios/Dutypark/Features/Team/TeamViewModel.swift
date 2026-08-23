@@ -51,7 +51,7 @@ final class TeamViewModel: ObservableObject {
         schedules.indices.contains(selectedIndex) ? schedules[selectedIndex] : []
     }
 
-    func load(memberID: MemberID?) async {
+    func load(memberID: MemberID?, emitErrorFeedback: Bool = false) async {
         guard !isLoading else { return }
         let selectedDayBeforeLoad = selectedDay
         let requestedYear = year
@@ -157,11 +157,11 @@ final class TeamViewModel: ObservableObject {
                 targetYear: requestedYear,
                 targetMonth: requestedMonth
             )
-            await loadShifts()
+            await loadShifts(emitErrorFeedback: emitErrorFeedback)
             hasLoaded = true
         } catch {
             loadFailed = true
-            presentError()
+            presentError(emitHaptic: emitErrorFeedback)
         }
     }
 
@@ -254,7 +254,7 @@ final class TeamViewModel: ObservableObject {
         if didChangeSelection {
             haptics.emit(.selection)
         }
-        await loadShifts()
+        await loadShifts(emitErrorFeedback: true)
     }
 
     func newSchedule() {
@@ -332,10 +332,12 @@ final class TeamViewModel: ObservableObject {
         }
     }
 
-    private func presentError(_ message: String? = nil) {
+    private func presentError(_ message: String? = nil, emitHaptic: Bool = true) {
         errorMessage = message
         showsError = true
-        haptics.emit(.error)
+        if emitHaptic {
+            haptics.emit(.error)
+        }
     }
 
     func duty(for day: TeamDayDTO) -> DutyDTO? {
@@ -343,7 +345,7 @@ final class TeamViewModel: ObservableObject {
     }
 
     private func reloadForChangedMonth() async {
-        await load(memberID: memberID)
+        await load(memberID: memberID, emitErrorFeedback: true)
     }
 
     func applyManagedTeam(_ updatedTeam: TeamDTO) {
@@ -358,13 +360,13 @@ final class TeamViewModel: ObservableObject {
         guard self.year == year, self.month == month, let memberID else { return }
         do {
             duties = try await repository.duties(memberID: memberID, year: year, month: month)
-            await loadShifts()
+            await loadShifts(emitErrorFeedback: true)
         } catch {
             presentError()
         }
     }
 
-    private func loadShifts() async {
+    private func loadShifts(emitErrorFeedback: Bool = false) async {
         guard team != nil, let day = selectedDay else {
             shifts = []
             return
@@ -373,7 +375,7 @@ final class TeamViewModel: ObservableObject {
             shifts = try await repository.shifts(year: day.year, month: day.month, day: day.day)
         } catch {
             shifts = []
-            presentError()
+            presentError(emitHaptic: emitErrorFeedback)
         }
     }
 

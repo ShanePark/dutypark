@@ -370,6 +370,69 @@ struct TeamFeatureTests {
     }
 
     @Test @MainActor
+    func passiveInitialTeamLoadFailureDoesNotEmitHaptics() async {
+        TeamURLProtocolStub.handler = { request in
+            Self.response(request, status: 503)
+        }
+        defer { TeamURLProtocolStub.handler = nil }
+
+        let haptics = DPHapticCenter()
+        let viewModel = TeamViewModel(
+            repository: TeamRepository(client: makeClient()),
+            haptics: haptics
+        )
+
+        await viewModel.load(memberID: 1)
+
+        #expect(viewModel.loadFailed)
+        #expect(haptics.event == nil)
+    }
+
+    @Test @MainActor
+    func passiveInitialTeamLoadShiftFailureDoesNotEmitHaptics() async {
+        TeamURLProtocolStub.handler = { request in
+            if request.url?.path == "/api/teams/shift" {
+                return Self.response(request, status: 503)
+            }
+            return Self.successfulTeamLoadResponse(request)
+        }
+        defer { TeamURLProtocolStub.handler = nil }
+
+        let haptics = DPHapticCenter()
+        let viewModel = TeamViewModel(
+            repository: TeamRepository(client: makeClient()),
+            haptics: haptics
+        )
+
+        await viewModel.load(memberID: 1)
+
+        #expect(viewModel.team != nil)
+        #expect(viewModel.loadFailed == false)
+        #expect(viewModel.shifts.isEmpty)
+        #expect(haptics.event == nil)
+    }
+
+    @Test @MainActor
+    func explicitTeamLoadRetryEmitsOneErrorHaptic() async {
+        TeamURLProtocolStub.handler = { request in
+            Self.response(request, status: 503)
+        }
+        defer { TeamURLProtocolStub.handler = nil }
+
+        let haptics = DPHapticCenter()
+        let viewModel = TeamViewModel(
+            repository: TeamRepository(client: makeClient()),
+            haptics: haptics
+        )
+
+        await viewModel.load(memberID: 1, emitErrorFeedback: true)
+
+        #expect(viewModel.loadFailed)
+        #expect(haptics.event?.kind == .error)
+        #expect(haptics.event?.id == 1)
+    }
+
+    @Test @MainActor
     func daySelectionTicksOnlyWhenTheSelectedDayActuallyChanges() async throws {
         TeamURLProtocolStub.handler = { request in
             Self.successfulTeamLoadResponse(request)

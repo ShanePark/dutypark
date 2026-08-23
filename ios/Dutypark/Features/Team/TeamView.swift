@@ -26,7 +26,7 @@ struct TeamView: View {
                     message: nil,
                     retryTitle: LocalizedStringKey(teamLocalized("team.common.retry"))
                 ) {
-                    Task { await viewModel.load(memberID: memberID) }
+                    Task { await viewModel.load(memberID: memberID, emitErrorFeedback: true) }
                 }
             } else if let team = viewModel.team {
                 teamContent(team)
@@ -53,7 +53,9 @@ struct TeamView: View {
             }
         }
         .task { await viewModel.loadIfNeeded(memberID: memberID) }
-        .refreshable { await viewModel.load(memberID: memberID) }
+        .refreshable {
+            await viewModel.load(memberID: memberID, emitErrorFeedback: true)
+        }
         .alert(
             Text("team.common.error", tableName: "Team"),
             isPresented: $viewModel.showsError
