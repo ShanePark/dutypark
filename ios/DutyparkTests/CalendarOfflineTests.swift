@@ -4,6 +4,54 @@ import XCTest
 
 @MainActor
 final class CalendarOfflineTests: XCTestCase {
+    func testVisibleCalendarObservesNetworkRecoveryWithoutMonthNavigation() throws {
+        let source = try String(
+            contentsOf: URL(fileURLWithPath: #filePath)
+                .deletingLastPathComponent()
+                .deletingLastPathComponent()
+                .appending(path: "Dutypark/Features/Calendar/CalendarView.swift"),
+            encoding: .utf8
+        )
+
+        XCTAssertTrue(source.contains("@StateObject private var offlineNetworkMonitor"))
+        XCTAssertTrue(source.contains(".onChange(of: offlineNetworkMonitor.status)"))
+        XCTAssertTrue(source.contains("await model.handleNetworkBecameReachable()"))
+    }
+
+    func testNetworkRecoveryRefreshesCachedMonthWithoutNavigation() async throws {
+        let cache = CalendarOfflineCacheStub(
+            account: Self.accountSnapshot(),
+            month: Self.monthSnapshot(storedAt: Date(timeIntervalSince1970: 123))
+        )
+        let repository = CalendarOfflineRepository(monthFailures: [.transport])
+        let haptics = DPHapticCenter()
+        let model = CalendarViewModel(
+            repository: repository,
+            now: Self.date(2026, 8, 12),
+            memberID: 42,
+            accountID: 42,
+            hapticCenter: haptics,
+            cache: cache,
+            outbox: CalendarOfflineOutboxStub(),
+            serverRecoverySleeper: { _ in
+                try await Task.sleep(for: .seconds(60))
+            }
+        )
+
+        await model.load()
+        XCTAssertTrue(model.isOfflineMode)
+        XCTAssertTrue(model.isShowingCachedData)
+
+        await model.handleNetworkBecameReachable()
+
+        XCTAssertFalse(model.isOfflineMode)
+        XCTAssertFalse(model.isShowingCachedData)
+        XCTAssertNil(model.cacheStoredAt)
+        let monthRequestCount = await repository.monthRequestCount
+        XCTAssertGreaterThanOrEqual(monthRequestCount, 2)
+        XCTAssertNil(haptics.event, "Automatic network recovery must remain haptic-free")
+    }
+
     func testTransportUsesSameAccountMonthCacheAndExposesSnapshotDate() async throws {
         let storedAt = Date(timeIntervalSince1970: 123)
         let cache = CalendarOfflineCacheStub(

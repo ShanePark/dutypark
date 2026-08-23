@@ -223,6 +223,27 @@ final class CalendarViewModel: ObservableObject {
         await load()
     }
 
+    /// Wakes a visible cached calendar as soon as the network path becomes usable.
+    /// Session availability can remain online when only a calendar request failed,
+    /// so waiting for the session observer would otherwise require a month change.
+    func handleNetworkBecameReachable() async {
+        guard !prefersOfflineCache,
+              isOfflineMode,
+              !serverRecoveryAttemptInProgress,
+              isMyCalendar,
+              let accountID = cacheAccountID
+        else { return }
+
+        cancelServerRecovery(clearPending: false)
+        serverRecoveryPending = true
+        switch await attemptServerRecovery(accountID: accountID) {
+        case .recovered, .stop:
+            serverRecoveryPending = false
+        case .retry:
+            scheduleServerRecovery()
+        }
+    }
+
     func load(emitErrorFeedback: Bool = false) async {
 #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-ui-testing-authenticated") {

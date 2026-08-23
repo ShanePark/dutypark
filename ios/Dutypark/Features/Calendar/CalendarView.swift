@@ -108,6 +108,7 @@ private struct CalloutTail: Shape {
 struct CalendarView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var session: SessionStore
+    @StateObject private var offlineNetworkMonitor = OfflineNetworkMonitor.shared
     @StateObject private var model: CalendarViewModel
     @StateObject private var todoDetailModel = TodoViewModel()
     @State private var showsSearch = false
@@ -188,6 +189,10 @@ struct CalendarView: View {
                     await model.load()
                 }
             }
+        }
+        .onChange(of: offlineNetworkMonitor.status) { _, status in
+            guard status == .satisfied, session.availability == .online else { return }
+            Task { await model.handleNetworkBecameReachable() }
         }
         .onReceive(NotificationCenter.default.publisher(
             for: Notification.Name("offlineSyncDidComplete")
