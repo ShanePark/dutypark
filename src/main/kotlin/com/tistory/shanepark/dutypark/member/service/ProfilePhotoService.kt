@@ -2,6 +2,7 @@ package com.tistory.shanepark.dutypark.member.service
 
 import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
 import com.tistory.shanepark.dutypark.attachment.repository.AttachmentRepository
+import com.tistory.shanepark.dutypark.attachment.service.AttachmentService
 import com.tistory.shanepark.dutypark.attachment.service.AttachmentValidationService
 import com.tistory.shanepark.dutypark.attachment.service.ImageThumbnailGenerator
 import com.tistory.shanepark.dutypark.attachment.service.StoragePathResolver
@@ -20,6 +21,7 @@ import java.util.*
 class ProfilePhotoService(
     private val memberRepository: MemberRepository,
     private val attachmentRepository: AttachmentRepository,
+    private val attachmentService: AttachmentService,
     private val storagePathResolver: StoragePathResolver,
     private val validationService: AttachmentValidationService,
     private val thumbnailGenerator: ImageThumbnailGenerator,
@@ -53,6 +55,7 @@ class ProfilePhotoService(
         val member = memberRepository.findById(loginMember.id).orElseThrow()
 
         deleteExistingPhotos(member.profilePhotoPath)
+        deleteLegacyProfilePhotos(member.id!!)
 
         val directory = storagePathResolver.resolvePermanentDirectory(
             AttachmentContextType.PROFILE,
@@ -81,6 +84,7 @@ class ProfilePhotoService(
         val member = memberRepository.findById(loginMember.id).orElseThrow()
 
         deleteExistingPhotos(member.profilePhotoPath)
+        deleteLegacyProfilePhotos(member.id!!)
         member.profilePhotoPath = null
         member.incrementProfilePhotoVersion()
 
@@ -92,6 +96,20 @@ class ProfilePhotoService(
 
         deleteFile(photoPath)
         deleteFile(toThumbnailPath(photoPath))
+    }
+
+    /**
+     * Profile attachments predate Member.profilePhotoPath. They must be removed
+     * together with the current path so an explicit replacement/deletion cannot
+     * expose the old file through the legacy read fallback.
+     */
+    private fun deleteLegacyProfilePhotos(memberId: Long) {
+        val legacyAttachments = attachmentRepository.findAllByContextTypeAndContextId(
+            AttachmentContextType.PROFILE,
+            memberId.toString(),
+        )
+
+        legacyAttachments.forEach(attachmentService::deleteAttachment)
     }
 
     private fun deleteFile(relativePath: String) {
