@@ -53,7 +53,8 @@ class TodoController(
     @PostMapping
     fun addTodo(
         @Login loginMember: LoginMember,
-        @RequestBody @Validated todoRequest: TodoRequest
+        @RequestBody @Validated todoRequest: TodoRequest,
+        @RequestHeader("Idempotency-Key", required = false) idempotencyKey: String? = null,
     ): TodoResponse {
         return todoService.addTodo(
             loginMember = loginMember,
@@ -63,7 +64,8 @@ class TodoController(
             dueDate = todoRequest.dueDate,
             tagFriendIds = todoRequest.tagFriendIds.orEmpty(),
             attachmentSessionId = todoRequest.attachmentSessionId,
-            orderedAttachmentIds = todoRequest.orderedAttachmentIds
+            orderedAttachmentIds = todoRequest.orderedAttachmentIds,
+            idempotencyKey = idempotencyKey,
         )
     }
 

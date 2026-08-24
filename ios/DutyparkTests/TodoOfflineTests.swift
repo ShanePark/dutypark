@@ -5,6 +5,53 @@ import Testing
 @MainActor
 struct TodoOfflineTests {
     @Test
+    func calendarTodoDetailBindsItsSessionContext() throws {
+        let root = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let source = try String(
+            contentsOf: root.appending(path: "Dutypark/Features/Calendar/CalendarView.swift"),
+            encoding: .utf8
+        )
+        let modalSource = try String(
+            contentsOf: root.appending(path: "Dutypark/Features/Todo/TodoModalViews.swift"),
+            encoding: .utf8
+        )
+
+        #expect(source.contains("todoDetailModel.configureSession"))
+        #expect(source.contains(".onChange(of: session.state)"))
+        #expect(modalSource.contains("!model.canPerformOnlineMutations"))
+        #expect(modalSource.contains("if todo.hasAttachments, model.canPerformOnlineMutations"))
+    }
+
+    @Test
+    func calendarDetailBindsOfflineSessionBeforeAttachmentOrMutations() async {
+        let repository = TodoOfflineRepository()
+        let model = TodoViewModel(
+            repository: repository,
+            cache: TodoOfflineCacheFake(),
+            outbox: TodoOfflineOutboxFake()
+        )
+        model.configureSession(accountID: 42, availability: .offline)
+        let todo = makeOfflineTodo(title: "Cached task", hasAttachments: true)
+        var draft = TodoDraft(todo: todo)
+        draft.title = "Edited while offline"
+
+        #expect(!(await model.update(todo: todo, draft: draft)))
+        #expect(model.errorKey == "todo.error.offlineReadOnly")
+
+        model.errorKey = nil
+        await model.loadAttachments(for: todo)
+        #expect(model.errorKey == nil)
+
+        #expect(!(await model.delete(todo)))
+        #expect(!(await model.leaveTag(todo)))
+        #expect(model.errorKey == "todo.error.offlineReadOnly")
+        #expect(await repository.fetchAttachmentsCount == 0)
+        #expect(await repository.mutationCallCount == 0)
+    }
+
+    @Test
     func loadUsesCachedBoardAndFriendsWhenTransportFails() async {
         let cachedTodo = makeOfflineTodo(title: "Cached task")
         let cachedBoard = makeOfflineBoard(todo: [cachedTodo])
@@ -419,6 +466,8 @@ private actor TodoOfflineRepository: TodoRepository {
     private var friendsSequenceIndex = 0
     private(set) var fetchBoardCount = 0
     private(set) var createRequest: TodoRequest?
+    private(set) var fetchAttachmentsCount = 0
+    private(set) var mutationCallCount = 0
 
     init(
         board: TodoBoardDTO = makeOfflineBoard(),
@@ -455,22 +504,44 @@ private actor TodoOfflineRepository: TodoRepository {
         }
         return try friendsResult.get()
     }
-    func fetchAttachments(todoID: TodoID) async throws -> [AttachmentDTO] { [] }
+    func fetchAttachments(todoID: TodoID) async throws -> [AttachmentDTO] {
+        fetchAttachmentsCount += 1
+        return []
+    }
 
     func create(_ request: TodoRequest) async throws -> TodoDTO {
         createRequest = request
         return try createResult.get()
     }
 
-    func update(id: TodoID, request: TodoRequest) async throws -> TodoDTO { throw APIError.transport }
-    func delete(id: TodoID) async throws { throw APIError.transport }
-    func complete(id: TodoID) async throws -> TodoDTO { throw APIError.transport }
-    func reopen(id: TodoID) async throws -> TodoDTO { throw APIError.transport }
-    func changeStatus(id: TodoID, request: TodoStatusChangeRequest) async throws -> TodoDTO {
+    func update(id: TodoID, request: TodoRequest) async throws -> TodoDTO {
+        mutationCallCount += 1
         throw APIError.transport
     }
-    func updatePositions(_ request: TodoPositionUpdateRequest) async throws { throw APIError.transport }
-    func leaveTag(id: TodoID) async throws { throw APIError.transport }
+    func delete(id: TodoID) async throws {
+        mutationCallCount += 1
+        throw APIError.transport
+    }
+    func complete(id: TodoID) async throws -> TodoDTO {
+        mutationCallCount += 1
+        throw APIError.transport
+    }
+    func reopen(id: TodoID) async throws -> TodoDTO {
+        mutationCallCount += 1
+        throw APIError.transport
+    }
+    func changeStatus(id: TodoID, request: TodoStatusChangeRequest) async throws -> TodoDTO {
+        mutationCallCount += 1
+        throw APIError.transport
+    }
+    func updatePositions(_ request: TodoPositionUpdateRequest) async throws {
+        mutationCallCount += 1
+        throw APIError.transport
+    }
+    func leaveTag(id: TodoID) async throws {
+        mutationCallCount += 1
+        throw APIError.transport
+    }
 }
 
 private actor TodoOfflineCacheFake: OfflineCacheProviding {
@@ -604,7 +675,8 @@ nonisolated private func makeOfflineFriend(id: MemberID, name: String) -> Friend
 nonisolated private func makeOfflineTodo(
     id: TodoID = UUID(),
     title: String,
-    status: TodoStatus = .todo
+    status: TodoStatus = .todo,
+    hasAttachments: Bool = false
 ) -> TodoDTO {
     TodoDTO(
         id: id.uuidString,
@@ -620,7 +692,7 @@ nonisolated private func makeOfflineTodo(
         owner: "Me",
         taggedByMember: nil,
         tags: [],
-        hasAttachments: false
+        hasAttachments: hasAttachments
     )
 }
 

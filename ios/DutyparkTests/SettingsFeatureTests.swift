@@ -168,6 +168,26 @@ struct SettingsFeatureTests {
     }
 
     @Test
+    func managedAccountSwitchKeepsTheConfirmationOpenOnFailure() throws {
+        let root = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let source = try String(
+            contentsOf: root.appending(path: "Dutypark/Features/Settings/MyInfoView.swift"),
+            encoding: .utf8
+        )
+        let switchCase = try #require(
+            source.range(of: "case .switchManagedAccount(let id, _):")
+        )
+        let switchSource = source[switchCase.lowerBound...]
+
+        #expect(switchSource.contains("try await session.impersonate(memberId: id)"))
+        #expect(switchSource.contains("DPHapticCenter.shared.emit(.error)"))
+        #expect(!switchSource.contains("model.noticeKey = \"settings.error.generic\""))
+        #expect(!switchSource.contains("try? await session.impersonate(memberId: id)"))
+    }
+
+    @Test
     func modalDismissPolicyKeepsBackdropAndAccessibilityRulesIndependent() {
         let explicitOnly = DPModalDismissPolicy(
             closeOnBackdrop: false,

@@ -113,6 +113,23 @@ struct AppRootView: View {
                 }
             }
         }
+        .alert(
+            "auth.transition.failure.title",
+            isPresented: Binding(
+                get: { session.authenticationTransitionFailure != nil },
+                set: {
+                    if !$0 {
+                        session.dismissAuthenticationTransitionFailure()
+                    }
+                }
+            )
+        ) {
+            Button("auth.transition.failure.ok", role: .cancel) {
+                session.dismissAuthenticationTransitionFailure()
+            }
+        } message: {
+            Text("auth.transition.failure.message")
+        }
     }
 
     #if DEBUG

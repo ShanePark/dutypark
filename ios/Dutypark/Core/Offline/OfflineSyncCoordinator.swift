@@ -2,10 +2,9 @@ import Combine
 import Foundation
 
 nonisolated protocol OfflineSyncTransport: Sendable {
-    /// Checks whether the server already contains the create represented by
-    /// this request.  Create operation IDs are intentionally local-only; a
-    /// transport must resolve an ambiguous response by comparing server
-    /// state before issuing another POST.
+    /// Legacy state lookup retained for older integrations and diagnostics.
+    /// The coordinator does not use content-based matching for queued creates:
+    /// it always sends the operation ID with the create request.
     func scheduleAlreadyExists(
         accountID: MemberID,
         request: ScheduleSaveDTO
@@ -15,14 +14,36 @@ nonisolated protocol OfflineSyncTransport: Sendable {
         request: TodoRequest
     ) async throws -> Bool
     func createSchedule(_ request: ScheduleSaveDTO) async throws -> ScheduleSaveResponse
+    func createSchedule(
+        _ request: ScheduleSaveDTO,
+        operationID: UUID
+    ) async throws -> ScheduleSaveResponse
     func createTodo(_ request: TodoRequest) async throws -> TodoDTO
+    func createTodo(
+        _ request: TodoRequest,
+        operationID: UUID
+    ) async throws -> TodoDTO
 }
 
 extension OfflineSyncTransport {
-    /// Existing test transports and integrations can opt into preflight
-    /// lookup incrementally.  Production's API transport overrides both
-    /// methods. A missing lookup must fail closed: posting after an ambiguous
-    /// response could create a duplicate.
+    /// The operation-aware overload keeps existing in-memory/test transports
+    /// source-compatible while production transports send the durable key.
+    func createSchedule(
+        _ request: ScheduleSaveDTO,
+        operationID: UUID
+    ) async throws -> ScheduleSaveResponse {
+        try await createSchedule(request)
+    }
+
+    func createTodo(
+        _ request: TodoRequest,
+        operationID: UUID
+    ) async throws -> TodoDTO {
+        try await createTodo(request)
+    }
+
+    /// Existing test transports and integrations can retain the legacy lookup
+    /// methods. They are not part of the idempotent create path.
     func scheduleAlreadyExists(
         accountID: MemberID,
         request: ScheduleSaveDTO
@@ -265,11 +286,37 @@ nonisolated struct APIOfflineSyncTransport: OfflineSyncTransport {
         )
     }
 
+    func createSchedule(
+        _ request: ScheduleSaveDTO,
+        operationID: UUID
+    ) async throws -> ScheduleSaveResponse {
+        try await client.request(
+            "schedules",
+            method: .post,
+            body: request,
+            headers: ["Idempotency-Key": operationID.uuidString],
+            authenticationFailureHandling: .awaitCompletion
+        )
+    }
+
     func createTodo(_ request: TodoRequest) async throws -> TodoDTO {
         try await client.request(
             "todos",
             method: .post,
             body: request,
+            authenticationFailureHandling: .awaitCompletion
+        )
+    }
+
+    func createTodo(
+        _ request: TodoRequest,
+        operationID: UUID
+    ) async throws -> TodoDTO {
+        try await client.request(
+            "todos",
+            method: .post,
+            body: request,
+            headers: ["Idempotency-Key": operationID.uuidString],
             authenticationFailureHandling: .awaitCompletion
         )
     }
@@ -627,43 +674,32 @@ final class OfflineSyncCoordinator: ObservableObject {
             return .cancelled
         }
         do {
-            var shouldCreate = true
             switch entry.payload {
             case .scheduleCreate(let request):
                 let request = try normalizedScheduleRequest(
                     request,
                     accountID: entry.accountID
                 )
-                if entry.requiresPreflight || entry.serverAttempted {
-                    shouldCreate = try await transport.scheduleAlreadyExists(
-                        accountID: entry.accountID,
-                        request: request
-                    ) == false
-                }
-                if shouldCreate {
-                    try await outbox.markServerAttempted(
-                        accountID: entry.accountID,
-                        operationID: entry.operationID
-                    )
-                    _ = try await transport.createSchedule(request)
-                }
+                try await outbox.markServerAttempted(
+                    accountID: entry.accountID,
+                    operationID: entry.operationID
+                )
+                _ = try await transport.createSchedule(
+                    request,
+                    operationID: entry.operationID
+                )
             case .todoCreate(let request):
                 let request = try normalizedTodoRequest(
                     request
                 )
-                if entry.requiresPreflight || entry.serverAttempted {
-                    shouldCreate = try await transport.todoAlreadyExists(
-                        accountID: entry.accountID,
-                        request: request
-                    ) == false
-                }
-                if shouldCreate {
-                    try await outbox.markServerAttempted(
-                        accountID: entry.accountID,
-                        operationID: entry.operationID
-                    )
-                    _ = try await transport.createTodo(request)
-                }
+                try await outbox.markServerAttempted(
+                    accountID: entry.accountID,
+                    operationID: entry.operationID
+                )
+                _ = try await transport.createTodo(
+                    request,
+                    operationID: entry.operationID
+                )
             }
             guard isCurrent(accountID: entry.accountID, generation: generation) else {
                 return .cancelled
@@ -865,9 +901,8 @@ final class OfflineSyncCoordinator: ObservableObject {
         guard request.memberId == accountID else {
             throw OfflineSyncRequestError.accountMismatch
         }
-        // operationID is an outbox-only identity.  Keep the legacy property
-        // nil so request encoding cannot accidentally reintroduce it while
-        // older feature code still compiles against the transitional model.
+        // The operation ID is transported in the Idempotency-Key header, not
+        // in the request body, so this normalization remains API-compatible.
         return ScheduleSaveDTO(
             id: request.id,
             memberId: request.memberId,
@@ -886,7 +921,8 @@ final class OfflineSyncCoordinator: ObservableObject {
     private func normalizedTodoRequest(
         _ request: TodoRequest
     ) throws -> TodoRequest {
-        // operationID is an outbox-only identity; see the schedule path.
+        // The operation ID is transported in the Idempotency-Key header, not
+        // in the request body, so this normalization remains API-compatible.
         return TodoRequest(
             title: request.title,
             content: request.content,

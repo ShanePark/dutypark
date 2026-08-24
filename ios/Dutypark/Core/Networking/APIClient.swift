@@ -175,6 +175,10 @@ private actor AuthenticationMode {
         return makeRequestSnapshot()
     }
 
+    func isCurrentEpoch(_ expectedEpoch: UInt64) -> Bool {
+        authenticationEpoch == expectedEpoch
+    }
+
     private func makeRequestSnapshot() -> AuthenticationRequestSnapshot {
         AuthenticationRequestSnapshot(
             session: authenticationSessionContext,
@@ -386,6 +390,7 @@ nonisolated final class APIClient: Sendable {
             headers: headers,
             scope: scope,
             authenticationEpoch: authenticationSnapshot.epoch,
+            authenticationSession: authenticationSnapshot.session,
             authenticationCookies: authenticationSnapshot.cookies
         )
 
@@ -398,6 +403,7 @@ nonisolated final class APIClient: Sendable {
                             method: .post,
                             scope: .api,
                             authenticationEpoch: authenticationSnapshot.epoch,
+                            authenticationSession: authenticationSnapshot.session,
                             authenticationCookies: authenticationSnapshot.cookies
                         )
                         try validate(refreshResponse, data: refreshData)
@@ -426,6 +432,7 @@ nonisolated final class APIClient: Sendable {
                     headers: headers,
                     scope: scope,
                     authenticationEpoch: retrySnapshot.epoch,
+                    authenticationSession: retrySnapshot.session,
                     authenticationCookies: retrySnapshot.cookies
                 )
                 if retryResponse.statusCode == 401 {
@@ -508,6 +515,7 @@ nonisolated final class APIClient: Sendable {
         headers: [String: String] = [:],
         scope: APIRequestScope = .api,
         authenticationEpoch: UInt64,
+        authenticationSession: AuthenticationSessionContext?,
         authenticationCookies: [AuthenticationCookieSnapshot]
     ) async throws -> (Data, HTTPURLResponse) {
 #if DEBUG
@@ -581,6 +589,17 @@ nonisolated final class APIClient: Sendable {
             from: httpResponse,
             ifEpochIs: authenticationEpoch
         )
+        let carriesAuthenticationCookie = authenticationCookies.contains {
+            $0.name == "access_token" || $0.name == "refresh_token"
+        }
+        if (authenticationSession != nil || carriesAuthenticationCookie),
+           !(await authenticationMode.isCurrentEpoch(authenticationEpoch)) {
+            // An authenticated response must not cross an account boundary.
+            // Public/guest requests without an authenticated session or auth
+            // cookie may complete normally while a login transition is in
+            // progress.
+            throw CancellationError()
+        }
         return (data, httpResponse)
     }
 

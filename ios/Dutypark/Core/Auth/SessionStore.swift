@@ -23,8 +23,17 @@ nonisolated enum ServerSessionWarningPresentation: Equatable, Sendable {
     case serverMayRemain
 }
 
+nonisolated enum AuthenticationTransitionFailurePresentation: Equatable, Sendable {
+    case impersonationFailed
+}
+
 @MainActor
 final class SessionStore: ObservableObject {
+    private struct AuthenticationTransitionContext {
+        let previousMember: LoginMember?
+        let generation: UInt64
+    }
+
     private static let impersonationExpirationKey = "dp-impersonation-expires"
 
     private let authService: AuthService
@@ -34,6 +43,7 @@ final class SessionStore: ObservableObject {
     private let cancelOfflineSync: @MainActor @Sendable (MemberID?) async -> Void
     private var impersonationExpiryTask: Task<Void, Never>?
     private var isTerminatingSession = false
+    private var sessionTerminationWaiters: [CheckedContinuation<Void, Never>] = []
     private var authenticationSessionGeneration: UInt64 = 0
 
     @Published private(set) var state: SessionState
@@ -46,6 +56,7 @@ final class SessionStore: ObservableObject {
     @Published private(set) var pendingDestination: URL?
     @Published private(set) var accountDeletionAcceptedPresentation: AccountDeletionAcceptedPresentation?
     @Published private(set) var serverSessionWarning: ServerSessionWarningPresentation?
+    @Published private(set) var authenticationTransitionFailure: AuthenticationTransitionFailurePresentation?
 
     init(
         authService: AuthService = AuthService(),
@@ -126,15 +137,39 @@ final class SessionStore: ObservableObject {
     /// explicit unauthenticated response follows the same purge path as a
     /// normal session failure.
     func revalidate() async {
-        guard case .authenticated = state, availability == .offline else { return }
+        guard case .authenticated(let currentMember) = state,
+              availability == .offline
+        else { return }
+        // `restore()` can outlive a login/logout transition.  The generation
+        // and member snapshot bind its result to the offline session that
+        // started the request.
+        let expectedGeneration = authenticationSessionGeneration
+        let expectedMemberID = currentMember.id
 
         do {
             if let member = try await authService.restore() {
-                await authenticate(member, availability: .online)
+                guard member.id == expectedMemberID,
+                      isCurrentRevalidation(
+                    generation: expectedGeneration,
+                    memberID: expectedMemberID
+                ) else { return }
+                await authenticate(
+                    member,
+                    availability: .online,
+                    expectedAuthenticationSessionGeneration: expectedGeneration
+                )
             } else {
+                guard isCurrentRevalidation(
+                    generation: expectedGeneration,
+                    memberID: expectedMemberID
+                ) else { return }
                 await invalidateAuthenticatedSession()
             }
         } catch let error as APIError where error.isAuthenticationRejection {
+            guard isCurrentRevalidation(
+                generation: expectedGeneration,
+                memberID: expectedMemberID
+            ) else { return }
             await invalidateAuthenticatedSession()
         } catch {
             // Keep serving the last verified local snapshot until a later
@@ -156,21 +191,25 @@ final class SessionStore: ObservableObject {
         loginRemainingAttempts = nil
         defer { isWorking = false }
 
-        let previousMember = await beginAuthenticationTransition()
+        let transition = await beginAuthenticationTransition()
         do {
             let member = try await authService.login(
                 email: email,
                 password: password,
                 rememberMe: rememberMe
             )
-            await authenticate(
+            guard await authenticate(
                 member,
                 availability: .online,
-                syncAlreadyCancelledFor: previousMember?.id
-            )
+                syncAlreadyCancelledFor: transition.previousMember?.id,
+                expectedAuthenticationSessionGeneration: transition.generation
+            ) else {
+                return
+            }
             DPHapticCenter.shared.emit(.success)
         } catch let error as APIError {
-            if let previousMember {
+            guard isCurrentAuthenticationTransition(transition) else { return }
+            if let previousMember = transition.previousMember {
                 await terminateFailedAuthenticationTransition(for: previousMember.id)
             } else {
                 await clearFailedAuthenticationTransition()
@@ -202,7 +241,8 @@ final class SessionStore: ObservableObject {
             }
             DPHapticCenter.shared.emit(.error)
         } catch {
-            if let previousMember {
+            guard isCurrentAuthenticationTransition(transition) else { return }
+            if let previousMember = transition.previousMember {
                 await terminateFailedAuthenticationTransition(for: previousMember.id)
             } else {
                 await clearFailedAuthenticationTransition()
@@ -246,22 +286,35 @@ final class SessionStore: ObservableObject {
         serverSessionWarning = nil
     }
 
+    func dismissAuthenticationTransitionFailure() {
+        authenticationTransitionFailure = nil
+    }
+
     func finishExternalLogin(emitsHaptic: Bool = true) async throws {
-        let previousMember = await beginAuthenticationTransition()
+        let transition = await beginAuthenticationTransition()
         do {
             guard let member = try await authService.status() else {
                 throw APIError.invalidResponse
             }
-            await authenticate(
+            guard isCurrentAuthenticationTransition(transition) else {
+                throw CancellationError()
+            }
+            guard await authenticate(
                 member,
                 availability: .online,
-                syncAlreadyCancelledFor: previousMember?.id
-            )
+                syncAlreadyCancelledFor: transition.previousMember?.id,
+                expectedAuthenticationSessionGeneration: transition.generation
+            ) else {
+                throw CancellationError()
+            }
             if emitsHaptic {
                 DPHapticCenter.shared.emit(.success)
             }
         } catch {
-            if let previousMember {
+            guard isCurrentAuthenticationTransition(transition) else {
+                throw error
+            }
+            if let previousMember = transition.previousMember {
                 await terminateFailedAuthenticationTransition(for: previousMember.id)
             } else {
                 await clearFailedAuthenticationTransition()
@@ -271,20 +324,29 @@ final class SessionStore: ObservableObject {
     }
 
     func impersonate(memberId: Int64) async throws {
-        let previousMember = await beginAuthenticationTransition()
+        let transition = await beginAuthenticationTransition()
         do {
             let (member, expiresIn) = try await authService.impersonate(memberId: memberId)
+            guard isCurrentAuthenticationTransition(transition) else {
+                throw CancellationError()
+            }
             let expiration = Date().addingTimeInterval(TimeInterval(expiresIn))
             impersonationExpiresAt = expiration
             UserDefaults.standard.set(expiration, forKey: Self.impersonationExpirationKey)
-            await authenticate(
+            guard await authenticate(
                 member,
                 availability: .online,
-                syncAlreadyCancelledFor: previousMember?.id
-            )
+                syncAlreadyCancelledFor: transition.previousMember?.id,
+                expectedAuthenticationSessionGeneration: transition.generation
+            ) else {
+                throw CancellationError()
+            }
             DPHapticCenter.shared.emit(.success)
         } catch {
-            if let previousMember {
+            guard isCurrentAuthenticationTransition(transition) else {
+                throw error
+            }
+            if let previousMember = transition.previousMember {
                 await terminateFailedAuthenticationTransition(for: previousMember.id)
             } else {
                 // A guest impersonation attempt has no prior cookie owner to
@@ -292,22 +354,28 @@ final class SessionStore: ObservableObject {
                 // the failed transition before preserving the thrown error.
                 await clearFailedAuthenticationTransition()
             }
+            authenticationTransitionFailure = .impersonationFailed
             throw error
         }
     }
 
     func restoreOriginalAccount() async {
-        let previousMember = await beginAuthenticationTransition()
+        let transition = await beginAuthenticationTransition()
         do {
             let member = try await authService.restoreOriginalAccount()
+            guard isCurrentAuthenticationTransition(transition) else { return }
             clearImpersonationExpiration()
-            await authenticate(
+            guard await authenticate(
                 member,
                 availability: .online,
-                syncAlreadyCancelledFor: previousMember?.id
-            )
+                syncAlreadyCancelledFor: transition.previousMember?.id,
+                expectedAuthenticationSessionGeneration: transition.generation
+            ) else {
+                return
+            }
             DPHapticCenter.shared.emit(.success)
         } catch {
+            guard isCurrentAuthenticationTransition(transition) else { return }
             pendingDestination = nil
             // Restoring the original account is a terminal server-side
             // transition. Keep the existing policy of ending the local
@@ -315,7 +383,7 @@ final class SessionStore: ObservableObject {
             // whose sync was stopped before the auth call.
             await terminateSession(
                 reportServerFailure: true,
-                syncAlreadyCancelledFor: previousMember?.id
+                syncAlreadyCancelledFor: transition.previousMember?.id
             )
         }
     }
@@ -337,32 +405,56 @@ final class SessionStore: ObservableObject {
         _ member: LoginMember,
         availability: SessionAvailability,
         persistSnapshot: Bool = true,
-        syncAlreadyCancelledFor: MemberID? = nil
-    ) async {
+        syncAlreadyCancelledFor: MemberID? = nil,
+        expectedAuthenticationSessionGeneration: UInt64? = nil
+    ) async -> Bool {
+        if let expectedAuthenticationSessionGeneration,
+           authenticationSessionGeneration != expectedAuthenticationSessionGeneration {
+            return false
+        }
         let sessionContext = beginAuthenticationSession(for: member)
         await purgePreviousAccountIfNeeded(
             for: member,
             syncAlreadyCancelledFor: syncAlreadyCancelledFor
         )
+        guard authenticationSessionGeneration == sessionContext.generation else {
+            return false
+        }
         await localDataPurger.reopenLocalData(for: member.id)
+        guard authenticationSessionGeneration == sessionContext.generation else {
+            return false
+        }
         accountDeletionAcceptedPresentation = nil
         serverSessionWarning = nil
         await authService.setContextualAuthenticationFailureHandler { [weak self] context in
             await self?.authenticationDidFail(for: context)
         }
+        guard authenticationSessionGeneration == sessionContext.generation else {
+            return false
+        }
         await authService.setAuthenticationSessionContext(sessionContext)
+        guard authenticationSessionGeneration == sessionContext.generation else {
+            return false
+        }
         await authService.setImpersonating(member.isImpersonating)
+        guard authenticationSessionGeneration == sessionContext.generation else {
+            return false
+        }
         AIScheduleParsingConsentStore.shared.scope(to: member.id)
         self.availability = availability
         state = .authenticated(member)
         if persistSnapshot {
             try? await offlineSessionStore.save(member, at: nil)
         }
+        guard authenticationSessionGeneration == sessionContext.generation else {
+            return false
+        }
         if member.isImpersonating, let impersonationExpiresAt {
             scheduleImpersonationExpiration(at: impersonationExpiresAt)
         } else if !member.isImpersonating {
             clearImpersonationExpiration()
         }
+        return true
     }
 
     private func becomeGuest() async {
@@ -389,10 +481,26 @@ final class SessionStore: ObservableObject {
     }
 
     private func invalidateAuthenticatedSession() async {
+        guard !isTerminatingSession else { return }
+        isTerminatingSession = true
+        defer { finishSessionTermination() }
+
         await invalidateAuthenticationContext()
         await discardLocalSessionData(memberID: memberIDForCurrentState)
         await authService.clearLocalAuthentication()
         await becomeGuest()
+    }
+
+    private func isCurrentRevalidation(
+        generation: UInt64,
+        memberID: MemberID
+    ) -> Bool {
+        guard authenticationSessionGeneration == generation,
+              availability == .offline,
+              case .authenticated(let member) = state,
+              member.id == memberID
+        else { return false }
+        return true
     }
 
     private func terminateSession(
@@ -401,7 +509,7 @@ final class SessionStore: ObservableObject {
     ) async {
         guard !isTerminatingSession else { return }
         isTerminatingSession = true
-        defer { isTerminatingSession = false }
+        defer { finishSessionTermination() }
         let memberID = memberIDForCurrentState
         await invalidateAuthenticationContext()
         if syncAlreadyCancelledFor == nil || memberID != syncAlreadyCancelledFor {
@@ -440,13 +548,18 @@ final class SessionStore: ObservableObject {
     /// replace its cookies. Clearing the request context first also makes an
     /// in-flight failure from the old account harmless while the transition
     /// waits for cancellation to finish.
-    private func beginAuthenticationTransition() async -> LoginMember? {
+    private func beginAuthenticationTransition() async -> AuthenticationTransitionContext {
+        await waitForSessionTermination()
         let previousMember = memberForCurrentState
-        await invalidateAuthenticationContext()
+        authenticationTransitionFailure = nil
+        let generation = await invalidateAuthenticationContext()
         if let previousMember {
             await cancelOfflineSync(previousMember.id)
         }
-        return previousMember
+        return AuthenticationTransitionContext(
+            previousMember: previousMember,
+            generation: generation
+        )
     }
 
     /// An authenticated account must not be restored after an auth transition
@@ -456,7 +569,7 @@ final class SessionStore: ObservableObject {
     private func terminateFailedAuthenticationTransition(for memberID: MemberID) async {
         guard !isTerminatingSession else { return }
         isTerminatingSession = true
-        defer { isTerminatingSession = false }
+        defer { finishSessionTermination() }
 
         pendingDestination = nil
         await authService.clearLocalAuthentication()
@@ -468,8 +581,30 @@ final class SessionStore: ObservableObject {
     }
 
     private func clearFailedAuthenticationTransition() async {
+        guard !isTerminatingSession else { return }
+        isTerminatingSession = true
+        defer { finishSessionTermination() }
+
         await authService.clearLocalAuthentication()
         await authService.setImpersonating(false)
+    }
+
+    private func waitForSessionTermination() async {
+        guard isTerminatingSession else { return }
+        await withCheckedContinuation { continuation in
+            if isTerminatingSession {
+                sessionTerminationWaiters.append(continuation)
+            } else {
+                continuation.resume()
+            }
+        }
+    }
+
+    private func finishSessionTermination() {
+        isTerminatingSession = false
+        let waiters = sessionTerminationWaiters
+        sessionTerminationWaiters.removeAll()
+        waiters.forEach { $0.resume() }
     }
 
     private func beginAuthenticationSession(
@@ -482,9 +617,18 @@ final class SessionStore: ObservableObject {
         )
     }
 
-    private func invalidateAuthenticationContext() async {
+    @discardableResult
+    private func invalidateAuthenticationContext() async -> UInt64 {
         authenticationSessionGeneration &+= 1
+        let generation = authenticationSessionGeneration
         await authService.invalidateAuthenticationSession()
+        return generation
+    }
+
+    private func isCurrentAuthenticationTransition(
+        _ transition: AuthenticationTransitionContext
+    ) -> Bool {
+        authenticationSessionGeneration == transition.generation
     }
 
     private var memberForCurrentState: LoginMember? {

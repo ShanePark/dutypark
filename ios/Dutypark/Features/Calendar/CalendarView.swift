@@ -190,6 +190,13 @@ struct CalendarView: View {
                 }
             }
         }
+        .onChange(of: session.state) { _, _ in
+            // The Calendar can stay mounted while the authenticated account
+            // changes. Rebind the detail-only Todo model before a cached item
+            // can issue a mutation with the previous account's context.
+            todoSelection = nil
+            configureFromSession()
+        }
         .onChange(of: offlineNetworkMonitor.status) { _, status in
             guard status == .satisfied, session.availability == .online else { return }
             Task { await model.handleNetworkBecameReachable() }
@@ -442,8 +449,15 @@ struct CalendarView: View {
     }
 
     private func configureFromSession() {
-        guard case .authenticated(let member) = session.state else { return }
+        guard case .authenticated(let member) = session.state else {
+            todoDetailModel.configureSession(accountID: nil, availability: .offline)
+            return
+        }
         model.configure(accountID: member.id, isOffline: session.availability.isOffline)
+        todoDetailModel.configureSession(
+            accountID: member.id,
+            availability: session.availability
+        )
     }
 
     private func offlineSyncAccountID(from notification: Notification) -> MemberID? {

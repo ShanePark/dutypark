@@ -122,6 +122,18 @@ struct TodoViewModelTests {
     }
 
     @Test
+    func newTodoForwardsItsOperationIDToTheInitialRepositoryCreate() async {
+        let created = makeTodo(status: .inProgress)
+        let repository = FakeTodoRepository(board: makeBoard(inProgress: [created]))
+        let model = TodoViewModel(repository: repository)
+        var draft = TodoDraft(status: .inProgress)
+        draft.title = "Quick task"
+
+        #expect(await model.create(draft: draft, refreshBoard: false))
+        #expect(await repository.createOperationID != nil)
+    }
+
+    @Test
     func completedTodoMutationsEmitSuccessOnlyAfterTheRepositoryReturns() async throws {
         let todo = makeTodo()
         let repository = FakeTodoRepository(board: makeBoard(todo: [todo]))
@@ -1032,6 +1044,7 @@ private actor FakeTodoRepository: TodoRepository {
     var statusChange: (id: TodoID, request: TodoStatusChangeRequest)?
     var positionRequest: TodoPositionUpdateRequest?
     var createRequest: TodoRequest?
+    var createOperationID: UUID?
     var fetchBoardCount = 0
     let shouldFailPositionUpdate: Bool
     let shouldFailAttachmentFetch: Bool
@@ -1065,6 +1078,14 @@ private actor FakeTodoRepository: TodoRepository {
             throw CocoaError(.fileNoSuchFile)
         }
         return todo
+    }
+
+    func create(
+        _ request: TodoRequest,
+        operationID: UUID
+    ) async throws -> TodoDTO {
+        createOperationID = operationID
+        return try await create(request)
     }
 
     func update(id: TodoID, request: TodoRequest) async throws -> TodoDTO {

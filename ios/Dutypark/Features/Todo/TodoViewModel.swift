@@ -25,6 +25,16 @@ final class TodoViewModel: ObservableObject {
     var cacheStoredAt: Date? { lastSyncedAt }
     var pendingTodoCount: Int { pendingOperationCount }
 
+    /// Whether a caller may issue a network-backed Todo mutation for the
+    /// currently bound session. Existing standalone model users retain their
+    /// historical default until they bind a session; screens that can show a
+    /// cached item without loading the board must bind explicitly.
+    var canPerformOnlineMutations: Bool {
+        guard !isOffline else { return false }
+        guard hasBoundSessionContext else { return true }
+        return accountID != nil && sessionAvailability == .online
+    }
+
     private let repository: any TodoRepository
     private let contentFilter: ContentFilterStore
     private let hapticCenter: DPHapticCenter
@@ -35,6 +45,10 @@ final class TodoViewModel: ObservableObject {
     private let syncQueuedOutbox: @MainActor @Sendable (MemberID) async -> Void
     private var accountID: MemberID?
     private var sessionAvailability: SessionAvailability?
+    /// Calendar can present a cached Todo without loading the Todo board first.
+    /// Bind that detail model to the current session explicitly so its mutation
+    /// guards do not mistake an unconfigured model for an online session.
+    private var hasBoundSessionContext = false
     private var recoveryTask: Task<Void, Never>?
     private var recoveryGeneration = 0
 
@@ -187,6 +201,30 @@ final class TodoViewModel: ObservableObject {
         recoveryTask = nil
     }
 
+    /// Binds a detail-only model to the authenticated session that owns the
+    /// displayed Todo. Calendar uses this before presenting a cached Todo,
+    /// because it intentionally does not load the full Todo board first.
+    func configureSession(accountID: MemberID?, availability: SessionAvailability) {
+        let accountChanged = self.accountID != accountID
+        if accountChanged {
+            cancelRecovery()
+            self.accountID = accountID
+            attachmentsByTodoID.removeAll()
+            board = nil
+            friends = []
+            pendingOperationCount = 0
+            lastSyncedAt = nil
+            errorKey = nil
+        }
+
+        hasBoundSessionContext = true
+        sessionAvailability = availability
+        isOffline = availability.isOffline
+        if availability == .online {
+            isShowingCachedData = false
+        }
+    }
+
     private func setAccountID(_ accountID: MemberID) {
         guard self.accountID != accountID else { return }
         cancelRecovery()
@@ -325,7 +363,10 @@ final class TodoViewModel: ObservableObject {
     }
 
     func loadAttachments(for todo: TodoDTO) async {
-        guard ensureOnlineMutationAllowed() else { return }
+        // Opening a cached detail is a read-only action while offline. Do not
+        // turn the automatic attachment preload into an error or haptic; just
+        // wait for an online session before attempting the request.
+        guard canPerformOnlineMutations else { return }
         guard todo.hasAttachments, attachmentsByTodoID[todo.uuid] == nil else {
             if !todo.hasAttachments { attachmentsByTodoID[todo.uuid] = [] }
             return
@@ -380,7 +421,10 @@ final class TodoViewModel: ObservableObject {
             )
         }
         do {
-            let created = try await repository.create(request)
+            let created = try await repository.create(
+                request,
+                operationID: operationID
+            )
             if refreshBoard {
                 patchBoard(with: created)
                 await saveCurrentBoardToCache(accountID: currentAccountID)
@@ -597,7 +641,7 @@ final class TodoViewModel: ObservableObject {
     }
 
     private func ensureOnlineMutationAllowed() -> Bool {
-        guard !isOffline else {
+        guard canPerformOnlineMutations else {
             errorKey = "todo.error.offlineReadOnly"
             emitHaptic(.warning)
             return false

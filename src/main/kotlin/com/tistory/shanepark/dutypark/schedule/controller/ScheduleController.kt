@@ -61,10 +61,11 @@ class ScheduleController(
     @PostMapping
     fun saveSchedule(
         @RequestBody @Validated scheduleSaveDto: ScheduleSaveDto,
-        @Login loginMember: LoginMember
+        @Login loginMember: LoginMember,
+        @RequestHeader("Idempotency-Key", required = false) idempotencyKey: String? = null,
     ): Map<String, Any> {
         val schedule = if (scheduleSaveDto.id == null) {
-            scheduleService.createSchedule(loginMember, scheduleSaveDto)
+            scheduleService.createSchedule(loginMember, scheduleSaveDto, idempotencyKey)
         } else {
             scheduleService.updateSchedule(loginMember, scheduleSaveDto)
         }

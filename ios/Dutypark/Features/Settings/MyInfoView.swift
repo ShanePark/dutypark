@@ -775,7 +775,13 @@ struct MyInfoView: View {
             case .removeManager(let id, _):
                 await model.unassignManager(id)
             case .switchManagedAccount(let id, _):
-                try? await session.impersonate(memberId: id)
+                do {
+                    try await session.impersonate(memberId: id)
+                } catch {
+                    DPHapticCenter.shared.emit(.error)
+                    confirmationAction.finish()
+                    return
+                }
             case .session(.session(let token)):
                 if SettingsSessionPolicy.canRevoke(token) {
                     _ = await model.revokeSession(id: token.id)

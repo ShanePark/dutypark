@@ -185,7 +185,7 @@ final class OfflineSyncTransportTests: XCTestCase {
         XCTAssertEqual(recorder.requests.count, 1)
     }
 
-    func testCreatePostsDoNotEncodeClientOperationID() async throws {
+    func testCreatePostsSendTheOperationIDAsAnIdempotencyHeader() async throws {
         let recorder = OfflineSyncRequestRecorder()
         let scheduleResponse = ScheduleSaveResponse(id: UUID())
         let todoResponse = makeTodoDTO(
@@ -209,14 +209,30 @@ final class OfflineSyncTransportTests: XCTestCase {
         }
 
         let transport = makeTransport()
-        _ = try await transport.createSchedule(makeScheduleRequest())
-        _ = try await transport.createTodo(makeTodoRequest())
+        let scheduleOperationID = UUID()
+        let todoOperationID = UUID()
+        _ = try await transport.createSchedule(
+            makeScheduleRequest(),
+            operationID: scheduleOperationID
+        )
+        _ = try await transport.createTodo(
+            makeTodoRequest(),
+            operationID: todoOperationID
+        )
 
         XCTAssertEqual(recorder.requests.map { $0.httpMethod }, ["POST", "POST"])
         let scheduleBody = try XCTUnwrap(Self.jsonBody(recorder.requests[0]))
         let todoBody = try XCTUnwrap(Self.jsonBody(recorder.requests[1]))
         XCTAssertNil(scheduleBody["clientOperationId"])
         XCTAssertNil(todoBody["clientOperationId"])
+        XCTAssertEqual(
+            recorder.requests[0].value(forHTTPHeaderField: "Idempotency-Key"),
+            scheduleOperationID.uuidString
+        )
+        XCTAssertEqual(
+            recorder.requests[1].value(forHTTPHeaderField: "Idempotency-Key"),
+            todoOperationID.uuidString
+        )
     }
 
     private func makeTransport() -> APIOfflineSyncTransport {

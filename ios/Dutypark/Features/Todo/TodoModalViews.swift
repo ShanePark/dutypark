@@ -389,7 +389,10 @@ struct TodoDetailModal: View {
                     .textSelection(.enabled)
             }
 
-            if todo.hasAttachments {
+            // `AttachmentGallery` performs its own remote list request in its
+            // task. Cached Calendar details are read-only offline, so do not
+            // mount the gallery until the model is bound to an online session.
+            if todo.hasAttachments, model.canPerformOnlineMutations {
                 VStack(alignment: .leading, spacing: DPSpacing.small) {
                     Text(todoLocalized("todo.label.attachments"))
                         .font(DPFont.bold(size: 12, relativeTo: .caption))
@@ -427,7 +430,10 @@ struct TodoDetailModal: View {
                     showingEdit = true
                 }
             )
-            .disabled(todo.hasAttachments && model.attachmentsByTodoID[todo.uuid] == nil)
+            .disabled(
+                !model.canPerformOnlineMutations
+                    || (todo.hasAttachments && model.attachmentsByTodoID[todo.uuid] == nil)
+            )
 
             TodoModalBorderedAction(
                 title: todoLocalized("todo.action.delete"),
@@ -435,6 +441,7 @@ struct TodoDetailModal: View {
                 color: DPColor.danger,
                 action: { confirmation = .delete }
             )
+            .disabled(!model.canPerformOnlineMutations)
         }
     }
 
@@ -478,6 +485,7 @@ struct TodoDetailModal: View {
         }
         .accessibilityLabel(todoLocalized("todo.action.more"))
         .accessibilityIdentifier("todo.detail.menu")
+        .disabled(!model.canPerformOnlineMutations)
     }
 
 }

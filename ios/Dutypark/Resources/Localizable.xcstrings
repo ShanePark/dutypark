@@ -218,6 +218,18 @@
       "en" : { "stringUnit" : { "state" : "translated", "value" : "OK" } },
       "ko" : { "stringUnit" : { "state" : "translated", "value" : "확인" } }
     } },
+    "auth.transition.failure.title" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Account switch failed" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "계정 전환 실패" } }
+    } },
+    "auth.transition.failure.message" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "We could not switch accounts, so you were signed out for your security. Please sign in again and try once more." } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "계정을 전환하지 못해 보안을 위해 로그아웃했습니다. 다시 로그인한 후 한 번 더 시도해주세요." } }
+    } },
+    "auth.transition.failure.ok" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "OK" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "확인" } }
+    } },
     "friendTag.clear" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Clear selected friends" } },
       "ko" : { "stringUnit" : { "state" : "translated", "value" : "선택한 친구 지우기" } }

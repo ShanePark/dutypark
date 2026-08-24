@@ -64,10 +64,21 @@ nonisolated enum CalendarServerRecoveryPolicy {
 
 @MainActor
 final class CalendarViewModel: ObservableObject {
+    private struct MonthRequestContext: Equatable {
+        let year: Int
+        let month: Int
+        let memberID: MemberID
+        let accountID: MemberID?
+        let isMine: Bool
+        let comparedMemberIDs: Set<MemberID>
+        let generation: Int
+    }
+
     private let repository: CalendarRepositoryProtocol
     private let cache: any OfflineCacheProviding
     private let outbox: any OfflineOutboxProviding
     private var initialAccountID: MemberID?
+    private var monthLoadGeneration = 0
     private var prefersOfflineCache: Bool
     private var prefetchTask: Task<Void, Never>?
     private var serverRecoveryTask: Task<Void, Never>?
@@ -182,6 +193,9 @@ final class CalendarViewModel: ObservableObject {
     var visibleDutyTypes: [DutyTypeDTO] { team?.dutyTypes.filter { !$0.hidden } ?? [] }
 
     func configure(accountID: MemberID, isOffline: Bool) {
+        if initialAccountID != accountID || prefersOfflineCache != isOffline {
+            monthLoadGeneration += 1
+        }
         if initialAccountID != accountID {
             cancelServerRecovery(clearPending: true)
         } else if isOffline {
@@ -288,6 +302,30 @@ final class CalendarViewModel: ObservableObject {
         initialAccountID ?? me?.id
     }
 
+    private func beginMonthRequest(memberID: MemberID) -> MonthRequestContext {
+        monthLoadGeneration += 1
+        return MonthRequestContext(
+            year: year,
+            month: month,
+            memberID: memberID,
+            accountID: cacheAccountID,
+            isMine: memberID == me?.id,
+            comparedMemberIDs: self.comparedMemberIDs,
+            generation: monthLoadGeneration
+        )
+    }
+
+    private func isCurrentMonthRequest(_ context: MonthRequestContext) -> Bool {
+        !Task.isCancelled
+            && context.generation == monthLoadGeneration
+            && context.year == year
+            && context.month == month
+            && context.memberID == targetMemberID
+            && context.accountID == cacheAccountID
+            && context.isMine == isMyCalendar
+            && context.comparedMemberIDs == comparedMemberIDs
+    }
+
     private func loadOnlineIdentity() async throws {
         let member = try await repository.member()
         me = member
@@ -365,42 +403,56 @@ final class CalendarViewModel: ObservableObject {
         }
 #endif
         guard let memberID = targetMemberID else { throw APIError.invalidResponse }
-        let mine = memberID == me?.id
+        let context = beginMonthRequest(memberID: memberID)
         if isOfflineMode, !forceOnlineRequest {
-            guard mine,
-                  let accountID = cacheAccountID,
-                  let snapshot = await cache.loadMonth(
-                    accountID: accountID,
-                    key: OfflineMonthKey(year: year, month: month)
-                  )
-            else { throw APIError.transport }
-            applyCachedMonth(snapshot, memberID: memberID)
-            await overlayPendingSchedules()
+            guard context.isMine, let accountID = context.accountID else {
+                throw APIError.transport
+            }
+            let snapshot = await cache.loadMonth(
+                accountID: accountID,
+                key: OfflineMonthKey(year: context.year, month: context.month)
+            )
+            guard isCurrentMonthRequest(context) else { return }
+            guard let snapshot else { throw APIError.transport }
+            applyCachedMonth(snapshot, context: context)
+            await overlayPendingSchedules(for: context)
+            guard isCurrentMonthRequest(context) else { return }
             isShowingCachedData = true
             return
         }
 
         do {
-            try await loadMonthFromServer(memberID: memberID, mine: mine)
+            try await loadMonthFromServer(context: context)
         } catch {
+            guard isCurrentMonthRequest(context) else { return }
             guard isRecoverableOfflineError(error),
-                  mine,
-                  let accountID = cacheAccountID,
-                  let snapshot = await cache.loadMonth(
-                    accountID: accountID,
-                    key: OfflineMonthKey(year: year, month: month)
-                  )
+                  context.isMine,
+                  let accountID = context.accountID
             else { throw error }
-            if let accountID = cacheAccountID {
+            let snapshot = await cache.loadMonth(
+                accountID: accountID,
+                key: OfflineMonthKey(year: context.year, month: context.month)
+            )
+            guard isCurrentMonthRequest(context) else { return }
+            guard let snapshot else { throw error }
+            if let accountID = context.accountID {
                 if todoBoard == nil {
-                    todoBoard = await cache.loadTodoBoard(accountID: accountID)
+                    let cachedTodoBoard = await cache.loadTodoBoard(accountID: accountID)
+                    guard isCurrentMonthRequest(context) else { return }
+                    todoBoard = cachedTodoBoard
                 }
-                if dDays.isEmpty, let account = await cache.loadAccount(memberID: accountID) {
-                    dDays = account.dDays.sorted { $0.date.rawValue < $1.date.rawValue }
+                if dDays.isEmpty {
+                    let account = await cache.loadAccount(memberID: accountID)
+                    guard isCurrentMonthRequest(context) else { return }
+                    if let account {
+                        dDays = account.dDays.sorted { $0.date.rawValue < $1.date.rawValue }
+                    }
                 }
             }
-            applyCachedMonth(snapshot, memberID: memberID)
-            await overlayPendingSchedules()
+            guard isCurrentMonthRequest(context) else { return }
+            applyCachedMonth(snapshot, context: context)
+            await overlayPendingSchedules(for: context)
+            guard isCurrentMonthRequest(context) else { return }
             isOfflineMode = true
             isShowingCachedData = true
             cacheStoredAt = snapshot.storedAt
@@ -414,36 +466,42 @@ final class CalendarViewModel: ObservableObject {
         }
     }
 
-    private func loadMonthFromServer(memberID: MemberID, mine: Bool) async throws {
-        async let calendarResult = repository.calendar(year: year, month: month)
-        async let dutiesResult = repository.duties(memberID: memberID, year: year, month: month)
-        async let schedulesResult = repository.schedules(memberID: memberID, year: year, month: month)
-        async let holidaysResult = repository.holidays(year: year, month: month)
-        async let dDaysResult = repository.dDays(memberID: memberID, isMine: mine)
-        async let manageResult = mine ? false : repository.canManage(memberID: memberID)
-        async let todoResult: TodoBoardDTO? = mine ? repository.todoBoard() : nil
-        async let comparedResult = repository.otherDuties(memberIDs: Array(comparedMemberIDs.sorted().prefix(3)), year: year, month: month)
+    private func loadMonthFromServer(context: MonthRequestContext) async throws {
+        async let calendarResult = repository.calendar(year: context.year, month: context.month)
+        async let dutiesResult = repository.duties(memberID: context.memberID, year: context.year, month: context.month)
+        async let schedulesResult = repository.schedules(memberID: context.memberID, year: context.year, month: context.month)
+        async let holidaysResult = repository.holidays(year: context.year, month: context.month)
+        async let dDaysResult = repository.dDays(memberID: context.memberID, isMine: context.isMine)
+        async let manageResult = context.isMine ? false : repository.canManage(memberID: context.memberID)
+        async let todoResult: TodoBoardDTO? = context.isMine ? repository.todoBoard() : nil
+        async let comparedResult = repository.otherDuties(memberIDs: Array(context.comparedMemberIDs.sorted().prefix(3)), year: context.year, month: context.month)
 
         let serverDays = try await calendarResult
-        let cells = CalendarDateSupport.cells(year: year, month: month, serverDays: serverDays)
+        let cells = CalendarDateSupport.cells(year: context.year, month: context.month, serverDays: serverDays)
         guard cells.count == 42 else { throw APIError.invalidResponse }
         let duties = try await dutiesResult
         let schedules = try await schedulesResult
         let holidays = try await holidaysResult
         let loadedDDays = try await dDaysResult
-        canManage = try await manageResult
-        todoBoard = try await todoResult
+        let loadedCanManage = try await manageResult
+        let loadedTodoBoard = try await todoResult
         let compared = try await comparedResult
+        guard isCurrentMonthRequest(context) else { return }
+        canManage = loadedCanManage
+        todoBoard = loadedTodoBoard
         dDays = loadedDDays.sorted { $0.date.rawValue < $1.date.rawValue }
         applyMonth(
+            year: context.year,
+            month: context.month,
             calendar: serverDays,
             schedules: schedules,
             duties: duties,
             holidays: holidays,
             compared: compared,
-            memberID: memberID
+            memberID: context.memberID
         )
-        await overlayPendingSchedules()
+        await overlayPendingSchedules(for: context)
+        guard isCurrentMonthRequest(context) else { return }
         isOfflineMode = false
         isShowingCachedData = false
         cacheStoredAt = nil
@@ -451,18 +509,23 @@ final class CalendarViewModel: ObservableObject {
             cancelServerRecovery(clearPending: true)
         }
 
-        guard mine, let accountID = cacheAccountID, accountID == memberID else { return }
+        guard isCurrentMonthRequest(context),
+              context.isMine,
+              let accountID = context.accountID,
+              accountID == context.memberID
+        else { return }
         // Cache writes are best effort. A filesystem failure must never turn an
         // otherwise successful online response into a user-visible error.
         try? await cache.saveMonth(OfflineMonthSnapshot(
             accountID: accountID,
-            key: OfflineMonthKey(year: year, month: month),
+            key: OfflineMonthKey(year: context.year, month: context.month),
             calendar: serverDays,
             schedules: schedules,
             duties: duties,
             holidays: holidays,
             otherDuties: compared
         ))
+        guard isCurrentMonthRequest(context) else { return }
         if let member = me, member.id == accountID {
             try? await cache.saveAccount(OfflineAccountSnapshot(
                 member: member,
@@ -471,24 +534,29 @@ final class CalendarViewModel: ObservableObject {
                 storedAt: .now
             ))
         }
+        guard isCurrentMonthRequest(context) else { return }
         if let board = todoBoard {
             try? await cache.saveTodoBoard(accountID: accountID, board: board, now: .now)
         }
     }
 
-    private func applyCachedMonth(_ snapshot: OfflineMonthSnapshot, memberID: MemberID) {
+    private func applyCachedMonth(_ snapshot: OfflineMonthSnapshot, context: MonthRequestContext) {
         applyMonth(
+            year: context.year,
+            month: context.month,
             calendar: snapshot.calendar,
             schedules: snapshot.schedules,
             duties: snapshot.duties,
             holidays: snapshot.holidays,
             compared: snapshot.otherDuties,
-            memberID: memberID
+            memberID: context.memberID
         )
         cacheStoredAt = snapshot.storedAt
     }
 
     private func applyMonth(
+        year: Int,
+        month: Int,
         calendar: [TeamDayDTO],
         schedules: [[ScheduleDTO]],
         duties: [DutyDTO],
@@ -1207,7 +1275,15 @@ final class CalendarViewModel: ObservableObject {
         }
 
         do {
-            let savedResponse = try await repository.saveSchedule(request)
+            let savedResponse: ScheduleSaveResponse
+            if let operationID {
+                savedResponse = try await repository.saveSchedule(
+                    request,
+                    operationID: operationID
+                )
+            } else {
+                savedResponse = try await repository.saveSchedule(request)
+            }
             emit(.success)
             do {
                 try await refreshSchedules()
@@ -1597,19 +1673,21 @@ final class CalendarViewModel: ObservableObject {
         rebindPresentedDays()
     }
 
-    private func overlayPendingSchedules() async {
-        guard let accountID = cacheAccountID,
+    private func overlayPendingSchedules(for context: MonthRequestContext) async {
+        guard isCurrentMonthRequest(context),
+              let accountID = context.accountID,
               let memberID = me?.id,
               memberID == accountID
         else { return }
         let entries = await outbox.entries(accountID: accountID)
+        guard isCurrentMonthRequest(context) else { return }
         pendingScheduleCount = pendingScheduleEntryCount(entries)
         for entry in entries where entry.state == .pending {
             guard case .scheduleCreate(let request) = entry.payload,
                   let start = CalendarDateSupport.date(from: request.startDateTime)
             else { continue }
             let parts = CalendarDateSupport.calendar.dateComponents([.year, .month], from: start)
-            guard parts.year == year, parts.month == month else { continue }
+            guard parts.year == context.year, parts.month == context.month else { continue }
             appendProvisionalSchedule(request, provisionalID: entry.operationID)
         }
     }

@@ -40,6 +40,28 @@ struct RootLifecycleTests {
     }
 
     @Test
+    func authenticationTransitionFailuresUseASeparateGlobalAlert() throws {
+        let iosDirectory = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let rootSource = try String(
+            contentsOf: iosDirectory.appending(path: "Dutypark/Features/Auth/AppRootView.swift"),
+            encoding: .utf8
+        )
+        let sessionSource = try String(
+            contentsOf: iosDirectory.appending(path: "Dutypark/Core/Auth/SessionStore.swift"),
+            encoding: .utf8
+        )
+
+        #expect(rootSource.contains("authenticationTransitionFailure"))
+        #expect(rootSource.contains("auth.transition.failure.title"))
+        #expect(rootSource.contains("auth.transition.failure.message"))
+        #expect(rootSource.contains("dismissAuthenticationTransitionFailure()"))
+        #expect(sessionSource.contains("case impersonationFailed"))
+        #expect(sessionSource.contains("authenticationTransitionFailure = .impersonationFailed"))
+    }
+
+    @Test
     func automaticHomeRefreshCoalescesImmediateSceneAndTabTriggers() {
         var policy = RootHomeRefreshPolicy()
         let now = Date(timeIntervalSince1970: 1_000)
