@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
   formatDateNumeric,
   formatDateOnly,
@@ -40,5 +40,26 @@ describe('date utils', () => {
     const formatted = formatDateRange(start, '2026-08-22T00:00')
 
     expect(formatted).toBe(formatDateTime(start))
+  })
+
+  it('treats an input midnight as midnight when Intl formats it as 24:00', () => {
+    const nativeDateTimeFormat = Intl.DateTimeFormat
+    const dateTimeFormat = vi.spyOn(Intl, 'DateTimeFormat')
+
+    dateTimeFormat.mockImplementation(function (locales, options) {
+      if (options?.hour === '2-digit' && options.minute === '2-digit' && !options.year) {
+        return { format: () => '24:00' } as unknown as Intl.DateTimeFormat
+      }
+
+      return new nativeDateTimeFormat(locales, options)
+    } as typeof Intl.DateTimeFormat)
+
+    try {
+      const start = '2026-08-22T09:30'
+
+      expect(formatDateRange(start, '2026-08-22T00:00')).toBe(formatDateTime(start))
+    } finally {
+      dateTimeFormat.mockRestore()
+    }
   })
 })

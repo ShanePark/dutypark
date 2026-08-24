@@ -88,14 +88,16 @@ export function formatDateRange(start: string, end: string): string {
   const startStr = formatDateTimeOrDate(start)
 
   if (startDate.toDateString() === endDate.toDateString()) {
+    const endInputTime = (end.split('T')[1] ?? '').slice(0, 5)
+    if (!endInputTime || endInputTime === '00:00') {
+      return startStr
+    }
+
     const endTime = formatWithLocale(endDate, {
       hour: '2-digit',
       minute: '2-digit',
       hour12: false,
     })
-    if (endTime === '00:00') {
-      return startStr
-    }
     return `${startStr} ~ ${endTime}`
   }
 
