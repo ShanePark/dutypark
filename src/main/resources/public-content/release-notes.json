@@ -42,9 +42,9 @@
       "entries": {
         "pr-409": {
           "title": "iPhone 오프라인 사용과 앱 경험 개선",
-          "summary": "iPhone 앱에서 네트워크가 불안정해도 캘린더와 Todo를 확인·편집할 수 있도록 하고, 프로필 사진과 터치 피드백 및 화면 동작을 전반적으로 다듬었습니다.",
+          "summary": "iPhone 앱에서 네트워크가 불안정해도 저장된 캘린더와 Todo를 확인하고 지원되는 새 항목을 등록할 수 있도록 하며, 프로필 사진과 터치 피드백 및 화면 동작을 전반적으로 다듬었습니다.",
           "changes": [
-            "오프라인에서도 저장된 캘린더와 Todo를 확인하고 변경할 수 있으며, 연결이 돌아오면 대기 중인 작업을 안전하게 동기화합니다.",
+            "오프라인에서도 저장된 캘린더와 Todo를 확인하고 첨부·태그가 없는 개인 일정과 Todo를 새로 등록할 수 있으며, 연결이 돌아오면 대기 중인 생성 작업을 동기화합니다.",
             "계정별 오프라인 데이터를 분리하고 로그아웃과 계정 전환 시 로컬 데이터를 안전하게 정리합니다.",
             "iPhone 앱의 선택, 저장, 오류와 주요 화면 전환에 상황에 맞는 터치 피드백을 적용하고 화면 배치를 개선했습니다.",
             "웹과 iPhone 앱에서 기본 프로필 사진과 편집 동작을 통일하고, 일정 시간과 Todo 화면의 작은 불편을 함께 개선했습니다."
@@ -2252,9 +2252,9 @@
       "entries": {
         "pr-409": {
           "title": "Offline iPhone workflows and app experience improvements",
-          "summary": "Keeps calendars and todos useful when the iPhone app has an unreliable connection, while refining profile photos, touch feedback, and interactions throughout the app.",
+          "summary": "Lets the iPhone app show cached calendars and todos and create supported new items during an unreliable connection, while refining profile photos, touch feedback, and interactions throughout the app.",
           "changes": [
-            "View and edit cached calendars and todos while offline, then safely synchronize queued work when the connection returns.",
+            "View cached calendars and todos and create personal schedules and todos without attachments or tags while offline, then synchronize queued creates when the connection returns.",
             "Keep offline data isolated by account and clean up local data safely during logout and account changes.",
             "Use context-appropriate touch feedback for selections, saves, errors, and key navigation throughout the iPhone app, with improved layouts.",
             "Use consistent default profile photos and editing behavior across web and iPhone, alongside smaller schedule-time and Todo screen refinements."
