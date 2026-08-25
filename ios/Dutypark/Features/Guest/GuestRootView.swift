@@ -107,7 +107,7 @@ private struct GuestLandingView: View {
             icon: "person.2",
             title: "guest.feature.life.title",
             description: "guest.feature.life.description",
-            image: nil
+            image: "IntroLife"
         ),
         Feature(
             id: "todo",
