@@ -106,10 +106,18 @@ struct RootChromeLocalizationTests {
         #expect(summary(name: "   ").displayName == RootChromeLocalization.localizable("root.menu.myInfo"))
     }
 
+    @Test
+    func profileCardPreservesPhotoAvailabilityFromTheMemberPayload() {
+        #expect(summary(hasProfilePhoto: true).hasProfilePhoto == true)
+        #expect(summary(hasProfilePhoto: false).hasProfilePhoto == false)
+        #expect(summary(hasProfilePhoto: nil).hasProfilePhoto == nil)
+    }
+
     private func summary(
         name: String = "선우",
         team: String? = nil,
         email: String? = nil,
+        hasProfilePhoto: Bool? = nil,
         profilePhotoVersion: Int64 = 0
     ) -> MoreProfileSummary {
         MoreProfileSummary(
@@ -123,6 +131,7 @@ struct RootChromeLocalizationTests {
                 isImpersonating: false,
                 originalMemberId: nil
             ),
+            hasProfilePhoto: hasProfilePhoto,
             profilePhotoVersion: profilePhotoVersion
         )
     }

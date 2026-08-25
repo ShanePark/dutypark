@@ -577,6 +577,7 @@ struct CalendarView: View {
         HStack(spacing: 6) {
             CalendarMemberAvatar(
                 memberID: model.targetMemberID,
+                hasProfilePhoto: model.targetHasProfilePhoto,
                 profilePhotoVersion: model.targetProfilePhotoVersion,
                 size: 32
             )
@@ -1697,6 +1698,7 @@ private struct DutyComparisonView: View {
             HStack(spacing: DPSpacing.small) {
                 CalendarMemberAvatar(
                     memberID: friend.id,
+                    hasProfilePhoto: friend.hasProfilePhoto,
                     profilePhotoVersion: friend.profilePhotoVersion,
                     size: 34
                 )
@@ -1734,12 +1736,14 @@ private struct DutyComparisonView: View {
 
 private struct CalendarMemberAvatar: View {
     let memberID: MemberID?
+    let hasProfilePhoto: Bool
     let profilePhotoVersion: Int64
     let size: CGFloat
 
     var body: some View {
         DPProfileAvatar(
             memberID: memberID,
+            hasProfilePhoto: hasProfilePhoto,
             profilePhotoVersion: profilePhotoVersion,
             size: size
         )
@@ -1932,6 +1936,7 @@ private struct CalendarDayCell: View {
         HStack(spacing: 2) {
             CalendarMemberAvatar(
                 memberID: item.memberID,
+                hasProfilePhoto: item.hasProfilePhoto,
                 profilePhotoVersion: item.profilePhotoVersion,
                 size: 12
             )

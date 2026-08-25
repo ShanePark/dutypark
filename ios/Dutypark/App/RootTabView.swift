@@ -167,6 +167,10 @@ struct RootTabView: View {
     // Bumped when the profile photo changes so the cached avatar in the "more" tab is
     // refetched instead of showing the replaced image.
     @State private var profilePhotoVersion: Int64 = 0
+    // Auth status intentionally stays small and does not contain profile-photo
+    // metadata. Home/My Info publish the full member payload when available;
+    // nil keeps the single More avatar backward-compatible until then.
+    @State private var hasProfilePhoto: Bool?
     @State private var showsNotifications = false
     @State private var notificationDropdownReadPolicy = RootNotificationDropdownReadPolicy()
     @State private var showsUnsupportedLink = false
@@ -353,7 +357,14 @@ struct RootTabView: View {
                 if session.availability.isOffline {
                     RootOnlineRequiredView(feature: .home)
                 } else {
-                    HomeView(refreshID: homeRefreshID, onRoute: openHomeRoute)
+                    HomeView(
+                        refreshID: homeRefreshID,
+                        onRoute: openHomeRoute,
+                        onProfilePhotoStateChanged: { hasPhoto, version in
+                            hasProfilePhoto = hasPhoto
+                            profilePhotoVersion = version
+                        }
+                    )
                 }
             }
                 .navigationTitle("")
@@ -594,7 +605,11 @@ struct RootTabView: View {
 
     private var moreProfile: MoreProfileSummary? {
         authenticatedMember.map {
-            MoreProfileSummary(member: $0, profilePhotoVersion: profilePhotoVersion)
+            MoreProfileSummary(
+                member: $0,
+                hasProfilePhoto: hasProfilePhoto,
+                profilePhotoVersion: profilePhotoVersion
+            )
         }
     }
 
@@ -654,10 +669,16 @@ struct RootTabView: View {
             // support is already open has to rebuild it to land on the history tab.
             .id(supportPresentationID)
         case .myInfo:
-            MyInfoView {
-                homeRefreshID &+= 1
-                profilePhotoVersion &+= 1
-            }
+            MyInfoView(
+                onProfilePhotoChanged: {
+                    homeRefreshID &+= 1
+                    profilePhotoVersion &+= 1
+                },
+                onProfilePhotoStateChanged: { hasPhoto, version in
+                    hasProfilePhoto = hasPhoto
+                    profilePhotoVersion = version
+                }
+            )
             .navigationTitle(RootChromeLocalization.localizable("root.menu.myInfo"))
             .navigationBarTitleDisplayMode(.inline)
         case .settings:
@@ -1414,11 +1435,15 @@ private struct NotificationDropdownRow: View {
 
 nonisolated struct NotificationDropdownActorPhotoRequest {
     let actorID: MemberID
+    let hasProfilePhoto: Bool?
     let profilePhotoVersion: Int64
 
     init?(notification: NotificationDTO) {
-        guard let actorID = notification.actorId else { return nil }
+        guard let actorID = notification.actorId,
+              notification.payload.actor?.hasProfilePhoto != false
+        else { return nil }
         self.actorID = actorID
+        hasProfilePhoto = notification.payload.actor?.hasProfilePhoto
         profilePhotoVersion = notification.payload.actor?.profilePhotoVersion ?? 0
     }
 

@@ -525,6 +525,7 @@ private struct AdminMemberRow<Detail: View>: View {
             AdminMemberAvatar(
                 memberID: member.id,
                 name: member.name,
+                hasProfilePhoto: member.hasProfilePhoto,
                 version: member.profilePhotoVersion,
                 size: 36
             )
@@ -625,12 +626,14 @@ private struct AdminMemberPaginationFooter: View {
 private struct AdminMemberAvatar: View {
     let memberID: MemberID
     let name: String
+    let hasProfilePhoto: Bool
     let version: Int64
     let size: CGFloat
 
     var body: some View {
         DPProfileAvatar(
             memberID: memberID,
+            hasProfilePhoto: hasProfilePhoto,
             profilePhotoVersion: version,
             size: size
         )
@@ -1104,6 +1107,7 @@ private struct AdminMemberDetailView: View {
             AdminMemberAvatar(
                 memberID: member.id,
                 name: member.name,
+                hasProfilePhoto: member.hasProfilePhoto,
                 version: member.profilePhotoVersion,
                 size: 76
             )

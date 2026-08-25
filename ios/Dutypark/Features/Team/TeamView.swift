@@ -550,6 +550,7 @@ private struct TeamMemberAvatar: View {
     var body: some View {
         DPProfileAvatar(
             memberID: member.id,
+            hasProfilePhoto: member.hasProfilePhoto,
             profilePhotoVersion: member.profilePhotoVersion,
             size: size
         )

@@ -31,10 +31,15 @@ struct MyInfoView: View {
     @State private var socialAction = SettingsDestructiveActionGate()
     @State private var oauthNoticeMessage: String?
     private let onProfilePhotoChanged: () -> Void
+    private let onProfilePhotoStateChanged: (Bool, Int64) -> Void
     private let settingsService = SettingsService()
 
-    init(onProfilePhotoChanged: @escaping () -> Void = {}) {
+    init(
+        onProfilePhotoChanged: @escaping () -> Void = {},
+        onProfilePhotoStateChanged: @escaping (Bool, Int64) -> Void = { _, _ in }
+    ) {
         self.onProfilePhotoChanged = onProfilePhotoChanged
+        self.onProfilePhotoStateChanged = onProfilePhotoStateChanged
     }
 
     var body: some View {
@@ -81,6 +86,10 @@ struct MyInfoView: View {
         }
         .accessibilityIdentifier("screen.myInfo")
         .task { await model.load(.myInfo) }
+        .onChange(of: model.member) { _, member in
+            guard let member else { return }
+            onProfilePhotoStateChanged(member.hasProfilePhoto, member.profilePhotoVersion)
+        }
         .onChange(of: selectedPhoto) { _, item in
             guard let item else { return }
             Task { await upload(item) }
@@ -198,6 +207,7 @@ struct MyInfoView: View {
                     self.photoToCrop = nil
                     Task {
                         if await model.uploadProfilePhoto(jpeg) {
+                            notifyProfilePhotoState()
                             onProfilePhotoChanged()
                         }
                     }
@@ -307,6 +317,7 @@ struct MyInfoView: View {
     private var profilePhoto: some View {
         DPProfileAvatar(
             memberID: model.member?.id,
+            hasProfilePhoto: model.member?.hasProfilePhoto,
             profilePhotoVersion: model.member?.profilePhotoVersion ?? 0,
             size: 80
         )
@@ -413,6 +424,7 @@ struct MyInfoView: View {
                 HStack(spacing: DPSpacing.compact) {
                     DPProfileAvatar(
                         memberID: member.id,
+                        hasProfilePhoto: member.hasProfilePhoto,
                         profilePhotoVersion: member.profilePhotoVersion,
                         size: 40
                     )
@@ -770,6 +782,7 @@ struct MyInfoView: View {
             switch requestedAction {
             case .deleteProfilePhoto:
                 if await model.deleteProfilePhoto() {
+                    notifyProfilePhotoState()
                     onProfilePhotoChanged()
                 }
             case .removeManager(let id, _):
@@ -792,6 +805,11 @@ struct MyInfoView: View {
             confirmationAction.finish()
             dismiss()
         }
+    }
+
+    private func notifyProfilePhotoState() {
+        guard let member = model.member else { return }
+        onProfilePhotoStateChanged(member.hasProfilePhoto, member.profilePhotoVersion)
     }
 }
 

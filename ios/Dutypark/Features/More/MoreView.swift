@@ -78,12 +78,14 @@ nonisolated struct MoreProfileSummary: Equatable, Sendable {
     let memberID: MemberID
     let name: String
     let supportingText: String?
+    let hasProfilePhoto: Bool?
     let profilePhotoVersion: Int64
 
-    init(member: LoginMember, profilePhotoVersion: Int64) {
+    init(member: LoginMember, hasProfilePhoto: Bool? = nil, profilePhotoVersion: Int64) {
         memberID = member.id
         name = member.name.trimmingCharacters(in: .whitespacesAndNewlines)
         supportingText = Self.nonempty(member.team) ?? Self.nonempty(member.email)
+        self.hasProfilePhoto = hasProfilePhoto
         self.profilePhotoVersion = profilePhotoVersion
     }
 
@@ -197,6 +199,7 @@ private struct MoreProfilePhoto: View {
     var body: some View {
         DPProfileAvatar(
             memberID: profile.memberID,
+            hasProfilePhoto: profile.hasProfilePhoto,
             profilePhotoVersion: profile.profilePhotoVersion,
             size: 48
         )

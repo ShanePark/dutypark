@@ -471,6 +471,7 @@ private struct NotificationActorAvatar: View {
     var body: some View {
         DPProfileAvatar(
             memberID: notification.actorId,
+            hasProfilePhoto: notification.payload.actor?.hasProfilePhoto,
             profilePhotoVersion: notification.payload.actor?.profilePhotoVersion ?? 0,
             size: 40
         )
