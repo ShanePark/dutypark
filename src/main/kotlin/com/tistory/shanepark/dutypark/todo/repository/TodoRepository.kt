@@ -14,6 +14,13 @@ import java.util.*
 
 interface TodoRepository : JpaRepository<Todo, UUID> {
 
+    fun findFirstByMemberIdAndStatusAndTitleAndContentOrderByCreatedDateAscIdAsc(
+        memberId: Long,
+        status: TodoStatus,
+        title: String,
+        content: String,
+    ): Optional<Todo>
+
     fun countByMemberId(memberId: Long): Long
 
     fun countByMemberIdAndStatus(memberId: Long, status: TodoStatus): Long

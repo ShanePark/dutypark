@@ -5,9 +5,6 @@ import com.tistory.shanepark.dutypark.attachment.repository.AttachmentRepository
 import com.tistory.shanepark.dutypark.attachment.service.AttachmentService
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
-import com.tistory.shanepark.dutypark.common.idempotency.CreateIdempotencyKey
-import com.tistory.shanepark.dutypark.common.idempotency.CreateIdempotencyKeyRepository
-import com.tistory.shanepark.dutypark.common.idempotency.CreateIdempotencyResource
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.service.FriendService
@@ -37,7 +34,6 @@ class TodoService(
     private val attachmentService: AttachmentService,
     private val friendService: FriendService,
     private val eventPublisher: ApplicationEventPublisher,
-    private val createIdempotencyKeyRepository: CreateIdempotencyKeyRepository,
 ) {
     private val log = logger()
 
@@ -107,27 +103,28 @@ class TodoService(
         tagFriendIds: List<Long> = emptyList(),
         attachmentSessionId: UUID? = null,
         orderedAttachmentIds: List<UUID> = emptyList(),
-        idempotencyKey: String? = null,
     ): TodoResponse {
         val member = findMember(loginMember)
-        val idempotency = reserveCreateOperation(
-            loginMember = loginMember,
-            idempotencyKey = idempotencyKey,
-            resourceKind = CreateIdempotencyResource.TODO,
-        )
-        idempotency?.resourceId?.let { resourceId ->
-            val existingTodo = todoRepository.findById(UUID.fromString(resourceId)).orElseThrow {
-                IllegalStateException("Idempotent todo result no longer exists")
-            }
-            verifyOwnership(existingTodo, member)
-            return toResponse(existingTodo, member)
-        }
-
         val targetStatus = status ?: TodoStatus.TODO
-        val todoLastPosition = todoRepository.findMinPositionByMemberAndStatus(member, targetStatus)
+        // Keep duplicate detection and creation under the same owner lock so
+        // concurrent retries cannot both observe an empty result.
+        val lockedMember = memberRepository
+            .findMemberWithTeamForUpdate(member.id!!)
+            .orElseThrow { IllegalStateException("Member not found") }
+        todoRepository
+            .findFirstByMemberIdAndStatusAndTitleAndContentOrderByCreatedDateAscIdAsc(
+                memberId = lockedMember.id!!,
+                status = targetStatus,
+                title = title,
+                content = content,
+            )
+            .orElse(null)
+            ?.let { existingTodo -> return toResponse(existingTodo, member) }
+
+        val todoLastPosition = todoRepository.findMinPositionByMemberAndStatus(lockedMember, targetStatus)
 
         val todo = Todo(
-            member = member,
+            member = lockedMember,
             title = title,
             content = content,
             position = todoLastPosition - 1,
@@ -146,37 +143,7 @@ class TodoService(
             orderedAttachmentIds = orderedAttachmentIds
         )
 
-        idempotency?.let {
-            it.resourceId = todo.id.toString()
-        }
-
         return toResponse(todo, member)
-    }
-
-    private fun reserveCreateOperation(
-        loginMember: LoginMember,
-        idempotencyKey: String?,
-        resourceKind: CreateIdempotencyResource,
-    ): CreateIdempotencyKey? {
-        val operationId = idempotencyKey?.trim()?.takeIf { it.isNotEmpty() } ?: return null
-        require(operationId.length <= 36) { "common.idempotency.invalid" }
-        // Serialize reservation and resource creation per authenticated account.
-        // The unique constraint remains a final guard for non-standard callers.
-        val account = memberRepository.findMemberWithTeamForUpdate(loginMember.id)
-            .orElseThrow { IllegalStateException("Member not found") }
-        return createIdempotencyKeyRepository
-            .findByMemberIdAndOperationIdAndResourceKind(
-                memberId = loginMember.id,
-                operationId = operationId,
-                resourceKind = resourceKind,
-            )
-            .orElseGet {
-                CreateIdempotencyKey(
-                    member = account,
-                    operationId = operationId,
-                    resourceKind = resourceKind,
-                ).also(createIdempotencyKeyRepository::save)
-            }
     }
 
     fun editTodo(

@@ -1231,10 +1231,9 @@ final class CalendarViewModel: ObservableObject {
             }
         }
 
-        // Generate the outbox operation before the first create request so a
-        // recoverable response can retain one durable operation. The request
-        // itself stays the normal server DTO; transport-level deduplication is
-        // applied by the shared outbox coordinator when it drains the entry.
+        // Generate the local outbox operation before the first create request
+        // so a recoverable response can retain one durable operation. The
+        // server applies the content-based duplicate policy to every create.
         let operationID = existing == nil ? UUID() : nil
         let request = ScheduleSaveDTO(
             id: existing?.id,
@@ -1276,14 +1275,7 @@ final class CalendarViewModel: ObservableObject {
 
         do {
             let savedResponse: ScheduleSaveResponse
-            if let operationID {
-                savedResponse = try await repository.saveSchedule(
-                    request,
-                    operationID: operationID
-                )
-            } else {
-                savedResponse = try await repository.saveSchedule(request)
-            }
+            savedResponse = try await repository.saveSchedule(request)
             emit(.success)
             do {
                 try await refreshSchedules()
@@ -1321,8 +1313,7 @@ final class CalendarViewModel: ObservableObject {
                         accountID: accountID,
                         request: request,
                         operationID: operationID,
-                        now: .now,
-                        requiresPreflight: true
+                        now: .now
                     )
                     appendProvisionalSchedule(request, provisionalID: operationID)
                     pendingScheduleCount = pendingScheduleEntryCount(

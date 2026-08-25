@@ -731,9 +731,9 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
         updateVisibility(target, Visibility.PUBLIC)
 
         val dateTime = LocalDateTime.of(2024, 3, 9, 0, 0)
-        val private = makeSchedule(target, Visibility.PRIVATE, dateTime)
-        val friends = makeSchedule(target, Visibility.FRIENDS, dateTime)
-        val public = makeSchedule(target, Visibility.PUBLIC, dateTime)
+        val private = makeSchedule(target, Visibility.PRIVATE, dateTime, content = "private")
+        val friends = makeSchedule(target, Visibility.FRIENDS, dateTime, content = "friends")
+        val public = makeSchedule(target, Visibility.PUBLIC, dateTime, content = "public")
 
         val result = scheduleService.findSchedulesByYearAndMonth(null, target.id!!, 2024, 3)
 
@@ -751,9 +751,9 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
         updateVisibility(target, Visibility.FRIENDS)
 
         val dateTime = LocalDateTime.of(2024, 3, 9, 0, 0)
-        val private = makeSchedule(target, Visibility.PRIVATE, dateTime)
-        val friends = makeSchedule(target, Visibility.FRIENDS, dateTime)
-        val public = makeSchedule(target, Visibility.PUBLIC, dateTime)
+        val private = makeSchedule(target, Visibility.PRIVATE, dateTime, content = "private")
+        val friends = makeSchedule(target, Visibility.FRIENDS, dateTime, content = "friends")
+        val public = makeSchedule(target, Visibility.PUBLIC, dateTime, content = "public")
 
         val friend = TestData.member2
         makeThemFriend(target, friend)
@@ -868,11 +868,16 @@ class ScheduleServiceIntegrationTest : DutyparkIntegrationTest() {
         }
     }
 
-    private fun makeSchedule(target: Member, visibility: Visibility, dateTime: LocalDateTime): Schedule {
+    private fun makeSchedule(
+        target: Member,
+        visibility: Visibility,
+        dateTime: LocalDateTime,
+        content: String = "private",
+    ): Schedule {
         return scheduleService.createSchedule(
             loginMember(target), ScheduleSaveDto(
                 memberId = target.id!!,
-                content = "private",
+                content = content,
                 startDateTime = dateTime,
                 endDateTime = dateTime,
                 visibility = visibility,

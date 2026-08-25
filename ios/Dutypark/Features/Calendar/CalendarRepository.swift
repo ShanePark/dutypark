@@ -14,10 +14,6 @@ nonisolated protocol CalendarRepositoryProtocol: Sendable {
     func dDays(memberID: MemberID, isMine: Bool) async throws -> [DDayDTO]
     func todoBoard() async throws -> TodoBoardDTO
     func saveSchedule(_ request: ScheduleSaveDTO) async throws -> ScheduleSaveResponse
-    func saveSchedule(
-        _ request: ScheduleSaveDTO,
-        operationID: UUID
-    ) async throws -> ScheduleSaveResponse
     func deleteSchedule(id: ScheduleID) async throws
     func untagSelf(scheduleID: ScheduleID) async throws
     func searchSchedules(memberID: MemberID, query: String, page: Int) async throws -> PageResponse<ScheduleSearchResultDTO>
@@ -27,17 +23,6 @@ nonisolated protocol CalendarRepositoryProtocol: Sendable {
     func uploadDutyBatch(memberID: MemberID, year: Int, month: Int, filename: String, data: Data) async throws -> DutyBatchUploadResult
     func saveDDay(_ request: DDaySaveDTO) async throws -> DDayDTO
     func deleteDDay(id: Int64) async throws
-}
-
-extension CalendarRepositoryProtocol {
-    /// Keep existing repository fakes and update call sites source-compatible;
-    /// the production repository overrides this overload to send the key.
-    func saveSchedule(
-        _ request: ScheduleSaveDTO,
-        operationID: UUID
-    ) async throws -> ScheduleSaveResponse {
-        try await saveSchedule(request)
-    }
 }
 
 nonisolated final class CalendarRepository: CalendarRepositoryProtocol, Sendable {
@@ -95,18 +80,6 @@ nonisolated final class CalendarRepository: CalendarRepositoryProtocol, Sendable
 
     func saveSchedule(_ request: ScheduleSaveDTO) async throws -> ScheduleSaveResponse {
         try await client.request("schedules", method: .post, body: request)
-    }
-
-    func saveSchedule(
-        _ request: ScheduleSaveDTO,
-        operationID: UUID
-    ) async throws -> ScheduleSaveResponse {
-        try await client.request(
-            "schedules",
-            method: .post,
-            body: request,
-            headers: ["Idempotency-Key": operationID.uuidString]
-        )
     }
 
     func deleteSchedule(id: ScheduleID) async throws {

@@ -15,6 +15,14 @@ import java.util.*
 
 interface ScheduleRepository : JpaRepository<Schedule, UUID> {
 
+    fun findFirstByMemberIdAndContentAndDescriptionAndStartDateTimeAndEndDateTimeOrderByCreatedDateAscIdAsc(
+        memberId: Long,
+        content: String,
+        description: String,
+        startDateTime: LocalDateTime,
+        endDateTime: LocalDateTime,
+    ): Optional<Schedule>
+
     fun countByMemberId(memberId: Long): Long
 
     fun countByMemberIdAndEndDateTimeGreaterThanEqual(memberId: Long, dateTime: LocalDateTime): Long

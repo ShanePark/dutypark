@@ -79,7 +79,7 @@ struct OfflineOutboxStoreTests {
     }
 
     @Test
-    func persistsPreflightMarkerAndUpgradesAnExistingOperation() async throws {
+    func duplicateOperationDoesNotChangeTheStoredPayload() async throws {
         let root = try makeTemporaryRoot()
         defer { try? FileManager.default.removeItem(at: root) }
         let store = OfflineOutboxStore(rootURL: root)
@@ -92,28 +92,22 @@ struct OfflineOutboxStoreTests {
             operationID: operationID,
             now: Date(timeIntervalSince1970: 100)
         )
-        let upgraded = try await store.enqueueScheduleCreate(
+        let duplicate = try await store.enqueueScheduleCreate(
             accountID: 42,
             request: request,
             operationID: operationID,
-            now: Date(timeIntervalSince1970: 101),
-            requiresPreflight: true
+            now: Date(timeIntervalSince1970: 101)
         )
         let restoredEntries = await OfflineOutboxStore(rootURL: root).entries(accountID: 42)
         let restored = try #require(restoredEntries.first)
 
-        #expect(!first.serverAttempted)
-        #expect(!first.requiresPreflight)
-        #expect(upgraded.serverAttempted)
-        #expect(upgraded.requiresPreflight)
+        #expect(first == duplicate)
         #expect(restored.operationID == operationID)
-        #expect(restored.serverAttempted)
-        #expect(restored.requiresPreflight)
         #expect(restoredEntries.count == 1)
     }
 
     @Test
-    func legacyEntryWithoutPreflightFieldsDecodesAsNeverAttempted() async throws {
+    func legacyEntryWithRemovedPreflightFieldsStillDecodes() async throws {
         let root = try makeTemporaryRoot()
         defer { try? FileManager.default.removeItem(at: root) }
         let store = OfflineOutboxStore(rootURL: root)
@@ -128,16 +122,16 @@ struct OfflineOutboxStoreTests {
             JSONSerialization.jsonObject(with: Data(contentsOf: file)) as? [String: Any]
         )
         var entries = try #require(object["entries"] as? [[String: Any]])
-        entries[0].removeValue(forKey: "serverAttempted")
-        entries[0].removeValue(forKey: "requiresPreflight")
+        entries[0]["serverAttempted"] = true
+        entries[0]["requiresPreflight"] = true
         object["entries"] = entries
         try JSONSerialization.data(withJSONObject: object).write(to: file, options: .atomic)
 
         let restoredEntries = await OfflineOutboxStore(rootURL: root).entries(accountID: 42)
         let restored = try #require(restoredEntries.first)
 
-        #expect(!restored.serverAttempted)
-        #expect(!restored.requiresPreflight)
+        #expect(restored.operationID == operationID)
+        #expect(restoredEntries.count == 1)
     }
 
     @Test

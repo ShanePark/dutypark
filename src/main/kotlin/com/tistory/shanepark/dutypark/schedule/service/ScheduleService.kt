@@ -7,9 +7,6 @@ import com.tistory.shanepark.dutypark.attachment.service.FileSystemService
 import com.tistory.shanepark.dutypark.attachment.service.StoragePathResolver
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
-import com.tistory.shanepark.dutypark.common.idempotency.CreateIdempotencyKey
-import com.tistory.shanepark.dutypark.common.idempotency.CreateIdempotencyKeyRepository
-import com.tistory.shanepark.dutypark.common.idempotency.CreateIdempotencyResource
 import com.tistory.shanepark.dutypark.consent.service.AiScheduleParsingConsentService
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
@@ -43,7 +40,6 @@ class ScheduleService(
     private val pathResolver: StoragePathResolver,
     private val eventPublisher: ApplicationEventPublisher,
     private val aiScheduleParsingConsentService: AiScheduleParsingConsentService,
-    private val createIdempotencyKeyRepository: CreateIdempotencyKeyRepository,
 ) {
 
     @Transactional(readOnly = true)
@@ -121,26 +117,31 @@ class ScheduleService(
     fun createSchedule(
         loginMember: LoginMember,
         scheduleSaveDto: ScheduleSaveDto,
-        idempotencyKey: String? = null,
     ): Schedule {
         val scheduleMember = memberRepository.findById(scheduleSaveDto.memberId).orElseThrow()
         schedulePermissionService.checkScheduleWriteAuthority(loginMember, scheduleMember)
 
-        val idempotency = reserveCreateOperation(
-            loginMember = loginMember,
-            idempotencyKey = idempotencyKey,
-            resourceKind = CreateIdempotencyResource.SCHEDULE,
-        )
-        idempotency?.resourceId?.let { resourceId ->
-            return scheduleRepository.findById(UUID.fromString(resourceId)).orElseThrow {
-                IllegalStateException("Idempotent schedule result no longer exists")
-            }
-        }
+        // Duplicate detection and creation must share the owner lock. Without
+        // it, two devices can both observe no matching schedule and create two
+        // rows before either transaction commits.
+        val lockedScheduleMember = memberRepository
+            .findMemberWithTeamForUpdate(scheduleMember.id!!)
+            .orElseThrow { IllegalStateException("Member not found") }
+        scheduleRepository
+            .findFirstByMemberIdAndContentAndDescriptionAndStartDateTimeAndEndDateTimeOrderByCreatedDateAscIdAsc(
+                memberId = lockedScheduleMember.id!!,
+                content = scheduleSaveDto.content,
+                description = scheduleSaveDto.description,
+                startDateTime = scheduleSaveDto.startDateTime,
+                endDateTime = scheduleSaveDto.endDateTime,
+            )
+            .orElse(null)
+            ?.let { return it }
 
         val startDateTime = scheduleSaveDto.startDateTime
-        val position = findNextPosition(scheduleMember, startDateTime)
+        val position = findNextPosition(lockedScheduleMember, startDateTime)
         val schedule = Schedule(
-            member = scheduleMember,
+            member = lockedScheduleMember,
             content = scheduleSaveDto.content,
             description = scheduleSaveDto.description,
             startDateTime = startDateTime,
@@ -164,37 +165,7 @@ class ScheduleService(
             orderedAttachmentIds = scheduleSaveDto.orderedAttachmentIds
         )
 
-        idempotency?.let {
-            it.resourceId = schedule.id.toString()
-        }
-
         return schedule
-    }
-
-    private fun reserveCreateOperation(
-        loginMember: LoginMember,
-        idempotencyKey: String?,
-        resourceKind: CreateIdempotencyResource,
-    ): CreateIdempotencyKey? {
-        val operationId = idempotencyKey?.trim()?.takeIf { it.isNotEmpty() } ?: return null
-        require(operationId.length <= 36) { "common.idempotency.invalid" }
-        // Serialize reservation and resource creation per authenticated account.
-        // The unique constraint remains a final guard for non-standard callers.
-        val account = memberRepository.findMemberWithTeamForUpdate(loginMember.id)
-            .orElseThrow { IllegalStateException("Member not found") }
-        return createIdempotencyKeyRepository
-            .findByMemberIdAndOperationIdAndResourceKind(
-                memberId = loginMember.id,
-                operationId = operationId,
-                resourceKind = resourceKind,
-            )
-            .orElseGet {
-                CreateIdempotencyKey(
-                    member = account,
-                    operationId = operationId,
-                    resourceKind = resourceKind,
-                ).also(createIdempotencyKeyRepository::save)
-            }
     }
 
     private fun findNextPosition(

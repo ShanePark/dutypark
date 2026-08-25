@@ -5,6 +5,7 @@ import com.tistory.shanepark.dutypark.attachment.domain.entity.Attachment
 import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
 import com.tistory.shanepark.dutypark.attachment.repository.AttachmentRepository
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
+import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
 import com.tistory.shanepark.dutypark.schedule.domain.dto.ScheduleSaveDto
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
@@ -87,6 +88,53 @@ class ScheduleControllerTest : RestDocsTest() {
         val createdSchedule = scheduleRepository.findAll()
             .first { it.member.id == member.id && it.content == updateScheduleDto.content }
         assertThat(createdSchedule.tags).hasSize(1)
+    }
+
+    @Test
+    fun `creating the same schedule content and date returns the existing row`() {
+        val member = TestData.member
+        val jwt = getJwt(member)
+        val request = ScheduleSaveDto(
+            memberId = member.id!!,
+            content = "duplicate-policy-schedule",
+            description = "same description",
+            visibility = Visibility.PRIVATE,
+            startDateTime = fixedDateTime.plusDays(30),
+            endDateTime = fixedDateTime.plusDays(30).plusHours(1),
+            aiTimeParsingRequested = false,
+        )
+        val json = objectMapper.writeValueAsString(request)
+        val sameKeyWithDifferentVisibility = objectMapper.writeValueAsString(
+            request.copy(visibility = Visibility.PUBLIC)
+        )
+        val differentEndTime = objectMapper.writeValueAsString(
+            request.copy(endDateTime = request.endDateTime.plusHours(1))
+        )
+
+        val first = mockMvc.perform(
+            post("/api/schedules")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json)
+                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer $jwt")
+        ).andExpect(status().isOk).andReturn()
+        val second = mockMvc.perform(
+            post("/api/schedules")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(sameKeyWithDifferentVisibility)
+                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer $jwt")
+        ).andExpect(status().isOk).andReturn()
+        val third = mockMvc.perform(
+            post("/api/schedules")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(differentEndTime)
+                .header(org.springframework.http.HttpHeaders.AUTHORIZATION, "Bearer $jwt")
+        ).andExpect(status().isOk).andReturn()
+
+        assertThat(objectMapper.readTree(first.response.contentAsString).get("id").stringValue())
+            .isEqualTo(objectMapper.readTree(second.response.contentAsString).get("id").stringValue())
+        assertThat(objectMapper.readTree(third.response.contentAsString).get("id").stringValue())
+            .isNotEqualTo(objectMapper.readTree(first.response.contentAsString).get("id").stringValue())
+        assertThat(scheduleRepository.countByMemberId(member.id!!)).isEqualTo(2)
     }
 
     @Test
