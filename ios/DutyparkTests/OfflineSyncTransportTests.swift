@@ -11,181 +11,7 @@ final class OfflineSyncTransportTests: XCTestCase {
         super.tearDown()
     }
 
-    func testScheduleCrossingMonthFetchesBothMonthsAndDeduplicatesSameID() async throws {
-        let recorder = OfflineSyncRequestRecorder()
-        let request = makeScheduleRequest(
-            startDateTime: "2026-08-31T23:00:00",
-            endDateTime: "2026-09-01T01:00:00"
-        )
-        let existing = makeScheduleDTO(
-            id: UUID(),
-            startDateTime: request.startDateTime.rawValue,
-            endDateTime: request.endDateTime.rawValue
-        )
-
-        OfflineSyncURLProtocol.handler = { request in
-            recorder.append(request)
-            guard let url = request.url else {
-                throw OfflineSyncURLProtocolError.invalidURL
-            }
-            let month = URLComponents(
-                url: url,
-                resolvingAgainstBaseURL: false
-            )?.queryItems?.first(where: { $0.name == "month" })?.value
-            let schedules: [[ScheduleDTO]] = switch month {
-            case "8", "9": [[existing]]
-            default: []
-            }
-            return try Self.response(for: request, encoding: schedules)
-        }
-
-        let transport = makeTransport()
-        let matched = try await transport.scheduleAlreadyExists(
-            accountID: 42,
-            request: request
-        )
-
-        XCTAssertTrue(matched)
-        let requests = recorder.requests
-        XCTAssertEqual(requests.count, 2)
-        XCTAssertEqual(requests.map { $0.httpMethod }, ["GET", "GET"])
-        XCTAssertEqual(
-            requests.compactMap { Self.queryItem(named: "month", in: $0) },
-            ["8", "9"]
-        )
-        XCTAssertTrue(requests.allSatisfy {
-            Self.queryItem(named: "memberId", in: $0) == "42"
-        })
-    }
-
-    func testScheduleWithTwoDifferentEquivalentCandidatesThrowsMultipleCandidates() async throws {
-        let recorder = OfflineSyncRequestRecorder()
-        let request = makeScheduleRequest(
-            startDateTime: "2026-08-31T23:00:00",
-            endDateTime: "2026-09-01T01:00:00"
-        )
-        let first = makeScheduleDTO(
-            id: UUID(),
-            startDateTime: request.startDateTime.rawValue,
-            endDateTime: request.endDateTime.rawValue
-        )
-        let second = makeScheduleDTO(
-            id: UUID(),
-            startDateTime: request.startDateTime.rawValue,
-            endDateTime: request.endDateTime.rawValue
-        )
-
-        OfflineSyncURLProtocol.handler = { request in
-            recorder.append(request)
-            let schedules: [[ScheduleDTO]] = [[first, second]]
-            return try Self.response(for: request, encoding: schedules)
-        }
-
-        do {
-            _ = try await makeTransport().scheduleAlreadyExists(
-                accountID: 42,
-                request: request
-            )
-            XCTFail("Expected multiple equivalent schedule candidates to be rejected")
-        } catch OfflineCreateDedupeError.multipleCandidates {
-            // Expected: two different server IDs cannot safely identify one
-            // ambiguous offline create.
-        } catch {
-            XCTFail("Unexpected error: \(error)")
-        }
-
-        XCTAssertEqual(recorder.requests.count, 2)
-    }
-
-    func testTodoBoardFlattensThreeColumnsAndDeduplicatesSameID() async throws {
-        let recorder = OfflineSyncRequestRecorder()
-        let request = makeTodoRequest(
-            title: "Offline todo",
-            content: "Description",
-            status: .done,
-            dueDate: "2026-08-12"
-        )
-        let existing = makeTodoDTO(
-            id: "todo-duplicate",
-            title: request.title,
-            content: request.content,
-            status: .done,
-            dueDate: request.dueDate?.rawValue
-        )
-        let unrelated = makeTodoDTO(
-            id: "todo-unrelated",
-            title: "Another todo",
-            content: "Different description",
-            status: .todo,
-            dueDate: nil
-        )
-        let board = makeTodoBoard(
-            todo: [existing],
-            inProgress: [unrelated],
-            done: [existing]
-        )
-
-        OfflineSyncURLProtocol.handler = { request in
-            recorder.append(request)
-            return try Self.response(for: request, encoding: board)
-        }
-
-        let matched = try await makeTransport().todoAlreadyExists(
-            accountID: 42,
-            request: request
-        )
-
-        XCTAssertTrue(matched)
-        XCTAssertEqual(recorder.requests.count, 1)
-        XCTAssertEqual(recorder.requests.first?.httpMethod, "GET")
-        XCTAssertEqual(recorder.requests.first?.url?.path, "/api/todos/board")
-    }
-
-    func testTodoBoardWithTwoDifferentEquivalentCandidatesThrowsMultipleCandidates() async throws {
-        let recorder = OfflineSyncRequestRecorder()
-        let request = makeTodoRequest(
-            title: "Offline todo",
-            content: "Description",
-            status: .done,
-            dueDate: "2026-08-12"
-        )
-        let first = makeTodoDTO(
-            id: "todo-one",
-            title: request.title,
-            content: request.content,
-            status: .done,
-            dueDate: request.dueDate?.rawValue
-        )
-        let second = makeTodoDTO(
-            id: "todo-two",
-            title: request.title,
-            content: request.content,
-            status: .done,
-            dueDate: request.dueDate?.rawValue
-        )
-        let board = makeTodoBoard(todo: [first], done: [second])
-
-        OfflineSyncURLProtocol.handler = { request in
-            recorder.append(request)
-            return try Self.response(for: request, encoding: board)
-        }
-
-        do {
-            _ = try await makeTransport().todoAlreadyExists(
-                accountID: 42,
-                request: request
-            )
-            XCTFail("Expected multiple equivalent todo candidates to be rejected")
-        } catch OfflineCreateDedupeError.multipleCandidates {
-            // Expected.
-        } catch {
-            XCTFail("Unexpected error: \(error)")
-        }
-
-        XCTAssertEqual(recorder.requests.count, 1)
-    }
-
-    func testCreatePostsSendTheOperationIDAsAnIdempotencyHeader() async throws {
+    func testCreatePostsWithoutAnIdempotencyHeader() async throws {
         let recorder = OfflineSyncRequestRecorder()
         let scheduleResponse = ScheduleSaveResponse(id: UUID())
         let todoResponse = makeTodoDTO(
@@ -209,30 +35,16 @@ final class OfflineSyncTransportTests: XCTestCase {
         }
 
         let transport = makeTransport()
-        let scheduleOperationID = UUID()
-        let todoOperationID = UUID()
-        _ = try await transport.createSchedule(
-            makeScheduleRequest(),
-            operationID: scheduleOperationID
-        )
-        _ = try await transport.createTodo(
-            makeTodoRequest(),
-            operationID: todoOperationID
-        )
+        _ = try await transport.createSchedule(makeScheduleRequest())
+        _ = try await transport.createTodo(makeTodoRequest())
 
         XCTAssertEqual(recorder.requests.map { $0.httpMethod }, ["POST", "POST"])
         let scheduleBody = try XCTUnwrap(Self.jsonBody(recorder.requests[0]))
         let todoBody = try XCTUnwrap(Self.jsonBody(recorder.requests[1]))
         XCTAssertNil(scheduleBody["clientOperationId"])
         XCTAssertNil(todoBody["clientOperationId"])
-        XCTAssertEqual(
-            recorder.requests[0].value(forHTTPHeaderField: "Idempotency-Key"),
-            scheduleOperationID.uuidString
-        )
-        XCTAssertEqual(
-            recorder.requests[1].value(forHTTPHeaderField: "Idempotency-Key"),
-            todoOperationID.uuidString
-        )
+        XCTAssertNil(recorder.requests[0].value(forHTTPHeaderField: "Idempotency-Key"))
+        XCTAssertNil(recorder.requests[1].value(forHTTPHeaderField: "Idempotency-Key"))
     }
 
     private func makeTransport() -> APIOfflineSyncTransport {

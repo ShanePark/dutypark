@@ -225,7 +225,6 @@ final class CalendarOfflineTests: XCTestCase {
             XCTFail("Expected a queued schedule create")
             return
         }
-        XCTAssertFalse(entry.requiresPreflight, "A never-attempted offline create must drain without a server preflight")
         XCTAssertEqual(
             model.days.first(where: { $0.cell.date.rawValue == "2026-08-12" })?.schedules.last?.id,
             entry.operationID
@@ -306,7 +305,6 @@ final class CalendarOfflineTests: XCTestCase {
             return
         }
         XCTAssertEqual(queuedRequest, request)
-        XCTAssertTrue(entry.requiresPreflight, "A transport failure after POST requires server-state preflight")
         for _ in 0..<20 { await Task.yield() }
         let requestedAccounts = await syncRequests.values
         XCTAssertEqual(requestedAccounts, [42])
@@ -351,7 +349,6 @@ final class CalendarOfflineTests: XCTestCase {
             return
         }
         XCTAssertEqual(queuedRequest, request)
-        XCTAssertTrue(entry.requiresPreflight, "An ambiguous response requires server-state preflight")
         for _ in 0..<20 { await Task.yield() }
         let requestedAccounts = await syncRequests.values
         XCTAssertEqual(requestedAccounts, [42])
@@ -397,7 +394,6 @@ final class CalendarOfflineTests: XCTestCase {
             XCTAssertTrue(saved, label)
             let entries = await outbox.entries(accountID: 42)
             let entry = try XCTUnwrap(entries.first, label)
-            XCTAssertTrue(entry.requiresPreflight, label)
 
             for _ in 0..<20 { await Task.yield() }
             let requestedAccounts = await syncRequests.values
@@ -689,39 +685,12 @@ private actor CalendarOfflineOutboxStub: OfflineOutboxProviding {
             operationID: operationID,
             accountID: accountID,
             payload: .scheduleCreate(request),
-            createdAt: now,
-            requiresPreflight: false
-        )
-        storedEntries.append(entry)
-        return entry
-    }
-    func enqueueScheduleCreate(
-        accountID: MemberID,
-        request: ScheduleSaveDTO,
-        operationID: UUID,
-        now: Date,
-        requiresPreflight: Bool
-    ) async throws -> OfflineOutboxEntry {
-        let entry = OfflineOutboxEntry(
-            operationID: operationID,
-            accountID: accountID,
-            payload: .scheduleCreate(request),
-            createdAt: now,
-            requiresPreflight: requiresPreflight
+            createdAt: now
         )
         storedEntries.append(entry)
         return entry
     }
     func enqueueTodoCreate(accountID: MemberID, request: TodoRequest, operationID: UUID, now: Date) async throws -> OfflineOutboxEntry {
-        fatalError("Not used by Calendar offline tests")
-    }
-    func enqueueTodoCreate(
-        accountID: MemberID,
-        request: TodoRequest,
-        operationID: UUID,
-        now: Date,
-        requiresPreflight: Bool
-    ) async throws -> OfflineOutboxEntry {
         fatalError("Not used by Calendar offline tests")
     }
     func entries(accountID: MemberID) async -> [OfflineOutboxEntry] { storedEntries.filter { $0.accountID == accountID } }
@@ -730,7 +699,6 @@ private actor CalendarOfflineOutboxStub: OfflineOutboxProviding {
     func markPermanentFailure(accountID: MemberID, operationID: UUID, error: OfflineOutboxFailure) async throws {}
     func retryPermanentFailure(accountID: MemberID, operationID: UUID, now: Date) async throws {}
     func markSucceeded(accountID: MemberID, operationID: UUID) async throws {}
-    func markServerAttempted(accountID: MemberID, operationID: UUID) async throws {}
     func purge(accountID: MemberID) async throws {}
 }
 

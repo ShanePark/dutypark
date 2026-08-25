@@ -4,6 +4,7 @@ import com.tistory.shanepark.dutypark.RestDocsTest
 import com.tistory.shanepark.dutypark.todo.domain.entity.Todo
 import com.tistory.shanepark.dutypark.todo.domain.entity.TodoStatus
 import com.tistory.shanepark.dutypark.todo.repository.TodoRepository
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.MediaType
@@ -91,6 +92,50 @@ class TodoControllerTest : RestDocsTest() {
                     responseFields(*todoResponseFields())
                 )
             )
+    }
+
+    @Test
+    fun `creating the same todo status title and content ignores due date and returns the existing row`() {
+        val firstJson = """
+            {
+                "title": "duplicate-policy-todo",
+                "content": "same content",
+                "status": "TODO",
+                "dueDate": "2025-12-31",
+                "attachmentSessionId": null,
+                "orderedAttachmentIds": []
+            }
+        """.trimIndent()
+        val secondJson = firstJson.replace("2025-12-31", "2026-12-31")
+        val differentStatusJson = secondJson.replace("\"status\": \"TODO\"", "\"status\": \"IN_PROGRESS\"")
+
+        val first = mockMvc.perform(
+            RestDocumentationRequestBuilders.post("/api/todos")
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(firstJson)
+                .withAuth(TestData.member)
+        ).andExpect(status().isOk).andReturn()
+        val second = mockMvc.perform(
+            RestDocumentationRequestBuilders.post("/api/todos")
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(secondJson)
+                .withAuth(TestData.member)
+        ).andExpect(status().isOk).andReturn()
+        val third = mockMvc.perform(
+            RestDocumentationRequestBuilders.post("/api/todos")
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(differentStatusJson)
+                .withAuth(TestData.member)
+        ).andExpect(status().isOk).andReturn()
+
+        assertThat(objectMapper.readTree(first.response.contentAsString).get("id").stringValue())
+            .isEqualTo(objectMapper.readTree(second.response.contentAsString).get("id").stringValue())
+        assertThat(objectMapper.readTree(third.response.contentAsString).get("id").stringValue())
+            .isNotEqualTo(objectMapper.readTree(first.response.contentAsString).get("id").stringValue())
+        assertThat(todoRepository.countByMemberId(TestData.member.id!!)).isEqualTo(2)
     }
 
     @Test

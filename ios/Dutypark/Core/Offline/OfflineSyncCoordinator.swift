@@ -2,269 +2,8 @@ import Combine
 import Foundation
 
 nonisolated protocol OfflineSyncTransport: Sendable {
-    /// Legacy state lookup retained for older integrations and diagnostics.
-    /// The coordinator does not use content-based matching for queued creates:
-    /// it always sends the operation ID with the create request.
-    func scheduleAlreadyExists(
-        accountID: MemberID,
-        request: ScheduleSaveDTO
-    ) async throws -> Bool
-    func todoAlreadyExists(
-        accountID: MemberID,
-        request: TodoRequest
-    ) async throws -> Bool
     func createSchedule(_ request: ScheduleSaveDTO) async throws -> ScheduleSaveResponse
-    func createSchedule(
-        _ request: ScheduleSaveDTO,
-        operationID: UUID
-    ) async throws -> ScheduleSaveResponse
     func createTodo(_ request: TodoRequest) async throws -> TodoDTO
-    func createTodo(
-        _ request: TodoRequest,
-        operationID: UUID
-    ) async throws -> TodoDTO
-}
-
-extension OfflineSyncTransport {
-    /// The operation-aware overload keeps existing in-memory/test transports
-    /// source-compatible while production transports send the durable key.
-    func createSchedule(
-        _ request: ScheduleSaveDTO,
-        operationID: UUID
-    ) async throws -> ScheduleSaveResponse {
-        try await createSchedule(request)
-    }
-
-    func createTodo(
-        _ request: TodoRequest,
-        operationID: UUID
-    ) async throws -> TodoDTO {
-        try await createTodo(request)
-    }
-
-    /// Existing test transports and integrations can retain the legacy lookup
-    /// methods. They are not part of the idempotent create path.
-    func scheduleAlreadyExists(
-        accountID: MemberID,
-        request: ScheduleSaveDTO
-    ) async throws -> Bool { throw OfflineCreateDedupeError.lookupUnavailable }
-
-    func todoAlreadyExists(
-        accountID: MemberID,
-        request: TodoRequest
-    ) async throws -> Bool { throw OfflineCreateDedupeError.lookupUnavailable }
-}
-
-/// Server-side create matching shared by the production transport and its
-/// focused tests.  The comparison deliberately ignores IDs and attachment
-/// metadata: the offline queue currently accepts only plain personal creates.
-/// Unicode composition, line endings, and outer whitespace are normalized;
-/// internal whitespace and letter case remain significant.
-nonisolated enum OfflineCreateDedupe {
-    static func normalizedText(_ value: String) -> String {
-        value
-            .replacingOccurrences(of: "\r\n", with: "\n")
-            .replacingOccurrences(of: "\r", with: "\n")
-            .precomposedStringWithCanonicalMapping
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    static func scheduleMatches(
-        _ existing: ScheduleDTO,
-        request: ScheduleSaveDTO
-    ) -> Bool {
-        guard request.tagFriendIds?.isEmpty != false,
-              request.attachmentSessionId == nil,
-              request.orderedAttachmentIds.isEmpty,
-              !request.aiTimeParsingRequested,
-              !existing.isTagged,
-              existing.tags.isEmpty,
-              existing.attachments.isEmpty,
-              normalizedText(existing.content) == normalizedText(request.content),
-              normalizedText(existing.description) == normalizedText(request.description),
-              canonicalLocalDateTime(existing.startDateTime.rawValue)
-                == canonicalLocalDateTime(request.startDateTime.rawValue),
-              canonicalLocalDateTime(existing.endDateTime.rawValue)
-                == canonicalLocalDateTime(request.endDateTime.rawValue),
-              canonicalLocalDateTime(request.startDateTime.rawValue) != nil,
-              canonicalLocalDateTime(request.endDateTime.rawValue) != nil,
-              existing.visibility == request.visibility
-        else { return false }
-        return true
-    }
-
-    static func todoMatches(
-        _ existing: TodoDTO,
-        request: TodoRequest
-    ) -> Bool {
-        request.tagFriendIds?.isEmpty != false
-            && request.attachmentSessionId == nil
-            && request.orderedAttachmentIds.isEmpty
-            && !existing.isTagged
-            && existing.tags.isEmpty
-            && !existing.hasAttachments
-            && dateOnlyMatches(existing.dueDate?.rawValue, request.dueDate?.rawValue)
-            && normalizedText(existing.title) == normalizedText(request.title)
-            && normalizedText(existing.content) == normalizedText(request.content)
-            && existing.status == (request.status ?? .todo)
-    }
-
-    /// Returns each calendar month touched by an inclusive schedule range.
-    /// ISO-like local date strings are used by the existing DTO wrappers; a
-    /// malformed range deliberately returns no months so the caller can defer
-    /// instead of issuing an unsafe POST.
-    static func monthsCovering(
-        start: LocalDateTimeValue,
-        end: LocalDateTimeValue
-    ) -> [(year: Int, month: Int)] {
-        guard let startValue = parseLocalDateTime(start.rawValue),
-              let endValue = parseLocalDateTime(end.rawValue),
-              startValue <= endValue
-        else { return [] }
-
-        var current = Month(year: startValue.year, month: startValue.month)
-        let endMonth = Month(year: endValue.year, month: endValue.month)
-        var result: [(year: Int, month: Int)] = []
-        while current <= endMonth {
-            result.append((current.year, current.month))
-            if current.month == 12 {
-                current = Month(year: current.year + 1, month: 1)
-            } else {
-                current = Month(year: current.year, month: current.month + 1)
-            }
-        }
-        return result
-    }
-
-    private static func canonicalLocalDateTime(_ value: String) -> String? {
-        parseLocalDateTime(value)?.canonical
-    }
-
-    private static func canonicalDateOnly(_ value: String?) -> String? {
-        guard let value else { return nil }
-        return parseLocalDateTime(value + "T00:00:00")?.canonical.prefix(10).description
-    }
-
-    private static func dateOnlyMatches(_ lhs: String?, _ rhs: String?) -> Bool {
-        switch (lhs, rhs) {
-        case (nil, nil):
-            return true
-        case (.some(let lhs), .some(let rhs)):
-            guard let lhs = canonicalDateOnly(lhs),
-                  let rhs = canonicalDateOnly(rhs)
-            else { return false }
-            return lhs == rhs
-        default:
-            return false
-        }
-    }
-
-    private static func parseLocalDateTime(_ value: String) -> LocalDateTime? {
-        let bytes = Array(value.utf8)
-        guard bytes.count == 19,
-              bytes[4] == 45,
-              bytes[7] == 45,
-              bytes[10] == 84,
-              bytes[13] == 58,
-              bytes[16] == 58
-        else { return nil }
-
-        func number(_ range: Range<Int>) -> Int? {
-            var result = 0
-            for index in range {
-                let byte = bytes[index]
-                guard (48...57).contains(byte) else { return nil }
-                result = result * 10 + Int(byte - 48)
-            }
-            return result
-        }
-
-        guard let year = number(0..<4),
-              let month = number(5..<7),
-              let day = number(8..<10),
-              let hour = number(11..<13),
-              let minute = number(14..<16),
-              let second = number(17..<19),
-              (1...12).contains(month),
-              (1...31).contains(day),
-              (0...23).contains(hour),
-              (0...59).contains(minute),
-              (0...59).contains(second)
-        else { return nil }
-
-        var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
-        let components = DateComponents(
-            calendar: calendar,
-            timeZone: calendar.timeZone,
-            year: year,
-            month: month,
-            day: day,
-            hour: hour,
-            minute: minute,
-            second: second
-        )
-        guard let date = calendar.date(from: components) else { return nil }
-        let validated = calendar.dateComponents(
-            [.year, .month, .day, .hour, .minute, .second],
-            from: date
-        )
-        guard validated.year == year,
-              validated.month == month,
-              validated.day == day,
-              validated.hour == hour,
-              validated.minute == minute,
-              validated.second == second
-        else { return nil }
-        return LocalDateTime(
-            year: year,
-            month: month,
-            day: day,
-            hour: hour,
-            minute: minute,
-            second: second
-        )
-    }
-
-    private struct Month: Comparable {
-        let year: Int
-        let month: Int
-
-        static func < (lhs: Month, rhs: Month) -> Bool {
-            lhs.year < rhs.year || (lhs.year == rhs.year && lhs.month < rhs.month)
-        }
-    }
-
-    private struct LocalDateTime: Comparable {
-        let year: Int
-        let month: Int
-        let day: Int
-        let hour: Int
-        let minute: Int
-        let second: Int
-
-        var canonical: String {
-            String(
-                format: "%04d-%02d-%02dT%02d:%02d:%02d",
-                year,
-                month,
-                day,
-                hour,
-                minute,
-                second
-            )
-        }
-
-        static func < (lhs: Self, rhs: Self) -> Bool {
-            lhs.canonical < rhs.canonical
-        }
-    }
-}
-
-nonisolated enum OfflineCreateDedupeError: Error, Sendable {
-    case invalidScheduleRange
-    case lookupUnavailable
-    case multipleCandidates
 }
 
 /// The production transport deliberately uses the same APIClient as the
@@ -286,19 +25,6 @@ nonisolated struct APIOfflineSyncTransport: OfflineSyncTransport {
         )
     }
 
-    func createSchedule(
-        _ request: ScheduleSaveDTO,
-        operationID: UUID
-    ) async throws -> ScheduleSaveResponse {
-        try await client.request(
-            "schedules",
-            method: .post,
-            body: request,
-            headers: ["Idempotency-Key": operationID.uuidString],
-            authenticationFailureHandling: .awaitCompletion
-        )
-    }
-
     func createTodo(_ request: TodoRequest) async throws -> TodoDTO {
         try await client.request(
             "todos",
@@ -308,77 +34,6 @@ nonisolated struct APIOfflineSyncTransport: OfflineSyncTransport {
         )
     }
 
-    func createTodo(
-        _ request: TodoRequest,
-        operationID: UUID
-    ) async throws -> TodoDTO {
-        try await client.request(
-            "todos",
-            method: .post,
-            body: request,
-            headers: ["Idempotency-Key": operationID.uuidString],
-            authenticationFailureHandling: .awaitCompletion
-        )
-    }
-
-    func scheduleAlreadyExists(
-        accountID: MemberID,
-        request: ScheduleSaveDTO
-    ) async throws -> Bool {
-        let months = OfflineCreateDedupe.monthsCovering(
-            start: request.startDateTime,
-            end: request.endDateTime
-        )
-        guard !months.isEmpty else {
-            throw OfflineCreateDedupeError.invalidScheduleRange
-        }
-
-        var schedulesByID: [ScheduleID: ScheduleDTO] = [:]
-        for month in months {
-            let days: [[ScheduleDTO]] = try await client.request(
-                "schedules",
-                queryItems: [
-                    URLQueryItem(name: "memberId", value: String(accountID)),
-                    URLQueryItem(name: "year", value: String(month.year)),
-                    URLQueryItem(name: "month", value: String(month.month))
-                ],
-                authenticationFailureHandling: .awaitCompletion
-            )
-            for schedule in days.flatMap({ $0 }) {
-                schedulesByID[schedule.id] = schedule
-            }
-        }
-
-        let candidates = schedulesByID.values.filter {
-            OfflineCreateDedupe.scheduleMatches($0, request: request)
-        }
-        guard candidates.count < 2 else {
-            throw OfflineCreateDedupeError.multipleCandidates
-        }
-        return candidates.count == 1
-    }
-
-    func todoAlreadyExists(
-        accountID: MemberID,
-        request: TodoRequest
-    ) async throws -> Bool {
-        guard accountID > 0 else { throw OfflineSyncRequestError.accountMismatch }
-        let board: TodoBoardDTO = try await client.request(
-            "todos/board",
-            authenticationFailureHandling: .awaitCompletion
-        )
-        var todosByID: [String: TodoDTO] = [:]
-        for todo in board.todo + board.inProgress + board.done {
-            todosByID[todo.id] = todo
-        }
-        let candidates = todosByID.values.filter {
-            OfflineCreateDedupe.todoMatches($0, request: request)
-        }
-        guard candidates.count < 2 else {
-            throw OfflineCreateDedupeError.multipleCandidates
-        }
-        return candidates.count == 1
-    }
 }
 
 nonisolated struct OfflineSyncAccountState: Equatable, Sendable {
@@ -680,26 +335,12 @@ final class OfflineSyncCoordinator: ObservableObject {
                     request,
                     accountID: entry.accountID
                 )
-                try await outbox.markServerAttempted(
-                    accountID: entry.accountID,
-                    operationID: entry.operationID
-                )
-                _ = try await transport.createSchedule(
-                    request,
-                    operationID: entry.operationID
-                )
+                _ = try await transport.createSchedule(request)
             case .todoCreate(let request):
                 let request = try normalizedTodoRequest(
                     request
                 )
-                try await outbox.markServerAttempted(
-                    accountID: entry.accountID,
-                    operationID: entry.operationID
-                )
-                _ = try await transport.createTodo(
-                    request,
-                    operationID: entry.operationID
-                )
+                _ = try await transport.createTodo(request)
             }
             guard isCurrent(accountID: entry.accountID, generation: generation) else {
                 return .cancelled
@@ -710,9 +351,10 @@ final class OfflineSyncCoordinator: ObservableObject {
                     operationID: entry.operationID
                 )
             } catch {
-                // The server accepted the create (or preflight found it), but
-                // the local delete failed. Keep the preflight marker so the
-                // next attempt never repeats the POST blindly.
+                // The server accepted or reconciled the create, but the local
+                // delete failed. Keep the operation in the queue so the next
+                // plain create remains safe under the server's content-based
+                // duplicate policy.
                 await recordRetry(
                     entry,
                     code: "offline.outbox.persist",
@@ -747,17 +389,6 @@ final class OfflineSyncCoordinator: ObservableObject {
                 )
             }
             return .permanentFailure
-        } catch is OfflineCreateDedupeError {
-            guard isCurrent(accountID: entry.accountID, generation: generation) else {
-                return .cancelled
-            }
-            await recordRetry(
-                entry,
-                code: "offline.dedupe.inconclusive",
-                message: "The server state could not be matched safely.",
-                generation: generation
-            )
-            return .retry
         } catch {
             guard isCurrent(accountID: entry.accountID, generation: generation) else {
                 return .cancelled
@@ -901,8 +532,8 @@ final class OfflineSyncCoordinator: ObservableObject {
         guard request.memberId == accountID else {
             throw OfflineSyncRequestError.accountMismatch
         }
-        // The operation ID is transported in the Idempotency-Key header, not
-        // in the request body, so this normalization remains API-compatible.
+        // The operation ID identifies only the local outbox entry. It is not
+        // part of the server request body or headers.
         return ScheduleSaveDTO(
             id: request.id,
             memberId: request.memberId,
@@ -921,8 +552,8 @@ final class OfflineSyncCoordinator: ObservableObject {
     private func normalizedTodoRequest(
         _ request: TodoRequest
     ) throws -> TodoRequest {
-        // The operation ID is transported in the Idempotency-Key header, not
-        // in the request body, so this normalization remains API-compatible.
+        // The operation ID identifies only the local outbox entry. It is not
+        // part of the server request body or headers.
         return TodoRequest(
             title: request.title,
             content: request.content,

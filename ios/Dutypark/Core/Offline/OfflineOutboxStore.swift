@@ -79,10 +79,6 @@ nonisolated struct OfflineOutboxEntry: Codable, Equatable, Sendable {
     let accountID: MemberID
     let payload: OfflineOutboxPayload
     let createdAt: Date
-    /// Marks a create whose server boundary has already been attempted.  A
-    /// retry must resolve server state before issuing another POST.
-    var serverAttempted: Bool
-    var requiresPreflight: Bool
     var state: OfflineOutboxState
     var attemptCount: Int
     var lastAttemptAt: Date?
@@ -94,8 +90,6 @@ nonisolated struct OfflineOutboxEntry: Codable, Equatable, Sendable {
         accountID: MemberID,
         payload: OfflineOutboxPayload,
         createdAt: Date,
-        serverAttempted: Bool = false,
-        requiresPreflight: Bool = false,
         state: OfflineOutboxState = .pending,
         attemptCount: Int = 0,
         lastAttemptAt: Date? = nil,
@@ -106,8 +100,6 @@ nonisolated struct OfflineOutboxEntry: Codable, Equatable, Sendable {
         self.accountID = accountID
         self.payload = payload
         self.createdAt = createdAt
-        self.serverAttempted = serverAttempted
-        self.requiresPreflight = requiresPreflight
         self.state = state
         self.attemptCount = attemptCount
         self.lastAttemptAt = lastAttemptAt
@@ -117,7 +109,6 @@ nonisolated struct OfflineOutboxEntry: Codable, Equatable, Sendable {
 
     private enum CodingKeys: String, CodingKey {
         case operationID, accountID, payload, createdAt
-        case serverAttempted, requiresPreflight
         case state, attemptCount, lastAttemptAt, nextAttemptAt, failure
     }
 
@@ -127,8 +118,6 @@ nonisolated struct OfflineOutboxEntry: Codable, Equatable, Sendable {
         accountID = try container.decode(MemberID.self, forKey: .accountID)
         payload = try container.decode(OfflineOutboxPayload.self, forKey: .payload)
         createdAt = try container.decode(Date.self, forKey: .createdAt)
-        serverAttempted = try container.decodeIfPresent(Bool.self, forKey: .serverAttempted) ?? false
-        requiresPreflight = try container.decodeIfPresent(Bool.self, forKey: .requiresPreflight) ?? serverAttempted
         state = try container.decode(OfflineOutboxState.self, forKey: .state)
         attemptCount = try container.decode(Int.self, forKey: .attemptCount)
         lastAttemptAt = try container.decodeIfPresent(Date.self, forKey: .lastAttemptAt)
@@ -159,25 +148,11 @@ nonisolated protocol OfflineOutboxProviding: Sendable {
         operationID: UUID,
         now: Date
     ) async throws -> OfflineOutboxEntry
-    func enqueueScheduleCreate(
-        accountID: MemberID,
-        request: ScheduleSaveDTO,
-        operationID: UUID,
-        now: Date,
-        requiresPreflight: Bool
-    ) async throws -> OfflineOutboxEntry
     func enqueueTodoCreate(
         accountID: MemberID,
         request: TodoRequest,
         operationID: UUID,
         now: Date
-    ) async throws -> OfflineOutboxEntry
-    func enqueueTodoCreate(
-        accountID: MemberID,
-        request: TodoRequest,
-        operationID: UUID,
-        now: Date,
-        requiresPreflight: Bool
     ) async throws -> OfflineOutboxEntry
     func entries(accountID: MemberID) async -> [OfflineOutboxEntry]
     func pendingEntries(accountID: MemberID, now: Date) async -> [OfflineOutboxEntry]
@@ -198,7 +173,6 @@ nonisolated protocol OfflineOutboxProviding: Sendable {
         now: Date
     ) async throws
     func markSucceeded(accountID: MemberID, operationID: UUID) async throws
-    func markServerAttempted(accountID: MemberID, operationID: UUID) async throws
     func purge(accountID: MemberID) async throws
     func purgeAll() async throws
     func reopen(accountID: MemberID) async
@@ -212,9 +186,9 @@ extension OfflineOutboxProviding {
 }
 
 /// Persistent queue for the two write operations supported in offline mode.
-/// Entries are account-scoped and operation IDs are idempotent within an
-/// account, so a retry after an ambiguous network failure cannot enqueue a
-/// second local operation.
+/// Entries are account-scoped and operation IDs identify one local create
+/// operation, so a retry after an ambiguous network failure cannot enqueue a
+/// second local operation. The server owns content-based duplicate handling.
 actor OfflineOutboxStore {
     static let shared = OfflineOutboxStore()
 
@@ -250,22 +224,6 @@ actor OfflineOutboxStore {
         operationID: UUID = UUID(),
         now: Date = .now
     ) throws -> OfflineOutboxEntry {
-        try enqueueScheduleCreate(
-            accountID: accountID,
-            request: request,
-            operationID: operationID,
-            now: now,
-            requiresPreflight: false
-        )
-    }
-
-    func enqueueScheduleCreate(
-        accountID: MemberID,
-        request: ScheduleSaveDTO,
-        operationID: UUID = UUID(),
-        now: Date = .now,
-        requiresPreflight: Bool
-    ) throws -> OfflineOutboxEntry {
         guard accountID > 0 else { throw OfflineOutboxStoreError.accountMismatch }
         return try withOpenAccount(accountID) {
             guard request.id == nil,
@@ -282,8 +240,7 @@ actor OfflineOutboxStore {
                 accountID: accountID,
                 payload: .scheduleCreate(normalizedRequest),
                 operationID: operationID,
-                now: now,
-                requiresPreflight: requiresPreflight
+                now: now
             )
         }
     }
@@ -293,22 +250,6 @@ actor OfflineOutboxStore {
         request: TodoRequest,
         operationID: UUID = UUID(),
         now: Date = .now
-    ) throws -> OfflineOutboxEntry {
-        try enqueueTodoCreate(
-            accountID: accountID,
-            request: request,
-            operationID: operationID,
-            now: now,
-            requiresPreflight: false
-        )
-    }
-
-    func enqueueTodoCreate(
-        accountID: MemberID,
-        request: TodoRequest,
-        operationID: UUID = UUID(),
-        now: Date = .now,
-        requiresPreflight: Bool
     ) throws -> OfflineOutboxEntry {
         guard accountID > 0 else { throw OfflineOutboxStoreError.accountMismatch }
         return try withOpenAccount(accountID) {
@@ -323,8 +264,7 @@ actor OfflineOutboxStore {
                 accountID: accountID,
                 payload: .todoCreate(normalizedRequest),
                 operationID: operationID,
-                now: now,
-                requiresPreflight: requiresPreflight
+                now: now
             )
         }
     }
@@ -412,17 +352,6 @@ actor OfflineOutboxStore {
         }
     }
 
-    /// Records the boundary before a POST is started.  If the process or
-    /// connection dies after this point, the next drain must preflight server
-    /// state before attempting the create again.
-    func markServerAttempted(accountID: MemberID, operationID: UUID) throws {
-        guard accountID > 0 else { throw OfflineOutboxStoreError.accountMismatch }
-        try update(accountID: accountID, operationID: operationID) { entry in
-            entry.serverAttempted = true
-            entry.requiresPreflight = true
-        }
-    }
-
     /// Removes only the queue file. The cache store owns the enclosing account
     /// directory and can therefore be purged independently.
     func purge(accountID: MemberID) throws {
@@ -461,8 +390,7 @@ actor OfflineOutboxStore {
         accountID: MemberID,
         payload: OfflineOutboxPayload,
         operationID: UUID,
-        now: Date,
-        requiresPreflight: Bool
+        now: Date
     ) throws -> OfflineOutboxEntry {
         guard accountID > 0 else { throw OfflineOutboxStoreError.accountMismatch }
         var file = loadFile(accountID: accountID) ?? File(
@@ -474,17 +402,7 @@ actor OfflineOutboxStore {
             guard existing.payload == payload else {
                 throw OfflineOutboxStoreError.operationConflict
             }
-            guard requiresPreflight,
-                  !existing.requiresPreflight || !existing.serverAttempted
-            else { return existing }
-            var updated = existing
-            updated.serverAttempted = true
-            updated.requiresPreflight = true
-            if let index = file.entries.firstIndex(where: { $0.operationID == operationID }) {
-                file.entries[index] = updated
-                try saveFile(file, accountID: accountID)
-            }
-            return updated
+            return existing
         }
 
         let entry = OfflineOutboxEntry(
@@ -492,8 +410,6 @@ actor OfflineOutboxStore {
             accountID: accountID,
             payload: payload,
             createdAt: now,
-            serverAttempted: requiresPreflight,
-            requiresPreflight: requiresPreflight
         )
         file.entries.append(entry)
         try saveFile(file, accountID: accountID)
@@ -608,8 +524,6 @@ actor OfflineOutboxStore {
                 accountID: entry.accountID,
                 payload: .scheduleCreate(request),
                 createdAt: entry.createdAt,
-                serverAttempted: entry.serverAttempted,
-                requiresPreflight: entry.requiresPreflight,
                 state: entry.state,
                 attemptCount: entry.attemptCount,
                 lastAttemptAt: entry.lastAttemptAt,
@@ -628,8 +542,6 @@ actor OfflineOutboxStore {
                 accountID: entry.accountID,
                 payload: .todoCreate(request),
                 createdAt: entry.createdAt,
-                serverAttempted: entry.serverAttempted,
-                requiresPreflight: entry.requiresPreflight,
                 state: entry.state,
                 attemptCount: entry.attemptCount,
                 lastAttemptAt: entry.lastAttemptAt,

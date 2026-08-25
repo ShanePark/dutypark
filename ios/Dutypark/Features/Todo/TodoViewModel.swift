@@ -408,8 +408,8 @@ final class TodoViewModel: ObservableObject {
         isSaving = true
         defer { isSaving = false }
         // Keep this UUID for the entire attempt. If the transport fails, the
-        // exact request and operation identity are placed in the durable
-        // outbox; server-side dedupe is handled by the sync transport.
+        // exact request and local operation identity are placed in the durable
+        // outbox; the server applies its content-based duplicate policy.
         let operationID = UUID()
         let request = draft.request()
         if isOffline {
@@ -421,10 +421,7 @@ final class TodoViewModel: ObservableObject {
             )
         }
         do {
-            let created = try await repository.create(
-                request,
-                operationID: operationID
-            )
+            let created = try await repository.create(request)
             if refreshBoard {
                 patchBoard(with: created)
                 await saveCurrentBoardToCache(accountID: currentAccountID)
@@ -772,8 +769,7 @@ final class TodoViewModel: ObservableObject {
                 accountID: accountID,
                 request: request,
                 operationID: operationID,
-                now: .now,
-                requiresPreflight: triggerSync
+                now: .now
             )
         } catch {
             // A failed durable write must never be presented as a queued

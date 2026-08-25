@@ -4,7 +4,7 @@ import XCTest
 
 @MainActor
 final class OfflineSyncCoordinatorTests: XCTestCase {
-    func testFirstOfflineCreatesSkipPreflightAndRemoveBothCreateKinds() async throws {
+    func testFirstOfflineCreatesPostBothCreateKinds() async throws {
         let outbox = SyncOutboxFake()
         let transport = SyncTransportFake()
         let coordinator = OfflineSyncCoordinator(
@@ -34,14 +34,10 @@ final class OfflineSyncCoordinatorTests: XCTestCase {
 
         let scheduleRequests = await transport.scheduleRequests
         let todoRequests = await transport.todoRequests
-        let schedulePreflights = await transport.schedulePreflightRequests
-        let todoPreflights = await transport.todoPreflightRequests
         let sentSchedule = try XCTUnwrap(scheduleRequests.first)
         let sentTodo = try XCTUnwrap(todoRequests.first)
         XCTAssertEqual(sentSchedule.memberId, 42)
         XCTAssertEqual(sentTodo.title, "Offline todo")
-        XCTAssertTrue(schedulePreflights.isEmpty)
-        XCTAssertTrue(todoPreflights.isEmpty)
         let remainingEntries = await outbox.entries(accountID: 42)
         XCTAssertTrue(remainingEntries.isEmpty)
         XCTAssertEqual(coordinator.state(for: 42).pendingCount, 0)
@@ -81,189 +77,9 @@ final class OfflineSyncCoordinatorTests: XCTestCase {
         XCTAssertEqual(entries.first?.state, .permanentFailure)
     }
 
-    func testEquivalentScheduleStillPostsAsDistinctOperation() async throws {
+    func testTransportFailureRetriesTheSameLocalOperation() async throws {
         let outbox = SyncOutboxFake()
-        let transport = SyncTransportFake(existingSchedules: [
-            makeScheduleDTO(
-                content: "Offline schedule",
-                description: "Created without a connection"
-            )
-        ])
-        let coordinator = OfflineSyncCoordinator(
-            outbox: outbox,
-            transport: transport,
-            now: { Date(timeIntervalSince1970: 100) },
-            networkStatusProvider: { .satisfied }
-        )
-        defer { coordinator.cancelAll() }
-
-        let operationID = UUID()
-        _ = try await outbox.enqueueScheduleCreate(
-            accountID: 42,
-            request: makeScheduleRequest(
-                content: "Offline schedule",
-                description: "Created without a connection"
-            ),
-            operationID: operationID,
-            now: Date(timeIntervalSince1970: 1)
-        )
-
-        await coordinator.synchronize(accountID: 42)
-
-        let scheduleRequests = await transport.scheduleRequests
-        let preflightRequests = await transport.schedulePreflightRequests
-        let operationIDs = await transport.scheduleOperationIDs
-        XCTAssertEqual(scheduleRequests.count, 1)
-        XCTAssertEqual(operationIDs, [operationID])
-        XCTAssertTrue(preflightRequests.isEmpty)
-        let remaining = await outbox.entries(accountID: 42)
-        XCTAssertTrue(remaining.isEmpty)
-    }
-
-    func testNonEquivalentScheduleStillPosts() async throws {
-        let outbox = SyncOutboxFake()
-        let transport = SyncTransportFake(existingSchedules: [
-            makeScheduleDTO(content: "A different schedule")
-        ])
-        let coordinator = OfflineSyncCoordinator(
-            outbox: outbox,
-            transport: transport,
-            now: { Date(timeIntervalSince1970: 100) },
-            networkStatusProvider: { .satisfied }
-        )
-        defer { coordinator.cancelAll() }
-
-        _ = try await outbox.enqueueScheduleCreate(
-            accountID: 42,
-            request: makeScheduleRequest(),
-            operationID: UUID(),
-            now: Date(timeIntervalSince1970: 1)
-        )
-
-        await coordinator.synchronize(accountID: 42)
-
-        let scheduleRequests = await transport.scheduleRequests
-        XCTAssertEqual(scheduleRequests.count, 1)
-        let remaining = await outbox.entries(accountID: 42)
-        XCTAssertTrue(remaining.isEmpty)
-    }
-
-    func testScheduleCreateWithAdjacentMonthPostsWithoutStateMatching() async throws {
-        let outbox = SyncOutboxFake()
-        let request = makeScheduleRequest(
-            content: "  Multi-day schedule \r\n",
-            description: "Line one\r\nline two\n",
-            startDateTime: "2026-08-31T23:00:00",
-            endDateTime: "2026-09-01T01:00:00"
-        )
-        let transport = SyncTransportFake(existingSchedules: [
-            makeScheduleDTO(
-                content: "Multi-day schedule",
-                description: "Line one\nline two",
-                startDateTime: "2026-08-31T23:00:00",
-                endDateTime: "2026-09-01T01:00:00"
-            )
-        ])
-        let coordinator = OfflineSyncCoordinator(
-            outbox: outbox,
-            transport: transport,
-            now: { Date(timeIntervalSince1970: 100) },
-            networkStatusProvider: { .satisfied }
-        )
-        defer { coordinator.cancelAll() }
-
-        _ = try await outbox.enqueueScheduleCreate(
-            accountID: 42,
-            request: request,
-            operationID: UUID(),
-            now: Date(timeIntervalSince1970: 1)
-        )
-
-        await coordinator.synchronize(accountID: 42)
-
-        let scheduleRequests = await transport.scheduleRequests
-        XCTAssertEqual(scheduleRequests.count, 1)
-        let remaining = await outbox.entries(accountID: 42)
-        XCTAssertTrue(remaining.isEmpty)
-    }
-
-    func testEquivalentTodoInAnyBoardColumnStillPostsAsDistinctOperation() async throws {
-        let outbox = SyncOutboxFake()
-        let request = makeTodoRequest(
-            title: "  Offline todo ",
-            content: "Description\r\nwith spaces\n",
-            status: .done,
-            dueDate: "2026-08-12"
-        )
-        let existing = makeTodoDTO(
-            title: "Offline todo",
-            content: "Description\nwith spaces",
-            status: .done,
-            dueDate: "2026-08-12"
-        )
-        let transport = SyncTransportFake(
-            existingTodoBoard: makeTodoBoard(done: [existing])
-        )
-        let coordinator = OfflineSyncCoordinator(
-            outbox: outbox,
-            transport: transport,
-            now: { Date(timeIntervalSince1970: 100) },
-            networkStatusProvider: { .satisfied }
-        )
-        defer { coordinator.cancelAll() }
-
-        let operationID = UUID()
-        _ = try await outbox.enqueueTodoCreate(
-            accountID: 42,
-            request: request,
-            operationID: operationID,
-            now: Date(timeIntervalSince1970: 1)
-        )
-
-        await coordinator.synchronize(accountID: 42)
-
-        let todoRequests = await transport.todoRequests
-        let preflightRequests = await transport.todoPreflightRequests
-        let operationIDs = await transport.todoOperationIDs
-        XCTAssertEqual(todoRequests.count, 1)
-        XCTAssertEqual(operationIDs, [operationID])
-        XCTAssertTrue(preflightRequests.isEmpty)
-        let remaining = await outbox.entries(accountID: 42)
-        XCTAssertTrue(remaining.isEmpty)
-    }
-
-    func testPureOfflineCreatePostsEvenWhenAnOlderEquivalentRowExists() async throws {
-        let outbox = SyncOutboxFake()
-        let transport = SyncTransportFake(existingSchedules: [makeScheduleDTO()])
-        let coordinator = OfflineSyncCoordinator(
-            outbox: outbox,
-            transport: transport,
-            now: { Date(timeIntervalSince1970: 100) },
-            networkStatusProvider: { .satisfied }
-        )
-        defer { coordinator.cancelAll() }
-
-        _ = try await outbox.enqueueScheduleCreate(
-            accountID: 42,
-            request: makeScheduleRequest(),
-            operationID: UUID(),
-            now: Date(timeIntervalSince1970: 1)
-        )
-
-        await coordinator.synchronize(accountID: 42)
-
-        let posts = await transport.scheduleRequests
-        let preflights = await transport.schedulePreflightRequests
-        XCTAssertEqual(posts.count, 1)
-        XCTAssertTrue(preflights.isEmpty)
-    }
-
-    func testAmbiguousPostFailureRetriesWithTheSameOperationID() async throws {
-        let outbox = SyncOutboxFake()
-        let transport = SyncTransportFake(
-            error: .transport,
-            existingSchedules: [makeScheduleDTO()]
-        )
+        let transport = SyncTransportFake(error: .transport)
         let coordinator = OfflineSyncCoordinator(
             outbox: outbox,
             transport: transport,
@@ -283,8 +99,6 @@ final class OfflineSyncCoordinatorTests: XCTestCase {
 
         let entriesAfterFailure = await outbox.entries(accountID: 42)
         let afterFailure = try XCTUnwrap(entriesAfterFailure.first)
-        XCTAssertTrue(afterFailure.serverAttempted)
-        XCTAssertTrue(afterFailure.requiresPreflight)
         XCTAssertEqual(afterFailure.attemptCount, 1)
 
         await outbox.setNextAttemptAt(
@@ -296,22 +110,35 @@ final class OfflineSyncCoordinatorTests: XCTestCase {
         await coordinator.synchronize(accountID: 42)
 
         let posts = await transport.scheduleRequests
-        let preflights = await transport.schedulePreflightRequests
-        let operationIDs = await transport.scheduleOperationIDs
         let remaining = await outbox.entries(accountID: 42)
-        XCTAssertEqual(posts.count, 2, "The server idempotency key makes a retry safe")
-        XCTAssertEqual(operationIDs.count, 2)
-        XCTAssertEqual(operationIDs[0], operationIDs[1])
-        XCTAssertTrue(preflights.isEmpty)
-        XCTAssertTrue(remaining.isEmpty)
+        XCTAssertEqual(posts.count, 2)
+        XCTAssertEqual(remaining.count, 0)
     }
 
-    func testDuplicateScheduleCandidatesDoNotSuppressASeparateCreate() async throws {
+    func testDuplicateLocalOperationIDIsNotEnqueuedTwice() async throws {
         let outbox = SyncOutboxFake()
-        let transport = SyncTransportFake(existingSchedules: [
-            makeScheduleDTO(),
-            makeScheduleDTO()
-        ])
+        let operationID = UUID()
+        let request = makeScheduleRequest()
+        let first = try await outbox.enqueueScheduleCreate(
+            accountID: 42,
+            request: request,
+            operationID: operationID,
+            now: Date(timeIntervalSince1970: 1)
+        )
+        let second = try await outbox.enqueueScheduleCreate(
+            accountID: 42,
+            request: request,
+            operationID: operationID,
+            now: Date(timeIntervalSince1970: 2)
+        )
+        XCTAssertEqual(first.operationID, second.operationID)
+        let entries = await outbox.entries(accountID: 42)
+        XCTAssertEqual(entries.count, 1)
+    }
+
+    func testPlainCreateAlwaysPostsAndLeavesDuplicatePolicyToServer() async throws {
+        let outbox = SyncOutboxFake()
+        let transport = SyncTransportFake()
         let coordinator = OfflineSyncCoordinator(
             outbox: outbox,
             transport: transport,
@@ -326,105 +153,11 @@ final class OfflineSyncCoordinatorTests: XCTestCase {
             operationID: UUID(),
             now: Date(timeIntervalSince1970: 1)
         )
-
         await coordinator.synchronize(accountID: 42)
-
-        let posts = await transport.scheduleRequests
-        let remaining = await outbox.entries(accountID: 42)
-        XCTAssertEqual(posts.count, 1)
-        XCTAssertTrue(remaining.isEmpty)
-    }
-
-    func testUnavailablePreflightDoesNotBlockIdempotentCreate() async throws {
-        let outbox = SyncOutboxFake()
-        let transport = SyncTransportFake(shouldFailPreflight: true)
-        let coordinator = OfflineSyncCoordinator(
-            outbox: outbox,
-            transport: transport,
-            now: { Date(timeIntervalSince1970: 100) },
-            networkStatusProvider: { .satisfied }
-        )
-        defer { coordinator.cancelAll() }
-
-        _ = try await outbox.enqueueTodoCreate(
-            accountID: 42,
-            request: makeTodoRequest(),
-            operationID: UUID(),
-            now: Date(timeIntervalSince1970: 1)
-        )
-
-        await coordinator.synchronize(accountID: 42)
-
-        let posts = await transport.todoRequests
-        let remaining = await outbox.entries(accountID: 42)
-        XCTAssertEqual(posts.count, 1)
-        XCTAssertTrue(remaining.isEmpty)
-    }
-
-    func testPreflightErrorsDoNotReplaceTheIdempotentCreateRequest() async throws {
-        for status in [408, 425, 429] {
-            let outbox = SyncOutboxFake()
-            let transport = SyncTransportFake(
-                preflightError: .server(status: status, code: "retry")
-            )
-            let coordinator = OfflineSyncCoordinator(
-                outbox: outbox,
-                transport: transport,
-                now: { Date(timeIntervalSince1970: 100) },
-                networkStatusProvider: { .satisfied }
-            )
-            defer { coordinator.cancelAll() }
-
-            _ = try await outbox.enqueueTodoCreate(
-                accountID: 42,
-                request: makeTodoRequest(),
-                operationID: UUID(),
-                now: Date(timeIntervalSince1970: 1),
-                requiresPreflight: true
-            )
-
-            await coordinator.synchronize(accountID: 42)
-
-            let posts = await transport.todoRequests
-            let entries = await outbox.entries(accountID: 42)
-            XCTAssertEqual(posts.count, 1)
-            XCTAssertTrue(entries.isEmpty)
-        }
-    }
-
-    func testDedupeKeepsInternalWhitespaceAndRejectsInvalidDates() {
-        XCTAssertFalse(
-            OfflineCreateDedupe.todoMatches(
-                makeTodoDTO(
-                    title: "Offline todo",
-                    content: "Two spaces",
-                    status: .todo,
-                    dueDate: nil
-                ),
-                request: makeTodoRequest(
-                    title: "Offline  todo",
-                    content: "Two spaces",
-                    dueDate: nil
-                )
-            )
-        )
-        XCTAssertFalse(
-            OfflineCreateDedupe.todoMatches(
-                makeTodoDTO(
-                    title: "Offline todo",
-                    content: "",
-                    status: .todo,
-                    dueDate: nil
-                ),
-                request: makeTodoRequest(dueDate: "2026-02-30")
-            )
-        )
-        XCTAssertTrue(
-            OfflineCreateDedupe.monthsCovering(
-                start: LocalDateTimeValue(rawValue: "2026-02-30T09:00:00"),
-                end: LocalDateTimeValue(rawValue: "2026-03-01T09:00:00")
-            ).isEmpty
-        )
+        let requests = await transport.scheduleRequests
+        let entries = await outbox.entries(accountID: 42)
+        XCTAssertEqual(requests.count, 1)
+        XCTAssertTrue(entries.isEmpty)
     }
 
     func testFourHundredMovesOnlyThatOperationToPermanentFailure() async throws {
@@ -742,30 +475,15 @@ private actor SyncOutboxFake: OfflineOutboxProviding {
         operationID: UUID,
         now: Date
     ) throws -> OfflineOutboxEntry {
-        try enqueueScheduleCreate(
-            accountID: accountID,
-            request: request,
-            operationID: operationID,
-            now: now,
-            requiresPreflight: false
-        )
-    }
-
-    func enqueueScheduleCreate(
-        accountID: MemberID,
-        request: ScheduleSaveDTO,
-        operationID: UUID,
-        now: Date,
-        requiresPreflight: Bool
-    ) throws -> OfflineOutboxEntry {
         let entry = OfflineOutboxEntry(
             operationID: operationID,
             accountID: accountID,
             payload: .scheduleCreate(request),
-            createdAt: now,
-            serverAttempted: requiresPreflight,
-            requiresPreflight: requiresPreflight
+            createdAt: now
         )
+        if let existing = storedEntries.first(where: {
+            $0.accountID == accountID && $0.operationID == operationID
+        }) { return existing }
         storedEntries.append(entry)
         return entry
     }
@@ -776,30 +494,15 @@ private actor SyncOutboxFake: OfflineOutboxProviding {
         operationID: UUID,
         now: Date
     ) throws -> OfflineOutboxEntry {
-        try enqueueTodoCreate(
-            accountID: accountID,
-            request: request,
-            operationID: operationID,
-            now: now,
-            requiresPreflight: false
-        )
-    }
-
-    func enqueueTodoCreate(
-        accountID: MemberID,
-        request: TodoRequest,
-        operationID: UUID,
-        now: Date,
-        requiresPreflight: Bool
-    ) throws -> OfflineOutboxEntry {
         let entry = OfflineOutboxEntry(
             operationID: operationID,
             accountID: accountID,
             payload: .todoCreate(request),
-            createdAt: now,
-            serverAttempted: requiresPreflight,
-            requiresPreflight: requiresPreflight
+            createdAt: now
         )
+        if let existing = storedEntries.first(where: {
+            $0.accountID == accountID && $0.operationID == operationID
+        }) { return existing }
         storedEntries.append(entry)
         return entry
     }
@@ -871,94 +574,27 @@ private actor SyncOutboxFake: OfflineOutboxProviding {
         }
     }
 
-    func markServerAttempted(accountID: MemberID, operationID: UUID) throws {
-        guard let index = storedEntries.firstIndex(where: {
-            $0.accountID == accountID && $0.operationID == operationID
-        }) else { throw OfflineOutboxStoreError.operationNotFound }
-        storedEntries[index].serverAttempted = true
-        storedEntries[index].requiresPreflight = true
-    }
-
     func purge(accountID: MemberID) throws {}
     func purgeAll() throws {}
 }
 
 private actor SyncTransportFake: OfflineSyncTransport {
     private var error: APIError?
-    private let existingSchedules: [ScheduleDTO]
-    private let existingTodoBoard: TodoBoardDTO?
-    private let shouldFailPreflight: Bool
-    private let preflightError: APIError?
     private(set) var scheduleRequests: [ScheduleSaveDTO] = []
     private(set) var todoRequests: [TodoRequest] = []
-    private(set) var scheduleOperationIDs: [UUID] = []
-    private(set) var todoOperationIDs: [UUID] = []
-    private(set) var schedulePreflightRequests: [ScheduleSaveDTO] = []
-    private(set) var todoPreflightRequests: [TodoRequest] = []
 
-    init(
-        error: APIError? = nil,
-        existingSchedules: [ScheduleDTO] = [],
-        existingTodoBoard: TodoBoardDTO? = nil,
-        shouldFailPreflight: Bool = false,
-        preflightError: APIError? = nil
-    ) {
+    init(error: APIError? = nil) {
         self.error = error
-        self.existingSchedules = existingSchedules
-        self.existingTodoBoard = existingTodoBoard
-        self.shouldFailPreflight = shouldFailPreflight
-        self.preflightError = preflightError
     }
 
     func setError(_ error: APIError?) {
         self.error = error
     }
 
-    func scheduleAlreadyExists(
-        accountID: MemberID,
-        request: ScheduleSaveDTO
-    ) async throws -> Bool {
-        schedulePreflightRequests.append(request)
-        if let preflightError { throw preflightError }
-        if shouldFailPreflight { throw OfflineCreateDedupeError.lookupUnavailable }
-        let candidates = existingSchedules.filter {
-            OfflineCreateDedupe.scheduleMatches($0, request: request)
-        }
-        if candidates.count > 1 { throw OfflineCreateDedupeError.multipleCandidates }
-        return candidates.count == 1
-    }
-
-    func todoAlreadyExists(
-        accountID: MemberID,
-        request: TodoRequest
-    ) async throws -> Bool {
-        todoPreflightRequests.append(request)
-        if let preflightError { throw preflightError }
-        if shouldFailPreflight { throw OfflineCreateDedupeError.lookupUnavailable }
-        let todos = [
-            existingTodoBoard?.todo ?? [],
-            existingTodoBoard?.inProgress ?? [],
-            existingTodoBoard?.done ?? []
-        ].flatMap { $0 }
-        let candidates = todos.filter {
-            OfflineCreateDedupe.todoMatches($0, request: request)
-        }
-        if candidates.count > 1 { throw OfflineCreateDedupeError.multipleCandidates }
-        return candidates.count == 1
-    }
-
     func createSchedule(_ request: ScheduleSaveDTO) throws -> ScheduleSaveResponse {
         scheduleRequests.append(request)
         if let error { throw error }
         return ScheduleSaveResponse(id: UUID())
-    }
-
-    func createSchedule(
-        _ request: ScheduleSaveDTO,
-        operationID: UUID
-    ) throws -> ScheduleSaveResponse {
-        scheduleOperationIDs.append(operationID)
-        return try createSchedule(request)
     }
 
     func createTodo(_ request: TodoRequest) throws -> TodoDTO {
@@ -982,13 +618,6 @@ private actor SyncTransportFake: OfflineSyncTransport {
         )
     }
 
-    func createTodo(
-        _ request: TodoRequest,
-        operationID: UUID
-    ) throws -> TodoDTO {
-        todoOperationIDs.append(operationID)
-        return try createTodo(request)
-    }
 }
 
 private func makeScheduleRequest(

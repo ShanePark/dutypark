@@ -182,8 +182,6 @@ struct TodoOfflineTests {
         #expect(await model.create(draft: draft, accountID: 42))
         let entry = try #require(await outbox.entries(accountID: 42).first)
         #expect(entry.state == .pending)
-        #expect(entry.requiresPreflight)
-        #expect(await outbox.todoRequiresPreflight == [true])
 
         for _ in 0..<20 { await Task.yield() }
         #expect(await syncRecorder.accountIDs == [42])
@@ -213,8 +211,6 @@ struct TodoOfflineTests {
             let request = try #require(await repository.createRequest)
             let entry = try #require(await outbox.entries(accountID: 42).first)
             #expect(entry.payload == .todoCreate(request))
-            #expect(entry.requiresPreflight)
-            #expect(await outbox.todoRequiresPreflight == [true])
             #expect(model.board?.inProgress.first?.uuid == entry.operationID)
             for _ in 0..<20 { await Task.yield() }
             #expect(await syncRecorder.accountIDs == [42])
@@ -248,8 +244,6 @@ struct TodoOfflineTests {
 
         #expect(succeeded)
         #expect(entry.payload == .todoCreate(request))
-        #expect(entry.requiresPreflight)
-        #expect(await outbox.todoRequiresPreflight == [true])
         #expect(provisional.uuid == entry.operationID)
         #expect(provisional.title == "Offline task")
         #expect(provisional.content == "Saved for later")
@@ -261,7 +255,7 @@ struct TodoOfflineTests {
     }
 
     @Test
-    func pureOfflineCreateEnqueuesWithoutPreflightOrImmediateSync() async throws {
+    func pureOfflineCreateEnqueuesWithoutImmediateSync() async throws {
         let cache = TodoOfflineCacheFake(account: makeOfflineAccount(), board: makeOfflineBoard())
         let outbox = TodoOfflineOutboxFake()
         let repository = TodoOfflineRepository(createError: .transport)
@@ -284,8 +278,6 @@ struct TodoOfflineTests {
         ))
         let entry = try #require(await outbox.entries(accountID: 42).first)
 
-        #expect(!entry.requiresPreflight)
-        #expect(await outbox.todoRequiresPreflight == [false])
         #expect(await repository.createRequest == nil)
         for _ in 0..<20 { await Task.yield() }
         #expect(await syncRecorder.accountIDs.isEmpty)
@@ -574,7 +566,6 @@ private actor TodoOfflineCacheFake: OfflineCacheProviding {
 
 private actor TodoOfflineOutboxFake: OfflineOutboxProviding {
     private var storedEntries: [OfflineOutboxEntry] = []
-    private(set) var todoRequiresPreflight: [Bool] = []
 
     init(entries: [OfflineOutboxEntry] = []) {
         storedEntries = entries
@@ -583,39 +574,12 @@ private actor TodoOfflineOutboxFake: OfflineOutboxProviding {
     func enqueueScheduleCreate(accountID: MemberID, request: ScheduleSaveDTO, operationID: UUID, now: Date) async throws -> OfflineOutboxEntry {
         fatalError("not used")
     }
-    func enqueueScheduleCreate(
-        accountID: MemberID,
-        request: ScheduleSaveDTO,
-        operationID: UUID,
-        now: Date,
-        requiresPreflight: Bool
-    ) async throws -> OfflineOutboxEntry {
-        fatalError("not used")
-    }
-
     func enqueueTodoCreate(accountID: MemberID, request: TodoRequest, operationID: UUID, now: Date) async throws -> OfflineOutboxEntry {
         makeTodoEntry(
             accountID: accountID,
             request: request,
             operationID: operationID,
-            now: now,
-            requiresPreflight: false
-        )
-    }
-
-    func enqueueTodoCreate(
-        accountID: MemberID,
-        request: TodoRequest,
-        operationID: UUID,
-        now: Date,
-        requiresPreflight: Bool
-    ) async throws -> OfflineOutboxEntry {
-        makeTodoEntry(
-            accountID: accountID,
-            request: request,
-            operationID: operationID,
-            now: now,
-            requiresPreflight: requiresPreflight
+            now: now
         )
     }
 
@@ -623,18 +587,14 @@ private actor TodoOfflineOutboxFake: OfflineOutboxProviding {
         accountID: MemberID,
         request: TodoRequest,
         operationID: UUID,
-        now: Date,
-        requiresPreflight: Bool
+        now: Date
     ) -> OfflineOutboxEntry {
-        todoRequiresPreflight.append(requiresPreflight)
         if let existing = storedEntries.first(where: { $0.operationID == operationID }) { return existing }
         let entry = OfflineOutboxEntry(
             operationID: operationID,
             accountID: accountID,
             payload: .todoCreate(request),
-            createdAt: now,
-            serverAttempted: requiresPreflight,
-            requiresPreflight: requiresPreflight
+            createdAt: now
         )
         storedEntries.append(entry)
         return entry
@@ -648,7 +608,6 @@ private actor TodoOfflineOutboxFake: OfflineOutboxProviding {
     func markPermanentFailure(accountID: MemberID, operationID: UUID, error: OfflineOutboxFailure) async throws {}
     func retryPermanentFailure(accountID: MemberID, operationID: UUID, now: Date) async throws {}
     func markSucceeded(accountID: MemberID, operationID: UUID) async throws {}
-    func markServerAttempted(accountID: MemberID, operationID: UUID) async throws {}
     func purge(accountID: MemberID) async throws { storedEntries.removeAll { $0.accountID == accountID } }
 }
 

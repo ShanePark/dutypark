@@ -1542,7 +1542,7 @@ final class CalendarFeatureTests: XCTestCase {
         XCTAssertEqual(haptics.event?.kind, .success)
     }
 
-    func testNewScheduleForwardsItsOperationIDToTheInitialRepositoryCreate() async {
+    func testNewScheduleUsesThePlainRepositoryCreate() async {
         let repository = CalendarRepositoryMock()
         let model = CalendarViewModel(repository: repository, now: date(2026, 8, 12))
         await model.load()
@@ -1561,8 +1561,8 @@ final class CalendarFeatureTests: XCTestCase {
         )
 
         XCTAssertTrue(saved)
-        let operationID = await repository.savedScheduleOperationID
-        XCTAssertNotNil(operationID)
+        let savedSchedule = await repository.savedSchedule
+        XCTAssertNotNil(savedSchedule)
     }
 
     func testScheduleValidationUsesWarningFeedbackWithoutCallingTheRepository() async {
@@ -2031,7 +2031,6 @@ private func tagItem(
 
 private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
     var savedSchedule: ScheduleSaveDTO?
-    var savedScheduleOperationID: UUID?
     var batchUpdateCount = 0
     var requestedPreviewMemberID: MemberID?
     var requestedScheduleMemberID: MemberID?
@@ -2110,13 +2109,6 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
         savedSchedule = request
         return ScheduleSaveResponse(id: UUID())
     }
-    func saveSchedule(
-        _ request: ScheduleSaveDTO,
-        operationID: UUID
-    ) async throws -> ScheduleSaveResponse {
-        savedScheduleOperationID = operationID
-        return try await saveSchedule(request)
-    }
     func deleteSchedule(id: ScheduleID) async throws {
         deleteScheduleCount += 1
         if failDestructiveMutations { throw APIError.invalidResponse }
@@ -2193,31 +2185,11 @@ private actor CalendarMonthRaceOutboxStub: OfflineOutboxProviding {
         fatalError("Not used by the calendar month race test")
     }
 
-    func enqueueScheduleCreate(
-        accountID: MemberID,
-        request: ScheduleSaveDTO,
-        operationID: UUID,
-        now: Date,
-        requiresPreflight: Bool
-    ) async throws -> OfflineOutboxEntry {
-        fatalError("Not used by the calendar month race test")
-    }
-
     func enqueueTodoCreate(
         accountID: MemberID,
         request: TodoRequest,
         operationID: UUID,
         now: Date
-    ) async throws -> OfflineOutboxEntry {
-        fatalError("Not used by the calendar month race test")
-    }
-
-    func enqueueTodoCreate(
-        accountID: MemberID,
-        request: TodoRequest,
-        operationID: UUID,
-        now: Date,
-        requiresPreflight: Bool
     ) async throws -> OfflineOutboxEntry {
         fatalError("Not used by the calendar month race test")
     }
@@ -2245,6 +2217,5 @@ private actor CalendarMonthRaceOutboxStub: OfflineOutboxProviding {
     ) async throws {}
 
     func markSucceeded(accountID: MemberID, operationID: UUID) async throws {}
-    func markServerAttempted(accountID: MemberID, operationID: UUID) async throws {}
     func purge(accountID: MemberID) async throws {}
 }
