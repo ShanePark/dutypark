@@ -40,6 +40,15 @@
         }
       },
       "entries": {
+        "pr-411": {
+          "title": "iPhone 오프라인 안내와 앱 미리보기 새단장",
+          "summary": "iPhone 오프라인 지원 범위를 자세히 안내하고 실제 샘플 데이터로 앱 소개 화면을 새로 만들었으며, 프로필 사진이 없는 회원의 불필요한 이미지 요청을 줄였습니다.",
+          "changes": [
+            "오프라인에서 확인하거나 새로 만들 수 있는 캘린더·Todo 항목과 연결 복구 후 동기화 및 재시도 방식을 자세히 안내합니다.",
+            "풍부한 일정, 근무, Todo와 친구 프로필을 담은 한국어·영어 앱 미리보기와 소개 이미지를 최신 화면으로 교체했습니다.",
+            "프로필 사진이 없는 회원은 기본 이미지를 바로 표시해 목록을 열 때 불필요한 사진 요청이 반복되지 않도록 개선했습니다."
+          ]
+        },
         "pr-410": {
           "title": "중복 일정과 Todo 생성 방지",
           "summary": "같은 일정이나 Todo 생성 요청이 반복되어도 기존 항목을 재사용해 네트워크 재시도와 여러 기기 사용 중 중복 항목이 생기지 않도록 개선했습니다.",
@@ -2259,6 +2268,15 @@
         }
       },
       "entries": {
+        "pr-411": {
+          "title": "Refreshed iPhone offline guide and app previews",
+          "summary": "Clarifies the iPhone offline experience, refreshes app previews with realistic demo data, and avoids unnecessary image requests for members without profile photos.",
+          "changes": [
+            "Explain which Calendar and Todo data remains available offline and how queued creates synchronize and retry after connectivity returns.",
+            "Replace the Korean and English app previews and introduction images with current screens containing rich schedules, duties, todos, and friend profiles.",
+            "Show the default avatar immediately for members without a profile photo instead of repeating unnecessary photo requests when lists appear."
+          ]
+        },
         "pr-410": {
           "title": "Prevent duplicate schedules and todos",
           "summary": "Reuses an existing schedule or todo when the same create is repeated, preventing duplicate items during network retries and use across multiple devices.",
@@ -4441,6 +4459,19 @@
     }
   },
   "items": [
+    {
+      "id": "pr-411",
+      "version": "2026.08.26",
+      "date": "2026-08-26",
+      "pr": 411,
+      "url": "https://github.com/ShanePark/dutypark/pull/411",
+      "category": "improvement",
+      "areas": [
+        "docs",
+        "profile",
+        "ui"
+      ]
+    },
     {
       "id": "pr-410",
       "version": "2026.08.25",
