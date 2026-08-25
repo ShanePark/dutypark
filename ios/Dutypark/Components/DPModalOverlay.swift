@@ -12,6 +12,23 @@ nonisolated enum DPModalDismissAction: Equatable, Sendable {
     case dismissImmediately
 }
 
+/// Maps an authorized dismissal to its optional semantic feedback.
+///
+/// Only an immediate dismissal is a completed, user-visible transition. A
+/// request can still be rejected by the presentation owner, while an ignored
+/// action is a no-op. Keeping this mapping separate makes it difficult for a
+/// passive binding change or an in-flight dismissal to accidentally tick.
+nonisolated enum DPModalDismissFeedback {
+    static func kind(
+        for action: DPModalDismissAction,
+        configured: DPHapticKind?
+    ) -> DPHapticKind? {
+        guard configured != nil else { return nil }
+        guard case .dismissImmediately = action else { return nil }
+        return configured
+    }
+}
+
 nonisolated struct DPModalDismissPolicy: Sendable {
     let closeOnBackdrop: Bool
     let canDismiss: Bool
@@ -63,6 +80,9 @@ struct DPModalOverlay<Content: View>: View {
     /// Intercepts backdrop and VoiceOver escape requests without closing immediately.
     /// `closeOnBackdrop == false` suppresses backdrop requests; `canDismiss == false` suppresses all requests.
     let onDismissRequest: ((DPModalDismissSource) -> Void)?
+    /// Feedback emitted only for an authorized immediate dismissal. Confirmation
+    /// panels pass `nil` because their buttons already acknowledge the press.
+    let dismissHaptic: DPHapticKind?
     /// Receives an authorized immediate-dismiss closure that bypasses `onDismissRequest`.
     private let content: (CGSize, @escaping () -> Void) -> Content
 
@@ -73,6 +93,7 @@ struct DPModalOverlay<Content: View>: View {
         canDismiss: Bool = true,
         isHostedInline: Bool = false,
         onDismissRequest: ((DPModalDismissSource) -> Void)? = nil,
+        dismissHaptic: DPHapticKind? = .routine,
         @ViewBuilder content: @escaping () -> Content
     ) {
         self.onDismiss = onDismiss
@@ -81,6 +102,7 @@ struct DPModalOverlay<Content: View>: View {
         self.canDismiss = canDismiss
         self.isHostedInline = isHostedInline
         self.onDismissRequest = onDismissRequest
+        self.dismissHaptic = dismissHaptic
         self.content = { _, _ in content() }
     }
 
@@ -91,6 +113,7 @@ struct DPModalOverlay<Content: View>: View {
         canDismiss: Bool = true,
         isHostedInline: Bool = false,
         onDismissRequest: ((DPModalDismissSource) -> Void)? = nil,
+        dismissHaptic: DPHapticKind? = .routine,
         @ViewBuilder content: @escaping (CGSize) -> Content
     ) {
         self.onDismiss = onDismiss
@@ -99,6 +122,7 @@ struct DPModalOverlay<Content: View>: View {
         self.canDismiss = canDismiss
         self.isHostedInline = isHostedInline
         self.onDismissRequest = onDismissRequest
+        self.dismissHaptic = dismissHaptic
         self.content = { size, _ in content(size) }
     }
 
@@ -109,6 +133,7 @@ struct DPModalOverlay<Content: View>: View {
         canDismiss: Bool = true,
         isHostedInline: Bool = false,
         onDismissRequest: ((DPModalDismissSource) -> Void)? = nil,
+        dismissHaptic: DPHapticKind? = .routine,
         @ViewBuilder content: @escaping (CGSize, @escaping () -> Void) -> Content
     ) {
         self.onDismiss = onDismiss
@@ -117,6 +142,7 @@ struct DPModalOverlay<Content: View>: View {
         self.canDismiss = canDismiss
         self.isHostedInline = isHostedInline
         self.onDismissRequest = onDismissRequest
+        self.dismissHaptic = dismissHaptic
         self.content = content
     }
 
@@ -206,11 +232,24 @@ struct DPModalOverlay<Content: View>: View {
             onDismissRequest?(source)
             return
         case .dismissImmediately:
-            dismissImmediately()
+            // Content controls already acknowledge their own press. Reserve the
+            // overlay-level tick for backdrop and accessibility dismissals so a
+            // close button never produces two impacts for one transition.
+            let configuredFeedback = source == .content ? nil : dismissHaptic
+            dismissImmediately(
+                feedback: DPModalDismissFeedback.kind(
+                    for: .dismissImmediately,
+                    configured: configuredFeedback
+                )
+            )
         }
     }
 
-    private func dismissImmediately() {
+    private func dismissImmediately(feedback: DPHapticKind?) {
+        if let feedback {
+            DPHapticCenter.shared.emit(feedback)
+        }
+
         isDismissing = true
 
         withAnimation(presentationAnimation) {

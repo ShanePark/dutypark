@@ -148,6 +148,7 @@ struct MyReportListView: View {
         VStack(alignment: .leading, spacing: 0) {
             Button {
                 expandedReportID = isExpanded ? nil : report.id
+                DPHapticCenter.shared.emit(.selection)
             } label: {
                 HStack(alignment: .top, spacing: DPSpacing.compact) {
                     VStack(alignment: .leading, spacing: DPSpacing.small) {

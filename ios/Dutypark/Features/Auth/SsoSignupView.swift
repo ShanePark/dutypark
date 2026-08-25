@@ -159,10 +159,12 @@ struct SsoSignupView: View {
                         if let terms = policies?.terms, let privacy = policies?.privacy {
                             HStack(spacing: 8) {
                                 Button(oauthString("auth.oauth.signup.terms")) {
+                                    DPHapticCenter.shared.emit(.routine)
                                     displayedPolicy = terms
                                 }
                                 Text("|")
                                 Button(oauthString("auth.oauth.signup.privacy")) {
+                                    DPHapticCenter.shared.emit(.routine)
                                     displayedPolicy = privacy
                                 }
                             }
@@ -210,7 +212,8 @@ struct SsoSignupView: View {
             DPModalOverlay(
                 maximumContentWidth: DPConfirmationPanel.maximumWidth,
                 onDismiss: finishDiscardConfirmationDismissal,
-                canDismiss: !isWorking
+                canDismiss: !isWorking,
+                dismissHaptic: nil
             ) { availableSize, confirmationDismiss in
                 DPConfirmationPanel(
                     title: oauthString("auth.oauth.signup.discard.title"),
@@ -251,6 +254,7 @@ struct SsoSignupView: View {
                     .toolbar {
                         ToolbarItem(placement: .confirmationAction) {
                             Button(oauthString("auth.oauth.close")) {
+                                DPHapticCenter.shared.emit(.routine)
                                 self.displayedPolicy = nil
                             }
                             .frame(
@@ -301,6 +305,7 @@ struct SsoSignupView: View {
                     .foregroundStyle(DPColor.textSecondary)
                 Spacer()
                 Button {
+                    DPHapticCenter.shared.emit(.routine)
                     displayedPolicy = policy
                 } label: {
                     HStack(spacing: 3) {
@@ -329,6 +334,7 @@ struct SsoSignupView: View {
 
             Button {
                 isAgreed.wrappedValue.toggle()
+                DPHapticCenter.shared.emit(.selection)
             } label: {
                 HStack(spacing: 8) {
                     Image(systemName: isAgreed.wrappedValue ? "checkmark.square.fill" : "square")
@@ -374,11 +380,13 @@ struct SsoSignupView: View {
             let response = try await oauthClient.currentPolicies()
             guard response.terms != nil, response.privacy != nil else {
                 errorKey = "auth.oauth.signup.policyError"
+                DPHapticCenter.shared.emit(.error)
                 return
             }
             policies = response
         } catch {
             errorKey = "auth.oauth.signup.policyError"
+            DPHapticCenter.shared.emit(.error)
         }
     }
 
@@ -396,6 +404,7 @@ struct SsoSignupView: View {
     private func requestCancellation() {
         switch cancellationDecision {
         case .dismiss:
+            DPHapticCenter.shared.emit(.routine)
             dismiss()
         case .confirmDiscard:
             isNameFocused = false
@@ -417,6 +426,7 @@ struct SsoSignupView: View {
         let trimmedName = username.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !ContentFilterStore.shared.isBlocked(trimmedName) else {
             errorKey = "auth.oauth.signup.contentFilter"
+            DPHapticCenter.shared.emit(.warning)
             return
         }
         isNameFocused = false
@@ -438,6 +448,7 @@ struct SsoSignupView: View {
                 try await session.finishExternalLogin()
             } catch {
                 errorKey = "auth.oauth.signup.error"
+                DPHapticCenter.shared.emit(.error)
             }
         }
     }

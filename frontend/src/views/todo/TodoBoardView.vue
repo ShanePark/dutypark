@@ -995,7 +995,7 @@ onBeforeUnmount(() => {
   color: var(--dp-text-muted);
   font-size: 0.875rem;
   text-align: center;
-  border: 2px dashed var(--dp-border-secondary);
+  border: 2px dashed var(--dp-accent-border);
   border-radius: 0.5rem;
   min-height: 80px;
   width: 100%;

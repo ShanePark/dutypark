@@ -83,6 +83,7 @@ struct AdminMemberSessionList: View {
 
                     if showsToggle {
                         Button {
+                            DPHapticCenter.shared.emit(.selection)
                             isExpanded.toggle()
                         } label: {
                             Text(presentation.toggleTitle)

@@ -32,16 +32,32 @@ final class SocialFeatureTests: XCTestCase {
         // Unblocking undoes a protective action and a family request goes out to somebody
         // else, so neither may fire straight from the tap.
         XCTAssertFalse(source.contains("Task { await viewModel.unblock(member) }"))
-        XCTAssertTrue(source.contains("confirmation = .unblock(member)"))
+        XCTAssertTrue(source.contains("presentConfirmation(.unblock(member))"))
         XCTAssertFalse(source.contains("Task { await viewModel.sendFamilyRequest(to: friend) }"))
-        XCTAssertTrue(source.contains("confirmation = .sendFamily(friend)"))
+        XCTAssertTrue(source.contains("presentConfirmation(.sendFamily(friend))"))
     }
 
     func testUnpinGoesThroughTheConfirmationPanel() throws {
         let source = try Self.projectSource(at: "Dutypark/Features/Social/SocialView.swift")
 
-        XCTAssertTrue(source.contains("confirmation = .unpin(friend)"))
+        XCTAssertTrue(source.contains("presentConfirmation(.unpin(friend))"))
         XCTAssertTrue(source.contains("case .unpin(let friend): await viewModel.togglePin(friend)"))
+    }
+
+    func testSocialNavigationAndModalActionsUseSemanticHaptics() throws {
+        let source = try Self.projectSource(at: "Dutypark/Features/Social/SocialView.swift")
+
+        XCTAssertTrue(source.contains("DPHapticCenter.shared.emit(.routine)"))
+        XCTAssertTrue(source.contains("DPHapticCenter.shared.emit(.selection)"))
+        XCTAssertTrue(source.contains("dismissModalWithHaptic"))
+        XCTAssertTrue(source.contains("dismissHaptic: nil"))
+
+        let popover = try Self.projectSource(at: "Dutypark/Features/Social/FriendActionPopover.swift")
+        XCTAssertTrue(popover.contains("DPHapticCenter.shared.emit(.routine)"))
+        XCTAssertTrue(popover.contains("DPHapticCenter.shared.emit(.selection)"))
+
+        let blocked = try Self.projectSource(at: "Dutypark/Features/Social/BlockedMembersPanel.swift")
+        XCTAssertTrue(blocked.contains("DPHapticCenter.shared.emit(.selection)"))
     }
 
     func testOnlyTheDestructiveConfirmationsAreStyledAsDestructive() {
@@ -226,7 +242,7 @@ final class SocialFeatureTests: XCTestCase {
 
         let socialView = try Self.projectSource(at: "Dutypark/Features/Social/SocialView.swift")
         XCTAssertTrue(socialView.contains("BlockedMembersPanel("))
-        XCTAssertTrue(socialView.contains("confirmation = .block(friend)"))
+        XCTAssertTrue(socialView.contains("presentConfirmation(.block(friend))"))
         XCTAssertTrue(socialView.contains("FriendSearchModalView("))
     }
 
@@ -674,6 +690,53 @@ final class SocialFeatureTests: XCTestCase {
         XCTAssertTrue(viewModel.friends.contains(where: { $0.member.id == 32 }))
         XCTAssertEqual(viewModel.errorKey, "social.error.removeFriend")
         XCTAssertEqual(repository.friendInfoRequestCount, 1)
+    }
+
+    func testMutationHapticsFollowTheServerResultBoundary() async throws {
+        let successHaptics = DPHapticCenter()
+        let successRepository = SocialRepositorySpy()
+        let successViewModel = SocialViewModel(
+            repository: successRepository,
+            haptics: successHaptics
+        )
+        await successViewModel.load()
+        let friend = try XCTUnwrap(
+            successViewModel.friends.first(where: { $0.member.id == 32 })
+        )
+
+        await successViewModel.removeFriend(friend)
+
+        XCTAssertEqual(successHaptics.event?.kind, .success)
+
+        let failureHaptics = DPHapticCenter()
+        let failureRepository = SocialRepositorySpy(failingAction: "remove:32")
+        let failureViewModel = SocialViewModel(
+            repository: failureRepository,
+            haptics: failureHaptics
+        )
+        await failureViewModel.load()
+        let failingFriend = try XCTUnwrap(
+            failureViewModel.friends.first(where: { $0.member.id == 32 })
+        )
+
+        await failureViewModel.removeFriend(failingFriend)
+
+        XCTAssertEqual(failureHaptics.event?.kind, .error)
+    }
+
+    func testPinnedOrderNoOpDoesNotEmitOutcomeHaptic() async {
+        let haptics = DPHapticCenter()
+        let viewModel = SocialViewModel(
+            repository: SocialRepositorySpy(),
+            haptics: haptics
+        )
+        await viewModel.load()
+
+        let currentIDs = viewModel.pinnedFriends.compactMap(\.member.id)
+        let didSave = await viewModel.savePinnedOrder(currentIDs)
+
+        XCTAssertTrue(didSave)
+        XCTAssertNil(haptics.event)
     }
 
     func testSuccessfulAcceptIsNotReportedAsFailureWhenReconciliationFails() async throws {

@@ -8,6 +8,10 @@ struct SocialView: View {
     @State private var confirmation: SocialConfirmation?
     @State private var isPerformingConfirmation = false
     @State private var actionCandidate: ActionCandidate?
+    /// Content buttons dismiss through the overlay's authorized closure. The
+    /// overlay calls `onDismiss` after the animation for every dismissal source,
+    /// so this flag keeps an explicit close from producing two routine ticks.
+    @State private var modalDismissHapticSent = false
     @State private var inlinePinnedOrder: [MemberID]?
     @State private var draggedPinnedFriendID: MemberID?
     /// The card the finger is currently down on, as reported by the reorder
@@ -81,17 +85,26 @@ struct SocialView: View {
             }
         }
         .fullScreenCover(isPresented: $isHelpPresented) {
-            DPModalOverlay(onDismiss: { isHelpPresented = false }) { availableSize, dismiss in
-                SocialHelpModal(maximumHeight: availableSize.height, dismiss: dismiss)
+            DPModalOverlay(
+                onDismiss: { finishModalDismissal { isHelpPresented = false } },
+                dismissHaptic: nil
+            ) { availableSize, dismiss in
+                SocialHelpModal(
+                    maximumHeight: availableSize.height,
+                    dismiss: { dismissModalWithHaptic(dismiss) }
+                )
             }
         }
         .fullScreenCover(isPresented: $isSearchPresented) {
-            DPModalOverlay(onDismiss: { isSearchPresented = false }) { availableSize, dismiss in
+            DPModalOverlay(
+                onDismiss: { finishModalDismissal { isSearchPresented = false } },
+                dismissHaptic: nil
+            ) { availableSize, dismiss in
                 FriendSearchModalView(
                     viewModel: viewModel,
                     availableSize: availableSize,
                     onSelectCandidate: { candidate = SearchCandidate(member: $0) },
-                    onDismiss: dismiss
+                    onDismiss: { dismissModalWithHaptic(dismiss) }
                 )
                 .alert(item: $candidate) { candidate in
                     Alert(
@@ -100,7 +113,9 @@ struct SocialView: View {
                         primaryButton: .default(Text(social("social.action.sendRequest"))) {
                             Task {
                                 await viewModel.sendFriendRequest(to: candidate.member)
-                                if viewModel.errorKey == nil { dismiss() }
+                                if viewModel.errorKey == nil {
+                                    dismissModalAfterOutcome(dismiss)
+                                }
                             }
                         },
                         secondaryButton: .cancel(Text(social("social.action.cancelDialog")))
@@ -112,7 +127,8 @@ struct SocialView: View {
             DPModalOverlay(
                 maximumContentWidth: DPConfirmationPanel.maximumWidth,
                 onDismiss: { self.confirmation = nil },
-                canDismiss: !isPerformingConfirmation
+                canDismiss: !isPerformingConfirmation,
+                dismissHaptic: nil
             ) { availableSize, dismiss in
                 DPConfirmationPanel(
                     title: social(confirmation.titleKey),
@@ -166,7 +182,7 @@ struct SocialView: View {
                     members: viewModel.blockedMembers,
                     isDisabled: isMutationInFlight,
                     unblock: { member in
-                        confirmation = .unblock(member)
+                        presentConfirmation(.unblock(member))
                     }
                 )
             }
@@ -196,6 +212,7 @@ struct SocialView: View {
             .accessibilityIdentifier("social.help")
 
             Button {
+                DPHapticCenter.shared.emit(.routine)
                 withoutPresentationAnimation { isSearchPresented = true }
             } label: {
                 Image(systemName: "person.badge.plus")
@@ -297,7 +314,7 @@ struct SocialView: View {
                     background: DPColor.backgroundCard,
                     border: DPColor.dangerBorder
                 ) {
-                    confirmation = .reject(request)
+                    presentConfirmation(.reject(request))
                 }
             }
         }
@@ -326,7 +343,7 @@ struct SocialView: View {
                     background: DPColor.backgroundCard,
                     border: DPColor.warningBorder
                 ) {
-                    confirmation = .cancel(request)
+                    presentConfirmation(.cancel(request))
                 }
             }
         }
@@ -406,6 +423,7 @@ struct SocialView: View {
             Button {
                 guard let id = friend.member.id else { return }
                 guard !consumeDragSuppression(for: id) else { return }
+                DPHapticCenter.shared.emit(.routine)
                 onOpenCalendar(id)
             } label: {
                 HStack(alignment: .top, spacing: SocialFriendCardLayout.contentSpacing) {
@@ -447,6 +465,9 @@ struct SocialView: View {
             HStack(spacing: 0) {
                 Button {
                     guard !consumeDragSuppression(for: friend.member.id) else { return }
+                    if friend.pinOrder == nil {
+                        DPHapticCenter.shared.emit(.selection)
+                    }
                     requestPinToggle(friend)
                 } label: {
                     Image(systemName: friend.pinOrder == nil ? "star" : "star.fill")
@@ -460,6 +481,7 @@ struct SocialView: View {
 
                 Button {
                     guard !consumeDragSuppression(for: friend.member.id) else { return }
+                    DPHapticCenter.shared.emit(.routine)
                     actionCandidate = ActionCandidate(friend: friend)
                 } label: {
                     Image(systemName: "ellipsis")
@@ -485,19 +507,19 @@ struct SocialView: View {
                     close: { actionCandidate = nil },
                     addFamily: {
                         actionCandidate = nil
-                        confirmation = .sendFamily(friend)
+                        presentConfirmation(.sendFamily(friend))
                     },
                     removeFamily: {
                         actionCandidate = nil
-                        confirmation = .removeFamily(friend)
+                        presentConfirmation(.removeFamily(friend))
                     },
                     removeFriend: {
                         actionCandidate = nil
-                        confirmation = .removeFriend(friend)
+                        presentConfirmation(.removeFriend(friend))
                     },
                     onBlock: {
                         actionCandidate = nil
-                        confirmation = .block(friend)
+                        presentConfirmation(.block(friend))
                     }
                 )
                 .presentationCompactAdaptation(.popover)
@@ -557,7 +579,7 @@ struct SocialView: View {
         if friend.pinOrder == nil {
             Task { await viewModel.togglePin(friend) }
         } else {
-            confirmation = .unpin(friend)
+            presentConfirmation(.unpin(friend))
         }
     }
 
@@ -808,6 +830,7 @@ struct SocialView: View {
                 .font(DPTypography.supporting)
                 .foregroundStyle(DPColor.textSecondary)
             Button(social("social.action.addFriend")) {
+                DPHapticCenter.shared.emit(.routine)
                 withoutPresentationAnimation { isSearchPresented = true }
             }
             .font(DPTypography.supporting)
@@ -824,6 +847,7 @@ struct SocialView: View {
 
     private var addFriendCard: some View {
         Button {
+            DPHapticCenter.shared.emit(.routine)
             withoutPresentationAnimation { isSearchPresented = true }
         } label: {
             VStack(spacing: DPSpacing.extraSmall) {
@@ -864,6 +888,31 @@ struct SocialView: View {
             isPerformingConfirmation = false
             dismiss()
         }
+    }
+
+    private func presentConfirmation(_ confirmation: SocialConfirmation) {
+        self.confirmation = confirmation
+    }
+
+    private func dismissModalWithHaptic(_ dismiss: @escaping () -> Void) {
+        modalDismissHapticSent = true
+        DPHapticCenter.shared.emit(.routine)
+        dismiss()
+    }
+
+    private func dismissModalAfterOutcome(_ dismiss: @escaping () -> Void) {
+        // The mutation VM already emitted the success event. Suppress the
+        // routine close tick so a successful request is acknowledged once.
+        modalDismissHapticSent = true
+        dismiss()
+    }
+
+    private func finishModalDismissal(_ update: () -> Void) {
+        if !modalDismissHapticSent {
+            DPHapticCenter.shared.emit(.routine)
+        }
+        modalDismissHapticSent = false
+        update()
     }
 
     private func perform(_ confirmation: SocialConfirmation) async {
@@ -952,41 +1001,13 @@ struct SocialAvatar: View {
     let size: CGFloat
 
     var body: some View {
-        Group {
-            if member.hasProfilePhoto, let id = member.id {
-                AsyncImage(url: profileURL(id: id)) { image in
-                    image.resizable().scaledToFill()
-                } placeholder: {
-                    fallback
-                }
-            } else {
-                fallback
-            }
-        }
-        .frame(width: size, height: size)
-        .background(DPColor.backgroundTertiary)
-        .clipShape(Circle())
+        DPProfileAvatar(
+            memberID: member.id,
+            profilePhotoVersion: member.profilePhotoVersion,
+            size: size
+        )
         .overlay { Circle().stroke(DPColor.borderPrimary, lineWidth: 2) }
         .accessibilityHidden(true)
-    }
-
-    private var fallback: some View {
-        Circle()
-            .fill(DPColor.backgroundTertiary)
-            .overlay {
-                Image(systemName: "person.fill")
-                    .font(.system(size: size * 0.42))
-                    .foregroundStyle(DPColor.textMuted)
-            }
-    }
-
-    private func profileURL(id: MemberID) -> URL {
-        AppConfiguration.apiBaseURL
-            .appending(path: "members/\(id)/profile-photo")
-            .appending(queryItems: [
-                URLQueryItem(name: "thumbnail", value: "true"),
-                URLQueryItem(name: "v", value: String(member.profilePhotoVersion))
-            ])
     }
 }
 

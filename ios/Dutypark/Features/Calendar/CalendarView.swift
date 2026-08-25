@@ -107,6 +107,8 @@ private struct CalloutTail: Shape {
 
 struct CalendarView: View {
     @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var session: SessionStore
+    @StateObject private var offlineNetworkMonitor = OfflineNetworkMonitor.shared
     @StateObject private var model: CalendarViewModel
     @StateObject private var todoDetailModel = TodoViewModel()
     @State private var showsSearch = false
@@ -157,7 +159,7 @@ struct CalendarView: View {
                     title: LocalizedStringKey(CalendarLocalization.text("calendar.error.title")),
                     message: LocalizedStringKey(error),
                     retryTitle: LocalizedStringKey(CalendarLocalization.text("calendar.retry")),
-                    retryAction: { Task { await model.load() } }
+                    retryAction: { Task { await model.load(emitErrorFeedback: true) } }
                 )
             } else {
                 calendarContent
@@ -171,7 +173,42 @@ struct CalendarView: View {
         // pop and the gesture policy declines it.
         .dpInteractivePopGestureEnabled()
         .toolbar { calendarToolbar }
-        .task { if model.days.isEmpty { await model.load() } }
+        .task {
+            configureFromSession()
+            if model.days.isEmpty {
+                await model.load()
+            } else {
+                model.resumeServerRecoveryIfNeeded()
+            }
+        }
+        .onDisappear { model.cancelBackgroundTasks() }
+        .onChange(of: session.availability) { _, availability in
+            configureFromSession()
+            Task {
+                if availability == .online || model.days.isEmpty {
+                    await model.load()
+                }
+            }
+        }
+        .onChange(of: session.state) { _, _ in
+            // The Calendar can stay mounted while the authenticated account
+            // changes. Rebind the detail-only Todo model before a cached item
+            // can issue a mutation with the previous account's context.
+            todoSelection = nil
+            configureFromSession()
+        }
+        .onChange(of: offlineNetworkMonitor.status) { _, status in
+            guard status == .satisfied, session.availability == .online else { return }
+            Task { await model.handleNetworkBecameReachable() }
+        }
+        .onReceive(NotificationCenter.default.publisher(
+            for: Notification.Name("offlineSyncDidComplete")
+        )) { notification in
+            guard case .authenticated(let member) = session.state,
+                  offlineSyncAccountID(from: notification) == member.id
+            else { return }
+            Task { await model.handleOfflineSyncCompleted() }
+        }
         .fullScreenCover(item: $model.selectedDay) { day in
             DPModalOverlay(
                 onDismiss: {
@@ -315,7 +352,8 @@ struct CalendarView: View {
             DPModalOverlay(
                 maximumContentWidth: DPConfirmationPanel.maximumWidth,
                 onDismiss: { finishBlockConfirmationDismissal() },
-                canDismiss: !blockModel.isBlocking
+                canDismiss: !blockModel.isBlocking,
+                dismissHaptic: nil
             ) { availableSize, dismiss in
                 DPConfirmationPanel(
                     title: CalendarLocalization.text("calendar.block.confirm.title"),
@@ -357,6 +395,9 @@ struct CalendarView: View {
     private var calendarContent: some View {
         ScrollView {
             LazyVStack(spacing: DPSpacing.small) {
+                if model.isShowingCachedData || model.pendingScheduleCount > 0 {
+                    offlineStateBanner
+                }
                 if showsDutyToolbar {
                     dutyToolbar
                 }
@@ -370,6 +411,61 @@ struct CalendarView: View {
             .padding(.bottom, DPSpacing.large)
         }
         .refreshable { await model.load() }
+    }
+
+    private var offlineStateBanner: some View {
+        VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+            if model.isShowingCachedData {
+                Label {
+                    Text(CalendarLocalization.text("calendar.offline.cached"))
+                } icon: {
+                    Image(systemName: "wifi.slash")
+                }
+                if let storedAt = model.cacheStoredAt {
+                    Text(CalendarLocalization.format(
+                        "calendar.offline.cachedAt",
+                        DateFormatter.localizedString(from: storedAt, dateStyle: .short, timeStyle: .short)
+                    ))
+                    .font(.caption)
+                    .foregroundStyle(DPColor.textSecondary)
+                }
+            }
+            if model.pendingScheduleCount > 0 {
+                Text(CalendarLocalization.format(
+                    "calendar.offline.pending",
+                    model.pendingScheduleCount
+                ))
+                .font(.caption)
+                .foregroundStyle(DPColor.textSecondary)
+            }
+        }
+        .font(.caption)
+        .foregroundStyle(DPColor.textPrimary)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, DPSpacing.small)
+        .padding(.vertical, DPSpacing.extraSmall)
+        .background(DPColor.backgroundSecondary, in: RoundedRectangle(cornerRadius: 10))
+        .accessibilityIdentifier("calendar.offline.banner")
+    }
+
+    private func configureFromSession() {
+        guard case .authenticated(let member) = session.state else {
+            todoDetailModel.configureSession(accountID: nil, availability: .offline)
+            return
+        }
+        model.configure(accountID: member.id, isOffline: session.availability.isOffline)
+        todoDetailModel.configureSession(
+            accountID: member.id,
+            availability: session.availability
+        )
+    }
+
+    private func offlineSyncAccountID(from notification: Notification) -> MemberID? {
+        if let accountID = notification.object as? MemberID { return accountID }
+        if let accountID = notification.object as? NSNumber { return accountID.int64Value }
+        if let accountID = notification.userInfo?["accountID"] as? MemberID { return accountID }
+        if let accountID = notification.userInfo?["accountID"] as? NSNumber { return accountID.int64Value }
+        return nil
     }
 
     @ToolbarContentBuilder
@@ -405,6 +501,7 @@ struct CalendarView: View {
             // The same siren in the same red as every other report in the app.
             Button(role: .destructive) {
                 guard let memberID = model.targetMemberID else { return }
+                DPHapticCenter.shared.emit(.routine)
                 withoutPresentationAnimation {
                     reportTarget = ReportTarget(
                         type: .member,
@@ -443,7 +540,10 @@ struct CalendarView: View {
     // tab root is not pushed and keeps the bare identity.
     private var memberBackAction: (() -> Void)? {
         guard isPushedMemberCalendar else { return nil }
-        return { dismiss() }
+        return {
+            DPHapticCenter.shared.emit(.routine)
+            dismiss()
+        }
     }
 
     // Back is a control of its own so the avatar and the name stay free to open the
@@ -477,8 +577,6 @@ struct CalendarView: View {
         HStack(spacing: 6) {
             CalendarMemberAvatar(
                 memberID: model.targetMemberID,
-                name: model.targetName,
-                hasProfilePhoto: model.targetHasProfilePhoto,
                 profilePhotoVersion: model.targetProfilePhotoVersion,
                 size: 32
             )
@@ -497,7 +595,10 @@ struct CalendarView: View {
     }
 
     private var monthLabel: some View {
-        Button { withoutPresentationAnimation { showsMonthPicker = true } } label: {
+        Button {
+            DPHapticCenter.shared.emit(.routine)
+            withoutPresentationAnimation { showsMonthPicker = true }
+        } label: {
             Text(String(format: "%04d-%02d", model.year, model.month))
                 .font(DPFont.bold(size: 16, relativeTo: .headline))
                 .foregroundStyle(DPColor.textPrimary)
@@ -685,6 +786,7 @@ struct CalendarView: View {
 
     private func performSearch() {
         guard model.canSearchSchedules else { return }
+        DPHapticCenter.shared.emit(.routine)
         withoutPresentationAnimation { showsSearch = true }
         if !model.searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             Task { await model.search() }
@@ -720,6 +822,7 @@ struct CalendarView: View {
         HStack(spacing: 0) {
             if model.isMyCalendar && !model.friends.isEmpty {
                 Button {
+                    DPHapticCenter.shared.emit(.routine)
                     withoutPresentationAnimation { showsDutyComparison = true }
                 } label: {
                     Image(systemName: "person.2")
@@ -743,7 +846,10 @@ struct CalendarView: View {
                 .accessibilityIdentifier("calendar.duty.quick.start")
             }
             if model.isMyCalendar, model.team?.dutyBatchTemplate != nil {
-                Button { importsDutyBatch = true } label: {
+                Button {
+                    DPHapticCenter.shared.emit(.routine)
+                    importsDutyBatch = true
+                } label: {
                     Image(systemName: "doc.badge.arrow.up")
                         .foregroundStyle(DPColor.textSecondary)
                         .frame(width: 44, height: 44)
@@ -802,7 +908,7 @@ struct CalendarView: View {
                 showsLabel: true,
                 tone: .warning
             ) {
-                model.setQuickDutyEditing(false)
+                model.setQuickDutyEditing(false, emitFeedback: false)
             }
             .padding(.trailing, -DPIconActionMetrics.touchPadding)
             .accessibilityIdentifier("calendar.duty.quick.exit")
@@ -811,6 +917,7 @@ struct CalendarView: View {
 
     private func openTodo(_ todo: TodoDTO) {
         guard TodoID(uuidString: todo.id) != nil else { return }
+        DPHapticCenter.shared.emit(.routine)
         todoSelection = CalendarTodoSelection(todo: todo)
     }
 
@@ -878,7 +985,10 @@ struct CalendarView: View {
             }
 
             if model.isMyCalendar {
-                Button { showsBatchUpdate = true } label: {
+                Button {
+                    DPHapticCenter.shared.emit(.routine)
+                    showsBatchUpdate = true
+                } label: {
                     Label(CalendarLocalization.text("calendar.duty.batch"), systemImage: "calendar")
                         .font(DPTypography.caption)
                         .foregroundStyle(DPColor.textSecondary)
@@ -967,7 +1077,7 @@ struct CalendarView: View {
                             guard !isSwipingMonth, !isSlidingMonth else { return }
                             if model.isQuickDutyEditing { model.focusQuickDuty(on: day) }
                             else {
-                                withoutPresentationAnimation { model.selectedDay = day }
+                                withoutPresentationAnimation { model.selectDay(day) }
                             }
                         }
                     } else {
@@ -1048,11 +1158,15 @@ struct CalendarView: View {
         LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: DPSpacing.small) {
             ForEach(model.dDays, id: \.id) { item in
                 DDayCard(item: item, model: model) {
+                    DPHapticCenter.shared.emit(.routine)
                     withoutPresentationAnimation { dDayModalSelection = .detail(item) }
                 }
             }
             if model.isMyCalendar {
-                Button { withoutPresentationAnimation { dDayModalSelection = .create } } label: {
+                Button {
+                    DPHapticCenter.shared.emit(.routine)
+                    withoutPresentationAnimation { dDayModalSelection = .create }
+                } label: {
                     VStack(spacing: 6) {
                         Circle()
                             .fill(DPColor.backgroundTertiary)
@@ -1332,7 +1446,10 @@ private struct YearMonthPickerView: View {
     private var pickerBody: some View {
         VStack(spacing: DPSpacing.medium) {
             HStack(spacing: DPSpacing.small) {
-                Button { pickerYear -= 1 } label: {
+                Button {
+                    pickerYear -= 1
+                    DPHapticCenter.shared.emit(.selection)
+                } label: {
                     Image(systemName: "chevron.left")
                         .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
                 }
@@ -1347,7 +1464,10 @@ private struct YearMonthPickerView: View {
 
                 Spacer(minLength: 0)
 
-                Button { pickerYear += 1 } label: {
+                Button {
+                    pickerYear += 1
+                    DPHapticCenter.shared.emit(.selection)
+                } label: {
                     Image(systemName: "chevron.right")
                         .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
                 }
@@ -1419,7 +1539,7 @@ private struct YearMonthPickerView: View {
         guard !isSelecting else { return }
         isSelecting = true
         Task {
-            await model.selectYearMonth(year: pickerYear, month: month)
+            await model.selectYearMonth(year: pickerYear, month: month, emitFeedback: false)
             dismiss()
         }
     }
@@ -1428,7 +1548,7 @@ private struct YearMonthPickerView: View {
         guard !isSelecting else { return }
         isSelecting = true
         Task {
-            await model.goToToday()
+            await model.goToToday(emitFeedback: false)
             dismiss()
         }
     }
@@ -1577,8 +1697,6 @@ private struct DutyComparisonView: View {
             HStack(spacing: DPSpacing.small) {
                 CalendarMemberAvatar(
                     memberID: friend.id,
-                    name: friend.name,
-                    hasProfilePhoto: friend.hasProfilePhoto,
                     profilePhotoVersion: friend.profilePhotoVersion,
                     size: 34
                 )
@@ -1616,57 +1734,16 @@ private struct DutyComparisonView: View {
 
 private struct CalendarMemberAvatar: View {
     let memberID: MemberID?
-    let name: String
-    let hasProfilePhoto: Bool
     let profilePhotoVersion: Int64
     let size: CGFloat
 
     var body: some View {
-        Group {
-            if hasProfilePhoto, let photoURL {
-                AsyncImage(url: photoURL) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image.resizable().scaledToFill()
-                    case .empty:
-                        ProgressView().controlSize(.small).tint(DPColor.textMuted)
-                    case .failure:
-                        fallback
-                    @unknown default:
-                        fallback
-                    }
-                }
-            } else {
-                fallback
-            }
-        }
-        .frame(width: size, height: size)
-        .background(DPColor.backgroundTertiary)
-        .clipShape(Circle())
-        .accessibilityHidden(true)
-    }
-
-    private var fallback: some View {
-        Circle()
-            .fill(DPColor.backgroundTertiary)
-            .overlay {
-                Text(name.prefix(1).uppercased())
-                    .font(DPFont.bold(size: max(11, size * 0.38), relativeTo: .caption))
-                    .foregroundStyle(DPColor.textSecondary)
-            }
-    }
-
-    private var photoURL: URL? {
-        guard let memberID else { return nil }
-        var components = URLComponents(
-            url: AppConfiguration.apiBaseURL.appending(path: "members/\(memberID)/profile-photo"),
-            resolvingAgainstBaseURL: false
+        DPProfileAvatar(
+            memberID: memberID,
+            profilePhotoVersion: profilePhotoVersion,
+            size: size
         )
-        components?.queryItems = [
-            URLQueryItem(name: "thumbnail", value: "true"),
-            URLQueryItem(name: "v", value: String(profilePhotoVersion))
-        ]
-        return components?.url
+        .accessibilityHidden(true)
     }
 }
 
@@ -1855,8 +1932,6 @@ private struct CalendarDayCell: View {
         HStack(spacing: 2) {
             CalendarMemberAvatar(
                 memberID: item.memberID,
-                name: item.name,
-                hasProfilePhoto: item.hasProfilePhoto,
                 profilePhotoVersion: item.profilePhotoVersion,
                 size: 12
             )
@@ -2735,7 +2810,11 @@ private struct ScheduleEditorView<Header: View>: View {
                 pendingAIConsentPolicy = nil
                 isSaving = true
                 Task {
-                    let granted = await aiConsent.grant(for: memberID, policyVersion: version)
+                    let granted = await aiConsent.grant(
+                        for: memberID,
+                        policyVersion: version,
+                        emitsHaptic: false
+                    )
                     await performSave(aiTimeParsingRequested: granted)
                 }
             }
@@ -2744,7 +2823,9 @@ private struct ScheduleEditorView<Header: View>: View {
                 pendingAIConsentPolicy = nil
                 isSaving = true
                 Task {
-                    if let memberID { _ = await aiConsent.revoke(for: memberID) }
+                    if let memberID {
+                        _ = await aiConsent.revoke(for: memberID, emitsHaptic: false)
+                    }
                     await performSave(aiTimeParsingRequested: false)
                 }
             }
@@ -3064,7 +3145,10 @@ private struct ScheduleEditorView<Header: View>: View {
                 .datePickerStyle(.compact)
                 .environment(\.locale, CalendarLocalization.selectedLocale)
 
-                Button(action: remove) {
+                Button {
+                    remove()
+                    DPHapticCenter.shared.emit(.selection)
+                } label: {
                     Image(systemName: "xmark.circle.fill")
                         .font(.system(size: 16))
                         .foregroundStyle(DPColor.textMuted)
@@ -3074,7 +3158,10 @@ private struct ScheduleEditorView<Header: View>: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel(CalendarLocalization.text("calendar.schedule.time.remove"))
             } else if canAdd {
-                Button(action: add) {
+                Button {
+                    add()
+                    DPHapticCenter.shared.emit(.selection)
+                } label: {
                     Label(
                         CalendarLocalization.text("calendar.schedule.time.add"),
                         systemImage: "clock"
@@ -3120,7 +3207,9 @@ private struct ScheduleEditorView<Header: View>: View {
     private func visibilityButton(_ option: Visibility, icon: String) -> some View {
         let selected = visibility == option
         return Button {
+            guard visibility != option else { return }
             visibility = option
+            DPHapticCenter.shared.emit(.selection)
         } label: {
             VStack(spacing: 4) {
                 ZStack(alignment: .topTrailing) {
@@ -3668,7 +3757,7 @@ private struct ScheduleSearchView: View {
                                 .font(DPTypography.label)
                                 .foregroundStyle(DPColor.textPrimary)
                             Label(
-                                item.startDateTime.rawValue.replacingOccurrences(of: "T", with: " "),
+                                CalendarVisualLogic.searchResultDateText(item.startDateTime),
                                 systemImage: "calendar"
                             )
                             Text(item.author)
@@ -4218,6 +4307,14 @@ private struct DDayEditorView: View {
         }
         .onAppear { onWorkingChange(isSaving) }
         .onChange(of: isSaving) { _, isWorking in onWorkingChange(isWorking) }
+        .onChange(of: date) { _, _ in
+            guard !isSaving else { return }
+            DPHapticCenter.shared.emit(.selection)
+        }
+        .onChange(of: isPrivate) { _, _ in
+            guard !isSaving else { return }
+            DPHapticCenter.shared.emit(.selection)
+        }
         .onChange(of: dismissRequest) { _, _ in guardedDismiss() }
         .onDisappear { onWorkingChange(false) }
         .alert(

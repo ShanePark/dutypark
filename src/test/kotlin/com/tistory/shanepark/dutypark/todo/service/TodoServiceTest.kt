@@ -4,6 +4,9 @@ import com.tistory.shanepark.dutypark.attachment.domain.entity.Attachment
 import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
 import com.tistory.shanepark.dutypark.attachment.repository.AttachmentRepository
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.common.idempotency.CreateIdempotencyKey
+import com.tistory.shanepark.dutypark.common.idempotency.CreateIdempotencyKeyRepository
+import com.tistory.shanepark.dutypark.common.idempotency.CreateIdempotencyResource
 import com.tistory.shanepark.dutypark.attachment.service.AttachmentService
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
@@ -41,6 +44,7 @@ class TodoServiceTest {
     private lateinit var attachmentService: AttachmentService
     private lateinit var friendService: FriendService
     private lateinit var eventPublisher: ApplicationEventPublisher
+    private lateinit var createIdempotencyKeyRepository: CreateIdempotencyKeyRepository
 
     private val loginMember = LoginMember(id = 1, email = "", name = "", team = "", isAdmin = false)
     private val member = Member(name = "", password = "")
@@ -54,6 +58,7 @@ class TodoServiceTest {
         attachmentService = mock(AttachmentService::class.java)
         friendService = mock(FriendService::class.java)
         eventPublisher = mock(ApplicationEventPublisher::class.java)
+        createIdempotencyKeyRepository = mock(CreateIdempotencyKeyRepository::class.java)
         ReflectionTestUtils.setField(member, "id", loginMember.id)
         todoService = TodoService(
             memberRepository,
@@ -61,7 +66,8 @@ class TodoServiceTest {
             attachmentRepository,
             attachmentService,
             friendService,
-            eventPublisher
+            eventPublisher,
+            createIdempotencyKeyRepository
         )
         // Mockito returns 0 (not null) by default for a nullable Int repository method;
         // mirror the real "no tagged rows" result so top-position math stays correct.
@@ -78,6 +84,7 @@ class TodoServiceTest {
     @Test
     fun `addTodo should save and return TodoResponse`() {
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(memberRepository.findMemberWithTeamForUpdate(loginMember.id)).thenReturn(Optional.of(member))
         `when`(todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.TODO)).thenReturn(0)
 
         val todo = Todo(member, "title", "content", 1)
@@ -88,6 +95,43 @@ class TodoServiceTest {
         assertEquals("title", response.title)
         assertEquals("content", response.content)
         verify(todoRepository, times(1)).save(any(Todo::class.java))
+    }
+
+    @Test
+    fun `same idempotency key reuses the first todo instead of creating another`() {
+        val operationId = "offline-todo-operation"
+        var persistedKey: CreateIdempotencyKey? = null
+        val persistedTodo = Todo(member, "title", "content", 1)
+
+        `when`(
+            createIdempotencyKeyRepository.findByMemberIdAndOperationIdAndResourceKind(
+                loginMember.id,
+                operationId,
+                CreateIdempotencyResource.TODO,
+            )
+        ).thenAnswer {
+            persistedKey?.let { Optional.of(it) } ?: Optional.empty<CreateIdempotencyKey>()
+        }
+        doAnswer {
+            persistedKey = it.getArgument<CreateIdempotencyKey>(0)
+            null
+        }.`when`(createIdempotencyKeyRepository).save(any<CreateIdempotencyKey>())
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(memberRepository.findMemberWithTeamForUpdate(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.TODO)).thenReturn(0)
+        `when`(todoRepository.save(any(Todo::class.java))).thenAnswer {
+            it.getArgument<Todo>(0).also { saved ->
+                ReflectionTestUtils.setField(saved, "id", persistedTodo.id)
+            }
+        }
+        `when`(todoRepository.findById(persistedTodo.id)).thenReturn(Optional.of(persistedTodo))
+
+        val first = todoService.addTodo(loginMember, "title", "content", idempotencyKey = operationId)
+        val second = todoService.addTodo(loginMember, "title", "content", idempotencyKey = operationId)
+
+        assertEquals(first.id, second.id)
+        verify(todoRepository, times(1)).save(any(Todo::class.java))
+        verify(createIdempotencyKeyRepository, times(1)).save(any(CreateIdempotencyKey::class.java))
     }
 
     @Test

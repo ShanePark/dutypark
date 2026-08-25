@@ -5,6 +5,10 @@ protocol TodoRepository: Sendable {
     func fetchFriends() async throws -> [FriendDTO]
     func fetchAttachments(todoID: TodoID) async throws -> [AttachmentDTO]
     func create(_ request: TodoRequest) async throws -> TodoDTO
+    func create(
+        _ request: TodoRequest,
+        operationID: UUID
+    ) async throws -> TodoDTO
     func update(id: TodoID, request: TodoRequest) async throws -> TodoDTO
     func delete(id: TodoID) async throws
     func complete(id: TodoID) async throws -> TodoDTO
@@ -12,6 +16,17 @@ protocol TodoRepository: Sendable {
     func changeStatus(id: TodoID, request: TodoStatusChangeRequest) async throws -> TodoDTO
     func updatePositions(_ request: TodoPositionUpdateRequest) async throws
     func leaveTag(id: TodoID) async throws
+}
+
+extension TodoRepository {
+    /// Keep existing repository fakes and call sites source-compatible;
+    /// the production repository overrides this overload to send the key.
+    func create(
+        _ request: TodoRequest,
+        operationID: UUID
+    ) async throws -> TodoDTO {
+        try await create(request)
+    }
 }
 
 nonisolated struct TodoAPIRepository: TodoRepository {
@@ -41,6 +56,18 @@ nonisolated struct TodoAPIRepository: TodoRepository {
 
     func create(_ request: TodoRequest) async throws -> TodoDTO {
         try await client.request("todos", method: .post, body: request)
+    }
+
+    func create(
+        _ request: TodoRequest,
+        operationID: UUID
+    ) async throws -> TodoDTO {
+        try await client.request(
+            "todos",
+            method: .post,
+            body: request,
+            headers: ["Idempotency-Key": operationID.uuidString]
+        )
     }
 
     func update(id: TodoID, request: TodoRequest) async throws -> TodoDTO {

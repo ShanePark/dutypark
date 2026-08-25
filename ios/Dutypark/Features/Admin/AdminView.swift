@@ -110,7 +110,13 @@ struct AdminRootView: View {
             DPModalOverlay(
                 maximumContentWidth: DPConfirmationPanel.maximumWidth,
                 onDismiss: { sessionConfirmation = nil },
-                canDismiss: !isRevokingSession
+                canDismiss: !isRevokingSession,
+                onDismissRequest: { _ in
+                    guard !isRevokingSession else { return }
+                    sessionConfirmation = nil
+                    DPHapticCenter.shared.emit(.routine)
+                },
+                dismissHaptic: nil
             ) { availableSize, dismiss in
                 DPConfirmationPanel(
                     title: confirmation.title,
@@ -149,6 +155,7 @@ struct AdminRootView: View {
             .accessibilityIdentifier("admin.tile.members")
 
             Button {
+                DPHapticCenter.shared.emit(.routine)
                 destination = .teams
             } label: {
                 AdminTopTile(
@@ -160,6 +167,7 @@ struct AdminRootView: View {
             .accessibilityIdentifier("admin.tile.teams")
 
             Button {
+                DPHapticCenter.shared.emit(.routine)
                 destination = .development
             } label: {
                 AdminTopTile(
@@ -171,6 +179,7 @@ struct AdminRootView: View {
             .accessibilityIdentifier("admin.tile.development")
 
             Button {
+                DPHapticCenter.shared.emit(.routine)
                 openURL(AdminWebDestination.apiDocumentationURL())
             } label: {
                 AdminTopTile(
@@ -294,6 +303,7 @@ struct AdminRootView: View {
                 .padding(.vertical, 48)
         } else if memberModel.loadFailed && memberModel.members.isEmpty {
             Button {
+                DPHapticCenter.shared.emit(.routine)
                 Task { await memberModel.load() }
             } label: {
                 Label(
@@ -487,6 +497,9 @@ private struct AdminMemberRow<Detail: View>: View {
                 header
             }
             .buttonStyle(.plain)
+            .simultaneousGesture(TapGesture().onEnded {
+                DPHapticCenter.shared.emit(.routine)
+            })
             // The identifier stays on the link rather than the row: SwiftUI pushes a container
             // identifier down onto its children, which would hide the inline session controls.
             .accessibilityIdentifier("admin.member.\(member.id)")
@@ -512,7 +525,6 @@ private struct AdminMemberRow<Detail: View>: View {
             AdminMemberAvatar(
                 memberID: member.id,
                 name: member.name,
-                hasProfilePhoto: member.hasProfilePhoto,
                 version: member.profilePhotoVersion,
                 size: 36
             )
@@ -587,7 +599,11 @@ private struct AdminMemberPaginationFooter: View {
         isDisabled: Bool,
         action: @escaping () -> Void
     ) -> some View {
-        Button(action: action) {
+        Button {
+            guard !isDisabled else { return }
+            DPHapticCenter.shared.emit(.selection)
+            action()
+        } label: {
             Image(systemName: systemImage)
                 .font(.system(size: DPSize.iconSmall))
                 .foregroundStyle(DPColor.textSecondary)
@@ -609,38 +625,18 @@ private struct AdminMemberPaginationFooter: View {
 private struct AdminMemberAvatar: View {
     let memberID: MemberID
     let name: String
-    let hasProfilePhoto: Bool
     let version: Int64
     let size: CGFloat
 
     var body: some View {
-        Group {
-            if hasProfilePhoto {
-                AsyncImage(url: AdminMemberAvatarPresentation.url(memberID: memberID, version: version)) { phase in
-                    if let image = phase.image {
-                        image.resizable().scaledToFill()
-                    } else {
-                        fallback
-                    }
-                }
-            } else {
-                fallback
-            }
-        }
-        .frame(width: size, height: size)
-        .clipShape(Circle())
+        DPProfileAvatar(
+            memberID: memberID,
+            profilePhotoVersion: version,
+            size: size
+        )
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(name)
         .accessibilityIdentifier("admin.member.avatar.\(memberID)")
-    }
-
-    private var fallback: some View {
-        ZStack {
-            DPColor.accent.opacity(0.14)
-            Text(String(name.prefix(1)))
-                .font(.system(size: size * 0.38, weight: .semibold))
-                .foregroundStyle(DPColor.accent)
-        }
     }
 }
 
@@ -993,7 +989,13 @@ private struct AdminMemberDetailView: View {
             DPModalOverlay(
                 maximumContentWidth: DPConfirmationPanel.maximumWidth,
                 onDismiss: { sessionConfirmation = nil },
-                canDismiss: !isRevokingSession
+                canDismiss: !isRevokingSession,
+                onDismissRequest: { _ in
+                    guard !isRevokingSession else { return }
+                    sessionConfirmation = nil
+                    DPHapticCenter.shared.emit(.routine)
+                },
+                dismissHaptic: nil
             ) { availableSize, dismiss in
                 DPConfirmationPanel(
                     title: confirmation.title,
@@ -1102,7 +1104,6 @@ private struct AdminMemberDetailView: View {
             AdminMemberAvatar(
                 memberID: member.id,
                 name: member.name,
-                hasProfilePhoto: member.hasProfilePhoto,
                 version: member.profilePhotoVersion,
                 size: 76
             )
@@ -1203,8 +1204,10 @@ private struct AdminMemberDetailView: View {
     private func requestPasswordModalDismiss() {
         switch passwordModalState.dismissDecision {
         case .dismiss:
+            DPHapticCenter.shared.emit(.routine)
             showsPasswordSheet = false
         case .confirmDiscard:
+            DPHapticCenter.shared.emit(.warning)
             showsPasswordDiscardConfirmation = true
         case .blocked:
             break
@@ -1248,7 +1251,9 @@ private struct AdminSessionRow: View {
                 )
                 .font(DPTypography.label)
                 Spacer()
-                Button(role: .destructive, action: onRevoke) {
+                Button(role: .destructive) {
+                    onRevoke()
+                } label: {
                     Image(systemName: "xmark.circle")
                         .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
                 }

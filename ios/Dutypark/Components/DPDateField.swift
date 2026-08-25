@@ -19,6 +19,24 @@ nonisolated enum DPDateFieldTap: Equatable, Sendable {
     case committed(DateOnly)
 }
 
+nonisolated enum DPDateFieldHapticPolicy {
+    static func selection(for tap: DPDateFieldTap) -> DPHapticKind? {
+        switch tap {
+        case .ignored:
+            return nil
+        case .staged, .committed:
+            return .selection
+        }
+    }
+
+    static func monthNavigation(
+        from: DatePickerMonth,
+        to: DatePickerMonth
+    ) -> DPHapticKind? {
+        from == to ? nil : .routine
+    }
+}
+
 /// Base metrics for the field, kept in a `nonisolated enum` so the numbers can be asserted
 /// without a snapshot. The view wraps each of them in `@ScaledMetric` so they follow the text
 /// size; the collapsed row is the exception — its height comes from the caller, which owns the
@@ -498,7 +516,7 @@ struct DPDateField<Accessory: View>: View {
             }
         }
         .onChange(of: isReadOnly) { _, locked in
-            if locked { collapse() }
+            if locked { collapse(emitFeedback: false) }
         }
         // Closing is closing however it was asked for, including from outside: a caller that
         // drives `expansion` shuts the calendar without going through the footer.
@@ -913,30 +931,45 @@ struct DPDateField<Accessory: View>: View {
             maximum: maximum
         )
         setExpanded(true)
+        DPHapticCenter.shared.emit(.routine)
     }
 
     /// Closing is also how a staged range is discarded, whichever way it was closed.
-    private func collapse() {
+    private func collapse(emitFeedback: Bool = true) {
+        let wasExpanded = isExpanded
         setExpanded(false)
         stagedDay = nil
+        if emitFeedback && wasExpanded {
+            DPHapticCenter.shared.emit(.routine)
+        }
     }
 
     private func select(_ day: DateOnly) {
-        switch DPDateFieldPolicy.tap(day, mode: mode, minimum: minimum, maximum: maximum) {
+        let tap = DPDateFieldPolicy.tap(day, mode: mode, minimum: minimum, maximum: maximum)
+        guard let feedback = DPDateFieldHapticPolicy.selection(for: tap) else {
+            return
+        }
+        switch tap {
+        case let .staged(day):
+            guard stagedDay != day else { return }
+            stagedDay = day
+            DPHapticCenter.shared.emit(feedback)
+        case let .committed(day):
+            let didChange = value != day
+            value = day
+            if didChange { DPHapticCenter.shared.emit(feedback) }
+            collapse(emitFeedback: false)
         case .ignored:
             return
-        case let .staged(day):
-            stagedDay = day
-        case let .committed(day):
-            value = day
-            collapse()
         }
     }
 
     private func confirm() {
         guard let stagedDay, canConfirm else { return }
+        let didChange = value != stagedDay
         value = stagedDay
-        collapse()
+        if didChange { DPHapticCenter.shared.emit(.selection) }
+        collapse(emitFeedback: false)
     }
 
     private func shiftMonth(_ delta: Int) {
@@ -946,14 +979,18 @@ struct DPDateField<Accessory: View>: View {
         ),
             let month = DatePickerGridLogic.month(of: moved)
         else { return }
+        guard DPDateFieldHapticPolicy.monthNavigation(from: visibleMonth, to: month) != nil else { return }
         visibleMonth = month
+        DPHapticCenter.shared.emit(.routine)
     }
 
     private func goToToday() {
         guard canGoToToday,
               let month = DatePickerGridLogic.month(of: DatePickerGridLogic.day(from: today))
         else { return }
+        guard DPDateFieldHapticPolicy.monthNavigation(from: visibleMonth, to: month) != nil else { return }
         visibleMonth = month
+        DPHapticCenter.shared.emit(.routine)
     }
 }
 

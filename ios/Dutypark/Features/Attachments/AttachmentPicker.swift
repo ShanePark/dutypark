@@ -16,17 +16,20 @@ final class AttachmentPickerModel: ObservableObject {
     @Published var failure: AttachmentPickerFailure?
 
     private let client: any AttachmentPickerClient
+    private let haptics: DPHapticCenter
 
     init(
         contextType: AttachmentContextType,
         targetContextId: String? = nil,
         existingAttachments: [AttachmentDTO] = [],
-        client: any AttachmentPickerClient = AttachmentClient()
+        client: any AttachmentPickerClient = AttachmentClient(),
+        haptics: DPHapticCenter = .shared
     ) {
         self.contextType = contextType
         self.targetContextId = targetContextId
         self.attachments = existingAttachments
         self.client = client
+        self.haptics = haptics
     }
 
     var result: AttachmentPickerResult {
@@ -66,28 +69,40 @@ final class AttachmentPickerModel: ObservableObject {
                 )
                 attachments.append(try await client.upload(file, sessionId: sessionId))
             }
+            try Task.checkCancellation()
+            haptics.emit(.success)
         } catch {
             guard !Task.isCancelled else { return }
             if let error = error as? AttachmentUploadError {
-                failure = .from(error)
+                recordFailure(.from(error))
             } else if let error = error as? APIError {
-                failure = .from(error)
+                recordFailure(.from(error))
             } else {
-                failure = .uploadFailed
+                recordFailure(.uploadFailed)
             }
         }
     }
 
     func remove(_ attachmentId: AttachmentID) {
+        guard !isBusy else { return }
+        let countBefore = attachments.count
         attachments.removeAll { $0.id == attachmentId }
+        guard attachments.count != countBefore else { return }
     }
 
     func move(from index: Int, by offset: Int) {
+        guard !isBusy, offset != 0 else { return }
         let destination = index + offset
         guard attachments.indices.contains(index), attachments.indices.contains(destination) else {
             return
         }
         attachments.swapAt(index, destination)
+        haptics.emit(.selection)
+    }
+
+    func recordFailure(_ failure: AttachmentPickerFailure) {
+        self.failure = failure
+        haptics.emit(.error)
     }
 
     @discardableResult
@@ -98,7 +113,8 @@ final class AttachmentPickerModel: ObservableObject {
             self.attachmentSessionId = nil
             return true
         } catch {
-            failure = .discardFailed
+            guard !Task.isCancelled, !(error is CancellationError) else { return false }
+            recordFailure(.discardFailed)
             return false
         }
     }
@@ -422,10 +438,10 @@ struct AttachmentPicker: View {
             await model.add(files: files)
         } catch let error as AttachmentUploadError {
             guard !Task.isCancelled else { return }
-            model.failure = .from(error)
+            model.recordFailure(.from(error))
         } catch {
             guard !Task.isCancelled else { return }
-            model.failure = .unreadableFile
+            model.recordFailure(.unreadableFile)
         }
     }
 
@@ -439,10 +455,10 @@ struct AttachmentPicker: View {
             await model.add(files: files)
         } catch let error as AttachmentUploadError {
             guard !Task.isCancelled else { return }
-            model.failure = .from(error)
+            model.recordFailure(.from(error))
         } catch {
             guard !Task.isCancelled else { return }
-            model.failure = .unreadableFile
+            model.recordFailure(.unreadableFile)
         }
     }
 

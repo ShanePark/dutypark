@@ -71,6 +71,7 @@ struct DPConfirmationPresentationSourceTests {
         #expect(source.contains("maximumContentWidth: DPConfirmationPanel.maximumWidth"))
         #expect(source.contains("DPConfirmationPanel("))
         #expect(source.contains("maximumHeight: availableSize.height"))
+        #expect(source.contains("dismissHaptic: nil"))
         // The overlay owns the only `fullScreenCover` pairing: one for each shape.
         #expect(source.components(separatedBy: "DPModalOverlay(").count - 1 == 1)
         #expect(source.components(separatedBy: "fullScreenCover(").count - 1 == 2)

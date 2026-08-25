@@ -63,6 +63,33 @@ struct TeamFeatureTests {
     }
 
     @Test
+    func teamHapticsStayAtSemanticSelectionNavigationAndResultBoundaries() throws {
+        let root = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let teamView = try String(
+            contentsOf: root.appending(path: "Dutypark/Features/Team/TeamView.swift"),
+            encoding: .utf8
+        )
+        let manageView = try String(
+            contentsOf: root.appending(path: "Dutypark/Features/Team/TeamManageView.swift"),
+            encoding: .utf8
+        )
+        let viewModel = try String(
+            contentsOf: root.appending(path: "Dutypark/Features/Team/TeamViewModel.swift"),
+            encoding: .utf8
+        )
+
+        #expect(teamView.contains("DPHapticCenter.shared.emit(.routine)"))
+        #expect(teamView.contains("DPHapticCenter.shared.emit(.selection)"))
+        #expect(manageView.contains("if !action.isDestructive"))
+        #expect(manageView.contains("present(.removeMember(id))"))
+        #expect(manageView.contains("dismissHaptic: nil"))
+        #expect(viewModel.contains("DPHapticCenter.shared.emit(.success)"))
+        #expect(viewModel.contains("DPHapticCenter.shared.emit(.error)"))
+    }
+
+    @Test
     func emptyShiftListDoesNotReuseTheScheduleEmptyMessage() throws {
         let sourceURL = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
@@ -223,6 +250,7 @@ struct TeamFeatureTests {
         #expect(succeeded == false)
         #expect(viewModel.showsError)
         #expect(viewModel.showsSuccess == false)
+        #expect(DPHapticCenter.shared.event?.kind == .error)
         TeamURLProtocolStub.handler = nil
     }
 
@@ -254,6 +282,7 @@ struct TeamFeatureTests {
         #expect(viewModel.team?.id == 7)
         #expect(viewModel.showsError == false)
         #expect(viewModel.showsSuccess)
+        #expect(DPHapticCenter.shared.event?.kind == .success)
         TeamURLProtocolStub.handler = nil
     }
 
@@ -337,6 +366,119 @@ struct TeamFeatureTests {
         #expect(viewModel.selectedDay?.year == 2026)
         #expect(viewModel.selectedDay?.month == 9)
         #expect(viewModel.selectedDay?.day == 13)
+        TeamURLProtocolStub.handler = nil
+    }
+
+    @Test @MainActor
+    func passiveInitialTeamLoadFailureDoesNotEmitHaptics() async {
+        TeamURLProtocolStub.handler = { request in
+            Self.response(request, status: 503)
+        }
+        defer { TeamURLProtocolStub.handler = nil }
+
+        let haptics = DPHapticCenter()
+        let viewModel = TeamViewModel(
+            repository: TeamRepository(client: makeClient()),
+            haptics: haptics
+        )
+
+        await viewModel.load(memberID: 1)
+
+        #expect(viewModel.loadFailed)
+        #expect(haptics.event == nil)
+    }
+
+    @Test @MainActor
+    func passiveInitialTeamLoadShiftFailureDoesNotEmitHaptics() async {
+        TeamURLProtocolStub.handler = { request in
+            if request.url?.path == "/api/teams/shift" {
+                return Self.response(request, status: 503)
+            }
+            return Self.successfulTeamLoadResponse(request)
+        }
+        defer { TeamURLProtocolStub.handler = nil }
+
+        let haptics = DPHapticCenter()
+        let viewModel = TeamViewModel(
+            repository: TeamRepository(client: makeClient()),
+            haptics: haptics
+        )
+
+        await viewModel.load(memberID: 1)
+
+        #expect(viewModel.team != nil)
+        #expect(viewModel.loadFailed == false)
+        #expect(viewModel.shifts.isEmpty)
+        #expect(haptics.event == nil)
+    }
+
+    @Test @MainActor
+    func explicitTeamLoadRetryEmitsOneErrorHaptic() async {
+        TeamURLProtocolStub.handler = { request in
+            Self.response(request, status: 503)
+        }
+        defer { TeamURLProtocolStub.handler = nil }
+
+        let haptics = DPHapticCenter()
+        let viewModel = TeamViewModel(
+            repository: TeamRepository(client: makeClient()),
+            haptics: haptics
+        )
+
+        await viewModel.load(memberID: 1, emitErrorFeedback: true)
+
+        #expect(viewModel.loadFailed)
+        #expect(haptics.event?.kind == .error)
+        #expect(haptics.event?.id == 1)
+    }
+
+    @Test @MainActor
+    func daySelectionTicksOnlyWhenTheSelectedDayActuallyChanges() async throws {
+        TeamURLProtocolStub.handler = { request in
+            Self.successfulTeamLoadResponse(request)
+        }
+        let haptics = DPHapticCenter()
+        let viewModel = TeamViewModel(
+            repository: TeamRepository(client: makeClient()),
+            now: try #require(Self.date(year: 2026, month: 8, day: 1)),
+            haptics: haptics
+        )
+
+        await viewModel.load(memberID: 1)
+        let eventIDBeforeSelection = haptics.event?.id
+
+        await viewModel.selectDay(at: viewModel.selectedIndex)
+
+        #expect(haptics.event?.id == eventIDBeforeSelection)
+
+        let nextIndex = viewModel.selectedIndex == 0 ? 1 : 0
+        await viewModel.selectDay(at: nextIndex)
+
+        #expect(haptics.event?.kind == .selection)
+        #expect(haptics.event?.id != eventIDBeforeSelection)
+        TeamURLProtocolStub.handler = nil
+    }
+
+    @Test @MainActor
+    func monthNavigationTicksOnlyAfterASuccessfulActualMonthChange() async throws {
+        TeamURLProtocolStub.handler = { request in
+            Self.successfulTeamLoadResponse(request)
+        }
+        let haptics = DPHapticCenter()
+        let viewModel = TeamViewModel(
+            repository: TeamRepository(client: makeClient()),
+            now: try #require(Self.date(year: 2026, month: 8, day: 1)),
+            haptics: haptics
+        )
+
+        await viewModel.load(memberID: 1)
+        await viewModel.goTo(year: 2026, month: 9)
+        let changedEventID = try #require(haptics.event?.id)
+        #expect(haptics.event?.kind == .routine)
+
+        await viewModel.goTo(year: 2026, month: 9)
+
+        #expect(haptics.event?.id == changedEventID)
         TeamURLProtocolStub.handler = nil
     }
 
@@ -431,6 +573,7 @@ struct TeamFeatureTests {
         #expect(saved.content == "Local schedule")
         #expect(viewModel.scheduleDraft == nil)
         #expect(viewModel.showsError == false)
+        #expect(DPHapticCenter.shared.event?.kind == .success)
 
         viewModel.schedulePendingDeletion = saved
         TeamURLProtocolStub.handler = { request in
@@ -446,6 +589,7 @@ struct TeamFeatureTests {
         #expect(viewModel.selectedSchedules.isEmpty)
         #expect(viewModel.schedulePendingDeletion == nil)
         #expect(viewModel.showsError == false)
+        #expect(DPHapticCenter.shared.event?.kind == .success)
         TeamURLProtocolStub.handler = nil
     }
 

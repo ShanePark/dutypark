@@ -5,6 +5,9 @@ import com.tistory.shanepark.dutypark.attachment.service.AttachmentService
 import com.tistory.shanepark.dutypark.attachment.service.FileSystemService
 import com.tistory.shanepark.dutypark.attachment.service.StoragePathResolver
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.common.idempotency.CreateIdempotencyKey
+import com.tistory.shanepark.dutypark.common.idempotency.CreateIdempotencyKeyRepository
+import com.tistory.shanepark.dutypark.common.idempotency.CreateIdempotencyResource
 import com.tistory.shanepark.dutypark.consent.service.AiScheduleParsingConsentService
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
@@ -43,6 +46,7 @@ class ScheduleServiceTest {
     private lateinit var pathResolver: StoragePathResolver
     private lateinit var eventPublisher: ApplicationEventPublisher
     private lateinit var aiScheduleParsingConsentService: AiScheduleParsingConsentService
+    private lateinit var createIdempotencyKeyRepository: CreateIdempotencyKeyRepository
 
     private lateinit var member: Member
     private lateinit var member2: Member
@@ -62,6 +66,7 @@ class ScheduleServiceTest {
         pathResolver = mock()
         eventPublisher = mock()
         aiScheduleParsingConsentService = mock()
+        createIdempotencyKeyRepository = mock()
         whenever(aiScheduleParsingConsentService.hasCurrentConsent(any())).thenReturn(true)
 
         scheduleService = ScheduleService(
@@ -76,6 +81,7 @@ class ScheduleServiceTest {
             pathResolver = pathResolver,
             eventPublisher = eventPublisher,
             aiScheduleParsingConsentService = aiScheduleParsingConsentService,
+            createIdempotencyKeyRepository = createIdempotencyKeyRepository,
         )
 
         member = Member(name = "testMember", email = "test@test.com", password = "1234")
@@ -99,6 +105,7 @@ class ScheduleServiceTest {
         )
 
         whenever(memberRepository.findById(member.id!!)).thenReturn(Optional.of(member))
+        whenever(memberRepository.findMemberWithTeamForUpdate(member.id!!)).thenReturn(Optional.of(member))
         whenever(scheduleRepository.findMaxPosition(eq(member), any())).thenReturn(-1)
         whenever(scheduleRepository.save(any<Schedule>())).thenAnswer { invocation ->
             val schedule = invocation.getArgument<Schedule>(0)
@@ -119,6 +126,56 @@ class ScheduleServiceTest {
         verify(schedulePermissionService).checkScheduleWriteAuthority(loginMember, member)
         verify(scheduleRepository).save(any<Schedule>())
         verify(scheduleTimeParsingQueueManager).addTask(any<Schedule>())
+    }
+
+    @Test
+    fun `same idempotency key reuses the first schedule instead of creating another`() {
+        val operationId = "offline-schedule-operation"
+        val saveDto = ScheduleSaveDto(
+            memberId = member.id!!,
+            content = "same content",
+            startDateTime = LocalDateTime.of(2023, 4, 10, 9, 0),
+            endDateTime = LocalDateTime.of(2023, 4, 10, 10, 0),
+        )
+        var persistedKey: CreateIdempotencyKey? = null
+        val persistedSchedule = Schedule(
+            member = member,
+            content = saveDto.content,
+            startDateTime = saveDto.startDateTime,
+            endDateTime = saveDto.endDateTime,
+        )
+        ReflectionTestUtils.setField(persistedSchedule, "id", UUID.randomUUID())
+
+        whenever(memberRepository.findById(member.id!!)).thenReturn(Optional.of(member))
+        whenever(memberRepository.findMemberWithTeamForUpdate(member.id!!)).thenReturn(Optional.of(member))
+        whenever(scheduleRepository.findMaxPosition(eq(member), any())).thenReturn(-1)
+        whenever(scheduleRepository.save(any<Schedule>())).thenAnswer {
+            it.getArgument<Schedule>(0).also { saved ->
+                ReflectionTestUtils.setField(saved, "id", persistedSchedule.id)
+            }
+        }
+        whenever(
+            createIdempotencyKeyRepository.findByMemberIdAndOperationIdAndResourceKind(
+                member.id!!,
+                operationId,
+                CreateIdempotencyResource.SCHEDULE,
+            )
+        ).thenAnswer {
+            persistedKey?.let { Optional.of(it) } ?: Optional.empty<CreateIdempotencyKey>()
+        }
+        doAnswer {
+            persistedKey = it.getArgument<CreateIdempotencyKey>(0)
+            null
+        }.`when`(createIdempotencyKeyRepository).save(any<CreateIdempotencyKey>())
+        whenever(scheduleRepository.findById(persistedSchedule.id)).thenReturn(Optional.of(persistedSchedule))
+
+        val first = scheduleService.createSchedule(loginMember, saveDto, operationId)
+        assertThat(persistedKey?.resourceId).isNotNull()
+        val second = scheduleService.createSchedule(loginMember, saveDto, operationId)
+
+        assertThat(second.id).isEqualTo(first.id)
+        verify(scheduleRepository, times(1)).save(any<Schedule>())
+        verify(createIdempotencyKeyRepository, times(1)).save(any<CreateIdempotencyKey>())
     }
 
     @Test

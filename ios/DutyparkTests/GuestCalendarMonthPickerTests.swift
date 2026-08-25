@@ -41,6 +41,28 @@ final class GuestCalendarMonthPickerTests: XCTestCase {
         })
     }
 
+    func testMonthNavigationEmitsRoutineFeedbackOnlyForAnActualChange() async {
+        let haptics = DPHapticCenter()
+        let model = GuestPublicCalendarViewModel(
+            memberID: 42,
+            api: GuestCalendarMonthPickerAPIMock(),
+            now: date(2026, 8, 12),
+            haptics: haptics
+        )
+
+        await model.load()
+        XCTAssertNil(haptics.event)
+
+        await model.changeMonth(by: 1)
+
+        XCTAssertEqual(haptics.event?.kind, .routine)
+        let eventID = haptics.event?.id
+
+        await model.changeMonth(by: 0)
+
+        XCTAssertEqual(haptics.event?.id, eventID)
+    }
+
     func testMonthPickerStringsResolveInEverySupportedLocale() throws {
         let keys = [
             "guest.calendar.month.choose",

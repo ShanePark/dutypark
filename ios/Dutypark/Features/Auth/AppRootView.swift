@@ -22,6 +22,7 @@ nonisolated enum UITestingDestination: Equatable {
 
 struct AppRootView: View {
     @EnvironmentObject private var session: SessionStore
+    @StateObject private var offlineSyncCoordinator = OfflineSyncCoordinator.shared
 
     var body: some View {
         Group {
@@ -93,9 +94,41 @@ struct AppRootView: View {
                     GuestRootView()
                 }
             case .authenticated(let member):
-                RootTabView()
-                    .id("\(member.id)-\(member.isImpersonating)-\(member.originalMemberId ?? 0)")
+                // Keep the offline status in the root layout itself. An outer
+                // `safeAreaInset` is not adopted by the UIKit navigation bars inside
+                // RootTabView, so it can paint over the header and blend with its
+                // material backdrop. A sibling in this stack reserves real vertical
+                // space and keeps the status text readable in every root tab.
+                VStack(spacing: 0) {
+                    OfflineSessionBanner(
+                        accountID: member.id,
+                        availability: session.availability,
+                        coordinator: offlineSyncCoordinator
+                    )
+                    .fixedSize(horizontal: false, vertical: true)
+                    .layoutPriority(1)
+                    RootTabView()
+                        .frame(minHeight: 0, maxHeight: .infinity)
+                        .id("\(member.id)-\(member.isImpersonating)-\(member.originalMemberId ?? 0)")
+                }
             }
+        }
+        .alert(
+            "auth.transition.failure.title",
+            isPresented: Binding(
+                get: { session.authenticationTransitionFailure != nil },
+                set: {
+                    if !$0 {
+                        session.dismissAuthenticationTransitionFailure()
+                    }
+                }
+            )
+        ) {
+            Button("auth.transition.failure.ok", role: .cancel) {
+                session.dismissAuthenticationTransitionFailure()
+            }
+        } message: {
+            Text("auth.transition.failure.message")
         }
     }
 
@@ -123,6 +156,90 @@ struct AppRootView: View {
         }
     }
     #endif
+}
+
+private struct OfflineSessionBanner: View {
+    let accountID: MemberID
+    let availability: SessionAvailability
+    @ObservedObject var coordinator: OfflineSyncCoordinator
+
+    var body: some View {
+        let hasStatus = availability.isOffline
+            || coordinator.isSyncing
+            || coordinator.pendingCount > 0
+            || coordinator.permanentFailureCount > 0
+        Group {
+            if hasStatus {
+                VStack(alignment: .leading, spacing: 2) {
+                    if availability.isOffline {
+                        Label(
+                            "auth.session.offline",
+                            systemImage: "wifi.slash"
+                        )
+                    }
+                    if coordinator.isSyncing {
+                        Label(
+                            "root.offline.syncing",
+                            systemImage: "arrow.triangle.2.circlepath"
+                        )
+                    }
+                    if coordinator.pendingCount > 0 {
+                        Text(
+                            formatted(
+                                "root.offline.pending",
+                                count: coordinator.pendingCount
+                            )
+                        )
+                    }
+                    if coordinator.permanentFailureCount > 0 {
+                        Text(
+                            formatted(
+                                "root.offline.failures",
+                                count: coordinator.permanentFailureCount
+                            )
+                        )
+                        Button("root.offline.retryFailures") {
+                            Task {
+                                await coordinator.retryPermanentFailures(
+                                    accountID: accountID,
+                                    networkStatus: availability.isOffline
+                                        ? .unsatisfied
+                                        : .satisfied
+                                )
+                            }
+                        }
+                        .accessibilityIdentifier("session.offline.retry-failures")
+                    }
+                }
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.orange)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                // This surface must be opaque. A translucent fill lets the system
+                // navigation/tab materials show through the text when the banner is
+                // stacked above a root tab.
+                .background(DPColor.backgroundSecondary)
+                .overlay(alignment: .bottom) {
+                    Rectangle()
+                        .fill(DPColor.warningBorder)
+                        .frame(height: 1)
+                }
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityElement(children: .combine)
+                .accessibilityIdentifier("session.offline")
+            }
+        }
+    }
+
+    private func formatted(_ key: String, count: Int) -> String {
+        let locale = AppLocalization.locale
+        return String(
+            format: RootChromeLocalization.localizable(key, locale: locale),
+            locale: locale,
+            arguments: [count]
+        )
+    }
 }
 
 nonisolated enum LaunchSplashPresentation {

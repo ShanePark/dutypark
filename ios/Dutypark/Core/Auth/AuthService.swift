@@ -113,6 +113,22 @@ nonisolated struct AuthService: Sendable {
         await client.setAuthenticationFailureHandler(handler)
     }
 
+    func setContextualAuthenticationFailureHandler(
+        _ handler: (@Sendable (AuthenticationSessionContext?) async -> Void)?
+    ) async {
+        await client.setContextualAuthenticationFailureHandler(handler)
+    }
+
+    func setAuthenticationSessionContext(
+        _ context: AuthenticationSessionContext?
+    ) async {
+        await client.setAuthenticationSessionContext(context)
+    }
+
+    func invalidateAuthenticationSession() async {
+        await client.invalidateAuthenticationSession()
+    }
+
     func logout() async throws {
         _ = try await client.data(
             "auth/logout",

@@ -21,6 +21,7 @@ struct AdminTeamListView: View {
                     Label(AdminLocalization.string("admin.teams.loadFailed"), systemImage: "wifi.exclamationmark")
                 } actions: {
                     Button(AdminLocalization.string("admin.common.retry")) {
+                        DPHapticCenter.shared.emit(.routine)
                         Task { await model.load() }
                     }
                 }
@@ -45,6 +46,9 @@ struct AdminTeamListView: View {
                                 } label: {
                                     AdminTeamRow(team: team)
                                 }
+                                .simultaneousGesture(TapGesture().onEnded {
+                                    DPHapticCenter.shared.emit(.routine)
+                                })
                             }
                         }
                     }
@@ -84,6 +88,7 @@ struct AdminTeamListView: View {
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {
+                    DPHapticCenter.shared.emit(.routine)
                     model.resetNameCheck()
                     createModalState = AdminModalInteractionState()
                     withoutPresentationAnimation { showsCreateSheet = true }
@@ -131,6 +136,7 @@ struct AdminTeamListView: View {
     }
 
     private func clearSearch() {
+        DPHapticCenter.shared.emit(.selection)
         if searchText.isEmpty {
             Task { await model.search("") }
         } else {
@@ -159,8 +165,10 @@ struct AdminTeamListView: View {
     private func requestCreateModalDismiss() {
         switch createModalState.dismissDecision {
         case .dismiss:
+            DPHapticCenter.shared.emit(.routine)
             showsCreateSheet = false
         case .confirmDiscard:
+            DPHapticCenter.shared.emit(.warning)
             showsCreateDiscardConfirmation = true
         case .blocked:
             break
@@ -301,6 +309,8 @@ private struct AdminTeamPagination: View {
                         .frame(minWidth: 20, minHeight: DPSize.minimumTouchTarget)
                 case .page(let itemPage):
                     Button {
+                        guard itemPage != page else { return }
+                        DPHapticCenter.shared.emit(.selection)
                         selectPage(itemPage)
                     } label: {
                         Text("\(itemPage + 1)")
@@ -326,6 +336,8 @@ private struct AdminTeamPagination: View {
 
     private func pageButton(systemImage: String, page: Int) -> some View {
         Button {
+            guard page != self.page else { return }
+            DPHapticCenter.shared.emit(.selection)
             selectPage(page)
         } label: {
             Image(systemName: systemImage)

@@ -439,58 +439,25 @@ struct DPFriendTagSelector: View {
 
     @ViewBuilder
     private func portrait(_ item: DPFriendTagItem) -> some View {
-        Group {
-            if item.hasProfilePhoto {
-                AsyncImage(url: profileURL(item)) { image in
-                    image.resizable().scaledToFill()
-                } placeholder: {
-                    portraitFallback(item)
-                }
-            } else {
-                portraitFallback(item)
-            }
-        }
-        .frame(width: portraitWidth, height: portraitHeight)
-        .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+        DPProfileAvatar(
+            memberID: item.id,
+            profilePhotoVersion: item.profilePhotoVersion,
+            size: CGSize(width: portraitWidth, height: portraitHeight),
+            shape: .roundedRectangle(cornerRadius: DPRadius.standard)
+        )
         .overlay {
             RoundedRectangle(cornerRadius: DPRadius.standard)
                 .stroke(DPColor.borderPrimary)
         }
     }
 
-    private func portraitFallback(_ item: DPFriendTagItem) -> some View {
-        DPColor.backgroundTertiary
-            .overlay {
-                Text(String(item.name.prefix(1)))
-                    .font(DPFont.bold(size: 22, relativeTo: .title3))
-                    .foregroundStyle(DPColor.textSecondary)
-            }
-    }
-
     @ViewBuilder
     private func chipAvatar(_ item: DPFriendTagItem) -> some View {
-        if item.hasProfilePhoto {
-            AsyncImage(url: profileURL(item)) { image in
-                image.resizable().scaledToFill()
-            } placeholder: {
-                chipAvatarFallback(item)
-            }
-            .frame(width: chipAvatarSize, height: chipAvatarSize)
-            .clipShape(Circle())
-        } else {
-            chipAvatarFallback(item)
-        }
-    }
-
-    private func chipAvatarFallback(_ item: DPFriendTagItem) -> some View {
-        Circle()
-            .fill(DPColor.backgroundTertiary)
-            .frame(width: chipAvatarSize, height: chipAvatarSize)
-            .overlay {
-                Text(String(item.name.prefix(1)))
-                    .font(DPFont.bold(size: 10, relativeTo: .caption2))
-                    .foregroundStyle(DPColor.textSecondary)
-            }
+        DPProfileAvatar(
+            memberID: item.id,
+            profilePhotoVersion: item.profilePhotoVersion,
+            size: chipAvatarSize
+        )
     }
 
     /// The rail only offers friends that can still be tagged; a stale pick stays removable through its chip.
@@ -512,15 +479,6 @@ struct DPFriendTagSelector: View {
             preservedItems: preservedItems,
             selection: selection
         )
-    }
-
-    private func profileURL(_ item: DPFriendTagItem) -> URL {
-        AppConfiguration.apiBaseURL
-            .appending(path: "members/\(item.id)/profile-photo")
-            .appending(queryItems: [
-                URLQueryItem(name: "thumbnail", value: "true"),
-                URLQueryItem(name: "v", value: String(item.profilePhotoVersion))
-            ])
     }
 
     private func localized(_ key: String) -> String {

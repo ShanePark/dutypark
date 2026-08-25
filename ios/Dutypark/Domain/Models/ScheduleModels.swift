@@ -36,6 +36,32 @@ nonisolated struct ScheduleSaveDTO: Codable, Equatable, Sendable {
     let attachmentSessionId: UUID?
     let orderedAttachmentIds: [AttachmentID]
     let aiTimeParsingRequested: Bool
+
+    init(
+        id: ScheduleID?,
+        memberId: MemberID,
+        content: String,
+        description: String,
+        visibility: Visibility,
+        startDateTime: LocalDateTimeValue,
+        endDateTime: LocalDateTimeValue,
+        tagFriendIds: [MemberID]?,
+        attachmentSessionId: UUID?,
+        orderedAttachmentIds: [AttachmentID],
+        aiTimeParsingRequested: Bool
+    ) {
+        self.id = id
+        self.memberId = memberId
+        self.content = content
+        self.description = description
+        self.visibility = visibility
+        self.startDateTime = startDateTime
+        self.endDateTime = endDateTime
+        self.tagFriendIds = tagFriendIds
+        self.attachmentSessionId = attachmentSessionId
+        self.orderedAttachmentIds = orderedAttachmentIds
+        self.aiTimeParsingRequested = aiTimeParsingRequested
+    }
 }
 
 nonisolated struct ScheduleSaveResponse: Codable, Equatable, Sendable {

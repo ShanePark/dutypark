@@ -9,6 +9,7 @@ final class APIClientAuthTests: XCTestCase {
     override func tearDown() {
         URLProtocolStub.handler = nil
         URLProtocolStub.error = nil
+        URLProtocolStub.deliversAsynchronously = false
         HTTPCookieStorage.shared.cookies?.forEach(HTTPCookieStorage.shared.deleteCookie)
         super.tearDown()
     }
@@ -1016,6 +1017,1415 @@ final class APIClientAuthTests: XCTestCase {
         XCTAssertNil(store.accountDeletionAcceptedPresentation)
     }
 
+    @MainActor
+    func testRestoreKeepsVerifiedMemberAuthenticatedWhenServerIsUnavailable() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("dutypark-offline-session-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let now = Date(timeIntervalSince1970: 1_000)
+        let offlineStore = OfflineSessionStore(
+            directoryURL: directory,
+            now: { now }
+        )
+        try await offlineStore.save(Self.testMember, at: nil)
+        URLProtocolStub.error = URLError(.notConnectedToInternet)
+
+        let store = SessionStore(
+            authService: AuthService(client: makeClient()),
+            offlineSessionStore: offlineStore
+        )
+        await store.restore()
+
+        XCTAssertEqual(store.state, .authenticated(Self.testMember))
+        XCTAssertEqual(store.availability, .offline)
+    }
+
+    @MainActor
+    func testUnauthorizedRestorePurgesSnapshotInsteadOfUsingItOffline() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("dutypark-offline-session-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let offlineStore = OfflineSessionStore(directoryURL: directory)
+        try await offlineStore.save(Self.testMember, at: nil)
+        URLProtocolStub.handler = { request in
+            switch request.url?.path {
+            case "/api/auth/status", "/api/auth/refresh":
+                return Self.response(request, status: 401)
+            default:
+                return Self.response(request, status: 404)
+            }
+        }
+
+        let store = SessionStore(
+            authService: AuthService(client: makeClient()),
+            offlineSessionStore: offlineStore
+        )
+        await store.restore()
+
+        XCTAssertEqual(store.state, .guest)
+        XCTAssertEqual(store.availability, .online)
+        let restored = await offlineStore.load(at: nil)
+        XCTAssertNil(restored)
+    }
+
+    @MainActor
+    func testLoginAsAnotherAccountPurgesSnapshotOwnedByPreviousAccount() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("dutypark-offline-session-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let offlineStore = OfflineSessionStore(directoryURL: directory)
+        try await offlineStore.save(Self.testMember, at: nil)
+        let boundary = SessionBoundaryProbe()
+        let replacementMember = LoginMember(
+            id: 2,
+            email: "other@duty.park",
+            name: "Other",
+            teamId: nil,
+            team: nil,
+            isAdmin: false,
+            isImpersonating: false,
+            originalMemberId: nil
+        )
+        URLProtocolStub.handler = { request in
+            switch request.url?.path {
+            case "/api/auth/token":
+                return Self.response(request, status: 200, body: #"{"expiresIn":3600}"#)
+            case "/api/auth/status":
+                return Self.response(
+                    request,
+                    status: 200,
+                    body: #"{"id":2,"email":"other@duty.park","name":"Other","teamId":null,"team":null,"isAdmin":false,"isImpersonating":false,"originalMemberId":null}"#
+                )
+            default:
+                return Self.response(request, status: 404)
+            }
+        }
+
+        let store = SessionStore(
+            authService: AuthService(client: makeClient()),
+            initialState: .guest,
+            offlineSessionStore: offlineStore,
+            localDataPurger: boundary,
+            cancelOfflineSync: { memberID in
+                await boundary.recordCancel(for: memberID)
+            }
+        )
+        await store.login(email: "other@duty.park", password: "password", rememberMe: false)
+
+        XCTAssertEqual(store.state, .authenticated(replacementMember))
+        let purgedMemberIDs = await boundary.memberIDs()
+        XCTAssertEqual(purgedMemberIDs, [1])
+        let events = await boundary.events()
+        XCTAssertEqual(events, ["cancel:1", "purge:1"])
+        let restored = await offlineStore.load(at: nil)
+        XCTAssertEqual(restored, replacementMember)
+    }
+
+    @MainActor
+    func testOfflineRevalidateKeepsSessionOnTransientFailureAndBecomesOnlineAfterSuccess() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("dutypark-offline-session-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let now = Date(timeIntervalSince1970: 1_000)
+        let offlineStore = OfflineSessionStore(directoryURL: directory, now: { now })
+        try await offlineStore.save(Self.testMember, at: nil)
+        URLProtocolStub.error = URLError(.timedOut)
+
+        let store = SessionStore(
+            authService: AuthService(client: makeClient()),
+            offlineSessionStore: offlineStore
+        )
+        await store.restore()
+        XCTAssertEqual(store.availability, .offline)
+
+        await store.revalidate()
+        XCTAssertEqual(store.availability, .offline)
+        XCTAssertEqual(store.state, .authenticated(Self.testMember))
+
+        URLProtocolStub.error = nil
+        URLProtocolStub.handler = { request in
+            if request.url?.path == "/api/auth/status" {
+                return Self.response(
+                    request,
+                    status: 200,
+                    body: #"{"id":1,"email":"test@duty.park","name":"Test","teamId":null,"team":null,"isAdmin":false,"isImpersonating":false,"originalMemberId":null}"#
+                )
+            }
+            return Self.response(request, status: 404)
+        }
+        await store.revalidate()
+
+        XCTAssertEqual(store.availability, .online)
+        XCTAssertEqual(store.state, .authenticated(Self.testMember))
+    }
+
+    @MainActor
+    func testLogoutPurgesOwnedOfflineDataThroughSessionBoundary() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("dutypark-offline-session-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let offlineStore = OfflineSessionStore(directoryURL: directory)
+        try await offlineStore.save(Self.testMember, at: nil)
+        let boundary = SessionBoundaryProbe()
+        URLProtocolStub.handler = { request in
+            if request.url?.path == "/api/auth/logout" {
+                return Self.response(request, status: 204)
+            }
+            return Self.response(request, status: 404)
+        }
+
+        let store = SessionStore(
+            authService: AuthService(client: makeClient()),
+            initialState: .authenticated(Self.testMember),
+            offlineSessionStore: offlineStore,
+            localDataPurger: boundary,
+            cancelOfflineSync: { memberID in
+                await boundary.recordCancel(for: memberID)
+            }
+        )
+        await store.logout()
+
+        XCTAssertEqual(store.state, .guest)
+        let purgedMemberIDs = await boundary.memberIDs()
+        XCTAssertEqual(purgedMemberIDs, [1])
+        let events = await boundary.events()
+        XCTAssertEqual(events, ["cancel:1", "purge:1"])
+        let restored = await offlineStore.load(at: nil)
+        XCTAssertNil(restored)
+    }
+
+    @MainActor
+    func testContinueAsGuestAfterRestoreFailurePurgesAllLocalData() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("dutypark-offline-session-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let offlineStore = OfflineSessionStore(directoryURL: directory)
+        let boundary = SessionBoundaryProbe()
+        URLProtocolStub.handler = { request in
+            Self.response(request, status: 503)
+        }
+
+        let store = SessionStore(
+            authService: AuthService(client: makeClient()),
+            offlineSessionStore: offlineStore,
+            localDataPurger: boundary,
+            cancelOfflineSync: { memberID in
+                await boundary.recordCancel(for: memberID)
+            }
+        )
+        await store.restore()
+        XCTAssertEqual(store.state, .restoreFailed)
+
+        await store.continueAsGuestAfterRestoreFailure()
+
+        XCTAssertEqual(store.state, .guest)
+        let purgedMemberIDs = await boundary.memberIDs()
+        XCTAssertEqual(purgedMemberIDs, [Int64?](arrayLiteral: nil))
+        let events = await boundary.events()
+        XCTAssertEqual(events, ["cancel:all", "purge:all"])
+    }
+
+    @MainActor
+    func testFinalUnauthorizedResponsePurgesAuthenticatedOfflineData() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("dutypark-offline-session-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let offlineStore = OfflineSessionStore(directoryURL: directory)
+        try await offlineStore.save(Self.testMember, at: nil)
+        let boundary = SessionBoundaryProbe()
+        URLProtocolStub.handler = { request in
+            switch request.url?.path {
+            case "/api/protected", "/api/auth/refresh":
+                return Self.response(request, status: 401)
+            case "/api/auth/logout":
+                return Self.response(request, status: 204)
+            default:
+                return Self.response(request, status: 404)
+            }
+        }
+
+        let client = makeClient()
+        let store = SessionStore(
+            authService: AuthService(client: client),
+            initialState: .authenticated(Self.testMember),
+            offlineSessionStore: offlineStore,
+            localDataPurger: boundary,
+            cancelOfflineSync: { memberID in
+                await boundary.recordCancel(for: memberID)
+            }
+        )
+        await store.restore()
+        // The store starts authenticated for this focused boundary test; wire
+        // the API client's failure callback exactly as a restored session does.
+        await client.setAuthenticationFailureHandler {
+            await store.logout()
+        }
+        do {
+            let _: ValueResponse = try await client.request("protected")
+            XCTFail("Expected unauthorized response")
+        } catch {
+            // Expected.
+        }
+
+        let purgedMemberIDs = await boundary.memberIDs()
+        XCTAssertEqual(purgedMemberIDs, [1])
+        let events = await boundary.events()
+        XCTAssertEqual(events, ["cancel:1", "purge:1"])
+        XCTAssertEqual(store.state, .guest)
+        let restored = await offlineStore.load(at: nil)
+        XCTAssertNil(restored)
+    }
+
+    @MainActor
+    func testDelayedUnauthorizedResponseFromPreviousAccountDoesNotTerminateReplacementSession() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("dutypark-offline-session-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let offlineStore = OfflineSessionStore(directoryURL: directory)
+        let delayedUnauthorized = DelayedUnauthorizedResponse()
+        let replacementMember = LoginMember(
+            id: 2,
+            email: "other@duty.park",
+            name: "Other",
+            teamId: nil,
+            team: nil,
+            isAdmin: false,
+            isImpersonating: false,
+            originalMemberId: nil
+        )
+
+        URLProtocolStub.handler = { request in
+            switch request.url?.path {
+            case "/api/auth/status":
+                let body = delayedUnauthorized.nextStatusResponseBody()
+                return Self.response(request, status: 200, body: body)
+            case "/api/auth/token":
+                return Self.response(request, status: 200, body: #"{"expiresIn":3600}"#)
+            case "/api/protected":
+                return delayedUnauthorized.protectedResponse(for: request)
+            case "/api/auth/refresh":
+                return Self.response(
+                    request,
+                    status: 401,
+                    body: #"{"status":401,"code":"auth.refresh.invalid"}"#
+                )
+            case "/api/auth/logout":
+                return Self.response(request, status: 204)
+            default:
+                return Self.response(request, status: 404)
+            }
+        }
+        URLProtocolStub.deliversAsynchronously = true
+
+        let client = makeClient()
+        let store = SessionStore(
+            authService: AuthService(client: client),
+            offlineSessionStore: offlineStore,
+            localDataPurger: NoopSessionLocalDataPurger(),
+            cancelOfflineSync: { _ in }
+        )
+        await store.restore()
+        XCTAssertEqual(store.state, .authenticated(Self.testMember))
+
+        let delayedRequest = Task {
+            await requestFails(client)
+        }
+        for _ in 0..<500 where !delayedUnauthorized.protectedRequestStarted {
+            try? await Task.sleep(for: .milliseconds(1))
+        }
+        XCTAssertTrue(delayedUnauthorized.protectedRequestStarted)
+
+        await store.login(email: "other@duty.park", password: "password", rememberMe: false)
+        XCTAssertEqual(store.state, .authenticated(replacementMember))
+
+        delayedUnauthorized.releaseProtectedRequest()
+        let delayedRequestFailed = await delayedRequest.value
+        XCTAssertTrue(delayedRequestFailed)
+        XCTAssertEqual(
+            store.state,
+            .authenticated(replacementMember),
+            "A 401 from account A must not log out account B"
+        )
+    }
+
+    @MainActor
+    func testDelayedOfflineRevalidationCannotReplaceNewerLogin() async throws {
+        let delayedStatus = DelayedAuthenticationStatusResponse()
+        let replacementMember = LoginMember(
+            id: 2,
+            email: "other@duty.park",
+            name: "Other",
+            teamId: nil,
+            team: nil,
+            isAdmin: false,
+            isImpersonating: false,
+            originalMemberId: nil
+        )
+        let statusRequestCount = LockedCounter()
+
+        URLProtocolStub.handler = { request in
+            switch request.url?.path {
+            case "/api/auth/status":
+                if statusRequestCount.increment() == 1 {
+                    return delayedStatus.response(for: request)
+                }
+                return Self.response(
+                    request,
+                    status: 200,
+                    body: #"{"id":2,"email":"other@duty.park","name":"Other","teamId":null,"team":null,"isAdmin":false,"isImpersonating":false,"originalMemberId":null}"#
+                )
+            case "/api/auth/token":
+                return Self.response(request, status: 200, body: #"{"expiresIn":3600}"#)
+            default:
+                return Self.response(request, status: 404)
+            }
+        }
+        URLProtocolStub.deliversAsynchronously = true
+
+        let store = SessionStore(
+            authService: AuthService(client: makeClient()),
+            initialState: .authenticated(Self.testMember),
+            localDataPurger: NoopSessionLocalDataPurger(),
+            cancelOfflineSync: { _ in },
+            initialAvailability: .offline
+        )
+        let revalidation = Task { await store.revalidate() }
+        for _ in 0..<500 where !delayedStatus.requestStarted {
+            try? await Task.sleep(for: .milliseconds(1))
+        }
+        XCTAssertTrue(delayedStatus.requestStarted)
+
+        await store.login(email: "other@duty.park", password: "password", rememberMe: false)
+        XCTAssertEqual(store.state, .authenticated(replacementMember))
+
+        delayedStatus.release()
+        await revalidation.value
+
+        XCTAssertEqual(
+            store.state,
+            .authenticated(replacementMember),
+            "A delayed restore result must not replace a newer login"
+        )
+    }
+
+    @MainActor
+    func testDelayedOfflineRevalidationUnauthenticatedResultCannotLogOutNewerLogin() async throws {
+        let delayedStatus = DelayedAuthenticationStatusResponse(
+            statusCode: 200,
+            body: ""
+        )
+        let replacementMember = LoginMember(
+            id: 2,
+            email: "other@duty.park",
+            name: "Other",
+            teamId: nil,
+            team: nil,
+            isAdmin: false,
+            isImpersonating: false,
+            originalMemberId: nil
+        )
+        let statusRequestCount = LockedCounter()
+
+        URLProtocolStub.handler = { request in
+            switch request.url?.path {
+            case "/api/auth/status":
+                if statusRequestCount.increment() == 1 {
+                    return delayedStatus.response(for: request)
+                }
+                return Self.response(
+                    request,
+                    status: 200,
+                    body: #"{"id":2,"email":"other@duty.park","name":"Other","teamId":null,"team":null,"isAdmin":false,"isImpersonating":false,"originalMemberId":null}"#
+                )
+            case "/api/auth/refresh":
+                return Self.response(request, status: 401)
+            case "/api/auth/token":
+                return Self.response(request, status: 200, body: #"{"expiresIn":3600}"#)
+            default:
+                return Self.response(request, status: 404)
+            }
+        }
+        URLProtocolStub.deliversAsynchronously = true
+
+        let store = SessionStore(
+            authService: AuthService(client: makeClient()),
+            initialState: .authenticated(Self.testMember),
+            localDataPurger: NoopSessionLocalDataPurger(),
+            cancelOfflineSync: { _ in },
+            initialAvailability: .offline
+        )
+        let revalidation = Task { await store.revalidate() }
+        for _ in 0..<500 where !delayedStatus.requestStarted {
+            try? await Task.sleep(for: .milliseconds(1))
+        }
+        XCTAssertTrue(delayedStatus.requestStarted)
+
+        await store.login(email: "other@duty.park", password: "password", rememberMe: false)
+        XCTAssertEqual(store.state, .authenticated(replacementMember))
+
+        delayedStatus.release()
+        await revalidation.value
+
+        XCTAssertEqual(
+            store.state,
+            .authenticated(replacementMember),
+            "A delayed unauthenticated result must not log out a newer login"
+        )
+    }
+
+    @MainActor
+    func testOfflineRevalidationIgnoresMemberFromDifferentAccount() async throws {
+        let delayedStatus = DelayedAuthenticationStatusResponse(
+            body: #"{"id":2,"email":"other@duty.park","name":"Other","teamId":null,"team":null,"isAdmin":false,"isImpersonating":false,"originalMemberId":null}"#
+        )
+        URLProtocolStub.handler = { request in
+            switch request.url?.path {
+            case "/api/auth/status":
+                return delayedStatus.response(for: request)
+            default:
+                return Self.response(request, status: 404)
+            }
+        }
+        URLProtocolStub.deliversAsynchronously = true
+
+        let store = SessionStore(
+            authService: AuthService(client: makeClient()),
+            initialState: .authenticated(Self.testMember),
+            localDataPurger: NoopSessionLocalDataPurger(),
+            cancelOfflineSync: { _ in },
+            initialAvailability: .offline
+        )
+        let revalidation = Task { await store.revalidate() }
+        for _ in 0..<500 where !delayedStatus.requestStarted {
+            try? await Task.sleep(for: .milliseconds(1))
+        }
+        XCTAssertTrue(delayedStatus.requestStarted)
+
+        delayedStatus.release()
+        await revalidation.value
+
+        XCTAssertEqual(
+            store.state,
+            .authenticated(Self.testMember),
+            "A restore response for another account must not replace the offline session"
+        )
+        XCTAssertEqual(store.availability, .offline)
+    }
+
+    @MainActor
+    func testAuthenticatedLoginCancelsCurrentAccountSyncBeforeChangingAuthCookies() async {
+        let transition = AuthTransitionProbe()
+        let replacementMember = LoginMember(
+            id: 2,
+            email: "other@duty.park",
+            name: "Other",
+            teamId: nil,
+            team: nil,
+            isAdmin: false,
+            isImpersonating: false,
+            originalMemberId: nil
+        )
+        URLProtocolStub.handler = { request in
+            switch request.url?.path {
+            case "/api/auth/status":
+                let body = transition.authRequestStarted
+                    ? #"{"id":2,"email":"other@duty.park","name":"Other","teamId":null,"team":null,"isAdmin":false,"isImpersonating":false,"originalMemberId":null}"#
+                    : #"{"id":1,"email":"test@duty.park","name":"Test","teamId":null,"team":null,"isAdmin":false,"isImpersonating":false,"originalMemberId":null}"#
+                return Self.response(request, status: 200, body: body)
+            case "/api/auth/token":
+                transition.markAuthRequestStarted()
+                return Self.response(request, status: 200, body: #"{"expiresIn":3600}"#)
+            case "/api/protected", "/api/auth/refresh":
+                return Self.response(request, status: 401)
+            default:
+                return Self.response(request, status: 404)
+            }
+        }
+
+        let client = makeClient()
+        let store = SessionStore(
+            authService: AuthService(client: client),
+            localDataPurger: NoopSessionLocalDataPurger(),
+            cancelOfflineSync: { memberID in
+                transition.markCancellationStarted(for: memberID)
+                await transition.waitForCancellationRelease()
+            }
+        )
+        await store.restore()
+        XCTAssertEqual(store.state, .authenticated(Self.testMember))
+
+        let loginTask = Task {
+            await store.login(email: "other@duty.park", password: "password", rememberMe: false)
+        }
+        for _ in 0..<500 where !transition.cancellationStarted {
+            try? await Task.sleep(for: .milliseconds(1))
+        }
+
+        XCTAssertTrue(transition.cancellationStarted)
+        XCTAssertEqual(transition.cancelledMemberID, 1)
+        XCTAssertFalse(
+            transition.authRequestStarted,
+            "The token request must wait until the previous account's sync is cancelled"
+        )
+
+        let staleRequestFinished = LockedFlag()
+        let staleRequest = Task {
+            defer { staleRequestFinished.set() }
+            return await requestFails(client)
+        }
+        for _ in 0..<500
+        where !staleRequestFinished.value && transition.cancellationCount < 2 {
+            try? await Task.sleep(for: .milliseconds(1))
+        }
+        XCTAssertTrue(staleRequestFinished.value)
+        XCTAssertEqual(
+            transition.cancellationCount,
+            1,
+            "A request started after transition invalidation must not cancel the old session again"
+        )
+        XCTAssertEqual(store.state, .authenticated(Self.testMember))
+
+        transition.releaseCancellation()
+        await loginTask.value
+        let staleRequestFailed = await staleRequest.value
+        XCTAssertTrue(staleRequestFailed)
+
+        XCTAssertTrue(transition.authRequestStarted)
+        XCTAssertEqual(store.state, .authenticated(replacementMember))
+    }
+
+    @MainActor
+    func testAuthenticatedExternalLoginCancelsBeforeStatusAuthCall() async throws {
+        let transition = AuthTransitionProbe()
+        let replacementMember = LoginMember(
+            id: 2,
+            email: "other@duty.park",
+            name: "Other",
+            teamId: nil,
+            team: nil,
+            isAdmin: false,
+            isImpersonating: false,
+            originalMemberId: nil
+        )
+        URLProtocolStub.handler = { request in
+            switch request.url?.path {
+            case "/api/auth/status":
+                transition.markAuthRequestStarted()
+                return Self.response(
+                    request,
+                    status: 200,
+                    body: #"{"id":2,"email":"other@duty.park","name":"Other","teamId":null,"team":null,"isAdmin":false,"isImpersonating":false,"originalMemberId":null}"#
+                )
+            default:
+                return Self.response(request, status: 404)
+            }
+        }
+
+        let client = makeClient()
+        let store = SessionStore(
+            authService: AuthService(client: client),
+            initialState: .authenticated(Self.testMember),
+            localDataPurger: NoopSessionLocalDataPurger(),
+            cancelOfflineSync: { memberID in
+                transition.markCancellationStarted(for: memberID)
+                await transition.waitForCancellationRelease()
+            }
+        )
+        let externalLoginTask = Task {
+            try? await store.finishExternalLogin(emitsHaptic: false)
+        }
+        for _ in 0..<500 where !transition.cancellationStarted {
+            try? await Task.sleep(for: .milliseconds(1))
+        }
+
+        XCTAssertTrue(transition.cancellationStarted)
+        XCTAssertEqual(transition.cancelledMemberID, 1)
+        XCTAssertFalse(transition.authRequestStarted)
+
+        transition.releaseCancellation()
+        await externalLoginTask.value
+
+        XCTAssertEqual(store.state, .authenticated(replacementMember))
+        XCTAssertEqual(transition.cancellationCount, 1)
+    }
+
+    @MainActor
+    func testAuthenticatedImpersonationCancelsBeforeTokenAuthCall() async throws {
+        let transition = AuthTransitionProbe()
+        let impersonatedMember = LoginMember(
+            id: 2,
+            email: nil,
+            name: "Managed",
+            teamId: nil,
+            team: nil,
+            isAdmin: false,
+            isImpersonating: true,
+            originalMemberId: 1
+        )
+        URLProtocolStub.handler = { request in
+            switch request.url?.path {
+            case "/api/auth/impersonate/2":
+                transition.markAuthRequestStarted()
+                return Self.response(request, status: 200, body: #"{"expiresIn":3600}"#)
+            case "/api/auth/status":
+                return Self.response(
+                    request,
+                    status: 200,
+                    body: #"{"id":2,"email":null,"name":"Managed","teamId":null,"team":null,"isAdmin":false,"isImpersonating":true,"originalMemberId":1}"#
+                )
+            default:
+                return Self.response(request, status: 404)
+            }
+        }
+
+        let client = makeClient()
+        let store = SessionStore(
+            authService: AuthService(client: client),
+            initialState: .authenticated(Self.testMember),
+            localDataPurger: NoopSessionLocalDataPurger(),
+            cancelOfflineSync: { memberID in
+                transition.markCancellationStarted(for: memberID)
+                await transition.waitForCancellationRelease()
+            }
+        )
+        let impersonationTask = Task {
+            try? await store.impersonate(memberId: 2)
+        }
+        for _ in 0..<500 where !transition.cancellationStarted {
+            try? await Task.sleep(for: .milliseconds(1))
+        }
+
+        XCTAssertTrue(transition.cancellationStarted)
+        XCTAssertEqual(transition.cancelledMemberID, 1)
+        XCTAssertFalse(transition.authRequestStarted)
+
+        transition.releaseCancellation()
+        await impersonationTask.value
+
+        XCTAssertEqual(store.state, .authenticated(impersonatedMember))
+        XCTAssertEqual(transition.cancellationCount, 1)
+    }
+
+    @MainActor
+    func testAuthenticatedRestoreOriginalAccountCancelsBeforeRestoreAuthCall() async {
+        let transition = AuthTransitionProbe()
+        let impersonatedMember = LoginMember(
+            id: 2,
+            email: nil,
+            name: "Managed",
+            teamId: nil,
+            team: nil,
+            isAdmin: false,
+            isImpersonating: true,
+            originalMemberId: 1
+        )
+        URLProtocolStub.handler = { request in
+            switch request.url?.path {
+            case "/api/auth/restore":
+                transition.markAuthRequestStarted()
+                return Self.response(request, status: 200, body: #"{"expiresIn":3600}"#)
+            case "/api/auth/status":
+                return Self.response(
+                    request,
+                    status: 200,
+                    body: #"{"id":1,"email":"test@duty.park","name":"Test","teamId":null,"team":null,"isAdmin":false,"isImpersonating":false,"originalMemberId":null}"#
+                )
+            default:
+                return Self.response(request, status: 404)
+            }
+        }
+
+        let client = makeClient()
+        let store = SessionStore(
+            authService: AuthService(client: client),
+            initialState: .authenticated(impersonatedMember),
+            localDataPurger: NoopSessionLocalDataPurger(),
+            cancelOfflineSync: { memberID in
+                transition.markCancellationStarted(for: memberID)
+                await transition.waitForCancellationRelease()
+            }
+        )
+        let restoreTask = Task {
+            await store.restoreOriginalAccount()
+        }
+        for _ in 0..<500 where !transition.cancellationStarted {
+            try? await Task.sleep(for: .milliseconds(1))
+        }
+
+        XCTAssertTrue(transition.cancellationStarted)
+        XCTAssertEqual(transition.cancelledMemberID, 2)
+        XCTAssertFalse(transition.authRequestStarted)
+
+        transition.releaseCancellation()
+        await restoreTask.value
+
+        XCTAssertEqual(store.state, .authenticated(Self.testMember))
+        XCTAssertEqual(transition.cancellationCount, 1)
+    }
+
+    @MainActor
+    func testLateExternalLoginFailureCannotTerminateNewerLogin() async throws {
+        let delayedStatus = DelayedAuthenticationStatusResponse(statusCode: 500)
+        let replacementMember = LoginMember(
+            id: 2,
+            email: "other@duty.park",
+            name: "Other",
+            teamId: nil,
+            team: nil,
+            isAdmin: false,
+            isImpersonating: false,
+            originalMemberId: nil
+        )
+        URLProtocolStub.handler = { request in
+            switch request.url?.path {
+            case "/api/auth/status":
+                if !delayedStatus.requestStarted {
+                    return delayedStatus.response(for: request)
+                }
+                return Self.response(
+                    request,
+                    status: 200,
+                    body: #"{"id":2,"email":"other@duty.park","name":"Other","teamId":null,"team":null,"isAdmin":false,"isImpersonating":false,"originalMemberId":null}"#
+                )
+            case "/api/auth/token":
+                return Self.response(request, status: 200, body: #"{"expiresIn":3600}"#)
+            default:
+                return Self.response(request, status: 404)
+            }
+        }
+        URLProtocolStub.deliversAsynchronously = true
+
+        let store = SessionStore(
+            authService: AuthService(client: makeClient()),
+            initialState: .authenticated(Self.testMember),
+            localDataPurger: NoopSessionLocalDataPurger(),
+            cancelOfflineSync: { _ in }
+        )
+        let externalLogin = Task {
+            try? await store.finishExternalLogin(emitsHaptic: false)
+        }
+        for _ in 0..<500 where !delayedStatus.requestStarted {
+            try? await Task.sleep(for: .milliseconds(1))
+        }
+        XCTAssertTrue(delayedStatus.requestStarted)
+
+        await store.login(
+            email: "other@duty.park",
+            password: "password",
+            rememberMe: false
+        )
+        XCTAssertEqual(store.state, .authenticated(replacementMember))
+
+        delayedStatus.release()
+        await externalLogin.value
+
+        XCTAssertEqual(
+            store.state,
+            .authenticated(replacementMember),
+            "A late external-login failure must not terminate a newer login"
+        )
+    }
+
+    @MainActor
+    func testLateImpersonationFailureCannotTerminateNewerLogin() async throws {
+        let delayedStatus = DelayedAuthenticationStatusResponse(statusCode: 500)
+        let replacementMember = LoginMember(
+            id: 2,
+            email: "other@duty.park",
+            name: "Other",
+            teamId: nil,
+            team: nil,
+            isAdmin: false,
+            isImpersonating: false,
+            originalMemberId: nil
+        )
+        URLProtocolStub.handler = { request in
+            switch request.url?.path {
+            case "/api/auth/impersonate/2":
+                return Self.response(request, status: 200, body: #"{"expiresIn":3600}"#)
+            case "/api/auth/status":
+                if !delayedStatus.requestStarted {
+                    return delayedStatus.response(for: request)
+                }
+                return Self.response(
+                    request,
+                    status: 200,
+                    body: #"{"id":2,"email":"other@duty.park","name":"Other","teamId":null,"team":null,"isAdmin":false,"isImpersonating":false,"originalMemberId":null}"#
+                )
+            case "/api/auth/token":
+                return Self.response(request, status: 200, body: #"{"expiresIn":3600}"#)
+            default:
+                return Self.response(request, status: 404)
+            }
+        }
+        URLProtocolStub.deliversAsynchronously = true
+
+        let store = SessionStore(
+            authService: AuthService(client: makeClient()),
+            initialState: .authenticated(Self.testMember),
+            localDataPurger: NoopSessionLocalDataPurger(),
+            cancelOfflineSync: { _ in }
+        )
+        let impersonation = Task {
+            try? await store.impersonate(memberId: 2)
+        }
+        for _ in 0..<500 where !delayedStatus.requestStarted {
+            try? await Task.sleep(for: .milliseconds(1))
+        }
+        XCTAssertTrue(delayedStatus.requestStarted)
+
+        await store.login(
+            email: "other@duty.park",
+            password: "password",
+            rememberMe: false
+        )
+        XCTAssertEqual(store.state, .authenticated(replacementMember))
+
+        delayedStatus.release()
+        await impersonation.value
+
+        XCTAssertEqual(
+            store.state,
+            .authenticated(replacementMember),
+            "A late impersonation failure must not terminate a newer login"
+        )
+        XCTAssertNil(store.authenticationTransitionFailure)
+    }
+
+    @MainActor
+    func testLateRestoreOriginalAccountFailureCannotTerminateNewerLogin() async throws {
+        let delayedStatus = DelayedAuthenticationStatusResponse(statusCode: 500)
+        let impersonatedMember = LoginMember(
+            id: 3,
+            email: nil,
+            name: "Managed",
+            teamId: nil,
+            team: nil,
+            isAdmin: false,
+            isImpersonating: true,
+            originalMemberId: 1
+        )
+        let replacementMember = LoginMember(
+            id: 2,
+            email: "other@duty.park",
+            name: "Other",
+            teamId: nil,
+            team: nil,
+            isAdmin: false,
+            isImpersonating: false,
+            originalMemberId: nil
+        )
+        URLProtocolStub.handler = { request in
+            switch request.url?.path {
+            case "/api/auth/restore":
+                return Self.response(request, status: 200, body: #"{"expiresIn":3600}"#)
+            case "/api/auth/status":
+                if !delayedStatus.requestStarted {
+                    return delayedStatus.response(for: request)
+                }
+                return Self.response(
+                    request,
+                    status: 200,
+                    body: #"{"id":2,"email":"other@duty.park","name":"Other","teamId":null,"team":null,"isAdmin":false,"isImpersonating":false,"originalMemberId":null}"#
+                )
+            case "/api/auth/token":
+                return Self.response(request, status: 200, body: #"{"expiresIn":3600}"#)
+            default:
+                return Self.response(request, status: 404)
+            }
+        }
+        URLProtocolStub.deliversAsynchronously = true
+
+        let store = SessionStore(
+            authService: AuthService(client: makeClient()),
+            initialState: .authenticated(impersonatedMember),
+            localDataPurger: NoopSessionLocalDataPurger(),
+            cancelOfflineSync: { _ in }
+        )
+        let restore = Task {
+            await store.restoreOriginalAccount()
+        }
+        for _ in 0..<500 where !delayedStatus.requestStarted {
+            try? await Task.sleep(for: .milliseconds(1))
+        }
+        XCTAssertTrue(delayedStatus.requestStarted)
+
+        await store.login(
+            email: "other@duty.park",
+            password: "password",
+            rememberMe: false
+        )
+        XCTAssertEqual(store.state, .authenticated(replacementMember))
+
+        delayedStatus.release()
+        await restore.value
+
+        XCTAssertEqual(
+            store.state,
+            .authenticated(replacementMember),
+            "A late restore failure must not terminate a newer login"
+        )
+    }
+
+    @MainActor
+    func testCleanupBlocksNewLoginUntilRestoreFailureCleanupCompletes() async throws {
+        let delayedCleanup = DelayedCleanupProbe()
+        let replacementMember = LoginMember(
+            id: 2,
+            email: "other@duty.park",
+            name: "Other",
+            teamId: nil,
+            team: nil,
+            isAdmin: false,
+            isImpersonating: false,
+            originalMemberId: nil
+        )
+        let impersonatedMember = LoginMember(
+            id: 3,
+            email: nil,
+            name: "Managed",
+            teamId: nil,
+            team: nil,
+            isAdmin: false,
+            isImpersonating: true,
+            originalMemberId: 1
+        )
+        URLProtocolStub.handler = { request in
+            switch request.url?.path {
+            case "/api/auth/restore":
+                return Self.response(request, status: 500)
+            case "/api/auth/token":
+                return Self.response(request, status: 200, body: #"{"expiresIn":3600}"#)
+            case "/api/auth/status":
+                return Self.response(
+                    request,
+                    status: 200,
+                    body: #"{"id":2,"email":"other@duty.park","name":"Other","teamId":null,"team":null,"isAdmin":false,"isImpersonating":false,"originalMemberId":null}"#
+                )
+            case "/api/auth/logout":
+                return Self.response(request, status: 204)
+            default:
+                return Self.response(request, status: 404)
+            }
+        }
+
+        let store = SessionStore(
+            authService: AuthService(client: makeClient()),
+            initialState: .authenticated(impersonatedMember),
+            unregisterPush: {
+                await delayedCleanup.waitForRelease()
+            },
+            localDataPurger: NoopSessionLocalDataPurger(),
+            cancelOfflineSync: { _ in }
+        )
+        let restore = Task {
+            await store.restoreOriginalAccount()
+        }
+        for _ in 0..<500 {
+            if await delayedCleanup.started { break }
+            try? await Task.sleep(for: .milliseconds(1))
+        }
+        let cleanupStarted = await delayedCleanup.started
+        XCTAssertTrue(cleanupStarted)
+
+        let loginFinished = LockedFlag()
+        let login = Task {
+            await store.login(
+                email: "other@duty.park",
+                password: "password",
+                rememberMe: false
+            )
+            loginFinished.set()
+        }
+        try? await Task.sleep(for: .milliseconds(50))
+        XCTAssertFalse(
+            loginFinished.value,
+            "A new login must wait while the previous session cleanup is in progress"
+        )
+
+        await delayedCleanup.release()
+        await restore.value
+        await login.value
+
+        XCTAssertEqual(store.state, SessionState.authenticated(replacementMember))
+    }
+
+    func testRequestUsesSnapshotCookieWhenAutomaticCookieHandlingIsDisabled() async throws {
+        let cookie = try XCTUnwrap(HTTPCookie(properties: [
+            .domain: "dutypark.test",
+            .path: "/",
+            .name: "access_token",
+            .value: "snapshot-token",
+            .secure: "TRUE",
+        ]))
+        HTTPCookieStorage.shared.setCookie(cookie)
+        let receivedCookie = LockedString()
+        URLProtocolStub.handler = { request in
+            receivedCookie.set(request.value(forHTTPHeaderField: "Cookie") ?? "")
+            return Self.response(request, status: 200, body: #"{"value":1}"#)
+        }
+
+        let value: ValueResponse = try await makeClient().request("protected")
+
+        XCTAssertEqual(value.value, 1)
+        XCTAssertTrue(receivedCookie.value.contains("access_token=snapshot-token"))
+    }
+
+    func testRefreshRetryUsesAccessCookieIssuedByRefreshResponse() async throws {
+        let oldCookie = try XCTUnwrap(HTTPCookie(properties: [
+            .domain: "dutypark.test",
+            .path: "/",
+            .name: "access_token",
+            .value: "old-access",
+            .secure: "TRUE",
+        ]))
+        HTTPCookieStorage.shared.setCookie(oldCookie)
+        let protectedRequestCookies = LockedRequests()
+        let protectedRequestCount = LockedCounter()
+        URLProtocolStub.handler = { request in
+            switch request.url?.path {
+            case "/api/protected":
+                protectedRequestCookies.append(
+                    request.value(forHTTPHeaderField: "Cookie") ?? ""
+                )
+                if protectedRequestCount.increment() == 1 {
+                    return Self.response(
+                        request,
+                        status: 401,
+                        body: #"{"status":401,"code":"auth.required"}"#
+                    )
+                }
+                guard request.value(forHTTPHeaderField: "Cookie")?.contains(
+                    "access_token=new-access"
+                ) == true else {
+                    return Self.response(request, status: 401)
+                }
+                return Self.response(request, status: 200, body: #"{"value":1}"#)
+            case "/api/auth/refresh":
+                return Self.response(
+                    request,
+                    status: 200,
+                    headers: [
+                        "Set-Cookie": "access_token=new-access; Path=/; Secure; HttpOnly"
+                    ],
+                    body: #"{"expiresIn":3600}"#
+                )
+            default:
+                return Self.response(request, status: 404)
+            }
+        }
+
+        let response: ValueResponse = try await makeClient().request("protected")
+
+        XCTAssertEqual(response.value, 1)
+        XCTAssertEqual(protectedRequestCookies.values.count, 2)
+        XCTAssertTrue(protectedRequestCookies.values[0].contains("access_token=old-access"))
+        XCTAssertTrue(protectedRequestCookies.values[1].contains("access_token=new-access"))
+    }
+
+    func testClearLocalAuthenticationDropsLateSetCookieFromOldRequest() async throws {
+        let delayedResponse = DelayedSetCookieResponse()
+        let storage = CookieStorageProbe(
+            onDelete: {},
+            onSetCookies: {}
+        )
+        let oldCookie = try XCTUnwrap(HTTPCookie(properties: [
+            .domain: "dutypark.test",
+            .path: "/",
+            .name: "access_token",
+            .value: "old-access",
+            .secure: "TRUE",
+        ]))
+        storage.setCookie(oldCookie)
+        storage.beginObservingSetCookies()
+        URLProtocolStub.handler = { request in
+            delayedResponse.response(for: request)
+        }
+
+        let client = makeClient(cookieStorage: storage)
+        let requestTask = Task {
+            _ = try? await client.request("protected") as ValueResponse
+        }
+        for _ in 0..<500 where !delayedResponse.requestStarted {
+            try? await Task.sleep(for: .milliseconds(1))
+        }
+        XCTAssertTrue(delayedResponse.requestStarted)
+
+        await client.clearLocalAuthentication()
+        delayedResponse.release()
+        await requestTask.value
+
+        XCTAssertFalse(storage.cookies?.contains {
+            $0.name == "access_token" || $0.name == "refresh_token"
+        } == true)
+    }
+
+    func testLateSetCookieFromPreviousAuthenticationEpochCannotOverwriteReplacementCookie() async throws {
+        let delayedResponse = DelayedSetCookieResponse()
+        let replacementCookie = try XCTUnwrap(HTTPCookie(properties: [
+            .domain: "dutypark.test",
+            .path: "/",
+            .name: "access_token",
+            .value: "replacement-token",
+            .secure: "TRUE",
+        ]))
+        URLProtocolStub.handler = { request in
+            delayedResponse.response(for: request)
+        }
+
+        let client = makeClient()
+        let requestTask = Task {
+            try await client.request("protected") as ValueResponse
+        }
+        for _ in 0..<500 where !delayedResponse.requestStarted {
+            try? await Task.sleep(for: .milliseconds(1))
+        }
+        XCTAssertTrue(delayedResponse.requestStarted)
+
+        await client.invalidateAuthenticationSession()
+        HTTPCookieStorage.shared.setCookie(replacementCookie)
+        delayedResponse.release()
+
+        let response = try await requestTask.value
+        XCTAssertEqual(response.value, 1)
+        XCTAssertEqual(
+            HTTPCookieStorage.shared.cookies?.first(where: {
+                $0.name == "access_token"
+            })?.value,
+            "replacement-token"
+        )
+    }
+
+    func testAuthenticatedResponseFromPreviousEpochIsCancelled() async throws {
+        let delayedResponse = DelayedSetCookieResponse()
+        URLProtocolStub.handler = { request in
+            delayedResponse.response(for: request)
+        }
+
+        let client = makeClient()
+        await client.setAuthenticationSessionContext(
+            AuthenticationSessionContext(memberID: 1, generation: 1)
+        )
+        let requestTask = Task {
+            try await client.request("protected") as ValueResponse
+        }
+        for _ in 0..<500 where !delayedResponse.requestStarted {
+            try? await Task.sleep(for: .milliseconds(1))
+        }
+        XCTAssertTrue(delayedResponse.requestStarted)
+
+        await client.invalidateAuthenticationSession()
+        delayedResponse.release()
+
+        do {
+            _ = try await requestTask.value
+            XCTFail("A response from a previous authenticated epoch must be cancelled")
+        } catch is CancellationError {
+            // Expected.
+        }
+    }
+
+    func testLateRefreshSetCookieFromPreviousAuthenticationEpochCannotOverwriteReplacementCookie() async throws {
+        let delayedRefresh = DelayedSetCookieResponse()
+        let protectedRequestCount = LockedCounter()
+        let replacementCookie = try XCTUnwrap(HTTPCookie(properties: [
+            .domain: "dutypark.test",
+            .path: "/",
+            .name: "access_token",
+            .value: "replacement-token",
+            .secure: "TRUE",
+        ]))
+        URLProtocolStub.handler = { request in
+            switch request.url?.path {
+            case "/api/protected":
+                if protectedRequestCount.increment() == 1 {
+                    return Self.response(
+                        request,
+                        status: 401,
+                        body: #"{"status":401,"code":"auth.required"}"#
+                    )
+                }
+                return Self.response(request, status: 200, body: #"{"value":1}"#)
+            case "/api/auth/refresh":
+                return delayedRefresh.response(for: request)
+            default:
+                return Self.response(request, status: 404)
+            }
+        }
+
+        let client = makeClient()
+        let requestTask = Task {
+            do {
+                let _: ValueResponse = try await client.request("protected")
+            } catch {
+                // A transition may cancel the old refresh task; the cookie
+                // assertion below is independent of that request outcome.
+            }
+        }
+        for _ in 0..<500 where !delayedRefresh.requestStarted {
+            try? await Task.sleep(for: .milliseconds(1))
+        }
+        XCTAssertTrue(delayedRefresh.requestStarted)
+
+        await client.invalidateAuthenticationSession()
+        HTTPCookieStorage.shared.setCookie(replacementCookie)
+        delayedRefresh.release()
+        await requestTask.value
+
+        XCTAssertEqual(
+            HTTPCookieStorage.shared.cookies?.first(where: {
+                $0.name == "access_token"
+            })?.value,
+            "replacement-token"
+        )
+    }
+
+    @MainActor
+    func testAuthenticatedLoginFailureAfterReplacementCookieDoesNotRestorePreviousAccount() async throws {
+        let boundary = SessionBoundaryProbe()
+        let oldCookie = try XCTUnwrap(HTTPCookie(properties: [
+            .domain: "dutypark.test",
+            .path: "/",
+            .name: "access_token",
+            .value: "account-a",
+            .secure: "TRUE",
+        ]))
+        HTTPCookieStorage.shared.setCookie(oldCookie)
+        URLProtocolStub.handler = { request in
+            switch request.url?.path {
+            case "/api/auth/token":
+                return Self.response(
+                    request,
+                    status: 200,
+                    headers: [
+                        "Set-Cookie": "access_token=replacement; Path=/; Secure; HttpOnly"
+                    ],
+                    body: #"{"expiresIn":3600}"#
+                )
+            case "/api/auth/status", "/api/auth/refresh":
+                return Self.response(request, status: 401)
+            default:
+                return Self.response(request, status: 404)
+            }
+        }
+        let store = SessionStore(
+            authService: AuthService(client: makeClient()),
+            initialState: .authenticated(Self.testMember),
+            localDataPurger: boundary,
+            cancelOfflineSync: { memberID in
+                await boundary.recordCancel(for: memberID)
+            }
+        )
+
+        await store.login(
+            email: "other@duty.park",
+            password: "password",
+            rememberMe: false
+        )
+
+        XCTAssertEqual(store.state, .guest)
+        let events = await boundary.events()
+        XCTAssertEqual(events, ["cancel:1", "purge:1"])
+        XCTAssertFalse(HTTPCookieStorage.shared.cookies?.contains {
+            $0.name == "access_token" || $0.name == "refresh_token"
+        } == true)
+    }
+
+    @MainActor
+    func testAuthenticatedImpersonationFailureAfterReplacementCookieDoesNotRestorePreviousAccount() async throws {
+        let boundary = SessionBoundaryProbe()
+        let oldCookie = try XCTUnwrap(HTTPCookie(properties: [
+            .domain: "dutypark.test",
+            .path: "/",
+            .name: "access_token",
+            .value: "account-a",
+            .secure: "TRUE",
+        ]))
+        HTTPCookieStorage.shared.setCookie(oldCookie)
+        URLProtocolStub.handler = { request in
+            switch request.url?.path {
+            case "/api/auth/impersonate/2":
+                return Self.response(
+                    request,
+                    status: 200,
+                    headers: [
+                        "Set-Cookie": "access_token=replacement; Path=/; Secure; HttpOnly"
+                    ],
+                    body: #"{"expiresIn":3600}"#
+                )
+            case "/api/auth/status":
+                return Self.response(request, status: 401)
+            default:
+                return Self.response(request, status: 404)
+            }
+        }
+        let store = SessionStore(
+            authService: AuthService(client: makeClient()),
+            initialState: .authenticated(Self.testMember),
+            localDataPurger: boundary,
+            cancelOfflineSync: { memberID in
+                await boundary.recordCancel(for: memberID)
+            }
+        )
+
+        do {
+            try await store.impersonate(memberId: 2)
+            XCTFail("Expected impersonation status failure")
+        } catch {
+            // Expected.
+        }
+
+        XCTAssertEqual(store.state, .guest)
+        XCTAssertEqual(
+            store.authenticationTransitionFailure,
+            .impersonationFailed
+        )
+        let events = await boundary.events()
+        XCTAssertEqual(events, ["cancel:1", "purge:1"])
+        XCTAssertFalse(HTTPCookieStorage.shared.cookies?.contains {
+            $0.name == "access_token" || $0.name == "refresh_token"
+        } == true)
+
+        store.dismissAuthenticationTransitionFailure()
+        XCTAssertNil(store.authenticationTransitionFailure)
+    }
+
+    @MainActor
+    func testGuestLoginFailureAfterReplacementCookieClearsCredentials() async throws {
+        URLProtocolStub.handler = { request in
+            switch request.url?.path {
+            case "/api/auth/token":
+                return Self.response(
+                    request,
+                    status: 200,
+                    headers: [
+                        "Set-Cookie": "access_token=replacement; Path=/; Secure; HttpOnly"
+                    ],
+                    body: #"{"expiresIn":3600}"#
+                )
+            case "/api/auth/status", "/api/auth/refresh":
+                return Self.response(request, status: 401)
+            default:
+                return Self.response(request, status: 404)
+            }
+        }
+        let store = SessionStore(
+            authService: AuthService(client: makeClient()),
+            initialState: .guest
+        )
+
+        await store.login(
+            email: "other@duty.park",
+            password: "password",
+            rememberMe: false
+        )
+
+        XCTAssertEqual(store.state, .guest)
+        XCTAssertFalse(HTTPCookieStorage.shared.cookies?.contains {
+            $0.name == "access_token" || $0.name == "refresh_token"
+        } == true)
+    }
+
     private static let testMember = LoginMember(
         id: 1,
         email: "test@duty.park",
@@ -1027,11 +2437,11 @@ final class APIClientAuthTests: XCTestCase {
         originalMemberId: nil
     )
 
-    private func makeClient() -> APIClient {
+    private func makeClient(cookieStorage: HTTPCookieStorage = .shared) -> APIClient {
         let configuration = URLSessionConfiguration.ephemeral
         configuration.protocolClasses = [URLProtocolStub.self]
-        configuration.httpCookieStorage = .shared
-        configuration.httpShouldSetCookies = true
+        configuration.httpCookieStorage = cookieStorage
+        configuration.httpShouldSetCookies = false
         return APIClient(
             baseURL: baseURL,
             session: URLSession(configuration: configuration)
@@ -1143,6 +2553,23 @@ private final class LockedCounter: @unchecked Sendable {
     }
 }
 
+private final class LockedString: @unchecked Sendable {
+    private let lock = NSLock()
+    private var storedValue = ""
+
+    func set(_ value: String) {
+        lock.lock()
+        storedValue = value
+        lock.unlock()
+    }
+
+    var value: String {
+        lock.lock()
+        defer { lock.unlock() }
+        return storedValue
+    }
+}
+
 private final class LockedRequests: @unchecked Sendable {
     private let lock = NSLock()
     private var storedValues: [String] = []
@@ -1161,6 +2588,294 @@ private final class LockedRequests: @unchecked Sendable {
 }
 
 private typealias LockedEvents = LockedRequests
+
+private final class AuthTransitionProbe: @unchecked Sendable {
+    private let lock = NSLock()
+    private let cancellationGate = TestAsyncGate()
+    private var storedCancellationCount = 0
+    private var storedCancellationStarted = false
+    private var storedCancelledMemberID: Int64?
+    private var storedAuthRequestStarted = false
+
+    var cancellationStarted: Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return storedCancellationStarted
+    }
+
+    var cancellationCount: Int {
+        lock.lock()
+        defer { lock.unlock() }
+        return storedCancellationCount
+    }
+
+    var cancelledMemberID: Int64? {
+        lock.lock()
+        defer { lock.unlock() }
+        return storedCancelledMemberID
+    }
+
+    var authRequestStarted: Bool {
+        lock.lock()
+        defer { lock.unlock() }
+        return storedAuthRequestStarted
+    }
+
+    func markCancellationStarted(for memberID: Int64?) {
+        lock.lock()
+        storedCancellationCount += 1
+        storedCancellationStarted = true
+        storedCancelledMemberID = memberID
+        lock.unlock()
+    }
+
+    func markAuthRequestStarted() {
+        lock.lock()
+        storedAuthRequestStarted = true
+        lock.unlock()
+    }
+
+    func waitForCancellationRelease() async {
+        await cancellationGate.wait()
+    }
+
+    func releaseCancellation() {
+        Task { await cancellationGate.open() }
+    }
+}
+
+private final class DelayedUnauthorizedResponse: @unchecked Sendable {
+    private let condition = NSCondition()
+    private var protectedRequestHasStarted = false
+    private var protectedRequestIsReleased = false
+    private var statusRequestCount = 0
+
+    var protectedRequestStarted: Bool {
+        condition.lock()
+        defer { condition.unlock() }
+        return protectedRequestHasStarted
+    }
+
+    func nextStatusResponseBody() -> String {
+        condition.lock()
+        defer { condition.unlock() }
+        defer { statusRequestCount += 1 }
+        if statusRequestCount == 0 {
+            return #"{"id":1,"email":"test@duty.park","name":"Test","teamId":null,"team":null,"isAdmin":false,"isImpersonating":false,"originalMemberId":null}"#
+        }
+        return #"{"id":2,"email":"other@duty.park","name":"Other","teamId":null,"team":null,"isAdmin":false,"isImpersonating":false,"originalMemberId":null}"#
+    }
+
+    func protectedResponse(for request: URLRequest) -> (HTTPURLResponse, Data) {
+        condition.lock()
+        protectedRequestHasStarted = true
+        condition.broadcast()
+        while !protectedRequestIsReleased {
+            condition.wait()
+        }
+        condition.unlock()
+        return response(request, status: 401)
+    }
+
+    func releaseProtectedRequest() {
+        condition.lock()
+        protectedRequestIsReleased = true
+        condition.broadcast()
+        condition.unlock()
+    }
+
+    private func response(
+        _ request: URLRequest,
+        status: Int,
+        body: String = ""
+    ) -> (HTTPURLResponse, Data) {
+        (
+            HTTPURLResponse(
+                url: request.url!,
+                statusCode: status,
+                httpVersion: nil,
+                headerFields: nil
+            )!,
+            Data(body.utf8)
+        )
+    }
+}
+
+private final class DelayedSetCookieResponse: @unchecked Sendable {
+    private let condition = NSCondition()
+    private var hasStarted = false
+    private var isReleased = false
+
+    var requestStarted: Bool {
+        condition.lock()
+        defer { condition.unlock() }
+        return hasStarted
+    }
+
+    func response(for request: URLRequest) -> (HTTPURLResponse, Data) {
+        condition.lock()
+        hasStarted = true
+        condition.broadcast()
+        while !isReleased {
+            condition.wait()
+        }
+        condition.unlock()
+        return (
+            HTTPURLResponse(
+                url: request.url!,
+                statusCode: 200,
+                httpVersion: nil,
+                headerFields: [
+                    "Set-Cookie": "access_token=stale-token; Path=/; Secure; HttpOnly"
+                ]
+            )!,
+            Data(#"{"value":1}"#.utf8)
+        )
+    }
+
+    func release() {
+        condition.lock()
+        isReleased = true
+        condition.broadcast()
+        condition.unlock()
+    }
+}
+
+private final class DelayedAuthenticationStatusResponse: @unchecked Sendable {
+    private let condition = NSCondition()
+    private let statusCode: Int
+    private let responseBody: Data
+    private var hasStarted = false
+    private var isReleased = false
+
+    init(
+        statusCode: Int = 200,
+        body: String = #"{"id":1,"email":"test@duty.park","name":"Test","teamId":null,"team":null,"isAdmin":false,"isImpersonating":false,"originalMemberId":null}"#
+    ) {
+        self.statusCode = statusCode
+        self.responseBody = Data(body.utf8)
+    }
+
+    var requestStarted: Bool {
+        condition.lock()
+        defer { condition.unlock() }
+        return hasStarted
+    }
+
+    func response(for request: URLRequest) -> (HTTPURLResponse, Data) {
+        condition.lock()
+        hasStarted = true
+        condition.broadcast()
+        while !isReleased {
+            condition.wait()
+        }
+        condition.unlock()
+        return (
+            HTTPURLResponse(
+                url: request.url!,
+                statusCode: statusCode,
+                httpVersion: nil,
+                headerFields: nil
+            )!,
+            responseBody
+        )
+    }
+
+    func release() {
+        condition.lock()
+        isReleased = true
+        condition.broadcast()
+        condition.unlock()
+    }
+}
+
+private actor DelayedCleanupProbe {
+    private var hasStarted = false
+    private var isReleased = false
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+
+    var started: Bool {
+        hasStarted
+    }
+
+    func waitForRelease() async {
+        hasStarted = true
+        guard !isReleased else { return }
+        await withCheckedContinuation { continuation in
+            waiters.append(continuation)
+        }
+    }
+
+    func release() {
+        isReleased = true
+        let pendingWaiters = waiters
+        waiters.removeAll()
+        pendingWaiters.forEach { $0.resume() }
+    }
+}
+
+private final class CookieStorageProbe: HTTPCookieStorage, @unchecked Sendable {
+    private let onDelete: @Sendable () -> Void
+    private let onSetCookies: @Sendable () -> Void
+    private let lock = NSLock()
+    private var isObservingSetCookies = false
+
+    init(
+        onDelete: @escaping @Sendable () -> Void,
+        onSetCookies: @escaping @Sendable () -> Void
+    ) {
+        self.onDelete = onDelete
+        self.onSetCookies = onSetCookies
+        super.init()
+    }
+
+    func beginObservingSetCookies() {
+        lock.lock()
+        isObservingSetCookies = true
+        lock.unlock()
+    }
+
+    override func deleteCookie(_ cookie: HTTPCookie) {
+        onDelete()
+        super.deleteCookie(cookie)
+    }
+
+    override func setCookies(
+        _ cookies: [HTTPCookie],
+        for URL: URL?,
+        mainDocumentURL: URL?
+    ) {
+        super.setCookies(cookies, for: URL, mainDocumentURL: mainDocumentURL)
+        lock.lock()
+        let shouldNotify = isObservingSetCookies
+        lock.unlock()
+        if shouldNotify {
+            onSetCookies()
+        }
+    }
+}
+
+private actor SessionBoundaryProbe: SessionLocalDataPurging {
+    private var storedMemberIDs: [Int64?] = []
+    private var storedEvents: [String] = []
+
+    func purgeLocalData(for memberID: Int64?) async {
+        storedMemberIDs.append(memberID)
+        storedEvents.append(memberID.map { "purge:" + String($0) } ?? "purge:all")
+    }
+
+    func memberIDs() -> [Int64?] {
+        storedMemberIDs
+    }
+
+    func recordCancel(for memberID: Int64?) {
+        storedEvents.append(memberID.map { "cancel:" + String($0) } ?? "cancel:all")
+    }
+
+    func events() -> [String] {
+        storedEvents
+    }
+}
 
 private final class RefreshRecorder: @unchecked Sendable {
     private let condition = NSCondition()
@@ -1217,6 +2932,7 @@ private final class RefreshRecorder: @unchecked Sendable {
 private final class URLProtocolStub: URLProtocol, @unchecked Sendable {
     nonisolated(unsafe) static var handler: (@Sendable (URLRequest) -> (HTTPURLResponse, Data))?
     nonisolated(unsafe) static var error: URLError?
+    nonisolated(unsafe) static var deliversAsynchronously = false
 
     override class func canInit(with request: URLRequest) -> Bool { true }
 
@@ -1230,12 +2946,20 @@ private final class URLProtocolStub: URLProtocol, @unchecked Sendable {
         guard let handler = Self.handler else {
             fatalError("URLProtocolStub.handler is not set")
         }
-        let (response, data) = handler(request)
-        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
-        if !data.isEmpty {
-            client?.urlProtocol(self, didLoad: data)
+        let deliver = { [weak self] in
+            guard let self else { return }
+            let (response, data) = handler(request)
+            self.client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+            if !data.isEmpty {
+                self.client?.urlProtocol(self, didLoad: data)
+            }
+            self.client?.urlProtocolDidFinishLoading(self)
         }
-        client?.urlProtocolDidFinishLoading(self)
+        if Self.deliversAsynchronously {
+            DispatchQueue.global().async(execute: deliver)
+        } else {
+            deliver()
+        }
     }
 
     override func stopLoading() {}

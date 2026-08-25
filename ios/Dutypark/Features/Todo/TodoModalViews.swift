@@ -157,7 +157,10 @@ struct TodoDetailModal: View {
                     preservedTags: todo.tags,
                     isSaving: model.isSaving,
                     maximumHeight: maximumHeight,
-                    dismissAction: { showingEdit = false },
+                    dismissAction: {
+                        model.emitHaptic(.routine)
+                        showingEdit = false
+                    },
                     savedDismissAction: dismiss,
                     dismissRequest: dismissRequest,
                     onBusyChange: { onDismissabilityChange(!$0) }
@@ -209,7 +212,10 @@ struct TodoDetailModal: View {
                 canDismiss: TodoConfirmationPolicy.canDismiss(
                     isConfirming: isConfirming,
                     isSaving: model.isSaving
-                )
+                ),
+                // The confirmation buttons already provide their press feedback;
+                // do not add a second tick when the panel itself closes.
+                dismissHaptic: nil
             ) { availableSize, confirmationDismiss in
                 DPConfirmationPanel(
                     title: todoLocalized(requestedConfirmation.titleKey),
@@ -383,7 +389,10 @@ struct TodoDetailModal: View {
                     .textSelection(.enabled)
             }
 
-            if todo.hasAttachments {
+            // `AttachmentGallery` performs its own remote list request in its
+            // task. Cached Calendar details are read-only offline, so do not
+            // mount the gallery until the model is bound to an online session.
+            if todo.hasAttachments, model.canPerformOnlineMutations {
                 VStack(alignment: .leading, spacing: DPSpacing.small) {
                     Text(todoLocalized("todo.label.attachments"))
                         .font(DPFont.bold(size: 12, relativeTo: .caption))
@@ -416,9 +425,15 @@ struct TodoDetailModal: View {
                 systemImage: "pencil",
                 color: DPColor.accent,
                 isLoading: isLoadingEditAttachments,
-                action: { showingEdit = true }
+                action: {
+                    model.emitHaptic(.routine)
+                    showingEdit = true
+                }
             )
-            .disabled(todo.hasAttachments && model.attachmentsByTodoID[todo.uuid] == nil)
+            .disabled(
+                !model.canPerformOnlineMutations
+                    || (todo.hasAttachments && model.attachmentsByTodoID[todo.uuid] == nil)
+            )
 
             TodoModalBorderedAction(
                 title: todoLocalized("todo.action.delete"),
@@ -426,6 +441,7 @@ struct TodoDetailModal: View {
                 color: DPColor.danger,
                 action: { confirmation = .delete }
             )
+            .disabled(!model.canPerformOnlineMutations)
         }
     }
 
@@ -469,6 +485,7 @@ struct TodoDetailModal: View {
         }
         .accessibilityLabel(todoLocalized("todo.action.more"))
         .accessibilityIdentifier("todo.detail.menu")
+        .disabled(!model.canPerformOnlineMutations)
     }
 
 }

@@ -23,16 +23,19 @@ final class SocialViewModel: ObservableObject {
     private let repository: any SocialRepository
     private let searchPageSize: Int
     private let onMutation: @MainActor (Bool) async -> Void
+    private let haptics: DPHapticCenter
     private var pinnedOrderIDs: [MemberID]?
 
     init(
         repository: any SocialRepository = LiveSocialRepository(),
         searchPageSize: Int = 5,
-        onMutation: @escaping @MainActor (Bool) async -> Void = { _ in }
+        onMutation: @escaping @MainActor (Bool) async -> Void = { _ in },
+        haptics: DPHapticCenter = .shared
     ) {
         self.repository = repository
         self.searchPageSize = searchPageSize
         self.onMutation = onMutation
+        self.haptics = haptics
     }
 
     var pinnedFriends: [DashboardFriendDetailDTO] {
@@ -93,6 +96,7 @@ final class SocialViewModel: ObservableObject {
         isSearching = true
         defer { isSearching = false }
         do {
+            let previousPage = searchPage
             let result = try await repository.search(
                 keyword: keyword,
                 page: max(0, page),
@@ -102,9 +106,13 @@ final class SocialViewModel: ObservableObject {
             searchPage = result.number
             searchTotalPages = result.totalPages
             searchTotalElements = result.totalElements
+            if result.number != previousPage {
+                haptics.emit(.selection)
+            }
         } catch {
             searchResults = []
             errorKey = "social.error.search"
+            haptics.emit(.error)
         }
     }
 
@@ -165,6 +173,7 @@ final class SocialViewModel: ObservableObject {
         guard let id = friend.member.id else { return }
         guard !sentRequests.contains(where: { $0.toMember.id == id }) else {
             errorKey = "social.error.familyAlreadyRequested"
+            haptics.emit(.warning)
             return
         }
         await perform(
@@ -258,6 +267,7 @@ final class SocialViewModel: ObservableObject {
         guard memberIDs.count == currentIDs.count,
               Set(memberIDs) == Set(currentIDs) else {
             errorKey = "social.error.reorder"
+            haptics.emit(.error)
             return false
         }
         guard memberIDs != currentIDs else { return true }
@@ -283,11 +293,14 @@ final class SocialViewModel: ObservableObject {
         } catch {
             pinnedOrderIDs = previousOrderIDs
             errorKey = "social.error.reorder"
+            haptics.emit(.error)
             return false
         }
 
         applyPinnedOrder(memberIDs)
         pinnedOrderIDs = nil
+        errorKey = nil
+        haptics.emit(.success)
 
         await onMutation(false)
         return true
@@ -323,8 +336,15 @@ final class SocialViewModel: ObservableObject {
         } catch {
             restore(snapshot)
             self.errorKey = errorKey
+            haptics.emit(.error)
             return
         }
+        self.errorKey = nil
+        // Emit immediately after the server confirms the mutation. Reloading the
+        // dashboard below is reconciliation, not part of the mutation result, so
+        // a transient refresh failure must not turn a completed action into an
+        // error haptic.
+        haptics.emit(.success)
         if reconcileAfterMutation {
             // The mutation is already confirmed. A transient reconciliation
             // failure must not roll it back or be reported as an action failure.

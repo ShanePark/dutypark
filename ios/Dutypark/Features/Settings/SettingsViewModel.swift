@@ -213,6 +213,7 @@ final class SettingsViewModel: ObservableObject {
         }
         if values.0 == nil, member != nil {
             showError("settings.error.load")
+            DPHapticCenter.shared.emit(.error)
         }
     }
 
@@ -258,7 +259,10 @@ final class SettingsViewModel: ObservableObject {
     }
 
     func deleteProfilePhoto() async -> Bool {
-        await workResult(success: "settings.photo.deleted") {
+        await workResult(
+            success: "settings.photo.deleted",
+            failure: "settings.photo.deleteFailed"
+        ) {
             try await service.deleteProfilePhoto()
             member = member?.replacing(
                 hasProfilePhoto: false,
@@ -268,9 +272,12 @@ final class SettingsViewModel: ObservableObject {
     }
 
     func assignManager(_ memberID: Int64) async {
-        await work(success: "settings.manager.assigned") {
+        let assigned = await workResult(success: "settings.manager.assigned") {
             try await service.assignManager(memberID)
-            managers = try await service.managers()
+        }
+        guard assigned else { return }
+        if let refreshedManagers = try? await service.managers() {
+            managers = refreshedManagers
         }
     }
 
@@ -284,6 +291,7 @@ final class SettingsViewModel: ObservableObject {
     func createAuxiliaryAccount(name: String) async {
         guard !contentFilter.isBlocked(name) else {
             showError("settings.error.contentFilter")
+            DPHapticCenter.shared.emit(.warning)
             return
         }
         await work(success: "settings.auxiliary.created") {
@@ -298,8 +306,10 @@ final class SettingsViewModel: ObservableObject {
         defer { isWorking = false }
         do {
             try await service.impersonate(memberID: memberID)
+            DPHapticCenter.shared.emit(.success)
         } catch {
             showError("settings.error.generic")
+            DPHapticCenter.shared.emit(.error)
             throw error
         }
     }
@@ -332,8 +342,10 @@ final class SettingsViewModel: ObservableObject {
                     newPassword: newPassword
                 )
             )
+            DPHapticCenter.shared.emit(.success)
         } catch {
             showError("settings.password.failed")
+            DPHapticCenter.shared.emit(.error)
             throw error
         }
     }
@@ -371,6 +383,7 @@ final class SettingsViewModel: ObservableObject {
         } catch {
             dutyPatternLoadFailed = true
             showError("settings.pattern.loadFailed")
+            DPHapticCenter.shared.emit(.error)
         }
     }
 
@@ -399,7 +412,7 @@ final class SettingsViewModel: ObservableObject {
     }
 
     func profilePhotoURL() -> URL? {
-        guard let member, let id = member.id, member.hasProfilePhoto else { return nil }
+        guard let member, let id = member.id else { return nil }
         return service.profilePhotoURL(memberID: id, version: member.profilePhotoVersion)
     }
 
@@ -412,6 +425,7 @@ final class SettingsViewModel: ObservableObject {
 
     private func workResult(
         success: String,
+        failure: String = "settings.error.generic",
         operation: () async throws -> Void
     ) async -> Bool {
         guard !isWorking else { return false }
@@ -420,9 +434,11 @@ final class SettingsViewModel: ObservableObject {
         do {
             try await operation()
             showNotice(success)
+            DPHapticCenter.shared.emit(.success)
             return true
         } catch {
-            showError("settings.error.generic")
+            showError(failure)
+            DPHapticCenter.shared.emit(.error)
             return false
         }
     }

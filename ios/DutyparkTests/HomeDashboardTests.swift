@@ -358,6 +358,15 @@ final class HomeDashboardTests: XCTestCase {
         XCTAssertTrue(source.contains("social.action.unpin"))
     }
 
+    func testHomeNavigationAndPinMutationsUseSemanticHaptics() throws {
+        let source = try Self.projectSource(at: "Dutypark/Features/Home/HomeView.swift")
+
+        XCTAssertTrue(source.contains("DPHapticCenter.shared.emit(.routine)"))
+        XCTAssertTrue(source.contains("DPHapticCenter.shared.emit(.selection)"))
+        XCTAssertTrue(source.contains("DPHapticCenter.shared.emit(.success)"))
+        XCTAssertTrue(source.contains("DPHapticCenter.shared.emit(.error)"))
+    }
+
     func testHomeFriendRailLocksItsHorizontalScrollWhileReordering() throws {
         let source = try Self.projectSource(at: "Dutypark/Features/Home/HomeView.swift")
         let railStart = try XCTUnwrap(source.range(of: "    private var friendsRail: some View {"))

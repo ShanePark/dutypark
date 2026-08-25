@@ -174,7 +174,8 @@ struct MyInfoView: View {
             DPModalOverlay(
                 maximumContentWidth: DPConfirmationPanel.maximumWidth,
                 onDismiss: { confirmation = nil },
-                canDismiss: !confirmationIsWorking
+                canDismiss: !confirmationIsWorking,
+                dismissHaptic: nil
             ) { availableSize, confirmationDismiss in
                 DPConfirmationPanel(
                     title: SettingsLocalization.string(requestedAction.titleKey),
@@ -229,6 +230,7 @@ struct MyInfoView: View {
             HStack(spacing: DPSpacing.medium) {
                 Menu {
                     Button {
+                        DPHapticCenter.shared.emit(.selection)
                         showCamera = true
                     } label: {
                         Label(
@@ -240,6 +242,7 @@ struct MyInfoView: View {
                     .accessibilityIdentifier("settings.photo.take")
 
                     Button {
+                        DPHapticCenter.shared.emit(.selection)
                         showPhotoLibrary = true
                     } label: {
                         Label(
@@ -251,7 +254,7 @@ struct MyInfoView: View {
 
                     if hasVisibleProfilePhoto {
                         Divider()
-                        Button(role: .destructive) {
+                        Button {
                             confirmation = .deleteProfilePhoto
                         } label: {
                             Label(
@@ -302,30 +305,11 @@ struct MyInfoView: View {
 
     @ViewBuilder
     private var profilePhoto: some View {
-        if let url = model.profilePhotoURL() {
-            AsyncImage(url: url) { phase in
-                if case .success(let image) = phase {
-                    image.resizable().scaledToFill()
-                } else {
-                    profilePlaceholder
-                }
-            }
-            .frame(width: 80, height: 80)
-            .clipShape(Circle())
-        } else {
-            profilePlaceholder
-                .frame(width: 80, height: 80)
-        }
-    }
-
-    private var profilePlaceholder: some View {
-        Circle()
-            .fill(.secondary.opacity(0.15))
-            .overlay {
-                Text(String(model.member?.name.first ?? "?"))
-                    .font(.title2.bold())
-                    .foregroundStyle(.secondary)
-            }
+        DPProfileAvatar(
+            memberID: model.member?.id,
+            profilePhotoVersion: model.member?.profilePhotoVersion ?? 0,
+            size: 80
+        )
     }
 
     private var patternSection: some View {
@@ -350,6 +334,7 @@ struct MyInfoView: View {
                 .frame(minHeight: 72)
             } else if let pattern = model.dutyPattern {
                 DutyPatternSummary(pattern: pattern) {
+                    DPHapticCenter.shared.emit(.routine)
                     withoutPresentationAnimation { showPattern = true }
                 }
             }
@@ -410,8 +395,13 @@ struct MyInfoView: View {
             if case .authenticated(let loginMember) = session.state, loginMember.isImpersonating {
                 Button {
                     Task {
-                        try? await model.restoreImpersonation()
-                        try? await session.finishExternalLogin()
+                        do {
+                            try await model.restoreImpersonation()
+                            try await session.finishExternalLogin(emitsHaptic: false)
+                            DPHapticCenter.shared.emit(.success)
+                        } catch {
+                            DPHapticCenter.shared.emit(.error)
+                        }
                     }
                 } label: {
                     Label(SettingsLocalization.string("settings.managed.restore"), systemImage: "arrow.uturn.backward")
@@ -421,7 +411,11 @@ struct MyInfoView: View {
             }
             ForEach(model.managedMembers, id: \.id) { member in
                 HStack(spacing: DPSpacing.compact) {
-                    ProfileInitial(name: member.name)
+                    DPProfileAvatar(
+                        memberID: member.id,
+                        profilePhotoVersion: member.profilePhotoVersion,
+                        size: 40
+                    )
                     VStack(alignment: .leading, spacing: 2) {
                         Text(member.name).font(DPTypography.bodyMedium).foregroundStyle(DPColor.textPrimary)
                         if let team = member.team {
@@ -443,7 +437,10 @@ struct MyInfoView: View {
                 .padding(DPSpacing.compact)
                 .background(DPColor.backgroundSecondary, in: RoundedRectangle(cornerRadius: DPRadius.standard))
             }
-            Button { withoutPresentationAnimation { showAuxiliary = true } } label: {
+            Button {
+                DPHapticCenter.shared.emit(.routine)
+                withoutPresentationAnimation { showAuxiliary = true }
+            } label: {
                 Label(SettingsLocalization.string("settings.auxiliary.create"), systemImage: "plus")
                     .frame(maxWidth: .infinity)
             }
@@ -519,13 +516,18 @@ struct MyInfoView: View {
         SettingsCard(title: "settings.account.title", icon: "lock") {
             HStack(spacing: DPSpacing.compact) {
             if model.member?.hasPassword == true {
-                Button { withoutPresentationAnimation { showPassword = true } } label: {
+                Button {
+                    DPHapticCenter.shared.emit(.routine)
+                    withoutPresentationAnimation { showPassword = true }
+                } label: {
                     Label(SettingsLocalization.string("settings.password.change"), systemImage: "lock.rotation")
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(AccentSoftButtonStyle())
             }
-            Button { withoutPresentationAnimation { showAccountDeletion = true } } label: {
+            Button {
+                withoutPresentationAnimation { showAccountDeletion = true }
+            } label: {
                 Label(SettingsLocalization.string("settings.account.delete"), systemImage: "person.crop.circle.badge.xmark")
                     .frame(maxWidth: .infinity)
             }
@@ -612,6 +614,7 @@ struct MyInfoView: View {
                 Button {
                     guard !socialAction.isWorking else { return }
                     withoutPresentationAnimation {
+                        DPHapticCenter.shared.emit(.routine)
                         socialManagementPresentation = .init(provider: provider)
                     }
                 } label: {
@@ -659,6 +662,7 @@ struct MyInfoView: View {
         else {
             model.noticeKey = "settings.photo.invalid"
             model.noticeIsError = true
+            DPHapticCenter.shared.emit(.error)
             return
         }
         photoToCrop = image
@@ -686,6 +690,7 @@ struct MyInfoView: View {
             await model.reloadMember()
             oauthNoticeMessage = nil
             model.showNotice("settings.social.linked")
+            DPHapticCenter.shared.emit(.success)
         } catch MobileOAuthError.cancelled {
             return
         } catch AppleSignInError.cancelled {
@@ -693,6 +698,7 @@ struct MyInfoView: View {
         } catch {
             oauthNoticeMessage = error.localizedDescription
             model.noticeIsError = true
+            DPHapticCenter.shared.emit(.error)
         }
     }
 
@@ -702,6 +708,7 @@ struct MyInfoView: View {
         ) else {
             model.noticeIsError = true
             model.noticeKey = "settings.social.unlinkLastAuthenticationMethod"
+            DPHapticCenter.shared.emit(.warning)
             return
         }
         guard isLinking == nil, isUnlinking == nil, socialAction.start() else { return }
@@ -715,9 +722,11 @@ struct MyInfoView: View {
             try await settingsService.unlinkSocialAccount(provider)
             await model.reloadMember()
             model.showNotice("settings.social.unlinked")
+            DPHapticCenter.shared.emit(.success)
         } catch {
             model.noticeIsError = true
             model.noticeKey = SettingsSocialUnlinkPolicy.noticeKey(for: error)
+            DPHapticCenter.shared.emit(.error)
         }
     }
 
@@ -754,6 +763,9 @@ struct MyInfoView: View {
         dismiss: @escaping () -> Void
     ) {
         guard confirmationAction.start() else { return }
+        if requestedAction.requiresWarning {
+            DPHapticCenter.shared.emit(.warning)
+        }
         Task {
             switch requestedAction {
             case .deleteProfilePhoto:
@@ -763,7 +775,13 @@ struct MyInfoView: View {
             case .removeManager(let id, _):
                 await model.unassignManager(id)
             case .switchManagedAccount(let id, _):
-                try? await session.impersonate(memberId: id)
+                do {
+                    try await session.impersonate(memberId: id)
+                } catch {
+                    DPHapticCenter.shared.emit(.error)
+                    confirmationAction.finish()
+                    return
+                }
             case .session(.session(let token)):
                 if SettingsSessionPolicy.canRevoke(token) {
                     _ = await model.revokeSession(id: token.id)
@@ -904,21 +922,6 @@ private struct SettingsSessionMetadataRow: View {
             }
         }
         .font(DPTypography.supporting)
-    }
-}
-
-private struct ProfileInitial: View {
-    let name: String
-
-    var body: some View {
-        Circle()
-            .fill(DPColor.backgroundTertiary)
-            .frame(width: 40, height: 40)
-            .overlay {
-                Text(String(name.first ?? "?"))
-                    .font(DPTypography.bodyMedium)
-                    .foregroundStyle(DPColor.textSecondary)
-            }
     }
 }
 

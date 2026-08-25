@@ -4,6 +4,45 @@ import XCTest
 
 @MainActor
 final class CalendarFeatureTests: XCTestCase {
+    func testCalendarHapticPolicyLeavesNoOpTransitionsSilent() {
+        XCTAssertNil(CalendarHapticPolicy.monthNavigation(fromYear: 2026, fromMonth: 8, toYear: 2026, toMonth: 8))
+        XCTAssertEqual(
+            CalendarHapticPolicy.monthNavigation(fromYear: 2026, fromMonth: 8, toYear: 2026, toMonth: 9),
+            .routine
+        )
+        XCTAssertNil(
+            CalendarHapticPolicy.selectionChanged(
+                from: DateOnly(rawValue: "2026-08-12"),
+                to: DateOnly(rawValue: "2026-08-12")
+            )
+        )
+        XCTAssertEqual(
+            CalendarHapticPolicy.mutationResult(succeeded: true),
+            .success
+        )
+        XCTAssertEqual(
+            CalendarHapticPolicy.mutationResult(succeeded: false),
+            .error
+        )
+        XCTAssertEqual(CalendarHapticPolicy.validationFailure(), .warning)
+        XCTAssertNil(CalendarHapticPolicy.validationFailure(isActionable: false))
+    }
+
+    func testSearchResultDateOmitsMidnightPlaceholderButKeepsExplicitTime() {
+        XCTAssertEqual(
+            CalendarVisualLogic.searchResultDateText(
+                LocalDateTimeValue(rawValue: "2026-08-22T00:00:00")
+            ),
+            "2026-08-22"
+        )
+        XCTAssertEqual(
+            CalendarVisualLogic.searchResultDateText(
+                LocalDateTimeValue(rawValue: "2026-08-22T09:30:00")
+            ),
+            "2026-08-22 09:30:00"
+        )
+    }
+
     /// The pinned D-day shares the day-number row, so only the counter fits. Adding the
     /// title pushed the number out of the single line, which is the one part the pin is
     /// for; the title already appears as a bubble on the D-day's own date.
@@ -125,7 +164,8 @@ final class CalendarFeatureTests: XCTestCase {
             "@Environment(\\.dismiss) private var dismiss",
             "private var memberBackAction: (() -> Void)?",
             "guard isPushedMemberCalendar else { return nil }",
-            "return { dismiss() }",
+            "DPHapticCenter.shared.emit(.routine)",
+            "dismiss()",
             "Button(action: memberBackAction)",
             ".navigationBarBackButtonHidden(isPushedMemberCalendar)",
             ".dpInteractivePopGestureEnabled()",
@@ -1449,6 +1489,127 @@ final class CalendarFeatureTests: XCTestCase {
         XCTAssertEqual(model.month, 12)
     }
 
+    func testCalendarMonthNavigationAndPickerUseRoutineFeedback() async {
+        let repository = CalendarRepositoryMock()
+        let haptics = DPHapticCenter()
+        let model = CalendarViewModel(
+            repository: repository,
+            now: date(2026, 8, 12),
+            hapticCenter: haptics
+        )
+        await model.load()
+        XCTAssertNil(haptics.event)
+
+        await model.changeMonth(by: 1)
+        guard let navigationEvent = haptics.event else {
+            XCTFail("Changing the month should emit a routine event")
+            return
+        }
+        XCTAssertEqual(navigationEvent.kind, .routine)
+        let navigationEventID = navigationEvent.id
+
+        await model.changeMonth(by: 0)
+        XCTAssertEqual(haptics.event?.id, navigationEventID, "A no-op month change stays silent")
+
+        await model.selectYearMonth(year: 2028, month: 2)
+        XCTAssertEqual(haptics.event?.kind, .routine)
+    }
+
+    func testScheduleMutationEmitsSuccessOnlyAfterTheSaveCompletes() async {
+        let repository = CalendarRepositoryMock()
+        let haptics = DPHapticCenter()
+        let model = CalendarViewModel(
+            repository: repository,
+            now: date(2026, 8, 12),
+            hapticCenter: haptics
+        )
+        await model.load()
+
+        let saved = await model.saveSchedule(
+            existing: nil,
+            content: "Dinner",
+            description: "",
+            visibility: .friends,
+            start: date(2026, 8, 12),
+            end: date(2026, 8, 12, hour: 1),
+            tagFriendIDs: [],
+            attachmentSessionID: nil,
+            orderedAttachmentIDs: [],
+            aiTimeParsingRequested: false
+        )
+
+        XCTAssertTrue(saved)
+        XCTAssertEqual(haptics.event?.kind, .success)
+    }
+
+    func testNewScheduleForwardsItsOperationIDToTheInitialRepositoryCreate() async {
+        let repository = CalendarRepositoryMock()
+        let model = CalendarViewModel(repository: repository, now: date(2026, 8, 12))
+        await model.load()
+
+        let saved = await model.saveSchedule(
+            existing: nil,
+            content: "Dinner",
+            description: "",
+            visibility: .friends,
+            start: date(2026, 8, 12),
+            end: date(2026, 8, 12, hour: 1),
+            tagFriendIDs: [],
+            attachmentSessionID: nil,
+            orderedAttachmentIDs: [],
+            aiTimeParsingRequested: false
+        )
+
+        XCTAssertTrue(saved)
+        let operationID = await repository.savedScheduleOperationID
+        XCTAssertNotNil(operationID)
+    }
+
+    func testScheduleValidationUsesWarningFeedbackWithoutCallingTheRepository() async {
+        let repository = CalendarRepositoryMock()
+        let haptics = DPHapticCenter()
+        let model = CalendarViewModel(
+            repository: repository,
+            now: date(2026, 8, 12),
+            hapticCenter: haptics
+        )
+        await model.load()
+
+        let saved = await model.saveSchedule(
+            existing: nil,
+            content: "   ",
+            description: "",
+            visibility: .friends,
+            start: date(2026, 8, 12),
+            end: date(2026, 8, 12),
+            tagFriendIDs: [],
+            attachmentSessionID: nil,
+            orderedAttachmentIDs: [],
+            aiTimeParsingRequested: false
+        )
+
+        XCTAssertFalse(saved)
+        XCTAssertEqual(haptics.event?.kind, .warning)
+        let request = await repository.savedSchedule
+        XCTAssertNil(request)
+    }
+
+    func testFailedScheduleDeleteUsesErrorFeedback() async {
+        let repository = CalendarRepositoryMock(failDestructiveMutations: true)
+        let haptics = DPHapticCenter()
+        let model = CalendarViewModel(
+            repository: repository,
+            now: date(2026, 8, 12),
+            hapticCenter: haptics
+        )
+        await model.load()
+
+        let succeeded = await model.deleteSchedule(model.days[11].schedules[0])
+
+        XCTAssertFalse(succeeded)
+        XCTAssertEqual(haptics.event?.kind, .error)
+    }
+
     func testScheduleSavePreservesEveryOrderedAttachmentIdentifier() async {
         let repository = CalendarRepositoryMock()
         let model = CalendarViewModel(repository: repository, now: date(2026, 8, 12))
@@ -1599,6 +1760,44 @@ final class CalendarFeatureTests: XCTestCase {
 
         XCTAssertEqual(model.year, 2028)
         XCTAssertEqual(model.month, 2)
+    }
+
+    func testSlowerPreviousMonthResponseCannotOverwriteLatestMonth() async {
+        let gate = CalendarMonthRaceGate()
+        let repository = CalendarRepositoryMock(monthGate: gate)
+        let model = CalendarViewModel(
+            repository: repository,
+            now: date(2026, 8, 12),
+            outbox: CalendarMonthRaceOutboxStub()
+        )
+
+        let augustLoad = Task { await model.load() }
+        await gate.waitForRequest(OfflineMonthKey(year: 2026, month: 8))
+
+        let septemberLoad = Task {
+            await model.selectYearMonth(year: 2026, month: 9, emitFeedback: false)
+        }
+        await gate.waitForRequest(OfflineMonthKey(year: 2026, month: 9))
+
+        await gate.release(OfflineMonthKey(year: 2026, month: 9))
+        await septemberLoad.value
+
+        XCTAssertEqual(model.year, 2026)
+        XCTAssertEqual(model.month, 9)
+        XCTAssertEqual(
+            model.days.first(where: { $0.cell.date.rawValue == "2026-09-12" })?.schedules.first?.startDateTime.rawValue,
+            "2026-09-12T00:00:00"
+        )
+
+        await gate.release(OfflineMonthKey(year: 2026, month: 8))
+        await augustLoad.value
+
+        XCTAssertEqual(model.year, 2026)
+        XCTAssertEqual(model.month, 9)
+        XCTAssertEqual(
+            model.days.first(where: { $0.cell.date.rawValue == "2026-09-12" })?.schedules.first?.startDateTime.rawValue,
+            "2026-09-12T00:00:00"
+        )
     }
 
     func testQuickDutyInputAdvancesToNextCurrentMonthDay() async {
@@ -1832,6 +2031,7 @@ private func tagItem(
 
 private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
     var savedSchedule: ScheduleSaveDTO?
+    var savedScheduleOperationID: UUID?
     var batchUpdateCount = 0
     var requestedPreviewMemberID: MemberID?
     var requestedScheduleMemberID: MemberID?
@@ -1847,6 +2047,7 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
     let failDestructiveMutations: Bool
     let returnsTaggedSchedule: Bool
     let otherDutyValues: [OtherDutyResponse]
+    let monthGate: CalendarMonthRaceGate?
 
     init(
         canManage: Bool = false,
@@ -1855,7 +2056,8 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
         scheduleOwnerID: MemberID = 1,
         failDestructiveMutations: Bool = false,
         returnsTaggedSchedule: Bool = false,
-        otherDuties: [OtherDutyResponse] = []
+        otherDuties: [OtherDutyResponse] = [],
+        monthGate: CalendarMonthRaceGate? = nil
     ) {
         canManageValue = canManage
         self.cancelMemberLoad = cancelMemberLoad
@@ -1864,6 +2066,7 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
         self.failDestructiveMutations = failDestructiveMutations
         self.returnsTaggedSchedule = returnsTaggedSchedule
         otherDutyValues = otherDuties
+        self.monthGate = monthGate
     }
 
     func member() async throws -> MemberDTO {
@@ -1882,7 +2085,8 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
     func team(id: TeamID) async throws -> TeamDTO { throw APIError.invalidResponse }
     func canManage(memberID: MemberID) async throws -> Bool { canManageValue }
     func calendar(year: Int, month: Int) async throws -> [TeamDayDTO] {
-        (1...42).map { TeamDayDTO(year: year, month: month, day: $0) }
+        await monthGate?.wait(year: year, month: month)
+        return (1...42).map { TeamDayDTO(year: year, month: month, day: $0) }
     }
     func duties(memberID: MemberID, year: Int, month: Int) async throws -> [DutyDTO] { [] }
     func otherDuties(memberIDs: [MemberID], year: Int, month: Int) async throws -> [OtherDutyResponse] {
@@ -1905,6 +2109,13 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
     func saveSchedule(_ request: ScheduleSaveDTO) async throws -> ScheduleSaveResponse {
         savedSchedule = request
         return ScheduleSaveResponse(id: UUID())
+    }
+    func saveSchedule(
+        _ request: ScheduleSaveDTO,
+        operationID: UUID
+    ) async throws -> ScheduleSaveResponse {
+        savedScheduleOperationID = operationID
+        return try await saveSchedule(request)
     }
     func deleteSchedule(id: ScheduleID) async throws {
         deleteScheduleCount += 1
@@ -1944,4 +2155,96 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
             curDate: DateOnly(rawValue: String(format: "%04d-%02d-12", year, month)), totalDays: 1
         )
     }
+}
+
+private actor CalendarMonthRaceGate {
+    private var requested: Set<OfflineMonthKey> = []
+    private var requestWaiters: [OfflineMonthKey: [CheckedContinuation<Void, Never>]] = [:]
+    private var releaseWaiters: [OfflineMonthKey: [CheckedContinuation<Void, Never>]] = [:]
+
+    func wait(year: Int, month: Int) async {
+        let key = OfflineMonthKey(year: year, month: month)
+        requested.insert(key)
+        requestWaiters.removeValue(forKey: key)?.forEach { $0.resume() }
+        await withCheckedContinuation { continuation in
+            releaseWaiters[key, default: []].append(continuation)
+        }
+    }
+
+    func waitForRequest(_ key: OfflineMonthKey) async {
+        guard !requested.contains(key) else { return }
+        await withCheckedContinuation { continuation in
+            requestWaiters[key, default: []].append(continuation)
+        }
+    }
+
+    func release(_ key: OfflineMonthKey) {
+        releaseWaiters.removeValue(forKey: key)?.forEach { $0.resume() }
+    }
+}
+
+private actor CalendarMonthRaceOutboxStub: OfflineOutboxProviding {
+    func enqueueScheduleCreate(
+        accountID: MemberID,
+        request: ScheduleSaveDTO,
+        operationID: UUID,
+        now: Date
+    ) async throws -> OfflineOutboxEntry {
+        fatalError("Not used by the calendar month race test")
+    }
+
+    func enqueueScheduleCreate(
+        accountID: MemberID,
+        request: ScheduleSaveDTO,
+        operationID: UUID,
+        now: Date,
+        requiresPreflight: Bool
+    ) async throws -> OfflineOutboxEntry {
+        fatalError("Not used by the calendar month race test")
+    }
+
+    func enqueueTodoCreate(
+        accountID: MemberID,
+        request: TodoRequest,
+        operationID: UUID,
+        now: Date
+    ) async throws -> OfflineOutboxEntry {
+        fatalError("Not used by the calendar month race test")
+    }
+
+    func enqueueTodoCreate(
+        accountID: MemberID,
+        request: TodoRequest,
+        operationID: UUID,
+        now: Date,
+        requiresPreflight: Bool
+    ) async throws -> OfflineOutboxEntry {
+        fatalError("Not used by the calendar month race test")
+    }
+
+    func entries(accountID: MemberID) async -> [OfflineOutboxEntry] { [] }
+    func pendingEntries(accountID: MemberID, now: Date) async -> [OfflineOutboxEntry] { [] }
+
+    func recordRetry(
+        accountID: MemberID,
+        operationID: UUID,
+        error: OfflineOutboxFailure,
+        nextAttemptAt: Date?
+    ) async throws {}
+
+    func markPermanentFailure(
+        accountID: MemberID,
+        operationID: UUID,
+        error: OfflineOutboxFailure
+    ) async throws {}
+
+    func retryPermanentFailure(
+        accountID: MemberID,
+        operationID: UUID,
+        now: Date
+    ) async throws {}
+
+    func markSucceeded(accountID: MemberID, operationID: UUID) async throws {}
+    func markServerAttempted(accountID: MemberID, operationID: UUID) async throws {}
+    func purge(accountID: MemberID) async throws {}
 }

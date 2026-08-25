@@ -47,10 +47,16 @@ final class ReportViewModel: ObservableObject {
 
     let target: ReportTarget
     private let repository: any ReportRepository
+    private let hapticCenter: DPHapticCenter
 
-    init(target: ReportTarget, repository: any ReportRepository = ReportAPIRepository()) {
+    init(
+        target: ReportTarget,
+        repository: any ReportRepository = ReportAPIRepository(),
+        hapticCenter: DPHapticCenter = .shared
+    ) {
         self.target = target
         self.repository = repository
+        self.hapticCenter = hapticCenter
     }
 
     var targetLabel: String {
@@ -75,11 +81,30 @@ final class ReportViewModel: ObservableObject {
             && ReportSubmissionPolicy.canSubmit(reason: reason, detail: detail)
     }
 
+    /// Picker and toggle bindings call these methods so a repeated value assignment is
+    /// silent while every committed choice still gets one selection tick.
+    func selectReason(_ reason: ReportReason) {
+        guard self.reason != reason else { return }
+        self.reason = reason
+        hapticCenter.emit(.selection)
+    }
+
+    func setAlsoBlock(_ isEnabled: Bool) {
+        guard alsoBlock != isEnabled else { return }
+        alsoBlock = isEnabled
+        hapticCenter.emit(.selection)
+    }
+
     @discardableResult
     func submit() async -> Bool {
-        guard canSubmit else { return false }
+        guard !isSubmitting, !didSubmit else { return false }
+        guard ReportSubmissionPolicy.canSubmit(reason: reason, detail: detail) else {
+            hapticCenter.emit(.warning)
+            return false
+        }
         isSubmitting = true
         defer { isSubmitting = false }
+        errorMessage = nil
         let request = CreateReportRequest(
             targetType: target.type,
             targetId: target.targetID,
@@ -91,9 +116,11 @@ final class ReportViewModel: ObservableObject {
             try await repository.createReport(request)
             didSubmit = true
             didBlock = request.alsoBlock
+            hapticCenter.emit(.success)
             return true
         } catch {
             errorMessage = error.localizedDescription
+            hapticCenter.emit(.error)
             return false
         }
     }
@@ -107,9 +134,14 @@ final class MemberBlockViewModel: ObservableObject {
     @Published var errorMessage: String?
 
     private let repository: any ReportRepository
+    private let hapticCenter: DPHapticCenter
 
-    init(repository: any ReportRepository = ReportAPIRepository()) {
+    init(
+        repository: any ReportRepository = ReportAPIRepository(),
+        hapticCenter: DPHapticCenter = .shared
+    ) {
         self.repository = repository
+        self.hapticCenter = hapticCenter
     }
 
     @discardableResult
@@ -119,9 +151,11 @@ final class MemberBlockViewModel: ObservableObject {
         defer { isBlocking = false }
         do {
             try await repository.block(memberID: memberID)
+            hapticCenter.emit(.success)
             return true
         } catch {
             errorMessage = error.localizedDescription
+            hapticCenter.emit(.error)
             return false
         }
     }

@@ -23,14 +23,19 @@ enum TodoBoardLayout {
         containerWidth * mobileColumnWidthRatio
     }
 
-    /// Gives the first and last columns enough scroll content on both sides to
-    /// use the same centered snap position as the middle column.
-    static func centeredColumnInset(containerWidth: CGFloat, columnWidth: CGFloat) -> CGFloat {
-        max(boardPadding, (containerWidth - columnWidth) / 2)
-    }
-
-    static func adjacentColumnPeekWidth(containerWidth: CGFloat, columnWidth: CGFloat) -> CGFloat {
-        max(0, centeredColumnInset(containerWidth: containerWidth, columnWidth: columnWidth) - columnGap)
+    /// Mirrors the responsive web board: the edge columns snap to the viewport
+    /// edges while the middle column remains centered.
+    static func scrollAnchor(for status: TodoStatus) -> UnitPoint {
+        switch status {
+        case .todo:
+            .leading
+        case .inProgress:
+            .center
+        case .done:
+            .trailing
+        case .unknown:
+            .center
+        }
     }
 }
 
@@ -85,6 +90,8 @@ struct TodoCreateModal: View {
     @ObservedObject var model: TodoViewModel
     let initialStatus: TodoStatus
     let friends: [FriendDTO]
+    let accountID: MemberID?
+    let availability: SessionAvailability?
     let refreshBoardAfterCreate: Bool
     let onCreated: () async -> Void
     let onDismiss: () -> Void
@@ -114,6 +121,8 @@ struct TodoCreateModal: View {
             ) { draft in
                 let created = await model.create(
                     draft: draft,
+                    accountID: accountID,
+                    availability: availability,
                     refreshBoard: refreshBoardAfterCreate
                 )
                 if created { await onCreated() }
@@ -124,6 +133,7 @@ struct TodoCreateModal: View {
 }
 
 struct TodoView: View {
+    @EnvironmentObject private var session: SessionStore
     let initialTodoID: TodoID?
     let onTodoChanged: () async -> Void
     let onInitialTodoOpened: () -> Void
@@ -166,6 +176,9 @@ struct TodoView: View {
 
     var body: some View {
         VStack(spacing: 0) {
+            if model.isShowingCachedData || model.pendingOperationCount > 0 {
+                todoAvailabilityBanner
+            }
             statusSelector
                 .padding(.horizontal, TodoBoardLayout.boardPadding)
                 .padding(.bottom, DPSpacing.compact)
@@ -206,7 +219,7 @@ struct TodoView: View {
                 .accessibilityIdentifier("todo.help")
 
                 Button {
-                    withoutPresentationAnimation { showingCreate = true }
+                    presentCreate()
                 } label: {
                     Image(systemName: "plus")
                         .frame(minWidth: DPSize.minimumTouchTarget, minHeight: DPSize.minimumTouchTarget)
@@ -214,7 +227,7 @@ struct TodoView: View {
                 }
                 .accessibilityRepresentation {
                     Button {
-                        withoutPresentationAnimation { showingCreate = true }
+                        presentCreate()
                     } label: {
                         Color.clear
                             .frame(
@@ -230,9 +243,15 @@ struct TodoView: View {
         }
         .task(id: initialTodoID) {
             if model.board == nil {
-                await model.load()
+                await model.load(
+                    accountID: authenticatedAccountID,
+                    availability: session.availability
+                )
             } else {
-                await model.refresh()
+                await model.refresh(
+                    accountID: authenticatedAccountID,
+                    availability: session.availability
+                )
             }
             visibleStatus = model.selectedStatus
             openInitialTodoIfPresent()
@@ -242,11 +261,41 @@ struct TodoView: View {
                 model.selectedStatus = status
             }
         }
+        .onChange(of: session.availability) { _, availability in
+            Task {
+                if availability == .online || model.board == nil {
+                    await model.refresh(
+                        accountID: authenticatedAccountID,
+                        availability: availability
+                    )
+                } else {
+                    await model.load(
+                        accountID: authenticatedAccountID,
+                        availability: availability
+                    )
+                }
+            }
+        }
+        .onReceive(
+            NotificationCenter.default.publisher(
+                for: Notification.Name("offlineSyncDidComplete")
+            )
+        ) { notification in
+            guard offlineSyncAccountID(from: notification) == authenticatedAccountID else { return }
+            Task {
+                await model.handleOfflineSyncCompleted(accountID: authenticatedAccountID)
+            }
+        }
+        .onDisappear {
+            model.cancelRecovery()
+        }
         .fullScreenCover(isPresented: $showingCreate) {
             TodoCreateModal(
                 model: model,
                 initialStatus: model.selectedStatus,
                 friends: model.friends,
+                accountID: authenticatedAccountID,
+                availability: session.availability,
                 refreshBoardAfterCreate: true,
                 onCreated: onTodoChanged,
                 onDismiss: { showingCreate = false }
@@ -277,6 +326,47 @@ struct TodoView: View {
             }
         }
         .todoErrorAlert(model)
+    }
+
+    private var authenticatedAccountID: MemberID? {
+        guard case .authenticated(let member) = session.state else { return nil }
+        return member.id
+    }
+
+    private var todoAvailabilityBanner: some View {
+        HStack(spacing: DPSpacing.small) {
+            Image(systemName: model.isShowingCachedData ? "wifi.slash" : "arrow.triangle.2.circlepath")
+            VStack(alignment: .leading, spacing: 1) {
+                if model.isShowingCachedData {
+                    Text(todoLocalized("todo.offline.cached"))
+                }
+                if model.pendingOperationCount > 0 {
+                    Text(
+                        todoLocalized("todo.offline.pending")
+                            .replacingOccurrences(
+                                of: "%d",
+                                with: String(model.pendingOperationCount)
+                            )
+                    )
+                }
+            }
+            .font(.caption.weight(.semibold))
+            Spacer(minLength: 0)
+        }
+        .foregroundStyle(.orange)
+        .padding(.horizontal, TodoBoardLayout.boardPadding)
+        .padding(.vertical, 6)
+        .background(.orange.opacity(0.12))
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("todo.offline.status")
+    }
+
+    private func offlineSyncAccountID(from notification: Notification) -> MemberID? {
+        if let accountID = notification.object as? MemberID { return accountID }
+        if let accountID = notification.object as? NSNumber { return accountID.int64Value }
+        if let accountID = notification.userInfo?["accountID"] as? MemberID { return accountID }
+        if let accountID = notification.userInfo?["accountID"] as? NSNumber { return accountID.int64Value }
+        return nil
     }
 
     private func openInitialTodoIfPresent() {
@@ -517,7 +607,7 @@ struct TodoView: View {
         HStack(spacing: DPSpacing.small) {
             ForEach(TodoStatus.boardStatuses, id: \.rawValue) { status in
                 Button {
-                    model.selectedStatus = status
+                    selectStatus(status)
                 } label: {
                     HStack(spacing: 5) {
                         Image(systemName: status.systemImage)
@@ -566,6 +656,7 @@ struct TodoView: View {
                 }
                 .accessibilityLabel(Text(todoLocalized(status.titleKey)))
                 .accessibilityValue(Text("\(model.count(for: status))"))
+                .accessibilityIdentifier("todo.status.\(status.rawValue)")
             }
         }
         .padding(.top, DPSpacing.small)
@@ -581,15 +672,18 @@ struct TodoView: View {
             DPErrorState(
                 title: LocalizedStringKey(todoLocalized("todo.error.load")),
                 retryTitle: LocalizedStringKey(todoLocalized("common.retry")),
-                retryAction: { Task { await model.load() } }
+                retryAction: {
+                    Task {
+                        await model.load(
+                            accountID: authenticatedAccountID,
+                            availability: session.availability
+                        )
+                    }
+                }
             )
         } else {
             GeometryReader { proxy in
                 let columnWidth = TodoBoardLayout.mobileColumnWidth(in: proxy.size.width)
-                let centeredColumnInset = TodoBoardLayout.centeredColumnInset(
-                    containerWidth: proxy.size.width,
-                    columnWidth: columnWidth
-                )
                 ScrollViewReader { scrollProxy in
                     ScrollView(.horizontal) {
                         LazyHStack(alignment: .top, spacing: TodoBoardLayout.columnGap) {
@@ -605,11 +699,12 @@ struct TodoView: View {
                                     dragTargetTodoID: dragTargetTodoID,
                                     dragInsertAfter: dragInsertAfter,
                                     add: {
-                                        model.selectedStatus = status
+                                        selectStatus(status)
                                         withoutPresentationAnimation { showingCreate = true }
                                     },
-                                    select: { model.selectedStatus = status },
+                                    select: { selectStatus(status) },
                                     open: { todo in
+                                        model.emitHaptic(.routine)
                                         selectedTodo = todo
                                         withoutPresentationAnimation { showingDetail = true }
                                     },
@@ -656,24 +751,43 @@ struct TodoView: View {
                         .scrollTargetLayout()
                         .padding(.bottom, DPSpacing.small)
                     }
-                    .contentMargins(.horizontal, centeredColumnInset, for: .scrollContent)
+                    .contentMargins(.horizontal, TodoBoardLayout.boardPadding, for: .scrollContent)
                     .scrollIndicators(.hidden)
                     .scrollTargetBehavior(.viewAligned(limitBehavior: .always))
                     .scrollPosition(id: $visibleStatus, anchor: .center)
                     .scrollDisabled(draggedTodoID != nil)
-                    .refreshable { await model.refresh() }
+                    .refreshable {
+                        await model.refresh(
+                            accountID: authenticatedAccountID,
+                            availability: session.availability
+                        )
+                    }
                     .task(id: model.selectedStatus.rawValue) {
                         let status = model.selectedStatus
                         await Task.yield()
                         guard draggedTodoID == nil else { return }
                         withAnimation(.easeInOut(duration: 0.2)) {
                             visibleStatus = status
-                            scrollProxy.scrollTo(status, anchor: .center)
+                            scrollProxy.scrollTo(
+                                status,
+                                anchor: TodoBoardLayout.scrollAnchor(for: status)
+                            )
                         }
                     }
                 }
             }
         }
+    }
+
+    private func selectStatus(_ status: TodoStatus) {
+        guard model.selectedStatus != status else { return }
+        model.selectedStatus = status
+        model.emitHaptic(.selection)
+    }
+
+    private func presentCreate() {
+        model.emitHaptic(.routine)
+        withoutPresentationAnimation { showingCreate = true }
     }
 
     /// The drop target resolved from the current gesture sample, expressed as the
@@ -1616,7 +1730,10 @@ struct TodoFormSheet: View {
                 canDismiss: TodoConfirmationPolicy.canDismiss(
                     isConfirming: isDiscarding,
                     isSaving: isDiscardConfirmationSaving
-                )
+                ),
+                // The destructive confirmation button already acknowledges its
+                // press; avoid a second haptic as the panel closes.
+                dismissHaptic: nil
             ) { availableSize, confirmationDismiss in
                 DPConfirmationPanel(
                     title: todoLocalized("todo.confirm.discardTitle"),
@@ -1665,7 +1782,9 @@ struct TodoFormSheet: View {
                     HStack(spacing: DPSpacing.small) {
                         ForEach(TodoStatus.boardStatuses, id: \.rawValue) { status in
                             Button {
+                                guard draft.status != status else { return }
                                 draft.status = status
+                                model.emitHaptic(.selection)
                             } label: {
                                 VStack(spacing: 6) {
                                     Image(systemName: status.systemImage)
@@ -1736,6 +1855,9 @@ struct TodoFormSheet: View {
                 }
                 .tint(DPColor.accent)
                 .frame(minHeight: DPSize.minimumTouchTarget)
+                .onChange(of: draft.hasDueDate) { _, _ in
+                    model.emitHaptic(.selection)
+                }
                 if draft.hasDueDate {
                     DatePicker(
                         todoLocalized("todo.field.dueDate"),

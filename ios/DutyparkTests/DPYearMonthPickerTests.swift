@@ -28,6 +28,19 @@ struct DPYearMonthPickerTests {
     }
 
     @Test
+    func pickerUsesSelectionForLocalYearStepsAndLeavesCommittedMonthToItsConsumer() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark/Components/DPYearMonthPicker.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+
+        #expect(source.contains("DPHapticCenter.shared.emit(.selection)"))
+        #expect(source.contains("DPHapticCenter.shared.emit(.routine)"))
+        #expect(source.contains("onSelect(year, month)"))
+    }
+
+    @Test
     func teamAndGuestCalendarsShareTheSingleYearMonthPicker() throws {
         let features = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()

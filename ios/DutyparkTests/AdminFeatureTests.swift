@@ -585,6 +585,44 @@ struct AdminFeatureTests {
         #expect(await repository.teamLoadCount == 1)
     }
 
+    @Test("Admin mutations report validation, success, and API feedback at their result boundary")
+    @MainActor
+    func mutationHapticFeedback() async throws {
+        let haptics = DPHapticCenter()
+        let repository = AdminTeamMutationRepository(
+            teams: [],
+            createdTeam: Self.managedTeam(id: 7, name: "Created"),
+            failMutations: false
+        )
+        let model = AdminTeamListViewModel(repository: repository, haptics: haptics)
+
+        await model.checkName("A")
+        #expect(haptics.event?.kind == .warning)
+        let warningID = haptics.event?.id
+
+        _ = try await model.create(name: "Created", description: "Description")
+        #expect(haptics.event?.kind == .success)
+        #expect(haptics.event?.id != warningID)
+
+        let failingHaptics = DPHapticCenter()
+        let failingRepository = AdminTeamMutationRepository(
+            teams: [],
+            createdTeam: Self.managedTeam(id: 8, name: "Failed"),
+            failMutations: true
+        )
+        let failingModel = AdminTeamListViewModel(
+            repository: failingRepository,
+            haptics: failingHaptics
+        )
+
+        do {
+            _ = try await failingModel.create(name: "Failed", description: "Description")
+            Issue.record("The failing mutation should throw")
+        } catch {
+            #expect(failingHaptics.event?.kind == .error)
+        }
+    }
+
     @Test("Clearing a submitted team search restores the unfiltered first page") @MainActor
     func clearingTeamSearchRestoresFirstPage() async {
         let team = SimpleTeamDTO(
@@ -1172,14 +1210,16 @@ private actor AdminRepositorySpy: AdminRepositoryProtocol {
 private actor AdminTeamMutationRepository: AdminRepositoryProtocol {
     private let initialTeams: [SimpleTeamDTO]
     private let createdTeam: TeamDTO
+    private let failMutations: Bool
     private(set) var teamLoadCount = 0
     private(set) var teamKeywords: [String] = []
     private(set) var createdValues: [(String, String)] = []
     private(set) var deletedIDs: [TeamID] = []
 
-    init(teams: [SimpleTeamDTO], createdTeam: TeamDTO) {
+    init(teams: [SimpleTeamDTO], createdTeam: TeamDTO, failMutations: Bool = false) {
         initialTeams = teams
         self.createdTeam = createdTeam
+        self.failMutations = failMutations
     }
 
     func teams(keyword: String, page: Int, size: Int) async throws -> PageResponse<SimpleTeamDTO> {
@@ -1204,6 +1244,7 @@ private actor AdminTeamMutationRepository: AdminRepositoryProtocol {
     }
 
     func createTeam(name: String, description: String) async throws -> TeamDTO {
+        if failMutations { throw APIError.invalidResponse }
         createdValues.append((name, description))
         return TeamDTO(
             id: createdTeam.id,
@@ -1220,6 +1261,7 @@ private actor AdminTeamMutationRepository: AdminRepositoryProtocol {
     }
 
     func deleteTeam(id: TeamID) async throws {
+        if failMutations { throw APIError.invalidResponse }
         deletedIDs.append(id)
     }
 

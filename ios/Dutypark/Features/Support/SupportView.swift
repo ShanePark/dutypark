@@ -67,7 +67,13 @@ struct SupportView: View {
     }
 
     private var tabPicker: some View {
-        Picker("", selection: $model.selectedTab) {
+        Picker(
+            "",
+            selection: Binding(
+                get: { model.selectedTab },
+                set: { model.selectTab($0) }
+            )
+        ) {
             ForEach(SupportTab.allCases) { tab in
                 Text(verbatim: SupportLocalization.text(tab.titleKey))
                     .tag(tab)

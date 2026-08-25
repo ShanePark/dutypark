@@ -1,7 +1,6 @@
 import Foundation
 
-/// Version footer for the "more" tab. The build number is shown next to the marketing
-/// version so support requests can name the exact installed build.
+/// Version footer for the "more" tab. It shows the marketing version used for the release.
 nonisolated enum MoreAppVersion {
     static var displayText: String? {
         displayText(
@@ -12,21 +11,16 @@ nonisolated enum MoreAppVersion {
 
     static func displayText(
         shortVersion: String?,
-        build: String?,
+        build _: String?,
         locale: Locale? = nil
     ) -> String? {
         guard let version = nonempty(shortVersion) else { return nil }
-
-        var value = version
-        if let buildNumber = nonempty(build), buildNumber != version {
-            value += " (\(buildNumber))"
-        }
 
         let selectedLocale = locale ?? AppLocalization.locale
         return String(
             format: RootChromeLocalization.localizable("root.more.version", locale: selectedLocale),
             locale: selectedLocale,
-            arguments: [value]
+            arguments: [version]
         )
     }
 

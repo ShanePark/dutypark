@@ -20,6 +20,7 @@ final class GuestPublicCalendarViewModel: ObservableObject {
 
     private let memberID: MemberID
     private let api: GuestAPIProtocol
+    private let haptics: DPHapticCenter
     private var loadGeneration = 0
 
     @Published private(set) var member: MemberPreviewDTO?
@@ -34,10 +35,12 @@ final class GuestPublicCalendarViewModel: ObservableObject {
     init(
         memberID: MemberID,
         api: GuestAPIProtocol = GuestAPI(),
-        now: Date = Date()
+        now: Date = Date(),
+        haptics: DPHapticCenter = .shared
     ) {
         self.memberID = memberID
         self.api = api
+        self.haptics = haptics
         let parts = CalendarDateSupport.calendar.dateComponents([.year, .month], from: now)
         year = parts.year ?? 2026
         month = parts.month ?? 1
@@ -73,6 +76,8 @@ final class GuestPublicCalendarViewModel: ObservableObject {
     }
 
     func changeMonth(by offset: Int) async {
+        let previousYear = year
+        let previousMonth = month
         guard let date = CalendarDateSupport.calendar.date(
             from: DateComponents(year: year, month: month, day: 1)
         ), let changed = CalendarDateSupport.calendar.date(
@@ -85,21 +90,43 @@ final class GuestPublicCalendarViewModel: ObservableObject {
         let parts = CalendarDateSupport.calendar.dateComponents([.year, .month], from: changed)
         year = parts.year ?? year
         month = parts.month ?? month
+        if year != previousYear || month != previousMonth {
+            haptics.emit(.routine)
+        }
         await load()
+        if hasError {
+            haptics.emit(.error)
+        }
     }
 
     func selectYearMonth(year: Int, month: Int) async {
         guard (1...12).contains(month) else { return }
+        let didChange = self.year != year || self.month != month
         self.year = year
         self.month = month
+        if didChange {
+            haptics.emit(.routine)
+        }
         await load()
+        if hasError {
+            haptics.emit(.error)
+        }
     }
 
     func goToToday() async {
         let parts = CalendarDateSupport.calendar.dateComponents([.year, .month], from: Date())
-        year = parts.year ?? year
-        month = parts.month ?? month
+        let nextYear = parts.year ?? year
+        let nextMonth = parts.month ?? month
+        let didChange = year != nextYear || month != nextMonth
+        year = nextYear
+        month = nextMonth
+        if didChange {
+            haptics.emit(.routine)
+        }
         await load()
+        if hasError {
+            haptics.emit(.error)
+        }
     }
 
     private func loadMonth(year: Int, month: Int) async throws -> MonthSnapshot {

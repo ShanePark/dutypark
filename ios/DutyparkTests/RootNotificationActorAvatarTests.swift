@@ -22,14 +22,20 @@ struct RootNotificationActorAvatarTests {
     }
 
     @Test
-    func photoRequestIsAbsentWhenActorHasNoProfilePhoto() throws {
+    func photoRequestStillUsesActorIDWhenPhotoMetadataIsStale() throws {
         let notification = try notification(
             actorID: 42,
             hasProfilePhoto: false,
             profilePhotoVersion: 7
         )
 
-        #expect(NotificationDropdownActorPhotoRequest(notification: notification) == nil)
+        let request = try #require(NotificationDropdownActorPhotoRequest(notification: notification))
+
+        #expect(request.path == "members/42/profile-photo")
+        #expect(request.queryItems == [
+            URLQueryItem(name: "thumbnail", value: "true"),
+            URLQueryItem(name: "v", value: "7"),
+        ])
     }
 
     @Test

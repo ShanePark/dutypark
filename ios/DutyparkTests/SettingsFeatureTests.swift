@@ -168,6 +168,26 @@ struct SettingsFeatureTests {
     }
 
     @Test
+    func managedAccountSwitchKeepsTheConfirmationOpenOnFailure() throws {
+        let root = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let source = try String(
+            contentsOf: root.appending(path: "Dutypark/Features/Settings/MyInfoView.swift"),
+            encoding: .utf8
+        )
+        let switchCase = try #require(
+            source.range(of: "case .switchManagedAccount(let id, _):")
+        )
+        let switchSource = source[switchCase.lowerBound...]
+
+        #expect(switchSource.contains("try await session.impersonate(memberId: id)"))
+        #expect(switchSource.contains("DPHapticCenter.shared.emit(.error)"))
+        #expect(!switchSource.contains("model.noticeKey = \"settings.error.generic\""))
+        #expect(!switchSource.contains("try? await session.impersonate(memberId: id)"))
+    }
+
+    @Test
     func modalDismissPolicyKeepsBackdropAndAccessibilityRulesIndependent() {
         let explicitOnly = DPModalDismissPolicy(
             closeOnBackdrop: false,
@@ -357,15 +377,39 @@ struct SettingsFeatureTests {
         #expect(photo.titleKey == "settings.photo.delete")
         #expect(photo.message == SettingsLocalization.string("settings.photo.deleteConfirm"))
         #expect(
-            SettingsLocalization.string("settings.photo.deleteConfirm", locale: .korean)
-                .contains("프로필 사진")
+            SettingsLocalization.string("settings.photo.delete", locale: .korean)
+                == "기본 이미지로 변경"
         )
         #expect(
-            SettingsLocalization.string("settings.photo.deleteConfirm", locale: .english)
-                .contains("profile photo")
+            SettingsLocalization.string("settings.photo.delete", locale: .english)
+                == "Use default image"
         )
         #expect(photo.confirmTitleKey == "settings.photo.delete")
         #expect(photo.isDestructive)
+        #expect(
+            SettingsLocalization.string("settings.photo.deleteConfirm", locale: .korean)
+                == "프로필 사진을 기본 이미지로 변경하시겠습니까?"
+        )
+        #expect(
+            SettingsLocalization.string("settings.photo.deleteConfirm", locale: .english)
+                == "Change your profile photo to the default image?"
+        )
+        #expect(
+            SettingsLocalization.string("settings.photo.deleted", locale: .korean)
+                == "프로필 사진이 기본 이미지로 변경되었습니다."
+        )
+        #expect(
+            SettingsLocalization.string("settings.photo.deleted", locale: .english)
+                == "Your profile photo is now set to the default image."
+        )
+        #expect(
+            SettingsLocalization.string("settings.photo.deleteFailed", locale: .korean)
+                == "프로필 사진을 기본 이미지로 변경하지 못했습니다."
+        )
+        #expect(
+            SettingsLocalization.string("settings.photo.deleteFailed", locale: .english)
+                == "Failed to change your profile photo to the default image."
+        )
 
         let manager = SettingsConfirmation.removeManager(id: 7, name: "Alex")
         #expect(manager.message.contains("Alex"))
@@ -597,6 +641,8 @@ struct SettingsFeatureTests {
         await model.updateVisibility(.publicAccess)
         #expect(!(await model.uploadProfilePhoto(Data([0x01]))))
         #expect(!(await model.deleteProfilePhoto()))
+        #expect(model.noticeKey == "settings.photo.deleteFailed")
+        #expect(model.noticeIsError)
         await model.unassignManager(2)
         await model.createAuxiliaryAccount(name: "Not created")
         #expect(!(await model.revokeSession(id: 102)))

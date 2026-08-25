@@ -1,6 +1,8 @@
 package com.tistory.shanepark.dutypark.member.service
 
 import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
+import com.tistory.shanepark.dutypark.attachment.repository.AttachmentRepository
+import com.tistory.shanepark.dutypark.attachment.service.AttachmentService
 import com.tistory.shanepark.dutypark.attachment.service.AttachmentValidationService
 import com.tistory.shanepark.dutypark.attachment.service.ImageThumbnailGenerator
 import com.tistory.shanepark.dutypark.attachment.service.StoragePathResolver
@@ -18,6 +20,8 @@ import java.util.*
 @Transactional
 class ProfilePhotoService(
     private val memberRepository: MemberRepository,
+    private val attachmentRepository: AttachmentRepository,
+    private val attachmentService: AttachmentService,
     private val storagePathResolver: StoragePathResolver,
     private val validationService: AttachmentValidationService,
     private val thumbnailGenerator: ImageThumbnailGenerator,
@@ -32,10 +36,16 @@ class ProfilePhotoService(
     @Transactional(readOnly = true)
     fun getProfilePhotoPath(memberId: Long, thumbnail: Boolean = false): Path? {
         val member = memberRepository.findById(memberId).orElse(null) ?: return null
-        val photoPath = member.profilePhotoPath ?: return null
+        val photoPath = member.profilePhotoPath
+            ?: return legacyProfilePhotoPath(memberId, thumbnail)
 
         val targetPath = if (thumbnail) toThumbnailPath(photoPath) else photoPath
-        return storagePathResolver.getStorageRoot().resolve(targetPath)
+        val resolvedPath = storagePathResolver.getStorageRoot().resolve(targetPath)
+        if (!thumbnail || Files.exists(resolvedPath)) {
+            return resolvedPath
+        }
+
+        return legacyProfilePhotoPath(memberId, thumbnail, photoPath) ?: resolvedPath
     }
 
     fun setProfilePhoto(loginMember: LoginMember, file: MultipartFile) {
@@ -45,6 +55,7 @@ class ProfilePhotoService(
         val member = memberRepository.findById(loginMember.id).orElseThrow()
 
         deleteExistingPhotos(member.profilePhotoPath)
+        deleteLegacyProfilePhotos(member.id!!)
 
         val directory = storagePathResolver.resolvePermanentDirectory(
             AttachmentContextType.PROFILE,
@@ -73,6 +84,7 @@ class ProfilePhotoService(
         val member = memberRepository.findById(loginMember.id).orElseThrow()
 
         deleteExistingPhotos(member.profilePhotoPath)
+        deleteLegacyProfilePhotos(member.id!!)
         member.profilePhotoPath = null
         member.incrementProfilePhotoVersion()
 
@@ -84,6 +96,20 @@ class ProfilePhotoService(
 
         deleteFile(photoPath)
         deleteFile(toThumbnailPath(photoPath))
+    }
+
+    /**
+     * Profile attachments predate Member.profilePhotoPath. They must be removed
+     * together with the current path so an explicit replacement/deletion cannot
+     * expose the old file through the legacy read fallback.
+     */
+    private fun deleteLegacyProfilePhotos(memberId: Long) {
+        val legacyAttachments = attachmentRepository.findAllByContextTypeAndContextId(
+            AttachmentContextType.PROFILE,
+            memberId.toString(),
+        )
+
+        legacyAttachments.forEach(attachmentService::deleteAttachment)
     }
 
     private fun deleteFile(relativePath: String) {
@@ -103,6 +129,42 @@ class ProfilePhotoService(
             "${originalPath.substring(0, lastDotIndex)}${THUMBNAIL_SUFFIX}${originalPath.substring(lastDotIndex)}"
         } else {
             "${originalPath}${THUMBNAIL_SUFFIX}"
+        }
+    }
+
+    private fun legacyProfilePhotoPath(
+        memberId: Long,
+        thumbnail: Boolean,
+        expectedPhotoPath: String? = null,
+    ): Path? {
+        val attachment = attachmentRepository
+            .findAllByContextTypeAndContextIdOrderByOrderIndexAsc(
+                AttachmentContextType.PROFILE,
+                memberId.toString()
+            )
+            .firstOrNull()
+            ?: return null
+
+        val legacyPhotoPath = "PROFILE/$memberId/${attachment.storedFilename}"
+        if (expectedPhotoPath != null && expectedPhotoPath != legacyPhotoPath) {
+            return null
+        }
+
+        return if (thumbnail) {
+            val thumbnailFilename = attachment.thumbnailFilename ?: return null
+            storagePathResolver.resolveThumbnailPath(
+                contextType = AttachmentContextType.PROFILE,
+                contextId = memberId.toString(),
+                uploadSessionId = null,
+                thumbnailFilename = thumbnailFilename,
+            )
+        } else {
+            storagePathResolver.resolveFilePath(
+                contextType = AttachmentContextType.PROFILE,
+                contextId = memberId.toString(),
+                uploadSessionId = null,
+                storedFilename = attachment.storedFilename,
+            )
         }
     }
 

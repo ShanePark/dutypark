@@ -14,6 +14,9 @@ struct GuestGuideView: View {
             .pickerStyle(.segmented)
             .padding(.horizontal, DPSpacing.medium)
             .padding(.vertical, DPSpacing.small)
+            .onChange(of: section) { _, _ in
+                DPHapticCenter.shared.emit(.selection)
+            }
             .accessibilityIdentifier("guest.guide.sectionPicker")
 
             switch section {

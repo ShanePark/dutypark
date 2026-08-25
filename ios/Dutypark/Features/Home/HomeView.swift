@@ -178,7 +178,6 @@ struct HomeView: View {
                         HomeAvatar(
                             memberId: dashboard.member.id,
                             name: dashboard.member.name,
-                            hasProfilePhoto: dashboard.member.hasProfilePhoto,
                             profilePhotoVersion: dashboard.member.profilePhotoVersion,
                             size: 36
                         )
@@ -284,7 +283,10 @@ struct HomeView: View {
 
     private var friendsDashboardPanel: some View {
         VStack(spacing: 0) {
-            Button { onRoute(.friends) } label: {
+            Button {
+                DPHapticCenter.shared.emit(.routine)
+                onRoute(.friends)
+            } label: {
                 panelHeader(
                     title: Text("home.friends", tableName: "Home"),
                     systemImage: "person.2.fill",
@@ -749,9 +751,11 @@ struct HomeView: View {
 #endif
             do {
                 try await pinRepository.updatePinnedOrder(memberIDs)
+                DPHapticCenter.shared.emit(.success)
             } catch {
                 viewModel.replaceFriendsDashboardForMutation(previousDashboard)
                 showsPinnedOrderError = true
+                DPHapticCenter.shared.emit(.error)
             }
             withAnimation(.snappy(duration: 0.16, extraBounce: 0)) {
                 inlinePinnedOrder = nil
@@ -841,11 +845,16 @@ struct HomeView: View {
 
     private func openCalendar(for memberId: MemberID?) {
         guard let memberId else { return }
+        DPHapticCenter.shared.emit(.routine)
         onRoute(.memberCalendar(memberId))
     }
 
     private func requestTogglePin(_ friend: DashboardFriendDetailDTO) {
+        guard pinningMemberID == nil,
+              !isSavingPinnedOrder,
+              draggedPinnedFriendID == nil else { return }
         if friend.pinOrder == nil {
+            DPHapticCenter.shared.emit(.selection)
             Task { await togglePin(friend) }
         } else {
             pendingUnpinConfirmation = HomeUnpinConfirmation(friend: friend)
@@ -871,9 +880,14 @@ struct HomeView: View {
             } else {
                 try await pinRepository.unpin(memberID)
             }
+            // The endpoint is the mutation boundary. Refreshing the rail
+            // below is reconciliation and must not replace this success
+            // event with a second or misleading result.
+            DPHapticCenter.shared.emit(.success)
             await viewModel.retryFriendsDashboard()
         } catch {
             viewModel.replaceFriendsDashboardForMutation(previousDashboard)
+            DPHapticCenter.shared.emit(.error)
         }
     }
 
@@ -983,26 +997,12 @@ private struct HomeFriendCard: View {
     }
 
     private var portrait: some View {
-        Group {
-            if friend.member.hasProfilePhoto,
-               let url = homeProfilePhotoURL(
-                   memberId: friend.member.id,
-                   profilePhotoVersion: friend.member.profilePhotoVersion
-               ) {
-                AsyncImage(url: url) { phase in
-                    if case .success(let image) = phase {
-                        image.resizable().scaledToFill()
-                    } else {
-                        portraitFallback
-                    }
-                }
-            } else {
-                portraitFallback
-            }
-        }
-        .frame(width: portraitWidth, height: portraitHeight)
-        .background(DPColor.backgroundTertiary)
-        .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+        DPProfileAvatar(
+            memberID: friend.member.id,
+            profilePhotoVersion: friend.member.profilePhotoVersion,
+            size: CGSize(width: portraitWidth, height: portraitHeight),
+            shape: .roundedRectangle(cornerRadius: DPRadius.standard)
+        )
         .overlay {
             RoundedRectangle(cornerRadius: DPRadius.standard)
                 .stroke(DPColor.borderPrimary)
@@ -1018,16 +1018,6 @@ private struct HomeFriendCard: View {
                     .accessibilityLabel(Text("home.family", tableName: "Home"))
             }
         }
-    }
-
-    private var portraitFallback: some View {
-        DPColor.backgroundTertiary
-            .overlay {
-                Text(String(friend.member.name.prefix(1)))
-                    .font(DPFont.bold(size: 22, relativeTo: .title3))
-                    .foregroundStyle(DPColor.textSecondary)
-                    .accessibilityHidden(true)
-            }
     }
 
     /// The star sits on a card only 60–88pt wide, so the visible chip stays small
@@ -1130,55 +1120,18 @@ private struct DutyBadge: View {
 private struct HomeAvatar: View {
     let memberId: MemberID?
     let name: String
-    let hasProfilePhoto: Bool
     let profilePhotoVersion: Int64
     let size: CGFloat
 
     var body: some View {
-        Group {
-            if hasProfilePhoto, let url = photoURL {
-                AsyncImage(url: url) { phase in
-                    if case .success(let image) = phase {
-                        image.resizable().scaledToFill()
-                    } else {
-                        fallback
-                    }
-                }
-            } else {
-                fallback
-            }
-        }
-        .frame(width: size, height: size)
-        .background(DPColor.backgroundTertiary)
-        .clipShape(Circle())
+        DPProfileAvatar(
+            memberID: memberId,
+            profilePhotoVersion: profilePhotoVersion,
+            size: size
+        )
         .overlay { Circle().stroke(DPColor.borderPrimary, lineWidth: 2) }
         .accessibilityLabel(name)
     }
-
-    private var fallback: some View {
-        Image(systemName: "person")
-            .resizable()
-            .scaledToFit()
-            .padding(size * 0.25)
-            .foregroundStyle(DPColor.textMuted)
-    }
-
-    private var photoURL: URL? {
-        homeProfilePhotoURL(memberId: memberId, profilePhotoVersion: profilePhotoVersion)
-    }
-}
-
-private func homeProfilePhotoURL(memberId: MemberID?, profilePhotoVersion: Int64) -> URL? {
-    guard let memberId else { return nil }
-    var components = URLComponents(
-        url: AppConfiguration.apiBaseURL.appending(path: "members/\(memberId)/profile-photo"),
-        resolvingAgainstBaseURL: false
-    )
-    components?.queryItems = [
-        URLQueryItem(name: "thumbnail", value: "true"),
-        URLQueryItem(name: "v", value: String(profilePhotoVersion))
-    ]
-    return components?.url
 }
 
 private struct HomeHexColor {

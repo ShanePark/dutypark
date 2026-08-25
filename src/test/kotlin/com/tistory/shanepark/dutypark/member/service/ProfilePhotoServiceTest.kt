@@ -1,6 +1,10 @@
 package com.tistory.shanepark.dutypark.member.service
 
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
+import com.tistory.shanepark.dutypark.attachment.domain.entity.Attachment
+import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
+import com.tistory.shanepark.dutypark.attachment.domain.enums.ThumbnailStatus
+import com.tistory.shanepark.dutypark.attachment.repository.AttachmentRepository
 import com.tistory.shanepark.dutypark.attachment.service.StoragePathResolver
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import org.assertj.core.api.Assertions.assertThat
@@ -22,6 +26,9 @@ class ProfilePhotoServiceTest : DutyparkIntegrationTest() {
 
     @Autowired
     lateinit var storagePathResolver: StoragePathResolver
+
+    @Autowired
+    lateinit var attachmentRepository: AttachmentRepository
 
     private val createdDirectories = mutableListOf<Path>()
 
@@ -63,6 +70,115 @@ class ProfilePhotoServiceTest : DutyparkIntegrationTest() {
     }
 
     @Test
+    fun `getProfilePhotoPath uses the matching legacy thumbnail when the current thumbnail is missing`() {
+        val member = TestData.member
+        val storedFilename = "legacy-photo.jpg"
+        val thumbnailFilename = "thumb-legacy-photo.png"
+        val profileDir = storagePathResolver.getStorageRoot().resolve("PROFILE/${member.id}")
+        createdDirectories.add(profileDir)
+        Files.createDirectories(profileDir)
+        Files.writeString(profileDir.resolve(storedFilename), "legacy original")
+        Files.writeString(profileDir.resolve(thumbnailFilename), "legacy thumbnail")
+
+        member.profilePhotoPath = "PROFILE/${member.id}/$storedFilename"
+        memberRepository.save(member)
+
+        val attachment = Attachment(
+            contextType = AttachmentContextType.PROFILE,
+            contextId = member.id.toString(),
+            uploadSessionId = null,
+            originalFilename = "profile.jpg",
+            storedFilename = storedFilename,
+            contentType = "image/jpeg",
+            size = 16,
+            storagePath = profileDir.toString(),
+            createdBy = member.id!!,
+        ).also {
+            it.thumbnailFilename = thumbnailFilename
+            it.thumbnailContentType = "image/png"
+            it.thumbnailStatus = ThumbnailStatus.COMPLETED
+        }
+        attachmentRepository.save(attachment)
+        em.flush()
+        em.clear()
+
+        val result = profilePhotoService.getProfilePhotoPath(member.id!!, thumbnail = true)
+
+        assertThat(result).isEqualTo(profileDir.resolve(thumbnailFilename))
+    }
+
+    @Test
+    fun `getProfilePhotoPath uses legacy attachment paths when profile path is null`() {
+        val member = TestData.member
+        val storedFilename = "legacy-photo.jpg"
+        val thumbnailFilename = "thumb-legacy-photo.png"
+        val profileDir = storagePathResolver.getStorageRoot().resolve("PROFILE/${member.id}")
+        createdDirectories.add(profileDir)
+        Files.createDirectories(profileDir)
+        Files.writeString(profileDir.resolve(storedFilename), "legacy original")
+        Files.writeString(profileDir.resolve(thumbnailFilename), "legacy thumbnail")
+
+        member.profilePhotoPath = null
+        memberRepository.save(member)
+
+        val attachment = Attachment(
+            contextType = AttachmentContextType.PROFILE,
+            contextId = member.id.toString(),
+            uploadSessionId = null,
+            originalFilename = "profile.jpg",
+            storedFilename = storedFilename,
+            contentType = "image/jpeg",
+            size = 16,
+            storagePath = profileDir.toString(),
+            createdBy = member.id!!,
+        ).also {
+            it.thumbnailFilename = thumbnailFilename
+            it.thumbnailContentType = "image/png"
+            it.thumbnailStatus = ThumbnailStatus.COMPLETED
+        }
+        attachmentRepository.save(attachment)
+        em.flush()
+        em.clear()
+
+        assertThat(profilePhotoService.getProfilePhotoPath(member.id!!, thumbnail = false))
+            .isEqualTo(profileDir.resolve(storedFilename))
+        assertThat(profilePhotoService.getProfilePhotoPath(member.id!!, thumbnail = true))
+            .isEqualTo(profileDir.resolve(thumbnailFilename))
+    }
+
+    @Test
+    fun `getProfilePhotoPath does not substitute original for a legacy attachment without thumbnail`() {
+        val member = TestData.member
+        val storedFilename = "legacy-photo.jpg"
+        val profileDir = storagePathResolver.getStorageRoot().resolve("PROFILE/${member.id}")
+        createdDirectories.add(profileDir)
+        Files.createDirectories(profileDir)
+        Files.writeString(profileDir.resolve(storedFilename), "legacy original")
+
+        member.profilePhotoPath = null
+        memberRepository.save(member)
+        attachmentRepository.save(
+            Attachment(
+                contextType = AttachmentContextType.PROFILE,
+                contextId = member.id.toString(),
+                uploadSessionId = null,
+                originalFilename = "profile.jpg",
+                storedFilename = storedFilename,
+                contentType = "image/jpeg",
+                size = 16,
+                storagePath = profileDir.toString(),
+                createdBy = member.id!!,
+            )
+        )
+        em.flush()
+        em.clear()
+
+        assertThat(profilePhotoService.getProfilePhotoPath(member.id!!, thumbnail = false))
+            .isEqualTo(profileDir.resolve(storedFilename))
+        assertThat(profilePhotoService.getProfilePhotoPath(member.id!!, thumbnail = true)).isNull()
+    }
+
+    @Test
     fun `getProfilePhotoPath returns null when no profile photo exists`() {
         val member = TestData.member
         member.profilePhotoPath = null
@@ -71,6 +187,58 @@ class ProfilePhotoServiceTest : DutyparkIntegrationTest() {
         val result = profilePhotoService.getProfilePhotoPath(member.id!!)
 
         assertThat(result).isNull()
+    }
+
+    @Test
+    fun `deleteProfilePhoto removes legacy attachment and prevents it from being served`() {
+        val member = TestData.member
+        val storedFilename = "legacy-photo.jpg"
+        val thumbnailFilename = "thumb-legacy-photo.png"
+        val profileDir = storagePathResolver.getStorageRoot().resolve("PROFILE/${member.id}")
+        createdDirectories.add(profileDir)
+        Files.createDirectories(profileDir)
+        val originalPath = profileDir.resolve(storedFilename)
+        val thumbnailPath = profileDir.resolve(thumbnailFilename)
+        Files.writeString(originalPath, "legacy original")
+        Files.writeString(thumbnailPath, "legacy thumbnail")
+
+        member.profilePhotoPath = null
+        memberRepository.save(member)
+        val attachment = Attachment(
+            contextType = AttachmentContextType.PROFILE,
+            contextId = member.id.toString(),
+            uploadSessionId = null,
+            originalFilename = "profile.jpg",
+            storedFilename = storedFilename,
+            contentType = "image/jpeg",
+            size = 16,
+            storagePath = profileDir.toString(),
+            createdBy = member.id!!,
+        ).also {
+            it.thumbnailFilename = thumbnailFilename
+            it.thumbnailContentType = "image/png"
+            it.thumbnailStatus = ThumbnailStatus.COMPLETED
+        }
+        attachmentRepository.save(attachment)
+        em.flush()
+        em.clear()
+
+        val loginMember = loginMember(member)
+
+        profilePhotoService.deleteProfilePhoto(loginMember)
+        em.flush()
+        em.clear()
+
+        assertThat(
+            attachmentRepository.findAllByContextTypeAndContextId(
+                AttachmentContextType.PROFILE,
+                member.id.toString(),
+            )
+        ).isEmpty()
+        assertThat(Files.exists(originalPath)).isFalse()
+        assertThat(Files.exists(thumbnailPath)).isFalse()
+        assertThat(profilePhotoService.getProfilePhotoPath(member.id!!)).isNull()
+        assertThat(profilePhotoService.getProfilePhotoPath(member.id!!, thumbnail = true)).isNull()
     }
 
     @Test

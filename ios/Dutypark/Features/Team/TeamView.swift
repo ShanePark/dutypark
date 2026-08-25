@@ -26,7 +26,7 @@ struct TeamView: View {
                     message: nil,
                     retryTitle: LocalizedStringKey(teamLocalized("team.common.retry"))
                 ) {
-                    Task { await viewModel.load(memberID: memberID) }
+                    Task { await viewModel.load(memberID: memberID, emitErrorFeedback: true) }
                 }
             } else if let team = viewModel.team {
                 teamContent(team)
@@ -53,7 +53,9 @@ struct TeamView: View {
             }
         }
         .task { await viewModel.loadIfNeeded(memberID: memberID) }
-        .refreshable { await viewModel.load(memberID: memberID) }
+        .refreshable {
+            await viewModel.load(memberID: memberID, emitErrorFeedback: true)
+        }
         .alert(
             Text("team.common.error", tableName: "Team"),
             isPresented: $viewModel.showsError
@@ -69,7 +71,9 @@ struct TeamView: View {
             )
         ) {
             if let draft = viewModel.scheduleDraft {
-                DPModalOverlay(onDismiss: { viewModel.scheduleDraft = nil }) { availableSize, dismiss in
+                DPModalOverlay(
+                    onDismiss: { viewModel.scheduleDraft = nil }
+                ) { availableSize, dismiss in
                     TeamScheduleEditor(
                         viewModel: viewModel,
                         draft: draft,
@@ -121,7 +125,8 @@ struct TeamView: View {
                     },
                     canDismiss: TeamScheduleDeleteConfirmationPolicy.canDismiss(
                         isDeleting: scheduleDeletionIsWorking
-                    )
+                    ),
+                    dismissHaptic: nil
                 ) { availableSize, dismiss in
                     DPConfirmationPanel(
                         title: teamLocalized("team.view.actions.deleteSchedule"),
@@ -231,6 +236,11 @@ struct TeamView: View {
                 .frame(width: 36, height: DPSize.minimumTouchTarget)
         }
         .buttonStyle(.plain)
+        .simultaneousGesture(
+            TapGesture().onEnded {
+                DPHapticCenter.shared.emit(.routine)
+            }
+        )
         .accessibilityLabel(Text("team.view.actions.manage", tableName: "Team"))
     }
 
@@ -360,6 +370,7 @@ struct TeamView: View {
                 }
                 if viewModel.isTeamManager {
                     Button {
+                        guard viewModel.selectedDay != nil else { return }
                         viewModel.newSchedule()
                     } label: {
                         Label {
@@ -485,7 +496,10 @@ struct TeamView: View {
                         ForEach(Array(shift.members.enumerated()), id: \.offset) { _, member in
                             Group {
                                 if let id = member.id {
-                                    Button { onOpenCalendar(id) } label: { memberCard(member) }
+                                    Button {
+                                        DPHapticCenter.shared.emit(.routine)
+                                        onOpenCalendar(id)
+                                    } label: { memberCard(member) }
                                         .buttonStyle(.plain)
                                 } else {
                                     memberCard(member)
@@ -534,39 +548,12 @@ private struct TeamMemberAvatar: View {
     let size: CGFloat
 
     var body: some View {
-        Group {
-            if member.hasProfilePhoto, let memberID = member.id {
-                AsyncImage(url: profileURL(memberID)) { image in
-                    image.resizable().scaledToFill()
-                } placeholder: {
-                    fallback
-                }
-            } else {
-                fallback
-            }
-        }
-        .frame(width: size, height: size)
-        .clipShape(Circle())
+        DPProfileAvatar(
+            memberID: member.id,
+            profilePhotoVersion: member.profilePhotoVersion,
+            size: size
+        )
         .accessibilityHidden(true)
-    }
-
-    private var fallback: some View {
-        Circle()
-            .fill(DPColor.backgroundCard)
-            .overlay {
-                Text(verbatim: String(member.name.prefix(1)).uppercased())
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(DPColor.textSecondary)
-            }
-    }
-
-    private func profileURL(_ memberID: MemberID) -> URL {
-        AppConfiguration.apiBaseURL
-            .appending(path: "members/\(memberID)/profile-photo")
-            .appending(queryItems: [
-                URLQueryItem(name: "thumbnail", value: "true"),
-                URLQueryItem(name: "v", value: String(member.profilePhotoVersion))
-            ])
     }
 }
 
@@ -739,6 +726,11 @@ private struct TeamScheduleEditor: View {
                     Text("team.view.schedule.form.startDate", tableName: "Team")
                 }
                 .frame(minHeight: DPSize.minimumTouchTarget)
+                .onChange(of: draft.startDate) { oldValue, newValue in
+                    if oldValue != newValue {
+                        DPHapticCenter.shared.emit(.selection)
+                    }
+                }
                 DatePicker(
                     selection: $draft.endDate,
                     in: draft.startDate...,
@@ -747,6 +739,11 @@ private struct TeamScheduleEditor: View {
                     Text("team.view.schedule.form.endDate", tableName: "Team")
                 }
                 .frame(minHeight: DPSize.minimumTouchTarget)
+                .onChange(of: draft.endDate) { oldValue, newValue in
+                    if oldValue != newValue {
+                        DPHapticCenter.shared.emit(.selection)
+                    }
+                }
             }
         }
         .padding(DPSpacing.medium)

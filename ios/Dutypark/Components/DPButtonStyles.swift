@@ -11,15 +11,16 @@ nonisolated enum DPButtonRole {
 
 /// Press-feedback rules factored out of the button styles so they stay testable.
 ///
-/// Every value here is built with `impact(flexibility:intensity:)` rather than
+/// Routine values use `impact(flexibility:intensity:)` rather than
 /// `impact(weight:)`: the `weight` form collapses `.light`, `.medium` and
 /// `.heavy` to one and the same light tap on the current SDK, so a `weight`
-/// based value can neither *feel* nor *compare* as heavier. The
-/// `flexibility`/`intensity` form carries both of its fields faithfully.
+/// based value cannot express a distinct routine impact. Destructive intent
+/// uses the system warning feedback instead of an impact.
 nonisolated enum DPButtonFeedback {
-    /// Destructive taps are irreversible, so they get a firm, full-intensity
-    /// thud instead of the routine roles' soft tick.
-    static let destructiveImpact = SensoryFeedback.impact(flexibility: .solid, intensity: 1)
+    /// Destructive intent is called out with the system warning feedback rather
+    /// than another impact. This keeps a delete/logout press distinct from a
+    /// routine button tap without making it feel like a completed operation.
+    static let destructiveWarning = SensoryFeedback.warning
 
     /// One shared tick for every reversible tap, so routine buttons stay
     /// consistent with each other.
@@ -28,7 +29,7 @@ nonisolated enum DPButtonFeedback {
     static func feedback(for role: DPButtonRole) -> SensoryFeedback {
         switch role {
         case .destructive:
-            return destructiveImpact
+            return destructiveWarning
         case .primary, .success, .secondary, .outline:
             return routineImpact
         }

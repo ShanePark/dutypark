@@ -1,12 +1,18 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { X, ZoomIn, ZoomOut, Upload, ImagePlus, Trash2 } from 'lucide-vue-next'
+import { X, ZoomIn, ZoomOut, Upload, ImagePlus, RotateCcw } from 'lucide-vue-next'
 import { Cropper, CircleStencil } from 'vue-advanced-cropper'
 import 'vue-advanced-cropper/dist/style.css'
 import { attachmentValidation, validateFile } from '@/api/attachment'
 import BaseModal from '@/components/common/BaseModal.vue'
 import { useSwal } from '@/composables/useSwal'
+import {
+  createCropSnapshot,
+  hasCropChanged,
+  type CropResultLike,
+  type CropSnapshot,
+} from './imageCropModalState'
 
 interface Props {
   isOpen: boolean
@@ -35,6 +41,9 @@ const fileName = ref<string>('profile.png')
 const zoom = ref(1)
 const isProcessing = ref(false)
 const isDragging = ref(false)
+const hasCropChanges = ref(false)
+const isCropperReady = ref(false)
+const initialCropSnapshot = ref<CropSnapshot | null>(null)
 
 const minZoom = 1
 const maxZoom = 3
@@ -42,6 +51,12 @@ const zoomStep = 0.1
 
 const hasImage = computed(() => !!imageSource.value)
 const isEditingExistingPhoto = ref(false)
+const hasChanges = computed(() => {
+  if (!hasImage.value) return false
+  if (!isEditingExistingPhoto.value) return true
+
+  return hasCropChanges.value || Math.abs(zoom.value - minZoom) > 0.0001
+})
 
 watch(
   () => props.isOpen,
@@ -49,12 +64,18 @@ watch(
     if (open) {
       zoom.value = 1
       isProcessing.value = false
+      hasCropChanges.value = false
+      isCropperReady.value = false
+      initialCropSnapshot.value = null
       imageSource.value = props.initialImageSource || null
       isEditingExistingPhoto.value = !!props.initialImageSource
     } else {
       imageSource.value = null
       fileName.value = 'profile.png'
       isEditingExistingPhoto.value = false
+      hasCropChanges.value = false
+      isCropperReady.value = false
+      initialCropSnapshot.value = null
     }
   }
 )
@@ -85,9 +106,11 @@ function processFile(file: File) {
   }
 
   fileName.value = file.name
-  isEditingExistingPhoto.value = false
   const reader = new FileReader()
   reader.onload = (e) => {
+    isEditingExistingPhoto.value = false
+    isCropperReady.value = false
+    initialCropSnapshot.value = null
     imageSource.value = e.target?.result as string
     zoom.value = 1
   }
@@ -120,6 +143,7 @@ function handleZoomIn() {
   if (zoom.value < maxZoom) {
     zoom.value = Math.min(maxZoom, zoom.value + zoomStep)
     cropperRef.value?.zoom(1 + zoomStep)
+    updateCropChangeState()
   }
 }
 
@@ -127,6 +151,7 @@ function handleZoomOut() {
   if (zoom.value > minZoom) {
     zoom.value = Math.max(minZoom, zoom.value - zoomStep)
     cropperRef.value?.zoom(1 - zoomStep)
+    updateCropChangeState()
   }
 }
 
@@ -134,13 +159,40 @@ function handleZoomChange(event: Event) {
   const target = event.target as HTMLInputElement
   const newZoom = parseFloat(target.value)
   const currentZoom = zoom.value
+  if (newZoom === currentZoom) return
+
   const ratio = newZoom / currentZoom
   zoom.value = newZoom
   cropperRef.value?.zoom(ratio)
+  updateCropChangeState()
+}
+
+function updateCropChangeState(result?: CropResultLike) {
+  if (!isCropperReady.value || !isEditingExistingPhoto.value) return
+
+  const currentResult = result || (cropperRef.value?.getResult() as CropResultLike | undefined)
+  if (!currentResult) return
+
+  hasCropChanges.value = hasCropChanged(initialCropSnapshot.value, currentResult)
+}
+
+function onCropperReady() {
+  const result = cropperRef.value?.getResult() as CropResultLike | undefined
+  if (!result) return
+
+  isCropperReady.value = true
+  if (isEditingExistingPhoto.value && !initialCropSnapshot.value) {
+    initialCropSnapshot.value = createCropSnapshot(result)
+    hasCropChanges.value = false
+  }
+}
+
+function onCropperChange(result: CropResultLike) {
+  updateCropChangeState(result)
 }
 
 function handleConfirm() {
-  if (isProcessing.value || !hasImage.value) return
+  if (isProcessing.value || !hasImage.value || !hasChanges.value) return
 
   const result = cropperRef.value?.getResult()
   if (!result?.canvas) {
@@ -255,6 +307,8 @@ function maxSizeDefault({ imageSize }: { imageSize: { width: number; height: num
                 }"
                 :default-size="isEditingExistingPhoto ? maxSizeDefault : undefined"
                 class="cropper"
+                @ready="onCropperReady"
+                @change="onCropperChange"
               />
               <Transition name="fade">
                 <div v-if="isDragging" class="drag-overlay">
@@ -321,17 +375,17 @@ function maxSizeDefault({ imageSize }: { imageSize: { width: number; height: num
             v-if="hasExistingPhoto"
             type="button"
             @click="handleDelete"
-            class="btn-delete"
+            class="btn-default-image"
             :disabled="isProcessing"
           >
-            <Trash2 class="w-4 h-4" />
-            {{ t('common.actions.delete') }}
+            <RotateCcw class="w-4 h-4" />
+            {{ t('profilePhoto.useDefault') }}
           </button>
           <button
             type="button"
             @click="handleConfirm"
             class="btn-confirm"
-            :disabled="isProcessing || !hasImage"
+            :disabled="isProcessing || !hasImage || !hasChanges"
           >
             {{ isProcessing ? t('imageCropModal.saving') : t('common.actions.save') }}
           </button>
@@ -560,7 +614,7 @@ function maxSizeDefault({ imageSize }: { imageSize: { width: number; height: num
 }
 
 .btn-cancel,
-.btn-delete,
+.btn-default-image,
 .btn-confirm {
   min-width: 80px;
   min-height: 44px;
@@ -582,17 +636,18 @@ function maxSizeDefault({ imageSize }: { imageSize: { width: number; height: num
   background-color: var(--dp-bg-hover);
 }
 
-.btn-delete {
+.btn-default-image {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 0.375rem;
-  background-color: var(--dp-danger-bg);
-  color: var(--dp-danger-hover);
+  background-color: var(--dp-bg-tertiary);
+  color: var(--dp-text-secondary);
 }
 
-.btn-delete:hover:not(:disabled) {
-  background-color: var(--dp-danger-border);
+.btn-default-image:hover:not(:disabled) {
+  background-color: var(--dp-bg-hover);
+  color: var(--dp-text-primary);
 }
 
 .btn-confirm {
@@ -605,7 +660,7 @@ function maxSizeDefault({ imageSize }: { imageSize: { width: number; height: num
 }
 
 .btn-cancel:disabled,
-.btn-delete:disabled,
+.btn-default-image:disabled,
 .btn-confirm:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -614,7 +669,7 @@ function maxSizeDefault({ imageSize }: { imageSize: { width: number; height: num
 /* Match the shared modal footer sizing: full-width actions below the sm breakpoint. */
 @media (max-width: 639px) {
   .btn-cancel,
-  .btn-delete,
+  .btn-default-image,
   .btn-confirm {
     flex: 1 1 0;
     min-width: 0;

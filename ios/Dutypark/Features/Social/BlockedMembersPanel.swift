@@ -70,6 +70,7 @@ struct BlockedMembersPanel: View {
             .frame(maxWidth: .infinity, alignment: .leading)
 
             Button(social("social.action.unblock")) {
+                DPHapticCenter.shared.emit(.selection)
                 unblock(member)
             }
             .font(DPFont.light(size: 14, relativeTo: .subheadline))

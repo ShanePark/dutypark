@@ -70,6 +70,24 @@ nonisolated struct TodoRequest: Codable, Equatable, Sendable {
     let tagFriendIds: [MemberID]?
     let attachmentSessionId: UUID?
     let orderedAttachmentIds: [AttachmentID]
+
+    init(
+        title: String,
+        content: String,
+        status: TodoStatus?,
+        dueDate: DateOnly?,
+        tagFriendIds: [MemberID]?,
+        attachmentSessionId: UUID?,
+        orderedAttachmentIds: [AttachmentID]
+    ) {
+        self.title = title
+        self.content = content
+        self.status = status
+        self.dueDate = dueDate
+        self.tagFriendIds = tagFriendIds
+        self.attachmentSessionId = attachmentSessionId
+        self.orderedAttachmentIds = orderedAttachmentIds
+    }
 }
 
 nonisolated struct TodoStatusChangeRequest: Codable, Equatable, Sendable {

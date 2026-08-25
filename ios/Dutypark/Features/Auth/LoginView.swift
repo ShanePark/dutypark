@@ -85,6 +85,7 @@ struct LoginView: View {
 
                             Button {
                                 rememberEmail.toggle()
+                                DPHapticCenter.shared.emit(.selection)
                             } label: {
                                 HStack(spacing: 8) {
                                     Image(systemName: rememberEmail ? "checkmark.square.fill" : "square")
@@ -244,6 +245,7 @@ struct LoginView: View {
                     .shadow(color: .black.opacity(0.06), radius: 3, y: 1)
 
                     Button {
+                        DPHapticCenter.shared.emit(.routine)
                         dismiss()
                     } label: {
                         Text("auth.login.backHome")
@@ -367,6 +369,7 @@ struct LoginView: View {
                 return
             } catch {
                 oauthErrorMessage = OAuthLoginErrorMessage.text(for: error)
+                DPHapticCenter.shared.emit(.error)
             }
         }
     }
@@ -380,6 +383,7 @@ struct LoginView: View {
         } catch {
             appleSignInAttempt = nil
             oauthErrorMessage = OAuthLoginErrorMessage.text(for: error)
+            DPHapticCenter.shared.emit(.error)
         }
     }
 
@@ -389,6 +393,7 @@ struct LoginView: View {
             oauthErrorMessage = OAuthLoginErrorMessage.text(
                 for: AppleSignInError.invalidCredential
             )
+            DPHapticCenter.shared.emit(.error)
             return
         }
         Task {
@@ -407,6 +412,7 @@ struct LoginView: View {
                 return
             } catch {
                 oauthErrorMessage = OAuthLoginErrorMessage.text(for: error)
+                DPHapticCenter.shared.emit(.error)
             }
         }
     }

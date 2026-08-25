@@ -61,7 +61,7 @@ struct GuestPublicCalendarView: View {
                         .foregroundStyle(DPColor.textSecondary)
                         .multilineTextAlignment(.center)
                     Button(GuestLocalization.text("guest.retry")) {
-                        Task { await model.load() }
+                        Task { await retryLoad() }
                     }
                     .buttonStyle(DPPrimaryButtonStyle())
                 }
@@ -100,10 +100,13 @@ struct GuestPublicCalendarView: View {
                 }
                 .accessibilityLabel(GuestLocalization.text("guest.calendar.more"))
                 .accessibilityIdentifier("guest.calendar.menu")
+                .simultaneousGesture(TapGesture().onEnded {
+                    DPHapticCenter.shared.emit(.selection)
+                })
             }
         }
         .task { if model.days.isEmpty { await model.load() } }
-        .refreshable { await model.load() }
+        .refreshable { await retryLoad() }
         .sheet(isPresented: $showsMonthPicker) {
             DPYearMonthPicker(
                 selectedYear: model.year,
@@ -158,7 +161,12 @@ struct GuestPublicCalendarView: View {
                 DPModalOverlay(
                     maximumContentWidth: DPConfirmationPanel.maximumWidth,
                     onDismiss: { showsReportLoginPrompt = false },
-                    isHostedInline: true
+                    isHostedInline: true,
+                    onDismissRequest: { _ in
+                        showsReportLoginPrompt = false
+                        DPHapticCenter.shared.emit(.routine)
+                    },
+                    dismissHaptic: nil
                 ) { availableSize, dismissPrompt in
                     GuestReportLoginPrompt(
                         maximumHeight: availableSize.height,
@@ -170,6 +178,13 @@ struct GuestPublicCalendarView: View {
                     )
                 }
             }
+        }
+    }
+
+    private func retryLoad() async {
+        await model.load()
+        if model.hasError {
+            DPHapticCenter.shared.emit(.error)
         }
     }
 
@@ -211,6 +226,7 @@ struct GuestPublicCalendarView: View {
             }
             Spacer()
             Button {
+                DPHapticCenter.shared.emit(.selection)
                 showsMonthPicker = true
             } label: {
                 HStack(spacing: DPSpacing.extraSmall) {
@@ -282,6 +298,7 @@ struct GuestPublicCalendarView: View {
             ForEach(Array(model.days.enumerated()), id: \.element.id) { index, day in
                 GuestCalendarDayCell(day: day, weekday: index % 7)
                     .onTapGesture {
+                        DPHapticCenter.shared.emit(.routine)
                         withoutPresentationAnimation { model.selectedDay = day }
                     }
             }
@@ -592,7 +609,9 @@ private struct GuestCalendarDayDetailView: View {
 
             Spacer()
 
-            Button(action: dismiss) {
+            Button {
+                dismiss()
+            } label: {
                 Image(systemName: "xmark")
                     .font(.system(size: 17, weight: .semibold))
                     .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)

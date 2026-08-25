@@ -35,6 +35,24 @@ xcodebuild \
   test
 ```
 
+### TestFlight Upload
+
+After logging into the Apple Developer account in Xcode (`Xcode > Settings > Accounts`), run the local release script from the repository root:
+
+```sh
+./ios/scripts/upload-testflight.sh
+```
+
+The script reads the app marketing version from the Xcode project, generates a `YYYYMMDD` build number, creates a Release archive, exports it with App Store distribution signing, and uploads it to App Store Connect. Release-note metadata keeps its separate `YYYY.MM.DD` changelog version format. Artifacts are written under `ios/build/testflight/`, which is ignored by Git.
+
+For a command preview without archiving or uploading:
+
+```sh
+DRY_RUN=1 ./ios/scripts/upload-testflight.sh
+```
+
+Set `BUILD_NUMBER` to override the generated build number, for example `BUILD_NUMBER=20260822.1` for another upload on the same day. Set `MARKETING_VERSION` to override the Xcode project's marketing version for a one-off build. App Store Connect processing continues after the upload command succeeds.
+
 ### UI Tests (Explicit Request Only)
 
 Do not run `DutyparkUITests` during default verification, even when an iOS UI change affects an existing UI test. Run a specific UI test or the full UI test target only when the user explicitly requests it.
@@ -83,4 +101,4 @@ The Xcode project uses filesystem-synchronized groups. In most cases, adding fil
 
 The individual Apple Developer Program membership was approved on 2026-08-14. The Team ID is `2V47G42CDS`, and the bundle identifier in the Xcode project is set to the registered Explicit App ID `io.github.shanepark.dutypark`. The Sign in with Apple, Push Notifications, and Associated Domains capabilities are enabled.
 
-After switching the Xcode Development Team and Bundle ID, a generic iOS Release build with development signing succeeded. The provisioning profile's application identifier, Sign in with Apple `Default` entitlement, and Associated Domains entitlement were verified. Creating an App Store distribution-signed archive, running Validate App, and completing TestFlight verification remain outstanding. When releasing under an individual membership, the account holder's legal name may appear as the App Store seller name.
+After switching the Xcode Development Team and Bundle ID, a generic iOS Release build with development signing succeeded. A distribution export and App Store Connect upload were verified on 2026-08-22 using the local Xcode account. When releasing under an individual membership, the account holder's legal name may appear as the App Store seller name.

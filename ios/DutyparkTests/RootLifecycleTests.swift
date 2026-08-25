@@ -40,6 +40,28 @@ struct RootLifecycleTests {
     }
 
     @Test
+    func authenticationTransitionFailuresUseASeparateGlobalAlert() throws {
+        let iosDirectory = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let rootSource = try String(
+            contentsOf: iosDirectory.appending(path: "Dutypark/Features/Auth/AppRootView.swift"),
+            encoding: .utf8
+        )
+        let sessionSource = try String(
+            contentsOf: iosDirectory.appending(path: "Dutypark/Core/Auth/SessionStore.swift"),
+            encoding: .utf8
+        )
+
+        #expect(rootSource.contains("authenticationTransitionFailure"))
+        #expect(rootSource.contains("auth.transition.failure.title"))
+        #expect(rootSource.contains("auth.transition.failure.message"))
+        #expect(rootSource.contains("dismissAuthenticationTransitionFailure()"))
+        #expect(sessionSource.contains("case impersonationFailed"))
+        #expect(sessionSource.contains("authenticationTransitionFailure = .impersonationFailed"))
+    }
+
+    @Test
     func automaticHomeRefreshCoalescesImmediateSceneAndTabTriggers() {
         var policy = RootHomeRefreshPolicy()
         let now = Date(timeIntervalSince1970: 1_000)
@@ -160,6 +182,82 @@ struct RootLifecycleTests {
             "push",
             "pending-push"
         ])
+    }
+
+    @Test
+    func offlineStartupSkipsNotificationAndPushNetworkWork() async {
+        var events: [String] = []
+
+        await RootAuthenticatedStartupAction.perform(
+            isOffline: true,
+            startPolling: { events.append("polling") },
+            refreshNotifications: { events.append("refresh") },
+            activatePush: { events.append("activate-push") },
+            consumePendingPush: { events.append("push") },
+            consumePendingDestination: { events.append("destination") }
+        )
+
+        #expect(events.isEmpty)
+    }
+
+    @Test
+    func offlineSceneDoesNotSetNotificationForegroundOrRunNetworkWork() async {
+        var events: [String] = []
+
+        await RootSceneLifecycleAction.perform(
+            isActive: true,
+            isNetworkAvailable: false,
+            setNotificationForeground: { events.append("foreground-\($0)") },
+            refreshHome: { events.append("home") },
+            refreshConsent: { events.append("consent") },
+            resumePush: { events.append("push") },
+            consumePendingPush: { events.append("pending-push") }
+        )
+
+        #expect(events == ["foreground-false"])
+    }
+
+    @Test
+    func connectivityRecoveryRevalidatesOnlyOnSatisfiedPathAndStartsWorkAfterOnline() async {
+        var availability = SessionAvailability.offline
+        var events: [String] = []
+
+        await RootConnectivityRecoveryAction.perform(
+            networkStatus: .satisfied,
+            availability: { availability },
+            revalidate: {
+                events.append("revalidate")
+                availability = .online
+            },
+            startOnlineWork: { events.append("online-work") }
+        )
+
+        #expect(events == ["revalidate", "online-work"])
+    }
+
+    @Test
+    func offlineAuthenticatedLaunchSelectsCalendarOnce() {
+        #expect(
+            RootOfflineDefaultTabPolicy.selectedTab(
+                availability: .offline,
+                current: .home,
+                hasApplied: false
+            ) == .calendar
+        )
+        #expect(
+            RootOfflineDefaultTabPolicy.selectedTab(
+                availability: .offline,
+                current: .todo,
+                hasApplied: true
+            ) == .todo
+        )
+        #expect(
+            RootOfflineDefaultTabPolicy.selectedTab(
+                availability: .online,
+                current: .home,
+                hasApplied: false
+            ) == .home
+        )
     }
 
     @Test

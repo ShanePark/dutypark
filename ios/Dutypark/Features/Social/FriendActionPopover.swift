@@ -16,7 +16,10 @@ struct FriendActionPopover: View {
                     .foregroundStyle(DPColor.textPrimary)
                     .lineLimit(1)
                 Spacer()
-                Button(action: close) {
+                Button {
+                    DPHapticCenter.shared.emit(.routine)
+                    close()
+                } label: {
                     Image(systemName: "xmark")
                         .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(DPColor.textMuted)
@@ -42,7 +45,10 @@ struct FriendActionPopover: View {
                     social("social.action.addFamily"),
                     image: "house",
                     color: DPColor.accent,
-                    action: addFamily
+                    action: {
+                        DPHapticCenter.shared.emit(.selection)
+                        addFamily()
+                    }
                 )
             }
 
