@@ -40,6 +40,15 @@
         }
       },
       "entries": {
+        "pr-410": {
+          "title": "중복 일정과 Todo 생성 방지",
+          "summary": "같은 일정이나 Todo 생성 요청이 반복되어도 기존 항목을 재사용해 네트워크 재시도와 여러 기기 사용 중 중복 항목이 생기지 않도록 개선했습니다.",
+          "changes": [
+            "같은 사용자의 일정은 제목, 내용, 시작 시각과 종료 시각이 모두 같으면 기존 일정을 재사용합니다.",
+            "같은 사용자의 Todo는 상태, 제목과 내용이 모두 같으면 기존 Todo를 재사용합니다.",
+            "웹과 iPhone의 일반 생성 및 오프라인 재시도가 서버의 동일한 중복 판정 규칙을 사용합니다."
+          ]
+        },
         "pr-409": {
           "title": "iPhone 오프라인 사용과 앱 경험 개선",
           "summary": "iPhone 앱에서 네트워크가 불안정해도 저장된 캘린더와 Todo를 확인하고 지원되는 새 항목을 등록할 수 있도록 하며, 프로필 사진과 터치 피드백 및 화면 동작을 전반적으로 다듬었습니다.",
@@ -2250,6 +2259,15 @@
         }
       },
       "entries": {
+        "pr-410": {
+          "title": "Prevent duplicate schedules and todos",
+          "summary": "Reuses an existing schedule or todo when the same create is repeated, preventing duplicate items during network retries and use across multiple devices.",
+          "changes": [
+            "Reuse an existing schedule when its owner, title, body, start time, and end time all match.",
+            "Reuse an existing todo when its owner, status, title, and content all match.",
+            "Apply the same server-side duplicate policy to regular web and iPhone creates and offline retries."
+          ]
+        },
         "pr-409": {
           "title": "Offline iPhone workflows and app experience improvements",
           "summary": "Lets the iPhone app show cached calendars and todos and create supported new items during an unreliable connection, while refining profile photos, touch feedback, and interactions throughout the app.",
@@ -4423,6 +4441,19 @@
     }
   },
   "items": [
+    {
+      "id": "pr-410",
+      "version": "2026.08.25",
+      "date": "2026-08-25",
+      "pr": 410,
+      "url": "https://github.com/ShanePark/dutypark/pull/410",
+      "category": "fix",
+      "areas": [
+        "infra",
+        "schedule",
+        "todo"
+      ]
+    },
     {
       "id": "pr-409",
       "version": "2026.08.24",
