@@ -1,0 +1,167 @@
+{
+  "version": 2,
+  "capture": {
+    "date": "2026-08-26",
+    "timezone": "Asia/Seoul",
+    "device": "iPhone 17 Pro Max",
+    "os": "iOS 26.5",
+    "marketingVersion": "1.0.0",
+    "buildNumber": "1",
+    "account": "demo.seoa@dutypark.local",
+    "source": "actual local app capture"
+  },
+  "output": {
+    "width": 1320,
+    "height": 2868,
+    "opaque": true,
+    "background": "#FFF9F3"
+  },
+  "font": {
+    "path": "../../../ios/Dutypark/Resources/Fonts/Maplestory OTF Bold.otf",
+    "name": "MaplestoryOTFBold",
+    "headlineSize": 72,
+    "subheadlineSize": 36,
+    "color": "#1F2937",
+    "subheadlineColor": "#475569"
+  },
+  "screenshots": [
+    {
+      "id": "home",
+      "raw": "../raw/ko/home.png",
+      "output": "../final/ko/01-home.png",
+      "safeArea": { "x": 60, "y": 60, "width": 1200, "height": 300 },
+      "deviceFrame": {
+        "frame": { "x": 140, "y": 430, "width": 1040, "height": 2259.64 },
+        "cornerRadius": 40,
+        "bezelWidth": 16,
+        "bezelColor": "#111827",
+        "shadowColor": "#40000000",
+        "shadowBlur": 28,
+        "shadowOffsetY": 14
+      },
+      "headline": "오늘의 하루를 한눈에",
+      "headlineFrame": { "x": 100, "y": 90, "width": 960, "height": 100 },
+      "subheadline": "일정과 친구들의 소식을 한 곳에서",
+      "subheadlineFrame": { "x": 120, "y": 200, "width": 900, "height": 70 },
+      "background": "../generated/coral-cream-canvas.png",
+      "stickers": [
+        { "path": "../generated/calendar-moon-sticker.png", "frame": { "x": 1080, "y": 210, "width": 120, "height": 120 } }
+      ]
+    },
+    {
+      "id": "calendar",
+      "raw": "../raw/ko/calendar.png",
+      "output": "../final/ko/02-calendar.png",
+      "safeArea": { "x": 60, "y": 60, "width": 1200, "height": 300 },
+      "deviceFrame": {
+        "frame": { "x": 140, "y": 430, "width": 1040, "height": 2259.64 },
+        "cornerRadius": 40,
+        "bezelWidth": 16,
+        "bezelColor": "#111827",
+        "shadowColor": "#40000000",
+        "shadowBlur": 28,
+        "shadowOffsetY": 14
+      },
+      "headline": "한 달의 흐름을 가볍게",
+      "headlineFrame": { "x": 100, "y": 90, "width": 960, "height": 100 },
+      "subheadline": "공유 일정과 근무표를 한눈에",
+      "subheadlineFrame": { "x": 120, "y": 200, "width": 900, "height": 70 },
+      "background": "../generated/coral-cream-canvas.png",
+      "stickers": [
+        { "path": "../generated/calendar-moon-sticker.png", "frame": { "x": 1080, "y": 210, "width": 120, "height": 120 } }
+      ]
+    },
+    {
+      "id": "todo",
+      "raw": "../raw/ko/todo.png",
+      "output": "../final/ko/03-todo.png",
+      "safeArea": { "x": 60, "y": 60, "width": 1200, "height": 300 },
+      "deviceFrame": {
+        "frame": { "x": 140, "y": 430, "width": 1040, "height": 2259.64 },
+        "cornerRadius": 40,
+        "bezelWidth": 16,
+        "bezelColor": "#111827",
+        "shadowColor": "#40000000",
+        "shadowBlur": 28,
+        "shadowOffsetY": 14
+      },
+      "headline": "할 일을 놓치지 않게",
+      "headlineFrame": { "x": 100, "y": 90, "width": 960, "height": 100 },
+      "subheadline": "오늘의 우선순위를 차근차근",
+      "subheadlineFrame": { "x": 120, "y": 200, "width": 900, "height": 70 },
+      "background": "../generated/coral-cream-canvas.png",
+      "stickers": [
+        { "path": "../generated/calendar-moon-sticker.png", "frame": { "x": 1080, "y": 210, "width": 120, "height": 120 } }
+      ]
+    },
+    {
+      "id": "team",
+      "raw": "../raw/ko/team.png",
+      "output": "../final/ko/04-team.png",
+      "safeArea": { "x": 60, "y": 60, "width": 1200, "height": 300 },
+      "deviceFrame": {
+        "frame": { "x": 140, "y": 430, "width": 1040, "height": 2259.64 },
+        "cornerRadius": 40,
+        "bezelWidth": 16,
+        "bezelColor": "#111827",
+        "shadowColor": "#40000000",
+        "shadowBlur": 28,
+        "shadowOffsetY": 14
+      },
+      "headline": "함께 쓰는 근무 캘린더",
+      "headlineFrame": { "x": 100, "y": 90, "width": 960, "height": 100 },
+      "subheadline": "팀 일정과 근무를 한눈에",
+      "subheadlineFrame": { "x": 120, "y": 200, "width": 900, "height": 70 },
+      "background": "../generated/coral-cream-canvas.png",
+      "stickers": [
+        { "path": "../generated/calendar-moon-sticker.png", "frame": { "x": 1080, "y": 210, "width": 120, "height": 120 } }
+      ]
+    },
+    {
+      "id": "social",
+      "raw": "../raw/ko/social.png",
+      "output": "../final/ko/05-social.png",
+      "safeArea": { "x": 60, "y": 60, "width": 1200, "height": 300 },
+      "deviceFrame": {
+        "frame": { "x": 140, "y": 430, "width": 1040, "height": 2259.64 },
+        "cornerRadius": 40,
+        "bezelWidth": 16,
+        "bezelColor": "#111827",
+        "shadowColor": "#40000000",
+        "shadowBlur": 28,
+        "shadowOffsetY": 14
+      },
+      "headline": "친구들의 하루를 가까이",
+      "headlineFrame": { "x": 100, "y": 90, "width": 960, "height": 100 },
+      "subheadline": "일정과 근무를 함께 나눠요",
+      "subheadlineFrame": { "x": 120, "y": 200, "width": 900, "height": 70 },
+      "background": "../generated/coral-cream-canvas.png",
+      "stickers": [
+        { "path": "../generated/calendar-moon-sticker.png", "frame": { "x": 1080, "y": 210, "width": 120, "height": 120 } }
+      ]
+    },
+    {
+      "id": "dday",
+      "raw": "../raw/ko/dday.png",
+      "output": "../final/ko/06-dday.png",
+      "safeArea": { "x": 60, "y": 60, "width": 1200, "height": 300 },
+      "deviceFrame": {
+        "frame": { "x": 140, "y": 430, "width": 1040, "height": 2259.64 },
+        "cornerRadius": 40,
+        "bezelWidth": 16,
+        "bezelColor": "#111827",
+        "shadowColor": "#40000000",
+        "shadowBlur": 28,
+        "shadowOffsetY": 14
+      },
+      "headline": "기다리는 날을 기억해요",
+      "headlineFrame": { "x": 100, "y": 90, "width": 960, "height": 100 },
+      "subheadline": "중요한 날까지 한눈에",
+      "subheadlineFrame": { "x": 120, "y": 200, "width": 900, "height": 70 },
+      "background": "../generated/coral-cream-canvas.png",
+      "stickers": [
+        { "path": "../generated/calendar-moon-sticker.png", "frame": { "x": 1080, "y": 210, "width": 120, "height": 120 } }
+      ]
+    }
+  ]
+}

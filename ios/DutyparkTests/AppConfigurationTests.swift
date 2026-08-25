@@ -45,4 +45,22 @@ final class AppConfigurationTests: XCTestCase {
             URL(string: "https://dutypark.test/admin/api/")
         )
     }
+
+    func testDemoCaptureEndpointIsLocalOnly() {
+        XCTAssertTrue(
+            AppConfiguration.isLocalCaptureEndpoint(
+                URL(string: "http://localhost:8080/api/")!
+            )
+        )
+        XCTAssertTrue(
+            AppConfiguration.isLocalCaptureEndpoint(
+                URL(string: "http://127.0.0.1:8080/api/")!
+            )
+        )
+        XCTAssertFalse(
+            AppConfiguration.isLocalCaptureEndpoint(
+                URL(string: "https://dutypark.o-r.kr/api/")!
+            )
+        )
+    }
 }
