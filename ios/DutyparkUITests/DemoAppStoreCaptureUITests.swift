@@ -109,7 +109,20 @@ final class DemoAppStoreCaptureUITests: XCTestCase {
     @MainActor
     private func signOutIfNeeded(in app: XCUIApplication) {
         let home = app.descendants(matching: .any)["screen.home"]
-        guard home.waitForExistence(timeout: 5) else { return }
+        let guestLogin = app.buttons["guest.login"]
+        let settledAuthentication = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in home.exists || guestLogin.exists },
+            object: app
+        )
+        XCTAssertEqual(
+            XCTWaiter.wait(for: [settledAuthentication], timeout: 30),
+            .completed,
+            "App did not settle into an authenticated or guest state"
+        )
+        guard home.exists else {
+            XCTAssertTrue(guestLogin.exists, "Guest landing did not load for account reset")
+            return
+        }
 
         let more = app.buttons["tab.more"]
         XCTAssertTrue(more.waitForExistence(timeout: 10), "More tab did not load for account reset")
@@ -127,7 +140,7 @@ final class DemoAppStoreCaptureUITests: XCTestCase {
         XCTAssertTrue(confirm.waitForExistence(timeout: 10), "Logout confirmation did not load")
         confirm.tap()
         XCTAssertTrue(
-            app.buttons["guest.login"].waitForExistence(timeout: 30),
+            guestLogin.waitForExistence(timeout: 30),
             "Guest landing did not return after logout"
         )
     }
