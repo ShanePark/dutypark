@@ -200,6 +200,13 @@ final class APNsRegistrationManager: ObservableObject {
     @Published private(set) var isEnabled: Bool
     @Published var showsPermissionPreprompt = false
 
+    var isToggleOn: Bool {
+        guard authorizationStatus == .authorized || authorizationStatus == .provisional else {
+            return false
+        }
+        return isEnabled
+    }
+
     private static let storedTokenKey = "dutypark.apns.device-token"
     private static let enabledPreferenceKey = "dp-push-enabled"
     private let api: any APNsRegistrationAPIProtocol

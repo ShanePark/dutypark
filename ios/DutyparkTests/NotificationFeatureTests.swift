@@ -501,6 +501,26 @@ struct NotificationFeatureTests {
     }
 
     @Test
+    func freshInstallationPresentsPushToggleOffAndFirstEnableOpensPermissionPreprompt() async throws {
+        let suiteName = "NotificationFeatureTests.freshPushInstallation.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        let center = NotificationAuthorizationCenterMock(status: .notDetermined)
+        let manager = APNsRegistrationManager(notificationCenter: center, defaults: defaults)
+        await manager.refreshAuthorizationStatus()
+
+        #expect(defaults.object(forKey: "dp-push-enabled") == nil)
+        #expect(manager.isEnabled)
+        #expect(!manager.isToggleOn)
+        #expect(!manager.showsPermissionPreprompt)
+
+        manager.requestPermission()
+
+        #expect(manager.showsPermissionPreprompt)
+    }
+
+    @Test
     func authenticatedActivationDoesNotRequestUndeterminedPermission() async throws {
         let suiteName = "NotificationFeatureTests.noAutomaticPrompt.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suiteName))

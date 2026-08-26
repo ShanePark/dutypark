@@ -243,7 +243,7 @@ struct SettingsView: View {
                             .multilineTextAlignment(.leading)
                     }
                     Spacer(minLength: DPSpacing.small)
-                    SettingsSwitch(isOn: push.isEnabled)
+                    SettingsSwitch(isOn: push.isToggleOn)
                 }
                 .padding(.horizontal, DPSpacing.compact)
                 .frame(minHeight: 64)
@@ -251,7 +251,7 @@ struct SettingsView: View {
             }
             .buttonStyle(.plain)
             .disabled(push.authorizationStatus == .denied)
-            .accessibilityValue(SettingsLocalization.string(push.isEnabled ? "settings.accessibility.on" : "settings.accessibility.off"))
+            .accessibilityValue(SettingsLocalization.string(push.isToggleOn ? "settings.accessibility.on" : "settings.accessibility.off"))
             .accessibilityAddTraits(.isButton)
             if push.authorizationStatus == .denied {
                 Label(SettingsLocalization.string("settings.push.denied"), systemImage: "info.circle")
@@ -374,7 +374,7 @@ struct SettingsView: View {
 
     private var pushBinding: Binding<Bool> {
         Binding(
-            get: { push.isEnabled },
+            get: { push.isToggleOn },
             set: { enabled in
                 if enabled {
                     push.requestPermission()
