@@ -76,19 +76,15 @@ nonisolated enum RootOfflineDefaultTabPolicy {
 @MainActor
 enum RootPendingPushAction {
     static func perform(
+        isAuthenticated: Bool,
+        isOnline: Bool,
+        isActive: Bool,
         consume: () -> NotificationID?,
-        open: (NotificationID) async throws -> Bool,
-        showFallback: () -> Void
+        showNotificationCenter: (NotificationID) -> Void
     ) async {
+        guard isAuthenticated, isOnline, isActive else { return }
         guard let notificationID = consume() else { return }
-        do {
-            guard try await open(notificationID) else {
-                showFallback()
-                return
-            }
-        } catch {
-            showFallback()
-        }
+        showNotificationCenter(notificationID)
     }
 }
 
@@ -158,6 +154,7 @@ struct RootTabView: View {
     @State private var homeRefreshPolicy = RootHomeRefreshPolicy(initialRefreshAt: Date())
     @State private var homePath: [HomeDestination] = []
     @State private var calendarPath: [MemberCalendarRoute] = []
+    @State private var calendarCurrentMonthRequestID = 0
     @State private var teamPath: [MemberCalendarRoute] = []
     @State private var morePath: [MoreDestination] = []
     @State private var todoTarget: TodoID?
@@ -172,6 +169,7 @@ struct RootTabView: View {
     // nil keeps the single More avatar backward-compatible until then.
     @State private var hasProfilePhoto: Bool?
     @State private var showsNotifications = false
+    @State private var notificationTargetID: NotificationID?
     @State private var notificationDropdownReadPolicy = RootNotificationDropdownReadPolicy()
     @State private var showsUnsupportedLink = false
     @State private var showsLogoutConfirmation = false
@@ -196,7 +194,7 @@ struct RootTabView: View {
             TabView(selection: tabSelection) {
                 homeTab
                 primaryTab(.calendar, path: $calendarPath, showsNavigationBar: true) {
-                    CalendarView()
+                    CalendarView(currentMonthRequestID: calendarCurrentMonthRequestID)
                         .navigationDestination(for: MemberCalendarRoute.self) { route in
                             memberCalendar(route)
                         }
@@ -385,7 +383,7 @@ struct RootTabView: View {
                         if session.availability.isOffline {
                             RootOnlineRequiredView(feature: .notifications)
                         } else {
-                            notificationCenter
+                            notificationCenter(targetID: $notificationTargetID)
                         }
                     case .friends:
                         if session.availability.isOffline {
@@ -441,6 +439,7 @@ struct RootTabView: View {
               authenticatedMemberID == accountID
         else { return }
         await notifications.setForeground(scenePhase == .active)
+        await openPendingPushIfNeeded()
         await offlineSyncCoordinator.synchronize(
             accountID: accountID,
             networkStatus: offlineNetworkMonitor.status == .unsatisfied
@@ -527,8 +526,8 @@ struct RootTabView: View {
 
     // The notification list is a screen like every other menu entry, so it is pushed onto
     // the stack it was opened from and leaves with the same back affordances.
-    private var notificationCenter: some View {
-        NotificationCenterView(store: notifications) { route in
+    private func notificationCenter(targetID: Binding<NotificationID?>) -> some View {
+        NotificationCenterView(store: notifications, targetNotificationID: targetID) { route in
             let didOpen = await openNotificationRoute(route)
             if didOpen {
                 DPHapticCenter.shared.emit(RootHapticPolicy.notificationNavigationFeedback)
@@ -553,6 +552,11 @@ struct RootTabView: View {
         Binding(
             get: { selectedTab },
             set: { destination in
+                if selectedTab == .calendar,
+                   destination == .calendar,
+                   calendarPath.isEmpty {
+                    calendarCurrentMonthRequestID &+= 1
+                }
                 let feedback = RootHapticPolicy.tabSelectionFeedback(
                     from: selectedTab,
                     to: destination
@@ -599,6 +603,17 @@ struct RootTabView: View {
     // The bell lives on the home tab root, so opening the full list from its dropdown
     // pushes onto the home stack: back returns to the dashboard the bell belongs to.
     private func openNotifications() {
+        notificationTargetID = nil
+        homePath = [.notifications]
+        selectedTab = .home
+    }
+
+    private func openNotifications(targeting notificationID: NotificationID) {
+        // A system push opens the full list without applying the dropdown's
+        // mark-all-on-close policy to unrelated notifications.
+        notificationDropdownReadPolicy.prepareForOpen()
+        showsNotifications = false
+        notificationTargetID = notificationID
         homePath = [.notifications]
         selectedTab = .home
     }
@@ -638,7 +653,7 @@ struct RootTabView: View {
             if session.availability.isOffline {
                 RootOnlineRequiredView(feature: .notifications)
             } else {
-                notificationCenter
+                notificationCenter(targetID: .constant(nil))
             }
         case .admin:
             if authenticatedMember?.isAdmin == true {
@@ -901,17 +916,12 @@ struct RootTabView: View {
         }
 #endif
         await RootPendingPushAction.perform(
+            isAuthenticated: authenticatedMemberID != nil,
+            isOnline: session.availability == .online
+                && offlineNetworkMonitor.status != .unsatisfied,
+            isActive: scenePhase == .active,
             consume: pushCenter.consumePendingNotificationID,
-            open: { notificationID in
-                guard let route = try await notifications.open(
-                    id: notificationID,
-                    emitsHaptic: false
-                ) else {
-                    return false
-                }
-                return await openNotificationRoute(route)
-            },
-            showFallback: { showsNotifications = true }
+            showNotificationCenter: openNotifications(targeting:)
         )
     }
 

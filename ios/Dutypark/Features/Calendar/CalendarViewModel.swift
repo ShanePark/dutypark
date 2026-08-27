@@ -977,7 +977,6 @@ final class CalendarViewModel: ObservableObject {
     func selectDay(_ day: CalendarDayContent) {
         let previousDate = selectedDay?.cell.date
         selectedDay = day
-        highlightedDate = day.cell.date
         if CalendarHapticPolicy.selectionChanged(from: previousDate, to: day.cell.date) != nil {
             emit(.selection)
         }

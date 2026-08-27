@@ -1515,6 +1515,44 @@ final class CalendarFeatureTests: XCTestCase {
         XCTAssertEqual(haptics.event?.kind, .routine)
     }
 
+    func testSelectingDayOnMyCalendarOpensTheDayWithoutCreatingAHighlight() async throws {
+        let haptics = DPHapticCenter()
+        let model = CalendarViewModel(
+            repository: CalendarRepositoryMock(),
+            now: date(2026, 8, 12),
+            hapticCenter: haptics
+        )
+        await model.load()
+        let day = try XCTUnwrap(model.days.first { $0.cell.date.rawValue == "2026-08-12" })
+
+        model.selectDay(day)
+
+        XCTAssertEqual(model.selectedDay?.cell.date, day.cell.date)
+        XCTAssertNil(model.highlightedDate)
+        XCTAssertEqual(haptics.event?.kind, .selection)
+    }
+
+    func testSelectingDayOnManagedCalendarPreservesExistingHighlight() async throws {
+        let haptics = DPHapticCenter()
+        let highlightedDate = DateOnly(rawValue: "2026-08-12")
+        let model = CalendarViewModel(
+            repository: CalendarRepositoryMock(canManage: true),
+            now: date(2026, 8, 12),
+            memberID: 9,
+            date: highlightedDate,
+            hapticCenter: haptics
+        )
+        await model.load()
+        let day = try XCTUnwrap(model.days.first { $0.cell.date.rawValue == "2026-08-13" })
+
+        model.selectDay(day)
+
+        XCTAssertTrue(model.canManage)
+        XCTAssertEqual(model.selectedDay?.cell.date, day.cell.date)
+        XCTAssertEqual(model.highlightedDate, highlightedDate)
+        XCTAssertEqual(haptics.event?.kind, .selection)
+    }
+
     func testScheduleMutationEmitsSuccessOnlyAfterTheSaveCompletes() async {
         let repository = CalendarRepositoryMock()
         let haptics = DPHapticCenter()

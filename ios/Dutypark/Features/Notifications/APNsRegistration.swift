@@ -418,10 +418,12 @@ final class NotificationPushCenter: ObservableObject {
     @Published private(set) var pendingNotificationID: NotificationID?
 
     func receive(userInfo: [AnyHashable: Any]) {
-        pendingNotificationID = Self.notificationID(from: userInfo)
+        guard let notificationID = Self.notificationID(from: userInfo) else { return }
+        pendingNotificationID = notificationID
     }
 
     func receive(notificationID: NotificationID?) {
+        guard let notificationID else { return }
         pendingNotificationID = notificationID
     }
 

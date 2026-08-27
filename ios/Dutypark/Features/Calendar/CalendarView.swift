@@ -139,15 +139,18 @@ struct CalendarView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private let isPushedMemberCalendar: Bool
+    private let currentMonthRequestID: Int
 
     init(
         memberID: MemberID? = nil,
         date: DateOnly? = nil,
         scheduleID: ScheduleID? = nil,
-        isPushed: Bool = false
+        isPushed: Bool = false,
+        currentMonthRequestID: Int = 0
     ) {
         _model = StateObject(wrappedValue: CalendarViewModel(memberID: memberID, date: date, scheduleID: scheduleID))
         isPushedMemberCalendar = isPushed
+        self.currentMonthRequestID = currentMonthRequestID
     }
 
     var body: some View {
@@ -180,6 +183,9 @@ struct CalendarView: View {
             } else {
                 model.resumeServerRecoveryIfNeeded()
             }
+        }
+        .onChange(of: currentMonthRequestID) { _, _ in
+            Task { await model.goToToday(emitFeedback: false) }
         }
         .onDisappear { model.cancelBackgroundTasks() }
         .onChange(of: session.availability) { _, availability in

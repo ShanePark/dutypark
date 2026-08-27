@@ -261,57 +261,61 @@ struct RootLifecycleTests {
     }
 
     @Test
-    func pendingPushOpensTheIdentifierProvidedByTheConsumer() async {
+    func pendingPushPresentsTheIdentifierProvidedByTheConsumer() async {
         let notificationID = UUID()
-        var openedIDs: [UUID] = []
-        var fallbackCount = 0
+        var presentedIDs: [UUID] = []
 
         await RootPendingPushAction.perform(
+            isAuthenticated: true,
+            isOnline: true,
+            isActive: true,
             consume: { notificationID },
-            open: {
-                openedIDs.append($0)
-                return true
-            },
-            showFallback: { fallbackCount += 1 }
+            showNotificationCenter: { presentedIDs.append($0) }
         )
 
-        #expect(openedIDs == [notificationID])
-        #expect(fallbackCount == 0)
+        #expect(presentedIDs == [notificationID])
     }
 
     @Test
     func pendingPushDoesNothingWhenTheConsumerProvidesNoIdentifier() async {
-        var openCount = 0
-        var fallbackCount = 0
+        var presentedIDs: [NotificationID] = []
 
         await RootPendingPushAction.perform(
+            isAuthenticated: true,
+            isOnline: true,
+            isActive: true,
             consume: { nil },
-            open: { _ in
-                openCount += 1
-                return true
-            },
-            showFallback: { fallbackCount += 1 }
+            showNotificationCenter: { presentedIDs.append($0) }
         )
 
-        #expect(openCount == 0)
-        #expect(fallbackCount == 0)
+        #expect(presentedIDs.isEmpty)
     }
 
-    @Test(arguments: [false, true])
-    func pendingPushFallsBackWhenRouteCannotOpen(orThrows: Bool) async {
+    @Test(arguments: [
+        (isAuthenticated: false, isOnline: true, isActive: true),
+        (isAuthenticated: true, isOnline: false, isActive: true),
+        (isAuthenticated: true, isOnline: true, isActive: false),
+    ])
+    func pendingPushRemainsPendingUntilTheRootIsReady(
+        readiness: (isAuthenticated: Bool, isOnline: Bool, isActive: Bool)
+    ) async {
         let notificationID = UUID()
-        var fallbackCount = 0
+        var consumeCount = 0
+        var presentedIDs: [UUID] = []
 
         await RootPendingPushAction.perform(
-            consume: { notificationID },
-            open: { _ in
-                if orThrows { throw StubError.failed }
-                return false
+            isAuthenticated: readiness.isAuthenticated,
+            isOnline: readiness.isOnline,
+            isActive: readiness.isActive,
+            consume: {
+                consumeCount += 1
+                return notificationID
             },
-            showFallback: { fallbackCount += 1 }
+            showNotificationCenter: { presentedIDs.append($0) }
         )
 
-        #expect(fallbackCount == 1)
+        #expect(consumeCount == 0)
+        #expect(presentedIDs.isEmpty)
     }
 
     @Test
