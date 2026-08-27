@@ -127,14 +127,6 @@ struct SettingsView: View {
                 SettingsLocalization.text(key)
             }
         }
-        .alert(SettingsLocalization.string("settings.push.permissionTitle"), isPresented: $push.showsPermissionPreprompt) {
-            Button(SettingsLocalization.string("settings.action.cancel"), role: .cancel) {}
-            Button(SettingsLocalization.string("settings.push.continue")) {
-                Task { await push.continuePermissionRequest() }
-            }
-        } message: {
-            SettingsLocalization.text("settings.push.permissionMessage")
-        }
         .alert(SettingsLocalization.string("settings.notice.title"), isPresented: aiConsentErrorBinding) {
             Button(SettingsLocalization.string("settings.action.confirm")) {
                 aiConsent.dismissError()

@@ -209,12 +209,14 @@ final class APNsRegistrationManager: ObservableObject {
 
     private static let storedTokenKey = "dutypark.apns.device-token"
     private static let enabledPreferenceKey = "dp-push-enabled"
+    private static let permissionPrepromptShownKey = "dp-push-permission-preprompt-shown"
     private let api: any APNsRegistrationAPIProtocol
     private let notificationCenter: any NotificationAuthorizationCenter
     private let remoteNotificationRegistrar: any RemoteNotificationRegistrar
     private let defaults: UserDefaults
     private let apiOperationLock = APNsRegistrationAPIOperationLock()
     private var hasRequestedRemoteRegistration = false
+    private var hasShownPermissionPreprompt = false
     private var registrationAttempt = 0
     private var pendingDeviceToken: String?
 
@@ -228,6 +230,7 @@ final class APNsRegistrationManager: ObservableObject {
         self.notificationCenter = notificationCenter
         self.remoteNotificationRegistrar = remoteNotificationRegistrar
         self.defaults = defaults
+        hasShownPermissionPreprompt = defaults.bool(forKey: Self.permissionPrepromptShownKey)
         isEnabled = defaults.object(forKey: Self.enabledPreferenceKey) == nil
             ? true
             : defaults.bool(forKey: Self.enabledPreferenceKey)
@@ -236,6 +239,7 @@ final class APNsRegistrationManager: ObservableObject {
     /// Displays Dutypark's explanation before iOS presents its one-time permission prompt.
     func requestPermission() {
         setEnabled(true)
+        markPermissionPrepromptAsShown()
         showsPermissionPreprompt = true
     }
 
@@ -252,7 +256,7 @@ final class APNsRegistrationManager: ObservableObject {
         }
     }
 
-    /// Call on sign-in and foreground resume. It never asks for permission by itself.
+    /// Call on foreground resume. It never asks for permission by itself.
     func resumeRegistration() async {
 #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-ui-testing-authenticated") {
@@ -266,9 +270,31 @@ final class APNsRegistrationManager: ObservableObject {
         }
     }
 
-    /// Called from the first authenticated root without presenting the one-time system prompt.
+    /// Called once when the first authenticated root becomes available.
     func activateForAuthenticatedSession() async {
-        await resumeRegistration()
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-ui-testing-authenticated") {
+            return
+        }
+#endif
+        await refreshAuthorizationStatus()
+        guard isEnabled else { return }
+
+        if authorizationStatus == .notDetermined {
+            guard !hasShownPermissionPreprompt else { return }
+            markPermissionPrepromptAsShown()
+            showsPermissionPreprompt = true
+            return
+        }
+
+        if authorizationStatus == .authorized || authorizationStatus == .provisional {
+            registerWithSystemIfNeeded()
+        }
+    }
+
+    private func markPermissionPrepromptAsShown() {
+        hasShownPermissionPreprompt = true
+        defaults.set(true, forKey: Self.permissionPrepromptShownKey)
     }
 
     private func registerWithSystemIfNeeded() {

@@ -22,6 +22,7 @@ nonisolated enum UITestingDestination: Equatable {
 
 struct AppRootView: View {
     @EnvironmentObject private var session: SessionStore
+    @StateObject private var push = APNsRegistrationManager.shared
     @StateObject private var offlineSyncCoordinator = OfflineSyncCoordinator.shared
 
     var body: some View {
@@ -60,6 +61,17 @@ struct AppRootView: View {
             }
         } message: {
             Text("auth.logout.serverWarning.message")
+        }
+        .alert(
+            SettingsLocalization.string("settings.push.permissionTitle"),
+            isPresented: $push.showsPermissionPreprompt
+        ) {
+            Button(SettingsLocalization.string("settings.action.cancel"), role: .cancel) {}
+            Button(SettingsLocalization.string("settings.push.continue")) {
+                Task { await push.continuePermissionRequest() }
+            }
+        } message: {
+            SettingsLocalization.text("settings.push.permissionMessage")
         }
     }
 

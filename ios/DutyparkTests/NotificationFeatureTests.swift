@@ -521,8 +521,8 @@ struct NotificationFeatureTests {
     }
 
     @Test
-    func authenticatedActivationDoesNotRequestUndeterminedPermission() async throws {
-        let suiteName = "NotificationFeatureTests.noAutomaticPrompt.\(UUID().uuidString)"
+    func authenticatedActivationShowsPrepromptForUndeterminedPermission() async throws {
+        let suiteName = "NotificationFeatureTests.automaticPrompt.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suiteName))
         defer { defaults.removePersistentDomain(forName: suiteName) }
         let center = NotificationAuthorizationCenterMock(status: .notDetermined)
@@ -533,6 +533,44 @@ struct NotificationFeatureTests {
         #expect(center.requestCount == 0)
         #expect(manager.authorizationStatus == .notDetermined)
         #expect(manager.registrationState == .idle)
+        #expect(manager.showsPermissionPreprompt)
+    }
+
+    @Test
+    func authenticatedActivationShowsAutomaticPrepromptOnlyOnce() async throws {
+        let suiteName = "NotificationFeatureTests.automaticPromptOnce.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let center = NotificationAuthorizationCenterMock(status: .notDetermined)
+        let manager = APNsRegistrationManager(notificationCenter: center, defaults: defaults)
+
+        await manager.activateForAuthenticatedSession()
+        #expect(manager.showsPermissionPreprompt)
+        manager.showsPermissionPreprompt = false
+
+        let restoredManager = APNsRegistrationManager(
+            notificationCenter: center,
+            defaults: defaults
+        )
+        await restoredManager.activateForAuthenticatedSession()
+
+        #expect(!restoredManager.showsPermissionPreprompt)
+        #expect(defaults.bool(forKey: "dp-push-permission-preprompt-shown"))
+    }
+
+    @Test(arguments: [UNAuthorizationStatus.authorized, .provisional, .denied])
+    func authenticatedActivationDoesNotShowAutomaticPrepromptForResolvedPermission(
+        status: UNAuthorizationStatus
+    ) async throws {
+        let suiteName = "NotificationFeatureTests.resolvedPermission.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let center = NotificationAuthorizationCenterMock(status: status)
+        let manager = APNsRegistrationManager(notificationCenter: center, defaults: defaults)
+
+        await manager.activateForAuthenticatedSession()
+
+        #expect(!manager.showsPermissionPreprompt)
     }
 
     @Test
@@ -548,6 +586,7 @@ struct NotificationFeatureTests {
 
         #expect(!manager.isEnabled)
         #expect(center.requestCount == 0)
+        #expect(!manager.showsPermissionPreprompt)
     }
 
     @Test
