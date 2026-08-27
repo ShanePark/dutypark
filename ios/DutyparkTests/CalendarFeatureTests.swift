@@ -88,9 +88,9 @@ final class CalendarFeatureTests: XCTestCase {
 
     /// Moving the month header into the navigation bar left the return to today as a bare
     /// arrow among the bar buttons, where nothing says what it does. It goes back to the
-    /// labelled speech bubble the web calendar draws, hung off the month label itself so it
-    /// stays inside the bar, which hit-tests nothing but its own items.
-    func testTheThisMonthAffordanceIsALabelledCalloutHangingFromTheMonthLabel() throws {
+    /// labelled speech bubble the web calendar draws, fixed at the top of the calendar body
+    /// so it remains reachable after the navigation bar returns to its native height.
+    func testTheThisMonthAffordanceIsALabelledCalloutFixedAtTheCalendarBodyTop() throws {
         let sourceURL = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
@@ -106,12 +106,31 @@ final class CalendarFeatureTests: XCTestCase {
             source.contains("thisMonthControl"),
             "The bare trailing bar icon gives way to the callout"
         )
+        let content = try Self.declaration(named: "private var calendarContent: some View", in: source)
+        XCTAssertTrue(content.contains("ZStack(alignment: .top) {"))
+        XCTAssertTrue(
+            content.contains("thisMonthCalloutLayer"),
+            "The callout is a fixed sibling of the scrolling content"
+        )
+        XCTAssertTrue(
+            !content.contains(".padding(.top, Self.calloutReach * 2)"),
+            "The fixed callout must not push the calendar content down"
+        )
+        XCTAssertTrue(
+            content.contains(".frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)"),
+            "The callout host covers the full calendar body for hit testing"
+        )
+
         let controls = try XCTUnwrap(source.range(of: "private var monthControls: some View"))
         let body = source[controls.upperBound...]
         let end = try XCTUnwrap(body.range(of: "\n    private var"))
         XCTAssertTrue(
-            body[..<end.lowerBound].contains("thisMonthCalloutLayer"),
-            "The callout hangs off the month controls, inside the bar, so it stays tappable"
+            !body[..<end.lowerBound].contains("thisMonthCalloutLayer"),
+            "The 44pt month controls do not expand to host the callout"
+        )
+        XCTAssertTrue(
+            !body[..<end.lowerBound].contains(".padding(.vertical, Self.calloutReach)"),
+            "The callout reserve belongs to the calendar content, not the navigation bar"
         )
     }
 
@@ -126,10 +145,10 @@ final class CalendarFeatureTests: XCTestCase {
         XCTAssertTrue(source.contains(".padding(.vertical, Self.calloutHitInsetY)"))
     }
 
-    /// iOS 26's automatic top edge effect blurs the first row as soon as the outer calendar
-    /// scroll view reaches its top. The calendar owns that effect policy, but only for the top
-    /// edge and only on OS versions that provide the API; the bottom edge remains unchanged.
-    func testCalendarDisablesOnlyTheTopScrollEdgeEffectOnIOS26() throws {
+    /// iOS 26's top edge effect must remain available for contrast when calendar content moves
+    /// under the fixed navigation controls. The calendar owns the effect policy, but only for
+    /// the top edge and only on OS versions that provide the API; the bottom edge is unchanged.
+    func testCalendarUsesASoftTopScrollEdgeEffectOnIOS26() throws {
         let source = try Self.calendarViewSource()
         let content = try Self.declaration(named: "private var calendarContent: some View", in: source)
         let modifier = try Self.declaration(
@@ -140,7 +159,8 @@ final class CalendarFeatureTests: XCTestCase {
         XCTAssertTrue(content.contains("ScrollView {"), "The policy belongs to the outer vertical calendar scroll view")
         XCTAssertTrue(content.contains("CalendarTopScrollEdgeEffectModifier()"))
         XCTAssertTrue(modifier.contains("if #available(iOS 26.0, *)"))
-        XCTAssertTrue(modifier.contains(".scrollEdgeEffectHidden(for: .top)"))
+        XCTAssertTrue(modifier.contains(".scrollEdgeEffectStyle(.soft, for: .top)"))
+        XCTAssertFalse(modifier.contains("scrollEdgeEffectHidden"))
         XCTAssertFalse(modifier.contains(".bottom"), "The bottom edge effect remains automatic")
         XCTAssertFalse(modifier.contains(".all"), "Only the top edge effect is disabled")
         XCTAssertTrue(modifier.contains("else"), "iOS 17 must keep the unmodified fallback")

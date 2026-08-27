@@ -109,7 +109,9 @@ private struct CalendarTopScrollEdgeEffectModifier: ViewModifier {
     @ViewBuilder
     func body(content: Content) -> some View {
         if #available(iOS 26.0, *) {
-            content.scrollEdgeEffectHidden(for: .top)
+            // Keep the top boundary readable when the calendar rows scroll under the
+            // fixed navigation controls, while leaving the iOS 17 behaviour untouched.
+            content.scrollEdgeEffectStyle(.soft, for: .top)
         } else {
             content
         }
@@ -410,23 +412,30 @@ struct CalendarView: View {
     }
 
     private var calendarContent: some View {
-        ScrollView {
-            LazyVStack(spacing: DPSpacing.small) {
-                if model.isShowingCachedData || model.pendingScheduleCount > 0 {
-                    offlineStateBanner
+        ZStack(alignment: .top) {
+            ScrollView {
+                LazyVStack(spacing: DPSpacing.small) {
+                    if model.isShowingCachedData || model.pendingScheduleCount > 0 {
+                        offlineStateBanner
+                    }
+                    if showsDutyToolbar {
+                        dutyToolbar
+                    }
+                    swipeableCalendarGrid
+                    if !model.isQuickDutyEditing {
+                        dDaySection
+                    }
                 }
-                if showsDutyToolbar {
-                    dutyToolbar
-                }
-                swipeableCalendarGrid
-                if !model.isQuickDutyEditing {
-                    dDaySection
-                }
+                .padding(.horizontal, DPSpacing.small)
+                .padding(.top, DPSpacing.extraSmall)
+                .padding(.bottom, DPSpacing.large)
             }
-            .padding(.horizontal, DPSpacing.small)
-            .padding(.top, DPSpacing.extraSmall)
-            .padding(.bottom, DPSpacing.large)
+
+            thisMonthCalloutLayer
+                .alignmentGuide(HorizontalAlignment.center) { _ in Self.calloutTailCenter }
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: showsThisMonthCallout)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .modifier(CalendarTopScrollEdgeEffectModifier())
         .refreshable { await model.load() }
     }
@@ -660,28 +669,14 @@ struct CalendarView: View {
     private nonisolated static let calloutTailCenter: CGFloat =
         calloutHitInsetX + calloutTailInset + calloutTailWidth / 2
 
-    // A 44pt bar button around a 16pt label leaves about this much room between the text and
-    // the button's bottom edge. The callout hangs from the edge of the room reserved below
-    // it, so that reserve is its own height less the slack it can borrow, and one point less
-    // again so the tail bites into the label rather than stopping a hair short of it.
-    private static let calloutLabelSlack: CGFloat = 8
-    private static let calloutLabelBite: CGFloat = 1
-
-    // Hanging the bubble straight off the label left the two glued together. It drops
-    // this much further before it starts, which is enough air to read them apart.
-    private static let calloutLabelDrop: CGFloat = 5
-    private static let calloutReach: CGFloat =
-        calloutHitInsetY * 2 + calloutCapsuleHeight - calloutLabelSlack - calloutLabelBite
-            + calloutLabelDrop
-
     // Keep the callout's existing upper-left corner fixed while giving its label and hit area
     // ten percent more room toward the lower-right. A transform leaves the month controls'
     // layout footprint unchanged, so the month header remains centred.
     private static let calloutScale: CGFloat = 1.1
 
-    // The month label lives in the navigation bar, so the callout is hung inside the bar too:
-    // content below it cannot be tapped through the bar, and a bubble that only looks right
-    // while being unreachable is worse than the bare arrow it replaced.
+    // The callout is hosted by the full calendar body rather than the navigation-bar item.
+    // That keeps the item at its native 44pt height while the body still owns the callout's
+    // scaled hit area.
     @ViewBuilder
     private var thisMonthCalloutLayer: some View {
         if showsThisMonthCallout {
@@ -743,16 +738,6 @@ struct CalendarView: View {
             }
         }
         .foregroundStyle(DPColor.accent)
-        // The bar hit-tests only what its own item covers, so the callout is reserved as part
-        // of the item rather than merely drawn over the bar; a bubble nobody can press is
-        // worse than the bare arrow it replaced. The bar centres the item it is given, so the
-        // reserve is matched above to keep the month navigation on the bar's own centre line.
-        .padding(.vertical, Self.calloutReach)
-        .overlay(alignment: .bottom) {
-            thisMonthCalloutLayer
-                .alignmentGuide(HorizontalAlignment.center) { _ in Self.calloutTailCenter }
-                .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: showsThisMonthCallout)
-        }
     }
 
     // The navigation bar has no room for the inline query field; tapping opens the
