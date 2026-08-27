@@ -126,6 +126,39 @@ final class CalendarFeatureTests: XCTestCase {
         XCTAssertTrue(source.contains(".padding(.vertical, Self.calloutHitInsetY)"))
     }
 
+    /// iOS 26's automatic top edge effect blurs the first row as soon as the outer calendar
+    /// scroll view reaches its top. The calendar owns that effect policy, but only for the top
+    /// edge and only on OS versions that provide the API; the bottom edge remains unchanged.
+    func testCalendarDisablesOnlyTheTopScrollEdgeEffectOnIOS26() throws {
+        let source = try Self.calendarViewSource()
+        let content = try Self.declaration(named: "private var calendarContent: some View", in: source)
+        let modifier = try Self.declaration(
+            named: "private struct CalendarTopScrollEdgeEffectModifier: ViewModifier",
+            in: source
+        )
+
+        XCTAssertTrue(content.contains("ScrollView {"), "The policy belongs to the outer vertical calendar scroll view")
+        XCTAssertTrue(content.contains("CalendarTopScrollEdgeEffectModifier()"))
+        XCTAssertTrue(modifier.contains("if #available(iOS 26.0, *)"))
+        XCTAssertTrue(modifier.contains(".scrollEdgeEffectHidden(for: .top)"))
+        XCTAssertFalse(modifier.contains(".bottom"), "The bottom edge effect remains automatic")
+        XCTAssertFalse(modifier.contains(".all"), "Only the top edge effect is disabled")
+        XCTAssertTrue(modifier.contains("else"), "iOS 17 must keep the unmodified fallback")
+    }
+
+    /// The callout grows from its current upper-left corner so its layout anchor and the month
+    /// header's centre do not move. Scaling the Button itself keeps the existing action and
+    /// accessibility label attached to the enlarged hit target.
+    func testTheThisMonthCalloutScalesTheWholeButtonByTenPercentFromTopLeading() throws {
+        let source = try Self.calendarViewSource()
+        let callout = try Self.declaration(named: "private var thisMonthCallout: some View", in: source)
+
+        XCTAssertTrue(source.contains("private static let calloutScale: CGFloat = 1.1"))
+        XCTAssertTrue(callout.contains(".scaleEffect(Self.calloutScale, anchor: .topLeading)"))
+        XCTAssertTrue(callout.contains("Button { Task { await model.goToToday() } } label:"))
+        XCTAssertTrue(callout.contains(".accessibilityLabel(CalendarLocalization.text(\"calendar.month.goToThisMonth\"))"))
+    }
+
     /// The strip above the calendar is gone: due-date bubbles inside the day cells are the
     /// only Todo surface the calendar keeps, and they open the detail modal in place.
     func testCalendarTodosLiveOnlyInDayCellsAndOpenTheDetailModal() throws {

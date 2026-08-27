@@ -105,6 +105,17 @@ private struct CalloutTail: Shape {
     }
 }
 
+private struct CalendarTopScrollEdgeEffectModifier: ViewModifier {
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            content.scrollEdgeEffectHidden(for: .top)
+        } else {
+            content
+        }
+    }
+}
+
 struct CalendarView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var session: SessionStore
@@ -416,6 +427,7 @@ struct CalendarView: View {
             .padding(.top, DPSpacing.extraSmall)
             .padding(.bottom, DPSpacing.large)
         }
+        .modifier(CalendarTopScrollEdgeEffectModifier())
         .refreshable { await model.load() }
     }
 
@@ -662,6 +674,11 @@ struct CalendarView: View {
         calloutHitInsetY * 2 + calloutCapsuleHeight - calloutLabelSlack - calloutLabelBite
             + calloutLabelDrop
 
+    // Keep the callout's existing upper-left corner fixed while giving its label and hit area
+    // ten percent more room toward the lower-right. A transform leaves the month controls'
+    // layout footprint unchanged, so the month header remains centred.
+    private static let calloutScale: CGFloat = 1.1
+
     // The month label lives in the navigation bar, so the callout is hung inside the bar too:
     // content below it cannot be tapped through the bar, and a bubble that only looks right
     // while being unreachable is worse than the bare arrow it replaced.
@@ -701,6 +718,7 @@ struct CalendarView: View {
             .padding(.vertical, Self.calloutHitInsetY)
             .contentShape(Rectangle())
         }
+        .scaleEffect(Self.calloutScale, anchor: .topLeading)
         .accessibilityLabel(CalendarLocalization.text("calendar.month.goToThisMonth"))
     }
 
