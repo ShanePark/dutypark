@@ -432,6 +432,7 @@ struct CalendarView: View {
             }
 
             thisMonthCalloutLayer
+                .offset(y: Self.calloutVerticalOffset)
                 .alignmentGuide(HorizontalAlignment.center) { _ in Self.calloutTailCenter }
                 .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: showsThisMonthCallout)
         }
@@ -673,6 +674,10 @@ struct CalendarView: View {
     // ten percent more room toward the lower-right. A transform leaves the month controls'
     // layout footprint unchanged, so the month header remains centred.
     private static let calloutScale: CGFloat = 1.1
+
+    // The callout is hosted below the 44pt navigation bar; lift its body anchor so the bubble
+    // sits close to the month controls without changing the scroll content's position.
+    private static let calloutVerticalOffset: CGFloat = -20
 
     // The callout is hosted by the full calendar body rather than the navigation-bar item.
     // That keeps the item at its native 44pt height while the body still owns the callout's

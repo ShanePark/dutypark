@@ -145,6 +145,20 @@ final class CalendarFeatureTests: XCTestCase {
         XCTAssertTrue(source.contains(".padding(.vertical, Self.calloutHitInsetY)"))
     }
 
+    func testTheThisMonthCalloutIsLiftedTwentyPointsWithinTheCalendarBody() throws {
+        let source = try Self.calendarViewSource()
+        let content = try Self.declaration(named: "private var calendarContent: some View", in: source)
+
+        XCTAssertTrue(
+            source.contains("private static let calloutVerticalOffset: CGFloat = -20"),
+            "The body-hosted callout needs an explicit 20pt upward offset"
+        )
+        XCTAssertTrue(
+            content.contains("thisMonthCalloutLayer\n                .offset(y: Self.calloutVerticalOffset)"),
+            "The upward offset must apply to the fixed body callout layer"
+        )
+    }
+
     /// iOS 26's top edge effect must remain available for contrast when calendar content moves
     /// under the fixed navigation controls. The calendar owns the effect policy, but only for
     /// the top edge and only on OS versions that provide the API; the bottom edge is unchanged.
