@@ -46,9 +46,10 @@ final class SocialPinnedFriendReorderUITests: XCTestCase {
         let first = app.buttons["social.friend.31"]
         XCTAssertTrue(first.waitForExistence(timeout: 10))
         let initialY = first.frame.minY
-        first.coordinate(withNormalizedOffset: CGVector(dx: 0.35, dy: 0.5)).press(
+        let start = first.coordinate(withNormalizedOffset: CGVector(dx: 0.35, dy: 0.5))
+        start.press(
             forDuration: 0.05,
-            thenDragTo: app.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.25))
+            thenDragTo: start.withOffset(CGVector(dx: 0, dy: -220))
         )
 
         XCTAssertLessThan(first.frame.minY, initialY - 10)
@@ -69,11 +70,18 @@ final class SocialPinnedFriendReorderUITests: XCTestCase {
         XCTAssertFalse(app.descendants(matching: .any)["screen.calendar"].exists)
         XCTAssertTrue(app.descendants(matching: .any)["social.list"].exists)
 
+        let cancelButton = app.buttons["dp.confirmation.cancel"]
+        let confirmButton = app.buttons["dp.confirmation.confirm"]
+        XCTAssertTrue(cancelButton.waitForExistence(timeout: 10))
+        XCTAssertTrue(confirmButton.exists)
+        cancelButton.tap()
+        XCTAssertTrue(confirmButton.waitForNonExistence(timeout: 5))
+
         let pinnedCard = app.buttons["social.friend.32"]
         XCTAssertTrue(pinnedCard.waitForExistence(timeout: 10))
         pinnedCard.tap()
         XCTAssertTrue(
-            app.descendants(matching: .any)["screen.calendar"].waitForExistence(timeout: 10)
+            app.descendants(matching: .any)["screen.calendar.member"].waitForExistence(timeout: 10)
         )
         capture("social-pinned-card-calendar")
     }

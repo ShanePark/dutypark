@@ -47,6 +47,7 @@ struct DPBrandMark: View {
         .fixedSize(horizontal: true, vertical: false)
         .contentShape(Rectangle())
         .onTapGesture(perform: action)
+        .accessibilityElement(children: .ignore)
         .accessibilityLabel("Dutypark")
         .accessibilityAddTraits(.isButton)
         .accessibilityAction { action() }

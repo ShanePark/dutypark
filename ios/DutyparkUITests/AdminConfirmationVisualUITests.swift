@@ -118,7 +118,7 @@ final class AdminConfirmationVisualUITests: XCTestCase {
         openAdministration(in: app)
         app.staticTexts["팀 관리"].firstMatch.tap()
 
-        let fixtureTeam = app.staticTexts["시각 검증팀"].firstMatch
+        let fixtureTeam = app.buttons["admin.team.101"].firstMatch
         XCTAssertTrue(fixtureTeam.waitForExistence(timeout: 10))
         fixtureTeam.tap()
         XCTAssertTrue(app.staticTexts["듀티파크 테스트팀 관리"].waitForExistence(timeout: 10))

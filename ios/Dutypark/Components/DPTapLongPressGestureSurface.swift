@@ -64,6 +64,7 @@ struct DPLongPressGestureRecognizer: UIGestureRecognizerRepresentable {
         case .ended:
             guard context.coordinator.hasBegun else { return }
             context.coordinator.hasBegun = false
+            onChanged(location)
             onEnded()
         case .cancelled, .failed:
             guard context.coordinator.hasBegun else { return }

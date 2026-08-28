@@ -248,10 +248,11 @@ final class NotificationConfirmationVisualUITests: XCTestCase {
         XCTAssertEqual(confirmButton.label, confirmTitle)
         XCTAssertTrue(cancelButton.isHittable)
         XCTAssertTrue(confirmButton.isHittable)
-        XCTAssertGreaterThanOrEqual(cancelButton.frame.width, 44)
-        XCTAssertGreaterThanOrEqual(cancelButton.frame.height, 44)
-        XCTAssertGreaterThanOrEqual(confirmButton.frame.width, 44)
-        XCTAssertGreaterThanOrEqual(confirmButton.frame.height, 44)
+        let pixelTolerance: CGFloat = 0.01
+        XCTAssertGreaterThanOrEqual(cancelButton.frame.width, 44 - pixelTolerance)
+        XCTAssertGreaterThanOrEqual(cancelButton.frame.height, 44 - pixelTolerance)
+        XCTAssertGreaterThanOrEqual(confirmButton.frame.width, 44 - pixelTolerance)
+        XCTAssertGreaterThanOrEqual(confirmButton.frame.height, 44 - pixelTolerance)
 
         let frames = [
             titleText.frame,

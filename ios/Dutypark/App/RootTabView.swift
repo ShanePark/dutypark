@@ -1550,8 +1550,8 @@ private extension View {
                 Text(tab.localizedTitle)
             } icon: {
                 Image(systemName: tab.systemImage)
-                    .accessibilityIdentifier(tab.accessibilityIdentifier)
             }
+            .accessibilityIdentifier(tab.accessibilityIdentifier)
         }
         .tag(tab)
     }

@@ -24,6 +24,15 @@ struct ContentFilterTests {
         #expect(ContentFilter.bannedWord(in: ["시발"], words: []) == nil)
     }
 
+#if DEBUG
+    @Test("UI-test fixtures do not refresh the content filter over the network")
+    func skipsNetworkRefreshForUITestingArguments() {
+        #expect(ContentFilterStore.shouldSkipNetworkRefresh(arguments: ["-ui-testing-authenticated"]))
+        #expect(ContentFilterStore.shouldSkipNetworkRefresh(arguments: ["-ui-testing-admin"]))
+        #expect(!ContentFilterStore.shouldSkipNetworkRefresh(arguments: ["Dutypark"]))
+    }
+#endif
+
     @Test("The store loads the list once per launch and caches it for the next cold launch")
     func loadsOnceAndCaches() async {
         let defaults = makeDefaults()

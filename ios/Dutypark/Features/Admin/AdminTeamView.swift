@@ -46,9 +46,7 @@ struct AdminTeamListView: View {
                                 } label: {
                                     AdminTeamRow(team: team)
                                 }
-                                .simultaneousGesture(TapGesture().onEnded {
-                                    DPHapticCenter.shared.emit(.routine)
-                                })
+                                .accessibilityIdentifier("admin.team.\(team.id)")
                             }
                         }
                     }
@@ -159,7 +157,8 @@ struct AdminTeamListView: View {
                 )
             }
         )
-            .accessibilityIdentifier("screen.team.manage.\(teamID)")
+        .modifier(AdminTeamNavigationHapticModifier())
+        .accessibilityIdentifier("screen.team.manage.\(teamID)")
     }
 
     private func requestCreateModalDismiss() {
@@ -175,6 +174,18 @@ struct AdminTeamListView: View {
         }
     }
 
+}
+
+private struct AdminTeamNavigationHapticModifier: ViewModifier {
+    @State private var didEmitNavigationHaptic = false
+
+    func body(content: Content) -> some View {
+        content.onAppear {
+            guard !didEmitNavigationHaptic else { return }
+            didEmitNavigationHaptic = true
+            DPHapticCenter.shared.emit(.routine)
+        }
+    }
 }
 
 private struct AdminTeamListSummary: View {
@@ -379,7 +390,6 @@ private struct AdminTeamRow: View {
         }
         .padding(.vertical, DPSpacing.extraSmall)
         .frame(minHeight: 60)
-        .accessibilityIdentifier("admin.team.\(team.id)")
     }
 }
 

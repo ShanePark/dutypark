@@ -28,6 +28,12 @@ final class ContentFilterStore: ObservableObject {
     func load() -> Task<Void, Never> {
         if let loadTask { return loadTask }
 
+#if DEBUG
+        guard !Self.shouldSkipNetworkRefresh(arguments: ProcessInfo.processInfo.arguments) else {
+            return Task {}
+        }
+#endif
+
         let task = Task { [weak self] in
             guard let self else { return }
             defer { self.loadTask = nil }
@@ -50,6 +56,12 @@ final class ContentFilterStore: ObservableObject {
     func isBlocked(_ values: String?...) -> Bool {
         blockedWord(in: values) != nil
     }
+
+#if DEBUG
+    nonisolated static func shouldSkipNetworkRefresh(arguments: [String]) -> Bool {
+        arguments.contains { $0.hasPrefix("-ui-testing-") }
+    }
+#endif
 
     private static let cacheKey = "dp-banned-words"
 }

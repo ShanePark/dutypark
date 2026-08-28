@@ -94,6 +94,11 @@ final class PinnedFriendActionButtonDragUITests: XCTestCase {
         XCTAssertEqual(pin.label, unpinLabel)
 
         pin.tap()
+        let confirmButton = app.buttons["dp.confirmation.confirm"]
+        XCTAssertTrue(confirmButton.waitForExistence(timeout: 10))
+        XCTAssertEqual(confirmButton.label, unpinLabel)
+        confirmButton.tap()
+        XCTAssertTrue(confirmButton.waitForNonExistence(timeout: 5))
         XCTAssertTrue(waitForLabel(pin, equals: pinLabel))
         XCTAssertFalse(app.descendants(matching: .any)["screen.calendar"].exists)
 

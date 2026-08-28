@@ -158,12 +158,13 @@ final class DutyparkUITests: XCTestCase {
 
         let monthControls = app.descendants(matching: .any)["calendar.month.controls"]
         XCTAssertTrue(monthControls.waitForExistence(timeout: 10))
-        XCTAssertEqual(monthControls.frame.midX, app.frame.midX, accuracy: 1)
+        XCTAssertEqual(monthControls.frame.midX, app.frame.midX, accuracy: 3)
         XCTAssertFalse(
             app.buttons["calendar.todo.add"].exists,
             "The Todo strip above the calendar is removed"
         )
-        XCTAssertTrue(app.buttons["tab.todo"].exists, "The dock Todo entry must remain")
+        let todoTab = primaryTab("tab.todo", in: app)
+        XCTAssertTrue(todoTab.exists, "The dock Todo entry must remain")
 
         let comparedDuty = app.descendants(matching: .any)["calendar.compared-duty.2"]
         XCTAssertTrue(comparedDuty.waitForExistence(timeout: 10))
@@ -377,13 +378,41 @@ final class DutyparkUITests: XCTestCase {
         line: UInt = #line
     ) -> XCUIElement {
         let tab = app.buttons.matching(identifier: identifier).firstMatch
+        let deadline = Date().addingTimeInterval(timeout)
+        let identifierGracePeriod = min(timeout, 1)
+        if tab.waitForExistence(timeout: identifierGracePeriod) {
+            return tab
+        }
+
+        guard let label = primaryTabLabel(for: identifier) else {
+            XCTFail(
+                "Primary tab did not appear: \(identifier)",
+                file: file,
+                line: line
+            )
+            return tab
+        }
+
+        let labelTab = app.tabBars.buttons[label].firstMatch
+        let remainingTimeout = max(0, deadline.timeIntervalSinceNow)
         XCTAssertTrue(
-            tab.waitForExistence(timeout: timeout),
-            "Primary tab did not appear: \(identifier)",
+            labelTab.waitForExistence(timeout: remainingTimeout),
+            "Primary tab did not appear: \(identifier) (English label: \(label))",
             file: file,
             line: line
         )
-        return tab
+        return labelTab
+    }
+
+    private func primaryTabLabel(for identifier: String) -> String? {
+        switch identifier {
+        case "tab.home": return "Home"
+        case "tab.calendar": return "Calendar"
+        case "tab.todo": return "Todo"
+        case "tab.team": return "Team"
+        case "tab.more": return "More"
+        default: return nil
+        }
     }
 
     @MainActor

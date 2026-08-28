@@ -14,8 +14,9 @@ final class SettingsRootConfirmationVisualUITests: XCTestCase {
         let photoActionsButton = app.buttons["settings.photo.actions"]
         XCTAssertTrue(photoActionsButton.waitForExistence(timeout: 10))
         XCTAssertTrue(photoActionsButton.isHittable)
-        XCTAssertGreaterThanOrEqual(photoActionsButton.frame.width, 80)
-        XCTAssertGreaterThanOrEqual(photoActionsButton.frame.height, 80)
+        let pixelTolerance: CGFloat = 0.01
+        XCTAssertGreaterThanOrEqual(photoActionsButton.frame.width, 80 - pixelTolerance)
+        XCTAssertGreaterThanOrEqual(photoActionsButton.frame.height, 80 - pixelTolerance)
         XCTAssertFalse(app.buttons["현재 프로필 사진 자르기"].exists)
         photoActionsButton.tap()
 
@@ -26,9 +27,9 @@ final class SettingsRootConfirmationVisualUITests: XCTestCase {
 
         assertCenteredConfirmation(
             in: app,
-            title: "프로필 사진 삭제",
-            message: "현재 프로필 사진을 삭제하시겠습니까?",
-            confirmTitle: "프로필 사진 삭제"
+            title: "기본 이미지로 변경",
+            message: "프로필 사진을 기본 이미지로 변경하시겠습니까?",
+            confirmTitle: "기본 이미지로 변경"
         )
         capture("parity-ios-profile-photo-delete-confirmation-after")
     }
