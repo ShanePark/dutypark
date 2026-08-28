@@ -126,6 +126,74 @@ struct RootLifecycleTests {
     }
 
     @Test
+    func notificationDropdownSwipePolicyTracksOnlyUpwardVerticalOffset() {
+        #expect(
+            RootNotificationDropdownSwipePolicy.followOffset(
+                translation: CGSize(width: 0, height: -80)
+            ) == -80
+        )
+        #expect(
+            RootNotificationDropdownSwipePolicy.followOffset(
+                translation: CGSize(width: 24, height: -40)
+            ) == -40
+        )
+        #expect(
+            RootNotificationDropdownSwipePolicy.followOffset(
+                translation: CGSize(width: 40, height: -24)
+            ) == -24
+        )
+        #expect(
+            RootNotificationDropdownSwipePolicy.followOffset(
+                translation: CGSize(width: 0, height: 40)
+            ) == 0
+        )
+    }
+
+    @Test
+    func notificationDropdownSwipePolicyDismissesOnlyAfterMoreThan60PointUpwardVerticalSwipe() {
+        #expect(
+            !RootNotificationDropdownSwipePolicy.shouldDismiss(
+                translation: CGSize(width: 0, height: -59)
+            )
+        )
+        #expect(
+            !RootNotificationDropdownSwipePolicy.shouldDismiss(
+                translation: CGSize(width: 40, height: -60)
+            )
+        )
+        #expect(
+            RootNotificationDropdownSwipePolicy.shouldDismiss(
+                translation: CGSize(width: 0, height: -61)
+            )
+        )
+        #expect(
+            !RootNotificationDropdownSwipePolicy.shouldDismiss(
+                translation: CGSize(width: 100, height: -80)
+            )
+        )
+        #expect(
+            !RootNotificationDropdownSwipePolicy.shouldDismiss(
+                translation: CGSize(width: 0, height: 60)
+            )
+        )
+    }
+
+    @Test
+    func notificationDropdownDismissHandleUsesGlobalDragCoordinates() throws {
+        let iosDirectory = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let rootSource = try String(
+            contentsOf: iosDirectory.appending(path: "Dutypark/App/RootTabView.swift"),
+            encoding: .utf8
+        )
+        let handleStart = try #require(rootSource.range(of: "private var dismissHandle"))
+        let handleSource = String(rootSource[handleStart.lowerBound...])
+
+        #expect(handleSource.contains("DragGesture(coordinateSpace: .global)"))
+    }
+
+    @Test
     func authenticatedStartupRunsRequiredWorkInOrder() async {
         var events: [String] = []
 

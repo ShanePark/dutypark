@@ -120,6 +120,19 @@ struct RootNotificationDropdownReadPolicy {
     }
 }
 
+struct RootNotificationDropdownSwipePolicy {
+    static let minimumVerticalTranslation: CGFloat = 60
+
+    static func followOffset(translation: CGSize) -> CGFloat {
+        min(translation.height, 0)
+    }
+
+    static func shouldDismiss(translation: CGSize) -> Bool {
+        translation.height < -minimumVerticalTranslation &&
+            abs(translation.height) > abs(translation.width)
+    }
+}
+
 struct RootHomeRefreshPolicy {
     static let minimumAutomaticInterval: TimeInterval = 5
 
@@ -762,7 +775,8 @@ struct RootTabView: View {
                 onViewAll: {
                     closeNotificationDropdown()
                     openNotifications()
-                }
+                },
+                onDismiss: closeNotificationDropdown
             )
             .frame(maxWidth: 384)
             .padding(.horizontal, DPSpacing.medium)
@@ -1294,6 +1308,10 @@ private struct NotificationDropdown: View {
     @ObservedObject var store: NotificationStore
     let onOpen: (NotificationDTO) async -> Void
     let onViewAll: () -> Void
+    let onDismiss: () -> Void
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var panelDragOffset: CGFloat = 0
 
     private var displayedNotifications: [NotificationDTO] {
         Array(store.notifications.prefix(10))
@@ -1381,6 +1399,8 @@ private struct NotificationDropdown: View {
             }
             .buttonStyle(.plain)
             .background(DPColor.backgroundTertiary)
+
+            dismissHandle
         }
         .background(DPColor.backgroundCard)
         .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
@@ -1390,7 +1410,47 @@ private struct NotificationDropdown: View {
         }
         .shadow(color: .black.opacity(0.25), radius: 20, y: 10)
         .shadow(color: .black.opacity(0.15), radius: 6, y: 4)
+        .offset(y: panelDragOffset)
         .accessibilityIdentifier("notifications.dropdown")
+    }
+
+    private var dismissHandle: some View {
+        HStack {
+            Capsule()
+                .fill(DPColor.textMuted)
+                .frame(width: 36, height: 5)
+        }
+        .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)
+        .contentShape(Rectangle())
+        .gesture(
+            DragGesture(coordinateSpace: .global)
+                .onChanged { value in
+                    panelDragOffset = RootNotificationDropdownSwipePolicy.followOffset(
+                        translation: value.translation
+                    )
+                }
+                .onEnded { value in
+                    guard RootNotificationDropdownSwipePolicy.shouldDismiss(
+                        translation: value.translation
+                    ) else {
+                        let animation: Animation? = reduceMotion
+                            ? nil
+                            : .interactiveSpring(response: 0.25, dampingFraction: 0.82)
+                        withAnimation(animation) {
+                            panelDragOffset = 0
+                        }
+                        return
+                    }
+                    onDismiss()
+                }
+        )
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(
+            RootChromeLocalization.notifications("notifications.common.close")
+        )
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction { onDismiss() }
+        .accessibilityIdentifier("notifications.dropdown.dismissHandle")
     }
 }
 
