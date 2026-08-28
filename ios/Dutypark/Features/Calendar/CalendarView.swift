@@ -342,6 +342,8 @@ struct CalendarView: View {
                     model: todoDetailModel,
                     todo: selection.todo,
                     maximumHeight: availableSize.height,
+                    accountID: authenticatedAccountID,
+                    sessionGeneration: session.authenticationSessionGenerationForCurrentAccount,
                     onTodoChanged: { await model.refreshTodoBoard() },
                     onDismissabilityChange: { todoDetailCanDismiss = $0 },
                     dismissRequest: todoDetailDismissRequest,
@@ -484,8 +486,14 @@ struct CalendarView: View {
         model.configure(accountID: member.id, isOffline: session.availability.isOffline)
         todoDetailModel.configureSession(
             accountID: member.id,
-            availability: session.availability
+            availability: session.availability,
+            sessionGeneration: session.authenticationSessionGenerationForCurrentAccount
         )
+    }
+
+    private var authenticatedAccountID: MemberID? {
+        guard case .authenticated(let member) = session.state else { return nil }
+        return member.id
     }
 
     private func offlineSyncAccountID(from notification: Notification) -> MemberID? {
@@ -1840,10 +1848,26 @@ private struct CalendarDayCell: View {
         .overlay(alignment: .bottom) { Rectangle().fill(cellBorder).frame(height: 0.5) }
         .overlay(Rectangle().stroke(focusBorder, lineWidth: highlighted || isToday ? 2 : 0))
         .contentShape(Rectangle())
+        // The day gesture belongs to the whole cell. Without an explicit accessibility
+        // boundary, SwiftUI propagates this label and button trait to every nested schedule,
+        // comparison chip and Todo button, producing duplicate date targets whose small
+        // subframes are often reported as non-hittable by VoiceOver and UI automation.
+        .accessibilityElement(children: .ignore)
         .accessibilityLabel(day.cell.date.rawValue)
+        .accessibilityIdentifier("calendar.day.\(day.cell.date.rawValue)")
         // A day that opens nothing carries no tap gesture, so it must not offer itself
         // as a button either.
         .accessibilityAddTraits(opensDetail ? .isButton : [])
+        // The visual Todo buttons remain nested in the cell. Re-expose them as custom
+        // actions after collapsing the cell so VoiceOver keeps both the day action and
+        // direct Todo access without recreating duplicate date elements.
+        .accessibilityActions {
+            if !hidesDetails {
+                ForEach(day.todos.prefix(CalendarVisualLogic.maximumTodosPerCell), id: \.id) { todo in
+                    Button(todo.title) { openTodo(todo) }
+                }
+            }
+        }
     }
 
     private var cellBackground: Color {

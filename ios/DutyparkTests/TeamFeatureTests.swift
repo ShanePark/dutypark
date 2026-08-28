@@ -725,6 +725,150 @@ struct TeamFeatureTests {
     }
 
     @Test
+    func sanitizesDutyUploadFilenameBeforePuttingItInMultipartHeaders() {
+        let controls = "\t\n\r\u{0B}\u{1F}\u{7F}"
+        let fileName = "roster\"\\" + controls + ".xlsx"
+        let form = TeamMultipartForm(boundary: "Dutypark-Test-Boundary")
+
+        #expect(
+            TeamFeatureLogic.sanitizedDutyBatchFileName(fileName)
+                == "roster\\\"\\\\.xlsx"
+        )
+
+        let body = form.makeBody(
+            fileName: fileName,
+            fileData: Data([0x01]),
+            year: 2026,
+            month: 8
+        )
+        let text = String(decoding: body, as: UTF8.self)
+        #expect(
+            text.contains(
+                "filename=\"\(TeamFeatureLogic.sanitizedDutyBatchFileName(fileName))\"\r\n"
+            )
+        )
+    }
+
+    @Test
+    func rejectsDutyUploadFilesLargerThanTheConfiguredLimit() {
+        let maximum = TeamFeatureLogic.maximumDutyBatchFileSize(
+            for: "roster.xlsx",
+            year: 2026,
+            month: 8
+        )
+
+        #expect(TeamFeatureLogic.isValidDutyBatchFileSize(0))
+        #expect(
+            TeamFeatureLogic.isValidDutyBatchFileSize(
+                maximum,
+                fileName: "roster.xlsx",
+                year: 2026,
+                month: 8
+            )
+        )
+        #expect(
+            !TeamFeatureLogic.isValidDutyBatchFileSize(
+                maximum + 1,
+                fileName: "roster.xlsx",
+                year: 2026,
+                month: 8
+            )
+        )
+        #expect(!TeamFeatureLogic.isValidDutyBatchFileSize(-1))
+    }
+
+    @Test
+    func keepsTheMaximumDutyUploadBodyBelowTenMiBIncludingMultipartOverhead() {
+        let fileName = "roster\"\\.xlsx"
+        let year = 2026
+        let month = 8
+        let boundary = String(repeating: "B", count: 45)
+        let form = TeamMultipartForm(boundary: boundary)
+        let maximum = TeamFeatureLogic.maximumDutyBatchFileSize(
+            for: fileName,
+            year: year,
+            month: month
+        )
+
+        #expect(
+            TeamFeatureLogic.isValidDutyBatchFileSize(
+                maximum,
+                fileName: fileName,
+                year: year,
+                month: month
+            )
+        )
+        #expect(
+            !TeamFeatureLogic.isValidDutyBatchFileSize(
+                maximum + 1,
+                fileName: fileName,
+                year: year,
+                month: month
+            )
+        )
+
+        let body = form.makeBody(
+            fileName: fileName,
+            fileData: Data(repeating: 0, count: maximum),
+            year: year,
+            month: month
+        )
+        #expect(body.count == TeamFeatureLogic.maximumDutyBatchRequestBodySize - 1)
+        #expect(body.count < TeamFeatureLogic.maximumDutyBatchRequestBodySize)
+    }
+
+    @Test
+    func repositoryRejectsOversizedDutyUploadWithoutSendingARequest() async {
+        TeamURLProtocolStub.requestCount = 0
+        TeamURLProtocolStub.handler = { request in
+            TeamURLProtocolStub.requestCount += 1
+            return Self.response(request, status: 200, body: "{}")
+        }
+        defer {
+            TeamURLProtocolStub.handler = nil
+            TeamURLProtocolStub.requestCount = 0
+        }
+
+        let repository = TeamRepository(client: makeClient())
+        await #expect(throws: TeamBatchUploadError.requestBodyTooLarge) {
+            _ = try await repository.uploadDutyBatch(
+                teamID: 7,
+                fileName: "roster.xlsx",
+                fileData: Data(repeating: 0, count: TeamFeatureLogic.maximumDutyBatchRequestBodySize),
+                year: 2026,
+                month: 8
+            )
+        }
+
+        #expect(TeamURLProtocolStub.requestCount == 0)
+    }
+
+    @Test
+    func checksDutyUploadFileSizeBeforeReadingTheFileData() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark/Features/Team/TeamViewModel.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+        let sizeCheck = try #require(source.range(of: "resourceValues(forKeys: [.fileSizeKey])"))
+        let dataRead = try #require(source.range(of: "Data(contentsOf: fileURL)"))
+
+        #expect(source.contains("TeamFeatureLogic.isValidDutyBatchFileSize"))
+        #expect(sizeCheck.lowerBound < dataRead.lowerBound)
+    }
+
+    @Test
+    func showsTheLocalizedDutyUploadErrorMessage() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark/Features/Team/TeamManageView.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+
+        #expect(source.contains("viewModel.errorMessage ?? teamLocalized(\"team.common.error\")"))
+    }
+
+    @Test
     func decodesJacksonPairObjectInTeamBatchResult() throws {
         let result = try JSONDecoder().decode(
             TeamBatchResultDTO.self,
@@ -1106,6 +1250,7 @@ struct TeamFeatureTests {
 private final class TeamURLProtocolStub: URLProtocol, @unchecked Sendable {
     nonisolated(unsafe) static var handler: (@Sendable (URLRequest) -> (HTTPURLResponse, Data))?
     nonisolated(unsafe) static var visibilityRequestCount = 0
+    nonisolated(unsafe) static var requestCount = 0
 
     override class func canInit(with request: URLRequest) -> Bool { true }
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
@@ -1114,6 +1259,7 @@ private final class TeamURLProtocolStub: URLProtocol, @unchecked Sendable {
         guard let handler = Self.handler else {
             fatalError("TeamURLProtocolStub handler is not set")
         }
+        Self.requestCount += 1
         let (response, data) = handler(request)
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
         client?.urlProtocol(self, didLoad: data)

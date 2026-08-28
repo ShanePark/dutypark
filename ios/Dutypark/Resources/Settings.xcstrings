@@ -1909,6 +1909,22 @@
         }
       }
     },
+    "settings.push.unavailable": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Push notifications are unavailable in the iOS Simulator. Try this on a physical iPhone."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS 시뮬레이터에서는 푸시 알림을 사용할 수 없습니다. 실제 iPhone에서 확인해주세요."
+          }
+        }
+      }
+    },
     "settings.crop.existing": {
       "localizations": {
         "en": {

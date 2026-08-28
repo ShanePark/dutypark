@@ -77,6 +77,105 @@ final class CalendarOfflineTests: XCTestCase {
         XCTAssertNil(model.errorMessage, "A complete same-account snapshot is a usable result")
     }
 
+    func testCachedComparisonDutiesAreNotAppliedToADifferentSelection() async throws {
+        let cache = CalendarOfflineCacheStub(
+            account: Self.accountSnapshot(),
+            month: Self.monthSnapshot(
+                storedAt: Date(timeIntervalSince1970: 123),
+                comparedMemberIDs: [2],
+                otherDuties: [Self.otherDuty(memberID: 2, name: "Friend A")]
+            )
+        )
+        let model = CalendarViewModel(
+            repository: CalendarOfflineRepository(),
+            now: Self.date(2026, 8, 12),
+            accountID: 42,
+            isOffline: true,
+            cache: cache
+        )
+        model.comparedMemberIDs = [3]
+
+        await model.load()
+
+        XCTAssertTrue(
+            model.days.flatMap(\.comparedDuties).isEmpty,
+            "A snapshot captured for another friend must not leak that friend's duties"
+        )
+    }
+
+    func testCachedComparisonDutiesAreAppliedWhenTheSelectionMatches() async throws {
+        let cache = CalendarOfflineCacheStub(
+            account: Self.accountSnapshot(),
+            month: Self.monthSnapshot(
+                storedAt: Date(timeIntervalSince1970: 123),
+                comparedMemberIDs: [2],
+                otherDuties: [Self.otherDuty(memberID: 2, name: "Friend A")]
+            )
+        )
+        let model = CalendarViewModel(
+            repository: CalendarOfflineRepository(),
+            now: Self.date(2026, 8, 12),
+            accountID: 42,
+            isOffline: true,
+            cache: cache
+        )
+        model.comparedMemberIDs = [2]
+
+        await model.load()
+
+        XCTAssertEqual(
+            model.days.first(where: { $0.cell.date.rawValue == "2026-08-12" })?.comparedDuties.map(\.memberID),
+            [2]
+        )
+    }
+
+    func testLegacyCachedComparisonDutiesAreIgnoredWithoutDiscardingTheMonth() async throws {
+        let cache = CalendarOfflineCacheStub(
+            account: Self.accountSnapshot(),
+            month: Self.monthSnapshot(
+                storedAt: Date(timeIntervalSince1970: 123),
+                comparedMemberIDs: nil,
+                otherDuties: [Self.otherDuty(memberID: 2, name: "Friend A")]
+            )
+        )
+        let model = CalendarViewModel(
+            repository: CalendarOfflineRepository(),
+            now: Self.date(2026, 8, 12),
+            accountID: 42,
+            isOffline: true,
+            cache: cache
+        )
+        model.comparedMemberIDs = [2]
+
+        await model.load()
+
+        XCTAssertEqual(
+            model.days.first(where: { $0.cell.date.rawValue == "2026-08-12" })?.schedules.first?.content,
+            "Cached appointment"
+        )
+        XCTAssertTrue(model.days.flatMap(\.comparedDuties).isEmpty)
+    }
+
+    func testLegacyMonthSnapshotDecodesWithoutComparisonIdentity() throws {
+        let legacy = Self.monthSnapshot(
+            storedAt: Date(timeIntervalSince1970: 123),
+            comparedMemberIDs: nil
+        )
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = .iso8601
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+
+        let decoded = try decoder.decode(
+            OfflineMonthSnapshot.self,
+            from: encoder.encode(legacy)
+        )
+
+        XCTAssertNil(decoded.comparedMemberIDs)
+        XCTAssertEqual(decoded.calendar.count, 42)
+        XCTAssertEqual(decoded.schedules.count, 42)
+    }
+
     func testServerRecoveryRetriesWithoutPathChangeAndClearsCachedState() async throws {
         let cache = CalendarOfflineCacheStub(
             account: Self.accountSnapshot(),
@@ -500,6 +599,39 @@ final class CalendarOfflineTests: XCTestCase {
         XCTAssertEqual(fetched, OfflineCacheRangePolicy.rollingThirteenMonths.months(around: OfflineMonthKey(year: 2026, month: 8)))
     }
 
+    func testPrefetchDoesNotPersistOldComparisonSelectionAfterItChanges() async throws {
+        let gate = CalendarPrefetchGate()
+        let cache = CalendarOfflineCacheStub(account: Self.accountSnapshot())
+        let repository = CalendarOfflineRepository(prefetchGate: gate)
+        let model = CalendarViewModel(
+            repository: repository,
+            now: Self.date(2026, 8, 12),
+            accountID: 42,
+            cache: cache
+        )
+        model.comparedMemberIDs = [2]
+
+        let prefetch = Task {
+            await model.prefetchCachedMonths(around: OfflineMonthKey(year: 2026, month: 8))
+        }
+        for _ in 0..<100 {
+            if await gate.requestCount > 0 { break }
+            await Task.yield()
+        }
+        let requestCount = await gate.requestCount
+        XCTAssertGreaterThan(requestCount, 0)
+
+        model.comparedMemberIDs = [3]
+        await gate.open()
+        await prefetch.value
+
+        let savedSnapshots = await cache.savedMonths
+        XCTAssertTrue(
+            savedSnapshots.isEmpty,
+            "A prefetch started for friend 2 must not overwrite the cache after friend 3 is selected"
+        )
+    }
+
     func testOfflineModeNeverStartsNetworkPrefetch() async throws {
         let repository = CalendarOfflineRepository()
         let model = CalendarViewModel(
@@ -589,7 +721,11 @@ private extension CalendarOfflineTests {
         )
     }
 
-    static func monthSnapshot(storedAt: Date) -> OfflineMonthSnapshot {
+    static func monthSnapshot(
+        storedAt: Date,
+        comparedMemberIDs: Set<MemberID>? = [],
+        otherDuties: [OtherDutyResponse] = []
+    ) -> OfflineMonthSnapshot {
         let key = OfflineMonthKey(year: 2026, month: 8)
         let days = CalendarOfflineRepository.gridDays(year: key.year, month: key.month)
         var schedules = Array(repeating: [ScheduleDTO](), count: 42)
@@ -626,8 +762,28 @@ private extension CalendarOfflineTests {
             schedules: schedules,
             duties: [],
             holidays: Array(repeating: [], count: 42),
-            otherDuties: [],
+            otherDuties: otherDuties,
+            comparedMemberIDs: comparedMemberIDs,
             storedAt: storedAt
+        )
+    }
+
+    static func otherDuty(memberID: MemberID, name: String) -> OtherDutyResponse {
+        OtherDutyResponse(
+            memberId: memberID,
+            name: name,
+            hasProfilePhoto: false,
+            profilePhotoVersion: 0,
+            duties: [DutyDTO(
+                year: 2026,
+                month: 8,
+                day: 12,
+                dutyType: "Day",
+                dutyColor: "#3B82F6",
+                isOff: false,
+                dutyTypeId: 7,
+                source: .override
+            )]
         )
     }
 }
@@ -728,6 +884,7 @@ private actor CalendarOfflineRepository: CalendarRepositoryProtocol {
     private(set) var prefetchedMonths: [OfflineMonthKey] = []
     private(set) var savedRequests: [ScheduleSaveDTO] = []
     private(set) var monthRequestCount = 0
+    let prefetchGate: CalendarPrefetchGate?
 
     init(
         monthFailure: APIError? = nil,
@@ -735,7 +892,8 @@ private actor CalendarOfflineRepository: CalendarRepositoryProtocol {
         saveFailure: APIError? = nil,
         searchFailure: APIError? = nil,
         scheduleFailures: [APIError] = [],
-        scheduleFailureAfter: Int? = nil
+        scheduleFailureAfter: Int? = nil,
+        prefetchGate: CalendarPrefetchGate? = nil
     ) {
         self.monthFailures = monthFailures.isEmpty
             ? monthFailure.map { [$0] } ?? []
@@ -744,6 +902,7 @@ private actor CalendarOfflineRepository: CalendarRepositoryProtocol {
         self.searchFailure = searchFailure
         self.scheduleFailures = scheduleFailures
         self.scheduleFailureAfter = scheduleFailureAfter
+        self.prefetchGate = prefetchGate
     }
 
     func member() async throws -> MemberDTO { Self.memberDTO() }
@@ -757,7 +916,11 @@ private actor CalendarOfflineRepository: CalendarRepositoryProtocol {
         return Self.gridDays(year: year, month: month)
     }
     func duties(memberID: MemberID, year: Int, month: Int) async throws -> [DutyDTO] { try failIfNeeded(); return [] }
-    func otherDuties(memberIDs: [MemberID], year: Int, month: Int) async throws -> [OtherDutyResponse] { try failIfNeeded(); return [] }
+    func otherDuties(memberIDs: [MemberID], year: Int, month: Int) async throws -> [OtherDutyResponse] {
+        await prefetchGate?.wait()
+        try failIfNeeded()
+        return []
+    }
     func schedules(memberID: MemberID, year: Int, month: Int) async throws -> [[ScheduleDTO]] {
         try failIfNeeded()
         scheduleRequestCount += 1
@@ -823,5 +986,22 @@ private actor CalendarOfflineRepository: CalendarRepositoryProtocol {
             let parts = calendar.dateComponents([.year, .month, .day], from: date)
             return TeamDayDTO(year: parts.year!, month: parts.month!, day: parts.day!)
         }
+    }
+}
+
+private actor CalendarPrefetchGate {
+    private(set) var requestCount = 0
+    private var isOpen = false
+
+    func wait() async {
+        requestCount += 1
+        while !isOpen {
+            guard !Task.isCancelled else { return }
+            await Task.yield()
+        }
+    }
+
+    func open() {
+        isOpen = true
     }
 }

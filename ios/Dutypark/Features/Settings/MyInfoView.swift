@@ -30,6 +30,7 @@ struct MyInfoView: View {
     @State private var socialManagementPresentation: SettingsSocialManagementPresentation?
     @State private var socialAction = SettingsDestructiveActionGate()
     @State private var oauthNoticeMessage: String?
+    @State private var photoNoticeMessage: String?
     private let onProfilePhotoChanged: () -> Void
     private let onProfilePhotoStateChanged: (Bool, Int64) -> Void
     private let settingsService = SettingsService()
@@ -205,6 +206,7 @@ struct MyInfoView: View {
             if let photoToCrop {
                 ProfilePhotoCropView(image: photoToCrop) { jpeg in
                     self.photoToCrop = nil
+                    photoNoticeMessage = nil
                     Task {
                         if await model.uploadProfilePhoto(jpeg) {
                             notifyProfilePhotoState()
@@ -213,6 +215,9 @@ struct MyInfoView: View {
                     }
                 } onCancel: {
                     self.photoToCrop = nil
+                } onError: { error in
+                    self.photoToCrop = nil
+                    showPhotoError(error)
                 }
             }
         }
@@ -220,10 +225,13 @@ struct MyInfoView: View {
             Button(SettingsLocalization.string("settings.action.confirm")) {
                 model.noticeKey = nil
                 oauthNoticeMessage = nil
+                photoNoticeMessage = nil
             }
         } message: {
             if let oauthNoticeMessage {
                 Text(verbatim: oauthNoticeMessage)
+            } else if let photoNoticeMessage {
+                Text(verbatim: photoNoticeMessage)
             } else if let key = model.noticeKey {
                 SettingsLocalization.text(key)
             }
@@ -565,11 +573,16 @@ struct MyInfoView: View {
 
     private var noticeBinding: Binding<Bool> {
         Binding(
-            get: { model.noticeKey != nil || oauthNoticeMessage != nil },
+            get: {
+                model.noticeKey != nil
+                    || oauthNoticeMessage != nil
+                    || photoNoticeMessage != nil
+            },
             set: {
                 if !$0 {
                     model.noticeKey = nil
                     oauthNoticeMessage = nil
+                    photoNoticeMessage = nil
                 }
             }
         )
@@ -669,21 +682,33 @@ struct MyInfoView: View {
 
     private func upload(_ item: PhotosPickerItem) async {
         defer { selectedPhoto = nil }
-        guard let data = try? await item.loadTransferable(type: Data.self),
-              let image = UIImage(data: data)
-        else {
-            model.noticeKey = "settings.photo.invalid"
-            model.noticeIsError = true
-            DPHapticCenter.shared.emit(.error)
-            return
+        do {
+            guard let picked = try await item.loadTransferable(type: ProfilePhotoPickerImage.self) else {
+                throw ProfilePhotoProcessingError.invalidImage
+            }
+            photoToCrop = picked.image
+        } catch let error as ProfilePhotoProcessingError {
+            showPhotoError(error)
+        } catch {
+            showPhotoError(.invalidImage)
         }
-        photoToCrop = image
     }
 
     private func cameraDidDismiss() {
         guard let cameraPhoto else { return }
         self.cameraPhoto = nil
-        photoToCrop = cameraPhoto
+        guard let image = ProfilePhotoCropper.downsampledImage(cameraPhoto) else {
+            showPhotoError(.invalidImage)
+            return
+        }
+        photoToCrop = image
+    }
+
+    private func showPhotoError(_ error: ProfilePhotoProcessingError) {
+        photoNoticeMessage = error.userMessage
+        model.noticeKey = nil
+        model.noticeIsError = true
+        DPHapticCenter.shared.emit(.error)
     }
 
     private func link(_ provider: OAuthProvider) async {

@@ -214,6 +214,26 @@ final class CalendarFeatureTests: XCTestCase {
         XCTAssertFalse(source.contains("private func openTodoBoard()"), "Calendar never opens the Todo board")
     }
 
+    func testCalendarDayCellExposesOneFullCellAccessibilityTarget() throws {
+        let dayCell = try Self.declaration(
+            named: "private struct CalendarDayCell: View",
+            in: Self.calendarViewSource()
+        )
+
+        XCTAssertTrue(
+            dayCell.contains(".accessibilityElement(children: .ignore)"),
+            "Nested schedule/comparison/todo views must not duplicate the day label"
+        )
+        XCTAssertTrue(
+            dayCell.contains(".accessibilityActions"),
+            "Collapsing the cell must retain direct VoiceOver actions for visible Todos"
+        )
+        XCTAssertTrue(
+            dayCell.contains(".accessibilityIdentifier(\"calendar.day.\\(day.cell.date.rawValue)\")"),
+            "Every day needs a stable, unique accessibility target for VoiceOver and UI automation"
+        )
+    }
+
     func testAMemberCalendarIsPushedOntoTheStackOfTheTabItWasOpenedFrom() throws {
         let projectRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
@@ -2005,6 +2025,217 @@ final class CalendarFeatureTests: XCTestCase {
         )
     }
 
+    func testDutyBatchFileSizePolicyRejectsTheProxyBoundaryAndUnknownMetadata() {
+        let maximum = AttachmentUploadPolicy.safeMaximumBytes
+
+        XCTAssertEqual(
+            CalendarFeatureLogic.dutyBatchFileSizeValidation(maximum - 1),
+            .allowed
+        )
+        XCTAssertEqual(
+            CalendarFeatureLogic.dutyBatchFileSizeValidation(maximum),
+            .tooLarge
+        )
+        XCTAssertEqual(
+            CalendarFeatureLogic.dutyBatchFileSizeValidation(maximum + 1),
+            .tooLarge
+        )
+        XCTAssertEqual(
+            CalendarFeatureLogic.dutyBatchFileSizeValidation(nil),
+            .unavailable
+        )
+        XCTAssertEqual(
+            CalendarFeatureLogic.dutyBatchFileSizeValidation(-1),
+            .unavailable
+        )
+    }
+
+    func testDutyBatchDataSizePolicyKeepsTheRequestBoundaryAfterReading() {
+        let maximum = AttachmentUploadPolicy.safeMaximumBytes
+
+        XCTAssertEqual(
+            CalendarFeatureLogic.dutyBatchDataSizeValidation(maximum - 1),
+            .allowed
+        )
+        XCTAssertEqual(
+            CalendarFeatureLogic.dutyBatchDataSizeValidation(maximum),
+            .tooLarge
+        )
+        XCTAssertEqual(
+            CalendarFeatureLogic.dutyBatchDataSizeValidation(maximum + 1),
+            .tooLarge
+        )
+    }
+
+    func testDutyBatchMultipartBodyCountsItsHeadersAndBoundaryAgainstTheLimit() throws {
+        let maximum = AttachmentUploadPolicy.safeMaximumBytes
+        let boundary = "DutyparkDuty-fixed"
+        let emptyBody = try XCTUnwrap(
+            CalendarDutyBatchMultipart.body(
+                memberID: 42,
+                year: 2026,
+                month: 8,
+                filename: "roster.xlsx",
+                data: Data(),
+                boundary: boundary
+            )
+        )
+        let overhead = emptyBody.count
+
+        let bodyBelowLimit = try XCTUnwrap(
+            CalendarDutyBatchMultipart.body(
+                memberID: 42,
+                year: 2026,
+                month: 8,
+                filename: "roster.xlsx",
+                data: Data(repeating: 0x41, count: maximum - overhead - 1),
+                boundary: boundary
+            )
+        )
+        XCTAssertEqual(bodyBelowLimit.count, maximum - 1)
+
+        let bodyAtLimit = CalendarDutyBatchMultipart.body(
+            memberID: 42,
+            year: 2026,
+            month: 8,
+            filename: "roster.xlsx",
+            data: Data(repeating: 0x41, count: maximum - overhead),
+            boundary: boundary
+        )
+        XCTAssertNil(bodyAtLimit, "The complete multipart request must remain strictly below 10 MiB")
+    }
+
+    func testDutyBatchMultipartBodyRejectsOversizedDataBeforeBuildingTheBody() throws {
+        let maximum = AttachmentUploadPolicy.safeMaximumBytes
+        let boundary = "DutyparkDuty-fixed"
+        let emptyBody = try XCTUnwrap(
+            CalendarDutyBatchMultipart.body(
+                memberID: 42,
+                year: 2026,
+                month: 8,
+                filename: "roster.xlsx",
+                data: Data(),
+                boundary: boundary
+            )
+        )
+
+        XCTAssertNil(
+            CalendarDutyBatchMultipart.body(
+                memberID: 42,
+                year: 2026,
+                month: 8,
+                filename: "roster.xlsx",
+                data: Data(repeating: 0x41, count: maximum - emptyBody.count + 1),
+                boundary: boundary
+            )
+        )
+    }
+
+    func testDutyBatchRepositoryRejectsMultipartOverflowBeforeSendingARequest() async {
+        CalendarURLProtocolStub.requestCount = 0
+        CalendarURLProtocolStub.handler = { request in
+            CalendarURLProtocolStub.requestCount += 1
+            return (
+                HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!,
+                Data(#"{"result":true,"workingDays":0,"offDays":0}"#.utf8)
+            )
+        }
+        defer {
+            CalendarURLProtocolStub.handler = nil
+            CalendarURLProtocolStub.requestCount = 0
+        }
+
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [CalendarURLProtocolStub.self]
+        let repository = CalendarRepository(
+            client: APIClient(
+                baseURL: URL(string: "https://dutypark.test/api/")!,
+                session: URLSession(configuration: configuration)
+            )
+        )
+
+        do {
+            _ = try await repository.uploadDutyBatch(
+                memberID: 42,
+                year: 2026,
+                month: 8,
+                filename: "roster.xlsx",
+                data: Data(repeating: 0x41, count: AttachmentUploadPolicy.safeMaximumBytes - 1)
+            )
+            XCTFail("Multipart overhead should make this request exceed the proxy limit")
+        } catch let error as APIError {
+            XCTAssertEqual(error, .invalidResponse)
+        } catch {
+            XCTFail("Unexpected upload error: \(error)")
+        }
+
+        XCTAssertEqual(CalendarURLProtocolStub.requestCount, 0)
+    }
+
+    func testDutyBatchMultipartFilenameSanitizesQuotedEscapedAndControlCharacters() throws {
+        let rawFilename = "roster\"\\night\r\n\u{0000}\u{001F}\u{007F}\u{0085}.xlsx"
+        let sanitized = CalendarDutyBatchMultipart.sanitizedFilename(rawFilename)
+
+        XCTAssertFalse(sanitized.contains("\""))
+        XCTAssertFalse(sanitized.contains("\\"))
+        XCTAssertFalse(
+            sanitized.unicodeScalars.contains {
+                $0.value <= 0x1F || $0.value == 0x7F || (0x80...0x9F).contains($0.value)
+            }
+        )
+        XCTAssertTrue(sanitized.hasSuffix(".xlsx"))
+
+        let body = try XCTUnwrap(
+            CalendarDutyBatchMultipart.body(
+                memberID: 42,
+                year: 2026,
+                month: 8,
+                filename: rawFilename,
+                data: Data(),
+                boundary: "DutyparkDuty-fixed"
+            )
+        )
+        let bodyText = String(decoding: body, as: UTF8.self)
+        XCTAssertTrue(bodyText.contains("filename=\"\(sanitized)\""))
+    }
+
+    func testDutyBatchUploadPreflightsResourceMetadataBeforeMaterializingData() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark/Features/Calendar/CalendarViewModel.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+        let upload = try Self.declaration(named: "func uploadDutyBatch(url: URL) async", in: source)
+        let metadata = try XCTUnwrap(upload.range(of: "url.resourceValues(forKeys: [.fileSizeKey])"))
+        let dataRead = try XCTUnwrap(upload.range(of: "Data(contentsOf: url)"))
+
+        XCTAssertLessThan(
+            metadata.lowerBound,
+            dataRead.lowerBound,
+            "The file URL metadata must be checked before Data(contentsOf:)"
+        )
+        XCTAssertTrue(upload.contains("dutyBatchFileSizeValidation"))
+        XCTAssertTrue(upload.contains("dutyBatchDataSizeValidation"))
+
+        let repositoryURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark/Features/Calendar/CalendarRepository.swift")
+        let repository = try String(contentsOf: repositoryURL, encoding: .utf8)
+        XCTAssertTrue(
+            repository.contains("guard data.count < AttachmentUploadPolicy.safeMaximumBytes"),
+            "The multipart request boundary must reject oversized Data even if a caller bypasses the ViewModel"
+        )
+        XCTAssertTrue(
+            repository.contains("CalendarDutyBatchMultipart.body("),
+            "The repository must build multipart data through the guarded builder"
+        )
+        XCTAssertTrue(
+            repository.contains("guard let body = CalendarDutyBatchMultipart.body("),
+            "The final request boundary must reject multipart overhead overflow"
+        )
+    }
+
     func testCalendarUsesTheSameCompactCellMinimumAsMobileWeb() {
         XCTAssertEqual(CalendarVisualLogic.compactCellMinimumHeight, 60)
         XCTAssertEqual(CalendarVisualLogic.maximumSchedulesPerCell, 3)
@@ -2323,4 +2554,25 @@ private actor CalendarMonthRaceOutboxStub: OfflineOutboxProviding {
 
     func markSucceeded(accountID: MemberID, operationID: UUID) async throws {}
     func purge(accountID: MemberID) async throws {}
+}
+
+private final class CalendarURLProtocolStub: URLProtocol, @unchecked Sendable {
+    nonisolated(unsafe) static var handler: (@Sendable (URLRequest) -> (HTTPURLResponse, Data))?
+    nonisolated(unsafe) static var requestCount = 0
+
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+
+    override func startLoading() {
+        guard let handler = Self.handler else {
+            fatalError("CalendarURLProtocolStub handler is not set")
+        }
+        Self.requestCount += 1
+        let (response, data) = handler(request)
+        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: data)
+        client?.urlProtocolDidFinishLoading(self)
+    }
+
+    override func stopLoading() {}
 }

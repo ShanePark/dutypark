@@ -86,7 +86,18 @@ nonisolated struct DutyBatchMemberResultDTO: Codable, Equatable, Sendable {
     let offDays: Int
 }
 
+nonisolated enum TeamBatchUploadError: Error, Equatable, Sendable {
+    case requestBodyTooLarge
+}
+
 nonisolated enum TeamFeatureLogic {
+    /// Multipart uploads are currently assembled in memory by the API client, so keep the
+    /// source file bounded to avoid an unbounded file-data plus request-body allocation.
+    static let maximumDutyBatchRequestBodySize = 10 * 1024 * 1024
+    private static let dutyBatchBoundaryLength = "Dutypark-".utf8.count + 36
+    /// Conservative default for callers that do not have the final filename and form fields.
+    static let maximumDutyBatchFileSize = maximumDutyBatchRequestBodySize - 2_048
+
     static func isMyShiftGroup(_ group: DutyByShiftDTO, memberID: MemberID?) -> Bool {
         guard let memberID else { return false }
         return group.members.contains { $0.id == memberID }
@@ -115,6 +126,51 @@ nonisolated enum TeamFeatureLogic {
         (fileName as NSString).pathExtension.lowercased() == "xlsx"
     }
 
+    static func isValidDutyBatchFileSize(_ fileSize: Int) -> Bool {
+        fileSize >= 0 && fileSize <= maximumDutyBatchFileSize
+    }
+
+    static func maximumDutyBatchFileSize(
+        for fileName: String,
+        year: Int,
+        month: Int
+    ) -> Int {
+        let boundary = String(repeating: "B", count: dutyBatchBoundaryLength)
+        let overhead = TeamMultipartForm(boundary: boundary).makeBody(
+            fileName: fileName,
+            fileData: Data(),
+            year: year,
+            month: month
+        ).count
+        return max(0, maximumDutyBatchRequestBodySize - overhead - 1)
+    }
+
+    static func isValidDutyBatchFileSize(
+        _ fileSize: Int,
+        fileName: String,
+        year: Int,
+        month: Int
+    ) -> Bool {
+        fileSize >= 0
+            && fileSize <= maximumDutyBatchFileSize(for: fileName, year: year, month: month)
+    }
+
+    /// Returns a filename safe to interpolate into a quoted multipart header parameter.
+    /// Control characters are removed before escaping the two quoted-string delimiters.
+    static func sanitizedDutyBatchFileName(_ fileName: String) -> String {
+        let filtered = fileName.unicodeScalars.reduce(into: String()) { result, scalar in
+            guard !CharacterSet.controlCharacters.contains(scalar),
+                  scalar.value != 0x2028,
+                  scalar.value != 0x2029
+            else { return }
+            result.unicodeScalars.append(scalar)
+        }
+        let escaped = filtered
+            .replacingOccurrences(of: "\\", with: "\\\\")
+            .replacingOccurrences(of: "\"", with: "\\\"")
+        return escaped.isEmpty ? "duty-batch.xlsx" : escaped
+    }
+
     static func isValidDutyBatchYear(_ year: Int, currentYear: Int) -> Bool {
         year >= currentYear && year <= currentYear + 1
     }
@@ -133,12 +189,21 @@ nonisolated struct TeamMultipartForm: Sendable {
         year: Int,
         month: Int
     ) -> Data {
+        let safeFileName = TeamFeatureLogic.sanitizedDutyBatchFileName(fileName)
         var data = Data()
+        // The API client currently accepts an in-memory body. Reserve the payload capacity
+        // up front to avoid repeated growth and transient buffers while appending the file.
+        data.reserveCapacity(
+            fileData.count
+                + safeFileName.utf8.count
+                + boundary.utf8.count * 3
+                + 256
+        )
         appendField(name: "year", value: String(year), to: &data)
         appendField(name: "month", value: String(month), to: &data)
         data.append("--\(boundary)\r\n".utf8Data)
         data.append(
-            "Content-Disposition: form-data; name=\"file\"; filename=\"\(fileName)\"\r\n".utf8Data
+            "Content-Disposition: form-data; name=\"file\"; filename=\"\(safeFileName)\"\r\n".utf8Data
         )
         data.append("Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet\r\n\r\n".utf8Data)
         data.append(fileData)

@@ -127,7 +127,7 @@ struct TeamManageView: View {
         ) {
             Button(teamLocalized("team.common.confirm"), role: .cancel) {}
         } message: {
-            Text("team.common.error", tableName: "Team")
+            Text(viewModel.errorMessage ?? teamLocalized("team.common.error"))
         }
         .alert(
             Text("team.manage.messages.updateSuccess", tableName: "Team"),
@@ -182,6 +182,8 @@ struct TeamManageView: View {
                         isPresented: $viewModel.showsError
                     ) {
                         Button(teamLocalized("team.common.confirm"), role: .cancel) {}
+                    } message: {
+                        Text(viewModel.errorMessage ?? teamLocalized("team.common.error"))
                     }
                 }
                 .interactiveDismissDisabled(viewModel.isWorking || pendingActionIsWorking)

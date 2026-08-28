@@ -25,6 +25,80 @@ nonisolated protocol CalendarRepositoryProtocol: Sendable {
     func deleteDDay(id: Int64) async throws
 }
 
+/// Builds the calendar duty import request while keeping its in-memory transport body
+/// below the production proxy limit. The API client accepts an in-memory `Data` body, so
+/// the limit has to include every multipart header and delimiter, not just the spreadsheet.
+nonisolated enum CalendarDutyBatchMultipart {
+    static func body(
+        memberID: MemberID,
+        year: Int,
+        month: Int,
+        filename: String,
+        data: Data,
+        boundary: String
+    ) -> Data? {
+        let safeFilename = sanitizedFilename(filename)
+        var body = Data()
+        appendField(name: "memberId", value: String(memberID), boundary: boundary, to: &body)
+        appendField(name: "year", value: String(year), boundary: boundary, to: &body)
+        appendField(name: "month", value: String(month), boundary: boundary, to: &body)
+        body.append(
+            Data(
+                "--\(boundary)\r\nContent-Disposition: form-data; name=\"file\"; filename=\"\(safeFilename)\"\r\nContent-Type: application/octet-stream\r\n\r\n".utf8
+            )
+        )
+        let closing = Data("\r\n--\(boundary)--\r\n".utf8)
+
+        // Check the complete request before appending the file. In addition to avoiding an
+        // oversized request, the checked additions keep a malformed/huge input from wrapping
+        // the Int calculation and bypassing the limit.
+        let (withFile, fileOverflow) = body.count.addingReportingOverflow(data.count)
+        let (total, closingOverflow) = withFile.addingReportingOverflow(closing.count)
+        guard !fileOverflow,
+              !closingOverflow,
+              total < AttachmentUploadPolicy.safeMaximumBytes
+        else {
+            return nil
+        }
+
+        body.reserveCapacity(total)
+        body.append(data)
+        body.append(closing)
+        return body
+    }
+
+    /// Returns a filename that cannot terminate or inject the quoted multipart parameter.
+    /// Quotes, backslashes, line breaks, and Unicode control characters are replaced so the
+    /// header remains valid even when the local file name is user-controlled.
+    static func sanitizedFilename(_ filename: String) -> String {
+        let sanitized = filename.unicodeScalars.map { scalar -> String in
+            if CharacterSet.controlCharacters.contains(scalar)
+                || scalar.value == 0x2028
+                || scalar.value == 0x2029
+                || scalar.value == 0x22
+                || scalar.value == 0x5C
+            {
+                return "_"
+            }
+            return String(scalar)
+        }.joined()
+        return sanitized.isEmpty ? "duty-batch.xlsx" : sanitized
+    }
+
+    private static func appendField(
+        name: String,
+        value: String,
+        boundary: String,
+        to body: inout Data
+    ) {
+        body.append(
+            Data(
+                "--\(boundary)\r\nContent-Disposition: form-data; name=\"\(name)\"\r\n\r\n\(value)\r\n".utf8
+            )
+        )
+    }
+}
+
 nonisolated final class CalendarRepository: CalendarRepositoryProtocol, Sendable {
     private let client: APIClient
 
@@ -114,18 +188,24 @@ nonisolated final class CalendarRepository: CalendarRepositoryProtocol, Sendable
     }
 
     func uploadDutyBatch(memberID: MemberID, year: Int, month: Int, filename: String, data: Data) async throws -> DutyBatchUploadResult {
-        let boundary = "DutyparkDuty-\(UUID().uuidString)"
-        var body = Data()
-        func field(_ name: String, _ value: String) {
-            body.append(Data("--\(boundary)\r\nContent-Disposition: form-data; name=\"\(name)\"\r\n\r\n\(value)\r\n".utf8))
+        // Keep the transport boundary protected even when a caller bypasses
+        // CalendarViewModel's file-URL preflight.
+        guard data.count < AttachmentUploadPolicy.safeMaximumBytes else {
+            throw APIError.invalidResponse
         }
-        field("memberId", String(memberID))
-        field("year", String(year))
-        field("month", String(month))
-        let safeFilename = filename.replacingOccurrences(of: "\"", with: "_").replacingOccurrences(of: "\r", with: "").replacingOccurrences(of: "\n", with: "")
-        body.append(Data("--\(boundary)\r\nContent-Disposition: form-data; name=\"file\"; filename=\"\(safeFilename)\"\r\nContent-Type: application/octet-stream\r\n\r\n".utf8))
-        body.append(data)
-        body.append(Data("\r\n--\(boundary)--\r\n".utf8))
+        let boundary = "DutyparkDuty-\(UUID().uuidString)"
+        guard let body = CalendarDutyBatchMultipart.body(
+            memberID: memberID,
+            year: year,
+            month: month,
+            filename: filename,
+            data: data,
+            boundary: boundary
+        ) else {
+            // This is the final transport guard. It covers multipart overhead even when a
+            // direct repository caller bypasses the URL and raw-data preflight.
+            throw APIError.invalidResponse
+        }
         let response = try await client.data(
             "duty_batch", method: .post, body: body,
             headers: ["Content-Type": "multipart/form-data; boundary=\(boundary)"]

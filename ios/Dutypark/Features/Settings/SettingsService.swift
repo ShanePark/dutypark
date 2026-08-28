@@ -179,13 +179,21 @@ nonisolated struct SettingsService: AccountDeletionServicing, Sendable {
     }
 
     func uploadProfilePhoto(jpegData: Data) async throws {
+        guard jpegData.count <= ProfilePhotoProcessingPolicy.maxUploadBytes else {
+            throw ProfilePhotoUploadError.tooLarge(
+                maxBytes: ProfilePhotoProcessingPolicy.maxUploadBytes
+            )
+        }
+
         let boundary = "Dutypark-\(UUID().uuidString)"
-        var body = Data()
-        appendUTF8("--\(boundary)\r\n", to: &body)
-        appendUTF8("Content-Disposition: form-data; name=\"file\"; filename=\"profile.jpg\"\r\n", to: &body)
-        appendUTF8("Content-Type: image/jpeg\r\n\r\n", to: &body)
+        let header = "--\(boundary)\r\n"
+            + "Content-Disposition: form-data; name=\"file\"; filename=\"profile.jpg\"\r\n"
+            + "Content-Type: image/jpeg\r\n\r\n"
+        let footer = "\r\n--\(boundary)--\r\n"
+        var body = Data(capacity: header.utf8.count + jpegData.count + footer.utf8.count)
+        body.append(contentsOf: header.utf8)
         body.append(jpegData)
-        appendUTF8("\r\n--\(boundary)--\r\n", to: &body)
+        body.append(contentsOf: footer.utf8)
 
         _ = try await client.data(
             "members/profile-photo",
@@ -297,8 +305,4 @@ nonisolated struct SettingsService: AccountDeletionServicing, Sendable {
                 URLQueryItem(name: "v", value: String(version)),
             ])
     }
-}
-
-nonisolated private func appendUTF8(_ value: String, to data: inout Data) {
-    data.append(Data(value.utf8))
 }

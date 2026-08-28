@@ -1,8 +1,17 @@
 import Foundation
 import Testing
+import WebKit
 @testable import Dutypark
 
 struct AdminWebViewTests {
+    @Test("Admin web views use an ephemeral website data store")
+    @MainActor
+    func usesEphemeralWebsiteDataStore() {
+        let dataStore = AdminWebSessionDataStore.make()
+
+        #expect(!dataStore.isPersistent)
+    }
+
     @Test("Embedded web preferences follow the app language and explicit dark theme")
     func resolvesKoreanDarkPreferences() {
         let preferences = AdminWebPreferences.resolve(

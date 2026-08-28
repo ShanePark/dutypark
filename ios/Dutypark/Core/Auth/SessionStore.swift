@@ -58,6 +58,15 @@ final class SessionStore: ObservableObject {
     @Published private(set) var serverSessionWarning: ServerSessionWarningPresentation?
     @Published private(set) var authenticationTransitionFailure: AuthenticationTransitionFailurePresentation?
 
+    /// Identifies the currently authenticated credentials for views that may
+    /// outlive a login/logout transition. A new login receives a new
+    /// generation even when it is for the same member, so delayed cleanup
+    /// callbacks cannot be mistaken for work from the current session.
+    var authenticationSessionGenerationForCurrentAccount: UInt64? {
+        guard case .authenticated = state else { return nil }
+        return authenticationSessionGeneration
+    }
+
     init(
         authService: AuthService = AuthService(),
         initialState: SessionState = .restoring,
@@ -179,7 +188,10 @@ final class SessionStore: ObservableObject {
 
     func continueAsGuestAfterRestoreFailure() async {
         guard state == .restoreFailed else { return }
-        await terminateSession(reportServerFailure: true)
+        await terminateSession(
+            reportServerFailure: true,
+            purgeAttachmentDiscards: true
+        )
     }
 
     func login(email: String, password: String, rememberMe: Bool) async {
@@ -266,9 +278,15 @@ final class SessionStore: ObservableObject {
         await invalidateAuthenticationContext()
         if case .authenticated(let member) = state {
             UserDefaults.standard.removeObject(forKey: "selectedDday_\(member.id)")
-            await discardLocalSessionData(memberID: member.id)
+            await discardLocalSessionData(
+                memberID: member.id,
+                purgeAttachmentDiscards: true
+            )
         } else {
-            await discardLocalSessionData(memberID: nil)
+            await discardLocalSessionData(
+                memberID: nil,
+                purgeAttachmentDiscards: true
+            )
         }
         UserDefaults.standard.removeObject(forKey: "dp-remember-email")
         await authService.clearLocalAuthentication()
@@ -449,6 +467,16 @@ final class SessionStore: ObservableObject {
         guard authenticationSessionGeneration == sessionContext.generation else {
             return false
         }
+        TodoAttachmentDiscardCoordinator.shared.activate(
+            accountID: member.id,
+            sessionGeneration: sessionContext.generation
+        )
+        if availability == .online {
+            TodoAttachmentDiscardCoordinator.shared.retryPending(
+                accountID: member.id,
+                sessionGeneration: sessionContext.generation
+            )
+        }
         if member.isImpersonating, let impersonationExpiresAt {
             scheduleImpersonationExpiration(at: impersonationExpiresAt)
         } else if !member.isImpersonating {
@@ -505,7 +533,8 @@ final class SessionStore: ObservableObject {
 
     private func terminateSession(
         reportServerFailure: Bool,
-        syncAlreadyCancelledFor: MemberID? = nil
+        syncAlreadyCancelledFor: MemberID? = nil,
+        purgeAttachmentDiscards: Bool = false
     ) async {
         guard !isTerminatingSession else { return }
         isTerminatingSession = true
@@ -523,7 +552,11 @@ final class SessionStore: ObservableObject {
             serverSessionWarning = reportServerFailure ? .serverMayRemain : nil
         }
         await authService.clearLocalAuthentication()
-        await discardLocalSessionData(memberID: memberID, syncAlreadyCancelled: true)
+        await discardLocalSessionData(
+            memberID: memberID,
+            syncAlreadyCancelled: true,
+            purgeAttachmentDiscards: purgeAttachmentDiscards
+        )
         await becomeGuest()
     }
 
@@ -610,6 +643,10 @@ final class SessionStore: ObservableObject {
     private func beginAuthenticationSession(
         for member: LoginMember
     ) -> AuthenticationSessionContext {
+        // A successful authentication starts a fresh credential generation.
+        // Stop any prior model-backed discard task before the new context is
+        // published; its durable session IDs remain available for retry below.
+        TodoAttachmentDiscardCoordinator.shared.cancelAll()
         authenticationSessionGeneration &+= 1
         return AuthenticationSessionContext(
             memberID: member.id,
@@ -621,6 +658,11 @@ final class SessionStore: ObservableObject {
     private func invalidateAuthenticationContext() async -> UInt64 {
         authenticationSessionGeneration &+= 1
         let generation = authenticationSessionGeneration
+        // Attachment discard requests retain only account-scoped session IDs,
+        // but a model-backed request must not continue after auth cookies are
+        // invalidated. The durable record remains for the same account to
+        // retry after a later login.
+        TodoAttachmentDiscardCoordinator.shared.cancelAll()
         await authService.invalidateAuthenticationSession()
         return generation
     }
@@ -668,10 +710,18 @@ final class SessionStore: ObservableObject {
 
     private func discardLocalSessionData(
         memberID: MemberID?,
-        syncAlreadyCancelled: Bool = false
+        syncAlreadyCancelled: Bool = false,
+        purgeAttachmentDiscards: Bool = false
     ) async {
         if !syncAlreadyCancelled {
             await cancelOfflineSync(memberID)
+        }
+        if let memberID {
+            if purgeAttachmentDiscards {
+                TodoAttachmentDiscardStore.shared.purge(accountID: memberID)
+            }
+        } else if purgeAttachmentDiscards {
+            TodoAttachmentDiscardStore.shared.purgeAll()
         }
         await localDataPurger.purgeLocalData(for: memberID)
         await offlineSessionStore.purge()

@@ -139,6 +139,33 @@ struct AttachmentFlowTests {
     }
 
     @Test
+    func pickerLoadsEachSelectedFileLazilyBeforeUploadingIt() async throws {
+        let firstAttachment = attachment(id: UUID(), filename: "first.txt")
+        let secondAttachment = attachment(id: UUID(), filename: "second.txt")
+        let client = AttachmentFlowClientStub(
+            uploadOutcomes: [
+                .success(firstAttachment),
+                .success(secondAttachment)
+            ]
+        )
+        let model = AttachmentPickerModel(contextType: .todo, client: client)
+        let loadRecorder = AttachmentLoadRecorder()
+
+        await model.add(totalFileCount: 2) { index in
+            await loadRecorder.record(index)
+            return try AttachmentUploadFile(
+                filename: index == 0 ? "first.txt" : "second.txt",
+                contentType: "text/plain",
+                data: Data([UInt8(index + 1)])
+            )
+        }
+
+        #expect(await loadRecorder.indices() == [0, 1])
+        #expect((await client.snapshot()).uploadedFilenames == ["first.txt", "second.txt"])
+        #expect(model.attachments.map(\.id) == [firstAttachment.id, secondAttachment.id])
+    }
+
+    @Test
     func pickerEmitsOneOutcomeForAnEntireUploadBatch() async throws {
         let haptics = DPHapticCenter()
         let client = AttachmentFlowClientStub(
@@ -372,6 +399,31 @@ struct AttachmentFlowTests {
         #expect(model.attachments.map(\.id) == [attachment.id, added.id])
     }
 
+    @Test
+    func galleryWritesDownloadedFilesThroughThePurgeableStore() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appending(path: "dutypark-attachment-gallery-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let attachment = embeddedAttachment(
+            contextId: UUID().uuidString,
+            filename: "private.pdf"
+        )
+        let model = AttachmentGalleryModel(
+            contextType: .schedule,
+            contextId: attachment.contextId ?? "",
+            attachments: [attachment],
+            client: AttachmentGalleryFlowClientStub(),
+            temporaryFileStore: AttachmentTemporaryFileStore(directoryURL: directory)
+        )
+
+        let url = try await model.localFile(for: attachment)
+        #expect(FileManager.default.fileExists(atPath: url.path))
+
+        model.removeTemporaryFile(at: url)
+
+        #expect(!FileManager.default.fileExists(atPath: url.path))
+    }
+
     private func temporaryFile(
         contents: Data,
         extension pathExtension: String = "bin"
@@ -521,6 +573,18 @@ private actor AttachmentFlowClientStub: AttachmentPickerClient {
             cancelledUploadCount: cancelledUploadCount,
             discardedSessionIds: discardedSessionIds
         )
+    }
+}
+
+private actor AttachmentLoadRecorder {
+    private var recordedIndices: [Int] = []
+
+    func record(_ index: Int) {
+        recordedIndices.append(index)
+    }
+
+    func indices() -> [Int] {
+        recordedIndices
     }
 }
 

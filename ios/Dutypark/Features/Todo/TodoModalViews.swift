@@ -103,6 +103,8 @@ struct TodoDetailModal: View {
     @ObservedObject var model: TodoViewModel
     let todo: TodoDTO
     let maximumHeight: CGFloat
+    let accountID: MemberID?
+    let sessionGeneration: UInt64?
     let onTodoChanged: () async -> Void
     let onDismissabilityChange: (Bool) -> Void
     let dismissRequest: Int
@@ -123,6 +125,8 @@ struct TodoDetailModal: View {
         model: TodoViewModel,
         todo: TodoDTO,
         maximumHeight: CGFloat,
+        accountID: MemberID? = nil,
+        sessionGeneration: UInt64? = nil,
         onTodoChanged: @escaping () async -> Void,
         onDismissabilityChange: @escaping (Bool) -> Void = { _ in },
         dismissRequest: Int = 0,
@@ -131,6 +135,8 @@ struct TodoDetailModal: View {
         self.model = model
         self.todo = todo
         self.maximumHeight = maximumHeight
+        self.accountID = accountID
+        self.sessionGeneration = sessionGeneration
         self.onTodoChanged = onTodoChanged
         self.onDismissabilityChange = onDismissabilityChange
         self.dismissRequest = dismissRequest
@@ -155,6 +161,8 @@ struct TodoDetailModal: View {
                     targetTodoID: todo.id,
                     existingAttachments: model.attachmentsByTodoID[todo.uuid, default: []],
                     preservedTags: todo.tags,
+                    accountID: accountID,
+                    sessionGeneration: sessionGeneration,
                     isSaving: model.isSaving,
                     maximumHeight: maximumHeight,
                     dismissAction: {

@@ -96,6 +96,15 @@ nonisolated enum AdminWebDestination {
     }
 }
 
+enum AdminWebSessionDataStore {
+    /// Admin authentication is copied from the native session for this view;
+    /// never persist it in the app-wide WebKit website data store.
+    @MainActor
+    static func make() -> WKWebsiteDataStore {
+        .nonPersistent()
+    }
+}
+
 nonisolated enum AdminWebDocumentStartScript {
     static let embeddedSelectors = [
         "header",
@@ -155,7 +164,7 @@ private struct AdminCookieWebView: UIViewRepresentable {
 
     func makeUIView(context: Context) -> WKWebView {
         let configuration = WKWebViewConfiguration()
-        configuration.websiteDataStore = .default()
+        configuration.websiteDataStore = AdminWebSessionDataStore.make()
 
         guard let origin = AdminWebDestination.originURL()?.absoluteString else {
             Task { @MainActor in onFailure() }

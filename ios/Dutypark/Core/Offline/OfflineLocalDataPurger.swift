@@ -8,16 +8,23 @@ nonisolated struct OfflineLocalDataPurger: SessionLocalDataPurging, Sendable {
 
     private let cache: any OfflineCacheProviding
     private let outbox: any OfflineOutboxProviding
+    private let temporaryFileStore: any AttachmentTemporaryFilePurging
 
     nonisolated init(
         cache: any OfflineCacheProviding = OfflineCacheStore.shared,
-        outbox: any OfflineOutboxProviding = OfflineOutboxStore.shared
+        outbox: any OfflineOutboxProviding = OfflineOutboxStore.shared,
+        temporaryFileStore: any AttachmentTemporaryFilePurging = AttachmentTemporaryFileStore.shared
     ) {
         self.cache = cache
         self.outbox = outbox
+        self.temporaryFileStore = temporaryFileStore
     }
 
     nonisolated func purgeLocalData(for memberID: Int64?) async {
+        // Private attachment downloads live outside the durable offline stores.
+        // Purge them for every session boundary, including a full reset.
+        await temporaryFileStore.purge()
+
         if let memberID {
             guard memberID > 0 else { return }
             do {

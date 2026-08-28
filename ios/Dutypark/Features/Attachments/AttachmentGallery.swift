@@ -74,18 +74,21 @@ final class AttachmentGalleryModel: ObservableObject {
     private let client: any AttachmentGalleryClient
     private let loadsRemotely: Bool
     private let haptics: DPHapticCenter
+    private let temporaryFileStore: AttachmentTemporaryFileStore
 
     init(
         contextType: AttachmentContextType,
         contextId: String,
         client: any AttachmentGalleryClient = AttachmentClient(),
-        haptics: DPHapticCenter = .shared
+        haptics: DPHapticCenter = .shared,
+        temporaryFileStore: AttachmentTemporaryFileStore = .shared
     ) {
         self.contextType = contextType
         self.contextId = contextId
         self.client = client
         self.loadsRemotely = true
         self.haptics = haptics
+        self.temporaryFileStore = temporaryFileStore
     }
 
     /// Schedule payloads already embed their attachment metadata, so a gallery built
@@ -96,7 +99,8 @@ final class AttachmentGalleryModel: ObservableObject {
         contextId: String,
         attachments: [AttachmentDTO],
         client: any AttachmentGalleryClient = AttachmentClient(),
-        haptics: DPHapticCenter = .shared
+        haptics: DPHapticCenter = .shared,
+        temporaryFileStore: AttachmentTemporaryFileStore = .shared
     ) {
         self.contextType = contextType
         self.contextId = contextId
@@ -104,6 +108,7 @@ final class AttachmentGalleryModel: ObservableObject {
         self.loadsRemotely = false
         self.attachments = attachments
         self.haptics = haptics
+        self.temporaryFileStore = temporaryFileStore
     }
 
 #if DEBUG
@@ -114,6 +119,7 @@ final class AttachmentGalleryModel: ObservableObject {
         self.loadsRemotely = false
         self.attachments = uiTestingAttachments
         self.haptics = .shared
+        self.temporaryFileStore = .shared
     }
 #endif
 
@@ -168,15 +174,15 @@ final class AttachmentGalleryModel: ObservableObject {
 
     func localFile(for attachment: AttachmentDTO) async throws -> URL {
         let downloaded = try await client.download(attachment, inline: false)
-        let directory = FileManager.default.temporaryDirectory
-            .appending(path: "DutyparkAttachments", directoryHint: .isDirectory)
-        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        let url = directory.appending(
-            path: "\(attachment.id.uuidString)-\(safeFilename(downloaded.filename))",
-            directoryHint: .notDirectory
+        return try temporaryFileStore.write(
+            downloaded.data,
+            for: attachment.id,
+            filename: downloaded.filename
         )
-        try downloaded.data.write(to: url, options: .atomic)
-        return url
+    }
+
+    func removeTemporaryFile(at url: URL) {
+        temporaryFileStore.remove(url)
     }
 
     func recordFailure(_ failure: AttachmentGalleryFailure) {
@@ -188,13 +194,6 @@ final class AttachmentGalleryModel: ObservableObject {
         haptics.emit(.routine)
     }
 
-    private func safeFilename(_ filename: String) -> String {
-        let value = filename
-            .replacingOccurrences(of: "/", with: "_")
-            .replacingOccurrences(of: ":", with: "_")
-            .replacingOccurrences(of: "\0", with: "")
-        return value.isEmpty ? "attachment" : value
-    }
 }
 
 nonisolated enum AttachmentGalleryFailure: String, Identifiable, Sendable {
@@ -231,6 +230,7 @@ struct AttachmentGallery: View {
     @State private var shareURL: URL?
     @State private var deleteCandidate: AttachmentDeletionCandidate?
     @State private var isPreparingFile = false
+    @State private var preparationTask: Task<Void, Never>?
 
     init(model: AttachmentGalleryModel, canEdit: Bool = false) {
         self.model = model
@@ -277,11 +277,15 @@ struct AttachmentGallery: View {
             }
         }
         .task { await model.load() }
-        .quickLookPreview($previewURL)
+        .quickLookPreview(previewBinding)
         .sheet(
             isPresented: Binding(
                 get: { shareURL != nil },
-                set: { if !$0 { shareURL = nil } }
+                set: { isPresented in
+                    if !isPresented {
+                        dismissShare()
+                    }
+                }
             )
         ) {
             if let shareURL {
@@ -318,6 +322,12 @@ struct AttachmentGallery: View {
             if let failure = model.failure {
                 Text(AttachmentLocalization.text(failure.messageKey))
             }
+        }
+        .onDisappear {
+            preparationTask?.cancel()
+            preparationTask = nil
+            dismissPreview()
+            dismissShare()
         }
         .overlay {
             if isPreparingFile {
@@ -462,17 +472,24 @@ struct AttachmentGallery: View {
     private func prepare(_ attachment: AttachmentDTO, forSharing: Bool) {
         guard !isPreparingFile else { return }
         isPreparingFile = true
-        Task {
+        preparationTask = Task {
+            var preparedURL: URL?
             defer { isPreparingFile = false }
             do {
                 let url = try await model.localFile(for: attachment)
+                preparedURL = url
+                try Task.checkCancellation()
                 if forSharing {
                     shareURL = url
                 } else {
                     previewURL = url
                 }
+                preparedURL = nil
                 model.attachmentOpened()
             } catch {
+                if let preparedURL {
+                    model.removeTemporaryFile(at: preparedURL)
+                }
                 guard !Task.isCancelled else { return }
                 model.recordFailure(.downloadFailed)
             }
@@ -481,6 +498,33 @@ struct AttachmentGallery: View {
 
     private func requestDelete(_ attachment: AttachmentDTO) {
         deleteCandidate = AttachmentDeletionCandidate(attachment: attachment)
+    }
+
+    private var previewBinding: Binding<URL?> {
+        Binding(
+            get: { previewURL },
+            set: { value in
+                if value == nil {
+                    dismissPreview()
+                } else {
+                    previewURL = value
+                }
+            }
+        )
+    }
+
+    private func dismissPreview() {
+        if let previewURL {
+            model.removeTemporaryFile(at: previewURL)
+        }
+        previewURL = nil
+    }
+
+    private func dismissShare() {
+        if let shareURL {
+            model.removeTemporaryFile(at: shareURL)
+        }
+        shareURL = nil
     }
 }
 

@@ -21,10 +21,16 @@ nonisolated enum APNsEnvironmentResolutionError: Error, Equatable {
 nonisolated enum APNsEnvironment {
     static var usesSandbox: Bool {
         get throws {
-            try usesSandbox(
+#if targetEnvironment(simulator)
+            // Simulator APNs registration belongs to the development environment,
+            // even when a Release simulator build has no usable provisioning profile.
+            return true
+#else
+            return try usesSandbox(
                 profileState: embeddedProvisioningProfileState(),
                 fallback: compileConfigurationUsesSandbox
             )
+#endif
         }
     }
 
@@ -53,7 +59,11 @@ nonisolated enum APNsEnvironment {
     }
 
     private static var compileConfigurationUsesSandbox: Bool {
-#if DEBUG
+#if targetEnvironment(simulator)
+        // Release simulator builds do not contain a signed provisioning profile,
+        // but any simulator APNs registration uses the development endpoint.
+        true
+#elseif DEBUG
         true
 #else
         false
@@ -137,6 +147,9 @@ enum APNsRegistrationState: Equatable {
     case registering
     case registered
     case failed
+    /// The current runtime cannot obtain an APNs token (for example, the iOS
+    /// Simulator). This is different from a registration failure on a real device.
+    case unsupported
 }
 
 @MainActor
@@ -201,6 +214,21 @@ final class APNsRegistrationManager: ObservableObject {
     @Published var showsPermissionPreprompt = false
 
     var isToggleOn: Bool {
+        guard authorizationStatus == .authorized || authorizationStatus == .provisional else {
+            return false
+        }
+        guard isEnabled else { return false }
+        // Keep the switch honest after APNs reports that this runtime cannot
+        // register. The stored preference remains enabled so a later retry (or
+        // a physical-device build) can try again without changing user intent.
+        return registrationState != .failed && registrationState != .unsupported
+    }
+
+    /// The user's persisted preference, used to decide what a tap should do.
+    /// This intentionally remains separate from `isToggleOn`: a failed
+    /// registration is displayed as off, but the user must still be able to tap
+    /// once to turn the preference off instead of being forced into a retry.
+    var isUserPreferenceOn: Bool {
         guard authorizationStatus == .authorized || authorizationStatus == .provisional else {
             return false
         }
@@ -398,8 +426,18 @@ final class APNsRegistrationManager: ObservableObject {
     }
 
     func didFailToRegisterForRemoteNotifications() {
+        guard isEnabled, hasRequestedRemoteRegistration else { return }
         hasRequestedRemoteRegistration = false
+#if targetEnvironment(simulator)
+        // The simulator may have notification authorization but still cannot
+        // obtain a usable APNs device token in this runtime. Surface that as an
+        // environment limitation instead of an account/server failure.
+        registrationState = .unsupported
+#else
+        // Keep real-device failures visible so users can retry and support can
+        // diagnose provisioning, connectivity, or APNs issues.
         registrationState = .failed
+#endif
     }
 
     func refreshAuthorizationStatus() async {

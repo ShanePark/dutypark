@@ -249,6 +249,10 @@ struct SettingsView: View {
                 Label(SettingsLocalization.string("settings.push.denied"), systemImage: "info.circle")
                     .font(DPTypography.supporting)
                     .foregroundStyle(DPColor.warning)
+            } else if push.registrationState == .unsupported {
+                Label(SettingsLocalization.string("settings.push.unavailable"), systemImage: "iphone.slash")
+                    .font(DPTypography.supporting)
+                    .foregroundStyle(DPColor.warning)
             } else if push.registrationState == .failed {
                 Label(SettingsLocalization.string("settings.push.failed"), systemImage: "exclamationmark.triangle")
                     .font(DPTypography.supporting)
@@ -366,7 +370,11 @@ struct SettingsView: View {
 
     private var pushBinding: Binding<Bool> {
         Binding(
-            get: { push.isToggleOn },
+            // Use the persisted preference for tap intent. `isToggleOn` is the
+            // effective display state and is off after a registration failure;
+            // using it here would make the first tap retry instead of disabling
+            // the failed setting.
+            get: { push.isUserPreferenceOn },
             set: { enabled in
                 if enabled {
                     push.requestPermission()

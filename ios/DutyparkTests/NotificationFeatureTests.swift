@@ -634,6 +634,7 @@ struct NotificationFeatureTests {
 
         await manager.activateForAuthenticatedSession()
         await manager.unregister()
+        manager.didFailToRegisterForRemoteNotifications()
         await manager.didRegisterForRemoteNotifications(deviceToken: Data([0xBB]))
 
         #expect(registrar.registrationRequestCount == 1)
@@ -696,6 +697,81 @@ struct NotificationFeatureTests {
         #expect(await api.calls().registeredTokens == ["aa"])
         #expect(defaults.string(forKey: "dutypark.apns.device-token") == "aa")
         #expect(manager.registrationState == .registered)
+    }
+
+    @Test
+    func failedRegistrationIsNotReportedAsEnabled() async throws {
+        let suiteName = "NotificationFeatureTests.failedRegistrationToggleState.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let center = NotificationAuthorizationCenterMock(status: .authorized)
+        let registrar = RemoteNotificationRegistrarMock()
+        let manager = APNsRegistrationManager(
+            notificationCenter: center,
+            remoteNotificationRegistrar: registrar,
+            defaults: defaults
+        )
+
+        await manager.resumeRegistration()
+        manager.didFailToRegisterForRemoteNotifications()
+
+        #expect(
+            manager.registrationState == .failed
+                || manager.registrationState == .unsupported
+        )
+        #expect(!manager.isToggleOn)
+    }
+
+    @Test
+    func failedRegistrationCanStillTurnUserPreferenceOff() async throws {
+        let suiteName = "NotificationFeatureTests.failedRegistrationCanDisablePreference.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let center = NotificationAuthorizationCenterMock(status: .authorized)
+        let registrar = RemoteNotificationRegistrarMock()
+        let manager = APNsRegistrationManager(
+            notificationCenter: center,
+            remoteNotificationRegistrar: registrar,
+            defaults: defaults
+        )
+
+        await manager.resumeRegistration()
+        manager.didFailToRegisterForRemoteNotifications()
+
+        #expect(!manager.isToggleOn)
+        #expect(manager.isUserPreferenceOn)
+
+        // This mirrors the Settings binding's off branch after the failed
+        // registration is displayed as off.
+        manager.setEnabled(!manager.isUserPreferenceOn)
+        await manager.unregister()
+
+        #expect(!manager.isUserPreferenceOn)
+        #expect(!manager.isEnabled)
+    }
+
+    @Test
+    func systemRegistrationFailureExplainsSimulatorLimitation() async throws {
+        let suiteName = "NotificationFeatureTests.simulatorRegistrationUnsupported.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let center = NotificationAuthorizationCenterMock(status: .authorized)
+        let registrar = RemoteNotificationRegistrarMock()
+        let manager = APNsRegistrationManager(
+            notificationCenter: center,
+            remoteNotificationRegistrar: registrar,
+            defaults: defaults
+        )
+
+        await manager.resumeRegistration()
+        manager.didFailToRegisterForRemoteNotifications()
+
+#if targetEnvironment(simulator)
+        #expect(manager.registrationState == .unsupported)
+#else
+        #expect(manager.registrationState == .failed)
+#endif
+        #expect(!manager.isToggleOn)
     }
 
     @Test
@@ -1201,9 +1277,11 @@ private actor APNsRegistrationAPIMock: APNsRegistrationAPIProtocol {
     private var registerFailuresRemaining: Int
     private let failsUnregister: Bool
     private var registerStarted = false
+    private var registerStartWaiters: [CheckedContinuation<Bool, Never>] = []
     private var registerReleaseRequested = false
     private var registerReleaseContinuation: CheckedContinuation<Void, Never>?
     private var unregisterStarted = false
+    private var unregisterStartWaiters: [CheckedContinuation<Bool, Never>] = []
     private var unregisterReleaseRequested = false
     private var unregisterReleaseContinuation: CheckedContinuation<Void, Never>?
 
@@ -1224,6 +1302,11 @@ private actor APNsRegistrationAPIMock: APNsRegistrationAPIProtocol {
     func register(deviceToken: String) async throws {
         registeredTokens.append(deviceToken)
         registerStarted = true
+        let startWaiters = registerStartWaiters
+        registerStartWaiters.removeAll()
+        for waiter in startWaiters {
+            waiter.resume(returning: true)
+        }
         if delaysRegister, !registerReleaseRequested {
             await withCheckedContinuation { continuation in
                 registerReleaseContinuation = continuation
@@ -1242,6 +1325,11 @@ private actor APNsRegistrationAPIMock: APNsRegistrationAPIProtocol {
         unregisteredTokens.append(deviceToken)
         recordedEvents.append(.unregisterStarted(deviceToken))
         unregisterStarted = true
+        let startWaiters = unregisterStartWaiters
+        unregisterStartWaiters.removeAll()
+        for waiter in startWaiters {
+            waiter.resume(returning: true)
+        }
         if delaysUnregister, !unregisterReleaseRequested {
             await withCheckedContinuation { continuation in
                 unregisterReleaseContinuation = continuation
@@ -1273,11 +1361,12 @@ private actor APNsRegistrationAPIMock: APNsRegistrationAPIProtocol {
     }
 
     func waitUntilRegisterStarts() async -> Bool {
-        for _ in 0..<200 {
-            if registerStarted { return true }
-            try? await Task.sleep(for: .milliseconds(1))
+        if registerStarted {
+            return true
         }
-        return registerStarted
+        return await withCheckedContinuation { continuation in
+            registerStartWaiters.append(continuation)
+        }
     }
 
     func releaseRegister() {
@@ -1287,11 +1376,12 @@ private actor APNsRegistrationAPIMock: APNsRegistrationAPIProtocol {
     }
 
     func waitUntilUnregisterStarts() async -> Bool {
-        for _ in 0..<200 {
-            if unregisterStarted { return true }
-            try? await Task.sleep(for: .milliseconds(1))
+        if unregisterStarted {
+            return true
         }
-        return unregisterStarted
+        return await withCheckedContinuation { continuation in
+            unregisterStartWaiters.append(continuation)
+        }
     }
 
     func releaseUnregister() {

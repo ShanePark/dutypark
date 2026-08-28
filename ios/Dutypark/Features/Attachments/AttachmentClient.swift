@@ -21,6 +21,11 @@ nonisolated struct AttachmentUploadFile: Equatable, Sendable {
 nonisolated enum AttachmentUploadPolicy {
     /// The application server accepts 50 MB, but the production proxy currently accepts requests below 10 MB.
     static let safeMaximumBytes = 10 * 1_024 * 1_024
+
+    /// Keep decoded camera images bounded before converting HEIF/HEIC to JPEG.
+    /// The resulting 2048px image remains sharp in the attachment gallery
+    /// while avoiding multi-tens-of-megabytes decoded image buffers.
+    static let maxImagePixelSize = 2_048
 }
 
 nonisolated enum AttachmentUploadError: Error, Equatable, Sendable {

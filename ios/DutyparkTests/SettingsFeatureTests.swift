@@ -1033,6 +1033,111 @@ struct SettingsFeatureTests {
     }
 
     @Test
+    func downsamplesProfilePhotoBeforeItReachesTheCropView() throws {
+        let source = UIGraphicsImageRenderer(size: CGSize(width: 3_000, height: 2_000)).image { context in
+            UIColor.systemBlue.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 3_000, height: 2_000))
+        }
+        let url = FileManager.default.temporaryDirectory
+            .appending(path: "dutypark-profile-photo-\(UUID().uuidString).jpg")
+        defer { try? FileManager.default.removeItem(at: url) }
+        try #require(source.jpegData(compressionQuality: 0.9)).write(to: url)
+
+        let downsampled = try #require(ProfilePhotoCropper.downsampledImage(at: url))
+        let largestDimension = max(downsampled.cgImage?.width ?? 0, downsampled.cgImage?.height ?? 0)
+
+        #expect(largestDimension <= ProfilePhotoProcessingPolicy.maxInputPixelDimension)
+        #expect(largestDimension < 3_000)
+    }
+
+    @Test
+    func rejectsProfilePhotoWhenInputSizeMetadataIsMissing() {
+        do {
+            try ProfilePhotoCropper.validateInputFileSize(nil)
+            Issue.record("A photo without a verifiable file size must be rejected")
+        } catch let error as ProfilePhotoProcessingError {
+            #expect(error == .inputSizeUnavailable)
+        } catch {
+            Issue.record("Unexpected error: \(error)")
+        }
+    }
+
+    @Test
+    func rejectsProfilePhotoWhenInputSizeMetadataCannotBeRead() {
+        let url = URL(string: "dutypark-profile-photo://unavailable-size")!
+
+        do {
+            _ = try ProfilePhotoCropper.loadDownsampledImage(at: url)
+            Issue.record("A photo whose file size cannot be read must be rejected")
+        } catch let error as ProfilePhotoProcessingError {
+            #expect(error == .inputSizeUnavailable)
+        } catch {
+            Issue.record("Unexpected error: \(error)")
+        }
+    }
+
+    @Test
+    func capsProfilePhotoCropPixelsAndUploadBytes() throws {
+        let image = UIGraphicsImageRenderer(size: CGSize(width: 3_000, height: 2_000)).image { context in
+            UIColor.systemBlue.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 3_000, height: 2_000))
+        }
+
+        let data = try #require(
+            ProfilePhotoCropper.jpeg(
+                image: image,
+                viewport: 300,
+                zoom: 1,
+                offset: .zero
+            )
+        )
+        let cropped = try #require(UIImage(data: data)?.cgImage)
+
+        #expect(cropped.width <= ProfilePhotoProcessingPolicy.maxOutputPixelDimension)
+        #expect(data.count <= ProfilePhotoProcessingPolicy.maxUploadBytes)
+    }
+
+    @Test
+    func rejectsOversizedProfilePhotoBeforeCreatingARequest() async throws {
+        let recorder = SettingsRequestRecorder()
+        SettingsURLProtocolStub.handler = { request in
+            recorder.record(request)
+            return (
+                HTTPURLResponse(
+                    url: request.url!,
+                    statusCode: 204,
+                    httpVersion: nil,
+                    headerFields: nil
+                )!,
+                Data()
+            )
+        }
+        defer { SettingsURLProtocolStub.handler = nil }
+
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [SettingsURLProtocolStub.self]
+        let service = SettingsService(client: APIClient(
+            baseURL: URL(string: "https://dutypark.test/api/")!,
+            session: URLSession(configuration: configuration)
+        ))
+        let oversizedData = Data(
+            repeating: 0,
+            count: ProfilePhotoProcessingPolicy.maxUploadBytes + 1
+        )
+
+        do {
+            try await service.uploadProfilePhoto(jpegData: oversizedData)
+            Issue.record("An oversized profile photo must be rejected before a request is sent")
+        } catch let error as ProfilePhotoUploadError {
+            #expect(error == .tooLarge(maxBytes: ProfilePhotoProcessingPolicy.maxUploadBytes))
+        } catch {
+            Issue.record("Unexpected error: \(error)")
+        }
+
+        #expect(recorder.requests.isEmpty)
+    }
+
+    @Test
     func clampsPhotoMovementInsideTheCropArea() {
         let offset = ProfilePhotoCropper.clampedOffset(
             CGSize(width: 1_000, height: -1_000),
