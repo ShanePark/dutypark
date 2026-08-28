@@ -804,6 +804,263 @@ struct TodoViewModelTests {
     }
 
     @Test
+    func malformedTodoIDDoesNotCrashWhenOpeningAnotherTodo() async {
+        let malformed = makeTodo(rawID: "not-a-uuid", title: "Malformed")
+        let valid = makeTodo(title: "Valid")
+        let repository = FakeTodoRepository(board: makeBoard(todo: [malformed, valid]))
+        let model = TodoViewModel(repository: repository)
+
+        let firstFallback = malformed.uuid
+        let secondFallback = malformed.uuid
+        #expect(firstFallback == secondFallback)
+
+        await model.load()
+        let opened = model.open(todoID: valid.uuid)
+
+        #expect(model.todos(for: .todo).map(\.id) == [valid.id])
+        #expect(opened?.id == valid.id)
+    }
+
+    @Test(arguments: [true, false])
+    func malformedCreateResponseFailsWithoutSuccessForEitherRefreshSetting(
+        refreshBoard: Bool
+    ) async {
+        let existing = makeTodo(title: "Existing")
+        let malformed = makeTodo(rawID: "not-a-uuid", title: "Malformed")
+        let original = makeBoard(todo: [existing])
+        let repository = FakeTodoRepository(
+            board: original,
+            createResponse: malformed
+        )
+        let cache = TodoMutationCacheSpy()
+        let haptics = DPHapticCenter()
+        let model = TodoViewModel(
+            repository: repository,
+            hapticCenter: haptics,
+            cache: cache
+        )
+
+        await model.load(accountID: 42)
+        let savedBoardCount = await cache.savedBoardCount()
+        let boardBefore = model.board
+        var draft = TodoDraft()
+        draft.title = "Created"
+
+        let succeeded = await model.create(
+            draft: draft,
+            accountID: 42,
+            refreshBoard: refreshBoard
+        )
+
+        #expect(!succeeded)
+        #expect(model.errorKey == "todo.error.create")
+        #expect(haptics.event?.kind == .error)
+        #expect(model.board == boardBefore)
+        #expect(await cache.savedBoardCount() == savedBoardCount)
+    }
+
+    @Test
+    func malformedUpdateResponseFailsWithoutPatchingOrCaching() async {
+        let todo = makeTodo(title: "Existing")
+        let malformed = makeTodo(rawID: "not-a-uuid", title: "Malformed")
+        let original = makeBoard(todo: [todo])
+        let repository = FakeTodoRepository(
+            board: original,
+            updateResponse: malformed
+        )
+        let cache = TodoMutationCacheSpy()
+        let haptics = DPHapticCenter()
+        let model = TodoViewModel(
+            repository: repository,
+            hapticCenter: haptics,
+            cache: cache
+        )
+
+        await model.load(accountID: 42)
+        let savedBoardCount = await cache.savedBoardCount()
+        let boardBefore = model.board
+        var draft = TodoDraft(todo: todo)
+        draft.title = "Updated"
+
+        let succeeded = await model.update(todo: todo, draft: draft)
+
+        #expect(!succeeded)
+        #expect(model.errorKey == "todo.error.update")
+        #expect(haptics.event?.kind == .error)
+        #expect(model.board == boardBefore)
+        #expect(await cache.savedBoardCount() == savedBoardCount)
+    }
+
+    @Test
+    func wrongValidUpdateResponseFailsWithoutPatchingOrCaching() async {
+        let todoID = UUID(uuidString: "11111111-1111-1111-1111-111111111111")!
+        let wrongID = UUID(uuidString: "22222222-2222-2222-2222-222222222222")!
+        let todo = makeTodo(id: todoID, title: "Existing")
+        let wrong = makeTodo(id: wrongID, title: "Unexpected", status: .done)
+        let original = makeBoard(todo: [todo], inProgress: [wrong])
+        let repository = FakeTodoRepository(
+            board: original,
+            updateResponse: wrong
+        )
+        let cache = TodoMutationCacheSpy()
+        let haptics = DPHapticCenter()
+        let model = TodoViewModel(
+            repository: repository,
+            hapticCenter: haptics,
+            cache: cache
+        )
+
+        await model.load(accountID: 42)
+        let savedBoardCount = await cache.savedBoardCount()
+        let boardBefore = model.board
+        var draft = TodoDraft(todo: todo)
+        draft.title = "Updated"
+
+        let succeeded = await model.update(todo: todo, draft: draft)
+
+        #expect(!succeeded)
+        #expect(model.errorKey == "todo.error.update")
+        #expect(haptics.event?.kind == .error)
+        #expect(model.board == boardBefore)
+        #expect(await cache.savedBoardCount() == savedBoardCount)
+    }
+
+    @Test
+    func malformedStatusResponseFailsWithoutPatchingOrCaching() async {
+        let todo = makeTodo(title: "Existing")
+        let malformed = makeTodo(rawID: "not-a-uuid", title: "Malformed")
+        let original = makeBoard(todo: [todo])
+        let repository = FakeTodoRepository(
+            board: original,
+            statusResponse: malformed
+        )
+        let cache = TodoMutationCacheSpy()
+        let haptics = DPHapticCenter()
+        let model = TodoViewModel(
+            repository: repository,
+            hapticCenter: haptics,
+            cache: cache
+        )
+
+        await model.load(accountID: 42)
+        let savedBoardCount = await cache.savedBoardCount()
+        let boardBefore = model.board
+        let selectedStatusBefore = model.selectedStatus
+
+        let succeeded = await model.move(todo, to: TodoStatus.inProgress)
+
+        #expect(!succeeded)
+        #expect(model.errorKey == "todo.error.status")
+        #expect(haptics.event?.kind == .error)
+        #expect(model.board == boardBefore)
+        #expect(model.selectedStatus == selectedStatusBefore)
+        #expect(await cache.savedBoardCount() == savedBoardCount)
+    }
+
+    @Test
+    func wrongValidStatusResponseFailsWithoutPatchingOrCaching() async {
+        let todoID = UUID(uuidString: "33333333-3333-3333-3333-333333333333")!
+        let wrongID = UUID(uuidString: "44444444-4444-4444-4444-444444444444")!
+        let todo = makeTodo(id: todoID, title: "Existing")
+        let wrong = makeTodo(id: wrongID, title: "Unexpected", status: .done)
+        let original = makeBoard(todo: [todo], inProgress: [wrong])
+        let repository = FakeTodoRepository(
+            board: original,
+            statusResponse: wrong
+        )
+        let cache = TodoMutationCacheSpy()
+        let haptics = DPHapticCenter()
+        let model = TodoViewModel(
+            repository: repository,
+            hapticCenter: haptics,
+            cache: cache
+        )
+
+        await model.load(accountID: 42)
+        let savedBoardCount = await cache.savedBoardCount()
+        let boardBefore = model.board
+        let selectedStatusBefore = model.selectedStatus
+
+        let succeeded = await model.move(todo, to: TodoStatus.inProgress)
+
+        #expect(!succeeded)
+        #expect(model.errorKey == "todo.error.status")
+        #expect(haptics.event?.kind == .error)
+        #expect(model.board == boardBefore)
+        #expect(model.selectedStatus == selectedStatusBefore)
+        #expect(await cache.savedBoardCount() == savedBoardCount)
+    }
+
+    @Test
+    func malformedCrossColumnDropResponseRollsBackOptimisticBoard() async {
+        let todo = makeTodo(
+            id: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!,
+            title: "Existing"
+        )
+        let malformed = makeTodo(rawID: "not-a-uuid", title: "Malformed")
+        let original = makeBoard(todo: [todo])
+        let repository = FakeTodoRepository(
+            board: original,
+            statusResponse: malformed
+        )
+        let cache = TodoMutationCacheSpy()
+        let haptics = DPHapticCenter()
+        let model = TodoViewModel(
+            repository: repository,
+            hapticCenter: haptics,
+            cache: cache
+        )
+
+        await model.load(accountID: 42)
+        let savedBoardCount = await cache.savedBoardCount()
+        let selectedStatusBefore = model.selectedStatus
+
+        let succeeded = await model.drop(todoID: todo.uuid, into: TodoStatus.inProgress)
+
+        #expect(!succeeded)
+        #expect(model.board == original)
+        #expect(model.selectedStatus == selectedStatusBefore)
+        #expect(model.errorKey == "todo.error.status")
+        #expect(haptics.event?.kind == .error)
+        #expect(await cache.savedBoardCount() == savedBoardCount)
+    }
+
+    @Test
+    func wrongValidCrossColumnDropResponseRollsBackOptimisticBoard() async {
+        let todoID = UUID(uuidString: "55555555-5555-5555-5555-555555555555")!
+        let wrongID = UUID(uuidString: "66666666-6666-6666-6666-666666666666")!
+        let todo = makeTodo(id: todoID, title: "Existing")
+        let wrong = makeTodo(id: wrongID, title: "Unexpected", status: .inProgress)
+        let original = makeBoard(todo: [todo], inProgress: [wrong])
+        let repository = FakeTodoRepository(
+            board: original,
+            statusResponse: wrong
+        )
+        let cache = TodoMutationCacheSpy()
+        let haptics = DPHapticCenter()
+        let model = TodoViewModel(
+            repository: repository,
+            hapticCenter: haptics,
+            cache: cache
+        )
+
+        await model.load(accountID: 42)
+        let savedBoardCount = await cache.savedBoardCount()
+
+        let succeeded = await model.drop(
+            todoID: todo.uuid,
+            into: TodoStatus.inProgress
+        )
+
+        #expect(!succeeded)
+        #expect(model.board == original)
+        #expect(model.selectedStatus == TodoStatus.todo)
+        #expect(model.errorKey == "todo.error.status")
+        #expect(haptics.event?.kind == .error)
+        #expect(await cache.savedBoardCount() == savedBoardCount)
+    }
+
+    @Test
     func taggedTodoCanMoveStatusWithoutOwnerEdit() async {
         let todo = makeTodo(status: .todo, isTagged: true)
         let repository = FakeTodoRepository(board: makeBoard(todo: [todo]))
@@ -1040,6 +1297,9 @@ struct TodoViewModelTests {
 private actor FakeTodoRepository: TodoRepository {
     var board: TodoBoardDTO
     let attachments: [AttachmentDTO]
+    let createResponse: TodoDTO?
+    let updateResponse: TodoDTO?
+    let statusResponse: TodoDTO?
     var updateRequest: (id: TodoID, request: TodoRequest)?
     var statusChange: (id: TodoID, request: TodoStatusChangeRequest)?
     var positionRequest: TodoPositionUpdateRequest?
@@ -1052,10 +1312,16 @@ private actor FakeTodoRepository: TodoRepository {
         board: TodoBoardDTO,
         attachments: [AttachmentDTO] = [],
         shouldFailPositionUpdate: Bool = false,
-        shouldFailAttachmentFetch: Bool = false
+        shouldFailAttachmentFetch: Bool = false,
+        createResponse: TodoDTO? = nil,
+        updateResponse: TodoDTO? = nil,
+        statusResponse: TodoDTO? = nil
     ) {
         self.board = board
         self.attachments = attachments
+        self.createResponse = createResponse
+        self.updateResponse = updateResponse
+        self.statusResponse = statusResponse
         self.shouldFailPositionUpdate = shouldFailPositionUpdate
         self.shouldFailAttachmentFetch = shouldFailAttachmentFetch
     }
@@ -1076,20 +1342,25 @@ private actor FakeTodoRepository: TodoRepository {
         guard let todo = (board.todo + board.inProgress + board.done).first else {
             throw CocoaError(.fileNoSuchFile)
         }
-        return todo
+        return createResponse ?? todo
     }
 
     func update(id: TodoID, request: TodoRequest) async throws -> TodoDTO {
         updateRequest = (id, request)
-        return board.todo[0]
+        return updateResponse ?? board.todo[0]
     }
 
     func delete(id: TodoID) async throws {}
-    func complete(id: TodoID) async throws -> TodoDTO { board.todo[0] }
-    func reopen(id: TodoID) async throws -> TodoDTO { board.todo[0] }
+    func complete(id: TodoID) async throws -> TodoDTO {
+        statusResponse ?? board.todo[0]
+    }
+    func reopen(id: TodoID) async throws -> TodoDTO {
+        statusResponse ?? board.todo[0]
+    }
 
     func changeStatus(id: TodoID, request: TodoStatusChangeRequest) async throws -> TodoDTO {
         statusChange = (id, request)
+        if let statusResponse { return statusResponse }
         return try todo(id: id)
     }
 
@@ -1112,15 +1383,35 @@ private actor FakeTodoRepository: TodoRepository {
     }
 }
 
+private actor TodoMutationCacheSpy: OfflineCacheProviding {
+    private var savedBoards: [TodoBoardDTO] = []
+
+    func savedBoardCount() -> Int { savedBoards.count }
+
+    func saveAccount(_ snapshot: OfflineAccountSnapshot) async throws {}
+    func saveAccount(member: LoginMember, friends: [FriendDTO], dDays: [DDayDTO], now: Date) async throws {}
+    func loadAccount(memberID: MemberID) async -> OfflineAccountSnapshot? { nil }
+    func saveMonth(_ snapshot: OfflineMonthSnapshot) async throws {}
+    func loadMonth(accountID: MemberID, key: OfflineMonthKey) async -> OfflineMonthSnapshot? { nil }
+    func loadCachedMonths(accountID: MemberID, around current: OfflineMonthKey) async -> [OfflineMonthSnapshot] { [] }
+    func saveTodoBoard(accountID: MemberID, board: TodoBoardDTO, now: Date) async throws {
+        savedBoards.append(board)
+    }
+    func loadTodoBoard(accountID: MemberID) async -> TodoBoardDTO? { nil }
+    func searchSchedules(accountID: MemberID, query: String, keys: [OfflineMonthKey]?) async -> [ScheduleSearchResultDTO] { [] }
+    func purge(accountID: MemberID) async throws {}
+}
+
 private func makeTodo(
     id: UUID = UUID(),
+    rawID: String? = nil,
     title: String = "Todo",
     status: TodoStatus = .todo,
     isTagged: Bool = false,
     hasAttachments: Bool = false
 ) -> TodoDTO {
     TodoDTO(
-        id: id.uuidString,
+        id: rawID ?? id.uuidString,
         title: title,
         content: "Details",
         position: 0,

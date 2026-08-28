@@ -1,4 +1,5 @@
 import Combine
+import CryptoKit
 import Foundation
 
 @MainActor
@@ -251,7 +252,7 @@ final class TodoViewModel: ObservableObject {
                 await refreshPendingOperationState()
                 return
             }
-            board = cachedBoard
+            board = boardWithValidIDs(cachedBoard)
             friends = cachedAccount?.friends.sorted(by: friendOrder) ?? []
             isOffline = true
             isShowingCachedData = true
@@ -268,7 +269,8 @@ final class TodoViewModel: ObservableObject {
         var boardLoaded = false
         do {
             let serverBoard = try await repository.fetchBoard()
-            board = serverBoard
+            let validBoard = boardWithValidIDs(serverBoard)
+            board = validBoard
             boardLoaded = true
             isOffline = false
             isShowingCachedData = false
@@ -276,7 +278,7 @@ final class TodoViewModel: ObservableObject {
             if let currentAccountID {
                 try? await cache.saveTodoBoard(
                     accountID: currentAccountID,
-                    board: serverBoard,
+                    board: validBoard,
                     now: .now
                 )
             }
@@ -289,7 +291,7 @@ final class TodoViewModel: ObservableObject {
                 await refreshPendingOperationState()
                 return
             }
-            board = cachedBoard
+            board = boardWithValidIDs(cachedBoard)
             boardLoaded = true
             usedFallback = true
             isOffline = true
@@ -422,6 +424,11 @@ final class TodoViewModel: ObservableObject {
         }
         do {
             let created = try await repository.create(request)
+            guard created.hasValidUUID else {
+                errorKey = "todo.error.create"
+                emitHaptic(.error)
+                return false
+            }
             if refreshBoard {
                 patchBoard(with: created)
                 await saveCurrentBoardToCache(accountID: currentAccountID)
@@ -460,7 +467,7 @@ final class TodoViewModel: ObservableObject {
             emitHaptic(.error)
             return false
         }
-        return await performMutation(errorKey: "todo.error.update") {
+        return await performMutation(errorKey: "todo.error.update", expectedTodoID: todo.uuid) {
             try await repository.update(
                 id: todo.uuid,
                 request: draft.request()
@@ -477,14 +484,14 @@ final class TodoViewModel: ObservableObject {
 
     func complete(_ todo: TodoDTO) async -> Bool {
         guard ensureOnlineMutationAllowed() else { return false }
-        return await performMutation(errorKey: "todo.error.status") {
+        return await performMutation(errorKey: "todo.error.status", expectedTodoID: todo.uuid) {
             try await repository.complete(id: todo.uuid)
         }
     }
 
     func reopen(_ todo: TodoDTO) async -> Bool {
         guard ensureOnlineMutationAllowed() else { return false }
-        return await performMutation(errorKey: "todo.error.status") {
+        return await performMutation(errorKey: "todo.error.status", expectedTodoID: todo.uuid) {
             try await repository.reopen(id: todo.uuid)
         }
     }
@@ -492,7 +499,7 @@ final class TodoViewModel: ObservableObject {
     func move(_ todo: TodoDTO, to status: TodoStatus) async -> Bool {
         guard ensureOnlineMutationAllowed() else { return false }
         guard todo.status != status else { return true }
-        return await performMutation(errorKey: "todo.error.status") {
+        return await performMutation(errorKey: "todo.error.status", expectedTodoID: todo.uuid) {
             try await repository.changeStatus(
                 id: todo.uuid,
                 request: TodoStatusChangeRequest(status: status, orderedIds: [])
@@ -568,13 +575,16 @@ final class TodoViewModel: ObservableObject {
                     TodoPositionUpdateRequest(status: destinationStatus, orderedIds: orderedIds)
                 )
             } else {
-                _ = try await repository.changeStatus(
+                let changed = try await repository.changeStatus(
                     id: todoID,
                     request: TodoStatusChangeRequest(
                         status: destinationStatus,
                         orderedIds: orderedIds
                     )
                 )
+                guard changed.hasValidUUID, changed.uuid == todoID else {
+                    throw TodoMutationResponseError.malformedID
+                }
             }
             await saveCurrentBoardToCache(accountID: accountID)
             return true
@@ -598,13 +608,19 @@ final class TodoViewModel: ObservableObject {
 
     private func performMutation(
         errorKey: String,
+        expectedTodoID: TodoID,
         operation: () async throws -> TodoDTO
     ) async -> Bool {
         guard !isSaving else { return false }
         isSaving = true
         defer { isSaving = false }
         do {
-            patchBoard(with: try await operation())
+            let response = try await operation()
+            guard patchBoard(with: response, expectedID: expectedTodoID) else {
+                self.errorKey = errorKey
+                emitHaptic(.error)
+                return false
+            }
             await saveCurrentBoardToCache(accountID: accountID)
             emitHaptic(.success)
             return true
@@ -829,10 +845,36 @@ final class TodoViewModel: ObservableObject {
         )
     }
 
-    private func patchBoard(with todo: TodoDTO) {
+    @discardableResult
+    private func patchBoard(with todo: TodoDTO, expectedID: TodoID? = nil) -> Bool {
+        guard todo.hasValidUUID,
+              expectedID == nil || todo.uuid == expectedID
+        else { return false }
         var columns = board.map(TodoBoardColumns.init(board:)) ?? TodoBoardColumns()
         columns.replace(todo)
         board = columns.board
+        return true
+    }
+
+    /// API and cache payloads keep Todo IDs as strings for compatibility with
+    /// the web client. A malformed ID cannot participate in UUID-keyed Todo
+    /// operations, so discard that card at the board boundary instead of
+    /// letting a later view or mutation force-unwrap it.
+    private func boardWithValidIDs(_ board: TodoBoardDTO) -> TodoBoardDTO {
+        let todo = board.todo.filter(\.hasValidUUID)
+        let inProgress = board.inProgress.filter(\.hasValidUUID)
+        let done = board.done.filter(\.hasValidUUID)
+        return TodoBoardDTO(
+            todo: todo,
+            inProgress: inProgress,
+            done: done,
+            counts: TodoCountsDTO(
+                todo: todo.count,
+                inProgress: inProgress.count,
+                done: done.count,
+                total: todo.count + inProgress.count + done.count
+            )
+        )
     }
 
     private func removeFromBoard(todoID: TodoID) {
@@ -955,6 +997,10 @@ final class TodoViewModel: ObservableObject {
         pendingOperationCount = 0
     }
 #endif
+}
+
+private enum TodoMutationResponseError: Error, Sendable {
+    case malformedID
 }
 
 private struct TodoBoardColumns {
@@ -1133,7 +1179,27 @@ enum TodoDateFormatter {
 
 extension TodoDTO {
     var uuid: TodoID {
-        UUID(uuidString: id)!
+        guard let uuid = UUID(uuidString: id) else {
+            return Self.fallbackUUID(for: id)
+        }
+        return uuid
+    }
+
+    fileprivate var hasValidUUID: Bool { UUID(uuidString: id) != nil }
+
+    /// The board boundary drops malformed IDs before they reach the UI. This
+    /// deterministic fallback keeps any defensive direct access stable while
+    /// still avoiding a process-crashing force unwrap.
+    private static func fallbackUUID(for id: String) -> UUID {
+        var bytes = Array(SHA256.hash(data: Data(id.utf8)).prefix(16))
+        bytes[6] = (bytes[6] & 0x0f) | 0x50
+        bytes[8] = (bytes[8] & 0x3f) | 0x80
+        return UUID(uuid: (
+            bytes[0], bytes[1], bytes[2], bytes[3],
+            bytes[4], bytes[5], bytes[6], bytes[7],
+            bytes[8], bytes[9], bytes[10], bytes[11],
+            bytes[12], bytes[13], bytes[14], bytes[15]
+        ))
     }
 }
 
