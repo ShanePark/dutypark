@@ -262,14 +262,9 @@ struct TeamView: View {
 
     private var monthHeader: some View {
         HStack(spacing: 0) {
-            Button {
+            DPMonthArrowButton(direction: .previous, label: teamLocalized("team.view.calendar.previousMonth"), identifier: "team.calendar.month.previous") {
                 Task { await viewModel.previousMonth() }
-            } label: {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 13, weight: .bold))
-                    .frame(width: 36, height: DPSize.minimumTouchTarget)
             }
-            .accessibilityLabel(Text("team.view.calendar.month", tableName: "Team"))
             .disabled(viewModel.isLoading)
 
             Button {
@@ -288,14 +283,9 @@ struct TeamView: View {
             .accessibilityLabel(Text("team.view.calendar.chooseMonth", tableName: "Team"))
             .disabled(viewModel.isLoading)
 
-            Button {
+            DPMonthArrowButton(direction: .next, label: teamLocalized("team.view.calendar.nextMonth"), identifier: "team.calendar.month.next") {
                 Task { await viewModel.nextMonth() }
-            } label: {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 13, weight: .bold))
-                    .frame(width: 36, height: DPSize.minimumTouchTarget)
             }
-            .accessibilityLabel(Text("team.view.calendar.month", tableName: "Team"))
             .disabled(viewModel.isLoading)
         }
     }

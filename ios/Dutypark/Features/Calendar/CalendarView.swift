@@ -648,9 +648,9 @@ struct CalendarView: View {
         .accessibilityIdentifier("calendar.month.display")
     }
 
-    // Every bar control is narrower than `DPSize.minimumTouchTarget`; the 44pt-tall
-    // navigation bar cannot fit the leading identity, the month navigation and two
-    // trailing actions otherwise. Height stays at the full touch target.
+    // The trailing search control is narrower than `DPSize.minimumTouchTarget`; the 44pt-tall
+    // navigation bar cannot fit the leading identity, the month navigation and the trailing
+    // action otherwise. Height stays at the full touch target.
     private static let barControlWidth: CGFloat = 36
 
     // Back sits inside the leading slot next to the identity, so it claims barely
@@ -738,19 +738,14 @@ struct CalendarView: View {
 
     private var monthControls: some View {
         HStack(spacing: 0) {
-            Button { Task { await model.changeMonth(by: -1) } } label: {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 18, weight: .semibold))
-                    .frame(width: Self.barControlWidth, height: DPSize.minimumTouchTarget)
+            DPMonthArrowButton(direction: .previous, label: CalendarLocalization.text("calendar.month.previous"), identifier: "calendar.month.previous") {
+                Task { await model.changeMonth(by: -1) }
             }
             monthCenterControls
-            Button { Task { await model.changeMonth(by: 1) } } label: {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 18, weight: .semibold))
-                    .frame(width: Self.barControlWidth, height: DPSize.minimumTouchTarget)
+            DPMonthArrowButton(direction: .next, label: CalendarLocalization.text("calendar.month.next"), identifier: "calendar.month.next") {
+                Task { await model.changeMonth(by: 1) }
             }
         }
-        .foregroundStyle(DPColor.accent)
     }
 
     // The navigation bar has no room for the inline query field; tapping opens the

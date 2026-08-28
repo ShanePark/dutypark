@@ -97,14 +97,14 @@ function handleMonthButtonClick() {
 </script>
 
 <template>
-  <div class="flex items-center justify-center">
+  <div class="flex items-center justify-center gap-1 sm:gap-2">
     <button
       type="button"
       @click="emit('prev-month')"
-      class="calendar-nav-btn flex min-h-11 min-w-11 flex-shrink-0 cursor-pointer items-center justify-center rounded-full p-1 sm:p-2"
+      class="calendar-nav-arrow"
       :aria-label="t('common.calendar.previousMonth')"
     >
-      <ChevronLeft class="h-5 w-5 sm:h-6 sm:w-6" />
+      <ChevronLeft class="h-6 w-6 sm:h-7 sm:w-7" />
     </button>
     <span class="relative inline-flex">
       <button
@@ -135,10 +135,10 @@ function handleMonthButtonClick() {
     <button
       type="button"
       @click="emit('next-month')"
-      class="calendar-nav-btn flex min-h-11 min-w-11 flex-shrink-0 cursor-pointer items-center justify-center rounded-full p-1 sm:p-2"
+      class="calendar-nav-arrow"
       :aria-label="t('common.calendar.nextMonth')"
     >
-      <ChevronRight class="h-5 w-5 sm:h-6 sm:w-6" />
+      <ChevronRight class="h-6 w-6 sm:h-7 sm:w-7" />
     </button>
   </div>
 </template>

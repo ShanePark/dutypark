@@ -220,9 +220,8 @@ struct GuestPublicCalendarView: View {
 
     private var monthControls: some View {
         HStack(spacing: DPSpacing.extraSmall) {
-            Button { Task { await model.changeMonth(by: -1) } } label: {
-                Image(systemName: "chevron.left")
-                    .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+            DPMonthArrowButton(direction: .previous, label: GuestLocalization.text("guest.calendar.month.previous"), identifier: "guest.calendar.month.previous") {
+                Task { await model.changeMonth(by: -1) }
             }
             Spacer()
             Button {
@@ -246,9 +245,8 @@ struct GuestPublicCalendarView: View {
             ))
             .accessibilityIdentifier("guest.calendar.monthPicker.open")
             Spacer()
-            Button { Task { await model.changeMonth(by: 1) } } label: {
-                Image(systemName: "chevron.right")
-                    .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+            DPMonthArrowButton(direction: .next, label: GuestLocalization.text("guest.calendar.month.next"), identifier: "guest.calendar.month.next") {
+                Task { await model.changeMonth(by: 1) }
             }
             Button(GuestLocalization.text("guest.calendar.today")) {
                 Task { await model.goToToday() }
