@@ -13,6 +13,8 @@ private keys, account data, or test-user secrets.
   `1856c2aaccfe086d6828366a0a7291363a43a1d7`, with the screenshot harness,
   Team month accessibility metadata, local demo seed, images, and evidence documents
   still uncommitted.
+- The distribution Archive and exported IPA were produced from clean repository HEAD
+  `268029a3265e7f2ef1096df81b75353a2c489f5c`.
 - These are development verification records, not clean-commit attestations. Before
   submission, repeat the relevant checks from a fixed commit and retain the raw artifacts.
 
@@ -144,12 +146,47 @@ The canonical temporary launch capture cited by the audit is:
 This is simulator smoke evidence only. It is neither an App Store screenshot nor proof
 of distribution signing, production entitlements, or an exported IPA.
 
+## App Store distribution Archive and IPA
+
+A Release device Archive and a local `app-store-connect` export were produced without
+uploading to App Store Connect:
+
+```sh
+xcodebuild -project ios/Dutypark.xcodeproj -scheme Dutypark \
+  -configuration Release -destination 'generic/platform=iOS' \
+  -derivedDataPath /private/tmp/dutypark-appstore-final-derived \
+  -archivePath /private/tmp/dutypark-appstore-final-20260829.xcarchive \
+  MARKETING_VERSION=1.0.0 CURRENT_PROJECT_VERSION=1 \
+  DEVELOPMENT_TEAM=2V47G42CDS CODE_SIGN_STYLE=Automatic \
+  -allowProvisioningUpdates archive
+xcodebuild -exportArchive \
+  -archivePath /private/tmp/dutypark-appstore-final-20260829.xcarchive \
+  -exportPath /private/tmp/dutypark-appstore-final-export-20260829 \
+  -exportOptionsPlist /private/tmp/dutypark-testflight-export/ExportOptions.plist \
+  -allowProvisioningUpdates
+```
+
+- Archive: PASS; Release, generic iOS device, arm64, clean source HEAD above.
+- Export: PASS; `/private/tmp/dutypark-appstore-final-export-20260829/Dutypark.ipa`.
+- IPA SHA-256:
+  `851993f3d51ef89da63015c8a0f3bd797b5c4ef55256e76201f1688abdb13352`.
+- `codesign --verify --deep --strict`: PASS; Apple Distribution certificate class,
+  expected team and bundle identifier.
+- The signed-app entitlement and embedded App Store profile both contain the production
+  APNs environment; `get-task-allow` is disabled.
+- The exported app uses `iphoneos26.5`, version `1.0.0` build `1`, the production API
+  URL, the expected associated domain, Sign in with Apple entitlement, `dutypark` URL
+  scheme, camera purpose string, and a bundled `PrivacyInfo.xcprivacy`.
+
+The Archive, IPA, distribution logs, and extracted inspection directory are temporary
+local artifacts. The SHA and summarized checks are durable here, but the IPA itself
+must be retained in release artifact storage if this exact binary will be submitted.
+
 ## Remaining retention gate
 
 This compact record resolves the missing command/result/SHA linkage for the fresh
 backend, web, and iOS unit reruns and preserves the known UI artifact provenance. Full
-`.xcresult` bundles and raw logs are still in `/private/tmp` and are not durable. Before
-the audit HOLD can be released, final clean-SHA verification must upload the full logs,
-`.xcresult`, Archive/export inspection, and real-device evidence to retained CI or
-release artifact storage, then replace temporary paths here with stable artifact links
-and checksums.
+`.xcresult` bundles, the Archive, IPA, and raw logs are still in `/private/tmp` and are
+not durable. Before the audit HOLD can be released, the final submission artifacts and
+real-device evidence must be uploaded to retained CI or release artifact storage, then
+temporary paths here must be replaced with stable artifact links and checksums.

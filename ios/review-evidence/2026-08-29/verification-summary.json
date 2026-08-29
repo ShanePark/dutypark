@@ -1,5 +1,5 @@
 {
-  "recordedAt": "2026-08-29T22:56:47+09:00",
+  "recordedAt": "2026-08-29T23:13:09+09:00",
   "repositoryHeadDuringFullStackRerun": "3d55d46de011f8a18b8b38434836b8fe8acb3a31",
   "repositoryHeadDuringScreenshotCapture": "1856c2aaccfe086d6828366a0a7291363a43a1d7",
   "workingTreeState": "uncommitted App Store screenshot harness, Team month accessibility metadata, local demo seed, screenshots, and evidence documents on repositoryHeadDuringScreenshotCapture",
@@ -73,5 +73,33 @@
     "resultBundleTreeSha256": "7cb530b8b4dc426bda3d1702b8404e39f1525ceee19bb1cae1954c0ca8672304",
     "installedSimulatorId": "F0737016-7654-4967-83FA-1DFB951DB36E",
     "installedBundleId": "io.github.shanepark.dutypark"
+  },
+  "appStoreDistribution": {
+    "repositoryHead": "268029a3265e7f2ef1096df81b75353a2c489f5c",
+    "sourceTreeClean": true,
+    "archiveCommand": "xcodebuild -project ios/Dutypark.xcodeproj -scheme Dutypark -configuration Release -destination 'generic/platform=iOS' -derivedDataPath /private/tmp/dutypark-appstore-final-derived -archivePath /private/tmp/dutypark-appstore-final-20260829.xcarchive MARKETING_VERSION=1.0.0 CURRENT_PROJECT_VERSION=1 DEVELOPMENT_TEAM=2V47G42CDS CODE_SIGN_STYLE=Automatic -allowProvisioningUpdates archive",
+    "archiveResult": "PASS",
+    "exportCommand": "xcodebuild -exportArchive -archivePath /private/tmp/dutypark-appstore-final-20260829.xcarchive -exportPath /private/tmp/dutypark-appstore-final-export-20260829 -exportOptionsPlist /private/tmp/dutypark-testflight-export/ExportOptions.plist -allowProvisioningUpdates",
+    "exportResult": "PASS",
+    "ipaPath": "/private/tmp/dutypark-appstore-final-export-20260829/Dutypark.ipa",
+    "ipaSha256": "851993f3d51ef89da63015c8a0f3bd797b5c4ef55256e76201f1688abdb13352",
+    "codeSignStrictVerification": "PASS",
+    "signingCertificateType": "Apple Distribution",
+    "bundleIdentifier": "io.github.shanepark.dutypark",
+    "teamIdentifier": "2V47G42CDS",
+    "productionApnsEntitlementVerified": true,
+    "embeddedAppStoreProfileVerified": true,
+    "getTaskAllow": false,
+    "sdk": "iphoneos26.5",
+    "architecture": "arm64",
+    "marketingVersion": "1.0.0",
+    "buildNumber": "1",
+    "productionApiBaseUrlVerified": true,
+    "associatedDomainsVerified": true,
+    "signInWithAppleEntitlementVerified": true,
+    "oauthUrlSchemeVerified": true,
+    "cameraPurposeStringVerified": true,
+    "privacyManifestBundled": true,
+    "appStoreConnectUploadOrProcessingVerified": false
   }
 }
