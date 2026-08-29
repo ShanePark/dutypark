@@ -407,7 +407,12 @@ struct AccountDeletionReceiptTests {
             localDataPurger: NoopSessionLocalDataPurger(),
             accountDeletionReceiptStore: receiptStore
         )
-        await store.completeAccountDeletion(receipt: receipt)
+        await store.completeAccountDeletion(
+            expectedMemberID: Self.member.id,
+            expectedAuthenticationSessionGeneration: store
+                .authenticationSessionGenerationForCurrentAccount!,
+            receipt: receipt
+        )
 
         #expect(store.state == .guest)
         #expect(store.accountDeletionReceipt == receipt)

@@ -389,6 +389,35 @@ struct AccountDeletionFlowTests {
     }
 
     @Test
+    func receiptTokenMismatchClearsStaleReceiptAndBlocksResubmission() async {
+        let service = AccountDeletionServiceStub(
+            deletionError: .server(status: 409, code: "account.delete.receiptToken.mismatch")
+        )
+        let receiptStore = makeReceiptStore()
+        let model = AccountDeletionViewModel(
+            service: service,
+            receiptStore: receiptStore,
+            ownerMemberID: 42
+        )
+        model.flow.step = .finalConfirmation
+        model.flow.storeProof("proof", expiresIn: 300)
+
+        let completion = await model.submit()
+
+        #expect(completion == .receiptMismatch)
+        #expect(model.errorKey == "settings.accountDeletion.error.receiptMismatch")
+        #expect(model.flow.step == .finalConfirmation)
+        #expect(model.flow.reauthProof == nil)
+        #expect(model.requestBlocked)
+        #expect(receiptStore.load() == nil)
+        #expect((await service.recordedCalls()).deletionRequests.count == 1)
+
+        #expect(await model.submit() == nil)
+        #expect(model.flow.step == .finalConfirmation)
+        #expect((await service.recordedCalls()).deletionRequests.count == 1)
+    }
+
+    @Test
     func duplicateSubmissionIsIgnoredWhileFirstDeletionIsInFlight() async throws {
         let service = AccountDeletionServiceStub(suspendsDeletion: true)
         let model = AccountDeletionViewModel(

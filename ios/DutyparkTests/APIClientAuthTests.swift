@@ -902,7 +902,13 @@ final class APIClientAuthTests: XCTestCase {
         UserDefaults.standard.set("test@duty.park", forKey: "dp-remember-email")
         UserDefaults.standard.set(12, forKey: "selectedDday_1")
 
-        await store.completeAccountDeletion()
+        let deletionGeneration = try XCTUnwrap(
+            store.authenticationSessionGenerationForCurrentAccount
+        )
+        await store.completeAccountDeletion(
+            expectedMemberID: Self.testMember.id,
+            expectedAuthenticationSessionGeneration: deletionGeneration
+        )
 
         XCTAssertEqual(store.state, .guest)
         XCTAssertEqual(store.accountDeletionAcceptedPresentation, .accepted)
@@ -921,6 +927,179 @@ final class APIClientAuthTests: XCTestCase {
 
         let freshStore = SessionStore(initialState: .restoring)
         XCTAssertNil(freshStore.accountDeletionAcceptedPresentation)
+    }
+
+    @MainActor
+    func testClearingAccountDeletionReceiptClearsInMemoryAndPersistedState() throws {
+        let suiteName = "APIClientAuthTests.clearAccountDeletionReceipt.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let receiptStore = AccountDeletionReceiptStore(
+            defaults: defaults,
+            tokenStore: APIClientAuthReceiptTokenStore()
+        )
+        let receipt = AccountDeletionReceipt(
+            jobId: 42,
+            status: "PENDING",
+            ownerMemberID: Self.testMember.id,
+            receiptToken: String(repeating: "R", count: 43),
+            estimatedCompletionAt: "2026-08-30T12:05:00Z"
+        )
+        try receiptStore.save(receipt)
+        let store = SessionStore(
+            authService: AuthService(client: makeClient()),
+            initialState: .authenticated(Self.testMember),
+            accountDeletionReceiptStore: receiptStore
+        )
+
+        XCTAssertEqual(store.accountDeletionReceipt?.ownerMemberID, receipt.ownerMemberID)
+        XCTAssertEqual(store.accountDeletionReceipt?.receiptToken, receipt.receiptToken)
+        XCTAssertEqual(
+            store.accountDeletionReceipt?.estimatedCompletionAt,
+            receipt.estimatedCompletionAt
+        )
+        XCTAssertEqual(store.accountDeletionAcceptedPresentation, .accepted)
+
+        let deletionGeneration = try XCTUnwrap(
+            store.authenticationSessionGenerationForCurrentAccount
+        )
+        XCTAssertTrue(
+            store.clearAccountDeletionReceipt(
+                expectedMemberID: Self.testMember.id,
+                expectedAuthenticationSessionGeneration: deletionGeneration
+            )
+        )
+
+        XCTAssertNil(store.accountDeletionReceipt)
+        XCTAssertNil(store.accountDeletionAcceptedPresentation)
+        XCTAssertNil(receiptStore.load())
+    }
+
+    @MainActor
+    func testLateAccountDeletionReceiptClearDoesNotClearReplacementReceipt() throws {
+        let suiteName = "APIClientAuthTests.lateAccountDeletionReceiptClear.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let receiptStore = AccountDeletionReceiptStore(
+            defaults: defaults,
+            tokenStore: APIClientAuthReceiptTokenStore()
+        )
+        let receipt = AccountDeletionReceipt(
+            jobId: 42,
+            status: "PENDING",
+            ownerMemberID: Self.testMember.id,
+            receiptToken: String(repeating: "S", count: 43),
+            estimatedCompletionAt: "2026-08-30T12:05:00Z"
+        )
+        try receiptStore.save(receipt)
+        let store = SessionStore(
+            authService: AuthService(client: makeClient()),
+            initialState: .authenticated(LoginMember(
+                id: 2,
+                email: "other@duty.park",
+                name: "Other",
+                teamId: nil,
+                team: nil,
+                isAdmin: false,
+                isImpersonating: false,
+                originalMemberId: nil
+            )),
+            accountDeletionReceiptStore: receiptStore
+        )
+
+        XCTAssertFalse(
+            store.clearAccountDeletionReceipt(
+                expectedMemberID: Self.testMember.id,
+                expectedAuthenticationSessionGeneration: 0
+            )
+        )
+        XCTAssertEqual(store.accountDeletionReceipt?.ownerMemberID, receipt.ownerMemberID)
+        XCTAssertEqual(store.accountDeletionReceipt?.receiptToken, receipt.receiptToken)
+        XCTAssertEqual(receiptStore.load()?.ownerMemberID, receipt.ownerMemberID)
+        XCTAssertEqual(receiptStore.load()?.receiptToken, receipt.receiptToken)
+    }
+
+    @MainActor
+    func testLateAccountDeletionCompletionDoesNotClearReplacementSession() async throws {
+        URLProtocolStub.handler = { request in
+            switch request.url?.path {
+            case "/api/auth/token":
+                return Self.response(
+                    request,
+                    status: 200,
+                    body: #"{"expiresIn":3600}"#
+                )
+            case "/api/auth/status":
+                return Self.response(
+                    request,
+                    status: 200,
+                    body: #"{"id":2,"email":"other@duty.park","name":"Other","teamId":null,"team":null,"isAdmin":false,"isImpersonating":false,"originalMemberId":null}"#
+                )
+            default:
+                return Self.response(request, status: 404)
+            }
+        }
+
+        let suiteName = "APIClientAuthTests.lateAccountDeletion.\(UUID().uuidString)"
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+        let receiptStore = AccountDeletionReceiptStore(
+            defaults: defaults,
+            tokenStore: APIClientAuthReceiptTokenStore()
+        )
+        let purger = SessionBoundaryProbe()
+        let store = SessionStore(
+            authService: AuthService(client: makeClient()),
+            initialState: .authenticated(Self.testMember),
+            localDataPurger: purger,
+            accountDeletionReceiptStore: receiptStore
+        )
+        let deletionGeneration = try XCTUnwrap(
+            store.authenticationSessionGenerationForCurrentAccount
+        )
+
+        await store.login(
+            email: "other@duty.park",
+            password: "12345678",
+            rememberMe: false
+        )
+        XCTAssertEqual(
+            store.state,
+            .authenticated(LoginMember(
+                id: 2,
+                email: "other@duty.park",
+                name: "Other",
+                teamId: nil,
+                team: nil,
+                isAdmin: false,
+                isImpersonating: false,
+                originalMemberId: nil
+            ))
+        )
+
+        // This completion belongs to the account and auth generation that was
+        // active before the login above. It must not touch the replacement.
+        let completed = await store.completeAccountDeletion(
+            expectedMemberID: Self.testMember.id,
+            expectedAuthenticationSessionGeneration: deletionGeneration
+        )
+
+        XCTAssertFalse(completed)
+        XCTAssertEqual(
+            store.state,
+            .authenticated(LoginMember(
+                id: 2,
+                email: "other@duty.park",
+                name: "Other",
+                teamId: nil,
+                team: nil,
+                isAdmin: false,
+                isImpersonating: false,
+                originalMemberId: nil
+            ))
+        )
+        let purgedMemberIDs = await purger.memberIDs()
+        XCTAssertFalse(purgedMemberIDs.contains(2))
     }
 
     @MainActor
@@ -944,7 +1123,11 @@ final class APIClientAuthTests: XCTestCase {
             authService: AuthService(client: makeClient()),
             initialState: .authenticated(Self.testMember)
         )
-        await store.completeAccountDeletion()
+        let deletionGeneration = store.authenticationSessionGenerationForCurrentAccount!
+        await store.completeAccountDeletion(
+            expectedMemberID: Self.testMember.id,
+            expectedAuthenticationSessionGeneration: deletionGeneration
+        )
         XCTAssertEqual(store.accountDeletionAcceptedPresentation, .accepted)
 
         await store.login(email: "test@duty.park", password: "12345678", rememberMe: false)
@@ -2811,6 +2994,17 @@ private actor SessionBoundaryProbe: SessionLocalDataPurging {
     func events() -> [String] {
         storedEvents
     }
+}
+
+@MainActor
+private final class APIClientAuthReceiptTokenStore: AccountDeletionReceiptTokenStoring {
+    private var token: String?
+
+    func loadToken() throws -> String? { token }
+
+    func saveToken(_ token: String) throws { self.token = token }
+
+    func clearToken() { token = nil }
 }
 
 private final class RefreshRecorder: @unchecked Sendable {

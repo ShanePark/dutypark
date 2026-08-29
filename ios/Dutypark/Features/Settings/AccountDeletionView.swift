@@ -57,6 +57,10 @@ nonisolated enum AccountDeletionCompletion: Equatable, Sendable {
     /// current account must not reuse or replace it; the caller should keep
     /// the current session intact and show status-first guidance instead.
     case existingReceipt
+    /// The server already has a different receipt for this account, so the
+    /// locally prepared token cannot be used for status lookup. The caller
+    /// should keep the current session intact and direct the user to support.
+    case receiptMismatch
 }
 
 @MainActor
@@ -67,6 +71,7 @@ final class AccountDeletionViewModel: ObservableObject {
     @Published private(set) var isLoading = false
     @Published private(set) var isWorking = false
     @Published private(set) var errorKey: String?
+    @Published private(set) var requestBlocked = false
     private(set) var acceptedResponse: AccountDeletionAccepted? = nil
 
     private let service: any AccountDeletionServicing
@@ -244,6 +249,7 @@ final class AccountDeletionViewModel: ObservableObject {
     func submit(ownerMemberID: Int64? = nil) async -> AccountDeletionCompletion? {
         guard flow.step == .finalConfirmation else { return nil }
         guard !isWorking else { return nil }
+        guard !requestBlocked else { return nil }
         guard let proof = flow.validProof() else {
             errorKey = "settings.accountDeletion.error.proofExpired"
             flow.step = .reauthentication
@@ -305,6 +311,16 @@ final class AccountDeletionViewModel: ObservableObject {
             // deletion may have been committed before decoding failed.
             return .accepted
         } catch {
+            if Self.isReceiptTokenMismatch(error) {
+                // The server deliberately does not reveal its canonical token.
+                // This locally prepared token cannot resolve status, so do not
+                // retain it or invite a retry that will fail in the same way.
+                receiptStore.clear()
+                requestBlocked = true
+                errorKey = Self.errorKey(for: error)
+                DPHapticCenter.shared.emit(.warning)
+                return .receiptMismatch
+            }
             if Self.isDefinitiveClientRejection(error) {
                 receiptStore.clear()
                 errorKey = Self.errorKey(for: error)
@@ -366,6 +382,8 @@ final class AccountDeletionViewModel: ObservableObject {
             return "settings.accountDeletion.error.impersonation"
         case "account.delete.alreadyPending":
             return "settings.accountDeletion.error.alreadyPending"
+        case "account.delete.receiptToken.mismatch":
+            return "settings.accountDeletion.error.receiptMismatch"
         default:
             return "settings.accountDeletion.error.generic"
         }
@@ -386,6 +404,11 @@ final class AccountDeletionViewModel: ObservableObject {
         case .transport, .decoding, .invalidURL, .invalidResponse:
             return false
         }
+    }
+
+    nonisolated private static func isReceiptTokenMismatch(_ error: Error) -> Bool {
+        guard let apiError = error as? APIError else { return false }
+        return code(from: apiError) == "account.delete.receiptToken.mismatch"
     }
 
 }
@@ -417,6 +440,7 @@ private nonisolated struct AccountDeletionUITestingService: AccountDeletionServi
 
 struct AccountDeletionView: View {
     @EnvironmentObject private var session: SessionStore
+    @Environment(\.openURL) private var openURL
     @StateObject private var model: AccountDeletionViewModel
     @ObservedObject private var policyModel: SettingsViewModel
     @ObservedObject var push: APNsRegistrationManager
@@ -481,12 +505,14 @@ struct AccountDeletionView: View {
             if model.isLoading {
                 ProgressView(SettingsLocalization.string("settings.accountDeletion.loading"))
                     .frame(maxWidth: .infinity, minHeight: 180)
+            } else if model.requestBlocked {
+                requestBlockedContent
             } else if model.preview == nil {
                 loadFailure
             } else {
                 stepContent
             }
-            if let errorKey = model.errorKey {
+            if let errorKey = model.errorKey, !model.requestBlocked {
                 Label(SettingsLocalization.string(errorKey), systemImage: "exclamationmark.triangle.fill")
                     .font(DPTypography.supporting)
                     .foregroundStyle(DPColor.danger)
@@ -494,6 +520,33 @@ struct AccountDeletionView: View {
             }
         }
         .padding(DPSpacing.large)
+    }
+
+    private var requestBlockedContent: some View {
+        VStack(alignment: .leading, spacing: DPSpacing.medium) {
+            Label {
+                Text(SettingsLocalization.string(
+                    model.errorKey ?? "settings.accountDeletion.error.receiptMismatch"
+                ))
+                .font(DPTypography.body)
+                .foregroundStyle(DPColor.textSecondary)
+            } icon: {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(DPColor.warning)
+            }
+            .accessibilityIdentifier("accountDeletion.requestBlocked")
+
+            Button {
+                DPHapticCenter.shared.emit(.routine)
+                openURL(URL(string: "https://dutypark.o-r.kr/support")!)
+            } label: {
+                Text(SettingsLocalization.string("settings.accountDeletion.accepted.support"))
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(DPSecondaryButtonStyle())
+            .accessibilityIdentifier("accountDeletion.support")
+        }
+        .frame(maxWidth: .infinity, minHeight: 180)
     }
 
     private var header: some View {
@@ -691,42 +744,45 @@ struct AccountDeletionView: View {
         .frame(maxWidth: .infinity, minHeight: 180)
     }
 
+    @ViewBuilder
     private var actions: some View {
-        HStack(spacing: DPSpacing.small) {
-            if model.flow.step != .scope {
-                Button {
-                    model.goBack()
-                } label: {
-                    SettingsLocalization.text("settings.accountDeletion.back")
-                        .frame(maxWidth: .infinity)
+        if !model.requestBlocked {
+            HStack(spacing: DPSpacing.small) {
+                if model.flow.step != .scope {
+                    Button {
+                        model.goBack()
+                    } label: {
+                        SettingsLocalization.text("settings.accountDeletion.back")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(DPSecondaryButtonStyle())
+                    .disabled(model.isWorking)
+                    .accessibilityIdentifier("accountDeletion.back")
                 }
-                .buttonStyle(DPSecondaryButtonStyle())
-                .disabled(model.isWorking)
-                .accessibilityIdentifier("accountDeletion.back")
+                if model.flow.step == .finalConfirmation {
+                    Button {
+                        Task { await deleteAccount() }
+                    } label: {
+                        SettingsLocalization.text("settings.accountDeletion.final.action")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(DPDestructiveButtonStyle())
+                    .disabled(model.isWorking)
+                    .accessibilityIdentifier("accountDeletion.submit")
+                } else {
+                    Button {
+                        model.advance(memberName: memberName)
+                    } label: {
+                        SettingsLocalization.text("settings.accountDeletion.continue")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(DPPrimaryButtonStyle())
+                    .disabled(!canAdvance || model.isWorking)
+                    .accessibilityIdentifier("accountDeletion.continue")
+                }
             }
-            if model.flow.step == .finalConfirmation {
-                Button {
-                    Task { await deleteAccount() }
-                } label: {
-                    SettingsLocalization.text("settings.accountDeletion.final.action")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(DPDestructiveButtonStyle())
-                .disabled(model.isWorking)
-                .accessibilityIdentifier("accountDeletion.submit")
-            } else {
-                Button {
-                    model.advance(memberName: memberName)
-                } label: {
-                    SettingsLocalization.text("settings.accountDeletion.continue")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(DPPrimaryButtonStyle())
-                .disabled(!canAdvance || model.isWorking)
-                .accessibilityIdentifier("accountDeletion.continue")
-            }
+            .padding(DPSpacing.compact)
         }
-        .padding(DPSpacing.compact)
     }
 
     private var canAdvance: Bool {
@@ -740,15 +796,31 @@ struct AccountDeletionView: View {
     }
 
     private func deleteAccount() async {
-        // An existing receipt belongs to another account and is deliberately
-        // reported as a non-successful completion. Keep this account signed in
-        // so the user can follow the sign-out/status guidance without treating
-        // another account's deletion as their own request.
-        guard let completion = await model.submit(), completion == .accepted else { return }
+        guard let sessionGeneration = session.authenticationSessionGenerationForCurrentAccount else {
+            return
+        }
+        // Non-successful receipt outcomes deliberately keep this account signed
+        // in. Only an accepted request may trigger irreversible session and
+        // notification cleanup.
+        guard let completion = await model.submit() else { return }
+        if completion == .receiptMismatch {
+            _ = session.clearAccountDeletionReceipt(
+                expectedMemberID: memberID,
+                expectedAuthenticationSessionGeneration: sessionGeneration
+            )
+            return
+        }
+        guard completion == .accepted else { return }
         let receipt = model.acceptedResponse?.receipt(ownerMemberID: memberID)
-        await push.completeAccountDeletionCleanup()
-        await session.completeAccountDeletion(receipt: receipt)
-        dismiss()
+        let completed = await session.completeAccountDeletion(
+            expectedMemberID: memberID,
+            expectedAuthenticationSessionGeneration: sessionGeneration,
+            receipt: receipt,
+            accountCleanup: { await push.completeAccountDeletionCleanup() }
+        )
+        if completed {
+            dismiss()
+        }
     }
 
     private var transferMemberSelection: Binding<Int64?> {

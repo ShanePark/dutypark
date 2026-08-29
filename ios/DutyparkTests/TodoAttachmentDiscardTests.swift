@@ -371,7 +371,11 @@ struct TodoAttachmentDiscardTests {
             todoDiscardResponse(request, status: 204)
         }
 
-        await sessionStore.completeAccountDeletion()
+        await sessionStore.completeAccountDeletion(
+            expectedMemberID: deletedAccountID,
+            expectedAuthenticationSessionGeneration: sessionStore
+                .authenticationSessionGenerationForCurrentAccount!
+        )
 
         #expect(store.pendingSessionIDs(accountID: deletedAccountID).isEmpty)
         #expect(store.pendingSessionIDs(accountID: otherAccountID) == [otherSessionID])

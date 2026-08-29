@@ -283,7 +283,33 @@ final class SessionStore: ObservableObject {
 
     /// Completes the irreversible local side of account deletion after the server
     /// accepted the deletion job (or reports that the account is already pending).
-    func completeAccountDeletion(receipt: AccountDeletionReceipt? = nil) async {
+    ///
+    /// When the completion started in a view that can outlive an auth
+    /// transition, the expected account and generation bind the cleanup to the
+    /// session that initiated it. The optional callback runs while the session
+    /// boundary is locked, so account-scoped notification cleanup cannot race a
+    /// replacement login.
+    @discardableResult
+    func completeAccountDeletion(
+        expectedMemberID: MemberID,
+        expectedAuthenticationSessionGeneration: UInt64,
+        receipt: AccountDeletionReceipt? = nil,
+        accountCleanup: (@MainActor @Sendable () async -> Void)? = nil
+    ) async -> Bool {
+        guard !isTerminatingSession,
+              isCurrentAccount(
+                  memberID: expectedMemberID,
+                  generation: expectedAuthenticationSessionGeneration
+              )
+        else { return false }
+
+        isTerminatingSession = true
+        defer { finishSessionTermination() }
+
+        // Snapshot the account before the first await. `isTerminatingSession`
+        // makes login/switch transitions wait until this whole boundary is
+        // complete, while the snapshot keeps the purge target explicit.
+        let member = memberForCurrentState
         if let receipt {
             do {
                 try accountDeletionReceiptStore.save(receipt)
@@ -295,7 +321,7 @@ final class SessionStore: ObservableObject {
             accountDeletionReceipt = accountDeletionReceiptStore.load()
         }
         await invalidateAuthenticationContext()
-        if case .authenticated(let member) = state {
+        if let member {
             UserDefaults.standard.removeObject(forKey: "selectedDday_\(member.id)")
             await discardLocalSessionData(
                 memberID: member.id,
@@ -307,18 +333,46 @@ final class SessionStore: ObservableObject {
                 purgeAttachmentDiscards: true
             )
         }
+        await accountCleanup?()
         UserDefaults.standard.removeObject(forKey: "dp-remember-email")
         await authService.clearLocalAuthentication()
         pendingDestination = nil
         await becomeGuest()
         accountDeletionAcceptedPresentation = .accepted
+        return true
     }
 
     func dismissAccountDeletionAcceptedPresentation(clearReceipt: Bool = true) {
+        guard clearReceipt else {
+            accountDeletionAcceptedPresentation = nil
+            return
+        }
+        clearAccountDeletionReceipt()
+    }
+
+    /// Clears the account-deletion receipt from both memory and persistence.
+    /// The presentation is also dismissed so a later guest session cannot show
+    /// a status screen for a receipt that no longer exists.
+    func clearAccountDeletionReceipt() {
         accountDeletionAcceptedPresentation = nil
-        guard clearReceipt else { return }
         accountDeletionReceiptStore.clear()
         accountDeletionReceipt = nil
+    }
+
+    /// Clears a receipt only when the caller still belongs to the session that
+    /// owned the deletion flow. This prevents a late callback from removing a
+    /// replacement account's receipt.
+    @discardableResult
+    func clearAccountDeletionReceipt(
+        expectedMemberID: MemberID,
+        expectedAuthenticationSessionGeneration: UInt64
+    ) -> Bool {
+        guard isCurrentAccount(
+            memberID: expectedMemberID,
+            generation: expectedAuthenticationSessionGeneration
+        ) else { return false }
+        clearAccountDeletionReceipt()
+        return true
     }
 
     func dismissServerSessionWarning() {
@@ -704,6 +758,14 @@ final class SessionStore: ObservableObject {
 
     private var memberIDForCurrentState: MemberID? {
         memberForCurrentState?.id
+    }
+
+    private func isCurrentAccount(
+        memberID: MemberID,
+        generation: UInt64
+    ) -> Bool {
+        memberIDForCurrentState == memberID
+            && authenticationSessionGeneration == generation
     }
 
     private func purgePreviousAccountIfNeeded(
