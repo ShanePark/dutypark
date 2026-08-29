@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { X, Plus, Minus, RotateCcw, Lock, Unlock } from 'lucide-vue-next'
+import { X, Plus, Minus, RotateCcw, Lock, Unlock, Loader2 } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import BaseModal from '@/components/common/BaseModal.vue'
 import CharacterCounter from '@/components/common/CharacterCounter.vue'
@@ -19,9 +19,12 @@ interface DDay {
 interface Props {
   isOpen: boolean
   dday?: DDay | null
+  isSubmitting?: boolean
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+  isSubmitting: false,
+})
 
 const emit = defineEmits<{
   (e: 'close'): void
@@ -67,7 +70,7 @@ function resetToToday() {
 }
 
 function handleSave() {
-  if (!title.value.trim() || !date.value) {
+  if (props.isSubmitting || !title.value.trim() || !date.value) {
     return
   }
   emit('save', {
@@ -79,6 +82,9 @@ function handleSave() {
 }
 
 function handleClose() {
+  if (props.isSubmitting) {
+    return
+  }
   emit('close')
 }
 </script>
@@ -88,11 +94,13 @@ function handleClose() {
     :is-open="isOpen"
     size="md"
     height="default"
+    :close-on-backdrop="!isSubmitting"
+    :close-on-escape="!isSubmitting"
     @close="handleClose"
   >
     <div class="modal-header">
       <h2>{{ dday ? t('duty.ddayModal.editTitle') : t('duty.ddayModal.addTitle') }}</h2>
-      <button @click="handleClose" class="p-2 rounded-full hover-close-btn cursor-pointer">
+      <button @click="handleClose" :disabled="isSubmitting" class="p-2 rounded-full hover-close-btn cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
         <X class="w-6 h-6 text-dp-text-primary" />
       </button>
     </div>
@@ -110,6 +118,7 @@ function handleClose() {
           class="form-control"
           :placeholder="t('duty.ddayModal.placeholders.title')"
           :aria-invalid="isTitleMissing"
+          :disabled="isSubmitting"
         />
       </div>
 
@@ -121,12 +130,14 @@ function handleClose() {
           v-model="date"
           :invalid="isDateMissing"
           :aria-label="t('duty.ddayModal.fields.date')"
+          :disabled="isSubmitting"
         />
       </div>
 
       <div class="flex justify-center gap-2">
         <button
           @click="addDays(-7)"
+          :disabled="isSubmitting"
           class="date-adjust-btn flex items-center justify-center gap-1 px-3 py-1.5 text-xs rounded"
         >
           <Minus class="w-3 h-3" />
@@ -134,6 +145,7 @@ function handleClose() {
         </button>
         <button
           @click="addDays(-1)"
+          :disabled="isSubmitting"
           class="date-adjust-btn flex items-center justify-center gap-1 px-3 py-1.5 text-xs rounded"
         >
           <Minus class="w-3 h-3" />
@@ -141,6 +153,7 @@ function handleClose() {
         </button>
         <button
           @click="resetToToday"
+          :disabled="isSubmitting"
           class="date-adjust-btn date-adjust-btn--today flex items-center justify-center gap-1 px-3 py-1.5 text-xs rounded"
         >
           <RotateCcw class="w-3 h-3" />
@@ -148,6 +161,7 @@ function handleClose() {
         </button>
         <button
           @click="addDays(1)"
+          :disabled="isSubmitting"
           class="date-adjust-btn flex items-center justify-center gap-1 px-3 py-1.5 text-xs rounded"
         >
           <Plus class="w-3 h-3" />
@@ -155,6 +169,7 @@ function handleClose() {
         </button>
         <button
           @click="addDays(7)"
+          :disabled="isSubmitting"
           class="date-adjust-btn flex items-center justify-center gap-1 px-3 py-1.5 text-xs rounded"
         >
           <Plus class="w-3 h-3" />
@@ -169,6 +184,7 @@ function handleClose() {
         </div>
         <button
           @click="isPrivate = !isPrivate"
+          :disabled="isSubmitting"
           class="relative inline-flex h-6 w-11 items-center rounded-full transition cursor-pointer"
           :class="isPrivate ? 'bg-dp-accent' : 'bg-dp-border-secondary'"
         >
@@ -183,16 +199,18 @@ function handleClose() {
     <div class="modal-actions-compact modal-actions-end modal-footer-safe">
       <button
         @click="handleClose"
+        :disabled="isSubmitting"
         class="flex-1 sm:flex-none px-4 py-2 rounded-lg transition btn-outline cursor-pointer"
       >
         {{ t('common.actions.close') }}
       </button>
       <button
         @click="handleSave"
-        :disabled="isTitleMissing || isDateMissing"
-        class="flex-1 sm:flex-none px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+        :disabled="isSubmitting || isTitleMissing || isDateMissing"
+        class="flex-1 sm:flex-none px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
       >
-        {{ t('duty.ddayModal.save') }}
+        <Loader2 v-if="isSubmitting" class="w-4 h-4 animate-spin" />
+        {{ isSubmitting ? t('duty.ddayModal.saving') : t('duty.ddayModal.save') }}
       </button>
     </div>
   </BaseModal>

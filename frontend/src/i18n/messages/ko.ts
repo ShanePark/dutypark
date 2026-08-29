@@ -69,6 +69,9 @@ const apiErrors = {
       exceeded: '요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.',
     },
   },
+  contentFilter: {
+    blocked: '커뮤니티 가이드라인에 어긋나는 표현이 포함되어 있어 저장할 수 없습니다. 내용을 수정해 주세요.',
+  },
   aiScheduleConsent: {
     settingsTitle: 'AI 시간 자동 인식',
     toggleLabel: 'AI로 일정 시간 자동 인식',
@@ -1280,6 +1283,7 @@ export default {
         plusWeek: '+7일',
       },
       save: '저장',
+      saving: '저장 중...',
     },
     ddayDetail: {
       title: 'D-Day 상세',

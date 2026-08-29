@@ -69,6 +69,9 @@ const apiErrors = {
       exceeded: 'Too many requests. Please try again later.',
     },
   },
+  contentFilter: {
+    blocked: 'This includes wording that violates the community guidelines. Please revise it before saving.',
+  },
   aiScheduleConsent: {
     settingsTitle: 'Automatic AI time recognition', toggleLabel: 'Recognize schedule times with AI',
     dataFlowTitle: 'Data transfer summary',
@@ -1345,6 +1348,7 @@ export default {
         plusWeek: '+7 days',
       },
       save: 'Save',
+      saving: 'Saving...',
     },
     ddayDetail: {
       title: 'D-Day details',

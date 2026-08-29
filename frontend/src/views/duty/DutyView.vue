@@ -87,6 +87,7 @@ const isTodoDetailModalOpen = ref(false)
 const isDDayModalOpen = ref(false)
 const isDDayDetailModalOpen = ref(false)
 const isDDayEditFromDetail = ref(false)
+const isSavingDDay = ref(false)
 const isSearchResultModalOpen = ref(false)
 const isOtherDutiesModalOpen = ref(false)
 
@@ -875,6 +876,18 @@ function handleDDayTogglePin(dday: LocalDDay) {
 }
 
 async function handleDDaySave(dday: { id?: number; title: string; date: string; isPrivate: boolean }) {
+  if (isSavingDDay.value) return
+
+  // Private D-Days are not shared UGC and are intentionally exempt from the
+  // client-side community-content check. The API applies the same policy to
+  // public D-Days as a final server-side guard.
+  if (!dday.isPrivate && contentFilterStore.isBlocked(dday.title)) {
+    showError(t('contentFilter.blocked'))
+    return
+  }
+
+  isSavingDDay.value = true
+  let succeeded = false
   try {
     const saveDto: DDaySaveDto = {
       id: dday.id,
@@ -903,10 +916,18 @@ async function handleDDaySave(dday: { id?: number; title: string; date: string; 
     }
     // Re-sort after add/update
     sortDDays()
+    succeeded = true
   } catch (error) {
     console.error('Failed to save D-Day:', error)
-    showError(t('duty.dday.messages.saveFailed'))
+    showError(resolveApiErrorMessage(error, {
+      fallbackKey: 'duty.dday.messages.saveFailed',
+    }, t))
+  } finally {
+    isSavingDDay.value = false
   }
+
+  if (!succeeded) return
+
   isDDayModalOpen.value = false
   // Return to detail modal if editing from there
   if (isDDayEditFromDetail.value) {
@@ -1610,6 +1631,7 @@ async function showExcelUploadModal() {
     <DDayModal
       :is-open="isDDayModalOpen"
       :dday="selectedDDay"
+      :is-submitting="isSavingDDay"
       @close="isDDayModalOpen = false; if (isDDayEditFromDetail) { isDDayDetailModalOpen = true; isDDayEditFromDetail = false; }"
       @save="handleDDaySave"
     />
