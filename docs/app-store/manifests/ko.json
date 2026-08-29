@@ -24,6 +24,8 @@
   "font": {
     "path": "../../../ios/Dutypark/Resources/Fonts/Maplestory OTF Bold.otf",
     "name": "MaplestoryOTFBold",
+    "subheadlinePath": "../../../ios/Dutypark/Resources/Fonts/Maplestory OTF Light.otf",
+    "subheadlineName": "MaplestoryOTFLight",
     "headlineSize": 72,
     "subheadlineSize": 36,
     "color": "#1F2937",

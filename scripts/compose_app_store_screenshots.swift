@@ -24,6 +24,8 @@ private struct OutputSpec: Decodable {
 private struct FontSpec: Decodable {
     let path: String
     let name: String
+    let subheadlinePath: String?
+    let subheadlineName: String?
     let headlineSize: Double
     let subheadlineSize: Double?
     let color: String
@@ -141,6 +143,17 @@ private func cgRect(_ spec: RectSpec) -> CGRect {
     CGRect(x: spec.x, y: spec.y, width: spec.width, height: spec.height)
 }
 
+/// Converts the manifest's top-left coordinate space into Core Graphics'
+/// bottom-left drawing space without changing the declared size.
+private func drawingRect(_ rect: CGRect, canvasHeight: CGFloat) -> CGRect {
+    CGRect(
+        x: rect.minX,
+        y: canvasHeight - rect.maxY,
+        width: rect.width,
+        height: rect.height
+    )
+}
+
 private func rectIsFinite(_ rect: CGRect) -> Bool {
     rect.origin.x.isFinite && rect.origin.y.isFinite && rect.width.isFinite && rect.height.isFinite
         && rect.width > 0 && rect.height > 0
@@ -167,20 +180,19 @@ private func color(_ hex: String, alpha: CGFloat = 1) throws -> CGColor {
     return NSColor(calibratedRed: red, green: green, blue: blue, alpha: embeddedAlpha * alpha).cgColor
 }
 
-private func registerFont(_ spec: FontSpec, manifestDirectory: URL) throws -> NSFont {
-    let fontURL = resolve(spec.path, relativeTo: manifestDirectory)
+private func registerFont(path: String, name: String, size: CGFloat, manifestDirectory: URL) throws {
+    let fontURL = resolve(path, relativeTo: manifestDirectory)
     try requireFile(fontURL)
     if !CTFontManagerRegisterFontsForURL(fontURL as CFURL, .process, nil) {
         // A previously registered process font returns false. It is still safe
         // to continue if the requested family can be resolved below.
-        guard NSFont(name: spec.name, size: spec.headlineSize) != nil else {
+        guard NSFont(name: name, size: size) != nil else {
             throw ComposeError.invalidManifest("could not register font \(fontURL.path)")
         }
     }
-    guard let font = NSFont(name: spec.name, size: spec.headlineSize) else {
-        throw ComposeError.invalidManifest("font \(spec.name) is not available after registering \(fontURL.path)")
+    guard NSFont(name: name, size: size) != nil else {
+        throw ComposeError.invalidManifest("font \(name) is not available after registering \(fontURL.path)")
     }
-    return font
 }
 
 private func drawImage(
@@ -216,9 +228,10 @@ private func drawDeviceFrame(
     spec: DeviceFrameSpec,
     bezelColor: CGColor,
     shadowColor: CGColor?,
+    canvasHeight: CGFloat,
     on context: CGContext
 ) {
-    let contentRect = cgRect(spec.frame)
+    let contentRect = drawingRect(cgRect(spec.frame), canvasHeight: canvasHeight)
     let bezel = CGFloat(spec.bezelWidth)
     let outerRect = contentRect.insetBy(dx: -bezel, dy: -bezel)
     let contentRadius = CGFloat(spec.cornerRadius)
@@ -239,7 +252,7 @@ private func drawDeviceFrame(
     context.saveGState()
     if let shadowColor {
         context.setShadow(
-            offset: CGSize(width: 0, height: CGFloat(spec.shadowOffsetY ?? 14)),
+            offset: CGSize(width: 0, height: -CGFloat(spec.shadowOffsetY ?? 14)),
             blur: CGFloat(spec.shadowBlur ?? 30),
             color: shadowColor
         )
@@ -328,7 +341,24 @@ private func compose(
     }
 
     let manifestDirectory = manifestURL.deletingLastPathComponent()
-    _ = try registerFont(manifest.font, manifestDirectory: manifestDirectory)
+    try registerFont(
+        path: manifest.font.path,
+        name: manifest.font.name,
+        size: manifest.font.headlineSize,
+        manifestDirectory: manifestDirectory
+    )
+    guard (manifest.font.subheadlinePath == nil) == (manifest.font.subheadlineName == nil) else {
+        throw ComposeError.invalidManifest("subheadlinePath and subheadlineName must be provided together")
+    }
+    if let path = manifest.font.subheadlinePath, let name = manifest.font.subheadlineName {
+        try registerFont(
+            path: path,
+            name: name,
+            size: manifest.font.subheadlineSize ?? 36,
+            manifestDirectory: manifestDirectory
+        )
+    }
+    let subheadlineFontName = manifest.font.subheadlineName ?? manifest.font.name
     let canvasRect = CGRect(x: 0, y: 0, width: requiredWidth, height: requiredHeight)
     let baseColor = try color(manifest.output.background ?? "#FFF9F3")
     let headlineColor = try color(manifest.font.color)
@@ -404,13 +434,18 @@ private func compose(
                 throw ComposeError.invalidSafeArea("sticker \(sticker.path) must be entirely inside safeArea")
             }
             let stickerURL = resolve(sticker.path, relativeTo: manifestDirectory)
-            drawImage(try loadImage(stickerURL), in: frame, interpolation: .high, on: context)
+            drawImage(
+                try loadImage(stickerURL),
+                in: drawingRect(frame, canvasHeight: CGFloat(requiredHeight)),
+                interpolation: .high,
+                on: context
+            )
         }
         if let headline = screenshot.headline, let frame = headlineFrame {
             try drawText(headline, in: frame, fontName: manifest.font.name, size: manifest.font.headlineSize, color: headlineColor, canvasHeight: CGFloat(requiredHeight), on: context)
         }
         if let subheadline = screenshot.subheadline, let frame = subheadlineFrame {
-            try drawText(subheadline, in: frame, fontName: manifest.font.name, size: CGFloat(manifest.font.subheadlineSize ?? 36), color: subheadlineColor, canvasHeight: CGFloat(requiredHeight), on: context)
+            try drawText(subheadline, in: frame, fontName: subheadlineFontName, size: CGFloat(manifest.font.subheadlineSize ?? 36), color: subheadlineColor, canvasHeight: CGFloat(requiredHeight), on: context)
         }
         let shadowColor: CGColor?
         if let shadowHex = screenshot.deviceFrame.shadowColor {
@@ -423,6 +458,7 @@ private func compose(
             spec: screenshot.deviceFrame,
             bezelColor: try color(screenshot.deviceFrame.bezelColor),
             shadowColor: shadowColor,
+            canvasHeight: CGFloat(requiredHeight),
             on: context
         )
 

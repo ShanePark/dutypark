@@ -88,10 +88,10 @@ private func pixel(_ image: RGBAImage, x: Int, y: Int) -> (UInt8, UInt8, UInt8, 
     return image.pixel(x: x, y: y)
 }
 
-// Manifest rectangles use a top-left origin; CGImage provider rows use a
-// bottom-left origin for the CGContext-backed fixture.
+// CGImage provider rows are exposed in display order, so this helper uses the
+// same top-left coordinates as the manifest contract.
 private func topPixel(_ image: RGBAImage, x: Int, y: Int) -> (UInt8, UInt8, UInt8, UInt8) {
-    pixel(image, x: x, y: height - 1 - y)
+    pixel(image, x: x, y: y)
 }
 
 let repo = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
@@ -111,6 +111,8 @@ try write([
     "font": [
         "path": repo.appendingPathComponent("ios/Dutypark/Resources/Fonts/Maplestory OTF Bold.otf").path,
         "name": "MaplestoryOTFBold",
+        "subheadlinePath": repo.appendingPathComponent("ios/Dutypark/Resources/Fonts/Maplestory OTF Light.otf").path,
+        "subheadlineName": "MaplestoryOTFLight",
         "headlineSize": 72,
         "subheadlineSize": 36,
         "color": "#1F2937"
@@ -131,7 +133,9 @@ try write([
         ],
         "background": background.path,
         "headline": "Fixture headline",
-        "headlineFrame": ["x": 130, "y": 110, "width": 1060, "height": 120]
+        "headlineFrame": ["x": 130, "y": 90, "width": 1060, "height": 90],
+        "subheadline": "Fixture subheadline",
+        "subheadlineFrame": ["x": 130, "y": 190, "width": 1060, "height": 60]
     ]]
 ], to: manifest)
 
@@ -236,4 +240,42 @@ ratioProcess.waitUntilExit()
 let ratioMessage = String(data: ratioErrors.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
 check(ratioProcess.terminationStatus != 0 && ratioMessage.contains("aspect ratio"), "non-uniform frame was not rejected")
 
-print("PASS: App Store screenshot compositor dimensions, alpha, uniform frame, safe-area text, and asset validation")
+let partialSubheadlineFontManifest = root.appendingPathComponent("partial-subheadline-font.json")
+try write([
+    "version": 2,
+    "output": ["width": width, "height": height, "opaque": true],
+    "font": [
+        "path": repo.appendingPathComponent("ios/Dutypark/Resources/Fonts/Maplestory OTF Bold.otf").path,
+        "name": "MaplestoryOTFBold",
+        "subheadlinePath": repo.appendingPathComponent("ios/Dutypark/Resources/Fonts/Maplestory OTF Light.otf").path,
+        "headlineSize": 72,
+        "color": "#1F2937"
+    ],
+    "screenshots": [[
+        "id": "partial-subheadline-font",
+        "raw": raw.path,
+        "output": root.appendingPathComponent("partial-subheadline-font-output.png").path,
+        "safeArea": ["x": 100, "y": 70, "width": 1120, "height": 240],
+        "deviceFrame": [
+            "frame": ["x": 140, "y": 430, "width": 1040, "height": 2259.64],
+            "cornerRadius": 40,
+            "bezelWidth": 16,
+            "bezelColor": "#111827"
+        ]
+    ]]
+], to: partialSubheadlineFontManifest)
+let partialSubheadlineFontProcess = Process()
+partialSubheadlineFontProcess.executableURL = URL(fileURLWithPath: "/bin/zsh")
+partialSubheadlineFontProcess.arguments = ["-lc", "scripts/compose-app-store-screenshots.sh \"\(partialSubheadlineFontManifest.path)\""]
+partialSubheadlineFontProcess.currentDirectoryURL = repo
+let partialSubheadlineFontErrors = Pipe()
+partialSubheadlineFontProcess.standardError = partialSubheadlineFontErrors
+try partialSubheadlineFontProcess.run()
+partialSubheadlineFontProcess.waitUntilExit()
+let partialSubheadlineFontMessage = String(data: partialSubheadlineFontErrors.fileHandleForReading.readDataToEndOfFile(), encoding: .utf8) ?? ""
+check(
+    partialSubheadlineFontProcess.terminationStatus != 0 && partialSubheadlineFontMessage.contains("subheadlinePath and subheadlineName must be provided together"),
+    "partial subheadline font configuration was not rejected"
+)
+
+print("PASS: App Store screenshot compositor dimensions, alpha, top-left layout, font hierarchy, uniform frame, safe-area text, and asset validation")

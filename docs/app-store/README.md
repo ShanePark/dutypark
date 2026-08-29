@@ -56,6 +56,10 @@ Headlines and generated decorations may only be placed inside a
 `safeArea` that does not overlap the device frame. A text or sticker frame that
 falls outside that area is rejected. Referenced artwork is required: a missing
 file fails the command instead of silently producing an incomplete submission.
+All manifest rectangles use top-left coordinates, matching design-tool and
+image-preview conventions. The current set uses Maplestory OTF Bold for concise
+feature headlines and Maplestory OTF Light for supporting copy, with a clear
+gap before the framed app capture.
 
 The output is always an opaque 1320x2868 PNG with no alpha channel, suitable for
 the iPhone 6.9-inch App Store slot. Keep the unmodified captures in `raw/` and
