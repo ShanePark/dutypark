@@ -186,6 +186,19 @@ nonisolated enum CalendarVisualLogic {
         return "(\(startClock.text)~\(endClock.text))"
     }
 
+    /// Schedule titles and their optional time belong to one readable text flow. Keep the
+    /// separator here so the month cell and day-detail cards cannot drift apart.
+    static func scheduleTitleText(content: String, time: String?, dayCounter: String? = nil) -> String {
+        var result = content
+        if let time, !time.isEmpty {
+            result += " \(time)"
+        }
+        if let dayCounter, !dayCounter.isEmpty {
+            result += " \(dayCounter)"
+        }
+        return result
+    }
+
     private static func scheduleClock(from value: LocalDateTimeValue) -> ScheduleClock? {
         guard let separator = value.rawValue.firstIndex(of: "T") else { return nil }
         let time = value.rawValue[value.rawValue.index(after: separator)...]

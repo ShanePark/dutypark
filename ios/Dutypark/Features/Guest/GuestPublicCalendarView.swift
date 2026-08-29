@@ -626,15 +626,7 @@ private struct GuestCalendarDayDetailView: View {
 
     private func scheduleCard(_ schedule: ScheduleDTO) -> some View {
         VStack(alignment: .leading, spacing: DPSpacing.small) {
-            Text(schedule.content)
-                .font(DPTypography.body)
-                .foregroundStyle(DPColor.textPrimary)
-
-            if let time = guestScheduleTime(schedule) {
-                Text(time)
-                    .font(DPTypography.caption)
-                    .foregroundStyle(DPColor.textMuted)
-            }
+            scheduleTitleLine(schedule)
 
             if !schedule.description.isEmpty {
                 Divider().overlay(DPColor.borderPrimary)
@@ -656,6 +648,18 @@ private struct GuestCalendarDayDetailView: View {
             RoundedRectangle(cornerRadius: DPRadius.standard)
                 .stroke(DPColor.borderPrimary, lineWidth: 1)
         }
+    }
+
+    private func scheduleTitleLine(_ schedule: ScheduleDTO) -> Text {
+        var line = Text(verbatim: schedule.content)
+            .font(DPTypography.body)
+            .foregroundColor(DPColor.textPrimary)
+        if let time = guestScheduleTime(schedule) {
+            line = line + Text(verbatim: " \(time)")
+                .font(DPTypography.caption)
+                .foregroundColor(DPColor.textMuted)
+        }
+        return line
     }
 
     private func detailSection<Content: View>(
@@ -709,19 +713,20 @@ private struct GuestScheduleAttachments: View {
 }
 
 private func guestCalendarScheduleText(_ schedule: ScheduleDTO) -> String {
-    var text = schedule.content
-    if let time = CalendarVisualLogic.calendarScheduleTimeText(
+    let time = CalendarVisualLogic.calendarScheduleTimeText(
         start: schedule.startDateTime,
         end: schedule.endDateTime,
         daysFromStart: schedule.daysFromStart,
         totalDays: schedule.totalDays
-    ) {
-        text += time
-    }
-    if schedule.totalDays > 1 {
-        text += "(\(schedule.daysFromStart)/\(schedule.totalDays))"
-    }
-    return text
+    )
+    let dayCounter = schedule.totalDays > 1
+        ? "(\(schedule.daysFromStart)/\(schedule.totalDays))"
+        : nil
+    return CalendarVisualLogic.scheduleTitleText(
+        content: schedule.content,
+        time: time,
+        dayCounter: dayCounter
+    )
 }
 
 private func guestScheduleTime(_ schedule: ScheduleDTO) -> String? {

@@ -1941,18 +1941,20 @@ private struct CalendarDayCell: View {
     /// The title and everything that qualifies it run as one flow of text, so the counter
     /// and the details mark stay with the last word instead of claiming a line of their own.
     private func scheduleTitleLine(_ schedule: ScheduleDTO) -> Text {
-        var line = Text(verbatim: schedule.content)
-        if let time = CalendarVisualLogic.calendarScheduleTimeText(
+        let time = CalendarVisualLogic.calendarScheduleTimeText(
             start: schedule.startDateTime,
             end: schedule.endDateTime,
             daysFromStart: schedule.daysFromStart,
             totalDays: schedule.totalDays
-        ) {
-            line = line + Text(verbatim: time)
-        }
-        if schedule.totalDays > 1 {
-            line = line + Text(verbatim: "(\(schedule.daysFromStart)/\(schedule.totalDays))")
-        }
+        )
+        let dayCounter = schedule.totalDays > 1
+            ? "(\(schedule.daysFromStart)/\(schedule.totalDays))"
+            : nil
+        var line = Text(verbatim: CalendarVisualLogic.scheduleTitleText(
+            content: schedule.content,
+            time: time,
+            dayCounter: dayCounter
+        ))
         if !schedule.description.isEmpty || !schedule.attachments.isEmpty {
             line = line + Text(verbatim: " ") + Text(Image(systemName: "text.bubble"))
         }
@@ -2321,21 +2323,12 @@ private struct DayDetailView: View {
     private func scheduleCard(_ schedule: ScheduleDTO) -> some View {
         VStack(alignment: .leading, spacing: DPSpacing.small) {
             HStack(alignment: .top, spacing: DPSpacing.small) {
-                VStack(alignment: .leading, spacing: 3) {
-                    HStack(spacing: DPSpacing.extraSmall) {
-                        Text(schedule.content)
-                            .font(DPFont.light(size: CalendarTypography.detailTitle, relativeTo: .body))
-                            .foregroundStyle(DPColor.textPrimary)
-                        if schedule.totalDays > 1 {
-                            Text("(\(schedule.daysFromStart)/\(schedule.totalDays))")
-                                .font(DPTypography.caption)
-                                .foregroundStyle(DPColor.accent)
-                        }
-                    }
-                    if let time = scheduleTime(schedule) {
-                        Text(time)
-                            .font(DPFont.light(size: CalendarTypography.detailMetadata, relativeTo: .subheadline))
-                            .foregroundStyle(DPColor.textSecondary)
+                HStack(spacing: DPSpacing.extraSmall) {
+                    scheduleTitleLine(schedule)
+                    if schedule.totalDays > 1 {
+                        Text("(\(schedule.daysFromStart)/\(schedule.totalDays))")
+                            .font(DPTypography.caption)
+                            .foregroundStyle(DPColor.accent)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -2398,6 +2391,18 @@ private struct DayDetailView: View {
             RoundedRectangle(cornerRadius: DPRadius.standard)
                 .stroke(DPColor.borderPrimary, lineWidth: 1)
         }
+    }
+
+    private func scheduleTitleLine(_ schedule: ScheduleDTO) -> Text {
+        var line = Text(verbatim: schedule.content)
+            .font(DPFont.light(size: CalendarTypography.detailTitle, relativeTo: .body))
+            .foregroundColor(DPColor.textPrimary)
+        if let time = scheduleTime(schedule) {
+            line = line + Text(verbatim: " \(time)")
+                .font(DPFont.light(size: CalendarTypography.detailMetadata, relativeTo: .subheadline))
+                .foregroundColor(DPColor.textSecondary)
+        }
+        return line
     }
 
     private func scheduleOverflowMenu(_ schedule: ScheduleDTO) -> some View {

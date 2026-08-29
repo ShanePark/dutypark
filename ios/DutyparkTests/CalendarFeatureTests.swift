@@ -154,6 +154,56 @@ final class CalendarFeatureTests: XCTestCase {
         )
     }
 
+    func testScheduleTitleTimeIsSeparatedByOneSpace() {
+        XCTAssertEqual(
+            CalendarVisualLogic.scheduleTitleText(content: "병원 예약", time: "(12:40~13:30)"),
+            "병원 예약 (12:40~13:30)"
+        )
+        XCTAssertEqual(
+            CalendarVisualLogic.scheduleTitleText(content: "하루 종일", time: nil),
+            "하루 종일"
+        )
+        XCTAssertEqual(
+            CalendarVisualLogic.scheduleTitleText(
+                content: "장기 일정",
+                time: "(12:40)",
+                dayCounter: "(1/3)"
+            ),
+            "장기 일정 (12:40) (1/3)"
+        )
+    }
+
+    func testCalendarAndGuestDetailsKeepScheduleTitleAndTimeInOneTextFlow() throws {
+        let calendarSource = try Self.calendarViewSource()
+        let calendarDayCell = try Self.declaration(
+            named: "private struct CalendarDayCell: View",
+            in: calendarSource
+        )
+        XCTAssertTrue(calendarDayCell.contains("CalendarVisualLogic.scheduleTitleText("))
+
+        let dayDetail = try Self.declaration(
+            named: "private struct DayDetailView: View",
+            in: calendarSource
+        )
+        XCTAssertTrue(dayDetail.contains("scheduleTitleLine(schedule)"))
+        XCTAssertTrue(dayDetail.contains(#"line = line + Text(verbatim: " \(time)")"#))
+        XCTAssertFalse(dayDetail.contains("Text(time)"), "The day detail must not render time on a separate line")
+
+        let guestSourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark/Features/Guest/GuestPublicCalendarView.swift")
+        let guestSource = try String(contentsOf: guestSourceURL, encoding: .utf8)
+        XCTAssertTrue(guestSource.contains("CalendarVisualLogic.scheduleTitleText("))
+        let guestDetail = try Self.declaration(
+            named: "private struct GuestCalendarDayDetailView: View",
+            in: guestSource
+        )
+        XCTAssertTrue(guestDetail.contains("scheduleTitleLine(schedule)"))
+        XCTAssertTrue(guestDetail.contains(#"line = line + Text(verbatim: " \(time)")"#))
+        XCTAssertFalse(guestDetail.contains("Text(time)"), "The guest detail must not render time on a separate line")
+    }
+
     /// The pinned D-day shares the day-number row, so only the counter fits. Adding the
     /// title pushed the number out of the single line, which is the one part the pin is
     /// for; the title already appears as a bubble on the D-day's own date.

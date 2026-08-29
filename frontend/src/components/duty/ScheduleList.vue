@@ -267,14 +267,13 @@ function handleTagClick(schedule: Schedule) {
             <div class="flex items-start gap-1.5 sm:gap-2">
               <div class="min-w-0 flex-1">
                 <div class="schedule-primary-content min-w-0">
-                  <span class="schedule-primary-title font-medium text-dp-text-primary">{{ schedule.content }}<template v-if="schedule.totalDays && schedule.totalDays > 1"> ({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</template></span>
+                  <span class="schedule-primary-title font-medium text-dp-text-primary">
+                    {{ schedule.content }}<span v-if="formatScheduleTime(schedule)" class="schedule-primary-time font-normal text-sm text-dp-text-secondary"> {{ formatScheduleTime(schedule) }}</span><template v-if="schedule.totalDays && schedule.totalDays > 1"> ({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</template>
+                  </span>
                   <div
-                    v-if="formatScheduleTime(schedule) || schedule.attachments?.length"
+                    v-if="schedule.attachments?.length"
                     class="schedule-primary-extra text-sm text-dp-text-secondary"
                   >
-                    <span v-if="formatScheduleTime(schedule)" class="schedule-primary-time">
-                      {{ formatScheduleTime(schedule) }}
-                    </span>
                     <span
                       v-if="schedule.attachments?.length"
                       class="schedule-primary-attachments flex items-center gap-1 text-dp-text-muted"
