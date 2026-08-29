@@ -1,12 +1,16 @@
 # App Store Connect submission draft
 
-Last reviewed: 2026-08-29 (KST)
+Last reviewed: 2026-08-30 (KST)
 
 This document is the version-controlled input draft for App Store Connect. It is not
 evidence that the fields were saved in App Store Connect. Do not add reviewer passwords,
 OAuth secrets, private keys, webhook URLs, device tokens, or real user data here.
 
 ## 1. App Privacy Details draft
+
+App Store Connect verification on 2026-08-30: the privacy policy URL and all eight data
+types below are published. Each data type is marked as linked to the user, used for App
+Functionality, and not used for tracking.
 
 Declare all listed data as **linked to the user**, used for **App Functionality**, and
 **not used for tracking**, unless the final production-flow check proves a narrower
@@ -105,12 +109,12 @@ Put the reviewer username and password only in App Store Connect's secure
 `App Review Information` fields, and keep that account and the core backend available for
 the review window. This is covered by the consolidated App Store Connect list below.
 
-## 4. Age Rating questionnaire draft
+## 4. Age Rating questionnaire
 
-Use the exact wording shown by the current App Store Connect questionnaire. The following
-is a source-based draft, not a predicted or final rating.
+The following answers were saved in App Store Connect on 2026-08-30 after checking the
+current questionnaire wording against the product behavior.
 
-| Questionnaire area | Draft answer and rationale |
+| Questionnaire area | Saved answer and rationale |
 |---|---|
 | Primary category | Productivity |
 | User-Generated Content | Yes. Users create schedules, D-Days, Todo, profile text, team/friend content, photos, and files; some schedule/D-Day content can be public or shared. Reporting, blocking, and text filtering are present. |
@@ -122,12 +126,16 @@ is a source-based draft, not a predicted or final rating.
 | Sexual Content, Nudity, Violence, Alcohol, Tobacco, Drugs, Medical/Treatment | Not intentionally provided by Dutypark. Answer frequency using actual production content and the questionnaire wording; do not treat a banned-word list as proof that user-entered content can never appear. |
 | Parental Controls / Age Assurance | None in the current product. Do not claim these controls unless implemented and reviewer-visible. |
 
-Record the rating calculated by App Store Connect after all answers are saved. If Apple
-classifies public/shared UGC differently, update this draft and the Review Notes.
+The saved result is global **4+**, **All Ages** in Korea, **6+** in Brazil, and **00+** in
+Vietnam. If the product later adds a social feed, discovery/recommendation, user chat,
+advertising, age-gated content, or intentionally provided mature content, reassess the
+answers before the next submission.
 
 ## 5. Required in App Store Connect
 
-- App Store Connect Privacy Details saved values and validation result.
+- [x] App Store Connect Privacy Details saved values and public privacy-policy URL.
+- [x] Content Rights declares that the app has the necessary rights to its third-party content.
 - Review Notes and secure reviewer-account fields saved values.
-- Questionnaire answers and calculated age rating.
-- Uploaded build processing/export-compliance status and the prepared ko/en screenshots.
+- [x] Questionnaire answers and calculated age rating.
+- [x] Prepared ko/en screenshots uploaded in the intended order.
+- Uploaded build processing and export-compliance status.

@@ -216,33 +216,36 @@ Apple의 [한국 개발자 대상 공식 안내](https://developer.apple.com/new
 
 Apple의 [연령 등급 값 및 정의](https://developer.apple.com/kr/help/app-store-connect/reference/app-information/age-ratings-values-and-definitions/)에 따르면 연령 등급은 필수 App Store Connect 정보이고, 질문지의 콘텐츠 유형·앱 내 제어·기능 존재·빈도 답변으로 전 세계 및 지역별 등급이 계산된다. “등급 없음”은 App Store에 게시할 수 없다.
 
-### Dutypark의 잠정 자기판정
+### Dutypark의 실제 저장 결과
 
-현재 확인된 기능만 기준으로는 다음 조건에서 **Apple global 4+ / 대한민국 ‘전체(All)’ 가능성**이 있다.
+2026-08-30 App Store Connect 질문지를 실제 기능과 대조해 저장했으며, 계산 결과는
+**Apple global 4+ / 대한민국 전체 이용가 / 브라질 6+ / 베트남 00+**이다.
 
 - 일반 일정·근무표·Todo·팀 공유가 주 기능
 - 폭력, 성적 내용/노출, 도박/랜덤박스, 주류·담배·약물, 의료·치료 정보, 욕설·성인 테마가 의도된 콘텐츠로 제공되지 않음
 - 사용자 생성 일정·Todo·프로필·첨부의 주된 공유는 팀/친구 범위이고 social feed/discovery는 없지만, `PUBLIC` 일정·D-Day는 비로그인 접근 및 iOS ShareLink로 공개·재공유가 가능함
 - 사용자 간 직접 메시지·채팅·공개 게시판이 없음
 
-이는 최종 등급이 아니다. App Store Connect 질문지에 다음을 실제 기능 기준으로 답하고 결과를 기록한다.
+저장한 답변과 근거는 다음과 같다.
 
 | 질문 영역 | Dutypark 확인 포인트 | 판정 상태 |
 |---|---|---|
-| User-Generated Content | 타인에게 공유되는 일정·Todo·프로필·사진·파일의 범위·빈도와 `PUBLIC` 일정·D-Day의 비로그인 접근·ShareLink 재공유 | **질문지 최종 입력 후 기입** |
-| Messaging and Chat | 직접/그룹 메시지, 공개 게시, 문의 답변이 사용자 간 통신인지 | **기능 확인 후 기입** |
-| Social Media | 소셜 피드·검색·추천·재배포로 많은 사용자에게 UGC가 보이는지 | **해당 시 Social Media 및 연령 제한 검토** |
-| Medical or Wellness | 근무표를 건강/치료/진단으로 표현하는지, 실제 건강·웰니스 콘텐츠가 있는지 | **없음이면 없음으로 정확히 답변** |
-| Mature/Profanity/Violence/Gambling | 콘텐츠 필터 목록 존재가 아니라 앱에서 실제 노출되는 빈도 기준 | **실제 fixture·운영 콘텐츠 대조** |
-| Advertising / parental controls / age assurance | 광고·나이 확인·유해 콘텐츠 차단 기능 존재 여부 | **질문지 최종 입력 후 기입** |
+| User-Generated Content | 타인에게 공유되는 일정·Todo·프로필·사진·파일과 `PUBLIC` 일정·D-Day가 있음 | **Yes** |
+| Messaging and Chat | 직접/그룹 메시지나 공개 게시판이 없고 문의 답변은 고객지원 흐름임 | **No** |
+| Social Media | 소셜 피드·검색·추천·팔로워·다수 대상 콘텐츠 확산 기능이 없음 | **No** |
+| Medical or Wellness | 건강·치료·진단 또는 웰니스 조언을 제공하지 않음 | **None / No** |
+| Mature/Profanity/Violence/Gambling | 해당 콘텐츠를 의도적으로 제공하지 않으며 현재 제품 기능에도 없음 | **None / No** |
+| Advertising / parental controls / age assurance | 광고·보호자 제어·연령 확인 기능이 없음 | **No** |
 
-코드 기준 잠정 답변(User-Generated Content 있음, Messaging/Chat 없음, Social Media 없음, Productivity 주 카테고리 등)은 [App Store Connect submission draft](../docs/app-store/APP_STORE_CONNECT_SUBMISSION_DRAFT.md)에 정리했다. 이는 App Store Connect의 실제 질문 문구에 답하고 계산된 등급을 받은 결과가 아니다.
+실제 저장값과 향후 재검토 조건은 [App Store Connect submission draft](../docs/app-store/APP_STORE_CONNECT_SUBMISSION_DRAFT.md)에 정리했다.
 
 ## 12. 실제 제출에 남은 작업
 
-- [ ] clean `0f0dd64c` IPA와 준비된 ko/en 스크린샷을 등록하고 build processing 완료를 확인한다.
-- [ ] 초안대로 App Privacy Details와 개인정보처리방침 URL을 저장하고 manifest validation을 확인한다.
+- [x] 준비된 ko/en 스크린샷을 등록하고 순서와 표시를 확인했다.
+- [x] 사용자 생성 콘텐츠를 포함하는 앱으로서 제3자 콘텐츠에 필요한 권리를 보유했다고 Content Rights에 선언했다.
+- [ ] 코드 동결 후 clean HEAD의 IPA를 등록하고 build processing 및 export compliance를 확인한다.
+- [x] 초안대로 App Privacy Details와 개인정보처리방침 URL을 저장했다. 최종 IPA의 manifest validation은 별도로 확인한다.
 - [ ] Review Notes와 secure reviewer username/password를 저장하고 심사 기간에 계정·core backend를 유지한다.
-- [ ] 현재 App Store Connect 연령등급 질문지에 실제 기능대로 답하고 계산된 등급을 저장한다.
+- [x] 현재 App Store Connect 연령등급 질문지에 실제 기능대로 답하고 계산된 등급을 저장했다.
 
-위 네 항목은 인증된 App Store Connect에서만 완료할 수 있다. 실기기 전수 E2E, 모든 내부 DB row 확인, raw 테스트 artifact 장기 보관, 고정 문의·신고 보존일 확정, 조건이 발생하지 않은 Services ID S2S 구현은 이번 제출 체크리스트에 포함하지 않는다.
+남은 App Store Connect 작업은 최종 빌드 처리·export compliance 및 Review Notes/심사 계정 등록이다. 실기기 전수 E2E, 모든 내부 DB row 확인, raw 테스트 artifact 장기 보관, 고정 문의·신고 보존일 확정, 조건이 발생하지 않은 Services ID S2S 구현은 이번 제출 체크리스트에 포함하지 않는다.
