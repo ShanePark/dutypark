@@ -127,7 +127,9 @@ class PublicContentServiceTest {
         assertThat(bannedWords.words).doesNotHaveDuplicates()
         assertThat(bannedWords.words).allMatch { word -> word.isNotBlank() }
         assertThat(bannedWords.words).allMatch { word -> word == word.lowercase() }
-        assertThat(bannedWords.words).allMatch { word -> word.all(Char::isLetterOrDigit) }
+        assertThat(bannedWords.words).allMatch { word ->
+            word.codePoints().allMatch { codePoint -> Character.isLetterOrDigit(codePoint) }
+        }
     }
 
     @Test
