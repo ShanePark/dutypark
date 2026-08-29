@@ -16,6 +16,7 @@ import reactor.netty.http.client.HttpClient
 import java.time.Duration
 import java.time.LocalDate
 
+// Keep this manual suite for regression checks when changing the external schedule-parsing model.
 @Disabled("External API test")
 class ScheduleTimeParsingServiceTest {
 
