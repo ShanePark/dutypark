@@ -2,7 +2,7 @@
 
 - 기준일: 2026-08-29 (KST)
 - 판정: **HOLD — 제출하지 않음**
-- 코드 기준: committed HEAD `c01f1174` 위의 현재 App Store Connect 제출 초안 작업 트리. 스크린샷 개선은 `268029a3`, 배포 IPA 검증 기록은 `e7b12b93`, Customer Support privacy declaration은 `f03d53a2`, Calendar 시간 표시는 `c01f1174`에 포함된다. 최종 제출 전에는 커밋 SHA가 고정된 동일 소스를 다시 검증해야 한다.
+- 코드 기준: 최종 로컬 Archive/IPA의 clean source HEAD `0f0dd64c`. 스크린샷 개선은 `268029a3`, Customer Support privacy declaration은 `f03d53a2`, Calendar 시간 표시는 `c01f1174`, App Store Connect 제출 초안은 `0f0dd64c`에 포함된다. 이 문서의 최신 IPA 증거 반영은 후속 문서 변경이며 앱 소스를 바꾸지 않는다.
 - 목적: [2026-08-28 보고서](./APP_STORE_REVIEW_AUDIT_2026-08-28.md)의 반복이 아닌, 그 이후 변경분과 제출 직전의 미검증 게이트를 기록한다.
 - 비밀값: 비밀번호, private key, client secret, webhook token, 실제 S2S URL은 이 문서에 기록하지 않는다. 심사용 계정은 App Store Connect의 `App Review Information → Sign-in required → Username / Password` 필드에서만 제공한다.
 
@@ -17,7 +17,7 @@
 | 문의·신고 탈퇴 후 보존 | 사업자 결정 HOLD | exact retention/purge 기간, snapshot·식별자 최소화, legal hold 범위·종료 조건 및 사용자 고지·Privacy declarations 일치 확정 |
 | 비동기 계정 삭제 완료 확인 | backend·web·iOS 구현 및 자동 테스트 PASS | 보통 5분 이내 ETA, 로그아웃 후 receipt 기반 상태 조회, 실제 `COMPLETED` confirmation, `FAILED` 지원 경로를 구현. disposable 운영 유사 계정 E2E는 별도 게이트 |
 | App Store 스크린샷 | 최신 ko/en 세트 재촬영·재합성·시각 검토 PASS | 제출할 build와 이미지 source가 같음을 최종 업로드 전에 한 번 더 확인 |
-| 배포 IPA | clean `268029a3` Archive/export 및 로컬 검사 PASS, 이후 제품 변경으로 재생성 필요 | 최종 제출 commit에서 Archive/export·manifest·서명을 다시 확인하고 App Store Connect processing 확인 |
+| 배포 IPA | clean `0f0dd64c` Archive/export 및 로컬 검사 PASS | App Store Connect 업로드·processing은 외부 게이트 |
 | 실제 iPhone E2E | 미실행 또는 일부 미검증 | APNs, OAuth, 카메라, 파일 picker, 파괴적 흐름 완료 |
 | App Store Connect | 저장소 입력 초안 작성; 인증된 포털 입력 대기 | privacy labels, Review Notes, secure demo account, questionnaire, backend 준비 |
 | 한국 Apple Services ID / S2S | 저장소 운영 구성상 웹 Sign in with Apple 활성; Apple 직접 적용 여부와 외부 S2S 등록·처리 미확인 | Developer Account의 한국 소재·Services ID 등록/변경 시점·연결된 primary App ID를 확인하고 S2S endpoint, notification JWT, retry/replay/idempotency 처리를 검증하는 필수 미완료 게이트 |
@@ -175,7 +175,7 @@ Dutypark의 내부 게이트는 이 최소 요건보다 보수적이다. 위 흐
 
 ## 7. 최종 exported IPA, 배포 서명, 운영 APNs
 
-exact `iPhone 13 mini` iOS 26.5에서 Release simulator build·설치·launch는 PASS했다. 실행 중 생성된 최신 임시 캡처(2절과 동일한 산출물)는 `/private/tmp/dutypark-release-latest-20260829.png`이며 장기 보존 증거·제출물로 사용하지 않는다. clean HEAD `268029a3`에서 별도 Release device Archive와 로컬 App Store Connect IPA export도 성공했고, IPA SHA-256과 검사 결과는 `ios/review-evidence/2026-08-29/`에 기록했다. 다만 이 산출물 뒤 `f03d53a2` privacy manifest와 `c01f1174` 앱 변경이 추가됐으므로, 기존 IPA는 서명·export 절차 증거이지 현재 최종 제출 바이너리가 아니다.
+exact `iPhone 13 mini` iOS 26.5에서 Release simulator build·설치·launch는 PASS했다. 실행 중 생성된 최신 임시 캡처(2절과 동일한 산출물)는 `/private/tmp/dutypark-release-latest-20260829.png`이며 장기 보존 증거·제출물로 사용하지 않는다. 최초 clean `268029a3` 배포 검증 뒤 제품 변경이 생겨, App Store Connect 제출 초안까지 포함한 clean HEAD `0f0dd64c`에서 Release device Archive와 로컬 App Store Connect IPA export를 다시 완료했다. 최신 IPA SHA-256과 검사 결과는 `ios/review-evidence/2026-08-29/`에 기록했다.
 
 - [x] Release Archive가 운영 API base URL을 사용한다.
 - [x] 2026-04-28 이후 App Store Connect 제출 요건에 맞게 최종 Archive가 iOS 26 SDK 이상으로 빌드됐는지 배포 산출물에서 확인한다.
@@ -184,11 +184,11 @@ exact `iPhone 13 mini` iOS 26.5에서 Release simulator build·설치·launch는
 - [x] 최종 앱의 서명 entitlement와 embedded profile에서 운영 APNs 환경을 확인했다. 구체 값은 증거 JSON에 복사하지 않고 boolean 판정만 기록했다.
 - [x] Associated Domains, Sign in with Apple capability, URL scheme가 배포 App ID와 일치한다.
 - [x] IPA의 실제 `Info.plist`에 카메라 purpose string, version/build, 운영 API 설정이 포함된다.
-- [ ] 최종 제출 commit에서 Archive/IPA를 재생성하고 `CustomerSupport` privacy declaration 포함 여부까지 다시 확인한다.
+- [x] clean `0f0dd64c`에서 Archive/IPA를 재생성하고 `CustomerSupport` privacy declaration 포함 여부까지 확인했다.
 - [ ] TestFlight/App Store Connect processing, export validation, 설치 가능한 빌드 상태를 확인한다.
 - [ ] 배포 IPA의 개인정보 manifest와 포함 SDK manifest가 App Store Connect Privacy Details와 일치한다.
 
-기존 `268029a3` 산출물 로컬 확인 결과: **PASS**. 현재 코드의 최종 산출물은 재생성 전이므로 **HOLD**이며, 이후에도 App Store Connect 업로드·processing과 Privacy Details 실계정 대조는 외부 확인 항목으로 남는다.
+최신 `0f0dd64c` 산출물 로컬 확인 결과: **PASS**. App Store Connect 업로드·processing과 Privacy Details 실계정 대조는 외부 확인 항목으로 남는다.
 
 ## 8. 실기기 필수 E2E 및 실제 파괴적 흐름
 
@@ -332,8 +332,8 @@ Apple 정의상 단순 UGC capability는 대한민국 ‘전체’ 표에도 포
 - [ ] 문의·신고·계정삭제 감사 레코드의 보존기간, snapshot/식별자 최소화, 실패 시 provider credential 파기 기한, 익명화, 법적 예외, 관리자 접근과 탈퇴 UI 고지 결정
 - [x] 비동기 계정 삭제의 보통 5분 이내 ETA, 로그아웃 후 receipt 상태 조회, worker 완료 confirmation, 최종 실패·지원 경로를 backend·web·iOS에 구현하고 자동 테스트 통과
 - [x] 현재 앱을 기준으로 ko/en App Store 스크린샷 재촬영·재합성·시각 검토
-- [ ] 최종 제출 commit의 distribution-signed exported IPA, production APNs entitlement, privacy manifest를 재확인(기존 `268029a3` 산출물은 PASS했으나 이후 제품 변경됨)
-- [ ] 최종 distribution Archive가 App Store 제출 요건인 iOS 26 SDK 이상으로 빌드됐는지 재확인
+- [x] clean `0f0dd64c`의 distribution-signed exported IPA, production APNs entitlement, privacy manifest 확인
+- [x] 최신 distribution Archive가 App Store 제출 요건인 iOS 26 SDK 이상으로 빌드됐는지 확인
 - [ ] 실제 iPhone APNs/OAuth/카메라/PhotosPicker/Files picker 확인
 - [ ] disposable 운영 유사 계정으로 202 접수부터 worker `COMPLETED`까지 확인하고, 공동 팀 데이터·OAuth revoke·첨부 정리·세션 폐기·receipt 30일 만료·실패/관리자 재시도·운영 edge rate limit을 끝까지 검증
 - [ ] App Store Connect privacy labels, 정책 URL, Review Notes, demo account, backend 확인

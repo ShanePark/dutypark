@@ -19,6 +19,8 @@ private keys, account data, or test-user secrets.
   `f03d53a2`. Its focused GREEN test was run with Calendar display work present in the
   shared tree; that work was subsequently committed as `c01f1174`, while the two privacy
   files exactly match `f03d53a2`.
+- The current distribution Archive and exported IPA were produced from clean repository
+  HEAD `0f0dd64c`, after both of those app changes and the submission draft were committed.
 - These are development verification records, not clean-commit attestations. Before
   submission, repeat the relevant checks from a fixed commit and retain the raw artifacts.
 
@@ -207,7 +209,7 @@ The canonical temporary launch capture cited by the audit is:
 This is simulator smoke evidence only. It is neither an App Store screenshot nor proof
 of distribution signing, production entitlements, or an exported IPA.
 
-## App Store distribution Archive and IPA
+## Initial App Store distribution Archive and IPA
 
 A Release device Archive and a local `app-store-connect` export were produced without
 uploading to App Store Connect:
@@ -242,6 +244,49 @@ xcodebuild -exportArchive \
 The Archive, IPA, distribution logs, and extracted inspection directory are temporary
 local artifacts. The SHA and summarized checks are durable here, but the IPA itself
 must be retained in release artifact storage if this exact binary will be submitted.
+
+## Current App Store distribution Archive and IPA
+
+Because the initial IPA predated the Customer Support manifest and Calendar changes, it
+was not treated as the final local binary. A new Release Archive and local
+`app-store-connect` export were produced from clean HEAD `0f0dd64c`:
+
+```sh
+xcodebuild -project ios/Dutypark.xcodeproj -scheme Dutypark \
+  -configuration Release -destination 'generic/platform=iOS' \
+  -derivedDataPath /private/tmp/dutypark-appstore-current-0f0dd64c-derived \
+  -archivePath /private/tmp/dutypark-appstore-current-0f0dd64c-20260829.xcarchive \
+  MARKETING_VERSION=1.0.0 CURRENT_PROJECT_VERSION=1 \
+  DEVELOPMENT_TEAM=2V47G42CDS CODE_SIGN_STYLE=Automatic \
+  -allowProvisioningUpdates archive
+xcodebuild -exportArchive \
+  -archivePath /private/tmp/dutypark-appstore-current-0f0dd64c-20260829.xcarchive \
+  -exportPath /private/tmp/dutypark-appstore-current-0f0dd64c-export-20260829 \
+  -exportOptionsPlist /private/tmp/dutypark-testflight-export/ExportOptions.plist \
+  -allowProvisioningUpdates
+```
+
+- Archive and export: PASS.
+- IPA: `/private/tmp/dutypark-appstore-current-0f0dd64c-export-20260829/Dutypark.ipa`,
+  15,000,506 bytes, finalized `2026-08-29T23:38:17+0900`.
+- IPA SHA-256:
+  `ea7d4084df0082100d25df68798dbfb1a6fcf1fe53954527913e20cb7c725890`.
+- Archive deterministic tree SHA-256:
+  `a694f6278c6ee6445ea7319153fb9998dbc5426133eb1b43c7095433238c1840`.
+- `codesign --verify --deep --strict`: PASS. The exported app is signed by Apple
+  Distribution for the expected team and `io.github.shanepark.dutypark` bundle.
+- Both the signed app and embedded App Store provisioning profile declare production APNs;
+  both disable `get-task-allow`.
+- The exported app uses `iphoneos26.5`, arm64, version `1.0.0` build `1`, the production
+  API URL, the expected associated domain and Sign in with Apple entitlement, the
+  `dutypark` URL scheme, and the camera purpose string.
+- The exported `PrivacyInfo.xcprivacy` contains all eight exact collected-data entries,
+  including `NSPrivacyCollectedDataTypeCustomerSupport` as linked/App Functionality/not
+  tracking; global tracking is false and the required UserDefaults reason remains present.
+
+This resolves the stale-local-IPA gap. The new Archive, IPA, export log, and extracted
+inspection directory still live only under `/private/tmp`; App Store Connect upload and
+processing were not performed.
 
 ## Remaining retention gate
 
