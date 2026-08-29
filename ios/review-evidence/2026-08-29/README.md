@@ -15,6 +15,10 @@ private keys, account data, or test-user secrets.
   still uncommitted.
 - The distribution Archive and exported IPA were produced from clean repository HEAD
   `268029a3265e7f2ef1096df81b75353a2c489f5c`.
+- The Customer Support privacy declaration is committed as
+  `f03d53a2`. Its focused GREEN test was run with Calendar display work present in the
+  shared tree; that work was subsequently committed as `c01f1174`, while the two privacy
+  files exactly match `f03d53a2`.
 - These are development verification records, not clean-commit attestations. Before
   submission, repeat the relevant checks from a fixed commit and retain the raw artifacts.
 
@@ -62,6 +66,63 @@ The focused unit bundles cited by the audit were also checked read-only:
 | `/private/tmp/dutypark-focused-contentfilter-20260829.xcresult` | 11 identifiers / 11 runs PASS | 776 KB | `2026-08-29T15:05:48+0900` | `cfc63a0d27bcc1e33a3fbad399acdbdf0bcd0cb3a90779bb954bada7d7b8411b` |
 | `/private/tmp/dutypark-focused-calendar-20260829.xcresult` | 104 identifiers / 104 runs PASS | 1.6 MB | `2026-08-29T15:05:48+0900` | `6cea9d33d38dc62e6ea3318c5ed4dbc9bb8497fb624a17ba82c0387e48f163fc` |
 | `/private/tmp/dutypark-focused-team-20260829.xcresult` | 55 identifiers / 56 expanded runs PASS | 1.1 MB | `2026-08-29T15:05:48+0900` | `3410f6c16e21c47c4a7d2b4e61ef460690c814047fbd2876245dadc339bac6d0` |
+
+## Customer Support privacy declaration
+
+The iOS customer-support flow collects inquiry content, but the privacy manifest did not
+declare Apple's dedicated Customer Support data type. The exact-list regression test was
+changed first and failed for that intended reason:
+
+- RED bundle: `/private/tmp/dutypark-privacy-manifest-red2-20260829.xcresult`
+- Result: 19 total; 18 PASS / 1 FAIL / 0 SKIP.
+- Intended failure:
+  `privacyManifestDeclaresExactDataTrackingAndRequiredReasonAPIs()` reported that
+  `NSPrivacyCollectedDataTypeCustomerSupport` was absent.
+
+The manifest then added `NSPrivacyCollectedDataTypeCustomerSupport` as linked to the user,
+not used for tracking, and used for App Functionality. The focused suite was rerun on exact
+`iPhone 13 mini`, iOS Simulator 26.5:
+
+```sh
+xcodebuild -project Dutypark.xcodeproj -scheme Dutypark \
+  -destination 'platform=iOS Simulator,name=iPhone 13 mini' \
+  -derivedDataPath /private/tmp/dutypark-privacy-manifest-final2-derived \
+  CODE_SIGNING_ALLOWED=NO \
+  -resultBundlePath /private/tmp/dutypark-privacy-manifest-final2-20260829.xcresult \
+  -only-testing:DutyparkTests/AIScheduleParsingConsentTests test
+```
+
+- GREEN result: 19 total / 19 PASS / 0 FAIL / 0 SKIP.
+- Bundle: `/private/tmp/dutypark-privacy-manifest-final2-20260829.xcresult`, 844 KB,
+  finalized `2026-08-29T23:29:40+0900`.
+- Deterministic tree SHA-256:
+  `a17c844613f328e8ed84b761bd169abf84d670cef055ddde8c1c4fe4495ee212`.
+- `plutil -lint ios/Dutypark/PrivacyInfo.xcprivacy`: PASS.
+- The built app's bundled `PrivacyInfo.xcprivacy` contains Customer Support and App
+  Functionality, and that verified Debug app was installed on simulator
+  `F0737016-7654-4967-83FA-1DFB951DB36E` (`iPhone 13 mini`).
+
+The complete `DutyparkTests` suite was then rerun on the same simulator:
+
+- Command: `xcodebuild -project Dutypark.xcodeproj -scheme Dutypark -destination
+  'platform=iOS Simulator,name=iPhone 13 mini' -derivedDataPath
+  /private/tmp/dutypark-privacy-full-final-derived CODE_SIGNING_ALLOWED=NO
+  -resultBundlePath /private/tmp/dutypark-privacy-full-final-20260829.xcresult
+  -only-testing:DutyparkTests test`.
+- Result: 1,128 identifiers; 1,127 aggregate PASS / 1 SKIP / 0 FAIL;
+  1,152 device-expanded PASS and 1 SKIP.
+- Bundle: `/private/tmp/dutypark-privacy-full-final-20260829.xcresult`, 10 MB.
+- Deterministic tree SHA-256:
+  `57f2bc334aeb8cefdf15ac566e6aecd6c9efa74c47c0a62b30cc0f461dca9ba8`.
+- The one skip is the existing first-unlock simulator file-protection limitation.
+- Two identifiers added since the preceding full run belong to the Calendar display work
+  later committed as `c01f1174`. Therefore this full run proves the integrated
+  `f03d53a2` + `c01f1174` source is green, but is not represented as a clean
+  single-commit `f03d53a2` attestation.
+
+This declaration aligns the local binary manifest with the source flow. App Store Connect
+Privacy Details still require authenticated entry and validation; the manifest does not
+complete that external step.
 
 ## Historical iOS UI evidence
 
