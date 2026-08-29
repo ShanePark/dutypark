@@ -150,13 +150,15 @@ struct MyInfoView: View {
             }
         }
         .fullScreenCover(isPresented: $showAccountDeletion) {
-            if let memberName = model.member?.name {
+            if let memberID = model.member?.id,
+               let memberName = model.member?.name {
                 DPModalOverlay(
                     onDismiss: { showAccountDeletion = false },
                     closeOnBackdrop: false,
                     canDismiss: !accountDeletionIsWorking
                 ) { availableSize, dismiss in
                     AccountDeletionView(
+                        memberID: memberID,
                         push: push,
                         memberName: memberName,
                         maximumHeight: availableSize.height,

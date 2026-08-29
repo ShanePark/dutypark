@@ -23,6 +23,11 @@ describe('account deletion translations', () => {
       expect(deletion.oauth.callbackNoOpener).toBeTruthy()
       expect(deletion.completion.signedOut).toBeTruthy()
       expect(deletion.completion.asyncCleanup).toBeTruthy()
+      expect(deletion.status.processingMessage).toContain('5')
+      expect(deletion.status.completedMessage).toBeTruthy()
+      expect(deletion.status.failedMessage).toBeTruthy()
+      expect(deletion.status.unavailable).toBeTruthy()
+      expect(deletion.status.support).toBeTruthy()
     },
   )
 

@@ -15,6 +15,7 @@ import com.tistory.shanepark.dutypark.member.accountdeletion.repository.AccountD
 import com.tistory.shanepark.dutypark.member.accountdeletion.repository.AccountDeletionTargetMemberRepository
 import com.tistory.shanepark.dutypark.member.accountdeletion.repository.AccountDeletionTargetTeamRepository
 import com.tistory.shanepark.dutypark.member.accountdeletion.service.AccountDeletionExternalAccountRevoker
+import com.tistory.shanepark.dutypark.member.accountdeletion.service.AccountDeletionReceiptToken
 import com.tistory.shanepark.dutypark.member.domain.entity.DDayEvent
 import com.tistory.shanepark.dutypark.member.domain.entity.FriendRelation
 import com.tistory.shanepark.dutypark.member.domain.entity.FriendRequest
@@ -313,7 +314,7 @@ class AccountDeletionWorkerIntegrationTest {
         val retrying = jobRepository.findById(job.id!!).orElseThrow()
         assertThat(retrying.status).isEqualTo(AccountDeletionJobStatus.RETRY_WAIT)
         assertThat(retrying.attemptCount).isOne()
-        assertThat(retrying.nextAttemptAt).isEqualTo(FIXED_NOW.plusSeconds(60))
+        assertThat(retrying.nextAttemptAt).isEqualTo(FIXED_NOW.plusSeconds(5))
         assertThat(retrying.lastError).contains("UncheckedIOException")
         verify(databaseCleanerMock, org.mockito.kotlin.never()).clean(memberIds, teamIds)
 
@@ -347,12 +348,62 @@ class AccountDeletionWorkerIntegrationTest {
         )
         em.clear()
 
-        assertThat(coordinator.claimNext()).isEqualTo(job.id)
+        val claim = coordinator.claimNext()
+        assertThat(claim?.jobId).isEqualTo(job.id)
+        assertThat(claim?.leaseToken).isNotBlank()
 
         val reclaimed = jobRepository.findById(job.id!!).orElseThrow()
         assertThat(reclaimed.status).isEqualTo(AccountDeletionJobStatus.PROCESSING)
         assertThat(reclaimed.attemptCount).isEqualTo(2)
         assertThat(reclaimed.lockedAt).isEqualTo(FIXED_NOW)
+    }
+
+    @Test
+    fun `stale worker cannot finish a newer lease`() {
+        val job = newJob(listOf(302L), emptyList())
+        val firstClaim = requireNotNull(coordinator.claimNext())
+        jdbc.update(
+            "update account_deletion_job set locked_at = :lockedAt where id = :id",
+            mapOf("lockedAt" to FIXED_NOW.minusSeconds(15 * 60 + 1), "id" to job.id!!),
+        )
+        em.clear()
+
+        val secondClaim = requireNotNull(coordinator.claimNext())
+        assertThat(secondClaim.leaseToken).isNotEqualTo(firstClaim.leaseToken)
+        assertThat(coordinator.markCompleted(firstClaim)).isFalse()
+        assertThat(coordinator.markFailure(firstClaim, "stale-worker")).isFalse()
+        assertThat(jobRepository.findById(job.id!!).orElseThrow().status)
+            .isEqualTo(AccountDeletionJobStatus.PROCESSING)
+        assertThat(coordinator.markCompleted(secondClaim)).isTrue()
+        assertThat(jobRepository.findById(job.id!!).orElseThrow().status)
+            .isEqualTo(AccountDeletionJobStatus.COMPLETED)
+    }
+
+    @Test
+    fun `final failed attempt exposes a receipt for thirty days`() {
+        val job = newJob(listOf(303L), emptyList())
+        val receiptToken = AccountDeletionReceiptToken.generate()
+        job.issueReceipt(AccountDeletionReceiptToken.hash(receiptToken), FIXED_NOW.plusSeconds(300))
+        jobRepository.saveAndFlush(job)
+        jdbc.update(
+            """
+                update account_deletion_job
+                set status = 'PROCESSING', attempt_count = 7,
+                    locked_at = :lockedAt, lease_token = 'previous-lease'
+                where id = :id
+            """.trimIndent(),
+            mapOf("lockedAt" to FIXED_NOW.minusSeconds(16 * 60), "id" to job.id!!),
+        )
+        em.clear()
+
+        val claim = requireNotNull(coordinator.claimNext())
+        assertThat(jobRepository.findById(job.id!!).orElseThrow().attemptCount).isEqualTo(8)
+        assertThat(coordinator.markFailure(claim, "terminal-failure")).isTrue()
+
+        val failed = jobRepository.findById(job.id!!).orElseThrow()
+        assertThat(failed.status).isEqualTo(AccountDeletionJobStatus.FAILED)
+        assertThat(failed.receiptExpiresAt).isEqualTo(FIXED_NOW.plusSeconds(30L * 24 * 60 * 60))
+        assertThat(failed.receiptTokenHash).isEqualTo(AccountDeletionReceiptToken.hash(receiptToken))
     }
 
     private fun newJob(memberIds: List<Long>, teamIds: List<Long>): AccountDeletionJob {

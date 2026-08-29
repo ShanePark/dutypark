@@ -12,6 +12,7 @@ import apiClient from './client'
 import {
   AccountDeletionOAuthError,
   accountDeletionApi,
+  createAccountDeletionReceiptToken,
   getWebSocialReauthenticationProviders,
   getAccountDeletionErrorKey,
   isAccountDeletionAlreadyPending,
@@ -44,16 +45,50 @@ describe('account deletion API contract', () => {
   })
 
   it('submits the exact deletion request contract', async () => {
-    vi.mocked(apiClient.post).mockResolvedValue({ data: { jobId: 3, status: 'ACCEPTED' } })
+    vi.mocked(apiClient.post).mockResolvedValue({
+      data: {
+        jobId: 3,
+        status: 'ACCEPTED',
+        receiptToken: 'receipt-token',
+        estimatedCompletionAt: '2026-08-29T15:05:00Z',
+      },
+    })
 
-    await accountDeletionApi.requestDeletion('proof', 17)
+    await accountDeletionApi.requestDeletion('proof', 17, 'receipt-token')
 
     expect(apiClient.post).toHaveBeenCalledWith('/members/me/deletion', {
       confirmation: 'DELETE',
       password: null,
       reauthProof: 'proof',
       transferAdminToMemberId: 17,
+      receiptToken: 'receipt-token',
     })
+  })
+
+  it('checks deletion status with the public receipt contract', async () => {
+    vi.mocked(apiClient.post).mockResolvedValue({
+      data: {
+        status: 'PROCESSING',
+        estimatedCompletionAt: '2026-08-29T15:05:00Z',
+      },
+    })
+
+    await accountDeletionApi.getStatus('receipt-token')
+
+    expect(apiClient.post).toHaveBeenCalledWith('/account-deletions/status', {
+      receiptToken: 'receipt-token',
+    })
+  })
+
+  it('generates a 32-byte base64url receipt token without URL-unsafe characters', () => {
+    const getRandomValues = vi.spyOn(globalThis.crypto, 'getRandomValues')
+
+    const token = createAccountDeletionReceiptToken()
+
+    expect(token).toHaveLength(43)
+    expect(token).toMatch(/^[A-Za-z0-9_-]+$/)
+    expect(getRandomValues).toHaveBeenCalledWith(expect.any(Uint8Array))
+    getRandomValues.mockRestore()
   })
 
   it('uses the mobile OAuth authorize and proof-exchange contracts', async () => {
@@ -117,5 +152,10 @@ describe('account deletion API error mapping', () => {
       .toBe('member.accountDeletion.errors.transferInvalid')
     expect(getAccountDeletionErrorKey(apiError(403, 'account.delete.impersonationForbidden')))
       .toBe('member.accountDeletion.errors.impersonation')
+  })
+
+  it('maps a receipt mismatch to the no-resubmit support flow', () => {
+    expect(getAccountDeletionErrorKey(apiError(409, 'account.delete.receiptToken.mismatch')))
+      .toBe('member.accountDeletion.errors.receiptMismatch')
   })
 })

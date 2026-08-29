@@ -64,6 +64,17 @@ export interface AccountDeletionReauthProofResponse {
 export interface AccountDeletionAcceptedResponse {
   jobId: number
   status: string
+  receiptToken: string
+  estimatedCompletionAt: string
+}
+
+export type AccountDeletionStatus = 'PROCESSING' | 'COMPLETED' | 'FAILED'
+
+export interface AccountDeletionStatusResponse {
+  status: AccountDeletionStatus
+  estimatedCompletionAt: string
+  completedAt?: string | null
+  receiptExpiresAt?: string | null
 }
 
 interface SocialReauthAuthorizeResponse {
@@ -83,6 +94,10 @@ export type AccountDeletionErrorKey =
   | 'member.accountDeletion.errors.transferInvalid'
   | 'member.accountDeletion.errors.noTransferCandidate'
   | 'member.accountDeletion.errors.impersonation'
+  | 'member.accountDeletion.errors.receiptStorage'
+  | 'member.accountDeletion.errors.receiptAlreadyPending'
+  | 'member.accountDeletion.errors.receiptOwnedByAnotherAccount'
+  | 'member.accountDeletion.errors.receiptMismatch'
   | 'member.accountDeletion.errors.generic'
 
 export type AccountDeletionOAuthFailure =
@@ -118,6 +133,8 @@ export function getAccountDeletionErrorKey(error: unknown): AccountDeletionError
       return 'member.accountDeletion.errors.transferInvalid'
     case 'account.delete.auxiliaryTeamTransferRequired':
       return 'member.accountDeletion.errors.noTransferCandidate'
+    case 'account.delete.receiptToken.mismatch':
+      return 'member.accountDeletion.errors.receiptMismatch'
     case 'account.delete.impersonationForbidden':
     case 'auth.reauth.impersonationForbidden':
       return 'member.accountDeletion.errors.impersonation'
@@ -150,6 +167,12 @@ export async function createAccountDeletionPkcePair(): Promise<{
     verifier,
     challenge: base64Url(new Uint8Array(digest)),
   }
+}
+
+export function createAccountDeletionReceiptToken(): string {
+  const random = new Uint8Array(32)
+  globalThis.crypto.getRandomValues(random)
+  return base64Url(random)
 }
 
 function openAccountDeletionOAuthPopup(): Window | null {
@@ -215,12 +238,23 @@ export const accountDeletionApi = {
     })
   },
 
-  requestDeletion(reauthProof: string, transferAdminToMemberId: number | null) {
+  requestDeletion(
+    reauthProof: string,
+    transferAdminToMemberId: number | null,
+    receiptToken: string,
+  ) {
     return apiClient.post<AccountDeletionAcceptedResponse>('/members/me/deletion', {
       confirmation: 'DELETE',
       password: null,
       reauthProof,
       transferAdminToMemberId,
+      receiptToken,
+    })
+  },
+
+  getStatus(receiptToken: string) {
+    return apiClient.post<AccountDeletionStatusResponse>('/account-deletions/status', {
+      receiptToken,
     })
   },
 

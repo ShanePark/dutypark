@@ -22,6 +22,7 @@ nonisolated enum UITestingDestination: Equatable {
 
 struct AppRootView: View {
     @EnvironmentObject private var session: SessionStore
+    @Environment(\.openURL) private var openURL
     @StateObject private var push = APNsRegistrationManager.shared
     @StateObject private var offlineSyncCoordinator = OfflineSyncCoordinator.shared
 
@@ -99,9 +100,17 @@ struct AppRootView: View {
                 }
             case .guest:
                 if session.accountDeletionAcceptedPresentation != nil {
-                    AccountDeletionAcceptedView {
-                        session.dismissAccountDeletionAcceptedPresentation()
-                    }
+                    AccountDeletionAcceptedView(
+                        receipt: session.accountDeletionReceipt,
+                        onDismiss: { clearReceipt in
+                            session.dismissAccountDeletionAcceptedPresentation(
+                                clearReceipt: clearReceipt
+                            )
+                        },
+                        onOpenSupport: {
+                            openURL(URL(string: "https://dutypark.o-r.kr/support")!)
+                        }
+                    )
                 } else {
                     GuestRootView()
                 }

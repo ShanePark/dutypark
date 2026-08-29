@@ -2,7 +2,7 @@
 
 - 기준일: 2026-08-29 (KST)
 - 판정: **HOLD — 제출하지 않음**
-- 코드 기준 HEAD: committed `c813778d`; 이 문서만 담는 후속 docs commit은 코드 기준에 포함하지 않는다. 이 커밋 해시는 검증한 코드 상태를 식별하기 위한 기준이며 최종 배포 산출물 자체를 증명하지 않는다.
+- 코드 기준: committed HEAD `407f1397` 위의 현재 미커밋 작업 트리. 계정 삭제 완료 확인 구현과 테스트·문서 변경을 포함한 이 작업 트리를 2026-08-29 17:50 KST까지 재검증했다. 최종 제출 전에는 커밋 SHA가 고정된 동일 소스를 다시 검증해야 한다.
 - 목적: [2026-08-28 보고서](./APP_STORE_REVIEW_AUDIT_2026-08-28.md)의 반복이 아닌, 그 이후 변경분과 제출 직전의 미검증 게이트를 기록한다.
 - 비밀값: 비밀번호, private key, client secret, webhook token, 실제 S2S URL은 이 문서에 기록하지 않는다. 심사용 계정은 App Store Connect의 `App Review Information → Sign-in required → Username / Password` 필드에서만 제공한다.
 
@@ -15,11 +15,12 @@
 | Slack 개인정보 제거 | 수정 반영됨 | Slack privacy focused 54 PASS. 전체 Release/실제 webhook 배포 확인은 별도 게이트 |
 | UGC 텍스트 필터 | 클라이언트·일부 서버 보강 반영됨 | backend/iOS 관련 focused·full 검증 PASS. 웹 정규화·private D-Day 예외는 반영됐고 cold-start/fetch fail-open, 모든 공개/공유 쓰기 경로·첨부·신고 흐름은 별도 게이트 |
 | 문의·신고 탈퇴 후 보존 | 사업자 결정 필요 | 보존기간·익명화·법적 보존 사유 및 탈퇴 UI 고지 확정 |
+| 비동기 계정 삭제 완료 확인 | backend·web·iOS 구현 및 자동 테스트 PASS | 보통 5분 이내 ETA, 로그아웃 후 receipt 기반 상태 조회, 실제 `COMPLETED` confirmation, `FAILED` 지원 경로를 구현. disposable 운영 유사 계정 E2E는 별도 게이트 |
 | App Store 스크린샷 | 현 앱과 불일치 가능 | 최종 빌드에서 한국어·영어 세트 재촬영·재합성 |
 | 배포 IPA | 배포 서명·최종 entitlement 미확정 | Release Archive/export, 서명, 운영 API, APNs production 확인 |
 | 실제 iPhone E2E | 미실행 또는 일부 미검증 | APNs, OAuth, 카메라, 파일 picker, 파괴적 흐름 완료 |
 | App Store Connect | 제출 전 입력 대기 | privacy labels, Review Notes, demo account, backend 준비 |
-| 한국 Apple Services ID / S2S | 조건부 확인 필요 | 웹 Sign in with Apple을 운영하면 연결된 primary App ID에 S2S endpoint 등록·처리 확인 |
+| 한국 Apple Services ID / S2S | 저장소 운영 구성상 웹 Sign in with Apple 활성; Apple 직접 적용 여부와 외부 S2S 등록·처리 미확인 | Developer Account의 한국 소재·Services ID 등록/변경 시점·연결된 primary App ID를 확인하고 S2S endpoint, notification JWT, retry/replay/idempotency 처리를 검증하는 필수 미완료 게이트 |
 | 연령 등급 | 최종 questionnaire 미작성 | App Store Connect 질문에 실제 기능 기준으로 답변 |
 
 Apple은 앱 완성도, 개인정보처리방침, 계정 삭제, UGC, 메타데이터를 실제 빌드·서버 동작과 함께 심사한다. 그러므로 시뮬레이터의 일부 성공이나 코드에 기능이 존재한다는 사실만으로 승인 가능으로 올리지 않는다.
@@ -33,19 +34,20 @@ Apple은 앱 완성도, 개인정보처리방침, 계정 삭제, UGC, 메타데�
 | iOS UI baseline | 91개 중 89 PASS, `tab.more` 및 알림 닫기 selector lookup failures 2건; 앱 crash 0, runner/simulator 오류 0 | geometry 문제가 아니라 selector lookup 실패였다. 후속 `7788a8f3`에서 selector fallback/accessibility id를 수정하고 해당 두 테스트를 각각 RED→GREEN focused PASS. 나머지 89개 전체 재실행은 생략 |
 | UI 안정화 1 | `ios/DutyparkUITests/AccountDeletionParityUITests.swift` | RED→GREEN focused PASS |
 | UI 안정화 2 | `ios/DutyparkUITests/NotificationConfirmationVisualUITests.swift` | RED→GREEN focused PASS |
-| iOS `DutyparkTests` 동일 실행 요약 | 1,147 total: 1,146 PASS / 1 SKIP / 0 FAIL; device-expanded 결과 1,171 PASS | 1,147은 identifier total이고 1,171은 같은 테스트 실행에서 동적으로 확장된 device case의 pass event 수이며 별도 suite/run이나 1,147에 더하는 수치가 아니다. SKIP 1건은 `OfflineSessionStore` first-unlock simulator file-protection을 시뮬레이터에서 재현할 수 없어 제외 |
+| iOS `DutyparkTests` 동일 실행 요약 | 1,168 total: 1,167 PASS / 1 SKIP / 0 FAIL; device-expanded 결과 1,192 PASS | 1,168은 identifier total이고 1,192는 같은 테스트 실행에서 동적으로 확장된 device case의 pass event 수이며 별도 suite/run이나 1,168에 더하는 수치가 아니다. SKIP 1건은 `OfflineSessionStore` first-unlock simulator file-protection을 시뮬레이터에서 재현할 수 없어 제외 |
 | Release simulator build | PASS | exact `iPhone 13 mini`, iOS 26.5 |
-| Release simulator install/launch | PASS | 임시 실행 캡처: `/private/tmp/dutypark-release-latest-20260829.png` (장기 보존 증거·제출물로 사용하지 않음) |
-| backend full Gradle | 1,829 total; 1,808 PASS / 21 SKIP / 0 FAIL | skip 사유는 개별 Gradle 결과에서 확인 |
+| Debug simulator install | PASS | 위 unit-test로 검증된 앱을 exact `iPhone 13 mini`에 설치하고 app container를 확인. 기존 Release 임시 캡처는 `/private/tmp/dutypark-release-latest-20260829.png`이며 장기 보존 증거·제출물로 사용하지 않음 |
+| backend full Gradle | 1,845 total; 1,824 PASS / 21 SKIP / 0 FAIL | skip 사유는 개별 Gradle 결과에서 확인 |
 | Slack privacy focused | 54 PASS | 일정 파싱 33 + 문의·신고·generic argument dump·예외 payload 21 최소화 검증 |
-| web focused/full | 31 focused PASS / 695 full PASS | type-check PASS, build PASS |
+| web full | 97 files / 725 tests PASS | type-check PASS, build PASS(2,218 modules transformed) |
 | App Store screenshot compose/extract scripts | PASS | 파일·크기·alpha·manifest 검증은 PASS. 실제 최신 앱 재촬영은 아래 UI 불일치로 미완료 |
+| Evidence manifest | 작성됨 | [2026-08-29 evidence manifest](./review-evidence/2026-08-29/README.md)에 fresh backend/web/iOS unit 재실행의 명령·tested SHA·결과와 기존 UI xcresult/capture provenance를 기록. 전체 bundle/log의 장기 artifact 저장은 HOLD |
 
 ## 3. 이번 점검의 범위와 근거
 
 ### 점검 범위
 
-- 시뮬레이터 기준: `iPhone 13 mini`, iOS 26.5, Release 1.0.0 (1) — 코드 HEAD `c813778d` 기준의 8/29 자동 검증 결과는 2절에 기록하고, 외부·실기기·배포 검증은 별도로 남긴다.
+- 시뮬레이터 기준: `iPhone 13 mini`, iOS 26.5 — committed HEAD `407f1397` 위 현재 미커밋 작업 트리의 8/29 자동 검증 결과는 2절에 기록하고, 외부·실기기·배포 검증은 별도로 남긴다.
 - iOS 코드: `ios/Dutypark/` 및 `ios/DutyparkTests/`
 - 백엔드 개인정보·인증·UGC 코드: `src/main/kotlin/`, `src/main/resources/db/migration/v2/`, `src/test/kotlin/`
 - App Store 산출물: `docs/app-store/raw/{ko,en}/`, `docs/app-store/final/{ko,en}/`, `docs/app-store/manifests/{ko,en}.json`
@@ -128,11 +130,12 @@ Apple은 계정 삭제 시 계정과 관련된 데이터 및 UGC를 원칙적으
 | 신고 당사자 식별자 | 이름 snapshot을 유지할지, 즉시 익명 ID로 바꿀지 | **사업자 결정 필요 — `최종 검증 후 기입`** |
 | 법적 보존 예외 | 적용 법령/분쟁·안전 사유, 보존 범위와 종료 조건 | **법무·사업자 확인 필요 — `최종 검증 후 기입`** |
 | 관리자 접근 | 운영자 중 누가 어느 기간 동안 어떤 필드에 접근할지 | **사업자 결정 필요 — `최종 검증 후 기입`** |
-| 탈퇴 UI 고지 | 삭제되는 데이터, 공동 팀 데이터, 남는 신고/문의 기록, 익명화 시점, 비동기 완료 예상시간 | **UI·정책 동시 확정 필요 — `최종 검증 후 기입`** |
+| 계정 삭제 감사 데이터 | deletion job의 root/target ID, 상태, 오류 코드, timestamp와 실패 시 남을 수 있는 provider credential의 보존·파기 기한 | **법무·사업자·운영 결정 필요 — `최종 검증 후 기입`** |
+| 탈퇴 UI 고지 | 삭제되는 데이터, 공동 팀 데이터, 남는 신고/문의 기록, 익명화 시점, 비동기 처리 ETA·상태/완료 표시·실패/재시도 경로 | **UI·정책 동시 확정 필요 — `최종 검증 후 기입`** |
 
 탈퇴 화면에는 최소한 다음을 사용자에게 직접 보여줘야 한다.
 
-1. 삭제 요청으로 삭제를 시작하는 계정·일정·Todo·첨부·OAuth 연결과 삭제 완료 예상시간
+1. 삭제 요청으로 삭제를 시작하는 계정·일정·Todo·첨부·OAuth 연결과 삭제 완료 예상시간(ETA), 상태/완료 확인 방법 및 실패 시 안내·재시도 경로
 2. 공동 팀 데이터처럼 권한 이관 또는 다른 사용자의 기능을 위해 처리되는 항목
 3. 법적 보존 또는 안전·분쟁 대응으로 남을 수 있는 문의·신고 항목과 정확한 기간
 4. 남는 항목의 익명화 방식과 관리자 접근 범위
@@ -142,9 +145,11 @@ Apple은 계정 삭제 시 계정과 관련된 데이터 및 UGC를 원칙적으
 
 ### Apple 최소 요건과 Dutypark 내부 게이트의 구분
 
-Apple의 최소 요건은 앱 안에서 계정 삭제를 시작할 수 있고, 삭제 범위와 법적 보존 예외를 설명하며, 계정과 관련 데이터를 실제로 삭제하는 경로를 제공하는 것이다. Apple FAQ는 삭제가 즉시·자동일 필요는 없다고 설명하므로 서버의 비동기 처리 자체를 부적합으로 단정하지 않는다. 비동기 처리라면 사용자에게 요청 접수·예상 완료 시점과 남을 수 있는 데이터의 범위를 알리고, 약속한 삭제를 끝까지 수행한 뒤 사용자에게 완료 사실을 확인할 수 있게 알려야 한다.
+Apple의 최소 요건은 앱 안에서 계정 삭제를 시작할 수 있고, 삭제 범위와 법적 보존 예외를 설명하며, 계정과 관련 데이터를 실제로 삭제하는 경로를 제공하는 것이다. Apple FAQ는 삭제가 즉시·자동일 필요는 없다고 설명하므로 서버의 비동기 처리 자체를 부적합으로 단정하지 않는다. 다만 비동기 처리라면 사용자에게 예상 소요시간을 알리고 삭제 완료 후 confirmation을 제공해야 한다.
 
-Dutypark의 내부 게이트는 이 최소 요건보다 보수적이다. 현재의 “요청 접수 후 계정 데이터와 파일을 비동기 삭제” UI가 있다는 것만으로 PASS하지 않고, disposable 계정으로 비동기 완료까지 확인한 뒤 세션·token·OAuth 연결·UGC·첨부 및 보존 예외가 정책과 일치하는지 검증한다. 이 내부 E2E와 사업자 보존 결정이 끝나지 않았으므로 제출 판정은 계속 HOLD다.
+현재 작업 트리는 이 제품 수준 누락을 보완했다. 클라이언트가 삭제 요청 전에 32-byte CSPRNG receipt token을 만들고 저장하며 서버는 원문 대신 SHA-256만 보관한다. 로그인 세션을 제거한 뒤에도 web과 iOS가 5초 간격으로 공개 status API를 조회하여 `PROCESSING`, 실제 worker의 `COMPLETED`, 최종 `FAILED`를 구분한다. UI에는 정상 상황에서 **보통 5분 이내**라는 ETA를 표시하고, 실제 완료 후에만 완료 confirmation과 success feedback을 제공한다. 실패·만료·알 수 없는 응답은 완료로 오인하지 않고 `/support` 안내를 제공한다. 요청이 서버에 접수됐는지 불명확한 network/5xx/응답 파싱 실패에도 요청 전 receipt를 유지하고 status 흐름으로 전환하며, ETA 전의 일시적 404는 계속 polling한다. receipt는 로컬 계정 ID에 묶어 다른 로그인 계정의 삭제 요청에 재사용하거나 덮어쓰지 않는다. terminal receipt는 완료 또는 최종 실패 후 30일 동안 상태 확인에만 사용되며, raw token은 URL·query·로그·analytics에 넣지 않는다. worker의 상태 전이는 claim별 lease token으로 보호한다.
+
+Dutypark의 내부 게이트는 이 최소 요건보다 보수적이다. 위 흐름의 backend·web·iOS 자동 테스트는 PASS했지만, disposable 계정으로 비동기 완료까지 확인한 뒤 세션·token·OAuth 연결·UGC·첨부 및 보존 예외가 정책과 일치하는지는 아직 실제 서버에서 검증하지 않았다. 상태 API에 앱 자체 rate limiter는 없으므로, 256-bit status-only token 외에도 운영 edge/IP rate limit이 적용되는지 배포 환경에서 확인한다. 이 내부 E2E와 사업자 보존 결정이 끝나지 않았으므로 제출 판정은 계속 HOLD다.
 
 ## 6. 현 앱과 달라진 App Store 스크린샷
 
@@ -162,7 +167,7 @@ compose/extract 스크립트 자체는 PASS했지만, 이는 기존 입력의 �
 
 ## 7. 최종 exported IPA, 배포 서명, 운영 APNs
 
-exact `iPhone 13 mini` iOS 26.5에서 Release simulator build·설치·launch는 PASS했다. 실행 중 생성된 임시 캡처는 `/private/tmp/dutypark-release-latest-20260829.png`이며 장기 보존 증거·제출물로 사용하지 않는다. 그러나 시뮬레이터의 `CODE_SIGNING_ALLOWED=NO` 빌드나 Debug entitlement는 App Store 배포물을 증명하지 않는다. 제출 직전에는 별도 Release Archive를 기준으로 다음을 확인한다.
+exact `iPhone 13 mini` iOS 26.5에서 Release simulator build·설치·launch는 PASS했다. 실행 중 생성된 최신 임시 캡처(2절과 동일한 산출물)는 `/private/tmp/dutypark-release-latest-20260829.png`이며 장기 보존 증거·제출물로 사용하지 않는다. 그러나 시뮬레이터의 `CODE_SIGNING_ALLOWED=NO` 빌드나 Debug entitlement는 App Store 배포물을 증명하지 않는다. 제출 직전에는 별도 Release Archive를 기준으로 다음을 확인한다.
 
 - [ ] Release Archive가 운영 API base URL을 사용한다.
 - [ ] 2026-04-28 이후 App Store Connect 제출 요건에 맞게 최종 Archive가 iOS 26 SDK 이상으로 빌드됐는지 배포 산출물에서 확인한다.
@@ -250,16 +255,19 @@ Apple의 [한국 개발자 대상 공식 안내](https://developer.apple.com/new
 - 앱에서의 계정 삭제
 - Apple 계정 영구 삭제
 
+저장소 운영 구성상 웹 Sign in with Apple은 활성이다. 운영 client ID와 production callback은 `frontend/.env.production:4-5`에 있고, 웹 Apple exchange 경로는 `src/main/kotlin/com/tistory/shanepark/dutypark/security/controller/WebAppleOAuthController.kt:17-34` 및 `src/main/kotlin/com/tistory/shanepark/dutypark/security/oauth/apple/AppleWebOAuthService.kt:11-40`에서 확인된다. 따라서 웹 SIWA 사용 여부 자체는 선택적 확인 항목이 아니다.
+
 현재 저장소에는 웹 Apple exchange endpoint는 있지만 Apple S2S notification endpoint/notification JWT 처리 경로는 확인되지 않는다. 별도 인프라에 구현되어 있을 수 있으므로 소스 부재만으로 미구현이라고 단정하지 않는다. Apple의 [S2S notification 구성 안내](https://developer.apple.com/help/account/capabilities/enabling-server-to-server-notifications/)처럼 이 endpoint를 등록하는 위치는 Services ID 자체가 아니라, 웹사이트와 연결된 **primary App ID의 Sign in with Apple 구성**이다.
 
-조건부 게이트:
+Apple 직접 요구사항의 적용 여부는 별도로 판정한다. 2026-01-01 이후 한국에 기반을 둔 개발자가 새 Services ID를 등록하거나 기존 Services ID를 업데이트한 경우에 S2S endpoint 제공 요구가 적용된다. Developer Account에서 한국 소재와 Services ID 등록·변경 시점을 아직 확인하지 않았으므로 Apple 직접 강제 여부는 미판정이다. 그러나 저장소 운영 구성상 활성인 web SIWA에 대한 Dutypark 내부 release gate로서 아래 endpoint·JWT·retry/replay/idempotency 검증은 조건과 관계없이 필수 미완료로 유지한다.
 
-- [ ] 실제 운영에서 Services ID를 사용해 웹 Sign in with Apple을 제공하는지 확인
-- [ ] 제공한다면 Developer Account에서 연결된 primary App ID에 S2S endpoint가 등록되어 있는지 확인한다. 실제 URL·secret은 이 문서에 기록하지 않는다.
+필수 미완료 게이트 (Dutypark 내부 release gate):
+
+- [ ] Developer Account에서 개발자/법인 소재지가 한국인지, web Services ID가 어느 primary App ID에 연결됐는지, Services ID 최초 등록·최근 업데이트 시점을 확인한다. 실제 URL·secret은 이 문서에 기록하지 않는다.
+- [ ] Developer Account에서 연결된 primary App ID의 Sign in with Apple 구성에 S2S endpoint가 등록되어 있는지 확인한다. 실제 URL·secret은 이 문서에 기록하지 않는다.
 - [ ] endpoint가 Apple notification JWT를 검증하고 email forwarding 변경, 앱 내 계정 삭제, Apple 계정 영구 삭제를 idempotently 처리하는지 확인
 - [ ] 통지를 받은 후 계정 연결·refresh credential·개인정보 삭제/비활성화가 즉시 반영되는지 확인
 - [ ] endpoint HTTP status, retry, replay/idempotency, 로그의 개인정보 최소화 확인
-- [ ] 제공하지 않는다면 web client ID/Services ID 설정·정책·빌드에서 실제로 비활성임을 증명
 
 S2S 확인 결과: **`최종 검증 후 기입`**.
 
@@ -305,12 +313,13 @@ Apple 정의상 단순 UGC capability는 대한민국 ‘전체’ 표에도 포
 - [x] Slack 개인정보 변경 focused test 54/54 PASS; UGC backend/iOS 관련 focused·full 검증 PASS(웹 정규화·private D-Day 예외 반영 완료), Release simulator build도 PASS
 - [ ] 웹 cold-start/fetch 실패 fail-open 해소 또는 모든 공유 mutation에 대한 서버 enforcement 확인
 - [ ] UGC 모든 서버 mutation 경로 및 첨부·신고·차단 E2E 확인
-- [ ] 문의·신고 보존기간, snapshot 최소화, 익명화, 법적 예외, 탈퇴 UI 고지 결정
+- [ ] 문의·신고·계정삭제 감사 레코드의 보존기간, snapshot/식별자 최소화, 실패 시 provider credential 파기 기한, 익명화, 법적 예외, 관리자 접근과 탈퇴 UI 고지 결정
+- [x] 비동기 계정 삭제의 보통 5분 이내 ETA, 로그아웃 후 receipt 상태 조회, worker 완료 confirmation, 최종 실패·지원 경로를 backend·web·iOS에 구현하고 자동 테스트 통과
 - [ ] 현재 앱을 기준으로 ko/en App Store 스크린샷 재촬영·재합성·시각 검토
 - [ ] distribution-signed exported IPA와 production APNs entitlement 확인
 - [ ] 최종 distribution Archive가 App Store 제출 요건인 iOS 26 SDK 이상으로 빌드됐는지 확인
 - [ ] 실제 iPhone APNs/OAuth/카메라/PhotosPicker/Files picker 확인
-- [ ] disposable 계정으로 계정 삭제·공동 팀 데이터·OAuth revoke·첨부 정리와 비동기 완료 후 사용자 confirmation 확인
+- [ ] disposable 운영 유사 계정으로 202 접수부터 worker `COMPLETED`까지 확인하고, 공동 팀 데이터·OAuth revoke·첨부 정리·세션 폐기·receipt 30일 만료·실패/관리자 재시도·운영 edge rate limit을 끝까지 검증
 - [ ] App Store Connect privacy labels, 정책 URL, Review Notes, demo account, backend 확인
-- [ ] 한국 Services ID 사용 여부 및 연결된 primary App ID의 S2S endpoint 확인
+- [ ] 저장소에서 활성인 web Services ID에 대해 Developer Account의 한국 소재·Services ID 등록/변경 시점·primary App ID 연결 및 S2S endpoint/JWT/retry/replay/idempotency를 확인하고, Apple 직접 적용 여부의 조건 판정을 별도로 기록
 - [ ] 한국 연령 등급 questionnaire 및 필요 시 GRAC RCN 처리 확인

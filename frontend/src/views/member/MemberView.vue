@@ -29,7 +29,8 @@ import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 import DutyPatternCard from '@/components/member/DutyPatternCard.vue'
 import SocialAccountConnectionModal from '@/components/member/SocialAccountConnectionModal.vue'
 import AccountDeletionModal from '@/components/member/AccountDeletionModal.vue'
-import type { AccountDeletionCompletion } from '@/utils/accountDeletionFlow'
+import type { AccountDeletionCompletionResult } from '@/utils/accountDeletionFlow'
+import { saveAccountDeletionReceipt } from '@/utils/accountDeletionReceipt'
 import {
   clearPendingSocialLinkProvider,
   consumeConnectedPendingSocialLinkProvider,
@@ -623,7 +624,7 @@ async function changePassword() {
 
 // Account deletion
 const showAccountDeletionModal = ref(false)
-const accountDeletionCompletion = ref<AccountDeletionCompletion | null>(null)
+const accountDeletionCompletion = ref<AccountDeletionCompletionResult | null>(null)
 
 function deleteAccount() {
   if (authStore.isImpersonating) {
@@ -633,9 +634,16 @@ function deleteAccount() {
   showAccountDeletionModal.value = true
 }
 
-function completeAccountDeletion(completion: AccountDeletionCompletion) {
+function completeAccountDeletion(result: AccountDeletionCompletionResult) {
   showAccountDeletionModal.value = false
-  accountDeletionCompletion.value = completion
+  if (result.receipt && saveAccountDeletionReceipt(result.receipt)) {
+    // Persist the unauthenticated status credential before clearing the local session.
+    authStore.completeAccountDeletion()
+    void router.replace({ name: 'account-deletion-status' })
+    return
+  }
+
+  accountDeletionCompletion.value = result
   authStore.completeAccountDeletion()
 }
 
@@ -696,7 +704,7 @@ onMounted(async () => {
         <Check class="h-7 w-7" aria-hidden="true" />
       </div>
       <h1 class="mt-4 text-xl font-bold text-dp-text-primary">
-        {{ accountDeletionCompletion === 'alreadyPending'
+        {{ accountDeletionCompletion.completion === 'alreadyPending'
           ? t('member.accountDeletion.completion.alreadyPendingTitle')
           : t('member.accountDeletion.completion.acceptedTitle') }}
       </h1>
@@ -704,8 +712,17 @@ onMounted(async () => {
         {{ t('member.accountDeletion.completion.signedOut') }}
       </p>
       <p class="mt-2 text-sm leading-6 text-dp-text-secondary">
-        {{ t('member.accountDeletion.completion.asyncCleanup') }}
+        {{ accountDeletionCompletion.receipt
+          ? t('member.accountDeletion.completion.asyncCleanup')
+          : t('member.accountDeletion.completion.receiptUnavailable') }}
       </p>
+      <RouterLink
+        v-if="!accountDeletionCompletion.receipt"
+        to="/support"
+        class="mt-3 inline-block text-sm font-semibold text-dp-accent hover:underline"
+      >
+        {{ t('member.accountDeletion.completion.contactSupport') }}
+      </RouterLink>
       <button
         type="button"
         class="mt-6 min-h-11 w-full rounded-lg bg-dp-accent px-4 font-medium text-dp-text-on-dark transition hover:bg-dp-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dp-accent-ring"
@@ -1003,8 +1020,9 @@ onMounted(async () => {
     </template>
 
     <AccountDeletionModal
-      v-if="memberInfo"
+      v-if="memberInfo?.id"
       :is-open="showAccountDeletionModal"
+      :member-id="memberInfo.id"
       :member-name="memberInfo.name"
       @close="showAccountDeletionModal = false"
       @completed="completeAccountDeletion"

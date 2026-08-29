@@ -6,6 +6,7 @@ import {
   canLeaveAccountDeletionTeamStep,
   createMemoryOnlyReauthProof,
   isAccountDeletionOAuthMessage,
+  isAmbiguousAccountDeletionRequestError,
   parseAccountDeletionOAuthCallback,
   readValidReauthProof,
 } from './accountDeletionFlow'
@@ -80,5 +81,17 @@ describe('account deletion OAuth callback validation', () => {
     expect(parseAccountDeletionOAuthCallback('?code=x&extra=value')).toBeNull()
     expect(parseAccountDeletionOAuthCallback('?code=x&code=y')).toBeNull()
     expect(parseAccountDeletionOAuthCallback('?error=unknown')).toBeNull()
+  })
+})
+
+describe('account deletion request outcome classification', () => {
+  it('preserves the provisional receipt for transport and server failures only', () => {
+    expect(isAmbiguousAccountDeletionRequestError({ code: 'ERR_NETWORK' })).toBe(true)
+    expect(isAmbiguousAccountDeletionRequestError({ response: { status: 504 } })).toBe(true)
+    expect(isAmbiguousAccountDeletionRequestError(new Error('malformed response'))).toBe(true)
+    expect(isAmbiguousAccountDeletionRequestError({ response: { status: 302 } })).toBe(true)
+    expect(isAmbiguousAccountDeletionRequestError({ response: { status: Number.NaN } })).toBe(true)
+    expect(isAmbiguousAccountDeletionRequestError({ response: { status: 400 } })).toBe(false)
+    expect(isAmbiguousAccountDeletionRequestError({ response: { status: 409 } })).toBe(false)
   })
 })

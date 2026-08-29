@@ -969,7 +969,7 @@ struct SettingsFeatureTests {
             case "/api/auth/reauth/password":
                 body = #"{"reauthProof":"short-lived","expiresIn":300}"#
             case "/api/members/me/deletion":
-                body = #"{"jobId":44,"status":"ACCEPTED"}"#
+                body = #"{"jobId":44,"status":"ACCEPTED","receiptToken":"receipt-token","estimatedCompletionAt":"2026-08-29T12:05:00Z"}"#
             default:
                 body = #"{"code":"not_found"}"#
             }
@@ -990,6 +990,7 @@ struct SettingsFeatureTests {
         let proof = try await service.reauthenticateForAccountDeletion(password: "secret")
         let accepted = try await service.requestAccountDeletion(
             reauthProof: proof.reauthProof,
+            receiptToken: "receipt-token",
             transferAdminToMemberId: 9
         )
 
@@ -1009,7 +1010,39 @@ struct SettingsFeatureTests {
         #expect(deletion["confirmation"] as? String == "DELETE")
         #expect(deletion["password"] == nil)
         #expect(deletion["reauthProof"] as? String == "short-lived")
+        #expect(deletion["receiptToken"] as? String == "receipt-token")
         #expect(deletion["transferAdminToMemberId"] as? Int == 9)
+    }
+
+    @Test
+    func accountDeletionStatusUsesTheUnauthenticatedReceiptEndpoint() async throws {
+        let recorder = SettingsRequestRecorder()
+        SettingsURLProtocolStub.handler = { request in
+            recorder.record(request)
+            return (
+                HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!,
+                Data(#"{"status":"COMPLETED","estimatedCompletionAt":"2026-08-29T12:05:00Z","completedAt":"2026-08-29T12:04:00Z","receiptExpiresAt":"2026-09-28T12:05:00Z"}"#.utf8)
+            )
+        }
+        defer { SettingsURLProtocolStub.handler = nil }
+
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [SettingsURLProtocolStub.self]
+        let service = SettingsService(client: APIClient(
+            baseURL: URL(string: "https://dutypark.test/api/")!,
+            session: URLSession(configuration: configuration)
+        ))
+
+        let response = try await service.accountDeletionStatus(receiptToken: "opaque-receipt")
+
+        #expect(response.status == "COMPLETED")
+        #expect(response.completedAt == "2026-08-29T12:04:00Z")
+        #expect(recorder.requests.count == 1)
+        #expect(recorder.requests.first?.httpMethod == "POST")
+        #expect(recorder.requests.first?.url?.path == "/api/account-deletions/status")
+        let requestBody = try #require(recorder.requestBodies.first.flatMap { $0 })
+        let body = try #require(Self.jsonBody(requestBody))
+        #expect(body["receiptToken"] as? String == "opaque-receipt")
     }
 
     @Test

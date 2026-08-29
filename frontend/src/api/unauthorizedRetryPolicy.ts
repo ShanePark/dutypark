@@ -1,6 +1,7 @@
 const NON_RETRYABLE_ONE_TIME_POST_PATHS = new Set([
   '/auth/reauth/password',
   '/members/me/deletion',
+  '/account-deletions/status',
   '/auth/mobile/oauth/exchange',
   '/auth/web/oauth/apple/exchange',
 ])

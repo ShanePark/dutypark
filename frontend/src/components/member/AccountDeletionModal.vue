@@ -15,10 +15,12 @@ import BaseModal from '@/components/common/BaseModal.vue'
 import {
   AccountDeletionOAuthError,
   accountDeletionApi,
+  createAccountDeletionReceiptToken,
   getWebSocialReauthenticationProviders,
   getAccountDeletionErrorKey,
   isAccountDeletionAlreadyPending,
   requiresIosAppleReauthentication,
+  type AccountDeletionAcceptedResponse,
   type AccountDeletionPreview,
 } from '@/api/accountDeletion'
 import type { SocialAccountProvider } from '@/api/member'
@@ -27,20 +29,31 @@ import {
   accountDeletionNameMatches,
   canLeaveAccountDeletionTeamStep,
   createMemoryOnlyReauthProof,
+  isAmbiguousAccountDeletionRequestError,
   readValidReauthProof,
-  type AccountDeletionCompletion,
+  type AccountDeletionCompletionResult,
   type AccountDeletionStep,
   type MemoryOnlyReauthProof,
 } from '@/utils/accountDeletionFlow'
+import {
+  ACCOUNT_DELETION_EXPECTED_COMPLETION_MS,
+  clearAccountDeletionReceipt,
+  hasStoredAccountDeletionReceiptEntry,
+  isAccountDeletionReceipt,
+  readAccountDeletionReceipt,
+  saveAccountDeletionReceipt,
+  type AccountDeletionReceipt,
+} from '@/utils/accountDeletionReceipt'
 
 const props = defineProps<{
   isOpen: boolean
+  memberId: number
   memberName: string
 }>()
 
 const emit = defineEmits<{
   close: []
-  completed: [completion: AccountDeletionCompletion]
+  completed: [result: AccountDeletionCompletionResult]
 }>()
 
 const { t } = useI18n()
@@ -54,6 +67,9 @@ const proof = ref<MemoryOnlyReauthProof | null>(null)
 const loading = ref(false)
 const working = ref(false)
 const errorKey = ref<string | null>(null)
+const requestBlocked = ref(false)
+const pendingReceiptToken = ref<string | null>(null)
+const pendingReceipt = ref<AccountDeletionReceipt | null>(null)
 let proofExpiryTimer: number | null = null
 
 const titleId = 'account-deletion-modal-title'
@@ -69,6 +85,12 @@ const webSocialProviders = computed(() => preview.value
   ? getWebSocialReauthenticationProviders(preview.value)
   : [])
 const hasAppleProvider = computed(() => preview.value?.socialProviders.includes('APPLE') ?? false)
+const canCheckDeletionStatus = computed(() => pendingReceiptToken.value !== null
+  || readAccountDeletionReceipt() !== null
+  || hasStoredAccountDeletionReceiptEntry())
+const shouldShowReceiptRecovery = computed(() => errorKey.value === 'member.accountDeletion.errors.receiptMismatch'
+  || errorKey.value === 'member.accountDeletion.errors.receiptStorage'
+  || canCheckDeletionStatus.value)
 const appleIsOnlyReauthenticationMethod = computed(() => preview.value
   ? requiresIosAppleReauthentication(preview.value)
   : false)
@@ -108,8 +130,11 @@ function resetFlow() {
   password.value = ''
   typedName.value = ''
   errorKey.value = null
+  requestBlocked.value = false
   loading.value = false
   working.value = false
+  pendingReceiptToken.value = null
+  pendingReceipt.value = null
 }
 
 function clearProof() {
@@ -290,18 +315,51 @@ async function submit() {
     return
   }
 
+  const receiptToken = ensurePendingReceiptToken()
+  if (!receiptToken) return
+
   working.value = true
   errorKey.value = null
-  let completion: AccountDeletionCompletion | null = null
+  let completionResult: AccountDeletionCompletionResult | null = null
   try {
-    await accountDeletionApi.requestDeletion(reauthProof, selectedTransferMemberId.value)
-    completion = 'accepted'
+    const response = await accountDeletionApi.requestDeletion(
+      reauthProof,
+      selectedTransferMemberId.value,
+      receiptToken,
+    )
+    const responseData: unknown = response?.data
+    if (!isTrustedAcceptedResponse(responseData, receiptToken)) {
+      // A successful response with a different token is a protocol violation. The
+      // request may still have been accepted, so preserve the provisional receipt
+      // and let the caller sign out into the status flow instead of resubmitting.
+      completionResult = uncertainCompletionResult()
+    } else {
+      const receipt = accountDeletionReceiptFromAcceptedResponse(responseData)
+      completionResult = {
+        completion: 'accepted',
+        // Keep the pre-request receipt as a safe fallback if the response is incomplete.
+        receipt: receipt ?? currentMemberReceipt(pendingReceipt.value ?? readAccountDeletionReceipt()),
+      }
+    }
   } catch (error) {
     if (isAccountDeletionAlreadyPending(error)) {
-      completion = 'alreadyPending'
+      const serverReceipt = accountDeletionReceiptFromUnknown(error)
+      completionResult = {
+        completion: 'alreadyPending',
+        // Do not replace the pre-request credential if an error payload carries
+        // a different token; that is another protocol ambiguity.
+        receipt: serverReceipt?.receiptToken === receiptToken
+          ? serverReceipt
+          : currentMemberReceipt(pendingReceipt.value ?? readAccountDeletionReceipt()),
+      }
+    } else if (isAmbiguousAccountDeletionRequestError(error)) {
+      completionResult = uncertainCompletionResult()
     } else {
-      errorKey.value = getAccountDeletionErrorKey(error)
-      step.value = 'reauthentication'
+      const mappedErrorKey = getAccountDeletionErrorKey(error)
+      clearProvisionalReceipt()
+      errorKey.value = mappedErrorKey
+      requestBlocked.value = mappedErrorKey === 'member.accountDeletion.errors.receiptMismatch'
+      if (!requestBlocked.value) step.value = 'reauthentication'
     }
   } finally {
     // Proofs are one-use and every final request consumes or invalidates them.
@@ -310,7 +368,113 @@ async function submit() {
     working.value = false
   }
 
-  if (completion) emit('completed', completion)
+  if (completionResult) emit('completed', completionResult)
+}
+
+function ensurePendingReceiptToken(): string | null {
+  if (pendingReceiptToken.value) {
+    if (pendingReceipt.value?.ownerMemberId === props.memberId) {
+      return pendingReceiptToken.value
+    }
+    errorKey.value = 'member.accountDeletion.errors.receiptOwnedByAnotherAccount'
+    return null
+  }
+
+  const stored = readAccountDeletionReceipt()
+  if (stored && stored.ownerMemberId !== props.memberId) {
+    errorKey.value = 'member.accountDeletion.errors.receiptOwnedByAnotherAccount'
+    return null
+  }
+  if (stored?.jobId === null) {
+    pendingReceiptToken.value = stored.receiptToken
+    pendingReceipt.value = stored
+    return stored.receiptToken
+  }
+  if (stored) {
+    errorKey.value = 'member.accountDeletion.errors.receiptAlreadyPending'
+    return null
+  }
+
+  const receiptToken = createAccountDeletionReceiptToken()
+  const newReceipt: AccountDeletionReceipt = {
+    ownerMemberId: props.memberId,
+    jobId: null,
+    receiptToken,
+    estimatedCompletionAt: new Date(Date.now() + ACCOUNT_DELETION_EXPECTED_COMPLETION_MS).toISOString(),
+  }
+  if (!saveAccountDeletionReceipt(newReceipt)) {
+    errorKey.value = 'member.accountDeletion.errors.receiptStorage'
+    return null
+  }
+  pendingReceiptToken.value = receiptToken
+  pendingReceipt.value = newReceipt
+  return receiptToken
+}
+
+function uncertainCompletionResult(): AccountDeletionCompletionResult | null {
+  const receipt = currentMemberReceipt(pendingReceipt.value ?? readAccountDeletionReceipt())
+  return receipt ? { completion: 'accepted', receipt } : null
+}
+
+function currentMemberReceipt(receipt: AccountDeletionReceipt | null): AccountDeletionReceipt | null {
+  return receipt?.ownerMemberId === props.memberId ? receipt : null
+}
+
+function clearProvisionalReceipt() {
+  const receipt = currentMemberReceipt(pendingReceipt.value ?? readAccountDeletionReceipt())
+  if (receipt?.jobId === null) clearAccountDeletionReceipt()
+  pendingReceiptToken.value = null
+  pendingReceipt.value = null
+}
+
+function isTrustedAcceptedResponse(
+  value: unknown,
+  receiptToken: string,
+): value is AccountDeletionAcceptedResponse {
+  if (!value || typeof value !== 'object') return false
+  const response = value as Record<string, unknown>
+  return Number.isInteger(response.jobId)
+    && (response.jobId as number) > 0
+    && typeof response.status === 'string'
+    && response.status.trim().length > 0
+    && response.receiptToken === receiptToken
+    && typeof response.estimatedCompletionAt === 'string'
+    && Number.isFinite(Date.parse(response.estimatedCompletionAt))
+}
+
+function accountDeletionReceiptFromAcceptedResponse(
+  response: AccountDeletionAcceptedResponse,
+): AccountDeletionReceipt | null {
+  const receipt = {
+    ownerMemberId: props.memberId,
+    jobId: response.jobId,
+    receiptToken: response.receiptToken,
+    estimatedCompletionAt: response.estimatedCompletionAt,
+  }
+  return isAccountDeletionReceipt(receipt) ? receipt : null
+}
+
+function accountDeletionReceiptFromUnknown(error: unknown): AccountDeletionReceipt | null {
+  const data = (error as { response?: { data?: unknown } }).response?.data
+  if (!data || typeof data !== 'object') return null
+  const value = data as Record<string, unknown>
+  const receipt = {
+    ownerMemberId: props.memberId,
+    jobId: value.jobId,
+    receiptToken: value.receiptToken,
+    estimatedCompletionAt: value.estimatedCompletionAt,
+  }
+  return isAccountDeletionReceipt(receipt) ? receipt : null
+}
+
+function receiptRecoveryPath(): string {
+  return hasStoredAccountDeletionReceiptEntry() ? '/account-deletion-status' : '/support'
+}
+
+function receiptRecoveryLabel(): string {
+  return hasStoredAccountDeletionReceiptEntry()
+    ? t('member.accountDeletion.status.recoverStoredReceipt')
+    : t('member.accountDeletion.completion.contactSupport')
 }
 </script>
 
@@ -359,6 +523,19 @@ async function submit() {
         <div v-if="loading" class="flex min-h-56 items-center justify-center gap-2 text-dp-text-secondary">
           <Loader2 class="h-5 w-5 animate-spin text-dp-accent" aria-hidden="true" />
           {{ t('member.accountDeletion.loading') }}
+        </div>
+
+        <div v-else-if="requestBlocked" class="flex min-h-56 flex-col items-center justify-center text-center">
+          <AlertTriangle class="h-8 w-8 text-dp-warning" aria-hidden="true" />
+          <p class="mt-3 text-sm leading-6 text-dp-text-secondary" role="alert">
+            {{ t(errorKey || 'member.accountDeletion.errors.generic') }}
+          </p>
+          <RouterLink
+            to="/support"
+            class="mt-4 inline-flex min-h-11 items-center rounded-lg bg-dp-accent-soft px-4 font-medium text-dp-accent hover:bg-dp-accent-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dp-accent-ring"
+          >
+            {{ t('member.accountDeletion.completion.contactSupport') }}
+          </RouterLink>
         </div>
 
         <div v-else-if="!preview" class="flex min-h-56 flex-col items-center justify-center text-center">
@@ -552,10 +729,17 @@ async function submit() {
             <AlertTriangle class="mt-1 h-4 w-4 shrink-0" aria-hidden="true" />
             {{ t(errorKey) }}
           </p>
+          <RouterLink
+            v-if="errorKey && shouldShowReceiptRecovery"
+            :to="receiptRecoveryPath()"
+            class="block text-center text-sm font-semibold text-dp-accent hover:underline"
+          >
+            {{ receiptRecoveryLabel() }}
+          </RouterLink>
         </div>
       </div>
 
-      <div v-if="preview" class="modal-actions modal-footer-safe flex-col-reverse sm:flex-row">
+      <div v-if="preview && !requestBlocked" class="modal-actions modal-footer-safe flex-col-reverse sm:flex-row">
         <button
           v-if="step !== 'scope'"
           type="button"

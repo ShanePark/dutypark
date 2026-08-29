@@ -53,6 +53,10 @@ nonisolated struct AccountDeletionFlowState: Equatable, Sendable {
 nonisolated enum AccountDeletionCompletion: Equatable, Sendable {
     case accepted
     case alreadyPending
+    /// A receipt from another account is already stored on this device. The
+    /// current account must not reuse or replace it; the caller should keep
+    /// the current session intact and show status-first guidance instead.
+    case existingReceipt
 }
 
 @MainActor
@@ -63,19 +67,26 @@ final class AccountDeletionViewModel: ObservableObject {
     @Published private(set) var isLoading = false
     @Published private(set) var isWorking = false
     @Published private(set) var errorKey: String?
+    private(set) var acceptedResponse: AccountDeletionAccepted? = nil
 
     private let service: any AccountDeletionServicing
     private let oauthClient: MobileOAuthClient
     private let appleSignInClient: AppleSignInClient
+    private let receiptStore: AccountDeletionReceiptStore
+    private let ownerMemberID: Int64?
 
     init(
         service: (any AccountDeletionServicing)? = nil,
         oauthClient: MobileOAuthClient = MobileOAuthClient(),
-        appleSignInClient: AppleSignInClient = AppleSignInClient()
+        appleSignInClient: AppleSignInClient = AppleSignInClient(),
+        receiptStore: AccountDeletionReceiptStore = .shared,
+        ownerMemberID: Int64? = nil
     ) {
         self.service = service ?? Self.defaultService()
         self.oauthClient = oauthClient
         self.appleSignInClient = appleSignInClient
+        self.receiptStore = receiptStore
+        self.ownerMemberID = ownerMemberID
     }
 
     private static func defaultService() -> any AccountDeletionServicing {
@@ -230,7 +241,7 @@ final class AccountDeletionViewModel: ObservableObject {
         }
     }
 
-    func submit() async -> AccountDeletionCompletion? {
+    func submit(ownerMemberID: Int64? = nil) async -> AccountDeletionCompletion? {
         guard flow.step == .finalConfirmation else { return nil }
         guard !isWorking else { return nil }
         guard let proof = flow.validProof() else {
@@ -241,29 +252,83 @@ final class AccountDeletionViewModel: ObservableObject {
         }
         isWorking = true
         errorKey = nil
+        acceptedResponse = nil
         defer {
             flow.clearProof()
             isWorking = false
         }
+        guard let ownerMemberID = ownerMemberID ?? self.ownerMemberID else {
+            errorKey = "settings.accountDeletion.error.receiptStorage"
+            DPHapticCenter.shared.emit(.error)
+            return nil
+        }
+        let receiptToken: String
         do {
-            _ = try await service.requestAccountDeletion(
-                reauthProof: proof,
-                transferAdminToMemberId: flow.selectedTransferMemberID
-            )
-            return .accepted
-        } catch let error as APIError where Self.code(from: error) == "account.delete.alreadyPending" {
-            return .alreadyPending
+            receiptToken = try receiptStore.prepareReceiptToken(ownerMemberID: ownerMemberID)
+        } catch let error as AccountDeletionReceiptStoreError
+            where error == .receiptBelongsToAnotherAccount {
+            errorKey = Self.errorKey(for: error)
+            DPHapticCenter.shared.emit(.warning)
+            return .existingReceipt
         } catch {
             errorKey = Self.errorKey(for: error)
             DPHapticCenter.shared.emit(.error)
-            // The backend consumes a valid proof before applying later team checks,
-            // so every failed final request must require a fresh proof.
-            flow.step = .reauthentication
             return nil
+        }
+        do {
+            let response = try await service.requestAccountDeletion(
+                reauthProof: proof,
+                receiptToken: receiptToken,
+                transferAdminToMemberId: flow.selectedTransferMemberID
+            )
+            guard response.receiptToken == receiptToken,
+                  let receipt = response.receipt(ownerMemberID: ownerMemberID)
+            else {
+                // The server may already have accepted the request even when
+                // its response cannot be trusted. Keep the provisional receipt
+                // and continue to the public status screen instead of losing
+                // the only handle that can resolve that ambiguity.
+                return .accepted
+            }
+            do {
+                try receiptStore.save(receipt)
+            } catch {
+                // The request reached the server, but local receipt metadata
+                // could not be updated. Keep the provisional token and let
+                // the public status screen resolve the ambiguous result.
+                return .accepted
+            }
+            acceptedResponse = response
+            return .accepted
+        } catch let error as APIError where error == .decoding {
+            // A 2xx response with an unexpected body is also ambiguous: the
+            // deletion may have been committed before decoding failed.
+            return .accepted
+        } catch {
+            if Self.isDefinitiveClientRejection(error) {
+                receiptStore.clear()
+                errorKey = Self.errorKey(for: error)
+                DPHapticCenter.shared.emit(.error)
+                // The backend consumes a valid proof before applying later
+                // checks, so every definitive rejection needs a fresh proof.
+                flow.step = .reauthentication
+                return nil
+            }
+            // Transport, server failures, malformed responses, and any other
+            // uncertain outcome may have committed the deletion. Keep the
+            // provisional receipt and continue to status lookup.
+            return .accepted
         }
     }
 
     nonisolated static func errorKey(for error: Error) -> String {
+        if error is AccountDeletionReceiptStoreError {
+            if let receiptError = error as? AccountDeletionReceiptStoreError,
+               receiptError == .receiptBelongsToAnotherAccount {
+                return "settings.accountDeletion.error.receiptOtherAccount"
+            }
+            return "settings.accountDeletion.error.receiptStorage"
+        }
         guard let apiError = error as? APIError else {
             if let appleError = error as? AppleSignInError {
                 return switch appleError {
@@ -313,6 +378,16 @@ final class AccountDeletionViewModel: ObservableObject {
         }
     }
 
+    nonisolated private static func isDefinitiveClientRejection(_ error: Error) -> Bool {
+        guard let apiError = error as? APIError else { return false }
+        switch apiError {
+        case .server(let status, _), .serverWithDetails(let status, _, _):
+            return status >= 400 && status < 500
+        case .transport, .decoding, .invalidURL, .invalidResponse:
+            return false
+        }
+    }
+
 }
 
 #if DEBUG
@@ -332,6 +407,7 @@ private nonisolated struct AccountDeletionUITestingService: AccountDeletionServi
 
     func requestAccountDeletion(
         reauthProof: String,
+        receiptToken: String,
         transferAdminToMemberId: Int64?
     ) async throws -> AccountDeletionAccepted {
         throw APIError.server(status: 409, code: "ui-testing.accountDeletion.executionForbidden")
@@ -341,8 +417,9 @@ private nonisolated struct AccountDeletionUITestingService: AccountDeletionServi
 
 struct AccountDeletionView: View {
     @EnvironmentObject private var session: SessionStore
-    @StateObject private var model = AccountDeletionViewModel()
+    @StateObject private var model: AccountDeletionViewModel
     @ObservedObject var push: APNsRegistrationManager
+    let memberID: Int64
     let memberName: String
     let maximumHeight: CGFloat
     let dismiss: () -> Void
@@ -350,6 +427,23 @@ struct AccountDeletionView: View {
     @FocusState private var focusedField: Field?
 
     private enum Field { case password, name }
+
+    init(
+        memberID: Int64,
+        push: APNsRegistrationManager,
+        memberName: String,
+        maximumHeight: CGFloat,
+        dismiss: @escaping () -> Void,
+        workingChanged: @escaping (Bool) -> Void = { _ in }
+    ) {
+        self.memberID = memberID
+        self.push = push
+        self.memberName = memberName
+        self.maximumHeight = maximumHeight
+        self.dismiss = dismiss
+        self.workingChanged = workingChanged
+        _model = StateObject(wrappedValue: AccountDeletionViewModel(ownerMemberID: memberID))
+    }
 
     var body: some View {
         DPModalPanel(maximumPanelHeight: maximumHeight, scrollTarget: focusedField) {
@@ -628,9 +722,14 @@ struct AccountDeletionView: View {
     }
 
     private func deleteAccount() async {
-        guard await model.submit() != nil else { return }
+        // An existing receipt belongs to another account and is deliberately
+        // reported as a non-successful completion. Keep this account signed in
+        // so the user can follow the sign-out/status guidance without treating
+        // another account's deletion as their own request.
+        guard let completion = await model.submit(), completion == .accepted else { return }
+        let receipt = model.acceptedResponse?.receipt(ownerMemberID: memberID)
         await push.completeAccountDeletionCleanup()
-        await session.completeAccountDeletion()
+        await session.completeAccountDeletion(receipt: receipt)
         dismiss()
     }
 

@@ -1,7 +1,29 @@
 import type { AccountDeletionPreview } from '@/api/accountDeletion'
+import type { AccountDeletionReceipt } from './accountDeletionReceipt'
 
 export type AccountDeletionStep = 'scope' | 'team' | 'reauthentication' | 'nameConfirmation' | 'finalConfirmation'
 export type AccountDeletionCompletion = 'accepted' | 'alreadyPending'
+
+export interface AccountDeletionCompletionResult {
+  completion: AccountDeletionCompletion
+  receipt: AccountDeletionReceipt | null
+}
+
+/**
+ * A deletion request can have been accepted even when the browser did not receive a response.
+ * Only an HTTP 4xx response proves that the request was rejected before background processing.
+ */
+export function isAmbiguousAccountDeletionRequestError(error: unknown): boolean {
+  const response = (error as { response?: { status?: unknown } }).response
+  if (!response) return true
+  // A 4xx response is the only response class that definitively rejects this
+  // request before the asynchronous deletion job can be accepted. Everything
+  // else (including malformed status metadata and redirects) is ambiguous.
+  return typeof response.status !== 'number'
+    || !Number.isInteger(response.status)
+    || response.status < 400
+    || response.status >= 500
+}
 
 export const ACCOUNT_DELETION_STEPS: AccountDeletionStep[] = [
   'scope',

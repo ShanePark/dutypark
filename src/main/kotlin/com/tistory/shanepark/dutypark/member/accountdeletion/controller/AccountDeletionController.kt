@@ -8,6 +8,7 @@ import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.service.CookieService
 import jakarta.servlet.http.HttpServletResponse
+import org.springframework.http.CacheControl
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
@@ -32,6 +33,8 @@ class AccountDeletionController(
     ): ResponseEntity<AccountDeletionAcceptedResponse> {
         val accepted = accountDeletionService.requestDeletion(login, request)
         cookieService.clearTokenCookies(response)
-        return ResponseEntity.accepted().body(accepted)
+        return ResponseEntity.accepted()
+            .cacheControl(CacheControl.noStore())
+            .body(accepted)
     }
 }

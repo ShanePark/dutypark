@@ -1,15 +1,20 @@
 package com.tistory.shanepark.dutypark.member.accountdeletion
 
 import com.tistory.shanepark.dutypark.RestDocsTest
+import com.tistory.shanepark.dutypark.member.accountdeletion.domain.AccountDeletionJob
+import com.tistory.shanepark.dutypark.member.accountdeletion.domain.AccountDeletionJobStatus
 import com.tistory.shanepark.dutypark.member.accountdeletion.dto.AccountDeletionRequest
 import com.tistory.shanepark.dutypark.member.accountdeletion.repository.AccountDeletionJobRepository
+import com.tistory.shanepark.dutypark.member.accountdeletion.service.AccountDeletionReceiptToken
 import com.tistory.shanepark.dutypark.member.accountdeletion.service.AccountDeletionService
+import com.tistory.shanepark.dutypark.member.accountdeletion.exception.AccountDeletionException
 import com.tistory.shanepark.dutypark.member.domain.enums.MemberStatus
 import com.tistory.shanepark.dutypark.member.repository.RefreshTokenRepository
 import com.tistory.shanepark.dutypark.push.apns.domain.entity.ApnsInstallation
 import com.tistory.shanepark.dutypark.push.apns.domain.repository.ApnsInstallationRepository
 import com.tistory.shanepark.dutypark.security.domain.entity.RefreshToken
 import org.assertj.core.api.Assertions.assertThat
+import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.http.HttpHeaders
@@ -18,6 +23,8 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
+import java.time.Duration
+import java.time.Instant
 import java.time.LocalDateTime
 
 class AccountDeletionControllerIntegrationTest : RestDocsTest() {
@@ -112,15 +119,19 @@ class AccountDeletionControllerIntegrationTest : RestDocsTest() {
             .andExpect(status().isAccepted)
             .andExpect(jsonPath("$.status").value("ACCEPTED"))
             .andExpect(jsonPath("$.jobId").isNumber)
+            .andExpect(jsonPath("$.receiptToken").isString)
+            .andExpect(jsonPath("$.estimatedCompletionAt").isString)
             .andReturn()
 
         em.flush()
         em.clear()
 
         val updatedMember = memberRepository.findById(TestData.member.id!!).orElseThrow()
+        val savedJob = accountDeletionJobRepository.findByRootMemberId(TestData.member.id!!)
+            ?: error("deletion job was not saved")
         assertThat(updatedMember.status).isEqualTo(MemberStatus.DELETION_PENDING)
         assertThat(updatedMember.deletionRequestedAt).isNotNull()
-        assertThat(accountDeletionJobRepository.findByRootMemberId(TestData.member.id!!)).isNotNull
+        assertThat(savedJob.estimatedCompletionAt).isEqualTo(savedJob.createdAt.plus(Duration.ofMinutes(5)))
         assertThat(refreshTokenRepository.findAllByMemberIdIn(listOf(TestData.member.id!!))).isEmpty()
         assertThat(apnsInstallationRepository.findByDeviceToken("account-deletion-device-token")).isNull()
 
@@ -131,6 +142,198 @@ class AccountDeletionControllerIntegrationTest : RestDocsTest() {
         assertThat(setCookies).anySatisfy { cookie ->
             assertThat(cookie).contains("refresh_token=").contains("Max-Age=0").contains("Path=/api/auth")
         }
+    }
+
+    @Test
+    fun `receipt token returns public processing status without authentication`() {
+        val result = performDeletion(AccountDeletionRequest(confirmation = "DELETE", password = TestData.testPass))
+            .andExpect(status().isAccepted)
+            .andReturn()
+        val receiptToken = objectMapper.readTree(result.response.contentAsString)["receiptToken"].asText()
+
+        mockMvc.perform(
+            post("/api/account-deletions/status")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsBytes(mapOf("receiptToken" to receiptToken)))
+        )
+            .andExpect(status().isOk)
+            .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string(HttpHeaders.CACHE_CONTROL, "no-store"))
+            .andExpect(jsonPath("$.status").value("PROCESSING"))
+            .andExpect(jsonPath("$.estimatedCompletionAt").isString)
+            .andExpect(jsonPath("$.completedAt").doesNotExist())
+            .andExpect(jsonPath("$.receiptExpiresAt").doesNotExist())
+            .andExpect(jsonPath("$.jobId").doesNotExist())
+            .andExpect(jsonPath("$.receiptToken").doesNotExist())
+    }
+
+    @Test
+    fun `client receipt token is validated, hashed, and safe to reuse on a retry`() {
+        val receiptToken = AccountDeletionReceiptToken.generate()
+        val request = AccountDeletionRequest(
+            confirmation = "DELETE",
+            password = TestData.testPass,
+            receiptToken = receiptToken,
+        )
+
+        val first = performDeletion(request)
+            .andExpect(status().isAccepted)
+            .andExpect(jsonPath("$.receiptToken").value(receiptToken))
+            .andReturn()
+        val jobId = objectMapper.readTree(first.response.contentAsString)["jobId"].asLong()
+        val job = accountDeletionJobRepository.findById(jobId).orElseThrow()
+        assertThat(job.receiptTokenHash)
+            .isEqualTo(AccountDeletionReceiptToken.hash(receiptToken))
+            .doesNotContain(receiptToken)
+
+        val duplicate = accountDeletionService.requestDeletion(loginMember(TestData.member), request)
+        assertThat(duplicate.jobId).isEqualTo(jobId)
+        assertThat(duplicate.receiptToken).isEqualTo(receiptToken)
+    }
+
+    @Test
+    fun `client receipt token must have the generated opaque token shape`() {
+        performDeletion(
+            AccountDeletionRequest(
+                confirmation = "DELETE",
+                password = TestData.testPass,
+                receiptToken = "weak-receipt-token",
+            )
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("account.delete.receiptToken.invalid"))
+
+        assertThat(accountDeletionJobRepository.findByRootMemberId(TestData.member.id!!)).isNull()
+    }
+
+    @Test
+    fun `client receipt token mismatch cannot revoke the original status receipt`() {
+        val originalToken = AccountDeletionReceiptToken.generate()
+        performDeletion(
+            AccountDeletionRequest(
+                confirmation = "DELETE",
+                password = TestData.testPass,
+                receiptToken = originalToken,
+            )
+        )
+            .andExpect(status().isAccepted)
+
+        val replacementToken = AccountDeletionReceiptToken.generate()
+        assertThatThrownBy {
+            accountDeletionService.requestDeletion(
+                loginMember(TestData.member),
+                AccountDeletionRequest(
+                    confirmation = "DELETE",
+                    password = TestData.testPass,
+                    receiptToken = replacementToken,
+                ),
+            )
+        }
+            .isInstanceOf(AccountDeletionException::class.java)
+            .extracting("message")
+            .isEqualTo("account.delete.receiptToken.mismatch")
+
+        mockMvc.perform(
+            post("/api/account-deletions/status")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsBytes(mapOf("receiptToken" to originalToken)))
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value("PROCESSING"))
+    }
+
+    @Test
+    fun `receipt token returns completed status and terminal expiry`() {
+        val result = performDeletion(AccountDeletionRequest(confirmation = "DELETE", password = TestData.testPass))
+            .andExpect(status().isAccepted)
+            .andReturn()
+        val receiptToken = objectMapper.readTree(result.response.contentAsString)["receiptToken"].asText()
+        val jobId = objectMapper.readTree(result.response.contentAsString)["jobId"].asLong()
+        val completedAt = Instant.now().minusSeconds(10)
+        val job = accountDeletionJobRepository.findById(jobId).orElseThrow()
+        job.claim(completedAt.minusSeconds(1))
+        job.markCompleted(completedAt)
+        accountDeletionJobRepository.saveAndFlush(job)
+
+        mockMvc.perform(
+            post("/api/account-deletions/status")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsBytes(mapOf("receiptToken" to receiptToken)))
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.status").value("COMPLETED"))
+            .andExpect(jsonPath("$.completedAt").value(completedAt.toString()))
+            .andExpect(jsonPath("$.receiptExpiresAt").value(completedAt.plus(Duration.ofDays(30)).toString()))
+    }
+
+    @Test
+    fun `issuing a receipt for a legacy completed job starts a new retention window`() {
+        val completedAt = Instant.parse("2025-08-12T03:00:00Z")
+        val jobId = saveLegacyTerminalJob(AccountDeletionJobStatus.COMPLETED, completedAt)
+        assertThat(accountDeletionJobRepository.findById(jobId).orElseThrow().receiptExpiresAt).isNull()
+
+        val beforeIssue = Instant.now()
+        val receiptToken = AccountDeletionReceiptToken.generate()
+        val accepted = accountDeletionService.requestDeletion(
+            loginMember(TestData.member),
+            AccountDeletionRequest(confirmation = "DELETE", receiptToken = receiptToken),
+        )
+        val afterIssue = Instant.now()
+
+        assertThat(accepted.receiptToken).isEqualTo(receiptToken)
+        assertReceiptExpiresWithinNewRetentionWindow(jobId, beforeIssue, afterIssue)
+    }
+
+    @Test
+    fun `issuing a receipt for a legacy failed job starts a new retention window`() {
+        val failedAt = Instant.parse("2025-08-12T03:00:00Z")
+        val jobId = saveLegacyTerminalJob(AccountDeletionJobStatus.FAILED, failedAt)
+        assertThat(accountDeletionJobRepository.findById(jobId).orElseThrow().receiptExpiresAt).isNull()
+
+        val beforeIssue = Instant.now()
+        val receiptToken = AccountDeletionReceiptToken.generate()
+        val accepted = accountDeletionService.requestDeletion(
+            loginMember(TestData.member),
+            AccountDeletionRequest(confirmation = "DELETE", receiptToken = receiptToken),
+        )
+        val afterIssue = Instant.now()
+
+        assertThat(accepted.receiptToken).isEqualTo(receiptToken)
+        assertReceiptExpiresWithinNewRetentionWindow(jobId, beforeIssue, afterIssue)
+    }
+
+    @Test
+    fun `unknown and expired receipt tokens return the same generic not found response`() {
+        val result = performDeletion(AccountDeletionRequest(confirmation = "DELETE", password = TestData.testPass))
+            .andExpect(status().isAccepted)
+            .andReturn()
+        val receiptToken = objectMapper.readTree(result.response.contentAsString)["receiptToken"].asText()
+        val jobId = objectMapper.readTree(result.response.contentAsString)["jobId"].asLong()
+        val completedAt = Instant.now().minus(Duration.ofDays(31))
+        val job = accountDeletionJobRepository.findById(jobId).orElseThrow()
+        job.claim(completedAt.minusSeconds(1))
+        job.markCompleted(completedAt)
+        accountDeletionJobRepository.saveAndFlush(job)
+
+        val expired = mockMvc.perform(
+            post("/api/account-deletions/status")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsBytes(mapOf("receiptToken" to receiptToken)))
+        )
+            .andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.code").value("accountDeletion.receipt.notFound"))
+            .andReturn()
+        val unknown = mockMvc.perform(
+            post("/api/account-deletions/status")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsBytes(mapOf("receiptToken" to "unknown-receipt-token")))
+        )
+            .andExpect(status().isNotFound)
+            .andExpect(jsonPath("$.code").value("accountDeletion.receipt.notFound"))
+            .andReturn()
+
+        assertThat(expired.response.contentAsString).isEqualTo(unknown.response.contentAsString)
+        assertThat(accountDeletionJobRepository.findById(jobId)).isPresent
+        assertThat(accountDeletionJobRepository.findById(jobId).orElseThrow().receiptTokenHash).isNull()
     }
 
     @Test
@@ -262,5 +465,42 @@ class AccountDeletionControllerIntegrationTest : RestDocsTest() {
         teamRepository.save(targetTeam)
         em.flush()
         em.clear()
+    }
+
+    private fun saveLegacyTerminalJob(status: AccountDeletionJobStatus, terminalAt: Instant): Long {
+        val job = AccountDeletionJob(
+            rootMemberId = TestData.member.id!!,
+            nextAttemptAt = terminalAt,
+            createdAt = terminalAt.minus(Duration.ofDays(365)),
+        )
+        accountDeletionJobRepository.saveAndFlush(job)
+        job.claim(terminalAt.minusSeconds(1))
+        when (status) {
+            AccountDeletionJobStatus.COMPLETED -> job.markCompleted(terminalAt)
+            AccountDeletionJobStatus.FAILED -> job.markFailed("legacy failure", terminalAt)
+            else -> error("only terminal statuses are supported")
+        }
+        accountDeletionJobRepository.saveAndFlush(job)
+        val jobId = requireNotNull(job.id)
+        em.createNativeQuery(
+            "update account_deletion_job set receipt_token_hash = null, receipt_expires_at = null where id = :id",
+        )
+            .setParameter("id", jobId)
+            .executeUpdate()
+        em.clear()
+        return jobId
+    }
+
+    private fun assertReceiptExpiresWithinNewRetentionWindow(
+        jobId: Long,
+        beforeIssue: Instant,
+        afterIssue: Instant,
+    ) {
+        val expiresAt = accountDeletionJobRepository.findById(jobId).orElseThrow().receiptExpiresAt
+            ?: error("receipt expiry was not issued")
+        assertThat(expiresAt).isBetween(
+            beforeIssue.plus(Duration.ofDays(30)),
+            afterIssue.plus(Duration.ofDays(30)),
+        )
     }
 }

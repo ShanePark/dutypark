@@ -1,0 +1,41 @@
+{
+  "recordedAt": "2026-08-29T17:50:26+09:00",
+  "repositoryHead": "407f139799ed97aa873032c06fdc6c2a159438b3",
+  "workingTreeState": "uncommitted account-deletion receipt/status implementation on repositoryHead",
+  "productCodeDirtyDuringRerun": true,
+  "backend": {
+    "command": "env JAVA_HOME=/Users/shane/.sdkman/candidates/java/17.0.18-tem PATH=/Users/shane/.sdkman/candidates/java/17.0.18-tem/bin:$PATH GRADLE_USER_HOME=/tmp/dutypark-gradle-account-deletion ./gradlew test",
+    "result": "PASS",
+    "total": 1845,
+    "passed": 1824,
+    "skipped": 21,
+    "failed": 0,
+    "errors": 0
+  },
+  "web": {
+    "testCommand": "cd frontend && npm test",
+    "testResult": "PASS",
+    "testFilesPassed": 97,
+    "testsPassed": 725,
+    "typeCheckCommand": "cd frontend && npm run type-check",
+    "typeCheckResult": "PASS",
+    "buildCommand": "cd frontend && npm run build",
+    "buildResult": "PASS",
+    "modulesTransformed": 2218
+  },
+  "iosUnit": {
+    "command": "cd ios && xcodebuild -project Dutypark.xcodeproj -scheme Dutypark -destination 'platform=iOS Simulator,name=iPhone 13 mini' -derivedDataPath /private/tmp/dutypark-commit-review-full-derived CODE_SIGNING_ALLOWED=NO -resultBundlePath /private/tmp/dutypark-commit-review-full-20260829.xcresult -only-testing:DutyparkTests test",
+    "result": "PASS",
+    "device": "iPhone 13 mini",
+    "platform": "iOS Simulator",
+    "osVersion": "26.5 (23F77)",
+    "identifierTotal": 1168,
+    "aggregatePassed": 1167,
+    "expandedTotal": 1193,
+    "expandedPassed": 1192,
+    "skipped": 1,
+    "failed": 0,
+    "resultBundlePath": "/private/tmp/dutypark-commit-review-full-20260829.xcresult",
+    "resultBundleTreeSha256": "3b82fb2ae402bcc1226e85f8cf530aeb36838efd4883a914045276deb39975d7"
+  }
+}

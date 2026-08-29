@@ -38,6 +38,12 @@ export const routes: RouteRecordRaw[] = [
     meta: { requiresAuth: false, hideLayout: true },
   },
   {
+    path: '/account-deletion-status',
+    name: 'account-deletion-status',
+    component: () => import('@/views/accountDeletionStatus/AccountDeletionStatusView.vue'),
+    meta: { requiresAuth: false, hideLayout: true },
+  },
+  {
     path: '/duty/:id',
     name: 'duty',
     component: () => import('@/views/duty/DutyView.vue'),

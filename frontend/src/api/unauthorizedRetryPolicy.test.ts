@@ -5,6 +5,7 @@ describe('unauthorized retry policy', () => {
   it.each([
     '/auth/reauth/password',
     '/members/me/deletion',
+    '/account-deletions/status',
     '/auth/mobile/oauth/exchange',
     '/auth/web/oauth/apple/exchange',
   ])('does not refresh and replay one-time POST %s', (url) => {

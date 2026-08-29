@@ -41,6 +41,7 @@ final class SessionStore: ObservableObject {
     private let offlineSessionStore: any OfflineSessionStoring
     private let localDataPurger: any SessionLocalDataPurging
     private let cancelOfflineSync: @MainActor @Sendable (MemberID?) async -> Void
+    private let accountDeletionReceiptStore: AccountDeletionReceiptStore
     private var impersonationExpiryTask: Task<Void, Never>?
     private var isTerminatingSession = false
     private var sessionTerminationWaiters: [CheckedContinuation<Void, Never>] = []
@@ -55,6 +56,7 @@ final class SessionStore: ObservableObject {
     @Published private(set) var impersonationExpiresAt: Date?
     @Published private(set) var pendingDestination: URL?
     @Published private(set) var accountDeletionAcceptedPresentation: AccountDeletionAcceptedPresentation?
+    @Published private(set) var accountDeletionReceipt: AccountDeletionReceipt?
     @Published private(set) var serverSessionWarning: ServerSessionWarningPresentation?
     @Published private(set) var authenticationTransitionFailure: AuthenticationTransitionFailurePresentation?
 
@@ -81,22 +83,29 @@ final class SessionStore: ObservableObject {
                 OfflineSyncCoordinator.shared.cancelAll()
             }
         },
-        initialAvailability: SessionAvailability = .online
+        initialAvailability: SessionAvailability = .online,
+        accountDeletionReceiptStore: AccountDeletionReceiptStore = .shared
     ) {
+        let storedReceipt = accountDeletionReceiptStore.load()
         self.authService = authService
         self.unregisterPush = unregisterPush
         self.offlineSessionStore = offlineSessionStore
         self.localDataPurger = localDataPurger
         self.cancelOfflineSync = cancelOfflineSync
+        self.accountDeletionReceiptStore = accountDeletionReceiptStore
         self.state = initialState
         self.availability = initialAvailability
         self.impersonationExpiresAt = impersonationExpiresAt
             ?? UserDefaults.standard.object(forKey: Self.impersonationExpirationKey) as? Date
+        self.accountDeletionReceipt = storedReceipt
+        self.accountDeletionAcceptedPresentation = storedReceipt == nil ? nil : .accepted
     }
 
     func restore() async {
         guard state == .restoring else { return }
-        accountDeletionAcceptedPresentation = nil
+        if accountDeletionReceipt != nil {
+            accountDeletionAcceptedPresentation = .accepted
+        }
         do {
             if let member = try await authService.restore() {
                 await authenticate(member, availability: .online)
@@ -274,7 +283,17 @@ final class SessionStore: ObservableObject {
 
     /// Completes the irreversible local side of account deletion after the server
     /// accepted the deletion job (or reports that the account is already pending).
-    func completeAccountDeletion() async {
+    func completeAccountDeletion(receipt: AccountDeletionReceipt? = nil) async {
+        if let receipt {
+            do {
+                try accountDeletionReceiptStore.save(receipt)
+                accountDeletionReceipt = receipt
+            } catch {
+                accountDeletionReceipt = accountDeletionReceiptStore.load()
+            }
+        } else if accountDeletionReceipt == nil {
+            accountDeletionReceipt = accountDeletionReceiptStore.load()
+        }
         await invalidateAuthenticationContext()
         if case .authenticated(let member) = state {
             UserDefaults.standard.removeObject(forKey: "selectedDday_\(member.id)")
@@ -293,11 +312,13 @@ final class SessionStore: ObservableObject {
         pendingDestination = nil
         await becomeGuest()
         accountDeletionAcceptedPresentation = .accepted
-        DPHapticCenter.shared.emit(.success)
     }
 
-    func dismissAccountDeletionAcceptedPresentation() {
+    func dismissAccountDeletionAcceptedPresentation(clearReceipt: Bool = true) {
         accountDeletionAcceptedPresentation = nil
+        guard clearReceipt else { return }
+        accountDeletionReceiptStore.clear()
+        accountDeletionReceipt = nil
     }
 
     func dismissServerSessionWarning() {
@@ -493,6 +514,9 @@ final class SessionStore: ObservableObject {
         AIScheduleParsingConsentStore.shared.scope(to: nil)
         availability = .online
         state = .guest
+        if accountDeletionReceipt != nil {
+            accountDeletionAcceptedPresentation = .accepted
+        }
     }
 
     private func authenticationDidFail(

@@ -23,26 +23,33 @@ class AccountDeletionWorker(
         initialDelayString = "\${dutypark.account-deletion.worker.initial-delay-ms:5000}",
     )
     fun processPendingJobs() {
+        coordinator.clearExpiredReceiptTokenHashes()
         while (true) {
-            val jobId = coordinator.claimNext() ?: return
-            runCatching { process(jobId) }
+            val claim = coordinator.claimNext() ?: return
+            runCatching { process(claim) }
                 .onFailure { error ->
                     val code = "accountDeletion.worker.${error::class.simpleName ?: "failure"}"
-                    log.error("Account deletion job failed: jobId={}, errorCode={}", jobId, code)
-                    runCatching { coordinator.markFailure(jobId, code) }
-                        .onFailure { log.error("Account deletion job state update failed: jobId={}", jobId) }
+                    log.error("Account deletion job failed: jobId={}, errorCode={}", claim.jobId, code)
+                    runCatching { coordinator.markFailure(claim, code) }
+                        .onFailure { log.error("Account deletion job state update failed: jobId={}", claim.jobId) }
                 }
         }
     }
 
-    private fun process(jobId: Long) {
-        val memberIds = targetMemberRepository.findAllByJobId(jobId).map { it.memberId }
-        val teamIds = targetTeamRepository.findAllByJobId(jobId).map { it.teamId }
+    private fun process(claim: AccountDeletionClaim) {
+        val memberIds = targetMemberRepository.findAllByJobId(claim.jobId).map { it.memberId }
+        val teamIds = targetTeamRepository.findAllByJobId(claim.jobId).map { it.teamId }
         check(memberIds.isNotEmpty())
         externalAccountRevoker.revoke(memberIds)
         fileCleaner.deleteFiles(memberIds, teamIds)
         databaseCleaner.clean(memberIds, teamIds)
-        coordinator.markCompleted(jobId)
-        log.info("Account deletion job completed: jobId={}, memberCount={}, teamCount={}", jobId, memberIds.size, teamIds.size)
+        if (coordinator.markCompleted(claim)) {
+            log.info(
+                "Account deletion job completed: jobId={}, memberCount={}, teamCount={}",
+                claim.jobId,
+                memberIds.size,
+                teamIds.size,
+            )
+        }
     }
 }
