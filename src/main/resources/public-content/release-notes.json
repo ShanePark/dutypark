@@ -40,6 +40,16 @@
         }
       },
       "entries": {
+        "pr-412": {
+          "title": "iPhone 출시 준비와 안전한 사용 경험 강화",
+          "summary": "iPhone 앱 출시와 심사 흐름을 안정화하고 푸시 알림과 일정 표시를 다듬었으며, 계정 삭제 확인과 콘텐츠·개인정보 보호를 강화했습니다.",
+          "changes": [
+            "로그인 후 푸시 알림 권한을 안내하고 시스템 권한과 설정 토글을 동기화하며, 알림과 캘린더 이동 및 일정 시간 표시를 iPhone에서 일관되게 개선했습니다.",
+            "iOS 앱의 심사·출시 흐름과 화면 캡처를 안정화하고 실제 앱에 필요한 기능 중심으로 정리했습니다.",
+            "회원 탈퇴가 완료되면 확인용 영수증과 상태 화면을 제공하고, 데이터 보존 예외와 개인정보 수집 안내를 명확히 표시합니다.",
+            "웹과 iPhone의 공개 콘텐츠 입력 필터를 서버 경계까지 강화하고, Slack 알림에서 일정 식별자와 민감한 정보가 노출되지 않도록 보호했습니다."
+          ]
+        },
         "pr-411": {
           "title": "iPhone 오프라인 안내와 앱 미리보기 새단장",
           "summary": "iPhone 오프라인 지원 범위를 자세히 안내하고 실제 샘플 데이터로 앱 소개 화면을 새로 만들었으며, 프로필 사진이 없는 회원의 불필요한 이미지 요청을 줄였습니다.",
@@ -2268,6 +2278,16 @@
         }
       },
       "entries": {
+        "pr-412": {
+          "title": "Safer iPhone release and app experience",
+          "summary": "Stabilizes the iPhone release and review flows, refines push notifications and schedule display, and strengthens account-deletion confirmation, content filtering, and privacy protection.",
+          "changes": [
+            "Prompt for push-notification permission after login, keep the system authorization and settings toggle in sync, and make notification navigation, calendar navigation, and schedule times more consistent on iPhone.",
+            "Stabilize iOS review and release flows and screen capture, while keeping the shipped app focused on the features it needs.",
+            "Provide a completion receipt and status screen after account deletion, with clearer disclosure of data-retention exceptions and collected privacy data.",
+            "Enforce public-content input filtering at server boundaries for web and iPhone, and protect Slack notifications from exposing schedule identifiers or sensitive data."
+          ]
+        },
         "pr-411": {
           "title": "Refreshed iPhone offline guide and app previews",
           "summary": "Clarifies the iPhone offline experience, refreshes app previews with realistic demo data, and avoids unnecessary image requests for members without profile photos.",
@@ -4459,6 +4479,25 @@
     }
   },
   "items": [
+    {
+      "id": "pr-412",
+      "version": "2026.08.30",
+      "date": "2026-08-30",
+      "pr": 412,
+      "url": "https://github.com/ShanePark/dutypark/pull/412",
+      "category": "improvement",
+      "areas": [
+        "auth",
+        "calendar",
+        "docs",
+        "infra",
+        "notifications",
+        "policy",
+        "schedule",
+        "security",
+        "ui"
+      ]
+    },
     {
       "id": "pr-411",
       "version": "2026.08.26",
