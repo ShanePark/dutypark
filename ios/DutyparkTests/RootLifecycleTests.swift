@@ -201,11 +201,39 @@ struct RootLifecycleTests {
         )
         #expect(
             handleSource.contains(
-                ".frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)"
+                ".frame(\n            width: DPSize.minimumTouchTarget,\n            height: DPSize.minimumTouchTarget,\n            alignment: .bottom\n        )"
             )
         )
-        #expect(dropdownSource.contains(".simultaneousGesture(dismissHandleGesture)"))
+        #expect(dropdownSource.contains(".highPriorityGesture(dismissHandleGesture)"))
+        #expect(!dropdownSource.contains(".simultaneousGesture(dismissHandleGesture)"))
         #expect(dropdownSource.contains("DragGesture(coordinateSpace: .global)"))
+        #expect(handleSource.contains(".accessibilityHidden(true)"))
+        #expect(rootSource.contains(".accessibilityAction(.escape)"))
+        #expect(rootSource.contains("notifications.dropdown.closeBackground"))
+        #expect(rootSource.contains(".accessibilityAction { closeNotificationDropdown() }"))
+    }
+
+    @Test
+    func notificationDropdownVisualAuditLaunchArgumentIsDebugOnlyAndFixtureBacked() throws {
+        let iosDirectory = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let rootSource = try String(
+            contentsOf: iosDirectory.appending(path: "Dutypark/App/RootTabView.swift"),
+            encoding: .utf8
+        )
+
+        #expect(
+            rootSource.contains(
+                "#if DEBUG\n            if ProcessInfo.processInfo.arguments.contains(\"-ui-testing-show-notifications\"),"
+            )
+        )
+        #expect(
+            rootSource.contains(
+                "ProcessInfo.processInfo.arguments.contains(\"-ui-testing-notification-fixture\")"
+            )
+        )
+        #expect(rootSource.contains("showsNotifications = true"))
     }
 
     @Test

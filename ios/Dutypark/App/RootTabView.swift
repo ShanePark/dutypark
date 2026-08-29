@@ -292,6 +292,12 @@ struct RootTabView: View {
             applyOfflineDefaultTabIfNeeded()
             await startOnlineWorkIfAllowed()
             await recoverConnectivityIfReachable()
+#if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("-ui-testing-show-notifications"),
+               ProcessInfo.processInfo.arguments.contains("-ui-testing-notification-fixture") {
+                showsNotifications = true
+            }
+#endif
         }
         .onDisappear {
             notifications.stopPolling()
@@ -1387,7 +1393,7 @@ private struct NotificationDropdown: View {
             }
             .buttonStyle(.plain)
             .background(DPColor.backgroundTertiary)
-            .simultaneousGesture(dismissHandleGesture)
+            .highPriorityGesture(dismissHandleGesture)
         }
         .background(DPColor.backgroundCard)
         .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
@@ -1411,7 +1417,11 @@ private struct NotificationDropdown: View {
                 .frame(width: 30, height: 4)
                 .padding(.bottom, DPSpacing.extraSmall)
         }
-        .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+        .frame(
+            width: DPSize.minimumTouchTarget,
+            height: DPSize.minimumTouchTarget,
+            alignment: .bottom
+        )
         // The 44pt interaction area belongs to the underlying footer row. Keeping
         // this visual overlay out of hit testing preserves the footer's tap action.
         .allowsHitTesting(false)
@@ -1422,6 +1432,7 @@ private struct NotificationDropdown: View {
         .accessibilityAddTraits(.isButton)
         .accessibilityAction { onDismiss() }
         .accessibilityIdentifier("notifications.dropdown.dismissHandle")
+        .accessibilityHidden(true)
     }
 
     private var dismissHandleGesture: some Gesture {
