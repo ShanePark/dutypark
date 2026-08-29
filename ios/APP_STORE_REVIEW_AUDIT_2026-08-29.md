@@ -2,7 +2,7 @@
 
 - 기준일: 2026-08-29 (KST)
 - 판정: **HOLD — 제출하지 않음**
-- 코드 기준 HEAD: committed `3ef00cba`; 이 문서만 담는 후속 docs commit은 코드 기준에 포함하지 않는다. 이 커밋 해시는 검증한 코드 상태를 식별하기 위한 기준이며 최종 배포 산출물 자체를 증명하지 않는다.
+- 코드 기준 HEAD: committed `c813778d`; 이 문서만 담는 후속 docs commit은 코드 기준에 포함하지 않는다. 이 커밋 해시는 검증한 코드 상태를 식별하기 위한 기준이며 최종 배포 산출물 자체를 증명하지 않는다.
 - 목적: [2026-08-28 보고서](./APP_STORE_REVIEW_AUDIT_2026-08-28.md)의 반복이 아닌, 그 이후 변경분과 제출 직전의 미검증 게이트를 기록한다.
 - 비밀값: 비밀번호, private key, client secret, webhook token, 실제 S2S URL은 이 문서에 기록하지 않는다. 심사용 계정은 App Store Connect의 `App Review Information → Sign-in required → Username / Password` 필드에서만 제공한다.
 
@@ -12,7 +12,7 @@
 
 | 제출 게이트 | 현재 판단 | 제출 전 조건 |
 |---|---|---|
-| Slack 개인정보 제거 | 수정 반영됨 | Slack focused 21 PASS. 전체 Release/실제 webhook 배포 확인은 별도 게이트 |
+| Slack 개인정보 제거 | 수정 반영됨 | Slack privacy focused 54 PASS. 전체 Release/실제 webhook 배포 확인은 별도 게이트 |
 | UGC 텍스트 필터 | 클라이언트·일부 서버 보강 반영됨 | backend/iOS 관련 focused·full 검증 PASS. 웹 정규화·private D-Day 예외는 반영됐고 cold-start/fetch fail-open, 모든 공개/공유 쓰기 경로·첨부·신고 흐름은 별도 게이트 |
 | 문의·신고 탈퇴 후 보존 | 사업자 결정 필요 | 보존기간·익명화·법적 보존 사유 및 탈퇴 UI 고지 확정 |
 | App Store 스크린샷 | 현 앱과 불일치 가능 | 최종 빌드에서 한국어·영어 세트 재촬영·재합성 |
@@ -37,7 +37,7 @@ Apple은 앱 완성도, 개인정보처리방침, 계정 삭제, UGC, 메타데�
 | Release simulator build | PASS | exact `iPhone 13 mini`, iOS 26.5 |
 | Release simulator install/launch | PASS | 임시 실행 캡처: `/private/tmp/dutypark-release-latest-20260829.png` (장기 보존 증거·제출물로 사용하지 않음) |
 | backend full Gradle | 1,829 total; 1,808 PASS / 21 SKIP / 0 FAIL | skip 사유는 개별 Gradle 결과에서 확인 |
-| Slack privacy focused | 21 PASS | 문의·신고·generic argument dump·예외 payload 최소화 검증 |
+| Slack privacy focused | 54 PASS | 일정 파싱 33 + 문의·신고·generic argument dump·예외 payload 21 최소화 검증 |
 | web focused/full | 31 focused PASS / 695 full PASS | type-check PASS, build PASS |
 | App Store screenshot compose/extract scripts | PASS | 파일·크기·alpha·manifest 검증은 PASS. 실제 최신 앱 재촬영은 아래 UI 불일치로 미완료 |
 
@@ -45,7 +45,7 @@ Apple은 앱 완성도, 개인정보처리방침, 계정 삭제, UGC, 메타데�
 
 ### 점검 범위
 
-- 시뮬레이터 기준: `iPhone 13 mini`, iOS 26.5, Release 1.0.0 (1) — 코드 HEAD `3ef00cba` 기준의 8/29 자동 검증 결과는 2절에 기록하고, 외부·실기기·배포 검증은 별도로 남긴다.
+- 시뮬레이터 기준: `iPhone 13 mini`, iOS 26.5, Release 1.0.0 (1) — 코드 HEAD `c813778d` 기준의 8/29 자동 검증 결과는 2절에 기록하고, 외부·실기기·배포 검증은 별도로 남긴다.
 - iOS 코드: `ios/Dutypark/` 및 `ios/DutyparkTests/`
 - 백엔드 개인정보·인증·UGC 코드: `src/main/kotlin/`, `src/main/resources/db/migration/v2/`, `src/test/kotlin/`
 - App Store 산출물: `docs/app-store/raw/{ko,en}/`, `docs/app-store/final/{ko,en}/`, `docs/app-store/manifests/{ko,en}.json`
@@ -74,10 +74,10 @@ Apple은 앱 완성도, 개인정보처리방침, 계정 삭제, UGC, 메타데�
 | 신고 알림을 사유/대상 type/중복·차단 enum만 전송 | `src/main/kotlin/com/tistory/shanepark/dutypark/report/service/ReportSlackNotifier.kt` | 신고자·피신고자 이름, 대상 ID, 상세내용, snapshot 제외 | **Slack focused PASS (21/21)** |
 | 예외 알림을 예외 클래스명만 전송하고 요청 본문·URL·IP·User-Agent·stack trace 제거 | `src/main/kotlin/com/tistory/shanepark/dutypark/common/slack/advice/ErrorDetectAdvisor.kt` | 사용자 입력과 인증·네트워크 정보를 운영 채널로 보내지 않음 | **Slack focused PASS (21/21)** |
 | `@SlackNotification`의 method argument dump 무시 및 실패 로그에서도 exception message 제외 | `src/main/kotlin/com/tistory/shanepark/dutypark/common/slack/aspect/SlackNotificationAspect.kt` | DTO·credential·사용자 문자의 우발적 전송 방지 | **Slack focused PASS (21/21)** |
+| LLM 일정 파싱 실패 알림을 고정 `Failure Kind` enum만 전송 | `src/main/kotlin/com/tistory/shanepark/dutypark/schedule/timeparsing/service/ScheduleTimeParsingWorker.kt` | 일정 ID·동적 시간·사용자 입력·raw AI 응답 제외 | **Schedule parsing privacy focused PASS (33/33)** |
 
-추가로 전수 확인할 잔여 Slack sink:
+추가로 배포 설정·payload를 확인할 Slack sink:
 
-- `src/main/kotlin/com/tistory/shanepark/dutypark/schedule/timeparsing/service/ScheduleTimeParsingWorker.kt`는 일정 ID와 실패 종류를 보낸다. 사용자 원문은 아니지만 일정 ID가 개인 데이터로 연결될 수 있는지 판단하고, 필요하면 pseudonymous ID 또는 전송 중단을 결정한다. 이 sink의 배포 설정 확인은 아직 미완료다.
 - `src/main/kotlin/com/tistory/shanepark/dutypark/common/listener/ApplicationStartupShutdownListener.kt`는 branch/commit 상태 알림만 보낸다. 개인정보가 없음을 최종 payload test에서 확인한다.
 - Slack을 운영 채널로 계속 사용한다면 개인정보처리방침의 제3자 처리자, 목적, 접근자, 보존·삭제 정책과 App Store Connect Privacy Details를 실제 payload에 맞춰 갱신한다. enum-only 변경의 focused test는 PASS했지만, 배포 IPA에 포함되는지와 실제 운영 webhook 설정은 별도 제출 게이트로 남아 있다.
 
@@ -148,7 +148,7 @@ Dutypark의 내부 게이트는 이 최소 요건보다 보수적이다. 현재�
 
 ## 6. 현 앱과 달라진 App Store 스크린샷
 
-기존 산출물은 `docs/app-store/README.md`의 2026-08-26 capture provenance를 사용한다. 코드 HEAD `3ef00cba`에 포함된 캘린더 화살표 수정으로 실제 UI가 바뀌었다. 기존 8/26 raw 캡처는 맨 chevron을 사용하지만 현재 앱은 원형 배경과 넓어진 탭 영역을 사용하므로, 기존 캡처를 최신 앱 화면으로 사용할 수 없다. Slack 개인정보와 UGC 필터 변경이 스크린샷에 보인다고 추정하지 않으며, 화면 불일치가 확인된 캘린더를 포함해 **전체 제출 세트를 재촬영**한다.
+기존 산출물은 `docs/app-store/README.md`의 2026-08-26 capture provenance를 사용한다. 코드 HEAD `c813778d`에 포함된 캘린더 화살표 수정으로 실제 UI가 바뀌었다. 기존 8/26 raw 캡처는 맨 chevron을 사용하지만 현재 앱은 원형 배경과 넓어진 탭 영역을 사용하므로, 기존 캡처를 최신 앱 화면으로 사용할 수 없다. Slack 개인정보와 UGC 필터 변경이 스크린샷에 보인다고 추정하지 않으며, 화면 불일치가 확인된 캘린더를 포함해 **전체 제출 세트를 재촬영**한다.
 
 필수 작업:
 
@@ -302,7 +302,7 @@ Apple 정의상 단순 UGC capability는 대한민국 ‘전체’ 표에도 포
 
 다음 항목을 모두 완료하고 이 문서의 `최종 검증 후 기입`을 실제 결과로 바꾼 뒤에만 HOLD를 해제한다.
 
-- [x] Slack 개인정보 변경 focused test 21/21 PASS; UGC backend/iOS 관련 focused·full 검증 PASS(웹 정규화·private D-Day 예외 반영 완료), Release simulator build도 PASS
+- [x] Slack 개인정보 변경 focused test 54/54 PASS; UGC backend/iOS 관련 focused·full 검증 PASS(웹 정규화·private D-Day 예외 반영 완료), Release simulator build도 PASS
 - [ ] 웹 cold-start/fetch 실패 fail-open 해소 또는 모든 공유 mutation에 대한 서버 enforcement 확인
 - [ ] UGC 모든 서버 mutation 경로 및 첨부·신고·차단 E2E 확인
 - [ ] 문의·신고 보존기간, snapshot 최소화, 익명화, 법적 예외, 탈퇴 UI 고지 결정
