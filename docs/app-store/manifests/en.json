@@ -1,14 +1,19 @@
 {
   "version": 2,
   "capture": {
-    "date": "2026-08-26",
+    "date": "2026-08-29",
     "timezone": "Asia/Seoul",
     "device": "iPhone 17 Pro Max",
     "os": "iOS 26.5",
     "marketingVersion": "1.0.0",
     "buildNumber": "1",
     "account": "demo.en.emma@dutypark.local",
-    "source": "actual local app capture"
+    "source": "actual local app capture",
+    "sourceCommit": "1856c2aa",
+    "sourceState": "working tree with Team month accessibility and screenshot harness changes",
+    "testResult": "2 PASS / 0 FAIL / 0 SKIP",
+    "resultBundle": "/private/tmp/dutypark-appstore-capture-final3-20260829.xcresult",
+    "apiEndpoint": "http://localhost:8081/api/"
   },
   "output": {
     "width": 1320,

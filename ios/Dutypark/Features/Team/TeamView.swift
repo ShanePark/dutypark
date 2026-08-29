@@ -92,6 +92,7 @@ struct TeamView: View {
                 nextYearLabel: Text("team.view.calendar.nextYear", tableName: "Team"),
                 currentMonthTitle: Text("team.view.calendar.thisMonth", tableName: "Team"),
                 cancelTitle: teamLocalized("team.common.cancel"),
+                identifierPrefix: "team.calendar.monthPicker",
                 onSelect: { year, month in
                     monthPickerPresented = false
                     Task { await viewModel.goTo(year: year, month: month) }
@@ -281,6 +282,10 @@ struct TeamView: View {
                 .frame(minHeight: DPSize.minimumTouchTarget)
             }
             .accessibilityLabel(Text("team.view.calendar.chooseMonth", tableName: "Team"))
+            .accessibilityValue(
+                Text(verbatim: "\(viewModel.year)-\(String(format: "%02d", viewModel.month))")
+            )
+            .accessibilityIdentifier("team.calendar.month.display")
             .disabled(viewModel.isLoading)
 
             DPMonthArrowButton(direction: .next, label: teamLocalized("team.view.calendar.nextMonth"), identifier: "team.calendar.month.next") {

@@ -2,7 +2,7 @@
 
 - 기준일: 2026-08-29 (KST)
 - 판정: **HOLD — 제출하지 않음**
-- 코드 기준: committed HEAD `3d55d46d` 위의 현재 미커밋 작업 트리. 탈퇴 시 문의·신고 보존 예외 고지와 정책 링크를 포함한 이 작업 트리를 2026-08-29 21:02 KST까지 재검증했다. 최종 제출 전에는 커밋 SHA가 고정된 동일 소스를 다시 검증해야 한다.
+- 코드 기준: committed HEAD `1856c2aa` 위의 현재 미커밋 스크린샷 작업 트리. 계정 삭제 보존 예외 고지는 이 HEAD에 포함됐고, 팀 월 선택 접근성 계약·캡처 harness·로컬 전용 demo seed·ko/en 이미지와 문서는 2026-08-29 22:57 KST까지 재검증했다. 최종 제출 전에는 커밋 SHA가 고정된 동일 소스를 다시 검증해야 한다.
 - 목적: [2026-08-28 보고서](./APP_STORE_REVIEW_AUDIT_2026-08-28.md)의 반복이 아닌, 그 이후 변경분과 제출 직전의 미검증 게이트를 기록한다.
 - 비밀값: 비밀번호, private key, client secret, webhook token, 실제 S2S URL은 이 문서에 기록하지 않는다. 심사용 계정은 App Store Connect의 `App Review Information → Sign-in required → Username / Password` 필드에서만 제공한다.
 
@@ -16,7 +16,7 @@
 | UGC 텍스트 필터 | 클라이언트·일부 서버 보강 반영됨 | backend/iOS 관련 focused·full 검증 PASS. 웹 정규화·private D-Day 예외는 반영됐고 cold-start/fetch fail-open, 모든 공개/공유 쓰기 경로·첨부·신고 흐름은 별도 게이트 |
 | 문의·신고 탈퇴 후 보존 | 사업자 결정 HOLD | exact retention/purge 기간, snapshot·식별자 최소화, legal hold 범위·종료 조건 및 사용자 고지·Privacy declarations 일치 확정 |
 | 비동기 계정 삭제 완료 확인 | backend·web·iOS 구현 및 자동 테스트 PASS | 보통 5분 이내 ETA, 로그아웃 후 receipt 기반 상태 조회, 실제 `COMPLETED` confirmation, `FAILED` 지원 경로를 구현. disposable 운영 유사 계정 E2E는 별도 게이트 |
-| App Store 스크린샷 | 현 앱과 불일치 가능 | 최종 빌드에서 한국어·영어 세트 재촬영·재합성 |
+| App Store 스크린샷 | 최신 ko/en 세트 재촬영·재합성·시각 검토 PASS | 제출할 build와 이미지 source가 같음을 최종 업로드 전에 한 번 더 확인 |
 | 배포 IPA | 배포 서명·최종 entitlement 미확정 | Release Archive/export, 서명, 운영 API, APNs production 확인 |
 | 실제 iPhone E2E | 미실행 또는 일부 미검증 | APNs, OAuth, 카메라, 파일 picker, 파괴적 흐름 완료 |
 | App Store Connect | 제출 전 입력 대기 | privacy labels, Review Notes, demo account, backend 준비 |
@@ -42,14 +42,14 @@ Apple routine review의 경계도 구분한다. Apple이 내부 DB를 직접 조
 | backend full Gradle | 1,845 total; 1,824 PASS / 21 SKIP / 0 FAIL | skip 사유는 개별 Gradle 결과에서 확인 |
 | Slack privacy focused | 54 PASS | 일정 파싱 33 + 문의·신고·generic argument dump·예외 payload 21 최소화 검증 |
 | web full | 97 files / 727 tests PASS | type-check PASS, build PASS(2,218 modules transformed) |
-| App Store screenshot compose/extract scripts | PASS | 파일·크기·alpha·manifest 검증은 PASS. 실제 최신 앱 재촬영은 아래 UI 불일치로 미완료 |
+| App Store screenshot capture/compose/extract | PASS | iPhone 17 Pro Max, iOS 26.5에서 실제 local demo 계정 ko/en 2/2 PASS. 14개 raw와 12개 final을 1320x2868 opaque PNG로 갱신하고 전수 시각 검토 완료 |
 | Evidence manifest | 작성됨 | [2026-08-29 evidence manifest](./review-evidence/2026-08-29/README.md)에 fresh backend/web/iOS unit 재실행의 명령·tested SHA·결과와 기존 UI xcresult/capture provenance를 기록. 전체 bundle/log의 장기 artifact 저장은 HOLD |
 
 ## 3. 이번 점검의 범위와 근거
 
 ### 점검 범위
 
-- 시뮬레이터 기준: `iPhone 13 mini`, iOS 26.5 — committed HEAD `3d55d46d` 위 현재 미커밋 작업 트리의 8/29 자동 검증 결과는 2절에 기록하고, 외부·실기기·배포 검증은 별도로 남긴다.
+- 시뮬레이터 기준: unit/build는 `iPhone 13 mini`, App Store 캡처는 `iPhone 17 Pro Max`, 모두 iOS 26.5 — committed HEAD `1856c2aa` 위 현재 미커밋 작업 트리의 8/29 자동 검증 결과는 2절에 기록하고, 외부·실기기·배포 검증은 별도로 남긴다.
 - iOS 코드: `ios/Dutypark/` 및 `ios/DutyparkTests/`
 - 백엔드 개인정보·인증·UGC 코드: `src/main/kotlin/`, `src/main/resources/db/migration/v2/`, `src/test/kotlin/`
 - App Store 산출물: `docs/app-store/raw/{ko,en}/`, `docs/app-store/final/{ko,en}/`, `docs/app-store/manifests/{ko,en}.json`
@@ -157,19 +157,20 @@ exact retention/purge 일정, 문의·신고 snapshot과 식별자의 최소화,
 
 Dutypark의 내부 게이트는 이 최소 요건보다 보수적이다. 위 흐름의 backend·web·iOS 자동 테스트는 PASS했지만, disposable 계정으로 비동기 완료까지 확인한 뒤 세션·token·OAuth 연결·UGC·첨부 및 보존 예외가 정책과 일치하는지는 아직 실제 서버에서 검증하지 않았다. 상태 API에 앱 자체 rate limiter는 없으므로, 256-bit status-only token 외에도 운영 edge/IP rate limit이 적용되는지 배포 환경에서 확인한다. 이 내부 E2E와 사업자 보존 결정이 끝나지 않았으므로 제출 판정은 계속 HOLD다.
 
-## 6. 현 앱과 달라진 App Store 스크린샷
+## 6. 최신 App Store 스크린샷 재촬영 결과
 
-기존 산출물은 `docs/app-store/README.md`의 2026-08-26 capture provenance를 사용한다. 코드 HEAD `c813778d`에 포함된 캘린더 화살표 수정으로 실제 UI가 바뀌었다. 기존 8/26 raw 캡처는 맨 chevron을 사용하지만 현재 앱은 원형 배경과 넓어진 탭 영역을 사용하므로, 기존 캡처를 최신 앱 화면으로 사용할 수 없다. Slack 개인정보와 UGC 필터 변경이 스크린샷에 보인다고 추정하지 않으며, 화면 불일치가 확인된 캘린더를 포함해 **전체 제출 세트를 재촬영**한다.
+2026-08-26 산출물은 캘린더 화살표 UI가 현재 앱과 달라 폐기하고, 2026-08-29에 격리된 `dutypark_demo` DB·loopback 8081 API와 실제 local demo 계정을 사용해 전체 세트를 다시 촬영했다. `DemoAppStoreCaptureUITests`는 iPhone 17 Pro Max, iOS 26.5에서 ko/en 2/2 PASS했고 결과 번들은 `/private/tmp/dutypark-appstore-capture-final3-20260829.xcresult`다. 명령·device·tested source·tree hash는 [evidence manifest](./review-evidence/2026-08-29/README.md)에 기록한다.
 
-필수 작업:
+완료한 작업:
 
-- `ios/DutyparkUITests/DemoAppStoreCaptureUITests.swift`로 한국어·영어 실제 계정 화면을 최종 Release 빌드에서 재촬영한다.
-- `docs/app-store/raw/ko/{home,calendar,todo,team,more,social,dday}.png`와 `raw/en/...`를 새 캡처로 교체한다.
-- `scripts/compose-app-store-screenshots.sh docs/app-store/manifests/ko.json` 및 `en.json`으로 final 이미지를 재생성한다.
-- `docs/app-store/final/ko/01-06*.png`, `final/en/01-06*.png`가 현재 기능·문구·상태를 보여주고, 로그인 화면·오류·테스트 계정 개인정보가 노출되지 않는지 확인한다.
-- 1320x2868 PNG, opaque canvas, 안전영역·문구·실제 앱 UI 보존 조건은 `docs/app-store/README.md`와 스크립트 검증을 따른다.
+- ko/en 각 7개 XCTAttachment를 추출해 `docs/app-store/raw/{ko,en}/`의 14개 원본을 교체했다.
+- locale별 manifest로 제출용 6개씩, 총 12개 `docs/app-store/final/{ko,en}/` 이미지를 재합성했다.
+- compose/extract 검증 스크립트가 크기·alpha·manifest·중복/누락·overwrite guard를 모두 PASS했다.
+- 14개 raw와 12개 final을 전수 시각 검토해 현재 원형 캘린더 화살표, 현행 문구·기능 상태, 실제 demo avatar를 확인했다. 로그인/오류 화면, 비밀값, 실제 개인 데이터는 보이지 않는다.
+- 영문 Calendar·Team·D-Day는 2026-11로 이동해 한국 공휴일 라벨이 노출되지 않는다. 팀 월 컨트롤은 UI 테스트가 `2026-08`에서 `2026-11` 전환을 접근성 value로 직접 검증한다.
+- 모든 raw/final은 1320x2868 opaque PNG이며 app UI는 crop·비균등 확대·재생성하지 않았다.
 
-compose/extract 스크립트 자체는 PASS했지만, 이는 기존 입력의 크기·alpha·manifest 검증 결과일 뿐 최신 UI라는 뜻은 아니다. 8/26 raw를 현재 앱 화면으로 교체하는 재촬영과 최종 시각 검토 결과는 **`최종 검증 후 기입`**이다.
+이 항목 자체는 **PASS**다. 다만 캡처는 Debug simulator/local demo 산출물이며 distribution signing, production entitlement 또는 최종 exported IPA를 증명하지 않는다. 제출 직전에는 업로드할 앱 build가 같은 UI revision인지 확인한다.
 
 ## 7. 최종 exported IPA, 배포 서명, 운영 APNs
 
@@ -321,7 +322,7 @@ Apple 정의상 단순 UGC capability는 대한민국 ‘전체’ 표에도 포
 - [ ] UGC 모든 서버 mutation 경로 및 첨부·신고·차단 E2E 확인
 - [ ] 문의·신고·계정삭제 감사 레코드의 보존기간, snapshot/식별자 최소화, 실패 시 provider credential 파기 기한, 익명화, 법적 예외, 관리자 접근과 탈퇴 UI 고지 결정
 - [x] 비동기 계정 삭제의 보통 5분 이내 ETA, 로그아웃 후 receipt 상태 조회, worker 완료 confirmation, 최종 실패·지원 경로를 backend·web·iOS에 구현하고 자동 테스트 통과
-- [ ] 현재 앱을 기준으로 ko/en App Store 스크린샷 재촬영·재합성·시각 검토
+- [x] 현재 앱을 기준으로 ko/en App Store 스크린샷 재촬영·재합성·시각 검토
 - [ ] distribution-signed exported IPA와 production APNs entitlement 확인
 - [ ] 최종 distribution Archive가 App Store 제출 요건인 iOS 26 SDK 이상으로 빌드됐는지 확인
 - [ ] 실제 iPhone APNs/OAuth/카메라/PhotosPicker/Files picker 확인

@@ -6,13 +6,17 @@ private keys, account data, or test-user secrets.
 
 ## Source state
 
-- Repository HEAD during the final rerun: `3d55d46de011f8a18b8b38434836b8fe8acb3a31`.
-- The verified source is the current uncommitted working tree on that HEAD, including
-  the account-deletion retention disclosure, privacy-policy links, localization, and tests.
-- This is a development verification record, not a clean-commit attestation. Before
-  submission, repeat the same checks from a fixed commit and retain the raw artifacts.
+- Repository HEAD during the backend/web/iOS unit rerun was
+  `3d55d46de011f8a18b8b38434836b8fe8acb3a31`, with the then-uncommitted
+  account-deletion retention disclosure that was later committed as `1856c2aa`.
+- Repository HEAD during the App Store screenshot refresh was
+  `1856c2aaccfe086d6828366a0a7291363a43a1d7`, with the screenshot harness,
+  Team month accessibility metadata, local demo seed, images, and evidence documents
+  still uncommitted.
+- These are development verification records, not clean-commit attestations. Before
+  submission, repeat the relevant checks from a fixed commit and retain the raw artifacts.
 
-## Fresh rerun bound to the source state above
+## Backend, web, and iOS unit rerun
 
 | Scope | Command | Result | Durable evidence |
 |---|---|---|---|
@@ -79,6 +83,54 @@ The baseline failures were:
 Each account-deletion focused bundle has three destination/configuration rows marked
 `Success` and one `TestCaseRuns` row marked `Success`. The notification focused bundle
 has the same three `Success` destination/configuration rows and one successful run row.
+
+## App Store screenshot refresh
+
+The stale 2026-08-26 screenshots were replaced from a real local demo-account run
+against an isolated loopback backend using `dutypark_demo`. The user's existing 8080
+backend and 5173 web server were not restarted or modified.
+
+```sh
+xcodebuild -project ios/Dutypark.xcodeproj \
+  -scheme Dutypark \
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro Max' \
+  -derivedDataPath /private/tmp/dutypark-appstore-capture-8081-derived \
+  CODE_SIGNING_ALLOWED=NO \
+  API_BASE_URL=http://localhost:8081/api/ \
+  -resultBundlePath /private/tmp/dutypark-appstore-capture-final3-20260829.xcresult \
+  -only-testing:DutyparkUITests/DemoAppStoreCaptureUITests test
+```
+
+- Result: PASS, 2 total / 2 PASS / 0 FAIL / 0 SKIP.
+- Device: iPhone 17 Pro Max, iOS Simulator 26.5 (23F77), arm64,
+  `2AFDB0DF-841A-433F-B923-9241B21E58CB`.
+- Result bundle: `/private/tmp/dutypark-appstore-capture-final3-20260829.xcresult`,
+  65 MB, finalized `2026-08-29T22:50:29+0900`.
+- Deterministic tree SHA-256:
+  `88bb141117dcee80d749d359e1dd207193bcad60b13857de5434c81a654a7fd1`.
+- Output: 14 opaque 1320x2868 raw PNGs and 12 opaque 1320x2868 composed PNGs.
+- Pipeline tests: `scripts/test-extract-app-store-captures.sh` PASS and
+  `scripts/test-compose-app-store-screenshots.sh` PASS.
+- Visual review: all 14 raw and 12 final images PASS. The English Calendar, Team,
+  and D-Day use November 2026 and contain no Korean public-holiday labels. No login or
+  error screen, credential, secret, or real personal data is visible.
+
+The checked-in raw and final PNG files are durable evidence of the visible result. The
+`.xcresult` path remains temporary and must be uploaded to retained artifact storage if
+the test-run provenance itself is needed after local cleanup.
+
+Because the screenshot fix adds Team month accessibility metadata to app code, the full
+`DutyparkTests` suite was rerun afterward on the exact `iPhone 13 mini`:
+
+- Result: PASS; 1,126 identifiers, 1,125 aggregate PASS, 1 SKIP, 0 FAIL;
+  device-expanded 1,150 PASS and 1 SKIP.
+- Bundle: `/private/tmp/dutypark-appstore-final-unit-20260829.xcresult`, 11 MB,
+  finalized `2026-08-29T22:56:47+0900`.
+- Deterministic tree SHA-256:
+  `7cb530b8b4dc426bda3d1702b8404e39f1525ceee19bb1cae1954c0ca8672304`.
+- The verified Debug app was installed on exact simulator
+  `F0737016-7654-4967-83FA-1DFB951DB36E`; `simctl get_app_container` confirmed the
+  installed `io.github.shanepark.dutypark` bundle.
 
 ## Release simulator capture
 

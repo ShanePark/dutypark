@@ -68,7 +68,7 @@ The English fixture uses the same local-only password, `demo1234!`, and the
 same eight generated avatar files. Its schedules, Todo cards, duties, D-Day,
 friend relationships, tags, and notifications are generated through the local
 application flow with English titles, descriptions, and notification content.
-The source for the English capture set is the real local app on `2026-08-26`,
+The source for the English capture set is the real local app on `2026-08-29`,
 stored under `docs/app-store/raw/en/`; it is not translated or fabricated by
 the image-generation step.
 
@@ -77,29 +77,41 @@ The complete content workflow is checked in as
 It first runs the Korean account seed, creates the English marker team and
 accounts, uploads these avatars, then creates all API-backed content. It also
 inserts only the marker members' capture-date duty rows in a guarded
-transaction, because the application has no bulk duty-create endpoint. The
-English fixture additionally has November 2026 schedules so the English
-calendar capture can show a populated, holiday-free month.
+transaction, because the application has no bulk duty-create endpoint. After
+the API identity guard succeeds, it clears only the two marker teams' prior
+capture schedules, Todos, D-Days, duties, team schedules, friendships, tags,
+and notifications before recreating the deterministic fixture. This prevents
+older fixture revisions from accumulating in a refreshed screenshot set. The
+English fixture additionally has November 2026 schedules and duties so the
+English Calendar, Team, and D-Day captures can show a populated,
+holiday-free month.
 
-Run it only after the local migrations and backend are running:
+Run it only after the local migrations and a backend connected to
+`dutypark_demo` are running. To preserve a normal development backend on
+port `8080`, run the demo backend on `8081` and select that endpoint explicitly:
 
 ```sh
 scripts/seed-local-demo-content.sh --dry-run
-DUTYPARK_DEMO_CONFIRM=1 scripts/seed-local-demo-content.sh
+DUTYPARK_DEMO_API_BASE_URL=http://127.0.0.1:8081 \
+  scripts/seed-local-demo-content.sh --dry-run
+DUTYPARK_DEMO_CONFIRM=1 \
+  DUTYPARK_DEMO_API_BASE_URL=http://127.0.0.1:8081 \
+  scripts/seed-local-demo-content.sh
 ```
 
 The script requires `curl`, `jq`, `nc`, and either a host `mysql` client or the
 local Docker container. It refuses every target except
-`127.0.0.1:3307/dutypark_demo` and `http://127.0.0.1:8080`, checks all avatar
+`127.0.0.1:3307/dutypark_demo` and loopback API ports `8080` or `8081`, checks all avatar
 files before writing, and authenticates both local owner accounts to verify
 that the backend's `/api/members/me` response has the exact local member ID,
 email, name, and marker team ID/name. If the backend is accidentally pointed
 at a shared or production database, the script stops before its first API
 mutation. It never deletes or updates data outside the two marker teams.
-API-created schedules and Todos use the server's deterministic
-duplicate contract; D-Days, team schedules, friendships, pins, tags, and duty
-rows are checked by marker key before creation. Re-running the command is
-therefore safe and leaves the same content counts and IDs. The final JSON
+The reset is allowed only after both local owner identities match the exact
+database member and marker-team IDs. Avatars are uploaded on every run so an
+isolated backend storage root cannot reuse stale database metadata without the
+matching files. Re-running the command is therefore safe and leaves the same
+content counts. The final JSON
 summary reports the isolated database, both team IDs, account counts, and
 content counts. The password and every fixture are local-only; do not run the
 command with production credentials or a shared database.
@@ -132,8 +144,9 @@ The iOS capture test uses the local-only launch guard and the real demo login:
 ```
 
 It must run against a localhost API endpoint. The guard intentionally refuses a
-remote or production endpoint. Capture Korean and English independently on an
-iPhone 17 Pro Max simulator at `1320x2868`; record `2026-08-26`, the locale,
+remote or production endpoint. When the isolated demo backend runs on `8081`,
+pass `API_BASE_URL=http://localhost:8081/api/` to `xcodebuild`. Capture Korean and English independently on an
+iPhone 17 Pro Max simulator at `1320x2868`; record the capture date, the locale,
 build, device, and endpoint in the capture manifest. Keep raw captures in
 `docs/app-store/raw/ko/` and `docs/app-store/raw/en/`. The README gallery uses
 the crop-free 660x1434 Korean reductions in `docs/screenshots/readme/`.

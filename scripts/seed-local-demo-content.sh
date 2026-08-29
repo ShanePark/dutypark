@@ -17,7 +17,7 @@ readonly DB_NAME="dutypark_demo"
 readonly DB_USER="${DUTYPARK_DEMO_DB_USER:-dutypark}"
 readonly DB_PASSWORD="${DUTYPARK_DEMO_DB_PASSWORD:-PASSWORD_HERE}"
 readonly DB_CONTAINER="${DUTYPARK_DEMO_DOCKER_CONTAINER:-dutypark-dev-db}"
-readonly API_BASE_URL="http://127.0.0.1:8080"
+readonly API_BASE_URL="${DUTYPARK_DEMO_API_BASE_URL:-http://127.0.0.1:8080}"
 readonly DEMO_CONFIRM_VALUE="1"
 readonly DEMO_PASSWORD="demo1234!"
 readonly DEMO_BCRYPT_HASH='$2a$10$J6nedueOD3J3OeDW8YDhbOswTZHT9v9GxFLFOEeNSsClA.WFsZUeG'
@@ -25,6 +25,8 @@ readonly KO_TEAM_NAME="Dutypark Demo 2026"
 readonly EN_TEAM_NAME="Dutypark English Demo 2026"
 readonly KO_OWNER_EMAIL="demo.seoa@dutypark.local"
 readonly EN_OWNER_EMAIL="demo.en.emma@dutypark.local"
+readonly CAPTURE_DATE="2026-08-29"
+readonly ENGLISH_CALENDAR_MONTH="2026-11"
 
 readonly -a KO_MEMBERS=(
     "윤서아|demo.seoa@dutypark.local|seoa-moon-rabbit.png"
@@ -91,10 +93,15 @@ creates deterministic duty rows for a capture date.
 
 The only writable targets are:
   MySQL  127.0.0.1:3307/dutypark_demo
-  API    http://127.0.0.1:8080
+  API    http://127.0.0.1:8080 (default) or http://127.0.0.1:8081
 
 Required for a real write:
   DUTYPARK_DEMO_CONFIRM=1 scripts/seed-local-demo-content.sh
+
+To use an isolated demo backend without touching a developer server on 8080:
+  DUTYPARK_DEMO_CONFIRM=1 \
+  DUTYPARK_DEMO_API_BASE_URL=http://127.0.0.1:8081 \
+  scripts/seed-local-demo-content.sh
 
 All accounts use the local-only password demo1234!. Never run this against a
 shared or production database.
@@ -113,10 +120,13 @@ if [[ "$DB_HOST" != "127.0.0.1" || "$DB_PORT" != "3307" || "$DB_NAME" != "dutypa
     echo "Refusing to run: demo seed target must be 127.0.0.1:3307/dutypark_demo." >&2
     exit 1
 fi
-if [[ "$API_BASE_URL" != "http://127.0.0.1:8080" ]]; then
-    echo "Refusing to run: demo API target must be http://127.0.0.1:8080." >&2
-    exit 1
-fi
+case "$API_BASE_URL" in
+    http://127.0.0.1:8080|http://127.0.0.1:8081) ;;
+    *)
+        echo "Refusing to run: demo API target must be loopback port 8080 or 8081." >&2
+        exit 1
+        ;;
+esac
 
 if (( dry_run )); then
     cat <<EOF
@@ -124,8 +134,8 @@ mysql=${DB_HOST}:${DB_PORT}/${DB_NAME}
 api=${API_BASE_URL}
 koreanAccounts=${#KO_MEMBERS[@]}
 englishAccounts=${#EN_MEMBERS[@]}
-captureDate=2026-08-26
-englishCalendarMonth=2026-11
+captureDate=${CAPTURE_DATE}
+englishCalendarMonth=${ENGLISH_CALENDAR_MONTH}
 write=disabled
 EOF
     exit 0
@@ -356,14 +366,9 @@ assert_api_identity() {
     fi
 }
 
-upload_avatar_if_missing() {
-    local email="$1" avatar="$2" cookie="$3" has_photo status
+upload_avatar() {
+    local email="$1" avatar="$2" cookie="$3" status
     login "$email" "$cookie"
-    api_call GET /api/members/me "$cookie"
-    has_photo=$(jq -r '.hasProfilePhoto // false' <<<"$LAST_BODY")
-    if [[ "$has_photo" == "true" ]]; then
-        return
-    fi
     status=$(curl -sS -o "$response_file" -w '%{http_code}' -b "$cookie" -c "$cookie" \
         -X PUT -F "file=@${AVATAR_DIR}/${avatar};type=image/png" \
         "${API_BASE_URL}/api/members/profile-photo")
@@ -523,7 +528,7 @@ populate_locale() {
     local index email avatar id schedule_id todo_id day
     for index in "${!ids[@]}"; do
         email="${emails[index]}"; avatar="${avatars[index]}"; id="${ids[index]}"
-        upload_avatar_if_missing "$email" "$avatar" "$friend_cookie"
+        upload_avatar "$email" "$avatar" "$friend_cookie"
         login "$email" "$friend_cookie"
         if [[ "$locale" == "ko" ]]; then
             schedule_id=$(create_schedule "$id" "$friend_cookie" '오늘의 집중 시간' '하루의 중요한 흐름을 가볍게 정리해요.' '2026-08-26T09:00:00' '2026-08-26T10:00:00' 'FRIENDS')
@@ -645,6 +650,30 @@ assert_api_identity "$KO_OWNER_EMAIL" "${KO_IDS[0]}" "${KO_NAMES[0]}" "$KO_TEAM_
 assert_api_identity "$EN_OWNER_EMAIL" "${EN_IDS[0]}" "${EN_NAMES[0]}" "$EN_TEAM_ID" "$EN_TEAM_NAME" "$identity_cookie"
 rm -f "$identity_cookie"
 
+# Reconcile only the two verified marker teams. A previous capture run or an
+# older fixture revision must not accumulate alongside the current deterministic
+# dataset. This happens only after the running API has proved that it serves the
+# exact local member/team identities read from dutypark_demo.
+marker_member_ids=""
+for marker_id in "${KO_IDS[@]}" "${EN_IDS[@]}"; do
+    [[ -z "$marker_member_ids" ]] || marker_member_ids+=","
+    marker_member_ids+="$marker_id"
+done
+run_sql "
+START TRANSACTION;
+DELETE FROM schedule_tags WHERE schedule_id IN (SELECT id FROM schedule WHERE member_id IN (${marker_member_ids}));
+DELETE FROM todo_tags WHERE todo_id IN (SELECT id FROM todo WHERE member_id IN (${marker_member_ids}));
+DELETE FROM notifications WHERE member_id IN (${marker_member_ids});
+DELETE FROM friend_requests WHERE from_member_id IN (${marker_member_ids}) OR to_member_id IN (${marker_member_ids});
+DELETE FROM friends WHERE member_id IN (${marker_member_ids}) OR friend_id IN (${marker_member_ids});
+DELETE FROM schedule WHERE member_id IN (${marker_member_ids});
+DELETE FROM todo WHERE member_id IN (${marker_member_ids});
+DELETE FROM d_day_event WHERE member_id IN (${marker_member_ids});
+DELETE FROM team_schedule WHERE team_id IN (${KO_TEAM_ID}, ${EN_TEAM_ID});
+DELETE FROM duty WHERE member_id IN (${marker_member_ids}) OR team_id IN (${KO_TEAM_ID}, ${EN_TEAM_ID});
+COMMIT;
+"
+
 populate_locale ko "$KO_TEAM_ID" "$KO_OWNER_EMAIL" KO_IDS KO_EMAILS KO_NAMES KO_AVATARS
 insert_duties ko "$KO_TEAM_ID" KO_IDS
 populate_locale en "$EN_TEAM_ID" "$EN_OWNER_EMAIL" EN_IDS EN_EMAILS EN_NAMES EN_AVATARS
@@ -680,8 +709,8 @@ en_duty_count=$(run_sql "SELECT COUNT(*) FROM duty WHERE team_id = ${EN_TEAM_ID}
 jq -n \
     --arg database "${DB_HOST}:${DB_PORT}/${DB_NAME}" \
     --arg api "$API_BASE_URL" \
-    --arg captureDate "2026-08-26" \
-    --arg englishMonth "2026-11" \
+    --arg captureDate "$CAPTURE_DATE" \
+    --arg englishMonth "$ENGLISH_CALENDAR_MONTH" \
     --argjson koreanTeamId "$KO_TEAM_ID" \
     --argjson englishTeamId "$EN_TEAM_ID" \
     --argjson koreanAccounts "${#KO_IDS[@]}" \

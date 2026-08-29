@@ -25,19 +25,23 @@ Todo, Team, Social, and D-Day. The checked-in manifests are
 `more.png` is retained as a raw capture for future selection but is not part of
 the six-screen App Store set. Both localized final sets are current: the
 English raw captures use the Emma Moon demo account and English sample data.
-Its Calendar and D-Day screens select the holiday-free November 2026 fixture
-so the English submission set contains no Korean public-holiday labels.
+Its Calendar, Team, and D-Day screens select the holiday-free November 2026
+fixture so the English submission set contains no Korean public-holiday labels.
 
 Capture metadata for this refresh:
 
 ```text
-Capture date: 2026-08-26 (Asia/Seoul)
+Capture date: 2026-08-29 (Asia/Seoul)
 Device: iPhone 17 Pro Max
 OS: iOS 26.5
 App: 1.0.0 (1)
 Canvas: 1320x2868 portrait
 Account: local dutypark_demo
+Source commit: 1856c2aa
+Capture API: http://localhost:8081/api/
 Source: actual app capture, not generated UI
+Capture test: 2 PASS / 0 FAIL / 0 SKIP
+Result bundle: /private/tmp/dutypark-appstore-capture-final3-20260829.xcresult
 ```
 
 The same per-locale provenance is recorded in each checked-in manifest's
@@ -68,16 +72,25 @@ whose base name is `appstore-{locale}-01-home-demo` through
 `appstore-{locale}-07-dday-demo`. Xcode's export manifest appends a repetition
 and UUID suffix such as `_0_<UUID>.png`; the extractor normalizes that suffix
 back to the base name while still rejecting duplicate base names. After an
-explicitly requested UI-test run, extract the attachments with the repository
+explicitly requested UI-test run, point the Debug simulator build at the
+isolated demo backend and then extract the attachments with the repository
 script:
 
 ```sh
+xcodebuild -project ios/Dutypark.xcodeproj \
+  -scheme Dutypark \
+  -destination 'platform=iOS Simulator,name=iPhone 17 Pro Max' \
+  -derivedDataPath /tmp/dutypark-appstore-capture-derived \
+  -resultBundlePath /tmp/dutypark-appstore-capture.xcresult \
+  CODE_SIGNING_ALLOWED=NO \
+  API_BASE_URL='http://localhost:8081/api/' \
+  -only-testing:DutyparkUITests/DemoAppStoreCaptureUITests test
 scripts/extract-app-store-captures.sh \
-  --result /tmp/Dutypark-demo.xcresult \
+  --result /tmp/dutypark-appstore-capture.xcresult \
   --locale ko \
   --force
 scripts/extract-app-store-captures.sh \
-  --result /tmp/Dutypark-demo.xcresult \
+  --result /tmp/dutypark-appstore-capture.xcresult \
   --locale en \
   --force
 ```

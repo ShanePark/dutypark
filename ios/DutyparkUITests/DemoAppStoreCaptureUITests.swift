@@ -67,6 +67,9 @@ final class DemoAppStoreCaptureUITests: XCTestCase {
 
         openPrimaryTab("tab.team", screen: "screen.team", in: app)
         waitForSettledContent(in: app, loadingIdentifier: nil)
+        if language == "en" {
+            selectEnglishTeamCaptureMonth(in: app)
+        }
         capture("appstore-\(language)-04-team-demo")
 
         openPrimaryTab("tab.more", screen: "screen.more", in: app)
@@ -200,6 +203,37 @@ final class DemoAppStoreCaptureUITests: XCTestCase {
             "English capture must show November 2026 after moving three months"
         )
         XCTAssertEqual(monthDisplay.value as? String, "2026-11")
+    }
+
+    @MainActor
+    private func selectEnglishTeamCaptureMonth(in app: XCUIApplication) {
+        let monthDisplay = app.buttons["team.calendar.month.display"]
+        XCTAssertTrue(monthDisplay.waitForExistence(timeout: 10), "Team month control did not load")
+        XCTAssertEqual(
+            monthDisplay.value as? String,
+            "2026-08",
+            "The English team capture starts in August 2026 before its move to November"
+        )
+
+        monthDisplay.tap()
+        let monthPicker = app.descendants(matching: .any)["team.calendar.monthPicker"]
+        XCTAssertTrue(monthPicker.waitForExistence(timeout: 5), "Team month picker did not load")
+
+        let november = app.buttons["team.calendar.monthPicker.month.11"]
+        XCTAssertTrue(november.waitForExistence(timeout: 5), "Team November month button did not load")
+        november.tap()
+        XCTAssertTrue(monthPicker.waitForNonExistence(timeout: 5), "Team month picker did not dismiss")
+
+        let monthChanged = XCTNSPredicateExpectation(
+            predicate: NSPredicate(format: "value == %@", "2026-11"),
+            object: monthDisplay
+        )
+        XCTAssertEqual(
+            XCTWaiter.wait(for: [monthChanged], timeout: 10),
+            .completed,
+            "English team capture must show November 2026"
+        )
+        waitForSettledContent(in: app, loadingIdentifier: nil)
     }
 
     @MainActor
