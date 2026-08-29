@@ -767,6 +767,7 @@ struct RootTabView: View {
                     RootChromeLocalization.notifications("notifications.common.close")
                 )
                 .accessibilityAddTraits(.isButton)
+                .accessibilityIdentifier("notifications.dropdown.closeBackground")
                 .accessibilityAction { closeNotificationDropdown() }
 
             NotificationDropdown(

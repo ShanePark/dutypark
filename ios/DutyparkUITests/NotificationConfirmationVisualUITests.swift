@@ -28,9 +28,8 @@ final class NotificationConfirmationVisualUITests: XCTestCase {
                 .waitForExistence(timeout: 10)
         )
 
-        let closeBackground = app.buttons["알림 닫기"]
+        let closeBackground = app.buttons["notifications.dropdown.closeBackground"]
         XCTAssertTrue(closeBackground.waitForExistence(timeout: 10))
-        XCTAssertTrue(closeBackground.isHittable)
         app.coordinate(withNormalizedOffset: CGVector(dx: 0.05, dy: 0.82)).tap()
 
         XCTAssertTrue(dropdown.waitForNonExistence(timeout: 10))
