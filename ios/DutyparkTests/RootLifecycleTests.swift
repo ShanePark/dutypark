@@ -187,10 +187,25 @@ struct RootLifecycleTests {
             contentsOf: iosDirectory.appending(path: "Dutypark/App/RootTabView.swift"),
             encoding: .utf8
         )
+        let dropdownStart = try #require(rootSource.range(of: "private struct NotificationDropdown"))
+        let rowStart = try #require(rootSource.range(of: "private struct NotificationDropdownRow"))
+        let dropdownSource = String(rootSource[dropdownStart.lowerBound..<rowStart.lowerBound])
         let handleStart = try #require(rootSource.range(of: "private var dismissHandle"))
         let handleSource = String(rootSource[handleStart.lowerBound...])
 
-        #expect(handleSource.contains("DragGesture(coordinateSpace: .global)"))
+        #expect(dropdownSource.contains(".overlay(alignment: .bottom)"))
+        #expect(
+            !dropdownSource.contains(
+                "\n\n            dismissHandle\n        }\n        .background(DPColor.backgroundCard)"
+            )
+        )
+        #expect(
+            handleSource.contains(
+                ".frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)"
+            )
+        )
+        #expect(dropdownSource.contains(".simultaneousGesture(dismissHandleGesture)"))
+        #expect(dropdownSource.contains("DragGesture(coordinateSpace: .global)"))
     }
 
     @Test

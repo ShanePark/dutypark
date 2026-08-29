@@ -1387,11 +1387,13 @@ private struct NotificationDropdown: View {
             }
             .buttonStyle(.plain)
             .background(DPColor.backgroundTertiary)
-
-            dismissHandle
+            .simultaneousGesture(dismissHandleGesture)
         }
         .background(DPColor.backgroundCard)
         .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+        .overlay(alignment: .bottom) {
+            dismissHandle
+        }
         .overlay {
             RoundedRectangle(cornerRadius: DPRadius.standard)
                 .stroke(DPColor.borderSecondary, lineWidth: DPChrome.borderWidth)
@@ -1403,35 +1405,16 @@ private struct NotificationDropdown: View {
     }
 
     private var dismissHandle: some View {
-        HStack {
+        ZStack(alignment: .bottom) {
             Capsule()
                 .fill(DPColor.textMuted)
-                .frame(width: 36, height: 5)
+                .frame(width: 30, height: 4)
+                .padding(.bottom, DPSpacing.extraSmall)
         }
-        .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)
-        .contentShape(Rectangle())
-        .gesture(
-            DragGesture(coordinateSpace: .global)
-                .onChanged { value in
-                    panelDragOffset = RootNotificationDropdownSwipePolicy.followOffset(
-                        translation: value.translation
-                    )
-                }
-                .onEnded { value in
-                    guard RootNotificationDropdownSwipePolicy.shouldDismiss(
-                        translation: value.translation
-                    ) else {
-                        let animation: Animation? = reduceMotion
-                            ? nil
-                            : .interactiveSpring(response: 0.25, dampingFraction: 0.82)
-                        withAnimation(animation) {
-                            panelDragOffset = 0
-                        }
-                        return
-                    }
-                    onDismiss()
-                }
-        )
+        .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+        // The 44pt interaction area belongs to the underlying footer row. Keeping
+        // this visual overlay out of hit testing preserves the footer's tap action.
+        .allowsHitTesting(false)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(
             RootChromeLocalization.notifications("notifications.common.close")
@@ -1439,6 +1422,29 @@ private struct NotificationDropdown: View {
         .accessibilityAddTraits(.isButton)
         .accessibilityAction { onDismiss() }
         .accessibilityIdentifier("notifications.dropdown.dismissHandle")
+    }
+
+    private var dismissHandleGesture: some Gesture {
+        DragGesture(coordinateSpace: .global)
+            .onChanged { value in
+                panelDragOffset = RootNotificationDropdownSwipePolicy.followOffset(
+                    translation: value.translation
+                )
+            }
+            .onEnded { value in
+                guard RootNotificationDropdownSwipePolicy.shouldDismiss(
+                    translation: value.translation
+                ) else {
+                    let animation: Animation? = reduceMotion
+                        ? nil
+                        : .interactiveSpring(response: 0.25, dampingFraction: 0.82)
+                    withAnimation(animation) {
+                        panelDragOffset = 0
+                    }
+                    return
+                }
+                onDismiss()
+            }
     }
 }
 
