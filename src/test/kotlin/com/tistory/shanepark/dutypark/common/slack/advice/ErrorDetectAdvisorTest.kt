@@ -1,7 +1,10 @@
 package com.tistory.shanepark.dutypark.common.slack.advice
 
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.read.ListAppender
 import com.tistory.shanepark.dutypark.common.slack.notifier.SlackNotifier
 import net.gpedro.integrations.slack.SlackAttachment
+import net.gpedro.integrations.slack.SlackException
 import net.gpedro.integrations.slack.SlackField
 import net.gpedro.integrations.slack.SlackMessage
 import org.assertj.core.api.Assertions.assertThat
@@ -12,6 +15,9 @@ import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
+import org.mockito.kotlin.any
+import org.mockito.kotlin.whenever
+import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
@@ -57,42 +63,62 @@ class ErrorDetectAdvisorTest {
     }
 
     @Test
-    fun `handleException redacts auth request body`() {
-        val request = requestWithBody("/api/auth/token", "secret=1")
+    fun `handleException sends only the exception class`() {
+        val request = requestWithBody("/api/private", "email=private@example.com&content=submitted-secret")
+        request.queryString = "token=query-secret"
+        val exception = RuntimeException("user supplied exception message")
 
         assertThrows<RuntimeException> {
-            advisor.handleException(request, RuntimeException("boom"))
+            advisor.handleException(request, exception)
         }
 
         val message = captureSlackMessage()
-        val bodyField = findField(message, "Request Body")
-        assertThat(bodyField).isEqualTo("[REDACTED]")
+        val attachment = readAttachments(message).single()
+        assertThat(readFieldTitles(attachment)).containsExactly("Error Type")
+        assertThat(findField(message, "Error Type")).isEqualTo("RuntimeException")
+        assertThat(attachment.toJson()["text"]).isNull()
+        assertThat(message.prepare().toString()).doesNotContain(
+            "private@example.com",
+            "submitted-secret",
+            "query-secret",
+            "127.0.0.1",
+            "JUnit",
+            "user supplied exception message",
+            "RuntimeException:",
+            "Request URL",
+            "Request Body",
+            "Request Parameters",
+            "Request IP",
+            "Request User-Agent",
+        )
     }
 
     @Test
-    fun `handleException clears body when payload is too large`() {
-        val request = requestWithBody("/api/other", "a".repeat(600))
+    fun `handleException keeps the original error when Slack sending fails`() {
+        val request = requestWithBody("/api/private", "content=submitted-secret")
+        val original = RuntimeException("original user supplied message")
+        val webhookFailureMessage = "https://hooks.slack.com/services/T000/B000/secret-token"
+        whenever(slackNotifier.call(any()))
+            .thenThrow(SlackException(IllegalStateException(webhookFailureMessage)))
 
-        assertThrows<RuntimeException> {
-            advisor.handleException(request, RuntimeException("boom"))
+        val logger = LoggerFactory.getLogger(ErrorDetectAdvisor::class.java)
+            as ch.qos.logback.classic.Logger
+        val appender = ListAppender<ILoggingEvent>().apply { start() }
+        logger.addAppender(appender)
+        val thrown = try {
+            assertThrows<RuntimeException> {
+                advisor.handleException(request, original)
+            }
+        } finally {
+            logger.detachAppender(appender)
         }
 
-        val message = captureSlackMessage()
-        val bodyField = findField(message, "Request Body")
-        assertThat(bodyField).isEqualTo("")
-    }
-
-    @Test
-    fun `handleException captures body for normal requests`() {
-        val request = requestWithBody("/api/other", "payload")
-
-        assertThrows<RuntimeException> {
-            advisor.handleException(request, RuntimeException("boom"))
-        }
-
-        val message = captureSlackMessage()
-        val bodyField = findField(message, "Request Body")
-        assertThat(bodyField).isEqualTo("payload")
+        assertThat(thrown).isSameAs(original)
+        assertThat(appender.list).hasSize(1)
+        assertThat(appender.list.single().formattedMessage)
+            .contains("SlackException")
+            .doesNotContain(webhookFailureMessage, original.message)
+        assertThat(appender.list.single().throwableProxy).isNull()
     }
 
     @Test
@@ -162,6 +188,8 @@ class ErrorDetectAdvisorTest {
         field.isAccessible = true
         return field.get(attachment) as? List<SlackField> ?: emptyList()
     }
+
+    private fun readFieldTitles(attachment: SlackAttachment): List<String?> = readFields(attachment).map(::readFieldTitle)
 
     private fun readFieldTitle(field: SlackField): String? {
         val titleField = SlackField::class.java.getDeclaredField("title")

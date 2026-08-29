@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.common.slack.advice
 
+import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.slack.notifier.SlackNotifier
 import jakarta.servlet.http.HttpServletRequest
 import net.gpedro.integrations.slack.SlackAttachment
@@ -15,12 +16,14 @@ import org.springframework.web.bind.annotation.ResponseBody
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
 import org.springframework.web.context.request.async.AsyncRequestNotUsableException
 import org.springframework.web.servlet.resource.NoResourceFoundException
-import java.util.*
+import java.util.Collections
 
 @ControllerAdvice
 class ErrorDetectAdvisor(
     private val slackNotifier: SlackNotifier,
 ) {
+    private val log = logger()
+
     private companion object {
         private val NOT_NOTIFY_EXCEPTIONS: Set<Class<out Exception>> = setOf(
             NoResourceFoundException::class.java,
@@ -57,7 +60,7 @@ class ErrorDetectAdvisor(
     }
 
     @ExceptionHandler(Exception::class)
-    fun handleException(req: HttpServletRequest, e: Exception) {
+    fun handleException(_req: HttpServletRequest, e: Exception) {
         if (isNotNotify(e))
             return
 
@@ -65,37 +68,31 @@ class ErrorDetectAdvisor(
         slackAttachment.setFallback("Error")
         slackAttachment.setColor("danger")
         slackAttachment.setTitle("Error Detect")
-        slackAttachment.setTitleLink(req.contextPath)
-        slackAttachment.setText(e.stackTraceToString())
-
-        val parameters = req.parameterMap.map { (key, value) -> "$key: ${value.joinToString(",")}" }
-        val body: String = when {
-            req.requestURI.startsWith("/api/auth/") -> "[REDACTED]"
-            req.contentLength > 500 -> ""
-            else -> req.reader.lines().reduce { acc, line -> "$acc\n$line" }.orElse("")
-        }
-
         slackAttachment.setFields(
             listOf(
-                SlackField().setTitle("Request URL").setValue(req.requestURL.toString()),
-                SlackField().setTitle("Request Method").setValue(req.method),
-                SlackField().setTitle("Request Parameters").setValue(parameters.joinToString("\n")),
-                SlackField().setTitle("Request Body").setValue(body),
-                SlackField().setTitle("Request Time").setValue(Date().toString()),
-                SlackField().setTitle("Request IP").setValue(req.remoteAddr),
-                SlackField().setTitle("Request User-Agent").setValue(req.getHeader("User-Agent")),
+                SlackField().setTitle("Error Type").setValue(exceptionType(e)),
             )
         )
 
         val slackMessage = SlackMessage()
         slackMessage.setAttachments(Collections.singletonList(slackAttachment))
         slackMessage.setIcon(":ghost:")
-        slackMessage.setText("Error Detect")
+        slackMessage.setText("")
         slackMessage.setUsername("DutyPark")
 
-        slackNotifier.call(slackMessage)
+        try {
+            slackNotifier.call(slackMessage)
+        } catch (notificationFailure: Throwable) {
+            log.error(
+                "Failed to send Slack notification (exception={})",
+                notificationFailure.javaClass.name,
+            )
+        }
         throw e
     }
+
+    /** 예외 클래스명은 운영 분류에 필요하지만 예외 메시지·stack trace는 사용자 입력을 포함할 수 있다. */
+    private fun exceptionType(e: Exception): String = e.javaClass.simpleName.ifEmpty { e.javaClass.name }
 
     private fun isNotNotify(e: Exception): Boolean {
         return NOT_NOTIFY_EXCEPTIONS.any { exceptionType -> exceptionType.isInstance(e) }

@@ -1,7 +1,6 @@
 package com.tistory.shanepark.dutypark.common.slack.aspect
 
 import com.tistory.shanepark.dutypark.common.config.logger
-import com.tistory.shanepark.dutypark.common.slack.annotation.SlackNotification
 import com.tistory.shanepark.dutypark.common.slack.notifier.SlackNotifier
 import net.gpedro.integrations.slack.SlackAttachment
 import net.gpedro.integrations.slack.SlackField
@@ -9,7 +8,6 @@ import net.gpedro.integrations.slack.SlackMessage
 import org.aspectj.lang.ProceedingJoinPoint
 import org.aspectj.lang.annotation.Around
 import org.aspectj.lang.annotation.Aspect
-import org.aspectj.lang.reflect.MethodSignature
 import org.springframework.beans.factory.annotation.Qualifier
 import org.springframework.core.task.TaskExecutor
 import org.springframework.stereotype.Component
@@ -27,24 +25,17 @@ class SlackNotificationAspect(
     fun slackNotification(proceedingJoinPoint: ProceedingJoinPoint): Any? {
         return try {
             val result = proceedingJoinPoint.proceed()
-            val method = (proceedingJoinPoint.signature as MethodSignature).method
-            val notification = method.getAnnotation(SlackNotification::class.java)
 
             val slackAttachment = SlackAttachment()
             slackAttachment.setFallback("Post")
             slackAttachment.setColor("good")
             slackAttachment.setTitle("Data save detected")
 
-            val fields = mutableListOf<SlackField>()
-            if (notification.includeArguments) {
-                val arguments = method.parameters
-                    .map { it.name }
-                    .zip(proceedingJoinPoint.args)
-                    .joinToString { "${it.first} : ${it.second}" }
-                fields += SlackField().setTitle("Arguments").setValue(arguments)
-            }
-            fields += SlackField().setTitle("method").setValue(proceedingJoinPoint.signature.name)
-            slackAttachment.setFields(fields)
+            // Method arguments can contain request DTOs, credentials, or user text. The annotation's
+            // includeArguments flag is retained for source compatibility but is intentionally ignored.
+            slackAttachment.setFields(
+                listOf(SlackField().setTitle("method").setValue(proceedingJoinPoint.signature.name))
+            )
 
             val slackMessage = SlackMessage()
             slackMessage.setAttachments(listOf(slackAttachment))
@@ -53,12 +44,23 @@ class SlackNotificationAspect(
             slackMessage.setUsername("DutyPark")
 
             taskExecutor.execute {
-                slackNotifier.call(slackMessage)
+                runCatching { slackNotifier.call(slackMessage) }
+                    .onFailure { failure ->
+                        log.error(
+                            "Failed to send Slack notification (exception={})",
+                            failure.javaClass.name,
+                        )
+                    }
             }
 
             result
         } catch (ex: Exception) {
-            log.error("Failed to send Slack notification for {}: {}", proceedingJoinPoint.signature.name, ex.message, ex)
+            // Exception messages and stack traces may echo request data. Keep this operational log
+            // classification-only as well; the original exception is still propagated unchanged.
+            log.error(
+                "Failed to send Slack notification (exception={})",
+                ex.javaClass.name,
+            )
             throw ex
         }
     }
