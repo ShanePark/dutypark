@@ -3,7 +3,6 @@ import SwiftUI
 nonisolated enum MoreMenuItem: String, CaseIterable, Hashable, Sendable {
     case friends
     case notifications
-    case admin
     case guide
     case support
     case settings
@@ -11,16 +10,16 @@ nonisolated enum MoreMenuItem: String, CaseIterable, Hashable, Sendable {
 
     // Grouped the way the web "more" menu separates global shortcuts, service
     // entries and the destructive action.
-    static func visibleGroups(isAdmin: Bool) -> [[Self]] {
+    static func visibleGroups() -> [[Self]] {
         [
             [.friends, .notifications],
-            (isAdmin ? [.admin] : []) + [.guide, .support, .settings],
+            [.guide, .support, .settings],
             [.logout],
         ]
     }
 
-    static func visibleItems(isAdmin: Bool) -> [Self] {
-        visibleGroups(isAdmin: isAdmin).flatMap { $0 }
+    static func visibleItems() -> [Self] {
+        visibleGroups().flatMap { $0 }
     }
 
     var accessibilityIdentifier: String {
@@ -33,8 +32,6 @@ nonisolated enum MoreMenuItem: String, CaseIterable, Hashable, Sendable {
             "person.2"
         case .notifications:
             "bell"
-        case .admin:
-            "lock.shield"
         case .guide:
             "book"
         case .support:
@@ -58,8 +55,6 @@ nonisolated enum MoreMenuItem: String, CaseIterable, Hashable, Sendable {
             RootChromeLocalization.social("social.title")
         case .notifications:
             RootChromeLocalization.notifications("notifications.title")
-        case .admin:
-            AdminLocalization.string("admin.menu.title")
         case .guide:
             RootChromeLocalization.localizable("root.menu.guide")
         case .support:
@@ -104,7 +99,6 @@ nonisolated struct MoreProfileSummary: Equatable, Sendable {
 }
 
 struct MoreView: View {
-    let isAdmin: Bool
     let profile: MoreProfileSummary?
     let onOpenMyInfo: () -> Void
     let onSelect: (MoreMenuItem) -> Void
@@ -118,7 +112,7 @@ struct MoreView: View {
                     }
                 }
                 ForEach(
-                    Array(MoreMenuItem.visibleGroups(isAdmin: isAdmin).enumerated()),
+                    Array(MoreMenuItem.visibleGroups().enumerated()),
                     id: \.offset
                 ) { _, group in
                     section(group)

@@ -106,7 +106,6 @@ struct AppTabTests {
     @Test
     func moreMenuHapticsSeparateNavigationFromDestructiveIntent() {
         #expect(RootHapticPolicy.moreMenuFeedback(for: .guide) == .routine)
-        #expect(RootHapticPolicy.moreMenuFeedback(for: .admin) == .routine)
         // The destructive confirmation button emits the warning; opening the prompt
         // itself stays silent so one logout action does not warn twice.
         #expect(RootHapticPolicy.moreMenuFeedback(for: .logout) == nil)
@@ -131,7 +130,6 @@ struct AppTabTests {
     @Test
     func moreMenuScreensPushOntoTheMoreTabInsteadOfSwitchingTabs() {
         #expect(RootNavigationPolicy.moreDestination(for: .friends) == .friends)
-        #expect(RootNavigationPolicy.moreDestination(for: .admin) == .admin)
         #expect(RootNavigationPolicy.moreDestination(for: .guide) == .guide)
         #expect(RootNavigationPolicy.moreDestination(for: .settings) == .settings)
         // Notifications are a screen like every other menu entry, so they are pushed too.

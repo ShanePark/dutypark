@@ -28,7 +28,6 @@ struct ContentFilterTests {
     @Test("UI-test fixtures do not refresh the content filter over the network")
     func skipsNetworkRefreshForUITestingArguments() {
         #expect(ContentFilterStore.shouldSkipNetworkRefresh(arguments: ["-ui-testing-authenticated"]))
-        #expect(ContentFilterStore.shouldSkipNetworkRefresh(arguments: ["-ui-testing-admin"]))
         #expect(!ContentFilterStore.shouldSkipNetworkRefresh(arguments: ["Dutypark"]))
     }
 #endif

@@ -231,7 +231,6 @@ struct RootTabView: View {
                 // its own, so an empty navigation bar would only push the list down.
                 primaryTab(.more, path: $morePath) {
                     MoreView(
-                        isAdmin: authenticatedMember?.isAdmin == true,
                         profile: moreProfile,
                         onOpenMyInfo: openMyInfo,
                         onSelect: openMoreMenuItem
@@ -653,7 +652,7 @@ struct RootTabView: View {
         switch item {
         case .logout:
             showsLogoutConfirmation = true
-        case .notifications, .friends, .admin, .guide, .support, .settings:
+        case .notifications, .friends, .guide, .support, .settings:
             guard let destination = RootNavigationPolicy.moreDestination(for: item) else { return }
             openMore(destination)
         }
@@ -667,15 +666,6 @@ struct RootTabView: View {
                 RootOnlineRequiredView(feature: .notifications)
             } else {
                 notificationCenter(targetID: .constant(nil))
-            }
-        case .admin:
-            if authenticatedMember?.isAdmin == true {
-                AdminRootView(onOpenCalendar: openMemberCalendar)
-            } else {
-                ContentUnavailableView(
-                    AdminLocalization.string("admin.access.title"),
-                    systemImage: "lock.shield"
-                )
             }
         case .friends:
             if session.availability.isOffline {
@@ -820,7 +810,7 @@ struct RootTabView: View {
     }
 
     // The calendar is pushed onto the stack of the tab it was opened from, so back is a
-    // real pop to the member card, friend row or admin detail that opened it.
+    // real pop to the member card or friend row that opened it.
     private func openMemberCalendar(_ memberID: MemberID) {
         let host = RootNavigationPolicy.memberCalendarHost(for: selectedTab)
         push(MemberCalendarRoute(memberID: memberID), onto: host)
@@ -1021,8 +1011,6 @@ nonisolated enum RootNavigationPolicy {
             .friends
         case .notifications:
             .notifications
-        case .admin:
-            .admin
         case .guide:
             .guide
         case .support:
@@ -1189,7 +1177,6 @@ private enum HomeDestination: Hashable {
 }
 
 nonisolated enum MoreDestination: Hashable, Sendable {
-    case admin
     case friends
     case notifications
     case guide

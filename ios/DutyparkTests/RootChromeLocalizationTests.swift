@@ -30,7 +30,7 @@ struct RootChromeLocalizationTests {
 
     @Test
     func moreMenuKeepsGlobalActionsAndExcludesDockDestinations() {
-        #expect(MoreMenuItem.visibleItems(isAdmin: false) == [
+        #expect(MoreMenuItem.visibleItems() == [
             .friends,
             .notifications,
             .guide,
@@ -38,18 +38,9 @@ struct RootChromeLocalizationTests {
             .settings,
             .logout,
         ])
-        #expect(MoreMenuItem.visibleItems(isAdmin: true) == [
-            .friends,
-            .notifications,
-            .admin,
-            .guide,
-            .support,
-            .settings,
-            .logout,
-        ])
-        #expect(MoreMenuItem.visibleGroups(isAdmin: true) == [
+        #expect(MoreMenuItem.visibleGroups() == [
             [.friends, .notifications],
-            [.admin, .guide, .support, .settings],
+            [.guide, .support, .settings],
             [.logout],
         ])
 
@@ -72,7 +63,6 @@ struct RootChromeLocalizationTests {
             MoreMenuItem.allCases.map(\.accessibilityIdentifier) == [
                 "more.friends",
                 "more.notifications",
-                "more.admin",
                 "more.guide",
                 "more.support",
                 "more.settings",

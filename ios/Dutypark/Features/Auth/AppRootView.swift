@@ -4,15 +4,12 @@ import SwiftUI
 nonisolated enum UITestingDestination: Equatable {
     case ssoSignup
     case attachmentGallery
-    case admin
 
     init?(arguments: [String]) {
         if arguments.contains("-ui-testing-sso-signup") {
             self = .ssoSignup
         } else if arguments.contains("-ui-testing-direct-attachment-gallery") {
             self = .attachmentGallery
-        } else if arguments.contains("-ui-testing-admin") {
-            self = .admin
         } else {
             return nil
         }
@@ -169,11 +166,6 @@ struct AppRootView: View {
             .environmentObject(session)
         case .attachmentGallery:
             AttachmentGalleryUITestingFixtureView()
-        case .admin:
-            NavigationStack {
-                AdminRootView(onOpenCalendar: { _ in })
-            }
-            .environmentObject(session)
         }
     }
     #endif

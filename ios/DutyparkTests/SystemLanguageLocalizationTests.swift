@@ -31,7 +31,6 @@ struct SystemLanguageLocalizationTests {
         #expect(moreMenuTitles(locale: .korean) == [
             "친구관리",
             "알림",
-            "관리자",
             "이용 안내",
             "문의하기",
             "설정",
@@ -40,7 +39,6 @@ struct SystemLanguageLocalizationTests {
         #expect(moreMenuTitles(locale: .english) == [
             "Manage friends",
             "Notifications",
-            "Administration",
             "Guide",
             "Support",
             "Settings",
@@ -48,7 +46,7 @@ struct SystemLanguageLocalizationTests {
         ])
 
         // The menu renders those same entries in the language iOS resolved.
-        #expect(MoreMenuItem.visibleItems(isAdmin: true).map(\.title) == moreMenuTitles(locale: AppLocalization.locale))
+        #expect(MoreMenuItem.visibleItems().map(\.title) == moreMenuTitles(locale: AppLocalization.locale))
     }
 
     @Test
@@ -102,7 +100,6 @@ struct SystemLanguageLocalizationTests {
         [
             RootChromeLocalization.social("social.title", locale: locale),
             RootChromeLocalization.notifications("notifications.title", locale: locale),
-            AdminLocalization.string("admin.menu.title", locale: locale),
             RootChromeLocalization.localizable("root.menu.guide", locale: locale),
             RootChromeLocalization.localizable("root.menu.support", locale: locale),
             RootChromeLocalization.localizable("root.menu.settings", locale: locale),

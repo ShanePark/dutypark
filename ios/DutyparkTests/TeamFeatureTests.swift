@@ -121,7 +121,7 @@ struct TeamFeatureTests {
     }
 
     @Test
-    func teamAdminToolPermissionIncludesServiceAdminAndTeamRoles() {
+    func teamAdminToolPermissionIncludesTeamLeadAndManagerRoles() {
         let team = managedTeam(
             adminID: 1,
             members: [
@@ -148,39 +148,48 @@ struct TeamFeatureTests {
 
         #expect(
             TeamManageViewModel.canUseAdminTools(
-                loginID: nil,
-                team: team,
-                isServiceAdmin: true
-            )
-        )
-        #expect(
-            TeamManageViewModel.canUseAdminTools(
                 loginID: 1,
-                team: team,
-                isServiceAdmin: false
+                team: team
             )
         )
         #expect(
             TeamManageViewModel.canUseAdminTools(
                 loginID: 2,
-                team: team,
-                isServiceAdmin: false
+                team: team
             )
         )
         #expect(
             TeamManageViewModel.canUseAdminTools(
                 loginID: 3,
-                team: team,
-                isServiceAdmin: false
+                team: team
             ) == false
         )
         #expect(
             TeamManageViewModel.canUseAdminTools(
                 loginID: nil,
-                team: nil,
-                isServiceAdmin: false
+                team: nil
             ) == false
         )
+    }
+
+    @Test
+    func teamManagementHasNoServiceAdminOnlyDeletePath() throws {
+        let root = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let manageView = try String(
+            contentsOf: root.appending(path: "Dutypark/Features/Team/TeamManageView.swift"),
+            encoding: .utf8
+        )
+        let viewModel = try String(
+            contentsOf: root.appending(path: "Dutypark/Features/Team/TeamViewModel.swift"),
+            encoding: .utf8
+        )
+
+        #expect(manageView.contains("isServiceAdmin") == false)
+        #expect(viewModel.contains("isServiceAdmin") == false)
+        #expect(manageView.contains("TeamManageDeletePolicy") == false)
+        #expect(manageView.contains("deleteTeam") == false)
     }
 
     @Test @MainActor

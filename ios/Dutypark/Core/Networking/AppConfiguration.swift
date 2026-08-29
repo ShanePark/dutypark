@@ -54,26 +54,4 @@ nonisolated enum AppConfiguration {
         return url
     }
 
-    static func baseURL(
-        for scope: APIRequestScope,
-        apiBaseURL: URL
-    ) -> URL? {
-        switch scope {
-        case .api:
-            return apiBaseURL
-        case .admin:
-            guard let scheme = apiBaseURL.scheme,
-                  let host = apiBaseURL.host
-            else {
-                return nil
-            }
-
-            var components = URLComponents()
-            components.scheme = scheme
-            components.host = host
-            components.port = apiBaseURL.port
-            components.path = "/admin/api/"
-            return components.url
-        }
-    }
 }
