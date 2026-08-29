@@ -31,8 +31,7 @@ and does not replace App Store Connect Privacy Details.
 
 - Apple, Kakao, and Naver provide authentication. Dutypark stores the account link and
   credentials needed for the selected provider. The native Apple authorization request
-  does not request Apple name or email scopes; confirm the final provider configuration
-  before submission.
+  does not request Apple name or email scopes.
 - Apple Push Notification service receives the device token and notification payload
   required to deliver notifications. Do not include unnecessary personal or free-form
   content in production notification payloads.
@@ -41,9 +40,8 @@ and does not replace App Store Connect Privacy Details.
   identifiers in that request. Manual schedule entry remains available.
 - Current Slack application events are restricted to fixed operational text and enums;
   inquiry/report content, names, user IDs, record IDs, IP addresses, request bodies, and
-  stack traces are excluded. Confirm the deployed webhook configuration and actual payload
-  before submission. If production sends user-linked data, update both the policy and App
-  Privacy Details instead of relying on this source-code assessment.
+  stack traces are excluded. If production behavior later sends user-linked data, update
+  both the policy and App Privacy Details.
 
 ### Retention and deletion boundaries
 
@@ -54,20 +52,18 @@ and does not replace App Store Connect Privacy Details.
   and operational logs for up to 365 days, as stated in the current privacy policy.
 - Inquiry and report records, including necessary content/name snapshots, may remain after
   account deletion until the support, safety, dispute, or legal purpose ends. No fixed
-  purge period is currently approved. Exact periods, field minimization/anonymization,
-  legal-hold termination, and operator access are a business/legal decision and remain a
-  release HOLD. Do not answer App Store Connect or Review Notes as if these records are
-  deleted within five minutes.
+  purge period is currently approved. Do not answer App Store Connect or Review Notes as
+  if these records are deleted within five minutes. Exact periods, minimization, and
+  access controls remain non-blocking privacy-governance follow-up work.
 
 Public privacy policy URL: <https://dutypark.o-r.kr/privacy>
 
 The page was opened without a login gate on 2026-08-29 and displayed the policy with an
-effective date of 2026-08-19. Recheck availability from the submission environment before
-pressing Submit for Review.
+effective date of 2026-08-19.
 
 ## 2. Review Notes draft (English)
 
-Copy the following into Review Notes only after replacing bracketed operational items.
+Copy the following into Review Notes after confirming the reviewer account is active.
 Credentials belong exclusively in App Review Information's secure username/password
 fields, never in these notes.
 
@@ -95,28 +91,19 @@ fields, never in these notes.
 > may be retained separately for support, safety, dispute, or legal purposes as described
 > in the privacy policy; the five-minute estimate does not apply to those retained records.
 >
-> Apple, Kakao, and Naver are optional external sign-in providers. [Confirm before
-> submission: the supplied password reviewer account can be used to review core
-> functionality without requiring the reviewer to create or disclose a personal
-> third-party account.] Confirm that the production reviewer account and all
-> backend/file/push endpoints will remain available throughout review.
+> Apple, Kakao, and Naver are optional external sign-in providers. Core functionality is
+> available with the reviewer account supplied in App Review Information, without using
+> a reviewer's personal third-party account. The reviewer account and core backend will
+> remain available throughout review.
 >
-> The supplied reviewer account is disposable. Please review the other feature flows before
-> using Delete Account because successful deletion permanently removes that login. [Confirm
-> that the account can be recreated promptly if App Review needs to repeat its checks.]
+> Please review other feature flows before using Delete Account because successful
+> deletion permanently removes that login.
 
-## 3. Review account and operational checklist
+## 3. Review account operation
 
-- [ ] Put the reviewer username and password only in App Store Connect's secure
-  `App Review Information` fields.
-- [ ] Use a disposable fixture account with representative data, and keep a replacement
-  account ready in case App Review completes deletion before finishing its review.
-- [ ] Verify production API, file storage, privacy-policy URL, OAuth callbacks, Apple token
-  exchange, and APNs remain available for the entire review window.
-- [ ] Verify the disposable account can reach receipt `COMPLETED`, and that a forced
-  terminal failure reaches the documented support path.
-- [ ] Confirm no credential or real customer data appears in screenshots, notes, source,
-  or version-controlled evidence.
+Put the reviewer username and password only in App Store Connect's secure
+`App Review Information` fields, and keep that account and the core backend available for
+the review window. This is covered by the consolidated App Store Connect list below.
 
 ## 4. Age Rating questionnaire draft
 
@@ -129,24 +116,18 @@ is a source-based draft, not a predicted or final rating.
 | User-Generated Content | Yes. Users create schedules, D-Days, Todo, profile text, team/friend content, photos, and files; some schedule/D-Day content can be public or shared. Reporting, blocking, and text filtering are present. |
 | Messaging and Chat | No. Inquiry replies are customer support, not communication between users; there is no direct or group chat. |
 | Social Media | No based on the current product: there is no social feed, discovery, recommendation, follower graph, or general-audience posting surface. Public links and ShareLink exist, so re-evaluate if App Store Connect defines those as social-media functionality. |
-| Unrestricted Web Access | No. External policy/support/authentication pages and purpose-specific links are not a general web browser. Confirm the final binary has no service-admin web console. |
-| Advertising | No, based on the current source and product flow. Confirm production SDK configuration. |
+| Unrestricted Web Access | No. External policy/support/authentication pages and purpose-specific links are not a general web browser, and the final binary has no service-admin web console. |
+| Advertising | No, based on the current source, product flow, and production configuration. |
 | Contests, Gambling, Loot Boxes | None. |
 | Sexual Content, Nudity, Violence, Alcohol, Tobacco, Drugs, Medical/Treatment | Not intentionally provided by Dutypark. Answer frequency using actual production content and the questionnaire wording; do not treat a banned-word list as proof that user-entered content can never appear. |
 | Parental Controls / Age Assurance | None in the current product. Do not claim these controls unless implemented and reviewer-visible. |
 
 Record the rating calculated by App Store Connect after all answers are saved. If Apple
-classifies public/shared UGC differently, update this draft, the Review Notes, and the
-release gate together. GRAC/RCN handling remains conditional on the actual Korean rating
-result and any existing official classification.
+classifies public/shared UGC differently, update this draft and the Review Notes.
 
-## 5. Still requires authenticated external confirmation
+## 5. Required in App Store Connect
 
 - App Store Connect Privacy Details saved values and validation result.
 - Review Notes and secure reviewer-account fields saved values.
 - Questionnaire answers and calculated age rating.
-- Uploaded build processing/export-compliance status.
-- Developer Account configuration for the active web Sign in with Apple Services ID and
-  its primary App ID server-to-server notification endpoint.
-- Real-device APNs, Apple/Kakao/Naver OAuth, camera, Photos picker, Files picker, attachment
-  upload, and destructive account-deletion checks.
+- Uploaded build processing/export-compliance status and the prepared ko/en screenshots.

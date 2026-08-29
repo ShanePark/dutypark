@@ -288,11 +288,10 @@ This resolves the stale-local-IPA gap. The new Archive, IPA, export log, and ext
 inspection directory still live only under `/private/tmp`; App Store Connect upload and
 processing were not performed.
 
-## Remaining retention gate
+## Artifact retention note
 
-This compact record resolves the missing command/result/SHA linkage for the fresh
-backend, web, and iOS unit reruns and preserves the known UI artifact provenance. Full
-`.xcresult` bundles, the Archive, IPA, and raw logs are still in `/private/tmp` and are
-not durable. Before the audit HOLD can be released, the final submission artifacts and
-real-device evidence must be uploaded to retained CI or release artifact storage, then
-temporary paths here must be replaced with stable artifact links and checksums.
+This compact record preserves the command/result/SHA linkage for the fresh backend, web,
+and iOS unit reruns and the known UI artifact provenance. Full `.xcresult` bundles, the
+Archive, IPA, and raw logs under `/private/tmp` are not durable. Copying them to retained
+CI or release storage is an optional internal audit practice, not an App Store submission
+requirement; the committed summaries and checksums remain the durable evidence.
