@@ -126,6 +126,117 @@ struct RootLifecycleTests {
     }
 
     @Test
+    func notificationDropdownSwipePolicyTracksOnlyUpwardVerticalOffset() {
+        #expect(
+            RootNotificationDropdownSwipePolicy.followOffset(
+                translation: CGSize(width: 0, height: -80)
+            ) == -80
+        )
+        #expect(
+            RootNotificationDropdownSwipePolicy.followOffset(
+                translation: CGSize(width: 24, height: -40)
+            ) == -40
+        )
+        #expect(
+            RootNotificationDropdownSwipePolicy.followOffset(
+                translation: CGSize(width: 40, height: -24)
+            ) == -24
+        )
+        #expect(
+            RootNotificationDropdownSwipePolicy.followOffset(
+                translation: CGSize(width: 0, height: 40)
+            ) == 0
+        )
+    }
+
+    @Test
+    func notificationDropdownSwipePolicyDismissesOnlyAfterMoreThan60PointUpwardVerticalSwipe() {
+        #expect(
+            !RootNotificationDropdownSwipePolicy.shouldDismiss(
+                translation: CGSize(width: 0, height: -59)
+            )
+        )
+        #expect(
+            !RootNotificationDropdownSwipePolicy.shouldDismiss(
+                translation: CGSize(width: 40, height: -60)
+            )
+        )
+        #expect(
+            RootNotificationDropdownSwipePolicy.shouldDismiss(
+                translation: CGSize(width: 0, height: -61)
+            )
+        )
+        #expect(
+            !RootNotificationDropdownSwipePolicy.shouldDismiss(
+                translation: CGSize(width: 100, height: -80)
+            )
+        )
+        #expect(
+            !RootNotificationDropdownSwipePolicy.shouldDismiss(
+                translation: CGSize(width: 0, height: 60)
+            )
+        )
+    }
+
+    @Test
+    func notificationDropdownDismissHandleUsesGlobalDragCoordinates() throws {
+        let iosDirectory = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let rootSource = try String(
+            contentsOf: iosDirectory.appending(path: "Dutypark/App/RootTabView.swift"),
+            encoding: .utf8
+        )
+        let dropdownStart = try #require(rootSource.range(of: "private struct NotificationDropdown"))
+        let rowStart = try #require(rootSource.range(of: "private struct NotificationDropdownRow"))
+        let dropdownSource = String(rootSource[dropdownStart.lowerBound..<rowStart.lowerBound])
+        let handleStart = try #require(rootSource.range(of: "private var dismissHandle"))
+        let handleSource = String(rootSource[handleStart.lowerBound...])
+
+        #expect(dropdownSource.contains(".overlay(alignment: .bottom)"))
+        #expect(
+            !dropdownSource.contains(
+                "\n\n            dismissHandle\n        }\n        .background(DPColor.backgroundCard)"
+            )
+        )
+        #expect(
+            handleSource.contains(
+                ".frame(\n            width: DPSize.minimumTouchTarget,\n            height: DPSize.minimumTouchTarget,\n            alignment: .bottom\n        )"
+            )
+        )
+        #expect(dropdownSource.contains(".highPriorityGesture(dismissHandleGesture)"))
+        #expect(!dropdownSource.contains(".simultaneousGesture(dismissHandleGesture)"))
+        #expect(dropdownSource.contains("DragGesture(coordinateSpace: .global)"))
+        #expect(handleSource.contains(".accessibilityHidden(true)"))
+        #expect(rootSource.contains(".accessibilityAction(.escape)"))
+        #expect(rootSource.contains("notifications.dropdown.closeBackground"))
+        #expect(rootSource.contains(".accessibilityAction { closeNotificationDropdown() }"))
+    }
+
+    @Test
+    func notificationDropdownVisualAuditLaunchArgumentIsDebugOnlyAndFixtureBacked() throws {
+        let iosDirectory = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let rootSource = try String(
+            contentsOf: iosDirectory.appending(path: "Dutypark/App/RootTabView.swift"),
+            encoding: .utf8
+        )
+
+        #expect(
+            rootSource.contains(
+                "#if DEBUG\n            if ProcessInfo.processInfo.arguments.contains(\"-ui-testing-show-notifications\"),"
+            )
+        )
+        #expect(
+            rootSource.contains(
+                "ProcessInfo.processInfo.arguments.contains(\"-ui-testing-notification-fixture\")"
+            )
+        )
+        #expect(rootSource.contains("showsNotifications = true"))
+    }
+
+    @Test
     func authenticatedStartupRunsRequiredWorkInOrder() async {
         var events: [String] = []
 
@@ -261,57 +372,61 @@ struct RootLifecycleTests {
     }
 
     @Test
-    func pendingPushOpensTheIdentifierProvidedByTheConsumer() async {
+    func pendingPushPresentsTheIdentifierProvidedByTheConsumer() async {
         let notificationID = UUID()
-        var openedIDs: [UUID] = []
-        var fallbackCount = 0
+        var presentedIDs: [UUID] = []
 
         await RootPendingPushAction.perform(
+            isAuthenticated: true,
+            isOnline: true,
+            isActive: true,
             consume: { notificationID },
-            open: {
-                openedIDs.append($0)
-                return true
-            },
-            showFallback: { fallbackCount += 1 }
+            showNotificationCenter: { presentedIDs.append($0) }
         )
 
-        #expect(openedIDs == [notificationID])
-        #expect(fallbackCount == 0)
+        #expect(presentedIDs == [notificationID])
     }
 
     @Test
     func pendingPushDoesNothingWhenTheConsumerProvidesNoIdentifier() async {
-        var openCount = 0
-        var fallbackCount = 0
+        var presentedIDs: [NotificationID] = []
 
         await RootPendingPushAction.perform(
+            isAuthenticated: true,
+            isOnline: true,
+            isActive: true,
             consume: { nil },
-            open: { _ in
-                openCount += 1
-                return true
-            },
-            showFallback: { fallbackCount += 1 }
+            showNotificationCenter: { presentedIDs.append($0) }
         )
 
-        #expect(openCount == 0)
-        #expect(fallbackCount == 0)
+        #expect(presentedIDs.isEmpty)
     }
 
-    @Test(arguments: [false, true])
-    func pendingPushFallsBackWhenRouteCannotOpen(orThrows: Bool) async {
+    @Test(arguments: [
+        (isAuthenticated: false, isOnline: true, isActive: true),
+        (isAuthenticated: true, isOnline: false, isActive: true),
+        (isAuthenticated: true, isOnline: true, isActive: false),
+    ])
+    func pendingPushRemainsPendingUntilTheRootIsReady(
+        readiness: (isAuthenticated: Bool, isOnline: Bool, isActive: Bool)
+    ) async {
         let notificationID = UUID()
-        var fallbackCount = 0
+        var consumeCount = 0
+        var presentedIDs: [UUID] = []
 
         await RootPendingPushAction.perform(
-            consume: { notificationID },
-            open: { _ in
-                if orThrows { throw StubError.failed }
-                return false
+            isAuthenticated: readiness.isAuthenticated,
+            isOnline: readiness.isOnline,
+            isActive: readiness.isActive,
+            consume: {
+                consumeCount += 1
+                return notificationID
             },
-            showFallback: { fallbackCount += 1 }
+            showNotificationCenter: { presentedIDs.append($0) }
         )
 
-        #expect(fallbackCount == 1)
+        #expect(consumeCount == 0)
+        #expect(presentedIDs.isEmpty)
     }
 
     @Test

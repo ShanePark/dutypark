@@ -54,6 +54,105 @@ Tag friends in your schedules. They'll see it on their dashboard instantly. No m
 - **Notifications** — Get alerted when someone tags you or sends a friend request
 - **Team View** — Aggregated roster for your whole team with manager controls
 
+## Native iOS Offline Mode
+
+The native iPhone app has an account-scoped offline mode. This is separate from
+the web PWA: iOS can reopen a recently verified account and render its local
+calendar and Todo data, while the web service worker currently handles push,
+notification-click routing, badges, and locale data only. The web app does not
+cache the app shell or arbitrary API responses for offline use; see
+[`frontend/README.md`](frontend/README.md#pwa-and-push).
+
+### What iOS keeps locally
+
+Offline data is stored under the app's Application Support directory at
+`Dutypark/Offline/accounts/<memberID>/`. Storage is isolated per account and
+contains:
+
+- a last server-verified profile snapshot, friend metadata, and D-Days;
+- monthly calendar snapshots containing the calendar grid, schedules, duties,
+  Korean holidays, and compared-member duty data; and
+- the Todo board and locally queued creates.
+
+The calendar cache keeps a rolling thirteen-month window (the current month,
+six previous months, and six following months). Cached member snapshots omit
+OAuth provider identifiers and access/refresh tokens. A regular, non-managed
+session can fall back to its saved identity for up to 30 days; this is a local
+snapshot, not proof that the server session is still active.
+
+### What works without a connection
+
+Offline reads are available for cached Calendar and Todo screens. The only
+durable offline writes are new, plain schedule and Todo creates:
+
+- a schedule may contain its title/content, description, visibility, and start
+  and end times;
+- a Todo may contain its title, content, status, and due date; and
+- each queued create receives a local UUID and remains visible as a provisional
+  item until synchronization completes.
+
+Tags, attachments, AI time parsing, edits, deletes, duty changes, D-Day
+changes, friend/team actions, notifications, and other online-only mutations
+require a connection. The Home, Social, Team, and Notifications root screens
+show an online-required state while offline.
+
+When connectivity returns, the iOS coordinator drains entries in creation
+order. The server suppresses duplicate creates using the owning member and
+content fields: schedules compare content, description, start time, and end
+time; Todos compare effective status, title, and content. Schedule visibility
+and Todo due date are intentionally not part of this duplicate identity.
+Transient transport/decoding failures and HTTP 408, 425, 429, and 5xx responses
+use exponential retry backoff from five seconds up to five minutes. Validation
+and permission 4xx responses become a permanent failure that requires an
+explicit retry; authentication failures are handled at the session boundary.
+
+Logging out or switching accounts purges that account's cache and outbox.
+In-flight work is guarded by the authentication generation and cannot be
+applied to the next account. Cached data can be stale, and the server remains
+the source of truth after synchronization; iOS does not promise conflict-free
+offline editing for updates or deletes.
+
+## Demo Data and Screenshot Workflow
+
+The repository keeps curated, real-app screenshots separate from App Store
+submission artwork. Select a preview to open the full-resolution capture.
+
+| Home | Calendar | Todo | Team | Social |
+|:---:|:---:|:---:|:---:|:---:|
+| [![Home dashboard](docs/screenshots/readme/home.png)](docs/screenshots/readme/home.png) | [![Calendar](docs/screenshots/readme/calendar.png)](docs/screenshots/readme/calendar.png) | [![Todo board](docs/screenshots/readme/todo.png)](docs/screenshots/readme/todo.png) | [![Team calendar](docs/screenshots/readme/team.png)](docs/screenshots/readme/team.png) | [![Friends and social](docs/screenshots/readme/social.png)](docs/screenshots/readme/social.png) |
+
+To refresh the demo set:
+
+1. Use the local Docker MySQL database and local backend/frontend only. Never
+   seed demo credentials or personal data through the production service.
+2. Create one marker-owned demo account, a team, and several friend accounts;
+   populate the current Asia/Seoul date with duties and shared schedules, a
+   full calendar month, Todo cards across statuses, friend relationships,
+   tags/notifications, and a future D-Day. Keep the marker and account list
+   documented with the local-only seed workflow so it can be rebuilt safely.
+3. Generate coherent avatar artwork with the repository's image-generation
+   workflow, upload each image through the authenticated profile-photo flow,
+   and create tag/friend events after the photo versions are current. This
+   keeps notification actor snapshots consistent with the visible avatars.
+4. Capture the unmodified app UI for the README gallery. Keep raw captures
+   separate from any marketing composition and record the locale, app build,
+   device, and capture date alongside the files.
+
+Korean and English App Store captures use separate local demo datasets; each
+capture run logs out first and signs in to the owner account for its locale.
+
+For App Store assets, maintain separate Korean and English raw sets under
+`docs/app-store/raw/{ko,en}/`, with generated artwork in
+`docs/app-store/generated/` and deterministic deliverables in
+`docs/app-store/final/{ko,en}/`. See the
+[`docs/app-store/README.md`](docs/app-store/README.md) workflow. Use real app captures as the source of truth;
+generated artwork may provide only a restrained outer canvas, mascot, or
+decorative sticker and must not redraw UI text, icons, status bars, or data.
+The current iPhone submission reference is the 6.9-inch portrait canvas
+`1320x2868`; consult Apple's [Screenshot specifications](https://developer.apple.com/help/app-store-connect/reference/app-information/screenshot-specifications/)
+and [upload guidance](https://developer.apple.com/help/app-store-connect/manage-app-information/upload-app-previews-and-screenshots/)
+when preparing or replacing a submission set.
+
 ---
 
 ## Features at a Glance

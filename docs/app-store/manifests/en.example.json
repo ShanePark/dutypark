@@ -1,0 +1,44 @@
+{
+  "version": 2,
+  "output": {
+    "width": 1320,
+    "height": 2868,
+    "opaque": true,
+    "background": "#FFF9F3"
+  },
+  "font": {
+    "path": "../../../ios/Dutypark/Resources/Fonts/Maplestory OTF Bold.otf",
+    "name": "MaplestoryOTFBold",
+    "subheadlinePath": "../../../ios/Dutypark/Resources/Fonts/Maplestory OTF Light.otf",
+    "subheadlineName": "MaplestoryOTFLight",
+    "headlineSize": 72,
+    "subheadlineSize": 36,
+    "color": "#1F2937",
+    "subheadlineColor": "#475569"
+  },
+  "screenshots": [
+    {
+      "id": "home",
+      "raw": "../raw/en/home.png",
+      "output": "../final/en/01-home.png",
+      "safeArea": { "x": 100, "y": 70, "width": 1120, "height": 250 },
+      "deviceFrame": {
+        "frame": { "x": 140, "y": 430, "width": 1040, "height": 2259.64 },
+        "cornerRadius": 40,
+        "bezelWidth": 16,
+        "bezelColor": "#111827",
+        "shadowColor": "#40000000",
+        "shadowBlur": 28,
+        "shadowOffsetY": 14
+      },
+      "headline": "See your day at a glance",
+      "headlineFrame": { "x": 130, "y": 96, "width": 1060, "height": 96 },
+      "subheadline": "Schedules and friends, together in one place",
+      "subheadlineFrame": { "x": 150, "y": 188, "width": 1020, "height": 60 },
+      "background": "../generated/coral-cream-canvas.png",
+      "stickers": [
+        { "path": "../generated/calendar-moon-sticker.png", "frame": { "x": 1030, "y": 86, "width": 120, "height": 120 } }
+      ]
+    }
+  ]
+}

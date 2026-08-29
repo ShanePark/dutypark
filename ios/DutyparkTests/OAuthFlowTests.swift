@@ -25,10 +25,6 @@ final class OAuthSignupPresentationTests: XCTestCase {
             UITestingDestination(arguments: ["-ui-testing-direct-attachment-gallery"]),
             .attachmentGallery
         )
-        XCTAssertEqual(
-            UITestingDestination(arguments: ["-ui-testing-admin"]),
-            .admin
-        )
     }
 
     func testEmptySignupCanDismissImmediately() {

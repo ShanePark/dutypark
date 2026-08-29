@@ -11,6 +11,7 @@ import jakarta.persistence.Id
 import jakarta.persistence.OneToMany
 import jakarta.persistence.Table
 import java.time.Instant
+import java.util.UUID
 
 @Entity
 @Table(name = "account_deletion_job")
@@ -56,6 +57,22 @@ class AccountDeletionJob(
     var completedAt: Instant? = null
         protected set
 
+    @Column(name = "receipt_token_hash", length = 64, unique = true)
+    var receiptTokenHash: String? = null
+        protected set
+
+    @Column(name = "estimated_completion_at")
+    var estimatedCompletionAt: Instant? = null
+        protected set
+
+    @Column(name = "receipt_expires_at")
+    var receiptExpiresAt: Instant? = null
+        protected set
+
+    @Column(name = "lease_token", length = 36)
+    var leaseToken: String? = null
+        protected set
+
     @OneToMany(mappedBy = "job", cascade = [CascadeType.ALL], orphanRemoval = true)
     val targetMembers: MutableSet<AccountDeletionTargetMember> = linkedSetOf()
 
@@ -74,7 +91,7 @@ class AccountDeletionJob(
         }
     }
 
-    fun claim(now: Instant) {
+    fun claim(now: Instant, leaseToken: String = UUID.randomUUID().toString()) {
         check(status == AccountDeletionJobStatus.PENDING ||
             status == AccountDeletionJobStatus.RETRY_WAIT ||
             status == AccountDeletionJobStatus.PROCESSING)
@@ -82,6 +99,7 @@ class AccountDeletionJob(
         attemptCount++
         lockedAt = now
         lastError = null
+        this.leaseToken = leaseToken
     }
 
     fun scheduleRetry(nextAttemptAt: Instant, error: String) {
@@ -90,13 +108,20 @@ class AccountDeletionJob(
         this.nextAttemptAt = nextAttemptAt
         lockedAt = null
         lastError = error.take(MAX_ERROR_LENGTH)
+        leaseToken = null
     }
 
     fun markFailed(error: String) {
+        markFailed(error, Instant.now())
+    }
+
+    fun markFailed(error: String, failedAt: Instant) {
         check(status == AccountDeletionJobStatus.PROCESSING)
         status = AccountDeletionJobStatus.FAILED
         lockedAt = null
         lastError = error.take(MAX_ERROR_LENGTH)
+        receiptExpiresAt = failedAt.plus(RECEIPT_RETENTION)
+        leaseToken = null
     }
 
     fun markCompleted(completedAt: Instant) {
@@ -105,9 +130,34 @@ class AccountDeletionJob(
         lockedAt = null
         lastError = null
         this.completedAt = completedAt
+        receiptExpiresAt = completedAt.plus(RECEIPT_RETENTION)
+        leaseToken = null
+    }
+
+    fun issueReceipt(
+        receiptTokenHash: String,
+        estimatedCompletionAt: Instant,
+        receiptIssuedAt: Instant? = null,
+    ) {
+        check(receiptTokenHash.length == RECEIPT_TOKEN_HASH_LENGTH)
+        this.receiptTokenHash = receiptTokenHash
+        this.estimatedCompletionAt = estimatedCompletionAt
+        this.receiptExpiresAt = when (status) {
+            AccountDeletionJobStatus.COMPLETED,
+            AccountDeletionJobStatus.FAILED,
+            -> receiptIssuedAt?.plus(RECEIPT_RETENTION) ?: receiptExpiresAt
+
+            else -> null
+        }
+    }
+
+    fun clearReceiptTokenHash() {
+        receiptTokenHash = null
     }
 
     companion object {
         private const val MAX_ERROR_LENGTH = 4_000
+        private const val RECEIPT_TOKEN_HASH_LENGTH = 64
+        private val RECEIPT_RETENTION = java.time.Duration.ofDays(30)
     }
 }

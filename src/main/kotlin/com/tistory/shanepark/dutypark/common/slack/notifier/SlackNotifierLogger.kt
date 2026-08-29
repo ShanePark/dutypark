@@ -8,6 +8,7 @@ class SlackNotifierLogger : SlackNotifier {
     private val log = logger()
 
     override fun call(slackMessage: SlackMessage) {
-        log.info("SlackNotifierLogger: $slackMessage")
+        // Keep the no-token fallback from becoming another payload sink in local or shipped logs.
+        log.info("Slack notification suppressed because no webhook is configured")
     }
 }

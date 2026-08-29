@@ -19,30 +19,21 @@ final class AppConfigurationTests: XCTestCase {
         XCTAssertNil(AppConfiguration.validatedAPIBaseURL("https://dutypark.o-r.kr/"))
     }
 
-    func testBuildsAdminBaseURLFromAPIOrigin() {
-        XCTAssertEqual(
-            AppConfiguration.baseURL(
-                for: .admin,
-                apiBaseURL: URL(string: "http://localhost:8080/api/")!
-            ),
-            URL(string: "http://localhost:8080/admin/api/")
+    func testDemoCaptureEndpointIsLocalOnly() {
+        XCTAssertTrue(
+            AppConfiguration.isLocalCaptureEndpoint(
+                URL(string: "http://localhost:8080/api/")!
+            )
         )
-        XCTAssertEqual(
-            AppConfiguration.baseURL(
-                for: .admin,
-                apiBaseURL: URL(string: "https://dutypark.o-r.kr/api/")!
-            ),
-            URL(string: "https://dutypark.o-r.kr/admin/api/")
+        XCTAssertTrue(
+            AppConfiguration.isLocalCaptureEndpoint(
+                URL(string: "http://127.0.0.1:8080/api/")!
+            )
         )
-    }
-
-    func testAdminBaseURLUsesOnlyOriginFromAPIBaseURL() {
-        XCTAssertEqual(
-            AppConfiguration.baseURL(
-                for: .admin,
-                apiBaseURL: URL(string: "https://dutypark.test/nested/api/?ignored=true#fragment")!
-            ),
-            URL(string: "https://dutypark.test/admin/api/")
+        XCTAssertFalse(
+            AppConfiguration.isLocalCaptureEndpoint(
+                URL(string: "https://dutypark.o-r.kr/api/")!
+            )
         )
     }
 }

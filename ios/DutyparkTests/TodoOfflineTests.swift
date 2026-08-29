@@ -74,6 +74,27 @@ struct TodoOfflineTests {
     }
 
     @Test
+    func loadDropsMalformedTodoIDsFromCachedBoard() async {
+        let malformed = makeOfflineTodo(rawID: "not-a-uuid", title: "Malformed")
+        let valid = makeOfflineTodo(title: "Valid")
+        let cache = TodoOfflineCacheFake(
+            account: makeOfflineAccount(),
+            board: makeOfflineBoard(todo: [malformed, valid])
+        )
+        let model = TodoViewModel(
+            repository: TodoOfflineRepository(),
+            cache: cache,
+            outbox: TodoOfflineOutboxFake()
+        )
+
+        await model.load(accountID: 42, availability: .offline)
+        let opened = model.open(todoID: valid.uuid)
+
+        #expect(model.board?.todo.map(\.id) == [valid.id])
+        #expect(opened?.id == valid.id)
+    }
+
+    @Test
     func loadKeepsExistingErrorWhenTransportHasNoCachedBoard() async {
         let model = TodoViewModel(
             repository: TodoOfflineRepository(boardError: .transport),
@@ -633,12 +654,13 @@ nonisolated private func makeOfflineFriend(id: MemberID, name: String) -> Friend
 
 nonisolated private func makeOfflineTodo(
     id: TodoID = UUID(),
+    rawID: String? = nil,
     title: String,
     status: TodoStatus = .todo,
     hasAttachments: Bool = false
 ) -> TodoDTO {
     TodoDTO(
-        id: id.uuidString,
+        id: rawID ?? id.uuidString,
         title: title,
         content: "Details",
         position: 0,

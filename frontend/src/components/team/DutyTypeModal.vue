@@ -10,6 +10,7 @@ import '@simonwep/pickr/dist/themes/monolith.min.css'
 import type { DutyTypeDto } from '@/types'
 import { X } from 'lucide-vue-next'
 import { resolveApiErrorMessage } from '@/utils/resolveApiError'
+import { useContentFilterStore } from '@/stores/contentFilter'
 
 const props = defineProps<{
   isOpen: boolean
@@ -27,6 +28,7 @@ const emit = defineEmits<{
 
 const { showWarning, showError, toastSuccess } = useSwal()
 const { t } = useI18n()
+const contentFilterStore = useContentFilterStore()
 
 const defaultDutyColor = '#ffb3ba'
 
@@ -142,6 +144,11 @@ async function saveDutyType() {
     return
   }
 
+  if (contentFilterStore.isBlocked(trimmedDutyTypeName.value)) {
+    showError(t('contentFilter.blocked'))
+    return
+  }
+
   submitting.value = true
   emit('update:saving', true)
   let succeeded = false
@@ -170,7 +177,6 @@ async function saveDutyType() {
     succeeded = true
   } catch (error) {
     console.error('Failed to save duty type:', error)
-    emit('saved')
     showError(resolveApiErrorMessage(error, {
       fallbackKey: 'team.dutyType.messages.saveFailed',
     }, t))

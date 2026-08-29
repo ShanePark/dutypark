@@ -30,11 +30,17 @@ struct MyInfoView: View {
     @State private var socialManagementPresentation: SettingsSocialManagementPresentation?
     @State private var socialAction = SettingsDestructiveActionGate()
     @State private var oauthNoticeMessage: String?
+    @State private var photoNoticeMessage: String?
     private let onProfilePhotoChanged: () -> Void
+    private let onProfilePhotoStateChanged: (Bool, Int64) -> Void
     private let settingsService = SettingsService()
 
-    init(onProfilePhotoChanged: @escaping () -> Void = {}) {
+    init(
+        onProfilePhotoChanged: @escaping () -> Void = {},
+        onProfilePhotoStateChanged: @escaping (Bool, Int64) -> Void = { _, _ in }
+    ) {
         self.onProfilePhotoChanged = onProfilePhotoChanged
+        self.onProfilePhotoStateChanged = onProfilePhotoStateChanged
     }
 
     var body: some View {
@@ -81,6 +87,10 @@ struct MyInfoView: View {
         }
         .accessibilityIdentifier("screen.myInfo")
         .task { await model.load(.myInfo) }
+        .onChange(of: model.member) { _, member in
+            guard let member else { return }
+            onProfilePhotoStateChanged(member.hasProfilePhoto, member.profilePhotoVersion)
+        }
         .onChange(of: selectedPhoto) { _, item in
             guard let item else { return }
             Task { await upload(item) }
@@ -140,13 +150,16 @@ struct MyInfoView: View {
             }
         }
         .fullScreenCover(isPresented: $showAccountDeletion) {
-            if let memberName = model.member?.name {
+            if let memberID = model.member?.id,
+               let memberName = model.member?.name {
                 DPModalOverlay(
                     onDismiss: { showAccountDeletion = false },
                     closeOnBackdrop: false,
                     canDismiss: !accountDeletionIsWorking
                 ) { availableSize, dismiss in
                     AccountDeletionView(
+                        memberID: memberID,
+                        policyModel: model,
                         push: push,
                         memberName: memberName,
                         maximumHeight: availableSize.height,
@@ -196,13 +209,18 @@ struct MyInfoView: View {
             if let photoToCrop {
                 ProfilePhotoCropView(image: photoToCrop) { jpeg in
                     self.photoToCrop = nil
+                    photoNoticeMessage = nil
                     Task {
                         if await model.uploadProfilePhoto(jpeg) {
+                            notifyProfilePhotoState()
                             onProfilePhotoChanged()
                         }
                     }
                 } onCancel: {
                     self.photoToCrop = nil
+                } onError: { error in
+                    self.photoToCrop = nil
+                    showPhotoError(error)
                 }
             }
         }
@@ -210,10 +228,13 @@ struct MyInfoView: View {
             Button(SettingsLocalization.string("settings.action.confirm")) {
                 model.noticeKey = nil
                 oauthNoticeMessage = nil
+                photoNoticeMessage = nil
             }
         } message: {
             if let oauthNoticeMessage {
                 Text(verbatim: oauthNoticeMessage)
+            } else if let photoNoticeMessage {
+                Text(verbatim: photoNoticeMessage)
             } else if let key = model.noticeKey {
                 SettingsLocalization.text(key)
             }
@@ -307,6 +328,7 @@ struct MyInfoView: View {
     private var profilePhoto: some View {
         DPProfileAvatar(
             memberID: model.member?.id,
+            hasProfilePhoto: model.member?.hasProfilePhoto,
             profilePhotoVersion: model.member?.profilePhotoVersion ?? 0,
             size: 80
         )
@@ -413,6 +435,7 @@ struct MyInfoView: View {
                 HStack(spacing: DPSpacing.compact) {
                     DPProfileAvatar(
                         memberID: member.id,
+                        hasProfilePhoto: member.hasProfilePhoto,
                         profilePhotoVersion: member.profilePhotoVersion,
                         size: 40
                     )
@@ -553,11 +576,16 @@ struct MyInfoView: View {
 
     private var noticeBinding: Binding<Bool> {
         Binding(
-            get: { model.noticeKey != nil || oauthNoticeMessage != nil },
+            get: {
+                model.noticeKey != nil
+                    || oauthNoticeMessage != nil
+                    || photoNoticeMessage != nil
+            },
             set: {
                 if !$0 {
                     model.noticeKey = nil
                     oauthNoticeMessage = nil
+                    photoNoticeMessage = nil
                 }
             }
         )
@@ -657,21 +685,33 @@ struct MyInfoView: View {
 
     private func upload(_ item: PhotosPickerItem) async {
         defer { selectedPhoto = nil }
-        guard let data = try? await item.loadTransferable(type: Data.self),
-              let image = UIImage(data: data)
-        else {
-            model.noticeKey = "settings.photo.invalid"
-            model.noticeIsError = true
-            DPHapticCenter.shared.emit(.error)
-            return
+        do {
+            guard let picked = try await item.loadTransferable(type: ProfilePhotoPickerImage.self) else {
+                throw ProfilePhotoProcessingError.invalidImage
+            }
+            photoToCrop = picked.image
+        } catch let error as ProfilePhotoProcessingError {
+            showPhotoError(error)
+        } catch {
+            showPhotoError(.invalidImage)
         }
-        photoToCrop = image
     }
 
     private func cameraDidDismiss() {
         guard let cameraPhoto else { return }
         self.cameraPhoto = nil
-        photoToCrop = cameraPhoto
+        guard let image = ProfilePhotoCropper.downsampledImage(cameraPhoto) else {
+            showPhotoError(.invalidImage)
+            return
+        }
+        photoToCrop = image
+    }
+
+    private func showPhotoError(_ error: ProfilePhotoProcessingError) {
+        photoNoticeMessage = error.userMessage
+        model.noticeKey = nil
+        model.noticeIsError = true
+        DPHapticCenter.shared.emit(.error)
     }
 
     private func link(_ provider: OAuthProvider) async {
@@ -770,6 +810,7 @@ struct MyInfoView: View {
             switch requestedAction {
             case .deleteProfilePhoto:
                 if await model.deleteProfilePhoto() {
+                    notifyProfilePhotoState()
                     onProfilePhotoChanged()
                 }
             case .removeManager(let id, _):
@@ -792,6 +833,11 @@ struct MyInfoView: View {
             confirmationAction.finish()
             dismiss()
         }
+    }
+
+    private func notifyProfilePhotoState() {
+        guard let member = model.member else { return }
+        onProfilePhotoStateChanged(member.hasProfilePhoto, member.profilePhotoVersion)
     }
 }
 

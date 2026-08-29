@@ -85,12 +85,309 @@ nonisolated enum TodoFormStatusSelectionPolicy {
     }
 }
 
+/// Persists attachment sessions whose discard request may outlive the Todo
+/// form. Session IDs are account-scoped so a later login can retry only its
+/// own cleanup work. These IDs do not contain attachment contents or tokens.
+@MainActor
+final class TodoAttachmentDiscardStore {
+    static let shared = TodoAttachmentDiscardStore()
+
+    private let defaults: UserDefaults
+    private let keyPrefix = "dp-todo-attachment-discard."
+
+    init(defaults: UserDefaults = .standard) {
+        self.defaults = defaults
+    }
+
+    func enqueue(accountID: MemberID, sessionID: UUID) {
+        guard accountID > 0 else { return }
+        var values = values(for: accountID)
+        let rawValue = sessionID.uuidString
+        guard !values.contains(rawValue) else { return }
+        values.append(rawValue)
+        defaults.set(values, forKey: key(for: accountID))
+    }
+
+    func pendingSessionIDs(accountID: MemberID) -> [UUID] {
+        guard accountID > 0 else { return [] }
+        return values(for: accountID).compactMap(UUID.init(uuidString:))
+    }
+
+    func remove(accountID: MemberID, sessionID: UUID) {
+        guard accountID > 0 else { return }
+        let remaining = values(for: accountID).filter { $0 != sessionID.uuidString }
+        if remaining.isEmpty {
+            defaults.removeObject(forKey: key(for: accountID))
+        } else {
+            defaults.set(remaining, forKey: key(for: accountID))
+        }
+    }
+
+    func purge(accountID: MemberID) {
+        guard accountID > 0 else { return }
+        defaults.removeObject(forKey: key(for: accountID))
+    }
+
+    func purgeAll() {
+        for key in defaults.dictionaryRepresentation().keys where key.hasPrefix(keyPrefix) {
+            defaults.removeObject(forKey: key)
+        }
+    }
+
+    private func values(for accountID: MemberID) -> [String] {
+        defaults.array(forKey: key(for: accountID)) as? [String] ?? []
+    }
+
+    private func key(for accountID: MemberID) -> String {
+        keyPrefix + String(accountID)
+    }
+}
+
+/// Finishes cleanup for an attachment session after a Todo form has left the
+/// hierarchy. A form is allowed to disappear immediately, but its temporary
+/// server session is persisted until a discard succeeds. The coordinator is
+/// shared by the authenticated session rather than owned by the form or a
+/// particular view model, so retry state survives SwiftUI teardown.
+@MainActor
+final class TodoAttachmentDiscardCoordinator {
+    /// The cleanup coordinator is session-scoped rather than view-scoped. A
+    /// Todo board and Calendar detail can both present attachment forms, and
+    /// authentication transitions must be able to cancel their in-flight
+    /// requests before replacing credentials.
+    static let shared = TodoAttachmentDiscardCoordinator()
+
+    /// Mirrors the app outbox's five-second exponential retry cadence while
+    /// keeping this cleanup bounded to a short retry window.
+    static let defaultRetryDelays: [Duration] = [
+        .seconds(5),
+        .seconds(10),
+        .seconds(20)
+    ]
+
+    typealias Sleep = @Sendable (Duration) async throws -> Void
+    typealias PersistedDiscard = @Sendable (MemberID, UUID) async -> Bool
+
+    private struct PendingKey: Hashable {
+        let accountID: MemberID
+        let sessionGeneration: UInt64
+        let sessionID: UUID
+    }
+
+    private struct PendingOperation {
+        let accountID: MemberID
+        let sessionID: UUID
+        let discard: @MainActor @Sendable () async -> Bool
+    }
+
+    private let store: TodoAttachmentDiscardStore
+    private let retryDelays: [Duration]
+    private let sleep: Sleep
+    private let persistedDiscard: PersistedDiscard
+    private var pendingOperations: [PendingKey: PendingOperation] = [:]
+    private var tasks: [PendingKey: Task<Void, Never>] = [:]
+    private var activeSession: AuthenticationSessionContext?
+
+    init(
+        store: TodoAttachmentDiscardStore = .shared,
+        retryDelays: [Duration] = TodoAttachmentDiscardCoordinator.defaultRetryDelays,
+        sleep: @escaping Sleep = { duration in
+            try await Task.sleep(for: duration)
+        },
+        persistedDiscard: @escaping PersistedDiscard = { _, sessionID in
+            do {
+                try await AttachmentClient().discardSession(sessionID)
+                return true
+            } catch {
+                return false
+            }
+        }
+    ) {
+        self.store = store
+        self.retryDelays = retryDelays
+        self.sleep = sleep
+        self.persistedDiscard = persistedDiscard
+    }
+
+    /// Sessions that still need a successful discard for the authenticated
+    /// account. The account argument is mandatory to avoid cross-account work.
+    func pendingSessionIDs(accountID: MemberID) -> Set<UUID> {
+        guard accountID > 0 else { return [] }
+        let stored = store.pendingSessionIDs(accountID: accountID)
+        let inMemory = pendingOperations.keys
+            .filter { $0.accountID == accountID }
+            .map(\.sessionID)
+        return Set(stored + inMemory)
+    }
+
+    /// Changes the account boundary and stops old-account retry tasks without
+    /// deleting their persisted records. They can be retried after that exact
+    /// account authenticates again.
+    func activate(accountID: MemberID, sessionGeneration: UInt64) {
+        guard accountID > 0 else { return }
+        let session = AuthenticationSessionContext(
+            memberID: accountID,
+            generation: sessionGeneration
+        )
+        // SessionStore is the authority that crosses authentication
+        // boundaries. It calls `cancelAll()` before activating a new context.
+        // Refuse a different context here so a stale Todo view cannot move the
+        // coordinator back to an old account (or revive an old generation)
+        // after logout or account switch.
+        guard activeSession == nil || activeSession == session else { return }
+        activeSession = session
+    }
+
+    /// Cancels only in-memory work for an account. Its durable pending IDs are
+    /// intentionally retained for same-account recovery after re-login.
+    func cancel(accountID: MemberID) {
+        guard accountID > 0 else { return }
+        for key in Array(tasks.keys) where key.accountID == accountID {
+            tasks[key]?.cancel()
+            tasks[key] = nil
+        }
+        // Do not retain a model-backed closure after the credentials it would
+        // use have been invalidated. The durable session ID is rehydrated with
+        // a fresh API client when this exact account authenticates again.
+        for key in Array(pendingOperations.keys) where key.accountID == accountID {
+            pendingOperations[key] = nil
+        }
+        if activeSession?.memberID == accountID {
+            activeSession = nil
+        }
+    }
+
+    /// Cancels in-flight model-backed requests at an authentication boundary
+    /// while retaining the durable IDs for a same-account retry. The task
+    /// cancellation is deliberately separate from store purging: logout and
+    /// account switching must preserve cleanup work, while account deletion
+    /// decides when to purge it explicitly.
+    func cancelAll() {
+        for task in tasks.values {
+            task.cancel()
+        }
+        tasks.removeAll()
+        pendingOperations.removeAll()
+        activeSession = nil
+    }
+
+    /// Schedules at most one discard task for a session. Calling this from
+    /// multiple disappearance callbacks is therefore harmless.
+    func schedule(
+        model: AttachmentPickerModel,
+        accountID: MemberID,
+        sessionGeneration: UInt64
+    ) {
+        guard accountID > 0,
+              let activeSession,
+              activeSession == AuthenticationSessionContext(
+                memberID: accountID,
+                generation: sessionGeneration
+              ),
+              let sessionID = model.attachmentSessionId
+        else { return }
+        let key = PendingKey(
+            accountID: accountID,
+            sessionGeneration: sessionGeneration,
+            sessionID: sessionID
+        )
+        store.enqueue(accountID: accountID, sessionID: sessionID)
+        let discard: @MainActor @Sendable () async -> Bool = { @MainActor [model] in
+            await model.discard()
+        }
+        pendingOperations[key] = PendingOperation(
+            accountID: accountID,
+            sessionID: sessionID,
+            discard: discard
+        )
+        guard tasks[key] == nil else { return }
+        start(key: key)
+    }
+
+    /// Rehydrates pending IDs for this authenticated account and starts their
+    /// cleanup through a fresh API client. IDs for every other account remain
+    /// untouched and cannot be sent with the current account's credentials.
+    func retryPending(accountID: MemberID, sessionGeneration: UInt64) {
+        guard accountID > 0,
+              activeSession == AuthenticationSessionContext(
+                memberID: accountID,
+                generation: sessionGeneration
+              )
+        else { return }
+        for sessionID in store.pendingSessionIDs(accountID: accountID) {
+            let key = PendingKey(
+                accountID: accountID,
+                sessionGeneration: sessionGeneration,
+                sessionID: sessionID
+            )
+            guard pendingOperations[key] == nil else { continue }
+            let persistedDiscard = self.persistedDiscard
+            let discard: @MainActor @Sendable () async -> Bool = {
+                await persistedDiscard(accountID, sessionID)
+            }
+            pendingOperations[key] = PendingOperation(
+                accountID: accountID,
+                sessionID: sessionID,
+                discard: discard
+            )
+        }
+        for key in Array(pendingOperations.keys)
+            where key.accountID == accountID && tasks[key] == nil {
+            start(key: key)
+        }
+    }
+
+    private func start(key: PendingKey) {
+        guard let operation = pendingOperations[key] else { return }
+        let discard = operation.discard
+        let store = self.store
+        let retryDelays = self.retryDelays
+        let sleep = self.sleep
+        let isActive: @MainActor @Sendable () -> Bool = { [weak self] in
+            guard let self else { return false }
+            return self.activeSession == AuthenticationSessionContext(
+                memberID: key.accountID,
+                generation: key.sessionGeneration
+            ) && self.tasks[key] != nil
+        }
+
+        tasks[key] = Task { @MainActor [weak self] in
+            var discarded = false
+            for attempt in 0...retryDelays.count {
+                guard !Task.isCancelled, isActive() else { break }
+                let succeeded = await discard()
+                guard !Task.isCancelled, isActive() else { break }
+                if succeeded {
+                    discarded = true
+                    break
+                }
+
+                guard attempt < retryDelays.count else { break }
+                do {
+                    try await sleep(retryDelays[attempt])
+                } catch {
+                    break
+                }
+            }
+
+            if discarded {
+                store.remove(accountID: key.accountID, sessionID: key.sessionID)
+            }
+            guard let self else { return }
+            self.tasks[key] = nil
+            if discarded {
+                self.pendingOperations.removeValue(forKey: key)
+            }
+        }
+    }
+}
+
 /// The single Todo creation presentation shared by the Todo board and Calendar quick-add.
 struct TodoCreateModal: View {
     @ObservedObject var model: TodoViewModel
     let initialStatus: TodoStatus
     let friends: [FriendDTO]
     let accountID: MemberID?
+    let sessionGeneration: UInt64?
     let availability: SessionAvailability?
     let refreshBoardAfterCreate: Bool
     let onCreated: () async -> Void
@@ -112,6 +409,8 @@ struct TodoCreateModal: View {
                 model: model,
                 targetTodoID: nil,
                 existingAttachments: [],
+                accountID: accountID,
+                sessionGeneration: sessionGeneration,
                 isSaving: model.isSaving,
                 maximumHeight: availableSize.height,
                 dismissAction: dismiss,
@@ -123,6 +422,7 @@ struct TodoCreateModal: View {
                     draft: draft,
                     accountID: accountID,
                     availability: availability,
+                    sessionGeneration: sessionGeneration,
                     refreshBoard: refreshBoardAfterCreate
                 )
                 if created { await onCreated() }
@@ -245,12 +545,14 @@ struct TodoView: View {
             if model.board == nil {
                 await model.load(
                     accountID: authenticatedAccountID,
-                    availability: session.availability
+                    availability: session.availability,
+                    sessionGeneration: authenticatedSessionGeneration
                 )
             } else {
                 await model.refresh(
                     accountID: authenticatedAccountID,
-                    availability: session.availability
+                    availability: session.availability,
+                    sessionGeneration: authenticatedSessionGeneration
                 )
             }
             visibleStatus = model.selectedStatus
@@ -266,12 +568,14 @@ struct TodoView: View {
                 if availability == .online || model.board == nil {
                     await model.refresh(
                         accountID: authenticatedAccountID,
-                        availability: availability
+                        availability: availability,
+                        sessionGeneration: authenticatedSessionGeneration
                     )
                 } else {
                     await model.load(
                         accountID: authenticatedAccountID,
-                        availability: availability
+                        availability: availability,
+                        sessionGeneration: authenticatedSessionGeneration
                     )
                 }
             }
@@ -295,6 +599,7 @@ struct TodoView: View {
                 initialStatus: model.selectedStatus,
                 friends: model.friends,
                 accountID: authenticatedAccountID,
+                sessionGeneration: authenticatedSessionGeneration,
                 availability: session.availability,
                 refreshBoardAfterCreate: true,
                 onCreated: onTodoChanged,
@@ -317,6 +622,8 @@ struct TodoView: View {
                         model: model,
                         todo: selectedTodo,
                         maximumHeight: availableSize.height,
+                        accountID: authenticatedAccountID,
+                        sessionGeneration: authenticatedSessionGeneration,
                         onTodoChanged: onTodoChanged,
                         onDismissabilityChange: { detailCanDismiss = $0 },
                         dismissRequest: detailDismissRequest,
@@ -331,6 +638,10 @@ struct TodoView: View {
     private var authenticatedAccountID: MemberID? {
         guard case .authenticated(let member) = session.state else { return nil }
         return member.id
+    }
+
+    private var authenticatedSessionGeneration: UInt64? {
+        session.authenticationSessionGenerationForCurrentAccount
     }
 
     private var todoAvailabilityBanner: some View {
@@ -676,7 +987,8 @@ struct TodoView: View {
                     Task {
                         await model.load(
                             accountID: authenticatedAccountID,
-                            availability: session.availability
+                            availability: session.availability,
+                            sessionGeneration: authenticatedSessionGeneration
                         )
                     }
                 }
@@ -759,7 +1071,8 @@ struct TodoView: View {
                     .refreshable {
                         await model.refresh(
                             accountID: authenticatedAccountID,
-                            availability: session.availability
+                            availability: session.availability,
+                            sessionGeneration: authenticatedSessionGeneration
                         )
                     }
                     .task(id: model.selectedStatus.rawValue) {
@@ -1620,6 +1933,8 @@ struct TodoFormSheet: View {
     let titleKey: String
     let friends: [FriendDTO]
     let preservedTags: [MemberPreviewDTO]
+    let accountID: MemberID?
+    let sessionGeneration: UInt64?
     let isSaving: Bool
     let maximumHeight: CGFloat?
     let dismissAction: (() -> Void)?
@@ -1645,6 +1960,12 @@ struct TodoFormSheet: View {
     @State private var dismissFormAfterDiscard = false
     @State private var isSubmitting = false
     @StateObject private var attachmentModel: AttachmentPickerModel
+    /// Keep the authentication context from the presentation that created the
+    /// attachment session. SwiftUI may render this form again after the
+    /// session changes, but a late disappearance must never reschedule the old
+    /// session with the new credentials.
+    @State private var boundAccountID: MemberID?
+    @State private var boundSessionGeneration: UInt64?
     @FocusState private var focusedField: TodoFormField?
     @State private var isTagSearchFocused = false
 
@@ -1656,6 +1977,8 @@ struct TodoFormSheet: View {
         targetTodoID: String?,
         existingAttachments: [AttachmentDTO],
         preservedTags: [MemberPreviewDTO] = [],
+        accountID: MemberID? = nil,
+        sessionGeneration: UInt64? = nil,
         isSaving: Bool,
         maximumHeight: CGFloat? = nil,
         dismissAction: (() -> Void)? = nil,
@@ -1667,6 +1990,8 @@ struct TodoFormSheet: View {
         self.titleKey = titleKey
         self.friends = friends
         self.preservedTags = preservedTags
+        self.accountID = accountID
+        self.sessionGeneration = sessionGeneration
         self.model = model
         self.isSaving = isSaving
         self.maximumHeight = maximumHeight
@@ -1681,6 +2006,8 @@ struct TodoFormSheet: View {
         _draft = State(initialValue: initialDraft)
         _baselineDraft = State(initialValue: initialDraft)
         _baselineAttachmentIDs = State(initialValue: existingAttachments.map(\.id))
+        _boundAccountID = State(initialValue: accountID)
+        _boundSessionGeneration = State(initialValue: sessionGeneration)
         _attachmentModel = StateObject(
             wrappedValue: AttachmentPickerModel(
                 contextType: .todo,
@@ -1721,7 +2048,11 @@ struct TodoFormSheet: View {
             guard !showsDiscardConfirmation else { return }
             onBusyChange(false)
             guard !didSave else { return }
-            Task { await attachmentModel.discard() }
+            model.scheduleAttachmentDiscard(
+                for: attachmentModel,
+                accountID: boundAccountID,
+                sessionGeneration: boundSessionGeneration
+            )
         }
         .fullScreenCover(isPresented: $showsDiscardConfirmation) {
             DPModalOverlay(

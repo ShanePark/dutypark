@@ -127,9 +127,15 @@ final class HomeFriendInteractionUITests: XCTestCase {
 
         pinButton.tap()
 
+        let unpinConfirmation = app.alerts["즐겨찾기 해제"]
+        XCTAssertTrue(unpinConfirmation.waitForExistence(timeout: 10))
+        let confirmUnpinButton = unpinConfirmation.buttons["즐겨찾기 해제"]
+        XCTAssertTrue(confirmUnpinButton.waitForExistence(timeout: 10))
+        confirmUnpinButton.tap()
+        XCTAssertTrue(unpinConfirmation.waitForNonExistence(timeout: 10))
         XCTAssertFalse(app.descendants(matching: .any)["home.loading"].exists)
         XCTAssertTrue(unpinnedFriend.exists)
-        XCTAssertEqual(pinButton.label, "즐겨찾기에 추가")
+        XCTAssertTrue(waitForLabel(pinButton, equals: "즐겨찾기에 추가"))
         XCTAssertTrue(home.exists)
         XCTAssertFalse(anyCalendar(app).exists)
         attachScreenshot(named: "home-friend-pin-unpin-stable")
@@ -244,5 +250,14 @@ final class HomeFriendInteractionUITests: XCTestCase {
         attachment.name = name
         attachment.lifetime = .keepAlways
         add(attachment)
+    }
+
+    @MainActor
+    private func waitForLabel(_ element: XCUIElement, equals label: String) -> Bool {
+        let expectation = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in element.label == label },
+            object: nil
+        )
+        return XCTWaiter.wait(for: [expectation], timeout: 10) == .completed
     }
 }

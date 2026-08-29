@@ -4,15 +4,12 @@ import SwiftUI
 nonisolated enum UITestingDestination: Equatable {
     case ssoSignup
     case attachmentGallery
-    case admin
 
     init?(arguments: [String]) {
         if arguments.contains("-ui-testing-sso-signup") {
             self = .ssoSignup
         } else if arguments.contains("-ui-testing-direct-attachment-gallery") {
             self = .attachmentGallery
-        } else if arguments.contains("-ui-testing-admin") {
-            self = .admin
         } else {
             return nil
         }
@@ -22,6 +19,8 @@ nonisolated enum UITestingDestination: Equatable {
 
 struct AppRootView: View {
     @EnvironmentObject private var session: SessionStore
+    @Environment(\.openURL) private var openURL
+    @StateObject private var push = APNsRegistrationManager.shared
     @StateObject private var offlineSyncCoordinator = OfflineSyncCoordinator.shared
 
     var body: some View {
@@ -61,6 +60,17 @@ struct AppRootView: View {
         } message: {
             Text("auth.logout.serverWarning.message")
         }
+        .alert(
+            SettingsLocalization.string("settings.push.permissionTitle"),
+            isPresented: $push.showsPermissionPreprompt
+        ) {
+            Button(SettingsLocalization.string("settings.action.cancel"), role: .cancel) {}
+            Button(SettingsLocalization.string("settings.push.continue")) {
+                Task { await push.continuePermissionRequest() }
+            }
+        } message: {
+            SettingsLocalization.text("settings.push.permissionMessage")
+        }
     }
 
     @ViewBuilder
@@ -87,9 +97,17 @@ struct AppRootView: View {
                 }
             case .guest:
                 if session.accountDeletionAcceptedPresentation != nil {
-                    AccountDeletionAcceptedView {
-                        session.dismissAccountDeletionAcceptedPresentation()
-                    }
+                    AccountDeletionAcceptedView(
+                        receipt: session.accountDeletionReceipt,
+                        onDismiss: { clearReceipt in
+                            session.dismissAccountDeletionAcceptedPresentation(
+                                clearReceipt: clearReceipt
+                            )
+                        },
+                        onOpenSupport: {
+                            openURL(URL(string: "https://dutypark.o-r.kr/support")!)
+                        }
+                    )
                 } else {
                     GuestRootView()
                 }
@@ -148,11 +166,6 @@ struct AppRootView: View {
             .environmentObject(session)
         case .attachmentGallery:
             AttachmentGalleryUITestingFixtureView()
-        case .admin:
-            NavigationStack {
-                AdminRootView(onOpenCalendar: { _ in })
-            }
-            .environmentObject(session)
         }
     }
     #endif

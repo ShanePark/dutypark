@@ -5,6 +5,7 @@ import com.tistory.shanepark.dutypark.member.accountdeletion.domain.AccountDelet
 import com.tistory.shanepark.dutypark.member.accountdeletion.dto.AccountDeletionAcceptedResponse
 import com.tistory.shanepark.dutypark.member.accountdeletion.dto.AccountDeletionPreviewResponse
 import com.tistory.shanepark.dutypark.member.accountdeletion.dto.AccountDeletionRequest
+import com.tistory.shanepark.dutypark.member.accountdeletion.dto.AccountDeletionStatusResponse
 import com.tistory.shanepark.dutypark.member.accountdeletion.dto.AuxiliaryAccountImpact
 import com.tistory.shanepark.dutypark.member.accountdeletion.dto.TeamAdminTransferCandidate
 import com.tistory.shanepark.dutypark.member.accountdeletion.dto.TeamDeletionImpact
@@ -27,6 +28,7 @@ import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
+import java.time.Duration
 import java.time.Instant
 
 @Service
@@ -73,13 +75,32 @@ class AccountDeletionService(
             throw badRequest("account.delete.confirmationMismatch")
         }
 
+        val receiptToken = request.receiptToken?.let(::validateReceiptToken)
+            ?: AccountDeletionReceiptToken.generate()
+        val receiptTokenHash = AccountDeletionReceiptToken.hash(receiptToken)
+
         jobRepository.findByRootMemberIdForUpdate(login.id).orElse(null)?.let { existing ->
-            return accepted(existing)
+            return acceptExistingJob(
+                existing = existing,
+                receiptToken = receiptToken,
+                receiptTokenHash = receiptTokenHash,
+                clientProvidedReceipt = request.receiptToken != null,
+            )
         }
 
         val root = memberRepository.findMemberWithTeamForUpdate(login.id).orElseThrow()
         if (root.status != MemberStatus.ACTIVE) {
-            jobRepository.findByRootMemberId(login.id)?.let { return accepted(it) }
+            // A concurrent deletion request can create the job after the initial lookup but
+            // before this member lock is acquired. Re-read it with a lock so the caller's
+            // receipt follows the same reconciliation rules as the fast path above.
+            jobRepository.findByRootMemberIdForUpdate(login.id).orElse(null)?.let { existing ->
+                return acceptExistingJob(
+                    existing = existing,
+                    receiptToken = receiptToken,
+                    receiptTokenHash = receiptTokenHash,
+                    clientProvidedReceipt = request.receiptToken != null,
+                )
+            }
             throw conflict("account.delete.alreadyPending")
         }
         reauthenticate(root, request)
@@ -120,6 +141,10 @@ class AccountDeletionService(
             nextAttemptAt = now,
             createdAt = now,
         )
+        job.issueReceipt(
+            receiptTokenHash = receiptTokenHash,
+            estimatedCompletionAt = now.plus(EXPECTED_COMPLETION_TIME),
+        )
         targets.forEach { job.addTargetMember(requireNotNull(it.id)) }
         deleteTeamIds.forEach(job::addTargetTeam)
         val saved = jobRepository.save(job)
@@ -128,7 +153,64 @@ class AccountDeletionService(
             if (target.status == MemberStatus.ACTIVE) target.markDeletionPending(now)
         }
         invalidateAuthentication(targets.map { requireNotNull(it.id) }, targets)
-        return accepted(saved)
+        return accepted(saved, receiptToken)
+    }
+
+    /**
+     * Looks up a deletion receipt without requiring the deleted account to remain authenticated.
+     * An expired hash is cleared in the same transaction, while the job and its audit targets stay intact.
+     */
+    @Transactional(noRollbackFor = [AccountDeletionException::class])
+    fun findStatus(receiptToken: String): AccountDeletionStatusResponse {
+        val now = clock.instant()
+        val receiptTokenHash = AccountDeletionReceiptToken.hash(receiptToken)
+        val job = jobRepository.findByReceiptTokenHash(receiptTokenHash)
+            .orElseThrow { receiptNotFound() }
+        val expiresAt = job.receiptExpiresAt
+        if (expiresAt != null && !expiresAt.isAfter(now)) {
+            // Do not dirty-flush a stale entity here: a concurrent request may have
+            // replaced this receipt after the lookup. The expected hash makes the clear
+            // conditional on the value that actually expired.
+            jobRepository.clearExpiredReceiptTokenHash(receiptTokenHash, now)
+            throw receiptNotFound()
+        }
+
+        val status = when (job.status) {
+            AccountDeletionJobStatus.PENDING,
+            AccountDeletionJobStatus.RETRY_WAIT,
+            AccountDeletionJobStatus.PROCESSING,
+            -> "PROCESSING"
+
+            AccountDeletionJobStatus.COMPLETED -> "COMPLETED"
+            AccountDeletionJobStatus.FAILED -> "FAILED"
+        }
+        return AccountDeletionStatusResponse(
+            status = status,
+            estimatedCompletionAt = job.estimatedCompletionAt ?: job.createdAt.plus(EXPECTED_COMPLETION_TIME),
+            completedAt = job.completedAt,
+            receiptExpiresAt = if (status == "PROCESSING") null else job.receiptExpiresAt,
+        )
+    }
+
+    private fun acceptExistingJob(
+        existing: AccountDeletionJob,
+        receiptToken: String,
+        receiptTokenHash: String,
+        clientProvidedReceipt: Boolean,
+    ): AccountDeletionAcceptedResponse {
+        when {
+            existing.receiptTokenHash == receiptTokenHash -> Unit
+            existing.receiptTokenHash == null || !clientProvidedReceipt -> {
+                existing.issueReceipt(
+                    receiptTokenHash = receiptTokenHash,
+                    estimatedCompletionAt = existing.estimatedCompletionAt
+                        ?: existing.createdAt.plus(EXPECTED_COMPLETION_TIME),
+                    receiptIssuedAt = clock.instant(),
+                )
+            }
+            else -> throw conflict("account.delete.receiptToken.mismatch")
+        }
+        return accepted(existing, receiptToken)
     }
 
     private fun reauthenticate(member: Member, request: AccountDeletionRequest) {
@@ -208,17 +290,28 @@ class AccountDeletionService(
         if (login.isImpersonating) throw forbidden("account.delete.impersonationForbidden")
     }
 
-    private fun accepted(job: AccountDeletionJob) = AccountDeletionAcceptedResponse(
+    private fun accepted(job: AccountDeletionJob, receiptToken: String? = null) = AccountDeletionAcceptedResponse(
         jobId = requireNotNull(job.id),
         status = if (job.status == AccountDeletionJobStatus.COMPLETED) "COMPLETED" else "ACCEPTED",
+        receiptToken = receiptToken,
+        estimatedCompletionAt = job.estimatedCompletionAt ?: job.createdAt.plus(EXPECTED_COMPLETION_TIME),
     )
 
     private fun badRequest(code: String) = AccountDeletionException(code, 400)
     private fun unauthorized(code: String) = AccountDeletionException(code, 401)
     private fun forbidden(code: String) = AccountDeletionException(code, 403)
     private fun conflict(code: String) = AccountDeletionException(code, 409)
+    private fun receiptNotFound() = AccountDeletionException("accountDeletion.receipt.notFound", 404)
+
+    private fun validateReceiptToken(receiptToken: String): String {
+        if (!AccountDeletionReceiptToken.isValid(receiptToken)) {
+            throw badRequest("account.delete.receiptToken.invalid")
+        }
+        return receiptToken
+    }
 
     companion object {
         private const val CONFIRMATION = "DELETE"
+        private val EXPECTED_COMPLETION_TIME: Duration = Duration.ofMinutes(5)
     }
 }

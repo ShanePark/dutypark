@@ -3,21 +3,6 @@ import SwiftUI
 nonisolated enum DutyparkLaunchPolicy {
     static func initialSessionState(arguments: [String]) -> SessionState {
 #if DEBUG
-        if arguments.contains("-ui-testing-service-admin") ||
-            arguments.contains("-ui-testing-admin") {
-            return .authenticated(
-                LoginMember(
-                    id: 1,
-                    email: "admin@duty.park",
-                    name: "Service Admin",
-                    teamId: nil,
-                    team: nil,
-                    isAdmin: true,
-                    isImpersonating: false,
-                    originalMemberId: nil
-                )
-            )
-        }
         if arguments.contains("-ui-testing-impersonating") {
             return .authenticated(
                 LoginMember(
@@ -76,6 +61,7 @@ struct DutyparkApp: App {
 
     init() {
         let arguments = CommandLine.arguments
+        AppConfiguration.enforceLocalCaptureIfRequested(arguments: arguments)
         let initialState = DutyparkLaunchPolicy.initialSessionState(arguments: arguments)
         _session = StateObject(wrappedValue: SessionStore(
             initialState: initialState,

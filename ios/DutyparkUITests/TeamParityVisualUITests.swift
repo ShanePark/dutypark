@@ -22,16 +22,16 @@ final class TeamParityVisualUITests: XCTestCase {
     }
 
     @MainActor
-    func testKoreanWeekdaysFollowAppLanguageWhenDeviceIsEnglish() {
+    func testEnglishWeekdaysFollowSystemLanguageWhenDeviceIsEnglish() {
         let app = launchTeamFixture(deviceLanguage: "en", deviceLocale: "en_US")
         defer { app.terminate() }
 
-        for weekday in ["일", "월", "화", "수", "목", "금", "토"] {
+        for weekday in ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] {
             XCTAssertTrue(app.staticTexts[weekday].firstMatch.exists)
         }
-        XCTAssertFalse(app.staticTexts["Sun"].exists)
-        XCTAssertFalse(app.staticTexts["Mon"].exists)
-        capture("parity-ios-team-weekdays-ko-app-en-device-after")
+        XCTAssertFalse(app.staticTexts["일"].exists)
+        XCTAssertFalse(app.staticTexts["월"].exists)
+        capture("parity-ios-team-weekdays-en-system-en-device-after")
     }
 
     @MainActor
@@ -110,9 +110,9 @@ final class TeamParityVisualUITests: XCTestCase {
         addSchedule.tap()
 
         XCTAssertTrue(app.staticTexts["팀 일정 저장"].waitForExistence(timeout: 10))
-        let cancel = app.buttons["취소"].firstMatch
-        XCTAssertTrue(cancel.waitForExistence(timeout: 10))
-        cancel.tap()
+        let close = app.buttons["닫기"].firstMatch
+        XCTAssertTrue(close.waitForExistence(timeout: 10))
+        close.tap()
 
         XCTAssertTrue(app.staticTexts["팀 일정 저장"].waitForNonExistence(timeout: 5))
         XCTAssertEqual(app.state, .runningForeground)

@@ -78,8 +78,7 @@ final class LongFormPolicyReadabilityUITests: XCTestCase {
     @MainActor
     private func openSettings(in app: XCUIApplication, waitForSettingsScreen: Bool = true) {
         XCTAssertTrue(app.descendants(matching: .any)["screen.home"].waitForExistence(timeout: 20))
-        let moreTab = app.buttons.matching(identifier: "tab.more").firstMatch
-        XCTAssertTrue(moreTab.waitForExistence(timeout: 10))
+        let moreTab = primaryMoreTab(in: app)
         moreTab.tap()
         XCTAssertTrue(app.descendants(matching: .any)["screen.more"].waitForExistence(timeout: 10))
         let settingsEntry = app.buttons["more.settings"]
@@ -88,6 +87,27 @@ final class LongFormPolicyReadabilityUITests: XCTestCase {
         if waitForSettingsScreen {
             XCTAssertTrue(app.scrollViews["screen.settings"].firstMatch.waitForExistence(timeout: 10))
         }
+    }
+
+    @MainActor
+    private func primaryMoreTab(
+        in app: XCUIApplication,
+        timeout: TimeInterval = 10
+    ) -> XCUIElement {
+        let identifiedTab = app.buttons.matching(identifier: "tab.more").firstMatch
+        let deadline = Date().addingTimeInterval(timeout)
+        let identifierGracePeriod = min(timeout, 1)
+        if identifiedTab.waitForExistence(timeout: identifierGracePeriod) {
+            return identifiedTab
+        }
+
+        let labelTab = app.tabBars.buttons["More"].firstMatch
+        let remainingTimeout = max(0, deadline.timeIntervalSinceNow)
+        XCTAssertTrue(
+            labelTab.waitForExistence(timeout: remainingTimeout),
+            "Primary tab did not appear: tab.more (English label: More)"
+        )
+        return labelTab
     }
 
     @MainActor

@@ -45,7 +45,10 @@ tables in the same change.
 ## Banned words
 
 `banned-words.json` is the canonical blocklist the clients check user input against before submitting a
-schedule, todo or member name. See `docs/design/content-filter.md` for the full contract.
+schedule, todo or member name. At the backend write boundary, the same list also applies to public D-Day
+titles, team duty type names and team default-duty names. Private D-Day titles (`isPrivate=true`) are
+intentionally outside this public-content boundary and remain allowed. See `docs/design/content-filter.md`
+for the full contract.
 
 The backend serves the list already normalized the way clients must normalize input before matching: NFKC,
 lowercased, and stripped of every character that is not a Unicode letter (`L*`) or decimal digit (`Nd`).

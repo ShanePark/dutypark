@@ -12,24 +12,19 @@ struct TeamManageView: View {
     @State private var batchUploadInteraction = TeamModalInteractionState()
     private let onTeamChanged: (TeamDTO) -> Void
     private let onDutyBatchChanged: (Int, Int) -> Void
-    private let onDeleteTeam: ((TeamDTO) async throws -> Void)?
 
     init(
         teamID: TeamID,
-        isServiceAdmin: Bool = false,
         onTeamChanged: @escaping (TeamDTO) -> Void = { _ in },
-        onDutyBatchChanged: @escaping (Int, Int) -> Void = { _, _ in },
-        onDeleteTeam: ((TeamDTO) async throws -> Void)? = nil
+        onDutyBatchChanged: @escaping (Int, Int) -> Void = { _, _ in }
     ) {
         _viewModel = StateObject(
             wrappedValue: TeamManageViewModel(
-                teamID: teamID,
-                isServiceAdmin: isServiceAdmin
+                teamID: teamID
             )
         )
         self.onTeamChanged = onTeamChanged
         self.onDutyBatchChanged = onDutyBatchChanged
-        self.onDeleteTeam = onDeleteTeam
     }
 
     private var loginID: MemberID? {
@@ -127,7 +122,7 @@ struct TeamManageView: View {
         ) {
             Button(teamLocalized("team.common.confirm"), role: .cancel) {}
         } message: {
-            Text("team.common.error", tableName: "Team")
+            Text(viewModel.errorMessage ?? teamLocalized("team.common.error"))
         }
         .alert(
             Text("team.manage.messages.updateSuccess", tableName: "Team"),
@@ -169,9 +164,6 @@ struct TeamManageView: View {
                         dismiss: dismiss,
                         dismissAfterSuccess: {
                             pendingAction = nil
-                            if case .deleteTeam = action {
-                                dismissView()
-                            }
                         },
                         workingChanged: { pendingActionIsWorking = $0 }
                     ) {
@@ -182,6 +174,8 @@ struct TeamManageView: View {
                         isPresented: $viewModel.showsError
                     ) {
                         Button(teamLocalized("team.common.confirm"), role: .cancel) {}
+                    } message: {
+                        Text(viewModel.errorMessage ?? teamLocalized("team.common.error"))
                     }
                 }
                 .interactiveDismissDisabled(viewModel.isWorking || pendingActionIsWorking)
@@ -213,24 +207,9 @@ struct TeamManageView: View {
             .lineLimit(2)
             .multilineTextAlignment(.center)
             .frame(maxWidth: .infinity)
-            if canDeleteTeam(team) {
-                Button(role: .destructive) {
-                    if let team { present(.deleteTeam(team)) }
-                } label: {
-                    Image(systemName: "trash")
-                        .foregroundStyle(DPColor.textOnDark)
-                        .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
-                        .background(DPColor.danger)
-                        .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(Text("team.manage.actions.deleteTeam", tableName: "Team"))
-                .accessibilityIdentifier("team.manage.delete")
-            } else {
-                Color.clear
-                    .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
-                    .accessibilityHidden(true)
-            }
+            Color.clear
+                .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                .accessibilityHidden(true)
         }
         .foregroundStyle(DPColor.textOnDark)
         .padding(.horizontal, DPSpacing.medium)
@@ -239,15 +218,6 @@ struct TeamManageView: View {
         .clipShape(UnevenRoundedRectangle(topLeadingRadius: DPRadius.standard, topTrailingRadius: DPRadius.standard))
         .padding(.horizontal, DPSpacing.small)
         .padding(.top, DPSpacing.medium)
-    }
-
-    private func canDeleteTeam(_ team: TeamDTO?) -> Bool {
-        guard let team else { return false }
-        return TeamManageDeletePolicy.canShow(
-            isServiceAdmin: viewModel.isServiceAdmin,
-            hasMembers: !team.members.isEmpty,
-            hasDeleteAction: onDeleteTeam != nil
-        )
     }
 
     private func informationSection(_ team: TeamDTO) -> some View {
@@ -576,7 +546,6 @@ struct TeamManageView: View {
             dutyType.hidden
                 ? teamLocalized("team.manage.actions.restoreDutyType")
                 : teamLocalized("team.manage.actions.hideDutyType")
-        case .deleteTeam: teamLocalized("team.manage.actions.deleteTeam")
         }
     }
 
@@ -619,12 +588,6 @@ struct TeamManageView: View {
                 locale: AppLocalization.locale,
                 dutyType.name
             )
-        case .deleteTeam(let team):
-            return String(
-                format: teamLocalized("team.manage.messages.deleteTeamConfirm"),
-                locale: AppLocalization.locale,
-                team.name
-            )
         }
         let name = viewModel.team?.members.first(where: { $0.id == memberID })?.name
             ?? teamLocalized("team.manage.labels.notAvailable")
@@ -638,17 +601,6 @@ struct TeamManageView: View {
         case .removeManager(let id): return await viewModel.removeManager(id)
         case .changeAdmin(let id): return await viewModel.changeAdmin(memberID: id)
         case .setDutyTypeVisibility(let dutyType): return await viewModel.toggleVisibility(dutyType)
-        case .deleteTeam(let team):
-            guard let deleteTeam = onDeleteTeam else { return false }
-            do {
-                try await deleteTeam(team)
-                DPHapticCenter.shared.emit(.success)
-                return true
-            } catch {
-                viewModel.showsError = true
-                DPHapticCenter.shared.emit(.error)
-                return false
-            }
         case nil: return false
         }
     }
@@ -659,25 +611,14 @@ struct TeamManageView: View {
         case removeManager(MemberID)
         case changeAdmin(MemberID?)
         case setDutyTypeVisibility(DutyTypeDTO)
-        case deleteTeam(TeamDTO)
 
         var isDestructive: Bool {
             switch self {
-            case .removeMember, .removeManager, .changeAdmin(nil), .deleteTeam: true
+            case .removeMember, .removeManager, .changeAdmin(nil): true
             case .setDutyTypeVisibility(let dutyType): !dutyType.hidden
             case .addManager, .changeAdmin: false
             }
         }
-    }
-}
-
-nonisolated enum TeamManageDeletePolicy {
-    static func canShow(
-        isServiceAdmin: Bool,
-        hasMembers: Bool,
-        hasDeleteAction: Bool
-    ) -> Bool {
-        isServiceAdmin && !hasMembers && hasDeleteAction
     }
 }
 

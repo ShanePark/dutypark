@@ -62,6 +62,12 @@ nonisolated enum CalendarServerRecoveryPolicy {
     }
 }
 
+nonisolated enum CalendarDutyBatchFileSizeValidation: Equatable, Sendable {
+    case allowed
+    case tooLarge
+    case unavailable
+}
+
 @MainActor
 final class CalendarViewModel: ObservableObject {
     private struct MonthRequestContext: Equatable {
@@ -79,6 +85,7 @@ final class CalendarViewModel: ObservableObject {
     private let outbox: any OfflineOutboxProviding
     private var initialAccountID: MemberID?
     private var monthLoadGeneration = 0
+    private var prefetchGeneration = 0
     private var prefersOfflineCache: Bool
     private var prefetchTask: Task<Void, Never>?
     private var serverRecoveryTask: Task<Void, Never>?
@@ -192,9 +199,17 @@ final class CalendarViewModel: ObservableObject {
     }
     var visibleDutyTypes: [DutyTypeDTO] { team?.dutyTypes.filter { !$0.hidden } ?? [] }
 
+    /// The API and the month cache both support at most three comparison members.
+    /// Keeping one canonical set prevents a direct state mutation from producing a
+    /// cache identity that differs from the request that populated `otherDuties`.
+    private var activeComparedMemberIDs: Set<MemberID> {
+        Set(comparedMemberIDs.sorted().prefix(3))
+    }
+
     func configure(accountID: MemberID, isOffline: Bool) {
         if initialAccountID != accountID || prefersOfflineCache != isOffline {
             monthLoadGeneration += 1
+            invalidatePrefetch()
         }
         if initialAccountID != accountID {
             cancelServerRecovery(clearPending: true)
@@ -209,8 +224,7 @@ final class CalendarViewModel: ObservableObject {
     /// Cancels feature-owned background work when the view leaves the hierarchy.
     /// A pending server recovery remains resumable when the same view reappears.
     func cancelBackgroundTasks() {
-        prefetchTask?.cancel()
-        prefetchTask = nil
+        invalidatePrefetch()
         cancelServerRecovery(clearPending: false)
     }
 
@@ -310,7 +324,7 @@ final class CalendarViewModel: ObservableObject {
             memberID: memberID,
             accountID: cacheAccountID,
             isMine: memberID == me?.id,
-            comparedMemberIDs: self.comparedMemberIDs,
+            comparedMemberIDs: activeComparedMemberIDs,
             generation: monthLoadGeneration
         )
     }
@@ -323,7 +337,7 @@ final class CalendarViewModel: ObservableObject {
             && context.memberID == targetMemberID
             && context.accountID == cacheAccountID
             && context.isMine == isMyCalendar
-            && context.comparedMemberIDs == comparedMemberIDs
+            && context.comparedMemberIDs == activeComparedMemberIDs
     }
 
     private func loadOnlineIdentity() async throws {
@@ -474,7 +488,7 @@ final class CalendarViewModel: ObservableObject {
         async let dDaysResult = repository.dDays(memberID: context.memberID, isMine: context.isMine)
         async let manageResult = context.isMine ? false : repository.canManage(memberID: context.memberID)
         async let todoResult: TodoBoardDTO? = context.isMine ? repository.todoBoard() : nil
-        async let comparedResult = repository.otherDuties(memberIDs: Array(context.comparedMemberIDs.sorted().prefix(3)), year: context.year, month: context.month)
+        async let comparedResult = repository.otherDuties(memberIDs: Array(context.comparedMemberIDs.sorted()), year: context.year, month: context.month)
 
         let serverDays = try await calendarResult
         let cells = CalendarDateSupport.cells(year: context.year, month: context.month, serverDays: serverDays)
@@ -523,7 +537,8 @@ final class CalendarViewModel: ObservableObject {
             schedules: schedules,
             duties: duties,
             holidays: holidays,
-            otherDuties: compared
+            otherDuties: compared,
+            comparedMemberIDs: context.comparedMemberIDs
         ))
         guard isCurrentMonthRequest(context) else { return }
         if let member = me, member.id == accountID {
@@ -541,6 +556,12 @@ final class CalendarViewModel: ObservableObject {
     }
 
     private func applyCachedMonth(_ snapshot: OfflineMonthSnapshot, context: MonthRequestContext) {
+        // A legacy snapshot has a nil selection because it predates comparison
+        // identities. Treat it exactly like a selection mismatch: schedules and
+        // duties remain useful offline, but another member's duties never leak.
+        let compared = snapshot.comparedMemberIDs == context.comparedMemberIDs
+            ? snapshot.otherDuties.filter { context.comparedMemberIDs.contains($0.memberId) }
+            : []
         applyMonth(
             year: context.year,
             month: context.month,
@@ -548,7 +569,7 @@ final class CalendarViewModel: ObservableObject {
             schedules: snapshot.schedules,
             duties: snapshot.duties,
             holidays: snapshot.holidays,
-            compared: snapshot.otherDuties,
+            compared: compared,
             memberID: context.memberID
         )
         cacheStoredAt = snapshot.storedAt
@@ -598,21 +619,38 @@ final class CalendarViewModel: ObservableObject {
     /// visible month. Each month is fetched and persisted in order so a slow
     /// connection does not fan out thirteen requests at once.
     func prefetchCachedMonths(around current: OfflineMonthKey? = nil) async {
+        await prefetchCachedMonths(around: current, generation: prefetchGeneration)
+    }
+
+    private func prefetchCachedMonths(
+        around current: OfflineMonthKey? = nil,
+        generation: Int
+    ) async {
         guard !isOfflineMode, let accountID = cacheAccountID else { return }
         let current = current ?? OfflineMonthKey(year: year, month: month)
+        let comparisonIDs = activeComparedMemberIDs
         for key in OfflineCacheRangePolicy.rollingThirteenMonths.months(around: current) {
-            if Task.isCancelled { return }
+            guard isCurrentPrefetch(
+                generation: generation,
+                accountID: accountID,
+                comparisonIDs: comparisonIDs
+            ) else { return }
             if let snapshot = await cache.loadMonth(accountID: accountID, key: key),
                Date().timeIntervalSince(snapshot.storedAt) < 24 * 60 * 60 {
                 continue
             }
+            guard isCurrentPrefetch(
+                generation: generation,
+                accountID: accountID,
+                comparisonIDs: comparisonIDs
+            ) else { return }
             do {
                 async let calendarResult = repository.calendar(year: key.year, month: key.month)
                 async let dutiesResult = repository.duties(memberID: accountID, year: key.year, month: key.month)
                 async let schedulesResult = repository.schedules(memberID: accountID, year: key.year, month: key.month)
                 async let holidaysResult = repository.holidays(year: key.year, month: key.month)
                 async let comparedResult = repository.otherDuties(
-                    memberIDs: Array(comparedMemberIDs.sorted().prefix(3)),
+                    memberIDs: Array(comparisonIDs.sorted()),
                     year: key.year,
                     month: key.month
                 )
@@ -621,6 +659,11 @@ final class CalendarViewModel: ObservableObject {
                 let schedules = try await schedulesResult
                 let holidays = try await holidaysResult
                 let compared = try await comparedResult
+                guard isCurrentPrefetch(
+                    generation: generation,
+                    accountID: accountID,
+                    comparisonIDs: comparisonIDs
+                ) else { return }
                 guard calendar.count == 42, schedules.count == 42, holidays.count == 42 else { continue }
                 try? await cache.saveMonth(OfflineMonthSnapshot(
                     accountID: accountID,
@@ -629,7 +672,8 @@ final class CalendarViewModel: ObservableObject {
                     schedules: schedules,
                     duties: duties,
                     holidays: holidays,
-                    otherDuties: compared
+                    otherDuties: compared,
+                    comparedMemberIDs: comparisonIDs
                 ))
             } catch is CancellationError {
                 return
@@ -646,10 +690,30 @@ final class CalendarViewModel: ObservableObject {
         // this gate also prevents test doubles and deep-linked guest screens
         // from starting an unbounded background refresh.
         guard initialAccountID != nil, isMyCalendar else { return }
-        prefetchTask?.cancel()
+        invalidatePrefetch()
+        let generation = prefetchGeneration
         prefetchTask = Task { [weak self] in
-            await self?.prefetchCachedMonths()
+            await self?.prefetchCachedMonths(generation: generation)
         }
+    }
+
+    private func isCurrentPrefetch(
+        generation: Int,
+        accountID: MemberID,
+        comparisonIDs: Set<MemberID>
+    ) -> Bool {
+        !Task.isCancelled
+            && generation == prefetchGeneration
+            && accountID == cacheAccountID
+            && comparisonIDs == activeComparedMemberIDs
+            && !isOfflineMode
+            && isMyCalendar
+    }
+
+    private func invalidatePrefetch() {
+        prefetchGeneration &+= 1
+        prefetchTask?.cancel()
+        prefetchTask = nil
     }
 
     private func scheduleServerRecovery() {
@@ -783,6 +847,16 @@ final class CalendarViewModel: ObservableObject {
         }
     }
 
+    private func isContentFilterBlocked(_ error: Error) -> Bool {
+        guard let apiError = error as? APIError else { return false }
+        switch apiError {
+        case .server(_, let code), .serverWithDetails(_, let code, _):
+            return code == "contentFilter.blocked"
+        default:
+            return false
+        }
+    }
+
     private enum CalendarServerRecoveryAttempt {
         case recovered
         case retry
@@ -791,6 +865,7 @@ final class CalendarViewModel: ObservableObject {
 
     func toggleMyDutyComparison() async {
         guard !isMyCalendar, let myID = me?.id else { return }
+        invalidatePrefetch()
         comparedMemberIDs = comparedMemberIDs.contains(myID) ? [] : [myID]
         emit(.selection)
         await reloadMonth()
@@ -936,6 +1011,7 @@ final class CalendarViewModel: ObservableObject {
             friends.contains(where: { $0.id == candidate })
         }.prefix(3))
         guard validIDs != comparedMemberIDs else { return }
+        invalidatePrefetch()
         comparedMemberIDs = validIDs
         emit(.selection)
         await reloadMonth()
@@ -977,7 +1053,6 @@ final class CalendarViewModel: ObservableObject {
     func selectDay(_ day: CalendarDayContent) {
         let previousDate = selectedDay?.cell.date
         selectedDay = day
-        highlightedDate = day.cell.date
         if CalendarHapticPolicy.selectionChanged(from: previousDate, to: day.cell.date) != nil {
             emit(.selection)
         }
@@ -1165,8 +1240,22 @@ final class CalendarViewModel: ObservableObject {
         let accessed = url.startAccessingSecurityScopedResource()
         defer { if accessed { url.stopAccessingSecurityScopedResource() } }
         do {
+            let resourceValues = try url.resourceValues(forKeys: [.fileSizeKey])
+            switch CalendarFeatureLogic.dutyBatchFileSizeValidation(resourceValues.fileSize) {
+            case .allowed:
+                break
+            case .tooLarge:
+                dutyBatchMessage = CalendarLocalization.text("calendar.duty.excel.tooLarge")
+                emit(.warning)
+                return
+            case .unavailable:
+                dutyBatchMessage = CalendarLocalization.text("calendar.duty.excel.failed")
+                emit(.error)
+                return
+            }
+
             let data = try Data(contentsOf: url)
-            guard data.count < AttachmentUploadPolicy.safeMaximumBytes else {
+            guard case .allowed = CalendarFeatureLogic.dutyBatchDataSizeValidation(data.count) else {
                 dutyBatchMessage = CalendarLocalization.text("calendar.duty.excel.tooLarge")
                 emit(.warning)
                 return
@@ -1468,6 +1557,11 @@ final class CalendarViewModel: ObservableObject {
             emit(.warning)
             return false
         }
+        guard isPrivate || !contentFilter.isBlocked(trimmed) else {
+            errorMessage = CalendarLocalization.text("calendar.error.contentFilter")
+            emit(.error)
+            return false
+        }
         let parts = CalendarDateSupport.calendar.dateComponents([.year, .month, .day], from: date)
         let dateOnly = DateOnly(rawValue: String(format: "%04d-%02d-%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0))
         do {
@@ -1479,7 +1573,9 @@ final class CalendarViewModel: ObservableObject {
             emit(.success)
             return true
         } catch {
-            errorMessage = CalendarLocalization.text("calendar.error.save")
+            errorMessage = isContentFilterBlocked(error)
+                ? CalendarLocalization.text("calendar.error.contentFilter")
+                : CalendarLocalization.text("calendar.error.save")
             emit(.error)
             return false
         }
@@ -1564,6 +1660,10 @@ final class CalendarViewModel: ObservableObject {
         let duties = days.compactMap(\.duty)
         let holidays = days.map(\.holidays)
         let schedules = days.map(\.schedules)
+        let comparisonIDs = activeComparedMemberIDs
+        let retainedComparison = existing?.comparedMemberIDs == comparisonIDs
+            ? (existing?.otherDuties ?? []).filter { comparisonIDs.contains($0.memberId) }
+            : []
         try? await cache.saveMonth(OfflineMonthSnapshot(
             accountID: accountID,
             key: key,
@@ -1571,7 +1671,8 @@ final class CalendarViewModel: ObservableObject {
             schedules: schedules,
             duties: duties,
             holidays: holidays,
-            otherDuties: existing?.otherDuties ?? []
+            otherDuties: retainedComparison,
+            comparedMemberIDs: comparisonIDs
         ))
     }
 
@@ -1735,6 +1836,7 @@ final class CalendarViewModel: ObservableObject {
     }
 
     private func reloadMonth() async {
+        invalidatePrefetch()
         isLoading = true
         errorMessage = nil
         defer { isLoading = false }
@@ -1754,6 +1856,16 @@ final class CalendarViewModel: ObservableObject {
 }
 
 enum CalendarFeatureLogic {
+    static func dutyBatchFileSizeValidation(_ fileSize: Int?) -> CalendarDutyBatchFileSizeValidation {
+        guard let fileSize, fileSize >= 0 else { return .unavailable }
+        return dutyBatchDataSizeValidation(fileSize)
+    }
+
+    static func dutyBatchDataSizeValidation(_ byteCount: Int) -> CalendarDutyBatchFileSizeValidation {
+        guard byteCount >= 0 else { return .unavailable }
+        return byteCount < AttachmentUploadPolicy.safeMaximumBytes ? .allowed : .tooLarge
+    }
+
     static func dutyBatchFailureMessage(_ result: DutyBatchUploadResult) -> String {
         dutyBatchFailureMessage(errorCode: result.errorCode, details: result.errorDetails)
     }

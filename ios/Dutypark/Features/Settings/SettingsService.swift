@@ -101,12 +101,101 @@ nonisolated struct AccountDeletionRequest: Encodable, Equatable, Sendable {
     let confirmation: String
     let password: String?
     let reauthProof: String
+    let receiptToken: String
     let transferAdminToMemberId: Int64?
 }
 
 nonisolated struct AccountDeletionAccepted: Decodable, Equatable, Sendable {
     let jobId: Int64
     let status: String
+    let receiptToken: String
+    let estimatedCompletionAt: String
+    let receiptExpiresAt: String?
+
+    init(
+        jobId: Int64,
+        status: String,
+        receiptToken: String = "",
+        estimatedCompletionAt: String = "",
+        receiptExpiresAt: String? = nil
+    ) {
+        self.jobId = jobId
+        self.status = status
+        self.receiptToken = receiptToken
+        self.estimatedCompletionAt = estimatedCompletionAt
+        self.receiptExpiresAt = receiptExpiresAt
+    }
+
+    func receipt(ownerMemberID: Int64) -> AccountDeletionReceipt? {
+        guard ownerMemberID > 0,
+              !receiptToken.isEmpty,
+              !estimatedCompletionAt.isEmpty
+        else { return nil }
+        return AccountDeletionReceipt(
+            jobId: jobId,
+            status: status,
+            ownerMemberID: ownerMemberID,
+            receiptToken: receiptToken,
+            estimatedCompletionAt: estimatedCompletionAt,
+            receiptExpiresAt: receiptExpiresAt
+        )
+    }
+}
+
+nonisolated struct AccountDeletionReceipt: Codable, Equatable, Sendable {
+    let jobId: Int64
+    let status: String
+    let ownerMemberID: Int64
+    let receiptToken: String
+    let estimatedCompletionAt: String
+    let receiptExpiresAt: String?
+
+    init(
+        jobId: Int64,
+        status: String,
+        ownerMemberID: Int64,
+        receiptToken: String,
+        estimatedCompletionAt: String,
+        receiptExpiresAt: String? = nil
+    ) {
+        self.jobId = jobId
+        self.status = status
+        self.ownerMemberID = ownerMemberID
+        self.receiptToken = receiptToken
+        self.estimatedCompletionAt = estimatedCompletionAt
+        self.receiptExpiresAt = receiptExpiresAt
+    }
+}
+
+nonisolated struct AccountDeletionStatusRequest: Encodable, Equatable, Sendable {
+    let receiptToken: String
+}
+
+nonisolated struct AccountDeletionStatusResponse: Decodable, Equatable, Sendable {
+    let status: String
+    let estimatedCompletionAt: String
+    let completedAt: String?
+    let receiptExpiresAt: String?
+
+    init(
+        status: String,
+        estimatedCompletionAt: String,
+        completedAt: String? = nil,
+        receiptExpiresAt: String? = nil
+    ) {
+        self.status = status
+        self.estimatedCompletionAt = estimatedCompletionAt
+        self.completedAt = completedAt
+        self.receiptExpiresAt = receiptExpiresAt
+    }
+}
+
+nonisolated enum AccountDeletionReceiptError: Error, Equatable, Sendable {
+    case invalidResponse
+}
+
+nonisolated protocol AccountDeletionStatusServicing: Sendable {
+    func accountDeletionStatus(receiptToken: String) async throws -> AccountDeletionStatusResponse
 }
 
 nonisolated protocol AccountDeletionServicing: Sendable {
@@ -114,11 +203,12 @@ nonisolated protocol AccountDeletionServicing: Sendable {
     func reauthenticateForAccountDeletion(password: String) async throws -> AccountDeletionReauthProof
     func requestAccountDeletion(
         reauthProof: String,
+        receiptToken: String,
         transferAdminToMemberId: Int64?
     ) async throws -> AccountDeletionAccepted
 }
 
-nonisolated struct SettingsService: AccountDeletionServicing, Sendable {
+nonisolated struct SettingsService: AccountDeletionServicing, AccountDeletionStatusServicing, Sendable {
     private let client: APIClient
 
     init(client: APIClient = .shared) {
@@ -179,13 +269,21 @@ nonisolated struct SettingsService: AccountDeletionServicing, Sendable {
     }
 
     func uploadProfilePhoto(jpegData: Data) async throws {
+        guard jpegData.count <= ProfilePhotoProcessingPolicy.maxUploadBytes else {
+            throw ProfilePhotoUploadError.tooLarge(
+                maxBytes: ProfilePhotoProcessingPolicy.maxUploadBytes
+            )
+        }
+
         let boundary = "Dutypark-\(UUID().uuidString)"
-        var body = Data()
-        appendUTF8("--\(boundary)\r\n", to: &body)
-        appendUTF8("Content-Disposition: form-data; name=\"file\"; filename=\"profile.jpg\"\r\n", to: &body)
-        appendUTF8("Content-Type: image/jpeg\r\n\r\n", to: &body)
+        let header = "--\(boundary)\r\n"
+            + "Content-Disposition: form-data; name=\"file\"; filename=\"profile.jpg\"\r\n"
+            + "Content-Type: image/jpeg\r\n\r\n"
+        let footer = "\r\n--\(boundary)--\r\n"
+        var body = Data(capacity: header.utf8.count + jpegData.count + footer.utf8.count)
+        body.append(contentsOf: header.utf8)
         body.append(jpegData)
-        appendUTF8("\r\n--\(boundary)--\r\n", to: &body)
+        body.append(contentsOf: footer.utf8)
 
         _ = try await client.data(
             "members/profile-photo",
@@ -274,6 +372,7 @@ nonisolated struct SettingsService: AccountDeletionServicing, Sendable {
 
     func requestAccountDeletion(
         reauthProof: String,
+        receiptToken: String,
         transferAdminToMemberId: Int64?
     ) async throws -> AccountDeletionAccepted {
         try await client.request(
@@ -283,8 +382,18 @@ nonisolated struct SettingsService: AccountDeletionServicing, Sendable {
                 confirmation: "DELETE",
                 password: nil,
                 reauthProof: reauthProof,
+                receiptToken: receiptToken,
                 transferAdminToMemberId: transferAdminToMemberId
             ),
+            retryingAfterUnauthorized: false
+        )
+    }
+
+    func accountDeletionStatus(receiptToken: String) async throws -> AccountDeletionStatusResponse {
+        try await client.request(
+            "account-deletions/status",
+            method: .post,
+            body: AccountDeletionStatusRequest(receiptToken: receiptToken),
             retryingAfterUnauthorized: false
         )
     }
@@ -297,8 +406,4 @@ nonisolated struct SettingsService: AccountDeletionServicing, Sendable {
                 URLQueryItem(name: "v", value: String(version)),
             ])
     }
-}
-
-nonisolated private func appendUTF8(_ value: String, to data: inout Data) {
-    data.append(Data(value.utf8))
 }

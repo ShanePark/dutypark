@@ -4,6 +4,7 @@ import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
 import com.tistory.shanepark.dutypark.member.accountdeletion.domain.AccountDeletionJob
 import com.tistory.shanepark.dutypark.member.accountdeletion.domain.AccountDeletionJobStatus
 import com.tistory.shanepark.dutypark.member.accountdeletion.repository.AccountDeletionJobRepository
+import com.tistory.shanepark.dutypark.member.accountdeletion.service.AccountDeletionReceiptToken
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
@@ -41,6 +42,7 @@ class AdminAccountDeletionControllerTest : DutyparkIntegrationTest() {
     @Test
     fun `admin can retry failed deletion job`() {
         val job = saveFailedJob()
+        val originalReceiptHash = job.receiptTokenHash
 
         mockMvc.perform(
             post("/admin/api/account-deletions/{jobId}/retry", job.id)
@@ -57,6 +59,9 @@ class AdminAccountDeletionControllerTest : DutyparkIntegrationTest() {
         assertThat(retried.lockedAt).isNull()
         assertThat(retried.lastError).isNull()
         assertThat(retried.completedAt).isNull()
+        assertThat(retried.receiptTokenHash).isEqualTo(originalReceiptHash)
+        assertThat(retried.receiptExpiresAt).isNull()
+        assertThat(retried.estimatedCompletionAt).isAfter(Instant.now())
     }
 
     @Test
@@ -86,6 +91,11 @@ class AdminAccountDeletionControllerTest : DutyparkIntegrationTest() {
 
     private fun saveFailedJob(): AccountDeletionJob {
         val job = savePendingJob()
+        val receiptToken = AccountDeletionReceiptToken.generate()
+        job.issueReceipt(
+            receiptTokenHash = AccountDeletionReceiptToken.hash(receiptToken),
+            estimatedCompletionAt = Instant.parse("2026-08-12T00:05:00Z"),
+        )
         job.claim(Instant.parse("2026-08-12T00:01:00Z"))
         job.markFailed("sensitive failure detail")
         return jobRepository.saveAndFlush(job)

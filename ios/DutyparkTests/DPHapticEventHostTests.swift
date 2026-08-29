@@ -48,4 +48,19 @@ struct DPHapticEventHostTests {
         #expect(hostSource.contains("DPHapticKind"))
         #expect(appSource.contains("dpHapticEventHost()"))
     }
+
+    @Test
+    func hostDefersSharedCenterInitializationUntilTheViewIsInstalled() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let hostSource = try String(
+            contentsOf: sourceURL.appending(path: "Dutypark/Components/DPHapticEventHost.swift"),
+            encoding: .utf8
+        )
+
+        #expect(hostSource.contains("@StateObject private var center: DPHapticCenter"))
+        #expect(hostSource.contains("StateObject(wrappedValue: DPHapticCenter.shared)"))
+        #expect(!hostSource.contains("func dpHapticEventHost(_ center: DPHapticCenter = .shared)"))
+    }
 }

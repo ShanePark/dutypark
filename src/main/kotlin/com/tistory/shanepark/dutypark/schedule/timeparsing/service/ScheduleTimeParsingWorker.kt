@@ -58,10 +58,7 @@ class ScheduleTimeParsingWorker(
                 e.javaClass.simpleName,
             )
             if (updateStatusIfCurrent(task, schedule, FAILED)) {
-                notifyLlmError(
-                    scheduleId = task.scheduleId.toString(),
-                    failureKind = "REQUEST_EXCEPTION",
-                )
+                notifyLlmError(failureKind = "REQUEST_EXCEPTION")
             }
             return true
         }
@@ -132,10 +129,7 @@ class ScheduleTimeParsingWorker(
         val updated = updateStatusIfCurrent(task, schedule, FAILED)
 
         if (updated && (response.errorMessage != null || response.rawResponse != null)) {
-            notifyLlmError(
-                scheduleId = schedule.id.toString(),
-                failureKind = "INVALID_RESPONSE",
-            )
+            notifyLlmError(failureKind = "INVALID_RESPONSE")
         }
         return true
     }
@@ -207,20 +201,13 @@ class ScheduleTimeParsingWorker(
         return updated
     }
 
-    private fun notifyLlmError(
-        scheduleId: String,
-        failureKind: String,
-    ) {
+    private fun notifyLlmError(failureKind: String) {
         val slackAttachment = SlackAttachment()
         slackAttachment.setFallback("LLM Parsing Error")
         slackAttachment.setColor("danger")
         slackAttachment.setTitle("LLM Time Parsing Failed")
 
-        val fields = mutableListOf(
-            SlackField().setTitle("Schedule ID").setValue(scheduleId),
-            SlackField().setTitle("Failure Kind").setValue(failureKind),
-            SlackField().setTitle("Time").setValue(LocalDateTime.now().toString()),
-        )
+        val fields = listOf(SlackField().setTitle("Failure Kind").setValue(failureKind))
         slackAttachment.setFields(fields)
 
         val slackMessage = SlackMessage()

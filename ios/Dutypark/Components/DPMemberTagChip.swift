@@ -144,6 +144,7 @@ struct DPMemberAvatar: View {
     var body: some View {
         DPProfileAvatar(
             memberID: item.memberID,
+            hasProfilePhoto: item.hasProfilePhoto,
             profilePhotoVersion: item.profilePhotoVersion,
             size: diameter
         )

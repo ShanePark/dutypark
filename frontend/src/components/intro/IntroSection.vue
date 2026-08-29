@@ -41,7 +41,8 @@ const features = computed<Feature[]>(() => [
       t('intro.features.life.descriptionLine1'),
       t('intro.features.life.descriptionLine2'),
     ],
-    mockupType: 'placeholder',
+    mockupType: 'image',
+    mockupSrc: '/img/intro/life.png',
   },
   {
     id: 'todo',

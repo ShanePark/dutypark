@@ -33,7 +33,7 @@ final class RootMoreMenuParityUITests: XCTestCase {
         let moreButtons = app.buttons.matching(
             NSPredicate(format: "identifier BEGINSWITH %@", "more.")
         ).allElementsBoundByIndex
-        // The UI-test fixture user is not an admin, so `more.admin` must stay absent.
+        // Service administration is not exposed in the iOS More menu.
         XCTAssertEqual(
             Set(moreButtons.map(\.identifier)),
             [
@@ -98,58 +98,4 @@ final class RootMoreMenuParityUITests: XCTestCase {
         )
     }
 
-    // Admin sits two pushes deep in the More stack, so a member calendar opened from a
-    // member detail has to stack on top of it instead of replacing the calendar tab.
-    @MainActor
-    func testAdminMemberCalendarPushesOntoTheMoreStack() {
-        let app = XCUIApplication()
-        app.launchArguments += [
-            "-dp-theme", "dark",
-            "-AppleLanguages", "(ko)",
-            "-AppleLocale", "ko_KR",
-            "-ui-testing-service-admin",
-            "-ui-testing-authenticated",
-            "-ui-testing-admin-visual-fixture",
-        ]
-        app.launch()
-        defer { app.terminate() }
-
-        let moreTab = app.buttons.matching(identifier: "tab.more").firstMatch
-        XCTAssertTrue(moreTab.waitForExistence(timeout: 20))
-        moreTab.tap()
-
-        let adminButton = app.buttons["more.admin"].firstMatch
-        XCTAssertTrue(adminButton.waitForExistence(timeout: 10))
-        adminButton.tap()
-
-        let memberRow = app.descendants(matching: .any)["admin.member.7"].firstMatch
-        XCTAssertTrue(memberRow.waitForExistence(timeout: 10))
-        memberRow.tap()
-
-        let openCalendar = app.buttons["달력으로 이동"].firstMatch
-        XCTAssertTrue(openCalendar.waitForExistence(timeout: 10))
-        openCalendar.tap()
-
-        let memberCalendar = app.descendants(matching: .any)["screen.calendar.member"]
-        XCTAssertTrue(memberCalendar.waitForExistence(timeout: 10))
-        XCTAssertTrue(
-            moreTab.isSelected,
-            "A member calendar opened from Admin must not jump to the calendar tab"
-        )
-
-        let identityChip = app.buttons["calendar.member.back"].firstMatch
-        XCTAssertTrue(identityChip.waitForExistence(timeout: 10))
-        identityChip.tap()
-
-        XCTAssertTrue(memberCalendar.waitForNonExistence(timeout: 5))
-        // The admin member detail is pushed by a destination-based link, which SwiftUI
-        // cannot represent in the tab's path, so growing the path drops it and back
-        // lands on the admin member list. That is the same screen the previous
-        // origin-restoring implementation returned to, now reached by a real pop.
-        XCTAssertTrue(
-            memberRow.waitForExistence(timeout: 10),
-            "Back from an admin member calendar must return into the admin stack"
-        )
-        XCTAssertTrue(moreTab.isSelected)
-    }
 }

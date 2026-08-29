@@ -20,6 +20,7 @@ spring:
   devtools:
     restart:
       enabled: false
+      additional-exclude: db/migration/**
   ai:
     openai:
       api-key: "${GEMINI_API_KEY:EMPTY}"

@@ -475,6 +475,8 @@ final class TeamManageViewModel: ObservableObject {
     @Published private(set) var isLoading = false
     @Published private(set) var isWorking = false
     @Published var showsError = false
+    /// Set when a failure has a user-facing message; the view falls back to the generic error.
+    @Published private(set) var errorMessage: String?
     @Published var showsSuccess = false
     @Published var memberSearchPresented = false
     @Published var dutyEditorPresented = false
@@ -482,17 +484,17 @@ final class TeamManageViewModel: ObservableObject {
     @Published var editingDutyType: DutyTypeDTO?
 
     let teamID: TeamID
-    let isServiceAdmin: Bool
     private let repository: TeamRepository
+    private let contentFilter: ContentFilterStore
 
     init(
         teamID: TeamID,
-        isServiceAdmin: Bool = false,
-        repository: TeamRepository = TeamRepository()
+        repository: TeamRepository = TeamRepository(),
+        contentFilter: ContentFilterStore = .shared
     ) {
         self.teamID = teamID
-        self.isServiceAdmin = isServiceAdmin
         self.repository = repository
+        self.contentFilter = contentFilter
     }
 
     func load() async {
@@ -508,36 +510,35 @@ final class TeamManageViewModel: ObservableObject {
                 )
             ]
             showsError = false
+            errorMessage = nil
             return
         }
 #endif
         isLoading = true
         defer { isLoading = false }
+        showsError = false
+        errorMessage = nil
         do {
             async let loadedTeam = repository.teamForManagement(teamID: teamID)
             async let loadedTemplates = repository.batchTemplates()
             team = try await loadedTeam
             templates = (try? await loadedTemplates) ?? []
         } catch {
-            showsError = true
-            DPHapticCenter.shared.emit(.error)
+            presentError()
         }
     }
 
     func canUseAdminTools(loginID: MemberID?) -> Bool {
         Self.canUseAdminTools(
             loginID: loginID,
-            team: team,
-            isServiceAdmin: isServiceAdmin
+            team: team
         )
     }
 
     nonisolated static func canUseAdminTools(
         loginID: MemberID?,
-        team: TeamDTO?,
-        isServiceAdmin: Bool
+        team: TeamDTO?
     ) -> Bool {
-        if isServiceAdmin { return true }
         guard let loginID, let team else { return false }
         return team.adminId == loginID
             || team.members.contains { $0.id == loginID && $0.isManager }
@@ -620,6 +621,10 @@ final class TeamManageViewModel: ObservableObject {
     }
 
     func saveDutyType(name: String, color: String) async {
+        guard !contentFilter.isBlocked(name) else {
+            presentError(teamLocalized("team.common.contentFilterError"))
+            return
+        }
         let target = editingDutyType
         let needsServerIdentity = target == nil
         await perform(
@@ -726,15 +731,31 @@ final class TeamManageViewModel: ObservableObject {
     }
 
     func upload(fileURL: URL, year: Int, month: Int) async -> TeamBatchResultDTO? {
+        guard !isWorking else { return nil }
         isWorking = true
         defer { isWorking = false }
         let granted = fileURL.startAccessingSecurityScopedResource()
         defer { if granted { fileURL.stopAccessingSecurityScopedResource() } }
+        showsError = false
+        errorMessage = nil
         do {
+            let fileName = fileURL.lastPathComponent
+            let resourceValues = try fileURL.resourceValues(forKeys: [.fileSizeKey])
+            guard let fileSize = resourceValues.fileSize,
+                  TeamFeatureLogic.isValidDutyBatchFileSize(
+                      fileSize,
+                      fileName: fileName,
+                      year: year,
+                      month: month
+                  )
+            else {
+                presentError(teamLocalized("team.batchUpload.failed"))
+                return nil
+            }
             let data = try Data(contentsOf: fileURL)
             let result = try await repository.uploadDutyBatch(
                 teamID: teamID,
-                fileName: fileURL.lastPathComponent,
+                fileName: fileName,
                 fileData: data,
                 year: year,
                 month: month
@@ -749,11 +770,19 @@ final class TeamManageViewModel: ObservableObject {
                 DPHapticCenter.shared.emit(.error)
             }
             return result
+        } catch TeamBatchUploadError.requestBodyTooLarge {
+            presentError(teamLocalized("team.batchUpload.failed"))
+            return nil
         } catch {
-            showsError = true
-            DPHapticCenter.shared.emit(.error)
+            presentError()
             return nil
         }
+    }
+
+    private func presentError(_ message: String? = nil) {
+        errorMessage = message
+        showsError = true
+        DPHapticCenter.shared.emit(.error)
     }
 
     @discardableResult
@@ -765,6 +794,7 @@ final class TeamManageViewModel: ObservableObject {
         guard !isWorking else { return false }
         isWorking = true
         showsError = false
+        errorMessage = nil
         showsSuccess = false
         defer { isWorking = false }
         do {
@@ -781,8 +811,21 @@ final class TeamManageViewModel: ObservableObject {
             showsSuccess = true
             return true
         } catch {
-            showsError = true
-            DPHapticCenter.shared.emit(.error)
+            presentError(
+                isContentFilterBlocked(error)
+                    ? teamLocalized("team.common.contentFilterError")
+                    : nil
+            )
+            return false
+        }
+    }
+
+    private func isContentFilterBlocked(_ error: Error) -> Bool {
+        guard let apiError = error as? APIError else { return false }
+        switch apiError {
+        case .server(_, let code), .serverWithDetails(_, let code, _):
+            return code == "contentFilter.blocked"
+        default:
             return false
         }
     }

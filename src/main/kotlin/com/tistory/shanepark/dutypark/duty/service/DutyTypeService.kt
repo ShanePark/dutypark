@@ -4,8 +4,9 @@ import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeCreateDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
-import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
+import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
+import com.tistory.shanepark.dutypark.publiccontent.service.PublicContentService
 import com.tistory.shanepark.dutypark.team.repository.TeamRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -20,6 +21,7 @@ class DutyTypeService(
     private val teamRepository: TeamRepository,
     private val dutyRepository: DutyRepository,
     private val clock: Clock,
+    private val publicContentService: PublicContentService,
 ) {
 
     fun findById(id: Long): DutyTypeDto {
@@ -46,6 +48,7 @@ class DutyTypeService(
     @Transactional(timeout = 20)
     fun addDutyType(dutyTypeCreateDto: DutyTypeCreateDto): DutyType {
         val team = teamRepository.findByIdForUpdate(dutyTypeCreateDto.teamId).orElseThrow()
+        publicContentService.validateContent(dutyTypeCreateDto.name)
         if (team.dutyTypes.any { it.name == dutyTypeCreateDto.name }) {
             throw IllegalArgumentException("DutyType already exists")
         }
@@ -56,6 +59,7 @@ class DutyTypeService(
         val dutyType = dutyTypeRepository.findById(dutyTypeUpdateDto.id).orElseThrow()
         val teamId = dutyType.team.id ?: throw IllegalArgumentException("DutyType has no team")
         val team = teamRepository.findByIdWithDutyTypes(teamId).orElseThrow()
+        publicContentService.validateContent(dutyTypeUpdateDto.name)
 
         team.dutyTypes
             .filter { it.id != dutyType.id }

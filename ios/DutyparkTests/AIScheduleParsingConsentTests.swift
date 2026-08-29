@@ -498,6 +498,7 @@ struct AIScheduleParsingConsentTests {
             "NSPrivacyCollectedDataTypeEmailAddress",
             "NSPrivacyCollectedDataTypePhotosorVideos",
             "NSPrivacyCollectedDataTypeOtherUserContent",
+            "NSPrivacyCollectedDataTypeCustomerSupport",
             "NSPrivacyCollectedDataTypeUserID",
             "NSPrivacyCollectedDataTypeDeviceID",
             "NSPrivacyCollectedDataTypeOtherDataTypes",

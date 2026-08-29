@@ -76,19 +76,15 @@ nonisolated enum RootOfflineDefaultTabPolicy {
 @MainActor
 enum RootPendingPushAction {
     static func perform(
+        isAuthenticated: Bool,
+        isOnline: Bool,
+        isActive: Bool,
         consume: () -> NotificationID?,
-        open: (NotificationID) async throws -> Bool,
-        showFallback: () -> Void
+        showNotificationCenter: (NotificationID) -> Void
     ) async {
+        guard isAuthenticated, isOnline, isActive else { return }
         guard let notificationID = consume() else { return }
-        do {
-            guard try await open(notificationID) else {
-                showFallback()
-                return
-            }
-        } catch {
-            showFallback()
-        }
+        showNotificationCenter(notificationID)
     }
 }
 
@@ -121,6 +117,19 @@ struct RootNotificationDropdownReadPolicy {
     mutating func consumeClose() -> Bool {
         defer { shouldMarkAllAsReadOnClose = false }
         return shouldMarkAllAsReadOnClose
+    }
+}
+
+struct RootNotificationDropdownSwipePolicy {
+    static let minimumVerticalTranslation: CGFloat = 60
+
+    static func followOffset(translation: CGSize) -> CGFloat {
+        min(translation.height, 0)
+    }
+
+    static func shouldDismiss(translation: CGSize) -> Bool {
+        translation.height < -minimumVerticalTranslation &&
+            abs(translation.height) > abs(translation.width)
     }
 }
 
@@ -158,6 +167,7 @@ struct RootTabView: View {
     @State private var homeRefreshPolicy = RootHomeRefreshPolicy(initialRefreshAt: Date())
     @State private var homePath: [HomeDestination] = []
     @State private var calendarPath: [MemberCalendarRoute] = []
+    @State private var calendarCurrentMonthRequestID = 0
     @State private var teamPath: [MemberCalendarRoute] = []
     @State private var morePath: [MoreDestination] = []
     @State private var todoTarget: TodoID?
@@ -167,7 +177,12 @@ struct RootTabView: View {
     // Bumped when the profile photo changes so the cached avatar in the "more" tab is
     // refetched instead of showing the replaced image.
     @State private var profilePhotoVersion: Int64 = 0
+    // Auth status intentionally stays small and does not contain profile-photo
+    // metadata. Home/My Info publish the full member payload when available;
+    // nil keeps the single More avatar backward-compatible until then.
+    @State private var hasProfilePhoto: Bool?
     @State private var showsNotifications = false
+    @State private var notificationTargetID: NotificationID?
     @State private var notificationDropdownReadPolicy = RootNotificationDropdownReadPolicy()
     @State private var showsUnsupportedLink = false
     @State private var showsLogoutConfirmation = false
@@ -192,7 +207,7 @@ struct RootTabView: View {
             TabView(selection: tabSelection) {
                 homeTab
                 primaryTab(.calendar, path: $calendarPath, showsNavigationBar: true) {
-                    CalendarView()
+                    CalendarView(currentMonthRequestID: calendarCurrentMonthRequestID)
                         .navigationDestination(for: MemberCalendarRoute.self) { route in
                             memberCalendar(route)
                         }
@@ -216,7 +231,6 @@ struct RootTabView: View {
                 // its own, so an empty navigation bar would only push the list down.
                 primaryTab(.more, path: $morePath) {
                     MoreView(
-                        isAdmin: authenticatedMember?.isAdmin == true,
                         profile: moreProfile,
                         onOpenMyInfo: openMyInfo,
                         onSelect: openMoreMenuItem
@@ -278,6 +292,12 @@ struct RootTabView: View {
             applyOfflineDefaultTabIfNeeded()
             await startOnlineWorkIfAllowed()
             await recoverConnectivityIfReachable()
+#if DEBUG
+            if ProcessInfo.processInfo.arguments.contains("-ui-testing-show-notifications"),
+               ProcessInfo.processInfo.arguments.contains("-ui-testing-notification-fixture") {
+                showsNotifications = true
+            }
+#endif
         }
         .onDisappear {
             notifications.stopPolling()
@@ -353,7 +373,14 @@ struct RootTabView: View {
                 if session.availability.isOffline {
                     RootOnlineRequiredView(feature: .home)
                 } else {
-                    HomeView(refreshID: homeRefreshID, onRoute: openHomeRoute)
+                    HomeView(
+                        refreshID: homeRefreshID,
+                        onRoute: openHomeRoute,
+                        onProfilePhotoStateChanged: { hasPhoto, version in
+                            hasProfilePhoto = hasPhoto
+                            profilePhotoVersion = version
+                        }
+                    )
                 }
             }
                 .navigationTitle("")
@@ -374,7 +401,7 @@ struct RootTabView: View {
                         if session.availability.isOffline {
                             RootOnlineRequiredView(feature: .notifications)
                         } else {
-                            notificationCenter
+                            notificationCenter(targetID: $notificationTargetID)
                         }
                     case .friends:
                         if session.availability.isOffline {
@@ -430,6 +457,7 @@ struct RootTabView: View {
               authenticatedMemberID == accountID
         else { return }
         await notifications.setForeground(scenePhase == .active)
+        await openPendingPushIfNeeded()
         await offlineSyncCoordinator.synchronize(
             accountID: accountID,
             networkStatus: offlineNetworkMonitor.status == .unsatisfied
@@ -516,8 +544,8 @@ struct RootTabView: View {
 
     // The notification list is a screen like every other menu entry, so it is pushed onto
     // the stack it was opened from and leaves with the same back affordances.
-    private var notificationCenter: some View {
-        NotificationCenterView(store: notifications) { route in
+    private func notificationCenter(targetID: Binding<NotificationID?>) -> some View {
+        NotificationCenterView(store: notifications, targetNotificationID: targetID) { route in
             let didOpen = await openNotificationRoute(route)
             if didOpen {
                 DPHapticCenter.shared.emit(RootHapticPolicy.notificationNavigationFeedback)
@@ -542,6 +570,11 @@ struct RootTabView: View {
         Binding(
             get: { selectedTab },
             set: { destination in
+                if selectedTab == .calendar,
+                   destination == .calendar,
+                   calendarPath.isEmpty {
+                    calendarCurrentMonthRequestID &+= 1
+                }
                 let feedback = RootHapticPolicy.tabSelectionFeedback(
                     from: selectedTab,
                     to: destination
@@ -588,13 +621,28 @@ struct RootTabView: View {
     // The bell lives on the home tab root, so opening the full list from its dropdown
     // pushes onto the home stack: back returns to the dashboard the bell belongs to.
     private func openNotifications() {
+        notificationTargetID = nil
+        homePath = [.notifications]
+        selectedTab = .home
+    }
+
+    private func openNotifications(targeting notificationID: NotificationID) {
+        // A system push opens the full list without applying the dropdown's
+        // mark-all-on-close policy to unrelated notifications.
+        notificationDropdownReadPolicy.prepareForOpen()
+        showsNotifications = false
+        notificationTargetID = notificationID
         homePath = [.notifications]
         selectedTab = .home
     }
 
     private var moreProfile: MoreProfileSummary? {
         authenticatedMember.map {
-            MoreProfileSummary(member: $0, profilePhotoVersion: profilePhotoVersion)
+            MoreProfileSummary(
+                member: $0,
+                hasProfilePhoto: hasProfilePhoto,
+                profilePhotoVersion: profilePhotoVersion
+            )
         }
     }
 
@@ -610,7 +658,7 @@ struct RootTabView: View {
         switch item {
         case .logout:
             showsLogoutConfirmation = true
-        case .notifications, .friends, .admin, .guide, .support, .settings:
+        case .notifications, .friends, .guide, .support, .settings:
             guard let destination = RootNavigationPolicy.moreDestination(for: item) else { return }
             openMore(destination)
         }
@@ -623,16 +671,7 @@ struct RootTabView: View {
             if session.availability.isOffline {
                 RootOnlineRequiredView(feature: .notifications)
             } else {
-                notificationCenter
-            }
-        case .admin:
-            if authenticatedMember?.isAdmin == true {
-                AdminRootView(onOpenCalendar: openMemberCalendar)
-            } else {
-                ContentUnavailableView(
-                    AdminLocalization.string("admin.access.title"),
-                    systemImage: "lock.shield"
-                )
+                notificationCenter(targetID: .constant(nil))
             }
         case .friends:
             if session.availability.isOffline {
@@ -654,10 +693,16 @@ struct RootTabView: View {
             // support is already open has to rebuild it to land on the history tab.
             .id(supportPresentationID)
         case .myInfo:
-            MyInfoView {
-                homeRefreshID &+= 1
-                profilePhotoVersion &+= 1
-            }
+            MyInfoView(
+                onProfilePhotoChanged: {
+                    homeRefreshID &+= 1
+                    profilePhotoVersion &+= 1
+                },
+                onProfilePhotoStateChanged: { hasPhoto, version in
+                    hasProfilePhoto = hasPhoto
+                    profilePhotoVersion = version
+                }
+            )
             .navigationTitle(RootChromeLocalization.localizable("root.menu.myInfo"))
             .navigationBarTitleDisplayMode(.inline)
         case .settings:
@@ -718,6 +763,7 @@ struct RootTabView: View {
                     RootChromeLocalization.notifications("notifications.common.close")
                 )
                 .accessibilityAddTraits(.isButton)
+                .accessibilityIdentifier("notifications.dropdown.closeBackground")
                 .accessibilityAction { closeNotificationDropdown() }
 
             NotificationDropdown(
@@ -726,7 +772,8 @@ struct RootTabView: View {
                 onViewAll: {
                     closeNotificationDropdown()
                     openNotifications()
-                }
+                },
+                onDismiss: closeNotificationDropdown
             )
             .frame(maxWidth: 384)
             .padding(.horizontal, DPSpacing.medium)
@@ -769,7 +816,7 @@ struct RootTabView: View {
     }
 
     // The calendar is pushed onto the stack of the tab it was opened from, so back is a
-    // real pop to the member card, friend row or admin detail that opened it.
+    // real pop to the member card or friend row that opened it.
     private func openMemberCalendar(_ memberID: MemberID) {
         let host = RootNavigationPolicy.memberCalendarHost(for: selectedTab)
         push(MemberCalendarRoute(memberID: memberID), onto: host)
@@ -880,17 +927,12 @@ struct RootTabView: View {
         }
 #endif
         await RootPendingPushAction.perform(
+            isAuthenticated: authenticatedMemberID != nil,
+            isOnline: session.availability == .online
+                && offlineNetworkMonitor.status != .unsatisfied,
+            isActive: scenePhase == .active,
             consume: pushCenter.consumePendingNotificationID,
-            open: { notificationID in
-                guard let route = try await notifications.open(
-                    id: notificationID,
-                    emitsHaptic: false
-                ) else {
-                    return false
-                }
-                return await openNotificationRoute(route)
-            },
-            showFallback: { showsNotifications = true }
+            showNotificationCenter: openNotifications(targeting:)
         )
     }
 
@@ -975,8 +1017,6 @@ nonisolated enum RootNavigationPolicy {
             .friends
         case .notifications:
             .notifications
-        case .admin:
-            .admin
         case .guide:
             .guide
         case .support:
@@ -1143,7 +1183,6 @@ private enum HomeDestination: Hashable {
 }
 
 nonisolated enum MoreDestination: Hashable, Sendable {
-    case admin
     case friends
     case notifications
     case guide
@@ -1263,6 +1302,10 @@ private struct NotificationDropdown: View {
     @ObservedObject var store: NotificationStore
     let onOpen: (NotificationDTO) async -> Void
     let onViewAll: () -> Void
+    let onDismiss: () -> Void
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var panelDragOffset: CGFloat = 0
 
     private var displayedNotifications: [NotificationDTO] {
         Array(store.notifications.prefix(10))
@@ -1350,16 +1393,69 @@ private struct NotificationDropdown: View {
             }
             .buttonStyle(.plain)
             .background(DPColor.backgroundTertiary)
+            .highPriorityGesture(dismissHandleGesture)
         }
         .background(DPColor.backgroundCard)
         .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+        .overlay(alignment: .bottom) {
+            dismissHandle
+        }
         .overlay {
             RoundedRectangle(cornerRadius: DPRadius.standard)
                 .stroke(DPColor.borderSecondary, lineWidth: DPChrome.borderWidth)
         }
         .shadow(color: .black.opacity(0.25), radius: 20, y: 10)
         .shadow(color: .black.opacity(0.15), radius: 6, y: 4)
+        .offset(y: panelDragOffset)
         .accessibilityIdentifier("notifications.dropdown")
+    }
+
+    private var dismissHandle: some View {
+        ZStack(alignment: .bottom) {
+            Capsule()
+                .fill(DPColor.textMuted)
+                .frame(width: 30, height: 4)
+                .padding(.bottom, DPSpacing.extraSmall)
+        }
+        .frame(
+            width: DPSize.minimumTouchTarget,
+            height: DPSize.minimumTouchTarget,
+            alignment: .bottom
+        )
+        // The 44pt interaction area belongs to the underlying footer row. Keeping
+        // this visual overlay out of hit testing preserves the footer's tap action.
+        .allowsHitTesting(false)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(
+            RootChromeLocalization.notifications("notifications.common.close")
+        )
+        .accessibilityAddTraits(.isButton)
+        .accessibilityAction { onDismiss() }
+        .accessibilityIdentifier("notifications.dropdown.dismissHandle")
+        .accessibilityHidden(true)
+    }
+
+    private var dismissHandleGesture: some Gesture {
+        DragGesture(coordinateSpace: .global)
+            .onChanged { value in
+                panelDragOffset = RootNotificationDropdownSwipePolicy.followOffset(
+                    translation: value.translation
+                )
+            }
+            .onEnded { value in
+                guard RootNotificationDropdownSwipePolicy.shouldDismiss(
+                    translation: value.translation
+                ) else {
+                    let animation: Animation? = reduceMotion
+                        ? nil
+                        : .interactiveSpring(response: 0.25, dampingFraction: 0.82)
+                    withAnimation(animation) {
+                        panelDragOffset = 0
+                    }
+                    return
+                }
+                onDismiss()
+            }
     }
 }
 
@@ -1414,11 +1510,15 @@ private struct NotificationDropdownRow: View {
 
 nonisolated struct NotificationDropdownActorPhotoRequest {
     let actorID: MemberID
+    let hasProfilePhoto: Bool?
     let profilePhotoVersion: Int64
 
     init?(notification: NotificationDTO) {
-        guard let actorID = notification.actorId else { return nil }
+        guard let actorID = notification.actorId,
+              notification.payload.actor?.hasProfilePhoto != false
+        else { return nil }
         self.actorID = actorID
+        hasProfilePhoto = notification.payload.actor?.hasProfilePhoto
         profilePhotoVersion = notification.payload.actor?.profilePhotoVersion ?? 0
     }
 
@@ -1515,8 +1615,8 @@ private extension View {
                 Text(tab.localizedTitle)
             } icon: {
                 Image(systemName: tab.systemImage)
-                    .accessibilityIdentifier(tab.accessibilityIdentifier)
             }
+            .accessibilityIdentifier(tab.accessibilityIdentifier)
         }
         .tag(tab)
     }

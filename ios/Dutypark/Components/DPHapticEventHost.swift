@@ -63,7 +63,15 @@ final class DPHapticCenter: ObservableObject {
 /// A root-level SwiftUI host for semantic haptic events.
 @MainActor
 struct DPHapticEventHost: ViewModifier {
-    @ObservedObject var center: DPHapticCenter
+    @StateObject private var center: DPHapticCenter
+
+    init() {
+        _center = StateObject(wrappedValue: DPHapticCenter.shared)
+    }
+
+    init(center: DPHapticCenter) {
+        _center = StateObject(wrappedValue: center)
+    }
 
     func body(content: Content) -> some View {
         content
@@ -76,7 +84,13 @@ struct DPHapticEventHost: ViewModifier {
 extension View {
     /// Installs the shared haptic event host for this view hierarchy.
     @MainActor
-    func dpHapticEventHost(_ center: DPHapticCenter = .shared) -> some View {
+    func dpHapticEventHost() -> some View {
+        modifier(DPHapticEventHost())
+    }
+
+    /// Installs a haptic event host backed by the supplied center.
+    @MainActor
+    func dpHapticEventHost(_ center: DPHapticCenter) -> some View {
         modifier(DPHapticEventHost(center: center))
     }
 }

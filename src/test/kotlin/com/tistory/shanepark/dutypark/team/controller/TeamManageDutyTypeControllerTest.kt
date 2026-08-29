@@ -42,6 +42,25 @@ class TeamManageDutyTypeControllerTest : RestDocsTest() {
     }
 
     @Test
+    fun `manager cannot add a duty type with a banned name`() {
+        setTeamAdmin(TestData.member.id!!)
+        val payload = DutyTypeCreateDto(
+            teamId = TestData.team.id!!,
+            name = "시.발",
+            color = "#123456",
+        )
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/teams/manage/{teamId}/duty-types", TestData.team.id!!)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(payload))
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("contentFilter.blocked"))
+    }
+
+    @Test
     fun `non-manager cannot add duty type`() {
         val payload = DutyTypeCreateDto(
             teamId = TestData.team.id!!,
@@ -82,6 +101,26 @@ class TeamManageDutyTypeControllerTest : RestDocsTest() {
         val updated = dutyTypeRepository.findById(target.id!!).orElseThrow()
         assertThat(updated.name).isEqualTo("UpdatedDy")
         assertThat(updated.color).isEqualTo("#654321")
+    }
+
+    @Test
+    fun `manager cannot update a duty type with a banned name`() {
+        setTeamAdmin(TestData.member.id!!)
+        val target = TestData.dutyTypes.first()
+        val payload = DutyTypeUpdateDto(
+            id = target.id!!,
+            name = "시.발",
+            color = "#654321",
+        )
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.patch("/api/teams/manage/{teamId}/duty-types", TestData.team.id!!)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(payload))
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("contentFilter.blocked"))
     }
 
     @Test

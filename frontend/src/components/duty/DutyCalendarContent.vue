@@ -308,7 +308,7 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
                   :visibility="schedule.visibility"
                   size="xs"
                   class="mr-0.5 inline-flex align-[-2px] sm:align-[-3px]"
-                /><span class="sm:hidden">{{ getMobileCalendarScheduleTitle(schedule) }}</span><span class="hidden sm:inline">{{ schedule.contentWithoutTime || schedule.content }}</span>{{ formatScheduleTime(schedule) }}<template v-if="schedule.totalDays > 1">({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</template><MessageSquareText
+                /><span class="sm:hidden">{{ getMobileCalendarScheduleTitle(schedule) }}</span><span class="hidden sm:inline">{{ schedule.contentWithoutTime || schedule.content }}</span><span v-if="formatScheduleTime(schedule)" class="calendar-schedule-time"> {{ formatScheduleTime(schedule) }}</span><template v-if="schedule.totalDays > 1"> ({{ schedule.daysFromStart }}/{{ schedule.totalDays }})</template><MessageSquareText
                   v-if="hasScheduleDetails(schedule)"
                   class="w-2.5 h-2.5 sm:w-3 sm:h-3 inline align-[-1px] sm:align-[-2px] ml-0.5"
                   :style="{ color: getPrimaryTextColor(getDutyColorAt(index)) }"

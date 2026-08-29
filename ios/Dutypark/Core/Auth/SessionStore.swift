@@ -41,6 +41,7 @@ final class SessionStore: ObservableObject {
     private let offlineSessionStore: any OfflineSessionStoring
     private let localDataPurger: any SessionLocalDataPurging
     private let cancelOfflineSync: @MainActor @Sendable (MemberID?) async -> Void
+    private let accountDeletionReceiptStore: AccountDeletionReceiptStore
     private var impersonationExpiryTask: Task<Void, Never>?
     private var isTerminatingSession = false
     private var sessionTerminationWaiters: [CheckedContinuation<Void, Never>] = []
@@ -55,8 +56,18 @@ final class SessionStore: ObservableObject {
     @Published private(set) var impersonationExpiresAt: Date?
     @Published private(set) var pendingDestination: URL?
     @Published private(set) var accountDeletionAcceptedPresentation: AccountDeletionAcceptedPresentation?
+    @Published private(set) var accountDeletionReceipt: AccountDeletionReceipt?
     @Published private(set) var serverSessionWarning: ServerSessionWarningPresentation?
     @Published private(set) var authenticationTransitionFailure: AuthenticationTransitionFailurePresentation?
+
+    /// Identifies the currently authenticated credentials for views that may
+    /// outlive a login/logout transition. A new login receives a new
+    /// generation even when it is for the same member, so delayed cleanup
+    /// callbacks cannot be mistaken for work from the current session.
+    var authenticationSessionGenerationForCurrentAccount: UInt64? {
+        guard case .authenticated = state else { return nil }
+        return authenticationSessionGeneration
+    }
 
     init(
         authService: AuthService = AuthService(),
@@ -72,22 +83,29 @@ final class SessionStore: ObservableObject {
                 OfflineSyncCoordinator.shared.cancelAll()
             }
         },
-        initialAvailability: SessionAvailability = .online
+        initialAvailability: SessionAvailability = .online,
+        accountDeletionReceiptStore: AccountDeletionReceiptStore = .shared
     ) {
+        let storedReceipt = accountDeletionReceiptStore.load()
         self.authService = authService
         self.unregisterPush = unregisterPush
         self.offlineSessionStore = offlineSessionStore
         self.localDataPurger = localDataPurger
         self.cancelOfflineSync = cancelOfflineSync
+        self.accountDeletionReceiptStore = accountDeletionReceiptStore
         self.state = initialState
         self.availability = initialAvailability
         self.impersonationExpiresAt = impersonationExpiresAt
             ?? UserDefaults.standard.object(forKey: Self.impersonationExpirationKey) as? Date
+        self.accountDeletionReceipt = storedReceipt
+        self.accountDeletionAcceptedPresentation = storedReceipt == nil ? nil : .accepted
     }
 
     func restore() async {
         guard state == .restoring else { return }
-        accountDeletionAcceptedPresentation = nil
+        if accountDeletionReceipt != nil {
+            accountDeletionAcceptedPresentation = .accepted
+        }
         do {
             if let member = try await authService.restore() {
                 await authenticate(member, availability: .online)
@@ -179,7 +197,10 @@ final class SessionStore: ObservableObject {
 
     func continueAsGuestAfterRestoreFailure() async {
         guard state == .restoreFailed else { return }
-        await terminateSession(reportServerFailure: true)
+        await terminateSession(
+            reportServerFailure: true,
+            purgeAttachmentDiscards: true
+        )
     }
 
     func login(email: String, password: String, rememberMe: Bool) async {
@@ -262,24 +283,96 @@ final class SessionStore: ObservableObject {
 
     /// Completes the irreversible local side of account deletion after the server
     /// accepted the deletion job (or reports that the account is already pending).
-    func completeAccountDeletion() async {
-        await invalidateAuthenticationContext()
-        if case .authenticated(let member) = state {
-            UserDefaults.standard.removeObject(forKey: "selectedDday_\(member.id)")
-            await discardLocalSessionData(memberID: member.id)
-        } else {
-            await discardLocalSessionData(memberID: nil)
+    ///
+    /// When the completion started in a view that can outlive an auth
+    /// transition, the expected account and generation bind the cleanup to the
+    /// session that initiated it. The optional callback runs while the session
+    /// boundary is locked, so account-scoped notification cleanup cannot race a
+    /// replacement login.
+    @discardableResult
+    func completeAccountDeletion(
+        expectedMemberID: MemberID,
+        expectedAuthenticationSessionGeneration: UInt64,
+        receipt: AccountDeletionReceipt? = nil,
+        accountCleanup: (@MainActor @Sendable () async -> Void)? = nil
+    ) async -> Bool {
+        guard !isTerminatingSession,
+              isCurrentAccount(
+                  memberID: expectedMemberID,
+                  generation: expectedAuthenticationSessionGeneration
+              )
+        else { return false }
+
+        isTerminatingSession = true
+        defer { finishSessionTermination() }
+
+        // Snapshot the account before the first await. `isTerminatingSession`
+        // makes login/switch transitions wait until this whole boundary is
+        // complete, while the snapshot keeps the purge target explicit.
+        let member = memberForCurrentState
+        if let receipt {
+            do {
+                try accountDeletionReceiptStore.save(receipt)
+                accountDeletionReceipt = receipt
+            } catch {
+                accountDeletionReceipt = accountDeletionReceiptStore.load()
+            }
+        } else if accountDeletionReceipt == nil {
+            accountDeletionReceipt = accountDeletionReceiptStore.load()
         }
+        await invalidateAuthenticationContext()
+        if let member {
+            UserDefaults.standard.removeObject(forKey: "selectedDday_\(member.id)")
+            await discardLocalSessionData(
+                memberID: member.id,
+                purgeAttachmentDiscards: true
+            )
+        } else {
+            await discardLocalSessionData(
+                memberID: nil,
+                purgeAttachmentDiscards: true
+            )
+        }
+        await accountCleanup?()
         UserDefaults.standard.removeObject(forKey: "dp-remember-email")
         await authService.clearLocalAuthentication()
         pendingDestination = nil
         await becomeGuest()
         accountDeletionAcceptedPresentation = .accepted
-        DPHapticCenter.shared.emit(.success)
+        return true
     }
 
-    func dismissAccountDeletionAcceptedPresentation() {
+    func dismissAccountDeletionAcceptedPresentation(clearReceipt: Bool = true) {
+        guard clearReceipt else {
+            accountDeletionAcceptedPresentation = nil
+            return
+        }
+        clearAccountDeletionReceipt()
+    }
+
+    /// Clears the account-deletion receipt from both memory and persistence.
+    /// The presentation is also dismissed so a later guest session cannot show
+    /// a status screen for a receipt that no longer exists.
+    func clearAccountDeletionReceipt() {
         accountDeletionAcceptedPresentation = nil
+        accountDeletionReceiptStore.clear()
+        accountDeletionReceipt = nil
+    }
+
+    /// Clears a receipt only when the caller still belongs to the session that
+    /// owned the deletion flow. This prevents a late callback from removing a
+    /// replacement account's receipt.
+    @discardableResult
+    func clearAccountDeletionReceipt(
+        expectedMemberID: MemberID,
+        expectedAuthenticationSessionGeneration: UInt64
+    ) -> Bool {
+        guard isCurrentAccount(
+            memberID: expectedMemberID,
+            generation: expectedAuthenticationSessionGeneration
+        ) else { return false }
+        clearAccountDeletionReceipt()
+        return true
     }
 
     func dismissServerSessionWarning() {
@@ -449,6 +542,16 @@ final class SessionStore: ObservableObject {
         guard authenticationSessionGeneration == sessionContext.generation else {
             return false
         }
+        TodoAttachmentDiscardCoordinator.shared.activate(
+            accountID: member.id,
+            sessionGeneration: sessionContext.generation
+        )
+        if availability == .online {
+            TodoAttachmentDiscardCoordinator.shared.retryPending(
+                accountID: member.id,
+                sessionGeneration: sessionContext.generation
+            )
+        }
         if member.isImpersonating, let impersonationExpiresAt {
             scheduleImpersonationExpiration(at: impersonationExpiresAt)
         } else if !member.isImpersonating {
@@ -465,6 +568,9 @@ final class SessionStore: ObservableObject {
         AIScheduleParsingConsentStore.shared.scope(to: nil)
         availability = .online
         state = .guest
+        if accountDeletionReceipt != nil {
+            accountDeletionAcceptedPresentation = .accepted
+        }
     }
 
     private func authenticationDidFail(
@@ -505,7 +611,8 @@ final class SessionStore: ObservableObject {
 
     private func terminateSession(
         reportServerFailure: Bool,
-        syncAlreadyCancelledFor: MemberID? = nil
+        syncAlreadyCancelledFor: MemberID? = nil,
+        purgeAttachmentDiscards: Bool = false
     ) async {
         guard !isTerminatingSession else { return }
         isTerminatingSession = true
@@ -523,7 +630,11 @@ final class SessionStore: ObservableObject {
             serverSessionWarning = reportServerFailure ? .serverMayRemain : nil
         }
         await authService.clearLocalAuthentication()
-        await discardLocalSessionData(memberID: memberID, syncAlreadyCancelled: true)
+        await discardLocalSessionData(
+            memberID: memberID,
+            syncAlreadyCancelled: true,
+            purgeAttachmentDiscards: purgeAttachmentDiscards
+        )
         await becomeGuest()
     }
 
@@ -610,6 +721,10 @@ final class SessionStore: ObservableObject {
     private func beginAuthenticationSession(
         for member: LoginMember
     ) -> AuthenticationSessionContext {
+        // A successful authentication starts a fresh credential generation.
+        // Stop any prior model-backed discard task before the new context is
+        // published; its durable session IDs remain available for retry below.
+        TodoAttachmentDiscardCoordinator.shared.cancelAll()
         authenticationSessionGeneration &+= 1
         return AuthenticationSessionContext(
             memberID: member.id,
@@ -621,6 +736,11 @@ final class SessionStore: ObservableObject {
     private func invalidateAuthenticationContext() async -> UInt64 {
         authenticationSessionGeneration &+= 1
         let generation = authenticationSessionGeneration
+        // Attachment discard requests retain only account-scoped session IDs,
+        // but a model-backed request must not continue after auth cookies are
+        // invalidated. The durable record remains for the same account to
+        // retry after a later login.
+        TodoAttachmentDiscardCoordinator.shared.cancelAll()
         await authService.invalidateAuthenticationSession()
         return generation
     }
@@ -638,6 +758,14 @@ final class SessionStore: ObservableObject {
 
     private var memberIDForCurrentState: MemberID? {
         memberForCurrentState?.id
+    }
+
+    private func isCurrentAccount(
+        memberID: MemberID,
+        generation: UInt64
+    ) -> Bool {
+        memberIDForCurrentState == memberID
+            && authenticationSessionGeneration == generation
     }
 
     private func purgePreviousAccountIfNeeded(
@@ -668,10 +796,18 @@ final class SessionStore: ObservableObject {
 
     private func discardLocalSessionData(
         memberID: MemberID?,
-        syncAlreadyCancelled: Bool = false
+        syncAlreadyCancelled: Bool = false,
+        purgeAttachmentDiscards: Bool = false
     ) async {
         if !syncAlreadyCancelled {
             await cancelOfflineSync(memberID)
+        }
+        if let memberID {
+            if purgeAttachmentDiscards {
+                TodoAttachmentDiscardStore.shared.purge(accountID: memberID)
+            }
+        } else if purgeAttachmentDiscards {
+            TodoAttachmentDiscardStore.shared.purgeAll()
         }
         await localDataPurger.purgeLocalData(for: memberID)
         await offlineSessionStore.purge()

@@ -43,6 +43,167 @@ final class CalendarFeatureTests: XCTestCase {
         )
     }
 
+    func testCalendarScheduleTimeMatchesTheWebCalendarPolicy() {
+        let start = LocalDateTimeValue(rawValue: "2026-08-20T12:40:00")
+        let end = LocalDateTimeValue(rawValue: "2026-08-20T13:30:00")
+
+        XCTAssertEqual(
+            CalendarVisualLogic.calendarScheduleTimeText(
+                start: start,
+                end: end,
+                daysFromStart: 1,
+                totalDays: 1
+            ),
+            "(12:40~13:30)"
+        )
+        XCTAssertEqual(
+            CalendarVisualLogic.calendarScheduleTimeText(
+                start: start,
+                end: start,
+                daysFromStart: 1,
+                totalDays: 1
+            ),
+            "(12:40)"
+        )
+        XCTAssertEqual(
+            CalendarVisualLogic.calendarScheduleTimeText(
+                start: start,
+                end: end,
+                daysFromStart: 1,
+                totalDays: 3
+            ),
+            "(12:40)"
+        )
+        XCTAssertNil(
+            CalendarVisualLogic.calendarScheduleTimeText(
+                start: start,
+                end: end,
+                daysFromStart: 2,
+                totalDays: 3
+            )
+        )
+        XCTAssertEqual(
+            CalendarVisualLogic.calendarScheduleTimeText(
+                start: start,
+                end: end,
+                daysFromStart: 3,
+                totalDays: 3
+            ),
+            "(~13:30)"
+        )
+        XCTAssertEqual(
+            CalendarVisualLogic.calendarScheduleTimeText(
+                start: LocalDateTimeValue(rawValue: "2026-08-20T00:00:00"),
+                end: end,
+                daysFromStart: 1,
+                totalDays: 1
+            ),
+            "(~13:30)"
+        )
+        XCTAssertNil(
+            CalendarVisualLogic.calendarScheduleTimeText(
+                start: LocalDateTimeValue(rawValue: "2026-08-20T00:00:00"),
+                end: LocalDateTimeValue(rawValue: "2026-08-20T00:00:00"),
+                daysFromStart: 1,
+                totalDays: 1
+            )
+        )
+    }
+
+    func testScheduleListTimeUsesHoursAndMinutesAndHidesMidnightSentinels() {
+        XCTAssertEqual(
+            CalendarVisualLogic.scheduleListTimeText(
+                start: LocalDateTimeValue(rawValue: "2026-08-20T12:40:00"),
+                end: LocalDateTimeValue(rawValue: "2026-08-20T13:30:00")
+            ),
+            "(12:40~13:30)"
+        )
+        XCTAssertEqual(
+            CalendarVisualLogic.scheduleListTimeText(
+                start: LocalDateTimeValue(rawValue: "2026-08-20T09:30:00.123456"),
+                end: LocalDateTimeValue(rawValue: "2026-08-20T10:45:00.654321")
+            ),
+            "(09:30~10:45)"
+        )
+        XCTAssertEqual(
+            CalendarVisualLogic.scheduleListTimeText(
+                start: LocalDateTimeValue(rawValue: "2026-08-20T12:40:00"),
+                end: LocalDateTimeValue(rawValue: "2026-08-20T12:40:00")
+            ),
+            "(12:40)"
+        )
+        XCTAssertEqual(
+            CalendarVisualLogic.scheduleListTimeText(
+                start: LocalDateTimeValue(rawValue: "2026-08-20T12:40:00"),
+                end: LocalDateTimeValue(rawValue: "2026-08-20T00:00:00")
+            ),
+            "(12:40)"
+        )
+        XCTAssertEqual(
+            CalendarVisualLogic.scheduleListTimeText(
+                start: LocalDateTimeValue(rawValue: "2026-08-20T00:00:00"),
+                end: LocalDateTimeValue(rawValue: "2026-08-20T13:30:00")
+            ),
+            "(00:00~13:30)"
+        )
+        XCTAssertNil(
+            CalendarVisualLogic.scheduleListTimeText(
+                start: LocalDateTimeValue(rawValue: "2026-08-20T00:00:00"),
+                end: LocalDateTimeValue(rawValue: "2026-08-20T00:00:00")
+            )
+        )
+    }
+
+    func testScheduleTitleTimeIsSeparatedByOneSpace() {
+        XCTAssertEqual(
+            CalendarVisualLogic.scheduleTitleText(content: "병원 예약", time: "(12:40~13:30)"),
+            "병원 예약 (12:40~13:30)"
+        )
+        XCTAssertEqual(
+            CalendarVisualLogic.scheduleTitleText(content: "하루 종일", time: nil),
+            "하루 종일"
+        )
+        XCTAssertEqual(
+            CalendarVisualLogic.scheduleTitleText(
+                content: "장기 일정",
+                time: "(12:40)",
+                dayCounter: "(1/3)"
+            ),
+            "장기 일정 (12:40) (1/3)"
+        )
+    }
+
+    func testCalendarAndGuestDetailsKeepScheduleTitleAndTimeInOneTextFlow() throws {
+        let calendarSource = try Self.calendarViewSource()
+        let calendarDayCell = try Self.declaration(
+            named: "private struct CalendarDayCell: View",
+            in: calendarSource
+        )
+        XCTAssertTrue(calendarDayCell.contains("CalendarVisualLogic.scheduleTitleText("))
+
+        let dayDetail = try Self.declaration(
+            named: "private struct DayDetailView: View",
+            in: calendarSource
+        )
+        XCTAssertTrue(dayDetail.contains("scheduleTitleLine(schedule)"))
+        XCTAssertTrue(dayDetail.contains(#"line = line + Text(verbatim: " \(time)")"#))
+        XCTAssertFalse(dayDetail.contains("Text(time)"), "The day detail must not render time on a separate line")
+
+        let guestSourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark/Features/Guest/GuestPublicCalendarView.swift")
+        let guestSource = try String(contentsOf: guestSourceURL, encoding: .utf8)
+        XCTAssertTrue(guestSource.contains("CalendarVisualLogic.scheduleTitleText("))
+        let guestDetail = try Self.declaration(
+            named: "private struct GuestCalendarDayDetailView: View",
+            in: guestSource
+        )
+        XCTAssertTrue(guestDetail.contains("scheduleTitleLine(schedule)"))
+        XCTAssertTrue(guestDetail.contains(#"line = line + Text(verbatim: " \(time)")"#))
+        XCTAssertFalse(guestDetail.contains("Text(time)"), "The guest detail must not render time on a separate line")
+    }
+
     /// The pinned D-day shares the day-number row, so only the counter fits. Adding the
     /// title pushed the number out of the single line, which is the one part the pin is
     /// for; the title already appears as a bubble on the D-day's own date.
@@ -88,9 +249,9 @@ final class CalendarFeatureTests: XCTestCase {
 
     /// Moving the month header into the navigation bar left the return to today as a bare
     /// arrow among the bar buttons, where nothing says what it does. It goes back to the
-    /// labelled speech bubble the web calendar draws, hung off the month label itself so it
-    /// stays inside the bar, which hit-tests nothing but its own items.
-    func testTheThisMonthAffordanceIsALabelledCalloutHangingFromTheMonthLabel() throws {
+    /// labelled speech bubble the web calendar draws, fixed at the top of the calendar body
+    /// so it remains reachable after the navigation bar returns to its native height.
+    func testTheThisMonthAffordanceIsALabelledCalloutFixedAtTheCalendarBodyTop() throws {
         let sourceURL = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
@@ -106,12 +267,31 @@ final class CalendarFeatureTests: XCTestCase {
             source.contains("thisMonthControl"),
             "The bare trailing bar icon gives way to the callout"
         )
+        let content = try Self.declaration(named: "private var calendarContent: some View", in: source)
+        XCTAssertTrue(content.contains("ZStack(alignment: .top) {"))
+        XCTAssertTrue(
+            content.contains("thisMonthCalloutLayer"),
+            "The callout is a fixed sibling of the scrolling content"
+        )
+        XCTAssertTrue(
+            !content.contains(".padding(.top, Self.calloutReach * 2)"),
+            "The fixed callout must not push the calendar content down"
+        )
+        XCTAssertTrue(
+            content.contains(".frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)"),
+            "The callout host covers the full calendar body for hit testing"
+        )
+
         let controls = try XCTUnwrap(source.range(of: "private var monthControls: some View"))
         let body = source[controls.upperBound...]
         let end = try XCTUnwrap(body.range(of: "\n    private var"))
         XCTAssertTrue(
-            body[..<end.lowerBound].contains("thisMonthCalloutLayer"),
-            "The callout hangs off the month controls, inside the bar, so it stays tappable"
+            !body[..<end.lowerBound].contains("thisMonthCalloutLayer"),
+            "The 44pt month controls do not expand to host the callout"
+        )
+        XCTAssertTrue(
+            !body[..<end.lowerBound].contains(".padding(.vertical, Self.calloutReach)"),
+            "The callout reserve belongs to the calendar content, not the navigation bar"
         )
     }
 
@@ -124,6 +304,54 @@ final class CalendarFeatureTests: XCTestCase {
 
         XCTAssertTrue(source.contains("private static let calloutHitInsetY: CGFloat = 6"))
         XCTAssertTrue(source.contains(".padding(.vertical, Self.calloutHitInsetY)"))
+    }
+
+    func testTheThisMonthCalloutIsLiftedTwentyPointsWithinTheCalendarBody() throws {
+        let source = try Self.calendarViewSource()
+        let content = try Self.declaration(named: "private var calendarContent: some View", in: source)
+
+        XCTAssertTrue(
+            source.contains("private static let calloutVerticalOffset: CGFloat = -20"),
+            "The body-hosted callout needs an explicit 20pt upward offset"
+        )
+        XCTAssertTrue(
+            content.contains("thisMonthCalloutLayer\n                .offset(y: Self.calloutVerticalOffset)"),
+            "The upward offset must apply to the fixed body callout layer"
+        )
+    }
+
+    /// iOS 26's top edge effect must remain available for contrast when calendar content moves
+    /// under the fixed navigation controls. The calendar owns the effect policy, but only for
+    /// the top edge and only on OS versions that provide the API; the bottom edge is unchanged.
+    func testCalendarUsesASoftTopScrollEdgeEffectOnIOS26() throws {
+        let source = try Self.calendarViewSource()
+        let content = try Self.declaration(named: "private var calendarContent: some View", in: source)
+        let modifier = try Self.declaration(
+            named: "private struct CalendarTopScrollEdgeEffectModifier: ViewModifier",
+            in: source
+        )
+
+        XCTAssertTrue(content.contains("ScrollView {"), "The policy belongs to the outer vertical calendar scroll view")
+        XCTAssertTrue(content.contains("CalendarTopScrollEdgeEffectModifier()"))
+        XCTAssertTrue(modifier.contains("if #available(iOS 26.0, *)"))
+        XCTAssertTrue(modifier.contains(".scrollEdgeEffectStyle(.soft, for: .top)"))
+        XCTAssertFalse(modifier.contains("scrollEdgeEffectHidden"))
+        XCTAssertFalse(modifier.contains(".bottom"), "The bottom edge effect remains automatic")
+        XCTAssertFalse(modifier.contains(".all"), "Only the top edge effect is disabled")
+        XCTAssertTrue(modifier.contains("else"), "iOS 17 must keep the unmodified fallback")
+    }
+
+    /// The callout grows from its current upper-left corner so its layout anchor and the month
+    /// header's centre do not move. Scaling the Button itself keeps the existing action and
+    /// accessibility label attached to the enlarged hit target.
+    func testTheThisMonthCalloutScalesTheWholeButtonByTenPercentFromTopLeading() throws {
+        let source = try Self.calendarViewSource()
+        let callout = try Self.declaration(named: "private var thisMonthCallout: some View", in: source)
+
+        XCTAssertTrue(source.contains("private static let calloutScale: CGFloat = 1.1"))
+        XCTAssertTrue(callout.contains(".scaleEffect(Self.calloutScale, anchor: .topLeading)"))
+        XCTAssertTrue(callout.contains("Button { Task { await model.goToToday() } } label:"))
+        XCTAssertTrue(callout.contains(".accessibilityLabel(CalendarLocalization.text(\"calendar.month.goToThisMonth\"))"))
     }
 
     /// The strip above the calendar is gone: due-date bubbles inside the day cells are the
@@ -145,6 +373,26 @@ final class CalendarFeatureTests: XCTestCase {
         XCTAssertFalse(source.contains("TodoCreateModal("), "Calendar no longer creates Todos")
         XCTAssertFalse(source.contains("TodoView("), "Calendar Todo bubbles must not present the full board")
         XCTAssertFalse(source.contains("private func openTodoBoard()"), "Calendar never opens the Todo board")
+    }
+
+    func testCalendarDayCellExposesOneFullCellAccessibilityTarget() throws {
+        let dayCell = try Self.declaration(
+            named: "private struct CalendarDayCell: View",
+            in: Self.calendarViewSource()
+        )
+
+        XCTAssertTrue(
+            dayCell.contains(".accessibilityElement(children: .ignore)"),
+            "Nested schedule/comparison/todo views must not duplicate the day label"
+        )
+        XCTAssertTrue(
+            dayCell.contains(".accessibilityActions"),
+            "Collapsing the cell must retain direct VoiceOver actions for visible Todos"
+        )
+        XCTAssertTrue(
+            dayCell.contains(".accessibilityIdentifier(\"calendar.day.\\(day.cell.date.rawValue)\")"),
+            "Every day needs a stable, unique accessibility target for VoiceOver and UI automation"
+        )
     }
 
     func testAMemberCalendarIsPushedOntoTheStackOfTheTabItWasOpenedFrom() throws {
@@ -1453,6 +1701,131 @@ final class CalendarFeatureTests: XCTestCase {
         XCTAssertEqual(deleteCount, 1)
     }
 
+    func testDDaySaveBlocksBannedTitleBeforeCallingTheRepository() async {
+        let suiteName = "calendar-content-filter-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.set(["시발"], forKey: "dp-banned-words")
+        let repository = CalendarRepositoryMock()
+        let haptics = DPHapticCenter()
+        let model = CalendarViewModel(
+            repository: repository,
+            now: date(2026, 8, 12),
+            contentFilter: ContentFilterStore(defaults: defaults),
+            hapticCenter: haptics
+        )
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        await model.load()
+
+        let saved = await model.saveDDay(
+            existing: nil,
+            title: "시.발",
+            date: date(2026, 8, 12),
+            isPrivate: false
+        )
+
+        XCTAssertFalse(saved)
+        XCTAssertEqual(
+            model.errorMessage,
+            CalendarLocalization.text("calendar.error.contentFilter")
+        )
+        XCTAssertEqual(haptics.event?.kind, .error)
+        let saveCount = await repository.saveDDayCount
+        XCTAssertEqual(saveCount, 0)
+    }
+
+    func testPrivateDDaySaveAllowsALocallyBannedTitle() async {
+        let suiteName = "calendar-private-content-filter-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.set(["시발"], forKey: "dp-banned-words")
+        let repository = CalendarRepositoryMock()
+        let haptics = DPHapticCenter()
+        let model = CalendarViewModel(
+            repository: repository,
+            now: date(2026, 8, 12),
+            contentFilter: ContentFilterStore(defaults: defaults),
+            hapticCenter: haptics
+        )
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        await model.load()
+
+        let saved = await model.saveDDay(
+            existing: nil,
+            title: "시.발",
+            date: date(2026, 8, 12),
+            isPrivate: true
+        )
+
+        XCTAssertTrue(saved)
+        XCTAssertNil(model.errorMessage)
+        XCTAssertEqual(haptics.event?.kind, .success)
+        let saveCount = await repository.saveDDayCount
+        XCTAssertEqual(saveCount, 1)
+    }
+
+    func testDDaySaveMapsServerContentFilterErrorToTheLocalizedMessage() async {
+        let repository = CalendarRepositoryMock(
+            saveDDayError: .server(status: 400, code: "contentFilter.blocked")
+        )
+        let haptics = DPHapticCenter()
+        let model = CalendarViewModel(
+            repository: repository,
+            now: date(2026, 8, 12),
+            hapticCenter: haptics
+        )
+
+        await model.load()
+
+        let saved = await model.saveDDay(
+            existing: nil,
+            title: "A safe title",
+            date: date(2026, 8, 12),
+            isPrivate: false
+        )
+
+        XCTAssertFalse(saved)
+        XCTAssertEqual(
+            model.errorMessage,
+            CalendarLocalization.text("calendar.error.contentFilter")
+        )
+        XCTAssertEqual(haptics.event?.kind, .error)
+        let saveCount = await repository.saveDDayCount
+        XCTAssertEqual(saveCount, 1)
+    }
+
+    func testDDaySaveMapsDetailedServerContentFilterErrorToTheLocalizedMessage() async {
+        let repository = CalendarRepositoryMock(
+            saveDDayError: .serverWithDetails(
+                status: 400,
+                code: "contentFilter.blocked",
+                details: APIErrorDetails(remainingAttempts: nil)
+            )
+        )
+        let haptics = DPHapticCenter()
+        let model = CalendarViewModel(
+            repository: repository,
+            now: date(2026, 8, 12),
+            hapticCenter: haptics
+        )
+
+        await model.load()
+
+        let saved = await model.saveDDay(
+            existing: nil,
+            title: "A safe title",
+            date: date(2026, 8, 12),
+            isPrivate: false
+        )
+
+        XCTAssertFalse(saved)
+        XCTAssertEqual(
+            model.errorMessage,
+            CalendarLocalization.text("calendar.error.contentFilter")
+        )
+        XCTAssertEqual(haptics.event?.kind, .error)
+    }
+
     func testLoadBuildsTheServerFortyTwoCellCalendar() async {
         let repository = CalendarRepositoryMock()
         let model = CalendarViewModel(repository: repository, now: date(2026, 8, 12))
@@ -1513,6 +1886,44 @@ final class CalendarFeatureTests: XCTestCase {
 
         await model.selectYearMonth(year: 2028, month: 2)
         XCTAssertEqual(haptics.event?.kind, .routine)
+    }
+
+    func testSelectingDayOnMyCalendarOpensTheDayWithoutCreatingAHighlight() async throws {
+        let haptics = DPHapticCenter()
+        let model = CalendarViewModel(
+            repository: CalendarRepositoryMock(),
+            now: date(2026, 8, 12),
+            hapticCenter: haptics
+        )
+        await model.load()
+        let day = try XCTUnwrap(model.days.first { $0.cell.date.rawValue == "2026-08-12" })
+
+        model.selectDay(day)
+
+        XCTAssertEqual(model.selectedDay?.cell.date, day.cell.date)
+        XCTAssertNil(model.highlightedDate)
+        XCTAssertEqual(haptics.event?.kind, .selection)
+    }
+
+    func testSelectingDayOnManagedCalendarPreservesExistingHighlight() async throws {
+        let haptics = DPHapticCenter()
+        let highlightedDate = DateOnly(rawValue: "2026-08-12")
+        let model = CalendarViewModel(
+            repository: CalendarRepositoryMock(canManage: true),
+            now: date(2026, 8, 12),
+            memberID: 9,
+            date: highlightedDate,
+            hapticCenter: haptics
+        )
+        await model.load()
+        let day = try XCTUnwrap(model.days.first { $0.cell.date.rawValue == "2026-08-13" })
+
+        model.selectDay(day)
+
+        XCTAssertTrue(model.canManage)
+        XCTAssertEqual(model.selectedDay?.cell.date, day.cell.date)
+        XCTAssertEqual(model.highlightedDate, highlightedDate)
+        XCTAssertEqual(haptics.event?.kind, .selection)
     }
 
     func testScheduleMutationEmitsSuccessOnlyAfterTheSaveCompletes() async {
@@ -1900,6 +2311,217 @@ final class CalendarFeatureTests: XCTestCase {
         )
     }
 
+    func testDutyBatchFileSizePolicyRejectsTheProxyBoundaryAndUnknownMetadata() {
+        let maximum = AttachmentUploadPolicy.safeMaximumBytes
+
+        XCTAssertEqual(
+            CalendarFeatureLogic.dutyBatchFileSizeValidation(maximum - 1),
+            .allowed
+        )
+        XCTAssertEqual(
+            CalendarFeatureLogic.dutyBatchFileSizeValidation(maximum),
+            .tooLarge
+        )
+        XCTAssertEqual(
+            CalendarFeatureLogic.dutyBatchFileSizeValidation(maximum + 1),
+            .tooLarge
+        )
+        XCTAssertEqual(
+            CalendarFeatureLogic.dutyBatchFileSizeValidation(nil),
+            .unavailable
+        )
+        XCTAssertEqual(
+            CalendarFeatureLogic.dutyBatchFileSizeValidation(-1),
+            .unavailable
+        )
+    }
+
+    func testDutyBatchDataSizePolicyKeepsTheRequestBoundaryAfterReading() {
+        let maximum = AttachmentUploadPolicy.safeMaximumBytes
+
+        XCTAssertEqual(
+            CalendarFeatureLogic.dutyBatchDataSizeValidation(maximum - 1),
+            .allowed
+        )
+        XCTAssertEqual(
+            CalendarFeatureLogic.dutyBatchDataSizeValidation(maximum),
+            .tooLarge
+        )
+        XCTAssertEqual(
+            CalendarFeatureLogic.dutyBatchDataSizeValidation(maximum + 1),
+            .tooLarge
+        )
+    }
+
+    func testDutyBatchMultipartBodyCountsItsHeadersAndBoundaryAgainstTheLimit() throws {
+        let maximum = AttachmentUploadPolicy.safeMaximumBytes
+        let boundary = "DutyparkDuty-fixed"
+        let emptyBody = try XCTUnwrap(
+            CalendarDutyBatchMultipart.body(
+                memberID: 42,
+                year: 2026,
+                month: 8,
+                filename: "roster.xlsx",
+                data: Data(),
+                boundary: boundary
+            )
+        )
+        let overhead = emptyBody.count
+
+        let bodyBelowLimit = try XCTUnwrap(
+            CalendarDutyBatchMultipart.body(
+                memberID: 42,
+                year: 2026,
+                month: 8,
+                filename: "roster.xlsx",
+                data: Data(repeating: 0x41, count: maximum - overhead - 1),
+                boundary: boundary
+            )
+        )
+        XCTAssertEqual(bodyBelowLimit.count, maximum - 1)
+
+        let bodyAtLimit = CalendarDutyBatchMultipart.body(
+            memberID: 42,
+            year: 2026,
+            month: 8,
+            filename: "roster.xlsx",
+            data: Data(repeating: 0x41, count: maximum - overhead),
+            boundary: boundary
+        )
+        XCTAssertNil(bodyAtLimit, "The complete multipart request must remain strictly below 10 MiB")
+    }
+
+    func testDutyBatchMultipartBodyRejectsOversizedDataBeforeBuildingTheBody() throws {
+        let maximum = AttachmentUploadPolicy.safeMaximumBytes
+        let boundary = "DutyparkDuty-fixed"
+        let emptyBody = try XCTUnwrap(
+            CalendarDutyBatchMultipart.body(
+                memberID: 42,
+                year: 2026,
+                month: 8,
+                filename: "roster.xlsx",
+                data: Data(),
+                boundary: boundary
+            )
+        )
+
+        XCTAssertNil(
+            CalendarDutyBatchMultipart.body(
+                memberID: 42,
+                year: 2026,
+                month: 8,
+                filename: "roster.xlsx",
+                data: Data(repeating: 0x41, count: maximum - emptyBody.count + 1),
+                boundary: boundary
+            )
+        )
+    }
+
+    func testDutyBatchRepositoryRejectsMultipartOverflowBeforeSendingARequest() async {
+        CalendarURLProtocolStub.requestCount = 0
+        CalendarURLProtocolStub.handler = { request in
+            CalendarURLProtocolStub.requestCount += 1
+            return (
+                HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!,
+                Data(#"{"result":true,"workingDays":0,"offDays":0}"#.utf8)
+            )
+        }
+        defer {
+            CalendarURLProtocolStub.handler = nil
+            CalendarURLProtocolStub.requestCount = 0
+        }
+
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [CalendarURLProtocolStub.self]
+        let repository = CalendarRepository(
+            client: APIClient(
+                baseURL: URL(string: "https://dutypark.test/api/")!,
+                session: URLSession(configuration: configuration)
+            )
+        )
+
+        do {
+            _ = try await repository.uploadDutyBatch(
+                memberID: 42,
+                year: 2026,
+                month: 8,
+                filename: "roster.xlsx",
+                data: Data(repeating: 0x41, count: AttachmentUploadPolicy.safeMaximumBytes - 1)
+            )
+            XCTFail("Multipart overhead should make this request exceed the proxy limit")
+        } catch let error as APIError {
+            XCTAssertEqual(error, .invalidResponse)
+        } catch {
+            XCTFail("Unexpected upload error: \(error)")
+        }
+
+        XCTAssertEqual(CalendarURLProtocolStub.requestCount, 0)
+    }
+
+    func testDutyBatchMultipartFilenameSanitizesQuotedEscapedAndControlCharacters() throws {
+        let rawFilename = "roster\"\\night\r\n\u{0000}\u{001F}\u{007F}\u{0085}.xlsx"
+        let sanitized = CalendarDutyBatchMultipart.sanitizedFilename(rawFilename)
+
+        XCTAssertFalse(sanitized.contains("\""))
+        XCTAssertFalse(sanitized.contains("\\"))
+        XCTAssertFalse(
+            sanitized.unicodeScalars.contains {
+                $0.value <= 0x1F || $0.value == 0x7F || (0x80...0x9F).contains($0.value)
+            }
+        )
+        XCTAssertTrue(sanitized.hasSuffix(".xlsx"))
+
+        let body = try XCTUnwrap(
+            CalendarDutyBatchMultipart.body(
+                memberID: 42,
+                year: 2026,
+                month: 8,
+                filename: rawFilename,
+                data: Data(),
+                boundary: "DutyparkDuty-fixed"
+            )
+        )
+        let bodyText = String(decoding: body, as: UTF8.self)
+        XCTAssertTrue(bodyText.contains("filename=\"\(sanitized)\""))
+    }
+
+    func testDutyBatchUploadPreflightsResourceMetadataBeforeMaterializingData() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark/Features/Calendar/CalendarViewModel.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+        let upload = try Self.declaration(named: "func uploadDutyBatch(url: URL) async", in: source)
+        let metadata = try XCTUnwrap(upload.range(of: "url.resourceValues(forKeys: [.fileSizeKey])"))
+        let dataRead = try XCTUnwrap(upload.range(of: "Data(contentsOf: url)"))
+
+        XCTAssertLessThan(
+            metadata.lowerBound,
+            dataRead.lowerBound,
+            "The file URL metadata must be checked before Data(contentsOf:)"
+        )
+        XCTAssertTrue(upload.contains("dutyBatchFileSizeValidation"))
+        XCTAssertTrue(upload.contains("dutyBatchDataSizeValidation"))
+
+        let repositoryURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark/Features/Calendar/CalendarRepository.swift")
+        let repository = try String(contentsOf: repositoryURL, encoding: .utf8)
+        XCTAssertTrue(
+            repository.contains("guard data.count < AttachmentUploadPolicy.safeMaximumBytes"),
+            "The multipart request boundary must reject oversized Data even if a caller bypasses the ViewModel"
+        )
+        XCTAssertTrue(
+            repository.contains("CalendarDutyBatchMultipart.body("),
+            "The repository must build multipart data through the guarded builder"
+        )
+        XCTAssertTrue(
+            repository.contains("guard let body = CalendarDutyBatchMultipart.body("),
+            "The final request boundary must reject multipart overhead overflow"
+        )
+    }
+
     func testCalendarUsesTheSameCompactCellMinimumAsMobileWeb() {
         XCTAssertEqual(CalendarVisualLogic.compactCellMinimumHeight, 60)
         XCTAssertEqual(CalendarVisualLogic.maximumSchedulesPerCell, 3)
@@ -2039,6 +2661,7 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
     var deleteScheduleCount = 0
     var untagCount = 0
     var deleteDDayCount = 0
+    var saveDDayCount = 0
     let canManageValue: Bool
     let cancelMemberLoad: Bool
     let friendValues: [FriendDTO]
@@ -2047,6 +2670,7 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
     let returnsTaggedSchedule: Bool
     let otherDutyValues: [OtherDutyResponse]
     let monthGate: CalendarMonthRaceGate?
+    let saveDDayError: APIError?
 
     init(
         canManage: Bool = false,
@@ -2056,7 +2680,8 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
         failDestructiveMutations: Bool = false,
         returnsTaggedSchedule: Bool = false,
         otherDuties: [OtherDutyResponse] = [],
-        monthGate: CalendarMonthRaceGate? = nil
+        monthGate: CalendarMonthRaceGate? = nil,
+        saveDDayError: APIError? = nil
     ) {
         canManageValue = canManage
         self.cancelMemberLoad = cancelMemberLoad
@@ -2066,6 +2691,7 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
         self.returnsTaggedSchedule = returnsTaggedSchedule
         otherDutyValues = otherDuties
         self.monthGate = monthGate
+        self.saveDDayError = saveDDayError
     }
 
     func member() async throws -> MemberDTO {
@@ -2128,7 +2754,11 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
     func uploadDutyBatch(memberID: MemberID, year: Int, month: Int, filename: String, data: Data) async throws -> DutyBatchUploadResult {
         DutyBatchUploadResult(result: true, errorCode: nil, errorDetails: nil, startDate: nil, endDate: nil, workingDays: 20, offDays: 10)
     }
-    func saveDDay(_ request: DDaySaveDTO) async throws -> DDayDTO { DDayDTO(id: 1, title: request.title, date: request.date, isPrivate: request.isPrivate, calc: 0, daysLeft: 0) }
+    func saveDDay(_ request: DDaySaveDTO) async throws -> DDayDTO {
+        saveDDayCount += 1
+        if let saveDDayError { throw saveDDayError }
+        return DDayDTO(id: 1, title: request.title, date: request.date, isPrivate: request.isPrivate, calc: 0, daysLeft: 0)
+    }
     func deleteDDay(id: Int64) async throws {
         deleteDDayCount += 1
         if failDestructiveMutations { throw APIError.invalidResponse }
@@ -2218,4 +2848,25 @@ private actor CalendarMonthRaceOutboxStub: OfflineOutboxProviding {
 
     func markSucceeded(accountID: MemberID, operationID: UUID) async throws {}
     func purge(accountID: MemberID) async throws {}
+}
+
+private final class CalendarURLProtocolStub: URLProtocol, @unchecked Sendable {
+    nonisolated(unsafe) static var handler: (@Sendable (URLRequest) -> (HTTPURLResponse, Data))?
+    nonisolated(unsafe) static var requestCount = 0
+
+    override class func canInit(with request: URLRequest) -> Bool { true }
+    override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
+
+    override func startLoading() {
+        guard let handler = Self.handler else {
+            fatalError("CalendarURLProtocolStub handler is not set")
+        }
+        Self.requestCount += 1
+        let (response, data) = handler(request)
+        client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
+        client?.urlProtocol(self, didLoad: data)
+        client?.urlProtocolDidFinishLoading(self)
+    }
+
+    override func stopLoading() {}
 }

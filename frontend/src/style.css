@@ -1198,6 +1198,43 @@ html.dark {
     transform: scale(0.95);
 }
 
+/* Month arrows. The bare icon left touch users guessing where the button was, since the
+   hover surface above never applies on touch; the accent wash is drawn all the time
+   instead. No border: the tint alone carries the shape and keeps the header light. */
+.calendar-nav-arrow {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 9999px;
+    border: none;
+    background-color: var(--dp-accent-bg);
+    color: var(--dp-accent);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+@media (min-width: 640px) {
+    .calendar-nav-arrow {
+        width: 3rem;
+        height: 3rem;
+    }
+}
+
+@media (hover: hover) and (pointer: fine) {
+    .calendar-nav-arrow:hover {
+        background-color: var(--dp-accent-bg-hover);
+        color: var(--dp-accent-hover);
+    }
+}
+
+.calendar-nav-arrow:active {
+    background-color: var(--dp-accent-bg-hover);
+    transform: scale(0.92);
+}
+
 /* "This month" speech bubble, pinned above the year-month button */
 .this-month-bubble {
     position: absolute;

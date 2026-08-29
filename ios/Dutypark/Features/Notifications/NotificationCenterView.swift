@@ -44,81 +44,135 @@ nonisolated enum NotificationDeletionConfirmation: Equatable, Identifiable, Send
 
 struct NotificationCenterView: View {
     @ObservedObject var store: NotificationStore
+    @Binding private var targetNotificationID: NotificationID?
     var onOpen: (NotificationRoute) async -> Bool
 
     @Environment(\.scenePhase) private var scenePhase
     @State private var deletionConfirmation: NotificationDeletionConfirmation?
     @State private var alertTitle: String?
     @State private var alertMessage: String?
+    @State private var highlightedNotificationID: NotificationID?
 
     init(
         store: NotificationStore,
+        targetNotificationID: Binding<NotificationID?> = .constant(nil),
         onOpen: @escaping (NotificationRoute) async -> Bool = { _ in true }
     ) {
         self.store = store
+        _targetNotificationID = targetNotificationID
         self.onOpen = onOpen
+        _highlightedNotificationID = State(initialValue: targetNotificationID.wrappedValue)
     }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 0) {
-                bulkActionBar
-                    .padding(.bottom, DPSpacing.medium)
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    bulkActionBar
+                        .padding(.bottom, DPSpacing.medium)
 
-                notificationCard
+                    notificationCard
+                }
+                .frame(maxWidth: 672)
+                .padding(.horizontal, DPSpacing.medium)
+                .padding(.vertical, DPSpacing.large)
+                .frame(maxWidth: .infinity)
             }
-            .frame(maxWidth: 672)
-            .padding(.horizontal, DPSpacing.medium)
-            .padding(.vertical, DPSpacing.large)
-            .frame(maxWidth: .infinity)
-        }
-        .background(DPColor.backgroundSecondary)
-        .accessibilityIdentifier("screen.notifications")
-        // Pushed like every other menu screen, so it leaves through the navigation bar
-        // instead of a sheet-only swipe down.
-        .navigationTitle(notificationLocalized("notifications.title"))
-        .navigationBarTitleDisplayMode(.inline)
-        .refreshable { await store.refresh() }
-        .task {
-            store.startPolling()
-            if store.notifications.isEmpty {
-                await store.refresh()
+            .task {
+                store.startPolling()
+                if NotificationCenterLoadPolicy.shouldRefresh(
+                    targetID: targetNotificationID,
+                    notificationsAreEmpty: store.notifications.isEmpty
+                ) {
+                    await store.refresh()
+                }
+                await locateTarget(using: proxy)
             }
-        }
-        .onChange(of: scenePhase) { _, phase in
-            Task { await store.setForeground(phase == .active) }
-        }
-        .dpConfirmation(
-            item: $deletionConfirmation,
-            copy: { confirmation in
-                DPConfirmationCopy(
-                    title: notificationLocalized(confirmation.titleKey),
-                    message: notificationLocalized(confirmation.messageKey),
-                    confirmTitle: notificationLocalized(confirmation.confirmTitleKey),
-                    cancelTitle: notificationLocalized("notifications.common.cancel"),
-                    isDestructive: true
-                )
-            },
-            confirm: { confirmation, dismiss in
-                dismiss()
-                Task { await delete(confirmation) }
-            }
-        )
-        .alert(
-            alertTitle ?? notificationLocalized("notifications.common.error"),
-            isPresented: Binding(
-                get: { alertMessage != nil },
-                set: {
-                    if !$0 {
-                        alertTitle = nil
-                        alertMessage = nil
+            .onChange(of: targetNotificationID) { _, _ in
+                highlightedNotificationID = nil
+                Task {
+                    if targetNotificationID != nil {
+                        await store.refresh()
                     }
+                    await locateTarget(using: proxy)
+                }
+            }
+            .onChange(of: scenePhase) { _, phase in
+                Task { await store.setForeground(phase == .active) }
+            }
+            .onDisappear {
+                highlightedNotificationID = nil
+                targetNotificationID = nil
+            }
+            .background(DPColor.backgroundSecondary)
+            .accessibilityIdentifier("screen.notifications")
+            // Pushed like every other menu screen, so it leaves through the navigation bar
+            // instead of a sheet-only swipe down.
+            .navigationTitle(notificationLocalized("notifications.title"))
+            .navigationBarTitleDisplayMode(.inline)
+            .refreshable {
+                await store.refresh()
+                await locateTarget(using: proxy)
+            }
+            .dpConfirmation(
+                item: $deletionConfirmation,
+                copy: { confirmation in
+                    DPConfirmationCopy(
+                        title: notificationLocalized(confirmation.titleKey),
+                        message: notificationLocalized(confirmation.messageKey),
+                        confirmTitle: notificationLocalized(confirmation.confirmTitleKey),
+                        cancelTitle: notificationLocalized("notifications.common.cancel"),
+                        isDestructive: true
+                    )
+                },
+                confirm: { confirmation, dismiss in
+                    dismiss()
+                    Task { await delete(confirmation) }
                 }
             )
-        ) {
-            Button(notificationLocalized("notifications.common.ok")) {}
-        } message: {
-            Text(alertMessage ?? "")
+            .alert(
+                alertTitle ?? notificationLocalized("notifications.common.error"),
+                isPresented: Binding(
+                    get: { alertMessage != nil },
+                    set: {
+                        if !$0 {
+                            alertTitle = nil
+                            alertMessage = nil
+                        }
+                    }
+                )
+            ) {
+                Button(notificationLocalized("notifications.common.ok")) {}
+            } message: {
+                Text(alertMessage ?? "")
+            }
+        }
+    }
+
+    private func locateTarget(using proxy: ScrollViewProxy) async {
+        guard let targetNotificationID else {
+            highlightedNotificationID = nil
+            return
+        }
+
+        while !Task.isCancelled {
+            switch NotificationCenterTargetLocator.nextAction(
+                targetID: targetNotificationID,
+                loadedNotificationIDs: store.notifications.map(\.id),
+                hasMore: store.hasMore
+            ) {
+            case .highlight:
+                highlightedNotificationID = targetNotificationID
+                await Task.yield()
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    proxy.scrollTo(targetNotificationID, anchor: .center)
+                }
+                return
+            case .loadMore:
+                guard await store.loadMore(emitsHaptic: false) else { return }
+            case .finished:
+                return
+            }
         }
     }
 
@@ -198,9 +252,11 @@ struct NotificationCenterView: View {
                 ForEach(Array(store.notifications.enumerated()), id: \.element.id) { index, notification in
                     NotificationRow(
                         notification: notification,
+                        isHighlighted: highlightedNotificationID == notification.id,
                         onOpen: { Task { await open(notification) } },
                         onDelete: { requestDelete(.notification(notification)) }
                     )
+                    .id(notification.id)
 
                     if index < store.notifications.count - 1 || store.hasMore {
                         Divider()
@@ -245,6 +301,7 @@ struct NotificationCenterView: View {
     // Every route either switches tabs or replaces the stack this screen sits on, so
     // opening a notification needs no dismissal of its own.
     private func open(_ notification: NotificationDTO) async {
+        highlightedNotificationID = nil
         guard let route = await store.open(notification) else { return }
         _ = await onOpen(route)
     }
@@ -289,6 +346,7 @@ struct NotificationCenterView: View {
 
 private struct NotificationRow: View {
     let notification: NotificationDTO
+    let isHighlighted: Bool
     let onOpen: () -> Void
     let onDelete: () -> Void
     @Environment(\.locale) private var locale
@@ -351,8 +409,42 @@ private struct NotificationRow: View {
                     }
                 }
             }
+            .overlay {
+                if isHighlighted {
+                    RoundedRectangle(cornerRadius: DPRadius.standard)
+                        .stroke(DPColor.accent, lineWidth: 2)
+                }
+            }
             .contentShape(Rectangle())
         }
+    }
+}
+
+nonisolated enum NotificationCenterTargetLocator {
+    nonisolated enum Action: Equatable {
+        case highlight
+        case loadMore
+        case finished
+    }
+
+    static func nextAction(
+        targetID: NotificationID,
+        loadedNotificationIDs: [NotificationID],
+        hasMore: Bool
+    ) -> Action {
+        if loadedNotificationIDs.contains(targetID) {
+            return .highlight
+        }
+        return hasMore ? .loadMore : .finished
+    }
+}
+
+nonisolated enum NotificationCenterLoadPolicy {
+    static func shouldRefresh(
+        targetID: NotificationID?,
+        notificationsAreEmpty: Bool
+    ) -> Bool {
+        targetID != nil || notificationsAreEmpty
     }
 }
 
@@ -471,6 +563,7 @@ private struct NotificationActorAvatar: View {
     var body: some View {
         DPProfileAvatar(
             memberID: notification.actorId,
+            hasProfilePhoto: notification.payload.actor?.hasProfilePhoto,
             profilePhotoVersion: notification.payload.actor?.profilePhotoVersion ?? 0,
             size: 40
         )

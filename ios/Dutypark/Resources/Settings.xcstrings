@@ -2,10 +2,29 @@
   "sourceLanguage": "en",
   "strings": {
     "settings.accountDeletion.accepted.confirm": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Continue" } }, "ko": { "stringUnit": { "state": "translated", "value": "확인" } } } },
+    "settings.accountDeletion.accepted.dismiss": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Close" } }, "ko": { "stringUnit": { "state": "translated", "value": "닫기" } } } },
+    "settings.accountDeletion.accepted.eta": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "The account data and files identified for deletion are usually processed within 5 minutes; inquiry and report records may follow a separate retention and deletion schedule." } }, "ko": { "stringUnit": { "state": "translated", "value": "삭제 대상으로 안내한 계정 데이터와 파일은 보통 5분 이내에 처리됩니다. 문의·신고 기록에는 별도의 보관·삭제 기준이 적용될 수 있습니다." } } } },
     "settings.accountDeletion.accepted.loggedOut": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "You have been safely signed out of Dutypark." } }, "ko": { "stringUnit": { "state": "translated", "value": "Dutypark에서 안전하게 로그아웃되었습니다." } } } },
     "settings.accountDeletion.accepted.noAction": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "No retry or support inquiry is needed. We will finish the deletion automatically." } }, "ko": { "stringUnit": { "state": "translated", "value": "다시 요청하거나 문의할 필요가 없습니다. 삭제는 자동으로 완료됩니다." } } } },
     "settings.accountDeletion.accepted.processing": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Your account data and files are being deleted in the background. This may take some time." } }, "ko": { "stringUnit": { "state": "translated", "value": "계정 데이터와 파일은 비동기로 삭제 중이며 완료까지 시간이 걸릴 수 있습니다." } } } },
+    "settings.accountDeletion.accepted.retry": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Check again" } }, "ko": { "stringUnit": { "state": "translated", "value": "다시 확인" } } } },
+    "settings.accountDeletion.accepted.statusUnavailable": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "We could not check the status temporarily. We will keep trying." } }, "ko": { "stringUnit": { "state": "translated", "value": "일시적으로 상태를 확인하지 못했습니다. 계속 다시 확인합니다." } } } },
+    "settings.accountDeletion.accepted.support": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Contact support" } }, "ko": { "stringUnit": { "state": "translated", "value": "문의하기" } } } },
     "settings.accountDeletion.accepted.title": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Deletion request received" } }, "ko": { "stringUnit": { "state": "translated", "value": "탈퇴 요청이 접수되었습니다" } } } },
+    "settings.accountDeletion.retentionNotice": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Original inquiry/report content, handling records, and any names or content snapshots included in those records may be retained in a limited scope after the account is disconnected when needed for operations, dispute handling, or legal obligations. They are deleted or anonymized once those purposes are fulfilled." } }, "ko": { "stringUnit": { "state": "translated", "value": "문의·신고 원문과 처리 기록, 그 기록에 포함된 이름 및 콘텐츠 snapshot은 계정 연결 해제 후에도 운영·분쟁 대응 또는 법령상 필요한 범위에서 제한적으로 보관될 수 있습니다. 해당 목적이 달성되면 삭제하거나 익명화합니다." } } } },
+    "settings.accountDeletion.completed.confirm": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Done" } }, "ko": { "stringUnit": { "state": "translated", "value": "확인" } } } },
+    "settings.accountDeletion.completed.details": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Processing is complete for the account data and files identified for deletion on the deletion screen." } }, "ko": { "stringUnit": { "state": "translated", "value": "탈퇴 화면에서 삭제 대상으로 안내한 계정 데이터와 파일의 처리가 완료되었습니다." } } } },
+    "settings.accountDeletion.completed.message": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Account deletion is complete." } }, "ko": { "stringUnit": { "state": "translated", "value": "계정 삭제가 완료되었습니다." } } } },
+    "settings.accountDeletion.completed.title": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Account deleted" } }, "ko": { "stringUnit": { "state": "translated", "value": "계정 삭제 완료" } } } },
+    "settings.accountDeletion.expired.details": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "This status receipt is no longer available. Contact support if you need help confirming your deletion." } }, "ko": { "stringUnit": { "state": "translated", "value": "삭제 상태 영수증을 더 이상 확인할 수 없습니다. 삭제 확인이 필요하면 문의해주세요." } } } },
+    "settings.accountDeletion.expired.message": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "We could not confirm the final deletion status." } }, "ko": { "stringUnit": { "state": "translated", "value": "최종 삭제 상태를 확인할 수 없습니다." } } } },
+    "settings.accountDeletion.expired.title": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Deletion status unavailable" } }, "ko": { "stringUnit": { "state": "translated", "value": "삭제 상태 확인 불가" } } } },
+    "settings.accountDeletion.failed.details": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "The deletion could not be completed. Contact support so we can help resolve it." } }, "ko": { "stringUnit": { "state": "translated", "value": "삭제를 완료하지 못했습니다. 해결을 위해 문의해주세요." } } } },
+    "settings.accountDeletion.failed.message": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Please contact support for help with your deletion request." } }, "ko": { "stringUnit": { "state": "translated", "value": "탈퇴 요청 해결을 위해 문의해주세요." } } } },
+    "settings.accountDeletion.failed.title": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Deletion needs attention" } }, "ko": { "stringUnit": { "state": "translated", "value": "삭제 처리에 확인이 필요합니다" } } } },
+    "settings.accountDeletion.unavailable.details": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "We could not verify the deletion status. Contact support if this continues." } }, "ko": { "stringUnit": { "state": "translated", "value": "삭제 상태를 확인하지 못했습니다. 계속되면 문의해주세요." } } } },
+    "settings.accountDeletion.unavailable.message": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "The deletion status response was not recognized." } }, "ko": { "stringUnit": { "state": "translated", "value": "삭제 상태 응답을 확인할 수 없습니다." } } } },
+    "settings.accountDeletion.unavailable.title": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Deletion status unavailable" } }, "ko": { "stringUnit": { "state": "translated", "value": "삭제 상태 확인 불가" } } } },
     "settings.account.delete": {
       "localizations": {
         "en": {
@@ -41,6 +60,7 @@
     "settings.accountDeletion.back": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Back" } }, "ko": { "stringUnit": { "state": "translated", "value": "이전" } } } },
     "settings.accountDeletion.continue": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Continue" } }, "ko": { "stringUnit": { "state": "translated", "value": "계속" } } } },
     "settings.accountDeletion.error.alreadyPending": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Account deletion has already been requested and is being processed." } }, "ko": { "stringUnit": { "state": "translated", "value": "이미 계정 삭제가 요청되어 처리 중입니다." } } } },
+    "settings.accountDeletion.error.receiptMismatch": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "A deletion request from another device is already in progress, but its status receipt is not available here. Check the original device or contact support." } }, "ko": { "stringUnit": { "state": "translated", "value": "다른 기기에서 이미 탈퇴 요청이 진행 중이지만 이 기기에서는 상태 영수증을 확인할 수 없습니다. 원래 기기에서 확인하거나 고객지원에 문의해주세요." } } } },
     "settings.accountDeletion.error.appleAccountMismatch": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "This Apple account does not match the account being verified." } }, "ko": { "stringUnit": { "state": "translated", "value": "현재 확인 중인 계정과 Apple 계정이 일치하지 않습니다." } } } },
     "settings.accountDeletion.error.appleConfigurationUnavailable": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Sign in with Apple is not available yet. Please use another verification method." } }, "ko": { "stringUnit": { "state": "translated", "value": "Apple 로그인을 아직 사용할 수 없습니다. 다른 본인 확인 방법을 이용해주세요." } } } },
     "settings.accountDeletion.error.appleCredentialInvalid": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "The Apple sign-in response is invalid or expired. Please try again." } }, "ko": { "stringUnit": { "state": "translated", "value": "Apple 로그인 응답이 올바르지 않거나 만료되었습니다. 다시 시도해주세요." } } } },
@@ -52,6 +72,8 @@
     "settings.accountDeletion.error.noTransferCandidate": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "There is no eligible member to receive administrator privileges." } }, "ko": { "stringUnit": { "state": "translated", "value": "관리자 권한을 넘겨받을 수 있는 팀원이 없습니다." } } } },
     "settings.accountDeletion.error.proofExpired": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Your verification has expired. Please verify your identity again." } }, "ko": { "stringUnit": { "state": "translated", "value": "본인 확인이 만료되었습니다. 다시 본인 확인을 진행해주세요." } } } },
     "settings.accountDeletion.error.reauthentication": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Could not verify your identity. Please try again." } }, "ko": { "stringUnit": { "state": "translated", "value": "본인 확인에 실패했습니다. 다시 시도해주세요." } } } },
+    "settings.accountDeletion.error.receiptOtherAccount": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "A deletion status from another account is still saved on this device. Sign out and check that status before deleting this account." } }, "ko": { "stringUnit": { "state": "translated", "value": "이 기기에 다른 계정의 탈퇴 상태가 아직 저장되어 있습니다. 로그아웃하여 해당 상태를 확인한 후 이 계정을 탈퇴해주세요." } } } },
+    "settings.accountDeletion.error.receiptStorage": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Could not securely prepare the deletion request. Please try again." } }, "ko": { "stringUnit": { "state": "translated", "value": "삭제 요청을 안전하게 준비하지 못했습니다. 다시 시도해주세요." } } } },
     "settings.accountDeletion.error.transferInvalid": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "The selected member cannot receive administrator privileges. Choose another member." } }, "ko": { "stringUnit": { "state": "translated", "value": "선택한 팀원에게 관리자 권한을 이관할 수 없습니다. 다른 팀원을 선택해주세요." } } } },
     "settings.accountDeletion.error.transferRequired": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Choose a member to receive administrator privileges." } }, "ko": { "stringUnit": { "state": "translated", "value": "관리자 권한을 넘겨받을 팀원을 선택해주세요." } } } },
     "settings.accountDeletion.final.action": { "localizations": { "en": { "stringUnit": { "state": "translated", "value": "Permanently delete account" } }, "ko": { "stringUnit": { "state": "translated", "value": "계정 영구 삭제" } } } },
@@ -1905,6 +1927,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "푸시 알림"
+          }
+        }
+      }
+    },
+    "settings.push.unavailable": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Push notifications are unavailable in the iOS Simulator. Try this on a physical iPhone."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iOS 시뮬레이터에서는 푸시 알림을 사용할 수 없습니다. 실제 iPhone에서 확인해주세요."
           }
         }
       }

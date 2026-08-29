@@ -1,10 +1,12 @@
 package com.tistory.shanepark.dutypark.duty.service
 
+import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeCreateDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
+import com.tistory.shanepark.dutypark.publiccontent.service.PublicContentService
 import com.tistory.shanepark.dutypark.team.domain.entity.Team
 import com.tistory.shanepark.dutypark.team.repository.TeamRepository
 import org.assertj.core.api.Assertions.assertThat
@@ -16,6 +18,8 @@ import org.mockito.Mock
 import org.mockito.Mockito.`when`
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.verifyNoInteractions
+import org.mockito.kotlin.doThrow
+import org.mockito.kotlin.whenever
 import org.mockito.junit.jupiter.MockitoExtension
 import org.springframework.test.util.ReflectionTestUtils
 import java.time.Clock
@@ -36,6 +40,9 @@ class DutyTypeServiceTest {
     @Mock
     private lateinit var dutyRepository: DutyRepository
 
+    @Mock
+    private lateinit var publicContentService: PublicContentService
+
     // UTC is still July 10, but Asia/Seoul is already July 11.
     private val clock = Clock.fixed(Instant.parse("2026-07-10T16:00:00Z"), ZoneOffset.UTC)
 
@@ -45,7 +52,7 @@ class DutyTypeServiceTest {
 
     @BeforeEach
     fun setUp() {
-        dutyTypeService = DutyTypeService(dutyTypeRepository, teamRepository, dutyRepository, clock)
+        dutyTypeService = DutyTypeService(dutyTypeRepository, teamRepository, dutyRepository, clock, publicContentService)
         team = Team("testTeam")
         ReflectionTestUtils.setField(team, "id", 1L)
     }
@@ -62,6 +69,22 @@ class DutyTypeServiceTest {
         assertThat(created.color).isEqualTo("#f0f8ff")
         assertThat(created.team).isEqualTo(team)
         assertThat(team.dutyTypes).contains(created)
+        verify(publicContentService).validateContent("dutyType")
+    }
+
+    @Test
+    fun `adding a banned duty type name does not mutate the team`() {
+        `when`(teamRepository.findByIdForUpdate(team.id!!)).thenReturn(Optional.of(team))
+        doThrow(BadRequestException("contentFilter.blocked"))
+            .whenever(publicContentService)
+            .validateContent("blocked")
+
+        assertThrows<BadRequestException> {
+            dutyTypeService.addDutyType(DutyTypeCreateDto(team.id!!, "blocked", "#f0f8ff"))
+        }
+
+        assertThat(team.dutyTypes).isEmpty()
+        verify(publicContentService).validateContent("blocked")
     }
 
     @Test
@@ -182,6 +205,28 @@ class DutyTypeServiceTest {
         assertThat(updated.id).isEqualTo(dutyType.id)
         assertThat(updated.name).isEqualTo("changed")
         assertThat(updated.color).isEqualTo("#aabbcc")
+        verify(publicContentService).validateContent("changed")
+    }
+
+    @Test
+    fun `updating to a banned duty type name does not mutate the duty type`() {
+        val dutyType = DutyType("original", 0, team, "#f0f8ff")
+        ReflectionTestUtils.setField(dutyType, "id", 1L)
+        team.dutyTypes.add(dutyType)
+
+        `when`(dutyTypeRepository.findById(dutyType.id!!)).thenReturn(Optional.of(dutyType))
+        `when`(teamRepository.findByIdWithDutyTypes(team.id!!)).thenReturn(Optional.of(team))
+        doThrow(BadRequestException("contentFilter.blocked"))
+            .whenever(publicContentService)
+            .validateContent("blocked")
+
+        assertThrows<BadRequestException> {
+            dutyTypeService.update(DutyTypeUpdateDto(dutyType.id!!, "blocked", "#aabbcc"))
+        }
+
+        assertThat(dutyType.name).isEqualTo("original")
+        assertThat(dutyType.color).isEqualTo("#f0f8ff")
+        verify(publicContentService).validateContent("blocked")
     }
 
     @Test

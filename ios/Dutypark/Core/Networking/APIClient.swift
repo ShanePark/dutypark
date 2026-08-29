@@ -18,14 +18,6 @@ nonisolated enum APIError: Error, Equatable, Sendable {
     case decoding
 }
 
-/// Selects the server API namespace while preserving the same cookie and
-/// authentication lifecycle. Admin requests use `/admin/api/**`; token refresh
-/// always remains on `/api/auth/refresh`.
-nonisolated enum APIRequestScope: Sendable {
-    case api
-    case admin
-}
-
 nonisolated enum AuthenticationFailureHandling: Sendable {
     case awaitCompletion
     case deferred
@@ -293,7 +285,6 @@ nonisolated final class APIClient: Sendable {
         method: HTTPMethod = .get,
         queryItems: [URLQueryItem] = [],
         headers: [String: String] = [:],
-        scope: APIRequestScope = .api,
         authenticationFailureHandling: AuthenticationFailureHandling = .awaitCompletion
     ) async throws -> Response {
         let data = try await data(
@@ -301,7 +292,6 @@ nonisolated final class APIClient: Sendable {
             method: method,
             queryItems: queryItems,
             headers: headers,
-            scope: scope,
             authenticationFailureHandling: authenticationFailureHandling
         )
         do {
@@ -318,7 +308,6 @@ nonisolated final class APIClient: Sendable {
         queryItems: [URLQueryItem] = [],
         body: Body,
         headers: [String: String] = [:],
-        scope: APIRequestScope = .api,
         retryingAfterUnauthorized: Bool = true,
         authenticationFailureHandling: AuthenticationFailureHandling = .awaitCompletion
     ) async throws -> Response {
@@ -334,7 +323,6 @@ nonisolated final class APIClient: Sendable {
             queryItems: queryItems,
             body: bodyData,
             headers: headers,
-            scope: scope,
             retryingAfterUnauthorized: retryingAfterUnauthorized,
             authenticationFailureHandling: authenticationFailureHandling
         )
@@ -349,13 +337,11 @@ nonisolated final class APIClient: Sendable {
     func optional<Response: Decodable & Sendable>(
         _ path: String,
         method: HTTPMethod = .get,
-        scope: APIRequestScope = .api,
         retryingAfterUnauthorized: Bool = true
     ) async throws -> Response? {
         let data = try await data(
             path,
             method: method,
-            scope: scope,
             retryingAfterUnauthorized: retryingAfterUnauthorized
         )
         guard !data.isEmpty else {
@@ -376,7 +362,6 @@ nonisolated final class APIClient: Sendable {
         queryItems: [URLQueryItem] = [],
         body: Data? = nil,
         headers: [String: String] = [:],
-        scope: APIRequestScope = .api,
         retryingAfterUnauthorized: Bool = true,
         authenticationFailureHandling: AuthenticationFailureHandling = .awaitCompletion
     ) async throws -> Data {
@@ -388,7 +373,6 @@ nonisolated final class APIClient: Sendable {
             queryItems: queryItems,
             body: body,
             headers: headers,
-            scope: scope,
             authenticationEpoch: authenticationSnapshot.epoch,
             authenticationSession: authenticationSnapshot.session,
             authenticationCookies: authenticationSnapshot.cookies
@@ -401,7 +385,6 @@ nonisolated final class APIClient: Sendable {
                         let (refreshData, refreshResponse) = try await perform(
                             "auth/refresh",
                             method: .post,
-                            scope: .api,
                             authenticationEpoch: authenticationSnapshot.epoch,
                             authenticationSession: authenticationSnapshot.session,
                             authenticationCookies: authenticationSnapshot.cookies
@@ -430,7 +413,6 @@ nonisolated final class APIClient: Sendable {
                     queryItems: queryItems,
                     body: body,
                     headers: headers,
-                    scope: scope,
                     authenticationEpoch: retrySnapshot.epoch,
                     authenticationSession: retrySnapshot.session,
                     authenticationCookies: retrySnapshot.cookies
@@ -513,7 +495,6 @@ nonisolated final class APIClient: Sendable {
         queryItems: [URLQueryItem] = [],
         body: Data? = nil,
         headers: [String: String] = [:],
-        scope: APIRequestScope = .api,
         authenticationEpoch: UInt64,
         authenticationSession: AuthenticationSessionContext?,
         authenticationCookies: [AuthenticationCookieSnapshot]
@@ -523,12 +504,6 @@ nonisolated final class APIClient: Sendable {
             fatalError("Authenticated UI testing attempted a live API request: \(method.rawValue) \(path)")
         }
 #endif
-        guard let scopedBaseURL = AppConfiguration.baseURL(
-            for: scope,
-            apiBaseURL: baseURL
-        ) else {
-            throw APIError.invalidURL
-        }
         let normalizedPath = path.drop(while: { $0 == "/" })
         guard !normalizedPath.split(separator: "/", omittingEmptySubsequences: false)
             .contains("..")
@@ -536,7 +511,7 @@ nonisolated final class APIClient: Sendable {
             throw APIError.invalidURL
         }
         guard var components = URLComponents(
-            url: scopedBaseURL.appending(path: String(normalizedPath)),
+            url: baseURL.appending(path: String(normalizedPath)),
             resolvingAgainstBaseURL: false
         ) else {
             throw APIError.invalidURL

@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component
 /**
  * [SlackEvent] 를 슬랙 메시지 한 덩어리로 그린다.
  *
- * 제목·본문·각주를 첨부 하나에 담아 색 막대 안에서 끝나게 하고, 메시지 본문은 비워 둔다.
+ * 제목과 운영 신호를 첨부 하나에 담아 색 막대 안에서 끝나게 하고, 메시지 본문은 비워 둔다.
  * 같은 문구가 첨부 위아래로 두 번 나오면 그만큼 세로로 길어지기 때문이다.
  *
  * 전송은 요청 스레드를 붙잡지 않도록 전용 executor 로 넘기고, 알림 실패가 원래 작업에 번지지 않게 로그로만 남긴다.
@@ -25,7 +25,7 @@ class SlackEventNotifier(
     private val log = logger()
 
     fun send(event: SlackEvent) {
-        val heading = listOfNotNull("${event.emoji} ${event.title}", event.subtitle).joinToString(SEPARATOR)
+        val heading = "${event.emoji} ${event.title}"
 
         val attachment = SlackAttachment()
         attachment.setFallback(heading)
@@ -33,7 +33,6 @@ class SlackEventNotifier(
         attachment.setTitle(heading)
         attachment.addMarkdownAttribute("text")
         detail(event)?.let { attachment.setText(it) }
-        event.footnote.takeIf { it.isNotEmpty() }?.let { attachment.setFooter(it.joinToString(SEPARATOR)) }
 
         val message = SlackMessage()
         message.setAttachments(listOf(attachment))
@@ -43,7 +42,12 @@ class SlackEventNotifier(
 
         taskExecutor.execute {
             runCatching { slackNotifier.call(message) }
-                .onFailure { log.error("Failed to send Slack notification: {}", heading, it) }
+                .onFailure { failure ->
+                    log.error(
+                        "Failed to send Slack notification (exception={})",
+                        failure.javaClass.name,
+                    )
+                }
         }
     }
 
@@ -53,14 +57,10 @@ class SlackEventNotifier(
         event.chips.takeIf { it.isNotEmpty() }?.let { chips ->
             lines += chips.joinToString(CHIP_GAP) { "`$it`" }
         }
-        event.body?.let { body ->
-            lines += body.lineSequence().joinToString("\n") { "> $it" }
-        }
         return lines.takeIf { it.isNotEmpty() }?.joinToString("\n")
     }
 
     companion object {
-        private const val SEPARATOR = "  ·  "
         private const val CHIP_GAP = "  "
         private const val BOT_ICON = ":calendar:"
     }

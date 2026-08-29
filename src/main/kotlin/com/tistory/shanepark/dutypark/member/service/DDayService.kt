@@ -7,6 +7,7 @@ import com.tistory.shanepark.dutypark.member.domain.dto.DDaySaveDto
 import com.tistory.shanepark.dutypark.member.domain.entity.DDayEvent
 import com.tistory.shanepark.dutypark.member.repository.DDayRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
+import com.tistory.shanepark.dutypark.publiccontent.service.PublicContentService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -16,12 +17,14 @@ import org.springframework.transaction.annotation.Transactional
 class DDayService(
     private val memberRepository: MemberRepository,
     private val dDayRepository: DDayRepository,
-    private val friendService: FriendService
+    private val friendService: FriendService,
+    private val publicContentService: PublicContentService,
 ) {
     val log = logger()
 
     fun createDDay(loginMember: LoginMember, dDaySaveDto: DDaySaveDto): DDayDto {
         val member = memberRepository.findById(loginMember.id).orElseThrow()
+        validatePublicTitle(dDaySaveDto)
 
         val dDayEvent = DDayEvent(
             member = member,
@@ -57,6 +60,7 @@ class DDayService(
         val id = dDaySaveDto.id ?: throw IllegalArgumentException("DDay ID must not be null")
         val dDayEvent = dDayRepository.findById(id).orElseThrow()
         authenticationCheck(dDayEvent, loginMember)
+        validatePublicTitle(dDaySaveDto)
         dDayEvent.title = dDaySaveDto.title
         dDayEvent.date = dDaySaveDto.date
         dDayEvent.isPrivate = dDaySaveDto.isPrivate
@@ -76,6 +80,12 @@ class DDayService(
         if (dDayEvent.member.id != loginMember?.id) {
             log.warn("D-Day access denied: loginMemberId={}, dDayEventId={}", loginMember?.id, dDayEvent.id)
             throw AuthException("dday.access.forbidden")
+        }
+    }
+
+    private fun validatePublicTitle(dDaySaveDto: DDaySaveDto) {
+        if (!dDaySaveDto.isPrivate) {
+            publicContentService.validateContent(dDaySaveDto.title)
         }
     }
 

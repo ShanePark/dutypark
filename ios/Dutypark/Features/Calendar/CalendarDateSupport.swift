@@ -86,6 +86,19 @@ nonisolated enum CalendarLocalization {
 /// Layout and contrast rules mirrored from the mobile web calendar.
 /// Kept value-only so the visual contract can be covered without SwiftUI snapshots.
 nonisolated enum CalendarVisualLogic {
+    private struct ScheduleClock: Equatable {
+        let hour: Int
+        let minute: Int
+
+        var text: String {
+            String(format: "%02d:%02d", hour, minute)
+        }
+
+        var isMidnight: Bool {
+            hour == 0 && minute == 0
+        }
+    }
+
     static let compactCellMinimumHeight: CGFloat = 60
     static let maximumSchedulesPerCell = 3
     static let maximumTodosPerCell = 2
@@ -118,6 +131,94 @@ nonisolated enum CalendarVisualLogic {
     /// compact time `DatePicker` (35) — as well as the date picker (33) and the button that
     /// adds a time (29).
     static let scheduleDateRowHeight: CGFloat = 36
+
+    /// The month grid mirrors the web calendar: the first day contributes the start time,
+    /// the last day contributes the end time, and a midnight value is the model's
+    /// no-explicit-time sentinel. A one-day schedule can show both ends, except when they
+    /// are the same instant, in which case the start time is sufficient.
+    static func calendarScheduleTimeText(
+        start: LocalDateTimeValue,
+        end: LocalDateTimeValue,
+        daysFromStart: Int,
+        totalDays: Int
+    ) -> String? {
+        guard let startClock = scheduleClock(from: start),
+              let endClock = scheduleClock(from: end)
+        else { return nil }
+
+        let showStartTime = daysFromStart == 1 && !startClock.isMidnight
+        let showEndTime = daysFromStart == totalDays &&
+            !endClock.isMidnight &&
+            !(totalDays == 1 && sameDateTime(start, end))
+
+        if showStartTime && showEndTime {
+            return "(\(startClock.text)~\(endClock.text))"
+        }
+        if showStartTime {
+            return "(\(startClock.text))"
+        }
+        if showEndTime {
+            return "(~\(endClock.text))"
+        }
+        return nil
+    }
+
+    /// The day detail follows the web schedule list: equal times collapse to one time, an
+    /// omitted end stays omitted, and an omitted start remains the explicit 00:00 side of a
+    /// range when only the end carries a time.
+    static func scheduleListTimeText(
+        start: LocalDateTimeValue,
+        end: LocalDateTimeValue
+    ) -> String? {
+        guard let startClock = scheduleClock(from: start),
+              let endClock = scheduleClock(from: end)
+        else { return nil }
+
+        if startClock.isMidnight && endClock.isMidnight {
+            return nil
+        }
+        if startClock == endClock {
+            return "(\(startClock.text))"
+        }
+        if !startClock.isMidnight && endClock.isMidnight {
+            return "(\(startClock.text))"
+        }
+        return "(\(startClock.text)~\(endClock.text))"
+    }
+
+    /// Schedule titles and their optional time belong to one readable text flow. Keep the
+    /// separator here so the month cell and day-detail cards cannot drift apart.
+    static func scheduleTitleText(content: String, time: String?, dayCounter: String? = nil) -> String {
+        var result = content
+        if let time, !time.isEmpty {
+            result += " \(time)"
+        }
+        if let dayCounter, !dayCounter.isEmpty {
+            result += " \(dayCounter)"
+        }
+        return result
+    }
+
+    private static func scheduleClock(from value: LocalDateTimeValue) -> ScheduleClock? {
+        guard let separator = value.rawValue.firstIndex(of: "T") else { return nil }
+        let time = value.rawValue[value.rawValue.index(after: separator)...]
+        let components = time.split(separator: ":", maxSplits: 2, omittingEmptySubsequences: false)
+        guard components.count >= 2,
+              let hour = Int(components[0]),
+              let minute = Int(components[1]),
+              (0..<24).contains(hour),
+              (0..<60).contains(minute)
+        else { return nil }
+        return ScheduleClock(hour: hour, minute: minute)
+    }
+
+    private static func sameDateTime(_ lhs: LocalDateTimeValue, _ rhs: LocalDateTimeValue) -> Bool {
+        if lhs.rawValue == rhs.rawValue { return true }
+        guard let lhsDate = CalendarDateSupport.date(from: lhs),
+              let rhsDate = CalendarDateSupport.date(from: rhs)
+        else { return false }
+        return lhsDate == rhsDate
+    }
 
     /// The "this month" callout only makes sense while another month is on screen. Year and
     /// month are compared together, so the same month of another year still offers the way back.

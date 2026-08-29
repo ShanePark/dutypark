@@ -441,6 +441,7 @@ struct DPFriendTagSelector: View {
     private func portrait(_ item: DPFriendTagItem) -> some View {
         DPProfileAvatar(
             memberID: item.id,
+            hasProfilePhoto: item.hasProfilePhoto,
             profilePhotoVersion: item.profilePhotoVersion,
             size: CGSize(width: portraitWidth, height: portraitHeight),
             shape: .roundedRectangle(cornerRadius: DPRadius.standard)
@@ -455,6 +456,7 @@ struct DPFriendTagSelector: View {
     private func chipAvatar(_ item: DPFriendTagItem) -> some View {
         DPProfileAvatar(
             memberID: item.id,
+            hasProfilePhoto: item.hasProfilePhoto,
             profilePhotoVersion: item.profilePhotoVersion,
             size: chipAvatarSize
         )

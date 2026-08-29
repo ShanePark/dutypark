@@ -311,6 +311,9 @@ nonisolated private struct OfflineCachedScheduleSnapshot: Codable, Equatable, Se
 }
 
 nonisolated struct OfflineMonthSnapshot: Codable, Equatable, Sendable {
+    // The comparison selection is an additive optional field. Keeping the storage
+    // schema version stable lets existing month files migrate lazily: they remain
+    // readable, but their unidentifiable comparison payload is never rendered.
     static let currentSchemaVersion = OfflineStorageConstants.schemaVersion
 
     let schemaVersion: Int
@@ -324,6 +327,12 @@ nonisolated struct OfflineMonthSnapshot: Codable, Equatable, Sendable {
     let duties: [DutyDTO]
     let holidays: [[HolidayDTO]]
     let otherDuties: [OtherDutyResponse]
+    /// The comparison selection that produced `otherDuties`.
+    ///
+    /// This is optional only for snapshots written before comparison identities were
+    /// persisted. A missing value is deliberately different from an empty selection:
+    /// legacy comparison results cannot be associated with the current selection safely.
+    let comparedMemberIDs: Set<MemberID>?
     let storedAt: Date
 
     init(
@@ -334,6 +343,7 @@ nonisolated struct OfflineMonthSnapshot: Codable, Equatable, Sendable {
         duties: [DutyDTO],
         holidays: [[HolidayDTO]],
         otherDuties: [OtherDutyResponse],
+        comparedMemberIDs: Set<MemberID>? = [],
         storedAt: Date = .now,
         schemaVersion: Int = currentSchemaVersion
     ) {
@@ -345,6 +355,7 @@ nonisolated struct OfflineMonthSnapshot: Codable, Equatable, Sendable {
         self.duties = duties
         self.holidays = holidays
         self.otherDuties = otherDuties
+        self.comparedMemberIDs = comparedMemberIDs
         self.storedAt = storedAt
     }
 
@@ -356,6 +367,7 @@ nonisolated struct OfflineMonthSnapshot: Codable, Equatable, Sendable {
             && calendar.count == 42
             && schedules.count == 42
             && holidays.count == 42
+            && (comparedMemberIDs?.allSatisfy { $0 > 0 } ?? true)
     }
 
     private enum CodingKeys: String, CodingKey {
@@ -367,6 +379,7 @@ nonisolated struct OfflineMonthSnapshot: Codable, Equatable, Sendable {
         case duties
         case holidays
         case otherDuties
+        case comparedMemberIDs
         case storedAt
     }
 
@@ -384,6 +397,9 @@ nonisolated struct OfflineMonthSnapshot: Codable, Equatable, Sendable {
         duties = try container.decode([DutyDTO].self, forKey: .duties)
         holidays = try container.decode([[HolidayDTO]].self, forKey: .holidays)
         otherDuties = try container.decode([OtherDutyResponse].self, forKey: .otherDuties)
+        // Snapshots written before comparison identities were added remain readable,
+        // but CalendarViewModel will not apply their comparison payload.
+        comparedMemberIDs = try container.decodeIfPresent(Set<MemberID>.self, forKey: .comparedMemberIDs)
         storedAt = try container.decode(Date.self, forKey: .storedAt)
     }
 
@@ -400,6 +416,7 @@ nonisolated struct OfflineMonthSnapshot: Codable, Equatable, Sendable {
         try container.encode(duties, forKey: .duties)
         try container.encode(holidays, forKey: .holidays)
         try container.encode(otherDuties, forKey: .otherDuties)
+        try container.encodeIfPresent(comparedMemberIDs, forKey: .comparedMemberIDs)
         try container.encode(storedAt, forKey: .storedAt)
     }
 }

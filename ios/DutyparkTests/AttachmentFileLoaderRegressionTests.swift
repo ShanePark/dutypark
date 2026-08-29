@@ -34,4 +34,19 @@ struct AttachmentFileLoaderRegressionTests {
         #expect(file.contentType == "application/octet-stream")
         #expect(file.data == data)
     }
+
+    @Test
+    func fileRepresentationImporterMaterializesContentsBeforeProviderFileEnds() throws {
+        let data = Data("provider-backed attachment".utf8)
+        let url = FileManager.default.temporaryDirectory
+            .appending(path: "dutypark-provider-\(UUID().uuidString).txt")
+        try data.write(to: url, options: .atomic)
+        defer { try? FileManager.default.removeItem(at: url) }
+
+        let imported = try ImportedAttachmentFile.imported(from: url)
+        try FileManager.default.removeItem(at: url)
+
+        #expect(imported.uploadFile.data == data)
+        #expect(imported.uploadFile.filename == url.lastPathComponent)
+    }
 }

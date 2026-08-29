@@ -5,7 +5,7 @@ import Testing
 struct RootNotificationActorAvatarTests {
     @Test
     func photoRequestUsesActorIDThumbnailAndVersion() throws {
-        let notification = try notification(
+        let notification = try makeNotification(
             actorID: 42,
             hasProfilePhoto: true,
             profilePhotoVersion: 7
@@ -22,25 +22,26 @@ struct RootNotificationActorAvatarTests {
     }
 
     @Test
-    func photoRequestStillUsesActorIDWhenPhotoMetadataIsStale() throws {
-        let notification = try notification(
+    func photoRequestIsAbsentWhenActorHasNoPhoto() throws {
+        let notification = try makeNotification(
             actorID: 42,
             hasProfilePhoto: false,
             profilePhotoVersion: 7
         )
 
-        let request = try #require(NotificationDropdownActorPhotoRequest(notification: notification))
+        #expect(NotificationDropdownActorPhotoRequest(notification: notification) == nil)
 
-        #expect(request.path == "members/42/profile-photo")
-        #expect(request.queryItems == [
-            URLQueryItem(name: "thumbnail", value: "true"),
-            URLQueryItem(name: "v", value: "7"),
-        ])
+        let unknownMetadata = try makeNotification(
+            actorID: 42,
+            hasProfilePhoto: nil,
+            profilePhotoVersion: 7
+        )
+        #expect(NotificationDropdownActorPhotoRequest(notification: unknownMetadata) != nil)
     }
 
     @Test
     func photoRequestIsAbsentWithoutActorID() throws {
-        let notification = try notification(
+        let notification = try makeNotification(
             actorID: nil,
             hasProfilePhoto: true,
             profilePhotoVersion: 7
@@ -49,12 +50,18 @@ struct RootNotificationActorAvatarTests {
         #expect(NotificationDropdownActorPhotoRequest(notification: notification) == nil)
     }
 
-    private func notification(
+    private func makeNotification(
         actorID: Int64?,
-        hasProfilePhoto: Bool,
+        hasProfilePhoto: Bool?,
         profilePhotoVersion: Int64
     ) throws -> NotificationDTO {
         let actorIDValue = actorID.map(String.init) ?? "null"
+        let actorValue: String
+        if let hasProfilePhoto {
+            actorValue = #"{"name":"민지","hasProfilePhoto":\#(hasProfilePhoto),"profilePhotoVersion":\#(profilePhotoVersion)}"#
+        } else {
+            actorValue = "null"
+        }
         let json = #"""
         {
           "id": "00000000-0000-0000-0000-000000000901",
@@ -64,11 +71,7 @@ struct RootNotificationActorAvatarTests {
           "actorId": \#(actorIDValue),
           "payload": {
             "version": 1,
-            "actor": {
-              "name": "민지",
-              "hasProfilePhoto": \#(hasProfilePhoto),
-              "profilePhotoVersion": \#(profilePhotoVersion)
-            }
+            "actor": \#(actorValue)
           },
           "isRead": false,
           "createdAt": "2026-08-15T08:30:00"

@@ -18,6 +18,29 @@ nonisolated enum AppConfiguration {
         preconditionFailure("DutyparkAPIBaseURL must be a valid absolute URL ending in /api/")
     }()
 
+    /// A capture run must never silently point at the production API. The simulator
+    /// Debug configuration is expected to use localhost, while device and Release
+    /// configurations continue to use their normal server configuration.
+    static func isLocalCaptureEndpoint(_ url: URL) -> Bool {
+        guard url.scheme?.lowercased() == "http",
+              let host = url.host?.lowercased(),
+              ["localhost", "127.0.0.1", "::1"].contains(host)
+        else { return false }
+
+        let path = url.path.hasSuffix("/") ? url.path : url.path + "/"
+        return path == "/api/"
+    }
+
+    static func enforceLocalCaptureIfRequested(
+        arguments: [String] = ProcessInfo.processInfo.arguments
+    ) {
+        guard arguments.contains("-capture-demo-local-only") else { return }
+        precondition(
+            isLocalCaptureEndpoint(apiBaseURL),
+            "Demo screenshot capture requires a localhost API endpoint; refusing to use a remote server."
+        )
+    }
+
     static func validatedAPIBaseURL(_ value: String) -> URL? {
         let normalizedValue = value.hasSuffix("/") ? value : value + "/"
         guard let url = URL(string: normalizedValue),
@@ -31,26 +54,4 @@ nonisolated enum AppConfiguration {
         return url
     }
 
-    static func baseURL(
-        for scope: APIRequestScope,
-        apiBaseURL: URL
-    ) -> URL? {
-        switch scope {
-        case .api:
-            return apiBaseURL
-        case .admin:
-            guard let scheme = apiBaseURL.scheme,
-                  let host = apiBaseURL.host
-            else {
-                return nil
-            }
-
-            var components = URLComponents()
-            components.scheme = scheme
-            components.host = host
-            components.port = apiBaseURL.port
-            components.path = "/admin/api/"
-            return components.url
-        }
-    }
 }

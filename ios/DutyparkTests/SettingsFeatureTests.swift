@@ -969,7 +969,7 @@ struct SettingsFeatureTests {
             case "/api/auth/reauth/password":
                 body = #"{"reauthProof":"short-lived","expiresIn":300}"#
             case "/api/members/me/deletion":
-                body = #"{"jobId":44,"status":"ACCEPTED"}"#
+                body = #"{"jobId":44,"status":"ACCEPTED","receiptToken":"receipt-token","estimatedCompletionAt":"2026-08-29T12:05:00Z"}"#
             default:
                 body = #"{"code":"not_found"}"#
             }
@@ -990,6 +990,7 @@ struct SettingsFeatureTests {
         let proof = try await service.reauthenticateForAccountDeletion(password: "secret")
         let accepted = try await service.requestAccountDeletion(
             reauthProof: proof.reauthProof,
+            receiptToken: "receipt-token",
             transferAdminToMemberId: 9
         )
 
@@ -1009,7 +1010,39 @@ struct SettingsFeatureTests {
         #expect(deletion["confirmation"] as? String == "DELETE")
         #expect(deletion["password"] == nil)
         #expect(deletion["reauthProof"] as? String == "short-lived")
+        #expect(deletion["receiptToken"] as? String == "receipt-token")
         #expect(deletion["transferAdminToMemberId"] as? Int == 9)
+    }
+
+    @Test
+    func accountDeletionStatusUsesTheUnauthenticatedReceiptEndpoint() async throws {
+        let recorder = SettingsRequestRecorder()
+        SettingsURLProtocolStub.handler = { request in
+            recorder.record(request)
+            return (
+                HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: nil, headerFields: nil)!,
+                Data(#"{"status":"COMPLETED","estimatedCompletionAt":"2026-08-29T12:05:00Z","completedAt":"2026-08-29T12:04:00Z","receiptExpiresAt":"2026-09-28T12:05:00Z"}"#.utf8)
+            )
+        }
+        defer { SettingsURLProtocolStub.handler = nil }
+
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [SettingsURLProtocolStub.self]
+        let service = SettingsService(client: APIClient(
+            baseURL: URL(string: "https://dutypark.test/api/")!,
+            session: URLSession(configuration: configuration)
+        ))
+
+        let response = try await service.accountDeletionStatus(receiptToken: "opaque-receipt")
+
+        #expect(response.status == "COMPLETED")
+        #expect(response.completedAt == "2026-08-29T12:04:00Z")
+        #expect(recorder.requests.count == 1)
+        #expect(recorder.requests.first?.httpMethod == "POST")
+        #expect(recorder.requests.first?.url?.path == "/api/account-deletions/status")
+        let requestBody = try #require(recorder.requestBodies.first.flatMap { $0 })
+        let body = try #require(Self.jsonBody(requestBody))
+        #expect(body["receiptToken"] as? String == "opaque-receipt")
     }
 
     @Test
@@ -1030,6 +1063,111 @@ struct SettingsFeatureTests {
         let cropped = try #require(UIImage(data: data)?.cgImage)
 
         #expect(cropped.width == cropped.height)
+    }
+
+    @Test
+    func downsamplesProfilePhotoBeforeItReachesTheCropView() throws {
+        let source = UIGraphicsImageRenderer(size: CGSize(width: 3_000, height: 2_000)).image { context in
+            UIColor.systemBlue.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 3_000, height: 2_000))
+        }
+        let url = FileManager.default.temporaryDirectory
+            .appending(path: "dutypark-profile-photo-\(UUID().uuidString).jpg")
+        defer { try? FileManager.default.removeItem(at: url) }
+        try #require(source.jpegData(compressionQuality: 0.9)).write(to: url)
+
+        let downsampled = try #require(ProfilePhotoCropper.downsampledImage(at: url))
+        let largestDimension = max(downsampled.cgImage?.width ?? 0, downsampled.cgImage?.height ?? 0)
+
+        #expect(largestDimension <= ProfilePhotoProcessingPolicy.maxInputPixelDimension)
+        #expect(largestDimension < 3_000)
+    }
+
+    @Test
+    func rejectsProfilePhotoWhenInputSizeMetadataIsMissing() {
+        do {
+            try ProfilePhotoCropper.validateInputFileSize(nil)
+            Issue.record("A photo without a verifiable file size must be rejected")
+        } catch let error as ProfilePhotoProcessingError {
+            #expect(error == .inputSizeUnavailable)
+        } catch {
+            Issue.record("Unexpected error: \(error)")
+        }
+    }
+
+    @Test
+    func rejectsProfilePhotoWhenInputSizeMetadataCannotBeRead() {
+        let url = URL(string: "dutypark-profile-photo://unavailable-size")!
+
+        do {
+            _ = try ProfilePhotoCropper.loadDownsampledImage(at: url)
+            Issue.record("A photo whose file size cannot be read must be rejected")
+        } catch let error as ProfilePhotoProcessingError {
+            #expect(error == .inputSizeUnavailable)
+        } catch {
+            Issue.record("Unexpected error: \(error)")
+        }
+    }
+
+    @Test
+    func capsProfilePhotoCropPixelsAndUploadBytes() throws {
+        let image = UIGraphicsImageRenderer(size: CGSize(width: 3_000, height: 2_000)).image { context in
+            UIColor.systemBlue.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 3_000, height: 2_000))
+        }
+
+        let data = try #require(
+            ProfilePhotoCropper.jpeg(
+                image: image,
+                viewport: 300,
+                zoom: 1,
+                offset: .zero
+            )
+        )
+        let cropped = try #require(UIImage(data: data)?.cgImage)
+
+        #expect(cropped.width <= ProfilePhotoProcessingPolicy.maxOutputPixelDimension)
+        #expect(data.count <= ProfilePhotoProcessingPolicy.maxUploadBytes)
+    }
+
+    @Test
+    func rejectsOversizedProfilePhotoBeforeCreatingARequest() async throws {
+        let recorder = SettingsRequestRecorder()
+        SettingsURLProtocolStub.handler = { request in
+            recorder.record(request)
+            return (
+                HTTPURLResponse(
+                    url: request.url!,
+                    statusCode: 204,
+                    httpVersion: nil,
+                    headerFields: nil
+                )!,
+                Data()
+            )
+        }
+        defer { SettingsURLProtocolStub.handler = nil }
+
+        let configuration = URLSessionConfiguration.ephemeral
+        configuration.protocolClasses = [SettingsURLProtocolStub.self]
+        let service = SettingsService(client: APIClient(
+            baseURL: URL(string: "https://dutypark.test/api/")!,
+            session: URLSession(configuration: configuration)
+        ))
+        let oversizedData = Data(
+            repeating: 0,
+            count: ProfilePhotoProcessingPolicy.maxUploadBytes + 1
+        )
+
+        do {
+            try await service.uploadProfilePhoto(jpegData: oversizedData)
+            Issue.record("An oversized profile photo must be rejected before a request is sent")
+        } catch let error as ProfilePhotoUploadError {
+            #expect(error == .tooLarge(maxBytes: ProfilePhotoProcessingPolicy.maxUploadBytes))
+        } catch {
+            Issue.record("Unexpected error: \(error)")
+        }
+
+        #expect(recorder.requests.isEmpty)
     }
 
     @Test

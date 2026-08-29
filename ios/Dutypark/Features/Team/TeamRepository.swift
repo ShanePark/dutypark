@@ -171,10 +171,27 @@ nonisolated struct TeamRepository: Sendable {
         month: Int
     ) async throws -> TeamBatchResultDTO {
         let form = TeamMultipartForm(boundary: "Dutypark-\(UUID().uuidString)")
+        guard TeamFeatureLogic.isValidDutyBatchFileSize(
+            fileData.count,
+            fileName: fileName,
+            year: year,
+            month: month
+        ) else {
+            throw TeamBatchUploadError.requestBodyTooLarge
+        }
+        let body = form.makeBody(
+            fileName: fileName,
+            fileData: fileData,
+            year: year,
+            month: month
+        )
+        guard body.count < TeamFeatureLogic.maximumDutyBatchRequestBodySize else {
+            throw TeamBatchUploadError.requestBodyTooLarge
+        }
         let data = try await client.data(
             "teams/manage/\(teamID)/duty",
             method: .post,
-            body: form.makeBody(fileName: fileName, fileData: fileData, year: year, month: month),
+            body: body,
             headers: ["Content-Type": form.contentType]
         )
         do {

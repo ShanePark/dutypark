@@ -74,9 +74,38 @@ struct AppTabTests {
     }
 
     @Test
+    func reselectingTheOwnCalendarRootRequestsTheCurrentMonthWithoutTabFeedback() throws {
+        let projectRoot = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let rootSource = try String(
+            contentsOf: projectRoot.appending(path: "Dutypark/App/RootTabView.swift"),
+            encoding: .utf8
+        )
+        let calendarSource = try String(
+            contentsOf: projectRoot.appending(path: "Dutypark/Features/Calendar/CalendarView.swift"),
+            encoding: .utf8
+        )
+
+        #expect(rootSource.contains("@State private var calendarCurrentMonthRequestID = 0"))
+        #expect(rootSource.contains("CalendarView(currentMonthRequestID: calendarCurrentMonthRequestID)"))
+        for condition in [
+            "selectedTab == .calendar",
+            "destination == .calendar",
+            "calendarPath.isEmpty",
+            "calendarCurrentMonthRequestID &+= 1",
+        ] {
+            #expect(rootSource.contains(condition), "RootTabView is missing: \(condition)")
+        }
+        #expect(calendarSource.contains("currentMonthRequestID: Int = 0"))
+        #expect(calendarSource.contains(".onChange(of: currentMonthRequestID)"))
+        #expect(calendarSource.contains("await model.goToToday(emitFeedback: false)"))
+        #expect(RootHapticPolicy.tabSelectionFeedback(from: .calendar, to: .calendar) == nil)
+    }
+
+    @Test
     func moreMenuHapticsSeparateNavigationFromDestructiveIntent() {
         #expect(RootHapticPolicy.moreMenuFeedback(for: .guide) == .routine)
-        #expect(RootHapticPolicy.moreMenuFeedback(for: .admin) == .routine)
         // The destructive confirmation button emits the warning; opening the prompt
         // itself stays silent so one logout action does not warn twice.
         #expect(RootHapticPolicy.moreMenuFeedback(for: .logout) == nil)
@@ -101,7 +130,6 @@ struct AppTabTests {
     @Test
     func moreMenuScreensPushOntoTheMoreTabInsteadOfSwitchingTabs() {
         #expect(RootNavigationPolicy.moreDestination(for: .friends) == .friends)
-        #expect(RootNavigationPolicy.moreDestination(for: .admin) == .admin)
         #expect(RootNavigationPolicy.moreDestination(for: .guide) == .guide)
         #expect(RootNavigationPolicy.moreDestination(for: .settings) == .settings)
         // Notifications are a screen like every other menu entry, so they are pushed too.

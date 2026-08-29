@@ -30,7 +30,7 @@ struct RootChromeLocalizationTests {
 
     @Test
     func moreMenuKeepsGlobalActionsAndExcludesDockDestinations() {
-        #expect(MoreMenuItem.visibleItems(isAdmin: false) == [
+        #expect(MoreMenuItem.visibleItems() == [
             .friends,
             .notifications,
             .guide,
@@ -38,18 +38,9 @@ struct RootChromeLocalizationTests {
             .settings,
             .logout,
         ])
-        #expect(MoreMenuItem.visibleItems(isAdmin: true) == [
-            .friends,
-            .notifications,
-            .admin,
-            .guide,
-            .support,
-            .settings,
-            .logout,
-        ])
-        #expect(MoreMenuItem.visibleGroups(isAdmin: true) == [
+        #expect(MoreMenuItem.visibleGroups() == [
             [.friends, .notifications],
-            [.admin, .guide, .support, .settings],
+            [.guide, .support, .settings],
             [.logout],
         ])
 
@@ -72,7 +63,6 @@ struct RootChromeLocalizationTests {
             MoreMenuItem.allCases.map(\.accessibilityIdentifier) == [
                 "more.friends",
                 "more.notifications",
-                "more.admin",
                 "more.guide",
                 "more.support",
                 "more.settings",
@@ -106,10 +96,18 @@ struct RootChromeLocalizationTests {
         #expect(summary(name: "   ").displayName == RootChromeLocalization.localizable("root.menu.myInfo"))
     }
 
+    @Test
+    func profileCardPreservesPhotoAvailabilityFromTheMemberPayload() {
+        #expect(summary(hasProfilePhoto: true).hasProfilePhoto == true)
+        #expect(summary(hasProfilePhoto: false).hasProfilePhoto == false)
+        #expect(summary(hasProfilePhoto: nil).hasProfilePhoto == nil)
+    }
+
     private func summary(
         name: String = "선우",
         team: String? = nil,
         email: String? = nil,
+        hasProfilePhoto: Bool? = nil,
         profilePhotoVersion: Int64 = 0
     ) -> MoreProfileSummary {
         MoreProfileSummary(
@@ -123,6 +121,7 @@ struct RootChromeLocalizationTests {
                 isImpersonating: false,
                 originalMemberId: nil
             ),
+            hasProfilePhoto: hasProfilePhoto,
             profilePhotoVersion: profilePhotoVersion
         )
     }

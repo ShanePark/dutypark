@@ -10,6 +10,7 @@ struct BrandAssetTests {
             "IntroDDay",
             "IntroDuty",
             "IntroHoliday",
+            "IntroLife",
             "IntroSchedule",
             "IntroTodo",
             "KakaoLogo",

@@ -3,8 +3,8 @@ import Testing
 @testable import Dutypark
 
 struct NativeContentBoundaryTests {
-    @Test("Only authenticated admin tools may embed a web view")
-    func productionWebKitUsageIsRestrictedToAdminTools() throws {
+    @Test("The iOS app contains no embedded web views")
+    func productionWebKitUsageIsRemoved() throws {
         let iosDirectory = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
             .deletingLastPathComponent()
@@ -22,7 +22,7 @@ struct NativeContentBoundaryTests {
             }
         }
 
-        #expect(webKitSources.sorted() == ["AdminWebView.swift"])
+        #expect(webKitSources.isEmpty)
     }
 
     @Test("Guest, settings, and authenticated deep-link routes render native content screens")
@@ -44,16 +44,6 @@ struct NativeContentBoundaryTests {
         #expect(guest.contains("guest.guide.sectionPicker"))
         #expect(settings.contains("case .guide:\n                PublicGuideView()"))
         #expect(settings.contains("PublicReleaseNotesView()"))
-    }
-
-    @Test("Admin navigation preserves the four responsive-web destinations")
-    func adminMenuMatchesResponsiveWeb() {
-        #expect(AdminRootNavigationPresentation.tileKeys == [
-            "admin.nav.members",
-            "admin.nav.teams",
-            "admin.nav.development",
-            "admin.nav.apiDocumentation",
-        ])
     }
 
     private func source(_ path: String, under directory: URL) throws -> String {

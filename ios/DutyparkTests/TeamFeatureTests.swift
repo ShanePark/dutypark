@@ -121,7 +121,7 @@ struct TeamFeatureTests {
     }
 
     @Test
-    func teamAdminToolPermissionIncludesServiceAdminAndTeamRoles() {
+    func teamAdminToolPermissionIncludesTeamLeadAndManagerRoles() {
         let team = managedTeam(
             adminID: 1,
             members: [
@@ -148,39 +148,48 @@ struct TeamFeatureTests {
 
         #expect(
             TeamManageViewModel.canUseAdminTools(
-                loginID: nil,
-                team: team,
-                isServiceAdmin: true
-            )
-        )
-        #expect(
-            TeamManageViewModel.canUseAdminTools(
                 loginID: 1,
-                team: team,
-                isServiceAdmin: false
+                team: team
             )
         )
         #expect(
             TeamManageViewModel.canUseAdminTools(
                 loginID: 2,
-                team: team,
-                isServiceAdmin: false
+                team: team
             )
         )
         #expect(
             TeamManageViewModel.canUseAdminTools(
                 loginID: 3,
-                team: team,
-                isServiceAdmin: false
+                team: team
             ) == false
         )
         #expect(
             TeamManageViewModel.canUseAdminTools(
                 loginID: nil,
-                team: nil,
-                isServiceAdmin: false
+                team: nil
             ) == false
         )
+    }
+
+    @Test
+    func teamManagementHasNoServiceAdminOnlyDeletePath() throws {
+        let root = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let manageView = try String(
+            contentsOf: root.appending(path: "Dutypark/Features/Team/TeamManageView.swift"),
+            encoding: .utf8
+        )
+        let viewModel = try String(
+            contentsOf: root.appending(path: "Dutypark/Features/Team/TeamViewModel.swift"),
+            encoding: .utf8
+        )
+
+        #expect(manageView.contains("isServiceAdmin") == false)
+        #expect(viewModel.contains("isServiceAdmin") == false)
+        #expect(manageView.contains("TeamManageDeletePolicy") == false)
+        #expect(manageView.contains("deleteTeam") == false)
     }
 
     @Test @MainActor
@@ -537,6 +546,115 @@ struct TeamFeatureTests {
     }
 
     @Test @MainActor
+    func dutyTypeSaveBlocksBannedNameBeforeCallingTheRepository() async {
+        let suiteName = "team-content-filter-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.set(["시발"], forKey: "dp-banned-words")
+        let contentFilter = ContentFilterStore(defaults: defaults)
+        let viewModel = TeamManageViewModel(
+            teamID: 7,
+            repository: TeamRepository(client: makeClient()),
+            contentFilter: contentFilter
+        )
+        TeamURLProtocolStub.requestCount = 0
+        TeamURLProtocolStub.handler = { request in
+            Self.response(request, status: 204)
+        }
+        defer {
+            TeamURLProtocolStub.handler = nil
+            defaults.removePersistentDomain(forName: suiteName)
+        }
+
+        await viewModel.saveDutyType(name: "시.발", color: "#112233")
+
+        #expect(viewModel.showsError)
+        #expect(viewModel.errorMessage == teamLocalized("team.common.contentFilterError"))
+        #expect(TeamURLProtocolStub.requestCount == 0)
+        #expect(DPHapticCenter.shared.event?.kind == .error)
+    }
+
+    @Test @MainActor
+    func dutyTypeSaveMapsServerContentFilterErrorToTheLocalizedMessage() async {
+        TeamURLProtocolStub.handler = { request in
+            Self.response(
+                request,
+                status: 400,
+                body: #"{"code":"contentFilter.blocked"}"#
+            )
+        }
+        let viewModel = TeamManageViewModel(
+            teamID: 7,
+            repository: TeamRepository(client: makeClient())
+        )
+        defer { TeamURLProtocolStub.handler = nil }
+
+        await viewModel.saveDutyType(name: "A safe duty", color: "#112233")
+
+        #expect(viewModel.showsError)
+        #expect(viewModel.errorMessage == teamLocalized("team.common.contentFilterError"))
+        #expect(viewModel.showsSuccess == false)
+        #expect(DPHapticCenter.shared.event?.kind == .error)
+    }
+
+    @Test @MainActor
+    func dutyTypeSaveMapsDetailedServerContentFilterErrorToTheLocalizedMessage() async {
+        TeamURLProtocolStub.handler = { request in
+            Self.response(
+                request,
+                status: 400,
+                body: #"{"code":"contentFilter.blocked","details":{"remainingAttempts":1}}"#
+            )
+        }
+        let viewModel = TeamManageViewModel(
+            teamID: 7,
+            repository: TeamRepository(client: makeClient())
+        )
+        defer { TeamURLProtocolStub.handler = nil }
+
+        await viewModel.saveDutyType(name: "A safe duty", color: "#112233")
+
+        #expect(viewModel.showsError)
+        #expect(viewModel.errorMessage == teamLocalized("team.common.contentFilterError"))
+        #expect(viewModel.showsSuccess == false)
+        #expect(DPHapticCenter.shared.event?.kind == .error)
+    }
+
+    @Test @MainActor
+    func defaultDutyTypeSaveUsesTheSameContentFilterGuard() async {
+        let suiteName = "team-default-content-filter-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.set(["시발"], forKey: "dp-banned-words")
+        let contentFilter = ContentFilterStore(defaults: defaults)
+        let viewModel = TeamManageViewModel(
+            teamID: 7,
+            repository: TeamRepository(client: makeClient()),
+            contentFilter: contentFilter
+        )
+        viewModel.editingDutyType = DutyTypeDTO(
+            id: nil,
+            teamId: 7,
+            name: "Off",
+            position: -1,
+            color: "#112233",
+            hidden: false
+        )
+        TeamURLProtocolStub.requestCount = 0
+        TeamURLProtocolStub.handler = { request in
+            Self.response(request, status: 204)
+        }
+        defer {
+            TeamURLProtocolStub.handler = nil
+            defaults.removePersistentDomain(forName: suiteName)
+        }
+
+        await viewModel.saveDutyType(name: "시.발", color: "#112233")
+
+        #expect(viewModel.showsError)
+        #expect(viewModel.errorMessage == teamLocalized("team.common.contentFilterError"))
+        #expect(TeamURLProtocolStub.requestCount == 0)
+    }
+
+    @Test @MainActor
     func scheduleMutationsPatchTheLoadedMonthWithoutARefreshRequest() async throws {
         TeamURLProtocolStub.handler = { request in
             Self.successfulTeamLoadResponse(request)
@@ -722,6 +840,150 @@ struct TeamFeatureTests {
         )
         #expect(body.range(of: fileData) != nil)
         #expect(body.suffix(Data("\r\n--\(boundary)--\r\n".utf8).count) == Data("\r\n--\(boundary)--\r\n".utf8))
+    }
+
+    @Test
+    func sanitizesDutyUploadFilenameBeforePuttingItInMultipartHeaders() {
+        let controls = "\t\n\r\u{0B}\u{1F}\u{7F}"
+        let fileName = "roster\"\\" + controls + ".xlsx"
+        let form = TeamMultipartForm(boundary: "Dutypark-Test-Boundary")
+
+        #expect(
+            TeamFeatureLogic.sanitizedDutyBatchFileName(fileName)
+                == "roster\\\"\\\\.xlsx"
+        )
+
+        let body = form.makeBody(
+            fileName: fileName,
+            fileData: Data([0x01]),
+            year: 2026,
+            month: 8
+        )
+        let text = String(decoding: body, as: UTF8.self)
+        #expect(
+            text.contains(
+                "filename=\"\(TeamFeatureLogic.sanitizedDutyBatchFileName(fileName))\"\r\n"
+            )
+        )
+    }
+
+    @Test
+    func rejectsDutyUploadFilesLargerThanTheConfiguredLimit() {
+        let maximum = TeamFeatureLogic.maximumDutyBatchFileSize(
+            for: "roster.xlsx",
+            year: 2026,
+            month: 8
+        )
+
+        #expect(TeamFeatureLogic.isValidDutyBatchFileSize(0))
+        #expect(
+            TeamFeatureLogic.isValidDutyBatchFileSize(
+                maximum,
+                fileName: "roster.xlsx",
+                year: 2026,
+                month: 8
+            )
+        )
+        #expect(
+            !TeamFeatureLogic.isValidDutyBatchFileSize(
+                maximum + 1,
+                fileName: "roster.xlsx",
+                year: 2026,
+                month: 8
+            )
+        )
+        #expect(!TeamFeatureLogic.isValidDutyBatchFileSize(-1))
+    }
+
+    @Test
+    func keepsTheMaximumDutyUploadBodyBelowTenMiBIncludingMultipartOverhead() {
+        let fileName = "roster\"\\.xlsx"
+        let year = 2026
+        let month = 8
+        let boundary = String(repeating: "B", count: 45)
+        let form = TeamMultipartForm(boundary: boundary)
+        let maximum = TeamFeatureLogic.maximumDutyBatchFileSize(
+            for: fileName,
+            year: year,
+            month: month
+        )
+
+        #expect(
+            TeamFeatureLogic.isValidDutyBatchFileSize(
+                maximum,
+                fileName: fileName,
+                year: year,
+                month: month
+            )
+        )
+        #expect(
+            !TeamFeatureLogic.isValidDutyBatchFileSize(
+                maximum + 1,
+                fileName: fileName,
+                year: year,
+                month: month
+            )
+        )
+
+        let body = form.makeBody(
+            fileName: fileName,
+            fileData: Data(repeating: 0, count: maximum),
+            year: year,
+            month: month
+        )
+        #expect(body.count == TeamFeatureLogic.maximumDutyBatchRequestBodySize - 1)
+        #expect(body.count < TeamFeatureLogic.maximumDutyBatchRequestBodySize)
+    }
+
+    @Test
+    func repositoryRejectsOversizedDutyUploadWithoutSendingARequest() async {
+        TeamURLProtocolStub.requestCount = 0
+        TeamURLProtocolStub.handler = { request in
+            TeamURLProtocolStub.requestCount += 1
+            return Self.response(request, status: 200, body: "{}")
+        }
+        defer {
+            TeamURLProtocolStub.handler = nil
+            TeamURLProtocolStub.requestCount = 0
+        }
+
+        let repository = TeamRepository(client: makeClient())
+        await #expect(throws: TeamBatchUploadError.requestBodyTooLarge) {
+            _ = try await repository.uploadDutyBatch(
+                teamID: 7,
+                fileName: "roster.xlsx",
+                fileData: Data(repeating: 0, count: TeamFeatureLogic.maximumDutyBatchRequestBodySize),
+                year: 2026,
+                month: 8
+            )
+        }
+
+        #expect(TeamURLProtocolStub.requestCount == 0)
+    }
+
+    @Test
+    func checksDutyUploadFileSizeBeforeReadingTheFileData() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark/Features/Team/TeamViewModel.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+        let sizeCheck = try #require(source.range(of: "resourceValues(forKeys: [.fileSizeKey])"))
+        let dataRead = try #require(source.range(of: "Data(contentsOf: fileURL)"))
+
+        #expect(source.contains("TeamFeatureLogic.isValidDutyBatchFileSize"))
+        #expect(sizeCheck.lowerBound < dataRead.lowerBound)
+    }
+
+    @Test
+    func showsTheLocalizedDutyUploadErrorMessage() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark/Features/Team/TeamManageView.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+
+        #expect(source.contains("viewModel.errorMessage ?? teamLocalized(\"team.common.error\")"))
     }
 
     @Test
@@ -1106,6 +1368,7 @@ struct TeamFeatureTests {
 private final class TeamURLProtocolStub: URLProtocol, @unchecked Sendable {
     nonisolated(unsafe) static var handler: (@Sendable (URLRequest) -> (HTTPURLResponse, Data))?
     nonisolated(unsafe) static var visibilityRequestCount = 0
+    nonisolated(unsafe) static var requestCount = 0
 
     override class func canInit(with request: URLRequest) -> Bool { true }
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
@@ -1114,6 +1377,7 @@ private final class TeamURLProtocolStub: URLProtocol, @unchecked Sendable {
         guard let handler = Self.handler else {
             fatalError("TeamURLProtocolStub handler is not set")
         }
+        Self.requestCount += 1
         let (response, data) = handler(request)
         client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
         client?.urlProtocol(self, didLoad: data)

@@ -242,12 +242,24 @@ final class TodoConfirmationVisualUITests: XCTestCase {
 
         secondCard.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).press(
             forDuration: 0.5,
-            thenDragTo: firstCard.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.18)),
+            thenDragTo: firstCard.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: -0.05)),
             withVelocity: .slow,
             thenHoldForDuration: 0.2
         )
 
-        XCTAssertLessThan(secondCard.frame.minY, firstCard.frame.minY)
+        let reorderExpectation = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in
+                secondCard.exists
+                    && firstCard.exists
+                    && secondCard.frame.minY < firstCard.frame.minY
+            },
+            object: secondCard
+        )
+        XCTAssertEqual(
+            XCTWaiter.wait(for: [reorderExpectation], timeout: 2),
+            .completed,
+            "The upward drag must eventually place the second card before the first card."
+        )
         XCTAssertEqual(
             thirdCard.frame.minY,
             initialThirdCardFrame.minY,
@@ -275,14 +287,37 @@ final class TodoConfirmationVisualUITests: XCTestCase {
         let secondCard = app.descendants(matching: .any)[
             "todo.card.A11CE000-0000-4000-8000-000000000002"
         ]
+        let thirdCard = app.descendants(matching: .any)[
+            "todo.card.A11CE000-0000-4000-8000-000000000003"
+        ]
         XCTAssertTrue(firstCard.waitForExistence(timeout: 10))
         XCTAssertTrue(secondCard.waitForExistence(timeout: 10))
+        XCTAssertTrue(thirdCard.waitForExistence(timeout: 10))
+        XCTAssertLessThan(secondCard.frame.minY, thirdCard.frame.minY)
         let initialSecondY = secondCard.frame.minY
+        let initialThirdY = thirdCard.frame.minY
 
         firstCard.swipeUp()
 
-        XCTAssertLessThan(secondCard.frame.minY, initialSecondY)
-        XCTAssertLessThan(firstCard.frame.minY, secondCard.frame.minY)
+        let scrollExpectation = XCTNSPredicateExpectation(
+            predicate: NSPredicate { _, _ in
+                secondCard.exists
+                    && thirdCard.exists
+                    && secondCard.frame.minY < initialSecondY
+                    && thirdCard.frame.minY < initialThirdY
+                    && secondCard.frame.minY < thirdCard.frame.minY
+            },
+            object: secondCard
+        )
+        XCTAssertEqual(
+            XCTWaiter.wait(for: [scrollExpectation], timeout: 2),
+            .completed,
+            "A vertical swipe must move the visible cards upward without changing their order."
+        )
+        XCTAssertFalse(
+            app.descendants(matching: .any)["todo.detail"].exists,
+            "A vertical scroll must not open Todo detail."
+        )
         XCTAssertFalse(
             app.buttons.matching(NSPredicate(format: "label == %@", "삭제")).firstMatch.exists,
             "A vertical scroll must not open Todo detail."

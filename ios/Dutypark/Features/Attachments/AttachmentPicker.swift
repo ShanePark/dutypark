@@ -50,7 +50,19 @@ final class AttachmentPickerModel: ObservableObject {
     }
 
     func add(files: [AttachmentUploadFile]) async {
-        guard !files.isEmpty, !isUploading else { return }
+        await add(totalFileCount: files.count) { index in
+            files[index]
+        }
+    }
+
+    /// Loads and uploads one selected item at a time. Keeping the loader in
+    /// the loop prevents a multi-selection from retaining every source Data
+    /// buffer while another file is being uploaded.
+    func add(
+        totalFileCount: Int,
+        load: @escaping @MainActor @Sendable (Int) async throws -> AttachmentUploadFile
+    ) async {
+        guard totalFileCount > 0, !isUploading else { return }
         isUploading = true
         defer {
             uploadProgress = nil
@@ -58,15 +70,16 @@ final class AttachmentPickerModel: ObservableObject {
         }
 
         do {
-            try Task.checkCancellation()
-            let sessionId = try await ensureSession()
-            for (index, file) in files.enumerated() {
+            for index in 0..<totalFileCount {
+                try Task.checkCancellation()
+                let file = try await load(index)
                 try Task.checkCancellation()
                 uploadProgress = AttachmentUploadProgress(
                     completedFileCount: index,
-                    totalFileCount: files.count,
+                    totalFileCount: totalFileCount,
                     currentFilename: file.filename
                 )
+                let sessionId = try await ensureSession()
                 attachments.append(try await client.upload(file, sessionId: sessionId))
             }
             try Task.checkCancellation()
@@ -429,36 +442,28 @@ struct AttachmentPicker: View {
     }
 
     private func add(urls: [URL]) async {
-        do {
-            var files: [AttachmentUploadFile] = []
-            for url in urls {
-                try Task.checkCancellation()
-                files.append(try AttachmentFileLoader.load(from: url))
+        await model.add(totalFileCount: urls.count) { index in
+            do {
+                return try await Task.detached(priority: .userInitiated) {
+                    try AttachmentFileLoader.load(from: urls[index])
+                }.value
+            } catch let error as AttachmentUploadError {
+                throw error
+            } catch {
+                throw AttachmentUploadError.unreadableFile
             }
-            await model.add(files: files)
-        } catch let error as AttachmentUploadError {
-            guard !Task.isCancelled else { return }
-            model.recordFailure(.from(error))
-        } catch {
-            guard !Task.isCancelled else { return }
-            model.recordFailure(.unreadableFile)
         }
     }
 
     private func add(photoItems: [PhotosPickerItem]) async {
-        do {
-            var files: [AttachmentUploadFile] = []
-            for item in photoItems {
-                try Task.checkCancellation()
-                files.append(try await AttachmentFileLoader.load(from: item))
+        await model.add(totalFileCount: photoItems.count) { index in
+            do {
+                return try await AttachmentFileLoader.load(from: photoItems[index])
+            } catch let error as AttachmentUploadError {
+                throw error
+            } catch {
+                throw AttachmentUploadError.unreadableFile
             }
-            await model.add(files: files)
-        } catch let error as AttachmentUploadError {
-            guard !Task.isCancelled else { return }
-            model.recordFailure(.from(error))
-        } catch {
-            guard !Task.isCancelled else { return }
-            model.recordFailure(.unreadableFile)
         }
     }
 

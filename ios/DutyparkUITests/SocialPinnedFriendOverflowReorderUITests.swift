@@ -4,7 +4,7 @@ import XCTest
 /// screen the `LazyVStack` publishes drop-target frames only for the rows inside
 /// the viewport, so a live reorder must not depend on a complete frame set.
 final class SocialPinnedFriendOverflowReorderUITests: XCTestCase {
-    private let seededOrder = (0..<18).map { String(41 + $0) }
+    private let seededOrder = (0..<32).map { String(41 + $0) }
 
     override func setUpWithError() throws {
         continueAfterFailure = false

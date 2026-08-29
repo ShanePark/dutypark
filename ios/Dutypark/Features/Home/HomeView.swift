@@ -81,18 +81,21 @@ struct HomeView: View {
     @ScaledMetric(relativeTo: .subheadline) private var maximumCardWidth = HomeFriendCardLayout.maximumCardWidth
     private let refreshID: Int
     private let onRoute: (HomeRoute) -> Void
+    private let onProfilePhotoStateChanged: (Bool, Int64) -> Void
     private let pinRepository: any SocialRepository
 
     init(
         service: any HomeDashboardServing = HomeDashboardService(),
         pinRepository: any SocialRepository = LiveSocialRepository(),
         refreshID: Int = 0,
-        onRoute: @escaping (HomeRoute) -> Void = { _ in }
+        onRoute: @escaping (HomeRoute) -> Void = { _ in },
+        onProfilePhotoStateChanged: @escaping (Bool, Int64) -> Void = { _, _ in }
     ) {
         _viewModel = StateObject(wrappedValue: HomeViewModel(service: service))
         self.pinRepository = pinRepository
         self.refreshID = refreshID
         self.onRoute = onRoute
+        self.onProfilePhotoStateChanged = onProfilePhotoStateChanged
     }
 
     var body: some View {
@@ -111,6 +114,10 @@ struct HomeView: View {
             } else {
                 await viewModel.refresh()
             }
+        }
+        .onChange(of: viewModel.myDashboard?.member) { _, member in
+            guard let member else { return }
+            onProfilePhotoStateChanged(member.hasProfilePhoto, member.profilePhotoVersion)
         }
         .refreshable {
             await viewModel.refresh()
@@ -178,6 +185,7 @@ struct HomeView: View {
                         HomeAvatar(
                             memberId: dashboard.member.id,
                             name: dashboard.member.name,
+                            hasProfilePhoto: dashboard.member.hasProfilePhoto,
                             profilePhotoVersion: dashboard.member.profilePhotoVersion,
                             size: 36
                         )
@@ -999,6 +1007,7 @@ private struct HomeFriendCard: View {
     private var portrait: some View {
         DPProfileAvatar(
             memberID: friend.member.id,
+            hasProfilePhoto: friend.member.hasProfilePhoto,
             profilePhotoVersion: friend.member.profilePhotoVersion,
             size: CGSize(width: portraitWidth, height: portraitHeight),
             shape: .roundedRectangle(cornerRadius: DPRadius.standard)
@@ -1120,12 +1129,14 @@ private struct DutyBadge: View {
 private struct HomeAvatar: View {
     let memberId: MemberID?
     let name: String
+    let hasProfilePhoto: Bool
     let profilePhotoVersion: Int64
     let size: CGFloat
 
     var body: some View {
         DPProfileAvatar(
             memberID: memberId,
+            hasProfilePhoto: hasProfilePhoto,
             profilePhotoVersion: profilePhotoVersion,
             size: size
         )

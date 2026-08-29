@@ -40,6 +40,16 @@
         }
       },
       "entries": {
+        "pr-412": {
+          "title": "iPhone 출시 준비와 안전한 사용 경험 강화",
+          "summary": "iPhone 앱 출시와 심사 흐름을 안정화하고 푸시 알림과 일정 표시를 다듬었으며, 계정 삭제 확인과 콘텐츠·개인정보 보호를 강화했습니다.",
+          "changes": [
+            "로그인 후 푸시 알림 권한을 안내하고 시스템 권한과 설정 토글을 동기화하며, 푸시 알림을 누르면 알림 센터에서 해당 행을 강조해 보여주고 행을 눌러 지원 화면으로 이동하는 흐름과 캘린더 이동 및 일정 시간 표시를 iPhone에서 일관되게 개선했습니다.",
+            "iOS 앱의 심사·출시 흐름과 화면 캡처를 안정화하고 실제 앱에 필요한 기능 중심으로 정리했습니다.",
+            "회원 탈퇴가 완료되면 확인용 영수증과 상태 화면을 제공하고, 데이터 보존 예외와 개인정보 수집 안내를 명확히 표시합니다.",
+            "웹과 iPhone의 공개 콘텐츠 입력 필터를 서버 경계까지 강화하고, Slack 알림에서 일정 식별자와 민감한 정보가 노출되지 않도록 보호했습니다."
+          ]
+        },
         "pr-410": {
           "title": "중복 일정과 Todo 생성 방지",
           "summary": "같은 일정이나 Todo 생성 요청이 반복되어도 기존 항목을 재사용해 네트워크 재시도와 여러 기기 사용 중 중복 항목이 생기지 않도록 개선했습니다.",
@@ -113,7 +123,7 @@
           "changes": [
             "네이티브 iOS 앱에서 대시보드, 근무 캘린더, 일정, Todo, 친구, 팀, 첨부파일, 알림, 설정, 관리자 기능을 이용할 수 있습니다.",
             "웹과 iOS에서 카카오, 네이버, Apple 계정으로 로그인하거나 계정을 연결할 수 있으며, 네이티브 Apple 로그인과 안전한 모바일 OAuth 연결을 지원합니다.",
-            "APNs를 통해 iPhone 푸시 알림을 받고, 알림에서 지원하는 화면으로 바로 이동할 수 있습니다.",
+            "APNs를 통해 iPhone 푸시 알림을 받고, 푸시 알림을 누르면 먼저 알림 센터에서 해당 행을 강조해 보여주며, 그 행을 눌러 지원하는 화면으로 이동할 수 있습니다.",
             "본인 확인과 단계별 안내를 거쳐 계정 삭제를 요청하고, 어느 클라이언트에서든 AI 일정 시간 인식 동의를 확인하거나 철회할 수 있습니다."
           ]
         },
@@ -2259,6 +2269,16 @@
         }
       },
       "entries": {
+        "pr-412": {
+          "title": "Safer iPhone release and app experience",
+          "summary": "Stabilizes the iPhone release and review flows, refines push notifications and schedule display, and strengthens account-deletion confirmation, content filtering, and privacy protection.",
+          "changes": [
+            "Prompt for push-notification permission after login, keep the system authorization and settings toggle in sync, and make the two-step iPhone notification flow (highlight the row in the notification center, then open its supported destination when the row is tapped), calendar navigation, and schedule times more consistent.",
+            "Stabilize iOS review and release flows and screen capture, while keeping the shipped app focused on the features it needs.",
+            "Provide a completion receipt and status screen after account deletion, with clearer disclosure of data-retention exceptions and collected privacy data.",
+            "Enforce public-content input filtering at server boundaries for web and iPhone, and protect Slack notifications from exposing schedule identifiers or sensitive data."
+          ]
+        },
         "pr-410": {
           "title": "Prevent duplicate schedules and todos",
           "summary": "Reuses an existing schedule or todo when the same create is repeated, preventing duplicate items during network retries and use across multiple devices.",
@@ -2332,7 +2352,7 @@
           "changes": [
             "Use the native iOS app for dashboards, duty calendars, schedules, todos, friends, teams, attachments, notifications, settings, and admin tools.",
             "Sign in and connect accounts with Kakao, Naver, or Apple across web and iOS, including native Sign in with Apple and secure mobile OAuth handoff.",
-            "Receive iPhone push notifications through APNs and open supported destinations directly from each notification.",
+            "Receive iPhone push notifications through APNs; tapping one first opens the notification center with its row highlighted, and tapping that row opens the supported destination.",
             "Request account deletion through a verified, staged flow and review or withdraw AI schedule-recognition consent from either client."
           ]
         },
@@ -4441,6 +4461,25 @@
     }
   },
   "items": [
+    {
+      "id": "pr-412",
+      "version": "2026.08.30",
+      "date": "2026-08-30",
+      "pr": 412,
+      "url": "https://github.com/ShanePark/dutypark/pull/412",
+      "category": "improvement",
+      "areas": [
+        "auth",
+        "calendar",
+        "docs",
+        "infra",
+        "notifications",
+        "policy",
+        "schedule",
+        "security",
+        "ui"
+      ]
+    },
     {
       "id": "pr-410",
       "version": "2026.08.25",

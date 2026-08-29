@@ -6,6 +6,7 @@ import com.tistory.shanepark.dutypark.member.domain.entity.DDayEvent
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.DDayRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
+import com.tistory.shanepark.dutypark.publiccontent.service.PublicContentService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
@@ -19,6 +20,7 @@ import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
 import org.mockito.kotlin.doThrow
 import org.mockito.kotlin.verify
+import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
 import org.springframework.test.util.ReflectionTestUtils
 import java.time.LocalDate
@@ -38,6 +40,9 @@ class DDayServiceTest {
     @Mock
     private lateinit var friendService: FriendService
 
+    @Mock
+    private lateinit var publicContentService: PublicContentService
+
     @Captor
     private lateinit var dDayEventCaptor: ArgumentCaptor<DDayEvent>
 
@@ -48,7 +53,7 @@ class DDayServiceTest {
 
     @BeforeEach
     fun setUp() {
-        dDayService = DDayService(memberRepository, dDayRepository, friendService)
+        dDayService = DDayService(memberRepository, dDayRepository, friendService, publicContentService)
         member = memberWithId(1L)
         member2 = memberWithId(2L)
     }
@@ -95,6 +100,28 @@ class DDayServiceTest {
         assertThat(savedEvent.member).isEqualTo(member)
         assertThat(dto.title).isEqualTo("Anniversary")
         assertThat(dto.isPrivate).isFalse
+        verify(publicContentService).validateContent("Anniversary")
+    }
+
+    @Test
+    fun `createDDay does not validate a private title`() {
+        whenever(memberRepository.findById(member.id!!)).thenReturn(Optional.of(member))
+        whenever(dDayRepository.save(any<DDayEvent>())).thenAnswer { invocation ->
+            val event = invocation.getArgument<DDayEvent>(0)
+            ReflectionTestUtils.setField(event, "id", 100L)
+            event
+        }
+
+        dDayService.createDDay(
+            loginMember = loginMember(member),
+            dDaySaveDto = DDaySaveDto(
+                title = "Private title",
+                date = fixedDate,
+                isPrivate = true,
+            )
+        )
+
+        verifyNoInteractions(publicContentService)
     }
 
     @Test
@@ -264,6 +291,59 @@ class DDayServiceTest {
         assertThat(event.title).isEqualTo("After")
         assertThat(event.date).isEqualTo(newDate)
         assertThat(event.isPrivate).isTrue
+        verifyNoInteractions(publicContentService)
+    }
+
+    @Test
+    fun `updateDDay validates a public title before updating`() {
+        val event = dDayEventWithId(
+            id = 10L,
+            member = member,
+            title = "Before",
+            date = fixedDate.plusDays(1),
+            isPrivate = false,
+        )
+        whenever(dDayRepository.findById(event.id!!)).thenReturn(Optional.of(event))
+
+        dDayService.updateDDay(
+            loginMember(member),
+            DDaySaveDto(
+                id = event.id,
+                title = "After",
+                date = fixedDate.plusDays(10),
+                isPrivate = false,
+            )
+        )
+
+        verify(publicContentService).validateContent("After")
+        assertThat(event.title).isEqualTo("After")
+        assertThat(event.isPrivate).isFalse
+    }
+
+    @Test
+    fun `updateDDay validates when transitioning a private event to public`() {
+        val event = dDayEventWithId(
+            id = 10L,
+            member = member,
+            title = "Private",
+            date = fixedDate.plusDays(1),
+            isPrivate = true,
+        )
+        whenever(dDayRepository.findById(event.id!!)).thenReturn(Optional.of(event))
+
+        dDayService.updateDDay(
+            loginMember(member),
+            DDaySaveDto(
+                id = event.id,
+                title = "Public",
+                date = fixedDate.plusDays(10),
+                isPrivate = false,
+            )
+        )
+
+        verify(publicContentService).validateContent("Public")
+        assertThat(event.title).isEqualTo("Public")
+        assertThat(event.isPrivate).isFalse
     }
 
     @Test

@@ -43,16 +43,12 @@ class ScheduleTimeParsingQueueManager(
 
     @PostConstruct
     fun init() {
-        val maskedKey = if (geminiApiKey.length > 8)
-            "${geminiApiKey.take(4)}...${geminiApiKey.takeLast(4)}"
-        else
-            "****"
-        log.info("GeminiKey: {}", maskedKey)
         if (geminiApiKey.isBlank() || geminiApiKey == "EMPTY") {
             log.info("AI time parsing disabled: Gemini API key is not configured")
             doTask = false
             return
         }
+        log.info("AI time parsing enabled")
 
         val allWaitJobs = scheduleRepository.findAllByParsingTimeStatus(WAIT)
         val consentedJobs = allWaitJobs.filter { schedule ->

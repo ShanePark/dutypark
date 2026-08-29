@@ -105,6 +105,19 @@ private struct CalloutTail: Shape {
     }
 }
 
+private struct CalendarTopScrollEdgeEffectModifier: ViewModifier {
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if #available(iOS 26.0, *) {
+            // Keep the top boundary readable when the calendar rows scroll under the
+            // fixed navigation controls, while leaving the iOS 17 behaviour untouched.
+            content.scrollEdgeEffectStyle(.soft, for: .top)
+        } else {
+            content
+        }
+    }
+}
+
 struct CalendarView: View {
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject private var session: SessionStore
@@ -139,15 +152,18 @@ struct CalendarView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private let isPushedMemberCalendar: Bool
+    private let currentMonthRequestID: Int
 
     init(
         memberID: MemberID? = nil,
         date: DateOnly? = nil,
         scheduleID: ScheduleID? = nil,
-        isPushed: Bool = false
+        isPushed: Bool = false,
+        currentMonthRequestID: Int = 0
     ) {
         _model = StateObject(wrappedValue: CalendarViewModel(memberID: memberID, date: date, scheduleID: scheduleID))
         isPushedMemberCalendar = isPushed
+        self.currentMonthRequestID = currentMonthRequestID
     }
 
     var body: some View {
@@ -180,6 +196,9 @@ struct CalendarView: View {
             } else {
                 model.resumeServerRecoveryIfNeeded()
             }
+        }
+        .onChange(of: currentMonthRequestID) { _, _ in
+            Task { await model.goToToday(emitFeedback: false) }
         }
         .onDisappear { model.cancelBackgroundTasks() }
         .onChange(of: session.availability) { _, availability in
@@ -323,6 +342,8 @@ struct CalendarView: View {
                     model: todoDetailModel,
                     todo: selection.todo,
                     maximumHeight: availableSize.height,
+                    accountID: authenticatedAccountID,
+                    sessionGeneration: session.authenticationSessionGenerationForCurrentAccount,
                     onTodoChanged: { await model.refreshTodoBoard() },
                     onDismissabilityChange: { todoDetailCanDismiss = $0 },
                     dismissRequest: todoDetailDismissRequest,
@@ -393,23 +414,32 @@ struct CalendarView: View {
     }
 
     private var calendarContent: some View {
-        ScrollView {
-            LazyVStack(spacing: DPSpacing.small) {
-                if model.isShowingCachedData || model.pendingScheduleCount > 0 {
-                    offlineStateBanner
+        ZStack(alignment: .top) {
+            ScrollView {
+                LazyVStack(spacing: DPSpacing.small) {
+                    if model.isShowingCachedData || model.pendingScheduleCount > 0 {
+                        offlineStateBanner
+                    }
+                    if showsDutyToolbar {
+                        dutyToolbar
+                    }
+                    swipeableCalendarGrid
+                    if !model.isQuickDutyEditing {
+                        dDaySection
+                    }
                 }
-                if showsDutyToolbar {
-                    dutyToolbar
-                }
-                swipeableCalendarGrid
-                if !model.isQuickDutyEditing {
-                    dDaySection
-                }
+                .padding(.horizontal, DPSpacing.small)
+                .padding(.top, DPSpacing.extraSmall)
+                .padding(.bottom, DPSpacing.large)
             }
-            .padding(.horizontal, DPSpacing.small)
-            .padding(.top, DPSpacing.extraSmall)
-            .padding(.bottom, DPSpacing.large)
+
+            thisMonthCalloutLayer
+                .offset(y: Self.calloutVerticalOffset)
+                .alignmentGuide(HorizontalAlignment.center) { _ in Self.calloutTailCenter }
+                .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: showsThisMonthCallout)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .modifier(CalendarTopScrollEdgeEffectModifier())
         .refreshable { await model.load() }
     }
 
@@ -456,8 +486,14 @@ struct CalendarView: View {
         model.configure(accountID: member.id, isOffline: session.availability.isOffline)
         todoDetailModel.configureSession(
             accountID: member.id,
-            availability: session.availability
+            availability: session.availability,
+            sessionGeneration: session.authenticationSessionGenerationForCurrentAccount
         )
+    }
+
+    private var authenticatedAccountID: MemberID? {
+        guard case .authenticated(let member) = session.state else { return nil }
+        return member.id
     }
 
     private func offlineSyncAccountID(from notification: Notification) -> MemberID? {
@@ -577,6 +613,7 @@ struct CalendarView: View {
         HStack(spacing: 6) {
             CalendarMemberAvatar(
                 memberID: model.targetMemberID,
+                hasProfilePhoto: model.targetHasProfilePhoto,
                 profilePhotoVersion: model.targetProfilePhotoVersion,
                 size: 32
             )
@@ -611,9 +648,9 @@ struct CalendarView: View {
         .accessibilityIdentifier("calendar.month.display")
     }
 
-    // Every bar control is narrower than `DPSize.minimumTouchTarget`; the 44pt-tall
-    // navigation bar cannot fit the leading identity, the month navigation and two
-    // trailing actions otherwise. Height stays at the full touch target.
+    // The trailing search control is narrower than `DPSize.minimumTouchTarget`; the 44pt-tall
+    // navigation bar cannot fit the leading identity, the month navigation and the trailing
+    // action otherwise. Height stays at the full touch target.
     private static let barControlWidth: CGFloat = 36
 
     // Back sits inside the leading slot next to the identity, so it claims barely
@@ -641,23 +678,18 @@ struct CalendarView: View {
     private nonisolated static let calloutTailCenter: CGFloat =
         calloutHitInsetX + calloutTailInset + calloutTailWidth / 2
 
-    // A 44pt bar button around a 16pt label leaves about this much room between the text and
-    // the button's bottom edge. The callout hangs from the edge of the room reserved below
-    // it, so that reserve is its own height less the slack it can borrow, and one point less
-    // again so the tail bites into the label rather than stopping a hair short of it.
-    private static let calloutLabelSlack: CGFloat = 8
-    private static let calloutLabelBite: CGFloat = 1
+    // Keep the callout's existing upper-left corner fixed while giving its label and hit area
+    // ten percent more room toward the lower-right. A transform leaves the month controls'
+    // layout footprint unchanged, so the month header remains centred.
+    private static let calloutScale: CGFloat = 1.1
 
-    // Hanging the bubble straight off the label left the two glued together. It drops
-    // this much further before it starts, which is enough air to read them apart.
-    private static let calloutLabelDrop: CGFloat = 5
-    private static let calloutReach: CGFloat =
-        calloutHitInsetY * 2 + calloutCapsuleHeight - calloutLabelSlack - calloutLabelBite
-            + calloutLabelDrop
+    // The callout is hosted below the 44pt navigation bar; lift its body anchor so the bubble
+    // sits close to the month controls without changing the scroll content's position.
+    private static let calloutVerticalOffset: CGFloat = -20
 
-    // The month label lives in the navigation bar, so the callout is hung inside the bar too:
-    // content below it cannot be tapped through the bar, and a bubble that only looks right
-    // while being unreachable is worse than the bare arrow it replaced.
+    // The callout is hosted by the full calendar body rather than the navigation-bar item.
+    // That keeps the item at its native 44pt height while the body still owns the callout's
+    // scaled hit area.
     @ViewBuilder
     private var thisMonthCalloutLayer: some View {
         if showsThisMonthCallout {
@@ -694,6 +726,7 @@ struct CalendarView: View {
             .padding(.vertical, Self.calloutHitInsetY)
             .contentShape(Rectangle())
         }
+        .scaleEffect(Self.calloutScale, anchor: .topLeading)
         .accessibilityLabel(CalendarLocalization.text("calendar.month.goToThisMonth"))
     }
 
@@ -705,28 +738,13 @@ struct CalendarView: View {
 
     private var monthControls: some View {
         HStack(spacing: 0) {
-            Button { Task { await model.changeMonth(by: -1) } } label: {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 18, weight: .semibold))
-                    .frame(width: Self.barControlWidth, height: DPSize.minimumTouchTarget)
+            DPMonthArrowButton(direction: .previous, label: CalendarLocalization.text("calendar.month.previous"), identifier: "calendar.month.previous") {
+                Task { await model.changeMonth(by: -1) }
             }
             monthCenterControls
-            Button { Task { await model.changeMonth(by: 1) } } label: {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 18, weight: .semibold))
-                    .frame(width: Self.barControlWidth, height: DPSize.minimumTouchTarget)
+            DPMonthArrowButton(direction: .next, label: CalendarLocalization.text("calendar.month.next"), identifier: "calendar.month.next") {
+                Task { await model.changeMonth(by: 1) }
             }
-        }
-        .foregroundStyle(DPColor.accent)
-        // The bar hit-tests only what its own item covers, so the callout is reserved as part
-        // of the item rather than merely drawn over the bar; a bubble nobody can press is
-        // worse than the bare arrow it replaced. The bar centres the item it is given, so the
-        // reserve is matched above to keep the month navigation on the bar's own centre line.
-        .padding(.vertical, Self.calloutReach)
-        .overlay(alignment: .bottom) {
-            thisMonthCalloutLayer
-                .alignmentGuide(HorizontalAlignment.center) { _ in Self.calloutTailCenter }
-                .animation(reduceMotion ? nil : .easeOut(duration: 0.18), value: showsThisMonthCallout)
         }
     }
 
@@ -1697,6 +1715,7 @@ private struct DutyComparisonView: View {
             HStack(spacing: DPSpacing.small) {
                 CalendarMemberAvatar(
                     memberID: friend.id,
+                    hasProfilePhoto: friend.hasProfilePhoto,
                     profilePhotoVersion: friend.profilePhotoVersion,
                     size: 34
                 )
@@ -1734,12 +1753,14 @@ private struct DutyComparisonView: View {
 
 private struct CalendarMemberAvatar: View {
     let memberID: MemberID?
+    let hasProfilePhoto: Bool
     let profilePhotoVersion: Int64
     let size: CGFloat
 
     var body: some View {
         DPProfileAvatar(
             memberID: memberID,
+            hasProfilePhoto: hasProfilePhoto,
             profilePhotoVersion: profilePhotoVersion,
             size: size
         )
@@ -1822,10 +1843,26 @@ private struct CalendarDayCell: View {
         .overlay(alignment: .bottom) { Rectangle().fill(cellBorder).frame(height: 0.5) }
         .overlay(Rectangle().stroke(focusBorder, lineWidth: highlighted || isToday ? 2 : 0))
         .contentShape(Rectangle())
+        // The day gesture belongs to the whole cell. Without an explicit accessibility
+        // boundary, SwiftUI propagates this label and button trait to every nested schedule,
+        // comparison chip and Todo button, producing duplicate date targets whose small
+        // subframes are often reported as non-hittable by VoiceOver and UI automation.
+        .accessibilityElement(children: .ignore)
         .accessibilityLabel(day.cell.date.rawValue)
+        .accessibilityIdentifier("calendar.day.\(day.cell.date.rawValue)")
         // A day that opens nothing carries no tap gesture, so it must not offer itself
         // as a button either.
         .accessibilityAddTraits(opensDetail ? .isButton : [])
+        // The visual Todo buttons remain nested in the cell. Re-expose them as custom
+        // actions after collapsing the cell so VoiceOver keeps both the day action and
+        // direct Todo access without recreating duplicate date elements.
+        .accessibilityActions {
+            if !hidesDetails {
+                ForEach(day.todos.prefix(CalendarVisualLogic.maximumTodosPerCell), id: \.id) { todo in
+                    Button(todo.title) { openTodo(todo) }
+                }
+            }
+        }
     }
 
     private var cellBackground: Color {
@@ -1904,10 +1941,20 @@ private struct CalendarDayCell: View {
     /// The title and everything that qualifies it run as one flow of text, so the counter
     /// and the details mark stay with the last word instead of claiming a line of their own.
     private func scheduleTitleLine(_ schedule: ScheduleDTO) -> Text {
-        var line = Text(verbatim: schedule.content)
-        if schedule.totalDays > 1 {
-            line = line + Text(verbatim: "(\(schedule.daysFromStart)/\(schedule.totalDays))")
-        }
+        let time = CalendarVisualLogic.calendarScheduleTimeText(
+            start: schedule.startDateTime,
+            end: schedule.endDateTime,
+            daysFromStart: schedule.daysFromStart,
+            totalDays: schedule.totalDays
+        )
+        let dayCounter = schedule.totalDays > 1
+            ? "(\(schedule.daysFromStart)/\(schedule.totalDays))"
+            : nil
+        var line = Text(verbatim: CalendarVisualLogic.scheduleTitleText(
+            content: schedule.content,
+            time: time,
+            dayCounter: dayCounter
+        ))
         if !schedule.description.isEmpty || !schedule.attachments.isEmpty {
             line = line + Text(verbatim: " ") + Text(Image(systemName: "text.bubble"))
         }
@@ -1932,6 +1979,7 @@ private struct CalendarDayCell: View {
         HStack(spacing: 2) {
             CalendarMemberAvatar(
                 memberID: item.memberID,
+                hasProfilePhoto: item.hasProfilePhoto,
                 profilePhotoVersion: item.profilePhotoVersion,
                 size: 12
             )
@@ -2275,21 +2323,12 @@ private struct DayDetailView: View {
     private func scheduleCard(_ schedule: ScheduleDTO) -> some View {
         VStack(alignment: .leading, spacing: DPSpacing.small) {
             HStack(alignment: .top, spacing: DPSpacing.small) {
-                VStack(alignment: .leading, spacing: 3) {
-                    HStack(spacing: DPSpacing.extraSmall) {
-                        Text(schedule.content)
-                            .font(DPFont.light(size: CalendarTypography.detailTitle, relativeTo: .body))
-                            .foregroundStyle(DPColor.textPrimary)
-                        if schedule.totalDays > 1 {
-                            Text("(\(schedule.daysFromStart)/\(schedule.totalDays))")
-                                .font(DPTypography.caption)
-                                .foregroundStyle(DPColor.accent)
-                        }
-                    }
-                    if let time = scheduleTime(schedule) {
-                        Text(time)
-                            .font(DPFont.light(size: CalendarTypography.detailMetadata, relativeTo: .subheadline))
-                            .foregroundStyle(DPColor.textSecondary)
+                HStack(spacing: DPSpacing.extraSmall) {
+                    scheduleTitleLine(schedule)
+                    if schedule.totalDays > 1 {
+                        Text("(\(schedule.daysFromStart)/\(schedule.totalDays))")
+                            .font(DPTypography.caption)
+                            .foregroundStyle(DPColor.accent)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -2352,6 +2391,18 @@ private struct DayDetailView: View {
             RoundedRectangle(cornerRadius: DPRadius.standard)
                 .stroke(DPColor.borderPrimary, lineWidth: 1)
         }
+    }
+
+    private func scheduleTitleLine(_ schedule: ScheduleDTO) -> Text {
+        var line = Text(verbatim: schedule.content)
+            .font(DPFont.light(size: CalendarTypography.detailTitle, relativeTo: .body))
+            .foregroundColor(DPColor.textPrimary)
+        if let time = scheduleTime(schedule) {
+            line = line + Text(verbatim: " \(time)")
+                .font(DPFont.light(size: CalendarTypography.detailMetadata, relativeTo: .subheadline))
+                .foregroundColor(DPColor.textSecondary)
+        }
+        return line
     }
 
     private func scheduleOverflowMenu(_ schedule: ScheduleDTO) -> some View {
@@ -2582,11 +2633,10 @@ private struct DayDetailView: View {
     }
 
     private func scheduleTime(_ schedule: ScheduleDTO) -> String? {
-        let start = String(schedule.startDateTime.rawValue.suffix(5))
-        let end = String(schedule.endDateTime.rawValue.suffix(5))
-        if start == "00:00", end == "00:00" { return nil }
-        if start == end || end == "00:00" { return "(\(start))" }
-        return "(\(start)~\(end))"
+        CalendarVisualLogic.scheduleListTimeText(
+            start: schedule.startDateTime,
+            end: schedule.endDateTime
+        )
     }
 
     private func visibilityKey(_ visibility: Visibility) -> String {

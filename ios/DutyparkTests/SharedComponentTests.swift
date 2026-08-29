@@ -34,6 +34,42 @@ struct SharedComponentTests {
     }
 
     @Test
+    func brandMarkExposesOneAccessibilityElementForItsCompoundContent() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark/Components/DPBrandChrome.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+        let brandMark = try #require(source.range(of: "struct DPBrandMark: View"))
+        let declaration = source[brandMark.lowerBound...]
+
+        #expect(declaration.contains(".accessibilityElement(children: .ignore)"))
+    }
+
+    @Test
+    func primaryTabIdentifierBelongsToTheActionableLabel() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark/App/RootTabView.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+        let primaryTabItem = try #require(source.range(of: "func primaryTabItem(_ tab: AppTab)"))
+        let declaration = source[primaryTabItem.lowerBound...]
+        let labelIdentifierContract = [
+            "Image(systemName: tab.systemImage)",
+            "            }",
+            "            .accessibilityIdentifier(tab.accessibilityIdentifier)"
+        ].joined(separator: "\n")
+        let imageIdentifierContract = [
+            "Image(systemName: tab.systemImage)",
+            "                .accessibilityIdentifier(tab.accessibilityIdentifier)"
+        ].joined(separator: "\n")
+
+        #expect(declaration.contains(labelIdentifierContract))
+        #expect(!declaration.contains(imageIdentifierContract))
+    }
+
+    @Test
     func dashboardHeaderChromeDoesNotUseTheSystemSharedBackground() {
         #expect(DPDashboardHeaderChrome.sharedBackgroundVisibility == SwiftUI.Visibility.hidden)
     }

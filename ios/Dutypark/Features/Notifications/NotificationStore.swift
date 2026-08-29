@@ -150,8 +150,9 @@ final class NotificationStore: ObservableObject {
         }
     }
 
-    func loadMore() async {
-        guard hasMore, !isLoadingMore else { return }
+    @discardableResult
+    func loadMore(emitsHaptic: Bool = true) async -> Bool {
+        guard hasMore, !isLoadingMore else { return false }
         isLoadingMore = true
         defer { isLoadingMore = false }
 
@@ -164,10 +165,14 @@ final class NotificationStore: ObservableObject {
             totalPages = result.totalPages
             loadFailed = false
             consecutiveFailures = 0
+            return true
         } catch {
             loadFailed = true
             consecutiveFailures += 1
-            haptics.emit(.error)
+            if emitsHaptic {
+                haptics.emit(.error)
+            }
+            return false
         }
     }
 

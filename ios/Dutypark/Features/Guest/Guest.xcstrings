@@ -573,6 +573,38 @@
         }
       }
     },
+    "guest.calendar.month.next": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next month"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다음 월"
+          }
+        }
+      }
+    },
+    "guest.calendar.month.previous": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Previous month"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이전 월"
+          }
+        }
+      }
+    },
     "guest.calendar.month.previousYear": {
       "localizations": {
         "en": {

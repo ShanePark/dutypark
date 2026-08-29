@@ -127,14 +127,6 @@ struct SettingsView: View {
                 SettingsLocalization.text(key)
             }
         }
-        .alert(SettingsLocalization.string("settings.push.permissionTitle"), isPresented: $push.showsPermissionPreprompt) {
-            Button(SettingsLocalization.string("settings.action.cancel"), role: .cancel) {}
-            Button(SettingsLocalization.string("settings.push.continue")) {
-                Task { await push.continuePermissionRequest() }
-            }
-        } message: {
-            SettingsLocalization.text("settings.push.permissionMessage")
-        }
         .alert(SettingsLocalization.string("settings.notice.title"), isPresented: aiConsentErrorBinding) {
             Button(SettingsLocalization.string("settings.action.confirm")) {
                 aiConsent.dismissError()
@@ -243,7 +235,7 @@ struct SettingsView: View {
                             .multilineTextAlignment(.leading)
                     }
                     Spacer(minLength: DPSpacing.small)
-                    SettingsSwitch(isOn: push.isEnabled)
+                    SettingsSwitch(isOn: push.isToggleOn)
                 }
                 .padding(.horizontal, DPSpacing.compact)
                 .frame(minHeight: 64)
@@ -251,10 +243,14 @@ struct SettingsView: View {
             }
             .buttonStyle(.plain)
             .disabled(push.authorizationStatus == .denied)
-            .accessibilityValue(SettingsLocalization.string(push.isEnabled ? "settings.accessibility.on" : "settings.accessibility.off"))
+            .accessibilityValue(SettingsLocalization.string(push.isToggleOn ? "settings.accessibility.on" : "settings.accessibility.off"))
             .accessibilityAddTraits(.isButton)
             if push.authorizationStatus == .denied {
                 Label(SettingsLocalization.string("settings.push.denied"), systemImage: "info.circle")
+                    .font(DPTypography.supporting)
+                    .foregroundStyle(DPColor.warning)
+            } else if push.registrationState == .unsupported {
+                Label(SettingsLocalization.string("settings.push.unavailable"), systemImage: "iphone.slash")
                     .font(DPTypography.supporting)
                     .foregroundStyle(DPColor.warning)
             } else if push.registrationState == .failed {
@@ -374,7 +370,11 @@ struct SettingsView: View {
 
     private var pushBinding: Binding<Bool> {
         Binding(
-            get: { push.isEnabled },
+            // Use the persisted preference for tap intent. `isToggleOn` is the
+            // effective display state and is off after a registration failure;
+            // using it here would make the first tap retry instead of disabling
+            // the failed setting.
+            get: { push.isUserPreferenceOn },
             set: { enabled in
                 if enabled {
                     push.requestPermission()
@@ -1280,7 +1280,7 @@ private struct AIScheduleConsentPolicyView: View {
     }
 }
 
-private struct DeepLinkedPolicyView: View {
+struct DeepLinkedPolicyView: View {
     let type: PolicyType
     @ObservedObject var model: SettingsViewModel
 

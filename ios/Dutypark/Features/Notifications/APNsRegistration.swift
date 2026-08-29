@@ -21,10 +21,16 @@ nonisolated enum APNsEnvironmentResolutionError: Error, Equatable {
 nonisolated enum APNsEnvironment {
     static var usesSandbox: Bool {
         get throws {
-            try usesSandbox(
+#if targetEnvironment(simulator)
+            // Simulator APNs registration belongs to the development environment,
+            // even when a Release simulator build has no usable provisioning profile.
+            return true
+#else
+            return try usesSandbox(
                 profileState: embeddedProvisioningProfileState(),
                 fallback: compileConfigurationUsesSandbox
             )
+#endif
         }
     }
 
@@ -53,7 +59,11 @@ nonisolated enum APNsEnvironment {
     }
 
     private static var compileConfigurationUsesSandbox: Bool {
-#if DEBUG
+#if targetEnvironment(simulator)
+        // Release simulator builds do not contain a signed provisioning profile,
+        // but any simulator APNs registration uses the development endpoint.
+        true
+#elseif DEBUG
         true
 #else
         false
@@ -137,6 +147,9 @@ enum APNsRegistrationState: Equatable {
     case registering
     case registered
     case failed
+    /// The current runtime cannot obtain an APNs token (for example, the iOS
+    /// Simulator). This is different from a registration failure on a real device.
+    case unsupported
 }
 
 @MainActor
@@ -200,14 +213,38 @@ final class APNsRegistrationManager: ObservableObject {
     @Published private(set) var isEnabled: Bool
     @Published var showsPermissionPreprompt = false
 
+    var isToggleOn: Bool {
+        guard authorizationStatus == .authorized || authorizationStatus == .provisional else {
+            return false
+        }
+        guard isEnabled else { return false }
+        // Keep the switch honest after APNs reports that this runtime cannot
+        // register. The stored preference remains enabled so a later retry (or
+        // a physical-device build) can try again without changing user intent.
+        return registrationState != .failed && registrationState != .unsupported
+    }
+
+    /// The user's persisted preference, used to decide what a tap should do.
+    /// This intentionally remains separate from `isToggleOn`: a failed
+    /// registration is displayed as off, but the user must still be able to tap
+    /// once to turn the preference off instead of being forced into a retry.
+    var isUserPreferenceOn: Bool {
+        guard authorizationStatus == .authorized || authorizationStatus == .provisional else {
+            return false
+        }
+        return isEnabled
+    }
+
     private static let storedTokenKey = "dutypark.apns.device-token"
     private static let enabledPreferenceKey = "dp-push-enabled"
+    private static let permissionPrepromptShownKey = "dp-push-permission-preprompt-shown"
     private let api: any APNsRegistrationAPIProtocol
     private let notificationCenter: any NotificationAuthorizationCenter
     private let remoteNotificationRegistrar: any RemoteNotificationRegistrar
     private let defaults: UserDefaults
     private let apiOperationLock = APNsRegistrationAPIOperationLock()
     private var hasRequestedRemoteRegistration = false
+    private var hasShownPermissionPreprompt = false
     private var registrationAttempt = 0
     private var pendingDeviceToken: String?
 
@@ -221,6 +258,7 @@ final class APNsRegistrationManager: ObservableObject {
         self.notificationCenter = notificationCenter
         self.remoteNotificationRegistrar = remoteNotificationRegistrar
         self.defaults = defaults
+        hasShownPermissionPreprompt = defaults.bool(forKey: Self.permissionPrepromptShownKey)
         isEnabled = defaults.object(forKey: Self.enabledPreferenceKey) == nil
             ? true
             : defaults.bool(forKey: Self.enabledPreferenceKey)
@@ -229,6 +267,7 @@ final class APNsRegistrationManager: ObservableObject {
     /// Displays Dutypark's explanation before iOS presents its one-time permission prompt.
     func requestPermission() {
         setEnabled(true)
+        markPermissionPrepromptAsShown()
         showsPermissionPreprompt = true
     }
 
@@ -245,7 +284,7 @@ final class APNsRegistrationManager: ObservableObject {
         }
     }
 
-    /// Call on sign-in and foreground resume. It never asks for permission by itself.
+    /// Call on foreground resume. It never asks for permission by itself.
     func resumeRegistration() async {
 #if DEBUG
         if ProcessInfo.processInfo.arguments.contains("-ui-testing-authenticated") {
@@ -259,9 +298,31 @@ final class APNsRegistrationManager: ObservableObject {
         }
     }
 
-    /// Called from the first authenticated root without presenting the one-time system prompt.
+    /// Called once when the first authenticated root becomes available.
     func activateForAuthenticatedSession() async {
-        await resumeRegistration()
+#if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-ui-testing-authenticated") {
+            return
+        }
+#endif
+        await refreshAuthorizationStatus()
+        guard isEnabled else { return }
+
+        if authorizationStatus == .notDetermined {
+            guard !hasShownPermissionPreprompt else { return }
+            markPermissionPrepromptAsShown()
+            showsPermissionPreprompt = true
+            return
+        }
+
+        if authorizationStatus == .authorized || authorizationStatus == .provisional {
+            registerWithSystemIfNeeded()
+        }
+    }
+
+    private func markPermissionPrepromptAsShown() {
+        hasShownPermissionPreprompt = true
+        defaults.set(true, forKey: Self.permissionPrepromptShownKey)
     }
 
     private func registerWithSystemIfNeeded() {
@@ -365,8 +426,18 @@ final class APNsRegistrationManager: ObservableObject {
     }
 
     func didFailToRegisterForRemoteNotifications() {
+        guard isEnabled, hasRequestedRemoteRegistration else { return }
         hasRequestedRemoteRegistration = false
+#if targetEnvironment(simulator)
+        // The simulator may have notification authorization but still cannot
+        // obtain a usable APNs device token in this runtime. Surface that as an
+        // environment limitation instead of an account/server failure.
+        registrationState = .unsupported
+#else
+        // Keep real-device failures visible so users can retry and support can
+        // diagnose provisioning, connectivity, or APNs issues.
         registrationState = .failed
+#endif
     }
 
     func refreshAuthorizationStatus() async {
@@ -385,10 +456,12 @@ final class NotificationPushCenter: ObservableObject {
     @Published private(set) var pendingNotificationID: NotificationID?
 
     func receive(userInfo: [AnyHashable: Any]) {
-        pendingNotificationID = Self.notificationID(from: userInfo)
+        guard let notificationID = Self.notificationID(from: userInfo) else { return }
+        pendingNotificationID = notificationID
     }
 
     func receive(notificationID: NotificationID?) {
+        guard let notificationID else { return }
         pendingNotificationID = notificationID
     }
 

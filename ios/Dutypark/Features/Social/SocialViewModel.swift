@@ -417,7 +417,7 @@ final class SocialViewModel: ObservableObject {
     }
 
     /// Well past the ~6 pinned cards an iPhone 16 Pro viewport shows at once.
-    static let uiTestingOverflowPinnedCount = 18
+    static let uiTestingOverflowPinnedCount = 32
 
     /// Seeds more pinned friends than fit on screen so the `LazyVStack` stops
     /// publishing drop-target frames for the rows outside the viewport.

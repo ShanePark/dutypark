@@ -92,6 +92,7 @@ struct TeamView: View {
                 nextYearLabel: Text("team.view.calendar.nextYear", tableName: "Team"),
                 currentMonthTitle: Text("team.view.calendar.thisMonth", tableName: "Team"),
                 cancelTitle: teamLocalized("team.common.cancel"),
+                identifierPrefix: "team.calendar.monthPicker",
                 onSelect: { year, month in
                     monthPickerPresented = false
                     Task { await viewModel.goTo(year: year, month: month) }
@@ -262,14 +263,9 @@ struct TeamView: View {
 
     private var monthHeader: some View {
         HStack(spacing: 0) {
-            Button {
+            DPMonthArrowButton(direction: .previous, label: teamLocalized("team.view.calendar.previousMonth"), identifier: "team.calendar.month.previous") {
                 Task { await viewModel.previousMonth() }
-            } label: {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 13, weight: .bold))
-                    .frame(width: 36, height: DPSize.minimumTouchTarget)
             }
-            .accessibilityLabel(Text("team.view.calendar.month", tableName: "Team"))
             .disabled(viewModel.isLoading)
 
             Button {
@@ -286,16 +282,15 @@ struct TeamView: View {
                 .frame(minHeight: DPSize.minimumTouchTarget)
             }
             .accessibilityLabel(Text("team.view.calendar.chooseMonth", tableName: "Team"))
+            .accessibilityValue(
+                Text(verbatim: "\(viewModel.year)-\(String(format: "%02d", viewModel.month))")
+            )
+            .accessibilityIdentifier("team.calendar.month.display")
             .disabled(viewModel.isLoading)
 
-            Button {
+            DPMonthArrowButton(direction: .next, label: teamLocalized("team.view.calendar.nextMonth"), identifier: "team.calendar.month.next") {
                 Task { await viewModel.nextMonth() }
-            } label: {
-                Image(systemName: "chevron.right")
-                    .font(.system(size: 13, weight: .bold))
-                    .frame(width: 36, height: DPSize.minimumTouchTarget)
             }
-            .accessibilityLabel(Text("team.view.calendar.month", tableName: "Team"))
             .disabled(viewModel.isLoading)
         }
     }
@@ -550,6 +545,7 @@ private struct TeamMemberAvatar: View {
     var body: some View {
         DPProfileAvatar(
             memberID: member.id,
+            hasProfilePhoto: member.hasProfilePhoto,
             profilePhotoVersion: member.profilePhotoVersion,
             size: size
         )
