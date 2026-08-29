@@ -1942,6 +1942,14 @@ private struct CalendarDayCell: View {
     /// and the details mark stay with the last word instead of claiming a line of their own.
     private func scheduleTitleLine(_ schedule: ScheduleDTO) -> Text {
         var line = Text(verbatim: schedule.content)
+        if let time = CalendarVisualLogic.calendarScheduleTimeText(
+            start: schedule.startDateTime,
+            end: schedule.endDateTime,
+            daysFromStart: schedule.daysFromStart,
+            totalDays: schedule.totalDays
+        ) {
+            line = line + Text(verbatim: time)
+        }
         if schedule.totalDays > 1 {
             line = line + Text(verbatim: "(\(schedule.daysFromStart)/\(schedule.totalDays))")
         }
@@ -2620,11 +2628,10 @@ private struct DayDetailView: View {
     }
 
     private func scheduleTime(_ schedule: ScheduleDTO) -> String? {
-        let start = String(schedule.startDateTime.rawValue.suffix(5))
-        let end = String(schedule.endDateTime.rawValue.suffix(5))
-        if start == "00:00", end == "00:00" { return nil }
-        if start == end || end == "00:00" { return "(\(start))" }
-        return "(\(start)~\(end))"
+        CalendarVisualLogic.scheduleListTimeText(
+            start: schedule.startDateTime,
+            end: schedule.endDateTime
+        )
     }
 
     private func visibilityKey(_ visibility: Visibility) -> String {

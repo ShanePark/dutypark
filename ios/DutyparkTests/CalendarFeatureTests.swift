@@ -43,6 +43,117 @@ final class CalendarFeatureTests: XCTestCase {
         )
     }
 
+    func testCalendarScheduleTimeMatchesTheWebCalendarPolicy() {
+        let start = LocalDateTimeValue(rawValue: "2026-08-20T12:40:00")
+        let end = LocalDateTimeValue(rawValue: "2026-08-20T13:30:00")
+
+        XCTAssertEqual(
+            CalendarVisualLogic.calendarScheduleTimeText(
+                start: start,
+                end: end,
+                daysFromStart: 1,
+                totalDays: 1
+            ),
+            "(12:40~13:30)"
+        )
+        XCTAssertEqual(
+            CalendarVisualLogic.calendarScheduleTimeText(
+                start: start,
+                end: start,
+                daysFromStart: 1,
+                totalDays: 1
+            ),
+            "(12:40)"
+        )
+        XCTAssertEqual(
+            CalendarVisualLogic.calendarScheduleTimeText(
+                start: start,
+                end: end,
+                daysFromStart: 1,
+                totalDays: 3
+            ),
+            "(12:40)"
+        )
+        XCTAssertNil(
+            CalendarVisualLogic.calendarScheduleTimeText(
+                start: start,
+                end: end,
+                daysFromStart: 2,
+                totalDays: 3
+            )
+        )
+        XCTAssertEqual(
+            CalendarVisualLogic.calendarScheduleTimeText(
+                start: start,
+                end: end,
+                daysFromStart: 3,
+                totalDays: 3
+            ),
+            "(~13:30)"
+        )
+        XCTAssertEqual(
+            CalendarVisualLogic.calendarScheduleTimeText(
+                start: LocalDateTimeValue(rawValue: "2026-08-20T00:00:00"),
+                end: end,
+                daysFromStart: 1,
+                totalDays: 1
+            ),
+            "(~13:30)"
+        )
+        XCTAssertNil(
+            CalendarVisualLogic.calendarScheduleTimeText(
+                start: LocalDateTimeValue(rawValue: "2026-08-20T00:00:00"),
+                end: LocalDateTimeValue(rawValue: "2026-08-20T00:00:00"),
+                daysFromStart: 1,
+                totalDays: 1
+            )
+        )
+    }
+
+    func testScheduleListTimeUsesHoursAndMinutesAndHidesMidnightSentinels() {
+        XCTAssertEqual(
+            CalendarVisualLogic.scheduleListTimeText(
+                start: LocalDateTimeValue(rawValue: "2026-08-20T12:40:00"),
+                end: LocalDateTimeValue(rawValue: "2026-08-20T13:30:00")
+            ),
+            "(12:40~13:30)"
+        )
+        XCTAssertEqual(
+            CalendarVisualLogic.scheduleListTimeText(
+                start: LocalDateTimeValue(rawValue: "2026-08-20T09:30:00.123456"),
+                end: LocalDateTimeValue(rawValue: "2026-08-20T10:45:00.654321")
+            ),
+            "(09:30~10:45)"
+        )
+        XCTAssertEqual(
+            CalendarVisualLogic.scheduleListTimeText(
+                start: LocalDateTimeValue(rawValue: "2026-08-20T12:40:00"),
+                end: LocalDateTimeValue(rawValue: "2026-08-20T12:40:00")
+            ),
+            "(12:40)"
+        )
+        XCTAssertEqual(
+            CalendarVisualLogic.scheduleListTimeText(
+                start: LocalDateTimeValue(rawValue: "2026-08-20T12:40:00"),
+                end: LocalDateTimeValue(rawValue: "2026-08-20T00:00:00")
+            ),
+            "(12:40)"
+        )
+        XCTAssertEqual(
+            CalendarVisualLogic.scheduleListTimeText(
+                start: LocalDateTimeValue(rawValue: "2026-08-20T00:00:00"),
+                end: LocalDateTimeValue(rawValue: "2026-08-20T13:30:00")
+            ),
+            "(00:00~13:30)"
+        )
+        XCTAssertNil(
+            CalendarVisualLogic.scheduleListTimeText(
+                start: LocalDateTimeValue(rawValue: "2026-08-20T00:00:00"),
+                end: LocalDateTimeValue(rawValue: "2026-08-20T00:00:00")
+            )
+        )
+    }
+
     /// The pinned D-day shares the day-number row, so only the counter fits. Adding the
     /// title pushed the number out of the single line, which is the one part the pin is
     /// for; the title already appears as a bubble on the D-day's own date.

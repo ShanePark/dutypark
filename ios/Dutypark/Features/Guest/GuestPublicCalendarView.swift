@@ -495,8 +495,8 @@ private struct GuestCalendarDayCell: View {
             if let holiday = day.holidays.first {
                 compactText(holiday.dateName, color: DPColor.danger)
             }
-            ForEach(day.schedules.prefix(3), id: \.id) {
-                compactText($0.content, color: DPColor.accent)
+            ForEach(day.schedules.prefix(3), id: \.id) { schedule in
+                compactText(guestCalendarScheduleText(schedule), color: DPColor.accent)
             }
             ForEach(day.dDays.prefix(1), id: \.id) {
                 compactText($0.title, color: DPColor.warning)
@@ -630,9 +630,11 @@ private struct GuestCalendarDayDetailView: View {
                 .font(DPTypography.body)
                 .foregroundStyle(DPColor.textPrimary)
 
-            Text(guestScheduleTime(schedule))
-                .font(DPTypography.caption)
-                .foregroundStyle(DPColor.textMuted)
+            if let time = guestScheduleTime(schedule) {
+                Text(time)
+                    .font(DPTypography.caption)
+                    .foregroundStyle(DPColor.textMuted)
+            }
 
             if !schedule.description.isEmpty {
                 Divider().overlay(DPColor.borderPrimary)
@@ -706,10 +708,27 @@ private struct GuestScheduleAttachments: View {
     }
 }
 
-private func guestScheduleTime(_ schedule: ScheduleDTO) -> String {
-    let start = schedule.startDateTime.rawValue.replacingOccurrences(of: "T", with: " ")
-    let end = schedule.endDateTime.rawValue.replacingOccurrences(of: "T", with: " ")
-    return "\(start) – \(end)"
+private func guestCalendarScheduleText(_ schedule: ScheduleDTO) -> String {
+    var text = schedule.content
+    if let time = CalendarVisualLogic.calendarScheduleTimeText(
+        start: schedule.startDateTime,
+        end: schedule.endDateTime,
+        daysFromStart: schedule.daysFromStart,
+        totalDays: schedule.totalDays
+    ) {
+        text += time
+    }
+    if schedule.totalDays > 1 {
+        text += "(\(schedule.daysFromStart)/\(schedule.totalDays))"
+    }
+    return text
+}
+
+private func guestScheduleTime(_ schedule: ScheduleDTO) -> String? {
+    CalendarVisualLogic.scheduleListTimeText(
+        start: schedule.startDateTime,
+        end: schedule.endDateTime
+    )
 }
 
 private func guestDDayLabel(_ item: DDayDTO) -> String {
