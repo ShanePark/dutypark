@@ -1,5 +1,8 @@
 package com.tistory.shanepark.dutypark.schedule.timeparsing.service
 
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.read.ListAppender
 import com.tistory.shanepark.dutypark.consent.service.AiScheduleParsingConsentService
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
@@ -8,6 +11,7 @@ import com.tistory.shanepark.dutypark.schedule.domain.enums.ParsingTimeStatus.PA
 import com.tistory.shanepark.dutypark.schedule.domain.enums.ParsingTimeStatus.WAIT
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.Assertions.assertFalse
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -23,6 +27,7 @@ import org.mockito.kotlin.never
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import org.slf4j.LoggerFactory
 import org.springframework.test.util.ReflectionTestUtils
 import org.springframework.transaction.support.TransactionSynchronizationManager
 import java.time.LocalDateTime
@@ -171,6 +176,38 @@ class ScheduleTimeParsingQueueManagerTest {
 
         assertEquals(0, queueManager.queueSize())
         verify(scheduleRepository, never()).findAllByParsingTimeStatus(WAIT)
+    }
+
+    @Test
+    fun `init never logs API key fragments`() {
+        queueManager.shutdown()
+        val secret = "abcdSECRETwxyz"
+        queueManager = ScheduleTimeParsingQueueManager(
+            worker = worker,
+            scheduleRepository = scheduleRepository,
+            aiScheduleParsingConsentService = aiScheduleParsingConsentService,
+            geminiApiKey = secret,
+            rpmLimit = 30,
+            rpdLimit = 14400,
+        )
+        whenever(scheduleRepository.findAllByParsingTimeStatus(WAIT)).thenReturn(emptyList())
+        val logger = LoggerFactory.getLogger(ScheduleTimeParsingQueueManager::class.java) as Logger
+        val appender = ListAppender<ILoggingEvent>().apply { start() }
+        logger.addAppender(appender)
+
+        try {
+            queueManager.init()
+        } finally {
+            logger.detachAppender(appender)
+            appender.stop()
+        }
+
+        val messages = appender.list.map(ILoggingEvent::getFormattedMessage)
+        assertFalse(messages.any { message ->
+            message.contains(secret) ||
+                message.contains(secret.take(4)) ||
+                message.contains(secret.takeLast(4))
+        })
     }
 
     @Test
