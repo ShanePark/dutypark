@@ -1,0 +1,316 @@
+# Dutypark iOS App Store 심사 증분·최종 게이트 보고서
+
+- 기준일: 2026-08-29 (KST)
+- 판정: **HOLD — 제출하지 않음**
+- 코드 기준 HEAD: committed `3ef00cba`; 이 문서만 담는 후속 docs commit은 코드 기준에 포함하지 않는다. 이 커밋 해시는 검증한 코드 상태를 식별하기 위한 기준이며 최종 배포 산출물 자체를 증명하지 않는다.
+- 목적: [2026-08-28 보고서](./APP_STORE_REVIEW_AUDIT_2026-08-28.md)의 반복이 아닌, 그 이후 변경분과 제출 직전의 미검증 게이트를 기록한다.
+- 비밀값: 비밀번호, private key, client secret, webhook token, 실제 S2S URL은 이 문서에 기록하지 않는다. 심사용 계정은 App Store Connect의 `App Review Information → Sign-in required → Username / Password` 필드에서만 제공한다.
+
+## 1. 최종 판정
+
+코드 변경에 대한 자동 검증은 PASS했지만, 아래 외부·실기기·배포 산출물 게이트가 닫히지 않았고 사업자 개인정보 보존 결정도 남아 있으므로 제출 판정은 **HOLD**다.
+
+| 제출 게이트 | 현재 판단 | 제출 전 조건 |
+|---|---|---|
+| Slack 개인정보 제거 | 수정 반영됨 | Slack focused 21 PASS. 전체 Release/실제 webhook 배포 확인은 별도 게이트 |
+| UGC 텍스트 필터 | 클라이언트·일부 서버 보강 반영됨 | backend/iOS 관련 focused·full 검증 PASS. 웹 정규화·private D-Day 예외는 반영됐고 cold-start/fetch fail-open, 모든 공개/공유 쓰기 경로·첨부·신고 흐름은 별도 게이트 |
+| 문의·신고 탈퇴 후 보존 | 사업자 결정 필요 | 보존기간·익명화·법적 보존 사유 및 탈퇴 UI 고지 확정 |
+| App Store 스크린샷 | 현 앱과 불일치 가능 | 최종 빌드에서 한국어·영어 세트 재촬영·재합성 |
+| 배포 IPA | 배포 서명·최종 entitlement 미확정 | Release Archive/export, 서명, 운영 API, APNs production 확인 |
+| 실제 iPhone E2E | 미실행 또는 일부 미검증 | APNs, OAuth, 카메라, 파일 picker, 파괴적 흐름 완료 |
+| App Store Connect | 제출 전 입력 대기 | privacy labels, Review Notes, demo account, backend 준비 |
+| 한국 Apple Services ID / S2S | 조건부 확인 필요 | 웹 Sign in with Apple을 운영하면 연결된 primary App ID에 S2S endpoint 등록·처리 확인 |
+| 연령 등급 | 최종 questionnaire 미작성 | App Store Connect 질문에 실제 기능 기준으로 답변 |
+
+Apple은 앱 완성도, 개인정보처리방침, 계정 삭제, UGC, 메타데이터를 실제 빌드·서버 동작과 함께 심사한다. 그러므로 시뮬레이터의 일부 성공이나 코드에 기능이 존재한다는 사실만으로 승인 가능으로 올리지 않는다.
+
+## 2. 2026-08-29 검증 결과
+
+이번 변경분에 대해 자동 검증은 다음과 같이 완료됐다. 아래 PASS는 실행한 테스트와 산출물에만 적용하며, 외부 서비스·실기기·배포 심사 게이트를 대신하지 않는다.
+
+| 범위 | 결과 | 비고 |
+|---|---|---|
+| iOS UI baseline | 91개 중 89 PASS, `tab.more` 및 알림 닫기 selector lookup failures 2건; 앱 crash 0, runner/simulator 오류 0 | geometry 문제가 아니라 selector lookup 실패였다. 후속 `7788a8f3`에서 selector fallback/accessibility id를 수정하고 해당 두 테스트를 각각 RED→GREEN focused PASS. 나머지 89개 전체 재실행은 생략 |
+| UI 안정화 1 | `ios/DutyparkUITests/AccountDeletionParityUITests.swift` | RED→GREEN focused PASS |
+| UI 안정화 2 | `ios/DutyparkUITests/NotificationConfirmationVisualUITests.swift` | RED→GREEN focused PASS |
+| iOS `DutyparkTests` 동일 실행 요약 | 1,147 total: 1,146 PASS / 1 SKIP / 0 FAIL; device-expanded 결과 1,171 PASS | 1,147은 identifier total이고 1,171은 같은 테스트 실행에서 동적으로 확장된 device case의 pass event 수이며 별도 suite/run이나 1,147에 더하는 수치가 아니다. SKIP 1건은 `OfflineSessionStore` first-unlock simulator file-protection을 시뮬레이터에서 재현할 수 없어 제외 |
+| Release simulator build | PASS | exact `iPhone 13 mini`, iOS 26.5 |
+| Release simulator install/launch | PASS | 임시 실행 캡처: `/private/tmp/dutypark-release-latest-20260829.png` (장기 보존 증거·제출물로 사용하지 않음) |
+| backend full Gradle | 1,829 total; 1,808 PASS / 21 SKIP / 0 FAIL | skip 사유는 개별 Gradle 결과에서 확인 |
+| Slack privacy focused | 21 PASS | 문의·신고·generic argument dump·예외 payload 최소화 검증 |
+| web focused/full | 31 focused PASS / 695 full PASS | type-check PASS, build PASS |
+| App Store screenshot compose/extract scripts | PASS | 파일·크기·alpha·manifest 검증은 PASS. 실제 최신 앱 재촬영은 아래 UI 불일치로 미완료 |
+
+## 3. 이번 점검의 범위와 근거
+
+### 점검 범위
+
+- 시뮬레이터 기준: `iPhone 13 mini`, iOS 26.5, Release 1.0.0 (1) — 코드 HEAD `3ef00cba` 기준의 8/29 자동 검증 결과는 2절에 기록하고, 외부·실기기·배포 검증은 별도로 남긴다.
+- iOS 코드: `ios/Dutypark/` 및 `ios/DutyparkTests/`
+- 백엔드 개인정보·인증·UGC 코드: `src/main/kotlin/`, `src/main/resources/db/migration/v2/`, `src/test/kotlin/`
+- App Store 산출물: `docs/app-store/raw/{ko,en}/`, `docs/app-store/final/{ko,en}/`, `docs/app-store/manifests/{ko,en}.json`
+- 이전 결과와 미실행 목록은 [2026-08-28 보고서](./APP_STORE_REVIEW_AUDIT_2026-08-28.md)를 기준으로 한다. 이 문서는 8/29 변경과 제출 차단 사유만 갱신한다.
+
+### Apple 공식 기준
+
+- [App Review Guidelines](https://developer.apple.com/app-store/review/guidelines/)
+- [Offering account deletion in your app](https://developer.apple.com/support/offering-account-deletion-in-your-app/)
+- [App Privacy Details](https://developer.apple.com/app-store/app-privacy-details/)
+- [User Privacy and Data Use / ATT](https://developer.apple.com/app-store/user-privacy-and-data-use/)
+- [Third-party SDK requirements](https://developer.apple.com/support/third-party-SDK-requirements/)
+- [Protected-resource permission guidance](https://developer.apple.com/documentation/uikit/requesting-access-to-protected-resources)
+
+## 4. 8/29 증분 변경사항
+
+### 4.1 Slack 운영 알림 개인정보 최소화
+
+이전 구현은 문의·신고·일반 예외 알림에 사용자 입력, 이름, ID, 이메일, IP, 요청 본문 또는 stack trace가 섞일 수 있었다. 현재 작업 트리에는 다음 변경이 반영되어 있다.
+
+| 변경 | 근거 경로 | 의도 | 검증 |
+|---|---|---|---|
+| `SlackEvent`에서 subtitle/body/footnote 제거, headline/chips만 운영 enum·고정문구로 제한 | `src/main/kotlin/com/tistory/shanepark/dutypark/common/slack/SlackEvent.kt` | 사용자·record ID가 공통 payload에 들어가지 않게 함 | **Slack focused PASS (21/21)** |
+| Slack 렌더러가 사용자 본문·각주를 만들지 않도록 변경 | `src/main/kotlin/com/tistory/shanepark/dutypark/common/slack/notifier/SlackEventNotifier.kt` | 외부 채널 전송 데이터 최소화 | **Slack focused PASS (21/21)** |
+| 문의 알림을 `New inquiry`와 `GUEST`/`MEMBER`만 전송 | `src/main/kotlin/com/tistory/shanepark/dutypark/inquiry/service/InquirySlackNotifier.kt` | 이메일·IP·제목·본문·member ID 제외 | **Slack focused PASS (21/21)** |
+| 신고 알림을 사유/대상 type/중복·차단 enum만 전송 | `src/main/kotlin/com/tistory/shanepark/dutypark/report/service/ReportSlackNotifier.kt` | 신고자·피신고자 이름, 대상 ID, 상세내용, snapshot 제외 | **Slack focused PASS (21/21)** |
+| 예외 알림을 예외 클래스명만 전송하고 요청 본문·URL·IP·User-Agent·stack trace 제거 | `src/main/kotlin/com/tistory/shanepark/dutypark/common/slack/advice/ErrorDetectAdvisor.kt` | 사용자 입력과 인증·네트워크 정보를 운영 채널로 보내지 않음 | **Slack focused PASS (21/21)** |
+| `@SlackNotification`의 method argument dump 무시 및 실패 로그에서도 exception message 제외 | `src/main/kotlin/com/tistory/shanepark/dutypark/common/slack/aspect/SlackNotificationAspect.kt` | DTO·credential·사용자 문자의 우발적 전송 방지 | **Slack focused PASS (21/21)** |
+
+추가로 전수 확인할 잔여 Slack sink:
+
+- `src/main/kotlin/com/tistory/shanepark/dutypark/schedule/timeparsing/service/ScheduleTimeParsingWorker.kt`는 일정 ID와 실패 종류를 보낸다. 사용자 원문은 아니지만 일정 ID가 개인 데이터로 연결될 수 있는지 판단하고, 필요하면 pseudonymous ID 또는 전송 중단을 결정한다. 이 sink의 배포 설정 확인은 아직 미완료다.
+- `src/main/kotlin/com/tistory/shanepark/dutypark/common/listener/ApplicationStartupShutdownListener.kt`는 branch/commit 상태 알림만 보낸다. 개인정보가 없음을 최종 payload test에서 확인한다.
+- Slack을 운영 채널로 계속 사용한다면 개인정보처리방침의 제3자 처리자, 목적, 접근자, 보존·삭제 정책과 App Store Connect Privacy Details를 실제 payload에 맞춰 갱신한다. enum-only 변경의 focused test는 PASS했지만, 배포 IPA에 포함되는지와 실제 운영 webhook 설정은 별도 제출 게이트로 남아 있다.
+
+### 4.2 UGC 텍스트 필터 보강
+
+Apple [App Review Guidelines 1.2](https://developer.apple.com/app-store/review/guidelines/)는 UGC 서비스에 게시 전 부적절한 내용 필터링 수단, 신고·신속한 대응, 사용자 차단, 공개 연락처를 요구한다. 현재 작업 트리의 증분은 다음과 같다.
+
+| 변경 | 근거 경로 | 의도 | 검증 |
+|---|---|---|---|
+| 캐시가 없거나 오프라인이어도 iOS 번들 사본 또는 emergency fallback을 사용 | `ios/Dutypark/Core/ContentFilter/ContentFilterStore.swift`, `ios/Dutypark/Core/ContentFilter/banned-words.json` | iOS cold/offline launch에서 fail-open 되지 않음 | **관련 iOS focused/unit 검증 PASS** |
+| 캘린더 입력을 client filter로 검사하고, D-Day는 공개일 때만 검사(private는 허용) | `ios/Dutypark/Features/Calendar/CalendarViewModel.swift` | 사용자 입력 직전 안내와 오류 haptic; private D-Day는 저장 허용 | **관련 iOS focused/unit 검증 PASS** |
+| Todo, 팀, 프로필/회원가입 입력을 client filter로 검사 | `ios/Dutypark/Features/Todo/TodoViewModel.swift`; `ios/Dutypark/Features/Team/TeamViewModel.swift`; `ios/Dutypark/Features/Settings/SettingsViewModel.swift`; `ios/Dutypark/Features/Auth/SsoSignupView.swift` | 주요 공개/공유 문자열의 일관된 UX | **관련 iOS focused/unit 검증 PASS** |
+| API가 동일 정규화·substring matching을 제공하고 공개 D-Day 및 근무유형/기본 근무유형 mutation을 서버에서 검증 | `src/main/kotlin/com/tistory/shanepark/dutypark/publiccontent/service/PublicContentService.kt`; `src/main/kotlin/com/tistory/shanepark/dutypark/member/service/DDayService.kt`; `src/main/kotlin/com/tistory/shanepark/dutypark/duty/service/DutyTypeService.kt`; `src/main/kotlin/com/tistory/shanepark/dutypark/team/service/TeamService.kt` | client preflight 우회 방지; private D-Day는 서버 검증 대상에서 제외 | **관련 backend focused/full 검증 PASS** |
+
+정규화 계약은 backend와 iOS에서 code point를 기준으로 동일하게 맞춰져 있다. 입력과 목록 항목 모두 NFKC 정규화와 lowercase를 거친 뒤 Unicode letter 및 decimal digit(`Nd`)만 남기고 substring으로 비교한다. iOS는 Unicode scalar general category의 `L*`와 decimal number를 사용하고, backend는 code point 기반 letter/digit 판정을 사용한다. D-Day는 공개 항목만 이 서버·클라이언트 검사를 적용하며 private D-Day는 허용한다. 근무유형과 팀 기본 근무유형은 팀에 공유되는 이름이므로 별도의 서버 mutation 검증 대상이다.
+
+웹도 NFKC·lowercase·Unicode letter 및 decimal digit(`Nd`) 정규화와 private D-Day 예외를 반영 완료했다. 남은 웹 잔여 위험은 cold start에서 캐시가 없거나 fetch가 실패하면 빈 목록으로 남아 client check가 fail-open되는 점이다. 또한 서버 enforcement는 공개 D-Day와 근무유형/기본 근무유형 경계에 한정되어 Schedule/Todo의 모든 서버 mutation을 덮는다고 볼 수 없다. 웹 fail-open 해소 또는 모든 공유 mutation의 서버 강제는 UGC 제출 게이트의 독립 잔여 위험이다.
+
+세 런타임은 같은 NFKC·Unicode letter/decimal digit 규칙을 구현하지만 contextual lowercase가 그리스어 final sigma 같은 문자에서 다른 결과를 낼 수 있다. 현재 46개 영어·한국어 목록에는 즉시 영향이 없지만, 새 script를 추가할 때 cross-runtime fixture/parity test를 추가하는 것을 잔여 게이트로 남긴다.
+
+자동 검증으로 확인된 현재 범위와 남은 UGC 게이트:
+
+- 서버 `validateContent` 호출은 현재 D-Day, duty type, team default duty에서 확인되었고, 관련 backend focused/full 검증은 PASS했다. 다만 `ScheduleService`와 `TodoService`의 서버 생성·수정 경로가 공개/친구/팀 공유 범위에 따라 필터를 우회하지 않는지는 아직 별도 코드·E2E 게이트로 남아 있다. 따라서 UGC 변경의 자동 회귀는 PASS로 기록하되 서버 mutation 전체 보호 완료로 확대 해석하지 않는다.
+- backend JSON, iOS bundled JSON, `ContentFilterStore`의 `emergencyWords`는 중복된 목록 소스다. backend 기동 검증은 backend JSON 자체만 검사하며, 세 소스 사이의 자동 동기화·생성·동일성 검증은 없다. 수동 목록 변경이 한 소스에만 반영될 수 있으므로 이를 residual risk로 유지한다.
+- 텍스트 필터는 사진·동영상·파일의 음란·혐오 이미지를 자동 판정하지 않는다. 첨부가 타인에게 공개되는 기능이면 신고/차단/운영자 삭제와 신속 대응을 실제로 검증한다.
+- 신고 대상이 삭제 또는 탈퇴한 계정이어도 운영자가 필요한 증거를 확인할 수 있는지, 동시에 Apple 계정 삭제 요구와 보존정책이 일치하는지 확인한다.
+- 필터 단어 목록은 표현 차단의 전부가 아니다. 폭력 위협, 괴롭힘, 개인정보 노출, 반복 악성 행위에 대한 운영 정책과 조치 흐름도 Review Notes/정책에서 설명한다.
+
+## 5. 사용자·사업자가 반드시 결정할 개인정보 보존 정책
+
+Apple은 계정 삭제 시 계정과 관련된 데이터 및 UGC를 원칙적으로 삭제하도록 요구하고, 법적 보존 의무가 있는 경우에만 예외를 인정한다. [Offering account deletion in your app](https://developer.apple.com/support/offering-account-deletion-in-your-app/)은 보존되는 정보를 사용자에게 설명하고, 단순 비활성화나 고객센터 연락만으로 대체하지 않도록 한다.
+
+현재 `src/main/resources/db/migration/v2/V2.2.44__publish_ugc_privacy_policy.sql`은 다음을 명시한다.
+
+- 문의 기록은 계정 삭제 후에도 보존
+- 신고 기록, 신고자·피신고자 이름 snapshot, 신고 대상 콘텐츠 snapshot도 보존
+- 고정된 자동 삭제 주기 없음
+- 목적 달성 후 삭제 또는 익명화한다는 원칙만 존재
+
+이 문구는 사업자와 사용자에게 다음처럼 확정되어야 한다. 빈칸을 결정하지 않은 채 제출하지 않는다.
+
+| 결정 항목 | 반드시 정할 내용 | 현재 상태 |
+|---|---|---|
+| 문의 보존기간 | 계정 삭제/문의 종료/마지막 처리 중 어느 시점부터 며칠 또는 몇 개월 보존할지 | **사업자 결정 필요 — `최종 검증 후 기입`** |
+| 문의 익명화 | 이름·이메일·IP·본문·첨부·답변 중 어느 필드를 언제 익명화할지 | **사업자 결정 필요 — `최종 검증 후 기입`** |
+| 신고 보존기간 | 신고 접수·처리·이의제기·법적 hold별 최대기간 | **사업자 결정 필요 — `최종 검증 후 기입`** |
+| 신고 snapshot | 원문 전체가 필요한지, 최소 excerpt/hash/분류만 남길지 | **사업자 결정 필요 — `최종 검증 후 기입`** |
+| 신고 당사자 식별자 | 이름 snapshot을 유지할지, 즉시 익명 ID로 바꿀지 | **사업자 결정 필요 — `최종 검증 후 기입`** |
+| 법적 보존 예외 | 적용 법령/분쟁·안전 사유, 보존 범위와 종료 조건 | **법무·사업자 확인 필요 — `최종 검증 후 기입`** |
+| 관리자 접근 | 운영자 중 누가 어느 기간 동안 어떤 필드에 접근할지 | **사업자 결정 필요 — `최종 검증 후 기입`** |
+| 탈퇴 UI 고지 | 삭제되는 데이터, 공동 팀 데이터, 남는 신고/문의 기록, 익명화 시점, 비동기 완료 예상시간 | **UI·정책 동시 확정 필요 — `최종 검증 후 기입`** |
+
+탈퇴 화면에는 최소한 다음을 사용자에게 직접 보여줘야 한다.
+
+1. 삭제 요청으로 삭제를 시작하는 계정·일정·Todo·첨부·OAuth 연결과 삭제 완료 예상시간
+2. 공동 팀 데이터처럼 권한 이관 또는 다른 사용자의 기능을 위해 처리되는 항목
+3. 법적 보존 또는 안전·분쟁 대응으로 남을 수 있는 문의·신고 항목과 정확한 기간
+4. 남는 항목의 익명화 방식과 관리자 접근 범위
+5. Sign in with Apple 연결 해제 및 토큰 철회 결과
+
+사업자가 보존기간을 결정하기 전까지는 계정 삭제와 개인정보 심사를 PASS로 기록하지 않는다.
+
+### Apple 최소 요건과 Dutypark 내부 게이트의 구분
+
+Apple의 최소 요건은 앱 안에서 계정 삭제를 시작할 수 있고, 삭제 범위와 법적 보존 예외를 설명하며, 계정과 관련 데이터를 실제로 삭제하는 경로를 제공하는 것이다. Apple FAQ는 삭제가 즉시·자동일 필요는 없다고 설명하므로 서버의 비동기 처리 자체를 부적합으로 단정하지 않는다. 비동기 처리라면 사용자에게 요청 접수·예상 완료 시점과 남을 수 있는 데이터의 범위를 알리고, 약속한 삭제를 끝까지 수행한 뒤 사용자에게 완료 사실을 확인할 수 있게 알려야 한다.
+
+Dutypark의 내부 게이트는 이 최소 요건보다 보수적이다. 현재의 “요청 접수 후 계정 데이터와 파일을 비동기 삭제” UI가 있다는 것만으로 PASS하지 않고, disposable 계정으로 비동기 완료까지 확인한 뒤 세션·token·OAuth 연결·UGC·첨부 및 보존 예외가 정책과 일치하는지 검증한다. 이 내부 E2E와 사업자 보존 결정이 끝나지 않았으므로 제출 판정은 계속 HOLD다.
+
+## 6. 현 앱과 달라진 App Store 스크린샷
+
+기존 산출물은 `docs/app-store/README.md`의 2026-08-26 capture provenance를 사용한다. 코드 HEAD `3ef00cba`에 포함된 캘린더 화살표 수정으로 실제 UI가 바뀌었다. 기존 8/26 raw 캡처는 맨 chevron을 사용하지만 현재 앱은 원형 배경과 넓어진 탭 영역을 사용하므로, 기존 캡처를 최신 앱 화면으로 사용할 수 없다. Slack 개인정보와 UGC 필터 변경이 스크린샷에 보인다고 추정하지 않으며, 화면 불일치가 확인된 캘린더를 포함해 **전체 제출 세트를 재촬영**한다.
+
+필수 작업:
+
+- `ios/DutyparkUITests/DemoAppStoreCaptureUITests.swift`로 한국어·영어 실제 계정 화면을 최종 Release 빌드에서 재촬영한다.
+- `docs/app-store/raw/ko/{home,calendar,todo,team,more,social,dday}.png`와 `raw/en/...`를 새 캡처로 교체한다.
+- `scripts/compose-app-store-screenshots.sh docs/app-store/manifests/ko.json` 및 `en.json`으로 final 이미지를 재생성한다.
+- `docs/app-store/final/ko/01-06*.png`, `final/en/01-06*.png`가 현재 기능·문구·상태를 보여주고, 로그인 화면·오류·테스트 계정 개인정보가 노출되지 않는지 확인한다.
+- 1320x2868 PNG, opaque canvas, 안전영역·문구·실제 앱 UI 보존 조건은 `docs/app-store/README.md`와 스크립트 검증을 따른다.
+
+compose/extract 스크립트 자체는 PASS했지만, 이는 기존 입력의 크기·alpha·manifest 검증 결과일 뿐 최신 UI라는 뜻은 아니다. 8/26 raw를 현재 앱 화면으로 교체하는 재촬영과 최종 시각 검토 결과는 **`최종 검증 후 기입`**이다.
+
+## 7. 최종 exported IPA, 배포 서명, 운영 APNs
+
+exact `iPhone 13 mini` iOS 26.5에서 Release simulator build·설치·launch는 PASS했다. 실행 중 생성된 임시 캡처는 `/private/tmp/dutypark-release-latest-20260829.png`이며 장기 보존 증거·제출물로 사용하지 않는다. 그러나 시뮬레이터의 `CODE_SIGNING_ALLOWED=NO` 빌드나 Debug entitlement는 App Store 배포물을 증명하지 않는다. 제출 직전에는 별도 Release Archive를 기준으로 다음을 확인한다.
+
+- [ ] Release Archive가 운영 API base URL을 사용한다.
+- [ ] 2026-04-28 이후 App Store Connect 제출 요건에 맞게 최종 Archive가 iOS 26 SDK 이상으로 빌드됐는지 배포 산출물에서 확인한다.
+- [ ] exported IPA가 distribution signing으로 서명되고 bundle ID가 등록된 App ID와 일치한다.
+- [ ] `codesign` 검증이 통과하고 embedded provisioning profile/entitlements가 예상 target과 일치한다.
+- [ ] 최종 앱 entitlement에서 `aps-environment`가 production인지 확인한다. 값은 문서에 복사하지 않는다.
+- [ ] Associated Domains, Sign in with Apple capability, URL scheme가 배포 App ID와 일치한다.
+- [ ] IPA의 실제 `Info.plist`에 카메라 purpose string, version/build, 운영 API 설정이 포함된다.
+- [ ] TestFlight/App Store Connect processing, export validation, 설치 가능한 빌드 상태를 확인한다.
+- [ ] 배포 IPA의 개인정보 manifest와 포함 SDK manifest가 App Store Connect Privacy Details와 일치한다.
+
+최종 산출물 확인 결과: **`최종 검증 후 기입`**.
+
+## 8. 실기기 필수 E2E 및 실제 파괴적 흐름
+
+Apple은 시뮬레이터 성공을 실기기·외부 공급자·배포 환경 검증으로 간주하지 않는다. 운영 계정이 아닌 disposable 계정과 테스트 팀을 사용하고, 파괴적 동작의 결과를 되돌릴 수 있게 준비한다.
+
+### 실기기·공급자 흐름
+
+- [ ] APNs 권한 허용/거부, 앱 설정 토글, cold launch 후 상태 유지, 실제 production 알림 수신
+- [ ] 백그라운드·잠금화면에서 일정·문의·팀 등 민감한 본문이 노출되지 않음
+- [ ] APNs token 등록·갱신·로그아웃·알림 해제 시 서버 제거
+- [ ] Apple native 로그인/가입/재인증, 취소·실패·재시도
+- [ ] Kakao/Naver OAuth callback, callback 취소·잘못된 state·외부 앱 미설치 처리
+- [ ] 카메라로 프로필 사진 촬영 및 권한 거부 fallback
+- [ ] PhotosPicker, Files picker, 고해상도 사진·큰 파일 선택, 업로드·미리보기·공유·다운로드·삭제
+- [ ] 로그아웃/앱 재실행 후 첨부 임시파일이 남지 않음
+
+### 실제 파괴적 흐름
+
+- [ ] disposable 계정으로 D-Day·일정·Todo 생성/수정/삭제와 서버 결과 확인
+- [ ] disposable 팀에서 멤버 제거, 친구 차단·해제, 콘텐츠 신고·철회, 관리자 삭제/정지 흐름 확인
+- [ ] 계정 탈퇴를 끝까지 실행하고 비동기 완료·로그인 차단·세션/token/OAuth credential 정리 확인
+- [ ] 탈퇴 후 삭제 대상과 보존 대상으로 결정한 문의·신고 records를 직접 조회해 정책과 일치하는지 확인
+- [ ] 공동 팀 데이터·권한 이관·공유 첨부가 고지된 동작과 일치하는지 확인
+
+각 항목 결과: **`최종 검증 후 기입`**. 운영 리뷰 계정이나 실제 사용자 데이터로 파괴적 테스트를 하지 않는다.
+
+## 9. App Store Connect 제출 준비
+
+### Privacy labels 및 정책
+
+- [ ] App Privacy Details에서 앱·백엔드·SDK·외부 처리자까지 데이터 흐름을 재작성한다.
+- [ ] 이름, 이메일, user/device ID, 사진·비디오, 기타 사용자 콘텐츠, IP·로그, APNs 등록 정보, 문의·신고 입력, AI 전송을 실제 수집·연결·추적 여부와 목적에 맞게 표시한다.
+- [ ] Google Gemini, Slack, Apple, Kakao, Naver 및 실제 사용 SDK의 데이터 접근·보존을 정책에 반영한다.
+- [ ] `ios/Dutypark/PrivacyInfo.xcprivacy`와 App Store Connect labels를 별도로 대조한다. Privacy manifest만으로 제출 정보가 완성되는 것으로 보지 않는다.
+- [ ] 개인정보처리방침 URL이 로그인 없이 공개되고 심사 서버에서도 안정적으로 열리며, 앱 내부에서 쉽게 접근된다.
+- [ ] 계정 삭제·동의 철회·AI 선택 동의·외부 제공·보존기간이 최신 UI와 정책에서 일치한다.
+
+### Review Notes, 계정, backend
+
+- [ ] 심사용 계정은 App Store Connect 보안 필드에만 입력하고 이 문서·소스·스크린샷에 비밀번호를 남기지 않는다.
+- [ ] Review Notes에 로그인 절차, 주요 탭, 팀/캘린더/첨부 진입 조건, 신고·차단, AI 선택 동의, 계정 삭제 위치와 비동기 처리 시간을 적는다.
+- [ ] 심사용 로그인 정보는 App Store Connect `App Review Information` → `Sign-in required` → `Username` / `Password` 공식 필드에만 제공하고, Review Notes나 문서에는 비밀번호를 복사하지 않는다.
+- [ ] Review Notes에 OAuth가 외부 계정과 연결되며, Apple/Kakao/Naver 각각의 검증 방법과 실패 시 대체 경로를 설명한다.
+- [ ] 운영 backend, API, 정책 URL, 파일 저장소, OAuth callback, Apple token exchange, APNs production이 심사 기간 내 동작한다.
+- [ ] 심사 계정의 기존 데이터와 파괴적 테스트 데이터가 섞이지 않도록 disposable/읽기 전용 fixture를 분리한다.
+
+## 10. 2026-08-24 이후 Sign in with Apple 변경사항
+
+### 10.1 `private.icloud.com` 새 도메인
+
+Apple의 [2026-08-24 공식 업데이트](https://developer.apple.com/news/?id=1ptvdtcm)는 2026년 후반 신규 Sign in with Apple 주소에 `private.icloud.com`이 사용될 수 있고 기존 `privaterelay.appleid.com`도 계속 동작함을 안내한다. 이는 앱·웹 계정 시스템, 이메일 검증 로직, allowlist가 두 도메인을 모두 받아들이도록 준비하라는 호환성 권고로 기록한다. 이 문서에서는 이를 별도의 App Review 필수요건으로 단정하지 않는다.
+
+Dutypark 코드에는 웹 Sign in with Apple 경로가 존재한다.
+
+- `src/main/kotlin/com/tistory/shanepark/dutypark/security/controller/WebAppleOAuthController.kt`
+- `src/main/kotlin/com/tistory/shanepark/dutypark/security/oauth/apple/AppleWebOAuthService.kt`
+- `src/main/resources/application.yml`의 web client ID/redirect 설정
+- 관련 정책: `src/main/resources/db/migration/v2/V2.2.35__publish_web_apple_sign_in_privacy_policy.sql`
+
+현재 소스에서 `privaterelay.appleid.com` 또는 `private.icloud.com`을 명시한 allowlist는 발견되지 않았다. 일반 이메일 형식 검증만으로 충분한지, 운영 메일 서버의 domain filter/suppression/forwarding 규칙이 새 도메인을 막지 않는지는 외부 설정 확인이 필요하다.
+
+- 웹 또는 이메일 relay를 운영하면 두 도메인 수용 여부(호환성 권고): **`최종 검증 후 기입`**
+- 실제 계정 변경·메일 전달 테스트 결과: **`최종 검증 후 기입`**
+- Apple relay를 사용하지 않는다면 그 사실과 `requestedScopes`/정책의 일치 여부를 Review Notes에 기록한다.
+
+공식 참고: [Communicating using the private email relay service](https://developer.apple.com/documentation/signinwithapple/communicating-using-the-private-email-relay-service), [Configuring your environment for Sign in with Apple](https://developer.apple.com/documentation/signinwithapple/configuring-your-environment-for-sign-in-with-apple)
+
+### 10.2 한국 개발자의 Services ID S2S notification endpoint
+
+Apple의 [한국 개발자 대상 공식 안내](https://developer.apple.com/news/?id=j9zukcr6)에 따르면 2026-01-01부터 한국에 기반을 둔 개발자가 웹사이트를 앱과 연결하는 새 Services ID를 등록하거나 기존 Services ID를 업데이트할 때 server-to-server notification endpoint를 제공해야 한다. Apple이 보낼 수 있는 이벤트에는 다음이 포함된다.
+
+- 이메일 전달 환경설정 변경
+- 앱에서의 계정 삭제
+- Apple 계정 영구 삭제
+
+현재 저장소에는 웹 Apple exchange endpoint는 있지만 Apple S2S notification endpoint/notification JWT 처리 경로는 확인되지 않는다. 별도 인프라에 구현되어 있을 수 있으므로 소스 부재만으로 미구현이라고 단정하지 않는다. Apple의 [S2S notification 구성 안내](https://developer.apple.com/help/account/capabilities/enabling-server-to-server-notifications/)처럼 이 endpoint를 등록하는 위치는 Services ID 자체가 아니라, 웹사이트와 연결된 **primary App ID의 Sign in with Apple 구성**이다.
+
+조건부 게이트:
+
+- [ ] 실제 운영에서 Services ID를 사용해 웹 Sign in with Apple을 제공하는지 확인
+- [ ] 제공한다면 Developer Account에서 연결된 primary App ID에 S2S endpoint가 등록되어 있는지 확인한다. 실제 URL·secret은 이 문서에 기록하지 않는다.
+- [ ] endpoint가 Apple notification JWT를 검증하고 email forwarding 변경, 앱 내 계정 삭제, Apple 계정 영구 삭제를 idempotently 처리하는지 확인
+- [ ] 통지를 받은 후 계정 연결·refresh credential·개인정보 삭제/비활성화가 즉시 반영되는지 확인
+- [ ] endpoint HTTP status, retry, replay/idempotency, 로그의 개인정보 최소화 확인
+- [ ] 제공하지 않는다면 web client ID/Services ID 설정·정책·빌드에서 실제로 비활성임을 증명
+
+S2S 확인 결과: **`최종 검증 후 기입`**.
+
+## 11. 한국 연령 등급 판단
+
+Apple의 [연령 등급 값 및 정의](https://developer.apple.com/kr/help/app-store-connect/reference/app-information/age-ratings-values-and-definitions/)에 따르면 연령 등급은 필수 App Store Connect 정보이고, 질문지의 콘텐츠 유형·앱 내 제어·기능 존재·빈도 답변으로 전 세계 및 지역별 등급이 계산된다. “등급 없음”은 App Store에 게시할 수 없다.
+
+### Dutypark의 잠정 자기판정
+
+현재 확인된 기능만 기준으로는 다음 조건에서 **Apple global 4+ / 대한민국 ‘전체(All)’ 가능성**이 있다.
+
+- 일반 일정·근무표·Todo·팀 공유가 주 기능
+- 폭력, 성적 내용/노출, 도박/랜덤박스, 주류·담배·약물, 의료·치료 정보, 욕설·성인 테마가 의도된 콘텐츠로 제공되지 않음
+- 사용자 생성 일정·Todo·프로필·첨부의 주된 공유는 팀/친구 범위이고 social feed/discovery는 없지만, `PUBLIC` 일정·D-Day는 비로그인 접근 및 iOS ShareLink로 공개·재공유가 가능함
+- 사용자 간 직접 메시지·채팅·공개 게시판이 없음
+
+이는 최종 등급이 아니다. App Store Connect 질문지에 다음을 실제 기능 기준으로 답하고 결과를 기록한다.
+
+| 질문 영역 | Dutypark 확인 포인트 | 판정 상태 |
+|---|---|---|
+| User-Generated Content | 타인에게 공유되는 일정·Todo·프로필·사진·파일의 범위·빈도와 `PUBLIC` 일정·D-Day의 비로그인 접근·ShareLink 재공유 | **질문지 최종 입력 후 기입** |
+| Messaging and Chat | 직접/그룹 메시지, 공개 게시, 문의 답변이 사용자 간 통신인지 | **기능 확인 후 기입** |
+| Social Media | 소셜 피드·검색·추천·재배포로 많은 사용자에게 UGC가 보이는지 | **해당 시 Social Media 및 연령 제한 검토** |
+| Medical or Wellness | 근무표를 건강/치료/진단으로 표현하는지, 실제 건강·웰니스 콘텐츠가 있는지 | **없음이면 없음으로 정확히 답변** |
+| Mature/Profanity/Violence/Gambling | 콘텐츠 필터 목록 존재가 아니라 앱에서 실제 노출되는 빈도 기준 | **실제 fixture·운영 콘텐츠 대조** |
+| Advertising / parental controls / age assurance | 광고·나이 확인·유해 콘텐츠 차단 기능 존재 여부 | **질문지 최종 입력 후 기입** |
+
+Apple 정의상 단순 UGC capability는 대한민국 ‘전체’ 표에도 포함될 수 있지만, 소셜 피드나 다수에게 콘텐츠를 확산시키는 기능은 `Social Media`로 별도 판단한다. Social Media를 13세 미만에게 제한하려면 Apple은 최소한 Declared Age Range API로 연령대를 확인하고 연령에 맞는 UGC만 제공하도록 안내한다. 해당 기능을 제공하지 않으면서 소셜 미디어로 분류될 수 있는 UI가 있는지 확인한다.
+
+### 대한민국 지역 변경
+
+- [2026-08-12 한국 연령 등급 업데이트](https://developer.apple.com/kr/news/?id=oj3r9pvw)에 따르면 GRAC 공식 등급이 있는 앱은 RCN을 제출해 한국 지역 등급을 override할 수 있다.
+- 같은 안내에 따르면 2026년 10월부터 한국 App Store에서 “빈도가 낮은 욕설 및 노골적인 유머”, “빈도가 낮은 성인/선정적 테마”가 `전체`에서 `12+`로 이동한다. 2026-08-29 현재는 향후 변경이므로, 10월 이후 제출이면 질문지와 결과를 다시 확인한다.
+- GRAC 지역 pictogram은 게임/엔터테인먼트 카테고리 또는 빈번/강한 simulated gambling 등에 해당할 때 조건부로 확인한다. Dutypark가 Productivity 카테고리라면 자동으로 게임 등급 대상이라고 단정하지 않지만, App Store Connect 기본·보조 카테고리를 확인한다.
+- GRAC의 공식 등급 통지를 받으면 [한국 연령 등급 override 절차](https://developer.apple.com/kr/help/app-store-connect/manage-app-information/set-an-app-age-rating/)에 따라 RCN을 등록하고 다음 버전에 반영한다.
+
+최종 연령 등급/질문지 답변: **`최종 검증 후 기입`**.
+
+## 12. 제출 보류 해제 조건
+
+다음 항목을 모두 완료하고 이 문서의 `최종 검증 후 기입`을 실제 결과로 바꾼 뒤에만 HOLD를 해제한다.
+
+- [x] Slack 개인정보 변경 focused test 21/21 PASS; UGC backend/iOS 관련 focused·full 검증 PASS(웹 정규화·private D-Day 예외 반영 완료), Release simulator build도 PASS
+- [ ] 웹 cold-start/fetch 실패 fail-open 해소 또는 모든 공유 mutation에 대한 서버 enforcement 확인
+- [ ] UGC 모든 서버 mutation 경로 및 첨부·신고·차단 E2E 확인
+- [ ] 문의·신고 보존기간, snapshot 최소화, 익명화, 법적 예외, 탈퇴 UI 고지 결정
+- [ ] 현재 앱을 기준으로 ko/en App Store 스크린샷 재촬영·재합성·시각 검토
+- [ ] distribution-signed exported IPA와 production APNs entitlement 확인
+- [ ] 최종 distribution Archive가 App Store 제출 요건인 iOS 26 SDK 이상으로 빌드됐는지 확인
+- [ ] 실제 iPhone APNs/OAuth/카메라/PhotosPicker/Files picker 확인
+- [ ] disposable 계정으로 계정 삭제·공동 팀 데이터·OAuth revoke·첨부 정리와 비동기 완료 후 사용자 confirmation 확인
+- [ ] App Store Connect privacy labels, 정책 URL, Review Notes, demo account, backend 확인
+- [ ] 한국 Services ID 사용 여부 및 연결된 primary App ID의 S2S endpoint 확인
+- [ ] 한국 연령 등급 questionnaire 및 필요 시 GRAC RCN 처리 확인
