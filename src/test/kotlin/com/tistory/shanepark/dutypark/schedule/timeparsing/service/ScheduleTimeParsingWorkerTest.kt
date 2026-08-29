@@ -653,10 +653,11 @@ class ScheduleTimeParsingWorkerTest {
         verify(slackNotifier).call(messageCaptor.capture())
         val fields = readAttachments(messageCaptor.firstValue).flatMap(::readFields)
         assertThat(fields.mapNotNull(::readFieldTitle))
-            .contains("Schedule ID", "Failure Kind", "Time")
+            .containsExactly("Failure Kind")
             .doesNotContain("Content", "LLM Response", "Error Message")
-        assertThat(fields.mapNotNull(::readFieldValue).joinToString(" "))
-            .doesNotContain(privateContent, rawAiResponse)
+        assertThat(fields.mapNotNull(::readFieldValue))
+            .containsExactly("INVALID_RESPONSE")
+            .doesNotContain(schedule.id.toString(), privateContent, rawAiResponse)
     }
 
     @Test
