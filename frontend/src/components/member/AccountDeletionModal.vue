@@ -568,6 +568,17 @@ function receiptRecoveryLabel(): string {
                 {{ t('member.accountDeletion.scope.async') }}
               </div>
             </div>
+            <div class="rounded-xl border border-dp-border-primary bg-dp-bg-secondary p-4">
+              <p class="text-sm leading-6 text-dp-text-secondary">
+                {{ t('member.accountDeletion.retentionNotice') }}
+              </p>
+              <RouterLink
+                to="/privacy"
+                class="mt-2 inline-flex text-sm font-semibold text-dp-accent hover:underline"
+              >
+                {{ t('policy.privacy.title') }}
+              </RouterLink>
+            </div>
             <div v-if="preview.auxiliaryImpacts.length" class="rounded-xl border border-dp-border-primary bg-dp-bg-secondary p-4">
               <h4 class="font-semibold text-dp-text-primary">{{ t('member.accountDeletion.scope.auxiliary') }}</h4>
               <ul class="mt-2 space-y-2 text-sm text-dp-text-secondary">
@@ -722,6 +733,17 @@ function receiptRecoveryLabel(): string {
                 <AlertTriangle class="mt-1 h-4 w-4 shrink-0" aria-hidden="true" />
                 {{ t('member.accountDeletion.final.irreversible') }}
               </p>
+            </div>
+            <div class="rounded-xl border border-dp-border-primary bg-dp-bg-secondary p-4">
+              <p class="text-sm leading-6 text-dp-text-secondary">
+                {{ t('member.accountDeletion.retentionNotice') }}
+              </p>
+              <RouterLink
+                to="/privacy"
+                class="mt-2 inline-flex text-sm font-semibold text-dp-accent hover:underline"
+              >
+                {{ t('policy.privacy.title') }}
+              </RouterLink>
             </div>
           </template>
 

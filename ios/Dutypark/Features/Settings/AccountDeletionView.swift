@@ -418,18 +418,21 @@ private nonisolated struct AccountDeletionUITestingService: AccountDeletionServi
 struct AccountDeletionView: View {
     @EnvironmentObject private var session: SessionStore
     @StateObject private var model: AccountDeletionViewModel
+    @ObservedObject private var policyModel: SettingsViewModel
     @ObservedObject var push: APNsRegistrationManager
     let memberID: Int64
     let memberName: String
     let maximumHeight: CGFloat
     let dismiss: () -> Void
     var workingChanged: (Bool) -> Void = { _ in }
+    @State private var showPrivacyPolicy = false
     @FocusState private var focusedField: Field?
 
     private enum Field { case password, name }
 
     init(
         memberID: Int64,
+        policyModel: SettingsViewModel,
         push: APNsRegistrationManager,
         memberName: String,
         maximumHeight: CGFloat,
@@ -437,6 +440,7 @@ struct AccountDeletionView: View {
         workingChanged: @escaping (Bool) -> Void = { _ in }
     ) {
         self.memberID = memberID
+        self.policyModel = policyModel
         self.push = push
         self.memberName = memberName
         self.maximumHeight = maximumHeight
@@ -459,6 +463,16 @@ struct AccountDeletionView: View {
             workingChanged(isWorking)
         }
         .onDisappear { model.cancel() }
+        .sheet(isPresented: $showPrivacyPolicy) {
+            NavigationStack {
+                DeepLinkedPolicyView(type: .privacy, model: policyModel)
+                    .task {
+                        if !policyModel.loadedSections.contains(.policies) {
+                            await policyModel.reloadPolicies()
+                        }
+                    }
+            }
+        }
     }
 
     private var bodyContent: some View {
@@ -540,6 +554,8 @@ struct AccountDeletionView: View {
                         .foregroundStyle(DPColor.textSecondary)
                 }
             }
+            retentionNotice
+            privacyPolicyLink
         }
     }
 
@@ -658,6 +674,8 @@ struct AccountDeletionView: View {
             SettingsLocalization.text("settings.accountDeletion.final.irreversible")
                 .font(DPTypography.bodyMedium)
                 .foregroundStyle(DPColor.danger)
+            retentionNotice
+            privacyPolicyLink
         }
     }
 
@@ -757,5 +775,38 @@ struct AccountDeletionView: View {
             .padding(DPSpacing.medium)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(DPColor.dangerSoft, in: RoundedRectangle(cornerRadius: DPRadius.standard))
+    }
+
+    private var retentionNotice: some View {
+        Label {
+            Text(SettingsLocalization.string("settings.accountDeletion.retentionNotice"))
+                .font(DPTypography.supporting)
+                .foregroundStyle(DPColor.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+        } icon: {
+            Image(systemName: "info.circle")
+                .foregroundStyle(DPColor.accent)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(DPSpacing.medium)
+        .background(DPColor.backgroundSecondary, in: RoundedRectangle(cornerRadius: DPRadius.standard))
+        .accessibilityIdentifier("accountDeletion.retentionNotice")
+    }
+
+    private var privacyPolicyLink: some View {
+        Button {
+            DPHapticCenter.shared.emit(.routine)
+            showPrivacyPolicy = true
+        } label: {
+            Label(
+                SettingsLocalization.string("settings.policy.privacy"),
+                systemImage: "doc.text"
+            )
+            .font(DPTypography.bodyMedium)
+            .foregroundStyle(DPColor.accent)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("accountDeletion.privacyPolicy")
     }
 }

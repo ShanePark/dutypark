@@ -1280,7 +1280,7 @@ private struct AIScheduleConsentPolicyView: View {
     }
 }
 
-private struct DeepLinkedPolicyView: View {
+struct DeepLinkedPolicyView: View {
     let type: PolicyType
     @ObservedObject var model: SettingsViewModel
 

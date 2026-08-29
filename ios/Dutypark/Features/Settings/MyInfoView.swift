@@ -159,6 +159,7 @@ struct MyInfoView: View {
                 ) { availableSize, dismiss in
                     AccountDeletionView(
                         memberID: memberID,
+                        policyModel: model,
                         push: push,
                         memberName: memberName,
                         maximumHeight: availableSize.height,

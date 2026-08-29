@@ -52,6 +52,13 @@ describe('account deletion receipt flow', () => {
     expect(accountDeletionModal).toContain("errorKey.value === 'member.accountDeletion.errors.receiptStorage'")
   })
 
+  it('discloses limited support-record retention and links the privacy policy', () => {
+    expect(accountDeletionModal.match(/t\('member\.accountDeletion\.retentionNotice'\)/g)).toHaveLength(2)
+    expect(accountDeletionModal.match(/t\('policy\.privacy\.title'\)/g)).toHaveLength(2)
+    expect(accountDeletionModal.match(/to="\/privacy"/g)).toHaveLength(2)
+    expect(accountDeletionModal).toMatch(/<template v-else>[\s\S]*?retentionNotice[\s\S]*?to="\/privacy"/)
+  })
+
   it('persists the server receipt before clearing the authenticated session', () => {
     const persistIndex = memberView.indexOf('saveAccountDeletionReceipt(result.receipt)')
     const cleanupIndex = memberView.indexOf('authStore.completeAccountDeletion()')

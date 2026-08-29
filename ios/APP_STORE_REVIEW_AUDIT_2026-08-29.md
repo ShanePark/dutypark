@@ -2,7 +2,7 @@
 
 - 기준일: 2026-08-29 (KST)
 - 판정: **HOLD — 제출하지 않음**
-- 코드 기준: committed HEAD `407f1397` 위의 현재 미커밋 작업 트리. 계정 삭제 완료 확인 구현과 테스트·문서 변경을 포함한 이 작업 트리를 2026-08-29 17:50 KST까지 재검증했다. 최종 제출 전에는 커밋 SHA가 고정된 동일 소스를 다시 검증해야 한다.
+- 코드 기준: committed HEAD `3d55d46d` 위의 현재 미커밋 작업 트리. 탈퇴 시 문의·신고 보존 예외 고지와 정책 링크를 포함한 이 작업 트리를 2026-08-29 21:02 KST까지 재검증했다. 최종 제출 전에는 커밋 SHA가 고정된 동일 소스를 다시 검증해야 한다.
 - 목적: [2026-08-28 보고서](./APP_STORE_REVIEW_AUDIT_2026-08-28.md)의 반복이 아닌, 그 이후 변경분과 제출 직전의 미검증 게이트를 기록한다.
 - 비밀값: 비밀번호, private key, client secret, webhook token, 실제 S2S URL은 이 문서에 기록하지 않는다. 심사용 계정은 App Store Connect의 `App Review Information → Sign-in required → Username / Password` 필드에서만 제공한다.
 
@@ -14,7 +14,7 @@
 |---|---|---|
 | Slack 개인정보 제거 | 수정 반영됨 | Slack privacy focused 54 PASS. 전체 Release/실제 webhook 배포 확인은 별도 게이트 |
 | UGC 텍스트 필터 | 클라이언트·일부 서버 보강 반영됨 | backend/iOS 관련 focused·full 검증 PASS. 웹 정규화·private D-Day 예외는 반영됐고 cold-start/fetch fail-open, 모든 공개/공유 쓰기 경로·첨부·신고 흐름은 별도 게이트 |
-| 문의·신고 탈퇴 후 보존 | 사업자 결정 필요 | 보존기간·익명화·법적 보존 사유 및 탈퇴 UI 고지 확정 |
+| 문의·신고 탈퇴 후 보존 | 사업자 결정 HOLD | exact retention/purge 기간, snapshot·식별자 최소화, legal hold 범위·종료 조건 및 사용자 고지·Privacy declarations 일치 확정 |
 | 비동기 계정 삭제 완료 확인 | backend·web·iOS 구현 및 자동 테스트 PASS | 보통 5분 이내 ETA, 로그아웃 후 receipt 기반 상태 조회, 실제 `COMPLETED` confirmation, `FAILED` 지원 경로를 구현. disposable 운영 유사 계정 E2E는 별도 게이트 |
 | App Store 스크린샷 | 현 앱과 불일치 가능 | 최종 빌드에서 한국어·영어 세트 재촬영·재합성 |
 | 배포 IPA | 배포 서명·최종 entitlement 미확정 | Release Archive/export, 서명, 운영 API, APNs production 확인 |
@@ -25,6 +25,8 @@
 
 Apple은 앱 완성도, 개인정보처리방침, 계정 삭제, UGC, 메타데이터를 실제 빌드·서버 동작과 함께 심사한다. 그러므로 시뮬레이터의 일부 성공이나 코드에 기능이 존재한다는 사실만으로 승인 가능으로 올리지 않는다.
 
+Apple routine review의 경계도 구분한다. Apple이 내부 DB를 직접 조회·감사한다고 전제하지 않으며, 이 보고서의 제출 기준은 배포 환경에서 관찰 가능한 live-backend flow와 앱·App Store Connect Privacy Details·개인정보처리방침의 선언이 서로 일치하는지 확인하는 것이다. 내부 DB/SQL·xcresult는 Dutypark의 traceability와 release evidence일 뿐 Apple의 직접 DB audit 결과로 표현하지 않는다.
+
 ## 2. 2026-08-29 검증 결과
 
 이번 변경분에 대해 자동 검증은 다음과 같이 완료됐다. 아래 PASS는 실행한 테스트와 산출물에만 적용하며, 외부 서비스·실기기·배포 심사 게이트를 대신하지 않는다.
@@ -34,12 +36,12 @@ Apple은 앱 완성도, 개인정보처리방침, 계정 삭제, UGC, 메타데�
 | iOS UI baseline | 91개 중 89 PASS, `tab.more` 및 알림 닫기 selector lookup failures 2건; 앱 crash 0, runner/simulator 오류 0 | geometry 문제가 아니라 selector lookup 실패였다. 후속 `7788a8f3`에서 selector fallback/accessibility id를 수정하고 해당 두 테스트를 각각 RED→GREEN focused PASS. 나머지 89개 전체 재실행은 생략 |
 | UI 안정화 1 | `ios/DutyparkUITests/AccountDeletionParityUITests.swift` | RED→GREEN focused PASS |
 | UI 안정화 2 | `ios/DutyparkUITests/NotificationConfirmationVisualUITests.swift` | RED→GREEN focused PASS |
-| iOS `DutyparkTests` 동일 실행 요약 | 1,168 total: 1,167 PASS / 1 SKIP / 0 FAIL; device-expanded 결과 1,192 PASS | 1,168은 identifier total이고 1,192는 같은 테스트 실행에서 동적으로 확장된 device case의 pass event 수이며 별도 suite/run이나 1,168에 더하는 수치가 아니다. SKIP 1건은 `OfflineSessionStore` first-unlock simulator file-protection을 시뮬레이터에서 재현할 수 없어 제외 |
+| iOS `DutyparkTests` 동일 실행 요약 | 1,126 total: 1,125 PASS / 1 SKIP / 0 FAIL; device-expanded 결과 1,150 PASS | 1,126은 identifier total이고 1,150은 같은 테스트 실행에서 동적으로 확장된 device case의 pass event 수이며 별도 suite/run이나 1,126에 더하는 수치가 아니다. SKIP 1건은 `OfflineSessionStore` first-unlock simulator file-protection을 시뮬레이터에서 재현할 수 없어 제외 |
 | Release simulator build | PASS | exact `iPhone 13 mini`, iOS 26.5 |
 | Debug simulator install | PASS | 위 unit-test로 검증된 앱을 exact `iPhone 13 mini`에 설치하고 app container를 확인. 기존 Release 임시 캡처는 `/private/tmp/dutypark-release-latest-20260829.png`이며 장기 보존 증거·제출물로 사용하지 않음 |
 | backend full Gradle | 1,845 total; 1,824 PASS / 21 SKIP / 0 FAIL | skip 사유는 개별 Gradle 결과에서 확인 |
 | Slack privacy focused | 54 PASS | 일정 파싱 33 + 문의·신고·generic argument dump·예외 payload 21 최소화 검증 |
-| web full | 97 files / 725 tests PASS | type-check PASS, build PASS(2,218 modules transformed) |
+| web full | 97 files / 727 tests PASS | type-check PASS, build PASS(2,218 modules transformed) |
 | App Store screenshot compose/extract scripts | PASS | 파일·크기·alpha·manifest 검증은 PASS. 실제 최신 앱 재촬영은 아래 UI 불일치로 미완료 |
 | Evidence manifest | 작성됨 | [2026-08-29 evidence manifest](./review-evidence/2026-08-29/README.md)에 fresh backend/web/iOS unit 재실행의 명령·tested SHA·결과와 기존 UI xcresult/capture provenance를 기록. 전체 bundle/log의 장기 artifact 저장은 HOLD |
 
@@ -47,7 +49,7 @@ Apple은 앱 완성도, 개인정보처리방침, 계정 삭제, UGC, 메타데�
 
 ### 점검 범위
 
-- 시뮬레이터 기준: `iPhone 13 mini`, iOS 26.5 — committed HEAD `407f1397` 위 현재 미커밋 작업 트리의 8/29 자동 검증 결과는 2절에 기록하고, 외부·실기기·배포 검증은 별도로 남긴다.
+- 시뮬레이터 기준: `iPhone 13 mini`, iOS 26.5 — committed HEAD `3d55d46d` 위 현재 미커밋 작업 트리의 8/29 자동 검증 결과는 2절에 기록하고, 외부·실기기·배포 검증은 별도로 남긴다.
 - iOS 코드: `ios/Dutypark/` 및 `ios/DutyparkTests/`
 - 백엔드 개인정보·인증·UGC 코드: `src/main/kotlin/`, `src/main/resources/db/migration/v2/`, `src/test/kotlin/`
 - App Store 산출물: `docs/app-store/raw/{ko,en}/`, `docs/app-store/final/{ko,en}/`, `docs/app-store/manifests/{ko,en}.json`
@@ -148,6 +150,10 @@ Apple은 계정 삭제 시 계정과 관련된 데이터 및 UGC를 원칙적으
 Apple의 최소 요건은 앱 안에서 계정 삭제를 시작할 수 있고, 삭제 범위와 법적 보존 예외를 설명하며, 계정과 관련 데이터를 실제로 삭제하는 경로를 제공하는 것이다. Apple FAQ는 삭제가 즉시·자동일 필요는 없다고 설명하므로 서버의 비동기 처리 자체를 부적합으로 단정하지 않는다. 다만 비동기 처리라면 사용자에게 예상 소요시간을 알리고 삭제 완료 후 confirmation을 제공해야 한다.
 
 현재 작업 트리는 이 제품 수준 누락을 보완했다. 클라이언트가 삭제 요청 전에 32-byte CSPRNG receipt token을 만들고 저장하며 서버는 원문 대신 SHA-256만 보관한다. 로그인 세션을 제거한 뒤에도 web과 iOS가 5초 간격으로 공개 status API를 조회하여 `PROCESSING`, 실제 worker의 `COMPLETED`, 최종 `FAILED`를 구분한다. UI에는 정상 상황에서 **보통 5분 이내**라는 ETA를 표시하고, 실제 완료 후에만 완료 confirmation과 success feedback을 제공한다. 실패·만료·알 수 없는 응답은 완료로 오인하지 않고 `/support` 안내를 제공한다. 요청이 서버에 접수됐는지 불명확한 network/5xx/응답 파싱 실패에도 요청 전 receipt를 유지하고 status 흐름으로 전환하며, ETA 전의 일시적 404는 계속 polling한다. receipt는 로컬 계정 ID에 묶어 다른 로그인 계정의 삭제 요청에 재사용하거나 덮어쓰지 않는다. terminal receipt는 완료 또는 최종 실패 후 30일 동안 상태 확인에만 사용되며, raw token은 URL·query·로그·analytics에 넣지 않는다. worker의 상태 전이는 claim별 lease token으로 보호한다.
+
+현재 구현으로 해소된 제품 수준 범위는 삭제 요청의 ETA 안내, 로그아웃 뒤 receipt 기반 상태 조회, `COMPLETED` 완료 confirmation, `FAILED` 지원 경로다. 이번 추가 고지는 5분 ETA가 삭제 대상으로 안내한 계정 데이터·파일에 적용되고 문의·신고 기록에는 별도 보존·삭제 기준이 적용될 수 있음을 탈퇴 전·후 화면에서 명시하며, 현재 공개 개인정보처리방침으로 연결한다. 이 범위는 backend·web·iOS 자동 테스트로 확인됐지만, live production backend에서 disposable 계정으로 처음부터 끝까지 관찰하는 검증과 App Store Connect Privacy Details·개인정보처리방침·실제 UI 고지의 일치성은 별도 게이트다. receipt의 30일 상태 확인 만료는 문의·신고·계정 삭제 감사 데이터의 보존기간을 정한 것이 아니다.
+
+exact retention/purge 일정, 문의·신고 snapshot과 식별자의 최소화, deletion audit record 및 실패 시 provider credential의 파기 시점, legal hold의 적용 범위·종료 조건은 이번 구현이나 자동 테스트로 결정되지 않는다. 이 항목들은 사업자·법무·운영 결정과 사용자/Privacy declarations 반영이 끝날 때까지 **HOLD**로 남긴다.
 
 Dutypark의 내부 게이트는 이 최소 요건보다 보수적이다. 위 흐름의 backend·web·iOS 자동 테스트는 PASS했지만, disposable 계정으로 비동기 완료까지 확인한 뒤 세션·token·OAuth 연결·UGC·첨부 및 보존 예외가 정책과 일치하는지는 아직 실제 서버에서 검증하지 않았다. 상태 API에 앱 자체 rate limiter는 없으므로, 256-bit status-only token 외에도 운영 edge/IP rate limit이 적용되는지 배포 환경에서 확인한다. 이 내부 E2E와 사업자 보존 결정이 끝나지 않았으므로 제출 판정은 계속 HOLD다.
 

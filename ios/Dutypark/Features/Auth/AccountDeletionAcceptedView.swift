@@ -171,6 +171,7 @@ struct AccountDeletionAcceptedView: View {
     let onOpenSupport: () -> Void
 
     @StateObject private var model: AccountDeletionStatusViewModel
+    @State private var showPrivacyPolicy = false
 
     init(
         receipt: AccountDeletionReceipt?,
@@ -216,6 +217,11 @@ struct AccountDeletionAcceptedView: View {
         }
         .background(DPColor.backgroundPrimary.ignoresSafeArea())
         .task { await model.start() }
+        .sheet(isPresented: $showPrivacyPolicy) {
+            NavigationStack {
+                GuestPolicyView(type: .privacy)
+            }
+        }
         .accessibilityIdentifier("screen.accountDeletionAccepted")
     }
 
@@ -242,33 +248,37 @@ struct AccountDeletionAcceptedView: View {
 
     @ViewBuilder
     private var content: some View {
-        switch model.presentation {
-        case .processing:
-            processingContent
-        case .completed:
-            terminalCard(
-                systemImage: "checkmark.circle.fill",
-                textKey: "settings.accountDeletion.completed.details",
-                identifier: "accountDeletion.accepted.completed"
-            )
-        case .failed:
-            terminalCard(
-                systemImage: "exclamationmark.triangle.fill",
-                textKey: "settings.accountDeletion.failed.details",
-                identifier: "accountDeletion.accepted.failed"
-            )
-        case .expired:
-            terminalCard(
-                systemImage: "questionmark.circle",
-                textKey: "settings.accountDeletion.expired.details",
-                identifier: "accountDeletion.accepted.expired"
-            )
-        case .unavailable:
-            terminalCard(
-                systemImage: "questionmark.circle",
-                textKey: "settings.accountDeletion.unavailable.details",
-                identifier: "accountDeletion.accepted.unavailable"
-            )
+        VStack(alignment: .leading, spacing: DPSpacing.medium) {
+            switch model.presentation {
+            case .processing:
+                processingContent
+            case .completed:
+                terminalCard(
+                    systemImage: "checkmark.circle.fill",
+                    textKey: "settings.accountDeletion.completed.details",
+                    identifier: "accountDeletion.accepted.completed"
+                )
+            case .failed:
+                terminalCard(
+                    systemImage: "exclamationmark.triangle.fill",
+                    textKey: "settings.accountDeletion.failed.details",
+                    identifier: "accountDeletion.accepted.failed"
+                )
+            case .expired:
+                terminalCard(
+                    systemImage: "questionmark.circle",
+                    textKey: "settings.accountDeletion.expired.details",
+                    identifier: "accountDeletion.accepted.expired"
+                )
+            case .unavailable:
+                terminalCard(
+                    systemImage: "questionmark.circle",
+                    textKey: "settings.accountDeletion.unavailable.details",
+                    identifier: "accountDeletion.accepted.unavailable"
+                )
+            }
+            retentionNotice
+            privacyPolicyLink
         }
     }
 
@@ -321,6 +331,39 @@ struct AccountDeletionAcceptedView: View {
         .padding(DPSpacing.medium)
         .background(DPColor.backgroundSecondary, in: RoundedRectangle(cornerRadius: DPRadius.standard))
         .accessibilityIdentifier(identifier)
+    }
+
+    private var retentionNotice: some View {
+        Label {
+            Text(SettingsLocalization.string("settings.accountDeletion.retentionNotice"))
+                .font(DPTypography.supporting)
+                .foregroundStyle(DPColor.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+        } icon: {
+            Image(systemName: "info.circle")
+                .foregroundStyle(DPColor.accent)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(DPSpacing.medium)
+        .background(DPColor.backgroundSecondary, in: RoundedRectangle(cornerRadius: DPRadius.standard))
+        .accessibilityIdentifier("accountDeletion.retentionNotice")
+    }
+
+    private var privacyPolicyLink: some View {
+        Button {
+            DPHapticCenter.shared.emit(.routine)
+            showPrivacyPolicy = true
+        } label: {
+            Label(
+                SettingsLocalization.string("settings.policy.privacy"),
+                systemImage: "doc.text"
+            )
+            .font(DPTypography.bodyMedium)
+            .foregroundStyle(DPColor.accent)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("accountDeletion.privacyPolicy")
     }
 
     @ViewBuilder

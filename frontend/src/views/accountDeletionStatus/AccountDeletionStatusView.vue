@@ -213,6 +213,18 @@ onUnmounted(stopPolling)
         {{ t('member.accountDeletion.status.retryMessage') }}
       </p>
 
+      <div class="mt-5 rounded-xl border border-dp-border-primary bg-dp-bg-secondary p-4 text-left">
+        <p class="text-sm leading-6 text-dp-text-secondary">
+          {{ t('member.accountDeletion.retentionNotice') }}
+        </p>
+        <RouterLink
+          to="/privacy"
+          class="mt-2 inline-flex text-sm font-semibold text-dp-accent hover:underline"
+        >
+          {{ t('policy.privacy.title') }}
+        </RouterLink>
+      </div>
+
       <div v-if="viewState === 'processing'" class="mt-6 flex flex-col gap-3">
         <button
           type="button"

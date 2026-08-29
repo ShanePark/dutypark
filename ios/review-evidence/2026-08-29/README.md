@@ -6,9 +6,9 @@ private keys, account data, or test-user secrets.
 
 ## Source state
 
-- Repository HEAD during the final rerun: `407f139799ed97aa873032c06fdc6c2a159438b3`.
+- Repository HEAD during the final rerun: `3d55d46de011f8a18b8b38434836b8fe8acb3a31`.
 - The verified source is the current uncommitted working tree on that HEAD, including
-  the account-deletion receipt/status implementation, migration, client UI, and tests.
+  the account-deletion retention disclosure, privacy-policy links, localization, and tests.
 - This is a development verification record, not a clean-commit attestation. Before
   submission, repeat the same checks from a fixed commit and retain the raw artifacts.
 
@@ -17,23 +17,23 @@ private keys, account data, or test-user secrets.
 | Scope | Command | Result | Durable evidence |
 |---|---|---|---|
 | Backend full test | `env JAVA_HOME=/Users/shane/.sdkman/candidates/java/17.0.18-tem PATH=/Users/shane/.sdkman/candidates/java/17.0.18-tem/bin:$PATH GRADLE_USER_HOME=/tmp/dutypark-gradle-account-deletion ./gradlew test` | PASS; 1,845 total, 1,824 PASS, 21 SKIP, 0 FAIL/ERROR | Gradle XML aggregation recorded in `verification-summary.json`; source XML was `build/test-results/test/TEST-*.xml` |
-| Web full test | `cd frontend && npm test` | 97 files PASS; 725 tests PASS | `verification-summary.json` |
+| Web full test | `cd frontend && npm test` | 97 files PASS; 727 tests PASS | `verification-summary.json` |
 | Web type check | `cd frontend && npm run type-check` | PASS | `verification-summary.json` |
 | Web production build | `cd frontend && npm run build` | PASS; 2,218 modules transformed | `verification-summary.json` |
-| iOS unit tests | `cd ios && xcodebuild -project Dutypark.xcodeproj -scheme Dutypark -destination 'platform=iOS Simulator,name=iPhone 13 mini' -derivedDataPath /private/tmp/dutypark-commit-review-full-derived CODE_SIGNING_ALLOWED=NO -resultBundlePath /private/tmp/dutypark-commit-review-full-20260829.xcresult -only-testing:DutyparkTests test` | PASS; 1,168 identifiers: 1,167 aggregate PASS, 1 SKIP, 0 FAIL; 1,192 expanded PASS | `xcresulttool` summary and bundle provenance recorded below and in `verification-summary.json` |
+| iOS unit tests | `cd ios && xcodebuild -project Dutypark.xcodeproj -scheme Dutypark -destination 'platform=iOS Simulator,name=iPhone 13 mini' -derivedDataPath /private/tmp/dutypark-retention-postadmin-derived CODE_SIGNING_ALLOWED=NO -resultBundlePath /private/tmp/dutypark-retention-postadmin-20260829.xcresult -only-testing:DutyparkTests test` | PASS; 1,126 identifiers: 1,125 aggregate PASS, 1 SKIP, 0 FAIL; 1,150 expanded PASS | `xcresulttool` summary and bundle provenance recorded below and in `verification-summary.json` |
 
 The fresh iOS run used `iPhone 13 mini`, iOS Simulator 26.5 (23F77). The one skipped
 test was
 `OfflineSessionStoreTests/testSnapshotAndDirectoryUseFirstUnlockFileProtection()`.
-The finalized `xcresulttool get test-results summary` reports 1,168 identifiers,
-1,167 aggregate PASS, 1 SKIP, and 0 FAIL. Its device/configuration expansion reports
-1,192 PASS and 1 SKIP.
+The finalized `xcresulttool get test-results summary` reports 1,126 identifiers,
+1,125 aggregate PASS, 1 SKIP, and 0 FAIL. Its device/configuration expansion reports
+1,150 PASS and 1 SKIP.
 
-The full fresh iOS bundle remains temporary because it is 60 MB:
+The full fresh iOS bundle remains temporary because it is 11 MB:
 
-- Path: `/private/tmp/dutypark-commit-review-full-20260829.xcresult`
-- Finalized: `2026-08-29T17:49:13+0900`
-- Deterministic tree SHA-256: `3b82fb2ae402bcc1226e85f8cf530aeb36838efd4883a914045276deb39975d7`
+- Path: `/private/tmp/dutypark-retention-postadmin-20260829.xcresult`
+- Finalized: `2026-08-29T21:02:35+0900`
+- Deterministic tree SHA-256: `088fa2fa3f2c5befe0bc370dea5c25178be69bc2940778d9e29b6c92ea7954f1`
 
 The tree hash is the SHA-256 of the sorted list of each relative file path and file
 SHA-256. It identifies the local bundle while it exists; it is not a substitute for
@@ -42,10 +42,10 @@ retaining that bundle in CI or release artifact storage.
 It was generated from the finalized bundle with:
 
 ```sh
-find /private/tmp/dutypark-commit-review-full-20260829.xcresult -type f -print0 \
+find /private/tmp/dutypark-retention-postadmin-20260829.xcresult -type f -print0 \
   | sort -z \
   | xargs -0 shasum -a 256 \
-  | sed 's#  /private/tmp/dutypark-commit-review-full-20260829.xcresult/#  #' \
+  | sed 's#  /private/tmp/dutypark-retention-postadmin-20260829.xcresult/#  #' \
   | shasum -a 256
 ```
 

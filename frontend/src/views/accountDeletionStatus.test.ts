@@ -36,4 +36,10 @@ describe('account deletion status page', () => {
     expect(statusView).toContain('resetStoredReceipt')
     expect(statusView).toContain('clearAccountDeletionReceipt()')
   })
+
+  it('discloses limited support-record retention and links the privacy policy', () => {
+    expect(statusView).toContain("t('member.accountDeletion.retentionNotice')")
+    expect(statusView).toContain("t('policy.privacy.title')")
+    expect(statusView).toContain('to="/privacy"')
+  })
 })

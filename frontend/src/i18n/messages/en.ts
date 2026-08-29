@@ -1142,6 +1142,7 @@ export default {
       title: 'Delete account',
       progress: 'Step {current} of {total}',
       loading: 'Loading the effects of account deletion...',
+      retentionNotice: 'Original inquiry/report content, handling records, and any names or content snapshots included in those records may be retained in a limited scope after the account is disconnected when needed for operations, dispute handling, or legal obligations. They are deleted or anonymized once those purposes are fulfilled.',
       scope: {
         title: 'Review what will be deleted',
         message: 'Review the immediate and background effects before continuing.',
@@ -1218,7 +1219,7 @@ export default {
         acceptedTitle: 'Your account deletion request was accepted',
         alreadyPendingTitle: 'Your account deletion request is already being processed',
         signedOut: 'You have been safely signed out from Dutypark.',
-        asyncCleanup: 'Account data and stored files are being removed. This usually finishes within 5 minutes.',
+        asyncCleanup: 'Account data and stored files are being removed. This part usually finishes within 5 minutes; inquiry and report records may follow a separate retention and deletion schedule.',
         receiptUnavailable: 'Your deletion request was accepted, but its status receipt could not be saved. Contact support to confirm the result.',
         contactSupport: 'Contact support',
         confirm: 'OK',
@@ -1226,7 +1227,7 @@ export default {
       status: {
         title: 'Account deletion status',
         processingTitle: 'Your account deletion is being processed',
-        processingMessage: 'Account data and stored files are being removed safely. This usually finishes within 5 minutes.',
+        processingMessage: 'Account data and stored files are being removed safely. This part usually finishes within 5 minutes; inquiry and report records may follow a separate retention and deletion schedule.',
         estimatedAt: 'Estimated completion: {time}',
         signedOut: 'You can check the processing status here after signing out.',
         refresh: 'Check status again',

@@ -13,6 +13,68 @@ struct AccountDeletionFlowTests {
     }
 
     @Test
+    func accountDeletionRetentionNoticeAndEtaAreLocalizedAndScoped() {
+        let expectedRetentionNoticeByLocale: [(Locale, String)] = [
+            (
+                .korean,
+                "문의·신고 원문과 처리 기록, 그 기록에 포함된 이름 및 콘텐츠 snapshot은 계정 연결 해제 후에도 운영·분쟁 대응 또는 법령상 필요한 범위에서 제한적으로 보관될 수 있습니다. 해당 목적이 달성되면 삭제하거나 익명화합니다."
+            ),
+            (
+                .english,
+                "Original inquiry/report content, handling records, and any names or content snapshots included in those records may be retained in a limited scope after the account is disconnected when needed for operations, dispute handling, or legal obligations. They are deleted or anonymized once those purposes are fulfilled."
+            ),
+        ]
+        let expectedEtaByLocale: [(Locale, String)] = [
+            (
+                .korean,
+                "삭제 대상으로 안내한 계정 데이터와 파일은 보통 5분 이내에 처리됩니다. 문의·신고 기록에는 별도의 보관·삭제 기준이 적용될 수 있습니다."
+            ),
+            (
+                .english,
+                "The account data and files identified for deletion are usually processed within 5 minutes; inquiry and report records may follow a separate retention and deletion schedule."
+            ),
+        ]
+
+        for (locale, expected) in expectedRetentionNoticeByLocale {
+            let notice = SettingsLocalization.string(
+                "settings.accountDeletion.retentionNotice",
+                locale: locale
+            )
+            #expect(notice == expected)
+            #expect(notice.rangeOfCharacter(from: .decimalDigits) == nil)
+        }
+        for (locale, expected) in expectedEtaByLocale {
+            let eta = SettingsLocalization.string(
+                "settings.accountDeletion.accepted.eta",
+                locale: locale
+            )
+            #expect(eta == expected)
+        }
+    }
+
+    @Test
+    func accountDeletionScreensDiscloseRetentionAndReusePrivacyPolicyPresentation() throws {
+        let root = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let deletionSource = try String(
+            contentsOf: root.appending(path: "Dutypark/Features/Settings/AccountDeletionView.swift"),
+            encoding: .utf8
+        )
+        let statusSource = try String(
+            contentsOf: root.appending(path: "Dutypark/Features/Auth/AccountDeletionAcceptedView.swift"),
+            encoding: .utf8
+        )
+
+        #expect(deletionSource.contains("settings.accountDeletion.retentionNotice"))
+        #expect(deletionSource.contains("settings.policy.privacy"))
+        #expect(deletionSource.contains("DeepLinkedPolicyView(type: .privacy"))
+        #expect(statusSource.contains("settings.accountDeletion.retentionNotice"))
+        #expect(statusSource.contains("settings.policy.privacy"))
+        #expect(statusSource.contains("GuestPolicyView(type: .privacy)"))
+    }
+
+    @Test
     func finalDestructiveActionCopyMatchesResponsiveWebInEveryLanguage() {
         for (locale, expected) in [
             (Locale.korean, "계정 영구 삭제"),
