@@ -11,6 +11,7 @@ import com.tistory.shanepark.dutypark.duty.service.DutyPatternService
 import com.tistory.shanepark.dutypark.duty.service.DutyResolver
 import com.tistory.shanepark.dutypark.member.domain.dto.toMemberPreviewDto
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
+import com.tistory.shanepark.dutypark.publiccontent.service.PublicContentService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.team.domain.dto.*
 import com.tistory.shanepark.dutypark.team.domain.entity.Team
@@ -30,6 +31,7 @@ class TeamService(
     private val memberRepository: MemberRepository,
     private val dutyPatternService: DutyPatternService,
     private val dutyResolver: DutyResolver,
+    private val publicContentService: PublicContentService,
 ) {
 
     @Transactional(readOnly = true)
@@ -142,6 +144,7 @@ class TeamService(
 
     fun updateDefaultDuty(teamId: Long, newDutyName: String?, newDutyColor: String?) {
         val team = teamRepository.findById(teamId).orElseThrow()
+        newDutyName?.let(publicContentService::validateContent)
         if (newDutyColor != null) {
             team.defaultDutyColor = newDutyColor
         }

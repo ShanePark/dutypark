@@ -13,6 +13,7 @@ import org.springframework.restdocs.payload.PayloadDocumentation.*
 import org.springframework.restdocs.request.RequestDocumentation.parameterWithName
 import org.springframework.restdocs.request.RequestDocumentation.pathParameters
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.time.LocalDate
@@ -62,6 +63,26 @@ class DDayControllerTest : RestDocsTest() {
                     )
                 )
             )
+    }
+
+    @Test
+    fun `public dday rejects a banned title on create`() {
+        val json = """
+            {
+                "title": "시.발",
+                "date": "${fixedDate.plusDays(30)}",
+                "isPrivate": false
+            }
+        """.trimIndent()
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/dday")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("contentFilter.blocked"))
     }
 
     @Test
@@ -115,6 +136,38 @@ class DDayControllerTest : RestDocsTest() {
                     )
                 )
             )
+    }
+
+    @Test
+    fun `public dday rejects a banned title on update`() {
+        val saved = dDayRepository.save(
+            DDayEvent(
+                member = TestData.member,
+                title = "Original",
+                date = fixedDate.plusDays(10),
+                isPrivate = false,
+            )
+        )
+        em.flush()
+        em.clear()
+
+        val json = """
+            {
+                "id": ${saved.id},
+                "title": "시.발",
+                "date": "${fixedDate.plusDays(60)}",
+                "isPrivate": false
+            }
+        """.trimIndent()
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.post("/api/dday")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("contentFilter.blocked"))
     }
 
     @Test

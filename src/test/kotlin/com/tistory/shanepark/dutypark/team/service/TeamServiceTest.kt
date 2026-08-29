@@ -8,8 +8,10 @@ import com.tistory.shanepark.dutypark.duty.service.DutyResolver
 import com.tistory.shanepark.dutypark.duty.service.ResolvedDuty
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutySource
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
+import com.tistory.shanepark.dutypark.publiccontent.service.PublicContentService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.team.domain.entity.Team
 import com.tistory.shanepark.dutypark.team.repository.TeamRepository
@@ -20,6 +22,9 @@ import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.InjectMocks
 import org.mockito.Mock
 import org.mockito.Mockito.`when`
+import org.mockito.kotlin.doThrow
+import org.mockito.kotlin.verify
+import org.mockito.kotlin.whenever
 import org.mockito.junit.jupiter.MockitoExtension
 import org.springframework.test.util.ReflectionTestUtils
 import java.time.LocalDate
@@ -48,6 +53,9 @@ class TeamServiceTest {
 
     @Mock
     lateinit var dutyResolver: DutyResolver
+
+    @Mock
+    lateinit var publicContentService: PublicContentService
 
     @Test
     fun `checkCanManage returns code-first auth exception for non-manager`() {
@@ -106,6 +114,39 @@ class TeamServiceTest {
         val shifts = service.loadShift(loginMember = longinMember, LocalDate.of(2025, 3, 12))
 
         assertThat(shifts).isEmpty()
+    }
+
+    @Test
+    fun `updateDefaultDuty validates the new name before updating`() {
+        val team = Team("Test Team")
+        ReflectionTestUtils.setField(team, "id", 1L)
+        `when`(teamRepository.findById(team.id!!)).thenReturn(Optional.of(team))
+
+        service.updateDefaultDuty(team.id!!, "New default", "#123456")
+
+        verify(publicContentService).validateContent("New default")
+        assertThat(team.defaultDutyName).isEqualTo("New default")
+        assertThat(team.defaultDutyColor).isEqualTo("#123456")
+    }
+
+    @Test
+    fun `updateDefaultDuty does not mutate when the new name is banned`() {
+        val team = Team("Test Team")
+        ReflectionTestUtils.setField(team, "id", 1L)
+        team.defaultDutyName = "Before"
+        team.defaultDutyColor = "#abcdef"
+        `when`(teamRepository.findById(team.id!!)).thenReturn(Optional.of(team))
+        doThrow(BadRequestException("contentFilter.blocked"))
+            .whenever(publicContentService)
+            .validateContent("blocked")
+
+        assertThrows<BadRequestException> {
+            service.updateDefaultDuty(team.id!!, "blocked", "#123456")
+        }
+
+        assertThat(team.defaultDutyName).isEqualTo("Before")
+        assertThat(team.defaultDutyColor).isEqualTo("#abcdef")
+        verify(publicContentService).validateContent("blocked")
     }
 
     @Test

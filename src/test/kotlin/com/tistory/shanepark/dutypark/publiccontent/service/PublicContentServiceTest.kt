@@ -1,9 +1,12 @@
 package com.tistory.shanepark.dutypark.publiccontent.service
 
 import com.tistory.shanepark.dutypark.TestUtils
+import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
 import com.tistory.shanepark.dutypark.publiccontent.domain.ReleaseNotesSource
 import org.assertj.core.api.Assertions.assertThat
+import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import org.springframework.core.io.ClassPathResource
 import tools.jackson.module.kotlin.readValue
 import java.security.MessageDigest
@@ -141,6 +144,25 @@ class PublicContentServiceTest {
         val words = service.getBannedWords().words
 
         assertThat(words.filter { word -> words.any { other -> other != word && word.contains(other) } }).isEmpty()
+    }
+
+    @Test
+    fun `validateContent uses the same normalized substring matching as clients`() {
+        val exception = assertThrows<BadRequestException> {
+            service.validateContent("시.발")
+        }
+
+        assertThat(exception.message).isEqualTo("contentFilter.blocked")
+        service.validateContent("시민 안내")
+    }
+
+    @Test
+    fun `normalization keeps supplementary-plane letters when matching`() {
+        val supplementaryLetter = String(Character.toChars(0x10400))
+
+        assertDoesNotThrow {
+            service.validateContent("f${supplementaryLetter}uck")
+        }
     }
 
     private fun sha256(path: String): String {

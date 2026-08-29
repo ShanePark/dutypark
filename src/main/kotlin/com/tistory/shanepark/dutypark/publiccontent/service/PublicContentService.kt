@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.publiccontent.service
 
+import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
 import com.tistory.shanepark.dutypark.publiccontent.domain.BannedWordsResponse
 import com.tistory.shanepark.dutypark.publiccontent.domain.BannedWordsSource
 import com.tistory.shanepark.dutypark.publiccontent.domain.GuideCard
@@ -117,6 +118,18 @@ class PublicContentService(
         words = bannedWordsResource.content.words,
     )
 
+    /**
+     * Applies the same normalization and substring matching as the public banned-words contract.
+     * User-generated text must be checked here as well as by clients because API callers can bypass
+     * the client-side preflight.
+     */
+    fun validateContent(value: String) {
+        val normalized = normalizeForMatching(value)
+        if (bannedWordsResource.content.words.any(normalized::contains)) {
+            throw BadRequestException("contentFilter.blocked")
+        }
+    }
+
     private inline fun <reified T> load(path: String): LoadedResource<T> = try {
         val bytes = ClassPathResource(path).inputStream.use { it.readBytes() }
         LoadedResource(
@@ -207,10 +220,18 @@ class PublicContentService(
         }
     }
 
-    private fun normalizeForMatching(value: String): String = Normalizer
-        .normalize(value, Normalizer.Form.NFKC)
-        .lowercase()
-        .filter(Char::isLetterOrDigit)
+    private fun normalizeForMatching(value: String): String {
+        val normalized = Normalizer
+            .normalize(value, Normalizer.Form.NFKC)
+            .lowercase()
+        return buildString {
+            normalized.codePoints().forEach { codePoint ->
+                if (Character.isLetterOrDigit(codePoint)) {
+                    appendCodePoint(codePoint)
+                }
+            }
+        }
+    }
 
     private fun validateReleaseNotes(source: ReleaseNotesSource) {
         check(source.schemaVersion == SUPPORTED_SCHEMA_VERSION)

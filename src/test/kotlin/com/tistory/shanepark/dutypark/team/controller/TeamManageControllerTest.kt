@@ -178,6 +178,20 @@ class TeamManageControllerTest : RestDocsTest() {
     }
 
     @Test
+    fun `manager cannot update default duty with a banned name`() {
+        setTeamAdmin(TestData.member.id!!)
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.patch("/api/teams/manage/{teamId}/default-duty", TestData.team.id!!)
+                .param("color", "#123456")
+                .param("name", "시.발")
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("contentFilter.blocked"))
+    }
+
+    @Test
     fun `manager can add member to team`() {
         setTeamAdmin(TestData.member.id!!)
         val newMember = memberRepository.save(Member("joiner", "joiner@duty.park", "pass"))
