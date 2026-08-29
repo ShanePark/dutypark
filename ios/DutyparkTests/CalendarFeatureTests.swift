@@ -1540,6 +1540,131 @@ final class CalendarFeatureTests: XCTestCase {
         XCTAssertEqual(deleteCount, 1)
     }
 
+    func testDDaySaveBlocksBannedTitleBeforeCallingTheRepository() async {
+        let suiteName = "calendar-content-filter-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.set(["시발"], forKey: "dp-banned-words")
+        let repository = CalendarRepositoryMock()
+        let haptics = DPHapticCenter()
+        let model = CalendarViewModel(
+            repository: repository,
+            now: date(2026, 8, 12),
+            contentFilter: ContentFilterStore(defaults: defaults),
+            hapticCenter: haptics
+        )
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        await model.load()
+
+        let saved = await model.saveDDay(
+            existing: nil,
+            title: "시.발",
+            date: date(2026, 8, 12),
+            isPrivate: false
+        )
+
+        XCTAssertFalse(saved)
+        XCTAssertEqual(
+            model.errorMessage,
+            CalendarLocalization.text("calendar.error.contentFilter")
+        )
+        XCTAssertEqual(haptics.event?.kind, .error)
+        let saveCount = await repository.saveDDayCount
+        XCTAssertEqual(saveCount, 0)
+    }
+
+    func testPrivateDDaySaveAllowsALocallyBannedTitle() async {
+        let suiteName = "calendar-private-content-filter-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.set(["시발"], forKey: "dp-banned-words")
+        let repository = CalendarRepositoryMock()
+        let haptics = DPHapticCenter()
+        let model = CalendarViewModel(
+            repository: repository,
+            now: date(2026, 8, 12),
+            contentFilter: ContentFilterStore(defaults: defaults),
+            hapticCenter: haptics
+        )
+        defer { defaults.removePersistentDomain(forName: suiteName) }
+
+        await model.load()
+
+        let saved = await model.saveDDay(
+            existing: nil,
+            title: "시.발",
+            date: date(2026, 8, 12),
+            isPrivate: true
+        )
+
+        XCTAssertTrue(saved)
+        XCTAssertNil(model.errorMessage)
+        XCTAssertEqual(haptics.event?.kind, .success)
+        let saveCount = await repository.saveDDayCount
+        XCTAssertEqual(saveCount, 1)
+    }
+
+    func testDDaySaveMapsServerContentFilterErrorToTheLocalizedMessage() async {
+        let repository = CalendarRepositoryMock(
+            saveDDayError: .server(status: 400, code: "contentFilter.blocked")
+        )
+        let haptics = DPHapticCenter()
+        let model = CalendarViewModel(
+            repository: repository,
+            now: date(2026, 8, 12),
+            hapticCenter: haptics
+        )
+
+        await model.load()
+
+        let saved = await model.saveDDay(
+            existing: nil,
+            title: "A safe title",
+            date: date(2026, 8, 12),
+            isPrivate: false
+        )
+
+        XCTAssertFalse(saved)
+        XCTAssertEqual(
+            model.errorMessage,
+            CalendarLocalization.text("calendar.error.contentFilter")
+        )
+        XCTAssertEqual(haptics.event?.kind, .error)
+        let saveCount = await repository.saveDDayCount
+        XCTAssertEqual(saveCount, 1)
+    }
+
+    func testDDaySaveMapsDetailedServerContentFilterErrorToTheLocalizedMessage() async {
+        let repository = CalendarRepositoryMock(
+            saveDDayError: .serverWithDetails(
+                status: 400,
+                code: "contentFilter.blocked",
+                details: APIErrorDetails(remainingAttempts: nil)
+            )
+        )
+        let haptics = DPHapticCenter()
+        let model = CalendarViewModel(
+            repository: repository,
+            now: date(2026, 8, 12),
+            hapticCenter: haptics
+        )
+
+        await model.load()
+
+        let saved = await model.saveDDay(
+            existing: nil,
+            title: "A safe title",
+            date: date(2026, 8, 12),
+            isPrivate: false
+        )
+
+        XCTAssertFalse(saved)
+        XCTAssertEqual(
+            model.errorMessage,
+            CalendarLocalization.text("calendar.error.contentFilter")
+        )
+        XCTAssertEqual(haptics.event?.kind, .error)
+    }
+
     func testLoadBuildsTheServerFortyTwoCellCalendar() async {
         let repository = CalendarRepositoryMock()
         let model = CalendarViewModel(repository: repository, now: date(2026, 8, 12))
@@ -2375,6 +2500,7 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
     var deleteScheduleCount = 0
     var untagCount = 0
     var deleteDDayCount = 0
+    var saveDDayCount = 0
     let canManageValue: Bool
     let cancelMemberLoad: Bool
     let friendValues: [FriendDTO]
@@ -2383,6 +2509,7 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
     let returnsTaggedSchedule: Bool
     let otherDutyValues: [OtherDutyResponse]
     let monthGate: CalendarMonthRaceGate?
+    let saveDDayError: APIError?
 
     init(
         canManage: Bool = false,
@@ -2392,7 +2519,8 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
         failDestructiveMutations: Bool = false,
         returnsTaggedSchedule: Bool = false,
         otherDuties: [OtherDutyResponse] = [],
-        monthGate: CalendarMonthRaceGate? = nil
+        monthGate: CalendarMonthRaceGate? = nil,
+        saveDDayError: APIError? = nil
     ) {
         canManageValue = canManage
         self.cancelMemberLoad = cancelMemberLoad
@@ -2402,6 +2530,7 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
         self.returnsTaggedSchedule = returnsTaggedSchedule
         otherDutyValues = otherDuties
         self.monthGate = monthGate
+        self.saveDDayError = saveDDayError
     }
 
     func member() async throws -> MemberDTO {
@@ -2464,7 +2593,11 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
     func uploadDutyBatch(memberID: MemberID, year: Int, month: Int, filename: String, data: Data) async throws -> DutyBatchUploadResult {
         DutyBatchUploadResult(result: true, errorCode: nil, errorDetails: nil, startDate: nil, endDate: nil, workingDays: 20, offDays: 10)
     }
-    func saveDDay(_ request: DDaySaveDTO) async throws -> DDayDTO { DDayDTO(id: 1, title: request.title, date: request.date, isPrivate: request.isPrivate, calc: 0, daysLeft: 0) }
+    func saveDDay(_ request: DDaySaveDTO) async throws -> DDayDTO {
+        saveDDayCount += 1
+        if let saveDDayError { throw saveDDayError }
+        return DDayDTO(id: 1, title: request.title, date: request.date, isPrivate: request.isPrivate, calc: 0, daysLeft: 0)
+    }
     func deleteDDay(id: Int64) async throws {
         deleteDDayCount += 1
         if failDestructiveMutations { throw APIError.invalidResponse }

@@ -537,6 +537,115 @@ struct TeamFeatureTests {
     }
 
     @Test @MainActor
+    func dutyTypeSaveBlocksBannedNameBeforeCallingTheRepository() async {
+        let suiteName = "team-content-filter-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.set(["시발"], forKey: "dp-banned-words")
+        let contentFilter = ContentFilterStore(defaults: defaults)
+        let viewModel = TeamManageViewModel(
+            teamID: 7,
+            repository: TeamRepository(client: makeClient()),
+            contentFilter: contentFilter
+        )
+        TeamURLProtocolStub.requestCount = 0
+        TeamURLProtocolStub.handler = { request in
+            Self.response(request, status: 204)
+        }
+        defer {
+            TeamURLProtocolStub.handler = nil
+            defaults.removePersistentDomain(forName: suiteName)
+        }
+
+        await viewModel.saveDutyType(name: "시.발", color: "#112233")
+
+        #expect(viewModel.showsError)
+        #expect(viewModel.errorMessage == teamLocalized("team.common.contentFilterError"))
+        #expect(TeamURLProtocolStub.requestCount == 0)
+        #expect(DPHapticCenter.shared.event?.kind == .error)
+    }
+
+    @Test @MainActor
+    func dutyTypeSaveMapsServerContentFilterErrorToTheLocalizedMessage() async {
+        TeamURLProtocolStub.handler = { request in
+            Self.response(
+                request,
+                status: 400,
+                body: #"{"code":"contentFilter.blocked"}"#
+            )
+        }
+        let viewModel = TeamManageViewModel(
+            teamID: 7,
+            repository: TeamRepository(client: makeClient())
+        )
+        defer { TeamURLProtocolStub.handler = nil }
+
+        await viewModel.saveDutyType(name: "A safe duty", color: "#112233")
+
+        #expect(viewModel.showsError)
+        #expect(viewModel.errorMessage == teamLocalized("team.common.contentFilterError"))
+        #expect(viewModel.showsSuccess == false)
+        #expect(DPHapticCenter.shared.event?.kind == .error)
+    }
+
+    @Test @MainActor
+    func dutyTypeSaveMapsDetailedServerContentFilterErrorToTheLocalizedMessage() async {
+        TeamURLProtocolStub.handler = { request in
+            Self.response(
+                request,
+                status: 400,
+                body: #"{"code":"contentFilter.blocked","details":{"remainingAttempts":1}}"#
+            )
+        }
+        let viewModel = TeamManageViewModel(
+            teamID: 7,
+            repository: TeamRepository(client: makeClient())
+        )
+        defer { TeamURLProtocolStub.handler = nil }
+
+        await viewModel.saveDutyType(name: "A safe duty", color: "#112233")
+
+        #expect(viewModel.showsError)
+        #expect(viewModel.errorMessage == teamLocalized("team.common.contentFilterError"))
+        #expect(viewModel.showsSuccess == false)
+        #expect(DPHapticCenter.shared.event?.kind == .error)
+    }
+
+    @Test @MainActor
+    func defaultDutyTypeSaveUsesTheSameContentFilterGuard() async {
+        let suiteName = "team-default-content-filter-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defaults.set(["시발"], forKey: "dp-banned-words")
+        let contentFilter = ContentFilterStore(defaults: defaults)
+        let viewModel = TeamManageViewModel(
+            teamID: 7,
+            repository: TeamRepository(client: makeClient()),
+            contentFilter: contentFilter
+        )
+        viewModel.editingDutyType = DutyTypeDTO(
+            id: nil,
+            teamId: 7,
+            name: "Off",
+            position: -1,
+            color: "#112233",
+            hidden: false
+        )
+        TeamURLProtocolStub.requestCount = 0
+        TeamURLProtocolStub.handler = { request in
+            Self.response(request, status: 204)
+        }
+        defer {
+            TeamURLProtocolStub.handler = nil
+            defaults.removePersistentDomain(forName: suiteName)
+        }
+
+        await viewModel.saveDutyType(name: "시.발", color: "#112233")
+
+        #expect(viewModel.showsError)
+        #expect(viewModel.errorMessage == teamLocalized("team.common.contentFilterError"))
+        #expect(TeamURLProtocolStub.requestCount == 0)
+    }
+
+    @Test @MainActor
     func scheduleMutationsPatchTheLoadedMonthWithoutARefreshRequest() async throws {
         TeamURLProtocolStub.handler = { request in
             Self.successfulTeamLoadResponse(request)

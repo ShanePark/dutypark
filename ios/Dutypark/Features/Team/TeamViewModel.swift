@@ -486,15 +486,18 @@ final class TeamManageViewModel: ObservableObject {
     let teamID: TeamID
     let isServiceAdmin: Bool
     private let repository: TeamRepository
+    private let contentFilter: ContentFilterStore
 
     init(
         teamID: TeamID,
         isServiceAdmin: Bool = false,
-        repository: TeamRepository = TeamRepository()
+        repository: TeamRepository = TeamRepository(),
+        contentFilter: ContentFilterStore = .shared
     ) {
         self.teamID = teamID
         self.isServiceAdmin = isServiceAdmin
         self.repository = repository
+        self.contentFilter = contentFilter
     }
 
     func load() async {
@@ -624,6 +627,10 @@ final class TeamManageViewModel: ObservableObject {
     }
 
     func saveDutyType(name: String, color: String) async {
+        guard !contentFilter.isBlocked(name) else {
+            presentError(teamLocalized("team.common.contentFilterError"))
+            return
+        }
         let target = editingDutyType
         let needsServerIdentity = target == nil
         await perform(
@@ -810,7 +817,21 @@ final class TeamManageViewModel: ObservableObject {
             showsSuccess = true
             return true
         } catch {
-            presentError()
+            presentError(
+                isContentFilterBlocked(error)
+                    ? teamLocalized("team.common.contentFilterError")
+                    : nil
+            )
+            return false
+        }
+    }
+
+    private func isContentFilterBlocked(_ error: Error) -> Bool {
+        guard let apiError = error as? APIError else { return false }
+        switch apiError {
+        case .server(_, let code), .serverWithDetails(_, let code, _):
+            return code == "contentFilter.blocked"
+        default:
             return false
         }
     }

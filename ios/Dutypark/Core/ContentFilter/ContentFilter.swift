@@ -24,6 +24,17 @@ nonisolated enum ContentFilter {
         .uppercaseLetter, .lowercaseLetter, .titlecaseLetter, .modifierLetter, .otherLetter, .decimalNumber,
     ]
 
+    /// Applies the same matching normalization to list entries and rejects values that cannot
+    /// contribute to a match. First occurrence order is retained after normalization.
+    static func normalizedWords(_ candidates: [String]) -> [String] {
+        var seen = Set<String>()
+        return candidates.compactMap { candidate in
+            let normalized = normalizeForMatching(candidate)
+            guard !normalized.isEmpty, seen.insert(normalized).inserted else { return nil }
+            return normalized
+        }
+    }
+
     static func bannedWord(in values: [String?], words: [String]) -> String? {
         guard !words.isEmpty else { return nil }
 

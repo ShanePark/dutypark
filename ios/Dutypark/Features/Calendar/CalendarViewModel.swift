@@ -847,6 +847,16 @@ final class CalendarViewModel: ObservableObject {
         }
     }
 
+    private func isContentFilterBlocked(_ error: Error) -> Bool {
+        guard let apiError = error as? APIError else { return false }
+        switch apiError {
+        case .server(_, let code), .serverWithDetails(_, let code, _):
+            return code == "contentFilter.blocked"
+        default:
+            return false
+        }
+    }
+
     private enum CalendarServerRecoveryAttempt {
         case recovered
         case retry
@@ -1547,6 +1557,11 @@ final class CalendarViewModel: ObservableObject {
             emit(.warning)
             return false
         }
+        guard isPrivate || !contentFilter.isBlocked(trimmed) else {
+            errorMessage = CalendarLocalization.text("calendar.error.contentFilter")
+            emit(.error)
+            return false
+        }
         let parts = CalendarDateSupport.calendar.dateComponents([.year, .month, .day], from: date)
         let dateOnly = DateOnly(rawValue: String(format: "%04d-%02d-%02d", parts.year ?? 0, parts.month ?? 0, parts.day ?? 0))
         do {
@@ -1558,7 +1573,9 @@ final class CalendarViewModel: ObservableObject {
             emit(.success)
             return true
         } catch {
-            errorMessage = CalendarLocalization.text("calendar.error.save")
+            errorMessage = isContentFilterBlocked(error)
+                ? CalendarLocalization.text("calendar.error.contentFilter")
+                : CalendarLocalization.text("calendar.error.save")
             emit(.error)
             return false
         }
