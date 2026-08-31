@@ -765,20 +765,22 @@ final class CalendarFeatureTests: XCTestCase {
         )
     }
 
-    func testDDayDeleteSuccessEnablesDismissalBeforeYieldingToPresenter() async {
+    func testDDayDeleteSuccessAuthorizesThenYieldsBeforeDismissingPresentation() async {
         var events: [String] = []
 
         await CalendarDDayDeleteSuccessDismissalPolicy.prepareForDismiss(
             authorizeDismiss: {
-                events.append("enabled")
+                events.append("authorized")
+            },
+            dismissPresentation: {
+                events.append("dismissed")
             },
             yieldTurn: {
                 events.append("yielded")
             }
         )
-        events.append("dismissed")
 
-        XCTAssertEqual(events, ["enabled", "yielded", "dismissed"])
+        XCTAssertEqual(events, ["authorized", "yielded", "dismissed"])
     }
 
     func testCalendarModalDismissabilityBlocksEditorsAndWorkingMutations() {
@@ -804,15 +806,26 @@ final class CalendarFeatureTests: XCTestCase {
         ))
         XCTAssertTrue(CalendarModalDismissabilityPolicy.dDayCanDismiss(
             isWorking: false,
-            isConfirmingDelete: false
+            isConfirmingDelete: false,
+            deleteSucceeded: false
         ))
         XCTAssertFalse(CalendarModalDismissabilityPolicy.dDayCanDismiss(
             isWorking: true,
-            isConfirmingDelete: false
+            isConfirmingDelete: false,
+            deleteSucceeded: false
         ))
         XCTAssertFalse(CalendarModalDismissabilityPolicy.dDayCanDismiss(
             isWorking: false,
-            isConfirmingDelete: true
+            isConfirmingDelete: true,
+            deleteSucceeded: false
+        ))
+    }
+
+    func testDDayModalCanDismissAfterDeleteSucceedsWhileConfirmationRouteIsStillActive() {
+        XCTAssertTrue(CalendarModalDismissabilityPolicy.dDayCanDismiss(
+            isWorking: false,
+            isConfirmingDelete: true,
+            deleteSucceeded: true
         ))
     }
 
