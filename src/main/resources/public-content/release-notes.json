@@ -40,6 +40,14 @@
         }
       },
       "entries": {
+        "pr-413": {
+          "title": "D-Day 삭제 모달 동작과 iOS 출시 준비 개선",
+          "summary": "D-Day를 삭제한 뒤 확인 모달이 닫히고 선택 상태가 정리되도록 개선했으며, App Store 심사 준비 문서와 릴리스 증빙을 최신 상태로 정리했습니다.",
+          "changes": [
+            "캘린더에서 D-Day를 삭제하면 삭제가 완료된 뒤 확인 모달이 닫히고 삭제된 항목이 다시 선택되지 않습니다.",
+            "iOS App Store 심사 준비 문서와 최신 릴리스 화면 증빙을 정리해 출시 준비 흐름을 명확하게 했습니다."
+          ]
+        },
         "pr-412": {
           "title": "iPhone 출시 준비와 안전한 사용 경험 강화",
           "summary": "iPhone 앱 출시와 심사 흐름을 안정화하고 푸시 알림과 일정 표시를 다듬었으며, 계정 삭제 확인과 콘텐츠·개인정보 보호를 강화했습니다.",
@@ -2269,6 +2277,14 @@
         }
       },
       "entries": {
+        "pr-413": {
+          "title": "Smoother D-Day deletion and iOS release preparation",
+          "summary": "Closes the confirmation modal after a D-Day is deleted and organizes the latest iOS App Store review documentation and release evidence.",
+          "changes": [
+            "After a successful D-Day deletion in Calendar, the confirmation modal closes and the deleted item is cleared from the selection.",
+            "Consolidates the iOS App Store review checklist and latest release screenshots to clarify the submission preparation flow."
+          ]
+        },
         "pr-412": {
           "title": "Safer iPhone release and app experience",
           "summary": "Stabilizes the iPhone release and review flows, refines push notifications and schedule display, and strengthens account-deletion confirmation, content filtering, and privacy protection.",
@@ -4461,6 +4477,19 @@
     }
   },
   "items": [
+    {
+      "id": "pr-413",
+      "version": "2026.08.31",
+      "date": "2026-08-31",
+      "pr": 413,
+      "url": "https://github.com/ShanePark/dutypark/pull/413",
+      "category": "fix",
+      "areas": [
+        "calendar",
+        "docs",
+        "ui"
+      ]
+    },
     {
       "id": "pr-412",
       "version": "2026.08.30",

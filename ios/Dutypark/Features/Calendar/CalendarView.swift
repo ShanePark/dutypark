@@ -284,7 +284,11 @@ struct CalendarView: View {
                     maximumHeight: availableSize.height,
                     onDismissabilityChange: { dDayModalCanDismiss = $0 },
                     dismissRequest: dDayDismissRequest,
-                    dismiss: dismiss
+                    dismiss: dismiss,
+                    onDeleteSuccess: {
+                        dDayModalCanDismiss = true
+                        dDayModalSelection = nil
+                    }
                 )
             }
         }
@@ -2057,10 +2061,12 @@ nonisolated enum CalendarDDayEditorDeleteRoutingPolicy {
 enum CalendarDDayDeleteSuccessDismissalPolicy {
     static func prepareForDismiss(
         authorizeDismiss: () -> Void,
+        dismissPresentation: () -> Void,
         yieldTurn: () async -> Void = { await Task.yield() }
     ) async {
         authorizeDismiss()
         await yieldTurn()
+        dismissPresentation()
     }
 }
 
@@ -2073,8 +2079,12 @@ enum CalendarModalDismissabilityPolicy {
         !isEditorWorking && !hasDestructiveAction && !isPerformingDestructiveAction
     }
 
-    static func dDayCanDismiss(isWorking: Bool, isConfirmingDelete: Bool) -> Bool {
-        !isWorking && !isConfirmingDelete
+    static func dDayCanDismiss(
+        isWorking: Bool,
+        isConfirmingDelete: Bool,
+        deleteSucceeded: Bool
+    ) -> Bool {
+        deleteSucceeded || (!isWorking && !isConfirmingDelete)
     }
 }
 
@@ -3875,8 +3885,10 @@ private struct DDayModalView: View {
     let onDismissabilityChange: (Bool) -> Void
     let dismissRequest: Int
     let dismiss: () -> Void
+    let onDeleteSuccess: () -> Void
     @State private var route: Route
     @State private var isDeleting = false
+    @State private var deleteSucceeded = false
     @State private var isChildWorking = false
 
     init(
@@ -3885,7 +3897,8 @@ private struct DDayModalView: View {
         maximumHeight: CGFloat,
         onDismissabilityChange: @escaping (Bool) -> Void,
         dismissRequest: Int,
-        dismiss: @escaping () -> Void
+        dismiss: @escaping () -> Void,
+        onDeleteSuccess: @escaping () -> Void
     ) {
         self.model = model
         self.selection = selection
@@ -3893,6 +3906,7 @@ private struct DDayModalView: View {
         self.onDismissabilityChange = onDismissabilityChange
         self.dismissRequest = dismissRequest
         self.dismiss = dismiss
+        self.onDeleteSuccess = onDeleteSuccess
         _route = State(initialValue: selection == .create ? .edit : .detail)
     }
 
@@ -3942,12 +3956,13 @@ private struct DDayModalView: View {
                             guard CalendarDestructiveActionPolicy.canBegin(isWorking: isDeleting) else { return }
                             isDeleting = true
                             let succeeded = await model.deleteDDay(item)
+                            deleteSucceeded = succeeded
                             isDeleting = false
                             if succeeded {
                                 await CalendarDDayDeleteSuccessDismissalPolicy.prepareForDismiss(
-                                    authorizeDismiss: { onDismissabilityChange(true) }
+                                    authorizeDismiss: { onDismissabilityChange(true) },
+                                    dismissPresentation: onDeleteSuccess
                                 )
-                                dismiss()
                             }
                         }
                     )
@@ -3987,7 +4002,8 @@ private struct DDayModalView: View {
         onDismissabilityChange(
             CalendarModalDismissabilityPolicy.dDayCanDismiss(
                 isWorking: isDeleting || isChildWorking,
-                isConfirmingDelete: route == .confirmDelete
+                isConfirmingDelete: route == .confirmDelete,
+                deleteSucceeded: deleteSucceeded
             )
         )
     }
