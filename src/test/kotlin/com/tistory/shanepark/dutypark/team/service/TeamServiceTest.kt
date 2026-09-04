@@ -103,6 +103,23 @@ class TeamServiceTest {
     }
 
     @Test
+    fun `change team admin rejects member outside team`() {
+        val team = Team("Test Team")
+        val outsider = Member(name = "outsider")
+        ReflectionTestUtils.setField(team, "id", 1L)
+        ReflectionTestUtils.setField(outsider, "id", 3L)
+        whenever(teamRepository.findById(1L)).thenReturn(Optional.of(team))
+        whenever(memberRepository.findById(3L)).thenReturn(Optional.of(outsider))
+
+        val exception = assertThrows<BadRequestException> {
+            service.changeTeamAdmin(teamId = 1L, memberId = 3L)
+        }
+
+        assertThat(exception.message).isEqualTo("team.member.notInTeam")
+        assertThat(team.admin).isNull()
+    }
+
+    @Test
     fun `loadShift should return empty shift if member is not in any team`() {
         val longinMember = LoginMember(id = 1L, name = "test")
         val team = Team("Test Team")

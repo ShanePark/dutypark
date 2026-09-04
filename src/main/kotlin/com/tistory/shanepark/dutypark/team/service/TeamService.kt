@@ -112,6 +112,10 @@ class TeamService(
         val team = teamRepository.findById(teamId).orElseThrow()
         val member = memberId?.let { memberRepository.findById(memberId).orElseThrow() }
 
+        if (member != null && member.team != team) {
+            throw BadRequestException("team.member.notInTeam")
+        }
+
         team.changeAdmin(member)
         teamRepository.save(team)
     }

@@ -73,7 +73,8 @@ async function fetchTeam() {
     const response = await teamApi.getTeamForManage(teamId)
     team.value = response.data
     teamLoaded.value = true
-    isAdmin.value = team.value.adminId === loginId.value ||
+    isAdmin.value = isAppAdmin.value ||
+      team.value.adminId === loginId.value ||
       team.value.members.some(m => m.id === loginId.value && m.isManager)
   } catch (error) {
     console.error('Failed to fetch team:', error)
