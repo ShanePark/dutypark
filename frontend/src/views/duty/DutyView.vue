@@ -112,6 +112,7 @@ const selectedDDay = ref<LocalDDay | null>(null)
 const pinnedDDay = ref<LocalDDay | null>(null)
 
 const todos = ref<LocalTodo[]>([])
+const pendingTodoStatusIds = ref<Set<string>>(new Set())
 
 // Todos with due dates computed from existing todos
 const todosDueByDays = computed(() => {
@@ -177,7 +178,9 @@ function applyTodoUpdate(apiTodo: TodoDto) {
     todos.value.unshift(localTodo)
   }
 
-  selectedTodo.value = localTodo
+  if (selectedTodo.value?.id === apiTodo.id) {
+    selectedTodo.value = localTodo
+  }
 }
 
 // Convert API DDayDto to LocalDDay
@@ -998,8 +1001,27 @@ async function handleTodoUpdate(data: {
   }
 }
 
+async function handleTodoStatusChange(status: TodoStatus) {
+  const todo = selectedTodo.value
+  if (!todo || todo.status === status || pendingTodoStatusIds.value.has(todo.id)) return
+
+  pendingTodoStatusIds.value.add(todo.id)
+  try {
+    const updatedTodo = await todoApi.changeStatus(todo.id, { status })
+    applyTodoUpdate(updatedTodo)
+    toastSuccess(t('duty.todo.messages.statusChanged'))
+  } catch (error) {
+    console.error('Failed to change todo status:', error)
+    showError(t('duty.todo.messages.statusChangeFailed'))
+  } finally {
+    pendingTodoStatusIds.value.delete(todo.id)
+  }
+}
+
 async function handleTodoDelete(todo: Pick<LocalTodo, 'id' | 'title'>) {
+  if (pendingTodoStatusIds.value.has(todo.id)) return
   if (!await confirmDelete(t('duty.todo.messages.deleteConfirm', { title: todo.title }))) return
+  if (pendingTodoStatusIds.value.has(todo.id)) return
   const fromDetailModal = isTodoDetailModalOpen.value
   try {
     await todoApi.deleteTodo(todo.id)
@@ -1015,7 +1037,9 @@ async function handleTodoDelete(todo: Pick<LocalTodo, 'id' | 'title'>) {
 }
 
 async function handleTodoUntagSelf(todo: Pick<LocalTodo, 'id' | 'title'>) {
+  if (pendingTodoStatusIds.value.has(todo.id)) return
   if (!await confirm(t('duty.todo.messages.untagConfirm', { title: todo.title }), t('duty.todo.messages.untagTitle'))) return
+  if (pendingTodoStatusIds.value.has(todo.id)) return
 
   try {
     await todoApi.untagSelf(todo.id)
@@ -1652,8 +1676,11 @@ async function showExcelUploadModal() {
       :todo="selectedTodo"
       :friends="friends"
       :can-report="canReportSelectedTodo"
+      :can-change-status="isMyCalendar"
+      :status-change-pending="selectedTodo ? pendingTodoStatusIds.has(selectedTodo.id) : false"
       @close="isTodoDetailModalOpen = false"
       @update="handleTodoUpdate"
+      @status-change="handleTodoStatusChange"
       @delete="handleTodoDelete"
       @untag-self="handleTodoUntagSelf"
       @report="openTodoReport"

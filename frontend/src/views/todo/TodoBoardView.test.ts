@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import todoBoardView from './TodoBoardView.vue?raw'
+import en from '@/i18n/messages/en'
+import ko from '@/i18n/messages/ko'
 
 const templateAt = todoBoardView.indexOf('<template>')
 const styleAt = todoBoardView.indexOf('<style')
@@ -111,11 +113,15 @@ describe('todo board mobile drag navigation', () => {
 
   it('keeps Sortable touch ordering active inside the destination column', () => {
     expect(script).toContain("draggable: '.kanban-card-wrapper'")
+    expect(script).toContain("filter: '.kanban-card-wrapper--status-pending'")
+    expect(script).not.toContain('.todo-status-picker')
+    expect(script).toContain('preventOnFilter: false')
     expect(script).toContain('delayOnTouchOnly: true')
     expect(script).toContain('touchStartThreshold: 4')
     expect(script).toContain('swapThreshold: 0.65')
     expect(style).toContain('.kanban-card-wrapper {')
-    expect(style).toContain('touch-action: none')
+    expect(style).toContain('touch-action: manipulation')
+    expect(style).not.toContain('touch-action: none')
   })
 
   it('keeps the destination order API and reload-on-failure recovery unchanged', () => {
@@ -133,5 +139,85 @@ describe('todo board mobile drag navigation', () => {
 
   it('keeps the empty column add action visually identifiable', () => {
     expect(style).toContain('border: 2px dashed var(--dp-accent-border);')
+  })
+
+  it('keeps status changes in the detail modal instead of repeating them on list cards', () => {
+    expect(template).toContain('<KanbanCard')
+    expect(template).not.toContain('@status-change="handleStatusChange(todo, $event)"')
+    expect(template).not.toContain(':status-change-pending="pendingStatusTodoIds.has(todo.id)"')
+    expect(template).toContain('@status-change="handleSelectedTodoStatusChange"')
+    expect(script).toContain('async function handleSelectedTodoStatusChange(status: TodoStatus)')
+    expect(script).toContain('todoApi.changeStatus(todo.id, { status })')
+    expect(script).toContain("toastSuccess(t('todoBoard.messages.changeStatusSuccess'))")
+    expect(script).toContain("showError(t('todoBoard.messages.changeStatusFailed'))")
+  })
+
+  it('reconciles the board from the successful status response before refreshing', () => {
+    expect(script).toContain('const updatedTodo = await todoApi.changeStatus(todo.id, { status })')
+    expect(script).toContain('reconcileTodoStatus(updatedTodo)')
+    expect(script).toMatch(
+      /const updatedTodo = await todoApi\.changeStatus\(todo\.id, \{ status \}\)[\s\S]*?reconcileTodoStatus\(updatedTodo\)[\s\S]*?await loadBoard\(\)/,
+    )
+    expect(script).toContain('if (selectedTodo.value?.id === updatedTodo.id)')
+  })
+
+  it('keeps the successful local reconciliation when the follow-up refresh fails', () => {
+    expect(script).toContain("showError(t('todoBoard.messages.loadFailed'))")
+    expect(script).toMatch(
+      /reconcileTodoStatus\(updatedTodo\)[\s\S]*?await loadBoard\(\)[\s\S]*?finally[\s\S]*?pendingStatusTodoIds\.value\.delete\(todo\.id\)/,
+    )
+  })
+
+  it('connects the detail modal status control and keeps the selected todo in sync', () => {
+    expect(template).toContain(':can-change-status="true"')
+    expect(template).toContain('@status-change="handleSelectedTodoStatusChange"')
+    expect(script).toContain('async function handleSelectedTodoStatusChange(status: TodoStatus)')
+    expect(script).toContain('selectedTodo.value = updatedTodo')
+  })
+
+  it('explains that list cards change status from detail or by dragging', () => {
+    expect(ko.todoBoard.help.whatIsKanbanText).toContain('상세 화면에서 상태를 변경')
+    expect(ko.todoBoard.help.whatIsKanbanText).toContain('드래그')
+    expect(ko.todoBoard.help.whatIsKanbanText).not.toContain('상태 버튼')
+    expect(ko.todoBoard.help.tips.drag).toContain('상세 화면에서 상태를 변경')
+    expect(ko.todoBoard.help.tips.drag).toContain('드래그')
+    expect(ko.todoBoard.help.tips.drag).not.toContain('상태 버튼')
+
+    expect(en.todoBoard.help.whatIsKanbanText).toContain('detail view')
+    expect(en.todoBoard.help.whatIsKanbanText).toContain('drag')
+    expect(en.todoBoard.help.whatIsKanbanText).not.toContain('status button')
+    expect(en.todoBoard.help.tips.drag).toContain('detail view')
+    expect(en.todoBoard.help.tips.drag).toContain('drag')
+    expect(en.todoBoard.help.tips.drag).not.toContain('status button')
+  })
+
+  it('blocks competing status changes for the same todo while its request is pending', () => {
+    expect(script).toContain('const pendingStatusTodoIds = ref<Set<string>>(new Set())')
+    expect(script).toContain('if (pendingStatusTodoIds.value.has(todo.id)) return')
+    expect(script).toContain('pendingStatusTodoIds.value.add(todo.id)')
+    expect(script).toContain('pendingStatusTodoIds.value.delete(todo.id)')
+    expect(script).toContain('finally')
+    expect(template).toContain(':status-change-pending="selectedTodo ? pendingStatusTodoIds.has(selectedTodo.id) : false"')
+  })
+
+  it('does not let an earlier status request replace a newly opened detail todo', () => {
+    expect(script).toContain('if (selectedTodo.value?.id !== todo.id || !board.value) return')
+  })
+
+  it('keeps pending cards out of Sortable and guards drag persistence', () => {
+    expect(script).toContain("filter: '.kanban-card-wrapper--status-pending'")
+    expect(script).toMatch(/async function handleDragEnd[\s\S]*?if \(pendingStatusTodoIds\.value\.has\(todoId\)\) return/)
+    expect(template).toContain(":class=\"{ 'kanban-card-wrapper--status-pending': pendingStatusTodoIds.has(todo.id) }\"")
+  })
+
+  it('marks cross-column drag status requests as pending until they settle', () => {
+    expect(script).toMatch(/async function handleDragEnd[\s\S]*?pendingStatusTodoIds\.value\.add\(todoId\)/)
+    expect(script).toMatch(/pendingStatusTodoIds\.value\.add\(todoId\)[\s\S]*?finally[\s\S]*?pendingStatusTodoIds\.value\.delete\(todoId\)/)
+  })
+
+  it('guards detail mutations while the todo status request is pending', () => {
+    expect(script).toMatch(/async function handleUpdateTodo[\s\S]*?if \(pendingStatusTodoIds\.value\.has\(data\.id\)\) return/)
+    expect(script).toMatch(/async function handleDeleteTodo[\s\S]*?if \(pendingStatusTodoIds\.value\.has\(todo\.id\)\) return/)
+    expect(script).toMatch(/async function handleUntagSelf[\s\S]*?if \(pendingStatusTodoIds\.value\.has\(todo\.id\)\) return/)
   })
 })

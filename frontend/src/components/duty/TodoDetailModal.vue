@@ -21,6 +21,7 @@ import DatePickerField from '@/components/common/DatePickerField.vue'
 import FriendTagSelector from '@/components/common/FriendTagSelector.vue'
 import MemberTagChips from '@/components/common/MemberTagChips.vue'
 import CopyTextButton from '@/components/common/CopyTextButton.vue'
+import TodoStatusPicker from '@/components/todo/TodoStatusPicker.vue'
 import { attachmentApi } from '@/api/attachment'
 import { useSwal } from '@/composables/useSwal'
 import { formatDateKorean } from '@/utils/date'
@@ -52,12 +53,16 @@ interface Props {
   startInEditMode?: boolean
   showBackToList?: boolean
   canReport?: boolean
+  canChangeStatus?: boolean
+  statusChangePending?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   startInEditMode: false,
   showBackToList: true,
   canReport: false,
+  canChangeStatus: false,
+  statusChangePending: false,
   friends: () => [],
 })
 
@@ -75,6 +80,7 @@ const emit = defineEmits<{
   }): void
   (e: 'delete', todo: Pick<TodoDetailItem, 'id' | 'title'>): void
   (e: 'untagSelf', todo: Pick<TodoDetailItem, 'id' | 'title'>): void
+  (e: 'status-change', status: TodoStatus): void
   (e: 'report', todo: Pick<TodoDetailItem, 'id' | 'title'>): void
   (e: 'backToList'): void
 }>()
@@ -99,7 +105,9 @@ const selectedTagSummaries = computed(() => {
 })
 
 const isEditTitleMissing = computed(() => !editTitle.value.trim())
-const isEditSaveDisabled = computed(() => isEditTitleMissing.value || isUploading.value)
+const isEditSaveDisabled = computed(() => {
+  return isEditTitleMissing.value || isUploading.value || props.statusChangePending
+})
 
 watch(
   () => props.isOpen,
@@ -193,7 +201,7 @@ const todoTagMembers = computed(() => {
 })
 
 function enterEditMode() {
-  if (!props.todo || props.todo.isTagged) return
+  if (!props.todo || props.todo.isTagged || props.statusChangePending) return
   isEditMode.value = true
   editTitle.value = props.todo.title
   editContent.value = props.todo.content
@@ -223,6 +231,7 @@ function cancelEdit() {
 
 function saveEdit() {
   if (!props.todo) return
+  if (props.statusChangePending) return
   if (!editTitle.value.trim()) {
     return
   }
@@ -289,27 +298,14 @@ function onUploadError(message: string) {
     :is-open="isOpen && !!todo"
     size="xl"
     height="default"
+    aria-labelledby="todo-detail-modal-title"
     @close="handleClose"
   >
     <template v-if="todo">
       <div class="modal-header">
         <div class="min-w-0 flex-1">
           <div class="flex flex-wrap items-center gap-2">
-            <h2 class="truncate">{{ todo.title }}</h2>
-            <span
-              :class="[
-                'inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full flex-shrink-0',
-                todo.status === 'TODO' ? 'bg-dp-bg-tertiary text-dp-text-primary' : '',
-                todo.status === 'IN_PROGRESS' ? 'bg-dp-warning-soft text-dp-warning' : '',
-                todo.status === 'DONE' ? 'bg-dp-success-soft text-dp-success' : '',
-              ]"
-            >
-              <CheckCircle2 v-if="todo.status === 'DONE'" class="w-3.5 h-3.5 flex-shrink-0" />
-              {{ getStatusLabel(todo.status) }}
-              <template v-if="todo.status === 'DONE' && todo.completedDate">
-                {{ formatDateKorean(todo.completedDate) }}
-              </template>
-            </span>
+            <h2 id="todo-detail-modal-title" class="truncate">{{ todo.title }}</h2>
           </div>
           <div class="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
             <span class="inline-flex items-center gap-1 text-xs text-dp-text-muted">
@@ -318,7 +314,13 @@ function onUploadError(message: string) {
             </span>
           </div>
         </div>
-        <button @click="handleClose" class="p-2 hover-close-btn rounded-full transition flex-shrink-0 cursor-pointer">
+        <button
+          type="button"
+          @click="handleClose"
+          class="p-2 hover-close-btn rounded-full transition flex-shrink-0 cursor-pointer"
+          :aria-label="t('common.actions.close')"
+          :title="t('common.actions.close')"
+        >
           <X class="w-6 h-6 text-dp-text-primary" />
         </button>
       </div>
@@ -440,35 +442,86 @@ function onUploadError(message: string) {
             <button
               v-if="showBackToList"
               @click="emit('backToList')"
-              class="flex flex-1 sm:flex-none min-h-11 items-center justify-center gap-1 px-3 py-2 text-sm rounded-lg transition btn-outline cursor-pointer"
+              class="flex min-h-11 w-full items-center justify-center gap-1 px-3 py-2 text-sm rounded-lg transition btn-outline cursor-pointer sm:w-auto sm:flex-none"
               :title="t('duty.todo.actions.backToList')"
             >
               <List class="w-4 h-4" />
               <span class="whitespace-nowrap">{{ t('duty.todo.actions.list') }}</span>
             </button>
 
-            <div class="flex flex-1 sm:flex-none flex-wrap justify-end gap-2">
+            <div class="todo-detail-footer-actions flex min-w-0 w-full items-stretch justify-end gap-2 sm:w-auto sm:flex-none">
+              <div
+                class="todo-detail-primary-actions grid min-w-0 flex-1 gap-2"
+                :class="isTaggedTodo ? 'grid-cols-2' : 'grid-cols-3'"
+              >
+                <TodoStatusPicker
+                  v-if="canChangeStatus && !isEditMode"
+                  :status="todo.status"
+                  :disabled="statusChangePending"
+                  :footer="true"
+                  class="todo-detail-primary-action min-w-0"
+                  @change="emit('status-change', $event)"
+                />
+                <span
+                  v-else-if="!canChangeStatus && !isEditMode"
+                  :class="[
+                    'todo-detail-primary-action flex min-h-11 min-w-0 items-center justify-center gap-1 rounded-lg px-3 py-2 text-center text-sm',
+                    todo.status === 'TODO' ? 'bg-dp-bg-tertiary text-dp-text-primary' : '',
+                    todo.status === 'IN_PROGRESS' ? 'bg-dp-warning-soft text-dp-warning' : '',
+                    todo.status === 'DONE' ? 'bg-dp-success-soft text-dp-success' : '',
+                  ]"
+                  :aria-label="getStatusLabel(todo.status)"
+                >
+                  <CheckCircle2 v-if="todo.status === 'DONE'" class="h-4 w-4 flex-shrink-0" />
+                  {{ getStatusLabel(todo.status) }}
+                  <template v-if="todo.status === 'DONE' && todo.completedDate">
+                    ({{ formatDateKorean(todo.completedDate) }})
+                  </template>
+                </span>
+
+                <button
+                  v-if="isTaggedTodo"
+                  type="button"
+                  class="todo-detail-primary-action flex min-h-11 min-w-0 w-full cursor-pointer items-center justify-center gap-1 rounded-lg border border-dp-border-primary px-3 py-2 text-center text-sm text-dp-text-primary transition hover:bg-dp-bg-hover disabled:cursor-not-allowed disabled:opacity-50"
+                  @click="emit('untagSelf', { id: todo.id, title: todo.title })"
+                  :disabled="statusChangePending"
+                >
+                  <X class="h-4 w-4 flex-shrink-0" />
+                  <span class="min-w-0 whitespace-normal break-words text-center leading-tight">{{ t('duty.todo.actions.removeTag') }}</span>
+                </button>
+
+                <template v-if="!isTaggedTodo">
+                  <button
+                    @click="enterEditMode"
+                    :disabled="statusChangePending"
+                    class="todo-detail-primary-action flex min-h-11 min-w-0 w-full cursor-pointer items-center justify-center gap-1 rounded-lg border border-dp-accent-border px-3 py-2 text-center text-sm text-dp-accent transition hover:bg-dp-accent-soft disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Pencil class="w-4 h-4 flex-shrink-0" />
+                    <span class="whitespace-nowrap">{{ t('duty.todo.actions.edit') }}</span>
+                  </button>
+                  <button
+                    @click="emit('delete', { id: todo.id, title: todo.title })"
+                    :disabled="statusChangePending"
+                    class="todo-detail-primary-action flex min-h-11 min-w-0 w-full cursor-pointer items-center justify-center gap-1 rounded-lg border border-dp-danger-border px-3 py-2 text-center text-sm text-dp-danger transition hover:bg-dp-danger-soft disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Trash2 class="w-4 h-4 flex-shrink-0" />
+                    <span class="whitespace-nowrap">{{ t('common.actions.delete') }}</span>
+                  </button>
+                </template>
+              </div>
+
               <OverflowMenu
-                v-if="canReport || isTaggedTodo"
+                v-if="canReport"
+                class="shrink-0"
                 :menu-label="t('report.actions.menu')"
                 align="right"
                 placement="above"
-                trigger-class="flex min-h-11 items-center justify-center gap-1 px-3 py-2 text-sm rounded-lg transition btn-outline cursor-pointer"
+                trigger-class="todo-detail-report-trigger flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg px-2 py-2 text-sm transition btn-outline cursor-pointer"
               >
                 <template #trigger>
                   <MoreHorizontal class="w-4 h-4" />
                 </template>
 
-                <button
-                  v-if="isTaggedTodo"
-                  type="button"
-                  role="menuitem"
-                  class="flex w-full min-h-11 cursor-pointer items-center gap-2.5 px-4 py-2.5 text-left text-sm text-dp-text-primary transition hover:bg-dp-bg-hover"
-                  @click="emit('untagSelf', { id: todo.id, title: todo.title })"
-                >
-                  <X class="h-4 w-4 flex-shrink-0" />
-                  {{ t('duty.todo.actions.removeTag') }}
-                </button>
                 <button
                   v-if="canReport"
                   type="button"
@@ -480,22 +533,6 @@ function onUploadError(message: string) {
                   {{ t('report.actions.report') }}
                 </button>
               </OverflowMenu>
-              <template v-if="!isTaggedTodo">
-                <button
-                  @click="enterEditMode"
-                  class="flex-1 sm:flex-none flex min-h-11 items-center justify-center gap-1 px-3 py-2 text-sm border border-dp-accent-border text-dp-accent rounded-lg hover:bg-dp-accent-soft transition cursor-pointer"
-                >
-                  <Pencil class="w-4 h-4" />
-                  <span class="whitespace-nowrap">{{ t('duty.todo.actions.edit') }}</span>
-                </button>
-                <button
-                  @click="emit('delete', { id: todo.id, title: todo.title })"
-                  class="flex-1 sm:flex-none flex min-h-11 items-center justify-center gap-1 px-3 py-2 text-sm border border-dp-danger-border text-dp-danger rounded-lg hover:bg-dp-danger-soft transition cursor-pointer"
-                >
-                  <Trash2 class="w-4 h-4" />
-                  <span class="whitespace-nowrap">{{ t('common.actions.delete') }}</span>
-                </button>
-              </template>
             </div>
           </div>
         </template>

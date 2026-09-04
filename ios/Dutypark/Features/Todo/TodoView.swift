@@ -719,6 +719,19 @@ struct TodoView: View {
         }
     }
 
+    /// VoiceOver status actions use the regular status-mutation result boundary
+    /// so a completed move gets the same success feedback as the detail footer.
+    /// Reordering by drag/drop remains on `model.drop`, whose drag feedback is
+    /// intentionally emitted at lift/retarget time instead.
+    private func changeStatus(_ todo: TodoDTO, to destination: TodoStatus) {
+        guard model.canPerformOnlineMutations, !model.isSaving else { return }
+        Task { @MainActor in
+            guard model.canPerformOnlineMutations, !model.isSaving else { return }
+            let succeeded = await model.move(todo, to: destination)
+            if succeeded { await onTodoChanged() }
+        }
+    }
+
     private func updateInteractiveDrag(
         todo: TodoDTO,
         location: CGPoint,
@@ -1028,6 +1041,10 @@ struct TodoView: View {
                                             }
                                         }
                                     },
+                                    canChangeStatus: model.canPerformOnlineMutations && !model.isSaving,
+                                    changeStatus: { todo, destination in
+                                        changeStatus(todo, to: destination)
+                                    },
                                     updateDrag: { todo, location in
                                         updateInteractiveDrag(
                                             todo: todo,
@@ -1155,6 +1172,8 @@ private struct TodoKanbanColumn: View {
     let select: () -> Void
     let open: (TodoDTO) -> Void
     let move: (TodoDTO, Int) -> Void
+    let canChangeStatus: Bool
+    let changeStatus: (TodoDTO, TodoStatus) -> Void
     let updateDrag: (TodoDTO, CGPoint) -> Void
     let finishDrag: (TodoDTO) -> Void
     let cancelDrag: () -> Void
@@ -1230,11 +1249,12 @@ private struct TodoKanbanColumn: View {
                                 isPressing: pressedTodoID == todo.uuid,
                                 canMoveUp: index > 0,
                                 canMoveDown: index < todos.count - 1,
+                                canChangeStatus: canChangeStatus,
                                 open: { open(todo) },
                                 moveUp: { move(todo, -1) },
                                 moveDown: { move(todo, 1) },
-                                moveToStatus: { destination in
-                                    drop(todo.uuid, destination, nil, false)
+                                changeStatus: { destination in
+                                    changeStatus(todo, destination)
                                 },
                                 dropEdge: dragTargetStatus == status && dragTargetTodoID == todo.uuid
                                     ? (dragInsertAfter ? .after : .before)
@@ -1309,10 +1329,11 @@ private struct TodoCard: View {
     let isPressing: Bool
     let canMoveUp: Bool
     let canMoveDown: Bool
+    let canChangeStatus: Bool
     let open: () -> Void
     let moveUp: () -> Void
     let moveDown: () -> Void
-    let moveToStatus: (TodoStatus) -> Void
+    let changeStatus: (TodoStatus) -> Void
     let dropEdge: TodoDropEdge?
     let updateDrag: (CGPoint) -> Void
     let finishDrag: () -> Void
@@ -1432,9 +1453,11 @@ private struct TodoCard: View {
             if canMoveDown { moveDown() }
         }
         .accessibilityActions {
-            ForEach(TodoStatus.boardStatuses.filter { $0 != status }, id: \.rawValue) { destination in
-                Button(todoLocalized(destination.titleKey)) {
-                    moveToStatus(destination)
+            if canChangeStatus {
+                ForEach(TodoStatus.boardStatuses.filter { $0 != status }, id: \.rawValue) { destination in
+                    Button(todoLocalized(destination.titleKey)) {
+                        changeStatus(destination)
+                    }
                 }
             }
         }
@@ -1579,10 +1602,11 @@ private struct TodoDragPreview: View {
             isPressing: false,
             canMoveUp: false,
             canMoveDown: false,
+            canChangeStatus: false,
             open: {},
             moveUp: {},
             moveDown: {},
-            moveToStatus: { _ in },
+            changeStatus: { _ in },
             dropEdge: nil,
             updateDrag: { _ in },
             finishDrag: {},

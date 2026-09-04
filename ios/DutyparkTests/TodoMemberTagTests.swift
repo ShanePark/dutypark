@@ -80,29 +80,32 @@ struct TodoMemberTagTests {
         #expect(todoLocalized("todo.action.more", locale: Locale(identifier: "en")) == "More")
     }
 
-    // Untagging and reporting are rare next to editing, so the detail row keeps them
-    // behind one overflow control instead of spending two slots on them.
     @Test
-    func untaggingAndReportingLiveBehindTheOverflowMenu() throws {
+    func taggedTodoExposesStatusAndUntagActionsInTheFooter() throws {
         let source = try source(of: "Dutypark/Features/Todo/TodoModalViews.swift")
 
-        let menu = try #require(source.range(of: #"Image(systemName: "ellipsis")"#))
-        let menuBody = String(source[source.startIndex..<menu.lowerBound])
-        for wiring in [
-            #"Label(todoLocalized("todo.action.leaveTag"), systemImage: "xmark")"#,
-            "Text(todoLocalized(\"todo.action.report\"))",
-            "DPReportBeaconIcon()",
-            "Button(role: .destructive) {",
-            #"accessibilityIdentifier("todo.detail.report")"#,
-        ] {
-            #expect(menuBody.contains(wiring), "The overflow menu is missing: \(wiring)")
-        }
-
-        #expect(!source.contains(#"systemImage: "flag""#), "Reporting is raised with a beacon, not a flag")
-        #expect(
-            !source.contains("TodoModalBorderedAction(\n                title: todoLocalized(\"todo.action.report\")"),
-            "Reporting must not sit inline beside the other actions"
+        let footerStart = try #require(source.range(of: "private var footer: some View"))
+        let footerEnd = try #require(
+            source.range(
+                of: "private struct TodoModalBorderedAction",
+                range: footerStart.upperBound..<source.endIndex
+            )
         )
+        let footer = String(source[footerStart.lowerBound..<footerEnd.lowerBound])
+
+        #expect(footer.contains("statusAction"))
+        #expect(footer.contains("if currentTodo.isTagged"))
+        #expect(footer.contains(#"title: todoLocalized("todo.action.leaveTag")"#))
+        #expect(footer.contains("reportMenu"))
+
+        let menuStart = try #require(source.range(of: "private var reportMenu: some View"))
+        let menu = String(source[menuStart.lowerBound..<source.endIndex])
+        #expect(menu.contains("Text(todoLocalized(\"todo.action.report\"))"))
+        #expect(menu.contains("DPReportBeaconIcon()"))
+        #expect(!menu.contains(#"Label(todoLocalized("todo.action.leaveTag")"#))
+        #expect(source.contains("ReportSheet("))
+        #expect(!source.contains("private var overflowMenu: some View"))
+        #expect(source.contains(#"Image(systemName: "ellipsis")"#))
     }
 
     private func source(of relativePath: String) throws -> String {
