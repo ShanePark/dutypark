@@ -239,4 +239,10 @@ describe('todo board mobile drag navigation', () => {
     expect(script).toMatch(/async function handleUntagSelf[\s\S]*?finally[\s\S]*?pendingStatusTodoIds\.value\.delete\(todo\.id\)/)
     expect(script).toMatch(/function openTodoReport[\s\S]*?pendingStatusTodoIds\.value\.has\(todo\.id\)/)
   })
+
+  it('serializes save, delete, and report with the same per-todo lock', () => {
+    expect(script).toMatch(/async function handleUpdateTodo[\s\S]*?pendingStatusTodoIds\.value\.add\(data\.id\)[\s\S]*?finally[\s\S]*?pendingStatusTodoIds\.value\.delete\(data\.id\)/)
+    expect(script).toMatch(/async function handleDeleteTodo[\s\S]*?pendingStatusTodoIds\.value\.add\(todo\.id\)[\s\S]*?finally[\s\S]*?pendingStatusTodoIds\.value\.delete\(todo\.id\)/)
+    expect(script).toMatch(/async function handleReportSubmit[\s\S]*?pendingStatusTodoIds\.value\.add\(target\.targetId\)[\s\S]*?finally[\s\S]*?pendingStatusTodoIds\.value\.delete\(target\.targetId\)/)
+  })
 })

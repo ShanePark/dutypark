@@ -611,6 +611,7 @@ async function handleUpdateTodo(data: {
     return
   }
 
+  pendingStatusTodoIds.value.add(data.id)
   try {
     await todoApi.updateTodo(data.id, {
       title: data.title,
@@ -633,6 +634,8 @@ async function handleUpdateTodo(data: {
   } catch (error) {
     console.error('Failed to update todo:', error)
     showError(t('todoBoard.messages.updateFailed'))
+  } finally {
+    pendingStatusTodoIds.value.delete(data.id)
   }
 }
 
@@ -641,6 +644,7 @@ async function handleDeleteTodo(todo: Pick<Todo, 'id' | 'title'>) {
   const confirmed = await confirmDelete(t('todoBoard.messages.deleteConfirm', { title: todo.title }))
   if (!confirmed || pendingStatusTodoIds.value.has(todo.id)) return
 
+  pendingStatusTodoIds.value.add(todo.id)
   try {
     await todoApi.deleteTodo(todo.id)
     toastSuccess(t('todoBoard.messages.deleteSuccess'))
@@ -649,6 +653,8 @@ async function handleDeleteTodo(todo: Pick<Todo, 'id' | 'title'>) {
   } catch (error) {
     console.error('Failed to delete todo:', error)
     showError(t('todoBoard.messages.deleteFailed'))
+  } finally {
+    pendingStatusTodoIds.value.delete(todo.id)
   }
 }
 
@@ -688,8 +694,10 @@ function openTodoReport(todo: Pick<Todo, 'id' | 'title'>) {
 async function handleReportSubmit(submission: ReportSubmission) {
   const target = reportTarget.value
   if (!target || isSubmittingReport.value) return
+  if (pendingStatusTodoIds.value.has(target.targetId)) return
 
   isSubmittingReport.value = true
+  pendingStatusTodoIds.value.add(target.targetId)
   try {
     await reportApi.createReport({
       targetType: target.targetType,
@@ -711,6 +719,7 @@ async function handleReportSubmit(submission: ReportSubmission) {
     console.error('Failed to submit report:', error)
     showError(resolveApiErrorMessage(error, { fallbackKey: 'report.messages.submitFailed' }, t))
   } finally {
+    pendingStatusTodoIds.value.delete(target.targetId)
     isSubmittingReport.value = false
   }
 }

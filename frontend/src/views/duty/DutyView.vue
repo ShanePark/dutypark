@@ -984,6 +984,8 @@ async function handleTodoUpdate(data: {
     return
   }
 
+  if (pendingTodoStatusIds.value.has(data.id)) return
+  pendingTodoStatusIds.value.add(data.id)
   try {
     const updatedTodo = await todoApi.updateTodo(data.id, {
       title: data.title,
@@ -998,6 +1000,8 @@ async function handleTodoUpdate(data: {
   } catch (error) {
     console.error('Failed to update todo:', error)
     showError(t('duty.todo.messages.updateFailed'))
+  } finally {
+    pendingTodoStatusIds.value.delete(data.id)
   }
 }
 
@@ -1023,12 +1027,15 @@ async function handleTodoDelete(todo: Pick<LocalTodo, 'id' | 'title'>) {
   if (!await confirmDelete(t('duty.todo.messages.deleteConfirm', { title: todo.title }))) return
   if (pendingTodoStatusIds.value.has(todo.id)) return
   const fromDetailModal = isTodoDetailModalOpen.value
+  pendingTodoStatusIds.value.add(todo.id)
   try {
     await todoApi.deleteTodo(todo.id)
     todos.value = todos.value.filter((t) => t.id !== todo.id)
   } catch (error) {
     console.error('Failed to delete todo:', error)
     showError(t('duty.todo.messages.deleteFailed'))
+  } finally {
+    pendingTodoStatusIds.value.delete(todo.id)
   }
   // Only close detail modal if called from detail modal
   if (fromDetailModal) {
@@ -1041,6 +1048,7 @@ async function handleTodoUntagSelf(todo: Pick<LocalTodo, 'id' | 'title'>) {
   if (!await confirm(t('duty.todo.messages.untagConfirm', { title: todo.title }), t('duty.todo.messages.untagTitle'))) return
   if (pendingTodoStatusIds.value.has(todo.id)) return
 
+  pendingTodoStatusIds.value.add(todo.id)
   try {
     await todoApi.untagSelf(todo.id)
     todos.value = todos.value.filter((item) => item.id !== todo.id)
@@ -1049,6 +1057,8 @@ async function handleTodoUntagSelf(todo: Pick<LocalTodo, 'id' | 'title'>) {
   } catch (error) {
     console.error('Failed to untag todo:', error)
     showError(t('duty.todo.messages.untagFailed'))
+  } finally {
+    pendingTodoStatusIds.value.delete(todo.id)
   }
 }
 
@@ -1339,6 +1349,7 @@ async function openScheduleReport(schedule: Pick<Schedule, 'id' | 'content'>) {
 
 async function openTodoReport(todo: Pick<LocalTodo, 'id' | 'title'>) {
   if (!await requireLogin()) return
+  if (pendingTodoStatusIds.value.has(todo.id)) return
   reportTarget.value = {
     targetType: 'TODO',
     targetId: todo.id,
@@ -1349,8 +1360,13 @@ async function openTodoReport(todo: Pick<LocalTodo, 'id' | 'title'>) {
 async function handleReportSubmit(submission: ReportSubmission) {
   const target = reportTarget.value
   if (!target || isSubmittingReport.value) return
+  const todoMutationId = target.targetType === 'TODO' ? target.targetId : null
+  if (todoMutationId && pendingTodoStatusIds.value.has(todoMutationId)) return
 
   isSubmittingReport.value = true
+  if (todoMutationId) {
+    pendingTodoStatusIds.value.add(todoMutationId)
+  }
   try {
     // A duplicate open report answers 200 instead of 201; both mean the report is on file.
     await reportApi.createReport({
@@ -1373,6 +1389,9 @@ async function handleReportSubmit(submission: ReportSubmission) {
     console.error('Failed to submit report:', error)
     showError(resolveApiErrorMessage(error, { fallbackKey: 'report.messages.submitFailed' }, t))
   } finally {
+    if (todoMutationId) {
+      pendingTodoStatusIds.value.delete(todoMutationId)
+    }
     isSubmittingReport.value = false
   }
 }

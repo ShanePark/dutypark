@@ -93,6 +93,14 @@ describe('duty calendar report entry points', () => {
       /async function refreshAfterBlock\(\)[\s\S]*?await loadFriends\(\)[\s\S]*?selectedFriendIds\.value = selectedFriendIds\.value\.filter[\s\S]*?loadSchedules\(\)[\s\S]*?loadTodos\(\)[\s\S]*?loadOtherDuties\(\)/
     )
   })
+
+  it('serializes every calendar todo mutation with the per-todo lock', () => {
+    expect(dutyView).toMatch(/async function handleTodoUpdate[\s\S]*?pendingTodoStatusIds\.value\.add\(data\.id\)[\s\S]*?finally[\s\S]*?pendingTodoStatusIds\.value\.delete\(data\.id\)/)
+    expect(dutyView).toMatch(/async function handleTodoDelete[\s\S]*?pendingTodoStatusIds\.value\.add\(todo\.id\)[\s\S]*?finally[\s\S]*?pendingTodoStatusIds\.value\.delete\(todo\.id\)/)
+    expect(dutyView).toMatch(/async function handleTodoUntagSelf[\s\S]*?pendingTodoStatusIds\.value\.add\(todo\.id\)[\s\S]*?finally[\s\S]*?pendingTodoStatusIds\.value\.delete\(todo\.id\)/)
+    expect(dutyView).toContain("const todoMutationId = target.targetType === 'TODO' ? target.targetId : null")
+    expect(dutyView).toMatch(/async function handleReportSubmit[\s\S]*?pendingTodoStatusIds\.value\.add\(todoMutationId\)[\s\S]*?finally[\s\S]*?pendingTodoStatusIds\.value\.delete\(todoMutationId\)/)
+  })
 })
 
 describe('schedule and to-do overflow actions', () => {
