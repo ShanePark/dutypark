@@ -64,7 +64,7 @@ function handleKeywordInput(event: Event) {
             :value="keyword"
             type="text"
             :placeholder="t('friendSearchModal.searchPlaceholder')"
-            class="form-control-neutral w-full !pl-11 pr-4 py-3 rounded-xl"
+            class="form-control-neutral w-full friend-search-modal__search-input"
             @input="handleKeywordInput"
             @keyup.enter="emit('search')"
           />
@@ -164,3 +164,10 @@ function handleKeywordInput(event: Event) {
     </div>
   </BaseModal>
 </template>
+
+<style scoped>
+.friend-search-modal__search-input {
+  padding: 0.75rem 1rem 0.75rem 2.75rem;
+  border-radius: 0.75rem;
+}
+</style>

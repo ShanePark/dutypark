@@ -1,10 +1,16 @@
 import { describe, expect, it } from 'vitest'
 import friendSearchModal from './FriendSearchModal.vue?raw'
 
-const template = friendSearchModal.slice(
-  friendSearchModal.indexOf('<template>'),
-  friendSearchModal.indexOf('<style') > -1 ? friendSearchModal.indexOf('<style') : friendSearchModal.length,
-)
+const styleStart = friendSearchModal.indexOf('<style')
+const template = friendSearchModal.slice(friendSearchModal.indexOf('<template>'), styleStart > -1 ? styleStart : friendSearchModal.length)
+const style = styleStart > -1 ? friendSearchModal.slice(styleStart) : ''
+
+function ruleFor(selector: string) {
+  const start = style.indexOf(`${selector} {`)
+  expect(start, `missing rule for ${selector}`).toBeGreaterThan(-1)
+  const end = style.indexOf('}', start)
+  return style.slice(start, end)
+}
 
 describe('FriendSearchModal search field', () => {
   it('keeps the placeholder clear of the leading search icon', () => {
@@ -12,8 +18,10 @@ describe('FriendSearchModal search field', () => {
     const inputEnd = template.indexOf('/>', inputStart)
     const input = template.slice(inputStart, inputEnd)
 
-    // form-control-neutral sets padding-inline in an unlayered component rule, so the
-    // important utility is needed for the icon-specific left padding to win the cascade.
-    expect(input).toContain('!pl-11')
+    expect(input).toContain('friend-search-modal__search-input')
+
+    const inputRule = ruleFor('.friend-search-modal__search-input')
+    expect(inputRule).toContain('padding: 0.75rem 1rem 0.75rem 2.75rem')
+    expect(inputRule).toContain('border-radius: 0.75rem')
   })
 })
