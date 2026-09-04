@@ -660,6 +660,7 @@ async function handleUntagSelf(todo: Pick<Todo, 'id' | 'title'>) {
   )
   if (!confirmed || pendingStatusTodoIds.value.has(todo.id)) return
 
+  pendingStatusTodoIds.value.add(todo.id)
   try {
     await todoApi.untagSelf(todo.id)
     showSuccess(t('todoBoard.messages.untagSuccess'))
@@ -668,10 +669,13 @@ async function handleUntagSelf(todo: Pick<Todo, 'id' | 'title'>) {
   } catch (error) {
     console.error('Failed to untag self:', error)
     showError(t('todoBoard.messages.untagFailed'))
+  } finally {
+    pendingStatusTodoIds.value.delete(todo.id)
   }
 }
 
 function openTodoReport(todo: Pick<Todo, 'id' | 'title'>) {
+  if (pendingStatusTodoIds.value.has(todo.id)) return
   if (!selectedTodo.value?.isTagged || selectedTodo.value.id !== todo.id) return
 
   reportTarget.value = {

@@ -28,6 +28,8 @@ describe('TodoDetailModal status changes', () => {
     expect(todoDetailModal).toMatch(/@click="enterEditMode"[\s\S]*?:disabled="statusChangePending"/)
     expect(todoDetailModal).toMatch(/@click="emit\('delete', \{ id: todo\.id, title: todo\.title \}\)"[\s\S]*?:disabled="statusChangePending"/)
     expect(todoDetailModal).toMatch(/v-if="isTaggedTodo"[\s\S]*?:disabled="statusChangePending"/)
+    expect(todoDetailModal).toMatch(/<OverflowMenu[\s\S]*?:disabled="statusChangePending"/)
+    expect(todoDetailModal).toContain('disabled:cursor-not-allowed disabled:opacity-50')
     expect(todoDetailModal).toContain('if (props.statusChangePending) return')
   })
 

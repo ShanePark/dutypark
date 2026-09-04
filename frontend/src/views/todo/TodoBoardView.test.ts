@@ -233,4 +233,10 @@ describe('todo board mobile drag navigation', () => {
     expect(script).toContain('async function handleReportSubmit(submission: ReportSubmission)')
     expect(script).toContain('await reportApi.createReport({')
   })
+
+  it('serializes tag removal with status and report mutations', () => {
+    expect(script).toMatch(/async function handleUntagSelf[\s\S]*?pendingStatusTodoIds\.value\.add\(todo\.id\)/)
+    expect(script).toMatch(/async function handleUntagSelf[\s\S]*?finally[\s\S]*?pendingStatusTodoIds\.value\.delete\(todo\.id\)/)
+    expect(script).toMatch(/function openTodoReport[\s\S]*?pendingStatusTodoIds\.value\.has\(todo\.id\)/)
+  })
 })

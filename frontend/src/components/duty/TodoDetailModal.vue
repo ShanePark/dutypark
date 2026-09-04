@@ -514,9 +514,10 @@ function onUploadError(message: string) {
                 v-if="canReport"
                 class="shrink-0"
                 :menu-label="t('report.actions.menu')"
+                :disabled="statusChangePending"
                 align="right"
                 placement="above"
-                trigger-class="todo-detail-report-trigger flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg px-2 py-2 text-sm transition btn-outline cursor-pointer"
+                trigger-class="todo-detail-report-trigger flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-lg px-2 py-2 text-sm transition btn-outline cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <template #trigger>
                   <MoreHorizontal class="w-4 h-4" />
