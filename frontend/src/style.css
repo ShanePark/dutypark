@@ -1408,7 +1408,7 @@ html.dark {
    ==================================== */
 
 /* Toasts share the full-screen container but show no backdrop, so only dialogs frost. */
-.swal2-container:not(.swal2-toast-shown) {
+body:not(.swal2-toast-shown) .swal2-container {
     backdrop-filter: blur(var(--dp-overlay-blur));
 }
 
@@ -1861,4 +1861,3 @@ div.swal2-popup.swal2-toast.colored-toast-info {
     position: relative;
     z-index: 10;
 }
-

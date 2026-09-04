@@ -119,6 +119,7 @@ struct TodoDetailModal: View {
     @State private var reportTarget: ReportTarget?
     @State private var reportCanDismiss = true
     @State private var dismissesAfterReportedBlock = false
+    @State private var isChangingStatus = false
     @StateObject private var gallery: AttachmentGalleryModel
 
     init(
@@ -155,12 +156,12 @@ struct TodoDetailModal: View {
             if showingEdit {
                 TodoFormSheet(
                     titleKey: "todo.form.editTitle",
-                    initialDraft: TodoDraft(todo: todo),
+                    initialDraft: TodoDraft(todo: currentTodo),
                     friends: model.friends,
                     model: model,
                     targetTodoID: todo.id,
-                    existingAttachments: model.attachmentsByTodoID[todo.uuid, default: []],
-                    preservedTags: todo.tags,
+                    existingAttachments: model.attachmentsByTodoID[currentTodo.uuid, default: []],
+                    preservedTags: currentTodo.tags,
                     accountID: accountID,
                     sessionGeneration: sessionGeneration,
                     isSaving: model.isSaving,
@@ -173,7 +174,7 @@ struct TodoDetailModal: View {
                     dismissRequest: dismissRequest,
                     onBusyChange: { onDismissabilityChange(!$0) }
                 ) { draft in
-                    let updated = await model.update(todo: todo, draft: draft)
+                    let updated = await model.update(todo: currentTodo, draft: draft)
                     if updated { await onTodoChanged() }
                     return updated
                 }
@@ -336,12 +337,6 @@ struct TodoDetailModal: View {
                         systemImage: "clock"
                     )
                     .lineLimit(1)
-
-                    Text(todoLocalized(todo.status.titleKey))
-                        .foregroundStyle(todo.status.color)
-                        .padding(.horizontal, DPSpacing.small)
-                        .padding(.vertical, 4)
-                        .background(todo.status.softColor, in: Capsule())
                 }
                 .font(DPTypography.caption)
                 .foregroundStyle(DPColor.textMuted)
@@ -362,6 +357,66 @@ struct TodoDetailModal: View {
         .padding(.leading, DPSpacing.medium)
         .padding(.trailing, DPSpacing.small)
         .padding(.vertical, DPSpacing.compact)
+    }
+
+    private var currentTodo: TodoDTO {
+        for status in TodoStatus.boardStatuses {
+            if let currentTodo = model.todos(for: status).first(where: { $0.uuid == todo.uuid }) {
+                return currentTodo
+            }
+        }
+        return todo
+    }
+
+    private var currentStatus: TodoStatus {
+        currentTodo.status
+    }
+
+    private var statusAction: some View {
+        Menu {
+            ForEach(TodoStatus.boardStatuses, id: \.rawValue) { destination in
+                Button {
+                    changeStatus(to: destination)
+                } label: {
+                    Label(
+                        todoLocalized(destination.titleKey),
+                        systemImage: destination.systemImage
+                    )
+                }
+                .disabled(destination == currentStatus || statusChangeIsBlocked)
+            }
+        } label: {
+            TodoModalFooterActionLabel(
+                title: todoLocalized("todo.action.status"),
+                systemImage: "arrow.left.arrow.right",
+                color: currentStatus.color,
+                isLoading: isChangingStatus
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(todoLocalized("todo.action.status"))
+        .accessibilityValue(todoLocalized(currentStatus.titleKey))
+        .accessibilityIdentifier("todo.detail.status")
+        .disabled(statusChangeIsBlocked)
+    }
+
+    private var statusChangeIsBlocked: Bool {
+        isChangingStatus || model.isSaving || !model.canPerformOnlineMutations
+    }
+
+    private func changeStatus(to destination: TodoStatus) {
+        guard !isChangingStatus,
+              !model.isSaving,
+              currentStatus != destination
+        else { return }
+        isChangingStatus = true
+        Task {
+            let succeeded = await model.move(currentTodo, to: destination)
+            if succeeded {
+                await onTodoChanged()
+            }
+            isChangingStatus = false
+        }
     }
 
     private var detailBody: some View {
@@ -415,6 +470,7 @@ struct TodoDetailModal: View {
 
     private var footer: some View {
         HStack(spacing: DPSpacing.small) {
+            statusAction
             secondaryActions
         }
         .padding(DPSpacing.compact)
@@ -422,11 +478,17 @@ struct TodoDetailModal: View {
 
     @ViewBuilder
     private var secondaryActions: some View {
-        // This modal only ever shows the signed-in member's own board, so the reportable
-        // case is a to-do someone else owns and tagged them into.
-        if todo.isTagged {
-            Spacer(minLength: 0)
-            overflowMenu
+        if currentTodo.isTagged {
+            TodoModalBorderedAction(
+                title: todoLocalized("todo.action.leaveTag"),
+                systemImage: "xmark",
+                color: DPColor.danger,
+                action: { confirmation = .leaveTag }
+            )
+            .accessibilityIdentifier("todo.detail.leaveTag")
+            .disabled(statusChangeIsBlocked)
+
+            reportMenu
         } else {
             TodoModalBorderedAction(
                 title: todoLocalized("common.edit"),
@@ -439,8 +501,8 @@ struct TodoDetailModal: View {
                 }
             )
             .disabled(
-                !model.canPerformOnlineMutations
-                    || (todo.hasAttachments && model.attachmentsByTodoID[todo.uuid] == nil)
+                statusChangeIsBlocked
+                    || (currentTodo.hasAttachments && model.attachmentsByTodoID[currentTodo.uuid] == nil)
             )
 
             TodoModalBorderedAction(
@@ -449,31 +511,20 @@ struct TodoDetailModal: View {
                 color: DPColor.danger,
                 action: { confirmation = .delete }
             )
-            .disabled(!model.canPerformOnlineMutations)
+            .disabled(statusChangeIsBlocked)
         }
     }
 
-    /// Leaving a tag and reporting are both rare, and side by side they read as two
-    /// equally likely choices, so the row offers one "more" control and keeps them
-    /// behind it.
-    private var overflowMenu: some View {
+    /// Reporting remains available for tagged Todos, while tag removal stays a
+    /// primary footer action instead of being hidden behind this menu.
+    private var reportMenu: some View {
         Menu {
-            Button {
-                confirmation = .leaveTag
-            } label: {
-                Label(todoLocalized("todo.action.leaveTag"), systemImage: "xmark")
-            }
-            .accessibilityIdentifier("todo.detail.leaveTag")
-
-            // A destructive menu item is drawn in the system red the app tokenises as
-            // `DPColor.danger`, and the beacon reads as raising an alarm where a flag
-            // reads as bookmarking.
             Button(role: .destructive) {
                 withoutPresentationAnimation {
                     reportTarget = ReportTarget(
                         type: .todo,
-                        targetID: todo.id,
-                        name: todo.title
+                        targetID: currentTodo.id,
+                        name: currentTodo.title
                     )
                 }
             } label: {
@@ -493,9 +544,45 @@ struct TodoDetailModal: View {
         }
         .accessibilityLabel(todoLocalized("todo.action.more"))
         .accessibilityIdentifier("todo.detail.menu")
-        .disabled(!model.canPerformOnlineMutations)
+        .disabled(statusChangeIsBlocked)
     }
 
+}
+
+private struct TodoModalFooterActionLabel: View {
+    @Environment(\.isEnabled) private var isEnabled
+
+    let title: String
+    let systemImage: String
+    let color: Color
+    let isLoading: Bool
+
+    var body: some View {
+        Group {
+            if isLoading {
+                HStack(spacing: DPSpacing.extraSmall) {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text(title)
+                }
+            } else {
+                Label(title, systemImage: systemImage)
+            }
+        }
+        .font(DPTypography.label)
+        .lineLimit(1)
+        .minimumScaleFactor(0.75)
+        .foregroundStyle(color)
+        .padding(.horizontal, DPSpacing.small)
+        .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)
+        .background(DPColor.backgroundCard)
+        .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+        .overlay(
+            RoundedRectangle(cornerRadius: DPRadius.standard)
+                .stroke(color.opacity(0.55), lineWidth: 1)
+        )
+        .opacity(isEnabled ? 1 : DPChrome.disabledOpacity)
+    }
 }
 
 private struct TodoModalBorderedAction: View {
@@ -507,29 +594,12 @@ private struct TodoModalBorderedAction: View {
 
     var body: some View {
         Button(action: action) {
-            Group {
-                if isLoading {
-                    HStack(spacing: DPSpacing.extraSmall) {
-                        ProgressView()
-                            .controlSize(.small)
-                        Text(title)
-                    }
-                } else {
-                    Label(title, systemImage: systemImage)
-                }
-            }
-                .font(DPTypography.label)
-                .lineLimit(1)
-                .minimumScaleFactor(0.75)
-                .foregroundStyle(color)
-                .padding(.horizontal, DPSpacing.small)
-                .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)
-                .background(DPColor.backgroundCard)
-                .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
-                .overlay(
-                    RoundedRectangle(cornerRadius: DPRadius.standard)
-                        .stroke(color.opacity(0.55), lineWidth: 1)
-                )
+            TodoModalFooterActionLabel(
+                title: title,
+                systemImage: systemImage,
+                color: color,
+                isLoading: isLoading
+            )
         }
         .buttonStyle(.plain)
     }

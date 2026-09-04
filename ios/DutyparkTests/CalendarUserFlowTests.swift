@@ -6,6 +6,7 @@ import XCTest
 final class CalendarUserFlowTests: XCTestCase {
     func testMutationsRefreshOnlyTheirAffectedCalendarSlice() async throws {
         let repository = CalendarUserFlowRepository(
+            teamID: 7,
             todo: Self.todo(),
             inProgressTodo: Self.todo(title: "Local in-progress todo", status: .inProgress)
         )
@@ -392,6 +393,7 @@ private actor CalendarUserFlowRepository: CalendarRepositoryProtocol {
     private var storedSchedule: ScheduleDTO?
     private var storedDDays: [DDayDTO] = []
     private let canManageValue: Bool
+    private let teamID: TeamID?
     private let scheduleOwnerID: MemberID
     private var storedDuty: DutyDTO?
     private var storedTodo: TodoDTO?
@@ -406,12 +408,14 @@ private actor CalendarUserFlowRepository: CalendarRepositoryProtocol {
     init(
         schedule: ScheduleDTO? = nil,
         canManage: Bool = false,
+        teamID: TeamID? = nil,
         scheduleOwnerID: MemberID = 1,
         todo: TodoDTO? = nil,
         inProgressTodo: TodoDTO? = nil
     ) {
         storedSchedule = schedule
         canManageValue = canManage
+        self.teamID = teamID
         self.scheduleOwnerID = scheduleOwnerID
         storedTodo = todo
         storedInProgressTodo = inProgressTodo
@@ -422,8 +426,8 @@ private actor CalendarUserFlowRepository: CalendarRepositoryProtocol {
             id: 1,
             name: "Tester",
             email: "test@duty.park",
-            teamId: nil,
-            team: nil,
+            teamId: teamID,
+            team: teamID == nil ? nil : "Team",
             calendarVisibility: .friends,
             kakaoId: nil,
             naverId: nil,
@@ -437,15 +441,29 @@ private actor CalendarUserFlowRepository: CalendarRepositoryProtocol {
         MemberPreviewDTO(
             id: id,
             name: "Member \(id)",
-            teamId: nil,
-            team: nil,
+            teamId: teamID,
+            team: teamID == nil ? nil : "Team",
             hasProfilePhoto: false,
             profilePhotoVersion: 0
         )
     }
 
     func friends() async throws -> [FriendDTO] { [] }
-    func team(id: TeamID) async throws -> TeamDTO { throw APIError.invalidResponse }
+    func team(id: TeamID) async throws -> TeamDTO {
+        guard teamID == id else { throw APIError.invalidResponse }
+        return TeamDTO(
+            id: id,
+            name: "Team",
+            description: nil,
+            dutyTypes: [],
+            members: [],
+            createdDate: LocalDateTimeValue(rawValue: "2026-08-12T00:00:00"),
+            lastModifiedDate: LocalDateTimeValue(rawValue: "2026-08-12T00:00:00"),
+            adminId: 1,
+            adminName: "Tester",
+            dutyBatchTemplate: nil
+        )
+    }
     func canManage(memberID: MemberID) async throws -> Bool {
         fetchCounts.canManage += 1
         return canManageValue

@@ -11,9 +11,19 @@ import type {
   DutyTypeUpdateDto,
   DutyBatchTemplateDto,
   DutyBatchTeamResult,
+  TeamCreateDto,
+  TeamNameCheckResult,
 } from '@/types'
 
 export const teamApi = {
+  createTeam(dto: TeamCreateDto) {
+    return apiClient.post<TeamDto>('/teams', dto)
+  },
+
+  checkTeamName(name: string) {
+    return apiClient.post<TeamNameCheckResult>('/teams/check', { name })
+  },
+
   getMyTeamSummary(year: number, month: number) {
     return apiClient.get<MyTeamSummary>('/teams/my', {
       params: { year, month },

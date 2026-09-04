@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { adminApi } from '@/api/admin'
 import { useSwal } from '@/composables/useSwal'
+import { useAdminModerationCounts } from '@/composables/useAdminModerationCounts'
 import { resolveApiErrorMessage } from '@/utils/resolveApiError'
 import AdminNavTiles from '@/components/admin/AdminNavTiles.vue'
 import AdminReportDetailModal from '@/components/admin/AdminReportDetailModal.vue'
@@ -29,6 +30,7 @@ const router = useRouter()
 const authStore = useAuthStore()
 const { t, locale } = useI18n()
 const { confirm, confirmDelete, showError, toastSuccess } = useSwal()
+const { loadReports } = useAdminModerationCounts()
 
 const STATUS_FILTERS: { value: ReportStatusFilter; labelKey: string }[] = [
   { value: 'OPEN', labelKey: 'admin.reports.filters.open' },
@@ -152,6 +154,7 @@ async function handleUpdateStatus(status: ReportResolutionStatus, memo: string) 
       memo: memo.trim(),
     })
     selectedReport.value = res.data
+    await loadReports(true)
     toastSuccess(t('admin.reports.messages.updateStatusSuccess'))
     await fetchReports()
   } catch (error) {

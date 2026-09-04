@@ -3,9 +3,13 @@ package com.tistory.shanepark.dutypark.team.controller
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyByShift
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
+import com.tistory.shanepark.dutypark.team.domain.dto.TeamCreateDto
 import com.tistory.shanepark.dutypark.team.domain.dto.MyTeamSummary
 import com.tistory.shanepark.dutypark.team.domain.dto.TeamDto
+import com.tistory.shanepark.dutypark.team.domain.enums.TeamNameCheckResult
+import com.tistory.shanepark.dutypark.team.domain.enums.TeamNameCheckResult.*
 import com.tistory.shanepark.dutypark.team.service.TeamService
+import jakarta.validation.Valid
 import org.springframework.web.bind.annotation.*
 import java.time.LocalDate
 
@@ -14,6 +18,29 @@ import java.time.LocalDate
 class TeamController(
     private val teamService: TeamService,
 ) {
+
+    @PostMapping
+    fun create(
+        @Login loginMember: LoginMember,
+        @RequestBody @Valid teamCreateDto: TeamCreateDto,
+    ): TeamDto {
+        return teamService.create(loginMember, teamCreateDto)
+    }
+
+    @PostMapping("/check")
+    fun nameCheck(
+        @Login loginMember: LoginMember,
+        @RequestBody payload: Map<String, String>,
+    ): TeamNameCheckResult {
+        val name = payload["name"]?.trim().orEmpty()
+        if (name.length < 2)
+            return TOO_SHORT
+        if (name.length > 20)
+            return TOO_LONG
+        if (teamService.isDuplicated(name))
+            return DUPLICATED
+        return OK
+    }
 
     @GetMapping("/{id}")
     fun findById(@PathVariable id: Long): TeamDto {

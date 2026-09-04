@@ -68,6 +68,10 @@ const isLoggedIn = computed(() => authStore.isLoggedIn)
 // canEdit: true if own calendar or manager of target member
 const canEdit = computed(() => isMyCalendar.value || amIManager.value)
 const canEditMyCalendar = computed(() => canEdit.value && isMyCalendar.value)
+// Duty entries belong to a team's duty types. Keep the broader calendar edit
+// permission above so teamless members can still manage schedules and D-Days.
+const canEditDuty = computed(() => canEdit.value && (!isMyCalendar.value || teamId.value !== null))
+const canEditMyDutyCalendar = computed(() => canEditDuty.value && isMyCalendar.value)
 
 // canSearch: true if can search schedules (same as canEdit)
 const canSearch = canEdit
@@ -108,6 +112,7 @@ const selectedDDay = ref<LocalDDay | null>(null)
 const pinnedDDay = ref<LocalDDay | null>(null)
 
 const todos = ref<LocalTodo[]>([])
+const pendingTodoStatusIds = ref<Set<string>>(new Set())
 
 // Todos with due dates computed from existing todos
 const todosDueByDays = computed(() => {
@@ -173,7 +178,9 @@ function applyTodoUpdate(apiTodo: TodoDto) {
     todos.value.unshift(localTodo)
   }
 
-  selectedTodo.value = localTodo
+  if (selectedTodo.value?.id === apiTodo.id) {
+    selectedTodo.value = localTodo
+  }
 }
 
 // Convert API DDayDto to LocalDDay
@@ -655,6 +662,7 @@ watch(
     rawCalendarDays.value = []
     dutyTypes.value = []
     team.value = null
+    teamId.value = null
     pinnedDDay.value = null
     friends.value = []
     selectedFriendIds.value = []
@@ -723,6 +731,10 @@ function goToToday() {
   currentMonth.value = today.getMonth() + 1
 }
 
+function goToTeam() {
+  router.push('/team')
+}
+
 // Handle "go to date" event from notification navigation
 async function handleGoToDate(event: Event) {
   const customEvent = event as CustomEvent<{ year: number; month: number; day: number }>
@@ -754,7 +766,7 @@ function handleDayClick(day: CalendarDay, _index: number) {
 // Batch edit mode: change duty type directly on cell
 async function handleBatchDutyChange(day: CalendarDay, dutyTypeId: number | null) {
   if (!memberId.value) return
-  if (!canEdit.value) return
+  if (!canEditDuty.value) return
 
   const { year, month, day: dayNum } = day
 
@@ -779,7 +791,7 @@ function debouncedLoadDuties() {
 
 // Quick duty change: apply to focused day and move to next day
 function handleQuickDutyChange(dutyTypeId: number | null) {
-  if (!focusedDay.value || !memberId.value || !canEdit.value) return
+  if (!focusedDay.value || !memberId.value || !canEditDuty.value) return
 
   // Capture current day before incrementing
   const currentDay = focusedDay.value
@@ -972,6 +984,8 @@ async function handleTodoUpdate(data: {
     return
   }
 
+  if (pendingTodoStatusIds.value.has(data.id)) return
+  pendingTodoStatusIds.value.add(data.id)
   try {
     const updatedTodo = await todoApi.updateTodo(data.id, {
       title: data.title,
@@ -986,18 +1000,42 @@ async function handleTodoUpdate(data: {
   } catch (error) {
     console.error('Failed to update todo:', error)
     showError(t('duty.todo.messages.updateFailed'))
+  } finally {
+    pendingTodoStatusIds.value.delete(data.id)
+  }
+}
+
+async function handleTodoStatusChange(status: TodoStatus) {
+  const todo = selectedTodo.value
+  if (!todo || todo.status === status || pendingTodoStatusIds.value.has(todo.id)) return
+
+  pendingTodoStatusIds.value.add(todo.id)
+  try {
+    const updatedTodo = await todoApi.changeStatus(todo.id, { status })
+    applyTodoUpdate(updatedTodo)
+    toastSuccess(t('duty.todo.messages.statusChanged'))
+  } catch (error) {
+    console.error('Failed to change todo status:', error)
+    showError(t('duty.todo.messages.statusChangeFailed'))
+  } finally {
+    pendingTodoStatusIds.value.delete(todo.id)
   }
 }
 
 async function handleTodoDelete(todo: Pick<LocalTodo, 'id' | 'title'>) {
+  if (pendingTodoStatusIds.value.has(todo.id)) return
   if (!await confirmDelete(t('duty.todo.messages.deleteConfirm', { title: todo.title }))) return
+  if (pendingTodoStatusIds.value.has(todo.id)) return
   const fromDetailModal = isTodoDetailModalOpen.value
+  pendingTodoStatusIds.value.add(todo.id)
   try {
     await todoApi.deleteTodo(todo.id)
     todos.value = todos.value.filter((t) => t.id !== todo.id)
   } catch (error) {
     console.error('Failed to delete todo:', error)
     showError(t('duty.todo.messages.deleteFailed'))
+  } finally {
+    pendingTodoStatusIds.value.delete(todo.id)
   }
   // Only close detail modal if called from detail modal
   if (fromDetailModal) {
@@ -1006,8 +1044,11 @@ async function handleTodoDelete(todo: Pick<LocalTodo, 'id' | 'title'>) {
 }
 
 async function handleTodoUntagSelf(todo: Pick<LocalTodo, 'id' | 'title'>) {
+  if (pendingTodoStatusIds.value.has(todo.id)) return
   if (!await confirm(t('duty.todo.messages.untagConfirm', { title: todo.title }), t('duty.todo.messages.untagTitle'))) return
+  if (pendingTodoStatusIds.value.has(todo.id)) return
 
+  pendingTodoStatusIds.value.add(todo.id)
   try {
     await todoApi.untagSelf(todo.id)
     todos.value = todos.value.filter((item) => item.id !== todo.id)
@@ -1016,6 +1057,8 @@ async function handleTodoUntagSelf(todo: Pick<LocalTodo, 'id' | 'title'>) {
   } catch (error) {
     console.error('Failed to untag todo:', error)
     showError(t('duty.todo.messages.untagFailed'))
+  } finally {
+    pendingTodoStatusIds.value.delete(todo.id)
   }
 }
 
@@ -1306,6 +1349,7 @@ async function openScheduleReport(schedule: Pick<Schedule, 'id' | 'content'>) {
 
 async function openTodoReport(todo: Pick<LocalTodo, 'id' | 'title'>) {
   if (!await requireLogin()) return
+  if (pendingTodoStatusIds.value.has(todo.id)) return
   reportTarget.value = {
     targetType: 'TODO',
     targetId: todo.id,
@@ -1316,8 +1360,13 @@ async function openTodoReport(todo: Pick<LocalTodo, 'id' | 'title'>) {
 async function handleReportSubmit(submission: ReportSubmission) {
   const target = reportTarget.value
   if (!target || isSubmittingReport.value) return
+  const todoMutationId = target.targetType === 'TODO' ? target.targetId : null
+  if (todoMutationId && pendingTodoStatusIds.value.has(todoMutationId)) return
 
   isSubmittingReport.value = true
+  if (todoMutationId) {
+    pendingTodoStatusIds.value.add(todoMutationId)
+  }
   try {
     // A duplicate open report answers 200 instead of 201; both mean the report is on file.
     await reportApi.createReport({
@@ -1340,6 +1389,9 @@ async function handleReportSubmit(submission: ReportSubmission) {
     console.error('Failed to submit report:', error)
     showError(resolveApiErrorMessage(error, { fallbackKey: 'report.messages.submitFailed' }, t))
   } finally {
+    if (todoMutationId) {
+      pendingTodoStatusIds.value.delete(todoMutationId)
+    }
     isSubmittingReport.value = false
   }
 }
@@ -1372,8 +1424,7 @@ async function handleBlockMember() {
 
 async function handleChangeDutyType(dutyTypeId: number | null) {
   if (!memberId.value || !selectedDay.value) return
-  // Allow if viewing own calendar OR if user has manager permission
-  if (!isMyCalendar.value && !amIManager.value) return
+  if (!canEditDuty.value) return
 
   const { year, month, day } = selectedDay.value
 
@@ -1388,7 +1439,7 @@ async function handleChangeDutyType(dutyTypeId: number | null) {
 }
 
 async function showBatchUpdateModal() {
-  if (!memberId.value || dutyTypes.value.length === 0) return
+  if (!memberId.value || !canEditDuty.value || dutyTypes.value.length === 0) return
 
   const buttonsHtml = dutyTypes.value
     .map((dt) => {
@@ -1434,7 +1485,7 @@ async function showBatchUpdateModal() {
 }
 
 async function showExcelUploadModal() {
-  if (!memberId.value || !team.value?.dutyBatchTemplate) return
+  if (!memberId.value || !canEditDuty.value || !team.value?.dutyBatchTemplate) return
 
   const fileExtensions = team.value.dutyBatchTemplate.fileExtensions || ['.xlsx', '.xls']
 
@@ -1534,6 +1585,29 @@ async function showExcelUploadModal() {
       @block-member="handleBlockMember"
     />
 
+    <div
+      v-if="isMyCalendar && teamId === null"
+      data-test="teamless-duty-guidance"
+      role="status"
+      class="mb-3 flex flex-col gap-3 rounded-xl border border-dp-warning-border bg-dp-warning-soft px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between"
+    >
+      <div class="min-w-0">
+        <p class="font-bold text-dp-text-primary">{{ t('duty.view.teamRequired') }}</p>
+        <p class="mt-0.5 text-sm leading-relaxed text-dp-text-secondary">
+          {{ t('duty.view.teamRequiredDescription') }}
+        </p>
+      </div>
+      <button
+        type="button"
+        data-test="teamless-duty-guidance-action"
+        class="flex min-h-[44px] shrink-0 items-center justify-center rounded-lg bg-dp-accent px-4 py-2 text-sm font-bold transition hover:bg-dp-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-dp-accent cursor-pointer"
+        :style="{ color: 'var(--dp-text-on-dark)' }"
+        @click="goToTeam"
+      >
+        {{ t('duty.view.goToTeam') }}
+      </button>
+    </div>
+
     <DutyTypesBar
       :batch-edit-mode="batchEditMode"
       :duty-types="dutyTypes"
@@ -1542,8 +1616,8 @@ async function showExcelUploadModal() {
       :focused-day="focusedDay"
       :focused-day-duty-type="focusedDayDutyType"
       :last-day-in-month="lastDayInMonth"
-      :can-edit="canEdit"
-      :can-edit-my-calendar="canEditMyCalendar"
+      :can-edit="canEditDuty"
+      :can-edit-my-calendar="canEditMyDutyCalendar"
       :other-duty-count="otherDutyCount"
       :is-other-duty-active="isOtherDutyActive"
       :team-has-duty-batch-template="teamHasDutyBatchTemplate"
@@ -1600,6 +1674,7 @@ async function showExcelUploadModal() {
       :schedules="selectedDaySchedules"
       :duty-types="dutyTypes"
       :can-edit="canEdit"
+      :can-edit-duty="canEditDuty"
       :friends="friends"
       :member-id="memberId"
       :is-my-calendar="isMyCalendar"
@@ -1620,8 +1695,11 @@ async function showExcelUploadModal() {
       :todo="selectedTodo"
       :friends="friends"
       :can-report="canReportSelectedTodo"
+      :can-change-status="isMyCalendar"
+      :status-change-pending="selectedTodo ? pendingTodoStatusIds.has(selectedTodo.id) : false"
       @close="isTodoDetailModalOpen = false"
       @update="handleTodoUpdate"
+      @status-change="handleTodoStatusChange"
       @delete="handleTodoDelete"
       @untag-self="handleTodoUntagSelf"
       @report="openTodoReport"

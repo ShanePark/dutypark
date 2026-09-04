@@ -13,6 +13,7 @@ import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.publiccontent.service.PublicContentService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
+import com.tistory.shanepark.dutypark.team.domain.dto.TeamCreateDto
 import com.tistory.shanepark.dutypark.team.domain.entity.Team
 import com.tistory.shanepark.dutypark.team.repository.TeamRepository
 import org.assertj.core.api.Assertions.assertThat
@@ -23,9 +24,13 @@ import org.mockito.InjectMocks
 import org.mockito.Mock
 import org.mockito.Mockito.`when`
 import org.mockito.kotlin.doThrow
+import org.mockito.kotlin.doNothing
+import org.mockito.kotlin.any
 import org.mockito.kotlin.verify
+import org.mockito.kotlin.never
 import org.mockito.kotlin.whenever
 import org.mockito.junit.jupiter.MockitoExtension
+import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.test.util.ReflectionTestUtils
 import java.time.LocalDate
 import java.util.*
@@ -100,6 +105,187 @@ class TeamServiceTest {
         }
 
         assertThat(exception.message).isEqualTo("team.member.required")
+    }
+
+    @Test
+    fun `change team admin rejects member outside team`() {
+        val team = Team("Test Team")
+        val outsider = Member(name = "outsider")
+        ReflectionTestUtils.setField(team, "id", 1L)
+        ReflectionTestUtils.setField(outsider, "id", 3L)
+        whenever(teamRepository.findById(1L)).thenReturn(Optional.of(team))
+        whenever(memberRepository.findById(3L)).thenReturn(Optional.of(outsider))
+
+        val exception = assertThrows<BadRequestException> {
+            service.changeTeamAdmin(teamId = 1L, memberId = 3L)
+        }
+
+        assertThat(exception.message).isEqualTo("team.member.notInTeam")
+        assertThat(team.admin).isNull()
+    }
+
+    @Test
+    fun `member can create a team and becomes its admin`() {
+        val member = Member(name = "new member")
+        ReflectionTestUtils.setField(member, "id", 10L)
+        val login = LoginMember(id = 10L, name = member.name)
+
+        whenever(memberRepository.findMemberWithTeamForUpdate(member.id!!)).thenReturn(Optional.of(member))
+        whenever(teamRepository.findByName("new team")).thenReturn(null)
+        whenever(teamRepository.saveAndFlush(any<Team>())).thenAnswer { invocation ->
+            (invocation.arguments[0] as Team).also {
+                ReflectionTestUtils.setField(it, "id", 20L)
+            }
+        }
+        whenever(dutyTypeRepository.saveAndFlush(any<DutyType>())).thenAnswer { invocation ->
+            (invocation.arguments[0] as DutyType).also {
+                ReflectionTestUtils.setField(it, "id", 30L)
+            }
+        }
+
+        val result = service.create(login, TeamCreateDto("new team", "description"))
+
+        assertThat(result.id).isEqualTo(20L)
+        assertThat(result.adminId).isEqualTo(member.id)
+        assertThat(member.team?.id).isEqualTo(result.id)
+        assertThat(member.team?.admin).isSameAs(member)
+        assertThat(result.description).isEqualTo("description")
+        assertThat(result.dutyTypes.map { it.name }).containsExactly("OFF", "WORK")
+        assertThat(result.dutyTypes[1].id).isEqualTo(30L)
+        assertThat(result.dutyTypes[1].position).isEqualTo(0)
+        assertThat(result.dutyTypes[1].color).isEqualTo("#98fb98")
+        assertThat(result.dutyTypes[1].hidden).isFalse
+        verify(dutyTypeRepository).saveAndFlush(any<DutyType>())
+        verify(publicContentService).validateContent("new team")
+        verify(publicContentService).validateContent("description")
+    }
+
+    @Test
+    fun `member cannot create a team with a banned name`() {
+        val member = Member(name = "member")
+        ReflectionTestUtils.setField(member, "id", 10L)
+        whenever(memberRepository.findMemberWithTeamForUpdate(member.id!!)).thenReturn(Optional.of(member))
+        doThrow(BadRequestException("contentFilter.blocked"))
+            .whenever(publicContentService)
+            .validateContent("blocked team")
+
+        val exception = assertThrows<BadRequestException> {
+            service.create(
+                LoginMember(id = member.id!!, name = member.name),
+                TeamCreateDto("  blocked team  ", "description"),
+            )
+        }
+
+        assertThat(exception.message).isEqualTo("contentFilter.blocked")
+        verify(publicContentService).validateContent("blocked team")
+        verify(teamRepository, never()).saveAndFlush(any())
+    }
+
+    @Test
+    fun `member cannot create a team with a banned description`() {
+        val member = Member(name = "member")
+        ReflectionTestUtils.setField(member, "id", 10L)
+        whenever(memberRepository.findMemberWithTeamForUpdate(member.id!!)).thenReturn(Optional.of(member))
+        doNothing().whenever(publicContentService).validateContent("clean team")
+        doThrow(BadRequestException("contentFilter.blocked"))
+            .whenever(publicContentService)
+            .validateContent("blocked description")
+
+        val exception = assertThrows<BadRequestException> {
+            service.create(
+                LoginMember(id = member.id!!, name = member.name),
+                TeamCreateDto("clean team", "blocked description"),
+            )
+        }
+
+        assertThat(exception.message).isEqualTo("contentFilter.blocked")
+        verify(publicContentService).validateContent("clean team")
+        verify(publicContentService).validateContent("blocked description")
+        verify(teamRepository, never()).saveAndFlush(any())
+    }
+
+    @Test
+    fun `member cannot create a team when already assigned to one`() {
+        val currentTeam = Team("current team")
+        val member = Member(name = "member").also { it.team = currentTeam }
+        ReflectionTestUtils.setField(member, "id", 10L)
+        whenever(memberRepository.findMemberWithTeamForUpdate(member.id!!)).thenReturn(Optional.of(member))
+
+        val exception = assertThrows<BadRequestException> {
+            service.create(LoginMember(id = member.id!!, name = member.name), TeamCreateDto("new team", ""))
+        }
+
+        assertThat(exception.message).isEqualTo("team.member.alreadyAssigned")
+        verify(teamRepository, never()).findByName(any())
+        verify(teamRepository, never()).saveAndFlush(any())
+    }
+
+    @Test
+    fun `member cannot create a team with a duplicated name`() {
+        val member = Member(name = "member")
+        ReflectionTestUtils.setField(member, "id", 10L)
+        whenever(memberRepository.findMemberWithTeamForUpdate(member.id!!)).thenReturn(Optional.of(member))
+        whenever(teamRepository.findByName("existing team")).thenReturn(Team("existing team"))
+
+        val exception = assertThrows<BadRequestException> {
+            service.create(LoginMember(id = member.id!!, name = member.name), TeamCreateDto("existing team", ""))
+        }
+
+        assertThat(exception.message).isEqualTo("team.name.duplicated")
+        verify(teamRepository, never()).saveAndFlush(any())
+    }
+
+    @Test
+    fun `member team creation trims the name before checking and saving`() {
+        val member = Member(name = "member")
+        ReflectionTestUtils.setField(member, "id", 10L)
+        whenever(memberRepository.findMemberWithTeamForUpdate(member.id!!)).thenReturn(Optional.of(member))
+        whenever(teamRepository.findByName("trimmed team")).thenReturn(null)
+        whenever(teamRepository.saveAndFlush(any<Team>())).thenAnswer { invocation ->
+            (invocation.arguments[0] as Team).also {
+                ReflectionTestUtils.setField(it, "id", 20L)
+            }
+        }
+
+        val result = service.create(
+            LoginMember(id = member.id!!, name = member.name),
+            TeamCreateDto("  trimmed team  ", "description"),
+        )
+
+        assertThat(result.name).isEqualTo("trimmed team")
+        verify(teamRepository).findByName("trimmed team")
+    }
+
+    @Test
+    fun `member cannot create a whitespace-only team name`() {
+        val member = Member(name = "member")
+        ReflectionTestUtils.setField(member, "id", 10L)
+        whenever(memberRepository.findMemberWithTeamForUpdate(member.id!!)).thenReturn(Optional.of(member))
+
+        val exception = assertThrows<BadRequestException> {
+            service.create(LoginMember(id = member.id!!, name = member.name), TeamCreateDto("  ", ""))
+        }
+
+        assertThat(exception.message).isEqualTo("team.name.length")
+        verify(teamRepository, never()).findByName(any())
+        verify(teamRepository, never()).saveAndFlush(any())
+    }
+
+    @Test
+    fun `member team creation maps a concurrent duplicate name to a bad request`() {
+        val member = Member(name = "member")
+        ReflectionTestUtils.setField(member, "id", 10L)
+        whenever(memberRepository.findMemberWithTeamForUpdate(member.id!!)).thenReturn(Optional.of(member))
+        whenever(teamRepository.findByName("racing team")).thenReturn(null)
+        whenever(teamRepository.saveAndFlush(any<Team>()))
+            .thenThrow(DataIntegrityViolationException("duplicate team name"))
+
+        val exception = assertThrows<BadRequestException> {
+            service.create(LoginMember(id = member.id!!, name = member.name), TeamCreateDto("racing team", ""))
+        }
+
+        assertThat(exception.message).isEqualTo("team.name.duplicated")
+        assertThat(member.team).isNull()
     }
 
     @Test

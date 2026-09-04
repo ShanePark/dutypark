@@ -4,6 +4,7 @@ import {
   findHostNode,
   mountHost,
   triggerHost,
+  hostText,
   type HostNode,
 } from '@/test/hostRenderer'
 
@@ -437,6 +438,20 @@ describe('DutyView D-Day saves', () => {
     resolveRequest({ data: makeDDay({ id: 11, title: '중복 방지' }) })
     await flush()
     expect(findHostNode(mounted.root, node => node.type === 'input' && node.props.type === 'text')).toBeNull()
+    closeMounted(mounted)
+  })
+})
+
+describe('DutyView teamless duty guidance', () => {
+  it('explains that duty input requires a team and links to the team menu', async () => {
+    const mounted = await mountDutyView()
+
+    const banner = nodeByDataTest(mounted.root, 'teamless-duty-guidance')
+    expect(hostText(banner)).toContain('duty.view.teamRequired')
+
+    triggerHost(nodeByDataTest(mounted.root, 'teamless-duty-guidance-action'), 'onClick')
+    expect(mocks.router.push).toHaveBeenCalledWith('/team')
+
     closeMounted(mounted)
   })
 })

@@ -208,6 +208,104 @@ struct TodoViewModelTests {
     }
 
     @Test
+    func todoCardsKeepStatusMovementNonVisualAndDetailsExposePicker() throws {
+        let root = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let boardSource = try String(
+            contentsOf: root.appending(path: "Dutypark/Features/Todo/TodoView.swift"),
+            encoding: .utf8
+        )
+        let modalSource = try String(
+            contentsOf: root.appending(path: "Dutypark/Features/Todo/TodoModalViews.swift"),
+            encoding: .utf8
+        )
+
+        #expect(!boardSource.contains(#"accessibilityIdentifier("todo.card.status.\(todo.id)")"#))
+        #expect(!boardSource.contains("private var statusMenu: some View"))
+        #expect(!boardSource.contains(#"Image(systemName: "arrow.left.arrow.right")"#))
+        #expect(!boardSource.contains("canPerformOnlineMutations: model.canPerformOnlineMutations"))
+        #expect(boardSource.contains("changeStatus: { todo, destination"))
+        #expect(!boardSource.contains("focusStatusAfterDirectMove(destination)"))
+
+        let cardStart = try #require(boardSource.range(of: "private struct TodoCard: View"))
+        let cardEnd = try #require(
+            boardSource.range(
+                of: "private struct TodoCardGestureModifier",
+                range: cardStart.upperBound..<boardSource.endIndex
+            )
+        )
+        let cardSource = String(boardSource[cardStart.lowerBound..<cardEnd.lowerBound])
+        #expect(!cardSource.contains("todoLocalized(status.shortTitleKey)"))
+        #expect(!cardSource.contains(#"Image(systemName: "arrow.left.arrow.right")"#))
+        #expect(!cardSource.contains("private var statusMenu: some View"))
+        #expect(!cardSource.contains("padding(.trailing, 52)"))
+        #expect(cardSource.contains(".accessibilityActions {"))
+        #expect(cardSource.contains("changeStatus(destination)"))
+
+        #expect(modalSource.contains(#"accessibilityIdentifier("todo.detail.status")"#))
+        #expect(modalSource.contains("model.move(currentTodo, to: destination)"))
+    }
+
+    @Test
+    func todoDetailFooterOwnActionsIncludeStatusEditAndDelete() throws {
+        let root = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let source = try String(
+            contentsOf: root.appending(path: "Dutypark/Features/Todo/TodoModalViews.swift"),
+            encoding: .utf8
+        )
+
+        let headerStart = try #require(source.range(of: "private var header: some View"))
+        let headerEnd = try #require(
+            source.range(
+                of: "private var currentTodo: TodoDTO",
+                range: headerStart.upperBound..<source.endIndex
+            )
+        )
+        let footerStart = try #require(
+            source.range(of: "private var footer: some View", range: headerStart.upperBound..<source.endIndex)
+        )
+        let header = String(source[headerStart.lowerBound..<headerEnd.lowerBound])
+        let footer = String(source[footerStart.lowerBound..<source.endIndex])
+
+        #expect(!header.contains("statusAction"))
+        #expect(footer.contains("statusAction"))
+        #expect(footer.contains(#"title: todoLocalized("common.edit")"#))
+        #expect(footer.contains(#"title: todoLocalized("todo.action.delete")"#))
+        #expect(footer.contains(#"title: todoLocalized("todo.action.leaveTag")"#))
+        #expect(!footer.contains("overflowMenu"))
+    }
+
+    @Test
+    func todoCardStatusActionsUseOnlineMutationBoundaryAndStayHiddenWhenBlocked() throws {
+        let root = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let source = try String(
+            contentsOf: root.appending(path: "Dutypark/Features/Todo/TodoView.swift"),
+            encoding: .utf8
+        )
+
+        let cardStart = try #require(source.range(of: "private struct TodoCard: View"))
+        let cardEnd = try #require(
+            source.range(
+                of: "private struct TodoCardGestureModifier",
+                range: cardStart.upperBound..<source.endIndex
+            )
+        )
+        let cardSource = String(source[cardStart.lowerBound..<cardEnd.lowerBound])
+
+        #expect(cardSource.contains("if canChangeStatus"))
+        #expect(cardSource.contains("changeStatus(destination)"))
+        #expect(!cardSource.contains("moveToStatus(destination)"))
+        #expect(source.contains("canChangeStatus: model.canPerformOnlineMutations && !model.isSaving"))
+        #expect(source.contains("await model.move(todo, to: destination)"))
+        #expect(source.contains("if succeeded { await onTodoChanged() }"))
+    }
+
+    @Test
     func mobileBoardMatchesWebColumnGeometryAndAnchors() {
         #expect(TodoBoardLayout.mobileColumnWidthRatio == 0.62)
         #expect(TodoBoardLayout.boardPadding == 8)
@@ -707,6 +805,7 @@ struct TodoViewModelTests {
             "todo.action.complete",
             "todo.action.delete",
             "todo.action.leaveTag",
+            "todo.action.status",
             "todo.action.reopen",
             "todo.confirm.discardTitle",
             "todo.confirm.discardMessage",

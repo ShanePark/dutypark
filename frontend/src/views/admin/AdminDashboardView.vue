@@ -32,8 +32,6 @@ const { showSuccess, showError, confirm, toastSuccess } = useSwal()
 const loading = ref(true)
 const members = ref<AdminMemberDto[]>([])
 const allTokens = ref<RefreshTokenDto[]>([])
-const openReportCount = ref(0)
-const openInquiryCount = ref(0)
 const isSuspensionWorking = ref(false)
 
 const currentPage = ref(0)
@@ -239,20 +237,6 @@ async function fetchTokens() {
   }
 }
 
-// Only the total is needed for the nav badge, so a single-element page is requested.
-async function fetchModerationCounts() {
-  try {
-    const [reports, inquiries] = await Promise.all([
-      adminApi.getReports('OPEN', 0, 1),
-      adminApi.getInquiries('OPEN', 0, 1),
-    ])
-    openReportCount.value = reports.data.totalElements
-    openInquiryCount.value = inquiries.data.totalElements
-  } catch (error) {
-    console.error('Failed to fetch moderation counts:', error)
-  }
-}
-
 async function handleSuspendMember(member: AdminMemberDto) {
   if (!await confirm(
     t('admin.memberDetail.suspension.suspendConfirm', { name: member.name }),
@@ -294,7 +278,7 @@ async function handleUnsuspendMember(member: AdminMemberDto) {
 async function fetchData() {
   loading.value = true
   try {
-    await Promise.all([fetchMembers(), fetchTokens(), fetchModerationCounts()])
+    await Promise.all([fetchMembers(), fetchTokens()])
   } catch (error) {
     console.error('Failed to fetch admin data:', error)
     showError(t('admin.dashboard.messages.loadDataFailed'))
@@ -328,8 +312,6 @@ onMounted(async () => {
       <template v-else>
         <AdminNavTiles
           active="members"
-          :open-report-count="openReportCount"
-          :open-inquiry-count="openInquiryCount"
         />
 
         <div class="admin-stats-band mb-4 sm:mb-6" :aria-label="t('admin.dashboard.statsAriaLabel')">

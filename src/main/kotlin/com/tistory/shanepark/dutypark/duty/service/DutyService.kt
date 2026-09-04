@@ -161,15 +161,15 @@ class DutyService(
         memberIds: List<Long>,
         year: Int, month: Int
     ): List<OtherDutyResponse> {
-        val responsesByMemberId = memberIds.distinct().sorted().associateWith { id ->
+        val responsesByMemberId = memberIds.distinct().sorted().mapNotNull { id ->
             val member = memberRepository.findById(id).orElseThrow()
-            val team = member.team ?: throw IllegalArgumentException("Member with id $id does not belong to any team")
-            val duties =
-                getDuties(memberId = id, year = year, month = month, loginMember = loginMember).map {
-                    if (it.dutyType.isNullOrBlank()) {
-                        it.copy(dutyType = team.defaultDutyName, dutyColor = team.defaultDutyColor)
-                    } else it
-                }
+            val rawDuties = getDuties(memberId = id, year = year, month = month, loginMember = loginMember)
+            val team = member.team ?: return@mapNotNull null
+            val duties = rawDuties.map {
+                if (it.dutyType.isNullOrBlank()) {
+                    it.copy(dutyType = team.defaultDutyName, dutyColor = team.defaultDutyColor)
+                } else it
+            }
             OtherDutyResponse(
                 memberId = member.id!!,
                 name = member.name,
@@ -177,8 +177,8 @@ class DutyService(
                 profilePhotoVersion = member.profilePhotoVersion,
                 duties = duties
             )
-        }
-        return memberIds.map { requireNotNull(responsesByMemberId[it]) }
+        }.associateBy { it.memberId }
+        return memberIds.mapNotNull { responsesByMemberId[it] }
     }
 
 }

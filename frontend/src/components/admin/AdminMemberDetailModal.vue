@@ -6,6 +6,7 @@ import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 import type { AdminMemberDetailDto, AdminMemberDto } from '@/types'
 import { getVisibilityIcon, getVisibilityLabel } from '@/utils/visibility'
 import { MEMBER_STATUS_LABEL_KEYS, memberStatusToneClass } from './adminModerationLabels'
+import { getCalendarDayDifference } from './adminMemberDetailRelativeTime'
 import {
   Bell,
   CalendarDays,
@@ -236,8 +237,7 @@ function formatTimeLabel(value: string) {
 }
 
 function formatSince(value: string) {
-  const diffMs = Date.now() - new Date(value).getTime()
-  const diffDays = Math.max(0, Math.floor(diffMs / 86400000))
+  const diffDays = getCalendarDayDifference(value)
 
   if (diffDays === 0) return t('admin.memberDetail.relativeTime.today')
   if (diffDays < 30) return t('admin.memberDetail.relativeTime.daysAgo', { count: diffDays })

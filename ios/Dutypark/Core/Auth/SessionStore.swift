@@ -195,6 +195,86 @@ final class SessionStore: ObservableObject {
         }
     }
 
+    /// Refreshes the lightweight member identity after an authenticated
+    /// mutation changes account-level fields (for example, creating a team).
+    /// The refresh is deliberately scoped to the current account so a late
+    /// status response cannot overwrite a replacement login. If the status
+    /// request is temporarily unavailable, or its JWT-backed team claim is
+    /// stale, an optional just-created team is patched into the current member
+    /// so dependent screens do not retain the old team state.
+    @discardableResult
+    func refreshCurrentMember(fallbackTeam: TeamDTO? = nil) async -> Bool {
+        guard case .authenticated(let currentMember) = state,
+              availability == .online
+        else { return false }
+
+        let expectedMemberID = currentMember.id
+        let expectedGeneration = authenticationSessionGeneration
+        do {
+            guard let statusMember = try await authService.status() else {
+                return await applyTeamFallback(
+                    fallbackTeam,
+                    expectedMemberID: expectedMemberID,
+                    expectedGeneration: expectedGeneration
+                )
+            }
+            guard statusMember.id == expectedMemberID,
+                  isCurrentAccount(
+                      memberID: expectedMemberID,
+                      generation: expectedGeneration
+                  )
+            else { return false }
+            let refreshedMember = Self.member(
+                statusMember,
+                applyingTeam: fallbackTeam
+            )
+            state = .authenticated(refreshedMember)
+            try? await offlineSessionStore.save(refreshedMember, at: nil)
+            return true
+        } catch {
+            return await applyTeamFallback(
+                fallbackTeam,
+                expectedMemberID: expectedMemberID,
+                expectedGeneration: expectedGeneration
+            )
+        }
+    }
+
+    private func applyTeamFallback(
+        _ fallbackTeam: TeamDTO?,
+        expectedMemberID: MemberID,
+        expectedGeneration: UInt64
+    ) async -> Bool {
+        guard let fallbackTeam,
+              isCurrentAccount(
+                  memberID: expectedMemberID,
+                  generation: expectedGeneration
+              ),
+              case .authenticated(let currentMember) = state
+        else { return false }
+        let patchedMember = Self.member(currentMember, applyingTeam: fallbackTeam)
+        state = .authenticated(patchedMember)
+        try? await offlineSessionStore.save(patchedMember, at: nil)
+        return true
+    }
+
+    private static func member(
+        _ member: LoginMember,
+        applyingTeam team: TeamDTO?
+    ) -> LoginMember {
+        guard let team else { return member }
+        return LoginMember(
+            id: member.id,
+            email: member.email,
+            name: member.name,
+            teamId: team.id,
+            team: team.name,
+            isAdmin: member.isAdmin,
+            isImpersonating: member.isImpersonating,
+            originalMemberId: member.originalMemberId
+        )
+    }
+
     func continueAsGuestAfterRestoreFailure() async {
         guard state == .restoreFailed else { return }
         await terminateSession(

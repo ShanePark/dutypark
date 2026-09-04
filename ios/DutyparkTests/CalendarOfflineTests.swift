@@ -286,6 +286,75 @@ final class CalendarOfflineTests: XCTestCase {
         XCTAssertEqual(monthRequestCount, 1)
     }
 
+    func testOfflineRestoreCannotOverwriteNewerOnlineAccountIdentity() async {
+        let gate = CalendarOfflineIdentityRaceGate()
+        let cache = CalendarOfflineCacheStub(
+            account: Self.accountSnapshot(),
+            accountLoadGate: gate
+        )
+        let repository = CalendarOfflineRepository(
+            member: Self.member(id: 99, name: "Online account")
+        )
+        let model = CalendarViewModel(
+            repository: repository,
+            now: Self.date(2026, 8, 12),
+            accountID: 42,
+            isOffline: true,
+            cache: cache
+        )
+
+        let offlineLoad = Task { await model.load() }
+        await gate.waitForRequest()
+
+        model.configure(accountID: 99, isOffline: false)
+        let onlineLoad = Task { await model.load() }
+        await onlineLoad.value
+
+        XCTAssertEqual(model.me?.id, 99)
+        XCTAssertEqual(model.me?.name, "Online account")
+        XCTAssertFalse(model.isOfflineMode)
+
+        await gate.release()
+        await offlineLoad.value
+
+        XCTAssertEqual(model.me?.id, 99)
+        XCTAssertEqual(model.me?.name, "Online account")
+        XCTAssertFalse(model.isOfflineMode)
+    }
+
+    func testOfflineRestoreDoesNotPartiallyApplyBeforeDelayedTodoBoardLoad() async {
+        let gate = CalendarOfflineIdentityRaceGate()
+        let cache = CalendarOfflineCacheStub(
+            account: Self.accountSnapshot(),
+            todoBoardLoadGate: gate
+        )
+        let repository = CalendarOfflineRepository(
+            member: Self.member(id: 99, name: "Online account")
+        )
+        let model = CalendarViewModel(
+            repository: repository,
+            now: Self.date(2026, 8, 12),
+            accountID: 42,
+            isOffline: true,
+            cache: cache
+        )
+
+        let offlineLoad = Task { await model.load() }
+        await gate.waitForRequest()
+        XCTAssertNil(model.me, "Cached identity must not be published before all cache reads finish")
+
+        model.configure(accountID: 99, isOffline: false)
+        let onlineLoad = Task { await model.load() }
+        await onlineLoad.value
+
+        await gate.release()
+        await offlineLoad.value
+
+        XCTAssertEqual(model.me?.id, 99)
+        XCTAssertEqual(model.me?.name, "Online account")
+        XCTAssertFalse(model.isOfflineMode)
+    }
+
     func testOfflineCreateUsesOneStableOperationIDAndShowsPendingScheduleWithOneSuccessHaptic() async throws {
         let cache = CalendarOfflineCacheStub(
             account: Self.accountSnapshot(),
@@ -607,8 +676,11 @@ final class CalendarOfflineTests: XCTestCase {
             repository: repository,
             now: Self.date(2026, 8, 12),
             accountID: 42,
+            isOffline: true,
             cache: cache
         )
+        await model.load()
+        model.configure(accountID: 42, isOffline: false)
         model.comparedMemberIDs = [2]
 
         let prefetch = Task {
@@ -701,6 +773,23 @@ private extension CalendarOfflineTests {
         )!
     }
 
+    static func member(id: MemberID, name: String) -> MemberDTO {
+        MemberDTO(
+            id: id,
+            name: name,
+            email: "\(name.lowercased().replacingOccurrences(of: " ", with: "."))@example.com",
+            teamId: nil,
+            team: nil,
+            calendarVisibility: .friends,
+            kakaoId: nil,
+            naverId: nil,
+            appleId: nil,
+            hasPassword: true,
+            hasProfilePhoto: false,
+            profilePhotoVersion: 0
+        )
+    }
+
     static func accountSnapshot() -> OfflineAccountSnapshot {
         OfflineAccountSnapshot(
             member: MemberDTO(
@@ -717,6 +806,28 @@ private extension CalendarOfflineTests {
                 hasProfilePhoto: false,
                 profilePhotoVersion: 0
             ),
+            friends: [
+                FriendDTO(
+                    id: 2,
+                    name: "Friend A",
+                    teamId: 7,
+                    team: "Team",
+                    hasProfilePhoto: false,
+                    profilePhotoVersion: 0,
+                    isFamily: false,
+                    pinOrder: nil
+                ),
+                FriendDTO(
+                    id: 3,
+                    name: "Friend B",
+                    teamId: 7,
+                    team: "Team",
+                    hasProfilePhoto: false,
+                    profilePhotoVersion: 0,
+                    isFamily: false,
+                    pinOrder: nil
+                ),
+            ],
             storedAt: Date(timeIntervalSince1970: 100)
         )
     }
@@ -792,22 +903,30 @@ private actor CalendarOfflineCacheStub: OfflineCacheProviding {
     var account: OfflineAccountSnapshot?
     var month: OfflineMonthSnapshot?
     private let searchResults: [ScheduleSearchResultDTO]
+    private let accountLoadGate: CalendarOfflineIdentityRaceGate?
+    private let todoBoardLoadGate: CalendarOfflineIdentityRaceGate?
     private(set) var savedMonths: [OfflineMonthSnapshot] = []
 
     init(
         account: OfflineAccountSnapshot? = nil,
         month: OfflineMonthSnapshot? = nil,
-        searchResults: [ScheduleSearchResultDTO] = []
+        searchResults: [ScheduleSearchResultDTO] = [],
+        accountLoadGate: CalendarOfflineIdentityRaceGate? = nil,
+        todoBoardLoadGate: CalendarOfflineIdentityRaceGate? = nil
     ) {
         self.account = account
         self.month = month
         self.searchResults = searchResults
+        self.accountLoadGate = accountLoadGate
+        self.todoBoardLoadGate = todoBoardLoadGate
     }
 
     func saveAccount(_ snapshot: OfflineAccountSnapshot) async throws { account = snapshot }
     func saveAccount(member: LoginMember, friends: [FriendDTO], dDays: [DDayDTO], now: Date) async throws {}
     func loadAccount(memberID: MemberID) async -> OfflineAccountSnapshot? {
-        account?.memberID == memberID ? account : nil
+        let snapshot = account?.memberID == memberID ? account : nil
+        await accountLoadGate?.waitForLoad()
+        return snapshot
     }
     func saveMonth(_ snapshot: OfflineMonthSnapshot) async throws {
         savedMonths.append(snapshot)
@@ -821,7 +940,10 @@ private actor CalendarOfflineCacheStub: OfflineCacheProviding {
         month.map { [$0] } ?? []
     }
     func saveTodoBoard(accountID: MemberID, board: TodoBoardDTO, now: Date) async throws {}
-    func loadTodoBoard(accountID: MemberID) async -> TodoBoardDTO? { nil }
+    func loadTodoBoard(accountID: MemberID) async -> TodoBoardDTO? {
+        await todoBoardLoadGate?.waitForLoad()
+        return nil
+    }
     func searchSchedules(accountID: MemberID, query: String, keys: [OfflineMonthKey]?) async -> [ScheduleSearchResultDTO] {
         searchResults
     }
@@ -874,6 +996,36 @@ private actor CalendarRecoverySleeperRecorder {
     }
 }
 
+private actor CalendarOfflineIdentityRaceGate {
+    private var requestObserved = false
+    private var requestWaiters: [CheckedContinuation<Void, Never>] = []
+    private var isReleased = false
+    private var releaseWaiters: [CheckedContinuation<Void, Never>] = []
+
+    func waitForLoad() async {
+        requestObserved = true
+        requestWaiters.forEach { $0.resume() }
+        requestWaiters.removeAll()
+        guard !isReleased else { return }
+        await withCheckedContinuation { continuation in
+            releaseWaiters.append(continuation)
+        }
+    }
+
+    func waitForRequest() async {
+        guard !requestObserved else { return }
+        await withCheckedContinuation { continuation in
+            requestWaiters.append(continuation)
+        }
+    }
+
+    func release() {
+        isReleased = true
+        releaseWaiters.forEach { $0.resume() }
+        releaseWaiters.removeAll()
+    }
+}
+
 private actor CalendarOfflineRepository: CalendarRepositoryProtocol {
     private var monthFailures: [APIError]
     private var scheduleFailures: [APIError]
@@ -885,6 +1037,7 @@ private actor CalendarOfflineRepository: CalendarRepositoryProtocol {
     private(set) var savedRequests: [ScheduleSaveDTO] = []
     private(set) var monthRequestCount = 0
     let prefetchGate: CalendarPrefetchGate?
+    let memberValue: MemberDTO
 
     init(
         monthFailure: APIError? = nil,
@@ -893,7 +1046,8 @@ private actor CalendarOfflineRepository: CalendarRepositoryProtocol {
         searchFailure: APIError? = nil,
         scheduleFailures: [APIError] = [],
         scheduleFailureAfter: Int? = nil,
-        prefetchGate: CalendarPrefetchGate? = nil
+        prefetchGate: CalendarPrefetchGate? = nil,
+        member: MemberDTO? = nil
     ) {
         self.monthFailures = monthFailures.isEmpty
             ? monthFailure.map { [$0] } ?? []
@@ -903,9 +1057,10 @@ private actor CalendarOfflineRepository: CalendarRepositoryProtocol {
         self.scheduleFailures = scheduleFailures
         self.scheduleFailureAfter = scheduleFailureAfter
         self.prefetchGate = prefetchGate
+        self.memberValue = member ?? Self.memberDTO()
     }
 
-    func member() async throws -> MemberDTO { Self.memberDTO() }
+    func member() async throws -> MemberDTO { memberValue }
     func member(id: MemberID) async throws -> MemberPreviewDTO { MemberPreviewDTO(id: id, name: "Member", teamId: nil, team: nil, hasProfilePhoto: false, profilePhotoVersion: 0) }
     func friends() async throws -> [FriendDTO] { [] }
     func team(id: TeamID) async throws -> TeamDTO { throw APIError.invalidResponse }

@@ -6,9 +6,11 @@ import type { MoveEvent, SortableEvent } from 'sortablejs'
 import { ListTodo, Clock, CheckCircle2, Lightbulb, LayoutGrid, Plus } from 'lucide-vue-next'
 import { todoApi } from '@/api/todo'
 import { friendApi } from '@/api/member'
+import { reportApi } from '@/api/report'
 import { useSwal } from '@/composables/useSwal'
 import { useContentFilterStore } from '@/stores/contentFilter'
 import { useDragClickGuard } from '@/composables/useDragClickGuard'
+import { resolveApiErrorMessage } from '@/utils/resolveApiError'
 import HelpButton from '@/components/common/HelpButton.vue'
 import HelpModal from '@/components/common/HelpModal.vue'
 import HelpNote from '@/components/common/HelpNote.vue'
@@ -18,7 +20,9 @@ import KanbanColumn from '@/components/todo/KanbanColumn.vue'
 import KanbanCard from '@/components/todo/KanbanCard.vue'
 import TodoAddModal from '@/components/duty/TodoAddModal.vue'
 import TodoDetailModal from '@/components/duty/TodoDetailModal.vue'
+import ReportModal from '@/components/common/ReportModal.vue'
 import type { TaggableFriend, Todo, TodoBoard, TodoStatus } from '@/types'
+import type { ReportSubmission, ReportTarget } from '@/types/report'
 
 const { t } = useI18n()
 const { showSuccess, showError, confirm, confirmDelete, toastSuccess } = useSwal()
@@ -37,6 +41,9 @@ const selectedTodo = ref<Todo | null>(null)
 const startInEditMode = ref(false)
 const activeStatus = ref<TodoStatus>('IN_PROGRESS')
 const friends = ref<TaggableFriend[]>([])
+const pendingStatusTodoIds = ref<Set<string>>(new Set())
+const reportTarget = ref<ReportTarget | null>(null)
+const isSubmittingReport = ref(false)
 let scrollRafId: number | null = null
 let dragFocusRafId: number | null = null
 let activeDragStatus: TodoStatus | null = null
@@ -50,6 +57,7 @@ let sortableInstances: Record<string, Sortable> = {}
 const todoList = computed(() => board.value?.todo ?? [])
 const inProgressList = computed(() => board.value?.inProgress ?? [])
 const doneList = computed(() => board.value?.done ?? [])
+const canReportSelectedTodo = computed(() => selectedTodo.value?.isTagged === true)
 
 const counts = computed(() => board.value?.counts ?? { todo: 0, inProgress: 0, done: 0, total: 0 })
 const statusTabs = computed<Array<{ status: TodoStatus; label: string; icon: typeof ListTodo }>>(() => [
@@ -109,6 +117,9 @@ function initSortables() {
       group: 'kanban',
       animation: 200,
       draggable: '.kanban-card-wrapper',
+      // A todo whose detail status request is pending must not start a second drag.
+      filter: '.kanban-card-wrapper--status-pending',
+      preventOnFilter: false,
       ghostClass: 'kanban-ghost',
       chosenClass: 'kanban-chosen',
       dragClass: 'kanban-drag',
@@ -307,6 +318,66 @@ function collectOrderedIds(container: Element | null): string[] {
   return orderedIds
 }
 
+function reconcileTodoStatus(updatedTodo: Todo, orderedIds: string[] = []) {
+  // Keep the successful PATCH response visible immediately. The board refresh
+  // below is still useful for canonical ordering and other viewers, but it is
+  // allowed to fail without putting the selected todo back into its old status.
+  if (selectedTodo.value?.id === updatedTodo.id) {
+    selectedTodo.value = updatedTodo
+  }
+
+  const currentBoard = board.value
+  if (!currentBoard) return
+
+  const listKey = updatedTodo.status === 'TODO'
+    ? 'todo'
+    : updatedTodo.status === 'IN_PROGRESS'
+      ? 'inProgress'
+      : 'done'
+  const targetList = currentBoard[listKey].filter((todo) => todo.id !== updatedTodo.id)
+  const lists = {
+    todo: currentBoard.todo.filter((todo) => todo.id !== updatedTodo.id),
+    inProgress: currentBoard.inProgress.filter((todo) => todo.id !== updatedTodo.id),
+    done: currentBoard.done.filter((todo) => todo.id !== updatedTodo.id),
+  }
+
+  // A drag supplies the complete destination order. For the detail picker the
+  // API bumps a moved todo to the top, so that response remains the first item.
+  const targetById = new Map(targetList.map((todo) => [todo.id, todo]))
+  targetById.set(updatedTodo.id, updatedTodo)
+  const requestedIds = orderedIds.length > 0 ? orderedIds : [updatedTodo.id]
+  const seen = new Set<string>()
+  const reconciledTarget: Todo[] = []
+  for (const id of requestedIds) {
+    const todo = targetById.get(id)
+    if (todo && !seen.has(todo.id)) {
+      seen.add(todo.id)
+      reconciledTarget.push(todo)
+    }
+  }
+  for (const todo of targetList) {
+    if (!seen.has(todo.id)) {
+      seen.add(todo.id)
+      reconciledTarget.push(todo)
+    }
+  }
+  if (!seen.has(updatedTodo.id)) {
+    reconciledTarget.unshift(updatedTodo)
+  }
+
+  lists[listKey] = reconciledTarget
+  board.value = {
+    ...currentBoard,
+    ...lists,
+    counts: {
+      todo: lists.todo.length,
+      inProgress: lists.inProgress.length,
+      done: lists.done.length,
+      total: lists.todo.length + lists.inProgress.length + lists.done.length,
+    },
+  }
+}
+
 function destroySortables() {
   cancelDragStatusFocus()
   removeDragPointerListeners()
@@ -325,6 +396,7 @@ function destroySortables() {
 async function handleDragEnd(evt: SortableEvent, previousActiveStatus: TodoStatus | null = null) {
   const todoId = evt.item.getAttribute('data-id')
   if (!todoId) return
+  if (pendingStatusTodoIds.value.has(todoId)) return
 
   const fromColumn = evt.from.getAttribute('data-column') as TodoStatus
   const toColumn = evt.to.getAttribute('data-column') as TodoStatus
@@ -347,11 +419,13 @@ async function handleDragEnd(evt: SortableEvent, previousActiveStatus: TodoStatu
     }
   } else {
     // Cross-column move (status change) — persist the destination column order too.
+    pendingStatusTodoIds.value.add(todoId)
     try {
-      await todoApi.changeStatus(todoId, {
+      const updatedTodo = await todoApi.changeStatus(todoId, {
         status: toColumn,
         orderedIds,
       })
+      reconcileTodoStatus(updatedTodo, orderedIds)
       focusStatus(toColumn, 'smooth')
       await loadBoard()
     } catch (error) {
@@ -362,7 +436,55 @@ async function handleDragEnd(evt: SortableEvent, previousActiveStatus: TodoStatu
       // the live drag-follow moved the viewport to its destination.
       activeStatus.value = statusToRestore
       focusStatus(statusToRestore, 'smooth')
+    } finally {
+      pendingStatusTodoIds.value.delete(todoId)
     }
+  }
+}
+
+async function changeTodoStatus(todo: Todo, status: TodoStatus): Promise<Todo | null> {
+  if (todo.status === status) return null
+  if (pendingStatusTodoIds.value.has(todo.id)) return null
+
+  const statusToRestore = activeStatus.value
+  pendingStatusTodoIds.value.add(todo.id)
+  // On mobile the destination column may be off screen. Move the board focus
+  // immediately so the explicit status action has the same visible result as a drag.
+  activeStatus.value = status
+  try {
+    const updatedTodo = await todoApi.changeStatus(todo.id, { status })
+    reconcileTodoStatus(updatedTodo)
+    toastSuccess(t('todoBoard.messages.changeStatusSuccess'))
+    await loadBoard()
+    focusStatus(status, 'smooth')
+    return updatedTodo
+  } catch (error) {
+    console.error('Failed to change status:', error)
+    showError(t('todoBoard.messages.changeStatusFailed'))
+    await loadBoard()
+    // Restore the column that was visible before the picker action failed.
+    activeStatus.value = statusToRestore
+    focusStatus(statusToRestore, 'smooth')
+    return null
+  } finally {
+    pendingStatusTodoIds.value.delete(todo.id)
+  }
+}
+
+async function handleSelectedTodoStatusChange(status: TodoStatus) {
+  const todo = selectedTodo.value
+  if (!todo || todo.status === status) return
+  if (pendingStatusTodoIds.value.has(todo.id)) return
+
+  const updatedTodo = await changeTodoStatus(todo, status)
+  if (selectedTodo.value?.id !== todo.id || !board.value) return
+  if (!updatedTodo) return
+
+  // reconcileTodoStatus updates the selected todo from the PATCH response before
+  // any refresh. Keep this response assignment guarded against a newly opened
+  // detail modal while the request was pending.
+  if (selectedTodo.value.id === updatedTodo.id) {
+    selectedTodo.value = updatedTodo
   }
 }
 
@@ -483,11 +605,13 @@ async function handleUpdateTodo(data: {
   attachmentSessionId?: string
   orderedAttachmentIds?: string[]
 }) {
+  if (pendingStatusTodoIds.value.has(data.id)) return
   if (contentFilterStore.isBlocked(data.title, data.content)) {
     showError(t('contentFilter.blocked'))
     return
   }
 
+  pendingStatusTodoIds.value.add(data.id)
   try {
     await todoApi.updateTodo(data.id, {
       title: data.title,
@@ -510,13 +634,17 @@ async function handleUpdateTodo(data: {
   } catch (error) {
     console.error('Failed to update todo:', error)
     showError(t('todoBoard.messages.updateFailed'))
+  } finally {
+    pendingStatusTodoIds.value.delete(data.id)
   }
 }
 
 async function handleDeleteTodo(todo: Pick<Todo, 'id' | 'title'>) {
+  if (pendingStatusTodoIds.value.has(todo.id)) return
   const confirmed = await confirmDelete(t('todoBoard.messages.deleteConfirm', { title: todo.title }))
-  if (!confirmed) return
+  if (!confirmed || pendingStatusTodoIds.value.has(todo.id)) return
 
+  pendingStatusTodoIds.value.add(todo.id)
   try {
     await todoApi.deleteTodo(todo.id)
     toastSuccess(t('todoBoard.messages.deleteSuccess'))
@@ -525,16 +653,20 @@ async function handleDeleteTodo(todo: Pick<Todo, 'id' | 'title'>) {
   } catch (error) {
     console.error('Failed to delete todo:', error)
     showError(t('todoBoard.messages.deleteFailed'))
+  } finally {
+    pendingStatusTodoIds.value.delete(todo.id)
   }
 }
 
 async function handleUntagSelf(todo: Pick<Todo, 'id' | 'title'>) {
+  if (pendingStatusTodoIds.value.has(todo.id)) return
   const confirmed = await confirm(
     t('todoBoard.messages.untagConfirm', { title: todo.title }),
     t('todoBoard.messages.untagTitle'),
   )
-  if (!confirmed) return
+  if (!confirmed || pendingStatusTodoIds.value.has(todo.id)) return
 
+  pendingStatusTodoIds.value.add(todo.id)
   try {
     await todoApi.untagSelf(todo.id)
     showSuccess(t('todoBoard.messages.untagSuccess'))
@@ -543,6 +675,52 @@ async function handleUntagSelf(todo: Pick<Todo, 'id' | 'title'>) {
   } catch (error) {
     console.error('Failed to untag self:', error)
     showError(t('todoBoard.messages.untagFailed'))
+  } finally {
+    pendingStatusTodoIds.value.delete(todo.id)
+  }
+}
+
+function openTodoReport(todo: Pick<Todo, 'id' | 'title'>) {
+  if (pendingStatusTodoIds.value.has(todo.id)) return
+  if (!selectedTodo.value?.isTagged || selectedTodo.value.id !== todo.id) return
+
+  reportTarget.value = {
+    targetType: 'TODO',
+    targetId: todo.id,
+    targetName: todo.title,
+  }
+}
+
+async function handleReportSubmit(submission: ReportSubmission) {
+  const target = reportTarget.value
+  if (!target || isSubmittingReport.value) return
+  if (pendingStatusTodoIds.value.has(target.targetId)) return
+
+  isSubmittingReport.value = true
+  pendingStatusTodoIds.value.add(target.targetId)
+  try {
+    await reportApi.createReport({
+      targetType: target.targetType,
+      targetId: target.targetId,
+      reason: submission.reason,
+      detail: submission.detail || undefined,
+      alsoBlock: submission.alsoBlock,
+    })
+    reportTarget.value = null
+    toastSuccess(t('report.messages.submitted'))
+
+    // Blocking the Todo owner removes the tag, so refresh both the board and the
+    // friend list before leaving the detail view in that case.
+    if (submission.alsoBlock) {
+      closeDetailModal()
+      await Promise.all([loadBoard(), loadFriends()])
+    }
+  } catch (error) {
+    console.error('Failed to submit report:', error)
+    showError(resolveApiErrorMessage(error, { fallbackKey: 'report.messages.submitFailed' }, t))
+  } finally {
+    pendingStatusTodoIds.value.delete(target.targetId)
+    isSubmittingReport.value = false
   }
 }
 
@@ -629,6 +807,7 @@ onBeforeUnmount(() => {
               :data-id="todo.id"
               :data-is-tagged="todo.isTagged"
               class="kanban-card-wrapper"
+              :class="{ 'kanban-card-wrapper--status-pending': pendingStatusTodoIds.has(todo.id) }"
             >
               <KanbanCard :todo="todo" @click="openDetailModal(todo)" />
             </div>
@@ -657,6 +836,7 @@ onBeforeUnmount(() => {
               :data-id="todo.id"
               :data-is-tagged="todo.isTagged"
               class="kanban-card-wrapper"
+              :class="{ 'kanban-card-wrapper--status-pending': pendingStatusTodoIds.has(todo.id) }"
             >
               <KanbanCard :todo="todo" @click="openDetailModal(todo)" />
             </div>
@@ -685,6 +865,7 @@ onBeforeUnmount(() => {
               :data-id="todo.id"
               :data-is-tagged="todo.isTagged"
               class="kanban-card-wrapper"
+              :class="{ 'kanban-card-wrapper--status-pending': pendingStatusTodoIds.has(todo.id) }"
             >
               <KanbanCard :todo="todo" @click="openDetailModal(todo)" />
             </div>
@@ -715,11 +896,24 @@ onBeforeUnmount(() => {
       :friends="friends"
       :start-in-edit-mode="startInEditMode"
       :show-back-to-list="false"
+      :can-change-status="true"
+      :can-report="canReportSelectedTodo"
+      :status-change-pending="selectedTodo ? pendingStatusTodoIds.has(selectedTodo.id) : false"
       @close="closeDetailModal"
       @update="handleUpdateTodo"
+      @status-change="handleSelectedTodoStatusChange"
       @delete="handleDeleteTodo"
       @untag-self="handleUntagSelf"
+      @report="openTodoReport"
       @back-to-list="handleBackToList"
+    />
+
+    <ReportModal
+      :is-open="!!reportTarget"
+      :target="reportTarget"
+      :is-submitting="isSubmittingReport"
+      @close="reportTarget = null"
+      @submit="handleReportSubmit"
     />
 
     <HelpModal
@@ -982,7 +1176,10 @@ onBeforeUnmount(() => {
 }
 
 .kanban-card-wrapper {
-  touch-action: none;
+  /* Let normal horizontal/vertical swipes reach the board or column scroller.
+     Sortable's 150ms touch delay still reserves a long press for intentional
+     card dragging, while a quick movement cancels that delayed drag. */
+  touch-action: manipulation;
 }
 
 .kanban-empty-state {

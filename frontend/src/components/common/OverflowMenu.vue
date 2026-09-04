@@ -1,15 +1,17 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useEscapeKey } from '@/composables/useEscapeKey'
 
 const props = withDefaults(defineProps<{
   menuLabel: string
   triggerClass: string
+  disabled?: boolean
   align?: 'left' | 'right'
   placement?: 'below' | 'above'
 }>(), {
   align: 'left',
   placement: 'below',
+  disabled: false,
 })
 
 const isOpen = ref(false)
@@ -22,8 +24,10 @@ const panelPositionClass = computed(() => [
 ])
 
 useEscapeKey(isOpen, () => close())
+watch(() => props.disabled, (disabled) => disabled && close())
 
 function toggle() {
+  if (props.disabled) return
   isOpen.value = !isOpen.value
 }
 
@@ -42,6 +46,7 @@ defineExpose({ close })
       :aria-label="menuLabel"
       :aria-expanded="isOpen"
       :data-open="isOpen"
+      :disabled="disabled"
       aria-haspopup="menu"
       @click="toggle"
     >

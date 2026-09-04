@@ -49,6 +49,25 @@ nonisolated enum CalendarHapticPolicy {
     }
 }
 
+/// Rules shared by the comparison picker and the month request. A duty roster
+/// is defined by a team's duty types, so a friend without a team membership
+/// cannot produce a meaningful comparison response.
+nonisolated enum CalendarComparisonPolicy {
+    static let maximumSelectionCount = 3
+
+    static func isSelectable(_ friend: FriendDTO) -> Bool {
+        friend.teamId != nil
+    }
+
+    static func normalizedSelection(
+        _ memberIDs: Set<MemberID>,
+        friends: [FriendDTO]
+    ) -> Set<MemberID> {
+        let selectableIDs = Set(friends.filter(isSelectable).map(\.id))
+        return Set(memberIDs.intersection(selectableIDs).sorted().prefix(maximumSelectionCount))
+    }
+}
+
 /// A short, bounded recovery window handles the case where the path monitor
 /// stays satisfied while the API server is restarting. The retry is deliberately
 /// feature-local and haptic-free; the shared outbox coordinator owns durable
@@ -85,6 +104,9 @@ final class CalendarViewModel: ObservableObject {
     private let outbox: any OfflineOutboxProviding
     private var initialAccountID: MemberID?
     private var monthLoadGeneration = 0
+    // Identity requests can overlap a session/team refresh, so month generations
+    // alone cannot prevent a delayed member response from restoring stale state.
+    private var identityLoadGeneration = 0
     private var prefetchGeneration = 0
     private var prefersOfflineCache: Bool
     private var prefetchTask: Task<Void, Never>?
@@ -177,6 +199,7 @@ final class CalendarViewModel: ObservableObject {
     var targetMemberID: MemberID? { selectedMemberID ?? me?.id }
     var isMyCalendar: Bool { targetMemberID == me?.id }
     var canEdit: Bool { isMyCalendar || canManage }
+    var canEditDuty: Bool { canEdit && team != nil }
     var canSearchSchedules: Bool { canEdit }
     var targetName: String {
         guard let targetMemberID else { return me?.name ?? "" }
@@ -203,12 +226,16 @@ final class CalendarViewModel: ObservableObject {
     /// Keeping one canonical set prevents a direct state mutation from producing a
     /// cache identity that differs from the request that populated `otherDuties`.
     private var activeComparedMemberIDs: Set<MemberID> {
-        Set(comparedMemberIDs.sorted().prefix(3))
+        let normalized = isMyCalendar
+            ? CalendarComparisonPolicy.normalizedSelection(comparedMemberIDs, friends: friends)
+            : comparedMemberIDs
+        return Set(normalized.sorted().prefix(CalendarComparisonPolicy.maximumSelectionCount))
     }
 
     func configure(accountID: MemberID, isOffline: Bool) {
         if initialAccountID != accountID || prefersOfflineCache != isOffline {
             monthLoadGeneration += 1
+            identityLoadGeneration &+= 1
             invalidatePrefetch()
         }
         if initialAccountID != accountID {
@@ -219,6 +246,20 @@ final class CalendarViewModel: ObservableObject {
         initialAccountID = accountID
         prefersOfflineCache = isOffline
         isOfflineMode = isOffline
+    }
+
+    /// Clears the cached member/team identity before an account-level change such as
+    /// creating a team. The next load then re-reads `/members/me` and rebuilds the
+    /// calendar with the new team rather than retaining the no-team snapshot.
+    func refreshIdentityAfterTeamChange() async {
+        guard isMyCalendar else { return }
+        identityLoadGeneration &+= 1
+        monthLoadGeneration += 1
+        invalidatePrefetch()
+        me = nil
+        team = nil
+        canManage = false
+        await load()
     }
 
     /// Cancels feature-owned background work when the view leaves the hierarchy.
@@ -284,14 +325,15 @@ final class CalendarViewModel: ObservableObject {
         defer { isLoading = false }
         do {
             if prefersOfflineCache {
-                guard await restoreCachedIdentity() else { throw APIError.transport }
+                guard try await restoreCachedIdentity() else { throw APIError.transport }
             } else if me == nil {
                 do {
                     try await loadOnlineIdentity()
                 } catch {
-                    guard isRecoverableOfflineError(error), await restoreCachedIdentity() else {
+                    guard isRecoverableOfflineError(error) else {
                         throw error
                     }
+                    guard try await restoreCachedIdentity() else { throw error }
                     isOfflineMode = true
                     serverRecoveryNeedsIdentity = true
                 }
@@ -314,6 +356,19 @@ final class CalendarViewModel: ObservableObject {
 
     private var cacheAccountID: MemberID? {
         initialAccountID ?? me?.id
+    }
+
+    /// A friend list can outlive a comparison selection (for example after a
+    /// team is removed). Reconcile that stale state before building any month
+    /// request so it cannot affect the count, cache identity, or API payload.
+    private func pruneUnavailableFriendComparisons() {
+        guard isMyCalendar else { return }
+        let normalized = CalendarComparisonPolicy.normalizedSelection(
+            comparedMemberIDs,
+            friends: friends
+        )
+        guard normalized != comparedMemberIDs else { return }
+        comparedMemberIDs = normalized
     }
 
     private func beginMonthRequest(memberID: MemberID) -> MonthRequestContext {
@@ -341,11 +396,18 @@ final class CalendarViewModel: ObservableObject {
     }
 
     private func loadOnlineIdentity() async throws {
+        identityLoadGeneration &+= 1
+        let generation = identityLoadGeneration
+        let accountID = cacheAccountID
         let member = try await repository.member()
+        guard isCurrentIdentityLoad(generation, accountID: accountID) else { throw CancellationError() }
         me = member
-        friends = try await repository.friends()
+        let loadedFriends = try await repository.friends()
+        guard isCurrentIdentityLoad(generation, accountID: accountID) else { throw CancellationError() }
+        friends = loadedFriends
         if let initialScheduleID {
             let schedule = try await repository.scheduleBasic(id: initialScheduleID)
+            guard isCurrentIdentityLoad(generation, accountID: accountID) else { throw CancellationError() }
             if selectedMemberID == nil {
                 selectedMemberID = schedule.memberId
             }
@@ -357,18 +419,24 @@ final class CalendarViewModel: ObservableObject {
             }
         }
         if selectedMemberID == nil { selectedMemberID = member.id }
+        pruneUnavailableFriendComparisons()
         if let selectedMemberID,
            selectedMemberID != member.id,
            !friends.contains(where: { $0.id == selectedMemberID }) {
-            targetMember = try await repository.member(id: selectedMemberID)
+            let loadedTargetMember = try await repository.member(id: selectedMemberID)
+            guard isCurrentIdentityLoad(generation, accountID: accountID) else { throw CancellationError() }
+            targetMember = loadedTargetMember
         }
         let targetTeamID = selectedMemberID == member.id
             ? member.teamId
             : friends.first(where: { $0.id == selectedMemberID })?.teamId ?? targetMember?.teamId
         if let teamID = targetTeamID {
-            team = try await repository.team(id: teamID)
+            let loadedTeam = try await repository.team(id: teamID)
+            guard isCurrentIdentityLoad(generation, accountID: accountID) else { throw CancellationError() }
+            team = loadedTeam
         }
         if let member = me, member.id == cacheAccountID {
+            guard isCurrentIdentityLoad(generation, accountID: accountID) else { throw CancellationError() }
             try? await cache.saveAccount(OfflineAccountSnapshot(
                 member: member,
                 friends: friends,
@@ -378,13 +446,27 @@ final class CalendarViewModel: ObservableObject {
         }
     }
 
-    private func restoreCachedIdentity() async -> Bool {
-        guard let accountID = cacheAccountID,
-              let snapshot = await cache.loadAccount(memberID: accountID)
-        else { return false }
+    private func isCurrentIdentityLoad(
+        _ generation: Int,
+        accountID: MemberID? = nil
+    ) -> Bool {
+        !Task.isCancelled
+            && generation == identityLoadGeneration
+            && (accountID == nil || accountID == cacheAccountID)
+    }
+
+    private func restoreCachedIdentity() async throws -> Bool {
+        identityLoadGeneration &+= 1
+        let generation = identityLoadGeneration
+        guard let accountID = cacheAccountID else { return false }
+        let snapshot = await cache.loadAccount(memberID: accountID)
+        guard isCurrentIdentityLoad(generation, accountID: accountID) else {
+            throw CancellationError()
+        }
+        guard let snapshot, snapshot.memberID == accountID else { return false }
 
         let profile = snapshot.profile
-        me = MemberDTO(
+        let loadedMember = MemberDTO(
             id: profile.memberID,
             name: profile.name,
             email: profile.email,
@@ -398,10 +480,21 @@ final class CalendarViewModel: ObservableObject {
             hasProfilePhoto: profile.hasProfilePhoto,
             profilePhotoVersion: profile.profilePhotoVersion
         )
-        friends = snapshot.friends
-        dDays = snapshot.dDays.sorted { $0.date.rawValue < $1.date.rawValue }
-        if selectedMemberID == nil { selectedMemberID = me?.id }
-        todoBoard = await cache.loadTodoBoard(accountID: accountID)
+        let loadedFriends = snapshot.friends
+        let loadedDDays = snapshot.dDays.sorted { $0.date.rawValue < $1.date.rawValue }
+        let loadedTodoBoard = await cache.loadTodoBoard(accountID: accountID)
+        guard isCurrentIdentityLoad(generation, accountID: accountID) else {
+            throw CancellationError()
+        }
+
+        // Publish the complete snapshot only after both cache reads have passed
+        // the same generation/account check; these MainActor writes are contiguous.
+        me = loadedMember
+        friends = loadedFriends
+        dDays = loadedDDays
+        if selectedMemberID == nil { selectedMemberID = loadedMember.id }
+        pruneUnavailableFriendComparisons()
+        todoBoard = loadedTodoBoard
         isOfflineMode = true
         return true
     }
@@ -417,6 +510,7 @@ final class CalendarViewModel: ObservableObject {
         }
 #endif
         guard let memberID = targetMemberID else { throw APIError.invalidResponse }
+        pruneUnavailableFriendComparisons()
         let context = beginMonthRequest(memberID: memberID)
         if isOfflineMode, !forceOnlineRequest {
             guard context.isMine, let accountID = context.accountID else {
@@ -763,13 +857,15 @@ final class CalendarViewModel: ObservableObject {
             do {
                 try await loadOnlineIdentity()
                 guard isServerRecoveryAccountCurrent(accountID: accountID) else { return .stop }
+            } catch is CancellationError {
+                return .stop
             } catch {
                 guard isServerRecoveryAccountCurrent(accountID: accountID) else { return .stop }
                 guard isRecoverableOfflineError(error) else {
-                    _ = await restoreCachedIdentity()
+                    _ = try? await restoreCachedIdentity()
                     return .stop
                 }
-                guard await restoreCachedIdentity() else { return .stop }
+                guard (try? await restoreCachedIdentity()) == true else { return .stop }
                 serverRecoveryNeedsIdentity = true
                 return .retry
             }
@@ -1007,9 +1103,7 @@ final class CalendarViewModel: ObservableObject {
 
     func setFriendDutyComparisons(_ memberIDs: Set<MemberID>) async {
         guard isMyCalendar else { return }
-        let validIDs = Set(memberIDs.filter { candidate in
-            friends.contains(where: { $0.id == candidate })
-        }.prefix(3))
+        let validIDs = CalendarComparisonPolicy.normalizedSelection(memberIDs, friends: friends)
         guard validIDs != comparedMemberIDs else { return }
         invalidatePrefetch()
         comparedMemberIDs = validIDs
@@ -1032,7 +1126,10 @@ final class CalendarViewModel: ObservableObject {
     }
 
     func setQuickDutyEditing(_ enabled: Bool, emitFeedback: Bool = true) {
-        guard !enabled || canEdit else { return }
+        guard !enabled || canEditDuty else {
+            if enabled { presentDutyUnavailable() }
+            return
+        }
         guard isQuickDutyEditing != enabled else { return }
         isQuickDutyEditing = enabled
         quickDutyDay = enabled ? (days.first(where: { $0.cell.date == highlightedDate && $0.cell.isCurrentMonth }) ?? days.first(where: \.cell.isCurrentMonth)) : nil
@@ -1040,7 +1137,7 @@ final class CalendarViewModel: ObservableObject {
     }
 
     func focusQuickDuty(on day: CalendarDayContent, emitFeedback: Bool = true) {
-        guard canEdit, day.cell.isCurrentMonth else { return }
+        guard canEditDuty, day.cell.isCurrentMonth else { return }
         let previousDate = quickDutyDay?.cell.date
         quickDutyDay = day
         highlightedDate = day.cell.date
@@ -1067,7 +1164,11 @@ final class CalendarViewModel: ObservableObject {
     }
 
     func applyQuickDuty(dutyTypeID: DutyTypeID?) async {
-        guard canEdit, let day = quickDutyDay, let memberID = targetMemberID else { return }
+        guard canEditDuty else {
+            presentDutyUnavailable()
+            return
+        }
+        guard let day = quickDutyDay, let memberID = targetMemberID else { return }
         let currentMonthDays = days.filter(\.cell.isCurrentMonth)
         let nextDate = currentMonthDays.firstIndex(where: { $0.id == day.id }).flatMap { index in
             currentMonthDays.indices.contains(index + 1) ? currentMonthDays[index + 1].cell.date : nil
@@ -1168,7 +1269,12 @@ final class CalendarViewModel: ObservableObject {
     }
 
     func updateDuty(day: CalendarDayContent, dutyTypeID: DutyTypeID?) async {
-        guard canEdit, let memberID = targetMemberID else { return }
+        guard canEdit else { return }
+        guard team != nil else {
+            presentDutyUnavailable()
+            return
+        }
+        guard let memberID = targetMemberID else { return }
         guard !isOfflineMode else {
             errorMessage = CalendarLocalization.text("calendar.offline.onlineOnly")
             emit(.warning)
@@ -1192,7 +1298,12 @@ final class CalendarViewModel: ObservableObject {
     }
 
     func batchUpdateDuty(dutyTypeID: DutyTypeID?) async {
-        guard isMyCalendar, let memberID = targetMemberID else { return }
+        guard isMyCalendar else { return }
+        guard team != nil else {
+            presentDutyUnavailable()
+            return
+        }
+        guard let memberID = targetMemberID else { return }
         guard !isOfflineMode else {
             errorMessage = CalendarLocalization.text("calendar.offline.onlineOnly")
             emit(.warning)
@@ -1215,7 +1326,11 @@ final class CalendarViewModel: ObservableObject {
     }
 
     func uploadDutyBatch(url: URL) async {
-        guard isMyCalendar, let template = team?.dutyBatchTemplate, let memberID = targetMemberID else { return }
+        guard isMyCalendar else { return }
+        guard let team, let template = team.dutyBatchTemplate, let memberID = targetMemberID else {
+            presentDutyUnavailable()
+            return
+        }
         guard !isOfflineMode else {
             dutyBatchMessage = CalendarLocalization.text("calendar.offline.onlineOnly")
             emit(.warning)
@@ -1852,6 +1967,11 @@ final class CalendarViewModel: ObservableObject {
 
     private func emit(_ kind: DPHapticKind) {
         hapticCenter.emit(kind)
+    }
+
+    private func presentDutyUnavailable() {
+        errorMessage = CalendarLocalization.text("calendar.duty.noTeam.message")
+        emit(.warning)
     }
 }
 

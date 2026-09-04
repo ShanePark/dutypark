@@ -56,6 +56,16 @@ describe('duty calendar report entry points', () => {
     expect(todoDetailModal).toMatch(/v-if="canReport"[\s\S]*?emit\('report'/)
   })
 
+  it('connects calendar to-do detail status changes to the local board state', () => {
+    expect(dutyView).toContain(':can-change-status="isMyCalendar"')
+    expect(dutyView).toContain(':status-change-pending="selectedTodo ? pendingTodoStatusIds.has(selectedTodo.id) : false"')
+    expect(dutyView).toContain('@status-change="handleTodoStatusChange"')
+    expect(dutyView).toContain('async function handleTodoStatusChange(status: TodoStatus)')
+    expect(dutyView).toContain('todoApi.changeStatus(todo.id, { status })')
+    expect(dutyView).toContain('pendingTodoStatusIds.value.add(todo.id)')
+    expect(dutyView).toContain('pendingTodoStatusIds.value.delete(todo.id)')
+  })
+
   it('treats a duplicate report response as a success', () => {
     expect(dutyView).toContain("toastSuccess(t('report.messages.submitted'))")
     expect(dutyView).not.toContain('response.status === 201')
@@ -83,6 +93,14 @@ describe('duty calendar report entry points', () => {
       /async function refreshAfterBlock\(\)[\s\S]*?await loadFriends\(\)[\s\S]*?selectedFriendIds\.value = selectedFriendIds\.value\.filter[\s\S]*?loadSchedules\(\)[\s\S]*?loadTodos\(\)[\s\S]*?loadOtherDuties\(\)/
     )
   })
+
+  it('serializes every calendar todo mutation with the per-todo lock', () => {
+    expect(dutyView).toMatch(/async function handleTodoUpdate[\s\S]*?pendingTodoStatusIds\.value\.add\(data\.id\)[\s\S]*?finally[\s\S]*?pendingTodoStatusIds\.value\.delete\(data\.id\)/)
+    expect(dutyView).toMatch(/async function handleTodoDelete[\s\S]*?pendingTodoStatusIds\.value\.add\(todo\.id\)[\s\S]*?finally[\s\S]*?pendingTodoStatusIds\.value\.delete\(todo\.id\)/)
+    expect(dutyView).toMatch(/async function handleTodoUntagSelf[\s\S]*?pendingTodoStatusIds\.value\.add\(todo\.id\)[\s\S]*?finally[\s\S]*?pendingTodoStatusIds\.value\.delete\(todo\.id\)/)
+    expect(dutyView).toContain("const todoMutationId = target.targetType === 'TODO' ? target.targetId : null")
+    expect(dutyView).toMatch(/async function handleReportSubmit[\s\S]*?pendingTodoStatusIds\.value\.add\(todoMutationId\)[\s\S]*?finally[\s\S]*?pendingTodoStatusIds\.value\.delete\(todoMutationId\)/)
+  })
 })
 
 describe('schedule and to-do overflow actions', () => {
@@ -106,19 +124,20 @@ describe('schedule and to-do overflow actions', () => {
     )
   })
 
-  it('hangs untag and report off one overflow trigger in the to-do detail footer', () => {
+  it('keeps tag removal visible and report behind the optional overflow trigger in the to-do detail footer', () => {
     expect(todoDetailModal).toContain(
       "import OverflowMenu from '@/components/common/OverflowMenu.vue'"
     )
-    expect(todoDetailModal).toContain('v-if="canReport || isTaggedTodo"')
+    expect(todoDetailModal).toContain('v-if="canReport"')
     expect(todoDetailModal).toMatch(
-      /<OverflowMenu[\s\S]*?v-if="isTaggedTodo"[\s\S]*?emit\('untagSelf'/
+      /<button[\s\S]*?v-if="isTaggedTodo"[\s\S]*?emit\('untagSelf'/
     )
-    expect(todoDetailModal).toMatch(/<OverflowMenu[\s\S]*?v-if="canReport"[\s\S]*?emit\('report'/)
+    expect(todoDetailModal).not.toMatch(/<OverflowMenu[\s\S]*?emit\('untagSelf'/)
+    expect(todoDetailModal).toMatch(/<OverflowMenu[\s\S]*?emit\('report'/)
     // The footer sits at the bottom of the modal, so its menu has to open upwards.
     expect(todoDetailModal).toContain('placement="above"')
-    expect(todoDetailModal).toMatch(
-      /<\/OverflowMenu>\s*<template v-if="!isTaggedTodo">/
+    expect(todoDetailModal.indexOf('todo-detail-primary-actions')).toBeLessThan(
+      todoDetailModal.indexOf('<OverflowMenu')
     )
   })
 

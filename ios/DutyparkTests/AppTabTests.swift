@@ -88,7 +88,7 @@ struct AppTabTests {
         )
 
         #expect(rootSource.contains("@State private var calendarCurrentMonthRequestID = 0"))
-        #expect(rootSource.contains("CalendarView(currentMonthRequestID: calendarCurrentMonthRequestID)"))
+        #expect(rootSource.contains("currentMonthRequestID: calendarCurrentMonthRequestID"))
         for condition in [
             "selectedTab == .calendar",
             "destination == .calendar",

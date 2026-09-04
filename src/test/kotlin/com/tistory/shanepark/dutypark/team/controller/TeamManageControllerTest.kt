@@ -72,6 +72,22 @@ class TeamManageControllerTest : RestDocsTest() {
     }
 
     @Test
+    fun `service admin can assign first team admin to a team member`() {
+        val teamBeforeAssignment = teamRepository.findById(TestData.team.id!!).orElseThrow()
+        assertThat(teamBeforeAssignment.admin).isNull()
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.put("/api/teams/manage/{teamId}/admin", TestData.team.id!!)
+                .param("memberId", TestData.member.id!!.toString())
+                .withAuth(TestData.admin)
+        )
+            .andExpect(status().isOk)
+
+        val updated = teamRepository.findById(TestData.team.id!!).orElseThrow()
+        assertThat(updated.admin?.id).isEqualTo(TestData.member.id)
+    }
+
+    @Test
     fun `manager can update batch template`() {
         setTeamAdmin(TestData.member.id!!)
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, shallowRef, onMounted, onUnmounted, watch, computed } from 'vue'
+import { ref, shallowRef, onMounted, onUnmounted, watch, computed, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Uppy from '@uppy/core'
 import XHRUpload from '@uppy/xhr-upload'
@@ -20,6 +20,12 @@ import {
   fetchAuthenticatedImage,
 } from '@/api/attachment'
 import { resolveFileUploaderErrorMessage } from './fileUploaderError'
+import {
+  extractClipboardImageFiles,
+  extractDroppedFiles,
+  hasDroppedFiles,
+  shouldPreventClipboardDefault,
+} from './fileUploaderInput'
 
 interface Props {
   contextType: AttachmentContextType
@@ -48,10 +54,19 @@ const sessionId = ref<string | null>(null)
 const sessionCreationPromise = ref<Promise<string> | null>(null)
 const uppy = shallowRef<Uppy | null>(null)
 const fileInputRef = ref<HTMLInputElement | null>(null)
+const uploaderRootRef = ref<HTMLElement | null>(null)
 const isDragging = ref(false)
 const ticker = ref(0)
 const imageBlobUrls = ref<Record<string, string>>({})
+const highlightedAttachmentIds = ref<Set<string>>(new Set())
+const attachmentItemRefs = new Map<string, Element>()
+const highlightTimers = new Map<string, number>()
+const dialogTarget = shallowRef<HTMLElement | null>(null)
+let dialogElement: HTMLElement | null = null
+let focusRequestId = 0
 let tickerInterval: number | null = null
+
+const attachmentHighlightDurationMs = 1800
 
 const isUploading = computed(() => Object.keys(uploadMeta.value).length > 0)
 const hasAttachments = computed(() => uploadedAttachments.value.length > 0)
@@ -122,6 +137,160 @@ function stopTicker() {
   ticker.value = 0
 }
 
+function addFileToUppy(file: File) {
+  try {
+    uppy.value?.addFile({
+      name: file.name,
+      type: file.type,
+      data: file,
+    })
+  } catch (e) {
+    console.error('Failed to add file:', e)
+  }
+}
+
+function addFilesToUppy(files: File[]) {
+  files.forEach(addFileToUppy)
+}
+
+function prefersReducedMotion(): boolean {
+  return typeof window !== 'undefined'
+    && typeof window.matchMedia === 'function'
+    && window.matchMedia('(prefers-reduced-motion: reduce)').matches
+}
+
+function setAttachmentItemRef(attachmentId: string, element: unknown) {
+  if (element && typeof (element as { scrollIntoView?: unknown }).scrollIntoView === 'function') {
+    attachmentItemRefs.set(attachmentId, element as Element)
+  } else {
+    attachmentItemRefs.delete(attachmentId)
+  }
+}
+
+function scheduleScrollToAttachment(attachmentId: string) {
+  const requestId = ++focusRequestId
+  void nextTick(() => {
+    // When several files are added in one drop, only the final item needs to be brought into view.
+    if (requestId !== focusRequestId) return
+
+    attachmentItemRefs.get(attachmentId)?.scrollIntoView({
+      block: 'nearest',
+      behavior: prefersReducedMotion() ? 'auto' : 'smooth',
+    })
+  })
+}
+
+function highlightAttachment(attachmentId: string) {
+  const nextHighlightedIds = new Set(highlightedAttachmentIds.value)
+  nextHighlightedIds.add(attachmentId)
+  highlightedAttachmentIds.value = nextHighlightedIds
+
+  const previousTimer = highlightTimers.get(attachmentId)
+  if (previousTimer !== undefined) {
+    clearTimeout(previousTimer)
+  }
+
+  const timer = window.setTimeout(() => {
+    const remainingIds = new Set(highlightedAttachmentIds.value)
+    remainingIds.delete(attachmentId)
+    highlightedAttachmentIds.value = remainingIds
+    highlightTimers.delete(attachmentId)
+  }, attachmentHighlightDurationMs)
+  highlightTimers.set(attachmentId, timer)
+}
+
+function clearAttachmentHighlights() {
+  highlightTimers.forEach((timer) => clearTimeout(timer))
+  highlightTimers.clear()
+  highlightedAttachmentIds.value = new Set()
+}
+
+function handleDialogDragOver(event: DragEvent) {
+  if (!hasDroppedFiles(event.dataTransfer)) return
+  event.preventDefault()
+  event.stopPropagation()
+  isDragging.value = true
+}
+
+function handleDialogDragLeave(event: DragEvent) {
+  const relatedTarget = event.relatedTarget
+  if (dialogElement && relatedTarget instanceof Node && dialogElement.contains(relatedTarget)) {
+    return
+  }
+
+  const isFileDrag = hasDroppedFiles(event.dataTransfer)
+  if (!isFileDrag && !isDragging.value) return
+  if (isFileDrag) {
+    event.preventDefault()
+    event.stopPropagation()
+  }
+  isDragging.value = false
+}
+
+function handleDialogDrop(event: DragEvent) {
+  const isFileDrag = hasDroppedFiles(event.dataTransfer)
+  if (!isFileDrag) {
+    isDragging.value = false
+    return
+  }
+
+  const files = extractDroppedFiles(event.dataTransfer)
+  event.preventDefault()
+  event.stopPropagation()
+  isDragging.value = false
+  if (files.length === 0) return
+
+  addFilesToUppy(files)
+}
+
+function handleDialogPaste(event: ClipboardEvent) {
+  const files = extractClipboardImageFiles(event.clipboardData)
+  if (files.length === 0) return
+
+  if (shouldPreventClipboardDefault(event.target, event.clipboardData)) {
+    event.preventDefault()
+    event.stopPropagation()
+  }
+  addFilesToUppy(files)
+}
+
+function handleWindowDragEnd() {
+  isDragging.value = false
+}
+
+function handleWindowDrop() {
+  isDragging.value = false
+}
+
+function attachDialogListeners() {
+  const dialog = uploaderRootRef.value?.closest<HTMLElement>('[role="dialog"]')
+  if (!dialog) return
+
+  dialogElement = dialog
+  dialogTarget.value = dialog
+  dialogElement.classList.add('file-uploader-dialog')
+  dialogElement.addEventListener('dragover', handleDialogDragOver)
+  dialogElement.addEventListener('dragleave', handleDialogDragLeave)
+  dialogElement.addEventListener('drop', handleDialogDrop)
+  dialogElement.addEventListener('paste', handleDialogPaste)
+  window.addEventListener('dragend', handleWindowDragEnd)
+  window.addEventListener('drop', handleWindowDrop)
+}
+
+function detachDialogListeners() {
+  if (!dialogElement) return
+
+  dialogElement.removeEventListener('dragover', handleDialogDragOver)
+  dialogElement.removeEventListener('dragleave', handleDialogDragLeave)
+  dialogElement.removeEventListener('drop', handleDialogDrop)
+  dialogElement.removeEventListener('paste', handleDialogPaste)
+  window.removeEventListener('dragend', handleWindowDragEnd)
+  window.removeEventListener('drop', handleWindowDrop)
+  dialogElement.classList.remove('file-uploader-dialog')
+  dialogElement = null
+  dialogTarget.value = null
+}
+
 function setupUppy() {
   if (uppy.value) {
     try {
@@ -178,6 +347,7 @@ function setupUppy() {
       bytesTotal: fileData?.size || 0,
       startedAt: Date.now(),
     }
+    scheduleScrollToAttachment(file.id)
 
     if (wasIdle) {
       emit('upload-start')
@@ -242,6 +412,9 @@ function setupUppy() {
       uploadedAttachments.value = uploadedAttachments.value.map((a, i) =>
         i === index ? normalized : a
       )
+
+      scheduleScrollToAttachment(normalized.id)
+      highlightAttachment(normalized.id)
     }
 
     delete uploadProgress.value[file.id]
@@ -316,49 +489,45 @@ function removeAttachment(attachmentId: string) {
 function onFileSelect(event: Event) {
   const input = event.target as HTMLInputElement
   const files = Array.from(input.files || [])
-  files.forEach((file) => {
-    try {
-      uppy.value?.addFile({
-        name: file.name,
-        type: file.type,
-        data: file,
-      })
-    } catch (e) {
-      console.error('Failed to add file:', e)
-    }
-  })
+  addFilesToUppy(files)
   input.value = ''
 }
 
 function onDragOver(event: DragEvent) {
+  if (!hasDroppedFiles(event.dataTransfer)) return
   event.preventDefault()
   event.stopPropagation()
   isDragging.value = true
 }
 
 function onDragLeave(event: DragEvent) {
-  event.preventDefault()
-  event.stopPropagation()
+  const relatedTarget = event.relatedTarget
+  if (dialogElement && relatedTarget instanceof Node && dialogElement.contains(relatedTarget)) {
+    return
+  }
+
+  const isFileDrag = hasDroppedFiles(event.dataTransfer)
+  if (!isFileDrag && !isDragging.value) return
+  if (isFileDrag) {
+    event.preventDefault()
+    event.stopPropagation()
+  }
   isDragging.value = false
 }
 
 function onDrop(event: DragEvent) {
+  const files = extractDroppedFiles(event.dataTransfer)
+  if (!hasDroppedFiles(event.dataTransfer)) {
+    isDragging.value = false
+    return
+  }
+
   event.preventDefault()
   event.stopPropagation()
   isDragging.value = false
+  if (files.length === 0) return
 
-  const files = Array.from(event.dataTransfer?.files || [])
-  files.forEach((file) => {
-    try {
-      uppy.value?.addFile({
-        name: file.name,
-        type: file.type,
-        data: file,
-      })
-    } catch (e) {
-      console.error('Failed to add dropped file:', e)
-    }
-  })
+  addFilesToUppy(files)
 }
 
 function cleanup() {
@@ -390,6 +559,10 @@ function cleanup() {
   sessionId.value = null
   sessionCreationPromise.value = null
   lastEmittedIds = ''
+  isDragging.value = false
+  focusRequestId += 1
+  attachmentItemRefs.clear()
+  clearAttachmentHighlights()
   stopTicker()
 }
 
@@ -414,10 +587,12 @@ defineExpose({
 
 onMounted(() => {
   setupUppy()
+  attachDialogListeners()
   loadExistingImages()
 })
 
 onUnmounted(() => {
+  detachDialogListeners()
   cleanup()
 })
 
@@ -462,7 +637,7 @@ async function loadExistingImages() {
 </script>
 
 <template>
-  <div class="file-uploader">
+  <div ref="uploaderRootRef" class="file-uploader">
     <div
       class="drop-zone cursor-pointer"
       :class="{ 'drag-over': isDragging }"
@@ -489,7 +664,11 @@ async function loadExistingImages() {
       <div
         v-for="attachment in uploadedAttachments"
         :key="attachment.id"
-        class="attachment-item"
+        :ref="(element) => setAttachmentItemRef(attachment.id, element)"
+        :class="[
+          'attachment-item',
+          { 'attachment-item--highlighted': highlightedAttachmentIds.has(attachment.id) },
+        ]"
       >
         <div class="attachment-preview">
           <template v-if="attachment.isImage && getDisplayImageUrl(attachment)">
@@ -530,6 +709,15 @@ async function loadExistingImages() {
         </div>
       </div>
     </div>
+
+    <Teleport v-if="isDragging && dialogTarget" :to="dialogTarget">
+      <div class="file-uploader-drop-overlay" aria-hidden="true">
+        <div class="file-uploader-drop-overlay__content">
+          <Upload class="file-uploader-drop-overlay__icon" :size="34" stroke-width="2.5" />
+          <span class="file-uploader-drop-overlay__title">{{ t('fileUploader.dropOverlay') }}</span>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
@@ -538,6 +726,10 @@ async function loadExistingImages() {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+}
+
+:global(.file-uploader-dialog) {
+  position: relative;
 }
 
 .drop-zone {
@@ -568,6 +760,44 @@ async function loadExistingImages() {
 .drop-zone.drag-over {
   border-color: var(--dp-accent);
   background-color: var(--dp-accent-bg);
+}
+
+.file-uploader-drop-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+  border: 3px solid var(--dp-accent);
+  background-color: var(--dp-accent-ring);
+  pointer-events: none;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.file-uploader-drop-overlay__content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.625rem;
+  max-width: min(100%, 22rem);
+  padding: 1.25rem 1.5rem;
+  border: 1px solid var(--dp-accent-border);
+  border-radius: 0.75rem;
+  background-color: var(--dp-bg-modal);
+  box-shadow: 0 0.5rem 1.5rem var(--dp-accent-ring);
+  color: var(--dp-text-primary);
+  text-align: center;
+}
+
+.file-uploader-drop-overlay__icon {
+  color: var(--dp-accent);
+}
+
+.file-uploader-drop-overlay__title {
+  font-size: 1rem;
+  font-weight: 700;
 }
 
 .upload-icon {
@@ -622,6 +852,32 @@ async function loadExistingImages() {
   border: 1px solid var(--dp-border-primary);
   border-radius: 0.375rem;
   background-color: var(--dp-bg-card);
+}
+
+.attachment-item--highlighted {
+  border-color: var(--dp-accent);
+  background-color: var(--dp-accent-bg);
+  box-shadow: 0 0 0 2px var(--dp-accent-ring);
+  animation: attachment-upload-highlight 1.8s ease-out;
+}
+
+@keyframes attachment-upload-highlight {
+  0% {
+    box-shadow: 0 0 0 4px var(--dp-accent-ring);
+  }
+  100% {
+    box-shadow: 0 0 0 2px var(--dp-accent-ring);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .file-uploader-drop-overlay {
+    transition: none;
+  }
+
+  .attachment-item--highlighted {
+    animation: none;
+  }
 }
 
 .attachment-preview {

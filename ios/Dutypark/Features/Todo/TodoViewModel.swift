@@ -52,6 +52,11 @@ final class TodoViewModel: ObservableObject {
     /// Bind that detail model to the current session explicitly so its mutation
     /// guards do not mistake an unconfigured model for an online session.
     private var hasBoundSessionContext = false
+    /// A detail-only model can patch one Todo into an otherwise empty board.
+    /// Such a board is useful for rendering the mutation result, but it is not
+    /// safe to persist as the account's full-board cache. This remains true
+    /// until a complete server or durable-cache board has been loaded.
+    private var hasLoadedCompleteBoard = false
     private var recoveryTask: Task<Void, Never>?
     private var recoveryGeneration = 0
 
@@ -264,6 +269,7 @@ final class TodoViewModel: ObservableObject {
             self.sessionGeneration = sessionGeneration
             attachmentsByTodoID.removeAll()
             board = nil
+            hasLoadedCompleteBoard = false
             friends = []
             pendingOperationCount = 0
             lastSyncedAt = nil
@@ -285,6 +291,7 @@ final class TodoViewModel: ObservableObject {
         cancelRecovery()
         self.accountID = accountID
         self.sessionGeneration = sessionGeneration
+        hasLoadedCompleteBoard = false
     }
 
     private func fetchBoardAndFriends(allowsRecoveryScheduling: Bool = true) async {
@@ -301,6 +308,7 @@ final class TodoViewModel: ObservableObject {
                   let cachedBoard = await cache.loadTodoBoard(accountID: currentAccountID)
             else {
                 board = nil
+                hasLoadedCompleteBoard = false
                 isShowingCachedData = false
                 lastSyncedAt = nil
                 errorKey = "todo.error.load"
@@ -308,6 +316,7 @@ final class TodoViewModel: ObservableObject {
                 return
             }
             board = boardWithValidIDs(cachedBoard)
+            hasLoadedCompleteBoard = true
             friends = cachedAccount?.friends.sorted(by: friendOrder) ?? []
             isOffline = true
             isShowingCachedData = true
@@ -326,6 +335,7 @@ final class TodoViewModel: ObservableObject {
             let serverBoard = try await repository.fetchBoard()
             let validBoard = boardWithValidIDs(serverBoard)
             board = validBoard
+            hasLoadedCompleteBoard = true
             boardLoaded = true
             isOffline = false
             isShowingCachedData = false
@@ -347,6 +357,7 @@ final class TodoViewModel: ObservableObject {
                 return
             }
             board = boardWithValidIDs(cachedBoard)
+            hasLoadedCompleteBoard = true
             boardLoaded = true
             usedFallback = true
             isOffline = true
@@ -809,7 +820,10 @@ final class TodoViewModel: ObservableObject {
     }
 
     private func saveCurrentBoardToCache(accountID: MemberID? = nil) async {
-        guard let accountID = accountID ?? self.accountID, let board else { return }
+        guard hasLoadedCompleteBoard,
+              let accountID = accountID ?? self.accountID,
+              let board
+        else { return }
         try? await cache.saveTodoBoard(accountID: accountID, board: board, now: .now)
     }
 
@@ -1048,6 +1062,7 @@ final class TodoViewModel: ObservableObject {
                 total: fixtureTodos.count
             )
         )
+        hasLoadedCompleteBoard = true
         friends = []
         attachmentsByTodoID = [:]
         errorKey = nil
