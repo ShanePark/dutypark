@@ -51,6 +51,19 @@ describe('AdminReportListView', () => {
     expect(reportListView).not.toContain('memo.trim() || undefined')
   })
 
+  it('refreshes only the shared report count after a successful status update', () => {
+    expect(reportListView).toContain("import { useAdminModerationCounts } from '@/composables/useAdminModerationCounts'")
+    expect(reportListView).toContain('const { loadReports } = useAdminModerationCounts()')
+
+    const handlerStart = reportListView.indexOf('async function handleUpdateStatus')
+    const handlerEnd = reportListView.indexOf('\n}\n\nasync function handleDeleteTarget', handlerStart)
+    const handler = reportListView.slice(handlerStart, handlerEnd)
+
+    expect(handler).toContain('await loadReports(true)')
+    expect(handler.indexOf('await loadReports(true)')).toBeGreaterThan(handler.indexOf('await adminApi.updateReportStatus'))
+    expect(handler).not.toContain('loadInquiries(true)')
+  })
+
   it('ignores stale list responses and retries the last valid page', () => {
     expect(reportListView).toContain('reportRequestTracker.start()')
     expect(reportListView).toContain('reportRequestTracker.isLatest(requestId)')
@@ -119,6 +132,19 @@ describe('AdminInquiryListView', () => {
     expect(inquiryListView).toContain('buildInquiryUpdateRequest(status, memo, answer, selectedInquiry.value.answer)')
   })
 
+  it('refreshes only the shared inquiry count when the status changes', () => {
+    expect(inquiryListView).toContain("import { useAdminModerationCounts } from '@/composables/useAdminModerationCounts'")
+    expect(inquiryListView).toContain('const { loadInquiries } = useAdminModerationCounts()')
+
+    const handlerStart = inquiryListView.indexOf('async function handleUpdateStatus')
+    const handlerEnd = inquiryListView.indexOf('\n}\n\nasync function handleCopyEmail', handlerStart)
+    const handler = inquiryListView.slice(handlerStart, handlerEnd)
+
+    expect(handler).toContain('if (statusChanged) await loadInquiries(true)')
+    expect(handler.indexOf('if (statusChanged) await loadInquiries(true)')).toBeGreaterThan(handler.indexOf('await adminApi.updateInquiryStatus'))
+    expect(handler).not.toContain('loadReports(true)')
+  })
+
   it('ignores stale list responses and retries the last valid page', () => {
     expect(inquiryListView).toContain('inquiryRequestTracker.start()')
     expect(inquiryListView).toContain('inquiryRequestTracker.isLatest(requestId)')
@@ -183,11 +209,11 @@ describe('AdminMemberDetailModal suspension controls', () => {
 })
 
 describe('AdminDashboardView moderation entry points', () => {
-  it('reads the unhandled counts from a single-element page', () => {
-    expect(adminDashboardView).toContain("adminApi.getReports('OPEN', 0, 1)")
-    expect(adminDashboardView).toContain("adminApi.getInquiries('OPEN', 0, 1)")
-    expect(adminDashboardView).toContain(':open-report-count="openReportCount"')
-    expect(adminDashboardView).toContain(':open-inquiry-count="openInquiryCount"')
+  it('delegates unhandled counts to the shared navigation state', () => {
+    expect(adminDashboardView).not.toContain("adminApi.getReports('OPEN', 0, 1)")
+    expect(adminDashboardView).not.toContain("adminApi.getInquiries('OPEN', 0, 1)")
+    expect(adminDashboardView).not.toContain(':open-report-count=')
+    expect(adminDashboardView).not.toContain(':open-inquiry-count=')
   })
 
   it('handles suspension from the member detail modal', () => {

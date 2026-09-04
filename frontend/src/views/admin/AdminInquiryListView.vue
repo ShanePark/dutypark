@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { adminApi } from '@/api/admin'
 import { useSwal } from '@/composables/useSwal'
+import { useAdminModerationCounts } from '@/composables/useAdminModerationCounts'
 import { resolveApiErrorMessage } from '@/utils/resolveApiError'
 import AdminNavTiles from '@/components/admin/AdminNavTiles.vue'
 import AdminInquiryDetailModal from '@/components/admin/AdminInquiryDetailModal.vue'
@@ -18,6 +19,7 @@ const router = useRouter()
 const authStore = useAuthStore()
 const { t, locale } = useI18n()
 const { showError, toastSuccess } = useSwal()
+const { loadInquiries } = useAdminModerationCounts()
 
 const STATUS_FILTERS: { value: InquiryStatusFilter; labelKey: string }[] = [
   { value: 'OPEN', labelKey: 'admin.inquiries.filters.open' },
@@ -135,6 +137,7 @@ async function handleUpdateStatus(status: InquiryStatus, memo: string, answer: s
     const request = buildInquiryUpdateRequest(status, memo, answer, selectedInquiry.value.answer)
     const res = await adminApi.updateInquiryStatus(selectedInquiryId.value, request)
     selectedInquiry.value = res.data
+    if (statusChanged) await loadInquiries(true)
     toastSuccess(t(statusChanged
       ? 'admin.inquiries.messages.updateStatusSuccess'
       : 'admin.inquiries.messages.saveSuccess'))

@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { useAdminModerationCounts } from '@/composables/useAdminModerationCounts'
 import {
   Building2,
   Code2,
@@ -10,15 +12,33 @@ import {
   Users,
 } from 'lucide-vue-next'
 
-withDefaults(defineProps<{
+const props = defineProps<{
   active: 'members' | 'teams' | 'reports' | 'inquiries' | 'dev'
-  /** Unhandled report count shown as a tile badge. Omit to hide the badge. */
+  /** Unhandled report count shown as a tile badge. Omit to use the shared count; pass null to hide it. */
   openReportCount?: number | null
-  /** Unhandled inquiry count shown as a tile badge. Omit to hide the badge. */
+  /** Unhandled inquiry count shown as a tile badge. Omit to use the shared count; pass null to hide it. */
   openInquiryCount?: number | null
-}>(), {
-  openReportCount: null,
-  openInquiryCount: null,
+}>()
+
+const {
+  openReportCount: sharedOpenReportCount,
+  openInquiryCount: sharedOpenInquiryCount,
+  loadReports,
+  loadInquiries,
+} = useAdminModerationCounts()
+
+const displayOpenReportCount = computed(() =>
+  props.openReportCount === undefined ? sharedOpenReportCount.value : props.openReportCount,
+)
+const displayOpenInquiryCount = computed(() =>
+  props.openInquiryCount === undefined ? sharedOpenInquiryCount.value : props.openInquiryCount,
+)
+
+// Keep the badge source in the shared composable when a view does not provide
+// an explicit count, so it survives navigation between admin screens.
+onMounted(() => {
+  if (props.openReportCount === undefined) void loadReports(true)
+  if (props.openInquiryCount === undefined) void loadInquiries(true)
 })
 
 const { t } = useI18n()
@@ -80,10 +100,10 @@ function clearHoverBg(e: Event, bgColor = 'var(--dp-bg-card)') {
       <div class="mb-2 flex items-center gap-1">
         <Flag class="admin-top-tile-icon mb-0" :class="active === 'reports' ? 'text-dp-text-on-dark' : 'text-dp-text-secondary'" />
         <span
-          v-if="openReportCount"
+          v-if="displayOpenReportCount"
           class="admin-top-tile-badge"
-          :aria-label="t('admin.nav.openCountAria', { count: openReportCount })"
-        >{{ openReportCount }}</span>
+          :aria-label="t('admin.nav.openCountAria', { count: displayOpenReportCount })"
+        >{{ displayOpenReportCount }}</span>
       </div>
       <span class="admin-top-tile-label" :class="active === 'reports' ? 'text-dp-text-on-dark' : 'text-dp-text-primary'">
         {{ t('admin.nav.reports') }}
@@ -102,10 +122,10 @@ function clearHoverBg(e: Event, bgColor = 'var(--dp-bg-card)') {
       <div class="mb-2 flex items-center gap-1">
         <MessageSquare class="admin-top-tile-icon mb-0" :class="active === 'inquiries' ? 'text-dp-text-on-dark' : 'text-dp-text-secondary'" />
         <span
-          v-if="openInquiryCount"
+          v-if="displayOpenInquiryCount"
           class="admin-top-tile-badge"
-          :aria-label="t('admin.nav.openCountAria', { count: openInquiryCount })"
-        >{{ openInquiryCount }}</span>
+          :aria-label="t('admin.nav.openCountAria', { count: displayOpenInquiryCount })"
+        >{{ displayOpenInquiryCount }}</span>
       </div>
       <span class="admin-top-tile-label" :class="active === 'inquiries' ? 'text-dp-text-on-dark' : 'text-dp-text-primary'">
         {{ t('admin.nav.inquiries') }}
