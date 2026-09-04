@@ -3,7 +3,11 @@ import SwiftUI
 struct TeamView: View {
     @EnvironmentObject private var session: SessionStore
     @StateObject private var viewModel = TeamViewModel()
+    @StateObject private var teamCreationViewModel = TeamCreationViewModel()
     @State private var monthPickerPresented = false
+    @State private var teamCreationPresented = false
+    @State private var teamManagementDestination: TeamID?
+    @State private var pendingTeamManagementDestination: TeamID?
     @State private var scheduleDeletionCandidate: TeamScheduleDTO?
     @State private var scheduleDeletionIsWorking = false
     private let onOpenCalendar: (MemberID) -> Void
@@ -42,6 +46,18 @@ struct TeamView: View {
                         Image(systemName: "building.2").font(.system(size: 64)).foregroundStyle(DPColor.textMuted)
                         Text("team.view.emptyTitle", tableName: "Team").font(DPTypography.sectionTitle)
                         Text("team.view.emptyDescription", tableName: "Team").font(DPTypography.heading).multilineTextAlignment(.center)
+                        Button {
+                            teamCreationViewModel.reset()
+                            teamCreationPresented = true
+                        } label: {
+                            Label(
+                                teamLocalized("team.view.actions.create"),
+                                systemImage: "plus"
+                            )
+                            .frame(maxWidth: .infinity)
+                        }
+                        .buttonStyle(DPPrimaryButtonStyle())
+                        .accessibilityIdentifier("team.create.open")
                     }
                     .foregroundStyle(DPColor.textSecondary)
                     .padding(48)
@@ -53,6 +69,19 @@ struct TeamView: View {
             }
         }
         .task { await viewModel.loadIfNeeded(memberID: memberID) }
+        .navigationDestination(item: $teamManagementDestination) { teamID in
+            teamManagementView(teamID: teamID)
+        }
+        .onChange(of: teamCreationPresented) { _, isPresented in
+            guard !isPresented, let destination = pendingTeamManagementDestination else {
+                return
+            }
+            pendingTeamManagementDestination = nil
+            DPHapticCenter.shared.emit(
+                TeamNavigationHapticPolicy.automaticManagementNavigation
+            )
+            teamManagementDestination = destination
+        }
         .refreshable {
             await viewModel.load(memberID: memberID, emitErrorFeedback: true)
         }
@@ -80,6 +109,26 @@ struct TeamView: View {
                         maximumHeight: availableSize.height,
                         dismiss: dismiss
                     )
+                }
+            }
+        }
+        .fullScreenCover(isPresented: $teamCreationPresented) {
+            DPModalOverlay(
+                onDismiss: { teamCreationPresented = false },
+                canDismiss: !teamCreationViewModel.isCreating
+            ) { availableSize, dismiss in
+                TeamCreationView(
+                    viewModel: teamCreationViewModel,
+                    maximumHeight: availableSize.height,
+                    dismiss: dismiss
+                ) { createdTeam in
+                    viewModel.applyCreatedTeam(createdTeam)
+                    _ = await session.refreshCurrentMember(fallbackTeam: createdTeam)
+                    await viewModel.load(
+                        memberID: memberID,
+                        emitErrorFeedback: false
+                    )
+                    pendingTeamManagementDestination = createdTeam.id
                 }
             }
         }
@@ -223,15 +272,7 @@ struct TeamView: View {
 
     private func manageControl(_ team: TeamDTO) -> some View {
         NavigationLink {
-            TeamManageView(
-                teamID: team.id,
-                onTeamChanged: { viewModel.applyManagedTeam($0) },
-                onDutyBatchChanged: { year, month in
-                    Task {
-                        await viewModel.refreshDutiesAfterBatch(year: year, month: month)
-                    }
-                }
-            )
+            teamManagementView(teamID: team.id)
         } label: {
             Image(systemName: "gearshape")
                 .frame(width: 36, height: DPSize.minimumTouchTarget)
@@ -243,6 +284,18 @@ struct TeamView: View {
             }
         )
         .accessibilityLabel(Text("team.view.actions.manage", tableName: "Team"))
+    }
+
+    private func teamManagementView(teamID: TeamID) -> some View {
+        TeamManageView(
+            teamID: teamID,
+            onTeamChanged: { viewModel.applyManagedTeam($0) },
+            onDutyBatchChanged: { year, month in
+                Task {
+                    await viewModel.refreshDutiesAfterBatch(year: year, month: month)
+                }
+            }
+        )
     }
 
     // Mirrors the calendar tab: the navigation bar cannot host the stacked
@@ -762,6 +815,253 @@ private struct TeamScheduleEditor: View {
             }
             .buttonStyle(DPPrimaryButtonStyle())
             .disabled(!draft.isValid || viewModel.isWorking)
+        }
+        .padding(DPSpacing.compact)
+    }
+}
+
+private struct TeamCreationView: View {
+    private enum Field: Hashable {
+        case name
+        case description
+    }
+
+    @ObservedObject private var viewModel: TeamCreationViewModel
+    @State private var name = ""
+    @State private var description = ""
+    @State private var isFinishing = false
+    @FocusState private var focusedField: Field?
+
+    let maximumHeight: CGFloat
+    let dismiss: () -> Void
+    let didCreate: @MainActor (TeamDTO) async -> Void
+
+    init(
+        viewModel: TeamCreationViewModel,
+        maximumHeight: CGFloat,
+        dismiss: @escaping () -> Void,
+        didCreate: @escaping @MainActor (TeamDTO) async -> Void
+    ) {
+        self.viewModel = viewModel
+        self.maximumHeight = maximumHeight
+        self.dismiss = dismiss
+        self.didCreate = didCreate
+    }
+
+    private var normalizedName: String {
+        TeamCreationLogic.normalizedName(name)
+    }
+
+    private var normalizedDescription: String {
+        TeamCreationLogic.normalizedDescription(description)
+    }
+
+    private var isNameCheckedForCurrentValue: Bool {
+        viewModel.checkedName == normalizedName
+    }
+
+    private var canCheckName: Bool {
+        TeamCreationLogic.isValidName(normalizedName)
+            && !viewModel.isChecking
+            && !viewModel.isCreating
+            && !isFinishing
+    }
+
+    private var canCreate: Bool {
+        TeamCreationLogic.isValidName(normalizedName)
+            && TeamCreationLogic.isValidDescription(normalizedDescription)
+            && isNameCheckedForCurrentValue
+            && viewModel.nameCheckResult == .ok
+            && !viewModel.isChecking
+            && !viewModel.isCreating
+            && !isFinishing
+    }
+
+    var body: some View {
+        DPModalPanel(
+            maximumPanelHeight: min(maximumHeight * 0.8, 620),
+            scrollTarget: focusedField
+        ) {
+            header
+        } content: {
+            form
+        } footer: {
+            footer
+        }
+        .accessibilityIdentifier("team.create.form")
+    }
+
+    private var header: some View {
+        HStack {
+            Text("team.create.title", tableName: "Team")
+                .font(DPTypography.bodyMedium)
+            Spacer()
+            Button(action: dismiss) {
+                Image(systemName: "xmark")
+                    .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+            }
+            .buttonStyle(.plain)
+            .disabled(viewModel.isCreating || isFinishing)
+            .accessibilityLabel(Text("team.create.cancel", tableName: "Team"))
+        }
+        .padding(.horizontal, DPSpacing.medium)
+        .padding(.vertical, DPSpacing.small)
+        .background(DPColor.backgroundTertiary)
+    }
+
+    private var form: some View {
+        VStack(alignment: .leading, spacing: DPSpacing.medium) {
+            VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("team.create.name", tableName: "Team")
+                        .font(DPTypography.label)
+                    Spacer()
+                    Text("team.create.nameLength", tableName: "Team")
+                        .font(DPTypography.caption)
+                        .foregroundStyle(DPColor.textMuted)
+                }
+                HStack(spacing: DPSpacing.extraSmall) {
+                    TextField(
+                        teamLocalized("team.create.namePlaceholder"),
+                        text: $name
+                    )
+                    .focused($focusedField, equals: .name)
+                    .textInputAutocapitalization(.sentences)
+                    .autocorrectionDisabled()
+                    .dpInputChrome(
+                        isFocused: focusedField == .name,
+                        isInvalid: !name.isEmpty && !TeamCreationLogic.isValidName(normalizedName),
+                        isDisabled: viewModel.isCreating || isFinishing
+                    )
+                    .onChange(of: name) { _, value in
+                        if value.count > TeamCreationLogic.maximumNameLength {
+                            name = String(value.prefix(TeamCreationLogic.maximumNameLength))
+                        }
+                        viewModel.invalidateNameCheck()
+                    }
+
+                    Button {
+                        Task { await viewModel.checkName(name) }
+                    } label: {
+                        if viewModel.isChecking {
+                            ProgressView()
+                                .controlSize(.small)
+                        } else {
+                            Text("team.create.checkName", tableName: "Team")
+                        }
+                    }
+                    .buttonStyle(DPSecondaryButtonStyle())
+                    .disabled(!canCheckName)
+                    .accessibilityIdentifier("team.create.checkName")
+                }
+                .id(Field.name)
+
+                if isNameCheckedForCurrentValue {
+                    nameCheckMessage
+                }
+            }
+
+            VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("team.create.description", tableName: "Team")
+                        .font(DPTypography.label)
+                    Spacer()
+                    Text(verbatim: "\(description.count)/\(TeamCreationLogic.maximumDescriptionLength)")
+                        .font(DPTypography.caption)
+                        .foregroundStyle(DPColor.textMuted)
+                }
+                TextEditor(text: $description)
+                    .frame(minHeight: 88)
+                    .focused($focusedField, equals: .description)
+                    .dpInputChrome(
+                        isFocused: focusedField == .description,
+                        isInvalid: description.count > TeamCreationLogic.maximumDescriptionLength,
+                        isDisabled: viewModel.isCreating || isFinishing
+                    )
+                    .overlay(alignment: .topLeading) {
+                        if description.isEmpty {
+                            Text("team.create.descriptionPlaceholder", tableName: "Team")
+                                .foregroundStyle(DPColor.textMuted)
+                                .padding(.horizontal, DPChrome.inputHorizontalPadding)
+                                .padding(.vertical, DPChrome.inputVerticalPadding)
+                                .allowsHitTesting(false)
+                        }
+                    }
+                    .onChange(of: description) { _, value in
+                        if value.count > TeamCreationLogic.maximumDescriptionLength {
+                            description = String(value.prefix(TeamCreationLogic.maximumDescriptionLength))
+                        }
+                    }
+                .id(Field.description)
+            }
+
+            if let errorMessage = viewModel.errorMessage {
+                Text(verbatim: errorMessage)
+                    .font(DPTypography.caption)
+                    .foregroundStyle(DPColor.danger)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(DPSpacing.medium)
+    }
+
+    @ViewBuilder
+    private var nameCheckMessage: some View {
+        switch viewModel.nameCheckResult {
+        case .ok:
+            Text("team.create.nameAvailable", tableName: "Team")
+                .foregroundStyle(DPColor.success)
+        case .duplicated:
+            Text("team.create.nameDuplicated", tableName: "Team")
+                .foregroundStyle(DPColor.danger)
+        case .tooShort:
+            Text("team.create.nameTooShort", tableName: "Team")
+                .foregroundStyle(DPColor.warning)
+        case .tooLong:
+            Text("team.create.nameTooLong", tableName: "Team")
+                .foregroundStyle(DPColor.warning)
+        case nil:
+            EmptyView()
+        }
+    }
+
+    private var footer: some View {
+        HStack(spacing: DPSpacing.small) {
+            Button {
+                dismiss()
+            } label: {
+                Text("team.create.cancel", tableName: "Team")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(DPSecondaryButtonStyle())
+            .disabled(viewModel.isCreating || isFinishing)
+
+            Button {
+                guard !isFinishing else { return }
+                isFinishing = true
+                Task {
+                    guard let createdTeam = await viewModel.createTeam(
+                        name: name,
+                        description: description
+                    ) else {
+                        isFinishing = false
+                        return
+                    }
+                    await didCreate(createdTeam)
+                    dismiss()
+                }
+            } label: {
+                if viewModel.isCreating {
+                    ProgressView()
+                        .tint(DPColor.textOnDark)
+                } else {
+                    Text("team.create.submit", tableName: "Team")
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(DPPrimaryButtonStyle())
+            .disabled(!canCreate)
+            .accessibilityIdentifier("team.create.submit")
         }
         .padding(DPSpacing.compact)
     }

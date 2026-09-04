@@ -64,6 +64,9 @@ class TeamAdminControllerTest : DutyparkIntegrationTest() {
 
         val saved = teamRepository.findByName("new-team")
         assertThat(saved).isNotNull
+        assertThat(saved!!.admin).isNull()
+        assertThat(saved.members).isEmpty()
+        assertThat(dutyTypeRepository.findAllByTeam(saved)).isEmpty()
     }
 
     @Test

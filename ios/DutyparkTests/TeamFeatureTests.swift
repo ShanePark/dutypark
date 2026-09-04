@@ -1087,6 +1087,96 @@ struct TeamFeatureTests {
     }
 
     @Test
+    func teamCreationInputsFollowTheServerConstraints() {
+        #expect(TeamCreationLogic.isValidName("AB"))
+        #expect(TeamCreationLogic.isValidName(String(repeating: "가", count: 20)))
+        #expect(TeamCreationLogic.isValidName("A") == false)
+        #expect(TeamCreationLogic.isValidName(String(repeating: "A", count: 21)) == false)
+        #expect(TeamCreationLogic.isValidDescription(String(repeating: "A", count: 50)))
+        #expect(TeamCreationLogic.isValidDescription(String(repeating: "A", count: 51)) == false)
+        #expect(TeamCreationLogic.normalizedName("  응급 팀  ") == "응급 팀")
+    }
+
+    @Test @MainActor
+    func teamCreationRequiresAnAvailableNameBeforePosting() async {
+        TeamURLProtocolStub.requestCount = 0
+        TeamURLProtocolStub.handler = { request in
+            Self.response(request, status: 200, body: #""DUPLICATED""#)
+        }
+        defer {
+            TeamURLProtocolStub.handler = nil
+            TeamURLProtocolStub.requestCount = 0
+        }
+
+        let viewModel = TeamCreationViewModel(
+            repository: TeamRepository(client: makeClient()),
+            haptics: DPHapticCenter()
+        )
+        let created = await viewModel.createTeam(name: "Existing", description: "")
+
+        #expect(created == nil)
+        #expect(viewModel.nameCheckResult == .duplicated)
+        #expect(TeamURLProtocolStub.requestCount == 1)
+    }
+
+    @Test @MainActor
+    func teamCreationChecksThenPostsAndReturnsTheCreatedTeam() async throws {
+        TeamURLProtocolStub.requestCount = 0
+        TeamURLProtocolStub.handler = { request in
+            switch (request.httpMethod, request.url?.path) {
+            case ("POST", "/api/teams/check"):
+                return Self.response(request, status: 200, body: #""OK""#)
+            case ("POST", "/api/teams"):
+                return Self.response(request, status: 200, body: Self.managedTeamJSON)
+            default:
+                return Self.response(request, status: 404)
+            }
+        }
+        defer {
+            TeamURLProtocolStub.handler = nil
+            TeamURLProtocolStub.requestCount = 0
+        }
+
+        let viewModel = TeamCreationViewModel(
+            repository: TeamRepository(client: makeClient()),
+            haptics: DPHapticCenter()
+        )
+        let created = try #require(
+            await viewModel.createTeam(name: "New Team", description: "A team")
+        )
+
+        #expect(created.id == 7)
+        #expect(created.name == "Team")
+        #expect(viewModel.nameCheckResult == .ok)
+        #expect(TeamURLProtocolStub.requestCount == 2)
+    }
+
+    @Test
+    func teamCreationQueuesManagementNavigationUntilTheModalCloses() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark/Features/Team/TeamView.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+
+        #expect(source.contains("@State private var teamManagementDestination: TeamID?"))
+        #expect(source.contains("@State private var pendingTeamManagementDestination: TeamID?"))
+        #expect(source.contains(".navigationDestination(item: $teamManagementDestination)"))
+        #expect(source.contains("pendingTeamManagementDestination = createdTeam.id"))
+        #expect(source.contains("TeamNavigationHapticPolicy.automaticManagementNavigation"))
+        #expect(source.contains("teamManagementDestination = destination"))
+
+        let creationCompletion = try #require(
+            source.range(of: "viewModel.applyCreatedTeam(createdTeam)")
+        )
+        let completionSource = source[creationCompletion.lowerBound...]
+        let completionEnd = try #require(completionSource.range(of: "pendingTeamManagementDestination = createdTeam.id"))
+        let routePreparation = completionSource[..<completionEnd.upperBound]
+        #expect(routePreparation.contains(".routine") == false)
+        #expect(TeamNavigationHapticPolicy.automaticManagementNavigation == .routine)
+    }
+
+    @Test
     func limitsAndNormalizesDutyNamesForCompactEditor() {
         #expect(TeamManageModalLogic.limitedDutyName("12345678901") == "1234567890")
         #expect(TeamManageModalLogic.normalizedDutyName("  Day  ") == "Day")

@@ -58,6 +58,7 @@ interface Props {
   schedules: Schedule[]
   dutyTypes: DutyType[]
   canEdit: boolean
+  canEditDuty: boolean
   friends: TaggableFriend[]
   memberId: number
   isMyCalendar: boolean
@@ -129,6 +130,7 @@ watch(
 )
 
 function handleDutyTypeChange(dutyTypeId: number | null, dutyTypeName: string) {
+  if (!props.canEditDuty) return
   selectedDutyType.value = dutyTypeName
   emit('changeDutyType', dutyTypeId)
 }
@@ -472,7 +474,7 @@ function handleUploadError(message: string) {
         </div>
         <!-- A reader who cannot change the duty is told it by the colour of the day in
              the grid behind this modal, so the modal does not repeat it. -->
-        <div v-if="!isCreateMode && !isEditMode && canEdit && dutyTypes.length > 0" class="flex flex-wrap gap-1.5 mt-2">
+        <div v-if="!isCreateMode && !isEditMode && canEditDuty && dutyTypes.length > 0" class="flex flex-wrap gap-1.5 mt-2">
           <span
             v-if="unavailableCurrentDuty"
             class="duty-type-btn duty-type-btn-selected min-h-11 px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1.5"

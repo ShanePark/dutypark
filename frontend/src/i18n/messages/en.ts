@@ -1306,6 +1306,9 @@ export default {
       loadDutiesFailed: 'Failed to load duties.',
       loadOtherDutiesFailed: 'Failed to load shared duty overlays.',
       changeDutyFailed: 'Failed to update duty.',
+      teamRequired: 'You cannot enter duties until you belong to a team.',
+      teamRequiredDescription: 'Create a team first, or ask a team manager to add you to one.',
+      goToTeam: 'Go to team menu',
     },
     batchUpdate: {
       title: 'Batch duty update',
@@ -1512,10 +1515,32 @@ export default {
   team: {
     view: {
       emptyTitle: 'You are not part of any team.',
-      emptyDescription: 'Ask a team manager to add you.',
+      emptyDescription: 'Ask a team manager to add you, or create a new team.',
+      createTeam: {
+        title: 'Create a new team',
+        nameLabel: 'Team name',
+        namePlaceholder: 'Enter a team name',
+        checkButton: 'Check name',
+        descriptionLabel: 'Team description (optional)',
+        descriptionPlaceholder: 'Enter a team description',
+        createButton: 'Create team',
+        nameCheck: {
+          tooShort: 'Team names must be at least 2 characters.',
+          tooLong: 'Team names must be 20 characters or fewer.',
+          duplicated: 'A team with this name already exists.',
+          ok: 'This team name is available.',
+        },
+        messages: {
+          nameCheckFailed: 'Failed to check the team name.',
+          nameDuplicated: 'This team name was just taken. Choose another name.',
+          createSuccess: 'The team has been created.',
+          createFailed: 'Failed to create the team.',
+        },
+      },
       selectedDate: '{month}/{day}/{year}',
       actions: {
         manage: 'Manage team',
+        createTeam: 'Create team',
         addSchedule: 'Add team schedule',
         editSchedule: 'Edit schedule',
         deleteSchedule: 'Delete schedule',

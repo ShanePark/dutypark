@@ -10,6 +10,9 @@ import {
   Building2,
   X,
   Loader2,
+  Plus,
+  Check,
+  AlertCircle,
 } from 'lucide-vue-next'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 import DatePickerField from '@/components/common/DatePickerField.vue'
@@ -19,6 +22,7 @@ import { dutyApi } from '@/api/duty'
 import { useSwal } from '@/composables/useSwal'
 import { useContentFilterStore } from '@/stores/contentFilter'
 import { isLightColor } from '@/utils/color'
+import { extractApiError } from '@/utils/resolveApiError'
 import BaseModal from '@/components/common/BaseModal.vue'
 import CalendarMonthNavigator from '@/components/common/CalendarMonthNavigator.vue'
 import YearMonthPicker from '@/components/common/YearMonthPicker.vue'
@@ -31,6 +35,8 @@ import type {
   MemberPreviewDto,
   DutyCalendarDay,
   HolidayDto,
+  TeamCreateDto,
+  TeamNameCheckResult,
 } from '@/types'
 
 const router = useRouter()
@@ -42,6 +48,23 @@ const contentFilterStore = useContentFilterStore()
 const loading = ref(false)
 const shiftLoading = ref(false)
 const saving = ref(false)
+const showCreateTeamModal = ref(false)
+const newTeamName = ref('')
+const newTeamDescription = ref('')
+const nameCheckResult = ref<TeamNameCheckResult | null>(null)
+const checkedTeamName = ref('')
+const isCheckingName = ref(false)
+const isCreatingTeam = ref(false)
+const newTeamNameFeedbackId = 'new-team-name-feedback'
+const trimmedNewTeamName = computed(() => newTeamName.value.trim())
+const trimmedNewTeamDescription = computed(() => newTeamDescription.value.trim())
+const isCreateTeamDisabled = computed(() =>
+  nameCheckResult.value !== 'OK' ||
+  checkedTeamName.value !== trimmedNewTeamName.value ||
+  trimmedNewTeamDescription.value.length > 50 ||
+  isCheckingName.value ||
+  isCreatingTeam.value
+)
 
 const hasTeam = ref(false)
 const isTeamManager = ref(false)
@@ -287,6 +310,125 @@ function goToTeamManage() {
   }
 }
 
+function openCreateTeamModal() {
+  newTeamName.value = ''
+  newTeamDescription.value = ''
+  nameCheckResult.value = null
+  checkedTeamName.value = ''
+  showCreateTeamModal.value = true
+}
+
+function closeCreateTeamModal() {
+  showCreateTeamModal.value = false
+}
+
+async function checkTeamName() {
+  const nameLength = trimmedNewTeamName.value.length
+  checkedTeamName.value = ''
+  if (nameLength < 2) {
+    nameCheckResult.value = 'TOO_SHORT'
+    return
+  }
+  if (nameLength > 20) {
+    nameCheckResult.value = 'TOO_LONG'
+    return
+  }
+
+  isCheckingName.value = true
+  const requestedName = trimmedNewTeamName.value
+  try {
+    const response = await teamApi.checkTeamName(requestedName)
+    if (trimmedNewTeamName.value === requestedName) {
+      nameCheckResult.value = response.data
+      checkedTeamName.value = requestedName
+    }
+  } catch (error) {
+    console.error('Failed to check team name:', error)
+    nameCheckResult.value = null
+    showError(t('team.view.createTeam.messages.nameCheckFailed'))
+  } finally {
+    isCheckingName.value = false
+  }
+}
+
+function getNameCheckMessage(): string {
+  switch (nameCheckResult.value) {
+    case 'TOO_SHORT':
+      return t('team.view.createTeam.nameCheck.tooShort')
+    case 'TOO_LONG':
+      return t('team.view.createTeam.nameCheck.tooLong')
+    case 'DUPLICATED':
+      return t('team.view.createTeam.nameCheck.duplicated')
+    case 'OK':
+      return t('team.view.createTeam.nameCheck.ok')
+    default:
+      return ''
+  }
+}
+
+async function handleCreateTeam() {
+  if (isCreateTeamDisabled.value) return
+
+  isCreatingTeam.value = true
+  try {
+    const createDto: TeamCreateDto = {
+      name: trimmedNewTeamName.value,
+      description: trimmedNewTeamDescription.value,
+    }
+    const response = await teamApi.createTeam(createDto)
+    const createdTeamId = response.data.id
+    const memberBeforeRefresh = authStore.user
+
+    // Keep the local session useful even if the follow-up status request is
+    // temporarily unavailable. A successful create has already assigned this
+    // member to the returned team.
+    if (memberBeforeRefresh) {
+      authStore.setUser({
+        ...memberBeforeRefresh,
+        teamId: createdTeamId,
+        team: response.data.name,
+      })
+    }
+
+    // Team creation also changes the member's team claim. Refresh the auth
+    // store before navigating so the rest of the app sees the new membership.
+    try {
+      await authStore.checkAuth()
+      if (authStore.user?.teamId !== createdTeamId && memberBeforeRefresh) {
+        authStore.setUser({
+          ...memberBeforeRefresh,
+          teamId: createdTeamId,
+          team: response.data.name,
+        })
+      }
+    } catch (error) {
+      console.error('Failed to refresh member team after creation:', error)
+      if (memberBeforeRefresh) {
+        authStore.setUser({
+          ...memberBeforeRefresh,
+          teamId: createdTeamId,
+          team: response.data.name,
+        })
+      }
+    }
+
+    toastSuccess(t('team.view.createTeam.messages.createSuccess'))
+    closeCreateTeamModal()
+    router.push(`/team/manage/${response.data.id}`)
+  } catch (error) {
+    console.error('Failed to create team:', error)
+    if (extractApiError(error)?.code === 'team.name.duplicated') {
+      checkedTeamName.value = trimmedNewTeamName.value
+      nameCheckResult.value = 'DUPLICATED'
+      showError(t('team.view.createTeam.messages.nameDuplicated'))
+    } else {
+      showError(t('team.view.createTeam.messages.createFailed'))
+    }
+  } finally {
+    isCreatingTeam.value = false
+  }
+}
+
 function goToMemberDuty(memberId: number) {
   router.push(`/duty/${memberId}`)
 }
@@ -396,10 +538,18 @@ onMounted(() => {
         <div class="bg-dp-surface-strong text-dp-text-on-dark font-bold text-xl text-center py-3">
           {{ t('header.menu.myTeam') }}
         </div>
-        <div class="flex flex-col items-center justify-center p-12 text-dp-text-secondary">
+        <div class="flex flex-col items-center justify-center p-8 text-dp-text-secondary sm:p-12">
           <Building2 class="w-16 h-16 mb-4 text-dp-text-muted" />
           <p class="text-xl font-bold mb-2">{{ t('team.view.emptyTitle') }}</p>
-          <p class="text-lg">{{ t('team.view.emptyDescription') }}</p>
+          <p class="text-center text-lg">{{ t('team.view.emptyDescription') }}</p>
+          <button
+            type="button"
+            class="mt-6 flex min-h-[44px] items-center justify-center gap-2 rounded-lg bg-dp-accent px-5 py-2.5 font-bold text-dp-text-on-dark transition hover:bg-dp-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-dp-accent cursor-pointer"
+            @click="openCreateTeamModal"
+          >
+            <Plus class="w-4 h-4" />
+            {{ t('team.view.actions.createTeam') }}
+          </button>
         </div>
       </div>
     </template>
@@ -588,6 +738,100 @@ onMounted(() => {
         </template>
       </div>
     </template>
+
+    <BaseModal
+      :is-open="showCreateTeamModal"
+      size="md"
+      height="fit"
+      rounded
+      @close="closeCreateTeamModal"
+    >
+      <div class="modal-header">
+        <h2>{{ t('team.view.createTeam.title') }}</h2>
+        <button
+          type="button"
+          @click="closeCreateTeamModal"
+          class="p-1.5 rounded-full hover-close-btn cursor-pointer text-dp-text-muted"
+        >
+          <X class="w-5 h-5" />
+        </button>
+      </div>
+
+      <div class="modal-body-form">
+        <div>
+          <label class="form-label">
+            {{ t('team.view.createTeam.nameLabel') }}
+            <CharacterCounter :current="newTeamName.length" :max="20" />
+          </label>
+          <div class="flex gap-2">
+            <input
+              v-model="newTeamName"
+              type="text"
+              maxlength="20"
+              minlength="2"
+              class="form-control-neutral flex-1"
+              :placeholder="t('team.view.createTeam.namePlaceholder')"
+              :aria-invalid="!trimmedNewTeamName || nameCheckResult === 'TOO_SHORT' || nameCheckResult === 'TOO_LONG' || nameCheckResult === 'DUPLICATED'"
+              :aria-describedby="nameCheckResult ? newTeamNameFeedbackId : undefined"
+              @input="nameCheckResult = null; checkedTeamName = ''"
+            />
+            <button
+              type="button"
+              @click="checkTeamName"
+              :disabled="isCheckingName || trimmedNewTeamName.length < 2"
+              class="flex items-center gap-2 rounded-lg bg-dp-accent px-4 py-2 text-sm font-medium text-dp-text-on-dark transition hover:bg-dp-accent-hover disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+            >
+              <Loader2 v-if="isCheckingName" class="w-4 h-4 animate-spin" />
+              {{ t('team.view.createTeam.checkButton') }}
+            </button>
+          </div>
+          <p
+            v-if="nameCheckResult"
+            :id="newTeamNameFeedbackId"
+            class="mt-1 flex items-center gap-1 text-sm"
+            :class="nameCheckResult === 'OK' ? 'text-dp-success' : 'text-dp-danger'"
+          >
+            <Check v-if="nameCheckResult === 'OK'" class="w-4 h-4" />
+            <AlertCircle v-else class="w-4 h-4" />
+            {{ getNameCheckMessage() }}
+          </p>
+        </div>
+
+        <div>
+          <label class="form-label">
+            {{ t('team.view.createTeam.descriptionLabel') }}
+            <CharacterCounter :current="newTeamDescription.length" :max="50" />
+          </label>
+          <input
+            v-model="newTeamDescription"
+            type="text"
+            maxlength="50"
+            class="form-control-neutral"
+            :placeholder="t('team.view.createTeam.descriptionPlaceholder')"
+            :aria-invalid="trimmedNewTeamDescription.length > 50"
+          />
+        </div>
+      </div>
+
+      <div class="modal-actions modal-actions-end modal-footer-safe">
+        <button
+          type="button"
+          @click="closeCreateTeamModal"
+          class="flex-1 rounded-lg bg-dp-bg-tertiary px-4 py-2 text-sm font-medium text-dp-text-primary transition hover-interactive cursor-pointer sm:flex-none"
+        >
+          {{ t('common.actions.close') }}
+        </button>
+        <button
+          type="button"
+          @click="handleCreateTeam"
+          :disabled="isCreateTeamDisabled"
+          class="flex flex-1 items-center justify-center gap-2 rounded-lg bg-dp-accent px-4 py-2 text-sm font-medium text-dp-text-on-dark transition hover:bg-dp-accent-hover disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer sm:flex-none"
+        >
+          <Loader2 v-if="isCreatingTeam" class="w-4 h-4 animate-spin" />
+          {{ t('team.view.createTeam.createButton') }}
+        </button>
+      </div>
+    </BaseModal>
 
     <BaseModal
       :is-open="showScheduleModal"

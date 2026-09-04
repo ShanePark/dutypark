@@ -2685,6 +2685,36 @@ final class CalendarFeatureTests: XCTestCase {
         XCTAssertTrue(manager.canSearchSchedules)
     }
 
+    func testDutyMutationIsBlockedWhenMyCalendarHasNoTeam() async {
+        let haptics = DPHapticCenter()
+        let repository = CalendarRepositoryMock()
+        let model = CalendarViewModel(
+            repository: repository,
+            now: date(2026, 8, 12),
+            hapticCenter: haptics
+        )
+
+        await model.load()
+        let day = model.days[0]
+        await model.updateDuty(day: day, dutyTypeID: 1)
+
+        let lastDutyUpdate = await repository.lastDutyUpdate
+        XCTAssertNil(lastDutyUpdate)
+        XCTAssertEqual(haptics.event?.kind, .warning)
+        XCTAssertEqual(
+            model.errorMessage,
+            CalendarLocalization.text("calendar.duty.noTeam.message")
+        )
+    }
+
+    func testCalendarSourceConnectsNoTeamDutyNoticeToTeamNavigation() throws {
+        let source = try Self.calendarViewSource()
+
+        XCTAssertTrue(source.contains("calendar.duty.noTeam.message"))
+        XCTAssertTrue(source.contains("calendar.duty.noTeam.openTeam"))
+        XCTAssertTrue(source.contains("onOpenTeam"))
+    }
+
     func testDutyColorParserRejectsMalformedValues() {
         XCTAssertNil(CalendarVisualLogic.rgb(nil))
         XCTAssertNil(CalendarVisualLogic.rgb("#12345"))

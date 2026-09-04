@@ -207,7 +207,10 @@ struct RootTabView: View {
             TabView(selection: tabSelection) {
                 homeTab
                 primaryTab(.calendar, path: $calendarPath, showsNavigationBar: true) {
-                    CalendarView(currentMonthRequestID: calendarCurrentMonthRequestID)
+                    CalendarView(
+                        currentMonthRequestID: calendarCurrentMonthRequestID,
+                        onOpenTeam: openTeam
+                    )
                         .navigationDestination(for: MemberCalendarRoute.self) { route in
                             memberCalendar(route)
                         }
@@ -609,6 +612,12 @@ struct RootTabView: View {
     private func openHome() {
         homePath.removeAll()
         selectedTab = .home
+    }
+
+    private func openTeam() {
+        // Route the CTA through the same binding as a tab-bar tap so the team
+        // stack is reset and exactly one selection haptic is emitted.
+        tabSelection.wrappedValue = .team
     }
 
     // Routed entries have no "more" menu behind them, so friend management replaces the

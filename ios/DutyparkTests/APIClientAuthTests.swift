@@ -163,6 +163,44 @@ final class APIClientAuthTests: XCTestCase {
         XCTAssertNil(guest)
     }
 
+    @MainActor
+    func testRefreshCurrentMemberPatchesCreatedTeamWhenStatusIsUnavailable() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("dutypark-created-team-session-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let offlineStore = OfflineSessionStore(directoryURL: directory)
+        URLProtocolStub.error = URLError(.notConnectedToInternet)
+        let store = SessionStore(
+            authService: AuthService(client: makeClient()),
+            initialState: .authenticated(Self.testMember),
+            offlineSessionStore: offlineStore
+        )
+        let createdTeam = try XCTUnwrap(
+            JSONDecoder().decode(
+                TeamDTO.self,
+                from: Data(#"{"id":7,"name":"Created Team","description":null,"dutyTypes":[],"members":[],"createdDate":"2026-08-12T00:00:00","lastModifiedDate":"2026-08-12T00:00:00","adminId":1,"adminName":"Test","dutyBatchTemplate":null}"#.utf8)
+            )
+        )
+
+        let refreshed = await store.refreshCurrentMember(fallbackTeam: createdTeam)
+
+        XCTAssertTrue(refreshed)
+        let expectedMember = LoginMember(
+            id: Self.testMember.id,
+            email: Self.testMember.email,
+            name: Self.testMember.name,
+            teamId: createdTeam.id,
+            team: createdTeam.name,
+            isAdmin: Self.testMember.isAdmin,
+            isImpersonating: Self.testMember.isImpersonating,
+            originalMemberId: Self.testMember.originalMemberId
+        )
+        XCTAssertEqual(store.state, .authenticated(expectedMember))
+        let persistedMember = await offlineStore.load(at: nil)
+        XCTAssertEqual(persistedMember, expectedMember)
+    }
+
     func testConcurrentUnauthorizedRequestsRefreshOnlyOnce() async throws {
         let recorder = RefreshRecorder()
         URLProtocolStub.handler = { request in

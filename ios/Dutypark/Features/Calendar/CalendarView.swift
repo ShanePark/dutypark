@@ -153,17 +153,20 @@ struct CalendarView: View {
 
     private let isPushedMemberCalendar: Bool
     private let currentMonthRequestID: Int
+    private let onOpenTeam: () -> Void
 
     init(
         memberID: MemberID? = nil,
         date: DateOnly? = nil,
         scheduleID: ScheduleID? = nil,
         isPushed: Bool = false,
-        currentMonthRequestID: Int = 0
+        currentMonthRequestID: Int = 0,
+        onOpenTeam: @escaping () -> Void = {}
     ) {
         _model = StateObject(wrappedValue: CalendarViewModel(memberID: memberID, date: date, scheduleID: scheduleID))
         isPushedMemberCalendar = isPushed
         self.currentMonthRequestID = currentMonthRequestID
+        self.onOpenTeam = onOpenTeam
     }
 
     var body: some View {
@@ -209,12 +212,14 @@ struct CalendarView: View {
                 }
             }
         }
-        .onChange(of: session.state) { _, _ in
+        .onChange(of: session.state) { _, state in
             // The Calendar can stay mounted while the authenticated account
             // changes. Rebind the detail-only Todo model before a cached item
             // can issue a mutation with the previous account's context.
             todoSelection = nil
             configureFromSession()
+            guard case .authenticated = state else { return }
+            Task { await model.refreshIdentityAfterTeamChange() }
         }
         .onChange(of: offlineNetworkMonitor.status) { _, status in
             guard status == .satisfied, session.availability == .online else { return }
@@ -424,6 +429,9 @@ struct CalendarView: View {
                     if model.isShowingCachedData || model.pendingScheduleCount > 0 {
                         offlineStateBanner
                     }
+                    if model.isMyCalendar, model.me != nil, model.me?.teamId == nil {
+                        noTeamDutyBanner
+                    }
                     if showsDutyToolbar {
                         dutyToolbar
                     }
@@ -480,6 +488,43 @@ struct CalendarView: View {
         .padding(.vertical, DPSpacing.extraSmall)
         .background(DPColor.backgroundSecondary, in: RoundedRectangle(cornerRadius: 10))
         .accessibilityIdentifier("calendar.offline.banner")
+    }
+
+    private var noTeamDutyBanner: some View {
+        VStack(alignment: .leading, spacing: DPSpacing.small) {
+            Label {
+                Text(CalendarLocalization.text("calendar.duty.noTeam.title"))
+                    .font(DPTypography.heading)
+                    .foregroundStyle(DPColor.textPrimary)
+            } icon: {
+                Image(systemName: "building.2")
+                    .foregroundStyle(DPColor.accent)
+            }
+            Text(CalendarLocalization.text("calendar.duty.noTeam.message"))
+                .font(DPTypography.caption)
+                .foregroundStyle(DPColor.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+            Button {
+                onOpenTeam()
+            } label: {
+                Label(
+                    CalendarLocalization.text("calendar.duty.noTeam.openTeam"),
+                    systemImage: "arrow.right"
+                )
+                .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(DPPrimaryButtonStyle())
+            .accessibilityIdentifier("calendar.duty.noTeam.openTeam")
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(DPSpacing.medium)
+        .background(DPColor.accentSoft)
+        .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+        .overlay {
+            RoundedRectangle(cornerRadius: DPRadius.standard)
+                .stroke(DPColor.accentBorder)
+        }
+        .accessibilityIdentifier("calendar.duty.noTeam.banner")
     }
 
     private func configureFromSession() {
@@ -834,7 +879,7 @@ struct CalendarView: View {
             hasDutySummary: model.days.contains { $0.duty?.month == model.month },
             hasComparisonAction: (model.isMyCalendar && !model.friends.isEmpty)
                 || (!model.isMyCalendar && model.me?.id != nil),
-            hasQuickEditAction: model.canEdit && !batchDutyTypes.isEmpty,
+            hasQuickEditAction: model.canEditDuty && !batchDutyTypes.isEmpty,
             hasImportAction: model.isMyCalendar && model.team?.dutyBatchTemplate != nil,
             isQuickDutyEditing: model.isQuickDutyEditing
         )
@@ -858,7 +903,7 @@ struct CalendarView: View {
                 }
                 .accessibilityLabel(CalendarLocalization.text("calendar.compare.mine"))
             }
-            if model.canEdit && !batchDutyTypes.isEmpty {
+            if model.canEditDuty && !batchDutyTypes.isEmpty {
                 Button { model.setQuickDutyEditing(true) } label: {
                     Image(systemName: "pencil.line")
                         .foregroundStyle(DPColor.textSecondary)
@@ -2283,7 +2328,7 @@ private struct DayDetailView: View {
 
             // Somebody else's duty is already told by the colour of the day in the grid
             // behind this sheet, so the sheet does not repeat it.
-            if model.canEdit, !showsEditor, !model.visibleDutyTypes.isEmpty {
+            if model.canEditDuty, !showsEditor, !model.visibleDutyTypes.isEmpty {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 6) {
                         ForEach(model.visibleDutyTypes, id: \.id) { type in

@@ -14,6 +14,22 @@ nonisolated struct TeamRepository: Sendable {
         )
     }
 
+    func checkTeamName(_ name: String) async throws -> TeamNameCheckResult {
+        try await client.request(
+            "teams/check",
+            method: .post,
+            body: TeamNameCheckRequest(name: name)
+        )
+    }
+
+    func createTeam(name: String, description: String) async throws -> TeamDTO {
+        try await client.request(
+            "teams",
+            method: .post,
+            body: TeamCreateRequest(name: name, description: description)
+        )
+    }
+
     func calendar(year: Int, month: Int) async throws -> [TeamDayDTO] {
         try await client.request(
             "calendar",

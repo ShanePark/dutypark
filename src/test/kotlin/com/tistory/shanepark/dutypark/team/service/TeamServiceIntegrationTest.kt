@@ -8,6 +8,7 @@ import com.tistory.shanepark.dutypark.duty.domain.entity.MemberDutyPattern
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.duty.repository.MemberDutyPatternRepository
 import com.tistory.shanepark.dutypark.duty.service.DutyService
+import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.team.domain.dto.TeamCreateDto
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Assertions.assertThrows
@@ -48,6 +49,25 @@ class TeamServiceIntegrationTest : DutyparkIntegrationTest() {
         assertThat(create.description).isEqualTo(teamCreateDto.description)
         val totalAfter = service.findAllWithMemberCount(Pageable.ofSize(10)).totalElements
         assertThat(totalAfter).isEqualTo(totalBefore + 1)
+    }
+
+    @Test
+    fun `member self-created team has an initial visible WORK duty type`() {
+        val member = memberRepository.save(Member(name = "creator", email = "team-creator@duty.park"))
+
+        val created = service.create(loginMember(member), TeamCreateDto("self-created", "teamDesc"))
+
+        assertThat(created.dutyTypes.map { it.name }).containsExactly("OFF", "WORK")
+        val savedTeam = teamRepository.findById(created.id).orElseThrow()
+        assertThat(savedTeam.admin?.id).isEqualTo(member.id)
+        assertThat(memberRepository.findById(member.id!!).orElseThrow().team?.id).isEqualTo(savedTeam.id)
+
+        val workDutyType = dutyTypeRepository.findAllByTeam(savedTeam).single()
+        assertThat(workDutyType.id).isNotNull
+        assertThat(workDutyType.position).isEqualTo(0)
+        assertThat(workDutyType.name).isEqualTo("WORK")
+        assertThat(workDutyType.color).isEqualTo("#98fb98")
+        assertThat(workDutyType.hidden).isFalse
     }
 
     @Test

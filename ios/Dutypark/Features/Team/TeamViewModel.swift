@@ -356,6 +356,17 @@ final class TeamViewModel: ObservableObject {
         }
     }
 
+    /// Shows the newly created team immediately while the authenticated
+    /// member/session and calendar data refresh in the background.
+    func applyCreatedTeam(_ createdTeam: TeamDTO) {
+        team = createdTeam
+        isTeamManager = true
+        loadFailed = false
+        showsError = false
+        errorMessage = nil
+        hasLoaded = true
+    }
+
     func refreshDutiesAfterBatch(year: Int, month: Int) async {
         guard self.year == year, self.month == month, let memberID else { return }
         do {
@@ -466,6 +477,161 @@ final class TeamViewModel: ObservableObject {
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter
     }()
+}
+
+nonisolated enum TeamCreationLogic {
+    static let minimumNameLength = 2
+    static let maximumNameLength = 20
+    static let maximumDescriptionLength = 50
+
+    static func normalizedName(_ value: String) -> String {
+        value.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    static func normalizedDescription(_ value: String) -> String {
+        value.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    static func isValidName(_ value: String) -> Bool {
+        let name = normalizedName(value)
+        return (minimumNameLength...maximumNameLength).contains(name.count)
+    }
+
+    static func isValidDescription(_ value: String) -> Bool {
+        normalizedDescription(value).count <= maximumDescriptionLength
+    }
+}
+
+/// The creation flow already emits a success event for the completed mutation.
+/// A single routine event is reserved for the follow-up management navigation;
+/// the manual gear link keeps its own existing routine event.
+nonisolated enum TeamNavigationHapticPolicy {
+    static let automaticManagementNavigation = DPHapticKind.routine
+}
+
+@MainActor
+final class TeamCreationViewModel: ObservableObject {
+    @Published private(set) var isChecking = false
+    @Published private(set) var isCreating = false
+    @Published private(set) var nameCheckResult: TeamNameCheckResult?
+    @Published private(set) var checkedName: String?
+    @Published private(set) var errorMessage: String?
+
+    private let repository: TeamRepository
+    private let haptics: DPHapticCenter
+
+    init(
+        repository: TeamRepository = TeamRepository(),
+        haptics: DPHapticCenter = .shared
+    ) {
+        self.repository = repository
+        self.haptics = haptics
+    }
+
+    var isNameAvailable: Bool {
+        nameCheckResult == .ok && checkedName != nil
+    }
+
+    func reset() {
+        guard !isChecking, !isCreating else { return }
+        nameCheckResult = nil
+        checkedName = nil
+        errorMessage = nil
+    }
+
+    func invalidateNameCheck() {
+        nameCheckResult = nil
+        checkedName = nil
+        errorMessage = nil
+    }
+
+    @discardableResult
+    func checkName(_ rawName: String) async -> TeamNameCheckResult? {
+        guard !isChecking, !isCreating else { return nameCheckResult }
+        let name = TeamCreationLogic.normalizedName(rawName)
+        guard TeamCreationLogic.isValidName(name) else {
+            checkedName = name
+            nameCheckResult = name.count < TeamCreationLogic.minimumNameLength
+                ? .tooShort
+                : .tooLong
+            return nameCheckResult
+        }
+
+        isChecking = true
+        errorMessage = nil
+        defer { isChecking = false }
+        do {
+            let result = try await repository.checkTeamName(name)
+            checkedName = name
+            nameCheckResult = result
+            return result
+        } catch {
+            checkedName = nil
+            nameCheckResult = nil
+            errorMessage = teamLocalized("team.create.checkFailed")
+            haptics.emit(.error)
+            return nil
+        }
+    }
+
+    @discardableResult
+    func createTeam(name rawName: String, description rawDescription: String) async -> TeamDTO? {
+        guard !isCreating else { return nil }
+        let name = TeamCreationLogic.normalizedName(rawName)
+        let description = TeamCreationLogic.normalizedDescription(rawDescription)
+        guard TeamCreationLogic.isValidName(name) else {
+            nameCheckResult = name.count < TeamCreationLogic.minimumNameLength
+                ? .tooShort
+                : .tooLong
+            checkedName = name
+            errorMessage = teamLocalized("team.create.nameInvalid")
+            haptics.emit(.warning)
+            return nil
+        }
+        guard TeamCreationLogic.isValidDescription(description) else {
+            errorMessage = teamLocalized("team.create.descriptionInvalid")
+            haptics.emit(.warning)
+            return nil
+        }
+
+        if checkedName != name || nameCheckResult != .ok {
+            guard await checkName(name) == .ok else { return nil }
+        }
+
+        isCreating = true
+        errorMessage = nil
+        defer { isCreating = false }
+        do {
+            let team = try await repository.createTeam(name: name, description: description)
+            haptics.emit(.success)
+            return team
+        } catch let error as APIError {
+            if error.serverCode == "team.name.duplicated" {
+                checkedName = name
+                nameCheckResult = .duplicated
+                errorMessage = teamLocalized("team.create.nameDuplicated")
+            } else {
+                errorMessage = teamLocalized("team.create.failed")
+            }
+            haptics.emit(.error)
+            return nil
+        } catch {
+            errorMessage = teamLocalized("team.create.failed")
+            haptics.emit(.error)
+            return nil
+        }
+    }
+}
+
+private extension APIError {
+    var serverCode: String? {
+        switch self {
+        case .server(_, let code), .serverWithDetails(_, let code, _):
+            code
+        default:
+            nil
+        }
+    }
 }
 
 @MainActor

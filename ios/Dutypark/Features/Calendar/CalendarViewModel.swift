@@ -196,6 +196,7 @@ final class CalendarViewModel: ObservableObject {
     var targetMemberID: MemberID? { selectedMemberID ?? me?.id }
     var isMyCalendar: Bool { targetMemberID == me?.id }
     var canEdit: Bool { isMyCalendar || canManage }
+    var canEditDuty: Bool { canEdit && team != nil }
     var canSearchSchedules: Bool { canEdit }
     var targetName: String {
         guard let targetMemberID else { return me?.name ?? "" }
@@ -241,6 +242,19 @@ final class CalendarViewModel: ObservableObject {
         initialAccountID = accountID
         prefersOfflineCache = isOffline
         isOfflineMode = isOffline
+    }
+
+    /// Clears the cached member/team identity before an account-level change such as
+    /// creating a team. The next load then re-reads `/members/me` and rebuilds the
+    /// calendar with the new team rather than retaining the no-team snapshot.
+    func refreshIdentityAfterTeamChange() async {
+        guard isMyCalendar else { return }
+        monthLoadGeneration += 1
+        invalidatePrefetch()
+        me = nil
+        team = nil
+        canManage = false
+        await load()
     }
 
     /// Cancels feature-owned background work when the view leaves the hierarchy.
@@ -1068,7 +1082,10 @@ final class CalendarViewModel: ObservableObject {
     }
 
     func setQuickDutyEditing(_ enabled: Bool, emitFeedback: Bool = true) {
-        guard !enabled || canEdit else { return }
+        guard !enabled || canEditDuty else {
+            if enabled { presentDutyUnavailable() }
+            return
+        }
         guard isQuickDutyEditing != enabled else { return }
         isQuickDutyEditing = enabled
         quickDutyDay = enabled ? (days.first(where: { $0.cell.date == highlightedDate && $0.cell.isCurrentMonth }) ?? days.first(where: \.cell.isCurrentMonth)) : nil
@@ -1076,7 +1093,7 @@ final class CalendarViewModel: ObservableObject {
     }
 
     func focusQuickDuty(on day: CalendarDayContent, emitFeedback: Bool = true) {
-        guard canEdit, day.cell.isCurrentMonth else { return }
+        guard canEditDuty, day.cell.isCurrentMonth else { return }
         let previousDate = quickDutyDay?.cell.date
         quickDutyDay = day
         highlightedDate = day.cell.date
@@ -1103,7 +1120,11 @@ final class CalendarViewModel: ObservableObject {
     }
 
     func applyQuickDuty(dutyTypeID: DutyTypeID?) async {
-        guard canEdit, let day = quickDutyDay, let memberID = targetMemberID else { return }
+        guard canEditDuty else {
+            presentDutyUnavailable()
+            return
+        }
+        guard let day = quickDutyDay, let memberID = targetMemberID else { return }
         let currentMonthDays = days.filter(\.cell.isCurrentMonth)
         let nextDate = currentMonthDays.firstIndex(where: { $0.id == day.id }).flatMap { index in
             currentMonthDays.indices.contains(index + 1) ? currentMonthDays[index + 1].cell.date : nil
@@ -1204,7 +1225,12 @@ final class CalendarViewModel: ObservableObject {
     }
 
     func updateDuty(day: CalendarDayContent, dutyTypeID: DutyTypeID?) async {
-        guard canEdit, let memberID = targetMemberID else { return }
+        guard canEdit else { return }
+        guard team != nil else {
+            presentDutyUnavailable()
+            return
+        }
+        guard let memberID = targetMemberID else { return }
         guard !isOfflineMode else {
             errorMessage = CalendarLocalization.text("calendar.offline.onlineOnly")
             emit(.warning)
@@ -1228,7 +1254,12 @@ final class CalendarViewModel: ObservableObject {
     }
 
     func batchUpdateDuty(dutyTypeID: DutyTypeID?) async {
-        guard isMyCalendar, let memberID = targetMemberID else { return }
+        guard isMyCalendar else { return }
+        guard team != nil else {
+            presentDutyUnavailable()
+            return
+        }
+        guard let memberID = targetMemberID else { return }
         guard !isOfflineMode else {
             errorMessage = CalendarLocalization.text("calendar.offline.onlineOnly")
             emit(.warning)
@@ -1251,7 +1282,11 @@ final class CalendarViewModel: ObservableObject {
     }
 
     func uploadDutyBatch(url: URL) async {
-        guard isMyCalendar, let template = team?.dutyBatchTemplate, let memberID = targetMemberID else { return }
+        guard isMyCalendar else { return }
+        guard let team, let template = team.dutyBatchTemplate, let memberID = targetMemberID else {
+            presentDutyUnavailable()
+            return
+        }
         guard !isOfflineMode else {
             dutyBatchMessage = CalendarLocalization.text("calendar.offline.onlineOnly")
             emit(.warning)
@@ -1888,6 +1923,11 @@ final class CalendarViewModel: ObservableObject {
 
     private func emit(_ kind: DPHapticKind) {
         hapticCenter.emit(kind)
+    }
+
+    private func presentDutyUnavailable() {
+        errorMessage = CalendarLocalization.text("calendar.duty.noTeam.message")
+        emit(.warning)
     }
 }
 

@@ -1211,6 +1211,9 @@ export default {
       loadDutiesFailed: '근무표를 불러오는데 실패했습니다.',
       loadOtherDutiesFailed: '함께 보기 근무표를 불러오는데 실패했습니다.',
       changeDutyFailed: '근무 변경에 실패했습니다.',
+      teamRequired: '팀에 소속되지 않아 듀티를 입력할 수 없습니다.',
+      teamRequiredDescription: '듀티를 입력하려면 먼저 팀을 만들거나 팀 관리자에게 회원 추가를 요청해주세요.',
+      goToTeam: '팀 메뉴로 이동',
     },
     batchUpdate: {
       title: '근무 일괄 변경',
@@ -1417,10 +1420,32 @@ export default {
   team: {
     view: {
       emptyTitle: '어느 팀에도 속해있지 않습니다.',
-      emptyDescription: '팀 관리자에게 가입을 요청해주세요.',
+      emptyDescription: '팀 관리자에게 회원 추가를 요청하거나 새 팀을 만들어보세요.',
+      createTeam: {
+        title: '새 팀 만들기',
+        nameLabel: '팀 이름',
+        namePlaceholder: '팀 이름 입력',
+        checkButton: '중복 확인',
+        descriptionLabel: '팀 설명 (선택)',
+        descriptionPlaceholder: '팀 설명 입력',
+        createButton: '팀 만들기',
+        nameCheck: {
+          tooShort: '팀 이름은 2자 이상이어야 합니다.',
+          tooLong: '팀 이름은 20자 이하여야 합니다.',
+          duplicated: '이미 존재하는 팀 이름입니다.',
+          ok: '사용 가능한 팀 이름입니다.',
+        },
+        messages: {
+          nameCheckFailed: '팀 이름 확인에 실패했습니다.',
+          nameDuplicated: '팀 이름이 이미 사용 중입니다. 다른 이름을 선택해주세요.',
+          createSuccess: '팀이 생성되었습니다.',
+          createFailed: '팀 생성에 실패했습니다.',
+        },
+      },
       selectedDate: '{year}년 {month}월 {day}일',
       actions: {
         manage: '팀 관리',
+        createTeam: '팀 만들기',
         addSchedule: '팀 일정 추가',
         editSchedule: '수정',
         deleteSchedule: '삭제',

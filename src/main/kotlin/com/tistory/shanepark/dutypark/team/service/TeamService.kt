@@ -18,6 +18,7 @@ import com.tistory.shanepark.dutypark.team.domain.entity.Team
 import com.tistory.shanepark.dutypark.team.repository.TeamRepository
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
+import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.LocalDate
@@ -70,6 +71,42 @@ class TeamService(
         }
     }
 
+    fun create(loginMember: LoginMember, teamCreateDto: TeamCreateDto): TeamDto {
+        val member = memberRepository.findMemberWithTeamForUpdate(loginMember.id).orElseThrow()
+        if (member.team != null) {
+            throw BadRequestException("team.member.alreadyAssigned")
+        }
+        val normalizedName = teamCreateDto.name.trim()
+        if (normalizedName.length < 2 || normalizedName.length > 20) {
+            throw BadRequestException("team.name.length")
+        }
+        if (isDuplicated(normalizedName)) {
+            throw BadRequestException("team.name.duplicated")
+        }
+
+        val team = Team(normalizedName).also {
+            it.description = teamCreateDto.description
+        }
+
+        return try {
+            val savedTeam = teamRepository.saveAndFlush(team)
+            savedTeam.addMember(member)
+            savedTeam.changeAdmin(member)
+            val initialWorkDutyType = savedTeam.addDutyType(
+                dutyName = INITIAL_WORK_DUTY_NAME,
+                dutyColor = INITIAL_WORK_DUTY_COLOR,
+            )
+            dutyTypeRepository.saveAndFlush(initialWorkDutyType)
+            TeamDto.of(
+                team = savedTeam,
+                members = emptyList(),
+                dutyTypes = listOf(initialWorkDutyType),
+            )
+        } catch (_: DataIntegrityViolationException) {
+            throw BadRequestException("team.name.duplicated")
+        }
+    }
+
     fun delete(id: Long) {
         val team = teamRepository.findById(id).orElseThrow()
         if (team.members.isNotEmpty()) {
@@ -84,6 +121,11 @@ class TeamService(
 
     fun isDuplicated(name: String): Boolean {
         return teamRepository.findByName(name) != null
+    }
+
+    private companion object {
+        const val INITIAL_WORK_DUTY_NAME = "WORK"
+        const val INITIAL_WORK_DUTY_COLOR = "#98fb98"
     }
 
     fun addMemberToTeam(teamId: Long, memberId: Long) {

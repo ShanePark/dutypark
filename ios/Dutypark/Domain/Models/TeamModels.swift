@@ -6,6 +6,22 @@ nonisolated struct DutyBatchTemplateDTO: Codable, Equatable, Sendable {
     let fileExtensions: [String]
 }
 
+nonisolated enum TeamNameCheckResult: String, Codable, Equatable, Sendable {
+    case ok = "OK"
+    case tooShort = "TOO_SHORT"
+    case tooLong = "TOO_LONG"
+    case duplicated = "DUPLICATED"
+}
+
+nonisolated struct TeamNameCheckRequest: Codable, Equatable, Sendable {
+    let name: String
+}
+
+nonisolated struct TeamCreateRequest: Codable, Equatable, Sendable {
+    let name: String
+    let description: String
+}
+
 nonisolated struct TeamMemberDTO: Codable, Equatable, Sendable {
     let id: MemberID?
     let name: String

@@ -68,6 +68,10 @@ const isLoggedIn = computed(() => authStore.isLoggedIn)
 // canEdit: true if own calendar or manager of target member
 const canEdit = computed(() => isMyCalendar.value || amIManager.value)
 const canEditMyCalendar = computed(() => canEdit.value && isMyCalendar.value)
+// Duty entries belong to a team's duty types. Keep the broader calendar edit
+// permission above so teamless members can still manage schedules and D-Days.
+const canEditDuty = computed(() => canEdit.value && (!isMyCalendar.value || teamId.value !== null))
+const canEditMyDutyCalendar = computed(() => canEditDuty.value && isMyCalendar.value)
 
 // canSearch: true if can search schedules (same as canEdit)
 const canSearch = canEdit
@@ -655,6 +659,7 @@ watch(
     rawCalendarDays.value = []
     dutyTypes.value = []
     team.value = null
+    teamId.value = null
     pinnedDDay.value = null
     friends.value = []
     selectedFriendIds.value = []
@@ -723,6 +728,10 @@ function goToToday() {
   currentMonth.value = today.getMonth() + 1
 }
 
+function goToTeam() {
+  router.push('/team')
+}
+
 // Handle "go to date" event from notification navigation
 async function handleGoToDate(event: Event) {
   const customEvent = event as CustomEvent<{ year: number; month: number; day: number }>
@@ -754,7 +763,7 @@ function handleDayClick(day: CalendarDay, _index: number) {
 // Batch edit mode: change duty type directly on cell
 async function handleBatchDutyChange(day: CalendarDay, dutyTypeId: number | null) {
   if (!memberId.value) return
-  if (!canEdit.value) return
+  if (!canEditDuty.value) return
 
   const { year, month, day: dayNum } = day
 
@@ -779,7 +788,7 @@ function debouncedLoadDuties() {
 
 // Quick duty change: apply to focused day and move to next day
 function handleQuickDutyChange(dutyTypeId: number | null) {
-  if (!focusedDay.value || !memberId.value || !canEdit.value) return
+  if (!focusedDay.value || !memberId.value || !canEditDuty.value) return
 
   // Capture current day before incrementing
   const currentDay = focusedDay.value
@@ -1372,8 +1381,7 @@ async function handleBlockMember() {
 
 async function handleChangeDutyType(dutyTypeId: number | null) {
   if (!memberId.value || !selectedDay.value) return
-  // Allow if viewing own calendar OR if user has manager permission
-  if (!isMyCalendar.value && !amIManager.value) return
+  if (!canEditDuty.value) return
 
   const { year, month, day } = selectedDay.value
 
@@ -1388,7 +1396,7 @@ async function handleChangeDutyType(dutyTypeId: number | null) {
 }
 
 async function showBatchUpdateModal() {
-  if (!memberId.value || dutyTypes.value.length === 0) return
+  if (!memberId.value || !canEditDuty.value || dutyTypes.value.length === 0) return
 
   const buttonsHtml = dutyTypes.value
     .map((dt) => {
@@ -1434,7 +1442,7 @@ async function showBatchUpdateModal() {
 }
 
 async function showExcelUploadModal() {
-  if (!memberId.value || !team.value?.dutyBatchTemplate) return
+  if (!memberId.value || !canEditDuty.value || !team.value?.dutyBatchTemplate) return
 
   const fileExtensions = team.value.dutyBatchTemplate.fileExtensions || ['.xlsx', '.xls']
 
@@ -1534,6 +1542,29 @@ async function showExcelUploadModal() {
       @block-member="handleBlockMember"
     />
 
+    <div
+      v-if="isMyCalendar && teamId === null"
+      data-test="teamless-duty-guidance"
+      role="status"
+      class="mb-3 flex flex-col gap-3 rounded-xl border border-dp-warning-border bg-dp-warning-soft px-4 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between"
+    >
+      <div class="min-w-0">
+        <p class="font-bold text-dp-text-primary">{{ t('duty.view.teamRequired') }}</p>
+        <p class="mt-0.5 text-sm leading-relaxed text-dp-text-secondary">
+          {{ t('duty.view.teamRequiredDescription') }}
+        </p>
+      </div>
+      <button
+        type="button"
+        data-test="teamless-duty-guidance-action"
+        class="flex min-h-[44px] shrink-0 items-center justify-center rounded-lg bg-dp-accent px-4 py-2 text-sm font-bold transition hover:bg-dp-accent-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-dp-accent cursor-pointer"
+        :style="{ color: 'var(--dp-text-on-dark)' }"
+        @click="goToTeam"
+      >
+        {{ t('duty.view.goToTeam') }}
+      </button>
+    </div>
+
     <DutyTypesBar
       :batch-edit-mode="batchEditMode"
       :duty-types="dutyTypes"
@@ -1542,8 +1573,8 @@ async function showExcelUploadModal() {
       :focused-day="focusedDay"
       :focused-day-duty-type="focusedDayDutyType"
       :last-day-in-month="lastDayInMonth"
-      :can-edit="canEdit"
-      :can-edit-my-calendar="canEditMyCalendar"
+      :can-edit="canEditDuty"
+      :can-edit-my-calendar="canEditMyDutyCalendar"
       :other-duty-count="otherDutyCount"
       :is-other-duty-active="isOtherDutyActive"
       :team-has-duty-batch-template="teamHasDutyBatchTemplate"
@@ -1600,6 +1631,7 @@ async function showExcelUploadModal() {
       :schedules="selectedDaySchedules"
       :duty-types="dutyTypes"
       :can-edit="canEdit"
+      :can-edit-duty="canEditDuty"
       :friends="friends"
       :member-id="memberId"
       :is-my-calendar="isMyCalendar"
