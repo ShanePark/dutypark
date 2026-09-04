@@ -64,7 +64,7 @@ function handleKeywordInput(event: Event) {
             :value="keyword"
             type="text"
             :placeholder="t('friendSearchModal.searchPlaceholder')"
-            class="form-control-neutral w-full pl-11 pr-4 py-3 rounded-xl"
+            class="form-control-neutral w-full !pl-11 pr-4 py-3 rounded-xl"
             @input="handleKeywordInput"
             @keyup.enter="emit('search')"
           />
