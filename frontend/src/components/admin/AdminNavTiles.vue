@@ -4,9 +4,6 @@ import { useI18n } from 'vue-i18n'
 import { useAdminModerationCounts } from '@/composables/useAdminModerationCounts'
 import {
   Building2,
-  Code2,
-  ExternalLink,
-  FileText,
   Flag,
   MessageSquare,
   Users,
@@ -57,7 +54,7 @@ function clearHoverBg(e: Event, bgColor = 'var(--dp-bg-card)') {
 </script>
 
 <template>
-  <div class="grid grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6">
+  <div class="grid grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
     <router-link
       to="/admin"
       class="admin-top-tile"
@@ -132,34 +129,6 @@ function clearHoverBg(e: Event, bgColor = 'var(--dp-bg-card)') {
       </span>
     </router-link>
 
-    <router-link
-      to="/admin/dev"
-      class="admin-top-tile"
-      :class="active === 'dev'
-        ? 'admin-top-tile-active hover:bg-dp-surface-strong-hover'
-        : 'bg-dp-bg-card border border-dp-border-primary'"
-      @mouseover="(e: Event) => active !== 'dev' && setHoverBg(e)"
-      @mouseleave="(e: Event) => active !== 'dev' && clearHoverBg(e)"
-    >
-      <Code2 class="admin-top-tile-icon" :class="active === 'dev' ? 'text-dp-text-on-dark' : 'text-dp-text-secondary'" />
-      <span class="admin-top-tile-label" :class="active === 'dev' ? 'text-dp-text-on-dark' : 'text-dp-text-primary'">
-        {{ t('admin.nav.dev') }}
-      </span>
-    </router-link>
-
-    <a
-      href="/docs/index.html"
-      target="_blank"
-      class="admin-top-tile bg-dp-bg-card border border-dp-border-primary"
-      @mouseover="(e: Event) => setHoverBg(e)"
-      @mouseleave="(e: Event) => clearHoverBg(e)"
-    >
-      <div class="mb-2 flex items-center gap-1">
-        <FileText class="admin-top-tile-icon mb-0 text-dp-text-secondary" />
-        <ExternalLink class="hidden sm:block w-3 h-3 text-dp-text-muted" />
-      </div>
-      <span class="admin-top-tile-label text-dp-text-primary">{{ t('admin.nav.apiDocs') }}</span>
-    </a>
   </div>
 </template>
 
