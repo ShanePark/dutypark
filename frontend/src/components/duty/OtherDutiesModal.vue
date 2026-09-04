@@ -35,7 +35,16 @@ function isSelected(friendId: number) {
   return props.selectedFriendIds.includes(friendId)
 }
 
+function isTeamless(friend: TaggableFriend) {
+  return friend.teamId == null
+}
+
 function handleToggle(friendId: number) {
+  const friend = props.friends.find((candidate) => candidate.id === friendId)
+  if (friend && isTeamless(friend) && !isSelected(friendId)) {
+    return
+  }
+
   if (!isSelected(friendId) && !canSelectMore.value) {
     return
   }
@@ -137,12 +146,12 @@ function handleClear() {
           :key="friend.id"
           type="button"
           :aria-pressed="isSelected(friend.id)"
-          :disabled="!isSelected(friend.id) && !canSelectMore"
+          :disabled="!isSelected(friend.id) && (isTeamless(friend) || !canSelectMore)"
           @click="handleToggle(friend.id)"
           class="friend-item flex items-center gap-2 rounded-lg p-2 text-left"
           :class="{
             'friend-item-selected': isSelected(friend.id),
-            'friend-item-disabled': !isSelected(friend.id) && !canSelectMore,
+            'friend-item-disabled': !isSelected(friend.id) && (isTeamless(friend) || !canSelectMore),
           }"
         >
           <ProfileAvatar
@@ -154,7 +163,15 @@ function handleClear() {
             class="friend-item-avatar"
           />
 
-          <span class="friend-item-name flex-1 min-w-0 truncate font-medium text-sm text-dp-text-primary">{{ friend.name }}</span>
+          <span class="flex min-w-0 flex-1 flex-col">
+            <span class="friend-item-name truncate font-medium text-sm text-dp-text-primary">{{ friend.name }}</span>
+            <span
+              v-if="isTeamless(friend)"
+              class="friend-item-team truncate text-xs text-dp-text-muted"
+            >
+              {{ t('duty.otherDuties.noTeam') }}
+            </span>
+          </span>
 
           <span
             v-if="isSelected(friend.id)"

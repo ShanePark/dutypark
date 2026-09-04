@@ -17,7 +17,7 @@ describe('OtherDutiesModal friend options', () => {
     expect(option).toMatch(/^<button/)
     expect(option).toContain('type="button"')
     expect(option).toContain(':aria-pressed="isSelected(friend.id)"')
-    expect(option).toContain(':disabled="!isSelected(friend.id) && !canSelectMore"')
+    expect(option).toContain(':disabled="!isSelected(friend.id) && (isTeamless(friend) || !canSelectMore)"')
     expect(option).toContain('@click="handleToggle(friend.id)"')
   })
 

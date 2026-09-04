@@ -1587,7 +1587,10 @@ private struct DutyComparisonView: View {
         self.model = model
         self.maximumHeight = maximumHeight
         self.dismiss = dismiss
-        _selection = State(initialValue: model.comparedMemberIDs)
+        _selection = State(initialValue: CalendarComparisonPolicy.normalizedSelection(
+            model.comparedMemberIDs,
+            friends: model.friends
+        ))
     }
 
     var body: some View {
@@ -1707,12 +1710,13 @@ private struct DutyComparisonView: View {
     }
 
     private func friendButton(_ friend: FriendDTO) -> some View {
-        let selected = selection.contains(friend.id)
-        let disabled = !selected && selection.count >= 3
+        let selectable = CalendarComparisonPolicy.isSelectable(friend)
+        let selected = selectable && selection.contains(friend.id)
+        let disabled = !selectable || (!selected && selection.count >= CalendarComparisonPolicy.maximumSelectionCount)
         return Button {
             if selected {
                 selection.remove(friend.id)
-            } else if selection.count < 3 {
+            } else if selection.count < CalendarComparisonPolicy.maximumSelectionCount {
                 selection.insert(friend.id)
             }
         } label: {
@@ -1728,8 +1732,13 @@ private struct DutyComparisonView: View {
                         .font(DPTypography.label)
                         .foregroundStyle(DPColor.textPrimary)
                         .lineLimit(1)
-                    if let team = friend.team, !team.isEmpty {
+                    if selectable, let team = friend.team, !team.isEmpty {
                         Text(team)
+                            .font(DPTypography.caption)
+                            .foregroundStyle(DPColor.textMuted)
+                            .lineLimit(1)
+                    } else if !selectable {
+                        Text(CalendarLocalization.text("calendar.compare.noTeam"))
                             .font(DPTypography.caption)
                             .foregroundStyle(DPColor.textMuted)
                             .lineLimit(1)

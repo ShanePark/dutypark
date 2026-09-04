@@ -49,6 +49,25 @@ nonisolated enum CalendarHapticPolicy {
     }
 }
 
+/// Rules shared by the comparison picker and the month request. A duty roster
+/// is defined by a team's duty types, so a friend without a team membership
+/// cannot produce a meaningful comparison response.
+nonisolated enum CalendarComparisonPolicy {
+    static let maximumSelectionCount = 3
+
+    static func isSelectable(_ friend: FriendDTO) -> Bool {
+        friend.teamId != nil
+    }
+
+    static func normalizedSelection(
+        _ memberIDs: Set<MemberID>,
+        friends: [FriendDTO]
+    ) -> Set<MemberID> {
+        let selectableIDs = Set(friends.filter(isSelectable).map(\.id))
+        return Set(memberIDs.intersection(selectableIDs).sorted().prefix(maximumSelectionCount))
+    }
+}
+
 /// A short, bounded recovery window handles the case where the path monitor
 /// stays satisfied while the API server is restarting. The retry is deliberately
 /// feature-local and haptic-free; the shared outbox coordinator owns durable
@@ -203,7 +222,10 @@ final class CalendarViewModel: ObservableObject {
     /// Keeping one canonical set prevents a direct state mutation from producing a
     /// cache identity that differs from the request that populated `otherDuties`.
     private var activeComparedMemberIDs: Set<MemberID> {
-        Set(comparedMemberIDs.sorted().prefix(3))
+        let normalized = isMyCalendar
+            ? CalendarComparisonPolicy.normalizedSelection(comparedMemberIDs, friends: friends)
+            : comparedMemberIDs
+        return Set(normalized.sorted().prefix(CalendarComparisonPolicy.maximumSelectionCount))
     }
 
     func configure(accountID: MemberID, isOffline: Bool) {
@@ -316,6 +338,19 @@ final class CalendarViewModel: ObservableObject {
         initialAccountID ?? me?.id
     }
 
+    /// A friend list can outlive a comparison selection (for example after a
+    /// team is removed). Reconcile that stale state before building any month
+    /// request so it cannot affect the count, cache identity, or API payload.
+    private func pruneUnavailableFriendComparisons() {
+        guard isMyCalendar else { return }
+        let normalized = CalendarComparisonPolicy.normalizedSelection(
+            comparedMemberIDs,
+            friends: friends
+        )
+        guard normalized != comparedMemberIDs else { return }
+        comparedMemberIDs = normalized
+    }
+
     private func beginMonthRequest(memberID: MemberID) -> MonthRequestContext {
         monthLoadGeneration += 1
         return MonthRequestContext(
@@ -357,6 +392,7 @@ final class CalendarViewModel: ObservableObject {
             }
         }
         if selectedMemberID == nil { selectedMemberID = member.id }
+        pruneUnavailableFriendComparisons()
         if let selectedMemberID,
            selectedMemberID != member.id,
            !friends.contains(where: { $0.id == selectedMemberID }) {
@@ -401,6 +437,7 @@ final class CalendarViewModel: ObservableObject {
         friends = snapshot.friends
         dDays = snapshot.dDays.sorted { $0.date.rawValue < $1.date.rawValue }
         if selectedMemberID == nil { selectedMemberID = me?.id }
+        pruneUnavailableFriendComparisons()
         todoBoard = await cache.loadTodoBoard(accountID: accountID)
         isOfflineMode = true
         return true
@@ -417,6 +454,7 @@ final class CalendarViewModel: ObservableObject {
         }
 #endif
         guard let memberID = targetMemberID else { throw APIError.invalidResponse }
+        pruneUnavailableFriendComparisons()
         let context = beginMonthRequest(memberID: memberID)
         if isOfflineMode, !forceOnlineRequest {
             guard context.isMine, let accountID = context.accountID else {
@@ -1007,9 +1045,7 @@ final class CalendarViewModel: ObservableObject {
 
     func setFriendDutyComparisons(_ memberIDs: Set<MemberID>) async {
         guard isMyCalendar else { return }
-        let validIDs = Set(memberIDs.filter { candidate in
-            friends.contains(where: { $0.id == candidate })
-        }.prefix(3))
+        let validIDs = CalendarComparisonPolicy.normalizedSelection(memberIDs, friends: friends)
         guard validIDs != comparedMemberIDs else { return }
         invalidatePrefetch()
         comparedMemberIDs = validIDs

@@ -2251,10 +2251,10 @@ final class CalendarFeatureTests: XCTestCase {
 
     func testComparisonSelectionOnlyAcceptsKnownFriendsAndThreeMembers() async {
         let repository = CalendarRepositoryMock(friends: [
-            FriendDTO(id: 2, name: "A", teamId: nil, team: nil, hasProfilePhoto: false, profilePhotoVersion: 0, isFamily: false, pinOrder: nil),
-            FriendDTO(id: 3, name: "B", teamId: nil, team: nil, hasProfilePhoto: false, profilePhotoVersion: 0, isFamily: false, pinOrder: nil),
-            FriendDTO(id: 4, name: "C", teamId: nil, team: nil, hasProfilePhoto: false, profilePhotoVersion: 0, isFamily: false, pinOrder: nil),
-            FriendDTO(id: 5, name: "D", teamId: nil, team: nil, hasProfilePhoto: false, profilePhotoVersion: 0, isFamily: false, pinOrder: nil)
+            FriendDTO(id: 2, name: "A", teamId: 7, team: "Team", hasProfilePhoto: false, profilePhotoVersion: 0, isFamily: false, pinOrder: nil),
+            FriendDTO(id: 3, name: "B", teamId: 7, team: "Team", hasProfilePhoto: false, profilePhotoVersion: 0, isFamily: false, pinOrder: nil),
+            FriendDTO(id: 4, name: "C", teamId: 7, team: "Team", hasProfilePhoto: false, profilePhotoVersion: 0, isFamily: false, pinOrder: nil),
+            FriendDTO(id: 5, name: "D", teamId: 7, team: "Team", hasProfilePhoto: false, profilePhotoVersion: 0, isFamily: false, pinOrder: nil)
         ])
         let model = CalendarViewModel(repository: repository, now: date(2026, 8, 12))
         await model.load()
@@ -2263,6 +2263,68 @@ final class CalendarFeatureTests: XCTestCase {
 
         XCTAssertEqual(model.comparedMemberIDs.count, 3)
         XCTAssertTrue(model.comparedMemberIDs.isSubset(of: [2, 3, 4, 5]))
+    }
+
+    func testComparisonSelectionDropsFriendsWithoutTeamAndDoesNotRequestThem() async {
+        let repository = CalendarRepositoryMock(friends: [
+            FriendDTO(id: 2, name: "No team", teamId: nil, team: nil, hasProfilePhoto: false, profilePhotoVersion: 0, isFamily: false, pinOrder: nil),
+            FriendDTO(id: 3, name: "Team friend", teamId: 7, team: "Team", hasProfilePhoto: false, profilePhotoVersion: 0, isFamily: false, pinOrder: nil)
+        ])
+        let model = CalendarViewModel(repository: repository, now: date(2026, 8, 12))
+        await model.load()
+
+        // A stale selection can exist before the friend list is refreshed.
+        model.comparedMemberIDs = [2]
+        await model.setFriendDutyComparisons([2, 3])
+
+        XCTAssertEqual(model.comparedMemberIDs, [3])
+        let requestedOtherDutyMemberIDs = await repository.requestedOtherDutyMemberIDs
+        XCTAssertEqual(requestedOtherDutyMemberIDs, [3])
+    }
+
+    func testComparisonKeepsTeamlessFriendsVisibleWithUnavailableLabel() throws {
+        let teamless = FriendDTO(
+            id: 2,
+            name: "No team",
+            teamId: nil,
+            team: nil,
+            hasProfilePhoto: false,
+            profilePhotoVersion: 0,
+            isFamily: false,
+            pinOrder: nil
+        )
+        let teamMember = FriendDTO(
+            id: 3,
+            name: "Team friend",
+            teamId: 7,
+            team: "Team",
+            hasProfilePhoto: false,
+            profilePhotoVersion: 0,
+            isFamily: false,
+            pinOrder: nil
+        )
+        let teamMemberWithoutDisplayName = FriendDTO(
+            id: 4,
+            name: "Team friend without label",
+            teamId: 7,
+            team: nil,
+            hasProfilePhoto: false,
+            profilePhotoVersion: 0,
+            isFamily: false,
+            pinOrder: nil
+        )
+
+        XCTAssertFalse(CalendarComparisonPolicy.isSelectable(teamless))
+        XCTAssertTrue(CalendarComparisonPolicy.isSelectable(teamMember))
+        XCTAssertTrue(CalendarComparisonPolicy.isSelectable(teamMemberWithoutDisplayName))
+        XCTAssertEqual(
+            CalendarLocalization.text("calendar.compare.noTeam", locale: .korean),
+            "소속 팀 없음"
+        )
+
+        let source = try Self.calendarViewSource()
+        XCTAssertTrue(source.contains("calendar.compare.noTeam"))
+        XCTAssertTrue(source.contains("CalendarComparisonPolicy.isSelectable"))
     }
 
     func testCalendarLocaleUsesTheAppSelectedLanguage() {
@@ -2670,6 +2732,7 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
     var requestedPreviewMemberID: MemberID?
     var requestedScheduleMemberID: MemberID?
     var requestedDDayMemberID: MemberID?
+    var requestedOtherDutyMemberIDs: [MemberID] = []
     var lastDutyUpdate: DutyUpdateDTO?
     var deleteScheduleCount = 0
     var untagCount = 0
@@ -2728,6 +2791,7 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
     }
     func duties(memberID: MemberID, year: Int, month: Int) async throws -> [DutyDTO] { [] }
     func otherDuties(memberIDs: [MemberID], year: Int, month: Int) async throws -> [OtherDutyResponse] {
+        requestedOtherDutyMemberIDs = memberIDs
         otherDutyValues
     }
     func schedules(memberID: MemberID, year: Int, month: Int) async throws -> [[ScheduleDTO]] {

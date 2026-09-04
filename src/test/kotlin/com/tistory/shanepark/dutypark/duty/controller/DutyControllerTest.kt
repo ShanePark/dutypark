@@ -121,6 +121,45 @@ class DutyControllerTest : RestDocsTest() {
     }
 
     @Test
+    fun `get others duties ignores friend without a team`() {
+        val today = fixedDate
+        makeThemFriend(TestData.member, TestData.member2)
+        TestData.member2.team = null
+        memberRepository.saveAndFlush(TestData.member2)
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.get("/api/duty/others")
+                .param("year", today.year.toString())
+                .param("month", today.monthValue.toString())
+                .param("memberIds", TestData.member2.id.toString())
+                .accept(MediaType.APPLICATION_JSON)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$[0]").doesNotExist())
+    }
+
+    @Test
+    fun `get others duties ignores friend without a team in a mixed request`() {
+        val today = fixedDate
+        makeThemFriend(TestData.member, TestData.member2)
+        TestData.member2.team = null
+        memberRepository.saveAndFlush(TestData.member2)
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.get("/api/duty/others")
+                .param("year", today.year.toString())
+                .param("month", today.monthValue.toString())
+                .param("memberIds", "${TestData.member.id},${TestData.member2.id}")
+                .accept(MediaType.APPLICATION_JSON)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$[0].memberId").value(TestData.member.id))
+            .andExpect(jsonPath("$[1]").doesNotExist())
+    }
+
+    @Test
     fun `update single duty`() {
         val today = fixedDate
         val json = """
