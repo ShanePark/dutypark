@@ -50,6 +50,7 @@ const saving = ref(false)
 
 const isAdmin = ref(false)
 const isAppAdmin = computed(() => authStore.user?.isAdmin ?? false)
+const canAssignFirstAdmin = computed(() => isAppAdmin.value && team.value?.adminId === null)
 const loginId = computed(() => authStore.user?.id ?? 0)
 const teamLoaded = ref(false)
 
@@ -154,7 +155,12 @@ async function unAssignManager(member: TeamMemberDto) {
 
 async function changeAdmin(member?: TeamMemberDto) {
   const message = member
-    ? t('team.manage.messages.changeAdminConfirm', { name: member.name })
+    ? t(
+        canAssignFirstAdmin.value
+          ? 'team.manage.messages.assignAdminConfirm'
+          : 'team.manage.messages.changeAdminConfirm',
+        { name: member.name },
+      )
     : t('team.manage.messages.resetAdminConfirm', { name: team.value?.adminName })
 
   if (!await confirm(message)) return
@@ -484,13 +490,22 @@ onMounted(() => {
                   <Check v-if="member.isManager" class="w-5 h-5 text-dp-success mx-auto" />
                 </template>
                 <template v-else>
-                  <button
-                    v-if="!member.isManager"
-                    @click="assignManager(member)"
-                    class="text-dp-success hover:text-dp-success transition"
-                  >
-                    <Plus class="w-5 h-5 mx-auto" />
-                  </button>
+                  <div v-if="!member.isManager" class="flex items-center justify-center gap-1">
+                    <button
+                      v-if="canAssignFirstAdmin && !member.isAdmin"
+                      @click="changeAdmin(member)"
+                      class="px-2 py-1 text-xs border border-dp-accent-border text-dp-accent rounded hover:bg-dp-accent-soft transition flex items-center gap-1"
+                    >
+                      <Crown class="w-3 h-3" />
+                      {{ t('team.manage.actions.assignAdmin') }}
+                    </button>
+                    <button
+                      @click="assignManager(member)"
+                      class="text-dp-success hover:text-dp-success transition"
+                    >
+                      <Plus class="w-5 h-5 mx-auto" />
+                    </button>
+                  </div>
                   <div v-else-if="member.isManager && !member.isAdmin" class="flex items-center justify-center gap-1">
                     <button
                       @click="unAssignManager(member)"
@@ -504,7 +519,7 @@ onMounted(() => {
                       class="px-2 py-1 text-xs border border-dp-accent-border text-dp-accent rounded hover:bg-dp-accent-soft transition flex items-center gap-1"
                     >
                       <Crown class="w-3 h-3" />
-                      {{ t('team.manage.actions.transferAdmin') }}
+                      {{ t(canAssignFirstAdmin ? 'team.manage.actions.assignAdmin' : 'team.manage.actions.transferAdmin') }}
                     </button>
                   </div>
                   <span class="text-dp-text-muted" v-else-if="member.isAdmin">-</span>
@@ -545,14 +560,23 @@ onMounted(() => {
             </button>
           </div>
           <div v-if="isAdmin && !member.isAdmin" class="flex flex-wrap gap-1">
-            <button
-              v-if="!member.isManager"
-              @click="assignManager(member)"
-              class="px-2 py-1 text-xs border border-dp-success-border text-dp-success rounded hover:bg-dp-success-soft transition flex items-center gap-1"
-            >
-              <Plus class="w-3 h-3" />
-              {{ t('team.manage.actions.assignManager') }}
-            </button>
+            <template v-if="!member.isManager">
+              <button
+                v-if="canAssignFirstAdmin"
+                @click="changeAdmin(member)"
+                class="px-2 py-1 text-xs border border-dp-accent-border text-dp-accent rounded hover:bg-dp-accent-soft transition flex items-center gap-1"
+              >
+                <Crown class="w-3 h-3" />
+                {{ t('team.manage.actions.assignAdmin') }}
+              </button>
+              <button
+                @click="assignManager(member)"
+                class="px-2 py-1 text-xs border border-dp-success-border text-dp-success rounded hover:bg-dp-success-soft transition flex items-center gap-1"
+              >
+                <Plus class="w-3 h-3" />
+                {{ t('team.manage.actions.assignManager') }}
+              </button>
+            </template>
             <template v-else-if="member.isManager">
               <button
                 @click="unAssignManager(member)"
@@ -566,7 +590,7 @@ onMounted(() => {
                 class="px-2 py-1 text-xs border border-dp-accent-border text-dp-accent rounded hover:bg-dp-accent-soft transition flex items-center gap-1"
               >
                 <Crown class="w-3 h-3" />
-                {{ t('team.manage.actions.transferAdmin') }}
+                {{ t(canAssignFirstAdmin ? 'team.manage.actions.assignAdmin' : 'team.manage.actions.transferAdmin') }}
               </button>
             </template>
           </div>
