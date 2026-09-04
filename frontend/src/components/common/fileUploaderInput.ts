@@ -41,6 +41,89 @@ function ensureClipboardImageName(file: File, timestamp: number, index: number):
   })
 }
 
+type ClipboardDataTransfer = Pick<DataTransfer, 'items' | 'types'>
+
+const nonTextInputTypes = new Set([
+  'button',
+  'checkbox',
+  'color',
+  'date',
+  'datetime-local',
+  'file',
+  'hidden',
+  'image',
+  'month',
+  'number',
+  'radio',
+  'range',
+  'reset',
+  'submit',
+  'time',
+  'week',
+])
+
+function isTextInputElement(target: EventTarget | null | undefined): boolean {
+  if (!target || typeof target !== 'object') return false
+
+  const element = target as {
+    tagName?: unknown
+    type?: unknown
+    contentEditable?: unknown
+    isContentEditable?: unknown
+    parentElement?: unknown
+    getAttribute?: (name: string) => string | null
+  }
+
+  if (element.isContentEditable === true || element.contentEditable === 'true') return true
+
+  const tagName = typeof element.tagName === 'string' ? element.tagName.toLowerCase() : ''
+  if (tagName === 'textarea') return true
+  if (tagName === 'input') {
+    const inputType = typeof element.type === 'string'
+      ? element.type.toLowerCase()
+      : element.getAttribute?.('type')?.toLowerCase() ?? 'text'
+    return !nonTextInputTypes.has(inputType)
+  }
+
+  const parent = element.parentElement
+  if (parent && typeof parent === 'object') {
+    const parentElement = parent as {
+      contentEditable?: unknown
+      isContentEditable?: unknown
+    }
+    if (parentElement.isContentEditable === true || parentElement.contentEditable === 'true') {
+      return true
+    }
+  }
+
+  return false
+}
+
+/**
+ * Return whether a clipboard carries a textual representation that the browser may paste into
+ * the focused editor. DataTransferItem.kind is the most reliable signal, while `types` covers
+ * browsers that omit items from ClipboardEvent.clipboardData.
+ */
+function hasClipboardText(dataTransfer: ClipboardDataTransfer | null | undefined): boolean {
+  if (!dataTransfer) return false
+  if (Array.from(dataTransfer.items ?? []).some((item) => item.kind === 'string')) return true
+
+  return Array.from(dataTransfer.types ?? []).some((type) => type.toLowerCase().startsWith('text/'))
+}
+
+/**
+ * Decide whether the attachment uploader should claim the browser's paste default. Image files
+ * are still returned and uploaded by FileUploader even when this is false; the false case only
+ * preserves the focused text control's normal insertion behavior for mixed clipboard contents.
+ */
+export function shouldPreventClipboardDefault(
+  target: EventTarget | null | undefined,
+  dataTransfer: ClipboardDataTransfer | null | undefined,
+): boolean {
+  if (!hasClipboardText(dataTransfer)) return true
+  return !isTextInputElement(target)
+}
+
 /**
  * Tell drag handlers whether taking ownership of the event is appropriate. This keeps ordinary
  * text and link dragging inside form controls working while still accepting browsers that expose

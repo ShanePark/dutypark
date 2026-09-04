@@ -6,6 +6,7 @@ describe('FileUploader interaction contract', () => {
     expect(fileUploader).toContain('extractClipboardImageFiles')
     expect(fileUploader).toContain('extractDroppedFiles')
     expect(fileUploader).toContain('hasDroppedFiles')
+    expect(fileUploader).toContain('shouldPreventClipboardDefault')
     expect(fileUploader).toContain('function addFilesToUppy(files: File[])')
     expect(fileUploader).toContain('event.preventDefault()')
     expect(fileUploader).toContain('function handleDialogPaste(event: ClipboardEvent)')

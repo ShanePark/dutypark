@@ -24,6 +24,7 @@ import {
   extractClipboardImageFiles,
   extractDroppedFiles,
   hasDroppedFiles,
+  shouldPreventClipboardDefault,
 } from './fileUploaderInput'
 
 interface Props {
@@ -59,7 +60,7 @@ const ticker = ref(0)
 const imageBlobUrls = ref<Record<string, string>>({})
 const highlightedAttachmentIds = ref<Set<string>>(new Set())
 const attachmentItemRefs = new Map<string, Element>()
-const highlightTimers = new Map<string, ReturnType<typeof setTimeout>>()
+const highlightTimers = new Map<string, number>()
 const dialogTarget = shallowRef<HTMLElement | null>(null)
 let dialogElement: HTMLElement | null = null
 let focusRequestId = 0
@@ -246,8 +247,10 @@ function handleDialogPaste(event: ClipboardEvent) {
   const files = extractClipboardImageFiles(event.clipboardData)
   if (files.length === 0) return
 
-  event.preventDefault()
-  event.stopPropagation()
+  if (shouldPreventClipboardDefault(event.target, event.clipboardData)) {
+    event.preventDefault()
+    event.stopPropagation()
+  }
   addFilesToUppy(files)
 }
 

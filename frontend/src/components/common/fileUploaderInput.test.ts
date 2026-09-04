@@ -3,6 +3,7 @@ import {
   extractClipboardImageFiles,
   extractDroppedFiles,
   hasDroppedFiles,
+  shouldPreventClipboardDefault,
 } from './fileUploaderInput'
 
 function makeItem(
@@ -63,6 +64,41 @@ describe('extractClipboardImageFiles', () => {
     expect(files).toHaveLength(1)
     expect(files[0]?.name).toMatch(/^pasted-image-\d+-1\.jpg$/)
     expect(files[0]?.type).toBe('image/jpeg')
+  })
+})
+
+describe('shouldPreventClipboardDefault', () => {
+  it('keeps native text paste in an input when the clipboard also contains an image', () => {
+    const image = new File(['image'], 'screenshot.png', { type: 'image/png' })
+    const textItem = makeItem('string', 'text/plain', null)
+    const imageItem = makeItem('file', 'image/png', image)
+    const textInput = {
+      tagName: 'INPUT',
+      type: 'text',
+      getAttribute: () => null,
+    } as unknown as EventTarget
+
+    expect(
+      shouldPreventClipboardDefault(
+        textInput,
+        makeDataTransfer({
+          items: [textItem, imageItem],
+          types: ['text/plain', 'Files'],
+        }),
+      ),
+    ).toBe(false)
+  })
+
+  it('keeps owning image-only clipboard pastes for the uploader', () => {
+    const image = new File(['image'], 'screenshot.png', { type: 'image/png' })
+    const imageItem = makeItem('file', 'image/png', image)
+
+    expect(
+      shouldPreventClipboardDefault(
+        null,
+        makeDataTransfer({ items: [imageItem], types: ['Files'] }),
+      ),
+    ).toBe(true)
   })
 })
 
