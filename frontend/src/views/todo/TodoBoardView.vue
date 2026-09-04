@@ -6,9 +6,11 @@ import type { MoveEvent, SortableEvent } from 'sortablejs'
 import { ListTodo, Clock, CheckCircle2, Lightbulb, LayoutGrid, Plus } from 'lucide-vue-next'
 import { todoApi } from '@/api/todo'
 import { friendApi } from '@/api/member'
+import { reportApi } from '@/api/report'
 import { useSwal } from '@/composables/useSwal'
 import { useContentFilterStore } from '@/stores/contentFilter'
 import { useDragClickGuard } from '@/composables/useDragClickGuard'
+import { resolveApiErrorMessage } from '@/utils/resolveApiError'
 import HelpButton from '@/components/common/HelpButton.vue'
 import HelpModal from '@/components/common/HelpModal.vue'
 import HelpNote from '@/components/common/HelpNote.vue'
@@ -18,7 +20,9 @@ import KanbanColumn from '@/components/todo/KanbanColumn.vue'
 import KanbanCard from '@/components/todo/KanbanCard.vue'
 import TodoAddModal from '@/components/duty/TodoAddModal.vue'
 import TodoDetailModal from '@/components/duty/TodoDetailModal.vue'
+import ReportModal from '@/components/common/ReportModal.vue'
 import type { TaggableFriend, Todo, TodoBoard, TodoStatus } from '@/types'
+import type { ReportSubmission, ReportTarget } from '@/types/report'
 
 const { t } = useI18n()
 const { showSuccess, showError, confirm, confirmDelete, toastSuccess } = useSwal()
@@ -38,6 +42,8 @@ const startInEditMode = ref(false)
 const activeStatus = ref<TodoStatus>('IN_PROGRESS')
 const friends = ref<TaggableFriend[]>([])
 const pendingStatusTodoIds = ref<Set<string>>(new Set())
+const reportTarget = ref<ReportTarget | null>(null)
+const isSubmittingReport = ref(false)
 let scrollRafId: number | null = null
 let dragFocusRafId: number | null = null
 let activeDragStatus: TodoStatus | null = null
@@ -51,6 +57,7 @@ let sortableInstances: Record<string, Sortable> = {}
 const todoList = computed(() => board.value?.todo ?? [])
 const inProgressList = computed(() => board.value?.inProgress ?? [])
 const doneList = computed(() => board.value?.done ?? [])
+const canReportSelectedTodo = computed(() => selectedTodo.value?.isTagged === true)
 
 const counts = computed(() => board.value?.counts ?? { todo: 0, inProgress: 0, done: 0, total: 0 })
 const statusTabs = computed<Array<{ status: TodoStatus; label: string; icon: typeof ListTodo }>>(() => [
@@ -664,6 +671,46 @@ async function handleUntagSelf(todo: Pick<Todo, 'id' | 'title'>) {
   }
 }
 
+function openTodoReport(todo: Pick<Todo, 'id' | 'title'>) {
+  if (!selectedTodo.value?.isTagged || selectedTodo.value.id !== todo.id) return
+
+  reportTarget.value = {
+    targetType: 'TODO',
+    targetId: todo.id,
+    targetName: todo.title,
+  }
+}
+
+async function handleReportSubmit(submission: ReportSubmission) {
+  const target = reportTarget.value
+  if (!target || isSubmittingReport.value) return
+
+  isSubmittingReport.value = true
+  try {
+    await reportApi.createReport({
+      targetType: target.targetType,
+      targetId: target.targetId,
+      reason: submission.reason,
+      detail: submission.detail || undefined,
+      alsoBlock: submission.alsoBlock,
+    })
+    reportTarget.value = null
+    toastSuccess(t('report.messages.submitted'))
+
+    // Blocking the Todo owner removes the tag, so refresh both the board and the
+    // friend list before leaving the detail view in that case.
+    if (submission.alsoBlock) {
+      closeDetailModal()
+      await Promise.all([loadBoard(), loadFriends()])
+    }
+  } catch (error) {
+    console.error('Failed to submit report:', error)
+    showError(resolveApiErrorMessage(error, { fallbackKey: 'report.messages.submitFailed' }, t))
+  } finally {
+    isSubmittingReport.value = false
+  }
+}
+
 async function loadFriends() {
   try {
     const response = await friendApi.getFriends()
@@ -837,13 +884,23 @@ onBeforeUnmount(() => {
       :start-in-edit-mode="startInEditMode"
       :show-back-to-list="false"
       :can-change-status="true"
+      :can-report="canReportSelectedTodo"
       :status-change-pending="selectedTodo ? pendingStatusTodoIds.has(selectedTodo.id) : false"
       @close="closeDetailModal"
       @update="handleUpdateTodo"
       @status-change="handleSelectedTodoStatusChange"
       @delete="handleDeleteTodo"
       @untag-self="handleUntagSelf"
+      @report="openTodoReport"
       @back-to-list="handleBackToList"
+    />
+
+    <ReportModal
+      :is-open="!!reportTarget"
+      :target="reportTarget"
+      :is-submitting="isSubmittingReport"
+      @close="reportTarget = null"
+      @submit="handleReportSubmit"
     />
 
     <HelpModal

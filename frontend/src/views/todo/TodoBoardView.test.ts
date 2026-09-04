@@ -220,4 +220,17 @@ describe('todo board mobile drag navigation', () => {
     expect(script).toMatch(/async function handleDeleteTodo[\s\S]*?if \(pendingStatusTodoIds\.value\.has\(todo\.id\)\) return/)
     expect(script).toMatch(/async function handleUntagSelf[\s\S]*?if \(pendingStatusTodoIds\.value\.has\(todo\.id\)\) return/)
   })
+
+  it('keeps the report action available for tagged todos in the board detail flow', () => {
+    expect(script).toContain("import ReportModal from '@/components/common/ReportModal.vue'")
+    expect(script).toContain("import { reportApi } from '@/api/report'")
+    expect(script).toContain("import type { ReportSubmission, ReportTarget } from '@/types/report'")
+    expect(script).toContain('const reportTarget = ref<ReportTarget | null>(null)')
+    expect(script).toContain('const canReportSelectedTodo = computed(')
+    expect(template).toContain(':can-report="canReportSelectedTodo"')
+    expect(template).toContain('@report="openTodoReport"')
+    expect(template).toContain('<ReportModal')
+    expect(script).toContain('async function handleReportSubmit(submission: ReportSubmission)')
+    expect(script).toContain('await reportApi.createReport({')
+  })
 })
