@@ -1704,6 +1704,7 @@ export default {
     addFailed: 'Failed to add the file.',
     dropDesktop: 'Drag files here or click to upload',
     dropMobile: 'Tap to choose files',
+    dropOverlay: 'Drop the file here to attach it',
     maxSize: 'Up to {size}',
   },
   attachmentGrid: {

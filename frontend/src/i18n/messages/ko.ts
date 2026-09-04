@@ -1609,6 +1609,7 @@ export default {
     addFailed: '파일 추가에 실패했습니다.',
     dropDesktop: '여기로 파일을 끌어오거나 클릭해 업로드하세요',
     dropMobile: '탭해서 파일을 선택하세요',
+    dropOverlay: '이곳에 파일을 놓으면 첨부됩니다',
     maxSize: '최대 {size}',
   },
   attachmentGrid: {
