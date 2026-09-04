@@ -137,7 +137,7 @@ final class ReportBlockNavigationTests: XCTestCase {
 
         // The board remains accessible, but blocking the owner deletes this tag on the
         // server. Refresh the board and close the detail that is no longer accessible.
-        XCTAssertTrue(source.contains("if todo.isTagged {"))
+        XCTAssertTrue(source.contains("if currentTodo.isTagged {"))
         XCTAssertTrue(source.contains("onBlocked: { dismissesAfterReportedBlock = true }"))
         XCTAssertTrue(source.contains("await model.refresh()"))
         XCTAssertTrue(source.contains("await onTodoChanged()"))

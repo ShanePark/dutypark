@@ -6,6 +6,7 @@ struct TeamView: View {
     @StateObject private var teamCreationViewModel = TeamCreationViewModel()
     @State private var monthPickerPresented = false
     @State private var teamCreationPresented = false
+    @State private var teamCreationFinishing = false
     @State private var teamManagementDestination: TeamID?
     @State private var pendingTeamManagementDestination: TeamID?
     @State private var scheduleDeletionCandidate: TeamScheduleDTO?
@@ -48,6 +49,7 @@ struct TeamView: View {
                         Text("team.view.emptyDescription", tableName: "Team").font(DPTypography.heading).multilineTextAlignment(.center)
                         Button {
                             teamCreationViewModel.reset()
+                            teamCreationFinishing = false
                             teamCreationPresented = true
                         } label: {
                             Label(
@@ -115,11 +117,12 @@ struct TeamView: View {
         .fullScreenCover(isPresented: $teamCreationPresented) {
             DPModalOverlay(
                 onDismiss: { teamCreationPresented = false },
-                canDismiss: !teamCreationViewModel.isCreating
+                canDismiss: !teamCreationViewModel.isCreating && !teamCreationFinishing
             ) { availableSize, dismiss in
                 TeamCreationView(
                     viewModel: teamCreationViewModel,
                     maximumHeight: availableSize.height,
+                    isFinishing: $teamCreationFinishing,
                     dismiss: dismiss
                 ) { createdTeam in
                     viewModel.applyCreatedTeam(createdTeam)
@@ -131,6 +134,7 @@ struct TeamView: View {
                     pendingTeamManagementDestination = createdTeam.id
                 }
             }
+            .interactiveDismissDisabled(teamCreationViewModel.isCreating || teamCreationFinishing)
         }
         .sheet(isPresented: $monthPickerPresented) {
             DPYearMonthPicker(
@@ -829,7 +833,7 @@ private struct TeamCreationView: View {
     @ObservedObject private var viewModel: TeamCreationViewModel
     @State private var name = ""
     @State private var description = ""
-    @State private var isFinishing = false
+    @Binding private var isFinishing: Bool
     @FocusState private var focusedField: Field?
 
     let maximumHeight: CGFloat
@@ -839,11 +843,13 @@ private struct TeamCreationView: View {
     init(
         viewModel: TeamCreationViewModel,
         maximumHeight: CGFloat,
+        isFinishing: Binding<Bool>,
         dismiss: @escaping () -> Void,
         didCreate: @escaping @MainActor (TeamDTO) async -> Void
     ) {
         self.viewModel = viewModel
         self.maximumHeight = maximumHeight
+        self._isFinishing = isFinishing
         self.dismiss = dismiss
         self.didCreate = didCreate
     }
@@ -933,6 +939,7 @@ private struct TeamCreationView: View {
                         isInvalid: !name.isEmpty && !TeamCreationLogic.isValidName(normalizedName),
                         isDisabled: viewModel.isCreating || isFinishing
                     )
+                    .disabled(viewModel.isCreating || isFinishing)
                     .onChange(of: name) { _, value in
                         if value.count > TeamCreationLogic.maximumNameLength {
                             name = String(value.prefix(TeamCreationLogic.maximumNameLength))
@@ -978,6 +985,7 @@ private struct TeamCreationView: View {
                         isInvalid: description.count > TeamCreationLogic.maximumDescriptionLength,
                         isDisabled: viewModel.isCreating || isFinishing
                     )
+                    .disabled(viewModel.isCreating || isFinishing)
                     .overlay(alignment: .topLeading) {
                         if description.isEmpty {
                             Text("team.create.descriptionPlaceholder", tableName: "Team")
@@ -1051,11 +1059,13 @@ private struct TeamCreationView: View {
                     dismiss()
                 }
             } label: {
-                if viewModel.isCreating {
-                    ProgressView()
-                        .tint(DPColor.textOnDark)
-                } else {
-                    Text("team.create.submit", tableName: "Team")
+                Group {
+                    if viewModel.isCreating {
+                        ProgressView()
+                            .tint(DPColor.textOnDark)
+                    } else {
+                        Text("team.create.submit", tableName: "Team")
+                    }
                 }
                 .frame(maxWidth: .infinity)
             }

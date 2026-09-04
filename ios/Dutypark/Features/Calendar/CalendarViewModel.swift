@@ -104,6 +104,9 @@ final class CalendarViewModel: ObservableObject {
     private let outbox: any OfflineOutboxProviding
     private var initialAccountID: MemberID?
     private var monthLoadGeneration = 0
+    // Identity requests can overlap a session/team refresh, so month generations
+    // alone cannot prevent a delayed member response from restoring stale state.
+    private var identityLoadGeneration = 0
     private var prefetchGeneration = 0
     private var prefersOfflineCache: Bool
     private var prefetchTask: Task<Void, Never>?
@@ -232,6 +235,7 @@ final class CalendarViewModel: ObservableObject {
     func configure(accountID: MemberID, isOffline: Bool) {
         if initialAccountID != accountID || prefersOfflineCache != isOffline {
             monthLoadGeneration += 1
+            identityLoadGeneration &+= 1
             invalidatePrefetch()
         }
         if initialAccountID != accountID {
@@ -249,6 +253,7 @@ final class CalendarViewModel: ObservableObject {
     /// calendar with the new team rather than retaining the no-team snapshot.
     func refreshIdentityAfterTeamChange() async {
         guard isMyCalendar else { return }
+        identityLoadGeneration &+= 1
         monthLoadGeneration += 1
         invalidatePrefetch()
         me = nil
@@ -320,14 +325,15 @@ final class CalendarViewModel: ObservableObject {
         defer { isLoading = false }
         do {
             if prefersOfflineCache {
-                guard await restoreCachedIdentity() else { throw APIError.transport }
+                guard try await restoreCachedIdentity() else { throw APIError.transport }
             } else if me == nil {
                 do {
                     try await loadOnlineIdentity()
                 } catch {
-                    guard isRecoverableOfflineError(error), await restoreCachedIdentity() else {
+                    guard isRecoverableOfflineError(error) else {
                         throw error
                     }
+                    guard try await restoreCachedIdentity() else { throw error }
                     isOfflineMode = true
                     serverRecoveryNeedsIdentity = true
                 }
@@ -390,11 +396,18 @@ final class CalendarViewModel: ObservableObject {
     }
 
     private func loadOnlineIdentity() async throws {
+        identityLoadGeneration &+= 1
+        let generation = identityLoadGeneration
+        let accountID = cacheAccountID
         let member = try await repository.member()
+        guard isCurrentIdentityLoad(generation, accountID: accountID) else { throw CancellationError() }
         me = member
-        friends = try await repository.friends()
+        let loadedFriends = try await repository.friends()
+        guard isCurrentIdentityLoad(generation, accountID: accountID) else { throw CancellationError() }
+        friends = loadedFriends
         if let initialScheduleID {
             let schedule = try await repository.scheduleBasic(id: initialScheduleID)
+            guard isCurrentIdentityLoad(generation, accountID: accountID) else { throw CancellationError() }
             if selectedMemberID == nil {
                 selectedMemberID = schedule.memberId
             }
@@ -410,15 +423,20 @@ final class CalendarViewModel: ObservableObject {
         if let selectedMemberID,
            selectedMemberID != member.id,
            !friends.contains(where: { $0.id == selectedMemberID }) {
-            targetMember = try await repository.member(id: selectedMemberID)
+            let loadedTargetMember = try await repository.member(id: selectedMemberID)
+            guard isCurrentIdentityLoad(generation, accountID: accountID) else { throw CancellationError() }
+            targetMember = loadedTargetMember
         }
         let targetTeamID = selectedMemberID == member.id
             ? member.teamId
             : friends.first(where: { $0.id == selectedMemberID })?.teamId ?? targetMember?.teamId
         if let teamID = targetTeamID {
-            team = try await repository.team(id: teamID)
+            let loadedTeam = try await repository.team(id: teamID)
+            guard isCurrentIdentityLoad(generation, accountID: accountID) else { throw CancellationError() }
+            team = loadedTeam
         }
         if let member = me, member.id == cacheAccountID {
+            guard isCurrentIdentityLoad(generation, accountID: accountID) else { throw CancellationError() }
             try? await cache.saveAccount(OfflineAccountSnapshot(
                 member: member,
                 friends: friends,
@@ -428,13 +446,27 @@ final class CalendarViewModel: ObservableObject {
         }
     }
 
-    private func restoreCachedIdentity() async -> Bool {
-        guard let accountID = cacheAccountID,
-              let snapshot = await cache.loadAccount(memberID: accountID)
-        else { return false }
+    private func isCurrentIdentityLoad(
+        _ generation: Int,
+        accountID: MemberID? = nil
+    ) -> Bool {
+        !Task.isCancelled
+            && generation == identityLoadGeneration
+            && (accountID == nil || accountID == cacheAccountID)
+    }
+
+    private func restoreCachedIdentity() async throws -> Bool {
+        identityLoadGeneration &+= 1
+        let generation = identityLoadGeneration
+        guard let accountID = cacheAccountID else { return false }
+        let snapshot = await cache.loadAccount(memberID: accountID)
+        guard isCurrentIdentityLoad(generation, accountID: accountID) else {
+            throw CancellationError()
+        }
+        guard let snapshot, snapshot.memberID == accountID else { return false }
 
         let profile = snapshot.profile
-        me = MemberDTO(
+        let loadedMember = MemberDTO(
             id: profile.memberID,
             name: profile.name,
             email: profile.email,
@@ -448,11 +480,21 @@ final class CalendarViewModel: ObservableObject {
             hasProfilePhoto: profile.hasProfilePhoto,
             profilePhotoVersion: profile.profilePhotoVersion
         )
-        friends = snapshot.friends
-        dDays = snapshot.dDays.sorted { $0.date.rawValue < $1.date.rawValue }
-        if selectedMemberID == nil { selectedMemberID = me?.id }
+        let loadedFriends = snapshot.friends
+        let loadedDDays = snapshot.dDays.sorted { $0.date.rawValue < $1.date.rawValue }
+        let loadedTodoBoard = await cache.loadTodoBoard(accountID: accountID)
+        guard isCurrentIdentityLoad(generation, accountID: accountID) else {
+            throw CancellationError()
+        }
+
+        // Publish the complete snapshot only after both cache reads have passed
+        // the same generation/account check; these MainActor writes are contiguous.
+        me = loadedMember
+        friends = loadedFriends
+        dDays = loadedDDays
+        if selectedMemberID == nil { selectedMemberID = loadedMember.id }
         pruneUnavailableFriendComparisons()
-        todoBoard = await cache.loadTodoBoard(accountID: accountID)
+        todoBoard = loadedTodoBoard
         isOfflineMode = true
         return true
     }
@@ -815,13 +857,15 @@ final class CalendarViewModel: ObservableObject {
             do {
                 try await loadOnlineIdentity()
                 guard isServerRecoveryAccountCurrent(accountID: accountID) else { return .stop }
+            } catch is CancellationError {
+                return .stop
             } catch {
                 guard isServerRecoveryAccountCurrent(accountID: accountID) else { return .stop }
                 guard isRecoverableOfflineError(error) else {
-                    _ = await restoreCachedIdentity()
+                    _ = try? await restoreCachedIdentity()
                     return .stop
                 }
-                guard await restoreCachedIdentity() else { return .stop }
+                guard (try? await restoreCachedIdentity()) == true else { return .stop }
                 serverRecoveryNeedsIdentity = true
                 return .retry
             }

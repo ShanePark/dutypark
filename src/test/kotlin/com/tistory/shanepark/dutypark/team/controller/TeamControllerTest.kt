@@ -59,6 +59,40 @@ class TeamControllerTest : RestDocsTest() {
     }
 
     @Test
+    fun `member cannot create a team with a banned name`() {
+        val member = memberRepository.save(Member(name = "new member", email = "blocked-name@duty.park"))
+        val json = objectMapper.writeValueAsString(TeamCreateDto("  시.발  ", ""))
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.post("/api/teams")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json)
+                .withAuth(member)
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("contentFilter.blocked"))
+
+        assertThat(teamRepository.findByName("시.발")).isNull()
+    }
+
+    @Test
+    fun `member cannot create a team with a banned description`() {
+        val member = memberRepository.save(Member(name = "new member", email = "blocked-description@duty.park"))
+        val json = objectMapper.writeValueAsString(TeamCreateDto("clean team", "시.발"))
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.post("/api/teams")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json)
+                .withAuth(member)
+        )
+            .andExpect(status().isBadRequest)
+            .andExpect(jsonPath("$.code").value("contentFilter.blocked"))
+
+        assertThat(teamRepository.findByName("clean team")).isNull()
+    }
+
+    @Test
     fun `member team name check returns duplicated`() {
         val member = memberRepository.save(Member(name = "new member", email = "new-member@duty.park"))
 

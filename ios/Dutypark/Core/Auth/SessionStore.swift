@@ -199,9 +199,9 @@ final class SessionStore: ObservableObject {
     /// mutation changes account-level fields (for example, creating a team).
     /// The refresh is deliberately scoped to the current account so a late
     /// status response cannot overwrite a replacement login. If the status
-    /// request is temporarily unavailable, an optional just-created team is
-    /// patched into the current member so dependent screens do not remain in
-    /// the stale no-team state.
+    /// request is temporarily unavailable, or its JWT-backed team claim is
+    /// stale, an optional just-created team is patched into the current member
+    /// so dependent screens do not retain the old team state.
     @discardableResult
     func refreshCurrentMember(fallbackTeam: TeamDTO? = nil) async -> Bool {
         guard case .authenticated(let currentMember) = state,
@@ -262,7 +262,7 @@ final class SessionStore: ObservableObject {
         _ member: LoginMember,
         applyingTeam team: TeamDTO?
     ) -> LoginMember {
-        guard let team, member.teamId == nil else { return member }
+        guard let team else { return member }
         return LoginMember(
             id: member.id,
             email: member.email,

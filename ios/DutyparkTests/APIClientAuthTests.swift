@@ -201,6 +201,50 @@ final class APIClientAuthTests: XCTestCase {
         XCTAssertEqual(persistedMember, expectedMember)
     }
 
+    @MainActor
+    func testRefreshCurrentMemberAuthoritativelyPatchesCreatedTeamOverStaleStatusClaim() async throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("dutypark-created-team-stale-claim-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        URLProtocolStub.handler = { request in
+            Self.response(
+                request,
+                status: 200,
+                body: #"{"id":1,"email":"fresh@duty.park","name":"Fresh Name","teamId":2,"team":"Old Team","isAdmin":true,"isImpersonating":false,"originalMemberId":null}"#
+            )
+        }
+        let offlineStore = OfflineSessionStore(directoryURL: directory)
+        let store = SessionStore(
+            authService: AuthService(client: makeClient()),
+            initialState: .authenticated(Self.testMember),
+            offlineSessionStore: offlineStore
+        )
+        let createdTeam = try XCTUnwrap(
+            JSONDecoder().decode(
+                TeamDTO.self,
+                from: Data(#"{"id":7,"name":"Created Team","description":null,"dutyTypes":[],"members":[],"createdDate":"2026-08-12T00:00:00","lastModifiedDate":"2026-08-12T00:00:00","adminId":1,"adminName":"Test","dutyBatchTemplate":null}"#.utf8)
+            )
+        )
+
+        let refreshed = await store.refreshCurrentMember(fallbackTeam: createdTeam)
+
+        XCTAssertTrue(refreshed)
+        let expectedMember = LoginMember(
+            id: 1,
+            email: "fresh@duty.park",
+            name: "Fresh Name",
+            teamId: createdTeam.id,
+            team: createdTeam.name,
+            isAdmin: true,
+            isImpersonating: false,
+            originalMemberId: nil
+        )
+        XCTAssertEqual(store.state, .authenticated(expectedMember))
+        let persistedMember = await offlineStore.load(at: nil)
+        XCTAssertEqual(persistedMember, expectedMember)
+    }
+
     func testConcurrentUnauthorizedRequestsRefreshOnlyOnce() async throws {
         let recorder = RefreshRecorder()
         URLProtocolStub.handler = { request in

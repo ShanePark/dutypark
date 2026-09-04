@@ -2149,7 +2149,7 @@ final class CalendarFeatureTests: XCTestCase {
     }
 
     func testManagerCanUseQuickDutyInputForDelegatedCalendar() async {
-        let repository = CalendarRepositoryMock(canManage: true)
+        let repository = CalendarRepositoryMock(canManage: true, teamID: 7)
         let model = CalendarViewModel(repository: repository, now: date(2026, 8, 12), memberID: 9)
         await model.load()
 
@@ -2224,8 +2224,44 @@ final class CalendarFeatureTests: XCTestCase {
         )
     }
 
+    func testTeamRefreshCannotBeOverwrittenByOlderIdentityResponse() async {
+        let gate = CalendarIdentityRaceGate()
+        let repository = CalendarRepositoryMock(
+            memberValues: [
+                Self.member(name: "Before team", teamID: nil),
+                Self.member(name: "After team", teamID: 7)
+            ],
+            memberGate: gate
+        )
+        let model = CalendarViewModel(
+            repository: repository,
+            now: date(2026, 8, 12),
+            accountID: 1
+        )
+
+        let initialLoad = Task { await model.load() }
+        await gate.waitForRequest(1)
+
+        let refreshedLoad = Task { await model.refreshIdentityAfterTeamChange() }
+        await gate.waitForRequest(2)
+
+        await gate.release(2)
+        await refreshedLoad.value
+
+        XCTAssertEqual(model.me?.name, "After team")
+        XCTAssertEqual(model.me?.teamId, 7)
+        XCTAssertEqual(model.team?.id, 7)
+
+        await gate.release(1)
+        await initialLoad.value
+
+        XCTAssertEqual(model.me?.name, "After team")
+        XCTAssertEqual(model.me?.teamId, 7)
+        XCTAssertEqual(model.team?.id, 7)
+    }
+
     func testQuickDutyInputAdvancesToNextCurrentMonthDay() async {
-        let repository = CalendarRepositoryMock()
+        let repository = CalendarRepositoryMock(teamID: 7)
         let model = CalendarViewModel(repository: repository, now: date(2026, 8, 12))
         await model.load()
         model.focusQuickDuty(on: model.days[11])
@@ -2736,6 +2772,22 @@ final class CalendarFeatureTests: XCTestCase {
     private func date(_ year: Int, _ month: Int, _ day: Int, hour: Int = 0) -> Date {
         CalendarDateSupport.calendar.date(from: DateComponents(year: year, month: month, day: day, hour: hour))!
     }
+
+    private static func member(name: String, teamID: TeamID?) -> MemberDTO {
+        MemberDTO(
+            id: 1,
+            name: name,
+            email: "test@duty.park",
+            teamId: teamID,
+            team: teamID == nil ? nil : "Team",
+            calendarVisibility: .friends,
+            kakaoId: nil,
+            naverId: nil,
+            hasPassword: true,
+            hasProfilePhoto: false,
+            profilePhotoVersion: 0
+        )
+    }
 }
 
 private func tagItem(
@@ -2771,49 +2823,85 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
     let canManageValue: Bool
     let cancelMemberLoad: Bool
     let friendValues: [FriendDTO]
+    let teamID: TeamID?
     let scheduleOwnerID: MemberID
     let failDestructiveMutations: Bool
     let returnsTaggedSchedule: Bool
     let otherDutyValues: [OtherDutyResponse]
     let monthGate: CalendarMonthRaceGate?
+    let memberValues: [MemberDTO]
+    let memberGate: CalendarIdentityRaceGate?
     let saveDDayError: APIError?
 
     init(
         canManage: Bool = false,
         cancelMemberLoad: Bool = false,
         friends: [FriendDTO] = [],
+        teamID: TeamID? = nil,
         scheduleOwnerID: MemberID = 1,
         failDestructiveMutations: Bool = false,
         returnsTaggedSchedule: Bool = false,
         otherDuties: [OtherDutyResponse] = [],
         monthGate: CalendarMonthRaceGate? = nil,
+        memberValues: [MemberDTO] = [],
+        memberGate: CalendarIdentityRaceGate? = nil,
         saveDDayError: APIError? = nil
     ) {
         canManageValue = canManage
         self.cancelMemberLoad = cancelMemberLoad
         friendValues = friends
+        self.teamID = teamID
         self.scheduleOwnerID = scheduleOwnerID
         self.failDestructiveMutations = failDestructiveMutations
         self.returnsTaggedSchedule = returnsTaggedSchedule
         otherDutyValues = otherDuties
         self.monthGate = monthGate
+        self.memberValues = memberValues
+        self.memberGate = memberGate
         self.saveDDayError = saveDDayError
     }
 
     func member() async throws -> MemberDTO {
         if cancelMemberLoad { throw CancellationError() }
+        if !memberValues.isEmpty, let memberGate {
+            let requestNumber = await memberGate.registerMemberRequest()
+            await memberGate.waitForRelease(requestNumber)
+            return memberValues[min(requestNumber - 1, memberValues.count - 1)]
+        }
         return MemberDTO(
-            id: 1, name: "Tester", email: "test@duty.park", teamId: nil, team: nil,
+            id: 1, name: "Tester", email: "test@duty.park", teamId: teamID,
+            team: teamID == nil ? nil : "Team",
             calendarVisibility: .friends, kakaoId: nil, naverId: nil, hasPassword: true,
             hasProfilePhoto: false, profilePhotoVersion: 0
         )
     }
     func member(id: MemberID) async throws -> MemberPreviewDTO {
         requestedPreviewMemberID = id
-        return MemberPreviewDTO(id: id, name: "Public member", teamId: nil, team: "Public team", hasProfilePhoto: true, profilePhotoVersion: 12)
+        return MemberPreviewDTO(
+            id: id,
+            name: "Public member",
+            teamId: teamID,
+            team: teamID == nil ? "Public team" : "Team",
+            hasProfilePhoto: true,
+            profilePhotoVersion: 12
+        )
     }
     func friends() async throws -> [FriendDTO] { friendValues }
-    func team(id: TeamID) async throws -> TeamDTO { throw APIError.invalidResponse }
+    func team(id: TeamID) async throws -> TeamDTO {
+        guard !memberValues.isEmpty || teamID == id else { throw APIError.invalidResponse }
+        return TeamDTO(
+            id: id,
+            name: "Team",
+            description: nil,
+            dutyTypes: [],
+            members: [],
+            createdDate: LocalDateTimeValue(rawValue: "2026-08-12T00:00:00"),
+            lastModifiedDate: LocalDateTimeValue(rawValue: "2026-08-12T00:00:00"),
+            adminId: 1,
+            adminName: "After team",
+            dutyBatchTemplate: nil
+        )
+    }
     func canManage(memberID: MemberID) async throws -> Bool { canManageValue }
     func calendar(year: Int, month: Int) async throws -> [TeamDayDTO] {
         await monthGate?.wait(year: year, month: month)
@@ -2822,7 +2910,7 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
     func duties(memberID: MemberID, year: Int, month: Int) async throws -> [DutyDTO] { [] }
     func otherDuties(memberIDs: [MemberID], year: Int, month: Int) async throws -> [OtherDutyResponse] {
         requestedOtherDutyMemberIDs = memberIDs
-        otherDutyValues
+        return otherDutyValues
     }
     func schedules(memberID: MemberID, year: Int, month: Int) async throws -> [[ScheduleDTO]] {
         requestedScheduleMemberID = memberID
@@ -2909,6 +2997,38 @@ private actor CalendarMonthRaceGate {
 
     func release(_ key: OfflineMonthKey) {
         releaseWaiters.removeValue(forKey: key)?.forEach { $0.resume() }
+    }
+}
+
+private actor CalendarIdentityRaceGate {
+    private var memberRequestCount = 0
+    private var requestWaiters: [Int: [CheckedContinuation<Void, Never>]] = [:]
+    private var releaseWaiters: [Int: [CheckedContinuation<Void, Never>]] = [:]
+
+    func registerMemberRequest() -> Int {
+        memberRequestCount += 1
+        let requestNumber = memberRequestCount
+        requestWaiters.removeValue(forKey: requestNumber)?.forEach { $0.resume() }
+        return requestNumber
+    }
+
+    func waitForRequest(_ requestNumber: Int) async {
+        guard memberRequestCount >= requestNumber else {
+            await withCheckedContinuation { continuation in
+                requestWaiters[requestNumber, default: []].append(continuation)
+            }
+            return
+        }
+    }
+
+    func waitForRelease(_ requestNumber: Int) async {
+        await withCheckedContinuation { continuation in
+            releaseWaiters[requestNumber, default: []].append(continuation)
+        }
+    }
+
+    func release(_ requestNumber: Int) {
+        releaseWaiters.removeValue(forKey: requestNumber)?.forEach { $0.resume() }
     }
 }
 

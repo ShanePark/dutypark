@@ -24,6 +24,7 @@ import org.mockito.InjectMocks
 import org.mockito.Mock
 import org.mockito.Mockito.`when`
 import org.mockito.kotlin.doThrow
+import org.mockito.kotlin.doNothing
 import org.mockito.kotlin.any
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.never
@@ -155,6 +156,52 @@ class TeamServiceTest {
         assertThat(result.dutyTypes[1].color).isEqualTo("#98fb98")
         assertThat(result.dutyTypes[1].hidden).isFalse
         verify(dutyTypeRepository).saveAndFlush(any<DutyType>())
+        verify(publicContentService).validateContent("new team")
+        verify(publicContentService).validateContent("description")
+    }
+
+    @Test
+    fun `member cannot create a team with a banned name`() {
+        val member = Member(name = "member")
+        ReflectionTestUtils.setField(member, "id", 10L)
+        whenever(memberRepository.findMemberWithTeamForUpdate(member.id!!)).thenReturn(Optional.of(member))
+        doThrow(BadRequestException("contentFilter.blocked"))
+            .whenever(publicContentService)
+            .validateContent("blocked team")
+
+        val exception = assertThrows<BadRequestException> {
+            service.create(
+                LoginMember(id = member.id!!, name = member.name),
+                TeamCreateDto("  blocked team  ", "description"),
+            )
+        }
+
+        assertThat(exception.message).isEqualTo("contentFilter.blocked")
+        verify(publicContentService).validateContent("blocked team")
+        verify(teamRepository, never()).saveAndFlush(any())
+    }
+
+    @Test
+    fun `member cannot create a team with a banned description`() {
+        val member = Member(name = "member")
+        ReflectionTestUtils.setField(member, "id", 10L)
+        whenever(memberRepository.findMemberWithTeamForUpdate(member.id!!)).thenReturn(Optional.of(member))
+        doNothing().whenever(publicContentService).validateContent("clean team")
+        doThrow(BadRequestException("contentFilter.blocked"))
+            .whenever(publicContentService)
+            .validateContent("blocked description")
+
+        val exception = assertThrows<BadRequestException> {
+            service.create(
+                LoginMember(id = member.id!!, name = member.name),
+                TeamCreateDto("clean team", "blocked description"),
+            )
+        }
+
+        assertThat(exception.message).isEqualTo("contentFilter.blocked")
+        verify(publicContentService).validateContent("clean team")
+        verify(publicContentService).validateContent("blocked description")
+        verify(teamRepository, never()).saveAndFlush(any())
     }
 
     @Test

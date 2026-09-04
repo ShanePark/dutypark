@@ -1177,6 +1177,54 @@ struct TeamFeatureTests {
     }
 
     @Test
+    func teamCreationModalBlocksEveryDismissalPathWhileBusy() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark/Features/Team/TeamView.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+        let creationCover = try #require(source.range(of: ".fullScreenCover(isPresented: $teamCreationPresented)"))
+        let creationSource = source[creationCover.lowerBound...]
+
+        #expect(creationSource.contains(
+            "canDismiss: !teamCreationViewModel.isCreating && !teamCreationFinishing"
+        ))
+        #expect(creationSource.contains(
+            ".interactiveDismissDisabled(teamCreationViewModel.isCreating || teamCreationFinishing)"
+        ))
+        #expect(creationSource.contains("isFinishing: $teamCreationFinishing"))
+    }
+
+    @Test
+    func teamCreationFieldsDisableEditingWhileCreatingOrFinishing() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark/Features/Team/TeamView.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+        let creationView = try #require(source.range(of: "private struct TeamCreationView"))
+        let creationSource = source[creationView.lowerBound...]
+        let disabledModifier = ".disabled(viewModel.isCreating || isFinishing)"
+        let nameField = try #require(creationSource.range(of: "TextField("))
+        let nameFieldEnd = try #require(
+            creationSource.range(
+                of: ".onChange(of: name)",
+                range: nameField.upperBound..<creationSource.endIndex
+            )
+        )
+        let descriptionField = try #require(creationSource.range(of: "TextEditor(text: $description)"))
+        let descriptionFieldEnd = try #require(
+            creationSource.range(
+                of: ".onChange(of: description)",
+                range: descriptionField.upperBound..<creationSource.endIndex
+            )
+        )
+
+        #expect(creationSource[nameField.lowerBound..<nameFieldEnd.lowerBound].contains(disabledModifier))
+        #expect(creationSource[descriptionField.lowerBound..<descriptionFieldEnd.lowerBound].contains(disabledModifier))
+    }
+
+    @Test
     func limitsAndNormalizesDutyNamesForCompactEditor() {
         #expect(TeamManageModalLogic.limitedDutyName("12345678901") == "1234567890")
         #expect(TeamManageModalLogic.normalizedDutyName("  Day  ") == "Day")

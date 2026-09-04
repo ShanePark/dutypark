@@ -80,6 +80,8 @@ class TeamService(
         if (normalizedName.length < 2 || normalizedName.length > 20) {
             throw BadRequestException("team.name.length")
         }
+        publicContentService.validateContent(normalizedName)
+        teamCreateDto.description.takeIf(String::isNotBlank)?.let(publicContentService::validateContent)
         if (isDuplicated(normalizedName)) {
             throw BadRequestException("team.name.duplicated")
         }

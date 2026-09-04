@@ -56,6 +56,7 @@ const checkedTeamName = ref('')
 const isCheckingName = ref(false)
 const isCreatingTeam = ref(false)
 const newTeamNameFeedbackId = 'new-team-name-feedback'
+const createTeamModalTitleId = 'create-team-modal-title'
 const trimmedNewTeamName = computed(() => newTeamName.value.trim())
 const trimmedNewTeamDescription = computed(() => newTeamDescription.value.trim())
 const isCreateTeamDisabled = computed(() =>
@@ -394,22 +395,10 @@ async function handleCreateTeam() {
     // store before navigating so the rest of the app sees the new membership.
     try {
       await authStore.checkAuth()
-      if (authStore.user?.teamId !== createdTeamId && memberBeforeRefresh) {
-        authStore.setUser({
-          ...memberBeforeRefresh,
-          teamId: createdTeamId,
-          team: response.data.name,
-        })
-      }
     } catch (error) {
       console.error('Failed to refresh member team after creation:', error)
-      if (memberBeforeRefresh) {
-        authStore.setUser({
-          ...memberBeforeRefresh,
-          teamId: createdTeamId,
-          team: response.data.name,
-        })
-      }
+      // checkAuth clears the store for 401/403 responses. Keep that
+      // unauthenticated state instead of restoring the pre-refresh member.
     }
 
     toastSuccess(t('team.view.createTeam.messages.createSuccess'))
@@ -744,14 +733,17 @@ onMounted(() => {
       size="md"
       height="fit"
       rounded
+      :aria-labelledby="createTeamModalTitleId"
       @close="closeCreateTeamModal"
     >
       <div class="modal-header">
-        <h2>{{ t('team.view.createTeam.title') }}</h2>
+        <h2 :id="createTeamModalTitleId">{{ t('team.view.createTeam.title') }}</h2>
         <button
           type="button"
           @click="closeCreateTeamModal"
           class="p-1.5 rounded-full hover-close-btn cursor-pointer text-dp-text-muted"
+          :aria-label="t('common.actions.close')"
+          :title="t('common.actions.close')"
         >
           <X class="w-5 h-5" />
         </button>
@@ -759,13 +751,14 @@ onMounted(() => {
 
       <div class="modal-body-form">
         <div>
-          <label class="form-label">
+          <label class="form-label" for="new-team-name">
             {{ t('team.view.createTeam.nameLabel') }}
             <CharacterCounter :current="newTeamName.length" :max="20" />
           </label>
           <div class="flex gap-2">
             <input
               v-model="newTeamName"
+              id="new-team-name"
               type="text"
               maxlength="20"
               minlength="2"
@@ -798,12 +791,13 @@ onMounted(() => {
         </div>
 
         <div>
-          <label class="form-label">
+          <label class="form-label" for="new-team-description">
             {{ t('team.view.createTeam.descriptionLabel') }}
             <CharacterCounter :current="newTeamDescription.length" :max="50" />
           </label>
           <input
             v-model="newTeamDescription"
+            id="new-team-description"
             type="text"
             maxlength="50"
             class="form-control-neutral"
