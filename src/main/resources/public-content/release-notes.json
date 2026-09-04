@@ -40,6 +40,16 @@
         }
       },
       "entries": {
+        "pr-415": {
+          "title": "팀 시작과 Todo 관리 경험 개선",
+          "summary": "팀이 없는 회원이 직접 팀을 만들고 바로 관리할 수 있게 하며, Todo 상태 변경과 모바일 조작 및 첨부파일 사용 경험을 웹과 iPhone에서 함께 개선했습니다.",
+          "changes": [
+            "팀이 없는 회원은 웹과 iPhone에서 새 팀을 만들고 관리 화면으로 바로 이동할 수 있으며, 관리자 권한과 공개 콘텐츠 검증 및 세션 갱신을 더 안전하게 처리합니다.",
+            "Todo 목록은 드래그 이동에 집중하고 상세 화면의 고정된 작업 버튼에서 상태 변경, 수정, 삭제 또는 태그 제거를 명확하게 실행할 수 있습니다.",
+            "모바일 웹의 Todo 컬럼 스와이프와 세로 스크롤을 안정화하고, 웹과 iPhone의 상태 변경·오프라인 캐시·접근성 피드백을 보강했습니다.",
+            "모달 첨부파일 업로드와 클립보드 붙여넣기, 친구·근무 선택, 관리자 메뉴와 변경 알림 표시를 전반적으로 다듬었습니다."
+          ]
+        },
         "pr-413": {
           "title": "D-Day 삭제 모달 동작과 iOS 출시 준비 개선",
           "summary": "D-Day를 삭제한 뒤 확인 모달이 닫히고 선택 상태가 정리되도록 개선했으며, App Store 심사 준비 문서와 릴리스 증빙을 최신 상태로 정리했습니다.",
@@ -2277,6 +2287,16 @@
         }
       },
       "entries": {
+        "pr-415": {
+          "title": "Better team onboarding and Todo workflows",
+          "summary": "Lets teamless members create and manage a team immediately while improving Todo status changes, mobile interactions, and attachment workflows across the web and iPhone app.",
+          "changes": [
+            "Teamless members can create a team on the web or iPhone and continue directly to management, with stronger authorization, public-content validation, and session refresh handling.",
+            "Todo lists stay focused on drag-and-drop while the fixed detail footer clearly exposes status change, edit, delete, or tag-removal actions.",
+            "Mobile web Todo column swiping and vertical scrolling are more reliable, with stronger status mutation, offline cache, and accessibility feedback behavior across web and iPhone.",
+            "Modal attachments and clipboard pasting, friend and duty selection, admin navigation, and moderation indicators are more consistent."
+          ]
+        },
         "pr-413": {
           "title": "Smoother D-Day deletion and iOS release preparation",
           "summary": "Closes the confirmation modal after a D-Day is deleted and organizes the latest iOS App Store review documentation and release evidence.",
@@ -4477,6 +4497,25 @@
     }
   },
   "items": [
+    {
+      "id": "pr-415",
+      "version": "2026.09.05",
+      "date": "2026-09-05",
+      "pr": 415,
+      "url": "https://github.com/ShanePark/dutypark/pull/415",
+      "category": "feature",
+      "areas": [
+        "admin",
+        "attachments",
+        "auth",
+        "calendar",
+        "duty",
+        "friends",
+        "team",
+        "todo",
+        "ui"
+      ]
+    },
     {
       "id": "pr-413",
       "version": "2026.08.31",
