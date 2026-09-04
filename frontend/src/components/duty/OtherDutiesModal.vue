@@ -53,21 +53,55 @@ function handleClear() {
 
 <style scoped>
 .friend-item {
-  transition: all 0.15s ease;
+  width: 100%;
+  border: 2px solid transparent;
+  background-color: var(--dp-bg-secondary);
+  color: var(--dp-text-primary);
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
-.friend-item:hover {
-  background-color: var(--dp-bg-tertiary);
-  transform: translateY(-1px);
-  box-shadow: var(--dp-shadow-sm);
+.friend-item-selected {
+  background-color: var(--dp-accent-bg);
+  border-color: var(--dp-accent-border);
 }
 
 .friend-item-disabled {
-  transition: all 0.15s ease;
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
-.friend-item-disabled:hover {
-  background-color: var(--dp-bg-tertiary);
+.friend-item:focus-visible {
+  outline: 2px solid var(--dp-accent);
+  outline-offset: 2px;
+}
+
+:deep(.friend-item-avatar.profile-avatar) {
+  transition: border-color 0.15s ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .friend-item:not(.friend-item-selected):not(.friend-item-disabled):hover {
+    background-color: var(--dp-bg-hover);
+    border-color: var(--dp-accent-border);
+    box-shadow: none;
+  }
+
+  .friend-item:not(.friend-item-selected):not(.friend-item-disabled):hover
+    :deep(.friend-item-avatar.profile-avatar) {
+    border-color: var(--dp-accent-border);
+  }
+
+  .friend-item-selected:hover {
+    background-color: var(--dp-accent-bg-hover);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .friend-item,
+  :deep(.friend-item-avatar.profile-avatar) {
+    transition: none;
+  }
 }
 </style>
 
@@ -98,19 +132,18 @@ function handleClear() {
       </div>
 
       <div v-else class="grid grid-cols-2 gap-2">
-        <div
+        <button
           v-for="friend in friends"
           :key="friend.id"
+          type="button"
+          :aria-pressed="isSelected(friend.id)"
+          :disabled="!isSelected(friend.id) && !canSelectMore"
           @click="handleToggle(friend.id)"
-          class="flex items-center gap-2 p-2 rounded-lg cursor-pointer transition"
+          class="friend-item flex items-center gap-2 rounded-lg p-2 text-left"
           :class="{
-            'bg-dp-accent/15 dark:bg-dp-accent/25 border-2 border-dp-accent-border': isSelected(friend.id),
-            'border-2 border-transparent friend-item':
-              !isSelected(friend.id) && canSelectMore,
-            'opacity-50 cursor-not-allowed border-2 border-transparent friend-item-disabled':
-              !isSelected(friend.id) && !canSelectMore,
+            'friend-item-selected': isSelected(friend.id),
+            'friend-item-disabled': !isSelected(friend.id) && !canSelectMore,
           }"
-          :style="!isSelected(friend.id) && canSelectMore ? { backgroundColor: 'var(--dp-bg-secondary)' } : {}"
         >
           <ProfileAvatar
             :member-id="friend.id"
@@ -118,19 +151,18 @@ function handleClear() {
             :has-profile-photo="friend.hasProfilePhoto"
             :profile-photo-version="friend.profilePhotoVersion"
             size="sm"
+            class="friend-item-avatar"
           />
 
-          <div class="flex-1 min-w-0">
-            <span class="font-medium text-sm truncate block text-dp-text-primary">{{ friend.name }}</span>
-          </div>
+          <span class="friend-item-name flex-1 min-w-0 truncate font-medium text-sm text-dp-text-primary">{{ friend.name }}</span>
 
-          <div
+          <span
             v-if="isSelected(friend.id)"
             class="w-5 h-5 bg-dp-accent rounded-full flex items-center justify-center flex-shrink-0"
           >
             <Check class="w-3 h-3 text-dp-text-on-dark" />
-          </div>
-        </div>
+          </span>
+        </button>
       </div>
     </div>
 

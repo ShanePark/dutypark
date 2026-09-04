@@ -25,6 +25,14 @@ The source code, tests, and task-specific documentation are the source of truth 
 - Local backend database connection settings are in `src/main/resources/application-dev.yml`.
 - Check for already-running servers with `lsof -nP -iTCP:5173 -iTCP:8080 -sTCP:LISTEN`. If a port is listening, that server is the user's: use it, and never restart or stop it.
 
+### Web Browser Verification
+
+- For manual web verification, use the running local web app at `http://localhost:5173` and sign in with `test@duty.park` / `12345678`.
+- The account above is for local development browser checks. Accounts and data from `docs/demo` and `seed-local-demo` are reserved for automated app tests and screenshot fixtures; do not use them for ordinary local web verification.
+- For web changes involving design, hover, interaction, or themes, run the relevant automated checks first, then verify the change in a real browser while signed in with the local development account. When relevant, check light and dark themes, desktop hover and focus states, and responsive/touch behavior.
+- Do not restart or stop development servers, create or seed accounts, or change passwords for browser verification. If sign-in or verification is unavailable, report the exact reason.
+- Completion reports for applicable web changes must state what browser verification was performed.
+
 ### Flyway Migrations
 
 - Once a versioned Flyway migration file is created, treat it as immutable: never modify its contents, rename it, renumber it, or delete it.
