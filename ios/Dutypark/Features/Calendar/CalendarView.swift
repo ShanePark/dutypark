@@ -2298,32 +2298,33 @@ private struct DayDetailView: View {
 
     private var modalHeader: some View {
         VStack(alignment: .leading, spacing: DPSpacing.small) {
-            HStack(spacing: DPSpacing.small) {
-                if createsSchedule {
-                    modeBadge("calendar.schedule.add", color: DPColor.success)
-                } else if editorSchedule != nil {
-                    modeBadge("calendar.schedule.edit", color: DPColor.accent)
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: DPSpacing.small) {
+                    modalModeBadge
+                        .fixedSize(horizontal: true, vertical: false)
+                    Text(formattedDate)
+                        .font(DPFont.bold(size: CalendarTypography.detailTitle, relativeTo: .headline))
+                        .foregroundStyle(DPColor.textPrimary)
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
+
+                    Spacer(minLength: 0)
+                    modalCloseButton
                 }
 
-                Text(formattedDate)
-                    .font(DPFont.bold(size: CalendarTypography.detailTitle, relativeTo: .headline))
-                    .foregroundStyle(DPColor.textPrimary)
-                    .lineLimit(1)
+                VStack(alignment: .leading, spacing: DPSpacing.small) {
+                    HStack(spacing: DPSpacing.small) {
+                        modalModeBadge
+                        Spacer(minLength: 0)
+                        modalCloseButton
+                    }
 
-                Spacer()
-
-                Button {
-                    requestDismissal()
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 17, weight: .semibold))
-                        .frame(width: 44, height: 44)
+                    Text(formattedDate)
+                        .font(DPFont.bold(size: CalendarTypography.detailTitle, relativeTo: .headline))
+                        .foregroundStyle(DPColor.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .buttonStyle(.plain)
-                .foregroundStyle(DPColor.textPrimary)
-                .opacity(dayModalCanRequestDismissal ? 1 : 0.35)
-                .disabled(!dayModalCanRequestDismissal)
-                .accessibilityLabel(CalendarLocalization.text("calendar.close"))
             }
 
             // Somebody else's duty is already told by the colour of the day in the grid
@@ -2343,6 +2344,30 @@ private struct DayDetailView: View {
         .padding(.trailing, DPSpacing.extraSmall)
         .padding(.vertical, DPSpacing.small)
         .background(DPColor.backgroundTertiary)
+    }
+
+    @ViewBuilder
+    private var modalModeBadge: some View {
+        if createsSchedule {
+            modeBadge("calendar.schedule.add", color: DPColor.success)
+        } else if editorSchedule != nil {
+            modeBadge("calendar.schedule.edit", color: DPColor.accent)
+        }
+    }
+
+    private var modalCloseButton: some View {
+        Button {
+            requestDismissal()
+        } label: {
+            Image(systemName: "xmark")
+                .font(.system(size: 17, weight: .semibold))
+                .frame(width: 44, height: 44)
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(DPColor.textPrimary)
+        .opacity(dayModalCanRequestDismissal ? 1 : 0.35)
+        .disabled(!dayModalCanRequestDismissal)
+        .accessibilityLabel(CalendarLocalization.text("calendar.close"))
     }
 
     private var scheduleList: some View {

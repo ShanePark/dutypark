@@ -66,7 +66,7 @@ struct FriendActionPopover: View {
                 action: onBlock
             )
         }
-        .frame(width: 176)
+        .frame(minWidth: 200, maxWidth: 240)
         .background(DPColor.backgroundCard)
     }
 
@@ -79,7 +79,9 @@ struct FriendActionPopover: View {
         Button(action: action) {
             HStack(spacing: 10) {
                 Image(systemName: image).frame(width: 16)
-                Text(title).lineLimit(1)
+                Text(title)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
                 Spacer()
             }
             .font(DPFont.light(size: 14, relativeTo: .subheadline))
