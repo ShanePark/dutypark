@@ -586,8 +586,6 @@ private actor CalendarUserFlowRepository: CalendarRepositoryProtocol {
             source: .override
         )
     }
-    func batchUpdateDuty(_ request: DutyBatchUpdateDTO) async throws {}
-
     func uploadDutyBatch(
         memberID: MemberID,
         year: Int,

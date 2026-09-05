@@ -1310,13 +1310,6 @@ export default {
       teamRequiredDescription: 'Create a team first, or ask a team manager to add you to one.',
       goToTeam: 'Go to team menu',
     },
-    batchUpdate: {
-      title: 'Batch duty update',
-      description1: 'Choose a duty to apply to all dates in {month}/{year}.',
-      description2: 'The selected duty will be applied to the entire month at once.',
-      warning: 'Existing duties will be replaced. A later default-pattern change will delete these batch entries from today onward.',
-      failed: 'Failed to update duties in bulk.',
-    },
     excelUpload: {
       title: 'Excel upload',
       ariaLabel: 'Upload duty roster file',
@@ -1346,7 +1339,6 @@ export default {
       loading: 'Loading duty types...',
       empty: 'No duty types available.',
       compare: 'Compare duties',
-      batchUpdate: 'Batch update',
       editMode: 'Edit mode',
       editModeActive: 'Edit mode is active',
       editModeDescription: 'Select a duty type to apply it to the selected day and move to the next day.',

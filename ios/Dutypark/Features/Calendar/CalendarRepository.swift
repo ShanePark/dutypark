@@ -19,7 +19,6 @@ nonisolated protocol CalendarRepositoryProtocol: Sendable {
     func searchSchedules(memberID: MemberID, query: String, page: Int) async throws -> PageResponse<ScheduleSearchResultDTO>
     func scheduleBasic(id: ScheduleID) async throws -> ScheduleBasicInfoDTO
     func updateDuty(_ request: DutyUpdateDTO) async throws
-    func batchUpdateDuty(_ request: DutyBatchUpdateDTO) async throws
     func uploadDutyBatch(memberID: MemberID, year: Int, month: Int, filename: String, data: Data) async throws -> DutyBatchUploadResult
     func saveDDay(_ request: DDaySaveDTO) async throws -> DDayDTO
     func deleteDDay(id: Int64) async throws
@@ -181,10 +180,6 @@ nonisolated final class CalendarRepository: CalendarRepositoryProtocol, Sendable
 
     func updateDuty(_ request: DutyUpdateDTO) async throws {
         let _: Bool = try await client.request("duty/change", method: .put, body: request)
-    }
-
-    func batchUpdateDuty(_ request: DutyBatchUpdateDTO) async throws {
-        let _: Bool = try await client.request("duty/batch", method: .put, body: request)
     }
 
     func uploadDutyBatch(memberID: MemberID, year: Int, month: Int, filename: String, data: Data) async throws -> DutyBatchUploadResult {

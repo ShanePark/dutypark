@@ -1,6 +1,5 @@
 package com.tistory.shanepark.dutypark.duty.service
 
-import com.tistory.shanepark.dutypark.duty.domain.dto.DutyBatchUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.entity.Duty
 import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
@@ -27,7 +26,6 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.springframework.test.util.ReflectionTestUtils
 import java.time.LocalDate
-import java.time.YearMonth
 import java.util.*
 
 @ExtendWith(MockitoExtension::class)
@@ -261,132 +259,6 @@ internal class DutyServiceTest {
 
         assertThat(exception.message).isEqualTo("duty.type.invalid")
         verify(dutyRepository, never()).save(any<Duty>())
-    }
-
-    @Test
-    fun `duty batch update set all duties`() {
-        val memberId = 1L
-        val dutyTypeId = 10L
-        val member = createMember(memberId)
-        val team = createTeam(1L)
-        member.team = team
-        val dutyType = createDutyType(dutyTypeId, "오전", team)
-        val year = 2025
-        val month = 1
-        val yearMonth = YearMonth.of(year, month)
-        val daysInMonth = yearMonth.lengthOfMonth()
-
-        val dto = DutyBatchUpdateDto(
-            year = year,
-            month = month,
-            dutyTypeId = dutyTypeId,
-            memberId = memberId
-        )
-
-        whenever(memberRepository.findMemberWithTeamForUpdate(memberId)).thenReturn(Optional.of(member))
-        whenever(dutyTypeRepository.findById(dutyTypeId)).thenReturn(Optional.of(dutyType))
-        whenever(dutyRepository.saveAll(any<List<Duty>>())).thenAnswer { it.arguments[0] }
-
-        dutyService.update(dto)
-
-        verify(dutyRepository).deleteDutiesByMemberAndDutyDateBetween(
-            member,
-            yearMonth.atDay(1),
-            yearMonth.atEndOfMonth(),
-        )
-        verify(dutyRepository).saveAll(org.mockito.kotlin.argThat<List<Duty>> { list ->
-            list.size == daysInMonth && list.all { it.dutyType == dutyType }
-        })
-        inOrder(memberRepository, dutyRepository) {
-            verify(memberRepository).findMemberWithTeamForUpdate(memberId)
-            verify(dutyRepository).deleteDutiesByMemberAndDutyDateBetween(
-                member,
-                yearMonth.atDay(1),
-                yearMonth.atEndOfMonth(),
-            )
-        }
-    }
-
-    @Test
-    fun `duty batch update delete all duties if dutyTypeId is null`() {
-        val memberId = 1L
-        val member = createMember(memberId)
-        val team = createTeam(1L)
-        member.team = team
-        val dutyType = createDutyType(10L, "오전", team)
-        val year = 2025
-        val month = 1
-        val yearMonth = YearMonth.of(year, month)
-
-        val existingDuty = Duty(
-            dutyDate = LocalDate.of(year, month, 1),
-            dutyType = dutyType,
-            member = member
-        )
-
-        val dto = DutyBatchUpdateDto(
-            year = year,
-            month = month,
-            dutyTypeId = null,
-            memberId = memberId
-        )
-
-        whenever(memberRepository.findMemberWithTeamForUpdate(memberId)).thenReturn(Optional.of(member))
-        whenever(dutyRepository.saveAll(any<List<Duty>>())).thenAnswer { it.arguments[0] }
-
-        dutyService.update(dto)
-
-        verify(dutyRepository).deleteDutiesByMemberAndDutyDateBetween(
-            member,
-            yearMonth.atDay(1),
-            yearMonth.atEndOfMonth(),
-        )
-        verify(dutyRepository).saveAll(org.mockito.kotlin.argThat<List<Duty>> { list ->
-            list.all { it.dutyType == null }
-        })
-    }
-
-    @Test
-    fun `duty batch update dutyTypeId if already exists`() {
-        val memberId = 1L
-        val oldDutyTypeId = 10L
-        val newDutyTypeId = 11L
-        val member = createMember(memberId)
-        val team = createTeam(1L)
-        member.team = team
-        val oldDutyType = createDutyType(oldDutyTypeId, "오전", team)
-        val newDutyType = createDutyType(newDutyTypeId, "오후", team)
-        val year = 2025
-        val month = 1
-        val yearMonth = YearMonth.of(year, month)
-
-        val existingDuty = Duty(
-            dutyDate = LocalDate.of(year, month, 1),
-            dutyType = oldDutyType,
-            member = member
-        )
-
-        val dto = DutyBatchUpdateDto(
-            year = year,
-            month = month,
-            dutyTypeId = newDutyTypeId,
-            memberId = memberId
-        )
-
-        whenever(memberRepository.findMemberWithTeamForUpdate(memberId)).thenReturn(Optional.of(member))
-        whenever(dutyTypeRepository.findById(newDutyTypeId)).thenReturn(Optional.of(newDutyType))
-        whenever(dutyRepository.saveAll(any<List<Duty>>())).thenAnswer { it.arguments[0] }
-
-        dutyService.update(dto)
-
-        verify(dutyRepository).deleteDutiesByMemberAndDutyDateBetween(
-            member,
-            yearMonth.atDay(1),
-            yearMonth.atEndOfMonth(),
-        )
-        verify(dutyRepository).saveAll(org.mockito.kotlin.argThat<List<Duty>> { list ->
-            list.size == yearMonth.lengthOfMonth() && list.all { it.dutyType == newDutyType }
-        })
     }
 
     @Test

@@ -1215,13 +1215,6 @@ export default {
       teamRequiredDescription: '듀티를 입력하려면 먼저 팀을 만들거나 팀 관리자에게 회원 추가를 요청해주세요.',
       goToTeam: '팀 메뉴로 이동',
     },
-    batchUpdate: {
-      title: '근무 일괄 변경',
-      description1: '{year}년 {month}월 전체에 적용할 근무를 선택하세요.',
-      description2: '선택한 근무가 해당 월 전체에 일괄 적용됩니다.',
-      warning: '기존 근무표가 덮어써집니다. 이후 기본 패턴을 변경하면 오늘 이후의 일괄 입력 근무도 삭제됩니다.',
-      failed: '근무 일괄 변경에 실패했습니다.',
-    },
     excelUpload: {
       title: '엑셀 업로드',
       ariaLabel: '근무표 파일 업로드',
@@ -1251,7 +1244,6 @@ export default {
       loading: '근무 유형을 불러오는 중...',
       empty: '등록된 근무 유형이 없습니다.',
       compare: '함께 보기',
-      batchUpdate: '일괄 변경',
       editMode: '편집 모드',
       editModeActive: '편집 모드 사용 중',
       editModeDescription: '근무 유형을 선택하면 선택한 날짜에 바로 반영되고 다음 날짜로 이동합니다.',

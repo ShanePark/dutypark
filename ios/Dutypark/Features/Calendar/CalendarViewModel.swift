@@ -1297,34 +1297,6 @@ final class CalendarViewModel: ObservableObject {
         }
     }
 
-    func batchUpdateDuty(dutyTypeID: DutyTypeID?) async {
-        guard isMyCalendar else { return }
-        guard team != nil else {
-            presentDutyUnavailable()
-            return
-        }
-        guard let memberID = targetMemberID else { return }
-        guard !isOfflineMode else {
-            errorMessage = CalendarLocalization.text("calendar.offline.onlineOnly")
-            emit(.warning)
-            return
-        }
-        do {
-            try await repository.batchUpdateDuty(DutyBatchUpdateDTO(
-                year: year, month: month, dutyTypeId: dutyTypeID, memberId: memberID
-            ))
-            emit(.success)
-            do {
-                try await refreshDuties()
-            } catch {
-                errorMessage = CalendarLocalization.text("calendar.error.save")
-            }
-        } catch {
-            errorMessage = CalendarLocalization.text("calendar.error.save")
-            emit(.error)
-        }
-    }
-
     func uploadDutyBatch(url: URL) async {
         guard isMyCalendar else { return }
         guard let team, let template = team.dutyBatchTemplate, let memberID = targetMemberID else {

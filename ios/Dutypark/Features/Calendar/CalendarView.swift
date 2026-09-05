@@ -126,7 +126,6 @@ struct CalendarView: View {
     @StateObject private var todoDetailModel = TodoViewModel()
     @State private var showsSearch = false
     @State private var dDayModalSelection: DDayModalSelection?
-    @State private var showsBatchUpdate = false
     @State private var showsMonthPicker = false
     @State private var showsDutyComparison = false
     @State private var importsDutyBatch = false
@@ -318,24 +317,6 @@ struct CalendarView: View {
                 DutyComparisonView(model: model, maximumHeight: availableSize.height) {
                     dismiss()
                 }
-            }
-        }
-        .fullScreenCover(isPresented: $showsBatchUpdate) {
-            DPModalOverlay(
-                maximumContentWidth: CalendarBatchDutySelectionModal.maximumWidth,
-                onDismiss: { showsBatchUpdate = false }
-            ) { availableSize, dismiss in
-                CalendarBatchDutySelectionModal(
-                    dutyTypes: batchDutyTypes,
-                    year: model.year,
-                    month: model.month,
-                    maximumHeight: availableSize.height,
-                    cancel: dismiss,
-                    select: { dutyTypeID in
-                        dismiss()
-                        Task { await model.batchUpdateDuty(dutyTypeID: dutyTypeID) }
-                    }
-                )
             }
         }
         .fullScreenCover(item: $todoSelection) { selection in
@@ -879,7 +860,7 @@ struct CalendarView: View {
             hasDutySummary: model.days.contains { $0.duty?.month == model.month },
             hasComparisonAction: (model.isMyCalendar && !model.friends.isEmpty)
                 || (!model.isMyCalendar && model.me?.id != nil),
-            hasQuickEditAction: model.canEditDuty && !batchDutyTypes.isEmpty,
+            hasQuickEditAction: model.canEditDuty && !quickDutyTypes.isEmpty,
             hasImportAction: model.isMyCalendar && model.team?.dutyBatchTemplate != nil,
             isQuickDutyEditing: model.isQuickDutyEditing
         )
@@ -903,7 +884,7 @@ struct CalendarView: View {
                 }
                 .accessibilityLabel(CalendarLocalization.text("calendar.compare.mine"))
             }
-            if model.canEditDuty && !batchDutyTypes.isEmpty {
+            if model.canEditDuty && !quickDutyTypes.isEmpty {
                 Button { model.setQuickDutyEditing(true) } label: {
                     Image(systemName: "pencil.line")
                         .foregroundStyle(DPColor.textSecondary)
@@ -1016,8 +997,7 @@ struct CalendarView: View {
     }
 
     // Every control on this row is a card-coloured chip of the same height and corner
-    // radius, so the day stepper, the duty types and the batch action read as one set
-    // instead of a stepper, some tiles and a stray capsule.
+    // radius, so the day stepper and the duty types read as one set.
     private var quickDutyBar: some View {
         CalendarFlowLayout(spacing: DPSpacing.small) {
             HStack(spacing: 0) {
@@ -1040,7 +1020,7 @@ struct CalendarView: View {
             .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
             .overlay(RoundedRectangle(cornerRadius: DPRadius.standard).stroke(DPColor.borderSecondary))
 
-            ForEach(batchDutyTypes, id: \.id) { type in
+            ForEach(quickDutyTypes, id: \.id) { type in
                 quickDutyButton(
                     id: type.id,
                     name: type.name,
@@ -1051,26 +1031,6 @@ struct CalendarView: View {
                 )
             }
 
-            if model.isMyCalendar {
-                Button {
-                    DPHapticCenter.shared.emit(.routine)
-                    showsBatchUpdate = true
-                } label: {
-                    Label(CalendarLocalization.text("calendar.duty.batch"), systemImage: "calendar")
-                        .font(DPTypography.caption)
-                        .foregroundStyle(DPColor.textSecondary)
-                        .padding(.horizontal, DPSpacing.compact)
-                        .frame(minHeight: DPSize.minimumTouchTarget)
-                        .background(DPColor.backgroundCard)
-                        .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
-                        .overlay {
-                            RoundedRectangle(cornerRadius: DPRadius.standard)
-                                .stroke(DPColor.borderSecondary, lineWidth: DPChrome.borderWidth)
-                        }
-                }
-                .buttonStyle(.plain)
-                .accessibilityIdentifier("calendar.duty.batch.open")
-            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -1261,9 +1221,9 @@ struct CalendarView: View {
         return Color(red: Double((value >> 16) & 0xff) / 255, green: Double((value >> 8) & 0xff) / 255, blue: Double(value & 0xff) / 255)
     }
 
-    private var batchDutyTypes: [DutyTypeDTO] {
+    private var quickDutyTypes: [DutyTypeDTO] {
 #if DEBUG
-        if ProcessInfo.processInfo.arguments.contains("-ui-testing-calendar-batch") {
+        if ProcessInfo.processInfo.arguments.contains("-ui-testing-calendar-duty-types") {
             return [
                 DutyTypeDTO(
                     id: 101,
@@ -1285,102 +1245,6 @@ struct CalendarView: View {
         }
 #endif
         return model.visibleDutyTypes
-    }
-}
-
-private struct CalendarBatchDutySelectionModal: View {
-    static let maximumWidth: CGFloat = 420
-
-    let dutyTypes: [DutyTypeDTO]
-    let year: Int
-    let month: Int
-    let maximumHeight: CGFloat
-    let cancel: () -> Void
-    let select: (DutyTypeID?) -> Void
-
-    var body: some View {
-        DPModalPanel(maximumPanelHeight: maximumHeight) {
-            Text(CalendarLocalization.text("calendar.duty.batch.title"))
-                .font(DPTypography.heading)
-                .foregroundStyle(DPColor.textPrimary)
-                .frame(maxWidth: .infinity, minHeight: 56)
-                .padding(.horizontal, DPSpacing.large)
-                .background(DPColor.backgroundTertiary)
-                .accessibilityAddTraits(.isHeader)
-                .accessibilityIdentifier("calendar.duty.batch.title")
-        } content: {
-            VStack(spacing: DPSpacing.medium) {
-                VStack(spacing: DPSpacing.extraSmall) {
-                    Text(CalendarLocalization.format("calendar.duty.batch.description.month", year, month))
-                    Text(CalendarLocalization.text("calendar.duty.batch.description.selection"))
-                }
-                .font(DPTypography.supporting)
-                .foregroundStyle(DPColor.textSecondary)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-
-                Label {
-                    Text(CalendarLocalization.text("calendar.duty.batch.warning"))
-                        .fixedSize(horizontal: false, vertical: true)
-                } icon: {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                }
-                .font(DPTypography.caption)
-                .foregroundStyle(DPColor.warning)
-                .padding(DPSpacing.compact)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(DPColor.warningSoft)
-                .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
-                .overlay {
-                    RoundedRectangle(cornerRadius: DPRadius.standard)
-                        .stroke(DPColor.warningBorder)
-                }
-
-                CalendarFlowLayout(spacing: DPSpacing.small) {
-                    ForEach(dutyTypes, id: \.id) { type in
-                        Button { select(type.id) } label: {
-                            Text(type.name)
-                                .font(DPTypography.label)
-                                .foregroundStyle(
-                                    CalendarVisualLogic.usesLightForeground(on: type.color)
-                                        ? DPColor.textOnDark
-                                        : DPColor.textOnLight
-                                )
-                                .padding(.horizontal, DPSpacing.medium)
-                                .frame(minHeight: DPSize.minimumTouchTarget)
-                                .background(dutyColor(type.color))
-                                .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
-                                .overlay {
-                                    RoundedRectangle(cornerRadius: DPRadius.standard)
-                                        .stroke(DPColor.borderPrimary)
-                                }
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityIdentifier("calendar.duty.batch.option.\(type.id.map(String.init) ?? "none")")
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-            .padding(DPSpacing.large)
-        } footer: {
-            Button(action: cancel) {
-                Text(CalendarLocalization.text("calendar.cancel"))
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(DPOutlineButtonStyle())
-            .padding(.horizontal, DPSpacing.large)
-            .padding(.vertical, DPSpacing.medium)
-            .accessibilityIdentifier("calendar.duty.batch.cancel")
-        }
-    }
-
-    private func dutyColor(_ hex: String?) -> Color {
-        guard let components = CalendarVisualLogic.rgb(hex) else { return DPColor.textMuted }
-        return Color(
-            red: Double(components.red) / 255,
-            green: Double(components.green) / 255,
-            blue: Double(components.blue) / 255
-        )
     }
 }
 
@@ -1899,7 +1763,7 @@ private struct CalendarDayCell: View {
         .opacity(day.cell.isCurrentMonth ? 1 : 0.45)
         .overlay(alignment: .trailing) { Rectangle().fill(cellBorder).frame(width: 0.5) }
         .overlay(alignment: .bottom) { Rectangle().fill(cellBorder).frame(height: 0.5) }
-        .overlay(Rectangle().stroke(focusBorder, lineWidth: highlighted || isToday ? 2 : 0))
+        .overlay(Rectangle().stroke(focusBorder, lineWidth: highlighted || (!hidesDetails && isToday) ? 2 : 0))
         .contentShape(Rectangle())
         // The day gesture belongs to the whole cell. Without an explicit accessibility
         // boundary, SwiftUI propagates this label and button trait to every nested schedule,

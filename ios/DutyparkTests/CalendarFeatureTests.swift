@@ -710,8 +710,6 @@ final class CalendarFeatureTests: XCTestCase {
             "calendar.dday.pin.action",
             "calendar.dday.delete.confirm.title",
             "calendar.dday.delete.confirm.message",
-            "calendar.duty.batch.description.month",
-            "calendar.duty.batch.description.selection",
             "calendar.month.current",
             "calendar.discard.title",
             "calendar.discard.message",
@@ -2134,20 +2132,6 @@ final class CalendarFeatureTests: XCTestCase {
         XCTAssertEqual(requestedDDayMemberID, 9)
     }
 
-    func testManagerCannotBatchReplaceAnotherMembersMonth() async {
-        let repository = CalendarRepositoryMock(canManage: true)
-        let model = CalendarViewModel(repository: repository, now: date(2026, 8, 12), memberID: 9)
-        await model.load()
-
-        XCTAssertTrue(model.canManage)
-        XCTAssertTrue(model.canEdit)
-        XCTAssertFalse(model.isMyCalendar)
-        await model.batchUpdateDuty(dutyTypeID: 7)
-
-        let batchUpdateCount = await repository.batchUpdateCount
-        XCTAssertEqual(batchUpdateCount, 0)
-    }
-
     func testManagerCanUseQuickDutyInputForDelegatedCalendar() async {
         let repository = CalendarRepositoryMock(canManage: true, teamID: 7)
         let model = CalendarViewModel(repository: repository, now: date(2026, 8, 12), memberID: 9)
@@ -2367,18 +2351,6 @@ final class CalendarFeatureTests: XCTestCase {
         XCTAssertEqual(CalendarLocalization.locale(languageCode: "ko").identifier, "ko")
         XCTAssertEqual(CalendarLocalization.locale(languageCode: "en").identifier, "en")
         XCTAssertEqual(CalendarLocalization.locale(languageCode: "fr-FR").identifier, "en")
-    }
-
-    func testKoreanDutyBatchMonthDescriptionDoesNotGroupTheYear() {
-        XCTAssertEqual(
-            CalendarLocalization.format(
-                "calendar.duty.batch.description.month",
-                2026,
-                8,
-                locale: .korean
-            ),
-            "2026년 8월 전체에 적용할 근무를 선택하세요."
-        )
     }
 
     func testCompactCalendarModalBodyFitsContentAndCapsForSmallPhones() {
@@ -2810,7 +2782,6 @@ private func tagItem(
 
 private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
     var savedSchedule: ScheduleSaveDTO?
-    var batchUpdateCount = 0
     var requestedPreviewMemberID: MemberID?
     var requestedScheduleMemberID: MemberID?
     var requestedDDayMemberID: MemberID?
@@ -2945,7 +2916,6 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
         ScheduleBasicInfoDTO(id: id, memberId: scheduleOwnerID, memberName: "Tester", startDateTime: LocalDateTimeValue(rawValue: "2026-08-12T00:00:00"), content: "Night duty")
     }
     func updateDuty(_ request: DutyUpdateDTO) async throws { lastDutyUpdate = request }
-    func batchUpdateDuty(_ request: DutyBatchUpdateDTO) async throws { batchUpdateCount += 1 }
     func uploadDutyBatch(memberID: MemberID, year: Int, month: Int, filename: String, data: Data) async throws -> DutyBatchUploadResult {
         DutyBatchUploadResult(result: true, errorCode: nil, errorDetails: nil, startDate: nil, endDate: nil, workingDays: 20, offDays: 10)
     }

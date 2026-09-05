@@ -23,7 +23,6 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'toggle-other-duties'): void
   (e: 'clear-other-duties'): void
-  (e: 'show-batch-update-modal'): void
   (e: 'toggle-batch-edit', value: boolean): void
   (e: 'show-excel-upload-modal'): void
   (e: 'quick-duty-change', dutyTypeId: number | null): void
@@ -135,7 +134,7 @@ function toggleBatchEdit() {
         {{ t('duty.typesBar.empty') }}
       </span>
     </div>
-    <div class="inline-flex rounded-lg border overflow-hidden ml-auto border-dp-border-secondary">
+    <div v-if="!batchEditMode" class="inline-flex rounded-lg border overflow-hidden ml-auto border-dp-border-secondary">
       <div
         v-if="!batchEditMode && isOtherDutyActive"
         class="flex min-h-[44px] items-stretch border-r border-dp-border-secondary bg-dp-accent-soft text-dp-accent-hover"
@@ -171,13 +170,6 @@ function toggleBatchEdit() {
       >
         <Users class="w-4 h-4" />
         <span class="hidden sm:inline font-medium">{{ t('duty.typesBar.compare') }}</span>
-      </button>
-      <button
-        v-if="canEditMyCalendar && batchEditMode"
-        @click="emit('show-batch-update-modal')"
-        class="px-2 sm:px-3 py-1.5 min-h-[44px] text-xs sm:text-sm transition-colors duration-150 border-r cursor-pointer hover:bg-dp-bg-hover border-dp-border-secondary"
-      >
-        {{ t('duty.typesBar.batchUpdate') }}
       </button>
       <button
         v-if="canEdit && !batchEditMode"

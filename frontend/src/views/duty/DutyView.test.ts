@@ -45,7 +45,6 @@ const mocks = vi.hoisted(() => ({
     canManage: vi.fn(),
     getOtherDuties: vi.fn(),
     updateDuty: vi.fn(),
-    batchUpdateDuty: vi.fn(),
     uploadDutyBatch: vi.fn(),
   },
   scheduleApi: {

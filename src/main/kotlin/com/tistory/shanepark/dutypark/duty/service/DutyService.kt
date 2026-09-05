@@ -1,7 +1,6 @@
 package com.tistory.shanepark.dutypark.duty.service
 
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
-import com.tistory.shanepark.dutypark.duty.domain.dto.DutyBatchUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutySource
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyUpdateDto
@@ -55,32 +54,6 @@ class DutyService(
         duty.dutyType = dutyType
         duty.teamId = member.team?.id
         duty.manualOverride = true
-    }
-
-    @Transactional(timeout = 20)
-    fun update(dutyBatchUpdateDto: DutyBatchUpdateDto) {
-        val member = memberRepository.findMemberWithTeamForUpdate(dutyBatchUpdateDto.memberId).orElseThrow()
-        val dutyType: DutyType? = dutyBatchUpdateDto.dutyTypeId?.let {
-            dutyTypeRepository.findById(it).orElseThrow()
-        }
-        validateDutyType(member, dutyType)
-
-        val targetMonth = YearMonth.of(dutyBatchUpdateDto.year, dutyBatchUpdateDto.month)
-        dutyRepository.deleteDutiesByMemberAndDutyDateBetween(
-            member,
-            targetMonth.atDay(1),
-            targetMonth.atEndOfMonth(),
-        )
-
-        val duties = (1..targetMonth.lengthOfMonth())
-            .map { day ->
-                Duty(
-                    member = member,
-                    dutyDate = targetMonth.atDay(day),
-                    dutyType = dutyType
-                )
-            }
-        dutyRepository.saveAll(duties)
     }
 
     fun canEdit(loginMember: LoginMember, memberId: Long): Boolean {

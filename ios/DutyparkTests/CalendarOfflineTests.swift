@@ -1111,7 +1111,6 @@ private actor CalendarOfflineRepository: CalendarRepositoryProtocol {
     }
     func scheduleBasic(id: ScheduleID) async throws -> ScheduleBasicInfoDTO { fatalError("Not used") }
     func updateDuty(_ request: DutyUpdateDTO) async throws {}
-    func batchUpdateDuty(_ request: DutyBatchUpdateDTO) async throws {}
     func uploadDutyBatch(memberID: MemberID, year: Int, month: Int, filename: String, data: Data) async throws -> DutyBatchUploadResult { fatalError("Not used") }
     func saveDDay(_ request: DDaySaveDTO) async throws -> DDayDTO { fatalError("Not used") }
     func deleteDDay(id: Int64) async throws {}

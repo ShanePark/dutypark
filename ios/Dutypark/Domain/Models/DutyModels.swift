@@ -75,13 +75,6 @@ nonisolated struct DutyUpdateDTO: Codable, Equatable, Sendable {
     let memberId: MemberID
 }
 
-nonisolated struct DutyBatchUpdateDTO: Codable, Equatable, Sendable {
-    let year: Int
-    let month: Int
-    let dutyTypeId: DutyTypeID?
-    let memberId: MemberID
-}
-
 nonisolated enum Weekday: Codable, Hashable, Sendable {
     case monday, tuesday, wednesday, thursday, friday, saturday, sunday
     case unknown(String)
