@@ -1,0 +1,106 @@
+name: Duty abbreviation implementation checks
+
+on:
+  push:
+    branches: [feat/duty-type-abbreviations]
+    paths: [.github/duty-abbreviation-changes.json]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: duty-abbreviation-implementation
+  cancel-in-progress: false
+
+jobs:
+  apply:
+    if: github.ref == 'refs/heads/feat/duty-type-abbreviations'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      head: ${{ steps.apply.outputs.head }}
+      checks: ${{ steps.apply.outputs.checks }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply reviewed source edits on the feature branch
+        id: apply
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import difflib, json, os
+          from pathlib import Path
+          plan_path = Path('.github/duty-abbreviation-changes.json')
+          plan = json.loads(plan_path.read_text())
+          originals, changed = {}, {}
+          for edit in plan['edits']:
+              path = Path(edit['path'])
+              assert not path.is_absolute() and '..' not in path.parts
+              assert path.parts[0] in ('src', 'frontend', 'ios', 'docs')
+              if path not in changed:
+                  originals[path] = changed[path] = path.read_text()
+              source = changed[path]
+              count = source.count(edit['before'])
+              assert count == edit['count'], f'{path}: expected {edit["count"]} matches, got {count}: {edit["before"]!r}'
+              changed[path] = source.replace(edit['before'], edit['after'])
+          for path, source in changed.items():
+              print(''.join(difflib.unified_diff(originals[path].splitlines(True), source.splitlines(True), fromfile=str(path), tofile=str(path))))
+              path.write_text(source)
+          plan_path.unlink()
+          if plan.get('finalize'):
+              Path('.github/workflows/duty-abbreviation-implementation.yml').unlink()
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as output:
+              output.write('checks=' + plan.get('checks', 'none') + '\n')
+          PY
+          git diff --check
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git commit -m 'feat: apply reviewed duty abbreviation changes'
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+          echo "head=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  backend:
+    needs: apply
+    if: needs.apply.outputs.checks == 'backend' || needs.apply.outputs.checks == 'all'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.apply.outputs.head }}
+          submodules: recursive
+          fetch-depth: 0
+      - uses: actions/setup-java@v3
+        with:
+          java-version: '25'
+          distribution: temurin
+      - name: Test abbreviation contracts and duty services
+        run: ./gradlew test --tests '*DutyAbbreviation*' --tests '*DutyTypeServiceTest'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: duty-abbreviation-backend-tests
+          path: |
+            build/test-results/test
+            build/reports/tests/test
+
+  frontend:
+    needs: apply
+    if: needs.apply.outputs.checks == 'frontend' || needs.apply.outputs.checks == 'all'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.apply.outputs.head }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+        working-directory: frontend
+      - run: npm run type-check && npm test && npm run build
+        working-directory: frontend
