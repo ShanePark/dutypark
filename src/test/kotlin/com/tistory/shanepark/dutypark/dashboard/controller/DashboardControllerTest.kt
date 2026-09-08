@@ -68,6 +68,8 @@ class DashboardControllerTest : RestDocsTest() {
             .andExpect(jsonPath("$.member").exists())
             .andExpect(jsonPath("$.member.kakaoId").value("kakao-dashboard"))
             .andExpect(jsonPath("$.member.naverId").value("naver-dashboard"))
+            .andExpect(jsonPath("$.duty.dutyType").value(TestData.dutyTypes[0].name))
+            .andExpect(jsonPath("$.duty.dutyAbbreviation").value(TestData.dutyTypes[0].shortName))
             .andDo(
                 document(
                     "dashboard/my",
@@ -89,6 +91,7 @@ class DashboardControllerTest : RestDocsTest() {
                         fieldWithPath("duty.month").description("Duty month").optional(),
                         fieldWithPath("duty.day").description("Duty day").optional(),
                         fieldWithPath("duty.dutyType").description("Duty type name").optional(),
+                        fieldWithPath("duty.dutyAbbreviation").description("Resolved duty abbreviation: custom override or first character of the full name").optional(),
                         fieldWithPath("duty.dutyColor").description("Duty color").optional(),
                         fieldWithPath("duty.isOff").description("Is off day").optional(),
                         fieldWithPath("duty.dutyTypeId").description("Duty type ID").optional(),
@@ -125,6 +128,8 @@ class DashboardControllerTest : RestDocsTest() {
         makeThemFriend(TestData.member, TestData.member2)
 
         val today = LocalDate.now(clock.withZone(ZoneId.of("Asia/Seoul")))
+        TestData.dutyTypes[1].abbreviation = "N"
+        dutyTypeRepository.saveAndFlush(TestData.dutyTypes[1])
         dutyRepository.save(
             Duty(
                 dutyDate = today,
@@ -140,6 +145,8 @@ class DashboardControllerTest : RestDocsTest() {
         )
             .andExpect(status().isOk)
             .andExpect(jsonPath("$.friends").isArray)
+            .andExpect(jsonPath("$.friends[0].duty.dutyType").value(TestData.dutyTypes[1].name))
+            .andExpect(jsonPath("$.friends[0].duty.dutyAbbreviation").value("N"))
             .andDo(
                 document(
                     "dashboard/friends",
@@ -156,6 +163,7 @@ class DashboardControllerTest : RestDocsTest() {
                         fieldWithPath("friends[].duty.month").description("Duty month").optional(),
                         fieldWithPath("friends[].duty.day").description("Duty day").optional(),
                         fieldWithPath("friends[].duty.dutyType").description("Duty type").optional(),
+                        fieldWithPath("friends[].duty.dutyAbbreviation").description("Resolved duty abbreviation; comparison views continue to display the full dutyType name").optional(),
                         fieldWithPath("friends[].duty.dutyColor").description("Duty color").optional(),
                         fieldWithPath("friends[].duty.isOff").description("Is off").optional(),
                         fieldWithPath("friends[].duty.dutyTypeId").description("Duty type ID").optional(),
