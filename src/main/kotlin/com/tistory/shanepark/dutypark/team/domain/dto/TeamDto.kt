@@ -52,6 +52,7 @@ data class TeamDto(
                         position = it.position,
                         color = it.color,
                         hidden = it.hidden,
+                        abbreviation = it.abbreviation,
                     )
                 }.toMutableList()
             sortedTypes.add(
@@ -61,7 +62,8 @@ data class TeamDto(
                     teamId = teamId,
                     name = team.defaultDutyName,
                     position = -1,
-                    color = team.defaultDutyColor
+                    color = team.defaultDutyColor,
+                    abbreviation = team.defaultDutyAbbreviation,
                 )
             )
 

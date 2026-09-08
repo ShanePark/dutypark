@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.duty.domain.entity
 
+import com.tistory.shanepark.dutypark.duty.domain.DutyAbbreviation
 import com.tistory.shanepark.dutypark.team.domain.entity.Team
 import jakarta.persistence.*
 
@@ -19,6 +20,9 @@ class DutyType(
 
     @Column(nullable = false)
     var hidden: Boolean = false,
+
+    @Column(length = 10)
+    var abbreviation: String? = null,
 ) {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -27,6 +31,10 @@ class DutyType(
 
     @OneToMany(mappedBy = "dutyType", cascade = [CascadeType.ALL], orphanRemoval = true)
     var duties: MutableList<Duty> = mutableListOf()
+
+    @get:Transient
+    val shortName: String
+        get() = DutyAbbreviation.resolve(name, abbreviation)
 
     override fun toString(): String {
         return "DutyType(name='$name', id=$id)"
