@@ -104,3 +104,55 @@ jobs:
         working-directory: frontend
       - run: npm run type-check && npm test && npm run build
         working-directory: frontend
+
+  native:
+    needs: apply
+    if: needs.apply.outputs.checks == 'native' || needs.apply.outputs.checks == 'all'
+    runs-on: macos-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.apply.outputs.head }}
+      - name: Select an installed Xcode 26 or newer
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import glob, plistlib, subprocess
+          candidates = []
+          for path in glob.glob('/Applications/Xcode*.app'):
+              with open(path + '/Contents/Info.plist', 'rb') as f:
+                  version = plistlib.load(f)['CFBundleShortVersionString']
+              parts = tuple(int(x) for x in version.split('.') if x.isdigit())
+              if parts and parts[0] >= 26 and 'beta' not in path.lower():
+                  candidates.append((parts, path))
+          assert candidates, 'Xcode 26 or later is required'
+          subprocess.run(['sudo', 'xcode-select', '--switch', max(candidates)[1] + '/Contents/Developer'], check=True)
+          PY
+          xcodebuild -version
+      - name: Build the app and install on iPhone 13 mini
+        id: simulator
+        shell: bash
+        run: |
+          set -euo pipefail
+          runtime=$(xcrun simctl list runtimes available -j | python3 -c 'import json,sys; r=[r for r in json.load(sys.stdin)["runtimes"] if r["isAvailable"] and ".iOS-" in r["identifier"]]; print(max(r, key=lambda x: tuple(map(int,x["version"].split("."))))["identifier"])')
+          device=$(xcrun simctl create 'iPhone 13 mini' com.apple.CoreSimulator.SimDeviceType.iPhone-13-mini "$runtime")
+          echo "device=$device" >> "$GITHUB_OUTPUT"
+          xcodebuild -quiet -project ios/Dutypark.xcodeproj -scheme Dutypark -destination "platform=iOS Simulator,id=$device" -derivedDataPath ios/build CODE_SIGNING_ALLOWED=NO build > native-build.log 2>&1 || { tail -150 native-build.log; exit 1; }
+          xcrun simctl boot "$device"
+          xcrun simctl bootstatus "$device" -b
+          xcrun simctl install "$device" ios/build/Build/Products/Debug-iphonesimulator/Dutypark.app
+      - name: Run native unit tests without UI tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          xcodebuild -quiet -project ios/Dutypark.xcodeproj -scheme Dutypark -destination 'platform=iOS Simulator,id=${{ steps.simulator.outputs.device }}' -derivedDataPath ios/build -resultBundlePath ios/unit-tests.xcresult CODE_SIGNING_ALLOWED=NO -only-testing:DutyparkTests test > native-test.log 2>&1 || { tail -180 native-test.log; exit 1; }
+          tail -40 native-test.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: duty-abbreviation-native-checks
+          path: |
+            native-build.log
+            native-test.log
+            ios/unit-tests.xcresult
