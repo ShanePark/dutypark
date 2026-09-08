@@ -21,8 +21,8 @@ struct DutyAbbreviationTests {
     @Test
     func typePayloadsDecodeBothLegacyAndNewContractsWithoutReplacingFullNames() throws {
         let decoder = JSONDecoder()
-        let legacy = #"{"id":7,"teamId":1,"name":"야간근무","position":0,"color":"#112233","hidden":false}"#
-        let custom = #"{"id":7,"teamId":1,"name":"야간근무","position":0,"color":"#112233","hidden":false,"abbreviation":"N","shortName":"N"}"#
+        let legacy = ##"{"id":7,"teamId":1,"name":"야간근무","position":0,"color":"#112233","hidden":false}"##
+        let custom = ##"{"id":7,"teamId":1,"name":"야간근무","position":0,"color":"#112233","hidden":false,"abbreviation":"N","shortName":"N"}"##
         let oldType = try decoder.decode(DutyTypeDTO.self, from: Data(legacy.utf8))
         var type = try decoder.decode(DutyTypeDTO.self, from: Data(custom.utf8))
         #expect(oldType.abbreviation == nil)
@@ -38,8 +38,8 @@ struct DutyAbbreviationTests {
 
     @Test
     func dailyAndCachedPayloadsKeepFullNamesForFriendsAndCompactLabelsForTheOwner() throws {
-        let legacy = #"{"year":2026,"month":9,"day":8,"dutyType":"야간근무","dutyColor":"#112233","isOff":false,"dutyTypeId":7,"source":"PATTERN"}"#
-        let custom = #"{"year":2026,"month":9,"day":8,"dutyType":"야간근무","dutyColor":"#112233","isOff":false,"dutyTypeId":7,"source":"PATTERN","dutyAbbreviation":"N"}"#
+        let legacy = ##"{"year":2026,"month":9,"day":8,"dutyType":"야간근무","dutyColor":"#112233","isOff":false,"dutyTypeId":7,"source":"PATTERN"}"##
+        let custom = ##"{"year":2026,"month":9,"day":8,"dutyType":"야간근무","dutyColor":"#112233","isOff":false,"dutyTypeId":7,"source":"PATTERN","dutyAbbreviation":"N"}"##
         let oldDuty = try JSONDecoder().decode(DutyDTO.self, from: Data(legacy.utf8))
         let duty = try JSONDecoder().decode(DutyDTO.self, from: Data(custom.utf8))
         #expect(oldDuty.shortName == "야")

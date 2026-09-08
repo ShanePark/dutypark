@@ -376,7 +376,7 @@ export default {
   apiErrors,
   dutyAbbreviation: {
     label: 'Abbreviation (optional)',
-    hint: 'Leave blank to use the first character of the duty name. Your calendar uses abbreviations; other people and shared views use full names.',
+    hint: 'Leave blank to use the first character of the duty name. Your duty selection and edit controls use abbreviations; other calendars and comparison views keep full names.',
     placeholder: 'e.g. N',
     preview: 'Abbreviation preview',
     tooLong: 'Abbreviations must be 10 characters or fewer.',

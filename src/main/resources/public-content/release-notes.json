@@ -40,6 +40,15 @@
         }
       },
       "entries": {
+        "pr-417": {
+          "title": "근무 유형별 단축어 설정",
+          "summary": "웹과 iPhone에서 근무 유형에 원하는 단축어를 설정하고, 본인 근무를 선택하거나 편집할 때 간결하게 확인할 수 있습니다.",
+          "changes": [
+            "근무 유형과 기본 휴무에 단축어를 지정할 수 있으며, 비워 두면 현재 근무명의 첫 글자를 자동으로 사용합니다.",
+            "본인 달력의 근무 선택과 편집에는 단축어를 표시하고, 다른 사람의 달력과 친구 함께보기에서는 전체 근무명을 유지합니다.",
+            "자동 단축어는 근무명을 바꾸면 함께 변경되고, 직접 지정한 단축어는 유지됩니다. 입력란을 비우면 다시 자동 단축어를 사용합니다."
+          ]
+        },
         "pr-415": {
           "title": "팀 시작과 Todo 관리 경험 개선",
           "summary": "팀이 없는 회원이 직접 팀을 만들고 바로 관리할 수 있게 하며, Todo 상태 변경과 모바일 조작 및 첨부파일 사용 경험을 웹과 iPhone에서 함께 개선했습니다.",
@@ -2287,6 +2296,15 @@
         }
       },
       "entries": {
+        "pr-417": {
+          "title": "Configurable duty type abbreviations",
+          "summary": "Set custom duty abbreviations on the web and iPhone, and use compact labels when selecting or editing your own duties.",
+          "changes": [
+            "Assign an abbreviation to a duty type or the default off duty; leave it blank to automatically use the first character of the current name.",
+            "Use abbreviations in your own duty selection and edit controls while keeping full names in other calendars and friend comparisons.",
+            "Automatic abbreviations follow name changes, explicit abbreviations stay unchanged, and clearing the field restores the automatic label."
+          ]
+        },
         "pr-415": {
           "title": "Better team onboarding and Todo workflows",
           "summary": "Lets teamless members create and manage a team immediately while improving Todo status changes, mobile interactions, and attachment workflows across the web and iPhone app.",
@@ -4497,6 +4515,20 @@
     }
   },
   "items": [
+    {
+      "id": "pr-417",
+      "version": "2026.09.08",
+      "date": "2026-09-08",
+      "pr": 417,
+      "url": "https://github.com/ShanePark/dutypark/pull/417",
+      "category": "feature",
+      "areas": [
+        "calendar",
+        "duty",
+        "team",
+        "ui"
+      ]
+    },
     {
       "id": "pr-415",
       "version": "2026.09.05",
