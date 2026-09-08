@@ -1,6 +1,10 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "team.dutyType.abbreviation.label" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Abbreviation (optional)"}},"ko":{"stringUnit":{"state":"translated","value":"단축어 (선택)"}}}},
+    "team.dutyType.abbreviation.hint" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Leave blank to use the first character of the duty name. Your duty selection and edit controls use abbreviations; other calendars and comparison views keep full names."}},"ko":{"stringUnit":{"state":"translated","value":"비워 두면 근무명의 첫 글자를 사용합니다. 본인 근무 선택·편집에는 단축어를, 다른 사람의 달력과 함께보기에는 전체 이름을 표시합니다."}}}},
+    "team.dutyType.abbreviation.preview" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Abbreviation preview"}},"ko":{"stringUnit":{"state":"translated","value":"단축어 미리보기"}}}},
+    "team.dutyType.abbreviation.tooLong" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Abbreviations must be 10 characters or fewer."}},"ko":{"stringUnit":{"state":"translated","value":"단축어는 10자 이내로 입력해 주세요."}}}},
     "team.batchUpload.failed" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Failed to upload the duty roster."}},"ko":{"stringUnit":{"state":"translated","value":"근무표 업로드에 실패했습니다."}}}},
     "team.batchUpload.fileLabel" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Excel file"}},"ko":{"stringUnit":{"state":"translated","value":"엑셀 파일"}}}},
     "team.batchUpload.month" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Month"}},"ko":{"stringUnit":{"state":"translated","value":"월"}}}},

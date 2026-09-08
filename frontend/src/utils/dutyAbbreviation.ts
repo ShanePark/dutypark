@@ -1,3 +1,5 @@
+/// <reference lib="es2022.intl" />
+
 interface DutyTypeLabelInput {
   name: string
   abbreviation?: string | null

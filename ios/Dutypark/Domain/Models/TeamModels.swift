@@ -70,12 +70,14 @@ nonisolated struct DutyTypeCreateDTO: Codable, Equatable, Sendable {
     let teamId: TeamID
     let name: String
     let color: String
+    var abbreviation: String? = nil
 }
 
 nonisolated struct DutyTypeUpdateDTO: Codable, Equatable, Sendable {
     let id: DutyTypeID
     let name: String
     let color: String
+    var abbreviation: String? = nil
 }
 
 nonisolated struct DutyTypeVisibilityDTO: Codable, Equatable, Sendable {

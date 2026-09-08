@@ -1043,12 +1043,13 @@ struct CalendarView: View {
             ForEach(batchDutyTypes, id: \.id) { type in
                 quickDutyButton(
                     id: type.id,
-                    name: type.name,
+                    name: type.displayName(isMyCalendar: model.isMyCalendar),
                     color: color(hex: type.color),
                     foreground: CalendarVisualLogic.usesLightForeground(on: type.color)
                         ? DPColor.textOnDark
                         : DPColor.textOnLight
                 )
+                .accessibilityLabel(Text(verbatim: type.name))
             }
 
             if model.isMyCalendar {
@@ -1339,7 +1340,7 @@ private struct CalendarBatchDutySelectionModal: View {
                 CalendarFlowLayout(spacing: DPSpacing.small) {
                     ForEach(dutyTypes, id: \.id) { type in
                         Button { select(type.id) } label: {
-                            Text(type.name)
+                            Text(verbatim: type.shortName)
                                 .font(DPTypography.label)
                                 .foregroundStyle(
                                     CalendarVisualLogic.usesLightForeground(on: type.color)
@@ -1356,6 +1357,7 @@ private struct CalendarBatchDutySelectionModal: View {
                                 }
                         }
                         .buttonStyle(.plain)
+                        .accessibilityLabel(Text(verbatim: type.name))
                         .accessibilityIdentifier("calendar.duty.batch.option.\(type.id.map(String.init) ?? "none")")
                     }
                 }
@@ -2332,7 +2334,12 @@ private struct DayDetailView: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 6) {
                         ForEach(model.visibleDutyTypes, id: \.id) { type in
-                            dutyButton(id: type.id, name: type.name, color: calendarColor(type.color))
+                            dutyButton(
+                                id: type.id,
+                                name: type.displayName(isMyCalendar: model.isMyCalendar),
+                                color: calendarColor(type.color)
+                            )
+                            .accessibilityLabel(Text(verbatim: type.name))
                         }
                     }
                 }
