@@ -104,6 +104,9 @@ const apiErrors = {
     },
   },
   dutyType: {
+    abbreviation: {
+      length: '단축어는 10자 이내로 입력해 주세요.',
+    },
     name: {
       required: '근무명은 필수입니다.',
       length: '근무명은 1자 이상 10자 이하로 입력해주세요.',
@@ -373,6 +376,13 @@ export default {
     },
   },
   apiErrors,
+  dutyAbbreviation: {
+    label: '단축어 (선택)',
+    hint: '비워 두면 근무명의 첫 글자를 사용합니다. 본인 달력에서는 단축어를, 다른 사람의 달력과 함께보기에서는 전체 이름을 표시합니다.',
+    placeholder: '예: N',
+    preview: '단축어 미리보기',
+    tooLong: '단축어는 10자 이내로 입력해 주세요.',
+  },
   contentFilter: {
     blocked: '커뮤니티 가이드라인에 어긋나는 표현이 포함되어 있어 저장할 수 없습니다. 내용을 수정해 주세요.',
   },

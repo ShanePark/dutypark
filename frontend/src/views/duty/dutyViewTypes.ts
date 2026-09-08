@@ -18,6 +18,8 @@ export type LocalTodo = Omit<SharedTodo, 'attachments'> & {
 export type TodoDueItem = Pick<LocalTodo, 'id' | 'title' | 'status'>
 
 export interface DutyType {
+  abbreviation?: string | null
+  shortName?: string
   id: number | null
   name: string
   color: string | null
@@ -85,6 +87,7 @@ export interface CalendarDay {
 }
 
 export interface DutyDay {
+  dutyAbbreviation?: string | null
   dutyType: string
   dutyColor: string
   dutyTypeId: number | null

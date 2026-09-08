@@ -97,7 +97,7 @@ function flush() {
 }
 
 function mountDutyType(options: {
-  dutyType?: { id: number; name: string; color: string; position: number; hidden: boolean } | null
+  dutyType?: { id: number; name: string; color: string; position: number; hidden: boolean; abbreviation?: string | null } | null
 } = {}) {
   const state = reactive({
     isOpen: true,
@@ -130,6 +130,12 @@ function nameInput(root: HostNode): HostNode {
   return input
 }
 
+function abbreviationInput(root: HostNode): HostNode {
+  const input = findHostNode(root, (node) => node.type === 'input' && node.props.id === 'duty-type-abbreviation')
+  if (!input) throw new Error('Could not find duty abbreviation input')
+  return input
+}
+
 function saveButton(root: HostNode): HostNode {
   const button = findHostNode(root, (node) =>
     node.type === 'button' && String(node.props.class ?? '').includes('bg-dp-success')
@@ -147,19 +153,19 @@ const variants = [
     name: 'new',
     dutyType: null,
     method: 'addDutyType' as const,
-    args: [42, { teamId: 42, name: '주간', color: '#ffb3ba' }],
+    args: [42, { teamId: 42, name: '주간', color: '#ffb3ba', abbreviation: null }],
   },
   {
     name: 'existing',
     dutyType: { id: 7, name: '기존', color: '#123456', position: 0, hidden: false },
     method: 'updateDutyType' as const,
-    args: [42, { id: 7, name: '주간', color: '#123456' }],
+    args: [42, { id: 7, name: '주간', color: '#123456', abbreviation: null }],
   },
   {
     name: 'default',
     dutyType: { id: 1, name: '휴무', color: '#654321', position: -1, hidden: false },
     method: 'updateDefaultDuty' as const,
-    args: [42, '주간', '#654321'],
+    args: [42, '주간', '#654321', ''],
   },
 ]
 
@@ -220,6 +226,78 @@ describe('DutyTypeModal save behavior', () => {
     expect(mounted.state.isOpen).toBe(true)
     expect(mounted.savedEvents).toEqual([])
     expect(nameInput(mounted.root).value).toBe('금지')
+  })
+
+  it('shows an automatic placeholder without persisting the inferred character', async () => {
+    const mounted = mountDutyType()
+    enterName(mounted.root, '야간근무')
+    await flush()
+    expect(abbreviationInput(mounted.root).props.placeholder).toBe('야')
+    expect(abbreviationInput(mounted.root).value).toBe('')
+    triggerHost(saveButton(mounted.root), 'onClick')
+    await flush()
+    expect(mocks.teamApi.addDutyType).toHaveBeenCalledWith(42, {
+      teamId: 42, name: '야간근무', color: '#ffb3ba', abbreviation: null,
+    })
+  })
+
+  it('saves a trimmed custom abbreviation without changing the full name', async () => {
+    const mounted = mountDutyType()
+    enterName(mounted.root, '야간근무')
+    triggerHost(abbreviationInput(mounted.root), 'onInput', { target: { value: ' N ' } })
+    await flush()
+    triggerHost(saveButton(mounted.root), 'onClick')
+    await flush()
+    expect(mocks.teamApi.addDutyType).toHaveBeenCalledWith(42, {
+      teamId: 42, name: '야간근무', color: '#ffb3ba', abbreviation: 'N',
+    })
+  })
+
+  it('clears an existing override with explicit null', async () => {
+    const mounted = mountDutyType({ dutyType: {
+      id: 7, name: '야간근무', color: '#123456', position: 0, hidden: false, abbreviation: 'N',
+    } })
+    await flush()
+    expect(abbreviationInput(mounted.root).value).toBe('N')
+    triggerHost(abbreviationInput(mounted.root), 'onInput', { target: { value: '' } })
+    triggerHost(saveButton(mounted.root), 'onClick')
+    await flush()
+    expect(mocks.teamApi.updateDutyType).toHaveBeenCalledWith(42, {
+      id: 7, name: '야간근무', color: '#123456', abbreviation: null,
+    })
+  })
+
+  it('also configures the synthetic default duty abbreviation', async () => {
+    const mounted = mountDutyType({ dutyType: {
+      id: 1, name: '휴무', color: '#654321', position: -1, hidden: false,
+    } })
+    triggerHost(abbreviationInput(mounted.root), 'onInput', { target: { value: 'O' } })
+    triggerHost(saveButton(mounted.root), 'onClick')
+    await flush()
+    expect(mocks.teamApi.updateDefaultDuty).toHaveBeenCalledWith(42, '휴무', '#654321', 'O')
+  })
+
+  it('rejects blocked abbreviations before starting a save', async () => {
+    mocks.filterStore.isBlocked.mockImplementation((value: string) => value === 'blocked')
+    const mounted = mountDutyType()
+    enterName(mounted.root, '야간근무')
+    triggerHost(abbreviationInput(mounted.root), 'onInput', { target: { value: 'blocked' } })
+    triggerHost(saveButton(mounted.root), 'onClick')
+    await flush()
+    expect(mocks.teamApi.addDutyType).not.toHaveBeenCalled()
+    expect(mocks.showError).toHaveBeenCalledWith(ko.contentFilter.blocked)
+    expect(mounted.savingEvents).toEqual([])
+  })
+
+  it('rejects overlong abbreviations even when input events bypass maxlength', async () => {
+    const mounted = mountDutyType()
+    enterName(mounted.root, '야간근무')
+    triggerHost(abbreviationInput(mounted.root), 'onInput', { target: { value: '12345678901' } })
+    await flush()
+    expect(saveButton(mounted.root).props.disabled).toBe(true)
+    triggerHost(saveButton(mounted.root), 'onClick')
+    await flush()
+    expect(mocks.teamApi.addDutyType).not.toHaveBeenCalled()
   })
 
   it('ignores a second click while the first request is pending', async () => {

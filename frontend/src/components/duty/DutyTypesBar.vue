@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { ChevronLeft, ChevronRight, FileSpreadsheet, Loader2, PencilLine, Users, X } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import { isLightColor } from '@/utils/color'
+import { dutyTypeLabel } from '@/utils/dutyAbbreviation'
 import type { DutyType, DutyTypeWithCount } from '@/views/duty/dutyViewTypes'
 
 const props = defineProps<{
@@ -104,6 +105,8 @@ function toggleBatchEdit() {
           :key="dutyType.id ?? 'off'"
           @click="emit('quick-duty-change', dutyType.id)"
           class="duty-quick-btn"
+          :title="dutyType.name"
+          :aria-label="dutyType.name"
           :class="{ 'duty-quick-btn-active': focusedDayDutyType === dutyType.name || (!focusedDayDutyType && dutyType.id === null) }"
           :style="{
             '--duty-color': dutyType.color || 'var(--dp-duty-fallback)',
@@ -111,7 +114,7 @@ function toggleBatchEdit() {
           } as any"
         >
           <span class="duty-quick-btn-inner">
-            {{ dutyType.name }}
+            {{ dutyTypeLabel(dutyType, canEditMyCalendar) }}
           </span>
         </button>
       </template>

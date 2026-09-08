@@ -11,6 +11,7 @@ import type { DutyTypeDto } from '@/types'
 import { X } from 'lucide-vue-next'
 import { resolveApiErrorMessage } from '@/utils/resolveApiError'
 import { useContentFilterStore } from '@/stores/contentFilter'
+import { dutyAbbreviation } from '@/utils/dutyAbbreviation'
 
 const props = defineProps<{
   isOpen: boolean
@@ -35,10 +36,15 @@ const defaultDutyColor = '#ffb3ba'
 const dutyTypeForm = ref({
   id: null as number | null,
   name: '',
+  abbreviation: '',
   color: defaultDutyColor,
   isDefault: false,
 })
 const trimmedDutyTypeName = computed(() => dutyTypeForm.value.name.trim())
+const trimmedDutyAbbreviation = computed(() => dutyTypeForm.value.abbreviation.trim())
+const isDutyAbbreviationInvalid = computed(() => trimmedDutyAbbreviation.value.length > 10)
+const automaticDutyAbbreviation = computed(() => dutyAbbreviation(trimmedDutyTypeName.value))
+const dutyAbbreviationPreview = computed(() => dutyAbbreviation(trimmedDutyTypeName.value, trimmedDutyAbbreviation.value))
 const submitting = ref(false)
 const hasDuplicateDutyTypeName = computed(() =>
   props.dutyTypes.some(
@@ -46,7 +52,7 @@ const hasDuplicateDutyTypeName = computed(() =>
   )
 )
 const isDutyTypeNameInvalid = computed(() => !trimmedDutyTypeName.value || hasDuplicateDutyTypeName.value)
-const isDutyTypeSaveDisabled = computed(() => props.saving || submitting.value || isDutyTypeNameInvalid.value)
+const isDutyTypeSaveDisabled = computed(() => props.saving || submitting.value || isDutyTypeNameInvalid.value || isDutyAbbreviationInvalid.value)
 
 let pickrInstance: Pickr | null = null
 const colorPickerRef = ref<HTMLElement | null>(null)
@@ -56,6 +62,7 @@ function setFormFromProps() {
       dutyTypeForm.value = {
         id: null,
         name: '',
+        abbreviation: '',
         color: defaultDutyColor,
         isDefault: false,
       }
@@ -65,6 +72,7 @@ function setFormFromProps() {
   dutyTypeForm.value = {
     id: props.dutyType.id,
     name: props.dutyType.name,
+    abbreviation: props.dutyType.abbreviation ?? '',
     color: props.dutyType.color || defaultDutyColor,
     isDefault: props.dutyType.position === -1,
   }
@@ -144,7 +152,13 @@ async function saveDutyType() {
     return
   }
 
-  if (contentFilterStore.isBlocked(trimmedDutyTypeName.value)) {
+  if (isDutyAbbreviationInvalid.value) {
+    showWarning(t('dutyAbbreviation.tooLong'))
+    return
+  }
+
+  if (contentFilterStore.isBlocked(trimmedDutyTypeName.value)
+    || (trimmedDutyAbbreviation.value && contentFilterStore.isBlocked(trimmedDutyAbbreviation.value))) {
     showError(t('contentFilter.blocked'))
     return
   }
@@ -157,19 +171,22 @@ async function saveDutyType() {
       await teamApi.updateDefaultDuty(
         props.teamId,
         trimmedDutyTypeName.value,
-        dutyTypeForm.value.color
+        dutyTypeForm.value.color,
+        trimmedDutyAbbreviation.value
       )
     } else if (dutyTypeForm.value.id) {
       await teamApi.updateDutyType(props.teamId, {
         id: dutyTypeForm.value.id,
         name: trimmedDutyTypeName.value,
         color: dutyTypeForm.value.color,
+        abbreviation: trimmedDutyAbbreviation.value || null,
       })
     } else {
       await teamApi.addDutyType(props.teamId, {
         teamId: props.teamId,
         name: trimmedDutyTypeName.value,
         color: dutyTypeForm.value.color,
+        abbreviation: trimmedDutyAbbreviation.value || null,
       })
     }
     toastSuccess(t('team.dutyType.messages.saveSuccess'))
@@ -233,6 +250,27 @@ async function saveDutyType() {
         />
       </div>
 
+      <div>
+        <label for="duty-type-abbreviation" class="form-label">
+          {{ t('dutyAbbreviation.label') }}
+          <CharacterCounter :current="dutyTypeForm.abbreviation.length" :max="10" />
+        </label>
+        <input
+          id="duty-type-abbreviation"
+          v-model="dutyTypeForm.abbreviation"
+          type="text"
+          maxlength="10"
+          autocomplete="off"
+          :placeholder="automaticDutyAbbreviation || t('dutyAbbreviation.placeholder')"
+          class="form-control"
+          :aria-invalid="isDutyAbbreviationInvalid"
+          aria-describedby="duty-type-abbreviation-help"
+        />
+        <p id="duty-type-abbreviation-help" class="mt-1 text-xs text-dp-text-secondary">
+          {{ t('dutyAbbreviation.hint') }}
+        </p>
+      </div>
+
       <div class="color-picker-container">
         <label class="form-label mb-2">
           {{ t('team.dutyType.fields.color') }}
@@ -252,6 +290,9 @@ async function saveDutyType() {
         >
           {{ dutyTypeForm.name || t('team.dutyType.placeholders.preview') }}
         </div>
+        <p class="mt-2 text-sm text-dp-text-secondary">
+          {{ t('dutyAbbreviation.preview') }}: <strong class="text-dp-text-primary">{{ dutyAbbreviationPreview || '–' }}</strong>
+        </p>
       </div>
     </div>
 

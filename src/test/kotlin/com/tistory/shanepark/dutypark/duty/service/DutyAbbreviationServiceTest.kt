@@ -16,6 +16,7 @@ import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.Mock
 import org.mockito.junit.jupiter.MockitoExtension
+import org.mockito.kotlin.doNothing
 import org.mockito.kotlin.doThrow
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
@@ -76,6 +77,7 @@ class DutyAbbreviationServiceTest {
     @Test
     fun `blocked abbreviations are rejected before changing any state`() {
         val type = existingType()
+        doNothing().whenever(content).validateContent("changed")
         doThrow(BadRequestException("contentFilter.blocked")).whenever(content).validateContent("blocked")
         assertThrows<BadRequestException> {
             service.update(DutyTypeUpdateDto(10, "changed", "#445566").apply { abbreviation = "blocked" })

@@ -420,6 +420,7 @@ const duties = computed<Array<DutyDay | null>>(() => {
 
     return {
       dutyType: duty.dutyType || 'OFF',
+      dutyAbbreviation: duty.dutyAbbreviation,
       dutyColor: duty.dutyColor || 'var(--dp-duty-fallback)',
       dutyTypeId: duty.dutyTypeId,
       source: duty.source,
@@ -485,6 +486,8 @@ async function loadTeam() {
       id: dt.id,
       name: dt.name,
       color: dt.color,
+      abbreviation: dt.abbreviation,
+      shortName: dt.shortName,
     }))
   } catch (error) {
     console.error('Failed to load team:', error)
