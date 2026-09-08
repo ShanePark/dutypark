@@ -5,6 +5,7 @@ import '@/styles/intro.css'
 import IntroHero from './IntroHero.vue'
 import IntroShowcase, { type Feature } from './IntroShowcase.vue'
 import IntroCTA from './IntroCTA.vue'
+import LocaleSwitcher from '@/components/layout/LocaleSwitcher.vue'
 
 const containerRef = ref<HTMLElement | null>(null)
 const { t } = useI18n()
@@ -81,20 +82,52 @@ const features = computed<Feature[]>(() => [
 </script>
 
 <template>
-  <div ref="containerRef" class="intro-container">
-    <IntroHero />
+  <div class="intro-shell">
+    <div class="intro-locale-control">
+      <LocaleSwitcher />
+    </div>
 
-    <IntroShowcase :features="features" />
+    <div ref="containerRef" class="intro-container">
+      <IntroHero />
 
-    <IntroCTA />
+      <IntroShowcase :features="features" />
+
+      <IntroCTA />
+    </div>
   </div>
 </template>
 
 <style scoped>
+.intro-shell {
+  position: relative;
+}
+
+.intro-locale-control {
+  position: absolute;
+  top: max(1rem, env(safe-area-inset-top));
+  right: max(1rem, env(safe-area-inset-right));
+  z-index: 200;
+  border: 1px solid var(--dp-border-primary);
+  border-radius: 9999px;
+  background: var(--dp-bg-card);
+}
+
+/* The header's mobile suggestion offset does not apply to this right-aligned control. */
+.intro-locale-control :deep(.locale-suggestion) {
+  right: 0;
+  max-width: calc(100vw - 2rem);
+}
+
 .intro-container {
   height: 100vh;
+  height: 100svh;
   overflow-x: hidden;
   overflow-y: auto;
   scroll-behavior: smooth;
+}
+@media (prefers-reduced-motion: reduce) {
+  .intro-container {
+    scroll-behavior: auto;
+  }
 }
 </style>
