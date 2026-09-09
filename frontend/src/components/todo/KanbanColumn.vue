@@ -72,6 +72,9 @@ const statusConfig: Record<TodoStatus, { labelKey: string; shortLabelKey: string
       >
         <Plus class="w-4 h-4" />
       </button>
+      <div class="kanban-column-header-actions">
+        <slot name="header-actions"></slot>
+      </div>
     </div>
     <div class="kanban-column-content">
       <slot></slot>
@@ -235,6 +238,12 @@ const statusConfig: Record<TodoStatus, { labelKey: string; shortLabelKey: string
 .kanban-column-add-btn:hover {
   background-color: var(--dp-accent-hover);
   transform: scale(1.1);
+}
+
+.kanban-column-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
 }
 
 .kanban-column-content {

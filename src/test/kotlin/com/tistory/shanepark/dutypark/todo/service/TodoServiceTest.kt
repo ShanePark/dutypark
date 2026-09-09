@@ -381,6 +381,75 @@ class TodoServiceTest {
     }
 
     @Test
+    fun `deleteCompletedTodos should delete only requested owned done todos and return count`() {
+        val completedId = UUID.randomUUID()
+        val todoId = UUID.randomUUID()
+        val completedTodo = createTodo("completed", TodoStatus.DONE, 0).also {
+            ReflectionTestUtils.setField(it, "id", completedId)
+        }
+        val activeTodo = createTodo("active", TodoStatus.TODO, 0).also {
+            ReflectionTestUtils.setField(it, "id", todoId)
+        }
+        val attachment = mock(Attachment::class.java)
+        val requestedIds = listOf(completedId, completedId, todoId)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(
+            todoRepository.findAllByIdAndMemberAndStatusForUpdate(
+                requestedIds.distinct(),
+                member,
+                TodoStatus.DONE,
+            )
+        ).thenReturn(listOf(completedTodo))
+        `when`(
+            attachmentRepository.findAllByContextTypeAndContextId(
+                AttachmentContextType.TODO,
+                completedId.toString(),
+            )
+        ).thenReturn(listOf(attachment))
+
+        val deletedCount = todoService.deleteCompletedTodos(loginMember, requestedIds)
+
+        assertEquals(1, deletedCount)
+        verify(todoRepository).delete(completedTodo)
+        verify(todoRepository, never()).delete(activeTodo)
+        verify(attachmentService).deleteAttachment(attachment)
+    }
+
+    @Test
+    fun `deleteCompletedTodos should skip a todo that is no longer done`() {
+        val reopenedId = UUID.randomUUID()
+        val reopenedTodo = createTodo("reopened", TodoStatus.TODO, 0).also {
+            ReflectionTestUtils.setField(it, "id", reopenedId)
+        }
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(
+            todoRepository.findAllByIdAndMemberAndStatusForUpdate(
+                listOf(reopenedId),
+                member,
+                TodoStatus.DONE,
+            )
+        ).thenReturn(listOf(reopenedTodo))
+
+        val deletedCount = todoService.deleteCompletedTodos(loginMember, listOf(reopenedId))
+
+        assertEquals(0, deletedCount)
+        verify(todoRepository, never()).delete(reopenedTodo)
+        verifyNoInteractions(attachmentRepository)
+    }
+
+    @Test
+    fun `deleteCompletedTodos should return zero without loading requested todos when ids are empty`() {
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+
+        val deletedCount = todoService.deleteCompletedTodos(loginMember, emptyList())
+
+        assertEquals(0, deletedCount)
+        verifyNoInteractions(todoRepository, attachmentRepository)
+    }
+
+    @Test
     fun `deleteTodoInternal removes attachments and the entity without an ownership check`() {
         val todoId = UUID.randomUUID()
         val todo = Todo(otherMember(), "title", "content", 1)

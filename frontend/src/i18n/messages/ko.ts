@@ -2185,3 +2185,8 @@ export default {
     },
   },
 } as const
+      clearCompleted: '완료 항목 정리',
+      deleteCompletedTitle: '내가 작성한 완료된 할일을 삭제할까요?',
+      deleteCompletedConfirm: '내가 작성한 완료된 할일 {count}개를 영구적으로 삭제합니다. 삭제 후 복구할 수 없습니다. 다른 사람이 작성해 나에게 태그한 항목은 제외됩니다.',
+      deleteCompletedSuccess: '완료된 할일 {count}개를 정리했습니다.',
+      deleteCompletedFailed: '완료된 할일 정리에 실패했습니다.',

@@ -60,4 +60,11 @@ export const todoApi = {
   deleteTodo: async (id: string): Promise<void> => {
     await apiClient.delete(`/todos/${id}`)
   },
+
+  deleteCompletedTodos: async (todoIds: string[]): Promise<{ count: number }> => {
+    const response = await apiClient.delete<{ count: number }>('/todos/completed', {
+      data: { todoIds },
+    })
+    return response.data
+  },
 }

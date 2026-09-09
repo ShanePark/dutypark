@@ -2280,3 +2280,8 @@ export default {
     },
   },
 } as const
+      clearCompleted: 'Clear completed',
+      deleteCompletedTitle: 'Delete your completed tasks?',
+      deleteCompletedConfirm: 'This permanently deletes {count} completed tasks you created. Deleted tasks cannot be restored. Tasks created by others and tagged to you are excluded.',
+      deleteCompletedSuccess: 'Cleared {count} completed tasks.',
+      deleteCompletedFailed: 'Failed to clear completed tasks.',

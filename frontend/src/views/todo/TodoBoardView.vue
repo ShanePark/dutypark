@@ -3,7 +3,7 @@ import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Sortable from 'sortablejs'
 import type { MoveEvent, SortableEvent } from 'sortablejs'
-import { ListTodo, Clock, CheckCircle2, Lightbulb, LayoutGrid, Plus } from 'lucide-vue-next'
+import { ListTodo, Clock, CheckCircle2, Lightbulb, LayoutGrid, Plus, BrushCleaning } from 'lucide-vue-next'
 import { todoApi } from '@/api/todo'
 import { friendApi } from '@/api/member'
 import { reportApi } from '@/api/report'
@@ -44,6 +44,7 @@ const friends = ref<TaggableFriend[]>([])
 const pendingStatusTodoIds = ref<Set<string>>(new Set())
 const reportTarget = ref<ReportTarget | null>(null)
 const isSubmittingReport = ref(false)
+const isClearingCompleted = ref(false)
 let scrollRafId: number | null = null
 let dragFocusRafId: number | null = null
 let activeDragStatus: TodoStatus | null = null
@@ -57,6 +58,7 @@ let sortableInstances: Record<string, Sortable> = {}
 const todoList = computed(() => board.value?.todo ?? [])
 const inProgressList = computed(() => board.value?.inProgress ?? [])
 const doneList = computed(() => board.value?.done ?? [])
+const ownDoneList = computed(() => doneList.value.filter((todo) => !todo.isTagged))
 const canReportSelectedTodo = computed(() => selectedTodo.value?.isTagged === true)
 
 const counts = computed(() => board.value?.counts ?? { todo: 0, inProgress: 0, done: 0, total: 0 })
@@ -658,6 +660,34 @@ async function handleDeleteTodo(todo: Pick<Todo, 'id' | 'title'>) {
   }
 }
 
+async function handleDeleteCompletedTodos() {
+  if (isClearingCompleted.value) return
+
+  // Capture the current own-DONE snapshot before opening the confirmation. Any
+  // todo completed while the modal is open remains for the next cleanup action.
+  const completedTodoIds = ownDoneList.value.map((todo) => todo.id)
+  if (completedTodoIds.length === 0) return
+
+  isClearingCompleted.value = true
+  try {
+    const confirmed = await confirmDelete(
+      t('todoBoard.messages.deleteCompletedConfirm', { count: completedTodoIds.length }),
+      t('todoBoard.messages.deleteCompletedTitle'),
+      t('todoBoard.actions.clearCompleted'),
+    )
+    if (!confirmed) return
+
+    const result = await todoApi.deleteCompletedTodos(completedTodoIds)
+    toastSuccess(t('todoBoard.messages.deleteCompletedSuccess', { count: result.count }))
+    await loadBoard()
+  } catch (error) {
+    console.error('Failed to delete completed todos:', error)
+    showError(t('todoBoard.messages.deleteCompletedFailed'))
+  } finally {
+    isClearingCompleted.value = false
+  }
+}
+
 async function handleUntagSelf(todo: Pick<Todo, 'id' | 'title'>) {
   if (pendingStatusTodoIds.value.has(todo.id)) return
   const confirmed = await confirm(
@@ -858,6 +888,20 @@ onBeforeUnmount(() => {
           @select="focusStatus"
           @add="openAddModal('DONE')"
         >
+          <template #header-actions>
+            <button
+              v-if="ownDoneList.length > 0"
+              type="button"
+              class="todo-board-clear-completed"
+              :disabled="isClearingCompleted"
+              :aria-label="t('todoBoard.actions.clearCompleted')"
+              :title="t('todoBoard.actions.clearCompleted')"
+              @click="handleDeleteCompletedTodos"
+            >
+              <BrushCleaning class="w-4 h-4" />
+              <span class="hidden sm:inline">{{ t('todoBoard.actions.clearCompleted') }}</span>
+            </button>
+          </template>
           <div data-column="DONE" class="kanban-column-drop-zone">
             <div
               v-for="todo in doneList"
@@ -1180,6 +1224,40 @@ onBeforeUnmount(() => {
      Sortable's 150ms touch delay still reserves a long press for intentional
      card dragging, while a quick movement cancels that delayed drag. */
   touch-action: manipulation;
+}
+
+.todo-board-clear-completed {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  min-height: 2.25rem;
+  padding: 0.375rem 0.625rem;
+  border: 1px solid var(--dp-danger-border);
+  border-radius: 0.5rem;
+  background-color: var(--dp-danger-bg);
+  color: var(--dp-danger);
+  font-size: 0.75rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.todo-board-clear-completed:hover {
+  background-color: var(--dp-danger-bg-hover);
+  border-color: var(--dp-danger);
+  color: var(--dp-danger-hover);
+}
+
+.todo-board-clear-completed:focus-visible {
+  outline: 2px solid var(--dp-accent);
+  outline-offset: 2px;
+}
+
+.todo-board-clear-completed:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .kanban-empty-state {

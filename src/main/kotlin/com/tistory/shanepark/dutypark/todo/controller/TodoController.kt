@@ -3,6 +3,7 @@ package com.tistory.shanepark.dutypark.todo.controller
 import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.todo.domain.dto.TodoBoardResponse
+import com.tistory.shanepark.dutypark.todo.domain.dto.TodoBulkDeleteRequest
 import com.tistory.shanepark.dutypark.todo.domain.dto.TodoPositionUpdateRequest
 import com.tistory.shanepark.dutypark.todo.domain.dto.TodoRequest
 import com.tistory.shanepark.dutypark.todo.domain.dto.TodoResponse
@@ -159,6 +160,15 @@ class TodoController(
         @PathVariable id: UUID
     ) {
         todoService.deleteTodo(loginMember, id)
+    }
+
+    @DeleteMapping("/completed")
+    fun deleteCompletedTodos(
+        @Login loginMember: LoginMember,
+        @RequestBody request: TodoBulkDeleteRequest,
+    ): Map<String, Int> {
+        val count = todoService.deleteCompletedTodos(loginMember, request.todoIds)
+        return mapOf("count" to count)
     }
 
     @GetMapping("/calendar")
