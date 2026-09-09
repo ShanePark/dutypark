@@ -2314,6 +2314,55 @@ final class CalendarFeatureTests: XCTestCase {
         XCTAssertEqual(model.quickDutyDay?.cell.day, 13)
     }
 
+    func testQuickDutyFocusClampsToTheTargetMonthWhenChangingFromLongMonth() async throws {
+        let model = CalendarViewModel(
+            repository: CalendarRepositoryMock(teamID: 7),
+            date: DateOnly(rawValue: "2026-01-31")
+        )
+        await model.load()
+        model.setQuickDutyEditing(true)
+
+        let january31 = try XCTUnwrap(model.days.first { $0.cell.date.rawValue == "2026-01-31" })
+        model.focusQuickDuty(on: january31, emitFeedback: false)
+
+        await model.changeMonth(by: 1)
+
+        XCTAssertEqual(model.year, 2026)
+        XCTAssertEqual(model.month, 2)
+        XCTAssertEqual(model.quickDutyDay?.cell.date.rawValue, "2026-02-28")
+        XCTAssertTrue(model.quickDutyDay?.cell.isCurrentMonth == true)
+    }
+
+    func testQuickDutyDoesNotWriteThePreviousMonthWhileNewMonthLoads() async throws {
+        let gate = CalendarMonthRaceGate()
+        let repository = CalendarRepositoryMock(teamID: 7, monthGate: gate)
+        let model = CalendarViewModel(
+            repository: repository,
+            date: DateOnly(rawValue: "2026-01-31")
+        )
+
+        let initialLoad = Task { await model.load() }
+        await gate.waitForRequest(OfflineMonthKey(year: 2026, month: 1))
+        await gate.release(OfflineMonthKey(year: 2026, month: 1))
+        await initialLoad.value
+
+        model.setQuickDutyEditing(true)
+        let january31 = try XCTUnwrap(model.days.first { $0.cell.date.rawValue == "2026-01-31" })
+        model.focusQuickDuty(on: january31, emitFeedback: false)
+
+        let monthChange = Task { await model.changeMonth(by: 1) }
+        await gate.waitForRequest(OfflineMonthKey(year: 2026, month: 2))
+
+        await model.applyQuickDuty(dutyTypeID: 7)
+
+        let lastDutyUpdate = await repository.lastDutyUpdate
+        XCTAssertNil(lastDutyUpdate)
+
+        await gate.release(OfflineMonthKey(year: 2026, month: 2))
+        await monthChange.value
+        XCTAssertEqual(model.quickDutyDay?.cell.date.rawValue, "2026-02-28")
+    }
+
     func testOtherCalendarCanOnlyCompareMyDuty() async {
         let repository = CalendarRepositoryMock()
         let model = CalendarViewModel(repository: repository, now: date(2026, 8, 12), memberID: 9)

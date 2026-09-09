@@ -630,6 +630,12 @@ onUnmounted(() => {
 watch(
   () => [currentYear.value, currentMonth.value],
   async () => {
+    // Keep the quick-duty focus inside the newly selected month. Without this,
+    // moving from a 31-day month to February leaves an impossible day selected.
+    if (focusedDay.value !== null) {
+      focusedDay.value = Math.min(focusedDay.value, lastDayInMonth.value)
+    }
+
     // Load calendar first to ensure index alignment
     await loadCalendar()
     await Promise.all([loadDuties(), loadSchedules(), loadOtherDuties(), loadHolidays()])
