@@ -21,7 +21,7 @@ class DutyType(
     @Column(nullable = false)
     var hidden: Boolean = false,
 
-    @Column(length = 10)
+    @Column(length = 3)
     var abbreviation: String? = null,
 ) {
     @Id

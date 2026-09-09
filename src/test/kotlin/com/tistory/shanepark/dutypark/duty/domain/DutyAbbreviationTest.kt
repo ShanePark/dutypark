@@ -7,6 +7,7 @@ import com.tistory.shanepark.dutypark.team.domain.dto.TeamDto
 import com.tistory.shanepark.dutypark.team.domain.entity.Team
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.assertThrows
 import java.time.LocalDate
 
 class DutyAbbreviationTest {
@@ -21,6 +22,25 @@ class DutyAbbreviationTest {
         assertThat(DutyAbbreviation.resolve("")).isEmpty()
         assertThat(DutyAbbreviation.normalize("  ")).isNull()
         assertThat(DutyAbbreviation.normalize(" N ")).isEqualTo("N")
+        assertThat(DutyAbbreviation.normalize(" n ")).isEqualTo("n")
+        assertThat(DutyAbbreviation.normalize("nAb")).isEqualTo("nAb")
+        assertThat(DutyAbbreviation.normalize("NNNN")).isNull()
+    }
+
+    @Test
+    fun `client overrides accept up to three ASCII letters or complete Korean syllables`() {
+        assertThat(DutyAbbreviation.normalizeAndValidate(" n ")).isEqualTo("n")
+        assertThat(DutyAbbreviation.normalizeAndValidate("nAb")).isEqualTo("nAb")
+        assertThat(DutyAbbreviation.normalizeAndValidate(" 출 ")).isEqualTo("출")
+        assertThat(DutyAbbreviation.normalizeAndValidate("  ")).isNull()
+        assertThat(DutyAbbreviation.normalizeAndValidate(null)).isNull()
+
+        for (value in listOf("NNNN", "1", "ㄱ", "😀", "é")) {
+            val exception = assertThrows<IllegalArgumentException> {
+                DutyAbbreviation.normalizeAndValidate(value)
+            }
+            assertThat(exception.message).isEqualTo("dutyType.abbreviation.invalid")
+        }
     }
 
     @Test

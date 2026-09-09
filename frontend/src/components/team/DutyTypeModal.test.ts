@@ -4,9 +4,11 @@ import ko from '@/i18n/messages/ko'
 import {
   createHostWrapper,
   findHostNode,
+  findHostNodes,
   mountHost,
   triggerHost,
   type HostNode,
+  hostText,
 } from '@/test/hostRenderer'
 
 const mocks = vi.hoisted(() => ({
@@ -253,6 +255,55 @@ describe('DutyTypeModal save behavior', () => {
     })
   })
 
+  it('preserves ASCII letter case and limits the field to three characters', async () => {
+    const mounted = mountDutyType()
+    enterName(mounted.root, '야간근무')
+    const input = abbreviationInput(mounted.root)
+    expect(input.props.maxlength).toBe('3')
+    expect(input.props.pattern).toBe('[A-Za-z가-힣]{1,3}')
+
+    triggerHost(input, 'onInput', { target: { value: 'nAb' } })
+    await flush()
+
+    expect(input.value).toBe('nAb')
+    triggerHost(saveButton(mounted.root), 'onClick')
+    await flush()
+    expect(mocks.teamApi.addDutyType).toHaveBeenCalledWith(42, {
+      teamId: 42, name: '야간근무', color: '#ffb3ba', abbreviation: 'nAb',
+    })
+  })
+
+  it('keeps up to three Hangul syllables valid and rejects digits, jamo, and overlong values', async () => {
+    const mounted = mountDutyType()
+    enterName(mounted.root, '야간근무')
+    const input = abbreviationInput(mounted.root)
+
+    for (const value of ['가', '가나다', '1', 'ㄱ', 'ABCD']) {
+      triggerHost(input, 'onInput', { target: { value } })
+      await flush()
+      if (value === '가' || value === '가나다') {
+        expect(saveButton(mounted.root).props.disabled).toBe(false)
+      } else {
+        expect(saveButton(mounted.root).props.disabled).toBe(true)
+      }
+    }
+  })
+
+  it('does not transform an in-progress Hangul composition until it is committed', async () => {
+    const mounted = mountDutyType()
+    enterName(mounted.root, '야간근무')
+    const input = abbreviationInput(mounted.root)
+
+    triggerHost(input, 'onCompositionstart')
+    triggerHost(input, 'onInput', { target: { value: 'ㄱ' }, isComposing: true })
+    expect(input.value).toBe('ㄱ')
+
+    triggerHost(input, 'onCompositionend', { target: { value: '가' } })
+    await flush()
+    expect(input.value).toBe('가')
+    expect(saveButton(mounted.root).props.disabled).toBe(false)
+  })
+
   it('clears an existing override with explicit null', async () => {
     const mounted = mountDutyType({ dutyType: {
       id: 7, name: '야간근무', color: '#123456', position: 0, hidden: false, abbreviation: 'N',
@@ -278,10 +329,10 @@ describe('DutyTypeModal save behavior', () => {
   })
 
   it('rejects blocked abbreviations before starting a save', async () => {
-    mocks.filterStore.isBlocked.mockImplementation((value: string) => value === 'blocked')
+    mocks.filterStore.isBlocked.mockImplementation((value: string) => value === 'B')
     const mounted = mountDutyType()
     enterName(mounted.root, '야간근무')
-    triggerHost(abbreviationInput(mounted.root), 'onInput', { target: { value: 'blocked' } })
+    triggerHost(abbreviationInput(mounted.root), 'onInput', { target: { value: 'B' } })
     triggerHost(saveButton(mounted.root), 'onClick')
     await flush()
     expect(mocks.teamApi.addDutyType).not.toHaveBeenCalled()
@@ -292,7 +343,7 @@ describe('DutyTypeModal save behavior', () => {
   it('rejects overlong abbreviations even when input events bypass maxlength', async () => {
     const mounted = mountDutyType()
     enterName(mounted.root, '야간근무')
-    triggerHost(abbreviationInput(mounted.root), 'onInput', { target: { value: '12345678901' } })
+    triggerHost(abbreviationInput(mounted.root), 'onInput', { target: { value: 'ABCD' } })
     await flush()
     expect(saveButton(mounted.root).props.disabled).toBe(true)
     triggerHost(saveButton(mounted.root), 'onClick')
@@ -319,5 +370,56 @@ describe('DutyTypeModal save behavior', () => {
     await flush()
     expect(mounted.savingEvents).toEqual([true, false])
     expect(mounted.state.saving).toBe(false)
+  })
+})
+
+describe('DutyTypeModal previews', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.t.mockImplementation((key: string) => key)
+    mocks.filterStore.isBlocked.mockReturnValue(false)
+  })
+
+  it('renders full and abbreviated labels with the same readable duty badge treatment', async () => {
+    const mounted = mountDutyType()
+    enterName(mounted.root, '야간근무')
+    await flush()
+
+    const previews = findHostNodes(
+      mounted.root,
+      (node) => node.type === 'span' && String(node.props.class ?? '').includes('duty-type-preview'),
+    )
+
+    expect(previews).toHaveLength(2)
+    expect(previews.map(hostText)).toEqual(['야간근무', '야'])
+    for (const preview of previews) {
+      expect(String(preview.props.class)).toContain('px-2.5')
+      expect(String(preview.props.class)).toContain('py-0.5')
+      expect(String(preview.props.class)).toContain('rounded-md')
+      expect(String(preview.props.class)).toContain('font-semibold')
+      expect(String(preview.props.class)).toContain('text-sm')
+      expect(preview.props.style).toMatchObject({
+        backgroundColor: '#ffb3ba',
+        color: 'var(--dp-text-on-light)',
+      })
+    }
+  })
+
+  it('uses the dark text token only when the selected color needs it', async () => {
+    const mounted = mountDutyType({
+      dutyType: { id: 7, name: '야간근무', color: '#123456', position: 0, hidden: false, abbreviation: 'N' },
+    })
+    await flush()
+
+    const previews = findHostNodes(
+      mounted.root,
+      (node) => node.type === 'span' && String(node.props.class ?? '').includes('duty-type-preview'),
+    )
+
+    expect(previews).toHaveLength(2)
+    expect(previews.every((preview) => {
+      const style = preview.props.style as { color?: string } | undefined
+      return style?.color === 'var(--dp-text-on-dark)'
+    })).toBe(true)
   })
 })

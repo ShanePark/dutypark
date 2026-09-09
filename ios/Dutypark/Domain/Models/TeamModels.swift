@@ -71,6 +71,13 @@ nonisolated struct DutyTypeCreateDTO: Codable, Equatable, Sendable {
     let name: String
     let color: String
     var abbreviation: String? = nil
+
+    init(teamId: TeamID, name: String, color: String, abbreviation: String? = nil) {
+        self.teamId = teamId
+        self.name = name
+        self.color = color
+        self.abbreviation = DutyAbbreviation.normalizeForSubmission(abbreviation)
+    }
 }
 
 nonisolated struct DutyTypeUpdateDTO: Codable, Equatable, Sendable {
@@ -78,6 +85,13 @@ nonisolated struct DutyTypeUpdateDTO: Codable, Equatable, Sendable {
     let name: String
     let color: String
     var abbreviation: String? = nil
+
+    init(id: DutyTypeID, name: String, color: String, abbreviation: String? = nil) {
+        self.id = id
+        self.name = name
+        self.color = color
+        self.abbreviation = DutyAbbreviation.normalizeForSubmission(abbreviation)
+    }
 }
 
 nonisolated struct DutyTypeVisibilityDTO: Codable, Equatable, Sendable {

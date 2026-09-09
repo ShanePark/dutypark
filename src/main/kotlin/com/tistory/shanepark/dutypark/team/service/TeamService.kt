@@ -199,10 +199,7 @@ class TeamService(
     ) {
         val team = teamRepository.findById(teamId).orElseThrow()
         newDutyName?.let(publicContentService::validateContent)
-        if (newDutyAbbreviation != null && newDutyAbbreviation.length > 10) {
-            throw BadRequestException("dutyType.abbreviation.length")
-        }
-        val abbreviation = DutyAbbreviation.normalize(newDutyAbbreviation)
+        val abbreviation = DutyAbbreviation.normalizeAndValidate(newDutyAbbreviation)
         abbreviation?.let(publicContentService::validateContent)
         // This endpoint uses query parameters: omission preserves, an empty value resets.
         if (newDutyAbbreviation != null) {

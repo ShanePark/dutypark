@@ -30,12 +30,18 @@ class DutyAbbreviationRequestTest {
             val validator = factory.validator
             assertThat(validator.validate(DutyTypeCreateDto(1, "야간근무", "#112233"))).isEmpty()
             assertThat(validator.validate(DutyTypeCreateDto(1, "야간근무", "#112233", "N"))).isEmpty()
-            val create = DutyTypeCreateDto(1, "야간근무", "#112233", "12345678901")
-            val update = DutyTypeUpdateDto(1, "야간근무", "#112233").apply {
-                abbreviation = "12345678901"
+            assertThat(validator.validate(DutyTypeCreateDto(1, "야간근무", "#112233", "nAb"))).isEmpty()
+            assertThat(validator.validate(DutyTypeCreateDto(1, "야간근무", "#112233", "출근"))).isEmpty()
+            assertThat(validator.validate(DutyTypeCreateDto(1, "야간근무", "#112233", " n "))).isEmpty()
+            assertThat(validator.validate(DutyTypeCreateDto(1, "야간근무", "#112233", "  "))).isEmpty()
+            for (value in listOf("NNNN", "1", "ㄱ", "😀", "é")) {
+                val createErrors = validator.validate(DutyTypeCreateDto(1, "야간근무", "#112233", value))
+                val updateErrors = validator.validate(DutyTypeUpdateDto(1, "야간근무", "#112233").apply {
+                    abbreviation = value
+                })
+                assertThat(createErrors.map { it.message }).contains("dutyType.abbreviation.invalid")
+                assertThat(updateErrors.map { it.message }).contains("dutyType.abbreviation.invalid")
             }
-            assertThat(validator.validate(create).map { it.message }).contains("dutyType.abbreviation.length")
-            assertThat(validator.validate(update).map { it.message }).contains("dutyType.abbreviation.length")
         }
     }
 }

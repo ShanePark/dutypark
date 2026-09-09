@@ -11,7 +11,12 @@ import type { DutyTypeDto } from '@/types'
 import { X } from 'lucide-vue-next'
 import { resolveApiErrorMessage } from '@/utils/resolveApiError'
 import { useContentFilterStore } from '@/stores/contentFilter'
-import { dutyAbbreviation } from '@/utils/dutyAbbreviation'
+import {
+  dutyAbbreviation,
+  isValidDutyAbbreviation,
+  normalizeDutyAbbreviation,
+} from '@/utils/dutyAbbreviation'
+import { isLightColor } from '@/utils/color'
 
 const props = defineProps<{
   isOpen: boolean
@@ -41,11 +46,16 @@ const dutyTypeForm = ref({
   isDefault: false,
 })
 const trimmedDutyTypeName = computed(() => dutyTypeForm.value.name.trim())
-const trimmedDutyAbbreviation = computed(() => dutyTypeForm.value.abbreviation.trim())
-const isDutyAbbreviationInvalid = computed(() => trimmedDutyAbbreviation.value.length > 10)
+const trimmedDutyAbbreviation = computed(() => normalizeDutyAbbreviation(dutyTypeForm.value.abbreviation))
+const isDutyAbbreviationInvalid = computed(() => !isValidDutyAbbreviation(trimmedDutyAbbreviation.value))
 const automaticDutyAbbreviation = computed(() => dutyAbbreviation(trimmedDutyTypeName.value))
 const dutyAbbreviationPreview = computed(() => dutyAbbreviation(trimmedDutyTypeName.value, trimmedDutyAbbreviation.value))
+const dutyTypePreviewStyle = computed(() => ({
+  backgroundColor: dutyTypeForm.value.color || 'var(--dp-duty-fallback)',
+  color: isLightColor(dutyTypeForm.value.color) ? 'var(--dp-text-on-light)' : 'var(--dp-text-on-dark)',
+}))
 const submitting = ref(false)
+const isDutyAbbreviationComposing = ref(false)
 const hasDuplicateDutyTypeName = computed(() =>
   props.dutyTypes.some(
     dt => dt.name === trimmedDutyTypeName.value && dt.id !== dutyTypeForm.value.id
@@ -72,10 +82,25 @@ function setFormFromProps() {
   dutyTypeForm.value = {
     id: props.dutyType.id,
     name: props.dutyType.name,
-    abbreviation: props.dutyType.abbreviation ?? '',
+    abbreviation: normalizeDutyAbbreviation(props.dutyType.abbreviation),
     color: props.dutyType.color || defaultDutyColor,
     isDefault: props.dutyType.position === -1,
   }
+}
+
+function handleDutyAbbreviationInput(event: Event) {
+  if (isDutyAbbreviationComposing.value || (event as InputEvent).isComposing) return
+  const input = event.target as HTMLInputElement
+  dutyTypeForm.value.abbreviation = normalizeDutyAbbreviation(input.value)
+}
+
+function startDutyAbbreviationComposition() {
+  isDutyAbbreviationComposing.value = true
+}
+
+function finishDutyAbbreviationComposition(event: CompositionEvent) {
+  isDutyAbbreviationComposing.value = false
+  handleDutyAbbreviationInput(event)
 }
 
 function initPickr(defaultColor: string) {
@@ -153,7 +178,7 @@ async function saveDutyType() {
   }
 
   if (isDutyAbbreviationInvalid.value) {
-    showWarning(t('dutyAbbreviation.tooLong'))
+    showWarning(t('dutyAbbreviation.invalid'))
     return
   }
 
@@ -253,21 +278,33 @@ async function saveDutyType() {
       <div>
         <label for="duty-type-abbreviation" class="form-label">
           {{ t('dutyAbbreviation.label') }}
-          <CharacterCounter :current="dutyTypeForm.abbreviation.length" :max="10" />
+          <CharacterCounter :current="dutyTypeForm.abbreviation.length" :max="3" />
         </label>
         <input
           id="duty-type-abbreviation"
-          v-model="dutyTypeForm.abbreviation"
+          :value="dutyTypeForm.abbreviation"
           type="text"
-          maxlength="10"
+          maxlength="3"
+          pattern="[A-Za-z가-힣]{1,3}"
           autocomplete="off"
           :placeholder="automaticDutyAbbreviation || t('dutyAbbreviation.placeholder')"
           class="form-control"
           :aria-invalid="isDutyAbbreviationInvalid"
-          aria-describedby="duty-type-abbreviation-help"
+          aria-describedby="duty-type-abbreviation-help duty-type-abbreviation-error"
+          @input="handleDutyAbbreviationInput"
+          @compositionstart="startDutyAbbreviationComposition"
+          @compositionend="finishDutyAbbreviationComposition"
         />
         <p id="duty-type-abbreviation-help" class="mt-1 text-xs text-dp-text-secondary">
           {{ t('dutyAbbreviation.hint') }}
+        </p>
+        <p
+          v-if="isDutyAbbreviationInvalid"
+          id="duty-type-abbreviation-error"
+          class="mt-1 text-xs text-dp-danger"
+          role="alert"
+        >
+          {{ t('dutyAbbreviation.invalid') }}
         </p>
       </div>
 
@@ -284,14 +321,20 @@ async function saveDutyType() {
         <label class="form-label">
           {{ t('team.dutyType.fields.preview') }}
         </label>
-        <div
-          class="inline-block px-4 py-2 rounded-lg border font-medium"
-          :style="{ backgroundColor: dutyTypeForm.color, borderColor: 'var(--dp-border-primary)' }"
+        <span
+          class="duty-type-preview px-2.5 py-0.5 rounded-md font-semibold text-sm"
+          :style="dutyTypePreviewStyle"
         >
           {{ dutyTypeForm.name || t('team.dutyType.placeholders.preview') }}
-        </div>
-        <p class="mt-2 text-sm text-dp-text-secondary">
-          {{ t('dutyAbbreviation.preview') }}: <strong class="text-dp-text-primary">{{ dutyAbbreviationPreview || '–' }}</strong>
+        </span>
+        <p class="mt-2 flex items-center gap-2 text-sm text-dp-text-secondary">
+          <span>{{ t('dutyAbbreviation.preview') }}:</span>
+          <span
+            class="duty-type-preview px-2.5 py-0.5 rounded-md font-semibold text-sm"
+            :style="dutyTypePreviewStyle"
+          >
+            {{ dutyAbbreviationPreview || '–' }}
+          </span>
         </p>
       </div>
     </div>

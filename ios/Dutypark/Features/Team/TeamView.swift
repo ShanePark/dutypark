@@ -526,22 +526,11 @@ struct TeamView: View {
         VStack(alignment: .leading, spacing: DPSpacing.small) {
             ForEach(Array(viewModel.shifts.enumerated()), id: \.offset) { _, shift in
                 VStack(alignment: .leading, spacing: 0) {
-                    HStack {
-                        Text(verbatim: shift.dutyType.name)
-                            .font(DPTypography.bodyMedium)
-                            .foregroundStyle(TeamVisualStyle.foregroundColor(on: shift.dutyType.color))
-                        Spacer()
-                        Text(verbatim: TeamLocalization.shiftMemberCount(shift.members.count))
-                            .font(DPTypography.caption)
-                            .foregroundStyle(DPColor.textOnLight)
-                            .padding(.horizontal, DPSpacing.small)
-                            .padding(.vertical, 2)
-                            .background(Color.white.opacity(0.65))
-                            .clipShape(Capsule())
-                            .accessibilityIdentifier("team.shift.memberCount")
-                    }
-                    .padding(DPSpacing.compact)
-                    .background(Color(teamHex: shift.dutyType.color))
+                    TeamDutyTypeBadge(
+                        name: shift.dutyType.name,
+                        color: shift.dutyType.color,
+                        memberCount: shift.members.count
+                    )
 
                     let memberColumns = Array(repeating: GridItem(.flexible(), spacing: DPSpacing.small), count: 2)
                     LazyVGrid(columns: memberColumns, spacing: DPSpacing.small) {
@@ -1077,7 +1066,7 @@ private struct TeamCreationView: View {
     }
 }
 
-private enum TeamVisualStyle {
+nonisolated enum TeamVisualStyle {
     static func weekdayColor(_ index: Int) -> Color {
         if index == 0 { return DPColor.danger }
         if index == 6 { return DPColor.accent }
@@ -1096,6 +1085,33 @@ private enum TeamVisualStyle {
         let green = Double((number >> 8) & 0xff) / 255
         let blue = Double(number & 0xff) / 255
         return (red * 0.299 + green * 0.587 + blue * 0.114) > 0.64
+    }
+}
+
+nonisolated struct TeamDutyTypeBadge: View {
+    let name: String
+    let color: String?
+    let memberCount: Int?
+
+    var body: some View {
+        HStack {
+            Text(verbatim: name)
+                .font(DPTypography.bodyMedium)
+                .foregroundStyle(TeamVisualStyle.foregroundColor(on: color))
+            Spacer()
+            if let memberCount {
+                Text(verbatim: TeamLocalization.shiftMemberCount(memberCount))
+                    .font(DPTypography.caption)
+                    .foregroundStyle(DPColor.textOnLight)
+                    .padding(.horizontal, DPSpacing.small)
+                    .padding(.vertical, 2)
+                    .background(Color.white.opacity(0.65))
+                    .clipShape(Capsule())
+                    .accessibilityIdentifier("team.shift.memberCount")
+            }
+        }
+        .padding(DPSpacing.compact)
+        .background(Color(teamHex: color))
     }
 }
 

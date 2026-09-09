@@ -36,7 +36,7 @@ class Team(
     @Column(nullable = false, name = "default_duty_name")
     var defaultDutyName: String = "OFF"
 
-    @Column(length = 10)
+    @Column(length = 3)
     var defaultDutyAbbreviation: String? = null
 
     @get:Transient

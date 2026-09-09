@@ -787,13 +787,13 @@ final class TeamManageViewModel: ObservableObject {
     }
 
     func saveDutyType(name: String, color: String, abbreviation: String? = nil) async {
-        let abbreviation = abbreviation?.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard DutyAbbreviation.isValid(abbreviation) else {
-            presentError(teamLocalized("team.dutyType.abbreviation.tooLong"))
+        let normalizedAbbreviation = DutyAbbreviation.normalizeForSubmission(abbreviation)
+        guard DutyAbbreviation.isValid(normalizedAbbreviation) else {
+            presentError(teamLocalized("team.dutyType.abbreviation.invalid"))
             return
         }
         guard !contentFilter.isBlocked(name),
-              abbreviation.map({ $0.isEmpty || !contentFilter.isBlocked($0) }) ?? true
+              normalizedAbbreviation.map({ $0.isEmpty || !contentFilter.isBlocked($0) }) ?? true
         else {
             presentError(teamLocalized("team.common.contentFilterError"))
             return
@@ -808,21 +808,21 @@ final class TeamManageViewModel: ObservableObject {
                         teamID: teamID,
                         name: name,
                         color: color,
-                        abbreviation: abbreviation
+                        abbreviation: normalizedAbbreviation
                     )
                 } else if target?.id == nil, target != nil {
                     try await repository.updateDefaultDuty(
                         teamID: teamID,
                         name: name,
                         color: color,
-                        abbreviation: abbreviation
+                        abbreviation: normalizedAbbreviation
                     )
                 } else {
                     try await repository.addDutyType(
                         teamID: teamID,
                         name: name,
                         color: color,
-                        abbreviation: abbreviation
+                        abbreviation: normalizedAbbreviation
                     )
                 }
             },
@@ -833,7 +833,7 @@ final class TeamManageViewModel: ObservableObject {
                         dutyType,
                         name: name,
                         color: color,
-                        abbreviation: abbreviation.map { DutyAbbreviation.normalize($0) }
+                        abbreviation: normalizedAbbreviation.map { DutyAbbreviation.normalize($0) }
                     )
                 }
                 return Self.copy(team, dutyTypes: dutyTypes)

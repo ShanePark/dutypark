@@ -341,7 +341,12 @@ struct TeamManageView: View {
                                 teamSmallAction(teamLocalized("team.manage.actions.revokeManager"), "shield.slash", DPColor.warning, DPColor.warningBorder) { present(.removeManager(id)) }
                                 teamSmallAction(teamLocalized("team.manage.actions.transferAdmin"), "crown", DPColor.accent, DPColor.accentBorder) { present(.changeAdmin(id)) }
                             } else {
-                                teamSmallAction(teamLocalized("team.manage.actions.assignManager"), "plus", DPColor.success, DPColor.successBorder) { present(.addManager(id)) }
+                                teamSmallAction(
+                                    teamLocalized("team.manage.actions.assignManager"),
+                                    "person.crop.circle.badge.checkmark",
+                                    DPColor.textSecondary,
+                                    DPColor.borderSecondary
+                                ) { present(.addManager(id)) }
                             }
                         }
                     }
@@ -788,8 +793,20 @@ private struct TeamDutyTypeEditor: View {
                 .id(Field.name)
 
                 VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
-                    Text("team.dutyType.abbreviation.label", tableName: "Team")
-                        .font(DPTypography.label)
+                    HStack {
+                        Text("team.dutyType.abbreviation.label", tableName: "Team")
+                            .font(DPTypography.label)
+                        Spacer()
+                        Text(verbatim: "\(abbreviation.count)/\(DutyAbbreviation.maximumLength)")
+                            .font(DPTypography.caption)
+                            .foregroundStyle(
+                                abbreviation.count > DutyAbbreviation.maximumLength
+                                    ? DPColor.danger
+                                    : abbreviation.count == DutyAbbreviation.maximumLength
+                                        ? DPColor.warning
+                                        : DPColor.textMuted
+                            )
+                    }
                     TextField(
                         DutyAbbreviation.resolve(trimmedName),
                         text: $abbreviation
@@ -804,7 +821,7 @@ private struct TeamDutyTypeEditor: View {
                         .font(DPTypography.caption)
                         .foregroundStyle(DPColor.textSecondary)
                     if !DutyAbbreviation.isValid(abbreviation) {
-                        Text("team.dutyType.abbreviation.tooLong", tableName: "Team")
+                        Text("team.dutyType.abbreviation.invalid", tableName: "Team")
                             .font(DPTypography.caption)
                             .foregroundStyle(DPColor.danger)
                     }
@@ -832,21 +849,13 @@ private struct TeamDutyTypeEditor: View {
                 VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
                     Text("team.dutyType.fields.preview", tableName: "Team")
                         .font(DPTypography.label)
-                    Text(
-                        verbatim: trimmedName.isEmpty
+                    TeamDutyTypeBadge(
+                        name: trimmedName.isEmpty
                             ? teamLocalized("team.dutyType.placeholders.preview")
-                            : trimmedName
+                            : trimmedName,
+                        color: color.teamHexRGB,
+                        memberCount: nil
                     )
-                    .font(DPTypography.bodyMedium)
-                    .foregroundStyle(DPColor.textPrimary)
-                    .padding(.horizontal, DPSpacing.medium)
-                    .frame(minHeight: DPSize.minimumTouchTarget)
-                    .background(color.opacity(0.78))
-                    .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: DPRadius.standard)
-                            .stroke(DPColor.borderPrimary)
-                    }
                 }
             }
             .padding(DPSpacing.medium)

@@ -18,7 +18,10 @@ data class DutyTypeUpdateDto(
         private set
 
     // Older clients omit this field. Only an explicit value (including null) changes it.
-    @field:Size(max = 10, message = "dutyType.abbreviation.length")
+    @field:Pattern(
+        regexp = "^\\s*[A-Za-z가-힣]{0,3}\\s*$",
+        message = "dutyType.abbreviation.invalid",
+    )
     var abbreviation: String? = null
         set(value) {
             field = value

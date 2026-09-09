@@ -4,18 +4,38 @@ import Testing
 
 struct DutyAbbreviationTests {
     @Test
-    func automaticLabelsUseACompleteCharacterAndCustomLabelsAreTrimmed() {
+    func automaticLabelsUseACompleteCharacterAndCustomLabelsUseTheThreeCharacterContract() {
         #expect(DutyAbbreviation.resolve("야간근무") == "야")
         #expect(DutyAbbreviation.resolve("야간근무", override: "  ") == "야")
-        #expect(DutyAbbreviation.resolve("야간근무", override: " N ") == "N")
+        #expect(DutyAbbreviation.resolve("야간근무", override: " n ") == "n")
+        #expect(DutyAbbreviation.resolve("야간근무", override: "nAb") == "nAb")
+        #expect(DutyAbbreviation.resolve("야간근무", override: " 가 ") == "가")
+        #expect(DutyAbbreviation.resolve("야간근무", override: "가나다") == "가나다")
+        #expect(DutyAbbreviation.resolve("야간근무", override: "ABCD") == "야")
+        #expect(DutyAbbreviation.resolve("야간근무", override: "1/10") == "야")
         #expect(DutyAbbreviation.resolve("🌙야간") == "🌙")
         #expect(DutyAbbreviation.resolve("👩‍⚕️근무") == "👩‍⚕️")
         #expect(DutyAbbreviation.resolve("e\u{301}vening") == "e\u{301}")
         #expect(DutyAbbreviation.resolve("") == "")
         #expect(DutyAbbreviation.normalize("  ") == nil)
-        #expect(DutyAbbreviation.isValid("1234567890"))
-        #expect(!DutyAbbreviation.isValid("12345678901"))
-        #expect(!DutyAbbreviation.isValid(String(repeating: "🌙", count: 6)))
+        #expect(DutyAbbreviation.normalizeForSubmission(nil) == nil)
+        #expect(DutyAbbreviation.normalizeForSubmission("  ") == "")
+        #expect(DutyAbbreviation.normalizeForSubmission(" nAb ") == "nAb")
+        #expect(DutyAbbreviation.normalize(" a ") == "a")
+        #expect(DutyAbbreviation.isValid(nil))
+        #expect(DutyAbbreviation.isValid("  "))
+        #expect(DutyAbbreviation.isValid("A"))
+        #expect(DutyAbbreviation.isValid("z"))
+        #expect(DutyAbbreviation.isValid("가"))
+        #expect(DutyAbbreviation.isValid("nAb"))
+        #expect(DutyAbbreviation.isValid("가나다"))
+        #expect(!DutyAbbreviation.isValid("1"))
+        #expect(!DutyAbbreviation.isValid("1/10"))
+        #expect(!DutyAbbreviation.isValid("ㄱ"))
+        #expect(!DutyAbbreviation.isValid("ㅏ"))
+        #expect(!DutyAbbreviation.isValid("ABCD"))
+        #expect(!DutyAbbreviation.isValid("가나다라"))
+        #expect(!DutyAbbreviation.isValid("👩‍⚕️"))
     }
 
     @Test
@@ -54,14 +74,19 @@ struct DutyAbbreviationTests {
     func requestsDistinguishAnOmittedOverrideFromAnExplicitReset() throws {
         let omitted = DutyTypeUpdateDTO(id: 7, name: "야간근무", color: "#112233")
         let reset = DutyTypeUpdateDTO(id: 7, name: "야간근무", color: "#112233", abbreviation: "")
-        let custom = DutyTypeCreateDTO(teamId: 1, name: "야간근무", color: "#112233", abbreviation: "N")
+        let custom = DutyTypeCreateDTO(teamId: 1, name: "야간근무", color: "#112233", abbreviation: " nAb ")
+        let update = DutyTypeUpdateDTO(id: 7, name: "야간근무", color: "#112233", abbreviation: " nAb ")
+        let blank = DutyTypeCreateDTO(teamId: 1, name: "야간근무", color: "#112233", abbreviation: "  ")
         let encoder = JSONEncoder()
         let omittedJSON = try #require(JSONSerialization.jsonObject(with: encoder.encode(omitted)) as? [String: Any])
         let resetJSON = try #require(JSONSerialization.jsonObject(with: encoder.encode(reset)) as? [String: Any])
         let customJSON = try #require(JSONSerialization.jsonObject(with: encoder.encode(custom)) as? [String: Any])
         #expect(omittedJSON["abbreviation"] == nil)
         #expect(resetJSON["abbreviation"] as? String == "")
-        #expect(customJSON["abbreviation"] as? String == "N")
+        #expect(custom.abbreviation == "nAb")
+        #expect(update.abbreviation == "nAb")
+        #expect(blank.abbreviation == "")
+        #expect(customJSON["abbreviation"] as? String == "nAb")
         #expect(customJSON["name"] as? String == "야간근무")
     }
 }

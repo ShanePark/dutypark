@@ -105,7 +105,8 @@ const apiErrors = {
   },
   dutyType: {
     abbreviation: {
-      length: '단축어는 10자 이내로 입력해 주세요.',
+      length: '단축어는 영어 알파벳 또는 완성형 한글을 1~3글자로 입력해 주세요.',
+      invalid: '단축어는 영어 알파벳 또는 완성형 한글을 1~3글자로 입력해 주세요.',
     },
     name: {
       required: '근무명은 필수입니다.',
@@ -378,10 +379,10 @@ export default {
   apiErrors,
   dutyAbbreviation: {
     label: '단축어 (선택)',
-    hint: '비워 두면 근무명의 첫 글자를 사용합니다. 본인 근무 선택·편집에는 단축어를, 다른 사람의 달력과 함께보기에는 전체 이름을 표시합니다.',
+    hint: '비워 두면 근무명의 첫 글자를 사용합니다. 직접 입력할 때는 영어 알파벳 또는 완성형 한글을 1~3글자로 사용할 수 있습니다. 본인 근무 선택·편집에는 단축어를, 다른 사람의 달력과 함께보기에는 전체 이름을 표시합니다.',
     placeholder: '예: N',
     preview: '단축어 미리보기',
-    tooLong: '단축어는 10자 이내로 입력해 주세요.',
+    invalid: '단축어는 영어 알파벳 또는 완성형 한글을 1~3글자로 입력해 주세요.',
   },
   contentFilter: {
     blocked: '커뮤니티 가이드라인에 어긋나는 표현이 포함되어 있어 저장할 수 없습니다. 내용을 수정해 주세요.',
@@ -1495,6 +1496,9 @@ export default {
         removeMember: '탈퇴',
         assignManager: '매니저 지정',
         addDutyType: '추가',
+        moveDutyTypeDown: '아래로 이동',
+        moveDutyTypeUp: '위로 이동',
+        editDutyType: '근무 유형 수정',
         hideDutyType: '숨기기',
         restoreDutyType: '복원',
       },

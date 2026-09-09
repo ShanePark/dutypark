@@ -1232,6 +1232,27 @@ struct TeamFeatureTests {
     }
 
     @Test
+    func abbreviationEditorUsesTheThreeCharacterContractWithoutFilteringIMEInput() throws {
+        let root = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let manageView = try String(
+            contentsOf: root.appending(path: "Dutypark/Features/Team/TeamManageView.swift"),
+            encoding: .utf8
+        )
+        let viewModel = try String(
+            contentsOf: root.appending(path: "Dutypark/Features/Team/TeamViewModel.swift"),
+            encoding: .utf8
+        )
+
+        #expect(manageView.contains(".textInputAutocapitalization(.never)"))
+        #expect(!manageView.contains("uppercaseASCIILetters"))
+        #expect(manageView.contains("DutyAbbreviation.maximumLength"))
+        #expect(manageView.contains("team.dutyType.abbreviation.invalid"))
+        #expect(viewModel.contains("DutyAbbreviation.normalizeForSubmission(abbreviation)"))
+    }
+
+    @Test
     func choosesTeamModalDismissBehaviorForPristineDirtyAndBusyStates() {
         #expect(TeamModalInteractionState().dismissDecision == .dismiss)
         #expect(TeamModalInteractionState(isDirty: true).dismissDecision == .confirmDiscard)
@@ -1267,6 +1288,29 @@ struct TeamFeatureTests {
         #expect(source.contains("team.dutyType.messages.hideConfirm"))
         #expect(source.contains("team.dutyType.messages.restoreConfirm"))
         #expect(source.contains("await viewModel.toggleVisibility(dutyType)"))
+    }
+
+    @Test
+    func teamManageActionsUseRoleIconAndMatchTheActualDutyBadgeStyle() throws {
+        let root = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let manageView = try String(
+            contentsOf: root.appending(path: "Dutypark/Features/Team/TeamManageView.swift"),
+            encoding: .utf8
+        )
+        let teamView = try String(
+            contentsOf: root.appending(path: "Dutypark/Features/Team/TeamView.swift"),
+            encoding: .utf8
+        )
+
+        #expect(manageView.contains("person.crop.circle.badge.checkmark"))
+        #expect(manageView.contains("TeamDutyTypeBadge("))
+        #expect(manageView.contains("color.opacity(0.78)") == false)
+        #expect(teamView.contains("TeamDutyTypeBadge("))
+        #expect(teamView.contains("nonisolated struct TeamDutyTypeBadge"))
+        #expect(teamView.contains("enum TeamVisualStyle"))
+        #expect(teamView.contains("static func foregroundColor(on hex: String?)"))
     }
 
     @Test

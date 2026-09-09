@@ -103,7 +103,8 @@ const apiErrors = {
   },
   dutyType: {
     abbreviation: {
-      length: 'Abbreviations must be 10 characters or fewer.',
+      length: 'Use one to three English letters or complete Hangul syllables for the abbreviation.',
+      invalid: 'Use one to three English letters or complete Hangul syllables for the abbreviation.',
     },
     name: {
       required: 'Duty name is required.',
@@ -376,10 +377,10 @@ export default {
   apiErrors,
   dutyAbbreviation: {
     label: 'Abbreviation (optional)',
-    hint: 'Leave blank to use the first character of the duty name. Your duty selection and edit controls use abbreviations; other calendars and comparison views keep full names.',
+    hint: 'Leave blank to use the first character of the duty name. Custom abbreviations must be one to three English letters or complete Hangul syllables. Your duty selection and edit controls use abbreviations; other calendars and comparison views keep full names.',
     placeholder: 'e.g. N',
     preview: 'Abbreviation preview',
-    tooLong: 'Abbreviations must be 10 characters or fewer.',
+    invalid: 'Use one to three English letters or complete Hangul syllables for the abbreviation.',
   },
   contentFilter: {
     blocked: 'This includes wording that violates the community guidelines. Please revise it before saving.',
@@ -1590,6 +1591,9 @@ export default {
         removeMember: 'Remove',
         assignManager: 'Make manager',
         addDutyType: 'Add',
+        moveDutyTypeDown: 'Move down',
+        moveDutyTypeUp: 'Move up',
+        editDutyType: 'Edit duty type',
         hideDutyType: 'Hide',
         restoreDutyType: 'Restore',
       },

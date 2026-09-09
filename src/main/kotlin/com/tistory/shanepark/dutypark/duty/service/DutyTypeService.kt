@@ -50,7 +50,7 @@ class DutyTypeService(
     fun addDutyType(dutyTypeCreateDto: DutyTypeCreateDto): DutyType {
         val team = teamRepository.findByIdForUpdate(dutyTypeCreateDto.teamId).orElseThrow()
         publicContentService.validateContent(dutyTypeCreateDto.name)
-        val abbreviation = DutyAbbreviation.normalize(dutyTypeCreateDto.abbreviation)
+        val abbreviation = DutyAbbreviation.normalizeAndValidate(dutyTypeCreateDto.abbreviation)
         abbreviation?.let(publicContentService::validateContent)
         if (team.dutyTypes.any { it.name == dutyTypeCreateDto.name }) {
             throw IllegalArgumentException("DutyType already exists")
@@ -65,7 +65,7 @@ class DutyTypeService(
         val teamId = dutyType.team.id ?: throw IllegalArgumentException("DutyType has no team")
         val team = teamRepository.findByIdWithDutyTypes(teamId).orElseThrow()
         publicContentService.validateContent(dutyTypeUpdateDto.name)
-        val abbreviation = DutyAbbreviation.normalize(dutyTypeUpdateDto.abbreviation)
+        val abbreviation = DutyAbbreviation.normalizeAndValidate(dutyTypeUpdateDto.abbreviation)
         abbreviation?.let(publicContentService::validateContent)
 
         team.dutyTypes
