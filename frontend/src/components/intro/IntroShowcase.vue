@@ -1,14 +1,8 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, inject, type Component, type Ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import {
-  ListTodo,
-  Clock,
-  Users,
-  Heart,
-  Flag,
-  Sun,
-} from 'lucide-vue-next'
+import { ListTodo, Clock, Users, Heart, Flag, Sun } from 'lucide-vue-next'
+import { getShowcaseProgress, getTransitionProgress, getScreenOpacity } from './showcaseMotion'
 
 export interface Feature {
   id: string
@@ -26,79 +20,9 @@ const props = defineProps<{
 const showcaseRef = ref<HTMLElement | null>(null)
 const containerRef = inject<Ref<HTMLElement | null>>('introContainer', ref(null))
 const { t } = useI18n()
-
 const activeIndex = ref(0)
 const featureProgress = ref(0)
-
-// Typing animation phases within 0-80% of feature progress
-// 0-15%: icon + title + mockup appear together
-// 15-40%: first description line typing
-// 40-65%: second description line typing
-// 65-80%: complete state
-// 80-100%: transition to next feature
-
-interface TypingState {
-  iconOpacity: number
-  titleText: string
-  descriptionLines: { text: string; complete: boolean }[]
-  mockupOpacity: number
-}
-
-function getTypingState(featureIndex: number, progress: number, feature: Feature): TypingState {
-  const diff = featureIndex - activeIndex.value
-
-  if (diff !== 0) {
-    if (diff < 0) {
-      return {
-        iconOpacity: 0,
-        titleText: feature.title,
-        descriptionLines: feature.descriptionLines.map(line => ({ text: line, complete: true })),
-        mockupOpacity: 0,
-      }
-    }
-    return {
-      iconOpacity: 0,
-      titleText: '',
-      descriptionLines: feature.descriptionLines.map(() => ({ text: '', complete: false })),
-      mockupOpacity: 0,
-    }
-  }
-
-  const p = progress
-
-  // Icon + Title + Mockup: 0-15% (appear together)
-  const initialOpacity = Math.min(1, p / 0.15)
-  const iconOpacity = initialOpacity
-
-  // Title appears all at once (no typing)
-  const titleText = initialOpacity > 0.3 ? feature.title : ''
-  // Mockup appears with title
-  const mockupOpacity = initialOpacity
-
-  const descriptionLines = feature.descriptionLines.map((line, idx) => {
-    // Line 0: 15-40%, Line 1: 40-65%
-    const lineStart = 0.15 + idx * 0.25
-    const lineEnd = lineStart + 0.25
-
-    if (p < lineStart) {
-      return { text: '', complete: false }
-    }
-
-    const lineProgress = Math.min(1, (p - lineStart) / (lineEnd - lineStart))
-    const chars = Math.floor(lineProgress * line.length)
-    return {
-      text: line.slice(0, chars),
-      complete: lineProgress >= 1,
-    }
-  })
-
-  return {
-    iconOpacity,
-    titleText,
-    descriptionLines,
-    mockupOpacity,
-  }
-}
+const reducedMotion = ref(false)
 
 const iconComponents: Record<string, Component> = {
   check: ListTodo,
@@ -109,195 +33,113 @@ const iconComponents: Record<string, Component> = {
   sun: Sun,
 }
 
-let rafId: number | null = null
+function getDescriptionLines(index: number, feature: Feature) {
+  const progress = reducedMotion.value || index < activeIndex.value
+    ? 1
+    : index === activeIndex.value ? featureProgress.value : 0
 
-const updateProgress = () => {
-  if (!showcaseRef.value || !containerRef?.value) return
-
-  const container = containerRef.value
-  const showcase = showcaseRef.value
-  const containerRect = container.getBoundingClientRect()
-  const showcaseRect = showcase.getBoundingClientRect()
-
-  const showcaseTop = showcaseRect.top - containerRect.top
-  const showcaseHeight = showcaseRect.height
-  const viewportHeight = containerRect.height
-
-  const scrollableDistance = showcaseHeight - viewportHeight
-
-  let progress = -showcaseTop / scrollableDistance
-  progress = Math.max(0, Math.min(1, progress))
-  const totalFeatures = props.features.length
-  const rawIndex = progress * totalFeatures
-  const currentIndex = Math.min(Math.floor(rawIndex), totalFeatures - 1)
-  activeIndex.value = currentIndex
-
-  featureProgress.value = rawIndex - currentIndex
-}
-
-const onScroll = () => {
-  if (rafId) return
-  rafId = requestAnimationFrame(() => {
-    updateProgress()
-    rafId = null
+  return feature.descriptionLines.map((line, lineIndex) => {
+    const lineStart = 0.15 + lineIndex * 0.25
+    const lineProgress = Math.max(0, Math.min(1, (progress - lineStart) / 0.25))
+    return {
+      text: line.slice(0, Math.floor(lineProgress * line.length)),
+      complete: lineProgress >= 1,
+    }
   })
 }
 
+const transitionProgress = computed(() =>
+  getTransitionProgress(activeIndex.value, featureProgress.value, props.features.length),
+)
+
+function getFeatureStyle(index: number) {
+  if (reducedMotion.value) {
+    return { opacity: index === activeIndex.value ? 1 : 0, transform: 'none' }
+  }
+
+  const diff = index - activeIndex.value
+  const transition = transitionProgress.value
+  const opacity = diff === 0 ? 1 - transition : diff === 1 ? transition : 0
+  const translateY = diff === 0 ? -50 * transition : 50 * (1 - transition)
+  return { opacity, transform: `translateY(${translateY}px)` }
+}
+
+function getMockupStyle(index: number) {
+  return {
+    opacity: reducedMotion.value
+      ? (index === activeIndex.value ? 1 : 0)
+      : getScreenOpacity(index, activeIndex.value, featureProgress.value, props.features.length),
+  }
+}
+
+let rafId: number | null = null
+let resizeObserver: ResizeObserver | null = null
+let scrollContainer: HTMLElement | null = null
+let motionQuery: MediaQueryList | null = null
+
+function updateProgress() {
+  if (!showcaseRef.value || !containerRef.value) return
+  const containerRect = containerRef.value.getBoundingClientRect()
+  const showcaseRect = showcaseRef.value.getBoundingClientRect()
+  const state = getShowcaseProgress(
+    showcaseRect.top - containerRect.top,
+    showcaseRect.height,
+    containerRef.value.clientHeight,
+    props.features.length,
+  )
+  activeIndex.value = state.activeIndex
+  featureProgress.value = state.featureProgress
+}
+
+function onScroll() {
+  if (rafId !== null) return
+  rafId = requestAnimationFrame(() => {
+    rafId = null
+    updateProgress()
+  })
+}
+
+function onMotionChange(event: MediaQueryListEvent) {
+  reducedMotion.value = event.matches
+}
+
 onMounted(() => {
-  if (!containerRef?.value) return
-  containerRef.value.addEventListener('scroll', onScroll, { passive: true })
+  motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)')
+  reducedMotion.value = motionQuery.matches
+  motionQuery.addEventListener('change', onMotionChange)
+
+  scrollContainer = containerRef.value
+  if (!scrollContainer || !showcaseRef.value) return
+  scrollContainer.addEventListener('scroll', onScroll, { passive: true })
+  resizeObserver = new ResizeObserver(onScroll)
+  resizeObserver.observe(scrollContainer)
+  resizeObserver.observe(showcaseRef.value)
   updateProgress()
 })
 
 onUnmounted(() => {
-  if (containerRef?.value) {
-    containerRef.value.removeEventListener('scroll', onScroll)
-  }
-  if (rafId) {
-    cancelAnimationFrame(rafId)
-  }
+  scrollContainer?.removeEventListener('scroll', onScroll)
+  resizeObserver?.disconnect()
+  motionQuery?.removeEventListener('change', onMotionChange)
+  if (rafId !== null) cancelAnimationFrame(rafId)
 })
 
-const getFeatureStyle = (index: number) => {
-  const diff = index - activeIndex.value
-  const progress = featureProgress.value
-
-  if (diff === 0) {
-    // Crossfade: both exit and enter happen at 80-100%
-    const exitProgress = Math.max(0, progress - 0.8) / 0.2
-    const opacity = 1 - exitProgress
-    const translateY = exitProgress * -50
-    const scale = 1 - exitProgress * 0.03
-
-    return {
-      opacity,
-      transform: `translate(-50%, -50%) translateY(${translateY}px) scale(${scale})`,
-      zIndex: 10,
-      pointerEvents: (exitProgress > 0.3 ? 'none' : 'auto') as 'none' | 'auto'
-    }
-  }
-
-  if (diff === 1) {
-    // Crossfade: enter at same time as current exits (80-100%)
-    const enterProgress = Math.max(0, progress - 0.8) / 0.2
-    const opacity = enterProgress
-    const translateY = (1 - enterProgress) * 50
-    const scale = 0.97 + enterProgress * 0.03
-
-    return {
-      opacity,
-      transform: `translate(-50%, -50%) translateY(${translateY}px) scale(${scale})`,
-      zIndex: 5,
-      pointerEvents: 'none' as const
-    }
-  }
-
-  if (diff < 0) {
-    return {
-      opacity: 0,
-      transform: 'translate(-50%, -50%) translateY(-50px) scale(0.97)',
-      zIndex: 1,
-      pointerEvents: 'none' as const
-    }
-  }
-
-  return {
-    opacity: 0,
-    transform: 'translate(-50%, -50%) translateY(50px) scale(0.97)',
-    zIndex: 1,
-    pointerEvents: 'none' as const
-  }
-}
-
-// Mockup animation - opacity only for stable positioning
-const getMockupStyle = (index: number) => {
-  const diff = index - activeIndex.value
-  const progress = featureProgress.value
-
-  if (diff === 0) {
-    // Mockup exits at 80-100% (same as text)
-    const exitProgress = Math.max(0, progress - 0.8) / 0.2
-    const opacity = 1 - exitProgress
-
-    return { opacity }
-  }
-
-  if (diff === 1) {
-    // Mockup enters at 80-100% (same as text)
-    const enterProgress = Math.max(0, progress - 0.8) / 0.2
-    const opacity = enterProgress
-
-    return { opacity }
-  }
-
-  return { opacity: 0 }
-}
-
-// Icon animation with bounce
-const getIconStyle = (index: number) => {
-  const diff = index - activeIndex.value
-  const progress = featureProgress.value
-
-  if (diff === 0) {
-    // Icon exits at 80-100%
-    const exitProgress = Math.max(0, progress - 0.8) / 0.2
-    const scale = 1 - exitProgress * 0.15
-    const rotate = exitProgress * 15
-
-    return {
-      opacity: 1 - exitProgress,
-      transform: `scale(${scale}) rotate(${rotate}deg)`,
-    }
-  }
-
-  if (diff === 1) {
-    // Icon enters at 80-100% with subtle bounce
-    const enterProgress = Math.max(0, progress - 0.8) / 0.2
-    const bounce = enterProgress < 0.7
-      ? enterProgress / 0.7 * 1.05
-      : 1.05 - (enterProgress - 0.7) / 0.3 * 0.05
-    const scale = Math.min(1, bounce)
-    const rotate = (1 - enterProgress) * -15
-
-    return {
-      opacity: enterProgress,
-      transform: `scale(${scale}) rotate(${rotate}deg)`,
-    }
-  }
-
-  return {
-    opacity: 0,
-    transform: 'scale(0.85)',
-  }
-}
-
-const progressDots = computed(() => {
-  return props.features.map((_, index) => {
-    const isActive = index === activeIndex.value
-    const isPassed = index < activeIndex.value
-    return { isActive, isPassed }
-  })
-})
+const progressDots = computed(() => props.features.map((_, index) => ({
+  isActive: index === activeIndex.value,
+  isPassed: index < activeIndex.value,
+})))
 
 function scrollToFeature(index: number) {
-  if (!showcaseRef.value || !containerRef?.value) return
-
+  if (!showcaseRef.value || !containerRef.value || !props.features.length) return
   const container = containerRef.value
-  const showcase = showcaseRef.value
-  const showcaseRect = showcase.getBoundingClientRect()
+  const showcaseRect = showcaseRef.value.getBoundingClientRect()
   const containerRect = container.getBoundingClientRect()
-
-  const showcaseTop = showcase.offsetTop - container.offsetTop
-  const showcaseHeight = showcaseRect.height
-  const viewportHeight = containerRect.height
-  const scrollableDistance = showcaseHeight - viewportHeight
-
-  const targetProgress = index / props.features.length
-  const targetScroll = showcaseTop + targetProgress * scrollableDistance
+  const showcaseTop = container.scrollTop + showcaseRect.top - containerRect.top
+  const scrollableDistance = Math.max(0, showcaseRect.height - container.clientHeight)
 
   container.scrollTo({
-    top: targetScroll,
-    behavior: 'smooth'
+    top: showcaseTop + index / props.features.length * scrollableDistance,
+    behavior: reducedMotion.value ? 'instant' : 'smooth',
   })
 }
 </script>
@@ -309,72 +151,66 @@ function scrollToFeature(index: number) {
         <button
           v-for="(dot, index) in progressDots"
           :key="index"
+          type="button"
           class="progress-dot"
           :class="{ active: dot.isActive, passed: dot.isPassed }"
+          :aria-current="dot.isActive ? 'step' : undefined"
           :aria-label="t('intro.hero.featureAriaLabel', { title: features[index]?.title ?? t('intro.hero.featureFallback') })"
           @click="scrollToFeature(index)"
         />
       </div>
 
       <div class="intro-showcase-stage">
-        <div
-          v-for="(feature, index) in features"
-          :key="feature.id"
-          class="intro-showcase-card"
-          :style="getFeatureStyle(index)"
-        >
-          <div class="intro-showcase-content">
-            <div class="intro-showcase-text">
-              <div
-                class="intro-showcase-icon"
-                :style="{
-                  ...getIconStyle(index),
-                  opacity: getTypingState(index, featureProgress, feature).iconOpacity
-                }"
-              >
-                <component :is="iconComponents[feature.icon]" />
-              </div>
-
-              <h2
-                class="intro-showcase-title"
-                :style="{ opacity: getTypingState(index, featureProgress, feature).titleText ? 1 : 0 }"
-              >
-                {{ getTypingState(index, featureProgress, feature).titleText }}
-              </h2>
-
-              <div class="intro-showcase-description">
-                <p
-                  v-for="(line, lineIdx) in getTypingState(index, featureProgress, feature).descriptionLines"
-                  :key="lineIdx"
-                  class="description-line"
-                >
-                  <span class="typing-text">{{ line.text }}</span>
-                  <span
-                    v-if="!line.complete && line.text.length > 0"
-                    class="typing-cursor"
-                  >|</span>
-                </p>
-              </div>
+        <div class="intro-showcase-text-stack">
+          <div
+            v-for="(feature, index) in features"
+            :key="feature.id"
+            class="intro-showcase-text"
+            :style="getFeatureStyle(index)"
+            :aria-hidden="index !== activeIndex"
+          >
+            <div class="intro-showcase-icon" aria-hidden="true">
+              <component :is="iconComponents[feature.icon]" />
             </div>
 
-            <div
-              class="intro-showcase-mockup"
-              :style="{
-                ...getMockupStyle(index),
-                opacity: index === activeIndex ? getTypingState(index, featureProgress, feature).mockupOpacity : getMockupStyle(index).opacity
-              }"
-            >
-              <div class="intro-mockup-frame">
-                <img
-                  v-if="feature.mockupType === 'image' && feature.mockupSrc"
-                  :src="feature.mockupSrc"
-                  :alt="t('intro.hero.featureAlt', { title: feature.title })"
-                />
+            <h2 class="intro-showcase-title">{{ feature.title }}</h2>
 
-                <div v-else class="intro-mockup-placeholder">
-                  <component :is="iconComponents[feature.icon]" />
-                  <span class="mockup-label">{{ feature.title }}</span>
-                </div>
+            <div class="intro-showcase-description">
+              <p
+                v-for="(line, lineIdx) in getDescriptionLines(index, feature)"
+                :key="lineIdx"
+                class="description-line"
+              >
+                <span class="sr-only">{{ feature.descriptionLines[lineIdx] }}</span>
+                <span class="description-line-size" aria-hidden="true">{{ feature.descriptionLines[lineIdx] }}</span>
+                <span class="description-line-typed" aria-hidden="true">
+                  <span class="typing-text">{{ line.text }}</span>
+                  <span v-if="!line.complete && line.text.length > 0" class="typing-cursor">|</span>
+                </span>
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- The frame enters with the section's natural scroll, then stays pinned.
+             Only its screens crossfade; text transforms and typing never move it. -->
+        <div class="intro-showcase-mockup">
+          <div class="intro-mockup-frame">
+            <div
+              v-for="(feature, index) in features"
+              :key="feature.id"
+              class="intro-mockup-screen"
+              :style="getMockupStyle(index)"
+              :aria-hidden="index !== activeIndex"
+            >
+              <img
+                v-if="feature.mockupType === 'image' && feature.mockupSrc"
+                :src="feature.mockupSrc"
+                :alt="t('intro.hero.featureAlt', { title: feature.title })"
+              />
+              <div v-else class="intro-mockup-placeholder">
+                <component :is="iconComponents[feature.icon]" />
+                <span class="mockup-label">{{ feature.title }}</span>
               </div>
             </div>
           </div>
@@ -386,8 +222,8 @@ function scrollToFeature(index: number) {
 
 <style scoped>
 .intro-showcase {
-  /* Each feature gets 100vh of scroll space */
   height: calc(v-bind('features.length') * 100vh);
+  height: calc(v-bind('features.length') * 100svh);
   position: relative;
 }
 
@@ -395,6 +231,7 @@ function scrollToFeature(index: number) {
   position: sticky;
   top: 0;
   height: 100vh;
+  height: 100svh;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -403,7 +240,7 @@ function scrollToFeature(index: number) {
 
 .intro-showcase-progress {
   position: absolute;
-  left: 1.5rem;
+  left: 0.75rem;
   top: 50%;
   transform: translateY(-50%);
   display: flex;
@@ -444,61 +281,43 @@ function scrollToFeature(index: number) {
 }
 
 .intro-showcase-stage {
-  position: relative;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 1.5rem;
+  align-items: center;
   width: 100%;
   max-width: 1200px;
-  padding: 0 1rem;
+  height: 100%;
+  padding: 4rem 2.5rem 2rem;
+}
+
+/* Every complete translation participates in sizing, not just the currently typed text. */
+.intro-showcase-text-stack {
+  display: grid;
+  min-width: 0;
+}
+
+.intro-showcase-text {
+  grid-area: 1 / 1;
+  min-width: 0;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  will-change: transform, opacity;
 }
 
 @media (min-width: 768px) {
   .intro-showcase-stage {
-    padding: 0 4rem;
-  }
-}
-
-.intro-showcase-card {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: calc(100% - 2rem);
-  max-width: 1100px;
-  will-change: transform, opacity;
-  transition: none;
-}
-
-@media (min-width: 768px) {
-  .intro-showcase-card {
-    width: calc(100% - 8rem);
-  }
-}
-
-.intro-showcase-content {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
-  align-items: center;
-}
-
-@media (min-width: 768px) {
-  .intro-showcase-content {
-    flex-direction: row;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-rows: minmax(0, 1fr);
     gap: 4rem;
+    padding: 4rem;
   }
-}
 
-.intro-showcase-text {
-  flex: 1;
-  text-align: center;
-  min-height: 220px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-@media (min-width: 768px) {
   .intro-showcase-text {
     text-align: left;
-    min-height: auto;
     align-items: flex-start;
   }
 }
@@ -507,10 +326,11 @@ function scrollToFeature(index: number) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 72px;
-  height: 72px;
+  width: 56px;
+  height: 56px;
+  flex-shrink: 0;
   border-radius: 1.25rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1rem;
   background: linear-gradient(135deg, var(--dp-bg-tertiary) 0%, var(--dp-bg-secondary) 100%);
   border: 1px solid var(--dp-border-primary);
   will-change: transform, opacity;
@@ -523,7 +343,7 @@ function scrollToFeature(index: number) {
 }
 
 .intro-showcase-title {
-  font-size: clamp(2rem, 6vw, 3.5rem);
+  font-size: clamp(1.5rem, 4.5vw, 3.5rem);
   font-weight: 700;
   margin-bottom: 1rem;
   color: var(--dp-text-primary);
@@ -544,16 +364,20 @@ function scrollToFeature(index: number) {
 }
 
 .intro-showcase-mockup {
-  flex: 1;
+  min-height: 0;
+  height: 100%;
   display: flex;
+  align-items: center;
   justify-content: center;
-  will-change: opacity;
 }
 
 .intro-mockup-frame {
   position: relative;
-  width: 200px;
+  height: 100%;
+  max-height: calc(200px * 19.5 / 9);
+  max-width: 100%;
   aspect-ratio: 9/19.5;
+  flex-shrink: 0;
   border-radius: 1.75rem;
   overflow: hidden;
   background: var(--dp-bg-footer);
@@ -586,13 +410,20 @@ function scrollToFeature(index: number) {
 
 @media (min-width: 768px) {
   .intro-mockup-frame {
-    width: 260px;
+    max-height: calc(260px * 19.5 / 9);
   }
+}
+
+.intro-mockup-screen {
+  position: absolute;
+  inset: 0;
+  background: var(--dp-bg-footer);
 }
 
 .intro-mockup-frame img {
   width: 100%;
   height: 100%;
+  display: block;
   object-fit: cover;
   object-position: top;
 }
@@ -630,8 +461,19 @@ function scrollToFeature(index: number) {
 }
 
 .description-line {
+  position: relative;
   min-height: 1.8em;
   margin: 0;
+}
+
+.description-line-size {
+  visibility: hidden;
+  white-space: pre-wrap;
+}
+
+.description-line-typed {
+  position: absolute;
+  inset: 0;
 }
 
 .typing-text {
@@ -639,7 +481,7 @@ function scrollToFeature(index: number) {
 }
 
 .typing-cursor {
-  display: inline-block;
+  position: absolute;
   color: var(--dp-primary);
   font-weight: 400;
   animation: blink 0.8s ease-in-out infinite;
@@ -652,6 +494,15 @@ function scrollToFeature(index: number) {
   }
   51%, 100% {
     opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .typing-cursor {
+    display: none;
+  }
+
+  .progress-dot {
+    transition: none;
   }
 }
 </style>
