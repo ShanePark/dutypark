@@ -43,6 +43,17 @@ final class CalendarFeatureTests: XCTestCase {
         )
     }
 
+    func testQuickDutyDateUsesMonthAndDayInTheSelectedLocale() {
+        XCTAssertEqual(
+            CalendarLocalization.monthDay(year: 2026, month: 9, day: 2, locale: Locale(identifier: "ko")),
+            "9월 2일"
+        )
+        XCTAssertEqual(
+            CalendarLocalization.monthDay(year: 2026, month: 9, day: 2, locale: Locale(identifier: "en")),
+            "Sep 2"
+        )
+    }
+
     func testCalendarScheduleTimeMatchesTheWebCalendarPolicy() {
         let start = LocalDateTimeValue(rawValue: "2026-08-20T12:40:00")
         let end = LocalDateTimeValue(rawValue: "2026-08-20T13:30:00")
@@ -395,6 +406,52 @@ final class CalendarFeatureTests: XCTestCase {
         )
     }
 
+    func testCalendarDayCellUsesATopBarForTodayWithoutReplacingDutyOrSelectionIndicators() throws {
+        let source = try Self.calendarViewSource()
+        let dayCell = try Self.declaration(
+            named: "private struct CalendarDayCell: View",
+            in: source
+        )
+        let todayMarker = try Self.declaration(
+            named: "private var todayMarker: some View",
+            in: source
+        )
+
+        XCTAssertTrue(
+            dayCell.contains(".overlay(alignment: .top)"),
+            "Today should be painted as a separate marker attached to the cell top"
+        )
+        XCTAssertTrue(
+            dayCell.contains("if isToday && !hidesDetails"),
+            "Quick duty editing keeps its own selection indicator without adding the today bar"
+        )
+        XCTAssertTrue(
+            todayMarker.contains("Capsule()") && todayMarker.contains(".fill(DPColor.danger)"),
+            "The today marker should be a red horizontal bar"
+        )
+        XCTAssertTrue(
+            todayMarker.contains("width: proxy.size.width * 0.7")
+                && todayMarker.contains("height: 4"),
+            "The today bar should be about 70% of the cell width and 4pt high"
+        )
+        XCTAssertFalse(
+            todayMarker.contains("Circle().fill(DPColor.accent)"),
+            "The today marker should no longer be a small dot"
+        )
+        XCTAssertFalse(
+            dayCell.contains("return isToday ? DPColor.danger : .clear"),
+            "Today must not paint a full-cell danger border"
+        )
+        XCTAssertTrue(
+            dayCell.contains(".background(cellBackground)"),
+            "The today bar must leave the duty background as the cell's source of truth"
+        )
+        XCTAssertTrue(
+            dayCell.contains(".overlay(Rectangle().stroke(focusBorder, lineWidth: highlighted ? 2 : 0))"),
+            "The selected/focused border remains independent from the today marker"
+        )
+    }
+
     func testAMemberCalendarIsPushedOntoTheStackOfTheTabItWasOpenedFrom() throws {
         let projectRoot = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent()
@@ -710,8 +767,6 @@ final class CalendarFeatureTests: XCTestCase {
             "calendar.dday.pin.action",
             "calendar.dday.delete.confirm.title",
             "calendar.dday.delete.confirm.message",
-            "calendar.duty.batch.description.month",
-            "calendar.duty.batch.description.selection",
             "calendar.month.current",
             "calendar.discard.title",
             "calendar.discard.message",
@@ -2134,20 +2189,6 @@ final class CalendarFeatureTests: XCTestCase {
         XCTAssertEqual(requestedDDayMemberID, 9)
     }
 
-    func testManagerCannotBatchReplaceAnotherMembersMonth() async {
-        let repository = CalendarRepositoryMock(canManage: true)
-        let model = CalendarViewModel(repository: repository, now: date(2026, 8, 12), memberID: 9)
-        await model.load()
-
-        XCTAssertTrue(model.canManage)
-        XCTAssertTrue(model.canEdit)
-        XCTAssertFalse(model.isMyCalendar)
-        await model.batchUpdateDuty(dutyTypeID: 7)
-
-        let batchUpdateCount = await repository.batchUpdateCount
-        XCTAssertEqual(batchUpdateCount, 0)
-    }
-
     func testManagerCanUseQuickDutyInputForDelegatedCalendar() async {
         let repository = CalendarRepositoryMock(canManage: true, teamID: 7)
         let model = CalendarViewModel(repository: repository, now: date(2026, 8, 12), memberID: 9)
@@ -2273,6 +2314,55 @@ final class CalendarFeatureTests: XCTestCase {
         XCTAssertEqual(model.quickDutyDay?.cell.day, 13)
     }
 
+    func testQuickDutyFocusClampsToTheTargetMonthWhenChangingFromLongMonth() async throws {
+        let model = CalendarViewModel(
+            repository: CalendarRepositoryMock(teamID: 7),
+            date: DateOnly(rawValue: "2026-01-31")
+        )
+        await model.load()
+        model.setQuickDutyEditing(true)
+
+        let january31 = try XCTUnwrap(model.days.first { $0.cell.date.rawValue == "2026-01-31" })
+        model.focusQuickDuty(on: january31, emitFeedback: false)
+
+        await model.changeMonth(by: 1)
+
+        XCTAssertEqual(model.year, 2026)
+        XCTAssertEqual(model.month, 2)
+        XCTAssertEqual(model.quickDutyDay?.cell.date.rawValue, "2026-02-28")
+        XCTAssertTrue(model.quickDutyDay?.cell.isCurrentMonth == true)
+    }
+
+    func testQuickDutyDoesNotWriteThePreviousMonthWhileNewMonthLoads() async throws {
+        let gate = CalendarMonthRaceGate()
+        let repository = CalendarRepositoryMock(teamID: 7, monthGate: gate)
+        let model = CalendarViewModel(
+            repository: repository,
+            date: DateOnly(rawValue: "2026-01-31")
+        )
+
+        let initialLoad = Task { await model.load() }
+        await gate.waitForRequest(OfflineMonthKey(year: 2026, month: 1))
+        await gate.release(OfflineMonthKey(year: 2026, month: 1))
+        await initialLoad.value
+
+        model.setQuickDutyEditing(true)
+        let january31 = try XCTUnwrap(model.days.first { $0.cell.date.rawValue == "2026-01-31" })
+        model.focusQuickDuty(on: january31, emitFeedback: false)
+
+        let monthChange = Task { await model.changeMonth(by: 1) }
+        await gate.waitForRequest(OfflineMonthKey(year: 2026, month: 2))
+
+        await model.applyQuickDuty(dutyTypeID: 7)
+
+        let lastDutyUpdate = await repository.lastDutyUpdate
+        XCTAssertNil(lastDutyUpdate)
+
+        await gate.release(OfflineMonthKey(year: 2026, month: 2))
+        await monthChange.value
+        XCTAssertEqual(model.quickDutyDay?.cell.date.rawValue, "2026-02-28")
+    }
+
     func testOtherCalendarCanOnlyCompareMyDuty() async {
         let repository = CalendarRepositoryMock()
         let model = CalendarViewModel(repository: repository, now: date(2026, 8, 12), memberID: 9)
@@ -2367,18 +2457,6 @@ final class CalendarFeatureTests: XCTestCase {
         XCTAssertEqual(CalendarLocalization.locale(languageCode: "ko").identifier, "ko")
         XCTAssertEqual(CalendarLocalization.locale(languageCode: "en").identifier, "en")
         XCTAssertEqual(CalendarLocalization.locale(languageCode: "fr-FR").identifier, "en")
-    }
-
-    func testKoreanDutyBatchMonthDescriptionDoesNotGroupTheYear() {
-        XCTAssertEqual(
-            CalendarLocalization.format(
-                "calendar.duty.batch.description.month",
-                2026,
-                8,
-                locale: .korean
-            ),
-            "2026년 8월 전체에 적용할 근무를 선택하세요."
-        )
     }
 
     func testCompactCalendarModalBodyFitsContentAndCapsForSmallPhones() {
@@ -2810,7 +2888,6 @@ private func tagItem(
 
 private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
     var savedSchedule: ScheduleSaveDTO?
-    var batchUpdateCount = 0
     var requestedPreviewMemberID: MemberID?
     var requestedScheduleMemberID: MemberID?
     var requestedDDayMemberID: MemberID?
@@ -2945,7 +3022,6 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
         ScheduleBasicInfoDTO(id: id, memberId: scheduleOwnerID, memberName: "Tester", startDateTime: LocalDateTimeValue(rawValue: "2026-08-12T00:00:00"), content: "Night duty")
     }
     func updateDuty(_ request: DutyUpdateDTO) async throws { lastDutyUpdate = request }
-    func batchUpdateDuty(_ request: DutyBatchUpdateDTO) async throws { batchUpdateCount += 1 }
     func uploadDutyBatch(memberID: MemberID, year: Int, month: Int, filename: String, data: Data) async throws -> DutyBatchUploadResult {
         DutyBatchUploadResult(result: true, errorCode: nil, errorDetails: nil, startDate: nil, endDate: nil, workingDays: 20, offDays: 10)
     }

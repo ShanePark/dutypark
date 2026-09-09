@@ -316,6 +316,27 @@ class TeamServiceTest {
     }
 
     @Test
+    fun `preserves mixed-case default abbreviations and rejects invalid values`() {
+        val team = Team("Test Team")
+        ReflectionTestUtils.setField(team, "id", 1L)
+        whenever(teamRepository.findById(team.id!!)).thenReturn(Optional.of(team))
+
+        service.updateDefaultDuty(team.id!!, null, null, " n ")
+
+        assertThat(team.defaultDutyAbbreviation).isEqualTo("n")
+
+        service.updateDefaultDuty(team.id!!, null, null, "nAb")
+
+        assertThat(team.defaultDutyAbbreviation).isEqualTo("nAb")
+
+        val exception = assertThrows<IllegalArgumentException> {
+            service.updateDefaultDuty(team.id!!, null, null, "1/10")
+        }
+        assertThat(exception.message).isEqualTo("dutyType.abbreviation.invalid")
+        assertThat(team.defaultDutyAbbreviation).isEqualTo("nAb")
+    }
+
+    @Test
     fun `updateDefaultDuty does not mutate when the new name is banned`() {
         val team = Team("Test Team")
         ReflectionTestUtils.setField(team, "id", 1L)

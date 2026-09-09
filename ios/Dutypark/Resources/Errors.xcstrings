@@ -1,6 +1,8 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "dutyType.abbreviation.length" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Enter 1 to 3 English letters or complete Korean syllables."}},"ko":{"stringUnit":{"state":"translated","value":"영문 또는 완성형 한글을 1~3글자로 입력해 주세요."}}}},
+    "dutyType.abbreviation.invalid" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Enter 1 to 3 English letters or complete Korean syllables."}},"ko":{"stringUnit":{"state":"translated","value":"영문 또는 완성형 한글을 1~3글자로 입력해 주세요."}}}},
     "already_linked": {
       "localizations": {
         "en": { "stringUnit": { "state": "translated", "value": "This social account is already connected to another account." } },

@@ -1,22 +1,14 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
-import { Sun, Moon } from 'lucide-vue-next'
 import NotificationBell from '@/components/common/NotificationBell.vue'
 import NotificationDropdown from '@/components/common/NotificationDropdown.vue'
 import LocaleSwitcher from '@/components/layout/LocaleSwitcher.vue'
-import { useThemeStore } from '@/stores/theme'
+import ThemeSwitcher from '@/components/layout/ThemeSwitcher.vue'
 
 const authStore = useAuthStore()
-const themeStore = useThemeStore()
 const { t } = useI18n()
-
-const themeToggleAriaLabel = computed(() => {
-  return themeStore.isDark
-    ? t('header.actions.switchToLightMode')
-    : t('header.actions.switchToDarkMode')
-})
 
 const isNotificationDropdownVisible = ref(false)
 const bellRef = ref<InstanceType<typeof NotificationBell> | null>(null)
@@ -59,16 +51,7 @@ function handleNotificationNavigate() {
         </router-link>
         <nav class="flex items-center gap-0.5 sm:gap-1">
           <LocaleSwitcher />
-
-          <button
-            type="button"
-            class="theme-toggle-btn cursor-pointer p-2 rounded-full transition-all duration-150 min-h-[44px] min-w-[44px] flex items-center justify-center"
-            @click="themeStore.toggleTheme()"
-            :aria-label="themeToggleAriaLabel"
-          >
-            <Moon v-if="!themeStore.isDark" class="w-5 h-5 theme-icon" />
-            <Sun v-else class="w-5 h-5 text-dp-warning theme-icon" />
-          </button>
+          <ThemeSwitcher />
 
           <template v-if="authStore.isLoggedIn">
             <div class="relative">
@@ -136,25 +119,6 @@ function handleNotificationNavigate() {
     height: 2.25rem;
     border-radius: 0.8rem;
   }
-}
-
-.theme-toggle-btn {
-  color: var(--dp-text-muted);
-}
-
-.theme-toggle-btn:hover {
-  color: var(--dp-text-primary);
-  background-color: var(--dp-bg-hover);
-}
-
-.theme-toggle-btn:hover .theme-icon {
-  animation: theme-rotate 0.5s ease-in-out;
-}
-
-@keyframes theme-rotate {
-  0% { transform: rotate(0deg); }
-  50% { transform: rotate(-20deg); }
-  100% { transform: rotate(0deg); }
 }
 
 .guide-link {

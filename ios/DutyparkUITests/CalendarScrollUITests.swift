@@ -18,7 +18,7 @@ final class CalendarScrollUITests: XCTestCase {
             "-ui-testing-authenticated",
             // Puts a landmark above the grid to measure the scroll by, and enough
             // below it for the page to have somewhere to scroll to.
-            "-ui-testing-calendar-batch",
+            "-ui-testing-calendar-duty-types",
             "-ui-testing-calendar-tall",
         ]
         app.launch()

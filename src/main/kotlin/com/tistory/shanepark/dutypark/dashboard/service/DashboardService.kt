@@ -79,6 +79,7 @@ class DashboardService(
                 isOff = false,
                 dutyTypeId = dutyType.id,
                 source = resolved.source,
+                dutyAbbreviation = dutyType.shortName,
             )
         } ?: DutyDto(
                 year = today.year,
@@ -88,6 +89,7 @@ class DashboardService(
                 dutyColor = team.defaultDutyColor,
                 isOff = true,
                 source = resolved.source,
+                dutyAbbreviation = team.defaultDutyShortName,
             )
     }
 
@@ -142,6 +144,7 @@ class DashboardService(
                         isOff = false,
                         dutyTypeId = dutyType.id,
                         source = resolved.source,
+                        dutyAbbreviation = dutyType.shortName,
                     )
                 } ?: DutyDto(
                         year = today.year,
@@ -151,6 +154,7 @@ class DashboardService(
                         dutyColor = member.team!!.defaultDutyColor,
                         isOff = true,
                         source = resolved.source,
+                        dutyAbbreviation = member.team!!.defaultDutyShortName,
                     )
                 memberId to dto
             }

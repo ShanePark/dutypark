@@ -317,6 +317,7 @@ struct TeamManageView: View {
             }
             if team.members.isEmpty {
                 Text("team.manage.labels.noMembers", tableName: "Team")
+                    .font(DPTypography.supporting)
                     .foregroundStyle(DPColor.textMuted)
                     .frame(maxWidth: .infinity, minHeight: 72)
             }
@@ -341,7 +342,12 @@ struct TeamManageView: View {
                                 teamSmallAction(teamLocalized("team.manage.actions.revokeManager"), "shield.slash", DPColor.warning, DPColor.warningBorder) { present(.removeManager(id)) }
                                 teamSmallAction(teamLocalized("team.manage.actions.transferAdmin"), "crown", DPColor.accent, DPColor.accentBorder) { present(.changeAdmin(id)) }
                             } else {
-                                teamSmallAction(teamLocalized("team.manage.actions.assignManager"), "plus", DPColor.success, DPColor.successBorder) { present(.addManager(id)) }
+                                teamSmallAction(
+                                    teamLocalized("team.manage.actions.assignManager"),
+                                    "person.crop.circle.badge.checkmark",
+                                    DPColor.textSecondary,
+                                    DPColor.borderSecondary
+                                ) { present(.addManager(id)) }
                             }
                         }
                     }
@@ -370,6 +376,7 @@ struct TeamManageView: View {
             }
             if team.dutyTypes.isEmpty {
                 Text("team.manage.labels.noDutyTypes", tableName: "Team")
+                    .font(DPTypography.supporting)
                     .foregroundStyle(DPColor.textMuted)
                     .frame(maxWidth: .infinity, minHeight: 72)
             }
@@ -684,6 +691,8 @@ private struct TeamDutyTypeEditor: View {
     let dismissAfterSuccess: () -> Void
     let dismiss: () -> Void
     @State private var name = ""
+    @State private var abbreviation = ""
+    @State private var initialAbbreviation = ""
     @State private var color = Color.blue
     @State private var isSubmitting = false
     @State private var initialName = ""
@@ -691,7 +700,7 @@ private struct TeamDutyTypeEditor: View {
     @State private var showsDiscardConfirmation = false
     @FocusState private var focusedField: Field?
 
-    private enum Field { case name }
+    private enum Field { case name, abbreviation }
 
     private var trimmedName: String {
         TeamManageModalLogic.normalizedDutyName(name)
@@ -707,7 +716,8 @@ private struct TeamDutyTypeEditor: View {
     }
 
     private var canSave: Bool {
-        !trimmedName.isEmpty && !hasDuplicateName && !isSubmitting && !viewModel.isWorking
+        !trimmedName.isEmpty && !hasDuplicateName && DutyAbbreviation.isValid(abbreviation)
+            && !isSubmitting && !viewModel.isWorking
     }
 
     var body: some View {
@@ -785,6 +795,48 @@ private struct TeamDutyTypeEditor: View {
                 .id(Field.name)
 
                 VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+                    HStack {
+                        Text("team.dutyType.abbreviation.label", tableName: "Team")
+                            .font(DPTypography.label)
+                        Spacer()
+                        Text(verbatim: "\(abbreviation.count)/\(DutyAbbreviation.maximumLength)")
+                            .font(DPTypography.caption)
+                            .foregroundStyle(
+                                abbreviation.count > DutyAbbreviation.maximumLength
+                                    ? DPColor.danger
+                                    : abbreviation.count == DutyAbbreviation.maximumLength
+                                        ? DPColor.warning
+                                        : DPColor.textMuted
+                            )
+                    }
+                    TextField(
+                        DutyAbbreviation.resolve(trimmedName),
+                        text: $abbreviation
+                    )
+                    .focused($focusedField, equals: .abbreviation)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                    .dpInputChrome(isInvalid: !DutyAbbreviation.isValid(abbreviation))
+                    .accessibilityLabel(Text("team.dutyType.abbreviation.label", tableName: "Team"))
+                    .accessibilityIdentifier("team.dutyType.abbreviation")
+                    Text("team.dutyType.abbreviation.hint", tableName: "Team")
+                        .font(DPTypography.caption)
+                        .foregroundStyle(DPColor.textSecondary)
+                    if !DutyAbbreviation.isValid(abbreviation) {
+                        Text("team.dutyType.abbreviation.invalid", tableName: "Team")
+                            .font(DPTypography.caption)
+                            .foregroundStyle(DPColor.danger)
+                    }
+                    HStack {
+                        Text("team.dutyType.abbreviation.preview", tableName: "Team")
+                        Text(verbatim: DutyAbbreviation.resolve(trimmedName, override: abbreviation))
+                            .bold()
+                    }
+                    .font(DPTypography.caption)
+                }
+                .id(Field.abbreviation)
+
+                VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
                     Text("team.dutyType.fields.color", tableName: "Team")
                         .font(DPTypography.label)
                     ColorPicker(
@@ -799,21 +851,13 @@ private struct TeamDutyTypeEditor: View {
                 VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
                     Text("team.dutyType.fields.preview", tableName: "Team")
                         .font(DPTypography.label)
-                    Text(
-                        verbatim: trimmedName.isEmpty
+                    TeamDutyTypeBadge(
+                        name: trimmedName.isEmpty
                             ? teamLocalized("team.dutyType.placeholders.preview")
-                            : trimmedName
+                            : trimmedName,
+                        color: color.teamHexRGB,
+                        memberCount: nil
                     )
-                    .font(DPTypography.bodyMedium)
-                    .foregroundStyle(DPColor.textPrimary)
-                    .padding(.horizontal, DPSpacing.medium)
-                    .frame(minHeight: DPSize.minimumTouchTarget)
-                    .background(color.opacity(0.78))
-                    .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: DPRadius.standard)
-                            .stroke(DPColor.borderPrimary)
-                    }
                 }
             }
             .padding(DPSpacing.medium)
@@ -831,7 +875,7 @@ private struct TeamDutyTypeEditor: View {
                     guard canSave else { return }
                     isSubmitting = true
                     Task {
-                        await viewModel.saveDutyType(name: trimmedName, color: color.teamHexRGB)
+                        await viewModel.saveDutyType(name: trimmedName, color: color.teamHexRGB, abbreviation: abbreviation)
                         isSubmitting = false
                         updateInteractionState()
                         if !viewModel.showsError { dismissAfterSuccess() }
@@ -849,13 +893,16 @@ private struct TeamDutyTypeEditor: View {
         .onAppear {
             if let dutyType = viewModel.editingDutyType {
                 name = dutyType.name
+                abbreviation = dutyType.abbreviation ?? ""
                 color = Color(teamHex: dutyType.color)
             }
             initialName = name
+            initialAbbreviation = abbreviation
             initialColorHex = color.teamHexRGB
             updateInteractionState()
         }
         .onChange(of: name) { _, _ in updateInteractionState() }
+        .onChange(of: abbreviation) { _, _ in updateInteractionState() }
         .onChange(of: color) { oldValue, newValue in
             if oldValue != newValue {
                 DPHapticCenter.shared.emit(.selection)
@@ -872,7 +919,8 @@ private struct TeamDutyTypeEditor: View {
     }
 
     private func updateInteractionState() {
-        interaction.isDirty = name != initialName || color.teamHexRGB != initialColorHex
+        interaction.isDirty = name != initialName || abbreviation != initialAbbreviation
+            || color.teamHexRGB != initialColorHex
         interaction.isWorking = isSubmitting || viewModel.isWorking
     }
 
@@ -1029,10 +1077,14 @@ private struct TeamMemberSearchView: View {
                     if viewModel.isWorking {
                         ProgressView()
                     } else if viewModel.results.isEmpty {
-                        ContentUnavailableView(
-                            teamLocalized("team.memberSearch.empty"),
-                            systemImage: "person.crop.circle.badge.questionmark"
-                        )
+                        ContentUnavailableView {
+                            Label {
+                                Text("team.memberSearch.empty", tableName: "Team")
+                                    .font(DPTypography.heading)
+                            } icon: {
+                                Image(systemName: "person.crop.circle.badge.questionmark")
+                            }
+                        }
                     }
                 }
 
@@ -1182,6 +1234,7 @@ private struct TeamBatchUploadView: View {
                             Image(systemName: "chevron.right")
                                 .font(DPTypography.caption)
                         }
+                        .font(DPTypography.label)
                         .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)
                         .padding(.horizontal, DPSpacing.compact)
                         .background(DPColor.backgroundInput)

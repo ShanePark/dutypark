@@ -210,6 +210,13 @@ export function formatMonthLabel(year: number, month: number, locale: string): s
   )
 }
 
+/** A compact month-and-day label for controls that focus one day in a month. */
+export function formatMonthDayLabel(year: number, month: number, day: number, locale: string): string {
+  return getFormatter(locale, { month: 'short', day: 'numeric' }).format(
+    new Date(year, month - 1, day),
+  )
+}
+
 /** The text on the field itself; empty for an unset or unparseable value. */
 export function formatFieldValue(modelValue: string, locale: string): string {
   if (!isIsoDate(modelValue)) {

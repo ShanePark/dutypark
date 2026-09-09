@@ -1271,17 +1271,17 @@ private struct ImpersonationBanner: View {
                 Image(systemName: "person.crop.circle.badge.clock")
                 VStack(alignment: .leading, spacing: 1) {
                     Text(RootChromeLocalization.localizable("auth.impersonation.active"))
-                        .font(.caption.weight(.semibold))
+                        .font(DPFont.bold(size: 12, relativeTo: .caption))
                     if let remaining = session.impersonationRemainingTime(at: context.date) {
                         Text(RootChromeLocalization.impersonationRemaining(Self.duration(remaining)))
-                        .font(.caption2.monospacedDigit())
+                        .font(DPFont.light(size: 11, relativeTo: .caption2).monospacedDigit())
                     }
                 }
                 Spacer(minLength: 4)
                 Button(RootChromeLocalization.settings("settings.managed.restore")) {
                     Task { await session.restoreOriginalAccount() }
                 }
-                .font(.caption.weight(.semibold))
+                .font(DPFont.bold(size: 12, relativeTo: .caption))
                 .buttonStyle(.bordered)
                 .tint(DPColor.warningHover)
             }

@@ -3,6 +3,8 @@ import { computed } from 'vue'
 import { ChevronLeft, ChevronRight, FileSpreadsheet, Loader2, PencilLine, Users, X } from 'lucide-vue-next'
 import { useI18n } from 'vue-i18n'
 import { isLightColor } from '@/utils/color'
+import { dutyTypeLabel } from '@/utils/dutyAbbreviation'
+import { formatMonthDayLabel } from '@/components/common/datePickerGrid'
 import type { DutyType, DutyTypeWithCount } from '@/views/duty/dutyViewTypes'
 
 const props = defineProps<{
@@ -12,6 +14,8 @@ const props = defineProps<{
   isLoadingDuties: boolean
   focusedDay: number | null
   focusedDayDutyType: string | null
+  currentYear: number
+  currentMonth: number
   lastDayInMonth: number
   canEdit: boolean
   canEditMyCalendar: boolean
@@ -23,16 +27,18 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'toggle-other-duties'): void
   (e: 'clear-other-duties'): void
-  (e: 'show-batch-update-modal'): void
   (e: 'toggle-batch-edit', value: boolean): void
   (e: 'show-excel-upload-modal'): void
   (e: 'quick-duty-change', dutyTypeId: number | null): void
   (e: 'update:focusedDay', value: number): void
 }>()
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 const focusedDayValue = computed(() => props.focusedDay ?? 1)
+const focusedDayLabel = computed(() =>
+  formatMonthDayLabel(props.currentYear, props.currentMonth, focusedDayValue.value, locale.value),
+)
 
 function moveFocusDay(delta: number) {
   const next = Math.min(props.lastDayInMonth, Math.max(1, focusedDayValue.value + delta))
@@ -88,7 +94,7 @@ function toggleBatchEdit() {
           >
             <ChevronLeft class="w-5 h-5 text-dp-text-secondary" />
           </button>
-          <span class="flex items-center px-1 text-xs sm:text-sm font-bold text-dp-warning">{{ t('duty.typesBar.focusedDay', { day: focusedDayValue }) }}</span>
+          <span class="flex items-center whitespace-nowrap px-1 text-xs sm:text-sm font-bold text-dp-warning">{{ focusedDayLabel }}</span>
           <button
             type="button"
             @click="moveFocusDay(1)"
@@ -104,6 +110,8 @@ function toggleBatchEdit() {
           :key="dutyType.id ?? 'off'"
           @click="emit('quick-duty-change', dutyType.id)"
           class="duty-quick-btn"
+          :title="dutyType.name"
+          :aria-label="dutyType.name"
           :class="{ 'duty-quick-btn-active': focusedDayDutyType === dutyType.name || (!focusedDayDutyType && dutyType.id === null) }"
           :style="{
             '--duty-color': dutyType.color || 'var(--dp-duty-fallback)',
@@ -111,7 +119,7 @@ function toggleBatchEdit() {
           } as any"
         >
           <span class="duty-quick-btn-inner">
-            {{ dutyType.name }}
+            {{ dutyTypeLabel(dutyType, canEditMyCalendar) }}
           </span>
         </button>
       </template>
@@ -135,7 +143,7 @@ function toggleBatchEdit() {
         {{ t('duty.typesBar.empty') }}
       </span>
     </div>
-    <div class="inline-flex rounded-lg border overflow-hidden ml-auto border-dp-border-secondary">
+    <div v-if="!batchEditMode" class="inline-flex rounded-lg border overflow-hidden ml-auto border-dp-border-secondary">
       <div
         v-if="!batchEditMode && isOtherDutyActive"
         class="flex min-h-[44px] items-stretch border-r border-dp-border-secondary bg-dp-accent-soft text-dp-accent-hover"
@@ -171,13 +179,6 @@ function toggleBatchEdit() {
       >
         <Users class="w-4 h-4" />
         <span class="hidden sm:inline font-medium">{{ t('duty.typesBar.compare') }}</span>
-      </button>
-      <button
-        v-if="canEditMyCalendar && batchEditMode"
-        @click="emit('show-batch-update-modal')"
-        class="px-2 sm:px-3 py-1.5 min-h-[44px] text-xs sm:text-sm transition-colors duration-150 border-r cursor-pointer hover:bg-dp-bg-hover border-dp-border-secondary"
-      >
-        {{ t('duty.typesBar.batchUpdate') }}
       </button>
       <button
         v-if="canEdit && !batchEditMode"

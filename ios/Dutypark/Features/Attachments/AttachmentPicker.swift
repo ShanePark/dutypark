@@ -251,35 +251,7 @@ struct AttachmentPicker: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: DPSpacing.compact) {
-            HStack(spacing: DPSpacing.small) {
-                PhotosPicker(
-                    selection: $photoItems,
-                    maxSelectionCount: 10,
-                    matching: .any(of: [.images, .videos])
-                ) {
-                    Label(
-                        AttachmentLocalization.text("attachment.action.photos"),
-                        systemImage: "photo.on.rectangle"
-                    )
-                    .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(DPPrimaryButtonStyle())
-                .disabled(model.isBusy)
-                .accessibilityIdentifier("attachment.photoPicker")
-
-                Button {
-                    isImportingFiles = true
-                } label: {
-                    Label(
-                        AttachmentLocalization.text("attachment.action.files"),
-                        systemImage: "folder"
-                    )
-                    .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(DPOutlineButtonStyle())
-                .disabled(model.isBusy)
-                .accessibilityIdentifier("attachment.filePicker")
-            }
+            attachmentActionButtons
 
             if model.isBusy {
                 VStack(alignment: .leading, spacing: DPSpacing.small) {
@@ -381,6 +353,58 @@ struct AttachmentPicker: View {
         .onDisappear {
             uploadCoordinator.cancel(model: model)
         }
+    }
+
+    private var attachmentActionButtons: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: DPSpacing.small) {
+                photoPickerButton
+                    .fixedSize(horizontal: true, vertical: false)
+                filePickerButton
+                    .fixedSize(horizontal: true, vertical: false)
+            }
+
+            VStack(spacing: DPSpacing.small) {
+                photoPickerButton
+                    .frame(maxWidth: .infinity)
+                filePickerButton
+                    .frame(maxWidth: .infinity)
+            }
+        }
+    }
+
+    private var photoPickerButton: some View {
+        PhotosPicker(
+            selection: $photoItems,
+            maxSelectionCount: 10,
+            matching: .any(of: [.images, .videos])
+        ) {
+            Label(
+                AttachmentLocalization.text("attachment.action.photos"),
+                systemImage: "photo.on.rectangle"
+            )
+            .fixedSize(horizontal: true, vertical: false)
+            .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(DPPrimaryButtonStyle())
+        .disabled(model.isBusy)
+        .accessibilityIdentifier("attachment.photoPicker")
+    }
+
+    private var filePickerButton: some View {
+        Button {
+            isImportingFiles = true
+        } label: {
+            Label(
+                AttachmentLocalization.text("attachment.action.files"),
+                systemImage: "folder"
+            )
+            .fixedSize(horizontal: true, vertical: false)
+            .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(DPOutlineButtonStyle())
+        .disabled(model.isBusy)
+        .accessibilityIdentifier("attachment.filePicker")
     }
 
     private func pickerRow(_ attachment: AttachmentDTO, at index: Int) -> some View {

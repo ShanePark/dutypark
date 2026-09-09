@@ -706,7 +706,7 @@ final class CalendarViewModel: ObservableObject {
                 }
             )
         }
-        selectedDay = selectedDay.flatMap { selected in days.first { $0.id == selected.id } }
+        rebindPresentedDays()
     }
 
     /// Refreshes the rolling thirteen-month self-calendar without delaying the
@@ -1169,6 +1169,9 @@ final class CalendarViewModel: ObservableObject {
             return
         }
         guard let day = quickDutyDay, let memberID = targetMemberID else { return }
+        // A month transition updates the visible month before its request finishes. Do not let
+        // the still-presented previous month's focus write a duty while that request is pending.
+        guard day.cell.year == year, day.cell.month == month, day.cell.isCurrentMonth else { return }
         let currentMonthDays = days.filter(\.cell.isCurrentMonth)
         let nextDate = currentMonthDays.firstIndex(where: { $0.id == day.id }).flatMap { index in
             currentMonthDays.indices.contains(index + 1) ? currentMonthDays[index + 1].cell.date : nil
@@ -1284,34 +1287,6 @@ final class CalendarViewModel: ObservableObject {
             try await repository.updateDuty(DutyUpdateDTO(
                 year: day.cell.year, month: day.cell.month, day: day.cell.day,
                 dutyTypeId: dutyTypeID, memberId: memberID
-            ))
-            emit(.success)
-            do {
-                try await refreshDuties()
-            } catch {
-                errorMessage = CalendarLocalization.text("calendar.error.save")
-            }
-        } catch {
-            errorMessage = CalendarLocalization.text("calendar.error.save")
-            emit(.error)
-        }
-    }
-
-    func batchUpdateDuty(dutyTypeID: DutyTypeID?) async {
-        guard isMyCalendar else { return }
-        guard team != nil else {
-            presentDutyUnavailable()
-            return
-        }
-        guard let memberID = targetMemberID else { return }
-        guard !isOfflineMode else {
-            errorMessage = CalendarLocalization.text("calendar.offline.onlineOnly")
-            emit(.warning)
-            return
-        }
-        do {
-            try await repository.batchUpdateDuty(DutyBatchUpdateDTO(
-                year: year, month: month, dutyTypeId: dutyTypeID, memberId: memberID
             ))
             emit(.success)
             do {
@@ -1930,7 +1905,16 @@ final class CalendarViewModel: ObservableObject {
 
     private func rebindPresentedDays() {
         selectedDay = selectedDay.flatMap { selected in days.first { $0.id == selected.id } }
-        quickDutyDay = quickDutyDay.flatMap { selected in days.first { $0.id == selected.id } }
+        if isQuickDutyEditing {
+            let preferredDay = quickDutyDay?.cell.day ?? 1
+            let lastDay = DatePickerGridLogic.daysInMonth(year: year, month: month)
+            let clampedDay = min(preferredDay, max(1, lastDay))
+            quickDutyDay = days.first {
+                $0.cell.isCurrentMonth && $0.cell.day == clampedDay
+            } ?? days.first(where: \.cell.isCurrentMonth)
+        } else {
+            quickDutyDay = quickDutyDay.flatMap { selected in days.first { $0.id == selected.id } }
+        }
     }
 
     private func replacing(

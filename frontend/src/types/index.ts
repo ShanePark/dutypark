@@ -172,6 +172,7 @@ export interface DashboardFriendDto {
 }
 
 export interface DashboardDutyDto {
+  dutyAbbreviation?: string | null
   year: number
   month: number
   day: number
@@ -330,6 +331,7 @@ export type TeamNameCheckResult = 'OK' | 'TOO_SHORT' | 'TOO_LONG' | 'DUPLICATED'
 
 // Duty Calendar types - matches backend DutyDto
 export interface DutyCalendarDay {
+  dutyAbbreviation?: string | null
   year: number
   month: number
   day: number
@@ -407,6 +409,8 @@ export interface TeamDto {
 }
 
 export interface DutyTypeDto {
+  abbreviation?: string | null
+  shortName?: string
   id: number | null
   name: string
   position: number
@@ -581,12 +585,14 @@ export interface PageResponse<T> {
 
 // Duty Type management types
 export interface DutyTypeCreateDto {
+  abbreviation?: string | null
   teamId: number
   name: string
   color: string
 }
 
 export interface DutyTypeUpdateDto {
+  abbreviation?: string | null
   id: number
   name: string
   color: string

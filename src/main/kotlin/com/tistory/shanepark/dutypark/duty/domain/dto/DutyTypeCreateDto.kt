@@ -13,4 +13,9 @@ data class DutyTypeCreateDto(
     val name: String,
     @field:Pattern(regexp = "^#[0-9a-fA-F]{6}$", message = "dutyType.color.invalid")
     val color: String,
+    @field:Pattern(
+        regexp = "^\\s*[A-Za-z가-힣]{0,3}\\s*$",
+        message = "dutyType.abbreviation.invalid",
+    )
+    val abbreviation: String? = null,
 )

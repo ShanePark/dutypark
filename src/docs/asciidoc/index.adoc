@@ -125,10 +125,6 @@ operation::duty/update[]
 
 operation::duty/update-unauthorized[]
 
-=== Batch Update Duties
-
-operation::duty/batch-update[]
-
 === Reset Duty Override
 
 operation::duty/reset-override[]

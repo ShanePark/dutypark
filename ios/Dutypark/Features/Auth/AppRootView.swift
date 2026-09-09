@@ -224,7 +224,7 @@ private struct OfflineSessionBanner: View {
                         .accessibilityIdentifier("session.offline.retry-failures")
                     }
                 }
-                .font(.caption.weight(.semibold))
+                .font(DPFont.bold(size: 12, relativeTo: .caption))
                 .foregroundStyle(.orange)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 12)

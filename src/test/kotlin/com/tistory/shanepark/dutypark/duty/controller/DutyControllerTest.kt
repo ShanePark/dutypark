@@ -12,6 +12,7 @@ import org.springframework.restdocs.payload.PayloadDocumentation.*
 import org.springframework.restdocs.request.RequestDocumentation.parameterWithName
 import org.springframework.restdocs.request.RequestDocumentation.queryParameters
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers.content
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.status
 import java.time.LocalDate
@@ -57,6 +58,7 @@ class DutyControllerTest : RestDocsTest() {
                         fieldWithPath("[].month").description("Month"),
                         fieldWithPath("[].day").description("Day of month"),
                         fieldWithPath("[].dutyType").description("Duty type name (null if off)"),
+                        fieldWithPath("[].dutyAbbreviation").description("Resolved duty abbreviation: custom override or first character of the full name"),
                         fieldWithPath("[].dutyColor").description("Duty type color (hex)"),
                         fieldWithPath("[].isOff").description("Whether this day is off"),
                         fieldWithPath("[].dutyTypeId").optional().description("Duty type ID"),
@@ -111,6 +113,7 @@ class DutyControllerTest : RestDocsTest() {
                         fieldWithPath("[].duties[].month").description("Month"),
                         fieldWithPath("[].duties[].day").description("Day of month"),
                         fieldWithPath("[].duties[].dutyType").description("Duty type name"),
+                        fieldWithPath("[].duties[].dutyAbbreviation").description("Resolved duty abbreviation; comparison views continue to display the full dutyType name"),
                         fieldWithPath("[].duties[].dutyColor").description("Duty type color"),
                         fieldWithPath("[].duties[].isOff").description("Whether this day is off"),
                         fieldWithPath("[].duties[].dutyTypeId").optional().description("Duty type ID"),
@@ -197,7 +200,7 @@ class DutyControllerTest : RestDocsTest() {
     }
 
     @Test
-    fun `batch update duties for month`() {
+    fun `monthly batch update endpoint is removed`() {
         val today = fixedDate
         val json = """
             {
@@ -215,20 +218,11 @@ class DutyControllerTest : RestDocsTest() {
                 .content(json)
                 .withAuth(TestData.member)
         )
+            // Missing API resources are swallowed by the application's static-resource
+            // fallback, so a valid payload is observable by its empty response rather
+            // than the former handler's true response body.
             .andExpect(status().isOk)
-            .andExpect(jsonPath("$").value(true))
-            .andDo(MockMvcResultHandlers.print())
-            .andDo(
-                document(
-                    "duty/batch-update",
-                    requestFields(
-                        fieldWithPath("year").description("Year"),
-                        fieldWithPath("month").description("Month"),
-                        fieldWithPath("dutyTypeId").description("Duty type ID to apply to all days (null for all off)"),
-                        fieldWithPath("memberId").description("Member ID")
-                    )
-                )
-            )
+            .andExpect(content().string(""))
     }
 
     @Test

@@ -102,6 +102,10 @@ const apiErrors = {
     },
   },
   dutyType: {
+    abbreviation: {
+      length: 'Use one to three English letters or complete Hangul syllables for the abbreviation.',
+      invalid: 'Use one to three English letters or complete Hangul syllables for the abbreviation.',
+    },
     name: {
       required: 'Duty name is required.',
       length: 'Duty names must be between 1 and 10 characters.',
@@ -371,6 +375,13 @@ export default {
     },
   },
   apiErrors,
+  dutyAbbreviation: {
+    label: 'Abbreviation (optional)',
+    hint: 'Leave blank to use the first character of the duty name. Custom abbreviations must be one to three English letters or complete Hangul syllables. Your duty selection and edit controls use abbreviations; other calendars and comparison views keep full names.',
+    placeholder: 'e.g. N',
+    preview: 'Abbreviation preview',
+    invalid: 'Use one to three English letters or complete Hangul syllables for the abbreviation.',
+  },
   contentFilter: {
     blocked: 'This includes wording that violates the community guidelines. Please revise it before saving.',
   },
@@ -806,6 +817,7 @@ export default {
     actions: {
       addNew: 'Add new task',
       clickToAdd: 'Click to add a task',
+      clearCompleted: 'Clear completed',
     },
     messages: {
       loadFailed: 'Failed to load the board.',
@@ -822,6 +834,10 @@ export default {
       deleteConfirm: 'Delete the to-do “{title}”?',
       deleteSuccess: 'Task deleted.',
       deleteFailed: 'Failed to delete the task.',
+      deleteCompletedTitle: 'Delete your completed tasks?',
+      deleteCompletedConfirm: 'This permanently deletes {count} completed tasks you created. Deleted tasks cannot be restored. Tasks created by others and tagged to you are excluded.',
+      deleteCompletedSuccess: 'Cleared {count} completed tasks.',
+      deleteCompletedFailed: 'Failed to clear completed tasks.',
       untagTitle: 'Remove tag',
       untagConfirm: 'Remove the to-do “{title}” from your list?',
       untagSuccess: 'TODO tag removed.',
@@ -1310,13 +1326,6 @@ export default {
       teamRequiredDescription: 'Create a team first, or ask a team manager to add you to one.',
       goToTeam: 'Go to team menu',
     },
-    batchUpdate: {
-      title: 'Batch duty update',
-      description1: 'Choose a duty to apply to all dates in {month}/{year}.',
-      description2: 'The selected duty will be applied to the entire month at once.',
-      warning: 'Existing duties will be replaced. A later default-pattern change will delete these batch entries from today onward.',
-      failed: 'Failed to update duties in bulk.',
-    },
     excelUpload: {
       title: 'Excel upload',
       ariaLabel: 'Upload duty roster file',
@@ -1340,13 +1349,12 @@ export default {
       selectionCount: '{selected} / {count} selected',
     },
     typesBar: {
-      focusedDay: 'Editing day {day}',
+      focusedDay: '{month}/{day}',
       prevDay: 'Previous day',
       nextDay: 'Next day',
       loading: 'Loading duty types...',
       empty: 'No duty types available.',
       compare: 'Compare duties',
-      batchUpdate: 'Batch update',
       editMode: 'Edit mode',
       editModeActive: 'Edit mode is active',
       editModeDescription: 'Select a duty type to apply it to the selected day and move to the next day.',
@@ -1583,6 +1591,9 @@ export default {
         removeMember: 'Remove',
         assignManager: 'Make manager',
         addDutyType: 'Add',
+        moveDutyTypeDown: 'Move down',
+        moveDutyTypeUp: 'Move up',
+        editDutyType: 'Edit duty type',
         hideDutyType: 'Hide',
         restoreDutyType: 'Restore',
       },

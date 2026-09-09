@@ -81,6 +81,19 @@ nonisolated enum CalendarLocalization {
             arguments: arguments
         )
     }
+
+    static func monthDay(year: Int, month: Int, day: Int, locale: Locale? = nil) -> String {
+        guard let date = CalendarDateSupport.calendar.date(
+            from: DateComponents(year: year, month: month, day: day)
+        ) else {
+            return "\(month)/\(day)"
+        }
+        let formatter = DateFormatter()
+        formatter.locale = locale ?? selectedLocale
+        formatter.calendar = CalendarDateSupport.calendar
+        formatter.setLocalizedDateFormatFromTemplate("MMMd")
+        return formatter.string(from: date)
+    }
 }
 
 /// Layout and contrast rules mirrored from the mobile web calendar.

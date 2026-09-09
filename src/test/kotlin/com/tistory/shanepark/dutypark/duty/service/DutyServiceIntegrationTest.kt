@@ -2,7 +2,6 @@ package com.tistory.shanepark.dutypark.duty.service
 
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
-import com.tistory.shanepark.dutypark.duty.domain.dto.DutyBatchUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.entity.Duty
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.member.domain.enums.Visibility
@@ -12,7 +11,6 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
 import java.time.LocalDate
-import java.time.YearMonth
 
 internal class DutyServiceIntegrationTest : DutyparkIntegrationTest() {
 
@@ -149,34 +147,6 @@ internal class DutyServiceIntegrationTest : DutyparkIntegrationTest() {
         updateVisibility(target, Visibility.PRIVATE)
 
         dutyService.getDuties(target.id!!, 2023, 4, loginMember(login))
-    }
-
-    @Test
-    fun `batch update replaces existing monthly overrides without unique constraint collisions`() {
-        val member = TestData.member
-        val month = YearMonth.of(2026, 8)
-        val oldType = TestData.dutyTypes[0]
-        val newType = TestData.dutyTypes[1]
-        dutyRepository.saveAndFlush(Duty(month.atDay(1), oldType, member))
-
-        dutyService.update(
-            DutyBatchUpdateDto(
-                year = month.year,
-                month = month.monthValue,
-                dutyTypeId = newType.id,
-                memberId = member.id!!,
-            )
-        )
-        dutyRepository.flush()
-
-        val replaced = dutyRepository.findAllByMemberAndDutyDateBetween(
-            member,
-            month.atDay(1),
-            month.atEndOfMonth(),
-        )
-        assertThat(replaced).hasSize(month.lengthOfMonth())
-        assertThat(replaced.map { it.dutyDate }).doesNotHaveDuplicates()
-        assertThat(replaced).allMatch { it.dutyType?.id == newType.id }
     }
 
 }

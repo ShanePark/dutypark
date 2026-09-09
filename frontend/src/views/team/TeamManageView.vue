@@ -35,6 +35,7 @@ import {
   Loader2,
   Eye,
   EyeOff,
+  UserCog,
 } from 'lucide-vue-next'
 
 const route = useRoute()
@@ -319,8 +320,9 @@ onMounted(() => {
     <template v-else-if="team">
       <div class="font-bold text-xl py-3 rounded-t-lg flex items-center justify-between px-4" :style="{ backgroundColor: 'var(--dp-modal-header-bg)', color: 'var(--dp-text-on-dark)' }">
         <button
+          type="button"
           @click="goBack('/team')"
-          class="px-3 py-1 text-dp-text-on-dark text-sm rounded-lg hover:bg-dp-border-secondary transition flex items-center gap-1 cursor-pointer bg-dp-surface-strong-alt"
+          class="inline-flex min-h-10 items-center gap-1.5 rounded-lg bg-dp-surface-strong-alt px-3 text-sm font-medium text-dp-text-on-dark transition-colors hover:bg-dp-surface-strong-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dp-accent-ring cursor-pointer"
         >
           <ChevronLeft class="w-4 h-4" />
           {{ t('team.manage.actions.back') }}
@@ -328,8 +330,9 @@ onMounted(() => {
         <span>{{ t('team.manage.title', { name: team.name }) }}</span>
         <button
           v-if="isAppAdmin && teamLoaded && !hasMember"
+          type="button"
           @click="removeTeam"
-          class="px-3 py-1 bg-dp-danger text-dp-text-on-dark text-sm rounded-lg hover:bg-dp-danger-hover transition cursor-pointer"
+          class="inline-flex min-h-10 items-center justify-center rounded-lg bg-dp-danger px-3 text-sm font-semibold text-dp-text-on-dark transition-colors hover:bg-dp-danger-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dp-accent-ring cursor-pointer"
         >
           {{ t('team.manage.actions.deleteTeam') }}
         </button>
@@ -355,8 +358,9 @@ onMounted(() => {
             <span class="font-medium">{{ team.adminName || t('team.manage.labels.notAvailable') }}</span>
             <button
               v-if="team.adminId && loginId !== team.adminId"
+              type="button"
               @click="changeAdmin()"
-              class="px-2 py-1 text-sm border border-dp-danger-border text-dp-danger rounded hover:bg-dp-danger-soft transition flex items-center gap-1 cursor-pointer"
+              class="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-dp-danger-border bg-dp-danger-soft px-2.5 py-2 text-sm font-medium text-dp-danger transition-colors hover:bg-dp-danger-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dp-accent-ring cursor-pointer"
             >
               <Trash2 class="w-3 h-3" />
               {{ t('team.manage.actions.cancelAdmin') }}
@@ -385,8 +389,9 @@ onMounted(() => {
             {{ t('team.manage.fields.dutyUpload') }}
           </p>
           <button
+            type="button"
             @click="openBatchUploadModal"
-            class="mt-1.5 w-full px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg font-medium hover:bg-dp-accent-hover transition flex items-center justify-center gap-1 cursor-pointer"
+            class="mt-1.5 inline-flex min-h-11 w-full items-center justify-center gap-1.5 rounded-lg bg-dp-accent px-4 py-2 font-semibold text-dp-text-on-dark transition-colors hover:bg-dp-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dp-accent-ring cursor-pointer"
           >
             <Upload class="w-4 h-4" />
             {{ t('team.manage.actions.upload') }}
@@ -414,8 +419,9 @@ onMounted(() => {
                   <span class="font-medium">{{ team.adminName || t('team.manage.labels.notAvailable') }}</span>
                   <button
                     v-if="team.adminId && loginId !== team.adminId"
+                    type="button"
                     @click="changeAdmin()"
-                    class="px-2 py-1 text-sm border border-dp-danger-border text-dp-danger rounded hover:bg-dp-danger-soft transition flex items-center gap-1 cursor-pointer"
+                    class="inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-dp-danger-border bg-dp-danger-soft px-2.5 py-2 text-sm font-medium text-dp-danger transition-colors hover:bg-dp-danger-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dp-accent-ring cursor-pointer"
                   >
                     <Trash2 class="w-3 h-3" />
                     {{ t('team.manage.actions.cancelAdmin') }}
@@ -446,8 +452,9 @@ onMounted(() => {
               </th>
               <td class="px-4 py-3">
                 <button
+                  type="button"
                   @click="openBatchUploadModal"
-                  class="px-4 py-2 bg-dp-accent text-dp-text-on-dark rounded-lg font-medium hover:bg-dp-accent-hover transition flex items-center gap-1 cursor-pointer"
+                  class="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-lg bg-dp-accent px-4 py-2 font-semibold text-dp-text-on-dark transition-colors hover:bg-dp-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dp-accent-ring cursor-pointer"
                 >
                   <Upload class="w-4 h-4" />
                   {{ t('team.manage.actions.upload') }}
@@ -463,8 +470,9 @@ onMounted(() => {
       <div class="text-dp-text-on-dark px-4 py-3 flex flex-wrap items-center justify-between gap-2 bg-dp-surface-strong">
         <h3 class="font-bold">{{ t('team.manage.fields.members') }}</h3>
         <button
+          type="button"
           @click="openMemberSearchModal"
-          class="px-3 py-1.5 bg-dp-accent text-dp-text-on-dark rounded-lg text-sm font-medium hover:bg-dp-accent-hover transition flex items-center gap-1"
+          class="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg bg-dp-accent px-3 text-sm font-semibold text-dp-text-on-dark shadow-sm transition-colors hover:bg-dp-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dp-accent-ring cursor-pointer"
         >
           <UserPlus class="w-4 h-4" />
           {{ t('team.manage.actions.addMember') }}
@@ -493,30 +501,37 @@ onMounted(() => {
                   <div v-if="!member.isManager" class="flex items-center justify-center gap-1">
                     <button
                       v-if="canAssignFirstAdmin && !member.isAdmin"
+                      type="button"
                       @click="changeAdmin(member)"
-                      class="px-2 py-1 text-xs border border-dp-accent-border text-dp-accent rounded hover:bg-dp-accent-soft transition flex items-center gap-1"
+                      class="inline-flex min-h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-dp-accent-border bg-dp-accent-soft px-2.5 py-2 text-xs font-medium text-dp-accent transition-colors hover:bg-dp-accent-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dp-accent-ring"
                     >
                       <Crown class="w-3 h-3" />
                       {{ t('team.manage.actions.assignAdmin') }}
                     </button>
                     <button
+                      type="button"
                       @click="assignManager(member)"
-                      class="text-dp-success hover:text-dp-success transition"
+                      :title="t('team.manage.actions.assignManager')"
+                      :aria-label="t('team.manage.actions.assignManager')"
+                      class="inline-flex min-h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-dp-accent-border bg-dp-accent-soft px-2.5 py-2 text-xs font-medium text-dp-accent transition-colors hover:bg-dp-accent-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dp-accent-ring"
                     >
-                      <Plus class="w-5 h-5 mx-auto" />
+                      <UserCog class="w-3.5 h-3.5" />
+                      <span>{{ t('team.manage.actions.assignManager') }}</span>
                     </button>
                   </div>
                   <div v-else-if="member.isManager && !member.isAdmin" class="flex items-center justify-center gap-1">
                     <button
+                      type="button"
                       @click="unAssignManager(member)"
-                      class="px-2 py-1 text-xs border border-dp-warning-border text-dp-warning rounded hover:bg-dp-warning-soft transition flex items-center gap-1"
+                      class="inline-flex min-h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-dp-warning-border bg-dp-warning-soft px-2.5 py-2 text-xs font-medium text-dp-warning transition-colors hover:bg-dp-warning-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dp-accent-ring"
                     >
                       <ShieldOff class="w-3 h-3" />
                       {{ t('team.manage.actions.revokeManager') }}
                     </button>
                     <button
+                      type="button"
                       @click="changeAdmin(member)"
-                      class="px-2 py-1 text-xs border border-dp-accent-border text-dp-accent rounded hover:bg-dp-accent-soft transition flex items-center gap-1"
+                      class="inline-flex min-h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-dp-accent-border bg-dp-accent-soft px-2.5 py-2 text-xs font-medium text-dp-accent transition-colors hover:bg-dp-accent-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dp-accent-ring"
                     >
                       <Crown class="w-3 h-3" />
                       {{ t(canAssignFirstAdmin ? 'team.manage.actions.assignAdmin' : 'team.manage.actions.transferAdmin') }}
@@ -527,8 +542,9 @@ onMounted(() => {
               </td>
               <td class="px-4 py-3 text-center">
                 <button
+                  type="button"
                   @click="removeMember(member.id)"
-                  class="px-2 py-1 text-sm bg-dp-danger text-dp-text-on-dark rounded hover:bg-dp-danger-hover transition flex items-center gap-1 mx-auto"
+                  class="inline-flex min-h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-dp-danger-border bg-dp-danger-soft px-2.5 py-2 text-sm font-medium text-dp-danger transition-colors hover:bg-dp-danger-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dp-accent-ring mx-auto"
                 >
                   <Trash2 class="w-3 h-3" />
                   {{ t('team.manage.actions.removeMember') }}
@@ -552,8 +568,9 @@ onMounted(() => {
               <Check v-if="member.isManager" class="w-4 h-4 text-dp-success" />
             </div>
             <button
+              type="button"
               @click="removeMember(member.id)"
-              class="px-2 py-1 text-xs bg-dp-danger text-dp-text-on-dark rounded hover:bg-dp-danger-hover transition flex items-center gap-1"
+              class="inline-flex min-h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-dp-danger-border bg-dp-danger-soft px-2.5 py-2 text-xs font-medium text-dp-danger transition-colors hover:bg-dp-danger-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dp-accent-ring"
             >
               <Trash2 class="w-3 h-3" />
               {{ t('team.manage.actions.removeMember') }}
@@ -563,31 +580,36 @@ onMounted(() => {
             <template v-if="!member.isManager">
               <button
                 v-if="canAssignFirstAdmin"
+                type="button"
                 @click="changeAdmin(member)"
-                class="px-2 py-1 text-xs border border-dp-accent-border text-dp-accent rounded hover:bg-dp-accent-soft transition flex items-center gap-1"
+                class="inline-flex min-h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-dp-accent-border bg-dp-accent-soft px-2.5 py-2 text-xs font-medium text-dp-accent transition-colors hover:bg-dp-accent-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dp-accent-ring"
               >
                 <Crown class="w-3 h-3" />
                 {{ t('team.manage.actions.assignAdmin') }}
               </button>
               <button
+                type="button"
                 @click="assignManager(member)"
-                class="px-2 py-1 text-xs border border-dp-success-border text-dp-success rounded hover:bg-dp-success-soft transition flex items-center gap-1"
+                :title="t('team.manage.actions.assignManager')"
+                class="inline-flex min-h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-dp-accent-border bg-dp-accent-soft px-2.5 py-2 text-xs font-medium text-dp-accent transition-colors hover:bg-dp-accent-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dp-accent-ring"
               >
-                <Plus class="w-3 h-3" />
+                <UserCog class="w-3.5 h-3.5" />
                 {{ t('team.manage.actions.assignManager') }}
               </button>
             </template>
             <template v-else-if="member.isManager">
               <button
+                type="button"
                 @click="unAssignManager(member)"
-                class="px-2 py-1 text-xs border border-dp-warning-border text-dp-warning rounded hover:bg-dp-warning-soft transition flex items-center gap-1"
+                class="inline-flex min-h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-dp-warning-border bg-dp-warning-soft px-2.5 py-2 text-xs font-medium text-dp-warning transition-colors hover:bg-dp-warning-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dp-accent-ring"
               >
                 <ShieldOff class="w-3 h-3" />
                 {{ t('team.manage.actions.revokeManager') }}
               </button>
               <button
+                type="button"
                 @click="changeAdmin(member)"
-                class="px-2 py-1 text-xs border border-dp-accent-border text-dp-accent rounded hover:bg-dp-accent-soft transition flex items-center gap-1"
+                class="inline-flex min-h-10 items-center justify-center gap-1.5 whitespace-nowrap rounded-lg border border-dp-accent-border bg-dp-accent-soft px-2.5 py-2 text-xs font-medium text-dp-accent transition-colors hover:bg-dp-accent-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dp-accent-ring"
               >
                 <Crown class="w-3 h-3" />
                 {{ t(canAssignFirstAdmin ? 'team.manage.actions.assignAdmin' : 'team.manage.actions.transferAdmin') }}
@@ -605,9 +627,10 @@ onMounted(() => {
       <div class="text-dp-text-on-dark px-4 py-3 flex items-center justify-between bg-dp-surface-strong">
         <h3 class="font-bold">{{ t('team.manage.fields.dutyTypes') }}</h3>
         <button
+          type="button"
           @click="openAddDutyTypeModal"
           :disabled="saving"
-          class="px-3 py-1.5 rounded-lg text-sm font-medium hover-interactive cursor-pointer flex items-center gap-1 bg-dp-bg-card text-dp-text-primary disabled:opacity-50 disabled:cursor-not-allowed"
+          class="inline-flex min-h-10 items-center justify-center gap-1.5 rounded-lg bg-dp-accent px-3 text-sm font-semibold text-dp-text-on-dark shadow-sm transition-colors hover:bg-dp-accent-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dp-accent-ring cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
         >
           <Plus class="w-4 h-4" />
           {{ t('team.manage.actions.addDutyType') }}
@@ -638,11 +661,14 @@ onMounted(() => {
                 <span v-if="dutyType.id === null" class="text-xs font-normal text-dp-text-muted">({{ t('team.manage.labels.offDuty') }})</span>
               </td>
               <td class="px-4 py-3 text-center">
-                <span
+                <button
+                  type="button"
                   @click="openEditDutyTypeModal(dutyType)"
-                  class="inline-block w-6 h-6 rounded-full border-2 cursor-pointer color-picker-swatch"
+                  :aria-label="t('team.manage.actions.editDutyType')"
+                  :title="t('team.manage.actions.editDutyType')"
+                  class="inline-block h-6 w-6 cursor-pointer rounded-full border-2 color-picker-swatch focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dp-accent-ring"
                   :style="{ backgroundColor: dutyType.color || 'var(--dp-duty-type-fallback)', borderColor: 'var(--dp-border-primary)' }"
-                ></span>
+                ></button>
               </td>
               <td class="px-4 py-3 text-center">
                 <span
@@ -660,35 +686,46 @@ onMounted(() => {
                 <div class="flex flex-wrap items-center justify-center gap-1">
                   <button
                     v-if="dutyType.id"
+                    type="button"
                     :disabled="saving || !canMoveDutyType(index, 1)"
                     @click="moveDutyType(index, 1)"
-                    class="min-w-11 min-h-11 p-2 border rounded hover-bg-light transition disabled:opacity-50 disabled:cursor-not-allowed border-dp-border-secondary"
+                    :aria-label="t('team.manage.actions.moveDutyTypeDown')"
+                    :title="t('team.manage.actions.moveDutyTypeDown')"
+                    class="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-dp-border-secondary bg-dp-bg-secondary p-2 text-dp-text-secondary transition-colors hover:bg-dp-bg-hover hover:text-dp-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dp-accent-ring disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <ArrowDown class="w-3 h-3 sm:w-4 sm:h-4" />
                   </button>
                   <button
                     v-if="dutyType.id"
+                    type="button"
                     :disabled="saving || !canMoveDutyType(index, -1)"
                     @click="moveDutyType(index, -1)"
-                    class="min-w-11 min-h-11 p-2 border rounded hover-bg-light transition disabled:opacity-50 disabled:cursor-not-allowed border-dp-border-secondary"
+                    :aria-label="t('team.manage.actions.moveDutyTypeUp')"
+                    :title="t('team.manage.actions.moveDutyTypeUp')"
+                    class="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-dp-border-secondary bg-dp-bg-secondary p-2 text-dp-text-secondary transition-colors hover:bg-dp-bg-hover hover:text-dp-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dp-accent-ring disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <ArrowUp class="w-3 h-3 sm:w-4 sm:h-4" />
                   </button>
                   <button
+                    type="button"
                     @click="openEditDutyTypeModal(dutyType)"
                     :disabled="saving"
-                    class="min-w-11 min-h-11 p-2 border border-dp-accent-border text-dp-accent rounded hover:bg-dp-accent-soft transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    :aria-label="t('team.manage.actions.editDutyType')"
+                    :title="t('team.manage.actions.editDutyType')"
+                    class="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-dp-accent-border bg-dp-accent-soft p-2 text-dp-accent transition-colors hover:bg-dp-accent-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dp-accent-ring disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <Pencil class="w-3 h-3 sm:w-4 sm:h-4" />
                   </button>
                   <button
                     v-if="dutyType.id"
+                    type="button"
                     @click="updateDutyTypeVisibility(dutyType)"
                     :disabled="saving"
-                    class="min-w-11 min-h-11 p-2 border rounded transition disabled:opacity-50 disabled:cursor-not-allowed"
+                    :aria-label="dutyType.hidden ? t('team.manage.actions.restoreDutyType') : t('team.manage.actions.hideDutyType')"
+                    class="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border p-2 transition-colors focus-visible:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50"
                     :class="dutyType.hidden
-                      ? 'border-dp-success-border text-dp-success hover:bg-dp-success-soft'
-                      : 'border-dp-warning-border text-dp-warning hover:bg-dp-warning-soft'"
+                      ? 'border-dp-success-border bg-dp-success-soft text-dp-success hover:bg-dp-success-soft-hover focus-visible:ring-dp-accent-ring'
+                      : 'border-dp-warning-border bg-dp-warning-soft text-dp-warning hover:bg-dp-warning-soft-hover focus-visible:ring-dp-accent-ring'"
                     :title="dutyType.hidden ? t('team.manage.actions.restoreDutyType') : t('team.manage.actions.hideDutyType')"
                   >
                     <Eye v-if="dutyType.hidden" class="w-4 h-4 mx-auto" />

@@ -104,6 +104,10 @@ const apiErrors = {
     },
   },
   dutyType: {
+    abbreviation: {
+      length: '단축어는 영어 알파벳 또는 완성형 한글을 1~3글자로 입력해 주세요.',
+      invalid: '단축어는 영어 알파벳 또는 완성형 한글을 1~3글자로 입력해 주세요.',
+    },
     name: {
       required: '근무명은 필수입니다.',
       length: '근무명은 1자 이상 10자 이하로 입력해주세요.',
@@ -373,6 +377,13 @@ export default {
     },
   },
   apiErrors,
+  dutyAbbreviation: {
+    label: '단축어 (선택)',
+    hint: '비워 두면 근무명의 첫 글자를 사용합니다. 직접 입력할 때는 영어 알파벳 또는 완성형 한글을 1~3글자로 사용할 수 있습니다. 본인 근무 선택·편집에는 단축어를, 다른 사람의 달력과 함께보기에는 전체 이름을 표시합니다.',
+    placeholder: '예: N',
+    preview: '단축어 미리보기',
+    invalid: '단축어는 영어 알파벳 또는 완성형 한글을 1~3글자로 입력해 주세요.',
+  },
   contentFilter: {
     blocked: '커뮤니티 가이드라인에 어긋나는 표현이 포함되어 있어 저장할 수 없습니다. 내용을 수정해 주세요.',
   },
@@ -808,6 +819,7 @@ export default {
     actions: {
       addNew: '새 할일 추가',
       clickToAdd: '클릭하여 할 일 추가',
+      clearCompleted: '완료 항목 정리',
     },
     messages: {
       loadFailed: '보드를 불러오는데 실패했습니다.',
@@ -824,6 +836,10 @@ export default {
       deleteConfirm: '“{title}” 할 일을 삭제하시겠습니까?',
       deleteSuccess: '할 일이 삭제되었습니다.',
       deleteFailed: '삭제에 실패했습니다.',
+      deleteCompletedTitle: '내가 작성한 완료된 할일을 삭제할까요?',
+      deleteCompletedConfirm: '내가 작성한 완료된 할일 {count}개를 영구적으로 삭제합니다. 삭제 후 복구할 수 없습니다. 다른 사람이 작성해 나에게 태그한 항목은 제외됩니다.',
+      deleteCompletedSuccess: '완료된 할일 {count}개를 정리했습니다.',
+      deleteCompletedFailed: '완료된 할일 정리에 실패했습니다.',
       untagTitle: '태그 제거',
       untagConfirm: '“{title}” 할 일 태그를 내 목록에서 제거하시겠습니까?',
       untagSuccess: 'TODO 태그가 제거되었습니다.',
@@ -1215,13 +1231,6 @@ export default {
       teamRequiredDescription: '듀티를 입력하려면 먼저 팀을 만들거나 팀 관리자에게 회원 추가를 요청해주세요.',
       goToTeam: '팀 메뉴로 이동',
     },
-    batchUpdate: {
-      title: '근무 일괄 변경',
-      description1: '{year}년 {month}월 전체에 적용할 근무를 선택하세요.',
-      description2: '선택한 근무가 해당 월 전체에 일괄 적용됩니다.',
-      warning: '기존 근무표가 덮어써집니다. 이후 기본 패턴을 변경하면 오늘 이후의 일괄 입력 근무도 삭제됩니다.',
-      failed: '근무 일괄 변경에 실패했습니다.',
-    },
     excelUpload: {
       title: '엑셀 업로드',
       ariaLabel: '근무표 파일 업로드',
@@ -1245,13 +1254,12 @@ export default {
       selectionCount: '{selected} / {count}명 선택됨',
     },
     typesBar: {
-      focusedDay: '{day}일 기준',
+      focusedDay: '{month}월 {day}일',
       prevDay: '이전 날짜',
       nextDay: '다음 날짜',
       loading: '근무 유형을 불러오는 중...',
       empty: '등록된 근무 유형이 없습니다.',
       compare: '함께 보기',
-      batchUpdate: '일괄 변경',
       editMode: '편집 모드',
       editModeActive: '편집 모드 사용 중',
       editModeDescription: '근무 유형을 선택하면 선택한 날짜에 바로 반영되고 다음 날짜로 이동합니다.',
@@ -1488,6 +1496,9 @@ export default {
         removeMember: '탈퇴',
         assignManager: '매니저 지정',
         addDutyType: '추가',
+        moveDutyTypeDown: '아래로 이동',
+        moveDutyTypeUp: '위로 이동',
+        editDutyType: '근무 유형 수정',
         hideDutyType: '숨기기',
         restoreDutyType: '복원',
       },

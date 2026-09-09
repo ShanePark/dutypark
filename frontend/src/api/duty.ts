@@ -78,24 +78,6 @@ export const dutyApi = {
   },
 
   /**
-   * Batch update duties for entire month
-   */
-  batchUpdateDuty: async (
-    memberId: number,
-    year: number,
-    month: number,
-    dutyTypeId: number | null
-  ): Promise<boolean> => {
-    const response = await apiClient.put<boolean>('/duty/batch', {
-      memberId,
-      year,
-      month,
-      dutyTypeId,
-    })
-    return response.data
-  },
-
-  /**
    * Get team info with duty types
    */
   getTeam: async (teamId: number): Promise<TeamDto> => {

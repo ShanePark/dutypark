@@ -224,6 +224,34 @@ class TodoService(
     }
 
     /**
+     * Deletes the completed todos selected by the owner in the current board snapshot.
+     * The repository query repeats the owner and DONE checks so stale, missing, tagged,
+     * or reopened ids are ignored safely.
+     */
+    fun deleteCompletedTodos(loginMember: LoginMember, ids: Collection<UUID>): Int {
+        val member = findMember(loginMember)
+        val distinctIds = ids.distinct()
+        if (distinctIds.isEmpty()) return 0
+
+        val completedTodos = todoRepository.findAllByIdAndMemberAndStatusForUpdate(
+            ids = distinctIds,
+            member = member,
+            status = TodoStatus.DONE,
+        )
+
+        var deletedCount = 0
+        completedTodos.forEach { todo ->
+            // Keep this guard even though the query filters by status and owner. It protects
+            // the destructive operation if a mocked repository or a stale persistence state
+            // returns an id that changed status before deletion.
+            if (todo.member.id != member.id || todo.status != TodoStatus.DONE) return@forEach
+            deleteTodoInternal(todo)
+            deletedCount++
+        }
+        return deletedCount
+    }
+
+    /**
      * Deletes a todo with its attachments, without any ownership check. Callers are responsible
      * for authorization (admin moderation calls this directly). Unlike schedules, the todo context
      * directory is intentionally left untouched, preserving the existing behaviour.

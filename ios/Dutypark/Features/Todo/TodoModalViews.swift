@@ -469,49 +469,63 @@ struct TodoDetailModal: View {
     }
 
     private var footer: some View {
-        HStack(spacing: DPSpacing.small) {
-            statusAction
-            secondaryActions
+        ViewThatFits(in: .horizontal) {
+            // Measure the natural width of every action before choosing the
+            // compact row. This keeps localized labels at their normal size;
+            // when they do not fit, the stacked layout below gets the full
+            // panel width instead of shrinking or truncating a label.
+            HStack(spacing: DPSpacing.small) {
+                statusAction
+                    .fixedSize(horizontal: true, vertical: false)
+                secondaryActions
+                    .fixedSize(horizontal: true, vertical: false)
+            }
+
+            VStack(spacing: DPSpacing.small) {
+                statusAction
+                secondaryActions
+            }
         }
         .padding(DPSpacing.compact)
     }
 
-    @ViewBuilder
     private var secondaryActions: some View {
-        if currentTodo.isTagged {
-            TodoModalBorderedAction(
-                title: todoLocalized("todo.action.leaveTag"),
-                systemImage: "xmark",
-                color: DPColor.danger,
-                action: { confirmation = .leaveTag }
-            )
-            .accessibilityIdentifier("todo.detail.leaveTag")
-            .disabled(statusChangeIsBlocked)
+        HStack(spacing: DPSpacing.small) {
+            if currentTodo.isTagged {
+                TodoModalBorderedAction(
+                    title: todoLocalized("todo.action.leaveTag"),
+                    systemImage: "xmark",
+                    color: DPColor.danger,
+                    action: { confirmation = .leaveTag }
+                )
+                .accessibilityIdentifier("todo.detail.leaveTag")
+                .disabled(statusChangeIsBlocked)
 
-            reportMenu
-        } else {
-            TodoModalBorderedAction(
-                title: todoLocalized("common.edit"),
-                systemImage: "pencil",
-                color: DPColor.accent,
-                isLoading: isLoadingEditAttachments,
-                action: {
-                    model.emitHaptic(.routine)
-                    showingEdit = true
-                }
-            )
-            .disabled(
-                statusChangeIsBlocked
-                    || (currentTodo.hasAttachments && model.attachmentsByTodoID[currentTodo.uuid] == nil)
-            )
+                reportMenu
+            } else {
+                TodoModalBorderedAction(
+                    title: todoLocalized("common.edit"),
+                    systemImage: "pencil",
+                    color: DPColor.accent,
+                    isLoading: isLoadingEditAttachments,
+                    action: {
+                        model.emitHaptic(.routine)
+                        showingEdit = true
+                    }
+                )
+                .disabled(
+                    statusChangeIsBlocked
+                        || (currentTodo.hasAttachments && model.attachmentsByTodoID[currentTodo.uuid] == nil)
+                )
 
-            TodoModalBorderedAction(
-                title: todoLocalized("todo.action.delete"),
-                systemImage: "trash",
-                color: DPColor.danger,
-                action: { confirmation = .delete }
-            )
-            .disabled(statusChangeIsBlocked)
+                TodoModalBorderedAction(
+                    title: todoLocalized("todo.action.delete"),
+                    systemImage: "trash",
+                    color: DPColor.danger,
+                    action: { confirmation = .delete }
+                )
+                .disabled(statusChangeIsBlocked)
+            }
         }
     }
 
@@ -570,8 +584,9 @@ private struct TodoModalFooterActionLabel: View {
             }
         }
         .font(DPTypography.label)
-        .lineLimit(1)
-        .minimumScaleFactor(0.75)
+        .lineLimit(2)
+        .multilineTextAlignment(.center)
+        .fixedSize(horizontal: false, vertical: true)
         .foregroundStyle(color)
         .padding(.horizontal, DPSpacing.small)
         .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)

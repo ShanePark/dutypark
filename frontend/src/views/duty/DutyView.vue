@@ -5,7 +5,6 @@ import { useI18n } from 'vue-i18n'
 import Swal from 'sweetalert2'
 import { useSwal } from '@/composables/useSwal'
 import { useNavigateBack } from '@/composables/useNavigateBack'
-import { isLightColor } from '@/utils/color'
 import { resolveApiCodeMessage, resolveApiErrorMessage } from '@/utils/resolveApiError'
 import { buildDutyTypeCounts } from '@/utils/dutyTypeCounts'
 import { isOwnedCalendarSchedule } from '@/utils/schedulePermissions'
@@ -420,6 +419,7 @@ const duties = computed<Array<DutyDay | null>>(() => {
 
     return {
       dutyType: duty.dutyType || 'OFF',
+      dutyAbbreviation: duty.dutyAbbreviation,
       dutyColor: duty.dutyColor || 'var(--dp-duty-fallback)',
       dutyTypeId: duty.dutyTypeId,
       source: duty.source,
@@ -485,6 +485,8 @@ async function loadTeam() {
       id: dt.id,
       name: dt.name,
       color: dt.color,
+      abbreviation: dt.abbreviation,
+      shortName: dt.shortName,
     }))
   } catch (error) {
     console.error('Failed to load team:', error)
@@ -628,6 +630,12 @@ onUnmounted(() => {
 watch(
   () => [currentYear.value, currentMonth.value],
   async () => {
+    // Keep the quick-duty focus inside the newly selected month. Without this,
+    // moving from a 31-day month to February leaves an impossible day selected.
+    if (focusedDay.value !== null) {
+      focusedDay.value = Math.min(focusedDay.value, lastDayInMonth.value)
+    }
+
     // Load calendar first to ensure index alignment
     await loadCalendar()
     await Promise.all([loadDuties(), loadSchedules(), loadOtherDuties(), loadHolidays()])
@@ -1438,52 +1446,6 @@ async function handleChangeDutyType(dutyTypeId: number | null) {
   }
 }
 
-async function showBatchUpdateModal() {
-  if (!memberId.value || !canEditDuty.value || dutyTypes.value.length === 0) return
-
-  const buttonsHtml = dutyTypes.value
-    .map((dt) => {
-      const textColor = isLightColor(dt.color) ? 'var(--dp-text-on-light)' : 'var(--dp-text-on-dark)'
-      return `<button class="swal2-styled duty-type-btn" style="background-color: ${dt.color || 'var(--dp-duty-fallback)'}; color: ${textColor}; margin: 4px;" data-id="${dt.id}">${dt.name}</button>`
-    })
-    .join('')
-
-  await Swal.fire({
-    title: t('duty.batchUpdate.title'),
-    html: `
-      <p>${t('duty.batchUpdate.description1', { year: currentYear.value, month: currentMonth.value })}</p>
-      <p>${t('duty.batchUpdate.description2')}</p>
-      <p class="text-sm text-dp-warning font-semibold mt-2">${t('duty.batchUpdate.warning')}</p>
-      <div class="mt-4">${buttonsHtml}</div>
-    `,
-    showConfirmButton: false,
-    showCancelButton: true,
-    cancelButtonText: t('common.actions.cancel'),
-    didOpen: () => {
-      const buttons = document.querySelectorAll('.duty-type-btn')
-      buttons.forEach((button) => {
-        button.addEventListener('click', async () => {
-          const dutyTypeId = button.getAttribute('data-id')
-          Swal.close()
-          try {
-            await dutyApi.batchUpdateDuty(
-              memberId.value,
-              currentYear.value,
-              currentMonth.value,
-              dutyTypeId ? parseInt(dutyTypeId) : null
-            )
-            await loadDuties()
-          } catch (error) {
-            console.error('Failed to batch update duties:', error)
-            await loadDuties()
-            showError(resolveApiErrorMessage(error, { fallbackKey: 'duty.batchUpdate.failed' }, t))
-          }
-        })
-      })
-    },
-  })
-}
-
 async function showExcelUploadModal() {
   if (!memberId.value || !canEditDuty.value || !team.value?.dutyBatchTemplate) return
 
@@ -1615,6 +1577,8 @@ async function showExcelUploadModal() {
       :is-loading-duties="isLoadingDuties"
       :focused-day="focusedDay"
       :focused-day-duty-type="focusedDayDutyType"
+      :current-year="currentYear"
+      :current-month="currentMonth"
       :last-day-in-month="lastDayInMonth"
       :can-edit="canEditDuty"
       :can-edit-my-calendar="canEditMyDutyCalendar"
@@ -1623,7 +1587,6 @@ async function showExcelUploadModal() {
       :team-has-duty-batch-template="teamHasDutyBatchTemplate"
       @toggle-other-duties="handleToggleOtherDuties"
       @clear-other-duties="handleOtherDutiesClear"
-      @show-batch-update-modal="showBatchUpdateModal"
       @toggle-batch-edit="batchEditMode = $event"
       @show-excel-upload-modal="showExcelUploadModal"
       @quick-duty-change="handleQuickDutyChange"

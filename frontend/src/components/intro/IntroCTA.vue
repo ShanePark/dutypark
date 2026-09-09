@@ -54,16 +54,6 @@ const buttonStyle = computed(() => {
     opacity: Math.min(1, p * 1.3)
   }
 })
-
-const guideLinkStyle = computed(() => {
-  const p = progress.value
-  const translateY = (1 - p) * 15
-
-  return {
-    transform: `translateY(${translateY}px)`,
-    opacity: Math.min(1, p * 1.4)
-  }
-})
 </script>
 
 <template>
@@ -89,23 +79,17 @@ const guideLinkStyle = computed(() => {
         {{ t('intro.cta.descriptionLine2') }}
       </p>
 
-      <router-link
-        to="/auth/login"
-        class="intro-cta-button"
-        :style="buttonStyle"
-      >
-        {{ t('intro.cta.login') }}
-        <ChevronRight class="w-5 h-5" />
-      </router-link>
+      <div class="intro-cta-actions" :style="buttonStyle">
+        <router-link to="/auth/login" class="intro-cta-button">
+          {{ t('intro.cta.login') }}
+          <ChevronRight class="w-5 h-5" aria-hidden="true" />
+        </router-link>
 
-      <router-link
-        to="/guide"
-        class="intro-guide-link"
-        :style="guideLinkStyle"
-      >
-        <BookOpen class="w-4 h-4" />
-        {{ t('intro.cta.guide') }}
-      </router-link>
+        <router-link to="/guide" class="intro-guide-link">
+          <BookOpen class="w-5 h-5" aria-hidden="true" />
+          {{ t('intro.cta.guide') }}
+        </router-link>
+      </div>
     </div>
   </section>
 </template>

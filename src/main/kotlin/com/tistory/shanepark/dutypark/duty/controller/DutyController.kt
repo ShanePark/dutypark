@@ -1,7 +1,6 @@
 package com.tistory.shanepark.dutypark.duty.controller
 
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
-import com.tistory.shanepark.dutypark.duty.domain.dto.DutyBatchUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyUpdateDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.OtherDutyResponse
@@ -55,16 +54,6 @@ class DutyController(
     ): ResponseEntity<Boolean> {
         checkAuthentication(loginMember, dutyUpdateDto.memberId)
         dutyService.update(dutyUpdateDto)
-        return ResponseEntity.ok(true)
-    }
-
-    @PutMapping("batch")
-    fun batchUpdateDuty(
-        @RequestBody dutyBatchUpdateDto: DutyBatchUpdateDto,
-        @Login loginMember: LoginMember
-    ): ResponseEntity<Boolean> {
-        checkAuthentication(loginMember, dutyBatchUpdateDto.memberId)
-        dutyService.update(dutyBatchUpdateDto)
         return ResponseEntity.ok(true)
     }
 

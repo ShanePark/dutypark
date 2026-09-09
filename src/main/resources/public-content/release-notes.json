@@ -40,6 +40,17 @@
         }
       },
       "entries": {
+        "pr-418": {
+          "title": "근무 단축어와 캘린더·팀 관리 개선",
+          "summary": "근무 단축어와 캘린더·팀 관리 화면을 개선하고 웹에 완료 할일 정리 기능을 추가했습니다.",
+          "changes": [
+            "단축어는 영문 대소문자와 완성형 한글로 최대 3글자까지 설정할 수 있습니다. 빈 값은 근무명 첫 글자를 자동으로 사용하며, 다른 사람의 근무는 전체 이름을 유지합니다.",
+            "팀 관리 버튼과 매니저 권한 표시를 다듬고 근무 유형 미리보기를 실제 표시와 맞췄습니다.",
+            "달력에 마우스를 올려도 근무색을 유지하고 오늘은 빨간 상단 막대로 표시합니다. 웹과 iPhone의 편집 날짜를 월과 일로 표시하며 월 단위 일괄 근무 변경 기능은 제거했습니다.",
+            "웹에서 내가 작성한 완료 할일을 개수 확인 후 한 번에 삭제할 수 있습니다. 다른 사람이 작성해 나에게 태그한 할일은 제외합니다.",
+            "랜딩 페이지의 언어·테마 버튼을 통일하고 소개 화면과 방문자 탐색을 개선했습니다. iPhone의 글꼴과 다국어 화면 배치도 다듬었습니다."
+          ]
+        },
         "pr-415": {
           "title": "팀 시작과 Todo 관리 경험 개선",
           "summary": "팀이 없는 회원이 직접 팀을 만들고 바로 관리할 수 있게 하며, Todo 상태 변경과 모바일 조작 및 첨부파일 사용 경험을 웹과 iPhone에서 함께 개선했습니다.",
@@ -2287,6 +2298,17 @@
         }
       },
       "entries": {
+        "pr-418": {
+          "title": "Duty abbreviations and calendar, team, and task improvements",
+          "summary": "Customize duty abbreviations, use clearer calendar and team controls, and clean up completed tasks on the web.",
+          "changes": [
+            "Set optional abbreviations using up to three uppercase or lowercase English letters or complete Hangul characters. Empty values use the first character of the duty name; other people’s duties retain full names.",
+            "Refine team and manager actions and align duty previews with actual badges.",
+            "Keep duty colors during hover, mark today with a red top bar, and show month/day editing labels on web and iPhone. Remove monthly bulk duty updates.",
+            "Delete completed tasks you created on the web after confirming the count. Tasks created by others and tagged to you are excluded.",
+            "Unify landing language and theme controls, improve the showcase and guest navigation, and refine iPhone typography and localized layouts."
+          ]
+        },
         "pr-415": {
           "title": "Better team onboarding and Todo workflows",
           "summary": "Lets teamless members create and manage a team immediately while improving Todo status changes, mobile interactions, and attachment workflows across the web and iPhone app.",
@@ -4497,6 +4519,21 @@
     }
   },
   "items": [
+    {
+      "id": "pr-418",
+      "version": "2026.09.10",
+      "date": "2026-09-10",
+      "pr": 418,
+      "url": "https://github.com/ShanePark/dutypark/pull/418",
+      "category": "feature",
+      "areas": [
+        "calendar",
+        "duty",
+        "team",
+        "todo",
+        "ui"
+      ]
+    },
     {
       "id": "pr-415",
       "version": "2026.09.05",

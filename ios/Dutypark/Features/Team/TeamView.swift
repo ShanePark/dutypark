@@ -439,6 +439,7 @@ struct TeamView: View {
 
             if viewModel.selectedSchedules.isEmpty {
                 Text("team.view.schedule.empty", tableName: "Team")
+                    .font(DPTypography.supporting)
                     .foregroundStyle(DPColor.textMuted)
                     .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)
             } else {
@@ -458,7 +459,7 @@ struct TeamView: View {
                                 .foregroundStyle(DPColor.textSecondary)
                                 if !schedule.description.isEmpty {
                                     Text(verbatim: schedule.description)
-                                        .font(.subheadline)
+                                        .font(DPTypography.supporting)
                                         .foregroundStyle(DPColor.textSecondary)
                                 }
                                 Text(verbatim: teamScheduleDateRange(schedule))
@@ -526,22 +527,11 @@ struct TeamView: View {
         VStack(alignment: .leading, spacing: DPSpacing.small) {
             ForEach(Array(viewModel.shifts.enumerated()), id: \.offset) { _, shift in
                 VStack(alignment: .leading, spacing: 0) {
-                    HStack {
-                        Text(verbatim: shift.dutyType.name)
-                            .font(DPTypography.bodyMedium)
-                            .foregroundStyle(TeamVisualStyle.foregroundColor(on: shift.dutyType.color))
-                        Spacer()
-                        Text(verbatim: TeamLocalization.shiftMemberCount(shift.members.count))
-                            .font(DPTypography.caption)
-                            .foregroundStyle(DPColor.textOnLight)
-                            .padding(.horizontal, DPSpacing.small)
-                            .padding(.vertical, 2)
-                            .background(Color.white.opacity(0.65))
-                            .clipShape(Capsule())
-                            .accessibilityIdentifier("team.shift.memberCount")
-                    }
-                    .padding(DPSpacing.compact)
-                    .background(Color(teamHex: shift.dutyType.color))
+                    TeamDutyTypeBadge(
+                        name: shift.dutyType.name,
+                        color: shift.dutyType.color,
+                        memberCount: shift.members.count
+                    )
 
                     let memberColumns = Array(repeating: GridItem(.flexible(), spacing: DPSpacing.small), count: 2)
                     LazyVGrid(columns: memberColumns, spacing: DPSpacing.small) {
@@ -989,6 +979,7 @@ private struct TeamCreationView: View {
                     .overlay(alignment: .topLeading) {
                         if description.isEmpty {
                             Text("team.create.descriptionPlaceholder", tableName: "Team")
+                                .font(DPTypography.body)
                                 .foregroundStyle(DPColor.textMuted)
                                 .padding(.horizontal, DPChrome.inputHorizontalPadding)
                                 .padding(.vertical, DPChrome.inputVerticalPadding)
@@ -1018,15 +1009,19 @@ private struct TeamCreationView: View {
         switch viewModel.nameCheckResult {
         case .ok:
             Text("team.create.nameAvailable", tableName: "Team")
+                .font(DPTypography.caption)
                 .foregroundStyle(DPColor.success)
         case .duplicated:
             Text("team.create.nameDuplicated", tableName: "Team")
+                .font(DPTypography.caption)
                 .foregroundStyle(DPColor.danger)
         case .tooShort:
             Text("team.create.nameTooShort", tableName: "Team")
+                .font(DPTypography.caption)
                 .foregroundStyle(DPColor.warning)
         case .tooLong:
             Text("team.create.nameTooLong", tableName: "Team")
+                .font(DPTypography.caption)
                 .foregroundStyle(DPColor.warning)
         case nil:
             EmptyView()
@@ -1077,7 +1072,7 @@ private struct TeamCreationView: View {
     }
 }
 
-private enum TeamVisualStyle {
+nonisolated enum TeamVisualStyle {
     static func weekdayColor(_ index: Int) -> Color {
         if index == 0 { return DPColor.danger }
         if index == 6 { return DPColor.accent }
@@ -1096,6 +1091,33 @@ private enum TeamVisualStyle {
         let green = Double((number >> 8) & 0xff) / 255
         let blue = Double(number & 0xff) / 255
         return (red * 0.299 + green * 0.587 + blue * 0.114) > 0.64
+    }
+}
+
+nonisolated struct TeamDutyTypeBadge: View {
+    let name: String
+    let color: String?
+    let memberCount: Int?
+
+    var body: some View {
+        HStack {
+            Text(verbatim: name)
+                .font(DPTypography.bodyMedium)
+                .foregroundStyle(TeamVisualStyle.foregroundColor(on: color))
+            Spacer()
+            if let memberCount {
+                Text(verbatim: TeamLocalization.shiftMemberCount(memberCount))
+                    .font(DPTypography.caption)
+                    .foregroundStyle(DPColor.textOnLight)
+                    .padding(.horizontal, DPSpacing.small)
+                    .padding(.vertical, 2)
+                    .background(Color.white.opacity(0.65))
+                    .clipShape(Capsule())
+                    .accessibilityIdentifier("team.shift.memberCount")
+            }
+        }
+        .padding(DPSpacing.compact)
+        .background(Color(teamHex: color))
     }
 }
 

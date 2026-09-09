@@ -91,9 +91,10 @@ class TeamManageController(
         @PathVariable teamId: Long,
         @RequestParam color: String,
         @RequestParam name: String,
+        @RequestParam(required = false) abbreviation: String? = null,
     ) {
         checkCanManage(login = loginMember, teamId = teamId)
-        teamService.updateDefaultDuty(teamId, name, color)
+        teamService.updateDefaultDuty(teamId, name, color, abbreviation)
     }
 
     @PostMapping("/{teamId}/members")

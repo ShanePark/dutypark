@@ -27,4 +27,21 @@ describe('team management service-admin access', () => {
     expect(teamManageView).toContain('@click="unAssignManager(member)"')
     expect(teamManageView).toContain('@click="changeAdmin(member)"')
   })
+
+  it('uses a clearly labelled manager action instead of a standalone plus icon', () => {
+    expect(teamManageView).toContain('UserCog')
+    expect(teamManageView).toMatch(
+      /@click="assignManager\(member\)"[\s\S]*?t\('team\.manage\.actions\.assignManager'\)/,
+    )
+    expect(teamManageView).not.toMatch(
+      /@click="assignManager\(member\)"[\s\S]*?<Plus class="w-5 h-5 mx-auto" \/>/,
+    )
+  })
+
+  it('keeps management actions consistent with the shared focus and touch target styles', () => {
+    expect(teamManageView).toContain('min-h-11')
+    expect(teamManageView).toContain('focus-visible:ring-2')
+    expect(teamManageView).toContain('bg-dp-accent-soft')
+    expect(teamManageView).toContain('bg-dp-danger-soft')
+  })
 })

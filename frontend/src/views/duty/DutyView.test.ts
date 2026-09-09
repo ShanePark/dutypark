@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { h, nextTick } from 'vue'
+import { defineComponent, h, nextTick } from 'vue'
 import {
   findHostNode,
   mountHost,
@@ -45,7 +45,6 @@ const mocks = vi.hoisted(() => ({
     canManage: vi.fn(),
     getOtherDuties: vi.fn(),
     updateDuty: vi.fn(),
-    batchUpdateDuty: vi.fn(),
     uploadDutyBatch: vi.fn(),
   },
   scheduleApi: {
@@ -201,10 +200,65 @@ vi.mock('@/components/duty/DayDetailModal.vue', () => emptyStub)
 vi.mock('@/components/duty/TodoDetailModal.vue', () => emptyStub)
 vi.mock('@/components/duty/SearchResultModal.vue', () => emptyStub)
 vi.mock('@/components/duty/OtherDutiesModal.vue', () => emptyStub)
-vi.mock('@/components/duty/DutyHeaderControls.vue', () => emptyStub)
-vi.mock('@/components/duty/DutyTypesBar.vue', () => emptyStub)
+vi.mock('@/components/duty/DutyHeaderControls.vue', () => ({
+  default: defineComponent({
+    props: { currentYear: Number, currentMonth: Number },
+    emits: ['open-year-month-picker', 'next-month'],
+    setup(_props, { emit }) {
+      return () => h('div', [
+        h('button', {
+          'data-test': 'open-year-month-picker',
+          onClick: () => emit('open-year-month-picker'),
+        }, 'open picker'),
+        h('button', {
+          'data-test': 'next-month',
+          onClick: () => emit('next-month'),
+        }, 'next month'),
+      ])
+    },
+  }),
+}))
+vi.mock('@/components/duty/DutyTypesBar.vue', () => ({
+  default: defineComponent({
+    props: {
+      batchEditMode: Boolean,
+      currentYear: Number,
+      currentMonth: Number,
+      focusedDay: Number,
+    },
+    emits: ['toggle-batch-edit', 'update:focusedDay'],
+    setup(props, { emit }) {
+      return () => h('div', [
+        h('button', {
+          'data-test': 'toggle-batch-edit',
+          onClick: () => emit('toggle-batch-edit', !props.batchEditMode),
+        }, 'toggle edit'),
+        h('button', {
+          'data-test': 'set-focused-day-31',
+          onClick: () => emit('update:focusedDay', 31),
+        }, 'focus 31'),
+        h('span', {
+          'data-test': 'focused-day-state',
+        }, `${props.currentYear}-${props.currentMonth}-${props.focusedDay ?? 'none'}`),
+      ])
+    },
+  }),
+}))
 vi.mock('@/components/duty/DutyCalendarContent.vue', () => emptyStub)
-vi.mock('@/components/common/YearMonthPicker.vue', () => emptyStub)
+vi.mock('@/components/common/YearMonthPicker.vue', () => ({
+  default: defineComponent({
+    props: { isOpen: Boolean, currentYear: Number },
+    emits: ['select'],
+    setup(props, { emit }) {
+      return () => props.isOpen
+        ? h('button', {
+          'data-test': 'select-january',
+          onClick: () => emit('select', props.currentYear, 1),
+        }, 'January')
+        : null
+    },
+  }),
+}))
 vi.mock('@/components/common/ReportModal.vue', () => emptyStub)
 
 const { default: DutyView } = await import('./DutyView.vue')
@@ -452,6 +506,29 @@ describe('DutyView teamless duty guidance', () => {
     triggerHost(nodeByDataTest(mounted.root, 'teamless-duty-guidance-action'), 'onClick')
     expect(mocks.router.push).toHaveBeenCalledWith('/team')
 
+    closeMounted(mounted)
+  })
+})
+
+describe('DutyView quick duty month changes', () => {
+  it('clamps a focused day when moving from a long month to February', async () => {
+    const mounted = await mountDutyView()
+
+    triggerHost(nodeByDataTest(mounted.root, 'open-year-month-picker'), 'onClick')
+    await flush()
+    triggerHost(nodeByDataTest(mounted.root, 'select-january'), 'onClick')
+    await flush()
+
+    triggerHost(nodeByDataTest(mounted.root, 'toggle-batch-edit'), 'onClick')
+    await flush()
+    triggerHost(nodeByDataTest(mounted.root, 'set-focused-day-31'), 'onClick')
+    await flush()
+    expect(nodeByDataTest(mounted.root, 'focused-day-state').children[0]?.text).toMatch(/-1-31$/)
+
+    triggerHost(nodeByDataTest(mounted.root, 'next-month'), 'onClick')
+    await flush()
+
+    expect(nodeByDataTest(mounted.root, 'focused-day-state').children[0]?.text).toMatch(/-2-28$/)
     closeMounted(mounted)
   })
 })

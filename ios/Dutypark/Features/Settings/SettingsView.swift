@@ -483,7 +483,7 @@ struct SettingsView: View {
                     .lineLimit(1)
             }
         }
-        .font(.caption)
+        .font(DPTypography.caption)
     }
 
     private func settingsNavigationLink<Destination: View>(
@@ -1031,16 +1031,20 @@ private struct PolicyView: View {
                     DPLongFormDocument(content: policy.content)
                     Divider()
                     Text("\(policy.version) · \(policy.effectiveDate.rawValue)")
-                        .font(.caption)
+                        .font(DPTypography.caption)
                         .foregroundStyle(.secondary)
                 }
                 .padding(.horizontal, DPLongFormDocumentLayout.horizontalPadding)
                 .padding(.vertical, DPLongFormDocumentLayout.verticalPadding)
             } else {
-                ContentUnavailableView(
-                    SettingsLocalization.string("settings.policy.unavailable"),
-                    systemImage: "doc.text"
-                )
+                ContentUnavailableView {
+                    Label {
+                        Text(SettingsLocalization.string("settings.policy.unavailable"))
+                            .font(DPTypography.heading)
+                    } icon: {
+                        Image(systemName: "doc.text")
+                    }
+                }
             }
         }
         .navigationTitle(SettingsLocalization.string(titleKey))

@@ -56,8 +56,9 @@ struct GuestPublicCalendarView: View {
                         .font(.system(size: 32))
                         .foregroundStyle(DPColor.danger)
                     Text(GuestLocalization.text("guest.calendar.error.title"))
-                        .font(.headline)
+                        .font(DPFont.bold(size: 17, relativeTo: .headline))
                     Text(GuestLocalization.text("guest.calendar.error.message"))
+                        .font(DPTypography.supporting)
                         .foregroundStyle(DPColor.textSecondary)
                         .multilineTextAlignment(.center)
                     Button(GuestLocalization.text("guest.retry")) {
@@ -197,7 +198,7 @@ struct GuestPublicCalendarView: View {
             LazyVStack(spacing: DPSpacing.medium) {
                 if let member = model.member {
                     Label(member.name, systemImage: "person.crop.circle.fill")
-                        .font(.headline)
+                        .font(DPFont.bold(size: 17, relativeTo: .headline))
                         .foregroundStyle(DPColor.textPrimary)
                         .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget, alignment: .leading)
                         .padding(.horizontal, DPSpacing.medium)
@@ -230,7 +231,7 @@ struct GuestPublicCalendarView: View {
             } label: {
                 HStack(spacing: DPSpacing.extraSmall) {
                     Text(GuestCalendarLocalization.yearMonth(year: model.year, month: model.month))
-                        .font(.title3.bold())
+                        .font(DPFont.bold(size: 20, relativeTo: .title3))
                     Image(systemName: "chevron.down")
                         .font(.caption.bold())
                 }
@@ -251,7 +252,7 @@ struct GuestPublicCalendarView: View {
             Button(GuestLocalization.text("guest.calendar.today")) {
                 Task { await model.goToToday() }
             }
-            .font(.subheadline.bold())
+            .font(DPFont.bold(size: 15, relativeTo: .subheadline))
             .frame(minHeight: DPSize.minimumTouchTarget)
         }
         .foregroundStyle(DPColor.accent)
@@ -272,10 +273,10 @@ struct GuestPublicCalendarView: View {
                             .frame(width: 10, height: 10)
                         Text(name).foregroundStyle(DPColor.textSecondary)
                         Text("\(counts[name]?.count ?? 0)")
-                            .bold()
+                            .font(DPFont.bold(size: 12, relativeTo: .caption))
                             .foregroundStyle(DPColor.textPrimary)
                     }
-                    .font(.caption)
+                    .font(DPTypography.caption)
                 }
             }
             .frame(minHeight: DPSize.minimumTouchTarget)
@@ -289,7 +290,7 @@ struct GuestPublicCalendarView: View {
         ) {
             ForEach(["sun", "mon", "tue", "wed", "thu", "fri", "sat"], id: \.self) { weekday in
                 Text(GuestLocalization.text("guest.calendar.weekday.\(weekday)"))
-                    .font(.caption.bold())
+                    .font(DPFont.bold(size: 12, relativeTo: .caption))
                     .foregroundStyle(weekday == "sun" ? DPColor.danger : DPColor.textSecondary)
                     .frame(maxWidth: .infinity, minHeight: 30)
             }
@@ -313,14 +314,15 @@ struct GuestPublicCalendarView: View {
         VStack(alignment: .leading, spacing: DPSpacing.small) {
             HStack {
                 Text("guest.calendar.dday.title", tableName: "Guest")
-                    .font(.headline)
+                    .font(DPFont.bold(size: 17, relativeTo: .headline))
                 Spacer()
                 Text("\(model.dDays.count)")
+                    .font(DPTypography.label)
                     .foregroundStyle(DPColor.textMuted)
             }
             if model.dDays.isEmpty {
                 Text("guest.calendar.dday.empty", tableName: "Guest")
-                    .font(.subheadline)
+                    .font(DPTypography.supporting)
                     .foregroundStyle(DPColor.textMuted)
                     .frame(maxWidth: .infinity, minHeight: 64)
             } else {
@@ -330,12 +332,14 @@ struct GuestPublicCalendarView: View {
                 ) {
                     ForEach(model.dDays, id: \.id) { item in
                         VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
-                            Text(item.title).lineLimit(1)
+                            Text(item.title)
+                                .font(DPTypography.label)
+                                .lineLimit(1)
                             Text(guestDDayLabel(item))
-                                .font(.title3.bold())
+                                .font(DPFont.bold(size: 20, relativeTo: .title3))
                                 .foregroundStyle(DPColor.accent)
                             Text(item.date.rawValue)
-                                .font(.caption)
+                                .font(DPTypography.caption)
                                 .foregroundStyle(DPColor.textMuted)
                         }
                         .frame(maxWidth: .infinity, minHeight: 76, alignment: .leading)
@@ -485,11 +489,12 @@ private struct GuestCalendarDayCell: View {
         VStack(alignment: .leading, spacing: 2) {
             HStack {
                 Text("\(day.cell.day)")
-                    .font(.caption.bold())
+                    .font(DPFont.bold(size: 12, relativeTo: .caption))
                     .foregroundStyle(day.holidays.isEmpty && weekday != 0 ? DPColor.textPrimary : DPColor.danger)
                 Spacer(minLength: 0)
                 if let duty = day.duty?.dutyType {
-                    Text(duty.prefix(4)).font(.system(size: 9, weight: .bold))
+                    Text(duty.prefix(4))
+                        .font(DPFont.bold(size: 9, relativeTo: .caption2))
                 }
             }
             if let holiday = day.holidays.first {
@@ -518,7 +523,7 @@ private struct GuestCalendarDayCell: View {
 
     private func compactText(_ text: String, color: Color) -> some View {
         Text(text)
-            .font(.system(size: 9))
+            .font(DPFont.light(size: 9, relativeTo: .caption2))
             .lineLimit(1)
             .foregroundStyle(color)
             .frame(maxWidth: .infinity, alignment: .leading)

@@ -2,6 +2,7 @@ package com.tistory.shanepark.dutypark.team.domain.entity
 
 import com.tistory.shanepark.dutypark.common.domain.entity.BaseTimeEntity
 import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTemplate
+import com.tistory.shanepark.dutypark.duty.domain.DutyAbbreviation
 import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
@@ -34,6 +35,13 @@ class Team(
 
     @Column(nullable = false, name = "default_duty_name")
     var defaultDutyName: String = "OFF"
+
+    @Column(length = 3)
+    var defaultDutyAbbreviation: String? = null
+
+    @get:Transient
+    val defaultDutyShortName: String
+        get() = DutyAbbreviation.resolve(defaultDutyName, defaultDutyAbbreviation)
 
     @OneToMany(mappedBy = "team", fetch = FetchType.LAZY, cascade = [CascadeType.ALL], orphanRemoval = true)
     @OrderBy("position ASC")

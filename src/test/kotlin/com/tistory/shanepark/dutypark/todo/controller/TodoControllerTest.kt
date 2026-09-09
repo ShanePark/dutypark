@@ -210,6 +210,78 @@ class TodoControllerTest : RestDocsTest() {
     }
 
     @Test
+    fun `delete completed todos deletes only requested owned completed todos`() {
+        val completed = todoRepository.save(
+            Todo(
+                member = TestData.member,
+                title = "Completed Todo",
+                content = "Content",
+                position = 0,
+                status = TodoStatus.DONE,
+                completedDate = java.time.LocalDateTime.now(),
+            )
+        )
+        val completedByOtherMember = todoRepository.save(
+            Todo(
+                member = TestData.member2,
+                title = "Other Completed Todo",
+                content = "Content",
+                position = 0,
+                status = TodoStatus.DONE,
+                completedDate = java.time.LocalDateTime.now(),
+            )
+        )
+        val active = todoRepository.save(
+            Todo(
+                member = TestData.member,
+                title = "Active Todo",
+                content = "Content",
+                position = 0,
+                status = TodoStatus.TODO,
+            )
+        )
+
+        val json = """
+            {
+                "todoIds": [
+                    "${completed.id}",
+                    "${completed.id}",
+                    "${completedByOtherMember.id}",
+                    "${active.id}"
+                ]
+            }
+        """.trimIndent()
+
+        mockMvc.perform(
+            RestDocumentationRequestBuilders.delete("/api/todos/completed")
+                .accept(MediaType.APPLICATION_JSON)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(json)
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.count").value(1))
+            .andDo(MockMvcResultHandlers.print())
+            .andDo(
+                document(
+                    "todos/delete-completed",
+                    requestFields(
+                        fieldWithPath("todoIds").description("UUIDs selected from the completed column")
+                    ),
+                    responseFields(
+                        fieldWithPath("count").description("Number of owned completed todos deleted")
+                    )
+                )
+            )
+
+        em.flush()
+        em.clear()
+        assertThat(todoRepository.findById(completed.id)).isEmpty
+        assertThat(todoRepository.findById(completedByOtherMember.id)).isPresent
+        assertThat(todoRepository.findById(active.id)).isPresent
+    }
+
+    @Test
     fun `updatePosition test`() {
         val saved1 = todoRepository.save(
             Todo(

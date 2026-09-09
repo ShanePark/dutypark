@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.duty.domain.dto
 
+import com.tistory.shanepark.dutypark.duty.domain.DutyAbbreviation
 import com.tistory.shanepark.dutypark.team.domain.entity.Team
 import java.time.LocalDate
 
@@ -12,6 +13,7 @@ data class DutyDto(
     val isOff: Boolean,
     val dutyTypeId: Long? = null,
     val source: DutySource = DutySource.OVERRIDE,
+    val dutyAbbreviation: String? = dutyType?.let { DutyAbbreviation.resolve(it) },
 ) {
     companion object {
         fun offDuty(date: LocalDate, team: Team, source: DutySource = DutySource.DEFAULT_OFF): DutyDto {
@@ -24,6 +26,7 @@ data class DutyDto(
                 isOff = true,
                 dutyTypeId = null,
                 source = source,
+                dutyAbbreviation = team.defaultDutyShortName,
             )
         }
     }

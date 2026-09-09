@@ -57,6 +57,22 @@ interface TodoRepository : JpaRepository<Todo, UUID> {
         @Param("status") status: TodoStatus
     ): Int?
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query(
+        """
+        SELECT t
+        FROM Todo t
+        WHERE t.id IN :ids
+          AND t.member = :member
+          AND t.status = :status
+        """
+    )
+    fun findAllByIdAndMemberAndStatusForUpdate(
+        @Param("ids") ids: Collection<UUID>,
+        @Param("member") member: Member,
+        @Param("status") status: TodoStatus,
+    ): List<Todo>
+
     @Query(
         """
         SELECT DISTINCT t

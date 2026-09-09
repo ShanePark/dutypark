@@ -157,7 +157,7 @@ struct ProfilePhotoCropView: View {
                 }
                 .padding(.horizontal)
                 SettingsLocalization.text("settings.crop.hint")
-                    .font(.footnote)
+                    .font(DPFont.light(size: 13, relativeTo: .footnote))
                     .foregroundStyle(.secondary)
             }
             .padding()
