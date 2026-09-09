@@ -1254,7 +1254,7 @@ export default {
       selectionCount: '{selected} / {count}명 선택됨',
     },
     typesBar: {
-      focusedDay: '{day}일 기준',
+      focusedDay: '{month}월 {day}일',
       prevDay: '이전 날짜',
       nextDay: '다음 날짜',
       loading: '근무 유형을 불러오는 중...',

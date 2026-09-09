@@ -148,13 +148,13 @@ function handleDayClick(day: CalendarDay, index: number) {
         v-for="(day, idx) in days"
         :key="idx"
         @click="handleDayClick(day, idx)"
+        :aria-current="isToday(day) ? 'date' : undefined"
         class="min-h-[60px] sm:min-h-[80px] md:min-h-[100px] border-b border-r p-0.5 sm:p-1 transition-all duration-150 relative"
         :class="[
-          clickable && isDayClickable(day, idx) ? 'cursor-pointer hover:brightness-95 dark:hover:brightness-110 hover:shadow-inner' : '',
+          clickable && isDayClickable(day, idx) ? 'cursor-pointer calendar-day-hoverable' : '',
           {
             'highlight-pulse-glow': !focusedDay && isHighlighted(day),
-            'ring-2 ring-dp-danger ring-inset': !focusedDay && isToday(day) && !isHighlighted(day),
-            'ring-2 ring-dp-accent ring-inset': !focusedDay && isSelected(day) && !isToday(day) && !isHighlighted(day),
+            'ring-2 ring-dp-accent ring-inset': !focusedDay && isSelected(day) && !isHighlighted(day),
             'duty-day-focused': isFocused(day),
             'rounded-bl-lg': idx === days.length - 7,
             'rounded-br-lg': idx === days.length - 1,
@@ -166,6 +166,7 @@ function handleDayClick(day: CalendarDay, index: number) {
           opacity: isCurrentMonth(day) ? 1 : 0.5
         }"
       >
+        <span v-if="isToday(day)" class="calendar-day-today-bar" aria-hidden="true" />
         <div class="flex items-center justify-between">
           <span
             class="text-xs sm:text-sm font-medium"
@@ -192,3 +193,45 @@ function handleDayClick(day: CalendarDay, index: number) {
     </div>
   </div>
 </template>
+
+<style scoped>
+.calendar-day-today-bar {
+  position: absolute;
+  top: 0;
+  left: 15%;
+  width: 70%;
+  height: 4px;
+  border-radius: 0 0 3px 3px;
+  background: var(--dp-danger);
+  pointer-events: none;
+}
+
+.calendar-day-hoverable::before,
+.calendar-day-hoverable::after {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .calendar-day-hoverable:hover::before {
+    top: 0;
+    left: 0;
+    border-top: 2px solid var(--dp-accent);
+    border-left: 2px solid var(--dp-accent);
+    opacity: 1;
+  }
+
+  .calendar-day-hoverable:hover::after {
+    right: 0;
+    bottom: 1px;
+    border-right: 2px solid var(--dp-accent);
+    border-bottom: 2px solid var(--dp-accent);
+    opacity: 1;
+  }
+}
+</style>

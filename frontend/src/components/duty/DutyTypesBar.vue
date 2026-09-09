@@ -4,6 +4,7 @@ import { ChevronLeft, ChevronRight, FileSpreadsheet, Loader2, PencilLine, Users,
 import { useI18n } from 'vue-i18n'
 import { isLightColor } from '@/utils/color'
 import { dutyTypeLabel } from '@/utils/dutyAbbreviation'
+import { formatMonthDayLabel } from '@/components/common/datePickerGrid'
 import type { DutyType, DutyTypeWithCount } from '@/views/duty/dutyViewTypes'
 
 const props = defineProps<{
@@ -13,6 +14,8 @@ const props = defineProps<{
   isLoadingDuties: boolean
   focusedDay: number | null
   focusedDayDutyType: string | null
+  currentYear: number
+  currentMonth: number
   lastDayInMonth: number
   canEdit: boolean
   canEditMyCalendar: boolean
@@ -30,9 +33,12 @@ const emit = defineEmits<{
   (e: 'update:focusedDay', value: number): void
 }>()
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 const focusedDayValue = computed(() => props.focusedDay ?? 1)
+const focusedDayLabel = computed(() =>
+  formatMonthDayLabel(props.currentYear, props.currentMonth, focusedDayValue.value, locale.value),
+)
 
 function moveFocusDay(delta: number) {
   const next = Math.min(props.lastDayInMonth, Math.max(1, focusedDayValue.value + delta))
@@ -88,7 +94,7 @@ function toggleBatchEdit() {
           >
             <ChevronLeft class="w-5 h-5 text-dp-text-secondary" />
           </button>
-          <span class="flex items-center px-1 text-xs sm:text-sm font-bold text-dp-warning">{{ t('duty.typesBar.focusedDay', { day: focusedDayValue }) }}</span>
+          <span class="flex items-center whitespace-nowrap px-1 text-xs sm:text-sm font-bold text-dp-warning">{{ focusedDayLabel }}</span>
           <button
             type="button"
             @click="moveFocusDay(1)"

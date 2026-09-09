@@ -1571,6 +1571,8 @@ async function showExcelUploadModal() {
       :is-loading-duties="isLoadingDuties"
       :focused-day="focusedDay"
       :focused-day-duty-type="focusedDayDutyType"
+      :current-year="currentYear"
+      :current-month="currentMonth"
       :last-day-in-month="lastDayInMonth"
       :can-edit="canEditDuty"
       :can-edit-my-calendar="canEditMyDutyCalendar"

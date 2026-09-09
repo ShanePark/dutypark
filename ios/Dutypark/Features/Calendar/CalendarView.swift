@@ -1006,7 +1006,11 @@ struct CalendarView: View {
                         .font(.system(size: 14, weight: .semibold))
                         .frame(width: Self.quickDutyStepWidth, height: DPSize.minimumTouchTarget)
                 }
-                Text(CalendarLocalization.format("calendar.duty.quick.day", model.quickDutyDay?.cell.day ?? 1))
+                Text(CalendarLocalization.monthDay(
+                    year: model.quickDutyDay?.cell.year ?? model.year,
+                    month: model.quickDutyDay?.cell.month ?? model.month,
+                    day: model.quickDutyDay?.cell.day ?? 1
+                ))
                     .font(DPFont.bold(size: 14, relativeTo: .subheadline))
                     .foregroundStyle(DPColor.warningHover)
                     .frame(minWidth: 38)
@@ -1764,7 +1768,12 @@ private struct CalendarDayCell: View {
         .opacity(day.cell.isCurrentMonth ? 1 : 0.45)
         .overlay(alignment: .trailing) { Rectangle().fill(cellBorder).frame(width: 0.5) }
         .overlay(alignment: .bottom) { Rectangle().fill(cellBorder).frame(height: 0.5) }
-        .overlay(Rectangle().stroke(focusBorder, lineWidth: highlighted || (!hidesDetails && isToday) ? 2 : 0))
+        .overlay(alignment: .top) {
+            if isToday && !hidesDetails {
+                todayMarker
+            }
+        }
+        .overlay(Rectangle().stroke(focusBorder, lineWidth: highlighted ? 2 : 0))
         .contentShape(Rectangle())
         // The day gesture belongs to the whole cell. Without an explicit accessibility
         // boundary, SwiftUI propagates this label and button trait to every nested schedule,
@@ -1824,7 +1833,18 @@ private struct CalendarDayCell: View {
 
     private var focusBorder: Color {
         if highlighted { return DPColor.accent }
-        return isToday ? DPColor.danger : .clear
+        return .clear
+    }
+
+    private var todayMarker: some View {
+        GeometryReader { proxy in
+            Capsule()
+                .fill(DPColor.danger)
+                .frame(width: proxy.size.width * 0.7, height: 4)
+                .position(x: proxy.size.width / 2, y: 2)
+        }
+        .frame(height: 4)
+        .accessibilityHidden(true)
     }
 
     private var isToday: Bool {

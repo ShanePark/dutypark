@@ -1349,7 +1349,7 @@ export default {
       selectionCount: '{selected} / {count} selected',
     },
     typesBar: {
-      focusedDay: 'Editing day {day}',
+      focusedDay: '{month}/{day}',
       prevDay: 'Previous day',
       nextDay: 'Next day',
       loading: 'Loading duty types...',

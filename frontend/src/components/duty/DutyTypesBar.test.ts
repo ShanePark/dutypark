@@ -2,7 +2,13 @@ import { describe, expect, it, vi } from 'vitest'
 import { h } from 'vue'
 import { createHostWrapper, findHostNodes, hostText, mountHost, triggerHost } from '@/test/hostRenderer'
 
-vi.mock('vue-i18n', () => ({ useI18n: () => ({ t: (key: string) => key }) }))
+vi.mock('vue-i18n', async () => {
+  const actual = await vi.importActual<typeof import('vue-i18n')>('vue-i18n')
+  return {
+    ...actual,
+    useI18n: () => ({ t: (key: string) => key, locale: { value: 'ko' } }),
+  }
+})
 
 const { default: DutyTypesBar } = await import('./DutyTypesBar.vue')
 const types = [
@@ -20,6 +26,8 @@ function mountBar(isMyCalendar: boolean, batchEditMode = true) {
     isLoadingDuties: false,
     focusedDay: 1,
     focusedDayDutyType: '야간근무',
+    currentYear: 2026,
+    currentMonth: 9,
     lastDayInMonth: 30,
     canEdit: true,
     canEditMyCalendar: isMyCalendar,
@@ -36,6 +44,7 @@ function mountBar(isMyCalendar: boolean, batchEditMode = true) {
 describe('duty quick input abbreviations', () => {
   it('shows abbreviations for the owner while preserving full accessible names and IDs', () => {
     const mounted = mountBar(true)
+    expect(hostText(mounted.root)).toContain('9월 1일')
     expect(mounted.buttons.map(button => hostText(button).trim())).toEqual(['N', 'N', '휴'])
     expect(mounted.buttons.map(button => button.props['aria-label'])).toEqual(['야간근무', '심야근무', '휴무'])
     expect(String(mounted.buttons[0]!.props.class)).toContain('duty-quick-btn-active')

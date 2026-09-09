@@ -11,6 +11,7 @@ import {
   endOfWeekIso,
   formatDayLabel,
   formatFieldValue,
+  formatMonthDayLabel,
   formatMonthLabel,
   isDateDisabled,
   isIsoDate,
@@ -266,6 +267,11 @@ describe('locale-aware text', () => {
   it('titles the month in the active locale', () => {
     expect(formatMonthLabel(2026, 8, 'ko')).toBe('2026년 8월')
     expect(formatMonthLabel(2026, 8, 'en')).toBe('August 2026')
+  })
+
+  it('formats a focused calendar day as month and day in the active locale', () => {
+    expect(formatMonthDayLabel(2026, 9, 2, 'ko')).toBe('9월 2일')
+    expect(formatMonthDayLabel(2026, 9, 2, 'en')).toBe('Sep 2')
   })
 
   it('shows the field value in the active locale and nothing at all when empty', () => {

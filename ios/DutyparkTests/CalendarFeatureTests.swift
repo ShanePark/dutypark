@@ -43,6 +43,17 @@ final class CalendarFeatureTests: XCTestCase {
         )
     }
 
+    func testQuickDutyDateUsesMonthAndDayInTheSelectedLocale() {
+        XCTAssertEqual(
+            CalendarLocalization.monthDay(year: 2026, month: 9, day: 2, locale: Locale(identifier: "ko")),
+            "9월 2일"
+        )
+        XCTAssertEqual(
+            CalendarLocalization.monthDay(year: 2026, month: 9, day: 2, locale: Locale(identifier: "en")),
+            "Sep 2"
+        )
+    }
+
     func testCalendarScheduleTimeMatchesTheWebCalendarPolicy() {
         let start = LocalDateTimeValue(rawValue: "2026-08-20T12:40:00")
         let end = LocalDateTimeValue(rawValue: "2026-08-20T13:30:00")
@@ -392,6 +403,52 @@ final class CalendarFeatureTests: XCTestCase {
         XCTAssertTrue(
             dayCell.contains(".accessibilityIdentifier(\"calendar.day.\\(day.cell.date.rawValue)\")"),
             "Every day needs a stable, unique accessibility target for VoiceOver and UI automation"
+        )
+    }
+
+    func testCalendarDayCellUsesATopBarForTodayWithoutReplacingDutyOrSelectionIndicators() throws {
+        let source = try Self.calendarViewSource()
+        let dayCell = try Self.declaration(
+            named: "private struct CalendarDayCell: View",
+            in: source
+        )
+        let todayMarker = try Self.declaration(
+            named: "private var todayMarker: some View",
+            in: source
+        )
+
+        XCTAssertTrue(
+            dayCell.contains(".overlay(alignment: .top)"),
+            "Today should be painted as a separate marker attached to the cell top"
+        )
+        XCTAssertTrue(
+            dayCell.contains("if isToday && !hidesDetails"),
+            "Quick duty editing keeps its own selection indicator without adding the today bar"
+        )
+        XCTAssertTrue(
+            todayMarker.contains("Capsule()") && todayMarker.contains(".fill(DPColor.danger)"),
+            "The today marker should be a red horizontal bar"
+        )
+        XCTAssertTrue(
+            todayMarker.contains("width: proxy.size.width * 0.7")
+                && todayMarker.contains("height: 4"),
+            "The today bar should be about 70% of the cell width and 4pt high"
+        )
+        XCTAssertFalse(
+            todayMarker.contains("Circle().fill(DPColor.accent)"),
+            "The today marker should no longer be a small dot"
+        )
+        XCTAssertFalse(
+            dayCell.contains("return isToday ? DPColor.danger : .clear"),
+            "Today must not paint a full-cell danger border"
+        )
+        XCTAssertTrue(
+            dayCell.contains(".background(cellBackground)"),
+            "The today bar must leave the duty background as the cell's source of truth"
+        )
+        XCTAssertTrue(
+            dayCell.contains(".overlay(Rectangle().stroke(focusBorder, lineWidth: highlighted ? 2 : 0))"),
+            "The selected/focused border remains independent from the today marker"
         )
     }
 
