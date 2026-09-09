@@ -40,13 +40,15 @@
         }
       },
       "entries": {
-        "pr-417": {
-          "title": "근무 유형별 단축어 설정",
-          "summary": "웹과 iPhone에서 근무 유형에 원하는 단축어를 설정하고, 본인 근무를 선택하거나 편집할 때 간결하게 확인할 수 있습니다.",
+        "pr-418": {
+          "title": "근무 단축어와 캘린더·팀 관리 개선",
+          "summary": "근무 단축어와 캘린더·팀 관리 화면을 개선하고 웹에 완료 할일 정리 기능을 추가했습니다.",
           "changes": [
-            "근무 유형과 기본 휴무에 단축어를 지정할 수 있으며, 비워 두면 현재 근무명의 첫 글자를 자동으로 사용합니다.",
-            "본인 달력의 근무 선택과 편집에는 단축어를 표시하고, 다른 사람의 달력과 친구 함께보기에서는 전체 근무명을 유지합니다.",
-            "자동 단축어는 근무명을 바꾸면 함께 변경되고, 직접 지정한 단축어는 유지됩니다. 입력란을 비우면 다시 자동 단축어를 사용합니다."
+            "단축어는 영문 대소문자와 완성형 한글로 최대 3글자까지 설정할 수 있습니다. 빈 값은 근무명 첫 글자를 자동으로 사용하며, 다른 사람의 근무는 전체 이름을 유지합니다.",
+            "팀 관리 버튼과 매니저 권한 표시를 다듬고 근무 유형 미리보기를 실제 표시와 맞췄습니다.",
+            "달력에 마우스를 올려도 근무색을 유지하고 오늘은 빨간 상단 막대로 표시합니다. 웹과 iPhone의 편집 날짜를 월과 일로 표시하며 월 단위 일괄 근무 변경 기능은 제거했습니다.",
+            "웹에서 내가 작성한 완료 할일을 개수 확인 후 한 번에 삭제할 수 있습니다. 다른 사람이 작성해 나에게 태그한 할일은 제외합니다.",
+            "랜딩 페이지의 언어·테마 버튼을 통일하고 소개 화면과 방문자 탐색을 개선했습니다. iPhone의 글꼴과 다국어 화면 배치도 다듬었습니다."
           ]
         },
         "pr-415": {
@@ -2296,13 +2298,15 @@
         }
       },
       "entries": {
-        "pr-417": {
-          "title": "Configurable duty type abbreviations",
-          "summary": "Set custom duty abbreviations on the web and iPhone, and use compact labels when selecting or editing your own duties.",
+        "pr-418": {
+          "title": "Duty abbreviations and calendar, team, and task improvements",
+          "summary": "Customize duty abbreviations, use clearer calendar and team controls, and clean up completed tasks on the web.",
           "changes": [
-            "Assign an abbreviation to a duty type or the default off duty; leave it blank to automatically use the first character of the current name.",
-            "Use abbreviations in your own duty selection and edit controls while keeping full names in other calendars and friend comparisons.",
-            "Automatic abbreviations follow name changes, explicit abbreviations stay unchanged, and clearing the field restores the automatic label."
+            "Set optional abbreviations using up to three uppercase or lowercase English letters or complete Hangul characters. Empty values use the first character of the duty name; other people’s duties retain full names.",
+            "Refine team and manager actions and align duty previews with actual badges.",
+            "Keep duty colors during hover, mark today with a red top bar, and show month/day editing labels on web and iPhone. Remove monthly bulk duty updates.",
+            "Delete completed tasks you created on the web after confirming the count. Tasks created by others and tagged to you are excluded.",
+            "Unify landing language and theme controls, improve the showcase and guest navigation, and refine iPhone typography and localized layouts."
           ]
         },
         "pr-415": {
@@ -4516,16 +4520,17 @@
   },
   "items": [
     {
-      "id": "pr-417",
-      "version": "2026.09.08",
-      "date": "2026-09-08",
-      "pr": 417,
-      "url": "https://github.com/ShanePark/dutypark/pull/417",
+      "id": "pr-418",
+      "version": "2026.09.10",
+      "date": "2026-09-10",
+      "pr": 418,
+      "url": "https://github.com/ShanePark/dutypark/pull/418",
       "category": "feature",
       "areas": [
         "calendar",
         "duty",
         "team",
+        "todo",
         "ui"
       ]
     },
