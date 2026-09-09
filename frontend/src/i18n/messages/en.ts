@@ -816,6 +816,7 @@ export default {
     actions: {
       addNew: 'Add new task',
       clickToAdd: 'Click to add a task',
+      clearCompleted: 'Clear completed',
     },
     messages: {
       loadFailed: 'Failed to load the board.',
@@ -832,6 +833,10 @@ export default {
       deleteConfirm: 'Delete the to-do “{title}”?',
       deleteSuccess: 'Task deleted.',
       deleteFailed: 'Failed to delete the task.',
+      deleteCompletedTitle: 'Delete your completed tasks?',
+      deleteCompletedConfirm: 'This permanently deletes {count} completed tasks you created. Deleted tasks cannot be restored. Tasks created by others and tagged to you are excluded.',
+      deleteCompletedSuccess: 'Cleared {count} completed tasks.',
+      deleteCompletedFailed: 'Failed to clear completed tasks.',
       untagTitle: 'Remove tag',
       untagConfirm: 'Remove the to-do “{title}” from your list?',
       untagSuccess: 'TODO tag removed.',
@@ -2280,8 +2285,3 @@ export default {
     },
   },
 } as const
-      clearCompleted: 'Clear completed',
-      deleteCompletedTitle: 'Delete your completed tasks?',
-      deleteCompletedConfirm: 'This permanently deletes {count} completed tasks you created. Deleted tasks cannot be restored. Tasks created by others and tagged to you are excluded.',
-      deleteCompletedSuccess: 'Cleared {count} completed tasks.',
-      deleteCompletedFailed: 'Failed to clear completed tasks.',

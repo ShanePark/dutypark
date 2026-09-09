@@ -818,6 +818,7 @@ export default {
     actions: {
       addNew: '새 할일 추가',
       clickToAdd: '클릭하여 할 일 추가',
+      clearCompleted: '완료 항목 정리',
     },
     messages: {
       loadFailed: '보드를 불러오는데 실패했습니다.',
@@ -834,6 +835,10 @@ export default {
       deleteConfirm: '“{title}” 할 일을 삭제하시겠습니까?',
       deleteSuccess: '할 일이 삭제되었습니다.',
       deleteFailed: '삭제에 실패했습니다.',
+      deleteCompletedTitle: '내가 작성한 완료된 할일을 삭제할까요?',
+      deleteCompletedConfirm: '내가 작성한 완료된 할일 {count}개를 영구적으로 삭제합니다. 삭제 후 복구할 수 없습니다. 다른 사람이 작성해 나에게 태그한 항목은 제외됩니다.',
+      deleteCompletedSuccess: '완료된 할일 {count}개를 정리했습니다.',
+      deleteCompletedFailed: '완료된 할일 정리에 실패했습니다.',
       untagTitle: '태그 제거',
       untagConfirm: '“{title}” 할 일 태그를 내 목록에서 제거하시겠습니까?',
       untagSuccess: 'TODO 태그가 제거되었습니다.',
@@ -2185,8 +2190,3 @@ export default {
     },
   },
 } as const
-      clearCompleted: '완료 항목 정리',
-      deleteCompletedTitle: '내가 작성한 완료된 할일을 삭제할까요?',
-      deleteCompletedConfirm: '내가 작성한 완료된 할일 {count}개를 영구적으로 삭제합니다. 삭제 후 복구할 수 없습니다. 다른 사람이 작성해 나에게 태그한 항목은 제외됩니다.',
-      deleteCompletedSuccess: '완료된 할일 {count}개를 정리했습니다.',
-      deleteCompletedFailed: '완료된 할일 정리에 실패했습니다.',
