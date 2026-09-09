@@ -14,6 +14,7 @@ import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.publiccontent.service.PublicContentService
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.team.domain.dto.*
+import com.tistory.shanepark.dutypark.duty.domain.DutyAbbreviation
 import com.tistory.shanepark.dutypark.team.domain.entity.Team
 import com.tistory.shanepark.dutypark.team.repository.TeamRepository
 import org.springframework.data.domain.Page
@@ -190,9 +191,23 @@ class TeamService(
         team.removeManager(member)
     }
 
-    fun updateDefaultDuty(teamId: Long, newDutyName: String?, newDutyColor: String?) {
+    fun updateDefaultDuty(
+        teamId: Long,
+        newDutyName: String?,
+        newDutyColor: String?,
+        newDutyAbbreviation: String? = null,
+    ) {
         val team = teamRepository.findById(teamId).orElseThrow()
         newDutyName?.let(publicContentService::validateContent)
+        if (newDutyAbbreviation != null && newDutyAbbreviation.length > 10) {
+            throw BadRequestException("dutyType.abbreviation.length")
+        }
+        val abbreviation = DutyAbbreviation.normalize(newDutyAbbreviation)
+        abbreviation?.let(publicContentService::validateContent)
+        // This endpoint uses query parameters: omission preserves, an empty value resets.
+        if (newDutyAbbreviation != null) {
+            team.defaultDutyAbbreviation = abbreviation
+        }
         if (newDutyColor != null) {
             team.defaultDutyColor = newDutyColor
         }

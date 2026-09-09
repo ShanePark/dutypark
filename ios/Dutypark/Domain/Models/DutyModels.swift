@@ -43,6 +43,13 @@ nonisolated struct DutyDTO: Codable, Equatable, Sendable {
     let isOff: Bool
     let dutyTypeId: DutyTypeID?
     let source: DutySource
+    var dutyAbbreviation: String? = nil
+
+    var shortName: String { DutyAbbreviation.resolve(dutyType ?? "", override: dutyAbbreviation) }
+
+    func displayName(isMyCalendar: Bool) -> String {
+        isMyCalendar ? shortName : dutyType ?? ""
+    }
 }
 
 nonisolated struct DutyTypeDTO: Codable, Equatable, Sendable {
@@ -52,6 +59,13 @@ nonisolated struct DutyTypeDTO: Codable, Equatable, Sendable {
     let position: Int
     let color: String?
     let hidden: Bool
+    var abbreviation: String? = nil
+
+    var shortName: String { DutyAbbreviation.resolve(name, override: abbreviation) }
+
+    func displayName(isMyCalendar: Bool) -> String {
+        isMyCalendar ? shortName : name
+    }
 }
 
 nonisolated struct DutyByShiftDTO: Codable, Equatable, Sendable {

@@ -76,9 +76,9 @@ export const teamApi = {
     })
   },
 
-  updateDefaultDuty(teamId: number, name: string, color: string) {
+  updateDefaultDuty(teamId: number, name: string, color: string, abbreviation?: string) {
     return apiClient.patch(`/teams/manage/${teamId}/default-duty`, null, {
-      params: { name, color },
+      params: { name, color, abbreviation },
     })
   },
 

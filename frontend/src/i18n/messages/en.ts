@@ -102,6 +102,9 @@ const apiErrors = {
     },
   },
   dutyType: {
+    abbreviation: {
+      length: 'Abbreviations must be 10 characters or fewer.',
+    },
     name: {
       required: 'Duty name is required.',
       length: 'Duty names must be between 1 and 10 characters.',
@@ -371,6 +374,13 @@ export default {
     },
   },
   apiErrors,
+  dutyAbbreviation: {
+    label: 'Abbreviation (optional)',
+    hint: 'Leave blank to use the first character of the duty name. Your duty selection and edit controls use abbreviations; other calendars and comparison views keep full names.',
+    placeholder: 'e.g. N',
+    preview: 'Abbreviation preview',
+    tooLong: 'Abbreviations must be 10 characters or fewer.',
+  },
   contentFilter: {
     blocked: 'This includes wording that violates the community guidelines. Please revise it before saving.',
   },

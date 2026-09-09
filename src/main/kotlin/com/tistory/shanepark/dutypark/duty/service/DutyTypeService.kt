@@ -1,5 +1,6 @@
 package com.tistory.shanepark.dutypark.duty.service
 
+import com.tistory.shanepark.dutypark.duty.domain.DutyAbbreviation
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeCreateDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeUpdateDto
@@ -49,10 +50,14 @@ class DutyTypeService(
     fun addDutyType(dutyTypeCreateDto: DutyTypeCreateDto): DutyType {
         val team = teamRepository.findByIdForUpdate(dutyTypeCreateDto.teamId).orElseThrow()
         publicContentService.validateContent(dutyTypeCreateDto.name)
+        val abbreviation = DutyAbbreviation.normalize(dutyTypeCreateDto.abbreviation)
+        abbreviation?.let(publicContentService::validateContent)
         if (team.dutyTypes.any { it.name == dutyTypeCreateDto.name }) {
             throw IllegalArgumentException("DutyType already exists")
         }
-        return team.addDutyType(dutyTypeCreateDto.name, dutyTypeCreateDto.color)
+        return team.addDutyType(dutyTypeCreateDto.name, dutyTypeCreateDto.color).also {
+            it.abbreviation = abbreviation
+        }
     }
 
     fun update(dutyTypeUpdateDto: DutyTypeUpdateDto): DutyType {
@@ -60,6 +65,8 @@ class DutyTypeService(
         val teamId = dutyType.team.id ?: throw IllegalArgumentException("DutyType has no team")
         val team = teamRepository.findByIdWithDutyTypes(teamId).orElseThrow()
         publicContentService.validateContent(dutyTypeUpdateDto.name)
+        val abbreviation = DutyAbbreviation.normalize(dutyTypeUpdateDto.abbreviation)
+        abbreviation?.let(publicContentService::validateContent)
 
         team.dutyTypes
             .filter { it.id != dutyType.id }
@@ -71,6 +78,9 @@ class DutyTypeService(
 
         dutyType.name = dutyTypeUpdateDto.name
         dutyType.color = dutyTypeUpdateDto.color
+        if (dutyTypeUpdateDto.abbreviationSpecified) {
+            dutyType.abbreviation = abbreviation
+        }
         return dutyType
     }
 

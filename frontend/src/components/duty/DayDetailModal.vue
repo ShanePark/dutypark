@@ -17,6 +17,7 @@ import {
 } from '@/utils/aiScheduleConsentFlow'
 import { VISIBILITY_ICONS, VISIBILITY_COLORS, type CalendarVisibility } from '@/utils/visibility'
 import { effectiveEndDateTime, isRangeInvalid } from '@/utils/scheduleDateTime'
+import { dutyLabel, dutyTypeLabel } from '@/utils/dutyAbbreviation'
 
 const { showWarning, showError, confirm, choose } = useSwal()
 const contentFilterStore = useContentFilterStore()
@@ -46,6 +47,8 @@ interface Schedule {
 }
 
 interface DutyType {
+  abbreviation?: string | null
+  shortName?: string
   id: number | null
   name: string
   color: string | null
@@ -54,7 +57,7 @@ interface DutyType {
 interface Props {
   isOpen: boolean
   date: { year: number; month: number; day: number }
-  duty?: { dutyType: string; dutyColor: string; dutyTypeId: number | null }
+  duty?: { dutyType: string; dutyColor: string; dutyTypeId: number | null; dutyAbbreviation?: string | null }
   schedules: Schedule[]
   dutyTypes: DutyType[]
   canEdit: boolean
@@ -478,19 +481,21 @@ function handleUploadError(message: string) {
           <span
             v-if="unavailableCurrentDuty"
             class="duty-type-btn duty-type-btn-selected min-h-11 px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1.5"
-            :title="t('team.manage.labels.hidden')"
+            :title="`${unavailableCurrentDuty.dutyType} (${t('team.manage.labels.hidden')})`"
           >
             <span
               class="inline-block w-3 h-3 rounded border"
               :style="{ backgroundColor: unavailableCurrentDuty.dutyColor || 'var(--dp-duty-fallback)', borderColor: 'var(--dp-border-secondary)' }"
             ></span>
-            {{ unavailableCurrentDuty.dutyType }}
+            {{ dutyLabel(unavailableCurrentDuty, isMyCalendar) }}
             <span class="text-dp-text-muted">({{ t('team.manage.labels.hidden') }})</span>
           </span>
           <button
             v-for="dutyType in dutyTypes"
             :key="dutyType.id ?? 'off'"
             @click="handleDutyTypeChange(dutyType.id, dutyType.name)"
+            :title="dutyType.name"
+            :aria-label="dutyType.name"
             class="duty-type-btn min-h-11 px-2.5 py-1 rounded-md text-xs font-medium flex items-center gap-1.5 cursor-pointer"
             :class="{
               'duty-type-btn-selected': selectedDutyType === dutyType.name,
@@ -504,7 +509,7 @@ function handleUploadError(message: string) {
               class="inline-block w-3 h-3 rounded border"
               :style="{ backgroundColor: dutyType.color || 'var(--dp-duty-fallback)', borderColor: 'var(--dp-border-secondary)' }"
             ></span>
-            {{ dutyType.name }}
+            {{ dutyTypeLabel(dutyType, isMyCalendar) }}
           </button>
         </div>
       </div>

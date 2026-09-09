@@ -100,14 +100,14 @@ nonisolated struct TeamRepository: Sendable {
         try await client.data("teams/manage/\(teamID)/batch-template", method: .patch, queryItems: query)
     }
 
-    func updateDefaultDuty(teamID: TeamID, name: String, color: String) async throws {
+    func updateDefaultDuty(teamID: TeamID, name: String, color: String, abbreviation: String? = nil) async throws {
         try await client.data(
             "teams/manage/\(teamID)/default-duty",
             method: .patch,
             queryItems: [
                 URLQueryItem(name: "name", value: name),
                 URLQueryItem(name: "color", value: color)
-            ]
+            ] + (abbreviation.map { [URLQueryItem(name: "abbreviation", value: $0)] } ?? [])
         )
     }
 
@@ -144,19 +144,19 @@ nonisolated struct TeamRepository: Sendable {
         try await memberAction(teamID: teamID, memberID: memberID, path: "manager", method: .delete)
     }
 
-    func addDutyType(teamID: TeamID, name: String, color: String) async throws {
+    func addDutyType(teamID: TeamID, name: String, color: String, abbreviation: String? = nil) async throws {
         try await sendJSON(
             "teams/manage/\(teamID)/duty-types",
             method: .post,
-            body: DutyTypeCreateDTO(teamId: teamID, name: name, color: color)
+            body: DutyTypeCreateDTO(teamId: teamID, name: name, color: color, abbreviation: abbreviation)
         )
     }
 
-    func updateDutyType(id: DutyTypeID, teamID: TeamID, name: String, color: String) async throws {
+    func updateDutyType(id: DutyTypeID, teamID: TeamID, name: String, color: String, abbreviation: String? = nil) async throws {
         try await sendJSON(
             "teams/manage/\(teamID)/duty-types",
             method: .patch,
-            body: DutyTypeUpdateDTO(id: id, name: name, color: color)
+            body: DutyTypeUpdateDTO(id: id, name: name, color: color, abbreviation: abbreviation)
         )
     }
 

@@ -1023,12 +1023,13 @@ struct CalendarView: View {
             ForEach(quickDutyTypes, id: \.id) { type in
                 quickDutyButton(
                     id: type.id,
-                    name: type.name,
+                    name: type.displayName(isMyCalendar: model.isMyCalendar),
                     color: color(hex: type.color),
                     foreground: CalendarVisualLogic.usesLightForeground(on: type.color)
                         ? DPColor.textOnDark
                         : DPColor.textOnLight
                 )
+                .accessibilityLabel(Text(verbatim: type.name))
             }
 
         }
@@ -2197,7 +2198,12 @@ private struct DayDetailView: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 6) {
                         ForEach(model.visibleDutyTypes, id: \.id) { type in
-                            dutyButton(id: type.id, name: type.name, color: calendarColor(type.color))
+                            dutyButton(
+                                id: type.id,
+                                name: type.displayName(isMyCalendar: model.isMyCalendar),
+                                color: calendarColor(type.color)
+                            )
+                            .accessibilityLabel(Text(verbatim: type.name))
                         }
                     }
                 }

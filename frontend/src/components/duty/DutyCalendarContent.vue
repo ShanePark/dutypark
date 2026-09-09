@@ -2,6 +2,7 @@
 import { computed, ref } from 'vue'
 import { CalendarCheck, MessageSquareText, CheckSquare } from 'lucide-vue-next'
 import { isLightColor } from '@/utils/color'
+import { dutyTypeLabel } from '@/utils/dutyAbbreviation'
 import { parseDateOnly } from '@/utils/date'
 import CalendarGrid from '@/components/common/CalendarGrid.vue'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
@@ -236,6 +237,8 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
               v-for="dutyType in dutyTypes"
               :key="dutyType.id ?? 'off'"
               @click.stop="emit('batch-duty-change', day, dutyType.id)"
+              :title="dutyType.name"
+              :aria-label="dutyType.name"
               class="text-[10px] sm:text-xs px-1 py-1 rounded border transition-all min-h-[22px] sm:min-h-[26px] cursor-pointer"
               :class="{
                 'ring-2 ring-dp-text-primary font-bold shadow-sm':
@@ -249,8 +252,7 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
                 borderColor: dutyType.color || 'var(--dp-duty-fallback)',
               }"
             >
-              <span class="sm:hidden">{{ dutyType.name.charAt(0) }}</span>
-              <span class="hidden sm:inline">{{ dutyType.name.length > 4 ? dutyType.name.substring(0, 4) : dutyType.name }}</span>
+              <span class="break-all">{{ dutyTypeLabel(dutyType, isMyCalendar) }}</span>
             </button>
           </div>
 

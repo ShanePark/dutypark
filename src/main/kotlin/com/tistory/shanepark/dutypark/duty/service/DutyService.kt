@@ -125,6 +125,7 @@ class DutyService(
             isOff = false,
             dutyTypeId = resolvedDutyType.id,
             source = source,
+            dutyAbbreviation = resolvedDutyType.shortName,
         )
     }
 
@@ -140,7 +141,7 @@ class DutyService(
             val team = member.team ?: return@mapNotNull null
             val duties = rawDuties.map {
                 if (it.dutyType.isNullOrBlank()) {
-                    it.copy(dutyType = team.defaultDutyName, dutyColor = team.defaultDutyColor)
+                    it.copy(dutyType = team.defaultDutyName, dutyColor = team.defaultDutyColor, dutyAbbreviation = team.defaultDutyShortName)
                 } else it
             }
             OtherDutyResponse(
