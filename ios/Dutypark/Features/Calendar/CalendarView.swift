@@ -449,7 +449,7 @@ struct CalendarView: View {
                         "calendar.offline.cachedAt",
                         DateFormatter.localizedString(from: storedAt, dateStyle: .short, timeStyle: .short)
                     ))
-                    .font(.caption)
+                    .font(DPTypography.caption)
                     .foregroundStyle(DPColor.textSecondary)
                 }
             }
@@ -458,11 +458,11 @@ struct CalendarView: View {
                     "calendar.offline.pending",
                     model.pendingScheduleCount
                 ))
-                .font(.caption)
+                .font(DPTypography.caption)
                 .foregroundStyle(DPColor.textSecondary)
             }
         }
-        .font(.caption)
+        .font(DPTypography.caption)
         .foregroundStyle(DPColor.textPrimary)
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, DPSpacing.small)

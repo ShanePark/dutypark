@@ -45,8 +45,9 @@ struct GuestPolicyView: View {
                         .font(.system(size: 32))
                         .foregroundStyle(DPColor.danger)
                     Text(title)
-                        .font(.headline)
+                        .font(DPFont.bold(size: 17, relativeTo: .headline))
                     Text(GuestLocalization.text("guest.policy.error"))
+                        .font(DPTypography.supporting)
                         .foregroundStyle(DPColor.textSecondary)
                     Button(GuestLocalization.text("guest.retry")) {
                         Task { await retryLoad() }
@@ -67,7 +68,7 @@ struct GuestPolicyView: View {
                             policy.version,
                             policy.effectiveDate.rawValue
                         ))
-                        .font(.caption)
+                        .font(DPTypography.caption)
                         .foregroundStyle(DPColor.textMuted)
                     }
                     .padding(.horizontal, DPLongFormDocumentLayout.horizontalPadding)
@@ -75,6 +76,7 @@ struct GuestPolicyView: View {
                 }
             } else {
                 Text(GuestLocalization.text("guest.policy.unavailable"))
+                    .font(DPTypography.supporting)
                     .foregroundStyle(DPColor.textMuted)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }

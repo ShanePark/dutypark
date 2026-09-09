@@ -317,6 +317,7 @@ struct TeamManageView: View {
             }
             if team.members.isEmpty {
                 Text("team.manage.labels.noMembers", tableName: "Team")
+                    .font(DPTypography.supporting)
                     .foregroundStyle(DPColor.textMuted)
                     .frame(maxWidth: .infinity, minHeight: 72)
             }
@@ -375,6 +376,7 @@ struct TeamManageView: View {
             }
             if team.dutyTypes.isEmpty {
                 Text("team.manage.labels.noDutyTypes", tableName: "Team")
+                    .font(DPTypography.supporting)
                     .foregroundStyle(DPColor.textMuted)
                     .frame(maxWidth: .infinity, minHeight: 72)
             }
@@ -1075,10 +1077,14 @@ private struct TeamMemberSearchView: View {
                     if viewModel.isWorking {
                         ProgressView()
                     } else if viewModel.results.isEmpty {
-                        ContentUnavailableView(
-                            teamLocalized("team.memberSearch.empty"),
-                            systemImage: "person.crop.circle.badge.questionmark"
-                        )
+                        ContentUnavailableView {
+                            Label {
+                                Text("team.memberSearch.empty", tableName: "Team")
+                                    .font(DPTypography.heading)
+                            } icon: {
+                                Image(systemName: "person.crop.circle.badge.questionmark")
+                            }
+                        }
                     }
                 }
 
@@ -1228,6 +1234,7 @@ private struct TeamBatchUploadView: View {
                             Image(systemName: "chevron.right")
                                 .font(DPTypography.caption)
                         }
+                        .font(DPTypography.label)
                         .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)
                         .padding(.horizontal, DPSpacing.compact)
                         .background(DPColor.backgroundInput)

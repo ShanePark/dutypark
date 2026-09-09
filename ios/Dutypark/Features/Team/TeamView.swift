@@ -439,6 +439,7 @@ struct TeamView: View {
 
             if viewModel.selectedSchedules.isEmpty {
                 Text("team.view.schedule.empty", tableName: "Team")
+                    .font(DPTypography.supporting)
                     .foregroundStyle(DPColor.textMuted)
                     .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)
             } else {
@@ -458,7 +459,7 @@ struct TeamView: View {
                                 .foregroundStyle(DPColor.textSecondary)
                                 if !schedule.description.isEmpty {
                                     Text(verbatim: schedule.description)
-                                        .font(.subheadline)
+                                        .font(DPTypography.supporting)
                                         .foregroundStyle(DPColor.textSecondary)
                                 }
                                 Text(verbatim: teamScheduleDateRange(schedule))
@@ -978,6 +979,7 @@ private struct TeamCreationView: View {
                     .overlay(alignment: .topLeading) {
                         if description.isEmpty {
                             Text("team.create.descriptionPlaceholder", tableName: "Team")
+                                .font(DPTypography.body)
                                 .foregroundStyle(DPColor.textMuted)
                                 .padding(.horizontal, DPChrome.inputHorizontalPadding)
                                 .padding(.vertical, DPChrome.inputVerticalPadding)
@@ -1007,15 +1009,19 @@ private struct TeamCreationView: View {
         switch viewModel.nameCheckResult {
         case .ok:
             Text("team.create.nameAvailable", tableName: "Team")
+                .font(DPTypography.caption)
                 .foregroundStyle(DPColor.success)
         case .duplicated:
             Text("team.create.nameDuplicated", tableName: "Team")
+                .font(DPTypography.caption)
                 .foregroundStyle(DPColor.danger)
         case .tooShort:
             Text("team.create.nameTooShort", tableName: "Team")
+                .font(DPTypography.caption)
                 .foregroundStyle(DPColor.warning)
         case .tooLong:
             Text("team.create.nameTooLong", tableName: "Team")
+                .font(DPTypography.caption)
                 .foregroundStyle(DPColor.warning)
         case nil:
             EmptyView()

@@ -661,7 +661,7 @@ struct TodoView: View {
                     )
                 }
             }
-            .font(.caption.weight(.semibold))
+            .font(DPFont.bold(size: 12, relativeTo: .caption))
             Spacer(minLength: 0)
         }
         .foregroundStyle(.orange)

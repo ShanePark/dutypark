@@ -91,7 +91,7 @@ struct DPYearMonthPicker: View {
             .accessibilityLabel(previousYearLabel)
 
             Spacer()
-            Text(verbatim: String(year)).font(.title3.bold())
+            Text(verbatim: String(year)).font(DPTypography.sectionTitle)
             Spacer()
 
             Button {
@@ -119,7 +119,7 @@ struct DPYearMonthPicker: View {
                     onSelect(year, month)
                 } label: {
                     Text(verbatim: DPYearMonthPickerLocalization.monthName(month))
-                        .font(.subheadline.weight(.medium))
+                        .font(DPFont.light(size: 15, relativeTo: .subheadline))
                         .lineLimit(1)
                         .minimumScaleFactor(0.7)
                         .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)
