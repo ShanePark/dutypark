@@ -1,9 +1,12 @@
+// @vitest-environment node
+
 import { strict as assert } from 'node:assert'
 import { readFileSync } from 'node:fs'
 import { describe, it } from 'vitest'
 
 const showcase = readFileSync(new URL('./IntroShowcase.vue', import.meta.url), 'utf8')
 const section = readFileSync(new URL('./IntroSection.vue', import.meta.url), 'utf8')
+const header = readFileSync(new URL('../layout/AppHeader.vue', import.meta.url), 'utf8')
 const cta = readFileSync(new URL('./IntroCTA.vue', import.meta.url), 'utf8')
 const styles = readFileSync(new URL('../../styles/intro.css', import.meta.url), 'utf8')
 const template = showcase.slice(showcase.indexOf('<template>'), showcase.indexOf('<style'))
@@ -39,8 +42,17 @@ describe('landing presentation', () => {
   it('exposes the existing persisted locale switcher without scrolling it away', () => {
     assert.match(section, /import LocaleSwitcher from '@\/components\/layout\/LocaleSwitcher.vue'/)
     assert.match(section, /<LocaleSwitcher \/>/)
-    assert.match(ruleFor(section, '.intro-locale-control'), /position: absolute/)
-    assert.match(ruleFor(section, '.intro-locale-control :deep(.locale-suggestion)'), /right: 0/)
+    assert.match(ruleFor(section, '.intro-controls'), /position: absolute/)
+    assert.match(ruleFor(section, '.intro-controls :deep(.locale-suggestion)'), /right: 0/)
+  })
+
+  it('uses the same locale and theme controls as the authenticated header', () => {
+    assert.match(section, /import LocaleSwitcher from '@\/components\/layout\/LocaleSwitcher.vue'/)
+    assert.match(section, /import ThemeSwitcher from '@\/components\/layout\/ThemeSwitcher.vue'/)
+    assert.match(section, /<LocaleSwitcher \/>/)
+    assert.match(section, /<ThemeSwitcher \/>/)
+    assert.match(header, /<LocaleSwitcher \/>/)
+    assert.match(header, /<ThemeSwitcher \/>/)
   })
 
   it('animates both CTA links as a group and keeps their destinations', () => {
