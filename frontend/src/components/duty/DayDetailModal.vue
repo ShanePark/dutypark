@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch, nextTick } from 'vue'
-import { X, Plus } from 'lucide-vue-next'
+import { X, Plus } from '@lucide/vue'
 import { useI18n } from 'vue-i18n'
 import BaseModal from '@/components/common/BaseModal.vue'
 import ScheduleList from '@/components/duty/ScheduleList.vue'

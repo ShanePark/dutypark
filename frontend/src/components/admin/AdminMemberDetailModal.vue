@@ -20,7 +20,7 @@ import {
   UserCog,
   Users,
   X,
-} from 'lucide-vue-next'
+} from '@lucide/vue'
 
 const props = withDefaults(defineProps<{
   open: boolean

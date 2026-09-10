@@ -7,7 +7,7 @@ import {
   Flag,
   MessageSquare,
   Users,
-} from 'lucide-vue-next'
+} from '@lucide/vue'
 
 const props = defineProps<{
   active: 'members' | 'teams' | 'reports' | 'inquiries' | 'dev'

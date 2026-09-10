@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted, inject, type Component, type Ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ListTodo, Clock, Users, Heart, Flag, Sun } from 'lucide-vue-next'
+import { ListTodo, Clock, Users, Heart, Flag, Sun } from '@lucide/vue'
 import { getShowcaseProgress, getTransitionProgress, getScreenOpacity } from './showcaseMotion'
 
 export interface Feature {

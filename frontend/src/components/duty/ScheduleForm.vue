@@ -36,7 +36,7 @@ export function endFollowingStart(
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { Check, Clock, X } from 'lucide-vue-next'
+import { Check, Clock, X } from '@lucide/vue'
 import { useI18n } from 'vue-i18n'
 import FileUploader from '@/components/common/FileUploader.vue'
 import CharacterCounter from '@/components/common/CharacterCounter.vue'

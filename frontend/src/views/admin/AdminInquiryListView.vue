@@ -13,7 +13,7 @@ import { INQUIRY_STATUS_LABEL_KEYS, inquiryStatusToneClass } from '@/components/
 import { buildInquiryUpdateRequest } from './inquiryUpdateRequest'
 import { createLatestRequestTracker, lastValidPage } from './moderationListState'
 import type { AdminInquiryDto, InquiryStatus, InquiryStatusFilter } from '@/types/adminModeration'
-import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-vue-next'
+import { ChevronLeft, ChevronRight, Loader2 } from '@lucide/vue'
 
 const router = useRouter()
 const authStore = useAuthStore()

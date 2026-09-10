@@ -10,7 +10,7 @@ import {
   Smartphone,
   Loader2,
   LogOut,
-} from 'lucide-vue-next'
+} from '@lucide/vue'
 import { isAppSession, sessionClientIcon, sessionClientLabelKey, sessionClientName } from './sessionClient'
 
 const props = withDefaults(defineProps<{

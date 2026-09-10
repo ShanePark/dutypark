@@ -109,7 +109,7 @@ vi.mock('@/api/schedule', () => ({ scheduleApi: mocks.scheduleApi }))
 vi.mock('@/api/report', () => ({ reportApi: mocks.reportApi }))
 vi.mock('@/api/block', () => ({ blockApi: mocks.blockApi }))
 
-vi.mock('lucide-vue-next', async () => {
+vi.mock('@lucide/vue', async () => {
   const { defineComponent, h } = await import('vue')
   const icon = defineComponent({ setup: () => () => h('span') })
   return {

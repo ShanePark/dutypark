@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CalendarCheck, Lock, Plus, Star } from 'lucide-vue-next'
+import { CalendarCheck, Lock, Plus, Star } from '@lucide/vue'
 import { useI18n } from 'vue-i18n'
 import type { LocalDDay } from '@/views/duty/dutyViewTypes'
 

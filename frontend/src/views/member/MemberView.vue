@@ -59,7 +59,7 @@ import {
   Plus,
   Settings,
   Apple,
-} from 'lucide-vue-next'
+} from '@lucide/vue'
 
 const route = useRoute()
 const router = useRouter()

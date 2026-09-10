@@ -21,7 +21,7 @@ import HelpButton from '@/components/common/HelpButton.vue'
 import HelpModal from '@/components/common/HelpModal.vue'
 import HelpNote from '@/components/common/HelpNote.vue'
 import HelpSection from '@/components/common/HelpSection.vue'
-import { Users, UserPlus, Star, GripVertical, CheckCircle2 } from 'lucide-vue-next'
+import { Users, UserPlus, Star, GripVertical, CheckCircle2 } from '@lucide/vue'
 
 const router = useRouter()
 const notificationStore = useNotificationStore()

@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.schedule.timeparsing.service
 
 import com.tistory.shanepark.dutypark.TestUtils.Companion.jsr310JsonMapper
+import com.tistory.shanepark.dutypark.common.config.AiProperties
 import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeParsingRequest
 import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeParsingResponse
 import org.assertj.core.api.Assertions.assertThat
@@ -12,6 +13,7 @@ import org.junit.jupiter.params.ParameterizedTest
 import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.Mockito.*
 import org.springframework.ai.chat.model.ChatModel
+import org.springframework.ai.openai.OpenAiChatOptions
 import java.time.LocalDate
 
 @DisplayName("ScheduleTimeParsingService Pre-filter Tests")
@@ -23,7 +25,8 @@ class ScheduleTimeParsingPreFilterTest {
     @BeforeEach
     fun setup() {
         chatModel = mock(ChatModel::class.java)
-        service = ScheduleTimeParsingService(chatModel, jsr310JsonMapper())
+        `when`(chatModel.options).thenReturn(OpenAiChatOptions.builder().build())
+        service = ScheduleTimeParsingService(chatModel, jsr310JsonMapper(), AiProperties(), 9)
     }
 
     @Nested
@@ -238,7 +241,7 @@ class ScheduleTimeParsingPreFilterTest {
         }
 
         private fun assertLlmCalled(content: String) {
-            reset(chatModel)
+            resetChatModel()
             val request = ScheduleTimeParsingRequest(
                 date = LocalDate.of(2025, 1, 15),
                 content = content
@@ -268,7 +271,7 @@ class ScheduleTimeParsingPreFilterTest {
             ]
         )
         fun `non-time numbers trigger LLM which is acceptable`(content: String) {
-            reset(chatModel)
+            resetChatModel()
             val request = ScheduleTimeParsingRequest(
                 date = LocalDate.of(2025, 1, 15),
                 content = content
@@ -291,7 +294,7 @@ class ScheduleTimeParsingPreFilterTest {
             ]
         )
         fun `korean words with time-like characters trigger LLM which is acceptable`(content: String) {
-            reset(chatModel)
+            resetChatModel()
             val request = ScheduleTimeParsingRequest(
                 date = LocalDate.of(2025, 1, 15),
                 content = content
@@ -310,7 +313,7 @@ class ScheduleTimeParsingPreFilterTest {
         @Test
         @DisplayName("Mixed content with time indicator at the end")
         fun `time indicator at end should trigger LLM`() {
-            reset(chatModel)
+            resetChatModel()
             val request = ScheduleTimeParsingRequest(
                 date = LocalDate.of(2025, 1, 15),
                 content = "약속 3"
@@ -324,7 +327,7 @@ class ScheduleTimeParsingPreFilterTest {
         @Test
         @DisplayName("Single digit should trigger LLM")
         fun `single digit should trigger LLM`() {
-            reset(chatModel)
+            resetChatModel()
             val request = ScheduleTimeParsingRequest(
                 date = LocalDate.of(2025, 1, 15),
                 content = "7"
@@ -338,7 +341,7 @@ class ScheduleTimeParsingPreFilterTest {
         @Test
         @DisplayName("Single Korean time word should trigger LLM")
         fun `single korean time word should trigger LLM`() {
-            reset(chatModel)
+            resetChatModel()
             val request = ScheduleTimeParsingRequest(
                 date = LocalDate.of(2025, 1, 15),
                 content = "정오"
@@ -380,6 +383,11 @@ class ScheduleTimeParsingPreFilterTest {
             assertThat(response.result).isTrue()
             assertThat(response.hasTime).isFalse()
         }
+    }
+
+    private fun resetChatModel() {
+        reset(chatModel)
+        `when`(chatModel.options).thenReturn(OpenAiChatOptions.builder().build())
     }
 
 }

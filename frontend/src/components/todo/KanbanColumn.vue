@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import { Plus, ListTodo, Clock, CheckCircle2 } from 'lucide-vue-next'
+import { Plus, ListTodo, Clock, CheckCircle2 } from '@lucide/vue'
 import type { TodoStatus } from '@/types'
 import type { Component } from 'vue'
 

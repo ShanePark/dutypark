@@ -20,7 +20,7 @@ import {
   ExternalLink,
   Loader2,
   RotateCcw,
-} from 'lucide-vue-next'
+} from '@lucide/vue'
 
 interface GuideCardView {
   id: string

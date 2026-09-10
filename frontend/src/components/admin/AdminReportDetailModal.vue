@@ -11,7 +11,7 @@ import {
   memberStatusToneClass,
   reportStatusToneClass,
 } from './adminModerationLabels'
-import { ChevronRight, Loader2, X } from 'lucide-vue-next'
+import { ChevronRight, Loader2, X } from '@lucide/vue'
 
 const props = defineProps<{
   open: boolean

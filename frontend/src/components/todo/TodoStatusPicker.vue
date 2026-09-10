@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch, type CSSProperties, type Component } from 'vue'
-import { ArrowRightLeft, Check, CheckCircle2, ChevronDown, Clock, ListTodo, Loader2 } from 'lucide-vue-next'
+import { ArrowRightLeft, Check, CheckCircle2, ChevronDown, Clock, ListTodo, Loader2 } from '@lucide/vue'
 import { useI18n } from 'vue-i18n'
 import { useEscapeKey } from '@/composables/useEscapeKey'
 import type { TodoStatus } from '@/types'

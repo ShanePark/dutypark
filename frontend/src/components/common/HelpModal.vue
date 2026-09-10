@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import { Info, X } from 'lucide-vue-next'
+import { Info, X } from '@lucide/vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 
 // Screens supply their own blocks — HelpSection for the explanations, HelpNote for

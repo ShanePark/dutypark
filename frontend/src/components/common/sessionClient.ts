@@ -1,4 +1,4 @@
-import { AppWindow, Globe } from 'lucide-vue-next'
+import { AppWindow, Globe } from '@lucide/vue'
 import type { RefreshTokenDto } from '@/types'
 
 /**

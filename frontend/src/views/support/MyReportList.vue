@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ChevronDown, CircleCheck, CircleSlash, Clock, Loader2, ShieldCheck, ShieldOff } from 'lucide-vue-next'
+import { ChevronDown, CircleCheck, CircleSlash, Clock, Loader2, ShieldCheck, ShieldOff } from '@lucide/vue'
 import { reportApi } from '@/api/report'
 import { useSwal } from '@/composables/useSwal'
 import { resolveApiErrorMessage } from '@/utils/resolveApiError'

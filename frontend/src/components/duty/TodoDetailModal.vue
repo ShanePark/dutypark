@@ -10,7 +10,7 @@ import {
   Calendar,
   Clock,
   CheckCircle2,
-} from 'lucide-vue-next'
+} from '@lucide/vue'
 import { useI18n } from 'vue-i18n'
 import BaseModal from '@/components/common/BaseModal.vue'
 import OverflowMenu from '@/components/common/OverflowMenu.vue'

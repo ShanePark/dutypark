@@ -24,8 +24,12 @@ spring:
   ai:
     openai:
       api-key: "${GEMINI_API_KEY:EMPTY}"
+      # Spring AI 2 delegates transient retries to the OpenAI client. Nine retries
+      # preserve the previous ten total attempts from Spring AI's retry template.
+      max-retries: 9
       chat:
         base-url: "https://generativelanguage.googleapis.com/v1beta/openai/"
+        timeout: ${AI_CHAT_READ_TIMEOUT:120s}
         options:
           model: "gemma-4-31b-it"
           temperature: 0.0

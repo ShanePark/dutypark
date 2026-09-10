@@ -5,7 +5,7 @@ import BaseModal from '@/components/common/BaseModal.vue'
 import { useSwal } from '@/composables/useSwal'
 import { teamApi } from '@/api/team'
 import type { MemberInviteCandidateDto } from '@/types'
-import { Search, X, ChevronLeft, ChevronRight, Loader2 } from 'lucide-vue-next'
+import { Search, X, ChevronLeft, ChevronRight, Loader2 } from '@lucide/vue'
 
 const props = defineProps<{
   isOpen: boolean

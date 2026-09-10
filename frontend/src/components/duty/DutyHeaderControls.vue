@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { ChevronLeft, Search, Siren, UserX } from 'lucide-vue-next'
+import { ChevronLeft, Search, Siren, UserX } from '@lucide/vue'
 import { useI18n } from 'vue-i18n'
 import CalendarMonthNavigator from '@/components/common/CalendarMonthNavigator.vue'
 import OverflowMenu from '@/components/common/OverflowMenu.vue'

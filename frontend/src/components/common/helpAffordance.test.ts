@@ -11,7 +11,7 @@ const helpScreens: Array<[string, string]> = [
 
 describe('help affordance', () => {
   it('names help with the information glyph rather than a question mark', () => {
-    expect(helpButton).toContain("import { Info } from 'lucide-vue-next'")
+    expect(helpButton).toContain("import { Info } from '@lucide/vue'")
     expect(helpButton).toContain('<Info />')
     expect(helpButton).not.toContain('HelpCircle')
   })

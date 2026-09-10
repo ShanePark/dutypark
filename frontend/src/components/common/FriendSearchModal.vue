@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { UserPlus, X, Search, ChevronLeft, ChevronRight, Loader2 } from 'lucide-vue-next'
+import { UserPlus, X, Search, ChevronLeft, ChevronRight, Loader2 } from '@lucide/vue'
 import type { MemberPreviewDto } from '@/types'
 import BaseModal from '@/components/common/BaseModal.vue'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'

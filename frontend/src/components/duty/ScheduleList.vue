@@ -10,7 +10,7 @@ import {
   Siren,
   Trash2,
   X,
-} from 'lucide-vue-next'
+} from '@lucide/vue'
 import AttachmentGrid from '@/components/common/AttachmentGrid.vue'
 import MemberTagChips from '@/components/common/MemberTagChips.vue'
 import VisibilityHintIcon from '@/components/common/VisibilityHintIcon.vue'

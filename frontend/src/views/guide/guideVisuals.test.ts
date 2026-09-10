@@ -26,7 +26,7 @@ import {
   UserCog,
   UserPlus,
   Users,
-} from 'lucide-vue-next'
+} from '@lucide/vue'
 import type { GuideTone } from '@/api/publicContent'
 import {
   GUIDE_ICONS,

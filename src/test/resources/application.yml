@@ -15,8 +15,10 @@ spring:
   ai:
     openai:
       api-key: "API_KEY_HERE"
+      max-retries: 9
       chat:
         base-url: "https://generativelanguage.googleapis.com/v1beta/openai/"
+        timeout: 120s
         options:
           model: "gemma-4-31b-it"
           temperature: 0.0

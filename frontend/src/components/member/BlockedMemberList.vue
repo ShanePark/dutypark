@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import { Ban } from 'lucide-vue-next'
+import { Ban } from '@lucide/vue'
 import type { BlockedMember } from '@/types/block'
 import { formatDateNumeric } from '@/utils/date'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'

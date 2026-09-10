@@ -1,5 +1,5 @@
 import type { Component } from 'vue'
-import { Bell, BookOpen, LifeBuoy, Settings, Shield, UserPlus } from 'lucide-vue-next'
+import { Bell, BookOpen, LifeBuoy, Settings, Shield, UserPlus } from '@lucide/vue'
 
 export type MoreMenuItem = {
   id: string

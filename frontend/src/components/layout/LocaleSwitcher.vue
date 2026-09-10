@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Check, ChevronDown, Languages, Sparkles, X } from 'lucide-vue-next'
+import { Check, ChevronDown, Languages, Sparkles, X } from '@lucide/vue'
 import { getLocaleNativeLabel } from '@/i18n'
 import { useLocaleStore, type SupportedLocale } from '@/stores/locale'
 

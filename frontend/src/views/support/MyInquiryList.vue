@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Bell, ChevronDown, Clock, Inbox, Loader2, MessageSquareText } from 'lucide-vue-next'
+import { Bell, ChevronDown, Clock, Inbox, Loader2, MessageSquareText } from '@lucide/vue'
 import { inquiryApi } from '@/api/inquiry'
 import type { MyInquiry } from '@/types/inquiry'
 import { formatSupportDateTime } from './supportHistory'

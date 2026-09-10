@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Check, ChevronLeft, ChevronRight, RotateCcw, Search, UserPlus, X } from 'lucide-vue-next'
+import { Check, ChevronLeft, ChevronRight, RotateCcw, Search, UserPlus, X } from '@lucide/vue'
 import type { TaggableFriend } from '@/types'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 import {

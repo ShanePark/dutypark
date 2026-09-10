@@ -13,7 +13,7 @@ import {
   Plus,
   Check,
   AlertCircle,
-} from 'lucide-vue-next'
+} from '@lucide/vue'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 import DatePickerField from '@/components/common/DatePickerField.vue'
 import { useAuthStore } from '@/stores/auth'
@@ -679,7 +679,7 @@ onMounted(() => {
         <Loader2 class="w-6 h-6 animate-spin text-dp-accent" />
       </div>
       <div v-else-if="shift.length > 0" class="mt-3 space-y-3">
-        <template v-for="group in shift" :key="group.dutyType.id">
+        <template v-for="group in shift" :key="group.dutyType.id ?? group.dutyType.name">
           <div
             v-if="group.members.length > 0"
             class="rounded-lg border overflow-hidden shadow-sm"

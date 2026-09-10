@@ -1,11 +1,14 @@
 package com.tistory.shanepark.dutypark.schedule.timeparsing.service
 
 import com.tistory.shanepark.dutypark.common.config.logger
+import com.tistory.shanepark.dutypark.common.config.AiProperties
 import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeParsingRequest
 import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeParsingResponse
 import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeIndicator
 import org.springframework.ai.chat.client.ChatClient
 import org.springframework.ai.chat.model.ChatModel
+import org.springframework.ai.openai.OpenAiChatOptions
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import tools.jackson.databind.json.JsonMapper
 
@@ -13,8 +16,19 @@ import tools.jackson.databind.json.JsonMapper
 class ScheduleTimeParsingService(
     chatModel: ChatModel,
     private val jsonMapper: JsonMapper,
+    private val aiProperties: AiProperties,
+    @Value("\${spring.ai.openai.chat.max-retries:\${spring.ai.openai.max-retries:3}}")
+    private val maxRetries: Int,
 ) {
-    private val chatClient = ChatClient.builder(chatModel).build()
+    private val chatClient = ChatClient.builder(chatModel)
+        .defaultOptions(
+            (chatModel.options as? OpenAiChatOptions
+                ?: error("ScheduleTimeParsingService requires OpenAiChatOptions"))
+                .mutate()
+                .timeout(aiProperties.chat.readTimeout)
+                .maxRetries(maxRetries)
+        )
+        .build()
     private val log = logger()
 
     fun parseScheduleTime(request: ScheduleTimeParsingRequest): ScheduleTimeParsingResponse {

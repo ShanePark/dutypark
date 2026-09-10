@@ -458,7 +458,7 @@ describe('DatePickerField theming and locale', () => {
       './datePickerGrid',
       '@/composables/useEscapeKey',
       '@/utils/date',
-      'lucide-vue-next',
+      '@lucide/vue',
       'vue',
       'vue-i18n',
     ])

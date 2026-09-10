@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { CalendarDays, CalendarPlus, ChevronRight, Info, Loader2, RotateCcw, X } from 'lucide-vue-next'
+import { CalendarDays, CalendarPlus, ChevronRight, Info, Loader2, RotateCcw, X } from '@lucide/vue'
 import { dutyApi } from '@/api/duty'
 import { useSwal } from '@/composables/useSwal'
 import type { DutyPatternDutyTypeDto, DutyPatternWeekday, MyDutyPatternDto } from '@/types'

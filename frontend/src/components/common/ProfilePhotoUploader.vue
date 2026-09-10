@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Camera, Loader2, Upload } from 'lucide-vue-next'
+import { Camera, Loader2, Upload } from '@lucide/vue'
 import { memberApi } from '@/api/member'
 import { fetchAuthenticatedImage } from '@/api/attachment'
 import { useSwal } from '@/composables/useSwal'

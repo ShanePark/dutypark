@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { Paperclip, CalendarCheck } from 'lucide-vue-next'
+import { Paperclip, CalendarCheck } from '@lucide/vue'
 import MemberTagChips from '@/components/common/MemberTagChips.vue'
 import { toDisplayTagMember } from '@/utils/tagMembers'
 import { formatDateNumeric } from '@/utils/date'

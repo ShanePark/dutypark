@@ -67,8 +67,12 @@ class TeamScheduleServiceTest {
 
         whenever(memberRepository.findById(1L)).thenReturn(Optional.of(author))
         whenever(teamRepository.findById(10L)).thenReturn(Optional.of(team))
-        whenever(teamScheduleRepository.findTeamSchedulesOfTeamRangeIn(any<Team>(), any(), any())).thenReturn(listOf())
-        whenever(teamScheduleRepository.save(any())).thenReturn(savedSchedule)
+        whenever(
+            teamScheduleRepository.findTeamSchedulesOfTeamRangeIn(
+                any<Team>(), any<LocalDateTime>(), any<LocalDateTime>()
+            )
+        ).thenReturn(listOf())
+        whenever(teamScheduleRepository.save(any<TeamSchedule>())).thenReturn(savedSchedule)
 
         val result = teamScheduleService.create(loginMember, saveDto)
 
@@ -119,9 +123,13 @@ class TeamScheduleServiceTest {
 
         whenever(memberRepository.findById(1L)).thenReturn(Optional.of(author))
         whenever(teamRepository.findById(20L)).thenReturn(Optional.of(team))
-        whenever(teamScheduleRepository.findTeamSchedulesOfTeamRangeIn(any(), any(), any()))
+        whenever(
+            teamScheduleRepository.findTeamSchedulesOfTeamRangeIn(
+                any<Team>(), any<LocalDateTime>(), any<LocalDateTime>()
+            )
+        )
             .thenReturn(existingSchedules)
-        whenever(teamScheduleRepository.save(any())).thenReturn(savedSchedule)
+        whenever(teamScheduleRepository.save(any<TeamSchedule>())).thenReturn(savedSchedule)
 
         val result = teamScheduleService.create(loginMember, saveDto)
 

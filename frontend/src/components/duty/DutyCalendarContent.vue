@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { CalendarCheck, MessageSquareText, CheckSquare } from 'lucide-vue-next'
+import { CalendarCheck, MessageSquareText, CheckSquare } from '@lucide/vue'
 import { isLightColor } from '@/utils/color'
 import { dutyTypeLabel } from '@/utils/dutyAbbreviation'
 import { parseDateOnly } from '@/utils/date'

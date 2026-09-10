@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { X, Users, Check, RotateCcw } from 'lucide-vue-next'
+import { X, Users, Check, RotateCcw } from '@lucide/vue'
 import { useI18n } from 'vue-i18n'
 import type { TaggableFriend } from '@/types'
 import BaseModal from '@/components/common/BaseModal.vue'
