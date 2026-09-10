@@ -1773,7 +1773,9 @@ private struct CalendarDayCell: View {
                 todayMarker
             }
         }
-        .overlay(Rectangle().stroke(focusBorder, lineWidth: highlighted ? 2 : 0))
+        .overlay(Rectangle().strokeBorder(focusBorder, lineWidth: highlighted ? (hidesDetails ? 2 : 1) : 0))
+        // Paint the today border last so its red cue remains visible above cell highlights.
+        .overlay { todayBorder }
         .contentShape(Rectangle())
         // The day gesture belongs to the whole cell. Without an explicit accessibility
         // boundary, SwiftUI propagates this label and button trait to every nested schedule,
@@ -1832,8 +1834,16 @@ private struct CalendarDayCell: View {
     }
 
     private var focusBorder: Color {
-        if highlighted { return DPColor.accent }
+        if highlighted && !(isToday && !hidesDetails) { return DPColor.accent }
         return .clear
+    }
+
+    @ViewBuilder
+    private var todayBorder: some View {
+        if isToday && !hidesDetails {
+            Rectangle().strokeBorder(DPColor.danger, lineWidth: 1)
+                .allowsHitTesting(false)
+        }
     }
 
     private var todayMarker: some View {

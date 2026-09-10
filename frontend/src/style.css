@@ -1856,8 +1856,5 @@ div.swal2-popup.swal2-toast.colored-toast-info {
 
 .highlight-pulse-glow {
     animation: highlight-pulse-glow-anim 0.6s ease-in-out 3;
-    outline: 3px solid var(--dp-warning);
-    outline-offset: -3px;
     position: relative;
-    z-index: 10;
 }

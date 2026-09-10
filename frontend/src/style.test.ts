@@ -12,3 +12,12 @@ describe('SweetAlert2 container styles', () => {
     expect(styles).not.toContain('.swal2-container:not(.swal2-toast-shown) {')
   })
 })
+
+describe('Calendar search highlight styles', () => {
+  it('keeps the pulse animation on the cell while its border is rendered in the grid', () => {
+    expect(styles).toMatch(/\.highlight-pulse-glow \{[\s\S]*animation: highlight-pulse-glow-anim/)
+    expect(styles).not.toContain('outline: 1px solid var(--dp-warning)')
+    expect(styles).not.toContain('outline-offset: -1px')
+    expect(styles).not.toContain('z-index: 10')
+  })
+})

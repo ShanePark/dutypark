@@ -167,6 +167,12 @@ function handleDayClick(day: CalendarDay, index: number) {
         }"
       >
         <span v-if="isToday(day)" class="calendar-day-today-bar" aria-hidden="true" />
+        <span v-if="isToday(day)" class="calendar-day-today-border" aria-hidden="true" />
+        <span
+          v-if="!focusedDay && isHighlighted(day)"
+          class="calendar-day-highlight-border"
+          aria-hidden="true"
+        />
         <div class="flex items-center justify-between">
           <span
             class="text-xs sm:text-sm font-medium"
@@ -204,6 +210,22 @@ function handleDayClick(day: CalendarDay, index: number) {
   border-radius: 0 0 3px 3px;
   background: var(--dp-danger);
   pointer-events: none;
+}
+
+.calendar-day-today-border {
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--dp-danger);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.calendar-day-highlight-border {
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--dp-warning);
+  pointer-events: none;
+  z-index: 1;
 }
 
 .calendar-day-hoverable::before,
