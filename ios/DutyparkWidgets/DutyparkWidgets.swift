@@ -353,7 +353,7 @@ private struct DutyparkWidgetDayCell: View {
                     .minimumScaleFactor(0.55)
                     .padding(.horizontal, 3)
                     .background(
-                        dutyTint.opacity(colorScheme == .dark ? 0.20 : 0.11),
+                        colorScheme == .dark ? .clear : dutyTint.opacity(0.11),
                         in: RoundedRectangle(cornerRadius: 4, style: .continuous)
                     )
                     .frame(maxWidth: .infinity, alignment: .center)
@@ -422,12 +422,15 @@ private struct DutyparkWidgetDayCell: View {
     }
 
     private var cellBackground: Color {
+        guard colorScheme == .light else {
+            return WidgetPalette.emptyCell(for: colorScheme)
+        }
         guard displayAbbreviation != nil else {
             return day.isOff
-                ? WidgetPalette.off(for: colorScheme).opacity(colorScheme == .dark ? 0.14 : 0.08)
+                ? WidgetPalette.off(for: colorScheme).opacity(0.08)
                 : WidgetPalette.emptyCell(for: colorScheme)
         }
-        return dutyTint.opacity(colorScheme == .dark ? 0.18 : 0.09)
+        return dutyTint.opacity(0.09)
     }
 
     private var dayNumberColor: Color {
@@ -461,13 +464,13 @@ private enum WidgetPalette {
 
     static func cardBorder(for colorScheme: ColorScheme) -> Color {
         colorScheme == .dark
-            ? Color(red: 0.294, green: 0.337, blue: 0.388)
+            ? Color(red: 0.216, green: 0.255, blue: 0.318)
             : Color(red: 0.82, green: 0.835, blue: 0.86)
     }
 
     static func gridLine(for colorScheme: ColorScheme) -> Color {
         colorScheme == .dark
-            ? Color(red: 0.294, green: 0.337, blue: 0.388)
+            ? Color(red: 0.176, green: 0.216, blue: 0.282)
             : Color(red: 0.82, green: 0.835, blue: 0.86)
     }
 
@@ -477,7 +480,7 @@ private enum WidgetPalette {
 
     static func weekdayBackground(for colorScheme: ColorScheme) -> Color {
         colorScheme == .dark
-            ? Color(red: 0.294, green: 0.337, blue: 0.388)
+            ? Color(red: 0.153, green: 0.204, blue: 0.286)
             : Color(red: 0.90, green: 0.906, blue: 0.922)
     }
 
@@ -553,13 +556,12 @@ private enum WidgetHexColor {
                 // the hue-preserving boost.
                 if saturation > 0.01 { saturation = max(saturation, 0.72) }
             } else if colorScheme == .dark {
-                if luminance < 0.34 {
-                    brightness = max(brightness, 0.90)
-                }
-                if saturation > 0.01, (luminance < 0.34 || saturation < 0.35) {
-                    // Cap fully saturated dark primaries so the result becomes a
-                    // luminous tint on the slate card while keeping its hue.
-                    saturation = 0.65
+                // Dark widgets use color as a quiet text accent. Lift every hue
+                // above the slate card and soften saturated team colors so a
+                // month full of duties does not become a patchwork of badges.
+                brightness = max(brightness, 0.90)
+                if saturation > 0.01 {
+                    saturation = min(saturation, 0.48)
                 }
             }
             return Color(
@@ -576,8 +578,8 @@ private enum WidgetHexColor {
         }
         if colorScheme == .light, white > 0.48 {
             white = min(white, 0.52)
-        } else if colorScheme == .dark, white < 0.34 {
-            white = max(white, 0.78)
+        } else if colorScheme == .dark {
+            white = max(white, 0.90)
         }
         return Color(white: Double(white), opacity: Double(alpha))
     }
