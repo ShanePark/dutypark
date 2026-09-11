@@ -111,6 +111,7 @@ final class CalendarViewModel: ObservableObject {
     private var prefersOfflineCache: Bool
     private var prefetchTask: Task<Void, Never>?
     private var serverRecoveryTask: Task<Void, Never>?
+    private var widgetSessionGeneration: UInt64?
     private var serverRecoveryPending = false
     private var serverRecoveryNeedsIdentity = false
     private var serverRecoveryAttemptInProgress = false
@@ -232,8 +233,14 @@ final class CalendarViewModel: ObservableObject {
         return Set(normalized.sorted().prefix(CalendarComparisonPolicy.maximumSelectionCount))
     }
 
-    func configure(accountID: MemberID, isOffline: Bool) {
-        if initialAccountID != accountID || prefersOfflineCache != isOffline {
+    func configure(
+        accountID: MemberID,
+        isOffline: Bool,
+        sessionGeneration: UInt64? = nil
+    ) {
+        if initialAccountID != accountID
+            || prefersOfflineCache != isOffline
+            || widgetSessionGeneration != sessionGeneration {
             monthLoadGeneration += 1
             identityLoadGeneration &+= 1
             invalidatePrefetch()
@@ -246,6 +253,7 @@ final class CalendarViewModel: ObservableObject {
         initialAccountID = accountID
         prefersOfflineCache = isOffline
         isOfflineMode = isOffline
+        widgetSessionGeneration = sessionGeneration
     }
 
     /// Clears the cached member/team identity before an account-level change such as
@@ -575,6 +583,7 @@ final class CalendarViewModel: ObservableObject {
     }
 
     private func loadMonthFromServer(context: MonthRequestContext) async throws {
+        let requestStartedAt = Date()
         async let calendarResult = repository.calendar(year: context.year, month: context.month)
         async let dutiesResult = repository.duties(memberID: context.memberID, year: context.year, month: context.month)
         async let schedulesResult = repository.schedules(memberID: context.memberID, year: context.year, month: context.month)
@@ -632,8 +641,18 @@ final class CalendarViewModel: ObservableObject {
             duties: duties,
             holidays: holidays,
             otherDuties: compared,
-            comparedMemberIDs: context.comparedMemberIDs
+            comparedMemberIDs: context.comparedMemberIDs,
+            storedAt: requestStartedAt
         ))
+        if isCurrentMonthRequest(context) {
+            publishWidgetSnapshot(
+                accountID: accountID,
+                key: OfflineMonthKey(year: context.year, month: context.month),
+                calendar: serverDays,
+                duties: duties,
+                updatedAt: requestStartedAt
+            )
+        }
         guard isCurrentMonthRequest(context) else { return }
         if let member = me, member.id == accountID {
             try? await cache.saveAccount(OfflineAccountSnapshot(
@@ -667,6 +686,11 @@ final class CalendarViewModel: ObservableObject {
             memberID: context.memberID
         )
         cacheStoredAt = snapshot.storedAt
+        if context.isMine,
+           let accountID = context.accountID,
+           accountID == context.memberID {
+            publishWidgetSnapshotIfMissing(snapshot)
+        }
     }
 
     private func applyMonth(
@@ -723,22 +747,36 @@ final class CalendarViewModel: ObservableObject {
         guard !isOfflineMode, let accountID = cacheAccountID else { return }
         let current = current ?? OfflineMonthKey(year: year, month: month)
         let comparisonIDs = activeComparedMemberIDs
+        let widgetGeneration = widgetSessionGeneration
         for key in OfflineCacheRangePolicy.rollingThirteenMonths.months(around: current) {
             guard isCurrentPrefetch(
                 generation: generation,
                 accountID: accountID,
-                comparisonIDs: comparisonIDs
+                comparisonIDs: comparisonIDs,
+                sessionGeneration: widgetGeneration
             ) else { return }
             if let snapshot = await cache.loadMonth(accountID: accountID, key: key),
                Date().timeIntervalSince(snapshot.storedAt) < 24 * 60 * 60 {
+                guard isCurrentPrefetch(
+                    generation: generation,
+                    accountID: accountID,
+                    comparisonIDs: comparisonIDs,
+                    sessionGeneration: widgetGeneration
+                ) else { return }
+                publishWidgetSnapshotIfMissing(
+                    snapshot,
+                    sessionGeneration: widgetGeneration
+                )
                 continue
             }
             guard isCurrentPrefetch(
                 generation: generation,
                 accountID: accountID,
-                comparisonIDs: comparisonIDs
+                comparisonIDs: comparisonIDs,
+                sessionGeneration: widgetGeneration
             ) else { return }
             do {
+                let requestStartedAt = Date()
                 async let calendarResult = repository.calendar(year: key.year, month: key.month)
                 async let dutiesResult = repository.duties(memberID: accountID, year: key.year, month: key.month)
                 async let schedulesResult = repository.schedules(memberID: accountID, year: key.year, month: key.month)
@@ -756,7 +794,8 @@ final class CalendarViewModel: ObservableObject {
                 guard isCurrentPrefetch(
                     generation: generation,
                     accountID: accountID,
-                    comparisonIDs: comparisonIDs
+                    comparisonIDs: comparisonIDs,
+                    sessionGeneration: widgetGeneration
                 ) else { return }
                 guard calendar.count == 42, schedules.count == 42, holidays.count == 42 else { continue }
                 try? await cache.saveMonth(OfflineMonthSnapshot(
@@ -767,8 +806,23 @@ final class CalendarViewModel: ObservableObject {
                     duties: duties,
                     holidays: holidays,
                     otherDuties: compared,
-                    comparedMemberIDs: comparisonIDs
+                    comparedMemberIDs: comparisonIDs,
+                    storedAt: requestStartedAt
                 ))
+                guard isCurrentPrefetch(
+                    generation: generation,
+                    accountID: accountID,
+                    comparisonIDs: comparisonIDs,
+                    sessionGeneration: widgetGeneration
+                ) else { return }
+                publishWidgetSnapshot(
+                    accountID: accountID,
+                    key: key,
+                    calendar: calendar,
+                    duties: duties,
+                    updatedAt: requestStartedAt,
+                    sessionGeneration: widgetGeneration
+                )
             } catch is CancellationError {
                 return
             } catch {
@@ -794,12 +848,14 @@ final class CalendarViewModel: ObservableObject {
     private func isCurrentPrefetch(
         generation: Int,
         accountID: MemberID,
-        comparisonIDs: Set<MemberID>
+        comparisonIDs: Set<MemberID>,
+        sessionGeneration: UInt64? = nil
     ) -> Bool {
         !Task.isCancelled
             && generation == prefetchGeneration
             && accountID == cacheAccountID
             && comparisonIDs == activeComparedMemberIDs
+            && (sessionGeneration == nil || widgetSessionGeneration == sessionGeneration)
             && !isOfflineMode
             && isMyCalendar
     }
@@ -1707,10 +1763,13 @@ final class CalendarViewModel: ObservableObject {
 
     private func refreshDuties() async throws {
         guard let memberID = targetMemberID else { throw APIError.invalidResponse }
+        let requestStartedAt = Date()
+        let requestKey = OfflineMonthKey(year: year, month: month)
+        let widgetGeneration = widgetSessionGeneration
         let loadedDuties = try await repository.duties(
             memberID: memberID,
-            year: year,
-            month: month
+            year: requestKey.year,
+            month: requestKey.month
         )
         days = days.map { day in
             let duty = loadedDuties.first {
@@ -1728,6 +1787,24 @@ final class CalendarViewModel: ObservableObject {
         }
         rebindPresentedDays()
         await persistCurrentMonthCache()
+        guard isMyCalendar,
+              targetMemberID == memberID,
+              cacheAccountID == memberID,
+              year == requestKey.year,
+              month == requestKey.month,
+              days.count == 42,
+              let widgetGeneration
+        else { return }
+        publishWidgetSnapshot(
+            accountID: memberID,
+            key: requestKey,
+            calendar: days.map {
+                TeamDayDTO(year: $0.cell.year, month: $0.cell.month, day: $0.cell.day)
+            },
+            duties: loadedDuties,
+            updatedAt: requestStartedAt,
+            sessionGeneration: widgetGeneration
+        )
     }
 
     private func rebuildTodoDays() {
@@ -1765,6 +1842,49 @@ final class CalendarViewModel: ObservableObject {
             comparedMemberIDs: comparisonIDs
         ))
     }
+
+    private func publishWidgetSnapshotIfMissing(
+        _ snapshot: OfflineMonthSnapshot,
+        sessionGeneration: UInt64? = nil
+    ) {
+        guard let sessionGeneration = sessionGeneration ?? widgetSessionGeneration,
+              let widgetSnapshot = DutyparkWidgetSnapshotBuilder.make(
+                  accountID: snapshot.accountID,
+                  key: snapshot.key,
+                  calendar: snapshot.calendar,
+                  duties: snapshot.duties,
+                  updatedAt: snapshot.storedAt
+              )
+        else { return }
+        _ = DutyparkWidgetRefreshService.publishIfMissing(
+            widgetSnapshot,
+            sessionGeneration: sessionGeneration
+        )
+    }
+
+    private func publishWidgetSnapshot(
+        accountID: MemberID,
+        key: OfflineMonthKey,
+        calendar: [TeamDayDTO],
+        duties: [DutyDTO],
+        updatedAt: Date = .now,
+        sessionGeneration: UInt64? = nil
+    ) {
+        guard let sessionGeneration = sessionGeneration ?? widgetSessionGeneration,
+              let widgetSnapshot = DutyparkWidgetSnapshotBuilder.make(
+                  accountID: accountID,
+                  key: key,
+                  calendar: calendar,
+                  duties: duties,
+                  updatedAt: updatedAt
+              )
+        else { return }
+        _ = DutyparkWidgetRefreshService.publish(
+            widgetSnapshot,
+            sessionGeneration: sessionGeneration
+        )
+    }
+
 
     private func removeSchedule(id: ScheduleID) {
         days = days.map { day in

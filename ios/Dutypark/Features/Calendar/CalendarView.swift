@@ -513,7 +513,11 @@ struct CalendarView: View {
             todoDetailModel.configureSession(accountID: nil, availability: .offline)
             return
         }
-        model.configure(accountID: member.id, isOffline: session.availability.isOffline)
+        model.configure(
+            accountID: member.id,
+            isOffline: session.availability.isOffline,
+            sessionGeneration: session.authenticationSessionGenerationForCurrentAccount
+        )
         todoDetailModel.configureSession(
             accountID: member.id,
             availability: session.availability,

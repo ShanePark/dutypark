@@ -613,6 +613,14 @@ final class SessionStore: ObservableObject {
         guard authenticationSessionGeneration == sessionContext.generation else {
             return false
         }
+        if member.isImpersonating || member.originalMemberId != nil {
+            DutyparkWidgetRefreshService.clear()
+        } else {
+            DutyparkWidgetRefreshService.activate(
+                accountID: member.id,
+                sessionGeneration: sessionContext.generation
+            )
+        }
         AIScheduleParsingConsentStore.shared.scope(to: member.id)
         self.availability = availability
         state = .authenticated(member)
@@ -806,6 +814,7 @@ final class SessionStore: ObservableObject {
         // published; its durable session IDs remain available for retry below.
         TodoAttachmentDiscardCoordinator.shared.cancelAll()
         authenticationSessionGeneration &+= 1
+        DutyparkWidgetRefreshService.invalidate()
         return AuthenticationSessionContext(
             memberID: member.id,
             generation: authenticationSessionGeneration
@@ -816,6 +825,7 @@ final class SessionStore: ObservableObject {
     private func invalidateAuthenticationContext() async -> UInt64 {
         authenticationSessionGeneration &+= 1
         let generation = authenticationSessionGeneration
+        DutyparkWidgetRefreshService.invalidate()
         // Attachment discard requests retain only account-scoped session IDs,
         // but a model-backed request must not continue after auth cookies are
         // invalidated. The durable record remains for the same account to
@@ -871,6 +881,7 @@ final class SessionStore: ObservableObject {
             await cancelOfflineSync(currentMember.id)
         }
         await localDataPurger.purgeLocalData(for: currentMember.id)
+        DutyparkWidgetRefreshService.clear(accountID: currentMember.id)
         await offlineSessionStore.purge()
     }
 
@@ -890,6 +901,7 @@ final class SessionStore: ObservableObject {
             TodoAttachmentDiscardStore.shared.purgeAll()
         }
         await localDataPurger.purgeLocalData(for: memberID)
+        DutyparkWidgetRefreshService.clear(accountID: memberID)
         await offlineSessionStore.purge()
     }
 }
