@@ -93,15 +93,20 @@ function calcDDayForDay(day: CalendarDay) {
   return diffDays < 0 ? `D${diffDays}` : `D+${diffDays + 1}`
 }
 
-function getDDaysForDay(day: CalendarDay): LocalDDay[] {
-  return props.dDays.filter((dday) => {
+const dDaysByDate = computed(() => {
+  const byDate = new Map<string, LocalDDay[]>()
+  for (const dday of props.dDays) {
     const ddayDate = parseDateOnly(dday.date)
-    return (
-      ddayDate.getFullYear() === day.year &&
-      ddayDate.getMonth() + 1 === day.month &&
-      ddayDate.getDate() === day.day
-    )
-  })
+    const key = `${ddayDate.getFullYear()}-${ddayDate.getMonth() + 1}-${ddayDate.getDate()}`
+    const entries = byDate.get(key)
+    if (entries) entries.push(dday)
+    else byDate.set(key, [dday])
+  }
+  return byDate
+})
+
+function getDDaysForDay(day: CalendarDay): LocalDDay[] {
+  return dDaysByDate.value.get(`${day.year}-${day.month}-${day.day}`) ?? []
 }
 
 function isDayClickable(_day: CalendarDay, index: number): boolean {
@@ -142,16 +147,29 @@ function hasScheduleDetails(schedule: Schedule) {
   return !!(schedule.description || schedule.attachments?.length)
 }
 
+const displayTagMembersBySchedule = computed(() => {
+  const bySchedule = new Map<Schedule, ReturnType<typeof buildDisplayTagMembers>>()
+  for (let index = 0; index < props.days.length; index++) {
+    // The grid renders up to three schedules per day. Keep identity-based keys
+    // because separate daily occurrences may share an id but carry different data.
+    for (const schedule of props.schedulesByDays[index]?.slice(0, 3) ?? []) {
+      if (bySchedule.has(schedule)) continue
+      bySchedule.set(schedule, buildDisplayTagMembers({
+        itemKey: schedule.id,
+        isTagged: schedule.isTagged,
+        owner: schedule.owner,
+        taggedBy: schedule.taggedBy,
+        taggedByMember: schedule.taggedByMember,
+        tags: schedule.tags,
+        excludeMemberId: props.memberId,
+      }))
+    }
+  }
+  return bySchedule
+})
+
 function getDisplayTagMembers(schedule: Schedule) {
-  return buildDisplayTagMembers({
-    itemKey: schedule.id,
-    isTagged: schedule.isTagged,
-    owner: schedule.owner,
-    taggedBy: schedule.taggedBy,
-    taggedByMember: schedule.taggedByMember,
-    tags: schedule.tags,
-    excludeMemberId: props.memberId,
-  })
+  return displayTagMembersBySchedule.value.get(schedule) ?? []
 }
 
 function getCalendarTagLabel(name: string) {

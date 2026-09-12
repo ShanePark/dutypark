@@ -43,8 +43,20 @@ function getLocale() {
   return getCurrentLocale()
 }
 
+const formatters = new Map<string, Intl.DateTimeFormat>()
+
 function formatWithLocale(date: Date, options: Intl.DateTimeFormatOptions): string {
-  return new Intl.DateTimeFormat(getLocale(), options).format(date)
+  const locale = getLocale()
+  const key = `${locale}:${JSON.stringify(options)}`
+  let formatter = formatters.get(key)
+  if (!formatter) {
+    // Reuse the few display styles within a render, then release them so later
+    // renders pick up changes to the system's default timezone as well.
+    if (formatters.size === 0) queueMicrotask(() => formatters.clear())
+    formatter = new Intl.DateTimeFormat(locale, options)
+    formatters.set(key, formatter)
+  }
+  return formatter.format(date)
 }
 
 /**
