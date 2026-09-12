@@ -13,7 +13,6 @@ import com.tistory.shanepark.dutypark.security.domain.dto.LoginDto
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.domain.dto.PasswordChangeDto
 import com.tistory.shanepark.dutypark.security.domain.entity.RefreshToken
-import com.tistory.shanepark.dutypark.security.domain.enums.TokenStatus
 import jakarta.persistence.EntityManager
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
@@ -74,7 +73,6 @@ class AuthServiceTest {
     fun `tokenToLoginMember returns login member for valid token`() {
         val loginMember = LoginMember(id = 1L, name = "user", sessionId = 10L)
         val member = memberWithId(1L)
-        whenever(jwtProvider.validateToken("token")).thenReturn(TokenStatus.VALID)
         whenever(jwtProvider.parseToken("token")).thenReturn(loginMember)
         whenever(refreshTokenService.isSessionActive(10L, 1L)).thenReturn(true)
         whenever(memberRepository.findById(1L)).thenReturn(Optional.of(member))
@@ -88,7 +86,6 @@ class AuthServiceTest {
     fun `tokenToLoginMember allows legacy token until its JWT expiration without revoking refresh session`() {
         val member = memberWithId(1L)
         val loginMember = LoginMember(id = 1L, name = "user")
-        whenever(jwtProvider.validateToken("legacy-token")).thenReturn(TokenStatus.VALID)
         whenever(jwtProvider.parseToken("legacy-token")).thenReturn(loginMember)
         whenever(memberRepository.findById(1L)).thenReturn(Optional.of(member))
 
@@ -100,7 +97,6 @@ class AuthServiceTest {
 
     @Test
     fun `tokenToLoginMember rejects revoked refresh session`() {
-        whenever(jwtProvider.validateToken("revoked-token")).thenReturn(TokenStatus.VALID)
         whenever(jwtProvider.parseToken("revoked-token"))
             .thenReturn(LoginMember(id = 1L, name = "user", sessionId = 10L))
         whenever(refreshTokenService.isSessionActive(10L, 1L)).thenReturn(false)
@@ -116,7 +112,6 @@ class AuthServiceTest {
     fun `tokenToLoginMember rejects deletion pending member`() {
         val loginMember = LoginMember(id = 1L, name = "user", sessionId = 10L)
         val member = memberWithId(1L).also { it.markDeletionPending(Instant.parse("2026-08-12T00:00:00Z")) }
-        whenever(jwtProvider.validateToken("token")).thenReturn(TokenStatus.VALID)
         whenever(jwtProvider.parseToken("token")).thenReturn(loginMember)
         whenever(refreshTokenService.isSessionActive(10L, 1L)).thenReturn(true)
         whenever(memberRepository.findById(1L)).thenReturn(Optional.of(member))
@@ -130,7 +125,7 @@ class AuthServiceTest {
 
     @Test
     fun `tokenToLoginMember throws for invalid token`() {
-        whenever(jwtProvider.validateToken("token")).thenReturn(TokenStatus.INVALID)
+        whenever(jwtProvider.parseToken("token")).thenThrow(AuthException())
 
         assertThrows<AuthException> {
             authService.tokenToLoginMember("token")
@@ -403,7 +398,6 @@ class AuthServiceTest {
     fun `tokenToLoginMember rejects suspended member`() {
         val loginMember = LoginMember(id = 1L, name = "user", sessionId = 10L)
         val member = memberWithId(1L).also { it.suspend() }
-        whenever(jwtProvider.validateToken("token")).thenReturn(TokenStatus.VALID)
         whenever(jwtProvider.parseToken("token")).thenReturn(loginMember)
         whenever(refreshTokenService.isSessionActive(10L, 1L)).thenReturn(true)
         whenever(memberRepository.findById(1L)).thenReturn(Optional.of(member))

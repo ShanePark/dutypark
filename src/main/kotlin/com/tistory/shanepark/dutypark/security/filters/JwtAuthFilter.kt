@@ -2,8 +2,6 @@ package com.tistory.shanepark.dutypark.security.filters
 
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
-import com.tistory.shanepark.dutypark.security.domain.enums.TokenStatus.NOT_EXIST
-import com.tistory.shanepark.dutypark.security.domain.enums.TokenStatus.VALID
 import com.tistory.shanepark.dutypark.security.service.AuthService
 import com.tistory.shanepark.dutypark.security.service.CookieService
 import jakarta.servlet.Filter
@@ -29,42 +27,28 @@ class JwtAuthFilter(
         if (shouldSkipTheFilter(req))
             return chain.doFilter(req, response)
 
-        var jwt = ""
-        var status = NOT_EXIST
         var tokenFromCookie = false
         var credentialsPresented = request.getHeader(HttpHeaders.AUTHORIZATION) != null
         var authenticated = false
 
-        val bearerToken = extractBearerToken(request)
-        if (bearerToken != null) {
-            status = authService.validateToken(bearerToken)
-            if (status == VALID) {
-                jwt = bearerToken
-            }
-        }
-
-        if (status != VALID) {
-            val cookieToken = cookieService.extractAccessToken(request.cookies)
-            if (cookieToken != null) {
-                credentialsPresented = true
-                val cookieStatus = authService.validateToken(cookieToken)
-                if (cookieStatus == VALID) {
-                    jwt = cookieToken
+        try {
+            var loginMember = extractBearerToken(request)?.let(authService::authenticateToken)
+            if (loginMember == null) {
+                val cookieToken = cookieService.extractAccessToken(request.cookies)
+                if (cookieToken != null) {
+                    credentialsPresented = true
                     tokenFromCookie = true
+                    loginMember = authService.authenticateToken(cookieToken)
                 }
-                status = cookieStatus
             }
-        }
 
-        if (status == VALID) {
-            try {
-                val loginMember = authService.tokenToLoginMember(jwt)
+            if (loginMember != null) {
                 request.setAttribute(LoginMember.ATTR_NAME, loginMember)
                 authenticated = true
-            } catch (_: AuthException) {
-                if (tokenFromCookie) {
-                    cookieService.clearTokenCookies(response)
-                }
+            }
+        } catch (_: AuthException) {
+            if (tokenFromCookie) {
+                cookieService.clearTokenCookies(response)
             }
         }
 
