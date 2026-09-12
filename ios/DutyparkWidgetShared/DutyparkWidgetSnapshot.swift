@@ -14,6 +14,12 @@ nonisolated struct DutyparkWidgetDay: Codable, Equatable, Sendable, Identifiable
     let abbreviation: String?
     let colorHex: String?
     let isOff: Bool
+    /// The first schedule returned for this date, shortened for the compact
+    /// monthly surface. `nil` means that this date has no schedules.
+    let scheduleContent: String?
+    /// Total schedules returned for this date, including the representative
+    /// schedule above.
+    let scheduleCount: Int
 
     var id: String { date }
 
@@ -23,7 +29,9 @@ nonisolated struct DutyparkWidgetDay: Codable, Equatable, Sendable, Identifiable
         isCurrentMonth: Bool,
         abbreviation: String?,
         colorHex: String?,
-        isOff: Bool
+        isOff: Bool,
+        scheduleContent: String? = nil,
+        scheduleCount: Int = 0
     ) {
         self.date = date
         self.weekday = weekday
@@ -31,6 +39,96 @@ nonisolated struct DutyparkWidgetDay: Codable, Equatable, Sendable, Identifiable
         self.abbreviation = abbreviation
         self.colorHex = colorHex
         self.isOff = isOff
+        self.scheduleContent = scheduleContent
+        self.scheduleCount = scheduleCount
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case date
+        case weekday
+        case isCurrentMonth
+        case abbreviation
+        case colorHex
+        case isOff
+        case scheduleContent
+        case scheduleCount
+    }
+
+    /// New schedule fields are optional on decode so snapshots written by the
+    /// previous monthly widget remain readable after an app update.
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        date = try container.decode(String.self, forKey: .date)
+        weekday = try container.decode(Int.self, forKey: .weekday)
+        isCurrentMonth = try container.decode(Bool.self, forKey: .isCurrentMonth)
+        abbreviation = try container.decodeIfPresent(String.self, forKey: .abbreviation)
+        colorHex = try container.decodeIfPresent(String.self, forKey: .colorHex)
+        isOff = try container.decode(Bool.self, forKey: .isOff)
+        scheduleContent = try container.decodeIfPresent(String.self, forKey: .scheduleContent)
+        scheduleCount = try container.decodeIfPresent(Int.self, forKey: .scheduleCount) ?? 0
+    }
+}
+
+nonisolated enum DutyparkWidgetTodoStatus: String, Codable, Equatable, Sendable {
+    case todo = "TODO"
+    case inProgress = "IN_PROGRESS"
+}
+
+/// Keeps the widget's compact schedule label consistent with Swift's user-
+/// visible character boundaries while leaving the persisted schedule content
+/// untouched for accessibility and future presentation changes.
+nonisolated enum DutyparkWidgetScheduleText {
+    static func shortened(_ content: String) -> String {
+        content.count > 5 ? String(content.prefix(5)) + "..." : content
+    }
+}
+
+/// Presentation-only Todo data shared with the extension. Completed cards are
+/// deliberately not representable in this contract.
+nonisolated struct DutyparkWidgetTodoItem: Codable, Equatable, Sendable, Identifiable {
+    let id: String
+    let title: String
+    let status: DutyparkWidgetTodoStatus
+
+    init(id: String, title: String, status: DutyparkWidgetTodoStatus) {
+        self.id = id
+        self.title = title
+        self.status = status
+    }
+
+    var isInProgress: Bool { status == .inProgress }
+}
+
+/// Short alias for callers that prefer the singular Todo model name.
+typealias DutyparkWidgetTodo = DutyparkWidgetTodoItem
+
+nonisolated struct DutyparkWidgetTodoSnapshot: Codable, Equatable, Sendable {
+    static let currentSchemaVersion = 1
+
+    let schemaVersion: Int
+    let accountID: Int64
+    let todos: [DutyparkWidgetTodoItem]
+    let updatedAt: Date
+
+    init(
+        accountID: Int64,
+        todos: [DutyparkWidgetTodoItem],
+        updatedAt: Date = .now,
+        schemaVersion: Int = currentSchemaVersion
+    ) {
+        self.schemaVersion = schemaVersion
+        self.accountID = accountID
+        self.todos = todos
+        self.updatedAt = updatedAt
+    }
+
+    var isCurrentSchema: Bool {
+        schemaVersion == Self.currentSchemaVersion
+            && accountID > 0
+            && todos.allSatisfy { todo in
+                !todo.id.isEmpty
+                    && !todo.title.isEmpty
+            }
     }
 }
 
@@ -72,6 +170,7 @@ nonisolated struct DutyparkWidgetSnapshot: Codable, Equatable, Sendable {
             && days.allSatisfy { day in
                 (1...7).contains(day.weekday)
                     && !day.date.isEmpty
+                    && day.scheduleCount >= 0
             }
     }
 }
@@ -80,6 +179,7 @@ nonisolated struct DutyparkWidgetSnapshot: Codable, Equatable, Sendable {
 /// cannot silently drift apart when one target is renamed.
 nonisolated enum DutyparkWidgetKind {
     static let monthly = "DutyparkMonthlyWidget"
+    static let todo = "DutyparkTodoWidget"
 }
 
 /// Synchronous, process-safe persistence for the app group snapshot.
@@ -97,6 +197,7 @@ nonisolated final class DutyparkWidgetSnapshotStore: @unchecked Sendable {
 
     private let rootURL: URL?
     private let fileManager: FileManager
+    private static let todoFileName = "todo.json"
     private let lock = NSLock()
     private var activeAccountID: Int64?
     private var activeSessionGeneration: UInt64?
@@ -178,6 +279,81 @@ nonisolated final class DutyparkWidgetSnapshotStore: @unchecked Sendable {
         )
     }
 
+    /// Saves the active Todo and in-progress cards for the current account.
+    /// Completed cards are filtered by the builder before they reach this store,
+    /// while the schema validator also rejects an unsupported status on decode.
+    @discardableResult
+    func saveTodo(
+        _ snapshot: DutyparkWidgetTodoSnapshot,
+        sessionGeneration: UInt64
+    ) -> Bool {
+        saveTodo(
+            snapshot,
+            sessionGeneration: sessionGeneration,
+            onlyIfMissing: false
+        )
+    }
+
+    /// Saves a cache migration only when no valid Todo snapshot exists for the
+    /// active account. A cached board must not replace a newer online publish.
+    @discardableResult
+    func saveTodoIfMissing(
+        _ snapshot: DutyparkWidgetTodoSnapshot,
+        sessionGeneration: UInt64
+    ) -> Bool {
+        saveTodo(
+            snapshot,
+            sessionGeneration: sessionGeneration,
+            onlyIfMissing: true
+        )
+    }
+
+    @discardableResult
+    private func saveTodo(
+        _ snapshot: DutyparkWidgetTodoSnapshot,
+        sessionGeneration: UInt64,
+        onlyIfMissing: Bool
+    ) -> Bool {
+        guard snapshot.isCurrentSchema else { return false }
+        lock.lock()
+        defer { lock.unlock() }
+        guard let activeAccountID,
+              activeAccountID == snapshot.accountID,
+              let activeSessionGeneration,
+              activeSessionGeneration == sessionGeneration,
+              let snapshotURL = todoURLUnlocked(accountID: snapshot.accountID)
+        else { return false }
+
+        do {
+            if let existingSnapshot = readTodoUnlocked(from: snapshotURL) {
+                let matchesSnapshot = existingSnapshot.isCurrentSchema
+                    && existingSnapshot.accountID == snapshot.accountID
+                if onlyIfMissing, matchesSnapshot {
+                    return false
+                }
+                if matchesSnapshot,
+                   existingSnapshot.updatedAt > snapshot.updatedAt {
+                    return false
+                }
+            }
+            let encoder = JSONEncoder()
+            encoder.dateEncodingStrategy = .millisecondsSince1970
+            encoder.outputFormatting = [.sortedKeys]
+            let data = try encoder.encode(snapshot)
+            try fileManager.createDirectory(
+                at: snapshotURL.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+            try data.write(
+                to: snapshotURL,
+                options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication]
+            )
+            return true
+        } catch {
+            return false
+        }
+    }
+
     @discardableResult
     private func save(
         _ snapshot: DutyparkWidgetSnapshot,
@@ -199,12 +375,13 @@ nonisolated final class DutyparkWidgetSnapshotStore: @unchecked Sendable {
         else { return false }
 
         do {
-            if let existingSnapshot = readUnlocked(from: snapshotURL) {
+            if let existing = readStoredSnapshotUnlocked(from: snapshotURL) {
+                let existingSnapshot = existing.snapshot
                 let matchesSnapshot = existingSnapshot.isCurrentSchema
                     && existingSnapshot.accountID == snapshot.accountID
                     && existingSnapshot.year == snapshot.year
                     && existingSnapshot.month == snapshot.month
-                if onlyIfMissing, matchesSnapshot {
+                if onlyIfMissing, matchesSnapshot, existing.hasScheduleFields {
                     return false
                 }
                 if matchesSnapshot,
@@ -267,6 +444,25 @@ nonisolated final class DutyparkWidgetSnapshotStore: @unchecked Sendable {
         shared.load(year: year, month: month)
     }
 
+    /// Reads the currently active account's Todo snapshot from the App Group.
+    func loadTodo() -> DutyparkWidgetTodoSnapshot? {
+        lock.lock()
+        defer { lock.unlock() }
+        guard let activeAccountID = readActiveAccountIDUnlocked(),
+              let snapshotURL = todoURLUnlocked(accountID: activeAccountID),
+              let snapshot = readTodoUnlocked(from: snapshotURL),
+              snapshot.accountID == activeAccountID,
+              snapshot.isCurrentSchema
+        else {
+            return nil
+        }
+        return snapshot
+    }
+
+    static func loadTodo() -> DutyparkWidgetTodoSnapshot? {
+        shared.loadTodo()
+    }
+
     /// Invalidates the active session before deleting its snapshot. An account ID
     /// mismatch is ignored so an old cleanup callback cannot erase a new account.
     func clear(accountID: Int64? = nil) {
@@ -291,13 +487,41 @@ nonisolated final class DutyparkWidgetSnapshotStore: @unchecked Sendable {
     }
 
     private func readUnlocked(from snapshotURL: URL) -> DutyparkWidgetSnapshot? {
-        guard
-              let data = try? Data(contentsOf: snapshotURL)
-        else { return nil }
+        readStoredSnapshotUnlocked(from: snapshotURL)?.snapshot
+    }
+
+    private func readStoredSnapshotUnlocked(
+        from snapshotURL: URL
+    ) -> (snapshot: DutyparkWidgetSnapshot, hasScheduleFields: Bool)? {
+        guard let data = try? Data(contentsOf: snapshotURL) else { return nil }
 
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .millisecondsSince1970
-        return try? decoder.decode(DutyparkWidgetSnapshot.self, from: data)
+        guard let snapshot = try? decoder.decode(DutyparkWidgetSnapshot.self, from: data) else {
+            return nil
+        }
+        return (
+            snapshot: snapshot,
+            hasScheduleFields: Self.hasScheduleFields(in: data)
+        )
+    }
+
+    private static func hasScheduleFields(in data: Data) -> Bool {
+        guard let object = try? JSONSerialization.jsonObject(with: data),
+              let payload = object as? [String: Any],
+              let days = payload["days"] as? [[String: Any]]
+        else { return false }
+        return days.contains { day in
+            day["scheduleContent"] != nil || day["scheduleCount"] != nil
+        }
+    }
+
+    private func readTodoUnlocked(from snapshotURL: URL) -> DutyparkWidgetTodoSnapshot? {
+        guard let data = try? Data(contentsOf: snapshotURL) else { return nil }
+
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .millisecondsSince1970
+        return try? decoder.decode(DutyparkWidgetTodoSnapshot.self, from: data)
     }
 
     private func activeAccountURLUnlocked() -> URL? {
@@ -320,6 +544,13 @@ nonisolated final class DutyparkWidgetSnapshotStore: @unchecked Sendable {
                 String(format: "%04d-%02d.json", year, month),
                 isDirectory: false
             )
+    }
+
+    private func todoURLUnlocked(accountID: Int64) -> URL? {
+        accountURLUnlocked(accountID)?.appendingPathComponent(
+            Self.todoFileName,
+            isDirectory: false
+        )
     }
 
     private func readActiveAccountIDUnlocked() -> Int64? {

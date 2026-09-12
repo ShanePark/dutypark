@@ -4,6 +4,136 @@ import XCTest
 
 @MainActor
 final class DutyparkWidgetSnapshotTests: XCTestCase {
+    func testSnapshotBuilderPublishesFirstScheduleContentAndTotalCount() throws {
+        let calendar = CalendarDateSupport.calendar
+        let firstDate = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 8, day: 30)))
+        let serverDays = try (0..<42).map { offset -> TeamDayDTO in
+            let date = try XCTUnwrap(calendar.date(byAdding: .day, value: offset, to: firstDate))
+            let parts = calendar.dateComponents([.year, .month, .day], from: date)
+            return TeamDayDTO(year: parts.year!, month: parts.month!, day: parts.day!)
+        }
+        let firstSchedule = makeSchedule(content: "가나다라마바")
+        let secondSchedule = makeSchedule(content: "두 번째 일정")
+        var schedules = Array(repeating: [ScheduleDTO](), count: 42)
+        schedules[2] = [firstSchedule, secondSchedule]
+
+        let snapshot = try XCTUnwrap(
+            DutyparkWidgetSnapshotBuilder.make(
+                accountID: 42,
+                key: OfflineMonthKey(year: 2026, month: 9),
+                calendar: serverDays,
+                duties: [],
+                schedules: schedules
+            )
+        )
+
+        let day = try XCTUnwrap(snapshot.days[2])
+        XCTAssertEqual(day.scheduleContent, "가나다라마바")
+        XCTAssertEqual(day.scheduleCount, 2)
+        XCTAssertNil(snapshot.days[3].scheduleContent)
+        XCTAssertEqual(snapshot.days[3].scheduleCount, 0)
+    }
+
+    func testScheduleTextUsesCharacterBoundaryAndLeavesExactFiveUntouched() {
+        XCTAssertEqual(DutyparkWidgetScheduleText.shortened("12345"), "12345")
+        XCTAssertEqual(DutyparkWidgetScheduleText.shortened("123456"), "12345...")
+        XCTAssertEqual(DutyparkWidgetScheduleText.shortened("가나다라마"), "가나다라마")
+        XCTAssertEqual(DutyparkWidgetScheduleText.shortened("가나다라마바"), "가나다라마...")
+        XCTAssertEqual(DutyparkWidgetScheduleText.shortened("😀😃😄😁😆"), "😀😃😄😁😆")
+        XCTAssertEqual(DutyparkWidgetScheduleText.shortened("😀😃😄😁😆😅"), "😀😃😄😁😆...")
+    }
+
+    func testTodoSnapshotBuilderKeepsTodoThenInProgressAndDropsDone() throws {
+        let board = TodoBoardDTO(
+            todo: [makeTodo(id: "todo-1", title: "First", status: .todo)],
+            inProgress: [makeTodo(id: "doing-1", title: "Second", status: .inProgress)],
+            done: [makeTodo(id: "done-1", title: "Completed", status: .done)],
+            counts: TodoCountsDTO(todo: 1, inProgress: 1, done: 1, total: 3)
+        )
+
+        let snapshot = try XCTUnwrap(
+            DutyparkWidgetSnapshotBuilder.make(accountID: 42, board: board)
+        )
+
+        XCTAssertEqual(snapshot.todos.map(\.id), ["todo-1", "doing-1"])
+        XCTAssertEqual(snapshot.todos.map(\.status), [.todo, .inProgress])
+    }
+
+    func testLegacyMonthlySnapshotDecodesWithoutNewScheduleFields() throws {
+        let legacyDay: [String: Any] = [
+            "date": "2026-09-01",
+            "weekday": 3,
+            "isCurrentMonth": true,
+            "abbreviation": "E",
+            "colorHex": "#123456",
+            "isOff": false
+        ]
+        let payload: [String: Any] = [
+            "schemaVersion": 1,
+            "accountID": 42,
+            "year": 2026,
+            "month": 9,
+            "days": Array(repeating: legacyDay, count: 42),
+            "updatedAt": 100_000
+        ]
+        let data = try JSONSerialization.data(withJSONObject: payload)
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .millisecondsSince1970
+        let snapshot = try decoder.decode(DutyparkWidgetSnapshot.self, from: data)
+
+        XCTAssertTrue(snapshot.isCurrentSchema)
+        XCTAssertNil(snapshot.days[0].scheduleContent)
+        XCTAssertEqual(snapshot.days[0].scheduleCount, 0)
+    }
+
+    func testTodoSnapshotStoreIsAccountAndSessionScoped() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("dutypark-widget-todo-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let store = DutyparkWidgetSnapshotStore(rootURL: root)
+        store.activate(accountID: 42, sessionGeneration: 7)
+        let snapshot = DutyparkWidgetTodoSnapshot(
+            accountID: 42,
+            todos: [
+                DutyparkWidgetTodoItem(id: "todo-1", title: "Todo", status: .todo),
+                DutyparkWidgetTodoItem(id: "todo-2", title: "Doing", status: .inProgress)
+            ],
+            updatedAt: Date(timeIntervalSince1970: 100)
+        )
+
+        XCTAssertTrue(store.saveTodo(snapshot, sessionGeneration: 7))
+        XCTAssertEqual(store.loadTodo(), snapshot)
+
+        store.activate(accountID: 99, sessionGeneration: 8)
+        XCTAssertNil(store.loadTodo())
+        XCTAssertFalse(store.saveTodo(snapshot, sessionGeneration: 8))
+    }
+
+    func testTodoSnapshotStoreDoesNotReplaceNewerOnlineDataWithCachedData() throws {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("dutypark-widget-todo-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let store = DutyparkWidgetSnapshotStore(rootURL: root)
+        store.activate(accountID: 42, sessionGeneration: 7)
+        let newer = DutyparkWidgetTodoSnapshot(
+            accountID: 42,
+            todos: [DutyparkWidgetTodoItem(id: "new", title: "Online", status: .todo)],
+            updatedAt: Date(timeIntervalSince1970: 200)
+        )
+        let older = DutyparkWidgetTodoSnapshot(
+            accountID: 42,
+            todos: [DutyparkWidgetTodoItem(id: "old", title: "Cached", status: .todo)],
+            updatedAt: Date(timeIntervalSince1970: 100)
+        )
+
+        XCTAssertTrue(store.saveTodo(newer, sessionGeneration: 7))
+        XCTAssertFalse(store.saveTodoIfMissing(older, sessionGeneration: 7))
+        XCTAssertFalse(store.saveTodo(older, sessionGeneration: 7))
+        XCTAssertEqual(store.loadTodo(), newer)
+    }
+
     func testSnapshotStoreRoundTripsAndRejectsAStaleSessionWriteAfterClear() throws {
         let root = FileManager.default.temporaryDirectory
             .appendingPathComponent("dutypark-widget-\(UUID().uuidString)", isDirectory: true)
@@ -247,6 +377,93 @@ final class DutyparkWidgetSnapshotTests: XCTestCase {
         XCTAssertEqual(store.load(year: key.year, month: key.month), existing)
     }
 
+    func testRefreshCurrentMonthPublishesSchedulesAndTodos() async throws {
+        let now = try XCTUnwrap(
+            CalendarDateSupport.date(from: DateOnly(rawValue: "2026-09-15"))
+        )
+        let key = OfflineMonthKey(year: 2026, month: 9)
+        var schedules = Array(repeating: [ScheduleDTO](), count: 42)
+        schedules[2] = [makeSchedule(content: "원문 일정 여섯자")]
+        let todo = makeTodo(id: "todo-widget", title: "Widget task", status: .todo)
+        let board = TodoBoardDTO(
+            todo: [todo],
+            inProgress: [],
+            done: [makeTodo(id: "done-widget", title: "Done task", status: .done)],
+            counts: TodoCountsDTO(todo: 1, inProgress: 0, done: 1, total: 2)
+        )
+        let cachedBoard = TodoBoardDTO(
+            todo: [makeTodo(id: "cached-widget", title: "Cached task", status: .todo)],
+            inProgress: [],
+            done: [],
+            counts: TodoCountsDTO(todo: 1, inProgress: 0, done: 0, total: 1)
+        )
+        let store = DutyparkWidgetSnapshotStore(
+            rootURL: FileManager.default.temporaryDirectory
+                .appendingPathComponent("dutypark-widget-\(UUID().uuidString)", isDirectory: true)
+        )
+        defer { store.clear() }
+        store.activate(accountID: 42, sessionGeneration: 7)
+        let refreshStartedAt = Date.now
+
+        await DutyparkWidgetRefreshService.refreshCurrentMonth(
+            accountID: 42,
+            sessionGeneration: 7,
+            now: now,
+            repository: DutyparkWidgetRepositoryStub(
+                schedules: schedules,
+                todoBoard: board
+            ),
+            // The cache publish intentionally has no reliable board timestamp;
+            // the authenticated result must still replace it below.
+            cache: DutyparkWidgetCacheStub(snapshots: [], todoBoard: cachedBoard),
+            store: store
+        )
+
+        let monthly = try XCTUnwrap(store.load(year: key.year, month: key.month))
+        XCTAssertEqual(monthly.days[2].scheduleContent, "원문 일정 여섯자")
+        XCTAssertEqual(monthly.days[2].scheduleCount, 1)
+        XCTAssertEqual(store.loadTodo()?.todos.map(\.id), [todo.id])
+        XCTAssertGreaterThanOrEqual(try XCTUnwrap(store.loadTodo()).updatedAt, refreshStartedAt)
+    }
+
+    func testRefreshCurrentMonthStillPublishesDutiesWhenSchedulesFail() async throws {
+        let now = try XCTUnwrap(
+            CalendarDateSupport.date(from: DateOnly(rawValue: "2026-09-15"))
+        )
+        let key = OfflineMonthKey(year: 2026, month: 9)
+        var cachedSchedules = Array(repeating: [ScheduleDTO](), count: 42)
+        cachedSchedules[2] = [makeSchedule(content: "Cached schedule")]
+        let cached = makeOfflineMonthSnapshot(
+            accountID: 42,
+            key: key,
+            schedules: cachedSchedules,
+            storedAt: Date(timeIntervalSince1970: 100)
+        )
+        let store = DutyparkWidgetSnapshotStore(
+            rootURL: FileManager.default.temporaryDirectory
+                .appendingPathComponent("dutypark-widget-\(UUID().uuidString)", isDirectory: true)
+        )
+        defer { store.clear() }
+        store.activate(accountID: 42, sessionGeneration: 7)
+
+        await DutyparkWidgetRefreshService.refreshCurrentMonth(
+            accountID: 42,
+            sessionGeneration: 7,
+            now: now,
+            repository: DutyparkWidgetRepositoryStub(
+                schedulesError: .transport,
+                todoBoardError: .transport
+            ),
+            cache: DutyparkWidgetCacheStub(snapshots: [cached]),
+            store: store
+        )
+
+        let monthly = try XCTUnwrap(store.load(year: key.year, month: key.month))
+        XCTAssertEqual(monthly.days[2].scheduleContent, "Cached schedule")
+        XCTAssertEqual(monthly.days[2].scheduleCount, 1)
+        XCTAssertEqual(monthly.accountID, 42)
+    }
+
     func testRefreshCurrentMonthDoesNotStartAnApiRequestAfterAccountSwitchDuringCacheLoad() async {
         let root = FileManager.default.temporaryDirectory
             .appendingPathComponent("dutypark-widget-\(UUID().uuidString)", isDirectory: true)
@@ -300,13 +517,14 @@ final class DutyparkWidgetSnapshotTests: XCTestCase {
     private func makeOfflineMonthSnapshot(
         accountID: Int64,
         key: OfflineMonthKey,
+        schedules: [[ScheduleDTO]] = Array(repeating: [], count: 42),
         storedAt: Date
     ) -> OfflineMonthSnapshot {
         OfflineMonthSnapshot(
             accountID: accountID,
             key: key,
             calendar: DutyparkWidgetRepositoryStub.gridDays(year: key.year, month: key.month),
-            schedules: Array(repeating: [], count: 42),
+            schedules: schedules,
             duties: [DutyDTO(
                 year: key.year,
                 month: key.month,
@@ -324,17 +542,69 @@ final class DutyparkWidgetSnapshotTests: XCTestCase {
             storedAt: storedAt
         )
     }
+
+    private func makeSchedule(content: String) -> ScheduleDTO {
+        ScheduleDTO(
+            id: UUID(),
+            content: content,
+            description: "",
+            position: 0,
+            year: 2026,
+            month: 9,
+            dayOfMonth: 1,
+            startDateTime: LocalDateTimeValue(rawValue: "2026-09-01T09:00:00"),
+            endDateTime: LocalDateTimeValue(rawValue: "2026-09-01T10:00:00"),
+            isTagged: false,
+            owner: "Me",
+            taggedByMember: nil,
+            tags: [],
+            visibility: .privateAccess,
+            dateToCompare: DateOnly(rawValue: "2026-09-01"),
+            attachments: [],
+            startDate: DateOnly(rawValue: "2026-09-01"),
+            daysFromStart: 0,
+            endDate: DateOnly(rawValue: "2026-09-01"),
+            curDate: DateOnly(rawValue: "2026-09-01"),
+            totalDays: 1
+        )
+    }
+
+    private func makeTodo(
+        id: String,
+        title: String,
+        status: TodoStatus
+    ) -> TodoDTO {
+        TodoDTO(
+            id: id,
+            title: title,
+            content: "Details",
+            position: 0,
+            status: status,
+            createdDate: LocalDateTimeValue(rawValue: "2026-09-01T09:00:00"),
+            completedDate: nil,
+            dueDate: nil,
+            isOverdue: false,
+            isTagged: false,
+            owner: "Me",
+            taggedByMember: nil,
+            tags: [],
+            hasAttachments: false
+        )
+    }
 }
 
 private actor DutyparkWidgetCacheStub: OfflineCacheProviding {
     private let snapshots: [OfflineMonthSnapshot]
+    private let todoBoard: TodoBoardDTO?
     private let onLoad: (@Sendable () -> Void)?
 
     init(
         snapshots: [OfflineMonthSnapshot],
+        todoBoard: TodoBoardDTO? = nil,
         onLoad: (@Sendable () -> Void)? = nil
     ) {
         self.snapshots = snapshots
+        self.todoBoard = todoBoard
         self.onLoad = onLoad
     }
 
@@ -362,7 +632,7 @@ private actor DutyparkWidgetCacheStub: OfflineCacheProviding {
     }
 
     func saveTodoBoard(accountID: MemberID, board: TodoBoardDTO, now: Date) async throws {}
-    func loadTodoBoard(accountID: MemberID) async -> TodoBoardDTO? { nil }
+    func loadTodoBoard(accountID: MemberID) async -> TodoBoardDTO? { todoBoard }
 
     func searchSchedules(
         accountID: MemberID,
@@ -374,8 +644,31 @@ private actor DutyparkWidgetCacheStub: OfflineCacheProviding {
 }
 
 private actor DutyparkWidgetRepositoryStub: CalendarRepositoryProtocol {
+    private static let emptyTodoBoard = TodoBoardDTO(
+        todo: [],
+        inProgress: [],
+        done: [],
+        counts: TodoCountsDTO(todo: 0, inProgress: 0, done: 0, total: 0)
+    )
+
+    private let schedulePayload: [[ScheduleDTO]]
+    private let schedulesError: APIError?
+    private let todoBoardPayload: TodoBoardDTO
+    private let todoBoardError: APIError?
     private var calendarRequestCount = 0
     private var dutiesRequestCount = 0
+
+    init(
+        schedules: [[ScheduleDTO]] = Array(repeating: [], count: 42),
+        schedulesError: APIError? = nil,
+        todoBoard: TodoBoardDTO? = nil,
+        todoBoardError: APIError? = nil
+    ) {
+        self.schedulePayload = schedules
+        self.schedulesError = schedulesError
+        self.todoBoardPayload = todoBoard ?? Self.emptyTodoBoard
+        self.todoBoardError = todoBoardError
+    }
 
     func requestCounts() -> (calendar: Int, duties: Int) {
         (calendarRequestCount, dutiesRequestCount)
@@ -398,10 +691,16 @@ private actor DutyparkWidgetRepositoryStub: CalendarRepositoryProtocol {
     }
 
     func otherDuties(memberIDs: [MemberID], year: Int, month: Int) async throws -> [OtherDutyResponse] { fatalError("Not used") }
-    func schedules(memberID: MemberID, year: Int, month: Int) async throws -> [[ScheduleDTO]] { fatalError("Not used") }
+    func schedules(memberID: MemberID, year: Int, month: Int) async throws -> [[ScheduleDTO]] {
+        if let schedulesError { throw schedulesError }
+        return schedulePayload
+    }
     func holidays(year: Int, month: Int) async throws -> [[HolidayDTO]] { fatalError("Not used") }
     func dDays(memberID: MemberID, isMine: Bool) async throws -> [DDayDTO] { fatalError("Not used") }
-    func todoBoard() async throws -> TodoBoardDTO { fatalError("Not used") }
+    func todoBoard() async throws -> TodoBoardDTO {
+        if let todoBoardError { throw todoBoardError }
+        return todoBoardPayload
+    }
     func saveSchedule(_ request: ScheduleSaveDTO) async throws -> ScheduleSaveResponse { fatalError("Not used") }
     func deleteSchedule(id: ScheduleID) async throws { fatalError("Not used") }
     func untagSelf(scheduleID: ScheduleID) async throws { fatalError("Not used") }

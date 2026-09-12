@@ -4,6 +4,7 @@ import WidgetKit
 
 private enum DutyparkWidgetConstants {
     static let appURL = "https://dutypark.o-r.kr/duty/"
+    static let todoAppURL = "https://dutypark.o-r.kr/todo"
     static let weekdaysKorean = ["일", "월", "화", "수", "목", "금", "토"]
     static let weekdaysEnglish = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 }
@@ -18,8 +19,14 @@ nonisolated struct DutyparkWidgetDayPresentation: Identifiable, Hashable, Sendab
     let abbreviation: String?
     let colorHex: String?
     let isOff: Bool
+    let scheduleContent: String?
+    let scheduleCount: Int
 
     var id: String { date }
+
+    var displayScheduleContent: String? {
+        scheduleContent.map(DutyparkWidgetScheduleText.shortened)
+    }
 
     init(
         date: String,
@@ -27,7 +34,9 @@ nonisolated struct DutyparkWidgetDayPresentation: Identifiable, Hashable, Sendab
         isCurrentMonth: Bool,
         abbreviation: String?,
         colorHex: String?,
-        isOff: Bool
+        isOff: Bool,
+        scheduleContent: String? = nil,
+        scheduleCount: Int = 0
     ) {
         self.date = date
         self.weekday = weekday
@@ -35,6 +44,8 @@ nonisolated struct DutyparkWidgetDayPresentation: Identifiable, Hashable, Sendab
         self.abbreviation = abbreviation
         self.colorHex = colorHex
         self.isOff = isOff
+        self.scheduleContent = scheduleContent
+        self.scheduleCount = scheduleCount
     }
 }
 
@@ -141,7 +152,9 @@ struct DutyparkWidgetProvider: TimelineProvider {
                 isCurrentMonth: day.isCurrentMonth,
                 abbreviation: day.abbreviation,
                 colorHex: day.colorHex,
-                isOff: day.isOff
+                isOff: day.isOff,
+                scheduleContent: day.scheduleContent,
+                scheduleCount: day.scheduleCount
             )
         } ?? []
 
@@ -345,19 +358,43 @@ private struct DutyparkWidgetDayCell: View {
                 .foregroundStyle(dayNumberColor)
                 .frame(maxWidth: .infinity, alignment: .leading)
             Spacer(minLength: 0)
-            if let abbreviation = displayAbbreviation {
-                Text(abbreviation)
-                    .font(.system(size: 14, weight: .heavy, design: .rounded))
-                    .foregroundStyle(dutyForeground)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.55)
-                    .padding(.horizontal, 3)
-                    .background(
-                        colorScheme == .dark ? .clear : dutyTint.opacity(0.11),
-                        in: RoundedRectangle(cornerRadius: 4, style: .continuous)
-                    )
-                    .frame(maxWidth: .infinity, alignment: .center)
+            VStack(alignment: .center, spacing: 1) {
+                if let abbreviation = displayAbbreviation {
+                    Text(abbreviation)
+                        .font(.system(size: 14, weight: .heavy, design: .rounded))
+                        .foregroundStyle(dutyForeground)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.55)
+                        .padding(.horizontal, 3)
+                        .background(
+                            colorScheme == .dark ? .clear : dutyTint.opacity(0.11),
+                            in: RoundedRectangle(cornerRadius: 4, style: .continuous)
+                        )
+                        .frame(maxWidth: .infinity, alignment: .center)
+                }
+                if let scheduleContent = day.displayScheduleContent,
+                   !scheduleContent.isEmpty {
+                    Text(scheduleContent)
+                        .font(.system(size: 9, weight: .semibold, design: .rounded))
+                        .foregroundStyle(scheduleForeground)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                }
+                if day.scheduleCount > 0 {
+                    Text("\(day.scheduleCount)")
+                        .font(.system(size: 8, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(scheduleForeground)
+                        .padding(.horizontal, 3)
+                        .background(
+                            WidgetPalette.scheduleBadgeBackground(for: colorScheme),
+                            in: Capsule(style: .continuous)
+                        )
+                        .accessibilityLabel(scheduleCountAccessibilityLabel)
+                }
             }
+            .frame(maxWidth: .infinity, alignment: .center)
         }
         .padding(.horizontal, 3)
         .padding(.vertical, 3)
@@ -401,10 +438,28 @@ private struct DutyparkWidgetDayCell: View {
     }
 
     private var accessibilityLabel: String {
+        var labels = [day.date]
         if let abbreviation = displayAbbreviation {
-            return "\(day.date), \(abbreviation)"
+            labels.append(abbreviation)
         }
-        return day.date
+        if let scheduleContent = day.scheduleContent,
+           !scheduleContent.isEmpty {
+            labels.append(scheduleContent)
+        }
+        if day.scheduleCount > 0 {
+            labels.append(scheduleCountAccessibilityLabel)
+        }
+        return labels.joined(separator: ", ")
+    }
+
+    private var scheduleCountAccessibilityLabel: String {
+        isKorean
+            ? "일정 \(day.scheduleCount)개"
+            : "\(day.scheduleCount) schedule\(day.scheduleCount == 1 ? "" : "s")"
+    }
+
+    private var isKorean: Bool {
+        Locale.current.language.languageCode?.identifier == "ko"
     }
 
     private var displayAbbreviation: String? {
@@ -446,6 +501,10 @@ private struct DutyparkWidgetDayCell: View {
             ?? (day.isOff
                 ? WidgetPalette.off(for: colorScheme)
                 : WidgetPalette.emptyDuty(for: colorScheme))
+    }
+
+    private var scheduleForeground: Color {
+        WidgetPalette.secondaryText(for: colorScheme)
     }
 }
 
@@ -520,6 +579,12 @@ private enum WidgetPalette {
         colorScheme == .dark
             ? Color(red: 0.82, green: 0.835, blue: 0.86)
             : Color(red: 0.42, green: 0.45, blue: 0.50)
+    }
+
+    static func scheduleBadgeBackground(for colorScheme: ColorScheme) -> Color {
+        colorScheme == .dark
+            ? Color(red: 0.216, green: 0.255, blue: 0.318)
+            : Color(red: 0.90, green: 0.906, blue: 0.922)
     }
 
 }
@@ -612,10 +677,287 @@ private enum WidgetHexColor {
     }
 }
 
+nonisolated enum DutyparkTodoWidgetAvailability: Equatable, Sendable {
+    case needsSync
+    case available
+}
+
+nonisolated struct DutyparkTodoWidgetEntry: TimelineEntry {
+    let date: Date
+    let accountID: Int64?
+    let todos: [DutyparkWidgetTodoItem]
+    let updatedAt: Date?
+    let isPlaceholder: Bool
+    let availability: DutyparkTodoWidgetAvailability
+
+    init(
+        date: Date,
+        accountID: Int64?,
+        todos: [DutyparkWidgetTodoItem],
+        updatedAt: Date?,
+        isPlaceholder: Bool = false,
+        availability: DutyparkTodoWidgetAvailability = .available
+    ) {
+        self.date = date
+        self.accountID = accountID
+        self.todos = todos
+        self.updatedAt = updatedAt
+        self.isPlaceholder = isPlaceholder
+        self.availability = availability
+    }
+}
+
+struct DutyparkTodoWidgetProvider: TimelineProvider {
+    private var calendar: Calendar {
+        var value = Calendar(identifier: .gregorian)
+        value.locale = Locale.current
+        value.timeZone = .current
+        return value
+    }
+
+    func placeholder(in context: Context) -> DutyparkTodoWidgetEntry {
+        DutyparkTodoWidgetEntry(
+            date: .now,
+            accountID: nil,
+            todos: [
+                DutyparkWidgetTodoItem(id: "placeholder-todo", title: "할 일을 확인하세요", status: .todo),
+                DutyparkWidgetTodoItem(id: "placeholder-progress", title: "진행 중인 할 일", status: .inProgress)
+            ],
+            updatedAt: nil,
+            isPlaceholder: true,
+            availability: .available
+        )
+    }
+
+    func getSnapshot(
+        in context: Context,
+        completion: @escaping (DutyparkTodoWidgetEntry) -> Void
+    ) {
+        if context.isPreview {
+            completion(
+                DutyparkTodoWidgetEntry(
+                    date: .now,
+                    accountID: 1,
+                    todos: DutyparkTodoWidgetPreviewData.todos,
+                    updatedAt: Date().addingTimeInterval(-60 * 60),
+                    availability: .available
+                )
+            )
+        } else {
+            completion(makeEntry(at: .now, snapshot: DutyparkWidgetSnapshotStore.loadTodo()))
+        }
+    }
+
+    func getTimeline(
+        in context: Context,
+        completion: @escaping (Timeline<DutyparkTodoWidgetEntry>) -> Void
+    ) {
+        let now = Date()
+        let entry = makeEntry(at: now, snapshot: DutyparkWidgetSnapshotStore.loadTodo())
+        let nextMidnight = calendar.nextDate(
+            after: now,
+            matching: DateComponents(hour: 0, minute: 0, second: 0),
+            matchingPolicy: .nextTime,
+            direction: .forward
+        ) ?? now.addingTimeInterval(60 * 60 * 24)
+        let midnightEntry = makeEntry(
+            at: nextMidnight,
+            snapshot: DutyparkWidgetSnapshotStore.loadTodo()
+        )
+        completion(
+            Timeline(
+                entries: [entry, midnightEntry],
+                policy: .after(nextMidnight)
+            )
+        )
+    }
+
+    private func makeEntry(
+        at date: Date,
+        snapshot: DutyparkWidgetTodoSnapshot?
+    ) -> DutyparkTodoWidgetEntry {
+        DutyparkTodoWidgetEntry(
+            date: date,
+            accountID: snapshot?.accountID,
+            todos: snapshot?.todos ?? [],
+            updatedAt: snapshot?.updatedAt,
+            availability: snapshot == nil ? .needsSync : .available
+        )
+    }
+}
+
+struct DutyparkTodoWidgetView: View {
+    let entry: DutyparkTodoWidgetEntry
+
+    private static let maximumVisibleTodoCount = 3
+
+    @Environment(\.colorScheme) private var colorScheme
+
+    private var isKorean: Bool {
+        Locale.current.language.languageCode?.identifier == "ko"
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 6) {
+                Image(systemName: "checklist")
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(WidgetPalette.today(for: colorScheme))
+                    .accessibilityHidden(true)
+                Text(isKorean ? "할 일" : "Todos")
+                    .font(.system(size: 18, weight: .heavy, design: .rounded))
+                    .foregroundStyle(WidgetPalette.primaryText(for: colorScheme))
+                Spacer(minLength: 4)
+                if entry.availability == .available, !entry.todos.isEmpty {
+                    Text("\(entry.todos.count)")
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                        .foregroundStyle(WidgetPalette.secondaryText(for: colorScheme))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(
+                            WidgetPalette.scheduleBadgeBackground(for: colorScheme),
+                            in: Capsule(style: .continuous)
+                        )
+                }
+            }
+            if entry.isPlaceholder {
+                todoRows
+                    .redacted(reason: .placeholder)
+            } else if entry.availability == .needsSync {
+                syncState
+            } else if entry.todos.isEmpty {
+                emptyState
+            } else {
+                todoRows
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .containerBackground(for: .widget) {
+            WidgetPalette.background(for: colorScheme)
+        }
+        .widgetURL(URL(string: DutyparkWidgetConstants.todoAppURL))
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel(accessibilityLabel)
+    }
+
+    private var todoRows: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            ForEach(Array(entry.todos.prefix(Self.maximumVisibleTodoCount))) { todo in
+                HStack(spacing: 7) {
+                    Circle()
+                        .fill(todo.status == .inProgress
+                            ? WidgetPalette.today(for: colorScheme)
+                            : WidgetPalette.secondaryText(for: colorScheme))
+                        .frame(width: 7, height: 7)
+                        .accessibilityHidden(true)
+                    Text(todo.title)
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .foregroundStyle(WidgetPalette.primaryText(for: colorScheme))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.65)
+                    Spacer(minLength: 0)
+                    Text(statusLabel(for: todo.status))
+                        .font(.system(size: 10, weight: .medium, design: .rounded))
+                        .foregroundStyle(WidgetPalette.secondaryText(for: colorScheme))
+                        .lineLimit(1)
+                }
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel("\(todo.title), \(statusLabel(for: todo.status))")
+            }
+            if hiddenTodoCount > 0 {
+                Text(isKorean ? "+\(hiddenTodoCount)개 더 보기" : "+\(hiddenTodoCount) more")
+                    .font(.system(size: 11, weight: .semibold, design: .rounded))
+                    .foregroundStyle(WidgetPalette.secondaryText(for: colorScheme))
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(
+                        isKorean
+                            ? "할 일 \(hiddenTodoCount)개 더 있음"
+                            : "\(hiddenTodoCount) more todos"
+                    )
+            }
+        }
+    }
+
+    private var hiddenTodoCount: Int {
+        max(0, entry.todos.count - Self.maximumVisibleTodoCount)
+    }
+
+    private var syncState: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Image(systemName: "arrow.clockwise.circle")
+                .font(.system(size: 21, weight: .medium))
+                .foregroundStyle(WidgetPalette.secondaryText(for: colorScheme))
+                .accessibilityHidden(true)
+            Text(isKorean ? "앱을 열어 할 일을 동기화하세요" : "Open Dutypark to sync your todos")
+                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .foregroundStyle(WidgetPalette.secondaryText(for: colorScheme))
+                .lineLimit(2)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+    }
+
+    private var emptyState: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Image(systemName: "checkmark.circle")
+                .font(.system(size: 21, weight: .medium))
+                .foregroundStyle(WidgetPalette.secondaryText(for: colorScheme))
+                .accessibilityHidden(true)
+            Text(isKorean ? "할 일이 없습니다" : "No active todos")
+                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .foregroundStyle(WidgetPalette.secondaryText(for: colorScheme))
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
+    }
+
+    private func statusLabel(for status: DutyparkWidgetTodoStatus) -> String {
+        switch status {
+        case .todo: isKorean ? "할 일" : "To do"
+        case .inProgress: isKorean ? "진행 중" : "Doing"
+        }
+    }
+
+    private var accessibilityLabel: String {
+        if entry.availability == .needsSync {
+            return isKorean
+                ? "앱을 열어 할 일을 동기화하세요"
+                : "Open Dutypark to sync your todos"
+        }
+        if entry.todos.isEmpty {
+            return isKorean ? "진행 중인 할 일 없음" : "No active todos"
+        }
+        let items = entry.todos.prefix(Self.maximumVisibleTodoCount).map {
+            "\($0.title), \(statusLabel(for: $0.status))"
+        }.joined(separator: ", ")
+        let remaining = hiddenTodoCount > 0
+            ? (isKorean ? ", \(hiddenTodoCount)개 더 있음" : ", \(hiddenTodoCount) more")
+            : ""
+        return isKorean
+            ? "활성 할 일, \(items)\(remaining)"
+            : "Active todos, \(items)\(remaining)"
+    }
+}
+
 @main
 struct DutyparkWidgets: WidgetBundle {
     var body: some Widget {
         DutyparkMonthlyWidget()
+        DutyparkTodoWidget()
+    }
+}
+
+struct DutyparkTodoWidget: Widget {
+    let kind = DutyparkWidgetKind.todo
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: DutyparkTodoWidgetProvider()) { entry in
+            DutyparkTodoWidgetView(entry: entry)
+        }
+        .configurationDisplayName("할 일")
+        .description("완료하지 않은 할 일을 확인합니다.")
+        .supportedFamilies([.systemMedium])
+        .contentMarginsDisabled()
     }
 }
 
@@ -645,6 +987,17 @@ struct DutyparkMonthlyWidget: Widget {
         updatedAt: Date().addingTimeInterval(-60 * 60),
         isPlaceholder: false,
         hasCurrentMonthData: true
+    )
+}
+
+#Preview(as: .systemMedium) {
+    DutyparkTodoWidget()
+} timeline: {
+    DutyparkTodoWidgetEntry(
+        date: Date(),
+        accountID: 1,
+        todos: DutyparkTodoWidgetPreviewData.todos,
+        updatedAt: Date().addingTimeInterval(-60 * 60)
     )
 }
 
@@ -709,4 +1062,24 @@ private enum DutyparkWidgetPreviewData {
             )
         }
     }()
+}
+
+private enum DutyparkTodoWidgetPreviewData {
+    static let todos = [
+        DutyparkWidgetTodoItem(
+            id: "preview-todo",
+            title: "병동 인수인계 확인",
+            status: .todo
+        ),
+        DutyparkWidgetTodoItem(
+            id: "preview-progress",
+            title: "이번 주 일정 정리",
+            status: .inProgress
+        ),
+        DutyparkWidgetTodoItem(
+            id: "preview-todo-two",
+            title: "팀 공지 작성",
+            status: .todo
+        )
+    ]
 }
