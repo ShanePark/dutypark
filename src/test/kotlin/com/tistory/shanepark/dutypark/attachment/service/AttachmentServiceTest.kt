@@ -535,6 +535,13 @@ class AttachmentServiceTest {
             return attachments.values.filter { it.contextType == contextType && it.contextId in contextIds }
         }
 
+        override fun findContextIdsWithAttachments(
+            contextType: AttachmentContextType,
+            contextIds: Collection<String>,
+        ): List<String> {
+            return findAllByContextTypeAndContextIdIn(contextType, contextIds).mapNotNull { it.contextId }.distinct()
+        }
+
         override fun findAllByContextTypeAndContextIdOrderByOrderIndexAsc(
             contextType: AttachmentContextType,
             contextId: String

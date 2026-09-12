@@ -42,7 +42,7 @@ class TodoService(
         val member = findMember(loginMember)
         return todoRepository.findAccessibleTodosByStatus(member, TodoStatus.TODO)
             .sortedWith(boardOrderComparator(member))
-            .map { toResponse(it, member) }
+            .let { toResponses(it, member) }
     }
 
     @Transactional(readOnly = true)
@@ -50,7 +50,7 @@ class TodoService(
         val member = findMember(loginMember)
         return todoRepository.findAccessibleTodosByStatus(member, TodoStatus.DONE)
             .sortedWith(completedOrderComparator(member))
-            .map { toResponse(it, member) }
+            .let { toResponses(it, member) }
     }
 
     @Transactional(readOnly = true)
@@ -64,14 +64,14 @@ class TodoService(
 
         allTodos
             .sortedWith(compareBy<Todo>({ it.status.ordinal }).then(boardOrderComparator(member)))
-            .forEach { todo ->
-            val response = toResponse(todo, member)
-            when (todo.status) {
-                TodoStatus.TODO -> todoList.add(response)
-                TodoStatus.IN_PROGRESS -> inProgressList.add(response)
-                TodoStatus.DONE -> doneList.add(response)
+            .let { toResponses(it, member) }
+            .forEach { response ->
+                when (response.status) {
+                    TodoStatus.TODO -> todoList.add(response)
+                    TodoStatus.IN_PROGRESS -> inProgressList.add(response)
+                    TodoStatus.DONE -> doneList.add(response)
+                }
             }
-        }
 
         return TodoBoardResponse(
             todo = todoList,
@@ -91,7 +91,7 @@ class TodoService(
         val member = findMember(loginMember)
         return todoRepository.findAccessibleTodosByStatus(member, status)
             .sortedWith(boardOrderComparator(member))
-            .map { toResponse(it, member) }
+            .let { toResponses(it, member) }
     }
 
     fun addTodo(
@@ -335,7 +335,7 @@ class TodoService(
 
         return todoRepository.findAccessibleTodosByDueDateBetween(member, startDate, endDate)
             .sortedWith(dueDateOrderComparator(member))
-            .map { toResponse(it, member) }
+            .let { toResponses(it, member) }
     }
 
     @Transactional(readOnly = true)
@@ -344,7 +344,7 @@ class TodoService(
 
         return todoRepository.findAccessibleTodosByDueDate(member, date)
             .sortedWith(boardOrderComparator(member))
-            .map { toResponse(it, member) }
+            .let { toResponses(it, member) }
     }
 
     @Transactional(readOnly = true)
@@ -354,7 +354,7 @@ class TodoService(
 
         return todoRepository.findAccessibleOverdueTodos(member, today, TodoStatus.DONE)
             .sortedWith(dueDateOrderComparator(member))
-            .map { toResponse(it, member) }
+            .let { toResponses(it, member) }
     }
 
     fun tagFriend(loginMember: LoginMember, todoId: UUID, friendId: Long) {
@@ -489,6 +489,17 @@ class TodoService(
             todo.id.toString()
         )
         return TodoResponse.from(todo, viewer, hasAttachments)
+    }
+
+    private fun toResponses(todos: List<Todo>, viewer: Member): List<TodoResponse> {
+        if (todos.isEmpty()) return emptyList()
+        val contextIdsWithAttachments = attachmentRepository.findContextIdsWithAttachments(
+            AttachmentContextType.TODO,
+            todos.map { it.id.toString() },
+        ).toHashSet()
+        return todos.map { todo ->
+            TodoResponse.from(todo, viewer, todo.id.toString() in contextIdsWithAttachments)
+        }
     }
 
     private fun syncTodoTags(todo: Todo, tagFriendIds: List<Long>) {
