@@ -158,8 +158,9 @@ final class NotificationStore: ObservableObject {
 
         do {
             let result = try await api.notifications(page: currentPage + 1, size: Self.pageSize)
+            let existingIDs = Set(notifications.map(\.id))
             notifications.append(contentsOf: result.content.filter { next in
-                !notifications.contains(where: { $0.id == next.id })
+                !existingIDs.contains(next.id)
             })
             currentPage = result.number
             totalPages = result.totalPages
