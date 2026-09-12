@@ -751,24 +751,13 @@ onMounted(async () => {
         <div class="flex items-center gap-4 sm:gap-6">
           <!-- Profile Photo (Left) -->
           <div class="flex-shrink-0">
-            <div class="sm:hidden">
-              <ProfilePhotoUploader
-                v-if="memberInfo?.id"
-                :member-id="memberInfo.id"
-                :profile-photo-version="memberInfo.profilePhotoVersion"
-                size="sm"
-                @upload-complete="fetchMemberInfo"
-              />
-            </div>
-            <div class="hidden sm:block">
-              <ProfilePhotoUploader
-                v-if="memberInfo?.id"
-                :member-id="memberInfo.id"
-                :profile-photo-version="memberInfo.profilePhotoVersion"
-                size="lg"
-                @upload-complete="fetchMemberInfo"
-              />
-            </div>
+            <ProfilePhotoUploader
+              v-if="memberInfo?.id"
+              :member-id="memberInfo.id"
+              :profile-photo-version="memberInfo.profilePhotoVersion"
+              size="responsive"
+              @upload-complete="fetchMemberInfo"
+            />
           </div>
 
           <!-- Member Info (Right) -->

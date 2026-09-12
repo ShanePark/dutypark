@@ -47,8 +47,10 @@ const sizeClasses = computed(() => {
 
 const imageError = ref(false)
 const imageBlobUrl = ref<string | null>(null)
+let imageRequestId = 0
 
 async function loadImage() {
+  const requestId = ++imageRequestId
   if (!photoUrl.value || !props.hasProfilePhoto) {
     imageBlobUrl.value = null
     return
@@ -56,6 +58,10 @@ async function loadImage() {
 
   imageError.value = false
   const blobUrl = await fetchAuthenticatedImage(photoUrl.value)
+  if (requestId !== imageRequestId) {
+    if (blobUrl) URL.revokeObjectURL(blobUrl)
+    return
+  }
   if (blobUrl) {
     imageBlobUrl.value = blobUrl
   } else {
@@ -83,6 +89,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  imageRequestId++
   if (imageBlobUrl.value) {
     URL.revokeObjectURL(imageBlobUrl.value)
   }
