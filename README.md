@@ -35,7 +35,7 @@ The service uses MySQL with Flyway migrations. See [`frontend/README.md`](fronte
 
 ## Local development
 
-Requirements: JDK 25+, Node.js 20+, and Docker. iOS development additionally requires Xcode 26+.
+Requirements: JDK 25+, Node.js 24.x (LTS), and Docker. iOS development additionally requires Xcode 26+.
 
 ```bash
 # Terminal 1

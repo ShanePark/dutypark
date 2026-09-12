@@ -144,7 +144,8 @@ class NaverLoginServiceTest {
         val redirectTarget = "/todo?view=mine"
         whenever(memberSocialAccountService.findMemberByProviderAndSocialId(SsoType.NAVER, "naver-999")).thenReturn(null)
         stubNaverApis(naverId = "naver-999")
-        whenever(memberSsoRegisterRepository.save(any())).thenAnswer { it.arguments[0] as MemberSsoRegister }
+        whenever(memberSsoRegisterRepository.save(any<MemberSsoRegister>()))
+            .thenAnswer { it.arguments[0] as MemberSsoRegister }
 
         val request = MockHttpServletRequest()
         val response = MockHttpServletResponse()

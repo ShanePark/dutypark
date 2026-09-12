@@ -2,7 +2,7 @@ services:
   mysql:
     image: mysql:8.0
     container_name: dutypark-dev-db
-    restart: unless-stopped
+    restart: "no"
     ports:
       - "3307:3306"
     environment:

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ChevronLeft, ChevronRight, Undo2 } from 'lucide-vue-next'
+import { ChevronLeft, ChevronRight, Undo2 } from '@lucide/vue'
 import { useDragClickGuard } from '@/composables/useDragClickGuard'
 
 const props = defineProps<{

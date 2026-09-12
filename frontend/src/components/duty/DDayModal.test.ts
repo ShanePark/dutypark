@@ -70,7 +70,7 @@ vi.mock('@/components/common/DatePickerField.vue', async () => {
   }
 })
 
-vi.mock('lucide-vue-next', async () => {
+vi.mock('@lucide/vue', async () => {
   const { defineComponent, h } = await import('vue')
   const icon = defineComponent({
     setup() {

@@ -4,7 +4,6 @@ import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.security.config.CookieConfig
 import com.tistory.shanepark.dutypark.security.config.JwtConfig
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
-import com.tistory.shanepark.dutypark.security.domain.enums.TokenStatus
 import com.tistory.shanepark.dutypark.security.service.AuthService
 import com.tistory.shanepark.dutypark.security.service.CookieService
 import jakarta.servlet.FilterChain
@@ -36,8 +35,7 @@ class JwtAuthFilterTest {
         }
         val response = MockHttpServletResponse()
         val loginMember = LoginMember(id = 1L, name = "legacy")
-        whenever(authService.validateToken("legacy-access")).thenReturn(TokenStatus.VALID)
-        whenever(authService.tokenToLoginMember("legacy-access")).thenReturn(loginMember)
+        whenever(authService.authenticateToken("legacy-access")).thenReturn(loginMember)
         var chainInvoked = false
 
         filter.doFilter(request, response, FilterChain { _, _ -> chainInvoked = true })
@@ -55,8 +53,7 @@ class JwtAuthFilterTest {
         }
         val response = MockHttpServletResponse()
         val loginMember = LoginMember(id = 1L, name = "legacy")
-        whenever(authService.validateToken("legacy-access")).thenReturn(TokenStatus.VALID)
-        whenever(authService.tokenToLoginMember("legacy-access")).thenReturn(loginMember)
+        whenever(authService.authenticateToken("legacy-access")).thenReturn(loginMember)
 
         filter.doFilter(request, response, FilterChain { _, _ -> })
 
@@ -78,7 +75,7 @@ class JwtAuthFilterTest {
         val request = MockHttpServletRequest("POST", "/api/inquiries").apply {
             addHeader(HttpHeaders.AUTHORIZATION, "Bearer invalid-access")
         }
-        whenever(authService.validateToken("invalid-access")).thenReturn(TokenStatus.INVALID)
+        whenever(authService.authenticateToken("invalid-access")).thenReturn(null)
 
         filter.doFilter(request, MockHttpServletResponse(), FilterChain { _, _ -> })
 
@@ -90,7 +87,7 @@ class JwtAuthFilterTest {
         val request = MockHttpServletRequest("POST", "/api/inquiries").apply {
             setCookies(Cookie(CookieService.ACCESS_TOKEN_COOKIE, "invalid-access"))
         }
-        whenever(authService.validateToken("invalid-access")).thenReturn(TokenStatus.EXPIRED)
+        whenever(authService.authenticateToken("invalid-access")).thenReturn(null)
 
         filter.doFilter(request, MockHttpServletResponse(), FilterChain { _, _ -> })
 
@@ -102,8 +99,7 @@ class JwtAuthFilterTest {
         val request = MockHttpServletRequest("POST", "/api/inquiries").apply {
             addHeader(HttpHeaders.AUTHORIZATION, "Bearer inactive-member-access")
         }
-        whenever(authService.validateToken("inactive-member-access")).thenReturn(TokenStatus.VALID)
-        whenever(authService.tokenToLoginMember("inactive-member-access"))
+        whenever(authService.authenticateToken("inactive-member-access"))
             .thenThrow(AuthException("auth.account.inactive"))
 
         filter.doFilter(request, MockHttpServletResponse(), FilterChain { _, _ -> })
@@ -119,9 +115,8 @@ class JwtAuthFilterTest {
             setCookies(Cookie(CookieService.ACCESS_TOKEN_COOKIE, "valid-cookie-access"))
         }
         val loginMember = LoginMember(id = 1L, name = "cookie-user")
-        whenever(authService.validateToken("invalid-access")).thenReturn(TokenStatus.INVALID)
-        whenever(authService.validateToken("valid-cookie-access")).thenReturn(TokenStatus.VALID)
-        whenever(authService.tokenToLoginMember("valid-cookie-access")).thenReturn(loginMember)
+        whenever(authService.authenticateToken("invalid-access")).thenReturn(null)
+        whenever(authService.authenticateToken("valid-cookie-access")).thenReturn(loginMember)
 
         filter.doFilter(request, MockHttpServletResponse(), FilterChain { _, _ -> })
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Bell, X, Check } from 'lucide-vue-next'
+import { Bell, X, Check } from '@lucide/vue'
 import { usePushNotification } from '@/composables/usePushNotification'
 
 const STORAGE_KEY = 'push-permission-guide-dismissed-until'

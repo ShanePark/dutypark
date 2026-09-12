@@ -101,7 +101,8 @@ class AppleNativeOAuthServiceTest {
     @Test
     fun `new Apple subject returns signup uuid without email based merging`() {
         whenever(social.findMemberByProviderAndSocialId(any(), eq(SUBJECT))).thenReturn(null)
-        whenever(signups.save(any())).thenAnswer { it.arguments[0] as MemberSsoRegister }
+        whenever(signups.save(any<MemberSsoRegister>()))
+            .thenAnswer { it.arguments[0] as MemberSsoRegister }
 
         val result = service.exchange(request(), null, servletRequest)
 
@@ -339,7 +340,8 @@ class AppleNativeOAuthServiceTest {
     fun `web exchange uses selected services id and redirect uri`() {
         stubWebExchange()
         whenever(social.findMemberByProviderAndSocialId(any(), eq(SUBJECT))).thenReturn(null)
-        whenever(signups.save(any())).thenAnswer { it.arguments[0] as MemberSsoRegister }
+        whenever(signups.save(any<MemberSsoRegister>()))
+            .thenAnswer { it.arguments[0] as MemberSsoRegister }
 
         service.exchangeForClient(request(), null, servletRequest, WEB_CLIENT_ID, WEB_REDIRECT_URI)
 

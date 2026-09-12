@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Camera, Loader2, Upload } from 'lucide-vue-next'
+import { Camera, Loader2, Upload } from '@lucide/vue'
 import { memberApi } from '@/api/member'
 import { fetchAuthenticatedImage } from '@/api/attachment'
 import { useSwal } from '@/composables/useSwal'
@@ -10,7 +10,7 @@ import ImageCropModal from '@/components/common/ImageCropModal.vue'
 interface Props {
   memberId: number
   profilePhotoVersion?: number
-  size?: 'sm' | 'lg'
+  size?: 'sm' | 'lg' | 'responsive'
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -21,6 +21,7 @@ const props = withDefaults(defineProps<Props>(), {
 const sizeClasses: Record<string, string> = {
   sm: 'photo-size-sm',
   lg: 'photo-size-lg',
+  responsive: 'photo-size-responsive',
 }
 
 const emit = defineEmits<{
@@ -35,6 +36,8 @@ const isUploading = ref(false)
 const isDeleting = ref(false)
 
 const showCropModal = ref(false)
+let photoRequestId = 0
+let isUnmounted = false
 
 const hasPhoto = computed(() => !!displayPhotoUrl.value)
 
@@ -42,12 +45,26 @@ const photoUrl = computed(() => {
   return `/api/members/${props.memberId}/profile-photo?v=${props.profilePhotoVersion}`
 })
 
-async function loadCurrentPhoto() {
+function replaceDisplayPhoto(url: string | null) {
   if (displayPhotoUrl.value?.startsWith('blob:')) {
     URL.revokeObjectURL(displayPhotoUrl.value)
   }
+  if (isUnmounted) {
+    if (url?.startsWith('blob:')) URL.revokeObjectURL(url)
+    displayPhotoUrl.value = null
+    return
+  }
+  displayPhotoUrl.value = url
+}
+
+async function loadCurrentPhoto() {
+  const requestId = ++photoRequestId
   const blobUrl = await fetchAuthenticatedImage(photoUrl.value)
-  displayPhotoUrl.value = blobUrl
+  if (requestId !== photoRequestId || isUnmounted) {
+    if (blobUrl) URL.revokeObjectURL(blobUrl)
+    return
+  }
+  replaceDisplayPhoto(blobUrl)
 }
 
 watch(
@@ -73,10 +90,8 @@ async function uploadFile(file: File) {
   try {
     await memberApi.updateProfilePhoto(file)
 
-    if (displayPhotoUrl.value?.startsWith('blob:')) {
-      URL.revokeObjectURL(displayPhotoUrl.value)
-    }
-    displayPhotoUrl.value = URL.createObjectURL(file)
+    photoRequestId++
+    replaceDisplayPhoto(URL.createObjectURL(file))
 
     emit('upload-complete')
     toastSuccess(t('profilePhoto.updated'))
@@ -98,10 +113,8 @@ async function deletePhoto() {
   isDeleting.value = true
   try {
     await memberApi.deleteProfilePhoto()
-    if (displayPhotoUrl.value?.startsWith('blob:')) {
-      URL.revokeObjectURL(displayPhotoUrl.value)
-    }
-    displayPhotoUrl.value = null
+    photoRequestId++
+    replaceDisplayPhoto(null)
     emit('upload-complete')
     toastSuccess(t('profilePhoto.deleted'))
   } catch (error) {
@@ -126,6 +139,12 @@ async function onCropDelete() {
 onMounted(() => {
   loadCurrentPhoto()
 })
+
+onUnmounted(() => {
+  isUnmounted = true
+  photoRequestId++
+  replaceDisplayPhoto(null)
+})
 </script>
 
 <template>
@@ -134,12 +153,12 @@ onMounted(() => {
       <div v-if="hasPhoto" class="photo-preview">
         <img :src="displayPhotoUrl!" :alt="t('profilePhoto.alt')" class="photo-image" />
         <div class="photo-overlay">
-          <Camera :class="props.size === 'sm' ? 'w-4 h-4' : 'w-6 h-6'" class="text-dp-text-on-dark" />
+          <Camera :class="props.size === 'sm' ? 'w-4 h-4' : props.size === 'responsive' ? 'w-4 h-4 sm:w-6 sm:h-6' : 'w-6 h-6'" class="text-dp-text-on-dark" />
         </div>
       </div>
       <div v-else class="photo-placeholder">
-        <Upload :class="props.size === 'sm' ? 'w-5 h-5' : 'w-8 h-8'" />
-        <span v-if="props.size !== 'sm'" class="text-sm mt-1">{{ t('profilePhoto.uploadPrompt') }}</span>
+        <Upload :class="props.size === 'sm' ? 'w-5 h-5' : props.size === 'responsive' ? 'w-5 h-5 sm:w-8 sm:h-8' : 'w-8 h-8'" />
+        <span v-if="props.size !== 'sm'" class="text-sm mt-1" :class="{ 'hidden sm:inline': props.size === 'responsive' }">{{ t('profilePhoto.uploadPrompt') }}</span>
       </div>
       <div v-if="isUploading || isDeleting" class="upload-loading">
         <Loader2 class="w-8 h-8 animate-spin text-dp-text-on-dark" />
@@ -175,7 +194,8 @@ onMounted(() => {
   box-shadow: var(--dp-shadow-md);
 }
 
-.photo-size-sm {
+.photo-size-sm,
+.photo-size-responsive {
   width: 80px;
   height: 80px;
 }
@@ -183,6 +203,13 @@ onMounted(() => {
 .photo-size-lg {
   width: 120px;
   height: 120px;
+}
+
+@media (min-width: 40rem) {
+  .photo-size-responsive {
+    width: 120px;
+    height: 120px;
+  }
 }
 
 .photo-container:hover {

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, onMounted, onUnmounted, toRef } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { X, ChevronLeft, ChevronRight, Download } from 'lucide-vue-next'
+import { X, ChevronLeft, ChevronRight, Download } from '@lucide/vue'
 import { fetchAuthenticatedImage } from '@/api/attachment'
 import { useBodyScrollLock } from '@/composables/useBodyScrollLock'
 import { useEscapeKey } from '@/composables/useEscapeKey'

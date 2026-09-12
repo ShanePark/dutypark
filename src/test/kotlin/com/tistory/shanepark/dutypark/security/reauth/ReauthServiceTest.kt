@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
@@ -37,7 +38,8 @@ class ReauthServiceTest {
     @Test
     fun `issue creates a five minute single-purpose proof for active member`() {
         whenever(memberRepository.findById(1L)).thenReturn(Optional.of(memberWithId(1L)))
-        whenever(proofRepository.save(org.mockito.kotlin.any())).thenAnswer { it.arguments[0] }
+        whenever(proofRepository.save(any<ReauthProof>()))
+            .thenAnswer { it.arguments[0] as ReauthProof }
 
         val response = service.issue(1L, ReauthPurpose.DELETE_ACCOUNT)
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, watch, computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { X, ZoomIn, ZoomOut, Upload, ImagePlus, RotateCcw } from 'lucide-vue-next'
+import { X, ZoomIn, ZoomOut, Upload, ImagePlus, RotateCcw } from '@lucide/vue'
 import { Cropper, CircleStencil } from 'vue-advanced-cropper'
 import 'vue-advanced-cropper/dist/style.css'
 import { attachmentValidation, validateFile } from '@/api/attachment'

@@ -79,6 +79,36 @@ class JwtProviderTest {
     }
 
     @Test
+    fun `validation preserves token failure status while parsing reports unauthorized`() {
+        val expired = Jwts.builder()
+            .subject("7")
+            .claim("name", "user7")
+            .expiration(Date.from(Instant.parse("2000-01-01T00:00:00Z")))
+            .signWith(TEST_KEY)
+            .compact()
+        val unsupported = Jwts.builder().subject("7").claim("name", "user7").compact()
+        val wrongSignature = Jwts.builder()
+            .subject("7")
+            .claim("name", "user7")
+            .signWith(Keys.hmacShaKeyFor(ByteArray(32) { 1 }))
+            .compact()
+
+        listOf(
+            expired to TokenStatus.EXPIRED,
+            unsupported to TokenStatus.UNSUPPORTED,
+            wrongSignature to TokenStatus.INVALID,
+            "malformed" to TokenStatus.INVALID,
+            "" to TokenStatus.INVALID,
+        ).forEach { (token, status) ->
+            assertThat(provider.validateToken(token)).isEqualTo(status)
+            assertThatThrownBy { provider.parseToken(token) }
+                .isInstanceOf(AuthException::class.java)
+                .hasMessage("auth.unauthorized")
+        }
+        assertThat(provider.validateToken(null)).isEqualTo(TokenStatus.INVALID)
+    }
+
+    @Test
     fun `constructor rejects blank malformed and short secrets`() {
         listOf(
             "",

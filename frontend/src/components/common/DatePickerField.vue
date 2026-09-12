@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Calendar, ChevronLeft, ChevronRight, Lock } from 'lucide-vue-next'
+import { Calendar, ChevronLeft, ChevronRight, Lock } from '@lucide/vue'
 import { useEscapeKey } from '@/composables/useEscapeKey'
 import { formatDateOnly } from '@/utils/date'
 import {

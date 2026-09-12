@@ -25,7 +25,7 @@ import {
   Home,
   ChevronLeft,
   ChevronRight,
-} from 'lucide-vue-next'
+} from '@lucide/vue'
 
 const router = useRouter()
 const authStore = useAuthStore()

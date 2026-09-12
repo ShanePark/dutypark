@@ -32,7 +32,8 @@ class AppleCredentialServiceTest {
             repository.findByProviderAndSocialIdAndClientId(SsoType.APPLE, "subject", WEB_CLIENT_ID)
         ).thenReturn(null)
         whenever(cipher.encrypt("plain-refresh-token")).thenReturn("v1:iv:ciphertext")
-        whenever(repository.saveAndFlush(any())).thenAnswer { it.arguments[0] }
+        whenever(repository.saveAndFlush(any<AppleOAuthCredential>()))
+            .thenAnswer { it.arguments[0] as AppleOAuthCredential }
 
         service.upsert("subject", "plain-refresh-token", WEB_CLIENT_ID)
 
@@ -52,7 +53,8 @@ class AppleCredentialServiceTest {
         whenever(secrets.isNativeClientId(NATIVE_CLIENT_ID)).thenReturn(true)
         whenever(cipher.encrypt("native-refresh")).thenReturn("native-encrypted")
         whenever(cipher.encrypt("web-refresh")).thenReturn("web-encrypted")
-        whenever(repository.saveAndFlush(any())).thenAnswer { it.arguments[0] }
+        whenever(repository.saveAndFlush(any<AppleOAuthCredential>()))
+            .thenAnswer { it.arguments[0] as AppleOAuthCredential }
 
         service.upsert("subject", "native-refresh", NATIVE_CLIENT_ID)
         service.upsert("subject", "web-refresh", WEB_CLIENT_ID)
@@ -107,7 +109,8 @@ class AppleCredentialServiceTest {
         whenever(repository.findByProviderAndSocialIdAndClientIdIsNull(SsoType.APPLE, "subject"))
             .thenReturn(legacy)
         whenever(cipher.encrypt("web-refresh")).thenReturn("web-encrypted")
-        whenever(repository.saveAndFlush(any())).thenAnswer { it.arguments[0] }
+        whenever(repository.saveAndFlush(any<AppleOAuthCredential>()))
+            .thenAnswer { it.arguments[0] as AppleOAuthCredential }
 
         service.upsert("subject", "web-refresh", WEB_CLIENT_ID)
 
@@ -122,7 +125,8 @@ class AppleCredentialServiceTest {
     @Test
     fun `revocation retry stores an encrypted synthetic orphan without touching an existing subject grant`() {
         whenever(cipher.encrypt("failed-revoke-token")).thenReturn("encrypted-retry-payload")
-        whenever(repository.saveAndFlush(any())).thenAnswer { it.arguments[0] }
+        whenever(repository.saveAndFlush(any<AppleOAuthCredential>()))
+            .thenAnswer { it.arguments[0] as AppleOAuthCredential }
 
         service.storeRevocationRetry("failed-revoke-token", WEB_CLIENT_ID)
 

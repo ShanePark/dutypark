@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { X, Share, Download, MoreVertical, Plus, Smartphone, Ellipsis } from 'lucide-vue-next'
+import { X, Share, Download, MoreVertical, Plus, Smartphone, Ellipsis } from '@lucide/vue'
 
 const STORAGE_KEY = 'pwa-install-guide-dismissed-until'
 const DISMISS_DAYS = 7

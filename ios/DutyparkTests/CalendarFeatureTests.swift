@@ -434,21 +434,58 @@ final class CalendarFeatureTests: XCTestCase {
                 && todayMarker.contains("height: 4"),
             "The today bar should be about 70% of the cell width and 4pt high"
         )
+        let todayBorder = try Self.declaration(
+            named: "private var todayBorder: some View",
+            in: source
+        )
+        XCTAssertTrue(
+            todayBorder.contains("if isToday && !hidesDetails"),
+            "The today border should follow the existing hidden-details behavior"
+        )
+        XCTAssertTrue(
+            todayBorder.contains("Rectangle().strokeBorder(DPColor.danger, lineWidth: 1)"),
+            "Today should have a thin red border inset inside the cell"
+        )
+        XCTAssertTrue(
+            todayBorder.contains(".allowsHitTesting(false)"),
+            "The decorative today border must not intercept cell interaction"
+        )
+        let focusBorder = try Self.declaration(
+            named: "private var focusBorder: Color",
+            in: source
+        )
+        XCTAssertTrue(
+            focusBorder.contains("highlighted && !(isToday && !hidesDetails)"),
+            "Today's normal calendar cell should use the red today border without a blue focus ring"
+        )
+        let focusOverlay = try XCTUnwrap(
+            dayCell.range(of: ".overlay(Rectangle().strokeBorder(focusBorder, lineWidth: highlighted ? (hidesDetails ? 2 : 1) : 0))"),
+            "The selected/focused border overlay should remain present"
+        )
+        let todayBorderOverlay = try XCTUnwrap(
+            dayCell.range(of: ".overlay { todayBorder }"),
+            "The today border overlay should remain present"
+        )
+        XCTAssertLessThan(
+            focusOverlay.lowerBound,
+            todayBorderOverlay.lowerBound,
+            "The red today border must be painted after the blue selection border so it remains visible"
+        )
         XCTAssertFalse(
             todayMarker.contains("Circle().fill(DPColor.accent)"),
             "The today marker should no longer be a small dot"
         )
-        XCTAssertFalse(
-            dayCell.contains("return isToday ? DPColor.danger : .clear"),
-            "Today must not paint a full-cell danger border"
-        )
         XCTAssertTrue(
             dayCell.contains(".background(cellBackground)"),
-            "The today bar must leave the duty background as the cell's source of truth"
+            "The today bar and border must leave the duty background as the cell's source of truth"
         )
         XCTAssertTrue(
-            dayCell.contains(".overlay(Rectangle().stroke(focusBorder, lineWidth: highlighted ? 2 : 0))"),
-            "The selected/focused border remains independent from the today marker"
+            dayCell.contains(".overlay(Rectangle().strokeBorder(focusBorder, lineWidth: highlighted ? (hidesDetails ? 2 : 1) : 0))"),
+            "The selected/focused border remains available for non-today cells"
+        )
+        XCTAssertTrue(
+            dayCell.contains("highlighted ? (hidesDetails ? 2 : 1) : 0"),
+            "Quick duty editing should retain its existing 2pt selection while search focus uses the 1pt inset border"
         )
     }
 

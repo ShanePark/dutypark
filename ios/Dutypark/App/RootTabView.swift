@@ -294,6 +294,7 @@ struct RootTabView: View {
             offlineNetworkMonitor.start()
             applyOfflineDefaultTabIfNeeded()
             await startOnlineWorkIfAllowed()
+            await publishOfflineWidgetCacheIfAllowed()
             await recoverConnectivityIfReachable()
 #if DEBUG
             if ProcessInfo.processInfo.arguments.contains("-ui-testing-show-notifications"),
@@ -332,8 +333,11 @@ struct RootTabView: View {
         }
         .onChange(of: session.availability) { _, availability in
             applyOfflineDefaultTabIfNeeded()
-            guard availability == .online else { return }
-            Task { await startOnlineWorkIfAllowed() }
+            if availability == .offline {
+                Task { await publishOfflineWidgetCacheIfAllowed() }
+            } else if availability == .online {
+                Task { await startOnlineWorkIfAllowed() }
+            }
         }
         .onChange(of: selectedTab) { _, tab in
             if tab == .home {
@@ -457,7 +461,8 @@ struct RootTabView: View {
             )
         }
         guard session.availability == .online,
-              authenticatedMemberID == accountID
+              authenticatedMemberID == accountID,
+              let sessionGeneration = session.authenticationSessionGenerationForCurrentAccount
         else { return }
         await notifications.setForeground(scenePhase == .active)
         await openPendingPushIfNeeded()
@@ -466,6 +471,26 @@ struct RootTabView: View {
             networkStatus: offlineNetworkMonitor.status == .unsatisfied
                 ? .unsatisfied
                 : .satisfied
+        )
+        guard session.availability == .online,
+              authenticatedMemberID == accountID,
+              session.authenticationSessionGenerationForCurrentAccount == sessionGeneration
+        else { return }
+        await DutyparkWidgetRefreshService.refreshCurrentMonth(
+            accountID: accountID,
+            sessionGeneration: sessionGeneration
+        )
+    }
+
+    private func publishOfflineWidgetCacheIfAllowed() async {
+        guard session.availability == .offline,
+              let accountID = authenticatedMemberID,
+              let sessionGeneration = session.authenticationSessionGenerationForCurrentAccount
+        else { return }
+        await DutyparkWidgetRefreshService.publishCachedMonths(
+            accountID: accountID,
+            sessionGeneration: sessionGeneration,
+            around: OfflineMonthKey(date: .now)
         )
     }
 

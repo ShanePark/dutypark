@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { AppWindow, Globe } from 'lucide-vue-next'
+import { AppWindow, Globe } from '@lucide/vue'
 import en from '@/i18n/messages/en'
 import ko from '@/i18n/messages/ko'
 import {

@@ -10,7 +10,7 @@ import {
   UserX,
   Users,
   X,
-} from 'lucide-vue-next'
+} from '@lucide/vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import {
   AccountDeletionOAuthError,

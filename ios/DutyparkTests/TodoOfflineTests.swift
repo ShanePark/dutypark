@@ -74,6 +74,60 @@ struct TodoOfflineTests {
     }
 
     @Test
+    func overlappingRefreshKeepsTheNewestBoardResponse() async {
+        let olderBoard = makeOfflineBoard(todo: [makeOfflineTodo(title: "Older")])
+        let newerBoard = makeOfflineBoard(todo: [makeOfflineTodo(title: "Newer")])
+        let repository = TodoOfflineRepository(
+            boardSequence: [.success(olderBoard), .success(newerBoard)],
+            blockFirstBoardFetch: true
+        )
+        let model = TodoViewModel(
+            repository: repository,
+            cache: TodoOfflineCacheFake(),
+            outbox: TodoOfflineOutboxFake()
+        )
+
+        let olderRefresh = Task {
+            await model.refresh(accountID: 42, sessionGeneration: 1)
+        }
+        await repository.waitForFirstBoardFetch()
+
+        let newerRefresh = Task {
+            await model.refresh(accountID: 42, sessionGeneration: 1)
+        }
+        await newerRefresh.value
+        await repository.releaseFirstBoardFetch()
+        await olderRefresh.value
+
+        #expect(model.board == newerBoard)
+    }
+
+    @Test
+    func supersededLoadDoesNotLeaveLoadingStateStuck() async {
+        let repository = TodoOfflineRepository(
+            boardSequence: [
+                .success(makeOfflineBoard(todo: [makeOfflineTodo(title: "Older")])),
+                .success(makeOfflineBoard(todo: [makeOfflineTodo(title: "Newer")])),
+            ],
+            blockFirstBoardFetch: true
+        )
+        let model = TodoViewModel(
+            repository: repository,
+            cache: TodoOfflineCacheFake(),
+            outbox: TodoOfflineOutboxFake()
+        )
+
+        let load = Task { await model.load(accountID: 42) }
+        await repository.waitForFirstBoardFetch()
+        let refresh = Task { await model.refresh(accountID: 42, sessionGeneration: 1) }
+        await refresh.value
+        #expect(!model.isLoading)
+        await repository.releaseFirstBoardFetch()
+        await load.value
+        #expect(!model.isLoading)
+    }
+
+    @Test
     func loadDropsMalformedTodoIDsFromCachedBoard() async {
         let malformed = makeOfflineTodo(rawID: "not-a-uuid", title: "Malformed")
         let valid = makeOfflineTodo(title: "Valid")
@@ -475,8 +529,10 @@ private actor TodoOfflineRepository: TodoRepository {
     let createResult: Result<TodoDTO, APIError>
     private var boardSequence: [Result<TodoBoardDTO, APIError>]?
     private var friendsSequence: [Result<[FriendDTO], APIError>]?
-    private var boardSequenceIndex = 0
     private var friendsSequenceIndex = 0
+    private let blockFirstBoardFetch: Bool
+    private var firstBoardFetchStarted = false
+    private var firstBoardFetchContinuation: CheckedContinuation<Void, Never>?
     private(set) var fetchBoardCount = 0
     private(set) var createRequest: TodoRequest?
     private(set) var fetchAttachmentsCount = 0
@@ -489,7 +545,8 @@ private actor TodoOfflineRepository: TodoRepository {
         friendsError: APIError? = nil,
         createError: APIError? = nil,
         boardSequence: [Result<TodoBoardDTO, APIError>]? = nil,
-        friendsSequence: [Result<[FriendDTO], APIError>]? = nil
+        friendsSequence: [Result<[FriendDTO], APIError>]? = nil,
+        blockFirstBoardFetch: Bool = false
     ) {
         boardResult = boardError.map(Result.failure) ?? .success(board)
         friendsResult = friendsError.map(Result.failure) ?? .success(friends)
@@ -497,13 +554,35 @@ private actor TodoOfflineRepository: TodoRepository {
             ?? .success(makeOfflineTodo(title: "Server task"))
         self.boardSequence = boardSequence
         self.friendsSequence = friendsSequence
+        self.blockFirstBoardFetch = blockFirstBoardFetch
+    }
+
+    func waitForFirstBoardFetch() async {
+        while !firstBoardFetchStarted {
+            await Task.yield()
+        }
+    }
+
+    func releaseFirstBoardFetch() {
+        firstBoardFetchContinuation?.resume()
+        firstBoardFetchContinuation = nil
     }
 
     func fetchBoard() async throws -> TodoBoardDTO {
         fetchBoardCount += 1
+        let requestID = fetchBoardCount
+        if blockFirstBoardFetch, fetchBoardCount == 1 {
+            firstBoardFetchStarted = true
+            await withCheckedContinuation { continuation in
+                firstBoardFetchContinuation = continuation
+            }
+        }
         if let boardSequence, !boardSequence.isEmpty {
-            let index = min(boardSequenceIndex, boardSequence.count - 1)
-            boardSequenceIndex += 1
+            // Capture the sequence slot before the first request suspends. An
+            // actor is reentrant across that continuation, so using a shared
+            // post-await index would let the newer request consume the older
+            // response and make this stale-response test nondeterministic.
+            let index = min(requestID - 1, boardSequence.count - 1)
             return try boardSequence[index].get()
         }
         return try boardResult.get()

@@ -5,7 +5,7 @@ import BaseModal from '@/components/common/BaseModal.vue'
 import { useSwal } from '@/composables/useSwal'
 import { teamApi } from '@/api/team'
 import { resolveApiCodeMessage, resolveApiErrorMessage } from '@/utils/resolveApiError'
-import { X, Loader2 } from 'lucide-vue-next'
+import { X, Loader2 } from '@lucide/vue'
 
 const props = defineProps<{
   isOpen: boolean

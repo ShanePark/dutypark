@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { UserCheck, UserPlus, Home } from 'lucide-vue-next'
+import { UserCheck, UserPlus, Home } from '@lucide/vue'
 import type { DashboardFriendRequestDto } from '@/types'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 

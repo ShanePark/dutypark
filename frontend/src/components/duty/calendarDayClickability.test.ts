@@ -4,7 +4,7 @@ import dayDetailModal from '@/components/duty/DayDetailModal.vue?raw'
 import dutyCalendarContent from '@/components/duty/DutyCalendarContent.vue?raw'
 
 describe('calendar cell clickability', () => {
-  it('preserves duty colours while using a today bar and hover corner markers', () => {
+  it('preserves duty colours while using inset today and search borders with hover corner markers', () => {
     expect(calendarGrid).not.toContain('hover:brightness-95')
     expect(calendarGrid).not.toContain('dark:hover:brightness-110')
     expect(calendarGrid).not.toContain('hover:outline-2')
@@ -12,6 +12,10 @@ describe('calendar cell clickability', () => {
     expect(calendarGrid).toContain('calendar-day-hoverable')
     expect(calendarGrid).not.toContain('calendar-day-today-dot')
     expect(calendarGrid).toContain('calendar-day-today-bar')
+    expect(calendarGrid).toContain('calendar-day-today-border')
+    expect(calendarGrid).toMatch(
+      /v-if="!focusedDay && isHighlighted\(day\)"[\s\S]*class="calendar-day-highlight-border"/
+    )
     expect(calendarGrid).toContain(":aria-current=\"isToday(day) ? 'date' : undefined\"")
     expect(calendarGrid).not.toContain("'ring-2 ring-dp-danger ring-inset'")
     expect(calendarGrid).toContain("'ring-2 ring-dp-accent ring-inset': !focusedDay && isSelected(day) && !isHighlighted(day)")
@@ -21,6 +25,9 @@ describe('calendar cell clickability', () => {
     expect(calendarGrid).toContain('width: 70%')
     expect(calendarGrid).toContain('height: 4px')
     expect(calendarGrid).toContain('background: var(--dp-danger)')
+    expect(calendarGrid).toContain('border: 1px solid var(--dp-danger)')
+    expect(calendarGrid).toContain('border: 1px solid var(--dp-warning)')
+    expect(calendarGrid).toContain('inset: 0')
     expect(calendarGrid).toContain('left: 15%')
     expect(calendarGrid).toContain('top: 0')
     expect(calendarGrid).toContain('left: 0')

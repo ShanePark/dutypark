@@ -24,7 +24,7 @@ import type {
   ReportResolutionStatus,
   ReportStatusFilter,
 } from '@/types/adminModeration'
-import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-vue-next'
+import { ChevronLeft, ChevronRight, Loader2 } from '@lucide/vue'
 
 const router = useRouter()
 const authStore = useAuthStore()

@@ -56,7 +56,8 @@ class MemberSocialAccountServiceTest {
         val member = memberWithId(1L)
         whenever(memberSocialAccountRepository.findByProviderAndSocialId(SsoType.KAKAO, "kakao-1")).thenReturn(null)
         whenever(memberSocialAccountRepository.findByMemberAndProvider(member, SsoType.KAKAO)).thenReturn(null)
-        whenever(memberSocialAccountRepository.saveAndFlush(any())).thenAnswer { it.arguments[0] }
+        whenever(memberSocialAccountRepository.saveAndFlush(any<MemberSocialAccount>()))
+            .thenAnswer { it.arguments[0] as MemberSocialAccount }
 
         service.link(member, SsoType.KAKAO, "kakao-1")
 
@@ -112,7 +113,7 @@ class MemberSocialAccountServiceTest {
         val member = memberWithId(1L)
         whenever(memberSocialAccountRepository.findByProviderAndSocialId(SsoType.KAKAO, "kakao-3")).thenReturn(null)
         whenever(memberSocialAccountRepository.findByMemberAndProvider(member, SsoType.KAKAO)).thenReturn(null)
-        whenever(memberSocialAccountRepository.saveAndFlush(any()))
+        whenever(memberSocialAccountRepository.saveAndFlush(any<MemberSocialAccount>()))
             .thenThrow(DataIntegrityViolationException("duplicate"))
 
         val exception = assertThrows<SocialAccountAlreadyLinkedException> {

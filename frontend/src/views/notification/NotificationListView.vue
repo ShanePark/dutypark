@@ -2,7 +2,7 @@
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Bell, Trash2, CheckCheck } from 'lucide-vue-next'
+import { Bell, Trash2, CheckCheck } from '@lucide/vue'
 import PageHeader from '@/components/common/PageHeader.vue'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'

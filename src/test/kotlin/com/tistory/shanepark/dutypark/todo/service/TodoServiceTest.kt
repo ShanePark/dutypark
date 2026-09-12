@@ -604,7 +604,8 @@ class TodoServiceTest {
 
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
         `when`(todoRepository.findAccessibleTodos(member)).thenReturn(listOf(todoItem))
-        `when`(attachmentService.hasAttachments(AttachmentContextType.TODO, todoItem.id.toString())).thenReturn(true)
+        `when`(attachmentRepository.findContextIdsWithAttachments(AttachmentContextType.TODO, listOf(todoItem.id.toString())))
+            .thenReturn(listOf(todoItem.id.toString()))
 
         val board = todoService.getBoard(loginMember)
 

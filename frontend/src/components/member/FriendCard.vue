@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
-import { Home, Star, GripVertical, MoreVertical } from 'lucide-vue-next'
+import { Home, Star, GripVertical, MoreVertical } from '@lucide/vue'
 import type { DashboardFriendDetail } from '@/types'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 

@@ -2,7 +2,7 @@
 import { computed, nextTick, onMounted, onUnmounted, ref, watch, type Component, type ComponentPublicInstance } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
-import { Calendar, Home, ListTodo, MoreHorizontal, Users } from 'lucide-vue-next'
+import { Calendar, Home, ListTodo, MoreHorizontal, Users } from '@lucide/vue'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notification'
 import { useDragClickGuard } from '@/composables/useDragClickGuard'

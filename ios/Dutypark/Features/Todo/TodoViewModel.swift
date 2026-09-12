@@ -59,6 +59,8 @@ final class TodoViewModel: ObservableObject {
     private var hasLoadedCompleteBoard = false
     private var recoveryTask: Task<Void, Never>?
     private var recoveryGeneration = 0
+    private var boardRequestGeneration = 0
+    private var loadingRequestGeneration: Int?
 
     init(
         repository: any TodoRepository = TodoAPIRepository(),
@@ -189,9 +191,13 @@ final class TodoViewModel: ObservableObject {
             }
         }
         retryPendingAttachmentDiscards()
+        let requestGeneration = beginBoardRequest()
         isLoading = true
-        defer { isLoading = false }
-        await fetchBoardAndFriends()
+        loadingRequestGeneration = requestGeneration
+        defer {
+            finishLoading(requestGeneration)
+        }
+        await fetchBoardAndFriends(requestGeneration: requestGeneration)
     }
 
     func refresh(
@@ -215,7 +221,13 @@ final class TodoViewModel: ObservableObject {
             }
         }
         retryPendingAttachmentDiscards()
-        await fetchBoardAndFriends()
+        let requestGeneration = beginBoardRequest()
+        isLoading = true
+        loadingRequestGeneration = requestGeneration
+        defer {
+            finishLoading(requestGeneration)
+        }
+        await fetchBoardAndFriends(requestGeneration: requestGeneration)
     }
 
     /// Public seam used by the outbox synchronizer after it has successfully
@@ -265,6 +277,9 @@ final class TodoViewModel: ObservableObject {
         let sessionChanged = self.sessionGeneration != sessionGeneration
         if accountChanged || sessionChanged {
             cancelRecovery()
+            boardRequestGeneration &+= 1
+            isLoading = false
+            loadingRequestGeneration = nil
             self.accountID = accountID
             self.sessionGeneration = sessionGeneration
             attachmentsByTodoID.removeAll()
@@ -289,32 +304,108 @@ final class TodoViewModel: ObservableObject {
         let sessionChanged = self.sessionGeneration != sessionGeneration
         guard accountChanged || sessionChanged else { return }
         cancelRecovery()
+        boardRequestGeneration &+= 1
+        isLoading = false
+        loadingRequestGeneration = nil
         self.accountID = accountID
         self.sessionGeneration = sessionGeneration
         hasLoadedCompleteBoard = false
     }
 
-    private func fetchBoardAndFriends(allowsRecoveryScheduling: Bool = true) async {
+    private func beginBoardRequest() -> Int {
+        boardRequestGeneration &+= 1
+        cancelRecovery()
+        return boardRequestGeneration
+    }
+
+    private func finishLoading(_ requestGeneration: Int) {
+        guard loadingRequestGeneration == requestGeneration else { return }
+        loadingRequestGeneration = nil
+        isLoading = false
+    }
+
+    private func isCurrentBoardRequest(
+        _ generation: Int,
+        accountID: MemberID?,
+        sessionGeneration: UInt64?
+    ) -> Bool {
+        !Task.isCancelled
+            && generation == boardRequestGeneration
+            && accountID == self.accountID
+            && sessionGeneration == self.sessionGeneration
+    }
+
+    private func isCurrentMutation(
+        requestGeneration: Int?,
+        accountID: MemberID?,
+        sessionGeneration: UInt64?
+    ) -> Bool {
+        guard let requestGeneration else { return true }
+        return isCurrentBoardRequest(
+            requestGeneration,
+            accountID: accountID,
+            sessionGeneration: sessionGeneration
+        )
+    }
+
+    private func fetchBoardAndFriends(
+        allowsRecoveryScheduling: Bool = true,
+        requestGeneration: Int
+    ) async {
         let currentAccountID = accountID
+        let currentSessionGeneration = sessionGeneration
+        guard isCurrentBoardRequest(
+            requestGeneration,
+            accountID: currentAccountID,
+            sessionGeneration: currentSessionGeneration
+        ) else { return }
         let cachedAccount: OfflineAccountSnapshot?
         if let currentAccountID {
             cachedAccount = await cache.loadAccount(memberID: currentAccountID)
         } else {
             cachedAccount = nil
         }
+        guard isCurrentBoardRequest(
+            requestGeneration,
+            accountID: currentAccountID,
+            sessionGeneration: currentSessionGeneration
+        ) else { return }
 
         if sessionAvailability?.isOffline == true {
-            guard let currentAccountID,
-                  let cachedBoard = await cache.loadTodoBoard(accountID: currentAccountID)
-            else {
+            guard let currentAccountID else {
                 board = nil
                 hasLoadedCompleteBoard = false
                 isShowingCachedData = false
                 lastSyncedAt = nil
                 errorKey = "todo.error.load"
-                await refreshPendingOperationState()
+                await refreshPendingOperationState(
+                    requestGeneration: requestGeneration,
+                    sessionGeneration: currentSessionGeneration
+                )
                 return
             }
+            guard let cachedBoard = await cache.loadTodoBoard(accountID: currentAccountID) else {
+                guard isCurrentBoardRequest(
+                    requestGeneration,
+                    accountID: currentAccountID,
+                    sessionGeneration: currentSessionGeneration
+                ) else { return }
+                board = nil
+                hasLoadedCompleteBoard = false
+                isShowingCachedData = false
+                lastSyncedAt = nil
+                errorKey = "todo.error.load"
+                await refreshPendingOperationState(
+                    requestGeneration: requestGeneration,
+                    sessionGeneration: currentSessionGeneration
+                )
+                return
+            }
+            guard isCurrentBoardRequest(
+                requestGeneration,
+                accountID: currentAccountID,
+                sessionGeneration: currentSessionGeneration
+            ) else { return }
             board = boardWithValidIDs(cachedBoard)
             hasLoadedCompleteBoard = true
             friends = cachedAccount?.friends.sorted(by: friendOrder) ?? []
@@ -322,10 +413,26 @@ final class TodoViewModel: ObservableObject {
             isShowingCachedData = true
             lastSyncedAt = cachedAccount?.storedAt
             errorKey = nil
-            await overlayQueuedTodos(accountID: currentAccountID)
-            await saveCurrentBoardToCache(accountID: currentAccountID)
+            await overlayQueuedTodos(
+                accountID: currentAccountID,
+                requestGeneration: requestGeneration,
+                sessionGeneration: currentSessionGeneration
+            )
+            guard isCurrentBoardRequest(
+                requestGeneration,
+                accountID: currentAccountID,
+                sessionGeneration: currentSessionGeneration
+            ) else { return }
+            await saveCurrentBoardToCache(
+                accountID: currentAccountID,
+                requestGeneration: requestGeneration,
+                sessionGeneration: currentSessionGeneration
+            )
             selectNonemptyStatusIfNeeded()
-            await refreshPendingOperationState()
+            await refreshPendingOperationState(
+                requestGeneration: requestGeneration,
+                sessionGeneration: currentSessionGeneration
+            )
             return
         }
 
@@ -333,6 +440,11 @@ final class TodoViewModel: ObservableObject {
         var boardLoaded = false
         do {
             let serverBoard = try await repository.fetchBoard()
+            guard isCurrentBoardRequest(
+                requestGeneration,
+                accountID: currentAccountID,
+                sessionGeneration: currentSessionGeneration
+            ) else { return }
             let validBoard = boardWithValidIDs(serverBoard)
             board = validBoard
             hasLoadedCompleteBoard = true
@@ -346,16 +458,44 @@ final class TodoViewModel: ObservableObject {
                     board: validBoard,
                     now: .now
                 )
+                guard isCurrentBoardRequest(
+                    requestGeneration,
+                    accountID: currentAccountID,
+                    sessionGeneration: currentSessionGeneration
+                ) else { return }
             }
         } catch {
-            guard isOfflineEligible(error),
-                  let currentAccountID,
-                  let cachedBoard = await cache.loadTodoBoard(accountID: currentAccountID)
-            else {
+            guard isCurrentBoardRequest(
+                requestGeneration,
+                accountID: currentAccountID,
+                sessionGeneration: currentSessionGeneration
+            ) else { return }
+            guard isOfflineEligible(error), let currentAccountID else {
                 errorKey = "todo.error.load"
-                await refreshPendingOperationState()
+                await refreshPendingOperationState(
+                    requestGeneration: requestGeneration,
+                    sessionGeneration: currentSessionGeneration
+                )
                 return
             }
+            guard let cachedBoard = await cache.loadTodoBoard(accountID: currentAccountID) else {
+                guard isCurrentBoardRequest(
+                    requestGeneration,
+                    accountID: currentAccountID,
+                    sessionGeneration: currentSessionGeneration
+                ) else { return }
+                errorKey = "todo.error.load"
+                await refreshPendingOperationState(
+                    requestGeneration: requestGeneration,
+                    sessionGeneration: currentSessionGeneration
+                )
+                return
+            }
+            guard isCurrentBoardRequest(
+                requestGeneration,
+                accountID: currentAccountID,
+                sessionGeneration: currentSessionGeneration
+            ) else { return }
             board = boardWithValidIDs(cachedBoard)
             hasLoadedCompleteBoard = true
             boardLoaded = true
@@ -373,13 +513,36 @@ final class TodoViewModel: ObservableObject {
             return
         }
         if let currentAccountID {
-            await overlayQueuedTodos(accountID: currentAccountID)
-            await saveCurrentBoardToCache(accountID: currentAccountID)
+            await overlayQueuedTodos(
+                accountID: currentAccountID,
+                requestGeneration: requestGeneration,
+                sessionGeneration: currentSessionGeneration
+            )
+            guard isCurrentBoardRequest(
+                requestGeneration,
+                accountID: currentAccountID,
+                sessionGeneration: currentSessionGeneration
+            ) else { return }
+            await saveCurrentBoardToCache(
+                accountID: currentAccountID,
+                requestGeneration: requestGeneration,
+                sessionGeneration: currentSessionGeneration
+            )
         }
+        guard isCurrentBoardRequest(
+            requestGeneration,
+            accountID: currentAccountID,
+            sessionGeneration: currentSessionGeneration
+        ) else { return }
         selectNonemptyStatusIfNeeded()
 
         do {
             let serverFriends = try await repository.fetchFriends()
+            guard isCurrentBoardRequest(
+                requestGeneration,
+                accountID: currentAccountID,
+                sessionGeneration: currentSessionGeneration
+            ) else { return }
             friends = serverFriends.sorted(by: friendOrder)
             if let cachedAccount {
                 let updated = OfflineAccountSnapshot(
@@ -390,8 +553,18 @@ final class TodoViewModel: ObservableObject {
                     storedAt: .now
                 )
                 try? await cache.saveAccount(updated)
+                guard isCurrentBoardRequest(
+                    requestGeneration,
+                    accountID: currentAccountID,
+                    sessionGeneration: currentSessionGeneration
+                ) else { return }
             }
         } catch {
+            guard isCurrentBoardRequest(
+                requestGeneration,
+                accountID: currentAccountID,
+                sessionGeneration: currentSessionGeneration
+            ) else { return }
             if isOfflineEligible(error), let cachedAccount {
                 friends = cachedAccount.friends.sorted(by: friendOrder)
                 usedFallback = true
@@ -416,6 +589,12 @@ final class TodoViewModel: ObservableObject {
             }
         }
 
+        guard isCurrentBoardRequest(
+            requestGeneration,
+            accountID: currentAccountID,
+            sessionGeneration: currentSessionGeneration
+        ) else { return }
+
         if !usedFallback {
             isOffline = false
             isShowingCachedData = false
@@ -424,10 +603,18 @@ final class TodoViewModel: ObservableObject {
                 cancelRecovery()
             }
             await syncQueuedOutboxIfNeeded(accountID: currentAccountID)
+            guard isCurrentBoardRequest(
+                requestGeneration,
+                accountID: currentAccountID,
+                sessionGeneration: currentSessionGeneration
+            ) else { return }
         } else if allowsRecoveryScheduling, let currentAccountID {
-            scheduleRecovery(for: currentAccountID)
+            scheduleRecovery(for: currentAccountID, requestGeneration: requestGeneration)
         }
-        await refreshPendingOperationState()
+        await refreshPendingOperationState(
+            requestGeneration: requestGeneration,
+            sessionGeneration: currentSessionGeneration
+        )
     }
 
     func loadAttachments(for todo: TodoDTO) async {
@@ -473,6 +660,8 @@ final class TodoViewModel: ObservableObject {
         }
 
         let currentAccountID = accountID ?? self.accountID
+        let requestGeneration = boardRequestGeneration
+        let requestSessionGeneration = self.sessionGeneration
         if isOffline && !draft.request().supportsOfflineCreate {
             errorKey = "todo.error.offlineUnsupported"
             emitHaptic(.warning)
@@ -491,11 +680,18 @@ final class TodoViewModel: ObservableObject {
                 request,
                 operationID: operationID,
                 accountID: currentAccountID,
-                triggerSync: sessionAvailability?.isOffline != true
+                triggerSync: sessionAvailability?.isOffline != true,
+                requestGeneration: requestGeneration,
+                sessionGeneration: requestSessionGeneration
             )
         }
         do {
             let created = try await repository.create(request)
+            guard isCurrentMutation(
+                requestGeneration: requestGeneration,
+                accountID: currentAccountID,
+                sessionGeneration: requestSessionGeneration
+            ) else { return false }
             guard created.hasValidUUID else {
                 errorKey = "todo.error.create"
                 emitHaptic(.error)
@@ -503,14 +699,33 @@ final class TodoViewModel: ObservableObject {
             }
             if refreshBoard {
                 patchBoard(with: created)
-                await saveCurrentBoardToCache(accountID: currentAccountID)
+                await saveCurrentBoardToCache(
+                    accountID: currentAccountID,
+                    requestGeneration: requestGeneration,
+                    sessionGeneration: requestSessionGeneration
+                )
             }
+            guard isCurrentMutation(
+                requestGeneration: requestGeneration,
+                accountID: currentAccountID,
+                sessionGeneration: requestSessionGeneration
+            ) else { return false }
             isOffline = false
             isShowingCachedData = false
             await refreshPendingOperationState(accountID: currentAccountID)
+            guard isCurrentMutation(
+                requestGeneration: requestGeneration,
+                accountID: currentAccountID,
+                sessionGeneration: requestSessionGeneration
+            ) else { return false }
             emitHaptic(.success)
             return true
         } catch let error {
+            guard isCurrentMutation(
+                requestGeneration: requestGeneration,
+                accountID: currentAccountID,
+                sessionGeneration: requestSessionGeneration
+            ) else { return false }
             guard isCreateOfflineEligible(error) else {
                 errorKey = "todo.error.create"
                 emitHaptic(.error)
@@ -521,7 +736,9 @@ final class TodoViewModel: ObservableObject {
                 request,
                 operationID: operationID,
                 accountID: currentAccountID,
-                triggerSync: true
+                triggerSync: true,
+                requestGeneration: requestGeneration,
+                sessionGeneration: requestSessionGeneration
             )
         }
     }
@@ -607,6 +824,9 @@ final class TodoViewModel: ObservableObject {
         guard ensureOnlineMutationAllowed() else { return false }
         guard !isSaving, let originalBoard = board else { return false }
         guard let sourceStatus = boardStatus(of: todoID, in: originalBoard) else { return false }
+        let requestGeneration = boardRequestGeneration
+        let requestAccountID = accountID
+        let requestSessionGeneration = sessionGeneration
 
         if targetTodoID == todoID {
             return true
@@ -658,9 +878,27 @@ final class TodoViewModel: ObservableObject {
                     throw TodoMutationResponseError.malformedID
                 }
             }
-            await saveCurrentBoardToCache(accountID: accountID)
-            return true
+            guard isCurrentMutation(
+                requestGeneration: requestGeneration,
+                accountID: requestAccountID,
+                sessionGeneration: requestSessionGeneration
+            ) else { return false }
+            await saveCurrentBoardToCache(
+                accountID: requestAccountID,
+                requestGeneration: requestGeneration,
+                sessionGeneration: requestSessionGeneration
+            )
+            return isCurrentMutation(
+                requestGeneration: requestGeneration,
+                accountID: requestAccountID,
+                sessionGeneration: requestSessionGeneration
+            )
         } catch {
+            guard isCurrentMutation(
+                requestGeneration: requestGeneration,
+                accountID: requestAccountID,
+                sessionGeneration: requestSessionGeneration
+            ) else { return false }
             board = originalBoard
             selectedStatus = sourceStatus
             errorKey = sourceStatus == destinationStatus
@@ -684,19 +922,41 @@ final class TodoViewModel: ObservableObject {
         operation: () async throws -> TodoDTO
     ) async -> Bool {
         guard !isSaving else { return false }
+        let requestGeneration = boardRequestGeneration
+        let requestAccountID = accountID
+        let requestSessionGeneration = sessionGeneration
         isSaving = true
         defer { isSaving = false }
         do {
             let response = try await operation()
+            guard isCurrentMutation(
+                requestGeneration: requestGeneration,
+                accountID: requestAccountID,
+                sessionGeneration: requestSessionGeneration
+            ) else { return false }
             guard patchBoard(with: response, expectedID: expectedTodoID) else {
                 self.errorKey = errorKey
                 emitHaptic(.error)
                 return false
             }
-            await saveCurrentBoardToCache(accountID: accountID)
+            await saveCurrentBoardToCache(
+                accountID: requestAccountID,
+                requestGeneration: requestGeneration,
+                sessionGeneration: requestSessionGeneration
+            )
+            guard isCurrentMutation(
+                requestGeneration: requestGeneration,
+                accountID: requestAccountID,
+                sessionGeneration: requestSessionGeneration
+            ) else { return false }
             emitHaptic(.success)
             return true
         } catch {
+            guard isCurrentMutation(
+                requestGeneration: requestGeneration,
+                accountID: requestAccountID,
+                sessionGeneration: requestSessionGeneration
+            ) else { return false }
             self.errorKey = errorKey
             emitHaptic(.error)
             return false
@@ -709,16 +969,38 @@ final class TodoViewModel: ObservableObject {
         operation: () async throws -> Void
     ) async -> Bool {
         guard !isSaving else { return false }
+        let requestGeneration = boardRequestGeneration
+        let requestAccountID = accountID
+        let requestSessionGeneration = sessionGeneration
         isSaving = true
         defer { isSaving = false }
         do {
             try await operation()
+            guard isCurrentMutation(
+                requestGeneration: requestGeneration,
+                accountID: requestAccountID,
+                sessionGeneration: requestSessionGeneration
+            ) else { return false }
             removeFromBoard(todoID: todoID)
             attachmentsByTodoID[todoID] = nil
-            await saveCurrentBoardToCache(accountID: accountID)
+            await saveCurrentBoardToCache(
+                accountID: requestAccountID,
+                requestGeneration: requestGeneration,
+                sessionGeneration: requestSessionGeneration
+            )
+            guard isCurrentMutation(
+                requestGeneration: requestGeneration,
+                accountID: requestAccountID,
+                sessionGeneration: requestSessionGeneration
+            ) else { return false }
             emitHaptic(.success)
             return true
         } catch {
+            guard isCurrentMutation(
+                requestGeneration: requestGeneration,
+                accountID: requestAccountID,
+                sessionGeneration: requestSessionGeneration
+            ) else { return false }
             self.errorKey = errorKey
             emitHaptic(.error)
             return false
@@ -734,7 +1016,7 @@ final class TodoViewModel: ObservableObject {
         return true
     }
 
-    private func scheduleRecovery(for accountID: MemberID) {
+    private func scheduleRecovery(for accountID: MemberID, requestGeneration: Int) {
         guard accountID > 0, !recoveryDelays.isEmpty else { return }
         cancelRecovery()
         let generation = recoveryGeneration
@@ -755,14 +1037,19 @@ final class TodoViewModel: ObservableObject {
                 }
                 guard let self,
                       self.recoveryGeneration == generation,
-                      self.accountID == accountID
+                      self.accountID == accountID,
+                      self.boardRequestGeneration == requestGeneration
                 else { return }
 
                 // Keep this request silent. The user did not initiate a new
                 // mutation, and the regular refresh path never emits haptics.
-                await self.fetchBoardAndFriends(allowsRecoveryScheduling: false)
+                await self.fetchBoardAndFriends(
+                    allowsRecoveryScheduling: false,
+                    requestGeneration: requestGeneration
+                )
                 guard self.recoveryGeneration == generation,
-                      self.accountID == accountID
+                      self.accountID == accountID,
+                      self.boardRequestGeneration == requestGeneration
                 else { return }
                 if !self.isOffline && !self.isShowingCachedData { return }
             }
@@ -809,29 +1096,105 @@ final class TodoViewModel: ObservableObject {
         }
     }
 
-    private func refreshPendingOperationState(accountID: MemberID? = nil) async {
-        guard let accountID = accountID ?? self.accountID else {
+    private func refreshPendingOperationState(
+        accountID: MemberID? = nil,
+        requestGeneration: Int? = nil,
+        sessionGeneration: UInt64? = nil
+    ) async {
+        let expectedAccountID = accountID ?? self.accountID
+        let expectedSessionGeneration = sessionGeneration ?? self.sessionGeneration
+        guard let expectedAccountID else {
             pendingOperationCount = 0
             return
         }
-        pendingOperationCount = await outbox.entries(accountID: accountID).filter {
+        let pendingCount = await outbox.entries(accountID: expectedAccountID).filter {
             $0.state == .pending
         }.count
+        guard self.accountID == expectedAccountID,
+              self.sessionGeneration == expectedSessionGeneration,
+              requestGeneration == nil || requestGeneration == boardRequestGeneration
+        else { return }
+        pendingOperationCount = pendingCount
     }
 
-    private func saveCurrentBoardToCache(accountID: MemberID? = nil) async {
+    private func saveCurrentBoardToCache(
+        accountID: MemberID? = nil,
+        requestGeneration: Int? = nil,
+        sessionGeneration: UInt64? = nil
+    ) async {
+        let expectedAccountID = accountID ?? self.accountID
+        let expectedSessionGeneration = sessionGeneration ?? self.sessionGeneration
         guard hasLoadedCompleteBoard,
-              let accountID = accountID ?? self.accountID,
+              let expectedAccountID,
+              self.accountID == expectedAccountID,
+              self.sessionGeneration == expectedSessionGeneration,
+              requestGeneration == nil || requestGeneration == boardRequestGeneration,
               let board
         else { return }
-        try? await cache.saveTodoBoard(accountID: accountID, board: board, now: .now)
+        try? await cache.saveTodoBoard(accountID: expectedAccountID, board: board, now: .now)
+        guard self.accountID == expectedAccountID,
+              self.sessionGeneration == expectedSessionGeneration,
+              hasLoadedCompleteBoard,
+              requestGeneration == nil || requestGeneration == boardRequestGeneration
+        else { return }
+        publishTodoWidgetSnapshot(
+            accountID: expectedAccountID,
+            board: board,
+            sessionGeneration: expectedSessionGeneration,
+            requestGeneration: requestGeneration
+        )
+    }
+
+    private func publishTodoWidgetSnapshot(
+        accountID: MemberID? = nil,
+        board: TodoBoardDTO? = nil,
+        updatedAt: Date = .now,
+        sessionGeneration: UInt64? = nil,
+        requestGeneration: Int? = nil
+    ) {
+        let expectedAccountID = accountID ?? self.accountID
+        let expectedSessionGeneration = sessionGeneration ?? self.sessionGeneration
+        guard hasLoadedCompleteBoard,
+              let accountID = expectedAccountID,
+              self.accountID == accountID,
+              self.sessionGeneration == expectedSessionGeneration,
+              let board = board ?? self.board,
+              let sessionGeneration = expectedSessionGeneration,
+              requestGeneration == nil || requestGeneration == boardRequestGeneration
+        else { return }
+        _ = DutyparkWidgetRefreshService.publishTodoBoard(
+            accountID: accountID,
+            board: board,
+            updatedAt: updatedAt,
+            sessionGeneration: sessionGeneration
+        )
     }
 
     /// Rebuilds locally-created cards from the durable outbox on every board
     /// load. The cache is normally enough, but this overlay also survives an
     /// interrupted cache write and keeps a queued card visible after a relaunch.
-    private func overlayQueuedTodos(accountID: MemberID) async {
-        for entry in await outbox.entries(accountID: accountID) {
+    private func overlayQueuedTodos(
+        accountID: MemberID,
+        requestGeneration: Int,
+        sessionGeneration: UInt64?
+    ) async {
+        guard isCurrentMutation(
+            requestGeneration: requestGeneration,
+            accountID: accountID,
+            sessionGeneration: sessionGeneration
+        ) else { return }
+        let entries = await outbox.entries(accountID: accountID)
+        guard isCurrentMutation(
+            requestGeneration: requestGeneration,
+            accountID: accountID,
+            sessionGeneration: sessionGeneration
+        ) else { return }
+        for entry in entries {
+            guard isCurrentMutation(
+                requestGeneration: requestGeneration,
+                accountID: accountID,
+                sessionGeneration: sessionGeneration
+            ) else { return }
             guard case .todoCreate(let request) = entry.payload else { continue }
             patchBoard(with: provisionalTodo(
                 from: request,
@@ -845,7 +1208,9 @@ final class TodoViewModel: ObservableObject {
         _ request: TodoRequest,
         operationID: UUID,
         accountID: MemberID?,
-        triggerSync: Bool
+        triggerSync: Bool,
+        requestGeneration: Int? = nil,
+        sessionGeneration: UInt64? = nil
     ) async -> Bool {
         guard let accountID,
               request.supportsOfflineCreate
@@ -854,6 +1219,11 @@ final class TodoViewModel: ObservableObject {
             emitHaptic(.warning)
             return false
         }
+        guard isCurrentMutation(
+            requestGeneration: requestGeneration,
+            accountID: accountID,
+            sessionGeneration: sessionGeneration
+        ) else { return false }
 
         do {
             _ = try await outbox.enqueueTodoCreate(
@@ -866,10 +1236,21 @@ final class TodoViewModel: ObservableObject {
             // A failed durable write must never be presented as a queued
             // success. Keep the in-memory board untouched so the caller can
             // retry without losing the last confirmed state.
+            guard isCurrentMutation(
+                requestGeneration: requestGeneration,
+                accountID: accountID,
+                sessionGeneration: sessionGeneration
+            ) else { return false }
             errorKey = "todo.error.offlineQueue"
             emitHaptic(.error)
             return false
         }
+
+        guard isCurrentMutation(
+            requestGeneration: requestGeneration,
+            accountID: accountID,
+            sessionGeneration: sessionGeneration
+        ) else { return false }
 
         let provisional = provisionalTodo(
             from: request,
@@ -879,8 +1260,22 @@ final class TodoViewModel: ObservableObject {
         patchBoard(with: provisional)
         isOffline = true
         isShowingCachedData = true
-        await saveCurrentBoardToCache(accountID: accountID)
+        await saveCurrentBoardToCache(
+            accountID: accountID,
+            requestGeneration: requestGeneration,
+            sessionGeneration: sessionGeneration
+        )
+        guard isCurrentMutation(
+            requestGeneration: requestGeneration,
+            accountID: accountID,
+            sessionGeneration: sessionGeneration
+        ) else { return false }
         await refreshPendingOperationState(accountID: accountID)
+        guard isCurrentMutation(
+            requestGeneration: requestGeneration,
+            accountID: accountID,
+            sessionGeneration: sessionGeneration
+        ) else { return false }
         errorKey = nil
         // The user's local save completed durably; the later network drain
         // is silent and must not emit a second success event.

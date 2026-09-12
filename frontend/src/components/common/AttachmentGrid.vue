@@ -14,7 +14,7 @@ import {
   FileCode,
   File,
   Presentation,
-} from 'lucide-vue-next'
+} from '@lucide/vue'
 import { fetchAuthenticatedImage, formatBytes } from '@/api/attachment'
 import ImageViewer from './ImageViewer.vue'
 import type { NormalizedAttachment } from '@/types'

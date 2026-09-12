@@ -2,7 +2,7 @@
 import { ref, inject, computed, type Ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { useScrollProgress } from '@/composables/useScrollProgress'
-import { ChevronRight, Sparkles, BookOpen } from 'lucide-vue-next'
+import { ChevronRight, Sparkles, BookOpen } from '@lucide/vue'
 
 const sectionRef = ref<HTMLElement | null>(null)
 const containerRef = inject<Ref<HTMLElement | null>>('introContainer', ref(null))

@@ -22,6 +22,7 @@ class JwtProvider(
     jwtConfig: JwtConfig,
 ) {
     private val key: SecretKey = createSigningKey(jwtConfig.secret)
+    private val parser = Jwts.parser().verifyWith(key).build()
     private val tokenValidityInMilliseconds: Long = 1000L * jwtConfig.tokenValidityInSeconds
 
     fun createToken(member: Member, sessionId: Long): String {
@@ -68,10 +69,7 @@ class JwtProvider(
         }
     }
 
-    private fun parseClaims(token: String?): Claims = Jwts
-        .parser()
-        .verifyWith(key)
-        .build()
+    private fun parseClaims(token: String?): Claims = parser
         .parseSignedClaims(token)
         .payload
 

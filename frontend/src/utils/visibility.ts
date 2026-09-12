@@ -1,4 +1,4 @@
-import { Eye, Users, House, Lock, type LucideIcon } from 'lucide-vue-next'
+import { Eye, Users, House, Lock, type LucideIcon } from '@lucide/vue'
 import { translateGlobal } from '@/i18n'
 
 export type CalendarVisibility = 'PUBLIC' | 'FRIENDS' | 'FAMILY' | 'PRIVATE'

@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { useAuthStore } from '@/stores/auth'
 import { useSwal } from '@/composables/useSwal'
-import { ArrowLeftCircle, AlertTriangle, Loader2, Clock } from 'lucide-vue-next'
+import { ArrowLeftCircle, AlertTriangle, Loader2, Clock } from '@lucide/vue'
 import { buildLoginPath } from '@/utils/redirect'
 
 const authStore = useAuthStore()

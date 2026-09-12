@@ -5,7 +5,7 @@ import BaseModal from '@/components/common/BaseModal.vue'
 import CharacterCounter from '@/components/common/CharacterCounter.vue'
 import type { AdminInquiryDto, InquiryStatus } from '@/types/adminModeration'
 import { INQUIRY_STATUS_LABEL_KEYS, inquiryStatusToneClass } from './adminModerationLabels'
-import { AlertTriangle, ChevronRight, Copy, Loader2, X } from 'lucide-vue-next'
+import { AlertTriangle, ChevronRight, Copy, Loader2, X } from '@lucide/vue'
 
 const ANSWER_MAX_LENGTH = 2000
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { ChevronRight, LogOut, MoreHorizontal } from 'lucide-vue-next'
+import { ChevronRight, LogOut, MoreHorizontal } from '@lucide/vue'
 import PageHeader from '@/components/common/PageHeader.vue'
 import ProfileAvatar from '@/components/common/ProfileAvatar.vue'
 import { useAuthStore } from '@/stores/auth'

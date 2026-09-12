@@ -3,7 +3,7 @@ import { ref, shallowRef, onMounted, onUnmounted, watch, computed, nextTick } fr
 import { useI18n } from 'vue-i18n'
 import Uppy from '@uppy/core'
 import XHRUpload from '@uppy/xhr-upload'
-import { Upload, X, FileIcon, Image, Loader2 } from 'lucide-vue-next'
+import { Upload, X, FileIcon, Image, Loader2 } from '@lucide/vue'
 import type {
   AttachmentContextType,
   NormalizedAttachment,

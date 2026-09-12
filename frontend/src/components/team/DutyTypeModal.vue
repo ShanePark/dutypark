@@ -8,7 +8,7 @@ import CharacterCounter from '@/components/common/CharacterCounter.vue'
 import Pickr from '@simonwep/pickr'
 import '@simonwep/pickr/dist/themes/monolith.min.css'
 import type { DutyTypeDto } from '@/types'
-import { X } from 'lucide-vue-next'
+import { X } from '@lucide/vue'
 import { resolveApiErrorMessage } from '@/utils/resolveApiError'
 import { useContentFilterStore } from '@/stores/contentFilter'
 import {

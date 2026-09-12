@@ -202,8 +202,9 @@ final class SupportViewModel: ObservableObject {
                 page: loadedInquiryPage + 1,
                 size: Self.inquiryPageSize
             )
+            let existingIDs = Set(inquiries.map(\.id))
             inquiries.append(contentsOf: page.content.filter { next in
-                !inquiries.contains(where: { $0.id == next.id })
+                !existingIDs.contains(next.id)
             })
             loadedInquiryPage = page.number
             totalInquiryPages = page.totalPages
@@ -251,8 +252,9 @@ final class SupportViewModel: ObservableObject {
                 page: loadedReportPage + 1,
                 size: Self.inquiryPageSize
             )
+            let existingIDs = Set(reports.map(\.id))
             reports.append(contentsOf: page.content.filter { next in
-                !reports.contains(where: { $0.id == next.id })
+                !existingIDs.contains(next.id)
             })
             loadedReportPage = page.number
             totalReportPages = page.totalPages

@@ -7,7 +7,7 @@ import AdminNavTiles from '@/components/admin/AdminNavTiles.vue'
 import {
   ChevronDown,
   ChevronRight,
-} from 'lucide-vue-next'
+} from '@lucide/vue'
 
 const router = useRouter()
 const authStore = useAuthStore()

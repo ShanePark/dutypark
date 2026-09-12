@@ -17,6 +17,7 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.kotlin.argumentCaptor
+import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
@@ -141,7 +142,8 @@ class KakaoLoginServiceTest {
         val redirectTarget = "/todo?view=mine"
         whenever(memberSocialAccountService.findMemberByProviderAndSocialId(SsoType.KAKAO, "999")).thenReturn(null)
         stubKakaoApis(kakaoId = 999L)
-        whenever(memberSsoRegisterRepository.save(org.mockito.kotlin.any())).thenAnswer { it.arguments[0] as MemberSsoRegister }
+        whenever(memberSsoRegisterRepository.save(any<MemberSsoRegister>()))
+            .thenAnswer { it.arguments[0] as MemberSsoRegister }
 
         val request = MockHttpServletRequest()
         val response = MockHttpServletResponse()

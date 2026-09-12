@@ -69,6 +69,26 @@ The implementation lives in `Dutypark/Core/Offline/` and is covered by focused
 unit tests in `DutyparkTests` (cache, outbox, session fallback, and sync
 coordinator behavior).
 
+## Home screen widget
+
+`DutyparkWidgets` is an iOS 17+ WidgetKit extension with a large monthly
+calendar widget for the signed-in member. It shows the month, weekday labels,
+dates, and that member's duty abbreviations; holidays and other members are
+not included.
+
+The app and the extension share the App Group
+`group.io.github.shanepark.dutypark`. The app saves monthly duty snapshots in
+that container, and the widget reads the current month's snapshot without
+its own login session or network request. Server changes become visible after
+the app next opens online and refreshes the current month, or after a calendar
+refresh. Cached months remain available across month boundaries; a month
+without saved data shows a sync prompt. Logging out clears the account's
+widget data and requests a widget reload.
+
+Before signing for a device or TestFlight, register the App Group and enable
+it for both `io.github.shanepark.dutypark` and the extension App ID
+`io.github.shanepark.dutypark.widgets`, then refresh their provisioning profiles.
+
 ## Opening and Verification
 
 Open `Dutypark.xcodeproj` in Xcode, or use the following command:
@@ -94,6 +114,37 @@ xcodebuild \
   CODE_SIGNING_ALLOWED=NO \
   -only-testing:DutyparkTests \
   test
+```
+
+The commands above intentionally disable signing and therefore cannot verify an
+App Group container. For simulator-only inspection, make a local ad-hoc build
+with `CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=-`, copy the product, and
+re-sign the extension before the app with the App Group-only entitlements. This
+keeps the local product launchable while registering the shared container; it
+does not replace device or TestFlight signing. `xcrun simctl get_app_container
+<device-udid> io.github.shanepark.dutypark groups` should then list
+`group.io.github.shanepark.dutypark`, and `xcrun simctl launch <device-udid>
+io.github.shanepark.dutypark` should return a process ID.
+
+```sh
+SIGNED_DERIVED_DATA=/tmp/dutypark-widget-signed-required
+LOCAL_SIGNED_APP=$(mktemp -d /tmp/dutypark-widget-local-signed.XXXXXX)
+DEVICE_UDID="<device-udid>"
+xcodebuild -project Dutypark.xcodeproj -scheme Dutypark \
+  -destination 'generic/platform=iOS Simulator' \
+  -derivedDataPath "$SIGNED_DERIVED_DATA" \
+  CODE_SIGNING_ALLOWED=YES CODE_SIGN_IDENTITY=- build
+ditto "$SIGNED_DERIVED_DATA/Build/Products/Debug-iphonesimulator/Dutypark.app" \
+  "$LOCAL_SIGNED_APP/Dutypark.app"
+codesign --force --sign - \
+  --entitlements DutyparkWidgets/DutyparkWidgets.entitlements \
+  "$LOCAL_SIGNED_APP/Dutypark.app/PlugIns/DutyparkWidgets.appex"
+codesign --force --sign - \
+  --entitlements DutyparkWidgets/DutyparkWidgets.entitlements \
+  "$LOCAL_SIGNED_APP/Dutypark.app"
+xcrun simctl install "$DEVICE_UDID" "$LOCAL_SIGNED_APP/Dutypark.app"
+xcrun simctl get_app_container "$DEVICE_UDID" io.github.shanepark.dutypark groups
+xcrun simctl launch "$DEVICE_UDID" io.github.shanepark.dutypark
 ```
 
 ### TestFlight Upload
@@ -197,6 +248,8 @@ xcodebuild \
 - `Dutypark/Config`: Build environment configuration
 - `DutyparkTests`: Unit tests
 - `DutyparkUITests`: UI tests
+- `DutyparkWidgets`: Home screen WidgetKit extension
+- `DutyparkWidgetShared`: App Group snapshot contract shared by the app and widget
 
 The Xcode project uses filesystem-synchronized groups. In most cases, adding files to the source directories above does not require changes to `project.pbxproj`.
 

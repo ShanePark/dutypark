@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Apple, Check, Info, Loader2, Trash2, X } from 'lucide-vue-next'
+import { Apple, Check, Info, Loader2, Trash2, X } from '@lucide/vue'
 import BaseModal from '@/components/common/BaseModal.vue'
 import type { SocialAccountProvider } from '@/api/member'
 

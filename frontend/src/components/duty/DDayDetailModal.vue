@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { X, Star, Pencil, Trash2, Lock, CalendarCheck } from 'lucide-vue-next'
+import { X, Star, Pencil, Trash2, Lock, CalendarCheck } from '@lucide/vue'
 import { useI18n } from 'vue-i18n'
 import BaseModal from '@/components/common/BaseModal.vue'
 import { parseDateOnly } from '@/utils/date'

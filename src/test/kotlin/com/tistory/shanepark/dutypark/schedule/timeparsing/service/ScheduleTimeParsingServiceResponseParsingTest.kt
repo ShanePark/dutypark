@@ -4,6 +4,7 @@ import ch.qos.logback.classic.Logger
 import ch.qos.logback.classic.spi.ILoggingEvent
 import ch.qos.logback.core.read.ListAppender
 import com.tistory.shanepark.dutypark.TestUtils.Companion.jsr310JsonMapper
+import com.tistory.shanepark.dutypark.common.config.AiProperties
 import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeParsingRequest
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
@@ -19,7 +20,10 @@ import org.springframework.ai.chat.model.ChatModel
 import org.springframework.ai.chat.model.ChatResponse
 import org.springframework.ai.chat.model.Generation
 import org.springframework.ai.chat.prompt.Prompt
+import org.springframework.ai.openai.OpenAiChatOptions
 import java.time.LocalDate
+import java.time.Duration
+import java.util.concurrent.atomic.AtomicReference
 
 @DisplayName("ScheduleTimeParsingService response parsing")
 class ScheduleTimeParsingServiceResponseParsingTest {
@@ -31,7 +35,8 @@ class ScheduleTimeParsingServiceResponseParsingTest {
     @BeforeEach
     fun setup() {
         chatModel = mock()
-        service = ScheduleTimeParsingService(chatModel, jsr310JsonMapper())
+        whenever(chatModel.options).thenReturn(OpenAiChatOptions.builder().build())
+        service = ScheduleTimeParsingService(chatModel, jsr310JsonMapper(), AiProperties(), 9)
         logAppender = ListAppender<ILoggingEvent>().apply { start() }
         serviceLogger().addAppender(logAppender)
     }
@@ -96,6 +101,54 @@ class ScheduleTimeParsingServiceResponseParsingTest {
         assertThat(response.startDateTime).isEqualTo("2025-02-28T14:50:00")
         assertThat(response.endDateTime).isEqualTo("2025-02-28T14:50:00")
         assertThat(response.content).isEqualTo("산본제일 진료")
+    }
+
+    @Test
+    fun `chat client applies configured timeout and retries while preserving model options`() {
+        val baseOptions = OpenAiChatOptions.builder()
+            .model("preserved-model")
+            .temperature(0.25)
+            .build()
+        whenever(chatModel.options).thenReturn(baseOptions)
+        val capturedPrompt = AtomicReference<Prompt>()
+        whenever(chatModel.call(any<Prompt>())).thenAnswer { invocation ->
+            capturedPrompt.set(invocation.getArgument<Prompt>(0))
+            ChatResponse(
+                listOf(
+                    Generation(
+                        AssistantMessage(
+                            """{"result":true,"hasTime":true,"startDateTime":"2025-02-28T14:00:00","endDateTime":"2025-02-28T14:00:00","content":"일정"}"""
+                        )
+                    )
+                )
+            )
+        }
+
+        val configuredService = ScheduleTimeParsingService(
+            chatModel = chatModel,
+            jsonMapper = jsr310JsonMapper(),
+            aiProperties = AiProperties(
+                chat = AiProperties.ChatProperties(
+                    connectTimeout = Duration.ofSeconds(30),
+                    readTimeout = Duration.ofSeconds(120),
+                )
+            ),
+            maxRetries = 9,
+        )
+
+        configuredService.parseScheduleTime(
+            ScheduleTimeParsingRequest(
+                date = LocalDate.of(2025, 2, 28),
+                content = "2시 일정"
+            )
+        )
+
+        val capturedOptions = (capturedPrompt.get()?.options as? OpenAiChatOptions)
+            ?: error("ChatClient did not pass OpenAiChatOptions to the model")
+        assertThat(capturedOptions.timeout).isEqualTo(Duration.ofSeconds(120))
+        assertThat(capturedOptions.maxRetries).isEqualTo(9)
+        assertThat(capturedOptions.model).isEqualTo("preserved-model")
+        assertThat(capturedOptions.temperature).isEqualTo(0.25)
     }
 
     @Test

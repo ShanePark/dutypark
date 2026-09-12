@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { X, ChevronLeft, ChevronRight, Calendar, Paperclip, Loader2 } from 'lucide-vue-next'
+import { X, ChevronLeft, ChevronRight, Calendar, Paperclip, Loader2 } from '@lucide/vue'
 import { useI18n } from 'vue-i18n'
 import BaseModal from '@/components/common/BaseModal.vue'
 import { formatDateRange } from '@/utils/date'

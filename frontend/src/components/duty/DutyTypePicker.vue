@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { nextTick, onMounted, onUnmounted, ref, type CSSProperties } from 'vue'
-import { Check, ChevronDown } from 'lucide-vue-next'
+import { Check, ChevronDown } from '@lucide/vue'
 import { useEscapeKey } from '@/composables/useEscapeKey'
 import type { DutyPatternDutyTypeDto } from '@/types'
 

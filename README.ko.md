@@ -35,7 +35,7 @@ Dutypark은 근무표와 일상의 약속을 하나의 캘린더에서 관리하
 
 ## 로컬 개발
 
-JDK 25+, Node.js 20+, Docker가 필요합니다. iOS 개발에는 Xcode 26+가 추가로 필요합니다.
+JDK 25+, Node.js 24.x (LTS), Docker가 필요합니다. iOS 개발에는 Xcode 26+가 추가로 필요합니다.
 
 ```bash
 # 터미널 1

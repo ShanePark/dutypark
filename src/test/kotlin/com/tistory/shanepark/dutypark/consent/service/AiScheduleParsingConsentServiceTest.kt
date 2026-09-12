@@ -86,7 +86,8 @@ class AiScheduleParsingConsentServiceTest {
     fun `grant records current version and request metadata`() {
         whenever(memberRepository.findMemberWithTeamForUpdate(1L)).thenReturn(Optional.of(member))
         whenever(consentEventRepository.findTopByMember_IdOrderByCreatedAtDescIdDesc(1L)).thenReturn(null)
-        whenever(consentEventRepository.save(any())).thenAnswer { it.arguments[0] }
+        whenever(consentEventRepository.save(any<AiScheduleParsingConsentEvent>()))
+            .thenAnswer { it.arguments[0] as AiScheduleParsingConsentEvent }
 
         val result = consentService.updateConsent(
             memberId = 1L,
@@ -125,7 +126,8 @@ class AiScheduleParsingConsentServiceTest {
     fun `first refusal records a revoked event`() {
         whenever(memberRepository.findMemberWithTeamForUpdate(1L)).thenReturn(Optional.of(member))
         whenever(consentEventRepository.findTopByMember_IdOrderByCreatedAtDescIdDesc(1L)).thenReturn(null)
-        whenever(consentEventRepository.save(any())).thenAnswer { it.arguments[0] }
+        whenever(consentEventRepository.save(any<AiScheduleParsingConsentEvent>()))
+            .thenAnswer { it.arguments[0] as AiScheduleParsingConsentEvent }
 
         val result = consentService.updateConsent(1L, false, null, null, null)
 
@@ -143,7 +145,8 @@ class AiScheduleParsingConsentServiceTest {
         val grant = event(AiScheduleParsingConsentEventType.GRANTED, "2026-08-13")
         whenever(memberRepository.findMemberWithTeamForUpdate(1L)).thenReturn(Optional.of(member))
         whenever(consentEventRepository.findTopByMember_IdOrderByCreatedAtDescIdDesc(1L)).thenReturn(grant)
-        whenever(consentEventRepository.save(any())).thenAnswer { it.arguments[0] }
+        whenever(consentEventRepository.save(any<AiScheduleParsingConsentEvent>()))
+            .thenAnswer { it.arguments[0] as AiScheduleParsingConsentEvent }
 
         val revoked = consentService.updateConsent(1L, false, "ignored", null, null)
 

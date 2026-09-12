@@ -48,25 +48,33 @@ class AuthService(
 
     @Transactional(readOnly = true)
     fun tokenToLoginMember(token: String): LoginMember {
-        if (validateToken(token) == TokenStatus.VALID) {
-            val loginMember = jwtProvider.parseToken(token)
-            loginMember.sessionId?.let { sessionId ->
-                val sessionOwnerId = if (loginMember.isImpersonating) {
-                    loginMember.originalMemberId ?: throw AuthException()
-                } else {
-                    loginMember.id
-                }
-                if (!refreshTokenService.isSessionActive(sessionId, sessionOwnerId)) {
-                    throw AuthException()
-                }
-            }
-            val member = memberRepository.findById(loginMember.id).orElseThrow {
-                AuthException("auth.account.inactive")
-            }
-            ensureActive(member)
-            return loginMember
+        return authenticateToken(token) ?: throw AuthException()
+    }
+
+    @Transactional(readOnly = true)
+    fun authenticateToken(token: String): LoginMember? {
+        val loginMember = try {
+            jwtProvider.parseToken(token)
+        } catch (_: AuthException) {
+            return null
         }
-        throw AuthException()
+        // Only a JWT parsing failure permits trying another credential. Session and member
+        // failures must propagate so a rejected bearer cannot fall back to a cookie.
+        loginMember.sessionId?.let { sessionId ->
+            val sessionOwnerId = if (loginMember.isImpersonating) {
+                loginMember.originalMemberId ?: throw AuthException()
+            } else {
+                loginMember.id
+            }
+            if (!refreshTokenService.isSessionActive(sessionId, sessionOwnerId)) {
+                throw AuthException()
+            }
+        }
+        val member = memberRepository.findById(loginMember.id).orElseThrow {
+            AuthException("auth.account.inactive")
+        }
+        ensureActive(member)
+        return loginMember
     }
 
     @Transactional(readOnly = true)

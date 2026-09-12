@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import { ChevronLeft, ChevronRight, FileSpreadsheet, Loader2, PencilLine, Users, X } from 'lucide-vue-next'
+import { ChevronLeft, ChevronRight, FileSpreadsheet, Loader2, PencilLine, Users, X } from '@lucide/vue'
 import { useI18n } from 'vue-i18n'
 import { isLightColor } from '@/utils/color'
 import { dutyTypeLabel } from '@/utils/dutyAbbreviation'

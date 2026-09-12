@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Info } from 'lucide-vue-next'
+import { Info } from '@lucide/vue'
 
 // The label names the panel this opens: the glyph alone cannot say which screen
 // the help is about.

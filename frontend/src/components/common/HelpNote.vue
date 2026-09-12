@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, type Component } from 'vue'
-import { Info } from 'lucide-vue-next'
+import { Info } from '@lucide/vue'
 
 // The aside a help panel closes with: a tips list, or a single caveat the sections
 // above should not interrupt. A titled note bullets its lines; an untitled one is a

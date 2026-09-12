@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, nextTick, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { Home, UserMinus, Trash2, Ban, X } from 'lucide-vue-next'
+import { Home, UserMinus, Trash2, Ban, X } from '@lucide/vue'
 import type { DashboardFriendDetail } from '@/types'
 
 const props = defineProps<{

@@ -9,7 +9,7 @@ import { resolveApiCodeMessage, resolveApiErrorMessage } from '@/utils/resolveAp
 import { buildDutyTypeCounts } from '@/utils/dutyTypeCounts'
 import { isOwnedCalendarSchedule } from '@/utils/schedulePermissions'
 import { buildLoginRoute } from '@/utils/redirect'
-import { Loader2 } from 'lucide-vue-next'
+import { Loader2 } from '@lucide/vue'
 
 import DayDetailModal from '@/components/duty/DayDetailModal.vue'
 import TodoDetailModal from '@/components/duty/TodoDetailModal.vue'
