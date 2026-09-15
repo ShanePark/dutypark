@@ -41,6 +41,7 @@ import { useI18n } from 'vue-i18n'
 import FileUploader from '@/components/common/FileUploader.vue'
 import CharacterCounter from '@/components/common/CharacterCounter.vue'
 import FriendTagSelector from '@/components/common/FriendTagSelector.vue'
+import VisibilityAudiencePreview from '@/components/common/VisibilityAudiencePreview.vue'
 import DatePickerField from '@/components/common/DatePickerField.vue'
 import type { NormalizedAttachment, TaggableFriend } from '@/types'
 import type { CalendarVisibility } from '@/utils/visibility'
@@ -298,6 +299,7 @@ defineExpose({
           :key="option.value"
           type="button"
           @click="form.visibility = option.value"
+          :aria-pressed="form.visibility === option.value"
           class="visibility-card relative flex min-h-11 flex-col items-center justify-center gap-1 px-1 py-2 sm:min-h-12 sm:gap-1.5 sm:px-2 sm:py-2.5 rounded-lg border-2 transition-all duration-150 cursor-pointer text-center"
           :class="{
             'visibility-card-selected': form.visibility === option.value,
@@ -328,6 +330,12 @@ defineExpose({
             </div>
           </div>
         </button>
+        <VisibilityAudiencePreview
+          v-if="canTagFriends"
+          :visibility="form.visibility"
+          scope="schedule"
+          class="col-span-4 mt-1"
+        />
       </div>
     </div>
 
