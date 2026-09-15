@@ -403,7 +403,6 @@ final class DutyparkWidgetSnapshotTests: XCTestCase {
         )
         defer { store.clear() }
         store.activate(accountID: 42, sessionGeneration: 7)
-        let refreshStartedAt = Date.now
 
         await DutyparkWidgetRefreshService.refreshCurrentMonth(
             accountID: 42,
@@ -423,7 +422,7 @@ final class DutyparkWidgetSnapshotTests: XCTestCase {
         XCTAssertEqual(monthly.days[2].scheduleContent, "원문 일정 여섯자")
         XCTAssertEqual(monthly.days[2].scheduleCount, 1)
         XCTAssertEqual(store.loadTodo()?.todos.map(\.id), [todo.id])
-        XCTAssertGreaterThanOrEqual(try XCTUnwrap(store.loadTodo()).updatedAt, refreshStartedAt)
+        XCTAssertEqual(try XCTUnwrap(store.loadTodo()).updatedAt, now)
     }
 
     func testRefreshCurrentMonthStillPublishesDutiesWhenSchedulesFail() async throws {

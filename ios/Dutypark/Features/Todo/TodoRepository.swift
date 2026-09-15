@@ -1,6 +1,6 @@
 import Foundation
 
-protocol TodoRepository: Sendable {
+nonisolated protocol TodoRepository: Sendable {
     func fetchBoard() async throws -> TodoBoardDTO
     func fetchFriends() async throws -> [FriendDTO]
     func fetchAttachments(todoID: TodoID) async throws -> [AttachmentDTO]

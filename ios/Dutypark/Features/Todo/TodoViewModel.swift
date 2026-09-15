@@ -1649,7 +1649,7 @@ enum TodoDateFormatter {
 }
 
 extension TodoDTO {
-    var uuid: TodoID {
+    nonisolated var uuid: TodoID {
         guard let uuid = UUID(uuidString: id) else {
             return Self.fallbackUUID(for: id)
         }
@@ -1661,7 +1661,7 @@ extension TodoDTO {
     /// The board boundary drops malformed IDs before they reach the UI. This
     /// deterministic fallback keeps any defensive direct access stable while
     /// still avoiding a process-crashing force unwrap.
-    private static func fallbackUUID(for id: String) -> UUID {
+    nonisolated private static func fallbackUUID(for id: String) -> UUID {
         var bytes = Array(SHA256.hash(data: Data(id.utf8)).prefix(16))
         bytes[6] = (bytes[6] & 0x0f) | 0x50
         bytes[8] = (bytes[8] & 0x3f) | 0x80
