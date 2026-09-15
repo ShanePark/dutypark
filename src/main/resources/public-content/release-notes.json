@@ -40,6 +40,15 @@
         }
       },
       "entries": {
+        "pr-423": {
+          "title": "iPhone 카카오톡·네이버 앱 로그인 지원",
+          "summary": "iPhone에서 카카오톡이나 네이버 앱으로 로그인하고 계정을 연동할 수 있습니다.",
+          "changes": [
+            "카카오톡·네이버 앱이 설치되어 있고 로그인 설정이 준비되어 있으면 해당 앱을 먼저 엽니다. 앱이 없으면 기존 웹 로그인으로 연결합니다.",
+            "계정 연동에도 앱 로그인을 적용하고, 회원 탈퇴 재인증은 기존 웹 방식을 유지합니다.",
+            "인증 오류 처리와 iPhone 빌드·위젯 테스트를 수정하고, 배포 시 최신 컨테이너 설정도 함께 적용하도록 개선했습니다."
+          ]
+        },
         "pr-421": {
           "title": "iPhone 위젯과 전반적인 성능 개선",
           "summary": "월간 근무와 일정·Todo를 iPhone 홈 화면 위젯에서 확인할 수 있게 하고, 백엔드·웹·iPhone 앱의 중복 작업을 줄였습니다.",
@@ -2309,6 +2318,15 @@
         }
       },
       "entries": {
+        "pr-423": {
+          "title": "KakaoTalk and Naver app login on iPhone",
+          "summary": "Sign in and link accounts through the KakaoTalk or Naver app on iPhone.",
+          "changes": [
+            "Open the provider app first when it is installed and configured, with the existing web flow available when the app is unavailable.",
+            "Support app login for account linking while preserving web reauthentication for account deletion.",
+            "Improve authentication error handling, fix iPhone build and widget test issues, and include current container configuration in deployments."
+          ]
+        },
         "pr-421": {
           "title": "iPhone widgets and application-wide performance improvements",
           "summary": "Adds monthly duty, schedule, and Todo widgets to the iPhone home screen while reducing redundant work across the backend, web, and iPhone app.",
@@ -4541,6 +4559,19 @@
     }
   },
   "items": [
+    {
+      "id": "pr-423",
+      "version": "2026.09.16",
+      "date": "2026-09-16",
+      "pr": 423,
+      "url": "https://github.com/ShanePark/dutypark/pull/423",
+      "category": "feature",
+      "areas": [
+        "auth",
+        "infra",
+        "maintenance"
+      ]
+    },
     {
       "id": "pr-421",
       "version": "2026.09.12",
