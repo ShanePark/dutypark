@@ -1,0 +1,89 @@
+name: Native audience verification
+
+on:
+  push:
+    branches: [feat/visibility-audience-preview]
+
+permissions:
+  contents: read
+
+jobs:
+  native:
+    if: contains(github.event.head_commit.message, '[verify-ios]')
+    runs-on: macos-latest
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        version: [feature, baseline]
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ matrix.version == 'baseline' && 'd7a85b8a0a6e07506cd63aa9c1c96a09d0dc18ae' || github.sha }}
+          persist-credentials: false
+      - name: Select iPhone 13 mini
+        id: simulator
+        run: |
+          xcodebuild -version
+          python3 - <<'PY'
+          import json, os, subprocess
+          runtimes = json.loads(subprocess.check_output(['xcrun', 'simctl', 'list', 'runtimes', '-j']))['runtimes']
+          runtimes = [r for r in runtimes if r.get('isAvailable') and '.iOS-' in r['identifier']]
+          assert runtimes, 'No available iOS simulator runtime'
+          runtime = max(runtimes, key=lambda r: tuple(int(x) for x in r['version'].split('.')))['identifier']
+          devices = json.loads(subprocess.check_output(['xcrun', 'simctl', 'list', 'devices', 'available', '-j']))['devices']
+          matches = [d for d in devices.get(runtime, []) if d['name'] == 'iPhone 13 mini']
+          udid = matches[0]['udid'] if matches else subprocess.check_output([
+              'xcrun', 'simctl', 'create', 'iPhone 13 mini',
+              'com.apple.CoreSimulator.SimDeviceType.iPhone-13-mini', runtime,
+          ], text=True).strip()
+          with open(os.environ['GITHUB_OUTPUT'], 'a') as out: out.write(f'udid={udid}\n')
+          PY
+      - name: Verify feature tests or reproduce the unchanged baseline failure
+        id: focused
+        env:
+          VERSION: ${{ matrix.version }}
+          SIMULATOR_UDID: ${{ steps.simulator.outputs.udid }}
+        run: |
+          if [ "$VERSION" = feature ]; then
+            TESTS=(-only-testing:DutyparkTests/VisibilityAudienceTests -only-testing:DutyparkTests/LocalizationCatalogTests)
+          else
+            TESTS=(-only-testing:DutyparkTests/DutyparkWidgetSnapshotTests/testRefreshCurrentMonthPublishesSchedulesAndTodos)
+          fi
+          xcodebuild -project ios/Dutypark.xcodeproj -scheme Dutypark \
+            -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" \
+            -derivedDataPath "$RUNNER_TEMP/dutypark-derived" \
+            -parallel-testing-enabled NO "${TESTS[@]}" \
+            CODE_SIGNING_ALLOWED=NO test > "$RUNNER_TEMP/focused.log" 2>&1 || {
+              tail -n 160 "$RUNNER_TEMP/focused.log"
+              exit 1
+            }
+          tail -n 65 "$RUNNER_TEMP/focused.log"
+      - name: Install the feature build verified by focused tests
+        if: matrix.version == 'feature' && steps.focused.outcome == 'success'
+        env:
+          SIMULATOR_UDID: ${{ steps.simulator.outputs.udid }}
+        run: xcrun simctl install "$SIMULATOR_UDID" "$RUNNER_TEMP/dutypark-derived/Build/Products/Debug-iphonesimulator/Dutypark.app"
+      - name: Re-run the complete native unit suite without skipping the known failure
+        if: matrix.version == 'feature' && steps.focused.outcome == 'success'
+        env:
+          SIMULATOR_UDID: ${{ steps.simulator.outputs.udid }}
+        run: |
+          xcodebuild -project ios/Dutypark.xcodeproj -scheme Dutypark \
+            -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" \
+            -derivedDataPath "$RUNNER_TEMP/dutypark-derived" \
+            -only-testing:DutyparkTests -parallel-testing-enabled NO \
+            CODE_SIGNING_ALLOWED=NO test > "$RUNNER_TEMP/all-unit-tests.log" 2>&1 || {
+              grep -E 'error:|recorded an issue|Failing tests:|\*\* TEST|VisibilityAudienceTests.*passed|LocalizationCatalogTests.*passed|Executed .* tests' "$RUNNER_TEMP/all-unit-tests.log" | tail -n 50
+              tail -n 18 "$RUNNER_TEMP/all-unit-tests.log"
+              exit 1
+            }
+          tail -n 25 "$RUNNER_TEMP/all-unit-tests.log"
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: audience-native-${{ matrix.version }}
+          path: |
+            ${{ runner.temp }}/focused.log
+            ${{ runner.temp }}/all-unit-tests.log
+          retention-days: 7
