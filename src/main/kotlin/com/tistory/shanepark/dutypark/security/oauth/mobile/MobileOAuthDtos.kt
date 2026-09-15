@@ -52,3 +52,36 @@ data class MobileOAuthExchangeResponse(
     val expiresIn: Long? = null,
     val reauthProof: String? = null,
 )
+
+/**
+ * Credentials returned by a provider's native SDK. Provider tokens deliberately stay out of
+ * the response and are never represented in server-side domain objects.
+ */
+data class MobileOAuthNativeExchangeRequest(
+    @field:NotBlank(message = "auth.oauth.mobile.provider.required")
+    @field:Size(max = 16, message = "auth.oauth.mobile.provider.invalid")
+    val provider: String,
+
+    @field:Size(max = 16, message = "auth.oauth.mobile.purpose.invalid")
+    val purpose: String = MobileOAuthPurpose.LOGIN.name,
+
+    @field:Size(max = MAX_PROVIDER_TOKEN_LENGTH, message = "auth.oauth.mobile.native.token.tooLong")
+    val accessToken: String? = null,
+
+    @field:Size(max = MAX_PROVIDER_TOKEN_LENGTH, message = "auth.oauth.mobile.native.token.tooLong")
+    val refreshToken: String? = null,
+) {
+    override fun toString(): String =
+        "MobileOAuthNativeExchangeRequest(provider=$provider, purpose=$purpose, " +
+            "accessToken=${accessToken.redacted()}, refreshToken=${refreshToken.redacted()})"
+
+    private fun String?.redacted(): String = if (this == null) "null" else "[REDACTED]"
+
+    companion object {
+        const val MAX_PROVIDER_TOKEN_LENGTH = 2048
+    }
+}
+
+data class MobileOAuthNativeCapabilitiesResponse(
+    val providers: List<String>,
+)

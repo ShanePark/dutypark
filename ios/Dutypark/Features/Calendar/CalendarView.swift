@@ -95,7 +95,7 @@ nonisolated enum ScheduleTagDisplayPolicy {
 /// The tail of the "this month" callout: a slender pointer that climbs from the capsule to
 /// the month label sitting in the navigation bar above it.
 private struct CalloutTail: Shape {
-    func path(in rect: CGRect) -> Path {
+    nonisolated func path(in rect: CGRect) -> Path {
         Path { path in
             path.move(to: CGPoint(x: rect.midX, y: rect.minY))
             path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))

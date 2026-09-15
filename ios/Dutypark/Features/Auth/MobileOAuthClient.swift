@@ -164,6 +164,48 @@ nonisolated private struct OAuthExchangeResponse: Decodable, Sendable {
     let reauthProof: String?
 }
 
+nonisolated private struct NativeOAuthCapabilitiesResponse: Decodable, Sendable {
+    let providers: [OAuthProvider]
+}
+
+nonisolated private struct NativeOAuthExchangeRequest: Encodable, Sendable {
+    let provider: OAuthProvider
+    let purpose: String
+    let accessToken: String?
+    let refreshToken: String?
+
+    init(provider: OAuthProvider, purpose: String, credential: NativeOAuthCredential) {
+        self.provider = provider
+        self.purpose = purpose
+        switch credential {
+        case .kakao(let accessToken):
+            self.accessToken = accessToken
+            self.refreshToken = nil
+        case .naver(let refreshToken):
+            self.accessToken = nil
+            self.refreshToken = refreshToken
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(provider, forKey: .provider)
+        try container.encode(purpose, forKey: .purpose)
+        // The backend contract requires provider-specific credentials and
+        // rejects the unused field, so omit nil values instead of encoding
+        // JSON nulls.
+        try container.encodeIfPresent(accessToken, forKey: .accessToken)
+        try container.encodeIfPresent(refreshToken, forKey: .refreshToken)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case provider
+        case purpose
+        case accessToken
+        case refreshToken
+    }
+}
+
 nonisolated struct SsoSignupRequest: Encodable, Sendable {
     let uuid: String
     let username: String
@@ -179,21 +221,41 @@ nonisolated private struct OAuthTokenResponse: Decodable, Sendable {
 
 @MainActor
 final class MobileOAuthClient {
-    static let callbackURI = "dutypark://oauth/callback"
+    static let callbackScheme = "dutypark"
+    static let callbackURI = "\(callbackScheme)://oauth/callback"
 
     private let client: APIClient
     private let webAuthenticator: OAuthWebAuthenticating
+    private let nativeOAuth: NativeOAuthAuthenticating
 
     init(
         client: APIClient = .shared,
-        webAuthenticator: OAuthWebAuthenticating = OAuthWebAuthenticationSession()
+        webAuthenticator: OAuthWebAuthenticating = OAuthWebAuthenticationSession(),
+        nativeOAuth: NativeOAuthAuthenticating = NativeOAuthClient()
     ) {
         self.client = client
         self.webAuthenticator = webAuthenticator
+        self.nativeOAuth = nativeOAuth
     }
 
     func login(provider: OAuthProvider) async throws -> MobileOAuthLoginOutcome {
         guard provider != .apple else { throw MobileOAuthError.invalidAuthorizationURL }
+
+        if try await shouldUseNative(provider: provider) {
+            let response = try await exchangeNative(
+                provider: provider,
+                purpose: "LOGIN",
+                credential: try await nativeOAuth.authenticate(provider: provider)
+            )
+            if response.signupRequired, let uuid = response.signupUuid {
+                return .signup(uuid: uuid)
+            }
+            guard !response.signupRequired else {
+                throw MobileOAuthError.invalidCallback
+            }
+            return .authenticated
+        }
+
         let pkce = PKCEPair.make()
         let callback = try await authorize(provider: provider, purpose: "LOGIN", pkce: pkce)
         if callback.error == "oauth_cancelled" {
@@ -228,6 +290,19 @@ final class MobileOAuthClient {
     /// Authenticated settings screens can use this to connect a social account.
     func link(provider: OAuthProvider) async throws {
         guard provider != .apple else { throw MobileOAuthError.invalidAuthorizationURL }
+
+        if try await shouldUseNative(provider: provider) {
+            let response = try await exchangeNative(
+                provider: provider,
+                purpose: "LINK",
+                credential: try await nativeOAuth.authenticate(provider: provider)
+            )
+            guard !response.signupRequired else {
+                throw MobileOAuthError.invalidCallback
+            }
+            return
+        }
+
         let callback = try await authorize(provider: provider, purpose: "LINK", pkce: PKCEPair.make())
         if callback.error == "oauth_cancelled" {
             throw MobileOAuthError.cancelled
@@ -310,5 +385,43 @@ final class MobileOAuthClient {
             throw MobileOAuthError.invalidAuthorizationURL
         }
         return try MobileOAuthCallback(url: await webAuthenticator.authenticate(at: url))
+    }
+
+    private func shouldUseNative(provider: OAuthProvider) async throws -> Bool {
+        guard nativeOAuth.isAvailable(for: provider) else { return false }
+
+        do {
+            let response: NativeOAuthCapabilitiesResponse = try await client.request(
+                "auth/mobile/oauth/native/capabilities"
+            )
+            return response.providers.contains(provider)
+        } catch APIError.server(status: 404, _),
+                APIError.serverWithDetails(status: 404, _, _),
+                APIError.decoding {
+            // A server that predates the native exchange contract continues
+            // through the existing authorization URL flow.
+            return false
+        }
+    }
+
+    private func exchangeNative(
+        provider: OAuthProvider,
+        purpose: String,
+        credential: NativeOAuthCredential
+    ) async throws -> OAuthExchangeResponse {
+        guard credential.provider == provider else {
+            throw MobileOAuthError.provider("provider_failed")
+        }
+
+        return try await client.request(
+            "auth/mobile/oauth/native/exchange",
+            method: .post,
+            body: NativeOAuthExchangeRequest(
+                provider: provider,
+                purpose: purpose,
+                credential: credential
+            ),
+            retryingAfterUnauthorized: purpose == "LINK"
+        )
     }
 }

@@ -62,6 +62,7 @@ struct DutyparkApp: App {
     init() {
         let arguments = CommandLine.arguments
         AppConfiguration.enforceLocalCaptureIfRequested(arguments: arguments)
+        OAuthNativeRuntime.configure()
         let initialState = DutyparkLaunchPolicy.initialSessionState(arguments: arguments)
         _session = StateObject(wrappedValue: SessionStore(
             initialState: initialState,

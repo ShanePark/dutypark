@@ -1,6 +1,6 @@
 import SwiftUI
 
-func todoLocalized(_ key: String, locale: Locale? = nil) -> String {
+nonisolated func todoLocalized(_ key: String, locale: Locale? = nil) -> String {
     AppLocalization.string(key, table: "Todo", locale: locale)
 }
 
@@ -2432,7 +2432,7 @@ private extension View {
 }
 
 extension TodoStatus {
-    static let boardStatuses: [TodoStatus] = [.todo, .inProgress, .done]
+    nonisolated static let boardStatuses: [TodoStatus] = [.todo, .inProgress, .done]
 
     var titleKey: String {
         switch self {
@@ -2443,7 +2443,7 @@ extension TodoStatus {
         }
     }
 
-    var shortTitleKey: String {
+    nonisolated var shortTitleKey: String {
         switch self {
         case .todo: "todo.statusShort.todo"
         case .inProgress: "todo.statusShort.inProgress"

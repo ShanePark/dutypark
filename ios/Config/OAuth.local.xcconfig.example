@@ -1,0 +1,8 @@
+// Copy this file to OAuth.local.xcconfig and fill in the values locally.
+// OAuth.local.xcconfig is ignored by Git. Do not commit provider secrets.
+
+KAKAO_NATIVE_APP_KEY = <Kakao native app key>
+KAKAO_NATIVE_CALLBACK_SCHEME = kakao$(KAKAO_NATIVE_APP_KEY)
+NAVER_CLIENT_ID = <Naver client ID>
+NAVER_CLIENT_SECRET = <Naver client secret>
+NAVER_APP_NAME = Dutypark

@@ -89,6 +89,11 @@ jobs:
         with:
           name: frontend-dist
           path: frontend/dist
+      - name: Upload deployment configuration
+        uses: actions/upload-artifact@v7
+        with:
+          name: deployment-config
+          path: docker-compose.yml
 
   deploy:
     needs: build
@@ -105,6 +110,11 @@ jobs:
         with:
           name: frontend-dist
           path: frontend-dist
+      - name: Download deployment configuration
+        uses: actions/download-artifact@v8
+        with:
+          name: deployment-config
+          path: deployment-config
       - name: Setup SSH
         uses: webfactory/ssh-agent@v0.10.0
         with:
@@ -119,12 +129,17 @@ jobs:
         run: |
           ssh -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_IP }} "rm -rf /dutypark/frontend-download && mkdir -p /dutypark/frontend-download"
           scp -r -P ${{ secrets.SSH_PORT }} frontend-dist/* ${{ secrets.SSH_USER }}@${{ secrets.SSH_IP }}:/dutypark/frontend-download/
+      - name: Deploy Docker Compose configuration
+        run: scp -P ${{ secrets.SSH_PORT }} deployment-config/docker-compose.yml ${{ secrets.SSH_USER }}@${{ secrets.SSH_IP }}:/dutypark/docker-compose.download.yml
       - name: Execute remote commands
         run: |
           ssh -p ${{ secrets.SSH_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_IP }} << 'EOF'
+            set -eu
+            docker compose --project-directory /dutypark --env-file /dutypark/.env -f /dutypark/docker-compose.download.yml config --quiet
             mv /dutypark/download.jar /dutypark/build/libs/dutypark.jar
             rm -rf /dutypark/frontend/dist/*
             mv /dutypark/frontend-download/* /dutypark/frontend/dist/
-            docker compose -f /dutypark/docker-compose.yml build app
-            docker compose -f /dutypark/docker-compose.yml up -d app nginx
+            docker compose --project-directory /dutypark --env-file /dutypark/.env -f /dutypark/docker-compose.download.yml build app
+            docker compose --project-directory /dutypark --env-file /dutypark/.env -f /dutypark/docker-compose.download.yml up -d app nginx
+            mv /dutypark/docker-compose.download.yml /dutypark/docker-compose.yml
           EOF

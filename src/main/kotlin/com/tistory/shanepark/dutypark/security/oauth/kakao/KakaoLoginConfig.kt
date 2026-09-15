@@ -46,4 +46,21 @@ class KakaoLoginConfig {
             .createClient(KakaoUserInfoApi::class.java)
     }
 
+    @Bean
+    fun kakaoAccessTokenInfoApi(): KakaoAccessTokenInfoApi {
+        val httpClient: HttpClient = HttpClient.create()
+            .responseTimeout(Duration.ofSeconds(10))
+        val connector: ClientHttpConnector = ReactorClientHttpConnector(httpClient)
+
+        val client = WebClient.builder()
+            .baseUrl("https://kapi.kakao.com/v1")
+            .clientConnector(connector)
+            .build()
+
+        return HttpServiceProxyFactory
+            .builderFor(WebClientAdapter.create(client))
+            .build()
+            .createClient(KakaoAccessTokenInfoApi::class.java)
+    }
+
 }

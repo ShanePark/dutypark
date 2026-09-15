@@ -29,6 +29,7 @@ import org.springframework.context.annotation.Primary
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.context.TestPropertySource
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.cookie
@@ -45,6 +46,7 @@ import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.whenever
 
 @AutoConfigureMockMvc
+@TestPropertySource(properties = ["oauth.kakao.app-id="])
 @Import(MobileOAuthControllerTest.ProviderApiTestConfig::class)
 class MobileOAuthControllerTest : DutyparkIntegrationTest() {
 
@@ -84,6 +86,22 @@ class MobileOAuthControllerTest : DutyparkIntegrationTest() {
             .andExpect(jsonPath("$.expiresIn").value(1800))
             .andExpect(cookie().exists("access_token"))
             .andExpect(cookie().exists("refresh_token"))
+    }
+
+    @Test
+    fun `native Kakao exchange is unavailable when the server app id is not configured`() {
+        mockMvc.perform(
+            post("/api/auth/mobile/oauth/native/exchange")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""{"provider":"KAKAO","accessToken":"native-token"}""")
+        )
+            .andExpect(status().isServiceUnavailable)
+            .andExpect(jsonPath("$.code").value("auth.oauth.mobile.provider.unavailable"))
+
+        mockMvc.perform(get("/api/auth/mobile/oauth/native/capabilities"))
+            .andExpect(status().isOk)
+            .andExpect(jsonPath("$.providers[0]").value("NAVER"))
+            .andExpect(jsonPath("$.providers[1]").doesNotExist())
     }
 
     @Test
