@@ -83,7 +83,7 @@ describe('audience disclosure interactions', () => {
     await flush()
     expect(mocks.friends).toHaveBeenCalledTimes(1)
     expect(mocks.member).toHaveBeenCalledTimes(1)
-    expect(roster(root)).toEqual(['친구 가람친구', '가족 나래가족'])
+    expect(roster(root)).toEqual(['가족 나래가족', '친구 가람친구'])
     expect(button(root, '명단 접기').props['aria-expanded']).toBe(true)
     expect(hostText(root)).toContain('2명')
     expect(mocks.updateVisibility).not.toHaveBeenCalled()
