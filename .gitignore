@@ -41,6 +41,7 @@ out/
 *.xcuserstate
 # xcodebuild -derivedDataPath writes here; the bare `build/` rule above misses the siblings.
 /ios/build-*/
+ios/Config/OAuth.local.xcconfig
 
 ### Ignore other profiles ###
 src/main/resources/application-**.yml

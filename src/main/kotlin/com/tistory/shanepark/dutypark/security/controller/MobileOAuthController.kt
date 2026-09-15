@@ -5,6 +5,9 @@ import com.tistory.shanepark.dutypark.security.oauth.mobile.MobileOAuthAuthorize
 import com.tistory.shanepark.dutypark.security.oauth.mobile.MobileOAuthAuthorizeResponse
 import com.tistory.shanepark.dutypark.security.oauth.mobile.MobileOAuthExchangeRequest
 import com.tistory.shanepark.dutypark.security.oauth.mobile.MobileOAuthExchangeResponse
+import com.tistory.shanepark.dutypark.security.oauth.mobile.MobileOAuthNativeCapabilitiesResponse
+import com.tistory.shanepark.dutypark.security.oauth.mobile.MobileOAuthNativeExchangeRequest
+import com.tistory.shanepark.dutypark.security.oauth.mobile.MobileNativeOAuthService
 import com.tistory.shanepark.dutypark.security.oauth.mobile.MobileOAuthService
 import com.tistory.shanepark.dutypark.security.oauth.apple.AppleNativeExchangeRequest
 import com.tistory.shanepark.dutypark.security.oauth.apple.AppleNativeOAuthService
@@ -21,6 +24,7 @@ import org.springframework.web.bind.annotation.*
 @RequestMapping("/api/auth/mobile/oauth")
 class MobileOAuthController(
     private val mobileOAuthService: MobileOAuthService,
+    private val mobileNativeOAuthService: MobileNativeOAuthService,
     private val cookieService: CookieService,
     private val appleNativeOAuthService: AppleNativeOAuthService,
 ) {
@@ -57,6 +61,24 @@ class MobileOAuthController(
         servletResponse: HttpServletResponse,
     ): MobileOAuthExchangeResponse {
         val result = mobileOAuthService.exchange(request, servletRequest)
+        if (result.accessToken != null && result.refreshToken != null) {
+            cookieService.setTokenCookies(servletResponse, result.accessToken, result.refreshToken)
+        }
+        return result.response
+    }
+
+    @GetMapping("/native/capabilities")
+    fun nativeCapabilities(): MobileOAuthNativeCapabilitiesResponse =
+        mobileNativeOAuthService.capabilities()
+
+    @PostMapping("/native/exchange")
+    fun exchangeNative(
+        @Valid @RequestBody request: MobileOAuthNativeExchangeRequest,
+        @Login(required = false) loginMember: LoginMember?,
+        servletRequest: HttpServletRequest,
+        servletResponse: HttpServletResponse,
+    ): MobileOAuthExchangeResponse {
+        val result = mobileNativeOAuthService.exchange(request, loginMember, servletRequest)
         if (result.accessToken != null && result.refreshToken != null) {
             cookieService.setTokenCookies(servletResponse, result.accessToken, result.refreshToken)
         }

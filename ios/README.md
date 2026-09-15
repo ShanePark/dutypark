@@ -10,6 +10,37 @@ offline recovery behavior.
 - iOS 17 or later
 - Swift 6
 
+## Native social login setup
+
+KakaoTalk and Naver app login are enabled only when the provider SDK is
+configured locally and the server advertises the native exchange capability.
+Without those values, or when the provider app is not installed, the existing
+web OAuth flow is used. Provider cancellation and authentication failures stay
+in the native flow and are shown to the user without silently opening a web
+page.
+
+Copy `Config/OAuth.local.xcconfig.example` to
+`Config/OAuth.local.xcconfig` and fill in the Kakao native app key and the
+existing Naver client ID and client secret. The local file is ignored by Git;
+never commit these values. Register the iOS bundle ID
+`io.github.shanepark.dutypark` in the Kakao native app settings and register
+`kakao<APP_KEY>` as its redirect scheme. Register
+`io.github.shanepark.dutypark.naver` as the Naver iOS URL scheme; the SDK
+returns to `io.github.shanepark.dutypark.naver://thirdPartyLoginResult`.
+Keep the `KAKAO_NATIVE_CALLBACK_SCHEME` line from the example file so the
+Kakao URL scheme matches the app key. The app also declares the provider query
+schemes required to detect installed apps.
+
+The Kakao SDK is initialized with `KakaoSDK.initSDK` and the Naver SDK with
+`NidOAuth.initialize` during app launch. The Naver client secret is used only
+inside the Naver SDK; the native exchange sends its refresh token to the
+Dutypark server. Because the official Naver SDK requires the client secret in
+the app, treat it as a public mobile configuration value that can be extracted
+from a built IPA; the server never accepts a client-supplied secret. The
+server's Kakao native configuration must use the same Kakao app ID, and its
+native capability endpoint must advertise the provider before native login is
+attempted.
+
 ## Offline behavior
 
 Offline support is currently native-iOS functionality; it is not the same as

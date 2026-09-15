@@ -1,0 +1,10 @@
+// Provider credentials are supplied through OAuth.local.xcconfig on a
+// developer machine or by the release build environment. Keep secrets out of
+// the repository and leave values empty to use the existing web OAuth flow.
+KAKAO_NATIVE_APP_KEY =
+KAKAO_NATIVE_CALLBACK_SCHEME = dutypark-kakao-disabled
+NAVER_CLIENT_ID =
+NAVER_CLIENT_SECRET =
+NAVER_APP_NAME = Dutypark
+
+#include? "OAuth.local.xcconfig"

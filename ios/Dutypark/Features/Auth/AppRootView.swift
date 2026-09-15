@@ -43,6 +43,9 @@ struct AppRootView: View {
             await session.restore()
         }
         .onOpenURL { url in
+            if OAuthNativeRuntime.handle(url: url) {
+                return
+            }
             if AppRootDeepLinkPolicy.shouldDeferDestination(url, for: session.state) {
                 session.deferDestinationUntilAuthenticated(url)
             }

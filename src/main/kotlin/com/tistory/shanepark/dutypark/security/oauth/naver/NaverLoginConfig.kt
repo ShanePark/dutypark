@@ -44,4 +44,20 @@ class NaverLoginConfig {
             .build()
             .createClient(NaverUserInfoApi::class.java)
     }
+
+    @Bean
+    fun naverRefreshTokenApi(): NaverRefreshTokenApi {
+        val httpClient: HttpClient = HttpClient.create()
+            .responseTimeout(Duration.ofSeconds(10))
+        val connector: ClientHttpConnector = ReactorClientHttpConnector(httpClient)
+
+        val client = WebClient.builder()
+            .baseUrl("https://nid.naver.com/oauth2.0")
+            .clientConnector(connector)
+            .build()
+
+        return HttpServiceProxyFactory.builderFor(WebClientAdapter.create(client))
+            .build()
+            .createClient(NaverRefreshTokenApi::class.java)
+    }
 }

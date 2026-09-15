@@ -75,6 +75,54 @@
         "ko": { "stringUnit": { "state": "translated", "value": "지원하지 않는 소셜 로그인 제공자입니다." } }
       }
     },
+    "auth.oauth.mobile.provider.failed": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "The social login provider could not complete authentication. Please try again." } },
+        "ko": { "stringUnit": { "state": "translated", "value": "소셜 로그인 제공자 인증에 실패했습니다. 다시 시도해주세요." } }
+      }
+    },
+    "auth.oauth.mobile.provider.unavailable": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "This social login provider is temporarily unavailable. Please try again later." } },
+        "ko": { "stringUnit": { "state": "translated", "value": "소셜 로그인 제공자를 일시적으로 사용할 수 없습니다. 잠시 후 다시 시도해주세요." } }
+      }
+    },
+    "auth.oauth.mobile.provider.required": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "Choose a social login provider." } },
+        "ko": { "stringUnit": { "state": "translated", "value": "소셜 로그인 제공자를 선택해주세요." } }
+      }
+    },
+    "auth.oauth.mobile.native.accessToken.required": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "The social login response is missing a required token. Please try again." } },
+        "ko": { "stringUnit": { "state": "translated", "value": "소셜 로그인 응답에 필요한 토큰이 없습니다. 다시 시도해주세요." } }
+      }
+    },
+    "auth.oauth.mobile.native.accessToken.unexpected": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "The social login response contains an unexpected token. Please try again." } },
+        "ko": { "stringUnit": { "state": "translated", "value": "소셜 로그인 응답에 예상하지 못한 토큰이 있습니다. 다시 시도해주세요." } }
+      }
+    },
+    "auth.oauth.mobile.native.refreshToken.required": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "The social login response is missing a required refresh token. Please try again." } },
+        "ko": { "stringUnit": { "state": "translated", "value": "소셜 로그인 응답에 필요한 갱신 토큰이 없습니다. 다시 시도해주세요." } }
+      }
+    },
+    "auth.oauth.mobile.native.refreshToken.unexpected": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "The social login response contains an unexpected refresh token. Please try again." } },
+        "ko": { "stringUnit": { "state": "translated", "value": "소셜 로그인 응답에 예상하지 못한 갱신 토큰이 있습니다. 다시 시도해주세요." } }
+      }
+    },
+    "auth.oauth.mobile.native.token.tooLong": {
+      "localizations": {
+        "en": { "stringUnit": { "state": "translated", "value": "The social login response is too large. Please try again." } },
+        "ko": { "stringUnit": { "state": "translated", "value": "소셜 로그인 응답이 너무 큽니다. 다시 시도해주세요." } }
+      }
+    },
     "auth.oauth.mobile.purpose.invalid": {
       "localizations": {
         "en": { "stringUnit": { "state": "translated", "value": "This social login request is not supported." } },

@@ -116,6 +116,8 @@ oauth:
     credential-encryption-key: "${APPLE_CREDENTIAL_ENCRYPTION_KEY:}"
   kakao:
     rest-api-key: "${KAKAO_REST_API_KEY:KAKAO_REST_API_KEY_HERE}"
+    # Native token verification is disabled until the numeric Kakao app id is configured.
+    app-id: "${KAKAO_APP_ID:}"
   naver:
     client-id: "${NAVER_CLIENT_ID:}"
     client-secret: "${NAVER_CLIENT_SECRET:}"
