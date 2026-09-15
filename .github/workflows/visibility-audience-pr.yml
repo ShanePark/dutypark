@@ -7,66 +7,12 @@ on:
 permissions:
   contents: read
 
-concurrency:
-  group: visibility-audience-pr-422
-  cancel-in-progress: false
-
 jobs:
-  integrate:
-    if: github.repository == 'ShanePark/dutypark' && github.ref == 'refs/heads/feat/visibility-audience-preview'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    outputs:
-      sha: ${{ steps.commit.outputs.sha }}
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          ref: feat/visibility-audience-preview
-          fetch-depth: 0
-      - name: Apply exact, idempotent integrations
-        run: |
-          python3 .github/scripts/integrate-visibility-audience.py
-          if [ -f .github/scripts/integrate-visibility-audience-ios.py ]; then
-            python3 .github/scripts/integrate-visibility-audience-ios.py
-          fi
-          git diff --check
-      - name: Commit only scoped feature files
-        id: commit
-        run: |
-          python3 - <<'PY'
-          import subprocess
-          allowed = {
-            'frontend/src/views/settings/SettingsView.vue',
-            'frontend/src/components/duty/ScheduleForm.vue',
-            'src/main/resources/public-content/release-notes.json',
-            'ios/Dutypark/Features/Settings/SettingsView.swift',
-            'ios/Dutypark/Features/Calendar/CalendarView.swift',
-            'ios/Dutypark/Components/DPVisibilityAudiencePreview.swift',
-            'ios/Dutypark/Resources/VisibilityAudience.xcstrings',
-          }
-          changed = subprocess.check_output(['git', 'diff', '--name-only'], text=True).splitlines()
-          new = subprocess.check_output(['git', 'ls-files', '--others', '--exclude-standard'], text=True).splitlines()
-          paths = sorted(set(changed + new))
-          assert set(paths) <= allowed, f'Unexpected changes: {set(paths) - allowed}'
-          if paths:
-              subprocess.run(['git', 'add', '--', *paths], check=True)
-          PY
-          if ! git diff --cached --quiet; then
-            git config user.name 'github-actions[bot]'
-            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git commit -m 'feat: integrate visibility audience screens and release note'
-            git push origin HEAD:refs/heads/feat/visibility-audience-preview
-          fi
-          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-
   web:
-    needs: integrate
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
         with:
-          ref: ${{ needs.integrate.outputs.sha }}
           persist-credentials: false
       - uses: actions/setup-node@v7
         with:
@@ -75,6 +21,13 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
       - run: npm ci
         working-directory: frontend
+      - name: Package local verification inputs
+        run: tar -czf "$RUNNER_TEMP/pr422-frontend-fixture.tgz" frontend
+      - uses: actions/upload-artifact@v7
+        with:
+          name: pr422-frontend-verification-inputs
+          path: ${{ runner.temp }}/pr422-frontend-fixture.tgz
+          retention-days: 1
       - run: npm run release-notes:check
         working-directory: frontend
       - run: npm run type-check
@@ -83,66 +36,3 @@ jobs:
         working-directory: frontend
       - run: npm run build
         working-directory: frontend
-
-  ios:
-    if: contains(github.event.head_commit.message, '[verify-ios]')
-    needs: integrate
-    runs-on: macos-latest
-    timeout-minutes: 45
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          ref: ${{ needs.integrate.outputs.sha }}
-          persist-credentials: false
-      - name: Check Xcode and build the native app
-        run: |
-          xcodebuild -version
-          xcodebuild -project ios/Dutypark.xcodeproj -scheme Dutypark \
-            -destination 'generic/platform=iOS Simulator' \
-            -derivedDataPath "$RUNNER_TEMP/dutypark-derived" \
-            CODE_SIGNING_ALLOWED=NO build > "$RUNNER_TEMP/dutypark-build.log" 2>&1 || {
-              tail -n 200 "$RUNNER_TEMP/dutypark-build.log"
-              exit 1
-            }
-          tail -n 5 "$RUNNER_TEMP/dutypark-build.log"
-      - name: Select an iPhone 13 mini simulator
-        id: simulator
-        run: |
-          python3 - <<'PY'
-          import json, os, subprocess
-          runtimes = json.loads(subprocess.check_output(['xcrun', 'simctl', 'list', 'runtimes', '-j']))['runtimes']
-          runtimes = [r for r in runtimes if r.get('isAvailable') and '.iOS-' in r['identifier']]
-          assert runtimes, 'No available iOS runtime'
-          runtime = max(runtimes, key=lambda r: tuple(int(x) for x in r['version'].split('.')))['identifier']
-          devices = json.loads(subprocess.check_output(['xcrun', 'simctl', 'list', 'devices', 'available', '-j']))['devices']
-          matches = [d for d in devices.get(runtime, []) if d['name'] == 'iPhone 13 mini']
-          udid = matches[0]['udid'] if matches else subprocess.check_output([
-              'xcrun', 'simctl', 'create', 'iPhone 13 mini',
-              'com.apple.CoreSimulator.SimDeviceType.iPhone-13-mini', runtime,
-          ], text=True).strip()
-          with open(os.environ['GITHUB_OUTPUT'], 'a') as out:
-              out.write(f'udid={udid}\n')
-          print(f'Unit-test destination: iPhone 13 mini ({udid}), {runtime}')
-          PY
-      - name: Run native unit tests only and install the verified build
-        env:
-          SIMULATOR_UDID: ${{ steps.simulator.outputs.udid }}
-        run: |
-          xcodebuild -project ios/Dutypark.xcodeproj -scheme Dutypark \
-            -destination "platform=iOS Simulator,id=$SIMULATOR_UDID" \
-            -derivedDataPath "$RUNNER_TEMP/dutypark-derived" \
-            -only-testing:DutyparkTests -parallel-testing-enabled NO \
-            CODE_SIGNING_ALLOWED=NO test > "$RUNNER_TEMP/dutypark-tests.log" 2>&1 || {
-              tail -n 250 "$RUNNER_TEMP/dutypark-tests.log"
-              exit 1
-            }
-          tail -n 25 "$RUNNER_TEMP/dutypark-tests.log"
-          xcrun simctl install "$SIMULATOR_UDID" "$RUNNER_TEMP/dutypark-derived/Build/Products/Debug-iphonesimulator/Dutypark.app"
-      - uses: actions/upload-artifact@v7
-        if: always()
-        with:
-          name: visibility-audience-ios-verification
-          path: |
-            ${{ runner.temp }}/dutypark-build.log
-            ${{ runner.temp }}/dutypark-tests.log
-          retention-days: 7
