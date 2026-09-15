@@ -14,7 +14,8 @@ struct LocalizationCatalogTests {
         "OAuth.xcstrings",
         "Settings.xcstrings",
         "Social.xcstrings",
-        "Team.xcstrings"
+        "Team.xcstrings",
+        "VisibilityAudience.xcstrings"
     ]
 
     @Test
