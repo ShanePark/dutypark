@@ -1,0 +1,81 @@
+name: Visibility audience PR verification
+
+on:
+  push:
+    branches: [feat/visibility-audience-preview]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: visibility-audience-pr-422
+  cancel-in-progress: false
+
+jobs:
+  integrate:
+    if: github.repository == 'ShanePark/dutypark' && github.ref == 'refs/heads/feat/visibility-audience-preview'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      sha: ${{ steps.commit.outputs.sha }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: feat/visibility-audience-preview
+          fetch-depth: 0
+      - name: Apply exact, idempotent integrations
+        run: |
+          python3 .github/scripts/integrate-visibility-audience.py
+          if [ -f .github/scripts/integrate-visibility-audience-ios.py ]; then
+            python3 .github/scripts/integrate-visibility-audience-ios.py
+          fi
+          git diff --check
+      - name: Commit only scoped feature files
+        id: commit
+        run: |
+          python3 - <<'PY'
+          import subprocess
+          allowed = {
+            'frontend/src/views/settings/SettingsView.vue',
+            'frontend/src/components/duty/ScheduleForm.vue',
+            'src/main/resources/public-content/release-notes.json',
+            'ios/Dutypark/Features/Settings/SettingsView.swift',
+            'ios/Dutypark/Features/Calendar/CalendarView.swift',
+          }
+          changed = subprocess.check_output(['git', 'diff', '--name-only'], text=True).splitlines()
+          assert set(changed) <= allowed, f'Unexpected changes: {set(changed) - allowed}'
+          if changed:
+              subprocess.run(['git', 'add', '--', *changed], check=True)
+          PY
+          if ! git diff --cached --quiet; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git commit -m 'feat: integrate visibility audience screens and release note'
+            git push origin HEAD:refs/heads/feat/visibility-audience-preview
+          fi
+          echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+  web:
+    needs: integrate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.integrate.outputs.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+        working-directory: frontend
+      - run: npm run release-notes:check
+        working-directory: frontend
+      - run: npm run type-check
+        working-directory: frontend
+      - run: npm test
+        working-directory: frontend
+      - run: npm run build
+        working-directory: frontend
