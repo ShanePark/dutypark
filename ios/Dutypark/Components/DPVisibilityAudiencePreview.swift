@@ -75,7 +75,7 @@ struct DPVisibilityAudiencePreview: View {
                         .padding(DPSpacing.medium)
                 }
             }
-            .background(DPColor.surface)
+            .background(DPColor.backgroundCard)
             .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
             .overlay(RoundedRectangle(cornerRadius: DPRadius.standard).stroke(DPColor.borderPrimary))
             .task(id: Request(context: context, expanded: isExpanded, retry: retryGeneration)) {

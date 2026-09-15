@@ -936,7 +936,19 @@ private struct VisibilitySettingsModal: View {
     @ObservedObject var model: SettingsViewModel
     let maximumHeight: CGFloat
     let dismiss: () -> Void
+    @State private var selected: Visibility
     private let options: [Visibility] = [.publicAccess, .friends, .family, .privateAccess]
+
+    init(model: SettingsViewModel, maximumHeight: CGFloat, dismiss: @escaping () -> Void) {
+        self.model = model
+        self.maximumHeight = maximumHeight
+        self.dismiss = dismiss
+        _selected = State(initialValue: model.member?.calendarVisibility ?? .friends)
+    }
+
+    private var canSave: Bool {
+        model.member?.id != nil && !model.isWorking && selected != model.member?.calendarVisibility
+    }
 
     var body: some View {
         DPModalPanel(maximumPanelHeight: maximumHeight) {
@@ -950,11 +962,32 @@ private struct VisibilitySettingsModal: View {
         } footer: {
             SettingsModalActions {
                 Button(action: dismiss) {
-                    SettingsLocalization.text("settings.visibility.close")
+                    Text(VisibilityAudienceLocalization.string("cancel"))
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(DPSecondaryButtonStyle())
                 .disabled(model.isWorking)
+
+                Button {
+                    guard canSave else { return }
+                    let ownerID = model.member?.id
+                    let value = selected
+                    Task {
+                        await model.updateVisibility(value)
+                        if model.member?.id == ownerID, model.member?.calendarVisibility == value {
+                            dismiss()
+                        }
+                    }
+                } label: {
+                    Group {
+                        if model.isWorking { ProgressView() }
+                        else { Text(VisibilityAudienceLocalization.string("save")) }
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(DPPrimaryButtonStyle())
+                .disabled(!canSave)
+                .accessibilityIdentifier("settings.visibility.save")
             }
         }
     }
@@ -964,27 +997,26 @@ private struct VisibilitySettingsModal: View {
             SettingsLocalization.text("settings.visibility.modalDescription")
                 .font(DPTypography.body)
                 .foregroundStyle(DPColor.textSecondary)
-            SettingsLocalization.text("settings.visibility.modalHint")
+            Text(VisibilityAudienceLocalization.string("selectionHint"))
                 .font(DPTypography.supporting)
-                .foregroundStyle(DPColor.textMuted)
+                .foregroundStyle(DPColor.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
             ForEach(options, id: \.rawValue) { option in
                 visibilityOption(option)
+            }
+            if let ownerID = model.member?.id {
+                DPVisibilityAudiencePreview(ownerID: ownerID, visibility: selected)
             }
         }
         .padding(DPSpacing.large)
     }
 
     private func visibilityOption(_ option: Visibility) -> some View {
-        let selected = model.member?.calendarVisibility == option
-        let audience = option == .friends ? model.friends : option == .family ? model.friends.filter(\.isFamily) : []
+        let isSelected = selected == option
         return Button {
-            if model.member?.calendarVisibility != option {
-                DPHapticCenter.shared.emit(.selection)
-            }
-            Task {
-                await model.updateVisibility(option)
-                if model.member?.calendarVisibility == option { dismiss() }
-            }
+            guard selected != option, !model.isWorking else { return }
+            selected = option
+            DPHapticCenter.shared.emit(.selection)
         } label: {
             VStack(alignment: .leading, spacing: DPSpacing.small) {
                 HStack(spacing: DPSpacing.compact) {
@@ -993,30 +1025,23 @@ private struct VisibilitySettingsModal: View {
                         .font(DPTypography.bodyMedium)
                         .foregroundStyle(DPColor.textPrimary)
                     Spacer()
-                    if selected { Image(systemName: "checkmark").foregroundStyle(DPColor.accent) }
+                    if isSelected { Image(systemName: "checkmark").foregroundStyle(DPColor.accent) }
                 }
                 SettingsLocalization.text(optionDescription(option))
                     .font(DPTypography.supporting)
                     .foregroundStyle(DPColor.textSecondary)
                     .padding(.leading, DPSpacing.large)
-                if option == .friends || option == .family {
-                    Text(audience.isEmpty
-                         ? SettingsLocalization.string(option == .friends ? "settings.visibility.emptyFriends" : "settings.visibility.emptyFamily")
-                         : audience.prefix(3).map(\.name).joined(separator: ", ") + (audience.count > 3 ? " +\(audience.count - 3)" : ""))
-                        .font(DPTypography.caption)
-                        .foregroundStyle(audience.isEmpty ? DPColor.warning : DPColor.textMuted)
-                        .padding(.leading, DPSpacing.large)
-                        .lineLimit(1)
-                }
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .padding(DPSpacing.medium)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(selected ? DPColor.accentSoft : DPColor.backgroundSecondary)
+            .background(isSelected ? DPColor.accentSoft : DPColor.backgroundSecondary)
             .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
-            .overlay(RoundedRectangle(cornerRadius: DPRadius.standard).stroke(selected ? DPColor.accent : DPColor.borderPrimary, lineWidth: 2))
+            .overlay(RoundedRectangle(cornerRadius: DPRadius.standard).stroke(isSelected ? DPColor.accent : DPColor.borderPrimary, lineWidth: 2))
         }
         .buttonStyle(.plain)
         .disabled(model.isWorking)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
     }
 }
 

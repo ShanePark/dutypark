@@ -2920,6 +2920,10 @@ private struct ScheduleEditorView<Header: View>: View {
                 }
             }
 
+            if model.isMyCalendar, let ownerID = model.me?.id {
+                DPVisibilityAudiencePreview(ownerID: ownerID, visibility: visibility, scope: .schedule)
+            }
+
             formRow("calendar.schedule.attachments", alignment: .top) {
                 AttachmentPicker(model: attachmentModel)
             }
