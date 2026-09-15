@@ -182,6 +182,7 @@
 				A50000000000000000000001 /* Frameworks */,
 				A80000000000000000000001 /* Resources */,
 				B30000000000000000000001 /* Embed Foundation Extensions */,
+				A81000000000000000000001 /* Generate build metadata */,
 			);
 			buildRules = (
 			);
@@ -355,6 +356,24 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		A81000000000000000000001 /* Generate build metadata */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"$(TARGET_BUILD_DIR)/$(INFOPLIST_PATH)",
+			);
+			name = "Generate build metadata";
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${SRCROOT}/scripts/generate-build-metadata.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		A70000000000000000000001 /* Sources */ = {
