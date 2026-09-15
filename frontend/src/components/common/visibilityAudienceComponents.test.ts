@@ -169,6 +169,25 @@ describe('audience disclosure interactions', () => {
     expect(mocks.updateVisibility).not.toHaveBeenCalled()
   })
 
+  it.each([true, false])('reveals the loaded roster and respects reduced motion (%s)', async reducedMotion => {
+    let resolve!: (value: { data: typeof relations }) => void
+    mocks.friends.mockReturnValue(new Promise(res => { resolve = res }))
+    vi.stubGlobal('window', { matchMedia: () => ({ matches: reducedMotion }) })
+    const { root } = mountPreview()
+    const toggle = button(root, '공개 대상 확인')
+    const scrollIntoView = vi.fn()
+    Object.assign(toggle, { scrollIntoView })
+    click(toggle)
+    await flush()
+    // The final roster can be taller than the loading placeholder. Scroll after it renders.
+    expect(scrollIntoView).not.toHaveBeenCalled()
+    resolve({ data: relations })
+    await flush()
+    expect(scrollIntoView).toHaveBeenCalledWith({
+      block: 'start', behavior: reducedMotion ? 'auto' : 'smooth',
+    })
+  })
+
   it.each(['PUBLIC', 'PRIVATE'] as const)('does not enumerate %s viewers', visibility => {
     const { root } = mountPreview(visibility)
     expect(hostText(root)).toBe('')

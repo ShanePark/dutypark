@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, useId, watch } from 'vue'
+import { computed, nextTick, ref, useId, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { ChevronDown, House, Info, Loader2, Search, Users } from '@lucide/vue'
 import { friendApi, memberApi } from '@/api/member'
@@ -17,6 +17,7 @@ const { t, locale } = useI18n({ useScope: 'local', messages })
 const auth = useAuthStore()
 const id = useId()
 const isOpen = ref(false)
+const toggleButton = ref<HTMLButtonElement | null>(null)
 const query = ref('')
 const isAvailable = computed(() => !!auth.user?.id && isRestrictedAudience(props.visibility))
 const title = computed(() => t(props.visibility === 'FAMILY' ? 'familyTitle' : 'friendsTitle'))
@@ -36,22 +37,34 @@ watch(() => [props.visibility, props.scope, auth.user?.id], () => {
   query.value = ''
 }, { flush: 'sync' })
 
-function toggle() {
+async function toggle() {
   isOpen.value = !isOpen.value
   query.value = ''
-  if (isOpen.value) void audience.load()
-  else audience.reset()
+  if (!isOpen.value) {
+    audience.reset()
+    return
+  }
+  await audience.load()
+  await nextTick()
+  // Keep the roster discoverable when the disclosure sits below the fold in a small modal.
+  if (isOpen.value && typeof toggleButton.value?.scrollIntoView === 'function') {
+    toggleButton.value.scrollIntoView({
+      block: 'start',
+      behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth',
+    })
+  }
 }
 </script>
 
 <template>
   <section v-if="isAvailable" class="audience-preview" :class="{ 'audience-preview--family': visibility === 'FAMILY' }">
     <button
-      :id="`${id}-trigger`" type="button" class="audience-preview__trigger"
+      ref="toggleButton" :id="`${id}-trigger`" type="button" class="audience-preview__trigger"
       :aria-expanded="isOpen" :aria-controls="`${id}-panel`" @click.stop="toggle"
     >
       <component :is="Icon" class="audience-preview__icon" aria-hidden="true" />
       <span class="audience-preview__trigger-label">{{ isOpen ? t('close') : t('open') }}</span>
+      <Loader2 v-if="audience.status.value === 'loading'" class="audience-preview__spinner" aria-hidden="true" />
       <span v-if="audience.status.value === 'ready'" class="audience-preview__count">{{ t('count', { count: audience.members.value.length }) }}</span>
       <ChevronDown class="audience-preview__chevron" :class="{ 'audience-preview__chevron--open': isOpen }" aria-hidden="true" />
     </button>
@@ -93,8 +106,8 @@ function toggle() {
 </template>
 
 <style scoped>
-.audience-preview { --audience-accent: var(--dp-accent-hover); border: 1px solid var(--dp-border-primary); border-radius: .75rem; background: var(--dp-bg-card); overflow: hidden; }
-.audience-preview--family { --audience-accent: var(--dp-warning-hover); }
+.audience-preview { --audience-accent: var(--dp-text-primary); border: 1px solid var(--dp-border-primary); border-radius: .75rem; background: var(--dp-bg-card); overflow: hidden; }
+.audience-preview__trigger > .audience-preview__icon { color: var(--dp-accent); }
 .audience-preview__trigger { display: flex; align-items: center; gap: .625rem; width: 100%; min-height: 44px; padding: .625rem .875rem; color: var(--audience-accent); text-align: left; cursor: pointer; }
 .audience-preview__trigger-label { flex: 1; font-size: .875rem; font-weight: 600; }
 .audience-preview__icon, .audience-preview__chevron, .audience-preview__spinner { width: 1rem; height: 1rem; flex-shrink: 0; }
@@ -117,7 +130,7 @@ function toggle() {
 .audience-preview__person + .audience-preview__person { border-top: 1px solid var(--dp-border-primary); }
 .audience-preview__name { flex: 1; min-width: 0; overflow-wrap: anywhere; font-size: .875rem; line-height: 1.5; color: var(--dp-text-primary); }
 .audience-preview__relationship { flex-shrink: 0; border-radius: 999px; padding: .125rem .5rem; font-size: .75rem; background: var(--dp-bg-tertiary); color: var(--dp-text-secondary); }
-.audience-preview__relationship--family { color: var(--dp-warning-hover); }
+.audience-preview__relationship--family { color: var(--dp-text-primary); font-weight: 600; }
 .audience-preview__footnote { display: grid; gap: .375rem; margin-top: .75rem; padding-top: .75rem; border-top: 1px solid var(--dp-border-primary); font-size: .75rem; line-height: 1.65; color: var(--dp-text-secondary); }
 .audience-preview__trigger:focus-visible, .audience-preview__retry:focus-visible { outline: 2px solid var(--dp-accent); outline-offset: -3px; }
 .audience-preview__search:focus-within { outline: 2px solid var(--dp-accent); outline-offset: 2px; }

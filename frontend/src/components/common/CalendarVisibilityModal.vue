@@ -3,7 +3,7 @@ import { computed, nextTick, onBeforeUnmount, ref, useId, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { Check, Loader2, X } from '@lucide/vue'
 import { translateGlobal } from '@/i18n'
-import { getVisibilityDescription, getVisibilityIcon, getVisibilityLabel, type CalendarVisibility } from '@/utils/visibility'
+import { getVisibilityIcon, getVisibilityLabel, type CalendarVisibility } from '@/utils/visibility'
 import messages from '@/i18n/messages/visibilityAudience'
 import BaseModal from './BaseModal.vue'
 import VisibilityAudiencePreview from './VisibilityAudiencePreview.vue'
@@ -66,7 +66,7 @@ function trapFocus(event: KeyboardEvent) {
             <component :is="getVisibilityIcon(option)" class="w-5 h-5 shrink-0" aria-hidden="true" />
             <span class="min-w-0 flex-1">
               <span class="block font-semibold">{{ getVisibilityLabel(option) }}</span>
-              <span class="mt-1 block text-sm leading-5 text-dp-text-secondary">{{ getVisibilityDescription(option) }}</span>
+              <span class="mt-1 block text-sm leading-5 text-dp-text-secondary">{{ translateGlobal(`member.visibility.options.${option.toLowerCase()}.description`) }}</span>
             </span>
             <Check v-if="selected === option" class="w-5 h-5 shrink-0 text-dp-accent" aria-hidden="true" />
           </label>
@@ -92,7 +92,7 @@ function trapFocus(event: KeyboardEvent) {
 .visibility-modal__option:has(input:focus-visible), .visibility-modal button:focus-visible { outline: 2px solid var(--dp-accent); outline-offset: 3px; }
 .visibility-modal__cancel, .visibility-modal__save { display: flex; align-items: center; justify-content: center; gap: .5rem; min-height: 44px; padding: .75rem 1rem; border-radius: .625rem; font-weight: 600; cursor: pointer; }
 .visibility-modal__cancel { background: var(--dp-bg-tertiary); color: var(--dp-text-primary); }
-.visibility-modal__save { flex: 1; background: var(--dp-accent); color: var(--dp-text-on-dark); }
+.visibility-modal__save { flex: 1; background: var(--dp-accent-hover); color: var(--dp-text-on-dark); }
 .visibility-modal button:disabled, .visibility-modal fieldset:disabled { opacity: .5; cursor: not-allowed; }
-@media (hover: hover) { .visibility-modal__option:hover { border-color: var(--dp-accent); } .visibility-modal__save:hover:not(:disabled) { background: var(--dp-accent-hover); } }
+@media (hover: hover) { .visibility-modal__option:hover { border-color: var(--dp-accent); } .visibility-modal__save:hover:not(:disabled) { filter: brightness(.94); } }
 </style>
