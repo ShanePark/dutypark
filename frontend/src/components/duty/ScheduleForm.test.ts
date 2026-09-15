@@ -1,6 +1,10 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import scheduleForm from './ScheduleForm.vue?raw'
 import { endFollowingStart } from './ScheduleForm.vue'
+
+// These tests exercise the form layout and date helper, not its authenticated child.
+// Audience loading and account boundaries have their own focused tests.
+vi.mock('@/components/common/VisibilityAudiencePreview.vue', () => ({ default: {} }))
 
 describe('ScheduleForm start and end rows', () => {
   it('lays start and end out in one grid so their controls share columns', () => {
@@ -60,7 +64,7 @@ describe('ScheduleForm start and end rows', () => {
     // keeps their labels the same width.
     expect(scheduleForm).not.toContain('w-16')
     expect(scheduleForm).toMatch(
-      /\.schedule-form__label\s*\{[\s\S]*?width: var\(--schedule-form-label-width\);/
+      /\.schedule-form__label\s*\{[^}]*width: var\(--schedule-form-label-width\);/
     )
     // Korean labels are all two-character words, so a two-character column wraps the four-character
     // ones into an even block instead of widening every row.
