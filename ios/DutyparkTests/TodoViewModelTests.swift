@@ -967,7 +967,6 @@ struct TodoViewModelTests {
             "todo.help.tip.1",
             "todo.help.tip.5",
             "todo.success.clearCompletedTitle",
-            "todo.success.clearCompletedMessage",
             "common.close",
             "common.edit",
             "common.save"

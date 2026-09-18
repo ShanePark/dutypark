@@ -44,7 +44,7 @@
         "add": { "icon": "personAdd", "tone": "accent" },
         "requests": { "icon": "bell", "tone": "danger" },
         "family": { "icon": "home", "tone": "warning" },
-        "pinning": { "icon": "pin", "tone": "warning" },
+        "ordering": { "icon": "users", "tone": "accentLight" },
         "remove": { "icon": "trash", "tone": "danger" }
       }
     },
@@ -94,8 +94,7 @@
               "items": [
                 "등록된 친구들의 오늘 근무와 일정을 확인할 수 있습니다.",
                 "친구 카드를 클릭하면 해당 친구의 달력으로 이동합니다.",
-                "자주 보는 친구를 즐겨찾기에 추가할 수 있습니다.",
-                "즐겨찾는 친구는 드래그하여 순서를 변경할 수 있습니다."
+                "친구 관리에서 순서를 바꾸면 대시보드에도 같은 순서로 표시됩니다."
               ]
             }
           ]
@@ -305,12 +304,11 @@
               ]
             },
             {
-              "id": "pinning",
-              "title": "즐겨찾는 친구와 순서 변경",
+              "id": "ordering",
+              "title": "친구 순서 변경",
               "items": [
-                "친구를 즐겨찾기에 추가하면 목록 상단에 표시됩니다.",
-                "즐겨찾는 친구는 드래그하여 순서를 변경할 수 있습니다.",
-                "즐겨찾기와 순서는 대시보드에도 동일하게 적용됩니다."
+                "모든 친구 카드를 꾹 눌러 원하는 위치로 옮길 수 있습니다.",
+                "친구 순서는 친구 목록과 대시보드에 동일하게 적용됩니다."
               ]
             },
             {
@@ -427,8 +425,7 @@
               "items": [
                 "You can check your registered friends’ duty and schedules for today.",
                 "Clicking a friend card moves you to that friend’s calendar.",
-                "You can add frequently checked friends to your favorites.",
-                "You can drag favorite friends to change their order."
+                "Changes to the order in Friend management are reflected on the dashboard."
               ]
             }
           ]
@@ -638,12 +635,11 @@
               ]
             },
             {
-              "id": "pinning",
-              "title": "Favorite friends and ordering",
+              "id": "ordering",
+              "title": "Reorder friends",
               "items": [
-                "Add a friend to your favorites to show them at the top of the list.",
-                "Favorite friends can be reordered by dragging.",
-                "Favorites and their order are shared with the dashboard as well."
+                "Press and hold any friend card, then move it to the position you want.",
+                "The friend order is shared between the friends list and dashboard."
               ]
             },
             {
