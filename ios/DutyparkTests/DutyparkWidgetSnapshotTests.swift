@@ -82,6 +82,7 @@ final class DutyparkWidgetSnapshotTests: XCTestCase {
         let snapshot = try decoder.decode(DutyparkWidgetSnapshot.self, from: data)
 
         XCTAssertTrue(snapshot.isCurrentSchema)
+        XCTAssertNil(snapshot.days[0].holidayName)
         XCTAssertNil(snapshot.days[0].scheduleContent)
         XCTAssertEqual(snapshot.days[0].scheduleCount, 0)
     }
@@ -308,6 +309,46 @@ final class DutyparkWidgetSnapshotTests: XCTestCase {
         XCTAssertTrue(snapshot.isCurrentSchema)
     }
 
+    func testSnapshotBuilderPublishesFirstHolidayNameForEachCalendarDay() throws {
+        let calendar = CalendarDateSupport.calendar
+        let firstDate = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 8, day: 30)))
+        let serverDays = try (0..<42).map { offset -> TeamDayDTO in
+            let date = try XCTUnwrap(calendar.date(byAdding: .day, value: offset, to: firstDate))
+            let parts = calendar.dateComponents([.year, .month, .day], from: date)
+            return TeamDayDTO(
+                year: try XCTUnwrap(parts.year),
+                month: try XCTUnwrap(parts.month),
+                day: try XCTUnwrap(parts.day)
+            )
+        }
+        var holidays = Array(repeating: [HolidayDTO](), count: 42)
+        holidays[2] = [
+            HolidayDTO(
+                dateName: "Arbor Day",
+                isHoliday: false,
+                localDate: DateOnly(rawValue: "2026-09-01")
+            ),
+            HolidayDTO(
+                dateName: "Liberation Day",
+                isHoliday: true,
+                localDate: DateOnly(rawValue: "2026-09-01")
+            )
+        ]
+
+        let snapshot = try XCTUnwrap(
+            DutyparkWidgetSnapshotBuilder.make(
+                accountID: 42,
+                key: OfflineMonthKey(year: 2026, month: 9),
+                calendar: serverDays,
+                duties: [],
+                holidays: holidays
+            )
+        )
+
+        XCTAssertEqual(snapshot.days[2].holidayName, "Liberation Day")
+        XCTAssertNil(snapshot.days[3].holidayName)
+    }
+
     func testPublishCachedMonthsMigratesOfflineCacheIntoTheWidgetStore() async throws {
         let root = FileManager.default.temporaryDirectory
             .appendingPathComponent("dutypark-widget-\(UUID().uuidString)", isDirectory: true)
@@ -384,6 +425,14 @@ final class DutyparkWidgetSnapshotTests: XCTestCase {
         let key = OfflineMonthKey(year: 2026, month: 9)
         var schedules = Array(repeating: [ScheduleDTO](), count: 42)
         schedules[2] = [makeSchedule(content: "원문 일정 여섯자")]
+        var holidays = Array(repeating: [HolidayDTO](), count: 42)
+        holidays[2] = [
+            HolidayDTO(
+                dateName: "Liberation Day",
+                isHoliday: true,
+                localDate: DateOnly(rawValue: "2026-09-01")
+            )
+        ]
         let todo = makeTodo(id: "todo-widget", title: "Widget task", status: .todo)
         let board = TodoBoardDTO(
             todo: [todo],
@@ -410,6 +459,7 @@ final class DutyparkWidgetSnapshotTests: XCTestCase {
             now: now,
             repository: DutyparkWidgetRepositoryStub(
                 schedules: schedules,
+                holidays: holidays,
                 todoBoard: board
             ),
             // The cache publish intentionally has no reliable board timestamp;
@@ -421,6 +471,7 @@ final class DutyparkWidgetSnapshotTests: XCTestCase {
         let monthly = try XCTUnwrap(store.load(year: key.year, month: key.month))
         XCTAssertEqual(monthly.days[2].scheduleContent, "원문 일정 여섯자")
         XCTAssertEqual(monthly.days[2].scheduleCount, 1)
+        XCTAssertEqual(monthly.days[2].holidayName, "Liberation Day")
         XCTAssertEqual(store.loadTodo()?.todos.map(\.id), [todo.id])
         XCTAssertEqual(try XCTUnwrap(store.loadTodo()).updatedAt, now)
     }
@@ -461,6 +512,44 @@ final class DutyparkWidgetSnapshotTests: XCTestCase {
         XCTAssertEqual(monthly.days[2].scheduleContent, "Cached schedule")
         XCTAssertEqual(monthly.days[2].scheduleCount, 1)
         XCTAssertEqual(monthly.accountID, 42)
+    }
+
+    func testRefreshCurrentMonthKeepsCachedHolidayWhenHolidayRequestFails() async throws {
+        let now = try XCTUnwrap(
+            CalendarDateSupport.date(from: DateOnly(rawValue: "2026-09-15"))
+        )
+        let key = OfflineMonthKey(year: 2026, month: 9)
+        let holiday = HolidayDTO(
+            dateName: "Liberation Day",
+            isHoliday: true,
+            localDate: DateOnly(rawValue: "2026-09-01")
+        )
+        var cachedHolidays = Array(repeating: [HolidayDTO](), count: 42)
+        cachedHolidays[2] = [holiday]
+        let cached = makeOfflineMonthSnapshot(
+            accountID: 42,
+            key: key,
+            holidays: cachedHolidays,
+            storedAt: Date(timeIntervalSince1970: 100)
+        )
+        let store = DutyparkWidgetSnapshotStore(
+            rootURL: FileManager.default.temporaryDirectory
+                .appendingPathComponent("dutypark-widget-\(UUID().uuidString)", isDirectory: true)
+        )
+        defer { store.clear() }
+        store.activate(accountID: 42, sessionGeneration: 7)
+
+        await DutyparkWidgetRefreshService.refreshCurrentMonth(
+            accountID: 42,
+            sessionGeneration: 7,
+            now: now,
+            repository: DutyparkWidgetRepositoryStub(holidaysError: .transport),
+            cache: DutyparkWidgetCacheStub(snapshots: [cached]),
+            store: store
+        )
+
+        let monthly = try XCTUnwrap(store.load(year: key.year, month: key.month))
+        XCTAssertEqual(monthly.days[2].holidayName, holiday.dateName)
     }
 
     func testRefreshCurrentMonthDoesNotStartAnApiRequestAfterAccountSwitchDuringCacheLoad() async {
@@ -517,6 +606,7 @@ final class DutyparkWidgetSnapshotTests: XCTestCase {
         accountID: Int64,
         key: OfflineMonthKey,
         schedules: [[ScheduleDTO]] = Array(repeating: [], count: 42),
+        holidays: [[HolidayDTO]] = Array(repeating: [], count: 42),
         storedAt: Date
     ) -> OfflineMonthSnapshot {
         OfflineMonthSnapshot(
@@ -535,7 +625,7 @@ final class DutyparkWidgetSnapshotTests: XCTestCase {
                 source: .pattern,
                 dutyAbbreviation: "E"
             )],
-            holidays: Array(repeating: [], count: 42),
+            holidays: holidays,
             otherDuties: [],
             comparedMemberIDs: [],
             storedAt: storedAt
@@ -651,6 +741,8 @@ private actor DutyparkWidgetRepositoryStub: CalendarRepositoryProtocol {
     )
 
     private let schedulePayload: [[ScheduleDTO]]
+    private let holidayPayload: [[HolidayDTO]]
+    private let holidaysError: APIError?
     private let schedulesError: APIError?
     private let todoBoardPayload: TodoBoardDTO
     private let todoBoardError: APIError?
@@ -659,12 +751,16 @@ private actor DutyparkWidgetRepositoryStub: CalendarRepositoryProtocol {
 
     init(
         schedules: [[ScheduleDTO]] = Array(repeating: [], count: 42),
+        holidays: [[HolidayDTO]] = Array(repeating: [], count: 42),
         schedulesError: APIError? = nil,
+        holidaysError: APIError? = nil,
         todoBoard: TodoBoardDTO? = nil,
         todoBoardError: APIError? = nil
     ) {
         self.schedulePayload = schedules
+        self.holidayPayload = holidays
         self.schedulesError = schedulesError
+        self.holidaysError = holidaysError
         self.todoBoardPayload = todoBoard ?? Self.emptyTodoBoard
         self.todoBoardError = todoBoardError
     }
@@ -694,7 +790,10 @@ private actor DutyparkWidgetRepositoryStub: CalendarRepositoryProtocol {
         if let schedulesError { throw schedulesError }
         return schedulePayload
     }
-    func holidays(year: Int, month: Int) async throws -> [[HolidayDTO]] { fatalError("Not used") }
+    func holidays(year: Int, month: Int) async throws -> [[HolidayDTO]] {
+        if let holidaysError { throw holidaysError }
+        return holidayPayload
+    }
     func dDays(memberID: MemberID, isMine: Bool) async throws -> [DDayDTO] { fatalError("Not used") }
     func todoBoard() async throws -> TodoBoardDTO {
         if let todoBoardError { throw todoBoardError }

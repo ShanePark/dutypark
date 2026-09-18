@@ -104,8 +104,9 @@ coordinator behavior).
 
 `DutyparkWidgets` is an iOS 17+ WidgetKit extension with a large monthly
 calendar widget for the signed-in member. It shows the month, weekday labels,
-dates, and that member's duty abbreviations; holidays and other members are
-not included.
+dates, that member's duty abbreviations, and a compact holiday name when one is
+present; other members are not included. Schedule content is intentionally not
+shown in the calendar widget so each date keeps a consistent duty layout.
 
 The app and the extension share the App Group
 `group.io.github.shanepark.dutypark`. The app saves monthly duty snapshots in

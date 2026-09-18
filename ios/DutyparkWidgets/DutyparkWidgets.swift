@@ -19,14 +19,9 @@ nonisolated struct DutyparkWidgetDayPresentation: Identifiable, Hashable, Sendab
     let abbreviation: String?
     let colorHex: String?
     let isOff: Bool
-    let scheduleContent: String?
-    let scheduleCount: Int
+    let holidayName: String?
 
     var id: String { date }
-
-    var displayScheduleContent: String? {
-        scheduleContent.map(DutyparkWidgetScheduleText.shortened)
-    }
 
     init(
         date: String,
@@ -35,8 +30,7 @@ nonisolated struct DutyparkWidgetDayPresentation: Identifiable, Hashable, Sendab
         abbreviation: String?,
         colorHex: String?,
         isOff: Bool,
-        scheduleContent: String? = nil,
-        scheduleCount: Int = 0
+        holidayName: String? = nil
     ) {
         self.date = date
         self.weekday = weekday
@@ -44,8 +38,7 @@ nonisolated struct DutyparkWidgetDayPresentation: Identifiable, Hashable, Sendab
         self.abbreviation = abbreviation
         self.colorHex = colorHex
         self.isOff = isOff
-        self.scheduleContent = scheduleContent
-        self.scheduleCount = scheduleCount
+        self.holidayName = holidayName
     }
 }
 
@@ -153,8 +146,7 @@ struct DutyparkWidgetProvider: TimelineProvider {
                 abbreviation: day.abbreviation,
                 colorHex: day.colorHex,
                 isOff: day.isOff,
-                scheduleContent: day.scheduleContent,
-                scheduleCount: day.scheduleCount
+                holidayName: day.holidayName
             )
         } ?? []
 
@@ -344,6 +336,12 @@ struct DutyparkMonthlyWidgetView: View {
 }
 
 private struct DutyparkWidgetDayCell: View {
+    private enum Layout {
+        static let dayNumberHeight: CGFloat = 14
+        static let holidayHeight: CGFloat = 8
+        static let dutyHeight: CGFloat = 18
+    }
+
     let day: DutyparkWidgetDayPresentation
     let isCurrentMonth: Bool
     let isToday: Bool
@@ -351,53 +349,26 @@ private struct DutyparkWidgetDayCell: View {
     let rowHeight: CGFloat
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 1) {
+        VStack(alignment: .leading, spacing: 0) {
             Text(dayNumber)
                 .font(.system(size: 12, weight: .bold, design: .rounded))
                 .monospacedDigit()
                 .foregroundStyle(dayNumberColor)
+                .frame(height: Layout.dayNumberHeight, alignment: .topLeading)
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+            Text(displayHolidayName ?? "")
+                .font(.system(size: 7.5, weight: .semibold, design: .rounded))
+                .foregroundStyle(holidayForeground)
+                .lineLimit(1)
+                .minimumScaleFactor(0.55)
+                .frame(height: Layout.holidayHeight, alignment: .leading)
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .opacity(displayHolidayName == nil ? 0 : 1)
             Spacer(minLength: 0)
-            VStack(alignment: .center, spacing: 1) {
-                if let abbreviation = displayAbbreviation {
-                    Text(abbreviation)
-                        .font(.system(size: 14, weight: .heavy, design: .rounded))
-                        .foregroundStyle(dutyForeground)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.55)
-                        .padding(.horizontal, 3)
-                        .background(
-                            colorScheme == .dark ? .clear : dutyTint.opacity(0.11),
-                            in: RoundedRectangle(cornerRadius: 4, style: .continuous)
-                        )
-                        .frame(maxWidth: .infinity, alignment: .center)
-                }
-                if let scheduleContent = day.displayScheduleContent,
-                   !scheduleContent.isEmpty {
-                    Text(scheduleContent)
-                        .font(.system(size: 9, weight: .semibold, design: .rounded))
-                        .foregroundStyle(scheduleForeground)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.7)
-                        .frame(maxWidth: .infinity, alignment: .center)
-                }
-                if day.scheduleCount > 0 {
-                    Text("\(day.scheduleCount)")
-                        .font(.system(size: 8, weight: .bold, design: .rounded))
-                        .monospacedDigit()
-                        .foregroundStyle(scheduleForeground)
-                        .padding(.horizontal, 3)
-                        .background(
-                            WidgetPalette.scheduleBadgeBackground(for: colorScheme),
-                            in: Capsule(style: .continuous)
-                        )
-                        .accessibilityLabel(scheduleCountAccessibilityLabel)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .center)
+            dutySlot
         }
         .padding(.horizontal, 3)
-        .padding(.vertical, 3)
+        .padding(.vertical, 1)
         .frame(maxWidth: .infinity, alignment: .topLeading)
         .frame(height: rowHeight, alignment: .topLeading)
         .background(cellBackground)
@@ -437,29 +408,22 @@ private struct DutyparkWidgetDayCell: View {
         return String(number)
     }
 
+    private var displayHolidayName: String? {
+        guard let holidayName = day.holidayName?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !holidayName.isEmpty
+        else { return nil }
+        return holidayName
+    }
+
     private var accessibilityLabel: String {
         var labels = [day.date]
+        if let holidayName = displayHolidayName {
+            labels.append(holidayName)
+        }
         if let abbreviation = displayAbbreviation {
             labels.append(abbreviation)
         }
-        if let scheduleContent = day.scheduleContent,
-           !scheduleContent.isEmpty {
-            labels.append(scheduleContent)
-        }
-        if day.scheduleCount > 0 {
-            labels.append(scheduleCountAccessibilityLabel)
-        }
         return labels.joined(separator: ", ")
-    }
-
-    private var scheduleCountAccessibilityLabel: String {
-        isKorean
-            ? "일정 \(day.scheduleCount)개"
-            : "\(day.scheduleCount) schedule\(day.scheduleCount == 1 ? "" : "s")"
-    }
-
-    private var isKorean: Bool {
-        Locale.current.language.languageCode?.identifier == "ko"
     }
 
     private var displayAbbreviation: String? {
@@ -469,11 +433,41 @@ private struct DutyparkWidgetDayCell: View {
         return day.isOff ? "off" : nil
     }
 
+    private var dutySlot: some View {
+        ZStack {
+            if let abbreviation = displayAbbreviation {
+                Text(abbreviation)
+                    .font(.system(size: 13, weight: .heavy, design: .rounded))
+                    .foregroundStyle(dutyForeground)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.55)
+                    .padding(.horizontal, 3)
+            }
+        }
+        .frame(height: Layout.dutyHeight)
+        .frame(maxWidth: .infinity)
+        .background(dutyBackground, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
+        .overlay {
+            if displayAbbreviation != nil {
+                RoundedRectangle(cornerRadius: 5, style: .continuous)
+                    .stroke(dutyForeground.opacity(colorScheme == .dark ? 0.28 : 0.18), lineWidth: 0.7)
+            }
+        }
+    }
+
     private var dutyTint: Color {
         WidgetHexColor.color(day.colorHex)
             ?? (day.isOff
                 ? WidgetPalette.off(for: colorScheme)
                 : WidgetPalette.emptyDuty(for: colorScheme))
+    }
+
+    private var dutyBackground: Color {
+        guard displayAbbreviation != nil else { return .clear }
+        return WidgetHexColor.backgroundColor(day.colorHex, for: colorScheme)
+            ?? (day.isOff
+                ? WidgetPalette.offBackground(for: colorScheme)
+                : WidgetPalette.emptyDutyBackground(for: colorScheme))
     }
 
     private var cellBackground: Color {
@@ -495,16 +489,16 @@ private struct DutyparkWidgetDayCell: View {
         return WidgetPalette.primaryText(for: colorScheme)
     }
 
+    private var holidayForeground: Color {
+        WidgetPalette.holiday(for: colorScheme)
+    }
+
     private var dutyForeground: Color {
         if day.isOff, day.colorHex == nil { return WidgetPalette.off(for: colorScheme) }
         return WidgetHexColor.readableColor(day.colorHex, for: colorScheme)
             ?? (day.isOff
                 ? WidgetPalette.off(for: colorScheme)
                 : WidgetPalette.emptyDuty(for: colorScheme))
-    }
-
-    private var scheduleForeground: Color {
-        WidgetPalette.secondaryText(for: colorScheme)
     }
 }
 
@@ -575,13 +569,55 @@ private enum WidgetPalette {
             : Color(red: 0.86, green: 0.15, blue: 0.20)
     }
 
+    static func holiday(for colorScheme: ColorScheme) -> Color {
+        colorScheme == .dark
+            ? Color(red: 1.0, green: 0.49, blue: 0.53)
+            : Color(red: 0.78, green: 0.10, blue: 0.15)
+    }
+
     static func emptyDuty(for colorScheme: ColorScheme) -> Color {
         colorScheme == .dark
             ? Color(red: 0.82, green: 0.835, blue: 0.86)
             : Color(red: 0.42, green: 0.45, blue: 0.50)
     }
 
-    static func scheduleBadgeBackground(for colorScheme: ColorScheme) -> Color {
+    static func offBackground(for colorScheme: ColorScheme) -> Color {
+        colorScheme == .dark
+            ? Color(red: 0.42, green: 0.10, blue: 0.12)
+            : Color(red: 1.0, green: 0.89, blue: 0.90)
+    }
+
+    static func emptyDutyBackground(for colorScheme: ColorScheme) -> Color {
+        colorScheme == .dark
+            ? Color(red: 0.22, green: 0.27, blue: 0.35)
+            : Color(red: 0.91, green: 0.92, blue: 0.94)
+    }
+
+    static func todoStatus(for colorScheme: ColorScheme) -> Color {
+        colorScheme == .dark
+            ? Color(red: 0.38, green: 0.65, blue: 1.0)
+            : Color(red: 0.145, green: 0.388, blue: 0.922)
+    }
+
+    static func inProgressStatus(for colorScheme: ColorScheme) -> Color {
+        colorScheme == .dark
+            ? Color(red: 1.0, green: 0.73, blue: 0.23)
+            : Color(red: 0.84, green: 0.42, blue: 0.02)
+    }
+
+    static func todoStatusBackground(for colorScheme: ColorScheme) -> Color {
+        colorScheme == .dark
+            ? Color(red: 0.12, green: 0.23, blue: 0.37)
+            : Color(red: 0.86, green: 0.92, blue: 1.0)
+    }
+
+    static func inProgressStatusBackground(for colorScheme: ColorScheme) -> Color {
+        colorScheme == .dark
+            ? Color(red: 0.35, green: 0.19, blue: 0.02)
+            : Color(red: 1.0, green: 0.95, blue: 0.82)
+    }
+
+    static func countBadgeBackground(for colorScheme: ColorScheme) -> Color {
         colorScheme == .dark
             ? Color(red: 0.216, green: 0.255, blue: 0.318)
             : Color(red: 0.90, green: 0.906, blue: 0.922)
@@ -624,9 +660,9 @@ private enum WidgetHexColor {
                 // Dark widgets use color as a quiet text accent. Lift every hue
                 // above the slate card and soften saturated team colors so a
                 // month full of duties does not become a patchwork of badges.
-                brightness = max(brightness, 0.90)
+                brightness = max(brightness, 0.94)
                 if saturation > 0.01 {
-                    saturation = min(saturation, 0.48)
+                    saturation = min(saturation, 0.32)
                 }
             }
             return Color(
@@ -645,6 +681,52 @@ private enum WidgetHexColor {
             white = min(white, 0.52)
         } else if colorScheme == .dark {
             white = max(white, 0.90)
+        }
+        return Color(white: Double(white), opacity: Double(alpha))
+    }
+
+    /// Duty fills stay recognizable on both widget surfaces. Very pale team
+    /// colors gain enough saturation in light mode, while dark colors are
+    /// lifted above the slate card in dark mode. The text keeps using the
+    /// separate readableColor transform above so the label remains legible.
+    static func backgroundColor(_ hex: String?, for colorScheme: ColorScheme) -> Color? {
+        guard let value = uiColor(hex) else { return nil }
+
+        var hue: CGFloat = 0
+        var saturation: CGFloat = 0
+        var brightness: CGFloat = 0
+        var alpha: CGFloat = 0
+        if value.getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha) {
+            if colorScheme == .light {
+                saturation = saturation > 0.01 ? max(saturation, 0.48) : 0
+                brightness = min(max(brightness, 0.74), 0.94)
+                alpha = 0.34
+            } else {
+                // Keep the hue while using a dark fill. ReadableColor lifts
+                // the matching label, so this fixed range gives every duty
+                // the same reliable text-to-fill contrast in dark mode.
+                saturation = saturation > 0.01 ? min(max(saturation, 0.42), 0.78) : 0
+                brightness = min(max(brightness, 0.30), 0.40)
+                alpha = 0.88
+            }
+            return Color(
+                hue: Double(hue),
+                saturation: Double(saturation),
+                brightness: Double(brightness),
+                opacity: Double(alpha)
+            )
+        }
+
+        var white: CGFloat = 0
+        guard value.getWhite(&white, alpha: &alpha) else {
+            return Color(uiColor: value)
+        }
+        if colorScheme == .light {
+            white = min(max(white, 0.74), 0.94)
+            alpha = 0.34
+        } else {
+            white = min(max(white, 0.56), 0.82)
+            alpha = 0.88
         }
         return Color(white: Double(white), opacity: Double(alpha))
     }
@@ -790,6 +872,8 @@ struct DutyparkTodoWidgetView: View {
     let entry: DutyparkTodoWidgetEntry
 
     private static let maximumVisibleTodoCount = 3
+    private static let statusBadgeWidth: CGFloat = 52
+    private static let statusBadgeHeight: CGFloat = 20
 
     @Environment(\.colorScheme) private var colorScheme
 
@@ -816,7 +900,7 @@ struct DutyparkTodoWidgetView: View {
                         .padding(.horizontal, 6)
                         .padding(.vertical, 3)
                         .background(
-                            WidgetPalette.scheduleBadgeBackground(for: colorScheme),
+                            WidgetPalette.countBadgeBackground(for: colorScheme),
                             in: Capsule(style: .continuous)
                         )
                 }
@@ -846,22 +930,13 @@ struct DutyparkTodoWidgetView: View {
         VStack(alignment: .leading, spacing: 6) {
             ForEach(Array(entry.todos.prefix(Self.maximumVisibleTodoCount))) { todo in
                 HStack(spacing: 7) {
-                    Circle()
-                        .fill(todo.status == .inProgress
-                            ? WidgetPalette.today(for: colorScheme)
-                            : WidgetPalette.secondaryText(for: colorScheme))
-                        .frame(width: 7, height: 7)
-                        .accessibilityHidden(true)
+                    statusBadge(for: todo.status)
                     Text(todo.title)
                         .font(.system(size: 13, weight: .semibold, design: .rounded))
                         .foregroundStyle(WidgetPalette.primaryText(for: colorScheme))
                         .lineLimit(1)
                         .minimumScaleFactor(0.65)
                     Spacer(minLength: 0)
-                    Text(statusLabel(for: todo.status))
-                        .font(.system(size: 10, weight: .medium, design: .rounded))
-                        .foregroundStyle(WidgetPalette.secondaryText(for: colorScheme))
-                        .lineLimit(1)
                 }
                 .accessibilityElement(children: .ignore)
                 .accessibilityLabel("\(todo.title), \(statusLabel(for: todo.status))")
@@ -877,6 +952,42 @@ struct DutyparkTodoWidgetView: View {
                             : "\(hiddenTodoCount) more todos"
                     )
             }
+        }
+    }
+
+    private func statusBadge(for status: DutyparkWidgetTodoStatus) -> some View {
+        Text(statusLabel(for: status))
+            .font(.system(size: 10, weight: .bold, design: .rounded))
+            .foregroundStyle(statusBadgeForeground(for: status))
+            .lineLimit(1)
+            .minimumScaleFactor(0.75)
+            .frame(width: Self.statusBadgeWidth, height: Self.statusBadgeHeight)
+            .background(
+                statusBadgeBackground(for: status),
+                in: RoundedRectangle(cornerRadius: 6, style: .continuous)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    .stroke(statusBadgeForeground(for: status).opacity(0.28), lineWidth: 0.7)
+            }
+            .accessibilityHidden(true)
+    }
+
+    private func statusBadgeForeground(for status: DutyparkWidgetTodoStatus) -> Color {
+        switch status {
+        case .todo:
+            WidgetPalette.todoStatus(for: colorScheme)
+        case .inProgress:
+            WidgetPalette.inProgressStatus(for: colorScheme)
+        }
+    }
+
+    private func statusBadgeBackground(for status: DutyparkWidgetTodoStatus) -> Color {
+        switch status {
+        case .todo:
+            WidgetPalette.todoStatusBackground(for: colorScheme)
+        case .inProgress:
+            WidgetPalette.inProgressStatusBackground(for: colorScheme)
         }
     }
 
@@ -913,8 +1024,8 @@ struct DutyparkTodoWidgetView: View {
 
     private func statusLabel(for status: DutyparkWidgetTodoStatus) -> String {
         switch status {
-        case .todo: isKorean ? "할 일" : "To do"
-        case .inProgress: isKorean ? "진행 중" : "Doing"
+        case .todo: isKorean ? "할일" : "TODO"
+        case .inProgress: isKorean ? "진행중" : "Doing"
         }
     }
 
@@ -1014,7 +1125,8 @@ private enum DutyparkWidgetPreviewData {
                     isCurrentMonth: day.isCurrentMonth,
                     abbreviation: day.abbreviation,
                     colorHex: day.colorHex,
-                    isOff: day.isOff
+                    isOff: day.isOff,
+                    holidayName: day.holidayName
                 )
             },
             updatedAt: Date().addingTimeInterval(-60 * 60)
@@ -1038,6 +1150,7 @@ private enum DutyparkWidgetPreviewData {
             let dateString = String(format: "%04d-%02d-%02d", year, month, day)
             let abbreviation: String?
             let color: String?
+            let holidayName: String?
             switch day % 6 {
             case 0:
                 abbreviation = "N"
@@ -1052,13 +1165,22 @@ private enum DutyparkWidgetPreviewData {
                 abbreviation = nil
                 color = nil
             }
+            switch day {
+            case 3:
+                holidayName = "공휴일"
+            case 15:
+                holidayName = "추석"
+            default:
+                holidayName = nil
+            }
             return DutyparkWidgetDayPresentation(
                 date: dateString,
                 weekday: weekday,
                 isCurrentMonth: year == 2026 && month == 9,
                 abbreviation: abbreviation,
                 colorHex: color,
-                isOff: abbreviation == "off"
+                isOff: abbreviation == "off",
+                holidayName: holidayName
             )
         }
     }()

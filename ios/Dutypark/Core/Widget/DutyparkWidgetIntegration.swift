@@ -12,6 +12,7 @@ nonisolated enum DutyparkWidgetSnapshotBuilder {
         calendar: [TeamDayDTO],
         duties: [DutyDTO],
         schedules: [[ScheduleDTO]]? = nil,
+        holidays: [[HolidayDTO]]? = nil,
         fallbackScheduleDays: [DutyparkWidgetDay]? = nil,
         updatedAt: Date = .now
     ) -> DutyparkWidgetSnapshot? {
@@ -32,6 +33,7 @@ nonisolated enum DutyparkWidgetSnapshotBuilder {
             }
             let abbreviation = duty?.shortName.isEmpty == false ? duty?.shortName : nil
             let daySchedules = Self.value(schedules, at: index)
+            let dayHolidays = Self.value(holidays, at: index)
             let fallbackScheduleDay = Self.value(fallbackScheduleDays, at: index)
             return DutyparkWidgetDay(
                 date: dateString,
@@ -40,6 +42,7 @@ nonisolated enum DutyparkWidgetSnapshotBuilder {
                 abbreviation: abbreviation,
                 colorHex: duty?.dutyColor,
                 isOff: duty?.isOff ?? false,
+                holidayName: dayHolidays?.first(where: { $0.isHoliday })?.dateName,
                 scheduleContent: daySchedules?.first?.content ?? fallbackScheduleDay?.scheduleContent,
                 scheduleCount: daySchedules?.count ?? fallbackScheduleDay?.scheduleCount ?? 0
             )
@@ -64,6 +67,7 @@ nonisolated enum DutyparkWidgetSnapshotBuilder {
             calendar: snapshot.calendar,
             duties: snapshot.duties,
             schedules: snapshot.schedules,
+            holidays: snapshot.holidays,
             updatedAt: updatedAt ?? snapshot.storedAt
         )
     }
@@ -252,6 +256,10 @@ enum DutyparkWidgetRefreshService {
             year: current.year,
             month: current.month
         )
+        async let holidaysResult = repository.holidays(
+            year: current.year,
+            month: current.month
+        )
         async let todoBoardResult: TodoBoardDTO? = try? await repository.todoBoard()
         // Todo is an independent widget surface. Publish a successful board
         // even when the monthly calendar/duty request below fails.
@@ -296,6 +304,23 @@ enum DutyparkWidgetRefreshService {
                     existingSnapshot: existingSnapshot
                 )
             }
+            let holidayData: [[HolidayDTO]]?
+            do {
+                let loadedHolidays = try await holidaysResult
+                if loadedHolidays.count == calendar.count {
+                    holidayData = loadedHolidays
+                } else {
+                    holidayData = cachedMonth?.holidays.count == calendar.count
+                        ? cachedMonth?.holidays
+                        : nil
+                }
+            } catch {
+                // A holiday outage must not discard a successful calendar and
+                // duty response. Prefer the freshest cached holiday labels.
+                holidayData = cachedMonth?.holidays.count == calendar.count
+                    ? cachedMonth?.holidays
+                    : nil
+            }
             guard store.isActive(
                 accountID: accountID,
                 sessionGeneration: sessionGeneration
@@ -306,6 +331,7 @@ enum DutyparkWidgetRefreshService {
                 calendar: calendar,
                 duties: duties,
                 schedules: scheduleData.schedules,
+                holidays: holidayData,
                 fallbackScheduleDays: scheduleData.fallbackDays,
                 updatedAt: now
             ) else { return }
