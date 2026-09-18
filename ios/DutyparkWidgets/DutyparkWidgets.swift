@@ -337,9 +337,9 @@ struct DutyparkMonthlyWidgetView: View {
 
 private struct DutyparkWidgetDayCell: View {
     private enum Layout {
-        static let dayNumberHeight: CGFloat = 14
+        static let dayNumberHeight: CGFloat = 15
         static let holidayHeight: CGFloat = 8
-        static let dutyHeight: CGFloat = 18
+        static let dutyHeight: CGFloat = 15
     }
 
     let day: DutyparkWidgetDayPresentation
@@ -349,28 +349,26 @@ private struct DutyparkWidgetDayCell: View {
     let rowHeight: CGFloat
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        VStack(alignment: .center, spacing: 0) {
             Text(dayNumber)
-                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .font(.system(size: 13, weight: .bold, design: .rounded))
                 .monospacedDigit()
                 .foregroundStyle(dayNumberColor)
-                .frame(height: Layout.dayNumberHeight, alignment: .topLeading)
-                .frame(maxWidth: .infinity, alignment: .topLeading)
-            Text(displayHolidayName ?? "")
+                .frame(height: Layout.dayNumberHeight)
+                .frame(maxWidth: .infinity)
+            dutySlot
+            Text(displayHolidayName ?? " ")
                 .font(.system(size: 7.5, weight: .semibold, design: .rounded))
                 .foregroundStyle(holidayForeground)
                 .lineLimit(1)
                 .minimumScaleFactor(0.55)
-                .frame(height: Layout.holidayHeight, alignment: .leading)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(height: Layout.holidayHeight)
+                .frame(maxWidth: .infinity)
                 .opacity(displayHolidayName == nil ? 0 : 1)
-            Spacer(minLength: 0)
-            dutySlot
         }
-        .padding(.horizontal, 3)
-        .padding(.vertical, 1)
-        .frame(maxWidth: .infinity, alignment: .topLeading)
-        .frame(height: rowHeight, alignment: .topLeading)
+        .padding(.horizontal, 2)
+        .frame(maxWidth: .infinity)
+        .frame(height: rowHeight, alignment: .center)
         .background(cellBackground)
         .opacity(isCurrentMonth ? 1 : 0.45)
         .overlay(alignment: .trailing) {
@@ -386,16 +384,8 @@ private struct DutyparkWidgetDayCell: View {
         .overlay {
             if isToday {
                 Rectangle()
-                    .stroke(WidgetPalette.today(for: colorScheme), lineWidth: 1)
-            }
-        }
-        .overlay(alignment: .top) {
-            if isToday {
-                Capsule(style: .continuous)
-                    .fill(WidgetPalette.today(for: colorScheme))
-                    .frame(maxWidth: .infinity, minHeight: 3, maxHeight: 3)
-                    .padding(.horizontal, 4)
-                    .padding(.top, 1)
+                    .stroke(WidgetPalette.today(for: colorScheme), lineWidth: 1.5)
+                    .padding(1)
             }
         }
         .accessibilityElement(children: .ignore)
@@ -434,52 +424,26 @@ private struct DutyparkWidgetDayCell: View {
     }
 
     private var dutySlot: some View {
-        ZStack {
-            if let abbreviation = displayAbbreviation {
-                Text(abbreviation)
-                    .font(.system(size: 13, weight: .heavy, design: .rounded))
-                    .foregroundStyle(dutyForeground)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.55)
-                    .padding(.horizontal, 3)
-            }
-        }
-        .frame(height: Layout.dutyHeight)
-        .frame(maxWidth: .infinity)
-        .background(dutyBackground, in: RoundedRectangle(cornerRadius: 5, style: .continuous))
-        .overlay {
-            if displayAbbreviation != nil {
-                RoundedRectangle(cornerRadius: 5, style: .continuous)
-                    .stroke(dutyForeground.opacity(colorScheme == .dark ? 0.28 : 0.18), lineWidth: 0.7)
-            }
-        }
+        Text(displayAbbreviation ?? " ")
+            .font(.system(size: 13, weight: .heavy, design: .rounded))
+            .foregroundStyle(dutyForeground)
+            .lineLimit(1)
+            .minimumScaleFactor(0.55)
+            .frame(height: Layout.dutyHeight)
+            .frame(maxWidth: .infinity)
+            .opacity(displayAbbreviation == nil ? 0 : 1)
     }
 
-    private var dutyTint: Color {
-        WidgetHexColor.color(day.colorHex)
-            ?? (day.isOff
-                ? WidgetPalette.off(for: colorScheme)
-                : WidgetPalette.emptyDuty(for: colorScheme))
-    }
-
-    private var dutyBackground: Color {
-        guard displayAbbreviation != nil else { return .clear }
+    private var cellBackground: Color {
+        guard displayAbbreviation != nil else {
+            return day.isOff
+                ? WidgetPalette.offBackground(for: colorScheme)
+                : WidgetPalette.emptyCell(for: colorScheme)
+        }
         return WidgetHexColor.backgroundColor(day.colorHex, for: colorScheme)
             ?? (day.isOff
                 ? WidgetPalette.offBackground(for: colorScheme)
                 : WidgetPalette.emptyDutyBackground(for: colorScheme))
-    }
-
-    private var cellBackground: Color {
-        guard colorScheme == .light else {
-            return WidgetPalette.emptyCell(for: colorScheme)
-        }
-        guard displayAbbreviation != nil else {
-            return day.isOff
-                ? WidgetPalette.off(for: colorScheme).opacity(0.08)
-                : WidgetPalette.emptyCell(for: colorScheme)
-        }
-        return dutyTint.opacity(0.09)
     }
 
     private var dayNumberColor: Color {
@@ -626,11 +590,6 @@ private enum WidgetPalette {
 }
 
 private enum WidgetHexColor {
-    static func color(_ hex: String?) -> Color? {
-        guard let value = rgb(hex) else { return nil }
-        return Color(red: value.red, green: value.green, blue: value.blue)
-    }
-
     /// Duty colors are chosen by each team and often use very pale fills. The
     /// calendar keeps the hue while nudging those colors toward a readable text
     /// value for the current widget surface. This avoids replacing pastel duties
@@ -685,9 +644,9 @@ private enum WidgetHexColor {
         return Color(white: Double(white), opacity: Double(alpha))
     }
 
-    /// Duty fills stay recognizable on both widget surfaces. Very pale team
-    /// colors gain enough saturation in light mode, while dark colors are
-    /// lifted above the slate card in dark mode. The text keeps using the
+    /// Colored calendar cells stay recognizable on both widget surfaces. Very
+    /// pale team colors gain enough saturation in light mode, while dark colors
+    /// are lifted above the slate card in dark mode. The text keeps using the
     /// separate readableColor transform above so the label remains legible.
     static func backgroundColor(_ hex: String?, for colorScheme: ColorScheme) -> Color? {
         guard let value = uiColor(hex) else { return nil }
@@ -745,18 +704,6 @@ private enum WidgetHexColor {
         )
     }
 
-    private static func rgb(_ hex: String?) -> (red: Double, green: Double, blue: Double)? {
-        guard var value = hex?.trimmingCharacters(in: .whitespacesAndNewlines), !value.isEmpty else {
-            return nil
-        }
-        if value.hasPrefix("#") { value.removeFirst() }
-        guard value.count == 6, let number = UInt32(value, radix: 16) else { return nil }
-        return (
-            Double((number >> 16) & 0xFF) / 255,
-            Double((number >> 8) & 0xFF) / 255,
-            Double(number & 0xFF) / 255
-        )
-    }
 }
 
 nonisolated enum DutyparkTodoWidgetAvailability: Equatable, Sendable {
