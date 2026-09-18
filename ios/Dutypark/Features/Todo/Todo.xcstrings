@@ -23,7 +23,7 @@
     "todo.confirm.discardTitle" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Discard changes?" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "변경사항을 버릴까요?" } } } },
     "todo.confirm.deleteMessage" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "This Todo and its attachments will be deleted." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "Todo와 첨부파일이 함께 삭제됩니다." } } } },
     "todo.confirm.deleteTitle" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete Todo?" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "Todo를 삭제할까요?" } } } },
-    "todo.confirm.clearCompletedMessage" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "%1$d completed tasks you created will be permanently deleted. %2$d tasks created by others and tagged to you will be removed from your board only." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "내가 작성한 완료 항목 %1$d개는 영구 삭제되고, 나에게 태그된 완료 항목 %2$d개는 내 보드에서만 제거됩니다." } } } },
+    "todo.confirm.clearCompletedMessage" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Tasks you created will be deleted, and tagged tasks will be removed from your board only." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "내가 만든 항목은 삭제되고, 태그된 항목은 내 보드에서만 제거됩니다." } } } },
     "todo.confirm.clearCompletedTitle" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Clear completed tasks?" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "완료 항목을 정리할까요?" } } } },
     "todo.confirm.leaveMessage" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "This Todo will be removed from your board." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "이 Todo가 내 보드에서 제거됩니다." } } } },
     "todo.confirm.leaveTitle" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Remove your tag?" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "내 태그를 해제할까요?" } } } },
@@ -83,8 +83,7 @@
     "todo.statusShort.done" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Done" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "완료" } } } },
     "todo.statusShort.inProgress" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Doing" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "진행중" } } } },
     "todo.statusShort.todo" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Todo" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "할 일" } } } },
-    "todo.success.clearCompletedMessage" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Completed tasks cleared: %1$d permanently deleted and %2$d removed from your board." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "완료 항목을 정리했습니다. 영구 삭제 %1$d개 · 내 보드에서 제거 %2$d개" } } } },
-    "todo.success.clearCompletedTitle" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Completed tasks cleared" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "완료 항목 정리 완료" } } } }
+    "todo.success.clearCompletedTitle" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Completed items cleared." } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "완료 항목을 정리했습니다." } } } }
   },
   "version" : "1.0"
 }

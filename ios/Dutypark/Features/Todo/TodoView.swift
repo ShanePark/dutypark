@@ -659,10 +659,10 @@ struct TodoView: View {
         .todoErrorAlert(model)
         .dpConfirmation(
             item: $completedCleanupConfirmation,
-            copy: { selection in
+            copy: { _ in
                 DPConfirmationCopy(
                     title: todoLocalized("todo.confirm.clearCompletedTitle"),
-                    message: completedCleanupConfirmationMessage(selection),
+                    message: todoLocalized("todo.confirm.clearCompletedMessage"),
                     confirmTitle: todoLocalized("todo.action.clearCompleted"),
                     cancelTitle: todoLocalized("common.cancel"),
                     isDestructive: true
@@ -683,10 +683,6 @@ struct TodoView: View {
         ) {
             Button(todoLocalized("common.ok"), role: .cancel) {
                 completedCleanupResult = nil
-            }
-        } message: {
-            if let completedCleanupResult {
-                Text(completedCleanupResultMessage(completedCleanupResult))
             }
         }
     }
@@ -1216,22 +1212,6 @@ struct TodoView: View {
             }
             dismiss()
         }
-    }
-
-    private func completedCleanupConfirmationMessage(
-        _ selection: TodoCompletedCleanupSelection
-    ) -> String {
-        todoLocalized("todo.confirm.clearCompletedMessage")
-            .replacingOccurrences(of: "%1$d", with: String(selection.ownedCount))
-            .replacingOccurrences(of: "%2$d", with: String(selection.taggedCount))
-    }
-
-    private func completedCleanupResultMessage(
-        _ result: TodoCompletedCleanupResponse
-    ) -> String {
-        todoLocalized("todo.success.clearCompletedMessage")
-            .replacingOccurrences(of: "%1$d", with: String(result.deletedCount))
-            .replacingOccurrences(of: "%2$d", with: String(result.untaggedCount))
     }
 
     /// The drop target resolved from the current gesture sample, expressed as the

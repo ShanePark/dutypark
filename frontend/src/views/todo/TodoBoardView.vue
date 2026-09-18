@@ -58,8 +58,6 @@ let sortableInstances: Record<string, Sortable> = {}
 const todoList = computed(() => board.value?.todo ?? [])
 const inProgressList = computed(() => board.value?.inProgress ?? [])
 const doneList = computed(() => board.value?.done ?? [])
-const completedOwnedList = computed(() => doneList.value.filter((todo) => !todo.isTagged))
-const completedTaggedList = computed(() => doneList.value.filter((todo) => todo.isTagged))
 const canReportSelectedTodo = computed(() => selectedTodo.value?.isTagged === true)
 
 const counts = computed(() => board.value?.counts ?? { todo: 0, inProgress: 0, done: 0, total: 0 })
@@ -668,24 +666,19 @@ async function handleDeleteCompletedTodos() {
   // completed while the modal is open remains for the next cleanup action.
   const completedTodos = doneList.value
   const completedTodoIds = completedTodos.map((todo) => todo.id)
-  const ownedCount = completedOwnedList.value.length
-  const taggedCount = completedTaggedList.value.length
   if (completedTodoIds.length === 0) return
 
   isClearingCompleted.value = true
   try {
     const confirmed = await confirmDelete(
-      t('todoBoard.messages.deleteCompletedConfirm', { ownedCount, taggedCount }),
+      t('todoBoard.messages.deleteCompletedConfirm'),
       t('todoBoard.messages.deleteCompletedTitle'),
       t('todoBoard.actions.clearCompleted'),
     )
     if (!confirmed) return
 
-    const result = await todoApi.deleteCompletedTodos(completedTodoIds)
-    toastSuccess(t('todoBoard.messages.deleteCompletedSuccess', {
-      deletedCount: result.deletedCount,
-      untaggedCount: result.untaggedCount,
-    }))
+    await todoApi.deleteCompletedTodos(completedTodoIds)
+    toastSuccess(t('todoBoard.messages.deleteCompletedSuccess'))
     await loadBoard()
   } catch (error) {
     console.error('Failed to delete completed todos:', error)
