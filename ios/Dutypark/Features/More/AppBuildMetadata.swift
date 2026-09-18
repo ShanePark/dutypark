@@ -12,6 +12,8 @@ nonisolated struct AppBuildMetadata: Equatable, Sendable {
         case unknown
     }
 
+    static let marketingVersionKey = "CFBundleShortVersionString"
+    static let buildNumberKey = "CFBundleVersion"
     static let buildDateKey = "DutyparkBuildDate"
     static let commitHashKey = "DutyparkGitCommit"
     static let sourceStateKey = "DutyparkSourceState"
@@ -40,8 +42,8 @@ nonisolated struct AppBuildMetadata: Equatable, Sendable {
 
     init?(infoDictionary: [String: Any]) {
         self.init(
-            shortVersion: infoDictionary["CFBundleShortVersionString"] as? String,
-            buildNumber: infoDictionary["CFBundleVersion"] as? String,
+            shortVersion: infoDictionary[Self.marketingVersionKey] as? String,
+            buildNumber: infoDictionary[Self.buildNumberKey] as? String,
             buildDate: infoDictionary[Self.buildDateKey] as? String,
             commitHash: infoDictionary[Self.commitHashKey] as? String,
             sourceState: SourceState(

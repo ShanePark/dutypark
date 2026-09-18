@@ -6,7 +6,7 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 IOS_DIR="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 
 PROJECT_PATH="$IOS_DIR/Dutypark.xcodeproj"
-PROJECT_FILE_PATH="$PROJECT_PATH/project.pbxproj"
+VERSION_CONFIG_PATH="$IOS_DIR/Config/Version.xcconfig"
 SCHEME="Dutypark"
 TEAM_ID="2V47G42CDS"
 EXPORT_OPTIONS_PATH="$IOS_DIR/ExportOptions-TestFlight.plist"
@@ -32,19 +32,21 @@ run() {
 
 command -v xcodebuild >/dev/null 2>&1 || die "xcodebuild is required. Run this script on macOS with Xcode installed."
 [[ -d "$PROJECT_PATH" ]] || die "Xcode project not found: $PROJECT_PATH"
-[[ -f "$PROJECT_FILE_PATH" ]] || die "Xcode project file not found: $PROJECT_FILE_PATH"
+[[ -f "$VERSION_CONFIG_PATH" ]] || die "Canonical version config not found: $VERSION_CONFIG_PATH"
 [[ -f "$EXPORT_OPTIONS_PATH" ]] || die "Export options not found: $EXPORT_OPTIONS_PATH"
 
-if [[ -n "${MARKETING_VERSION:-}" ]]; then
-	marketing_version="$MARKETING_VERSION"
-else
-	marketing_version="$(awk -F ' = |;' '
-		$1 ~ /^[[:space:]]*MARKETING_VERSION[[:space:]]*$/ {
-			print $2
-			exit
-		}
-	' "$PROJECT_FILE_PATH")"
-	[[ -n "$marketing_version" ]] || die "Unable to read MARKETING_VERSION from the Xcode project."
+configured_marketing_version="$(awk -F ' = |;' '
+	$1 ~ /^[[:space:]]*MARKETING_VERSION[[:space:]]*$/ {
+		gsub(/[[:space:]]+$/, "", $2)
+		print $2
+		exit
+	}
+' "$VERSION_CONFIG_PATH")"
+[[ -n "$configured_marketing_version" ]] || die "Unable to read MARKETING_VERSION from the canonical version config."
+
+marketing_version="$configured_marketing_version"
+if [[ -n "${MARKETING_VERSION:-}" && "$MARKETING_VERSION" != "$configured_marketing_version" ]]; then
+	die "MARKETING_VERSION override ($MARKETING_VERSION) must match the canonical version ($configured_marketing_version)."
 fi
 
 [[ "$marketing_version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || die \

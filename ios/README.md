@@ -187,11 +187,13 @@ After logging into the Apple Developer account in Xcode (`Xcode > Settings > Acc
 ./ios/scripts/upload-testflight.sh
 ```
 
-The script reads the app marketing version from the Xcode project, generates a
-KST `YYYYMMDD` build number, creates a Release archive, exports it with App
-Store distribution signing, and submits it to App Store Connect. Release-note
-metadata keeps its separate `YYYY.MM.DD` changelog version format. Artifacts
-are written under `ios/build/testflight/`, which is ignored by Git.
+The script reads the canonical app marketing version from
+`Config/Version.xcconfig`, generates a KST `YYYYMMDD` build number, creates a
+Release archive, exports it with App Store distribution signing, and submits it
+to App Store Connect. The same config is inherited by the app, tests, and widget
+targets, while the running app displays the built `CFBundleShortVersionString`.
+Release-note metadata keeps its separate `YYYY.MM.DD` changelog version format.
+Artifacts are written under `ios/build/testflight/`, which is ignored by Git.
 
 The command succeeding means that the transport accepted the upload; it does
 not mean that App Store Connect has finished processing or validation. Check
@@ -209,10 +211,10 @@ DRY_RUN=1 ./ios/scripts/upload-testflight.sh
 ```
 
 Set `BUILD_NUMBER` to override the generated build number, for example
-`BUILD_NUMBER=20260826.1` for another upload on the same day. Set
-`MARKETING_VERSION` to override the Xcode project's marketing version for a
-one-off build. App Store Connect processing continues asynchronously after the
-upload command succeeds.
+`BUILD_NUMBER=20260826.1` for another upload on the same day. If
+`MARKETING_VERSION` is provided, it must match `Config/Version.xcconfig`; the
+canonical file is the single source for the app release version. App Store
+Connect processing continues asynchronously after the upload command succeeds.
 
 ### Screenshots and demo captures
 

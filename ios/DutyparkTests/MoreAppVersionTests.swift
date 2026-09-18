@@ -46,6 +46,22 @@ struct MoreAppVersionTests {
     }
 
     @Test
+    func versionFooterUsesTheSameMarketingVersionAsBuildMetadata() throws {
+        let metadata = try #require(AppBuildMetadata(
+            shortVersion: "1.1.1",
+            buildNumber: "20260919",
+            buildDate: nil,
+            commitHash: nil,
+            sourceState: .unknown
+        ))
+
+        #expect(
+            MoreAppVersion.displayText(metadata: metadata, locale: korean)
+                == "버전 1.1.1"
+        )
+    }
+
+    @Test
     func buildMetadataFormatsVersionDateAndCommitForInformationSection() throws {
         let metadata = try #require(AppBuildMetadata(
             shortVersion: "1.2.0",
