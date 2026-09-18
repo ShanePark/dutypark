@@ -7,7 +7,7 @@ nonisolated struct DPFriendTagItem: Identifiable, Equatable, Sendable {
     let hasProfilePhoto: Bool
     let profilePhotoVersion: Int64
     let isFamily: Bool
-    let pinOrder: Int64?
+    let displayOrder: Int64?
 
     init(
         id: MemberID,
@@ -16,7 +16,7 @@ nonisolated struct DPFriendTagItem: Identifiable, Equatable, Sendable {
         hasProfilePhoto: Bool,
         profilePhotoVersion: Int64,
         isFamily: Bool = false,
-        pinOrder: Int64? = nil
+        displayOrder: Int64? = nil
     ) {
         self.id = id
         self.name = name
@@ -24,7 +24,7 @@ nonisolated struct DPFriendTagItem: Identifiable, Equatable, Sendable {
         self.hasProfilePhoto = hasProfilePhoto
         self.profilePhotoVersion = profilePhotoVersion
         self.isFamily = isFamily
-        self.pinOrder = pinOrder
+        self.displayOrder = displayOrder
     }
 }
 
@@ -79,7 +79,7 @@ nonisolated enum DPFriendTagSelectionLogic {
     }
 
     private static func precedes(_ lhs: DPFriendTagItem, _ rhs: DPFriendTagItem) -> Bool {
-        switch (lhs.pinOrder, rhs.pinOrder) {
+        switch (lhs.displayOrder, rhs.displayOrder) {
         case let (.some(left), .some(right)) where left != right:
             return left < right
         case (.some, .none):

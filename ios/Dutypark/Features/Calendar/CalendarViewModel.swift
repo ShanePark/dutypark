@@ -1078,7 +1078,7 @@ final class CalendarViewModel: ObservableObject {
             hasProfilePhoto: false,
             profilePhotoVersion: 17,
             isFamily: false,
-            pinOrder: nil
+            displayOrder: nil
         )
         friends = includesCalendarParity ? [parityFriend] : []
         team = nil

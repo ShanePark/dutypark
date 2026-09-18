@@ -9,14 +9,14 @@ struct DPDragActivationTests {
     /// The ring exists to answer "how much longer?", which it only does if it fills
     /// on the same clock as the press it is counting down.
     @Test func ringFillsForExactlyAsLongAsTheReorderPress() {
-        #expect(DPDragActivation.pressDuration == DPPinnedFriendDragLayout.minimumPressDuration)
+        #expect(DPDragActivation.pressDuration == DPFriendDragLayout.minimumPressDuration)
         #expect(DPDragActivation.pressDuration == TodoBoardLayout.dragLongPressDuration)
     }
 
     /// Same for the drift tolerance: a ring that kept filling past the recognizer's
     /// `allowableMovement` would promise a lift that can no longer happen.
     @Test func ringGivesUpOnTheSameDriftAsTheRecognizer() {
-        #expect(DPDragActivation.maximumPressMovement == DPPinnedFriendDragLayout.maximumPressDistance)
+        #expect(DPDragActivation.maximumPressMovement == DPFriendDragLayout.maximumPressDistance)
         #expect(DPDragActivation.maximumPressMovement == TodoBoardLayout.dragLongPressMaximumDistance)
     }
 

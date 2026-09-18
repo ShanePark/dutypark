@@ -264,7 +264,6 @@ struct PublicContentFeatureTests {
             "palette": "paintpalette.fill",
             "sun": "sun.max.fill",
             "bell": "bell.badge.fill",
-            "pin": "pin.fill",
             "trash": "trash.fill",
             "camera": "camera.fill",
             "shield": "shield.checkered",
@@ -272,7 +271,7 @@ struct PublicContentFeatureTests {
             "link": "link",
             "lock": "lock.fill",
         ]
-        #expect(symbols.count == 25)
+        #expect(symbols.count == 24)
         for (key, expected) in symbols {
             let resolved = PublicContentPresentation.symbol(icon: key)
             #expect(resolved == expected)

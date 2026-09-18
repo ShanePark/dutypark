@@ -8,12 +8,12 @@ import Testing
 /// changes exactly once per crossing — a trigger that churned on every drag
 /// update would buzz continuously for the length of the drag.
 @MainActor
-struct PinnedFriendDragActivationTests {
+struct FriendDragActivationTests {
     private static let order: [MemberID] = [31, 32, 33]
     private static let targets = [
-        DPPinnedFriendDropTarget(memberID: 31, frame: CGRect(x: 0, y: 0, width: 300, height: 88)),
-        DPPinnedFriendDropTarget(memberID: 32, frame: CGRect(x: 0, y: 96, width: 300, height: 88)),
-        DPPinnedFriendDropTarget(memberID: 33, frame: CGRect(x: 0, y: 192, width: 300, height: 88))
+        DPFriendDropTarget(memberID: 31, frame: CGRect(x: 0, y: 0, width: 300, height: 88)),
+        DPFriendDropTarget(memberID: 32, frame: CGRect(x: 0, y: 96, width: 300, height: 88)),
+        DPFriendDropTarget(memberID: 33, frame: CGRect(x: 0, y: 192, width: 300, height: 88))
     ]
 
     @Test func draggingPastEveryCardTicksOncePerCrossing() {
@@ -49,7 +49,7 @@ struct PinnedFriendDragActivationTests {
 
     private func sweep(from start: CGFloat, to end: CGFloat, by step: CGFloat = 4) -> [Int?] {
         stride(from: start, through: end, by: step).map { previewTop in
-            DPPinnedFriendLiveOrder.reordered(
+            DPFriendLiveOrder.reordered(
                 Self.order,
                 draggedID: 31,
                 previewFrame: CGRect(x: 0, y: previewTop, width: 300, height: 88),

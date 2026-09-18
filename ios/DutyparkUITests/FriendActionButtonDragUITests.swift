@@ -1,56 +1,13 @@
 import XCTest
 
-/// A reorder drag may start anywhere on a pinned card, including on top of the
-/// row's trailing action buttons. Once the long press has been recognized the
-/// buttons underneath must not fire when the finger lifts, otherwise reaching for
-/// "anywhere on the card" silently unpins the friend or opens the action menu.
-final class PinnedFriendActionButtonDragUITests: XCTestCase {
-    private let pinLabel = "즐겨찾기에 추가"
-    private let unpinLabel = "즐겨찾기 해제"
+/// A reorder drag may start anywhere on a friend card, including on top of the
+/// row's trailing action button. Once the long press has been recognized the
+/// button underneath must not fire when the finger lifts.
+final class FriendActionButtonDragUITests: XCTestCase {
     private let removeFriendLabel = "친구 삭제"
 
     override func setUpWithError() throws {
         continueAfterFailure = false
-    }
-
-    @MainActor
-    func testSocialReorderDragStartingOnThePinButtonReordersInsteadOfUnpinning() {
-        let app = launchSocial()
-        let before = persistedOrder(app)
-        XCTAssertEqual(before, ["31", "32", "33", "34", "35", "36"])
-
-        let pin = app.buttons["social.friend.31.pin"]
-        let target = app.buttons["social.friend.34.pin"]
-        XCTAssertTrue(pin.waitForExistence(timeout: 10))
-        XCTAssertTrue(target.waitForExistence(timeout: 10))
-        XCTAssertEqual(pin.label, unpinLabel)
-
-        pin.press(
-            forDuration: 0.4,
-            thenDragTo: target,
-            withVelocity: .slow,
-            thenHoldForDuration: 0.2
-        )
-
-        let after = persistedOrder(app)
-        XCTAssertTrue(
-            after.contains("31"),
-            "A drag started on the star must not unpin the friend. Pinned order is "
-                + after.joined(separator: ",")
-        )
-        XCTAssertEqual(
-            Set(after),
-            Set(before),
-            "The pinned set must be unchanged. Pinned order is " + after.joined(separator: ",")
-        )
-        XCTAssertEqual(app.buttons["social.friend.31.pin"].label, unpinLabel)
-        XCTAssertNotEqual(
-            after,
-            before,
-            "A drag started on the star must still reorder. Order stayed "
-                + after.joined(separator: ",")
-        )
-        capture("social-pin-button-drag-reorders")
     }
 
     @MainActor
@@ -87,24 +44,8 @@ final class PinnedFriendActionButtonDragUITests: XCTestCase {
     }
 
     @MainActor
-    func testSocialPinAndMoreButtonsStillRespondToPlainTaps() {
+    func testSocialMoreButtonStillRespondsToPlainTap() {
         let app = launchSocial()
-        let pin = app.buttons["social.friend.31.pin"]
-        XCTAssertTrue(pin.waitForExistence(timeout: 10))
-        XCTAssertEqual(pin.label, unpinLabel)
-
-        pin.tap()
-        let confirmButton = app.buttons["dp.confirmation.confirm"]
-        XCTAssertTrue(confirmButton.waitForExistence(timeout: 10))
-        XCTAssertEqual(confirmButton.label, unpinLabel)
-        confirmButton.tap()
-        XCTAssertTrue(confirmButton.waitForNonExistence(timeout: 5))
-        XCTAssertTrue(waitForLabel(pin, equals: pinLabel))
-        XCTAssertFalse(app.descendants(matching: .any)["screen.calendar"].exists)
-
-        pin.tap()
-        XCTAssertTrue(waitForLabel(pin, equals: unpinLabel))
-
         app.buttons["social.friend.31.more"].tap()
         XCTAssertTrue(
             app.buttons[removeFriendLabel].waitForExistence(timeout: 10),
@@ -113,66 +54,43 @@ final class PinnedFriendActionButtonDragUITests: XCTestCase {
         capture("social-action-buttons-plain-taps")
     }
 
-    /// The home rail reorders pinned friends too, so a drag that starts on the
-    /// star must neither unpin the friend nor open their calendar when the finger
-    /// lifts elsewhere.
+    /// A drag that starts on a Home friend card must reorder the rail without
+    /// opening the friend's calendar when the finger lifts elsewhere.
     @MainActor
-    func testHomeDragStartingOnThePinButtonDoesNotUnpinTheFriend() {
+    func testHomeDragStartingOnTheFriendCardReordersWithoutOpeningCalendar() {
         let app = launchHome()
         let home = app.descendants(matching: .any)["screen.home"]
         XCTAssertTrue(home.waitForExistence(timeout: 20))
 
         let source = app.buttons["home.friend.31"]
         let target = app.buttons["home.friend.33"]
-        let pin = app.buttons["home.friend.31.pin"]
         for _ in 0..<6 where !(source.isHittable && target.isHittable) {
             home.swipeUp(velocity: .slow)
         }
         XCTAssertTrue(source.isHittable)
         XCTAssertTrue(target.isHittable)
-        XCTAssertTrue(pin.waitForExistence(timeout: 10))
-        XCTAssertEqual(pin.label, unpinLabel)
         XCTAssertLessThan(source.frame.minX, target.frame.minX)
 
-        pin.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).press(
+        source.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).press(
             forDuration: 0.4,
             thenDragTo: target.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)),
             withVelocity: .slow,
             thenHoldForDuration: 0.2
         )
 
-        let pinAfter = app.buttons["home.friend.31.pin"]
-        XCTAssertTrue(
-            pinAfter.waitForExistence(timeout: 5),
-            "A drag started on the star must leave the card in place."
-        )
-        XCTAssertEqual(
-            pinAfter.label,
-            unpinLabel,
-            "A drag started on the star must not unpin the friend."
-        )
         XCTAssertGreaterThan(
             app.buttons["home.friend.31"].frame.minX,
             app.buttons["home.friend.33"].frame.minX,
-            "The home rail must reorder while preserving the pin."
+            "The home rail must reorder the friend card."
         )
         XCTAssertFalse(
             app.descendants(matching: .any)
                 .matching(NSPredicate(format: "identifier BEGINSWITH %@", "screen.calendar"))
                 .firstMatch
                 .exists,
-            "A drag started on the star must not open the friend's calendar."
+            "A drag started on the friend card must not open the friend's calendar."
         )
-        capture("home-pin-button-drag-reorders-keeps-pin")
-    }
-
-    @MainActor
-    private func waitForLabel(_ element: XCUIElement, equals label: String) -> Bool {
-        let expectation = XCTNSPredicateExpectation(
-            predicate: NSPredicate { _, _ in element.label == label },
-            object: nil
-        )
-        return XCTWaiter.wait(for: [expectation], timeout: 10) == .completed
+        capture("home-friend-card-drag-reorders")
     }
 
     @MainActor
@@ -205,7 +123,7 @@ final class PinnedFriendActionButtonDragUITests: XCTestCase {
 
     @MainActor
     private func launchHome() -> XCUIApplication {
-        launch(extraArguments: ["-ui-testing-home-many-pinned"])
+        launch(extraArguments: ["-ui-testing-home-many-friends"])
     }
 
     @MainActor

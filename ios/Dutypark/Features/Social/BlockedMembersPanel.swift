@@ -25,7 +25,7 @@ struct BlockedMembersPanel: View {
                     }
                 }
             }
-            .padding(SocialFriendCardLayout.panelInset)
+            .padding(DPSpacing.compact)
             .disabled(isDisabled)
         }
         .background(DPColor.backgroundCard)

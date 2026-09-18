@@ -2056,7 +2056,7 @@ nonisolated enum TodoFriendTagAdapter {
             hasProfilePhoto: friend.hasProfilePhoto,
             profilePhotoVersion: friend.profilePhotoVersion,
             isFamily: friend.isFamily,
-            pinOrder: friend.pinOrder
+            displayOrder: friend.displayOrder
         )
     }
 

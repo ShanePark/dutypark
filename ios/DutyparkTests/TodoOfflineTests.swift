@@ -732,7 +732,7 @@ nonisolated private func makeOfflineAccount(friends: [FriendDTO] = []) -> Offlin
 }
 
 nonisolated private func makeOfflineFriend(id: MemberID, name: String) -> FriendDTO {
-    FriendDTO(id: id, name: name, teamId: nil, team: nil, hasProfilePhoto: false, profilePhotoVersion: 0, isFamily: false, pinOrder: nil)
+    FriendDTO(id: id, name: name, teamId: nil, team: nil, hasProfilePhoto: false, profilePhotoVersion: 0, isFamily: false, displayOrder: nil)
 }
 
 nonisolated private func makeOfflineTodo(

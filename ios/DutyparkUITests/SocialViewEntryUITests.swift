@@ -189,14 +189,11 @@ final class SocialViewEntryUITests: XCTestCase {
         let socialList = app.descendants(matching: .any)["social.list"]
         XCTAssertTrue(socialList.waitForExistence(timeout: 10))
 
-        let pinButton = socialList.buttons["social.friend.31.pin"]
-        XCTAssertTrue(pinButton.waitForExistence(timeout: 10))
-        XCTAssertTrue(pinButton.isHittable)
         let moreButton = socialList.buttons["social.friend.31.more"]
         XCTAssertTrue(moreButton.waitForExistence(timeout: 10))
         XCTAssertTrue(
             moreButton.isHittable,
-            "pin=\(pinButton.frame) more=\(moreButton.frame) list=\(socialList.frame) app=\(app.frame)"
+            "more=\(moreButton.frame) list=\(socialList.frame) app=\(app.frame)"
         )
         moreButton.tap()
         let removeButton = app.buttons

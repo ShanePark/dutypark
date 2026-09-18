@@ -1,24 +1,24 @@
 import CoreGraphics
 
-/// The axis along which a pinned-friend list lays out its cards.
-enum PinnedFriendReorderAxis {
+/// The axis along which a friend list lays out its cards.
+enum FriendReorderAxis {
     case horizontal
     case vertical
 }
 
-/// Live drag-reorder math shared by the pinned friend lists on Home and Social.
+/// Live drag-reorder math shared by the friend lists on Home and Social.
 ///
 /// Drop-target frames are looked up by member ID rather than by position because
 /// both lists render in lazy stacks: cards outside the viewport publish no frame,
 /// so the target set is routinely a subset of the pinned order.
-enum PinnedFriendReorder {
+enum FriendReorder {
     static let overlapThreshold: CGFloat = 12
 
     static func reordered(
         _ originalOrder: [MemberID],
         draggedID: MemberID,
         previewFrame: CGRect,
-        axis: PinnedFriendReorderAxis = .vertical,
+        axis: FriendReorderAxis = .vertical,
         framesByID: [MemberID: CGRect]
     ) -> [MemberID] {
         guard let sourceIndex = originalOrder.firstIndex(of: draggedID),
@@ -74,13 +74,13 @@ enum PinnedFriendReorder {
 
     private static func threshold(
         for frame: CGRect,
-        axis: PinnedFriendReorderAxis
+        axis: FriendReorderAxis
     ) -> CGFloat {
         min(overlapThreshold, axis.length(of: frame) * 0.2)
     }
 }
 
-private extension PinnedFriendReorderAxis {
+private extension FriendReorderAxis {
     func position(of frame: CGRect) -> CGFloat {
         switch self {
         case .horizontal: frame.midX

@@ -10,21 +10,21 @@ final class HomeDashboardTests: XCTestCase {
     }
 
     /// The home rail and friend management list share the same deliberate hold
-    /// before a pinned friend becomes draggable.
-    func testPinnedFriendLongPressUsesDeliberateActivationDelay() {
-        XCTAssertEqual(DPPinnedFriendDragLayout.minimumPressDuration, 0.35)
-        XCTAssertEqual(DPPinnedFriendDragLayout.maximumPressDistance, 10)
-        XCTAssertEqual(DPPinnedFriendDragLayout.activationDistance, 4)
+    /// before a friend becomes draggable.
+    func testFriendLongPressUsesDeliberateActivationDelay() {
+        XCTAssertEqual(DPFriendDragLayout.minimumPressDuration, 0.35)
+        XCTAssertEqual(DPFriendDragLayout.maximumPressDistance, 10)
+        XCTAssertEqual(DPFriendDragLayout.activationDistance, 4)
     }
 
-    func testPinnedFriendDragMovesCardAfterItOverlapsTheNextCard() {
+    func testFriendDragMovesCardAfterItOverlapsTheNextCard() {
         let targets = [
-            DPPinnedFriendDropTarget(memberID: 2, frame: CGRect(x: 0, y: 0, width: 300, height: 88)),
-            DPPinnedFriendDropTarget(memberID: 3, frame: CGRect(x: 0, y: 96, width: 300, height: 88)),
-            DPPinnedFriendDropTarget(memberID: 4, frame: CGRect(x: 0, y: 192, width: 300, height: 88))
+            DPFriendDropTarget(memberID: 2, frame: CGRect(x: 0, y: 0, width: 300, height: 88)),
+            DPFriendDropTarget(memberID: 3, frame: CGRect(x: 0, y: 96, width: 300, height: 88)),
+            DPFriendDropTarget(memberID: 4, frame: CGRect(x: 0, y: 192, width: 300, height: 88))
         ]
 
-        let reordered = DPPinnedFriendLiveOrder.reordered(
+        let reordered = DPFriendLiveOrder.reordered(
             [2, 3, 4],
             draggedID: 2,
             previewFrame: CGRect(x: 0, y: 20, width: 300, height: 88),
@@ -34,13 +34,13 @@ final class HomeDashboardTests: XCTestCase {
         XCTAssertEqual(reordered, [3, 2, 4])
     }
 
-    func testPinnedFriendDragKeepsOrderBeforeCardsOverlap() {
+    func testFriendDragKeepsOrderBeforeCardsOverlap() {
         let targets = [
-            DPPinnedFriendDropTarget(memberID: 2, frame: CGRect(x: 0, y: 0, width: 300, height: 88)),
-            DPPinnedFriendDropTarget(memberID: 3, frame: CGRect(x: 0, y: 96, width: 300, height: 88))
+            DPFriendDropTarget(memberID: 2, frame: CGRect(x: 0, y: 0, width: 300, height: 88)),
+            DPFriendDropTarget(memberID: 3, frame: CGRect(x: 0, y: 96, width: 300, height: 88))
         ]
 
-        let reordered = DPPinnedFriendLiveOrder.reordered(
+        let reordered = DPFriendLiveOrder.reordered(
             [2, 3],
             draggedID: 2,
             previewFrame: CGRect(x: 0, y: 4, width: 300, height: 88),
@@ -50,19 +50,19 @@ final class HomeDashboardTests: XCTestCase {
         XCTAssertEqual(reordered, [2, 3])
     }
 
-    func testPinnedFriendDragMovesCardAfterItOverlapsNextCardHorizontally() {
+    func testFriendDragMovesCardAfterItOverlapsNextCardHorizontally() {
         let targets = [
-            DPPinnedFriendDropTarget(memberID: 2, frame: CGRect(x: 0, y: 0, width: 88, height: 200)),
-            DPPinnedFriendDropTarget(memberID: 3, frame: CGRect(x: 96, y: 0, width: 88, height: 200)),
-            DPPinnedFriendDropTarget(memberID: 4, frame: CGRect(x: 192, y: 0, width: 88, height: 200))
+            DPFriendDropTarget(memberID: 2, frame: CGRect(x: 0, y: 0, width: 88, height: 200)),
+            DPFriendDropTarget(memberID: 3, frame: CGRect(x: 96, y: 0, width: 88, height: 200)),
+            DPFriendDropTarget(memberID: 4, frame: CGRect(x: 192, y: 0, width: 88, height: 200))
         ]
 
-        let reordered = PinnedFriendReorder.reordered(
+        let reordered = FriendReorder.reordered(
             [2, 3, 4],
             draggedID: 2,
             previewFrame: CGRect(x: 20, y: 0, width: 88, height: 200),
             axis: .horizontal,
-            framesByID: PinnedFriendReorder.framesByID(
+            framesByID: FriendReorder.framesByID(
                 targets,
                 memberID: \.memberID,
                 frame: \.frame
@@ -72,15 +72,15 @@ final class HomeDashboardTests: XCTestCase {
         XCTAssertEqual(reordered, [3, 2, 4])
     }
 
-    func testPinnedFriendDragReordersWithOnlyVisibleLazyStackTargets() {
+    func testFriendDragReordersWithOnlyVisibleLazyStackTargets() {
         let targets = [
-            DPPinnedFriendDropTarget(memberID: 21, frame: CGRect(x: 0, y: 0, width: 300, height: 88)),
-            DPPinnedFriendDropTarget(memberID: 22, frame: CGRect(x: 0, y: 96, width: 300, height: 88)),
-            DPPinnedFriendDropTarget(memberID: 23, frame: CGRect(x: 0, y: 192, width: 300, height: 88)),
-            DPPinnedFriendDropTarget(memberID: 24, frame: CGRect(x: 0, y: 288, width: 300, height: 88))
+            DPFriendDropTarget(memberID: 21, frame: CGRect(x: 0, y: 0, width: 300, height: 88)),
+            DPFriendDropTarget(memberID: 22, frame: CGRect(x: 0, y: 96, width: 300, height: 88)),
+            DPFriendDropTarget(memberID: 23, frame: CGRect(x: 0, y: 192, width: 300, height: 88)),
+            DPFriendDropTarget(memberID: 24, frame: CGRect(x: 0, y: 288, width: 300, height: 88))
         ]
 
-        let reordered = DPPinnedFriendLiveOrder.reordered(
+        let reordered = DPFriendLiveOrder.reordered(
             [21, 22, 23, 24, 25, 26],
             draggedID: 21,
             previewFrame: CGRect(x: 0, y: 20, width: 300, height: 88),
@@ -90,7 +90,7 @@ final class HomeDashboardTests: XCTestCase {
         XCTAssertEqual(reordered, [22, 21, 23, 24, 25, 26])
     }
 
-    func testLoadsBothDashboardSectionsAndKeepsPinnedOrder() async throws {
+    func testLoadsBothDashboardSectionsAndKeepsFriendOrder() async throws {
         let myDashboard = try Self.decodeMyDashboard()
         let friendsDashboard = try Self.decodeFriendsDashboard()
         let viewModel = HomeViewModel(
@@ -160,8 +160,8 @@ final class HomeDashboardTests: XCTestCase {
         let viewModel = HomeViewModel(service: service)
         let staleDashboard = try Self.decodeMyDashboard(named: "Stale")
         let newestDashboard = try Self.decodeMyDashboard(named: "Newest")
-        let staleFriendsDashboard = try Self.decodeFriendsDashboard(pinnedFriendNamed: "Stale Friend")
-        let newestFriendsDashboard = try Self.decodeFriendsDashboard(pinnedFriendNamed: "Newest Friend")
+        let staleFriendsDashboard = try Self.decodeFriendsDashboard(friendNamed: "Stale Friend")
+        let newestFriendsDashboard = try Self.decodeFriendsDashboard(friendNamed: "Newest Friend")
         let firstRequests = HomeRequestCountSignal(description: "First refresh started both requests")
         await service.notifyWhenRequestCountsReach(my: 1, friends: 1, signal: firstRequests)
 
@@ -238,7 +238,7 @@ final class HomeDashboardTests: XCTestCase {
         await retry.value
     }
 
-    func testOptimisticPinAndUnpinKeepFriendContentAndUpdateOnlyPinState() throws {
+    func testOptimisticFriendOrderKeepsFriendContent() throws {
         let friends = try Self.decodeFriendsDashboard()
         let viewModel = HomeViewModel(
             service: HomeServiceStub(my: try Self.decodeMyDashboard(), friends: friends)
@@ -246,34 +246,27 @@ final class HomeDashboardTests: XCTestCase {
         viewModel.replaceFriendsDashboardForMutation(friends)
 
         let snapshot = viewModel.friendsDashboard
-        viewModel.setFriendPinned(memberID: 4, isPinned: true)
+        viewModel.setFriendOrder([4, 3, 2])
 
-        XCTAssertEqual(viewModel.sortedFriends.map(\.member.id), [2, 3, 4])
-        XCTAssertNotNil(viewModel.sortedFriends.first(where: { $0.member.id == 4 })?.pinOrder)
-        XCTAssertEqual(viewModel.sortedFriends.first(where: { $0.member.id == 4 })?.member.name, "Unpinned")
-
-        viewModel.setFriendPinned(memberID: 4, isPinned: false)
-
-        XCTAssertNil(viewModel.sortedFriends.first(where: { $0.member.id == 4 })?.pinOrder)
-        XCTAssertEqual(viewModel.sortedFriends.map(\.member.id), [2, 3, 4])
+        XCTAssertEqual(viewModel.sortedFriends.map(\.member.id), [4, 3, 2])
+        XCTAssertEqual(viewModel.sortedFriends.map(\.displayOrder), [0, 1, 2])
+        XCTAssertEqual(viewModel.sortedFriends.first?.member.name, "Third")
 
         viewModel.replaceFriendsDashboardForMutation(snapshot)
         XCTAssertEqual(viewModel.friendsDashboard, snapshot)
     }
 
-    func testPinnedFriendOrderUpdatesOnlyPinnedFriends() throws {
+    func testFriendOrderUpdatesEveryFriend() throws {
         let friends = try Self.decodeFriendsDashboard()
         let viewModel = HomeViewModel(
             service: HomeServiceStub(my: try Self.decodeMyDashboard(), friends: friends)
         )
         viewModel.replaceFriendsDashboardForMutation(friends)
 
-        viewModel.setPinnedFriendOrder([3, 2])
+        viewModel.setFriendOrder([3, 2, 4])
 
         XCTAssertEqual(viewModel.sortedFriends.map(\.member.id), [3, 2, 4])
-        XCTAssertEqual(viewModel.sortedFriends.first(where: { $0.member.id == 3 })?.pinOrder, 0)
-        XCTAssertEqual(viewModel.sortedFriends.first(where: { $0.member.id == 2 })?.pinOrder, 1)
-        XCTAssertNil(viewModel.sortedFriends.first(where: { $0.member.id == 4 })?.pinOrder)
+        XCTAssertEqual(viewModel.sortedFriends.map(\.displayOrder), [0, 1, 2])
     }
 
     /// The rail sizes its cards exactly like the friend tag selector, so three
@@ -332,15 +325,15 @@ final class HomeDashboardTests: XCTestCase {
         let source = try Self.projectSource(at: "Dutypark/Features/Home/HomeView.swift")
 
         for expected in [
-            "DPPinnedFriendReorderGesture",
-            "DPPinnedFriendDropTargetPreferenceKey",
-            "DPPinnedFriendLiveOrder",
+            "DPFriendReorderGesture",
+            "DPFriendDropTargetPreferenceKey",
+            "DPFriendLiveOrder",
             "dpDragFeedback",
             "dpDragSourceSlot",
             "dpPressProgress",
             "consumeDragSuppression",
-            "savePinnedOrder",
-            "setPinnedFriendOrder(memberIDs)",
+            "saveFriendOrder",
+            "setFriendOrder(memberIDs)",
             "home.action.moveUp",
             "home.action.moveDown"
         ] {
@@ -349,20 +342,10 @@ final class HomeDashboardTests: XCTestCase {
         XCTAssertTrue(source.contains("axis: .horizontal"))
     }
 
-    func testUnpinFromHomeGoesThroughAConfirmationAlert() throws {
-        let source = try Self.projectSource(at: "Dutypark/Features/Home/HomeView.swift")
-
-        XCTAssertTrue(source.contains("pendingUnpinConfirmation"))
-        XCTAssertTrue(source.contains("pendingUnpinConfirmation = HomeUnpinConfirmation(friend: friend)"))
-        XCTAssertTrue(source.contains("social.confirm.unpin.title"))
-        XCTAssertTrue(source.contains("social.action.unpin"))
-    }
-
-    func testHomeNavigationAndPinMutationsUseSemanticHaptics() throws {
+    func testHomeNavigationAndFriendOrderMutationsUseSemanticHaptics() throws {
         let source = try Self.projectSource(at: "Dutypark/Features/Home/HomeView.swift")
 
         XCTAssertTrue(source.contains("DPHapticCenter.shared.emit(.routine)"))
-        XCTAssertTrue(source.contains("DPHapticCenter.shared.emit(.selection)"))
         XCTAssertTrue(source.contains("DPHapticCenter.shared.emit(.success)"))
         XCTAssertTrue(source.contains("DPHapticCenter.shared.emit(.error)"))
     }
@@ -379,7 +362,7 @@ final class HomeDashboardTests: XCTestCase {
         let rail = String(source[railStart.lowerBound..<railEnd.lowerBound])
 
         XCTAssertTrue(
-            rail.contains(".scrollDisabled(draggedPinnedFriendID != nil)"),
+            rail.contains(".scrollDisabled(draggedFriendID != nil)"),
             "The nested horizontal rail must stop scrolling once a card is lifted"
         )
     }
@@ -497,7 +480,7 @@ final class HomeDashboardTests: XCTestCase {
     }
 
     private nonisolated static func decodeFriendsDashboard(
-        pinnedFriendNamed name: String
+        friendNamed name: String
     ) throws -> DashboardFriendInfoDTO {
         let json = friendsDashboardJSON.replacingOccurrences(
             of: "\"name\":\"First\"",
@@ -555,25 +538,25 @@ final class HomeDashboardTests: XCTestCase {
         {
           "friends": [
             {
-              "member": {"id":4,"name":"Unpinned","teamId":7,"team":"Dutypark","hasProfilePhoto":false,"profilePhotoVersion":0},
+              "member": {"id":4,"name":"Third","teamId":7,"team":"Dutypark","hasProfilePhoto":false,"profilePhotoVersion":0},
               "duty": null,
               "schedules": [],
               "isFamily": false,
-              "pinOrder": null
+              "displayOrder": 2
             },
             {
               "member": {"id":3,"name":"Second","teamId":7,"team":"Dutypark","hasProfilePhoto":false,"profilePhotoVersion":0},
               "duty": null,
               "schedules": [],
               "isFamily": false,
-              "pinOrder": 2
+              "displayOrder": 1
             },
             {
               "member": {"id":2,"name":"First","teamId":7,"team":"Dutypark","hasProfilePhoto":false,"profilePhotoVersion":0},
               "duty": null,
               "schedules": [],
               "isFamily": true,
-              "pinOrder": 1
+              "displayOrder": 0
             }
           ],
           "pendingRequestsTo": [

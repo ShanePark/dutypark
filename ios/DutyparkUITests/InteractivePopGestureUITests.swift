@@ -128,7 +128,7 @@ final class InteractivePopGestureUITests: XCTestCase {
         XCTAssertTrue(teamTab.isSelected)
     }
 
-    // The home dashboard opens a pinned friend's calendar through its own route, which
+    // The home dashboard opens a friend's calendar through its own route, which
     // pushes onto the home stack instead of switching to the calendar tab.
     @MainActor
     func testMemberCalendarPushedFromTheHomeDashboardPopsBackToIt() {

@@ -1427,7 +1427,7 @@ final class TodoViewModel: ObservableObject {
     }
 
     private func friendOrder(_ lhs: FriendDTO, _ rhs: FriendDTO) -> Bool {
-        switch (lhs.pinOrder, rhs.pinOrder) {
+        switch (lhs.displayOrder, rhs.displayOrder) {
         case let (left?, right?) where left != right:
             return left < right
         case (_?, nil):

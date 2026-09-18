@@ -621,7 +621,7 @@ final class CalendarFeatureTests: XCTestCase {
     }
 
     func testSharedFriendTagSelectorMergesCurrentAndSelectedStaleItems() {
-        let current = tagItem(id: 1, name: "Current name", team: "New team", isFamily: true, pinOrder: 2)
+        let current = tagItem(id: 1, name: "Current name", team: "New team", isFamily: true, displayOrder: 2)
         let staleDuplicate = tagItem(id: 1, name: "Old name", team: "Old team")
         let selectedStale = tagItem(id: 2, name: "Former friend", team: "Previous team")
         let unselectedStale = tagItem(id: 3, name: "Hidden", team: nil)
@@ -642,9 +642,9 @@ final class CalendarFeatureTests: XCTestCase {
             tagItem(id: 8, name: "Amy", team: nil, isFamily: false),
             tagItem(id: 7, name: "Zed", team: nil, isFamily: true),
             tagItem(id: 6, name: "Amy", team: nil, isFamily: true),
-            tagItem(id: 5, name: "Same", team: nil, pinOrder: 2),
-            tagItem(id: 4, name: "Same", team: nil, pinOrder: 2),
-            tagItem(id: 3, name: "Pinned", team: nil, pinOrder: 1)
+            tagItem(id: 5, name: "Same", team: nil, displayOrder: 2),
+            tagItem(id: 4, name: "Same", team: nil, displayOrder: 2),
+            tagItem(id: 3, name: "Ordered", team: nil, displayOrder: 1)
         ]
 
         let merged = DPFriendTagSelectionLogic.mergedItems(
@@ -2414,10 +2414,10 @@ final class CalendarFeatureTests: XCTestCase {
 
     func testComparisonSelectionOnlyAcceptsKnownFriendsAndThreeMembers() async {
         let repository = CalendarRepositoryMock(friends: [
-            FriendDTO(id: 2, name: "A", teamId: 7, team: "Team", hasProfilePhoto: false, profilePhotoVersion: 0, isFamily: false, pinOrder: nil),
-            FriendDTO(id: 3, name: "B", teamId: 7, team: "Team", hasProfilePhoto: false, profilePhotoVersion: 0, isFamily: false, pinOrder: nil),
-            FriendDTO(id: 4, name: "C", teamId: 7, team: "Team", hasProfilePhoto: false, profilePhotoVersion: 0, isFamily: false, pinOrder: nil),
-            FriendDTO(id: 5, name: "D", teamId: 7, team: "Team", hasProfilePhoto: false, profilePhotoVersion: 0, isFamily: false, pinOrder: nil)
+            FriendDTO(id: 2, name: "A", teamId: 7, team: "Team", hasProfilePhoto: false, profilePhotoVersion: 0, isFamily: false, displayOrder: nil),
+            FriendDTO(id: 3, name: "B", teamId: 7, team: "Team", hasProfilePhoto: false, profilePhotoVersion: 0, isFamily: false, displayOrder: nil),
+            FriendDTO(id: 4, name: "C", teamId: 7, team: "Team", hasProfilePhoto: false, profilePhotoVersion: 0, isFamily: false, displayOrder: nil),
+            FriendDTO(id: 5, name: "D", teamId: 7, team: "Team", hasProfilePhoto: false, profilePhotoVersion: 0, isFamily: false, displayOrder: nil)
         ])
         let model = CalendarViewModel(repository: repository, now: date(2026, 8, 12))
         await model.load()
@@ -2430,8 +2430,8 @@ final class CalendarFeatureTests: XCTestCase {
 
     func testComparisonSelectionDropsFriendsWithoutTeamAndDoesNotRequestThem() async {
         let repository = CalendarRepositoryMock(friends: [
-            FriendDTO(id: 2, name: "No team", teamId: nil, team: nil, hasProfilePhoto: false, profilePhotoVersion: 0, isFamily: false, pinOrder: nil),
-            FriendDTO(id: 3, name: "Team friend", teamId: 7, team: "Team", hasProfilePhoto: false, profilePhotoVersion: 0, isFamily: false, pinOrder: nil)
+            FriendDTO(id: 2, name: "No team", teamId: nil, team: nil, hasProfilePhoto: false, profilePhotoVersion: 0, isFamily: false, displayOrder: nil),
+            FriendDTO(id: 3, name: "Team friend", teamId: 7, team: "Team", hasProfilePhoto: false, profilePhotoVersion: 0, isFamily: false, displayOrder: nil)
         ])
         let model = CalendarViewModel(repository: repository, now: date(2026, 8, 12))
         await model.load()
@@ -2454,7 +2454,7 @@ final class CalendarFeatureTests: XCTestCase {
             hasProfilePhoto: false,
             profilePhotoVersion: 0,
             isFamily: false,
-            pinOrder: nil
+            displayOrder: nil
         )
         let teamMember = FriendDTO(
             id: 3,
@@ -2464,7 +2464,7 @@ final class CalendarFeatureTests: XCTestCase {
             hasProfilePhoto: false,
             profilePhotoVersion: 0,
             isFamily: false,
-            pinOrder: nil
+            displayOrder: nil
         )
         let teamMemberWithoutDisplayName = FriendDTO(
             id: 4,
@@ -2474,7 +2474,7 @@ final class CalendarFeatureTests: XCTestCase {
             hasProfilePhoto: false,
             profilePhotoVersion: 0,
             isFamily: false,
-            pinOrder: nil
+            displayOrder: nil
         )
 
         XCTAssertFalse(CalendarComparisonPolicy.isSelectable(teamless))
@@ -2910,7 +2910,7 @@ private func tagItem(
     name: String,
     team: String?,
     isFamily: Bool = false,
-    pinOrder: Int64? = nil
+    displayOrder: Int64? = nil
 ) -> DPFriendTagItem {
     DPFriendTagItem(
         id: id,
@@ -2919,7 +2919,7 @@ private func tagItem(
         hasProfilePhoto: false,
         profilePhotoVersion: 0,
         isFamily: isFamily,
-        pinOrder: pinOrder
+        displayOrder: displayOrder
     )
 }
 
