@@ -1,5 +1,6 @@
 import Foundation
 import Testing
+import UIKit
 @testable import Dutypark
 
 @MainActor
@@ -430,6 +431,41 @@ struct TodoViewModelTests {
         #expect(TodoBoardLayout.scrollAnchor(for: .inProgress) == .center)
         #expect(TodoBoardLayout.scrollAnchor(for: .done) == .trailing)
         #expect(TodoBoardLayout.scrollAnchor(for: .unknown("future")) == .center)
+    }
+
+    @Test
+    func completedCleanupActionMatchesTheCompactWebHeaderControl() throws {
+        let root = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let source = try String(
+            contentsOf: root.appending(path: "Dutypark/Features/Todo/TodoView.swift"),
+            encoding: .utf8
+        )
+        let columnStart = try #require(source.range(of: "private struct TodoKanbanColumn: View"))
+        let cardStart = try #require(source.range(of: "private struct TodoCard: View", range: columnStart.upperBound..<source.endIndex))
+        let column = String(source[columnStart.lowerBound..<cardStart.lowerBound])
+        let addButton = try #require(column.range(of: "Button(action: add)"))
+        let cleanupButton = try #require(column.range(of: "if let clearCompleted"))
+
+        #expect(addButton.lowerBound < cleanupButton.lowerBound)
+        #expect(column.contains(#"Image(systemName: "paintbrush.fill")"#))
+        #expect(!column.contains(#"Image(systemName: "trash")"#))
+        #expect(column.contains(".frame(width: 36, height: 36)"))
+        #expect(column.contains("DPColor.dangerSoft"))
+        #expect(column.contains("DPColor.dangerBorder"))
+        #expect(column.contains(".frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)"))
+        #expect(column.contains(".contentShape(Rectangle())"))
+        #expect(column.contains(".accessibilityLabel(todoLocalized(\"todo.action.clearCompleted\"))"))
+        #expect(column.contains(".accessibilityIdentifier(\"todo.clearCompleted\")"))
+    }
+
+    @Test
+    func completedCleanupSymbolIsAvailableOnSupportedIOS() {
+        #expect(
+            UIImage(systemName: "paintbrush.fill") != nil,
+            "paintbrush.fill must resolve to an SF Symbol on the supported iOS runtime"
+        )
     }
 
     @Test(arguments: [

@@ -1316,27 +1316,6 @@ private struct TodoKanbanColumn: View {
                 }
                 .buttonStyle(.plain)
 
-                if let clearCompleted {
-                    Button(action: clearCompleted) {
-                        Image(systemName: "trash")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(DPColor.danger)
-                            .frame(width: 24, height: 24)
-                            .background(
-                                DPColor.dangerSoft,
-                                in: RoundedRectangle(cornerRadius: DPRadius.compact)
-                            )
-                            .frame(
-                                width: DPSize.minimumTouchTarget,
-                                height: DPSize.minimumTouchTarget
-                            )
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(todoLocalized("todo.action.clearCompleted"))
-                    .accessibilityIdentifier("todo.clearCompleted")
-                }
-
                 Button(action: add) {
                     Image(systemName: "plus")
                         .font(.system(size: 14, weight: .bold))
@@ -1348,6 +1327,31 @@ private struct TodoKanbanColumn: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel(todoLocalized("todo.action.add"))
+
+                if let clearCompleted {
+                    Button(action: clearCompleted) {
+                        Image(systemName: "paintbrush.fill")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(DPColor.danger)
+                            .frame(width: 36, height: 36)
+                            .background(
+                                DPColor.dangerSoft,
+                                in: RoundedRectangle(cornerRadius: DPRadius.standard)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: DPRadius.standard)
+                                    .stroke(DPColor.dangerBorder, lineWidth: DPChrome.borderWidth)
+                            )
+                            .frame(
+                                width: DPSize.minimumTouchTarget,
+                                height: DPSize.minimumTouchTarget
+                            )
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(todoLocalized("todo.action.clearCompleted"))
+                    .accessibilityIdentifier("todo.clearCompleted")
+                }
             }
             .padding(.leading, DPSpacing.small)
             .background(DPColor.backgroundCard)
