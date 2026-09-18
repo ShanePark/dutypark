@@ -61,6 +61,7 @@ private actor TodoCacheIntegrityRepository: TodoRepository {
     }
     func updatePositions(_ request: TodoPositionUpdateRequest) async throws { throw boardError }
     func leaveTag(id: TodoID) async throws { throw boardError }
+    func clearCompleted(todoIDs: [TodoID]) async throws -> TodoCompletedCleanupResponse { throw boardError }
 }
 
 private actor TodoCacheIntegrityCache: OfflineCacheProviding {

@@ -916,6 +916,67 @@ final class TodoViewModel: ObservableObject {
         }
     }
 
+    @discardableResult
+    func clearCompleted(todoIDs: [TodoID]) async -> TodoCompletedCleanupResponse? {
+        guard !todoIDs.isEmpty, !isSaving else { return nil }
+        guard ensureOnlineMutationAllowed() else { return nil }
+        let requestGeneration = boardRequestGeneration
+        let requestAccountID = accountID
+        let requestSessionGeneration = sessionGeneration
+        isSaving = true
+        defer { isSaving = false }
+
+        do {
+            let response = try await repository.clearCompleted(todoIDs: todoIDs)
+            guard isCurrentMutation(
+                requestGeneration: requestGeneration,
+                accountID: requestAccountID,
+                sessionGeneration: requestSessionGeneration
+            ) else { return nil }
+
+            let serverBoard = boardWithValidIDs(try await repository.fetchBoard())
+            guard isCurrentMutation(
+                requestGeneration: requestGeneration,
+                accountID: requestAccountID,
+                sessionGeneration: requestSessionGeneration
+            ) else { return nil }
+            board = serverBoard
+            hasLoadedCompleteBoard = true
+            isOffline = false
+            isShowingCachedData = false
+            lastSyncedAt = .now
+            let serverTodoIDs = Set(
+                (serverBoard.todo + serverBoard.inProgress + serverBoard.done).map(\.uuid)
+            )
+            for todoID in todoIDs where !serverTodoIDs.contains(todoID) {
+                attachmentsByTodoID[todoID] = nil
+            }
+            selectNonemptyStatusIfNeeded()
+            await saveCurrentBoardToCache(
+                accountID: requestAccountID,
+                requestGeneration: requestGeneration,
+                sessionGeneration: requestSessionGeneration
+            )
+            guard isCurrentMutation(
+                requestGeneration: requestGeneration,
+                accountID: requestAccountID,
+                sessionGeneration: requestSessionGeneration
+            ) else { return nil }
+            errorKey = nil
+            emitHaptic(.success)
+            return response
+        } catch {
+            guard isCurrentMutation(
+                requestGeneration: requestGeneration,
+                accountID: requestAccountID,
+                sessionGeneration: requestSessionGeneration
+            ) else { return nil }
+            errorKey = "todo.error.clearCompleted"
+            emitHaptic(.error)
+            return nil
+        }
+    }
+
     private func performMutation(
         errorKey: String,
         expectedTodoID: TodoID,

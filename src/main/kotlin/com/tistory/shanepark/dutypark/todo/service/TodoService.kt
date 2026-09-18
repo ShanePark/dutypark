@@ -12,6 +12,7 @@ import com.tistory.shanepark.dutypark.notification.event.TodoStatusChangedEvent
 import com.tistory.shanepark.dutypark.notification.event.TodoTaggedEvent
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.todo.domain.dto.TodoBoardResponse
+import com.tistory.shanepark.dutypark.todo.domain.dto.TodoBulkDeleteResponse
 import com.tistory.shanepark.dutypark.todo.domain.dto.TodoCountsResponse
 import com.tistory.shanepark.dutypark.todo.domain.dto.TodoResponse
 import com.tistory.shanepark.dutypark.todo.domain.entity.Todo
@@ -224,31 +225,40 @@ class TodoService(
     }
 
     /**
-     * Deletes the completed todos selected by the owner in the current board snapshot.
-     * The repository query repeats the owner and DONE checks so stale, missing, tagged,
-     * or reopened ids are ignored safely.
+     * Clears completed todos selected from the viewer's board.
+     *
+     * Owned todos are deleted together with their attachments. For a todo owned by another
+     * member, only the viewer's tag is removed. The repository query repeats the DONE and
+     * ownership/tag checks so stale, missing, or reopened ids are ignored safely.
      */
-    fun deleteCompletedTodos(loginMember: LoginMember, ids: Collection<UUID>): Int {
+    fun deleteCompletedTodos(loginMember: LoginMember, ids: Collection<UUID>): TodoBulkDeleteResponse {
         val member = findMember(loginMember)
         val distinctIds = ids.distinct()
-        if (distinctIds.isEmpty()) return 0
+        if (distinctIds.isEmpty()) return TodoBulkDeleteResponse(deletedCount = 0, untaggedCount = 0)
 
-        val completedTodos = todoRepository.findAllByIdAndMemberAndStatusForUpdate(
+        val completedTodos = todoRepository.findAllByIdAndStatusAndAccessibleByMemberForUpdate(
             ids = distinctIds,
             member = member,
             status = TodoStatus.DONE,
         )
 
         var deletedCount = 0
+        var untaggedCount = 0
         completedTodos.forEach { todo ->
-            // Keep this guard even though the query filters by status and owner. It protects
-            // the destructive operation if a mocked repository or a stale persistence state
-            // returns an id that changed status before deletion.
-            if (todo.member.id != member.id || todo.status != TodoStatus.DONE) return@forEach
-            deleteTodoInternal(todo)
-            deletedCount++
+            // Keep these guards even though the query filters by status and accessibility. They
+            // protect the mutation if a mocked repository or stale persistence state returns an
+            // id that changed before this transaction reached it.
+            if (todo.status != TodoStatus.DONE) return@forEach
+
+            if (todo.member.id == member.id) {
+                deleteTodoInternal(todo)
+                deletedCount++
+            } else if (todo.tags.any { it.member.id == member.id }) {
+                todo.removeTag(member)
+                untaggedCount++
+            }
         }
-        return deletedCount
+        return TodoBulkDeleteResponse(deletedCount = deletedCount, untaggedCount = untaggedCount)
     }
 
     /**
@@ -267,7 +277,7 @@ class TodoService(
     fun completeTodo(loginMember: LoginMember, id: UUID): TodoResponse {
         val member = findMember(loginMember)
 
-        val todo = todoRepository.findById(id)
+        val todo = todoRepository.findByIdForUpdate(id)
             .orElseThrow { IllegalArgumentException("Todo not found") }
 
         verifyStatusChangePermission(todo, member)
@@ -283,7 +293,7 @@ class TodoService(
     fun reopenTodo(loginMember: LoginMember, id: UUID): TodoResponse {
         val member = findMember(loginMember)
 
-        val todo = todoRepository.findById(id)
+        val todo = todoRepository.findByIdForUpdate(id)
             .orElseThrow { IllegalArgumentException("Todo not found") }
 
         verifyStatusChangePermission(todo, member)
@@ -303,7 +313,7 @@ class TodoService(
         orderedIds: List<UUID>
     ): TodoResponse {
         val member = findMember(loginMember)
-        val todo = todoRepository.findById(id)
+        val todo = todoRepository.findByIdForUpdate(id)
             .orElseThrow { IllegalArgumentException("Todo not found") }
 
         verifyStatusChangePermission(todo, member)

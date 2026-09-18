@@ -68,6 +68,11 @@ class TodoServiceTest {
         // mirror the real "no tagged rows" result so top-position math stays correct.
         `when`(todoRepository.findMinTagOrderByMemberAndStatus(anyArg(), anyArg()))
             .thenReturn(null)
+        // Status mutation methods use the pessimistic lookup. Keep the older findById stubs
+        // usable for the existing behavior tests while individual lock-focused tests override it.
+        doAnswer { invocation ->
+            todoRepository.findById(invocation.getArgument<UUID>(0))
+        }.`when`(todoRepository).findByIdForUpdate(anyArg())
     }
 
     @Suppress("UNCHECKED_CAST")
@@ -381,7 +386,7 @@ class TodoServiceTest {
     }
 
     @Test
-    fun `deleteCompletedTodos should delete only requested owned done todos and return count`() {
+    fun `deleteCompletedTodos should delete only requested owned done todos and return result counts`() {
         val completedId = UUID.randomUUID()
         val todoId = UUID.randomUUID()
         val completedTodo = createTodo("completed", TodoStatus.DONE, 0).also {
@@ -395,7 +400,7 @@ class TodoServiceTest {
 
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
         `when`(
-            todoRepository.findAllByIdAndMemberAndStatusForUpdate(
+            todoRepository.findAllByIdAndStatusAndAccessibleByMemberForUpdate(
                 requestedIds.distinct(),
                 member,
                 TodoStatus.DONE,
@@ -408,9 +413,10 @@ class TodoServiceTest {
             )
         ).thenReturn(listOf(attachment))
 
-        val deletedCount = todoService.deleteCompletedTodos(loginMember, requestedIds)
+        val result = todoService.deleteCompletedTodos(loginMember, requestedIds)
 
-        assertEquals(1, deletedCount)
+        assertEquals(1, result.deletedCount)
+        assertEquals(0, result.untaggedCount)
         verify(todoRepository).delete(completedTodo)
         verify(todoRepository, never()).delete(activeTodo)
         verify(attachmentService).deleteAttachment(attachment)
@@ -425,17 +431,47 @@ class TodoServiceTest {
 
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
         `when`(
-            todoRepository.findAllByIdAndMemberAndStatusForUpdate(
+            todoRepository.findAllByIdAndStatusAndAccessibleByMemberForUpdate(
                 listOf(reopenedId),
                 member,
                 TodoStatus.DONE,
             )
         ).thenReturn(listOf(reopenedTodo))
 
-        val deletedCount = todoService.deleteCompletedTodos(loginMember, listOf(reopenedId))
+        val result = todoService.deleteCompletedTodos(loginMember, listOf(reopenedId))
 
-        assertEquals(0, deletedCount)
+        assertEquals(0, result.deletedCount)
+        assertEquals(0, result.untaggedCount)
         verify(todoRepository, never()).delete(reopenedTodo)
+        verifyNoInteractions(attachmentRepository)
+    }
+
+    @Test
+    fun `deleteCompletedTodos should remove only current user's tag from requested tagged done todo`() {
+        val taggedId = UUID.randomUUID()
+        val otherTaggedMember = memberWithId(3L)
+        val taggedTodo = Todo(otherMember(), "tagged", "content", 0, TodoStatus.DONE)
+            .also {
+                it.addTag(member)
+                it.addTag(otherTaggedMember)
+                ReflectionTestUtils.setField(it, "id", taggedId)
+            }
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(
+            todoRepository.findAllByIdAndStatusAndAccessibleByMemberForUpdate(
+                listOf(taggedId),
+                member,
+                TodoStatus.DONE,
+            )
+        ).thenReturn(listOf(taggedTodo))
+
+        val result = todoService.deleteCompletedTodos(loginMember, listOf(taggedId))
+
+        assertEquals(0, result.deletedCount)
+        assertEquals(1, result.untaggedCount)
+        assertEquals(listOf(otherTaggedMember.id), taggedTodo.tags.map { it.member.id })
+        verify(todoRepository, never()).delete(taggedTodo)
         verifyNoInteractions(attachmentRepository)
     }
 
@@ -443,9 +479,10 @@ class TodoServiceTest {
     fun `deleteCompletedTodos should return zero without loading requested todos when ids are empty`() {
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
 
-        val deletedCount = todoService.deleteCompletedTodos(loginMember, emptyList())
+        val result = todoService.deleteCompletedTodos(loginMember, emptyList())
 
-        assertEquals(0, deletedCount)
+        assertEquals(0, result.deletedCount)
+        assertEquals(0, result.untaggedCount)
         verifyNoInteractions(todoRepository, attachmentRepository)
     }
 
@@ -1033,6 +1070,22 @@ class TodoServiceTest {
     }
 
     @Test
+    fun `completeTodo loads the todo with a pessimistic write lookup`() {
+        val todoId = UUID.randomUUID()
+        val todo = createTodo("task", TodoStatus.TODO, 0)
+        ReflectionTestUtils.setField(todo, "id", todoId)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findByIdForUpdate(todoId)).thenReturn(Optional.of(todo))
+        `when`(todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.DONE)).thenReturn(0)
+
+        clearInvocations(todoRepository)
+        todoService.completeTodo(loginMember, todoId)
+
+        verify(todoRepository).findByIdForUpdate(todoId)
+    }
+
+    @Test
     fun `completeTodo already DONE should not change anything`() {
         val todoId = UUID.randomUUID()
         val todo = createTodo("task", TodoStatus.DONE, 0)
@@ -1104,6 +1157,22 @@ class TodoServiceTest {
     }
 
     @Test
+    fun `reopenTodo loads the todo with a pessimistic write lookup`() {
+        val todoId = UUID.randomUUID()
+        val todo = createTodo("task", TodoStatus.DONE, 0)
+        ReflectionTestUtils.setField(todo, "id", todoId)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findByIdForUpdate(todoId)).thenReturn(Optional.of(todo))
+        `when`(todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.TODO)).thenReturn(0)
+
+        clearInvocations(todoRepository)
+        todoService.reopenTodo(loginMember, todoId)
+
+        verify(todoRepository).findByIdForUpdate(todoId)
+    }
+
+    @Test
     fun `reopenTodo should allow tagged member to reopen todo`() {
         val todoId = UUID.randomUUID()
         val owner = otherMember()
@@ -1142,6 +1211,22 @@ class TodoServiceTest {
 
         assertEquals(TodoStatus.IN_PROGRESS, result.status)
         assertEquals(5, result.position)
+    }
+
+    @Test
+    fun `changeStatus loads the todo with a pessimistic write lookup`() {
+        val todoId = UUID.randomUUID()
+        val todo = createTodo("task", TodoStatus.TODO, 0)
+        ReflectionTestUtils.setField(todo, "id", todoId)
+
+        `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
+        `when`(todoRepository.findByIdForUpdate(todoId)).thenReturn(Optional.of(todo))
+        `when`(todoRepository.findMinPositionByMemberAndStatus(member, TodoStatus.IN_PROGRESS)).thenReturn(0)
+
+        clearInvocations(todoRepository)
+        todoService.changeStatus(loginMember, todoId, TodoStatus.IN_PROGRESS, emptyList())
+
+        verify(todoRepository).findByIdForUpdate(todoId)
     }
 
     // ========== updatePosition Edge Cases ==========

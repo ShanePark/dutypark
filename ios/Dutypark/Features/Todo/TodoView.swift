@@ -39,6 +39,27 @@ enum TodoBoardLayout {
     }
 }
 
+nonisolated struct TodoCompletedCleanupSelection: Equatable, Identifiable, Sendable {
+    let todoIDs: [TodoID]
+    let ownedCount: Int
+    let taggedCount: Int
+
+    var id: String {
+        todoIDs.map(\.uuidString).joined(separator: ",")
+    }
+}
+
+nonisolated enum TodoCompletedCleanupPolicy {
+    static func selection(from todos: [TodoDTO]) -> TodoCompletedCleanupSelection? {
+        guard !todos.isEmpty else { return nil }
+        return TodoCompletedCleanupSelection(
+            todoIDs: todos.map(\.uuid),
+            ownedCount: todos.count(where: { !$0.isTagged }),
+            taggedCount: todos.count(where: \.isTagged)
+        )
+    }
+}
+
 nonisolated enum TodoFormDismissalAction: Equatable, Sendable {
     case dismiss
     case confirmDiscard
@@ -443,6 +464,9 @@ struct TodoView: View {
     @State private var showingDetail = false
     @State private var showingCreate = false
     @State private var showingHelp = false
+    @State private var completedCleanupConfirmation: TodoCompletedCleanupSelection?
+    @State private var isCleaningUpCompleted = false
+    @State private var completedCleanupResult: TodoCompletedCleanupResponse?
     @State private var detailCanDismiss = true
     @State private var detailDismissRequest = 0
     @State private var visibleStatus: TodoStatus?
@@ -633,6 +657,38 @@ struct TodoView: View {
             }
         }
         .todoErrorAlert(model)
+        .dpConfirmation(
+            item: $completedCleanupConfirmation,
+            copy: { selection in
+                DPConfirmationCopy(
+                    title: todoLocalized("todo.confirm.clearCompletedTitle"),
+                    message: completedCleanupConfirmationMessage(selection),
+                    confirmTitle: todoLocalized("todo.action.clearCompleted"),
+                    cancelTitle: todoLocalized("common.cancel"),
+                    isDestructive: true
+                )
+            },
+            isWorking: isCleaningUpCompleted,
+            canDismiss: !isCleaningUpCompleted,
+            confirm: { selection, dismiss in
+                clearCompleted(selection, dismiss: dismiss)
+            }
+        )
+        .alert(
+            todoLocalized("todo.success.clearCompletedTitle"),
+            isPresented: Binding(
+                get: { completedCleanupResult != nil },
+                set: { if !$0 { completedCleanupResult = nil } }
+            )
+        ) {
+            Button(todoLocalized("common.ok"), role: .cancel) {
+                completedCleanupResult = nil
+            }
+        } message: {
+            if let completedCleanupResult {
+                Text(completedCleanupResultMessage(completedCleanupResult))
+            }
+        }
     }
 
     private var authenticatedAccountID: MemberID? {
@@ -1027,6 +1083,7 @@ struct TodoView: View {
                                         selectStatus(status)
                                         withoutPresentationAnimation { showingCreate = true }
                                     },
+                                    clearCompleted: completedCleanupAction(for: status),
                                     select: { selectStatus(status) },
                                     open: { todo in
                                         model.emitHaptic(.routine)
@@ -1120,6 +1177,63 @@ struct TodoView: View {
         withoutPresentationAnimation { showingCreate = true }
     }
 
+    private func requestCompletedCleanup() {
+        guard model.canPerformOnlineMutations,
+              !model.isSaving,
+              let selection = TodoCompletedCleanupPolicy.selection(
+                  from: model.todos(for: .done)
+              )
+        else { return }
+        // The destructive confirmation button owns the warning haptic. Keeping
+        // this request silent avoids warning feedback for a cancelled cleanup.
+        completedCleanupConfirmation = selection
+    }
+
+    private func completedCleanupAction(for status: TodoStatus) -> (() -> Void)? {
+        guard status == .done,
+              !model.todos(for: .done).isEmpty,
+              model.canPerformOnlineMutations else {
+            return nil
+        }
+        return { requestCompletedCleanup() }
+    }
+
+    private func clearCompleted(
+        _ selection: TodoCompletedCleanupSelection,
+        dismiss: @escaping DPConfirmationDismiss
+    ) {
+        guard completedCleanupConfirmation == selection,
+              !isCleaningUpCompleted,
+              !model.isSaving
+        else { return }
+        isCleaningUpCompleted = true
+        Task { @MainActor in
+            let result = await model.clearCompleted(todoIDs: selection.todoIDs)
+            isCleaningUpCompleted = false
+            if let result {
+                completedCleanupResult = result
+                await onTodoChanged()
+            }
+            dismiss()
+        }
+    }
+
+    private func completedCleanupConfirmationMessage(
+        _ selection: TodoCompletedCleanupSelection
+    ) -> String {
+        todoLocalized("todo.confirm.clearCompletedMessage")
+            .replacingOccurrences(of: "%1$d", with: String(selection.ownedCount))
+            .replacingOccurrences(of: "%2$d", with: String(selection.taggedCount))
+    }
+
+    private func completedCleanupResultMessage(
+        _ result: TodoCompletedCleanupResponse
+    ) -> String {
+        todoLocalized("todo.success.clearCompletedMessage")
+            .replacingOccurrences(of: "%1$d", with: String(result.deletedCount))
+            .replacingOccurrences(of: "%2$d", with: String(result.untaggedCount))
+    }
+
     /// The drop target resolved from the current gesture sample, expressed as the
     /// placement the drop would commit. Rendering it makes the neighbouring cards
     /// step aside live and turns the hidden dragged row into a moving placeholder.
@@ -1169,6 +1283,7 @@ private struct TodoKanbanColumn: View {
     let dragTargetTodoID: TodoID?
     let dragInsertAfter: Bool
     let add: () -> Void
+    let clearCompleted: (() -> Void)?
     let select: () -> Void
     let open: (TodoDTO) -> Void
     let move: (TodoDTO, Int) -> Void
@@ -1200,6 +1315,27 @@ private struct TodoKanbanColumn: View {
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+
+                if let clearCompleted {
+                    Button(action: clearCompleted) {
+                        Image(systemName: "trash")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(DPColor.danger)
+                            .frame(width: 24, height: 24)
+                            .background(
+                                DPColor.dangerSoft,
+                                in: RoundedRectangle(cornerRadius: DPRadius.compact)
+                            )
+                            .frame(
+                                width: DPSize.minimumTouchTarget,
+                                height: DPSize.minimumTouchTarget
+                            )
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(todoLocalized("todo.action.clearCompleted"))
+                    .accessibilityIdentifier("todo.clearCompleted")
+                }
 
                 Button(action: add) {
                     Image(systemName: "plus")

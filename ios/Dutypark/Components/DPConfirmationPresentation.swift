@@ -37,8 +37,8 @@ private struct DPConfirmationCover: View {
     let closeOnBackdrop: Bool
     let canDismiss: Bool
     let finishDismissal: () -> Void
-    let cancel: ((DPConfirmationDismiss) -> Void)?
-    let confirm: (DPConfirmationDismiss) -> Void
+    let cancel: ((@escaping DPConfirmationDismiss) -> Void)?
+    let confirm: (@escaping DPConfirmationDismiss) -> Void
 
     var body: some View {
         DPModalOverlay(
@@ -93,8 +93,8 @@ extension View {
         closeOnBackdrop: Bool = true,
         canDismiss: Bool = true,
         finishDismissal: (() -> Void)? = nil,
-        cancel: ((DPConfirmationDismiss) -> Void)? = nil,
-        confirm: @escaping (DPConfirmationDismiss) -> Void
+        cancel: ((@escaping DPConfirmationDismiss) -> Void)? = nil,
+        confirm: @escaping (@escaping DPConfirmationDismiss) -> Void
     ) -> some View {
         fullScreenCover(isPresented: isPresented) {
             DPConfirmationCover(
@@ -126,8 +126,8 @@ extension View {
         closeOnBackdrop: Bool = true,
         canDismiss: Bool = true,
         finishDismissal: (() -> Void)? = nil,
-        cancel: ((DPConfirmationDismiss) -> Void)? = nil,
-        confirm: @escaping (Item, DPConfirmationDismiss) -> Void
+        cancel: ((@escaping DPConfirmationDismiss) -> Void)? = nil,
+        confirm: @escaping (Item, @escaping DPConfirmationDismiss) -> Void
     ) -> some View {
         fullScreenCover(item: item) { value in
             DPConfirmationCover(

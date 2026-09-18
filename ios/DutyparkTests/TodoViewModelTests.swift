@@ -163,6 +163,108 @@ struct TodoViewModelTests {
     }
 
     @Test
+    func completedCleanupCapturesAllDoneIDsAndPartitionsOwnedAndTaggedCounts() async throws {
+        let owned = makeTodo(
+            id: UUID(uuidString: "11111111-1111-1111-1111-111111111111")!,
+            title: "Owned completed",
+            status: .done
+        )
+        let tagged = makeTodo(
+            id: UUID(uuidString: "22222222-2222-2222-2222-222222222222")!,
+            title: "Tagged completed",
+            status: .done,
+            isTagged: true
+        )
+        let serverBoardAfterCleanup = makeBoard()
+        let repository = FakeTodoRepository(
+            board: makeBoard(done: [owned, tagged]),
+            cleanupResponse: TodoCompletedCleanupResponse(
+                deletedCount: 1,
+                untaggedCount: 1
+            ),
+            postCleanupBoard: serverBoardAfterCleanup
+        )
+        let haptics = DPHapticCenter()
+        let model = TodoViewModel(repository: repository, hapticCenter: haptics)
+        await model.load()
+
+        let selection = try #require(
+            TodoCompletedCleanupPolicy.selection(from: model.todos(for: .done))
+        )
+        #expect(selection.ownedCount == 1)
+        #expect(selection.taggedCount == 1)
+        #expect(selection.todoIDs == [owned.uuid, tagged.uuid])
+
+        let result = await model.clearCompleted(todoIDs: selection.todoIDs)
+        let requestedIDs = await repository.completedCleanupIDs
+
+        #expect(result == TodoCompletedCleanupResponse(deletedCount: 1, untaggedCount: 1))
+        #expect(requestedIDs == [owned.uuid, tagged.uuid])
+        #expect(model.todos(for: .done).isEmpty)
+        #expect(await repository.fetchBoardCount == 2)
+        #expect(haptics.event?.kind == .success)
+    }
+
+    @Test
+    func completedCleanupUsesTheAuthoritativeBoardWhenTheServerIgnoresAnID() async throws {
+        let owned = makeTodo(
+            id: UUID(uuidString: "33333333-3333-3333-3333-333333333333")!,
+            title: "Reopened by server",
+            status: .done
+        )
+        let tagged = makeTodo(
+            id: UUID(uuidString: "44444444-4444-4444-4444-444444444444")!,
+            title: "Still tagged",
+            status: .done,
+            isTagged: true
+        )
+        let reopened = makeTodo(
+            id: owned.uuid,
+            title: owned.title,
+            status: .inProgress
+        )
+        let serverBoardAfterCleanup = makeBoard(inProgress: [reopened], done: [tagged])
+        let repository = FakeTodoRepository(
+            board: makeBoard(done: [owned, tagged]),
+            cleanupResponse: TodoCompletedCleanupResponse(
+                deletedCount: 1,
+                untaggedCount: 0
+            ),
+            postCleanupBoard: serverBoardAfterCleanup
+        )
+        let model = TodoViewModel(repository: repository)
+        await model.load()
+
+        let result = await model.clearCompleted(todoIDs: [owned.uuid, tagged.uuid])
+
+        #expect(result == TodoCompletedCleanupResponse(deletedCount: 1, untaggedCount: 0))
+        #expect(model.todos(for: .inProgress).map(\.uuid) == [owned.uuid])
+        #expect(model.todos(for: .done).map(\.uuid) == [tagged.uuid])
+        #expect(await repository.fetchBoardCount == 2)
+    }
+
+    @Test
+    func completedCleanupDoesNotOfferAnActionForAnEmptyDoneColumn() {
+        #expect(TodoCompletedCleanupPolicy.selection(from: []) == nil)
+    }
+
+    @Test
+    func failedCompletedCleanupKeepsTheBoardAndEmitsErrorFeedback() async {
+        let todo = makeTodo(status: .done)
+        let repository = FakeTodoRepository(board: makeBoard(done: [todo]))
+        let haptics = DPHapticCenter()
+        let model = TodoViewModel(repository: repository, hapticCenter: haptics)
+        await model.load()
+
+        let result = await model.clearCompleted(todoIDs: [todo.uuid])
+
+        #expect(result == nil)
+        #expect(model.todos(for: .done).map(\.uuid) == [todo.uuid])
+        #expect(model.errorKey == "todo.error.clearCompleted")
+        #expect(haptics.event?.kind == .error)
+    }
+
+    @Test
     func contentFilterAndAttachmentValidationUseActionableFailureFeedback() async {
         let defaults = UserDefaults(suiteName: "todo-haptic-content-filter-\(UUID().uuidString)")!
         defaults.set(["시발"], forKey: "dp-banned-words")
@@ -203,6 +305,8 @@ struct TodoViewModelTests {
 
         #expect(boardSource.contains("model.emitHaptic(.selection)"))
         #expect(boardSource.contains("model.emitHaptic(.routine)"))
+        #expect(boardSource.contains("TodoCompletedCleanupPolicy.selection"))
+        #expect(boardSource.contains("todo.action.clearCompleted"))
         #expect(boardSource.contains("onChange(of: draft.hasDueDate)"))
         #expect(modalSource.contains("dismissHaptic: nil"))
     }
@@ -803,16 +907,20 @@ struct TodoViewModelTests {
         let keys = [
             "todo.action.add",
             "todo.action.complete",
+            "todo.action.clearCompleted",
             "todo.action.delete",
             "todo.action.leaveTag",
             "todo.action.status",
             "todo.action.reopen",
+            "todo.confirm.clearCompletedTitle",
+            "todo.confirm.clearCompletedMessage",
             "todo.confirm.discardTitle",
             "todo.confirm.discardMessage",
             "todo.confirm.discardAction",
             "todo.drag.dropHere",
             "todo.drag.hint",
             "todo.error.load",
+            "todo.error.clearCompleted",
             "todo.help.open",
             "todo.help.title",
             "todo.help.kanban.body",
@@ -822,6 +930,8 @@ struct TodoViewModelTests {
             "todo.help.tips.title",
             "todo.help.tip.1",
             "todo.help.tip.5",
+            "todo.success.clearCompletedTitle",
+            "todo.success.clearCompletedMessage",
             "common.close",
             "common.edit",
             "common.save"
@@ -1399,10 +1509,13 @@ private actor FakeTodoRepository: TodoRepository {
     let createResponse: TodoDTO?
     let updateResponse: TodoDTO?
     let statusResponse: TodoDTO?
+    let cleanupResponse: TodoCompletedCleanupResponse?
+    let postCleanupBoard: TodoBoardDTO?
     var updateRequest: (id: TodoID, request: TodoRequest)?
     var statusChange: (id: TodoID, request: TodoStatusChangeRequest)?
     var positionRequest: TodoPositionUpdateRequest?
     var createRequest: TodoRequest?
+    var completedCleanupIDs: [TodoID]?
     var fetchBoardCount = 0
     let shouldFailPositionUpdate: Bool
     let shouldFailAttachmentFetch: Bool
@@ -1414,13 +1527,17 @@ private actor FakeTodoRepository: TodoRepository {
         shouldFailAttachmentFetch: Bool = false,
         createResponse: TodoDTO? = nil,
         updateResponse: TodoDTO? = nil,
-        statusResponse: TodoDTO? = nil
+        statusResponse: TodoDTO? = nil,
+        cleanupResponse: TodoCompletedCleanupResponse? = nil,
+        postCleanupBoard: TodoBoardDTO? = nil
     ) {
         self.board = board
         self.attachments = attachments
         self.createResponse = createResponse
         self.updateResponse = updateResponse
         self.statusResponse = statusResponse
+        self.cleanupResponse = cleanupResponse
+        self.postCleanupBoard = postCleanupBoard
         self.shouldFailPositionUpdate = shouldFailPositionUpdate
         self.shouldFailAttachmentFetch = shouldFailAttachmentFetch
     }
@@ -1471,6 +1588,15 @@ private actor FakeTodoRepository: TodoRepository {
     }
 
     func leaveTag(id: TodoID) async throws {}
+
+    func clearCompleted(todoIDs: [TodoID]) async throws -> TodoCompletedCleanupResponse {
+        completedCleanupIDs = todoIDs
+        guard let cleanupResponse else { throw CocoaError(.fileNoSuchFile) }
+        if let postCleanupBoard {
+            board = postCleanupBoard
+        }
+        return cleanupResponse
+    }
 
     private func todo(id: TodoID) throws -> TodoDTO {
         guard let todo = (board.todo + board.inProgress + board.done)
@@ -1527,16 +1653,20 @@ private func makeTodo(
     )
 }
 
-private func makeBoard(todo: [TodoDTO] = [], inProgress: [TodoDTO] = []) -> TodoBoardDTO {
+private func makeBoard(
+    todo: [TodoDTO] = [],
+    inProgress: [TodoDTO] = [],
+    done: [TodoDTO] = []
+) -> TodoBoardDTO {
     TodoBoardDTO(
         todo: todo,
         inProgress: inProgress,
-        done: [],
+        done: done,
         counts: TodoCountsDTO(
             todo: todo.count,
             inProgress: inProgress.count,
-            done: 0,
-            total: todo.count + inProgress.count
+            done: done.count,
+            total: todo.count + inProgress.count + done.count
         )
     )
 }

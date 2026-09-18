@@ -312,6 +312,13 @@ private actor TodoFlowRepository: TodoRepository {
 
     func updatePositions(_ request: TodoPositionUpdateRequest) async throws {}
     func leaveTag(id: TodoID) async throws { _ = remove(id: id) }
+    func clearCompleted(todoIDs: [TodoID]) async throws -> TodoCompletedCleanupResponse {
+        for todoID in todoIDs { _ = remove(id: todoID) }
+        return TodoCompletedCleanupResponse(
+            deletedCount: todoIDs.count,
+            untaggedCount: 0
+        )
+    }
 
     private func insert(_ todo: TodoDTO, orderedIDs: [TodoID] = []) {
         var columns = currentColumns()

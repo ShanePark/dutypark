@@ -634,6 +634,10 @@ private actor TodoOfflineRepository: TodoRepository {
         mutationCallCount += 1
         throw APIError.transport
     }
+    func clearCompleted(todoIDs: [TodoID]) async throws -> TodoCompletedCleanupResponse {
+        mutationCallCount += 1
+        throw APIError.transport
+    }
 }
 
 private actor TodoOfflineCacheFake: OfflineCacheProviding {

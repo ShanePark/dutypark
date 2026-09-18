@@ -58,7 +58,8 @@ let sortableInstances: Record<string, Sortable> = {}
 const todoList = computed(() => board.value?.todo ?? [])
 const inProgressList = computed(() => board.value?.inProgress ?? [])
 const doneList = computed(() => board.value?.done ?? [])
-const ownDoneList = computed(() => doneList.value.filter((todo) => !todo.isTagged))
+const completedOwnedList = computed(() => doneList.value.filter((todo) => !todo.isTagged))
+const completedTaggedList = computed(() => doneList.value.filter((todo) => todo.isTagged))
 const canReportSelectedTodo = computed(() => selectedTodo.value?.isTagged === true)
 
 const counts = computed(() => board.value?.counts ?? { todo: 0, inProgress: 0, done: 0, total: 0 })
@@ -663,22 +664,28 @@ async function handleDeleteTodo(todo: Pick<Todo, 'id' | 'title'>) {
 async function handleDeleteCompletedTodos() {
   if (isClearingCompleted.value) return
 
-  // Capture the current own-DONE snapshot before opening the confirmation. Any
-  // todo completed while the modal is open remains for the next cleanup action.
-  const completedTodoIds = ownDoneList.value.map((todo) => todo.id)
+  // Capture the current DONE snapshot before opening the confirmation. Any todo
+  // completed while the modal is open remains for the next cleanup action.
+  const completedTodos = doneList.value
+  const completedTodoIds = completedTodos.map((todo) => todo.id)
+  const ownedCount = completedOwnedList.value.length
+  const taggedCount = completedTaggedList.value.length
   if (completedTodoIds.length === 0) return
 
   isClearingCompleted.value = true
   try {
     const confirmed = await confirmDelete(
-      t('todoBoard.messages.deleteCompletedConfirm', { count: completedTodoIds.length }),
+      t('todoBoard.messages.deleteCompletedConfirm', { ownedCount, taggedCount }),
       t('todoBoard.messages.deleteCompletedTitle'),
       t('todoBoard.actions.clearCompleted'),
     )
     if (!confirmed) return
 
     const result = await todoApi.deleteCompletedTodos(completedTodoIds)
-    toastSuccess(t('todoBoard.messages.deleteCompletedSuccess', { count: result.count }))
+    toastSuccess(t('todoBoard.messages.deleteCompletedSuccess', {
+      deletedCount: result.deletedCount,
+      untaggedCount: result.untaggedCount,
+    }))
     await loadBoard()
   } catch (error) {
     console.error('Failed to delete completed todos:', error)
@@ -890,7 +897,7 @@ onBeforeUnmount(() => {
         >
           <template #header-actions>
             <button
-              v-if="ownDoneList.length > 0"
+              v-if="doneList.length > 0"
               type="button"
               class="todo-board-clear-completed"
               :disabled="isClearingCompleted"
