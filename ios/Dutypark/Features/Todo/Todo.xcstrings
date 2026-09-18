@@ -50,7 +50,7 @@
     "todo.field.status" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Status" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "상태" } } } },
     "todo.field.tags" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Tagged friends" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "친구 태그" } } } },
     "todo.field.title" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Title" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "제목" } } } },
-    "todo.form.createTitle" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "New Todo" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "새 Todo" } } } },
+    "todo.form.createTitle" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Add Todo" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "할일 추가" } } } },
     "todo.form.editTitle" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Edit Todo" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "Todo 수정" } } } },
     "todo.help.open" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Help" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "도움말" } } } },
     "todo.help.title" : { "localizations" : { "en" : { "stringUnit" : { "state" : "translated", "value" : "Using the Todo board" } }, "ko" : { "stringUnit" : { "state" : "translated", "value" : "할일 보드 사용법" } } } },

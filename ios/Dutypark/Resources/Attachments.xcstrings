@@ -1,6 +1,10 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
+    "attachment.action.add" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Add attachment" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "첨부파일 추가" } }
+    } },
     "attachment.gallery.label" : {
       "localizations" : {
         "en" : { "stringUnit" : { "state" : "translated", "value" : "Attachments (%lld)" } },
@@ -15,6 +19,10 @@
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Cancel upload" } },
       "ko" : { "stringUnit" : { "state" : "translated", "value" : "업로드 취소" } }
     } },
+    "attachment.action.camera" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Take photo" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "사진 촬영" } }
+    } },
     "attachment.action.delete" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Delete" } },
       "ko" : { "stringUnit" : { "state" : "translated", "value" : "삭제" } }
@@ -22,6 +30,10 @@
     "attachment.action.files" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Files" } },
       "ko" : { "stringUnit" : { "state" : "translated", "value" : "파일" } }
+    } },
+    "attachment.action.fileUpload" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Upload file" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "파일 업로드" } }
     } },
     "attachment.action.more" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "More attachment actions" } },
@@ -42,6 +54,10 @@
     "attachment.action.photos" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Photos" } },
       "ko" : { "stringUnit" : { "state" : "translated", "value" : "사진" } }
+    } },
+    "attachment.action.photoLibrary" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Photo library" } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "사진 앨범" } }
     } },
     "attachment.action.preview" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "Preview attachment" } },
@@ -66,6 +82,14 @@
     "attachment.error.blockedExtension" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "This file type is not allowed." } },
       "ko" : { "stringUnit" : { "state" : "translated", "value" : "업로드할 수 없는 파일 형식입니다." } }
+    } },
+    "attachment.error.cameraPermissionDenied" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Allow camera access in Settings to take a photo." } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "사진을 촬영하려면 설정에서 카메라 접근 권한을 허용해주세요." } }
+    } },
+    "attachment.error.cameraUnavailable" : { "localizations" : {
+      "en" : { "stringUnit" : { "state" : "translated", "value" : "Camera is not available on this device." } },
+      "ko" : { "stringUnit" : { "state" : "translated", "value" : "이 기기에서는 카메라를 사용할 수 없습니다." } }
     } },
     "attachment.error.conversion" : { "localizations" : {
       "en" : { "stringUnit" : { "state" : "translated", "value" : "The photo could not be converted." } },

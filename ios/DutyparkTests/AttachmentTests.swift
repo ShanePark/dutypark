@@ -1,4 +1,6 @@
+import CoreImage
 import Foundation
+import ImageIO
 import Testing
 import UIKit
 @testable import Dutypark
@@ -11,21 +13,27 @@ struct AttachmentTests {
     @Test
     func resolvesEveryAttachmentStringFromDedicatedTable() throws {
         let keys = [
+            "attachment.action.add",
             "attachment.action.cancel",
             "attachment.action.cancelUpload",
+            "attachment.action.camera",
             "attachment.action.delete",
             "attachment.action.files",
+            "attachment.action.fileUpload",
             "attachment.action.more",
             "attachment.action.moveDown",
             "attachment.action.moveUp",
             "attachment.action.ok",
             "attachment.action.photos",
+            "attachment.action.photoLibrary",
             "attachment.action.preview",
             "attachment.action.remove",
             "attachment.action.share",
             "attachment.delete.title",
             "attachment.empty",
             "attachment.error.blockedExtension",
+            "attachment.error.cameraPermissionDenied",
+            "attachment.error.cameraUnavailable",
             "attachment.error.conversion",
             "attachment.error.delete",
             "attachment.error.discard",
@@ -166,6 +174,95 @@ struct AttachmentTests {
         #expect(file.filename == "photo.jpg")
         #expect(file.contentType == "image/jpeg")
         #expect(file.data.starts(with: [0xFF, 0xD8]))
+    }
+
+    @Test
+    func convertsCameraImageToBoundedJPEGWithUniqueFilename() throws {
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        let image = UIGraphicsImageRenderer(
+            size: CGSize(width: 4_096, height: 2_048),
+            format: format
+        ).image { context in
+            UIColor.systemBlue.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 4_096, height: 2_048))
+        }
+
+        let first = try AttachmentFileLoader.load(from: image)
+        let second = try AttachmentFileLoader.load(from: image)
+
+        #expect(first.contentType == "image/jpeg")
+        #expect(first.filename.hasPrefix("photo-"))
+        #expect(first.filename.hasSuffix(".jpg"))
+        #expect(first.filename != second.filename)
+        #expect(first.data.starts(with: [0xFF, 0xD8]))
+
+        let source = try #require(CGImageSourceCreateWithData(first.data as CFData, nil))
+        let properties = try #require(CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any])
+        let width = try #require(properties[kCGImagePropertyPixelWidth] as? Int)
+        let height = try #require(properties[kCGImagePropertyPixelHeight] as? Int)
+        #expect(max(width, height) <= AttachmentUploadPolicy.maxImagePixelSize)
+    }
+
+    @Test
+    func rejectsCameraImageWithoutBitmap() {
+        let image = UIImage(ciImage: CIImage(color: .red))
+
+        #expect(throws: AttachmentUploadError.imageConversionFailed) {
+            try AttachmentFileLoader.load(from: image)
+        }
+    }
+
+    @Test
+    func cameraImageNormalizesRightOrientationBeforeEncoding() throws {
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        let landscape = UIGraphicsImageRenderer(
+            size: CGSize(width: 320, height: 180),
+            format: format
+        ).image { context in
+            UIColor.systemOrange.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 320, height: 180))
+        }
+        let source = try #require(landscape.cgImage)
+        let oriented = UIImage(cgImage: source, scale: 1, orientation: .right)
+
+        let file = try AttachmentFileLoader.load(from: oriented)
+        let imageSource = try #require(CGImageSourceCreateWithData(file.data as CFData, nil))
+        let properties = try #require(
+            CGImageSourceCopyPropertiesAtIndex(imageSource, 0, nil) as? [CFString: Any]
+        )
+        let width = try #require(properties[kCGImagePropertyPixelWidth] as? Int)
+        let height = try #require(properties[kCGImagePropertyPixelHeight] as? Int)
+
+        #expect(width == 180)
+        #expect(height == 320)
+    }
+
+    @Test
+    func cameraImagePreservesPixelsWhenUIImageUsesScaleTwo() throws {
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        let sourceImage = UIGraphicsImageRenderer(
+            size: CGSize(width: 1_200, height: 800),
+            format: format
+        ).image { context in
+            UIColor.systemPurple.setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 1_200, height: 800))
+        }
+        let source = try #require(sourceImage.cgImage)
+        let scaled = UIImage(cgImage: source, scale: 2, orientation: .up)
+
+        let file = try AttachmentFileLoader.load(from: scaled)
+        let imageSource = try #require(CGImageSourceCreateWithData(file.data as CFData, nil))
+        let properties = try #require(
+            CGImageSourceCopyPropertiesAtIndex(imageSource, 0, nil) as? [CFString: Any]
+        )
+        let width = try #require(properties[kCGImagePropertyPixelWidth] as? Int)
+        let height = try #require(properties[kCGImagePropertyPixelHeight] as? Int)
+
+        #expect(width == 1_200)
+        #expect(height == 800)
     }
 
     @Test

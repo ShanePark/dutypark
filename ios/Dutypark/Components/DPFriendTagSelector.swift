@@ -100,11 +100,19 @@ nonisolated enum DPFriendTagSelectorScrollAnchor: Hashable, Sendable {
     case selectionSummary
 }
 
+/// The schedule editor keeps the selector's card treatment, while compact forms can
+/// opt out of the extra panel chrome and let the cards sit directly in their section.
+nonisolated enum DPFriendTagSelectorAppearance: Equatable, Sendable {
+    case standard
+    case flat
+}
+
 struct DPFriendTagSelector: View {
     let items: [DPFriendTagItem]
     let preservedItems: [DPFriendTagItem]
     @Binding var selection: Set<MemberID>
     let disabled: Bool
+    let appearance: DPFriendTagSelectorAppearance
     private let onExpand: () -> Void
     private let isSearchFocusedBinding: Binding<Bool>?
 
@@ -142,12 +150,14 @@ struct DPFriendTagSelector: View {
         selection: Binding<Set<MemberID>>,
         disabled: Bool = false,
         isSearchFocused: Binding<Bool>? = nil,
+        appearance: DPFriendTagSelectorAppearance = .standard,
         onExpand: @escaping () -> Void = {}
     ) {
         self.items = items
         self.preservedItems = preservedItems
         _selection = selection
         self.disabled = disabled
+        self.appearance = appearance
         self.onExpand = onExpand
         self.isSearchFocusedBinding = isSearchFocused
         _isExpanded = State(initialValue: !selection.wrappedValue.isEmpty)
@@ -232,12 +242,14 @@ struct DPFriendTagSelector: View {
             selectedStrip
                 .id(DPFriendTagSelectorScrollAnchor.selectionSummary)
         }
-        .padding(10)
-        .background(DPColor.backgroundCard)
-        .clipShape(RoundedRectangle(cornerRadius: DPRadius.large))
+        .padding(appearance == .flat ? 0 : 10)
+        .background(appearance == .flat ? Color.clear : DPColor.backgroundCard)
+        .clipShape(RoundedRectangle(cornerRadius: appearance == .flat ? 0 : DPRadius.large))
         .overlay {
-            RoundedRectangle(cornerRadius: DPRadius.large)
-                .stroke(DPColor.borderPrimary)
+            if appearance == .standard {
+                RoundedRectangle(cornerRadius: DPRadius.large)
+                    .stroke(DPColor.borderPrimary)
+            }
         }
     }
 
@@ -254,24 +266,28 @@ struct DPFriendTagSelector: View {
             }
             .padding(.horizontal, 2)
 
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 6) {
-                    ForEach(selectedItems) { item in
-                        chip(item)
+            if appearance == .standard || !selection.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 6) {
+                        ForEach(selectedItems) { item in
+                            chip(item)
+                        }
                     }
+                    .padding(.horizontal, 2)
                 }
-                .padding(.horizontal, 2)
+                // Reserve the chip rail before the first selection in the standard selector so
+                // picking a friend changes only its contents. Compact forms omit that empty rail.
+                .frame(minHeight: appearance == .flat ? 0 : chipAvatarSize + 16)
             }
-            // Reserve the chip rail before the first selection so picking a friend changes
-            // only the rail's contents, never the form's height or scroll position.
-            .frame(minHeight: chipAvatarSize + 16)
         }
-        .padding(DPSpacing.small)
-        .background(DPColor.accentSoft)
-        .clipShape(RoundedRectangle(cornerRadius: DPRadius.large))
+        .padding(appearance == .flat ? 0 : DPSpacing.small)
+        .background(appearance == .flat ? Color.clear : DPColor.accentSoft)
+        .clipShape(RoundedRectangle(cornerRadius: appearance == .flat ? 0 : DPRadius.large))
         .overlay {
-            RoundedRectangle(cornerRadius: DPRadius.large)
-                .stroke(DPColor.accentBorder)
+            if appearance == .standard {
+                RoundedRectangle(cornerRadius: DPRadius.large)
+                    .stroke(DPColor.accentBorder)
+            }
         }
     }
 
@@ -291,8 +307,8 @@ struct DPFriendTagSelector: View {
                     .onChange(of: proxy.size.width) { _, width in railWidth = width }
             }
         }
-        .background(DPColor.backgroundSecondary)
-        .clipShape(RoundedRectangle(cornerRadius: DPRadius.large))
+        .background(appearance == .flat ? Color.clear : DPColor.backgroundSecondary)
+        .clipShape(RoundedRectangle(cornerRadius: appearance == .flat ? 0 : DPRadius.large))
     }
 
     private var searchField: some View {

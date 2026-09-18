@@ -134,6 +134,47 @@ final class DPFriendTagSelectorLayoutTests: XCTestCase {
         )
     }
 
+    func testSelectorOffersAnOptInFlatAppearanceForCompactForms() throws {
+        let source = try Self.selectorSource()
+
+        XCTAssertTrue(
+            source.contains("nonisolated enum DPFriendTagSelectorAppearance"),
+            "The shared selector needs a named appearance so compact forms can opt out of its outer chrome"
+        )
+        XCTAssertTrue(
+            source.contains("appearance: DPFriendTagSelectorAppearance = .standard"),
+            "The existing schedule selector must keep its standard appearance by default"
+        )
+    }
+
+    func testFlatAppearanceRemovesOnlyTheExpandedSelectorChrome() throws {
+        let source = try Self.selectorSource()
+        let expanded = try Self.expandedSelectorBody()
+        let rail = try Self.railBody()
+        let strip = try Self.selectedStripBody()
+
+        XCTAssertTrue(
+            expanded.contains("appearance == .flat ? 0 : 10"),
+            "Flat mode should remove the expanded selector padding without changing the default mode"
+        )
+        XCTAssertTrue(
+            expanded.contains("appearance == .flat ? Color.clear : DPColor.backgroundCard"),
+            "Flat mode should remove the selector's second background surface"
+        )
+        XCTAssertTrue(
+            rail.contains("appearance == .flat ? Color.clear : DPColor.backgroundSecondary"),
+            "Flat mode should remove the rail's extra background surface"
+        )
+        XCTAssertTrue(
+            strip.contains("appearance == .flat ? Color.clear : DPColor.accentSoft"),
+            "Flat mode should keep selected friends readable without a nested summary panel"
+        )
+        XCTAssertTrue(
+            source.contains("appearance == .flat ? 0 : chipAvatarSize + 16"),
+            "Flat mode should avoid reserving an empty chip rail in the compact form"
+        )
+    }
+
     private static func cardBody() throws -> Substring {
         let source = try selectorSource()
         let start = try XCTUnwrap(source.range(of: "private func card(_ item: DPFriendTagItem)"))
@@ -145,6 +186,13 @@ final class DPFriendTagSelectorLayoutTests: XCTestCase {
         let source = try selectorSource()
         let start = try XCTUnwrap(source.range(of: "private var selectedStrip: some View {"))
         let end = try XCTUnwrap(source.range(of: "private var rail: some View {"))
+        return source[start.upperBound..<end.lowerBound]
+    }
+
+    private static func railBody() throws -> Substring {
+        let source = try selectorSource()
+        let start = try XCTUnwrap(source.range(of: "private var rail: some View {"))
+        let end = try XCTUnwrap(source.range(of: "private var searchField: some View {"))
         return source[start.upperBound..<end.lowerBound]
     }
 

@@ -2112,6 +2112,7 @@ struct TodoFormSheet: View {
     @State private var boundSessionGeneration: UInt64?
     @FocusState private var focusedField: TodoFormField?
     @State private var isTagSearchFocused = false
+    @State private var isStatusMenuPresented = false
 
     init(
         titleKey: String,
@@ -2251,53 +2252,14 @@ struct TodoFormSheet: View {
     }
 
     private var formContent: some View {
-        VStack(alignment: .leading, spacing: DPSpacing.large) {
-            if showsStatusSelection {
-                TodoFormSection(title: todoLocalized("todo.field.status")) {
-                    HStack(spacing: DPSpacing.small) {
-                        ForEach(TodoStatus.boardStatuses, id: \.rawValue) { status in
-                            Button {
-                                guard draft.status != status else { return }
-                                draft.status = status
-                                model.emitHaptic(.selection)
-                            } label: {
-                                VStack(spacing: 6) {
-                                    Image(systemName: status.systemImage)
-                                        .font(.system(size: 16, weight: .semibold))
-                                    Text(todoLocalized(status.shortTitleKey))
-                                        .font(DPTypography.caption)
-                                        .lineLimit(1)
-                                }
-                                .foregroundStyle(status.color)
-                                .frame(maxWidth: .infinity, minHeight: 62)
-                                .background(status.softColor)
-                                .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: DPRadius.standard)
-                                        .stroke(draft.status == status ? status.color : Color.clear, lineWidth: 2)
-                                )
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityAddTraits(draft.status == status ? .isSelected : [])
-                            .accessibilityIdentifier("todo.form.status.\(status.rawValue.lowercased())")
-                        }
-                    }
-                }
-            }
+        VStack(alignment: .leading, spacing: DPSpacing.compact) {
+            HStack(alignment: .bottom, spacing: DPSpacing.small) {
+                titleField
 
-            TodoFormSection(title: todoLocalized("todo.field.title")) {
-                TextField("", text: $draft.title, prompt: Text(todoLocalized("todo.field.title")))
-                    .textInputAutocapitalization(.sentences)
-                    .focused($focusedField, equals: .title)
-                    .accessibilityIdentifier("todo.form.title")
-                    .dpInputChrome(
-                        isFocused: focusedField == .title,
-                        isInvalid: draft.title.count > 50
-                    )
-                Text(verbatim: "\(draft.title.count)/50")
-                    .font(DPTypography.caption)
-                    .foregroundStyle(draft.title.count > 50 ? DPColor.danger : DPColor.textMuted)
-                    .frame(maxWidth: .infinity, alignment: .trailing)
+                if showsStatusSelection {
+                    statusPicker
+                        .frame(width: 132)
+                }
             }
             .id(TodoFormField.title)
 
@@ -2307,7 +2269,7 @@ struct TodoFormSheet: View {
                     .foregroundStyle(DPColor.textPrimary)
                     .scrollContentBackground(.hidden)
                     .focused($focusedField, equals: .content)
-                    .frame(minHeight: 132)
+                    .frame(height: 104)
                     .dpInputChrome(isFocused: focusedField == .content)
                     .overlay(alignment: .topLeading) {
                         if draft.content.isEmpty {
@@ -2323,25 +2285,36 @@ struct TodoFormSheet: View {
             .id(TodoFormField.content)
 
             TodoFormSection(title: todoLocalized("todo.field.dueDate")) {
-                Toggle(isOn: $draft.hasDueDate) {
+                HStack(spacing: DPSpacing.small) {
                     Label(todoLocalized("todo.field.setDueDate"), systemImage: "calendar")
                         .font(DPTypography.supporting)
                         .foregroundStyle(DPColor.textSecondary)
+                    Spacer(minLength: DPSpacing.small)
+
+                    if draft.hasDueDate {
+                        DatePicker(
+                            todoLocalized("todo.field.dueDate"),
+                            selection: $draft.dueDate,
+                            displayedComponents: .date
+                        )
+                        .labelsHidden()
+                        .datePickerStyle(.compact)
+                        .font(DPTypography.body)
+                        .accessibilityIdentifier("todo.form.dueDate")
+                    } else {
+                        Text(todoLocalized("todo.field.dueDate"))
+                            .font(DPTypography.supporting)
+                            .foregroundStyle(DPColor.textMuted)
+                    }
+
+                    Toggle("", isOn: $draft.hasDueDate)
+                        .labelsHidden()
+                        .tint(DPColor.accent)
+                        .accessibilityLabel(todoLocalized("todo.field.setDueDate"))
                 }
-                .tint(DPColor.accent)
                 .frame(minHeight: DPSize.minimumTouchTarget)
                 .onChange(of: draft.hasDueDate) { _, _ in
                     model.emitHaptic(.selection)
-                }
-                if draft.hasDueDate {
-                    DatePicker(
-                        todoLocalized("todo.field.dueDate"),
-                        selection: $draft.dueDate,
-                        displayedComponents: .date
-                    )
-                    .datePickerStyle(.compact)
-                    .font(DPTypography.body)
-                    .dpInputChrome()
                 }
             }
 
@@ -2352,7 +2325,8 @@ struct TodoFormSheet: View {
                         preservedItems: preservedTags.compactMap(TodoFriendTagAdapter.item),
                         selection: $draft.taggedFriendIDs,
                         disabled: isBusy,
-                        isSearchFocused: $isTagSearchFocused
+                        isSearchFocused: $isTagSearchFocused,
+                        appearance: .flat
                     )
                 }
                 .id(TodoFormField.tags)
@@ -2360,12 +2334,127 @@ struct TodoFormSheet: View {
 
             TodoFormSection(title: todoLocalized("todo.label.attachments")) {
                 AttachmentPicker(model: attachmentModel)
-                    .padding(DPSpacing.compact)
                     .background(DPColor.backgroundTertiary)
                     .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
             }
         }
-        .padding(DPSpacing.medium)
+        .padding(.horizontal, DPSpacing.medium)
+        .padding(.vertical, DPSpacing.compact)
+    }
+
+    private var titleField: some View {
+        VStack(alignment: .leading, spacing: DPSpacing.small) {
+            HStack(spacing: DPSpacing.extraSmall) {
+                Text(todoLocalized("todo.field.title"))
+                    .font(DPFont.bold(size: 14, relativeTo: .subheadline))
+                    .foregroundStyle(DPColor.textSecondary)
+                if showsStatusSelection {
+                    Text(verbatim: "*")
+                        .foregroundStyle(DPColor.danger)
+                }
+                Spacer(minLength: DPSpacing.small)
+                Text(verbatim: "\(draft.title.count)/50")
+                    .font(DPTypography.caption)
+                    .foregroundStyle(draft.title.count > 50 ? DPColor.danger : DPColor.textMuted)
+            }
+
+            TextField("", text: $draft.title, prompt: Text(todoLocalized("todo.field.title")))
+                .textInputAutocapitalization(.sentences)
+                .focused($focusedField, equals: .title)
+                .accessibilityIdentifier("todo.form.title")
+                .dpInputChrome(
+                    isFocused: focusedField == .title,
+                    isInvalid: draft.title.count > 50
+                )
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var statusPicker: some View {
+        let selectedStatus = TodoStatus.boardStatuses.contains(draft.status)
+            ? draft.status
+            : .todo
+
+        return Button {
+            guard !isBusy else { return }
+            isStatusMenuPresented.toggle()
+        } label: {
+            HStack(spacing: DPSpacing.extraSmall) {
+                Image(systemName: selectedStatus.systemImage)
+                    .font(.system(size: DPSize.iconSmall, weight: .semibold))
+                Text(todoLocalized(selectedStatus.shortTitleKey))
+                    .font(DPFont.bold(size: 13, relativeTo: .subheadline))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.down")
+                    .font(.system(size: 11, weight: .semibold))
+            }
+            .foregroundStyle(selectedStatus.color)
+            .padding(.horizontal, DPSpacing.small)
+            .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget, alignment: .leading)
+            .background(selectedStatus.softColor)
+            .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+            .overlay {
+                RoundedRectangle(cornerRadius: DPRadius.standard)
+                    .stroke(selectedStatus.color, lineWidth: DPChrome.borderWidth)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .popover(
+            isPresented: $isStatusMenuPresented,
+            attachmentAnchor: .rect(.bounds),
+            arrowEdge: .top
+        ) {
+            VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+                ForEach(TodoStatus.boardStatuses, id: \.rawValue) { status in
+                    Button {
+                        selectStatus(status)
+                    } label: {
+                        HStack(spacing: DPSpacing.small) {
+                            Image(systemName: status.systemImage)
+                                .font(.system(size: DPSize.iconSmall, weight: .semibold))
+                                .foregroundStyle(status.color)
+                            Text(todoLocalized(status.titleKey))
+                                .font(DPTypography.label)
+                                .foregroundStyle(status.color)
+                            Spacer(minLength: 0)
+                            if selectedStatus == status {
+                                Image(systemName: "checkmark")
+                                    .font(.system(size: DPSize.iconSmall, weight: .bold))
+                                    .foregroundStyle(status.color)
+                            }
+                        }
+                        .padding(.horizontal, DPSpacing.small)
+                        .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget, alignment: .leading)
+                        .background(
+                            selectedStatus == status
+                                ? status.softColor
+                                : DPColor.backgroundCard
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("todo.form.status.\(status.rawValue.lowercased())")
+                }
+            }
+            .padding(DPSpacing.small)
+            .frame(width: 192)
+            .background(DPColor.backgroundCard)
+            .presentationCompactAdaptation(.popover)
+        }
+        .accessibilityLabel(todoLocalized("todo.field.status"))
+        .accessibilityValue(todoLocalized(selectedStatus.titleKey))
+        .accessibilityIdentifier("todo.form.status")
+    }
+
+    private func selectStatus(_ status: TodoStatus) {
+        isStatusMenuPresented = false
+        guard showsStatusSelection, draft.status != status else { return }
+        draft.status = status
+        model.emitHaptic(.selection)
     }
 
     private var formFooter: some View {
