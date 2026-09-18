@@ -20,8 +20,12 @@ const props = withDefaults(defineProps<{
   modelValue: number[]
   friends: TaggableFriend[]
   selectedSummaries?: SelectedFriendSummary[]
+  alwaysExpanded?: boolean
+  appearance?: 'default' | 'flat'
 }>(), {
   selectedSummaries: () => [],
+  alwaysExpanded: false,
+  appearance: 'default',
 })
 
 const emit = defineEmits<{
@@ -31,9 +35,9 @@ const emit = defineEmits<{
 const { t, locale } = useI18n()
 const { confirm } = useSwal()
 const searchQuery = ref('')
-const isExpanded = ref(props.modelValue.length > 0)
+const isInternallyExpanded = ref(props.modelValue.length > 0)
+const isExpanded = computed(() => props.alwaysExpanded || isInternallyExpanded.value)
 const railRef = ref<HTMLElement | null>(null)
-const selectedBlockRef = ref<HTMLElement | null>(null)
 const canScrollPrev = ref(false)
 const canScrollNext = ref(false)
 
@@ -55,8 +59,8 @@ const selectedFriends = computed(() => buildSelectedEntries({
 const railFriends = computed(() => filterTaggableFriends(sortedFriends.value, searchQuery.value))
 
 watch(selectedCount, (count, previousCount) => {
-  if (count > 0 && previousCount === 0) {
-    isExpanded.value = true
+  if (count > 0 && previousCount === 0 && !props.alwaysExpanded) {
+    isInternallyExpanded.value = true
   }
 })
 
@@ -97,18 +101,8 @@ async function clearSelection() {
   emit('update:modelValue', [])
 }
 
-async function openSelector() {
-  isExpanded.value = true
-  await nextTick()
-
-  if (!window.matchMedia('(max-width: 639px)').matches) {
-    return
-  }
-
-  selectedBlockRef.value?.scrollIntoView({
-    behavior: 'smooth',
-    block: 'nearest',
-  })
+function openSelector() {
+  isInternallyExpanded.value = true
 }
 
 function updateRailHints() {
@@ -152,7 +146,12 @@ function getSubtitle(friend: TaggableFriend) {
 </script>
 
 <template>
-  <section :class="isExpanded ? 'friend-tag-selector space-y-2 rounded-2xl border border-dp-border-primary bg-dp-bg-card p-2.5 sm:space-y-2.5 sm:p-4' : ''">
+  <section
+    :class="[
+      isExpanded ? 'friend-tag-selector space-y-2 rounded-2xl border border-dp-border-primary bg-dp-bg-card p-2.5 sm:space-y-2.5 sm:p-4' : '',
+      { 'friend-tag-selector--flat': isExpanded && appearance === 'flat' },
+    ]"
+  >
     <button
       v-if="!isExpanded"
       type="button"
@@ -258,7 +257,7 @@ function getSubtitle(friend: TaggableFriend) {
         <p class="mt-1 text-xs text-dp-text-muted">{{ t('friendTagSelector.emptyDescription') }}</p>
       </div>
 
-      <div ref="selectedBlockRef" class="friend-tag-selector__selected">
+      <div class="friend-tag-selector__selected">
         <div class="friend-tag-selector__selected-header">
           <span class="text-xs font-semibold text-dp-text-secondary">
             {{ t('friendTagSelector.selectedCount', { count: selectedCount }) }}
@@ -276,7 +275,10 @@ function getSubtitle(friend: TaggableFriend) {
           </button>
         </div>
 
-        <div class="friend-tag-selector__chips">
+        <div
+          class="friend-tag-selector__chips"
+          :class="{ 'friend-tag-selector__chips--empty': selectedFriends.length === 0 }"
+        >
           <button
             v-for="friend in selectedFriends"
             :key="`chip-${friend.id}`"
@@ -305,6 +307,38 @@ function getSubtitle(friend: TaggableFriend) {
 </template>
 
 <style scoped>
+.friend-tag-selector {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.friend-tag-selector--flat {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0 !important;
+}
+
+.friend-tag-selector--flat .friend-tag-selector__rail-frame {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.friend-tag-selector--flat .friend-tag-selector__selected {
+  gap: 0.25rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+}
+
+.friend-tag-selector--flat .friend-tag-selector__chips--empty {
+  min-height: 0 !important;
+  padding-bottom: 0;
+}
+
 .friend-tag-selector__selected {
   display: flex;
   flex-direction: column;
@@ -646,6 +680,8 @@ function getSubtitle(friend: TaggableFriend) {
 
   .friend-tag-selector__search-input {
     min-height: 2.75rem;
+    /* iOS Safari zooms focused form controls below 16px and leaves the page enlarged. */
+    font-size: 1rem;
   }
 }
 </style>
