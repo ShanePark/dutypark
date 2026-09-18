@@ -7,6 +7,16 @@ import todoDetailModal from '@/components/duty/TodoDetailModal.vue?raw'
 import dayDetailModal from '@/components/duty/DayDetailModal.vue?raw'
 
 describe('duty calendar report entry points', () => {
+  it('keeps the other member identity usable beside the back control on mobile', () => {
+    expect(dutyView).toContain(':show-back="!isMyCalendar"')
+    expect(dutyHeaderControls).toMatch(
+      /v-if="showBack"[\s\S]*?class="calendar-nav-btn flex [^"]*w-4 min-w-4[^"]*sm:min-w-11/,
+    )
+    expect(dutyHeaderControls).not.toContain('hidden sm:flex')
+    expect(dutyHeaderControls).not.toContain('<ProfileAvatar v-if="!showBack"')
+    expect(dutyHeaderControls).toContain(':compact="true"')
+  })
+
   it('shows the member menu on other members calendars only', () => {
     expect(dutyView).toContain(':show-member-menu="!isMyCalendar"')
     expect(dutyView).toContain(':show-block="isLoggedIn && !isMyCalendar"')

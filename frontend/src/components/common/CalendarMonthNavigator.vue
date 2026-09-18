@@ -4,10 +4,13 @@ import { useI18n } from 'vue-i18n'
 import { ChevronLeft, ChevronRight, Undo2 } from '@lucide/vue'
 import { useDragClickGuard } from '@/composables/useDragClickGuard'
 
-const props = defineProps<{
+const props = withDefaults(defineProps<{
   currentYear: number
   currentMonth: number
-}>()
+  compact?: boolean
+}>(), {
+  compact: false,
+})
 
 const emit = defineEmits<{
   (e: 'prev-month'): void
@@ -97,11 +100,15 @@ function handleMonthButtonClick() {
 </script>
 
 <template>
-  <div class="flex items-center justify-center gap-1 sm:gap-2">
+  <div
+    class="flex items-center justify-center gap-1 sm:gap-2"
+    :class="{ 'calendar-nav-compact': props.compact }"
+  >
     <button
       type="button"
       @click="emit('prev-month')"
       class="calendar-nav-arrow"
+      :class="{ 'calendar-nav-arrow-compact': props.compact }"
       :aria-label="t('common.calendar.previousMonth')"
     >
       <ChevronLeft class="h-6 w-6 sm:h-7 sm:w-7" />
@@ -117,6 +124,7 @@ function handleMonthButtonClick() {
         @pointerdown.capture="dragClickGuard.handlePointerDown"
         @click.capture="dragClickGuard.handleClick"
         class="calendar-nav-btn flex min-h-11 min-w-[5.5rem] touch-pan-y select-none items-center justify-center whitespace-nowrap rounded px-1 py-1 text-lg font-semibold cursor-pointer sm:min-w-[6.75rem] sm:px-3 sm:text-2xl"
+        :class="{ 'calendar-nav-month-compact': props.compact }"
       >
         {{ currentYear }}-{{ String(currentMonth).padStart(2, '0') }}
       </button>
@@ -136,6 +144,7 @@ function handleMonthButtonClick() {
       type="button"
       @click="emit('next-month')"
       class="calendar-nav-arrow"
+      :class="{ 'calendar-nav-arrow-compact': props.compact }"
       :aria-label="t('common.calendar.nextMonth')"
     >
       <ChevronRight class="h-6 w-6 sm:h-7 sm:w-7" />

@@ -1235,6 +1235,38 @@ html.dark {
     transform: scale(0.92);
 }
 
+/* The duty header has to fit the member identity, month controls and search slot on
+   narrow screens. Match the compact iOS month controls when that header opts in. */
+.calendar-nav-arrow-compact {
+    width: 2.25rem;
+    height: 2.25rem;
+}
+
+.calendar-nav-compact {
+    gap: 0;
+}
+
+.calendar-nav-month-compact {
+    min-width: 4.875rem;
+    font-size: 1rem;
+}
+
+@media (min-width: 640px) {
+    .calendar-nav-arrow-compact {
+        width: 3rem;
+        height: 3rem;
+    }
+
+    .calendar-nav-compact {
+        gap: 0.5rem;
+    }
+
+    .calendar-nav-month-compact {
+        min-width: 6.75rem;
+        font-size: 1.5rem;
+    }
+}
+
 /* "This month" speech bubble, pinned above the year-month button */
 .this-month-bubble {
     position: absolute;
