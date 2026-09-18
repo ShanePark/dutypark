@@ -40,6 +40,17 @@
         }
       },
       "entries": {
+        "pr-424": {
+          "title": "친구 순서 관리와 Todo·iPhone 경험 개선",
+          "summary": "백엔드와 웹·iPhone 앱에서 친구 순서와 완료 Todo 정리를 일관되게 지원하고, 첨부파일·캘린더 위젯과 iPhone 빌드 정보도 개선했습니다.",
+          "changes": [
+            "백엔드가 친구 고정 상태 대신 전체 친구 표시 순서를 저장·반환하고, 웹과 iPhone에서 친구 카드를 드래그해 순서를 저장할 수 있습니다.",
+            "친구 관리 화면을 웹과 iPhone에서 모바일 바텀시트·액션 메뉴, 드래그 피드백, 접근성 및 다국어 지원과 함께 정리했습니다.",
+            "완료 Todo를 한 번에 정리할 때 내가 만든 항목은 삭제하고 다른 사람이 나에게 태그한 항목은 태그만 제거하도록 백엔드, 웹, iPhone 흐름을 맞췄습니다.",
+            "웹 Todo 생성 모달과 친구 태그 선택, iPhone Todo 작성 및 첨부파일 선택(카메라·사진·파일)을 개선했습니다.",
+            "iPhone 캘린더 위젯의 날짜·근무 색상·공휴일·Todo 상태 표시를 다듬고, 설정에서 앱 버전·빌드 날짜·커밋 정보를 확인할 수 있게 했습니다."
+          ]
+        },
         "pr-423": {
           "title": "iPhone 카카오톡·네이버 앱 로그인 지원",
           "summary": "iPhone에서 카카오톡이나 네이버 앱으로 로그인하고 계정을 연동할 수 있습니다.",
@@ -2318,6 +2329,17 @@
         }
       },
       "entries": {
+        "pr-424": {
+          "title": "Friend ordering and Todo, iPhone experience improvements",
+          "summary": "The backend, web, and iPhone app now keep friend ordering and completed-Todo cleanup consistent, with improved attachments, calendar widgets, and iPhone build details.",
+          "changes": [
+            "The backend stores and returns one display order for all friends instead of a pinned state, and the web and iPhone app let you save the order by dragging friend cards.",
+            "Refresh friend management on the web and iPhone with a mobile bottom sheet, action menus, drag feedback, accessibility, and localized support.",
+            "When clearing completed Todos, delete items you created and remove only your tag from items created by someone else across the backend, web, and iPhone flows.",
+            "Improve the web Todo creation modal and friend tag selection, along with iPhone Todo creation and attachment sources for the camera, photo library, and files.",
+            "Refine iPhone calendar widget dates, duty colors, holidays, and Todo status badges, and show the app version, build date, and commit information in Settings."
+          ]
+        },
         "pr-423": {
           "title": "KakaoTalk and Naver app login on iPhone",
           "summary": "Sign in and link accounts through the KakaoTalk or Naver app on iPhone.",
@@ -4559,6 +4581,24 @@
     }
   },
   "items": [
+    {
+      "id": "pr-424",
+      "version": "2026.09.19",
+      "date": "2026-09-19",
+      "pr": 424,
+      "url": "https://github.com/ShanePark/dutypark/pull/424",
+      "category": "feature",
+      "areas": [
+        "attachments",
+        "calendar",
+        "dashboard",
+        "docs",
+        "friends",
+        "infra",
+        "todo",
+        "ui"
+      ]
+    },
     {
       "id": "pr-423",
       "version": "2026.09.16",
