@@ -354,7 +354,61 @@ struct SettingsView: View {
             settingsNavigationLink("settings.releaseNotes", icon: "clock.arrow.circlepath") {
                 PublicReleaseNotesView()
             }
+            if let buildMetadata = AppBuildMetadata.current {
+                buildMetadataSection(buildMetadata)
+            }
         }
+    }
+
+    private func buildMetadataSection(_ metadata: AppBuildMetadata) -> some View {
+        VStack(alignment: .leading, spacing: DPSpacing.small) {
+            Divider()
+                .overlay(DPColor.borderPrimary)
+            Text(SettingsLocalization.string("settings.buildInfo.title"))
+                .font(DPTypography.caption)
+                .foregroundStyle(DPColor.textMuted)
+            buildMetadataRow(
+                labelKey: "settings.buildInfo.version",
+                value: metadata.versionText,
+                identifier: "settings.buildInfo.version"
+            )
+            if let dateText = metadata.dateText {
+                buildMetadataRow(
+                    labelKey: "settings.buildInfo.date",
+                    value: dateText,
+                    identifier: "settings.buildInfo.date"
+                )
+            }
+            if let commitText = metadata.commitText(locale: AppLocalization.locale) {
+                buildMetadataRow(
+                    labelKey: "settings.buildInfo.commit",
+                    value: commitText,
+                    identifier: "settings.buildInfo.commit"
+                )
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("settings.buildInfo")
+    }
+
+    private func buildMetadataRow(
+        labelKey: String,
+        value: String,
+        identifier: String
+    ) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: DPSpacing.small) {
+            SettingsLocalization.text(labelKey)
+                .font(DPTypography.caption)
+                .foregroundStyle(DPColor.textMuted)
+            Spacer(minLength: DPSpacing.small)
+            Text(verbatim: value)
+                .font(DPTypography.caption)
+                .foregroundStyle(DPColor.textSecondary)
+                .multilineTextAlignment(.trailing)
+                .textSelection(.enabled)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier(identifier)
     }
 
     private var visibilityBinding: Binding<Visibility> {

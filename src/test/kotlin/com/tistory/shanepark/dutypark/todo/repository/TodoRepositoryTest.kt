@@ -3,6 +3,7 @@ package com.tistory.shanepark.dutypark.todo.repository
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.todo.domain.entity.Todo
 import com.tistory.shanepark.dutypark.todo.domain.entity.TodoStatus
+import jakarta.persistence.LockModeType
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
@@ -11,6 +12,8 @@ import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager
+import org.springframework.data.jpa.repository.Lock
+import java.util.UUID
 
 @DataJpaTest
 @DisplayName("TodoRepository Tests")
@@ -31,6 +34,24 @@ class TodoRepositoryTest {
         member2 = entityManager.persist(Member(name = "user2", password = "pass", email = "user2@test.com"))
         entityManager.flush()
         entityManager.clear()
+    }
+
+    @Test
+    fun `findByIdForUpdate uses a pessimistic write lock`() {
+        val method = TodoRepository::class.java.getMethod("findByIdForUpdate", UUID::class.java)
+
+        assertThat(method.getAnnotation(Lock::class.java).value)
+            .isEqualTo(LockModeType.PESSIMISTIC_WRITE)
+    }
+
+    @Test
+    fun `completed cleanup lookup uses a pessimistic write lock`() {
+        val method = TodoRepository::class.java.methods.single {
+            it.name == "findAllByIdAndStatusAndAccessibleByMemberForUpdate"
+        }
+
+        assertThat(method.getAnnotation(Lock::class.java).value)
+            .isEqualTo(LockModeType.PESSIMISTIC_WRITE)
     }
 
     @Nested
@@ -193,6 +214,29 @@ class TodoRepositoryTest {
             // member1's tag (-50) must not leak into member2's query.
             assertThat(result).isEqualTo(4)
         }
+    }
+
+    @Test
+    fun `should find requested done todos owned by or tagged for member`() {
+        val ownDone = Todo(member1, "Own done", "Content", 0, TodoStatus.DONE)
+        val taggedDone = Todo(member2, "Tagged done", "Content", 0, TodoStatus.DONE).also {
+            it.addTag(member1)
+        }
+        val untaggedDone = Todo(member2, "Other done", "Content", 0, TodoStatus.DONE)
+        val taggedTodo = Todo(member2, "Tagged active", "Content", 0, TodoStatus.TODO).also {
+            it.addTag(member1)
+        }
+        todoRepository.saveAll(listOf(ownDone, taggedDone, untaggedDone, taggedTodo))
+        entityManager.flush()
+        entityManager.clear()
+
+        val result = todoRepository.findAllByIdAndStatusAndAccessibleByMemberForUpdate(
+            ids = listOf(ownDone.id, taggedDone.id, untaggedDone.id, taggedTodo.id),
+            member = member1,
+            status = TodoStatus.DONE,
+        )
+
+        assertThat(result.map { it.id }).containsExactlyInAnyOrder(ownDone.id, taggedDone.id)
     }
 
     @Nested

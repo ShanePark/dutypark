@@ -78,8 +78,8 @@ final class DragFeedbackTests: XCTestCase {
     /// what keeps a lift to one haptic instead of one per drag update.
     func testEveryDragSurfaceUsesTheSharedFeedbackModifier() throws {
         let expectations = [
-            "Dutypark/Features/Home/HomeView.swift": "dpDragFeedback(dragID: draggedPinnedFriendID)",
-            "Dutypark/Features/Social/SocialView.swift": "dpDragFeedback(dragID: draggedPinnedFriendID)",
+            "Dutypark/Features/Home/HomeView.swift": "dpDragFeedback(dragID: draggedFriendID)",
+            "Dutypark/Features/Social/SocialView.swift": "dpDragFeedback(dragID: draggedFriendID)",
             "Dutypark/Features/Todo/TodoView.swift": "dpDragFeedback(dragID: draggedTodoID)"
         ]
 
@@ -90,7 +90,7 @@ final class DragFeedbackTests: XCTestCase {
 
     }
 
-    /// The pinned friend drag keeps the pressed control alive under the finger, so
+    /// The friend drag keeps the pressed control alive under the finger, so
     /// the rationale for swallowing the lift that ends a drag has to stay next to
     /// the code that does it on both friend surfaces.
     func testTapSuppressionRationaleStaysDocumented() throws {

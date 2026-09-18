@@ -1,7 +1,9 @@
+import AVFoundation
 import Combine
 import PhotosUI
 import SwiftUI
 import UniformTypeIdentifiers
+import UIKit
 
 @MainActor
 final class AttachmentPickerModel: ObservableObject {
@@ -177,6 +179,8 @@ nonisolated enum AttachmentPickerFailure: String, Identifiable, Sendable {
     case blockedExtension
     case uploadFailed
     case discardFailed
+    case cameraUnavailable
+    case cameraPermissionDenied
 
     var id: String { rawValue }
 
@@ -189,6 +193,8 @@ nonisolated enum AttachmentPickerFailure: String, Identifiable, Sendable {
         case .blockedExtension: "attachment.error.blockedExtension"
         case .uploadFailed: "attachment.error.upload"
         case .discardFailed: "attachment.error.discard"
+        case .cameraUnavailable: "attachment.error.cameraUnavailable"
+        case .cameraPermissionDenied: "attachment.error.cameraPermissionDenied"
         }
     }
 
@@ -246,7 +252,10 @@ struct AttachmentPicker: View {
     @ObservedObject var model: AttachmentPickerModel
 
     @State private var photoItems: [PhotosPickerItem] = []
+    @State private var isShowingPhotoPicker = false
     @State private var isImportingFiles = false
+    @State private var isShowingCamera = false
+    @State private var cameraImage: UIImage?
     @State private var uploadCoordinator = AttachmentUploadCoordinator()
 
     var body: some View {
@@ -321,6 +330,12 @@ struct AttachmentPicker: View {
                 pickerRow(attachment, at: index)
             }
         }
+        .photosPicker(
+            isPresented: $isShowingPhotoPicker,
+            selection: $photoItems,
+            maxSelectionCount: 10,
+            matching: .any(of: [.images, .videos])
+        )
         .fileImporter(
             isPresented: $isImportingFiles,
             allowedContentTypes: [.item],
@@ -333,6 +348,14 @@ struct AttachmentPicker: View {
             guard !items.isEmpty else { return }
             photoItems = []
             startUpload { await add(photoItems: items) }
+        }
+        .sheet(isPresented: $isShowingCamera, onDismiss: cameraPickerDidDismiss) {
+            AttachmentCameraPicker { image in
+                cameraImage = image
+                isShowingCamera = false
+            }
+            .presentationDetents([.large])
+            .ignoresSafeArea()
         }
         .alert(
             AttachmentLocalization.text("attachment.error.title"),
@@ -356,55 +379,68 @@ struct AttachmentPicker: View {
     }
 
     private var attachmentActionButtons: some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: DPSpacing.small) {
-                photoPickerButton
-                    .fixedSize(horizontal: true, vertical: false)
-                filePickerButton
-                    .fixedSize(horizontal: true, vertical: false)
+        Menu {
+            Button {
+                choose(.camera)
+            } label: {
+                Label(
+                    AttachmentLocalization.text("attachment.action.camera"),
+                    systemImage: "camera.fill"
+                )
             }
+            .disabled(!UIImagePickerController.isSourceTypeAvailable(.camera))
+            .accessibilityIdentifier("attachment.source.camera")
 
-            VStack(spacing: DPSpacing.small) {
-                photoPickerButton
-                    .frame(maxWidth: .infinity)
-                filePickerButton
-                    .frame(maxWidth: .infinity)
+            Button {
+                choose(.photos)
+            } label: {
+                Label(
+                    AttachmentLocalization.text("attachment.action.photoLibrary"),
+                    systemImage: "photo.on.rectangle"
+                )
             }
-        }
-    }
+            .accessibilityIdentifier("attachment.source.photos")
 
-    private var photoPickerButton: some View {
-        PhotosPicker(
-            selection: $photoItems,
-            maxSelectionCount: 10,
-            matching: .any(of: [.images, .videos])
-        ) {
-            Label(
-                AttachmentLocalization.text("attachment.action.photos"),
-                systemImage: "photo.on.rectangle"
-            )
-            .fixedSize(horizontal: true, vertical: false)
-            .frame(maxWidth: .infinity)
-        }
-        .buttonStyle(DPPrimaryButtonStyle())
-        .disabled(model.isBusy)
-        .accessibilityIdentifier("attachment.photoPicker")
-    }
-
-    private var filePickerButton: some View {
-        Button {
-            isImportingFiles = true
+            Button {
+                choose(.files)
+            } label: {
+                Label(
+                    AttachmentLocalization.text("attachment.action.fileUpload"),
+                    systemImage: "folder"
+                )
+            }
+            .accessibilityIdentifier("attachment.source.files")
         } label: {
-            Label(
-                AttachmentLocalization.text("attachment.action.files"),
-                systemImage: "folder"
-            )
-            .fixedSize(horizontal: true, vertical: false)
-            .frame(maxWidth: .infinity)
+            HStack(spacing: DPSpacing.compact) {
+                Image(systemName: "paperclip")
+                    .font(.system(size: DPSize.icon, weight: .semibold))
+                    .foregroundStyle(DPColor.accent)
+                    .frame(width: 32, height: 32)
+                    .background(DPColor.accentSoft)
+                    .clipShape(Circle())
+
+                Text(AttachmentLocalization.text("attachment.action.add"))
+                    .font(DPTypography.bodyMedium)
+                    .foregroundStyle(DPColor.textPrimary)
+
+                Spacer(minLength: DPSpacing.small)
+
+                Image(systemName: "chevron.down")
+                    .font(.system(size: DPSize.iconSmall, weight: .semibold))
+                    .foregroundStyle(DPColor.textMuted)
+            }
+            .padding(.horizontal, DPSpacing.compact)
+            .frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
+            .background(DPColor.backgroundCard)
+            .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
+            .overlay {
+                RoundedRectangle(cornerRadius: DPRadius.standard)
+                    .stroke(DPColor.borderPrimary, lineWidth: DPChrome.borderWidth)
+            }
         }
-        .buttonStyle(DPOutlineButtonStyle())
         .disabled(model.isBusy)
-        .accessibilityIdentifier("attachment.filePicker")
+        .accessibilityIdentifier("attachment.add")
+        .accessibilityLabel(AttachmentLocalization.text("attachment.action.add"))
     }
 
     private func pickerRow(_ attachment: AttachmentDTO, at index: Int) -> some View {
@@ -491,8 +527,111 @@ struct AttachmentPicker: View {
         }
     }
 
+    private func add(cameraImage: UIImage) async {
+        await model.add(totalFileCount: 1) { _ in
+            do {
+                return try AttachmentFileLoader.load(from: cameraImage)
+            } catch let error as AttachmentUploadError {
+                throw error
+            } catch {
+                throw AttachmentUploadError.imageConversionFailed
+            }
+        }
+    }
+
+    private enum AttachmentSource {
+        case camera
+        case photos
+        case files
+    }
+
+    private func choose(_ source: AttachmentSource) {
+        guard !model.isBusy else { return }
+        DPHapticCenter.shared.emit(.selection)
+
+        switch source {
+        case .camera:
+            requestCameraAccess()
+        case .photos:
+            isShowingPhotoPicker = true
+        case .files:
+            isImportingFiles = true
+        }
+    }
+
+    private func requestCameraAccess() {
+        guard UIImagePickerController.isSourceTypeAvailable(.camera) else {
+            model.recordFailure(.cameraUnavailable)
+            return
+        }
+
+        Task { @MainActor in
+            let authorized: Bool
+            switch AVCaptureDevice.authorizationStatus(for: .video) {
+            case .authorized:
+                authorized = true
+            case .notDetermined:
+                authorized = await AVCaptureDevice.requestAccess(for: .video)
+            case .denied, .restricted:
+                authorized = false
+            @unknown default:
+                authorized = false
+            }
+
+            guard authorized else {
+                model.recordFailure(.cameraPermissionDenied)
+                return
+            }
+            guard !model.isBusy else { return }
+            isShowingCamera = true
+        }
+    }
+
+    private func cameraPickerDidDismiss() {
+        guard let cameraImage else { return }
+        self.cameraImage = nil
+        startUpload { await add(cameraImage: cameraImage) }
+    }
+
     private func startUpload(_ operation: @escaping @MainActor () async -> Void) {
         uploadCoordinator.start(model: model, operation: operation)
+    }
+}
+
+private struct AttachmentCameraPicker: UIViewControllerRepresentable {
+    let completion: (UIImage?) -> Void
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(completion: completion)
+    }
+
+    func makeUIViewController(context: Context) -> UIImagePickerController {
+        let picker = UIImagePickerController()
+        picker.sourceType = .camera
+        picker.cameraCaptureMode = .photo
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_ uiViewController: UIImagePickerController, context: Context) {}
+
+    final class Coordinator: NSObject, UINavigationControllerDelegate, UIImagePickerControllerDelegate {
+        let completion: (UIImage?) -> Void
+
+        init(completion: @escaping (UIImage?) -> Void) {
+            self.completion = completion
+        }
+
+        func imagePickerController(
+            _ picker: UIImagePickerController,
+            didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]
+        ) {
+            completion(info[.originalImage] as? UIImage)
+        }
+
+        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
+            completion(nil)
+        }
     }
 }
 

@@ -44,7 +44,7 @@ class FriendService(
         val member = loginMemberToMember(loginMember)
         val relations = friendRelationRepository.findAllByMember(member)
         return relations
-            .sortedWith(compareBy({ it.pinOrder ?: Long.MAX_VALUE }, { it.friend.name }))
+            .sortedWith(compareBy({ it.displayOrder ?: Long.MAX_VALUE }, { it.friend.name }))
             .map { it.toFriendDto() }
     }
 
@@ -345,31 +345,14 @@ class FriendService(
         }
     }
 
-    fun pinFriend(loginMember: LoginMember, friendId: Long) {
-        val login = loginMemberToMember(loginMember)
-        val friend = memberRepository.findById(friendId).orElseThrow()
-        friendRelationRepository.findByMemberAndFriend(member = login, friend = friend)?.let {
-            it.pinOrder = System.currentTimeMillis()
-        } ?: throw BadRequestException("friend.notFriend")
-    }
-
-    fun unpinFriend(loginMember: LoginMember, friendId: Long) {
-        val login = loginMemberToMember(loginMember)
-        val friend = memberRepository.findById(friendId).orElseThrow()
-        friendRelationRepository.findByMemberAndFriend(member = login, friend = friend)?.let {
-            it.pinOrder = null
-        } ?: throw BadRequestException("friend.notFriend")
-    }
-
-    fun updateFriendsPin(loginMember: LoginMember, friendIds: List<Long>) {
+    fun updateFriendsOrder(loginMember: LoginMember, friendIds: List<Long>) {
         val login = loginMemberToMember(loginMember)
         val friends = memberRepository.findAllById(friendIds)
         val friendMap = friendRelationRepository.findAllByMemberAndFriendIn(login, friends)
-            .filter { it.pinOrder != null }
             .associateBy { it.friend.id }
         friendIds.forEachIndexed { index, friendId ->
             friendMap[friendId]?.let {
-                it.pinOrder = index.toLong() + 1
+                it.displayOrder = index.toLong() + 1
             }
         }
     }

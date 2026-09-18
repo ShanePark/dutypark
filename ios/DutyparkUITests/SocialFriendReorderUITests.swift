@@ -1,12 +1,12 @@
 import XCTest
 
-final class SocialPinnedFriendReorderUITests: XCTestCase {
+final class SocialFriendReorderUITests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
     }
 
     @MainActor
-    func testLongPressDragReordersSixPinnedFriendsAndSavesOnceWithoutReload() {
+    func testLongPressDragReordersSixFriendsAndSavesOnceWithoutReload() {
         let app = launchSocial()
         let list = app.descendants(matching: .any)["social.list"]
         let first = app.buttons["social.friend.31"]
@@ -31,16 +31,16 @@ final class SocialPinnedFriendReorderUITests: XCTestCase {
         let saveCount = app.staticTexts["social.reorder.saveCount"]
         XCTAssertEqual(saveCount.label, "1")
         XCTAssertFalse(app.descendants(matching: .any)["screen.calendar"].exists)
-        let sixthPinButton = app.buttons["social.friend.36.pin"]
-        for _ in 0..<4 where !sixthPinButton.exists {
+        let sixthFriend = app.buttons["social.friend.36"]
+        for _ in 0..<4 where !sixthFriend.exists {
             list.swipeUp()
         }
-        XCTAssertTrue(sixthPinButton.waitForExistence(timeout: 5))
-        capture("social-six-pinned-reordered")
+        XCTAssertTrue(sixthFriend.waitForExistence(timeout: 5))
+        capture("social-six-friends-reordered")
     }
 
     @MainActor
-    func testPinnedCardVerticalSwipeScrollsWithoutReorderOrCalendarNavigation() {
+    func testFriendCardVerticalSwipeScrollsWithoutReorderOrCalendarNavigation() {
         let app = launchSocial()
         let list = app.descendants(matching: .any)["social.list"]
         let first = app.buttons["social.friend.31"]
@@ -56,34 +56,19 @@ final class SocialPinnedFriendReorderUITests: XCTestCase {
         XCTAssertTrue(list.exists)
         XCTAssertEqual(app.staticTexts["social.reorder.saveCount"].label, "0")
         XCTAssertFalse(app.descendants(matching: .any)["screen.calendar"].exists)
-        capture("social-pinned-card-vertical-swipe")
+        capture("social-friend-card-vertical-swipe")
     }
 
     @MainActor
-    func testPinButtonDoesNotNavigateAndPinnedCardTapStillOpensCalendar() {
+    func testFriendCardTapOpensCalendar() {
         let app = launchSocial()
-        let pinButton = app.buttons["social.friend.31.pin"]
-        XCTAssertTrue(pinButton.waitForExistence(timeout: 10))
-
-        pinButton.tap()
-
-        XCTAssertFalse(app.descendants(matching: .any)["screen.calendar"].exists)
-        XCTAssertTrue(app.descendants(matching: .any)["social.list"].exists)
-
-        let cancelButton = app.buttons["dp.confirmation.cancel"]
-        let confirmButton = app.buttons["dp.confirmation.confirm"]
-        XCTAssertTrue(cancelButton.waitForExistence(timeout: 10))
-        XCTAssertTrue(confirmButton.exists)
-        cancelButton.tap()
-        XCTAssertTrue(confirmButton.waitForNonExistence(timeout: 5))
-
-        let pinnedCard = app.buttons["social.friend.32"]
-        XCTAssertTrue(pinnedCard.waitForExistence(timeout: 10))
-        pinnedCard.tap()
+        let friendCard = app.buttons["social.friend.31"]
+        XCTAssertTrue(friendCard.waitForExistence(timeout: 10))
+        friendCard.tap()
         XCTAssertTrue(
             app.descendants(matching: .any)["screen.calendar.member"].waitForExistence(timeout: 10)
         )
-        capture("social-pinned-card-calendar")
+        capture("social-friend-card-calendar")
     }
 
     @MainActor

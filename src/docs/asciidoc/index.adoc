@@ -312,25 +312,9 @@ operation::friends/unfriend[]
 
 operation::friends/unfriend-bad-request[]
 
-=== Pin Friend
+=== Update Friend Order
 
-operation::friends/pin[]
-
-==== Pin Friend [Bad Request]
-
-operation::friends/pin-bad-request[]
-
-=== Unpin Friend
-
-operation::friends/unpin[]
-
-==== Unpin Friend [Bad Request]
-
-operation::friends/unpin-bad-request[]
-
-=== Update Pin Order
-
-operation::friends/update-pin-order[]
+operation::friends/update-order[]
 
 === Send Family Request
 

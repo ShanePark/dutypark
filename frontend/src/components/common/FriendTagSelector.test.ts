@@ -75,16 +75,48 @@ describe('FriendTagSelector expanded layout (D8)', () => {
     expect(ruleFor('.friend-tag-selector__chips')).toContain('min-height: 2rem')
   })
 
-  it('scrolls the selected summary into view after opening on mobile', () => {
-    expect(template).toContain('ref="selectedBlockRef"')
-    expect(script).toContain("window.matchMedia('(max-width: 639px)').matches")
-    expect(script).toContain("behavior: 'smooth'")
-    expect(script).toContain("block: 'nearest'")
+  it('keeps the page position stable when the inline selector opens', () => {
+    expect(template).not.toContain('ref="selectedBlockRef"')
+    expect(script).not.toContain('scrollIntoView')
+    expect(script).not.toContain("window.matchMedia('(max-width: 639px)').matches")
+  })
+
+  it('keeps the expanded selector within its grid column', () => {
+    const selectorRule = ruleFor('.friend-tag-selector')
+    expect(selectorRule).toContain('width: 100%')
+    expect(selectorRule).toContain('min-width: 0')
+    expect(selectorRule).toContain('max-width: 100%')
+  })
+
+  it('uses a 16px search input on mobile to prevent browser auto-zoom', () => {
+    const mobileStyles = style.slice(style.indexOf('@media (max-width: 639px)'))
+    expect(mobileStyles).toMatch(/\.friend-tag-selector__search-input \{[\s\S]*?font-size:\s*1rem;/)
   })
 
   it('keeps the rail scroll hints wired to the rail itself, not to the block order', () => {
     expect(template).toContain('@scroll.passive="updateRailHints"')
     expect(script).toContain('watch([railFriends, isExpanded]')
     expect(script).toContain("window.addEventListener('resize', updateRailHints)")
+  })
+})
+
+describe('FriendTagSelector presentation modes (D9)', () => {
+  it('supports an always-expanded inline mode without changing the default schedule behavior', () => {
+    expect(script).toContain('alwaysExpanded?: boolean')
+    expect(script).toContain('alwaysExpanded: false')
+    expect(script).toContain('appearance?: \'default\' | \'flat\'')
+    expect(script).toContain("appearance: 'default'")
+    expect(script).toContain('const isInternallyExpanded = ref(props.modelValue.length > 0)')
+    expect(script).toContain('const isExpanded = computed(() => props.alwaysExpanded || isInternallyExpanded.value)')
+    expect(script).toContain('count > 0 && previousCount === 0 && !props.alwaysExpanded')
+    expect(template).toContain("'friend-tag-selector--flat': isExpanded && appearance === 'flat'")
+  })
+
+  it('flattens the Todo presentation while preserving the selected card cues', () => {
+    expect(ruleFor('.friend-tag-selector--flat')).toMatch(/border:\s*0/)
+    expect(ruleFor('.friend-tag-selector--flat .friend-tag-selector__rail-frame')).toMatch(/border:\s*0/)
+    expect(ruleFor('.friend-tag-selector--flat .friend-tag-selector__selected')).toMatch(/background:\s*transparent/)
+    expect(template).toContain("'friend-tag-selector__chips--empty': selectedFriends.length === 0")
+    expect(ruleFor('.friend-tag-selector--flat .friend-tag-selector__chips--empty')).toMatch(/min-height:\s*0\s*!important/)
   })
 })

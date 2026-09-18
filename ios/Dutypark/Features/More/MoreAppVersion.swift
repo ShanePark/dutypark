@@ -3,9 +3,18 @@ import Foundation
 /// Version footer for the "more" tab. It shows the marketing version used for the release.
 nonisolated enum MoreAppVersion {
     static var displayText: String? {
-        displayText(
-            shortVersion: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String,
-            build: Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String
+        displayText(metadata: AppBuildMetadata.current)
+    }
+
+    static func displayText(
+        metadata: AppBuildMetadata?,
+        locale: Locale? = nil
+    ) -> String? {
+        guard let metadata else { return nil }
+        return displayText(
+            shortVersion: metadata.shortVersion,
+            build: metadata.buildNumber,
+            locale: locale
         )
     }
 

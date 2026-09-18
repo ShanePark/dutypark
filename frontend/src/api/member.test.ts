@@ -6,6 +6,7 @@ vi.mock('./client', () => ({
   default: {
     get: vi.fn(),
     delete: vi.fn(),
+    patch: vi.fn(),
   },
 }))
 
@@ -16,6 +17,7 @@ import {
   getSocialAccountUnlinkErrorKey,
   getVisibleSocialAccountProviders,
   isSocialAccountConnected,
+  friendApi,
   memberApi,
   refreshAppleLinkMemberState,
   type SocialAccountProvider,
@@ -75,6 +77,18 @@ describe('member social account API contract', () => {
       expect(apiClient.delete).toHaveBeenCalledWith(`/members/me/social-accounts/${provider}`)
     },
   )
+})
+
+describe('friend order API contract', () => {
+  it('updates the complete display order through the order endpoint', async () => {
+    vi.mocked(apiClient.patch).mockResolvedValue({ data: undefined })
+
+    await friendApi.updateFriendsOrder([3, 1, 2])
+
+    expect(apiClient.patch).toHaveBeenCalledWith('/friends/order', [3, 1, 2])
+    expect(friendApi).not.toHaveProperty('pinFriend')
+    expect(friendApi).not.toHaveProperty('unpinFriend')
+  })
 })
 
 describe('Apple link member state refresh', () => {

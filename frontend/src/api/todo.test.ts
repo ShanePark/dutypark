@@ -14,13 +14,16 @@ describe('todo bulk cleanup API contract', () => {
     vi.clearAllMocks()
   })
 
-  it('sends the selected completed todo IDs and returns the deleted count', async () => {
-    vi.mocked(apiClient.delete).mockResolvedValue({ data: { count: 2 } })
+  it('sends all selected completed todo IDs and returns both cleanup counts', async () => {
+    vi.mocked(apiClient.delete).mockResolvedValue({ data: { deletedCount: 2, untaggedCount: 1 } })
 
-    await expect(todoApi.deleteCompletedTodos(['todo-1', 'todo-2'])).resolves.toEqual({ count: 2 })
+    await expect(todoApi.deleteCompletedTodos(['todo-1', 'todo-2', 'todo-3'])).resolves.toEqual({
+      deletedCount: 2,
+      untaggedCount: 1,
+    })
 
     expect(apiClient.delete).toHaveBeenCalledWith('/todos/completed', {
-      data: { todoIds: ['todo-1', 'todo-2'] },
+      data: { todoIds: ['todo-1', 'todo-2', 'todo-3'] },
     })
   })
 })

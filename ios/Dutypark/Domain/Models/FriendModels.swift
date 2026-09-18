@@ -67,7 +67,9 @@ nonisolated struct FriendDTO: Codable, Equatable, Sendable {
     let hasProfilePhoto: Bool
     let profilePhotoVersion: Int64
     let isFamily: Bool
-    let pinOrder: Int64?
+    /// The user's order for this friend. A nil value means the server has no
+    /// persisted order yet; clients fall back to their stable default order.
+    let displayOrder: Int64?
 }
 
 nonisolated struct FriendRequestDTO: Codable, Equatable, Sendable {

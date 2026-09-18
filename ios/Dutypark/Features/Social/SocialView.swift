@@ -8,23 +8,24 @@ struct SocialView: View {
     @State private var confirmation: SocialConfirmation?
     @State private var isPerformingConfirmation = false
     @State private var actionCandidate: ActionCandidate?
+    @State private var pendingFriendAction: SocialConfirmation?
     /// Content buttons dismiss through the overlay's authorized closure. The
     /// overlay calls `onDismiss` after the animation for every dismissal source,
     /// so this flag keeps an explicit close from producing two routine ticks.
     @State private var modalDismissHapticSent = false
-    @State private var inlinePinnedOrder: [MemberID]?
-    @State private var draggedPinnedFriendID: MemberID?
+    @State private var inlineFriendOrder: [MemberID]?
+    @State private var draggedFriendID: MemberID?
     /// The card the finger is currently down on, as reported by the reorder
     /// recognizer. Only the press progress ring reads it.
-    @State private var pressedPinnedFriendID: MemberID?
-    @State private var pinnedDragLocation: CGPoint?
-    @State private var pinnedDragPreviewSize: CGSize?
-    @State private var pinnedDragGrabOffset: CGSize?
-    @State private var pinnedFriendDropTargets: [DPPinnedFriendDropTarget] = []
-    @State private var pinnedDragReferenceTargets: [DPPinnedFriendDropTarget] = []
-    @State private var pinnedDragOriginalOrder: [MemberID] = []
+    @State private var pressedFriendID: MemberID?
+    @State private var friendDragLocation: CGPoint?
+    @State private var friendDragPreviewSize: CGSize?
+    @State private var friendDragGrabOffset: CGSize?
+    @State private var friendDropTargets: [DPFriendDropTarget] = []
+    @State private var friendDragReferenceTargets: [DPFriendDropTarget] = []
+    @State private var friendDragOriginalOrder: [MemberID] = []
     @State private var dragSuppressedFriendID: MemberID?
-    @State private var isSavingPinnedOrder = false
+    @State private var isSavingFriendOrder = false
 
     private let onOpenCalendar: (MemberID) -> Void
 
@@ -62,17 +63,17 @@ struct SocialView: View {
         .refreshable { await viewModel.refresh() }
         .overlay {
             ZStack(alignment: .topLeading) {
-                if let draggedPinnedFriendID,
-                   let pinnedDragLocation,
-                   let pinnedDragPreviewSize,
-                   let pinnedDragGrabOffset,
-                   let friend = displayedPinnedFriends.first(where: { $0.member.id == draggedPinnedFriendID }) {
+                if let draggedFriendID,
+                   let friendDragLocation,
+                   let friendDragPreviewSize,
+                   let friendDragGrabOffset,
+                   let friend = displayedFriends.first(where: { $0.member.id == draggedFriendID }) {
                     friendCard(friend, isDragPreview: true)
-                        .frame(width: pinnedDragPreviewSize.width, height: pinnedDragPreviewSize.height)
+                        .frame(width: friendDragPreviewSize.width, height: friendDragPreviewSize.height)
                         .dpDragLift(tint: DPColor.accent, cornerRadius: DPRadius.large)
                         .position(
-                            x: pinnedDragLocation.x - pinnedDragGrabOffset.width,
-                            y: pinnedDragLocation.y - pinnedDragGrabOffset.height
+                            x: friendDragLocation.x - friendDragGrabOffset.width,
+                            y: friendDragLocation.y - friendDragGrabOffset.height
                         )
                         .allowsHitTesting(false)
                         .accessibilityHidden(true)
@@ -83,6 +84,22 @@ struct SocialView: View {
                 }
 #endif
             }
+        }
+        .sheet(item: $actionCandidate, onDismiss: finishFriendActionSheetDismissal) { candidate in
+            FriendActionSheet(
+                friend: candidate.friend,
+                close: closeFriendActionSheet,
+                addFamily: { queueFriendAction(.sendFamily(candidate.friend)) },
+                removeFamily: { queueFriendAction(.removeFamily(candidate.friend)) },
+                removeFriend: { queueFriendAction(.removeFriend(candidate.friend)) },
+                onBlock: { queueFriendAction(.block(candidate.friend)) }
+            )
+            .presentationDetents([
+                .height(FriendActionSheetLayout.defaultHeight)
+            ])
+            .presentationDragIndicator(.hidden)
+            .presentationCornerRadius(DPRadius.extraLarge)
+            .presentationBackground(DPColor.backgroundCard)
         }
         .fullScreenCover(isPresented: $isHelpPresented) {
             DPModalOverlay(
@@ -160,9 +177,9 @@ struct SocialView: View {
     }
 
     /// Applied to the mutating controls only. Disabling the whole screen would
-    /// also tear down the pinned friend reorder gesture while a save is in flight.
+    /// also tear down the friend reorder gesture while a save is in flight.
     private var isMutationInFlight: Bool {
-        viewModel.isPerformingAction || isSavingPinnedOrder
+        viewModel.isPerformingAction || isSavingFriendOrder
     }
 
     private var friendContent: some View {
@@ -170,7 +187,7 @@ struct SocialView: View {
             // The panels stack eagerly: the friend panel's own `LazyVStack` keeps
             // the rows lazy, while a lazy outer stack made the scroll content
             // height unstable once a panel followed the friend list, and the
-            // pinned drop-target geometry then re-published forever.
+            // friend drop-target geometry then re-published forever.
             VStack(spacing: DPSpacing.large) {
                 if viewModel.hasPendingRequests {
                     requestsPanel
@@ -191,12 +208,12 @@ struct SocialView: View {
             .padding(.bottom, DPSpacing.large)
         }
         .coordinateSpace(name: SocialFriendDragCoordinateSpace.name)
-        .onPreferenceChange(DPPinnedFriendDropTargetPreferenceKey.self) {
-            pinnedFriendDropTargets = $0
+        .onPreferenceChange(DPFriendDropTargetPreferenceKey.self) {
+            friendDropTargets = $0
         }
-        .scrollDisabled(draggedPinnedFriendID != nil)
-        .dpDragFeedback(dragID: draggedPinnedFriendID)
-        .dpDragRetargetFeedback(target: pinnedDragRetargetSlot)
+        .scrollDisabled(draggedFriendID != nil)
+        .dpDragFeedback(dragID: draggedFriendID)
+        .dpDragRetargetFeedback(target: friendDragRetargetSlot)
         .accessibilityIdentifier("social.list")
     }
 
@@ -255,37 +272,48 @@ struct SocialView: View {
     }
 
     private var friendsPanel: some View {
-        VStack(spacing: 0) {
-            SocialPanelHeader(
-                title: social("social.section.friends"),
-                count: viewModel.friends.count,
-                systemImage: "person.2",
-                colors: [DPColor.surfaceStrong, DPColor.surfaceStrongAlt]
-            )
+        VStack(alignment: .leading, spacing: DPSpacing.small) {
+            HStack(spacing: DPSpacing.small) {
+                Text(social("social.section.friends"))
+                    .font(DPFont.bold(size: 16, relativeTo: .body))
+                    .foregroundStyle(DPColor.textPrimary)
+                Text(String(viewModel.friends.count))
+                    .font(DPTypography.caption)
+                    .foregroundStyle(DPColor.textMuted)
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, DPSpacing.compact)
+            .accessibilityElement(children: .combine)
 
-            LazyVStack(spacing: DPSpacing.small) {
-                if viewModel.friends.isEmpty {
+            LazyVStack(spacing: 0) {
+                if displayedFriends.isEmpty {
                     emptyFriends
                 } else {
-                    ForEach(displayedPinnedFriends, id: \.member.id) { friend in
+                    ForEach(Array(displayedFriends.enumerated()), id: \.element.member.id) { index, friend in
+                        if index > 0 {
+                            friendRowSeparator
+                        }
                         friendCard(friend)
                     }
-                    ForEach(viewModel.unpinnedFriends, id: \.member.id) { friend in
-                        friendCard(friend)
-                    }
+                    friendRowSeparator
+                    addFriendCard
                 }
-
-                addFriendCard
             }
-            .padding(SocialFriendCardLayout.panelInset)
+            .padding(.horizontal, SocialFriendCardLayout.panelInset)
+            .background(DPColor.backgroundCard)
+            .clipShape(RoundedRectangle(cornerRadius: DPRadius.extraLarge, style: .continuous))
+            .overlay {
+                RoundedRectangle(cornerRadius: DPRadius.extraLarge, style: .continuous)
+                    .stroke(DPColor.borderPrimary, lineWidth: 1)
+            }
         }
-        .background(DPColor.backgroundCard)
-        .clipShape(RoundedRectangle(cornerRadius: DPRadius.extraLarge, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: DPRadius.extraLarge, style: .continuous)
-                .stroke(DPColor.borderPrimary, lineWidth: 1)
-        }
-        .shadow(color: Color.black.opacity(0.05), radius: 2, y: 1)
+    }
+
+    private var friendRowSeparator: some View {
+        Rectangle()
+            .fill(DPColor.borderPrimary)
+            .frame(height: DPChrome.borderWidth)
+            .accessibilityHidden(true)
     }
 
     private func receivedRequestCard(_ request: FriendRequestDTO) -> some View {
@@ -403,11 +431,11 @@ struct SocialView: View {
         .buttonStyle(.plain)
     }
 
-    private var displayedPinnedFriends: [DashboardFriendDetailDTO] {
-        let friends = viewModel.pinnedFriends
-        guard let inlinePinnedOrder else { return friends }
+    private var displayedFriends: [DashboardFriendDetailDTO] {
+        let friends = viewModel.orderedFriends
+        guard let inlineFriendOrder else { return friends }
         let positions = Dictionary(
-            uniqueKeysWithValues: inlinePinnedOrder.enumerated().map { ($1, $0) }
+            uniqueKeysWithValues: inlineFriendOrder.enumerated().map { ($1, $0) }
         )
         return friends.sorted {
             positions[$0.member.id ?? -1, default: .max]
@@ -419,14 +447,14 @@ struct SocialView: View {
         _ friend: DashboardFriendDetailDTO,
         isDragPreview: Bool = false
     ) -> some View {
-        HStack(alignment: .top, spacing: 0) {
+        HStack(alignment: .center, spacing: 0) {
             Button {
                 guard let id = friend.member.id else { return }
                 guard !consumeDragSuppression(for: id) else { return }
                 DPHapticCenter.shared.emit(.routine)
                 onOpenCalendar(id)
             } label: {
-                HStack(alignment: .top, spacing: SocialFriendCardLayout.contentSpacing) {
+                HStack(alignment: .center, spacing: SocialFriendCardLayout.contentSpacing) {
                     SocialAvatar(member: friend.member, size: SocialFriendCardLayout.avatarSize)
 
                     HStack(spacing: 6) {
@@ -443,123 +471,55 @@ struct SocialView: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
+                .frame(
+                    maxWidth: .infinity,
+                    minHeight: SocialFriendCardLayout.rowHeight,
+                    alignment: .leading
+                )
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
             .frame(maxWidth: .infinity, alignment: .leading)
             .accessibilityIdentifier("social.friend.\(friend.member.id ?? -1)")
             .accessibilityHint(
-                isPinnedFriendReorderEnabled(friend, isDragPreview: isDragPreview)
-                    ? social("social.action.openCalendar") + " " + social("social.hint.pinnedOrder")
+                isFriendReorderEnabled(friend, isDragPreview: isDragPreview)
+                    ? social("social.action.openCalendar") + " " + social("social.hint.friendOrder")
                     : social("social.action.openCalendar")
             )
             .accessibilityActions {
-                ForEach(accessiblePinnedFriendMoves(friend), id: \.offset) { move in
+                ForEach(accessibleFriendMoves(friend), id: \.offset) { move in
                     Button(social(move.key)) {
                         guard let memberID = friend.member.id else { return }
-                        movePinnedFriend(memberID: memberID, to: move.destinationIndex)
+                        moveFriend(memberID: memberID, to: move.destinationIndex)
                     }
                 }
             }
 
-            HStack(spacing: 0) {
-                Button {
-                    guard !consumeDragSuppression(for: friend.member.id) else { return }
-                    if friend.pinOrder == nil {
-                        DPHapticCenter.shared.emit(.selection)
-                    }
-                    requestPinToggle(friend)
-                } label: {
-                    Image(systemName: friend.pinOrder == nil ? "star" : "star.fill")
-                        .font(.system(size: 16))
-                        .foregroundStyle(friend.pinOrder == nil ? DPColor.textMuted : DPColor.warning)
-                        .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(social(friend.pinOrder == nil ? "social.action.pin" : "social.action.unpin"))
-                .accessibilityIdentifier("social.friend.\(friend.member.id ?? -1).pin")
-
-                Button {
-                    guard !consumeDragSuppression(for: friend.member.id) else { return }
-                    DPHapticCenter.shared.emit(.routine)
-                    actionCandidate = ActionCandidate(friend: friend)
-                } label: {
-                    Image(systemName: "ellipsis")
-                        .font(.system(size: 18, weight: .medium))
-                        .foregroundStyle(DPColor.textMuted)
-                        .rotationEffect(.degrees(90))
-                        .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
-                }
-                .buttonStyle(.plain)
-                .accessibilityLabel(social("social.action.more"))
-                .accessibilityIdentifier("social.friend.\(friend.member.id ?? -1).more")
-            }
-            .frame(width: SocialFriendCardLayout.topActionsWidth, alignment: .topTrailing)
-            .popover(
-                isPresented: Binding(
-                    get: { actionCandidate?.id == friend.member.id },
-                    set: { if !$0 { actionCandidate = nil } }
-                ),
-                arrowEdge: .top
-            ) {
-                FriendActionPopover(
-                    friend: friend,
-                    close: { actionCandidate = nil },
-                    addFamily: {
-                        actionCandidate = nil
-                        presentConfirmation(.sendFamily(friend))
-                    },
-                    removeFamily: {
-                        actionCandidate = nil
-                        presentConfirmation(.removeFamily(friend))
-                    },
-                    removeFriend: {
-                        actionCandidate = nil
-                        presentConfirmation(.removeFriend(friend))
-                    },
-                    onBlock: {
-                        actionCandidate = nil
-                        presentConfirmation(.block(friend))
-                    }
-                )
-                .presentationCompactAdaptation(.popover)
-            }
-            .disabled(isMutationInFlight)
+            friendManagementButton(friend)
         }
-        .padding(DPSpacing.compact)
-        .frame(minHeight: 88, alignment: .top)
+        .frame(maxWidth: .infinity, minHeight: SocialFriendCardLayout.rowHeight)
+        .contentShape(Rectangle())
+        // Attach the reorder recognizer to the whole row so a long press over
+        // the management control still starts a reorder, while a short press
+        // remains owned by that control's button.
+        .modifier(friendReorderGesture(friend, isDragPreview: isDragPreview))
         .background {
-            if friend.pinOrder != nil {
-                LinearGradient(
-                    colors: [DPColor.backgroundSecondary, DPColor.backgroundTertiary],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            } else {
-                DPColor.backgroundCard
+            if isDragPreview {
+                RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous)
+                    .fill(DPColor.backgroundCard)
             }
         }
-        .clipShape(RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous)
-                .stroke(
-                    friend.pinOrder == nil ? DPColor.borderPrimary : DPColor.borderSecondary,
-                    lineWidth: friend.pinOrder == nil ? 1 : 2
-                )
-        }
-        .shadow(color: Color.black.opacity(friend.pinOrder == nil ? 0.05 : 0.10), radius: 2, y: 1)
-        .contentShape(RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous))
         .dpDragSourceSlot(
-            isLifted: draggedPinnedFriendID == friend.member.id && !isDragPreview,
+            isLifted: draggedFriendID == friend.member.id && !isDragPreview,
             tint: DPColor.accent,
-            cornerRadius: DPRadius.large
+            cornerRadius: 0
         )
         .background {
-            if friend.pinOrder != nil && !isDragPreview, let memberID = friend.member.id {
+            if !isDragPreview, let memberID = friend.member.id {
                 GeometryReader { proxy in
                     Color.clear.preference(
-                        key: DPPinnedFriendDropTargetPreferenceKey.self,
-                        value: [DPPinnedFriendDropTarget(
+                        key: DPFriendDropTargetPreferenceKey.self,
+                        value: [DPFriendDropTarget(
                             memberID: memberID,
                             frame: proxy.frame(in: .named(SocialFriendDragCoordinateSpace.name))
                         )]
@@ -567,81 +527,94 @@ struct SocialView: View {
                 }
             }
         }
-        .modifier(pinnedFriendReorderGesture(friend, isDragPreview: isDragPreview))
         .dpPressProgress(
-            isPressing: pressedPinnedFriendID == friend.member.id,
-            isDragging: draggedPinnedFriendID == friend.member.id,
+            isPressing: pressedFriendID == friend.member.id,
+            isDragging: draggedFriendID == friend.member.id,
             tint: DPColor.accent
         )
     }
 
-    private func requestPinToggle(_ friend: DashboardFriendDetailDTO) {
-        if friend.pinOrder == nil {
-            Task { await viewModel.togglePin(friend) }
-        } else {
-            presentConfirmation(.unpin(friend))
+    private func friendManagementButton(_ friend: DashboardFriendDetailDTO) -> some View {
+        Button {
+            guard !consumeDragSuppression(for: friend.member.id) else { return }
+            DPHapticCenter.shared.emit(.selection)
+            actionCandidate = ActionCandidate(friend: friend)
+        } label: {
+            Image(systemName: "slider.horizontal.3")
+                .font(.system(size: 24, weight: .medium))
+                .foregroundStyle(DPColor.textSecondary)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
+        .accessibilityLabel(social("social.action.manage"))
+        .accessibilityIdentifier("social.friend.\(friend.member.id ?? -1).more")
+        .frame(
+            minWidth: SocialFriendCardLayout.managementWidth,
+            maxWidth: SocialFriendCardLayout.managementWidth,
+            minHeight: SocialFriendCardLayout.rowHeight
+        )
+        .disabled(isMutationInFlight)
     }
 
-    private func isPinnedFriendReorderEnabled(
+    private func isFriendReorderEnabled(
         _ friend: DashboardFriendDetailDTO,
         isDragPreview: Bool
     ) -> Bool {
-        !isDragPreview && friend.pinOrder != nil && viewModel.pinnedFriends.count >= 2
+        !isDragPreview && viewModel.orderedFriends.count >= 2
     }
 
-    /// Social arms the tap suppression inside `updatePinnedFriendDrag`, so both
+    /// Social arms the tap suppression inside `updateFriendDrag`, so both
     /// gesture paths suppress the lift that ends a drag, and the final drag
     /// location the iOS 17 fallback reports is unused: the last `onChanged`
     /// already applied it.
-    private func pinnedFriendReorderGesture(
+    private func friendReorderGesture(
         _ friend: DashboardFriendDetailDTO,
         isDragPreview: Bool
-    ) -> DPPinnedFriendReorderGesture {
-        DPPinnedFriendReorderGesture(
-            isEnabled: isPinnedFriendReorderEnabled(friend, isDragPreview: isDragPreview),
+    ) -> DPFriendReorderGesture {
+        DPFriendReorderGesture(
+            isEnabled: isFriendReorderEnabled(friend, isDragPreview: isDragPreview),
             coordinateSpaceName: SocialFriendDragCoordinateSpace.name,
             onPressBegan: {
                 guard let memberID = friend.member.id else { return }
-                pressedPinnedFriendID = memberID
+                pressedFriendID = memberID
             },
             onPressEnded: {
                 // Only this card may end its own press: a late ending from a card
                 // released moments ago must not empty a ring that has since
                 // started filling somewhere else.
-                guard pressedPinnedFriendID == friend.member.id else { return }
-                pressedPinnedFriendID = nil
+                guard pressedFriendID == friend.member.id else { return }
+                pressedFriendID = nil
             },
             onBegan: { location in
                 guard let memberID = friend.member.id else { return }
-                updatePinnedFriendDrag(memberID: memberID, location: location)
+                updateFriendDrag(memberID: memberID, location: location)
             },
             onChanged: { location in
                 guard let memberID = friend.member.id else { return }
-                updatePinnedFriendDrag(memberID: memberID, location: location)
+                updateFriendDrag(memberID: memberID, location: location)
             },
-            onEnded: { _ in finishPinnedFriendDrag() },
+            onEnded: { _ in finishFriendDrag() },
             onCancelled: {
                 guard let memberID = friend.member.id else { return }
-                cancelPinnedFriendDrag(memberID)
+                cancelFriendDrag(memberID)
             }
         )
     }
 
-    private func accessiblePinnedFriendMoves(
+    private func accessibleFriendMoves(
         _ friend: DashboardFriendDetailDTO
-    ) -> [PinnedFriendAccessibleMove] {
-        guard friend.pinOrder != nil,
-              viewModel.pinnedFriends.count >= 2,
+    ) -> [FriendAccessibleMove] {
+        guard viewModel.orderedFriends.count >= 2,
               let memberID = friend.member.id else { return [] }
-        let pinnedIDs = displayedPinnedFriends.compactMap(\.member.id)
-        guard let index = pinnedIDs.firstIndex(of: memberID) else { return [] }
+        let friendIDs = displayedFriends.compactMap(\.member.id)
+        guard let index = friendIDs.firstIndex(of: memberID) else { return [] }
 
-        var moves: [PinnedFriendAccessibleMove] = []
+        var moves: [FriendAccessibleMove] = []
         if index > 0 {
             moves.append(.init(offset: -1, destinationIndex: index - 1, key: "social.action.moveUp"))
         }
-        if index < pinnedIDs.count - 1 {
+        if index < friendIDs.count - 1 {
             moves.append(.init(offset: 1, destinationIndex: index + 1, key: "social.action.moveDown"))
         }
         return moves
@@ -649,21 +622,21 @@ struct SocialView: View {
 
     /// The slot the held card currently occupies. Only a drag has a slot, so an
     /// accessibility move — and the inline order being dropped once a save
-    /// settles — rewrite `inlinePinnedOrder` without ticking.
-    private var pinnedDragRetargetSlot: Int? {
-        guard let draggedPinnedFriendID, let inlinePinnedOrder else { return nil }
-        return inlinePinnedOrder.firstIndex(of: draggedPinnedFriendID)
+    /// settles — rewrite `inlineFriendOrder` without ticking.
+    private var friendDragRetargetSlot: Int? {
+        guard let draggedFriendID, let inlineFriendOrder else { return nil }
+        return inlineFriendOrder.firstIndex(of: draggedFriendID)
     }
 
-    private func cancelPinnedFriendDrag(_ memberID: MemberID) {
-        guard draggedPinnedFriendID == memberID else { return }
-        clearPinnedFriendDrag()
+    private func cancelFriendDrag(_ memberID: MemberID) {
+        guard draggedFriendID == memberID else { return }
+        clearFriendDrag()
         scheduleDragSuppressionReset(for: memberID)
     }
 
     /// A reorder drag keeps the pressed control alive underneath the finger — the
     /// row moves with the drag, so the lift still lands inside the control that
-    /// started it. Every control on a pinned card therefore has to swallow the
+    /// started it. Every control on a friend card therefore has to swallow the
     /// lift that ends a drag; only the touch that began the drag is suppressed,
     /// so plain taps are untouched.
     private func consumeDragSuppression(for memberID: MemberID?) -> Bool {
@@ -681,97 +654,118 @@ struct SocialView: View {
         }
     }
 
-    private func updatePinnedFriendDrag(memberID: MemberID, location: CGPoint) {
-        guard !isSavingPinnedOrder, !viewModel.isReordering else { return }
-        if draggedPinnedFriendID != memberID {
-            let ids = displayedPinnedFriends.compactMap(\.member.id)
-            inlinePinnedOrder = ids
-            draggedPinnedFriendID = memberID
+    private func updateFriendDrag(memberID: MemberID, location: CGPoint) {
+        guard !isSavingFriendOrder, !viewModel.isReordering else { return }
+        if draggedFriendID != memberID {
+            let ids = displayedFriends.compactMap(\.member.id)
+            inlineFriendOrder = ids
+            draggedFriendID = memberID
             dragSuppressedFriendID = memberID
-            pinnedDragOriginalOrder = ids
-            pinnedDragReferenceTargets = pinnedFriendDropTargets.sorted { $0.frame.minY < $1.frame.minY }
-            if let frame = pinnedFriendDropTargets.last(where: { $0.memberID == memberID })?.frame {
-                pinnedDragPreviewSize = frame.size
-                pinnedDragGrabOffset = CGSize(
+            friendDragOriginalOrder = ids
+            friendDragReferenceTargets = friendDropTargets.sorted { $0.frame.minY < $1.frame.minY }
+            if let frame = friendDropTargets.last(where: { $0.memberID == memberID })?.frame {
+                friendDragPreviewSize = frame.size
+                friendDragGrabOffset = CGSize(
                     width: location.x - frame.midX,
                     height: location.y - frame.midY
                 )
             }
         }
-        guard let previewSize = pinnedDragPreviewSize,
-              let grabOffset = pinnedDragGrabOffset,
-              !pinnedDragOriginalOrder.isEmpty else { return }
+        guard let previewSize = friendDragPreviewSize,
+              let grabOffset = friendDragGrabOffset,
+              !friendDragOriginalOrder.isEmpty else { return }
 
-        pinnedDragLocation = location
+        friendDragLocation = location
         let previewFrame = CGRect(
             x: location.x - grabOffset.width - previewSize.width / 2,
             y: location.y - grabOffset.height - previewSize.height / 2,
             width: previewSize.width,
             height: previewSize.height
         )
-        let nextOrder = DPPinnedFriendLiveOrder.reordered(
-            pinnedDragOriginalOrder,
+        let nextOrder = DPFriendLiveOrder.reordered(
+            friendDragOriginalOrder,
             draggedID: memberID,
             previewFrame: previewFrame,
-            targets: pinnedDragReferenceTargets
+            targets: friendDragReferenceTargets
         )
-        guard nextOrder != inlinePinnedOrder else { return }
+        guard nextOrder != inlineFriendOrder else { return }
         withAnimation(.snappy(duration: 0.16, extraBounce: 0)) {
-            inlinePinnedOrder = nextOrder
+            inlineFriendOrder = nextOrder
         }
     }
 
-    private func finishPinnedFriendDrag() {
-        let memberID = draggedPinnedFriendID
-        let finalOrder = inlinePinnedOrder
-        clearPinnedFriendDrag()
+    private func finishFriendDrag() {
+        let memberID = draggedFriendID
+        let finalOrder = inlineFriendOrder
+        clearFriendDrag()
         if let memberID {
             scheduleDragSuppressionReset(for: memberID)
         }
         guard let finalOrder,
-              finalOrder != viewModel.pinnedFriends.compactMap(\.member.id) else {
-            inlinePinnedOrder = nil
+              finalOrder != viewModel.orderedFriends.compactMap(\.member.id) else {
+            inlineFriendOrder = nil
             return
         }
-        savePinnedOrder(finalOrder)
+        saveFriendOrder(finalOrder)
     }
 
-    private func movePinnedFriend(memberID: MemberID, to destinationIndex: Int) {
-        guard !isSavingPinnedOrder, !viewModel.isReordering else { return }
-        var ids = displayedPinnedFriends.compactMap(\.member.id)
+    private func moveFriend(memberID: MemberID, to destinationIndex: Int) {
+        guard !isSavingFriendOrder, !viewModel.isReordering else { return }
+        var ids = displayedFriends.compactMap(\.member.id)
         guard let sourceIndex = ids.firstIndex(of: memberID), sourceIndex != destinationIndex else { return }
         ids.remove(at: sourceIndex)
         ids.insert(memberID, at: min(max(0, destinationIndex), ids.count))
         withAnimation(.snappy(duration: 0.16, extraBounce: 0)) {
-            inlinePinnedOrder = ids
+            inlineFriendOrder = ids
         }
-        savePinnedOrder(ids)
+        saveFriendOrder(ids)
     }
 
-    private func savePinnedOrder(_ ids: [MemberID]) {
-        guard !isSavingPinnedOrder else { return }
-        isSavingPinnedOrder = true
+    private func saveFriendOrder(_ ids: [MemberID]) {
+        guard !isSavingFriendOrder else { return }
+        isSavingFriendOrder = true
         Task {
-            let didSave = await viewModel.savePinnedOrder(ids)
-            isSavingPinnedOrder = false
+            let didSave = await viewModel.saveFriendOrder(ids)
+            isSavingFriendOrder = false
             withAnimation(.snappy(duration: 0.16, extraBounce: 0)) {
                 // A failed request restores the model's previous order and the
                 // model presents the localized reorder error through its alert.
-                inlinePinnedOrder = nil
+                inlineFriendOrder = nil
             }
             if !didSave {
-                clearPinnedFriendDrag()
+                clearFriendDrag()
             }
         }
     }
 
-    private func clearPinnedFriendDrag() {
-        draggedPinnedFriendID = nil
-        pinnedDragLocation = nil
-        pinnedDragPreviewSize = nil
-        pinnedDragGrabOffset = nil
-        pinnedDragReferenceTargets = []
-        pinnedDragOriginalOrder = []
+    private func clearFriendDrag() {
+        draggedFriendID = nil
+        friendDragLocation = nil
+        friendDragPreviewSize = nil
+        friendDragGrabOffset = nil
+        friendDragReferenceTargets = []
+        friendDragOriginalOrder = []
+    }
+
+    private func queueFriendAction(_ action: SocialConfirmation) {
+        DPHapticCenter.shared.emit(.selection)
+        pendingFriendAction = action
+        actionCandidate = nil
+    }
+
+    private func closeFriendActionSheet() {
+        DPHapticCenter.shared.emit(.routine)
+        actionCandidate = nil
+    }
+
+    private func finishFriendActionSheetDismissal() {
+        // The native sheet callback also runs for passive teardown. Explicit
+        // close already acknowledges itself; only an action carries work
+        // forward into the confirmation cover.
+        if let pendingFriendAction {
+            self.pendingFriendAction = nil
+            presentConfirmation(pendingFriendAction)
+        }
     }
 
 #if DEBUG
@@ -783,11 +777,11 @@ struct SocialView: View {
     private var uiTestingProbes: some View {
         VStack(spacing: 0) {
             uiTestingProbe(
-                String(viewModel.uiTestingPinnedOrderSaveCount),
+                String(viewModel.uiTestingFriendOrderSaveCount),
                 identifier: "social.reorder.saveCount"
             )
             uiTestingProbe(
-                uiTestingPersistedPinnedOrder,
+                uiTestingPersistedFriendOrder,
                 identifier: "social.reorder.persistedOrder"
             )
             uiTestingProbe(
@@ -797,16 +791,16 @@ struct SocialView: View {
         }
     }
 
-    private var uiTestingPersistedPinnedOrder: String {
-        let ids: [MemberID] = viewModel.pinnedFriends.compactMap { $0.member.id }
+    private var uiTestingPersistedFriendOrder: String {
+        let ids: [MemberID] = viewModel.orderedFriends.compactMap { $0.member.id }
         let labels: [String] = ids.map { String($0) }
         return labels.joined(separator: ",")
     }
 
-    /// The number of pinned rows the `LazyVStack` currently publishes a frame for.
+    /// The number of friend rows the `LazyVStack` currently publishes a frame for.
     private var uiTestingPublishedDropTargetCount: Int {
         var seen = Set<MemberID>()
-        for target in pinnedFriendDropTargets {
+        for target in friendDropTargets {
             seen.insert(target.memberID)
         }
         return seen.count
@@ -850,27 +844,24 @@ struct SocialView: View {
             DPHapticCenter.shared.emit(.routine)
             withoutPresentationAnimation { isSearchPresented = true }
         } label: {
-            VStack(spacing: DPSpacing.extraSmall) {
+            HStack(spacing: SocialFriendCardLayout.contentSpacing) {
                 Image(systemName: "person.badge.plus")
-                    .font(.system(size: 17, weight: .medium))
-                    .foregroundStyle(DPColor.textMuted)
-                    .frame(width: 32, height: 32)
-                    .background(DPColor.backgroundTertiary)
-                    .clipShape(Circle())
+                    .font(.system(size: 18, weight: .medium))
+                    .foregroundStyle(DPColor.textSecondary)
+                    .frame(width: SocialFriendCardLayout.avatarSize)
                 Text(social("social.action.addFriend"))
-                    .font(DPFont.bold(size: 12, relativeTo: .caption))
-                    .foregroundStyle(DPColor.textMuted)
+                    .font(DPFont.bold(size: 14, relativeTo: .subheadline))
+                    .foregroundStyle(DPColor.textSecondary)
+                Spacer(minLength: 0)
             }
-            .frame(maxWidth: .infinity, minHeight: 80)
+            .frame(
+                maxWidth: .infinity,
+                minHeight: SocialFriendCardLayout.rowHeight,
+                alignment: .leading
+            )
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .background(DPColor.backgroundCard)
-        .clipShape(RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous))
-        .overlay {
-            RoundedRectangle(cornerRadius: DPRadius.large, style: .continuous)
-                .stroke(DPColor.borderSecondary, style: StrokeStyle(lineWidth: 2, dash: [7, 5]))
-        }
         .disabled(isMutationInFlight)
     }
 
@@ -924,7 +915,6 @@ struct SocialView: View {
         case .block(let friend): await viewModel.block(friend)
         case .unblock(let member): await viewModel.unblock(member)
         case .sendFamily(let friend): await viewModel.sendFamilyRequest(to: friend)
-        case .unpin(let friend): await viewModel.togglePin(friend)
         }
     }
 }
@@ -1013,13 +1003,14 @@ struct SocialAvatar: View {
 }
 
 enum SocialFriendCardLayout {
-    static let panelInset: CGFloat = 12
-    static let avatarSize: CGFloat = 56
-    static let contentSpacing: CGFloat = 10
-    static let topActionsWidth = DPSize.minimumTouchTarget * 2
+    static let panelInset: CGFloat = 14
+    static let avatarSize: CGFloat = 44
+    static let contentSpacing: CGFloat = 12
+    static let managementWidth: CGFloat = 44
+    static let rowHeight: CGFloat = 72
 }
 
-private struct PinnedFriendAccessibleMove {
+private struct FriendAccessibleMove {
     let offset: Int
     let destinationIndex: Int
     let key: String

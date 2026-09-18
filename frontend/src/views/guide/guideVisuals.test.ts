@@ -14,7 +14,6 @@ import {
   Lock,
   Palette,
   Pencil,
-  Pin,
   Plus,
   Search,
   Settings,
@@ -37,7 +36,7 @@ import {
 } from './guideVisuals'
 
 /**
- * The shared vocabulary contract: these 25 icon keys and 7 tone keys are what the guide content
+ * The shared vocabulary contract: these 24 icon keys and 7 tone keys are what the guide content
  * file may assign, so every one of them must resolve here instead of hitting the fallback.
  */
 const contractIcons: Record<string, GuideIconComponent> = {
@@ -59,7 +58,6 @@ const contractIcons: Record<string, GuideIconComponent> = {
   palette: Palette,
   sun: Sun,
   bell: Bell,
-  pin: Pin,
   trash: Trash2,
   camera: Camera,
   shield: Shield,
@@ -80,7 +78,7 @@ const contractToneClasses: Record<GuideTone, string> = {
 
 describe('guideVisuals', () => {
   it('maps exactly the 25 contract icon keys', () => {
-    expect(Object.keys(contractIcons)).toHaveLength(25)
+    expect(Object.keys(contractIcons)).toHaveLength(24)
     expect(Object.keys(GUIDE_ICONS).sort()).toEqual(Object.keys(contractIcons).sort())
   })
 

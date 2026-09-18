@@ -224,7 +224,7 @@ export interface DashboardFriendDetail {
   duty: DashboardDutyDto | null
   schedules: DashboardScheduleDto[]
   isFamily: boolean
-  pinOrder: number | null
+  displayOrder: number | null
 }
 
 export interface DashboardFriendInfo {
@@ -530,7 +530,7 @@ export interface FriendDto {
   hasProfilePhoto?: boolean
   profilePhotoVersion?: number
   isFamily: boolean
-  pinOrder: number | null
+  displayOrder: number | null
 }
 
 export interface TaggableFriend extends FriendDto {}

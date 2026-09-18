@@ -131,7 +131,7 @@ capture cannot race the asynchronous after-commit listener.
 
 The capture fixture should include the current `Asia/Seoul` date, at least one
 owner/friend schedule and duty for the Home view, a populated calendar month,
-Todo cards across statuses, the friend rail and pinned order, tag/friend
+Todo cards across statuses, the friend rail and friend order, tag/friend
 notifications, and a future D-Day. Upload photos before creating events so the
 notification actor snapshot has the same profile-photo version as the visible
 avatar.

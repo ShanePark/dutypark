@@ -131,7 +131,9 @@ nonisolated struct DashboardFriendDetailDTO: Codable, Equatable, Sendable {
     let duty: DutyDTO?
     let schedules: [ScheduleDTO]
     let isFamily: Bool
-    let pinOrder: Int64?
+    /// The user's order for this friend. A nil value means the server has no
+    /// persisted order yet; clients fall back to their stable default order.
+    let displayOrder: Int64?
 }
 
 nonisolated struct DashboardFriendInfoDTO: Codable, Equatable, Sendable {

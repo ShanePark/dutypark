@@ -99,3 +99,39 @@ nonisolated struct TodoPositionUpdateRequest: Codable, Equatable, Sendable {
     let status: TodoStatus
     let orderedIds: [TodoID]
 }
+
+nonisolated struct TodoCompletedCleanupRequest: Codable, Equatable, Sendable {
+    let todoIds: [TodoID]
+}
+
+nonisolated struct TodoCompletedCleanupResponse: Codable, Equatable, Sendable {
+    let deletedCount: Int
+    let untaggedCount: Int
+
+    private enum CodingKeys: String, CodingKey {
+        case deletedCount
+        case untaggedCount
+        // Keep decoding the pre-count-split response while older servers are
+        // being rolled out. New clients always send and consume both counts.
+        case count
+    }
+
+    init(deletedCount: Int, untaggedCount: Int) {
+        self.deletedCount = deletedCount
+        self.untaggedCount = untaggedCount
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        deletedCount = try container.decodeIfPresent(Int.self, forKey: .deletedCount)
+            ?? container.decodeIfPresent(Int.self, forKey: .count)
+            ?? 0
+        untaggedCount = try container.decodeIfPresent(Int.self, forKey: .untaggedCount) ?? 0
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(deletedCount, forKey: .deletedCount)
+        try container.encode(untaggedCount, forKey: .untaggedCount)
+    }
+}

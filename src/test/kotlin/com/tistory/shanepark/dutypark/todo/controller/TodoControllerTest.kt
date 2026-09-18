@@ -210,7 +210,7 @@ class TodoControllerTest : RestDocsTest() {
     }
 
     @Test
-    fun `delete completed todos deletes only requested owned completed todos`() {
+    fun `delete completed todos deletes owned items and removes own tags from tagged items`() {
         val completed = todoRepository.save(
             Todo(
                 member = TestData.member,
@@ -221,10 +221,19 @@ class TodoControllerTest : RestDocsTest() {
                 completedDate = java.time.LocalDateTime.now(),
             )
         )
-        val completedByOtherMember = todoRepository.save(
+        val completedByOtherMember = Todo(
+            member = TestData.member2,
+            title = "Other Completed Todo",
+            content = "Content",
+            position = 0,
+            status = TodoStatus.DONE,
+            completedDate = java.time.LocalDateTime.now(),
+        ).also { it.addTag(TestData.member) }
+        todoRepository.save(completedByOtherMember)
+        val completedByOtherMemberWithoutTag = todoRepository.save(
             Todo(
                 member = TestData.member2,
-                title = "Other Completed Todo",
+                title = "Other Untagged Completed Todo",
                 content = "Content",
                 position = 0,
                 status = TodoStatus.DONE,
@@ -247,6 +256,7 @@ class TodoControllerTest : RestDocsTest() {
                     "${completed.id}",
                     "${completed.id}",
                     "${completedByOtherMember.id}",
+                    "${completedByOtherMemberWithoutTag.id}",
                     "${active.id}"
                 ]
             }
@@ -260,6 +270,8 @@ class TodoControllerTest : RestDocsTest() {
                 .withAuth(TestData.member)
         )
             .andExpect(status().isOk)
+            .andExpect(jsonPath("$.deletedCount").value(1))
+            .andExpect(jsonPath("$.untaggedCount").value(1))
             .andExpect(jsonPath("$.count").value(1))
             .andDo(MockMvcResultHandlers.print())
             .andDo(
@@ -269,7 +281,9 @@ class TodoControllerTest : RestDocsTest() {
                         fieldWithPath("todoIds").description("UUIDs selected from the completed column")
                     ),
                     responseFields(
-                        fieldWithPath("count").description("Number of owned completed todos deleted")
+                        fieldWithPath("deletedCount").description("Number of owned completed todos deleted"),
+                        fieldWithPath("untaggedCount").description("Number of current user's tags removed from completed todos"),
+                        fieldWithPath("count").description("Legacy alias for deletedCount")
                     )
                 )
             )
@@ -278,6 +292,8 @@ class TodoControllerTest : RestDocsTest() {
         em.clear()
         assertThat(todoRepository.findById(completed.id)).isEmpty
         assertThat(todoRepository.findById(completedByOtherMember.id)).isPresent
+        assertThat(todoRepository.findById(completedByOtherMember.id).orElseThrow().tags).isEmpty()
+        assertThat(todoRepository.findById(completedByOtherMemberWithoutTag.id)).isPresent
         assertThat(todoRepository.findById(active.id)).isPresent
     }
 

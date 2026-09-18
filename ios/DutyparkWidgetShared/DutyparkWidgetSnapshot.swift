@@ -14,6 +14,9 @@ nonisolated struct DutyparkWidgetDay: Codable, Equatable, Sendable, Identifiable
     let abbreviation: String?
     let colorHex: String?
     let isOff: Bool
+    /// The first public holiday name returned for this date, when present.
+    /// This is optional so snapshots written before holiday support remain readable.
+    let holidayName: String?
     /// The first schedule returned for this date, shortened for the compact
     /// monthly surface. `nil` means that this date has no schedules.
     let scheduleContent: String?
@@ -30,6 +33,7 @@ nonisolated struct DutyparkWidgetDay: Codable, Equatable, Sendable, Identifiable
         abbreviation: String?,
         colorHex: String?,
         isOff: Bool,
+        holidayName: String? = nil,
         scheduleContent: String? = nil,
         scheduleCount: Int = 0
     ) {
@@ -39,6 +43,7 @@ nonisolated struct DutyparkWidgetDay: Codable, Equatable, Sendable, Identifiable
         self.abbreviation = abbreviation
         self.colorHex = colorHex
         self.isOff = isOff
+        self.holidayName = holidayName
         self.scheduleContent = scheduleContent
         self.scheduleCount = scheduleCount
     }
@@ -50,6 +55,7 @@ nonisolated struct DutyparkWidgetDay: Codable, Equatable, Sendable, Identifiable
         case abbreviation
         case colorHex
         case isOff
+        case holidayName
         case scheduleContent
         case scheduleCount
     }
@@ -64,6 +70,7 @@ nonisolated struct DutyparkWidgetDay: Codable, Equatable, Sendable, Identifiable
         abbreviation = try container.decodeIfPresent(String.self, forKey: .abbreviation)
         colorHex = try container.decodeIfPresent(String.self, forKey: .colorHex)
         isOff = try container.decode(Bool.self, forKey: .isOff)
+        holidayName = try container.decodeIfPresent(String.self, forKey: .holidayName)
         scheduleContent = try container.decodeIfPresent(String.self, forKey: .scheduleContent)
         scheduleCount = try container.decodeIfPresent(Int.self, forKey: .scheduleCount) ?? 0
     }

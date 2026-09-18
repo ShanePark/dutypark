@@ -34,14 +34,18 @@ final class SocialFeatureTests: XCTestCase {
         XCTAssertFalse(source.contains("Task { await viewModel.unblock(member) }"))
         XCTAssertTrue(source.contains("presentConfirmation(.unblock(member))"))
         XCTAssertFalse(source.contains("Task { await viewModel.sendFamilyRequest(to: friend) }"))
-        XCTAssertTrue(source.contains("presentConfirmation(.sendFamily(friend))"))
+        XCTAssertTrue(source.contains("queueFriendAction(.sendFamily(candidate.friend))"))
     }
 
-    func testUnpinGoesThroughTheConfirmationPanel() throws {
+    func testFriendCardsUseTheSharedReorderGesture() throws {
         let source = try Self.projectSource(at: "Dutypark/Features/Social/SocialView.swift")
 
-        XCTAssertTrue(source.contains("presentConfirmation(.unpin(friend))"))
-        XCTAssertTrue(source.contains("case .unpin(let friend): await viewModel.togglePin(friend)"))
+        XCTAssertTrue(source.contains("DPFriendReorderGesture("))
+        XCTAssertTrue(source.contains("isEnabled: isFriendReorderEnabled"))
+        XCTAssertTrue(source.contains("social.hint.friendOrder"))
+        XCTAssertFalse(source.contains("\"star\""))
+        XCTAssertFalse(source.contains("\"star.fill\""))
+        XCTAssertFalse(source.contains("displayOrder"))
     }
 
     func testSocialNavigationAndModalActionsUseSemanticHaptics() throws {
@@ -51,10 +55,6 @@ final class SocialFeatureTests: XCTestCase {
         XCTAssertTrue(source.contains("DPHapticCenter.shared.emit(.selection)"))
         XCTAssertTrue(source.contains("dismissModalWithHaptic"))
         XCTAssertTrue(source.contains("dismissHaptic: nil"))
-
-        let popover = try Self.projectSource(at: "Dutypark/Features/Social/FriendActionPopover.swift")
-        XCTAssertTrue(popover.contains("DPHapticCenter.shared.emit(.routine)"))
-        XCTAssertTrue(popover.contains("DPHapticCenter.shared.emit(.selection)"))
 
         let blocked = try Self.projectSource(at: "Dutypark/Features/Social/BlockedMembersPanel.swift")
         XCTAssertTrue(blocked.contains("DPHapticCenter.shared.emit(.selection)"))
@@ -73,7 +73,7 @@ final class SocialFeatureTests: XCTestCase {
             duty: nil,
             schedules: [],
             isFamily: false,
-            pinOrder: nil
+            displayOrder: nil
         )
         let blocked = BlockedMemberDTO(
             id: 7,
@@ -110,12 +110,11 @@ final class SocialFeatureTests: XCTestCase {
         )
     }
 
-    func testInlinePinnedOrderStringsResolveInEveryLocale() throws {
+    func testInlineFriendOrderStringsResolveInEveryLocale() throws {
         let keys = [
             "social.action.moveDown",
             "social.action.moveUp",
-            "social.hint.pinnedOrder",
-            "social.section.pinnedOrder",
+            "social.hint.friendOrder",
             "social.warning.reorderReload"
         ]
 
@@ -141,8 +140,6 @@ final class SocialFeatureTests: XCTestCase {
             "social.confirm.block.title",
             "social.confirm.sendFamily.message",
             "social.confirm.sendFamily.title",
-            "social.confirm.unpin.message",
-            "social.confirm.unpin.title",
             "social.confirm.unblock.message",
             "social.confirm.unblock.title",
             "social.empty.blocked",
@@ -164,59 +161,19 @@ final class SocialFeatureTests: XCTestCase {
         }
     }
 
-    func testFavoriteFriendStringsUseConsistentTerminology() throws {
+    func testFriendOrderStringsUseConsistentTerminology() throws {
         let expected: [String: [String: String]] = [
-            "social.action.pin": [
-                "en": "Add to favorites",
-                "ko": "즐겨찾기에 추가"
-            ],
-            "social.action.unpin": [
-                "en": "Remove from favorites",
-                "ko": "즐겨찾기 해제"
-            ],
-            "social.confirm.unpin.message": [
-                "en": "Remove %@ from your favorites?",
-                "ko": "%@님을 즐겨찾기에서 해제할까요?"
-            ],
-            "social.confirm.unpin.title": [
-                "en": "Remove from favorites",
-                "ko": "즐겨찾기 해제"
-            ],
-            "social.hint.pinnedOrder": [
-                "en": "Drag this handle to reorder favorite friends.",
-                "ko": "이 핸들을 드래그해 즐겨찾는 친구 순서를 바꿔주세요."
-            ],
-            "social.section.pinned": [
-                "en": "Favorite friends",
-                "ko": "즐겨찾는 친구"
-            ],
-            "social.section.pinnedOrder": [
-                "en": "Favorite friend order",
-                "ko": "즐겨찾는 친구 순서"
-            ],
-            "social.help.pin.title": [
-                "en": "Add friends you check often to your favorites",
-                "ko": "자주 보는 친구를 즐겨찾기에 추가하세요"
-            ],
-            "social.help.pin.body": [
-                "en": "Tap the star to add a friend to your favorites. Favorite friends move to the top and can be reordered.",
-                "ko": "별 아이콘을 누르면 즐겨찾는 친구로 추가되어 목록 맨 위에 표시됩니다. 즐겨찾는 친구는 원하는 순서로 바꿀 수 있어요."
+            "social.hint.friendOrder": [
+                "en": "Press and hold this friend, then drag to reorder.",
+                "ko": "친구를 꾹 눌러 원하는 위치로 끌어 옮기세요."
             ],
             "social.help.reorder.body": [
-                "en": "Press a favorite friend's card until the ring around it fills, then drag it to where you want it and let go. You need at least two favorite friends.",
-                "ko": "즐겨찾는 친구 카드를 테두리가 채워질 때까지 길게 누른 다음, 원하는 위치로 끌어다 놓으세요. 즐겨찾는 친구가 두 명 이상이어야 합니다."
+                "en": "Press and hold any friend's card until the ring around it fills, then drag it to where you want it and let go.",
+                "ko": "친구 카드를 테두리가 채워질 때까지 꾹 누른 다음, 원하는 위치로 끌어다 놓으세요."
             ],
             "social.help.note": [
-                "en": "Friends not in your favorites stay below in the default order. With VoiceOver on, use the \"Move up\" and \"Move down\" actions on a favorite friend instead.",
-                "ko": "즐겨찾기에 추가하지 않은 친구는 기본 순서대로 아래에 표시됩니다. VoiceOver를 사용할 때는 즐겨찾는 친구 카드의 \"위로 이동\", \"아래로 이동\" 동작을 이용하세요."
-            ],
-            "social.error.pin": [
-                "en": "Failed to add the friend to your favorites.",
-                "ko": "친구를 즐겨찾기에 추가하지 못했습니다."
-            ],
-            "social.error.unpin": [
-                "en": "Failed to remove the friend from your favorites.",
-                "ko": "친구를 즐겨찾기에서 해제하지 못했습니다."
+                "en": "You can move any friend. With VoiceOver on, use the \"Move up\" and \"Move down\" actions.",
+                "ko": "모든 친구를 옮길 수 있어요. VoiceOver를 사용할 때는 \"위로 이동\", \"아래로 이동\" 동작을 이용하세요."
             ]
         ]
 
@@ -227,7 +184,7 @@ final class SocialFeatureTests: XCTestCase {
                 XCTAssertEqual(
                     bundle.localizedString(forKey: key, value: key, table: "Social"),
                     values[locale],
-                    "Unexpected favorite-friend copy for \(key) in \(locale)"
+                    "Unexpected friend-order copy for \(key) in \(locale)"
                 )
             }
         }
@@ -236,14 +193,45 @@ final class SocialFeatureTests: XCTestCase {
     /// The extracted components keep the friend list screen's block entry points,
     /// which SwiftUI leaves unreachable from a unit test.
     func testBlockEntryPointsStayWiredIntoTheExtractedComponents() throws {
-        let popover = try Self.projectSource(at: "Dutypark/Features/Social/FriendActionPopover.swift")
-        XCTAssertTrue(popover.contains("social.action.block"))
-        XCTAssertTrue(popover.contains("onBlock"))
+        let sheet = try Self.projectSource(at: "Dutypark/Features/Social/FriendActionSheet.swift")
+        XCTAssertTrue(sheet.contains("social.action.block"))
+        XCTAssertTrue(sheet.contains("onBlock"))
 
         let socialView = try Self.projectSource(at: "Dutypark/Features/Social/SocialView.swift")
         XCTAssertTrue(socialView.contains("BlockedMembersPanel("))
-        XCTAssertTrue(socialView.contains("presentConfirmation(.block(friend))"))
+        XCTAssertTrue(socialView.contains("queueFriendAction(.block(candidate.friend))"))
         XCTAssertTrue(socialView.contains("FriendSearchModalView("))
+    }
+
+    func testFriendCardsSplitCalendarAndManagementHitAreas() throws {
+        let source = try Self.projectSource(at: "Dutypark/Features/Social/SocialView.swift")
+
+        XCTAssertTrue(source.contains("SocialFriendCardLayout.managementWidth"))
+        XCTAssertTrue(source.contains("social.action.manage"))
+        XCTAssertTrue(source.contains(#"Image(systemName: "slider.horizontal.3")"#))
+        XCTAssertFalse(source.contains(#"Image(systemName: "ellipsis")"#))
+        XCTAssertTrue(source.contains("friendRowSeparator"))
+        XCTAssertTrue(source.contains(".modifier(friendReorderGesture(friend, isDragPreview: isDragPreview))"))
+        XCTAssertTrue(source.contains("if isDragPreview"))
+        XCTAssertFalse(source.contains("friendManagementDivider"))
+        XCTAssertTrue(source.contains("FriendActionSheet("))
+        XCTAssertFalse(source.contains(".popover("))
+        XCTAssertFalse(source.contains("FriendActionPopover"))
+    }
+
+    func testFriendManagementSheetMatchesMobileWebStructure() throws {
+        let source = try Self.projectSource(at: "Dutypark/Features/Social/FriendActionSheet.swift")
+        let socialView = try Self.projectSource(at: "Dutypark/Features/Social/SocialView.swift")
+
+        XCTAssertTrue(source.contains("friendActionSheetGrabber"))
+        XCTAssertTrue(source.contains("DPProfileAvatar"))
+        XCTAssertTrue(source.contains("safeAreaInset(edge: .bottom"))
+        XCTAssertTrue(socialView.contains("presentationDetents"))
+        XCTAssertTrue(socialView.contains("presentationDragIndicator(.hidden)"))
+        XCTAssertTrue(source.contains("social.action.addFamily"))
+        XCTAssertTrue(source.contains("social.action.removeFamily"))
+        XCTAssertTrue(source.contains("social.action.removeFriend"))
+        XCTAssertTrue(source.contains("social.action.block"))
     }
 
     override func tearDown() {
@@ -289,9 +277,7 @@ final class SocialFeatureTests: XCTestCase {
         try await repository.sendFamilyRequest(to: 14)
         try await repository.removeFromFamily(15)
         try await repository.removeFriend(16)
-        try await repository.pin(17)
-        try await repository.unpin(18)
-        try await repository.updatePinnedOrder([18, 17])
+        try await repository.updateFriendOrder([18, 17])
 
         let requests = recorder.requests
         XCTAssertEqual(requests[0].url?.path, "/api/friends/search")
@@ -304,7 +290,7 @@ final class SocialFeatureTests: XCTestCase {
             ]
         )
         XCTAssertEqual(requests.dropFirst().map { $0.httpMethod }, [
-            "POST", "DELETE", "POST", "POST", "PUT", "DELETE", "DELETE", "PATCH", "PATCH", "PATCH"
+            "POST", "DELETE", "POST", "POST", "PUT", "DELETE", "DELETE", "PATCH"
         ])
         XCTAssertEqual(requests.dropFirst().map { $0.url!.path }, [
             "/api/friends/request/send/10",
@@ -314,9 +300,7 @@ final class SocialFeatureTests: XCTestCase {
             "/api/friends/family/14",
             "/api/friends/family/15",
             "/api/friends/16",
-            "/api/friends/pin/17",
-            "/api/friends/unpin/18",
-            "/api/friends/pin/order"
+            "/api/friends/order"
         ])
     }
 
@@ -347,7 +331,7 @@ final class SocialFeatureTests: XCTestCase {
         XCTAssertEqual(blocked.first?.blockedAt.rawValue, "2026-08-18T09:30:00")
     }
 
-    func testPinnedOrderPayloadUsesArrayJSONShape() throws {
+    func testFriendOrderPayloadUsesArrayJSONShape() throws {
         let payload = try JSONEncoder().encode([MemberID](arrayLiteral: 18, 17))
 
         XCTAssertEqual(payload, Data("[18,17]".utf8))
@@ -377,61 +361,75 @@ final class SocialFeatureTests: XCTestCase {
         let viewModel = SocialViewModel(repository: repository)
         await viewModel.load()
 
-        var draftIDs = viewModel.pinnedFriends.compactMap(\.member.id)
+        var draftIDs = viewModel.orderedFriends.compactMap(\.member.id)
         draftIDs.move(fromOffsets: IndexSet(integer: 0), toOffset: 2)
 
         XCTAssertFalse(repository.actions.contains(where: { $0.hasPrefix("order:") }))
 
-        let didSave = await viewModel.savePinnedOrder(draftIDs)
+        let didSave = await viewModel.saveFriendOrder(draftIDs)
 
         XCTAssertTrue(didSave)
-        XCTAssertEqual(repository.actions.last, "order:32,31")
+        XCTAssertEqual(repository.actions.last, "order:32,31,33")
         XCTAssertEqual(repository.actions.filter { $0.hasPrefix("order:") }.count, 1)
     }
 
-    func testSixPinnedFriendsReorderSavesExactlyOnceWithoutDashboardReload() async {
-        let repository = SocialRepositorySpy(pinnedFriendCount: 6)
+    func testSixFriendsReorderSavesExactlyOnceWithoutDashboardReload() async {
+        let repository = SocialRepositorySpy(friendCount: 6)
         let viewModel = SocialViewModel(repository: repository)
         await viewModel.load()
-        let originalIDs = viewModel.pinnedFriends.compactMap(\.member.id)
+        let originalIDs = viewModel.orderedFriends.compactMap(\.member.id)
         let reorderedIDs: [MemberID] = [32, 33, 31, 34, 35, 36]
 
         XCTAssertEqual(originalIDs, [31, 32, 33, 34, 35, 36])
 
-        let didSave = await viewModel.savePinnedOrder(reorderedIDs)
+        let didSave = await viewModel.saveFriendOrder(reorderedIDs)
 
         XCTAssertTrue(didSave)
-        XCTAssertEqual(viewModel.pinnedFriends.compactMap(\.member.id), reorderedIDs)
+        XCTAssertEqual(viewModel.orderedFriends.compactMap(\.member.id), reorderedIDs)
         XCTAssertEqual(repository.actions, ["order:32,33,31,34,35,36"])
         XCTAssertEqual(repository.friendInfoRequestCount, 1)
     }
 
-    func testPinnedReorderUsesScrollCompatibleLongPressRecognizer() throws {
+    func testFriendReorderUsesScrollCompatibleLongPressRecognizer() throws {
         let source = try Self.sharedReorderGestureSource()
 
-        XCTAssertTrue(source.contains("modernPinnedFriendReorderGesture"))
+        XCTAssertTrue(source.contains("modernFriendReorderGesture"))
         XCTAssertTrue(source.contains("DPLongPressGestureRecognizer("))
-        XCTAssertTrue(source.contains("content.gesture(modernPinnedFriendReorderGesture"))
+        XCTAssertTrue(source.contains("content.gesture(modernFriendReorderGesture"))
         XCTAssertTrue(source.contains("onCancelled:"))
+    }
+
+    /// The management slider is a child control of the row. The UIKit recognizer
+    /// must observe that touch as a simultaneous gesture, without filtering the
+    /// child view out of its hit-test chain.
+    func testFriendReorderRecognizerObservesManagementControlTouches() throws {
+        let recognizer = try Self.projectSource(at: "Dutypark/Components/DPTapLongPressGestureSurface.swift")
+        let social = try Self.projectSource(at: "Dutypark/Features/Social/SocialView.swift")
+
+        XCTAssertTrue(recognizer.contains("recognizer.cancelsTouchesInView = false"))
+        XCTAssertTrue(recognizer.contains("shouldRecognizeSimultaneouslyWith"))
+        XCTAssertFalse(recognizer.contains("shouldReceive"))
+        XCTAssertTrue(social.contains("friendManagementButton(friend)"))
+        XCTAssertTrue(social.contains(".modifier(friendReorderGesture(friend, isDragPreview: isDragPreview))"))
     }
 
     /// The iOS 17 deployment target still has no `UIGestureRecognizerRepresentable`,
     /// so sharing the gesture must not quietly drop the sequenced fallback.
-    func testSharedPinnedReorderGestureKeepsTheLegacySequencedFallback() throws {
+    func testSharedFriendReorderGestureKeepsTheLegacySequencedFallback() throws {
         let source = try Self.sharedReorderGestureSource()
 
         XCTAssertTrue(source.contains("LongPressGesture("))
         XCTAssertTrue(source.contains(".sequenced("))
         XCTAssertTrue(source.contains("DragGesture("))
-        XCTAssertTrue(source.contains("content.simultaneousGesture(legacyPinnedFriendReorderGesture"))
+        XCTAssertTrue(source.contains("content.simultaneousGesture(legacyFriendReorderGesture"))
     }
 
     /// Friend management and the home dashboard both adopt the shared reorder
     /// gesture rather than keeping private copies of the recognizer wiring.
-    func testPinnedListAdoptsTheSharedReorderGesture() throws {
+    func testFriendListAdoptsTheSharedReorderGesture() throws {
         let social = try Self.projectSource(at: "Dutypark/Features/Social/SocialView.swift")
         XCTAssertTrue(
-            social.contains("DPPinnedFriendReorderGesture("),
+            social.contains("DPFriendReorderGesture("),
             "Friend management should adopt the shared reorder gesture"
         )
         XCTAssertFalse(
@@ -441,13 +439,13 @@ final class SocialFeatureTests: XCTestCase {
 
         let home = try Self.projectSource(at: "Dutypark/Features/Home/HomeView.swift")
         XCTAssertTrue(
-            home.contains("DPPinnedFriendReorderGesture("),
-            "The home friend rail should reorder pinned friends"
+            home.contains("DPFriendReorderGesture("),
+            "The home friend rail should reorder friends"
         )
     }
 
     private static func sharedReorderGestureSource() throws -> String {
-        try projectSource(at: "Dutypark/Components/DPPinnedFriendReorder.swift")
+        try projectSource(at: "Dutypark/Components/DPFriendReorder.swift")
     }
 
     private static func projectSource(at path: String) throws -> String {
@@ -459,48 +457,48 @@ final class SocialFeatureTests: XCTestCase {
     }
 
     func testFailedInlineReorderRollsBackAndReportsFailure() async {
-        let repository = SocialRepositorySpy(failPinnedOrder: true)
+        let repository = SocialRepositorySpy(failFriendOrder: true)
         let viewModel = SocialViewModel(repository: repository)
         await viewModel.load()
-        let originalOrder = viewModel.pinnedFriends.compactMap(\.member.id)
+        let originalOrder = viewModel.orderedFriends.compactMap(\.member.id)
         var draftIDs = originalOrder
         draftIDs.move(fromOffsets: IndexSet(integer: 0), toOffset: 2)
 
-        let didSave = await viewModel.savePinnedOrder(draftIDs)
+        let didSave = await viewModel.saveFriendOrder(draftIDs)
 
         XCTAssertFalse(didSave)
-        XCTAssertEqual(viewModel.pinnedFriends.compactMap(\.member.id), originalOrder)
+        XCTAssertEqual(viewModel.orderedFriends.compactMap(\.member.id), originalOrder)
         XCTAssertEqual(viewModel.errorKey, "social.error.reorder")
         XCTAssertFalse(viewModel.isReordering)
     }
 
-    func testSuccessfulPinnedOrderDoesNotReloadTheWholeSnapshot() async {
+    func testSuccessfulFriendOrderDoesNotReloadTheWholeSnapshot() async {
         let repository = SocialRepositorySpy()
         let viewModel = SocialViewModel(repository: repository)
         await viewModel.load()
-        var draftIDs = viewModel.pinnedFriends.compactMap(\.member.id)
+        var draftIDs = viewModel.orderedFriends.compactMap(\.member.id)
         draftIDs.move(fromOffsets: IndexSet(integer: 0), toOffset: 2)
 
-        let didSave = await viewModel.savePinnedOrder(draftIDs)
+        let didSave = await viewModel.saveFriendOrder(draftIDs)
 
         XCTAssertTrue(didSave)
-        XCTAssertEqual(viewModel.pinnedFriends.compactMap(\.member.id), draftIDs)
+        XCTAssertEqual(viewModel.orderedFriends.compactMap(\.member.id), draftIDs)
         XCTAssertNil(viewModel.errorKey)
         XCTAssertEqual(repository.actions.filter { $0.hasPrefix("order:") }.count, 1)
         XCTAssertEqual(repository.friendInfoRequestCount, 1)
         XCTAssertFalse(viewModel.isReordering)
     }
 
-    func testConcurrentPinnedOrderSaveDoesNotSendDuplicateMutation() async {
-        let repository = SocialRepositorySpy(pinnedOrderDelayMilliseconds: 100)
+    func testConcurrentFriendOrderSaveDoesNotSendDuplicateMutation() async {
+        let repository = SocialRepositorySpy(friendOrderDelayMilliseconds: 100)
         let viewModel = SocialViewModel(repository: repository)
         await viewModel.load()
-        var draftIDs = viewModel.pinnedFriends.compactMap(\.member.id)
+        var draftIDs = viewModel.orderedFriends.compactMap(\.member.id)
         draftIDs.move(fromOffsets: IndexSet(integer: 0), toOffset: 2)
 
-        let firstSave = Task { await viewModel.savePinnedOrder(draftIDs) }
+        let firstSave = Task { await viewModel.saveFriendOrder(draftIDs) }
         while !viewModel.isReordering { await Task.yield() }
-        let duplicateResult = await viewModel.savePinnedOrder(draftIDs)
+        let duplicateResult = await viewModel.saveFriendOrder(draftIDs)
         let firstResult = await firstSave.value
 
         XCTAssertTrue(firstResult)
@@ -508,12 +506,12 @@ final class SocialFeatureTests: XCTestCase {
         XCTAssertEqual(repository.actions.filter { $0.hasPrefix("order:") }.count, 1)
     }
 
-    func testInlineReorderRejectsIDsOutsidePinnedFriends() async {
+    func testInlineReorderRejectsIDsOutsideFriends() async {
         let repository = SocialRepositorySpy()
         let viewModel = SocialViewModel(repository: repository)
         await viewModel.load()
 
-        let didSave = await viewModel.savePinnedOrder([32, 33])
+        let didSave = await viewModel.saveFriendOrder([32, 33])
 
         XCTAssertFalse(didSave)
         XCTAssertEqual(viewModel.errorKey, "social.error.reorder")
@@ -521,9 +519,9 @@ final class SocialFeatureTests: XCTestCase {
     }
 
     func testInlineDragMovesCardAsSoonAsItOverlapsNextCard() {
-        let targets = pinnedTargets()
+        let targets = friendTargets()
 
-        let reordered = DPPinnedFriendLiveOrder.reordered(
+        let reordered = DPFriendLiveOrder.reordered(
             [31, 32, 33],
             draggedID: 31,
             previewFrame: CGRect(x: 0, y: 20, width: 300, height: 88),
@@ -534,11 +532,11 @@ final class SocialFeatureTests: XCTestCase {
     }
 
     func testInlineDragDoesNotMoveBeforeCardsOverlap() {
-        let reordered = DPPinnedFriendLiveOrder.reordered(
+        let reordered = DPFriendLiveOrder.reordered(
             [31, 32, 33],
             draggedID: 31,
             previewFrame: CGRect(x: 0, y: 4, width: 300, height: 88),
-            targets: pinnedTargets()
+            targets: friendTargets()
         )
 
         XCTAssertEqual(reordered, [31, 32, 33])
@@ -546,8 +544,8 @@ final class SocialFeatureTests: XCTestCase {
 
     func testInlineDragReturnsToOriginalOrderWhenPreviewLeavesOverlap() {
         let original: [MemberID] = [31, 32, 33]
-        let targets = pinnedTargets()
-        let overlapped = DPPinnedFriendLiveOrder.reordered(
+        let targets = friendTargets()
+        let overlapped = DPFriendLiveOrder.reordered(
             original,
             draggedID: 31,
             previewFrame: CGRect(x: 0, y: 20, width: 300, height: 88),
@@ -555,7 +553,7 @@ final class SocialFeatureTests: XCTestCase {
         )
         XCTAssertEqual(overlapped, [32, 31, 33])
 
-        let restored = DPPinnedFriendLiveOrder.reordered(
+        let restored = DPFriendLiveOrder.reordered(
             original,
             draggedID: 31,
             previewFrame: CGRect(x: 0, y: 4, width: 300, height: 88),
@@ -565,12 +563,12 @@ final class SocialFeatureTests: XCTestCase {
         XCTAssertEqual(restored, original)
     }
 
-    func testInlineDragCanMovePinnedCardUpMultiplePositions() {
-        let reordered = DPPinnedFriendLiveOrder.reordered(
+    func testInlineDragCanMoveFriendCardUpMultiplePositions() {
+        let reordered = DPFriendLiveOrder.reordered(
             [31, 32, 33],
             draggedID: 33,
             previewFrame: CGRect(x: 0, y: 0, width: 300, height: 88),
-            targets: pinnedTargets()
+            targets: friendTargets()
         )
 
         XCTAssertEqual(reordered, [33, 31, 32])
@@ -578,13 +576,13 @@ final class SocialFeatureTests: XCTestCase {
 
     func testInlineDragReordersWithOnlyVisibleLazyStackTargets() {
         let targets = [
-            DPPinnedFriendDropTarget(memberID: 31, frame: CGRect(x: 0, y: 0, width: 300, height: 88)),
-            DPPinnedFriendDropTarget(memberID: 32, frame: CGRect(x: 0, y: 96, width: 300, height: 88)),
-            DPPinnedFriendDropTarget(memberID: 33, frame: CGRect(x: 0, y: 192, width: 300, height: 88)),
-            DPPinnedFriendDropTarget(memberID: 34, frame: CGRect(x: 0, y: 288, width: 300, height: 88))
+            DPFriendDropTarget(memberID: 31, frame: CGRect(x: 0, y: 0, width: 300, height: 88)),
+            DPFriendDropTarget(memberID: 32, frame: CGRect(x: 0, y: 96, width: 300, height: 88)),
+            DPFriendDropTarget(memberID: 33, frame: CGRect(x: 0, y: 192, width: 300, height: 88)),
+            DPFriendDropTarget(memberID: 34, frame: CGRect(x: 0, y: 288, width: 300, height: 88))
         ]
 
-        let reordered = DPPinnedFriendLiveOrder.reordered(
+        let reordered = DPFriendLiveOrder.reordered(
             [31, 32, 33, 34, 35, 36],
             draggedID: 31,
             previewFrame: CGRect(x: 0, y: 20, width: 300, height: 88),
@@ -595,18 +593,17 @@ final class SocialFeatureTests: XCTestCase {
     }
 
     func testInlineDragRequiresLongPressBeforeMovement() {
-        XCTAssertEqual(DPPinnedFriendDragLayout.minimumPressDuration, 0.35)
-        XCTAssertEqual(DPPinnedFriendDragLayout.maximumPressDistance, 10)
-        XCTAssertEqual(DPPinnedFriendDragLayout.activationDistance, 4)
+        XCTAssertEqual(DPFriendDragLayout.minimumPressDuration, 0.35)
+        XCTAssertEqual(DPFriendDragLayout.maximumPressDistance, 10)
+        XCTAssertEqual(DPFriendDragLayout.activationDistance, 4)
     }
 
     func testCompactFriendCardKeepsManagementActionsOutOfTheContentLayout() {
-        XCTAssertEqual(SocialFriendCardLayout.panelInset, 12)
-        XCTAssertEqual(SocialFriendCardLayout.avatarSize, 56)
-        XCTAssertEqual(
-            SocialFriendCardLayout.topActionsWidth,
-            DPSize.minimumTouchTarget * 2
-        )
+        XCTAssertEqual(SocialFriendCardLayout.panelInset, 14)
+        XCTAssertEqual(SocialFriendCardLayout.avatarSize, 44)
+        XCTAssertEqual(SocialFriendCardLayout.contentSpacing, 12)
+        XCTAssertEqual(SocialFriendCardLayout.managementWidth, 44)
+        XCTAssertEqual(SocialFriendCardLayout.rowHeight, 72)
     }
 
     func testFriendCardMatchesMobileWebIdentityOnlyDensity() throws {
@@ -618,7 +615,7 @@ final class SocialFeatureTests: XCTestCase {
         let start = try XCTUnwrap(source.range(of: "    private func friendCard("))
         let end = try XCTUnwrap(
             source.range(
-                of: "    private func isPinnedFriendReorderEnabled(",
+                of: "    private func isFriendReorderEnabled(",
                 range: start.upperBound..<source.endIndex
             )
         )
@@ -629,7 +626,7 @@ final class SocialFeatureTests: XCTestCase {
         XCTAssertFalse(friendCardSource.contains("friend.member.team"))
         XCTAssertFalse(friendCardSource.contains("friend.duty"))
         XCTAssertFalse(friendCardSource.contains("friend.schedules"))
-        XCTAssertTrue(friendCardSource.contains(".frame(minHeight: 88"))
+        XCTAssertTrue(friendCardSource.contains("SocialFriendCardLayout.rowHeight"))
     }
 
     func testSuccessfulMutationsReportOnlyReceivedRequestCountEffects() async {
@@ -643,8 +640,10 @@ final class SocialFeatureTests: XCTestCase {
         if let received = viewModel.receivedRequests.first {
             await viewModel.accept(received)
         }
-        if let friend = viewModel.friends.first {
-            await viewModel.togglePin(friend)
+        var order = viewModel.orderedFriends.compactMap(\.member.id)
+        if order.count > 1 {
+            order.swapAt(0, 1)
+            await viewModel.saveFriendOrder(order)
         }
 
         XCTAssertEqual(effects, [true, false])
@@ -668,9 +667,11 @@ final class SocialFeatureTests: XCTestCase {
         await viewModel.removeFromFamily(family)
         XCTAssertFalse(try XCTUnwrap(viewModel.friends.first(where: { $0.member.id == 31 })).isFamily)
 
-        let pinned = try XCTUnwrap(viewModel.friends.first(where: { $0.member.id == 31 }))
-        await viewModel.togglePin(pinned)
-        XCTAssertNil(viewModel.friends.first(where: { $0.member.id == 31 })?.pinOrder)
+        var order = viewModel.orderedFriends.compactMap(\.member.id)
+        order.reverse()
+        let didSave = await viewModel.saveFriendOrder(order)
+        XCTAssertTrue(didSave)
+        XCTAssertEqual(viewModel.orderedFriends.compactMap(\.member.id), order)
 
         let removed = try XCTUnwrap(viewModel.friends.first(where: { $0.member.id == 32 }))
         await viewModel.removeFriend(removed)
@@ -724,7 +725,7 @@ final class SocialFeatureTests: XCTestCase {
         XCTAssertEqual(failureHaptics.event?.kind, .error)
     }
 
-    func testPinnedOrderNoOpDoesNotEmitOutcomeHaptic() async {
+    func testFriendOrderNoOpDoesNotEmitOutcomeHaptic() async {
         let haptics = DPHapticCenter()
         let viewModel = SocialViewModel(
             repository: SocialRepositorySpy(),
@@ -732,8 +733,8 @@ final class SocialFeatureTests: XCTestCase {
         )
         await viewModel.load()
 
-        let currentIDs = viewModel.pinnedFriends.compactMap(\.member.id)
-        let didSave = await viewModel.savePinnedOrder(currentIDs)
+        let currentIDs = viewModel.orderedFriends.compactMap(\.member.id)
+        let didSave = await viewModel.saveFriendOrder(currentIDs)
 
         XCTAssertTrue(didSave)
         XCTAssertNil(haptics.event)
@@ -828,11 +829,11 @@ final class SocialFeatureTests: XCTestCase {
         return APIClient(baseURL: baseURL, session: URLSession(configuration: configuration))
     }
 
-    private func pinnedTargets() -> [DPPinnedFriendDropTarget] {
+    private func friendTargets() -> [DPFriendDropTarget] {
         [
-            DPPinnedFriendDropTarget(memberID: 31, frame: CGRect(x: 0, y: 0, width: 300, height: 88)),
-            DPPinnedFriendDropTarget(memberID: 32, frame: CGRect(x: 0, y: 96, width: 300, height: 88)),
-            DPPinnedFriendDropTarget(memberID: 33, frame: CGRect(x: 0, y: 192, width: 300, height: 88))
+            DPFriendDropTarget(memberID: 31, frame: CGRect(x: 0, y: 0, width: 300, height: 88)),
+            DPFriendDropTarget(memberID: 32, frame: CGRect(x: 0, y: 96, width: 300, height: 88)),
+            DPFriendDropTarget(memberID: 33, frame: CGRect(x: 0, y: 192, width: 300, height: 88))
         ]
     }
 
@@ -850,11 +851,11 @@ final class SocialFeatureTests: XCTestCase {
 
 private final class SocialRepositorySpy: SocialRepository, @unchecked Sendable {
     private let lock = NSLock()
-    private let failPinnedOrder: Bool
+    private let failFriendOrder: Bool
     private let failReloadAfterMutation: Bool
     private let failingAction: String?
-    private let pinnedOrderDelayMilliseconds: Int64
-    private let pinnedFriendCount: Int?
+    private let friendOrderDelayMilliseconds: Int64
+    private let friendCount: Int?
     private let receivedRequestFromMemberID: MemberID
     private var storedActions: [String] = []
     private var didPerformMutation = false
@@ -862,19 +863,19 @@ private final class SocialRepositorySpy: SocialRepository, @unchecked Sendable {
     private var storedBlockedMemberIDs: [MemberID]
 
     init(
-        failPinnedOrder: Bool = false,
+        failFriendOrder: Bool = false,
         failReloadAfterMutation: Bool = false,
         failingAction: String? = nil,
-        pinnedOrderDelayMilliseconds: Int64 = 0,
-        pinnedFriendCount: Int? = nil,
+        friendOrderDelayMilliseconds: Int64 = 0,
+        friendCount: Int? = nil,
         blockedMemberIDs: [MemberID] = [],
         receivedRequestFromMemberID: MemberID = 11
     ) {
-        self.failPinnedOrder = failPinnedOrder
+        self.failFriendOrder = failFriendOrder
         self.failReloadAfterMutation = failReloadAfterMutation
         self.failingAction = failingAction
-        self.pinnedOrderDelayMilliseconds = pinnedOrderDelayMilliseconds
-        self.pinnedFriendCount = pinnedFriendCount
+        self.friendOrderDelayMilliseconds = friendOrderDelayMilliseconds
+        self.friendCount = friendCount
         self.storedBlockedMemberIDs = blockedMemberIDs
         self.receivedRequestFromMemberID = receivedRequestFromMemberID
     }
@@ -893,15 +894,15 @@ private final class SocialRepositorySpy: SocialRepository, @unchecked Sendable {
             return failReloadAfterMutation && didPerformMutation
         }
         if shouldFail { throw SocialTestError.reload }
-        let friends = if let pinnedFriendCount {
-            (0..<pinnedFriendCount).map { index in
-                friend(id: 31 + MemberID(index), pinOrder: Int64(index + 1))
+        let friends = if let friendCount {
+            (0..<friendCount).map { index in
+                friend(id: 31 + MemberID(index), displayOrder: Int64(index + 1))
             }
         } else {
             [
-                friend(id: 31, pinOrder: 1, isFamily: true),
-                friend(id: 32, pinOrder: 2),
-                friend(id: 33, pinOrder: nil)
+                friend(id: 31, displayOrder: 1, isFamily: true),
+                friend(id: 32, displayOrder: 2),
+                friend(id: 33, displayOrder: nil)
             ]
         }
         // The server unfriends a blocked member, so the dashboard drops them too.
@@ -926,8 +927,6 @@ private final class SocialRepositorySpy: SocialRepository, @unchecked Sendable {
     func sendFamilyRequest(to memberID: MemberID) async throws { try perform("family:\(memberID)") }
     func removeFromFamily(_ memberID: MemberID) async throws { try perform("demote:\(memberID)") }
     func removeFriend(_ memberID: MemberID) async throws { try perform("remove:\(memberID)") }
-    func pin(_ memberID: MemberID) async throws { try perform("pin:\(memberID)") }
-    func unpin(_ memberID: MemberID) async throws { try perform("unpin:\(memberID)") }
     func block(_ memberID: MemberID) async throws {
         try perform("block:\(memberID)")
         lock.withLock {
@@ -954,12 +953,12 @@ private final class SocialRepositorySpy: SocialRepository, @unchecked Sendable {
         }
     }
 
-    func updatePinnedOrder(_ memberIDs: [MemberID]) async throws {
+    func updateFriendOrder(_ memberIDs: [MemberID]) async throws {
         record("order:\(memberIDs.map(String.init).joined(separator: ","))")
-        if pinnedOrderDelayMilliseconds > 0 {
-            try await Task.sleep(for: .milliseconds(pinnedOrderDelayMilliseconds))
+        if friendOrderDelayMilliseconds > 0 {
+            try await Task.sleep(for: .milliseconds(friendOrderDelayMilliseconds))
         }
-        if failPinnedOrder { throw SocialTestError.reorder }
+        if failFriendOrder { throw SocialTestError.reorder }
         lock.withLock {
             didPerformMutation = true
         }
@@ -991,7 +990,7 @@ private final class SocialRepositorySpy: SocialRepository, @unchecked Sendable {
 
     private func friend(
         id: MemberID,
-        pinOrder: Int64?,
+        displayOrder: Int64?,
         isFamily: Bool = false
     ) -> DashboardFriendDetailDTO {
         DashboardFriendDetailDTO(
@@ -999,7 +998,7 @@ private final class SocialRepositorySpy: SocialRepository, @unchecked Sendable {
             duty: nil,
             schedules: [],
             isFamily: isFamily,
-            pinOrder: pinOrder
+            displayOrder: displayOrder
         )
     }
 

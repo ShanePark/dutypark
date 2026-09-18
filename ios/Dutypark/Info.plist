@@ -15,7 +15,7 @@
     <key>ITSAppUsesNonExemptEncryption</key>
     <false/>
     <key>NSCameraUsageDescription</key>
-    <string>Camera access is needed to take your profile photo.</string>
+    <string>Camera access is needed to take photos for attachments or your profile.</string>
     <key>UILaunchStoryboardName</key>
     <string>LaunchScreen</string>
     <key>UIAppFonts</key>

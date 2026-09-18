@@ -17,14 +17,14 @@ final class SocialViewModel: ObservableObject {
     @Published private(set) var isReordering = false
     @Published var errorKey: String?
 #if DEBUG
-    @Published private(set) var uiTestingPinnedOrderSaveCount = 0
+    @Published private(set) var uiTestingFriendOrderSaveCount = 0
 #endif
 
     private let repository: any SocialRepository
     private let searchPageSize: Int
     private let onMutation: @MainActor (Bool) async -> Void
     private let haptics: DPHapticCenter
-    private var pinnedOrderIDs: [MemberID]?
+    private var friendOrderIDs: [MemberID]?
 
     init(
         repository: any SocialRepository = LiveSocialRepository(),
@@ -38,19 +38,38 @@ final class SocialViewModel: ObservableObject {
         self.haptics = haptics
     }
 
-    var pinnedFriends: [DashboardFriendDetailDTO] {
-        let pinned = friends.filter { $0.pinOrder != nil }
-        if let pinnedOrderIDs {
-            let positions = Dictionary(uniqueKeysWithValues: pinnedOrderIDs.enumerated().map { ($1, $0) })
-            return pinned.sorted {
-                positions[$0.member.id ?? -1, default: .max] < positions[$1.member.id ?? -1, default: .max]
-            }
-        }
-        return pinned.sorted { ($0.pinOrder ?? .max) < ($1.pinOrder ?? .max) }
-    }
+    var orderedFriends: [DashboardFriendDetailDTO] {
+        let positions = Dictionary(
+            uniqueKeysWithValues: (friendOrderIDs ?? []).enumerated().map { ($1, $0) }
+        )
 
-    var unpinnedFriends: [DashboardFriendDetailDTO] {
-        friends.filter { $0.pinOrder == nil }
+        return friends.enumerated()
+            .sorted { lhs, rhs in
+                let lhsOrder = positions[lhs.element.member.id ?? -1]
+                let rhsOrder = positions[rhs.element.member.id ?? -1]
+                switch (lhsOrder, rhsOrder) {
+                case let (left?, right?):
+                    return left == right ? lhs.offset < rhs.offset : left < right
+                case (_?, nil):
+                    return true
+                case (nil, _?):
+                    return false
+                case (nil, nil):
+                    let leftDisplayOrder = lhs.element.displayOrder
+                    let rightDisplayOrder = rhs.element.displayOrder
+                    switch (leftDisplayOrder, rightDisplayOrder) {
+                    case let (left?, right?):
+                        return left == right ? lhs.offset < rhs.offset : left < right
+                    case (_?, nil):
+                        return true
+                    case (nil, _?):
+                        return false
+                    case (nil, nil):
+                        return lhs.offset < rhs.offset
+                    }
+                }
+            }
+            .map(\.element)
     }
 
     var hasPendingRequests: Bool {
@@ -234,37 +253,12 @@ final class SocialViewModel: ObservableObject {
         }
     }
 
-    func togglePin(_ friend: DashboardFriendDetailDTO) async {
-        guard let id = friend.member.id else { return }
-#if DEBUG
-        if isSocialReorderUITesting {
-            let pinOrder = friend.pinOrder == nil ? nextPinOrder : nil
-            replaceFriend(id: id) { $0.replacingPinOrder(pinOrder) }
-            await onMutation(false)
-            return
-        }
-#endif
-        await perform(
-            error: friend.pinOrder == nil ? "social.error.pin" : "social.error.unpin",
-            affectsReceivedRequestCount: false,
-            optimisticUpdate: {
-                let pinOrder = friend.pinOrder == nil ? nextPinOrder : nil
-                replaceFriend(id: id) { $0.replacingPinOrder(pinOrder) }
-            }
-        ) {
-            if friend.pinOrder == nil {
-                try await repository.pin(id)
-            } else {
-                try await repository.unpin(id)
-            }
-        }
-    }
-
     @discardableResult
-    func savePinnedOrder(_ memberIDs: [MemberID]) async -> Bool {
+    func saveFriendOrder(_ memberIDs: [MemberID]) async -> Bool {
         guard !isReordering else { return false }
-        let currentIDs = pinnedFriends.compactMap(\.member.id)
+        let currentIDs = orderedFriends.compactMap(\.member.id)
         guard memberIDs.count == currentIDs.count,
+              Set(memberIDs).count == memberIDs.count,
               Set(memberIDs) == Set(currentIDs) else {
             errorKey = "social.error.reorder"
             haptics.emit(.error)
@@ -274,31 +268,31 @@ final class SocialViewModel: ObservableObject {
 
 #if DEBUG
         if isUITesting {
-            pinnedOrderIDs = memberIDs
+            friendOrderIDs = memberIDs
             if isSocialReorderUITesting {
-                uiTestingPinnedOrderSaveCount += 1
+                uiTestingFriendOrderSaveCount += 1
             }
             await onMutation(false)
             return true
         }
 #endif
 
-        let previousOrderIDs = pinnedOrderIDs
-        pinnedOrderIDs = memberIDs
+        let previousOrderIDs = friendOrderIDs
+        friendOrderIDs = memberIDs
         isReordering = true
         defer { isReordering = false }
 
         do {
-            try await repository.updatePinnedOrder(memberIDs)
+            try await repository.updateFriendOrder(memberIDs)
         } catch {
-            pinnedOrderIDs = previousOrderIDs
+            friendOrderIDs = previousOrderIDs
             errorKey = "social.error.reorder"
             haptics.emit(.error)
             return false
         }
 
-        applyPinnedOrder(memberIDs)
-        pinnedOrderIDs = nil
+        applyFriendOrder(memberIDs)
+        friendOrderIDs = nil
         errorKey = nil
         haptics.emit(.success)
 
@@ -315,7 +309,7 @@ final class SocialViewModel: ObservableObject {
         friends = info.friends
         receivedRequests = info.pendingRequestsTo
         sentRequests = info.pendingRequestsFrom
-        pinnedOrderIDs = nil
+        friendOrderIDs = nil
         blockedMembers = try await repository.blockedMembers()
     }
 
@@ -353,10 +347,6 @@ final class SocialViewModel: ObservableObject {
         await onMutation(affectsReceivedRequestCount)
     }
 
-    private var nextPinOrder: Int64 {
-        (friends.compactMap(\.pinOrder).max() ?? -1) + 1
-    }
-
     private func replaceFriend(
         id: MemberID,
         transform: (DashboardFriendDetailDTO) -> DashboardFriendDetailDTO
@@ -366,14 +356,14 @@ final class SocialViewModel: ObservableObject {
         }
     }
 
-    private func applyPinnedOrder(_ memberIDs: [MemberID]) {
+    private func applyFriendOrder(_ memberIDs: [MemberID]) {
         let orders = Dictionary(
             uniqueKeysWithValues: memberIDs.enumerated().map { ($1, Int64($0)) }
         )
         friends = friends.map { friend in
             guard let memberID = friend.member.id,
-                  let pinOrder = orders[memberID] else { return friend }
-            return friend.replacingPinOrder(pinOrder)
+                  let displayOrder = orders[memberID] else { return friend }
+            return friend.replacingDisplayOrder(displayOrder)
         }
     }
 
@@ -384,7 +374,7 @@ final class SocialViewModel: ObservableObject {
             sentRequests: sentRequests,
             searchResults: searchResults,
             blockedMembers: blockedMembers,
-            pinnedOrderIDs: pinnedOrderIDs
+            friendOrderIDs: friendOrderIDs
         )
     }
 
@@ -394,7 +384,7 @@ final class SocialViewModel: ObservableObject {
         sentRequests = snapshot.sentRequests
         searchResults = snapshot.searchResults
         blockedMembers = snapshot.blockedMembers
-        pinnedOrderIDs = snapshot.pinnedOrderIDs
+        friendOrderIDs = snapshot.friendOrderIDs
     }
 
     private struct MutationSnapshot {
@@ -403,7 +393,7 @@ final class SocialViewModel: ObservableObject {
         let sentRequests: [FriendRequestDTO]
         let searchResults: [MemberPreviewDTO]
         let blockedMembers: [BlockedMemberDTO]
-        let pinnedOrderIDs: [MemberID]?
+        let friendOrderIDs: [MemberID]?
     }
 
 #if DEBUG
@@ -416,10 +406,10 @@ final class SocialViewModel: ObservableObject {
             || isSocialReorderOverflowUITesting
     }
 
-    /// Well past the ~6 pinned cards an iPhone 16 Pro viewport shows at once.
-    static let uiTestingOverflowPinnedCount = 32
+    /// Well past the ~6 friend cards an iPhone 16 Pro viewport shows at once.
+    static let uiTestingOverflowFriendCount = 32
 
-    /// Seeds more pinned friends than fit on screen so the `LazyVStack` stops
+    /// Seeds more friends than fit on screen so the `LazyVStack` stops
     /// publishing drop-target frames for the rows outside the viewport.
     private var isSocialReorderOverflowUITesting: Bool {
         ProcessInfo.processInfo.arguments.contains("-ui-testing-social-reorder-overflow")
@@ -428,41 +418,41 @@ final class SocialViewModel: ObservableObject {
     private func loadUITestingFixture() {
         if isSocialReorderOverflowUITesting {
             var overflowFriends: [DashboardFriendDetailDTO] = []
-            for index in 0..<SocialViewModel.uiTestingOverflowPinnedCount {
+            for index in 0..<SocialViewModel.uiTestingOverflowFriendCount {
                 let id = MemberID(41 + index)
                 overflowFriends.append(
-                    uiTestingFriend(id: id, name: "핀친구 \(index + 1)", pinOrder: Int64(index + 1))
+                    uiTestingFriend(id: id, name: "친구 \(index + 1)", displayOrder: Int64(index))
                 )
             }
             friends = overflowFriends
         } else if isSocialReorderUITesting {
             friends = [
-                uiTestingFriend(id: 31, name: "알렉스", pinOrder: 1),
-                uiTestingFriend(id: 32, name: "민지", pinOrder: 2),
-                uiTestingFriend(id: 33, name: "테일러", pinOrder: 3),
-                uiTestingFriend(id: 34, name: "지우", pinOrder: 4),
-                uiTestingFriend(id: 35, name: "하늘", pinOrder: 5),
-                uiTestingFriend(id: 36, name: "유진", pinOrder: 6)
+                uiTestingFriend(id: 31, name: "알렉스", displayOrder: 0),
+                uiTestingFriend(id: 32, name: "민지", displayOrder: 1),
+                uiTestingFriend(id: 33, name: "테일러", displayOrder: 2),
+                uiTestingFriend(id: 34, name: "지우", displayOrder: 3),
+                uiTestingFriend(id: 35, name: "하늘", displayOrder: 4),
+                uiTestingFriend(id: 36, name: "유진", displayOrder: 5)
             ]
         } else {
             friends = [
-                uiTestingFriend(id: 31, name: "알렉스", pinOrder: 1),
-                uiTestingFriend(id: 32, name: "민지", pinOrder: 2),
-                uiTestingFriend(id: 33, name: "테일러", pinOrder: nil)
+                uiTestingFriend(id: 31, name: "알렉스", displayOrder: 0),
+                uiTestingFriend(id: 32, name: "민지", displayOrder: 1),
+                uiTestingFriend(id: 33, name: "테일러", displayOrder: 2)
             ]
         }
         receivedRequests = []
         sentRequests = []
         blockedMembers = []
-        pinnedOrderIDs = nil
+        friendOrderIDs = nil
         errorKey = nil
-        uiTestingPinnedOrderSaveCount = 0
+        uiTestingFriendOrderSaveCount = 0
     }
 
     private func uiTestingFriend(
         id: MemberID,
         name: String,
-        pinOrder: Int64?
+        displayOrder: Int64?
     ) -> DashboardFriendDetailDTO {
         DashboardFriendDetailDTO(
             member: MemberPreviewDTO(
@@ -476,7 +466,7 @@ final class SocialViewModel: ObservableObject {
             duty: nil,
             schedules: [],
             isFamily: false,
-            pinOrder: pinOrder
+            displayOrder: displayOrder
         )
     }
 #endif
@@ -489,17 +479,17 @@ private extension DashboardFriendDetailDTO {
             duty: duty,
             schedules: schedules,
             isFamily: isFamily,
-            pinOrder: pinOrder
+            displayOrder: displayOrder
         )
     }
 
-    func replacingPinOrder(_ pinOrder: Int64?) -> DashboardFriendDetailDTO {
+    func replacingDisplayOrder(_ displayOrder: Int64?) -> DashboardFriendDetailDTO {
         DashboardFriendDetailDTO(
             member: member,
             duty: duty,
             schedules: schedules,
             isFamily: isFamily,
-            pinOrder: pinOrder
+            displayOrder: displayOrder
         )
     }
 }

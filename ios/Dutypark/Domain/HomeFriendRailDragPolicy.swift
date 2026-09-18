@@ -5,7 +5,7 @@ nonisolated enum HomeFriendRailAutoScrollDirection: Int, Equatable, Sendable {
     case forward = 1
 }
 
-/// Pure layout rules for the Home pinned-friend rail while a card is held.
+/// Pure layout rules for the Home friend rail while a card is held.
 nonisolated enum HomeFriendRailDragPolicy {
     static let activationEdgeWidth: CGFloat = 56
 

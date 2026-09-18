@@ -10,7 +10,7 @@ data class FriendDto(
     val hasProfilePhoto: Boolean = false,
     val profilePhotoVersion: Long = 0,
     val isFamily: Boolean = false,
-    val pinOrder: Long? = null,
+    val displayOrder: Long? = null,
 )
 
 internal fun FriendRelation.toFriendDto(): FriendDto {
@@ -23,6 +23,6 @@ internal fun FriendRelation.toFriendDto(): FriendDto {
         hasProfilePhoto = preview.hasProfilePhoto,
         profilePhotoVersion = preview.profilePhotoVersion,
         isFamily = isFamily,
-        pinOrder = pinOrder,
+        displayOrder = displayOrder,
     )
 }

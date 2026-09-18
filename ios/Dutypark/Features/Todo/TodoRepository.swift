@@ -12,6 +12,7 @@ nonisolated protocol TodoRepository: Sendable {
     func changeStatus(id: TodoID, request: TodoStatusChangeRequest) async throws -> TodoDTO
     func updatePositions(_ request: TodoPositionUpdateRequest) async throws
     func leaveTag(id: TodoID) async throws
+    func clearCompleted(todoIDs: [TodoID]) async throws -> TodoCompletedCleanupResponse
 }
 
 nonisolated struct TodoAPIRepository: TodoRepository {
@@ -69,6 +70,14 @@ nonisolated struct TodoAPIRepository: TodoRepository {
 
     func leaveTag(id: TodoID) async throws {
         try await client.data("todos/\(id.uuidString)/tags", method: .delete)
+    }
+
+    func clearCompleted(todoIDs: [TodoID]) async throws -> TodoCompletedCleanupResponse {
+        try await client.request(
+            "todos/completed",
+            method: .delete,
+            body: TodoCompletedCleanupRequest(todoIds: todoIDs)
+        )
     }
 
     private func sendWithoutResponse<Body: Encodable & Sendable>(

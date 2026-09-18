@@ -7,14 +7,10 @@ export type SelectedFriendEntry = TaggableFriend & {
 
 export function sortTaggableFriends(friends: TaggableFriend[], locale: string): TaggableFriend[] {
   return [...friends].sort((a, b) => {
-    const aPinned = a.pinOrder == null ? 1 : 0
-    const bPinned = b.pinOrder == null ? 1 : 0
-    if (aPinned !== bPinned) {
-      return aPinned - bPinned
-    }
-
-    if (a.pinOrder != null && b.pinOrder != null && a.pinOrder !== b.pinOrder) {
-      return a.pinOrder - b.pinOrder
+    const aOrder = a.displayOrder ?? Number.MAX_SAFE_INTEGER
+    const bOrder = b.displayOrder ?? Number.MAX_SAFE_INTEGER
+    if (aOrder !== bOrder) {
+      return aOrder - bOrder
     }
 
     const aFamily = a.isFamily ? 0 : 1
@@ -64,7 +60,7 @@ export function buildSelectedEntries(options: {
       hasProfilePhoto: false,
       profilePhotoVersion: 0,
       isFamily: false,
-      pinOrder: null,
+      displayOrder: null,
       isUnavailable: true,
     }))
 

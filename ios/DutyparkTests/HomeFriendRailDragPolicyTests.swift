@@ -41,7 +41,7 @@ struct HomeFriendRailDragPolicyTests {
     }
 
     @Test
-    func edgeAutoScrollMovesOnlyOnePinnedSlotAtATime() {
+    func edgeAutoScrollMovesOnlyOneFriendSlotAtATime() {
         let order: [MemberID] = [31, 32, 33, 34]
 
         #expect(HomeFriendRailDragPolicy.movedOrder(
@@ -57,7 +57,7 @@ struct HomeFriendRailDragPolicyTests {
     }
 
     @Test
-    func edgeAutoScrollStopsAtPinnedBoundaries() {
+    func edgeAutoScrollStopsAtFriendBoundaries() {
         let order: [MemberID] = [31, 32, 33]
 
         #expect(HomeFriendRailDragPolicy.movedOrder(

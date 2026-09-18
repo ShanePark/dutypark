@@ -24,7 +24,7 @@ class FriendRelation(
     @Column(name = "is_family")
     var isFamily: Boolean = false
 
-    @Column(name = "pin_order")
-    var pinOrder: Long? = null
+    @Column(name = "display_order")
+    var displayOrder: Long? = null
 
 }

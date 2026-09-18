@@ -39,7 +39,7 @@ final class HomeViewModel: ObservableObject {
     var sortedFriends: [DashboardFriendDetailDTO] {
         guard let friends = friendsDashboard?.friends else { return [] }
         return friends.enumerated().sorted { first, second in
-            switch (first.element.pinOrder, second.element.pinOrder) {
+            switch (first.element.displayOrder, second.element.displayOrder) {
             case let (firstOrder?, secondOrder?):
                 return firstOrder == secondOrder ? first.offset < second.offset : firstOrder < secondOrder
             case (_?, nil):
@@ -145,23 +145,9 @@ final class HomeViewModel: ObservableObject {
         friendsState = .loaded(dashboard)
     }
 
-    func setFriendPinned(memberID: MemberID, isPinned: Bool) {
+    func setFriendOrder(_ memberIDs: [MemberID]) {
         guard let dashboard = friendsDashboard else { return }
-        let nextPinOrder = isPinned
-            ? (dashboard.friends.compactMap(\.pinOrder).max() ?? -1) + 1
-            : nil
-        let updatedFriends = dashboard.friends.map { friend in
-            guard friend.member.id == memberID else { return friend }
-            return friend.replacingPinOrder(nextPinOrder)
-        }
-        replaceFriendsDashboardForMutation(dashboard.replacingFriends(updatedFriends))
-    }
-
-    func setPinnedFriendOrder(_ memberIDs: [MemberID]) {
-        guard let dashboard = friendsDashboard else { return }
-        let currentIDs = dashboard.friends.compactMap { friend in
-            friend.pinOrder == nil ? nil : friend.member.id
-        }
+        let currentIDs = dashboard.friends.compactMap(\.member.id)
         guard memberIDs.count == currentIDs.count,
               Set(memberIDs) == Set(currentIDs) else { return }
 
@@ -170,8 +156,8 @@ final class HomeViewModel: ObservableObject {
         )
         let updatedFriends = dashboard.friends.map { friend in
             guard let memberID = friend.member.id,
-                  let pinOrder = orders[memberID] else { return friend }
-            return friend.replacingPinOrder(pinOrder)
+                  let displayOrder = orders[memberID] else { return friend }
+            return friend.replacingDisplayOrder(displayOrder)
         }
         replaceFriendsDashboardForMutation(dashboard.replacingFriends(updatedFriends))
     }
@@ -213,29 +199,29 @@ final class HomeViewModel: ObservableObject {
             profilePhotoVersion: 0
         )
         myState = .loaded(DashboardMyDetailDTO(member: member, duty: nil, schedules: []))
-        // The many-pinned fixture spans every card variant — team or not, duty or
+        // The many-friends fixture spans every card variant — team or not, duty or
         // not, off duty, and a team name long enough to need shrinking — so a UI
         // test can prove none of them changes the card's size.
-        let friends = if ProcessInfo.processInfo.arguments.contains("-ui-testing-home-many-pinned") {
+        let friends = if ProcessInfo.processInfo.arguments.contains("-ui-testing-home-many-friends") {
             [
-                uiTestingFriend(id: 31, name: "첫째 친구", team: "간호1팀", duty: uiTestingDuty("주간"), pinOrder: 0),
-                uiTestingFriend(id: 32, name: "둘째 친구", duty: uiTestingDuty("야간"), pinOrder: 1),
-                uiTestingFriend(id: 33, name: "셋째 친구", team: "간호2팀", pinOrder: 2),
-                uiTestingFriend(id: 34, name: "넷째 친구", pinOrder: 3),
+                uiTestingFriend(id: 31, name: "첫째 친구", team: "간호1팀", duty: uiTestingDuty("주간"), displayOrder: 0),
+                uiTestingFriend(id: 32, name: "둘째 친구", duty: uiTestingDuty("야간"), displayOrder: 1),
+                uiTestingFriend(id: 33, name: "셋째 친구", team: "간호2팀", displayOrder: 2),
+                uiTestingFriend(id: 34, name: "넷째 친구", displayOrder: 3),
                 uiTestingFriend(
                     id: 35,
                     name: "다섯째 친구",
                     team: "아주 긴 이름의 병동 간호팀",
                     duty: uiTestingDuty("주간"),
-                    pinOrder: 4
+                    displayOrder: 4
                 ),
-                uiTestingFriend(id: 36, name: "여섯째 친구", duty: uiTestingDuty(nil), pinOrder: 5),
+                uiTestingFriend(id: 36, name: "여섯째 친구", duty: uiTestingDuty(nil), displayOrder: 5),
             ]
         } else {
             [
-                uiTestingFriend(id: 21, name: "김간호", team: "간호1팀", duty: uiTestingDuty("주간"), pinOrder: 0),
-                uiTestingFriend(id: 22, name: "박야간", duty: uiTestingDuty("야간"), pinOrder: 1),
-                uiTestingFriend(id: 23, name: "이휴무", team: "응급팀", duty: uiTestingDuty(nil), pinOrder: nil),
+                uiTestingFriend(id: 21, name: "김간호", team: "간호1팀", duty: uiTestingDuty("주간"), displayOrder: 0),
+                uiTestingFriend(id: 22, name: "박야간", duty: uiTestingDuty("야간"), displayOrder: 1),
+                uiTestingFriend(id: 23, name: "이휴무", team: "응급팀", duty: uiTestingDuty(nil), displayOrder: 2),
             ]
         }
         friendsState = .loaded(DashboardFriendInfoDTO(
@@ -250,7 +236,7 @@ final class HomeViewModel: ObservableObject {
         name: String,
         team: String? = nil,
         duty: DutyDTO? = nil,
-        pinOrder: Int64?
+        displayOrder: Int64?
     ) -> DashboardFriendDetailDTO {
         DashboardFriendDetailDTO(
             member: MemberPreviewDTO(
@@ -264,7 +250,7 @@ final class HomeViewModel: ObservableObject {
             duty: duty,
             schedules: [],
             isFamily: id == 21,
-            pinOrder: pinOrder
+            displayOrder: displayOrder
         )
     }
 
@@ -284,13 +270,13 @@ final class HomeViewModel: ObservableObject {
 }
 
 private extension DashboardFriendDetailDTO {
-    func replacingPinOrder(_ pinOrder: Int64?) -> DashboardFriendDetailDTO {
+    func replacingDisplayOrder(_ displayOrder: Int64?) -> DashboardFriendDetailDTO {
         DashboardFriendDetailDTO(
             member: member,
             duty: duty,
             schedules: schedules,
             isFamily: isFamily,
-            pinOrder: pinOrder
+            displayOrder: displayOrder
         )
     }
 }

@@ -815,7 +815,7 @@ private extension CalendarOfflineTests {
                     hasProfilePhoto: false,
                     profilePhotoVersion: 0,
                     isFamily: false,
-                    pinOrder: nil
+                    displayOrder: nil
                 ),
                 FriendDTO(
                     id: 3,
@@ -825,7 +825,7 @@ private extension CalendarOfflineTests {
                     hasProfilePhoto: false,
                     profilePhotoVersion: 0,
                     isFamily: false,
-                    pinOrder: nil
+                    displayOrder: nil
                 ),
             ],
             storedAt: Date(timeIntervalSince1970: 100)

@@ -491,7 +491,7 @@ final class SettingsViewModel: ObservableObject {
                 hasProfilePhoto: false,
                 profilePhotoVersion: 0,
                 isFamily: true,
-                pinOrder: 1
+                displayOrder: 1
             )
         ]
         managers = []

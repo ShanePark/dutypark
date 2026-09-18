@@ -36,7 +36,7 @@ class PublicContentServiceTest {
         assertThat(guide.sections.first().cards.map { it.id })
             .containsExactly("today", "friends")
         assertThat(guide.sections.sumOf { it.cards.size }).isEqualTo(30)
-        assertThat(guide.sections.sumOf { section -> section.cards.sumOf { it.items.size } }).isEqualTo(107)
+        assertThat(guide.sections.sumOf { section -> section.cards.sumOf { it.items.size } }).isEqualTo(105)
     }
 
     @Test

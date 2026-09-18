@@ -18,6 +18,11 @@ export interface LegacyTodoRequest {
   orderedAttachmentIds?: string[]
 }
 
+export interface DeleteCompletedTodosResponse {
+  deletedCount: number
+  untaggedCount: number
+}
+
 export const todoApi = {
   completeTodo: async (id: string): Promise<Todo> => {
     const response = await apiClient.patch<Todo>(`/todos/${id}/complete`)
@@ -61,8 +66,8 @@ export const todoApi = {
     await apiClient.delete(`/todos/${id}`)
   },
 
-  deleteCompletedTodos: async (todoIds: string[]): Promise<{ count: number }> => {
-    const response = await apiClient.delete<{ count: number }>('/todos/completed', {
+  deleteCompletedTodos: async (todoIds: string[]): Promise<DeleteCompletedTodosResponse> => {
+    const response = await apiClient.delete<DeleteCompletedTodosResponse>('/todos/completed', {
       data: { todoIds },
     })
     return response.data

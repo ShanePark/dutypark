@@ -1,49 +1,49 @@
 import SwiftUI
 
-/// Long-press activation thresholds for the pinned friend reorder drag, shared by
+/// Long-press activation thresholds for the friend reorder drag, shared by
 /// the Home dashboard list and the Social friend list so both screens lift a card
 /// after the same deliberate press.
 ///
 /// The threshold itself comes from `DPDragActivation` so the press progress ring
 /// empties exactly when the card lifts.
-enum DPPinnedFriendDragLayout {
+enum DPFriendDragLayout {
     static let minimumPressDuration: TimeInterval = DPDragActivation.pressDuration
     static let maximumPressDistance: CGFloat = DPDragActivation.maximumPressMovement
     static let activationDistance: CGFloat = 4
 }
 
-/// A pinned row's live frame, published in its screen's drag coordinate space.
-struct DPPinnedFriendDropTarget: Equatable {
+/// A friend row's live frame, published in its screen's drag coordinate space.
+struct DPFriendDropTarget: Equatable {
     let memberID: MemberID
     let frame: CGRect
 }
 
-struct DPPinnedFriendDropTargetPreferenceKey: PreferenceKey {
-    static let defaultValue: [DPPinnedFriendDropTarget] = []
+struct DPFriendDropTargetPreferenceKey: PreferenceKey {
+    static let defaultValue: [DPFriendDropTarget] = []
 
     static func reduce(
-        value: inout [DPPinnedFriendDropTarget],
-        nextValue: () -> [DPPinnedFriendDropTarget]
+        value: inout [DPFriendDropTarget],
+        nextValue: () -> [DPFriendDropTarget]
     ) {
         value.append(contentsOf: nextValue())
     }
 }
 
-/// Adapts the published drop targets to the pure reorder math in `PinnedFriendReorder`.
-enum DPPinnedFriendLiveOrder {
+/// Adapts the published drop targets to the pure reorder math in `FriendReorder`.
+enum DPFriendLiveOrder {
     static func reordered(
         _ originalOrder: [MemberID],
         draggedID: MemberID,
         previewFrame: CGRect,
-        axis: PinnedFriendReorderAxis = .vertical,
-        targets: [DPPinnedFriendDropTarget]
+        axis: FriendReorderAxis = .vertical,
+        targets: [DPFriendDropTarget]
     ) -> [MemberID] {
-        PinnedFriendReorder.reordered(
+        FriendReorder.reordered(
             originalOrder,
             draggedID: draggedID,
             previewFrame: previewFrame,
             axis: axis,
-            framesByID: PinnedFriendReorder.framesByID(
+            framesByID: FriendReorder.framesByID(
                 targets,
                 memberID: \.memberID,
                 frame: \.frame
@@ -52,7 +52,7 @@ enum DPPinnedFriendLiveOrder {
     }
 }
 
-/// The long-press-then-drag reorder gesture behind the pinned friend lists.
+/// The long-press-then-drag reorder gesture behind the friend lists.
 ///
 /// iOS 18 attaches the UIKit recognizer (`DPLongPressGestureRecognizer`) so the
 /// drag participates in the card's own hit-test chain and can recognize alongside
@@ -66,7 +66,7 @@ enum DPPinnedFriendLiveOrder {
 ///   reports its first movement through `onChanged`.
 /// - only the fallback publishes a final drag location, so `onEnded` receives one
 ///   there and `nil` on iOS 18.
-struct DPPinnedFriendReorderGesture: ViewModifier {
+struct DPFriendReorderGesture: ViewModifier {
     let isEnabled: Bool
     let coordinateSpaceName: String
     /// Touch down and its ending, which is what the press progress ring counts
@@ -84,17 +84,17 @@ struct DPPinnedFriendReorderGesture: ViewModifier {
         if !isEnabled {
             content
         } else if #available(iOS 18.0, *) {
-            content.gesture(modernPinnedFriendReorderGesture)
+            content.gesture(modernFriendReorderGesture)
         } else {
-            content.simultaneousGesture(legacyPinnedFriendReorderGesture)
+            content.simultaneousGesture(legacyFriendReorderGesture)
         }
     }
 
     @available(iOS 18.0, *)
-    private var modernPinnedFriendReorderGesture: DPLongPressGestureRecognizer {
+    private var modernFriendReorderGesture: DPLongPressGestureRecognizer {
         DPLongPressGestureRecognizer(
-            minimumDuration: DPPinnedFriendDragLayout.minimumPressDuration,
-            maximumMovement: DPPinnedFriendDragLayout.maximumPressDistance,
+            minimumDuration: DPFriendDragLayout.minimumPressDuration,
+            maximumMovement: DPFriendDragLayout.maximumPressDistance,
             coordinateSpaceName: coordinateSpaceName,
             onPressBegan: onPressBegan,
             onPressEnded: onPressEnded,
@@ -105,14 +105,14 @@ struct DPPinnedFriendReorderGesture: ViewModifier {
         )
     }
 
-    private var legacyPinnedFriendReorderGesture: some Gesture {
+    private var legacyFriendReorderGesture: some Gesture {
         LongPressGesture(
-            minimumDuration: DPPinnedFriendDragLayout.minimumPressDuration,
-            maximumDistance: DPPinnedFriendDragLayout.maximumPressDistance
+            minimumDuration: DPFriendDragLayout.minimumPressDuration,
+            maximumDistance: DPFriendDragLayout.maximumPressDistance
         )
         .sequenced(
             before: DragGesture(
-                minimumDistance: DPPinnedFriendDragLayout.activationDistance,
+                minimumDistance: DPFriendDragLayout.activationDistance,
                 coordinateSpace: .named(coordinateSpaceName)
             )
         )

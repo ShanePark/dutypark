@@ -26,12 +26,12 @@ final class ParityVisualCaptureUITests: XCTestCase {
 
         home.swipeUp()
 
-        let firstPinnedFriend = app.buttons["home.friend.21"]
-        let secondPinnedFriend = app.buttons["home.friend.22"]
-        let unpinnedFriend = app.buttons["home.friend.23"]
-        XCTAssertTrue(firstPinnedFriend.waitForExistence(timeout: 10))
-        XCTAssertTrue(secondPinnedFriend.exists)
-        XCTAssertTrue(unpinnedFriend.exists)
+        let firstFriend = app.buttons["home.friend.21"]
+        let secondFriend = app.buttons["home.friend.22"]
+        let thirdFriend = app.buttons["home.friend.23"]
+        XCTAssertTrue(firstFriend.waitForExistence(timeout: 10))
+        XCTAssertTrue(secondFriend.exists)
+        XCTAssertTrue(thirdFriend.exists)
         XCTAssertFalse(app.staticTexts["받은 요청"].exists)
         XCTAssertFalse(app.staticTexts["보낸 요청"].exists)
         XCTAssertEqual(
@@ -41,7 +41,7 @@ final class ParityVisualCaptureUITests: XCTestCase {
             0
         )
 
-        // The rail has no visible drag handle: the whole pinned card becomes
+        // The rail has no visible drag handle: the whole friend card becomes
         // draggable after a deliberate hold, which the home interaction tests
         // cover separately.
         XCTAssertTrue(home.exists)

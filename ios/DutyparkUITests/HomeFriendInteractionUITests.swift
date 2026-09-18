@@ -11,19 +11,19 @@ final class HomeFriendInteractionUITests: XCTestCase {
     /// its content is tall enough, so this launches at an accessibility text size
     /// to guarantee there is something to scroll.
     @MainActor
-    func testVerticalSwipeStartingOnPinnedCardScrollsWithoutOpeningCalendar() {
+    func testVerticalSwipeStartingOnFriendCardScrollsWithoutOpeningCalendar() {
         let app = launchApp(contentSizeCategory: "UICTContentSizeCategoryAccessibilityXXXL")
         let home = app.descendants(matching: .any)["screen.home"]
         XCTAssertTrue(home.waitForExistence(timeout: 20))
 
-        let pinnedFriend = app.buttons["home.friend.21"]
-        XCTAssertTrue(pinnedFriend.waitForExistence(timeout: 10))
+        let friend = app.buttons["home.friend.21"]
+        XCTAssertTrue(friend.waitForExistence(timeout: 10))
         home.swipeUp()
-        let initial = pinnedFriend.frame
-        let start = pinnedFriend.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+        let initial = friend.frame
+        let start = friend.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
         start.press(forDuration: 0.05, thenDragTo: start.withOffset(CGVector(dx: 0, dy: 220)))
 
-        let moved = pinnedFriend.frame
+        let moved = friend.frame
         XCTAssertGreaterThan(
             moved.minY,
             initial.minY + 10,
@@ -45,7 +45,7 @@ final class HomeFriendInteractionUITests: XCTestCase {
     /// the rail rather than count as a tap on the card it started on.
     @MainActor
     func testHorizontalSwipeScrollsTheFriendRailWithoutOpeningCalendar() {
-        let app = launchApp(manyPinnedFriends: true)
+        let app = launchApp(manyFriends: true)
         let home = app.descendants(matching: .any)["screen.home"]
         XCTAssertTrue(home.waitForExistence(timeout: 20))
         home.swipeUp()
@@ -74,77 +74,34 @@ final class HomeFriendInteractionUITests: XCTestCase {
     }
 
     @MainActor
-    func testPinnedAndUnpinnedFriendCardsOpenCalendarButPinButtonDoesNot() {
+    func testFriendCardsOpenCalendar() {
         let app = launchApp()
         let home = app.descendants(matching: .any)["screen.home"]
         XCTAssertTrue(home.waitForExistence(timeout: 20))
         home.swipeUp()
 
-        let pinnedPinButton = app.buttons["home.friend.21.pin"]
-        XCTAssertTrue(pinnedPinButton.waitForExistence(timeout: 10))
-        pinnedPinButton.tap()
-        XCTAssertTrue(home.exists)
-        XCTAssertFalse(anyCalendar(app).exists)
-
-        app.buttons["home.friend.22"].tap()
+        app.buttons["home.friend.21"].tap()
         XCTAssertTrue(
             memberCalendar(app).waitForExistence(timeout: 10),
-            "Tapping a pinned card must open that friend's calendar"
+            "Tapping a friend card must open that friend's calendar"
         )
-        attachScreenshot(named: "home-pinned-friend-calendar")
+        attachScreenshot(named: "home-friend-calendar")
 
         app.buttons.matching(identifier: "tab.home").firstMatch.tap()
         XCTAssertTrue(home.waitForExistence(timeout: 20))
         home.swipeUp()
-        app.buttons["home.friend.23"].tap()
+        app.buttons["home.friend.22"].tap()
         XCTAssertTrue(
             memberCalendar(app).waitForExistence(timeout: 10),
-            "Tapping an unpinned card must open that friend's calendar"
+            "Tapping another friend card must open that friend's calendar"
         )
-        attachScreenshot(named: "home-unpinned-friend-calendar")
+        attachScreenshot(named: "home-friend-calendar-second")
     }
 
+    /// A long press on any home friend card reorders the horizontal friend rail.
     @MainActor
-    func testPinAndUnpinKeepFriendContentVisibleWithoutViewportJump() {
-        let app = launchApp()
-        let home = app.descendants(matching: .any)["screen.home"]
-        XCTAssertTrue(home.waitForExistence(timeout: 20))
-        home.swipeUp()
-
-        let unpinnedFriend = app.buttons["home.friend.23"]
-        let pinButton = app.buttons["home.friend.23.pin"]
-        XCTAssertTrue(unpinnedFriend.waitForExistence(timeout: 10))
-        XCTAssertTrue(pinButton.waitForExistence(timeout: 10))
-        let initialFrame = unpinnedFriend.frame
-
-        pinButton.tap()
-
-        XCTAssertFalse(app.descendants(matching: .any)["home.loading"].exists)
-        XCTAssertTrue(unpinnedFriend.exists)
-        XCTAssertEqual(unpinnedFriend.frame.minY, initialFrame.minY, accuracy: 10)
-        XCTAssertEqual(unpinnedFriend.frame.minX, initialFrame.minX, accuracy: 10)
-        XCTAssertEqual(pinButton.label, "즐겨찾기 해제")
-
-        pinButton.tap()
-
-        let unpinConfirmation = app.alerts["즐겨찾기 해제"]
-        XCTAssertTrue(unpinConfirmation.waitForExistence(timeout: 10))
-        let confirmUnpinButton = unpinConfirmation.buttons["즐겨찾기 해제"]
-        XCTAssertTrue(confirmUnpinButton.waitForExistence(timeout: 10))
-        confirmUnpinButton.tap()
-        XCTAssertTrue(unpinConfirmation.waitForNonExistence(timeout: 10))
-        XCTAssertFalse(app.descendants(matching: .any)["home.loading"].exists)
-        XCTAssertTrue(unpinnedFriend.exists)
-        XCTAssertTrue(waitForLabel(pinButton, equals: "즐겨찾기에 추가"))
-        XCTAssertTrue(home.exists)
-        XCTAssertFalse(anyCalendar(app).exists)
-        attachScreenshot(named: "home-friend-pin-unpin-stable")
-    }
-
-    /// A long press on a pinned home card reorders the horizontal friend rail.
-    @MainActor
-    func testLongPressDragOnFriendCardReordersPinnedFriends() {
-        let app = launchApp(manyPinnedFriends: true)
+    func testLongPressDragOnFriendCardReordersFriends() {
+        let app = launchApp(manyFriends: true)
         let home = app.descendants(matching: .any)["screen.home"]
         XCTAssertTrue(home.waitForExistence(timeout: 20))
         home.swipeUp()
@@ -176,7 +133,7 @@ final class HomeFriendInteractionUITests: XCTestCase {
     /// exact same size, which is what keeps the rail from looking ragged.
     @MainActor
     func testEveryFriendCardHasTheSameSizeRegardlessOfTeamOrDuty() {
-        let app = launchApp(manyPinnedFriends: true)
+        let app = launchApp(manyFriends: true)
         let home = app.descendants(matching: .any)["screen.home"]
         XCTAssertTrue(home.waitForExistence(timeout: 20))
         home.swipeUp()
@@ -224,7 +181,7 @@ final class HomeFriendInteractionUITests: XCTestCase {
 
     @MainActor
     private func launchApp(
-        manyPinnedFriends: Bool = false,
+        manyFriends: Bool = false,
         contentSizeCategory: String? = nil
     ) -> XCUIApplication {
         let app = XCUIApplication()
@@ -234,8 +191,8 @@ final class HomeFriendInteractionUITests: XCTestCase {
             "-AppleLocale", "ko_KR",
             "-ui-testing-authenticated",
         ]
-        if manyPinnedFriends {
-            app.launchArguments.append("-ui-testing-home-many-pinned")
+        if manyFriends {
+            app.launchArguments.append("-ui-testing-home-many-friends")
         }
         if let contentSizeCategory {
             app.launchArguments += ["-UIPreferredContentSizeCategoryName", contentSizeCategory]
@@ -252,12 +209,4 @@ final class HomeFriendInteractionUITests: XCTestCase {
         add(attachment)
     }
 
-    @MainActor
-    private func waitForLabel(_ element: XCUIElement, equals label: String) -> Bool {
-        let expectation = XCTNSPredicateExpectation(
-            predicate: NSPredicate { _, _ in element.label == label },
-            object: nil
-        )
-        return XCTWaiter.wait(for: [expectation], timeout: 10) == .completed
-    }
 }

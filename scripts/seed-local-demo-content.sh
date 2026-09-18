@@ -87,7 +87,7 @@ Usage: scripts/seed-local-demo-content.sh [--dry-run]
 Creates the deterministic Korean and English local screenshot fixtures. The
 script first runs seed-local-demo-accounts.sh, creates/refreshes the English
 marker team, uploads the generated avatars, and then uses the localhost API
-for schedules, Todos, D-Days, friends, pins, tags, notifications, and team
+for schedules, Todos, D-Days, friends, friend order, tags, notifications, and team
 schedules. Duties are the only bulk rows inserted directly, because no API
 creates deterministic duty rows for a capture date.
 
@@ -456,20 +456,12 @@ ensure_friend_pair() {
     [[ "$relation_count" == "2" ]] || { echo "Friend relationship was not created for ${owner_email} and ${friend_email}." >&2; exit 1; }
 }
 
-ensure_pins() {
-    local owner_email="$1" owner_cookie="$2" owner_id="$3"; shift 3
-    local id friend_json pinned order_json
+ensure_friend_order() {
+    local owner_email="$1" owner_cookie="$2"; shift 2
+    local order_json
     login "$owner_email" "$owner_cookie"
-    api_call GET /api/friends "$owner_cookie"
-    friend_json="$LAST_BODY"
-    for id in "$@"; do
-        pinned=$(jq -r --argjson id "$id" '[.[] | select(.id == $id) | (.pinOrder // 0)] | first // 0' <<<"$friend_json")
-        if [[ "$pinned" == "0" || "$pinned" == "null" ]]; then
-            api_call PATCH "/api/friends/pin/${id}" "$owner_cookie"
-        fi
-    done
     order_json=$(json_number_array "$@")
-    api_call PATCH /api/friends/pin/order "$owner_cookie" "$order_json"
+    api_call PATCH /api/friends/order "$owner_cookie" "$order_json"
 }
 
 ensure_schedule_tag() {
@@ -580,7 +572,7 @@ populate_locale() {
         friend_id="${ids[friend_index]}"; friend_email="${emails[friend_index]}"
         ensure_friend_pair "$owner_id" "$friend_id" "$owner_email" "$friend_email" "$owner_cookie" "$friend_cookie"
     done
-    ensure_pins "$owner_email" "$owner_cookie" "$owner_id" "${ids[@]:1}"
+    ensure_friend_order "$owner_email" "$owner_cookie" "${ids[@]:1}"
     for friend_index in 1 2 3 4 5 6 7; do
         ensure_schedule_tag "$owner_primary_schedule_id" "$owner_cookie" "${ids[friend_index]}"
     done

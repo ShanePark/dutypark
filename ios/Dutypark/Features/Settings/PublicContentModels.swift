@@ -145,7 +145,6 @@ nonisolated enum PublicContentPresentation {
         "palette": "paintpalette.fill",
         "sun": "sun.max.fill",
         "bell": "bell.badge.fill",
-        "pin": "pin.fill",
         "trash": "trash.fill",
         "camera": "camera.fill",
         "shield": "shield.checkered",

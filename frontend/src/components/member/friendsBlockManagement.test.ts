@@ -1,11 +1,19 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+import { h } from 'vue'
+import { createHostWrapper, findHostNode, findHostNodes, mountHost, triggerHost } from '@/test/hostRenderer'
 import friendsView from '@/views/member/FriendsView.vue?raw'
+import FriendCard from './FriendCard.vue'
 import friendRequestList from './FriendRequestList.vue?raw'
 import friendCard from './FriendCard.vue?raw'
 import friendActionMenu from './FriendActionMenu.vue?raw'
 import blockedMemberList from './BlockedMemberList.vue?raw'
 import en from '@/i18n/messages/en'
 import ko from '@/i18n/messages/ko'
+
+vi.mock('vue-i18n', async (importOriginal) => ({
+  ...await importOriginal<typeof import('vue-i18n')>(),
+  useI18n: () => ({ t: (key: string) => key }),
+}))
 
 /**
  * The friends page was split into request list / friend card / action menu / blocked list.
@@ -40,11 +48,101 @@ describe('friends page composition', () => {
 
   it('keeps the drag-and-drop contract between the page and the friend card', () => {
     expect(friendCard).toContain(':data-member-id="friend.member.id"')
-    expect(friendCard).toContain('pinned-friend')
-    expect(friendCard).toContain('handle friend-drag-handle')
+    expect(friendCard).toContain('friend-card')
+    expect(friendCard).toContain('friend-card-calendar')
+    expect(friendCard).toContain('friend-card-action')
+    expect(friendCard).toContain('SlidersHorizontal')
+    expect(friendCard).toContain('h-11 w-11')
+    expect(friendCard).toContain('!h-11 !w-11')
+    expect(friendCard).toContain('border-b')
+    expect(friendCard).not.toContain('MoreVertical')
+    expect(friendCard).toContain("friends.actions.manageFriend")
+    expect(friendCard).not.toContain('pinned-friend')
+    expect(friendCard).not.toContain('friend-drag-handle')
 
-    expect(friendsView).toContain("querySelectorAll('.pinned-friend')")
+    expect(friendsView).toContain("draggable: '.friend-card'")
+    expect(friendsView).not.toContain("handle: '.handle'")
+    expect(friendsView).not.toContain("filter: '.friend-card-action'")
+    expect(friendsView).not.toContain('preventOnFilter')
+    expect(friendsView).toContain('friend-list-surface')
+    expect(friendsView).toContain('friend-card-add')
+    expect(friendsView).not.toContain('grid-cols-1')
+    expect(friendsView).not.toContain('gap-2 sm:gap-3')
+    expect(friendsView).toContain("querySelectorAll('.friend-card')")
     expect(friendsView).toContain("getAttribute('data-member-id')")
+  })
+
+  it('starts a deliberate long-press before moving a card', () => {
+    expect(friendsView).toContain('delay: 150')
+    expect(friendsView).toContain('delayOnTouchOnly: true')
+    expect(friendsView).toContain('touchStartThreshold: 4')
+    expect(friendCard).toContain('touch-manipulation')
+  })
+
+  it('persists the complete order and guards an in-flight save', () => {
+    expect(friendsView).toContain('const isSavingFriendOrder = ref(false)')
+    expect(friendsView).toContain('if (isSavingFriendOrder.value) return')
+    expect(friendsView).toContain('friendApi.updateFriendsOrder(friendIds)')
+    expect(friendsView).toContain('displayOrder: index + 1')
+    expect(friendsView).toContain('friendInfo.value.friends = previousFriends')
+  })
+})
+
+describe('friend card actions', () => {
+  const friend = {
+    member: { id: 31, name: 'Alex', hasProfilePhoto: false, profilePhotoVersion: 0 },
+    duty: null,
+    schedules: [],
+    isFamily: false,
+    displayOrder: null,
+  }
+
+  function mountFriend(displayOrder: number | null = null) {
+    const events = {
+      select: vi.fn(),
+      openMenu: vi.fn(),
+    }
+    const mounted = mountHost(createHostWrapper(() => h(FriendCard, {
+      friend: { ...friend, displayOrder },
+      onSelect: events.select,
+      onOpenMenu: events.openMenu,
+    })))
+    return { ...mounted, events }
+  }
+
+  it('separates calendar and friend-management actions into two touch regions', () => {
+    const mounted = mountFriend()
+    const buttons = findHostNodes(mounted.root, (node) => node.type === 'button')
+    const calendar = findHostNode(mounted.root, (node) =>
+      node.type === 'button' && String(node.props.class ?? '').includes('friend-card-calendar'))
+    const management = findHostNode(mounted.root, (node) =>
+      node.type === 'button' && String(node.props.class ?? '').includes('friend-card-action'))
+
+    expect(calendar).toBeTruthy()
+    expect(management).toBeTruthy()
+    expect(String(management?.props.class)).toContain('friend-card-action')
+    expect(String(management?.props.class)).toContain('h-11')
+    expect(String(management?.props.class)).toContain('w-11')
+    expect(buttons).toHaveLength(2)
+
+    triggerHost(calendar!, 'onClick', { stopPropagation: vi.fn() })
+    expect(mounted.events.select).toHaveBeenCalledOnce()
+    triggerHost(management!, 'onClick', { stopPropagation: vi.fn(), currentTarget: management })
+
+    expect(mounted.events.openMenu).toHaveBeenCalledOnce()
+    expect(mounted.events.select).toHaveBeenCalledOnce()
+    mounted.app.unmount()
+  })
+
+  it('does not make an unlabelled card surface navigate', () => {
+    const mounted = mountFriend(3)
+    const card = findHostNode(mounted.root, (node) =>
+      node.type === 'div' && String(node.props.class ?? '').includes('friend-card'))
+
+    expect(card).toBeTruthy()
+    expect(card?.props.onClick).toBeUndefined()
+    expect(mounted.events.select).not.toHaveBeenCalled()
+    mounted.app.unmount()
   })
 })
 
@@ -81,17 +179,9 @@ describe('friend blocking', () => {
     expect(addFamily).toMatch(/confirm\([\s\S]*?friendApi\.sendFamilyRequest\(/)
   })
 
-  it('asks before removing a friend from favorites', () => {
-    const unpin = functionBody(friendsView, 'unpinFriend')
-
-    expect(unpin).toContain('friend?.pinOrder == null')
-    expect(unpin).toMatch(/confirm\([\s\S]*?friends\.messages\.unpinConfirm/)
-    expect(unpin).toMatch(/confirm\([\s\S]*?friendApi\.unpinFriend\(/)
-  })
-
-  it('treats a zero pin order as a pinned friend', () => {
-    expect(friendsView).toContain('a.pinOrder == null ? 1 : 0')
-    expect(friendCard).toContain('friend.pinOrder != null')
+  it('uses displayOrder only as the complete internal order', () => {
+    expect(friendsView).toContain('a.displayOrder ?? Number.MAX_SAFE_INTEGER')
+    expect(friendCard).not.toContain('friend.displayOrder')
   })
 
   it('closes the kebab menu before running its action, so a dialog it opens stays clickable', () => {
@@ -193,56 +283,54 @@ describe('block translations', () => {
     ['ko', ko, {
       dashboardSection: '친구',
       friendsSection: '친구 목록',
-      add: '즐겨찾기에 추가',
-      remove: '즐겨찾기 해제',
-      addFailed: '친구를 즐겨찾기에 추가하지 못했습니다.',
-      removeFailed: '친구를 즐겨찾기에서 해제하지 못했습니다.',
-      confirmTitle: '즐겨찾기 해제',
-      confirm: '{name}님을 즐겨찾기에서 해제할까요?',
-      helpOpenAriaLabel: '친구 즐겨찾기 및 순서 도움말',
-      helpTitle: '즐겨찾는 친구 순서 변경하기',
-      helpPinTitle: '자주 보는 친구를 즐겨찾기에 추가하세요',
-      helpPinText: '별 아이콘을 누르면 즐겨찾는 친구로 추가되어 목록 맨 위에 표시됩니다. 즐겨찾는 친구는 원하는 순서로 바꿀 수 있어요.',
-      helpReorderText: '즐겨찾는 친구가 두 명 이상이면 카드 오른쪽 아래에 손잡이가 나타납니다. 손잡이를 끌어 원하는 자리에 놓으세요.',
-      helpNote: '즐겨찾기에 추가하지 않은 친구는 기본 순서대로 아래에 표시됩니다.',
+      manageFriend: '{name}님 친구 관리',
+      openCalendar: '{name}님의 시간표 보기',
+      helpOpenAriaLabel: '친구 순서 변경 도움말',
+      helpTitle: '친구 순서 바꾸기',
+      reorderTitle: '친구 카드를 꾹 눌러 옮기세요',
+      reorderText: '친구 카드를 꾹 누른 채 원하는 위치로 끌어 옮기세요.',
+      saveTitle: '순서는 자동으로 저장됩니다',
+      saveText: '카드를 놓는 순간 바뀐 순서가 저장되어 다른 기기에서도 똑같이 보입니다.',
+      helpNote: '친구 카드를 꾹 눌러 원하는 위치로 옮길 수 있어요.',
     }],
     ['en', en, {
       dashboardSection: 'Friends',
       friendsSection: 'Friends list',
-      add: 'Add to favorites',
-      remove: 'Remove from favorites',
-      addFailed: 'Failed to add the friend to your favorites.',
-      removeFailed: 'Failed to remove the friend from your favorites.',
-      confirmTitle: 'Remove from favorites',
-      confirm: 'Remove {name} from your favorites?',
-      helpOpenAriaLabel: 'How to favorite and reorder friends',
-      helpTitle: 'Reorder favorite friends',
-      helpPinTitle: 'Add friends you check often to your favorites',
-      helpPinText: 'Tap the star to add a friend to your favorites. Favorite friends move to the top and can be reordered.',
-      helpReorderText: 'Once two or more friends are in your favorites, a handle appears at the bottom right of each card. Drag it to the position you want.',
-      helpNote: 'Friends not in your favorites stay below in the default order.',
+      manageFriend: 'Manage {name}',
+      openCalendar: "View {name}'s calendar",
+      helpOpenAriaLabel: 'How to reorder friends',
+      helpTitle: 'Reorder friends',
+      reorderTitle: 'Press and hold a friend to move it',
+      reorderText: 'Press and hold a friend card, then drag it to the position you want.',
+      saveTitle: 'The order saves itself',
+      saveText: 'Dropping a card saves the new order right away, so it looks the same on your other devices.',
+      helpNote: 'Press and hold a friend card to move it to the position you want.',
     }],
-  ] as const)('uses the favorite-friend terminology consistently in %s', (_locale, messages, expected) => {
+  ] as const)('uses the whole-friend reorder terminology consistently in %s', (_locale, messages, expected) => {
     expect(messages.dashboard.labels.friends).toBe(expected.dashboardSection)
-    expect(messages.dashboard.actions.pin).toBe(expected.add)
-    expect(messages.dashboard.actions.unpin).toBe(expected.remove)
-    expect(messages.dashboard.messages.pinFailed).toBe(expected.addFailed)
-    expect(messages.dashboard.messages.unpinFailed).toBe(expected.removeFailed)
-    expect(messages.dashboard.messages.unpinTitle).toBe(expected.confirmTitle)
-    expect(messages.dashboard.messages.unpinConfirm).toBe(expected.confirm)
+    expect(messages.dashboard.actions).not.toHaveProperty('pin')
+    expect(messages.dashboard.actions).not.toHaveProperty('unpin')
+    expect(messages.dashboard.messages).not.toHaveProperty('pinFailed')
+    expect(messages.dashboard.messages).not.toHaveProperty('unpinFailed')
+    expect(messages.dashboard.messages).not.toHaveProperty('unpinTitle')
+    expect(messages.dashboard.messages).not.toHaveProperty('unpinConfirm')
 
     expect(messages.friends.sections.list).toBe(expected.friendsSection)
-    expect(messages.friends.actions.pin).toBe(expected.add)
-    expect(messages.friends.actions.unpin).toBe(expected.remove)
-    expect(messages.friends.messages.pinFailed).toBe(expected.addFailed)
-    expect(messages.friends.messages.unpinFailed).toBe(expected.removeFailed)
-    expect(messages.friends.messages.unpinTitle).toBe(expected.confirmTitle)
-    expect(messages.friends.messages.unpinConfirm).toBe(expected.confirm)
+    expect(messages.friends.actions.manageFriend).toBe(expected.manageFriend)
+    expect(messages.friends.actions.openCalendar).toBe(expected.openCalendar)
+    expect(messages.friends.actions).not.toHaveProperty('pin')
+    expect(messages.friends.actions).not.toHaveProperty('unpin')
+    expect(messages.friends.actions).not.toHaveProperty('dragToReorder')
+    expect(messages.friends.messages).not.toHaveProperty('pinFailed')
+    expect(messages.friends.messages).not.toHaveProperty('unpinFailed')
+    expect(messages.friends.messages).not.toHaveProperty('unpinTitle')
+    expect(messages.friends.messages).not.toHaveProperty('unpinConfirm')
     expect(messages.friends.help.openAriaLabel).toBe(expected.helpOpenAriaLabel)
     expect(messages.friends.help.title).toBe(expected.helpTitle)
-    expect(messages.friends.help.pinTitle).toBe(expected.helpPinTitle)
-    expect(messages.friends.help.pinText).toBe(expected.helpPinText)
-    expect(messages.friends.help.reorderText).toBe(expected.helpReorderText)
+    expect(messages.friends.help.reorderTitle).toBe(expected.reorderTitle)
+    expect(messages.friends.help.reorderText).toBe(expected.reorderText)
+    expect(messages.friends.help.saveTitle).toBe(expected.saveTitle)
+    expect(messages.friends.help.saveText).toBe(expected.saveText)
     expect(messages.friends.help.note).toBe(expected.helpNote)
   })
 })

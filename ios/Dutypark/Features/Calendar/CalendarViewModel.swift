@@ -667,6 +667,7 @@ final class CalendarViewModel: ObservableObject {
                 calendar: serverDays,
                 schedules: finalSchedules,
                 duties: duties,
+                holidays: holidays,
                 updatedAt: requestStartedAt
             )
         }
@@ -845,6 +846,7 @@ final class CalendarViewModel: ObservableObject {
                     calendar: calendar,
                     schedules: schedules,
                     duties: duties,
+                    holidays: holidays,
                     updatedAt: requestStartedAt,
                     sessionGeneration: widgetGeneration
                 )
@@ -1076,7 +1078,7 @@ final class CalendarViewModel: ObservableObject {
             hasProfilePhoto: false,
             profilePhotoVersion: 17,
             isFamily: false,
-            pinOrder: nil
+            displayOrder: nil
         )
         friends = includesCalendarParity ? [parityFriend] : []
         team = nil
@@ -1927,6 +1929,7 @@ final class CalendarViewModel: ObservableObject {
             },
             schedules: days.map(\.schedules),
             duties: loadedDuties,
+            holidays: days.map(\.holidays),
             updatedAt: requestStartedAt,
             sessionGeneration: widgetGeneration
         )
@@ -1979,6 +1982,7 @@ final class CalendarViewModel: ObservableObject {
                   calendar: snapshot.calendar,
                   duties: snapshot.duties,
                   schedules: snapshot.schedules,
+                  holidays: snapshot.holidays,
                   updatedAt: snapshot.storedAt
               )
         else { return }
@@ -1994,6 +1998,7 @@ final class CalendarViewModel: ObservableObject {
         calendar: [TeamDayDTO],
         schedules: [[ScheduleDTO]]? = nil,
         duties: [DutyDTO],
+        holidays: [[HolidayDTO]]? = nil,
         updatedAt: Date = .now,
         sessionGeneration: UInt64? = nil
     ) {
@@ -2004,6 +2009,7 @@ final class CalendarViewModel: ObservableObject {
                   calendar: calendar,
                   duties: duties,
                   schedules: schedules,
+                  holidays: holidays,
                   updatedAt: updatedAt
               )
         else { return }
@@ -2028,6 +2034,7 @@ final class CalendarViewModel: ObservableObject {
             },
             schedules: days.map(\.schedules),
             duties: days.compactMap(\.duty),
+            holidays: days.map(\.holidays),
             updatedAt: updatedAt,
             sessionGeneration: sessionGeneration
         )

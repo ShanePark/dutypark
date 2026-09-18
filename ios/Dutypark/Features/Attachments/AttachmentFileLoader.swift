@@ -67,6 +67,56 @@ nonisolated enum AttachmentFileLoader {
         )
     }
 
+    /// Camera imports arrive as an already-decoded UIImage rather than a
+    /// security-scoped file URL. Normalize orientation and bound the pixel
+    /// dimensions before encoding so a camera original cannot make the Todo
+    /// sheet retain a multi-tens-of-megabytes image buffer.
+    static func load(from image: UIImage) throws -> AttachmentUploadFile {
+        guard image.cgImage != nil,
+              image.size.width > 0,
+              image.size.height > 0
+        else {
+            throw AttachmentUploadError.imageConversionFailed
+        }
+
+        // `UIImage.size` already accounts for the orientation; drawing directly
+        // into the bounded canvas both preserves it and avoids a full-size
+        // normalization render before downsampling.
+        let imageScale = max(image.scale, 1)
+        let sourceSize = CGSize(
+            width: image.size.width * imageScale,
+            height: image.size.height * imageScale
+        )
+        let largestDimension = max(sourceSize.width, sourceSize.height)
+        guard largestDimension > 0 else {
+            throw AttachmentUploadError.imageConversionFailed
+        }
+
+        let scale = min(
+            1,
+            CGFloat(AttachmentUploadPolicy.maxImagePixelSize) / CGFloat(largestDimension)
+        )
+        let size = CGSize(
+            width: max(1, floor(sourceSize.width * scale)),
+            height: max(1, floor(sourceSize.height * scale))
+        )
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = 1
+        format.opaque = true
+        let boundedImage = UIGraphicsImageRenderer(size: size, format: format).image { _ in
+            image.draw(in: CGRect(origin: .zero, size: size))
+        }
+        guard let data = boundedImage.jpegData(compressionQuality: 0.9) else {
+            throw AttachmentUploadError.imageConversionFailed
+        }
+
+        return try AttachmentUploadFile(
+            filename: "photo-\(UUID().uuidString).jpg",
+            contentType: "image/jpeg",
+            data: data
+        )
+    }
+
     static func preparedFile(
         data: Data,
         filename: String,

@@ -44,4 +44,74 @@ struct MoreAppVersionTests {
     func installedBundleExposesItsOwnVersion() {
         #expect(MoreAppVersion.displayText != nil)
     }
+
+    @Test
+    func versionFooterUsesTheSameMarketingVersionAsBuildMetadata() throws {
+        let metadata = try #require(AppBuildMetadata(
+            shortVersion: "1.1.1",
+            buildNumber: "20260919",
+            buildDate: nil,
+            commitHash: nil,
+            sourceState: .unknown
+        ))
+
+        #expect(
+            MoreAppVersion.displayText(metadata: metadata, locale: korean)
+                == "버전 1.1.1"
+        )
+    }
+
+    @Test
+    func buildMetadataFormatsVersionDateAndCommitForInformationSection() throws {
+        let metadata = try #require(AppBuildMetadata(
+            shortVersion: "1.2.0",
+            buildNumber: "34",
+            buildDate: "2026-09-16 01:23 KST",
+            commitHash: "abc1234",
+            sourceState: .clean
+        ))
+
+        #expect(metadata.versionText == "1.2.0 (34)")
+        #expect(metadata.dateText == "2026-09-16 01:23 KST")
+        #expect(metadata.commitText(locale: english) == "abc1234")
+    }
+
+    @Test
+    func buildMetadataMarksTrackedSourceChangesWithoutChangingTheCommitHash() throws {
+        let metadata = try #require(AppBuildMetadata(
+            shortVersion: "1.2.0",
+            buildNumber: "34",
+            buildDate: "2026-09-16 01:23 KST",
+            commitHash: "abc1234",
+            sourceState: .modified
+        ))
+
+        #expect(metadata.commitText(locale: english) == "abc1234 (modified)")
+        #expect(metadata.commitText(locale: korean) == "abc1234 (수정됨)")
+    }
+
+    @Test
+    func buildMetadataReadsGeneratedValuesFromTheApplicationInfoDictionary() throws {
+        let metadata = try #require(AppBuildMetadata(infoDictionary: [
+            "CFBundleShortVersionString": "1.2.0",
+            "CFBundleVersion": "34",
+            AppBuildMetadata.buildDateKey: "2026-09-16 01:23 KST",
+            AppBuildMetadata.commitHashKey: "abc1234",
+            AppBuildMetadata.sourceStateKey: "clean",
+        ]))
+
+        #expect(metadata.versionText == "1.2.0 (34)")
+        #expect(metadata.dateText == "2026-09-16 01:23 KST")
+        #expect(metadata.commitText(locale: english) == "abc1234")
+    }
+
+    @Test
+    func installedApplicationBundleContainsGeneratedBuildMetadata() throws {
+        let info = try #require(Bundle.main.infoDictionary)
+        let buildDate = try #require(info[AppBuildMetadata.buildDateKey] as? String)
+        let commitHash = try #require(info[AppBuildMetadata.commitHashKey] as? String)
+
+        #expect(!buildDate.isEmpty)
+        #expect(!commitHash.isEmpty)
+    }
 }

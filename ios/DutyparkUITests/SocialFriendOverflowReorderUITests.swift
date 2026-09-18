@@ -1,9 +1,9 @@
 import XCTest
 
-/// Covers the reported "친구관리" symptom: with more pinned friends than fit on
+/// Covers the reported "친구관리" symptom: with more friends than fit on
 /// screen the `LazyVStack` publishes drop-target frames only for the rows inside
 /// the viewport, so a live reorder must not depend on a complete frame set.
-final class SocialPinnedFriendOverflowReorderUITests: XCTestCase {
+final class SocialFriendOverflowReorderUITests: XCTestCase {
     private let seededOrder = (0..<32).map { String(41 + $0) }
 
     override func setUpWithError() throws {
@@ -11,7 +11,7 @@ final class SocialPinnedFriendOverflowReorderUITests: XCTestCase {
     }
 
     @MainActor
-    func testPinnedFriendFixtureOverflowsViewportSoLazyStackDropsDropTargets() {
+    func testFriendFixtureOverflowsViewportSoLazyStackDropsDropTargets() {
         let app = launchSocial()
 
         XCTAssertEqual(persistedOrder(app), seededOrder)
@@ -20,30 +20,30 @@ final class SocialPinnedFriendOverflowReorderUITests: XCTestCase {
             publishedTargets,
             seededOrder.count,
             "The fixture must overflow the viewport: the LazyVStack published \(publishedTargets) "
-                + "of \(seededOrder.count) pinned drop targets."
+                + "of \(seededOrder.count) friend drop targets."
         )
         XCTAssertFalse(
             app.buttons["social.friend.\(seededOrder[seededOrder.count - 1])"].isHittable,
-            "The last pinned friend must be scrolled out of the viewport."
+            "The last friend must be scrolled out of the viewport."
         )
-        let onScreen = hittablePinnedCount(app)
+        let onScreen = hittableFriendCount(app)
         XCTAssertLessThan(
             onScreen,
             seededOrder.count / 2,
-            "Most pinned cards must start off-screen; \(onScreen) are on screen."
+            "Most friend cards must start off-screen; \(onScreen) are on screen."
         )
         XCTAssertLessThan(
-            existingPinnedCount(app),
+            existingFriendCount(app),
             seededOrder.count,
-            "The LazyVStack must leave some pinned rows uninstantiated."
+            "The LazyVStack must leave some friend rows uninstantiated."
         )
-        capture("social-overflow-pinned-list")
+        capture("social-overflow-friend-list")
     }
 
-    /// a. The drag has to reorder and persist even though several pinned rows
+    /// a. The drag has to reorder and persist even though several friend rows
     ///    publish no drop-target frame.
     @MainActor
-    func testReorderPersistsWhilePinnedRowsAreOutsideTheViewport() {
+    func testReorderPersistsWhileFriendRowsAreOutsideTheViewport() {
         let app = launchSocial()
         let before = persistedOrder(app)
         XCTAssertEqual(before, seededOrder)
@@ -65,13 +65,13 @@ final class SocialPinnedFriendOverflowReorderUITests: XCTestCase {
         XCTAssertNotEqual(
             after,
             before,
-            "Dragging a pinned friend down must reorder the list even when rows are off-screen. "
+            "Dragging a friend down must reorder the list even when rows are off-screen. "
                 + "Order stayed \(after.joined(separator: ","))."
         )
         XCTAssertEqual(
             app.staticTexts["social.reorder.saveCount"].label,
             "1",
-            "The new pinned order must be saved exactly once."
+            "The new friend order must be saved exactly once."
         )
         XCTAssertEqual(
             after.firstIndex(of: "41"),
@@ -94,18 +94,15 @@ final class SocialPinnedFriendOverflowReorderUITests: XCTestCase {
 
         let source = app.buttons["social.friend.41"]
         let target = app.buttons["social.friend.44"]
-        let pin = app.buttons["social.friend.41.pin"]
         let more = app.buttons["social.friend.41.more"]
         XCTAssertTrue(source.waitForExistence(timeout: 10))
         XCTAssertTrue(target.waitForExistence(timeout: 10))
-        XCTAssertTrue(pin.waitForExistence(timeout: 10))
         XCTAssertTrue(more.waitForExistence(timeout: 10))
 
-        // Trailing lower corner of the card: right of the avatar+name button and
-        // below the pin/more action buttons, so only the card itself is hit.
-        let grab = CGPoint(x: pin.frame.midX, y: source.frame.maxY + 8)
+        // Trailing lower corner of the card: below the more action button, so
+        // only the card itself is hit.
+        let grab = CGPoint(x: more.frame.midX, y: source.frame.maxY + 8)
         XCTAssertFalse(source.frame.contains(grab), "Grab point must be outside the inner button.")
-        XCTAssertFalse(pin.frame.contains(grab), "Grab point must be outside the pin button.")
         XCTAssertFalse(more.frame.contains(grab), "Grab point must be outside the more button.")
 
         let start = app.coordinate(withNormalizedOffset: .zero)
@@ -183,12 +180,12 @@ final class SocialPinnedFriendOverflowReorderUITests: XCTestCase {
     }
 
     @MainActor
-    private func hittablePinnedCount(_ app: XCUIApplication) -> Int {
+    private func hittableFriendCount(_ app: XCUIApplication) -> Int {
         seededOrder.filter { app.buttons["social.friend.\($0)"].isHittable }.count
     }
 
     @MainActor
-    private func existingPinnedCount(_ app: XCUIApplication) -> Int {
+    private func existingFriendCount(_ app: XCUIApplication) -> Int {
         seededOrder.filter { app.buttons["social.friend.\($0)"].exists }.count
     }
 

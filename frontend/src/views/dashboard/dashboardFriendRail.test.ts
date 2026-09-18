@@ -6,7 +6,7 @@ import ko from '@/i18n/messages/ko'
 /**
  * The home friend list is a portrait card rail (D1/D2/D6) with no reordering of its own (D3):
  * reordering lives only on the friends page; this rail's drag is scroll-only. These markers
- * pin the rail's shape so a card can never grow a taller neighbour, and pin the fact that
+ * keep the rail's shape so a card can never grow a taller neighbour, and keep the fact that
  * the sortable wiring stays removed.
  */
 
@@ -62,45 +62,20 @@ describe('home friend list drops reordering (D3)', () => {
   })
 })
 
-describe('home friend list keeps the pin toggle (D4)', () => {
-  it('keeps the optimistic pin and unpin calls', () => {
-    expect(script).toContain('async function pinFriend')
-    expect(script).toContain('async function unpinFriend')
-    expect(script).toContain('friendApi.pinFriend')
-    expect(script).toContain('friendApi.unpinFriend')
-    expect(script).toContain('dashboard.messages.pinFailed')
-    expect(script).toContain('dashboard.messages.unpinFailed')
-  })
-
-  it('overlays the star on the portrait without navigating the card', () => {
-    expect(template).toContain('@click.stop="pinFriend(friend.member)"')
-    expect(template).toContain('@click.stop="unpinFriend(friend.member)"')
-    expect(ruleFor('.dashboard-friend-card__pin')).toContain('position: absolute')
-  })
-
-  it('asks for confirmation before removing a friend from favorites', () => {
-    const unpinStart = script.indexOf('async function unpinFriend')
-    expect(unpinStart).toBeGreaterThan(-1)
-    const unpinEnd = script.indexOf('\nfunction sortFriendsByPinOrder', unpinStart)
-    const unpin = script.slice(unpinStart, unpinEnd)
-
-    expect(unpin).toContain('friend?.pinOrder == null')
-    expect(unpin).toMatch(/await confirm\([\s\S]*?dashboard\.messages\.unpinConfirm/)
-    expect(unpin).toMatch(/dashboard\.messages\.unpinTitle/)
-    expect(unpin).toMatch(/confirm\([\s\S]*?friendApi\.unpinFriend\(/)
-  })
-
-  it('treats a zero pin order as a pinned friend', () => {
-    expect(script).toContain('a.pinOrder == null ? 1 : 0')
-    expect(template).toContain('v-if="friend.pinOrder != null"')
-  })
-
-  it('uses only the yellow star to distinguish pinned friends', () => {
-    expect(template).not.toContain('dashboard-friend-card--pinned')
+describe('home friend list keeps the shared friend order', () => {
+  it('does not render a favorite star or a pin-specific card style', () => {
+    expect(template).not.toContain('<Star')
+    expect(template).not.toContain('dashboard-friend-card__pin')
+    expect(style).not.toContain('.dashboard-friend-card__pin')
     expect(style).not.toContain('.dashboard-friend-card--pinned')
-    expect(ruleFor('.dashboard-friend-card')).not.toContain('var(--dp-accent-border)')
-    expect(ruleFor('.dashboard-friend-card')).not.toContain('var(--dp-accent-bg)')
-    expect(ruleFor('.dashboard-friend-card__pin--on')).toContain('var(--dp-warning)')
+  })
+
+  it('sorts the dashboard rail by the complete display order', () => {
+    expect(script).toContain('const sortedFriends = computed')
+    expect(script).toContain('const aOrder = a.displayOrder ?? Number.MAX_SAFE_INTEGER')
+    expect(script).toContain('const bOrder = b.displayOrder ?? Number.MAX_SAFE_INTEGER')
+    expect(script).toContain('aOrder - bOrder')
+    expect(template).not.toContain('friend.displayOrder')
   })
 })
 
