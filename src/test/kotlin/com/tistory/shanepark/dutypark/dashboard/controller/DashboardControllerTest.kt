@@ -170,7 +170,7 @@ class DashboardControllerTest : RestDocsTest() {
                         fieldWithPath("friends[].duty.source").description("Resolved duty source, including PATTERN_PAUSED while automatic pattern application is paused").optional(),
                         fieldWithPath("friends[].schedules").description("Friend's today schedules"),
                         fieldWithPath("friends[].isFamily").description("Is family member"),
-                        fieldWithPath("friends[].pinOrder").description("Pin order for sorting"),
+                        fieldWithPath("friends[].displayOrder").description("Friend display order for sorting"),
                         fieldWithPath("pendingRequestsTo").description("Pending friend requests sent"),
                         fieldWithPath("pendingRequestsFrom").description("Pending friend requests received")
                     )

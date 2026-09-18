@@ -64,7 +64,7 @@ class FriendServiceUnitTest {
     }
 
     @Test
-    fun updateFriendsPin() {
+    fun updateFriendsOrder() {
         val member = Member(name = "test")
         ReflectionTestUtils.setField(member, "id", 0L)
 
@@ -80,7 +80,7 @@ class FriendServiceUnitTest {
             FriendRelation(
                 member = member,
                 friend = friend
-            ).apply { pinOrder = 0L }
+        ).apply { displayOrder = 0L }
         }.toList()
 
         whenever(memberRepository.findAllById(friendIds)).thenReturn(dummyFriends)
@@ -88,18 +88,18 @@ class FriendServiceUnitTest {
         whenever(friendRelationRepository.findAllByMemberAndFriendIn(member, dummyFriends))
             .thenReturn(dummyFriendRelations)
 
-        friendService.updateFriendsPin(
+        friendService.updateFriendsOrder(
             loginMember = LoginMember(id = member.id!!, name = member.name),
             friendIds = friendIds
         )
 
         dummyFriendRelations.forEachIndexed { index, relation ->
-            assertThat(relation.pinOrder).isEqualTo(index + 1L)
+            assertThat(relation.displayOrder).isEqualTo(index + 1L)
         }
     }
 
     @Test
-    fun `update friends pin does not update NullPinOrder`() {
+    fun `update friends order updates every listed friend`() {
         val member = Member(name = "test")
         ReflectionTestUtils.setField(member, "id", 0L)
 
@@ -111,12 +111,12 @@ class FriendServiceUnitTest {
             }
         }.toList()
 
-        val pinOrderNullFriendId = friendIds[1]
+        val displayOrderNullFriendId = friendIds[1]
         val dummyFriendRelations = dummyFriends.mapIndexed { _, friend ->
             FriendRelation(
                 member = member,
                 friend = friend
-            ).apply { pinOrder = if (friend.id == pinOrderNullFriendId) null else 0L }
+            ).apply { displayOrder = if (friend.id == displayOrderNullFriendId) null else 0L }
         }.toList()
 
         whenever(memberRepository.findAllById(friendIds)).thenReturn(dummyFriends)
@@ -124,17 +124,13 @@ class FriendServiceUnitTest {
         whenever(friendRelationRepository.findAllByMemberAndFriendIn(member, dummyFriends))
             .thenReturn(dummyFriendRelations)
 
-        friendService.updateFriendsPin(
+        friendService.updateFriendsOrder(
             loginMember = LoginMember(id = member.id!!, name = member.name),
             friendIds = friendIds
         )
 
         dummyFriendRelations.forEachIndexed { index, relation ->
-            if (relation.friend.id != pinOrderNullFriendId) {
-                assertThat(relation.pinOrder).isEqualTo(index + 1L)
-            } else {
-                assertThat(relation.pinOrder).isNull()
-            }
+            assertThat(relation.displayOrder).isEqualTo(index + 1L)
         }
     }
 

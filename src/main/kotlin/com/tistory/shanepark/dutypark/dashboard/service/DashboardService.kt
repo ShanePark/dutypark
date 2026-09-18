@@ -110,7 +110,7 @@ class DashboardService(
                     duty = dutiesByMemberId[friendId],
                     schedules = schedulesByMemberId[friendId] ?: emptyList(),
                     isFamily = it.isFamily,
-                    pinOrder = it.pinOrder
+                    displayOrder = it.displayOrder
                 )
             }.sorted()
 

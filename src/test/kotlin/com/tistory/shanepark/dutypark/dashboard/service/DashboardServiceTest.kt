@@ -181,11 +181,11 @@ class DashboardServiceTest {
 
         val relation1 = FriendRelation(member, friend1).apply {
             isFamily = true
-            pinOrder = 2
+            displayOrder = 2
         }
         val relation2 = FriendRelation(member, friend2).apply {
             isFamily = false
-            pinOrder = 1
+            displayOrder = 1
         }
         whenever(friendRelationRepository.findAllByMember(member)).thenReturn(listOf(relation1, relation2))
 
@@ -198,7 +198,7 @@ class DashboardServiceTest {
 
         assertThat(result.friends).hasSize(2)
         assertThat(result.friends.first().member.id).isEqualTo(friend2.id)
-        assertThat(result.friends.map(DashboardFriendDetail::pinOrder)).containsExactly(1, 2)
+        assertThat(result.friends.map(DashboardFriendDetail::displayOrder)).containsExactly(1, 2)
         assertThat(result.pendingRequestsFrom.first().id).isEqualTo(10L)
         assertThat(result.pendingRequestsTo.first().id).isEqualTo(11L)
     }

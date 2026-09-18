@@ -9,12 +9,12 @@ data class DashboardFriendDetail(
     val duty: DutyDto?,
     val schedules: List<ScheduleDto> = emptyList(),
     val isFamily: Boolean = false,
-    val pinOrder: Long? = null,
+    val displayOrder: Long? = null,
 ) : Comparable<DashboardFriendDetail> {
     override fun compareTo(other: DashboardFriendDetail): Int {
         return compareValuesBy(
             this, other,
-            { it.pinOrder ?: Long.MAX_VALUE },
+            { it.displayOrder ?: Long.MAX_VALUE },
             { it.member.name }
         )
     }

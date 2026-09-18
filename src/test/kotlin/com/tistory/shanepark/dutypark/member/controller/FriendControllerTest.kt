@@ -45,7 +45,7 @@ class FriendControllerTest : RestDocsTest() {
                         fieldWithPath("[].hasProfilePhoto").description("Whether friend has profile photo"),
                         fieldWithPath("[].profilePhotoVersion").description("Profile photo version for cache busting"),
                         fieldWithPath("[].isFamily").description("Whether the friend is marked as family"),
-                        fieldWithPath("[].pinOrder").description("Pinned friend order (nullable)")
+                        fieldWithPath("[].displayOrder").description("Friend display order (nullable)")
                     )
                 )
             )
@@ -379,99 +379,7 @@ class FriendControllerTest : RestDocsTest() {
     }
 
     @Test
-    fun `pin friend`() {
-        makeThemFriend(TestData.member, TestData.member2)
-        em.flush()
-        em.clear()
-
-        mockMvc.perform(
-            RestDocumentationRequestBuilders.patch("/api/friends/pin/{friendId}", TestData.member2.id!!)
-                .accept(MediaType.APPLICATION_JSON)
-                .withAuth(TestData.member)
-        )
-            .andExpect(status().isOk)
-            .andDo(MockMvcResultHandlers.print())
-            .andDo(
-                document(
-                    "friends/pin",
-                    pathParameters(
-                        parameterWithName("friendId").description("Friend ID to pin")
-                    )
-                )
-            )
-    }
-
-    @Test
-    fun `unpin friend`() {
-        makeThemFriend(TestData.member, TestData.member2)
-        em.flush()
-        em.clear()
-
-        mockMvc.perform(
-            RestDocumentationRequestBuilders.patch("/api/friends/unpin/{friendId}", TestData.member2.id!!)
-                .accept(MediaType.APPLICATION_JSON)
-                .withAuth(TestData.member)
-        )
-            .andExpect(status().isOk)
-            .andDo(MockMvcResultHandlers.print())
-            .andDo(
-                document(
-                    "friends/unpin",
-                    pathParameters(
-                        parameterWithName("friendId").description("Friend ID to unpin")
-                    )
-                )
-            )
-    }
-
-    @Test
-    fun `pin friend returns code when target is not a friend`() {
-        mockMvc.perform(
-            RestDocumentationRequestBuilders.patch("/api/friends/pin/{friendId}", TestData.member2.id!!)
-                .accept(MediaType.APPLICATION_JSON)
-                .withAuth(TestData.member)
-        )
-            .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.code").value("friend.notFriend"))
-            .andDo(MockMvcResultHandlers.print())
-            .andDo(
-                document(
-                    "friends/pin-bad-request",
-                    pathParameters(
-                        parameterWithName("friendId").description("Friend ID to pin")
-                    ),
-                    standardErrorResponseFields(
-                        "Machine-readable error code (`friend.notFriend`)"
-                    )
-                )
-            )
-    }
-
-    @Test
-    fun `unpin friend returns code when target is not a friend`() {
-        mockMvc.perform(
-            RestDocumentationRequestBuilders.patch("/api/friends/unpin/{friendId}", TestData.member2.id!!)
-                .accept(MediaType.APPLICATION_JSON)
-                .withAuth(TestData.member)
-        )
-            .andExpect(status().isBadRequest)
-            .andExpect(jsonPath("$.code").value("friend.notFriend"))
-            .andDo(MockMvcResultHandlers.print())
-            .andDo(
-                document(
-                    "friends/unpin-bad-request",
-                    pathParameters(
-                        parameterWithName("friendId").description("Friend ID to unpin")
-                    ),
-                    standardErrorResponseFields(
-                        "Machine-readable error code (`friend.notFriend`)"
-                    )
-                )
-            )
-    }
-
-    @Test
-    fun `update friends pin order`() {
+    fun `update friends display order`() {
         makeThemFriend(TestData.member, TestData.member2)
         em.flush()
         em.clear()
@@ -479,7 +387,7 @@ class FriendControllerTest : RestDocsTest() {
         val json = "[${TestData.member2.id}]"
 
         mockMvc.perform(
-            RestDocumentationRequestBuilders.patch("/api/friends/pin/order")
+            RestDocumentationRequestBuilders.patch("/api/friends/order")
                 .accept(MediaType.APPLICATION_JSON)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json)
@@ -489,7 +397,7 @@ class FriendControllerTest : RestDocsTest() {
             .andDo(MockMvcResultHandlers.print())
             .andDo(
                 document(
-                    "friends/update-pin-order",
+                    "friends/update-order",
                     requestFields(
                         fieldWithPath("[]").description("Ordered list of friend IDs")
                     )
