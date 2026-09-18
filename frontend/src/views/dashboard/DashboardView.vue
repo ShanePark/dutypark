@@ -21,7 +21,6 @@ import {
   Briefcase,
   ClipboardList,
   Users,
-  Star,
   Home,
   ChevronLeft,
   ChevronRight,
@@ -114,15 +113,9 @@ const friendRailDrag = {
 const sortedFriends = computed(() => {
   if (!friendInfo.value) return []
   return [...friendInfo.value.friends].sort((a, b) => {
-    const aPinned = a.pinOrder == null ? 1 : 0
-    const bPinned = b.pinOrder == null ? 1 : 0
-    if (aPinned !== bPinned) {
-      return aPinned - bPinned
-    }
-    if (a.pinOrder != null && b.pinOrder != null) {
-      return (a.pinOrder || 0) - (b.pinOrder || 0)
-    }
-    return 0
+    const aOrder = a.displayOrder ?? Number.MAX_SAFE_INTEGER
+    const bOrder = b.displayOrder ?? Number.MAX_SAFE_INTEGER
+    return aOrder - bOrder
   })
 })
 
@@ -314,61 +307,6 @@ function printScheduleTime(startDateTime: string) {
   return date.toLocaleTimeString(locale.value, {
     hour: '2-digit',
     minute: '2-digit',
-  })
-}
-
-async function pinFriend(member: { id: number | null; name: string }) {
-  if (!friendInfo.value || !member.id) return
-  const friend = friendInfo.value.friends.find((f) => f.member.id === member.id)
-  if (friend) {
-    const maxOrder = Math.max(0, ...friendInfo.value.friends.map((f) => f.pinOrder || 0))
-    friend.pinOrder = maxOrder + 1
-    sortFriendsByPinOrder()
-    try {
-      await friendApi.pinFriend(member.id)
-    } catch (error) {
-      console.error('Failed to pin friend:', error)
-      friend.pinOrder = null
-      sortFriendsByPinOrder()
-      showWarning(t('dashboard.messages.pinFailed'))
-    }
-  }
-}
-
-async function unpinFriend(member: { id: number | null; name: string }) {
-  if (!friendInfo.value || !member.id) return
-  const friend = friendInfo.value.friends.find((f) => f.member.id === member.id)
-  if (friend?.pinOrder == null) return
-  if (!await confirm(
-    t('dashboard.messages.unpinConfirm', { name: member.name }),
-    t('dashboard.messages.unpinTitle'),
-  )) return
-
-  const oldPinOrder = friend.pinOrder
-  friend.pinOrder = null
-  sortFriendsByPinOrder()
-  try {
-    await friendApi.unpinFriend(member.id)
-  } catch (error) {
-    console.error('Failed to unpin friend:', error)
-    friend.pinOrder = oldPinOrder
-    sortFriendsByPinOrder()
-    showWarning(t('dashboard.messages.unpinFailed'))
-  }
-}
-
-function sortFriendsByPinOrder() {
-  if (!friendInfo.value) return
-  friendInfo.value.friends.sort((a, b) => {
-    const aPinned = a.pinOrder == null ? 1 : 0
-    const bPinned = b.pinOrder == null ? 1 : 0
-    if (aPinned !== bPinned) {
-      return aPinned - bPinned
-    }
-    if (a.pinOrder != null && b.pinOrder != null) {
-      return (a.pinOrder || 0) - (b.pinOrder || 0)
-    }
-    return 0
   })
 }
 
@@ -649,26 +587,6 @@ watch(
                   >{{ dutyLabel(friend) }}</span>
                 </button>
 
-                <button
-                  v-if="friend.pinOrder != null"
-                  type="button"
-                  class="dashboard-friend-card__pin dashboard-friend-card__pin--on"
-                  :title="t('dashboard.actions.unpin')"
-                  :aria-label="t('dashboard.actions.unpin')"
-                  @click.stop="unpinFriend(friend.member)"
-                >
-                  <Star class="h-3 w-3" fill="currentColor" />
-                </button>
-                <button
-                  v-else
-                  type="button"
-                  class="dashboard-friend-card__pin"
-                  :title="t('dashboard.actions.pin')"
-                  :aria-label="t('dashboard.actions.pin')"
-                  @click.stop="pinFriend(friend.member)"
-                >
-                  <Star class="h-3 w-3" />
-                </button>
               </div>
             </div>
 
@@ -790,35 +708,6 @@ watch(
   display: block;
   width: 100%;
   aspect-ratio: 3 / 4;
-}
-
-.dashboard-friend-card__pin {
-  position: absolute;
-  top: 0.125rem;
-  right: 0.125rem;
-  display: inline-flex;
-  width: 1.25rem;
-  height: 1.25rem;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid var(--dp-bg-card);
-  border-radius: 9999px;
-  background: var(--dp-bg-card);
-  color: var(--dp-text-muted);
-  cursor: pointer;
-}
-
-.dashboard-friend-card__pin:hover {
-  color: var(--dp-warning);
-}
-
-.dashboard-friend-card__pin:focus-visible {
-  outline: 2px solid var(--dp-accent);
-  outline-offset: 2px;
-}
-
-.dashboard-friend-card__pin--on {
-  color: var(--dp-warning);
 }
 
 .dashboard-friend-card__name {
@@ -975,18 +864,6 @@ watch(
 
   .dashboard-friend-card__main {
     gap: 0.375rem;
-  }
-
-  .dashboard-friend-card__pin {
-    top: 0.25rem;
-    right: 0.25rem;
-    width: 1.625rem;
-    height: 1.625rem;
-  }
-
-  .dashboard-friend-card__pin svg {
-    width: 0.9375rem;
-    height: 0.9375rem;
   }
 
   .dashboard-friend-card__name {

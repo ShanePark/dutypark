@@ -576,32 +576,17 @@ html.dark {
 
 /* Friend Cards */
 .friend-card {
-    @apply relative overflow-hidden cursor-pointer;
-    background-color: var(--dp-bg-card);
-    box-shadow: var(--dp-shadow-sm);
-    transform: translateY(0) scale(1);
-    will-change: transform, box-shadow;
-    transition:
-        transform 0.24s cubic-bezier(0.16, 1, 0.3, 1),
-        box-shadow 0.24s ease,
-        border-color 0.2s ease,
-        background-color 0.2s ease;
+    @apply relative cursor-pointer;
+    background-color: transparent;
+    transition: background-color 0.2s ease;
 }
 
 .friend-card:hover {
-    box-shadow: var(--dp-shadow-md);
-    transform: translateY(-2px) scale(1.018);
     background-color: var(--dp-bg-hover);
 }
 
 .friend-card:active {
-    transform: translateY(0) scale(1.006);
-}
-
-/* Pinned friend card highlight - neutral gray theme */
-.pinned-friend-highlight {
-    background: linear-gradient(to bottom right, var(--dp-bg-secondary), var(--dp-bg-tertiary));
-    border-color: var(--dp-border-secondary);
+    background-color: var(--dp-bg-tertiary);
 }
 
 /* Friend icon styles */
@@ -618,16 +603,6 @@ html.dark {
 /* Friend schedule item */
 .friend-schedule-item {
     color: var(--dp-text-secondary);
-}
-
-/* Friend drag handle */
-.friend-drag-handle {
-    background-color: var(--dp-bg-tertiary);
-    color: var(--dp-text-muted);
-}
-
-.friend-drag-handle:hover {
-    background-color: var(--dp-bg-hover);
 }
 
 /* D-Day Cards */
@@ -704,8 +679,6 @@ html.dark {
 
 /* Friend section - prevent hover effects while sorting */
 .friend-section-sorting .friend-card:hover {
-    box-shadow: var(--dp-shadow-sm);
-    transform: none;
     background-color: inherit;
 }
 

@@ -21,7 +21,7 @@ import HelpButton from '@/components/common/HelpButton.vue'
 import HelpModal from '@/components/common/HelpModal.vue'
 import HelpNote from '@/components/common/HelpNote.vue'
 import HelpSection from '@/components/common/HelpSection.vue'
-import { Users, UserPlus, Star, GripVertical, CheckCircle2 } from '@lucide/vue'
+import { Users, UserPlus, CheckCircle2 } from '@lucide/vue'
 
 const router = useRouter()
 const notificationStore = useNotificationStore()
@@ -48,11 +48,12 @@ const unblockingId = ref<number | null>(null)
 
 const openDropdownId = ref<number | null>(null)
 const dropdownPosition = ref({ top: 0, left: 0 })
-const MENU_WIDTH = 176 // w-44, matches FriendActionMenu
+const MENU_WIDTH = 240 // 15rem, matches FriendActionMenu on desktop
 
 let friendSortable: Sortable | null = null
 const friendListRef = ref<HTMLElement | null>(null)
 const friendSectionRef = ref<HTMLElement | null>(null)
+const isSavingFriendOrder = ref(false)
 
 const showSearchModal = ref(false)
 const searchKeyword = ref('')
@@ -66,15 +67,7 @@ const searchLoading = ref(false)
 const sortedFriends = computed(() => {
   if (!friendInfo.value) return []
   return [...friendInfo.value.friends].sort((a, b) => {
-    const aPinned = a.pinOrder == null ? 1 : 0
-    const bPinned = b.pinOrder == null ? 1 : 0
-    if (aPinned !== bPinned) {
-      return aPinned - bPinned
-    }
-    if (a.pinOrder != null && b.pinOrder != null) {
-      return (a.pinOrder || 0) - (b.pinOrder || 0)
-    }
-    return 0
+    return (a.displayOrder ?? Number.MAX_SAFE_INTEGER) - (b.displayOrder ?? Number.MAX_SAFE_INTEGER)
   })
 })
 
@@ -160,67 +153,6 @@ async function cancelRequest(req: DashboardFriendRequestDto) {
     console.error('Failed to cancel friend request:', e)
     showWarning(t('friends.messages.cancelFailed'))
   }
-}
-
-async function pinFriend(member: { id: number | null; name: string }) {
-  if (!friendInfo.value || !member.id) return
-  const friend = friendInfo.value.friends.find((f) => f.member.id === member.id)
-  if (friend) {
-    const maxOrder = Math.max(0, ...friendInfo.value.friends.map((f) => f.pinOrder || 0))
-    friend.pinOrder = maxOrder + 1
-    sortFriendsByPinOrder()
-    nextTick(() => {
-      initFriendSortable()
-    })
-    try {
-      await friendApi.pinFriend(member.id)
-    } catch (e) {
-      console.error('Failed to pin friend:', e)
-      friend.pinOrder = null
-      sortFriendsByPinOrder()
-      showWarning(t('friends.messages.pinFailed'))
-    }
-  }
-}
-
-async function unpinFriend(member: { id: number | null; name: string }) {
-  if (!friendInfo.value || !member.id) return
-  const friend = friendInfo.value.friends.find((f) => f.member.id === member.id)
-  if (friend?.pinOrder == null) return
-  if (!await confirm(
-    t('friends.messages.unpinConfirm', { name: member.name }),
-    t('friends.messages.unpinTitle'),
-  )) return
-
-  const oldPinOrder = friend.pinOrder
-  friend.pinOrder = null
-  sortFriendsByPinOrder()
-  nextTick(() => {
-    initFriendSortable()
-  })
-  try {
-    await friendApi.unpinFriend(member.id)
-  } catch (e) {
-    console.error('Failed to unpin friend:', e)
-    friend.pinOrder = oldPinOrder
-    sortFriendsByPinOrder()
-    showWarning(t('friends.messages.unpinFailed'))
-  }
-}
-
-function sortFriendsByPinOrder() {
-  if (!friendInfo.value) return
-  friendInfo.value.friends.sort((a, b) => {
-    const aPinned = a.pinOrder == null ? 1 : 0
-    const bPinned = b.pinOrder == null ? 1 : 0
-    if (aPinned !== bPinned) {
-      return aPinned - bPinned
-    }
-    if (a.pinOrder != null && b.pinOrder != null) {
-      return (a.pinOrder || 0) - (b.pinOrder || 0)
-    }
-    return 0
-  })
 }
 
 async function addFamily(member: { id: number | null; name: string }) {
@@ -434,46 +366,65 @@ function initFriendSortable() {
 
   friendSortable = new Sortable(friendListRef.value, {
     animation: 150,
-    draggable: '.pinned-friend',
-    handle: '.handle',
+    draggable: '.friend-card',
+    delay: 150,
+    delayOnTouchOnly: true,
+    touchStartThreshold: 4,
     ghostClass: 'sortable-ghost',
     fallbackClass: 'sortable-fallback',
     fallbackOnBody: true,
     forceFallback: true,
     chosenClass: 'sortable-chosen',
+    disabled: isSavingFriendOrder.value,
     onStart: () => {
+      if (isSavingFriendOrder.value) return
       dragClickGuard.startDrag()
       friendSectionRef.value?.classList.add('friend-section-sorting')
     },
     onEnd: () => {
       dragClickGuard.endDrag()
       friendSectionRef.value?.classList.remove('friend-section-sorting')
-      updateFriendsPin()
+      void updateFriendsOrder()
     },
   })
 }
 
-async function updateFriendsPin() {
+async function updateFriendsOrder() {
   if (!friendListRef.value || !friendInfo.value) return
+  if (isSavingFriendOrder.value) return
 
-  const pinnedElements = friendListRef.value.querySelectorAll('.pinned-friend')
-  const friendIds = Array.from(pinnedElements)
+  const friendIds = Array.from(friendListRef.value.querySelectorAll('.friend-card'))
     .map((el) => Number(el.getAttribute('data-member-id')))
     .filter((id) => !isNaN(id) && id > 0)
 
   if (friendIds.length === 0) return
 
+  const currentFriendIds = friendInfo.value.friends
+    .map((friend) => friend.member.id)
+    .filter((id): id is number => id !== null && id > 0)
+  if (friendIds.length !== currentFriendIds.length || new Set(friendIds).size !== currentFriendIds.length) return
+  if (friendIds.every((id, index) => id === currentFriendIds[index])) return
+
+  const previousFriends = friendInfo.value.friends
   applyFriendOrder(friendIds)
+  isSavingFriendOrder.value = true
+  friendSortable?.option('disabled', true)
 
   nextTick(() => {
     initFriendSortable()
   })
 
   try {
-    await friendApi.updateFriendsPinOrder(friendIds)
+    await friendApi.updateFriendsOrder(friendIds)
   } catch (e) {
-    console.error('Failed to update friend pin order:', e)
+    console.error('Failed to update friend order:', e)
+    friendInfo.value.friends = previousFriends
     showWarning(t('friends.messages.reorderFailed'))
+  } finally {
+    isSavingFriendOrder.value = false
+    nextTick(() => {
+      initFriendSortable()
+    })
   }
 }
 
@@ -481,11 +432,18 @@ function applyFriendOrder(friendIds: number[]) {
   if (!friendInfo.value || friendIds.length === 0) return
 
   const friendMap = new Map(friendInfo.value.friends.map((f) => [f.member.id, f]))
-  const pinnedSet = new Set(friendIds)
-  const pinnedFriends = friendIds.map((id) => friendMap.get(id)).filter(Boolean)
-  const unpinnedFriends = friendInfo.value.friends.filter((f) => f.member.id !== null && !pinnedSet.has(f.member.id))
+  const orderedFriends = friendIds
+    .map((id) => friendMap.get(id))
+    .filter((friend): friend is NonNullable<typeof friend> => friend != null)
+  const orderedSet = new Set(friendIds)
+  const remainingFriends = friendInfo.value.friends.filter(
+    (friend) => friend.member.id === null || !orderedSet.has(friend.member.id),
+  )
 
-  friendInfo.value.friends = [...pinnedFriends, ...unpinnedFriends] as typeof friendInfo.value.friends
+  friendInfo.value.friends = [...orderedFriends, ...remainingFriends].map((friend, index) => ({
+    ...friend,
+    displayOrder: index + 1,
+  }))
 }
 
 function destroyFriendSortable() {
@@ -498,13 +456,8 @@ function destroyFriendSortable() {
   }
 }
 
-function onDocumentKeydown(event: KeyboardEvent) {
-  if (event.key === 'Escape') closeDropdown()
-}
-
 onMounted(async () => {
   document.addEventListener('click', closeDropdown)
-  document.addEventListener('keydown', onDocumentKeydown)
   loadBlockedMembers()
   await loadFriendInfo()
   nextTick(() => {
@@ -514,24 +467,25 @@ onMounted(async () => {
 
 onUnmounted(() => {
   document.removeEventListener('click', closeDropdown)
-  document.removeEventListener('keydown', onDocumentKeydown)
   destroyFriendSortable()
 })
 </script>
 
 <template>
   <div class="max-w-4xl mx-auto px-4 py-6">
-    <PageHeader :title="t('header.menu.friends')" :icon="UserPlus" show-back back-fallback="/more">
+    <PageHeader class="friends-page-header" :title="t('header.menu.friends')" show-back back-fallback="/more">
       <HelpButton
         :label="t('friends.help.openAriaLabel')"
         @click="isHelpModalOpen = true"
       />
       <button
-        class="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-dp-surface-strong to-dp-surface-strong-alt text-dp-text-on-dark rounded-xl hover:from-dp-surface-strong-alt hover:to-dp-surface-strong-hover transition-all shadow-lg font-medium cursor-pointer"
+        type="button"
+        class="inline-flex h-11 w-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-dp-surface-strong to-dp-surface-strong-alt text-dp-text-on-dark shadow-lg transition-all hover:from-dp-surface-strong-alt hover:to-dp-surface-strong-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dp-accent-ring sm:w-auto sm:px-4 font-medium cursor-pointer"
+        :aria-label="t('friends.actions.addFriend')"
         @click="openSearchModal"
       >
         <UserPlus class="w-4 h-4" />
-        {{ t('friends.actions.addFriend') }}
+        <span class="hidden sm:inline">{{ t('friends.actions.addFriend') }}</span>
       </button>
     </PageHeader>
 
@@ -554,56 +508,56 @@ onUnmounted(() => {
 
       <div
         ref="friendSectionRef"
-        class="friend-section rounded-2xl shadow-sm border bg-dp-bg-card border-dp-border-primary"
+        class="friend-section"
       >
-        <div class="bg-gradient-to-r from-dp-surface-strong to-dp-surface-strong-alt px-6 py-3">
-          <div class="flex items-center gap-2">
-            <Users class="w-5 h-5 text-dp-text-on-dark" />
-            <span class="text-dp-text-on-dark font-bold">{{ t('friends.sections.list') }}</span>
-            <span v-if="friendInfo.friends.length" class="ml-2 px-2 py-0.5 bg-dp-overlay-light/20 rounded-full text-xs text-dp-text-on-dark">
-              {{ friendInfo.friends.length }}
-            </span>
-          </div>
-        </div>
-        <div class="p-5">
-          <div v-if="sortedFriends.length === 0" class="text-center py-8">
-            <Users class="w-12 h-12 mx-auto mb-3 text-dp-text-muted" />
-            <p class="text-sm text-dp-text-secondary">{{ t('friends.labels.noFriends') }}</p>
-            <button
-              class="mt-4 px-4 py-2 text-sm font-medium bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition cursor-pointer"
-              @click="openSearchModal"
-            >
-              {{ t('friends.actions.addFriend') }}
-            </button>
-          </div>
-
-          <div
-            v-else
-            ref="friendListRef"
-            class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3"
-            @pointerdown.capture="dragClickGuard.handlePointerDown"
-            @click.capture="dragClickGuard.handleClick"
+        <div class="mb-3 flex items-center gap-2 px-1">
+          <Users class="h-5 w-5 text-dp-text-secondary" />
+          <span class="font-semibold text-dp-text-primary">{{ t('friends.sections.list') }}</span>
+          <span
+            v-if="friendInfo.friends.length"
+            class="rounded-full bg-dp-bg-tertiary px-2 py-0.5 text-xs font-medium text-dp-text-secondary"
           >
-            <FriendCard
-              v-for="friend in sortedFriends"
-              :key="friend.member.id ?? 'unknown'"
-              :friend="friend"
-              @select="moveTo(friend.member.id)"
-              @pin="pinFriend(friend.member)"
-              @unpin="unpinFriend(friend.member)"
-              @open-menu="toggleDropdown"
-            />
+            {{ friendInfo.friends.length }}
+          </span>
+        </div>
 
-            <div
-              class="group rounded-xl sm:rounded-2xl border-2 border-dashed cursor-pointer hover:border-dp-accent-border hover:bg-dp-accent-soft transition-all duration-300 flex flex-col items-center justify-center min-h-[80px] sm:min-h-[120px] border-dp-border-secondary"
-              @click="openSearchModal"
-            >
-              <div class="w-8 h-8 sm:w-12 sm:h-12 group-hover:bg-dp-accent-soft rounded-full flex items-center justify-center mb-1 sm:mb-2 transition-colors bg-dp-bg-tertiary">
-                <UserPlus class="w-4 h-4 sm:w-6 sm:h-6 group-hover:text-dp-accent transition-colors text-dp-text-muted" />
-              </div>
-              <span class="font-semibold text-xs sm:text-sm group-hover:text-dp-accent transition-colors text-dp-text-muted">{{ t('friends.actions.addFriend') }}</span>
-            </div>
-          </div>
+        <div v-if="sortedFriends.length === 0" class="text-center py-8">
+          <Users class="w-12 h-12 mx-auto mb-3 text-dp-text-muted" />
+          <p class="text-sm text-dp-text-secondary">{{ t('friends.labels.noFriends') }}</p>
+          <button
+            class="mt-4 px-4 py-2 text-sm font-medium bg-dp-accent text-dp-text-on-dark rounded-lg hover:bg-dp-accent-hover transition cursor-pointer"
+            @click="openSearchModal"
+          >
+            {{ t('friends.actions.addFriend') }}
+          </button>
+        </div>
+
+        <div
+          v-else
+          ref="friendListRef"
+          class="friend-list-surface overflow-hidden rounded-2xl border border-dp-border-primary bg-dp-bg-card"
+          @pointerdown.capture="dragClickGuard.handlePointerDown"
+          @click.capture="dragClickGuard.handleClick"
+        >
+          <FriendCard
+            v-for="friend in sortedFriends"
+            :key="friend.member.id ?? 'unknown'"
+            :friend="friend"
+            @select="moveTo(friend.member.id)"
+            @open-menu="toggleDropdown"
+          />
+
+          <button
+            type="button"
+            class="friend-card-add flex min-h-[72px] w-full items-center gap-3 px-4 text-left text-dp-text-secondary transition hover:bg-dp-bg-tertiary hover:text-dp-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-dp-accent-ring cursor-pointer"
+            :aria-label="t('friends.actions.addFriend')"
+            @click="openSearchModal"
+          >
+            <span class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-dp-bg-tertiary">
+              <UserPlus class="h-4 w-4" aria-hidden="true" />
+            </span>
+            <span class="font-medium text-sm">{{ t('friends.actions.addFriend') }}</span>
+          </button>
         </div>
       </div>
     </template>
@@ -649,21 +603,14 @@ onUnmounted(() => {
       :title="t('friends.help.title')"
       @close="isHelpModalOpen = false"
     >
-      <!-- The three blocks are one procedure, so they are numbered. -->
       <HelpSection
         :step="1"
-        :icon="Star"
-        :title="t('friends.help.pinTitle')"
-        :text="t('friends.help.pinText')"
-      />
-      <HelpSection
-        :step="2"
-        :icon="GripVertical"
+        :icon="Users"
         :title="t('friends.help.reorderTitle')"
         :text="t('friends.help.reorderText')"
       />
       <HelpSection
-        :step="3"
+        :step="2"
         :icon="CheckCircle2"
         :title="t('friends.help.saveTitle')"
         :text="t('friends.help.saveText')"
@@ -673,3 +620,9 @@ onUnmounted(() => {
     </HelpModal>
   </div>
 </template>
+
+<style scoped>
+.friends-page-header {
+  flex-wrap: nowrap !important;
+}
+</style>

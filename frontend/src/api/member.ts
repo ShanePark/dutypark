@@ -268,24 +268,10 @@ export const friendApi = {
   },
 
   /**
-   * Pin a friend
+   * Update the complete friend display order
    */
-  pinFriend(friendId: number) {
-    return apiClient.patch(`/friends/pin/${friendId}`)
-  },
-
-  /**
-   * Unpin a friend
-   */
-  unpinFriend(friendId: number) {
-    return apiClient.patch(`/friends/unpin/${friendId}`)
-  },
-
-  /**
-   * Update friends pin order
-   */
-  updateFriendsPinOrder(order: number[]) {
-    return apiClient.patch('/friends/pin/order', order)
+  updateFriendsOrder(order: number[]) {
+    return apiClient.patch('/friends/order', order)
   },
 }
 

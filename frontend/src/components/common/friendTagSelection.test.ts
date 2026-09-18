@@ -13,19 +13,19 @@ function friend(overrides: Partial<TaggableFriend> & Pick<TaggableFriend, 'id' |
     hasProfilePhoto: false,
     profilePhotoVersion: 0,
     isFamily: false,
-    pinOrder: null,
+    displayOrder: null,
     ...overrides,
   }
 }
 
 describe('sortTaggableFriends', () => {
-  it('orders pinned friends first, then family, then by name', () => {
+  it('orders by display order, then keeps family and name fallback ordering', () => {
     const friends = [
       friend({ id: 1, name: 'Zoe' }),
       friend({ id: 2, name: 'Amy' }),
       friend({ id: 3, name: 'Family', isFamily: true }),
-      friend({ id: 4, name: 'Pinned second', pinOrder: 2 }),
-      friend({ id: 5, name: 'Pinned first', pinOrder: 1 }),
+      friend({ id: 4, name: 'Ordered second', displayOrder: 2 }),
+      friend({ id: 5, name: 'Ordered first', displayOrder: 1 }),
     ]
 
     expect(sortTaggableFriends(friends, 'ko').map((entry) => entry.id)).toEqual([5, 4, 3, 2, 1])
