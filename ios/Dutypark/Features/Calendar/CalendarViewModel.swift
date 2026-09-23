@@ -274,6 +274,53 @@ final class CalendarViewModel: ObservableObject {
         await load()
     }
 
+    /// Re-reads the personal calendar and its team duty types when the user
+    /// returns to the calendar tab. Team management can change duty colors while
+    /// this tab remains mounted, so its in-memory month must not be reused.
+    func refreshAfterCalendarTabReturn() async {
+        guard let currentMember = me, isMyCalendar else { return }
+        identityLoadGeneration &+= 1
+        monthLoadGeneration += 1
+        invalidatePrefetch()
+
+        let identityGeneration = identityLoadGeneration
+        let accountID = currentMember.id
+        isLoading = true
+        errorMessage = nil
+        defer { isLoading = false }
+
+        var teamRefreshFailed = false
+        if let teamID = currentMember.teamId {
+            do {
+                let refreshedTeam = try await repository.team(id: teamID)
+                guard isCurrentIdentityLoad(identityGeneration, accountID: accountID),
+                      isMyCalendar
+                else { return }
+                team = refreshedTeam
+            } catch is CancellationError {
+                return
+            } catch {
+                teamRefreshFailed = true
+            }
+        } else {
+            team = nil
+        }
+
+        do {
+            try await loadMonth(forceOnlineRequest: true)
+        } catch is CancellationError {
+            return
+        } catch {
+            errorMessage = CalendarLocalization.text("calendar.error.load")
+            return
+        }
+
+        if teamRefreshFailed {
+            errorMessage = CalendarLocalization.text("calendar.error.load")
+        }
+        startPrefetchIfNeeded()
+    }
+
     /// Cancels feature-owned background work when the view leaves the hierarchy.
     /// A pending server recovery remains resumable when the same view reappears.
     func cancelBackgroundTasks() {

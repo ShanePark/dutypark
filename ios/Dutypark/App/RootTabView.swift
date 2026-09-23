@@ -168,6 +168,7 @@ struct RootTabView: View {
     @State private var homePath: [HomeDestination] = []
     @State private var calendarPath: [MemberCalendarRoute] = []
     @State private var calendarCurrentMonthRequestID = 0
+    @State private var calendarDataRefreshRequestID = 0
     @State private var teamPath: [MemberCalendarRoute] = []
     @State private var morePath: [MoreDestination] = []
     @State private var todoTarget: TodoID?
@@ -209,6 +210,7 @@ struct RootTabView: View {
                 primaryTab(.calendar, path: $calendarPath, showsNavigationBar: true) {
                     CalendarView(
                         currentMonthRequestID: calendarCurrentMonthRequestID,
+                        dataRefreshRequestID: calendarDataRefreshRequestID,
                         onOpenTeam: openTeam
                     )
                         .navigationDestination(for: MemberCalendarRoute.self) { route in
@@ -602,6 +604,9 @@ struct RootTabView: View {
                    destination == .calendar,
                    calendarPath.isEmpty {
                     calendarCurrentMonthRequestID &+= 1
+                } else if selectedTab != .calendar,
+                          destination == .calendar {
+                    calendarDataRefreshRequestID &+= 1
                 }
                 let feedback = RootHapticPolicy.tabSelectionFeedback(
                     from: selectedTab,

@@ -152,6 +152,7 @@ struct CalendarView: View {
 
     private let isPushedMemberCalendar: Bool
     private let currentMonthRequestID: Int
+    private let dataRefreshRequestID: Int
     private let onOpenTeam: () -> Void
 
     init(
@@ -160,11 +161,13 @@ struct CalendarView: View {
         scheduleID: ScheduleID? = nil,
         isPushed: Bool = false,
         currentMonthRequestID: Int = 0,
+        dataRefreshRequestID: Int = 0,
         onOpenTeam: @escaping () -> Void = {}
     ) {
         _model = StateObject(wrappedValue: CalendarViewModel(memberID: memberID, date: date, scheduleID: scheduleID))
         isPushedMemberCalendar = isPushed
         self.currentMonthRequestID = currentMonthRequestID
+        self.dataRefreshRequestID = dataRefreshRequestID
         self.onOpenTeam = onOpenTeam
     }
 
@@ -201,6 +204,10 @@ struct CalendarView: View {
         }
         .onChange(of: currentMonthRequestID) { _, _ in
             Task { await model.goToToday(emitFeedback: false) }
+        }
+        .onChange(of: dataRefreshRequestID) { _, _ in
+            guard session.availability == .online else { return }
+            Task { await model.refreshAfterCalendarTabReturn() }
         }
         .onDisappear { model.cancelBackgroundTasks() }
         .onChange(of: session.availability) { _, availability in
