@@ -1408,6 +1408,10 @@ html.dark {
     height: 160px !important;
 }
 
+.color-picker--compact .pcr-app.monolith .pcr-selection {
+    height: 112px !important;
+}
+
 /* ====================================
    SweetAlert2 Custom Styles
    ==================================== */

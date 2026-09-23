@@ -44,4 +44,15 @@ describe('team management service-admin access', () => {
     expect(teamManageView).toContain('bg-dp-accent-soft')
     expect(teamManageView).toContain('bg-dp-danger-soft')
   })
+
+  it('renders compact duty type rows with exact color previews and hidden types grouped last', () => {
+    expect(teamManageView).toContain('groupDutyTypesForManagement')
+    expect(teamManageView).toContain('v-for="(dutyType, index) in displayedDutyTypes"')
+    expect(teamManageView).toContain('backgroundColor: dutyType.color ||')
+    expect(teamManageView).toContain('isLightColor(dutyType.color)')
+    expect(teamManageView).not.toMatch(/v-if="hasDutyType" class="overflow-x-auto"/)
+    expect(teamManageView).not.toContain("t('team.manage.fields.status')")
+    expect(teamManageView).not.toContain("t('team.manage.labels.visible')")
+    expect(teamManageView).not.toContain("t('team.manage.labels.offDuty')")
+  })
 })

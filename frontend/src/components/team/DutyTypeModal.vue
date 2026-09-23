@@ -49,9 +49,8 @@ const trimmedDutyTypeName = computed(() => dutyTypeForm.value.name.trim())
 const trimmedDutyAbbreviation = computed(() => normalizeDutyAbbreviation(dutyTypeForm.value.abbreviation))
 const isDutyAbbreviationInvalid = computed(() => !isValidDutyAbbreviation(trimmedDutyAbbreviation.value))
 const automaticDutyAbbreviation = computed(() => dutyAbbreviation(trimmedDutyTypeName.value))
-const dutyAbbreviationPreview = computed(() => dutyAbbreviation(trimmedDutyTypeName.value, trimmedDutyAbbreviation.value))
 const dutyTypePreviewStyle = computed(() => ({
-  backgroundColor: dutyTypeForm.value.color || 'var(--dp-duty-fallback)',
+  backgroundColor: dutyTypeForm.value.color || 'var(--dp-duty-type-fallback)',
   color: isLightColor(dutyTypeForm.value.color) ? 'var(--dp-text-on-light)' : 'var(--dp-text-on-dark)',
 }))
 const submitting = ref(false)
@@ -248,77 +247,74 @@ async function saveDutyType() {
       </button>
     </div>
 
-    <div class="modal-body-form">
-      <p class="text-sm text-dp-text-secondary">
-        {{ t('team.dutyType.description') }}
-      </p>
+    <div class="modal-body-form-compact !space-y-3">
+      <div class="grid grid-cols-[minmax(0,1fr)_minmax(0,0.8fr)] gap-3">
+        <div class="min-w-0">
+          <label for="duty-type-name" class="form-label !flex !min-h-5 !items-center !justify-between !gap-1 !whitespace-nowrap !text-xs">
+            <span class="inline-flex min-w-0 items-center gap-1 whitespace-nowrap">
+              {{ t('team.dutyType.fields.name') }}
+              <span
+                aria-hidden="true"
+                class="duty-type-required-indicator h-1.5 w-1.5 shrink-0 rounded-full bg-dp-danger"
+              ></span>
+            </span>
+            <CharacterCounter :current="dutyTypeForm.name.length" :max="10" />
+          </label>
+          <input
+            id="duty-type-name"
+            v-model="dutyTypeForm.name"
+            type="text"
+            maxlength="10"
+            :placeholder="t('team.dutyType.placeholders.name')"
+            class="form-control"
+            required
+            aria-required="true"
+            :aria-invalid="isDutyTypeNameInvalid"
+          />
+        </div>
 
-      <div
-        v-if="dutyTypeForm.isDefault"
-        class="bg-dp-accent-soft border border-dp-accent-border rounded-lg p-3 text-sm text-dp-accent-hover"
-      >
-        {{ t('team.dutyType.defaultNoticeStart') }} <strong>{{ t('team.dutyType.defaultNoticeStrong') }}</strong>{{ t('team.dutyType.defaultNoticeEnd') }}
-      </div>
-
-      <div>
-        <label class="form-label">
-          {{ t('team.dutyType.fields.name') }}
-          <CharacterCounter :current="dutyTypeForm.name.length" :max="10" />
-        </label>
-        <input
-          v-model="dutyTypeForm.name"
-          type="text"
-          maxlength="10"
-          :placeholder="t('team.dutyType.placeholders.name')"
-          class="form-control"
-          :aria-invalid="isDutyTypeNameInvalid"
-        />
-      </div>
-
-      <div>
-        <label for="duty-type-abbreviation" class="form-label">
-          {{ t('dutyAbbreviation.label') }}
-          <CharacterCounter :current="dutyTypeForm.abbreviation.length" :max="3" />
-        </label>
-        <input
-          id="duty-type-abbreviation"
-          :value="dutyTypeForm.abbreviation"
-          type="text"
-          maxlength="3"
-          pattern="[A-Za-z가-힣]{1,3}"
-          autocomplete="off"
-          :placeholder="automaticDutyAbbreviation || t('dutyAbbreviation.placeholder')"
-          class="form-control"
-          :aria-invalid="isDutyAbbreviationInvalid"
-          aria-describedby="duty-type-abbreviation-help duty-type-abbreviation-error"
-          @input="handleDutyAbbreviationInput"
-          @compositionstart="startDutyAbbreviationComposition"
-          @compositionend="finishDutyAbbreviationComposition"
-        />
-        <p id="duty-type-abbreviation-help" class="mt-1 text-xs text-dp-text-secondary">
-          {{ t('dutyAbbreviation.hint') }}
-        </p>
-        <p
-          v-if="isDutyAbbreviationInvalid"
-          id="duty-type-abbreviation-error"
-          class="mt-1 text-xs text-dp-danger"
-          role="alert"
-        >
-          {{ t('dutyAbbreviation.invalid') }}
-        </p>
-      </div>
-
-      <div class="color-picker-container">
-        <label class="form-label mb-2">
-          {{ t('team.dutyType.fields.color') }}
-        </label>
-        <div class="color-picker-wrapper flex justify-center items-center">
-          <div ref="colorPickerRef" class="color-picker"></div>
+        <div class="min-w-0">
+          <label for="duty-type-abbreviation" class="form-label !flex !min-h-5 !items-center !justify-between !gap-1 !whitespace-nowrap !text-xs">
+            <span class="min-w-0 truncate">{{ t('dutyAbbreviation.label') }}</span>
+            <CharacterCounter :current="dutyTypeForm.abbreviation.length" :max="3" />
+          </label>
+          <input
+            id="duty-type-abbreviation"
+            :value="dutyTypeForm.abbreviation"
+            type="text"
+            maxlength="3"
+            pattern="[A-Za-z가-힣]{1,3}"
+            autocomplete="off"
+            :placeholder="automaticDutyAbbreviation || t('dutyAbbreviation.placeholder')"
+            class="form-control"
+            :aria-invalid="isDutyAbbreviationInvalid"
+            :aria-describedby="isDutyAbbreviationInvalid ? 'duty-type-abbreviation-error' : undefined"
+            @input="handleDutyAbbreviationInput"
+            @compositionstart="startDutyAbbreviationComposition"
+            @compositionend="finishDutyAbbreviationComposition"
+          />
+          <p
+            v-if="isDutyAbbreviationInvalid"
+            id="duty-type-abbreviation-error"
+            class="mt-1 text-xs text-dp-danger"
+            role="alert"
+          >
+            {{ t('dutyAbbreviation.invalid') }}
+          </p>
         </div>
       </div>
 
-      <div>
-        <label class="form-label">
+      <div class="color-picker-container !gap-2 !mt-0">
+        <label class="form-label mb-0">
+          {{ t('team.dutyType.fields.color') }}
+        </label>
+        <div class="color-picker-wrapper !flex-row justify-center items-center">
+          <div ref="colorPickerRef" class="color-picker color-picker--compact"></div>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-3">
+        <label class="form-label mb-0 shrink-0">
           {{ t('team.dutyType.fields.preview') }}
         </label>
         <span
@@ -327,19 +323,10 @@ async function saveDutyType() {
         >
           {{ dutyTypeForm.name || t('team.dutyType.placeholders.preview') }}
         </span>
-        <p class="mt-2 flex items-center gap-2 text-sm text-dp-text-secondary">
-          <span>{{ t('dutyAbbreviation.preview') }}:</span>
-          <span
-            class="duty-type-preview px-2.5 py-0.5 rounded-md font-semibold text-sm"
-            :style="dutyTypePreviewStyle"
-          >
-            {{ dutyAbbreviationPreview || '–' }}
-          </span>
-        </p>
       </div>
     </div>
 
-    <div class="modal-actions modal-actions-end modal-footer-safe">
+    <div class="modal-actions-compact modal-actions-end modal-footer-safe">
       <button
         @click="close"
         :disabled="saving || submitting"

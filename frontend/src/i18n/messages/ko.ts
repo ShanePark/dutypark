@@ -383,10 +383,8 @@ export default {
   },
   apiErrors,
   dutyAbbreviation: {
-    label: '단축어 (선택)',
-    hint: '비워 두면 근무명의 첫 글자를 사용합니다. 직접 입력할 때는 영어 알파벳 또는 완성형 한글을 1~3글자로 사용할 수 있습니다. 본인 근무 선택·편집에는 단축어를, 다른 사람의 달력과 함께보기에는 전체 이름을 표시합니다.',
+    label: '단축어',
     placeholder: '예: N',
-    preview: '단축어 미리보기',
     invalid: '단축어는 영어 알파벳 또는 완성형 한글을 1~3글자로 입력해 주세요.',
   },
   contentFilter: {

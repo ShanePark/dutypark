@@ -3,6 +3,13 @@ export interface DutyTypeVisibilityItem {
   hidden: boolean
 }
 
+export function groupDutyTypesForManagement<T extends DutyTypeVisibilityItem>(types: T[]): T[] {
+  return [
+    ...types.filter(type => !type.hidden),
+    ...types.filter(type => type.hidden),
+  ]
+}
+
 export function findVisibleDutyTypeNeighbor(
   types: DutyTypeVisibilityItem[],
   index: number,

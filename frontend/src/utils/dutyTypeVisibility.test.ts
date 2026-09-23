@@ -1,11 +1,23 @@
 import { describe, expect, it } from 'vitest'
 import {
+  groupDutyTypesForManagement,
   findVisibleDutyTypeNeighbor,
 } from './dutyTypeVisibility'
 
 const off = { id: null, hidden: false }
 
 describe('duty type visibility helpers', () => {
+  it('keeps visible duty types first and groups hidden types at the end without changing order', () => {
+    const types = [
+      { id: 1, name: '주간', hidden: false },
+      { id: 2, name: '예전', hidden: true },
+      { id: 3, name: '야간', hidden: false },
+      { id: 4, name: '중단', hidden: true },
+    ]
+
+    expect(groupDutyTypesForManagement(types).map(type => type.id)).toEqual([1, 3, 2, 4])
+  })
+
   it('finds the next visible duty type across hidden rows', () => {
     const types = [
       off,

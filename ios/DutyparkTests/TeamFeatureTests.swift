@@ -771,6 +771,18 @@ struct TeamFeatureTests {
     }
 
     @Test
+    func managementListKeepsVisibleTypesFirstAndGroupsHiddenTypesLast() {
+        let dutyTypes = [
+            dutyType(id: nil, hidden: false),
+            dutyType(id: 1, hidden: true),
+            dutyType(id: 2, hidden: false),
+            dutyType(id: 3, hidden: true)
+        ]
+
+        #expect(TeamFeatureLogic.dutyTypeManagementDisplayOrder(in: dutyTypes) == [0, 2, 1, 3])
+    }
+
+    @Test
     func excludesDefaultAndHiddenDutyTypesFromReorderTargets() {
         let dutyTypes = [
             dutyType(id: nil, hidden: false),
@@ -1247,9 +1259,39 @@ struct TeamFeatureTests {
 
         #expect(manageView.contains(".textInputAutocapitalization(.never)"))
         #expect(!manageView.contains("uppercaseASCIILetters"))
-        #expect(manageView.contains("DutyAbbreviation.maximumLength"))
+        #expect(DutyAbbreviation.maximumLength == 3)
         #expect(manageView.contains("team.dutyType.abbreviation.invalid"))
         #expect(viewModel.contains("DutyAbbreviation.normalizeForSubmission(abbreviation)"))
+    }
+
+    @Test
+    func dutyTypeEditorAlignsNameAndAbbreviationAndMarksOnlyNameRequired() throws {
+        let root = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+        let manageView = try String(
+            contentsOf: root.appending(path: "Dutypark/Features/Team/TeamManageView.swift"),
+            encoding: .utf8
+        )
+        let editorStart = try #require(manageView.range(of: "private struct TeamDutyTypeEditor"))
+        let editor = manageView[editorStart.lowerBound...]
+        let catalogData = try Data(contentsOf: root.appending(path: "Dutypark/Resources/Team.xcstrings"))
+        let catalog = try #require(JSONSerialization.jsonObject(with: catalogData) as? [String: Any])
+        let strings = try #require(catalog["strings"] as? [String: Any])
+        let abbreviationEntry = try #require(strings["team.dutyType.abbreviation.label"] as? [String: Any])
+        let localizations = try #require(abbreviationEntry["localizations"] as? [String: Any])
+        let korean = try #require(localizations["ko"] as? [String: Any])
+        let koreanUnit = try #require(korean["stringUnit"] as? [String: Any])
+        let english = try #require(localizations["en"] as? [String: Any])
+        let englishUnit = try #require(english["stringUnit"] as? [String: Any])
+
+        #expect(koreanUnit["value"] as? String == "단축어")
+        #expect(englishUnit["value"] as? String == "Abbreviation")
+        #expect(editor.contains("Text(\"team.dutyType.fields.name\", tableName: \"Team\")"))
+        #expect(editor.contains("Circle()"))
+        #expect(editor.contains(".fill(DPColor.danger)"))
+        #expect(editor.contains("team.dutyType.fields.name.requiredHint"))
+        #expect(editor.contains(".lineLimit(1)"))
     }
 
     @Test
@@ -1282,7 +1324,7 @@ struct TeamFeatureTests {
             .appending(path: "Dutypark/Features/Team/TeamManageView.swift")
         let source = try String(contentsOf: sourceURL, encoding: .utf8)
 
-        #expect(source.contains("present(.setDutyTypeVisibility(dutyType))"))
+        #expect(source.contains("present(.setDutyTypeVisibility(dutyType), emitRoutineHaptic: false)"))
         #expect(source.contains("Task { await viewModel.toggleVisibility(dutyType) }") == false)
         #expect(source.contains("case .setDutyTypeVisibility(let dutyType):"))
         #expect(source.contains("team.dutyType.messages.hideConfirm"))

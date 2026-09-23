@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { h, nextTick, reactive } from 'vue'
+import dutyTypeModalSource from './DutyTypeModal.vue?raw'
+import en from '@/i18n/messages/en'
 import ko from '@/i18n/messages/ko'
 import {
   createHostWrapper,
@@ -380,7 +382,7 @@ describe('DutyTypeModal previews', () => {
     mocks.filterStore.isBlocked.mockReturnValue(false)
   })
 
-  it('renders full and abbreviated labels with the same readable duty badge treatment', async () => {
+  it('renders one readable full-name badge using the configured color', async () => {
     const mounted = mountDutyType()
     enterName(mounted.root, '야간근무')
     await flush()
@@ -390,8 +392,8 @@ describe('DutyTypeModal previews', () => {
       (node) => node.type === 'span' && String(node.props.class ?? '').includes('duty-type-preview'),
     )
 
-    expect(previews).toHaveLength(2)
-    expect(previews.map(hostText)).toEqual(['야간근무', '야'])
+    expect(previews).toHaveLength(1)
+    expect(previews.map(hostText)).toEqual(['야간근무'])
     for (const preview of previews) {
       expect(String(preview.props.class)).toContain('px-2.5')
       expect(String(preview.props.class)).toContain('py-0.5')
@@ -405,7 +407,7 @@ describe('DutyTypeModal previews', () => {
     }
   })
 
-  it('uses the dark text token only when the selected color needs it', async () => {
+  it('uses the dark text token when the selected color needs it', async () => {
     const mounted = mountDutyType({
       dutyType: { id: 7, name: '야간근무', color: '#123456', position: 0, hidden: false, abbreviation: 'N' },
     })
@@ -416,10 +418,43 @@ describe('DutyTypeModal previews', () => {
       (node) => node.type === 'span' && String(node.props.class ?? '').includes('duty-type-preview'),
     )
 
-    expect(previews).toHaveLength(2)
+    expect(previews).toHaveLength(1)
     expect(previews.every((preview) => {
       const style = preview.props.style as { color?: string } | undefined
       return style?.color === 'var(--dp-text-on-dark)'
     })).toBe(true)
+  })
+
+  it('keeps the edit form compact and removes redundant explanatory copy', () => {
+    expect(dutyTypeModalSource).toContain('grid grid-cols-[minmax(0,1fr)_minmax(0,0.8fr)]')
+    expect(dutyTypeModalSource).not.toContain("t('dutyAbbreviation.hint')")
+    expect(dutyTypeModalSource).not.toContain("t('dutyAbbreviation.preview')")
+    expect(dutyTypeModalSource).not.toContain('team.dutyType.defaultNotice')
+    expect(dutyTypeModalSource).not.toContain("t('team.dutyType.description')")
+  })
+
+  it('marks only the duty name as required and keeps both field labels on one aligned row', async () => {
+    const mounted = mountDutyType()
+    await flush()
+
+    expect(ko.dutyAbbreviation.label).toBe('단축어')
+    expect(en.dutyAbbreviation.label).toBe('Abbreviation')
+    expect(nameInput(mounted.root).props.required).toBe('')
+    expect(nameInput(mounted.root).props['aria-required']).toBe('true')
+    expect(abbreviationInput(mounted.root).props.required).toBeUndefined()
+    expect(abbreviationInput(mounted.root).props['aria-required']).toBeUndefined()
+
+    const labels = findHostNodes(mounted.root, (node) => node.type === 'label')
+    const nameLabel = labels.find((node) => node.props.for === 'duty-type-name')
+    const abbreviationLabel = labels.find((node) => node.props.for === 'duty-type-abbreviation')
+    const requiredIndicator = findHostNode(
+      mounted.root,
+      (node) => node.type === 'span' && String(node.props.class ?? '').includes('duty-type-required-indicator'),
+    )
+    expect(String(nameLabel?.props.class)).toContain('whitespace-nowrap')
+    expect(String(abbreviationLabel?.props.class)).toContain('whitespace-nowrap')
+    expect(requiredIndicator?.props['aria-hidden']).toBe('true')
+    expect(dutyTypeModalSource).toContain('min-h-5')
+    expect(dutyTypeModalSource).toContain('duty-type-required-indicator')
   })
 })
