@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.ResponseBody
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
 import org.springframework.web.context.request.async.AsyncRequestNotUsableException
+import org.springframework.web.servlet.HandlerMapping
 import org.springframework.web.servlet.resource.NoResourceFoundException
 import java.util.Collections
 
@@ -25,6 +26,9 @@ class ErrorDetectAdvisor(
     private val log = logger()
 
     private companion object {
+        private const val MAX_EXCEPTION_CAUSE_DEPTH = 8
+        private const val MAX_STACK_TRACE_FRAMES = 32
+
         private val NOT_NOTIFY_EXCEPTIONS: Set<Class<out Exception>> = setOf(
             NoResourceFoundException::class.java,
             ClientAbortException::class.java,
@@ -88,6 +92,12 @@ class ErrorDetectAdvisor(
                 notificationFailure.javaClass.name,
             )
         }
+        log.error(
+            "Unhandled request exception (method={}, pathPattern={})\n{}",
+            _req.method,
+            pathPattern(_req),
+            exceptionTrace(e),
+        )
         throw e
     }
 
@@ -96,6 +106,30 @@ class ErrorDetectAdvisor(
 
     private fun isNotNotify(e: Exception): Boolean {
         return NOT_NOTIFY_EXCEPTIONS.any { exceptionType -> exceptionType.isInstance(e) }
+    }
+
+    private fun pathPattern(req: HttpServletRequest): String =
+        req.getAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE) as? String ?: "<unmatched>"
+
+    /** Stack frames and exception types aid diagnosis without logging potentially sensitive exception messages. */
+    private fun exceptionTrace(exception: Throwable): String = buildString {
+        var current: Throwable? = exception
+        var depth = 0
+        while (current != null && depth < MAX_EXCEPTION_CAUSE_DEPTH) {
+            if (depth > 0) append("\nCaused by: ")
+            append(current.javaClass.name)
+
+            val frames = current.stackTrace
+            frames.take(MAX_STACK_TRACE_FRAMES).forEach { frame ->
+                append("\n\tat ").append(frame)
+            }
+            if (frames.size > MAX_STACK_TRACE_FRAMES) {
+                append("\n\t... ").append(frames.size - MAX_STACK_TRACE_FRAMES).append(" more")
+            }
+
+            current = current.cause
+            depth++
+        }
     }
 
 }
