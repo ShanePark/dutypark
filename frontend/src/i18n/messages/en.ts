@@ -327,6 +327,11 @@ export default {
     labels: {
       or: 'or',
     },
+    unsavedChanges: {
+      title: 'Discard changes?',
+      message: 'Your unsaved changes will be lost.',
+      discard: 'Discard changes',
+    },
     navigation: {
       back: 'Back',
       backHome: 'Back to home',

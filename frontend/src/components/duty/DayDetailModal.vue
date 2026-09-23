@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue'
+import { ref, computed, watch, nextTick, onBeforeUnmount } from 'vue'
 import { X, Plus } from '@lucide/vue'
 import { useI18n } from 'vue-i18n'
 import BaseModal from '@/components/common/BaseModal.vue'
@@ -17,6 +17,7 @@ import {
 } from '@/utils/aiScheduleConsentFlow'
 import { VISIBILITY_ICONS, VISIBILITY_COLORS, type CalendarVisibility } from '@/utils/visibility'
 import { effectiveEndDateTime, isRangeInvalid } from '@/utils/scheduleDateTime'
+import { hasUnsavedScheduleChanges, type ScheduleDismissalDraft } from '@/utils/formDismissal'
 import { dutyLabel, dutyTypeLabel } from '@/utils/dutyAbbreviation'
 
 const { showWarning, showError, confirm, choose } = useSwal()
@@ -148,6 +149,69 @@ const newSchedule = ref({
 })
 const editAttachments = ref<NormalizedAttachment[]>([])
 const selectedTagSummaries = ref<SelectedTagSummary[]>([])
+const initialScheduleDraft = ref<ScheduleDismissalDraft | null>(null)
+const initialScheduleAttachmentIds = ref<string[]>([])
+const datePickerBackdropDismissPending = ref(false)
+let isHandlingDismissal = false
+
+function clearDatePickerBackdropDismissPending() {
+  datePickerBackdropDismissPending.value = false
+  window.removeEventListener('pointerdown', clearDatePickerBackdropDismissPending, true)
+  window.removeEventListener('pointercancel', clearDatePickerBackdropDismissPending)
+}
+
+function markDatePickerBackdropDismissPending() {
+  clearDatePickerBackdropDismissPending()
+  datePickerBackdropDismissPending.value = true
+  // Registered during document capture, so this runs on the next pointerdown only.
+  window.addEventListener('pointerdown', clearDatePickerBackdropDismissPending, true)
+  window.addEventListener('pointercancel', clearDatePickerBackdropDismissPending, { once: true })
+}
+
+onBeforeUnmount(clearDatePickerBackdropDismissPending)
+
+function currentScheduleDraft(): ScheduleDismissalDraft {
+  return {
+    content: newSchedule.value.content,
+    description: newSchedule.value.description,
+    startDateTime: newSchedule.value.startDateTime,
+    endDateTime: newSchedule.value.endDateTime,
+    visibility: newSchedule.value.visibility,
+    tagFriendIds: newSchedule.value.tagFriendIds,
+  }
+}
+
+function hasUnsavedScheduleDraft() {
+  const initialDraft = initialScheduleDraft.value
+  if (!initialDraft || (!isCreateMode.value && !isEditMode.value)) return false
+  return hasUnsavedScheduleChanges(
+    initialDraft,
+    currentScheduleDraft(),
+    initialScheduleAttachmentIds.value,
+    scheduleFormRef.value?.getAttachments().map((attachment) => attachment.id) ?? [],
+    scheduleFormRef.value?.getSessionId() != null,
+  )
+}
+
+function isScheduleFormBusy() {
+  return isUploading.value
+    || isResolvingAiConsent.value
+    || (scheduleFormRef.value?.isUploading() ?? false)
+}
+
+async function confirmDiscardChanges() {
+  return confirm(
+    t('common.unsavedChanges.message'),
+    t('common.unsavedChanges.title'),
+    t('common.unsavedChanges.discard'),
+    t('common.actions.cancel'),
+    { animation: false },
+  )
+}
+
+async function discardScheduleForm() {
+  await scheduleFormRef.value?.discardSession()
+}
 
 const untagConfirmSchedule = ref<Pick<Schedule, 'id' | 'content'> | null>(null)
 
@@ -224,6 +288,8 @@ watch(
       isEditMode.value = false
       editingScheduleId.value = null
       editAttachments.value = []
+      initialScheduleDraft.value = null
+      initialScheduleAttachmentIds.value = []
       const { year, month, day } = props.date
       const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`
       newSchedule.value.startDateTime = `${dateStr}T00:00`
@@ -251,6 +317,8 @@ function startCreateMode() {
     visibility: 'FAMILY',
     tagFriendIds: [],
   }
+  initialScheduleDraft.value = currentScheduleDraft()
+  initialScheduleAttachmentIds.value = []
   selectedTagSummaries.value = []
   nextTick(() => {
     if (contentRef.value) {
@@ -299,6 +367,9 @@ function startEditMode(schedule: Schedule) {
     })
   )
 
+  initialScheduleDraft.value = currentScheduleDraft()
+  initialScheduleAttachmentIds.value = editAttachments.value.map((attachment) => attachment.id)
+
   nextTick(() => {
     if (contentRef.value) {
       contentRef.value.scrollTop = 0
@@ -306,13 +377,47 @@ function startEditMode(schedule: Schedule) {
   })
 }
 
-function cancelEdit() {
+function exitEditor() {
   isCreateMode.value = false
   isEditMode.value = false
   editingScheduleId.value = null
   editAttachments.value = []
   selectedTagSummaries.value = []
-  scheduleFormRef.value?.cleanup()
+  initialScheduleDraft.value = null
+  initialScheduleAttachmentIds.value = []
+}
+
+async function cancelEdit() {
+  if (isHandlingDismissal || isScheduleFormBusy()) return
+  isHandlingDismissal = true
+  try {
+    if (hasUnsavedScheduleDraft() && !(await confirmDiscardChanges())) return
+
+    await discardScheduleForm()
+    exitEditor()
+  } finally {
+    isHandlingDismissal = false
+  }
+}
+
+async function requestClose() {
+  if (datePickerBackdropDismissPending.value) {
+    clearDatePickerBackdropDismissPending()
+    return
+  }
+  if (isHandlingDismissal || isScheduleFormBusy()) return
+  isHandlingDismissal = true
+  try {
+    const isEditing = isCreateMode.value || isEditMode.value
+    if (hasUnsavedScheduleDraft() && !(await confirmDiscardChanges())) return
+
+    if (isEditing) {
+      await discardScheduleForm()
+    }
+    emit('close')
+  } finally {
+    isHandlingDismissal = false
+  }
 }
 
 function buildScheduleData(): ScheduleSaveData {
@@ -433,10 +538,7 @@ async function saveSchedule() {
       emit('createSchedule', data)
     }
 
-    isCreateMode.value = false
-    isEditMode.value = false
-    editingScheduleId.value = null
-    editAttachments.value = []
+    exitEditor()
   } finally {
     isResolvingAiConsent.value = false
   }
@@ -461,7 +563,8 @@ function handleUploadError(message: string) {
     size="2xl"
     height="viewport"
     z-index="detail"
-    @close="emit('close')"
+    backdrop-event="click"
+    @close="requestClose"
   >
     <div class="day-detail-modal-header modal-header">
       <div class="w-full">
@@ -471,7 +574,7 @@ function handleUploadError(message: string) {
             <span v-else-if="isEditMode" class="px-2 py-0.5 bg-dp-accent-soft text-dp-accent-hover text-xs font-medium rounded">{{ t('duty.schedule.dayDetail.editBadge') }}</span>
             <h2>{{ formattedDate }}</h2>
           </div>
-          <button @click="emit('close')" class="p-2 rounded-full flex-shrink-0 hover-close-btn cursor-pointer">
+          <button @click="requestClose" :disabled="isScheduleFormBusy()" class="p-2 rounded-full flex-shrink-0 hover-close-btn cursor-pointer disabled:cursor-not-allowed disabled:opacity-50">
             <X class="w-6 h-6 text-dp-text-primary" />
           </button>
         </div>
@@ -545,6 +648,7 @@ function handleUploadError(message: string) {
             @upload-start="handleUploadStart"
             @upload-complete="handleUploadComplete"
             @error="handleUploadError"
+            @date-picker-backdrop-dismiss="markDatePickerBackdropDismissPending"
           />
         </div>
 
@@ -563,8 +667,9 @@ function handleUploadError(message: string) {
           </div>
           <div v-else-if="!isCreateMode && !isEditMode" class="flex justify-end">
             <button
-              @click="emit('close')"
-              class="w-full sm:w-auto px-4 py-2 rounded-lg transition btn-outline cursor-pointer"
+              @click="requestClose"
+              :disabled="isScheduleFormBusy()"
+              class="w-full sm:w-auto px-4 py-2 rounded-lg transition btn-outline cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
             >
               {{ t('common.actions.close') }}
             </button>
@@ -572,7 +677,8 @@ function handleUploadError(message: string) {
           <div v-else-if="isCreateMode || isEditMode" class="flex justify-end gap-2">
             <button
               @click="cancelEdit"
-              class="flex-1 sm:flex-none px-4 py-2 rounded-lg transition btn-outline cursor-pointer"
+              :disabled="isScheduleFormBusy()"
+              class="flex-1 sm:flex-none px-4 py-2 rounded-lg transition btn-outline cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
             >
               {{ t('common.actions.close') }}
             </button>

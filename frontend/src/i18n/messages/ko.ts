@@ -329,6 +329,11 @@ export default {
     labels: {
       or: '또는',
     },
+    unsavedChanges: {
+      title: '변경사항을 버릴까요?',
+      message: '저장하지 않은 변경사항이 사라집니다.',
+      discard: '변경사항 버리기',
+    },
     navigation: {
       back: '뒤로',
       backHome: '홈으로 돌아가기',
