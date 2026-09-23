@@ -76,6 +76,32 @@ nonisolated struct DutyparkWidgetDay: Codable, Equatable, Sendable, Identifiable
     }
 }
 
+/// RGB values parsed from a configured team duty color. The widget uses these
+/// components directly for cell fills so the selected color does not change with
+/// the system appearance; contrast is calculated separately for overlaid text.
+nonisolated struct DutyparkWidgetColorComponents: Equatable, Sendable {
+    let red: UInt8
+    let green: UInt8
+    let blue: UInt8
+
+    init?(hex: String?) {
+        guard var value = hex?.trimmingCharacters(in: .whitespacesAndNewlines), !value.isEmpty else {
+            return nil
+        }
+        if value.hasPrefix("#") { value.removeFirst() }
+        guard value.count == 6, let number = UInt32(value, radix: 16) else { return nil }
+
+        red = UInt8((number >> 16) & 0xFF)
+        green = UInt8((number >> 8) & 0xFF)
+        blue = UInt8(number & 0xFF)
+    }
+
+    var usesLightForeground: Bool {
+        let luminance = (Double(red) * 299 + Double(green) * 587 + Double(blue) * 114) / 1_000
+        return luminance <= 127.5
+    }
+}
+
 nonisolated enum DutyparkWidgetTodoStatus: String, Codable, Equatable, Sendable {
     case todo = "TODO"
     case inProgress = "IN_PROGRESS"

@@ -4,6 +4,19 @@ import XCTest
 
 @MainActor
 final class DutyparkWidgetSnapshotTests: XCTestCase {
+    func testWidgetDutyColorKeepsConfiguredRGBAndChoosesTextContrastSeparately() throws {
+        let configuredColor = try XCTUnwrap(DutyparkWidgetColorComponents(hex: " #123456 "))
+
+        XCTAssertEqual(configuredColor.red, 0x12)
+        XCTAssertEqual(configuredColor.green, 0x34)
+        XCTAssertEqual(configuredColor.blue, 0x56)
+        XCTAssertTrue(configuredColor.usesLightForeground)
+
+        let lightColor = try XCTUnwrap(DutyparkWidgetColorComponents(hex: "#F0E0D0"))
+        XCTAssertFalse(lightColor.usesLightForeground)
+        XCTAssertNil(DutyparkWidgetColorComponents(hex: "#12345"))
+    }
+
     func testSnapshotBuilderPublishesFirstScheduleContentAndTotalCount() throws {
         let calendar = CalendarDateSupport.calendar
         let firstDate = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 8, day: 30)))
