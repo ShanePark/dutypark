@@ -40,6 +40,16 @@
         }
       },
       "entries": {
+        "pr-425": {
+          "title": "캘린더·위젯과 모바일 근무 관리 개선",
+          "summary": "캘린더와 위젯을 다듬고 모바일 근무 종류 관리와 웹 양식의 미저장 변경 확인을 개선했으며, 백엔드 진단과 첨부파일 테스트도 보강했습니다.",
+          "changes": [
+            "캘린더와 위젯의 표시 및 동작을 개선했습니다.",
+            "모바일에서 근무 종류를 더 쉽게 관리할 수 있습니다.",
+            "웹 양식에 저장하지 않은 변경사항이 있으면 화면을 나갈 때 확인합니다.",
+            "백엔드 진단 정보와 첨부파일 테스트를 보강했습니다."
+          ]
+        },
         "pr-424": {
           "title": "친구 순서 관리와 Todo·iPhone 경험 개선",
           "summary": "백엔드와 웹·iPhone 앱에서 친구 순서와 완료 Todo 정리를 일관되게 지원하고, 첨부파일·캘린더 위젯과 iPhone 빌드 정보도 개선했습니다.",
@@ -2329,6 +2339,16 @@
         }
       },
       "entries": {
+        "pr-425": {
+          "title": "Calendar, widget, and mobile duty management improvements",
+          "summary": "Refine calendar and widget behavior, make duty types easier to manage on mobile, and protect web form edits with unsaved-change prompts. Backend diagnostics and attachment tests are also improved.",
+          "changes": [
+            "Improve calendar and widget presentation and behavior.",
+            "Make duty types easier to manage on mobile.",
+            "Warn before leaving a web form with unsaved changes.",
+            "Strengthen backend diagnostics and attachment test coverage."
+          ]
+        },
         "pr-424": {
           "title": "Friend ordering and Todo, iPhone experience improvements",
           "summary": "The backend, web, and iPhone app now keep friend ordering and completed-Todo cleanup consistent, with improved attachments, calendar widgets, and iPhone build details.",
@@ -4581,6 +4601,21 @@
     }
   },
   "items": [
+    {
+      "id": "pr-425",
+      "version": "2026.09.25",
+      "date": "2026-09-25",
+      "pr": 425,
+      "url": "https://github.com/ShanePark/dutypark/pull/425",
+      "category": "improvement",
+      "areas": [
+        "attachments",
+        "calendar",
+        "duty",
+        "maintenance",
+        "ui"
+      ]
+    },
     {
       "id": "pr-424",
       "version": "2026.09.19",
