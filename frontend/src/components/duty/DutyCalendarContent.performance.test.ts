@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createHash } from 'node:crypto'
 import { defineComponent, h, nextTick, reactive } from 'vue'
 import { createHostWrapper, findHostNode, findHostNodes, hostText, mountHost, triggerHost, type HostNode } from '@/test/hostRenderer'
+import { getCalendarGridSlice } from '@/utils/calendarGrid'
 import type { CalendarDay, LocalDDay, Schedule } from '@/views/duty/dutyViewTypes'
 
 vi.mock('@/i18n', () => ({ getCurrentLocale: () => 'ko' }))
@@ -80,6 +81,13 @@ function ddayButtons(root: HostNode) {
   return findHostNodes(root, node => node.type === 'button' && String(node.props.class).includes('calendar-action-bubble--dday'))
 }
 
+function visibleDDayCount(props: CalendarProps) {
+  const visibleDates = new Set(getCalendarGridSlice(props.days, props.currentYear, props.currentMonth).days.map(day =>
+    `${day.year}-${String(day.month).padStart(2, '0')}-${String(day.day).padStart(2, '0')}`,
+  ))
+  return props.dDays.filter(dday => visibleDates.has(dday.date)).length
+}
+
 function tagNames(root: HostNode) {
   return findHostNodes(root, node => 'data-avatar-name' in node.props).map(node => node.props['data-avatar-name'])
 }
@@ -98,7 +106,8 @@ describe('calendar derived display data', () => {
     const props = makeProps()
     const root = mountCalendar(props)
 
-    expect(ddayButtons(root)).toHaveLength(props.dDays.length)
+    expect(ddayButtons(root)).toHaveLength(visibleDDayCount(props))
+    expect(props.dDays).toHaveLength(100)
     expect(parseDateOnly).toHaveBeenCalledTimes(props.dDays.length)
     expect(buildDisplayTagMembers).toHaveBeenCalledTimes(42 * 3)
     expect(hostText(root)).not.toContain('Schedule 0-3')
