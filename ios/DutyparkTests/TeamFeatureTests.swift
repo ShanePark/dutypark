@@ -121,6 +121,31 @@ struct TeamFeatureTests {
     }
 
     @Test
+    func teamCalendarReusesTheSharedDateAndWeekdayPresentation() throws {
+        let sourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark/Features/Team/TeamView.swift")
+        let source = try String(contentsOf: sourceURL, encoding: .utf8)
+        let dayCellStart = try #require(source.range(of: "private struct TeamCalendarDayCell"))
+        let dayCellEnd = try #require(source[dayCellStart.lowerBound...].range(of: "private enum TeamScheduleField"))
+        let dayCell = source[dayCellStart.lowerBound..<dayCellEnd.lowerBound]
+        let calendarStart = try #require(source.range(of: "private var calendar: some View"))
+        let calendarEnd = try #require(source[calendarStart.lowerBound...].range(of: "private var selectedSchedules: some View"))
+        let calendar = source[calendarStart.lowerBound..<calendarEnd.lowerBound]
+
+        #expect(dayCell.contains("DPCalendarDayNumber("))
+        #expect(dayCell.contains("DPCalendarCellStyle.cellBackground("))
+        #expect(dayCell.contains("DPCalendarCellStyle.cellBorder("))
+        #expect(calendar.contains("DPCalendarWeekdayHeaderCell("))
+
+        // This gray sits between the old team cutoff (0.64) and the general calendar
+        // cutoff (127.5/255), where the two calendars used to choose opposite text colors.
+        #expect(!DPCalendarCellStyle.usesLightForeground(on: "#999999"))
+        #expect(DPCalendarCellStyle.primaryForeground(dutyColor: "#999999") == DPColor.textOnLight)
+    }
+
+    @Test
     func teamAdminToolPermissionIncludesTeamLeadAndManagerRoles() {
         let team = managedTeam(
             adminID: 1,

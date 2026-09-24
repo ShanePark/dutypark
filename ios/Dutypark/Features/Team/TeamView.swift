@@ -365,15 +365,7 @@ struct TeamView: View {
         return VStack(spacing: 0) {
             LazyVGrid(columns: columns, spacing: 0) {
                 ForEach(Array(TeamLocalization.shortStandaloneWeekdaySymbols().enumerated()), id: \.offset) { index, weekday in
-                    Text(verbatim: weekday)
-                        .font(DPTypography.caption)
-                        .foregroundStyle(TeamVisualStyle.weekdayColor(index))
-                        .frame(maxWidth: .infinity, minHeight: 36)
-                        .background(DPColor.backgroundTertiary)
-                        .overlay(alignment: .trailing) {
-                            if index < 6 { Rectangle().fill(DPColor.borderSecondary).frame(width: 1) }
-                        }
-                        .overlay(alignment: .bottom) { Rectangle().fill(DPColor.borderSecondary).frame(height: 1) }
+                    DPCalendarWeekdayHeaderCell(label: weekday, weekdayIndex: index)
                 }
             }
             LazyVGrid(columns: columns, spacing: 0) {
@@ -400,8 +392,9 @@ struct TeamView: View {
         .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
         .overlay {
             RoundedRectangle(cornerRadius: DPRadius.standard)
-                .stroke(DPColor.borderPrimary)
+                .stroke(DPColor.borderSecondary)
         }
+        .shadow(color: .black.opacity(0.05), radius: 1, y: 1)
     }
 
     private var selectedSchedules: some View {
@@ -613,14 +606,16 @@ private struct TeamCalendarDayCell: View {
     var body: some View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: 1) {
-                Text(verbatim: String(day.day))
-                    .font(DPFont.light(size: 12, relativeTo: .caption))
-                    .fontWeight(isToday ? .bold : .medium)
-                    .foregroundStyle(dayNumberColor)
+                DPCalendarDayNumber(
+                    day: day.day,
+                    weekdayIndex: weekdayIndex,
+                    dutyColor: duty?.dutyColor,
+                    hasHoliday: !holidays.isEmpty
+                )
                 ForEach(Array(holidays.enumerated()), id: \.offset) { _, holiday in
                     Text(verbatim: holiday.dateName)
                         .font(DPFont.light(size: 9, relativeTo: .caption2))
-                        .foregroundStyle(holiday.isHoliday ? DPColor.danger : adaptiveMuted)
+                        .foregroundStyle(holiday.isHoliday ? DPColor.dangerHover : adaptiveMuted)
                         .lineLimit(1)
                 }
                 ForEach(Array(schedules.prefix(2).enumerated()), id: \.offset) { _, schedule in
@@ -642,11 +637,20 @@ private struct TeamCalendarDayCell: View {
             .padding(3)
             .frame(maxWidth: .infinity, minHeight: 60, alignment: .topLeading)
             .background(cellBackground)
-            .opacity(day.month == currentMonth ? 1 : 0.5)
+            .opacity(day.month == currentMonth ? 1 : 0.45)
             .overlay {
-                Rectangle().stroke(adaptiveBorder, lineWidth: 0.5)
                 Rectangle()
                     .stroke(isToday ? DPColor.danger : isSelected ? DPColor.accent : Color.clear, lineWidth: 2)
+            }
+            .overlay(alignment: .trailing) {
+                Rectangle()
+                    .fill(adaptiveBorder)
+                    .frame(width: DPCalendarCellStyle.cellSeparatorWidth)
+            }
+            .overlay(alignment: .bottom) {
+                Rectangle()
+                    .fill(adaptiveBorder)
+                    .frame(height: DPCalendarCellStyle.cellSeparatorWidth)
             }
         }
         .buttonStyle(.plain)
@@ -658,19 +662,15 @@ private struct TeamCalendarDayCell: View {
         return today.year == day.year && today.month == day.month && today.day == day.day
     }
 
-    private var isLightDuty: Bool { TeamVisualStyle.isLightColor(duty?.dutyColor) }
     private var cellBackground: Color {
-        if let color = duty?.dutyColor { return Color(teamHex: color) }
-        return day.month == currentMonth ? DPColor.backgroundCard : DPColor.backgroundTertiary
+        DPCalendarCellStyle.cellBackground(
+            dutyColor: duty?.dutyColor,
+            isCurrentMonth: day.month == currentMonth
+        )
     }
-    private var adaptiveText: Color { duty == nil ? DPColor.textPrimary : isLightDuty ? DPColor.textOnLight : DPColor.textOnDark }
-    private var adaptiveMuted: Color { duty == nil ? DPColor.textMuted : isLightDuty ? DPColor.textMuted : DPColor.textOnDarkMuted }
-    private var adaptiveBorder: Color { duty == nil ? DPColor.borderSecondary : isLightDuty ? DPColor.textOnLight.opacity(0.32) : DPColor.textOnDark.opacity(0.7) }
-    private var dayNumberColor: Color {
-        if weekdayIndex == 0 { return DPColor.danger }
-        if weekdayIndex == 6 { return DPColor.accent }
-        return adaptiveText
-    }
+    private var adaptiveText: Color { DPCalendarCellStyle.primaryForeground(dutyColor: duty?.dutyColor) }
+    private var adaptiveMuted: Color { DPCalendarCellStyle.secondaryForeground(dutyColor: duty?.dutyColor) }
+    private var adaptiveBorder: Color { DPCalendarCellStyle.cellBorder(dutyColor: duty?.dutyColor) }
 
     private func scheduleLabel(_ schedule: TeamScheduleDTO) -> String {
         guard let from = schedule.daysFromStart, let total = schedule.totalDays, total > 1 else { return schedule.content }
@@ -1073,12 +1073,6 @@ private struct TeamCreationView: View {
 }
 
 nonisolated enum TeamVisualStyle {
-    static func weekdayColor(_ index: Int) -> Color {
-        if index == 0 { return DPColor.danger }
-        if index == 6 { return DPColor.accent }
-        return DPColor.textPrimary
-    }
-
     static func foregroundColor(on hex: String?) -> Color {
         isLightColor(hex) ? DPColor.textOnLight : DPColor.textOnDark
     }

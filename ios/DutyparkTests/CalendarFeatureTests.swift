@@ -2856,6 +2856,15 @@ final class CalendarFeatureTests: XCTestCase {
         XCTAssertTrue(CalendarVisualLogic.usesLightForeground(on: "#7F7F7F"))
         XCTAssertFalse(CalendarVisualLogic.usesLightForeground(on: "#808080"))
         XCTAssertFalse(CalendarVisualLogic.usesLightForeground(on: nil))
+
+        let colors: [String?] = ["#111827", "3B82F6", "#FCD34D", "#7F7F7F", "#808080", nil]
+        for color in colors {
+            XCTAssertEqual(
+                DPCalendarCellStyle.usesLightForeground(on: color),
+                CalendarVisualLogic.usesLightForeground(on: color),
+                "Both calendar grids must use the same duty-color contrast threshold"
+            )
+        }
     }
 
     func testReadOnlyFriendCalendarDoesNotOfferScheduleSearch() async {

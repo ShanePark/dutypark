@@ -1092,14 +1092,11 @@ struct CalendarView: View {
     private var calendarGrid: some View {
         VStack(spacing: 0) {
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 7), spacing: 0) {
-                ForEach(["sun", "mon", "tue", "wed", "thu", "fri", "sat"], id: \.self) { weekday in
-                    Text(CalendarLocalization.text("calendar.weekday.\(weekday)"))
-                        .font(DPFont.bold(size: CalendarTypography.weekday, relativeTo: .subheadline))
-                        .foregroundStyle(weekday == "sun" ? DPColor.dangerHover : weekday == "sat" ? DPColor.accentHover : DPColor.textPrimary)
-                        .frame(maxWidth: .infinity, minHeight: 34)
-                        .background(DPColor.backgroundHover)
-                        .overlay(alignment: .trailing) { Rectangle().fill(DPColor.borderSecondary).frame(width: 0.5) }
-                        .overlay(alignment: .bottom) { Rectangle().fill(DPColor.borderSecondary).frame(height: 2) }
+                ForEach(Array(["sun", "mon", "tue", "wed", "thu", "fri", "sat"].enumerated()), id: \.element) { index, weekday in
+                    DPCalendarWeekdayHeaderCell(
+                        label: CalendarLocalization.text("calendar.weekday.\(weekday)"),
+                        weekdayIndex: index
+                    )
                 }
                 ForEach(Array(model.days.enumerated()), id: \.element.id) { index, day in
                     let opensDetail = CalendarDayOpenPolicy.opensDetail(day, canEdit: model.canEdit)
@@ -1719,9 +1716,12 @@ private struct CalendarDayCell: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 1) {
             HStack(spacing: 1) {
-                Text("\(day.cell.day)")
-                    .font(DPFont.bold(size: CalendarTypography.dayNumber, relativeTo: .caption))
-                    .foregroundStyle(dayNumberColor)
+                DPCalendarDayNumber(
+                    day: day.cell.day,
+                    weekdayIndex: weekday,
+                    dutyColor: day.duty?.dutyColor,
+                    hasHoliday: !hidesDetails && !day.holidays.isEmpty
+                )
                 Spacer(minLength: 0)
                 if let pinnedDDay, !hidesDetails, let label = relativeLabel(pinnedDDay) {
                     Text(label)
@@ -1811,37 +1811,22 @@ private struct CalendarDayCell: View {
     }
 
     private var cellBackground: Color {
-        guard let components = CalendarVisualLogic.rgb(day.duty?.dutyColor) else {
-            return day.cell.isCurrentMonth ? DPColor.backgroundCard : DPColor.backgroundSecondary
-        }
-        return Color(
-            red: Double(components.red) / 255,
-            green: Double(components.green) / 255,
-            blue: Double(components.blue) / 255
+        DPCalendarCellStyle.cellBackground(
+            dutyColor: day.duty?.dutyColor,
+            isCurrentMonth: day.cell.isCurrentMonth
         )
     }
 
     private var primaryForeground: Color {
-        guard day.duty?.dutyColor != nil else { return DPColor.textPrimary }
-        return CalendarVisualLogic.usesLightForeground(on: day.duty?.dutyColor) ? DPColor.textOnDark : DPColor.textOnLight
+        DPCalendarCellStyle.primaryForeground(dutyColor: day.duty?.dutyColor)
     }
 
     private var secondaryForeground: Color {
-        guard day.duty?.dutyColor != nil else { return DPColor.textMuted }
-        return CalendarVisualLogic.usesLightForeground(on: day.duty?.dutyColor) ? DPColor.textOnDarkMuted : DPColor.textMuted
-    }
-
-    private var dayNumberColor: Color {
-        if weekday == 0 || (!hidesDetails && !day.holidays.isEmpty) { return DPColor.dangerHover }
-        if weekday == 6 { return DPColor.accentHover }
-        return primaryForeground
+        DPCalendarCellStyle.secondaryForeground(dutyColor: day.duty?.dutyColor)
     }
 
     private var cellBorder: Color {
-        guard day.duty?.dutyColor != nil else { return DPColor.borderSecondary }
-        return CalendarVisualLogic.usesLightForeground(on: day.duty?.dutyColor)
-            ? DPColor.textOnDark.opacity(0.30)
-            : DPColor.textOnLight.opacity(0.15)
+        DPCalendarCellStyle.cellBorder(dutyColor: day.duty?.dutyColor)
     }
 
     private var focusBorder: Color {
