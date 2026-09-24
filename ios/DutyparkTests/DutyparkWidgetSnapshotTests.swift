@@ -4,6 +4,23 @@ import XCTest
 
 @MainActor
 final class DutyparkWidgetSnapshotTests: XCTestCase {
+    func testWidgetLanguageStorePersistsOnlySupportedLanguageCodesAndReportsChanges() {
+        let root = FileManager.default.temporaryDirectory
+            .appendingPathComponent("dutypark-widget-language-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let store = DutyparkWidgetLanguageStore(rootURL: root)
+
+        XCTAssertNil(store.loadLanguageCode())
+        XCTAssertTrue(store.saveLanguageCode("ko-KR"))
+        XCTAssertEqual(store.loadLanguageCode(), "ko")
+        XCTAssertFalse(store.saveLanguageCode("ko"))
+        XCTAssertFalse(store.saveLanguageCode("fr-FR"))
+        XCTAssertEqual(store.loadLanguageCode(), "ko")
+        XCTAssertTrue(store.saveLanguageCode("en-US"))
+        XCTAssertEqual(store.loadLanguageCode(), "en")
+    }
+
     func testWidgetDutyColorKeepsConfiguredRGBAndChoosesTextContrastSeparately() throws {
         let configuredColor = try XCTUnwrap(DutyparkWidgetColorComponents(hex: " #123456 "))
 
@@ -38,6 +55,15 @@ final class DutyparkWidgetSnapshotTests: XCTestCase {
         )
         XCTAssertEqual(
             DutyparkWidgetDayNumberStyle.resolve(
+                weekday: 7,
+                holidayName: "Public holiday",
+                isCurrentMonth: true,
+                hasConfiguredDutyColor: true
+            ),
+            .sundayOrHoliday
+        )
+        XCTAssertEqual(
+            DutyparkWidgetDayNumberStyle.resolve(
                 weekday: 3,
                 holidayName: "Liberation Day",
                 isCurrentMonth: true,
@@ -63,6 +89,32 @@ final class DutyparkWidgetSnapshotTests: XCTestCase {
             ),
             .secondary
         )
+    }
+
+    func testMonthlyWidgetShowsOnlyTheWeeksNeededForEachMonth() {
+        let fourWeekMonth = (0..<42).map { $0 < 28 }
+        let september2026 = (0..<42).map { (2..<32).contains($0) }
+        let february2026 = (0..<42).map { (7..<35).contains($0) }
+        let sixWeekMonth = (0..<42).map { (6..<37).contains($0) }
+
+        let fourWeekRange = DutyparkWidgetMonthGridLayout.visibleDayRange(isCurrentMonth: fourWeekMonth)
+        let septemberRange = DutyparkWidgetMonthGridLayout.visibleDayRange(isCurrentMonth: september2026)
+        let februaryRange = DutyparkWidgetMonthGridLayout.visibleDayRange(isCurrentMonth: february2026)
+        let sixWeekRange = DutyparkWidgetMonthGridLayout.visibleDayRange(isCurrentMonth: sixWeekMonth)
+        let daysPerWeek = DutyparkWidgetMonthGridLayout.daysPerWeek
+
+        XCTAssertEqual(fourWeekRange, 0..<28)
+        XCTAssertEqual(septemberRange, 0..<35)
+        XCTAssertEqual(februaryRange, 7..<35)
+        XCTAssertEqual(sixWeekRange, 0..<42)
+        XCTAssertEqual(fourWeekMonth.count, 42)
+        XCTAssertEqual(september2026.count, 42)
+        XCTAssertEqual(february2026.count, 42)
+        XCTAssertEqual(sixWeekMonth.count, 42)
+        XCTAssertEqual(fourWeekRange.count / daysPerWeek, 4)
+        XCTAssertEqual(septemberRange.count / daysPerWeek, 5)
+        XCTAssertEqual(februaryRange.count / daysPerWeek, 4)
+        XCTAssertEqual(sixWeekRange.count / daysPerWeek, 6)
     }
 
     func testSnapshotBuilderPublishesFirstScheduleContentAndTotalCount() throws {

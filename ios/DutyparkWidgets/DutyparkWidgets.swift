@@ -8,6 +8,19 @@ private enum DutyparkWidgetConstants {
     static let weekdaysEnglish = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
 }
 
+private enum DutyparkWidgetLocalization {
+    static var isKorean: Bool {
+        if let languageCode = DutyparkWidgetLanguageStore.shared.loadLanguageCode() {
+            switch languageCode {
+            case "ko": return true
+            case "en": return false
+            default: break
+            }
+        }
+        return Locale.current.language.languageCode?.identifier == "ko"
+    }
+}
+
 private enum DutyparkWidgetLayout {
     static let monthHeaderHeight: CGFloat = 30
     static let weekdayHeaderHeight: CGFloat = 20
@@ -173,7 +186,7 @@ struct DutyparkMonthlyWidgetView: View {
     @Environment(\.colorScheme) private var colorScheme
 
     private var isKorean: Bool {
-        Locale.current.language.languageCode?.identifier == "ko"
+        DutyparkWidgetLocalization.isKorean
     }
 
     private var weekdayLabels: [String] {
@@ -190,7 +203,7 @@ struct DutyparkMonthlyWidgetView: View {
                 if entry.isPlaceholder {
                     placeholderCalendar
                 } else if entry.hasRenderableData {
-                    calendarGrid(rowHeight: rowHeight(for: proxy.size.height))
+                    calendarGrid(rowHeight: rowHeight(for: proxy.size.height, weekCount: visibleWeekCount))
                 } else {
                     unavailableState
                 }
@@ -229,33 +242,45 @@ struct DutyparkMonthlyWidgetView: View {
     }
 
     private func calendarGrid(rowHeight: CGFloat) -> some View {
-        VStack(spacing: 0) {
+        let visibleRange = visibleDayRange
+        let daysPerWeek = DutyparkWidgetMonthGridLayout.daysPerWeek
+        let weekCount = visibleRange.count / daysPerWeek
+        let visibleDays = Array(entry.days[visibleRange])
+
+        return VStack(spacing: 0) {
             weekdayRow
-            LazyVGrid(
-                columns: calendarColumns,
-                spacing: 0
-            ) {
-                ForEach(Array(entry.days.enumerated()), id: \.element.id) { index, day in
+            LazyVGrid(columns: calendarColumns, spacing: 0) {
+                ForEach(Array(visibleDays.enumerated()), id: \.element.id) { index, day in
                     DutyparkWidgetDayCell(
                         day: day,
                         isCurrentMonth: day.isCurrentMonth,
                         isToday: isToday(day),
                         colorScheme: colorScheme,
-                        hasRightDivider: index % 7 < 6,
-                        hasBottomDivider: index / 7 < 5,
+                        hasRightDivider: index % daysPerWeek < daysPerWeek - 1,
+                        hasBottomDivider: index / daysPerWeek < weekCount - 1,
                         rowHeight: rowHeight
                     )
                 }
             }
-            .frame(height: rowHeight * 6)
+            .frame(height: rowHeight * CGFloat(weekCount))
         }
         .background(WidgetPalette.cardBackground(for: colorScheme))
     }
 
-    private func rowHeight(for totalHeight: CGFloat) -> CGFloat {
+    private func rowHeight(for totalHeight: CGFloat, weekCount: Int) -> CGFloat {
         let reservedHeight = DutyparkWidgetLayout.monthHeaderHeight
             + DutyparkWidgetLayout.weekdayHeaderHeight
-        return max(0, (totalHeight - reservedHeight) / 6)
+        return max(0, (totalHeight - reservedHeight) / CGFloat(max(1, weekCount)))
+    }
+
+    private var visibleWeekCount: Int {
+        visibleDayRange.count / DutyparkWidgetMonthGridLayout.daysPerWeek
+    }
+
+    private var visibleDayRange: Range<Int> {
+        DutyparkWidgetMonthGridLayout.visibleDayRange(
+            isCurrentMonth: entry.days.map(\.isCurrentMonth)
+        )
     }
 
     private var weekdayRow: some View {
@@ -345,8 +370,14 @@ struct DutyparkMonthlyWidgetView: View {
 
 private struct DutyparkWidgetDayCell: View {
     private enum Layout {
-        static let maximumDayNumberHeight: CGFloat = 14
-        static let maximumHolidayHeight: CGFloat = 8
+        static let maximumTextFontSize: CGFloat = 12
+        static let minimumTextFontSize: CGFloat = 8
+        static let dateAndDutyLineHeight: CGFloat = 1.25
+        static let holidayFontSize: CGFloat = 9
+        static let holidayHeight: CGFloat = 11
+        static let verticalSpacing: CGFloat = 1
+        static let topInset: CGFloat = 4
+        static let bottomInset: CGFloat = 3
     }
 
     let day: DutyparkWidgetDayPresentation
@@ -358,60 +389,30 @@ private struct DutyparkWidgetDayCell: View {
     let rowHeight: CGFloat
 
     var body: some View {
-        VStack(alignment: .center, spacing: 0) {
+        VStack(alignment: .center, spacing: Layout.verticalSpacing) {
             Text(dayNumber)
                 .font(.system(size: dayNumberFontSize, weight: .bold, design: .rounded))
                 .monospacedDigit()
                 .foregroundStyle(dayNumberColor)
-                .padding(.horizontal, hasDayNumberBadge ? 3 : 0)
-                .frame(minWidth: hasDayNumberBadge ? 18 : nil, minHeight: hasDayNumberBadge ? dayNumberHeight : nil)
-                .background {
-                    if hasDutyContrastBadge {
-                        Capsule().fill(WidgetPalette.weekendDateBadgeBackground(for: colorScheme))
-                    } else if isToday {
-                        Capsule().fill(WidgetPalette.today(for: colorScheme).opacity(0.10))
-                    }
-                }
-                .overlay {
-                    if hasDutyContrastBadge {
-                        Capsule().stroke(WidgetPalette.weekendDateBadgeBorder(for: colorScheme), lineWidth: 0.75)
-                    } else if isToday {
-                        Capsule().stroke(WidgetPalette.todayHalo(for: colorScheme), lineWidth: 3)
-                    }
-                }
-                .overlay {
-                    if isToday {
-                        Capsule().stroke(WidgetPalette.today(for: colorScheme), lineWidth: 1)
-                    }
-                }
                 .frame(height: dayNumberHeight)
                 .frame(maxWidth: .infinity)
-                .overlay(alignment: .topTrailing) {
-                    if isToday {
-                        Circle()
-                            .fill(WidgetPalette.today(for: colorScheme))
-                            .frame(width: 5, height: 5)
-                            .overlay {
-                                Circle().stroke(WidgetPalette.todayHalo(for: colorScheme), lineWidth: 1)
-                            }
-                            .padding(.trailing, 4)
-                    }
-                }
             dutySlot
             if showsHolidayName {
                 Text(displayHolidayName ?? " ")
-                    .font(.system(size: 7.5, weight: .semibold, design: .rounded))
+                    .font(.system(size: Layout.holidayFontSize, weight: .medium, design: .rounded))
                     .foregroundStyle(holidayForeground)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.55)
-                    .frame(height: holidayHeight)
+                    .truncationMode(.tail)
+                    .frame(height: Layout.holidayHeight)
                     .frame(maxWidth: .infinity)
             }
         }
         .opacity(isCurrentMonth ? 1 : 0.45)
         .padding(.horizontal, 2)
+        .padding(.top, Layout.topInset)
+        .padding(.bottom, Layout.bottomInset)
         .frame(maxWidth: .infinity)
-        .frame(height: rowHeight, alignment: .center)
+        .frame(height: rowHeight, alignment: .top)
         .background(cellBackground)
         .overlay(alignment: .trailing) {
             if hasRightDivider {
@@ -427,10 +428,15 @@ private struct DutyparkWidgetDayCell: View {
                     .frame(height: 0.5)
             }
         }
+        .overlay(alignment: .top) {
+            if isToday {
+                todayMarker
+            }
+        }
         .overlay {
             if isToday {
                 Rectangle()
-                    .stroke(WidgetPalette.todayHalo(for: colorScheme), lineWidth: 3)
+                    .stroke(WidgetPalette.todayHalo(for: colorScheme), lineWidth: 2.5)
                     .padding(1)
             }
         }
@@ -481,10 +487,21 @@ private struct DutyparkWidgetDayCell: View {
             .font(.system(size: dutyFontSize, weight: .heavy, design: .rounded))
             .foregroundStyle(dutyForeground)
             .lineLimit(1)
-            .minimumScaleFactor(0.55)
+            .minimumScaleFactor(0.8)
             .frame(height: dutyHeight)
             .frame(maxWidth: .infinity)
             .opacity(displayAbbreviation == nil ? 0 : 1)
+    }
+
+    private var todayMarker: some View {
+        GeometryReader { proxy in
+            Capsule()
+                .fill(WidgetPalette.today(for: colorScheme))
+                .frame(width: proxy.size.width * 0.7, height: 4)
+                .position(x: proxy.size.width / 2, y: 2)
+        }
+        .frame(height: 4)
+        .accessibilityHidden(true)
     }
 
     private var cellBackground: Color {
@@ -523,17 +540,8 @@ private struct DutyparkWidgetDayCell: View {
         )
     }
 
-    private var hasDutyContrastBadge: Bool {
-        guard hasConfiguredDutyColor else { return false }
-        return dayNumberStyle == .sundayOrHoliday || dayNumberStyle == .saturday
-    }
-
-    private var hasDayNumberBadge: Bool {
-        isToday || hasDutyContrastBadge
-    }
-
     private var holidayForeground: Color {
-        hasConfiguredDutyColor ? dutyForeground : WidgetPalette.holiday(for: colorScheme)
+        WidgetPalette.holiday(for: colorScheme)
     }
 
     private var dutyForeground: Color {
@@ -549,27 +557,29 @@ private struct DutyparkWidgetDayCell: View {
     }
 
     private var dayNumberHeight: CGFloat {
-        min(Layout.maximumDayNumberHeight, rowHeight * 0.52)
+        let reservedHeight = Layout.topInset + Layout.bottomInset
+            + 2 * Layout.verticalSpacing + Layout.holidayHeight
+        return min(15, max(10, (rowHeight - reservedHeight) / 2))
     }
 
     private var dutyHeight: CGFloat {
-        max(0, rowHeight - dayNumberHeight - holidayHeight)
-    }
-
-    private var holidayHeight: CGFloat {
-        showsHolidayName ? min(Layout.maximumHolidayHeight, rowHeight * 0.22) : 0
+        dayNumberHeight
     }
 
     private var showsHolidayName: Bool {
-        rowHeight >= 30 && displayHolidayName != nil
+        guard displayHolidayName != nil else { return false }
+        let dateAndDutyHeight = Layout.topInset + Layout.bottomInset
+            + dayNumberHeight + dutyHeight + Layout.verticalSpacing
+        let holidayHeightNeeded = Layout.holidayHeight + Layout.verticalSpacing
+        return rowHeight - dateAndDutyHeight >= holidayHeightNeeded
     }
 
     private var dayNumberFontSize: CGFloat {
-        max(8, min(13, dayNumberHeight * 0.95))
+        min(Layout.maximumTextFontSize, max(Layout.minimumTextFontSize, dayNumberHeight / Layout.dateAndDutyLineHeight))
     }
 
     private var dutyFontSize: CGFloat {
-        max(8, min(13, dutyHeight * 0.95))
+        dayNumberFontSize
     }
 }
 
@@ -610,22 +620,16 @@ private enum WidgetPalette {
         colorScheme == .dark ? Color(red: 0.82, green: 0.835, blue: 0.86) : Color(red: 0.294, green: 0.337, blue: 0.388)
     }
 
-    static func sunday(for colorScheme: ColorScheme) -> Color {
-        colorScheme == .dark
-            ? Color(red: 0.98, green: 0.45, blue: 0.49)
-            : Color(red: 0.86, green: 0.15, blue: 0.20)
+    static func sunday(for _: ColorScheme) -> Color {
+        Color(red: 0xDC / 255, green: 0x26 / 255, blue: 0x26 / 255)
     }
 
-    static func saturday(for colorScheme: ColorScheme) -> Color {
-        colorScheme == .dark
-            ? Color(red: 0.44, green: 0.67, blue: 1.0)
-            : Color(red: 0.15, green: 0.39, blue: 0.86)
+    static func saturday(for _: ColorScheme) -> Color {
+        Color(red: 0x25 / 255, green: 0x63 / 255, blue: 0xEB / 255)
     }
 
-    static func today(for colorScheme: ColorScheme) -> Color {
-        colorScheme == .dark
-            ? Color(red: 0.98, green: 0.45, blue: 0.49)
-            : Color(red: 0.86, green: 0.15, blue: 0.20)
+    static func today(for _: ColorScheme) -> Color {
+        Color(red: 0xEF / 255, green: 0x44 / 255, blue: 0x44 / 255)
     }
 
     static func todayHalo(for colorScheme: ColorScheme) -> Color {
@@ -634,28 +638,14 @@ private enum WidgetPalette {
             : .white
     }
 
-    static func weekendDateBadgeBackground(for colorScheme: ColorScheme) -> Color {
-        colorScheme == .dark
-            ? Color(red: 0.067, green: 0.094, blue: 0.153)
-            : .white
-    }
-
-    static func weekendDateBadgeBorder(for colorScheme: ColorScheme) -> Color {
-        colorScheme == .dark
-            ? Color.white.opacity(0.52)
-            : Color(red: 0.294, green: 0.337, blue: 0.388).opacity(0.35)
-    }
-
     static func off(for colorScheme: ColorScheme) -> Color {
         colorScheme == .dark
             ? Color(red: 1.0, green: 0.42, blue: 0.46)
             : Color(red: 0.86, green: 0.15, blue: 0.20)
     }
 
-    static func holiday(for colorScheme: ColorScheme) -> Color {
-        colorScheme == .dark
-            ? Color(red: 1.0, green: 0.49, blue: 0.53)
-            : Color(red: 0.78, green: 0.10, blue: 0.15)
+    static func holiday(for _: ColorScheme) -> Color {
+        Color(red: 0xDC / 255, green: 0x26 / 255, blue: 0x26 / 255)
     }
 
     static func emptyDuty(for colorScheme: ColorScheme) -> Color {
@@ -849,7 +839,7 @@ struct DutyparkTodoWidgetView: View {
     @Environment(\.colorScheme) private var colorScheme
 
     private var isKorean: Bool {
-        Locale.current.language.languageCode?.identifier == "ko"
+        DutyparkWidgetLocalization.isKorean
     }
 
     var body: some View {

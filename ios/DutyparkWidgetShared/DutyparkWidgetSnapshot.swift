@@ -236,6 +236,117 @@ nonisolated enum DutyparkWidgetKind {
     static let todo = "DutyparkTodoWidget"
 }
 
+/// Trims only the rows rendered by the widget; snapshots keep their six-week shape.
+nonisolated enum DutyparkWidgetMonthGridLayout {
+    static let daysPerWeek = 7
+    static let maximumWeekCount = 6
+
+    static func visibleDayRange(isCurrentMonth: [Bool]) -> Range<Int> {
+        guard isCurrentMonth.count == daysPerWeek * maximumWeekCount,
+              let firstMonthDayIndex = isCurrentMonth.firstIndex(of: true),
+              let lastMonthDayIndex = isCurrentMonth.lastIndex(of: true)
+        else {
+            return 0..<(daysPerWeek * maximumWeekCount)
+        }
+
+        let firstVisibleDayIndex = firstMonthDayIndex / daysPerWeek * daysPerWeek
+        let endOfLastVisibleWeek = min(
+            isCurrentMonth.count,
+            (lastMonthDayIndex / daysPerWeek + 1) * daysPerWeek
+        )
+        return firstVisibleDayIndex..<endOfLastVisibleWeek
+    }
+}
+
+/// Stores the containing app's selected localization separately from account
+/// snapshots so WidgetKit can follow per-app language settings.
+nonisolated final class DutyparkWidgetLanguageStore: @unchecked Sendable {
+    static let shared = DutyparkWidgetLanguageStore()
+
+    private static let fileName = "language.json"
+    private let rootURL: URL?
+    private let fileManager: FileManager
+    private let lock = NSLock()
+
+    init(
+        rootURL: URL? = nil,
+        fileManager: FileManager = .default
+    ) {
+        self.rootURL = rootURL
+            ?? fileManager.containerURL(
+                forSecurityApplicationGroupIdentifier: DutyparkWidgetSnapshotStore.appGroupIdentifier
+            )
+        self.fileManager = fileManager
+    }
+
+    /// Persists a supported app language. Returns true only when the value
+    /// changed and was written successfully.
+    @discardableResult
+    func saveLanguageCode(_ languageCode: String) -> Bool {
+        guard let normalized = Self.normalizedLanguageCode(languageCode),
+              let url = languageURL
+        else {
+            return false
+        }
+
+        lock.lock()
+        defer { lock.unlock() }
+        guard loadLanguageCodeUnlocked() != normalized else { return false }
+
+        do {
+            let data = try JSONEncoder().encode(StoredLanguage(languageCode: normalized))
+            try fileManager.createDirectory(
+                at: url.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+            try data.write(
+                to: url,
+                options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication]
+            )
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    /// Returns `ko` or `en` when a supported language has been published.
+    func loadLanguageCode() -> String? {
+        lock.lock()
+        defer { lock.unlock() }
+        return loadLanguageCodeUnlocked()
+    }
+
+    private var languageURL: URL? {
+        rootURL?.appendingPathComponent(Self.fileName, isDirectory: false)
+    }
+
+    private func loadLanguageCodeUnlocked() -> String? {
+        guard let languageURL,
+              let data = try? Data(contentsOf: languageURL),
+              let stored = try? JSONDecoder().decode(StoredLanguage.self, from: data)
+        else {
+            return nil
+        }
+        return Self.normalizedLanguageCode(stored.languageCode)
+    }
+
+    private static func normalizedLanguageCode(_ languageCode: String) -> String? {
+        let normalized = languageCode
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        let primaryLanguage = normalized.split(whereSeparator: { $0 == "-" || $0 == "_" }).first
+        switch primaryLanguage {
+        case "ko": return "ko"
+        case "en": return "en"
+        default: return nil
+        }
+    }
+
+    private struct StoredLanguage: Codable {
+        let languageCode: String
+    }
+}
+
 /// Synchronous, process-safe persistence for the app group snapshot.
 ///
 /// The containing app calls `activate` when a verified session is published and

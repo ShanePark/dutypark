@@ -20,6 +20,7 @@ nonisolated enum UITestingDestination: Equatable {
 struct AppRootView: View {
     @EnvironmentObject private var session: SessionStore
     @Environment(\.openURL) private var openURL
+    @Environment(\.scenePhase) private var scenePhase
     @StateObject private var push = APNsRegistrationManager.shared
     @StateObject private var offlineSyncCoordinator = OfflineSyncCoordinator.shared
 
@@ -36,11 +37,20 @@ struct AppRootView: View {
             #endif
         }
         .task {
+            DutyparkWidgetRefreshService.syncAppLanguage(
+                languageCode: AppLocalization.locale.identifier
+            )
             ContentFilterStore.shared.load()
             #if DEBUG
             guard uiTestingDestination == nil else { return }
             #endif
             await session.restore()
+        }
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active else { return }
+            DutyparkWidgetRefreshService.syncAppLanguage(
+                languageCode: AppLocalization.locale.identifier
+            )
         }
         .onOpenURL { url in
             if OAuthNativeRuntime.handle(url: url) {
