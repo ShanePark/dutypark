@@ -17,6 +17,54 @@ final class DutyparkWidgetSnapshotTests: XCTestCase {
         XCTAssertNil(DutyparkWidgetColorComponents(hex: "#12345"))
     }
 
+    func testWidgetDateNumberColorMatchesCalendarWeekendAndHolidayPriority() {
+        XCTAssertEqual(
+            DutyparkWidgetDayNumberStyle.resolve(
+                weekday: 1,
+                holidayName: nil,
+                isCurrentMonth: true,
+                hasConfiguredDutyColor: true
+            ),
+            .sundayOrHoliday
+        )
+        XCTAssertEqual(
+            DutyparkWidgetDayNumberStyle.resolve(
+                weekday: 7,
+                holidayName: nil,
+                isCurrentMonth: true,
+                hasConfiguredDutyColor: true
+            ),
+            .saturday
+        )
+        XCTAssertEqual(
+            DutyparkWidgetDayNumberStyle.resolve(
+                weekday: 3,
+                holidayName: "Liberation Day",
+                isCurrentMonth: true,
+                hasConfiguredDutyColor: true
+            ),
+            .sundayOrHoliday
+        )
+        XCTAssertEqual(
+            DutyparkWidgetDayNumberStyle.resolve(
+                weekday: 3,
+                holidayName: nil,
+                isCurrentMonth: true,
+                hasConfiguredDutyColor: true
+            ),
+            .duty
+        )
+        XCTAssertEqual(
+            DutyparkWidgetDayNumberStyle.resolve(
+                weekday: 3,
+                holidayName: nil,
+                isCurrentMonth: false,
+                hasConfiguredDutyColor: false
+            ),
+            .secondary
+        )
+    }
+
     func testSnapshotBuilderPublishesFirstScheduleContentAndTotalCount() throws {
         let calendar = CalendarDateSupport.calendar
         let firstDate = try XCTUnwrap(calendar.date(from: DateComponents(year: 2026, month: 8, day: 30)))

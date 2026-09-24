@@ -363,8 +363,40 @@ private struct DutyparkWidgetDayCell: View {
                 .font(.system(size: dayNumberFontSize, weight: .bold, design: .rounded))
                 .monospacedDigit()
                 .foregroundStyle(dayNumberColor)
+                .padding(.horizontal, hasDayNumberBadge ? 3 : 0)
+                .frame(minWidth: hasDayNumberBadge ? 18 : nil, minHeight: hasDayNumberBadge ? dayNumberHeight : nil)
+                .background {
+                    if hasDutyContrastBadge {
+                        Capsule().fill(WidgetPalette.weekendDateBadgeBackground(for: colorScheme))
+                    } else if isToday {
+                        Capsule().fill(WidgetPalette.today(for: colorScheme).opacity(0.10))
+                    }
+                }
+                .overlay {
+                    if hasDutyContrastBadge {
+                        Capsule().stroke(WidgetPalette.weekendDateBadgeBorder(for: colorScheme), lineWidth: 0.75)
+                    } else if isToday {
+                        Capsule().stroke(WidgetPalette.todayHalo(for: colorScheme), lineWidth: 3)
+                    }
+                }
+                .overlay {
+                    if isToday {
+                        Capsule().stroke(WidgetPalette.today(for: colorScheme), lineWidth: 1)
+                    }
+                }
                 .frame(height: dayNumberHeight)
                 .frame(maxWidth: .infinity)
+                .overlay(alignment: .topTrailing) {
+                    if isToday {
+                        Circle()
+                            .fill(WidgetPalette.today(for: colorScheme))
+                            .frame(width: 5, height: 5)
+                            .overlay {
+                                Circle().stroke(WidgetPalette.todayHalo(for: colorScheme), lineWidth: 1)
+                            }
+                            .padding(.trailing, 4)
+                    }
+                }
             dutySlot
             if showsHolidayName {
                 Text(displayHolidayName ?? " ")
@@ -393,6 +425,13 @@ private struct DutyparkWidgetDayCell: View {
                 Rectangle()
                     .fill(WidgetPalette.gridLine(for: colorScheme))
                     .frame(height: 0.5)
+            }
+        }
+        .overlay {
+            if isToday {
+                Rectangle()
+                    .stroke(WidgetPalette.todayHalo(for: colorScheme), lineWidth: 3)
+                    .padding(1)
             }
         }
         .overlay {
@@ -461,11 +500,36 @@ private struct DutyparkWidgetDayCell: View {
     }
 
     private var dayNumberColor: Color {
-        if hasConfiguredDutyColor { return dutyForeground }
-        if !isCurrentMonth { return WidgetPalette.secondaryText(for: colorScheme) }
-        if day.weekday == 1 { return WidgetPalette.sunday(for: colorScheme) }
-        if day.weekday == 7 { return WidgetPalette.saturday(for: colorScheme) }
-        return WidgetPalette.primaryText(for: colorScheme)
+        switch dayNumberStyle {
+        case .sundayOrHoliday:
+            return WidgetPalette.sunday(for: colorScheme)
+        case .saturday:
+            return WidgetPalette.saturday(for: colorScheme)
+        case .duty:
+            return dutyForeground
+        case .secondary:
+            return WidgetPalette.secondaryText(for: colorScheme)
+        case .primary:
+            return WidgetPalette.primaryText(for: colorScheme)
+        }
+    }
+
+    private var dayNumberStyle: DutyparkWidgetDayNumberStyle {
+        DutyparkWidgetDayNumberStyle.resolve(
+            weekday: day.weekday,
+            holidayName: day.holidayName,
+            isCurrentMonth: isCurrentMonth,
+            hasConfiguredDutyColor: hasConfiguredDutyColor
+        )
+    }
+
+    private var hasDutyContrastBadge: Bool {
+        guard hasConfiguredDutyColor else { return false }
+        return dayNumberStyle == .sundayOrHoliday || dayNumberStyle == .saturday
+    }
+
+    private var hasDayNumberBadge: Bool {
+        isToday || hasDutyContrastBadge
     }
 
     private var holidayForeground: Color {
@@ -562,6 +626,24 @@ private enum WidgetPalette {
         colorScheme == .dark
             ? Color(red: 0.98, green: 0.45, blue: 0.49)
             : Color(red: 0.86, green: 0.15, blue: 0.20)
+    }
+
+    static func todayHalo(for colorScheme: ColorScheme) -> Color {
+        colorScheme == .dark
+            ? Color(red: 0.122, green: 0.161, blue: 0.216)
+            : .white
+    }
+
+    static func weekendDateBadgeBackground(for colorScheme: ColorScheme) -> Color {
+        colorScheme == .dark
+            ? Color(red: 0.067, green: 0.094, blue: 0.153)
+            : .white
+    }
+
+    static func weekendDateBadgeBorder(for colorScheme: ColorScheme) -> Color {
+        colorScheme == .dark
+            ? Color.white.opacity(0.52)
+            : Color(red: 0.294, green: 0.337, blue: 0.388).opacity(0.35)
     }
 
     static func off(for colorScheme: ColorScheme) -> Color {

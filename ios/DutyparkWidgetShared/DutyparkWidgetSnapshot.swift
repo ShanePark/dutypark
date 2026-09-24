@@ -76,6 +76,27 @@ nonisolated struct DutyparkWidgetDay: Codable, Equatable, Sendable, Identifiable
     }
 }
 
+nonisolated enum DutyparkWidgetDayNumberStyle: Equatable, Sendable {
+    case sundayOrHoliday
+    case saturday
+    case duty
+    case secondary
+    case primary
+
+    static func resolve(
+        weekday: Int,
+        holidayName: String?,
+        isCurrentMonth: Bool,
+        hasConfiguredDutyColor: Bool
+    ) -> DutyparkWidgetDayNumberStyle {
+        let hasHolidayName = holidayName?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+        if weekday == 1 || hasHolidayName { return .sundayOrHoliday }
+        if weekday == 7 { return .saturday }
+        if hasConfiguredDutyColor { return .duty }
+        return isCurrentMonth ? .primary : .secondary
+    }
+}
+
 /// RGB values parsed from a configured team duty color. The widget uses these
 /// components directly for cell fills so the selected color does not change with
 /// the system appearance; contrast is calculated separately for overlaid text.
