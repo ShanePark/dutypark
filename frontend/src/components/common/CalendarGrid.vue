@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { isLightColor } from '@/utils/color'
+import { getCalendarGridSlice } from '@/utils/calendarGrid'
 import type { HolidayDto } from '@/types'
 
 interface CalendarDay {
@@ -40,6 +41,15 @@ const props = withDefaults(defineProps<Props>(), {
 const emit = defineEmits<{
   (e: 'day-click', day: CalendarDay, index: number): void
 }>()
+
+const calendarGridSlice = computed(() =>
+  getCalendarGridSlice(props.days, props.currentYear, props.currentMonth),
+)
+const visibleDays = computed(() => calendarGridSlice.value.days)
+
+function getSourceIndex(visibleIndex: number): number {
+  return calendarGridSlice.value.startIndex + visibleIndex
+}
 
 const { locale } = useI18n()
 const weekDays = computed(() => {
@@ -145,19 +155,19 @@ function handleDayClick(day: CalendarDay, index: number) {
 
     <div class="grid grid-cols-7">
       <div
-        v-for="(day, idx) in days"
+        v-for="(day, idx) in visibleDays"
         :key="idx"
-        @click="handleDayClick(day, idx)"
+        @click="handleDayClick(day, getSourceIndex(idx))"
         :aria-current="isToday(day) ? 'date' : undefined"
         class="min-h-[60px] sm:min-h-[80px] md:min-h-[100px] border-b border-r p-0.5 sm:p-1 transition-all duration-150 relative"
         :class="[
-          clickable && isDayClickable(day, idx) ? 'cursor-pointer calendar-day-hoverable' : '',
+          clickable && isDayClickable(day, getSourceIndex(idx)) ? 'cursor-pointer calendar-day-hoverable' : '',
           {
             'highlight-pulse-glow': !focusedDay && isHighlighted(day),
             'ring-2 ring-dp-accent ring-inset': !focusedDay && isSelected(day) && !isHighlighted(day),
             'duty-day-focused': isFocused(day),
-            'rounded-bl-lg': idx === days.length - 7,
-            'rounded-br-lg': idx === days.length - 1,
+            'rounded-bl-lg': idx === visibleDays.length - 7,
+            'rounded-br-lg': idx === visibleDays.length - 1,
           }
         ]"
         :style="{
@@ -181,11 +191,11 @@ function handleDayClick(day: CalendarDay, index: number) {
           >
             {{ day.day }}
           </span>
-          <slot name="day-header" :day="day" :index="idx" />
+          <slot name="day-header" :day="day" :index="getSourceIndex(idx)" />
         </div>
 
         <div
-          v-for="holiday in (holidays[idx] ?? [])"
+          v-for="holiday in (holidays[getSourceIndex(idx)] ?? [])"
           :key="holiday.localDate + holiday.dateName"
           class="block truncate text-[10px] sm:text-sm leading-snug px-0.5"
           :title="holiday.dateName"
@@ -194,7 +204,7 @@ function handleDayClick(day: CalendarDay, index: number) {
           {{ holiday.dateName }}
         </div>
 
-        <slot name="day-content" :day="day" :index="idx" />
+        <slot name="day-content" :day="day" :index="getSourceIndex(idx)" />
       </div>
     </div>
   </div>
