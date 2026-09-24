@@ -33,6 +33,48 @@ nonisolated enum CalendarDateSupport {
         }
     }
 
+    /// The API and cache keep six Sunday-first rows. Some months that begin on Sunday have a
+    /// complete previous week at the front of that data, so derive the displayed slice from
+    /// the actual dates instead of rebuilding the grid from the month alone.
+    static func visibleCellRange(year: Int, month: Int, cells: [CalendarCell]) -> Range<Int> {
+        let firstMonthCell = cells.firstIndex { $0.year == year && $0.month == month }
+        let lastMonthCell = cells.lastIndex { $0.year == year && $0.month == month }
+        return visibleCellRange(
+            cellCount: cells.count,
+            firstMonthCell: firstMonthCell,
+            lastMonthCell: lastMonthCell
+        )
+    }
+
+    static func visibleCellRange(year: Int, month: Int, serverDays: [TeamDayDTO]) -> Range<Int> {
+        let firstMonthDay = serverDays.firstIndex { $0.year == year && $0.month == month }
+        let lastMonthDay = serverDays.lastIndex { $0.year == year && $0.month == month }
+        return visibleCellRange(
+            cellCount: serverDays.count,
+            firstMonthCell: firstMonthDay,
+            lastMonthCell: lastMonthDay
+        )
+    }
+
+    static func visibleWeekCount(year: Int, month: Int, cells: [CalendarCell]) -> Int {
+        visibleCellRange(year: year, month: month, cells: cells).count / 7
+    }
+
+    private static func visibleCellRange(
+        cellCount: Int,
+        firstMonthCell: Int?,
+        lastMonthCell: Int?
+    ) -> Range<Int> {
+        guard cellCount == 42,
+              let firstMonthCell,
+              let lastMonthCell
+        else { return 0..<cellCount }
+
+        let firstVisibleCell = firstMonthCell - firstMonthCell % 7
+        let endOfLastVisibleWeek = min(((lastMonthCell / 7) + 1) * 7, cellCount)
+        return firstVisibleCell..<endOfLastVisibleWeek
+    }
+
     static func date(from value: DateOnly) -> Date? {
         let parts = value.rawValue.split(separator: "-").compactMap { Int($0) }
         guard parts.count == 3 else { return nil }
@@ -273,28 +315,19 @@ nonisolated enum CalendarVisualLogic {
     }
 
     static func usesLightForeground(on hex: String?) -> Bool {
-        guard let components = rgb(hex) else { return false }
-        let luminance = (Double(components.red) * 299 + Double(components.green) * 587 + Double(components.blue) * 114) / 1_000
-        return luminance <= 127.5
+        DPCalendarCellStyle.usesLightForeground(on: hex)
     }
 
     static func rgb(_ hex: String?) -> (red: UInt8, green: UInt8, blue: UInt8)? {
-        guard var value = hex?.trimmingCharacters(in: .whitespacesAndNewlines), !value.isEmpty else { return nil }
-        if value.hasPrefix("#") { value.removeFirst() }
-        guard value.count == 6, let number = UInt32(value, radix: 16) else { return nil }
-        return (
-            UInt8((number >> 16) & 0xFF),
-            UInt8((number >> 8) & 0xFF),
-            UInt8(number & 0xFF)
-        )
+        DPCalendarCellStyle.rgb(hex)
     }
 }
 
 /// Type sizes for the dense calendar surface, kept in one place so the
 /// 375-point layout stays compact without falling below the mobile web scale.
 nonisolated enum CalendarTypography {
-    static let weekday: CGFloat = 14
-    static let dayNumber: CGFloat = 12
+    static let weekday = DPCalendarCellStyle.weekdayFontSize
+    static let dayNumber = DPCalendarCellStyle.dayNumberFontSize
     static let cellContent: CGFloat = 10
     static let cellMicro: CGFloat = 9
     static let detailTitle: CGFloat = 16

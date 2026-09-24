@@ -45,7 +45,7 @@ describe('calendar cell clickability', () => {
     expect(calendarGrid).toMatch(
       /function handleDayClick\(day: CalendarDay, index: number\) \{\s*if \(!props\.isDayClickable\(day, index\)\) return\s*emit\('day-click', day, index\)/
     )
-    expect(calendarGrid).toContain("clickable && isDayClickable(day, idx) ? 'cursor-pointer")
+    expect(calendarGrid).toContain("clickable && isDayClickable(day, getSourceIndex(idx)) ? 'cursor-pointer")
   })
 
   it('shuts a read-only day holding no schedule and leaves batch edit untouched', () => {

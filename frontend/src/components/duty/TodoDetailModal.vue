@@ -24,13 +24,14 @@ import CopyTextButton from '@/components/common/CopyTextButton.vue'
 import TodoStatusPicker from '@/components/todo/TodoStatusPicker.vue'
 import { attachmentApi } from '@/api/attachment'
 import { useSwal } from '@/composables/useSwal'
+import { hasUnsavedTodoChanges } from '@/utils/formDismissal'
 import { formatDateKorean } from '@/utils/date'
 import { toDisplayTagMember } from '@/utils/tagMembers'
 import type { NormalizedAttachment, TaggableFriend, Todo as TodoDto, TodoStatus } from '@/types'
 
 type TodoDetailItem = Omit<TodoDto, 'attachments'>
 
-const { showWarning, showError } = useSwal()
+const { showWarning, showError, confirm } = useSwal()
 const { t } = useI18n()
 
 function getStatusLabel(status: string): string {
@@ -96,6 +97,41 @@ const isUploading = ref(false)
 const fileUploaderRef = ref<InstanceType<typeof FileUploader> | null>(null)
 const viewAttachments = ref<NormalizedAttachment[]>([])
 const isLoadingAttachments = ref(false)
+let isHandlingClose = false
+
+function hasUnsavedEditChanges() {
+  if (!props.todo || !isEditMode.value) return false
+  const initialTagFriendIds = props.todo.tags.flatMap((tag) => tag.id == null ? [] : [tag.id])
+  return hasUnsavedTodoChanges(
+    {
+      title: props.todo.title,
+      content: props.todo.content,
+      status: props.todo.status,
+      dueDate: props.todo.dueDate || '',
+      tagFriendIds: initialTagFriendIds,
+    },
+    {
+      title: editTitle.value,
+      content: editContent.value,
+      status: props.todo.status,
+      dueDate: editDueDate.value,
+      tagFriendIds: editTagFriendIds.value,
+    },
+    viewAttachments.value.map((attachment) => attachment.id),
+    editAttachments.value.map((attachment) => attachment.id),
+    sessionId.value !== null,
+  )
+}
+
+async function confirmDiscardChanges() {
+  return confirm(
+    t('common.unsavedChanges.message'),
+    t('common.unsavedChanges.title'),
+    t('common.unsavedChanges.discard'),
+    t('common.actions.cancel'),
+    { animation: false },
+  )
+}
 
 const selectedTagSummaries = computed(() => {
   return editTagFriendIds.value.flatMap((id) => {
@@ -212,21 +248,26 @@ function enterEditMode() {
   isUploading.value = false
 }
 
-function cancelEdit() {
-  // Discard session if created during edit
-  if (fileUploaderRef.value) {
-    fileUploaderRef.value.discardSession()
+async function cancelEdit() {
+  if (isHandlingClose || isUploading.value) return
+  isHandlingClose = true
+  try {
+    if (hasUnsavedEditChanges() && !(await confirmDiscardChanges())) return
+
+    await fileUploaderRef.value?.discardSession()
+    isEditMode.value = false
+    if (props.todo) {
+      editTitle.value = props.todo.title
+      editContent.value = props.todo.content
+      editDueDate.value = props.todo.dueDate || ''
+      editTagFriendIds.value = props.todo.tags.flatMap((tag) => tag.id == null ? [] : [tag.id])
+      editAttachments.value = [...viewAttachments.value]
+    }
+    sessionId.value = null
+    isUploading.value = false
+  } finally {
+    isHandlingClose = false
   }
-  isEditMode.value = false
-  if (props.todo) {
-    editTitle.value = props.todo.title
-    editContent.value = props.todo.content
-    editDueDate.value = props.todo.dueDate || ''
-    editTagFriendIds.value = props.todo.tags.flatMap((tag) => tag.id == null ? [] : [tag.id])
-    editAttachments.value = [...viewAttachments.value]
-  }
-  sessionId.value = null
-  isUploading.value = false
 }
 
 function saveEdit() {
@@ -262,14 +303,22 @@ function saveEdit() {
   isUploading.value = false
 }
 
-function handleClose() {
-  if (isEditMode.value && fileUploaderRef.value) {
-    fileUploaderRef.value.discardSession()
+async function handleClose() {
+  if (isHandlingClose || isUploading.value) return
+  isHandlingClose = true
+  try {
+    if (hasUnsavedEditChanges() && !(await confirmDiscardChanges())) return
+
+    if (isEditMode.value) {
+      await fileUploaderRef.value?.discardSession()
+    }
+    isEditMode.value = false
+    sessionId.value = null
+    isUploading.value = false
+    emit('close')
+  } finally {
+    isHandlingClose = false
   }
-  isEditMode.value = false
-  sessionId.value = null
-  isUploading.value = false
-  emit('close')
 }
 
 function onSessionCreated(sid: string) {
@@ -317,7 +366,8 @@ function onUploadError(message: string) {
         <button
           type="button"
           @click="handleClose"
-          class="p-2 hover-close-btn rounded-full transition flex-shrink-0 cursor-pointer"
+          class="p-2 hover-close-btn rounded-full transition flex-shrink-0 cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+          :disabled="isUploading"
           :aria-label="t('common.actions.close')"
           :title="t('common.actions.close')"
         >
@@ -540,7 +590,8 @@ function onUploadError(message: string) {
         <template v-else>
           <button
             @click="cancelEdit"
-            class="flex-1 sm:flex-none px-4 py-2 rounded-lg transition btn-outline cursor-pointer"
+            :disabled="isUploading"
+            class="flex-1 sm:flex-none px-4 py-2 rounded-lg transition btn-outline cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
           >
             {{ t('common.actions.close') }}
           </button>

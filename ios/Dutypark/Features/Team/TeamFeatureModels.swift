@@ -122,6 +122,12 @@ nonisolated enum TeamFeatureLogic {
         return nil
     }
 
+    static func dutyTypeManagementDisplayOrder(in dutyTypes: [DutyTypeDTO]) -> [Int] {
+        let visible = dutyTypes.indices.filter { !dutyTypes[$0].hidden }
+        let hidden = dutyTypes.indices.filter { dutyTypes[$0].hidden }
+        return visible + hidden
+    }
+
     static func isValidDutyBatchFileName(_ fileName: String) -> Bool {
         (fileName as NSString).pathExtension.lowercased() == "xlsx"
     }

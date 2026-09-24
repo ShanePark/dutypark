@@ -27,6 +27,7 @@ The source code, tests, and task-specific documentation are the source of truth 
 
 ### Web Browser Verification
 
+- Use Playwright in headless mode for browser verification. Do not use Computer Use or control a visible browser or app window; that interrupts the user's work. If the sandbox blocks headless browser startup, request the needed execution permission instead of switching to Computer Use.
 - For manual web verification, use the running local web app at `http://localhost:5173` and sign in with `test@duty.park` / `12345678`.
 - The account above is for local development browser checks. Accounts and data from `docs/demo` and `seed-local-demo` are reserved for automated app tests and screenshot fixtures; do not use them for ordinary local web verification.
 - For web changes involving design, hover, interaction, or themes, run the relevant automated checks first, then verify the change in a real browser while signed in with the local development account. When relevant, check light and dark themes, desktop hover and focus states, and responsive/touch behavior.

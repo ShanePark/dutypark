@@ -54,6 +54,50 @@ final class CalendarFeatureTests: XCTestCase {
         )
     }
 
+    func testCalendarMonthGridTrimsUnusedWeeksFromTheServerCalendar() throws {
+        let fixtures: [(year: Int, month: Int, weekCount: Int, firstDay: String, lastDay: String)] = [
+            (2026, 2, 4, "2026-02-01", "2026-02-28"),
+            (2026, 9, 5, "2026-08-30", "2026-10-03"),
+            (2026, 8, 6, "2026-07-26", "2026-09-05")
+        ]
+
+        for fixture in fixtures {
+            let cells = try serverCalendarCells(year: fixture.year, month: fixture.month)
+            let range = CalendarDateSupport.visibleCellRange(
+                year: fixture.year,
+                month: fixture.month,
+                cells: cells
+            )
+
+            XCTAssertEqual(cells.count, 42)
+            XCTAssertEqual(
+                CalendarDateSupport.visibleWeekCount(year: fixture.year, month: fixture.month, cells: cells),
+                fixture.weekCount
+            )
+            XCTAssertEqual(range.count, fixture.weekCount * 7)
+            XCTAssertEqual(cells[range.lowerBound].date.rawValue, fixture.firstDay)
+            XCTAssertEqual(cells[range.upperBound - 1].date.rawValue, fixture.lastDay)
+        }
+    }
+
+    private func serverCalendarCells(year: Int, month: Int) throws -> [CalendarCell] {
+        let calendar = CalendarDateSupport.calendar
+        let firstDay = try XCTUnwrap(calendar.date(from: DateComponents(year: year, month: month, day: 1)))
+        let weekdayOffset = (calendar.component(.weekday, from: firstDay) - calendar.firstWeekday + 7) % 7
+        let paddingBefore = weekdayOffset == 0 ? 7 : weekdayOffset
+        let gridStart = try XCTUnwrap(calendar.date(byAdding: .day, value: -paddingBefore, to: firstDay))
+        let serverDays = try (0..<42).map { offset -> TeamDayDTO in
+            let date = try XCTUnwrap(calendar.date(byAdding: .day, value: offset, to: gridStart))
+            let components = calendar.dateComponents([.year, .month, .day], from: date)
+            return TeamDayDTO(
+                year: try XCTUnwrap(components.year),
+                month: try XCTUnwrap(components.month),
+                day: try XCTUnwrap(components.day)
+            )
+        }
+        return CalendarDateSupport.cells(year: year, month: month, serverDays: serverDays)
+    }
+
     func testCalendarScheduleTimeMatchesTheWebCalendarPolicy() {
         let start = LocalDateTimeValue(rawValue: "2026-08-20T12:40:00")
         let end = LocalDateTimeValue(rawValue: "2026-08-20T13:30:00")
@@ -1943,6 +1987,46 @@ final class CalendarFeatureTests: XCTestCase {
         XCTAssertEqual(model.days[11].schedules.first?.content, "Night duty")
     }
 
+    func testReturningToCalendarRefreshesDutyAndTeamColorsWithoutChangingViewedMonth() async {
+        let oldDutyType = DutyTypeDTO(
+            id: 7,
+            teamId: 7,
+            name: "Night",
+            position: 0,
+            color: "#111111",
+            hidden: false
+        )
+        let newDutyType = DutyTypeDTO(
+            id: 7,
+            teamId: 7,
+            name: "Night",
+            position: 0,
+            color: "#22AA44",
+            hidden: false
+        )
+        let repository = CalendarRepositoryMock(
+            teamID: 7,
+            duties: [calendarDuty(color: "#111111")],
+            dutyTypes: [oldDutyType]
+        )
+        let model = CalendarViewModel(repository: repository, now: date(2026, 8, 12))
+        await model.load()
+
+        await repository.updateCalendarValues(
+            duties: [calendarDuty(color: "#22AA44")],
+            dutyTypes: [newDutyType]
+        )
+        await model.refreshAfterCalendarTabReturn()
+
+        XCTAssertEqual(model.year, 2026)
+        XCTAssertEqual(model.month, 8)
+        XCTAssertEqual(model.days.first(where: { $0.cell.day == 12 })?.duty?.dutyColor, "#22AA44")
+        XCTAssertEqual(model.visibleDutyTypes.first?.color, "#22AA44")
+        let requestCounts = await repository.refreshRequestCounts()
+        XCTAssertEqual(requestCounts.team, 2)
+        XCTAssertEqual(requestCounts.duties, 2)
+    }
+
     func testCancelledCalendarLoadDoesNotShowAnError() async {
         let repository = CalendarRepositoryMock(cancelMemberLoad: true)
         let model = CalendarViewModel(repository: repository, now: date(2026, 8, 12))
@@ -2816,6 +2900,15 @@ final class CalendarFeatureTests: XCTestCase {
         XCTAssertTrue(CalendarVisualLogic.usesLightForeground(on: "#7F7F7F"))
         XCTAssertFalse(CalendarVisualLogic.usesLightForeground(on: "#808080"))
         XCTAssertFalse(CalendarVisualLogic.usesLightForeground(on: nil))
+
+        let colors: [String?] = ["#111827", "3B82F6", "#FCD34D", "#7F7F7F", "#808080", nil]
+        for color in colors {
+            XCTAssertEqual(
+                DPCalendarCellStyle.usesLightForeground(on: color),
+                CalendarVisualLogic.usesLightForeground(on: color),
+                "Both calendar grids must use the same duty-color contrast threshold"
+            )
+        }
     }
 
     func testReadOnlyFriendCalendarDoesNotOfferScheduleSearch() async {
@@ -2888,6 +2981,20 @@ final class CalendarFeatureTests: XCTestCase {
         CalendarDateSupport.calendar.date(from: DateComponents(year: year, month: month, day: day, hour: hour))!
     }
 
+    private func calendarDuty(color: String) -> DutyDTO {
+        DutyDTO(
+            year: 2026,
+            month: 8,
+            day: 12,
+            dutyType: "Night",
+            dutyColor: color,
+            isOff: false,
+            dutyTypeId: 7,
+            source: .override,
+            dutyAbbreviation: "N"
+        )
+    }
+
     private static func member(name: String, teamID: TeamID?) -> MemberDTO {
         MemberDTO(
             id: 1,
@@ -2934,6 +3041,8 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
     var untagCount = 0
     var deleteDDayCount = 0
     var saveDDayCount = 0
+    var dutyRequestCount = 0
+    var teamRequestCount = 0
     let canManageValue: Bool
     let cancelMemberLoad: Bool
     let friendValues: [FriendDTO]
@@ -2946,6 +3055,8 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
     let memberValues: [MemberDTO]
     let memberGate: CalendarIdentityRaceGate?
     let saveDDayError: APIError?
+    private var dutyValues: [DutyDTO]
+    private var dutyTypeValues: [DutyTypeDTO]
 
     init(
         canManage: Bool = false,
@@ -2959,7 +3070,9 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
         monthGate: CalendarMonthRaceGate? = nil,
         memberValues: [MemberDTO] = [],
         memberGate: CalendarIdentityRaceGate? = nil,
-        saveDDayError: APIError? = nil
+        saveDDayError: APIError? = nil,
+        duties: [DutyDTO] = [],
+        dutyTypes: [DutyTypeDTO] = []
     ) {
         canManageValue = canManage
         self.cancelMemberLoad = cancelMemberLoad
@@ -2973,6 +3086,8 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
         self.memberValues = memberValues
         self.memberGate = memberGate
         self.saveDDayError = saveDDayError
+        dutyValues = duties
+        dutyTypeValues = dutyTypes
     }
 
     func member() async throws -> MemberDTO {
@@ -3003,11 +3118,12 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
     func friends() async throws -> [FriendDTO] { friendValues }
     func team(id: TeamID) async throws -> TeamDTO {
         guard !memberValues.isEmpty || teamID == id else { throw APIError.invalidResponse }
+        teamRequestCount += 1
         return TeamDTO(
             id: id,
             name: "Team",
             description: nil,
-            dutyTypes: [],
+            dutyTypes: dutyTypeValues,
             members: [],
             createdDate: LocalDateTimeValue(rawValue: "2026-08-12T00:00:00"),
             lastModifiedDate: LocalDateTimeValue(rawValue: "2026-08-12T00:00:00"),
@@ -3017,11 +3133,21 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
         )
     }
     func canManage(memberID: MemberID) async throws -> Bool { canManageValue }
+    func updateCalendarValues(duties: [DutyDTO], dutyTypes: [DutyTypeDTO]) {
+        dutyValues = duties
+        dutyTypeValues = dutyTypes
+    }
+    func refreshRequestCounts() -> (team: Int, duties: Int) {
+        (teamRequestCount, dutyRequestCount)
+    }
     func calendar(year: Int, month: Int) async throws -> [TeamDayDTO] {
         await monthGate?.wait(year: year, month: month)
         return (1...42).map { TeamDayDTO(year: year, month: month, day: $0) }
     }
-    func duties(memberID: MemberID, year: Int, month: Int) async throws -> [DutyDTO] { [] }
+    func duties(memberID: MemberID, year: Int, month: Int) async throws -> [DutyDTO] {
+        dutyRequestCount += 1
+        return dutyValues
+    }
     func otherDuties(memberIDs: [MemberID], year: Int, month: Int) async throws -> [OtherDutyResponse] {
         requestedOtherDutyMemberIDs = memberIDs
         return otherDutyValues

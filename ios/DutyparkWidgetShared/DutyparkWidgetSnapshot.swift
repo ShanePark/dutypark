@@ -76,6 +76,96 @@ nonisolated struct DutyparkWidgetDay: Codable, Equatable, Sendable, Identifiable
     }
 }
 
+nonisolated enum DutyparkWidgetDayNumberStyle: Equatable, Sendable {
+    case sundayOrHoliday
+    case saturday
+    case duty
+    case secondary
+    case primary
+
+    var calendarForegroundComponents: DutyparkWidgetColorComponents? {
+        switch self {
+        case .sundayOrHoliday:
+            DutyparkWidgetColorComponents(red: 0xDC, green: 0x26, blue: 0x26)
+        case .saturday:
+            DutyparkWidgetColorComponents(red: 0x25, green: 0x63, blue: 0xEB)
+        case .duty, .secondary, .primary:
+            nil
+        }
+    }
+
+    static func resolve(
+        weekday: Int,
+        holidayName: String?,
+        isCurrentMonth: Bool,
+        hasConfiguredDutyColor: Bool
+    ) -> DutyparkWidgetDayNumberStyle {
+        let hasHolidayName = holidayName?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
+        if weekday == 1 || hasHolidayName { return .sundayOrHoliday }
+        if weekday == 7 { return .saturday }
+        if hasConfiguredDutyColor { return .duty }
+        return isCurrentMonth ? .primary : .secondary
+    }
+}
+
+/// RGB values parsed from a configured team duty color. The widget uses these
+/// components directly for cell fills so the selected color does not change with
+/// the system appearance; contrast is calculated separately for overlaid text.
+nonisolated struct DutyparkWidgetColorComponents: Equatable, Sendable {
+    let red: UInt8
+    let green: UInt8
+    let blue: UInt8
+
+    init(red: UInt8, green: UInt8, blue: UInt8) {
+        self.red = red
+        self.green = green
+        self.blue = blue
+    }
+
+    init?(hex: String?) {
+        guard var value = hex?.trimmingCharacters(in: .whitespacesAndNewlines), !value.isEmpty else {
+            return nil
+        }
+        if value.hasPrefix("#") { value.removeFirst() }
+        guard value.count == 6, let number = UInt32(value, radix: 16) else { return nil }
+
+        self.init(
+            red: UInt8((number >> 16) & 0xFF),
+            green: UInt8((number >> 8) & 0xFF),
+            blue: UInt8(number & 0xFF)
+        )
+    }
+
+    var usesLightForeground: Bool {
+        let luminance = (Double(red) * 299 + Double(green) * 587 + Double(blue) * 114) / 1_000
+        return luminance <= 127.5
+    }
+
+    func needsDateNumberContrastBacking(for style: DutyparkWidgetDayNumberStyle) -> Bool {
+        guard let foreground = style.calendarForegroundComponents else { return false }
+        return contrastRatio(with: foreground) < 4.5
+    }
+
+    private func contrastRatio(with other: Self) -> Double {
+        let first = relativeLuminance
+        let second = other.relativeLuminance
+        return (max(first, second) + 0.05) / (min(first, second) + 0.05)
+    }
+
+    private var relativeLuminance: Double {
+        func linearized(_ component: UInt8) -> Double {
+            let value = Double(component) / 255
+            return value <= 0.04045
+                ? value / 12.92
+                : pow((value + 0.055) / 1.055, 2.4)
+        }
+
+        return 0.2126 * linearized(red)
+            + 0.7152 * linearized(green)
+            + 0.0722 * linearized(blue)
+    }
+}
+
 nonisolated enum DutyparkWidgetTodoStatus: String, Codable, Equatable, Sendable {
     case todo = "TODO"
     case inProgress = "IN_PROGRESS"
@@ -187,6 +277,117 @@ nonisolated struct DutyparkWidgetSnapshot: Codable, Equatable, Sendable {
 nonisolated enum DutyparkWidgetKind {
     static let monthly = "DutyparkMonthlyWidget"
     static let todo = "DutyparkTodoWidget"
+}
+
+/// Trims only the rows rendered by the widget; snapshots keep their six-week shape.
+nonisolated enum DutyparkWidgetMonthGridLayout {
+    static let daysPerWeek = 7
+    static let maximumWeekCount = 6
+
+    static func visibleDayRange(isCurrentMonth: [Bool]) -> Range<Int> {
+        guard isCurrentMonth.count == daysPerWeek * maximumWeekCount,
+              let firstMonthDayIndex = isCurrentMonth.firstIndex(of: true),
+              let lastMonthDayIndex = isCurrentMonth.lastIndex(of: true)
+        else {
+            return 0..<(daysPerWeek * maximumWeekCount)
+        }
+
+        let firstVisibleDayIndex = firstMonthDayIndex / daysPerWeek * daysPerWeek
+        let endOfLastVisibleWeek = min(
+            isCurrentMonth.count,
+            (lastMonthDayIndex / daysPerWeek + 1) * daysPerWeek
+        )
+        return firstVisibleDayIndex..<endOfLastVisibleWeek
+    }
+}
+
+/// Stores the containing app's selected localization separately from account
+/// snapshots so WidgetKit can follow per-app language settings.
+nonisolated final class DutyparkWidgetLanguageStore: @unchecked Sendable {
+    static let shared = DutyparkWidgetLanguageStore()
+
+    private static let fileName = "language.json"
+    private let rootURL: URL?
+    private let fileManager: FileManager
+    private let lock = NSLock()
+
+    init(
+        rootURL: URL? = nil,
+        fileManager: FileManager = .default
+    ) {
+        self.rootURL = rootURL
+            ?? fileManager.containerURL(
+                forSecurityApplicationGroupIdentifier: DutyparkWidgetSnapshotStore.appGroupIdentifier
+            )
+        self.fileManager = fileManager
+    }
+
+    /// Persists a supported app language. Returns true only when the value
+    /// changed and was written successfully.
+    @discardableResult
+    func saveLanguageCode(_ languageCode: String) -> Bool {
+        guard let normalized = Self.normalizedLanguageCode(languageCode),
+              let url = languageURL
+        else {
+            return false
+        }
+
+        lock.lock()
+        defer { lock.unlock() }
+        guard loadLanguageCodeUnlocked() != normalized else { return false }
+
+        do {
+            let data = try JSONEncoder().encode(StoredLanguage(languageCode: normalized))
+            try fileManager.createDirectory(
+                at: url.deletingLastPathComponent(),
+                withIntermediateDirectories: true
+            )
+            try data.write(
+                to: url,
+                options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication]
+            )
+            return true
+        } catch {
+            return false
+        }
+    }
+
+    /// Returns `ko` or `en` when a supported language has been published.
+    func loadLanguageCode() -> String? {
+        lock.lock()
+        defer { lock.unlock() }
+        return loadLanguageCodeUnlocked()
+    }
+
+    private var languageURL: URL? {
+        rootURL?.appendingPathComponent(Self.fileName, isDirectory: false)
+    }
+
+    private func loadLanguageCodeUnlocked() -> String? {
+        guard let languageURL,
+              let data = try? Data(contentsOf: languageURL),
+              let stored = try? JSONDecoder().decode(StoredLanguage.self, from: data)
+        else {
+            return nil
+        }
+        return Self.normalizedLanguageCode(stored.languageCode)
+    }
+
+    private static func normalizedLanguageCode(_ languageCode: String) -> String? {
+        let normalized = languageCode
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
+        let primaryLanguage = normalized.split(whereSeparator: { $0 == "-" || $0 == "_" }).first
+        switch primaryLanguage {
+        case "ko": return "ko"
+        case "en": return "en"
+        default: return nil
+        }
+    }
+
+    private struct StoredLanguage: Codable {
+        let languageCode: String
+    }
 }
 
 /// Synchronous, process-safe persistence for the app group snapshot.

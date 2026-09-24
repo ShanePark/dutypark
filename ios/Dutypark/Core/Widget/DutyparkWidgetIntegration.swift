@@ -120,6 +120,14 @@ nonisolated enum DutyparkWidgetSnapshotBuilder {
 /// authenticated API. This keeps the widget useful before the user opens Calendar.
 @MainActor
 enum DutyparkWidgetRefreshService {
+    static func syncAppLanguage(
+        languageCode: String,
+        store: DutyparkWidgetLanguageStore = .shared
+    ) {
+        guard store.saveLanguageCode(languageCode) else { return }
+        reloadTimelines()
+    }
+
     static func invalidate(
         store: DutyparkWidgetSnapshotStore = .shared
     ) {

@@ -327,6 +327,11 @@ export default {
     labels: {
       or: 'or',
     },
+    unsavedChanges: {
+      title: 'Discard changes?',
+      message: 'Your unsaved changes will be lost.',
+      discard: 'Discard changes',
+    },
     navigation: {
       back: 'Back',
       backHome: 'Back to home',
@@ -376,10 +381,8 @@ export default {
   },
   apiErrors,
   dutyAbbreviation: {
-    label: 'Abbreviation (optional)',
-    hint: 'Leave blank to use the first character of the duty name. Custom abbreviations must be one to three English letters or complete Hangul syllables. Your duty selection and edit controls use abbreviations; other calendars and comparison views keep full names.',
+    label: 'Abbreviation',
     placeholder: 'e.g. N',
-    preview: 'Abbreviation preview',
     invalid: 'Use one to three English letters or complete Hangul syllables for the abbreviation.',
   },
   contentFilter: {

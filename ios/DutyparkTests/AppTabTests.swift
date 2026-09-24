@@ -89,6 +89,9 @@ struct AppTabTests {
 
         #expect(rootSource.contains("@State private var calendarCurrentMonthRequestID = 0"))
         #expect(rootSource.contains("currentMonthRequestID: calendarCurrentMonthRequestID"))
+        #expect(rootSource.contains("@State private var calendarDataRefreshRequestID = 0"))
+        #expect(rootSource.contains("dataRefreshRequestID: calendarDataRefreshRequestID"))
+        #expect(rootSource.contains("selectedTab != .calendar"))
         for condition in [
             "selectedTab == .calendar",
             "destination == .calendar",
@@ -100,6 +103,9 @@ struct AppTabTests {
         #expect(calendarSource.contains("currentMonthRequestID: Int = 0"))
         #expect(calendarSource.contains(".onChange(of: currentMonthRequestID)"))
         #expect(calendarSource.contains("await model.goToToday(emitFeedback: false)"))
+        #expect(calendarSource.contains("dataRefreshRequestID: Int = 0"))
+        #expect(calendarSource.contains(".onChange(of: dataRefreshRequestID)"))
+        #expect(calendarSource.contains("model.refreshAfterCalendarTabReturn()"))
         #expect(RootHapticPolicy.tabSelectionFeedback(from: .calendar, to: .calendar) == nil)
     }
 

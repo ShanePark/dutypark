@@ -379,58 +379,14 @@ struct TeamManageView: View {
                     .font(DPTypography.supporting)
                     .foregroundStyle(DPColor.textMuted)
                     .frame(maxWidth: .infinity, minHeight: 72)
-            }
-            ScrollView(.horizontal) {
+            } else {
                 VStack(spacing: 0) {
-                    HStack(spacing: 0) {
-                        teamTableHeader("#", width: 44)
-                        teamTableHeader(teamLocalized("team.manage.fields.dutyName"), width: 104)
-                        teamTableHeader(teamLocalized("team.manage.fields.color"), width: 64)
-                        teamTableHeader(teamLocalized("team.manage.fields.status"), width: 84)
-                        teamTableHeader(teamLocalized("team.manage.fields.tools"), width: 190)
-                    }
-                    ForEach(Array(team.dutyTypes.enumerated()), id: \.offset) { index, dutyType in
-                        HStack(spacing: 0) {
-                            teamTableCell(String(index + 1), width: 44)
-                            teamTableCell(dutyType.name, width: 104)
-                            Circle().fill(Color(teamHex: dutyType.color)).frame(width: 24, height: 24).frame(width: 64).frame(minHeight: 60)
-                            Text(dutyType.hidden ? "team.manage.labels.hidden" : dutyType.id == nil ? "team.manage.labels.offDuty" : "team.manage.labels.visible", tableName: "Team")
-                                .font(DPTypography.caption)
-                                .foregroundStyle(dutyType.hidden ? DPColor.textMuted : DPColor.success)
-                                .padding(.horizontal, DPSpacing.small).padding(.vertical, DPSpacing.extraSmall)
-                                .background(dutyType.hidden ? DPColor.backgroundTertiary : DPColor.successSoft)
-                                .clipShape(Capsule()).frame(width: 84)
-                            HStack(spacing: DPSpacing.extraSmall) {
-                                if dutyType.id != nil {
-                                    teamToolButton(
-                                        "arrow.down",
-                                        label: teamLocalized("team.dutyType.actions.saveOrder"),
-                                        isDisabled: TeamFeatureLogic.visibleDutyTypeNeighbor(in: team.dutyTypes, from: index, direction: 1) == nil
-                                    ) { Task { await viewModel.moveDutyType(from: index, direction: 1) } }
-                                    teamToolButton(
-                                        "arrow.up",
-                                        label: teamLocalized("team.dutyType.actions.saveOrder"),
-                                        isDisabled: TeamFeatureLogic.visibleDutyTypeNeighbor(in: team.dutyTypes, from: index, direction: -1) == nil
-                                    ) { Task { await viewModel.moveDutyType(from: index, direction: -1) } }
-                                }
-                                teamToolButton("pencil", label: teamLocalized("team.dutyType.actions.edit"), tint: DPColor.accent) {
-                            viewModel.editingDutyType = dutyType
-                            dutyEditorInteraction = TeamModalInteractionState()
-                            DPHapticCenter.shared.emit(.routine)
-                            withoutPresentationAnimation { viewModel.dutyEditorPresented = true }
-                                }
-                                if dutyType.id != nil {
-                                    teamToolButton(
-                                        dutyType.hidden ? "eye" : "eye.slash",
-                                        label: dutyType.hidden ? teamLocalized("team.manage.actions.restoreDutyType") : teamLocalized("team.manage.actions.hideDutyType"),
-                                        tint: dutyType.hidden ? DPColor.success : DPColor.warning
-                                    ) { present(.setDutyTypeVisibility(dutyType)) }
-                                }
-                            }
-                            .frame(width: 190)
-                        }
-                        .opacity(dutyType.hidden ? 0.6 : 1)
-                        .overlay(alignment: .bottom) { Rectangle().fill(DPColor.borderPrimary).frame(height: 1) }
+                    ForEach(
+                        TeamFeatureLogic.dutyTypeManagementDisplayOrder(in: team.dutyTypes),
+                        id: \.self
+                    ) { index in
+                        let dutyType = team.dutyTypes[index]
+                        dutyTypeManagementRow(dutyType, index: index, dutyTypes: team.dutyTypes)
                     }
                 }
             }
@@ -438,6 +394,104 @@ struct TeamManageView: View {
         .background(DPColor.backgroundCard)
         .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
         .overlay { RoundedRectangle(cornerRadius: DPRadius.standard).stroke(DPColor.borderPrimary) }
+    }
+
+    private func dutyTypeManagementRow(
+        _ dutyType: DutyTypeDTO,
+        index: Int,
+        dutyTypes: [DutyTypeDTO]
+    ) -> some View {
+        HStack(spacing: DPSpacing.extraSmall) {
+            Button {
+                editDutyType(dutyType)
+            } label: {
+                TeamDutyTypeBadge(name: dutyType.name, color: dutyType.color, memberCount: nil)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                    .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget)
+                    .contentShape(RoundedRectangle(cornerRadius: DPRadius.small))
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(Text(verbatim: dutyType.name))
+            .accessibilityHint(Text("team.dutyType.actions.edit", tableName: "Team"))
+
+            if dutyType.id != nil {
+                Menu {
+                    Button {
+                        DPHapticCenter.shared.emit(.selection)
+                        editDutyType(dutyType, emitRoutineHaptic: false)
+                    } label: {
+                        Label(teamLocalized("team.dutyType.actions.edit"), systemImage: "pencil")
+                    }
+
+                    if !dutyType.hidden {
+                        Button {
+                            Task { await viewModel.moveDutyType(from: index, direction: -1) }
+                        } label: {
+                            Label(teamLocalized("team.manage.actions.moveDutyTypeUp"), systemImage: "arrow.up")
+                        }
+                        .disabled(
+                            TeamFeatureLogic.visibleDutyTypeNeighbor(
+                                in: dutyTypes,
+                                from: index,
+                                direction: -1
+                            ) == nil
+                        )
+
+                        Button {
+                            Task { await viewModel.moveDutyType(from: index, direction: 1) }
+                        } label: {
+                            Label(teamLocalized("team.manage.actions.moveDutyTypeDown"), systemImage: "arrow.down")
+                        }
+                        .disabled(
+                            TeamFeatureLogic.visibleDutyTypeNeighbor(
+                                in: dutyTypes,
+                                from: index,
+                                direction: 1
+                            ) == nil
+                        )
+                    }
+
+                    Button {
+                        DPHapticCenter.shared.emit(dutyType.hidden ? .selection : .warning)
+                        present(.setDutyTypeVisibility(dutyType), emitRoutineHaptic: false)
+                    } label: {
+                        Label(
+                            teamLocalized(
+                                dutyType.hidden
+                                    ? "team.manage.actions.restoreDutyType"
+                                    : "team.manage.actions.hideDutyType"
+                            ),
+                            systemImage: dutyType.hidden ? "eye" : "eye.slash"
+                        )
+                    }
+                } label: {
+                    Image(systemName: "ellipsis")
+                        .foregroundStyle(DPColor.textSecondary)
+                        .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
+                        .overlay {
+                            RoundedRectangle(cornerRadius: DPRadius.small)
+                                .stroke(DPColor.borderSecondary)
+                        }
+                }
+                .buttonStyle(.plain)
+                .disabled(viewModel.isWorking)
+                .accessibilityLabel(Text("team.manage.actions.dutyTypeTools", tableName: "Team"))
+            }
+        }
+        .padding(.horizontal, DPSpacing.compact)
+        .padding(.vertical, DPSpacing.compact)
+        .opacity(dutyType.hidden ? 0.5 : 1)
+        .overlay(alignment: .bottom) { Rectangle().fill(DPColor.borderPrimary).frame(height: 1) }
+    }
+
+    private func editDutyType(_ dutyType: DutyTypeDTO, emitRoutineHaptic: Bool = true) {
+        viewModel.editingDutyType = dutyType
+        dutyEditorInteraction = TeamModalInteractionState()
+        if emitRoutineHaptic {
+            DPHapticCenter.shared.emit(.routine)
+        }
+        withoutPresentationAnimation { viewModel.dutyEditorPresented = true }
     }
 
     private func manageInfoRow(label: String, value: String) -> some View {
@@ -495,46 +549,9 @@ struct TeamManageView: View {
         .buttonStyle(.plain)
     }
 
-    private func teamTableHeader(_ title: String, width: CGFloat) -> some View {
-        Text(verbatim: title)
-            .font(DPTypography.label)
-            .foregroundStyle(DPColor.textOnDark)
-            .frame(width: width)
-            .frame(minHeight: 40)
-            .background(DPColor.backgroundFooter)
-    }
-
-    private func teamTableCell(_ title: String, width: CGFloat) -> some View {
-        Text(verbatim: title)
-            .font(DPTypography.label)
-            .foregroundStyle(DPColor.textPrimary)
-            .lineLimit(2)
-            .frame(width: width)
-            .frame(minHeight: 60)
-    }
-
-    private func teamToolButton(
-        _ systemImage: String,
-        label: String,
-        tint: Color = DPColor.textPrimary,
-        isDisabled: Bool = false,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            Image(systemName: systemImage)
-                .foregroundStyle(tint)
-                .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
-                .overlay { RoundedRectangle(cornerRadius: DPRadius.small).stroke(DPColor.borderSecondary) }
-        }
-        .buttonStyle(.plain)
-        .disabled(isDisabled)
-        .opacity(isDisabled ? DPChrome.disabledOpacity : 1)
-        .accessibilityLabel(Text(verbatim: label))
-    }
-
-    private func present(_ action: PendingAction) {
+    private func present(_ action: PendingAction, emitRoutineHaptic: Bool = true) {
         pendingActionIsWorking = false
-        if !action.isDestructive {
+        if !action.isDestructive, emitRoutineHaptic {
             DPHapticCenter.shared.emit(.routine)
         }
         withoutPresentationAnimation { pendingAction = action }
@@ -693,10 +710,10 @@ private struct TeamDutyTypeEditor: View {
     @State private var name = ""
     @State private var abbreviation = ""
     @State private var initialAbbreviation = ""
-    @State private var color = Color.blue
+    @State private var color = Color(teamHex: TeamManageModalLogic.defaultDutyTypeColor)
     @State private var isSubmitting = false
     @State private var initialName = ""
-    @State private var initialColorHex = Color.blue.teamHexRGB
+    @State private var initialColorHex = TeamManageModalLogic.defaultDutyTypeColor
     @State private var showsDiscardConfirmation = false
     @FocusState private var focusedField: Field?
 
@@ -735,122 +752,82 @@ private struct TeamDutyTypeEditor: View {
                 dismiss: requestDismiss
             )
         } content: {
-            VStack(alignment: .leading, spacing: DPSpacing.medium) {
-                Text("team.dutyType.description", tableName: "Team")
-                    .font(DPTypography.caption)
-                    .foregroundStyle(DPColor.textSecondary)
-
-                if viewModel.editingDutyType != nil, viewModel.editingDutyType?.id == nil {
-                    HStack(alignment: .top, spacing: DPSpacing.small) {
-                        Image(systemName: "info.circle.fill")
-                        Text(
-                            teamLocalized("team.dutyType.defaultNoticeStart")
-                                + teamLocalized("team.dutyType.defaultNoticeStrong")
-                                + teamLocalized("team.dutyType.defaultNoticeEnd")
-                        )
-                    }
-                    .font(DPTypography.caption)
-                    .foregroundStyle(DPColor.accent)
-                    .padding(DPSpacing.compact)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(DPColor.accentSoft)
-                    .clipShape(RoundedRectangle(cornerRadius: DPRadius.standard))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: DPRadius.standard)
-                            .stroke(DPColor.accentBorder)
-                    }
-                }
-
-                VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
-                    HStack {
-                        Text("team.dutyType.fields.name", tableName: "Team")
-                            .font(DPTypography.label)
-                        Spacer()
-                        Text(verbatim: "\(name.count)/\(TeamManageModalLogic.maximumDutyNameLength)")
-                            .font(DPTypography.caption)
-                            .foregroundStyle(
-                                name.count == TeamManageModalLogic.maximumDutyNameLength
-                                    ? DPColor.warning
-                                    : DPColor.textMuted
-                            )
-                    }
-                    TextField(teamLocalized("team.dutyType.placeholders.name"), text: $name)
-                        .focused($focusedField, equals: .name)
-                        .dpInputChrome(isInvalid: name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                        .onChange(of: name) { _, newValue in
-                            name = String(newValue.prefix(TeamManageModalLogic.maximumDutyNameLength))
+            VStack(alignment: .leading, spacing: DPSpacing.small) {
+                HStack(alignment: .top, spacing: DPSpacing.small) {
+                    VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+                        HStack(spacing: DPSpacing.extraSmall) {
+                            Text("team.dutyType.fields.name", tableName: "Team")
+                                .font(DPTypography.label)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.75)
+                            Circle()
+                                .fill(DPColor.danger)
+                                .frame(width: 5, height: 5)
+                                .accessibilityHidden(true)
                         }
-                    if hasDuplicateName {
-                        Text(
-                            String(
-                                format: teamLocalized("team.dutyType.warnings.duplicate"),
-                                locale: AppLocalization.locale,
-                                trimmedName
+                        TextField(teamLocalized("team.dutyType.placeholders.name"), text: $name)
+                            .focused($focusedField, equals: .name)
+                            .dpInputChrome(isInvalid: name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                            .accessibilityLabel(Text("team.dutyType.fields.name", tableName: "Team"))
+                            .accessibilityHint(Text("team.dutyType.fields.name.requiredHint", tableName: "Team"))
+                            .onChange(of: name) { _, newValue in
+                                name = String(newValue.prefix(TeamManageModalLogic.maximumDutyNameLength))
+                            }
+                        if hasDuplicateName {
+                            Text(
+                                String(
+                                    format: teamLocalized("team.dutyType.warnings.duplicate"),
+                                    locale: AppLocalization.locale,
+                                    trimmedName
+                                )
                             )
-                        )
-                        .font(DPTypography.caption)
-                        .foregroundStyle(DPColor.danger)
-                    }
-                }
-                .id(Field.name)
-
-                VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
-                    HStack {
-                        Text("team.dutyType.abbreviation.label", tableName: "Team")
-                            .font(DPTypography.label)
-                        Spacer()
-                        Text(verbatim: "\(abbreviation.count)/\(DutyAbbreviation.maximumLength)")
-                            .font(DPTypography.caption)
-                            .foregroundStyle(
-                                abbreviation.count > DutyAbbreviation.maximumLength
-                                    ? DPColor.danger
-                                    : abbreviation.count == DutyAbbreviation.maximumLength
-                                        ? DPColor.warning
-                                        : DPColor.textMuted
-                            )
-                    }
-                    TextField(
-                        DutyAbbreviation.resolve(trimmedName),
-                        text: $abbreviation
-                    )
-                    .focused($focusedField, equals: .abbreviation)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-                    .dpInputChrome(isInvalid: !DutyAbbreviation.isValid(abbreviation))
-                    .accessibilityLabel(Text("team.dutyType.abbreviation.label", tableName: "Team"))
-                    .accessibilityIdentifier("team.dutyType.abbreviation")
-                    Text("team.dutyType.abbreviation.hint", tableName: "Team")
-                        .font(DPTypography.caption)
-                        .foregroundStyle(DPColor.textSecondary)
-                    if !DutyAbbreviation.isValid(abbreviation) {
-                        Text("team.dutyType.abbreviation.invalid", tableName: "Team")
                             .font(DPTypography.caption)
                             .foregroundStyle(DPColor.danger)
+                        }
                     }
-                    HStack {
-                        Text("team.dutyType.abbreviation.preview", tableName: "Team")
-                        Text(verbatim: DutyAbbreviation.resolve(trimmedName, override: abbreviation))
-                            .bold()
-                    }
-                    .font(DPTypography.caption)
-                }
-                .id(Field.abbreviation)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .id(Field.name)
 
-                VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+                    VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
+                        Text("team.dutyType.abbreviation.label", tableName: "Team")
+                            .font(DPTypography.label)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.75)
+                        TextField(DutyAbbreviation.resolve(trimmedName), text: $abbreviation)
+                            .focused($focusedField, equals: .abbreviation)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                            .dpInputChrome(isInvalid: !DutyAbbreviation.isValid(abbreviation))
+                            .accessibilityLabel(Text("team.dutyType.abbreviation.label", tableName: "Team"))
+                            .accessibilityIdentifier("team.dutyType.abbreviation")
+                        if !DutyAbbreviation.isValid(abbreviation) {
+                            Text("team.dutyType.abbreviation.invalid", tableName: "Team")
+                                .font(DPTypography.caption)
+                                .foregroundStyle(DPColor.danger)
+                        }
+                    }
+                    .frame(width: 112, alignment: .leading)
+                    .id(Field.abbreviation)
+                }
+
+                HStack {
                     Text("team.dutyType.fields.color", tableName: "Team")
                         .font(DPTypography.label)
+                    Spacer()
                     ColorPicker(
                         teamLocalized("team.dutyType.fields.color"),
                         selection: $color,
                         supportsOpacity: false
                     )
                     .labelsHidden()
-                    .frame(maxWidth: .infinity, minHeight: DPSize.minimumTouchTarget, alignment: .leading)
+                    .accessibilityLabel(Text("team.dutyType.fields.color", tableName: "Team"))
+                    .frame(width: DPSize.minimumTouchTarget, height: DPSize.minimumTouchTarget)
                 }
 
                 VStack(alignment: .leading, spacing: DPSpacing.extraSmall) {
                     Text("team.dutyType.fields.preview", tableName: "Team")
                         .font(DPTypography.label)
+                        .foregroundStyle(DPColor.textMuted)
                     TeamDutyTypeBadge(
                         name: trimmedName.isEmpty
                             ? teamLocalized("team.dutyType.placeholders.preview")
@@ -895,6 +872,10 @@ private struct TeamDutyTypeEditor: View {
                 name = dutyType.name
                 abbreviation = dutyType.abbreviation ?? ""
                 color = Color(teamHex: dutyType.color)
+            } else {
+                name = ""
+                abbreviation = ""
+                color = Color(teamHex: TeamManageModalLogic.defaultDutyTypeColor)
             }
             initialName = name
             initialAbbreviation = abbreviation
@@ -1523,6 +1504,7 @@ nonisolated enum TeamConfirmationSubmissionPolicy {
 
 nonisolated enum TeamManageModalLogic {
     static let maximumDutyNameLength = 10
+    static let defaultDutyTypeColor = "#FFB3BA"
 
     static func limitedDutyName(_ value: String) -> String {
         String(value.prefix(maximumDutyNameLength))

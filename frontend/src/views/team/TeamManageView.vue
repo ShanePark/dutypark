@@ -12,8 +12,10 @@ import DutyTypeModal from '@/components/team/DutyTypeModal.vue'
 import adminApi from '@/api/admin'
 import { resolveApiErrorMessage } from '@/utils/resolveApiError'
 import {
+  groupDutyTypesForManagement,
   findVisibleDutyTypeNeighbor,
 } from '@/utils/dutyTypeVisibility'
+import { isLightColor } from '@/utils/color'
 import type {
   TeamDto,
   TeamMemberDto,
@@ -26,7 +28,6 @@ import {
   Plus,
   ArrowUp,
   ArrowDown,
-  Pencil,
   Check,
   Upload,
   ChevronLeft,
@@ -61,6 +62,7 @@ const dutyBatchTemplates = ref<DutyBatchTemplateDto[]>([])
 
 const hasMember = computed(() => team.value?.members && team.value.members.length > 0)
 const hasDutyType = computed(() => team.value?.dutyTypes && team.value.dutyTypes.length > 0)
+const displayedDutyTypes = computed(() => groupDutyTypesForManagement(team.value?.dutyTypes ?? []))
 
 const showMemberSearchModal = ref(false)
 
@@ -247,12 +249,19 @@ function visibleNeighborIndex(index: number, direction: -1 | 1): number | null {
   return findVisibleDutyTypeNeighbor(team.value?.dutyTypes ?? [], index, direction)
 }
 
-function canMoveDutyType(index: number, direction: -1 | 1): boolean {
-  const dutyType = team.value?.dutyTypes[index]
-  return !!dutyType?.id && !dutyType.hidden && visibleNeighborIndex(index, direction) !== null
+function sourceDutyTypeIndex(dutyType: DutyTypeDto): number {
+  return team.value?.dutyTypes.findIndex(type => type.id === dutyType.id) ?? -1
 }
 
-function moveDutyType(index: number, direction: -1 | 1) {
+function canMoveDutyType(dutyType: DutyTypeDto, direction: -1 | 1): boolean {
+  if (!dutyType.id || dutyType.hidden) return false
+  const index = sourceDutyTypeIndex(dutyType)
+  return index >= 0 && visibleNeighborIndex(index, direction) !== null
+}
+
+function moveDutyType(dutyType: DutyTypeDto, direction: -1 | 1) {
+  const index = sourceDutyTypeIndex(dutyType)
+  if (index < 0) return
   const neighborIndex = visibleNeighborIndex(index, direction)
   if (neighborIndex !== null) void swapPosition(index, neighborIndex)
 }
@@ -637,105 +646,72 @@ onMounted(() => {
         </button>
       </div>
 
-      <div v-if="hasDutyType" class="overflow-x-auto">
-        <table class="w-full">
-          <thead class="text-dp-text-on-dark bg-dp-bg-footer">
-            <tr>
-              <th class="px-4 py-2 text-center w-12">#</th>
-              <th class="px-4 py-2 text-left">{{ t('team.manage.fields.dutyName') }}</th>
-              <th class="px-4 py-2 text-center">{{ t('team.manage.fields.color') }}</th>
-              <th class="px-4 py-2 text-center">{{ t('team.manage.fields.status') }}</th>
-              <th class="px-4 py-2 text-center">{{ t('team.manage.fields.tools') }}</th>
-            </tr>
-          </thead>
-          <tbody class="border-dp-border-primary">
-            <tr
-              v-for="(dutyType, index) in team.dutyTypes"
-              :key="dutyType.id || 'default'"
-              class="hover-bg-light border-b border-dp-border-primary"
-              :class="{ 'opacity-60': dutyType.hidden }"
+      <div v-if="hasDutyType" class="divide-y divide-dp-border-primary">
+        <div
+          v-for="(dutyType, index) in displayedDutyTypes"
+          :key="dutyType.id || 'default'"
+          class="flex min-w-0 items-center gap-2 px-2.5 py-2 hover-bg-light"
+          :class="{
+            'border-t-2 border-dp-border-secondary bg-dp-bg-secondary/30':
+              dutyType.hidden && (index === 0 || !displayedDutyTypes[index - 1]?.hidden),
+          }"
+        >
+          <button
+            type="button"
+            @click="openEditDutyTypeModal(dutyType)"
+            :disabled="saving"
+            :aria-label="`${t('team.manage.actions.editDutyType')}: ${dutyType.name}`"
+            :title="t('team.manage.actions.editDutyType')"
+            class="inline-flex min-h-10 min-w-0 flex-1 items-center rounded-md px-2.5 py-1.5 text-left text-sm font-semibold shadow-sm transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dp-accent-ring disabled:cursor-not-allowed"
+            :class="{ 'opacity-50 grayscale': dutyType.hidden }"
+            :style="{
+              backgroundColor: dutyType.color || 'var(--dp-duty-type-fallback)',
+              color: dutyType.color
+                ? (isLightColor(dutyType.color) ? 'var(--dp-text-on-light)' : 'var(--dp-text-on-dark)')
+                : 'var(--dp-text-primary)',
+            }"
+          >
+            <span class="truncate">{{ dutyType.name }}</span>
+          </button>
+          <div v-if="dutyType.id" class="flex shrink-0 items-center gap-1">
+            <button
+              v-if="!dutyType.hidden"
+              type="button"
+              :disabled="saving || !canMoveDutyType(dutyType, -1)"
+              @click="moveDutyType(dutyType, -1)"
+              :aria-label="t('team.manage.actions.moveDutyTypeUp')"
+              :title="t('team.manage.actions.moveDutyTypeUp')"
+              class="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-dp-border-secondary bg-dp-bg-secondary p-2 text-dp-text-secondary transition-colors hover:bg-dp-bg-hover hover:text-dp-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dp-accent-ring disabled:cursor-not-allowed disabled:opacity-50"
             >
-              <td class="px-4 py-3 text-center text-dp-text-muted">{{ index + 1 }}</td>
-              <td class="px-4 py-3 font-medium text-dp-text-primary">
-                {{ dutyType.name }}
-                <span v-if="dutyType.id === null" class="text-xs font-normal text-dp-text-muted">({{ t('team.manage.labels.offDuty') }})</span>
-              </td>
-              <td class="px-4 py-3 text-center">
-                <button
-                  type="button"
-                  @click="openEditDutyTypeModal(dutyType)"
-                  :aria-label="t('team.manage.actions.editDutyType')"
-                  :title="t('team.manage.actions.editDutyType')"
-                  class="inline-block h-6 w-6 cursor-pointer rounded-full border-2 color-picker-swatch focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dp-accent-ring"
-                  :style="{ backgroundColor: dutyType.color || 'var(--dp-duty-type-fallback)', borderColor: 'var(--dp-border-primary)' }"
-                ></button>
-              </td>
-              <td class="px-4 py-3 text-center">
-                <span
-                  class="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium"
-                  :class="dutyType.hidden
-                    ? 'bg-dp-bg-tertiary text-dp-text-muted'
-                    : 'bg-dp-success-soft text-dp-success'"
-                >
-                  <EyeOff v-if="dutyType.hidden" class="w-3 h-3" />
-                  <Eye v-else class="w-3 h-3" />
-                  {{ dutyType.hidden ? t('team.manage.labels.hidden') : t('team.manage.labels.visible') }}
-                </span>
-              </td>
-              <td class="px-4 py-3">
-                <div class="flex flex-wrap items-center justify-center gap-1">
-                  <button
-                    v-if="dutyType.id"
-                    type="button"
-                    :disabled="saving || !canMoveDutyType(index, 1)"
-                    @click="moveDutyType(index, 1)"
-                    :aria-label="t('team.manage.actions.moveDutyTypeDown')"
-                    :title="t('team.manage.actions.moveDutyTypeDown')"
-                    class="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-dp-border-secondary bg-dp-bg-secondary p-2 text-dp-text-secondary transition-colors hover:bg-dp-bg-hover hover:text-dp-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dp-accent-ring disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <ArrowDown class="w-3 h-3 sm:w-4 sm:h-4" />
-                  </button>
-                  <button
-                    v-if="dutyType.id"
-                    type="button"
-                    :disabled="saving || !canMoveDutyType(index, -1)"
-                    @click="moveDutyType(index, -1)"
-                    :aria-label="t('team.manage.actions.moveDutyTypeUp')"
-                    :title="t('team.manage.actions.moveDutyTypeUp')"
-                    class="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-dp-border-secondary bg-dp-bg-secondary p-2 text-dp-text-secondary transition-colors hover:bg-dp-bg-hover hover:text-dp-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dp-accent-ring disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <ArrowUp class="w-3 h-3 sm:w-4 sm:h-4" />
-                  </button>
-                  <button
-                    type="button"
-                    @click="openEditDutyTypeModal(dutyType)"
-                    :disabled="saving"
-                    :aria-label="t('team.manage.actions.editDutyType')"
-                    :title="t('team.manage.actions.editDutyType')"
-                    class="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-dp-accent-border bg-dp-accent-soft p-2 text-dp-accent transition-colors hover:bg-dp-accent-soft-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dp-accent-ring disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <Pencil class="w-3 h-3 sm:w-4 sm:h-4" />
-                  </button>
-                  <button
-                    v-if="dutyType.id"
-                    type="button"
-                    @click="updateDutyTypeVisibility(dutyType)"
-                    :disabled="saving"
-                    :aria-label="dutyType.hidden ? t('team.manage.actions.restoreDutyType') : t('team.manage.actions.hideDutyType')"
-                    class="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border p-2 transition-colors focus-visible:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    :class="dutyType.hidden
-                      ? 'border-dp-success-border bg-dp-success-soft text-dp-success hover:bg-dp-success-soft-hover focus-visible:ring-dp-accent-ring'
-                      : 'border-dp-warning-border bg-dp-warning-soft text-dp-warning hover:bg-dp-warning-soft-hover focus-visible:ring-dp-accent-ring'"
-                    :title="dutyType.hidden ? t('team.manage.actions.restoreDutyType') : t('team.manage.actions.hideDutyType')"
-                  >
-                    <Eye v-if="dutyType.hidden" class="w-4 h-4 mx-auto" />
-                    <EyeOff v-else class="w-4 h-4 mx-auto" />
-                  </button>
-                </div>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+              <ArrowUp class="w-4 h-4" />
+            </button>
+            <button
+              v-if="!dutyType.hidden"
+              type="button"
+              :disabled="saving || !canMoveDutyType(dutyType, 1)"
+              @click="moveDutyType(dutyType, 1)"
+              :aria-label="t('team.manage.actions.moveDutyTypeDown')"
+              :title="t('team.manage.actions.moveDutyTypeDown')"
+              class="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border border-dp-border-secondary bg-dp-bg-secondary p-2 text-dp-text-secondary transition-colors hover:bg-dp-bg-hover hover:text-dp-text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-dp-accent-ring disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <ArrowDown class="w-4 h-4" />
+            </button>
+            <button
+              type="button"
+              @click="updateDutyTypeVisibility(dutyType)"
+              :disabled="saving"
+              :aria-label="dutyType.hidden ? t('team.manage.actions.restoreDutyType') : t('team.manage.actions.hideDutyType')"
+              :title="dutyType.hidden ? t('team.manage.actions.restoreDutyType') : t('team.manage.actions.hideDutyType')"
+              class="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg border p-2 transition-colors focus-visible:outline-none focus-visible:ring-2 disabled:cursor-not-allowed disabled:opacity-50"
+              :class="dutyType.hidden
+                ? 'border-dp-success-border bg-dp-success-soft text-dp-success hover:bg-dp-success-soft-hover focus-visible:ring-dp-accent-ring'
+                : 'border-dp-warning-border bg-dp-warning-soft text-dp-warning hover:bg-dp-warning-soft-hover focus-visible:ring-dp-accent-ring'"
+            >
+              <Eye v-if="dutyType.hidden" class="w-4 h-4" />
+              <EyeOff v-else class="w-4 h-4" />
+            </button>
+          </div>
+        </div>
       </div>
       <div v-else class="p-6 text-center text-dp-text-muted">
         {{ t('team.manage.labels.noDutyTypes') }}

@@ -133,6 +133,7 @@ const emit = defineEmits<{
   (e: 'upload-start'): void
   (e: 'upload-complete'): void
   (e: 'error', message: string): void
+  (e: 'date-picker-backdrop-dismiss'): void
 }>()
 
 const { t } = useI18n()
@@ -156,6 +157,10 @@ function cleanup() {
   fileUploaderRef.value?.cleanup()
 }
 
+async function discardSession() {
+  await fileUploaderRef.value?.discardSession()
+}
+
 function isUploading() {
   return fileUploaderRef.value?.isUploading() ?? false
 }
@@ -164,6 +169,7 @@ defineExpose({
   getSessionId,
   getAttachments,
   cleanup,
+  discardSession,
   isUploading,
 })
 </script>
@@ -207,6 +213,7 @@ defineExpose({
         :invalid="isTimeRangeInvalid"
         :aria-label="t('duty.schedule.fields.startDateTime')"
         class="schedule-form__date"
+        @backdrop-dismiss="emit('date-picker-backdrop-dismiss')"
       />
       <div class="schedule-form__time-slot">
         <template v-if="startTime !== null">
@@ -246,6 +253,7 @@ defineExpose({
         :invalid="isTimeRangeInvalid"
         :aria-label="t('duty.schedule.fields.endDateTime')"
         class="schedule-form__date"
+        @backdrop-dismiss="emit('date-picker-backdrop-dismiss')"
       />
       <div class="schedule-form__time-slot">
         <template v-if="endTime !== null">

@@ -1,7 +1,7 @@
 {
   "sourceLanguage" : "en",
   "strings" : {
-    "team.dutyType.abbreviation.label" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Abbreviation (optional)"}},"ko":{"stringUnit":{"state":"translated","value":"단축어 (선택)"}}}},
+    "team.dutyType.abbreviation.label" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Abbreviation"}},"ko":{"stringUnit":{"state":"translated","value":"단축어"}}}},
     "team.dutyType.abbreviation.hint" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Leave blank to use the first character of the duty name. Enter 1 to 3 English letters or complete Korean syllables."}},"ko":{"stringUnit":{"state":"translated","value":"비워 두면 근무명의 첫 글자를 사용합니다. 영문 또는 완성형 한글 1~3글자를 입력할 수 있습니다."}}}},
     "team.dutyType.abbreviation.preview" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Abbreviation preview"}},"ko":{"stringUnit":{"state":"translated","value":"단축어 미리보기"}}}},
     "team.dutyType.abbreviation.invalid" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Enter 1 to 3 English letters or complete Korean syllables."}},"ko":{"stringUnit":{"state":"translated","value":"영문 또는 완성형 한글을 1~3글자로 입력해 주세요."}}}},
@@ -58,6 +58,7 @@
     "team.dutyType.description" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Set the duty name and color used by your team."}},"ko":{"stringUnit":{"state":"translated","value":"팀에서 사용할 근무 유형 이름과 색상을 설정하세요."}}}},
     "team.dutyType.fields.color" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Color"}},"ko":{"stringUnit":{"state":"translated","value":"색상"}}}},
     "team.dutyType.fields.name" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Duty name"}},"ko":{"stringUnit":{"state":"translated","value":"근무명"}}}},
+    "team.dutyType.fields.name.requiredHint" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Required field"}},"ko":{"stringUnit":{"state":"translated","value":"필수 입력 항목"}}}},
     "team.dutyType.fields.order" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Order"}},"ko":{"stringUnit":{"state":"translated","value":"순서"}}}},
     "team.dutyType.fields.preview" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Preview"}},"ko":{"stringUnit":{"state":"translated","value":"미리보기"}}}},
     "team.dutyType.fields.visibility" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Visibility"}},"ko":{"stringUnit":{"state":"translated","value":"표시 상태"}}}},
@@ -152,6 +153,9 @@
     "team.manage.actions.back" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Back"}},"ko":{"stringUnit":{"state":"translated","value":"뒤로"}}}},
     "team.manage.actions.upload" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Upload"}},"ko":{"stringUnit":{"state":"translated","value":"등록"}}}},
     "team.manage.actions.addDutyType" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Add"}},"ko":{"stringUnit":{"state":"translated","value":"추가"}}}},
+    "team.manage.actions.dutyTypeTools" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Duty type actions"}},"ko":{"stringUnit":{"state":"translated","value":"근무 유형 도구"}}}},
+    "team.manage.actions.moveDutyTypeUp" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Move up"}},"ko":{"stringUnit":{"state":"translated","value":"위로 이동"}}}},
+    "team.manage.actions.moveDutyTypeDown" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Move down"}},"ko":{"stringUnit":{"state":"translated","value":"아래로 이동"}}}},
     "team.manage.actions.hideDutyType" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Hide"}},"ko":{"stringUnit":{"state":"translated","value":"숨기기"}}}},
     "team.manage.actions.restoreDutyType" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Restore"}},"ko":{"stringUnit":{"state":"translated","value":"복원"}}}},
     "team.manage.fields.batchTemplate" : {"localizations":{"en":{"stringUnit":{"state":"translated","value":"Duty import template"}},"ko":{"stringUnit":{"state":"translated","value":"근무 반입 양식"}}}},

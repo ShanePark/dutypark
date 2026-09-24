@@ -84,6 +84,7 @@ export function useSwal() {
     title = translateGlobal('common.swal.confirm'),
     confirmButtonText = title,
     cancelButtonText = translateGlobal('common.actions.cancel'),
+    options: { animation?: boolean } = {},
   ) => {
     const colors = getSwalColors()
     return Swal.fire({
@@ -95,6 +96,7 @@ export function useSwal() {
       cancelButtonText,
       confirmButtonColor: colors.confirmButtonColor,
       cancelButtonColor: colors.cancelButtonColor,
+      ...(options.animation === undefined ? {} : { animation: options.animation }),
     }).then((result) => result.isConfirmed)
   }
 

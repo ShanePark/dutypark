@@ -15,6 +15,7 @@ import org.hamcrest.Matchers
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.http.ContentDisposition
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
 import org.springframework.mock.web.MockMultipartFile
@@ -444,6 +445,52 @@ class AttachmentControllerEdgeCaseTest : RestDocsTest() {
         ).andExpect(status().isOk)
             .andExpect(header().string(HttpHeaders.CONTENT_DISPOSITION, org.hamcrest.Matchers.startsWith("inline;")))
             .andDo(MockMvcResultHandlers.print())
+    }
+
+    @Test
+    fun `download encodes unicode filename in content disposition`() {
+        val member = TestData.member
+        val jwt = getJwt(member)
+        val session = sessionRepository.save(
+            AttachmentUploadSession(
+                contextType = AttachmentContextType.SCHEDULE,
+                targetContextId = null,
+                ownerId = member.id!!,
+                expiresAt = clock.instant().plusSeconds(86400)
+            )
+        )
+        val originalFilename = "사용량\u202f현황.png"
+        val attachment = attachmentRepository.save(
+            Attachment(
+                contextType = AttachmentContextType.SCHEDULE,
+                contextId = null,
+                uploadSessionId = session.id,
+                originalFilename = originalFilename,
+                storedFilename = "usage.png",
+                contentType = "image/png",
+                size = 4,
+                storagePath = pathResolver.resolveTemporaryDirectory(session.id).toString(),
+                createdBy = member.id!!,
+                orderIndex = 0
+            )
+        )
+        val tempDir = pathResolver.resolveTemporaryDirectory(session.id)
+        Files.createDirectories(tempDir)
+        Files.write(tempDir.resolve("usage.png"), byteArrayOf(1, 2, 3, 4))
+
+        val response = mockMvc.perform(
+            get("/api/attachments/{id}/download", attachment.id)
+                .param("inline", "true")
+                .header(HttpHeaders.AUTHORIZATION, "Bearer $jwt")
+        ).andExpect(status().isOk)
+            .andReturn()
+            .response
+
+        val contentDisposition = response.getHeader(HttpHeaders.CONTENT_DISPOSITION)!!
+        assertThat(contentDisposition).contains("inline; filename=\"______.png\"")
+        assertThat(contentDisposition).doesNotContain(originalFilename)
+        assertThat(contentDisposition.all { it.code < 128 }).isTrue()
+        assertThat(ContentDisposition.parse(contentDisposition).filename).isEqualTo(originalFilename)
     }
 
     @Test

@@ -72,6 +72,7 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   'update:modelValue': [value: string]
+  'backdrop-dismiss': []
 }>()
 
 const { t, locale } = useI18n()
@@ -360,6 +361,11 @@ function handlePointerDownOutside(event: PointerEvent) {
   const target = event.target
   if (!(target instanceof Node)) return
   if (triggerRef.value?.contains(target) || popoverRef.value?.contains(target)) return
+
+  const dialog = triggerRef.value?.closest('[role="dialog"]')
+  if (dialog && target === dialog.parentElement) {
+    emit('backdrop-dismiss')
+  }
   close()
 }
 

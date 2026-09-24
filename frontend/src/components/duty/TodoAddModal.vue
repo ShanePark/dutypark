@@ -10,6 +10,7 @@ import FriendTagSelector from '@/components/common/FriendTagSelector.vue'
 import { useEscapeKey } from '@/composables/useEscapeKey'
 import type { NormalizedAttachment, TaggableFriend, TodoStatus } from '@/types'
 import { useSwal } from '@/composables/useSwal'
+import { hasUnsavedTodoChanges, type TodoDismissalDraft } from '@/utils/formDismissal'
 
 interface Props {
   isOpen: boolean
@@ -49,11 +50,50 @@ const isDesktop = ref(
 )
 let desktopMediaQuery: MediaQueryList | null = null
 
-const { showWarning, showError } = useSwal()
+const { showWarning, showError, confirm } = useSwal()
 
 const { t } = useI18n()
 
 const isTitleMissing = computed(() => !title.value.trim())
+
+function emptyDraft(initialStatus: TodoStatus): TodoDismissalDraft {
+  return {
+    title: '',
+    content: '',
+    status: initialStatus,
+    dueDate: '',
+    tagFriendIds: [],
+  }
+}
+
+const initialDraft = ref<TodoDismissalDraft>(emptyDraft(props.initialStatus))
+let isHandlingClose = false
+
+function hasUnsavedChanges() {
+  return hasUnsavedTodoChanges(
+    initialDraft.value,
+    {
+      title: title.value,
+      content: content.value,
+      status: status.value,
+      dueDate: dueDate.value,
+      tagFriendIds: tagFriendIds.value,
+    },
+    [],
+    attachments.value.map((attachment) => attachment.id),
+    sessionId.value !== null,
+  )
+}
+
+async function confirmDiscardChanges() {
+  return confirm(
+    t('common.unsavedChanges.message'),
+    t('common.unsavedChanges.title'),
+    t('common.unsavedChanges.discard'),
+    t('common.actions.cancel'),
+    { animation: false },
+  )
+}
 
 const statusOptions = computed<Array<{ value: TodoStatus; label: string; icon: typeof ListTodo; colorClass: string }>>(() => [
   { value: 'TODO', label: t('duty.todo.status.todo'), icon: ListTodo, colorClass: 'status-card-todo' },
@@ -211,6 +251,7 @@ watch(
   (open) => {
     if (open) {
       // Reset form when opening
+      initialDraft.value = emptyDraft(props.initialStatus)
       title.value = ''
       content.value = ''
       status.value = props.initialStatus
@@ -225,21 +266,26 @@ watch(
   }
 )
 
-function handleClose() {
-  closeStatusMenu()
-  // Discard session if exists
-  if (fileUploaderRef.value) {
-    fileUploaderRef.value.discardSession()
+async function handleClose() {
+  if (isHandlingClose || isUploading.value) return
+  isHandlingClose = true
+  try {
+    if (hasUnsavedChanges() && !(await confirmDiscardChanges())) return
+
+    closeStatusMenu()
+    await fileUploaderRef.value?.discardSession()
+    title.value = ''
+    content.value = ''
+    status.value = 'TODO'
+    dueDate.value = ''
+    tagFriendIds.value = []
+    attachments.value = []
+    sessionId.value = null
+    isUploading.value = false
+    emit('close')
+  } finally {
+    isHandlingClose = false
   }
-  title.value = ''
-  content.value = ''
-  status.value = 'TODO'
-  dueDate.value = ''
-  tagFriendIds.value = []
-  attachments.value = []
-  sessionId.value = null
-  isUploading.value = false
-  emit('close')
 }
 
 function handleSave() {
@@ -314,7 +360,8 @@ function onUploadError(message: string) {
       <button
         type="button"
         @click="handleClose"
-        class="p-2 rounded-full hover-close-btn cursor-pointer"
+        class="p-2 rounded-full hover-close-btn cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+        :disabled="isUploading"
         :aria-label="t('common.actions.close')"
         :title="t('common.actions.close')"
       >
@@ -491,7 +538,8 @@ function onUploadError(message: string) {
     <div class="todo-add-modal-footer modal-actions-compact modal-actions-end modal-footer-safe">
       <button
         @click="handleClose"
-        class="flex-1 sm:flex-none px-4 py-2 rounded-lg transition btn-outline cursor-pointer"
+        class="flex-1 sm:flex-none px-4 py-2 rounded-lg transition btn-outline cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+        :disabled="isUploading"
       >
         {{ t('common.actions.close') }}
       </button>

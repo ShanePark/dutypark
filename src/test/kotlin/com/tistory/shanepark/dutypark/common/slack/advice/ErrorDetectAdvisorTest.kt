@@ -19,9 +19,11 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.whenever
 import org.slf4j.LoggerFactory
 import org.springframework.http.HttpStatus
+import org.springframework.http.converter.HttpMessageNotWritableException
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
 import org.springframework.web.context.request.async.AsyncRequestNotUsableException
+import org.springframework.web.servlet.HandlerMapping
 import org.apache.catalina.connector.ClientAbortException
 
 class ErrorDetectAdvisorTest {
@@ -94,6 +96,76 @@ class ErrorDetectAdvisorTest {
     }
 
     @Test
+    fun `handleException logs mapped request and exception trace without messages`() {
+        val request = requestWithBody(
+            "/api/attachments/attachment-secret/download",
+            "email=private@example.com&content=submitted-secret",
+        ).apply {
+            method = "GET"
+            queryString = "token=query-secret"
+            setAttribute(HandlerMapping.BEST_MATCHING_PATTERN_ATTRIBUTE, "/api/attachments/{id}/download")
+        }
+        val exception = HttpMessageNotWritableException(
+            "private@example.com response value",
+            IllegalStateException("submitted-secret serialization detail"),
+        )
+        val logger = LoggerFactory.getLogger(ErrorDetectAdvisor::class.java)
+            as ch.qos.logback.classic.Logger
+        val appender = ListAppender<ILoggingEvent>().apply { start() }
+        logger.addAppender(appender)
+
+        try {
+            assertThrows<HttpMessageNotWritableException> {
+                advisor.handleException(request, exception)
+            }
+        } finally {
+            logger.detachAppender(appender)
+        }
+
+        assertThat(appender.list).hasSize(1)
+        val event = appender.list.single()
+        assertThat(event.formattedMessage)
+            .contains(
+                "method=GET",
+                "pathPattern=/api/attachments/{id}/download",
+                "HttpMessageNotWritableException",
+                "IllegalStateException",
+                "ErrorDetectAdvisorTest.handleException logs mapped request",
+            )
+            .doesNotContain(
+                "attachment-secret",
+                "query-secret",
+                "private@example.com",
+                "submitted-secret",
+            )
+        assertThat(event.throwableProxy).isNull()
+    }
+
+    @Test
+    fun `handleException does not log raw URI when request has no route pattern`() {
+        val request = requestWithBody("/api/private/member-secret", "")
+        request.method = "GET"
+        request.queryString = "token=query-secret"
+        val logger = LoggerFactory.getLogger(ErrorDetectAdvisor::class.java)
+            as ch.qos.logback.classic.Logger
+        val appender = ListAppender<ILoggingEvent>().apply { start() }
+        logger.addAppender(appender)
+
+        try {
+            assertThrows<RuntimeException> {
+                advisor.handleException(request, RuntimeException("private exception message"))
+            }
+        } finally {
+            logger.detachAppender(appender)
+        }
+
+        assertThat(appender.list).hasSize(1)
+        assertThat(appender.list.single().formattedMessage)
+            .contains("method=GET", "pathPattern=<unmatched>")
+            .doesNotContain("/api/private/member-secret", "query-secret", "private exception message")
+    }
+
+    @Test
     fun `handleException keeps the original error when Slack sending fails`() {
         val request = requestWithBody("/api/private", "content=submitted-secret")
         val original = RuntimeException("original user supplied message")
@@ -114,11 +186,16 @@ class ErrorDetectAdvisorTest {
         }
 
         assertThat(thrown).isSameAs(original)
-        assertThat(appender.list).hasSize(1)
-        assertThat(appender.list.single().formattedMessage)
+        assertThat(appender.list).hasSize(2)
+        val slackFailureLog = appender.list.first()
+        assertThat(slackFailureLog.formattedMessage)
             .contains("SlackException")
             .doesNotContain(webhookFailureMessage, original.message)
-        assertThat(appender.list.single().throwableProxy).isNull()
+        val diagnosticLog = appender.list.last()
+        assertThat(diagnosticLog.formattedMessage)
+            .contains("Unhandled request exception", "pathPattern=<unmatched>", "RuntimeException")
+            .doesNotContain(webhookFailureMessage, original.message)
+        assertThat(appender.list).allSatisfy { assertThat(it.throwableProxy).isNull() }
     }
 
     @Test

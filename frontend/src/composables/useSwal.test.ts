@@ -62,6 +62,22 @@ describe('useSwal', () => {
     }))
   })
 
+  it('can disable dialog animations for immediate confirmations', async () => {
+    const { confirm } = useSwal()
+
+    await expect(confirm(
+      'Discard unsaved changes?',
+      'Unsaved changes',
+      'Discard',
+      'Cancel',
+      { animation: false },
+    )).resolves.toBe(true)
+
+    expect(mocks.fire).toHaveBeenCalledWith(expect.objectContaining({
+      animation: false,
+    }))
+  })
+
   it('returns the selected three-way choice with custom labels', async () => {
     mocks.fire.mockResolvedValue({ isDenied: true })
     const { choose } = useSwal()
