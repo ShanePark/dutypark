@@ -91,6 +91,17 @@ final class DutyparkWidgetSnapshotTests: XCTestCase {
         )
     }
 
+    func testWidgetWeekendDateNumberNeedsContrastBackingWhenConfiguredDutyColorMatches() throws {
+        let redDutyColor = try XCTUnwrap(DutyparkWidgetColorComponents(hex: "#DC2626"))
+        let blueDutyColor = try XCTUnwrap(DutyparkWidgetColorComponents(hex: "#2563EB"))
+        let contrastingDutyColor = try XCTUnwrap(DutyparkWidgetColorComponents(hex: "#FFFFFF"))
+
+        XCTAssertTrue(redDutyColor.needsDateNumberContrastBacking(for: .sundayOrHoliday))
+        XCTAssertTrue(blueDutyColor.needsDateNumberContrastBacking(for: .saturday))
+        XCTAssertFalse(contrastingDutyColor.needsDateNumberContrastBacking(for: .sundayOrHoliday))
+        XCTAssertFalse(contrastingDutyColor.needsDateNumberContrastBacking(for: .saturday))
+    }
+
     func testMonthlyWidgetShowsOnlyTheWeeksNeededForEachMonth() {
         let fourWeekMonth = (0..<42).map { $0 < 28 }
         let september2026 = (0..<42).map { (2..<32).contains($0) }

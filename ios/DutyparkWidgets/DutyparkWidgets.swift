@@ -394,6 +394,13 @@ private struct DutyparkWidgetDayCell: View {
                 .font(.system(size: dayNumberFontSize, weight: .bold, design: .rounded))
                 .monospacedDigit()
                 .foregroundStyle(dayNumberColor)
+                .padding(.horizontal, needsDayNumberContrastBacking ? 3 : 0)
+                .background {
+                    if needsDayNumberContrastBacking {
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(.white)
+                    }
+                }
                 .frame(height: dayNumberHeight)
                 .frame(maxWidth: .infinity)
             dutySlot
@@ -538,6 +545,13 @@ private struct DutyparkWidgetDayCell: View {
             isCurrentMonth: isCurrentMonth,
             hasConfiguredDutyColor: hasConfiguredDutyColor
         )
+    }
+
+    private var needsDayNumberContrastBacking: Bool {
+        guard hasConfiguredDutyColor,
+              let background = DutyparkWidgetColorComponents(hex: day.colorHex)
+        else { return false }
+        return background.needsDateNumberContrastBacking(for: dayNumberStyle)
     }
 
     private var holidayForeground: Color {

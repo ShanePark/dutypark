@@ -83,6 +83,17 @@ nonisolated enum DutyparkWidgetDayNumberStyle: Equatable, Sendable {
     case secondary
     case primary
 
+    var calendarForegroundComponents: DutyparkWidgetColorComponents? {
+        switch self {
+        case .sundayOrHoliday:
+            DutyparkWidgetColorComponents(red: 0xDC, green: 0x26, blue: 0x26)
+        case .saturday:
+            DutyparkWidgetColorComponents(red: 0x25, green: 0x63, blue: 0xEB)
+        case .duty, .secondary, .primary:
+            nil
+        }
+    }
+
     static func resolve(
         weekday: Int,
         holidayName: String?,
@@ -105,6 +116,12 @@ nonisolated struct DutyparkWidgetColorComponents: Equatable, Sendable {
     let green: UInt8
     let blue: UInt8
 
+    init(red: UInt8, green: UInt8, blue: UInt8) {
+        self.red = red
+        self.green = green
+        self.blue = blue
+    }
+
     init?(hex: String?) {
         guard var value = hex?.trimmingCharacters(in: .whitespacesAndNewlines), !value.isEmpty else {
             return nil
@@ -112,14 +129,40 @@ nonisolated struct DutyparkWidgetColorComponents: Equatable, Sendable {
         if value.hasPrefix("#") { value.removeFirst() }
         guard value.count == 6, let number = UInt32(value, radix: 16) else { return nil }
 
-        red = UInt8((number >> 16) & 0xFF)
-        green = UInt8((number >> 8) & 0xFF)
-        blue = UInt8(number & 0xFF)
+        self.init(
+            red: UInt8((number >> 16) & 0xFF),
+            green: UInt8((number >> 8) & 0xFF),
+            blue: UInt8(number & 0xFF)
+        )
     }
 
     var usesLightForeground: Bool {
         let luminance = (Double(red) * 299 + Double(green) * 587 + Double(blue) * 114) / 1_000
         return luminance <= 127.5
+    }
+
+    func needsDateNumberContrastBacking(for style: DutyparkWidgetDayNumberStyle) -> Bool {
+        guard let foreground = style.calendarForegroundComponents else { return false }
+        return contrastRatio(with: foreground) < 4.5
+    }
+
+    private func contrastRatio(with other: Self) -> Double {
+        let first = relativeLuminance
+        let second = other.relativeLuminance
+        return (max(first, second) + 0.05) / (min(first, second) + 0.05)
+    }
+
+    private var relativeLuminance: Double {
+        func linearized(_ component: UInt8) -> Double {
+            let value = Double(component) / 255
+            return value <= 0.04045
+                ? value / 12.92
+                : pow((value + 0.055) / 1.055, 2.4)
+        }
+
+        return 0.2126 * linearized(red)
+            + 0.7152 * linearized(green)
+            + 0.0722 * linearized(blue)
     }
 }
 
