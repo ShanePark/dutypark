@@ -357,6 +357,14 @@ struct TeamView: View {
         return now.year == viewModel.year && now.month == viewModel.month
     }
 
+    private var visibleCalendarIndices: Range<Int> {
+        CalendarDateSupport.visibleCellRange(
+            year: viewModel.year,
+            month: viewModel.month,
+            serverDays: viewModel.days
+        )
+    }
+
     private var calendar: some View {
         let columns = Array(repeating: GridItem(.flexible(), spacing: 0), count: 7)
         // The weekday header and the day cells are indexed from zero, so sharing one
@@ -369,11 +377,11 @@ struct TeamView: View {
                 }
             }
             LazyVGrid(columns: columns, spacing: 0) {
-                ForEach(Array(viewModel.days.enumerated()), id: \.offset) { index, day in
+                ForEach(Array(visibleCalendarIndices), id: \.self) { index in
                     TeamCalendarDayCell(
-                        day: day,
+                        day: viewModel.days[index],
                         currentMonth: viewModel.month,
-                        duty: viewModel.duty(for: day),
+                        duty: viewModel.duty(for: viewModel.days[index]),
                         holidays: viewModel.holidays.indices.contains(index)
                             ? viewModel.holidays[index]
                             : [],

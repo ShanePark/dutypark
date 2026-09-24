@@ -1089,6 +1089,16 @@ struct CalendarView: View {
     // between them keeps its room; the group is still 44pt tall.
     private static let quickDutyStepWidth: CGFloat = 36
 
+    private var visibleCalendarDays: [CalendarDayContent] {
+        let cells = model.days.map(\.cell)
+        let visibleRange = CalendarDateSupport.visibleCellRange(
+            year: model.year,
+            month: model.month,
+            cells: cells
+        )
+        return Array(model.days[visibleRange])
+    }
+
     private var calendarGrid: some View {
         VStack(spacing: 0) {
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 0), count: 7), spacing: 0) {
@@ -1098,7 +1108,7 @@ struct CalendarView: View {
                         weekdayIndex: index
                     )
                 }
-                ForEach(Array(model.days.enumerated()), id: \.element.id) { index, day in
+                ForEach(Array(visibleCalendarDays.enumerated()), id: \.element.id) { index, day in
                     let opensDetail = CalendarDayOpenPolicy.opensDetail(day, canEdit: model.canEdit)
                     let cell = CalendarDayCell(
                         day: day,

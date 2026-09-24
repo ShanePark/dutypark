@@ -54,6 +54,50 @@ final class CalendarFeatureTests: XCTestCase {
         )
     }
 
+    func testCalendarMonthGridTrimsUnusedWeeksFromTheServerCalendar() throws {
+        let fixtures: [(year: Int, month: Int, weekCount: Int, firstDay: String, lastDay: String)] = [
+            (2026, 2, 4, "2026-02-01", "2026-02-28"),
+            (2026, 9, 5, "2026-08-30", "2026-10-03"),
+            (2026, 8, 6, "2026-07-26", "2026-09-05")
+        ]
+
+        for fixture in fixtures {
+            let cells = try serverCalendarCells(year: fixture.year, month: fixture.month)
+            let range = CalendarDateSupport.visibleCellRange(
+                year: fixture.year,
+                month: fixture.month,
+                cells: cells
+            )
+
+            XCTAssertEqual(cells.count, 42)
+            XCTAssertEqual(
+                CalendarDateSupport.visibleWeekCount(year: fixture.year, month: fixture.month, cells: cells),
+                fixture.weekCount
+            )
+            XCTAssertEqual(range.count, fixture.weekCount * 7)
+            XCTAssertEqual(cells[range.lowerBound].date.rawValue, fixture.firstDay)
+            XCTAssertEqual(cells[range.upperBound - 1].date.rawValue, fixture.lastDay)
+        }
+    }
+
+    private func serverCalendarCells(year: Int, month: Int) throws -> [CalendarCell] {
+        let calendar = CalendarDateSupport.calendar
+        let firstDay = try XCTUnwrap(calendar.date(from: DateComponents(year: year, month: month, day: 1)))
+        let weekdayOffset = (calendar.component(.weekday, from: firstDay) - calendar.firstWeekday + 7) % 7
+        let paddingBefore = weekdayOffset == 0 ? 7 : weekdayOffset
+        let gridStart = try XCTUnwrap(calendar.date(byAdding: .day, value: -paddingBefore, to: firstDay))
+        let serverDays = try (0..<42).map { offset -> TeamDayDTO in
+            let date = try XCTUnwrap(calendar.date(byAdding: .day, value: offset, to: gridStart))
+            let components = calendar.dateComponents([.year, .month, .day], from: date)
+            return TeamDayDTO(
+                year: try XCTUnwrap(components.year),
+                month: try XCTUnwrap(components.month),
+                day: try XCTUnwrap(components.day)
+            )
+        }
+        return CalendarDateSupport.cells(year: year, month: month, serverDays: serverDays)
+    }
+
     func testCalendarScheduleTimeMatchesTheWebCalendarPolicy() {
         let start = LocalDateTimeValue(rawValue: "2026-08-20T12:40:00")
         let end = LocalDateTimeValue(rawValue: "2026-08-20T13:30:00")

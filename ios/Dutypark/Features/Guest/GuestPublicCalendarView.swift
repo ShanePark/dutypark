@@ -283,6 +283,16 @@ struct GuestPublicCalendarView: View {
         }
     }
 
+    private var visibleCalendarDays: [GuestCalendarDay] {
+        let cells = model.days.map(\.cell)
+        let visibleRange = CalendarDateSupport.visibleCellRange(
+            year: model.year,
+            month: model.month,
+            cells: cells
+        )
+        return Array(model.days[visibleRange])
+    }
+
     private var calendarGrid: some View {
         LazyVGrid(
             columns: Array(repeating: GridItem(.flexible(), spacing: 1), count: 7),
@@ -294,7 +304,7 @@ struct GuestPublicCalendarView: View {
                     .foregroundStyle(weekday == "sun" ? DPColor.danger : DPColor.textSecondary)
                     .frame(maxWidth: .infinity, minHeight: 30)
             }
-            ForEach(Array(model.days.enumerated()), id: \.element.id) { index, day in
+            ForEach(Array(visibleCalendarDays.enumerated()), id: \.element.id) { index, day in
                 GuestCalendarDayCell(day: day, weekday: index % 7)
                     .onTapGesture {
                         DPHapticCenter.shared.emit(.routine)

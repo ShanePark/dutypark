@@ -33,6 +33,48 @@ nonisolated enum CalendarDateSupport {
         }
     }
 
+    /// The API and cache keep six Sunday-first rows. Some months that begin on Sunday have a
+    /// complete previous week at the front of that data, so derive the displayed slice from
+    /// the actual dates instead of rebuilding the grid from the month alone.
+    static func visibleCellRange(year: Int, month: Int, cells: [CalendarCell]) -> Range<Int> {
+        let firstMonthCell = cells.firstIndex { $0.year == year && $0.month == month }
+        let lastMonthCell = cells.lastIndex { $0.year == year && $0.month == month }
+        return visibleCellRange(
+            cellCount: cells.count,
+            firstMonthCell: firstMonthCell,
+            lastMonthCell: lastMonthCell
+        )
+    }
+
+    static func visibleCellRange(year: Int, month: Int, serverDays: [TeamDayDTO]) -> Range<Int> {
+        let firstMonthDay = serverDays.firstIndex { $0.year == year && $0.month == month }
+        let lastMonthDay = serverDays.lastIndex { $0.year == year && $0.month == month }
+        return visibleCellRange(
+            cellCount: serverDays.count,
+            firstMonthCell: firstMonthDay,
+            lastMonthCell: lastMonthDay
+        )
+    }
+
+    static func visibleWeekCount(year: Int, month: Int, cells: [CalendarCell]) -> Int {
+        visibleCellRange(year: year, month: month, cells: cells).count / 7
+    }
+
+    private static func visibleCellRange(
+        cellCount: Int,
+        firstMonthCell: Int?,
+        lastMonthCell: Int?
+    ) -> Range<Int> {
+        guard cellCount == 42,
+              let firstMonthCell,
+              let lastMonthCell
+        else { return 0..<cellCount }
+
+        let firstVisibleCell = firstMonthCell - firstMonthCell % 7
+        let endOfLastVisibleWeek = min(((lastMonthCell / 7) + 1) * 7, cellCount)
+        return firstVisibleCell..<endOfLastVisibleWeek
+    }
+
     static func date(from value: DateOnly) -> Date? {
         let parts = value.rawValue.split(separator: "-").compactMap { Int($0) }
         guard parts.count == 3 else { return nil }
