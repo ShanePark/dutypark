@@ -42,9 +42,9 @@
       "entries": {
         "pr-426": {
           "title": "문의 동시성 CI 테스트 안정화",
-          "summary": "느린 CI 실행 환경에서 문의 동시성 테스트가 시간 초과되지 않도록 대기 한도를 조정했습니다.",
+          "summary": "느린 CI 실행에서도 문의 동시성 테스트가 끝날 수 있도록 전체 요청에 공유 기한을 적용했습니다.",
           "changes": [
-            "동시 문의 테스트의 전체 완료 제한을 15초에서 60초로 늘렸습니다."
+            "각 Future에 적용되던 15초 대기 제한을 모든 요청이 공유하는 60초 완료 기한으로 바꿨습니다."
           ]
         },
         "pr-425": {
@@ -2348,9 +2348,9 @@
       "entries": {
         "pr-426": {
           "title": "Stabilize inquiry concurrency CI test",
-          "summary": "Adjust the wait limit so the inquiry concurrency test can finish under slower CI scheduling.",
+          "summary": "Use one shared deadline for all requests so the inquiry concurrency test can finish under slower CI scheduling.",
           "changes": [
-            "Increase the shared deadline for concurrent inquiry test requests from 15 to 60 seconds."
+            "Replace each Future's 15-second timeout with one 60-second deadline shared by all concurrent requests."
           ]
         },
         "pr-425": {
