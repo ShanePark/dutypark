@@ -40,6 +40,13 @@
         }
       },
       "entries": {
+        "pr-426": {
+          "title": "문의 동시성 CI 테스트 안정화",
+          "summary": "느린 CI 실행에서도 문의 동시성 테스트가 끝날 수 있도록 전체 요청에 공유 기한을 적용했습니다.",
+          "changes": [
+            "각 Future에 적용되던 15초 대기 제한을 모든 요청이 공유하는 60초 완료 기한으로 바꿨습니다."
+          ]
+        },
         "pr-425": {
           "title": "캘린더·위젯과 모바일 근무 관리 개선",
           "summary": "캘린더와 위젯을 다듬고 모바일 근무 종류 관리와 웹 양식의 미저장 변경 확인을 개선했으며, 백엔드 진단과 첨부파일 테스트도 보강했습니다.",
@@ -2339,6 +2346,13 @@
         }
       },
       "entries": {
+        "pr-426": {
+          "title": "Stabilize inquiry concurrency CI test",
+          "summary": "Use one shared deadline for all requests so the inquiry concurrency test can finish under slower CI scheduling.",
+          "changes": [
+            "Replace each Future's 15-second timeout with one 60-second deadline shared by all concurrent requests."
+          ]
+        },
         "pr-425": {
           "title": "Calendar, widget, and mobile duty management improvements",
           "summary": "Refine calendar and widget behavior, make duty types easier to manage on mobile, and protect web form edits with unsaved-change prompts. Backend diagnostics and attachment tests are also improved.",
@@ -4601,6 +4615,17 @@
     }
   },
   "items": [
+    {
+      "id": "pr-426",
+      "version": "2026.09.25.02",
+      "date": "2026-09-25",
+      "pr": 426,
+      "url": "https://github.com/ShanePark/dutypark/pull/426",
+      "category": "maintenance",
+      "areas": [
+        "infra"
+      ]
+    },
     {
       "id": "pr-425",
       "version": "2026.09.25",

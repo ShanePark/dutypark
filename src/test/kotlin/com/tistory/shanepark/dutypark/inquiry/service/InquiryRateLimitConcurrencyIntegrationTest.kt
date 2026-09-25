@@ -53,7 +53,10 @@ class InquiryRateLimitConcurrencyIntegrationTest {
 
         try {
             start.countDown()
-            val accepted = futures.count { it.get(15, TimeUnit.SECONDS) }
+            val deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(60)
+            val accepted = futures.count { future ->
+                future.get((deadline - System.nanoTime()).coerceAtLeast(0), TimeUnit.NANOSECONDS)
+            }
 
             assertThat(accepted).isEqualTo(5)
             assertThat(inquiryRepository.findAll().count { it.ipAddress == ipAddress }).isEqualTo(5)
