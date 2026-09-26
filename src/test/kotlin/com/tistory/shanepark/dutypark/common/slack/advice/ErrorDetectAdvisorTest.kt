@@ -7,8 +7,11 @@ import net.gpedro.integrations.slack.SlackAttachment
 import net.gpedro.integrations.slack.SlackException
 import net.gpedro.integrations.slack.SlackField
 import net.gpedro.integrations.slack.SlackMessage
+import org.apache.catalina.connector.ClientAbortException
+import org.apache.coyote.CloseNowException
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
+import org.junit.jupiter.api.Timeout
 import org.junit.jupiter.api.assertDoesNotThrow
 import org.junit.jupiter.api.assertThrows
 import org.mockito.kotlin.argumentCaptor
@@ -24,7 +27,8 @@ import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException
 import org.springframework.web.context.request.async.AsyncRequestNotUsableException
 import org.springframework.web.servlet.HandlerMapping
-import org.apache.catalina.connector.ClientAbortException
+import java.io.IOException
+import java.util.concurrent.TimeUnit
 
 class ErrorDetectAdvisorTest {
 
@@ -139,6 +143,7 @@ class ErrorDetectAdvisorTest {
                 "submitted-secret",
             )
         assertThat(event.throwableProxy).isNull()
+        assertThat(findField(captureSlackMessage(), "Error Type")).isEqualTo("HttpMessageNotWritableException")
     }
 
     @Test
@@ -210,6 +215,61 @@ class ErrorDetectAdvisorTest {
     }
 
     @Test
+    fun `handleException skips wrapped response connection failures`() {
+        val request = MockHttpServletRequest()
+        val ioFailure = IOException("socket closed")
+        val wrappedExceptions = listOf(
+            IllegalStateException(
+                "response conversion failed",
+                AsyncRequestNotUsableException("response is unusable", ClientAbortException(ioFailure)),
+            ),
+            ClientAbortException(ioFailure),
+            CloseNowException("connection closed"),
+        )
+        val logger = LoggerFactory.getLogger(ErrorDetectAdvisor::class.java)
+            as ch.qos.logback.classic.Logger
+        val appender = ListAppender<ILoggingEvent>().apply { start() }
+        logger.addAppender(appender)
+
+        try {
+            wrappedExceptions.forEach { connectionFailure ->
+                val exception = HttpMessageNotWritableException("response write failed", connectionFailure)
+                assertDoesNotThrow { advisor.handleException(request, exception) }
+            }
+        } finally {
+            logger.detachAppender(appender)
+        }
+
+        verifyNoInteractions(slackNotifier)
+        assertThat(appender.list).isEmpty()
+    }
+
+    @Test
+    @Timeout(value = 2, unit = TimeUnit.SECONDS)
+    fun `handleException logs and notifies for cyclic non-connection cause chain`() {
+        val request = MockHttpServletRequest()
+        val exception = HttpMessageNotWritableException("write failed", CyclicCauseException())
+        val logger = LoggerFactory.getLogger(ErrorDetectAdvisor::class.java)
+            as ch.qos.logback.classic.Logger
+        val appender = ListAppender<ILoggingEvent>().apply { start() }
+        logger.addAppender(appender)
+
+        try {
+            assertThrows<HttpMessageNotWritableException> {
+                advisor.handleException(request, exception)
+            }
+        } finally {
+            logger.detachAppender(appender)
+        }
+
+        assertThat(findField(captureSlackMessage(), "Error Type")).isEqualTo("HttpMessageNotWritableException")
+        assertThat(appender.list).hasSize(1)
+        assertThat(appender.list.single().formattedMessage)
+            .contains("HttpMessageNotWritableException", "CyclicCauseException")
+            .doesNotContain("write failed", "cyclic-cause-private-message")
+    }
+
+    @Test
     fun `handleMethodArgumentTypeMismatch returns 400 and does not notify`() {
         val mismatchException = MethodArgumentTypeMismatchException(
             "NaN",
@@ -236,6 +296,11 @@ class ErrorDetectAdvisorTest {
         request.addParameter("q", "value")
         request.setContent(body.toByteArray())
         return request
+    }
+
+    private class CyclicCauseException : RuntimeException("cyclic-cause-private-message") {
+        override val cause: Throwable
+            get() = this
     }
 
     private fun captureSlackMessage(): SlackMessage {
