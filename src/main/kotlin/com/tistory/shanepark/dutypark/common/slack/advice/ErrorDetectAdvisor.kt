@@ -18,6 +18,7 @@ import org.springframework.web.context.request.async.AsyncRequestNotUsableExcept
 import org.springframework.web.servlet.HandlerMapping
 import org.springframework.web.servlet.resource.NoResourceFoundException
 import java.util.Collections
+import java.util.IdentityHashMap
 
 @ControllerAdvice
 class ErrorDetectAdvisor(
@@ -29,12 +30,13 @@ class ErrorDetectAdvisor(
         private const val MAX_EXCEPTION_CAUSE_DEPTH = 8
         private const val MAX_STACK_TRACE_FRAMES = 32
 
-        private val NOT_NOTIFY_EXCEPTIONS: Set<Class<out Exception>> = setOf(
-            NoResourceFoundException::class.java,
+        private val CONNECTION_TERMINATION_EXCEPTIONS: Set<Class<out Exception>> = setOf(
             ClientAbortException::class.java,
             CloseNowException::class.java,
             AsyncRequestNotUsableException::class.java
         )
+        private val NOT_NOTIFY_EXCEPTIONS: Set<Class<out Exception>> =
+            CONNECTION_TERMINATION_EXCEPTIONS + NoResourceFoundException::class.java
     }
 
     @ExceptionHandler(HttpRequestMethodNotSupportedException::class)
@@ -105,7 +107,12 @@ class ErrorDetectAdvisor(
     private fun exceptionType(e: Exception): String = e.javaClass.simpleName.ifEmpty { e.javaClass.name }
 
     private fun isNotNotify(e: Exception): Boolean {
-        return NOT_NOTIFY_EXCEPTIONS.any { exceptionType -> exceptionType.isInstance(e) }
+        if (NOT_NOTIFY_EXCEPTIONS.any { exceptionType -> exceptionType.isInstance(e) }) {
+            return true
+        }
+        return causeChain(e).drop(1).any { cause ->
+            CONNECTION_TERMINATION_EXCEPTIONS.any { exceptionType -> exceptionType.isInstance(cause) }
+        }
     }
 
     private fun pathPattern(req: HttpServletRequest): String =
@@ -113,9 +120,7 @@ class ErrorDetectAdvisor(
 
     /** Stack frames and exception types aid diagnosis without logging potentially sensitive exception messages. */
     private fun exceptionTrace(exception: Throwable): String = buildString {
-        var current: Throwable? = exception
-        var depth = 0
-        while (current != null && depth < MAX_EXCEPTION_CAUSE_DEPTH) {
+        causeChain(exception).take(MAX_EXCEPTION_CAUSE_DEPTH).forEachIndexed { depth, current ->
             if (depth > 0) append("\nCaused by: ")
             append(current.javaClass.name)
 
@@ -126,9 +131,15 @@ class ErrorDetectAdvisor(
             if (frames.size > MAX_STACK_TRACE_FRAMES) {
                 append("\n\t... ").append(frames.size - MAX_STACK_TRACE_FRAMES).append(" more")
             }
+        }
+    }
 
+    private fun causeChain(exception: Throwable): Sequence<Throwable> = sequence {
+        val seen = Collections.newSetFromMap(IdentityHashMap<Throwable, Boolean>())
+        var current: Throwable? = exception
+        while (current != null && seen.add(current)) {
+            yield(current)
             current = current.cause
-            depth++
         }
     }
 

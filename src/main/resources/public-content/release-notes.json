@@ -40,6 +40,14 @@
         }
       },
       "entries": {
+        "pr-427": {
+          "title": "클라이언트 연결 종료 오류 알림 노이즈 감소",
+          "summary": "응답 전송 중 클라이언트 연결이 종료되어 발생하는 불필요한 오류 로그와 Slack 알림을 줄였습니다.",
+          "changes": [
+            "다른 예외에 감싸진 경우에도 연결 종료를 감지해 해당 오류 로그와 Slack 알림을 생략합니다.",
+            "그 밖의 응답 전송 오류는 기존처럼 로그와 Slack 알림을 유지합니다."
+          ]
+        },
         "pr-426": {
           "title": "문의 동시성 CI 테스트 안정화",
           "summary": "느린 CI 실행에서도 문의 동시성 테스트가 끝날 수 있도록 전체 요청에 공유 기한을 적용했습니다.",
@@ -2346,6 +2354,14 @@
         }
       },
       "entries": {
+        "pr-427": {
+          "title": "Reduce noise from client disconnect error alerts",
+          "summary": "Suppress unnecessary error logs and Slack alerts when a client connection closes during a response write.",
+          "changes": [
+            "Detect connection termination even when wrapped by another exception, and suppress the resulting log and Slack alert.",
+            "Keep logging and Slack alerts for other response-write failures."
+          ]
+        },
         "pr-426": {
           "title": "Stabilize inquiry concurrency CI test",
           "summary": "Use one shared deadline for all requests so the inquiry concurrency test can finish under slower CI scheduling.",
@@ -4615,6 +4631,17 @@
     }
   },
   "items": [
+    {
+      "id": "pr-427",
+      "version": "2026.09.27",
+      "date": "2026-09-27",
+      "pr": 427,
+      "url": "https://github.com/ShanePark/dutypark/pull/427",
+      "category": "fix",
+      "areas": [
+        "infra"
+      ]
+    },
     {
       "id": "pr-426",
       "version": "2026.09.25.02",
