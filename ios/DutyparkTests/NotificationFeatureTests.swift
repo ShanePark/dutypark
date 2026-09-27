@@ -391,6 +391,73 @@ struct NotificationFeatureTests {
     }
 
     @Test
+    func notificationRelativeDatesUseOneLocalizedUnitAndPastOrFutureSuffix() throws {
+        let now = try #require(ISO8601DateFormatter().date(from: "2026-08-12T09:51:00Z"))
+        let dayAndHours = 16 * 24 * 60 * 60 + 5 * 60 * 60
+
+        #expect(NotificationPresentation.relativeTime(
+            now,
+            now: now,
+            locale: Locale(identifier: "ko")
+        ) == "1초 전")
+        #expect(NotificationPresentation.relativeTime(
+            now.addingTimeInterval(TimeInterval(-dayAndHours)),
+            now: now,
+            locale: Locale(identifier: "ko")
+        ) == "16일 전")
+        #expect(NotificationPresentation.relativeTime(
+            now.addingTimeInterval(TimeInterval(-dayAndHours)),
+            now: now,
+            locale: Locale(identifier: "en")
+        ) == "16 days ago")
+        #expect(NotificationPresentation.relativeTime(
+            now.addingTimeInterval(-16 * 60),
+            now: now,
+            locale: Locale(identifier: "ko")
+        ) == "16분 전")
+        #expect(NotificationPresentation.relativeTime(
+            now.addingTimeInterval(-89),
+            now: now,
+            locale: Locale(identifier: "ko")
+        ) == "1분 전")
+        #expect(NotificationPresentation.relativeTime(
+            now.addingTimeInterval(-90),
+            now: now,
+            locale: Locale(identifier: "ko")
+        ) == "2분 전")
+        #expect(NotificationPresentation.relativeTime(
+            now.addingTimeInterval(-5 * 60 * 60),
+            now: now,
+            locale: Locale(identifier: "en")
+        ) == "5 hours ago")
+        #expect(NotificationPresentation.relativeTime(
+            now.addingTimeInterval(-21 * 60 * 60),
+            now: now,
+            locale: Locale(identifier: "en")
+        ) == "21 hours ago")
+        #expect(NotificationPresentation.relativeTime(
+            now.addingTimeInterval(-22 * 60 * 60),
+            now: now,
+            locale: Locale(identifier: "ko")
+        ) == "1일 전")
+        #expect(NotificationPresentation.relativeTime(
+            now.addingTimeInterval(-36 * 60 * 60),
+            now: now,
+            locale: Locale(identifier: "ko")
+        ) == "2일 전")
+        #expect(NotificationPresentation.relativeTime(
+            now.addingTimeInterval(TimeInterval(dayAndHours)),
+            now: now,
+            locale: Locale(identifier: "ko")
+        ) == "16일 후")
+        #expect(NotificationPresentation.relativeTime(
+            now.addingTimeInterval(TimeInterval(dayAndHours)),
+            now: now,
+            locale: Locale(identifier: "en")
+        ) == "in 16 days")
+    }
+
+    @Test
     func convertsAPNsDeviceTokenToLowercaseHex() {
         #expect(APNsRegistrationManager.hexString(for: Data([0x00, 0x7F, 0xA4, 0xFF])) == "007fa4ff")
     }

@@ -1524,7 +1524,7 @@ private struct NotificationDropdownRow: View {
                         .lineLimit(1)
 
                     if let date = NotificationPresentation.date(from: notification.createdAt) {
-                        Text(date, style: .relative)
+                        NotificationRelativeTimeText(date: date)
                             .font(DPTypography.caption)
                             .foregroundStyle(DPColor.textMuted)
                     }

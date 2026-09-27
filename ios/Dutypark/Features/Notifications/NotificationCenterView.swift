@@ -379,15 +379,17 @@ private struct NotificationRow: View {
                             .lineLimit(2)
 
                         if let date = NotificationPresentation.date(from: notification.createdAt) {
-                            HStack(spacing: DPSpacing.small) {
-                                Text(date, style: .relative)
-                                Text("(\(NotificationPresentation.absoluteDate(date, locale: locale)))")
+                            HStack {
+                                NotificationRelativeTimeText(date: date)
+                                Spacer(minLength: DPSpacing.small)
+                                Text(NotificationPresentation.absoluteDate(date, locale: locale))
                                     .opacity(0.7)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.8)
+                                    .frame(maxWidth: .infinity, alignment: .trailing)
                             }
                             .font(DPTypography.caption)
                             .foregroundStyle(DPColor.textMuted)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.8)
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)

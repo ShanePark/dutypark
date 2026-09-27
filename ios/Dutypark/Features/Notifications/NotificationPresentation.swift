@@ -1,4 +1,4 @@
-import Foundation
+import SwiftUI
 
 nonisolated enum NotificationRoute: Equatable, Hashable, Sendable {
     case friends
@@ -137,6 +137,58 @@ nonisolated enum NotificationPresentation {
         return formatter.date(from: value.rawValue)
     }
 
+    /// Formats the same single-unit relative time used by the web notification list.
+    static func relativeTime(
+        _ date: Date,
+        now: Date = .now,
+        locale: Locale = AppLocalization.locale
+    ) -> String {
+        let supportedLocale = AppLocalization.supportedLocale(
+            languageCode: locale.identifier,
+            preferredLanguages: []
+        )
+        let formatter = RelativeDateTimeFormatter()
+        formatter.locale = supportedLocale
+        formatter.unitsStyle = .full
+        formatter.dateTimeStyle = .numeric
+
+        let interval = abs(date.timeIntervalSince(now))
+        let direction = date <= now ? -1 : 1
+        let seconds = Int(interval.rounded())
+        let minutes = Int((interval / 60).rounded())
+        let hours = Int((interval / 3_600).rounded())
+        let days = Int((interval / 86_400).rounded())
+        let months = Int((interval / (86_400 * 30.44)).rounded())
+        let years = Int((interval / (86_400 * 365.25)).rounded())
+
+        let components: DateComponents
+        if seconds <= 44 {
+            components = DateComponents(second: direction * max(1, seconds))
+        } else if seconds <= 89 {
+            components = DateComponents(minute: direction)
+        } else if minutes <= 44 {
+            components = DateComponents(minute: direction * max(1, minutes))
+        } else if minutes <= 89 {
+            components = DateComponents(hour: direction)
+        } else if hours <= 21 {
+            components = DateComponents(hour: direction * max(1, hours))
+        } else if hours <= 35 {
+            components = DateComponents(day: direction)
+        } else if days <= 25 {
+            components = DateComponents(day: direction * max(1, days))
+        } else if days <= 45 {
+            components = DateComponents(month: direction)
+        } else if months <= 10 {
+            components = DateComponents(month: direction * max(1, months))
+        } else if months <= 17 {
+            components = DateComponents(year: direction)
+        } else {
+            components = DateComponents(year: direction * max(1, years))
+        }
+
+        return formatter.localizedString(from: components)
+    }
+
     /// Matches the locale-specific absolute timestamp shown beside relative time on the web list.
     static func absoluteDate(
         _ date: Date,
@@ -202,5 +254,19 @@ nonisolated enum NotificationPresentation {
 
     private static func localized(_ key: String, locale: Locale) -> String {
         AppLocalization.string(key, table: "Notifications", locale: locale)
+    }
+}
+
+struct NotificationRelativeTimeText: View {
+    let date: Date
+
+    @Environment(\.locale) private var locale
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 30)) { context in
+            Text(NotificationPresentation.relativeTime(date, now: context.date, locale: locale))
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+        }
     }
 }
