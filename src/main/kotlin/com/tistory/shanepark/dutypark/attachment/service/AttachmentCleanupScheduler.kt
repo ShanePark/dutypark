@@ -11,7 +11,6 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.time.Clock
 import java.time.Instant
-import java.nio.file.Files
 
 @Service
 class AttachmentCleanupScheduler(
@@ -37,8 +36,7 @@ class AttachmentCleanupScheduler(
 
         var attachmentsRemoved = 0
         var attachmentFailures = 0
-        var directoriesRemoved = 0
-        var directoriesAlreadyAbsent = 0
+        var directoryCleanupsCompleted = 0
         var directoryFailures = 0
         val sessionResults = mutableListOf<Map<String, Any?>>()
 
@@ -77,33 +75,10 @@ class AttachmentCleanupScheduler(
             }
 
             val tempDir = pathResolver.resolveTemporaryDirectory(sessionId)
-            var directoryResult = "removed"
+            var directoryResult = "completed"
             runCatching {
-                val existed = Files.exists(tempDir)
                 fileSystemService.deleteDirectory(tempDir)
-                if (!existed) {
-                    directoryResult = "already_absent"
-                    directoriesAlreadyAbsent++
-                } else if (Files.exists(tempDir)) {
-                    directoryResult = "still_exists"
-                    directoryFailures++
-                    log.warn(
-                        "Expired-session temporary directory remains after cleanup: {}",
-                        auditContext(
-                            mapOf(
-                                "actor" to systemActor,
-                                "sessionId" to sessionId,
-                                "contextType" to session.contextType,
-                                "contextId" to session.targetContextId,
-                                "ownerId" to session.ownerId,
-                                "ownerName" to null,
-                                "path" to tempDir.toString()
-                            )
-                        )
-                    )
-                } else {
-                    directoriesRemoved++
-                }
+                directoryCleanupsCompleted++
             }.onFailure { ex ->
                 directoryResult = "failed"
                 directoryFailures++
@@ -177,13 +152,11 @@ class AttachmentCleanupScheduler(
             actor = systemActor,
             target = mapOf("type" to "AttachmentCleanupJob", "runAt" to now),
             details = mapOf(
-                "expiredSessionIds" to expiredSessions.map { it.id },
                 "expiredSessionCount" to expiredSessions.size,
                 "sessionDeletionSucceeded" to !sessionDeleteFailed,
                 "attachmentsRemoved" to attachmentsRemoved,
                 "attachmentFailures" to attachmentFailures,
-                "temporaryDirectoriesRemoved" to directoriesRemoved,
-                "temporaryDirectoriesAlreadyAbsent" to directoriesAlreadyAbsent,
+                "temporaryDirectoryCleanupsCompleted" to directoryCleanupsCompleted,
                 "temporaryDirectoryFailures" to directoryFailures
             )
         )

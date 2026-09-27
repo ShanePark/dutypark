@@ -19,8 +19,10 @@ import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.Mock
 import org.mockito.Mockito.`when`
+import org.mockito.Mockito.never
 import org.mockito.Mockito.verify
 import org.mockito.Mockito.verifyNoInteractions
+import org.mockito.kotlin.spy
 import org.mockito.kotlin.doThrow
 import org.mockito.kotlin.whenever
 import org.mockito.junit.jupiter.MockitoExtension
@@ -287,9 +289,10 @@ class DutyTypeServiceTest {
 
     @Test
     fun `swap dutyType position`() {
-        val dutyType1 = DutyType("type1", 0, team, "#f0f8ff")
+        val teamSpy = spy(team)
+        val dutyType1 = DutyType("type1", 0, teamSpy, "#f0f8ff")
         ReflectionTestUtils.setField(dutyType1, "id", 1L)
-        val dutyType2 = DutyType("type2", 1, team, "#f0f8ff")
+        val dutyType2 = DutyType("type2", 1, teamSpy, "#f0f8ff")
         ReflectionTestUtils.setField(dutyType2, "id", 2L)
 
         val position1 = dutyType1.position
@@ -302,6 +305,7 @@ class DutyTypeServiceTest {
 
         assertThat(dutyType1.position).isEqualTo(position2)
         assertThat(dutyType2.position).isEqualTo(position1)
+        verify(teamSpy, never()).name
     }
 
     @Test

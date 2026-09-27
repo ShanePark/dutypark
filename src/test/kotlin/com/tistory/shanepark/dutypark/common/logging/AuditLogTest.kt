@@ -42,7 +42,6 @@ class AuditLogTest {
             name = "Shane",
             isImpersonating = true,
             originalMemberId = 2,
-            originalMemberName = "Manager",
         ).toAuditActor()
 
         val logged = logger.auditChangeAfterCommit(
@@ -55,7 +54,8 @@ class AuditLogTest {
 
         assertThat(logged).isTrue()
         val message = appender.list.single().formattedMessage
-        assertThat(message).contains("\"originalMemberId\":2,\"originalMemberName\":\"Manager\"")
+        assertThat(message).contains("\"originalMemberId\":2")
+        assertThat(message).doesNotContain("originalMemberName", "Manager")
         assertThat(message).contains("\"teamName\":\"Ward\"")
         assertThat(message).contains("\"name\":{\"before\":\"DAY\",\"after\":\"NIGHT\"}")
         assertThat(message).contains("\"abbreviation\":{\"before\":\"D\",\"after\":null}")
@@ -75,6 +75,57 @@ class AuditLogTest {
 
         assertThat(logged).isFalse()
         assertThat(appender.list).isEmpty()
+    }
+
+    @Test
+    fun `disabled audit event does not serialize into after commit callback`() {
+        val previousLevel = logger.level
+        logger.level = Level.WARN
+        TransactionSynchronizationManager.initSynchronization()
+        try {
+            logger.auditEventAfterCommit(
+                event = "attachment.deleted",
+                actor = AuditActor(5, "Shane"),
+                target = mapOf("type" to "Attachment", "id" to 13),
+            )
+
+            assertThat(TransactionSynchronizationManager.getSynchronizations()).isEmpty()
+            assertThat(appender.list).isEmpty()
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization()
+            logger.level = previousLevel
+        }
+    }
+
+    @Test
+    fun `disabled audit change preserves changed result without registering callback`() {
+        val previousLevel = logger.level
+        logger.level = Level.WARN
+        TransactionSynchronizationManager.initSynchronization()
+        try {
+            val changed = logger.auditChangeAfterCommit(
+                event = "duty_type.updated",
+                actor = AuditActor(5, "Shane"),
+                target = mapOf("type" to "DutyType", "id" to 37),
+                before = mapOf("name" to "DAY"),
+                after = mapOf("name" to "NIGHT"),
+            )
+            val unchanged = logger.auditChangeAfterCommit(
+                event = "duty_type.updated",
+                actor = AuditActor(5, "Shane"),
+                target = mapOf("type" to "DutyType", "id" to 37),
+                before = mapOf("name" to "NIGHT"),
+                after = mapOf("name" to "NIGHT"),
+            )
+
+            assertThat(changed).isTrue()
+            assertThat(unchanged).isFalse()
+            assertThat(TransactionSynchronizationManager.getSynchronizations()).isEmpty()
+            assertThat(appender.list).isEmpty()
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization()
+            logger.level = previousLevel
+        }
     }
 
     @Test

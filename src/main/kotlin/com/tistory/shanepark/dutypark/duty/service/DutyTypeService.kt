@@ -148,7 +148,6 @@ class DutyTypeService(
             target = mapOf(
                 "type" to "DutyTypePositionSwap",
                 "teamId" to dutyType1.team.id,
-                "teamName" to dutyType1.team.name,
                 "firstDutyTypeId" to dutyType1.id,
                 "firstDutyTypeName" to dutyType1.name,
                 "secondDutyTypeId" to dutyType2.id,

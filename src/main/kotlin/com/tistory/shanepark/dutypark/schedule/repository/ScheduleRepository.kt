@@ -171,9 +171,6 @@ interface ScheduleRepository : JpaRepository<Schedule, UUID> {
         visibilities: Collection<Visibility>
     ): List<Schedule>
 
-    @Query("SELECT s FROM Schedule s JOIN FETCH s.member WHERE s.id = :id")
-    fun findWithMemberById(id: UUID): Optional<Schedule>
-
     fun findAllByParsingTimeStatus(parsingTimeStatus: ParsingTimeStatus): List<Schedule>
 
     @Modifying

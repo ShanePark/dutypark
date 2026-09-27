@@ -33,7 +33,6 @@ import org.springframework.http.HttpHeaders
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.security.crypto.password.PasswordEncoder
 import org.slf4j.LoggerFactory
-import tools.jackson.databind.json.JsonMapper
 import java.time.Instant
 import java.time.LocalDateTime
 import java.util.Optional
@@ -139,7 +138,7 @@ class AuthServiceTest {
     }
 
     @Test
-    fun `authenticateToken resolves the original impersonating actor name only for impersonation`() {
+    fun `authenticateToken preserves original actor id without looking up its name`() {
         val loginMember = LoginMember(
             id = 9L,
             name = "Impersonated Target",
@@ -148,17 +147,16 @@ class AuthServiceTest {
             sessionId = 80L,
         )
         val targetMember = memberWithId(9L).also { it.name = "Impersonated Target" }
-        val originalMember = memberWithId(8L).also { it.name = "Original Manager" }
         whenever(jwtProvider.parseToken("impersonation-token")).thenReturn(loginMember)
         whenever(refreshTokenService.isSessionActive(80L, 8L)).thenReturn(true)
         whenever(memberRepository.findById(9L)).thenReturn(Optional.of(targetMember))
-        whenever(memberRepository.findById(8L)).thenReturn(Optional.of(originalMember))
 
         val resolved = authService.authenticateToken("impersonation-token")
 
-        assertThat(resolved?.originalMemberName).isEqualTo("Original Manager")
-        assertThat(loginMember.originalMemberName).isNull()
-        verify(memberRepository).findById(8L)
+        assertThat(resolved).isEqualTo(loginMember)
+        assertThat(resolved?.originalMemberId).isEqualTo(8L)
+        verify(memberRepository).findById(9L)
+        verify(memberRepository, never()).findById(8L)
     }
 
     @Test
@@ -169,52 +167,9 @@ class AuthServiceTest {
 
         val resolved = authService.authenticateToken("ordinary-token")
 
-        assertThat(resolved?.originalMemberName).isNull()
+        assertThat(resolved).isEqualTo(loginMember)
         verify(memberRepository).findById(1L)
         verify(memberRepository, never()).findById(2L)
-    }
-
-    @Test
-    fun `authenticateToken remains valid when optional original actor lookup fails`() {
-        val loginMember = LoginMember(
-            id = 9L,
-            name = "Impersonated Target",
-            isImpersonating = true,
-            originalMemberId = 8L,
-            sessionId = 80L,
-        )
-        whenever(jwtProvider.parseToken("impersonation-token")).thenReturn(loginMember)
-        whenever(refreshTokenService.isSessionActive(80L, 8L)).thenReturn(true)
-        whenever(memberRepository.findById(9L)).thenReturn(
-            Optional.of(memberWithId(9L).also { it.name = "Impersonated Target" })
-        )
-        whenever(memberRepository.findById(8L)).thenThrow(IllegalStateException("private database diagnostic"))
-
-        var resolved: LoginMember? = null
-        val logs = captureAuthLogs {
-            resolved = authService.authenticateToken("impersonation-token")
-        }
-
-        assertThat(resolved?.id).isEqualTo(9L)
-        assertThat(resolved?.originalMemberName).isNull()
-        assertThat(logs)
-            .contains("actor_name_lookup_failed", "Impersonated Target", "originalActorId", "8", "IllegalStateException")
-            .doesNotContain("private database diagnostic", "@duty.park")
-    }
-
-    @Test
-    fun `original actor name stays out of LoginMember JSON`() {
-        val loginMember = LoginMember(
-            id = 9L,
-            name = "Impersonated Target",
-            isImpersonating = true,
-            originalMemberId = 8L,
-            originalMemberName = "Original Manager",
-        )
-
-        val json = JsonMapper.builder().build().writeValueAsString(loginMember)
-
-        assertThat(json).doesNotContain("originalMemberName", "Original Manager")
     }
 
     @Test

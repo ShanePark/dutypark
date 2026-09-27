@@ -162,7 +162,6 @@ class TeamService(
         val previousAdmin = team.admin
         val before = mapOf(
             "adminId" to previousAdmin?.id,
-            "adminName" to previousAdmin?.name,
         )
         val member = memberId?.let { memberRepository.findById(memberId).orElseThrow() }
 
@@ -177,10 +176,7 @@ class TeamService(
             actor = actor?.toAuditActor(),
             target = teamAuditTarget(team),
             before = before,
-            after = mapOf(
-                "adminId" to team.admin?.id,
-                "adminName" to team.admin?.name,
-            ),
+            after = mapOf("adminId" to team.admin?.id),
         )
     }
 
@@ -215,9 +211,8 @@ class TeamService(
         if (!team.isManager(memberId)) {
             return
         }
-        val wasTeamManager = team.managers.any { it.member.id == memberId }
-        team.removeManager(member)
-        if (wasTeamManager) {
+        val removed = team.removeManager(member)
+        if (removed) {
             log.auditChangeAfterCommit(
                 event = "team.manager_removed",
                 actor = actor?.toAuditActor(),

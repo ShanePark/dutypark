@@ -39,7 +39,6 @@ class ImageThumbnailGenerator : ThumbnailGenerator {
                         "thumbnailPath" to targetPath.toString(),
                         "outputFormat" to "png",
                         "maxSide" to maxSide,
-                        "outputSize" to targetPath.toFile().length()
                     )
                 )
             )

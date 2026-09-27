@@ -149,7 +149,7 @@ class TodoServiceTest {
     @Test
     fun `editTodo should throw exception if not owner`() {
         val todoId = UUID.randomUUID()
-        val otherMember = otherMember()
+        val otherMember = spy(otherMember())
         val todo = Todo(otherMember, "old title", "old content", 1)
 
         `when`(memberRepository.findById(loginMember.id)).thenReturn(Optional.of(member))
@@ -159,6 +159,7 @@ class TodoServiceTest {
             todoService.editTodo(loginMember, todoId, "new title", "new content")
         }
         assertEquals("Todo is not yours", exception.message)
+        verify(otherMember, never()).name
     }
 
     @Test
@@ -836,7 +837,7 @@ class TodoServiceTest {
     @Test
     fun `changeStatus should throw exception if not owner`() {
         val todoId = UUID.randomUUID()
-        val otherMember = otherMember()
+        val otherMember = spy(otherMember())
         val todo = createTodo("task", TodoStatus.TODO, 0)
         ReflectionTestUtils.setField(todo, "id", todoId)
         ReflectionTestUtils.setField(todo, "member", otherMember)
@@ -848,6 +849,7 @@ class TodoServiceTest {
             todoService.changeStatus(loginMember, todoId, TodoStatus.IN_PROGRESS, listOf(todoId))
         }
         assertEquals("Todo status change is not allowed", exception.message)
+        verify(otherMember, never()).name
     }
 
     @Test

@@ -201,12 +201,4 @@ class ScheduleRepositoryTest {
         assertThat(schedule1.tags.map { it.member.id }).containsExactlyInAnyOrder(taggedMemberId, otherTagMemberId)
     }
 
-    @Test
-    fun `findWithMemberById loads owner for detached schedule processing`() {
-        val schedule = repository.findWithMemberById(schedule1Id).orElseThrow()
-
-        entityManager.clear()
-
-        assertThat(schedule.member.name).isEqualTo("owner1")
-    }
 }

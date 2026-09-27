@@ -105,12 +105,12 @@ class Team(
         this.managers.add(TeamManager(team = this, member = member))
     }
 
-    fun removeManager(member: Member) {
+    fun removeManager(member: Member): Boolean {
         if (member.team?.id != id)
             throw IllegalArgumentException("Member does not belong to this team")
         if (!isManager(member.id ?: -1))
             throw IllegalArgumentException("Member is not a manager")
-        this.managers.removeIf { it.member == member }
+        return this.managers.removeIf { it.member == member }
     }
 
     override fun toString(): String {

@@ -58,7 +58,7 @@ class RefreshTokenService(
     }
 
     fun deleteRefreshToken(loginMember: LoginMember, id: Long, currentToken: String? = null): Boolean {
-        val refreshToken = refreshTokenRepository.findWithMemberById(id) ?: run {
+        val refreshToken = refreshTokenRepository.findById(id).orElse(null) ?: run {
             log.warn(
                 "Refresh token deletion denied {}",
                 auditContext(
@@ -79,7 +79,7 @@ class RefreshTokenService(
                     linkedMapOf(
                         "event" to "auth.refresh_token.delete_denied",
                         "actor" to loginMember.toAuditActor(),
-                        "target" to memberTarget(refreshToken.member) + ("refreshTokenId" to id),
+                        "target" to mapOf("type" to "Member", "id" to refreshToken.member.id, "refreshTokenId" to id),
                         "reason" to "not_token_owner",
                     )
                 ),
@@ -91,7 +91,7 @@ class RefreshTokenService(
         log.auditEventAfterCommit(
             event = "auth.refresh_token.deleted",
             actor = loginMember.toAuditActor(),
-            target = memberTarget(refreshToken.member),
+            target = mapOf("type" to "Member", "id" to refreshToken.member.id),
             details = mapOf(
                 "refreshTokenId" to id,
                 "currentSession" to deletedCurrentToken,

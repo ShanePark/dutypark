@@ -73,10 +73,10 @@ class ScheduleTimeParsingWorkerTest {
     }
 
     @Test
-    fun `time parsing result log includes schedule and owner context without splitting lines`() {
+    fun `time parsing result log includes schedule and owner id without loading member name`() {
         val schedule = createSchedule(content = "비공개 진료\n3시", memberName = "로그 사용자")
         val task = ScheduleTimeParsingTask(schedule)
-        `when`(scheduleRepository.findWithMemberById(schedule.id)).thenReturn(Optional.of(schedule))
+        `when`(scheduleRepository.findById(schedule.id)).thenReturn(Optional.of(schedule))
         `when`(scheduleTimeParsingService.parseScheduleTime(anyOrNull())).thenReturn(
             ScheduleTimeParsingResponse(
                 result = true,
@@ -97,12 +97,13 @@ class ScheduleTimeParsingWorkerTest {
             appender.stop()
         }
 
+        verify(scheduleRepository).findById(schedule.id)
         val logMessage = appender.list.single().formattedMessage
         assertThat(logMessage)
             .contains(schedule.id.toString())
             .contains(schedule.parsingGeneration.toString())
             .contains("\"memberId\":1")
-            .contains("\"memberName\":\"로그 사용자\"")
+            .doesNotContain("\"memberName\"")
             .contains("비공개 진료\\n3시")
             .contains("진료 후\\n확인")
             .doesNotContain("\n")
@@ -112,7 +113,7 @@ class ScheduleTimeParsingWorkerTest {
     fun `if schedule is already deleted, never run`() {
         val schedule = createSchedule()
         val task = ScheduleTimeParsingTask(schedule)
-        `when`(scheduleRepository.findWithMemberById(schedule.id)).thenReturn(Optional.empty())
+        `when`(scheduleRepository.findById(schedule.id)).thenReturn(Optional.empty())
 
         val aiAttempted = worker.run(task)
 
@@ -132,7 +133,7 @@ class ScheduleTimeParsingWorkerTest {
             startDateTime = schedule.startDateTime,
             endDateTime = schedule.endDateTime,
         )
-        `when`(scheduleRepository.findWithMemberById(schedule.id)).thenReturn(Optional.of(schedule))
+        `when`(scheduleRepository.findById(schedule.id)).thenReturn(Optional.of(schedule))
 
         val aiAttempted = worker.run(task)
 
@@ -152,7 +153,7 @@ class ScheduleTimeParsingWorkerTest {
     fun `terminal parsing states ignore duplicate tasks`(status: ParsingTimeStatus) {
         val schedule = createSchedule().apply { parsingTimeStatus = status }
         val task = ScheduleTimeParsingTask(schedule)
-        `when`(scheduleRepository.findWithMemberById(schedule.id)).thenReturn(Optional.of(schedule))
+        `when`(scheduleRepository.findById(schedule.id)).thenReturn(Optional.of(schedule))
 
         val aiAttempted = worker.run(task)
 
@@ -173,7 +174,7 @@ class ScheduleTimeParsingWorkerTest {
             contentWithoutTime = ""
         }
         val task = ScheduleTimeParsingTask(schedule)
-        `when`(scheduleRepository.findWithMemberById(schedule.id)).thenReturn(Optional.of(schedule))
+        `when`(scheduleRepository.findById(schedule.id)).thenReturn(Optional.of(schedule))
 
         worker.run(task)
 
@@ -188,7 +189,7 @@ class ScheduleTimeParsingWorkerTest {
     fun `if fail to parse, it changes status into FAILED`() {
         val schedule = createSchedule()
         val task = ScheduleTimeParsingTask(schedule)
-        `when`(scheduleRepository.findWithMemberById(schedule.id)).thenReturn(Optional.of(schedule))
+        `when`(scheduleRepository.findById(schedule.id)).thenReturn(Optional.of(schedule))
         val response = ScheduleTimeParsingResponse(
             result = false,
         )
@@ -205,7 +206,7 @@ class ScheduleTimeParsingWorkerTest {
     fun `withdrawn owner consent immediately before parsing changes status to SKIP without external request`() {
         val schedule = createSchedule(content = "3시 회의")
         val task = ScheduleTimeParsingTask(schedule)
-        whenever(scheduleRepository.findWithMemberById(schedule.id)).thenReturn(Optional.of(schedule))
+        whenever(scheduleRepository.findById(schedule.id)).thenReturn(Optional.of(schedule))
         whenever(aiScheduleParsingConsentService.hasCurrentConsent(schedule.member.id!!)).thenReturn(false)
 
         val aiAttempted = worker.run(task)
@@ -225,7 +226,7 @@ class ScheduleTimeParsingWorkerTest {
     fun `withdrawn owner consent takes priority over no time indicator pre-filter`() {
         val schedule = createSchedule(content = "점심 먹기")
         val task = ScheduleTimeParsingTask(schedule)
-        whenever(scheduleRepository.findWithMemberById(schedule.id)).thenReturn(Optional.of(schedule))
+        whenever(scheduleRepository.findById(schedule.id)).thenReturn(Optional.of(schedule))
         whenever(aiScheduleParsingConsentService.hasCurrentConsent(schedule.member.id!!)).thenReturn(false)
 
         val aiAttempted = worker.run(task)
@@ -245,7 +246,7 @@ class ScheduleTimeParsingWorkerTest {
     fun `If there is no time information, it changes status into NO_TIME_INFO`() {
         val schedule = createSchedule()
         val task = ScheduleTimeParsingTask(schedule)
-        `when`(scheduleRepository.findWithMemberById(schedule.id)).thenReturn(Optional.of(schedule))
+        `when`(scheduleRepository.findById(schedule.id)).thenReturn(Optional.of(schedule))
         val response = ScheduleTimeParsingResponse(
             result = true,
             hasTime = false,
@@ -263,7 +264,7 @@ class ScheduleTimeParsingWorkerTest {
     fun `When parsing is successful, it updates the schedule`() {
         val schedule = createSchedule()
         val task = ScheduleTimeParsingTask(schedule)
-        `when`(scheduleRepository.findWithMemberById(schedule.id)).thenReturn(Optional.of(schedule))
+        `when`(scheduleRepository.findById(schedule.id)).thenReturn(Optional.of(schedule))
 
         val newStart = LocalDateTime.of(2025, 3, 3, 9, 0)
         val newEnd = LocalDateTime.of(2025, 3, 3, 10, 0)
@@ -296,7 +297,7 @@ class ScheduleTimeParsingWorkerTest {
             parsingTimeStatus = ParsingTimeStatus.WAIT
         }
         val task = ScheduleTimeParsingTask(schedule)
-        `when`(scheduleRepository.findWithMemberById(schedule.id)).thenReturn(Optional.of(schedule))
+        `when`(scheduleRepository.findById(schedule.id)).thenReturn(Optional.of(schedule))
         `when`(scheduleTimeParsingService.parseScheduleTime(anyOrNull())).thenReturn(
             ScheduleTimeParsingResponse(
                 result = true,
@@ -325,7 +326,7 @@ class ScheduleTimeParsingWorkerTest {
             parsingTimeStatus = ParsingTimeStatus.WAIT
         }
         val task = ScheduleTimeParsingTask(schedule)
-        `when`(scheduleRepository.findWithMemberById(schedule.id)).thenReturn(Optional.of(schedule))
+        `when`(scheduleRepository.findById(schedule.id)).thenReturn(Optional.of(schedule))
 
         val aiAttempted = worker.run(task)
 
@@ -349,7 +350,7 @@ class ScheduleTimeParsingWorkerTest {
             contentWithoutTime = ""
             parsingTimeStatus = ParsingTimeStatus.WAIT
         }
-        `when`(scheduleRepository.findWithMemberById(scheduleId)).thenReturn(Optional.of(parsingSchedule))
+        `when`(scheduleRepository.findById(scheduleId)).thenReturn(Optional.of(parsingSchedule))
         whenever(
             scheduleRepository.applyParsingResultIfCurrent(
                 any(), any(), any(), any(), any(), any(), any()
@@ -379,7 +380,7 @@ class ScheduleTimeParsingWorkerTest {
     fun `stale parsing exception does not mark current generation failed or notify Slack`() {
         val schedule = createSchedule(content = "3시 회의")
         val task = ScheduleTimeParsingTask(schedule)
-        `when`(scheduleRepository.findWithMemberById(schedule.id)).thenReturn(Optional.of(schedule))
+        `when`(scheduleRepository.findById(schedule.id)).thenReturn(Optional.of(schedule))
         `when`(scheduleTimeParsingService.parseScheduleTime(anyOrNull()))
             .thenThrow(RuntimeException("old request failed"))
         whenever(
@@ -396,7 +397,7 @@ class ScheduleTimeParsingWorkerTest {
     fun `interrupted AI call leaves schedule waiting for startup recovery`() {
         val schedule = createSchedule(content = "3시 회의")
         val task = ScheduleTimeParsingTask(schedule)
-        `when`(scheduleRepository.findWithMemberById(schedule.id)).thenReturn(Optional.of(schedule))
+        `when`(scheduleRepository.findById(schedule.id)).thenReturn(Optional.of(schedule))
         `when`(scheduleTimeParsingService.parseScheduleTime(anyOrNull()))
             .thenThrow(RuntimeException(InterruptedException("application shutdown")))
 
@@ -416,7 +417,7 @@ class ScheduleTimeParsingWorkerTest {
     fun `duplicate task does not overwrite PARSED status after the first task succeeds`() {
         val schedule = createSchedule(content = "3시 회의")
         val task = ScheduleTimeParsingTask(schedule)
-        `when`(scheduleRepository.findWithMemberById(schedule.id)).thenReturn(Optional.of(schedule))
+        `when`(scheduleRepository.findById(schedule.id)).thenReturn(Optional.of(schedule))
         `when`(scheduleTimeParsingService.parseScheduleTime(anyOrNull())).thenReturn(
             ScheduleTimeParsingResponse(
                 result = true,
@@ -441,7 +442,7 @@ class ScheduleTimeParsingWorkerTest {
     fun `duplicate task does not parse again after NO_TIME_INFO`() {
         val schedule = createSchedule(content = "프로젝트 2026")
         val task = ScheduleTimeParsingTask(schedule)
-        `when`(scheduleRepository.findWithMemberById(schedule.id)).thenReturn(Optional.of(schedule))
+        `when`(scheduleRepository.findById(schedule.id)).thenReturn(Optional.of(schedule))
         `when`(scheduleTimeParsingService.parseScheduleTime(anyOrNull())).thenReturn(
             ScheduleTimeParsingResponse(result = true, hasTime = false)
         )
@@ -458,7 +459,7 @@ class ScheduleTimeParsingWorkerTest {
     fun `duplicate task does not parse midnight result again`() {
         val schedule = createSchedule(content = "0시 회의")
         val task = ScheduleTimeParsingTask(schedule)
-        `when`(scheduleRepository.findWithMemberById(schedule.id)).thenReturn(Optional.of(schedule))
+        `when`(scheduleRepository.findById(schedule.id)).thenReturn(Optional.of(schedule))
         `when`(scheduleTimeParsingService.parseScheduleTime(anyOrNull())).thenReturn(
             ScheduleTimeParsingResponse(
                 result = true,
@@ -483,7 +484,7 @@ class ScheduleTimeParsingWorkerTest {
     fun `special midnight text reaches time parsing service`() {
         val schedule = createSchedule(content = "자정 회의")
         val task = ScheduleTimeParsingTask(schedule)
-        `when`(scheduleRepository.findWithMemberById(schedule.id)).thenReturn(Optional.of(schedule))
+        `when`(scheduleRepository.findById(schedule.id)).thenReturn(Optional.of(schedule))
         `when`(scheduleTimeParsingService.parseScheduleTime(anyOrNull())).thenReturn(
             ScheduleTimeParsingResponse(
                 result = true,
@@ -504,7 +505,7 @@ class ScheduleTimeParsingWorkerTest {
     fun `parsed end before start is rejected`() {
         val schedule = createSchedule(content = "18시부터 10시 회의")
         val task = ScheduleTimeParsingTask(schedule)
-        `when`(scheduleRepository.findWithMemberById(schedule.id)).thenReturn(Optional.of(schedule))
+        `when`(scheduleRepository.findById(schedule.id)).thenReturn(Optional.of(schedule))
         `when`(scheduleTimeParsingService.parseScheduleTime(anyOrNull())).thenReturn(
             ScheduleTimeParsingResponse(
                 result = true,
@@ -526,7 +527,7 @@ class ScheduleTimeParsingWorkerTest {
     fun `parsed date outside requested date is rejected`() {
         val schedule = createSchedule(content = "10시 회의")
         val task = ScheduleTimeParsingTask(schedule)
-        `when`(scheduleRepository.findWithMemberById(schedule.id)).thenReturn(Optional.of(schedule))
+        `when`(scheduleRepository.findById(schedule.id)).thenReturn(Optional.of(schedule))
         `when`(scheduleTimeParsingService.parseScheduleTime(anyOrNull())).thenReturn(
             ScheduleTimeParsingResponse(
                 result = true,
@@ -548,7 +549,7 @@ class ScheduleTimeParsingWorkerTest {
     fun `if date is not parsable and DateTimeParseException is thrown, it changes status into FAILED`() {
         val schedule = createSchedule()
         val task = ScheduleTimeParsingTask(schedule)
-        `when`(scheduleRepository.findWithMemberById(schedule.id)).thenReturn(Optional.of(schedule))
+        `when`(scheduleRepository.findById(schedule.id)).thenReturn(Optional.of(schedule))
 
         `when`(scheduleTimeParsingService.parseScheduleTime(anyOrNull())).thenReturn(
             ScheduleTimeParsingResponse(
@@ -569,7 +570,7 @@ class ScheduleTimeParsingWorkerTest {
     fun `if content has no time-related text, status changes to NO_TIME_INFO`() {
         val schedule = createSchedule(content = "점심 먹기")
         val task = ScheduleTimeParsingTask(schedule)
-        `when`(scheduleRepository.findWithMemberById(schedule.id)).thenReturn(Optional.of(schedule))
+        `when`(scheduleRepository.findById(schedule.id)).thenReturn(Optional.of(schedule))
 
         val aiAttempted = worker.run(task)
 
@@ -583,7 +584,7 @@ class ScheduleTimeParsingWorkerTest {
     fun `if content has Arabic numbers, parsing should proceed`() {
         val schedule = createSchedule(content = "3시 회의")
         val task = ScheduleTimeParsingTask(schedule)
-        `when`(scheduleRepository.findWithMemberById(schedule.id)).thenReturn(Optional.of(schedule))
+        `when`(scheduleRepository.findById(schedule.id)).thenReturn(Optional.of(schedule))
 
         val response = ScheduleTimeParsingResponse(
             result = true,
@@ -604,7 +605,7 @@ class ScheduleTimeParsingWorkerTest {
     fun `if content has Korean numbers, parsing should proceed`() {
         val schedule = createSchedule(content = "세시 회의")
         val task = ScheduleTimeParsingTask(schedule)
-        `when`(scheduleRepository.findWithMemberById(schedule.id)).thenReturn(Optional.of(schedule))
+        `when`(scheduleRepository.findById(schedule.id)).thenReturn(Optional.of(schedule))
 
         val response = ScheduleTimeParsingResponse(
             result = true,
@@ -625,7 +626,7 @@ class ScheduleTimeParsingWorkerTest {
     fun `if content has mixed numbers and non-time text, parsing should proceed`() {
         val schedule = createSchedule(content = "5일 여행 계획")
         val task = ScheduleTimeParsingTask(schedule)
-        `when`(scheduleRepository.findWithMemberById(schedule.id)).thenReturn(Optional.of(schedule))
+        `when`(scheduleRepository.findById(schedule.id)).thenReturn(Optional.of(schedule))
 
         val response = ScheduleTimeParsingResponse(
             result = true,
@@ -645,7 +646,7 @@ class ScheduleTimeParsingWorkerTest {
     fun `when exception is thrown during parsing, slack notification is sent`() {
         val schedule = createSchedule()
         val task = ScheduleTimeParsingTask(schedule)
-        `when`(scheduleRepository.findWithMemberById(schedule.id)).thenReturn(Optional.of(schedule))
+        `when`(scheduleRepository.findById(schedule.id)).thenReturn(Optional.of(schedule))
         `when`(scheduleTimeParsingService.parseScheduleTime(anyOrNull()))
             .thenThrow(RuntimeException("API connection failed"))
 
@@ -659,7 +660,7 @@ class ScheduleTimeParsingWorkerTest {
     fun `when parsing fails with errorMessage, slack notification is sent`() {
         val schedule = createSchedule()
         val task = ScheduleTimeParsingTask(schedule)
-        `when`(scheduleRepository.findWithMemberById(schedule.id)).thenReturn(Optional.of(schedule))
+        `when`(scheduleRepository.findById(schedule.id)).thenReturn(Optional.of(schedule))
         val response = ScheduleTimeParsingResponse(
             result = false,
             errorMessage = "LLM returned invalid format"
@@ -678,7 +679,7 @@ class ScheduleTimeParsingWorkerTest {
         val rawAiResponse = "raw-provider-response-with-private-data"
         val schedule = createSchedule(content = privateContent)
         val task = ScheduleTimeParsingTask(schedule)
-        whenever(scheduleRepository.findWithMemberById(schedule.id)).thenReturn(Optional.of(schedule))
+        whenever(scheduleRepository.findById(schedule.id)).thenReturn(Optional.of(schedule))
         whenever(scheduleTimeParsingService.parseScheduleTime(anyOrNull())).thenReturn(
             ScheduleTimeParsingResponse(
                 result = false,
@@ -704,7 +705,7 @@ class ScheduleTimeParsingWorkerTest {
     fun `when parsing fails without error info, slack notification is not sent`() {
         val schedule = createSchedule()
         val task = ScheduleTimeParsingTask(schedule)
-        `when`(scheduleRepository.findWithMemberById(schedule.id)).thenReturn(Optional.of(schedule))
+        `when`(scheduleRepository.findById(schedule.id)).thenReturn(Optional.of(schedule))
         val response = ScheduleTimeParsingResponse(
             result = false,
             errorMessage = null,

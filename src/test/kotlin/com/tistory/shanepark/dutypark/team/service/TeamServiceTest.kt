@@ -30,6 +30,7 @@ import org.mockito.kotlin.doNothing
 import org.mockito.kotlin.any
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.never
+import org.mockito.kotlin.spy
 import org.mockito.kotlin.whenever
 import org.mockito.junit.jupiter.MockitoExtension
 import org.slf4j.LoggerFactory
@@ -130,8 +131,8 @@ class TeamServiceTest {
     @Test
     fun `change team admin logs the previous and new admin identities`() {
         val team = Team("Test Team")
-        val previousAdmin = Member(name = "Previous Admin")
-        val newAdmin = Member(name = "New Admin")
+        val previousAdmin = spy(Member(name = "Previous Admin"))
+        val newAdmin = spy(Member(name = "New Admin"))
         ReflectionTestUtils.setField(team, "id", 1L)
         ReflectionTestUtils.setField(previousAdmin, "id", 2L)
         ReflectionTestUtils.setField(newAdmin, "id", 3L)
@@ -156,7 +157,10 @@ class TeamServiceTest {
 
         assertThat(appender.list).hasSize(1)
         assertThat(appender.list.single().formattedMessage)
-            .contains("Test Team", "Previous Admin", "New Admin", "2", "3", "Acting Admin", "\"originalMemberId\":12")
+            .contains("Test Team", "2", "3", "Acting Admin", "\"originalMemberId\":12")
+            .doesNotContain("Previous Admin", "New Admin", "adminName")
+        verify(previousAdmin, never()).name
+        verify(newAdmin, never()).name
     }
 
     @Test

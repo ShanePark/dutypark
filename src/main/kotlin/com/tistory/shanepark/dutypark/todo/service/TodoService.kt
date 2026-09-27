@@ -405,7 +405,6 @@ class TodoService(
                         "actor" to loginMember.toAuditActor(),
                         "todoId" to todoEntity.id,
                         "ownerId" to todoEntity.member.id,
-                        "ownerName" to todoEntity.member.name,
                         "operation" to operation,
                     )
                 ),
@@ -431,7 +430,6 @@ class TodoService(
                     "actor" to loginMember.toAuditActor(),
                     "todoId" to todoEntity.id,
                     "ownerId" to todoEntity.member.id,
-                    "ownerName" to todoEntity.member.name,
                     "currentStatus" to todoEntity.status,
                     "requestedStatus" to requestedStatus,
                     "operation" to operation,

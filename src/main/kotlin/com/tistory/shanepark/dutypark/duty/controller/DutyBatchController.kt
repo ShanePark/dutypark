@@ -43,7 +43,6 @@ class DutyBatchController(
         if (dutyService.canEdit(loginMember = loginMember, memberId = memberId).not())
             throw AuthException("duty.edit.forbidden")
 
-        val member = memberService.findPreviewById(memberId)
         val dutyBatchTemplate = memberService.getDutyBatchTemplate(memberId)
             ?: throw IllegalArgumentException("dutyBatch.template.required")
 
@@ -51,10 +50,7 @@ class DutyBatchController(
         val yearMonth = YearMonth.of(year, month)
         val target = mapOf(
             "type" to "Member",
-            "memberId" to member.id,
-            "memberName" to member.name,
-            "teamId" to member.teamId,
-            "teamName" to member.team,
+            "memberId" to memberId,
         )
         val uploadDetails = mapOf(
             "template" to dutyBatchTemplate.name,

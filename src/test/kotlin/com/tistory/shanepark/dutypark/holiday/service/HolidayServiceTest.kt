@@ -18,6 +18,7 @@ import org.mockito.Mock
 import org.mockito.Mockito.`when`
 import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
+import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.slf4j.LoggerFactory
 import java.time.Clock
@@ -68,10 +69,11 @@ class HolidayServiceTest {
 
         verify(dutyRepository).deleteAutomaticByDutyDateGreaterThanEqual(LocalDate.of(2026, 7, 11))
         verify(holidayRepository).deleteAll()
+        verify(holidayRepository, never()).count()
         assertThat(appender.list).hasSize(1)
         assertThat(appender.list.single().formattedMessage)
             .contains("\"event\":\"holiday_information_reset\"", "\"name\":\"Holiday Admin\"")
-            .contains("\"holidayRecordCountBefore\":0", "\"holidayRecordCountAfter\":0")
+            .doesNotContain("holidayRecordCountBefore", "holidayRecordCountAfter")
             .contains("\"cachedHolidayYearsBefore\":[]", "\"cachedHolidayYearsAfter\":[]")
     }
 

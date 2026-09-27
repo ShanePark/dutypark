@@ -5,17 +5,12 @@ import com.tistory.shanepark.dutypark.security.domain.entity.RefreshToken
 import org.springframework.data.jpa.repository.EntityGraph
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.data.jpa.repository.Query
-import org.springframework.data.repository.query.Param
 import java.time.LocalDateTime
 
 interface RefreshTokenRepository : JpaRepository<RefreshToken, Long> {
 
     @EntityGraph(attributePaths = ["member", "member.team"])
     fun findByToken(token: String): RefreshToken?
-
-    @EntityGraph(attributePaths = ["member"])
-    @Query("select r from RefreshToken r where r.id = :id")
-    fun findWithMemberById(@Param("id") id: Long): RefreshToken?
 
     @Query("select r from RefreshToken r join fetch r.member order by r.lastUsed desc")
     fun findAllWithMemberOrderByLastUsedDesc(): List<RefreshToken>

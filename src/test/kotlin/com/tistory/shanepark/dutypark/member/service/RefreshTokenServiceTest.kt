@@ -60,7 +60,7 @@ class RefreshTokenServiceTest {
         val member = memberWithId(1L).also { it.name = "Owner Name" }
         val refreshToken = refreshTokenWithId(1L, member)
 
-        whenever(refreshTokenRepository.findWithMemberById(1L)).thenReturn(refreshToken)
+        whenever(refreshTokenRepository.findById(1L)).thenReturn(Optional.of(refreshToken))
 
         val loginMember = LoginMember(
             id = 1L,
@@ -74,10 +74,10 @@ class RefreshTokenServiceTest {
             refreshTokenService.deleteRefreshToken(loginMember, 1L)
         }
 
-        verify(refreshTokenRepository).findWithMemberById(1L)
+        verify(refreshTokenRepository).findById(1L)
         verify(refreshTokenRepository).delete(refreshToken)
-        assertThat(logs).contains("Actor Name", "Owner Name", "1", "delete")
-            .doesNotContain(member.email ?: "")
+        assertThat(logs).contains("Actor Name", "\"id\":1", "refreshTokenId", "delete")
+            .doesNotContain("Owner Name", member.email ?: "")
     }
 
     @Test
@@ -85,7 +85,7 @@ class RefreshTokenServiceTest {
         val member = memberWithId(1L).also { it.name = "Target Member" }
         val refreshToken = refreshTokenWithId(1L, member)
 
-        whenever(refreshTokenRepository.findWithMemberById(1L)).thenReturn(refreshToken)
+        whenever(refreshTokenRepository.findById(1L)).thenReturn(Optional.of(refreshToken))
 
         val loginMember = LoginMember(
             id = 2L,
@@ -99,9 +99,10 @@ class RefreshTokenServiceTest {
             refreshTokenService.deleteRefreshToken(loginMember, 1L)
         }
 
-        verify(refreshTokenRepository).findWithMemberById(1L)
+        verify(refreshTokenRepository).findById(1L)
         verify(refreshTokenRepository).delete(refreshToken)
-        assertThat(logs).contains("Admin Actor", "2", "Target Member", "1", "admin_revoked_session")
+        assertThat(logs).contains("Admin Actor", "2", "\"id\":1", "admin_revoked_session")
+            .doesNotContain("Target Member")
     }
 
     @Test
@@ -109,7 +110,7 @@ class RefreshTokenServiceTest {
         val member = memberWithId(1L).also { it.name = "Owner Name" }
         val refreshToken = refreshTokenWithId(1L, member)
 
-        whenever(refreshTokenRepository.findWithMemberById(1L)).thenReturn(refreshToken)
+        whenever(refreshTokenRepository.findById(1L)).thenReturn(Optional.of(refreshToken))
 
         val loginMember = LoginMember(
             id = 2L,
@@ -125,8 +126,9 @@ class RefreshTokenServiceTest {
             }
             assertThat(exception.message).isEqualTo("auth.refreshToken.delete.forbidden")
         }
-        verify(refreshTokenRepository).findWithMemberById(1L)
-        assertThat(logs).contains("Actor Name", "Owner Name", "2", "1", "not_token_owner")
+        verify(refreshTokenRepository).findById(1L)
+        assertThat(logs).contains("Actor Name", "\"id\":1", "2", "1", "not_token_owner")
+            .doesNotContain("Owner Name")
     }
 
     @Test

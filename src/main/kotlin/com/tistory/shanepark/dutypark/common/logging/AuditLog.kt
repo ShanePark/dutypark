@@ -13,7 +13,6 @@ data class AuditActor(
     val id: Long?,
     val name: String,
     val originalMemberId: Long? = null,
-    val originalMemberName: String? = null,
 )
 
 private val auditJsonMapper = JsonMapper.builder().build()
@@ -55,7 +54,6 @@ fun LoginMember.toAuditActor(): AuditActor = AuditActor(
     id = id,
     name = name,
     originalMemberId = originalMemberId.takeIf { isImpersonating },
-    originalMemberName = originalMemberName.takeIf { isImpersonating },
 )
 
 fun Member.toAuditActor(): AuditActor = AuditActor(id = id, name = name)
@@ -69,6 +67,8 @@ fun Logger.auditEventAfterCommit(
     target: Map<String, Any?> = emptyMap(),
     details: Map<String, Any?> = emptyMap(),
 ) {
+    if (!isInfoEnabled) return
+
     val message = auditContext(
         linkedMapOf(
             "event" to event,
@@ -89,6 +89,7 @@ fun Logger.auditChangeAfterCommit(
 ): Boolean {
     val changes = changedFields(before, after)
     if (changes.isEmpty()) return false
+    if (!isInfoEnabled) return true
 
     val message = auditContext(
         linkedMapOf(
@@ -147,7 +148,6 @@ private fun auditActorFields(actor: AuditActor): Map<String, Any?> =
     linkedMapOf<String, Any?>("id" to actor.id, "name" to actor.name).apply {
         actor.originalMemberId?.let {
             put("originalMemberId", it)
-            actor.originalMemberName?.let { name -> put("originalMemberName", name) }
         }
     }
 

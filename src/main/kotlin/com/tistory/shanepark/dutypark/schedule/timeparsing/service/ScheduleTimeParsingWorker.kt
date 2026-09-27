@@ -129,11 +129,10 @@ class ScheduleTimeParsingWorker(
         "scheduleId" to task.scheduleId,
         "parsingGeneration" to task.parsingGeneration,
         "memberId" to schedule.member.id,
-        "memberName" to schedule.member.name,
     )
 
     private fun findCurrentSchedule(task: ScheduleTimeParsingTask): Schedule? {
-        val schedule = scheduleRepository.findWithMemberById(task.scheduleId).orElse(null) ?: return null
+        val schedule = scheduleRepository.findById(task.scheduleId).orElse(null) ?: return null
         if (task.isExpired(schedule) || schedule.parsingTimeStatus != WAIT) return null
         return schedule
     }

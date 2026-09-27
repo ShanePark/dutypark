@@ -49,7 +49,7 @@ import java.security.MessageDigest
 import java.util.Base64
 import org.mockito.kotlin.any
 import org.mockito.kotlin.anyOrNull
-import org.mockito.kotlin.doThrow
+import org.mockito.kotlin.clearInvocations
 import org.mockito.kotlin.never
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
@@ -354,11 +354,12 @@ class MobileOAuthControllerTest : DutyparkIntegrationTest() {
     }
 
     @Test
-    fun `mobile oauth provider failure logs authenticated member name for link flow`() {
+    fun `mobile oauth provider failure logs authenticated member id without member lookup`() {
         val verifier = "j".repeat(43)
         val state = URI.create(
             authorize("KAKAO", verifier, purpose = "LINK", bearer = getJwt(TestData.member))
         ).queryParam("state")
+        clearInvocations(memberRepositorySpy)
 
         val events = captureMobileOAuthLogs {
             mockMvc.perform(
@@ -373,36 +374,10 @@ class MobileOAuthControllerTest : DutyparkIntegrationTest() {
         val message = events.single().formattedMessage
         assertThat(message)
             .contains("\"authenticatedMemberId\":${TestData.member.id}")
-            .contains("\"authenticatedMemberName\":\"${TestData.member.name}\"")
+            .doesNotContain("\"authenticatedMemberName\"", "\"memberLookupExceptionType\"")
             .doesNotContain(state, "provider-failure", "provider failed", TestData.member.email)
         assertThat(events.single().throwableProxy).isNull()
-    }
-
-    @Test
-    fun `mobile oauth provider failure survives optional actor lookup failure`() {
-        val verifier = "k".repeat(43)
-        val state = URI.create(
-            authorize("KAKAO", verifier, purpose = "LINK", bearer = getJwt(TestData.member))
-        ).queryParam("state")
-        doThrow(IllegalStateException("private directory diagnostic"))
-            .whenever(memberRepositorySpy).findById(TestData.member.id!!)
-
-        val events = captureMobileOAuthLogs {
-            mockMvc.perform(
-                get("/api/auth/mobile/oauth/callback/kakao")
-                    .param("code", "provider-failure")
-                    .param("state", state)
-            )
-                .andExpect(status().isFound)
-                .andExpect(header().string(HttpHeaders.LOCATION, "dutypark://oauth/callback?error=provider_failed"))
-        }
-
-        val message = events.single().formattedMessage
-        assertThat(message)
-            .contains("\"authenticatedMemberId\":${TestData.member.id}")
-            .contains("\"memberLookupExceptionType\":\"IllegalStateException\"")
-            .doesNotContain(state, "provider-failure", "provider failed", "private directory diagnostic", TestData.member.email)
-        assertThat(events.single().throwableProxy).isNull()
+        verify(memberRepositorySpy, never()).findById(any())
     }
 
     private fun captureMobileOAuthLogs(block: () -> Unit): List<ILoggingEvent> {

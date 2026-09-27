@@ -53,7 +53,6 @@ class HolidayService(
     @Transactional(timeout = 20)
     fun resetHolidayInfo(actor: AuditActor? = null) {
         val resetFrom = LocalDate.now(clock.withZone(SEOUL))
-        val holidayCount = holidayRepository.count()
         val cachedYears = holidayMap.keys.sorted()
         dutyRepository.deleteAutomaticByDutyDateGreaterThanEqual(resetFrom)
         holidayRepository.deleteAll()
@@ -63,8 +62,6 @@ class HolidayService(
             actor = actor,
             target = mapOf("generatedDutiesFrom" to resetFrom),
             details = mapOf(
-                "holidayRecordCountBefore" to holidayCount,
-                "holidayRecordCountAfter" to 0,
                 "cachedHolidayYearsBefore" to cachedYears,
                 "cachedHolidayYearsAfter" to emptyList<Int>(),
             ),

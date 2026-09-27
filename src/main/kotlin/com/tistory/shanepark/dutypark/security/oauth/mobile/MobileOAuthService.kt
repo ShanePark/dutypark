@@ -131,13 +131,6 @@ class MobileOAuthService(
                 redirectUri = providerCallbackUri(provider),
             )
         } catch (e: Exception) {
-            val (authenticatedMemberName, memberLookupExceptionType) = claim.authenticatedMemberId?.let { memberId ->
-                try {
-                    memberRepository.findById(memberId).orElse(null)?.name to null
-                } catch (lookupException: RuntimeException) {
-                    null to lookupException.javaClass.simpleName
-                }
-            } ?: (null to null)
             log.warn(
                 "Mobile OAuth provider call failed: {}",
                 auditContext(
@@ -146,8 +139,6 @@ class MobileOAuthService(
                         "flow" to "mobile_callback",
                         "transactionId" to claim.transactionId,
                         "authenticatedMemberId" to claim.authenticatedMemberId,
-                        "authenticatedMemberName" to authenticatedMemberName,
-                        "memberLookupExceptionType" to memberLookupExceptionType,
                         "provider" to claim.provider,
                         "purpose" to claim.purpose,
                         "clientId" to when (claim.provider) {

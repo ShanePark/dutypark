@@ -35,8 +35,6 @@ class AuthService(
     private val jwtConfig: JwtConfig,
     private val loginAttemptService: LoginAttemptService,
     private val entityManager: EntityManager,
-    private val impersonationActorNameResolver: ImpersonationActorNameResolver =
-        ImpersonationActorNameResolver(memberRepository),
 ) {
     private val log = logger()
 
@@ -79,31 +77,7 @@ class AuthService(
             AuthException("auth.account.inactive")
         }
         ensureActive(member)
-        if (!loginMember.isImpersonating) return loginMember
-
-        val originalMemberName = loginMember.originalMemberName ?: loginMember.originalMemberId?.let { originalMemberId ->
-            try {
-                impersonationActorNameResolver.findName(originalMemberId)
-            } catch (exception: RuntimeException) {
-                log.warn(
-                    "Impersonation actor name lookup failed {}",
-                    auditContext(
-                        mapOf(
-                            "event" to "auth.impersonation.actor_name_lookup_failed",
-                            "actor" to loginMember.toAuditActor(),
-                            "target" to mapOf("type" to "Member", "id" to member.id, "name" to member.name),
-                            "details" to mapOf(
-                                "originalActorId" to originalMemberId,
-                                "errorType" to exception.javaClass.simpleName,
-                            ),
-                            "reason" to "identity_enrichment_failed",
-                        )
-                    ),
-                )
-                null
-            }
-        }
-        return loginMember.copy(originalMemberName = originalMemberName)
+        return loginMember
     }
 
     @Transactional(readOnly = true)
