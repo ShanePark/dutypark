@@ -12,6 +12,7 @@ import com.tistory.shanepark.dutypark.inquiry.domain.entity.Inquiry
 import com.tistory.shanepark.dutypark.inquiry.service.InquirySlackNotifier
 import com.tistory.shanepark.dutypark.inquiry.service.InquiryService
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
+import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.report.domain.dto.CreateReportRequest
 import com.tistory.shanepark.dutypark.report.domain.dto.ReportCreateResult
 import com.tistory.shanepark.dutypark.report.domain.entity.ContentReport
@@ -48,6 +49,7 @@ class SlackSubmissionPrivacyTest {
             Long::class.javaObjectType,
             CreateInquiryRequest::class.java,
             String::class.java,
+            LoginMember::class.java,
         )
         val createReport = ReportService::class.java.getMethod(
             "createReport",

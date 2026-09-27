@@ -13,6 +13,8 @@ data class LoginMember(
     val originalMemberId: Long? = null,
     @get:JsonIgnore
     val sessionId: Long? = null,
+    @get:JsonIgnore
+    val originalMemberName: String? = null,
 ) {
     companion object {
         const val ATTR_NAME: String = "loginMember"

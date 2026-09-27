@@ -7,6 +7,8 @@ import com.tistory.shanepark.dutypark.attachment.service.FileSystemService
 import com.tistory.shanepark.dutypark.attachment.service.StoragePathResolver
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.common.logging.AuditActor
+import com.tistory.shanepark.dutypark.common.logging.toAuditActor
 import com.tistory.shanepark.dutypark.consent.service.AiScheduleParsingConsentService
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
@@ -247,18 +249,20 @@ class ScheduleService(
         val schedule = scheduleRepository.findById(id).orElseThrow()
         schedulePermissionService.checkScheduleWriteAuthority(schedule = schedule, loginMember = loginMember)
 
-        deleteScheduleInternal(schedule)
+        deleteScheduleInternal(schedule, actor = loginMember.toAuditActor())
     }
 
     /**
      * Deletes a schedule with its attachments and context directory, without any permission check.
      * Callers are responsible for authorization (admin moderation calls this directly).
      */
-    internal fun deleteScheduleInternal(schedule: Schedule) {
+    internal fun deleteScheduleInternal(schedule: Schedule, actor: AuditActor? = null) {
         val contextId = schedule.id.toString()
         val attachments = attachmentRepository.findAllByContextTypeAndContextId(SCHEDULE, contextId)
 
-        attachments.forEach(attachmentService::deleteAttachment)
+        attachments.forEach { attachment ->
+            attachmentService.deleteAttachment(attachment, actor = actor, reason = "schedule_deleted")
+        }
 
         val contextDir = pathResolver.resolveContextDirectory(SCHEDULE, contextId)
         fileSystemService.deleteDirectory(contextDir)

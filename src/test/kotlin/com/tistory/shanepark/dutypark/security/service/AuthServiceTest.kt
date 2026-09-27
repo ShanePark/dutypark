@@ -1,5 +1,8 @@
 package com.tistory.shanepark.dutypark.security.service
 
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.read.ListAppender
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.common.exceptions.RateLimitException
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
@@ -21,6 +24,7 @@ import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
 import org.mockito.Mockito.never
 import org.mockito.kotlin.any
+import org.mockito.kotlin.anyOrNull
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
@@ -28,6 +32,8 @@ import org.mockito.kotlin.whenever
 import org.springframework.http.HttpHeaders
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.security.crypto.password.PasswordEncoder
+import org.slf4j.LoggerFactory
+import tools.jackson.databind.json.JsonMapper
 import java.time.Instant
 import java.time.LocalDateTime
 import java.util.Optional
@@ -133,50 +139,177 @@ class AuthServiceTest {
     }
 
     @Test
-    fun `changePassword updates password when current matches`() {
-        val member = memberWithId(1L)
-        member.password = "encoded-old"
-        whenever(memberRepository.findById(1L)).thenReturn(Optional.of(member))
-        whenever(passwordEncoder.matches("old-pass", "encoded-old")).thenReturn(true)
-        whenever(passwordEncoder.encode("new-pass-1")).thenReturn("encoded-new")
+    fun `authenticateToken resolves the original impersonating actor name only for impersonation`() {
+        val loginMember = LoginMember(
+            id = 9L,
+            name = "Impersonated Target",
+            isImpersonating = true,
+            originalMemberId = 8L,
+            sessionId = 80L,
+        )
+        val targetMember = memberWithId(9L).also { it.name = "Impersonated Target" }
+        val originalMember = memberWithId(8L).also { it.name = "Original Manager" }
+        whenever(jwtProvider.parseToken("impersonation-token")).thenReturn(loginMember)
+        whenever(refreshTokenService.isSessionActive(80L, 8L)).thenReturn(true)
+        whenever(memberRepository.findById(9L)).thenReturn(Optional.of(targetMember))
+        whenever(memberRepository.findById(8L)).thenReturn(Optional.of(originalMember))
 
-        authService.changePassword(
-            PasswordChangeDto(memberId = 1L, currentPassword = "old-pass", newPassword = "new-pass-1")
+        val resolved = authService.authenticateToken("impersonation-token")
+
+        assertThat(resolved?.originalMemberName).isEqualTo("Original Manager")
+        assertThat(loginMember.originalMemberName).isNull()
+        verify(memberRepository).findById(8L)
+    }
+
+    @Test
+    fun `authenticateToken does not look up an original actor for ordinary members`() {
+        val loginMember = LoginMember(id = 1L, name = "Ordinary Member")
+        whenever(jwtProvider.parseToken("ordinary-token")).thenReturn(loginMember)
+        whenever(memberRepository.findById(1L)).thenReturn(Optional.of(memberWithId(1L)))
+
+        val resolved = authService.authenticateToken("ordinary-token")
+
+        assertThat(resolved?.originalMemberName).isNull()
+        verify(memberRepository).findById(1L)
+        verify(memberRepository, never()).findById(2L)
+    }
+
+    @Test
+    fun `authenticateToken remains valid when optional original actor lookup fails`() {
+        val loginMember = LoginMember(
+            id = 9L,
+            name = "Impersonated Target",
+            isImpersonating = true,
+            originalMemberId = 8L,
+            sessionId = 80L,
+        )
+        whenever(jwtProvider.parseToken("impersonation-token")).thenReturn(loginMember)
+        whenever(refreshTokenService.isSessionActive(80L, 8L)).thenReturn(true)
+        whenever(memberRepository.findById(9L)).thenReturn(
+            Optional.of(memberWithId(9L).also { it.name = "Impersonated Target" })
+        )
+        whenever(memberRepository.findById(8L)).thenThrow(IllegalStateException("private database diagnostic"))
+
+        var resolved: LoginMember? = null
+        val logs = captureAuthLogs {
+            resolved = authService.authenticateToken("impersonation-token")
+        }
+
+        assertThat(resolved?.id).isEqualTo(9L)
+        assertThat(resolved?.originalMemberName).isNull()
+        assertThat(logs)
+            .contains("actor_name_lookup_failed", "Impersonated Target", "originalActorId", "8", "IllegalStateException")
+            .doesNotContain("private database diagnostic", "@duty.park")
+    }
+
+    @Test
+    fun `original actor name stays out of LoginMember JSON`() {
+        val loginMember = LoginMember(
+            id = 9L,
+            name = "Impersonated Target",
+            isImpersonating = true,
+            originalMemberId = 8L,
+            originalMemberName = "Original Manager",
         )
 
-        assertThat(member.password).isEqualTo("encoded-new")
-        verify(refreshTokenService).revokeAllRefreshTokensByMember(member)
+        val json = JsonMapper.builder().build().writeValueAsString(loginMember)
+
+        assertThat(json).doesNotContain("originalMemberName", "Original Manager")
+    }
+
+    @Test
+    fun `changePassword updates password when current matches`() {
+        val member = memberWithId(1L).also {
+            it.name = "Target Name"
+            it.password = "stored-password-hash"
+        }
+        whenever(memberRepository.findById(1L)).thenReturn(Optional.of(member))
+        whenever(passwordEncoder.matches("current-password-secret", "stored-password-hash")).thenReturn(true)
+        whenever(passwordEncoder.encode("new-password-secret")).thenReturn("new-password-hash")
+
+        val logs = captureAuthLogs {
+            authService.changePassword(
+                PasswordChangeDto(
+                    memberId = 1L,
+                    currentPassword = "current-password-secret",
+                    newPassword = "new-password-secret",
+                )
+            )
+        }
+
+        assertThat(member.password).isEqualTo("new-password-hash")
+        assertThat(logs)
+            .contains("password", "Target Name", "1")
+            .doesNotContain(
+                "current-password-secret",
+                "new-password-secret",
+                "stored-password-hash",
+                "new-password-hash",
+                "user1@duty.park",
+            )
+        verify(refreshTokenService).revokeAllRefreshTokensByMember(member, null, "password_changed")
     }
 
     @Test
     fun `changePassword throws when current password does not match`() {
-        val member = memberWithId(1L)
-        member.password = "encoded-old"
+        val member = memberWithId(1L).also {
+            it.name = "Target Name"
+            it.password = "stored-password-hash"
+        }
         whenever(memberRepository.findById(1L)).thenReturn(Optional.of(member))
-        whenever(passwordEncoder.matches("old-pass", "encoded-old")).thenReturn(false)
+        whenever(passwordEncoder.matches("wrong-password-secret", "stored-password-hash")).thenReturn(false)
 
-        assertThrows<AuthException> {
-            authService.changePassword(
-                PasswordChangeDto(memberId = 1L, currentPassword = "old-pass", newPassword = "new-pass-1")
-            )
+        val logs = captureAuthLogs {
+            assertThrows<AuthException> {
+                authService.changePassword(
+                    PasswordChangeDto(
+                        memberId = 1L,
+                        currentPassword = "wrong-password-secret",
+                        newPassword = "new-password-secret",
+                    )
+                )
+            }
         }
 
-        verify(refreshTokenService, never()).revokeAllRefreshTokensByMember(any())
+        assertThat(logs)
+            .contains("Target Name", "1", "current_password_mismatch")
+            .doesNotContain("wrong-password-secret", "new-password-secret", "stored-password-hash")
+        verify(refreshTokenService, never()).revokeAllRefreshTokensByMember(
+            any(),
+            anyOrNull<LoginMember>(),
+            any(),
+        )
     }
 
     @Test
     fun `changePassword by admin skips current password check`() {
-        val member = memberWithId(2L)
-        member.password = "encoded-old"
+        val member = memberWithId(2L).also {
+            it.name = "Target Name"
+            it.password = "stored-password-hash"
+        }
+        val actor = LoginMember(id = 88L, email = "admin-private@example.com", name = "Admin Name")
         whenever(memberRepository.findById(2L)).thenReturn(Optional.of(member))
-        whenever(passwordEncoder.encode("new-pass-1")).thenReturn("encoded-new")
+        whenever(passwordEncoder.encode("new-password-secret")).thenReturn("new-password-hash")
 
-        authService.changePassword(
-            PasswordChangeDto(memberId = 2L, currentPassword = null, newPassword = "new-pass-1"),
-            byAdmin = true
-        )
+        val logs = captureAuthLogs {
+            authService.changePassword(
+                PasswordChangeDto(memberId = 2L, currentPassword = null, newPassword = "new-password-secret"),
+                byAdmin = true,
+                actor = actor,
+            )
+        }
 
-        assertThat(member.password).isEqualTo("encoded-new")
+        assertThat(member.password).isEqualTo("new-password-hash")
+        assertThat(logs)
+            .contains("Admin Name", "88", "Target Name", "2", "credentialChanged", "password")
+            .doesNotContain(
+                "admin-private@example.com",
+                "user2@duty.park",
+                "new-password-secret",
+                "new-password-hash",
+                "stored-password-hash",
+            )
+        verify(refreshTokenService).revokeAllRefreshTokensByMember(member, actor, "password_changed")
     }
 
     @Test
@@ -193,17 +326,22 @@ class AuthServiceTest {
 
     @Test
     fun `getTokenResponse records failed attempt on wrong password`() {
-        val member = memberWithId(3L)
+        val member = memberWithId(3L).also { it.name = "Login Target" }
         member.password = "encoded-old"
         whenever(loginAttemptService.isBlocked("127.0.0.1", "user@duty.park")).thenReturn(false)
         whenever(memberRepository.findByEmail("user@duty.park")).thenReturn(Optional.of(member))
         whenever(passwordEncoder.matches("wrong", "encoded-old")).thenReturn(false)
         val request = requestWith("127.0.0.1", "user@duty.park")
 
-        assertThrows<AuthException> {
-            authService.getTokenResponse(LoginDto("user@duty.park", "wrong"), request)
+        val logs = captureAuthLogs {
+            assertThrows<AuthException> {
+                authService.getTokenResponse(LoginDto("user@duty.park", "wrong-password-secret"), request)
+            }
         }
 
+        assertThat(logs)
+            .contains("invalid_credentials", "127.0.0.1", "/api/auth/token", "POST", "Login Target", "3")
+            .doesNotContain("user@duty.park", "wrong-password-secret", "encoded-old")
         verify(loginAttemptService).recordFailedAttempt("127.0.0.1", "user@duty.park")
         verify(loginAttemptService, never()).recordSuccessfulAttempt(any(), any())
     }
@@ -335,8 +473,8 @@ class AuthServiceTest {
 
     @Test
     fun `impersonate returns token when manager authorized`() {
-        val manager = memberWithId(8L)
-        val target = memberWithId(9L)
+        val manager = memberWithId(8L).also { it.name = "Manager Name" }
+        val target = memberWithId(9L).also { it.name = "Target Name" }
         whenever(memberRepository.findById(8L)).thenReturn(Optional.of(manager))
         whenever(memberRepository.findById(9L)).thenReturn(Optional.of(target))
         whenever(memberManagerRepository.findAllByManagerAndManaged(manager, target)).thenReturn(
@@ -344,9 +482,12 @@ class AuthServiceTest {
         )
         whenever(jwtProvider.createImpersonationToken(target, 8L, 80L)).thenReturn("imp-token")
 
-        val token = authService.impersonate(LoginMember(id = 8L, name = "manager", sessionId = 80L), 9L)
+        val logs = captureAuthLogs {
+            val token = authService.impersonate(LoginMember(id = 8L, name = "Manager Name", sessionId = 80L), 9L)
+            assertThat(token).isEqualTo("imp-token")
+        }
 
-        assertThat(token).isEqualTo("imp-token")
+        assertThat(logs).contains("Manager Name", "Target Name", "8", "9", "80")
     }
 
     @Test
@@ -374,15 +515,19 @@ class AuthServiceTest {
 
     @Test
     fun `impersonate throws when not managing target`() {
-        val manager = memberWithId(8L)
-        val target = memberWithId(9L)
+        val manager = memberWithId(8L).also { it.name = "Manager Name" }
+        val target = memberWithId(9L).also { it.name = "Target Name" }
         whenever(memberRepository.findById(8L)).thenReturn(Optional.of(manager))
         whenever(memberRepository.findById(9L)).thenReturn(Optional.of(target))
         whenever(memberManagerRepository.findAllByManagerAndManaged(manager, target)).thenReturn(emptyList())
 
-        assertThrows<AuthException> {
-            authService.impersonate(LoginMember(id = 8L, name = "manager", sessionId = 80L), 9L)
+        val logs = captureAuthLogs {
+            assertThrows<AuthException> {
+                authService.impersonate(LoginMember(id = 8L, name = "Manager Name", sessionId = 80L), 9L)
+            }
         }
+
+        assertThat(logs).contains("Manager Name", "Target Name", "8", "9", "not_managed")
     }
 
     @Test
@@ -392,6 +537,32 @@ class AuthServiceTest {
         assertThrows<AuthException> {
             authService.restore(LoginMember(id = 1L, name = "user"), null, request)
         }
+    }
+
+    @Test
+    fun `restore logs manager and impersonated member identities after restoring`() {
+        val originalMember = memberWithId(8L).also { it.name = "Manager Name" }
+        val refreshToken = RefreshToken(originalMember, futureDateTime, "127.0.0.1", "test-agent")
+        setRefreshTokenId(refreshToken, 80L)
+        whenever(memberRepository.findById(8L)).thenReturn(Optional.of(originalMember))
+        whenever(refreshTokenService.findByToken(refreshToken.token)).thenReturn(refreshToken)
+        whenever(jwtProvider.createToken(originalMember, 80L)).thenReturn("restored-jwt")
+        val currentLogin = LoginMember(
+            id = 9L,
+            name = "Impersonated Name",
+            isImpersonating = true,
+            originalMemberId = 8L,
+            sessionId = 80L,
+        )
+        val request = requestWith("127.0.0.1")
+
+        val logs = captureAuthLogs {
+            val response = authService.restore(currentLogin, refreshToken.token, request)
+            assertThat(response.accessToken).isEqualTo("restored-jwt")
+        }
+
+        assertThat(logs).contains("Manager Name", "Impersonated Name", "8", "9", "80", "ended")
+            .doesNotContain(refreshToken.token)
     }
 
     @Test
@@ -494,8 +665,23 @@ class AuthServiceTest {
     private fun requestWith(ip: String, userAgent: String = "test-agent"): MockHttpServletRequest {
         val request = MockHttpServletRequest()
         request.remoteAddr = ip
+        request.requestURI = "/api/auth/token"
+        request.method = "POST"
         request.addHeader(HttpHeaders.USER_AGENT, userAgent)
         return request
+    }
+
+    private fun captureAuthLogs(block: () -> Unit): String {
+        val logger = LoggerFactory.getLogger(AuthService::class.java) as Logger
+        val appender = ListAppender<ILoggingEvent>().apply { start() }
+        logger.addAppender(appender)
+        try {
+            block()
+        } finally {
+            logger.detachAppender(appender)
+            appender.stop()
+        }
+        return appender.list.joinToString("\n") { it.formattedMessage }
     }
 
     private fun memberWithId(id: Long): Member {

@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.push.apns.service
 
 import com.tistory.shanepark.dutypark.common.config.logger
+import com.tistory.shanepark.dutypark.common.logging.auditContext
 import com.tistory.shanepark.dutypark.notification.domain.enums.NotificationType
 import com.tistory.shanepark.dutypark.notification.domain.payload.ActorNotificationPayload
 import com.tistory.shanepark.dutypark.notification.domain.payload.InquiryAnsweredPayload
@@ -77,11 +78,17 @@ class ApnsPushService @Autowired constructor(
         val body = objectMapper.writeValueAsString(buildPayload(payload))
 
         installations.forEach { installation ->
-            send(installation, credentials.authorization(clock.instant()), body)
+            send(installation, memberId, payload, credentials.authorization(clock.instant()), body)
         }
     }
 
-    private fun send(installation: ApnsInstallation, authorization: String, body: String) {
+    private fun send(
+        installation: ApnsInstallation,
+        memberId: Long,
+        payload: PushNotificationPayload,
+        authorization: String,
+        body: String,
+    ) {
         val host = if (installation.sandbox) SANDBOX_HOST else PRODUCTION_HOST
         val request = HttpRequest.newBuilder()
             .uri(URI.create("https://$host/3/device/${installation.deviceToken}"))
@@ -96,25 +103,74 @@ class ApnsPushService @Autowired constructor(
         httpClient.sendAsync(request, HttpResponse.BodyHandlers.ofString())
             .whenComplete { response, error ->
                 when {
-                    error != null -> log.warn("Failed to send APNs notification: {}", error.javaClass.simpleName)
+                    error != null -> log.warn(
+                        "APNs request failed: {}",
+                        auditContext(
+                            pushContext("apns_delivery_failed", memberId, installation, payload) + safeFailureContext(error)
+                        ),
+                    )
                     response.statusCode() == 410 -> {
                         apnsInstallationRepository.delete(installation)
                         log.info(
-                            "Removed expired APNs installation: status={}, reason={}, apnsId={}",
-                            response.statusCode(),
-                            safeReason(response),
-                            safeApnsId(response),
+                            "Expired APNs installation removed: {}",
+                            auditContext(
+                                pushContext("apns_installation_expired", memberId, installation, payload) +
+                                    mapOf(
+                                        "status" to response.statusCode(),
+                                        "reason" to safeReason(response),
+                                        "apnsId" to safeApnsId(response),
+                                    )
+                            ),
                         )
                     }
                     response.statusCode() !in 200..299 ->
                         log.warn(
-                            "APNs notification failed: status={}, reason={}, apnsId={}",
-                            response.statusCode(),
-                            safeReason(response),
-                            safeApnsId(response),
+                            "APNs provider returned a failure status: {}",
+                            auditContext(
+                                pushContext("apns_provider_failure", memberId, installation, payload) +
+                                    mapOf(
+                                        "status" to response.statusCode(),
+                                        "reason" to safeReason(response),
+                                        "apnsId" to safeApnsId(response),
+                                    )
+                            ),
                         )
                 }
             }
+    }
+
+    private fun pushContext(
+        event: String,
+        memberId: Long,
+        installation: ApnsInstallation,
+        payload: PushNotificationPayload,
+    ): Map<String, Any?> {
+        val actorPayload = payload.notification?.payload as? ActorNotificationPayload
+        return linkedMapOf(
+            "event" to event,
+            "provider" to "apns",
+            "memberId" to memberId,
+            "refreshTokenId" to installation.refreshToken.id,
+            "installationId" to installation.getId(),
+            "environment" to if (installation.sandbox) "sandbox" else "production",
+            "notificationId" to (payload.notificationId ?: payload.notification?.id),
+            "notificationType" to payload.type,
+            "actorMemberId" to payload.notification?.actorId,
+            "actorName" to actorPayload?.actor?.name,
+        )
+    }
+
+    private fun safeFailureContext(error: Throwable): Map<String, Any?> {
+        val causes = generateSequence(error) { it.cause }.take(5).toList()
+        val stackFrames = causes.flatMap { cause ->
+            cause.stackTrace.take(8).map { frame ->
+                "${frame.className}.${frame.methodName}:${frame.lineNumber}"
+            }
+        }.take(24)
+        return mapOf(
+            "causeTypes" to causes.map { it.javaClass.simpleName },
+            "stackFrames" to stackFrames,
+        )
     }
 
     private fun safeReason(response: HttpResponse<String>): String = runCatching {
@@ -226,7 +282,15 @@ class ApnsPushService @Autowired constructor(
                 PKCS8EncodedKeySpec(Base64.getDecoder().decode(encoded))
             )
         } catch (e: Exception) {
-            log.error("APNs private key could not be loaded: {}", e.javaClass.simpleName)
+            log.error(
+                "APNs signing key could not be loaded: {}",
+                auditContext(
+                    mapOf(
+                        "event" to "apns_credential_load_failed",
+                        "configurationField" to "privateKey",
+                    ) + safeFailureContext(e)
+                ),
+            )
             null
         }
     }

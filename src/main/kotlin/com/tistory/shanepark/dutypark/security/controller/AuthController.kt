@@ -37,7 +37,7 @@ class AuthController(
             throw AuthException("auth.password.changeUnauthorized")
         }
         val byAdmin = loginMember.isAdmin && loginMember.id != param.memberId
-        authService.changePassword(param, byAdmin)
+        authService.changePassword(param, byAdmin, actor = loginMember)
         return ResponseEntity.noContent().build()
     }
 

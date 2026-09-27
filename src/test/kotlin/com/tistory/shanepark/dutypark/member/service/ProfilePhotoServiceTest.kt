@@ -1,5 +1,8 @@
 package com.tistory.shanepark.dutypark.member.service
 
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.read.ListAppender
 import com.tistory.shanepark.dutypark.DutyparkIntegrationTest
 import com.tistory.shanepark.dutypark.attachment.domain.entity.Attachment
 import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
@@ -11,6 +14,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.Test
+import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.mock.web.MockMultipartFile
 import java.nio.file.Files
@@ -239,6 +243,48 @@ class ProfilePhotoServiceTest : DutyparkIntegrationTest() {
         assertThat(Files.exists(thumbnailPath)).isFalse()
         assertThat(profilePhotoService.getProfilePhotoPath(member.id!!)).isNull()
         assertThat(profilePhotoService.getProfilePhotoPath(member.id!!, thumbnail = true)).isNull()
+    }
+
+    @Test
+    fun `file deletion failure logs safe diagnostics and still deletes profile photo`() {
+        val member = TestData.member
+        val relativePath = "PROFILE/${member.id}/undeletable.png"
+        val nonEmptyDirectory = storagePathResolver.getStorageRoot().resolve(relativePath)
+        createdDirectories.add(nonEmptyDirectory.parent)
+        Files.createDirectories(nonEmptyDirectory)
+        Files.writeString(nonEmptyDirectory.resolve("keep.txt"), "keep")
+        member.profilePhotoPath = relativePath
+        memberRepository.save(member)
+        em.flush()
+
+        val logger = LoggerFactory.getLogger(ProfilePhotoService::class.java) as Logger
+        val appender = ListAppender<ILoggingEvent>().apply { start() }
+        logger.addAppender(appender)
+
+        try {
+            profilePhotoService.deleteProfilePhoto(loginMember(member))
+        } finally {
+            logger.detachAppender(appender)
+        }
+
+        em.flush()
+        em.clear()
+        val updatedMember = memberRepository.findById(member.id!!).orElseThrow()
+        assertThat(updatedMember.profilePhotoPath).isNull()
+        assertThat(updatedMember.profilePhotoVersion).isEqualTo(1)
+        assertThat(Files.exists(nonEmptyDirectory.resolve("keep.txt"))).isTrue
+        assertThat(appender.list).hasSize(1)
+        val event = appender.list.single()
+        assertThat(event.formattedMessage)
+            .contains(
+                "\"actor\":{\"id\":${member.id},\"name\":\"${member.name}\"}",
+                "\"operation\":\"delete_profile_photo_file\"",
+                "\"relativePath\":\"$relativePath\"",
+                "\"exceptionType\":\"java.nio.file.DirectoryNotEmptyException\"",
+                "\"stackFrames\":[",
+            )
+            .doesNotContain("\"message\":")
+        assertThat(event.throwableProxy).isNull()
     }
 
     @Test

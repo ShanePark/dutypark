@@ -3,6 +3,9 @@ package com.tistory.shanepark.dutypark.security.service
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.common.exceptions.RateLimitException
+import com.tistory.shanepark.dutypark.common.logging.auditContext
+import com.tistory.shanepark.dutypark.common.logging.auditEventAfterCommit
+import com.tistory.shanepark.dutypark.common.logging.toAuditActor
 import com.tistory.shanepark.dutypark.member.repository.MemberManagerRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
@@ -32,6 +35,8 @@ class AuthService(
     private val jwtConfig: JwtConfig,
     private val loginAttemptService: LoginAttemptService,
     private val entityManager: EntityManager,
+    private val impersonationActorNameResolver: ImpersonationActorNameResolver =
+        ImpersonationActorNameResolver(memberRepository),
 ) {
     private val log = logger()
 
@@ -74,7 +79,31 @@ class AuthService(
             AuthException("auth.account.inactive")
         }
         ensureActive(member)
-        return loginMember
+        if (!loginMember.isImpersonating) return loginMember
+
+        val originalMemberName = loginMember.originalMemberName ?: loginMember.originalMemberId?.let { originalMemberId ->
+            try {
+                impersonationActorNameResolver.findName(originalMemberId)
+            } catch (exception: RuntimeException) {
+                log.warn(
+                    "Impersonation actor name lookup failed {}",
+                    auditContext(
+                        mapOf(
+                            "event" to "auth.impersonation.actor_name_lookup_failed",
+                            "actor" to loginMember.toAuditActor(),
+                            "target" to mapOf("type" to "Member", "id" to member.id, "name" to member.name),
+                            "details" to mapOf(
+                                "originalActorId" to originalMemberId,
+                                "errorType" to exception.javaClass.simpleName,
+                            ),
+                            "reason" to "identity_enrichment_failed",
+                        )
+                    ),
+                )
+                null
+            }
+        }
+        return loginMember.copy(originalMemberName = originalMemberName)
     }
 
     @Transactional(readOnly = true)
@@ -88,24 +117,58 @@ class AuthService(
         }
     }
 
-    fun changePassword(param: PasswordChangeDto, byAdmin: Boolean = false) {
+    fun changePassword(
+        param: PasswordChangeDto,
+        byAdmin: Boolean = false,
+        actor: LoginMember? = null,
+    ) {
         val member = memberRepository.findById(param.memberId).orElseThrow {
-            log.warn("Change password failed: member not exist, memberId={}", param.memberId)
+            log.warn(
+                "Password change denied {}",
+                auditContext(
+                    linkedMapOf(
+                        "event" to "member.password.change_denied",
+                        "actor" to actor?.toAuditActor(),
+                        "target" to mapOf("type" to "Member", "id" to param.memberId),
+                        "reason" to "member_not_found",
+                    )
+                ),
+            )
             throw AuthException("auth.password.memberNotFound")
         }
+        val auditActor = actor?.toAuditActor()
+        val target = mapOf("type" to "Member", "id" to member.id, "name" to member.name)
 
         if (!byAdmin) {
             val passwordMatch = passwordEncoder.matches(param.currentPassword, member.password)
             if (!passwordMatch) {
-                log.warn("Change password failed: password not match, memberId={}", param.memberId)
+                log.warn(
+                    "Password change denied {}",
+                    auditContext(
+                        linkedMapOf(
+                            "event" to "member.password.change_denied",
+                            "actor" to auditActor,
+                            "target" to target,
+                            "reason" to "current_password_mismatch",
+                        )
+                    ),
+                )
                 throw AuthException("auth.password.currentMismatch")
             }
         }
 
         member.password = passwordEncoder.encode(param.newPassword)
-        refreshTokenService.revokeAllRefreshTokensByMember(member)
-
-        log.info("Member password changed: memberId={}", param.memberId)
+        refreshTokenService.revokeAllRefreshTokensByMember(
+            member = member,
+            actor = actor,
+            reason = "password_changed",
+        )
+        log.auditEventAfterCommit(
+            event = "member.password.changed",
+            actor = auditActor,
+            target = target,
+            details = mapOf("credentialChanged" to true, "changedFields" to listOf("password"), "byAdmin" to byAdmin),
+        )
     }
 
     fun getTokenResponse(login: LoginDto, req: HttpServletRequest): TokenResponse {
@@ -113,7 +176,18 @@ class AuthService(
         val email = login.email ?: throw AuthException(LOGIN_FAILED_MESSAGE)
 
         if (loginAttemptService.isBlocked(ipAddress, email)) {
-            log.info("Login blocked due to rate limit: ip={}, email={}", ipAddress, email)
+            log.info(
+                "Login denied {}",
+                auditContext(
+                    linkedMapOf(
+                        "event" to "auth.login.denied",
+                        "request" to mapOf("method" to req.method, "path" to req.requestURI),
+                        "ipAddress" to ipAddress,
+                        "status" to 429,
+                        "reason" to "rate_limited",
+                    )
+                ),
+            )
             throw RateLimitException(RATE_LIMIT_MESSAGE)
         }
 
@@ -121,7 +195,21 @@ class AuthService(
 
         if (member == null || !passwordEncoder.matches(login.password, member.password)) {
             loginAttemptService.recordFailedAttempt(ipAddress, email)
-            log.info("Login failed: ip={}, email={}", ipAddress, email)
+            log.info(
+                "Login denied {}",
+                auditContext(
+                    linkedMapOf(
+                        "event" to "auth.login.denied",
+                        "request" to mapOf("method" to req.method, "path" to req.requestURI),
+                        "ipAddress" to ipAddress,
+                        "status" to 401,
+                        "reason" to "invalid_credentials",
+                        "target" to member?.let {
+                            mapOf("type" to "Member", "id" to it.id, "name" to it.name)
+                        },
+                    )
+                ),
+            )
             throw AuthException(LOGIN_FAILED_MESSAGE)
         }
 
@@ -179,7 +267,16 @@ class AuthService(
 
     fun getTokenResponseByMemberId(memberId: Long, req: HttpServletRequest): TokenResponse {
         val member = memberRepository.findById(memberId).orElseThrow {
-            log.warn("Token generation failed: member not exist, memberId={}", memberId)
+            log.warn(
+                "Token generation denied {}",
+                auditContext(
+                    mapOf(
+                        "event" to "auth.token.generation_denied",
+                        "target" to mapOf("type" to "Member", "id" to memberId),
+                        "reason" to "member_not_found",
+                    )
+                ),
+            )
             AuthException("auth.token.memberNotFound")
         }
         ensureActive(member)
@@ -204,33 +301,83 @@ class AuthService(
         legacyRefreshToken: String? = null,
     ): String {
         if (manager.isImpersonating) {
-            log.warn("Impersonation denied: manager {} already impersonating another account", manager.id)
+            logImpersonationDenied(
+                actor = manager.toAuditActor(),
+                target = mapOf("type" to "Member", "id" to targetMemberId),
+                reason = "manager_already_impersonating",
+            )
             throw AuthException("auth.impersonation.alreadyImpersonating")
         }
 
-        val managerEntity = memberRepository.findById(manager.id).orElseThrow {
-            AuthException("auth.impersonation.managerNotFound")
+        val managerEntity = memberRepository.findById(manager.id).orElse(null) ?: run {
+            logImpersonationDenied(
+                actor = manager.toAuditActor(),
+                target = mapOf("type" to "Member", "id" to targetMemberId),
+                reason = "manager_not_found",
+            )
+            throw AuthException("auth.impersonation.managerNotFound")
         }
-        ensureActive(managerEntity)
+        try {
+            ensureActive(managerEntity)
+        } catch (exception: AuthException) {
+            logImpersonationDenied(
+                actor = manager.toAuditActor(),
+                target = mapOf("type" to "Member", "id" to targetMemberId),
+                reason = "manager_inactive",
+                status = managerEntity.status,
+            )
+            throw exception
+        }
 
-        val targetEntity = memberRepository.findById(targetMemberId).orElseThrow {
-            AuthException("auth.impersonation.targetNotFound")
+        val targetEntity = memberRepository.findById(targetMemberId).orElse(null) ?: run {
+            logImpersonationDenied(
+                actor = manager.toAuditActor(),
+                target = mapOf("type" to "Member", "id" to targetMemberId),
+                reason = "target_not_found",
+            )
+            throw AuthException("auth.impersonation.targetNotFound")
         }
-        ensureActive(targetEntity)
+        try {
+            ensureActive(targetEntity)
+        } catch (exception: AuthException) {
+            logImpersonationDenied(
+                actor = manager.toAuditActor(),
+                target = mapOf("type" to "Member", "id" to targetEntity.id, "name" to targetEntity.name),
+                reason = "target_inactive",
+                status = targetEntity.status,
+            )
+            throw exception
+        }
 
         val isManager = memberManagerRepository.findAllByManagerAndManaged(managerEntity, targetEntity).isNotEmpty()
         if (!isManager) {
-            log.warn("Impersonation denied: manager={} is not managing target={}", manager.id, targetMemberId)
+            logImpersonationDenied(
+                actor = manager.toAuditActor(),
+                target = mapOf("type" to "Member", "id" to targetEntity.id, "name" to targetEntity.name),
+                reason = "not_managed",
+            )
             throw AuthException("auth.impersonation.forbidden")
         }
-
-        log.info("Impersonation started: manager={} -> target={}", manager.id, targetMemberId)
 
         val sessionId = manager.sessionId ?: legacyRefreshToken?.let(refreshTokenService::findByToken)
             ?.takeIf { it.member.id == manager.id && it.isValid() }
             ?.id
-            ?: throw AuthException("auth.impersonation.sessionInvalid")
-        return jwtProvider.createImpersonationToken(targetEntity, manager.id, sessionId)
+            ?: run {
+                logImpersonationDenied(
+                    actor = manager.toAuditActor(),
+                    target = mapOf("type" to "Member", "id" to targetEntity.id, "name" to targetEntity.name),
+                    reason = "session_invalid",
+                )
+                throw AuthException("auth.impersonation.sessionInvalid")
+            }
+        val impersonationToken = jwtProvider.createImpersonationToken(targetEntity, manager.id, sessionId)
+        log.auditEventAfterCommit(
+            event = "auth.impersonation.started",
+            actor = manager.toAuditActor(),
+            target = mapOf("type" to "Member", "id" to targetEntity.id, "name" to targetEntity.name),
+            details = mapOf("sessionId" to sessionId),
+        )
+        return impersonationToken
     }
 
     fun restore(currentLogin: LoginMember, existingRefreshToken: String?, req: HttpServletRequest): TokenResponse {
@@ -260,7 +407,12 @@ class AuthService(
         } ?: throw AuthException("auth.restore.sessionInvalid")
         val jwt = jwtProvider.createToken(originalMember, requireNotNull(refreshToken.id))
 
-        log.info("Impersonation ended: restored to={} from={}", originalMemberId, currentLogin.id)
+        log.auditEventAfterCommit(
+            event = "auth.impersonation.ended",
+            actor = originalMember.toAuditActor(),
+            target = mapOf("type" to "Member", "id" to currentLogin.id, "name" to currentLogin.name),
+            details = mapOf("sessionId" to refreshToken.id),
+        )
 
         return TokenResponse(
             accessToken = jwt,
@@ -276,6 +428,25 @@ class AuthService(
         if (member.status != MemberStatus.ACTIVE) {
             throw AuthException(code)
         }
+    }
+
+    private fun logImpersonationDenied(
+        actor: com.tistory.shanepark.dutypark.common.logging.AuditActor,
+        target: Map<String, Any?>,
+        reason: String,
+        status: MemberStatus? = null,
+    ) {
+        log.warn(
+            "Impersonation denied {}",
+            auditContext(
+                linkedMapOf<String, Any?>(
+                    "event" to "auth.impersonation.denied",
+                    "actor" to actor,
+                    "target" to target,
+                    "reason" to reason,
+                ).apply { status?.let { put("status", it) } }
+            ),
+        )
     }
 
 }

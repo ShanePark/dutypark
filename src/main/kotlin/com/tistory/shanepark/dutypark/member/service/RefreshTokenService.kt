@@ -2,6 +2,10 @@ package com.tistory.shanepark.dutypark.member.service
 
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.common.logging.AuditActor
+import com.tistory.shanepark.dutypark.common.logging.auditContext
+import com.tistory.shanepark.dutypark.common.logging.auditEventAfterCommit
+import com.tistory.shanepark.dutypark.common.logging.toAuditActor
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.repository.RefreshTokenRepository
@@ -24,7 +28,14 @@ class RefreshTokenService(
     @Scheduled(cron = "0 0 0 * * *")
     fun revokeExpiredRefreshTokens() {
         val expiredTokens = refreshTokenRepository.findAllByValidUntilIsBefore(LocalDateTime.now())
+        if (expiredTokens.isEmpty()) return
         refreshTokenRepository.deleteAll(expiredTokens)
+        log.auditEventAfterCommit(
+            event = "auth.refresh_tokens.expired_revoked",
+            actor = AuditActor(id = null, name = "system"),
+            target = mapOf("type" to "RefreshToken"),
+            details = mapOf("count" to expiredTokens.size, "reason" to "expired"),
+        )
     }
 
     fun findRefreshTokens(
@@ -47,13 +58,50 @@ class RefreshTokenService(
     }
 
     fun deleteRefreshToken(loginMember: LoginMember, id: Long, currentToken: String? = null): Boolean {
-        val refreshToken = refreshTokenRepository.findById(id).orElseThrow()
+        val refreshToken = refreshTokenRepository.findWithMemberById(id) ?: run {
+            log.warn(
+                "Refresh token deletion denied {}",
+                auditContext(
+                    linkedMapOf(
+                        "event" to "auth.refresh_token.delete_denied",
+                        "actor" to loginMember.toAuditActor(),
+                        "target" to mapOf("refreshTokenId" to id),
+                        "reason" to "token_not_found",
+                    )
+                ),
+            )
+            throw NoSuchElementException()
+        }
         if (!loginMember.isAdmin && refreshToken.member.id != loginMember.id) {
-            log.warn("No authority to delete refresh token: loginMemberId={}, refreshTokenId={}", loginMember.id, id)
+            log.warn(
+                "Refresh token deletion denied {}",
+                auditContext(
+                    linkedMapOf(
+                        "event" to "auth.refresh_token.delete_denied",
+                        "actor" to loginMember.toAuditActor(),
+                        "target" to memberTarget(refreshToken.member) + ("refreshTokenId" to id),
+                        "reason" to "not_token_owner",
+                    )
+                ),
+            )
             throw AuthException("auth.refreshToken.delete.forbidden")
         }
         val deletedCurrentToken = currentToken != null && refreshToken.token == currentToken
         refreshTokenRepository.delete(refreshToken)
+        log.auditEventAfterCommit(
+            event = "auth.refresh_token.deleted",
+            actor = loginMember.toAuditActor(),
+            target = memberTarget(refreshToken.member),
+            details = mapOf(
+                "refreshTokenId" to id,
+                "currentSession" to deletedCurrentToken,
+                "reason" to if (loginMember.isAdmin && refreshToken.member.id != loginMember.id) {
+                    "admin_revoked_session"
+                } else {
+                    "member_removed_session"
+                },
+            ),
+        )
         return deletedCurrentToken
     }
 
@@ -72,6 +120,15 @@ class RefreshTokenService(
     fun deleteByToken(token: String): Boolean {
         val refreshToken = refreshTokenRepository.findByToken(token) ?: return false
         refreshTokenRepository.delete(refreshToken)
+        log.auditEventAfterCommit(
+            event = "auth.refresh_token.deleted",
+            actor = refreshToken.member.toAuditActor(),
+            target = memberTarget(refreshToken.member),
+            details = mapOf(
+                "refreshTokenId" to refreshToken.id,
+                "reason" to "logout",
+            ),
+        )
         return true
     }
 
@@ -92,18 +149,40 @@ class RefreshTokenService(
             .map { RefreshTokenDto.of(it) }
     }
 
-    fun revokeAllRefreshTokensByMember(member: Member) {
+    fun revokeAllRefreshTokensByMember(
+        member: Member,
+        actor: LoginMember? = null,
+        reason: String = "security_action",
+    ) {
         val findAllByMember = refreshTokenRepository.findAllByMember(member)
-        log.info("Revoked {} refresh tokens of member {}", findAllByMember.size, member.email)
         refreshTokenRepository.deleteAll(findAllByMember)
+        if (findAllByMember.isNotEmpty()) {
+            log.auditEventAfterCommit(
+                event = "auth.refresh_tokens.revoked_all",
+                actor = actor?.toAuditActor(),
+                target = memberTarget(member),
+                details = mapOf("count" to findAllByMember.size, "reason" to reason),
+            )
+        }
     }
 
-    fun deleteOtherRefreshTokens(memberId: Long, currentToken: String): Int {
+    fun deleteOtherRefreshTokens(memberId: Long, currentToken: String, actor: LoginMember? = null): Int {
         val tokens = refreshTokenRepository.findAllByMemberIdOrderByLastUsedDesc(memberId)
         val tokensToDelete = tokens.filter { it.token != currentToken }
         refreshTokenRepository.deleteAll(tokensToDelete)
-        log.info("Deleted {} other refresh tokens for member {}", tokensToDelete.size, memberId)
+        if (tokensToDelete.isNotEmpty()) {
+            val member = tokensToDelete.first().member
+            log.auditEventAfterCommit(
+                event = "auth.refresh_tokens.deleted_other",
+                actor = actor?.toAuditActor(),
+                target = memberTarget(member),
+                details = mapOf("count" to tokensToDelete.size, "reason" to "other_sessions_removed"),
+            )
+        }
         return tokensToDelete.size
     }
+
+    private fun memberTarget(member: Member): Map<String, Any?> =
+        mapOf("type" to "Member", "id" to member.id, "name" to member.name)
 
 }

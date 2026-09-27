@@ -2,6 +2,8 @@ package com.tistory.shanepark.dutypark.consent.service
 
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
+import com.tistory.shanepark.dutypark.common.logging.auditChangeAfterCommit
+import com.tistory.shanepark.dutypark.common.logging.toAuditActor
 import com.tistory.shanepark.dutypark.consent.domain.AiScheduleParsingConsentEvent
 import com.tistory.shanepark.dutypark.consent.domain.AiScheduleParsingConsentEventType
 import com.tistory.shanepark.dutypark.consent.dto.AiScheduleParsingConsentResponse
@@ -11,6 +13,7 @@ import com.tistory.shanepark.dutypark.policy.domain.dto.PolicyDto
 import com.tistory.shanepark.dutypark.policy.domain.entity.PolicyVersion
 import com.tistory.shanepark.dutypark.policy.domain.enums.PolicyType
 import com.tistory.shanepark.dutypark.policy.service.PolicyService
+import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -45,6 +48,7 @@ class AiScheduleParsingConsentService(
         policyVersion: String?,
         ipAddress: String?,
         userAgent: String?,
+        loginMember: LoginMember? = null,
     ): AiScheduleParsingConsentResponse {
         val currentPolicy = requireCurrentPolicy()
         if (consented && policyVersion != currentPolicy.version) {
@@ -62,6 +66,10 @@ class AiScheduleParsingConsentService(
             return response(memberId, currentPolicy, latestEvent)
         }
 
+        val previousState = mapOf(
+            "eventType" to latestEvent?.eventType,
+            "policyVersion" to latestEvent?.policyVersion,
+        )
         val savedEvent = consentEventRepository.save(
             AiScheduleParsingConsentEvent(
                 member = member,
@@ -71,9 +79,12 @@ class AiScheduleParsingConsentService(
                 userAgent = userAgent?.take(500),
             )
         )
-        log.info(
-            "AI schedule parsing consent changed: memberId={}, eventType={}, policyVersion={}",
-            memberId, requestedType, savedEvent.policyVersion,
+        log.auditChangeAfterCommit(
+            event = "ai_schedule_parsing_consent_changed",
+            actor = loginMember?.toAuditActor() ?: member.toAuditActor(),
+            target = mapOf("memberId" to member.id),
+            before = previousState,
+            after = mapOf("eventType" to savedEvent.eventType, "policyVersion" to savedEvent.policyVersion),
         )
         return response(memberId, currentPolicy, savedEvent)
     }

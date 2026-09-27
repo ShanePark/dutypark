@@ -1,6 +1,8 @@
 package com.tistory.shanepark.dutypark.member.accountdeletion.worker
 
 import com.tistory.shanepark.dutypark.common.config.logger
+import com.tistory.shanepark.dutypark.common.logging.auditContext
+import com.tistory.shanepark.dutypark.common.logging.auditEventAfterCommit
 import com.tistory.shanepark.dutypark.member.accountdeletion.repository.AccountDeletionTargetMemberRepository
 import com.tistory.shanepark.dutypark.member.accountdeletion.repository.AccountDeletionTargetTeamRepository
 import com.tistory.shanepark.dutypark.member.accountdeletion.service.AccountDeletionExternalAccountRevoker
@@ -29,9 +31,33 @@ class AccountDeletionWorker(
             runCatching { process(claim) }
                 .onFailure { error ->
                     val code = "accountDeletion.worker.${error::class.simpleName ?: "failure"}"
-                    log.error("Account deletion job failed: jobId={}, errorCode={}", claim.jobId, code)
+                    log.error(
+                        "Account deletion job failed: {}",
+                        auditContext(
+                            mapOf(
+                                "event" to "account_deletion_job_failed",
+                                "jobId" to claim.jobId,
+                                "errorCode" to code,
+                                "causeTypes" to causeTypes(error),
+                                "stackFrames" to safeStackFrames(error),
+                            )
+                        ),
+                    )
                     runCatching { coordinator.markFailure(claim, code) }
-                        .onFailure { log.error("Account deletion job state update failed: jobId={}", claim.jobId) }
+                        .onFailure { updateError ->
+                            log.error(
+                                "Account deletion job failure state update failed: {}",
+                                auditContext(
+                                    mapOf(
+                                        "event" to "account_deletion_failure_state_update_failed",
+                                        "jobId" to claim.jobId,
+                                        "errorType" to updateError.javaClass.simpleName,
+                                        "causeTypes" to causeTypes(updateError),
+                                        "stackFrames" to safeStackFrames(updateError),
+                                    )
+                                ),
+                            )
+                        }
                 }
         }
     }
@@ -44,12 +70,26 @@ class AccountDeletionWorker(
         fileCleaner.deleteFiles(memberIds, teamIds)
         databaseCleaner.clean(memberIds, teamIds)
         if (coordinator.markCompleted(claim)) {
-            log.info(
-                "Account deletion job completed: jobId={}, memberCount={}, teamCount={}",
-                claim.jobId,
-                memberIds.size,
-                teamIds.size,
+            log.auditEventAfterCommit(
+                event = "account_deletion_job_completed",
+                actor = null,
+                target = mapOf("jobId" to claim.jobId),
+                details = mapOf("memberCount" to memberIds.size, "teamCount" to teamIds.size),
             )
         }
     }
+
+    private fun causeTypes(error: Throwable): List<String> =
+        generateSequence(error) { it.cause }.take(5).map { it.javaClass.simpleName }.toList()
+
+    private fun safeStackFrames(error: Throwable): List<String> =
+        generateSequence(error) { it.cause }
+            .take(5)
+            .flatMap { cause ->
+                cause.stackTrace.take(8).asSequence().map { frame ->
+                    "${frame.className}.${frame.methodName}:${frame.lineNumber}"
+                }
+            }
+            .take(24)
+            .toList()
 }

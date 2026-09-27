@@ -1,5 +1,8 @@
 package com.tistory.shanepark.dutypark.member.service
 
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.read.ListAppender
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
@@ -17,6 +20,7 @@ import org.mockito.junit.jupiter.MockitoExtension
 import org.mockito.kotlin.any
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import org.slf4j.LoggerFactory
 import java.time.LocalDateTime
 import java.util.*
 
@@ -53,63 +57,76 @@ class RefreshTokenServiceTest {
 
     @Test
     fun deleteRefreshTokenSuccess() {
-        val member = memberWithId(1L)
+        val member = memberWithId(1L).also { it.name = "Owner Name" }
         val refreshToken = refreshTokenWithId(1L, member)
 
-        whenever(refreshTokenRepository.findById(1L)).thenReturn(Optional.of(refreshToken))
+        whenever(refreshTokenRepository.findWithMemberById(1L)).thenReturn(refreshToken)
 
         val loginMember = LoginMember(
             id = 1L,
             email = "",
-            name = "",
+            name = "Actor Name",
             team = "",
             isAdmin = false,
         )
 
-        refreshTokenService.deleteRefreshToken(loginMember, 1L)
+        val logs = captureRefreshTokenLogs {
+            refreshTokenService.deleteRefreshToken(loginMember, 1L)
+        }
 
+        verify(refreshTokenRepository).findWithMemberById(1L)
         verify(refreshTokenRepository).delete(refreshToken)
+        assertThat(logs).contains("Actor Name", "Owner Name", "1", "delete")
+            .doesNotContain(member.email ?: "")
     }
 
     @Test
     fun adminCanDeleteAnyRefreshToken() {
-        val member = memberWithId(1L)
+        val member = memberWithId(1L).also { it.name = "Target Member" }
         val refreshToken = refreshTokenWithId(1L, member)
 
-        whenever(refreshTokenRepository.findById(1L)).thenReturn(Optional.of(refreshToken))
+        whenever(refreshTokenRepository.findWithMemberById(1L)).thenReturn(refreshToken)
 
         val loginMember = LoginMember(
             id = 2L,
             email = "",
-            name = "",
+            name = "Admin Actor",
             team = "",
             isAdmin = true,
         )
 
-        refreshTokenService.deleteRefreshToken(loginMember, 1L)
+        val logs = captureRefreshTokenLogs {
+            refreshTokenService.deleteRefreshToken(loginMember, 1L)
+        }
 
+        verify(refreshTokenRepository).findWithMemberById(1L)
         verify(refreshTokenRepository).delete(refreshToken)
+        assertThat(logs).contains("Admin Actor", "2", "Target Member", "1", "admin_revoked_session")
     }
 
     @Test
     fun deleteRefreshTokenFailIfNotSameUser() {
-        val member = memberWithId(1L)
+        val member = memberWithId(1L).also { it.name = "Owner Name" }
         val refreshToken = refreshTokenWithId(1L, member)
 
-        whenever(refreshTokenRepository.findById(1L)).thenReturn(Optional.of(refreshToken))
+        whenever(refreshTokenRepository.findWithMemberById(1L)).thenReturn(refreshToken)
 
         val loginMember = LoginMember(
             id = 2L,
             email = "",
-            name = "",
+            name = "Actor Name",
             team = "",
             isAdmin = false,
         )
 
-        val exception = assertThrows<AuthException> {
-            refreshTokenService.deleteRefreshToken(loginMember, 1L)
+        val logs = captureRefreshTokenLogs {
+            val exception = assertThrows<AuthException> {
+                refreshTokenService.deleteRefreshToken(loginMember, 1L)
+            }
+            assertThat(exception.message).isEqualTo("auth.refreshToken.delete.forbidden")
         }
-        assertThat(exception.message).isEqualTo("auth.refreshToken.delete.forbidden")
+        verify(refreshTokenRepository).findWithMemberById(1L)
+        assertThat(logs).contains("Actor Name", "Owner Name", "2", "1", "not_token_owner")
     }
 
     @Test
@@ -121,23 +138,72 @@ class RefreshTokenServiceTest {
 
         whenever(refreshTokenRepository.findAllByValidUntilIsBefore(any())).thenReturn(expiredTokens)
 
-        refreshTokenService.revokeExpiredRefreshTokens()
+        val logs = captureRefreshTokenLogs {
+            refreshTokenService.revokeExpiredRefreshTokens()
+        }
 
         verify(refreshTokenRepository).findAllByValidUntilIsBefore(any())
         verify(refreshTokenRepository).deleteAll(expiredTokens)
+        assertThat(logs).contains("system", "expired_revoked", "2", "expired")
+            .doesNotContain(expiredToken1.token, expiredToken2.token)
     }
 
     @Test
     fun `Revoke All refresh Tokens by Member Test`() {
-        val member = memberWithId(1L)
+        val member = memberWithId(1L).also { it.name = "Target Name" }
         val tokens = (1..10).map { refreshTokenWithId(it.toLong(), member) }
+        val actor = LoginMember(
+            id = 99L,
+            email = "admin-private@example.com",
+            name = "Admin Actor",
+            isAdmin = true,
+        )
 
         whenever(refreshTokenRepository.findAllByMember(member)).thenReturn(tokens)
 
-        refreshTokenService.revokeAllRefreshTokensByMember(member)
+        val logs = captureRefreshTokenLogs {
+            refreshTokenService.revokeAllRefreshTokensByMember(member, actor, "account_suspension")
+        }
 
         verify(refreshTokenRepository).findAllByMember(member)
         verify(refreshTokenRepository).deleteAll(tokens)
+        assertThat(logs)
+            .contains("Admin Actor", "99", "Target Name", "1", "10", "account_suspension")
+            .doesNotContain("admin-private@example.com", member.email ?: "", tokens.first().token)
+    }
+
+    @Test
+    fun `deleting refresh token by cookie logs target identity without token value`() {
+        val member = memberWithId(2L).also { it.name = "Logout Target" }
+        val refreshToken = refreshTokenWithId(12L, member)
+        whenever(refreshTokenRepository.findByToken(refreshToken.token)).thenReturn(refreshToken)
+
+        val logs = captureRefreshTokenLogs {
+            assertThat(refreshTokenService.deleteByToken(refreshToken.token)).isTrue()
+        }
+
+        verify(refreshTokenRepository).delete(refreshToken)
+        assertThat(logs)
+            .contains("\"actor\":{\"id\":2,\"name\":\"Logout Target\"}", "Logout Target", "2", "12", "deleted")
+            .doesNotContain(refreshToken.token, member.email ?: "")
+    }
+
+    @Test
+    fun `delete other refresh tokens logs actor and owner without token values`() {
+        val member = memberWithId(3L).also { it.name = "Session Owner" }
+        val current = refreshTokenWithId(31L, member)
+        val other = refreshTokenWithId(32L, member)
+        val actor = LoginMember(id = 3L, email = "private@example.com", name = "Session Owner")
+        whenever(refreshTokenRepository.findAllByMemberIdOrderByLastUsedDesc(3L)).thenReturn(listOf(current, other))
+
+        val logs = captureRefreshTokenLogs {
+            assertThat(refreshTokenService.deleteOtherRefreshTokens(3L, current.token, actor)).isEqualTo(1)
+        }
+
+        verify(refreshTokenRepository).deleteAll(listOf(other))
+        assertThat(logs)
+            .contains("Session Owner", "3", "deleted_other", "1")
+            .doesNotContain("private@example.com", current.token, other.token)
     }
 
     @Test
@@ -219,5 +285,18 @@ class RefreshTokenServiceTest {
         field.isAccessible = true
         field.set(source, id)
         return source
+    }
+
+    private fun captureRefreshTokenLogs(block: () -> Unit): String {
+        val logger = LoggerFactory.getLogger(RefreshTokenService::class.java) as Logger
+        val appender = ListAppender<ILoggingEvent>().apply { start() }
+        logger.addAppender(appender)
+        try {
+            block()
+        } finally {
+            logger.detachAppender(appender)
+            appender.stop()
+        }
+        return appender.list.joinToString("\n") { it.formattedMessage }
     }
 }

@@ -2,9 +2,13 @@ package com.tistory.shanepark.dutypark.attachment.service
 
 import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
+import ch.qos.logback.classic.Logger as LogbackLogger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.read.ListAppender
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.io.TempDir
+import org.slf4j.LoggerFactory
 import java.awt.Color
 import java.awt.image.BufferedImage
 import java.nio.file.Files
@@ -112,15 +116,33 @@ class ImageThumbnailGeneratorTest {
     }
 
     @Test
-    fun `should throw exception for invalid image file`() {
-        val invalidPath = tempDir.resolve("invalid.png")
+    fun `invalid image failure logs escaped diagnostics without raw throwable`() {
+        val invalidPath = tempDir.resolve("invalid\nimage.png")
         Files.write(invalidPath, "not an image".toByteArray())
 
         val targetPath = tempDir.resolve("thumb.png")
+        val logger = LoggerFactory.getLogger(ImageThumbnailGenerator::class.java) as LogbackLogger
+        val appender = ListAppender<ILoggingEvent>().apply { start() }
+        logger.addAppender(appender)
 
-        assertThatThrownBy {
-            generator.generate(invalidPath, targetPath, 200)
-        }.isInstanceOf(Exception::class.java)
+        try {
+            assertThatThrownBy {
+                generator.generate(invalidPath, targetPath, 200)
+            }.isInstanceOf(Exception::class.java)
+        } finally {
+            logger.detachAppender(appender)
+        }
+
+        assertThat(appender.list).hasSize(1)
+        val event = appender.list.single()
+        assertThat(event.throwableProxy).isNull()
+        assertThat(event.formattedMessage)
+            .doesNotContain("\n")
+            .contains("invalid\\nimage.png")
+            .contains("\"exceptionType\"")
+            .contains("\"stackFrames\"")
+            .contains("ImageThumbnailGenerator.generate")
+            .doesNotContain("not an image")
     }
 
     private fun createTestImage(width: Int, height: Int, color: Color): BufferedImage {

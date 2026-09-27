@@ -5,6 +5,9 @@ import com.tistory.shanepark.dutypark.attachment.repository.AttachmentRepository
 import com.tistory.shanepark.dutypark.attachment.service.AttachmentService
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.common.logging.AuditActor
+import com.tistory.shanepark.dutypark.common.logging.auditContext
+import com.tistory.shanepark.dutypark.common.logging.toAuditActor
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.service.FriendService
@@ -167,7 +170,7 @@ class TodoService(
                 .orElseThrow { IllegalArgumentException("Todo not found") }
         }
 
-        verifyOwnership(todo, member)
+        verifyOwnership(todo, member, loginMember, "edit")
 
         todo.update(title, content)
         todo.dueDate = dueDate
@@ -199,7 +202,7 @@ class TodoService(
         val todos = todoRepository.findAllById(ids).sortedBy { indexMap.getValue(it.id) }
 
         todos.forEachIndexed { index, todo ->
-            verifyOwnership(todo, member)
+            verifyOwnership(todo, member, loginMember, "reorder")
             if (todo.status != TodoStatus.TODO) {
                 throw IllegalArgumentException("Cannot reorder non-TODO status todo")
             }
@@ -219,9 +222,9 @@ class TodoService(
     fun deleteTodo(loginMember: LoginMember, id: UUID) {
         val member = findMember(loginMember)
         val todo = todoRepository.findById(id).orElseThrow { IllegalArgumentException("Todo not found") }
-        verifyOwnership(todo, member)
+        verifyOwnership(todo, member, loginMember, "delete")
 
-        deleteTodoInternal(todo)
+        deleteTodoInternal(todo, loginMember.toAuditActor())
     }
 
     /**
@@ -251,7 +254,7 @@ class TodoService(
             if (todo.status != TodoStatus.DONE) return@forEach
 
             if (todo.member.id == member.id) {
-                deleteTodoInternal(todo)
+                deleteTodoInternal(todo, loginMember.toAuditActor())
                 deletedCount++
             } else if (todo.tags.any { it.member.id == member.id }) {
                 todo.removeTag(member)
@@ -266,10 +269,12 @@ class TodoService(
      * for authorization (admin moderation calls this directly). Unlike schedules, the todo context
      * directory is intentionally left untouched, preserving the existing behaviour.
      */
-    internal fun deleteTodoInternal(todo: Todo) {
+    internal fun deleteTodoInternal(todo: Todo, actor: AuditActor? = null) {
         val attachments =
             attachmentRepository.findAllByContextTypeAndContextId(AttachmentContextType.TODO, todo.id.toString())
-        attachments.forEach(attachmentService::deleteAttachment)
+        attachments.forEach { attachment ->
+            attachmentService.deleteAttachment(attachment, actor = actor, reason = "todo_deleted")
+        }
 
         todoRepository.delete(todo)
     }
@@ -280,7 +285,7 @@ class TodoService(
         val todo = todoRepository.findByIdForUpdate(id)
             .orElseThrow { IllegalArgumentException("Todo not found") }
 
-        verifyStatusChangePermission(todo, member)
+        verifyStatusChangePermission(todo, member, loginMember, TodoStatus.DONE, "complete")
 
         if (todo.status == TodoStatus.TODO || todo.status == TodoStatus.IN_PROGRESS) {
             bumpTodoToTopOfStatus(todo, TodoStatus.DONE)
@@ -296,7 +301,7 @@ class TodoService(
         val todo = todoRepository.findByIdForUpdate(id)
             .orElseThrow { IllegalArgumentException("Todo not found") }
 
-        verifyStatusChangePermission(todo, member)
+        verifyStatusChangePermission(todo, member, loginMember, TodoStatus.TODO, "reopen")
 
         if (todo.status == TodoStatus.DONE) {
             bumpTodoToTopOfStatus(todo, TodoStatus.TODO)
@@ -316,7 +321,7 @@ class TodoService(
         val todo = todoRepository.findByIdForUpdate(id)
             .orElseThrow { IllegalArgumentException("Todo not found") }
 
-        verifyStatusChangePermission(todo, member)
+        verifyStatusChangePermission(todo, member, loginMember, newStatus, "change_status")
         val statusChanged = todo.status != newStatus
 
         // Change status first, bumping every stakeholder (owner + tagged members)
@@ -372,7 +377,7 @@ class TodoService(
         val member = findMember(loginMember)
         val friend = memberRepository.findById(friendId).orElseThrow { IllegalArgumentException("Member not found") }
 
-        verifyOwnership(todo, member)
+        verifyOwnership(todo, member, loginMember, "tag_friend")
         addTagToTodo(todo, friend)
     }
 
@@ -381,7 +386,7 @@ class TodoService(
         val member = findMember(loginMember)
         val friend = memberRepository.findById(friendId).orElseThrow { IllegalArgumentException("Member not found") }
 
-        verifyOwnership(todo, member)
+        verifyOwnership(todo, member, loginMember, "untag_friend")
         todo.removeTag(friend)
     }
 
@@ -391,22 +396,47 @@ class TodoService(
         todo.removeTag(member)
     }
 
-    private fun verifyOwnership(todoEntity: Todo, member: Member) {
+    private fun verifyOwnership(todoEntity: Todo, member: Member, loginMember: LoginMember, operation: String) {
         if (todoEntity.member.id != member.id) {
-            log.warn("Unauthorized access attempt: memberId={} tried to access todo {} (owner={})", member.id, todoEntity.id, todoEntity.member.id)
+            log.warn(
+                "Todo ownership check denied {}",
+                auditContext(
+                    mapOf(
+                        "actor" to loginMember.toAuditActor(),
+                        "todoId" to todoEntity.id,
+                        "ownerId" to todoEntity.member.id,
+                        "ownerName" to todoEntity.member.name,
+                        "operation" to operation,
+                    )
+                ),
+            )
             throw IllegalArgumentException("Todo is not yours")
         }
     }
 
-    private fun verifyStatusChangePermission(todoEntity: Todo, member: Member) {
+    private fun verifyStatusChangePermission(
+        todoEntity: Todo,
+        member: Member,
+        loginMember: LoginMember,
+        requestedStatus: TodoStatus,
+        operation: String,
+    ) {
         if (isOwner(todoEntity, member) || isTaggedMember(todoEntity, member)) {
             return
         }
         log.warn(
-            "Unauthorized status change attempt: memberId={} tried to change status of todo {} (owner={})",
-            member.id,
-            todoEntity.id,
-            todoEntity.member.id
+            "Todo status change denied {}",
+            auditContext(
+                mapOf(
+                    "actor" to loginMember.toAuditActor(),
+                    "todoId" to todoEntity.id,
+                    "ownerId" to todoEntity.member.id,
+                    "ownerName" to todoEntity.member.name,
+                    "currentStatus" to todoEntity.status,
+                    "requestedStatus" to requestedStatus,
+                    "operation" to operation,
+                )
+            ),
         )
         throw IllegalArgumentException("Todo status change is not allowed")
     }

@@ -1,5 +1,8 @@
 package com.tistory.shanepark.dutypark.notification.event
 
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.read.ListAppender
 import com.tistory.shanepark.dutypark.member.block.service.BlockService
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
@@ -38,6 +41,7 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
+import org.slf4j.LoggerFactory
 import org.springframework.test.util.ReflectionTestUtils
 import java.util.Optional
 import java.util.UUID
@@ -529,6 +533,37 @@ class NotificationEventListenerTest {
 
         verifyNoInteractions(webPushService)
         verifyNoInteractions(apnsPushService)
+    }
+
+    @Test
+    fun `notification creation failure logs event and available actor context without unsafe exception text`() {
+        val actor = memberWithId(2L, "Actor Name")
+        whenever(memberRepository.findById(actor.id!!)).thenReturn(Optional.of(actor))
+        whenever(
+            notificationService.createNotification(
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+                any(),
+            )
+        ).doThrow(IllegalStateException("https://push.example/private-endpoint"))
+        val logger = LoggerFactory.getLogger(NotificationEventListener::class.java) as Logger
+        val appender = ListAppender<ILoggingEvent>().apply { start() }
+        logger.addAppender(appender)
+
+        try {
+            listener.handleFriendRequestSent(FriendRequestSentEvent(10L, actor.id!!, 3L))
+        } finally {
+            logger.detachAppender(appender)
+        }
+
+        val event = appender.list.single()
+        assertThat(event.formattedMessage)
+            .contains("friend_request_sent", "10", "FRIEND_REQUEST_RECEIVED", "3", "2", "Actor Name")
+            .doesNotContain("push.example", "private-endpoint")
+        assertThat(event.throwableProxy).isNull()
     }
 
     @Test

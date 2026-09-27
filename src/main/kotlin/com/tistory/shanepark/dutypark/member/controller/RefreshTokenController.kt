@@ -50,7 +50,11 @@ class RefreshTokenController(
     ): ResponseEntity<Map<String, Int>> {
         val currentToken = cookieService.extractRefreshToken(request.cookies)
             ?: throw BadRequestException("auth.refresh.current.required")
-        val deletedCount = refreshTokenService.deleteOtherRefreshTokens(loginMember.id, currentToken)
+        val deletedCount = refreshTokenService.deleteOtherRefreshTokens(
+            memberId = loginMember.id,
+            currentToken = currentToken,
+            actor = loginMember,
+        )
         return ResponseEntity.ok(mapOf("deletedCount" to deletedCount))
     }
 

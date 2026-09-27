@@ -1,5 +1,8 @@
 package com.tistory.shanepark.dutypark.security.oauth.apple
 
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.read.ListAppender
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.entity.MemberSsoRegister
@@ -19,6 +22,7 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
+import org.slf4j.LoggerFactory
 import org.mockito.kotlin.*
 import java.util.Optional
 
@@ -181,13 +185,29 @@ class AppleNativeOAuthServiceTest {
         whenever(provider.revoke("refresh-token", "io.github.shanepark.dutypark", "client-secret"))
             .thenThrow(revokeFailure)
 
-        val thrown = assertThrows<SocialAccountAlreadyLinkedException> {
-            service.exchange(request(MobileOAuthPurpose.LINK), loginMember(), servletRequest)
+        val logger = LoggerFactory.getLogger(AppleNativeOAuthService::class.java) as Logger
+        val appender = ListAppender<ILoggingEvent>().apply { start() }
+        logger.addAppender(appender)
+        val thrown = try {
+            assertThrows<SocialAccountAlreadyLinkedException> {
+                service.exchange(request(MobileOAuthPurpose.LINK), loginMember(), servletRequest)
+            }
+        } finally {
+            logger.detachAppender(appender)
+            appender.stop()
         }
 
         assertThat(thrown).isSameAs(conflict)
         assertThat(thrown.suppressed).containsExactly(revokeFailure)
         verify(credentials).storeRevocationRetry("refresh-token", "io.github.shanepark.dutypark")
+        assertThat(appender.list).hasSize(1)
+        assertThat(appender.list.single().formattedMessage)
+            .contains("\"actor\":{\"id\":7,\"name\":\"member\"")
+            .contains("\"flow\":\"LINK\"")
+            .contains("\"reason\":\"provider_revocation_failed\"")
+            .contains("AppleOAuthException")
+            .doesNotContain("refresh-token", "client-secret", "auth.apple.provider.unavailable")
+        assertThat(appender.list.single().throwableProxy).isNull()
     }
 
     @Test
@@ -203,12 +223,27 @@ class AppleNativeOAuthServiceTest {
         whenever(credentials.storeRevocationRetry("refresh-token", "io.github.shanepark.dutypark"))
             .thenThrow(retryPersistenceFailure)
 
-        val thrown = assertThrows<SocialAccountAlreadyLinkedException> {
-            service.exchange(request(MobileOAuthPurpose.LINK), loginMember(), servletRequest)
+        val logger = LoggerFactory.getLogger(AppleNativeOAuthService::class.java) as Logger
+        val appender = ListAppender<ILoggingEvent>().apply { start() }
+        logger.addAppender(appender)
+        val thrown = try {
+            assertThrows<SocialAccountAlreadyLinkedException> {
+                service.exchange(request(MobileOAuthPurpose.LINK), loginMember(), servletRequest)
+            }
+        } finally {
+            logger.detachAppender(appender)
+            appender.stop()
         }
 
         assertThat(thrown).isSameAs(conflict)
         assertThat(thrown.suppressed).containsExactly(revokeFailure, retryPersistenceFailure)
+        assertThat(appender.list).hasSize(1)
+        assertThat(appender.list.single().formattedMessage)
+            .contains("io.github.shanepark.dutypark")
+            .contains("\"actor\":{\"id\":7,\"name\":\"member\"")
+            .contains("IllegalStateException")
+            .doesNotContain("refresh-token", "client-secret", "retry persistence failed")
+        assertThat(appender.list.single().throwableProxy).isNull()
     }
 
     @Test

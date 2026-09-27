@@ -43,6 +43,7 @@ class InquiryController(
             memberId = loginMember?.id,
             request = request,
             ipAddress = servletRequest.remoteAddr,
+            loginMember = loginMember,
         )
     }
 

@@ -2,6 +2,8 @@ package com.tistory.shanepark.dutypark.holiday.service
 
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
+import com.tistory.shanepark.dutypark.common.logging.AuditActor
+import com.tistory.shanepark.dutypark.common.logging.auditEventAfterCommit
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.holiday.domain.Holiday
 import com.tistory.shanepark.dutypark.holiday.domain.HolidayDto
@@ -49,13 +51,24 @@ class HolidayService(
     }
 
     @Transactional(timeout = 20)
-    fun resetHolidayInfo() {
-        dutyRepository.deleteAutomaticByDutyDateGreaterThanEqual(
-            LocalDate.now(clock.withZone(SEOUL))
-        )
+    fun resetHolidayInfo(actor: AuditActor? = null) {
+        val resetFrom = LocalDate.now(clock.withZone(SEOUL))
+        val holidayCount = holidayRepository.count()
+        val cachedYears = holidayMap.keys.sorted()
+        dutyRepository.deleteAutomaticByDutyDateGreaterThanEqual(resetFrom)
         holidayRepository.deleteAll()
         holidayMap.clear()
-        log.info("Holiday info has been reset.")
+        log.auditEventAfterCommit(
+            event = "holiday_information_reset",
+            actor = actor,
+            target = mapOf("generatedDutiesFrom" to resetFrom),
+            details = mapOf(
+                "holidayRecordCountBefore" to holidayCount,
+                "holidayRecordCountAfter" to 0,
+                "cachedHolidayYearsBefore" to cachedYears,
+                "cachedHolidayYearsAfter" to emptyList<Int>(),
+            ),
+        )
     }
 
     private fun holidaysInRangeFromMemory(years: Set<Int>): List<HolidayDto> {

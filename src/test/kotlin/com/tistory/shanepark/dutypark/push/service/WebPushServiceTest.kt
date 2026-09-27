@@ -1,9 +1,15 @@
 package com.tistory.shanepark.dutypark.push.service
 
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.read.ListAppender
 import tools.jackson.databind.ObjectMapper
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.RefreshTokenRepository
+import com.tistory.shanepark.dutypark.notification.domain.payload.FriendRequestReceivedPayload
+import com.tistory.shanepark.dutypark.notification.domain.payload.NotificationActorSnapshot
 import com.tistory.shanepark.dutypark.notification.domain.enums.NotificationType
+import com.tistory.shanepark.dutypark.notification.dto.NotificationDto
 import com.tistory.shanepark.dutypark.push.dto.PushNotificationPayload
 import com.tistory.shanepark.dutypark.push.dto.PushSubscriptionKeys
 import com.tistory.shanepark.dutypark.push.dto.PushSubscriptionRequest
@@ -21,6 +27,7 @@ import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
+import org.slf4j.LoggerFactory
 import java.math.BigInteger
 import java.security.KeyPairGenerator
 import java.security.Security
@@ -29,6 +36,7 @@ import java.security.interfaces.ECPublicKey
 import java.security.spec.ECGenParameterSpec
 import java.time.LocalDateTime
 import java.util.Base64
+import java.util.UUID
 import org.bouncycastle.jce.provider.BouncyCastleProvider
 
 @ExtendWith(org.mockito.junit.jupiter.MockitoExtension::class)
@@ -232,6 +240,53 @@ class WebPushServiceTest {
 
         assertThat(token.hasPushSubscription()).isTrue
         verify(refreshTokenRepository, never()).save(token)
+    }
+
+    @Test
+    fun `send failure logs notification and session context without endpoint or provider message`() {
+        val memberId = 8L
+        val token = refreshTokenWithId(42L, memberWithId(memberId))
+        subscribeValidPush(token)
+        token.pushEndpoint = "https://push.example/private-endpoint"
+        val notificationId = UUID.fromString("123e4567-e89b-12d3-a456-426614174000")
+        val payload = PushNotificationPayload(
+            type = NotificationType.FRIEND_REQUEST_RECEIVED,
+            notificationId = notificationId.toString(),
+            notification = NotificationDto(
+                id = notificationId,
+                type = NotificationType.FRIEND_REQUEST_RECEIVED,
+                referenceType = null,
+                referenceId = null,
+                actorId = 9L,
+                payload = FriendRequestReceivedPayload(
+                    actor = NotificationActorSnapshot("Actor Name", false, 0),
+                ),
+                isRead = false,
+                createdAt = fixedDateTime,
+            ),
+        )
+        whenever(
+            refreshTokenRepository.findAllByMemberIdAndPushEndpointIsNotNullAndValidUntilAfter(any(), any())
+        ).thenReturn(listOf(token))
+        whenever(objectMapper.writeValueAsString(any())).thenReturn("{}")
+        whenever(pushService.send(any<nl.martijndwars.webpush.Notification>())).thenThrow(
+            RuntimeException("provider request failed for https://push.example/private-endpoint")
+        )
+        val logger = LoggerFactory.getLogger(WebPushService::class.java) as Logger
+        val appender = ListAppender<ILoggingEvent>().apply { start() }
+        logger.addAppender(appender)
+
+        try {
+            service.sendToMember(memberId, payload)
+        } finally {
+            logger.detachAppender(appender)
+        }
+
+        val event = appender.list.single()
+        assertThat(event.formattedMessage)
+            .contains("$memberId", "42", notificationId.toString(), "FRIEND_REQUEST_RECEIVED", "9", "Actor Name")
+            .doesNotContain("push.example", "private-endpoint", "provider request failed")
+        assertThat(event.throwableProxy).isNull()
     }
 
     @Test

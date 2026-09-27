@@ -3,6 +3,8 @@ package com.tistory.shanepark.dutypark.security.controller
 import com.tistory.shanepark.dutypark.member.service.RefreshTokenService
 import com.tistory.shanepark.dutypark.security.config.CookieConfig
 import com.tistory.shanepark.dutypark.security.config.JwtConfig
+import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
+import com.tistory.shanepark.dutypark.security.domain.dto.PasswordChangeDto
 import com.tistory.shanepark.dutypark.security.service.AuthService
 import com.tistory.shanepark.dutypark.security.service.CookieService
 import com.tistory.shanepark.dutypark.security.service.LoginAttemptService
@@ -12,11 +14,30 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.mockito.kotlin.doThrow
 import org.mockito.kotlin.mock
+import org.mockito.kotlin.verify
 import org.springframework.http.HttpHeaders
 import org.springframework.mock.web.MockHttpServletRequest
 import org.springframework.mock.web.MockHttpServletResponse
 
 class AuthControllerUnitTest {
+
+    @Test
+    fun `password change passes authenticated actor to audit service`() {
+        val authService = mock<AuthService>()
+        val controller = AuthController(
+            authService = authService,
+            cookieService = mock(),
+            refreshTokenService = mock(),
+            jwtConfig = JwtConfig("secret", 600, 7),
+            loginAttemptService = mock(),
+        )
+        val actor = LoginMember(id = 99L, name = "Admin Actor", isAdmin = true)
+        val change = PasswordChangeDto(memberId = 7L, currentPassword = null, newPassword = "new-pass")
+
+        controller.changePassword(actor, change)
+
+        verify(authService).changePassword(change, byAdmin = true, actor = actor)
+    }
 
     @Test
     fun `logout clears cookies even when server token deletion fails`() {

@@ -1,5 +1,8 @@
 package com.tistory.shanepark.dutypark.security.oauth.naver
 
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.read.ListAppender
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.domain.entity.MemberSsoRegister
 import com.tistory.shanepark.dutypark.member.domain.enums.SsoType
@@ -16,6 +19,7 @@ import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.extension.ExtendWith
+import org.slf4j.LoggerFactory
 import org.mockito.kotlin.any
 import org.mockito.kotlin.argumentCaptor
 import org.mockito.kotlin.eq
@@ -189,18 +193,32 @@ class NaverLoginServiceTest {
             )
         )
 
-        val exception = assertThrows<IllegalStateException> {
-            service.login(
-                req = MockHttpServletRequest(),
-                resp = MockHttpServletResponse(),
-                code = "code-3",
-                state = "encoded-state",
-                callbackUrl = "https://client/callback",
-                redirectTarget = "/"
-            )
+        val logger = LoggerFactory.getLogger(NaverLoginService::class.java) as Logger
+        val appender = ListAppender<ILoggingEvent>().apply { start() }
+        logger.addAppender(appender)
+        val exception = try {
+            assertThrows<IllegalStateException> {
+                service.login(
+                    req = MockHttpServletRequest(),
+                    resp = MockHttpServletResponse(),
+                    code = "code-3",
+                    state = "encoded-state",
+                    callbackUrl = "https://client/callback",
+                    redirectTarget = "/"
+                )
+            }
+        } finally {
+            logger.detachAppender(appender)
+            appender.stop()
         }
 
         assertThat(exception.message).contains("no valid data in session")
+        assertThat(appender.list).hasSize(1)
+        assertThat(appender.list.single().formattedMessage)
+            .contains("NAVER")
+            .contains("invalid_request")
+            .doesNotContain("no valid data in session")
+        assertThat(appender.list.single().throwableProxy).isNull()
         verify(naverUserInfoApi, never()).getUserInfo(any())
     }
 

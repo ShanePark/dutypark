@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.schedule.timeparsing.service
 
 import com.tistory.shanepark.dutypark.common.config.logger
+import com.tistory.shanepark.dutypark.common.logging.auditContext
 import com.tistory.shanepark.dutypark.consent.service.AiScheduleParsingConsentService
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
 import com.tistory.shanepark.dutypark.schedule.domain.enums.ParsingTimeStatus.SKIP
@@ -128,7 +129,14 @@ class ScheduleTimeParsingQueueManager(
     private fun run() {
         while (!isShuttingDown.get() && queue.isNotEmpty()) {
             while (!isShuttingDown.get() && shouldWait()) {
-                log.info("Waiting for AI API rate limit (RPM/RPD check)")
+                log.info(
+                    "Waiting for AI API rate limit: queueSize={}, rpmLimit={}, rpdLimit={}, completedInMinute={}, completedToday={}",
+                    queue.size,
+                    rpmLimit,
+                    rpdLimit,
+                    completedTasks.size,
+                    completedDailyTasks.size,
+                )
                 TimeUnit.MINUTES.sleep(1)
             }
             if (isShuttingDown.get()) return
@@ -139,7 +147,28 @@ class ScheduleTimeParsingQueueManager(
                     recordCompletion()
                 }
             } catch (e: Exception) {
-                log.error("Unexpected schedule time parsing failure: scheduleId={}", task.scheduleId, e)
+                log.error(
+                    "Unexpected schedule time parsing failure: {}",
+                    auditContext(
+                        mapOf(
+                            "scheduleId" to task.scheduleId,
+                            "parsingGeneration" to task.parsingGeneration,
+                            "causeTypes" to generateSequence(e as Throwable?) { it.cause }
+                                .take(5)
+                                .map { it.javaClass.simpleName }
+                                .toList(),
+                            "stackFrames" to generateSequence(e as Throwable?) { it.cause }
+                                .take(5)
+                                .flatMap { cause ->
+                                    cause.stackTrace.take(8).asSequence().map { frame ->
+                                        "${frame.className}.${frame.methodName}:${frame.lineNumber}"
+                                    }
+                                }
+                                .take(24)
+                                .toList(),
+                        )
+                    ),
+                )
                 // Count conservatively because the failure may have happened after the external AI request.
                 recordCompletion()
                 if (!isShuttingDown.get() && task.canRetryAfterUnexpectedFailure()) {

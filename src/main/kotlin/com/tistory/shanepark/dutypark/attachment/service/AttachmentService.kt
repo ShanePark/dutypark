@@ -9,6 +9,11 @@ import com.tistory.shanepark.dutypark.attachment.dto.FinalizeSessionRequest
 import com.tistory.shanepark.dutypark.attachment.dto.ReorderAttachmentsRequest
 import com.tistory.shanepark.dutypark.attachment.repository.AttachmentRepository
 import com.tistory.shanepark.dutypark.common.config.logger
+import com.tistory.shanepark.dutypark.common.logging.AuditActor
+import com.tistory.shanepark.dutypark.common.logging.auditChangeAfterCommit
+import com.tistory.shanepark.dutypark.common.logging.auditContext
+import com.tistory.shanepark.dutypark.common.logging.auditEventAfterCommit
+import com.tistory.shanepark.dutypark.common.logging.toAuditActor
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
@@ -76,17 +81,38 @@ class AttachmentService(
 
             val savedAttachment = attachmentRepository.save(attachment)
 
-            log.info(
-                "File uploaded successfully: sessionId={}, filename={}, size={}, orderIndex={}",
-                sessionId,
-                originalFilename,
-                file.size,
-                nextOrderIndex
+            log.auditEventAfterCommit(
+                event = "attachment.uploaded",
+                actor = loginMember.toAuditActor(),
+                target = attachmentAuditTarget(savedAttachment, loginMember.toAuditActor()),
+                details = mapOf(
+                    "originalFilename" to savedAttachment.originalFilename,
+                    "storedFilename" to savedAttachment.storedFilename,
+                    "contentType" to savedAttachment.contentType,
+                    "size" to savedAttachment.size,
+                    "orderIndex" to savedAttachment.orderIndex,
+                    "thumbnailStatus" to savedAttachment.thumbnailStatus
+                )
             )
 
             return savedAttachment
         } catch (e: Exception) {
-            log.error("Failed to upload file: sessionId={}, filename={}", sessionId, originalFilename, e)
+            log.error(
+                "Failed to upload attachment: {}",
+                auditContext(
+                    mapOf(
+                        "actorId" to loginMember.id,
+                        "actorName" to loginMember.name,
+                        "ownerId" to session.ownerId,
+                        "ownerName" to ownerName(session.ownerId, loginMember.toAuditActor()),
+                        "sessionId" to sessionId,
+                        "contextType" to session.contextType,
+                        "contextId" to session.targetContextId,
+                        "filename" to originalFilename,
+                        "size" to file.size
+                    ) + e.toAttachmentLogDiagnostics()
+                )
+            )
             fileSystemService.deleteFile(temporaryFilePath)
             throw e
         }
@@ -124,10 +150,14 @@ class AttachmentService(
             permissionEvaluator.checkWritePermission(loginMember, attachment)
         }
 
-        deleteAttachment(attachment)
+        deleteAttachment(attachment, actor = loginMember.toAuditActor(), reason = "direct_request")
     }
 
-    fun deleteAttachment(attachment: Attachment) {
+    fun deleteAttachment(
+        attachment: Attachment,
+        actor: AuditActor? = null,
+        reason: String = "unspecified"
+    ) {
         val filePath = pathResolver.resolveFilePath(
             attachment.contextType,
             attachment.contextId,
@@ -148,7 +178,17 @@ class AttachmentService(
         }
 
         attachmentRepository.delete(attachment)
-        log.info("Deleted attachment: id={}, filename={}", attachment.id, attachment.originalFilename)
+        log.auditEventAfterCommit(
+            event = "attachment.deleted",
+            actor = actor,
+            target = attachmentAuditTarget(attachment, actor),
+            details = mapOf(
+                "originalFilename" to attachment.originalFilename,
+                "storedFilename" to attachment.storedFilename,
+                "size" to attachment.size,
+                "reason" to reason
+            )
+        )
     }
 
     fun finalizeSession(
@@ -168,7 +208,12 @@ class AttachmentService(
         val allAttachments = attachmentRepository.findAllByUploadSessionId(sessionId)
         if (allAttachments.isEmpty()) {
             sessionService.deleteSession(sessionId)
-            log.info("Finalized empty session: sessionId={}", sessionId)
+            log.auditEventAfterCommit(
+                event = "attachment.upload_session.finalized_empty",
+                actor = loginMember.toAuditActor(),
+                target = sessionAuditTarget(sessionId, session.contextType, session.targetContextId, session.ownerId, loginMember.toAuditActor()),
+                details = mapOf("attachmentCount" to 0, "deletedAttachmentCount" to 0)
+            )
             return
         }
 
@@ -179,6 +224,13 @@ class AttachmentService(
             allAttachments.filter { it.id in orderedIds }
         }
         val attachmentsToDelete = allAttachments.filter { it.id !in orderedIds && orderedIds.isNotEmpty() }
+        val beforeStates = attachmentsToKeep.associate { attachment ->
+            attachment.id to mapOf(
+                "contextId" to attachment.contextId,
+                "uploadSessionId" to attachment.uploadSessionId,
+                "orderIndex" to attachment.orderIndex
+            )
+        }
 
         val tempDir = pathResolver.resolveTemporaryDirectory(sessionId)
         val finalDir = pathResolver.resolveContextDirectory(session.contextType, request.contextId)
@@ -202,7 +254,7 @@ class AttachmentService(
             updateAttachmentOrdering(attachmentsToKeep, orderedIds)
             attachmentRepository.saveAll(attachmentsToKeep)
 
-            attachmentsToDelete.forEach { deleteTempAttachment(it, tempDir) }
+            attachmentsToDelete.forEach { deleteTempAttachment(it, tempDir, loginMember.toAuditActor()) }
 
             if (Files.exists(tempDir)) {
                 fileSystemService.deleteDirectory(tempDir)
@@ -210,15 +262,47 @@ class AttachmentService(
 
             sessionService.deleteSession(sessionId)
 
-            log.info(
-                "Finalized session: sessionId={}, contextId={}, attachmentCount={}, deletedCount={}",
-                sessionId,
-                request.contextId,
-                attachmentsToKeep.size,
-                attachmentsToDelete.size
+            attachmentsToKeep.forEach { attachment ->
+                log.auditChangeAfterCommit(
+                    event = "attachment.finalized",
+                    actor = loginMember.toAuditActor(),
+                    target = attachmentAuditTarget(attachment, loginMember.toAuditActor()),
+                    before = beforeStates.getValue(attachment.id),
+                    after = mapOf(
+                        "contextId" to attachment.contextId,
+                        "uploadSessionId" to attachment.uploadSessionId,
+                        "orderIndex" to attachment.orderIndex
+                    )
+                )
+            }
+            log.auditEventAfterCommit(
+                event = "attachment.upload_session.finalized",
+                actor = loginMember.toAuditActor(),
+                target = sessionAuditTarget(sessionId, session.contextType, request.contextId, session.ownerId, loginMember.toAuditActor()),
+                details = mapOf(
+                    "finalizedAttachmentIds" to attachmentsToKeep.map { it.id },
+                    "deletedAttachmentIds" to attachmentsToDelete.map { it.id },
+                    "finalizedAttachmentCount" to attachmentsToKeep.size,
+                    "deletedAttachmentCount" to attachmentsToDelete.size
+                )
             )
         } catch (e: Exception) {
-            log.error("Failed to finalize session: sessionId={}, error={}", sessionId, e.message, e)
+            log.error(
+                "Failed to finalize attachment upload session: {}",
+                auditContext(
+                    mapOf(
+                        "actorId" to loginMember.id,
+                        "actorName" to loginMember.name,
+                        "ownerId" to session.ownerId,
+                        "ownerName" to ownerName(session.ownerId, loginMember.toAuditActor()),
+                        "sessionId" to sessionId,
+                        "contextType" to session.contextType,
+                        "contextId" to request.contextId,
+                        "attachmentCount" to allAttachments.size,
+                        "deletedAttachmentCount" to attachmentsToDelete.size
+                    ) + e.toAttachmentLogDiagnostics()
+                )
+            )
             throw IllegalStateException("Failed to finalize session", e)
         }
     }
@@ -234,9 +318,16 @@ class AttachmentService(
 
         if (attachments.isEmpty()) {
             log.warn(
-                "No attachments found for reordering: contextType={}, contextId={}",
-                request.contextType,
-                request.contextId
+                "Attachment reorder had no matching attachments: {}",
+                auditContext(
+                    mapOf(
+                        "actorId" to loginMember.id,
+                        "actorName" to loginMember.name,
+                        "contextType" to request.contextType,
+                        "contextId" to request.contextId,
+                        "requestedAttachmentIds" to request.orderedAttachmentIds
+                    )
+                )
             )
             return
         }
@@ -244,15 +335,19 @@ class AttachmentService(
         val firstAttachment = attachments.first()
         permissionEvaluator.checkWritePermission(loginMember, firstAttachment)
 
+        val beforeOrder = attachments.associate { it.id to it.orderIndex }
         updateAttachmentOrdering(attachments, request.orderedAttachmentIds)
         attachmentRepository.saveAll(attachments)
 
-        log.info(
-            "Reordered attachments: contextType={}, contextId={}, count={}",
-            request.contextType,
-            request.contextId,
-            attachments.size
-        )
+        attachments.forEach { attachment ->
+            log.auditChangeAfterCommit(
+                event = "attachment.order_changed",
+                actor = loginMember.toAuditActor(),
+                target = attachmentAuditTarget(attachment, loginMember.toAuditActor()),
+                before = mapOf("orderIndex" to beforeOrder.getValue(attachment.id)),
+                after = mapOf("orderIndex" to attachment.orderIndex)
+            )
+        }
     }
 
     fun listAttachments(
@@ -283,7 +378,9 @@ class AttachmentService(
         permissionEvaluator.checkSessionOwnership(loginMember, session)
 
         val sessionAttachments = attachmentRepository.findAllByUploadSessionId(sessionId)
-        sessionAttachments.forEach { deleteAttachment(it) }
+        sessionAttachments.forEach {
+            deleteAttachment(it, actor = loginMember.toAuditActor(), reason = "session_discard")
+        }
 
         val tempDir = pathResolver.resolveTemporaryDirectory(sessionId)
         if (Files.exists(tempDir)) {
@@ -292,10 +389,14 @@ class AttachmentService(
 
         sessionService.deleteSession(sessionId)
 
-        log.info(
-            "Discarded session: sessionId={}, deletedAttachmentCount={}",
-            sessionId,
-            sessionAttachments.size
+        log.auditEventAfterCommit(
+            event = "attachment.upload_session.discarded",
+            actor = loginMember.toAuditActor(),
+            target = sessionAuditTarget(sessionId, session.contextType, session.targetContextId, session.ownerId, loginMember.toAuditActor()),
+            details = mapOf(
+                "deletedAttachmentIds" to sessionAttachments.map { it.id },
+                "deletedAttachmentCount" to sessionAttachments.size
+            )
         )
     }
 
@@ -330,14 +431,24 @@ class AttachmentService(
                 finalizeSession(loginMember, attachmentSessionId, request)
             } else {
                 sessionService.deleteSession(attachmentSessionId)
-                log.info("Skipped finalizing empty session: sessionId={}", attachmentSessionId)
+                log.auditEventAfterCommit(
+                    event = "attachment.upload_session.finalized_empty",
+                    actor = loginMember.toAuditActor(),
+                    target = sessionAuditTarget(
+                        attachmentSessionId,
+                        session.contextType,
+                        session.targetContextId,
+                        session.ownerId,
+                        loginMember.toAuditActor()
+                    ),
+                    details = mapOf("attachmentCount" to 0, "deletedAttachmentCount" to 0)
+                )
             }
         }
 
         val attachmentsToDelete = existingAttachments.filter { it.id !in orderedAttachmentIds }
         attachmentsToDelete.forEach { attachment ->
-            log.info("Deleting unlisted attachment: id={}, filename={}", attachment.id, attachment.originalFilename)
-            deleteAttachment(attachment)
+            deleteAttachment(attachment, actor = loginMember.toAuditActor(), reason = "not_in_ordered_attachment_ids")
         }
 
         if (orderedAttachmentIds.isNotEmpty()) {
@@ -354,7 +465,18 @@ class AttachmentService(
         if (remainingAttachments.isEmpty()) {
             val contextDir = pathResolver.resolveContextDirectory(contextType, contextId)
             fileSystemService.deleteDirectory(contextDir)
-            log.info("Deleted empty attachment directory: contextType={}, contextId={}", contextType, contextId)
+            log.info(
+                "Deleted empty attachment directory: {}",
+                auditContext(
+                    mapOf(
+                        "actorId" to loginMember.id,
+                        "actorName" to loginMember.name,
+                        "contextType" to contextType,
+                        "contextId" to contextId,
+                        "path" to contextDir.toString()
+                    )
+                )
+            )
         }
     }
 
@@ -433,9 +555,9 @@ class AttachmentService(
 
     private fun deleteTempAttachment(
         attachment: Attachment,
-        tempDir: java.nio.file.Path
+        tempDir: java.nio.file.Path,
+        actor: AuditActor
     ) {
-        log.info("Deleting attachment excluded from orderedIds: id={}, filename={}", attachment.id, attachment.originalFilename)
         val tempFilePath = tempDir.resolve(attachment.storedFilename)
         if (Files.exists(tempFilePath)) {
             Files.delete(tempFilePath)
@@ -448,5 +570,46 @@ class AttachmentService(
             }
         }
         attachmentRepository.delete(attachment)
+        log.auditEventAfterCommit(
+            event = "attachment.deleted",
+            actor = actor,
+            target = attachmentAuditTarget(attachment, actor),
+            details = mapOf(
+                "originalFilename" to attachment.originalFilename,
+                "storedFilename" to attachment.storedFilename,
+                "size" to attachment.size,
+                "reason" to "not_in_finalized_attachment_ids"
+            )
+        )
     }
+
+    private fun attachmentAuditTarget(attachment: Attachment, actor: AuditActor?): Map<String, Any?> =
+        mapOf(
+            "type" to "Attachment",
+            "id" to attachment.id,
+            "contextType" to attachment.contextType,
+            "contextId" to attachment.contextId,
+            "uploadSessionId" to attachment.uploadSessionId,
+            "ownerId" to attachment.createdBy,
+            "ownerName" to ownerName(attachment.createdBy, actor),
+            "filename" to attachment.originalFilename
+        )
+
+    private fun sessionAuditTarget(
+        sessionId: UUID,
+        contextType: AttachmentContextType,
+        contextId: String?,
+        ownerId: Long,
+        actor: AuditActor?
+    ): Map<String, Any?> = mapOf(
+        "type" to "AttachmentUploadSession",
+        "id" to sessionId,
+        "contextType" to contextType,
+        "contextId" to contextId,
+        "ownerId" to ownerId,
+        "ownerName" to ownerName(ownerId, actor)
+    )
+
+    private fun ownerName(ownerId: Long, actor: AuditActor?): String? =
+        actor?.takeIf { it.id == ownerId }?.name
 }

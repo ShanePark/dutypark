@@ -9,6 +9,7 @@ import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.member.repository.RefreshTokenRepository
 import com.tistory.shanepark.dutypark.member.service.MemberSocialAccountService
 import com.tistory.shanepark.dutypark.member.service.RefreshTokenService
+import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.notification.domain.repository.NotificationRepository
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
 import com.tistory.shanepark.dutypark.security.config.DutyparkProperties
@@ -58,14 +59,15 @@ class AdminServiceSuspensionTest {
 
     @Test
     fun `suspend obtains a member write lock before changing status`() {
-        val member = Member(name = "member")
+        val member = Member(name = "Suspended Member")
+        val actor = LoginMember(id = 99L, name = "Admin Actor", isAdmin = true)
         whenever(memberRepository.findMemberWithTeamForUpdate(1L)).thenReturn(Optional.of(member))
 
-        service.suspendMember(1L)
+        service.suspendMember(1L, actor)
 
         verify(memberRepository).findMemberWithTeamForUpdate(1L)
         verify(memberRepository, never()).findById(1L)
-        verify(refreshTokenService).revokeAllRefreshTokensByMember(member)
+        verify(refreshTokenService).revokeAllRefreshTokensByMember(member, actor, "account_suspension")
     }
 
     @Test

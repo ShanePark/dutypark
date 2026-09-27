@@ -7,8 +7,11 @@ import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
 import com.tistory.shanepark.dutypark.duty.repository.DutyTypeRepository
 import com.tistory.shanepark.dutypark.publiccontent.service.PublicContentService
+import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.team.domain.entity.Team
 import com.tistory.shanepark.dutypark.team.repository.TeamRepository
+import ch.qos.logback.classic.Logger as LogbackLogger
+import ch.qos.logback.core.read.ListAppender
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
@@ -21,6 +24,7 @@ import org.mockito.Mockito.verifyNoInteractions
 import org.mockito.kotlin.doThrow
 import org.mockito.kotlin.whenever
 import org.mockito.junit.jupiter.MockitoExtension
+import org.slf4j.LoggerFactory
 import org.springframework.test.util.ReflectionTestUtils
 import java.time.Clock
 import java.time.Instant
@@ -206,6 +210,39 @@ class DutyTypeServiceTest {
         assertThat(updated.name).isEqualTo("changed")
         assertThat(updated.color).isEqualTo("#aabbcc")
         verify(publicContentService).validateContent("changed")
+    }
+
+    @Test
+    fun `update duty type logs a before and after snapshot with normalized abbreviation`() {
+        val dutyType = DutyType("original", 0, team, "#f0f8ff", abbreviation = "N")
+        ReflectionTestUtils.setField(dutyType, "id", 1L)
+        team.dutyTypes.add(dutyType)
+
+        `when`(dutyTypeRepository.findById(dutyType.id!!)).thenReturn(Optional.of(dutyType))
+        `when`(teamRepository.findByIdWithDutyTypes(team.id!!)).thenReturn(Optional.of(team))
+        val update = DutyTypeUpdateDto(dutyType.id!!, "changed", "#aabbcc").also {
+            it.abbreviation = " U "
+        }
+
+        val logger = LoggerFactory.getLogger(DutyTypeService::class.java) as LogbackLogger
+        val appender = ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>().apply {
+            context = logger.loggerContext
+            start()
+        }
+        logger.addAppender(appender)
+        val actor = LoginMember(id = 7L, name = "Manager", isImpersonating = true, originalMemberId = 9L)
+        try {
+            dutyTypeService.update(update, actor = actor)
+            dutyTypeService.update(update, actor = actor)
+        } finally {
+            logger.detachAppender(appender)
+            appender.stop()
+        }
+
+        assertThat(appender.list).hasSize(1)
+        assertThat(appender.list.single().formattedMessage)
+            .contains("original", "changed", "#f0f8ff", "#aabbcc", "N", "U", team.name)
+            .contains("\"name\":\"Manager\"", "\"originalMemberId\":9")
     }
 
     @Test

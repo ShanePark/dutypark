@@ -1,8 +1,11 @@
 package com.tistory.shanepark.dutypark.team.service
 
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
+import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
+import com.tistory.shanepark.dutypark.common.logging.auditChangeAfterCommit
+import com.tistory.shanepark.dutypark.common.logging.toAuditActor
 import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTemplate
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyByShift
 import com.tistory.shanepark.dutypark.duty.repository.DutyRepository
@@ -35,6 +38,7 @@ class TeamService(
     private val dutyResolver: DutyResolver,
     private val publicContentService: PublicContentService,
 ) {
+    private val log = logger()
 
     @Transactional(readOnly = true)
     fun findAllWithMemberCount(pageable: Pageable, keyword: String = ""): Page<SimpleTeamDto> {
@@ -153,8 +157,13 @@ class TeamService(
         team.removeMember(member)
     }
 
-    fun changeTeamAdmin(teamId: Long, memberId: Long?) {
+    fun changeTeamAdmin(teamId: Long, memberId: Long?, actor: LoginMember? = null) {
         val team = teamRepository.findById(teamId).orElseThrow()
+        val previousAdmin = team.admin
+        val before = mapOf(
+            "adminId" to previousAdmin?.id,
+            "adminName" to previousAdmin?.name,
+        )
         val member = memberId?.let { memberRepository.findById(memberId).orElseThrow() }
 
         if (member != null && member.team != team) {
@@ -163,9 +172,19 @@ class TeamService(
 
         team.changeAdmin(member)
         teamRepository.save(team)
+        log.auditChangeAfterCommit(
+            event = "team.admin_changed",
+            actor = actor?.toAuditActor(),
+            target = teamAuditTarget(team),
+            before = before,
+            after = mapOf(
+                "adminId" to team.admin?.id,
+                "adminName" to team.admin?.name,
+            ),
+        )
     }
 
-    fun addTeamManager(teamId: Long, memberId: Long) {
+    fun addTeamManager(teamId: Long, memberId: Long, actor: LoginMember? = null) {
         val team = teamRepository.findById(teamId).orElseThrow()
         val member = memberRepository.findById(memberId).orElseThrow()
 
@@ -175,10 +194,18 @@ class TeamService(
         if (team.isManager(memberId)) {
             return
         }
+        val before = mapOf("manager" to false)
         team.addManager(member)
+        log.auditChangeAfterCommit(
+            event = "team.manager_added",
+            actor = actor?.toAuditActor(),
+            target = teamAuditTarget(team) + mapOf("managerId" to member.id, "managerName" to member.name),
+            before = before,
+            after = mapOf("manager" to true),
+        )
     }
 
-    fun removeTeamManager(teamId: Long, memberId: Long) {
+    fun removeTeamManager(teamId: Long, memberId: Long, actor: LoginMember? = null) {
         val team = teamRepository.findById(teamId).orElseThrow()
         val member = memberRepository.findById(memberId).orElseThrow()
 
@@ -188,8 +215,24 @@ class TeamService(
         if (!team.isManager(memberId)) {
             return
         }
+        val wasTeamManager = team.managers.any { it.member.id == memberId }
         team.removeManager(member)
+        if (wasTeamManager) {
+            log.auditChangeAfterCommit(
+                event = "team.manager_removed",
+                actor = actor?.toAuditActor(),
+                target = teamAuditTarget(team) + mapOf("managerId" to member.id, "managerName" to member.name),
+                before = mapOf("manager" to true),
+                after = mapOf("manager" to false),
+            )
+        }
     }
+
+    private fun teamAuditTarget(team: Team) = mapOf(
+        "type" to "Team",
+        "teamId" to team.id,
+        "teamName" to team.name,
+    )
 
     fun updateDefaultDuty(
         teamId: Long,

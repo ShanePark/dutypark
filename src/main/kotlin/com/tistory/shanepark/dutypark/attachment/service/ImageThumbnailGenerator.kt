@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.attachment.service
 
 import com.tistory.shanepark.dutypark.common.config.logger
+import com.tistory.shanepark.dutypark.common.logging.auditContext
 import net.coobird.thumbnailator.Thumbnails
 import org.springframework.stereotype.Component
 import java.nio.file.Path
@@ -30,9 +31,29 @@ class ImageThumbnailGenerator : ThumbnailGenerator {
                 .size(maxSide, maxSide)
                 .outputFormat("png")
                 .toFile(targetPath.toFile())
-            log.info("Thumbnail generated successfully: {} -> {}", sourcePath.fileName, targetPath.fileName)
+            log.info(
+                "Attachment thumbnail generated: {}",
+                auditContext(
+                    mapOf(
+                        "sourcePath" to sourcePath.toString(),
+                        "thumbnailPath" to targetPath.toString(),
+                        "outputFormat" to "png",
+                        "maxSide" to maxSide,
+                        "outputSize" to targetPath.toFile().length()
+                    )
+                )
+            )
         } catch (e: Exception) {
-            log.error("Failed to generate thumbnail for {}: {}", sourcePath.fileName, e.message)
+            log.error(
+                "Attachment thumbnail generation failed: {}",
+                auditContext(
+                    mapOf(
+                        "sourcePath" to sourcePath.toString(),
+                        "thumbnailPath" to targetPath.toString(),
+                        "maxSide" to maxSide,
+                    ) + e.toAttachmentLogDiagnostics()
+                )
+            )
             throw e
         }
     }

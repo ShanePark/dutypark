@@ -57,9 +57,10 @@ class AdminReportController(
 
     @DeleteMapping("/{reportId}/target")
     fun deleteTarget(
+        @Login loginMember: LoginMember,
         @PathVariable reportId: UUID,
     ): AdminReportDetailDto {
-        return adminReportService.deleteTarget(reportId)
+        return adminReportService.deleteTarget(reportId, loginMember = loginMember)
     }
 
     /** An omitted or `ALL` status means "every report"; anything else must name a [ReportStatus]. */

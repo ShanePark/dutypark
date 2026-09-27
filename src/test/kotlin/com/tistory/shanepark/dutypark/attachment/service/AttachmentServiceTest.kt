@@ -13,10 +13,16 @@ import org.assertj.core.api.Assertions.assertThat
 import org.assertj.core.api.Assertions.assertThatThrownBy
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
+import org.slf4j.LoggerFactory
+import ch.qos.logback.classic.Logger as LogbackLogger
+import ch.qos.logback.core.read.ListAppender
+import ch.qos.logback.classic.spi.ILoggingEvent
+import com.tistory.shanepark.dutypark.attachment.dto.ReorderAttachmentsRequest
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.mock.web.MockMultipartFile
 import java.nio.file.Files
 import java.nio.file.Path
+import java.io.IOException
 import java.time.Clock
 import java.time.Instant
 import java.time.ZoneId
@@ -114,6 +120,221 @@ class AttachmentServiceTest {
         assertThat(result.orderIndex).isEqualTo(0)
         assertThat(attachmentRepository.savedAttachments).hasSize(1)
         assertThat(fakeFileSpy.writtenFiles).hasSize(1)
+    }
+
+    @Test
+    fun `uploadFile log identifies actor session context and uploaded attachment`() {
+        val sessionId = UUID.randomUUID()
+        val session = AttachmentUploadSession(
+            contextType = AttachmentContextType.SCHEDULE,
+            targetContextId = null,
+            ownerId = loginMember.id,
+            expiresAt = Instant.now().plusSeconds(3600)
+        )
+        org.mockito.kotlin.whenever(sessionService.findById(sessionId)).thenReturn(session)
+
+        val logger = LoggerFactory.getLogger(AttachmentService::class.java) as LogbackLogger
+        val appender = ListAppender<ILoggingEvent>().apply { start() }
+        logger.addAppender(appender)
+        val result = try {
+            service.uploadFile(
+                loginMember,
+                sessionId,
+                MockMultipartFile("file", "receipt.png", "image/png", byteArrayOf(1, 2, 3))
+            )
+        } finally {
+            logger.detachAppender(appender)
+        }
+
+        assertThat(appender.list).hasSize(1)
+        val message = appender.list.single().formattedMessage
+        assertThat(message)
+            .contains(loginMember.id.toString())
+            .contains(loginMember.name)
+            .contains(sessionId.toString())
+            .contains("SCHEDULE")
+            .contains(result.id.toString())
+            .contains("receipt.png")
+            .contains("3")
+    }
+
+    @Test
+    fun `uploadFile failure log escapes filename and keeps safe exception diagnostics`() {
+        val sessionId = UUID.randomUUID()
+        val session = AttachmentUploadSession(
+            contextType = AttachmentContextType.SCHEDULE,
+            targetContextId = null,
+            ownerId = loginMember.id,
+            expiresAt = Instant.now().plusSeconds(3600)
+        )
+        org.mockito.kotlin.whenever(sessionService.findById(sessionId)).thenReturn(session)
+        fakeFileSpy.writeFailure = {
+            IOException("disk failed\nunsafe detail", IllegalStateException("cause\nunsafe detail"))
+        }
+
+        val logger = LoggerFactory.getLogger(AttachmentService::class.java) as LogbackLogger
+        val appender = ListAppender<ILoggingEvent>().apply { start() }
+        logger.addAppender(appender)
+        try {
+            assertThatThrownBy {
+                service.uploadFile(
+                    loginMember,
+                    sessionId,
+                    MockMultipartFile("file", "bad\nname.txt", "text/plain", byteArrayOf(1, 2, 3))
+                )
+            }.isInstanceOf(IOException::class.java)
+        } finally {
+            logger.detachAppender(appender)
+        }
+
+        assertThat(appender.list).hasSize(1)
+        val event = appender.list.single()
+        assertThat(event.throwableProxy).isNull()
+        assertThat(event.formattedMessage)
+            .doesNotContain("\n")
+            .contains("bad\\nname.txt")
+            .contains(loginMember.id.toString())
+            .contains(loginMember.name)
+            .contains(sessionId.toString())
+            .contains("SCHEDULE")
+            .contains("java.io.IOException")
+            .contains("java.lang.IllegalStateException")
+            .contains("stackFrames")
+            .contains("AttachmentService.uploadFile")
+            .doesNotContain("unsafe detail")
+    }
+
+    @Test
+    fun `finalizeSession failure log escapes filename and keeps safe exception diagnostics`() {
+        val sessionId = UUID.randomUUID()
+        val contextId = UUID.randomUUID().toString()
+        val session = AttachmentUploadSession(
+            contextType = AttachmentContextType.SCHEDULE,
+            targetContextId = null,
+            ownerId = loginMember.id,
+            expiresAt = Instant.now().plusSeconds(3600)
+        )
+        org.mockito.kotlin.whenever(sessionService.findById(sessionId)).thenReturn(session)
+        val tempSessionDir = pathResolver.resolveTemporaryDirectory(sessionId)
+        Files.createDirectories(tempSessionDir)
+        val kept = attachmentRepository.save(
+            Attachment(
+                contextType = AttachmentContextType.SCHEDULE,
+                contextId = null,
+                uploadSessionId = sessionId,
+                originalFilename = "kept.txt",
+                storedFilename = "kept.txt",
+                contentType = "text/plain",
+                size = 1,
+                storagePath = tempSessionDir.toString(),
+                createdBy = loginMember.id
+            )
+        )
+        val deleted = attachmentRepository.save(
+            Attachment(
+                contextType = AttachmentContextType.SCHEDULE,
+                contextId = null,
+                uploadSessionId = sessionId,
+                originalFilename = "bad\nname.txt",
+                storedFilename = "bad-name.txt",
+                contentType = "text/plain",
+                size = 1,
+                storagePath = tempSessionDir.toString(),
+                createdBy = loginMember.id
+            )
+        )
+        Files.write(tempSessionDir.resolve(kept.storedFilename), byteArrayOf(1))
+        Files.createDirectories(tempSessionDir.resolve(deleted.storedFilename))
+        Files.write(tempSessionDir.resolve(deleted.storedFilename).resolve("child.txt"), byteArrayOf(1))
+
+        val logger = LoggerFactory.getLogger(AttachmentService::class.java) as LogbackLogger
+        val appender = ListAppender<ILoggingEvent>().apply { start() }
+        logger.addAppender(appender)
+        try {
+            assertThatThrownBy {
+                service.finalizeSession(
+                    loginMember,
+                    sessionId,
+                    FinalizeSessionRequest(contextId, listOf(kept.id))
+                )
+            }.isInstanceOf(IllegalStateException::class.java)
+        } finally {
+            logger.detachAppender(appender)
+        }
+
+        assertThat(appender.list).hasSize(1)
+        val event = appender.list.single()
+        assertThat(event.throwableProxy).isNull()
+        assertThat(event.formattedMessage)
+            .doesNotContain("\n")
+            .contains(loginMember.id.toString())
+            .contains(loginMember.name)
+            .contains(sessionId.toString())
+            .contains(contextId)
+            .contains("SCHEDULE")
+            .contains("java.nio.file.")
+            .contains("stackFrames")
+            .contains("AttachmentService.deleteTempAttachment")
+    }
+
+    @Test
+    fun `reorder log records actor and each changed order`() {
+        val contextId = UUID.randomUUID().toString()
+        val first = attachmentRepository.save(
+            Attachment(
+                contextType = AttachmentContextType.SCHEDULE,
+                contextId = contextId,
+                originalFilename = "first.txt",
+                storedFilename = "first-stored.txt",
+                contentType = "text/plain",
+                size = 1,
+                storagePath = tempDir.toString(),
+                orderIndex = 0,
+                createdBy = loginMember.id
+            )
+        )
+        val second = attachmentRepository.save(
+            Attachment(
+                contextType = AttachmentContextType.SCHEDULE,
+                contextId = contextId,
+                originalFilename = "second.txt",
+                storedFilename = "second-stored.txt",
+                contentType = "text/plain",
+                size = 2,
+                storagePath = tempDir.toString(),
+                orderIndex = 1,
+                createdBy = loginMember.id
+            )
+        )
+
+        val logger = LoggerFactory.getLogger(AttachmentService::class.java) as LogbackLogger
+        val appender = ListAppender<ILoggingEvent>().apply { start() }
+        logger.addAppender(appender)
+        try {
+            service.reorderAttachments(
+                loginMember,
+                ReorderAttachmentsRequest(
+                    contextType = AttachmentContextType.SCHEDULE,
+                    contextId = contextId,
+                    orderedAttachmentIds = listOf(second.id, first.id)
+                )
+            )
+        } finally {
+            logger.detachAppender(appender)
+        }
+
+        val messages = appender.list.map { it.formattedMessage }
+        assertThat(messages).hasSize(2)
+        assertThat(messages.joinToString("\n"))
+            .contains(loginMember.id.toString())
+            .contains(loginMember.name)
+            .contains(contextId)
+            .contains(first.id.toString())
+            .contains(second.id.toString())
+            .contains("\"before\":0")
+            .contains("\"after\":1")
+            .contains("\"before\":1")
+            .contains("\"after\":0")
     }
 
     @Test
@@ -648,11 +869,13 @@ class AttachmentServiceTest {
 
     class FakeFileSpy {
         val writtenFiles = mutableListOf<Path>()
+        var writeFailure: (() -> IOException)? = null
     }
 
     class TestFileSystemService(private val spy: FakeFileSpy) : FileSystemService() {
         override fun writeFile(file: org.springframework.web.multipart.MultipartFile, targetPath: Path): Path {
             spy.writtenFiles.add(targetPath)
+            spy.writeFailure?.invoke()?.let { throw it }
             return super.writeFile(file, targetPath)
         }
     }

@@ -28,5 +28,6 @@ class AiScheduleParsingConsentController(
         policyVersion = request.policyVersion,
         ipAddress = servletRequest.remoteAddr,
         userAgent = servletRequest.getHeader("User-Agent"),
+        loginMember = loginMember,
     )
 }

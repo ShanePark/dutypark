@@ -6,10 +6,14 @@ import com.tistory.shanepark.dutypark.duty.batch.exceptions.NotSupportedFileExce
 import com.tistory.shanepark.dutypark.duty.batch.exceptions.YearMonthNotMatchException
 import com.tistory.shanepark.dutypark.duty.batch.service.DutyBatchSungsimService
 import com.tistory.shanepark.dutypark.duty.service.DutyService
+import ch.qos.logback.classic.Logger as LogbackLogger
+import ch.qos.logback.core.read.ListAppender
+import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.eq
 import org.mockito.kotlin.whenever
+import org.slf4j.LoggerFactory
 import org.springframework.http.HttpHeaders
 import org.springframework.mock.web.MockMultipartFile
 import org.springframework.test.context.bean.override.mockito.MockitoBean
@@ -73,18 +77,33 @@ class DutyBatchControllerTest : RestDocsTest() {
             dutyBatchSungsimService.batchUploadMember(any(), eq(TestData.member.id!!), eq(YearMonth.of(2026, 3)))
         ).thenThrow(NotSupportedFileException(".xls,.xlsx"))
 
-        mockMvc.perform(
-            multipart("/api/duty_batch")
-                .file(validFile())
-                .param("memberId", TestData.member.id!!.toString())
-                .param("year", "2026")
-                .param("month", "3")
-                .header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(TestData.member)}")
-        )
-            .andExpect(status().isOk)
-            .andExpect(jsonPath("$.result").value(false))
-            .andExpect(jsonPath("$.errorCode").value("dutyBatch.notSupportedFile"))
-            .andExpect(jsonPath("$.errorDetails.supportedFile").value(".xls,.xlsx"))
+        val logger = LoggerFactory.getLogger(DutyBatchController::class.java) as LogbackLogger
+        val appender = ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>().apply {
+            context = logger.loggerContext
+            start()
+        }
+        logger.addAppender(appender)
+        try {
+            mockMvc.perform(
+                multipart("/api/duty_batch")
+                    .file(validFile())
+                    .param("memberId", TestData.member.id!!.toString())
+                    .param("year", "2026")
+                    .param("month", "3")
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer ${getJwt(TestData.member)}")
+            )
+                .andExpect(status().isOk)
+                .andExpect(jsonPath("$.result").value(false))
+                .andExpect(jsonPath("$.errorCode").value("dutyBatch.notSupportedFile"))
+                .andExpect(jsonPath("$.errorDetails.supportedFile").value(".xls,.xlsx"))
+        } finally {
+            logger.detachAppender(appender)
+            appender.stop()
+        }
+
+        assertThat(appender.list).hasSize(1)
+        assertThat(appender.list.single().formattedMessage)
+            .contains("duty_batch.member_upload_failed", "dummy1", "dutyBatch.notSupportedFile", "2026", "3")
     }
 
     @Test

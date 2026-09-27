@@ -18,6 +18,7 @@ import com.tistory.shanepark.dutypark.member.service.RefreshTokenService
 import com.tistory.shanepark.dutypark.notification.domain.repository.NotificationRepository
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
 import com.tistory.shanepark.dutypark.security.config.DutyparkProperties
+import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.todo.domain.entity.TodoStatus
 import com.tistory.shanepark.dutypark.todo.repository.TodoRepository
 import org.springframework.data.domain.Page
@@ -127,14 +128,18 @@ class AdminService(
     }
 
     @Transactional
-    fun suspendMember(memberId: Long) {
+    fun suspendMember(memberId: Long, actor: LoginMember? = null) {
         val member = memberRepository.findMemberWithTeamForUpdate(memberId).orElseThrow()
         when (member.status) {
             MemberStatus.SUSPENDED -> return
             MemberStatus.DELETION_PENDING -> throw MemberSuspensionException("member.suspend.deletionPending")
             MemberStatus.ACTIVE -> {
                 member.suspend()
-                refreshTokenService.revokeAllRefreshTokensByMember(member)
+                refreshTokenService.revokeAllRefreshTokensByMember(
+                    member = member,
+                    actor = actor,
+                    reason = "account_suspension",
+                )
             }
         }
     }

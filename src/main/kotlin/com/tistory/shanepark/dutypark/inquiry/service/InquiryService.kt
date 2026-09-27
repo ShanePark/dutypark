@@ -3,6 +3,8 @@ package com.tistory.shanepark.dutypark.inquiry.service
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
 import com.tistory.shanepark.dutypark.common.exceptions.RateLimitException
+import com.tistory.shanepark.dutypark.common.logging.auditContext
+import com.tistory.shanepark.dutypark.common.logging.toAuditActor
 import com.tistory.shanepark.dutypark.inquiry.config.InquiryRateLimitConfig
 import com.tistory.shanepark.dutypark.inquiry.domain.dto.AdminInquiryDto
 import com.tistory.shanepark.dutypark.inquiry.domain.dto.CreateInquiryRequest
@@ -17,6 +19,7 @@ import com.tistory.shanepark.dutypark.inquiry.repository.InquiryRepository
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
 import com.tistory.shanepark.dutypark.notification.event.InquiryAnsweredEvent
+import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import org.springframework.context.ApplicationEventPublisher
 import org.springframework.data.domain.Page
 import org.springframework.data.domain.Pageable
@@ -41,7 +44,12 @@ class InquiryService(
     private val log = logger()
 
     @Transactional
-    fun createInquiry(memberId: Long?, request: CreateInquiryRequest, ipAddress: String): CreateInquiryResponse {
+    fun createInquiry(
+        memberId: Long?,
+        request: CreateInquiryRequest,
+        ipAddress: String,
+        loginMember: LoginMember? = null,
+    ): CreateInquiryResponse {
         lockRateLimitBucket(ipAddress)
         val now = now()
         val recentCount = inquiryRepository.countByIpAddressAndCreatedDateAfter(
@@ -49,7 +57,21 @@ class InquiryService(
             createdDate = now.minusMinutes(RATE_LIMIT_WINDOW_MINUTES),
         )
         if (recentCount >= rateLimitConfig.maxPerHour) {
-            log.warn("Inquiry rate limit exceeded. ip={}, recentCount={}", ipAddress, recentCount)
+            val actor = loginMember?.toAuditActor()
+                ?: memberId?.let { memberRepository.findById(it).orElse(null)?.toAuditActor() }
+            log.warn(
+                "Inquiry rate limit exceeded {}",
+                auditContext(
+                    mapOf(
+                        "actor" to actor,
+                        "claimedMemberId" to memberId,
+                        "ipAddress" to ipAddress,
+                        "recentCount" to recentCount,
+                        "limitPerHour" to rateLimitConfig.maxPerHour,
+                        "windowMinutes" to RATE_LIMIT_WINDOW_MINUTES,
+                    )
+                ),
+            )
             throw RateLimitException("inquiry.rateLimit.exceeded")
         }
 

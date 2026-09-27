@@ -12,6 +12,8 @@ import com.tistory.shanepark.dutypark.report.repository.ContentReportRepository
 import com.tistory.shanepark.dutypark.schedule.domain.entity.Schedule
 import com.tistory.shanepark.dutypark.schedule.repository.ScheduleRepository
 import com.tistory.shanepark.dutypark.schedule.service.ScheduleService
+import com.tistory.shanepark.dutypark.common.logging.toAuditActor
+import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.todo.domain.entity.Todo
 import com.tistory.shanepark.dutypark.todo.repository.TodoRepository
 import com.tistory.shanepark.dutypark.todo.service.TodoService
@@ -80,12 +82,17 @@ class AdminReportService(
      * The report itself is kept as the record of the moderation decision.
      */
     @Transactional
-    fun deleteTarget(reportId: UUID): AdminReportDetailDto {
+    fun deleteTarget(reportId: UUID, loginMember: LoginMember? = null): AdminReportDetailDto {
         val report = findReportOrThrow(reportId)
+        val actor = loginMember?.toAuditActor()
         when (report.targetType) {
             ReportTargetType.MEMBER -> throw BadRequestException("report.target.notDeletable")
-            ReportTargetType.SCHEDULE -> findSchedule(report.targetId)?.let(scheduleService::deleteScheduleInternal)
-            ReportTargetType.TODO -> findTodo(report.targetId)?.let(todoService::deleteTodoInternal)
+            ReportTargetType.SCHEDULE -> findSchedule(report.targetId)?.let {
+                scheduleService.deleteScheduleInternal(it, actor = actor)
+            }
+            ReportTargetType.TODO -> findTodo(report.targetId)?.let { todo ->
+                todoService.deleteTodoInternal(todo, actor = actor)
+            }
         }
         return toDetail(report, targetExists = false)
     }

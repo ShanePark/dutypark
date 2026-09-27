@@ -1,20 +1,16 @@
 package com.tistory.shanepark.dutypark.schedule.timeparsing.service
 
-import ch.qos.logback.classic.Logger
-import ch.qos.logback.classic.spi.ILoggingEvent
-import ch.qos.logback.core.read.ListAppender
 import com.tistory.shanepark.dutypark.TestUtils.Companion.jsr310JsonMapper
 import com.tistory.shanepark.dutypark.common.config.AiProperties
 import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeParsingRequest
+import com.tistory.shanepark.dutypark.schedule.timeparsing.domain.ScheduleTimeParsingResponse
 import org.assertj.core.api.Assertions.assertThat
-import org.junit.jupiter.api.AfterEach
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.DisplayName
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.any
 import org.mockito.kotlin.mock
 import org.mockito.kotlin.whenever
-import org.slf4j.LoggerFactory
 import org.springframework.ai.chat.messages.AssistantMessage
 import org.springframework.ai.chat.model.ChatModel
 import org.springframework.ai.chat.model.ChatResponse
@@ -30,20 +26,12 @@ class ScheduleTimeParsingServiceResponseParsingTest {
 
     private lateinit var chatModel: ChatModel
     private lateinit var service: ScheduleTimeParsingService
-    private lateinit var logAppender: ListAppender<ILoggingEvent>
 
     @BeforeEach
     fun setup() {
         chatModel = mock()
         whenever(chatModel.options).thenReturn(OpenAiChatOptions.builder().build())
         service = ScheduleTimeParsingService(chatModel, jsr310JsonMapper(), AiProperties(), 9)
-        logAppender = ListAppender<ILoggingEvent>().apply { start() }
-        serviceLogger().addAppender(logAppender)
-    }
-
-    @AfterEach
-    fun tearDown() {
-        serviceLogger().detachAppender(logAppender)
     }
 
     @Test
@@ -176,32 +164,81 @@ class ScheduleTimeParsingServiceResponseParsingTest {
     }
 
     @Test
-    fun `parseScheduleTime logs content before and after with parsed time`() {
+    fun `log context preserves before and after content on one escaped line`() {
+        val request = ScheduleTimeParsingRequest(
+            date = LocalDate.of(2025, 2, 28),
+            content = "이재상담5시20분\n다음 줄",
+        )
         whenever(chatModel.call(any<Prompt>())).thenReturn(
             ChatResponse(
                 listOf(
                     Generation(
                         AssistantMessage(
-                            """{"result":true,"hasTime":true,"startDateTime":"2025-02-28T17:20:00","endDateTime":"2025-02-28T17:20:00","content":"이재상담"}"""
+                            """{"result":true,"hasTime":true,"startDateTime":"2025-02-28T17:20:00","endDateTime":"2025-02-28T17:20:00","content":"이재상담\n후속"}"""
                         )
                     )
                 )
             )
         )
 
-        service.parseScheduleTime(
-            ScheduleTimeParsingRequest(
-                date = LocalDate.of(2025, 2, 28),
-                content = "이재상담5시20분"
+        val response = service.parseScheduleTime(request)
+        val logMessage = response.toLogMessage(
+            request,
+            mapOf("scheduleId" to "schedule-123", "memberId" to 7L, "memberName" to "민수"),
+        )
+
+        assertThat(logMessage)
+            .contains("\"contentBefore\":\"이재상담5시20분\\n다음 줄\"")
+            .contains("\"contentAfter\":\"이재상담\\n후속\"")
+            .contains("\"time\":\"2025-02-28T17:20:00\"")
+            .contains("\"scheduleId\":\"schedule-123\"")
+            .contains("\"memberId\":7")
+            .contains("\"memberName\":\"민수\"")
+            .contains("\"hasTime\":true")
+            .contains("\"result\":true")
+            .doesNotContain("\n")
+    }
+
+    @Test
+    fun `invalid model JSON includes error type and escaped raw response in log context`() {
+        val request = ScheduleTimeParsingRequest(
+            date = LocalDate.of(2025, 2, 28),
+            content = "진료 3시",
+        )
+        val invalidJson = """{"result":[],"hasTime":true,"content":"첫 줄\\n둘째 줄"}"""
+        whenever(chatModel.call(any<Prompt>())).thenReturn(
+            ChatResponse(
+                listOf(
+                    Generation(
+                        AssistantMessage(invalidJson)
+                    )
+                )
             )
         )
 
-        val logMessage = logAppender.list.last().formattedMessage
+        val response = service.parseScheduleTime(request)
+        val logMessage = response.toLogMessage(request)
+        val errorMessage = requireNotNull(response.errorMessage)
+        val logJson = jsr310JsonMapper().readTree(logMessage)
 
-        assertThat(logMessage).contains("content='이재상담5시20분' -> '이재상담'")
-        assertThat(logMessage).contains("time=2025-02-28T17:20:00")
-        assertThat(logMessage).contains("hasTime=true")
-        assertThat(logMessage).contains("result=true")
+        assertThat(response.result).isFalse()
+        assertThat(response.errorType).isNotBlank()
+        assertThat(errorMessage).isNotBlank()
+        assertThat(logJson["rawResponse"].asText()).isEqualTo(invalidJson)
+        assertThat(logJson["errorType"].asText()).isNotBlank()
+        assertThat(logJson.has("errorMessage")).isFalse()
+        assertThat(logMessage).doesNotContain("\n", "\r")
+    }
+
+    @Test
+    fun `internal error type is not serialized in response`() {
+        val response = ScheduleTimeParsingResponse(errorType = "IllegalArgumentException")
+
+        val serialized = jsr310JsonMapper().writeValueAsString(response)
+
+        assertThat(serialized)
+            .doesNotContain("errorType")
+            .doesNotContain("IllegalArgumentException")
     }
 
     @Test
@@ -219,7 +256,4 @@ class ScheduleTimeParsingServiceResponseParsingTest {
         assertThat(response.errorMessage).isEqualTo("LLM API returned empty response")
     }
 
-    private fun serviceLogger(): Logger {
-        return LoggerFactory.getLogger(ScheduleTimeParsingService::class.java) as Logger
-    }
 }

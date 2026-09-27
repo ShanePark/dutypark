@@ -4,7 +4,9 @@ import com.tistory.shanepark.dutypark.admin.domain.dto.AdminMemberDto
 import com.tistory.shanepark.dutypark.admin.domain.dto.AdminMemberDetailDto
 import com.tistory.shanepark.dutypark.admin.service.AdminService
 import com.tistory.shanepark.dutypark.common.domain.dto.PageResponse
+import com.tistory.shanepark.dutypark.member.domain.annotation.Login
 import com.tistory.shanepark.dutypark.member.service.RefreshTokenService
+import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.security.domain.dto.RefreshTokenDto
 import org.springframework.data.domain.Pageable
 import org.springframework.data.web.PageableDefault
@@ -44,9 +46,10 @@ class AdminController(
 
     @PostMapping("/members/{memberId}/suspension")
     fun suspendMember(
+        @Login loginMember: LoginMember,
         @PathVariable memberId: Long,
     ) {
-        adminService.suspendMember(memberId)
+        adminService.suspendMember(memberId, loginMember)
     }
 
     @DeleteMapping("/members/{memberId}/suspension")

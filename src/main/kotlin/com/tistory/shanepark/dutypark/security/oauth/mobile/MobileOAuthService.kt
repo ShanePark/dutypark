@@ -2,6 +2,7 @@ package com.tistory.shanepark.dutypark.security.oauth.mobile
 
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.common.logging.auditContext
 import com.tistory.shanepark.dutypark.member.domain.entity.MemberSsoRegister
 import com.tistory.shanepark.dutypark.member.domain.enums.SsoType
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.PlatformTransactionManager
 import org.springframework.transaction.annotation.Transactional
 import org.springframework.transaction.support.TransactionTemplate
+import org.springframework.web.client.RestClientResponseException
 import org.springframework.web.util.UriComponentsBuilder
 import java.net.URI
 import java.nio.charset.StandardCharsets
@@ -129,7 +131,36 @@ class MobileOAuthService(
                 redirectUri = providerCallbackUri(provider),
             )
         } catch (e: Exception) {
-            log.warn("Mobile OAuth provider call failed. provider={}, error={}", provider, e.javaClass.simpleName)
+            val (authenticatedMemberName, memberLookupExceptionType) = claim.authenticatedMemberId?.let { memberId ->
+                try {
+                    memberRepository.findById(memberId).orElse(null)?.name to null
+                } catch (lookupException: RuntimeException) {
+                    null to lookupException.javaClass.simpleName
+                }
+            } ?: (null to null)
+            log.warn(
+                "Mobile OAuth provider call failed: {}",
+                auditContext(
+                    mapOf(
+                        "operation" to "authorization_code_exchange",
+                        "flow" to "mobile_callback",
+                        "transactionId" to claim.transactionId,
+                        "authenticatedMemberId" to claim.authenticatedMemberId,
+                        "authenticatedMemberName" to authenticatedMemberName,
+                        "memberLookupExceptionType" to memberLookupExceptionType,
+                        "provider" to claim.provider,
+                        "purpose" to claim.purpose,
+                        "clientId" to when (claim.provider) {
+                            SsoType.KAKAO -> kakaoClientId
+                            SsoType.NAVER -> naverClientId
+                            SsoType.APPLE -> null
+                        },
+                        "httpStatus" to (e as? RestClientResponseException)?.statusCode?.value(),
+                        "exceptionType" to e.javaClass.simpleName,
+                        "causeType" to e.cause?.javaClass?.simpleName,
+                    )
+                ),
+            )
             return callbackUri(claim.callbackUri, "error", "provider_failed")
         }
 

@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.notification.service
 
 import com.tistory.shanepark.dutypark.common.config.logger
+import com.tistory.shanepark.dutypark.common.logging.auditContext
 import com.tistory.shanepark.dutypark.member.domain.enums.FriendRequestStatus
 import com.tistory.shanepark.dutypark.member.repository.FriendRequestRepository
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
@@ -122,20 +123,43 @@ class NotificationService(
             notification.payloadJson,
         )) {
             is NotificationPayloadDecodeResult.Success -> result.payload
-            is NotificationPayloadDecodeResult.Missing -> fallbackPayload(memberId, notification, source, result.reason)
-            is NotificationPayloadDecodeResult.Invalid -> fallbackPayload(memberId, notification, source, result.reason)
+            is NotificationPayloadDecodeResult.Missing -> fallbackPayload(
+                memberId,
+                notification,
+                source,
+                decodeStatus = "MISSING",
+            )
+            is NotificationPayloadDecodeResult.Invalid -> fallbackPayload(
+                memberId,
+                notification,
+                source,
+                decodeStatus = "INVALID",
+            )
         }
     }
 
-    private fun fallbackPayload(memberId: Long, notification: Notification, source: String, reason: String): NotificationPayload {
+    private fun fallbackPayload(
+        memberId: Long,
+        notification: Notification,
+        source: String,
+        decodeStatus: String,
+    ): NotificationPayload {
         log.warn(
-            "Falling back to generic payload for notification {} of member {} during {} because payload is invalid (type={}, version={}, reason={})",
-            notification.id,
-            memberId,
-            source,
-            notification.type,
-            notification.payloadVersion,
-            reason,
+            "Notification payload fallback: {}",
+            auditContext(
+                mapOf(
+                    "event" to "notification_payload_fallback",
+                    "notificationId" to notification.id,
+                    "memberId" to memberId,
+                    "actorMemberId" to notification.actorId,
+                    "referenceType" to notification.referenceType,
+                    "referenceId" to notification.referenceId,
+                    "source" to source,
+                    "notificationType" to notification.type,
+                    "payloadVersion" to notification.payloadVersion,
+                    "decodeStatus" to decodeStatus,
+                )
+            ),
         )
         return UnknownNotificationPayload()
     }

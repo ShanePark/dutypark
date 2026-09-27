@@ -16,6 +16,8 @@ import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
 import com.tistory.shanepark.dutypark.team.domain.dto.TeamCreateDto
 import com.tistory.shanepark.dutypark.team.domain.entity.Team
 import com.tistory.shanepark.dutypark.team.repository.TeamRepository
+import ch.qos.logback.classic.Logger as LogbackLogger
+import ch.qos.logback.core.read.ListAppender
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.Test
@@ -30,6 +32,7 @@ import org.mockito.kotlin.verify
 import org.mockito.kotlin.never
 import org.mockito.kotlin.whenever
 import org.mockito.junit.jupiter.MockitoExtension
+import org.slf4j.LoggerFactory
 import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.test.util.ReflectionTestUtils
 import java.time.LocalDate
@@ -122,6 +125,71 @@ class TeamServiceTest {
 
         assertThat(exception.message).isEqualTo("team.member.notInTeam")
         assertThat(team.admin).isNull()
+    }
+
+    @Test
+    fun `change team admin logs the previous and new admin identities`() {
+        val team = Team("Test Team")
+        val previousAdmin = Member(name = "Previous Admin")
+        val newAdmin = Member(name = "New Admin")
+        ReflectionTestUtils.setField(team, "id", 1L)
+        ReflectionTestUtils.setField(previousAdmin, "id", 2L)
+        ReflectionTestUtils.setField(newAdmin, "id", 3L)
+        team.changeAdmin(previousAdmin)
+        newAdmin.team = team
+        whenever(teamRepository.findById(1L)).thenReturn(Optional.of(team))
+        whenever(memberRepository.findById(3L)).thenReturn(Optional.of(newAdmin))
+
+        val logger = LoggerFactory.getLogger(TeamService::class.java) as LogbackLogger
+        val appender = ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>().apply {
+            context = logger.loggerContext
+            start()
+        }
+        logger.addAppender(appender)
+        val actor = LoginMember(id = 11L, name = "Acting Admin", isImpersonating = true, originalMemberId = 12L)
+        try {
+            service.changeTeamAdmin(teamId = 1L, memberId = 3L, actor = actor)
+        } finally {
+            logger.detachAppender(appender)
+            appender.stop()
+        }
+
+        assertThat(appender.list).hasSize(1)
+        assertThat(appender.list.single().formattedMessage)
+            .contains("Test Team", "Previous Admin", "New Admin", "2", "3", "Acting Admin", "\"originalMemberId\":12")
+    }
+
+    @Test
+    fun `adding and removing team manager logs identities once for actual changes`() {
+        val team = Team("Test Team")
+        val manager = Member(name = "Team Manager")
+        ReflectionTestUtils.setField(team, "id", 1L)
+        ReflectionTestUtils.setField(manager, "id", 2L)
+        manager.team = team
+        whenever(teamRepository.findById(1L)).thenReturn(Optional.of(team))
+        whenever(memberRepository.findById(2L)).thenReturn(Optional.of(manager))
+        val actor = LoginMember(id = 11L, name = "Acting Admin", isImpersonating = true, originalMemberId = 12L)
+
+        val logger = LoggerFactory.getLogger(TeamService::class.java) as LogbackLogger
+        val appender = ListAppender<ch.qos.logback.classic.spi.ILoggingEvent>().apply {
+            context = logger.loggerContext
+            start()
+        }
+        logger.addAppender(appender)
+        try {
+            service.addTeamManager(teamId = 1L, memberId = 2L, actor = actor)
+            service.addTeamManager(teamId = 1L, memberId = 2L, actor = actor)
+            service.removeTeamManager(teamId = 1L, memberId = 2L, actor = actor)
+            service.removeTeamManager(teamId = 1L, memberId = 2L, actor = actor)
+        } finally {
+            logger.detachAppender(appender)
+            appender.stop()
+        }
+
+        assertThat(appender.list).hasSize(2)
+        assertThat(appender.list.map { it.formattedMessage })
+            .anySatisfy { assertThat(it).contains("team.manager_added", "Test Team", "Team Manager", "Acting Admin") }
+            .anySatisfy { assertThat(it).contains("team.manager_removed", "Test Team", "Team Manager", "Acting Admin") }
     }
 
     @Test

@@ -1,6 +1,5 @@
 package com.tistory.shanepark.dutypark.team.controller
 
-import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.slack.annotation.SlackNotification
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeCreateDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeUpdateDto
@@ -18,8 +17,6 @@ class TeamManageDutyTypeController(
     private val teamService: TeamService,
     private val dutyTypeService: DutyTypeService,
 ) {
-    private val log = logger()
-
     @PostMapping("/{teamId}/duty-types")
     @SlackNotification
     fun addDutyType(
@@ -29,8 +26,7 @@ class TeamManageDutyTypeController(
     ) {
         require(teamId == dutyTypeCreateDto.teamId) { "team.dutyType.teamMismatch" }
         checkCanManage(login = loginMember, teamId = dutyTypeCreateDto.teamId)
-        dutyTypeService.addDutyType(dutyTypeCreateDto)
-        log.info("DutyType created: teamId={}, name={}, by={}", dutyTypeCreateDto.teamId, dutyTypeCreateDto.name, loginMember.id)
+        dutyTypeService.addDutyType(dutyTypeCreateDto, actor = loginMember)
     }
 
     @PatchMapping("/{teamId}/duty-types")
@@ -43,8 +39,7 @@ class TeamManageDutyTypeController(
         val dutyType = dutyTypeService.findById(dutyTypeUpdateDto.id)
         require(teamId == dutyType.teamId) { "team.dutyType.teamMismatch" }
         checkCanManage(login = loginMember, teamId = dutyType.teamId)
-        dutyTypeService.update(dutyTypeUpdateDto)
-        log.info("DutyType updated: id={}, by={}", dutyTypeUpdateDto.id, loginMember.id)
+        dutyTypeService.update(dutyTypeUpdateDto, actor = loginMember)
     }
 
     @PatchMapping("/{teamId}/duty-types/swap-position")
@@ -58,7 +53,7 @@ class TeamManageDutyTypeController(
         require(dutyType1.teamId == dutyType2.teamId) { "team.dutyType.sameTeam.required" }
         require(teamId == dutyType1.teamId) { "team.dutyType.teamMismatch" }
         checkCanManage(login = loginMember, teamId = dutyType1.teamId)
-        dutyTypeService.swapDutyTypePosition(id1, id2)
+        dutyTypeService.swapDutyTypePosition(id1, id2, actor = loginMember)
     }
 
     @PatchMapping("/{teamId}/duty-types/{id}/visibility")
@@ -72,8 +67,7 @@ class TeamManageDutyTypeController(
         val dutyType = dutyTypeService.findById(id)
         require(teamId == dutyType.teamId) { "team.dutyType.teamMismatch" }
         checkCanManage(login = loginMember, teamId = dutyType.teamId)
-        dutyTypeService.updateVisibility(id, visibility.hidden)
-        log.info("DutyType visibility updated: id={}, hidden={}, by={}", id, visibility.hidden, loginMember.id)
+        dutyTypeService.updateVisibility(id, visibility.hidden, actor = loginMember)
     }
 
     private fun checkCanManage(login: LoginMember, teamId: Long) {

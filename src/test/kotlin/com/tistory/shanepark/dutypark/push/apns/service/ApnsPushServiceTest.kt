@@ -25,6 +25,7 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.whenever
 import org.slf4j.LoggerFactory
+import org.springframework.test.util.ReflectionTestUtils
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
@@ -186,17 +187,32 @@ class ApnsPushServiceTest {
         )
         whenever(httpClient.sendAsync(any(), any<HttpResponse.BodyHandler<String>>()))
             .thenReturn(CompletableFuture.completedFuture(response))
-        whenever(repository.findAllDeliverableByMemberId(any(), any())).thenReturn(
-            listOf(ApnsInstallation(refreshToken(), "sensitive-device-token", sandbox = true))
-        )
+        val installation = ApnsInstallation(refreshToken(), "sensitive-device-token", sandbox = true)
+        whenever(repository.findAllDeliverableByMemberId(any(), any())).thenReturn(listOf(installation))
         val logger = LoggerFactory.getLogger(ApnsPushService::class.java) as Logger
         val appender = ListAppender<ILoggingEvent>().apply { start() }
         logger.addAppender(appender)
 
+        val notificationId = UUID.fromString("123e4567-e89b-12d3-a456-426614174000")
         try {
             enabledService(httpClient).sendToMember(
                 1L,
-                PushNotificationPayload(type = NotificationType.FRIEND_REQUEST_RECEIVED),
+                PushNotificationPayload(
+                    type = NotificationType.FRIEND_REQUEST_RECEIVED,
+                    notificationId = notificationId.toString(),
+                    notification = NotificationDto(
+                        id = notificationId,
+                        type = NotificationType.FRIEND_REQUEST_RECEIVED,
+                        referenceType = null,
+                        referenceId = null,
+                        actorId = 2L,
+                        payload = FriendRequestReceivedPayload(
+                            actor = NotificationActorSnapshot("Actor Name", false, 0),
+                        ),
+                        isRead = false,
+                        createdAt = LocalDateTime.now(),
+                    ),
+                ),
             )
         } finally {
             logger.detachAppender(appender)
@@ -204,8 +220,59 @@ class ApnsPushServiceTest {
 
         assertThat(appender.list).hasSize(1)
         assertThat(appender.list.single().formattedMessage)
-            .contains("status=403", "reason=UnrelatedKeyIdInToken", "apnsId=550e8400-e29b-41d4-a716-446655440000")
-            .doesNotContain("secret", "do-not-log", "sensitive-device-token", "bearer")
+            .contains(
+                "403",
+                "UnrelatedKeyIdInToken",
+                "550e8400-e29b-41d4-a716-446655440000",
+                "FRIEND_REQUEST_RECEIVED",
+                notificationId.toString(),
+                "Actor Name",
+                "2",
+                "1",
+                installation.getId().toString(),
+                "71",
+            )
+            .doesNotContain("do-not-log", "sensitive-device-token", "bearer")
+        assertThat(appender.list.single().throwableProxy).isNull()
+    }
+
+    @Test
+    fun `transport failure logs safe cause context and push target identifiers`() {
+        val httpClient: HttpClient = mock()
+        val responseFailure = IllegalStateException("device token=sensitive-device-token endpoint=https://private.example/path")
+        whenever(httpClient.sendAsync(any(), any<HttpResponse.BodyHandler<String>>()))
+            .thenReturn(CompletableFuture.failedFuture(responseFailure))
+        val installation = ApnsInstallation(refreshToken(), "sensitive-device-token", sandbox = true)
+        whenever(repository.findAllDeliverableByMemberId(any(), any())).thenReturn(listOf(installation))
+        val logger = LoggerFactory.getLogger(ApnsPushService::class.java) as Logger
+        val appender = ListAppender<ILoggingEvent>().apply { start() }
+        logger.addAppender(appender)
+
+        try {
+            enabledService(httpClient).sendToMember(
+                1L,
+                PushNotificationPayload(
+                    type = NotificationType.FRIEND_REQUEST_ACCEPTED,
+                    notificationId = "notification-123",
+                ),
+            )
+        } finally {
+            logger.detachAppender(appender)
+        }
+
+        assertThat(appender.list).hasSize(1)
+        val event = appender.list.single()
+        assertThat(event.formattedMessage)
+            .contains(
+                "IllegalStateException",
+                "FRIEND_REQUEST_ACCEPTED",
+                "notification-123",
+                "1",
+                installation.getId().toString(),
+                "71",
+            )
+            .doesNotContain("sensitive-device-token", "private.example", "device token=", "bearer")
+        assertThat(event.throwableProxy).isNull()
     }
 
     @Test
@@ -309,7 +376,7 @@ class ApnsPushServiceTest {
         validUntil = LocalDateTime.now().plusDays(1),
         remoteAddr = null,
         userAgent = null,
-    )
+    ).also { ReflectionTestUtils.setField(it, "id", 71L) }
 
     private fun privateKeyPem(): String {
         val generator = KeyPairGenerator.getInstance("EC")

@@ -1,5 +1,8 @@
 package com.tistory.shanepark.dutypark.member.service
 
+import ch.qos.logback.classic.Logger
+import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.core.read.ListAppender
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.member.domain.dto.DDaySaveDto
 import com.tistory.shanepark.dutypark.member.domain.entity.DDayEvent
@@ -22,6 +25,7 @@ import org.mockito.kotlin.doThrow
 import org.mockito.kotlin.verify
 import org.mockito.kotlin.verifyNoInteractions
 import org.mockito.kotlin.whenever
+import org.slf4j.LoggerFactory
 import org.springframework.test.util.ReflectionTestUtils
 import java.time.LocalDate
 import java.util.*
@@ -175,16 +179,28 @@ class DDayServiceTest {
         val event = dDayEventWithId(
             id = 10L,
             member = member,
-            title = "Private",
+            title = "secret family date",
             date = fixedDate.plusDays(1),
             isPrivate = true
         )
         whenever(dDayRepository.findById(event.id!!)).thenReturn(Optional.of(event))
+        val logger = LoggerFactory.getLogger(DDayService::class.java) as Logger
+        val appender = ListAppender<ILoggingEvent>().apply { start() }
+        logger.addAppender(appender)
 
-        val exception = assertThrows<AuthException> {
-            dDayService.findDDay(loginMember(member2), event.id!!)
+        val exception = try {
+            assertThrows<AuthException> {
+                dDayService.findDDay(loginMember(member2), event.id!!)
+            }
+        } finally {
+            logger.detachAppender(appender)
         }
+
         assertThat(exception.message).isEqualTo("dday.access.forbidden")
+        assertThat(appender.list).hasSize(1)
+        assertThat(appender.list.single().formattedMessage)
+            .contains("test2", "test1", "10")
+            .doesNotContain("secret family date")
     }
 
     @Test
@@ -356,19 +372,30 @@ class DDayServiceTest {
             isPrivate = false
         )
         whenever(dDayRepository.findById(event.id!!)).thenReturn(Optional.of(event))
+        val logger = LoggerFactory.getLogger(DDayService::class.java) as Logger
+        val appender = ListAppender<ILoggingEvent>().apply { start() }
+        logger.addAppender(appender)
 
-        val exception = assertThrows<AuthException> {
-            dDayService.updateDDay(
-                loginMember(member2),
-                DDaySaveDto(
-                    id = event.id,
-                    title = "After",
-                    date = fixedDate.plusDays(10),
-                    isPrivate = true
+        val exception = try {
+            assertThrows<AuthException> {
+                dDayService.updateDDay(
+                    loginMember(member2),
+                    DDaySaveDto(
+                        id = event.id,
+                        title = "After",
+                        date = fixedDate.plusDays(10),
+                        isPrivate = true
+                    )
                 )
-            )
+            }
+        } finally {
+            logger.detachAppender(appender)
         }
         assertThat(exception.message).isEqualTo("dday.access.forbidden")
+        assertThat(appender.list).hasSize(1)
+        assertThat(appender.list.single().formattedMessage)
+            .contains("D-day access denied", "\"operation\":\"update\"")
+            .doesNotContain("private event", "\"operation\":\"view\"")
     }
 
     @Test
@@ -397,10 +424,21 @@ class DDayServiceTest {
             isPrivate = false
         )
         whenever(dDayRepository.findById(event.id!!)).thenReturn(Optional.of(event))
+        val logger = LoggerFactory.getLogger(DDayService::class.java) as Logger
+        val appender = ListAppender<ILoggingEvent>().apply { start() }
+        logger.addAppender(appender)
 
-        val exception = assertThrows<AuthException> {
-            dDayService.deleteDDay(loginMember(member2), event.id!!)
+        val exception = try {
+            assertThrows<AuthException> {
+                dDayService.deleteDDay(loginMember(member2), event.id!!)
+            }
+        } finally {
+            logger.detachAppender(appender)
         }
         assertThat(exception.message).isEqualTo("dday.access.forbidden")
+        assertThat(appender.list).hasSize(1)
+        assertThat(appender.list.single().formattedMessage)
+            .contains("D-day access denied", "\"operation\":\"delete\"")
+            .doesNotContain("private event", "\"operation\":\"view\"")
     }
 }

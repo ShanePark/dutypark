@@ -4,6 +4,7 @@ import com.tistory.shanepark.dutypark.attachment.domain.entity.Attachment
 import com.tistory.shanepark.dutypark.attachment.domain.enums.AttachmentContextType
 import com.tistory.shanepark.dutypark.attachment.repository.AttachmentRepository
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
+import com.tistory.shanepark.dutypark.common.logging.toAuditActor
 import com.tistory.shanepark.dutypark.attachment.service.AttachmentService
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.member.repository.MemberRepository
@@ -380,7 +381,11 @@ class TodoServiceTest {
         todoService.deleteTodo(loginMember, todoId)
 
         attachments.forEach { attachment ->
-            verify(attachmentService, times(1)).deleteAttachment(attachment)
+            verify(attachmentService, times(1)).deleteAttachment(
+                attachment,
+                actor = loginMember.toAuditActor(),
+                reason = "todo_deleted",
+            )
         }
         verify(todoRepository, times(1)).delete(todo)
     }
@@ -419,7 +424,11 @@ class TodoServiceTest {
         assertEquals(0, result.untaggedCount)
         verify(todoRepository).delete(completedTodo)
         verify(todoRepository, never()).delete(activeTodo)
-        verify(attachmentService).deleteAttachment(attachment)
+        verify(attachmentService).deleteAttachment(
+            attachment,
+            actor = loginMember.toAuditActor(),
+            reason = "todo_deleted",
+        )
     }
 
     @Test
@@ -498,7 +507,11 @@ class TodoServiceTest {
 
         todoService.deleteTodoInternal(todo)
 
-        verify(attachmentService, times(1)).deleteAttachment(attachment)
+        verify(attachmentService, times(1)).deleteAttachment(
+            attachment,
+            actor = null,
+            reason = "todo_deleted",
+        )
         verify(todoRepository, times(1)).delete(todo)
         verifyNoInteractions(memberRepository)
     }
