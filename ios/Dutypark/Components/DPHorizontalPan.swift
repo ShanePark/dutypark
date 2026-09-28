@@ -9,6 +9,14 @@ nonisolated enum DPHorizontalPanPolicy {
     static func shouldBegin(velocity: CGPoint) -> Bool {
         abs(velocity.x) > abs(velocity.y)
     }
+
+    static func shouldSendChange(for state: UIGestureRecognizer.State) -> Bool {
+        state == .began || state == .changed
+    }
+
+    static func shouldSendEnd(for state: UIGestureRecognizer.State) -> Bool {
+        state == .ended || state == .cancelled || state == .failed
+    }
 }
 
 extension View {
@@ -114,13 +122,10 @@ private final class DPHorizontalPanCoordinator: NSObject, UIGestureRecognizerDel
     @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
         let translation = gesture.translation(in: gesture.view)
         let size = CGSize(width: translation.x, height: translation.y)
-        switch gesture.state {
-        case .changed:
+        if DPHorizontalPanPolicy.shouldSendChange(for: gesture.state) {
             onChanged(size)
-        case .ended, .cancelled, .failed:
+        } else if DPHorizontalPanPolicy.shouldSendEnd(for: gesture.state) {
             onEnded(size)
-        default:
-            break
         }
     }
 

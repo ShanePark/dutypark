@@ -25,4 +25,10 @@ final class DPHorizontalPanPolicyTests: XCTestCase {
         XCTAssertFalse(DPHorizontalPanPolicy.shouldBegin(velocity: CGPoint(x: 500, y: 500)))
         XCTAssertFalse(DPHorizontalPanPolicy.shouldBegin(velocity: .zero))
     }
+
+    func testThePagerPreparesItsTrackWhenThePanBegins() {
+        XCTAssertTrue(DPHorizontalPanPolicy.shouldSendChange(for: .began))
+        XCTAssertTrue(DPHorizontalPanPolicy.shouldSendChange(for: .changed))
+        XCTAssertFalse(DPHorizontalPanPolicy.shouldSendChange(for: .ended))
+    }
 }

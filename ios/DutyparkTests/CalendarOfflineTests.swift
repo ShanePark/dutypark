@@ -129,6 +129,56 @@ final class CalendarOfflineTests: XCTestCase {
         )
     }
 
+    func testAdjacentMonthPreviewUsesOwnCachedContentAndSkipsOtherCalendars() async throws {
+        let cache = CalendarOfflineCacheStub(
+            account: Self.accountSnapshot(),
+            months: [Self.monthSnapshot(year: 2026, month: 9, storedAt: Date(timeIntervalSince1970: 456))]
+        )
+        let model = CalendarViewModel(
+            repository: CalendarOfflineRepository(),
+            now: Self.date(2026, 8, 12),
+            accountID: 42,
+            isOffline: true,
+            cache: cache
+        )
+
+        await model.load()
+        let preview = await model.cachedMonthPreview(year: 2026, month: 9)
+        XCTAssertEqual(
+            preview?.first(where: { $0.cell.date.rawValue == "2026-09-12" })?.schedules.first?.content,
+            "Cached appointment"
+        )
+
+        model.selectedMemberID = 2
+        let friendPreview = await model.cachedMonthPreview(year: 2026, month: 9)
+        XCTAssertNil(
+            friendPreview,
+            "A friend's calendar must use date-only geometry instead of this account's cache"
+        )
+    }
+
+    func testFailedMonthChangeRestoresTheLoadedMonth() async throws {
+        let cache = CalendarOfflineCacheStub(
+            account: Self.accountSnapshot(),
+            month: Self.monthSnapshot(storedAt: Date(timeIntervalSince1970: 456))
+        )
+        let model = CalendarViewModel(
+            repository: CalendarOfflineRepository(),
+            now: Self.date(2026, 8, 12),
+            accountID: 42,
+            isOffline: true,
+            cache: cache
+        )
+
+        await model.load()
+        let changed = await model.changeMonth(by: 1)
+
+        XCTAssertFalse(changed)
+        XCTAssertEqual(model.year, 2026)
+        XCTAssertEqual(model.month, 8)
+        XCTAssertEqual(model.days.first(where: { $0.cell.isCurrentMonth })?.cell.month, 8)
+    }
+
     func testLegacyCachedComparisonDutiesAreIgnoredWithoutDiscardingTheMonth() async throws {
         let cache = CalendarOfflineCacheStub(
             account: Self.accountSnapshot(),
@@ -833,37 +883,40 @@ private extension CalendarOfflineTests {
     }
 
     static func monthSnapshot(
+        year: Int = 2026,
+        month: Int = 8,
         storedAt: Date,
         comparedMemberIDs: Set<MemberID>? = [],
         otherDuties: [OtherDutyResponse] = []
     ) -> OfflineMonthSnapshot {
-        let key = OfflineMonthKey(year: 2026, month: 8)
+        let key = OfflineMonthKey(year: year, month: month)
         let days = CalendarOfflineRepository.gridDays(year: key.year, month: key.month)
         var schedules = Array(repeating: [ScheduleDTO](), count: 42)
+        let date = String(format: "%04d-%02d-12", year, month)
         let schedule = ScheduleDTO(
             id: UUID(uuidString: "00000000-0000-0000-0000-000000000042")!,
             content: "Cached appointment",
             description: "",
             position: 0,
-            year: 2026,
-            month: 8,
+            year: year,
+            month: month,
             dayOfMonth: 12,
-            startDateTime: LocalDateTimeValue(rawValue: "2026-08-12T09:00:00"),
-            endDateTime: LocalDateTimeValue(rawValue: "2026-08-12T10:00:00"),
+            startDateTime: LocalDateTimeValue(rawValue: "\(date)T09:00:00"),
+            endDateTime: LocalDateTimeValue(rawValue: "\(date)T10:00:00"),
             isTagged: false,
             owner: "Offline tester",
             taggedByMember: nil,
             tags: [],
             visibility: .privateAccess,
-            dateToCompare: DateOnly(rawValue: "2026-08-12"),
+            dateToCompare: DateOnly(rawValue: date),
             attachments: [],
-            startDate: DateOnly(rawValue: "2026-08-12"),
+            startDate: DateOnly(rawValue: date),
             daysFromStart: 0,
-            endDate: DateOnly(rawValue: "2026-08-12"),
-            curDate: DateOnly(rawValue: "2026-08-12"),
+            endDate: DateOnly(rawValue: date),
+            curDate: DateOnly(rawValue: date),
             totalDays: 1
         )
-        if let index = days.firstIndex(where: { $0.day == 12 && $0.month == 8 }) {
+        if let index = days.firstIndex(where: { $0.day == 12 && $0.month == month }) {
             schedules[index] = [schedule]
         }
         return OfflineMonthSnapshot(
@@ -902,6 +955,7 @@ private extension CalendarOfflineTests {
 private actor CalendarOfflineCacheStub: OfflineCacheProviding {
     var account: OfflineAccountSnapshot?
     var month: OfflineMonthSnapshot?
+    private var months: [OfflineMonthSnapshot]
     private let searchResults: [ScheduleSearchResultDTO]
     private let accountLoadGate: CalendarOfflineIdentityRaceGate?
     private let todoBoardLoadGate: CalendarOfflineIdentityRaceGate?
@@ -910,12 +964,14 @@ private actor CalendarOfflineCacheStub: OfflineCacheProviding {
     init(
         account: OfflineAccountSnapshot? = nil,
         month: OfflineMonthSnapshot? = nil,
+        months: [OfflineMonthSnapshot] = [],
         searchResults: [ScheduleSearchResultDTO] = [],
         accountLoadGate: CalendarOfflineIdentityRaceGate? = nil,
         todoBoardLoadGate: CalendarOfflineIdentityRaceGate? = nil
     ) {
         self.account = account
         self.month = month
+        self.months = months
         self.searchResults = searchResults
         self.accountLoadGate = accountLoadGate
         self.todoBoardLoadGate = todoBoardLoadGate
@@ -931,13 +987,17 @@ private actor CalendarOfflineCacheStub: OfflineCacheProviding {
     func saveMonth(_ snapshot: OfflineMonthSnapshot) async throws {
         savedMonths.append(snapshot)
         month = snapshot
+        months.removeAll { $0.key == snapshot.key && $0.accountID == snapshot.accountID }
     }
     func loadMonth(accountID: MemberID, key: OfflineMonthKey) async -> OfflineMonthSnapshot? {
+        if let snapshot = months.first(where: { $0.accountID == accountID && $0.key == key }) {
+            return snapshot
+        }
         guard let month, month.accountID == accountID, month.key == key else { return nil }
         return month
     }
     func loadCachedMonths(accountID: MemberID, around current: OfflineMonthKey) async -> [OfflineMonthSnapshot] {
-        month.map { [$0] } ?? []
+        (month.map { [$0] } ?? []) + months.filter { $0.accountID == accountID }
     }
     func saveTodoBoard(accountID: MemberID, board: TodoBoardDTO, now: Date) async throws {}
     func loadTodoBoard(accountID: MemberID) async -> TodoBoardDTO? {

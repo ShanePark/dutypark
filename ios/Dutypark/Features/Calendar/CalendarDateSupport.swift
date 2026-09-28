@@ -33,6 +33,37 @@ nonisolated enum CalendarDateSupport {
         }
     }
 
+    /// Builds the date-only geometry for a neighbouring month while its calendar
+    /// snapshot is not cached yet. The dates always belong to the requested month
+    /// grid, so a placeholder can never make the previous month's contents appear
+    /// under a new month label.
+    static func placeholderCells(year: Int, month: Int) -> [CalendarCell] {
+        guard (1...12).contains(month),
+              let firstDay = calendar.date(from: DateComponents(year: year, month: month, day: 1))
+        else { return [] }
+        let leadingDays = (calendar.component(.weekday, from: firstDay) - calendar.firstWeekday + 7) % 7
+        guard let gridStart = calendar.date(byAdding: .day, value: -leadingDays, to: firstDay) else {
+            return []
+        }
+
+        return (0..<42).compactMap { offset in
+            guard let date = calendar.date(byAdding: .day, value: offset, to: gridStart) else {
+                return nil
+            }
+            let parts = calendar.dateComponents([.year, .month, .day], from: date)
+            guard let cellYear = parts.year, let cellMonth = parts.month, let day = parts.day else {
+                return nil
+            }
+            return CalendarCell(
+                date: DateOnly(rawValue: String(format: "%04d-%02d-%02d", cellYear, cellMonth, day)),
+                year: cellYear,
+                month: cellMonth,
+                day: day,
+                isCurrentMonth: cellYear == year && cellMonth == month
+            )
+        }
+    }
+
     /// The API and cache keep six Sunday-first rows. Some months that begin on Sunday have a
     /// complete previous week at the front of that data, so derive the displayed slice from
     /// the actual dates instead of rebuilding the grid from the month alone.

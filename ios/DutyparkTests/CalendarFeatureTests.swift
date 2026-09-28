@@ -80,6 +80,31 @@ final class CalendarFeatureTests: XCTestCase {
         }
     }
 
+    func testSwipePlaceholderKeepsTheRequestedMonthsFullDateGeometry() {
+        let fixtures: [(year: Int, month: Int, weekCount: Int, firstDay: String, lastDay: String)] = [
+            (2026, 2, 4, "2026-02-01", "2026-02-28"),
+            (2026, 9, 5, "2026-08-30", "2026-10-03"),
+            (2026, 8, 6, "2026-07-26", "2026-09-05")
+        ]
+
+        for fixture in fixtures {
+            let cells = CalendarDateSupport.placeholderCells(year: fixture.year, month: fixture.month)
+            let range = CalendarDateSupport.displayedCellRange(in: cells)
+
+            XCTAssertEqual(cells.count, 42)
+            XCTAssertEqual(
+                CalendarDateSupport.visibleWeekCount(year: fixture.year, month: fixture.month, cells: cells),
+                fixture.weekCount
+            )
+            XCTAssertEqual(cells[range.lowerBound].date.rawValue, fixture.firstDay)
+            XCTAssertEqual(cells[range.upperBound - 1].date.rawValue, fixture.lastDay)
+            XCTAssertEqual(
+                cells[range].filter(\.isCurrentMonth).map(\.day),
+                Array(1...cells.filter(\.isCurrentMonth).count)
+            )
+        }
+    }
+
     func testCalendarMonthTransitionKeepsTheLoadedMonthsRowsUntilNewDataArrives() throws {
         let loadedCells = try serverCalendarCells(year: 2026, month: 8)
         let loadedRange = CalendarDateSupport.visibleCellRange(

@@ -6,7 +6,7 @@ import Foundation
 ///
 /// The grid sits inside a vertical scroll view and its cells are tappable, so the
 /// gesture has to stay a passenger: it only claims a drag that is clearly sideways,
-/// and while the finger is down it lets the grid follow only a short, damped distance.
+/// and leaves vertical travel to the enclosing scroll view.
 nonisolated enum CalendarMonthSwipe {
     /// How far the finger has to travel sideways before lifting it changes the month.
     static let threshold: CGFloat = 56
@@ -15,12 +15,25 @@ nonisolated enum CalendarMonthSwipe {
     /// has to beat the vertical travel by this much before the drag counts as a swipe.
     static let verticalTolerance: CGFloat = 28
 
-    /// The furthest the grid follows the finger. A drag that turns out to be a scroll
-    /// therefore never pulls the calendar meaningfully off its column.
-    static let maximumFollowDistance: CGFloat = 72
-
-    static let slideOutDuration: TimeInterval = 0.16
+    static let slideOutDuration: TimeInterval = 0.22
     static let slideInDuration: TimeInterval = 0.22
+
+    /// The resting position of the three-page body track, with the current month
+    /// centered and its neighbours exactly one viewport away.
+    static func trackOffset(width: CGFloat, drag: CGFloat) -> CGFloat {
+        -width + drag
+    }
+
+    /// The destination after a committed swipe: `+1` moves the next slot to center,
+    /// while `-1` moves the previous slot to center.
+    static func settledTrackOffset(width: CGFloat, monthOffset: Int) -> CGFloat {
+        monthOffset > 0 ? -2 * width : monthOffset < 0 ? 0 : -width
+    }
+
+    static func interpolatedBodyHeight(source: CGFloat, target: CGFloat, progress: CGFloat) -> CGFloat {
+        let progress = min(max(progress, 0), 1)
+        return source + (target - source) * progress
+    }
 
     /// The month offset a finished drag asks for: `-1` for the previous month when the
     /// finger travelled left to right, `+1` for the next month, and `0` when the drag
@@ -32,13 +45,12 @@ nonisolated enum CalendarMonthSwipe {
         return translation.width > 0 ? -1 : 1
     }
 
-    /// How far the grid sits from its column while the finger is down. The travel is
-    /// rubber-banded towards `maximumFollowDistance`: the first few points follow the
-    /// finger almost exactly, and a long drag stops well before the grid leaves.
-    static func followOffset(translation: CGSize) -> CGFloat {
+    /// The month track follows a horizontal drag one point for each point the finger
+    /// moves, stopping at the neighbouring page so the three-page track cannot expose
+    /// empty space. Vertical drags are left to the enclosing scroll view.
+    static func followOffset(translation: CGSize, viewportWidth: CGFloat) -> CGFloat {
         guard abs(translation.width) > abs(translation.height) else { return 0 }
-        let magnitude = maximumFollowDistance
-            * (1 - exp(-abs(translation.width) / maximumFollowDistance))
-        return translation.width < 0 ? -magnitude : magnitude
+        guard viewportWidth > 0 else { return 0 }
+        return min(max(translation.width, -viewportWidth), viewportWidth)
     }
 }
