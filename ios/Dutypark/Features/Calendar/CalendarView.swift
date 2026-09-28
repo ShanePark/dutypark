@@ -431,6 +431,10 @@ struct CalendarView: View {
                 .padding(.horizontal, DPSpacing.small)
                 .padding(.top, DPSpacing.extraSmall)
                 .padding(.bottom, DPSpacing.large)
+                .animation(
+                    reduceMotion ? nil : .easeInOut(duration: CalendarMonthSwipe.slideInDuration),
+                    value: visibleCalendarDays.count
+                )
             }
 
             thisMonthCalloutLayer
@@ -1091,11 +1095,7 @@ struct CalendarView: View {
 
     private var visibleCalendarDays: [CalendarDayContent] {
         let cells = model.days.map(\.cell)
-        let visibleRange = CalendarDateSupport.visibleCellRange(
-            year: model.year,
-            month: model.month,
-            cells: cells
-        )
+        let visibleRange = CalendarDateSupport.displayedCellRange(in: cells)
         return Array(model.days[visibleRange])
     }
 

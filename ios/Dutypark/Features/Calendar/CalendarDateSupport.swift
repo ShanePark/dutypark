@@ -60,6 +60,20 @@ nonisolated enum CalendarDateSupport {
         visibleCellRange(year: year, month: month, cells: cells).count / 7
     }
 
+    /// The requested month can change before its server days arrive. Keep drawing the month
+    /// already carried by `cells` until the replacement grid is ready, rather than mistaking
+    /// the old grid's few overlapping dates for a complete week of the requested month.
+    static func displayedCellRange(in cells: [CalendarCell]) -> Range<Int> {
+        guard let displayedMonth = cells.first(where: { $0.isCurrentMonth }) else {
+            return 0..<cells.count
+        }
+        return visibleCellRange(
+            year: displayedMonth.year,
+            month: displayedMonth.month,
+            cells: cells
+        )
+    }
+
     private static func visibleCellRange(
         cellCount: Int,
         firstMonthCell: Int?,

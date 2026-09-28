@@ -31,6 +31,7 @@ enum GuestCalendarLocalization {
 
 struct GuestPublicCalendarView: View {
     @EnvironmentObject private var session: SessionStore
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @StateObject private var model: GuestPublicCalendarViewModel
     @State private var showsMonthPicker = false
     @State private var showsReportLoginPrompt = false
@@ -216,6 +217,10 @@ struct GuestPublicCalendarView: View {
             }
             .padding(.horizontal, DPSpacing.small)
             .padding(.bottom, DPSpacing.large)
+            .animation(
+                reduceMotion ? nil : .easeInOut(duration: 0.22),
+                value: visibleCalendarDays.count
+            )
         }
     }
 
@@ -285,11 +290,7 @@ struct GuestPublicCalendarView: View {
 
     private var visibleCalendarDays: [GuestCalendarDay] {
         let cells = model.days.map(\.cell)
-        let visibleRange = CalendarDateSupport.visibleCellRange(
-            year: model.year,
-            month: model.month,
-            cells: cells
-        )
+        let visibleRange = CalendarDateSupport.displayedCellRange(in: cells)
         return Array(model.days[visibleRange])
     }
 

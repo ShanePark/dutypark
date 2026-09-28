@@ -17,6 +17,7 @@ const props = defineProps<{
   currentYear: number
   currentMonth: number
   lastDayInMonth: number
+  isCalendarMonthLoaded: boolean
   canEdit: boolean
   canEditMyCalendar: boolean
   otherDutyCount: number
@@ -41,6 +42,7 @@ const focusedDayLabel = computed(() =>
 )
 
 function moveFocusDay(delta: number) {
+  if (!props.isCalendarMonthLoaded) return
   const next = Math.min(props.lastDayInMonth, Math.max(1, focusedDayValue.value + delta))
   emit('update:focusedDay', next)
 }
@@ -88,7 +90,7 @@ function toggleBatchEdit() {
           <button
             type="button"
             @click="moveFocusDay(-1)"
-            :disabled="focusedDayValue === 1"
+            :disabled="!isCalendarMonthLoaded || focusedDayValue === 1"
             :aria-label="t('duty.typesBar.prevDay')"
             class="flex min-w-10 sm:min-w-11 items-center justify-center transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed hover:bg-dp-bg-hover focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-dp-warning"
           >
@@ -98,7 +100,7 @@ function toggleBatchEdit() {
           <button
             type="button"
             @click="moveFocusDay(1)"
-            :disabled="focusedDayValue === lastDayInMonth"
+            :disabled="!isCalendarMonthLoaded || focusedDayValue === lastDayInMonth"
             :aria-label="t('duty.typesBar.nextDay')"
             class="flex min-w-10 sm:min-w-11 items-center justify-center transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed hover:bg-dp-bg-hover focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-dp-warning"
           >
@@ -108,6 +110,7 @@ function toggleBatchEdit() {
         <button
           v-for="dutyType in dutyTypes"
           :key="dutyType.id ?? 'off'"
+          :disabled="!isCalendarMonthLoaded"
           @click="emit('quick-duty-change', dutyType.id)"
           class="duty-quick-btn"
           :title="dutyType.name"

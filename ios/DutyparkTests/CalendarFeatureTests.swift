@@ -80,6 +80,72 @@ final class CalendarFeatureTests: XCTestCase {
         }
     }
 
+    func testCalendarMonthTransitionKeepsTheLoadedMonthsRowsUntilNewDataArrives() throws {
+        let loadedCells = try serverCalendarCells(year: 2026, month: 8)
+        let loadedRange = CalendarDateSupport.visibleCellRange(
+            year: 2026,
+            month: 8,
+            cells: loadedCells
+        )
+        let partialNextMonthRange = CalendarDateSupport.visibleCellRange(
+            year: 2026,
+            month: 9,
+            cells: loadedCells
+        )
+        let displayedRange = CalendarDateSupport.displayedCellRange(in: loadedCells)
+
+        XCTAssertEqual(loadedRange.count, 42)
+        XCTAssertEqual(
+            partialNextMonthRange.count,
+            7,
+            "The old six-week response contains only one row of the next month"
+        )
+        XCTAssertEqual(
+            displayedRange,
+            loadedRange,
+            "The current grid should keep its complete month until the next response replaces it"
+        )
+
+        let loadedSeptemberCells = try serverCalendarCells(year: 2026, month: 9)
+        let loadedSeptemberRange = CalendarDateSupport.visibleCellRange(
+            year: 2026,
+            month: 9,
+            cells: loadedSeptemberCells
+        )
+        let partialPreviousMonthRange = CalendarDateSupport.visibleCellRange(
+            year: 2026,
+            month: 8,
+            cells: loadedSeptemberCells
+        )
+        XCTAssertEqual(loadedSeptemberRange.count, 35)
+        XCTAssertEqual(partialPreviousMonthRange.count, 7)
+        XCTAssertEqual(
+            CalendarDateSupport.displayedCellRange(in: loadedSeptemberCells),
+            loadedSeptemberRange,
+            "The current grid must also stay intact while moving to the previous month"
+        )
+
+        let calendarSource = try Self.calendarViewSource()
+        let calendarGrid = try Self.declaration(
+            named: "private var visibleCalendarDays: [CalendarDayContent]",
+            in: calendarSource
+        )
+        XCTAssertTrue(calendarGrid.contains("CalendarDateSupport.displayedCellRange(in: cells)"))
+        XCTAssertTrue(calendarSource.contains("value: visibleCalendarDays.count"))
+
+        let guestSourceURL = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appending(path: "Dutypark/Features/Guest/GuestPublicCalendarView.swift")
+        let guestSource = try String(contentsOf: guestSourceURL, encoding: .utf8)
+        let guestGrid = try Self.declaration(
+            named: "private var visibleCalendarDays: [GuestCalendarDay]",
+            in: guestSource
+        )
+        XCTAssertTrue(guestGrid.contains("CalendarDateSupport.displayedCellRange(in: cells)"))
+        XCTAssertTrue(guestSource.contains("value: visibleCalendarDays.count"))
+    }
+
     private func serverCalendarCells(year: Int, month: Int) throws -> [CalendarCell] {
         let calendar = CalendarDateSupport.calendar
         let firstDay = try XCTUnwrap(calendar.date(from: DateComponents(year: year, month: month, day: 1)))

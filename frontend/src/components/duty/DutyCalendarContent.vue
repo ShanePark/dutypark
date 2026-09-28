@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { CalendarCheck, MessageSquareText, CheckSquare } from '@lucide/vue'
 import { isLightColor } from '@/utils/color'
 import { dutyTypeLabel } from '@/utils/dutyAbbreviation'
@@ -17,6 +17,9 @@ const props = defineProps<{
   days: CalendarDay[]
   currentYear: number
   currentMonth: number
+  calendarDataYear: number
+  calendarDataMonth: number
+  isCalendarMonthLoaded: boolean
   holidays: HolidayDto[][]
   getDutyColorForDay: (day: CalendarDay) => string | null
   highlightDay: { year: number; month: number; day: number } | null
@@ -46,6 +49,31 @@ const emit = defineEmits<{
 // Swiping the grid sideways is the quick way through the months; the header
 // chevrons stay for taps and for keyboard and assistive-technology users.
 const swipeContainer = ref<HTMLElement | null>(null)
+const calendarTrack = ref<HTMLElement | null>(null)
+let calendarTrackResizeObserver: ResizeObserver | null = null
+
+function syncCalendarHeight() {
+  const container = swipeContainer.value
+  const track = calendarTrack.value
+  if (!container || !track) return
+
+  const height = track.getBoundingClientRect().height
+  if (height > 0) container.style.height = `${height}px`
+}
+
+onMounted(() => {
+  if (!swipeContainer.value || !calendarTrack.value || typeof ResizeObserver === 'undefined') return
+
+  syncCalendarHeight()
+  calendarTrackResizeObserver = new ResizeObserver(syncCalendarHeight)
+  calendarTrackResizeObserver.observe(calendarTrack.value)
+})
+
+onUnmounted(() => {
+  calendarTrackResizeObserver?.disconnect()
+  calendarTrackResizeObserver = null
+})
+
 const monthSwipe = useCalendarMonthSwipe({
   onPrevMonth: () => emit('prev-month'),
   onNextMonth: () => emit('next-month'),
@@ -53,7 +81,7 @@ const monthSwipe = useCalendarMonthSwipe({
 })
 
 const focusedCalendarDay = computed(() => {
-  if (!props.batchEditMode || !props.focusedDay) return null
+  if (!props.batchEditMode || !props.focusedDay || !props.isCalendarMonthLoaded) return null
   return { year: props.currentYear, month: props.currentMonth, day: props.focusedDay }
 })
 
@@ -110,6 +138,7 @@ function getDDaysForDay(day: CalendarDay): LocalDDay[] {
 }
 
 function isDayClickable(_day: CalendarDay, index: number): boolean {
+  if (!props.isCalendarMonthLoaded) return false
   if (props.batchEditMode) return true
   return canOpenCalendarDay(props.canEdit, props.schedulesByDays[index]?.length ?? 0)
 }
@@ -226,16 +255,16 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
     @pointerdown.capture="monthSwipe.dragClickGuard.handlePointerDown"
     @click.capture="monthSwipe.dragClickGuard.handleClick"
   >
-    <div class="calendar-month-swipe__track" :style="monthSwipe.trackStyle.value">
+    <div ref="calendarTrack" class="calendar-month-swipe__track" :style="monthSwipe.trackStyle.value">
       <CalendarGrid
         :days="days"
-        :current-year="currentYear"
-        :current-month="currentMonth"
+        :current-year="calendarDataYear"
+        :current-month="calendarDataMonth"
         :holidays="displayHolidays"
         :get-duty-color="getDutyColorForDay"
         :highlight-day="highlightDay"
         :focused-day="focusedCalendarDay"
-        :clickable="!batchEditMode || canEdit"
+        :clickable="isCalendarMonthLoaded && (!batchEditMode || canEdit)"
         :is-day-clickable="isDayClickable"
         @day-click="(day, index) => emit('day-click', day, index)"
       >
@@ -254,6 +283,7 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
             <button
               v-for="dutyType in dutyTypes"
               :key="dutyType.id ?? 'off'"
+              :disabled="!isCalendarMonthLoaded"
               @click.stop="emit('batch-duty-change', day, dutyType.id)"
               :title="dutyType.name"
               :aria-label="dutyType.name"
@@ -304,6 +334,7 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
               v-for="dday in getDDaysForDay(day)"
               :key="dday.id"
               type="button"
+              :disabled="!isCalendarMonthLoaded"
               :aria-label="dday.title"
               :title="dday.title"
               @click.stop="emit('dday-click', dday)"
@@ -394,6 +425,7 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
                 v-for="todo in todosDueByDays[index].slice(0, 2)"
                 :key="'due-' + todo.id"
                 type="button"
+                :disabled="!isCalendarMonthLoaded"
                 :aria-label="todo.title"
                 :title="todo.title"
                 @click.stop="emit('todo-click', todo)"
@@ -428,6 +460,13 @@ function shouldShowPrivateVisibility(schedule: Schedule) {
   overflow-x: clip;
   /* The browser keeps the vertical scroll; sideways is this component's gesture. */
   touch-action: pan-y;
+  transition: height 220ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .calendar-month-swipe {
+    transition: none;
+  }
 }
 
 .calendar-inline-text {

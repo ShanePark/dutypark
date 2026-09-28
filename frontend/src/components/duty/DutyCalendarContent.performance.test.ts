@@ -53,7 +53,10 @@ function makeSchedule(id: string, daysFromStart = 1): Schedule {
 function makeProps(ddayCount = 100): CalendarProps {
   const days: CalendarDay[] = Array.from({ length: 42 }, (_, index) => {
     const date = new Date(2026, 7, 30 + index)
-    return { year: date.getFullYear(), month: date.getMonth() + 1, day: date.getDate(), isToday: false }
+    return {
+      year: date.getFullYear(), month: date.getMonth() + 1, day: date.getDate(),
+      isCurrentMonth: date.getFullYear() === 2026 && date.getMonth() + 1 === 9, isToday: false,
+    }
   })
   const dDays: LocalDDay[] = Array.from({ length: ddayCount }, (_, index) => {
     const day = days[index % days.length]!
@@ -63,7 +66,9 @@ function makeProps(ddayCount = 100): CalendarProps {
     }
   })
   return {
-    days, currentYear: 2026, currentMonth: 9, holidays: [], getDutyColorForDay: () => null,
+    days, currentYear: 2026, currentMonth: 9, calendarDataYear: 2026, calendarDataMonth: 9,
+    isCalendarMonthLoaded: true,
+    holidays: [], getDutyColorForDay: () => null,
     highlightDay: null, batchEditMode: false, focusedDay: null, canEdit: true,
     duties: [], dutyTypes: [], otherDuties: [], dDays, pinnedDDay: null, todosDueByDays: [],
     isMyCalendar: true, memberId: 1,
@@ -79,6 +84,24 @@ function mountCalendar(props: CalendarProps) {
 
 function ddayButtons(root: HostNode) {
   return findHostNodes(root, node => node.type === 'button' && String(node.props.class).includes('calendar-action-bubble--dday'))
+}
+
+function calendarDayCells(root: HostNode) {
+  return findHostNodes(root, node => String(node.props.class).includes('min-h-[60px]'))
+}
+
+function batchDutyButtons(root: HostNode) {
+  return findHostNodes(root, node => node.type === 'button' && node.props.title === 'Morning')
+}
+
+function makeMonthDays(year: number, month: number, firstVisibleDay: number): CalendarProps['days'] {
+  return Array.from({ length: 42 }, (_, index) => {
+    const date = new Date(year, month - 1, firstVisibleDay + index)
+    return {
+      year: date.getFullYear(), month: date.getMonth() + 1, day: date.getDate(), isToday: false,
+      isCurrentMonth: date.getFullYear() === year && date.getMonth() + 1 === month,
+    }
+  })
 }
 
 function visibleDDayCount(props: CalendarProps) {
@@ -102,6 +125,45 @@ afterEach(() => {
 })
 
 describe('calendar derived display data', () => {
+  it('keeps the loaded month rows until the new month calendar data arrives', async () => {
+    const props = reactive(makeProps(0))
+    props.dDays = [{
+      id: 50, title: 'Deadline', date: '2026-09-30', isPrivate: false, calc: 0, dDayText: 'D-Day',
+    }]
+    props.calendarDataYear = 2026
+    props.calendarDataMonth = 9
+    const root = mountCalendar(props)
+
+    expect(calendarDayCells(root)).toHaveLength(35)
+    expect(ddayButtons(root)).toHaveLength(1)
+
+    props.currentMonth = 10
+    props.isCalendarMonthLoaded = false
+    await nextTick()
+    expect(calendarDayCells(root)).toHaveLength(35)
+    expect(ddayButtons(root)).toHaveLength(1)
+    expect(ddayButtons(root)[0]!.props.disabled).toBe(true)
+
+    props.batchEditMode = true
+    props.dutyTypes = [{ id: 7, name: 'Morning', color: '#112233' }]
+    await nextTick()
+    const loadedMonthBatchButtonCount = batchDutyButtons(root).length
+    expect(loadedMonthBatchButtonCount).toBeGreaterThan(0)
+    expect(batchDutyButtons(root)).toHaveLength(loadedMonthBatchButtonCount)
+    expect(batchDutyButtons(root).every(button => button.props.disabled === true)).toBe(true)
+
+    props.days = makeMonthDays(2026, 9, 27)
+    props.calendarDataMonth = 10
+    props.isCalendarMonthLoaded = true
+    await nextTick()
+    expect(calendarDayCells(root)).toHaveLength(35)
+    expect(batchDutyButtons(root).every(button => button.props.disabled === false)).toBe(true)
+    props.batchEditMode = false
+    await nextTick()
+    expect(ddayButtons(root)).toHaveLength(1)
+    expect(ddayButtons(root)[0]!.props.disabled).toBe(false)
+  })
+
   it('parses each D-Day once and builds tags only for visible schedules', () => {
     const props = makeProps()
     const root = mountCalendar(props)

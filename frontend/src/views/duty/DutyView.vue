@@ -366,6 +366,13 @@ const schedulesByDays = ref<Schedule[][]>([])
 const holidaysByDays = ref<HolidayDto[][]>([])
 
 const rawCalendarDays = ref<Array<{ year: number; month: number; day: number }>>([])
+const calendarDataYear = ref(currentYear.value)
+const calendarDataMonth = ref(currentMonth.value)
+const isCalendarMonthLoaded = computed(() =>
+  calendarDataYear.value === currentYear.value &&
+  calendarDataMonth.value === currentMonth.value &&
+  rawCalendarDays.value.length > 0,
+)
 
 const searchResults = ref<any[]>([])
 const searchPageInfo = ref({
@@ -376,12 +383,20 @@ const searchPageInfo = ref({
 })
 
 // Load calendar structure from backend API (cached)
-async function loadCalendar() {
+async function loadCalendar(): Promise<boolean> {
+  const year = currentYear.value
+  const month = currentMonth.value
   try {
-    rawCalendarDays.value = await dutyApi.getCalendar(currentYear.value, currentMonth.value)
+    const days = await dutyApi.getCalendar(year, month)
+    if (year !== currentYear.value || month !== currentMonth.value) return false
+
+    rawCalendarDays.value = days
+    calendarDataYear.value = year
+    calendarDataMonth.value = month
+    return true
   } catch (error) {
     console.error('Failed to load calendar:', error)
-    rawCalendarDays.value = []
+    return false
   }
 }
 
@@ -390,7 +405,7 @@ const calendarDays = computed(() => {
   const today = new Date()
 
   return rawCalendarDays.value.map((raw) => {
-    const isCurrentMonth = raw.year === currentYear.value && raw.month === currentMonth.value
+    const isCurrentMonth = raw.year === calendarDataYear.value && raw.month === calendarDataMonth.value
     const isToday =
       raw.day === today.getDate() &&
       raw.month === today.getMonth() + 1 &&
@@ -401,8 +416,8 @@ const calendarDays = computed(() => {
       month: raw.month,
       day: raw.day,
       isCurrentMonth,
-      isPrev: raw.month < currentMonth.value || (raw.month === 12 && currentMonth.value === 1),
-      isNext: raw.month > currentMonth.value || (raw.month === 1 && currentMonth.value === 12),
+      isPrev: raw.month < calendarDataMonth.value || (raw.month === 12 && calendarDataMonth.value === 1),
+      isNext: raw.month > calendarDataMonth.value || (raw.month === 1 && calendarDataMonth.value === 12),
       isToday,
     } as CalendarDay
   })
@@ -637,7 +652,8 @@ watch(
     }
 
     // Load calendar first to ensure index alignment
-    await loadCalendar()
+    const calendarLoaded = await loadCalendar()
+    if (!calendarLoaded) return
     await Promise.all([loadDuties(), loadSchedules(), loadOtherDuties(), loadHolidays()])
   }
 )
@@ -668,6 +684,8 @@ watch(
     schedulesByDays.value = []
     holidaysByDays.value = []
     rawCalendarDays.value = []
+    calendarDataYear.value = currentYear.value
+    calendarDataMonth.value = currentMonth.value
     dutyTypes.value = []
     team.value = null
     teamId.value = null
@@ -759,6 +777,8 @@ async function handleGoToDate(event: Event) {
 
 // Day click handler
 function handleDayClick(day: CalendarDay, _index: number) {
+  if (!isCalendarMonthLoaded.value) return
+
   // In batch edit mode, clicking a day moves the focus to that day
   if (batchEditMode.value) {
     if (day.isCurrentMonth) {
@@ -773,6 +793,7 @@ function handleDayClick(day: CalendarDay, _index: number) {
 
 // Batch edit mode: change duty type directly on cell
 async function handleBatchDutyChange(day: CalendarDay, dutyTypeId: number | null) {
+  if (!isCalendarMonthLoaded.value) return
   if (!memberId.value) return
   if (!canEditDuty.value) return
 
@@ -799,6 +820,7 @@ function debouncedLoadDuties() {
 
 // Quick duty change: apply to focused day and move to next day
 function handleQuickDutyChange(dutyTypeId: number | null) {
+  if (!isCalendarMonthLoaded.value) return
   if (!focusedDay.value || !memberId.value || !canEditDuty.value) return
 
   // Capture current day before incrementing
@@ -1580,6 +1602,7 @@ async function showExcelUploadModal() {
       :current-year="currentYear"
       :current-month="currentMonth"
       :last-day-in-month="lastDayInMonth"
+      :is-calendar-month-loaded="isCalendarMonthLoaded"
       :can-edit="canEditDuty"
       :can-edit-my-calendar="canEditMyDutyCalendar"
       :other-duty-count="otherDutyCount"
@@ -1597,6 +1620,9 @@ async function showExcelUploadModal() {
       :days="calendarDays"
       :current-year="currentYear"
       :current-month="currentMonth"
+      :calendar-data-year="calendarDataYear"
+      :calendar-data-month="calendarDataMonth"
+      :is-calendar-month-loaded="isCalendarMonthLoaded"
       :holidays="holidaysByDays"
       :get-duty-color-for-day="getDutyColorForDay"
       :highlight-day="searchDay"
