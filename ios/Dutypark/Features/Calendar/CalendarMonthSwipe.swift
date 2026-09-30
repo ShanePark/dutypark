@@ -32,11 +32,6 @@ nonisolated enum CalendarMonthSwipe {
         monthOffset > 0 ? -2 * width : monthOffset < 0 ? 0 : -width
     }
 
-    static func interpolatedBodyHeight(source: CGFloat, target: CGFloat, progress: CGFloat) -> CGFloat {
-        let progress = min(max(progress, 0), 1)
-        return source + (target - source) * progress
-    }
-
     /// The month offset a finished horizontal pan asks for. Once the recognizer has
     /// classified the gesture as horizontal, vertical drift no longer changes the
     /// decision. A short release commits only when it was a quick outward flick; a
@@ -62,5 +57,15 @@ nonisolated enum CalendarMonthSwipe {
     static func followOffset(translation: CGSize, viewportWidth: CGFloat) -> CGFloat {
         guard viewportWidth > 0 else { return 0 }
         return min(max(translation.width, -viewportWidth), viewportWidth)
+    }
+}
+
+/// Hold the surrounding layout still until the month swipe completes. Adjacent
+/// pages can load taller content while the finger reverses or cancels its drag.
+nonisolated struct CalendarMonthBodyViewport {
+    let height: CGFloat
+
+    init(sourceHeight: CGFloat) {
+        height = sourceHeight
     }
 }

@@ -28,6 +28,7 @@ private struct CalendarMonthPage: Identifiable {
 private struct CalendarMonthTransition: Identifiable {
     let id: UUID
     var pages: [CalendarMonthPage]
+    let viewport: CalendarMonthBodyViewport
 }
 
 private struct CalendarMonthBodyHeightsPreferenceKey: PreferenceKey {
@@ -212,7 +213,6 @@ struct CalendarView: View {
     @State private var monthTrackOffset: CGFloat = 0
     @State private var calendarGridWidth: CGFloat = 0
     @State private var calendarBodyHeight: CGFloat = 0
-    @State private var monthBodyHeights: [OfflineMonthKey: CGFloat] = [:]
     @State private var monthTransition: CalendarMonthTransition?
     @State private var monthPreviewTask: Task<Void, Never>?
     @State private var monthSlideTask: Task<Void, Never>?
@@ -1232,7 +1232,6 @@ struct CalendarView: View {
         }
         .onPreferenceChange(CalendarMonthBodyHeightsPreferenceKey.self) { heights in
             guard !heights.isEmpty else { return }
-            monthBodyHeights.merge(heights, uniquingKeysWith: { _, newValue in newValue })
             if monthTransition == nil,
                let height = heights[displayedMonthKey],
                height > 0 {
@@ -1325,32 +1324,8 @@ struct CalendarView: View {
     }
 
     private var transitionBodyHeight: CGFloat {
-        guard let monthTransition, calendarGridWidth > 0 else {
-            return max(calendarBodyHeight, minimumBodyHeight(for: CalendarMonthPage(key: displayedMonthKey, days: model.days)))
-        }
-
-        let source = monthTransition.pages[1]
-        let targetIndex = monthTrackOffset < -calendarGridWidth ? 2 : 0
-        let target = monthTransition.pages[targetIndex]
-        let sourceHeight = naturalBodyHeight(for: source)
-        let targetHeight = naturalBodyHeight(for: target)
-        let progress = min(max(abs(monthTrackOffset + calendarGridWidth) / calendarGridWidth, 0), 1)
-        return CalendarMonthSwipe.interpolatedBodyHeight(
-            source: sourceHeight,
-            target: targetHeight,
-            progress: progress
-        )
-    }
-
-    private func naturalBodyHeight(for page: CalendarMonthPage) -> CGFloat {
-        let estimatedRowHeight = max(
-            calendarBodyHeight / CGFloat(max(visibleRowCount(for: CalendarMonthPage(key: displayedMonthKey, days: model.days)), 1)),
-            CalendarVisualLogic.compactCellMinimumHeight
-        )
-        return max(
-            monthBodyHeights[page.key] ?? CGFloat(visibleRowCount(for: page)) * estimatedRowHeight,
-            minimumBodyHeight(for: page)
-        )
+        monthTransition?.viewport.height
+            ?? max(calendarBodyHeight, minimumBodyHeight(for: CalendarMonthPage(key: displayedMonthKey, days: model.days)))
     }
 
     private func minimumBodyHeight(for page: CalendarMonthPage) -> CGFloat {
@@ -1390,7 +1365,11 @@ struct CalendarView: View {
                 placeholderMonthPage(for: previous),
                 CalendarMonthPage(key: source, days: model.days),
                 placeholderMonthPage(for: next)
-            ]
+            ],
+            viewport: CalendarMonthBodyViewport(sourceHeight: max(
+                calendarBodyHeight,
+                minimumBodyHeight(for: CalendarMonthPage(key: source, days: model.days))
+            ))
         )
         withTransaction(Transaction(animation: nil)) {
             monthTransition = transition
