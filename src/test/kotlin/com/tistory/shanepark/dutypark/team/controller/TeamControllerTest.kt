@@ -43,7 +43,7 @@ class TeamControllerTest : RestDocsTest() {
             .andExpect(jsonPath("$.dutyTypes[0].name").value("OFF"))
             .andExpect(jsonPath("$.dutyTypes[1].name").value("WORK"))
             .andExpect(jsonPath("$.dutyTypes[1].position").value(0))
-            .andExpect(jsonPath("$.dutyTypes[1].color").value("#98fb98"))
+            .andExpect(jsonPath("$.dutyTypes[1].color").value("#F6D365"))
             .andExpect(jsonPath("$.dutyTypes[1].hidden").value(false))
 
         val created = teamRepository.findByName("new team")
@@ -54,7 +54,7 @@ class TeamControllerTest : RestDocsTest() {
         assertThat(workDutyType.id).isNotNull
         assertThat(workDutyType.name).isEqualTo("WORK")
         assertThat(workDutyType.position).isEqualTo(0)
-        assertThat(workDutyType.color).isEqualTo("#98fb98")
+        assertThat(workDutyType.color).isEqualTo("#F6D365")
         assertThat(workDutyType.hidden).isFalse
     }
 

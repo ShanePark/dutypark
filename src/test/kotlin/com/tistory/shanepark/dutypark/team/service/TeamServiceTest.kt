@@ -22,6 +22,8 @@ import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.extension.ExtendWith
+import org.junit.jupiter.params.ParameterizedTest
+import org.junit.jupiter.params.provider.ValueSource
 import org.mockito.InjectMocks
 import org.mockito.Mock
 import org.mockito.Mockito.`when`
@@ -225,7 +227,7 @@ class TeamServiceTest {
         assertThat(result.dutyTypes.map { it.name }).containsExactly("OFF", "WORK")
         assertThat(result.dutyTypes[1].id).isEqualTo(30L)
         assertThat(result.dutyTypes[1].position).isEqualTo(0)
-        assertThat(result.dutyTypes[1].color).isEqualTo("#98fb98")
+        assertThat(result.dutyTypes[1].color).isEqualTo("#F6D365")
         assertThat(result.dutyTypes[1].hidden).isFalse
         verify(dutyTypeRepository).saveAndFlush(any<DutyType>())
         verify(publicContentService).validateContent("new team")
@@ -380,11 +382,40 @@ class TeamServiceTest {
         ReflectionTestUtils.setField(team, "id", 1L)
         `when`(teamRepository.findById(team.id!!)).thenReturn(Optional.of(team))
 
-        service.updateDefaultDuty(team.id!!, "New default", "#123456")
+        service.updateDefaultDuty(team.id!!, "New default", "#F6D365")
 
         verify(publicContentService).validateContent("New default")
         assertThat(team.defaultDutyName).isEqualTo("New default")
-        assertThat(team.defaultDutyColor).isEqualTo("#123456")
+        assertThat(team.defaultDutyColor).isEqualTo("#F6D365")
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = ["#000000", "#ffffff", "#ff0000", "#0000ff", "#123456"])
+    fun `default duty color changes accept custom hex colors outside the palette`(color: String) {
+        val team = Team("Test Team").apply {
+            defaultDutyName = "before"
+            defaultDutyColor = "#abcdef"
+            defaultDutyAbbreviation = "B"
+        }
+        whenever(teamRepository.findById(1L)).thenReturn(Optional.of(team))
+
+        service.updateDefaultDuty(1L, "after", color, "A")
+
+        assertThat(team.defaultDutyName).isEqualTo("after")
+        assertThat(team.defaultDutyColor).isEqualTo(color)
+        assertThat(team.defaultDutyAbbreviation).isEqualTo("A")
+    }
+
+    @Test
+    fun `legacy default duty color allows name and abbreviation edits`() {
+        val team = Team("Test Team").apply { defaultDutyColor = "#abcdef" }
+        whenever(teamRepository.findById(1L)).thenReturn(Optional.of(team))
+
+        service.updateDefaultDuty(1L, "after", "#abcdef", "A")
+
+        assertThat(team.defaultDutyName).isEqualTo("after")
+        assertThat(team.defaultDutyColor).isEqualTo("#abcdef")
+        assertThat(team.defaultDutyAbbreviation).isEqualTo("A")
     }
 
     @Test

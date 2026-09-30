@@ -519,9 +519,13 @@ private struct DutyparkWidgetDayCell: View {
     private var dayNumberColor: Color {
         switch dayNumberStyle {
         case .sundayOrHoliday:
-            return WidgetPalette.sunday(for: colorScheme)
+            return usesPaletteBackground
+                ? (WidgetHexColor.backgroundColor(DutyTypeColorPalette.sundayHex) ?? WidgetPalette.sunday(for: colorScheme))
+                : WidgetPalette.sunday(for: colorScheme)
         case .saturday:
-            return WidgetPalette.saturday(for: colorScheme)
+            return usesPaletteBackground
+                ? (WidgetHexColor.backgroundColor(DutyTypeColorPalette.saturdayHex) ?? WidgetPalette.saturday(for: colorScheme))
+                : WidgetPalette.saturday(for: colorScheme)
         case .duty:
             return dutyForeground
         case .secondary:
@@ -540,8 +544,14 @@ private struct DutyparkWidgetDayCell: View {
         )
     }
 
+    private var usesPaletteBackground: Bool {
+        displayAbbreviation != nil && DutyTypeColorPalette.contains(day.colorHex)
+    }
+
     private var holidayForeground: Color {
-        WidgetPalette.holiday(for: colorScheme)
+        usesPaletteBackground
+            ? (WidgetHexColor.backgroundColor(DutyTypeColorPalette.sundayHex) ?? WidgetPalette.sunday(for: colorScheme))
+            : WidgetPalette.holiday(for: colorScheme)
     }
 
     private var dutyForeground: Color {

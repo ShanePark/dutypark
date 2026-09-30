@@ -4,11 +4,11 @@ import { useI18n } from 'vue-i18n'
 import BaseModal from '@/components/common/BaseModal.vue'
 import { useSwal } from '@/composables/useSwal'
 import { teamApi } from '@/api/team'
-import CharacterCounter from '@/components/common/CharacterCounter.vue'
 import Pickr from '@simonwep/pickr'
 import '@simonwep/pickr/dist/themes/monolith.min.css'
+import CharacterCounter from '@/components/common/CharacterCounter.vue'
 import type { DutyTypeDto } from '@/types'
-import { X } from '@lucide/vue'
+import { Check, X } from '@lucide/vue'
 import { resolveApiErrorMessage } from '@/utils/resolveApiError'
 import { useContentFilterStore } from '@/stores/contentFilter'
 import {
@@ -17,6 +17,7 @@ import {
   normalizeDutyAbbreviation,
 } from '@/utils/dutyAbbreviation'
 import { isLightColor } from '@/utils/color'
+import { defaultDutyTypeColor, dutyTypePalette, isDutyTypePaletteColor } from '@/utils/dutyTypePalette'
 
 const props = defineProps<{
   isOpen: boolean
@@ -36,7 +37,7 @@ const { showWarning, showError, toastSuccess } = useSwal()
 const { t } = useI18n()
 const contentFilterStore = useContentFilterStore()
 
-const defaultDutyColor = '#ffb3ba'
+const defaultDutyColor: string = defaultDutyTypeColor
 
 const dutyTypeForm = ref({
   id: null as number | null,
@@ -63,10 +64,14 @@ const hasDuplicateDutyTypeName = computed(() =>
 const isDutyTypeNameInvalid = computed(() => !trimmedDutyTypeName.value || hasDuplicateDutyTypeName.value)
 const isDutyTypeSaveDisabled = computed(() => props.saving || submitting.value || isDutyTypeNameInvalid.value || isDutyAbbreviationInvalid.value)
 
-let pickrInstance: Pickr | null = null
+const customColorMode = ref(false)
 const colorPickerRef = ref<HTMLElement | null>(null)
+let pickrInstance: Pickr | null = null
+
+const hasLegacyColor = computed(() => !!props.dutyType?.color && !isDutyTypePaletteColor(props.dutyType.color))
 
 function setFormFromProps() {
+  customColorMode.value = !!props.dutyType?.color && !isDutyTypePaletteColor(props.dutyType.color)
   if (!props.dutyType) {
       dutyTypeForm.value = {
         id: null,
@@ -102,62 +107,64 @@ function finishDutyAbbreviationComposition(event: CompositionEvent) {
   handleDutyAbbreviationInput(event)
 }
 
-function initPickr(defaultColor: string) {
-  destroyPickr()
-  nextTick(() => {
-    if (colorPickerRef.value && !pickrInstance) {
-      pickrInstance = Pickr.create({
-        el: colorPickerRef.value,
-        theme: 'monolith',
-        default: defaultColor,
-        inline: true,
-        showAlways: true,
-        components: {
-          preview: true,
-          opacity: false,
-          hue: true,
-          interaction: {
-            hex: true,
-            rgba: false,
-            hsla: false,
-            hsva: false,
-            cmyk: false,
-            input: true,
-            save: false,
-          },
-        },
-      })
+watch(
+  () => props.isOpen,
+  (open) => { if (open) setFormFromProps() },
+  { immediate: true }
+)
 
-      pickrInstance.on('change', (color: Pickr.HSVaColor) => {
-        dutyTypeForm.value.color = color.toHEXA().toString()
-      })
-    }
-  })
+function selectColor(color: string) {
+  if (props.saving || submitting.value) return
+  customColorMode.value = false
+  if (dutyTypeForm.value.color.toLowerCase() !== color.toLowerCase()) dutyTypeForm.value.color = color
+}
+
+function selectCustomColor() {
+  if (props.saving || submitting.value || customColorMode.value) return
+  customColorMode.value = true
 }
 
 function destroyPickr() {
-  if (pickrInstance) {
-    pickrInstance.destroyAndRemove()
-    pickrInstance = null
-  }
+  pickrInstance?.destroyAndRemove()
+  pickrInstance = null
 }
 
 watch(
-  () => props.isOpen,
-  (open) => {
-    if (open) {
-      setFormFromProps()
-      initPickr(dutyTypeForm.value.color)
-    } else {
-      destroyPickr()
-    }
+  () => props.isOpen && customColorMode.value,
+  async (showCustomPicker) => {
+    destroyPickr()
+    if (!showCustomPicker) return
+    await nextTick()
+    if (!props.isOpen || !customColorMode.value || !colorPickerRef.value || pickrInstance) return
+    const instance = Pickr.create({
+      el: colorPickerRef.value,
+      theme: 'monolith',
+      default: dutyTypeForm.value.color,
+      defaultRepresentation: 'HEXA',
+      inline: true,
+      showAlways: true,
+      components: {
+        preview: true,
+        opacity: false,
+        hue: true,
+        interaction: { hex: true, rgba: false, hsla: false, hsva: false, cmyk: false, input: true, save: false },
+      },
+    })
+    pickrInstance = instance
+    // Pickr initializes its internal color to black before applying the configured default.
+    instance.setColor(dutyTypeForm.value.color, true)
+    let initialized = false
+    instance.on('init', () => { initialized = true })
+    instance.on('change', (color: Pickr.HSVaColor) => {
+      if (!initialized || pickrInstance !== instance || !props.isOpen || !customColorMode.value || props.saving || submitting.value) return
+      const selectedColor = color.toHEXA().toString()
+      if (dutyTypeForm.value.color.toLowerCase() !== selectedColor.toLowerCase()) dutyTypeForm.value.color = selectedColor
+    })
   },
   { immediate: true }
 )
 
-onUnmounted(() => {
-  destroyPickr()
-})
+onUnmounted(destroyPickr)
 
 function close() {
   if (props.saving || submitting.value) return
@@ -304,13 +311,53 @@ async function saveDutyType() {
         </div>
       </div>
 
-      <div class="color-picker-container !gap-2 !mt-0">
-        <label class="form-label mb-0">
-          {{ t('team.dutyType.fields.color') }}
-        </label>
-        <div class="color-picker-wrapper !flex-row justify-center items-center">
-          <div ref="colorPickerRef" class="color-picker color-picker--compact"></div>
+      <fieldset class="min-w-0">
+        <legend class="form-label">{{ t('team.dutyType.fields.color') }}</legend>
+        <div class="grid grid-cols-2 gap-2">
+          <label v-for="option in dutyTypePalette" :key="option.color" class="relative cursor-pointer">
+            <input
+              type="radio"
+              name="duty-type-color"
+              :value="option.color"
+              :checked="!customColorMode && dutyTypeForm.color.toLowerCase() === option.color.toLowerCase()"
+              :disabled="saving || submitting"
+              :aria-label="t(`team.dutyType.palette.${option.name}`)"
+              class="peer sr-only"
+              @change="selectColor(option.color)"
+            />
+            <span
+              class="flex min-h-11 items-center justify-center gap-1 rounded-lg border-2 border-transparent px-1 text-xs font-semibold text-dp-text-on-light transition peer-checked:border-dp-text-on-light peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-dp-accent peer-disabled:cursor-not-allowed peer-disabled:opacity-50 hover:brightness-95"
+              :style="{ backgroundColor: option.color }"
+            >
+              {{ t(`team.dutyType.palette.${option.name}`) }}
+              <Check v-if="!customColorMode && dutyTypeForm.color.toLowerCase() === option.color.toLowerCase()" class="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            </span>
+          </label>
+          <label class="relative cursor-pointer">
+            <input
+              type="radio"
+              name="duty-type-color"
+              value="custom"
+              :checked="customColorMode"
+              :disabled="saving || submitting"
+              :aria-label="t('team.dutyType.palette.custom')"
+              class="peer sr-only"
+              @change="selectCustomColor"
+            />
+            <span class="flex min-h-11 items-center justify-center gap-1 rounded-lg border-2 border-dp-border-primary bg-dp-bg-secondary px-2 text-xs font-semibold text-dp-text-primary transition peer-checked:border-dp-text-primary peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-dp-accent peer-disabled:cursor-not-allowed peer-disabled:opacity-50 hover:bg-dp-bg-hover">
+              {{ t('team.dutyType.palette.custom') }}
+              <Check v-if="customColorMode" class="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            </span>
+          </label>
         </div>
+        <div v-if="hasLegacyColor" class="mt-2 flex items-center gap-2 text-xs text-dp-text-secondary">
+          <span class="h-5 w-5 shrink-0 rounded border border-dp-border-primary" :style="{ backgroundColor: dutyType?.color || undefined }" aria-hidden="true"></span>
+          {{ t('team.dutyType.palette.currentColor') }}
+        </div>
+      </fieldset>
+
+      <div v-if="customColorMode" class="color-picker-wrapper items-center" :inert="saving || submitting" :aria-disabled="saving || submitting">
+        <div ref="colorPickerRef" class="color-picker color-picker--compact"></div>
       </div>
 
       <div class="flex items-center gap-3">

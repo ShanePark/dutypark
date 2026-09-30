@@ -3,6 +3,7 @@ package com.tistory.shanepark.dutypark.team.domain.entity
 import com.tistory.shanepark.dutypark.common.domain.entity.BaseTimeEntity
 import com.tistory.shanepark.dutypark.duty.batch.domain.DutyBatchTemplate
 import com.tistory.shanepark.dutypark.duty.domain.DutyAbbreviation
+import com.tistory.shanepark.dutypark.duty.domain.DutyColorPalette
 import com.tistory.shanepark.dutypark.duty.domain.entity.DutyType
 import com.tistory.shanepark.dutypark.member.domain.entity.Member
 import com.tistory.shanepark.dutypark.security.domain.dto.LoginMember
@@ -31,7 +32,7 @@ class Team(
     val managers: MutableList<TeamManager> = mutableListOf()
 
     @Column(nullable = false, length = 7)
-    var defaultDutyColor: String = "#ffb3ba"
+    var defaultDutyColor: String = DutyColorPalette.DEFAULT_OFF_COLOR
 
     @Column(nullable = false, name = "default_duty_name")
     var defaultDutyName: String = "OFF"

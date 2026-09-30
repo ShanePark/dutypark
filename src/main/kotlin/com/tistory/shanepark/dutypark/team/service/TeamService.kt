@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.team.service
 
 import com.tistory.shanepark.dutypark.common.domain.dto.CalendarView
+import com.tistory.shanepark.dutypark.duty.domain.DutyColorPalette
 import com.tistory.shanepark.dutypark.common.config.logger
 import com.tistory.shanepark.dutypark.common.exceptions.AuthException
 import com.tistory.shanepark.dutypark.common.exceptions.BadRequestException
@@ -132,7 +133,7 @@ class TeamService(
 
     private companion object {
         const val INITIAL_WORK_DUTY_NAME = "WORK"
-        const val INITIAL_WORK_DUTY_COLOR = "#98fb98"
+        const val INITIAL_WORK_DUTY_COLOR = DutyColorPalette.DEFAULT_COLOR
     }
 
     fun addMemberToTeam(teamId: Long, memberId: Long) {
@@ -239,6 +240,7 @@ class TeamService(
         newDutyName?.let(publicContentService::validateContent)
         val abbreviation = DutyAbbreviation.normalizeAndValidate(newDutyAbbreviation)
         abbreviation?.let(publicContentService::validateContent)
+        newDutyColor?.let { DutyColorPalette.validate(it, team.defaultDutyColor) }
         // This endpoint uses query parameters: omission preserves, an empty value resets.
         if (newDutyAbbreviation != null) {
             team.defaultDutyAbbreviation = abbreviation

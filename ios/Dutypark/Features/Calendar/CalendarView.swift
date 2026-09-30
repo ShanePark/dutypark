@@ -2059,7 +2059,7 @@ private struct CalendarDayCell: View {
                     Text(holiday.dateName)
                         .font(DPFont.light(size: CalendarTypography.cellContent, relativeTo: .caption2))
                         .lineLimit(1)
-                        .foregroundStyle(holiday.isHoliday ? DPColor.dangerHover : secondaryForeground)
+                        .foregroundStyle(holiday.isHoliday ? DPCalendarCellStyle.holidayForeground(dutyColor: day.duty?.dutyColor) : secondaryForeground)
                 }
                 ForEach(Array(day.comparedDuties.prefix(3).enumerated()), id: \.offset) { _, item in
                     comparedDutyChip(item)

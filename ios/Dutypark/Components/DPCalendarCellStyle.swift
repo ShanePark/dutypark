@@ -56,9 +56,17 @@ nonisolated enum DPCalendarCellStyle {
     }
 
     static func dayNumberColor(dutyColor: String?, weekdayIndex: Int, hasHoliday: Bool) -> Color {
-        if weekdayIndex == 0 || hasHoliday { return DPColor.dangerHover }
-        if weekdayIndex == 6 { return DPColor.accentHover }
+        if weekdayIndex == 0 || hasHoliday {
+            return holidayForeground(dutyColor: dutyColor)
+        }
+        if weekdayIndex == 6 {
+            return DutyTypeColorPalette.contains(dutyColor) ? DutyTypeColorPalette.saturdayColor : DPColor.accentHover
+        }
         return primaryForeground(dutyColor: dutyColor)
+    }
+
+    static func holidayForeground(dutyColor: String?) -> Color {
+        DutyTypeColorPalette.contains(dutyColor) ? DutyTypeColorPalette.sundayColor : DPColor.dangerHover
     }
 
     static func weekdayColor(_ index: Int) -> Color {

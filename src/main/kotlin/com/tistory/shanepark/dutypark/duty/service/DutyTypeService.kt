@@ -1,6 +1,7 @@
 package com.tistory.shanepark.dutypark.duty.service
 
 import com.tistory.shanepark.dutypark.duty.domain.DutyAbbreviation
+import com.tistory.shanepark.dutypark.duty.domain.DutyColorPalette
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeCreateDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeDto
 import com.tistory.shanepark.dutypark.duty.domain.dto.DutyTypeUpdateDto
@@ -69,6 +70,7 @@ class DutyTypeService(
         if (team.dutyTypes.any { it.name == dutyTypeCreateDto.name }) {
             throw IllegalArgumentException("DutyType already exists")
         }
+        DutyColorPalette.validate(dutyTypeCreateDto.color)
         return team.addDutyType(dutyTypeCreateDto.name, dutyTypeCreateDto.color).also {
             it.abbreviation = abbreviation
             log.auditEventAfterCommit(
@@ -111,6 +113,7 @@ class DutyTypeService(
                 }
             }
 
+        DutyColorPalette.validate(dutyTypeUpdateDto.color, dutyType.color)
         dutyType.name = dutyTypeUpdateDto.name
         dutyType.color = dutyTypeUpdateDto.color
         if (dutyTypeUpdateDto.abbreviationSpecified) {

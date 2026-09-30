@@ -1298,7 +1298,7 @@ struct TeamFeatureTests {
             contentsOf: root.appending(path: "Dutypark/Features/Team/TeamManageView.swift"),
             encoding: .utf8
         )
-        let editorStart = try #require(manageView.range(of: "private struct TeamDutyTypeEditor"))
+        let editorStart = try #require(manageView.range(of: "struct TeamDutyTypeEditor"))
         let editor = manageView[editorStart.lowerBound...]
         let catalogData = try Data(contentsOf: root.appending(path: "Dutypark/Resources/Team.xcstrings"))
         let catalog = try #require(JSONSerialization.jsonObject(with: catalogData) as? [String: Any])

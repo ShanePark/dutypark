@@ -207,7 +207,7 @@ class TeamManageControllerTest : RestDocsTest() {
 
         mockMvc.perform(
             MockMvcRequestBuilders.patch("/api/teams/manage/{teamId}/default-duty", TestData.team.id!!)
-                .param("color", "#123456")
+                .param("color", "#F6D365")
                 .param("name", "DEFAULT")
                 .withAuth(TestData.member)
         )
@@ -215,7 +215,24 @@ class TeamManageControllerTest : RestDocsTest() {
 
         val updated = teamRepository.findById(TestData.team.id!!).orElseThrow()
         assertThat(updated.defaultDutyName).isEqualTo("DEFAULT")
-        assertThat(updated.defaultDutyColor).isEqualTo("#123456")
+        assertThat(updated.defaultDutyColor).isEqualTo("#F6D365")
+    }
+
+    @Test
+    fun `manager can change default duty to a custom hex color`() {
+        setTeamAdmin(TestData.member.id!!)
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.patch("/api/teams/manage/{teamId}/default-duty", TestData.team.id!!)
+                .param("color", "#ffffff")
+                .param("name", "DEFAULT")
+                .withAuth(TestData.member)
+        )
+            .andExpect(status().isOk)
+
+        val updated = teamRepository.findById(TestData.team.id!!).orElseThrow()
+        assertThat(updated.defaultDutyColor).isEqualTo("#ffffff")
+        assertThat(updated.defaultDutyName).isEqualTo("DEFAULT")
     }
 
     @Test
@@ -224,7 +241,7 @@ class TeamManageControllerTest : RestDocsTest() {
 
         mockMvc.perform(
             MockMvcRequestBuilders.patch("/api/teams/manage/{teamId}/default-duty", TestData.team.id!!)
-                .param("color", "#123456")
+                .param("color", "#F6D365")
                 .param("name", "시.발")
                 .withAuth(TestData.member)
         )

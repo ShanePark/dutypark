@@ -24,12 +24,9 @@ const mocks = vi.hoisted(() => ({
   showWarning: vi.fn(),
   showError: vi.fn(),
   toastSuccess: vi.fn(),
-  pickr: {
-    create: vi.fn(() => ({
-      on: vi.fn(),
-      destroyAndRemove: vi.fn(),
-    })),
-  },
+  pickrInstances: [] as Array<{ on: ReturnType<typeof vi.fn>; setColor: ReturnType<typeof vi.fn>; destroyAndRemove: ReturnType<typeof vi.fn> }>,
+  pickrCreate: vi.fn((_options: { default: string; defaultRepresentation?: string }) => ({ on: vi.fn((event, callback) => { if (event === 'init') callback() }), setColor: vi.fn(), destroyAndRemove: vi.fn() })),
+
 }))
 
 vi.mock('@/i18n', () => ({
@@ -47,6 +44,9 @@ vi.doMock('vue-i18n', () => ({
   createI18n: () => ({ global: { locale: { value: 'ko' }, t: mocks.t } }),
 }))
 
+vi.mock('@simonwep/pickr', () => ({ default: { create: mocks.pickrCreate } }))
+vi.mock('@simonwep/pickr/dist/themes/monolith.min.css', () => ({}))
+
 vi.mock('@/api/team', () => ({ teamApi: mocks.teamApi }))
 vi.mock('@/stores/contentFilter', () => ({
   useContentFilterStore: () => mocks.filterStore,
@@ -58,8 +58,6 @@ vi.mock('@/composables/useSwal', () => ({
     toastSuccess: mocks.toastSuccess,
   }),
 }))
-vi.mock('@simonwep/pickr', () => ({ default: mocks.pickr }))
-vi.mock('@simonwep/pickr/dist/themes/monolith.min.css', () => ({}))
 
 vi.mock('@/components/common/BaseModal.vue', async () => {
   const { defineComponent, h } = await import('vue')
@@ -91,7 +89,7 @@ vi.mock('@lucide/vue', async () => {
       return () => h('span')
     },
   })
-  return { X: icon }
+  return { X: icon, Check: icon }
 })
 
 const { default: DutyTypeModal } = await import('./DutyTypeModal.vue')
@@ -157,7 +155,7 @@ const variants = [
     name: 'new',
     dutyType: null,
     method: 'addDutyType' as const,
-    args: [42, { teamId: 42, name: '주간', color: '#ffb3ba', abbreviation: null }],
+    args: [42, { teamId: 42, name: '주간', color: '#F6D365', abbreviation: null }],
   },
   {
     name: 'existing',
@@ -241,7 +239,7 @@ describe('DutyTypeModal save behavior', () => {
     triggerHost(saveButton(mounted.root), 'onClick')
     await flush()
     expect(mocks.teamApi.addDutyType).toHaveBeenCalledWith(42, {
-      teamId: 42, name: '야간근무', color: '#ffb3ba', abbreviation: null,
+      teamId: 42, name: '야간근무', color: '#F6D365', abbreviation: null,
     })
   })
 
@@ -253,7 +251,7 @@ describe('DutyTypeModal save behavior', () => {
     triggerHost(saveButton(mounted.root), 'onClick')
     await flush()
     expect(mocks.teamApi.addDutyType).toHaveBeenCalledWith(42, {
-      teamId: 42, name: '야간근무', color: '#ffb3ba', abbreviation: 'N',
+      teamId: 42, name: '야간근무', color: '#F6D365', abbreviation: 'N',
     })
   })
 
@@ -271,7 +269,7 @@ describe('DutyTypeModal save behavior', () => {
     triggerHost(saveButton(mounted.root), 'onClick')
     await flush()
     expect(mocks.teamApi.addDutyType).toHaveBeenCalledWith(42, {
-      teamId: 42, name: '야간근무', color: '#ffb3ba', abbreviation: 'nAb',
+      teamId: 42, name: '야간근무', color: '#F6D365', abbreviation: 'nAb',
     })
   })
 
@@ -401,7 +399,7 @@ describe('DutyTypeModal previews', () => {
       expect(String(preview.props.class)).toContain('font-semibold')
       expect(String(preview.props.class)).toContain('text-sm')
       expect(preview.props.style).toMatchObject({
-        backgroundColor: '#ffb3ba',
+        backgroundColor: '#F6D365',
         color: 'var(--dp-text-on-light)',
       })
     }
@@ -456,5 +454,198 @@ describe('DutyTypeModal previews', () => {
     expect(requiredIndicator?.props['aria-hidden']).toBe('true')
     expect(dutyTypeModalSource).toContain('min-h-5')
     expect(dutyTypeModalSource).toContain('duty-type-required-indicator')
+  })
+})
+
+describe('DutyTypeModal representative palette', () => {
+  beforeEach(() => { vi.clearAllMocks(); mocks.t.mockImplementation((key: string) => key); mocks.filterStore.isBlocked.mockReturnValue(false) })
+  it('offers eleven representative options and one custom option and defaults new duties to yellow', async () => {
+    const mounted = mountDutyType(); await flush()
+    const options = findHostNodes(mounted.root, node => node.type === 'input' && node.props.type === 'radio' && node.props.value !== 'custom')
+    expect(options).toHaveLength(11)
+    expect(options.map(node => node.props.value)).toEqual(['#ECC2C9', '#F6BC7A', '#F6D365', '#D8BF9B', '#C8DD70', '#A6D99B', '#8FDCBD', '#9DDBDE', '#D1B8EC', '#E9AEE9', '#CCC8BD'])
+    expect(options.find(node => node.props.value === '#F6D365')?.props.checked).toBe(true)
+    expect(findHostNodes(mounted.root, node => node.type === 'input' && node.props.type === 'radio')).toHaveLength(12)
+    expect(dutyTypeModalSource).toContain('grid grid-cols-2 gap-2')
+  })
+  it('preserves a legacy color until a palette option is selected', async () => {
+    const mounted = mountDutyType({ dutyType: { id: 7, name: '기존', color: '#123456', position: 0, hidden: false } }); await flush()
+    const options = findHostNodes(mounted.root, node => node.type === 'input' && node.props.type === 'radio' && node.props.value !== 'custom')
+    expect(options.every(node => !node.props.checked)).toBe(true)
+    expect(hostText(mounted.root)).toContain('team.dutyType.palette.currentColor')
+    enterName(mounted.root, '주간'); triggerHost(saveButton(mounted.root), 'onClick'); await flush()
+    expect(mocks.teamApi.updateDutyType).toHaveBeenCalledWith(42, { id: 7, name: '주간', color: '#123456', abbreviation: null })
+  })
+  it('updates preview and saves only the selected representative color', async () => {
+    const mounted = mountDutyType(); await flush(); enterName(mounted.root, '주간')
+    const option = findHostNode(mounted.root, node => node.type === 'input' && node.props.value === '#A6D99B')
+    expect(option).not.toBeNull(); triggerHost(option!, 'onChange', { target: { checked: true } }); await flush()
+    const preview = findHostNode(mounted.root, node => node.type === 'span' && String(node.props.class ?? '').includes('duty-type-preview'))
+    expect(preview?.props.style).toMatchObject({ backgroundColor: '#A6D99B' })
+    triggerHost(saveButton(mounted.root), 'onClick'); await flush()
+    expect(mocks.teamApi.addDutyType).toHaveBeenCalledWith(42, { teamId: 42, name: '주간', color: '#A6D99B', abbreviation: null })
+  })
+  it('leaves the exact stored palette value unchanged on a no-op selection', async () => {
+    const mounted = mountDutyType({ dutyType: { id: 7, name: '기존', color: '#f6d365', position: 0, hidden: false } })
+    await flush()
+    const option = findHostNode(mounted.root, node => node.type === 'input' && node.props.value === '#F6D365')
+    expect(option?.props.checked).toBe(true)
+    triggerHost(option!, 'onChange', { target: { checked: true } })
+    enterName(mounted.root, '주간'); triggerHost(saveButton(mounted.root), 'onClick'); await flush()
+    expect(mocks.teamApi.updateDutyType).toHaveBeenCalledWith(42, { id: 7, name: '주간', color: '#f6d365', abbreviation: null })
+  })
+  it('disables palette selection while saving and ignores a forced change event', async () => {
+    const mounted = mountDutyType(); mounted.state.saving = true; await flush()
+    const options = findHostNodes(mounted.root, node => node.type === 'input' && node.props.type === 'radio')
+    expect(options.every(node => node.props.disabled)).toBe(true)
+    triggerHost(options[4]!, 'onChange', { target: { checked: true } }); await flush()
+    expect(options.find(node => node.props.value === '#F6D365')?.props.checked).toBe(true)
+  })
+  it('discards palette selection when closed and reopened', async () => {
+    const mounted = mountDutyType(); await flush()
+    const option = findHostNode(mounted.root, node => node.type === 'input' && node.props.value === '#A6D99B')
+    expect(option).not.toBeNull(); triggerHost(option!, 'onChange', { target: { checked: true } }); await flush()
+    mounted.state.isOpen = false; await flush(); mounted.state.isOpen = true; await flush()
+    const selected = findHostNodes(mounted.root, node => node.type === 'input' && node.props.type === 'radio' && Boolean(node.props.checked))
+    expect(selected.map(node => node.props.value)).toEqual(['#F6D365'])
+    expect(mocks.teamApi.addDutyType).not.toHaveBeenCalled()
+  })
+})
+
+
+describe('DutyTypeModal custom spectrum', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.t.mockImplementation((key: string) => key)
+    mocks.filterStore.isBlocked.mockReturnValue(false)
+    mocks.pickrInstances.length = 0
+    mocks.pickrCreate.mockImplementation(() => {
+      const instance = { on: vi.fn((event, callback) => { if (event === 'init') callback() }), setColor: vi.fn(), destroyAndRemove: vi.fn() }
+      mocks.pickrInstances.push(instance)
+      return instance
+    })
+  })
+
+  function customOption(root: HostNode): HostNode {
+    const option = findHostNode(root, node => node.type === 'input' && node.props.value === 'custom')
+    if (!option) throw new Error('Could not find custom color option')
+    return option
+  }
+
+  it('opens the spectrum without changing the current color and ignores repeated selection', async () => {
+    const mounted = mountDutyType()
+    await flush()
+    expect(mocks.pickrCreate).not.toHaveBeenCalled()
+    triggerHost(customOption(mounted.root), 'onChange')
+    await flush()
+    expect(mocks.pickrCreate).toHaveBeenCalledTimes(1)
+    const preview = findHostNode(mounted.root, node => String(node.props.class ?? '').includes('duty-type-preview'))
+    expect(preview?.props.style).toMatchObject({ backgroundColor: '#F6D365' })
+    triggerHost(customOption(mounted.root), 'onChange')
+    await flush()
+    expect(mocks.pickrCreate).toHaveBeenCalledTimes(1)
+  })
+
+  it('saves an arbitrary custom color from the spectrum', async () => {
+    const mounted = mountDutyType()
+    enterName(mounted.root, '주간')
+    triggerHost(customOption(mounted.root), 'onChange')
+    await flush()
+    const change = mocks.pickrInstances[0]?.on.mock.calls.find(([event]) => event === 'change')?.[1]
+    expect(change).toBeTypeOf('function')
+    change({ toHEXA: () => ({ toString: () => '#1234AB' }) })
+    await flush()
+    triggerHost(saveButton(mounted.root), 'onClick')
+    await flush()
+    expect(mocks.teamApi.addDutyType).toHaveBeenCalledWith(42, { teamId: 42, name: '주간', color: '#1234AB', abbreviation: null })
+  })
+
+  it('starts stored arbitrary colors in custom mode without changing their exact value', async () => {
+    const mounted = mountDutyType({ dutyType: { id: 7, name: '기존', color: '#aBcDeF', position: 0, hidden: false } })
+    await flush()
+    expect(customOption(mounted.root).props.checked).toBe(true)
+    expect(mocks.pickrCreate.mock.calls[0]?.[0].default).toBe('#aBcDeF')
+    expect(mocks.pickrCreate.mock.calls[0]?.[0].defaultRepresentation).toBe('HEXA')
+    expect(mocks.pickrInstances[0]?.setColor).toHaveBeenCalledWith('#aBcDeF', true)
+    const change = mocks.pickrInstances[0]?.on.mock.calls.find(([event]) => event === 'change')?.[1]
+    change({ toHEXA: () => ({ toString: () => '#ABCDEF' }) })
+    enterName(mounted.root, '주간')
+    triggerHost(saveButton(mounted.root), 'onClick')
+    await flush()
+    expect(mocks.teamApi.updateDutyType).toHaveBeenCalledWith(42, { id: 7, name: '주간', color: '#aBcDeF', abbreviation: null })
+  })
+
+  it('ignores initialization color events until Pickr is ready', async () => {
+    mocks.pickrCreate.mockImplementation(() => {
+      const instance = { on: vi.fn(), setColor: vi.fn(), destroyAndRemove: vi.fn() }
+      mocks.pickrInstances.push(instance)
+      return instance
+    })
+    const mounted = mountDutyType()
+    triggerHost(customOption(mounted.root), 'onChange')
+    await flush()
+    const handlers = mocks.pickrInstances[0]!.on.mock.calls
+    const change = handlers.find(([event]) => event === 'change')![1]
+    const initialize = handlers.find(([event]) => event === 'init')![1]
+    change({ toHEXA: () => ({ toString: () => '#000000' }) })
+    await flush()
+    const preview = () => findHostNode(mounted.root, node => String(node.props.class ?? '').includes('duty-type-preview'))
+    expect(preview()?.props.style).toMatchObject({ backgroundColor: '#F6D365' })
+    initialize()
+    change({ toHEXA: () => ({ toString: () => '#1234AB' }) })
+    await flush()
+    expect(preview()?.props.style).toMatchObject({ backgroundColor: '#1234AB' })
+  })
+
+  it('ignores custom change events while saving and after the picker was destroyed', async () => {
+    const mounted = mountDutyType()
+    triggerHost(customOption(mounted.root), 'onChange')
+    await flush()
+    const change = mocks.pickrInstances[0]?.on.mock.calls.find(([event]) => event === 'change')?.[1]
+    mounted.state.saving = true
+    await flush()
+    change({ toHEXA: () => ({ toString: () => '#1234AB' }) })
+    await flush()
+    const preview = () => findHostNode(mounted.root, node => String(node.props.class ?? '').includes('duty-type-preview'))
+    expect(preview()?.props.style).toMatchObject({ backgroundColor: '#F6D365' })
+    mounted.state.saving = false
+    await flush()
+    const representative = findHostNode(mounted.root, node => node.type === 'input' && node.props.value === '#A6D99B')!
+    triggerHost(representative, 'onChange')
+    await flush()
+    triggerHost(customOption(mounted.root), 'onChange')
+    await flush()
+    change({ toHEXA: () => ({ toString: () => '#1234AB' }) })
+    await flush()
+    expect(preview()?.props.style).toMatchObject({ backgroundColor: '#A6D99B' })
+  })
+
+  it('does not create a picker when the modal closes before initialization finishes', async () => {
+    const mounted = mountDutyType()
+    triggerHost(customOption(mounted.root), 'onChange')
+    mounted.state.isOpen = false
+    await flush()
+    expect(mocks.pickrCreate).not.toHaveBeenCalled()
+  })
+
+  it('destroys the spectrum on palette selection, closing, and unmounting', async () => {
+    const mounted = mountDutyType()
+    triggerHost(customOption(mounted.root), 'onChange')
+    await flush()
+    const representative = findHostNode(mounted.root, node => node.type === 'input' && node.props.value === '#A6D99B')!
+    triggerHost(representative, 'onChange')
+    await flush()
+    expect(mocks.pickrInstances[0]?.destroyAndRemove).toHaveBeenCalledTimes(1)
+    triggerHost(customOption(mounted.root), 'onChange')
+    await flush()
+    mounted.state.isOpen = false
+    await flush()
+    expect(mocks.pickrInstances[1]?.destroyAndRemove).toHaveBeenCalledTimes(1)
+    mounted.state.isOpen = true
+    await flush()
+    triggerHost(customOption(mounted.root), 'onChange')
+    await flush()
+    mounted.app.unmount()
+    expect(mocks.pickrInstances[2]?.destroyAndRemove).toHaveBeenCalledTimes(1)
   })
 })

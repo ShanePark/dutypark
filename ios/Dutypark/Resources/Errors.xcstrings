@@ -1026,13 +1026,13 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Invalid color format."
+            "value": "This duty color cannot be selected."
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "올바른 색상 형식이 아닙니다."
+            "value": "선택할 수 없는 근무 색상입니다."
           }
         }
       }

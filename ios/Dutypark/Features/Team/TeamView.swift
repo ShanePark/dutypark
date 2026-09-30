@@ -623,7 +623,7 @@ private struct TeamCalendarDayCell: View {
                 ForEach(Array(holidays.enumerated()), id: \.offset) { _, holiday in
                     Text(verbatim: holiday.dateName)
                         .font(DPFont.light(size: 9, relativeTo: .caption2))
-                        .foregroundStyle(holiday.isHoliday ? DPColor.dangerHover : adaptiveMuted)
+                        .foregroundStyle(holiday.isHoliday ? DPCalendarCellStyle.holidayForeground(dutyColor: duty?.dutyColor) : adaptiveMuted)
                         .lineLimit(1)
                 }
                 ForEach(Array(schedules.prefix(2).enumerated()), id: \.offset) { _, schedule in
