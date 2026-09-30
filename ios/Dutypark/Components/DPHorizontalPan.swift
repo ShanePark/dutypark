@@ -3,11 +3,25 @@ import UIKit
 
 /// Which drags a sideways pager may take from the page it sits on.
 nonisolated enum DPHorizontalPanPolicy {
-    /// A drag is the pager's only while it is travelling sideways faster than it is
-    /// travelling down the page. A tie goes to the scroll, which is what the reader
-    /// asked for far more often.
-    static func shouldBegin(velocity: CGPoint) -> Bool {
-        abs(velocity.x) > abs(velocity.y)
+    enum Axis {
+        case undecided, horizontal, vertical
+    }
+
+    /// UIKit may begin before there is enough travel to determine an axis. Keep that
+    /// touch alive; rejecting it in shouldBegin cannot be undone later in the swipe.
+    static let minimumDirectionalTravel: CGFloat = 8
+
+    static func axis(for translation: CGPoint) -> Axis {
+        let horizontalTravel = abs(translation.x)
+        let verticalTravel = abs(translation.y)
+        guard max(horizontalTravel, verticalTravel) >= minimumDirectionalTravel else {
+            return .undecided
+        }
+        return horizontalTravel > verticalTravel ? .horizontal : .vertical
+    }
+
+    static func shouldBegin(velocity _: CGPoint, translation: CGPoint) -> Bool {
+        axis(for: translation) != .vertical
     }
 
     static func shouldSendChange(for state: UIGestureRecognizer.State) -> Bool {
@@ -15,7 +29,11 @@ nonisolated enum DPHorizontalPanPolicy {
     }
 
     static func shouldSendEnd(for state: UIGestureRecognizer.State) -> Bool {
-        state == .ended || state == .cancelled || state == .failed
+        state == .ended
+    }
+
+    static func shouldSendCancel(for state: UIGestureRecognizer.State) -> Bool {
+        state == .cancelled || state == .failed
     }
 }
 
@@ -26,22 +44,24 @@ extension View {
     /// SwiftUI's own `DragGesture` claims a drag the instant it passes its minimum
     /// distance, whichever way it went, and from then on the scroll view sees
     /// nothing: a scroll that began with the smallest sideways roll of a thumb simply
-    /// did not move the page. A UIKit recogniser can refuse the drag before it begins
-    /// instead, leaving the touch where it belongs.
+    /// did not move the page. A simultaneous UIKit recogniser leaves the scroll free
+    /// to move and sends pager updates only after enough sideways travel.
     ///
     /// `translation` arrives in the same shape `DragGesture` reports it, so callers
     /// read it the same way.
     func dpHorizontalPan(
         onChanged: @escaping (CGSize) -> Void,
-        onEnded: @escaping (CGSize) -> Void
+        onEnded: @escaping (CGSize, CGSize) -> Void,
+        onCancelled: @escaping (CGSize) -> Void
     ) -> some View {
-        background(DPHorizontalPanBridge(onChanged: onChanged, onEnded: onEnded))
+        background(DPHorizontalPanBridge(onChanged: onChanged, onEnded: onEnded, onCancelled: onCancelled))
     }
 }
 
 private struct DPHorizontalPanBridge: UIViewRepresentable {
     let onChanged: (CGSize) -> Void
-    let onEnded: (CGSize) -> Void
+    let onEnded: (CGSize, CGSize) -> Void
+    let onCancelled: (CGSize) -> Void
 
     func makeUIView(context: Context) -> DPHorizontalPanAnchorView {
         let view = DPHorizontalPanAnchorView(gesture: context.coordinator.gesture)
@@ -53,6 +73,7 @@ private struct DPHorizontalPanBridge: UIViewRepresentable {
     func updateUIView(_ uiView: DPHorizontalPanAnchorView, context: Context) {
         context.coordinator.onChanged = onChanged
         context.coordinator.onEnded = onEnded
+        context.coordinator.onCancelled = onCancelled
         uiView.attachGestureIfPossible()
     }
 
@@ -103,15 +124,17 @@ private final class DPHorizontalPanAnchorView: UIView {
 }
 
 @MainActor
-private final class DPHorizontalPanCoordinator: NSObject, UIGestureRecognizerDelegate {
+final class DPHorizontalPanCoordinator: NSObject, UIGestureRecognizerDelegate {
     /// Weak so that the recogniser, which the scrolling ancestor owns and this object
     /// is the target of, never keeps the view it measures alive.
     weak var anchor: UIView?
     var onChanged: (CGSize) -> Void = { _ in }
-    var onEnded: (CGSize) -> Void = { _ in }
+    var onEnded: (CGSize, CGSize) -> Void = { _, _ in }
+    var onCancelled: (CGSize) -> Void = { _ in }
+    private var axis = DPHorizontalPanPolicy.Axis.undecided
 
     lazy var gesture: UIPanGestureRecognizer = {
-        let gesture = UIPanGestureRecognizer(target: self, action: #selector(handlePan))
+        let gesture = UIPanGestureRecognizer(target: self, action: #selector(handlePan(_:)))
         gesture.delegate = self
         // The decorated view keeps its own taps; a drag that turns out to be a swipe
         // is turned away by the caller rather than by cancelling the touch.
@@ -121,17 +144,37 @@ private final class DPHorizontalPanCoordinator: NSObject, UIGestureRecognizerDel
 
     @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
         let translation = gesture.translation(in: gesture.view)
+        let velocity = gesture.velocity(in: gesture.view)
+        handlePan(state: gesture.state, translation: translation, velocity: velocity)
+    }
+
+    func handlePan(state: UIGestureRecognizer.State, translation: CGPoint, velocity: CGPoint) {
+        if state == .began { axis = .undecided }
+        if axis == .undecided { axis = DPHorizontalPanPolicy.axis(for: translation) }
+        let isTerminal = DPHorizontalPanPolicy.shouldSendEnd(for: state)
+            || DPHorizontalPanPolicy.shouldSendCancel(for: state)
+        defer { if isTerminal { axis = .undecided } }
+        guard axis == .horizontal else { return }
+
         let size = CGSize(width: translation.x, height: translation.y)
-        if DPHorizontalPanPolicy.shouldSendChange(for: gesture.state) {
+        if DPHorizontalPanPolicy.shouldSendChange(for: state) {
             onChanged(size)
-        } else if DPHorizontalPanPolicy.shouldSendEnd(for: gesture.state) {
-            onEnded(size)
+        } else if DPHorizontalPanPolicy.shouldSendEnd(for: state) {
+            // A fast flick can go straight from an unresolved begin to its end.
+            // Prepare the month track before asking the caller to commit it.
+            onChanged(size)
+            onEnded(size, CGSize(width: velocity.x, height: velocity.y))
+        } else if DPHorizontalPanPolicy.shouldSendCancel(for: state) {
+            onCancelled(size)
         }
     }
 
     func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
         guard let pan = gestureRecognizer as? UIPanGestureRecognizer, let anchor else { return false }
-        guard DPHorizontalPanPolicy.shouldBegin(velocity: pan.velocity(in: pan.view)) else { return false }
+        guard DPHorizontalPanPolicy.shouldBegin(
+            velocity: pan.velocity(in: pan.view),
+            translation: pan.translation(in: pan.view)
+        ) else { return false }
         return anchor.bounds.contains(pan.location(in: anchor))
     }
 

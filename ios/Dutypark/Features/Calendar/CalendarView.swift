@@ -1252,7 +1252,11 @@ struct CalendarView: View {
         // A plain DragGesture claimed every drag that passed its minimum distance,
         // so a scroll that set off with the slightest sideways lean never reached
         // the page underneath. This one takes sideways drags and nothing else.
-        .dpHorizontalPan(onChanged: followMonthSwipe, onEnded: finishMonthSwipe)
+        .dpHorizontalPan(
+            onChanged: followMonthSwipe,
+            onEnded: finishMonthSwipe,
+            onCancelled: cancelMonthSwipe
+        )
     }
 
     private func calendarMonthBody(
@@ -1424,9 +1428,13 @@ struct CalendarView: View {
         if drag != 0 { isSwipingMonth = true }
     }
 
-    private func finishMonthSwipe(translation: CGSize) {
+    private func finishMonthSwipe(translation: CGSize, velocity: CGSize) {
         guard !isSlidingMonth else { return }
-        let offset = CalendarMonthSwipe.monthOffset(translation: translation)
+        let offset = CalendarMonthSwipe.monthOffset(
+            translation: translation,
+            velocity: velocity,
+            viewportWidth: calendarGridWidth
+        )
         guard offset != 0, let transition = monthTransition else {
             settleUncommittedMonthSwipe()
             return
@@ -1476,6 +1484,11 @@ struct CalendarView: View {
             try? await Task.sleep(for: .milliseconds(100))
             isSwipingMonth = false
         }
+    }
+
+    private func cancelMonthSwipe(translation _: CGSize) {
+        guard !isSlidingMonth else { return }
+        settleUncommittedMonthSwipe()
     }
 
     private func settleUncommittedMonthSwipe() {

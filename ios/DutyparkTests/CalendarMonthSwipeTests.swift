@@ -7,42 +7,111 @@ import XCTest
 
 final class CalendarMonthSwipeTests: XCTestCase {
     func testASidewaysDragPastTheThresholdPicksTheNeighbouringMonth() {
-        let travel = CalendarMonthSwipe.threshold
+        let width: CGFloat = 360
+        let travel = width * CalendarMonthSwipe.releaseDistanceFraction
 
         XCTAssertEqual(
-            CalendarMonthSwipe.monthOffset(translation: CGSize(width: travel, height: 0)),
+            CalendarMonthSwipe.monthOffset(
+                translation: CGSize(width: travel, height: 0),
+                velocity: .zero,
+                viewportWidth: width
+            ),
             -1,
             "Dragging left to right pulls the previous month in"
         )
         XCTAssertEqual(
-            CalendarMonthSwipe.monthOffset(translation: CGSize(width: -travel, height: 0)),
+            CalendarMonthSwipe.monthOffset(
+                translation: CGSize(width: -travel, height: 0),
+                velocity: .zero,
+                viewportWidth: width
+            ),
             1,
             "Dragging right to left pulls the next month in"
         )
     }
 
     func testAShortDragKeepsTheMonth() {
-        let travel = CalendarMonthSwipe.threshold - 1
+        let width: CGFloat = 360
+        let travel = width * CalendarMonthSwipe.releaseDistanceFraction - 1
 
-        XCTAssertEqual(CalendarMonthSwipe.monthOffset(translation: CGSize(width: travel, height: 0)), 0)
-        XCTAssertEqual(CalendarMonthSwipe.monthOffset(translation: CGSize(width: -travel, height: 0)), 0)
-        XCTAssertEqual(CalendarMonthSwipe.monthOffset(translation: .zero), 0)
-    }
-
-    /// The grid lives inside the scrolling calendar, so a scroll that drifts sideways
-    /// must not land on another month.
-    func testAScrollThatDriftsSidewaysKeepsTheMonth() {
-        let translation = CGSize(
-            width: CalendarMonthSwipe.threshold + 20,
-            height: CalendarMonthSwipe.threshold + 20
-        )
-
-        XCTAssertEqual(CalendarMonthSwipe.monthOffset(translation: translation), 0)
         XCTAssertEqual(
             CalendarMonthSwipe.monthOffset(
-                translation: CGSize(width: -translation.width, height: translation.height)
+                translation: CGSize(width: travel, height: 0), velocity: .zero, viewportWidth: width
             ),
             0
+        )
+        XCTAssertEqual(
+            CalendarMonthSwipe.monthOffset(
+                translation: CGSize(width: -travel, height: 0), velocity: .zero, viewportWidth: width
+            ),
+            0
+        )
+        XCTAssertEqual(
+            CalendarMonthSwipe.monthOffset(translation: .zero, velocity: .zero, viewportWidth: width),
+            0
+        )
+    }
+
+    func testAPartialPageDragDoesNotCommitTheMonth() {
+        XCTAssertEqual(
+            CalendarMonthSwipe.monthOffset(
+                translation: CGSize(width: 90, height: 0), velocity: .zero, viewportWidth: 360
+            ),
+            0,
+            "A short pull should settle back to the current month"
+        )
+    }
+
+    func testAHorizontalDragWithVerticalDriftStillSelectsTheNeighbour() {
+        XCTAssertEqual(
+            CalendarMonthSwipe.monthOffset(
+                translation: CGSize(width: 120, height: 95), velocity: .zero, viewportWidth: 360
+            ),
+            -1,
+            "Once the horizontal pan is recognized, small vertical drift should not veto it"
+        )
+    }
+
+    func testAFastOutwardFlickCommitsBeforeTheDistanceThreshold() {
+        XCTAssertEqual(
+            CalendarMonthSwipe.monthOffset(
+                translation: CGSize(width: 36, height: 20),
+                velocity: CGSize(width: 700, height: 40),
+                viewportWidth: 360
+            ),
+            -1
+        )
+    }
+
+    func testAReversedOrInwardReleaseKeepsTheCurrentMonth() {
+        XCTAssertEqual(
+            CalendarMonthSwipe.monthOffset(
+                translation: CGSize(width: 80, height: 10),
+                velocity: CGSize(width: -240, height: 0),
+                viewportWidth: 360
+            ),
+            0,
+            "Returning toward the starting month before release should cancel the page change"
+        )
+        XCTAssertEqual(
+            CalendarMonthSwipe.monthOffset(
+                translation: CGSize(width: 140, height: 10),
+                velocity: CGSize(width: -240, height: 0),
+                viewportWidth: 360
+            ),
+            0,
+            "An inward release should not commit even after crossing the distance threshold"
+        )
+    }
+
+    func testSmallOpposingVelocityNoiseDoesNotCancelACompletePageDrag() {
+        XCTAssertEqual(
+            CalendarMonthSwipe.monthOffset(
+                translation: CGSize(width: 140, height: 10),
+                velocity: CGSize(width: -40, height: 0),
+                viewportWidth: 360
+            ),
+            -1
         )
     }
 
@@ -92,14 +161,15 @@ final class CalendarMonthSwipeTests: XCTestCase {
         )
     }
 
-    func testTheGridStaysPutWhileTheDragIsMostlyVertical() {
+    func testTheGridKeepsFollowingItsHorizontalAxisAfterThePanBegins() {
         XCTAssertEqual(
             CalendarMonthSwipe.followOffset(
-                translation: CGSize(width: 20, height: 40),
+                translation: CGSize(width: 80, height: 100),
                 viewportWidth: 360
             ),
-            0,
-            accuracy: 0.001
+            80,
+            accuracy: 0.001,
+            "A recognized horizontal pan should not jump back when the finger wobbles vertically"
         )
     }
 
@@ -160,7 +230,8 @@ final class CalendarMonthSwipeTests: XCTestCase {
             encoding: .utf8
         )
 
-        XCTAssertTrue(source.contains("dpHorizontalPan(onChanged:"))
+        XCTAssertTrue(source.contains(".dpHorizontalPan("))
+        XCTAssertTrue(source.contains("onCancelled: cancelMonthSwipe"))
         XCTAssertFalse(
             source.contains("simultaneousGesture(monthSwipeGesture)"),
             "A plain DragGesture over the grid takes drags that belong to the scroll"
@@ -169,7 +240,8 @@ final class CalendarMonthSwipeTests: XCTestCase {
             source.contains("guard !isSwipingMonth, !isSlidingMonth else { return }"),
             "A day that was dragged sideways must not open its detail modal"
         )
-        XCTAssertTrue(source.contains("CalendarMonthSwipe.monthOffset(translation:"))
+        XCTAssertTrue(source.contains("CalendarMonthSwipe.monthOffset("))
+        XCTAssertTrue(source.contains("velocity: velocity"))
         XCTAssertTrue(source.contains("CalendarMonthSwipe.followOffset("))
         XCTAssertTrue(source.contains("viewportWidth: calendarGridWidth"))
     }

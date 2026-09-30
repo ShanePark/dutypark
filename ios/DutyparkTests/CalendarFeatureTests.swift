@@ -2118,6 +2118,102 @@ final class CalendarFeatureTests: XCTestCase {
         XCTAssertEqual(requestCounts.duties, 2)
     }
 
+    func testReturningToCalendarDoesNotBlockTheFirstMonthSwipe() async {
+        let teamGate = CalendarTabRefreshGate()
+        let repository = CalendarRepositoryMock(teamID: 7, teamRefreshGate: teamGate)
+        let model = CalendarViewModel(repository: repository, now: date(2026, 8, 12))
+        await model.load()
+
+        let refresh = Task { await model.refreshAfterCalendarTabReturn() }
+        await teamGate.waitForRequest()
+        XCTAssertEqual(model.days.count, 42)
+        XCTAssertFalse(model.isLoading, "Refreshing a displayed calendar must keep month navigation available")
+        let changed = await model.changeMonth(by: 1)
+        let countsBeforeRelease = await repository.refreshRequestCounts()
+        await teamGate.release()
+        await refresh.value
+
+        XCTAssertTrue(changed)
+        XCTAssertEqual(model.month, 9)
+        let countsAfterRelease = await repository.refreshRequestCounts()
+        XCTAssertEqual(countsAfterRelease.duties, countsBeforeRelease.duties,
+                       "A superseded team refresh must not start another month load")
+    }
+
+    func testDelayedTeamRefreshDoesNotUnlockAnInFlightMonthChange() async {
+        let teamGate = CalendarTabRefreshGate()
+        let monthGate = CalendarMonthRaceGate()
+        let repository = CalendarRepositoryMock(teamID: 7, monthGate: monthGate, teamRefreshGate: teamGate)
+        let model = CalendarViewModel(repository: repository, now: date(2026, 8, 12))
+        let initialLoad = Task { await model.load() }
+        await monthGate.waitForRequest(OfflineMonthKey(year: 2026, month: 8))
+        await monthGate.release(OfflineMonthKey(year: 2026, month: 8))
+        await initialLoad.value
+
+        let refreshFinished = expectation(description: "Superseded team refresh finishes before the new month loads")
+        let refresh = Task {
+            await model.refreshAfterCalendarTabReturn()
+            refreshFinished.fulfill()
+        }
+        await teamGate.waitForRequest()
+        guard !model.isLoading else {
+            XCTFail("A displayed calendar refresh blocks the first month change")
+            await teamGate.release()
+            await monthGate.release(OfflineMonthKey(year: 2026, month: 8))
+            // The old implementation starts its month request after releasing the team.
+            await monthGate.waitForRequestCount(2, key: OfflineMonthKey(year: 2026, month: 8))
+            await monthGate.release(OfflineMonthKey(year: 2026, month: 8))
+            await refresh.value
+            return
+        }
+        let monthChange = Task { await model.changeMonth(by: 1) }
+        await monthGate.waitForRequest(OfflineMonthKey(year: 2026, month: 9))
+        await teamGate.release()
+        await fulfillment(of: [refreshFinished], timeout: 1)
+        XCTAssertTrue(model.isLoading, "Only the foreground month load may release its loading lock")
+        let duplicateChange = await model.changeMonth(by: 1)
+        XCTAssertFalse(duplicateChange)
+        await monthGate.release(OfflineMonthKey(year: 2026, month: 9))
+        await refresh.value
+        let changed = await monthChange.value
+        XCTAssertTrue(changed)
+        XCTAssertEqual(model.month, 9)
+    }
+
+    func testDelayedCalendarRefreshCannotOverwriteOrUnlockTheNewMonth() async {
+        let monthGate = CalendarMonthRaceGate()
+        let repository = CalendarRepositoryMock(monthGate: monthGate)
+        let model = CalendarViewModel(repository: repository, now: date(2026, 8, 12))
+        let august = OfflineMonthKey(year: 2026, month: 8)
+        let september = OfflineMonthKey(year: 2026, month: 9)
+        let initialLoad = Task { await model.load() }
+        await monthGate.waitForRequest(august)
+        await monthGate.release(august)
+        await initialLoad.value
+
+        let refresh = Task { await model.refreshAfterCalendarTabReturn() }
+        await monthGate.waitForRequestCount(2, key: august)
+        guard !model.isLoading else {
+            XCTFail("A displayed calendar refresh blocks the first month change")
+            await monthGate.release(august)
+            await refresh.value
+            return
+        }
+        let monthChange = Task { await model.changeMonth(by: 1) }
+        await monthGate.waitForRequest(september)
+        await monthGate.release(august)
+        await refresh.value
+        XCTAssertTrue(model.isLoading)
+        XCTAssertEqual(model.month, 9)
+        XCTAssertNil(model.errorMessage)
+
+        await monthGate.release(september)
+        let changed = await monthChange.value
+        XCTAssertTrue(changed)
+        XCTAssertFalse(model.isLoading)
+        XCTAssertEqual(model.days.first(where: { $0.cell.isCurrentMonth })?.cell.month, 9)
+    }
+
     func testCancelledCalendarLoadDoesNotShowAnError() async {
         let repository = CalendarRepositoryMock(cancelMemberLoad: true)
         let model = CalendarViewModel(repository: repository, now: date(2026, 8, 12))
@@ -3143,6 +3239,7 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
     let returnsTaggedSchedule: Bool
     let otherDutyValues: [OtherDutyResponse]
     let monthGate: CalendarMonthRaceGate?
+    let teamRefreshGate: CalendarTabRefreshGate?
     let memberValues: [MemberDTO]
     let memberGate: CalendarIdentityRaceGate?
     let saveDDayError: APIError?
@@ -3159,6 +3256,7 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
         returnsTaggedSchedule: Bool = false,
         otherDuties: [OtherDutyResponse] = [],
         monthGate: CalendarMonthRaceGate? = nil,
+        teamRefreshGate: CalendarTabRefreshGate? = nil,
         memberValues: [MemberDTO] = [],
         memberGate: CalendarIdentityRaceGate? = nil,
         saveDDayError: APIError? = nil,
@@ -3174,6 +3272,7 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
         self.returnsTaggedSchedule = returnsTaggedSchedule
         otherDutyValues = otherDuties
         self.monthGate = monthGate
+        self.teamRefreshGate = teamRefreshGate
         self.memberValues = memberValues
         self.memberGate = memberGate
         self.saveDDayError = saveDDayError
@@ -3210,6 +3309,7 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
     func team(id: TeamID) async throws -> TeamDTO {
         guard !memberValues.isEmpty || teamID == id else { throw APIError.invalidResponse }
         teamRequestCount += 1
+        if teamRequestCount > 1 { await teamRefreshGate?.wait() }
         return TeamDTO(
             id: id,
             name: "Team",
@@ -3306,12 +3406,18 @@ private actor CalendarRepositoryMock: CalendarRepositoryProtocol {
 
 private actor CalendarMonthRaceGate {
     private var requested: Set<OfflineMonthKey> = []
+    private var requestCounts: [OfflineMonthKey: Int] = [:]
+    private var countWaiters: [OfflineMonthKey: [(Int, CheckedContinuation<Void, Never>)]] = [:]
     private var requestWaiters: [OfflineMonthKey: [CheckedContinuation<Void, Never>]] = [:]
     private var releaseWaiters: [OfflineMonthKey: [CheckedContinuation<Void, Never>]] = [:]
 
     func wait(year: Int, month: Int) async {
         let key = OfflineMonthKey(year: year, month: month)
         requested.insert(key)
+        requestCounts[key, default: 0] += 1
+        let readyWaiters = countWaiters[key, default: []].filter { $0.0 <= requestCounts[key, default: 0] }
+        countWaiters[key] = countWaiters[key, default: []].filter { $0.0 > requestCounts[key, default: 0] }
+        readyWaiters.forEach { $0.1.resume() }
         requestWaiters.removeValue(forKey: key)?.forEach { $0.resume() }
         await withCheckedContinuation { continuation in
             releaseWaiters[key, default: []].append(continuation)
@@ -3327,6 +3433,36 @@ private actor CalendarMonthRaceGate {
 
     func release(_ key: OfflineMonthKey) {
         releaseWaiters.removeValue(forKey: key)?.forEach { $0.resume() }
+    }
+
+    func waitForRequestCount(_ count: Int, key: OfflineMonthKey) async {
+        guard requestCounts[key, default: 0] < count else { return }
+        await withCheckedContinuation { continuation in
+            countWaiters[key, default: []].append((count, continuation))
+        }
+    }
+}
+
+private actor CalendarTabRefreshGate {
+    private var requested = false
+    private var requestWaiters: [CheckedContinuation<Void, Never>] = []
+    private var releaseWaiter: CheckedContinuation<Void, Never>?
+
+    func wait() async {
+        requested = true
+        requestWaiters.forEach { $0.resume() }
+        requestWaiters.removeAll()
+        await withCheckedContinuation { releaseWaiter = $0 }
+    }
+
+    func waitForRequest() async {
+        guard !requested else { return }
+        await withCheckedContinuation { requestWaiters.append($0) }
+    }
+
+    func release() {
+        releaseWaiter?.resume()
+        releaseWaiter = nil
     }
 }
 

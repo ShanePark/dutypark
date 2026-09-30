@@ -278,24 +278,35 @@ final class CalendarViewModel: ObservableObject {
     /// returns to the calendar tab. Team management can change duty colors while
     /// this tab remains mounted, so its in-memory month must not be reused.
     func refreshAfterCalendarTabReturn() async {
-        guard let currentMember = me, isMyCalendar else { return }
+        guard let currentMember = me, isMyCalendar, !isLoading else { return }
+        guard days.count == 42,
+              days.contains(where: { $0.cell.isCurrentMonth && $0.cell.year == year && $0.cell.month == month })
+        else {
+            await load()
+            return
+        }
         identityLoadGeneration &+= 1
         monthLoadGeneration += 1
         invalidatePrefetch()
 
         let identityGeneration = identityLoadGeneration
+        let refreshMonthGeneration = monthLoadGeneration
         let accountID = currentMember.id
-        isLoading = true
+        // The displayed month stays interactive during a tab refresh. A foreground
+        // month request supersedes this refresh and owns its own loading lock.
         errorMessage = nil
-        defer { isLoading = false }
+
+        func isCurrentRefresh(monthGeneration: Int) -> Bool {
+            isCurrentIdentityLoad(identityGeneration, accountID: accountID)
+                && isMyCalendar
+                && monthLoadGeneration == monthGeneration
+        }
 
         var teamRefreshFailed = false
         if let teamID = currentMember.teamId {
             do {
                 let refreshedTeam = try await repository.team(id: teamID)
-                guard isCurrentIdentityLoad(identityGeneration, accountID: accountID),
-                      isMyCalendar
-                else { return }
+                guard isCurrentRefresh(monthGeneration: refreshMonthGeneration) else { return }
                 team = refreshedTeam
             } catch is CancellationError {
                 return
@@ -305,15 +316,18 @@ final class CalendarViewModel: ObservableObject {
         } else {
             team = nil
         }
+        guard isCurrentRefresh(monthGeneration: refreshMonthGeneration) else { return }
 
         do {
             try await loadMonth(forceOnlineRequest: true)
         } catch is CancellationError {
             return
         } catch {
+            guard isCurrentRefresh(monthGeneration: refreshMonthGeneration + 1) else { return }
             errorMessage = CalendarLocalization.text("calendar.error.load")
             return
         }
+        guard isCurrentRefresh(monthGeneration: refreshMonthGeneration + 1) else { return }
 
         if teamRefreshFailed {
             errorMessage = CalendarLocalization.text("calendar.error.load")
