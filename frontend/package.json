@@ -9,8 +9,7 @@
     "preview": "vite preview",
     "type-check": "vue-tsc -b --noEmit",
     "release-notes:check": "node scripts/check-release-notes.mjs",
-    "test": "vitest run",
-    "duty-colors:review": "vue-tsc -p tools/duty-color-review/tsconfig.json --noEmit && node tools/duty-color-review/build.mjs"
+    "test": "vitest run"
   },
   "dependencies": {
     "@lucide/vue": "^1.44.0",
