@@ -54,7 +54,11 @@ extension View {
         onEnded: @escaping (CGSize, CGSize) -> Void,
         onCancelled: @escaping (CGSize) -> Void
     ) -> some View {
-        background(DPHorizontalPanBridge(onChanged: onChanged, onEnded: onEnded, onCancelled: onCancelled))
+        // Group distributes a background to its current branch. A pager replacing
+        // that branch on its first change would remove the in-flight recognizer.
+        // Keep its anchor on a stable layout owner across content replacements.
+        ZStack(alignment: .topLeading) { self }
+            .background(DPHorizontalPanBridge(onChanged: onChanged, onEnded: onEnded, onCancelled: onCancelled))
     }
 }
 

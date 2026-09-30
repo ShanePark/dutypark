@@ -6,6 +6,54 @@ import XCTest
 @testable import Dutypark
 
 final class CalendarMonthSwipeTests: XCTestCase {
+    @MainActor
+    func testFirstPanKeepsItsRecognizerWhenTheMonthTrackAppears() throws {
+        let events = CalendarPanLifecycleEvents()
+        let host = UIHostingController(rootView: CalendarPanLifecycleFixture(events: events))
+        host.view.frame = CGRect(x: 0, y: 0, width: 375, height: 600)
+        let window = UIWindow(frame: host.view.frame)
+        window.rootViewController = host
+        window.makeKeyAndVisible()
+        defer { window.isHidden = true }
+
+        func render() {
+            host.view.setNeedsLayout()
+            host.view.layoutIfNeeded()
+            RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.05))
+            host.view.layoutIfNeeded()
+        }
+
+        func pagerRecognizers(in view: UIView) -> [UIPanGestureRecognizer] {
+            let own = (view.gestureRecognizers ?? []).compactMap { gesture -> UIPanGestureRecognizer? in
+                guard gesture.delegate is DPHorizontalPanCoordinator else { return nil }
+                return gesture as? UIPanGestureRecognizer
+            }
+            return own + view.subviews.flatMap { pagerRecognizers(in: $0) }
+        }
+
+        render()
+        let initialRecognizers = pagerRecognizers(in: host.view)
+        XCTAssertEqual(initialRecognizers.count, 1, "The first visible calendar must already receive pans")
+        let pan = try XCTUnwrap(initialRecognizers.first)
+        let coordinator = try XCTUnwrap(pan.delegate as? DPHorizontalPanCoordinator)
+        let anchor = try XCTUnwrap(coordinator.anchor)
+        XCTAssertNotNil(anchor.window)
+
+        // UIKit has begun one touch. Its first change replaces the single-month
+        // branch with the actual three-page track, as CalendarView does.
+        coordinator.handlePan(state: .began, translation: CGPoint(x: -40, y: 4), velocity: .zero)
+        render()
+        XCTAssertTrue(events.hasTrack, "The pan must have prepared the adjacent months")
+        let activeRecognizers = pagerRecognizers(in: host.view)
+        XCTAssertEqual(activeRecognizers.count, 1)
+        XCTAssertTrue(activeRecognizers.first === pan, "Replacing month content must not remove an in-flight recognizer")
+        XCTAssertTrue(coordinator.anchor === anchor, "The first pan's coordinate anchor must survive content replacement")
+        XCTAssertNotNil(anchor.window)
+
+        coordinator.handlePan(state: .ended, translation: CGPoint(x: -150, y: 4), velocity: .zero)
+        XCTAssertEqual(events.completedPans, 1)
+    }
+
     func testASidewaysDragPastTheThresholdPicksTheNeighbouringMonth() {
         let width: CGFloat = 360
         let travel = width * CalendarMonthSwipe.releaseDistanceFraction
@@ -346,6 +394,70 @@ final class CalendarMonthSwipeTests: XCTestCase {
 
 private struct CalendarMonthLayoutPage: Identifiable {
     let id: Int
+}
+
+@MainActor
+private final class CalendarPanLifecycleEvents {
+    var hasTrack = false
+    var completedPans = 0
+}
+
+@MainActor
+private struct CalendarPanLifecycleFixture: View {
+    @State private var showsTrack = false
+    @State private var drag: CGFloat = 0
+    let events: CalendarPanLifecycleEvents
+    private let width: CGFloat = 351
+
+    var body: some View {
+        ScrollView {
+            LazyVStack(spacing: DPSpacing.small) {
+                VStack(spacing: 0) {
+                    CalendarWeekdayStrip()
+                    monthBodyPager
+                }
+            }
+            .padding(.horizontal, DPSpacing.small)
+        }
+    }
+
+    private var monthBodyPager: some View {
+        Group {
+            if showsTrack {
+                CalendarMonthPageTrack(
+                    pages: [-1, 0, 1].map(CalendarMonthLayoutPage.init(id:)),
+                    width: width,
+                    height: 300,
+                    offset: -width + drag
+                ) { _, index in
+                    monthBody
+                        .allowsHitTesting(index == 1)
+                }
+            } else {
+                monthBody.fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .frame(minWidth: 0, maxWidth: .infinity, alignment: .leading)
+        .background(Color.white)
+        .clipped()
+        .dpHorizontalPan(
+            onChanged: { translation in
+                showsTrack = true
+                events.hasTrack = true
+                drag = translation.width
+            },
+            onEnded: { _, _ in events.completedPans += 1 },
+            onCancelled: { _ in }
+        )
+    }
+
+    private var monthBody: some View {
+        CalendarMonthCellGrid(items: (0..<35).map(CalendarMonthLayoutCell.init(id:))) { index, _ in
+            Text("\(index + 1)")
+                .frame(maxWidth: .infinity, minHeight: 60, alignment: .topLeading)
+                .onTapGesture {}
+        }
+    }
 }
 
 private struct CalendarMonthLayoutCell: Identifiable {
