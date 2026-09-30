@@ -17,7 +17,7 @@ import {
   normalizeDutyAbbreviation,
 } from '@/utils/dutyAbbreviation'
 import { isLightColor } from '@/utils/color'
-import { defaultDutyTypeColor, dutyTypePalette, isDutyTypePaletteColor } from '@/utils/dutyTypePalette'
+import { dutyCalendarWeekendColor, defaultDutyTypeColor, dutyTypePalette, isDutyTypePaletteColor } from '@/utils/dutyTypePalette'
 
 const props = defineProps<{
   isOpen: boolean
@@ -34,7 +34,7 @@ const emit = defineEmits<{
 }>()
 
 const { showWarning, showError, toastSuccess } = useSwal()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const contentFilterStore = useContentFilterStore()
 
 const defaultDutyColor: string = defaultDutyTypeColor
@@ -54,6 +54,21 @@ const dutyTypePreviewStyle = computed(() => ({
   backgroundColor: dutyTypeForm.value.color || 'var(--dp-duty-type-fallback)',
   color: isLightColor(dutyTypeForm.value.color) ? 'var(--dp-text-on-light)' : 'var(--dp-text-on-dark)',
 }))
+const weekendPreviews = computed(() => {
+  const formatter = new Intl.DateTimeFormat(locale.value, { weekday: 'short' })
+  return [
+    { day: 'saturday' as const, label: formatter.format(new Date(2024, 0, 6)) },
+    { day: 'sunday' as const, label: formatter.format(new Date(2024, 0, 7)) },
+  ]
+})
+
+function dutyWeekendPreviewStyle(day: 'saturday' | 'sunday') {
+  return {
+    backgroundColor: dutyTypePreviewStyle.value.backgroundColor,
+    color: dutyCalendarWeekendColor(dutyTypeForm.value.color, day),
+  }
+}
+
 const submitting = ref(false)
 const isDutyAbbreviationComposing = ref(false)
 const hasDuplicateDutyTypeName = computed(() =>
@@ -325,12 +340,14 @@ async function saveDutyType() {
               class="peer sr-only"
               @change="selectColor(option.color)"
             />
-            <span
-              class="flex min-h-11 items-center justify-center gap-1 rounded-lg border-2 border-transparent px-1 text-xs font-semibold text-dp-text-on-light transition peer-checked:border-dp-text-on-light peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-dp-accent peer-disabled:cursor-not-allowed peer-disabled:opacity-50 hover:brightness-95"
-              :style="{ backgroundColor: option.color }"
-            >
-              {{ t(`team.dutyType.palette.${option.name}`) }}
-              <Check v-if="!customColorMode && dutyTypeForm.color.toLowerCase() === option.color.toLowerCase()" class="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+            <span class="duty-color-option">
+              <span
+                class="h-6 w-6 shrink-0 rounded-full border border-dp-border-secondary"
+                :style="{ backgroundColor: option.color }"
+                aria-hidden="true"
+              ></span>
+              <span class="min-w-0 truncate">{{ t(`team.dutyType.palette.${option.name}`) }}</span>
+              <Check v-if="!customColorMode && dutyTypeForm.color.toLowerCase() === option.color.toLowerCase()" class="ml-auto h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             </span>
           </label>
           <label class="relative cursor-pointer">
@@ -344,9 +361,12 @@ async function saveDutyType() {
               class="peer sr-only"
               @change="selectCustomColor"
             />
-            <span class="flex min-h-11 items-center justify-center gap-1 rounded-lg border-2 border-dp-border-primary bg-dp-bg-secondary px-2 text-xs font-semibold text-dp-text-primary transition peer-checked:border-dp-text-primary peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-dp-accent peer-disabled:cursor-not-allowed peer-disabled:opacity-50 hover:bg-dp-bg-hover">
-              {{ t('team.dutyType.palette.custom') }}
+            <span class="duty-color-option">
+              <span class="min-w-0 truncate">{{ t('team.dutyType.palette.custom') }}</span>
               <Check v-if="customColorMode" class="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+              <span class="duty-color-custom-well ml-auto" aria-hidden="true">
+                <span :style="{ backgroundColor: dutyTypeForm.color }"></span>
+              </span>
             </span>
           </label>
         </div>
@@ -364,12 +384,22 @@ async function saveDutyType() {
         <label class="form-label mb-0 shrink-0">
           {{ t('team.dutyType.fields.preview') }}
         </label>
-        <span
-          class="duty-type-preview px-2.5 py-0.5 rounded-md font-semibold text-sm"
-          :style="dutyTypePreviewStyle"
-        >
-          {{ dutyTypeForm.name || t('team.dutyType.placeholders.preview') }}
-        </span>
+        <div class="flex min-w-0 flex-wrap items-center gap-2">
+          <span
+            class="duty-type-preview max-w-full truncate px-2.5 py-0.5 rounded-md font-semibold text-sm"
+            :style="dutyTypePreviewStyle"
+          >
+            {{ dutyTypeForm.name || t('team.dutyType.placeholders.preview') }}
+          </span>
+          <span
+            v-for="preview in weekendPreviews"
+            :key="preview.day"
+            class="duty-weekend-preview px-2.5 py-0.5 rounded-md font-semibold text-sm"
+            :style="dutyWeekendPreviewStyle(preview.day)"
+          >
+            {{ preview.label }}
+          </span>
+        </div>
       </div>
     </div>
 
@@ -391,3 +421,60 @@ async function saveDutyType() {
     </div>
   </BaseModal>
 </template>
+
+
+<style scoped>
+.duty-color-option {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 44px;
+  padding: 0 0.625rem;
+  border: 1px solid var(--dp-border-secondary);
+  border-radius: 0.375rem;
+  background-color: var(--dp-bg-input);
+  color: var(--dp-text-primary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: border-color 150ms, background-color 150ms;
+}
+
+.peer:checked + .duty-color-option {
+  border-color: var(--dp-text-primary);
+  box-shadow: inset 0 0 0 1px var(--dp-text-primary);
+}
+
+.peer:focus-visible + .duty-color-option {
+  outline: 2px solid var(--dp-accent);
+  outline-offset: 2px;
+}
+
+.peer:disabled + .duty-color-option {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+@media (hover: hover) {
+  .peer:not(:disabled) + .duty-color-option:hover {
+    background-color: var(--dp-bg-hover);
+  }
+}
+
+.duty-color-custom-well {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: conic-gradient(#f87171, #fbbf24, #a3e635, #34d399, #22d3ee, #818cf8, #e879f9, #f87171);
+}
+
+.duty-color-custom-well > span {
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--dp-bg-input);
+  border-radius: 50%;
+}
+</style>

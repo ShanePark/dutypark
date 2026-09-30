@@ -817,13 +817,7 @@ struct TeamDutyTypeEditor: View {
                     Text("team.dutyType.fields.preview", tableName: "Team")
                         .font(DPTypography.label)
                         .foregroundStyle(DPColor.textMuted)
-                    TeamDutyTypeBadge(
-                        name: trimmedName.isEmpty
-                            ? teamLocalized("team.dutyType.placeholders.preview")
-                            : trimmedName,
-                        color: color,
-                        memberCount: nil
-                    )
+                    TeamDutyColorPreview(name: trimmedName, color: color)
                 }
             }
             .padding(DPSpacing.medium)
@@ -898,6 +892,50 @@ struct TeamDutyTypeEditor: View {
         case .dismiss:
             dismiss()
         }
+    }
+}
+
+struct TeamDutyColorPreview: View {
+    let name: String
+    let color: String
+
+    struct Indicator: Identifiable {
+        let id: String
+        let text: String
+        let foreground: Color
+    }
+
+    func indicators(locale: Locale? = nil) -> [Indicator] {
+        let weekdays = TeamLocalization.shortStandaloneWeekdaySymbols(locale: locale)
+        return [Indicator(
+            id: "work",
+            text: name.isEmpty ? AppLocalization.string("team.dutyType.placeholders.preview", table: "Team", locale: locale) : name,
+            foreground: DPCalendarCellStyle.primaryForeground(dutyColor: color)
+        ), Indicator(
+            id: "saturday",
+            text: weekdays[6],
+            foreground: DPCalendarCellStyle.dayNumberColor(dutyColor: color, weekdayIndex: 6, hasHoliday: false)
+        ), Indicator(
+            id: "sunday",
+            text: weekdays[0],
+            foreground: DPCalendarCellStyle.dayNumberColor(dutyColor: color, weekdayIndex: 0, hasHoliday: false)
+        )]
+    }
+
+    var body: some View {
+        HStack(spacing: DPSpacing.medium) {
+            ForEach(indicators()) { indicator in
+                Text(verbatim: indicator.text)
+                    .font(DPTypography.bodyMedium)
+                    .foregroundStyle(indicator.foreground)
+                    .lineLimit(1)
+                    .frame(maxWidth: indicator.id == "work" ? .infinity : nil, alignment: .leading)
+                    .fixedSize(horizontal: indicator.id != "work", vertical: false)
+                    .accessibilityIdentifier("team.dutyType.preview.\(indicator.id)")
+            }
+        }
+        .padding(DPSpacing.compact)
+        .background(DPCalendarCellStyle.cellBackground(dutyColor: color, isCurrentMonth: true))
     }
 }
 

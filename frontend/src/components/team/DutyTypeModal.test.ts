@@ -15,6 +15,7 @@ import {
 
 const mocks = vi.hoisted(() => ({
   t: vi.fn((key: string) => key),
+  locale: { value: 'ko' },
   filterStore: { isBlocked: vi.fn() },
   teamApi: {
     addDutyType: vi.fn(),
@@ -35,12 +36,12 @@ vi.mock('@/i18n', () => ({
 }))
 
 vi.mock('vue-i18n', () => ({
-  useI18n: () => ({ t: mocks.t }),
+  useI18n: () => ({ t: mocks.t, locale: mocks.locale }),
   createI18n: () => ({ global: { locale: { value: 'ko' }, t: mocks.t } }),
 }))
 
 vi.doMock('vue-i18n', () => ({
-  useI18n: () => ({ t: mocks.t }),
+  useI18n: () => ({ t: mocks.t, locale: mocks.locale }),
   createI18n: () => ({ global: { locale: { value: 'ko' }, t: mocks.t } }),
 }))
 
@@ -647,5 +648,35 @@ describe('DutyTypeModal custom spectrum', () => {
     await flush()
     mounted.app.unmount()
     expect(mocks.pickrInstances[2]?.destroyAndRemove).toHaveBeenCalledTimes(1)
+  })
+})
+
+
+describe('DutyTypeModal weekend preview', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mocks.locale.value = 'ko'
+    mocks.t.mockImplementation((key: string) => key)
+    mocks.filterStore.isBlocked.mockReturnValue(false)
+  })
+
+  it.each([
+    { color: '#F6D365', saturday: '#1E40AF', sunday: '#991B1B' },
+    { color: '#123456', saturday: 'var(--dp-saturday)', sunday: 'var(--dp-sunday)' },
+  ])('previews the actual Saturday and Sunday foreground for $color', async ({ color, saturday, sunday }) => {
+    const mounted = mountDutyType({ dutyType: { id: 7, name: '야간근무', color, position: 0, hidden: false } })
+    await flush()
+    const previews = findHostNodes(mounted.root, node => node.type === 'span' && String(node.props.class ?? '').includes('duty-weekend-preview'))
+    expect(previews.map(hostText)).toEqual(['토', '일'])
+    expect(previews[0]?.props.style).toMatchObject({ backgroundColor: color, color: saturday })
+    expect(previews[1]?.props.style).toMatchObject({ backgroundColor: color, color: sunday })
+  })
+
+  it('localizes the weekend labels for English', async () => {
+    mocks.locale.value = 'en'
+    const mounted = mountDutyType()
+    await flush()
+    const previews = findHostNodes(mounted.root, node => node.type === 'span' && String(node.props.class ?? '').includes('duty-weekend-preview'))
+    expect(previews.map(hostText)).toEqual(['Sat', 'Sun'])
   })
 })
