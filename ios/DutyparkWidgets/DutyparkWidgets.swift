@@ -234,7 +234,7 @@ struct DutyparkMonthlyWidgetView: View {
     private var header: some View {
         ZStack {
             Text(String(format: "%04d-%02d", entry.year, entry.month))
-                .font(.system(size: 19, weight: .heavy, design: .rounded))
+                .font(DPFont.bold(size: 19, relativeTo: .headline))
                 .monospacedDigit()
                 .foregroundStyle(WidgetPalette.primaryText(for: colorScheme))
                 .minimumScaleFactor(0.8)
@@ -287,7 +287,7 @@ struct DutyparkMonthlyWidgetView: View {
         LazyVGrid(columns: calendarColumns, spacing: 0) {
             ForEach(Array(weekdayLabels.enumerated()), id: \.offset) { index, label in
                 Text(label)
-                    .font(.system(size: isKorean ? 12 : 10, weight: .bold, design: .rounded))
+                    .font(DPFont.bold(size: isKorean ? 12 : 10, relativeTo: .caption))
                     .foregroundStyle(weekdayColor(index))
                     .frame(maxWidth: .infinity, minHeight: DutyparkWidgetLayout.weekdayHeaderHeight)
                     .overlay(alignment: .trailing) {
@@ -316,7 +316,7 @@ struct DutyparkMonthlyWidgetView: View {
             ProgressView()
                 .tint(WidgetPalette.secondaryText(for: colorScheme))
             Text(isKorean ? "근무표를 불러오는 중" : "Loading duty schedule")
-                .font(.system(size: 12, weight: .medium, design: .rounded))
+                .font(DPFont.light(size: 12, relativeTo: .caption))
                 .foregroundStyle(WidgetPalette.secondaryText(for: colorScheme))
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -329,11 +329,11 @@ struct DutyparkMonthlyWidgetView: View {
                 .foregroundStyle(WidgetPalette.secondaryText(for: colorScheme))
                 .accessibilityHidden(true)
             Text(isKorean ? "저장된 근무표가 없습니다" : "No saved duty schedule")
-                .font(.system(size: 13, weight: .semibold, design: .rounded))
+                .font(DPFont.bold(size: 13, relativeTo: .caption))
                 .foregroundStyle(WidgetPalette.primaryText(for: colorScheme))
                 .multilineTextAlignment(.center)
             Text(isKorean ? "앱을 열어 근무표를 동기화해 주세요" : "Open Dutypark to sync your schedule")
-                .font(.system(size: 10, weight: .regular, design: .rounded))
+                .font(DPFont.light(size: 10, relativeTo: .caption2))
                 .foregroundStyle(WidgetPalette.secondaryText(for: colorScheme))
                 .multilineTextAlignment(.center)
                 .lineLimit(2)
@@ -391,7 +391,7 @@ private struct DutyparkWidgetDayCell: View {
     var body: some View {
         VStack(alignment: .center, spacing: Layout.verticalSpacing) {
             Text(dayNumber)
-                .font(.system(size: dayNumberFontSize, weight: .bold, design: .rounded))
+                .font(DPFont.bold(size: dayNumberFontSize, relativeTo: .caption2))
                 .monospacedDigit()
                 .foregroundStyle(dayNumberColor)
                 .padding(.horizontal, needsDayNumberContrastBacking ? 3 : 0)
@@ -406,7 +406,7 @@ private struct DutyparkWidgetDayCell: View {
             dutySlot
             if showsHolidayName {
                 Text(displayHolidayName ?? " ")
-                    .font(.system(size: Layout.holidayFontSize, weight: .medium, design: .rounded))
+                    .font(DPFont.light(size: Layout.holidayFontSize, relativeTo: .caption2))
                     .foregroundStyle(holidayForeground)
                     .lineLimit(1)
                     .truncationMode(.tail)
@@ -491,7 +491,7 @@ private struct DutyparkWidgetDayCell: View {
 
     private var dutySlot: some View {
         Text(displayAbbreviation ?? " ")
-            .font(.system(size: dutyFontSize, weight: .heavy, design: .rounded))
+            .font(DPFont.bold(size: dutyFontSize, relativeTo: .caption2))
             .foregroundStyle(dutyForeground)
             .lineLimit(1)
             .minimumScaleFactor(0.8)
