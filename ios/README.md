@@ -108,6 +108,13 @@ dates, that member's duty abbreviations, and a compact holiday name when one is
 present; other members are not included. Schedule content is intentionally not
 shown in the calendar widget so each date keeps a consistent duty layout.
 
+The Todo widget supports small square and medium wide sizes. Both show up to
+three incomplete Todos with their status and open the Todo screen when tapped.
+The small size uses compact status icons to leave more room for titles. Choose
+the size when adding the widget from the Home Screen widget gallery; on iOS
+versions that support resizing, the widget's Home Screen menu also offers the
+supported sizes.
+
 The app and the extension share the App Group
 `group.io.github.shanepark.dutypark`. The app saves monthly duty snapshots in
 that container, and the widget reads the current month's snapshot without

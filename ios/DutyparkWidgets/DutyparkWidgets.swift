@@ -847,6 +847,9 @@ struct DutyparkTodoWidgetView: View {
     private static let statusBadgeHeight: CGFloat = 20
 
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.widgetFamily) private var widgetFamily
+
+    private var isSmall: Bool { widgetFamily == .systemSmall }
 
     private var isKorean: Bool {
         DutyparkWidgetLocalization.isKorean
@@ -887,7 +890,7 @@ struct DutyparkTodoWidgetView: View {
                 todoRows
             }
         }
-        .padding(14)
+        .padding(isSmall ? 12 : 14)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .containerBackground(for: .widget) {
             WidgetPalette.background(for: colorScheme)
@@ -901,9 +904,17 @@ struct DutyparkTodoWidgetView: View {
         VStack(alignment: .leading, spacing: 6) {
             ForEach(Array(entry.todos.prefix(Self.maximumVisibleTodoCount))) { todo in
                 HStack(spacing: 7) {
-                    statusBadge(for: todo.status)
+                    if isSmall {
+                        Image(systemName: todo.status == .inProgress ? "clock.fill" : "circle")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(statusBadgeForeground(for: todo.status))
+                            .frame(width: 14, height: Self.statusBadgeHeight)
+                            .accessibilityHidden(true)
+                    } else {
+                        statusBadge(for: todo.status)
+                    }
                     Text(todo.title)
-                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .font(.system(size: isSmall ? 12 : 13, weight: .semibold, design: .rounded))
                         .foregroundStyle(WidgetPalette.primaryText(for: colorScheme))
                         .lineLimit(1)
                         .minimumScaleFactor(0.65)
@@ -1038,7 +1049,7 @@ struct DutyparkTodoWidget: Widget {
         }
         .configurationDisplayName("할 일")
         .description("완료하지 않은 할 일을 확인합니다.")
-        .supportedFamilies([.systemMedium])
+        .supportedFamilies([.systemSmall, .systemMedium])
         .contentMarginsDisabled()
     }
 }
@@ -1069,6 +1080,17 @@ struct DutyparkMonthlyWidget: Widget {
         updatedAt: Date().addingTimeInterval(-60 * 60),
         isPlaceholder: false,
         hasCurrentMonthData: true
+    )
+}
+
+#Preview(as: .systemSmall) {
+    DutyparkTodoWidget()
+} timeline: {
+    DutyparkTodoWidgetEntry(
+        date: Date(),
+        accountID: 1,
+        todos: DutyparkTodoWidgetPreviewData.todos,
+        updatedAt: Date().addingTimeInterval(-60 * 60)
     )
 }
 
